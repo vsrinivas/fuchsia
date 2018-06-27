@@ -25,12 +25,11 @@ class StoryWatcherImpl;
 //
 // It maintains a hierarchy of context values to represent:
 // Stories -> Modules
-//         -> fuchsia::modular::Link Entities
+//         -> Link Entities
 //
-// TODO(thatguy): Add fuchsia::modular::Link value types to the Context engine
-// and use them here. Then update the resulting published value to remove its
-// added JSON structure, since it will all be represented in the metadata of the
-// value.
+// TODO(thatguy): Add Link value types to the Context engine and use them
+// here. Then update the resulting published value to remove its added JSON
+// structure, since it will all be represented in the metadata of the value.
 class StoryInfoAcquirer : public fuchsia::modular::VisibleStoriesWatcher,
                           public fuchsia::modular::StoryProviderWatcher,
                           public fuchsia::modular::FocusWatcher,

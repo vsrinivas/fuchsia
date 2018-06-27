@@ -20,53 +20,6 @@
 
 namespace maxwell {
 
-namespace {
-
-constexpr char kContextProperty[] = "@context";
-constexpr char kSourceProperty[] = "@source";
-
-struct Context {
-  fidl::StringPtr topic;
-};
-
-struct Source {
-  fidl::StringPtr story_id;
-  fidl::VectorPtr<fidl::StringPtr> module_path;
-  fidl::StringPtr link_name;
-};
-
-void XdrContext_v1(modular::XdrContext* const xdr, Context* const data) {
-  // NOTE(mesch): No xdr->Version() call here, because the JSON output is not
-  // persisted, hence cannot version skew.
-  xdr->Field("topic", &data->topic);
-}
-
-constexpr modular::XdrFilterType<Context> XdrContext[] = {
-    XdrContext_v1,
-    nullptr,
-};
-
-void XdrSource_v1(modular::XdrContext* const xdr, Source* const data) {
-  // NOTE(mesch): No xdr->Version() call here, because the JSON output is not
-  // persisted, hence cannot version skew.
-  xdr->Field("story_id", &data->story_id);
-  xdr->Field("module_path", &data->module_path);
-  xdr->Field("link_name", &data->link_name);
-}
-
-constexpr modular::XdrFilterType<Source> XdrSource[] = {
-    XdrSource_v1,
-    nullptr,
-};
-
-std::string MakeLinkTopic(const fidl::StringPtr& base_topic) {
-  std::stringstream s;
-  s << "link/" << base_topic;
-  return s.str();
-}
-
-}  // namespace
-
 LinkWatcherImpl::LinkWatcherImpl(
     StoryWatcherImpl* const owner,
     fuchsia::modular::StoryController* const story_controller,
@@ -112,9 +65,6 @@ LinkWatcherImpl::~LinkWatcherImpl() = default;
 
 void LinkWatcherImpl::Notify(fidl::StringPtr json) {
   ProcessNewValue(json);
-  // TODO(thatguy): Deprecate this method once every fuchsia::modular::Link is a
-  // "context link".
-  MaybeProcessContextLink(json);
 }
 
 void LinkWatcherImpl::ProcessNewValue(const fidl::StringPtr& value) {
@@ -197,60 +147,6 @@ void LinkWatcherImpl::ProcessNewValue(const fidl::StringPtr& value) {
   for (const auto& key : to_remove) {
     entity_node_writers_.erase(key);
   }
-}
-
-void LinkWatcherImpl::MaybeProcessContextLink(const fidl::StringPtr& value) {
-  modular::JsonDoc doc;
-  doc.Parse(value);
-  FXL_CHECK(!doc.HasParseError());
-
-  if (!doc.IsObject()) {
-    return;
-  }
-
-  auto i = doc.FindMember(kContextProperty);
-  if (i == doc.MemberEnd()) {
-    return;
-  }
-
-  modular::JsonDoc context_doc;
-  context_doc.CopyFrom(i->value, context_doc.GetAllocator());
-  doc.RemoveMember(i);
-
-  if (!context_doc.IsObject()) {
-    return;
-  }
-
-  Context context;
-  if (!modular::XdrRead(&context_doc, &context, XdrContext)) {
-    return;
-  }
-
-  Source source;
-  source.story_id = story_id_;
-  fidl::Clone(link_path_.module_path, &source.module_path);
-  source.link_name = link_path_.link_name;
-
-  modular::JsonDoc source_doc;
-  modular::XdrWrite(&source_doc, &source, XdrSource);
-  doc.AddMember(kSourceProperty, source_doc, doc.GetAllocator());
-
-  std::string json = modular::JsonValueToString(doc);
-
-  auto it = topic_node_writers_.find(context.topic);
-  if (it == topic_node_writers_.end()) {
-    fuchsia::modular::ContextValueWriterPtr topic_node_writer;
-    link_node_writer_->CreateChildValue(
-        topic_node_writer.NewRequest(),
-        fuchsia::modular::ContextValueType::ENTITY);
-    it =
-        topic_node_writers_.emplace(context.topic, std::move(topic_node_writer))
-            .first;
-  }
-  it->second->Set(
-      json, fidl::MakeOptional(ContextMetadataBuilder()
-                                   .SetEntityTopic(MakeLinkTopic(context.topic))
-                                   .Build()));
 }
 
 }  // namespace maxwell

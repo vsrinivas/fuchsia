@@ -15,8 +15,6 @@
         "//peridot/tests/component_context:component_context_test_one_agent",
         "//peridot/tests/component_context:component_context_test_two_agent",
         "//peridot/tests/component_context:component_context_test_unstoppable_agent",
-        "//peridot/tests/context_link:context_link_test_module",
-        "//peridot/tests/context_link:context_link_test_user_shell",
         "//peridot/bin/device_runner:dev_device_shell",
         "//peridot/bin/user_runner/story_runner:dev_story_shell",
         "//peridot/bin/token_manager:dev_token_manager",

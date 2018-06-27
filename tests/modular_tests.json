@@ -13,10 +13,6 @@
       "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --story_shell=dev_story_shell --user_shell_args=--root_module=component_context_test_module"
     },
     {
-      "name":"context_link",
-      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=context_link_test_user_shell --story_shell=dev_story_shell"
-    },
-    {
       "name":"embed_shell",
       "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --story_shell=embed_shell_test_story_shell --user_shell_args=--root_module=embed_shell_test_parent_module"
     },
