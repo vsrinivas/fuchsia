@@ -1542,7 +1542,7 @@ void StoryControllerImpl::GetModules(GetModulesCallback callback) {
   auto done =
       on_run->AsyncMap([this] { return story_storage_->ReadAllModuleData(); });
   operation_queue_.Add(WrapFutureAsOperation(
-      on_run, done, callback, "StoryControllerImpl.GetModules.op"));
+      "StoryControllerImpl.GetModules.op", on_run, done, callback));
 }
 
 void StoryControllerImpl::GetModuleController(

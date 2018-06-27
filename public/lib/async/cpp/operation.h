@@ -436,23 +436,26 @@ class FutureOperation : public Operation<Args...> {
 };
 
 // EXPERIMENTAL
-// This is useful to glue a FIDL call that expects its result as a callback
-// with a Future<>, but have the business logic of the Future<> run on an
+//
+// This is useful to glue a FIDL call that expects its result as a callback with
+// a Future<>, but have the business logic of the Future<> run on an
 // OperationContainer.
 //
 // Usage:
+//
 // void MyFidlCall(args..., MyFidlCallResult result_call) {
 //   auto on_run = Future<>::Create();
 //   auto done = on_run->Map(...)->Then(...);
-//   operation_container.Add(WrapFutureAsOperation(on_run, done, result_call,
-//                                                 "MyFidlCall"));
+//   operation_container_.Add(WrapFutureAsOperation(
+//       "MyFidlCall", on_run, done, result_call));
 // }
+//
 template <typename... ResultArgs, typename... FutureArgs>
 OperationBase* WrapFutureAsOperation(
+    const char* const trace_name,
     FuturePtr<> on_run, FuturePtr<FutureArgs...> done,
-    std::function<void(ResultArgs...)> result_call, std::string trace_name) {
-  // TODO(apang): Standardize on char* vs std::string for trace_name argument.
-  return new FutureOperation<ResultArgs...>(trace_name.c_str(),
+    std::function<void(ResultArgs...)> result_call) {
+  return new FutureOperation<ResultArgs...>(trace_name,
                                             std::move(on_run), std::move(done),
                                             std::move(result_call));
 }
@@ -463,7 +466,8 @@ class FutureOperation2 : public Operation<Args...> {
   using ResultCall = std::function<void(Args...)>;
   using RunOpCall = std::function<FuturePtr<Args...>(OperationBase*)>;
 
-  FutureOperation2(const char* trace_name, RunOpCall run_op, ResultCall done)
+  FutureOperation2(const char* const trace_name, RunOpCall run_op,
+                   ResultCall done)
       : Operation<Args...>(trace_name, std::move(done)),
         run_op_(run_op) {}
 
@@ -484,6 +488,7 @@ class FutureOperation2 : public Operation<Args...> {
 };
 
 // EXPERIMENTAL
+//
 // Glue code to define operations where the body of the operation is defined
 // inline to where the operation instance is created. It is an alternative to
 // WrapFutureAsOperation.
@@ -494,6 +499,7 @@ class FutureOperation2 : public Operation<Args...> {
 // Operation.
 //
 // Usage:
+//
 // void MyFidlCall(args..., MyFidlCallResult result_call) {
 //   operation_container.Add(NewCallbackOperation(
 //      "MyFidlService::MyFidlCall",
@@ -513,7 +519,7 @@ class FutureOperation2 : public Operation<Args...> {
 // }
 template <typename... ResultArgs>
 OperationBase* NewCallbackOperation(
-    const char* trace_name,
+    const char* const trace_name,
     typename FutureOperation2<ResultArgs...>::RunOpCall run,
     typename FutureOperation2<ResultArgs...>::ResultCall done) {
   return new FutureOperation2<ResultArgs...>(

@@ -584,7 +584,7 @@ void StoryProviderImpl::GetStoryInfo(fidl::StringPtr story_id,
             return fidl::MakeOptional(std::move(story_data->story_info));
           });
   operation_queue_.Add(WrapFutureAsOperation(
-      on_run, done, callback, "StoryProviderImpl::GetStoryInfo"));
+      "StoryProviderImpl::GetStoryInfo", on_run, done, callback));
 }
 
 // Called by StoryControllerImpl on behalf of ModuleContextImpl
@@ -634,7 +634,7 @@ void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
             return result;
           });
   operation_queue_.Add(WrapFutureAsOperation(
-      on_run, done, callback, "StoryProviderImpl::PreviousStories"));
+      "StoryProviderImpl::PreviousStories", on_run, done, callback));
 }
 
 // |fuchsia::modular::StoryProvider|
@@ -657,7 +657,7 @@ void StoryProviderImpl::PromoteKindOfProtoStory(fidl::StringPtr story_id) {
   });
   std::function<void()> callback = [] {};
   operation_queue_.Add(WrapFutureAsOperation(
-      on_run, done, callback, "StoryProviderImpl::PromoteKindOfProtoStory"));
+      "StoryProviderImpl::PromoteKindOfProtoStory", on_run, done, callback));
 }
 
 void StoryProviderImpl::OnStoryStorageUpdated(
@@ -724,7 +724,7 @@ void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
   });
   std::function<void()> callback = [] {};
   operation_queue_.Add(WrapFutureAsOperation(
-      on_run, done, callback, "StoryProviderImpl::OnFocusChange"));
+      "StoryProviderImpl::OnFocusChange", on_run, done, callback));
 }
 
 void StoryProviderImpl::NotifyStoryWatchers(
