@@ -316,20 +316,20 @@ TEST(Frame, RxInfo_MacFrame) {
 
     // Only MAC frames can hold rx_info;
     MgmtFrame<> mgmt_frame(fbl::move(pkt));
-    ASSERT_TRUE(mgmt_frame.has_rx_info());
-    ASSERT_EQ(memcmp(mgmt_frame.rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
+    ASSERT_TRUE(mgmt_frame.View().has_rx_info());
+    ASSERT_EQ(memcmp(mgmt_frame.View().rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
 
     CtrlFrame<PsPollFrame> ctrl_frame(mgmt_frame.Take());
-    ASSERT_TRUE(ctrl_frame.has_rx_info());
-    ASSERT_EQ(memcmp(ctrl_frame.rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
+    ASSERT_TRUE(ctrl_frame.View().has_rx_info());
+    ASSERT_EQ(memcmp(ctrl_frame.View().rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
 
     MgmtFrame<> data_frame(ctrl_frame.Take());
-    ASSERT_TRUE(data_frame.has_rx_info());
-    ASSERT_EQ(memcmp(data_frame.rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
+    ASSERT_TRUE(data_frame.View().has_rx_info());
+    ASSERT_EQ(memcmp(data_frame.View().rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
 
     // Verify next frame does not hold an rx_info.
     auto next_frame = data_frame.NextFrame<LlcHeader>();
-    ASSERT_FALSE(next_frame.has_rx_info());
+    ASSERT_FALSE(next_frame.View().has_rx_info());
 }
 
 TEST(Frame, RxInfo_OtherFrame) {
@@ -340,15 +340,15 @@ TEST(Frame, RxInfo_OtherFrame) {
 
     // Only MAC frames can hold rx_info. Test some others.
     Frame<TestHdr1> frame1(fbl::move(pkt));
-    ASSERT_FALSE(frame1.has_rx_info());
+    ASSERT_FALSE(frame1.View().has_rx_info());
     Frame<TestHdr1> frame2(frame1.Take());
-    ASSERT_FALSE(frame2.has_rx_info());
+    ASSERT_FALSE(frame2.View().has_rx_info());
     Frame<Beacon> frame3(frame2.Take());
-    ASSERT_FALSE(frame3.has_rx_info());
+    ASSERT_FALSE(frame3.View().has_rx_info());
     Frame<FrameControl> frame4(frame3.Take());
-    ASSERT_FALSE(frame4.has_rx_info());
+    ASSERT_FALSE(frame4.View().has_rx_info());
     Frame<uint8_t> frame5(frame4.Take());
-    ASSERT_FALSE(frame5.has_rx_info());
+    ASSERT_FALSE(frame5.View().has_rx_info());
 }
 
 TEST(Frame, RxInfo_PaddingAlignedBody) {
@@ -367,8 +367,8 @@ TEST(Frame, RxInfo_PaddingAlignedBody) {
     data[0] = 42;
 
     DataFrame<> data_frame(fbl::move(pkt));
-    ASSERT_TRUE(data_frame.has_rx_info());
-    ASSERT_EQ(memcmp(data_frame.rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
+    ASSERT_TRUE(data_frame.View().has_rx_info());
+    ASSERT_EQ(memcmp(data_frame.View().rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
     ASSERT_EQ(data_frame.body()->data[0], 42);
 }
 
@@ -389,8 +389,8 @@ TEST(Frame, RxInfo_NoPaddingAlignedBody) {
     data[0] = 42;
 
     DataFrame<> data_frame(fbl::move(pkt));
-    ASSERT_TRUE(data_frame.has_rx_info());
-    ASSERT_EQ(memcmp(data_frame.rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
+    ASSERT_TRUE(data_frame.View().has_rx_info());
+    ASSERT_EQ(memcmp(data_frame.View().rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
     ASSERT_EQ(data_frame.body()->data[0], 42);
 }
 

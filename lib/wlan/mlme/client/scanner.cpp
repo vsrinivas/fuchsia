@@ -160,7 +160,8 @@ zx_status_t Scanner::HandleBeacon(const MgmtFrame<Beacon>& frame) {
     ZX_DEBUG_ASSERT(IsRunning());
 
     common::MacAddr bssid(frame.hdr()->addr3);
-    return ProcessBeacon(bssid, *frame.body(), frame.len() - frame.hdr()->len(), *frame.rx_info());
+    return ProcessBeacon(bssid, *frame.body(), frame.len() - frame.hdr()->len(),
+                         *frame.View().rx_info());
 }
 
 zx_status_t Scanner::HandleProbeResponse(const MgmtFrame<ProbeResponse>& frame) {
@@ -171,7 +172,7 @@ zx_status_t Scanner::HandleProbeResponse(const MgmtFrame<ProbeResponse>& frame) 
     // ProbeResponse holds the same fields as a Beacon with the only difference in their IEs.
     // Thus, we can safely convert a ProbeResponse to a Beacon.
     auto bcn = reinterpret_cast<const Beacon*>(frame.body());
-    return ProcessBeacon(bssid, *bcn, frame.len() - frame.hdr()->len(), *frame.rx_info());
+    return ProcessBeacon(bssid, *bcn, frame.len() - frame.hdr()->len(), *frame.View().rx_info());
 }
 
 zx_status_t Scanner::ProcessBeacon(const common::MacAddr& bssid, const Beacon& bcn,
