@@ -19,10 +19,10 @@ typedef struct sdio_rw_txn {
 
 typedef struct sdio_protocol_ops {
     zx_status_t (*get_oob_irq)(void* ctx, zx_handle_t *oob_irq);
-    zx_status_t (*enable_func)(void *ctx, uint8_t fn_idx);
-    zx_status_t (*disable_func)(void *ctx, uint8_t fn_idx);
-    zx_status_t (*enable_func_intr)(void *ctx, uint8_t fn_idx);
-    zx_status_t (*disable_func_intr)(void *ctx, uint8_t fn_idx);
+    zx_status_t (*enable_fn)(void *ctx, uint8_t fn_idx);
+    zx_status_t (*disable_fn)(void *ctx, uint8_t fn_idx);
+    zx_status_t (*enable_fn_intr)(void *ctx, uint8_t fn_idx);
+    zx_status_t (*disable_fn_intr)(void *ctx, uint8_t fn_idx);
     zx_status_t (*update_block_size)(void *ctx, uint8_t fn_idx, uint16_t blk_sz, bool deflt);
     zx_status_t (*do_rw_txn)(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn);
 } sdio_protocol_ops_t;
@@ -32,20 +32,20 @@ typedef struct sdio_protocol {
     void* ctx;
 } sdio_protocol_t;
 
-static inline zx_status_t sdio_enable_func(sdio_protocol_t* sdio, uint8_t fn_idx) {
-    return sdio->ops->enable_func(sdio->ctx, fn_idx);
+static inline zx_status_t sdio_enable_fn(sdio_protocol_t* sdio, uint8_t fn_idx) {
+    return sdio->ops->enable_fn(sdio->ctx, fn_idx);
 }
 
-static inline zx_status_t sdio_disable_func(sdio_protocol_t* sdio, uint8_t fn_idx) {
-    return sdio->ops->disable_func(sdio->ctx, fn_idx);
+static inline zx_status_t sdio_disable_fn(sdio_protocol_t* sdio, uint8_t fn_idx) {
+    return sdio->ops->disable_fn(sdio->ctx, fn_idx);
 }
 
-static inline zx_status_t sdio_enable_func_intr(sdio_protocol_t* sdio, uint8_t fn_idx) {
-    return sdio->ops->enable_func_intr(sdio->ctx, fn_idx);
+static inline zx_status_t sdio_enable_fn_intr(sdio_protocol_t* sdio, uint8_t fn_idx) {
+    return sdio->ops->enable_fn_intr(sdio->ctx, fn_idx);
 }
 
-static inline zx_status_t sdio_disable_func_intr(sdio_protocol_t* sdio, uint8_t fn_idx) {
-    return sdio->ops->disable_func_intr(sdio->ctx, fn_idx);
+static inline zx_status_t sdio_disable_fn_intr(sdio_protocol_t* sdio, uint8_t fn_idx) {
+    return sdio->ops->disable_fn_intr(sdio->ctx, fn_idx);
 }
 
 static inline zx_status_t sdio_update_block_size(sdio_protocol_t* sdio, uint8_t fn_idx,
