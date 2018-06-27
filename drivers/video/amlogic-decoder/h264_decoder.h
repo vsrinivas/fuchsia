@@ -30,6 +30,7 @@ class H264Decoder : public VideoDecoder {
                                uint32_t height);
   void InitializeStream();
   void ReceivedFrames(uint32_t frame_count);
+  void SwitchStreams();
 
   Owner* owner_;
   io_buffer_t codec_data_ = {};

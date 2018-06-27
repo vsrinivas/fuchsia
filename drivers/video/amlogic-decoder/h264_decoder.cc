@@ -280,6 +280,9 @@ void H264Decoder::SetFrameReadyNotifier(FrameReadyNotifier notifier) {
 
 zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
                                           uint32_t height) {
+  // TODO: Hold onto frames that are pending in a client (if the stream is
+  // currently switching).
+  video_frames_.clear();
   for (uint32_t i = 0; i < frame_count; ++i) {
     // Try to avoid overlapping with any framebuffers.
     // TODO(ZX-2154): Use canvas driver to allocate indices.
@@ -316,6 +319,8 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
 }
 
 void H264Decoder::InitializeStream() {
+  if (io_buffer_is_valid(&reference_mv_buffer_))
+    io_buffer_release(&reference_mv_buffer_);
   auto stream_info = StreamInfo::Get().ReadFrom(owner_->dosbus());
   uint32_t level_idc = AvScratchA::Get().ReadFrom(owner_->dosbus()).reg_value();
   uint32_t mb_mv_byte = stream_info.mv_size_flag() ? 24 : 96;
@@ -403,9 +408,20 @@ void H264Decoder::ReceivedFrames(uint32_t frame_count) {
 enum {
   kCommandInitializeStream = 1,
   kCommandNewFrames = 2,
+  kCommandSwitchStreams = 3,
   kCommandFatalError = 6,
   kCommandGotFirstOffset = 9,
 };
+
+void H264Decoder::SwitchStreams() {
+  // Signal that we're ready to allocate new frames for the new stream.
+  AvScratch7::Get().FromValue(0).WriteTo(owner_->dosbus());
+  AvScratch8::Get().FromValue(0).WriteTo(owner_->dosbus());
+  AvScratch9::Get().FromValue(0).WriteTo(owner_->dosbus());
+
+  // Signal firmware that command has been processed.
+  AvScratch0::Get().FromValue(0).WriteTo(owner_->dosbus());
+}
 
 void H264Decoder::HandleInterrupt() {
   // Stop processing on fatal error.
@@ -426,6 +442,10 @@ void H264Decoder::HandleInterrupt() {
 
     case kCommandNewFrames:
       ReceivedFrames((scratch0.reg_value() >> 8) & 0xff);
+      break;
+
+    case kCommandSwitchStreams:
+      SwitchStreams();
       break;
 
     case kCommandFatalError: {

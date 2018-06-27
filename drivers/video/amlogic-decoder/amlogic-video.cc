@@ -300,14 +300,20 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
 }
 
 zx_status_t AmlogicVideo::ProcessVideoNoParser(void* data, uint32_t len) {
-  if (len > kStreamBufferSize) {
+  uint32_t current_offset =
+      VldMemVififoWP::Get().ReadFrom(dosbus_.get()).reg_value() -
+      VldMemVififoStartPtr::Get().ReadFrom(dosbus_.get()).reg_value();
+
+  if (len + current_offset > kStreamBufferSize) {
     DECODE_ERROR("Video too large\n");
     return ZX_ERR_OUT_OF_RANGE;
   }
-  memcpy(io_buffer_virt(&stream_buffer_), data, len);
-  io_buffer_cache_flush(&stream_buffer_, 0, len);
+  memcpy(
+      static_cast<uint8_t*>(io_buffer_virt(&stream_buffer_)) + current_offset,
+      data, len);
+  io_buffer_cache_flush(&stream_buffer_, current_offset, len);
   VldMemVififoWP::Get()
-      .FromValue(len + io_buffer_phys(&stream_buffer_))
+      .FromValue(io_buffer_phys(&stream_buffer_) + current_offset + len)
       .WriteTo(dosbus_.get());
   VldMemVififoControl::Get()
       .ReadFrom(dosbus_.get())
