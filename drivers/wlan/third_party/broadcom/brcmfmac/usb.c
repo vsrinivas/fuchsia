@@ -1704,6 +1704,7 @@ static zx_status_t brcmf_usb_reset_resume(struct brcmf_usb_interface* intf) {
     return brcmf_fw_get_firmwares(&usb->dev, 0, devinfo->fw_name, NULL, brcmf_usb_probe_phase2);
 }
 
+#ifdef TODO_ADD_USB_IDS
 #define BROADCOM_USB_DEVICE(dev_id) \
     { .idVendor=BRCM_USB_VENDOR_ID_BROADCOM, .idProduct=dev_id }
 
@@ -1731,8 +1732,7 @@ static const struct brcmf_usb_device_id brcmf_usb_devid_table[] = {
     CYPRESS_USB_DEVICE(BRCM_USB_BCMFW_DEVICE_ID),
     {/* end: all zeroes */}
 };
-
-MODULE_DEVICE_TABLE(usb, brcmf_usb_devid_table);
+#endif // TODO_ADD_USB_IDS
 
 static zx_status_t brcmf_usb_reset_device(struct brcmf_device* dev, void* notused) {
     /* device past is the usb interface so we
@@ -1760,7 +1760,7 @@ struct brcmf_usb_driver brcmf_usbdrvr = {
     .reset = brcmf_usb_reset_device,
     .resume = brcmf_usb_resume,
     .reset_resume = brcmf_usb_reset_resume,
-    .id_table = brcmf_usb_devid_table,
+    //.id_table = brcmf_usb_devid_table,
 };
 
 void brcmf_usb_exit(void) {

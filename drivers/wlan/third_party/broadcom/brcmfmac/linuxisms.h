@@ -556,7 +556,6 @@ enum brcmf_bus_type { BRCMF_BUSTYPE_SDIO, BRCMF_BUSTYPE_USB, BRCMF_BUSTYPE_PCIE 
 #define MODULE_LICENSE(a)
 #define module_param_named(a, b, c, d)
 #define MODULE_PARM_DESC(a, b)
-#define MODULE_DEVICE_TABLE(a, b)
 #define EXPORT_SYMBOL(a)
 #define MODULE_SUPPORTED_DEVICE(a)
 
@@ -1121,27 +1120,8 @@ struct va_format {
     const char* fmt;
 };
 
-struct mmc_host {
-    void* parent;
-    int max_blk_count;
-    int max_req_size;
-    uint32_t caps;
-    int max_segs;
-    int max_seg_size;
-};
-
 struct sdio_device_id {
     int foo;
-};
-
-struct sdio_driver {
-    void* probe;
-    void* remove;
-    char* name;
-    const void* id_table;
-    struct {
-        void* pm;
-    } drv;
 };
 
 struct dentry {

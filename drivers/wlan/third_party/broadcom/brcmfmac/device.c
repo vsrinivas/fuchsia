@@ -27,7 +27,7 @@ async_dispatcher_t* default_dispatcher;
 struct brcmf_bus* dev_get_drvdata(struct brcmf_device* dev) {
     return dev->drvdata;
 }
-
+// TODO(cphoenix): Get rid of dev_get_drvdata and drv_set_drvdata.
 void dev_set_drvdata(struct brcmf_device* dev, struct brcmf_bus* drvdata) {
     dev->drvdata = drvdata;
 }

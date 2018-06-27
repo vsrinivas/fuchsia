@@ -169,29 +169,17 @@ struct brcmf_sdreg {
 struct brcmf_sdio;
 struct brcmf_sdiod_freezer;
 
-struct sdio_func {
-    uint32_t class;
-    uint32_t vendor;
-    int cur_blksize;
-    int enable_timeout;
-    int device;
-    struct brcmf_device dev;
-    int num;
-    struct {
-        struct mmc_host* host;
-        uint32_t quirks;
-        void** sdio_func;
-    } * card;
-};
-
 struct brcmf_sdio_dev {
-    struct sdio_func* func1;
-    struct sdio_func* func2;
-    sdio_protocol_t* zx_dev;
+    void* func1; // These are temporary, to avoid adding >100 lines to this CL.
+    void* func2;
+    uint32_t manufacturer_id;
+    uint32_t product_id;
+    zx_device_t* zxdev;
+    sdio_protocol_t* sdio_proto;
+    struct brcmf_device dev;
     uint32_t sbwad;             /* Save backplane window address */
     struct brcmf_core* cc_core; /* chipcommon core info struct */
     struct brcmf_sdio* bus;
-    struct brcmf_device* dev;
     struct brcmf_bus* bus_if;
     struct brcmf_mp_device* settings;
     bool oob_irq_requested;
@@ -354,7 +342,7 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
 // TODO(cphoenix): Expand "uint" to "unsigned int" everywhere.
 
 /* Issue an abort to the specified function */
-int brcmf_sdiod_abort(struct brcmf_sdio_dev* sdiodev, struct sdio_func* func);
+int brcmf_sdiod_abort(struct brcmf_sdio_dev* sdiodev, uint32_t func);
 
 void brcmf_sdiod_change_state(struct brcmf_sdio_dev* sdiodev, enum brcmf_sdiod_state state);
 #ifdef CONFIG_PM_SLEEP
