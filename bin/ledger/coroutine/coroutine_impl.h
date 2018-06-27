@@ -23,7 +23,7 @@ class CoroutineServiceImpl : public CoroutineService {
   ~CoroutineServiceImpl() override;
 
   // CoroutineService.
-  void StartCoroutine(std::function<void(CoroutineHandler*)> runnable) override;
+  void StartCoroutine(fit::function<void(CoroutineHandler*)> runnable) override;
 
  private:
   class CoroutineHandlerImpl;

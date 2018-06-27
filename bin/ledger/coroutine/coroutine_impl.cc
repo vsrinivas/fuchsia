@@ -19,7 +19,7 @@ constexpr size_t kMaxAvailableStacks = 25;
 class CoroutineServiceImpl::CoroutineHandlerImpl : public CoroutineHandler {
  public:
   CoroutineHandlerImpl(std::unique_ptr<context::Stack> stack,
-                       std::function<void(CoroutineHandler*)> runnable);
+                       fit::function<void(CoroutineHandler*)> runnable);
   ~CoroutineHandlerImpl() override;
 
   // CoroutineHandler.
@@ -38,7 +38,7 @@ class CoroutineServiceImpl::CoroutineHandlerImpl : public CoroutineHandler {
   ContinuationStatus DoYield();
 
   std::unique_ptr<context::Stack> stack_;
-  std::function<void(CoroutineHandler*)> runnable_;
+  fit::function<void(CoroutineHandler*)> runnable_;
   std::function<void(std::unique_ptr<context::Stack>)> cleanup_;
   context::Context main_context_;
   context::Context routine_context_;
@@ -54,7 +54,7 @@ class CoroutineServiceImpl::CoroutineHandlerImpl : public CoroutineHandler {
 
 CoroutineServiceImpl::CoroutineHandlerImpl::CoroutineHandlerImpl(
     std::unique_ptr<context::Stack> stack,
-    std::function<void(CoroutineHandler*)> runnable)
+    fit::function<void(CoroutineHandler*)> runnable)
     : stack_(std::move(stack)), runnable_(std::move(runnable)) {
   FXL_DCHECK(stack_);
   FXL_DCHECK(runnable_);
@@ -148,7 +148,7 @@ CoroutineServiceImpl::~CoroutineServiceImpl() {
 }
 
 void CoroutineServiceImpl::StartCoroutine(
-    std::function<void(CoroutineHandler* handler)> runnable) {
+    fit::function<void(CoroutineHandler* handler)> runnable) {
   std::unique_ptr<context::Stack> stack;
   if (available_stack_.empty()) {
     stack = std::make_unique<context::Stack>();

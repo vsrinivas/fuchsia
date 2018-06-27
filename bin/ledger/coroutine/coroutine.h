@@ -7,6 +7,8 @@
 
 #include <functional>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/capture.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -58,7 +60,7 @@ class CoroutineService {
 
   // Starts a new coroutine that will execute |runnable|.
   virtual void StartCoroutine(
-      std::function<void(CoroutineHandler*)> runnable) = 0;
+      fit::function<void(CoroutineHandler*)> runnable) = 0;
 };
 
 // Allows to execute an asynchronous call in a coroutine. The coroutine will

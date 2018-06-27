@@ -9,6 +9,7 @@ source_set("coroutine") {
     "coroutine.h",
     "coroutine_impl.cc",
     "coroutine_impl.h",
+    "coroutine_manager.h",
   ]
 
   public_deps = [
@@ -27,6 +28,7 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "coroutine_manager_unittest.cc",
     "coroutine_unittest.cc",
   ]
 

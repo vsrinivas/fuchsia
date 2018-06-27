@@ -17,6 +17,7 @@
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/coroutine/coroutine_manager.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/impl/page_db_impl.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
@@ -176,23 +177,6 @@ class PageStorageImpl : public PageStorage {
   // Notifies the registered watchers with the |commits| in commit_to_send_.
   void NotifyWatchers();
 
-  // Immediately adds the |handler| in the set of active ones, and once the
-  // returned callback is called, removes the |handler| from the set, and calls
-  // the given |callback|.
-  template <typename... Args>
-  std::function<void(Args...)> UpdateActiveHandlersCallback(
-      coroutine::CoroutineHandler* handler,
-      std::function<void(Args...)> callback) {
-    handlers_.insert(handler);
-    return [this, handler, callback = std::move(callback)](Args... args) {
-      // Remove the handler before calling the final callback. Otherwise the
-      // handler might be unnecessarily interrupted, if this PageStorage
-      // destructor is called in the callback.
-      handlers_.erase(handler);
-      callback(std::forward<Args>(args)...);
-    };
-  }
-
   // Synchronous versions of API methods using coroutines.
   FXL_WARN_UNUSED_RESULT Status
   SynchronousInit(coroutine::CoroutineHandler* handler);
@@ -237,10 +221,9 @@ class PageStorageImpl : public PageStorage {
   std::queue<
       std::pair<ChangeSource, std::vector<std::unique_ptr<const Commit>>>>
       commits_to_send_;
-  // The set of active handlers.
-  std::set<coroutine::CoroutineHandler*> handlers_;
 
   callback::OperationSerializer commit_serializer_;
+  coroutine::CoroutineManager coroutine_manager_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageStorageImpl);
 };
