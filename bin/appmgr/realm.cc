@@ -481,17 +481,14 @@ void Realm::CreateComponentFromPackage(
   // If meta/*.cmx exists, read sandbox data from it.
   if (!cmx_data.empty()) {
     SandboxMetadata sandbox;
-
     CmxMetadata cmx;
-    if (!cmx_data.empty()) {
-      rapidjson::Value sandbox_meta;
-      if (!cmx.ParseSandboxMetadata(cmx_data, &sandbox_meta)) {
-        FXL_LOG(ERROR) << "Failed to parse sandbox metadata for "
-                       << launch_info.url;
-        return;
-      }
-      sandbox.Parse(sandbox_meta);
+    rapidjson::Value sandbox_meta;
+    if (!cmx.ParseSandboxMetadata(cmx_data, &sandbox_meta)) {
+      FXL_LOG(ERROR) << "Failed to parse sandbox metadata for "
+                     << launch_info.url;
+      return;
     }
+    sandbox.Parse(sandbox_meta);
 
     // If an app has the "shell" feature, then we use the libraries from the
     // system rather than from the package because programs spawned from the
