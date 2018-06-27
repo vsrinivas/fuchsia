@@ -20,7 +20,7 @@
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 
 namespace network_wrapper {
 namespace {
@@ -92,24 +92,24 @@ class FakeNetworkWrapper : public http::HttpService {
 
 class DestroyWatcher : public fxl::RefCountedThreadSafe<DestroyWatcher> {
  public:
-  static fxl::RefPtr<DestroyWatcher> Create(const fxl::Closure& callback) {
-    return fxl::AdoptRef(new DestroyWatcher(callback));
+  static fxl::RefPtr<DestroyWatcher> Create(fit::closure callback) {
+    return fxl::AdoptRef(new DestroyWatcher(std::move(callback)));
   }
 
  private:
-  explicit DestroyWatcher(fxl::Closure callback)
+  explicit DestroyWatcher(fit::closure callback)
       : callback_(std::move(callback)) {}
   ~DestroyWatcher() { callback_(); }
 
-  fxl::Closure callback_;
+  fit::closure callback_;
 
   FRIEND_REF_COUNTED_THREAD_SAFE(DestroyWatcher);
 };
 
-class NetworkWrapperImplTest : public gtest::TestWithMessageLoop {
+class NetworkWrapperImplTest : public gtest::TestLoopFixture {
  public:
   NetworkWrapperImplTest()
-      : network_service_(message_loop_.async(),
+      : network_service_(dispatcher(),
                          std::make_unique<backoff::TestBackoff>(),
                          [this] { return NewHttpService(); }) {}
 
@@ -192,7 +192,7 @@ TEST_F(NetworkWrapperImplTest, CancelRequest) {
          callback_destroyed = true;
        })](http::URLResponse) { received_response = true; });
 
-  async::PostTask(message_loop_.async(), [cancel] { cancel->Cancel(); });
+  async::PostTask(dispatcher(), [cancel] { cancel->Cancel(); });
   cancel = nullptr;
   RunLoopUntilIdle();
   EXPECT_FALSE(received_response);

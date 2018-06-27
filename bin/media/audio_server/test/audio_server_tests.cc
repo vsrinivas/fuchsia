@@ -7,7 +7,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
-#include <lib/gtest/test_with_message_loop.h>
+#include <lib/gtest/real_loop_fixture.h>
 
 #include "lib/app/cpp/environment_services.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
@@ -20,7 +20,7 @@ namespace test {
 //
 // Tests of the asynchronous Audio interface.
 //
-class AudioServerTest : public gtest::TestWithMessageLoop {
+class AudioServerTest : public gtest::RealLoopFixture {
  protected:
   void SetUp() override {
     fuchsia::sys::ConnectToEnvironmentService(audio_.NewRequest());
@@ -29,7 +29,7 @@ class AudioServerTest : public gtest::TestWithMessageLoop {
     audio_.set_error_handler([this]() {
       FXL_LOG(ERROR) << "Audio connection lost. Quitting.";
       error_occurred_ = true;
-      message_loop_.PostQuitTask();
+      QuitLoop();
     });
   }
 
@@ -130,7 +130,7 @@ TEST_F(AudioServerTest, SetRoutingPolicy) {
 // In short, further testing of the sync interfaces (over and above any testing
 // done on the async interfaces) should not be needed.
 //
-class AudioServerSyncTest : public gtest::TestWithMessageLoop {
+class AudioServerSyncTest : public gtest::RealLoopFixture {
  protected:
   void SetUp() override {
     fuchsia::sys::ConnectToEnvironmentService(audio_.NewRequest());

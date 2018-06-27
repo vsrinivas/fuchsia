@@ -10,7 +10,7 @@
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/real_loop_fixture.h"
 #include "lib/syslog/cpp/logger.h"
 
 namespace {
@@ -70,7 +70,7 @@ bool LogListenerMock::ConnectToLogger(
   return true;
 }
 
-class LoggerTest : public gtest::TestWithMessageLoop {};
+using LoggerTest = gtest::RealLoopFixture;
 
 zx_koid_t GetKoid(zx_handle_t handle) {
   zx_info_handle_basic_t info;
@@ -127,8 +127,8 @@ TEST_F(LoggerTest, Integration) {
   auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   ASSERT_TRUE(log_listener.ConnectToLogger(startup_context.get(), pid));
   auto& logs = log_listener.GetLogs();
-  EXPECT_TRUE(RunLoopUntilWithTimeout([&logs] { return logs.size() >= 1u; },
-                                      fxl::TimeDelta::FromSeconds(5)));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&logs] { return logs.size() >= 1u; },
+                                        zx::sec(5)));
   ASSERT_EQ(logs.size(), 1u);
   ASSERT_EQ(logs[0].tags->size(), 1u);
   EXPECT_EQ(logs[0].tags.get()[0].get(), tag);

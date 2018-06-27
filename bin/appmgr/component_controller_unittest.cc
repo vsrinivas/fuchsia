@@ -10,7 +10,7 @@
 
 #include "gtest/gtest.h"
 #include "lib/fsl/handles/object_info.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/real_loop_fixture.h"
 
 namespace component {
 namespace {
@@ -50,10 +50,10 @@ std::unique_ptr<T> ComponentContainerImpl<T>::ExtractComponent(T* controller) {
 typedef ComponentContainerImpl<ComponentControllerImpl> FakeRealm;
 typedef ComponentContainerImpl<ComponentBridge> FakeRunner;
 
-class ComponentControllerTest : public gtest::TestWithMessageLoop {
+class ComponentControllerTest : public gtest::RealLoopFixture {
  public:
   void SetUp() override {
-    gtest::TestWithMessageLoop::SetUp();
+    gtest::RealLoopFixture::SetUp();
 
     // create process
     const char* argv[] = {"sh", NULL};
@@ -69,7 +69,7 @@ class ComponentControllerTest : public gtest::TestWithMessageLoop {
     if (process_) {
       process_.kill();
     }
-    gtest::TestWithMessageLoop::TearDown();
+    gtest::RealLoopFixture::TearDown();
   }
 
  protected:
@@ -88,13 +88,13 @@ class ComponentControllerTest : public gtest::TestWithMessageLoop {
   zx::process process_;
 };
 
-class ComponentBridgeTest : public gtest::TestWithMessageLoop,
+class ComponentBridgeTest : public gtest::RealLoopFixture,
                             public fuchsia::sys::ComponentController {
  public:
   ComponentBridgeTest()
       : binding_(this), binding_error_handler_called_(false) {}
   void SetUp() override {
-    gtest::TestWithMessageLoop::SetUp();
+    gtest::RealLoopFixture::SetUp();
     binding_.Bind(remote_controller_.NewRequest());
     binding_.set_error_handler([this] {
       binding_error_handler_called_ = true;
@@ -227,8 +227,7 @@ TEST_F(ComponentControllerTest, CreateAndKill) {
   bool wait = false;
   component_ptr->Wait([&wait](int64_t errcode) { wait = true; });
   component_ptr->Kill();
-  EXPECT_TRUE(RunLoopUntilWithTimeout([&wait] { return wait; },
-                                      fxl::TimeDelta::FromSeconds(5)));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, zx::sec(5)));
 
   // make sure all messages are processed after wait was called
   RunLoopUntilIdle();
@@ -245,8 +244,7 @@ TEST_F(ComponentControllerTest, ControllerScope) {
 
     ASSERT_EQ(realm_.ComponentCount(), 1u);
   }
-  EXPECT_TRUE(RunLoopUntilWithTimeout([&wait] { return wait; },
-                                      fxl::TimeDelta::FromSeconds(5)));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, zx::sec(5)));
 
   // make sure all messages are processed after wait was called
   RunLoopUntilIdle();
@@ -318,8 +316,7 @@ TEST_F(ComponentBridgeTest, CreateAndKill) {
   int64_t expected_retval = (1L << 60);
   SetReturnCode(expected_retval);
   component_ptr->Kill();
-  EXPECT_TRUE(RunLoopUntilWithTimeout([&wait] { return wait; },
-                                      fxl::TimeDelta::FromSeconds(5)));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, zx::sec(5)));
   EXPECT_EQ(expected_retval, retval);
 
   // make sure all messages are processed after wait was called
@@ -337,8 +334,7 @@ TEST_F(ComponentBridgeTest, ControllerScope) {
 
     ASSERT_EQ(runner_.ComponentCount(), 1u);
   }
-  EXPECT_TRUE(RunLoopUntilWithTimeout([&wait] { return wait; },
-                                      fxl::TimeDelta::FromSeconds(5)));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, zx::sec(5)));
 
   // make sure all messages are processed after wait was called
   RunLoopUntilIdle();
@@ -371,8 +367,7 @@ TEST_F(ComponentBridgeTest, DetachController) {
   // bridge should be still connected, kill that to see if we are able to kill
   // real component.
   component_bridge_ptr->Kill();
-  EXPECT_TRUE(RunLoopUntilWithTimeout([&wait] { return wait; },
-                                      fxl::TimeDelta::FromSeconds(5)));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, zx::sec(5)));
 
   // make sure all messages are processed after wait was called
   RunLoopUntilIdle();
@@ -410,8 +405,8 @@ TEST_F(ComponentBridgeTest, BindingErrorHandler) {
         component_ptr, ExportedDirType::kPublicDebugCtrlLayout,
         std::move(export_dir_req));
   }
-  EXPECT_TRUE(RunLoopUntilWithTimeout([this] { return !binding_.is_bound(); },
-                                      fxl::TimeDelta::FromSeconds(5)));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this] { return !binding_.is_bound(); },
+                                        zx::sec(5)));
   EXPECT_TRUE(binding_error_handler_called_);
 }
 
@@ -428,8 +423,8 @@ TEST_F(ComponentBridgeTest, BindingErrorHandlerWhenDetached) {
     component_ptr->Detach();
     RunLoopUntilIdle();
   }
-  EXPECT_TRUE(RunLoopUntilWithTimeout([this] { return !binding_.is_bound(); },
-                                      fxl::TimeDelta::FromSeconds(5)));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this] { return !binding_.is_bound(); },
+                                        zx::sec(5)));
   EXPECT_TRUE(binding_error_handler_called_);
 }
 

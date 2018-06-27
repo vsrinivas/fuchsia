@@ -5,7 +5,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
-#include <lib/gtest/test_with_message_loop.h>
+#include <lib/gtest/real_loop_fixture.h>
 
 #include "lib/app/cpp/environment_services.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
@@ -16,7 +16,7 @@ namespace audio {
 namespace test {
 
 // Base class for tests of the asynchronous AudioRenderer2 interface.
-class AudioRenderer2Test : public gtest::TestWithMessageLoop {
+class AudioRenderer2Test : public gtest::RealLoopFixture {
  protected:
   void SetUp() override {
     fuchsia::sys::ConnectToEnvironmentService(audio_.NewRequest());
@@ -25,7 +25,7 @@ class AudioRenderer2Test : public gtest::TestWithMessageLoop {
     audio_.set_error_handler([this]() {
       FXL_LOG(ERROR) << "Audio connection lost. Quitting.";
       error_occurred_ = true;
-      message_loop_.PostQuitTask();
+      QuitLoop();
     });
 
     audio_->CreateRendererV2(audio_renderer_.NewRequest());
@@ -34,7 +34,7 @@ class AudioRenderer2Test : public gtest::TestWithMessageLoop {
     audio_renderer_.set_error_handler([this]() {
       FXL_LOG(ERROR) << "AudioRenderer2 connection lost. Quitting.";
       error_occurred_ = true;
-      message_loop_.PostQuitTask();
+      QuitLoop();
     });
   }
   void TearDown() override { EXPECT_FALSE(error_occurred_); }
@@ -55,7 +55,7 @@ TEST_F(AudioRenderer2Test, SetPcmFormat) {
   int64_t lead_time = -1;
   audio_renderer_->GetMinLeadTime([this, &lead_time](int64_t min_lead_time) {
     lead_time = min_lead_time;
-    message_loop_.PostQuitTask();
+    QuitLoop();
   });
 
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -79,10 +79,10 @@ TEST_F(AudioRenderer2Test, SetPcmFormat_Double) {
   int64_t lead_time = -1;
   audio_renderer_->GetMinLeadTime([this, &lead_time](int64_t min_lead_time) {
     lead_time = min_lead_time;
-    message_loop_.PostQuitTask();
+    QuitLoop();
   });
 
-  EXPECT_FALSE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(100)));
+  EXPECT_FALSE(RunLoopWithTimeout(zx::msec(100)));
   EXPECT_GE(lead_time, 0);
 }
 
@@ -93,7 +93,7 @@ TEST_F(AudioRenderer2Test, SetPcmFormat_Double) {
 //
 // In short, further testing of the sync interfaces (over and above any testing
 // done on the async interfaces) should not be needed.
-class AudioRenderer2SyncTest : public gtest::TestWithMessageLoop {
+class AudioRenderer2SyncTest : public gtest::RealLoopFixture {
  protected:
   void SetUp() override {
     fuchsia::sys::ConnectToEnvironmentService(audio_.NewRequest());

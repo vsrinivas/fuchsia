@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/util.h>
-#include <lib/gtest/test_with_message_loop.h>
+#include <lib/gtest/real_loop_fixture.h>
 #include <test/sysmgr/cpp/fidl.h>
 
 #include "garnet/bin/appmgr/appmgr.h"
@@ -15,7 +15,7 @@ namespace sysmgr {
 namespace test {
 namespace {
 
-class TestSysmgr : public gtest::TestWithMessageLoop {};
+using TestSysmgr = gtest::RealLoopFixture;
 
 TEST_F(TestSysmgr, ServiceStartup) {
   zx::channel h1, h2;
@@ -30,7 +30,7 @@ TEST_F(TestSysmgr, ServiceStartup) {
                              .sysmgr_args = std::move(sysmgr_args),
                              .run_virtual_console = false,
                              .retry_sysmgr_crash = false};
-  component::Appmgr appmgr(message_loop_.async(), std::move(args));
+  component::Appmgr appmgr(dispatcher(), std::move(args));
 
   zx::channel svc_client, svc_server;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &svc_client, &svc_server));
@@ -40,7 +40,7 @@ TEST_F(TestSysmgr, ServiceStartup) {
   ::test::sysmgr::InterfacePtr interface_ptr;
   ASSERT_EQ(ZX_OK, fdio_service_connect_at(
                        svc_client.get(), ::test::sysmgr::Interface::Name_,
-                       interface_ptr.NewRequest(message_loop_.async())
+                       interface_ptr.NewRequest(dispatcher())
                            .TakeChannel()
                            .release()));
 
@@ -51,8 +51,8 @@ TEST_F(TestSysmgr, ServiceStartup) {
     response = r;
   });
 
-  RunLoopUntilWithTimeout([&received_response] { return received_response; },
-                          fxl::TimeDelta::FromSeconds(10));
+  RunLoopWithTimeoutOrUntil([&received_response] { return received_response; },
+                            zx::sec(10));
   EXPECT_EQ("test_sysmgr_service_startup", response);
 }
 

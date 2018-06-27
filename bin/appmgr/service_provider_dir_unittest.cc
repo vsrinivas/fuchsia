@@ -8,7 +8,7 @@
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
 
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/real_loop_fixture.h"
 #include "garnet/bin/appmgr/util.h"
 
 namespace component {
@@ -34,9 +34,9 @@ class FakeEcho : public fidl::examples::echo::Echo {
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeEcho);
 };
 
-class ServiceProviderTest : public gtest::TestWithMessageLoop {
+class ServiceProviderTest : public gtest::RealLoopFixture {
  public:
-  ServiceProviderTest() : vfs_(async_get_default()), value_(0) {}
+  ServiceProviderTest() : vfs_(dispatcher()), value_(0) {}
 
   fbl::RefPtr<fs::Service> CreateService(int set_value) {
     return fbl::AdoptRef(

@@ -25,7 +25,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/real_loop_fixture.h"
 #include "lib/svc/cpp/services.h"
 #include "lib/test_runner/cpp/reporting/gtest_listener.h"
 #include "lib/test_runner/cpp/reporting/reporter.h"
@@ -49,7 +49,7 @@ fuchsia::auth::AppConfig MakeDevAppConfig() {
 using fuchsia::auth::AppConfig;
 using fuchsia::auth::Status;
 
-class DevTokenManagerAppTest : public gtest::TestWithMessageLoop,
+class DevTokenManagerAppTest : public gtest::RealLoopFixture,
                                fuchsia::auth::AuthenticationContextProvider {
  public:
   DevTokenManagerAppTest()
