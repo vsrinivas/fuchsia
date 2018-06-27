@@ -304,9 +304,7 @@ void Device::DdkRelease() {
 
     // Stop workers; send a stop message to each, then join each (possibly in different order).
     zx_port_packet_t packet;
-    packet.key = 0;
-    packet.type = ZX_PKT_TYPE_USER;
-    packet.status = ZX_ERR_STOP;
+    Worker::MakeRequest(&packet, Worker::kStopRequest);
     for (size_t i = 0; i < info->num_workers; ++i) {
         port_.queue(&packet);
     }
@@ -509,10 +507,7 @@ void Device::SendToWorker(block_op_t* block) {
     zx_status_t rc;
 
     zx_port_packet_t packet;
-    packet.key = 0;
-    packet.type = ZX_PKT_TYPE_USER;
-    packet.status = ZX_ERR_NEXT;
-    memcpy(packet.user.c8, &block, sizeof(block));
+    Worker::MakeRequest(&packet, Worker::kBlockRequest, block);
     if ((rc = port_.queue(&packet)) != ZX_OK) {
         zxlogf(ERROR, "zx::port::queue failed: %s\n", zx_status_get_string(rc));
         BlockComplete(block, rc);

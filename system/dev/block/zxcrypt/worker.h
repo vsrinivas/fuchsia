@@ -9,6 +9,7 @@
 
 #include <crypto/cipher.h>
 #include <lib/zx/port.h>
+#include <zircon/syscalls/port.h>
 #include <zircon/types.h>
 #include <zxcrypt/volume.h>
 
@@ -27,13 +28,16 @@ public:
     Worker();
     ~Worker();
 
+    // Opcodes for requests that can be sent to workers.
+    static constexpr uint64_t kBlockRequest = 0x1;
+    static constexpr uint64_t kStopRequest = 0x2;
+
+    // Configure the given |packet| to be an |op| request, with an optional |arg|.
+    static void MakeRequest(zx_port_packet_t* packet, uint64_t op, void* arg = nullptr);
+
     // Starts the worker, which will service requests sent from the given |device| on the given
     // |port|.  Cryptographic operations will use the key material from the given |volume|.
     zx_status_t Start(Device* device, const Volume& volume, zx::port&& port);
-
-    // Thread body.  Reads an I/O request from the |port_| and dispatches it between |EncryptWrite|
-    // and |DecryptRead|.
-    zx_status_t Loop();
 
     // Asks the worker to stop.  This call blocks until the worker has finished processing the
     // currently queued operations and exits.
@@ -41,6 +45,11 @@ public:
 
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Worker);
+
+    // Loop thread.  Reads an I/O request from the |port_| and dispatches it between |EncryptWrite|
+    // and |DecryptRead|.
+    static int WorkerRun(void* arg) { return static_cast<Worker*>(arg)->Run(); }
+    zx_status_t Run();
 
     // Copies the plaintext data to be written to the write buffer location given in |block|'s extra
     // information, and encrypts it before sending it to the parent device.

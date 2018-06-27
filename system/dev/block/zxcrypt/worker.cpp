@@ -23,20 +23,23 @@
 #include "worker.h"
 
 namespace zxcrypt {
-namespace {
-
-int WorkerRun(void* arg) {
-    return static_cast<Worker*>(arg)->Loop();
-}
-
-} // namespace
-
+    
 Worker::Worker() : device_(nullptr) {
     LOG_ENTRY();
 }
 
 Worker::~Worker() {
     LOG_ENTRY();
+}
+
+void Worker::MakeRequest(zx_port_packet_t* packet, uint64_t op, void* arg) {
+    static_assert(sizeof(uintptr_t) <= sizeof(uint64_t), "cannot store pointer as uint64_t");
+    ZX_DEBUG_ASSERT(packet);
+    packet->key = 0;
+    packet->type = ZX_PKT_TYPE_USER;
+    packet->status = ZX_OK;
+    packet->user.u64[0] = op;
+    packet->user.u64[1] = reinterpret_cast<uint64_t>(arg);
 }
 
 zx_status_t Worker::Start(Device* device, const Volume& volume, zx::port&& port) {
@@ -65,7 +68,7 @@ zx_status_t Worker::Start(Device* device, const Volume& volume, zx::port&& port)
     return ZX_OK;
 }
 
-zx_status_t Worker::Loop() {
+zx_status_t Worker::Run() {
     LOG_ENTRY();
     ZX_DEBUG_ASSERT(device_);
     zx_status_t rc;
@@ -77,13 +80,24 @@ zx_status_t Worker::Loop() {
             zxlogf(ERROR, "failed to read request: %s\n", zx_status_get_string(rc));
             return rc;
         }
-        if (packet.status == ZX_ERR_STOP) {
+        ZX_DEBUG_ASSERT(packet.key == 0);
+        ZX_DEBUG_ASSERT(packet.type == ZX_PKT_TYPE_USER);
+        ZX_DEBUG_ASSERT(packet.status == ZX_OK);
+
+        // Handle control messages
+        switch (packet.user.u64[0]) {
+        case kBlockRequest:
+            break;
+        case kStopRequest:
             zxlogf(TRACE, "worker %p stopping.\n", this);
             return ZX_OK;
+        default:
+            zxlogf(ERROR, "unknown request: 0x%016" PRIx64 "\n", packet.user.u64[0]);
+            return ZX_ERR_NOT_SUPPORTED;
         }
 
-        // Dispatch request
-        block_op_t* block = reinterpret_cast<block_op_t*>(packet.user.u64[0]);
+        // Dispatch block request
+        block_op_t* block = reinterpret_cast<block_op_t*>(packet.user.u64[1]);
         switch (block->command & BLOCK_OP_MASK) {
         case BLOCK_OP_WRITE:
             device_->BlockForward(block, EncryptWrite(block));
