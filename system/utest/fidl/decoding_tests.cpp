@@ -354,7 +354,7 @@ bool decode_array_of_present_handles_error_closes_handles() {
         zx_signals_t observed_signals;
         EXPECT_EQ(zx_object_wait_one(handle_pairs[i][1],
                                      ZX_EVENTPAIR_PEER_CLOSED,
-                                     zx_clock_get(ZX_CLOCK_MONOTONIC) + 1,
+                                     zx_clock_get_monotonic() + 1,
                                      &observed_signals),
                    ZX_ERR_TIMED_OUT);
         EXPECT_EQ(observed_signals & ZX_EVENTPAIR_PEER_CLOSED, 0);

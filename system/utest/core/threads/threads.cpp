@@ -518,7 +518,7 @@ static bool test_suspend_sleeping() {
     ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL),
               ZX_OK, "");
 
-    const zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    const zx_time_t now = zx_clock_get_monotonic();
     ASSERT_GE(now, sleep_deadline, "thread did not sleep long enough");
 
     ASSERT_EQ(zx_handle_close(thread_h), ZX_OK, "");

@@ -65,7 +65,7 @@ zx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
 
     zx_time_t duration_nsec = static_cast<zx_time_t>(ZX_SEC(1)
                             * static_cast<double>(duration_seconds));
-    zx_time_t stop_time = zx_clock_get(ZX_CLOCK_MONOTONIC) + duration_nsec;
+    zx_time_t stop_time = zx_clock_get_monotonic() + duration_nsec;
     printf("Recording for %.1f seconds\n", duration_seconds);
 
     res = StartRingBuffer();

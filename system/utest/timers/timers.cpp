@@ -15,7 +15,7 @@
 
 static bool deadline_test() {
     BEGIN_TEST;
-    auto then = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    auto then = zx_clock_get_monotonic();
     // The day we manage to boot and run this test in less than 1uS we need to fix this.
     ASSERT_GT(then, 1000u);
 
@@ -93,11 +93,11 @@ static bool restart_race() {
     BEGIN_TEST;
 
     const zx_time_t kTestDuration = ZX_SEC(5);
-    auto start = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    auto start = zx_clock_get_monotonic();
 
     zx::timer timer;
     ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
-    while (zx_clock_get(ZX_CLOCK_MONOTONIC) - start < kTestDuration) {
+    while (zx_clock_get_monotonic() - start < kTestDuration) {
         ASSERT_EQ(timer.set(zx::deadline_after(zx::usec(100)), zx::nsec(0)), ZX_OK);
     }
 
@@ -151,7 +151,7 @@ static bool coalesce_test(uint32_t mode) {
     zx::timer timer_2;
     ASSERT_EQ(zx::timer::create(mode, ZX_CLOCK_MONOTONIC, &timer_2), ZX_OK);
 
-    zx_time_t start = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t start = zx_clock_get_monotonic();
 
     const auto deadline_1 = zx::time(start + ZX_MSEC(350));
     const auto deadline_2 = zx::time(start + ZX_MSEC(250));
@@ -163,7 +163,7 @@ static bool coalesce_test(uint32_t mode) {
     EXPECT_EQ(timer_2.wait_one(ZX_TIMER_SIGNALED, zx::time::infinite(), &pending), ZX_OK);
     EXPECT_EQ(pending, ZX_TIMER_SIGNALED);
 
-    auto duration = zx_clock_get(ZX_CLOCK_MONOTONIC) - start;
+    auto duration = zx_clock_get_monotonic() - start;
 
     if (mode == ZX_TIMER_SLACK_LATE) {
         EXPECT_GE(duration, ZX_MSEC(350));

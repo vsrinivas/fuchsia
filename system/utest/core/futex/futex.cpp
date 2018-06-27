@@ -39,10 +39,10 @@ static bool test_futex_wait_timeout_elapsed() {
     int32_t futex_value = 0;
     constexpr zx_duration_t kRelativeDeadline = ZX_MSEC(500);
     for (int i = 0; i < 5; ++i) {
-        zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        zx_time_t now = zx_clock_get_monotonic();
         zx_status_t rc = zx_futex_wait(&futex_value, 0, zx_deadline_after(kRelativeDeadline));
         ASSERT_EQ(rc, ZX_ERR_TIMED_OUT, "wait should time out");
-        zx_time_t elapsed = zx_clock_get(ZX_CLOCK_MONOTONIC) - now;
+        zx_time_t elapsed = zx_clock_get_monotonic() - now;
         if (elapsed < kRelativeDeadline) {
             unittest_printf("\nelapsed %" PRIu64
                             " < kRelativeDeadline: %" PRIu64 "\n",
@@ -455,7 +455,7 @@ static bool test_futex_misaligned() {
 }
 
 static void log(const char* str) {
-    uint64_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    uint64_t now = zx_clock_get_monotonic();
     unittest_printf("[%08" PRIu64 ".%08" PRIu64 "]: %s",
                     now / 1000000000, now % 1000000000, str);
 }

@@ -28,5 +28,5 @@ VDSO_INTERFACE_FUNCTION(zx_ticks_get);
 // At boot time the kernel can decide to redirect the {_,}zx_ticks_get
 // dynamic symbol table entries to point to this instead.  See VDso::VDso.
 VDSO_KERNEL_EXPORT zx_ticks_t CODE_soft_ticks_get(void) {
-    return VDSO_zx_clock_get(ZX_CLOCK_MONOTONIC);
+    return VDSO_zx_clock_get_monotonic();
 }

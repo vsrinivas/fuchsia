@@ -59,7 +59,7 @@ static zx_time_t iotime_posix(int is_read, int fd, size_t total, size_t bufsz) {
         return ZX_TIME_INFINITE;
     }
 
-    zx_time_t t0 = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t t0 = zx_clock_get_monotonic();
     size_t n = total;
     const char* fn_name = is_read ? "read" : "write";
     while (n > 0) {
@@ -75,7 +75,7 @@ static zx_time_t iotime_posix(int is_read, int fd, size_t total, size_t bufsz) {
         }
         n -= xfer;
     }
-    zx_time_t t1 = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t t1 = zx_clock_get_monotonic();
 
     return t1 - t0;
 }
@@ -143,7 +143,7 @@ static zx_time_t iotime_fifo(char* dev, int is_read, int fd, size_t total, size_
         return ZX_TIME_INFINITE;
     }
 
-    zx_time_t t0 = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t t0 = zx_clock_get_monotonic();
     size_t n = total;
     while (n > 0) {
         size_t xfer = (n > bufsz) ? bufsz : n;
@@ -161,7 +161,7 @@ static zx_time_t iotime_fifo(char* dev, int is_read, int fd, size_t total, size_
         }
         n -= xfer;
     }
-    zx_time_t t1 = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t t1 = zx_clock_get_monotonic();
     return t1 - t0;
 }
 

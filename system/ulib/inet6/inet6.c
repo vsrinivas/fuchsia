@@ -437,7 +437,7 @@ static void mac_cache_save(mac_addr_t* mac, ip6_addr_t* ip) {
 
     mtx_lock(&mac_cache_lock);
     ip6_to_mac_t* oldest_entry = &mac_lookup_tbl[key][0];
-    zx_time_t curr_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t curr_time = zx_clock_get_monotonic();
 
     for (size_t entry_ndx = 0; entry_ndx < MAC_TBL_ENTRIES; entry_ndx++) {
         ip6_to_mac_t* entry = &mac_lookup_tbl[key][entry_ndx];

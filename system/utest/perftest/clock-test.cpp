@@ -7,12 +7,12 @@
 
 namespace {
 
-// Performance test for zx_clock_get(ZX_CLOCK_MONOTONIC).  This is worth
+// Performance test for zx_clock_get_monotonic().  This is worth
 // testing because it is a very commonly called syscall.  The kernel's
 // implementation of the syscall is non-trivial and can be rather slow on
 // some machines/VMs.
 bool ClockGetMonotonicTest() {
-    zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_clock_get_monotonic();
     return true;
 }
 

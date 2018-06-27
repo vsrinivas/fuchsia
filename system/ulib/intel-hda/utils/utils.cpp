@@ -15,11 +15,11 @@ zx_status_t WaitCondition(zx_time_t timeout,
     ZX_DEBUG_ASSERT(poll_interval != ZX_TIME_INFINITE);
     ZX_DEBUG_ASSERT(cond);
 
-    zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t now = zx_clock_get_monotonic();
     timeout += now;
 
     while (!cond()) {
-        now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        now = zx_clock_get_monotonic();
         if (now >= timeout)
             return ZX_ERR_TIMED_OUT;
 

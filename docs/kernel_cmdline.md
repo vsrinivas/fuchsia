@@ -398,7 +398,7 @@ when the process it launches exits.
 ## vdso.soft_ticks=\<bool>
 
 If this option is set, the `zx_ticks_get` and `zx_ticks_per_second` system
-calls will use `zx_clock_get(ZX_CLOCK_MONOTONIC)` in nanoseconds rather than
+calls will use `zx_clock_get_monotonic()` in nanoseconds rather than
 hardware cycle counters in a hardware-based time unit.  Defaults to false.
 
 ## virtcon.disable

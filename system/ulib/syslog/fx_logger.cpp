@@ -54,7 +54,7 @@ void fx_logger::ActivateFallback(int fallback_fd) {
 zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity,
                                          const char* tag, const char* msg,
                                          va_list args, bool perform_format) {
-    zx_time_t time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t time = zx_clock_get_monotonic();
     fx_log_packet_t packet;
     memset(&packet, 0, sizeof(packet));
     constexpr size_t kDataSize = sizeof(packet.data);
@@ -128,7 +128,7 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity,
 zx_status_t fx_logger::VLogWriteToFd(int fd, fx_log_severity_t severity,
                                      const char* tag, const char* msg,
                                      va_list args, bool perform_format) {
-    zx_time_t time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t time = zx_clock_get_monotonic();
     constexpr char kEllipsis[] = "...";
     constexpr size_t kEllipsisSize = sizeof(kEllipsis) - 1;
     constexpr size_t kMaxMessageSize = 2043;

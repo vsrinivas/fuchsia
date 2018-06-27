@@ -411,7 +411,7 @@ zx_status_t AudioDeviceStream::PlugMonitor(float duration) {
                 duration);
 
         while (true) {
-            zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+            zx_time_t now = zx_clock_get_monotonic();
             if (now >= deadline)
                 break;
 

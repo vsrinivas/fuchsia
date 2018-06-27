@@ -330,7 +330,7 @@ zx_status_t AmlDWMacDevice::MDIOWrite(uint32_t reg, uint32_t val) {
             return ZX_OK;
         }
         zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
-    } while (zx_clock_get(ZX_CLOCK_MONOTONIC) < deadline);
+    } while (zx_clock_get_monotonic() < deadline);
     return ZX_ERR_TIMED_OUT;
 }
 
@@ -348,7 +348,7 @@ zx_status_t AmlDWMacDevice::MDIORead(uint32_t reg, uint32_t* val) {
             return ZX_OK;
         }
         zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
-    } while (zx_clock_get(ZX_CLOCK_MONOTONIC) < deadline);
+    } while (zx_clock_get_monotonic() < deadline);
     return ZX_ERR_TIMED_OUT;
 }
 

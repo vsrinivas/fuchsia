@@ -701,7 +701,7 @@ GaussPdmInputStream::OnStart(dispatcher::Channel* channel,
     a113_pdm_fifo_reset(&audio_device_);
     a113_toddr_enable(&audio_device_, 1);
     a113_pdm_enable(&audio_device_, 1);
-    resp.start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    resp.start_time = zx_clock_get_monotonic();
 
     resp.result = ZX_OK;
     return channel->Write(&resp, sizeof(resp));

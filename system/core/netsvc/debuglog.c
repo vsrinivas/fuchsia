@@ -63,7 +63,7 @@ int debuglog_init(void) {
     }
 
     // Set up our timeout to expire immediately, so that we check for pending log messages
-    debuglog_next_timeout = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    debuglog_next_timeout = zx_clock_get_monotonic();
 
     seqno = 1;
     pending = 0;

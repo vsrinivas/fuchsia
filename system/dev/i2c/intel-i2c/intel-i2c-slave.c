@@ -28,7 +28,7 @@ static const zx_duration_t timeout_ns = ZX_SEC(2);
         const zx_time_t deadline = zx_deadline_after(timeout_ns);             \
         int wait_for_condition_value;                                         \
         while (!(wait_for_condition_value = !!(condition))) {                 \
-            zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);                 \
+            zx_time_t now = zx_clock_get_monotonic();                 \
             if (now >= deadline)                                              \
                 break;                                                        \
             if (poll_interval)                                                \

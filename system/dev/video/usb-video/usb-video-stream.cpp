@@ -770,7 +770,7 @@ void UsbVideoStream::ParseHeaderTimestamps(usb_request_t* req) {
         zxlogf(ERROR, "could not get host SOF, err: %d\n", status);
         return;
     }
-    zx_time_t host_complete_time_ns = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t host_complete_time_ns = zx_clock_get_monotonic();
 
     // Calculate the difference between when raw frame capture starts and ends.
     uint32_t device_delay = cur_frame_state_.stc - cur_frame_state_.pts;

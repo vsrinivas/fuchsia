@@ -907,7 +907,7 @@ static void xdc_handle_port_status_change(xdc_t* xdc, xdc_poll_state_t* poll_sta
     if (dcportsc & DCPORTSC_CSC) {
         poll_state->connected = dcportsc & DCPORTSC_CCS;
         if (poll_state->connected) {
-            poll_state->last_conn = zx_clock_get(ZX_CLOCK_MONOTONIC);
+            poll_state->last_conn = zx_clock_get_monotonic();
         }
         zxlogf(TRACE, "Port: Connect Status Change, connected: %d\n", poll_state->connected != 0);
     }
@@ -1005,7 +1005,7 @@ bool xdc_update_state(xdc_t* xdc, xdc_poll_state_t* poll_state) {
     // DCE bit to retry the Debug Device enumeration process. See last paragraph of
     // 7.6.4.1 of XHCI spec.
     if (poll_state->connected && !poll_state->configured) {
-        zx_duration_t waited_ns = zx_clock_get(ZX_CLOCK_MONOTONIC) - poll_state->last_conn;
+        zx_duration_t waited_ns = zx_clock_get_monotonic() - poll_state->last_conn;
 
         if (waited_ns > TRANSITION_CONFIGURED_THRESHOLD) {
             zxlogf(ERROR, "xdc failed to enter configured state, toggling DCE\n");

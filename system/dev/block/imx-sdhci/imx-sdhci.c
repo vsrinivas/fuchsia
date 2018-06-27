@@ -277,12 +277,12 @@ static uint32_t imx_sdhci_prepare_cmd(sdmmc_req_t* req) {
 
 static zx_status_t imx_sdhci_wait_for_reset(imx_sdhci_device_t* dev,
                                             const uint32_t mask, zx_time_t timeout) {
-    zx_time_t deadline = zx_clock_get(ZX_CLOCK_MONOTONIC) + timeout;
+    zx_time_t deadline = zx_clock_get_monotonic() + timeout;
     while (true) {
         if (!(dev->regs->sys_ctrl & mask)) {
             break;
         }
-        if (zx_clock_get(ZX_CLOCK_MONOTONIC) > deadline) {
+        if (zx_clock_get_monotonic() > deadline) {
             SDHCI_ERROR("time out while waiting for reset\n");
             return ZX_ERR_TIMED_OUT;
         }

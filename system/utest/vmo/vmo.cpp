@@ -1208,16 +1208,16 @@ bool vmo_cache_map_test() {
             buf[i] = 0;
 
         // write to it
-        zx_time_t wt = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        zx_time_t wt = zx_clock_get_monotonic();
         for (size_t i = 0; i < size / 4; i++)
             buf[i] = 0;
-        wt = zx_clock_get(ZX_CLOCK_MONOTONIC) - wt;
+        wt = zx_clock_get_monotonic() - wt;
 
         // read from it
-        zx_time_t rt = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        zx_time_t rt = zx_clock_get_monotonic();
         for (size_t i = 0; i < size / 4; i++)
             __UNUSED uint32_t hole = buf[i];
-        rt = zx_clock_get(ZX_CLOCK_MONOTONIC) - rt;
+        rt = zx_clock_get_monotonic() - rt;
 
         printf("took %" PRIu64 " nsec to write %s memory\n", wt, type);
         printf("took %" PRIu64 " nsec to read %s memory\n", rt, type);
@@ -1548,13 +1548,13 @@ bool vmo_unmap_coherency() {
 
     const zx_time_t max_duration = ZX_SEC(30);
     const zx_time_t max_wait = ZX_SEC(1);
-    zx_time_t start = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t start = zx_clock_get_monotonic();
     for (;;) {
         // wait for it to loop at least once
-        zx_time_t t = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        zx_time_t t = zx_clock_get_monotonic();
         size_t last_count = args.count.load();
         while (args.count.load() <= last_count) {
-            if (zx_clock_get(ZX_CLOCK_MONOTONIC) - t > max_wait) {
+            if (zx_clock_get_monotonic() - t > max_wait) {
                 UNITTEST_FAIL_TRACEF("looper appears stuck!\n");
                 break;
             }
@@ -1564,7 +1564,7 @@ bool vmo_unmap_coherency() {
         status = zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, 0, len, nullptr, 0);
         EXPECT_EQ(0, status, "vm decommit");
 
-        if (zx_clock_get(ZX_CLOCK_MONOTONIC) - start > max_duration)
+        if (zx_clock_get_monotonic() - start > max_duration)
             break;
     }
 

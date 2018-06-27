@@ -18,7 +18,7 @@ static int thread_func(void* arg) {
     val++;
     if (val % 1000 == 0) {
         printf("Created %" PRId64 " threads, time %" PRId64 " us\n", val,
-               zx_clock_get(ZX_CLOCK_MONOTONIC) / 1000000);
+               zx_clock_get_monotonic() / 1000000);
     }
 
     thrd_t thread;
@@ -33,7 +33,7 @@ static int thread_func(void* arg) {
         val--;
         if (val % 1000 == 0)
             printf("Joined %" PRId64 " threads, time %" PRId64 " us\n", val,
-                   zx_clock_get(ZX_CLOCK_MONOTONIC) / 1000000);
+                   zx_clock_get_monotonic() / 1000000);
     }
 
     return 0;

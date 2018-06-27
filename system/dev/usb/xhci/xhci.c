@@ -120,11 +120,11 @@ static zx_status_t xhci_claim_ownership(xhci_t* xhci) {
     // BIOS semaphore.  Additionally, all bits besides bit 0 in the OS semaphore
     // are RsvdP, so we need to preserve them on modification.
     cap->os_owned_sem |= 1;
-    zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t now = zx_clock_get_monotonic();
     zx_time_t deadline = now + ZX_SEC(1);
     while ((cap->bios_owned_sem & 1) && now < deadline) {
         zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
-        now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        now = zx_clock_get_monotonic();
     }
 
     if (cap->bios_owned_sem & 1) {
@@ -583,7 +583,7 @@ static void xhci_handle_command_complete_event(xhci_t* xhci, xhci_trb_t* event_t
 static void xhci_handle_mfindex_wrap(xhci_t* xhci) {
     mtx_lock(&xhci->mfindex_mutex);
     xhci->mfindex_wrap_count++;
-    xhci->last_mfindex_wrap = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    xhci->last_mfindex_wrap = zx_clock_get_monotonic();
     mtx_unlock(&xhci->mfindex_mutex);
 }
 
@@ -594,7 +594,7 @@ uint64_t xhci_get_current_frame(xhci_t* xhci) {
     uint64_t wrap_count = xhci->mfindex_wrap_count;
     // try to detect race condition where mfindex has wrapped but we haven't processed wrap event yet
     if (mfindex < 500) {
-        if (zx_clock_get(ZX_CLOCK_MONOTONIC) - xhci->last_mfindex_wrap > ZX_MSEC(1000)) {
+        if (zx_clock_get_monotonic() - xhci->last_mfindex_wrap > ZX_MSEC(1000)) {
             zxlogf(TRACE, "woah, mfindex wrapped before we got the event!\n");
             wrap_count++;
         }

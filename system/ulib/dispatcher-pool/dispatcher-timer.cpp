@@ -151,7 +151,7 @@ void Timer::Dispatch(ExecutionDomain* domain) {
         // If the timer was moved into the future, skip the dispatch operation,
         // but fall into the code which re-sets the timer.  Otherwise, the timer
         // has now fired and we should reset our internal bookkeeping.
-        do_dispatch = ((zx_clock_get(ZX_CLOCK_MONOTONIC) + early_slop_nsec_) >= deadline_);
+        do_dispatch = ((zx_clock_get_monotonic() + early_slop_nsec_) >= deadline_);
         if (do_dispatch) {
             DisarmLocked();
         }

@@ -386,7 +386,7 @@ void GpuDevice::Flush() {
 
 void GpuDevice::virtio_gpu_flusher() {
     LTRACE_ENTRY;
-    zx_time_t next_deadline = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t next_deadline = zx_clock_get_monotonic();
     zx_time_t period = ZX_SEC(1) / kRefreshRateHz;
     for (;;) {
         zx_nanosleep(next_deadline);

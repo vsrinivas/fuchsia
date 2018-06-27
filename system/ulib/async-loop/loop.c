@@ -414,7 +414,7 @@ async_loop_state_t async_loop_get_state(async_loop_t* loop) {
 }
 
 zx_time_t async_loop_now(async_t* async) {
-    return zx_clock_get(ZX_CLOCK_MONOTONIC);
+    return zx_clock_get_monotonic();
 }
 
 static zx_status_t async_loop_begin_wait(async_t* async, async_wait_t* wait) {

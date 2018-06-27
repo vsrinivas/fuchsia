@@ -151,7 +151,7 @@ static int paver_copy_buffer(void* arg) {
     file_info_t* file_info = arg;
     size_t read_ndx = 0;
     int result = 0;
-    zx_time_t last_reported = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t last_reported = zx_clock_get_monotonic();
     while (read_ndx < file_info->paver.size) {
         completion_reset(&file_info->paver.data_ready);
         size_t write_ndx = atomic_load(&file_info->paver.offset);
@@ -175,7 +175,7 @@ static int paver_copy_buffer(void* arg) {
                 goto done;
             }
             read_ndx += r;
-            zx_time_t curr_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+            zx_time_t curr_time = zx_clock_get_monotonic();
             if ((curr_time - last_reported) >= ZX_SEC(1)) {
                 float complete = ((float)read_ndx / (float)file_info->paver.size) * 100.0;
                 printf("netsvc: paver write progress %0.1f%%\n", complete);

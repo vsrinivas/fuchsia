@@ -679,7 +679,7 @@ zx_status_t IntelHDAStream::ProcessStartLocked(const audio_proto::RingBufStartRe
                                  HDA_SD_REG_STS32_ACK;
         REG_SET_BITS(&regs_->ctl_sts.w, SET);
         hw_wmb();
-        resp.start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        resp.start_time = zx_clock_get_monotonic();
     }
 
     // Success, we are now running.

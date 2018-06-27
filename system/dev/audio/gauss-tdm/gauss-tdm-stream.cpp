@@ -734,7 +734,7 @@ zx_status_t TdmOutputStream::OnStartLocked(dispatcher::Channel* channel,
     //enable tdmout
     regs_->tdmout[TDM_OUT_C].ctl0 |= (1 << 31);
 
-    resp.start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    resp.start_time = zx_clock_get_monotonic();
     return channel->Write(&resp, sizeof(resp));
 }
 

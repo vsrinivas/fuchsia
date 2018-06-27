@@ -110,12 +110,12 @@ int LoadGeneratorThread::Run() {
             break;
 
         double sleep_delay = MakeRandomDouble(min_sleep_msec(), max_sleep_msec());
-        zx_time_t sleep_deadline = zx_clock_get(ZX_CLOCK_MONOTONIC)
+        zx_time_t sleep_deadline = zx_clock_get_monotonic()
                                  + static_cast<zx_time_t>(sleep_delay * 1000000.0);
 
         do {
             static constexpr zx_time_t max_sleep = ZX_MSEC(10);
-            zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+            zx_time_t now = zx_clock_get_monotonic();
 
             if (now >= sleep_deadline)
                 break;

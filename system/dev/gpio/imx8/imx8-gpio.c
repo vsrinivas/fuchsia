@@ -223,7 +223,7 @@ static int imx8_gpio_irq_handler(void *arg) {
             pin = gpio_block*IMX_GPIO_PER_BLOCK + pin;
 
             // Trigger the corresponding virtual interrupt
-            status = zx_interrupt_trigger(gpio->vinth[pin], 0, zx_clock_get(ZX_CLOCK_MONOTONIC));
+            status = zx_interrupt_trigger(gpio->vinth[pin], 0, zx_clock_get_monotonic());
             if (status != ZX_OK) {
                 zxlogf(ERROR, "%s: zx_interrupt_trigger failed %d \n", __FUNCTION__, status);
                 goto fail;

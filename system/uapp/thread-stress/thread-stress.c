@@ -31,15 +31,15 @@ int main(int argc, char** argv) {
     printf("Running thread stress test...\n");
     thrd_t thread[NUM_THREADS];
     while (true) {
-        zx_time_t start = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        zx_time_t start = zx_clock_get_monotonic();
         for (int i = 0; i != NUM_THREADS; ++i) {
             thread_create(&thread[i]);
         }
-        zx_time_t create = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        zx_time_t create = zx_clock_get_monotonic();
         for (int i = 0; i != NUM_THREADS; ++i) {
             thread_join(thread[i]);
         }
-        zx_time_t join = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        zx_time_t join = zx_clock_get_monotonic();
         printf(
             "%d threads in %.2fs (create %.2fs, join %.2fs)\n",
             NUM_THREADS,

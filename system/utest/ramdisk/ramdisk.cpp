@@ -1343,7 +1343,7 @@ static int fifo_wake_thread(void* arg) {
     ramdisk_txn_counts_t counts;
     do {
         zx::nanosleep(zx::deadline_after(zx::msec(100)));
-        if (wake->deadline < zx_clock_get(ZX_CLOCK_MONOTONIC)) {
+        if (wake->deadline < zx_clock_get_monotonic()) {
             return ZX_ERR_TIMED_OUT;
         }
         if ((res = ioctl_ramdisk_get_txn_counts(wake->fd, &counts)) < 0) {

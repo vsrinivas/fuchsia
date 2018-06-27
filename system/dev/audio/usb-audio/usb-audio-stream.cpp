@@ -41,7 +41,7 @@ UsbAudioStream::UsbAudioStream(UsbAudioDevice* parent,
       parent_(*parent),
       ifc_(fbl::move(ifc)),
       default_domain_(fbl::move(default_domain)),
-      create_time_(zx_clock_get(ZX_CLOCK_MONOTONIC)) {
+      create_time_(zx_clock_get_monotonic()) {
     snprintf(log_prefix_, sizeof(log_prefix_),
              "UsbAud %04hx:%04hx %s-%03d",
              parent_.vid(),
@@ -943,7 +943,7 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
         audio_proto::RingBufPositionNotify notify_pos;
     } resp;
 
-    uint64_t complete_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    uint64_t complete_time = zx_clock_get_monotonic();
     Action when_finished = Action::NONE;
 
     // TODO(johngro) : See MG-940.  Eliminate this as soon as we have a more

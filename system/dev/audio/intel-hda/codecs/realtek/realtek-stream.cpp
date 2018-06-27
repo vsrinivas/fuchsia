@@ -213,7 +213,7 @@ zx_status_t RealtekStream::OnUnsolicitedResponseLocked(const CodecResponse& resp
     if (plug_state_ != plugged) {
         // Update our internal state.
         plug_state_ = plugged;
-        last_plug_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        last_plug_time_ = zx_clock_get_monotonic();
 
         // Inform anyone who has registered for notification.
         ZX_DEBUG_ASSERT(pc_.async_plug_det);
@@ -696,7 +696,7 @@ zx_status_t RealtekStream::ProcessPinCaps(const Command& cmd, const CodecRespons
 
 zx_status_t RealtekStream::ProcessPinState(const Command& cmd, const CodecResponse& resp) {
     plug_state_ = PinSenseState(resp.data).presence_detect();
-    last_plug_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    last_plug_time_ = zx_clock_get_monotonic();
     return UpdateSetupProgressLocked(PLUG_STATE_SETUP_COMPLETE);
 }
 

@@ -249,7 +249,7 @@ static zx_status_t bio_random(bio_random_args_t* a, uint64_t* _total, zx_time_t*
     size_t count = a->count;
     zx_handle_t fifo = a->blk->fifo;
 
-    zx_time_t t0 = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t t0 = zx_clock_get_monotonic();
     thrd_create(&t, bio_random_thread, a);
 
     while (count > 0) {
@@ -279,7 +279,7 @@ static zx_status_t bio_random(bio_random_args_t* a, uint64_t* _total, zx_time_t*
         }
     }
 
-    zx_time_t t1 = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t t1 = zx_clock_get_monotonic();
 
     fprintf(stderr, "waiting for thread to exit...\n");
     thrd_join(t, &r);

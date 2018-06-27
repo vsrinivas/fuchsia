@@ -263,7 +263,7 @@ static int i2c_hid_noirq_thread(void* arg) {
         zx_status_t status = device_read(dev->i2cdev, buf, len, 0, &actual);
         if (status != ZX_OK) {
             if (status == ZX_ERR_TIMED_OUT) {
-                zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+                zx_time_t now = zx_clock_get_monotonic();
                 if (now - last_timeout_warning > kMinTimeBetweenWarnings) {
                     zxlogf(TRACE, "i2c-hid: device_read timed out\n");
                     last_timeout_warning = now;
@@ -359,7 +359,7 @@ static int i2c_hid_irq_thread(void* arg) {
         status = device_read(dev->i2cdev, buf, len, 0, &actual);
         if (status != ZX_OK) {
             if (status == ZX_ERR_TIMED_OUT) {
-                zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+                zx_time_t now = zx_clock_get_monotonic();
                 if (now - last_timeout_warning > kMinTimeBetweenWarnings) {
                     zxlogf(TRACE, "i2c-hid: device_read timed out\n");
                     last_timeout_warning = now;
