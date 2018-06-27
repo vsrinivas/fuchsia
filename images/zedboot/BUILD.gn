@@ -49,6 +49,7 @@ zedboot_binary_patterns = [
   "bin/dlog",
   "bin/fshost",
   "bin/netsvc",
+  "bin/svchost",
   "bin/virtual-console",
   "driver/*",  # Drivers automagically cause devhost to be brought in.
 
