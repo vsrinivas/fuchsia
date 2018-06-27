@@ -95,13 +95,11 @@ class TestApp {
     Await("one_agent_connected", [this] {
       one_agent_connected_.Pass();
       TestMessageQueue([this] {
-        TestAgentController(callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
-                                                 [this] { steps_.Step(); }));
+        TestAgentController([this] { steps_.Step(); });
       });
     });
 
-    TestUnstoppableAgent(callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
-                                              [this] { steps_.Step(); }));
+    TestUnstoppableAgent([this] { steps_.Step(); });
   }
 
   TestPoint stopped_{"Root module stopped"};
@@ -114,8 +112,7 @@ class TestApp {
 
  private:
   TestPoint msg_queue_communicated_{
-      "Communicated message between fuchsia::modular::Agent one using a "
-      "fuchsia::modular::MessageQueue"};
+      "Communicated message between Agent one using a MessageQueue"};
 
   // Tests message queues. Calls |done_cb| when completed successfully.
   void TestMessageQueue(std::function<void()> done_cb) {

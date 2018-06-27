@@ -9,7 +9,6 @@
       "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=clipboard_test_module --story_shell=dev_story_shell"
     },
     {
-      "disabled": true,
       "name":"component_context",
       "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --story_shell=dev_story_shell --user_shell_args=--root_module=component_context_test_module"
     },
