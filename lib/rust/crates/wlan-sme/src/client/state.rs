@@ -3,14 +3,12 @@
 // found in the LICENSE file.
 
 use bytes::Bytes;
+use client::bss::convert_bss_description;
 use fidl_mlme::{self, BssDescription, MlmeEvent};
-use super::{ConnectResult, Status, Tokens};
-use super::internal::{MlmeSink, UserSink};
-use super::super::MlmeRequest;
-use wlan_rsn::akm;
-use wlan_rsn::cipher;
-use wlan_rsn::rsne;
-use wlan_rsn::suite_selector::OUI;
+use client::{ConnectResult, Status, Tokens};
+use client::internal::{MlmeSink, UserSink};
+use MlmeRequest;
+use wlan_rsn::{akm, cipher, rsne, suite_selector::OUI};
 
 const DEFAULT_JOIN_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
 const DEFAULT_AUTH_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
@@ -183,10 +181,7 @@ impl<T: Tokens> State<T> {
                 connecting_to: Some(bss.ssid.as_bytes().to_vec()),
             },
             &State::Associated { ref bss, link_state: LinkState::LinkUp, .. } => Status {
-                connected_to: Some(super::CurrentBss {
-                    ssid: bss.ssid.as_bytes().to_vec(),
-                    bssid: bss.bssid.clone(),
-                }),
+                connected_to: Some(convert_bss_description(bss)),
                 connecting_to: None,
             },
         }

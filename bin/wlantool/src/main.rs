@@ -174,12 +174,17 @@ impl fmt::Display for Bssid {
 fn handle_scan_transaction(scan_txn: fidl_sme::ScanTransactionProxy)
     -> impl Future<Item = (), Error = Error>
 {
+    let mut printed_header = false;
     scan_txn.take_event_stream()
-        .map(|e| {
+        .map(move |e| {
             match e {
                 ScanTransactionEvent::OnResult { aps } => {
+                    if !printed_header {
+                        print_scan_header();
+                        printed_header = true;
+                    }
                     for ap in aps {
-                        println!("{}", String::from_utf8_lossy(&ap.ssid));
+                        print_scan_result(ap);
                     }
                     false
                 },
@@ -198,6 +203,19 @@ fn handle_scan_transaction(scan_txn: fidl_sme::ScanTransactionProxy)
             }
             Ok(())
         })
+}
+
+fn print_scan_header() {
+    println!("BSSID             dBm  Channel Protected SSID");
+}
+
+fn print_scan_result(ess: fidl_sme::EssInfo) {
+    println!("{} {:4} {:7} {:9} {}",
+        Bssid(ess.best_bss.bssid),
+        ess.best_bss.rx_dbm,
+        ess.best_bss.channel,
+        if ess.best_bss.protected { "Y" } else { "N" },
+        String::from_utf8_lossy(&ess.best_bss.ssid));
 }
 
 fn handle_connect_transaction(connect_txn: fidl_sme::ConnectTransactionProxy)

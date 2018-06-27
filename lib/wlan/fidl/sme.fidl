@@ -4,9 +4,17 @@
 
 library fuchsia.wlan.sme;
 
-struct ScanResult {
+struct BssInfo {
     array<uint8>:6 bssid;
     vector<uint8>:32 ssid;
+    int8 rx_dbm;
+    uint8 channel;
+    bool protected;
+    bool compatible;
+};
+
+struct EssInfo {
+    BssInfo best_bss;
 };
 
 enum ScanErrorCode {
@@ -20,7 +28,7 @@ struct ScanError {
 
 interface ScanTransaction {
     // Can be called several times to deliver incremental scan results
-    1: -> OnResult(vector<ScanResult> aps);
+    1: -> OnResult(vector<EssInfo> aps);
     2: -> OnFinished();
     3: -> OnError(ScanError error);
 };
@@ -48,13 +56,8 @@ struct ConnectRequest {
     vector<uint8>:32 ssid;
 };
 
-struct CurrentBss {
-    vector<uint8>:32 ssid;
-    array<uint8>:6 bssid;
-};
-
 struct ClientStatusResponse {
-    CurrentBss? connected_to;
+    BssInfo? connected_to;
     // If non-empty, this is the SSID we are currently trying to connect to
     vector<uint8>:32 connecting_to_ssid;
 };

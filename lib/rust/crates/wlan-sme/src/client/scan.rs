@@ -8,7 +8,7 @@ use std::collections::hash_map::Entry;
 use std::cmp::Ordering;
 use std::mem;
 use std::sync::Arc;
-use super::super::{DeviceCapabilities, Ssid};
+use client::{bss::*, DeviceCapabilities, Ssid};
 
 // Scans can be performed for two different purposes:
 //      1) Discover available wireless networks. These scans are initiated by the "user",
@@ -85,12 +85,7 @@ pub enum ScanResult<D, J> {
     },
 }
 
-pub type DiscoveryResult = Result<Vec<DiscoveredEss>, DiscoveryError>;
-
-pub struct DiscoveredEss {
-    pub ssid: Ssid,
-    pub best_bss: [u8; 6],
-}
+pub type DiscoveryResult = Result<Vec<EssInfo>, DiscoveryError>;
 
 #[derive(Debug, Fail)]
 pub enum DiscoveryError {
@@ -255,8 +250,8 @@ fn convert_discovery_result(msg: fidl_mlme::ScanConfirm) -> DiscoveryResult {
     }
 }
 
-fn group_networks(bss_set: Vec<BssDescription>) -> Vec<DiscoveredEss> {
-    let mut best_bss_by_ssid = HashMap::new();
+fn group_networks(bss_set: Vec<BssDescription>) -> Vec<EssInfo> {
+    let mut best_bss_by_ssid: HashMap<Ssid, BssDescription> = HashMap::new();
     for bss in bss_set {
         match best_bss_by_ssid.entry(bss.ssid.bytes().collect()) {
             Entry::Vacant(e) => { e.insert(bss); },
@@ -266,10 +261,9 @@ fn group_networks(bss_set: Vec<BssDescription>) -> Vec<DiscoveredEss> {
                 }
         };
     }
-    best_bss_by_ssid.into_iter()
-        .map(|(ssid, bss)| DiscoveredEss {
-                ssid,
-                best_bss: bss.bssid.clone()
+    best_bss_by_ssid.values()
+        .map(|bss| EssInfo {
+                best_bss: convert_bss_description(&bss)
             })
         .collect()
 }
@@ -278,20 +272,6 @@ fn best_bss_to_join(bss_set: Vec<BssDescription>, ssid: &[u8]) -> Option<BssDesc
     bss_set.into_iter()
         .filter(|bss_desc| bss_desc.ssid.as_bytes() == ssid)
         .max_by(compare_bss)
-}
-
-fn compare_bss(left: &BssDescription, right: &BssDescription) -> Ordering {
-    get_dbmh(left).cmp(&get_dbmh(right))
-}
-
-fn get_dbmh(bss: &BssDescription) -> i16 {
-    if bss.rcpi_dbmh != 0 {
-        bss.rcpi_dbmh
-    } else if bss.rssi_dbm != 0 {
-        (bss.rssi_dbm as i16) * 2
-    } else {
-        ::std::i16::MIN
-    }
 }
 
 fn get_channels_to_scan(device_caps: &DeviceCapabilities) -> Vec<u8> {

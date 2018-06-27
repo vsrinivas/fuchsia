@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod bss;
 mod scan;
 mod state;
 
@@ -12,7 +13,8 @@ use std::sync::Arc;
 use super::{DeviceCapabilities, MlmeRequest, MlmeStream, Ssid};
 use futures::channel::mpsc;
 
-pub use self::scan::{DiscoveryError, DiscoveryResult, DiscoveredEss};
+pub use self::bss::{BssInfo, EssInfo};
+pub use self::scan::{DiscoveryError, DiscoveryResult};
 
 // A token is an opaque value that identifies a particular request from a user.
 // To avoid parameterizing over many different token types, we introduce a helper
@@ -83,14 +85,8 @@ pub enum UserEvent<T: Tokens> {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct CurrentBss {
-    pub ssid: Ssid,
-    pub bssid: [u8; 6],
-}
-
-#[derive(Clone, Debug, PartialEq)]
 pub struct Status {
-    pub connected_to: Option<CurrentBss>,
+    pub connected_to: Option<BssInfo>,
     pub connecting_to: Option<Ssid>
 }
 

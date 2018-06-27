@@ -136,7 +136,7 @@ fn scan(client: &ClientRef, legacy_req: legacy::ScanRequest)
                 eprintln!("Failed to fetch all results before the channel was closed");
                 Err(internal_error())
             } else {
-                Ok(aps.into_iter().map(convert_scan_result).collect())
+                Ok(aps.into_iter().map(|ess| convert_bss_info(ess.best_bss)).collect())
             }
         })
         .then(|r| match r {
@@ -166,16 +166,15 @@ fn convert_scan_err(error: fidl_sme::ScanError) -> legacy::Error {
     }
 }
 
-fn convert_scan_result(result: fidl_sme::ScanResult) -> legacy::Ap {
+fn convert_bss_info(bss: fidl_sme::BssInfo) -> legacy::Ap {
     legacy::Ap {
-        bssid: result.bssid.to_vec(),
-        ssid: String::from_utf8_lossy(&result.ssid).to_string(),
-        // TODO(gbonik): get actual data from wlanstack
-        rssi_dbm: -30,
-        is_secure: false,
-        is_compatible: true,
+        bssid: bss.bssid.to_vec(),
+        ssid: String::from_utf8_lossy(&bss.ssid).to_string(),
+        rssi_dbm: bss.rx_dbm,
+        is_secure: bss.protected,
+        is_compatible: bss.compatible,
         chan: fidl_mlme::WlanChan {
-            primary: 1,
+            primary: bss.channel,
             secondary80: 0,
             cbw: fidl_mlme::Cbw::Cbw20
         }
@@ -246,7 +245,7 @@ fn status(client: &ClientRef)
             Ok(status) => legacy::WlanStatus {
                 error: success(),
                 state: convert_state(&status),
-                current_ap: convert_current_ap(&status),
+                current_ap: status.connected_to.map(|bss| Box::new(convert_bss_info(*bss))),
             },
             Err(error) => legacy::WlanStatus {
                 error,
@@ -265,24 +264,6 @@ fn convert_state(status: &fidl_sme::ClientStatusResponse) -> legacy::State {
         // There is no "idle" or "disconnected" state in the legacy API
         legacy::State::Querying
     }
-}
-
-fn convert_current_ap(status: &fidl_sme::ClientStatusResponse) -> Option<Box<legacy::Ap>> {
-    status.connected_to.as_ref().map(|bss| {
-        Box::new(legacy::Ap {
-            bssid: bss.bssid.to_vec(),
-            ssid: String::from_utf8_lossy(&bss.ssid).to_string(),
-            // TODO(gbonik): get actual data from wlanstack
-            rssi_dbm: -30,
-            is_secure: false,
-            is_compatible: true,
-            chan: fidl_mlme::WlanChan {
-                primary: 1,
-                secondary80: 0,
-                cbw: fidl_mlme::Cbw::Cbw20
-            }
-        })
-    })
 }
 
 fn stats(client: &ClientRef)

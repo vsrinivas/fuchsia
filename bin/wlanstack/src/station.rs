@@ -15,7 +15,7 @@ use futures::channel::mpsc;
 use stats_scheduler::StatsRequest;
 use std::sync::{Arc, Mutex};
 use wlan_sme::{client, DeviceCapabilities, Station, MlmeRequest, MlmeStream};
-use wlan_sme::client::{ConnectResult, DiscoveryError, DiscoveryResult, DiscoveredEss};
+use wlan_sme::client::{BssInfo, ConnectResult, DiscoveryError, DiscoveryResult, EssInfo};
 use zx;
 
 struct ClientTokens;
@@ -202,10 +202,7 @@ fn status(client: &Arc<Mutex<Client>>) -> fidl_sme::ClientStatusResponse {
     let status = client.lock().unwrap().status();
     fidl_sme::ClientStatusResponse {
         connected_to: status.connected_to.map(|bss| {
-            Box::new(fidl_sme::CurrentBss {
-                ssid: bss.ssid,
-                bssid: bss.bssid
-            })
+            Box::new(convert_bss_info(bss))
         }),
         connecting_to_ssid: status.connecting_to.unwrap_or(Vec::new()),
     }
@@ -238,7 +235,7 @@ fn send_scan_results(token: fidl_sme::ScanTransactionControlHandle,
 {
     match result {
         Ok(ess_list) => {
-            let mut results = ess_list.into_iter().map(convert_scan_result).collect::<Vec<_>>();
+            let mut results = ess_list.into_iter().map(convert_ess_info).collect::<Vec<_>>();
             token.send_on_result(&mut results.iter_mut())?;
             token.send_on_finished()?;
         },
@@ -254,10 +251,20 @@ fn send_scan_results(token: fidl_sme::ScanTransactionControlHandle,
     Ok(())
 }
 
-fn convert_scan_result(ess: DiscoveredEss) -> fidl_sme::ScanResult {
-    fidl_sme::ScanResult {
-        bssid: ess.best_bss,
-        ssid: ess.ssid,
+fn convert_ess_info(ess: EssInfo) -> fidl_sme::EssInfo {
+    fidl_sme::EssInfo {
+        best_bss: convert_bss_info(ess.best_bss)
+    }
+}
+
+fn convert_bss_info(bss: BssInfo) -> fidl_sme::BssInfo {
+    fidl_sme::BssInfo {
+        bssid: bss.bssid,
+        ssid: bss.ssid,
+        rx_dbm: bss.rx_dbm,
+        channel: bss.channel,
+        protected: bss.protected,
+        compatible: bss.compatible
     }
 }
 
