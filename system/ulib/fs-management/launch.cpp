@@ -40,90 +40,123 @@ void InitArgvAndActions(int argc, const char** argv, zx_handle_t* handles,
     }
 }
 
-}  // namespace
+constexpr size_t kMaxStdioActions = 1;
 
-zx_status_t launch_logs_async(int argc, const char** argv, zx_handle_t* handles,
-                              uint32_t* types, size_t len) {
-    const char* null_terminated_argv[argc + 1];
-    fdio_spawn_action_t actions[len + 1];
-    InitArgvAndActions(argc, argv, handles, types, len, null_terminated_argv, actions);
+enum class StdioType {
+    kLog,
+    kClone,
+    kNone,
+};
 
-    size_t action_count = len;
-
-    zx_handle_t h;
-    zx_log_create(0, &h);
-    if (h != ZX_HANDLE_INVALID) {
-        actions[action_count].action = FDIO_SPAWN_ACTION_ADD_HANDLE;
-        actions[action_count].h.id = PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO);
-        actions[action_count].h.handle = h;
-        ++action_count;
+// Initializes Stdio.
+//
+// If necessary, updates the |actions| which will be sent to fdio_spawn.
+// |action_count| is an in/out parameter which may be increased if an action is
+// added.
+// |flags| is an in/out parameter which may be modified to alter the cloning of
+// STDIO.
+void InitStdio(StdioType stdio, fdio_spawn_action_t* actions,
+               size_t* action_count, uint32_t* flags) {
+    switch (stdio) {
+    case StdioType::kLog:
+        zx_handle_t h;
+        zx_log_create(0, &h);
+        if (h != ZX_HANDLE_INVALID) {
+            actions[*action_count].action = FDIO_SPAWN_ACTION_ADD_HANDLE;
+            actions[*action_count].h.id = PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO);
+            actions[*action_count].h.handle = h;
+            *action_count += 1;
+        }
+        *flags &= ~FDIO_SPAWN_CLONE_STDIO;
+        break;
+    case StdioType::kClone:
+        *flags |= FDIO_SPAWN_CLONE_STDIO;
+        break;
+    case StdioType::kNone:
+        *flags &= ~FDIO_SPAWN_CLONE_STDIO;
+        break;
     }
-
-    uint32_t flags = FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO;
-    char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-    zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, argv[0], null_terminated_argv,
-                                        nullptr, action_count, actions, nullptr, err_msg);
-    if (status != ZX_OK) {
-        fprintf(stderr, "fs-management: Cannot launch %s: %d (%s): %s\n",
-                argv[0], status, zx_status_get_string(status), err_msg);
-    }
-    return status;
 }
 
-zx_status_t launch_stdio_sync(int argc, const char** argv, zx_handle_t* handles,
-                              uint32_t* types, size_t len) {
-    const char* null_terminated_argv[argc + 1];
-    fdio_spawn_action_t actions[len];
-    InitArgvAndActions(argc, argv, handles, types, len, null_terminated_argv, actions);
+enum class ProcessAction {
+    kBlock,
+    kNonBlock,
+};
 
+// Spawns a process.
+//
+// Optionally blocks, waiting for the process to terminate, depending
+// the value provided in |block|.
+zx_status_t Spawn(ProcessAction proc_action, uint32_t flags, const char** argv,
+                  size_t action_count, const fdio_spawn_action_t* actions) {
     zx::process proc;
     char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-    zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
-                                        argv[0], null_terminated_argv, nullptr,
-                                        len, actions, proc.reset_and_get_address(),
+    zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, argv[0], argv, nullptr,
+                                        action_count, actions, proc.reset_and_get_address(),
                                         err_msg);
     if (status != ZX_OK) {
-        fprintf(stderr, "fs-management: Cannot launch %s: %d (%s): %s\n",
+        fprintf(stderr, "fs-management: Cannot spawn %s: %d (%s): %s\n",
                 argv[0], status, zx_status_get_string(status), err_msg);
         return status;
     }
 
-    status = proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
-    if (status != ZX_OK) {
-        fprintf(stderr, "launch: Error waiting for process to terminate\n");
-        return status;
-    }
+    if (proc_action == ProcessAction::kBlock) {
+        status = proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
+        if (status != ZX_OK) {
+            fprintf(stderr, "spawn: Error waiting for process to terminate\n");
+            return status;
+        }
 
-    zx_info_process_t info;
-    status = proc.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
-    if (status != ZX_OK) {
-        fprintf(stderr, "launch: Failed to get process info\n");
-        return status;
-    }
+        zx_info_process_t info;
+        status = proc.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
+        if (status != ZX_OK) {
+            fprintf(stderr, "spawn: Failed to get process info\n");
+            return status;
+        }
 
-    if (!info.exited || info.return_code != 0) {
-        return ZX_ERR_BAD_STATE;
+        if (!info.exited || info.return_code != 0) {
+            return ZX_ERR_BAD_STATE;
+        }
     }
     return ZX_OK;
 }
 
-zx_status_t launch_stdio_async(int argc, const char** argv, zx_handle_t* handles,
-                               uint32_t* types, size_t len) {
+zx_status_t Launch(StdioType stdio, ProcessAction proc_action, int argc,
+                   const char** argv, zx_handle_t* handles, uint32_t* types, size_t len) {
     const char* null_terminated_argv[argc + 1];
-    fdio_spawn_action_t actions[len];
+    fdio_spawn_action_t actions[len + kMaxStdioActions];
     InitArgvAndActions(argc, argv, handles, types, len, null_terminated_argv, actions);
 
-    zx::process proc;
-    char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-    zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
-                                        argv[0], null_terminated_argv, nullptr,
-                                        len, actions, proc.reset_and_get_address(),
-                                        err_msg);
-    if (status != ZX_OK) {
-        fprintf(stderr, "fs-management: Cannot launch %s: %d (%s): %s\n",
-                argv[0], status, zx_status_get_string(status), err_msg);
-        return status;
-    }
+    size_t action_count = len;
+    uint32_t flags = FDIO_SPAWN_CLONE_ALL;
+    InitStdio(stdio, actions, &action_count, &flags);
 
-    return status;
+    return Spawn(proc_action, flags, null_terminated_argv, action_count, actions);
+}
+
+}  // namespace
+
+zx_status_t launch_silent_sync(int argc, const char** argv, zx_handle_t* handles,
+                               uint32_t* types, size_t len) {
+    return Launch(StdioType::kNone, ProcessAction::kBlock, argc, argv, handles, types, len);
+}
+
+zx_status_t launch_silent_async(int argc, const char** argv, zx_handle_t* handles,
+                                uint32_t* types, size_t len) {
+    return Launch(StdioType::kNone, ProcessAction::kNonBlock, argc, argv, handles, types, len);
+}
+
+zx_status_t launch_stdio_sync(int argc, const char** argv, zx_handle_t* handles,
+                              uint32_t* types, size_t len) {
+    return Launch(StdioType::kClone, ProcessAction::kBlock, argc, argv, handles, types, len);
+}
+
+zx_status_t launch_stdio_async(int argc, const char** argv, zx_handle_t* handles,
+                               uint32_t* types, size_t len) {
+    return Launch(StdioType::kClone, ProcessAction::kNonBlock, argc, argv, handles, types, len);
+}
+
+zx_status_t launch_logs_async(int argc, const char** argv, zx_handle_t* handles,
+                              uint32_t* types, size_t len) {
+    return Launch(StdioType::kLog, ProcessAction::kNonBlock, argc, argv, handles, types, len);
 }
