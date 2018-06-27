@@ -134,7 +134,7 @@ class Service {
     char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
 
     zx_status_t status =
-        fdio_spawn_etc(job_.get(),
+        fdio_spawn_etc(child_job.get(),
                        FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_CLONE_LDSVC |
                            FDIO_SPAWN_CLONE_NAMESPACE,
                        argv_[0], argv_, nullptr, kActionCount, actions,
