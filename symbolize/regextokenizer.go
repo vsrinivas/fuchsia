@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+// TODO: Make this whole file private
+
 type actionFunc func(...string)
 
 type regexInfo struct {

@@ -12,6 +12,100 @@ import (
 	"testing"
 )
 
+type triggerTester struct {
+	count    uint64
+	sinkType string
+	name     string
+	src      LineSource
+	mod      Module
+	seg      Segment
+	t        *testing.T
+}
+
+func (t *triggerTester) HandleDump(dump *DumpfileElement) {
+	t.count += 1
+	if dump == nil {
+		t.t.Fatal("dump was nil")
+	}
+	t.sinkType = dump.SinkType()
+	t.name = dump.Name()
+	t.src = dump.Context().Source
+	mods := dump.Context().Mods
+	segs := dump.Context().Segs
+	if len(mods) != 1 {
+		t.t.Fatal("expected exactly 1 module")
+	}
+	t.mod = mods[0]
+	if len(segs) != 1 {
+		t.t.Fatal("expected exactly 1 segment")
+	}
+	t.seg = segs[0]
+}
+
+func TestDumpfile(t *testing.T) {
+	msg := "[123.456] 1234.5678> {{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
+		"[123.456] 1234.5678> {{{mmap:0x12345000:849596:load:1:rx:0x0}}}\n" +
+		"[123.456] 1234.5678> {{{dumpfile:llvm-cov:test}}}\n"
+
+	symbo := newMockSymbolizer([]mockModule{})
+	repo := NewRepo()
+	demuxer := NewDemuxer(repo, symbo)
+	tap := NewTriggerTap()
+	tHandler := &triggerTester{t: t}
+	tap.AddHandler(tHandler.HandleDump)
+
+	ctx := context.Background()
+	in := StartParsing(ctx, strings.NewReader(msg))
+	out := demuxer.Start(ctx, in)
+	tout := tap.Start(ctx, out)
+	buf := new(bytes.Buffer)
+	presenter := NewBasicPresenter(buf, true)
+	presenter.Start(tout)
+
+	expectedSrc := Process(1234)
+	expectedMod := Module{
+		Name:  "libc.so",
+		Build: "4fcb712aa6387724a9f465a32cd8c14b",
+		Id:    1,
+	}
+	expectedSeg := Segment{
+		Mod:        1,
+		Vaddr:      0x12345000,
+		Size:       849596,
+		Flags:      "rx",
+		ModRelAddr: 0x0,
+	}
+	expectedSink := "llvm-cov"
+	expectedName := "test"
+	expected := "[123.456] 01234.05678> {{{dumpfile:llvm-cov:test}}}\n"
+
+	actual := buf.String()
+	if actual != expected {
+		t.Error("expected", expected, "got", actual)
+	}
+	if tHandler.sinkType != expectedSink {
+		t.Error("expected", expectedSink, "got", tHandler.sinkType)
+	}
+	if tHandler.name != expectedName {
+		t.Error("expected", expectedName, "got", tHandler.name)
+	}
+	if tHandler.src != expectedSrc {
+		t.Error("expected", expectedSrc, "got", tHandler.src)
+	}
+	if tHandler.mod != expectedMod {
+		t.Error("expected", expectedMod, "got", tHandler.mod)
+	}
+	if tHandler.seg != expectedSeg {
+		t.Error("expected", expectedSeg, "got", tHandler.seg)
+	}
+	if tHandler.count == 0 {
+		t.Error("trigger handler was not called")
+	}
+	if tHandler.count > 1 {
+		t.Error("trigger handler was called more than once")
+	}
+}
+
 func TestSyslog(t *testing.T) {
 	msg := "[123.456][1234][05678][klog] Blarg\n"
 	symbo := newMockSymbolizer([]mockModule{})

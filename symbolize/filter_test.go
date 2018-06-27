@@ -86,7 +86,7 @@ func TestBasic(t *testing.T) {
 	line := parseLine("\033[1m Error at {{{pc:0x123879c0}}}")
 	// print out a more precise form
 	for _, token := range line {
-		token.Accept(&filterVisitor{filter, 1, context.Background()})
+		token.Accept(&filterVisitor{filter, 1, context.Background(), DummySource{}})
 	}
 	json, err := GetLineJson(line)
 	if err != nil {
@@ -160,7 +160,7 @@ func TestBacktrace(t *testing.T) {
 	}
 	filter.addSegment(Segment{1, 0x12345000, 849596, "rx", 0x0})
 	for _, token := range line {
-		token.Accept(&filterVisitor{filter, 1, context.Background()})
+		token.Accept(&filterVisitor{filter, 1, context.Background(), DummySource{}})
 	}
 
 	json, err := GetLineJson(line)
@@ -246,7 +246,7 @@ func TestReset(t *testing.T) {
 
 	// now forget the context
 	for _, token := range line {
-		token.Accept(&filterVisitor{filter, 1, context.Background()})
+		token.Accept(&filterVisitor{filter, 1, context.Background(), DummySource{}})
 	}
 
 	if _, err := filter.findInfoForAddress(addr); err == nil {

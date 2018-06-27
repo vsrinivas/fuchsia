@@ -105,14 +105,14 @@ func (b *BasicPresenter) Start(input <-chan OutputLine) {
 }
 
 func (b *BasicPresenter) printSrcLoc(loc SourceLocation, info addressInfo) {
-	modRelAddr := info.addr - info.seg.vaddr + info.seg.modRelAddr
+	modRelAddr := info.addr - info.seg.Vaddr + info.seg.ModRelAddr
 	if !loc.function.IsEmpty() {
 		b.printfForce("%s at ", loc.function)
 	}
 	if !loc.file.IsEmpty() {
 		b.printfForce("%s:%d", loc.file, loc.line)
 	} else {
-		b.printfForce("<%s>+0x%x", info.mod.name, modRelAddr)
+		b.printfForce("<%s>+0x%x", info.mod.Name, modRelAddr)
 	}
 }
 
@@ -147,15 +147,19 @@ func (b *BasicPresenter) VisitText(node *Text) {
 	b.printfForce(node.text)
 }
 
+func (b *BasicPresenter) VisitDump(elem *DumpfileElement) {
+	b.printfForce("{{{dumpfile:%s:%s}}}", elem.sinkType, elem.name)
+}
+
 func (b *BasicPresenter) VisitReset(elem *ResetElement) {
 	// Don't output {{{reset}}} at all
 }
 
 func (b *BasicPresenter) VisitModule(node *ModuleElement) {
-	b.printfLazy("{{{module:%s:%s:%d}}}", node.mod.build, node.mod.name, node.mod.id)
+	b.printfLazy("{{{module:%s:%s:%d}}}", node.mod.Build, node.mod.Name, node.mod.Id)
 }
 
 func (b *BasicPresenter) VisitMapping(node *MappingElement) {
-	b.printfLazy("{{{mmap:%#x:%#x:load:%d:%s:%#x}}}", node.seg.vaddr, node.seg.size, node.seg.mod, node.seg.flags,
-		node.seg.modRelAddr)
+	b.printfLazy("{{{mmap:0x%x:0x%x:load:%d:%s:0x%x}}}", node.seg.Vaddr, node.seg.Size, node.seg.Mod, node.seg.Flags,
+		node.seg.ModRelAddr)
 }

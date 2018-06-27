@@ -9,12 +9,15 @@ import (
 	"fmt"
 )
 
-// PresentationVisistor is a visitor for presentables
+// TODO (jakehehrlich): Add methods to make these node types usable
+
+// NodeVisitor is a visitor for all Node types
 type NodeVisitor interface {
 	VisitBt(elem *BacktraceElement)
 	VisitPc(elem *PCElement)
 	VisitColor(node *ColorCode)
 	VisitText(node *Text)
+	VisitDump(elem *DumpfileElement)
 	VisitReset(elem *ResetElement)
 	VisitModule(elem *ModuleElement)
 	VisitMapping(elem *MappingElement)
@@ -23,7 +26,7 @@ type Node interface {
 	Accept(visitor NodeVisitor)
 }
 
-// OptionalString implements possibelly missing strings from llvm-symbolizer
+// OptionalString implements possibly missing strings from llvm-symbolizer
 type OptStr struct {
 	val *string
 }
@@ -103,6 +106,28 @@ type Text struct {
 
 func (t *Text) Accept(visitor NodeVisitor) {
 	visitor.VisitText(t)
+}
+
+type DumpfileElement struct {
+	sinkType string
+	name     string
+	context  *TriggerContext
+}
+
+func (d *DumpfileElement) Context() TriggerContext {
+	return *d.context
+}
+
+func (d *DumpfileElement) SinkType() string {
+	return d.sinkType
+}
+
+func (d *DumpfileElement) Name() string {
+	return d.name
+}
+
+func (d *DumpfileElement) Accept(visitor NodeVisitor) {
+	visitor.VisitDump(d)
 }
 
 type ResetElement struct{}

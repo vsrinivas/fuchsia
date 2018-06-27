@@ -63,7 +63,7 @@ type pipe struct {
 // Demuxer demultiplexes incomming input lines, spins up new filters, and sends them input lines.
 type Demuxer struct {
 	// Spin up new filters as new procsses are found.
-	filters map[lineSource]pipe
+	filters map[LineSource]pipe
 	// Use same symbolizer for all
 	symbolizer Symbolizer
 	// Use same repo for all
@@ -75,7 +75,7 @@ func NewDemuxer(repo *SymbolizerRepo, symbo Symbolizer) *Demuxer {
 	return &Demuxer{
 		repo:       repo,
 		symbolizer: symbo,
-		filters:    make(map[lineSource]pipe),
+		filters:    make(map[LineSource]pipe),
 	}
 }
 

@@ -8,6 +8,8 @@ import (
 	"sort"
 )
 
+// TODO (jakehehrlich): This whole file should be private.
+
 type byVAddr []Segment
 
 func (b byVAddr) Len() int {
@@ -19,7 +21,7 @@ func (b byVAddr) Swap(i, j int) {
 }
 
 func (b byVAddr) Less(i, j int) bool {
-	return b[i].vaddr < b[j].vaddr
+	return b[i].Vaddr < b[j].Vaddr
 }
 
 // TODO: replace with skip list
@@ -36,7 +38,7 @@ func merge(a []Segment, b []Segment) []Segment {
 	out := []Segment{}
 	for len(a) != 0 && len(b) != 0 {
 		var min Segment
-		if a[0].vaddr < b[0].vaddr {
+		if a[0].Vaddr < b[0].Vaddr {
 			min = a[0]
 			a = a[1:]
 		} else {
@@ -67,9 +69,9 @@ func (m *mappingStore) sortAndFind(vaddr uint64) *Segment {
 func findSegment(sorted []Segment, vaddr uint64) *Segment {
 	idx := sort.Search(len(sorted), func(i int) bool {
 		seg := sorted[i]
-		return seg.vaddr+seg.size >= vaddr
+		return seg.Vaddr+seg.Size >= vaddr
 	})
-	if idx < len(sorted) && sorted[idx].vaddr <= vaddr {
+	if idx < len(sorted) && sorted[idx].Vaddr <= vaddr {
 		return &sorted[idx]
 	}
 	return nil
@@ -94,4 +96,11 @@ func (m *mappingStore) add(seg Segment) {
 func (m *mappingStore) clear() {
 	m.segments = nil
 	m.sorted = 0
+}
+
+// GetSegments returns a new slice containing all the segments
+func (m *mappingStore) GetSegments() []Segment {
+	out := make([]Segment, len(m.segments))
+	copy(out, m.segments)
+	return out
 }
