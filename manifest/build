@@ -3,8 +3,5 @@
   <imports>
     <localimport file="minimal"/>
     <localimport file="third_party"/>
-    <import remote="https://fuchsia.googlesource.com/buildtools"
-            manifest="manifest/buildtools"
-            name="buildtools"/>
   </imports>
 </manifest>
