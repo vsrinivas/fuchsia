@@ -220,7 +220,8 @@ fn main_ds() -> Result<(), Error> {
                 watchers: watchers.clone(),
             };
 
-            d.initialize_keys(DATA_DIR, &["DeviceName", "TestSetting"]);
+            d.initialize_keys(DATA_DIR, &["DeviceName", "TestSetting",
+                "Display.Brightness"]);
 
             async::spawn(device_settings_server(d, channel))
         }))

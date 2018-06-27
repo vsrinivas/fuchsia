@@ -14,6 +14,7 @@
         "garnet/packages/prod/debug_agent",
         "garnet/packages/prod/debugserver",
         "garnet/packages/prod/device_settings",
+        "garnet/packages/prod/display_manager",
         "garnet/packages/prod/dhcpd",
         "garnet/packages/prod/drivers",
         "garnet/packages/prod/far",

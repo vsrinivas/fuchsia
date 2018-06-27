@@ -1,0 +1,38 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("bin") {
+  output_name = "display_manager"
+
+  sources = [
+    "display.h",
+    "display.cc",
+    "display_manager_impl.h",
+    "display_manager_impl.cc",
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/device/fidl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+package("display_manager") {
+  deps = [
+    ":bin",
+  ]
+  binary = "display_manager"
+
+    meta = [
+    {
+      path = rebase_path("meta/display_manager.cmx")
+      dest = "display_manager.cmx"
+    },
+  ]
+}
