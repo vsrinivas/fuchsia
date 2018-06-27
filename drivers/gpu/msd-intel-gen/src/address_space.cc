@@ -37,9 +37,6 @@ std::unique_ptr<GpuMapping> AddressSpace::MapBufferGpu(std::shared_ptr<AddressSp
     DASSERT((align_pow2 & ~0xFF) == 0);
     DASSERT(magma::is_page_aligned(length));
 
-    if (!buffer->platform_buffer()->CommitPages(offset / PAGE_SIZE, length / PAGE_SIZE))
-        return DRETP(nullptr, "failed to commit pages");
-
     gpu_addr_t gpu_addr;
     if (!address_space->Alloc(length, static_cast<uint8_t>(align_pow2), &gpu_addr))
         return DRETP(nullptr, "failed to allocate gpu address");
