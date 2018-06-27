@@ -73,6 +73,14 @@ impl fidl::endpoints2::Proxy for {{ $interface.Name }}Proxy {
 	}
 }
 
+impl Deref for {{ $interface.Name }}Proxy {
+	type Target = fidl::client2::Client;
+
+	fn deref(&self) -> &Self::Target {
+		&self.client
+	}
+}
+
 impl {{ $interface.Name }}Proxy {
 	pub fn new(channel: async::Channel) -> Self {
 		Self { client: fidl::client2::Client::new(channel) }

@@ -26,6 +26,7 @@ extern crate {{ $crate }};
 
 use fidl::encoding2::{Encodable, Decodable};
 use futures::{Future, Stream, Never};
+use std::ops::Deref;
 
 {{ range $const := .Consts -}}
 {{ template "ConstDeclaration" $const }}

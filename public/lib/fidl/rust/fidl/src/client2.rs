@@ -21,6 +21,7 @@ use parking_lot::Mutex;
 use slab::Slab;
 use std::collections::VecDeque;
 use std::mem;
+use std::ops::Deref;
 use std::sync::Arc;
 use self::zx::MessageBuf;
 
@@ -41,6 +42,7 @@ fn decode_transaction_body<D: Decodable>(mut buf: zx::MessageBuf) -> Result<D, E
 pub struct Client {
     inner: Arc<ClientInner>,
 }
+
 
 /// A future representing the raw response to a FIDL query.
 pub type RawQueryResponseFut = Either<FutureResult<MessageBuf, Error>, MessageResponse>;
@@ -312,6 +314,14 @@ struct ClientInner {
 
     /// A queue of received events and a waker for the task to receive them.
     event_channel: Mutex<EventChannel>,
+}
+
+impl Deref for Client {
+    type Target = async::Channel;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner.channel
+    }
 }
 
 impl ClientInner {

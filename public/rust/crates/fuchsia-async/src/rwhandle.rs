@@ -97,6 +97,11 @@ impl<T> RWHandle<T> where T: AsHandleRef {
         self.handle
     }
 
+    /// Tests to see if the channel received a OBJECT_PEER_CLOSED signal
+    pub fn is_closed(&self) -> bool {
+        (self.receiver().signals.load(Ordering::Relaxed) & CLOSED) != 0
+    }
+
     /// Tests to see if this resource is ready to be read from.
     /// If it is not, it arranges for the current task to receive a notification
     /// when a "readable" signal arrives.

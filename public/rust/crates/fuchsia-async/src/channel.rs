@@ -39,6 +39,11 @@ impl Channel {
         Ok(Channel(RWHandle::new(channel)?))
     }
 
+    /// Tests to see if the channel received a OBJECT_PEER_CLOSED signal
+    pub fn is_closed(&self) -> bool {
+        self.0.is_closed()
+    }
+
     /// Test whether this socket is ready to be read or not.
     ///
     /// If the socket is *not* readable then the current task is scheduled to
