@@ -16,7 +16,8 @@
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/gtest/real_loop_fixture.h"
 #include "lib/svc/cpp/services.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/cloud_provider/fake_cloud_provider.h"
@@ -40,7 +41,7 @@ fidl::VectorPtr<uint8_t> TestArray() {
   return result;
 }
 
-class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
+class LedgerEndToEndTest : public gtest::RealLoopFixture {
  public:
   LedgerEndToEndTest()
       : startup_context_(
@@ -82,7 +83,8 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
     ledger::LedgerPtr ledger;
     (*ledger_repository)
         ->GetLedger(std::move(ledger_name), ledger.NewRequest(),
-                    callback::Capture(MakeQuitTask(), &status));
+                    callback::Capture(fxl::MakeCopyable(QuitLoopClosure()),
+                                      &status));
     RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure()
@@ -90,7 +92,8 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
     }
 
     ledger->GetRootPage(page->NewRequest(),
-                        callback::Capture(MakeQuitTask(), &status));
+                        callback::Capture(fxl::MakeCopyable(QuitLoopClosure()),
+                                          &status));
     RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure()
@@ -105,7 +108,8 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
     ledger::PageSnapshotPtr snapshot;
     (*page)->GetSnapshot(snapshot.NewRequest(),
                          fidl::VectorPtr<uint8_t>::New(0), nullptr,
-                         callback::Capture(MakeQuitTask(), &status));
+                         callback::Capture(fxl::MakeCopyable(QuitLoopClosure()),
+                                           &status));
     RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure()
@@ -115,7 +119,8 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
     std::unique_ptr<ledger::Token> next_token;
     snapshot->GetEntriesInline(
         fidl::VectorPtr<uint8_t>::New(0), nullptr,
-        callback::Capture(MakeQuitTask(), &status, &entries, &next_token));
+        callback::Capture(fxl::MakeCopyable(QuitLoopClosure()),
+                          &status, &entries, &next_token));
     RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure()
@@ -148,7 +153,7 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
   files::ScopedTempDir tmp_dir;
   ledger_repository_factory_->GetRepository(
       tmp_dir.path(), nullptr, ledger_repository.NewRequest(),
-      callback::Capture(MakeQuitTask(), &status));
+      callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
 
@@ -177,7 +182,7 @@ TEST_F(LedgerEndToEndTest, Terminate) {
   bool called = false;
   RegisterShutdownCallback([this, &called] {
     called = true;
-    message_loop_.PostQuitTask();
+    QuitLoop();
   });
   controller_->Terminate();
   RunLoop();
@@ -223,7 +228,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   ledger_repository_factory_->GetRepository(
       tmp_dir.path(), std::move(cloud_provider_ptr),
       ledger_repository.NewRequest(),
-      callback::Capture(MakeQuitTask(), &status));
+      callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
 
@@ -275,7 +280,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
   ledger_repository_factory_->GetRepository(
       tmp_dir.path(), std::move(cloud_provider_ptr),
       ledger_repository.NewRequest(),
-      callback::Capture(MakeQuitTask(), &status));
+      callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
 
@@ -311,7 +316,7 @@ TEST_F(LedgerEndToEndTest, ShutDownWhenCloudProviderDisconnects) {
   ledger_repository_factory_->GetRepository(
       tmp_dir.path(), std::move(cloud_provider_ptr),
       ledger_repository.NewRequest(),
-      callback::Capture(MakeQuitTask(), &status));
+      callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
 
