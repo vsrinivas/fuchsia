@@ -17,6 +17,7 @@ ROOT_PUBSPECS = [
     'third_party/dart/pkg/analysis_server',
     'third_party/dart/pkg/analyzer',
     'third_party/dart/pkg/analyzer_cli',
+    'third_party/dart/pkg/build_integration',
     'third_party/dart/pkg/front_end',
     'third_party/dart/pkg/kernel',
     'third_party/dart/pkg/telemetry',
@@ -47,14 +48,14 @@ def main():
     script_args = parser.parse_args()
 
     if sys.platform.startswith('linux'):
-        platform = 'linux'
+        platform = 'linux-x64'
     elif sys.platform.startswith('darwin'):
-        platform = 'mac'
+        platform = 'mac-x64'
     else:
         print('Unsupported platform: %s' % sys.platform)
         return 1
-    pub_path = os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'dart', 'tools',
-                            'sdks', platform, 'dart-sdk', 'bin', 'pub')
+    pub_path = os.path.join(paths.FUCHSIA_ROOT, 'topaz', 'tools',
+                            'prebuilt-dart-sdk', platform, 'bin', 'pub')
     importer_path = os.path.join(paths.FUCHSIA_ROOT, 'scripts', 'dart',
                                  'package_importer.py')
     output_path = os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'dart-pkg',
