@@ -1,16 +1,14 @@
 use {Status, ok, sys};
 
 /// Draw random bytes from the kernel's CPRNG to fill the given buffer. Returns the actual number of
-/// bytes drawn, which may sometimes be less than the size of the buffer provided.
-///
-/// The buffer must have length less than `ZX_CPRNG_DRAW_MAX_LEN`.
+/// bytes drawn, which is always the size of the buffer provided.
 ///
 /// Wraps the
-/// [zx_cprng_draw_new](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/syscalls/cprng_draw.md)
+/// [zx_cprng_draw](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/syscalls/cprng_draw.md)
 /// syscall.
 pub fn cprng_draw(buffer: &mut [u8]) -> Result<usize, Status> {
-    let status = unsafe { sys::zx_cprng_draw_new(buffer.as_mut_ptr(), buffer.len()) };
-    ok(status).map(|()| buffer.len())
+    unsafe { sys::zx_cprng_draw(buffer.as_mut_ptr(), buffer.len()) };
+    Ok(buffer.len())
 }
 
 /// Mix the given entropy into the kernel CPRNG.
@@ -50,9 +48,9 @@ mod tests {
     }
 
     #[test]
-    fn cprng_too_large() {
+    fn cprng_large() {
         let mut buffer = [0; sys::ZX_CPRNG_DRAW_MAX_LEN + 1];
-        assert_eq!(cprng_draw(&mut buffer), Err(Status::INVALID_ARGS));
+        assert_eq!(cprng_draw(&mut buffer), Ok(buffer.len()));
 
         for mut s in buffer.chunks_mut(sys::ZX_CPRNG_DRAW_MAX_LEN) {
             assert_eq!(cprng_draw(&mut s), Ok(s.len()));

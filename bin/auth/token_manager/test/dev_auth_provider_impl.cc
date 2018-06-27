@@ -5,10 +5,10 @@
 #include "garnet/bin/auth/token_manager/test/dev_auth_provider_impl.h"
 
 namespace {
+
 std::string GenerateRandomString() {
   uint32_t random_number;
-  zx_status_t status = zx_cprng_draw_new(&random_number, sizeof random_number);
-  FXL_CHECK(status == ZX_OK);
+  zx_cprng_draw(&random_number, sizeof random_number);
   return std::to_string(random_number);
 }
 

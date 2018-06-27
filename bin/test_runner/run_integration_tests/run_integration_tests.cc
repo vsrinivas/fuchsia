@@ -46,7 +46,7 @@ class TestRunObserverImpl : public test_runner::TestRunObserver {
 bool RunTest(std::shared_ptr<fuchsia::sys::StartupContext> app_context,
              const std::string& url, const std::vector<std::string>& args) {
   uint64_t random_number;
-  zx_cprng_draw_new(&random_number, sizeof random_number);
+  zx_cprng_draw(&random_number, sizeof random_number);
   std::string test_id = fxl::StringPrintf("test_%lX", random_number);
   TestRunObserverImpl observer(test_id);
   test_runner::TestRunContext context(app_context, &observer, test_id, url,

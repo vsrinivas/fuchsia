@@ -478,10 +478,10 @@ extern {
 
     pub fn zx_vmar_root_self() -> zx_handle_t;
 
-    pub fn zx_cprng_draw_new(
+    pub fn zx_cprng_draw(
         buffer: *mut u8,
         len: usize
-        ) -> zx_status_t;
+        );
 
     pub fn zx_cprng_add_entropy(
         buffer: *const u8,
