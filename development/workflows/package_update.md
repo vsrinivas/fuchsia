@@ -45,15 +45,19 @@ build generates a [TUF][TUF-home] file tree which is served.
 The update agent on the target defaults to using a local port on the target. To
 connect the agent on the target to the HTTP server running on the development
 host we can establish a reverse SSH tunnel. The host HTTP server is started and
-reverse SSH tunnel created by calling `fx serve-updates`.
+reverse SSH tunnel created by calling `fx serve -v` or `fx serve-updates -v`.
+`fx serve` will run both the bootserver and the update server and is often what
+people use. `fx serve-updates` runs just the update server. In both cases, `-v`
+is recommended because the command will print more output which may assist with
+debugging. If the host connects successfully to the target you will see the
+message `Ready to serve updates!` in the shell on your host.
 
 The reverse SSH tunnel will remain until sshd running on the target is
-restarted, this will happen if you *reboot* the device *or* *restart* *`sysmgr`*.
-The HTTP server on the host will remain running until explicitly killed.
-`fx serve-updates` can be run again to reconnect the tunnel or restart the HTTP
-server. Note that an error will be reported if a second instance of the HTTP
-server is started, *this* *is* *okay*. The second instance will exit and the
-first will continue to serve the update tree.
+restarted. sshd will obviously be restarted if the target is rebooted. The host
+will attempt to reconnect the SSH tunnel when the target reboots, but this is
+not completely reliable. Following a reboot of your target, look for the
+`Ready to serve updates!` message in the host terminal where the update server
+is running.
 
 ## Triggering package updates
 
@@ -61,25 +65,32 @@ In the future certain updates may happen automatically, but today the update
 agent on the target must be told to look for an update. To accomplish this a SSH
 connection is made from the host to the target and a command is run to tell the
 update agent to look for a new package. To trigger the update invoke
-`fx push-package <package_name>`. The &lt;package_name&gt; argument can be
+`fx build-push <package_name>`. The &lt;package_name&gt; argument can be
 repeated to push multiple packages. The &lt;package_name&gt; argument can also
-be omitted to cause *all* packages to be pushed. It is worth noting that pushing
-all packages can take a considerable amount of time because of the
-implementation of the host-side tool.
+be omitted to cause *all* packages to be pushed, but in this case it may be
+better to instead do an [OTA].
 
 The update package(s) will be available until the target is rebooted. Following
 a reboot the package data will still be on local storage, but will be
 inaccessible. This is a limitation of the current implementation which will
-improve over time.
+improve over time. When doing an [OTA] the result of the OTA is persistent
+across reboots.
+
+## Triggering an OTA (experimental)
+
+Sometimes there may be kernel changes or changes in the system package that you
+need to pick up. There are two options, [paving][paver] or doing an OTA. To do
+an OTA you should make sure your code is up to date, do a full-build, and have
+the update server running on your host. Then run the command
+`fx shell amber_ctl system_update`. If the update server is running
+with the `-v` flag there should be a flurry of output as the target retrieves
+all the new files. Following completion of the OTA the device will reboot.
+
 
 ## Just the commands
 
-Most likely you will want to run the first three commands **every** time there are
-changes you want to build and push.
-
-  * `fx full-build` or `fx build <target_name>`
-  * `fx serve-updates` (messages about a port in use are okay)
-  * `fx push-package <package_name>`
+  * `fx serve -v` or `fx serve-updates -v` (to not run the bootserver as well)
+  * `fx build-push <package_name>` (each time a change is made you want to push)
   * `fx shell "killall sysmgr"` (optional, depending on your component)
 
 ## Issues and considerations
@@ -105,8 +116,8 @@ case 'fuchsia' can be restarted. More accurately, `sysmgr` can be restarted.
 
 If a package is part of the system image (because its package rule sets
 `deprecated_system_image = "true"`) then it can not be updated with the package update flow.
-It is a goal of the update flow to include updating the system package, but even
-when this is supported the target will probably need a reboot.
+To update the system package, an [OTA] is required which requires a
+reboot at present.
 
 The system package is intended for a few key pieces of code and data that are
 involved in booting the system. There are very few reasons that code should need
@@ -130,3 +141,4 @@ root hash and put in a directory at the root of the TUF file tree called 'blobs'
 [pkg-doc]: /development/build/packages.md "Packaging docs"
 [flutter-gni]: https://fuchsia.googlesource.com/topaz/+/master/runtime/flutter_runner/flutter_app.gni "Flutter GN build template"
 [paver]: fuchsia_paver.md "Fuchsia paver"
+[OTA]: #triggering-an-ota-experimental "Triggering an OTA"
