@@ -1,0 +1,128 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "dynamic_channel_registry.h"
+
+#include <zircon/assert.h>
+
+#include "garnet/drivers/bluetooth/lib/common/log.h"
+
+namespace btlib {
+namespace l2cap {
+namespace internal {
+
+DynamicChannelRegistry::~DynamicChannelRegistry() {
+  // Clean up connected channels.
+  for (auto& id_and_chan : channels_) {
+    auto& chan = id_and_chan.second;
+    if (chan->IsConnected()) {
+      chan->Disconnect();
+    }
+  }
+}
+
+// Run return callbacks on the L2CAP thread. LogicalLink takes care of out-of-
+// thread dispatch for delivering the pointer to the channel.
+void DynamicChannelRegistry::OpenOutbound(PSM psm,
+                                          DynamicChannelCallback open_cb) {
+  const ChannelId id = FindAvailableChannelId();
+  if (id == kInvalidChannelId) {
+    bt_log(ERROR, "l2cap", "No dynamic channel IDs available");
+    open_cb(nullptr);
+    return;
+  }
+
+  auto iter = channels_.emplace(id, MakeOutbound(psm, id)).first;
+  ActivateChannel(iter->second.get(), std::move(open_cb));
+}
+
+void DynamicChannelRegistry::CloseChannel(ChannelId local_cid) {
+  DynamicChannel* channel = FindChannel(local_cid);
+  if (!channel) {
+    return;
+  }
+
+  ZX_DEBUG_ASSERT(channel->IsConnected());
+  channel->Disconnect();
+  RemoveChannel(channel);
+}
+
+DynamicChannelRegistry::DynamicChannelRegistry(ChannelId largest_channel_id,
+                                               DynamicChannelCallback close_cb)
+    : largest_channel_id_(largest_channel_id), close_cb_(std::move(close_cb)) {
+  ZX_DEBUG_ASSERT(largest_channel_id_ >= kFirstDynamicChannelId);
+  ZX_DEBUG_ASSERT(close_cb_);
+}
+
+ChannelId DynamicChannelRegistry::FindAvailableChannelId() const {
+  for (ChannelId id = kFirstDynamicChannelId; id != largest_channel_id_ + 1;
+       id++) {
+    if (channels_.count(id) == 0) {
+      return id;
+    }
+  }
+
+  return kInvalidChannelId;
+}
+
+DynamicChannel* DynamicChannelRegistry::FindChannel(ChannelId local_cid) const {
+  auto iter = channels_.find(local_cid);
+  if (iter == channels_.end()) {
+    return nullptr;
+  }
+  return iter->second.get();
+}
+
+void DynamicChannelRegistry::ActivateChannel(DynamicChannel* channel,
+                                             DynamicChannelCallback open_cb) {
+  // It's safe to capture |this| here because the callback will be owned by the
+  // DynamicChannel, which this registry owns.
+  auto return_chan = [this, channel, open_cb = std::move(open_cb)]() {
+    if (channel->IsOpen()) {
+      open_cb(channel);
+      return;
+    }
+
+    bt_log(TRACE, "l2cap",
+           "Failed to open dynamic channel %#.4x (remote %#.4x) for PSM %#.4x",
+           channel->local_cid(), channel->remote_cid(), channel->psm());
+
+    // TODO(NET-1084): Maybe negotiate channel parameters here? For now, just
+    // disconnect the channel.
+    if (channel->IsConnected()) {
+      channel->Disconnect();
+    }
+    RemoveChannel(channel);
+    open_cb(nullptr);
+  };
+
+  channel->Open(std::move(return_chan));
+}
+
+void DynamicChannelRegistry::OnChannelDisconnected(DynamicChannel* channel) {
+  if (channel->opened()) {
+    close_cb_(channel);
+  }
+  RemoveChannel(channel);
+}
+
+void DynamicChannelRegistry::RemoveChannel(DynamicChannel* channel) {
+  ZX_DEBUG_ASSERT(channel);
+  ZX_DEBUG_ASSERT(!channel->IsConnected());
+
+  auto iter = channels_.find(channel->local_cid());
+  if (iter == channels_.end()) {
+    return;
+  }
+
+  if (channel != iter->second.get()) {
+    return;
+  }
+
+  channels_.erase(iter);
+}
+
+}  // namespace internal
+}  // namespace l2cap
+}  // namespace btlib
