@@ -73,6 +73,27 @@ source_set("device") {
   allow_circular_includes_from = [ "zircon:device" ]
 }
 
+source_set("random_header") {
+  visibility = [ "./*" ]
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_random.h",
+  ]
+}
+
+group("random") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    ":random_header",
+  ]
+
+  deps = [
+    "zircon:random",
+  ]
+}
+
 source_set("mmio") {
   public_configs = [ ":platform_include_config" ]
 

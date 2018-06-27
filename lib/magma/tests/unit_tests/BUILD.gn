@@ -70,6 +70,7 @@ source_set("magma_platform_tests") {
     "test_platform_futex.cc",
     "test_platform_handle.cc",
     "test_platform_port.cc",
+    "test_platform_random.cc",
     "test_platform_semaphore.cc",
     "test_platform_thread.cc",
   ]
@@ -78,6 +79,7 @@ source_set("magma_platform_tests") {
     "$magma_build_root/src/magma_util/platform:event",
     "$magma_build_root/src/magma_util/platform:futex",
     "$magma_build_root/src/magma_util/platform:port",
+    "$magma_build_root/src/magma_util/platform:random",
     "$magma_build_root/src/magma_util/platform:semaphore",
     "$magma_build_root/src/magma_util/platform:thread",
     "//third_party/googletest:gtest",

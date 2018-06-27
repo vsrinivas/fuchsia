@@ -100,12 +100,12 @@ source_set("connection") {
     ":event",
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util",
+    "$zircon_build_root/public/lib/async",
+    "$zircon_build_root/public/lib/async-loop-cpp",
     "$zircon_build_root/public/lib/ddk",
     "$zircon_build_root/public/lib/driver",
     "$zircon_build_root/public/lib/fdio",
     "$zircon_build_root/public/lib/zx",
-    "$zircon_build_root/public/lib/async-loop-cpp",
-    "$zircon_build_root/public/lib/async",
   ]
 
   libs = [ "zircon" ]
@@ -150,7 +150,6 @@ source_set("handle") {
     "$zircon_build_root/public/lib/zx",
   ]
 }
-
 
 source_set("object") {
   configs += [ "..:platform_include_config" ]
@@ -219,6 +218,17 @@ source_set("trace") {
       "//garnet/public/lib/fsl",
     ]
   }
+
+  libs = [ "zircon" ]
+}
+
+source_set("random") {
+  deps = [
+    "..:random_header",
+  ]
+  sources = [
+    "zircon_platform_random.cc",
+  ]
 
   libs = [ "zircon" ]
 }
