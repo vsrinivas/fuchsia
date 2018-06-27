@@ -23,23 +23,15 @@ CommandTransaction::CommandTransaction(
   }
 }
 
-bool CommandTransaction::HasMoreResponses() const {
-  return !replies_.empty();
-}
-
-common::DynamicByteBuffer CommandTransaction::PopNextReply() {
-  FXL_DCHECK(HasMoreResponses());
-  auto reply = std::move(replies_.front());
-  replies_.pop();
-  return reply;
-}
-
 TestController::TestController()
     : FakeControllerBase(),
       data_dispatcher_(nullptr),
       transaction_dispatcher_(nullptr) {}
 
-TestController::~TestController() { Stop(); }
+TestController::~TestController() {
+  EXPECT_EQ(0u, cmd_transactions_.size()) << "Not all transactions resolved!";
+  Stop();
+}
 
 void TestController::QueueCommandTransaction(CommandTransaction transaction) {
   cmd_transactions_.push(std::move(transaction));

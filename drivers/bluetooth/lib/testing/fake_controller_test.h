@@ -107,6 +107,12 @@ class FakeControllerTest : public ::gtest::TestLoopFixture {
   zx::channel test_cmd_chan() { return std::move(cmd1_); }
   zx::channel test_acl_chan() { return std::move(acl1_); }
 
+  // Starts processing data on the control and ACL data channels.
+  void StartTestDevice() {
+    test_device()->StartCmdChannel(test_cmd_chan());
+    test_device()->StartAclChannel(test_acl_chan());
+  }
+
  private:
   // Channels to be moved to the tests
   zx::channel cmd1_;

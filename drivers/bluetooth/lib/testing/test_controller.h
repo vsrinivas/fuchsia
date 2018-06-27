@@ -33,9 +33,6 @@ class CommandTransaction final {
  private:
   friend class TestController;
 
-  bool HasMoreResponses() const;
-  common::DynamicByteBuffer PopNextReply();
-
   common::DynamicByteBuffer expected_;
   std::queue<common::DynamicByteBuffer> replies_;
 
