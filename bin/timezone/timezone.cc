@@ -48,7 +48,7 @@ bool TimezoneImpl::Init() {
   }
 
   // ICU-related initialization.
-  UErrorCode icu_set_data_status;
+  UErrorCode icu_set_data_status = U_ZERO_ERROR;
   udata_setCommonData(reinterpret_cast<void*>(icu_data_ptr),
                       &icu_set_data_status);
   if (icu_set_data_status != U_ZERO_ERROR) {
