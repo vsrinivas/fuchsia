@@ -5,6 +5,8 @@
 #include <fbl/auto_lock.h>
 #include <fcntl.h>
 #include <rapidjson/document.h>
+#include <rapidjson/error/en.h>
+#include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -26,6 +28,50 @@ constexpr uint32_t kAllSetGainFlags =
     ::fuchsia::media::SetAudioGainFlag_GainValid |
     ::fuchsia::media::SetAudioGainFlag_MuteValid |
     ::fuchsia::media::SetAudioGainFlag_AgcValid;
+
+std::ostream& operator<<(std::ostream& stream,
+                         const rapidjson::ParseResult& result) {
+  return stream << "(offset " << result.Offset() << " : "
+                << rapidjson::GetParseError_En(result.Code()) << ")";
+}
+
+std::ostream& operator<<(std::ostream& stream,
+                         const rapidjson::SchemaValidator::ValueType& value) {
+  // clang-format off
+  if (value.IsNull()) return stream << "<null>";
+  if (value.IsBool()) return stream << value.GetBool();
+  if (value.IsInt()) return stream << value.GetInt();
+  if (value.IsUint()) return stream << value.GetUint();
+  if (value.IsInt64()) return stream << value.GetInt64();
+  if (value.IsUint64()) return stream << value.GetUint64();
+  if (value.IsDouble()) return stream << value.GetDouble();
+  if (value.IsString()) return stream << "\"" << value.GetString() << "\"";
+  if (value.IsFloat()) return stream << value.GetFloat();
+  // clang-format on
+
+  if (value.IsArray()) {
+    bool first = true;
+    stream << "[";
+    for (auto iter = value.Begin(); iter != value.End(); ++iter) {
+      stream << (first ? "" : ", ") << *iter;
+      first = false;
+    }
+    return stream << "]";
+  }
+
+  if (value.IsObject()) {
+    bool first = true;
+    stream << "{ ";
+    for (auto iter = value.MemberBegin(); iter != value.MemberEnd(); ++iter) {
+      stream << (first ? "" : ", ") << iter->name << " : " << iter->value;
+      first = false;
+    }
+    return stream << " }";
+  }
+
+  return stream << "???";
+}
+
 }  // namespace
 
 const std::string AudioDeviceSettings::kSettingsPath =
@@ -55,9 +101,11 @@ void AudioDeviceSettings::Initialize() {
   }
 
   rapidjson::Document schema_doc;
-  if (schema_doc.Parse(kAudioDeviceSettingsSchema.c_str()).HasParseError()) {
-    FXL_LOG(ERROR) << "Failed to parse settings file JSON schema!  Settings "
-                      "will neither be persisted nor restored.";
+  rapidjson::ParseResult parse_res =
+      schema_doc.Parse(kAudioDeviceSettingsSchema.c_str());
+  if (parse_res.IsError()) {
+    FXL_LOG(ERROR) << "Failed to parse settings file JSON schema " << parse_res
+                   << "!  Settings will neither be persisted nor restored.";
     return;
   }
 
@@ -135,6 +183,10 @@ void AudioDeviceSettings::InitFromClone(const AudioDeviceSettings& other) {
   ::fuchsia::media::AudioGainInfo gain_info;
   other.GetGainInfo(&gain_info);
   SetGainInfo(gain_info, kAllSetGainFlags);
+
+  // Clone misc. flags.
+  ignore_device_ = other.ignore_device();
+  disallow_auto_routing_ = other.disallow_auto_routing();
 }
 
 bool AudioDeviceSettings::SetGainInfo(
@@ -267,7 +319,10 @@ zx_status_t AudioDeviceSettings::Deserialize() {
 
   // Parse the contents
   rapidjson::Document doc;
-  if (doc.ParseInsitu(buffer.get()).HasParseError()) {
+  rapidjson::ParseResult parse_res = doc.ParseInsitu(buffer.get());
+  if (parse_res.IsError()) {
+    FXL_LOG(WARNING) << "Parse error " << parse_res
+                     << " when reading persisted audio settings.";
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
@@ -275,6 +330,9 @@ zx_status_t AudioDeviceSettings::Deserialize() {
   FXL_DCHECK(file_schema_ != nullptr);
   rapidjson::SchemaValidator validator(*file_schema_);
   if (!doc.Accept(validator)) {
+    FXL_LOG(WARNING)
+        << "Schema validation error when reading persisted audio settings.";
+    FXL_LOG(WARNING) << "Error: " << validator.GetError();
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
@@ -293,6 +351,10 @@ zx_status_t AudioDeviceSettings::Deserialize() {
 
   // Apply gain settings.
   SetGainInfo(gain_info, kAllSetGainFlags);
+
+  // Extract misc. flags.
+  ignore_device_ = doc["ignore_device"].GetBool();
+  disallow_auto_routing_ = doc["disallow_auto_routing"].GetBool();
 
   // Success!
   return ZX_OK;
@@ -323,6 +385,10 @@ zx_status_t AudioDeviceSettings::Serialize() {
       (gain_info.flags & ::fuchsia::media::AudioGainInfoFlag_AgcEnabled) &&
       (gain_info.flags & ::fuchsia::media::AudioGainInfoFlag_AgcSupported));
   writer.EndObject();  // end "gain" object
+  writer.Key("ignore_device");
+  writer.Bool(ignore_device());
+  writer.Key("disallow_auto_routing");
+  writer.Bool(disallow_auto_routing());
   writer.EndObject();  // end top level object
 
   // Truncate the file down to nothing, write the data, and finally flush the

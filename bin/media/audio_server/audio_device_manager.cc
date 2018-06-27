@@ -129,10 +129,6 @@ void AudioDeviceManager::ActivateDevice(
     return;
   }
 
-  // Move the deivce over to the set of active devices.
-  devices_.insert(devices_pending_init_.erase(*device));
-  device->SetActivated();
-
   // TODO(johngro): remove this when system gain is fully deprecated.
   // For now, if this is an output device, update its gain to be whatever the
   // current "system" gain is set to.
@@ -170,6 +166,17 @@ void AudioDeviceManager::ActivateDevice(
                      "will be cloned from this device, and not persisted";
     settings->InitFromClone(*collision);
   }
+
+  // Has this device been configured to be ignored?  If so, remove the device
+  // instead of activating it.
+  if (settings->ignore_device()) {
+    RemoveDevice(device);
+    return;
+  }
+
+  // Move the deivce over to the set of active devices.
+  devices_.insert(devices_pending_init_.erase(*device));
+  device->SetActivated();
 
   // Now that we have our gain settings (restored from disk, cloned from
   // others, or default), reapply them via the device itself.  We do this in
@@ -231,6 +238,7 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
   }
 
   device->Shutdown();
+  FinalizeDeviceSettings(*device);
 
   if (device->InContainer()) {
     auto& device_set = device->activated() ? devices_ : devices_pending_init_;
@@ -239,7 +247,6 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
     // If the device was active, reconsider what the default device is now,
     // and let clients know that this device has gone away.
     if (device->activated()) {
-      FinalizeDeviceSettings(*device);
       UpdateDefaultDevice(device->is_input());
 
       for (auto& client : bindings_.bindings()) {
@@ -440,7 +447,8 @@ fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(
   // index.
   for (auto& obj : devices_) {
     auto device = static_cast<AudioDevice*>(&obj);
-    if (device->type() != type) {
+    if ((device->type() != type) ||
+        device->device_settings()->disallow_auto_routing()) {
       continue;
     }
 

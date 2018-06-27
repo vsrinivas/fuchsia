@@ -58,6 +58,10 @@ class AudioDeviceSettings
   const audio_stream_unique_id_t& uid() const { return uid_; }
   bool is_input() const { return is_input_; }
 
+  // Simple accessors for persisted properties
+  bool ignore_device() const { return ignore_device_; }
+  bool disallow_auto_routing() const { return disallow_auto_routing_; }
+
   // Disallow copy/move construction/assignment
   AudioDeviceSettings(const AudioDeviceSettings&) = delete;
   AudioDeviceSettings(AudioDeviceSettings&&) = delete;
@@ -127,6 +131,8 @@ class AudioDeviceSettings
   // Members which should only ever be accessed from the context of the
   // AudioDeviceManager's message loop thread.
   fbl::unique_fd storage_;
+  bool ignore_device_ = false;
+  bool disallow_auto_routing_ = false;
 
   // Members which control the dirty/clean status of the settings relative to
   // storage, and which control the Nagle-ish commit limiter.

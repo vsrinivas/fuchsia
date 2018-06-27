@@ -44,7 +44,16 @@ def main():
   out.write(HEADER % (varname, ));
 
   for i in range(len(lines)):
-    out.write('    "%s"' % (lines[i].replace('"', '\\"').replace('\n', ''), ))
+    l = lines[i].replace('\n', '')   # Remove the trailing newline
+    l = re.sub('//.*', '', l)        # Remove any comments
+    l = re.sub('(^\s+|\s+$)', '', l) # Remove leading/trailing whitespace
+    l = l.replace('"', '\\"')        # Escape all double-quotes
+
+    # Skip empty lines
+    if len(l) == 0:
+      continue
+
+    out.write('    "%s"' % (l, ))
     if ((i + 1) == len(lines)):
       out.write(';\n')
     else:
