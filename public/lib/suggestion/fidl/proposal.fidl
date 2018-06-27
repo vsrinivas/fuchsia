@@ -88,7 +88,9 @@ struct FocusStory {
 // Adds a module from an Intent to an existing story.
 struct AddModule {
   // The identifier of the story that the Intent is to be added to.
-  string story_id;
+  // This will only be used if there is no story_name associated with the
+  // Proposal itself.
+  string? story_id;
 
   // The name of the module that will be added as a result of this proposal.  A
   // proposal for the same |story_id|, |module_name| and

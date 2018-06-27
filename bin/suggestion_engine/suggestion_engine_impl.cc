@@ -440,6 +440,10 @@ void SuggestionEngineImpl::PerformAddModuleAction(
           << add_module.story_id << "). Using " << override_story_id << ".";
     }
   }
+
+  FXL_CHECK(!story_id.empty())
+      << "Attempting to add module without specifying a story id.";
+
   fuchsia::modular::StoryControllerPtr story_controller;
   story_provider_->GetController(story_id, story_controller.NewRequest());
   fuchsia::modular::Intent intent;
