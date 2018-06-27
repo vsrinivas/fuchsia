@@ -333,6 +333,9 @@ static inline void swap_to_head(const char c, char* s, const size_t n) {
     s[i] = tmp;
 }
 
+size_t kernel_zone_size;
+efi_physical_addr kernel_zone_base;
+
 EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     xefi_init(img, sys);
     gConOut->ClearScreen(gConOut);
@@ -373,6 +376,20 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
         printf("Framebuffer base is at %" PRIx64 "\n\n",
                gop->Mode->FrameBufferBase);
     }
+
+    // Set aside space for the kernel down at the 1MB mark up front
+    // to avoid other allocations getting in the way.
+    // The kernel itself is about 1MB, but we leave generous space
+    // for its BSS afterwards.
+    kernel_zone_base = 0x100000;
+    kernel_zone_size = 32 * 1024 * 1024;
+
+    if (gBS->AllocatePages(AllocateAddress, EfiLoaderData,
+                          BYTES_TO_PAGES(kernel_zone_size), &kernel_zone_base)) {
+        printf("boot: cannot obtain memory for kernel @ %p\n", (void*) kernel_zone_base);
+        kernel_zone_size = 0;
+    }
+    printf("KALLOC DONE\n");
 
     // Default boot defaults to network
     const char* defboot = cmdline_get("bootloader.default", "network");

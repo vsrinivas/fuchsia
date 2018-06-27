@@ -208,6 +208,10 @@ int boot_zircon(efi_handle img, efi_system_table* sys,
         printf("boot: ramdisk missing or too small\n");
         return -1;
     }
+    if (isz > kernel_zone_size) {
+        printf("boot: kernel image too large\n");
+        return -1;
+    }
 
     zbi_header_t* hdr0 = ramdisk;
     if ((hdr0->type != ZBI_TYPE_CONTAINER) ||
@@ -296,15 +300,7 @@ int boot_zircon(efi_handle img, efi_system_table* sys,
         }
     }
 
-    // Allocate at 1M and copy kernel down there
-    efi_physical_addr mem = 0x100000;
-    unsigned pages = BYTES_TO_PAGES(isz);
-    //TODO: sort out why pages + 1?  Inherited from deprecated_load()
-    if (bs->AllocatePages(AllocateAddress, EfiLoaderData, pages + 1, &mem)) {
-        printf("boot: cannot obtain memory @ %p\n", (void*) mem);
-        goto fail;
-    }
-    memcpy((void*)mem, image, isz);
+    memcpy((void*)kernel_zone_base, image, isz);
 
     // Obtain the system memory map
     size_t msize, dsize;
@@ -367,7 +363,6 @@ int boot_zircon(efi_handle img, efi_system_table* sys,
     start_zircon(entry, ramdisk - FRONT_BYTES);
 
 fail:
-    bs->FreePages(mem, pages);
     return -1;
 }
 
