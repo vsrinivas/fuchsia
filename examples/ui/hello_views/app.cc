@@ -13,10 +13,10 @@
 #include <lib/zx/time.h>
 #include <zircon/types.h>
 
+#include "example_view_provider_service.h"
 #include "garnet/public/lib/ui/scenic/fidl_helpers.h"
 #include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"
-#include "view_provider_service.h"
 
 static fuchsia::sys::FileDescriptorPtr CloneFileDescriptor(int fd) {
   zx_handle_t handles[FDIO_MAX_HANDLES] = {0, 0, 0};
@@ -60,7 +60,7 @@ App::App(async::Loop* loop, AppType type)
     : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       loop_(loop),
       type_(type) {
-  // Connect the ViewProviderService.
+  // Connect the ExampleViewProviderService.
   if (type_ == AppType::CONTAINER) {
     // Launch the subview app.  Clone our stdout and stderr file descriptors
     // into it so output (FXL_LOG, etc) from the subview app will show up as
@@ -77,7 +77,7 @@ App::App(async::Loop* loop, AppType type)
     subview_services.ConnectToService(view_provider_.NewRequest(),
                                       "view_provider");
   } else if (type_ == AppType::SUBVIEW) {
-    view_provider_impl_ = std::make_unique<ViewProviderService>(
+    view_provider_impl_ = std::make_unique<ExampleViewProviderService>(
         startup_context_.get(), [this](ViewContext context) {
           // Bind the ServiceProviders, ourselves as the ourgoing one.
           incoming_services_.Bind(std::move(context.incoming_services));

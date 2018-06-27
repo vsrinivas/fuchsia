@@ -29,13 +29,14 @@ using ViewFactory = std::function<void(ViewContext context)>;
 
 // A basic implementation of the |ViewProvider| interface which Scenic clients
 // can use to create and expose custom Views to other Scenic clients.
-class ViewProviderService : public fuchsia::ui::app::ViewProvider {
+class ExampleViewProviderService : public fuchsia::ui::app::ViewProvider {
  public:
-  ViewProviderService(::fuchsia::sys::StartupContext* startup_ctx,
-                      ViewFactory factory);
-  ~ViewProviderService() override;
-  ViewProviderService(const ViewProviderService&) = delete;
-  ViewProviderService& operator=(const ViewProviderService&) = delete;
+  ExampleViewProviderService(::fuchsia::sys::StartupContext* startup_ctx,
+                             ViewFactory factory);
+  ~ExampleViewProviderService() override;
+  ExampleViewProviderService(const ExampleViewProviderService&) = delete;
+  ExampleViewProviderService& operator=(const ExampleViewProviderService&) =
+      delete;
 
   // |ui::ViewProvider|
   void CreateView(

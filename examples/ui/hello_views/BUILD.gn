@@ -9,8 +9,8 @@ executable("hello_views") {
     "app.cc",
     "app.h",
     "main.cc",
-    "view_provider_service.cc",
-    "view_provider_service.h",
+    "example_view_provider_service.cc",
+    "example_view_provider_service.h",
   ]
 
   deps = [
@@ -36,8 +36,8 @@ executable("hello_subview") {
     "app.cc",
     "app.h",
     "subview.cc",
-    "view_provider_service.cc",
-    "view_provider_service.h",
+    "example_view_provider_service.cc",
+    "example_view_provider_service.h",
   ]
 
   deps = [

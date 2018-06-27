@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/examples/ui/hello_views/view_provider_service.h"
+#include "garnet/examples/ui/hello_views/example_view_provider_service.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
@@ -14,7 +14,7 @@
 
 namespace hello_views {
 
-ViewProviderService::ViewProviderService(
+ExampleViewProviderService::ExampleViewProviderService(
     fuchsia::sys::StartupContext* startup_ctx, ViewFactory factory)
     : startup_ctx_(startup_ctx), view_factory_fn_(factory) {
   FXL_DCHECK(startup_ctx_);
@@ -26,13 +26,13 @@ ViewProviderService::ViewProviderService(
       "view_provider");
 }
 
-ViewProviderService::~ViewProviderService() {
+ExampleViewProviderService::~ExampleViewProviderService() {
   startup_ctx_->outgoing_services()
       ->RemoveService<fuchsia::ui::app::ViewProvider>();
 }
 
 // |ui::ViewProvider|
-void ViewProviderService::CreateView(
+void ExampleViewProviderService::CreateView(
     ::zx::eventpair token,
     ::fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
     ::fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) {
