@@ -65,7 +65,7 @@ zx_status_t Dispatcher::HandlePacket(fbl::unique_ptr<Packet> packet) {
         status = HandleSvcPacket(fbl::move(packet));
         break;
     case Packet::Peer::kEthernet:
-        status = DispatchFramePacket(fbl::move(packet), mlme_.get());
+        status = mlme_->HandleFramePacket(fbl::move(packet));
         break;
     case Packet::Peer::kWlan: {
         auto fc = packet->field<FrameControl>(0);
@@ -83,7 +83,7 @@ zx_status_t Dispatcher::HandlePacket(fbl::unique_ptr<Packet> packet) {
             break;
         }
 
-        status = DispatchFramePacket(fbl::move(packet), mlme_.get());
+        status = mlme_->HandleFramePacket(fbl::move(packet));
         break;
     }
     default:
@@ -178,7 +178,7 @@ zx_status_t Dispatcher::HandleMlmeMessage(fbl::unique_ptr<Packet> packet, uint32
         errorf("could not deserialize MLME primitive %d: \n", ordinal);
         return status;
     }
-    return mlme_->HandleFrame(msg);
+    return mlme_->HandleMlmeMsg(msg);
 }
 
 template <typename T> zx_status_t Dispatcher::SendServiceMessage(uint32_t ordinal, T* msg) const {

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <wlan/mlme/mlme.h>
+#include <wlan/mlme/service.h>
 
 #include <fbl/ref_ptr.h>
 
@@ -16,6 +17,7 @@ namespace wlan {
 
 class DeviceInterface;
 class Packet;
+class BaseMlmeMsg;
 class Scanner;
 class Station;
 
@@ -29,18 +31,21 @@ class ClientMlme : public Mlme {
     zx_status_t Init() override;
     zx_status_t PreChannelChange(wlan_channel_t chan) override;
     zx_status_t PostChannelChange() override;
+    zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;
+    zx_status_t HandleFramePacket(fbl::unique_ptr<Packet> pkt) override;
     zx_status_t HandleTimeout(const ObjectId id) override;
-    // MLME-JOIN.request will initialize a Station and starts the association flow.
-    zx_status_t HandleMlmeJoinReq(const MlmeMsg<::fuchsia::wlan::mlme::JoinRequest>& msg) override;
     ::fuchsia::wlan::stats::MlmeStats GetMlmeStats() const override final;
 
     bool IsStaValid() const;
 
-    DeviceInterface* const device_;
+   private:
+    // MLME-JOIN.request will initialize a Station and starts the association flow.
+    zx_status_t HandleMlmeJoinReq(const MlmeMsg<::fuchsia::wlan::mlme::JoinRequest>& msg);
 
-    fbl::RefPtr<Scanner> scanner_;
+    DeviceInterface* const device_;
+    fbl::unique_ptr<Scanner> scanner_;
     // TODO(tkilbourn): track other STAs
-    fbl::RefPtr<Station> sta_;
+    fbl::unique_ptr<Station> sta_;
 };
 
 }  // namespace wlan

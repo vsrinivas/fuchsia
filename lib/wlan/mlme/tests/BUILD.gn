@@ -79,7 +79,6 @@ executable("dispatcher_tests") {
   testonly = true
 
   sources = [
-    "dispatcher_unittest.cpp",
     "frame_dispatcher_unittest.cpp",
   ]
 

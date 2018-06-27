@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <wlan/mlme/ap/ap_mlme.h>
+#include <wlan/mlme/frame_dispatcher.h>
 
 #include <fbl/ref_ptr.h>
 #include <wlan/common/logging.h>
@@ -41,6 +42,22 @@ zx_status_t ApMlme::HandleTimeout(const ObjectId id) {
     return ZX_OK;
 }
 
+zx_status_t ApMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
+    if (auto start_req = msg.As<wlan_mlme::StartRequest>()) {
+        return HandleMlmeStartReq(*start_req);
+    } else if (auto stop_req = msg.As<wlan_mlme::StopRequest>()) {
+        return HandleMlmeStopReq(*stop_req);
+    }
+
+    if (bss_ != nullptr) { return DispatchMlmeMsg(msg, bss_.get()); }
+    return ZX_OK;
+}
+
+zx_status_t ApMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
+    if (bss_ != nullptr) { return DispatchFramePacket(fbl::move(pkt), bss_.get()); }
+    return ZX_OK;
+}
+
 zx_status_t ApMlme::HandleMlmeStartReq(const MlmeMsg<wlan_mlme::StartRequest>& req) {
     debugfn();
 
@@ -62,9 +79,8 @@ zx_status_t ApMlme::HandleMlmeStartReq(const MlmeMsg<wlan_mlme::StartRequest>& r
 
     // Create and start BSS.
     auto bcn_sender = fbl::make_unique<BeaconSender>(device_);
-    bss_ = fbl::AdoptRef(new InfraBss(device_, fbl::move(bcn_sender), bssid));
+    bss_.reset(new InfraBss(device_, fbl::move(bcn_sender), bssid));
     bss_->Start(req);
-    AddChildHandler(bss_);
 
     return ZX_OK;
 }
@@ -79,7 +95,6 @@ zx_status_t ApMlme::HandleMlmeStopReq(const MlmeMsg<wlan_mlme::StopRequest>& req
     }
 
     // Stop and destroy BSS.
-    RemoveChildHandler(bss_);
     bss_->Stop();
     bss_.reset();
 

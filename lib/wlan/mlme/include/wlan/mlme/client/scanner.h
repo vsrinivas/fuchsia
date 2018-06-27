@@ -23,7 +23,7 @@ class DeviceInterface;
 class Packet;
 class Timer;
 
-class Scanner : public FrameHandler {
+class Scanner {
    public:
     Scanner(DeviceInterface* device, fbl::unique_ptr<Timer> timer);
     virtual ~Scanner() {}
@@ -40,16 +40,17 @@ class Scanner : public FrameHandler {
     Type ScanType() const;
     wlan_channel_t ScanChannel() const;
 
-    zx_status_t HandleMlmeScanReq(const MlmeMsg<::fuchsia::wlan::mlme::ScanRequest>& req) override;
-    zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
-    zx_status_t HandleBeacon(const MgmtFrame<Beacon>& frame) override;
-    zx_status_t HandleProbeResponse(const MgmtFrame<ProbeResponse>& frame) override;
+    zx_status_t HandleMlmeScanReq(const MlmeMsg<::fuchsia::wlan::mlme::ScanRequest>& req);
+
+    zx_status_t HandleBeacon(const MgmtFrameView<Beacon>& frame);
+    zx_status_t HandleProbeResponse(const MgmtFrameView<ProbeResponse>& frame);
     zx_status_t HandleTimeout();
     zx_status_t HandleError(zx_status_t error_code);
 
     const Timer& timer() const { return *timer_; }
 
    private:
+    bool ShouldDropMgmtFrame(const MgmtFrameHeader& hdr);
     zx::time InitialTimeout() const;
     zx_status_t SendScanConfirm();
     zx_status_t SendProbeRequest();
@@ -57,8 +58,7 @@ class Scanner : public FrameHandler {
     // kBssPruneDelay seconds, and hence, multiple calls to this method in a short time frame have
     // no effect.
     void RemoveStaleBss();
-    zx_status_t ProcessBeacon(const common::MacAddr& bssid, const Beacon& bcn, uint16_t body_ie_len,
-                              const wlan_rx_info_t& rx_info);
+    zx_status_t ProcessBeacon(const MgmtFrameView<Beacon>& bcn_frame);
 
     static constexpr size_t kMaxBssEntries = 20;  // Limited by zx.Channel buffer size.
     static constexpr zx::duration kBssExpiry = zx::sec(60);

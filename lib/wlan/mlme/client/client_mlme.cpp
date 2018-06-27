@@ -8,6 +8,7 @@
 #include <wlan/common/logging.h>
 #include <wlan/mlme/client/scanner.h>
 #include <wlan/mlme/client/station.h>
+#include <wlan/mlme/frame_dispatcher.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
@@ -48,9 +49,7 @@ zx_status_t ClientMlme::Init() {
         return status;
     }
 
-    ZX_DEBUG_ASSERT(scanner_.get() == nullptr);
-    scanner_ = fbl::AdoptRef(new Scanner(device_, std::move(timer)));
-    AddChildHandler(scanner_);
+    scanner_.reset(new Scanner(device_, std::move(timer)));
     return status;
 }
 
@@ -75,6 +74,39 @@ zx_status_t ClientMlme::HandleTimeout(const ObjectId id) {
     return ZX_OK;
 }
 
+zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
+    // Let the Scanner handle all MLME-SCAN.requests.
+    if (auto scan_req = msg.As<wlan_mlme::ScanRequest>()) {
+        return scanner_->HandleMlmeScanReq(*scan_req);
+    }
+
+    // MLME-JOIN.request will reset the STA.
+    if (auto join_req = msg.As<wlan_mlme::JoinRequest>()) {
+        HandleMlmeJoinReq(*join_req);
+    }
+
+    // Once the STA was spawned, let it handle all incoming MLME messages.
+    if (sta_ != nullptr) { DispatchMlmeMsg(msg, sta_.get()); }
+    return ZX_OK;
+}
+
+zx_status_t ClientMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
+    // TODO(hahnr): Extract into some form of helper method.
+    MgmtFrameView<> mgmt_frame(pkt.get());
+    if (mgmt_frame.hdr()->fc.IsMgmt()) {
+        if (mgmt_frame.hdr()->IsBeacon()) {
+            auto bcn = mgmt_frame.Specialize<Beacon>();
+            if (bcn.HasValidLen()) { scanner_->HandleBeacon(bcn); }
+        } else if (mgmt_frame.hdr()->IsProbeResponse()) {
+            auto proberesp = mgmt_frame.Specialize<ProbeResponse>();
+            if (proberesp.HasValidLen()) { scanner_->HandleProbeResponse(proberesp); }
+        }
+    }
+
+    if (sta_ != nullptr) { DispatchFramePacket(fbl::move(pkt), sta_.get()); }
+    return ZX_OK;
+}
+
 zx_status_t ClientMlme::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& req) {
     debugfn();
     fbl::unique_ptr<Timer> timer;
@@ -88,9 +120,7 @@ zx_status_t ClientMlme::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>&
         return status;
     }
 
-    RemoveChildHandler(sta_);
-    sta_ = fbl::AdoptRef(new Station(device_, std::move(timer)));
-    AddChildHandler(sta_);
+    sta_.reset(new Station(device_, std::move(timer)));
     return ZX_OK;
 }
 

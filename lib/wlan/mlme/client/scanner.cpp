@@ -123,9 +123,9 @@ wlan_channel_t Scanner::ScanChannel() const {
     };
 }
 
-zx_status_t Scanner::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
+bool Scanner::ShouldDropMgmtFrame(const MgmtFrameHeader& hdr) {
     // Ignore all management frames when scanner is not running.
-    if (!IsRunning()) { return ZX_ERR_STOP; }
+    if (!IsRunning()) { return true; }
 
     common::MacAddr bssid(hdr.addr3);
     common::MacAddr src_addr(hdr.addr2);
@@ -134,10 +134,10 @@ zx_status_t Scanner::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
         // Do not process frame.
         debugbcn("Rxed a beacon/probe_resp from the non-BSSID station: BSSID %s   SrcAddr %s\n",
                  MACSTR(bssid), MACSTR(src_addr));
-        return ZX_ERR_STOP;
+        return true;
     }
 
-    return ZX_OK;
+    return false;
 }
 
 void Scanner::RemoveStaleBss() {
@@ -155,29 +155,26 @@ void Scanner::RemoveStaleBss() {
         [now](fbl::RefPtr<Bss> bss) -> bool { return (bss->ts_refreshed() + kBssExpiry <= now); });
 }
 
-zx_status_t Scanner::HandleBeacon(const MgmtFrame<Beacon>& frame) {
+zx_status_t Scanner::HandleBeacon(const MgmtFrameView<Beacon>& frame) {
     debugfn();
-    ZX_DEBUG_ASSERT(IsRunning());
+    if (ShouldDropMgmtFrame(*frame.hdr())) { return ZX_OK; }
 
-    common::MacAddr bssid(frame.hdr()->addr3);
-    return ProcessBeacon(bssid, *frame.body(), frame.len() - frame.hdr()->len(),
-                         *frame.View().rx_info());
+    return ProcessBeacon(frame);
 }
 
-zx_status_t Scanner::HandleProbeResponse(const MgmtFrame<ProbeResponse>& frame) {
+zx_status_t Scanner::HandleProbeResponse(const MgmtFrameView<ProbeResponse>& frame) {
     debugfn();
-    ZX_DEBUG_ASSERT(IsRunning());
+    if (ShouldDropMgmtFrame(*frame.hdr())) { return ZX_OK; }
 
-    common::MacAddr bssid(frame.hdr()->addr3);
     // ProbeResponse holds the same fields as a Beacon with the only difference in their IEs.
     // Thus, we can safely convert a ProbeResponse to a Beacon.
-    auto bcn = reinterpret_cast<const Beacon*>(frame.body());
-    return ProcessBeacon(bssid, *bcn, frame.len() - frame.hdr()->len(), *frame.View().rx_info());
+    auto bcn_frame = frame.Specialize<Beacon>();
+    return ProcessBeacon(bcn_frame);
 }
 
-zx_status_t Scanner::ProcessBeacon(const common::MacAddr& bssid, const Beacon& bcn,
-                                   uint16_t body_ie_len, const wlan_rx_info_t& rxinfo) {
+zx_status_t Scanner::ProcessBeacon(const MgmtFrameView<Beacon>& bcn_frame) {
     debugfn();
+    common::MacAddr bssid(bcn_frame.hdr()->addr3);
 
     // Before processing Beacon, remove stale entries.
     RemoveStaleBss();
@@ -186,18 +183,18 @@ zx_status_t Scanner::ProcessBeacon(const common::MacAddr& bssid, const Beacon& b
     zx_status_t status = ZX_OK;
     auto bss = nbrs_bss_.Lookup(bssid);
     if (bss != nullptr) {
-        status = bss->ProcessBeacon(bcn, body_ie_len, &rxinfo);
+        status = bss->ProcessBeacon(*bcn_frame.body(), bcn_frame.body_len(), bcn_frame.rx_info());
     } else if (nbrs_bss_.IsFull()) {
         errorf("error, maximum number of BSS reached: %lu\n", nbrs_bss_.Count());
     } else {
         bss = fbl::AdoptRef(new Bss(bssid));
-        bss->ProcessBeacon(bcn, body_ie_len, &rxinfo);
+        bss->ProcessBeacon(*bcn_frame.body(), bcn_frame.body_len(), bcn_frame.rx_info());
         status = nbrs_bss_.Insert(bssid, bss);
     }
 
     if (status != ZX_OK) {
         debugbcn("Failed to handle beacon (err %3d): BSSID %s timestamp: %15" PRIu64 "\n", status,
-                 MACSTR(bssid), bcn.timestamp);
+                 MACSTR(bssid), bcn_frame.body()->timestamp);
     }
 
     return ZX_OK;

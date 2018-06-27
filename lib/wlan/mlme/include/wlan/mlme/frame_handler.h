@@ -9,8 +9,6 @@
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
@@ -74,7 +72,7 @@ namespace wlan {
 // Use the latter option when dealing with dynamic frame targets, such as a forwarding the current
 // frame to a specific client. Use the first option when the frame targets are fixed and the amount
 // of targets is rather small.
-class FrameHandler : public fbl::RefCounted<FrameHandler> {
+class FrameHandler {
    public:
     FrameHandler() {}
     virtual ~FrameHandler() = default;
@@ -89,17 +87,6 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
         status = HandleFrameInternal(std::forward<Args>(args)...);
         if (status == ZX_ERR_STOP) { return ZX_OK; }
         if (status != ZX_OK) { return status; }
-
-        // Forward frame to all children.
-        uint16_t i = 0;
-        for (auto& handler : children_) {
-            status = handler->HandleFrame(std::forward<Args>(args)...);
-            // Log when a child failed processing a frame, but proceed.
-            if (status != ZX_OK) {
-                debugfhandler("child %u failed handling frame: %d\n", i, status);
-            }
-            i++;
-        }
 
         // If there is a dynamic target registered, forward frame.
         if (dynamic_target_ != nullptr) {
@@ -116,15 +103,6 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
         ZX_DEBUG_ASSERT(handler != nullptr);
         ZX_DEBUG_ASSERT(dynamic_target_ == nullptr);
         dynamic_target_ = handler;
-    }
-
-    void AddChildHandler(fbl::RefPtr<FrameHandler> ptr) { children_.push_back(ptr); }
-
-    void RemoveChildHandler(fbl::RefPtr<FrameHandler> ptr) {
-        children_.erase(
-            std::remove_if(children_.begin(), children_.end(),
-                           [ptr](fbl::RefPtr<FrameHandler>& entry) { return entry == ptr; }),
-            children_.end());
     }
 
    protected:
@@ -242,8 +220,6 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     // Ideally, this will turn into its own component which is also better testable and replaceable.
     // However, most of my prototyping hit compiler limitations.
     FrameHandler* dynamic_target_ = nullptr;
-    // List of all children which all incoming frames should get forwarded to.
-    std::vector<fbl::RefPtr<FrameHandler>> children_;
 };
 
 }  // namespace wlan

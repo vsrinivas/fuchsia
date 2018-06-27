@@ -6,7 +6,6 @@
 
 #include <fuchsia/wlan/stats/cpp/fidl.h>
 #include <wlan/common/bitfield.h>
-#include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
@@ -40,13 +39,16 @@ class ObjectId : public common::BitField<uint64_t> {
 
 class DeviceInterface;
 class Packet;
+class BaseMlmeMsg;
 
 // Mlme is the Mac sub-Layer Management Entity for the wlan driver.
-class Mlme : public FrameHandler {
+class Mlme {
    public:
     virtual ~Mlme() {}
     virtual zx_status_t Init() = 0;
 
+    virtual zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) = 0;
+    virtual zx_status_t HandleFramePacket(fbl::unique_ptr<Packet> pkt) = 0;
     // Called before a channel change happens.
     virtual zx_status_t PreChannelChange(wlan_channel_t chan) = 0;
     // Called after a channel change is complete. The DeviceState channel will reflect the channel,
