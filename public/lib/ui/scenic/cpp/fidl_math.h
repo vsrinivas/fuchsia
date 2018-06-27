@@ -5,7 +5,7 @@
 #ifndef LIB_UI_SCENIC_CPP_FIDL_MATH_H_
 #define LIB_UI_SCENIC_CPP_FIDL_MATH_H_
 
-#include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/ui/gfx/cpp/fidl.h>
 
 // TODO(SCN-811): add tests.
 
