@@ -70,11 +70,9 @@ esac
 export QUIET V
 
 if [[ "${ASAN}" = "true" ]]; then
-  readonly ASAN_ZIRCON=true
-  readonly ASAN_ULIB=false
+  readonly NOT_ASAN=false
 else
-  readonly ASAN_ZIRCON=false
-  readonly ASAN_ULIB=true
+  readonly NOT_ASAN=true
 fi
 
 make_zircon_common() {
@@ -93,12 +91,13 @@ make_zircon_target() {
 }
 
 for ARCH in "${ARCHLIST[@]}"; do
-    # Build full bootloader, kernel, userland, and sysroot.
+    # Build without ASan for sysroot.  If all of userland will be ASan,
+    # then this build is only user libraries.
     make_zircon_target PROJECT="${ARCH}" \
-        BUILDDIR_SUFFIX= USE_ASAN="${ASAN_ZIRCON}" "$@"
+        BUILDDIR_SUFFIX= ENABLE_ULIB_ONLY="${ASAN}" "$@"
 
-    # Build alternate shared libraries (ASan).
+    # Always build at least the libraries with ASan, but never the sysroot.
     make_zircon_target PROJECT="${ARCH}" \
-        BUILDDIR_SUFFIX=-ulib USE_ASAN="${ASAN_ULIB}" \
-        ENABLE_ULIB_ONLY=true ENABLE_BUILD_SYSROOT=false "$@"
+        BUILDDIR_SUFFIX=-asan USE_ASAN=true ENABLE_BUILD_SYSROOT=false \
+        ENABLE_ULIB_ONLY="${NOT_ASAN}"
 done
