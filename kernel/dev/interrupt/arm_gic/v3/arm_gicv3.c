@@ -148,6 +148,8 @@ static void gic_init_percpu_early(void) {
 static zx_status_t gic_init(void) {
     LTRACE_ENTRY;
 
+    DEBUG_ASSERT(arch_ints_disabled());
+
     uint pidr2 = GICREG(0, GICD_PIDR2);
     uint rev = BITS_SHIFT(pidr2, 7, 4);
     if (rev != GICV3 && rev != GICV4)
@@ -176,7 +178,14 @@ static zx_status_t gic_init(void) {
     GICREG(0, GICD_CTLR) = CTLR_ENALBE_G0 | CTLR_ENABLE_G1NS | CTLR_ARE_S;
     gic_wait_for_rwp(GICD_CTLR);
 
-    // set spi to target cpu 0. must do this after ARE enable
+    // ensure we're running on cpu 0 and that cpu 0 corresponds to affinity 0.0.0.0
+    DEBUG_ASSERT(arch_curr_cpu_num() == 0);
+    DEBUG_ASSERT(arch_cpu_num_to_cpu_id(0u) == 0);  // AFF0
+    DEBUG_ASSERT(arch_cpu_num_to_cluster_id(0u) == 0);  // AFF1
+
+    // TODO(maniscalco): If/when we support AFF2/AFF3, be sure to assert those here.
+
+    // set spi to target cpu 0 (affinity 0.0.0.0). must do this after ARE enable
     uint max_cpu = BITS_SHIFT(typer, 7, 5);
     if (max_cpu > 0) {
         for (i = 32; i < gic_max_int; i++) {
@@ -384,8 +393,54 @@ static void gic_shutdown(void) {
     GICREG(0, GICD_CTLR) = 0;
 }
 
+// Returns true if any PPIs are enabled on the calling CPU.
+static bool is_ppi_enabled(void) {
+    DEBUG_ASSERT(arch_ints_disabled());
+
+    // PPIs are 16-31.
+    uint32_t mask = 0xffff0000;
+
+    uint cpu_num = arch_curr_cpu_num();
+    uint32_t reg = GICREG(0, GICR_ICENABLER0(cpu_num));
+    if ((reg & mask) != 0) {
+        return true;
+    }
+
+    return false;
+}
+
+// Returns true if any SPIs are enabled on the calling CPU.
+static bool is_spi_enabled(void) {
+    DEBUG_ASSERT(arch_ints_disabled());
+
+    uint cpu_num = arch_curr_cpu_num();
+
+    // TODO(maniscalco): If/when we support AFF2/AFF3, update the mask below.
+    uint aff0 = arch_cpu_num_to_cpu_id(cpu_num);
+    uint aff1 = arch_cpu_num_to_cluster_id(cpu_num);
+    uint64_t aff_mask = (aff1 << 8) + aff0;
+
+    // Check each SPI to see if it's routed to this CPU.
+    for (uint i = 32u; i < gic_max_int; ++i) {
+        if ((GICREG64(0, GICD_IROUTER(i)) & aff_mask) != 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 static void gic_shutdown_cpu(void) {
-    PANIC_UNIMPLEMENTED;
+    DEBUG_ASSERT(arch_ints_disabled());
+
+    // Before we shutdown the GIC, make sure we've migrated/disabled any and all peripheral
+    // interrupts targeted at this CPU (PPIs and SPIs).
+    DEBUG_ASSERT(!is_ppi_enabled());
+    DEBUG_ASSERT(!is_spi_enabled());
+    // TODO(maniscalco): If/when we start using LPIs, make sure none are targeted at this CPU.
+
+    // Disable group 1 interrupts at the CPU interface.
+    gic_write_igrpen(0);
 }
 
 static const struct pdev_interrupt_ops gic_ops = {
