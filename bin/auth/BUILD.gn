@@ -56,11 +56,13 @@ package("rust_tests") {
   deps = [
     "rust/cache:cache",
     "rust/store:store",
+    "rust/testing/dev_auth_provider:dev_auth_provider_rust_bin",
   ]
 
   tests = [
     { name = "auth_cache_lib_test_rustc" },
     { name = "auth_store_lib_test_rustc" },
+    { name = "dev_auth_provider_rust_bin_test_rustc"},
   ]
 }
 
@@ -73,12 +75,12 @@ package("tests") {
   deps = [
     ":token_manager_unittests",
     "//garnet/bin/auth/testing/e2e_local:e2e_dev",
-    "//garnet/bin/auth/token_manager/test:dev_auth_provider",
+    "//garnet/bin/auth/rust/testing/dev_auth_provider:dev_auth_provider_rust_bin"
   ]
 
   binaries = [
     {
-      name = "dev_auth_provider"
+      name = "dev_auth_provider_rust"
     },
   ]
 

@@ -1,0 +1,37 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/package.gni")
+
+rustc_binary("dev_auth_provider_rust_bin") {
+  name = "dev_auth_provider_rust"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/lib/auth/fidl:fidl-rustc",
+    "//garnet/public/rust/crates/fuchsia-app",
+    "//garnet/public/rust/crates/fuchsia-async",
+    "//garnet/public/rust/crates/fuchsia-zircon",
+    "//garnet/public/rust/crates/fuchsia-syslog",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures",
+    "//third_party/rust-crates/rustc_deps:rand",
+    "//third_party/rust-crates/rustc_deps:log",
+  ]
+
+}
+
+package("dev_auth_provider_rust") {
+
+  testonly = true
+  deps = [
+    ":dev_auth_provider_rust_bin"
+  ]
+
+  binaries = [ { name = "rust_crates/dev_auth_provider_rust" },]
+
+}
+

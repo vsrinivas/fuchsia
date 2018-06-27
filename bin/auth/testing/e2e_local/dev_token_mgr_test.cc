@@ -80,7 +80,7 @@ class DevTokenManagerAppTest : public gtest::RealLoopFixture,
 
     fuchsia::auth::AuthProviderConfig dev_config;
     dev_config.auth_provider_type = kDevIdp;
-    dev_config.url = "dev_auth_provider";
+    dev_config.url = "dev_auth_provider_rust";
 
     fidl::VectorPtr<fuchsia::auth::AuthProviderConfig> auth_provider_configs;
     auth_provider_configs.push_back(std::move(dev_config));
@@ -168,7 +168,7 @@ TEST_F(DevTokenManagerAppTest, GetFirebaseToken) {
   if (firebase_token) {
     EXPECT_TRUE(firebase_token->id_token.get().find(":fbt_") !=
                 std::string::npos);
-    EXPECT_TRUE(firebase_token->email.get().find("@devauthprovider.com") !=
+    EXPECT_TRUE(firebase_token->email.get().find("@firebase.example.com") !=
                 std::string::npos);
     EXPECT_TRUE(firebase_token->local_id.get().find("local_id_") !=
                 std::string::npos);

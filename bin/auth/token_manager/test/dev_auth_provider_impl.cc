@@ -72,7 +72,7 @@ void DevAuthProviderImpl::GetAppFirebaseToken(
   FirebaseTokenPtr fb_token = fuchsia::auth::FirebaseToken::New();
   fb_token->id_token =
       std::string(firebase_api_key) + ":fbt_" + GenerateRandomString();
-  fb_token->email = GenerateRandomString() + "@devauthprovider.com";
+  fb_token->email = GenerateRandomString() + "@firebase.example.com";
   fb_token->local_id = "local_id_" + GenerateRandomString();
   fb_token->expires_in = 3600;
 
