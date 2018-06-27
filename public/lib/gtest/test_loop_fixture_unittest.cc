@@ -65,7 +65,7 @@ TEST_F(TestLoopFixtureTest, LoopCanQuitAndReset) {
 
   // Quit task is posted, followed by another task. The quit task is
   // dispatched and work is reported.
-  async::PostTask(dispatcher(), [this] { QuitLoop(); });
+  async::PostTask(dispatcher(), QuitLoopClosure() );
   async::PostTask(dispatcher(), [] {});
   EXPECT_TRUE(RunLoopUntilIdle());
 

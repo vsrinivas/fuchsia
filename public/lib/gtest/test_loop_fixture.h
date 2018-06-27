@@ -8,6 +8,7 @@
 #include <functional>
 
 #include <lib/async-testutils/test_loop.h>
+#include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
@@ -75,6 +76,9 @@ class TestLoopFixture : public ::testing::Test {
   // then next call to run will immediately exit. Further calls to run will
   // continue to dispatch.
   void QuitLoop() { loop_.Quit(); }
+
+  // A callback that quits the message loop when called.
+  fit::closure QuitLoopClosure() { return [this] { loop_.Quit(); }; }
 
  private:
   // The test message loop for the test fixture.
