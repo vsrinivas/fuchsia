@@ -1452,9 +1452,7 @@ static zx_status_t dh_create_device(device_t* dev, devhost_t* dh,
     return ZX_OK;
 
 fail:
-    while (hcount > 0) {
-        zx_handle_close(handle[--hcount]);
-    }
+    zx_handle_close_many(handle, hcount);
 fail_after_write:
     zx_handle_close(hrpc);
     return r;

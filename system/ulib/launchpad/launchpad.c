@@ -102,20 +102,12 @@ const char* launchpad_error_message(launchpad_t* lp) {
 // We always install the vmar handle as the second in the message.
 #define lp_vmar(lp) ((lp)->handles[1])
 
-static void close_handles(zx_handle_t* handles, size_t count) {
-    for (size_t i = 0; i < count; ++i) {
-        if (handles[i] != ZX_HANDLE_INVALID) {
-            zx_handle_close(handles[i]);
-        }
-    }
-}
-
 void launchpad_destroy(launchpad_t* lp) {
     if (lp == &invalid_launchpad)
         return;
-    close_handles(&lp->reserve_vmar, 1);
-    close_handles(lp->special_handles, HND_SPECIAL_COUNT);
-    close_handles(lp->handles, lp->handle_count);
+    zx_handle_close(lp->reserve_vmar);
+    zx_handle_close_many(lp->special_handles, HND_SPECIAL_COUNT);
+    zx_handle_close_many(lp->handles, lp->handle_count);
     free(lp->handles);
     free(lp->handles_info);
     free(lp->script_args);

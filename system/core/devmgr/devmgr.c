@@ -202,9 +202,7 @@ int analyzer_starter(void* arg) {
         }
         if (actual_bytes != sizeof(exception_type) || actual_handles != countof(handles)) {
             printf("devmgr: zx_channel_read unexpected read size: %d\n", status);
-            for (size_t i = 0; i < actual_handles; ++i) {
-                zx_handle_close(handles[i]);
-            }
+            zx_handle_close_many(handles, actual_handles);
             continue;
         }
 

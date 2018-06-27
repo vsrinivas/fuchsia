@@ -46,10 +46,8 @@ private:
             *error_msg_out_ = error_msg;
         }
         if (handles_ != nullptr) {
-            for (uint32_t i = 0; i < handle_idx_; ++i) {
-                // Return value intentionally ignored: this is best-effort cleanup.
-                zx_handle_close(handles_[i]);
-            }
+            // Return value intentionally ignored: this is best-effort cleanup.
+            zx_handle_close_many(handles_, handle_idx_);
         }
     }
 

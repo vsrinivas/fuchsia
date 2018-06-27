@@ -21,8 +21,7 @@ static bool has_fd(int fd) {
     zx_status_t status = fdio_clone_fd(fd, fd + 50, handles, ids);
     if (status > 0) {
         size_t n = (size_t)status;
-        for (size_t i = 0; i < n; ++i)
-            zx_handle_close(handles[i]);
+        zx_handle_close_many(handles, n);
         return true;
     }
     return false;

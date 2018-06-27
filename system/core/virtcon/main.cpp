@@ -78,7 +78,7 @@ static zx_status_t log_reader_cb(port_handler_t* ph, zx_signals_t signals, uint3
 }
 
 static zx_status_t launch_shell(vc_t* vc, int fd, const char* cmd) {
-    const char* args[] = { "/boot/bin/sh", "-c", cmd };
+    const char* args[] = {"/boot/bin/sh", "-c", cmd};
 
     launchpad_t* lp;
     launchpad_create(zx_job_default(), "vc:sh", &lp);
@@ -129,7 +129,7 @@ static zx_status_t session_io_cb(port_fd_handler_t* fh, unsigned pollevt, uint32
                 goto fail;
             }
 
-            if(launch_shell(vc, fd, NULL) < 0) {
+            if (launch_shell(vc, fd, NULL) < 0) {
                 goto fail;
             }
             return ZX_OK;
@@ -229,9 +229,7 @@ static zx_status_t new_vc_cb(port_handler_t* ph, zx_signals_t signals, uint32_t 
     uint32_t types[FDIO_MAX_HANDLES];
     zx_status_t r = fdio_transfer_fd(fd, FDIO_FLAG_USE_FOR_STDIO | 0, handles, types);
     if (r != 2) {
-        for (int n = 0; n < r; n++) {
-            zx_handle_close(handles[n]);
-        }
+        zx_handle_close_many(handles, r);
         session_destroy(vc);
     } else if (zx_channel_write(h, 0, types, 2 * sizeof(uint32_t), handles, 2) != ZX_OK) {
         session_destroy(vc);
@@ -309,7 +307,7 @@ static bool handle_dir_event(port_handler_t* ph, zx_signals_t signals,
         // add temporary nul
         uint8_t tmp = msg[namelen];
         msg[namelen] = 0;
-        event_handler(event, (char*) msg);
+        event_handler(event, (char*)msg);
         msg[namelen] = tmp;
         msg += namelen;
         len -= (namelen + 2u);
@@ -339,8 +337,8 @@ int main(int argc, char** argv) {
     const char* value = getenv("virtcon.keep-log-visible");
     if (value == NULL ||
         ((strcmp(value, "0") == 0) ||
-        (strcmp(value, "false") == 0) ||
-        (strcmp(value, "off") == 0))) {
+         (strcmp(value, "false") == 0) ||
+         (strcmp(value, "off") == 0))) {
         keep_log = false;
     } else {
         keep_log = true;

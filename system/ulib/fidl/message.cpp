@@ -19,8 +19,7 @@ Message::Message(BytePart bytes, HandlePart handles)
       handles_(static_cast<HandlePart&&>(handles)) {}
 
 Message::~Message() {
-    for (zx_handle_t handle : handles_)
-        zx_handle_close(handle);
+    zx_handle_close_many(handles_.data(), handles_.actual());
     ClearHandlesUnsafe();
 }
 

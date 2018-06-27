@@ -5,11 +5,11 @@
 #include <lib/fdio/spawn.h>
 
 #include <fcntl.h>
+#include <fuchsia/process/c/fidl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/util.h>
-#include <fuchsia/process/c/fidl.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -202,7 +202,7 @@ static zx_status_t send_handles(zx_handle_t launcher, size_t handle_capacity,
         }
     }
 
-    for ( ; a < action_count; ++a) {
+    for (; a < action_count; ++a) {
         zx_handle_t fdio_handles[FDIO_MAX_HANDLES];
         uint32_t fdio_types[FDIO_MAX_HANDLES];
 
@@ -252,9 +252,7 @@ static zx_status_t send_handles(zx_handle_t launcher, size_t handle_capacity,
     return status;
 
 cleanup:
-    for (size_t i = 0; i < h; ++i) {
-        zx_handle_close(handles[i]);
-    }
+    zx_handle_close_many(handles, h);
 
     // If |a| is less than |action_count|, that means we encountered an error
     // before we processed all the actions. We need to iterate through the rest

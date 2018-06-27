@@ -39,10 +39,8 @@ private:
             *error_msg_out_ = error_msg;
         }
         if (handles_) {
-            for (uint32_t i = 0; i < num_handles_; ++i) {
-                // Return value intentionally ignored: this is best-effort cleanup.
-                zx_handle_close(handles_[i]);
-            }
+            // Return value intentionally ignored: this is best-effort cleanup.
+            zx_handle_close_many(handles_, num_handles_);
         }
         return ZX_ERR_INVALID_ARGS;
     }

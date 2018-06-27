@@ -92,8 +92,7 @@ bool TraceProviderImpl::Connection::ReadMessage() {
         return false;
 
     if (!DecodeAndDispatch(buffer, num_bytes, handles, num_handles)) {
-        for (uint32_t i = 0; i < num_handles; i++)
-            zx_handle_close(handles[i]);
+        zx_handle_close_many(handles, num_handles);
         return false;
     }
 
