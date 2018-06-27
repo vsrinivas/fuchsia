@@ -16,7 +16,6 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/fxl/time/time_delta.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
@@ -243,7 +242,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
     EXPECT_EQ(ledger::Status::OK, status);
   }
 
-  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(100)));
+  EXPECT_TRUE(RunLoopWithTimeout(zx::msec(100)));
   EXPECT_EQ(0u, watcher.changes_seen);
 
   waiter = NewWaiter();
@@ -309,7 +308,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
     EXPECT_EQ(ledger::Status::OK, status);
   }
 
-  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(100)));
+  EXPECT_TRUE(RunLoopWithTimeout(zx::msec(100)));
   EXPECT_EQ(0u, watcher.changes_seen);
 
   waiter = NewWaiter();
@@ -403,7 +402,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherTransaction) {
   waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
 
-  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(100)));
+  EXPECT_TRUE(RunLoopWithTimeout(zx::msec(100)));
   EXPECT_EQ(0u, watcher.changes_seen);
 
   waiter = NewWaiter();
@@ -501,7 +500,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
   EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
   EXPECT_EQ("Bob", ToString(change.changed_entries->at(0).value));
 
-  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(100)));
+  EXPECT_TRUE(RunLoopWithTimeout(zx::msec(100)));
 
   // A merge happens now. Only the first watcher should see a change.
   watcher_waiter1->RunUntilCalled();
@@ -540,7 +539,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherEmptyTransaction) {
   waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
 
-  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(100)));
+  EXPECT_TRUE(RunLoopWithTimeout(zx::msec(100)));
   EXPECT_EQ(0u, watcher.changes_seen);
 }
 
@@ -671,7 +670,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
   page->StartTransaction(callback::Capture(transaction_waiter->GetCallback(),
                                            &start_transaction_status));
 
-  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(100)));
+  EXPECT_TRUE(RunLoopWithTimeout(zx::msec(100)));
 
   // We haven't sent the callback of the first change, so nothing should have
   // happened.
@@ -684,7 +683,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
   EXPECT_EQ(2u, watcher.changes.size());
   EXPECT_TRUE(transaction_waiter->NotCalledYet());
 
-  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(100)));
+  EXPECT_TRUE(RunLoopWithTimeout(zx::msec(100)));
 
   // We haven't sent the callback of the first change, so nothing should have
   // happened.

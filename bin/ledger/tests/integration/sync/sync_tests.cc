@@ -5,6 +5,7 @@
 #include "lib/callback/capture.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
 #include "peridot/lib/convert/convert.h"
 
@@ -19,8 +20,9 @@ class SyncIntegrationTest : public IntegrationTest {
       ledger::Page* page, fidl::VectorPtr<ledger::Entry>* entries) {
     ledger::PageSnapshotPtr snapshot;
     ledger::Status status;
-    page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                      nullptr, callback::Capture(MakeQuitTask(), &status));
+    page->GetSnapshot(
+        snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr,
+        callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
     RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure() << "Unable to retrieve a snapshot";
@@ -30,9 +32,10 @@ class SyncIntegrationTest : public IntegrationTest {
     std::unique_ptr<ledger::Token> next_token = nullptr;
     do {
       fidl::VectorPtr<ledger::Entry> new_entries;
-      snapshot->GetEntries(fidl::VectorPtr<uint8_t>::New(0), std::move(token),
-                           callback::Capture(MakeQuitTask(), &status,
-                                             &new_entries, &next_token));
+      snapshot->GetEntries(
+          fidl::VectorPtr<uint8_t>::New(0), std::move(token),
+          callback::Capture(fxl::MakeCopyable(QuitLoopClosure()),
+                            &status, &new_entries, &next_token));
       RunLoop();
       if (status != ledger::Status::OK) {
         return ::testing::AssertionFailure() << "Unable to retrieve entries";
@@ -51,11 +54,12 @@ TEST_P(SyncIntegrationTest, SerialConnection) {
   auto page = instance1->GetTestPage();
   ledger::Status status;
   page->Put(convert::ToArray("Hello"), convert::ToArray("World"),
-            callback::Capture(MakeQuitTask(), &status));
+            callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
   ledger::PageId page_id;
-  page->GetId(callback::Capture(MakeQuitTask(), &page_id));
+  page->GetId(callback::Capture(fxl::MakeCopyable(QuitLoopClosure()),
+                                &page_id));
   RunLoop();
 
   auto instance2 = NewLedgerAppInstance();
@@ -69,14 +73,16 @@ TEST_P(SyncIntegrationTest, SerialConnection) {
   }));
 
   ledger::PageSnapshotPtr snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    nullptr, callback::Capture(MakeQuitTask(), &status));
+  page->GetSnapshot(
+      snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr,
+      callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
   std::unique_ptr<ledger::InlinedValue> inlined_value;
   snapshot->GetInline(
       convert::ToArray("Hello"),
-      callback::Capture(MakeQuitTask(), &status, &inlined_value));
+      callback::Capture(fxl::MakeCopyable(QuitLoopClosure()),
+                        &status, &inlined_value));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
   ASSERT_TRUE(inlined_value);
@@ -89,14 +95,14 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
 
   auto page1 = instance1->GetTestPage();
   ledger::PageId page_id;
-  page1->GetId(callback::Capture(MakeQuitTask(), &page_id));
+  page1->GetId(callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &page_id));
   RunLoop();
   auto page2 =
       instance2->GetPage(fidl::MakeOptional(page_id), ledger::Status::OK);
 
   ledger::Status status;
   page1->Put(convert::ToArray("Hello"), convert::ToArray("World"),
-             callback::Capture(MakeQuitTask(), &status));
+             callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
 
@@ -109,14 +115,16 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   }));
 
   ledger::PageSnapshotPtr snapshot;
-  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     nullptr, callback::Capture(MakeQuitTask(), &status));
+  page2->GetSnapshot(
+      snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr,
+      callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
   std::unique_ptr<ledger::InlinedValue> inlined_value;
   snapshot->GetInline(
       convert::ToArray("Hello"),
-      callback::Capture(MakeQuitTask(), &status, &inlined_value));
+      callback::Capture(fxl::MakeCopyable(QuitLoopClosure()),
+                        &status, &inlined_value));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
   ASSERT_TRUE(inlined_value);

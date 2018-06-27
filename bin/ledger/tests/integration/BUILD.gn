@@ -23,6 +23,7 @@ executable("integration") {
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/app:lib",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/ledger/p2p_provider/impl",

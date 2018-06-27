@@ -32,14 +32,14 @@ BaseIntegrationTest::BaseIntegrationTest() = default;
 
 BaseIntegrationTest::~BaseIntegrationTest() = default;
 
-void BaseIntegrationTest::RunLoop() { message_loop_.Run(); }
+void BaseIntegrationTest::RunLoop() { RealLoopFixture::RunLoop(); }
 
-void BaseIntegrationTest::StopLoop() { message_loop_.QuitNow(); }
+void BaseIntegrationTest::StopLoop() { QuitLoop(); }
 
 void BaseIntegrationTest::SetUp() {
   ::testing::Test::SetUp();
   trace_provider_ =
-      std::make_unique<trace::TraceProvider>(message_loop_.async());
+      std::make_unique<trace::TraceProvider>(dispatcher());
   loop_.StartThread();
   if (server_id) {
     GetAppFactory()->SetServerId(*server_id);

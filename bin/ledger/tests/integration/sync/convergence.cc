@@ -246,10 +246,10 @@ class ConvergenceTest
           // The first ledger gets a random page id, the others use the
           // same id for their pages.
           i == 0 ? nullptr : fidl::MakeOptional(page_id),
-          [this] { message_loop_.QuitNow(); },
-          callback::Capture([this] { message_loop_.QuitNow(); }, &status,
+          QuitLoopClosure(),
+          callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status,
                             &pages_[i], &page_id));
-      message_loop_.Run();
+      RunLoop();
       ASSERT_EQ(ledger::Status::OK, status);
     }
   }
@@ -270,7 +270,8 @@ class ConvergenceTest
     ledger::Status status = ledger::Status::UNKNOWN_ERROR;
     (*page)->GetSnapshot(
         std::move(page_snapshot_request), fidl::VectorPtr<uint8_t>::New(0),
-        std::move(page_watcher), callback::Capture(MakeQuitTask(), &status));
+        std::move(page_watcher),
+        callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
     RunLoop();
     EXPECT_EQ(ledger::Status::OK, status);
     return watcher;
@@ -280,8 +281,9 @@ class ConvergenceTest
     std::unique_ptr<SyncWatcherImpl> watcher =
         std::make_unique<SyncWatcherImpl>();
     ledger::Status status = ledger::Status::UNKNOWN_ERROR;
-    (*page)->SetSyncStateWatcher(watcher->NewBinding(),
-                                 callback::Capture(MakeQuitTask(), &status));
+    (*page)->SetSyncStateWatcher(
+        watcher->NewBinding(),
+        callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
     RunLoop();
     EXPECT_EQ(ledger::Status::OK, status);
     return watcher;
@@ -297,7 +299,8 @@ class ConvergenceTest
       ledger::Status status = ledger::Status::UNKNOWN_ERROR;
       watchers[i]->GetInlineOnLatestSnapshot(
           convert::ToArray(key),
-          callback::Capture(MakeQuitTask(), &status, &values[i]));
+          callback::Capture(fxl::MakeCopyable(QuitLoopClosure()),
+                            &status, &values[i]));
       RunLoop();
       EXPECT_EQ(ledger::Status::OK, status);
     }
@@ -342,7 +345,7 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
       ledger::LedgerPtr ledger = ledger_instances_[i]->GetTestLedger();
       ledger->SetConflictResolverFactory(
           std::move(resolver_factory_ptr),
-          callback::Capture(MakeQuitTask(), &status));
+          callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
       RunLoop();
       EXPECT_EQ(ledger::Status::OK, status);
     }
@@ -350,17 +353,19 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
     watchers.push_back(WatchPageContents(&pages_[i]));
     sync_watchers.push_back(WatchPageSyncState(&pages_[i]));
 
-    pages_[i]->StartTransaction(callback::Capture(MakeQuitTask(), &status));
+    pages_[i]->StartTransaction(
+        callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
     RunLoop();
     EXPECT_EQ(ledger::Status::OK, status);
 
     if (merge_function_type_ == MergeType::NON_ASSOCIATIVE_CUSTOM) {
       pages_[i]->Put(convert::ToArray("value"),
                      DoubleToArray(distribution(generator)),
-                     callback::Capture(MakeQuitTask(), &status));
+                     callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
     } else {
-      pages_[i]->Put(convert::ToArray("value"), data_generator_.MakeValue(50),
-                     callback::Capture(MakeQuitTask(), &status));
+      pages_[i]->Put(
+          convert::ToArray("value"), data_generator_.MakeValue(50),
+          callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
     }
     RunLoop();
     EXPECT_EQ(ledger::Status::OK, status);
@@ -373,7 +378,8 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
   for (int i = 0; i < num_ledgers_; i++) {
     pages_[i]->Commit(commit_waiter->NewCallback());
   }
-  commit_waiter->Finalize(callback::Capture(MakeQuitTask(), &status));
+  commit_waiter->Finalize(
+      callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
   RunLoop();
 
   // Function to verify if the visible Ledger state has not changed since last

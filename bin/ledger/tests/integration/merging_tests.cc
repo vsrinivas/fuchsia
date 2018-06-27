@@ -324,7 +324,7 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
       ledger::MergePolicy policy,
       fidl::InterfaceRequest<ledger::ConflictResolverFactory> request,
       fxl::Closure on_get_policy_called_callback,
-      fxl::TimeDelta response_delay = fxl::TimeDelta::FromMilliseconds(0))
+      zx::duration response_delay = zx::msec(0))
       : loop_controller_(loop_controller),
         new_conflict_resolver_waiter_(loop_controller->NewWaiter()),
         policy_(policy),
@@ -355,7 +355,7 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
                                callback_();
                              }
                            },
-                           zx::nsec(response_delay_.ToNanoseconds()));
+                           response_delay_);
   }
 
   void NewConflictResolver(
@@ -384,7 +384,7 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
   std::map<storage::PageId, DummyConflictResolver> dummy_resolvers_;
   fidl::Binding<ConflictResolverFactory> binding_;
   fxl::Closure callback_;
-  fxl::TimeDelta response_delay_;
+  zx::duration response_delay_;
 };
 
 // Optional is an object that optionally contains another object.
@@ -1037,13 +1037,13 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
   // Remove all references to a page:
   page1 = nullptr;
   page2 = nullptr;
-  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(500)));
+  EXPECT_TRUE(RunLoopWithTimeout(zx::msec(500)));
 
   // Resolution should not crash the Ledger
   fidl::VectorPtr<ledger::MergedValue> merged_values =
       fidl::VectorPtr<ledger::MergedValue>::New(0);
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
-  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(200)));
+  EXPECT_TRUE(RunLoopWithTimeout(zx::msec(200)));
 }
 
 TEST_P(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
@@ -1147,14 +1147,14 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
   // Remove all references to a page:
   page1 = nullptr;
   page2 = nullptr;
-  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(500)));
+  EXPECT_TRUE(RunLoopWithTimeout(zx::msec(500)));
 
   // Resolution should not crash the Ledger
   fidl::VectorPtr<ledger::MergedValue> merged_values =
       fidl::VectorPtr<ledger::MergedValue>::New(0);
 
   EXPECT_TRUE(resolver_impl2->requests[0].Merge(std::move(merged_values)));
-  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(200)));
+  EXPECT_TRUE(RunLoopWithTimeout(zx::msec(200)));
 }
 
 // Tests for a race between setting the new conflict resolver and sending the
@@ -1231,7 +1231,7 @@ TEST_P(MergingIntegrationTest,
   ledger::ConflictResolverFactoryPtr resolver_factory_ptr2;
   auto resolver_factory2 = std::make_unique<TestConflictResolverFactory>(
       this, ledger::MergePolicy::CUSTOM, resolver_factory_ptr2.NewRequest(),
-      nullptr, fxl::TimeDelta::FromMilliseconds(250));
+      nullptr, zx::msec(250));
   waiter = NewWaiter();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr2),
@@ -1902,7 +1902,7 @@ TEST_P(MergingIntegrationTest, WaitForCustomMerge) {
 
   // Check that conflicts_resolved_callback is not called, as there are merge
   // requests pending.
-  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(250)));
+  EXPECT_TRUE(RunLoopWithTimeout(zx::msec(250)));
   EXPECT_TRUE(conflicts_resolved_callback_waiter->NotCalledYet());
 
   // Merge manually.

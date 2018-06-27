@@ -13,7 +13,7 @@
 
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/real_loop_fixture.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 
@@ -25,7 +25,7 @@ namespace integration {
 // Integration tests verify interactions with client-facing FIDL services
 // exposed by Ledger. The FIDL services are run within the test process, on a
 // separate thread.
-class BaseIntegrationTest : public gtest::TestWithMessageLoop,
+class BaseIntegrationTest : public gtest::RealLoopFixture,
                             public LedgerAppInstanceFactory::LoopController {
  public:
   BaseIntegrationTest();
