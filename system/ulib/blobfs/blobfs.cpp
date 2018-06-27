@@ -23,6 +23,7 @@
 #include <lib/async/cpp/task.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 #define ZXDEBUG 0
@@ -162,6 +163,13 @@ zx_status_t VnodeBlob::Verify() const {
     zx_status_t status = MerkleTree::Verify(data, data_size, tree,
                                             merkle_size, 0, data_size, digest);
     blobfs_->UpdateMerkleVerifyMetrics(data_size, merkle_size, ticker.End());
+
+    if (status != ZX_OK) {
+        char name[Digest::kLength * 2 + 1];
+        ZX_ASSERT(digest.ToString(name, sizeof(name)) == ZX_OK);
+        FS_TRACE_ERROR("blobfs verify(%s) Failure: %s\n", name, zx_status_get_string(status));
+    }
+
     return status;
 }
 

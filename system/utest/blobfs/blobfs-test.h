@@ -73,6 +73,11 @@ public:
         read_only_ = read_only;
     }
 
+    // Determine if the mounted filesystem should have output to stdio.
+    void SetStdio(bool stdio) {
+        stdio_ = stdio;
+    }
+
     // Reset to initial state, given that the test was successfully torn down.
     bool Reset() {
         BEGIN_HELPER;
@@ -88,8 +93,8 @@ private:
     // Checks info of mounted blobfs.
     bool CheckInfo(const char* mount_path);
 
-    // Mounts the blobfs partition with.
-    bool MountInternal();
+    // Mounts the blobfs partition.
+    bool Mount();
 
     FsTestType type_;
     FsTestState state_ = FsTestState::kInit;
@@ -99,6 +104,7 @@ private:
     char fvm_path_[PATH_MAX];
     bool read_only_ = false;
     bool asleep_ = false;
+    bool stdio_ = true;
 };
 
 }  // namespace

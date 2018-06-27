@@ -161,7 +161,7 @@ bool BlobfsTest::Init(FsTestState state) {
         ASSERT_EQ(state, FsTestState::kRunning);
         ASSERT_EQ(mkfs(ramdisk_path_, DISK_FORMAT_BLOBFS, launch_stdio_sync, &default_mkfs_options),
                   ZX_OK);
-        ASSERT_TRUE(MountInternal());
+        ASSERT_TRUE(Mount());
     }
 
     error.cancel();
@@ -176,7 +176,7 @@ bool BlobfsTest::Remount() {
     ASSERT_EQ(umount(MOUNT_PATH), ZX_OK, "Failed to unmount blobfs");
     ASSERT_EQ(fsck(ramdisk_path_, DISK_FORMAT_BLOBFS, &test_fsck_options,
                    launch_stdio_sync), ZX_OK, "Filesystem fsck failed");
-    ASSERT_TRUE(MountInternal(), "Failed to mount blobfs");
+    ASSERT_TRUE(Mount(), "Failed to mount blobfs");
     error.cancel();
     END_HELPER;
 }
@@ -283,7 +283,7 @@ bool BlobfsTest::CheckInfo(const char* mount_path) {
     return true;
 }
 
-bool BlobfsTest::MountInternal() {
+bool BlobfsTest::Mount() {
     BEGIN_HELPER;
     int flags = read_only_ ? O_RDONLY : O_RDWR;
 
@@ -297,9 +297,11 @@ bool BlobfsTest::MountInternal() {
         options.readonly = true;
     }
 
+    auto launch = stdio_ ? launch_stdio_async : launch_silent_async;
+
     // fd consumed by mount. By default, mount waits until the filesystem is
     // ready to accept commands.
-    ASSERT_EQ(mount(fd.get(), MOUNT_PATH, DISK_FORMAT_BLOBFS, &options, launch_stdio_async), ZX_OK,
+    ASSERT_EQ(mount(fd.get(), MOUNT_PATH, DISK_FORMAT_BLOBFS, &options, launch), ZX_OK,
               "Could not mount blobfs");
 
     END_HELPER;
@@ -1001,6 +1003,8 @@ template <FsTestType TestType>
 static bool CorruptedBlob(void) {
     BEGIN_TEST;
     BlobfsTest blobfsTest(TestType);
+    // This test is noisy, since blob corruption is logged loudly.
+    blobfsTest.SetStdio(false);
     ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
 
     fbl::unique_ptr<blob_info_t> info;
@@ -1031,6 +1035,8 @@ template <FsTestType TestType>
 static bool CorruptedDigest(void) {
     BEGIN_TEST;
     BlobfsTest blobfsTest(TestType);
+    // This test is noisy, since blob corruption is logged loudly.
+    blobfsTest.SetStdio(false);
     ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
 
     fbl::unique_ptr<blob_info_t> info;
