@@ -101,7 +101,7 @@ void StandardOutputBase::Process() {
       // (something that happens automatically if we mix).
       if (!cur_mix_job_.sw_output_muted) {
         // Fill the intermediate buffer with silence.
-        size_t bytes_to_zero = sizeof(int32_t) * cur_mix_job_.buf_frames *
+        size_t bytes_to_zero = sizeof(mix_buf_[0]) * cur_mix_job_.buf_frames *
                                output_formatter_->channels();
         ::memset(mix_buf_.get(), 0, bytes_to_zero);
 
@@ -199,7 +199,7 @@ void StandardOutputBase::SetupMixBuffer(uint32_t max_mix_frames) {
                                    output_formatter_->channels());
 
   mix_buf_frames_ = max_mix_frames;
-  mix_buf_.reset(new int32_t[mix_buf_frames_ * output_formatter_->channels()]);
+  mix_buf_.reset(new float[mix_buf_frames_ * output_formatter_->channels()]);
 }
 
 void StandardOutputBase::ForeachLink(TaskType task_type) {
@@ -364,8 +364,8 @@ bool StandardOutputBase::ProcessMix(
   }
 
   uint32_t frames_left = cur_mix_job_.buf_frames - cur_mix_job_.frames_produced;
-  int32_t* buf = mix_buf_.get() +
-                 (cur_mix_job_.frames_produced * output_formatter_->channels());
+  float* buf = mix_buf_.get() +
+               (cur_mix_job_.frames_produced * output_formatter_->channels());
 
   // Figure out where the first and last sampling points of this job are,
   // expressed in fractional renderer frames.

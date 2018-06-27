@@ -137,18 +137,7 @@ class StandardOutputBase : public AudioOutput {
       FXL_GUARDED_BY(mix_domain_->token());
 
   // State for the internal buffer which holds intermediate mix results.
-  //
-  // TODO(johngro): Right now, the cannonical intermediate format is signed 32
-  // bit ints.  As time goes on, we may need to reconsider this.  This will
-  // become more important when...
-  //
-  // 1) We support 24 bit audio.  Right now, with a 16 bit max, we can
-  //    accumulate for up to a maximum of 2^16-1 renderers without needing to do
-  //    anything special about about clipping.  With 24 bit audio, this number
-  //    will drop to only 255 simultanious renderers.  It is unclear if this is
-  //    a reasonable system-wide limitation or not.
-  // 2) We support floating point audio.
-  std::unique_ptr<int32_t[]> mix_buf_ FXL_GUARDED_BY(mix_domain_->token());
+  std::unique_ptr<float[]> mix_buf_ FXL_GUARDED_BY(mix_domain_->token());
   uint32_t mix_buf_frames_ FXL_GUARDED_BY(mix_domain_->token()) = 0;
 
   // State used by the mix task.

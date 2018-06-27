@@ -129,10 +129,10 @@ TEST(DataFormats, OutputFormatter_Other) {
 // conversion, unity scale and no accumulation, we expect bit-equality.
 TEST(PassThru, Source_8) {
   uint8_t source[] = {0x00, 0xFF, 0x27, 0xCD, 0x7F, 0x80, 0xA6, 0x6D};
-  int32_t accum[8];
+  float accum[8];
 
-  int32_t expect[] = {-0x08000000, 0x07F00000, -0x05900000, 0x04D00000,
-                      -0x00100000, 0,          0x02600000,  -0x01300000};
+  float expect[] = {-0x08000000, 0x07F00000, -0x05900000, 0x04D00000,
+                    -0x00100000, 0,          0x02600000,  -0x01300000};
   NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
 
   MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1,
@@ -151,10 +151,10 @@ TEST(PassThru, Source_8) {
 TEST(PassThru, Source_16) {
   int16_t source[] = {-0x8000, 0x7FFF, -0x67A7, 0x4D4D,
                       -0x123,  0,      0x2600,  -0x2DCB};
-  int32_t accum[8];
+  float accum[8];
 
-  int32_t expect[] = {-0x08000000, 0x07FFF000, -0x067A7000, 0x04D4D000,
-                      -0x00123000, 0,          0x02600000,  -0x02DCB000};
+  float expect[] = {-0x08000000, 0x07FFF000, -0x067A7000, 0x04D4D000,
+                    -0x00123000, 0,          0x02600000,  -0x02DCB000};
   NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
 
   // Try in 2-channel mode
@@ -177,10 +177,10 @@ TEST(PassThru, Source_Float) {
   float source[] = {
       -1.0, 1.0f,      -0.809783935f, 0.603912353f, -0.00888061523f,
       0.0f, 0.296875f, -0.357757568f};
-  int32_t accum[8];
+  float accum[8];
 
-  int32_t expect[] = {-0x08000000, 0x08000000, -0x067A7000, 0x04D4D000,
-                      -0x00123000, 0,          0x02600000,  -0x02DCB000};
+  float expect[] = {-0x08000000, 0x08000000, -0x067A7000, 0x04D4D000,
+                    -0x00123000, 0,          0x02600000,  -0x02DCB000};
   NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
 
   // Try in 1-channel mode
@@ -203,8 +203,8 @@ TEST(PassThru, NoOp) {
   EXPECT_NE(nullptr, no_op_mixer);
 
   int16_t source[] = {0x7FFF, -0x8000};
-  int32_t accum[] = {-1, 42};
-  int32_t expect[] = {-1, 42};
+  float accum[] = {-1, 42};
+  float expect[] = {-1, 42};
 
   uint32_t dst_offset = 0;
   int32_t frac_src_offset = 0;
@@ -223,11 +223,11 @@ TEST(PassThru, NoOp) {
 // Are all valid data values passed correctly to 16-bit outputs
 TEST(PassThru, MonoToStereo) {
   int16_t source[] = {-0x8000, -0x3FFF, -1, 0, 1, 0x7FFF};
-  int32_t accum[6 * 2];
+  float accum[6 * 2];
 
-  int32_t expect[] = {-0x08000000, -0x08000000, -0x03FFF000, -0x03FFF000,
-                      -0x0001000,  -0x00001000, 0,           0,
-                      0x0001000,   0x00001000,  0x07FFF000,  0x07FFF000};
+  float expect[] = {-0x08000000, -0x08000000, -0x03FFF000, -0x03FFF000,
+                    -0x0001000,  -0x00001000, 0,           0,
+                    0x0001000,   0x00001000,  0x07FFF000,  0x07FFF000};
   NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
 
   MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
@@ -240,13 +240,13 @@ TEST(PassThru, MonoToStereo) {
 TEST(PassThru, StereoToMono_Cancel) {
   int16_t source[] = {32767, -32767, -23130, 23130, 0,    0,
                       1,     -1,     -13107, 13107, 3855, -3855};
-  int32_t accum[6];
+  float accum[6];
 
   MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2,
                                48000, 1, 48000, Resampler::SampleAndHold);
 
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum));
-  EXPECT_TRUE(CompareBufferToVal(accum, 0, fbl::count_of(accum)));
+  EXPECT_TRUE(CompareBufferToVal(accum, 0.0f, fbl::count_of(accum)));
 }
 
 // Validate that we correctly mix stereo->mono, including rounding.
@@ -255,10 +255,10 @@ TEST(PassThru, StereoToMono_Round) {
   int16_t source[] = {-0x13,   0x2EF5,  0x7B,   -0x159, -0x3E8,  0x3ED,
                       -0x103B, -0x1B58, 0x7FFF, 0x7FFF, -0x8000, -0x8000};
   // Will be overwritten
-  int32_t accum[] = {-0x1234, 0x4321, -0x13579, 0xC0FF, -0xAAAA, 0x555};
+  float accum[] = {-0x1234, 0x4321, -0x13579, 0xC0FF, -0xAAAA, 0x555};
 
-  int32_t expect[] = {0x01771000,  -0x0006F000, 0x00002800,
-                      -0x015C9800, 0x07FFF000,  -0x08000000};
+  float expect[] = {0x01771000,  -0x0006F000, 0x00002800,
+                    -0x015C9800, 0x07FFF000,  -0x08000000};
   NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
 
   MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2,
@@ -271,8 +271,8 @@ TEST(PassThru, StereoToMono_Round) {
 TEST(PassThru, Accumulate) {
   int16_t source[] = {-0x10E1, 0x0929, 0x1A85, -0x223D};
 
-  int32_t accum[] = {0x056CE240, 0x02B67930, -0x015B2000, 0x0259EB00};
-  int32_t expect[] = {0x045ED240, 0x03490930, 0x004D3000, 0x00361B00};
+  float accum[] = {0x056CE240, 0x02B67930, -0x015B2000, 0x0259EB00};
+  float expect[] = {0x045ED240, 0x03490930, 0x004D3000, 0x00361B00};
   NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
   NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
 
@@ -281,8 +281,8 @@ TEST(PassThru, Accumulate) {
   DoMix(std::move(mixer), source, accum, true, fbl::count_of(accum) / 2);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
-  int32_t expect2[] = {-0x010E1000, 0x00929000, 0x01A85000,
-                       -0x0223D000};  // =source
+  float expect2[] = {-0x010E1000, 0x00929000, 0x01A85000,
+                     -0x0223D000};  // =source
   NormalizeInt28ToPipelineBitwidth(expect2, fbl::count_of(expect2));
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 48000, 2,
                       48000, Resampler::SampleAndHold);
@@ -292,9 +292,9 @@ TEST(PassThru, Accumulate) {
 
 // Are all valid data values rounded correctly to 8-bit outputs?
 TEST(PassThru, Output_8) {
-  int32_t accum[] = {-0x08080000, -0x08000000, -0x04080000, -0x00001000,
-                     //   ^^^^^  clamp to uint8   vvvvv
-                     0, 0x04080000, 0x07FFF000, 0x08000000};
+  float accum[] = {-0x08080000, -0x08000000, -0x04080000, -0x00001000,
+                   //   ^^^^^  clamp to uint8   vvvvv
+                   0, 0x04080000, 0x07FFF000, 0x08000000};
   NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
 
   // Dest completely overwritten, except for last value: we only mix(8)
@@ -311,9 +311,9 @@ TEST(PassThru, Output_8) {
 
 // Are all valid data values passed correctly to 16-bit outputs?
 TEST(PassThru, Output_16) {
-  int32_t accum[] = {-0x08080000, -0x08000000, -0x04080000, -0x00001000,
-                     //   ^^^^^   clamp to int16   vvvvv
-                     0, 0x04080000, 0x07FFF000, 0x08000000};
+  float accum[] = {-0x08080000, -0x08000000, -0x04080000, -0x00001000,
+                   //   ^^^^^   clamp to int16   vvvvv
+                   0, 0x04080000, 0x07FFF000, 0x08000000};
   NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
 
   // Dest buffer is overwritten, EXCEPT for last value: we only mix(8)
@@ -331,9 +331,9 @@ TEST(PassThru, Output_16) {
 
 // Are all valid data values passed correctly to float outputs
 TEST(PassThru, Output_Float) {
-  int32_t accum[] = {-0x08080000, -0x08000000, -0x04080000, -0x00001000,
-                     //   ^^^^ clamp to [-1.0,1.0] vvvv
-                     0, 0x04080000, 0x07FFF000, 0x08080000};
+  float accum[] = {-0x08080000, -0x08000000, -0x04080000, -0x00001000,
+                   //   ^^^^ clamp to [-1.0,1.0] vvvv
+                   0, 0x04080000, 0x07FFF000, 0x08080000};
   NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
 
   float dest[] = {1.2f, 2.3f, 3.4f, 4.5f, 5.6f, 6.7f, 7.8f, 8.9f, 4.2f};

@@ -21,7 +21,7 @@ class PointSamplerImpl : public PointSampler {
  public:
   PointSamplerImpl() : PointSampler(0, FRAC_ONE - 1) {}
 
-  bool Mix(int32_t* dst, uint32_t dst_frames, uint32_t* dst_offset,
+  bool Mix(float* dst, uint32_t dst_frames, uint32_t* dst_offset,
            const void* src, uint32_t frac_src_frames, int32_t* frac_src_offset,
            uint32_t frac_step_size, Gain::AScale amplitude_scale,
            bool accumulate, uint32_t modulo = 0,
@@ -29,11 +29,11 @@ class PointSamplerImpl : public PointSampler {
 
  private:
   template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
-  static inline bool Mix(int32_t* dst, uint32_t dst_frames,
-                         uint32_t* dst_offset, const void* src,
-                         uint32_t frac_src_frames, int32_t* frac_src_offset,
-                         uint32_t frac_step_size, uint32_t modulo,
-                         uint32_t denominator, Gain::AScale amplitude_scale);
+  static inline bool Mix(float* dst, uint32_t dst_frames, uint32_t* dst_offset,
+                         const void* src, uint32_t frac_src_frames,
+                         int32_t* frac_src_offset, uint32_t frac_step_size,
+                         uint32_t modulo, uint32_t denominator,
+                         Gain::AScale amplitude_scale);
 };
 
 // TODO(mpuryear): MTWN-75 factor to minimize PointSamplerImpl code duplication
@@ -43,7 +43,7 @@ class NxNPointSamplerImpl : public PointSampler {
   NxNPointSamplerImpl(uint32_t chan_count)
       : PointSampler(0, FRAC_ONE - 1), chan_count_(chan_count) {}
 
-  bool Mix(int32_t* dst, uint32_t dst_frames, uint32_t* dst_offset,
+  bool Mix(float* dst, uint32_t dst_frames, uint32_t* dst_offset,
            const void* src, uint32_t frac_src_frames, int32_t* frac_src_offset,
            uint32_t frac_step_size, Gain::AScale amplitude_scale,
            bool accumulate, uint32_t modulo = 0,
@@ -51,12 +51,11 @@ class NxNPointSamplerImpl : public PointSampler {
 
  private:
   template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
-  static inline bool Mix(int32_t* dst, uint32_t dst_frames,
-                         uint32_t* dst_offset, const void* src,
-                         uint32_t frac_src_frames, int32_t* frac_src_offset,
-                         uint32_t frac_step_size, uint32_t modulo,
-                         uint32_t denominator, Gain::AScale amplitude_scale,
-                         uint32_t chan_count);
+  static inline bool Mix(float* dst, uint32_t dst_frames, uint32_t* dst_offset,
+                         const void* src, uint32_t frac_src_frames,
+                         int32_t* frac_src_offset, uint32_t frac_step_size,
+                         uint32_t modulo, uint32_t denominator,
+                         Gain::AScale amplitude_scale, uint32_t chan_count);
   uint32_t chan_count_ = 0;
 };
 
@@ -65,10 +64,9 @@ class NxNPointSamplerImpl : public PointSampler {
 template <size_t DChCount, typename SType, size_t SChCount>
 template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
 inline bool PointSamplerImpl<DChCount, SType, SChCount>::Mix(
-    int32_t* dst, uint32_t dst_frames, uint32_t* dst_offset,
-    const void* src_void, uint32_t frac_src_frames, int32_t* frac_src_offset,
-    uint32_t frac_step_size, uint32_t modulo, uint32_t denominator,
-    Gain::AScale amplitude_scale) {
+    float* dst, uint32_t dst_frames, uint32_t* dst_offset, const void* src_void,
+    uint32_t frac_src_frames, int32_t* frac_src_offset, uint32_t frac_step_size,
+    uint32_t modulo, uint32_t denominator, Gain::AScale amplitude_scale) {
   static_assert(
       ScaleType != ScalerType::MUTED || DoAccumulate == true,
       "Mixing muted streams without accumulation is explicitly unsupported");
@@ -111,10 +109,10 @@ inline bool PointSamplerImpl<DChCount, SType, SChCount>::Mix(
     while ((doff < dst_frames) &&
            (soff < static_cast<int32_t>(frac_src_frames))) {
       uint32_t src_iter = (soff >> kPtsFractionalBits) * SChCount;
-      int32_t* out = dst + (doff * DChCount);
+      float* out = dst + (doff * DChCount);
 
       for (size_t dst_iter = 0; dst_iter < DChCount; ++dst_iter) {
-        int32_t sample = SR::Read(src + src_iter + (dst_iter / SR::DstPerSrc));
+        float sample = SR::Read(src + src_iter + (dst_iter / SR::DstPerSrc));
         out[dst_iter] = DM::Mix(out[dst_iter], sample, amplitude_scale);
       }
 
@@ -157,7 +155,7 @@ inline bool PointSamplerImpl<DChCount, SType, SChCount>::Mix(
 
 template <size_t DChCount, typename SType, size_t SChCount>
 bool PointSamplerImpl<DChCount, SType, SChCount>::Mix(
-    int32_t* dst, uint32_t dst_frames, uint32_t* dst_offset, const void* src,
+    float* dst, uint32_t dst_frames, uint32_t* dst_offset, const void* src,
     uint32_t frac_src_frames, int32_t* frac_src_offset, uint32_t frac_step_size,
     Gain::AScale amplitude_scale, bool accumulate, uint32_t modulo,
     uint32_t denominator) {
@@ -218,10 +216,10 @@ bool PointSamplerImpl<DChCount, SType, SChCount>::Mix(
 template <typename SType>
 template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
 inline bool NxNPointSamplerImpl<SType>::Mix(
-    int32_t* dst, uint32_t dst_frames, uint32_t* dst_offset,
-    const void* src_void, uint32_t frac_src_frames, int32_t* frac_src_offset,
-    uint32_t frac_step_size, uint32_t modulo, uint32_t denominator,
-    Gain::AScale amplitude_scale, uint32_t chan_count) {
+    float* dst, uint32_t dst_frames, uint32_t* dst_offset, const void* src_void,
+    uint32_t frac_src_frames, int32_t* frac_src_offset, uint32_t frac_step_size,
+    uint32_t modulo, uint32_t denominator, Gain::AScale amplitude_scale,
+    uint32_t chan_count) {
   static_assert(
       ScaleType != ScalerType::MUTED || DoAccumulate == true,
       "Mixing muted streams without accumulation is explicitly unsupported");
@@ -263,11 +261,10 @@ inline bool NxNPointSamplerImpl<SType>::Mix(
     while ((doff < dst_frames) &&
            (soff < static_cast<int32_t>(frac_src_frames))) {
       uint32_t src_iter = (soff >> kPtsFractionalBits) * chan_count;
-      int32_t* out = dst + (doff * chan_count);
+      float* out = dst + (doff * chan_count);
 
       for (size_t dst_iter = 0; dst_iter < chan_count; ++dst_iter) {
-        int32_t sample =
-            SampleNormalizer<SType>::Read(src + src_iter + dst_iter);
+        float sample = SampleNormalizer<SType>::Read(src + src_iter + dst_iter);
         out[dst_iter] = DM::Mix(out[dst_iter], sample, amplitude_scale);
       }
 
@@ -311,7 +308,7 @@ inline bool NxNPointSamplerImpl<SType>::Mix(
 
 template <typename SType>
 bool NxNPointSamplerImpl<SType>::Mix(
-    int32_t* dst, uint32_t dst_frames, uint32_t* dst_offset, const void* src,
+    float* dst, uint32_t dst_frames, uint32_t* dst_offset, const void* src,
     uint32_t frac_src_frames, int32_t* frac_src_offset, uint32_t frac_step_size,
     Gain::AScale amplitude_scale, bool accumulate, uint32_t modulo,
     uint32_t denominator) {

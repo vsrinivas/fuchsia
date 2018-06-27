@@ -23,10 +23,10 @@ class AudioPerformance {
   // After first run ("cold"), timings measured are tightly clustered (+/-1-2%);
   // we can get a high-confidence profile assessment with fewer runs.
   //
-  // These values were chosen to keep mixer and outputformatter profile times
-  // at approx. 30 seconds each on a standard NUC.
-  static constexpr uint32_t kNumMixerProfilerRuns = 100;
-  static constexpr uint32_t kNumOutputProfilerRuns = 3000;
+  // These values were chosen to keep Mixer and OutputFormatter profile times
+  // under 180 seconds each, on both a standard VIM2 and a standard NUC.
+  static constexpr uint32_t kNumMixerProfilerRuns = 190;
+  static constexpr uint32_t kNumOutputProfilerRuns = 2100;
 
   // class is static only - prevent attempts to instantiate it
   AudioPerformance() = delete;

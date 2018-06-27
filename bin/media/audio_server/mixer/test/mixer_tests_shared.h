@@ -36,25 +36,41 @@ OutputFormatterPtr SelectOutputFormatter(
     fuchsia::media::AudioSampleFormat dst_format, uint32_t num_channels);
 
 // When doing direct bit-for-bit comparisons in our tests, we must factor in the
-// left-shift biasing that is done while converting input data into the internal
-// format of our accumulator. For this reason, tests that previously simply
-// input a 16-bit value at unity SRC and gain, expecting that same 16-bit value
-// to be deposited into the accumulator, would now expect that value to be
-// left-shifted by some number of bits. With this in mind, and to remain
-// flexible in the midst of changes in our pipeline width, our tests now specify
-// any expected values at the higher-than-needed precision of 28-bit. (They also
-// specify values in hexadecimal format in almost all cases, to make bit-shifted
-// values slightly more clear.)  This precision of __28__bit__ test data was
-// specifically chosen to accomodate a future transition to a float32 pipeline,
-// which has 25 effective bits of [precision+sign].
+// conversion that occurs, from non-float inputs into our internal accumulator's
+// float format. For this reason, tests that previously simply input a 16-bit
+// value at unity SRC and gain, expecting that same 16-bit value to be deposited
+// into the accumulator, should now expect that value to be converted to a float
+// value in the range of [-1.0, +1.0). With this in mind, and to remain flexible
+// amidst other changes in pipeline width, our tests now specify any expected
+// values at the higher-than-needed precision of 28-bit. (They also specify
+// values in hexadecimal format in most cases, to make bit-shifted values more
+// clear.)  A __28__bit__ precision for test data was specifically chosen to
+// accomodate the transition we have now made to a float32 internal pipeline,
+// with its 25 effective bits of [precision+sign].
 //
-// This shared function, then, is used to normalize data arrays down to the
-// actual pipeline width, depending on the details of our processing pipeline.
-void NormalizeInt28ToPipelineBitwidth(int32_t* source, uint32_t source_len);
+// This shared function, then, normalizes data arrays into our float32 pipeline.
+// Because inputs must be in the range of [-2^27 , 2^27 ], for all practical
+// purposes it wants "int28" inputs, hence this function's unexpected name.
+void NormalizeInt28ToPipelineBitwidth(float* source, uint32_t source_len);
+
+// Related to the conversions discussed above, these constants are the expected
+// amplitudes in the accumulator of full-scale signals in various input types.
+// int16 and int8 have more negative values than positive ones. To be linear
+// without clipping, a full-scale int signal reaches the max (such as 0x7FFF)
+// but not the min (such as -0x8000). Thus, for int16 and (u)int8 these
+// magnitudes are less than the 1.0 we expect for float inputs.
+constexpr double kFullScaleFloatInputAmplitude = 1.0f;
+constexpr double kFullScaleFloatAccumAmplitude = 1.0f;
+constexpr double kFullScaleInt8AccumAmplitude =
+    static_cast<double>(std::numeric_limits<int8_t>::max()) /
+    -std::numeric_limits<int8_t>::min();
+constexpr double kFullScaleInt16AccumAmplitude =
+    static_cast<double>(std::numeric_limits<int16_t>::max()) /
+    -std::numeric_limits<int16_t>::min();
 
 // Use supplied mixer to mix (w/out rate conversion) from source to accumulator.
 // TODO(mpuryear): refactor this so that tests just call mixer->Mix directly.
-void DoMix(MixerPtr mixer, const void* src_buf, int32_t* accum_buf,
+void DoMix(MixerPtr mixer, const void* src_buf, float* accum_buf,
            bool accumulate, int32_t num_frames,
            Gain::AScale mix_scale = Gain::kUnityScale);
 

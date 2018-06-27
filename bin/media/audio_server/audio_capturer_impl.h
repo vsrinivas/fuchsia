@@ -231,7 +231,7 @@ class AudioCapturerImpl
 
   // Intermediate mixing buffer and output formatter
   std::unique_ptr<OutputFormatter> output_formatter_;
-  std::unique_ptr<int32_t[]> mix_buf_;
+  std::unique_ptr<float[]> mix_buf_;
 
   // Vector used to hold references to our source links while we are mixing
   // (instead of holding the lock which prevents source_links_ mutation for the

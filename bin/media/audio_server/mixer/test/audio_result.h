@@ -230,43 +230,43 @@ class AudioResult {
   // The lowest (furthest-from-Unity) AScale with no observable attenuation on
   // full-scale data (i.e. the smallest AScale indistinguishable from Unity).
   //
-  // For 24-bit scalar precision, this scalar multiplied by full-scale 1.0
-  // should produce 0.FFFFC0, which (in 18-bit pipeline) exactly rounds up to 1.
-  // With current precision values, this scalar is (0x1000000-0x40)/0x1000000.
-  static constexpr Gain::AScale kMinUnityScale =
-      ((1 << (Gain::kFractionalScaleBits)) -
-       (1 << (Gain::kFractionalScaleBits - kAudioPipelineWidth))) /
-      static_cast<Gain::AScale>(1 << (Gain::kFractionalScaleBits));
+  // This const is determined by the number of precision bits in a float32.
+  // Conceptually, it is exactly (2^25 - 1) / (2^25) -- float32 contains 25 bits
+  // of precision, minus 1 for sign, plus 1 for rounding effects. At this value
+  // exactly (or slightly more, if it cannot be perfectly expressed in float32),
+  // all values effectly round back to their original values.
+  static constexpr Gain::AScale kMinUnityScale = 0.999999970198f;
 
   // The highest (closest-to-Unity) AScale with an observable effect on
   // full-scale (i.e. the largest sub-Unity AScale distinguishable from Unity).
   //
-  // This const is the smallest discernable decrement below kMinUnityScale.
-  // For 18-bit data and float scale, this equals (0x1000000-0x40-1)/0x1000000.
-  static constexpr Gain::AScale kPrevScaleEpsilon =
-      ((1 << (Gain::kFractionalScaleBits)) -
-       (1 << (Gain::kFractionalScaleBits - kAudioPipelineWidth)) - 1) /
-      static_cast<Gain::AScale>(1 << (Gain::kFractionalScaleBits));
+  // Related to kMinUnityScale, this const is also determined by the number of
+  // precision bits in a float32. Conceptually, it is infinitesimally less than
+  // (2^25 - 1) / (2^25).  At this value, for the first time the largest values
+  // (i.e. full-scale) will not round back to their original values.
+  static constexpr Gain::AScale kPrevScaleEpsilon = 0.999999970197f;
 
   // The lowest (closest-to-zero) AScale at which full-scale data are not
   // silenced (i.e. the smallest AScale that is distinguishable from Mute).
   //
-  // This scalar mirrors kMinUnityScale above. This scalar multiplied by full-
-  // scale should produce 0.000040. For 18-bit pipeline, this exactly rounds up
-  // to the last non-zero value. Given our current precision (18-bit data, float
-  // scale), this scalar is 0x40/0x1000000.
-  static constexpr Gain::AScale kPrevMinScaleNonZero =
-      (1 << (Gain::kFractionalScaleBits - kAudioPipelineWidth)) /
-      static_cast<Gain::AScale>(1 << (Gain::kFractionalScaleBits));
+  // This value would actually be infinitesimally close to zero, if it were not
+  // for our -160dB limit. kPrevMinScaleNonMute is essentially the scale that
+  // leads to kMutedGain -- plus the smallest-possible increment that a float32
+  // can express.  Note the close relation to kMaxScaleMute.
+  static constexpr Gain::AScale kPrevMinScaleNonMute = 0.000000010000000384f;
 
   // The highest (furthest-from-Mute) AScale at which full-scale data are
   // silenced (i.e. the largest AScale that is indistinguishable from Mute).
   //
-  // This is kPrevMinScaleNonZero, minus the smallest discernable decrement.
-  // For 18-bit data and float scale, this val is (0x40-1)/0x1000000.
-  static constexpr Gain::AScale kMaxScaleZero =
-      ((1 << (Gain::kFractionalScaleBits - kAudioPipelineWidth)) - 1) /
-      static_cast<Gain::AScale>(1 << (Gain::kFractionalScaleBits));
+  // This value would actually be infinitesimally close to zero, if it were not
+  // for our -160dB limit. kMaxScaleMute is essentially the scale that leads to
+  // kMutedGain -- plus an increment that float32 ultimately cannot express.
+  static constexpr Gain::AScale kMaxScaleMute = 0.000000010000000383f;
+
+  static_assert(kMinUnityScale > kPrevScaleEpsilon,
+                "kPrevScaleEpsilon should be distinguishable from Unity");
+  static_assert(kPrevMinScaleNonMute > kMaxScaleMute,
+                "kPrevMinScaleNonMute should be distinguishable from Mute");
 
   static Gain::AScale ScaleEpsilon;
   static Gain::AScale MinScaleNonZero;
@@ -295,6 +295,7 @@ class AudioResult {
   static constexpr double kPrevLevelEpsilonDown = -1.6807164e-04;
 
   static double SinadEpsilonDown;
+  // Previously-cached sinad when applying the smallest-detectable gain change.
   static constexpr double kPrevSinadEpsilonDown = 93.232593;
 
   // Level and unwanted artifacts -- as well as previously-cached threshold
@@ -303,6 +304,7 @@ class AudioResult {
   static constexpr double kPrevLevel60Down = 60.0;
 
   static double Sinad60Down;
+  // Previously-cached sinad when applying exactly -60.0 dB gain.
   static constexpr double kPrevSinad60Down = 34.196374;
 
   //
@@ -346,7 +348,8 @@ class AudioResult {
   static double LevelToleranceOutputFloat;
 
   static constexpr double kPrevLevelToleranceOutput8 = 6.5638245e-02;
-  static constexpr double kPrevLevelToleranceOutput16 = 8.4876728e-05;
+  static constexpr double kPrevLevelToleranceOutput16 = 6.7860087e-02;
+  // was: 8.4876728e-05;
   static constexpr double kPrevLevelToleranceOutputFloat = 6.8541681e-07;
 
   static double LevelOutput8;

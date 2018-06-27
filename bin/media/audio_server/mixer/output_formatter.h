@@ -38,7 +38,7 @@ class OutputFormatter {
    *
    * @param frames The number of frames to produce.
    */
-  virtual void ProduceOutput(const int32_t* source, void* dest,
+  virtual void ProduceOutput(const float* source, void* dest,
                              uint32_t frames) const = 0;
 
   /**

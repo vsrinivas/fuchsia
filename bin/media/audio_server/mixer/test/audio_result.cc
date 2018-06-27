@@ -381,15 +381,11 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
 //
 // Scale
 //
-// The highest (closest-to-Unity) AScale with an observable effect on
-// full-scale (i.e. the largest sub-Unity AScale distinguishable from Unity).
 Gain::AScale AudioResult::ScaleEpsilon = 0;
 constexpr Gain::AScale AudioResult::kPrevScaleEpsilon;
 
-// The lowest (closest-to-zero) AScale at which full-scale data are not
-// silenced (i.e. the smallest AScale that is distinguishable from Mute).
 Gain::AScale AudioResult::MinScaleNonZero = 0;
-constexpr Gain::AScale AudioResult::kPrevMinScaleNonZero;
+constexpr Gain::AScale AudioResult::kPrevMinScaleNonMute;
 
 double AudioResult::DynRangeTolerance = 0.0;
 constexpr double AudioResult::kPrevDynRangeTolerance;
@@ -401,7 +397,6 @@ double AudioResult::SinadEpsilonDown = -INFINITY;
 constexpr double AudioResult::kPrevSinadEpsilonDown;
 
 double AudioResult::Level60Down = -INFINITY;
-// Previously-cached sinad when applying exactly -60.0 dB gain.
 constexpr double AudioResult::kPrevLevel60Down;
 
 double AudioResult::Sinad60Down = -INFINITY;
@@ -508,7 +503,7 @@ void AudioResult::DumpFreqRespValues(double* freq_resp_vals,
   printf("\n\n %s", arr_name.c_str());
   for (uint32_t freq = 0; freq < FrequencySet::kReferenceFreqs.size(); ++freq) {
     if (freq % 6 == 0) {
-      printf("\n");
+      printf("\n\t\t");
     }
     printf(" %14.7le,", freq_resp_vals[freq]);
   }
@@ -519,7 +514,7 @@ void AudioResult::DumpSinadValues(double* sinad_vals, std::string arr_name) {
   printf("\n\n %s", arr_name.c_str());
   for (uint32_t freq = 0; freq < FrequencySet::kReferenceFreqs.size(); ++freq) {
     if (freq % 6 == 0) {
-      printf("\n");
+      printf("\n\t\t");
     }
     printf(" %11.7lf,", sinad_vals[freq]);
   }

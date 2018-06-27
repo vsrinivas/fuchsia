@@ -8,6 +8,7 @@
 #include <type_traits>
 
 #include <fbl/algorithm.h>
+#include <math.h>
 
 #include "garnet/bin/media/audio_server/constants.h"
 #include "lib/fidl/cpp/clone.h"
@@ -20,22 +21,23 @@ namespace audio {
 template <typename DType, typename Enable = void>
 class DstConverter;
 
+// Converting audio between float and int is surprisingly controversial.
+// (blog.bjornroche.com/2009/12/int-float-int-its-jungle-out-there.html etc. --
+// search for "audio float int convert"). In choosing an internal pipeline that
+// is float32, we can accomodate float32 Sources (such as an incoming stream
+// from the render API, or an input device). Unfortunately, if the Destination
+// (output device or outgoing stream destined for capture API) is NOT float32,
+// then we cannot communicate the value of +1.0; we clamp these values in
+// DstConverter::Convert). That said, the "practically clipping" value of +1.0
+// is rare in WAV files, and other sources can easily reduce their input levels.
 template <typename DType>
 class DstConverter<
     DType, typename std::enable_if<std::is_same<DType, int16_t>::value>::type> {
  public:
-  static inline constexpr DType Convert(int32_t sample) {
-    if (kAudioPipelineWidth > 16) {
-      // Before we right-shift, add "0.5" to round instead of truncate.
-      // 1<<(kAudioPipelineWidth-16) is output LSB; 1<<(k..Width-17) is half.
-      // -0.5 rounds *away from* zero; if negative, round_val is slightly less.
-      int32_t round_val =
-          (1 << (kAudioPipelineWidth - 17)) - (sample <= 0 ? 1 : 0);
-      sample = (sample + round_val) >> (kAudioPipelineWidth - 16);
-    }
-    sample = fbl::clamp<int32_t>(sample, std::numeric_limits<int16_t>::min(),
-                                 std::numeric_limits<int16_t>::max());
-    return static_cast<DType>(sample);
+  static inline constexpr DType Convert(float sample) {
+    int32_t val = round(sample * 0x00008000);
+    return fbl::clamp<int32_t>(val, std::numeric_limits<int16_t>::min(),
+                               std::numeric_limits<int16_t>::max());
   }
 };
 
@@ -43,16 +45,11 @@ template <typename DType>
 class DstConverter<
     DType, typename std::enable_if<std::is_same<DType, uint8_t>::value>::type> {
  public:
-  static inline constexpr DType Convert(int32_t sample) {
-    // Before we right-shift, add "0.5" to convert truncation into rounding.
-    // 1<<(kAudioPipelineWidth-8) is output LSB; 1<<(k..Width-9) is half this.
-    // -0.5 rounds *away from* zero; if negative, make round_val slightly less.
-    int32_t round_val =
-        (1 << (kAudioPipelineWidth - 9)) - (sample <= 0 ? 1 : 0);
-    sample = fbl::clamp<int32_t>(
-        (sample + round_val) >> (kAudioPipelineWidth - 8),
-        std::numeric_limits<int8_t>::min(), std::numeric_limits<int8_t>::max());
-    return static_cast<DType>(sample + 0x80);
+  static inline constexpr DType Convert(float sample) {
+    int32_t val = round(sample * 0x0080) + 0x0080;
+    return static_cast<DType>(
+        fbl::clamp<int32_t>(val, std::numeric_limits<uint8_t>::min(),
+                            std::numeric_limits<uint8_t>::max()));
   }
 };
 
@@ -61,10 +58,8 @@ class DstConverter<
     DType, typename std::enable_if<std::is_same<DType, float>::value>::type> {
  public:
   // This will emit +1.0 values, which are legal per WAV format custom.
-  static inline constexpr DType Convert(int32_t sample) {
-    return fbl::clamp(
-        static_cast<DType>(sample) / (1 << (kAudioPipelineWidth - 1)), -1.0f,
-        1.0f);
+  static inline constexpr DType Convert(float sample) {
+    return fbl::clamp(sample, -1.0f, 1.0f);
   }
 };
 
@@ -101,7 +96,7 @@ class OutputFormatterImpl : public OutputFormatter {
       const fuchsia::media::AudioMediaTypeDetailsPtr& format)
       : OutputFormatter(format, sizeof(DType)) {}
 
-  void ProduceOutput(const int32_t* source, void* dest_void,
+  void ProduceOutput(const float* source, void* dest_void,
                      uint32_t frames) const override {
     using DC = DstConverter<DType>;
     DType* dest = static_cast<DType*>(dest_void);

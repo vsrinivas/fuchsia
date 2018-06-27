@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <iomanip>
+
 #include "garnet/bin/media/audio_server/mixer/test/audio_result.h"
 #include "garnet/bin/media/audio_server/mixer/test/mixer_tests_shared.h"
 #include "lib/fxl/logging.h"
@@ -35,17 +37,17 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
     mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 48000,
                         1, 48000, Resampler::SampleAndHold);
     amplitude = std::numeric_limits<int8_t>::max();
-    expected_amplitude = amplitude * (1 << (kAudioPipelineWidth - 8));
+    expected_amplitude = kFullScaleInt8AccumAmplitude;
   } else if (std::is_same<T, int16_t>::value) {
     mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000,
                         1, 48000, Resampler::SampleAndHold);
     amplitude = std::numeric_limits<int16_t>::max();
-    expected_amplitude = amplitude * (1 << (kAudioPipelineWidth - 16));
+    expected_amplitude = kFullScaleInt16AccumAmplitude;
   } else if (std::is_same<T, float>::value) {
     mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 48000, 1,
                         48000, Resampler::SampleAndHold);
-    amplitude = 1.0;
-    expected_amplitude = amplitude * (1 << (kAudioPipelineWidth - 1));
+    amplitude = kFullScaleFloatInputAmplitude;
+    expected_amplitude = kFullScaleFloatAccumAmplitude;
   } else {
     FXL_DCHECK(false) << "Unsupported source format";
   }
@@ -55,7 +57,7 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
   OverwriteCosine(source.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
                   amplitude);
 
-  std::vector<int32_t> accum(kFreqTestBufSize);
+  std::vector<float> accum(kFreqTestBufSize);
   uint32_t dst_offset = 0;
   int32_t frac_src_offset = 0;
   mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset, source.data(),
@@ -74,7 +76,7 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
   // We can directly compare 'signal' and 'other', regardless of source format.
   *sinad_db = ValToDb(magn_signal / magn_other);
 
-  // All sources (8-bit, 16-bit, ...) are normalized to "int18" in accum buffer.
+  // All sources (8-bit, 16-bit, ...) are normalized to float in accum buffer.
   return ValToDb(magn_signal / expected_amplitude);
 }
 
@@ -138,23 +140,23 @@ double MeasureOutputNoiseFloor(double* sinad_db) {
     output_formatter =
         SelectOutputFormatter(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1);
     expected_amplitude = std::numeric_limits<int8_t>::max();
-    amplitude = expected_amplitude * (1 << (kAudioPipelineWidth - 8));
+    amplitude = kFullScaleInt8AccumAmplitude;
   } else if (std::is_same<T, int16_t>::value) {
     output_formatter =
         SelectOutputFormatter(fuchsia::media::AudioSampleFormat::SIGNED_16, 1);
     expected_amplitude = std::numeric_limits<int16_t>::max();
-    amplitude = expected_amplitude * (1 << (kAudioPipelineWidth - 16));
+    amplitude = kFullScaleInt8AccumAmplitude;
   } else if (std::is_same<T, float>::value) {
     output_formatter =
         SelectOutputFormatter(fuchsia::media::AudioSampleFormat::FLOAT, 1);
-    expected_amplitude = 1.0;
-    amplitude = expected_amplitude * (1 << (kAudioPipelineWidth - 1));
+    expected_amplitude = kFullScaleFloatInputAmplitude;
+    amplitude = kFullScaleFloatAccumAmplitude;
   } else {
     FXL_DCHECK(false) << "Unsupported source format";
   }
 
   // Populate accum buffer and output to destination buffer
-  std::vector<int32_t> accum(kFreqTestBufSize);
+  std::vector<float> accum(kFreqTestBufSize);
   OverwriteCosine(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
                   amplitude);
 
@@ -232,7 +234,7 @@ void MeasureFreqRespSinad(MixerPtr mixer, uint32_t src_buf_size,
   // All FFT inputs are considered periodic, so to generate a periodic output
   // from the resampler, this extra source element should equal source[0].
   std::vector<float> source(src_buf_size + 1);
-  std::vector<int32_t> accum(kFreqTestBufSize);
+  std::vector<float> accum(kFreqTestBufSize);
   uint32_t step_size = (Mixer::FRAC_ONE * src_buf_size) / kFreqTestBufSize;
   uint32_t modulo =
       (Mixer::FRAC_ONE * src_buf_size) - (step_size * kFreqTestBufSize);
@@ -290,8 +292,7 @@ void MeasureFreqRespSinad(MixerPtr mixer, uint32_t src_buf_size,
                      &magn_other);
 
     // Calculate Frequency Response and Signal-to-Noise-And-Distortion (SINAD).
-    level_db[freq_idx] =
-        ValToDb(magn_signal / (1 << (kAudioPipelineWidth - 1)));
+    level_db[freq_idx] = ValToDb(magn_signal);
     sinad_db[freq_idx] = ValToDb(magn_signal / magn_other);
   }
 }
@@ -309,10 +310,13 @@ void EvaluateFreqRespResults(double* freq_resp_results,
     uint32_t freq = FrequencySet::UseFullFrequencySet
                         ? idx
                         : FrequencySet::kSummaryIdxs[idx];
-    EXPECT_GE(freq_resp_results[freq], freq_resp_limits[freq]) << freq;
+    EXPECT_GE(freq_resp_results[freq], freq_resp_limits[freq])
+        << " [" << freq << "]  " << std::scientific << std::setprecision(9)
+        << freq_resp_results[freq];
     EXPECT_LE(freq_resp_results[freq],
               0.0 + AudioResult::kPrevLevelToleranceInterpolation)
-        << freq;
+        << " [" << freq << "]  " << std::scientific << std::setprecision(9)
+        << freq_resp_results[freq];
     AudioResult::LevelToleranceInterpolation =
         fmax(AudioResult::LevelToleranceInterpolation, freq_resp_results[freq]);
   }
@@ -329,7 +333,9 @@ void EvaluateSinadResults(double* sinad_results, const double* sinad_limits) {
     uint32_t freq = FrequencySet::UseFullFrequencySet
                         ? idx
                         : FrequencySet::kSummaryIdxs[idx];
-    EXPECT_GE(sinad_results[freq], sinad_limits[freq]) << freq;
+    EXPECT_GE(sinad_results[freq], sinad_limits[freq])
+        << " [" << freq << "]  " << std::scientific << std::setprecision(9)
+        << sinad_results[freq];
   }
 }
 

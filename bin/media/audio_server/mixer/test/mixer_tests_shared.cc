@@ -57,29 +57,21 @@ OutputFormatterPtr SelectOutputFormatter(
   return output_formatter;
 }
 
-// This converts a higher-resolution-than-needed "int28" data into our internal
-// (accum) representation, depending on the width of our processing pipeline.
-// The test-data-width of 28 bits was chosen to accomodate float32 precision.
-void NormalizeInt28ToPipelineBitwidth(int32_t* source, uint32_t source_len) {
-  static_assert(kAudioPipelineWidth <= 28, "kAudioPipelineWidth too wide");
-
-  if (kAudioPipelineWidth < 28) {
-    for (uint32_t idx = 0; idx < source_len; ++idx) {
-      // Before right-shift, add "0.5" to convert truncation into rounding.
-      // 1<<(28-kAudioPipelineWidth) is the LSB. 1<<(27-k..Width) is LSB/2.
-      // -0.5 rounds *away from* zero; if negative make round_val slightly less.
-      int32_t rounding_val =
-          (1 << (27 - kAudioPipelineWidth)) - (source[idx] < 0 ? 1 : 0);
-      source[idx] += rounding_val;
-      source[idx] >>= (28 - kAudioPipelineWidth);
-    }
+// This shared function normalizes data arrays into our float32 pipeline.
+// Because inputs must be in the range of [-2^27 , 2^27 ], for all practical
+// purposes it wants "int28" inputs, hence this function's unexpected name. The
+// test-data-width of 28 bits was chosen to accomodate float32 precision.
+constexpr float kInt28ToFloat = 1.0 / (1 << 27);  // Why 27? Remember sign bit.
+void NormalizeInt28ToPipelineBitwidth(float* source, uint32_t source_len) {
+  for (uint32_t idx = 0; idx < source_len; ++idx) {
+    source[idx] *= kInt28ToFloat;
   }
 }
 
 // Use the supplied mixer to scale from src into accum buffers.  Assumes a
 // specific buffer size, with no SRC, starting at the beginning of each buffer.
 // By default, does not gain-scale or accumulate (both can be overridden).
-void DoMix(MixerPtr mixer, const void* src_buf, int32_t* accum_buf,
+void DoMix(MixerPtr mixer, const void* src_buf, float* accum_buf,
            bool accumulate, int32_t num_frames, Gain::AScale mix_scale) {
   uint32_t dst_offset = 0;
   int32_t frac_src_offset = 0;

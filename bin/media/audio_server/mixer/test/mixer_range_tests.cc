@@ -13,8 +13,6 @@ namespace test {
 // Convenience abbreviation within this source file to shorten names
 using Resampler = ::media::audio::Mixer::Resampler;
 
-constexpr double kFullScaleFloatInputAmplitude = 1.0f;
-constexpr double kFullScaleAccumAmplitude = 1 << (kAudioPipelineWidth - 1);
 // Ideal dynamic range measurement is exactly equal to the reduction in gain.
 // Ideal accompanying noise is ideal noise floor, minus the reduction in gain.
 void MeasureSummaryDynamicRange(Gain::AScale scale, double* level_db,
@@ -23,7 +21,7 @@ void MeasureSummaryDynamicRange(Gain::AScale scale, double* level_db,
                                48000, 1, 48000, Resampler::SampleAndHold);
 
   std::vector<float> source(kFreqTestBufSize);
-  std::vector<int32_t> accum(kFreqTestBufSize);
+  std::vector<float> accum(kFreqTestBufSize);
 
   // Populate source buffer; mix it (pass-thru) to accumulation buffer
   OverwriteCosine(source.data(), kFreqTestBufSize,
@@ -43,7 +41,7 @@ void MeasureSummaryDynamicRange(Gain::AScale scale, double* level_db,
   MeasureAudioFreq(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
                    &magn_signal, &magn_other);
 
-  *level_db = ValToDb(magn_signal / kFullScaleAccumAmplitude);
+  *level_db = ValToDb(magn_signal);
   *sinad_db = ValToDb(magn_signal / magn_other);
 }
 
@@ -117,8 +115,8 @@ TEST(DynamicRange, MonoToStereo) {
                                48000, 2, 48000, Resampler::SampleAndHold);
 
   std::vector<float> source(kFreqTestBufSize);
-  std::vector<int32_t> accum(kFreqTestBufSize * 2);
-  std::vector<int32_t> left(kFreqTestBufSize);
+  std::vector<float> accum(kFreqTestBufSize * 2);
+  std::vector<float> left(kFreqTestBufSize);
 
   // Populate mono source buffer; mix it (no SRC/gain) to stereo accumulator
   OverwriteCosine(source.data(), kFreqTestBufSize,
@@ -144,7 +142,7 @@ TEST(DynamicRange, MonoToStereo) {
   MeasureAudioFreq(left.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
                    &magn_left_signal, &magn_left_other);
 
-  level_left_db = ValToDb(magn_left_signal / kFullScaleAccumAmplitude);
+  level_left_db = ValToDb(magn_left_signal);
   sinad_left_db = ValToDb(magn_left_signal / magn_left_other);
 
   EXPECT_NEAR(level_left_db, 0.0, AudioResult::kPrevLevelToleranceSourceFloat);
@@ -161,7 +159,7 @@ TEST(DynamicRange, StereoToMono) {
 
   std::vector<float> mono(kFreqTestBufSize);
   std::vector<float> source(kFreqTestBufSize * 2);
-  std::vector<int32_t> accum(kFreqTestBufSize);
+  std::vector<float> accum(kFreqTestBufSize);
 
   // Populate a mono source buffer; copy it into left side of stereo buffer.
   OverwriteCosine(mono.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
@@ -192,9 +190,9 @@ TEST(DynamicRange, StereoToMono) {
   MeasureAudioFreq(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
                    &magn_signal, &magn_other);
 
-  AudioResult::LevelStereoMono =
-      ValToDb(magn_signal / kFullScaleAccumAmplitude);
-  AudioResult::FloorStereoMono = ValToDb(kFullScaleAccumAmplitude / magn_other);
+  AudioResult::LevelStereoMono = ValToDb(magn_signal);
+  AudioResult::FloorStereoMono =
+      ValToDb(kFullScaleFloatAccumAmplitude / magn_other);
 
   // We added identical signals, so accuracy should be high. However, noise
   // floor is doubled as well, so we expect 6dB reduction in sinad.
@@ -231,24 +229,28 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   MixerPtr mixer;
   double amplitude, expected_amplitude;
 
+  // Why isn't expected_amplitude 1.0?  int16 and int8 have more negative values
+  // than positive ones. To be linear without clipping, a full-scale signal
+  // reaches the max (such as 0x7FFF) but not the min (such as -0x8000). Thus,
+  // this magnitude is slightly less than the 1.0 we expect for float signals.
   if (std::is_same<T, uint8_t>::value) {
     mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 48000,
                         1, 48000, Resampler::SampleAndHold);
     amplitude = std::numeric_limits<int8_t>::max();
-    expected_amplitude = amplitude * (1 << (kAudioPipelineWidth - 8));
+    expected_amplitude = kFullScaleInt8AccumAmplitude;
   } else if (std::is_same<T, int16_t>::value) {
     mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000,
                         1, 48000, Resampler::SampleAndHold);
     amplitude = std::numeric_limits<int16_t>::max();
-    expected_amplitude = amplitude * (1 << (kAudioPipelineWidth - 16));
+    expected_amplitude = kFullScaleInt16AccumAmplitude;
   } else {
     mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 48000, 1,
                         48000, Resampler::SampleAndHold);
     amplitude = kFullScaleFloatInputAmplitude;
-    expected_amplitude = kFullScaleAccumAmplitude;
+    expected_amplitude = kFullScaleFloatAccumAmplitude;
   }
   std::vector<T> source(kFreqTestBufSize);
-  std::vector<int32_t> accum(kFreqTestBufSize);
+  std::vector<float> accum(kFreqTestBufSize);
 
   OverwriteCosine(source.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
                   amplitude);

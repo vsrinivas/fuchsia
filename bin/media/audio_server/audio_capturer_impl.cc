@@ -272,7 +272,7 @@ void AudioCapturerImpl::SetPayloadBuffer(zx::vmo payload_buf_vmo) {
   //
   // TODO(johngro):  This does not need to be as long (in frames) as the user
   // supplied VMO.  Limit this to something more reasonable.
-  mix_buf_.reset(new int32_t[payload_buf_frames_]);
+  mix_buf_.reset(new float[payload_buf_frames_]);
 
   // Map the VMO into our process.
   uintptr_t tmp;
@@ -934,7 +934,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     }
 
     uint32_t frames_left = mix_frames;
-    int32_t* buf = mix_buf_.get();
+    float* buf = mix_buf_.get();
 
     // Now for each of the possible regions, intersect with our job and mix.
     for (const auto& region : regions) {

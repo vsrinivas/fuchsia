@@ -44,9 +44,8 @@ zx_status_t SelectBestFormat(
   constexpr uint32_t S16_FMT = AUDIO_SAMPLE_FORMAT_16BIT;
   constexpr uint32_t F32_FMT = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
 
-  // Users should only be asking for unsigned 8 bit, signed 16 bit or float32
-  // right now.  If they ask for anything else, change their preference to
-  // indicate signed 16 bit for now.
+  // For now, users should only ask for unsigned-8, signed-16 or float-32. If
+  // they ask for anything else, change their preference to signed-16.
   //
   // TODO(johngro) : clean this up as part of fixing MTWN-54
   if ((pref_sample_format & AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN) ||
@@ -58,10 +57,13 @@ zx_status_t SelectBestFormat(
 
   for (const auto& range : fmts) {
     // Start by scoring our sample format.  Right now, we only support 8-bit
-    // unsigned, 32-bit float, and 16-bit signed LPCM in the mixer.  If this
+    // unsigned, 16-bit signed and 32-bit float in the mixer.  If this
     // sample format range does not support any of these, just skip it for now.
-    // Otherwise, 4 points if you match the requested format, 3 for signed 16
-    // bit, 2 for float32, or 1 for unsigned 8.
+    // Otherwise, 4 points if you match the requested format, 3 for signed-16,
+    // 2 for float-32, or 1 for unsigned-8.
+    //
+    // TODO(mpuryear): once we can validate float-32 with hardware that natively
+    // handles it, change this algorithm to prefer float-32 over signed-16.
     audio_sample_format_t this_sample_format;
     int sample_format_score;
 

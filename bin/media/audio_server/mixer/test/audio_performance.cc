@@ -154,8 +154,8 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
 
   std::unique_ptr<SampleType[]> source =
       std::make_unique<SampleType[]>(source_frames * num_input_chans);
-  std::unique_ptr<int32_t[]> accum =
-      std::make_unique<int32_t[]>(kFreqTestBufSize * num_output_chans);
+  std::unique_ptr<float[]> accum =
+      std::make_unique<float[]>(kFreqTestBufSize * num_output_chans);
   uint32_t frac_src_frames = source_frames * Mixer::FRAC_ONE;
   int32_t frac_src_offset;
   uint32_t dst_offset;
@@ -270,7 +270,7 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans,
 
   uint32_t num_samples = kFreqTestBufSize * num_chans;
 
-  std::unique_ptr<int32_t[]> accum = std::make_unique<int32_t[]>(num_samples);
+  std::unique_ptr<float[]> accum = std::make_unique<float[]>(num_samples);
   std::unique_ptr<SampleType[]> dest =
       std::make_unique<SampleType[]>(num_samples);
 
@@ -281,17 +281,13 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans,
     case OutputDataRange::OutOfRange:
       range = 'O';
       for (size_t idx = 0; idx < num_samples; ++idx) {
-        // For int32 accumulator bitwidths < 32, these are ALWAYS out-of-range.
-        // (I.e. at bitwidth 31, accumulator range is [-0x40000000,0x40000000].
-        accum[idx] = (idx % 2 ? -0x70000000 : 0x70000000);
+        accum[idx] = (idx % 2 ? -1.5f : 1.5f);
       }
       break;
     case OutputDataRange::Normal:
       range = 'N';
-      // For int32 accumulator bitwidths >=16, these are ALWAYS in-range.
       OverwriteCosine(accum.get(), num_samples,
-                      FrequencySet::kReferenceFreqs[FrequencySet::kRefFreqIdx],
-                      std::numeric_limits<int16_t>::max());
+                      FrequencySet::kReferenceFreqs[FrequencySet::kRefFreqIdx]);
       break;
     default:
       ASSERT_TRUE(false) << "Unknown output sample format for testing";

@@ -108,6 +108,44 @@ all test code referencing these values should EXPECT_GE. The tolerances
 (always explicitly called by this term) are always compared in symmetric
 manner, on both sides of the expected level.
 
+### Updating AudioResult thresholds
+
+Frequency response or SINAD failures include the measured value in the log,
+at the point that the failure is surfaced. If the intention is to update
+AudioResult in a way that essentially accepts the new result as the expected
+value, then that value (at eight total digits of precision) can be used. For
+more significant updates to AudioResult values, the __--dump__ flag is
+available. This option automatically includes all frequencies (i.e. it implies
+__--full__); following the run, all measured values are displayed in a format
+that is easily copied into audio_result.cc. Note that these values will be
+displayed with 9 digits of precision, so care must be taken when including
+them in audio_result.cc. The rule of thumb is to use only eight total digits
+of precision, and to err on the side of "more loose" when reducing the number
+of digits. Generally this means that for tolerance thresholds and frequency
+response, any additional digit should be "ceiling-ed" up (a frequency response
+measurement of -1.57207701 should be saved as -1.5720771); however, for SINAD,
+noise floor and dynamic range, the additional digit would be "floored" away (a
+SINAD of 19.3948736 would be saved as the slightly-less-strict 19.394873, while
+a SINAD measurement of -19.3948736 would be saved as -19.394874, also slightly
+less tight).
+
+
+## Performance Profiling
+
+The audio_mixer_tests test binary also contains the ability to profile the
+performance of the Mixer and OutputFormatter areas. Use the __--profile__ flag
+to trigger these micro-benchmark tests, which use *zx_clock_get* to measure the
+time required for the target to execute a Mix() or ProduceOutput() call (for
+Mixer or OutputFormatter objects, respectively) to generate 64k frames. The
+aggregated results that are displayed for each permutation of parameters
+represent the time consumed *per-call*, although to determine a Mean that is
+relatively reliable we run these micro-benchmarks many tens or even hundreds of
+times. As is often the case with performance profiling, one should be careful
+not to directly compare results from different machines; generally this
+profiling functionality is intended to be used to provide a general sense of
+"before versus after" with regards to a specific change related to the mixer
+pipeline or computation.
+
 
 ## Issues
 
@@ -144,8 +182,8 @@ higher code resilience and easier future extensibility.
 *   MTWN-45
 
     In addition to the existing resamplers (SampleAndHold, LinearInterpolation),
-we should consider adding new ones with increased fidelity. This would more
-fully allow clients to make the quality-vs.-performance tradeoff themselves.
+we should create new ones with increased fidelity. This would more fully allow
+clients to make the quality-vs.-performance tradeoff themselves.
 
 **Gain**
 
@@ -160,24 +198,9 @@ and tests.
 
 **Accumulate**
 
-*   MTWN-83
-
-    The accumulation step does not clamp values to the int32 range and can
-overflow, given a sufficient number of incoming streams. This limit is
-admittedly beyond any foreseeable scenario (65,000 streams), but this should be
-documented even if the code does not explicitly clamp.
-
 **Denormalize (Output)**
 
 **Numerous Stages**
-
-*   MTWN-86
-
-    Expanding the width of our internal data processing pipeline -- whether
-moving to float32, or staying with fixed-point/int but increasing our number of
-fractional bits -- will require changes to all stages, including
-Normalization-Input, Rechannelization, Interpolation, Gain Scaling, Accumulation
-and Denormalization-Output.
 
 **Interface to Renderer (or other parts of audio_server)**
 

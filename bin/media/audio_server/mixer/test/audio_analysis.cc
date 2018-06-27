@@ -3,8 +3,12 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/media/audio_server/mixer/test/audio_analysis.h"
-#include <fbl/algorithm.h>
+
+#include <iomanip>
 #include <vector>
+
+#include <fbl/algorithm.h>
+
 #include "lib/fxl/logging.h"
 
 namespace media {
@@ -38,7 +42,7 @@ bool CompareBuffers(const T* actual, const T* expect, uint32_t buf_size,
   for (uint32_t idx = 0; idx < buf_size; ++idx) {
     if (actual[idx] != expect[idx]) {
       if (expect_to_pass) {
-        FXL_LOG(ERROR) << "[" << idx << "] was "
+        FXL_LOG(ERROR) << "[" << idx << "] was " << std::setprecision(10)
                        << (is_uint8 ? static_cast<int32_t>(actual[idx])
                                     : actual[idx])
                        << ", should be "
@@ -66,7 +70,7 @@ bool CompareBufferToVal(const T* buf, T val, uint32_t buf_size,
   for (uint32_t idx = 0; idx < buf_size; ++idx) {
     if (buf[idx] != val) {
       if (expect_to_pass) {
-        FXL_LOG(ERROR) << "[" << idx << "] was "
+        FXL_LOG(ERROR) << "[" << idx << "] was " << std::setprecision(10)
                        << (is_uint8 ? static_cast<int32_t>(buf[idx]) : buf[idx])
                        << ", should be "
                        << (is_uint8 ? static_cast<int32_t>(val) : val);

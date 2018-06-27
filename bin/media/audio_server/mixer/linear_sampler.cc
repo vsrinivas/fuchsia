@@ -15,12 +15,10 @@ namespace media {
 namespace audio {
 namespace mixer {
 
-inline int32_t Interpolate(int32_t A, int32_t B, uint32_t alpha) {
-  // Called very frequently: optimized to cast, mult, compare, 2 shift, 3 add.
-  int64_t val = (static_cast<int64_t>(A) << kPtsFractionalBits) +
-                (B - A) * static_cast<int32_t>(alpha);
-  val += (val >= 0 ? kPtsRoundingVal : kPtsRoundingVal - 1);
-  return val >> kPtsFractionalBits;
+// We specify alpha in fixed-point 19.13: a max val of "1.0" is 0x00002000.
+inline float Interpolate(float A, float B, uint32_t alpha) {
+  double val = static_cast<double>(B - A) * alpha / (1 << kPtsFractionalBits);
+  return A + val;
 }
 
 template <size_t DChCount, typename SType, size_t SChCount>
@@ -28,7 +26,7 @@ class LinearSamplerImpl : public LinearSampler {
  public:
   LinearSamplerImpl() : LinearSampler(FRAC_ONE - 1, FRAC_ONE - 1) { Reset(); }
 
-  bool Mix(int32_t* dst, uint32_t dst_frames, uint32_t* dst_offset,
+  bool Mix(float* dst, uint32_t dst_frames, uint32_t* dst_offset,
            const void* src, uint32_t frac_src_frames, int32_t* frac_src_offset,
            uint32_t frac_step_size, Gain::AScale amplitude_scale,
            bool accumulate, uint32_t modulo = 0,
@@ -38,13 +36,13 @@ class LinearSamplerImpl : public LinearSampler {
 
  private:
   template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
-  inline bool Mix(int32_t* dst, uint32_t dst_frames, uint32_t* dst_offset,
+  inline bool Mix(float* dst, uint32_t dst_frames, uint32_t* dst_offset,
                   const void* src, uint32_t frac_src_frames,
                   int32_t* frac_src_offset, uint32_t frac_step_size,
                   uint32_t modulo, uint32_t denominator,
                   Gain::AScale amplitude_scale);
 
-  int32_t filter_data_[2 * DChCount];
+  float filter_data_[2 * DChCount];
 };
 
 // TODO(mpuryear): MTWN-75 factor to minimize LinearSamplerImpl code duplication
@@ -53,30 +51,31 @@ class NxNLinearSamplerImpl : public LinearSampler {
  public:
   NxNLinearSamplerImpl(size_t channelCount)
       : LinearSampler(FRAC_ONE - 1, FRAC_ONE - 1), chan_count_(channelCount) {
-    filter_data_u_ = std::make_unique<int32_t[]>(2 * chan_count_);
+    filter_data_u_ = std::make_unique<float[]>(2 * chan_count_);
     Reset();
   }
 
-  bool Mix(int32_t* dst, uint32_t dst_frames, uint32_t* dst_offset,
+  bool Mix(float* dst, uint32_t dst_frames, uint32_t* dst_offset,
            const void* src, uint32_t frac_src_frames, int32_t* frac_src_offset,
            uint32_t frac_step_size, Gain::AScale amplitude_scale,
            bool accumulate, uint32_t modulo = 0,
            uint32_t denominator = 1) override;
 
   void Reset() override {
-    ::memset(filter_data_u_.get(), 0, 2 * chan_count_ * sizeof(int32_t));
+    ::memset(filter_data_u_.get(), 0,
+             2 * chan_count_ * sizeof(filter_data_u_[0]));
   }
 
  private:
   template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
-  inline bool Mix(int32_t* dst, uint32_t dst_frames, uint32_t* dst_offset,
+  inline bool Mix(float* dst, uint32_t dst_frames, uint32_t* dst_offset,
                   const void* src, uint32_t frac_src_frames,
                   int32_t* frac_src_offset, uint32_t frac_step_size,
                   uint32_t modulo, uint32_t denominator,
                   Gain::AScale amplitude_scale, size_t chan_count);
 
   size_t chan_count_;
-  std::unique_ptr<int32_t[]> filter_data_u_;
+  std::unique_ptr<float[]> filter_data_u_;
 };
 
 // If upper layers call with ScaleType MUTED, they must set DoAccumulate=TRUE.
@@ -84,10 +83,9 @@ class NxNLinearSamplerImpl : public LinearSampler {
 template <size_t DChCount, typename SType, size_t SChCount>
 template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
 inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
-    int32_t* dst, uint32_t dst_frames, uint32_t* dst_offset,
-    const void* src_void, uint32_t frac_src_frames, int32_t* frac_src_offset,
-    uint32_t frac_step_size, uint32_t modulo, uint32_t denominator,
-    Gain::AScale amplitude_scale) {
+    float* dst, uint32_t dst_frames, uint32_t* dst_offset, const void* src_void,
+    uint32_t frac_src_frames, int32_t* frac_src_offset, uint32_t frac_step_size,
+    uint32_t modulo, uint32_t denominator, Gain::AScale amplitude_scale) {
   static_assert(
       ScaleType != ScalerType::MUTED || DoAccumulate == true,
       "Mixing muted streams without accumulation is explicitly unsupported");
@@ -141,10 +139,10 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
       }
 
       do {
-        int32_t* out = dst + (doff * DChCount);
+        float* out = dst + (doff * DChCount);
 
         for (size_t D = 0; D < DChCount; ++D) {
-          int32_t sample = Interpolate(
+          float sample = Interpolate(
               filter_data_[D], filter_data_[DChCount + D], soff + FRAC_ONE);
           out[D] = DM::Mix(out[D], sample, amplitude_scale);
         }
@@ -165,12 +163,12 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
     // Now we are fully in the current buffer and need not rely on our cache.
     while ((doff < dst_frames) && (soff < src_end)) {
       uint32_t S = (soff >> kPtsFractionalBits) * SChCount;
-      int32_t* out = dst + (doff * DChCount);
+      float* out = dst + (doff * DChCount);
 
       for (size_t D = 0; D < DChCount; ++D) {
-        int32_t s1 = SR::Read(src + S + (D / SR::DstPerSrc));
-        int32_t s2 = SR::Read(src + S + (D / SR::DstPerSrc) + SChCount);
-        int32_t sample = Interpolate(s1, s2, soff & FRAC_MASK);
+        float s1 = SR::Read(src + S + (D / SR::DstPerSrc));
+        float s2 = SR::Read(src + S + (D / SR::DstPerSrc) + SChCount);
+        float sample = Interpolate(s1, s2, soff & FRAC_MASK);
         out[D] = DM::Mix(out[D], sample, amplitude_scale);
       }
 
@@ -213,10 +211,10 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
       // ... then we can _point-sample_ one final frame into our output buffer.
       // We need not _interpolate_ since fractional position is exactly zero.
       uint32_t S = (soff >> kPtsFractionalBits) * SChCount;
-      int32_t* out = dst + (doff * DChCount);
+      float* out = dst + (doff * DChCount);
 
       for (size_t D = 0; D < DChCount; ++D) {
-        int32_t sample = SR::Read(src + S + (D / SR::DstPerSrc));
+        float sample = SR::Read(src + S + (D / SR::DstPerSrc));
         out[D] = DM::Mix(out[D], sample, amplitude_scale);
       }
     }
@@ -265,7 +263,7 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
 
 template <size_t DChCount, typename SType, size_t SChCount>
 bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
-    int32_t* dst, uint32_t dst_frames, uint32_t* dst_offset, const void* src,
+    float* dst, uint32_t dst_frames, uint32_t* dst_offset, const void* src,
     uint32_t frac_src_frames, int32_t* frac_src_offset, uint32_t frac_step_size,
     Gain::AScale amplitude_scale, bool accumulate, uint32_t modulo,
     uint32_t denominator) {
@@ -326,10 +324,10 @@ bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
 template <typename SType>
 template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
 inline bool NxNLinearSamplerImpl<SType>::Mix(
-    int32_t* dst, uint32_t dst_frames, uint32_t* dst_offset,
-    const void* src_void, uint32_t frac_src_frames, int32_t* frac_src_offset,
-    uint32_t frac_step_size, uint32_t modulo, uint32_t denominator,
-    Gain::AScale amplitude_scale, size_t chan_count) {
+    float* dst, uint32_t dst_frames, uint32_t* dst_offset, const void* src_void,
+    uint32_t frac_src_frames, int32_t* frac_src_offset, uint32_t frac_step_size,
+    uint32_t modulo, uint32_t denominator, Gain::AScale amplitude_scale,
+    size_t chan_count) {
   static_assert(
       ScaleType != ScalerType::MUTED || DoAccumulate == true,
       "Mixing muted streams without accumulation is explicitly unsupported");
@@ -378,11 +376,11 @@ inline bool NxNLinearSamplerImpl<SType>::Mix(
       }
 
       do {
-        int32_t* out = dst + (doff * chan_count);
+        float* out = dst + (doff * chan_count);
 
         for (size_t D = 0; D < chan_count; ++D) {
-          int32_t sample = Interpolate(filter_data_u_[chan_count + D],
-                                       filter_data_u_[D], -soff);
+          float sample = Interpolate(filter_data_u_[chan_count + D],
+                                     filter_data_u_[D], -soff);
           out[D] = DM::Mix(out[D], sample, amplitude_scale);
         }
 
@@ -402,12 +400,12 @@ inline bool NxNLinearSamplerImpl<SType>::Mix(
     // Now we are fully in the current buffer and need not rely on our cache.
     while ((doff < dst_frames) && (soff < src_end)) {
       uint32_t S = (soff >> kPtsFractionalBits) * chan_count;
-      int32_t* out = dst + (doff * chan_count);
+      float* out = dst + (doff * chan_count);
 
       for (size_t D = 0; D < chan_count; ++D) {
-        int32_t s1 = SampleNormalizer<SType>::Read(src + S + D);
-        int32_t s2 = SampleNormalizer<SType>::Read(src + S + D + chan_count);
-        int32_t sample = Interpolate(s1, s2, soff & FRAC_MASK);
+        float s1 = SampleNormalizer<SType>::Read(src + S + D);
+        float s2 = SampleNormalizer<SType>::Read(src + S + D + chan_count);
+        float sample = Interpolate(s1, s2, soff & FRAC_MASK);
         out[D] = DM::Mix(out[D], sample, amplitude_scale);
       }
 
@@ -450,10 +448,10 @@ inline bool NxNLinearSamplerImpl<SType>::Mix(
       // ... then we can _point-sample_ one final frame into our output buffer.
       // We need not _interpolate_ since fractional position is exactly zero.
       uint32_t S = (soff >> kPtsFractionalBits) * chan_count;
-      int32_t* out = dst + (doff * chan_count);
+      float* out = dst + (doff * chan_count);
 
       for (size_t D = 0; D < chan_count; ++D) {
-        int32_t sample = SampleNormalizer<SType>::Read(src + S + D);
+        float sample = SampleNormalizer<SType>::Read(src + S + D);
         out[D] = DM::Mix(out[D], sample, amplitude_scale);
       }
     }
@@ -502,7 +500,7 @@ inline bool NxNLinearSamplerImpl<SType>::Mix(
 
 template <typename SType>
 bool NxNLinearSamplerImpl<SType>::Mix(
-    int32_t* dst, uint32_t dst_frames, uint32_t* dst_offset, const void* src,
+    float* dst, uint32_t dst_frames, uint32_t* dst_offset, const void* src,
     uint32_t frac_src_frames, int32_t* frac_src_offset, uint32_t frac_step_size,
     Gain::AScale amplitude_scale, bool accumulate, uint32_t modulo,
     uint32_t denominator) {

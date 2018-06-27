@@ -123,7 +123,7 @@ class Mixer {
   //
   // TODO(mpuryear): Change frac_src_frames parameter to be (integer)
   // src_frames, as number of src_frames was never intended to be fractional.
-  virtual bool Mix(int32_t* dst, uint32_t dst_frames, uint32_t* dst_offset,
+  virtual bool Mix(float* dst, uint32_t dst_frames, uint32_t* dst_offset,
                    const void* src, uint32_t frac_src_frames,
                    int32_t* frac_src_offset, uint32_t frac_step_size,
                    Gain::AScale amplitude_scale, bool accumulate,
