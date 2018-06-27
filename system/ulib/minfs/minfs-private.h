@@ -366,8 +366,6 @@ private:
                        size_t* out_actual) final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t Setattr(const vnattr_t* a) final;
-    zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
-                           zxrio_object_info_t* extra);
     zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
                         size_t* out_actual) final;
     zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name,
@@ -594,6 +592,8 @@ private:
     void Purge(WritebackWork* wb);
 
 #ifdef __Fuchsia__
+    zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
+                           zxrio_object_info_t* extra) final;
     void Sync(SyncCallback closure) final;
     zx_status_t AttachRemote(fs::MountChannel h) final;
     zx_status_t InitVmo();

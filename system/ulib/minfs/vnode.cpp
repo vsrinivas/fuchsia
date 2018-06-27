@@ -1410,16 +1410,6 @@ zx_status_t VnodeMinfs::Setattr(const vnattr_t* a) {
     return ZX_OK;
 }
 
-zx_status_t VnodeMinfs::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
-                                   zxrio_object_info_t* extra) {
-    if (IsDirectory()) {
-        *type = FDIO_PROTOCOL_DIRECTORY;
-    } else {
-        *type = FDIO_PROTOCOL_FILE;
-    }
-    return ZX_OK;
-}
-
 typedef struct dircookie {
     size_t off;        // Offset into directory
     uint32_t reserved; // Unused
@@ -1955,6 +1945,16 @@ zx_status_t VnodeMinfs::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targ
 }
 
 #ifdef __Fuchsia__
+zx_status_t VnodeMinfs::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
+                                   zxrio_object_info_t* extra) {
+    if (IsDirectory()) {
+        *type = FDIO_PROTOCOL_DIRECTORY;
+    } else {
+        *type = FDIO_PROTOCOL_FILE;
+    }
+    return ZX_OK;
+}
+
 void VnodeMinfs::Sync(SyncCallback closure) {
     TRACE_DURATION("minfs", "VnodeMinfs::Sync");
     fs_->Sync([this, cb = fbl::move(closure)](zx_status_t status) {
