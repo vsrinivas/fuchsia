@@ -62,12 +62,14 @@ CobaltObservation::CobaltObservation(CobaltObservation&& rhs)
     : CobaltObservation(rhs.metric_id_, std::move(rhs.parts_)) {}
 
 void CobaltObservation::Report(fuchsia::cobalt::CobaltEncoderPtr& encoder,
-                               std::function<void(Status)> callback) && {
+                               fit::function<void(Status)> callback) && {
   if (parts_->size() == 1) {
     encoder->AddObservation(metric_id_, parts_->at(0).encoding_id,
-                            std::move(parts_->at(0).value), callback);
+                            std::move(parts_->at(0).value),
+                            std::move(callback));
   } else {
-    encoder->AddMultipartObservation(metric_id_, std::move(parts_), callback);
+    encoder->AddMultipartObservation(metric_id_, std::move(parts_),
+                                     std::move(callback));
   }
 }
 
@@ -343,13 +345,13 @@ std::unique_ptr<CobaltContext> MakeCobaltContext(
   return std::make_unique<CobaltContextImpl>(async, context, project_id);
 }
 
-fxl::AutoCall<fxl::Closure> InitializeCobalt(
+fxl::AutoCall<fit::closure> InitializeCobalt(
     async_t* async, fuchsia::sys::StartupContext* startup_context,
     int32_t project_id, CobaltContext** cobalt_context) {
   FXL_DCHECK(!*cobalt_context);
   auto context = MakeCobaltContext(async, startup_context, project_id);
   *cobalt_context = context.get();
-  return fxl::MakeAutoCall<fxl::Closure>(fxl::MakeCopyable(
+  return fxl::MakeAutoCall<fit::closure>(fxl::MakeCopyable(
       [context = std::move(context), cobalt_context]() mutable {
         context.reset();
         *cobalt_context = nullptr;

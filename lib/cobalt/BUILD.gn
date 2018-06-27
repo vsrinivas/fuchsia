@@ -16,6 +16,7 @@ source_set("cobalt") {
   public_deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fit",
   ]
 
   deps = [

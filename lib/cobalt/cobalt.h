@@ -10,11 +10,11 @@
 #include <utility>
 
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/backoff/exponential_backoff.h"
 #include "lib/fxl/functional/auto_call.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 
@@ -33,7 +33,7 @@ class CobaltObservation {
 
   uint32_t metric_id() const { return metric_id_; }
   void Report(fuchsia::cobalt::CobaltEncoderPtr& encoder,
-              std::function<void(fuchsia::cobalt::Status)> callback) &&;
+              fit::function<void(fuchsia::cobalt::Status)> callback) &&;
 
   CobaltObservation& operator=(const CobaltObservation&);
   CobaltObservation& operator=(CobaltObservation&&);
@@ -62,7 +62,7 @@ std::unique_ptr<CobaltContext> MakeCobaltContext(
 // Cobalt initialization. When cobalt is not needed anymore, the returned object
 // must be deleted. This method must not be called again until then.
 // DEPRECATED - prefer MakeCobaltContext().
-fxl::AutoCall<fxl::Closure> InitializeCobalt(
+fxl::AutoCall<fit::closure> InitializeCobalt(
     async_t* async, fuchsia::sys::StartupContext* startup_context,
     int32_t project_id, CobaltContext** cobalt_context);
 

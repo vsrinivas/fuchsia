@@ -364,10 +364,10 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerApp);
 };
 
-fxl::AutoCall<fxl::Closure> SetupCobalt(Settings& settings, async_t* async,
+fxl::AutoCall<fit::closure> SetupCobalt(Settings& settings, async_t* async,
                                         fuchsia::sys::StartupContext* context) {
   if (settings.disable_statistics) {
-    return fxl::MakeAutoCall<fxl::Closure>([] {});
+    return fxl::MakeAutoCall<fit::closure>([] {});
   }
   return InitializeCobalt(async, context);
 };
@@ -386,7 +386,7 @@ int main(int argc, const char** argv) {
   trace::TraceProvider trace_provider(loop.async());
   auto context = std::shared_ptr<fuchsia::sys::StartupContext>(
       fuchsia::sys::StartupContext::CreateFromStartupInfo());
-  fxl::AutoCall<fxl::Closure> cobalt_cleanup =
+  fxl::AutoCall<fit::closure> cobalt_cleanup =
       modular::SetupCobalt(settings, std::move(loop.async()), context.get());
 
   modular::DeviceRunnerApp app(settings, context, [&loop, &cobalt_cleanup] {

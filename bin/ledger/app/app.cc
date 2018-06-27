@@ -41,11 +41,11 @@ struct AppParams {
   bool disable_statistics = false;
 };
 
-fxl::AutoCall<fxl::Closure> SetupCobalt(
+fxl::AutoCall<fit::closure> SetupCobalt(
     bool disable_statistics, async_t* async,
     fuchsia::sys::StartupContext* startup_context) {
   if (disable_statistics) {
-    return fxl::MakeAutoCall<fxl::Closure>([] {});
+    return fxl::MakeAutoCall<fit::closure>([] {});
   }
   return InitializeCobalt(async, startup_context);
 };
@@ -108,7 +108,7 @@ class App : public ledger_internal::LedgerController {
   async::Loop loop_;
   trace::TraceProvider trace_provider_;
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
-  fxl::AutoCall<fxl::Closure> cobalt_cleaner_;
+  fxl::AutoCall<fit::closure> cobalt_cleaner_;
   std::unique_ptr<Environment> environment_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;
   fidl::BindingSet<ledger_internal::LedgerRepositoryFactory> factory_bindings_;
