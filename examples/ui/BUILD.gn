@@ -8,8 +8,8 @@ group("ui") {
   public_deps = [
     "hello_pose_buffer",
     "hello_scenic",
-    "hello_views",
     "hello_stereo",
+    "hello_views",
     "shadertoy/client",
     "shadertoy/service",
     "shapes",
@@ -22,19 +22,22 @@ group("ui") {
 }
 
 package("hello_scenic") {
-  deprecated_system_image = true
-
   deps = [
     "hello_scenic",
   ]
 
-  binaries = [
+  binary = "hello_scenic"
+
+  meta = [
     {
-      name = "hello_scenic"
+      path = rebase_path("meta/ui_example.cmx")
+      dest = "ui_example.cmx"
     },
   ]
 }
 
+# TODO(SCN-794): move out of system image (not sure how to do this for multiple
+# binaries).
 package("hello_views") {
   deprecated_system_image = true
 
@@ -54,27 +57,31 @@ package("hello_views") {
 }
 
 package("hello_pose_buffer") {
-  deprecated_system_image = true
   deps = [
     "hello_pose_buffer",
   ]
 
-  binaries = [
+  binary = "hello_pose_buffer"
+
+  meta = [
     {
-      name = "hello_pose_buffer"
+      path = rebase_path("meta/ui_example.cmx")
+      dest = "ui_example.cmx"
     },
   ]
 }
 
 package("hello_stereo") {
-  deprecated_system_image = true
   deps = [
     "hello_stereo",
   ]
 
-  binaries = [
+  binary = "hello_stereo"
+
+  meta = [
     {
-      name = "hello_stereo"
+      path = rebase_path("meta/ui_example.cmx")
+      dest = "ui_example.cmx"
     },
   ]
 }
@@ -85,6 +92,13 @@ package("shadertoy_client") {
   ]
 
   binary = "shadertoy_client"
+
+  meta = [
+    {
+      path = rebase_path("meta/ui_example.cmx")
+      dest = "ui_example.cmx"
+    },
+  ]
 }
 
 package("shadertoy_service") {
@@ -108,6 +122,13 @@ package("shapes_view") {
   ]
 
   binary = "shapes_view"
+
+  meta = [
+    {
+      path = rebase_path("meta/ui_example.cmx")
+      dest = "ui_example.cmx"
+    },
+  ]
 }
 
 package("shapes_a11y_view") {
@@ -116,18 +137,26 @@ package("shapes_a11y_view") {
   ]
 
   binary = "shapes_a11y_view"
+
+  meta = [
+    {
+      path = rebase_path("meta/ui_example.cmx")
+      dest = "ui_example.cmx"
+    },
+  ]
 }
 
 package("sketchy_client") {
-  deprecated_system_image = true
-
   deps = [
     "sketchy",
   ]
 
-  binaries = [
+  binary = "sketchy_client"
+
+  meta = [
     {
-      name = "sketchy_client"
+      path = rebase_path("meta/ui_example.cmx")
+      dest = "ui_example.cmx"
     },
   ]
 }
@@ -138,6 +167,13 @@ package("spinning_square_view") {
   ]
 
   binary = "spinning_square_view"
+
+  meta = [
+    {
+      path = rebase_path("meta/ui_example.cmx")
+      dest = "ui_example.cmx"
+    },
+  ]
 }
 
 package("tile_view") {
@@ -146,6 +182,13 @@ package("tile_view") {
   ]
 
   binary = "tile_view"
+
+  meta = [
+    {
+      path = rebase_path("meta/ui_example.cmx")
+      dest = "ui_example.cmx"
+    },
+  ]
 }
 
 package("video_display") {

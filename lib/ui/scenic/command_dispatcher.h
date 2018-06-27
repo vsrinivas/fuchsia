@@ -20,6 +20,7 @@ class CommandDispatcherContext final {
   explicit CommandDispatcherContext(Scenic* scenic, Session* session);
   CommandDispatcherContext(CommandDispatcherContext&& context);
 
+  // TODO(SCN-808): can/should we avoid exposing any/all of these?
   Scenic* scenic() { return scenic_; }
   Session* session() { return session_; }
   SessionId session_id() { return session_id_; }

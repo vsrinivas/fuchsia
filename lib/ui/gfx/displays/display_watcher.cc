@@ -29,8 +29,8 @@ void DisplayWatcher::WaitForDisplay(DisplayReadyCallback callback) {
   callback(fxl::UniqueFD(-1), ZX_HANDLE_INVALID, ZX_HANDLE_INVALID);
 #else
   device_watcher_ = fsl::DeviceWatcher::Create(
-      kDisplayDir,
-      [this, callback = std::move(callback)](int dir_fd, std::string filename) mutable {
+      kDisplayDir, [this, callback = std::move(callback)](
+                       int dir_fd, std::string filename) mutable {
         HandleDevice(std::move(callback), dir_fd, filename);
       });
 #endif
@@ -43,7 +43,7 @@ void DisplayWatcher::HandleDevice(DisplayReadyCallback callback, int dir_fd,
   // Get display info.
   std::string path = kDisplayDir + "/" + filename;
 
-  FXL_LOG(INFO) << "SceneManager: Acquired display controller " << path << ".("
+  FXL_LOG(INFO) << "Scenic: Acquired display controller " << path << ".("
                 << filename << ")";
   fxl::UniqueFD fd(open(path.c_str(), O_RDWR));
   if (!fd.is_valid()) {

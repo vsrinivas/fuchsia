@@ -1,0 +1,7 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+    }
+}

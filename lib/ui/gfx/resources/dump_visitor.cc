@@ -152,7 +152,9 @@ void DumpVisitor::VisitNode(Node* r) {
   if (r->clip_to_self()) {
     WriteProperty("clip_to_self") << r->clip_to_self();
   }
-  if (!r->transform().IsIdentity()) {
+  if (r->transform().IsIdentity()) {
+    WriteProperty("transform") << "identity";
+  } else {
     WriteProperty("transform") << r->transform();
   }
   if (!r->parts().empty()) {
@@ -259,6 +261,8 @@ void DumpVisitor::Visit(LayerStack* r) {
 
 void DumpVisitor::Visit(Layer* r) {
   BeginItem("Layer", r);
+  WriteProperty("width") << r->width();
+  WriteProperty("height") << r->height();
   if (r->renderer()) {
     BeginSection("renderer");
     r->renderer()->Accept(this);
@@ -340,7 +344,7 @@ void DumpVisitor::VisitResource(Resource* r) {
 void DumpVisitor::BeginItem(const char* type, Resource* r) {
   BeginLine();
   if (r) {
-    output_ << r->id();
+    output_ << r->session()->id() << "-" << r->id();
     if (!r->label().empty())
       output_ << ":\"" << r->label() << "\"";
     output_ << "> ";
