@@ -10,6 +10,26 @@
 #define MULTILINE(...) #__VA_ARGS__
 #define INVALID_CONFIGS 4
 
+namespace {
+
+class TempFile {
+ public:
+  TempFile(const char* contents) {
+    int fd = mkstemp(pathname_);
+    EXPECT_GE(fd, 0) << "Failed to create temp file";
+    ssize_t len = strlen(contents);
+    EXPECT_EQ(write(fd, contents, len), len);
+    EXPECT_EQ(close(fd), 0);
+  }
+  ~TempFile() { EXPECT_EQ(unlink(pathname_), 0); }
+  const char* pathname() { return pathname_; }
+
+ private:
+  char pathname_[29] = "/tmp/time_server_test_XXXXXX";
+};
+
+}  // namespace
+
 namespace time_zone {
 
 const char* invalid_configs[INVALID_CONFIGS] = {
@@ -39,15 +59,9 @@ const char* invalid_configs[INVALID_CONFIGS] = {
 
 TEST(TimeServerConfigTest, HandlesInvalidInput) {
   for (int i = 0; i < INVALID_CONFIGS; i++) {
-    char filename[] = "/tmp/ts_test.XXXXXX";
-    int fd = mkstemp(filename);
-    ASSERT_NE(fd, -1) << "Can't create temp file";
-    auto ac1 = fxl::MakeAutoCall([&]() { unlink(filename); });
-    write(fd, invalid_configs[i], strlen(invalid_configs[i]));
-    close(fd);
-
+    TempFile temp_file(invalid_configs[i]);
     TimeServerConfig config;
-    ASSERT_EQ(config.Parse(filename), false);
+    ASSERT_EQ(config.Parse(temp_file.pathname()), false);
   }
 }
 
@@ -60,15 +74,9 @@ TEST(TimeServerConfigTest, HandlesValidInput) {
       "addresses" : [ {"address" : "address:7898"} ]
     } ]
   });
-  char filename[] = "/tmp/ts_test.XXXXXX";
-  int fd = mkstemp(filename);
-  ASSERT_NE(fd, -1) << "Can't create temp file";
-  auto ac1 = fxl::MakeAutoCall([&]() { unlink(filename); });
-  write(fd, json, strlen(json));
-  close(fd);
-
+  TempFile temp_file(json);
   TimeServerConfig config;
-  ASSERT_EQ(config.Parse(filename), true);
+  ASSERT_EQ(config.Parse(temp_file.pathname()), true);
   auto server_list = config.ServerList();
   ASSERT_EQ(server_list.size(), 1u);
 }
@@ -83,15 +91,9 @@ TEST(TimeServerConfigTest, HandlesMultipleAddressesInput) {
           [ {"address" : "address:7898"}, {"address" : "address2:7898"} ]
     } ]
   });
-  char filename[] = "/tmp/ts_test.XXXXXX";
-  int fd = mkstemp(filename);
-  ASSERT_NE(fd, -1) << "Can't create temp file";
-  auto ac1 = fxl::MakeAutoCall([&]() { unlink(filename); });
-  write(fd, json, strlen(json));
-  close(fd);
-
+  TempFile temp_file(json);
   TimeServerConfig config;
-  ASSERT_EQ(config.Parse(filename), true);
+  ASSERT_EQ(config.Parse(temp_file.pathname()), true);
   auto server_list = config.ServerList();
   ASSERT_EQ(server_list.size(), 2u);
 }
@@ -113,15 +115,9 @@ TEST(TimeServerConfigTest, HandlesMultipleServerInput) {
       }
     ]
   });
-  char filename[] = "/tmp/ts_test.XXXXXX";
-  int fd = mkstemp(filename);
-  ASSERT_NE(fd, -1) << "Can't create temp file";
-  auto ac1 = fxl::MakeAutoCall([&]() { unlink(filename); });
-  write(fd, json, strlen(json));
-  close(fd);
-
+  TempFile temp_file(json);
   TimeServerConfig config;
-  ASSERT_EQ(config.Parse(filename), true);
+  ASSERT_EQ(config.Parse(temp_file.pathname()), true);
   auto server_list = config.ServerList();
   ASSERT_EQ(server_list.size(), 2u);
 }
@@ -144,15 +140,9 @@ TEST(TimeServerConfigTest, HandlesMultipleServerNAddressesInput) {
       }
     ]
   });
-  char filename[] = "/tmp/ts_test.XXXXXX";
-  int fd = mkstemp(filename);
-  ASSERT_NE(fd, -1) << "Can't create temp file";
-  auto ac1 = fxl::MakeAutoCall([&]() { unlink(filename); });
-  write(fd, json, strlen(json));
-  close(fd);
-
+  TempFile temp_file(json);
   TimeServerConfig config;
-  ASSERT_EQ(config.Parse(filename), true);
+  ASSERT_EQ(config.Parse(temp_file.pathname()), true);
   auto server_list = config.ServerList();
   ASSERT_EQ(server_list.size(), 3u);
 }
