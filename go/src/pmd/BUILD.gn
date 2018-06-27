@@ -73,8 +73,6 @@ foreach(testpkg, test_packages) {
 }
 
 package("pkgsvr") {
-  deprecated_system_image = true
-
   deps = [
     ":pkgsvr_bin",
   ]
