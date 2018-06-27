@@ -5,8 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_COROUTINE_COROUTINE_MANAGER_H_
 #define PERIDOT_BIN_LEDGER_COROUTINE_COROUTINE_MANAGER_H_
 
+#include <algorithm>
 #include <list>
-#include <type_traits>
 
 #include <lib/fit/function.h>
 
@@ -48,6 +48,11 @@ class CoroutineManager {
               UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
           runnable(handler, std::move(callback));
+
+          // Verify that the handler is correctly unregistered. It would be a
+          // bug otherwise.
+          FXL_DCHECK(std::find(handlers_.begin(), handlers_.end(), handler) ==
+                     handlers_.end());
         });
   }
 

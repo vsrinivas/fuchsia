@@ -762,12 +762,30 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
   FXL_DCHECK(GetObjectDigestType(object_identifier.object_digest) !=
              ObjectDigestType::INLINE);
 
-  page_sync_->GetObject(
-      object_identifier,
-      [this, callback = std::move(callback),
-       object_identifier = std::move(object_identifier)](
-          Status status, ChangeSource source,
-          std::unique_ptr<DataSource::DataChunk> chunk) mutable {
+  coroutine_manager_.StartCoroutine(
+      std::move(callback),
+      [this, object_identifier = std::move(object_identifier)](
+          CoroutineHandler* handler,
+          std::function<void(Status)> callback) mutable {
+        Status status;
+        ChangeSource source;
+        std::unique_ptr<DataSource::DataChunk> chunk;
+
+        if (coroutine::SyncCall(
+                handler,
+                [this, object_identifier](
+                    std::function<void(Status, ChangeSource,
+                                       std::unique_ptr<DataSource::DataChunk>)>
+                        callback) {
+                  page_sync_->GetObject(std::move(object_identifier),
+                                        std::move(callback));
+                },
+                &status, &source,
+                &chunk) == coroutine::ContinuationStatus::INTERRUPTED) {
+          callback(Status::INTERRUPTED);
+          return;
+        }
+
         if (status != Status::OK) {
           callback(status);
           return;
@@ -776,69 +794,62 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
           callback(status);
           return;
         }
-        coroutine_manager_.StartCoroutine(
-            std::move(callback),
-            fxl::MakeCopyable(
-                [this, object_identifier = std::move(object_identifier), source,
-                 chunk = std::move(chunk)](
-                    CoroutineHandler* handler,
-                    std::function<void(Status)> callback) mutable {
-                  auto object_digest_type =
-                      GetObjectDigestType(object_identifier.object_digest);
-                  FXL_DCHECK(
-                      object_digest_type == ObjectDigestType::VALUE_HASH ||
-                      object_digest_type == ObjectDigestType::INDEX_HASH);
+        auto object_digest_type =
+            GetObjectDigestType(object_identifier.object_digest);
+        FXL_DCHECK(object_digest_type == ObjectDigestType::VALUE_HASH ||
+                   object_digest_type == ObjectDigestType::INDEX_HASH);
 
-                  if (object_identifier.object_digest !=
-                      ComputeObjectDigest(GetObjectType(object_digest_type),
-                                          chunk->Get())) {
-                    callback(Status::OBJECT_DIGEST_MISMATCH);
-                    return;
-                  }
+        if (object_identifier.object_digest !=
+            ComputeObjectDigest(GetObjectType(object_digest_type),
+                                chunk->Get())) {
+          callback(Status::OBJECT_DIGEST_MISMATCH);
+          return;
+        }
 
-                  if (object_digest_type == ObjectDigestType::VALUE_HASH) {
-                    AddPiece(std::move(object_identifier), std::move(chunk),
-                             source, std::move(callback));
-                    return;
-                  }
+        if (object_digest_type == ObjectDigestType::VALUE_HASH) {
+          callback(SynchronousAddPiece(handler, std::move(object_identifier),
+                                       std::move(chunk), source));
+          return;
+        }
 
-                  auto waiter =
-                      fxl::MakeRefCounted<callback::StatusWaiter<Status>>(
-                          Status::OK);
-                  Status status = ForEachPiece(
-                      chunk->Get(), [&](ObjectIdentifier identifier) {
-                        if (GetObjectDigestType(identifier.object_digest) ==
-                            ObjectDigestType::INLINE) {
-                          return Status::OK;
-                        }
+        auto waiter =
+            fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
+        status = ForEachPiece(chunk->Get(), [&](ObjectIdentifier identifier) {
+          if (GetObjectDigestType(identifier.object_digest) ==
+              ObjectDigestType::INLINE) {
+            return Status::OK;
+          }
 
-                        Status status =
-                            db_->ReadObject(handler, identifier, nullptr);
-                        if (status == Status::NOT_FOUND) {
-                          DownloadFullObject(std::move(identifier),
-                                             waiter->NewCallback());
-                          return Status::OK;
-                        }
-                        return status;
-                      });
-                  if (status != Status::OK) {
-                    callback(status);
-                    return;
-                  }
+          Status status = db_->ReadObject(handler, identifier, nullptr);
+          if (status == Status::NOT_FOUND) {
+            DownloadFullObject(std::move(identifier), waiter->NewCallback());
+            return Status::OK;
+          }
+          return status;
+        });
+        if (status != Status::OK) {
+          callback(status);
+          return;
+        }
 
-                  waiter->Finalize(fxl::MakeCopyable(
-                      [this, object_identifier = std::move(object_identifier),
-                       source, chunk = std::move(chunk),
-                       callback = std::move(callback)](Status status) mutable {
-                        if (status != Status::OK) {
-                          callback(status);
-                          return;
-                        }
+        if (coroutine::SyncCall(
+                handler,
+                [waiter =
+                     std::move(waiter)](std::function<void(Status)> callback) {
+                  waiter->Finalize(std::move(callback));
+                },
+                &status) == coroutine::ContinuationStatus::INTERRUPTED) {
+          callback(Status::INTERRUPTED);
+          return;
+        }
 
-                        AddPiece(std::move(object_identifier), std::move(chunk),
-                                 source, std::move(callback));
-                      }));
-                }));
+        if (status != Status::OK) {
+          callback(status);
+          return;
+        }
+
+        callback(SynchronousAddPiece(handler, std::move(object_identifier),
+                                     std::move(chunk), source));
       });
 }
 
