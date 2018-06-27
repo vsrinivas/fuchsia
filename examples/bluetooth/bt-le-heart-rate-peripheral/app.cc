@@ -37,9 +37,12 @@ void App::StartAdvertising() {
               << ", advertisement_id: " << advertisement_id << std::endl;
   };
 
-  binding_ = std::make_unique<Binding>(this);
-  peripheral_->StartAdvertising(std::move(ad), nullptr, binding_->NewBinding(),
-                                60, false, std::move(start_adv_result_cb));
+  peripheral_.events().OnCentralConnected =
+      fit::bind_member(this, &App::OnCentralConnected);
+  peripheral_.events().OnCentralDisconnected =
+      fit::bind_member(this, &App::OnCentralDisconnected);
+  peripheral_->StartAdvertising(std::move(ad), nullptr, 60, false,
+                                std::move(start_adv_result_cb));
 }
 
 constexpr char App::kDeviceName[];
@@ -48,17 +51,12 @@ void App::OnCentralConnected(fidl::StringPtr advertisement_id,
                              ble::RemoteDevice central) {
   std::cout << "Central (" << central.identifier << ") connected" << std::endl;
 
-  // Save the binding for this connection.
-  connected_bindings_.emplace(*central.identifier, std::move(binding_));
-
   // Start another advertisement so other peers can connect.
   StartAdvertising();
 }
 
 void App::OnCentralDisconnected(fidl::StringPtr device_id) {
   std::cout << "Central (" << device_id << ") disconnected" << std::endl;
-
-  connected_bindings_.erase(device_id);
 }
 
 }  // namespace bt_le_heart_rate
