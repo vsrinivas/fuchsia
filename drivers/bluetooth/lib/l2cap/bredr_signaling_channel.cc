@@ -25,7 +25,11 @@ bool BrEdrSignalingChannel::TestLink(const common::ByteBuffer& data,
                                      BrEdrSignalingChannel::DataCallback cb) {
   const CommandId id = EnqueueResponse(
       kEchoResponse, [cb = std::move(cb)](const SignalingPacket& packet) {
-        cb(packet.payload_data());
+        if (packet.header().code == kCommandRejectCode) {
+          cb(common::BufferView());
+        } else {
+          cb(packet.payload_data());
+        }
       });
 
   if (id == kInvalidCommandId) {
@@ -140,6 +144,7 @@ CommandId BrEdrSignalingChannel::EnqueueResponse(
 
 bool BrEdrSignalingChannel::IsSupportedResponse(CommandCode code) const {
   switch (code) {
+    case kCommandRejectCode:
     case kConnectionResponse:
     case kConfigurationResponse:
     case kDisconnectResponse:
@@ -168,7 +173,8 @@ void BrEdrSignalingChannel::OnRxResponse(const SignalingPacket& packet) {
     return;
   }
 
-  if (packet.header().code != iter->second.first) {
+  if (packet.header().code != iter->second.first &&
+      packet.header().code != kCommandRejectCode) {
     FXL_LOG(ERROR) << fxl::StringPrintf(
         "l2cap: BR/EDR sig: Response (id %#04x) has unexpected code %#04x",
         packet.header().id, packet.header().code);

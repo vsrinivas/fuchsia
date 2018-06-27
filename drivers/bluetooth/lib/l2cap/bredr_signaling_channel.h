@@ -26,11 +26,12 @@ class BrEdrSignalingChannel final : public SignalingChannel {
 
   // Test the link using an Echo Request command that can have an arbitrary
   // payload. The callback will be invoked with the remote's Echo Response
-  // payload (if any) on the L2CAP thread. Returns false if the request failed
-  // to send.
+  // payload (if any) on the L2CAP thread, or with an empty buffer if the
+  // remote responded with a rejection. Returns false if the request failed to
+  // send.
   bool TestLink(const common::ByteBuffer& data, DataCallback cb);
 
-private:
+ private:
   // Invoked upon response command reception that matches an outgoing request.
   using ResponseHandler = fit::function<void(const SignalingPacket& packet)>;
 
@@ -42,6 +43,8 @@ private:
   // packet (specified by |expected_code|) is received. Returns the identifier
   // to be included in the header of the outgoing request packet (or
   // kInvalidCommandId if all valid command identifiers are pending responses).
+  // If the signaling channel receives a Command Reject that matches the same
+  // identifier, the rejection packet will be forwarded to the callback instead.
   // |handler| will be run on the L2CAP thread.
   //
   // TODO(xow): Add function to cancel a queued response.

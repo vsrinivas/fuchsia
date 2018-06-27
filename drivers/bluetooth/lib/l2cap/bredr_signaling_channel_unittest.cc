@@ -403,6 +403,38 @@ TEST_F(L2CAP_BrEdrSignalingChannelTest, ReuseCommandIds) {
   EXPECT_EQ(256, req_count);
 }
 
+// Ensure that the signaling channel plumbs a rejection command from remote to
+// the appropriate response handler.
+TEST_F(L2CAP_BrEdrSignalingChannelTest, EchoRemoteRejection) {
+  const common::ByteBuffer& reject_rsp = common::CreateStaticByteBuffer(
+      // Command header (Command Rejected)
+      0x01, 0x01, 0x02, 0x00,
+
+      // Reason (Command not understood)
+      0x00, 0x00);
+
+  bool tx_success = false;
+  fake_chan()->SetSendCallback([&tx_success](auto) { tx_success = true; },
+                               dispatcher());
+
+  const common::ByteBuffer& req_data = common::CreateStaticByteBuffer('h', 'i');
+  bool rx_success = false;
+  EXPECT_TRUE(
+      sig()->TestLink(req_data, [&rx_success](const common::ByteBuffer& data) {
+        rx_success = true;
+        EXPECT_EQ(0U, data.size());
+      }));
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(tx_success);
+
+  // Remote sends back a rejection.
+  fake_chan()->Receive(reject_rsp);
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(rx_success);
+}
+
 }  // namespace
 }  // namespace internal
 }  // namespace l2cap
