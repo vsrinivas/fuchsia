@@ -241,7 +241,7 @@ TEST_F(L2CAP_BrEdrSignalingChannelTest, SendAndReceiveEcho) {
         rx_success = common::ContainersEqual(rsp_data, data);
       }));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(tx_success);
 
   // Remote sends back an echo response with a different payload than in local
@@ -250,7 +250,7 @@ TEST_F(L2CAP_BrEdrSignalingChannelTest, SendAndReceiveEcho) {
     fake_chan()->Receive(expected_rsp);
   }
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(rx_success);
 }
 
@@ -294,7 +294,7 @@ TEST_F(L2CAP_BrEdrSignalingChannelTest, RejectRemoteResponseInvalidId) {
   EXPECT_TRUE(sig()->TestLink(
       req_data, [&echo_cb_called](auto&) { echo_cb_called = true; }));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(tx_success);
 
   const common::ByteBuffer& reject_rsp = common::CreateStaticByteBuffer(
@@ -312,7 +312,7 @@ TEST_F(L2CAP_BrEdrSignalingChannelTest, RejectRemoteResponseInvalidId) {
 
   fake_chan()->Receive(rsp_invalid_id);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_FALSE(echo_cb_called);
   EXPECT_TRUE(reject_sent);
 }
@@ -336,7 +336,7 @@ TEST_F(L2CAP_BrEdrSignalingChannelTest, RejectRemoteResponseWrongType) {
   EXPECT_TRUE(sig()->TestLink(
       req_data, [&echo_cb_called](auto&) { echo_cb_called = true; }));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(tx_success);
 
   const common::ByteBuffer& reject_rsp = common::CreateStaticByteBuffer(
@@ -354,7 +354,7 @@ TEST_F(L2CAP_BrEdrSignalingChannelTest, RejectRemoteResponseWrongType) {
 
   fake_chan()->Receive(rsp_invalid_id);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_FALSE(echo_cb_called);
   EXPECT_TRUE(reject_sent);
 }
@@ -386,7 +386,7 @@ TEST_F(L2CAP_BrEdrSignalingChannelTest, ReuseCommandIds) {
   // type should be allowed to be sent.
   EXPECT_FALSE(sig()->TestLink(req_data, [](auto&) {}));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_EQ(255, req_count);
 
   // Remote finally responds to a request, but not in order requests were sent.
@@ -395,11 +395,11 @@ TEST_F(L2CAP_BrEdrSignalingChannelTest, ReuseCommandIds) {
       0x09, 0x0c, 0x00, 0x00);
   fake_chan()->Receive(echo_rsp);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(sig()->TestLink(req_data, [](auto&) {}));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_EQ(256, req_count);
 }
 
