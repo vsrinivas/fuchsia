@@ -18,41 +18,41 @@ namespace usb {
 // Decoded video dimensions and other frame-specific characteristics
 // supported by frame-based formats.
 struct UsbVideoFrameDesc {
-    uint8_t index;
+  uint8_t index;
 
-    camera::camera_proto::CaptureType capture_type;
-    // Specified in 100ns units.
-    uint32_t default_frame_interval;
-    uint16_t width;
-    uint16_t height;
-    // The number of bytes per line of video.
-    uint32_t stride;
+  camera::camera_proto::CaptureType capture_type;
+  // Specified in 100ns units.
+  uint32_t default_frame_interval;
+  uint16_t width;
+  uint16_t height;
+  // The number of bytes per line of video.
+  uint32_t stride;
 };
 
 struct UsbVideoFormat {
-    uint8_t index;
-    camera::camera_proto::PixelFormat pixel_format;
-    uint8_t bits_per_pixel;
+  uint8_t index;
+  camera::camera_proto::PixelFormat pixel_format;
+  uint8_t bits_per_pixel;
 
-    fbl::Vector<UsbVideoFrameDesc> frame_descs;
-    uint8_t default_frame_index;
+  fbl::Vector<UsbVideoFrameDesc> frame_descs;
+  uint8_t default_frame_index;
 };
 
 // For changing characteristics of a video streaming interface and its
 // underlying isochronous endpoint.
 struct UsbVideoStreamingSetting {
-    int alt_setting;
+  int alt_setting;
 
-    uint8_t transactions_per_microframe;
-    uint16_t max_packet_size;
+  uint8_t transactions_per_microframe;
+  uint16_t max_packet_size;
 
-    // USB_ENDPOINT_BULK or USB_ENDPOINT_ISOCHRONOUS
-    int ep_type;
+  // USB_ENDPOINT_BULK or USB_ENDPOINT_ISOCHRONOUS
+  int ep_type;
 };
 
 inline uint32_t setting_bandwidth(const UsbVideoStreamingSetting& setting) {
-    return setting.max_packet_size * setting.transactions_per_microframe;
+  return setting.max_packet_size * setting.transactions_per_microframe;
 }
 
-} // namespace usb
-} // namespace video
+}  // namespace usb
+}  // namespace video
