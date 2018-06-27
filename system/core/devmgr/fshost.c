@@ -331,10 +331,6 @@ zx_handle_t fs_root_clone(void) {
     return h;
 }
 
-zx_handle_t devmgr_load_file(const char* path, uint32_t* out_size) {
-    return ZX_HANDLE_INVALID;
-}
-
 static zx_handle_t fs_root;
 static zx_handle_t devfs_root;
 static zx_handle_t svc_root;

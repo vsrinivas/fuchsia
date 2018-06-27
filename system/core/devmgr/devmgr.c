@@ -84,34 +84,12 @@ static const char* argv_sh[] = { "/boot/bin/sh" };
 static const char* argv_appmgr[] = { "/system/bin/appmgr" };
 
 void do_autorun(const char* name, const char* env) {
-    char* cmd = getenv(env);
-    if (!cmd) {
-        return;
+    const char* cmd = getenv(env);
+    if (cmd != NULL) {
+        devmgr_launch_cmdline(env, svcs_job_handle, name,
+                              &devmgr_launch_load, NULL, cmd,
+                              NULL, NULL, 0, NULL, FS_ALL);
     }
-
-    // Get the full commandline by splitting on '+'.
-    char* buf = strdup(cmd);
-    if (buf == NULL) {
-        printf("devmgr: %s: Can't parse %s\n", env, cmd);
-        return;
-    }
-    const int MAXARGS = 8;
-    char* argv[MAXARGS];
-    int argc = 0;
-    char* token;
-    char* rest = buf;
-    while (argc < MAXARGS && (token = strtok_r(rest, "+", &rest))) {
-        argv[argc++] = token;
-    }
-    printf("devmgr: %s: starting", env);
-    for (int i = 0; i < argc; i++) {
-        printf(" '%s'", argv[i]);
-    }
-    printf("...\n");
-    devmgr_launch(svcs_job_handle, name,
-                  argc, (const char* const*)argv,
-                  NULL, -1, NULL, NULL, 0, NULL, FS_ALL);
-    free(buf);
 }
 
 static zx_handle_t fshost_event;
@@ -161,9 +139,11 @@ static int fuchsia_starter(void* arg) {
                 appmgr_hnd_count++;
                 appmgr_req_srv = ZX_HANDLE_INVALID;
             }
-            devmgr_launch(fuchsia_job_handle, "appmgr", countof(argv_appmgr),
-                          argv_appmgr, NULL, -1, appmgr_hnds, appmgr_ids,
-                          appmgr_hnd_count, NULL, FS_FOR_APPMGR);
+            devmgr_launch(fuchsia_job_handle, "appmgr",
+                          &devmgr_launch_load, NULL,
+                          countof(argv_appmgr), argv_appmgr, NULL, -1,
+                          appmgr_hnds, appmgr_ids, appmgr_hnd_count,
+                          NULL, FS_FOR_APPMGR);
             appmgr_started = true;
         }
         if (!autorun_started) {
@@ -342,6 +322,7 @@ int service_starter(void* arg) {
             uint32_t handle_types[] = { PA_HND(PA_USER0, 0), PA_HND(PA_USER0, 1) };
 
             devmgr_launch(svcs_job_handle, "crashlogger",
+                          &devmgr_launch_load, NULL,
                           argc_crashlogger, argv_crashlogger,
                           NULL, -1, handles, handle_types,
                           countof(handles), NULL, 0);
@@ -365,7 +346,9 @@ int service_starter(void* arg) {
         zx_handle_duplicate(root_job_handle, ZX_RIGHT_SAME_RIGHTS, &handles[0]);
         uint32_t handle_types[] = {PA_HND(PA_USER0, 0), PA_HND(PA_USER0, 1), PA_HND(PA_USER0, 2)};
         static const char* argv_crashsvc[] = { "/boot/bin/crashsvc" };
-        devmgr_launch(svcs_job_handle, "crashsvc", countof(argv_crashsvc), argv_crashsvc, NULL, -1,
+        devmgr_launch(svcs_job_handle, "crashsvc",
+                      &devmgr_launch_load, NULL,
+                      countof(argv_crashsvc), argv_crashsvc, NULL, -1,
                       handles, handle_types, countof(handles), NULL, 0);
     }
 #endif
@@ -399,7 +382,8 @@ int service_starter(void* arg) {
         }
 
         zx_handle_t proc;
-        if (devmgr_launch(svcs_job_handle, "netsvc", argc, args,
+        if (devmgr_launch(svcs_job_handle, "netsvc",
+                          &devmgr_launch_load, NULL, argc, args,
                           NULL, -1, NULL, NULL, 0, &proc, FS_ALL) == ZX_OK) {
             if (vruncmd) {
                 zx_info_handle_basic_t info = {
@@ -435,6 +419,7 @@ int service_starter(void* arg) {
         zx_channel_create(0, &h, &virtcon_open);
         const char* args[] = { "/boot/bin/virtual-console", "--shells", num_shells, "--run", vcmd };
         devmgr_launch(svcs_job_handle, "virtual-console",
+                      &devmgr_launch_load, NULL,
                       vruncmd ? 5 : 3, args, envp, -1,
                       &h, &type, (h == ZX_HANDLE_INVALID) ? 0 : 1, NULL, FS_ALL);
     }
@@ -478,6 +463,7 @@ static int console_starter(void* arg) {
         int fd;
         if ((fd = open(device, O_RDWR)) >= 0) {
             devmgr_launch(svcs_job_handle, "sh:console",
+                          &devmgr_launch_load, NULL,
                           countof(argv_sh), argv_sh, envp, fd, NULL, NULL, 0, NULL, FS_ALL);
             break;
         }
@@ -642,7 +628,7 @@ static zx_status_t publish_data_sink(void* ctx, const char* name, zx_handle_t vm
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static loader_service_ops_t loader_ops = {
+static const loader_service_ops_t loader_ops = {
     .load_object = load_object,
     .load_abspath = load_abspath,
     .publish_data_sink = publish_data_sink,
@@ -762,8 +748,9 @@ void fshost_start(void) {
     }
     envp[envc] = NULL;
 
-    devmgr_launch(svcs_job_handle, "fshost", argc, argv,
-                  envp, -1, handles, types, n, NULL, 0);
+    devmgr_launch(svcs_job_handle, "fshost",
+                  &devmgr_launch_load, NULL, argc, argv, envp, -1,
+                  handles, types, n, NULL, 0);
 
     // switch to system loader service provided by fshost
     zx_handle_close(dl_set_loader_service(ldsvc));
@@ -776,6 +763,16 @@ zx_handle_t devmgr_load_file(const char* path, uint32_t* out_size) {
     zx_handle_t vmo = ZX_HANDLE_INVALID;
     bootfs_open(&bootfs, path + 6, &vmo, out_size);
     return vmo;
+}
+
+zx_status_t devmgr_launch_load(void* ctx, launchpad_t* lp, const char* file) {
+    zx_handle_t vmo = devmgr_load_file(file, NULL);
+    if (vmo != ZX_HANDLE_INVALID) {
+        return launchpad_load_from_vmo(lp, vmo);
+    } else {
+        // TODO(mcgrathr): This case is probably never used.  Remove it later.
+        return launchpad_load_from_file(lp, file);
+    }
 }
 
 void devmgr_vfs_exit(void) {

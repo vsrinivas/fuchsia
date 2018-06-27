@@ -5,4 +5,3 @@
 #pragma once
 
 void fuchsia_start(void);
-void launch_blob_init(void);

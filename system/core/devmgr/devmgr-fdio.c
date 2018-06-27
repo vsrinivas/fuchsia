@@ -61,11 +61,13 @@ void devmgr_disable_appmgr_services(void) {
     FSTAB[1].flags = 0;
 }
 
-zx_status_t devmgr_launch(zx_handle_t job, const char* name,
-                          int argc, const char* const* argv,
-                          const char** _envp, int stdiofd,
-                          zx_handle_t* handles, uint32_t* types, size_t hcount,
-                          zx_handle_t* proc, uint32_t flags) {
+zx_status_t devmgr_launch(
+    zx_handle_t job, const char* name,
+    zx_status_t (*load)(void*, launchpad_t*, const char*), void* ctx,
+    int argc, const char* const* argv,
+    const char** _envp, int stdiofd,
+    const zx_handle_t* handles, const uint32_t* types, size_t hcount,
+    zx_handle_t* proc, uint32_t flags) {
     zx_status_t status;
     const char* envp[MAX_ENVP + 1];
     unsigned envn = 0;
@@ -85,11 +87,9 @@ zx_status_t devmgr_launch(zx_handle_t job, const char* name,
     launchpad_t* lp;
     launchpad_create(job_copy, name, &lp);
 
-    zx_handle_t file_vmo;
-    if ((file_vmo = devmgr_load_file(argv[0], NULL)) != ZX_HANDLE_INVALID) {
-        launchpad_load_from_vmo(lp, file_vmo);
-    } else {
-        launchpad_load_from_file(lp, argv[0]);
+    status = (*load)(ctx, lp, argv[0]);
+    if (status != ZX_OK) {
+        launchpad_abort(lp, status, "cannot load file");
     }
     launchpad_set_args(lp, argc, argv);
     launchpad_set_environ(lp, envp);
@@ -130,6 +130,43 @@ zx_status_t devmgr_launch(zx_handle_t job, const char* name,
         printf("devmgr: launch %s (%s) OK\n", argv[0], name);
     }
     zx_handle_close(job_copy);
+    return status;
+}
+
+zx_status_t devmgr_launch_cmdline(
+    const char* me, zx_handle_t job, const char* name,
+    zx_status_t (*load)(void* ctx, launchpad_t*, const char* file), void* ctx,
+    const char* cmdline,
+    const zx_handle_t* handles, const uint32_t* types, size_t hcount,
+    zx_handle_t* proc, uint32_t flags) {
+
+    // Get the full commandline by splitting on '+'.
+    char* buf = strdup(cmdline);
+    if (buf == NULL) {
+        printf("%s: Can't parse + command: %s\n", me, cmdline);
+        return ZX_ERR_UNAVAILABLE;
+    }
+    const int MAXARGS = 8;
+    char* argv[MAXARGS];
+    int argc = 0;
+    char* token;
+    char* rest = buf;
+    while (argc < MAXARGS && (token = strtok_r(rest, "+", &rest))) {
+        argv[argc++] = token;
+    }
+
+    printf("%s: starting", me);
+    for (int i = 0; i < argc; i++) {
+        printf(" '%s'", argv[i]);
+    }
+    printf("...\n");
+
+    zx_status_t status = devmgr_launch(
+        job, name, load, ctx, argc, (const char* const*)argv, NULL, -1,
+        handles, types, hcount, proc, flags);
+
+    free(buf);
+
     return status;
 }
 

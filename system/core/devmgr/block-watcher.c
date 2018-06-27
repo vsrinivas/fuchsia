@@ -7,15 +7,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <lib/fdio/watcher.h>
 #include <fs-management/mount.h>
 #include <gpt/gpt.h>
+#include <lib/fdio/util.h>
+#include <lib/fdio/watcher.h>
+#include <loader-service/loader-service.h>
 #include <zircon/device/block.h>
 #include <zircon/device/device.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
-#include <lib/fdio/util.h>
 
 #include "block-watcher.h"
 #include "devmgr.h"
@@ -24,55 +25,23 @@
 static zx_handle_t job;
 static bool netboot;
 
-void launch_blob_init() {
-    const char* blob_init = getenv("zircon.system.blob-init");
-    if (blob_init == NULL) {
-        return;
-    }
-    if (secondary_bootfs_ready()) {
-        printf("fshost: zircon.system.blob-init ignored due to secondary bootfs\n");
-        return;
-    }
+static zx_status_t fshost_launch_load(void* ctx, launchpad_t* lp,
+                                      const char* file) {
+    return launchpad_load_from_file(lp, file);
+}
 
-    zx_handle_t proc = ZX_HANDLE_INVALID;
-
-    uint32_t type = PA_HND(PA_USER0, 0);
-    zx_handle_t handle = ZX_HANDLE_INVALID;
-    zx_handle_t pkgfs_root = ZX_HANDLE_INVALID;
-    if (zx_channel_create(0, &handle, &pkgfs_root) != ZX_OK) {
-        return;
-    }
-
-    //TODO: make blob-init a /fs/blob relative path
-    const char *argv[2];
-    char binary[strlen(blob_init) + 4];
-    sprintf(binary, "/fs%s", blob_init);
-    argv[0] = binary;
-    const char* blob_init_arg = getenv("zircon.system.blob-init-arg");
-    int argc = 1;
-    if (blob_init_arg != NULL) {
-        argc++;
-        argv[1] = blob_init_arg;
-    }
-
-    zx_status_t status = devmgr_launch(job, "pkgfs", argc, &argv[0], NULL, -1,
-                                       &handle, &type, 1, &proc, FS_DATA | FS_BLOB | FS_SVC);
-
-    if (status != ZX_OK) {
-        printf("fshost: '%s' failed to launch: %d\n", blob_init, status);
-        goto fail0;
-    }
-
+static void pkgfs_finish(zx_handle_t proc, zx_handle_t pkgfs_root) {
     zx_time_t deadline = zx_deadline_after(ZX_SEC(5));
     zx_signals_t observed;
-    status = zx_object_wait_one(proc, ZX_USER_SIGNAL_0 | ZX_PROCESS_TERMINATED,
-                                deadline, &observed);
+    zx_status_t status = zx_object_wait_one(
+        proc, ZX_USER_SIGNAL_0 | ZX_PROCESS_TERMINATED, deadline, &observed);
     if (status != ZX_OK) {
-        printf("fshost: '%s' did not signal completion: %d\n", blob_init, status);
+        printf("fshost: pkgfs did not signal completion: %d (%s)\n",
+               status, zx_status_get_string(status));
         goto fail0;
     }
     if (!(observed & ZX_USER_SIGNAL_0)) {
-        printf("fshost: '%s' terminated prematurely\n", blob_init);
+        printf("fshost: pkgfs terminated prematurely\n");
         goto fail0;
     }
     if (vfs_install_fs("/pkgfs", pkgfs_root) != ZX_OK) {
@@ -105,21 +74,219 @@ fail1:
     zx_handle_close(proc);
 }
 
+// TODO(mcgrathr): Remove this fallback path when the old args
+// are no longer used.
+static void old_launch_blob_init(void) {
+    const char* blob_init = getenv("zircon.system.blob-init");
+    if (blob_init == NULL) {
+        return;
+    }
+    if (secondary_bootfs_ready()) {
+        printf("fshost: zircon.system.blob-init ignored due to secondary bootfs\n");
+        return;
+    }
+
+    zx_handle_t proc = ZX_HANDLE_INVALID;
+
+    uint32_t type = PA_HND(PA_USER0, 0);
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    zx_handle_t pkgfs_root = ZX_HANDLE_INVALID;
+    if (zx_channel_create(0, &handle, &pkgfs_root) != ZX_OK) {
+        return;
+    }
+
+    //TODO: make blob-init a /fs/blob relative path
+    const char *argv[2];
+    char binary[strlen(blob_init) + 4];
+    sprintf(binary, "/fs%s", blob_init);
+    argv[0] = binary;
+    const char* blob_init_arg = getenv("zircon.system.blob-init-arg");
+    int argc = 1;
+    if (blob_init_arg != NULL) {
+        argc++;
+        argv[1] = blob_init_arg;
+    }
+
+    zx_status_t status = devmgr_launch(
+        job, "pkgfs", &fshost_launch_load, NULL, argc, &argv[0], NULL, -1,
+        &handle, &type, 1, &proc, FS_DATA | FS_BLOB | FS_SVC);
+
+    if (status != ZX_OK) {
+        printf("fshost: '%s' failed to launch: %d\n", blob_init, status);
+        zx_handle_close(handle);
+        zx_handle_close(pkgfs_root);
+        return;
+    }
+
+    pkgfs_finish(proc, pkgfs_root);
+}
+
+// Launching pkgfs uses its own loader service and command lookup to run out of
+// the blobfs without any real filesystem.  Files are found by
+// getenv("zircon.system.pkgfs.file.PATH") returning a blob content ID.
+// That is, a manifest of name->blob is embedded in /boot/config/devmgr.
+static zx_status_t pkgfs_ldsvc_load_blob(void* ctx, const char* prefix,
+                                         const char* name, zx_handle_t* vmo) {
+    const int fs_blob_fd = (intptr_t)ctx;
+    char key[256];
+    if (snprintf(key, sizeof(key), "zircon.system.pkgfs.file.%s%s",
+                 prefix, name) >= (int)sizeof(key)) {
+        return ZX_ERR_BAD_PATH;
+    }
+    const char *blob = getenv(key);
+    if (blob == NULL) {
+        return ZX_ERR_NOT_FOUND;
+    }
+    int fd = openat(fs_blob_fd, blob, O_RDONLY);
+    if (fd < 0) {
+        return ZX_ERR_NOT_FOUND;
+    }
+    zx_status_t status = fdio_get_vmo_clone(fd, vmo);
+    close(fd);
+    if (status == ZX_OK) {
+        zx_object_set_property(*vmo, ZX_PROP_NAME, key, strlen(key));
+    }
+    return status;
+}
+
+static zx_status_t pkgfs_ldsvc_load_object(void* ctx, const char* name,
+                                           zx_handle_t* vmo) {
+    return pkgfs_ldsvc_load_blob(ctx, "lib/", name, vmo);
+}
+
+static zx_status_t pkgfs_ldsvc_load_abspath(void* ctx, const char* name,
+                                            zx_handle_t* vmo) {
+    return pkgfs_ldsvc_load_blob(ctx, "", name + 1, vmo);
+}
+
+static zx_status_t pkgfs_ldsvc_publish_data_sink(void* ctx, const char* name,
+                                                 zx_handle_t vmo) {
+    zx_handle_close(vmo);
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static void pkgfs_ldsvc_finalizer(void* ctx) {
+    close((intptr_t)ctx);
+}
+
+static const loader_service_ops_t pkgfs_ldsvc_ops = {
+    .load_object = pkgfs_ldsvc_load_object,
+    .load_abspath = pkgfs_ldsvc_load_abspath,
+    .publish_data_sink = pkgfs_ldsvc_publish_data_sink,
+    .finalizer = pkgfs_ldsvc_finalizer,
+};
+
+// Create a local loader service with a fixed mapping of names to blobs.
+// Always consumes fs_blob_fd.
+static zx_status_t pkgfs_ldsvc_start(int fs_blob_fd, zx_handle_t* ldsvc) {
+    loader_service_t* service;
+    zx_status_t status = loader_service_create(NULL, &pkgfs_ldsvc_ops,
+                                               (void*)(intptr_t)fs_blob_fd,
+                                               &service);
+    if (status != ZX_OK) {
+        printf("fshost: cannot create pkgfs loader service: %d (%s)\n",
+               status, zx_status_get_string(status));
+        close(fs_blob_fd);
+        return status;
+    }
+    status = loader_service_connect(service, ldsvc);
+    loader_service_release(service);
+    if (status != ZX_OK) {
+        printf("fshost: cannot connect pkgfs loader service: %d (%s)\n",
+               status, zx_status_get_string(status));
+    }
+    return status;
+}
+
+// This is the callback to load the file via launchpad.  First look up the
+// file itself.  Then get the loader service started so it can service
+// launchpad's request for the PT_INTERP file.  Then load it up.
+static zx_status_t pkgfs_launch_load(void* ctx, launchpad_t* lp,
+                                     const char* file) {
+    while (file[0] == '/') {
+        ++file;
+    }
+    zx_handle_t vmo;
+    zx_status_t status = pkgfs_ldsvc_load_blob(ctx, "", file, &vmo);
+    const int fs_blob_fd = (intptr_t)ctx;
+    if (status == ZX_OK) {
+        // The service takes ownership of fs_blob_fd.
+        zx_handle_t ldsvc;
+        status = pkgfs_ldsvc_start(fs_blob_fd, &ldsvc);
+        if (status == ZX_OK) {
+            launchpad_use_loader_service(lp, ldsvc);
+            launchpad_load_from_vmo(lp, vmo);
+        } else {
+            zx_handle_close(vmo);
+        }
+    } else {
+        close(fs_blob_fd);
+    }
+    return status;
+}
+
+static bool pkgfs_launch(void) {
+    const char* cmd = getenv("zircon.system.pkgfs.cmd");
+    if (cmd == NULL) {
+        return false;
+    }
+
+    int fs_blob_fd = open("/fs/blob", O_RDONLY | O_DIRECTORY);
+    if (fs_blob_fd < 0) {
+        printf("fshost: open(/fs/blob): %m\n");
+        return false;
+    }
+
+    zx_handle_t h0, h1;
+    zx_status_t status = zx_channel_create(0, &h0, &h1);
+    if (status != ZX_OK) {
+        printf("fshost: cannot create pkgfs root channel: %d (%s)\n",
+               status, zx_status_get_string(status));
+        close(fs_blob_fd);
+        return false;
+    }
+
+    zx_handle_t proc = ZX_HANDLE_INVALID;
+    status = devmgr_launch_cmdline(
+        "fshost", job, "pkgfs",
+        &pkgfs_launch_load, (void*)(intptr_t)fs_blob_fd, cmd,
+        &h1, (const uint32_t[]){ PA_HND(PA_USER0, 0) }, 1,
+        &proc, FS_DATA | FS_BLOB | FS_SVC);
+    if (status != ZX_OK) {
+        printf("fshost: failed to launch %s: %d (%s)\n",
+               cmd, status, zx_status_get_string(status));
+        return false;
+    }
+
+    pkgfs_finish(proc, h0);
+    return true;
+}
+
+static void launch_blob_init(void) {
+    if (!pkgfs_launch()) {
+        // TODO(mcgrathr): Remove when the old args are no longer used.
+        old_launch_blob_init();
+    }
+}
+
 static zx_status_t launch_blobfs(int argc, const char** argv, zx_handle_t* hnd,
                                  uint32_t* ids, size_t len) {
-    return devmgr_launch(job, "blobfs:/blob", argc, argv, NULL, -1,
+    return devmgr_launch(job, "blobfs:/blob",
+                         &fshost_launch_load, NULL, argc, argv, NULL, -1,
                          hnd, ids, len, NULL, FS_FOR_FSPROC);
 }
 
 static zx_status_t launch_minfs(int argc, const char** argv, zx_handle_t* hnd,
                                 uint32_t* ids, size_t len) {
-    return devmgr_launch(job, "minfs:/data", argc, argv, NULL, -1,
+    return devmgr_launch(job, "minfs:/data",
+                         &fshost_launch_load, NULL, argc, argv, NULL, -1,
                          hnd, ids, len, NULL, FS_FOR_FSPROC);
 }
 
 static zx_status_t launch_fat(int argc, const char** argv, zx_handle_t* hnd,
                               uint32_t* ids, size_t len) {
-    return devmgr_launch(job, "fatfs:/volume", argc, argv, NULL, -1,
+    return devmgr_launch(job, "fatfs:/volume",
+                         &fshost_launch_load, NULL, argc, argv, NULL, -1,
                          hnd, ids, len, NULL, FS_FOR_FSPROC);
 }
 
