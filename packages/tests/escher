@@ -1,7 +1,4 @@
 {
-    "host_tests" : [
-      "//garnet/public/lib/escher/test:escher_unittests"
-    ],
     "packages": [
         "//garnet/public/lib/escher:escher_tests"
     ]
