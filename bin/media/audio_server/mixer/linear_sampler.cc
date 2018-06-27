@@ -15,10 +15,10 @@ namespace media {
 namespace audio {
 namespace mixer {
 
+constexpr float kFramesPerPtsSubframe = 1.0f / (1 << kPtsFractionalBits);
 // We specify alpha in fixed-point 19.13: a max val of "1.0" is 0x00002000.
 inline float Interpolate(float A, float B, uint32_t alpha) {
-  double val = static_cast<double>(B - A) * alpha / (1 << kPtsFractionalBits);
-  return A + val;
+  return ((B - A) * kFramesPerPtsSubframe * alpha) + A;
 }
 
 template <size_t DChCount, typename SType, size_t SChCount>

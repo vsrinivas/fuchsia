@@ -9,6 +9,14 @@
 
 namespace media {
 namespace audio {
+constexpr int32_t kFloatToInt8 = -std::numeric_limits<int8_t>::min();
+constexpr int32_t kFloatToInt16 = -std::numeric_limits<int16_t>::min();
+
+constexpr int32_t kOffsetInt8ToUint8 =
+    std::numeric_limits<uint8_t>::min() - std::numeric_limits<int8_t>::min();
+
+constexpr float kInt8ToFloat = 1.0f / kFloatToInt8;
+constexpr float kInt16ToFloat = 1.0f / kFloatToInt16;
 
 // The number of fractional bits used when expressing timestamps (in frame
 // units) as fixed point integers.  Ultimately, this determines the resolution
@@ -31,12 +39,8 @@ namespace audio {
 // signals are only guaranteed bit-for-bit accurate in the top 13 bits.
 // TODO(mpuryear): MTWN-86 Consider even more fractional position precision.
 constexpr uint32_t kPtsFractionalBits = 13;
-constexpr uint32_t kPtsRoundingVal = 1 << (kPtsFractionalBits - 1);
 // Used in places where PTS must be an integral number of frames.
 constexpr uint32_t kPtsFractionalMask = (1 << kPtsFractionalBits) - 1;
-
-// This is the width of our floating-point audio processing pipeline.
-constexpr uint32_t kAudioPipelineWidth = 25;
 
 // A compile time constant which is guaranteed to never be used as a valid
 // generation ID (by any of the various things which use generation IDs to track

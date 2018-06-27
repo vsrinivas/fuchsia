@@ -72,7 +72,7 @@ class Gain {
   std::atomic<float> db_target_rend_gain_;
   float db_current_rend_gain_ = kMinGainDb;
   float db_current_output_gain_ = kMinGainDb;
-  AScale combined_gain_scalar_ = 0.0f;
+  AScale combined_gain_scale_ = 0.0f;
 };
 
 }  // namespace audio

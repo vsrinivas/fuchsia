@@ -40,8 +40,7 @@ class SampleNormalizer<
     SType, typename std::enable_if<std::is_same<SType, uint8_t>::value>::type> {
  public:
   static inline float Read(const SType* src) {
-    return (static_cast<float>(*src) - 0x0080) /
-           -std::numeric_limits<int8_t>::min();
+    return kInt8ToFloat * (static_cast<int32_t>(*src) - kOffsetInt8ToUint8);
   }
 };
 
@@ -49,11 +48,7 @@ template <typename SType>
 class SampleNormalizer<
     SType, typename std::enable_if<std::is_same<SType, int16_t>::value>::type> {
  public:
-  // Called frequently; expecting optimizing compiler to take advantage of
-  // constexpr kAudioPipelineWidth to eliminate the conditional.
-  static inline float Read(const SType* src) {
-    return static_cast<float>(*src) / -std::numeric_limits<int16_t>::min();
-  }
+  static inline float Read(const SType* src) { return kInt16ToFloat * (*src); }
 };
 
 template <typename SType>
@@ -115,9 +110,8 @@ class SrcReader<
  public:
   static constexpr size_t DstPerSrc = 1;
   static inline float Read(const SType* src) {
-    return (SampleNormalizer<SType>::Read(src + 0) +
-            SampleNormalizer<SType>::Read(src + 1)) /
-           2;
+    return 0.5f * (SampleNormalizer<SType>::Read(src + 0) +
+                   SampleNormalizer<SType>::Read(src + 1));
   }
 };
 

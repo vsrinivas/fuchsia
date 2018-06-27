@@ -17,26 +17,31 @@
 namespace media {
 namespace audio {
 
+// Converting audio between float and int is surprisingly controversial.
+// (blog.bjornroche.com/2009/12/int-float-int-its-jungle-out-there.html etc. --
+// web-search "audio float int convert"). Our float32-based internal pipeline
+// can accomodate float and int Sources without data loss (where Source is a
+// client-submitted stream from AudioRenderer, or an input device), but for non-
+// float Destinations (output device, or AudioCapturer stream to a client) we
+// must clamp +1.0 values in DstConverter::Convert. When translating from float
+// to int16 for example, we can translate -1.0 perfectly to -32768 (negative
+// 0x8000), while +1.0 cannot become +32768 (positive 0x8000, exceeding int16's
+// max) so it is clamped to 32767 (0x7FFF).
+//
+// Having said all this, the "practically clipping" value of +1.0 is rare in WAV
+// files, and other sources should easily be able to reduce their input levels.
+
 // Template to produce destination samples from normalized samples.
 template <typename DType, typename Enable = void>
 class DstConverter;
 
-// Converting audio between float and int is surprisingly controversial.
-// (blog.bjornroche.com/2009/12/int-float-int-its-jungle-out-there.html etc. --
-// search for "audio float int convert"). In choosing an internal pipeline that
-// is float32, we can accomodate float32 Sources (such as an incoming stream
-// from the render API, or an input device). Unfortunately, if the Destination
-// (output device or outgoing stream destined for capture API) is NOT float32,
-// then we cannot communicate the value of +1.0; we clamp these values in
-// DstConverter::Convert). That said, the "practically clipping" value of +1.0
-// is rare in WAV files, and other sources can easily reduce their input levels.
 template <typename DType>
 class DstConverter<
     DType, typename std::enable_if<std::is_same<DType, int16_t>::value>::type> {
  public:
   static inline constexpr DType Convert(float sample) {
-    int32_t val = round(sample * 0x00008000);
-    return fbl::clamp<int32_t>(val, std::numeric_limits<int16_t>::min(),
+    return fbl::clamp<int32_t>(round(sample * kFloatToInt16),
+                               std::numeric_limits<int16_t>::min(),
                                std::numeric_limits<int16_t>::max());
   }
 };
@@ -46,10 +51,10 @@ class DstConverter<
     DType, typename std::enable_if<std::is_same<DType, uint8_t>::value>::type> {
  public:
   static inline constexpr DType Convert(float sample) {
-    int32_t val = round(sample * 0x0080) + 0x0080;
-    return static_cast<DType>(
-        fbl::clamp<int32_t>(val, std::numeric_limits<uint8_t>::min(),
-                            std::numeric_limits<uint8_t>::max()));
+    return fbl::clamp<int32_t>(
+        round(sample * kFloatToInt8) + kOffsetInt8ToUint8,
+        std::numeric_limits<uint8_t>::min(),
+        std::numeric_limits<uint8_t>::max());
   }
 };
 
@@ -83,7 +88,7 @@ class SilenceMaker<
     DType, typename std::enable_if<std::is_same<DType, uint8_t>::value>::type> {
  public:
   static inline void Fill(void* dest, size_t samples) {
-    ::memset(dest, 0x80, samples * sizeof(DType));
+    ::memset(dest, kOffsetInt8ToUint8, samples * sizeof(DType));
   }
 };
 
