@@ -344,7 +344,7 @@
              path="third_party/zlib"
              remote="https://fuchsia.googlesource.com/third_party/zlib"
              gerrithost="https://fuchsia-review.googlesource.com"
-             revision="f0b417f596815c67d7fbdf48faa2ce39dde0f672"/>
+             revision="5a6d2ed866da7e104c6e79fc2f2a9d5e0738cb98"/>
 
     <!-- TODO(INTK-60) should supersede the need for this, as it will be delivered by cipd instead -->
     <project name="third_party/vboot_reference"
