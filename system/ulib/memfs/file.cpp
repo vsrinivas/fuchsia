@@ -141,6 +141,12 @@ zx_status_t VnodeFile::Getattr(vnattr_t* attr) {
     return ZX_OK;
 }
 
+zx_status_t VnodeFile::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
+                                  zxrio_object_info_t* extra) {
+    *type = FDIO_PROTOCOL_FILE;
+    return ZX_OK;
+}
+
 zx_status_t VnodeFile::Truncate(size_t len) {
     zx_status_t status;
     if (len > kMemfsMaxFileSize) {

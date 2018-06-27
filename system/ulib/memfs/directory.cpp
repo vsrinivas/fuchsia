@@ -82,6 +82,12 @@ zx_status_t VnodeDir::Getattr(vnattr_t* attr) {
     return ZX_OK;
 }
 
+zx_status_t VnodeDir::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
+                                 zxrio_object_info_t* extra) {
+    *type = FDIO_PROTOCOL_DIRECTORY;
+    return ZX_OK;
+}
+
 zx_status_t VnodeDir::Readdir(fs::vdircookie_t* cookie, void* data, size_t len, size_t* out_actual) {
     fs::DirentFiller df(data, len);
     if (!IsDirectory()) {

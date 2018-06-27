@@ -80,6 +80,8 @@ private:
                        size_t* out_actual) final;
     zx_status_t Truncate(size_t len) final;
     zx_status_t Getattr(vnattr_t* a) final;
+    zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
+                           zxrio_object_info_t* extra) final;
     zx_status_t GetVmo(int flags, zx_handle_t* out) final;
 
     zx_handle_t vmo_;
@@ -133,6 +135,8 @@ private:
                        bool dst_must_be_dir) final;
     zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target) final;
     zx_status_t Getattr(vnattr_t* a) final;
+    zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
+                           zxrio_object_info_t* extra) final;
     zx_status_t GetVmo(int flags,  zx_handle_t* out) final;
 
     fs::RemoteContainer remoter_;
