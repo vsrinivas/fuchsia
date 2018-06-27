@@ -54,6 +54,12 @@ func main() {
 	ctx.Serve()
 	go bindings.Serve()
 
+	if err := AddStackService(ctx); err != nil {
+		log.Fatal(err)
+	}
+	ctx.Serve()
+	go bindings.Serve()
+
 	arena, err := eth.NewArena()
 	if err != nil {
 		log.Fatalf("ethernet: %v", err)
