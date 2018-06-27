@@ -132,7 +132,7 @@ TEST_F(ATT_BearerTest, RequestTimeout) {
                                          NopCallback, err_cb));
 
   AdvanceTimeBy(zx::msec(kTransactionTimeoutMs));
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(closed);
   EXPECT_TRUE(err_cb_called);
@@ -171,7 +171,7 @@ TEST_F(ATT_BearerTest, RequestTimeoutMany) {
       common::NewBuffer(kTestRequest2, 'T', 'e', 's', 't'), NopCallback,
       err_cb));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   // The first indication should have been sent and the second one queued.
   EXPECT_EQ(1u, chan_count);
@@ -181,7 +181,7 @@ TEST_F(ATT_BearerTest, RequestTimeoutMany) {
 
   // Make the request timeout.
   AdvanceTimeBy(zx::msec(kTransactionTimeoutMs));
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(closed);
   EXPECT_EQ(kTransactionCount, err_cb_count);
@@ -208,7 +208,7 @@ TEST_F(ATT_BearerTest, IndicationTimeout) {
       common::NewBuffer(kIndication, 'T', 'e', 's', 't'), NopCallback, err_cb));
 
   AdvanceTimeBy(zx::msec(kTransactionTimeoutMs));
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(closed);
   EXPECT_TRUE(err_cb_called);
@@ -247,7 +247,7 @@ TEST_F(ATT_BearerTest, IndicationTimeoutMany) {
   EXPECT_TRUE(bearer()->StartTransaction(
       common::NewBuffer(kIndication, kIndValue2), NopCallback, err_cb));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   // The first indication should have been sent and the second one queued.
   EXPECT_EQ(1u, chan_count);
@@ -257,7 +257,7 @@ TEST_F(ATT_BearerTest, IndicationTimeoutMany) {
 
   // Make the request timeout.
   AdvanceTimeBy(zx::msec(kTransactionTimeoutMs));
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(closed);
   EXPECT_EQ(kTransactionCount, err_cb_count);
@@ -271,7 +271,7 @@ TEST_F(ATT_BearerTest, ReceiveEmptyPacket) {
 
   fake_chan()->Receive(common::BufferView());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(closed);
 }
 
@@ -283,7 +283,7 @@ TEST_F(ATT_BearerTest, ReceiveResponseWithoutRequest) {
 
   fake_chan()->Receive(common::CreateStaticByteBuffer(kTestResponse));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(closed);
 }
 
@@ -295,7 +295,7 @@ TEST_F(ATT_BearerTest, ReceiveConfirmationWithoutIndication) {
 
   fake_chan()->Receive(common::CreateStaticByteBuffer(kConfirmation));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(closed);
 }
 
@@ -327,7 +327,7 @@ TEST_F(ATT_BearerTest, SendRequestWrongResponse) {
   bearer()->StartTransaction(common::NewBuffer(kTestRequest), NopCallback,
                              err_cb);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(closed);
   EXPECT_TRUE(err_cb_called);
   EXPECT_EQ(1u, count);
@@ -368,7 +368,7 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponseTooShort) {
   bearer()->StartTransaction(common::NewBuffer(kTestRequest), NopCallback,
                              err_cb);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(closed);
   EXPECT_TRUE(err_cb_called);
   EXPECT_TRUE(chan_cb_called);
@@ -409,7 +409,7 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponseTooLong) {
   bearer()->StartTransaction(common::NewBuffer(kTestRequest), NopCallback,
                              err_cb);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(closed);
   EXPECT_TRUE(err_cb_called);
   EXPECT_TRUE(chan_cb_called);
@@ -455,7 +455,7 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponseWrongOpCode) {
   bearer()->StartTransaction(common::NewBuffer(kTestRequest), NopCallback,
                              err_cb);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(closed);
   EXPECT_TRUE(err_cb_called);
   EXPECT_TRUE(chan_cb_called);
@@ -496,7 +496,7 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponse) {
   bearer()->StartTransaction(common::NewBuffer(kTestRequest), NopCallback,
                              err_cb);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(err_cb_called);
   EXPECT_TRUE(chan_cb_called);
 
@@ -528,7 +528,7 @@ TEST_F(ATT_BearerTest, SendRequestSuccess) {
   bearer()->StartTransaction(common::NewBuffer(kTestRequest), cb,
                              NopErrorCallback);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(chan_cb_called);
   EXPECT_TRUE(cb_called);
 
@@ -630,7 +630,7 @@ TEST_F(ATT_BearerTest, SendManyRequests) {
   bearer()->StartTransaction(common::NewBuffer(kTestRequest3), callback3,
                              error_cb);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(2u, success_count);
   EXPECT_EQ(1u, error_count);
@@ -669,7 +669,7 @@ TEST_F(ATT_BearerTest, SendIndicationSuccess) {
   bearer()->StartTransaction(common::NewBuffer(kIndication), cb,
                              NopErrorCallback);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(chan_cb_called);
   EXPECT_TRUE(cb_called);
 
@@ -731,7 +731,7 @@ TEST_F(ATT_BearerTest, SendWithoutResponseMany) {
         common::NewBuffer(opcode | kCommandFlag)));
   }
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_EQ(kExpectedCount, chan_cb_count);
 }
 
@@ -784,7 +784,7 @@ TEST_F(ATT_BearerTest, RemoteTransactionNoHandler) {
   fake_chan()->SetSendCallback(chan_cb, dispatcher());
   fake_chan()->Receive(common::CreateStaticByteBuffer(kTestRequest));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(received_error_rsp);
 }
 
@@ -800,7 +800,7 @@ TEST_F(ATT_BearerTest, RemoteTransactionSeqProtocolError) {
   bearer()->RegisterHandler(kTestRequest, handler);
   fake_chan()->Receive(common::CreateStaticByteBuffer(kTestRequest));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   ASSERT_EQ(1, request_count);
 
   // Receiving a second request before sending a response should close the
@@ -812,7 +812,7 @@ TEST_F(ATT_BearerTest, RemoteTransactionSeqProtocolError) {
 
   fake_chan()->Receive(common::CreateStaticByteBuffer(kTestRequest));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(closed);
   EXPECT_EQ(1, request_count);
   EXPECT_FALSE(bearer()->is_open());
@@ -830,7 +830,7 @@ TEST_F(ATT_BearerTest, RemoteIndicationSeqProtocolError) {
   bearer()->RegisterHandler(kIndication, handler);
   fake_chan()->Receive(common::CreateStaticByteBuffer(kIndication));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   ASSERT_EQ(1, ind_count);
 
   // Receiving a second indication before sending a confirmation should close
@@ -842,7 +842,7 @@ TEST_F(ATT_BearerTest, RemoteIndicationSeqProtocolError) {
 
   fake_chan()->Receive(common::CreateStaticByteBuffer(kIndication));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(closed);
   EXPECT_EQ(1, ind_count);
   EXPECT_FALSE(bearer()->is_open());
@@ -880,7 +880,7 @@ TEST_F(ATT_BearerTest, ReplyWrongOpCode) {
   bearer()->RegisterHandler(kTestRequest, handler);
   fake_chan()->Receive(common::CreateStaticByteBuffer(kTestRequest));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   ASSERT_TRUE(handler_called);
 
   EXPECT_FALSE(bearer()->Reply(id, common::NewBuffer(kTestResponse2)));
@@ -901,7 +901,7 @@ TEST_F(ATT_BearerTest, ReplyToIndicationWrongOpCode) {
   bearer()->RegisterHandler(kIndication, handler);
   fake_chan()->Receive(common::CreateStaticByteBuffer(kIndication));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   ASSERT_TRUE(handler_called);
 
   EXPECT_FALSE(bearer()->Reply(id, common::NewBuffer(kTestResponse)));
@@ -930,7 +930,7 @@ TEST_F(ATT_BearerTest, ReplyWithResponse) {
   bearer()->RegisterHandler(kTestRequest, handler);
   fake_chan()->Receive(common::CreateStaticByteBuffer(kTestRequest));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   ASSERT_TRUE(handler_called);
 
   EXPECT_TRUE(bearer()->Reply(id, common::NewBuffer(kTestResponse)));
@@ -939,7 +939,7 @@ TEST_F(ATT_BearerTest, ReplyWithResponse) {
   EXPECT_FALSE(bearer()->Reply(id, common::NewBuffer(kTestResponse)));
   EXPECT_FALSE(bearer()->ReplyWithError(id, 0, ErrorCode::kUnlikelyError));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(response_sent);
 }
 
@@ -965,7 +965,7 @@ TEST_F(ATT_BearerTest, IndicationConfirmation) {
   bearer()->RegisterHandler(kIndication, handler);
   fake_chan()->Receive(common::CreateStaticByteBuffer(kIndication));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   ASSERT_TRUE(handler_called);
 
   EXPECT_TRUE(bearer()->Reply(id, common::NewBuffer(kConfirmation)));
@@ -973,7 +973,7 @@ TEST_F(ATT_BearerTest, IndicationConfirmation) {
   // The transaction is marked as complete.
   EXPECT_FALSE(bearer()->Reply(id, common::NewBuffer(kConfirmation)));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(conf_sent);
 }
 
@@ -996,7 +996,7 @@ TEST_F(ATT_BearerTest, IndicationReplyWithError) {
   bearer()->RegisterHandler(kIndication, handler);
   fake_chan()->Receive(common::CreateStaticByteBuffer(kIndication));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   ASSERT_TRUE(handler_called);
 
   // Cannot reply to an indication with error.
@@ -1029,7 +1029,7 @@ TEST_F(ATT_BearerTest, ReplyWithError) {
   bearer()->RegisterHandler(kTestRequest, handler);
   fake_chan()->Receive(common::CreateStaticByteBuffer(kTestRequest));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   ASSERT_TRUE(handler_called);
 
   EXPECT_TRUE(bearer()->ReplyWithError(id, 0, ErrorCode::kUnlikelyError));
@@ -1038,7 +1038,7 @@ TEST_F(ATT_BearerTest, ReplyWithError) {
   EXPECT_FALSE(bearer()->Reply(id, common::NewBuffer(kTestResponse)));
   EXPECT_FALSE(bearer()->ReplyWithError(id, 0, ErrorCode::kUnlikelyError));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(response_sent);
 }
 
@@ -1071,7 +1071,7 @@ TEST_F(ATT_BearerTest, RequestAndIndication) {
   fake_chan()->Receive(common::CreateStaticByteBuffer(kTestRequest));
   fake_chan()->Receive(common::CreateStaticByteBuffer(kIndication));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_EQ(1, req_count);
   ASSERT_EQ(1, ind_count);
 
@@ -1105,7 +1105,7 @@ TEST_F(ATT_BearerTest, RemotePDUWithoutResponse) {
   fake_chan()->Receive(common::CreateStaticByteBuffer(kTestCommand));
   fake_chan()->Receive(common::CreateStaticByteBuffer(kNotification));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_EQ(1, cmd_count);
   EXPECT_EQ(1, not_count);
 }

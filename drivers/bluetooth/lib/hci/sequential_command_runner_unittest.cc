@@ -110,7 +110,7 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunner) {
 
   cmd_runner.RunCommands(status_cb);
   EXPECT_FALSE(cmd_runner.IsReady());
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
   EXPECT_EQ(0, cb_called);
@@ -127,7 +127,7 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunner) {
 
   cmd_runner.RunCommands(status_cb);
   EXPECT_FALSE(cmd_runner.IsReady());
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
   EXPECT_EQ(0, cb_called);
@@ -145,7 +145,7 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunner) {
 
   cmd_runner.RunCommands(status_cb);
   EXPECT_FALSE(cmd_runner.IsReady());
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
   EXPECT_EQ(1, cb_called);
@@ -162,7 +162,7 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunner) {
 
   cmd_runner.RunCommands(status_cb);
   EXPECT_FALSE(cmd_runner.IsReady());
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
   EXPECT_EQ(2, cb_called);
@@ -180,7 +180,7 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunner) {
 
   cmd_runner.RunCommands(status_cb);
   EXPECT_FALSE(cmd_runner.IsReady());
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
   EXPECT_EQ(0, cb_called);
@@ -249,7 +249,7 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
 
   // Since |status_cb| is expected to not get called (which would normally quit
   // the message loop) - we run until we reach a steady-state waiting.
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
 
@@ -273,7 +273,7 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
   EXPECT_FALSE(cmd_runner.IsReady());
 
   // |status_cb| is expected to not get called.
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
 
@@ -304,7 +304,7 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
   cmd_runner.RunCommands(status_cb);
   EXPECT_FALSE(cmd_runner.IsReady());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());

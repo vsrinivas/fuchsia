@@ -6,15 +6,13 @@
 
 #include <map>
 
-#include "gtest/gtest.h"
-
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
-#include "garnet/drivers/bluetooth/lib/testing/test_base.h"
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/random/rand.h"
+#include "lib/gtest/test_loop_fixture.h"
 
 namespace btlib {
 
@@ -115,7 +113,7 @@ class FakeLowEnergyAdvertiser final : public hci::LowEnergyAdvertiser {
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeLowEnergyAdvertiser);
 };
 
-using TestingBase = ::btlib::testing::TestBase;
+using TestingBase = ::gtest::TestLoopFixture;
 
 class GAP_LowEnergyAdvertisingManagerTest : public TestingBase {
  public:
@@ -200,7 +198,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, Success) {
   am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestIntervalMs,
                       false /* anonymous */, GetSuccessCallback());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_EQ(1u, ad_store().size());
@@ -214,7 +212,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, DataSize) {
   am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestIntervalMs,
                       false /* anonymous */, GetSuccessCallback());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   fake_ad = CreateFakeAdvertisingData(kDefaultMaxAdSize + 1);
 
@@ -224,7 +222,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, DataSize) {
   am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestIntervalMs,
                       false /* anonymous */, GetErrorCallback());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_EQ(1u, ad_store().size());
@@ -244,7 +242,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, RegisterUnregister) {
   am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestIntervalMs,
                       false /* anonymous */, GetSuccessCallback());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_EQ(1u, ad_store().size());
@@ -255,7 +253,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, RegisterUnregister) {
   am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestIntervalMs,
                       false /* anonymous */, GetSuccessCallback());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_EQ(2u, ad_store().size());
@@ -280,7 +278,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, AdvertiserError) {
   am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestIntervalMs,
                       false /* anonymous */, GetErrorCallback());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
 }
@@ -306,14 +304,14 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, ConnectCallback) {
   am.StartAdvertising(fake_ad, scan_rsp, connect_cb, kTestIntervalMs,
                       false /* anonymous */, GetSuccessCallback());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
   advertised_id = last_ad_id();
 
   incoming_conn_cb(std::move(link));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 }
 
 //  - Error: Connectable and Anonymous at the same time
@@ -342,7 +340,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, SendsCorrectData) {
   am.StartAdvertising(fake_ad, scan_rsp, nullptr, interval_ms,
                       false /* anonymous */, GetSuccessCallback());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_EQ(1u, ad_store().size());

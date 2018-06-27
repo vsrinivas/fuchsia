@@ -9,10 +9,8 @@
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_channel.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap_defs.h"
-#include "garnet/drivers/bluetooth/lib/testing/test_base.h"
 #include "lib/fxl/macros.h"
-
-#include "gtest/gtest.h"
+#include "lib/gtest/test_loop_fixture.h"
 
 namespace btlib {
 namespace l2cap {
@@ -23,7 +21,7 @@ namespace testing {
 //
 //   * A simple way to initialize and access a FakeChannel.
 //   * Basic command<->response expectation.
-class FakeChannelTest : public ::btlib::testing::TestBase {
+class FakeChannelTest : public ::gtest::TestLoopFixture {
  public:
   FakeChannelTest() = default;
   ~FakeChannelTest() override = default;

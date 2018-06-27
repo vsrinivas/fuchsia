@@ -1558,7 +1558,7 @@ TEST_F(GATT_ServerTest, WriteCommandSuccess) {
   // clang-format on
 
   fake_chan()->Receive(kCmd);
-  RunUntilIdle();
+  RunLoopUntilIdle();
 }
 
 TEST_F(GATT_ServerTest, ReadRequestInvalidPDU) {

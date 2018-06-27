@@ -2,21 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# This target only includes the test_base.h header which is intended for tests
-# that only require a message loop and no HCI functionality.
-source_set("test_base") {
-  testonly = true
-
-  sources = [
-    "test_base.h"
-  ]
-
-  public_deps = [
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-testutils",
-  ]
-}
-
 source_set("testing") {
   testonly = true
 
@@ -34,15 +19,12 @@ source_set("testing") {
     "test_controller.h",
   ]
 
-  public_deps = [
-    ":test_base",
-  ]
-
   deps = [
     "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
-    "//third_party/googletest:gtest",
 
     # Production dependencies are for the protocol headers only. FakeController
     # does not depend on any logic from these libraries.

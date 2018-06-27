@@ -4,28 +4,26 @@
 
 #include "run_or_post.h"
 
-#include <lib/async-testutils/test_loop.h>
-
-#include "gtest/gtest.h"
+#include "lib/gtest/test_loop_fixture.h"
 
 namespace btlib {
 namespace common {
 namespace {
 
-TEST(RunOrPostTest, WithoutDispatcher) {
+using RunOrPostTest = ::gtest::TestLoopFixture;
+
+TEST_F(RunOrPostTest, WithoutDispatcher) {
   bool run = false;
   RunOrPost([&run] { run = true; }, nullptr);
   EXPECT_TRUE(run);
 }
 
-TEST(RunOrPostTest, WithDispatcher) {
-  async::TestLoop loop;
-
+TEST_F(RunOrPostTest, WithDispatcher) {
   bool run = false;
-  RunOrPost([&run] { run = true; }, loop.async());
+  RunOrPost([&run] { run = true; }, dispatcher());
   EXPECT_FALSE(run);
 
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(run);
 }
 

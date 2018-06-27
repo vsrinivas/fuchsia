@@ -6,8 +6,6 @@
 
 #include <unordered_map>
 
-#include "gtest/gtest.h"
-
 #include <lib/async/cpp/task.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
@@ -115,7 +113,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketBREDRBuffer) {
     }
   });
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   // kMaxNumPackets is 5. The controller should have received 3 packets on
   // kHandle0 and 2 on kHandle1
@@ -131,7 +129,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketBREDRBuffer) {
   );
   test_device()->SendCommandChannelPacket(event_buffer);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(5, handle0_packet_count);
   EXPECT_EQ(5, handle1_packet_count);
@@ -196,7 +194,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketLEBuffer) {
     }
   });
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   // The controller can buffer 3 packets. Since BR/EDR packets should have
   // failed to go out, the controller should have received 3 packets on handle 0
@@ -212,7 +210,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketLEBuffer) {
   );
   test_device()->SendCommandChannelPacket(event_buffer);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(kTotalExpected, handle0_packet_count);
   EXPECT_EQ(0u, handle1_packet_count);
@@ -270,7 +268,7 @@ TEST_F(HCI_ACLDataChannelTest, SendLEPacketBothBuffers) {
     }
   });
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   // ACLDataChannel should be looking at kLEMaxNumPackets, which is 5. The
   // controller should have received 3 packets on kHandle0 and 2 on kHandle1
@@ -286,7 +284,7 @@ TEST_F(HCI_ACLDataChannelTest, SendLEPacketBothBuffers) {
   );
   test_device()->SendCommandChannelPacket(event_buffer);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(5, handle0_packet_count);
   EXPECT_EQ(5, handle1_packet_count);
@@ -344,7 +342,7 @@ TEST_F(HCI_ACLDataChannelTest, SendBREDRPacketBothBuffers) {
     }
   });
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   // ACLDataChannel should be looking at kLEMaxNumPackets, which is 5. The
   // controller should have received 3 packets on kHandle0 and 2 on kHandle1
@@ -360,7 +358,7 @@ TEST_F(HCI_ACLDataChannelTest, SendBREDRPacketBothBuffers) {
   );
   test_device()->SendCommandChannelPacket(event_buffer);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(5, handle0_packet_count);
   EXPECT_EQ(5, handle1_packet_count);
@@ -455,7 +453,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketFromMultipleThreads) {
     t3.join();
 
   // Messages are sent on another thread, so wait here until they arrive.
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(kExpectedTotalPacketCount / 3, handle0_total_packet_count);
   EXPECT_EQ(kExpectedTotalPacketCount / 3, handle1_total_packet_count);
@@ -515,7 +513,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPackets) {
   EXPECT_TRUE(acl_data_channel()->SendPackets(std::move(packets),
                                               Connection::LinkType::kLE));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(pass);
   EXPECT_EQ(kExpectedPacketCount, seq_no);
@@ -568,7 +566,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketsAtomically) {
   }
 
   // Messages are sent on another thread, so wait here until they arrive.
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   ASSERT_EQ(kExpectedPacketCount, received.size());
 
@@ -625,7 +623,7 @@ TEST_F(HCI_ACLDataChannelTest, ReceiveData) {
     test_device()->SendACLDataChannelPacket(valid1);
   });
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(kExpectedPacketCount, num_rx_packets);
   EXPECT_EQ(0x0001, packet0_handle);
@@ -642,7 +640,7 @@ TEST_F(HCI_ACLDataChannelTest, TransportClosedCallback) {
 
   async::PostTask(dispatcher(),
                   [this] { test_device()->CloseACLDataChannel(); });
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(closed_cb_called);
 }
 
@@ -661,7 +659,7 @@ TEST_F(HCI_ACLDataChannelTest, TransportClosedCallbackBothChannels) {
     test_device()->CloseCommandChannel();
   });
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_EQ(1, closed_cb_count);
 }
 

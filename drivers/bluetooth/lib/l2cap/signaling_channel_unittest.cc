@@ -98,7 +98,7 @@ TEST_F(L2CAP_SignalingChannelTest, IgnoreEmptyFrame) {
   fake_chan()->SetSendCallback(std::move(send_cb), dispatcher());
   fake_chan()->Receive(common::BufferView());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_FALSE(send_cb_called);
 }
 
@@ -192,7 +192,7 @@ TEST_F(L2CAP_SignalingChannelTest, HandlePacket) {
 
   fake_chan()->Receive(cmd);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(called);
 }
 
@@ -210,7 +210,7 @@ TEST_F(L2CAP_SignalingChannelTest, UseChannelAfterSignalFree) {
   // Ensure that closing the channel (possibly firing callback) is OK.
   fake_chan()->Close();
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 }
 
 TEST_F(L2CAP_SignalingChannelTest, ValidRequestCommandIds) {

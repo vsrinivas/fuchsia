@@ -17,8 +17,6 @@
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_device.h"
 
-#include "gtest/gtest.h"
-
 #include "lib/fxl/macros.h"
 
 namespace btlib {
@@ -180,7 +178,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceErrorStatus) {
   EXPECT_EQ(RemoteDevice::ConnectionState::kInitializing,
             dev->le_connection_state());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(status.is_protocol_error());
   EXPECT_EQ(hci::StatusCode::kConnectionFailedToBeEstablished,
@@ -207,7 +205,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceFailure) {
   EXPECT_EQ(RemoteDevice::ConnectionState::kInitializing,
             dev->le_connection_state());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(status.is_protocol_error());
   EXPECT_EQ(hci::StatusCode::kConnectionFailedToBeEstablished,
@@ -236,10 +234,10 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceTimeout) {
 
   // Make sure the first HCI transaction completes before advancing the fake
   // clock.
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   AdvanceTimeBy(zx::msec(kTestRequestTimeoutMs));
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_FALSE(status);
   EXPECT_EQ(common::HostError::kTimedOut, status.error()) << status.ToString();
@@ -270,7 +268,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDevice) {
   EXPECT_EQ(RemoteDevice::ConnectionState::kInitializing,
             dev->le_connection_state());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(status);
   EXPECT_EQ(1u, connected_devices().size());
@@ -320,14 +318,14 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, DeleteRefInClosedCallback) {
   };
 
   ASSERT_TRUE(conn_mgr()->Connect(dev->identifier(), success_cb));
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   ASSERT_TRUE(conn_ref);
   ASSERT_TRUE(conn_ref->active());
 
   // This will trigger the closed callback.
   EXPECT_TRUE(conn_mgr()->Disconnect(dev->identifier()));
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(1, closed_count);
   EXPECT_TRUE(connected_devices().empty());
@@ -355,7 +353,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ReleaseRef) {
   EXPECT_TRUE(connected_devices().empty());
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), callback));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(status);
   EXPECT_EQ(1u, connected_devices().size());
@@ -365,7 +363,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ReleaseRef) {
   ASSERT_TRUE(conn_ref);
   conn_ref = nullptr;
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(connected_devices().empty());
   EXPECT_EQ(RemoteDevice::ConnectionState::kNotConnected,
@@ -395,7 +393,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest,
         << "request count: " << i + 1;
   }
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   ASSERT_EQ(kRequestCount, cb_count);
   for (int i = 0; i < kRequestCount; ++i) {
@@ -425,7 +423,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, OneDeviceManyPendingRequests) {
         << "request count: " << i + 1;
   }
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(1u, connected_devices().size());
   EXPECT_EQ(1u, connected_devices().count(kAddress0));
@@ -450,7 +448,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, OneDeviceManyPendingRequests) {
   // Drop the last reference.
   conn_refs[kRequestCount - 1] = nullptr;
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(connected_devices().empty());
 }
@@ -471,7 +469,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, AddRefAfterConnection) {
 
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), callback));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(1u, connected_devices().size());
   EXPECT_EQ(1u, connected_devices().count(kAddress0));
@@ -481,7 +479,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, AddRefAfterConnection) {
   for (size_t i = 1; i < kRefCount; ++i) {
     EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), callback))
         << "request count: " << i + 1;
-    RunUntilIdle();
+    RunLoopUntilIdle();
   }
 
   EXPECT_EQ(1u, connected_devices().size());
@@ -491,7 +489,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, AddRefAfterConnection) {
   // Disconnect.
   conn_refs.clear();
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(connected_devices().empty());
 }
@@ -513,7 +511,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, PendingRequestsOnTwoDevices) {
   EXPECT_TRUE(conn_mgr()->Connect(dev0->identifier(), callback));
   EXPECT_TRUE(conn_mgr()->Connect(dev1->identifier(), callback));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(2u, connected_devices().size());
   EXPECT_EQ(1u, connected_devices().count(kAddress0));
@@ -528,14 +526,14 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, PendingRequestsOnTwoDevices) {
   // |dev1| should disconnect first.
   conn_refs[1] = nullptr;
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(1u, connected_devices().size());
   EXPECT_EQ(1u, connected_devices().count(kAddress0));
 
   conn_refs.clear();
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(connected_devices().empty());
 }
 
@@ -558,7 +556,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest,
   EXPECT_TRUE(conn_mgr()->Connect(dev0->identifier(), callback));
   EXPECT_TRUE(conn_mgr()->Connect(dev1->identifier(), callback));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(1u, connected_devices().size());
   EXPECT_EQ(1u, connected_devices().count(kAddress1));
@@ -571,7 +569,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest,
   // Both connections should disconnect.
   conn_refs.clear();
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(connected_devices().empty());
 }
 
@@ -599,7 +597,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, Destructor) {
   };
 
   EXPECT_TRUE(conn_mgr()->Connect(dev0->identifier(), success_cb));
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   ASSERT_TRUE(conn_ref);
   bool conn_closed = false;
@@ -618,7 +616,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, Destructor) {
   EXPECT_TRUE(conn_mgr()->Connect(dev1->identifier(), error_cb));
   DeleteConnMgr();
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(error_cb_called);
   EXPECT_TRUE(conn_closed);
@@ -653,13 +651,13 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, Disconnect) {
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), success_cb));
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), success_cb));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   ASSERT_EQ(2u, conn_refs.size());
 
   EXPECT_TRUE(conn_mgr()->Disconnect(dev->identifier()));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(2, closed_count);
   EXPECT_TRUE(connected_devices().empty());
@@ -689,14 +687,14 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, DisconnectEvent) {
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), success_cb));
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), success_cb));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   ASSERT_EQ(2u, conn_refs.size());
 
   // This makes FakeController send us HCI Disconnection Complete events.
   test_device()->Disconnect(kAddress0);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(2, closed_count);
 }
@@ -715,7 +713,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, DisconnectWhileRefPending) {
   };
 
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), success_cb));
-  RunUntilIdle();
+  RunLoopUntilIdle();
   ASSERT_TRUE(conn_ref);
 
   auto ref_cb = [](auto status, auto conn_ref) {
@@ -729,7 +727,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, DisconnectWhileRefPending) {
   // This should invalidate the ref that was bound to |ref_cb|.
   EXPECT_TRUE(conn_mgr()->Disconnect(dev->identifier()));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 }
 
 // This tests that a connection reference callback returns nullptr if a HCI
@@ -749,7 +747,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, DisconnectEventWhileRefPending) {
   };
 
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), success_cb));
-  RunUntilIdle();
+  RunLoopUntilIdle();
   ASSERT_TRUE(conn_ref);
 
   // Request a new reference. Disconnect the link before the reference is
@@ -769,7 +767,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, DisconnectEventWhileRefPending) {
   conn_mgr()->SetDisconnectCallbackForTesting(disconn_cb);
 
   test_device()->Disconnect(kAddress0);
-  RunUntilIdle();
+  RunLoopUntilIdle();
 }
 
 // Listener receives remote initiated connection ref.
@@ -779,7 +777,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, RegisterRemoteInitiatedLink) {
   // First create a fake incoming connection.
   test_device()->ConnectLowEnergy(kAddress0);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   auto link = MoveLastRemoteInitiated();
   ASSERT_TRUE(link);
@@ -796,7 +794,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, RegisterRemoteInitiatedLink) {
 
   conn_ref = nullptr;
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(connected_devices().empty());
 }
 
@@ -815,7 +813,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, L2CAPLEConnectionParameterUpdate) {
   };
   ASSERT_TRUE(conn_mgr()->Connect(dev->identifier(), conn_cb));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   ASSERT_TRUE(conn_ref);
 
   hci::LEPreferredConnectionParameters preferred(
@@ -842,7 +840,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, L2CAPLEConnectionParameterUpdate) {
   fake_l2cap()->TriggerLEConnectionParameterUpdate(conn_ref->handle(),
                                                    preferred);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(fake_dev_cb_called);
   ASSERT_TRUE(conn_params_cb_called);
@@ -868,7 +866,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, L2CAPSignalLinkError) {
   };
   ASSERT_TRUE(conn_mgr()->Connect(dev->identifier(), conn_cb));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   ASSERT_TRUE(conn_ref);
   ASSERT_TRUE(att_chan);
   ASSERT_EQ(1u, connected_devices().size());
@@ -876,7 +874,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, L2CAPSignalLinkError) {
   // Signaling a link error through the channel should disconnect the link.
   att_chan->SignalLinkError();
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(connected_devices().empty());
 }
 

@@ -4,8 +4,6 @@
 
 #include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
 
-#include "gtest/gtest.h"
-
 #include <lib/async/cpp/task.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
@@ -94,7 +92,7 @@ TEST_F(HCI_CommandChannelTest, SingleRequestResponse) {
 
   test_obj = nullptr;
   EXPECT_FALSE(test_obj_deleted);
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   // Make sure that the I/O thread is no longer holding on to |test_obj|.
   TearDown();
@@ -160,7 +158,7 @@ TEST_F(HCI_CommandChannelTest, SingleAsynchronousRequest) {
   id = cmd_channel()->SendCommand(std::move(packet),
                                   dispatcher(), cb,
                                   kInquiryCompleteEventCode);
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_EQ(2, cb_count);
 }
 
@@ -205,7 +203,7 @@ TEST_F(HCI_CommandChannelTest, SingleRequestWithStatusResponse) {
   id = cmd_channel()->SendCommand(std::move(reset),
                                   dispatcher(), complete_cb,
                                   kCommandStatusEventCode);
-  RunUntilIdle();
+  RunLoopUntilIdle();
 }
 
 // Tests:
@@ -278,14 +276,14 @@ TEST_F(HCI_CommandChannelTest, OneSentUntilStatus) {
   inquiry_id = cmd_channel()->SendCommand(std::move(inquiry),
                                           dispatcher(), cb);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(1u, transaction_count);
   EXPECT_EQ(1u, cb_event_count);
 
   test_device()->SendCommandChannelPacket(rsp_commandsavail);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(2u, transaction_count);
   EXPECT_EQ(2u, cb_event_count);
@@ -369,14 +367,14 @@ TEST_F(HCI_CommandChannelTest, QueuedCommands) {
   cmd_channel()->SendCommand(std::move(packet), dispatcher(),
                              cb);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   // Different opcodes can be sent without a reply
   EXPECT_EQ(2u, transaction_count);
 
   // Even if we get a response to one, the duplicate opcode is still queued.
   test_device()->SendCommandChannelPacket(rsp_inqcancel);
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(2u, transaction_count);
   EXPECT_EQ(1u, cancel_count);
@@ -384,7 +382,7 @@ TEST_F(HCI_CommandChannelTest, QueuedCommands) {
 
   // Once we get a reset back, the second can be sent (and replied to)
   test_device()->SendCommandChannelPacket(rsp_reset);
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(3u, transaction_count);
   EXPECT_EQ(1u, cancel_count);
@@ -460,7 +458,7 @@ TEST_F(HCI_CommandChannelTest, AsynchronousCommands) {
   id1 = cmd_channel()->SendCommand(
       std::move(packet), dispatcher(), cb, kTestEventCode0);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   // Should have received the Status but not the result.
   EXPECT_EQ(1u, cb_count);
@@ -470,13 +468,13 @@ TEST_F(HCI_CommandChannelTest, AsynchronousCommands) {
   packet = CommandPacket::New(kInquiryCancel);
   id2 = cmd_channel()->SendCommand(
       std::move(packet), dispatcher(), cb, kTestEventCode0);
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(1u, cb_count);
 
   // Sending the complete will release the queue and send the next command.
   test_device()->SendCommandChannelPacket(rsp_bogocomplete);
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(3u, cb_count);
 
@@ -488,7 +486,7 @@ TEST_F(HCI_CommandChannelTest, AsynchronousCommands) {
 
   // Finish out the commands.
   test_device()->SendCommandChannelPacket(rsp_bogocomplete);
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(4u, cb_count);
 }
@@ -543,7 +541,7 @@ TEST_F(HCI_CommandChannelTest, AsyncQueueWhenBlocked) {
 
   test_device()->SendCommandChannelPacket(rsp_nocommandsavail);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   CommandChannel::TransactionId id;
   size_t cb_count = 0;
@@ -566,7 +564,7 @@ TEST_F(HCI_CommandChannelTest, AsyncQueueWhenBlocked) {
   id = cmd_channel()->SendCommand(
       std::move(packet), dispatcher(), cb, kTestEventCode0);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   ASSERT_NE(0u, id);
   ASSERT_EQ(0u, transaction_count);
@@ -575,14 +573,14 @@ TEST_F(HCI_CommandChannelTest, AsyncQueueWhenBlocked) {
   auto invalid_id = cmd_channel()->AddEventHandler(
       kTestEventCode0, [](const auto&) {}, dispatcher());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   ASSERT_EQ(0u, invalid_id);
 
   // Commands become available and the whole transaction finishes.
   test_device()->SendCommandChannelPacket(rsp_commandsavail);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   ASSERT_EQ(1u, transaction_count);
   ASSERT_EQ(2u, cb_count);
@@ -655,7 +653,7 @@ TEST_F(HCI_CommandChannelTest, EventHandlerBasic) {
   test_device()->SendCommandChannelPacket(cmd_status);
   test_device()->SendCommandChannelPacket(event1);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(3, event_count0);
   EXPECT_EQ(3, event_count1);
@@ -677,7 +675,7 @@ TEST_F(HCI_CommandChannelTest, EventHandlerBasic) {
   test_device()->SendCommandChannelPacket(event0);
   test_device()->SendCommandChannelPacket(event1);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(0, event_count0);
   EXPECT_EQ(7, event_count1);
@@ -696,7 +694,7 @@ TEST_F(HCI_CommandChannelTest, EventHandlerBasic) {
   test_device()->SendCommandChannelPacket(event1);
   test_device()->SendCommandChannelPacket(event1);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(0, event_count0);
   EXPECT_EQ(0, event_count1);
@@ -755,7 +753,7 @@ TEST_F(HCI_CommandChannelTest, EventHandlerEventWhileTransactionPending) {
                                   dispatcher(), nullptr);
   EXPECT_NE(0u, id);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(2, event_count);
 }
@@ -805,17 +803,17 @@ TEST_F(HCI_CommandChannelTest, LEMetaEventHandler) {
   test_device()->StartAclChannel(test_acl_chan());
 
   test_device()->SendCommandChannelPacket(le_meta_event_bytes0);
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_EQ(2, event_count0);
   EXPECT_EQ(0, event_count1);
 
   test_device()->SendCommandChannelPacket(le_meta_event_bytes0);
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_EQ(4, event_count0);
   EXPECT_EQ(0, event_count1);
 
   test_device()->SendCommandChannelPacket(le_meta_event_bytes1);
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_EQ(4, event_count0);
   EXPECT_EQ(1, event_count1);
 
@@ -823,7 +821,7 @@ TEST_F(HCI_CommandChannelTest, LEMetaEventHandler) {
   cmd_channel()->RemoveEventHandler(id0);
   test_device()->SendCommandChannelPacket(le_meta_event_bytes0);
   test_device()->SendCommandChannelPacket(le_meta_event_bytes1);
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_EQ(5, event_count0);
   EXPECT_EQ(2, event_count1);
 }
@@ -865,7 +863,7 @@ TEST_F(HCI_CommandChannelTest, TransportClosedCallback) {
 
   async::PostTask(dispatcher(),
                   [this] { test_device()->CloseCommandChannel(); });
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(closed_cb_called);
 }
 
@@ -907,10 +905,10 @@ TEST_F(HCI_CommandChannelTest, CommandTimeout) {
   EXPECT_NE(0u, id2);
 
   // Run the loop until the command timeout task gets scheduled.
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   AdvanceTimeBy(zx::msec(kCommandTimeoutMs));
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(2u, cb_count);
 }
@@ -992,20 +990,20 @@ TEST_F(HCI_CommandChannelTest, AsynchronousCommandChaining) {
   id1 = cmd_channel()->SendCommand(
       std::move(packet), dispatcher(), cb.share(), kTestEventCode0);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   // Should have received the Status but not the result.
   EXPECT_EQ(1u, cb_count);
 
   // Sending the complete will finish the command and add the next command.
   test_device()->SendCommandChannelPacket(rsp_bogocomplete);
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(3u, cb_count);
 
   // Finish out the command.
   test_device()->SendCommandChannelPacket(rsp_bogocomplete);
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(4u, cb_count);
 }

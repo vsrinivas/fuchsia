@@ -4,8 +4,6 @@
 
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 
-#include "gtest/gtest.h"
-
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "garnet/drivers/bluetooth/lib/testing/test_controller.h"
@@ -81,7 +79,7 @@ TEST_F(HCI_ConnectionTest, Close) {
   connection.Close(StatusCode::kRemoteUserTerminatedConnection);
   EXPECT_FALSE(connection.is_open());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
 }
 
@@ -122,7 +120,7 @@ TEST_F(HCI_ConnectionTest, CloseError) {
   connection.Close(StatusCode::kRemoteUserTerminatedConnection);
   EXPECT_FALSE(connection.is_open());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
 }
 

@@ -68,6 +68,7 @@ source_set("tests") {
     "//garnet/drivers/bluetooth/lib/gatt:testing",
     "//garnet/drivers/bluetooth/lib/l2cap:testing",
     "//garnet/drivers/bluetooth/lib/testing",
+    "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest",
   ]
 }

@@ -9,8 +9,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/zx/channel.h>
 
-#include "gtest/gtest.h"
-
 #include "garnet/drivers/bluetooth/lib/gatt/fake_layer.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_layer.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
@@ -80,7 +78,7 @@ TEST_F(GAP_AdapterTest, InitializeFailureNoFeaturesSupported) {
 
   // The controller supports nothing.
   InitializeAdapter(std::move(init_cb));
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_FALSE(success);
   EXPECT_EQ(1, init_cb_count);
@@ -102,7 +100,7 @@ TEST_F(GAP_AdapterTest, InitializeFailureNoBufferInfo) {
   test_device()->set_settings(settings);
 
   InitializeAdapter(std::move(init_cb));
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_FALSE(success);
   EXPECT_EQ(1, init_cb_count);
@@ -127,7 +125,7 @@ TEST_F(GAP_AdapterTest, InitializeSuccess) {
   test_device()->set_settings(settings);
 
   InitializeAdapter(std::move(init_cb));
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(success);
   EXPECT_EQ(1, init_cb_count);
@@ -151,7 +149,7 @@ TEST_F(GAP_AdapterTest, InitializeFailureHCICommandError) {
                                           hci::StatusCode::kHardwareFailure);
 
   InitializeAdapter(std::move(init_cb));
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_FALSE(success);
   EXPECT_EQ(1, init_cb_count);
@@ -172,7 +170,7 @@ TEST_F(GAP_AdapterTest, TransportClosedCallback) {
   test_device()->set_settings(settings);
 
   InitializeAdapter(std::move(init_cb));
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(success);
   EXPECT_EQ(1, init_cb_count);
@@ -182,7 +180,7 @@ TEST_F(GAP_AdapterTest, TransportClosedCallback) {
   // Deleting the FakeController should cause the transport closed callback to
   // get called.
   async::PostTask(dispatcher(), [this] { DeleteTestDevice(); });
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(transport_closed_called());
 }
@@ -205,7 +203,7 @@ TEST_F(GAP_AdapterTest, SetNameError) {
                                           hci::StatusCode::kHardwareFailure);
 
   InitializeAdapter(std::move(init_cb));
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(success);
   EXPECT_EQ(1, init_cb_count);
@@ -214,7 +212,7 @@ TEST_F(GAP_AdapterTest, SetNameError) {
 
   adapter()->SetLocalName(kNewName, name_cb);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_FALSE(result);
   EXPECT_EQ(hci::StatusCode::kHardwareFailure, result.protocol_error());
@@ -235,7 +233,7 @@ TEST_F(GAP_AdapterTest, SetNameSuccess) {
   test_device()->set_settings(settings);
 
   InitializeAdapter(std::move(init_cb));
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(success);
   EXPECT_EQ(1, init_cb_count);
@@ -244,7 +242,7 @@ TEST_F(GAP_AdapterTest, SetNameSuccess) {
 
   adapter()->SetLocalName(kNewName, name_cb);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(result);
   // Local name is only valid up to the first zero

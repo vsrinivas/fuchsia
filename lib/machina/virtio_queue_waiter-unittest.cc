@@ -4,20 +4,18 @@
 
 #include "garnet/lib/machina/virtio_queue_waiter.h"
 
-#include <lib/async-testutils/test_loop.h>
-
 #include "garnet/lib/machina/virtio_device_fake.h"
-#include "gtest/gtest.h"
+#include "lib/gtest/test_loop_fixture.h"
 
 namespace machina {
 namespace {
 
-TEST(VirtioQueueWaiter, Wait) {
-  async::TestLoop loop;
+using VirtioQueueWaiterTest = ::gtest::TestLoopFixture;
 
+TEST_F(VirtioQueueWaiterTest, Wait) {
   bool wait_complete = false;
   VirtioDeviceFake device;
-  VirtioQueueWaiter waiter(loop.async(), device.queue(),
+  VirtioQueueWaiter waiter(dispatcher(), device.queue(),
                            [&](zx_status_t status, uint32_t events) {
                              EXPECT_EQ(ZX_OK, status);
                              wait_complete = true;
@@ -26,12 +24,12 @@ TEST(VirtioQueueWaiter, Wait) {
   ASSERT_EQ(device.Init(), ZX_OK);
   EXPECT_EQ(ZX_OK, waiter.Begin());
 
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_FALSE(wait_complete);
 
   // Signal without a descriptor should not invoke the wait callback.
   device.queue()->Signal();
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_FALSE(wait_complete);
 
   // Add a descriptor and signal again. This should invoke the waiter.
@@ -42,7 +40,7 @@ TEST(VirtioQueueWaiter, Wait) {
                 .Build(),
             ZX_OK);
   device.queue()->Signal();
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(wait_complete);
 }
 

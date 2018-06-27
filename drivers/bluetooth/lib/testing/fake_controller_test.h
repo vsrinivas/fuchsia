@@ -12,9 +12,9 @@
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_packet.h"
 #include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
-#include "garnet/drivers/bluetooth/lib/testing/test_base.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
+#include "lib/gtest/test_loop_fixture.h"
 
 namespace btlib {
 namespace testing {
@@ -36,7 +36,7 @@ class FakeControllerBase;
 //     can respond to HCI commands the way a real controller would (albeit in a
 //     contrived fashion), emulate discovery and connection events, etc.
 template <class FakeControllerType>
-class FakeControllerTest : public TestBase {
+class FakeControllerTest : public ::gtest::TestLoopFixture {
  public:
   FakeControllerTest() = default;
   virtual ~FakeControllerTest() = default;
@@ -57,7 +57,7 @@ class FakeControllerTest : public TestBase {
       transport_->ShutDown();
     }
 
-    RunUntilIdle();
+    RunLoopUntilIdle();
 
     transport_ = nullptr;
     test_device_ = nullptr;
@@ -75,7 +75,7 @@ class FakeControllerTest : public TestBase {
     transport_->acl_data_channel()->SetDataRxHandler(
         std::bind(&FakeControllerTest<FakeControllerType>::OnDataReceived, this,
                   std::placeholders::_1),
-        TestBase::dispatcher());
+        dispatcher());
 
     return true;
   }
@@ -137,7 +137,7 @@ class FakeControllerTest : public TestBase {
     if (!data_received_callback_)
       return;
 
-    async::PostTask(TestBase::dispatcher(),
+    async::PostTask(dispatcher(),
                     [this, packet = std::move(data_packet)]() mutable {
                       data_received_callback_(std::move(packet));
                     });

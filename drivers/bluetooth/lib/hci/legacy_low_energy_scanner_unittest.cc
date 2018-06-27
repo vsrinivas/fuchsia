@@ -162,7 +162,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScanHCIErrors) {
       false, defaults::kLEScanInterval, defaults::kLEScanWindow, false,
       LEScanFilterPolicy::kNoWhiteList, kScanPeriodMs, cb));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   // Status should be failure and the scan parameters shouldn't have applied.
   EXPECT_EQ(LowEnergyScanner::ScanStatus::kFailed, status);
@@ -181,7 +181,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScanHCIErrors) {
       LEScanFilterPolicy::kNoWhiteList, kScanPeriodMs, cb));
 
   EXPECT_EQ(LowEnergyScanner::State::kInitiating, scanner()->state());
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   // Status should be failure but the scan parameters should have applied.
   EXPECT_EQ(LowEnergyScanner::ScanStatus::kFailed, status);
@@ -212,7 +212,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScan) {
       kScanPeriodMs, cb));
 
   EXPECT_EQ(LowEnergyScanner::State::kInitiating, scanner()->state());
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   // Scan should have started.
   EXPECT_EQ(LowEnergyScanner::ScanStatus::kStarted, status);
@@ -236,7 +236,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScan) {
 
   // After 10 s (kScanPeriodMs) the scan should stop by itself.
   AdvanceTimeBy(zx::msec(kScanPeriodMs));
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_EQ(LowEnergyScanner::ScanStatus::kComplete, status);
   EXPECT_FALSE(test_device()->le_scan_state().enabled);
   EXPECT_EQ(LowEnergyScanner::State::kIdle, scanner()->state());
@@ -264,7 +264,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StopScan) {
       10 * kScanPeriodMs, cb));
 
   EXPECT_EQ(LowEnergyScanner::State::kInitiating, scanner()->state());
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   // Scan should have started.
   EXPECT_EQ(LowEnergyScanner::ScanStatus::kStarted, status);
@@ -275,7 +275,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StopScan) {
   // StopScan() should terminate the scan session and the status should be
   // kStopped.
   EXPECT_TRUE(scanner()->StopScan());
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(LowEnergyScanner::ScanStatus::kStopped, status);
   EXPECT_FALSE(test_device()->le_scan_state().enabled);
@@ -304,7 +304,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StopScanWhileInitiating) {
   // StartScan() so that the it never completes. The HCI_LE_Set_Scan_Parameters
   // command *may* get sent but the scan should never get enabled.
   EXPECT_TRUE(scanner()->StopScan());
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(LowEnergyScanner::ScanStatus::kStopped, status);
   EXPECT_FALSE(test_device()->le_scan_state().enabled);
@@ -339,13 +339,13 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, ActiveScanResults) {
       LEScanFilterPolicy::kNoWhiteList, kTestPeriod, cb));
   EXPECT_EQ(LowEnergyScanner::State::kInitiating, scanner()->state());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   ASSERT_EQ(kExpectedResultCount, results.size());
 
   // Ending the scan period should notify Fake Device #4.
   scanner()->StopScanPeriodForTesting();
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_EQ(LowEnergyScanner::ScanStatus::kComplete, status);
   ASSERT_EQ(kExpectedResultCount + 1, results.size());
 
@@ -439,21 +439,21 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StopDuringActiveScan) {
       true, defaults::kLEScanInterval, defaults::kLEScanWindow, true,
       LEScanFilterPolicy::kNoWhiteList, LowEnergyScanner::kPeriodInfinite, cb));
   EXPECT_EQ(LowEnergyScanner::State::kInitiating, scanner()->state());
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_EQ(LowEnergyScanner::State::kScanning, scanner()->state());
 
   // Run the loop until we've seen an event for the last device that we
   // added. Fake Device 4 (i.e. kAddress4) is scannable but it never sends a
   // scan response so we expect that remain in the scanner's pending reports
   // list.
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_EQ(5u, results.size());
   EXPECT_EQ(results.find(kAddress4), results.end());
 
   // Stop the scan. Since we are terminating the scan period early,
   // LowEnergyScanner should not send a report for the pending device.
   EXPECT_TRUE(scanner()->StopScan());
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_EQ(LowEnergyScanner::State::kIdle, scanner()->state());
 
   EXPECT_EQ(5u, results.size());
@@ -484,7 +484,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, PassiveScanResults) {
 
   EXPECT_EQ(LowEnergyScanner::State::kInitiating, scanner()->state());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   ASSERT_EQ(kExpectedResultCount, results.size());
 
   // Verify the 6 results against the fake devices that were set up by

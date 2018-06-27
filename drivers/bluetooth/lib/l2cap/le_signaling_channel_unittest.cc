@@ -54,7 +54,7 @@ TEST_F(L2CAP_LESignalingChannelTest, IgnoreEmptyFrame) {
   fake_chan()->SetSendCallback(std::move(send_cb), dispatcher());
   fake_chan()->Receive(common::BufferView());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_FALSE(send_cb_called);
 }
 
@@ -315,7 +315,7 @@ TEST_F(L2CAP_LESignalingChannelTest, ConnParamUpdateAccept) {
 
   fake_chan()->Receive(cmd);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(fake_chan_cb_called);
   EXPECT_TRUE(conn_param_cb_called);
@@ -350,7 +350,7 @@ TEST_F(L2CAP_LESignalingChannelSlaveTest, ConnParamUpdateReject) {
   fake_chan()->SetSendCallback(cb, dispatcher());
   fake_chan()->Receive(cmd);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(cb_called);
 }
 

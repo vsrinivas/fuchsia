@@ -114,7 +114,7 @@ class BrEdrConnectionManagerTest : public TestingBase {
           CommandTransaction(kWriteScanEnableInq, {&kWriteScanEnableRsp}));
       connection_manager_ = nullptr;
     }
-    RunUntilIdle();
+    RunLoopUntilIdle();
     test_device()->Stop();
     device_cache_ = nullptr;
     TestingBase::TearDown();
@@ -149,7 +149,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, DisableConnectivity) {
 
   connmgr()->SetConnectable(false, cb);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(1u, cb_count);
 
@@ -160,7 +160,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, DisableConnectivity) {
 
   connmgr()->SetConnectable(false, cb);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(2u, cb_count);
 }
@@ -183,7 +183,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, EnableConnectivity) {
 
   connmgr()->SetConnectable(true, cb);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(1u, cb_count);
 
@@ -198,7 +198,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, EnableConnectivity) {
 
   connmgr()->SetConnectable(true, cb);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(2u, cb_count);
 }
@@ -381,7 +381,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, IncommingConnection) {
 
   test_device()->SendCommandChannelPacket(kConnectionRequest);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(6u, transactions);
 
@@ -397,7 +397,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, IncommingConnection) {
 
   SetConnectionManager(nullptr);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(9u, transactions);
 }
@@ -439,7 +439,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, IncommingConnectionFailedInterrogation) {
 
   test_device()->SendCommandChannelPacket(kConnectionRequest);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(5u, transactions);
 }

@@ -64,7 +64,7 @@ TEST_F(L2CAP_BrEdrSignalingChannelTest, RespondsToEchoRequest) {
   fake_chan()->SetSendCallback(std::move(cb), dispatcher());
   fake_chan()->Receive(cmd);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(called);
 }
 
@@ -93,7 +93,7 @@ TEST_F(L2CAP_BrEdrSignalingChannelTest, IgnoreEmptyFrame) {
   fake_chan()->SetSendCallback(std::move(send_cb), dispatcher());
   fake_chan()->Receive(common::BufferView());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_FALSE(send_cb_called);
 }
 
@@ -143,7 +143,7 @@ TEST_F(L2CAP_BrEdrSignalingChannelTest, RejectMalformedAdditionalCommand) {
   fake_chan()->SetSendCallback(std::move(send_cb), dispatcher());
   fake_chan()->Receive(cmd);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_EQ(2, cb_times_called);
 }
 
@@ -206,7 +206,7 @@ TEST_F(L2CAP_BrEdrSignalingChannelTest, HandleMultipleCommands) {
   fake_chan()->SetSendCallback(std::move(send_cb), dispatcher());
   fake_chan()->Receive(cmd);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_EQ(3, cb_times_called);
 }
 

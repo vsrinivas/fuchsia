@@ -6,8 +6,6 @@
 
 #include <vector>
 
-#include "gtest/gtest.h"
-
 #include <lib/async/cpp/task.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/defaults.h"
@@ -122,7 +120,7 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnection) {
       defaults::kLEScanWindow, kTestParams, callback, kConnectTimeoutMs);
   EXPECT_FALSE(ret);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_FALSE(connector()->request_pending());
   EXPECT_TRUE(callback_called);
@@ -160,7 +158,7 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionStatusError) {
   EXPECT_TRUE(ret);
   EXPECT_TRUE(connector()->request_pending());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_FALSE(connector()->request_pending());
   EXPECT_TRUE(callback_called);
@@ -195,7 +193,7 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionEventError) {
   EXPECT_TRUE(ret);
   EXPECT_TRUE(connector()->request_pending());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_FALSE(connector()->request_pending());
   EXPECT_TRUE(callback_called);
@@ -239,7 +237,7 @@ TEST_F(HCI_LowEnergyConnectorTest, Cancel) {
   // before.
   EXPECT_FALSE(connector()->timeout_posted());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_FALSE(connector()->timeout_posted());
   EXPECT_FALSE(connector()->request_pending());
@@ -266,7 +264,7 @@ TEST_F(HCI_LowEnergyConnectorTest, IncomingConnect) {
   test_device()->SendLEMetaEvent(kLEConnectionCompleteSubeventCode,
                                  common::BufferView(&event, sizeof(event)));
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   ASSERT_EQ(1u, in_connections().size());
 
@@ -315,7 +313,7 @@ TEST_F(HCI_LowEnergyConnectorTest, IncomingConnectDuringConnectionRequest) {
                                    common::BufferView(&event, sizeof(event)));
   });
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(status);
   EXPECT_EQ(1u, callback_count);
@@ -357,11 +355,11 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionTimeout) {
 
   // Advance the loop until the HCI command is processed (advancing the fake
   // clock here would cause the HCI command to time out).
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   // Make the connection attempt time out.
   AdvanceTimeBy(zx::msec(kConnectTimeoutMs));
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_FALSE(connector()->request_pending());
   EXPECT_TRUE(callback_called);
@@ -386,7 +384,7 @@ TEST_F(HCI_LowEnergyConnectorTest, SendRequestAndDelete) {
   EXPECT_TRUE(connector()->request_pending());
 
   DeleteConnector();
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(request_canceled);
   EXPECT_TRUE(in_connections().empty());

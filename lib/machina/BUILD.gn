@@ -155,6 +155,7 @@ executable("machina_unittests") {
   deps = [
     ":machina",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",

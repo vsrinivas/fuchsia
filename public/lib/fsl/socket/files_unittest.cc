@@ -6,21 +6,21 @@
 
 #include <fcntl.h>
 
-#include <lib/async-testutils/test_loop.h>
 #include <lib/zx/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/gtest/test_loop_fixture.h"
 
 namespace fsl {
 namespace {
 
-TEST(SocketAndFile, CopyToFileDescriptor) {
-  async::TestLoop loop;
+using SockAndFileTest = ::gtest::TestLoopFixture;
+
+TEST_F(SockAndFileTest, CopyToFileDescriptor) {
   files::ScopedTempDir tmp_dir;
   std::string tmp_file;
   tmp_dir.NewTempFile(&tmp_file);
@@ -31,12 +31,11 @@ TEST(SocketAndFile, CopyToFileDescriptor) {
   bool success;
   CopyToFileDescriptor(
       fsl::WriteStringToSocket("Hello"), std::move(destination),
-      loop.async(),
-      [&loop, &success](bool success_value, fxl::UniqueFD fd) {
+      dispatcher(),
+      [&success](bool success_value, fxl::UniqueFD fd) {
         success = success_value;
-        loop.Quit();
       });
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(success);
   std::string content;
@@ -44,8 +43,7 @@ TEST(SocketAndFile, CopyToFileDescriptor) {
   EXPECT_EQ("Hello", content);
 }
 
-TEST(SocketAndFile, CopyFromFileDescriptor) {
-  async::TestLoop loop;
+TEST_F(SockAndFileTest, CopyFromFileDescriptor) {
   files::ScopedTempDir tmp_dir;
   std::string tmp_file;
   tmp_dir.NewTempFile(&tmp_file);
@@ -59,12 +57,11 @@ TEST(SocketAndFile, CopyFromFileDescriptor) {
 
   bool success;
   CopyFromFileDescriptor(
-      std::move(source), std::move(socket1), loop.async(),
-      [&loop, &success](bool success_value, fxl::UniqueFD fd) {
+      std::move(source), std::move(socket1), dispatcher(),
+      [&success](bool success_value, fxl::UniqueFD fd) {
         success = success_value;
-        loop.Quit();
       });
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(success);
   std::string content;

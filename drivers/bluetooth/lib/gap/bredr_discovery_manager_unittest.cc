@@ -176,7 +176,7 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, RequestDiscoveryAndDrop) {
 
   EXPECT_FALSE(discovery_manager()->discovering());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(1u, devices_found);
   EXPECT_TRUE(discovery_manager()->discovering());
@@ -186,7 +186,7 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, RequestDiscoveryAndDrop) {
 
   test_device()->SendCommandChannelPacket(kInquiryComplete);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(2u, devices_found);
 
@@ -195,7 +195,7 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, RequestDiscoveryAndDrop) {
   session = nullptr;
   test_device()->SendCommandChannelPacket(kInquiryResult);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(2u, devices_found);
   EXPECT_FALSE(discovery_manager()->discovering());
@@ -224,7 +224,7 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, MultipleRequests) {
 
   EXPECT_FALSE(discovery_manager()->discovering());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(session1);
   EXPECT_EQ(1u, devices_found1);
@@ -241,7 +241,7 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, MultipleRequests) {
         session2 = std::move(cb_session);
       });
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(session2);
   EXPECT_EQ(1u, devices_found1);
@@ -250,18 +250,18 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, MultipleRequests) {
 
   test_device()->SendCommandChannelPacket(kInquiryResult);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(2u, devices_found1);
   EXPECT_EQ(1u, devices_found2);
 
   session1 = nullptr;
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   test_device()->SendCommandChannelPacket(kInquiryResult);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(2u, devices_found1);
   EXPECT_EQ(2u, devices_found2);
@@ -272,7 +272,7 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, MultipleRequests) {
 
   test_device()->SendCommandChannelPacket(kInquiryResult);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(2u, devices_found1);
   EXPECT_EQ(2u, devices_found2);
@@ -300,7 +300,7 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, RequestDiscoveryWhileStop) {
 
   EXPECT_FALSE(discovery_manager()->discovering());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(session1);
   EXPECT_EQ(1u, devices_found1);
@@ -324,12 +324,12 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, RequestDiscoveryWhileStop) {
 
   // We're still waiting on the previous session to complete, so we haven't
   // started tne new session yet.
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   test_device()->SendCommandChannelPacket(kInquiryResult);
   test_device()->SendCommandChannelPacket(kInquiryComplete);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(session2);
   EXPECT_EQ(1u, devices_found1);
@@ -338,7 +338,7 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, RequestDiscoveryWhileStop) {
 
   test_device()->SendCommandChannelPacket(kInquiryResult);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(1u, devices_found1);
   EXPECT_EQ(2u, devices_found2);
@@ -346,7 +346,7 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, RequestDiscoveryWhileStop) {
   // TODO(jamuraa, NET-619): test InquiryCancel when it is implemented
   session2 = nullptr;
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(1u, devices_found1);
   EXPECT_EQ(2u, devices_found2);
@@ -370,7 +370,7 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, RequestDiscoveryError) {
 
   EXPECT_FALSE(discovery_manager()->discovering());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_FALSE(discovery_manager()->discovering());
 }
@@ -398,21 +398,21 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, ContinuingDiscoveryError) {
 
   EXPECT_FALSE(discovery_manager()->discovering());
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(1u, devices_found);
   EXPECT_TRUE(discovery_manager()->discovering());
 
   test_device()->SendCommandChannelPacket(kInquiryCompleteError);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(error_callback);
   EXPECT_FALSE(discovery_manager()->discovering());
 
   session = nullptr;
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 }
 
 // Test: requesting discoverable works
@@ -430,7 +430,7 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, DiscoverableSet) {
 
   discovery_manager()->RequestDiscoverable(session_cb);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(0u, sessions.size());
   EXPECT_FALSE(discovery_manager()->discoverable());
@@ -440,14 +440,14 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, DiscoverableSet) {
 
   test_device()->SendCommandChannelPacket(kReadScanEnableRspNone);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   // Request another session while the first is pending.
   discovery_manager()->RequestDiscoverable(session_cb);
 
   test_device()->SendCommandChannelPacket(kWriteScanEnableRsp);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(2u, sessions.size());
   EXPECT_TRUE(discovery_manager()->discoverable());
@@ -464,7 +464,7 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, DiscoverableSet) {
 
   sessions.clear();
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_FALSE(discovery_manager()->discoverable());
 }
@@ -486,7 +486,7 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, DiscoverableRequestWhileStopping) {
 
   discovery_manager()->RequestDiscoverable(session_cb);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(1u, sessions.size());
   EXPECT_TRUE(discovery_manager()->discoverable());
@@ -496,7 +496,7 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, DiscoverableRequestWhileStopping) {
 
   sessions.clear();
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   // Request a new discovery before the procedure finishes.
   // This will queue another ReadScanEnable just in case the disable write is
@@ -509,7 +509,7 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, DiscoverableRequestWhileStopping) {
 
   // This shouldn't send any WriteScanEnable because we're already in the right
   // mode (TestController will assert if we do as it's not expecting)
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(1u, sessions.size());
   EXPECT_TRUE(discovery_manager()->discoverable());
@@ -519,7 +519,7 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, DiscoverableRequestWhileStopping) {
       CommandTransaction(kWriteScanEnableBoth, {&kWriteScanEnableRsp}));
   test_device()->SendCommandChannelPacket(kReadScanEnableRspPage);
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(1u, sessions.size());
   EXPECT_TRUE(discovery_manager()->discoverable());
@@ -531,7 +531,7 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, DiscoverableRequestWhileStopping) {
 
   sessions.clear();
 
-  RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_FALSE(discovery_manager()->discoverable());
 }
