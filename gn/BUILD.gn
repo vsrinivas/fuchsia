@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/fuchsia/zircon.gni")
 import("//build/gn/packages.gni")
 import("//build/package.gni")
 import("//build/toolchain/goma.gni")
@@ -54,8 +55,9 @@ if (package_host_tests != []) {
   }
 }
 
-# TODO(BLD-31): This Zircon->GN magic needs some comments.
-
+# Collect the source files that are dependencies of the create_gn_rules.py
+# script, below.  Unfortunately, exec_script cannot use a depfile produced
+# by the script and only supports a separately computed list of dependencies.
 zircon_files =
     exec_script("//build/zircon/list_source_files.py", [], "list lines")
 
@@ -70,9 +72,9 @@ supporting_templates = [
   "//build/zircon/sysroot.mako",
 ]
 
-# The following script generates GN build files for Zircon objects. It is placed
-# before everything else so that //zircon targets are available in due time.
-# See //build/zircon/README.md for more details.
+# The following script generates GN build files for Zircon objects.  It is
+# placed before everything else so that //zircon targets are available in
+# due time.  See //build/zircon/README.md for more details.
 exec_script("//build/zircon/create_gn_rules.py",
             [
               "--out",
@@ -80,9 +82,9 @@ exec_script("//build/zircon/create_gn_rules.py",
               "--staging",
               rebase_path("$root_out_dir/zircon-gn"),
               "--zircon-user-build",
-              rebase_path("//out/build-zircon/build-\${target_cpu}"),
+              rebase_path(zircon_build_abi_dir),
               "--zircon-tool-build",
-              rebase_path("//out/build-zircon"),
+              rebase_path("$zircon_tools_dir/.."),
             ],
             "",
             zircon_files + supporting_templates)
@@ -103,6 +105,18 @@ if (use_goma) {
     "export GOMACC='${goma_dir}/gomacc'",
   ]
 }
+_fx_build_zircon_args = ""
+if (zircon_use_asan) {
+  _fx_build_zircon_args += " -A"
+}
+foreach(selector, select_variant) {
+  if (selector == "host_asan") {
+    _fx_build_zircon_args += " -H"
+  }
+}
+if (_fx_build_zircon_args != "") {
+  _fx_config_lines += [ "FUCHSIA_BUILD_ZIRCON_ARGS=($_fx_build_zircon_args)" ]
+}
 write_file("$root_build_dir/fx.config", _fx_config_lines)
 
 # Generates breakpad symbol data for unstripped binaries.
@@ -119,23 +133,31 @@ action("breakpad_symbols") {
     "//build/images:ids.txt",
   ]
 
-  inputs = [ "//buildtools/${host_platform}/dump_syms/dump_syms" ]
-  sources = ["$root_out_dir/ids.txt"]
+  inputs = [
+    "//buildtools/${host_platform}/dump_syms/dump_syms",
+  ]
+  sources = [
+    "$root_out_dir/ids.txt",
+  ]
 
   # This action generates a single xxx.sym file for each binary in the ids file.
   # These symbol files are not used as the input to another build step, so we
   # don't list them as outputs. The summary file is all we need for infra to
   # find and upload the symbol files.
   outputs = [
-     "$root_out_dir/breakpad_symbols/symbol_file_mappings.json",
+    "$root_out_dir/breakpad_symbols/symbol_file_mappings.json",
   ]
 
   depfile = "${outputs[0]}.d"
 
   args = [
-    "-out-dir", rebase_path("$root_out_dir/breakpad_symbols"),
-    "-dump-syms-path", rebase_path("//buildtools/${host_platform}/dump_syms/dump_syms"),
-    "-summary-file", rebase_path(outputs[0], root_build_dir),
-    "-depfile", rebase_path(depfile, root_build_dir)
-  ] + rebase_path(sources, root_build_dir)
+           "-out-dir",
+           rebase_path("$root_out_dir/breakpad_symbols"),
+           "-dump-syms-path",
+           rebase_path("//buildtools/${host_platform}/dump_syms/dump_syms"),
+           "-summary-file",
+           rebase_path(outputs[0], root_build_dir),
+           "-depfile",
+           rebase_path(depfile, root_build_dir),
+         ] + rebase_path(sources, root_build_dir)
 }

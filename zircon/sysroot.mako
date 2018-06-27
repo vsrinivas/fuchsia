@@ -20,7 +20,6 @@ copy("${copy_target(path)}") {
 % endfor
 
 group("sysroot") {
-
   deps = [
     % for path, file in sorted(data.files.iteritems()):
     ":${copy_target(path)}",

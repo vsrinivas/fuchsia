@@ -2,9 +2,8 @@
 
 import("//build/sdk/sdk_atom.gni")
 
-if (current_toolchain != host_toolchain) {
-  assert(false, "The ${data.name} tool is host-only.")
-}
+assert(current_toolchain == host_toolchain,
+       "The ${data.name} tool is host-only.")
 
 copy("${data.name}") {
   sources = [
@@ -21,9 +20,7 @@ sdk_atom("${data.name}_sdk") {
   name = "${data.name}"
   category = "partner"
 
-  tags = [
-    "arch:host",
-  ]
+  tags = [ "arch:host" ]
 
   files = [
     {

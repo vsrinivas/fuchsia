@@ -8,9 +8,35 @@ declare_args() {
   # Where to find Zircon's host-side tools that are run as part of the build.
   zircon_tools_dir = "//out/build-zircon/tools"
 
+  # Zircon build directory for `target_cpu`, containing link-time `.so.abi`
+  # files that GN `deps` on //zircon/public libraries will link against.
+  # This should not be a sanitizer build.
+  zircon_build_abi_dir = "//out/build-zircon/build-$target_cpu"
+
   # Zircon build directory for `target_cpu`, containing `.manifest` and
-  # `.bin` files for Zircon's BOOTFS, BOOTDATA, and kernel image.
-  zircon_build_dir = "//out/build-zircon/build-${target_cpu}"
+  # `.zbi` files for Zircon's BOOTFS and kernel.  This provides the kernel
+  # and Zircon components used in the boot image.  It also provides the
+  # Zircon shared libraries used at runtime in Fuchsia packages.
+  #
+  # If left `""` (the default), then this is computed from
+  # [`zircon_build_abi_dir`](#zircon_build_abi_dir) and
+  # [`zircon_use_asan`](#zircon_use_asan).
+  zircon_build_dir = ""
+
+  # Set this if [`zircon_build_dir`](#zircon_build_dir) was built with
+  # `USE_ASAN=true`, e.g. `//scripts/build-zircon.sh -A`.  This mainly
+  # affects the defaults for [`zircon_build_dir`](#zircon_build_dir) and
+  # [`zircon_build_abi_dir`](#zircon_build_abi_dir).  It also gets noticed
+  # by //scripts/fx commands that rebuild Zircon so that they use `-A`
+  # again next time.
+  zircon_use_asan = false
+}
+
+if (zircon_build_dir == "") {
+  zircon_build_dir = zircon_build_abi_dir
+  if (zircon_use_asan) {
+    zircon_build_dir += "-asan"
+  }
 }
 
 # Template for running a Zircon host tool as part of the build.

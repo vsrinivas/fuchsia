@@ -14,104 +14,104 @@ config("${data.name}_config") {
   ]
 }
 
-if (!toolchain_variant.is_pic_default) {
+if (current_toolchain != shlib_toolchain) {
 
-# In the main toolchain, we just redirect to the same target in the shared
-# toolchain.
+  # In the main toolchain, we just redirect to the same target in the shared
+  # toolchain.
 
-group("${data.name}") {
-  public_deps = [
-    ":${data.name}($current_toolchain-shared)",
-  ]
+  group("${data.name}") {
+    public_deps = [
+      ":${data.name}($current_toolchain-shared)",
+    ]
 
-  public_configs = [
-    ":${data.name}_config",
-  ]
-}
+    public_configs = [
+      ":${data.name}_config",
+    ]
+  }
 
 } else {
 
-# In the shared toolchain, we normally set up the library.
+  # In the shared toolchain, we normally set up the library.
 
-_abi_lib = "$root_out_dir/${data.lib_name}"
-% if data.has_impl_prebuilt:
-_impl_lib = "$root_out_dir/${data.lib_name}.impl"
-% endif
-_debug_lib = "$root_out_dir/lib.unstripped/${data.lib_name}"
+  _abi_lib = "$root_out_dir/${data.lib_name}"
+  % if data.has_impl_prebuilt:
+  _impl_lib = "$root_out_dir/${data.lib_name}.impl"
+  % endif
+  _debug_lib = "$root_out_dir/lib.unstripped/${data.lib_name}"
 
-copy("${data.name}_copy_abi_lib") {
-  sources = [
-    "${data.prebuilt}",
-  ]
+  copy("${data.name}_copy_abi_lib") {
+    sources = [
+      "${data.prebuilt}",
+    ]
 
-  outputs = [
-    _abi_lib,
-  ]
-}
+    outputs = [
+      _abi_lib,
+    ]
+  }
 
-% if data.has_impl_prebuilt:
-copy("${data.name}_copy_impl_lib") {
-sources = [
- "${data.impl_prebuilt}",
-]
+  % if data.has_impl_prebuilt:
+  copy("${data.name}_copy_impl_lib") {
+    sources = [
+      "${data.impl_prebuilt}",
+    ]
 
-outputs = [
- _impl_lib,
-]
-}
-% else:
-group("${data.name}_copy_impl_lib") {}
-% endif
+    outputs = [
+      _impl_lib,
+    ]
+  }
+  % else:
+  group("${data.name}_copy_impl_lib") {}
+  % endif
 
-copy("${data.name}_copy_unstripped_lib") {
-  sources = [
-    "${data.debug_prebuilt}",
-  ]
+  copy("${data.name}_copy_unstripped_lib") {
+    sources = [
+      "${data.debug_prebuilt}",
+    ]
 
-  outputs = [
-    _debug_lib,
-  ]
-}
+    outputs = [
+      _debug_lib,
+    ]
+  }
 
-_linked_lib = _abi_lib
-if (is_debug) {
-  _linked_lib = _debug_lib
-}
-config("${data.name}_lib_config") {
-  libs = [
-    _linked_lib,
-  ]
+  _linked_lib = _abi_lib
+  if (is_debug) {
+    _linked_lib = _debug_lib
+  }
+  config("${data.name}_lib_config") {
+    libs = [
+      _linked_lib,
+    ]
 
-  visibility = [
-    ":*",
-  ]
-}
+    visibility = [
+      ":*",
+    ]
+  }
 
-group("${data.name}") {
+  group("${data.name}") {
 
-  public_deps = [
-    ":${data.name}_copy_abi_lib",
-    ":${data.name}_copy_impl_lib",
-    ":${data.name}_copy_unstripped_lib",
-    % for dep in sorted(data.deps):
-    "../${dep}",
-    % endfor
-    % for dep in sorted(data.fidl_deps):
-    "../../fidl/${dep}",
-    % endfor
-  ]
+    public_deps = [
+      ":${data.name}_copy_abi_lib",
+      ":${data.name}_copy_impl_lib",
+      ":${data.name}_copy_unstripped_lib",
+      % for dep in sorted(data.deps):
+      "../${dep}",
+      % endfor
+      % for dep in sorted(data.fidl_deps):
+      "../../fidl/${dep}",
+      % endfor
+    ]
 
-  public_configs = [
-    ":${data.name}_config",
-    ":${data.name}_lib_config",
-  ]
+    public_configs = [
+      ":${data.name}_config",
+      ":${data.name}_lib_config",
+    ]
 
-  data_deps = [
-    ":${data.name}_copy_abi_lib",
-  ]
-}
+    data_deps = [
+      ":${data.name}_copy_abi_lib",
+    ]
+  }
 
-}  # !toolchain_variant.is_pic_default
+}  # current_toolchain != shlib_toolchain
 
 sdk_atom("${data.name}_sdk") {
   domain = "cpp"
@@ -137,9 +137,9 @@ sdk_atom("${data.name}_sdk") {
     {
       source = "$shared_out_dir/${data.lib_name}"
       dest = "lib/${data.lib_name}"
-    % if not data.has_impl_prebuilt:
+      % if not data.has_impl_prebuilt:
       packaged = true
-    % endif
+      % endif
     },
     % if data.has_impl_prebuilt:
     {
