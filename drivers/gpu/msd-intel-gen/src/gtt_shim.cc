@@ -34,12 +34,11 @@ public:
         return false;
     }
 
-    bool GlobalGttInsert(uint64_t addr, magma::PlatformBuffer* buffer,
-                         magma::PlatformBusMapper::BusMapping* bus_mapping, uint64_t page_offset,
+    bool GlobalGttInsert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t page_offset,
                          uint64_t page_count, CachingType caching_type) override
     {
-        return pci_device()->GetGtt()->GlobalGttInsert(addr, buffer, bus_mapping, page_offset,
-                                                       page_count, caching_type);
+        return pci_device()->GetGtt()->GlobalGttInsert(addr, buffer, page_offset, page_count,
+                                                       caching_type);
     }
 
 private:

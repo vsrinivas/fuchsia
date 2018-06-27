@@ -48,21 +48,22 @@ std::unique_ptr<GpuMapping> AddressSpace::MapBufferGpu(std::shared_ptr<AddressSp
     uint64_t page_offset = offset / PAGE_SIZE;
     uint32_t page_count = length / PAGE_SIZE;
 
-    std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping =
-        address_space->owner_->GetBusMapper()->MapPageRangeBus(buffer->platform_buffer(),
-                                                               page_offset, page_count);
-    if (!bus_mapping)
-        return DRETP(nullptr, "failed to bus map the page range");
+    std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping;
 
     if (address_space->type() == ADDRESS_SPACE_PPGTT) {
+        bus_mapping = address_space->owner_->GetBusMapper()->MapPageRangeBus(
+            buffer->platform_buffer(), page_offset, page_count);
+        if (!bus_mapping)
+            return DRETP(nullptr, "failed to bus map the page range");
+
         if (!address_space->Insert(gpu_addr, bus_mapping.get(), page_offset, page_count,
                                    CACHING_LLC))
             return DRETP(nullptr, "failed to insert into address_space");
 
     } else {
         if (!static_cast<Gtt*>(address_space.get())
-                 ->GlobalGttInsert(gpu_addr, buffer->platform_buffer(), bus_mapping.get(),
-                                   page_offset, page_count, CACHING_LLC))
+                 ->GlobalGttInsert(gpu_addr, buffer->platform_buffer(), page_offset, page_count,
+                                   CACHING_LLC))
             return DRETP(nullptr, "failed to insert into address_space");
     }
 

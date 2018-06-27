@@ -59,8 +59,7 @@ public:
         return false;
     }
 
-    bool GlobalGttInsert(uint64_t addr, magma::PlatformBuffer* buffer,
-                         magma::PlatformBusMapper::BusMapping* bus_mapping, uint64_t page_offset,
+    bool GlobalGttInsert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t page_offset,
                          uint64_t page_count, CachingType caching_type) override
     {
         // Bus mapping will be redone in the core driver.

@@ -20,10 +20,8 @@ public:
 
     virtual bool Init(uint64_t gtt_size) = 0;
 
-    virtual bool GlobalGttInsert(uint64_t addr, magma::PlatformBuffer* buffer,
-                                 magma::PlatformBusMapper::BusMapping* bus_mapping,
-                                 uint64_t page_offset, uint64_t page_count,
-                                 CachingType caching_type) = 0;
+    virtual bool GlobalGttInsert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t page_offset,
+                                 uint64_t page_count, CachingType caching_type) = 0;
 
     static std::unique_ptr<Gtt> CreateShim(Owner* owner);
 
