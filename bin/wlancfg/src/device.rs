@@ -3,27 +3,23 @@
 // found in the LICENSE file.
 
 use config::{self, Config};
-use fidl;
+use fidl::{self, endpoints2::create_endpoints};
 use futures::prelude::*;
 use futures::{future, stream};
+use shim;
 use std::sync::Arc;
 use wlan;
-use wlan_service::{self, DeviceWatcherEvent, DeviceServiceProxyInterface};
+use wlan_service::{self, DeviceWatcherEvent, DeviceServiceProxy};
 use zx;
 
-#[derive(Debug)]
-pub struct Listener<Proxy>
-where
-    Proxy: DeviceServiceProxyInterface,
-{
-    proxy: Proxy,
+pub struct Listener {
+    proxy: DeviceServiceProxy,
     config: Config,
+    legacy_client: shim::ClientRef,
 }
 
-pub fn handle_event<Proxy>(
-    listener: &Arc<Listener<Proxy>>, evt: DeviceWatcherEvent,
-) -> impl Future<Item = (), Error = fidl::Error>
-where Proxy: DeviceServiceProxyInterface,
+pub fn handle_event(listener: &Arc<Listener>, evt: DeviceWatcherEvent)
+    -> impl Future<Item = (), Error = fidl::Error>
 {
     println!("wlancfg got event: {:?}", evt);
     match evt {
@@ -50,11 +46,8 @@ where Proxy: DeviceServiceProxyInterface,
     }
 }
 
-fn on_phy_added<Proxy>(
-    listener: &Arc<Listener<Proxy>>, id: u16,
-) -> impl Future<Item = (), Error = Never>
-where
-    Proxy: DeviceServiceProxyInterface,
+fn on_phy_added(listener: &Arc<Listener>, id: u16)
+    -> impl Future<Item = (), Error = Never>
 {
     println!("wlancfg: phy {} added", id);
 
@@ -107,41 +100,45 @@ where
         .recover(|e| println!("failure in on_phy_added: {:?}", e))
 }
 
-fn on_phy_removed<Proxy>(
-    _listener: &Arc<Listener<Proxy>>, id: u16,
-) -> impl Future<Item = (), Error = Never>
-where
-    Proxy: DeviceServiceProxyInterface,
+fn on_phy_removed(_listener: &Arc<Listener>, id: u16)
+    -> impl Future<Item = (), Error = Never>
 {
     println!("wlancfg: phy removed: {}", id);
     future::ok(())
 }
 
-fn on_iface_added<Proxy>(
-    _listener: &Arc<Listener<Proxy>>, id: u16,
-) -> impl Future<Item = (), Error = Never>
-where
-    Proxy: DeviceServiceProxyInterface,
+fn on_iface_added(listener: &Arc<Listener>, iface_id: u16)
+    -> impl Future<Item = (), Error = Never>
 {
-    println!("wlancfg: iface added: {}", id);
-    future::ok(())
+    let service = listener.proxy.clone();
+    let legacy_client = listener.legacy_client.clone();
+    create_endpoints()
+        .into_future()
+        .and_then(move |(sme, remote)| {
+            service.get_client_sme(iface_id, remote)
+                .map(move |status| {
+                    if status == zx::sys::ZX_OK {
+                        let c = shim::Client { service, sme, iface_id };
+                        legacy_client.set_if_empty(c);
+                    } else {
+                        eprintln!("GetClientSme returned {}", zx::Status::from_raw(status));
+                    }
+                })
+        })
+        .recover(|e| eprintln!("Failed to get client SME: {}", e))
+        .inspect(move |()| println!("wlancfg: iface added: {}", iface_id))
 }
 
-fn on_iface_removed<Proxy>(
-    _listener: &Arc<Listener<Proxy>>, id: u16,
-) -> impl Future<Item = (), Error = Never>
-where
-    Proxy: DeviceServiceProxyInterface,
+fn on_iface_removed(listener: &Arc<Listener>, id: u16)
+    -> impl Future<Item = (), Error = Never>
 {
+    listener.legacy_client.remove_if_matching(id);
     println!("wlancfg: iface removed: {}", id);
     future::ok(())
 }
 
-impl<Proxy> Listener<Proxy>
-where
-    Proxy: DeviceServiceProxyInterface,
-{
-    pub fn new(proxy: Proxy, config: Config) -> Arc<Self> {
-        Arc::new(Listener { proxy, config })
+impl Listener {
+    pub fn new(proxy: DeviceServiceProxy, config: Config, legacy_client: shim::ClientRef) -> Arc<Self> {
+        Arc::new(Listener { proxy, config, legacy_client })
     }
 }
