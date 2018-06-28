@@ -355,9 +355,25 @@ private:
     unsigned int names_matched_ = 0;
 
     bool PatternMatch(const char* name, bool casefold) const {
+        bool excludes = false, included = false;
         for (auto next = begin_; next != end_; ++next) {
-            if (fnmatch(*next, name, casefold ? FNM_CASEFOLD : 0) == 0) {
-                return true;
+            auto ptn = *next;
+            if (ptn[0] == '!' || ptn[0] == '^') {
+                excludes = true;
+            } else {
+                included = (included || fnmatch(
+                                ptn, name, casefold ? FNM_CASEFOLD : 0) == 0);
+            }
+        }
+        if (included && excludes) {
+            for (auto next = begin_; next != end_; ++next) {
+                auto ptn = *next;
+                if (ptn[0] == '!' || ptn[0] == '^') {
+                    ++ptn;
+                    if (fnmatch(ptn, name, casefold ? FNM_CASEFOLD : 0) == 0) {
+                        return false;
+                    }
+                }
             }
         }
         return false;
@@ -1767,8 +1783,10 @@ The BOOTFS image contains all files from BOOTFS items in ZBI input files,\n\
 manifest files, directories, and `--entry` switches (in input order unless\n\
 `--sort` was specified).\n\
 \n\
-Arguments after -- are shell filename patterns (* matches even /)\n\
+Each argument after -- is shell filename PATTERN (* matches even /)\n\
 to filter the files that will be packed into BOOTFS, extracted, or listed.\n\
+For a PATTERN that starts with ! or ^ matching names are excluded after\n\
+including matches for all positive PATTERN arguments.\n\
 \n\
 When extracting a single file, `--output` or `-o` can be used.\n\
 Otherwise multiple files are created with their BOOTFS file names\n\
