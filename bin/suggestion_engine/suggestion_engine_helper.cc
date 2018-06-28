@@ -11,23 +11,12 @@ namespace modular {
 SuggestionPrototype* CreateSuggestionPrototype(
     SuggestionPrototypeMap* owner, const std::string& source_url,
     const std::string& story_id, fuchsia::modular::Proposal proposal) {
-  return CreateSuggestionPrototype(owner, source_url, story_id, "",
-                                   std::move(proposal));
-}
-
-SuggestionPrototype* CreateSuggestionPrototype(
-    SuggestionPrototypeMap* owner, const std::string& source_url,
-    const std::string& story_id, const std::string& preloaded_story_id,
-    fuchsia::modular::Proposal proposal) {
   auto prototype_pair = owner->emplace(std::make_pair(source_url, proposal.id),
                                        std::make_unique<SuggestionPrototype>());
-
-  SuggestionPrototype* suggestion_prototype =
-      prototype_pair.first->second.get();
-  suggestion_prototype->preloaded_story_id = preloaded_story_id;
+  auto suggestion_prototype = prototype_pair.first->second.get();
   suggestion_prototype->suggestion_id = fxl::GenerateUUID();
   suggestion_prototype->source_url = source_url;
-
+  // TODO(miguelfrde): remove when cleaning usage of proposal.story_id.
   if (story_id.empty()) {
     suggestion_prototype->story_id = proposal.story_id;
   } else {

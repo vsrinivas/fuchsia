@@ -156,11 +156,6 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   friend class NextProcessor;
   friend class QueryProcessor;
 
-  // Used by AddNextProposal to create a kind-of-proto-story and pre execute
-  // actions when |proposal.preload| is true.
-  void AddProposalWithRichSuggestion(ProposalPublisherImpl* source,
-                                     fuchsia::modular::Proposal proposal);
-
   // TODO(andrewosh): Performing actions should be handled by a separate
   // interface that's passed to the SuggestionEngineImpl.
   //
@@ -218,10 +213,6 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
 
   std::string StoryIdFromName(const std::string& source_url,
                               const std::string& story_name);
-
-  // Returns true iff the component at |component_url| is allowed to make rich
-  // suggestions (i.e. pre-load stories to be displayed as suggestions).
-  bool CanComponentUseRichSuggestions(const std::string& component_url);
 
   fidl::BindingSet<fuchsia::modular::SuggestionEngine> bindings_;
   fidl::BindingSet<fuchsia::modular::SuggestionProvider>

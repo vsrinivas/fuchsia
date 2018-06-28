@@ -21,9 +21,6 @@ fuchsia::modular::Suggestion CreateSuggestion(
     const SuggestionPrototype& prototype) {
   fuchsia::modular::Suggestion suggestion;
   suggestion.uuid = prototype.suggestion_id;
-  if (!prototype.preloaded_story_id.empty()) {
-    suggestion.preloaded_story_id = prototype.preloaded_story_id;
-  }
   fidl::Clone(prototype.proposal.display, &suggestion.display);
   return suggestion;
 }

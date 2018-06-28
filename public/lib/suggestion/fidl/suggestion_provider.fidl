@@ -95,11 +95,6 @@ struct Suggestion {
   // only suggestion shown to the user.
   float32 confidence;
 
-  // Story id for a rich suggestion. User shell may opt to start and compose the
-  // story's UI as the suggestion display, instead of making use of the properties
-  // in |display|.
-  string? preloaded_story_id;
-
   // Display properties of the Suggestion
   SuggestionDisplay display;
 };

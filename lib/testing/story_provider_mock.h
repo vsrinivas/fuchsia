@@ -32,16 +32,6 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
     return controller_mock_;
   }
 
-  const std::string& last_created_story() const { return last_created_story_; }
-
-  const std::string& last_created_kind_of_story() const {
-    return last_created_kind_of_story_;
-  }
-
-  const std::string& last_promoted_story() const {
-    return last_promoted_story_;
-  }
-
  private:
   // |fuchsia::modular::StoryProvider|
   void CreateStory(fidl::StringPtr url, CreateStoryCallback callback) override {
@@ -61,8 +51,7 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
   // |fuchsia::modular::StoryProvider|
   void CreateKindOfProtoStory(CreateKindOfProtoStoryCallback callback)
       override {
-    last_created_kind_of_story_ = "kindoffoo";
-    callback("kindoffoo");
+    callback("foo");
   }
 
   // |fuchsia::modular::StoryProvider|
@@ -122,12 +111,9 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
   }
 
   void PromoteKindOfProtoStory(fidl::StringPtr story_id) override {
-    last_promoted_story_ = story_id;
   }
 
   std::string last_created_story_;
-  std::string last_created_kind_of_story_;
-  std::string last_promoted_story_;
   StoryControllerMock controller_mock_;
   fidl::BindingSet<fuchsia::modular::StoryController> binding_set_;
   fidl::InterfacePtrSet<fuchsia::modular::StoryProviderWatcher> watchers_;

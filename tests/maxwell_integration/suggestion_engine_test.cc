@@ -829,53 +829,6 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
             story_provider()->story_controller().last_added_module());
 }
 
-TEST_F(SuggestionInteractionTest, ProposalWithRichSuggestion) {
-  Proposinator p(suggestion_engine());
-  StartListening(10 /* max_results */);
-
-  auto module_id = "foo://bar1";
-
-  fuchsia::modular::AddModule add_module;
-  add_module.story_id = "foo://bar";
-  add_module.module_name = module_id;
-  add_module.intent.action.handler = module_id;
-  add_module.surface_parent_module_path =
-      fidl::VectorPtr<fidl::StringPtr>::New(0);
-  add_module.surface_relation = fuchsia::modular::SurfaceRelation();
-
-  fuchsia::modular::Action action;
-  action.set_add_module(std::move(add_module));
-  fidl::VectorPtr<fuchsia::modular::Action> actions;
-  actions.push_back(std::move(action));
-
-  auto proposal = CreateProposal("1", "1", std::move(actions),
-                                 fuchsia::modular::AnnoyanceType::NONE);
-  AddProposalListenerBinding(proposal.listener.NewRequest());
-  proposal.wants_rich_suggestion = true;
-  p.Propose(std::move(proposal));
-
-  WaitUntilIdle();
-  EXPECT_EQ(1, suggestion_count());
-
-  // There should be one suggestion, and the add module action should have
-  // been executed. A KindOfProtoStory should have been created, but not
-  // yet promoted. That only happens if the 'user' accepts the suggestion.
-  EXPECT_EQ(GetOnlySuggestion()->preloaded_story_id, "kindoffoo");
-  EXPECT_EQ(story_provider()->last_created_kind_of_story(), "kindoffoo");
-  EXPECT_EQ(module_id,
-            story_provider()->story_controller().last_added_module());
-  EXPECT_EQ(story_provider()->last_created_story(), "");
-  EXPECT_EQ(story_provider()->last_promoted_story(), "");
-
-  auto suggestion_id = GetOnlySuggestion()->uuid;
-  AcceptSuggestion(suggestion_id);
-  WaitUntilIdle();
-
-  // The story provider mock uses "kindoffoo" as the story id for KindOfProto
-  // stories.
-  EXPECT_EQ(story_provider()->last_promoted_story(), "kindoffoo");
-}
-
 TEST_F(SuggestionInteractionTest, AcceptSugestion_QueryAction) {
   AskProposinator p(suggestion_engine());
   StartListening(10);
