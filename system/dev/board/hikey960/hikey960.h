@@ -14,7 +14,6 @@
 enum {
     BTI_BOARD,
     BTI_USB_DWC3,
-    BTI_USB_XHCI,
     BTI_DSI,
     BTI_MALI,
 };
@@ -28,7 +27,6 @@ typedef struct {
     hi3660_t* hi3660;
     usb_mode_switch_protocol_t usb_mode_switch;
     usb_mode_t usb_mode;
-    usb_mode_t initial_usb_mode;
 } hikey960_t;
 
 // hikey960-devices.c

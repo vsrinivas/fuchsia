@@ -47,39 +47,6 @@ static const pbus_dev_t dwc3_dev = {
     .bti_count = countof(dwc3_btis),
 };
 
-
-static const pbus_mmio_t xhci_mmios[] = {
-    {
-        .base = IMX8M_USB2_BASE,
-        .length = IMX8M_USB2_LENGTH,
-    },
-};
-static const pbus_irq_t xhci_irqs[] = {
-    {
-        .irq = IMX8M_A53_INTR_USB2,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
-};
-static const pbus_bti_t xhci_btis[] = {
-    {
-        .iommu_index = 0,
-        .bti_id = BTI_USB,
-    },
-};
-
-static const pbus_dev_t xhci_dev = {
-    .name = "xhci",
-    .vid = PDEV_VID_GENERIC,
-    .pid = PDEV_PID_GENERIC,
-    .did = PDEV_DID_USB_XHCI,
-    .mmios = xhci_mmios,
-    .mmio_count = countof(xhci_mmios),
-    .irqs = xhci_irqs,
-    .irq_count = countof(xhci_irqs),
-    .btis = xhci_btis,
-    .bti_count = countof(xhci_btis),
-};
-
 zx_status_t imx_usb_init(imx8mevk_bus_t* bus) {
     zx_status_t status;
     zx_handle_t bti;
@@ -148,11 +115,6 @@ zx_status_t imx_usb_init(imx8mevk_bus_t* bus) {
 
     if ((status = pbus_device_add(&bus->pbus, &dwc3_dev, 0)) != ZX_OK) {
         zxlogf(ERROR, "hi3360_add_devices could not add dwc3_dev: %d\n", status);
-        return status;
-    }
-    // xhci_dev is enabled/disabled dynamically, so don't enable it here
-    if ((status = pbus_device_add(&bus->pbus, &xhci_dev, PDEV_ADD_DISABLED)) != ZX_OK) {
-        zxlogf(ERROR, "%s could not add xhci_dev: %d\n", __FUNCTION__, status);
         return status;
     }
     return ZX_OK;

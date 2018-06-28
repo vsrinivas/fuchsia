@@ -54,28 +54,12 @@ static const pbus_dev_t display_dev = {
     .bti_count = countof(imx8mevk_display_btis),
 };
 
-
 static zx_status_t imx8mevk_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
-    imx8mevk_bus_t* bus = ctx;
-    *out_mode = bus->initial_usb_mode;
+    *out_mode = USB_MODE_HOST;
     return ZX_OK;
 }
 
 static zx_status_t imx8mevk_set_mode(void* ctx, usb_mode_t mode) {
-    imx8mevk_bus_t* bus = ctx;
-
-    if (mode == bus->usb_mode) {
-        return ZX_OK;
-    }
-    if (mode == USB_MODE_OTG) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    // add or remove XHCI device
-    pbus_device_enable(&bus->pbus, PDEV_VID_GENERIC, PDEV_PID_GENERIC, PDEV_DID_USB_XHCI,
-                       mode == USB_MODE_HOST);
-
-    bus->usb_mode = mode;
     return ZX_OK;
 }
 
@@ -142,7 +126,6 @@ static int imx8mevk_start_thread(void* arg) {
 
     bus->usb_mode_switch.ops = &usb_mode_switch_ops;
     bus->usb_mode_switch.ctx = bus;
-    bus->initial_usb_mode = USB_MODE_HOST;
     // TODO: Power and Clocks
 
     // start the gpio driver first so we can do our initial pinmux

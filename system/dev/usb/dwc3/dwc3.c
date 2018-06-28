@@ -126,6 +126,25 @@ static void dwc3_start_peripheral_mode(dwc3_t* dwc) {
     mtx_unlock(&dwc->lock);
 }
 
+static zx_status_t xhci_get_protocol(void* ctx, uint32_t proto_id, void* protocol) {
+    dwc3_t* dwc = ctx;
+    // XHCI uses same MMIO and IRQ as dwc3, so we can just share our pdev protoocl
+    // with the XHCI driver
+    return device_get_protocol(dwc->parent, proto_id, protocol);
+}
+
+static void xhci_release(void* ctx) {
+    dwc3_t* dwc = ctx;
+    // signal that XHCI driver has shut down
+    completion_signal(&dwc->xhci_done);
+}
+
+static zx_protocol_device_t xhci_dev_proto = {
+    .version = DEVICE_OPS_VERSION,
+    .get_protocol = xhci_get_protocol,
+    .release = xhci_release,
+};
+
 static void dwc3_start_host_mode(dwc3_t* dwc) {
     volatile void* mmio = dwc3_mmio(dwc);
 
@@ -136,6 +155,29 @@ static void dwc3_start_host_mode(dwc3_t* dwc) {
                               GCTL_PWRDNSCALE(2));
     mtx_unlock(&dwc->lock);
 
+    // add a device to bind the XHCI driver
+    ZX_DEBUG_ASSERT(dwc->xhci_dev == NULL);
+
+    zx_device_prop_t props[] = {
+        {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
+        {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GENERIC},
+        {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_USB_XHCI},
+    };
+
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "dwc3",
+        .proto_id = ZX_PROTOCOL_PLATFORM_DEV,
+        .ctx = dwc,
+        .ops = &xhci_dev_proto,
+        .props = props,
+        .prop_count = countof(props),
+    };
+
+    zx_status_t status = device_add(dwc->parent, &args, &dwc->xhci_dev);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "dwc3_start_host_mode failed to add device for XHCI: %d\n", status);
+    }
 }
 
 void dwc3_usb_reset(dwc3_t* dwc) {
@@ -312,10 +354,14 @@ static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
         dwc->irq_handle = ZX_HANDLE_INVALID;
         dwc3_disconnected(dwc);
         dwc3_stop(dwc);
-    }
-
-    if (mode == USB_MODE_HOST) {
-        dwc3_start_host_mode(dwc);
+    } else if (dwc->usb_mode == USB_MODE_HOST) {
+        if (dwc->xhci_dev) {
+            completion_reset(&dwc->xhci_done);
+            device_remove(dwc->xhci_dev);
+            // Wait for XHCI to shut down before switching to device mode
+            completion_wait(&dwc->xhci_done, ZX_TIME_INFINITE);
+            dwc->xhci_dev = NULL;
+        }
     }
 
     status = usb_mode_switch_set_mode(&dwc->ums, mode);
@@ -331,6 +377,8 @@ static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
         }
 
         dwc3_start_peripheral_mode(dwc);
+    } else if (mode == USB_MODE_HOST) {
+        dwc3_start_host_mode(dwc);
     }
 
     dwc->usb_mode = mode;
