@@ -110,7 +110,7 @@ def main():
         canon_tgt = os.path.realpath(tgt)
         if not canon_tgt.startswith(canon_root_out_dir):
           raise ValueError("--go-dependency destination not in --root-out-dir: provided=%s, path=%s, realpath=%s" % (dst, tgt, canon_tgt))
-        os.symlink(src, tgt)
+        os.symlink(os.path.relpath(src, os.path.dirname(tgt)), tgt)
 
     gopath = os.path.abspath(project_path)
 
