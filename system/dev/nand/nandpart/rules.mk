@@ -4,13 +4,18 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
+# Driver.
+
 MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
 MODULE_SRCS := \
+    $(LOCAL_DIR)/aml-bad-block.cpp \
+    $(LOCAL_DIR)/bad-block.cpp \
     $(LOCAL_DIR)/binding.c \
     $(LOCAL_DIR)/nandpart.cpp \
+    $(LOCAL_DIR)/nandpart-utils.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \

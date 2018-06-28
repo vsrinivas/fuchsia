@@ -7,6 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/protocol/nand.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/bad-block.h>
 #include <ddktl/protocol/nand.h>
 
 #include <fbl/array.h>
@@ -14,13 +15,16 @@
 #include <fbl/ref_ptr.h>
 #include <zircon/types.h>
 
+#include "bad-block.h"
+
 namespace nand {
 
 class NandPartDevice;
-using DeviceType = ddk::Device<NandPartDevice, ddk::GetSizable>;
+using DeviceType = ddk::Device<NandPartDevice, ddk::GetSizable, ddk::GetProtocolable>;
 
 class NandPartDevice : public DeviceType,
-                       public ddk::NandProtocol<NandPartDevice> {
+                       public ddk::NandProtocol<NandPartDevice>,
+                       public ddk::BadBlockable<NandPartDevice> {
 public:
     // Spawns device nodes based on parent node.
     static zx_status_t Create(zx_device_t* parent);
@@ -43,13 +47,18 @@ public:
     zx_status_t GetFactoryBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
                                        uint32_t* num_bad_blocks);
 
+    // Bad block protocol implementation.
+    zx_status_t GetBadBlockList(uint32_t* bad_block_list, uint32_t bad_block_list_len,
+                                uint32_t* bad_block_count);
+    zx_status_t MarkBlockBad(uint32_t block);
+
 private:
     explicit NandPartDevice(zx_device_t* parent, const nand_protocol_t& nand_proto,
-                            size_t parent_op_size,
+                            fbl::RefPtr<BadBlock> bad_block, size_t parent_op_size,
                             const nand_info_t& nand_info, uint32_t erase_block_start)
         : DeviceType(parent), nand_proto_(nand_proto), nand_(&nand_proto_),
           parent_op_size_(parent_op_size), nand_info_(nand_info),
-          erase_block_start_(erase_block_start) {}
+          erase_block_start_(erase_block_start), bad_block_(fbl::move(bad_block)) {}
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(NandPartDevice);
 
@@ -62,6 +71,11 @@ private:
     nand_info_t nand_info_;
     // First erase block for the partition.
     uint32_t erase_block_start_;
+    // Device specific bad block info. Shared between all devices for a given
+    // parent device.
+    fbl::RefPtr<BadBlock> bad_block_;
+    // Cached list of bad blocks for this partition. Lazily instantiated.
+    fbl::Array<uint32_t> bad_block_list_;
 };
 
 } // namespace nand

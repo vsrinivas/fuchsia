@@ -6,13 +6,13 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
+#include <ddk/protocol/bad-block.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
@@ -22,70 +22,12 @@
 #include <zircon/hw/gpt.h>
 #include <zircon/types.h>
 
+#include "nandpart-utils.h"
+
 namespace nand {
 namespace {
 
 constexpr uint8_t fvm_guid[] = GUID_FVM_VALUE;
-
-// Checks that the partition map is valid, sorts it in partition order, and
-// ensures blocks are on erase block boundaries.
-zx_status_t SanitizePartitionMap(zbi_partition_map_t* pmap, const nand_info_t& nand_info) {
-    if (pmap->partition_count == 0) {
-        zxlogf(ERROR, "nandpart: partition count is zero\n");
-        return ZX_ERR_INTERNAL;
-    }
-
-    // 1) Partitions should not be overlapping.
-    qsort(pmap->partitions, pmap->partition_count, sizeof(zbi_partition_t),
-          [](const void* left, const void* right) {
-              const auto* left_ = static_cast<const zbi_partition_t*>(left);
-              const auto* right_ = static_cast<const zbi_partition_t*>(right);
-              if (left_->first_block < right_->first_block) {
-                  return -1;
-              }
-              if (left_->first_block > right_->first_block) {
-                  return 1;
-              }
-              return 0;
-          });
-    auto* const begin = &pmap->partitions[0];
-    const auto* const end = &pmap->partitions[pmap->partition_count];
-
-    for (auto *part = begin, *next = begin + 1; next != end; part++, next++) {
-        if (part->last_block >= next->first_block) {
-            zxlogf(ERROR, "nandpart: partition %s [%lu, %lu] overlaps partition %s [%lu, %lu]\n",
-                   part->name, part->first_block, part->last_block, next->name, next->first_block,
-                   next->last_block);
-            return ZX_ERR_INTERNAL;
-        }
-    }
-
-    // 2) All partitions must start at an erase block boundary.
-    const size_t erase_block_size = nand_info.page_size * nand_info.pages_per_block;
-    ZX_DEBUG_ASSERT(fbl::is_pow2(erase_block_size));
-    const int block_shift = ffs(static_cast<int>(erase_block_size)) - 1;
-
-    if (pmap->block_size != erase_block_size) {
-        for (auto* part = begin; part != end; part++) {
-            uint64_t first_byte_offset = part->first_block * pmap->block_size;
-            uint64_t last_byte_offset = (part->last_block + 1) * pmap->block_size;
-
-            if (fbl::round_down(first_byte_offset, erase_block_size) != first_byte_offset ||
-                fbl::round_down(last_byte_offset, erase_block_size) != last_byte_offset) {
-                zxlogf(ERROR, "nandpart: partition %s size is not a multiple of erase_block_size\n",
-                       part->name);
-                return ZX_ERR_INTERNAL;
-            }
-            part->first_block = first_byte_offset >> block_shift;
-            part->last_block = (last_byte_offset >> block_shift) - 1;
-        }
-    }
-    // 3) Partitions should exist within NAND.
-    if ((end - 1)->last_block >= nand_info.num_blocks) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-    return ZX_OK;
-}
 
 // Shim for calling sub-partition's callback.
 void CompletionCallback(nand_op_t* op, zx_status_t status) {
@@ -112,11 +54,38 @@ zx_status_t NandPartDevice::Create(zx_device_t* parent) {
     // Make sure parent_op_size is aligned, so we can safely add our data at the end.
     parent_op_size = fbl::round_up(parent_op_size, 8u);
 
-    // Query parent for partition map.
+    // Query parent for bad block configuration info.
     size_t actual;
+    bad_block_config_t bad_block_config;
+    zx_status_t status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &bad_block_config,
+                                             sizeof(bad_block_config), &actual);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "nandpart: parent device '%s' has no device metadata\n",
+               device_get_name(parent));
+        return status;
+    }
+    if (actual != sizeof(bad_block_config)) {
+        zxlogf(ERROR, "nandpart: Expected metadata of size %zu, got %zu\n",
+               sizeof(bad_block_config), actual);
+        return ZX_ERR_INTERNAL;
+    }
+
+    // Create a bad block instance.
+    BadBlock::Config config = {
+        .bad_block_config = bad_block_config,
+        .nand_proto = nand_proto,
+    };
+    fbl::RefPtr<BadBlock> bad_block;
+    status = BadBlock::Create(config, &bad_block);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "nandpart: Failed to create BadBlock object\n");
+        return status;
+    }
+
+    // Query parent for partition map.
     uint8_t buffer[METADATA_PARTITION_MAP_MAX];
-    zx_status_t status = device_get_metadata(parent, DEVICE_METADATA_PARTITION_MAP, buffer,
-                                             sizeof(buffer), &actual);
+    status = device_get_metadata(parent, DEVICE_METADATA_PARTITION_MAP, buffer, sizeof(buffer),
+                                 &actual);
     if (status != ZX_OK) {
         zxlogf(ERROR, "nandpart: parent device '%s' has no parititon map\n",
                device_get_name(parent));
@@ -159,7 +128,7 @@ zx_status_t NandPartDevice::Create(zx_device_t* parent) {
 
         fbl::AllocChecker ac;
         fbl::unique_ptr<NandPartDevice> device(new (&ac) NandPartDevice(
-            parent, nand_proto, parent_op_size, nand_info,
+            parent, nand_proto, bad_block, parent_op_size, nand_info,
             static_cast<uint32_t>(part->first_block)));
         if (!ac.check()) {
             continue;
@@ -241,6 +210,64 @@ zx_status_t NandPartDevice::GetFactoryBadBlockList(uint32_t* bad_blocks, uint32_
     // TODO implement this.
     *num_bad_blocks = 0;
     return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t NandPartDevice::GetBadBlockList(uint32_t* bad_block_list, uint32_t bad_block_list_len,
+                                            uint32_t* bad_block_count) {
+
+    if (!bad_block_list_) {
+        const zx_status_t status = bad_block_->GetBadBlockList(
+            erase_block_start_, erase_block_start_ + nand_info_.num_blocks, &bad_block_list_);
+        if (status != ZX_OK) {
+            return status;
+        }
+        for (uint32_t i = 0; i < bad_block_list_.size(); i++) {
+          bad_block_list_[i] -= erase_block_start_;
+        }
+    }
+
+    *bad_block_count = static_cast<uint32_t>(bad_block_list_.size());
+    zxlogf(TRACE, "nandpart: %s: Bad block count: %u\n", name(), *bad_block_count);
+
+    if (bad_block_list_len == 0 || bad_block_list_.size() == 0) {
+        return ZX_OK;
+    }
+    if (bad_block_list == NULL) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    const size_t size = sizeof(uint32_t) * fbl::min(*bad_block_count, bad_block_list_len);
+    memcpy(bad_block_list, bad_block_list_.get(), size);
+    return ZX_OK;
+}
+
+zx_status_t NandPartDevice::MarkBlockBad(uint32_t block) {
+    if (block >= nand_info_.num_blocks) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    // First, invalidate our cached copy.
+    bad_block_list_.reset();
+
+    // Second, "write-through" to actually persist.
+    block += erase_block_start_;
+    return bad_block_->MarkBlockBad(block);
+}
+
+zx_status_t NandPartDevice::DdkGetProtocol(uint32_t proto_id, void* protocol) {
+    auto* proto = static_cast<ddk::AnyProtocol*>(protocol);
+    proto->ctx = this;
+    switch (proto_id) {
+    case ZX_PROTOCOL_NAND:
+        proto->ops = &nand_proto_ops_;
+        break;
+    case ZX_PROTOCOL_BAD_BLOCK:
+        proto->ops = &bad_block_proto_ops_;
+        break;
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return ZX_OK;
 }
 
 } // namespace nand
