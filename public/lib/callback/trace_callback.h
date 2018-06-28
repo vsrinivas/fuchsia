@@ -126,15 +126,20 @@ constexpr const char* CheckConstantCString(const char* value) {
 // Wraps the given callback so that it's traced using async tracing from the
 // time it's wrapped to the time it completes. Can be used only for callbacks
 // that will be called at most once.
-#define TRACE_CALLBACK(cb, category, name, args...)                       \
-  (TRACE_ENABLED()                                                        \
-       ? ::callback::internal::TraceCallback(                             \
-             cb,                                                          \
-             ::callback::internal::CheckConstantCString<__builtin_strlen( \
-                 category)>(category),                                    \
-             ::callback::internal::CheckConstantCString<__builtin_strlen( \
-                 name)>(name),                                            \
-             name "_callback", ##args)                                    \
-       : ::callback::internal::TraceCallback(cb))
+#define TRACE_CALLBACK(cb, category, name, args...)                            \
+  [&]() {                                                                      \
+    auto trace_local_cb__ = cb;                                                \
+    return (                                                                   \
+        TRACE_ENABLED()                                                        \
+            ? ::callback::internal::TraceCallback(                             \
+                  std::move(trace_local_cb__),                                 \
+                  ::callback::internal::CheckConstantCString<__builtin_strlen( \
+                      category)>(category),                                    \
+                  ::callback::internal::CheckConstantCString<__builtin_strlen( \
+                      name)>(name),                                            \
+                  name "_callback", ##args)                                    \
+            : ::callback::internal::TraceCallback(                             \
+                  std::move(trace_local_cb__)));                               \
+  }()
 
 #endif  // LIB_CALLBACK_TRACE_CALLBACK_H_

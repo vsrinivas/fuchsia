@@ -23,6 +23,13 @@ class ScopedLambda {
     }
   }
 
+  template <typename... ArgType>
+  void operator()(ArgType&&... args) const {
+    if (witness_) {
+      function_(std::forward<ArgType>(args)...);
+    }
+  }
+
  private:
   W witness_;
   T function_;

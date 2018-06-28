@@ -12,7 +12,6 @@ source_set("callback") {
     "capture.h",
     "destruction_sentinel.cc",
     "destruction_sentinel.h",
-    "ensure_copyable.h",
     "managed_container.cc",
     "managed_container.h",
     "operation_serializer.h",
@@ -21,7 +20,6 @@ source_set("callback") {
     "scoped_task_runner.h",
     "set_when_called.cc",
     "set_when_called.h",
-    "to_function.h",
     "trace_callback.h",
     "waiter.h",
   ]
@@ -43,13 +41,11 @@ source_set("unittests") {
     "cancellable_unittest.cc",
     "capture_unittest.cc",
     "destruction_sentinel_unittest.cc",
-    "ensure_copyable_unittest.cc",
     "managed_container_unittest.cc",
     "operation_serializer_unittests.cc",
     "scoped_callback_unittest.cc",
     "scoped_task_runner_unittest.cc",
     "set_when_called_unittest.cc",
-    "to_function_unittest.cc",
     "waiter_unittest.cc",
   ]
 

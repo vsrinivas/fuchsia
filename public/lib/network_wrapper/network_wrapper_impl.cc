@@ -8,7 +8,6 @@
 
 #include "lib/callback/cancellable_helper.h"
 #include "lib/callback/destruction_sentinel.h"
-#include "lib/callback/to_function.h"
 #include "lib/callback/trace_callback.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/strings/ascii.h"
@@ -81,7 +80,7 @@ class NetworkWrapperImpl::RunningRequest {
     url_loader_->Start(
         std::move(request),
         TRACE_CALLBACK(
-            callback::ToStdFunction([this](http::URLResponse response) {
+            [this](http::URLResponse response) {
               url_loader_.Unbind();
 
               if (response.error) {
@@ -98,7 +97,7 @@ class NetworkWrapperImpl::RunningRequest {
 
               callback_(std::move(response));
               return;
-            }),
+            },
             "network_wrapper", "network_url_loader_start", "url", url, "method",
             method));
 
