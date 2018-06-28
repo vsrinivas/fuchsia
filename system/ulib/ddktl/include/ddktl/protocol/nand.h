@@ -5,11 +5,17 @@
 #pragma once
 
 #include <ddk/protocol/nand.h>
+#include <ddktl/device-internal.h>
 #include <zircon/assert.h>
 
 #include "nand-internal.h"
 
 // DDK nand protocol support.
+//
+// :: Proxies ::
+//
+// ddk::NandProtocolProxy is a simple wrappers around nand_protocol_t. It does
+// not own the pointers passed to it.
 //
 // :: Mixins ::
 //
@@ -39,20 +45,23 @@ namespace ddk {
 
 template <typename D>
 class NandProtocol : public internal::base_protocol {
-  public:
+public:
     NandProtocol() {
         internal::CheckNandProtocolSubclass<D>();
-        ops_.query = Query;
-        ops_.queue = Queue;
-        ops_.get_bad_block_list = GetBadBlockList;
+        nand_proto_ops_.query = Query;
+        nand_proto_ops_.queue = Queue;
+        nand_proto_ops_.get_bad_block_list = GetBadBlockList;
 
         // Can only inherit from one base_protocol implementation.
         ZX_ASSERT(ddk_proto_id_ == 0);
         ddk_proto_id_ = ZX_PROTOCOL_NAND;
-        ddk_proto_ops_ = &ops_;
+        ddk_proto_ops_ = &nand_proto_ops_;
     }
 
-  private:
+protected:
+    nand_protocol_ops_t nand_proto_ops_ = {};
+
+private:
     static void Query(void* ctx, nand_info_t* info_out, size_t* nand_op_size_out) {
         static_cast<D*>(ctx)->Query(info_out, nand_op_size_out);
     }
@@ -65,8 +74,29 @@ class NandProtocol : public internal::base_protocol {
                                 uint32_t* num_bad_blocks) {
         static_cast<D*>(ctx)->GetBadBlockList(bad_blocks, bad_block_len, num_bad_blocks);
     }
-
-    nand_protocol_ops_t ops_ = {};
 };
 
-}  // namespace ddk
+class NandProtocolProxy {
+public:
+    NandProtocolProxy(nand_protocol_t* proto)
+        : ops_(proto->ops), ctx_(proto->ctx) {}
+
+    void Query(nand_info_t* info_out, size_t* nand_op_size_out) {
+        ops_->query(ctx_, info_out, nand_op_size_out);
+    }
+
+    void Queue(nand_op_t* operation) {
+        ops_->queue(ctx_, operation);
+    }
+
+    void GetBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
+                         uint32_t* num_bad_blocks) {
+        ops_->get_bad_block_list(ctx_, bad_blocks, bad_block_len, num_bad_blocks);
+    }
+
+private:
+    nand_protocol_ops_t* ops_;
+    void* ctx_;
+};
+
+} // namespace ddk
