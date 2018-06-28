@@ -179,9 +179,6 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
         port0_transmit_descriptors_.Add(desc);
     }
 
-    StartIrqThread();
-    DriverStatusOk();
-
     device_ops_.read = virtio_console_read;
     device_ops_.write = virtio_console_write;
 
@@ -200,6 +197,9 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
         device_ = nullptr;
         return status;
     }
+
+    StartIrqThread();
+    DriverStatusOk();
 
     LTRACE_EXIT;
     return ZX_OK;
