@@ -90,6 +90,9 @@ func newPackageDirFromBlob(blob string, filesystem *Filesystem) (*packageDir, er
 
 	for _, line := range lines {
 		line = bytes.TrimSpace(line)
+		if len(line) == 0 {
+			continue
+		}
 		parts := bytes.SplitN(line, []byte("="), 2)
 		if len(parts) != 2 {
 			log.Printf("pkgfs: bad contents line: %v", line)
