@@ -12,6 +12,7 @@
 #include <hw/reg.h>
 #include <soc/aml-a113/a113-hw.h>
 #include <unistd.h>
+#include <zircon/device/bad-block.h>
 
 #include "gauss.h"
 #include "gauss-hw.h"
@@ -44,10 +45,24 @@ static const pbus_bti_t raw_nand_btis[] = {
     },
 };
 
+static const bad_block_config_t config = {
+    .type = kAmlogicUboot,
+    .aml = {
+        .table_start_block = 20,
+        .table_end_block = 23,
+    },
+};
+
 static const pbus_metadata_t raw_nand_metadata[] = {
     {
         .type = DEVICE_METADATA_PARTITION_MAP,
         .extra = 0,
+    },
+    {
+        .type = DEVICE_METADATA_PRIVATE,
+        .extra = 0,
+        .data = &config,
+        .len = sizeof(config),
     },
 };
 
@@ -98,5 +113,4 @@ zx_status_t gauss_raw_nand_init(gauss_bus_t* bus) {
 
     return ZX_OK;
 }
-
 
