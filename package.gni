@@ -477,7 +477,11 @@ template("package") {
       # dynamically linked libraries resolved.
       generate_manifest("${pkg_target_name}.manifest") {
         visibility = [
+          ":${pkg_target_name}",
           ":${pkg_target_name}.meta",
+          ":${pkg_target_name}.blob.rsp",
+          ":${pkg_target_name}.pkgsvr_index.rsp",
+          ":${pkg_target_name}.amber_index.rsp",
           "//build/images:blob.manifest",
           "//build/images:ids.txt",
         ]
@@ -509,12 +513,7 @@ template("package") {
                        "//build/images:system_image.manifest",
                      ]
       }
-      deps = pkg.deps
-      if (pkg.deprecated_system_image) {
-        deps += [
-          ":${pkg_target_name}.manifest",
-        ]
-      }
+      deps = pkg.deps + [ ":${pkg_target_name}.manifest" ]
       data_deps = pkg.data_deps
       output_name = "${pkg_target_name}.system.rsp"
       response_file_contents = manifest_args
@@ -529,6 +528,7 @@ template("package") {
         # A real package needs blobs for all its contents and for its
         # synthesized meta.far file.
         deps = [
+          ":${pkg_target_name}.manifest",
           ":${pkg_target_name}.meta",
         ]
         response_file_contents = [
@@ -566,6 +566,7 @@ template("package") {
           # in the build, rather than its merkleroot.
           # TODO(mcgrathr): Make amber publish use pkgsvr index directly.
           deps = [
+            ":${pkg_target_name}.manifest",
             ":${pkg_target_name}.meta",
           ]
           response_file_contents = [
