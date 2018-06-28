@@ -48,6 +48,8 @@ static_library("client") {
     "remote_api.h",
     "remote_api_impl.cc",
     "remote_api_impl.h",
+    "run_until.cc",
+    "run_until.h",
     "session.cc",
     "system.cc",
     "system_impl.cc",

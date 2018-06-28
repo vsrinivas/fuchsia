@@ -6,6 +6,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
+
+#include <functional>
 #include <string>
 
 #include "garnet/bin/zxdb/client/client_object.h"
@@ -18,8 +20,12 @@ namespace zxdb {
 
 class Err;
 class Frame;
+struct InputLocation;
 class Process;
 
+// The flow control commands on this object (Pause, Continue, Step...) apply
+// only to this thread (other threads will continue to run or not run
+// as they were previously).
 class Thread : public ClientObject {
  public:
   explicit Thread(Session* session);
@@ -39,10 +45,14 @@ class Thread : public ClientObject {
   // To make sure this is up-to-date, call Process::SyncThreads().
   virtual debug_ipc::ThreadRecord::State GetState() const = 0;
 
-  // Applies only to this thread (other threads will continue to run or not run
-  // as they were previously).
   virtual void Pause() = 0;
   virtual void Continue() = 0;
+
+  // The callback does NOT mean the step has completed, but rather the setup
+  // for the function was successful. Symbols and breakpoint setup can cause
+  // asynchronous failures.
+  virtual void ContinueUntil(const InputLocation& location,
+                             std::function<void(const Err&)> cb) = 0;
   virtual Err Step() = 0;
   virtual void StepInstruction() = 0;
 

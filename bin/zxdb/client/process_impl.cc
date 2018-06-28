@@ -6,8 +6,10 @@
 
 #include <set>
 
+#include "garnet/bin/zxdb/client/input_location.h"
 #include "garnet/bin/zxdb/client/memory_dump.h"
 #include "garnet/bin/zxdb/client/remote_api.h"
+#include "garnet/bin/zxdb/client/run_until.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/target_impl.h"
 #include "garnet/bin/zxdb/client/thread_impl.h"
@@ -116,6 +118,11 @@ void ProcessImpl::Continue() {
   request.how = debug_ipc::ResumeRequest::How::kContinue;
   session()->remote_api()->Resume(
       request, [](const Err& err, debug_ipc::ResumeReply) {});
+}
+
+void ProcessImpl::ContinueUntil(const InputLocation& location,
+                                std::function<void(const Err&)> cb) {
+  RunUntil(this, location, cb);
 }
 
 void ProcessImpl::ReadMemory(

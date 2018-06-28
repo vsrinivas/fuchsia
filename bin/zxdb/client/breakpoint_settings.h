@@ -47,6 +47,9 @@ struct BreakpointSettings {
   InputLocation location;
 
   StopMode stop_mode = StopMode::kAll;
+
+  // When set, this breakpoint will be automatically deleted when it's hit.
+  bool one_shot = false;
 };
 
 }  // namespace zxdb

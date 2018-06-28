@@ -529,6 +529,22 @@ void Session::DispatchNotifyException(
   }
 
   thread->DispatchExceptionNotification(notify.type, hit_breakpoints);
+
+  // Delete all one-shot breakpoints the backend deleted. This happens after
+  // the thread notifications so observers can tell why the thread stopped.
+  for (const auto& stats : notify.hit_breakpoints) {
+    if (!stats.should_delete)
+      continue;
+
+    // Breakpoint needs deleting.
+    BreakpointImpl* impl = system_.BreakpointImplForId(stats.breakpoint_id);
+    if (impl) {
+      // Need to tell the breakpoint it was removed in the backend before
+      // deleting it or it will try to uninstall itself.
+      impl->BackendBreakpointRemoved();
+      system_.DeleteBreakpoint(impl);
+    }
+  }
 }
 
 ThreadImpl* Session::ThreadImplFromKoid(uint64_t process_koid,

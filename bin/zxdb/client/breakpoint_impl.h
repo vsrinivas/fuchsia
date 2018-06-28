@@ -61,6 +61,10 @@ class BreakpointImpl : public Breakpoint,
   // same address and they can have different answers.
   BreakpointAction OnHit(Thread* thread);
 
+  // Called when the backend reports that the breakpoint has been automatically
+  // removed.
+  void BackendBreakpointRemoved();
+
  private:
   friend BreakpointLocationImpl;
   struct ProcessRecord;

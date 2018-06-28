@@ -278,4 +278,42 @@ TEST_F(SessionTest, MultiBreakpointStop) {
   thread->RemoveObserver(&thread_observer);
 }
 
+// Tests that one shot breakpoints get deleted when the agent notifies us that
+// the breakpoint was hit and deleted.
+TEST_F(SessionTest, OneShotBreakpointDelete) {
+  // Make a process and thread for notifying about.
+  constexpr uint64_t kProcessKoid = 1234;
+  InjectProcess(kProcessKoid);
+  constexpr uint64_t kThreadKoid = 5678;
+  InjectThread(kProcessKoid, kThreadKoid);
+
+  // Create a breakpoint.
+  Breakpoint* bp = session().system().CreateNewBreakpoint();
+  constexpr uint64_t kAddress = 0x12345678;
+  BreakpointSettings settings;
+  settings.enabled = true;
+  settings.location = InputLocation(kAddress);
+  settings.one_shot = true;
+  SyncSetSettings(bp, settings);
+
+  // This will tell us if the breakpoint is deleted.
+  fxl::WeakPtr<Breakpoint> weak_bp = bp->GetWeakPtr();
+
+  debug_ipc::NotifyException notify;
+  notify.process_koid = kProcessKoid;
+  notify.type = debug_ipc::NotifyException::Type::kSoftware;
+  notify.thread.koid = kThreadKoid;
+  notify.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
+  sink()->PopulateNotificationWithBreakpoints(&notify);
+
+  // There should have been one breakpoint populated, mark deleted.
+  ASSERT_EQ(1u, notify.hit_breakpoints.size());
+  notify.hit_breakpoints[0].should_delete = true;
+
+  // Notify of the breakpoint hit and delete. It should be deleted.
+  EXPECT_TRUE(weak_bp);
+  InjectException(notify);
+  EXPECT_FALSE(weak_bp);
+}
+
 }  // namespace zxdb

@@ -4,12 +4,13 @@
 
 #include "garnet/bin/zxdb/client/thread_impl.h"
 
-#include <inttypes.h>  // ERSASEMME(brettw)
 #include <iostream>
 
 #include "garnet/bin/zxdb/client/frame_impl.h"
+#include "garnet/bin/zxdb/client/input_location.h"
 #include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/remote_api.h"
+#include "garnet/bin/zxdb/client/run_until.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/symbols/line_details.h"
 #include "garnet/public/lib/fxl/logging.h"
@@ -50,6 +51,11 @@ void ThreadImpl::Continue() {
   request.how = debug_ipc::ResumeRequest::How::kContinue;
   session()->remote_api()->Resume(
       request, [](const Err& err, debug_ipc::ResumeReply) {});
+}
+
+void ThreadImpl::ContinueUntil(const InputLocation& location,
+                               std::function<void(const Err&)> cb) {
+  RunUntil(this, location, std::move(cb));
 }
 
 Err ThreadImpl::Step() {

@@ -11,6 +11,7 @@ class LoadedModuleSymbols;
 class Process;
 class Thread;
 
+// Note: process creation and destruction events are on the TargetObserver.
 class ProcessObserver {
  public:
   // Called immediately after creating a new thread and before destroying it.

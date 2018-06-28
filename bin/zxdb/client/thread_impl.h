@@ -27,6 +27,8 @@ class ThreadImpl : public Thread {
   debug_ipc::ThreadRecord::State GetState() const override;
   void Pause() override;
   void Continue() override;
+  void ContinueUntil(const InputLocation& location,
+                     std::function<void(const Err&)> cb) override;
   Err Step() override;
   void StepInstruction() override;
   std::vector<Frame*> GetFrames() const override;

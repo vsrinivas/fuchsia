@@ -7,12 +7,14 @@
 #include <inttypes.h>
 
 #include "garnet/bin/zxdb/client/err.h"
+#include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
+#include "garnet/bin/zxdb/console/input_location_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
@@ -204,7 +206,7 @@ Examples
       Steps thread 2 in the current process.
 )";
 Err DoStep(ConsoleContext* context, const Command& cmd) {
-  Err err = AssertStoppedThreadCommand(context, cmd, "stepi");
+  Err err = AssertStoppedThreadCommand(context, cmd, true, "stepi");
   if (err.has_error())
     return err;
 
@@ -245,7 +247,7 @@ Examples
       Steps thread 2 in process 3.
 )";
 Err DoStepi(ConsoleContext* context, const Command& cmd) {
-  Err err = AssertStoppedThreadCommand(context, cmd, "stepi");
+  Err err = AssertStoppedThreadCommand(context, cmd, true, "stepi");
   if (err.has_error())
     return err;
 
@@ -255,7 +257,8 @@ Err DoStepi(ConsoleContext* context, const Command& cmd) {
 
 // regs ------------------------------------------------------------------------
 
-const char kRegsShortHelp[] = "regs / rg: Show the current registers for a thread.";
+const char kRegsShortHelp[] =
+    "regs / rg: Show the current registers for a thread.";
 const char kRegsHelp[] =
     R"(regs
 
@@ -282,18 +285,135 @@ void OnRegsComplete(const Err& err,
   out.Append("General Registers:\n");
   out.Append("-------------------------------------------------\n");
   for (auto&& reg : registers) {
-    out.Append(
-        fxl::StringPrintf("%4s: 0x%016lx\n", reg.name.c_str(), reg.value));
+    out.Append(fxl::StringPrintf("%4s: 0x%016" PRIx64 "\n", reg.name.c_str(),
+                                 reg.value));
   }
   console->Output(std::move(out));
 }
 
 Err DoRegs(ConsoleContext* context, const Command& cmd) {
-  Err err = AssertStoppedThreadCommand(context, cmd, "regs");
+  Err err = AssertStoppedThreadCommand(context, cmd, true, "regs");
   if (err.has_error())
     return err;
 
   cmd.thread()->GetRegisters(&OnRegsComplete);
+  return Err();
+}
+
+// until -----------------------------------------------------------------------
+
+const char kUntilShortHelp[] =
+    "until / u: Runs a thread until a location is reached.";
+const char kUntilHelp[] =
+    R"(until <location>
+
+  Alias: "u"
+
+  Continues execution of a thread or a process until a given location is
+  reached. You could think of this command as setting an implicit one-shot
+  breakpoint at the given location and continuing execution.
+
+  Normally this operation will apply only to the current thread. To apply to
+  all threads in a process, use "process until" (see the examples below).
+
+Location arguments
+
+  Current frame's address (no input)
+    until
+
+)" LOCATION_ARG_HELP("until")
+        R"(
+Examples
+
+  u
+  until
+      Runs until the current frame's location is hit again. This can be useful
+      if the current code is called in a loop to advance to the next iteration
+      of the current code.
+
+  f 1 u
+  frame 1 until
+      Runs until the given frame's location is hit. Since frame 1 is
+      always the current function's calling frame, this command will normally
+      stop when the current function returns. The exception is if the code
+      in the calling function is called recursively from the current location,
+      in which case the next invocation will stop ("until" does not match
+      stack frames on break).
+
+  u 24
+  until 24
+      Runs the current thread until line 24 of the current frame's file.
+
+  until foo.cc:24
+      Runs the current thread until the given file/line is reached.
+
+  thread 2 until 24
+  process 1 thread 2 until 24
+      Runs the specified thread until line 24 is reached. When no filename is
+      given, the specified thread's currently selected frame will be used.
+
+  u MyClass::MyFunc
+  until MyClass::MyFunc
+      Runs the current thread until the given function is called.
+
+  pr u MyClass::MyFunc
+  process until MyClass::MyFunc
+      Continues all threads of the current process, stopping the next time any
+      of them call the function.
+)";
+Err DoUntil(ConsoleContext* context, const Command& cmd) {
+  Err err;
+
+  // Decode the location.
+  //
+  // The validation on this is a bit tricky. Most uses apply to the current
+  // thread and take some implicit information from the current frame (which
+  // requires the thread be stopped). But when doing a process-wide one, don't
+  // require a currently stopped thread unless it's required to compute the
+  // location.
+  InputLocation location;
+  if (cmd.args().empty()) {
+    // No args means use the current location.
+    if (!cmd.frame()) {
+      return Err(ErrType::kInput,
+                 "There isn't a current frame to take the location from.");
+    }
+    location = InputLocation(cmd.frame()->GetAddress());
+  } else if (cmd.args().size() == 1) {
+    // One arg = normal location (ParseInputLocation can handle null frames).
+    Err err = ParseInputLocation(cmd.frame(), cmd.args()[0], &location);
+    if (err.has_error())
+      return err;
+  } else {
+    return Err(ErrType::kInput,
+               "Expecting zero or one arg for the location.\n"
+               "Formats: <function>, <file>:<line#>, <line#>, or *<address>");
+  }
+
+  auto callback = [](const Err& err) {
+    if (err.has_error())
+      Console::get()->Output(err);
+  };
+
+  // Dispatch the request.
+  if (cmd.HasNoun(Noun::kProcess) && !cmd.HasNoun(Noun::kThread) &&
+      !cmd.HasNoun(Noun::kFrame)) {
+    // Process-wide ("process until ...").
+    err = AssertRunningTarget(context, "until", cmd.target());
+    if (err.has_error())
+      return err;
+    cmd.target()->GetProcess()->ContinueUntil(location, callback);
+  } else {
+    // Thread-specific.
+    err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
+    if (err.has_error())
+      return err;
+
+    err = AssertStoppedThreadCommand(context, cmd, false, "until");
+    if (err.has_error())
+      return err;
+    cmd.thread()->ContinueUntil(location, callback);
+  }
   return Err();
 }
 
@@ -310,6 +430,8 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
       VerbRecord(&DoStep, {"step", "s"}, kStepShortHelp, kStepHelp);
   (*verbs)[Verb::kStepi] =
       VerbRecord(&DoStepi, {"stepi", "si"}, kStepiShortHelp, kStepiHelp);
+  (*verbs)[Verb::kUntil] =
+      VerbRecord(&DoUntil, {"until", "u"}, kUntilShortHelp, kUntilHelp);
 }
 
 }  // namespace zxdb

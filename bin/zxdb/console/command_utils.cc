@@ -37,10 +37,13 @@ Err AssertRunningTarget(ConsoleContext* context, const char* command_name,
 }
 
 Err AssertStoppedThreadCommand(ConsoleContext* context, const Command& cmd,
-                               const char* command_name) {
-  Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread});
-  if (err.has_error())
-    return err;
+                               bool validate_nouns, const char* command_name) {
+  Err err;
+  if (validate_nouns) {
+    err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread});
+    if (err.has_error())
+      return err;
+  }
 
   if (!cmd.thread()) {
     return Err(fxl::StringPrintf(

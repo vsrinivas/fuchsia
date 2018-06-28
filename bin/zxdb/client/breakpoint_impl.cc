@@ -162,6 +162,10 @@ BreakpointAction BreakpointImpl::OnHit(Thread* thread) {
   return BreakpointAction::kStop;
 }
 
+void BreakpointImpl::BackendBreakpointRemoved() {
+  backend_installed_ = false;
+}
+
 void BreakpointImpl::WillDestroyThread(Process* process, Thread* thread) {
   if (settings_.scope_thread == thread) {
     // When the thread is destroyed that the breakpoint is associated with,
@@ -279,6 +283,7 @@ void BreakpointImpl::SendBackendAddOrChange(
   debug_ipc::AddOrChangeBreakpointRequest request;
   request.breakpoint.breakpoint_id = backend_id_;
   request.breakpoint.stop = SettingsStopToIpcStop(settings_.stop_mode);
+  request.breakpoint.one_shot = settings_.one_shot;
 
   for (const auto& proc : procs_) {
     for (const auto& pair : proc.second.locs) {
