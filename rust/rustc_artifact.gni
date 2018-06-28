@@ -129,9 +129,8 @@ template("rustc_artifact") {
     } else if (is_debug) {
       with_lto = "none"
     } else {
-      # TODO(tkilbourn): turn this on after gathering more data on impact to build
-      # speed.
-      with_lto = "none"
+      # Release builds default to "thin" lto
+      with_lto = "thin"
     }
   } else {
     with_lto = "none"
