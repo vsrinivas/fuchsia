@@ -7,11 +7,11 @@
 
 #include <bootdata/decompress.h>
 
+#include <fs-management/ramdisk.h>
+#include <launchpad/launchpad.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
-#include <fs-management/ramdisk.h>
-#include <launchpad/launchpad.h>
 #include <loader-service/loader-service.h>
 
 #include <zircon/boot/bootdata.h>
@@ -29,8 +29,8 @@
 #include <string.h>
 #include <threads.h>
 
-#include "bootfs.h"
 #include "block-watcher.h"
+#include "bootfs.h"
 
 // When adding VMOs to the boot filesystem, add them under the directory
 // /boot/VMO_SUBDIR. This constant must end, but not start, with a slash.
@@ -250,7 +250,7 @@ static void setup_bootfs(void) {
             off += itemlen;
             len -= itemlen;
         }
-done:
+    done:
         zx_handle_close(vmo);
     }
 }
@@ -275,7 +275,7 @@ static void fetch_vmos(uint_fast8_t type, const char* debug_type_name) {
         char name[VMO_SUBDIR_LEN + ZX_MAX_NAME_LEN] = VMO_SUBDIR;
         size_t size;
         zx_status_t status = zx_object_get_property(vmo, ZX_PROP_NAME,
-                name + VMO_SUBDIR_LEN, sizeof(name) - VMO_SUBDIR_LEN);
+                                                    name + VMO_SUBDIR_LEN, sizeof(name) - VMO_SUBDIR_LEN);
         if (status != ZX_OK) {
             printf("devmgr: zx_object_get_property on %s %u: %s\n",
                    debug_type_name, i, zx_status_get_string(status));
@@ -336,9 +336,9 @@ static zx_handle_t devfs_root;
 static zx_handle_t svc_root;
 static zx_handle_t fshost_event;
 
-#define FS_DIR_FLAGS \
-    (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN |\
-    ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE)
+#define FS_DIR_FLAGS                            \
+    (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN | \
+     ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE)
 
 zx_handle_t fs_clone(const char* path) {
     if (!strcmp(path, "svc")) {
