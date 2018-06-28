@@ -41,10 +41,10 @@ public:
 
     ~TestConnection()
     {
-        magma_release_context(connection_, context_id_);
-
-        if (connection_)
+        if (connection_) {
+            magma_release_context(connection_, context_id_);
             magma_release_connection(connection_);
+        }
     }
 
     enum How { NORMAL, FAULT, HANG };
@@ -186,6 +186,29 @@ public:
         }
     }
 
+    void SubmitAndDisconnect()
+    {
+        uint64_t size;
+        magma_buffer_t batch_buffer;
+
+        ASSERT_EQ(magma_create_buffer(connection_, PAGE_SIZE, &size, &batch_buffer), 0);
+        void* vaddr;
+        ASSERT_EQ(0, magma_map(connection_, batch_buffer, &vaddr));
+
+        ASSERT_TRUE(InitBatchBuffer(vaddr, size, true));
+
+        magma_buffer_t command_buffer;
+        ASSERT_EQ(magma_create_command_buffer(connection_, PAGE_SIZE, &command_buffer), 0);
+        EXPECT_TRUE(InitCommandBuffer(command_buffer, batch_buffer, size, false));
+        magma_submit_command_buffer(connection_, command_buffer, context_id_);
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        magma_release_connection(connection_);
+        connection_ = nullptr;
+    }
+
+
 private:
     magma_connection_t* connection_;
     uint32_t context_id_;
@@ -209,3 +232,5 @@ TEST(HangRecovery, Test)
 }
 
 TEST(HangRecovery, DISABLED_Stress) { TestConnection::Stress(1000); }
+
+TEST(HangRecovery, SubmitAndDisconnect) { TestConnection().SubmitAndDisconnect(); }
