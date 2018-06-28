@@ -37,6 +37,8 @@
 #define VMO_SUBDIR "kernel/"
 #define VMO_SUBDIR_LEN (sizeof(VMO_SUBDIR) - 1)
 
+#define LAST_PANIC_FILEPATH "log/last-panic.txt"
+
 struct callback_data {
     zx_handle_t vmo;
     unsigned int file_count;
@@ -115,7 +117,7 @@ static void setup_last_crashlog(zx_handle_t vmo_in, uint64_t off_in, size_t sz) 
     if (copy_vmo(vmo_in, off_in, sz, &vmo) != ZX_OK) {
         return;
     }
-    bootfs_add_file("log/last-panic.txt", vmo, 0, sz);
+    bootfs_add_file(LAST_PANIC_FILEPATH, vmo, 0, sz);
 }
 
 struct bootdata_ramdisk {
@@ -294,7 +296,7 @@ static void fetch_vmos(uint_fast8_t type, const char* debug_type_name) {
         }
         if (!strcmp(name + VMO_SUBDIR_LEN, "crashlog")) {
             // the crashlog has a special home
-            strcpy(name, "log/last-panic.txt");
+            strcpy(name, LAST_PANIC_FILEPATH);
         }
         status = bootfs_add_file(name, vmo, 0, size);
         if (status != ZX_OK) {
