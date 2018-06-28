@@ -1344,7 +1344,9 @@ static zx_status_t brcmf_usb_bus_setup(struct brcmf_usbdev_info* devinfo) {
     brcmf_dbg(TEMP, "Survived netdev_open");
     PAUSE;
     for (int i = 0; i < 11; i++) {
-        channels[i].center_freq = i+1; // TODO(cphoenix): Fix this hack along with ieee80211_frequency_to_channel() hack in device.h
+        // TODO(cphoenix): Fix this hack along with ieee80211_frequency_to_channel() hack
+        // in device.h
+        channels[i].center_freq = i+1;
         channels[i].hw_value = i+1;
         request.channels[i] = &channels[i];
     }

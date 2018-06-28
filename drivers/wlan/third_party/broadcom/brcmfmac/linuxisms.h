@@ -180,24 +180,7 @@ LINUX_FUNCII(send_sig) // SDIO only
 LINUX_FUNCVI(kthread_stop) // SDIO only
 LINUX_FUNCVI(pr_warn) // SDIO only
 // Last parameter of this returns an error code. Must be a zx_status_t (0 or negative).
-LINUX_FUNCVI(sdio_readb) // SDIO only
-// Last parameter of this returns an error code. Must be a zx_status_t (0 or negative).
-LINUX_FUNCVI(sdio_writeb) // SDIO only
-LINUX_FUNCVI(sdio_claim_host) // SDIO only
-LINUX_FUNCVI(sdio_release_host) // SDIO only
-LINUX_FUNCVI(sdio_claim_irq)
-LINUX_FUNCVI(sdio_release_irq)
-LINUX_FUNCVI(sdio_readl)  // Last param is zx_status_t
-LINUX_FUNCVI(sdio_writel) // Last param is zx_status_t
-LINUX_FUNCVS(sdio_memcpy_fromio)
-LINUX_FUNCVS(sdio_readsb)
-LINUX_FUNCVS(sdio_set_block_size)
 #define SDIO_DEVICE(a,b) (a)
-LINUX_FUNCVS(sdio_register_driver)
-LINUX_FUNCVV(sdio_unregister_driver)
-LINUX_FUNCVI(sdio_f0_writeb)
-LINUX_FUNCVI(sdio_memcpy_toio)
-LINUX_FUNCVI(sdio_f0_readb)
 LINUX_FUNCVI(pm_runtime_allow) // SDIO only
 LINUX_FUNCVI(pm_runtime_forbid) // SDIO only
 // Leave enable/disable_irq_wake() NOPs for now. TODO(cphoenix): Use the ZX equivalent.

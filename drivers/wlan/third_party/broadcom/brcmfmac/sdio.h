@@ -180,11 +180,8 @@ struct brcmf_sdio;
 struct brcmf_sdiod_freezer;
 
 struct brcmf_sdio_dev {
-    void* func1; // These are temporary, to avoid adding >100 lines to this CL.
-    void* func2;
     uint32_t manufacturer_id;
     uint32_t product_id;
-    zx_device_t* zxdev;
     sdio_protocol_t* sdio_proto;
     zx_handle_t irq_handle;
     thrd_t isr_thread;
@@ -298,21 +295,40 @@ struct sdpcmd_regs {
 zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev);
 void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev);
 
-/* SDIO device register access interface */
-/* Accessors for SDIO Function 0 */
-#define brcmf_sdiod_func0_rb(sdiodev, addr, r) sdio_f0_readb((sdiodev)->func1, (addr), (r))
+/* SDIO device register access interface for func0 and func1.
+ * rb, rl - read byte / word and return value.
+ * wb, wl - write byte / word.
+ * Success is returned in result_out which may be NULL.
+ */
+uint8_t brcmf_sdiod_func0_rb(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
+                             zx_status_t *result_out);
 
-#define brcmf_sdiod_func0_wb(sdiodev, addr, v, ret) \
-    sdio_f0_writeb((sdiodev)->func1, (v), (addr), (ret))
+void brcmf_sdiod_func0_wb(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint8_t value,
+                          zx_status_t *result_out);
 
-/* Accessors for SDIO Function 1 */
-#define brcmf_sdiod_readb(sdiodev, addr, r) sdio_readb((sdiodev)->func1, (addr), (r))
+uint8_t brcmf_sdiod_func1_rb(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
+                             zx_status_t *result_out);
 
-#define brcmf_sdiod_writeb(sdiodev, addr, v, ret) sdio_writeb((sdiodev)->func1, (v), (addr), (ret))
+void brcmf_sdiod_func1_wb(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint8_t value,
+                          zx_status_t *result_out);
 
-uint32_t brcmf_sdiod_readl(struct brcmf_sdio_dev* sdiodev, uint32_t addr, zx_status_t* ret);
-void brcmf_sdiod_writel(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint32_t data,
-                        zx_status_t* ret);
+uint32_t brcmf_sdiod_func1_rl(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
+                              zx_status_t* result_out);
+
+void brcmf_sdiod_func1_wl(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint32_t data,
+                          zx_status_t* result_out);
+
+/* SDIO buffer transfer functions. Returns status.
+ * _fifo means read repeatedly from the same address (don't increment).
+ */
+zx_status_t brcmf_sdiod_read(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
+                             void* data, size_t size);
+
+zx_status_t brcmf_sdiod_write(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
+                              void* data, size_t size);
+
+zx_status_t brcmf_sdiod_read_fifo(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
+                                  void* data, size_t size);
 
 /* Buffer transfer to/from device (client) core via cmd53.
  *   fn:       function number

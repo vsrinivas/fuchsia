@@ -15,6 +15,8 @@
  */
 /* ****************** SDIO CARD Interface Functions **************************/
 
+// TODO(cphoenix): Do we need sdio, completion, status, stdatomic, threads?
+#include <ddk/protocol/sdio.h>
 #include <lib/sync/completion.h>
 #include <zircon/status.h>
 
@@ -109,18 +111,16 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
         }
         sdiodev->irq_wake = true;
 
-        sdio_claim_host(sdiodev->func1);
-
         if (sdiodev->bus_if->chip == BRCM_CC_43362_CHIP_ID) {
             /* assign GPIO to SDIO core */
             addr = CORE_CC_REG(SI_ENUM_BASE, gpiocontrol);
-            gpiocontrol = brcmf_sdiod_readl(sdiodev, addr, &ret);
+            gpiocontrol = brcmf_sdiod_func1_rl(sdiodev, addr, &ret);
             gpiocontrol |= 0x2;
-            brcmf_sdiod_writel(sdiodev, addr, gpiocontrol, &ret);
+            brcmf_sdiod_func1_wl(sdiodev, addr, gpiocontrol, &ret);
 
-            brcmf_sdiod_writeb(sdiodev, SBSDIO_GPIO_SELECT, 0xf, &ret);
-            brcmf_sdiod_writeb(sdiodev, SBSDIO_GPIO_OUT, 0, &ret);
-            brcmf_sdiod_writeb(sdiodev, SBSDIO_GPIO_EN, 0x2, &ret);
+            brcmf_sdiod_func1_wb(sdiodev, SBSDIO_GPIO_SELECT, 0xf, &ret);
+            brcmf_sdiod_func1_wb(sdiodev, SBSDIO_GPIO_OUT, 0, &ret);
+            brcmf_sdiod_func1_wb(sdiodev, SBSDIO_GPIO_EN, 0x2, &ret);
         }
 
         /* must configure SDIO_CCCR_INT_ENABLE to enable irq */
@@ -134,13 +134,12 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
             data |= SDIO_CCCR_BRCM_SEPINT_ACT_HI;
         }
         brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_BRCM_SEPINT, data, &ret);
-        sdio_release_host(sdiodev->func1);
     } else {
         brcmf_dbg(SDIO, "Entering\n");
-        sdio_claim_host(sdiodev->func1);
-        sdio_claim_irq(sdiodev->func1, brcmf_sdiod_ib_irqhandler);
-        sdio_claim_irq(sdiodev->func2, brcmf_sdiod_dummy_irqhandler);
-        sdio_release_host(sdiodev->func1);
+        sdio_enable_fn_intr(sdiodev->sdio_proto, SDIO_FN_1);
+        (void)brcmf_sdiod_ib_irqhandler; // TODO(cphoenix): If we use these, plug them in later.
+        sdio_enable_fn_intr(sdiodev->sdio_proto, SDIO_FN_2);
+        (void)brcmf_sdiod_dummy_irqhandler;
         sdiodev->sd_irq_requested = true;
     }
 
@@ -155,10 +154,8 @@ void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev) {
         struct brcmfmac_sdio_pd* pdata;
 
         pdata = &sdiodev->settings->bus.sdio;
-        sdio_claim_host(sdiodev->func1);
         brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_BRCM_SEPINT, 0, NULL);
         brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_INT_ENABLE, 0, NULL);
-        sdio_release_host(sdiodev->func1);
 
         sdiodev->oob_irq_requested = false;
         if (sdiodev->irq_wake) {
@@ -170,10 +167,8 @@ void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev) {
     }
 
     if (sdiodev->sd_irq_requested) {
-        sdio_claim_host(sdiodev->func1);
-        sdio_release_irq(sdiodev->func2);
-        sdio_release_irq(sdiodev->func1);
-        sdio_release_host(sdiodev->func1);
+        sdio_disable_fn_intr(sdiodev->sdio_proto, SDIO_FN_2);
+        sdio_disable_fn_intr(sdiodev->sdio_proto, SDIO_FN_1);
         sdiodev->sd_irq_requested = false;
     }
 }
@@ -201,6 +196,59 @@ void brcmf_sdiod_change_state(struct brcmf_sdio_dev* sdiodev, enum brcmf_sdiod_s
     sdiodev->state = state;
 }
 
+static zx_status_t brcmf_sdiod_transfer(struct brcmf_sdio_dev* sdiodev, uint8_t func,
+                                           uint32_t addr, bool write, void* data, size_t size,
+                                           bool fifo) {
+    sdio_rw_txn_t txn;
+
+    txn.addr = addr;
+    txn.write = write;
+    txn.virt = data;
+    txn.data_size = size;
+    txn.incr = !fifo;
+    txn.fifo = fifo;
+    txn.use_dma = false; // TODO(cphoenix): Decide when to use DMA
+    txn.buf_offset = 0;
+    brcmf_dbg(TEMP, "F%d about to %s %ld bytes (0x%x) at 0x%x", func, write ? "write" : "read",
+              size, *(uint32_t*)data, addr);
+    brcmf_hexdump(data, size+12);
+    zx_status_t result = sdio_do_rw_txn(sdiodev->sdio_proto, func, &txn);
+    brcmf_hexdump(data, size+12);
+    brcmf_dbg(TEMP, "Result %d, data 0x%x", result, *(uint32_t*)data);
+    return result;
+}
+
+static uint8_t brcmf_sdiod_func_rb(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
+                             zx_status_t* result_out) {
+    uint8_t data;
+    zx_status_t result;
+    result = brcmf_sdiod_transfer(sdiodev, func, addr, false, &data, sizeof(data), false);
+    if (result_out != NULL) {
+        *result_out = result;
+    }
+    return data;
+}
+
+uint8_t brcmf_sdiod_func0_rb(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
+                             zx_status_t* result_out) {
+    return brcmf_sdiod_func_rb(sdiodev, SDIO_FN_0, addr, result_out);
+}
+
+uint8_t brcmf_sdiod_func1_rb(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
+                             zx_status_t* result_out) {
+    return brcmf_sdiod_func_rb(sdiodev, SDIO_FN_1, addr, result_out);
+}
+
+void brcmf_sdiod_func0_wb(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint8_t data,
+                             zx_status_t* result_out) {
+    brcmf_sdiod_transfer(sdiodev, SDIO_FN_0, addr, true, &data, sizeof(data), result_out);
+}
+
+void brcmf_sdiod_func1_wb(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint8_t data,
+                             zx_status_t* result_out) {
+    (void)brcmf_sdiod_transfer(sdiodev, SDIO_FN_1, addr, true, &data, sizeof(data), result_out);
+}
+
 static zx_status_t brcmf_sdiod_set_backplane_window(struct brcmf_sdio_dev* sdiodev, uint32_t addr) {
     uint32_t v;
     uint32_t bar0 = addr & SBSDIO_SBWINDOW_MASK;
@@ -214,7 +262,7 @@ static zx_status_t brcmf_sdiod_set_backplane_window(struct brcmf_sdio_dev* sdiod
     v = bar0 >> 8;
 
     for (i = 0; i < 3 && err == ZX_OK; i++, v >>= 8) {
-        brcmf_sdiod_writeb(sdiodev, SBSDIO_FUNC1_SBADDRLOW + i, v & 0xff, &err);
+        brcmf_sdiod_func1_wb(sdiodev, SBSDIO_FUNC1_SBADDRLOW + i, v & 0xff, &err);
     }
 
     if (err == ZX_OK) {
@@ -224,21 +272,16 @@ static zx_status_t brcmf_sdiod_set_backplane_window(struct brcmf_sdio_dev* sdiod
     return err;
 }
 
-uint32_t brcmf_sdiod_readl(struct brcmf_sdio_dev* sdiodev, uint32_t addr, zx_status_t* ret) {
+uint32_t brcmf_sdiod_func1_rl(struct brcmf_sdio_dev* sdiodev, uint32_t addr, zx_status_t* ret) {
     uint32_t data = 0;
     zx_status_t retval;
 
     retval = brcmf_sdiod_set_backplane_window(sdiodev, addr);
-    if (retval != ZX_OK) {
-        goto out;
+    if (retval == ZX_OK) {
+        addr &= SBSDIO_SB_OFT_ADDR_MASK;
+        addr |= SBSDIO_SB_ACCESS_2_4B_FLAG;
+        retval = brcmf_sdiod_transfer(sdiodev, SDIO_FN_1, addr, false, &data, sizeof(data), false);
     }
-
-    addr &= SBSDIO_SB_OFT_ADDR_MASK;
-    addr |= SBSDIO_SB_ACCESS_2_4B_FLAG;
-
-    data = sdio_readl(sdiodev->func1, addr, &retval);
-
-out:
     if (ret) {
         *ret = retval;
     }
@@ -246,24 +289,34 @@ out:
     return data;
 }
 
-void brcmf_sdiod_writel(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint32_t data,
-                        zx_status_t* ret) {
+void brcmf_sdiod_func1_wl(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint32_t data,
+                          zx_status_t* ret) {
     zx_status_t retval;
 
     retval = brcmf_sdiod_set_backplane_window(sdiodev, addr);
-    if (retval != ZX_OK) {
-        goto out;
+    if (retval == ZX_OK) {
+        addr &= SBSDIO_SB_OFT_ADDR_MASK;
+        addr |= SBSDIO_SB_ACCESS_2_4B_FLAG;
+        retval = brcmf_sdiod_transfer(sdiodev, SDIO_FN_1, addr, true, &data, sizeof(data), false);
     }
-
-    addr &= SBSDIO_SB_OFT_ADDR_MASK;
-    addr |= SBSDIO_SB_ACCESS_2_4B_FLAG;
-
-    sdio_writel(sdiodev->func1, data, addr, &retval);
-
-out:
     if (ret) {
         *ret = retval;
     }
+}
+
+zx_status_t brcmf_sdiod_read(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
+                             void* data, size_t size) {
+    return brcmf_sdiod_transfer(sdiodev, func, addr, false, data, size, false);
+}
+
+zx_status_t brcmf_sdiod_write(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
+                              void* data, size_t size) {
+    return brcmf_sdiod_transfer(sdiodev, func, addr, true, data, size, false);
+}
+
+zx_status_t brcmf_sdiod_read_fifo(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
+                                  void* data, size_t size) {
+    return brcmf_sdiod_transfer(sdiodev, func, addr, false, data, size, true);
 }
 
 static zx_status_t brcmf_sdiod_netbuf_read(struct brcmf_sdio_dev* sdiodev, uint32_t func,
@@ -277,10 +330,10 @@ static zx_status_t brcmf_sdiod_netbuf_read(struct brcmf_sdio_dev* sdiodev, uint3
 
     switch (func) {
     case SDIO_FN_1:
-        err = sdio_memcpy_fromio(sdiodev->sdio_proto, func, ((uint8_t*)(netbuf->data)), addr, req_sz);
+        err = brcmf_sdiod_read(sdiodev, func, addr, netbuf->data, req_sz);
         break;
     case SDIO_FN_2:
-        err = sdio_readsb(sdiodev->sdio_proto, func, ((uint8_t*)(netbuf->data)), addr, req_sz);
+        err = brcmf_sdiod_read_fifo(sdiodev, func, addr, netbuf->data, req_sz);
         break;
     default:
         /* bail out as things are really fishy here */
@@ -304,7 +357,7 @@ static zx_status_t brcmf_sdiod_netbuf_write(struct brcmf_sdio_dev* sdiodev, uint
     req_sz = netbuf->len + 3;
     req_sz &= (uint)~3;
 
-    err = sdio_memcpy_toio(sdiodev->sdio_proto, func, addr, ((uint8_t*)(netbuf->data)), req_sz);
+    err = brcmf_sdiod_write(sdiodev, func, addr, netbuf->data, req_sz);
 
     if (err == ZX_ERR_IO_REFUSED) {
         brcmf_sdiod_change_state(sdiodev, BRCMF_SDIOD_NOMEDIUM);
@@ -471,8 +524,6 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
         dsize = size;
     }
 
-    sdio_claim_host(sdiodev->func1);
-
     /* Do the transfer(s) */
     while (size) {
         /* Set the backplane window to include the start address */
@@ -517,8 +568,6 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
 
     brcmf_netbuf_free(pkt);
 
-    sdio_release_host(sdiodev->func1);
-
     return err;
 }
 
@@ -561,16 +610,12 @@ static zx_status_t brcmf_sdiod_freezer_on(struct brcmf_sdio_dev* sdiodev) {
     atomic_store(&sdiodev->freezer->freezing, 1);
     brcmf_sdio_trigger_dpc(sdiodev->bus);
     sync_completion_wait(&sdiodev->freezer->thread_freeze, ZX_TIME_INFINITE);
-    sdio_claim_host(sdiodev->func1);
     res = brcmf_sdio_sleep(sdiodev->bus, true);
-    sdio_release_host(sdiodev->func1);
     return res;
 }
 
 static void brcmf_sdiod_freezer_off(struct brcmf_sdio_dev* sdiodev) {
-    sdio_claim_host(sdiodev->func1);
     brcmf_sdio_sleep(sdiodev->bus, false);
-    sdio_release_host(sdiodev->func1);
     atomic_store(&sdiodev->freezer->freezing, 0);
     sync_completion_signal(&sdiodev->freezer->resumed);
 }
@@ -615,14 +660,10 @@ static zx_status_t brcmf_sdiod_remove(struct brcmf_sdio_dev* sdiodev) {
     brcmf_sdiod_freezer_detach(sdiodev);
 
     /* Disable Function 2 */
-    sdio_claim_host(sdiodev->sdio_proto, SDIO_FN_2);
     sdio_disable_fn(sdiodev->sdio_proto, SDIO_FN_2);
-    sdio_release_host(sdiodev->sdio_proto, SDIO_FN_2);
 
     /* Disable Function 1 */
-    sdio_claim_host(sdiodev->sdio_proto, SDIO_FN_1);
     sdio_disable_fn(sdiodev->sdio_proto, SDIO_FN_1);
-    sdio_release_host(sdiodev->sdio_proto, SDIO_FN_1);
 
     sdiodev->sbwad = 0;
 
@@ -644,18 +685,14 @@ static void brcmf_sdiod_host_fixup(struct mmc_host* host) {
 static zx_status_t brcmf_sdiod_probe(struct brcmf_sdio_dev* sdiodev) {
     zx_status_t ret = ZX_OK;
 
-    sdio_claim_host(sdiodev->func1);
-
-    ret = sdio_set_block_size(sdiodev->func1, SDIO_FUNC1_BLOCKSIZE);
+    ret = sdio_update_block_size(sdiodev->sdio_proto, SDIO_FN_1, SDIO_FUNC1_BLOCKSIZE, false);
     if (ret != ZX_OK) {
         brcmf_err("Failed to set F1 blocksize\n");
-        sdio_release_host(sdiodev->func1);
         goto out;
     }
-    ret = sdio_set_block_size(sdiodev->func2, SDIO_FUNC2_BLOCKSIZE);
+    ret = sdio_update_block_size(sdiodev->sdio_proto, SDIO_FN_2, SDIO_FUNC2_BLOCKSIZE, false);
     if (ret != ZX_OK) {
         brcmf_err("Failed to set F2 blocksize\n");
-        sdio_release_host(sdiodev->func1);
         goto out;
     }
 
@@ -665,7 +702,6 @@ static zx_status_t brcmf_sdiod_probe(struct brcmf_sdio_dev* sdiodev) {
 
     /* Enable Function 1 */
     ret = sdio_enable_fn(sdiodev->sdio_proto, SDIO_FN_1);
-    sdio_release_host(sdiodev->func1);
     if (ret != ZX_OK) {
         brcmf_err("Failed to enable F1: err=%d\n", ret);
         goto out;
@@ -768,7 +804,7 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, sdio_protocol_t* sdio_proto)
         return ZX_ERR_NO_MEMORY;
     }
     dev = &sdiodev->dev;
-    sdiodev->zxdev = zxdev;
+    dev->zxdev = zxdev;
     sdiodev->sdio_proto = sdio_proto;
 
     sdiodev->bus_if = bus_if;
@@ -855,7 +891,7 @@ static zx_status_t brcmf_ops_sdio_suspend(struct brcmf_sdio_dev* sdiodev, uint32
             sdio_flags |= MMC_PM_WAKE_SDIO_IRQ;
         }
     }
-    if (sdio_set_host_pm_flags(sdiodev->func1, sdio_flags)) {
+    if (sdio_set_host_pm_flags(sdiodev, SDIO_FN_1, sdio_flags)) {
         brcmf_err("Failed to set pm_flags %x\n", sdio_flags);
     }
     return ZX_OK;
