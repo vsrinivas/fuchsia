@@ -23,6 +23,7 @@ executable_package("suggestion_engine") {
     "//peridot/public/lib:fidl",
     "//garnet/public/lib/app/cpp",
     "//peridot/public/lib/app_driver/cpp",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 

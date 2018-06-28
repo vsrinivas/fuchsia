@@ -5,7 +5,10 @@
 #ifndef PERIDOT_LIB_UTIL_IDLE_WAITER_H_
 #define PERIDOT_LIB_UTIL_IDLE_WAITER_H_
 
-#include "lib/fsl/tasks/message_loop.h"
+#include <vector>
+
+#include <lib/async-loop/cpp/loop.h>
+
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -18,7 +21,7 @@ namespace util {
 // have completed. This function is typically exposed on a service's debug FIDL
 // interface and used for test synchronization.
 //
-// This class is bound to a message loop using SetMessageLoop(). Unbound
+// This class is bound to a message loop using SetLoop(). Unbound
 // instances of this class may exist in unit tests.
 class IdleWaiter final {
  public:
@@ -36,8 +39,8 @@ class IdleWaiter final {
   IdleWaiter();
   ~IdleWaiter();
 
-  void SetMessageLoop(fsl::MessageLoop* message_loop);
-  fsl::MessageLoop* message_loop() const { return message_loop_; }
+  void SetLoop(async::Loop* loop);
+  async::Loop* loop() const { return loop_; }
 
   // Registers an ongoing activity which prevents this app from being
   // considered idle. When the last copy of |ActivityToken| is destroyed, the
@@ -75,7 +78,7 @@ class IdleWaiter final {
   // |FinishIdleCheck| for more information.
   void PostIdleCheck();
 
-  fsl::MessageLoop* message_loop_{};
+  async::Loop* loop_{};
   std::vector<fxl::Closure> callbacks_;
 
   Activity* activity_ = nullptr;

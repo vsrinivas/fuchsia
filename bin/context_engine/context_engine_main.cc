@@ -5,11 +5,11 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/context_engine/context_engine_impl.h"
 
 namespace modular {
@@ -46,21 +46,22 @@ class ContextEngineApp {
 }  // namespace modular
 
 int main(int argc, const char** argv) {
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   auto context_engine_app =
       std::make_unique<modular::ContextEngineApp>(context.get());
   fxl::WeakPtr<modular::ContextDebugImpl> debug = context_engine_app->debug();
-  debug->GetIdleWaiter()->SetMessageLoop(&loop);
+  debug->GetIdleWaiter()->SetLoop(&loop);
 
   modular::AppDriver<modular::ContextEngineApp> driver(
       context->outgoing().deprecated_services(), std::move(context_engine_app),
-      [&loop] { loop.QuitNow(); });
+      [&loop] { loop.Quit(); });
 
   // The |WaitUntilIdle| debug functionality escapes the main message loop to
   // perform its test.
   do {
     loop.Run();
+    loop.ResetQuit();
   } while (debug && debug->GetIdleWaiter()->FinishIdleCheck());
 
   return 0;

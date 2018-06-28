@@ -6,7 +6,8 @@
 
 namespace maxwell {
 
-MaxwellTestBase::MaxwellTestBase() {
+MaxwellTestBase::MaxwellTestBase()
+  : loop_(&kAsyncLoopConfigMakeDefault) {
   startup_context_ = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   auto root_environment = startup_context_->environment().get();
   FXL_CHECK(root_environment != nullptr);

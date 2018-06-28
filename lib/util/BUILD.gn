@@ -69,7 +69,7 @@ source_set("idle_waiter") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp"
   ]
 }

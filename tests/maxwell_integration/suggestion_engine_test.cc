@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
 
-#include "gtest/gtest.h"
 #include "lib/context/cpp/context_helper.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"
 #include "peridot/bin/acquirers/mock/mock_gps.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
@@ -94,8 +94,9 @@ class AskProposinator : public Proposinator,
                         public fuchsia::modular::QueryHandler {
  public:
   AskProposinator(fuchsia::modular::SuggestionEngine* suggestion_engine,
+                  async::Loop* loop,
                   fidl::StringPtr url = "AskProposinator")
-      : Proposinator(suggestion_engine, url), ask_binding_(this) {
+      : Proposinator(suggestion_engine, url), loop_(loop), ask_binding_(this) {
     fidl::InterfaceHandle<fuchsia::modular::QueryHandler> query_handle;
     ask_binding_.Bind(query_handle.NewRequest());
     suggestion_engine->RegisterQueryHandler(url, std::move(query_handle));
@@ -109,13 +110,14 @@ class AskProposinator : public Proposinator,
 
     if (waiting_for_query_) {
       waiting_for_query_ = false;
-      fsl::MessageLoop::GetCurrent()->PostQuitTask();
+      async::PostTask(loop_->async(), [this] { loop_->Quit(); });
     }
   }
 
   void WaitForQuery() {
     waiting_for_query_ = true;
-    fsl::MessageLoop::GetCurrent()->Run();
+    loop_->Run();
+    loop_->ResetQuit();
   }
 
   void Commit() {
@@ -142,6 +144,7 @@ class AskProposinator : public Proposinator,
   }
 
  private:
+  async::Loop* const loop_;
   fidl::Binding<fuchsia::modular::QueryHandler> ask_binding_;
   fuchsia::modular::UserInputPtr query_;
   fidl::VectorPtr<fuchsia::modular::Proposal> query_proposals_;
@@ -287,7 +290,7 @@ class SuggestionEngineTest : public ContextEngineTestBase,
 
   void WaitUntilIdle() {
     ContextEngineTestBase::WaitUntilIdle();
-    util::WaitUntilIdle(&suggestion_debug_, &message_loop_);
+    util::WaitUntilIdle(&suggestion_debug_, &loop_);
   }
 
   void AddProposalListenerBinding(
@@ -830,7 +833,7 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
 }
 
 TEST_F(SuggestionInteractionTest, AcceptSugestion_QueryAction) {
-  AskProposinator p(suggestion_engine());
+  AskProposinator p(suggestion_engine(), &loop_);
   StartListening(10);
 
   fuchsia::modular::UserInput user_input;
@@ -874,7 +877,7 @@ TEST_F(SuggestionInteractionTest, AcceptSugestion_QueryAction) {
 }
 
 TEST_F(AskTest, DefaultAsk) {
-  AskProposinator p(suggestion_engine());
+  AskProposinator p(suggestion_engine(), &loop_);
 
   Query("test query");
   p.WaitForQuery();
@@ -903,7 +906,7 @@ TEST_F(AskTest, DefaultAsk) {
   ASYNC_CHECK(listener()->GetTopSuggestion()->display->headline == h)
 
 TEST_F(AskTest, AskDifferentQueries) {
-  AskProposinator p(suggestion_engine());
+  AskProposinator p(suggestion_engine(), &loop_);
 
   Query("The Hottest Band on the Internet");
   p.WaitForQuery();
@@ -926,7 +929,7 @@ TEST_F(AskTest, AskDifferentQueries) {
 }
 
 TEST_F(AskTest, ChangeHeadlineRank) {
-  AskProposinator p(suggestion_engine());
+  AskProposinator p(suggestion_engine(), &loop_);
 
   Query("test query");
   p.WaitForQuery();
@@ -974,7 +977,7 @@ TEST_F(AskTest, ChangeHeadlineRank) {
   EXPECT_EQ(expected, (*listener())[index]->display->headline)
 
 TEST_F(AskTest, AskRanking) {
-  AskProposinator p(suggestion_engine());
+  AskProposinator p(suggestion_engine(), &loop_);
 
   Query("");
   p.WaitForQuery();

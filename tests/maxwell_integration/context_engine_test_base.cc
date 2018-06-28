@@ -39,7 +39,7 @@ void ContextEngineTestBase::StartContextAgent(const std::string& url) {
 }
 
 void ContextEngineTestBase::WaitUntilIdle() {
-  util::WaitUntilIdle(&debug_, &message_loop_);
+  util::WaitUntilIdle(&debug_, &loop_);
 }
 
 }  // namespace maxwell

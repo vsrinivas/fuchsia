@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
@@ -50,22 +51,23 @@ class SuggestionEngineApp {
 }  // namespace modular
 
 int main(int argc, const char** argv) {
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   auto suggestion_engine =
       std::make_unique<modular::SuggestionEngineApp>(context.get());
 
   fxl::WeakPtr<modular::SuggestionDebugImpl> debug = suggestion_engine->debug();
-  debug->GetIdleWaiter()->SetMessageLoop(&loop);
+  debug->GetIdleWaiter()->SetLoop(&loop);
 
   modular::AppDriver<modular::SuggestionEngineApp> driver(
       context->outgoing().deprecated_services(), std::move(suggestion_engine),
-      [&loop] { loop.QuitNow(); });
+      [&loop] { loop.Quit(); });
 
   // The |WaitUntilIdle| debug functionality escapes the main message loop to
   // perform its test.
   do {
     loop.Run();
+    loop.ResetQuit();
   } while (debug && debug->GetIdleWaiter()->FinishIdleCheck());
 
   return 0;

@@ -5,9 +5,11 @@
 #ifndef PERIDOT_LIB_TESTING_WAIT_UNTIL_IDLE_H_
 #define PERIDOT_LIB_TESTING_WAIT_UNTIL_IDLE_H_
 
+#include <lib/async/cpp/task.h>
+#include <lib/async-loop/cpp/loop.h>
+
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/interface_ptr.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace util {
 
@@ -18,21 +20,24 @@ namespace util {
 // afterwards.
 template <class Interface>
 void WaitUntilIdle(fidl::InterfacePtr<Interface>* debug_interface_ptr,
-                   fsl::MessageLoop* message_loop) {
-  debug_interface_ptr->set_error_handler([message_loop] {
-    message_loop->PostQuitTask();
+                   async::Loop* loop) {
+  debug_interface_ptr->set_error_handler([loop] {
+    loop->Quit();
     ADD_FAILURE() << Interface::Name_
                   << " disconnected (check app logs for crash)";
   });
 
-  // We can't just use a synchronous ptr because t doesn't run the message loop
-  // while it waits.
-  (*debug_interface_ptr)->WaitUntilIdle([message_loop] {
-    message_loop->PostQuitTask();
+  // We can't just use a synchronous ptr or
+  // |fidl::InterfacePtr::WaitForResponse| because those don't run the message
+  // loop while they wait.
+  (*debug_interface_ptr)->WaitUntilIdle([loop] {
+    loop->Quit();
   });
-  message_loop->Run();
+  loop->Run();
+  loop->ResetQuit();
   // Finish processing any remaining messages.
-  message_loop->RunUntilIdle();
+  loop->RunUntilIdle();
+  loop->ResetQuit();
 
   debug_interface_ptr->set_error_handler(nullptr);
 }

@@ -5,18 +5,19 @@
 #ifndef PERIDOT_TESTS_MAXWELL_INTEGRATION_TEST_H_
 #define PERIDOT_TESTS_MAXWELL_INTEGRATION_TEST_H_
 
+#include <lib/async-loop/cpp/loop.h>
+
 #include "gtest/gtest.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/app/cpp/startup_context.h"
-#include "lib/gtest/test_with_message_loop.h"
 #include "peridot/bin/maxwell/agent_launcher.h"
 #include "peridot/lib/testing/component_context_fake.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
 
 namespace maxwell {
 
-class MaxwellTestBase : public gtest::TestWithMessageLoop {
+class MaxwellTestBase : public testing::Test {
  protected:
   MaxwellTestBase();
   virtual ~MaxwellTestBase() = default;
@@ -39,6 +40,8 @@ class MaxwellTestBase : public gtest::TestWithMessageLoop {
   modular::EntityResolverFake& entity_resolver() {
     return child_component_context_.entity_resolver_fake();
   }
+
+  async::Loop loop_;
 
  private:
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
