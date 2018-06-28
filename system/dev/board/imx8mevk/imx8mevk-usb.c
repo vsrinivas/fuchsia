@@ -15,37 +15,106 @@
 #include <zircon/syscalls/smc.h>
 #include "imx8mevk.h"
 
-static const pbus_mmio_t dwc3_mmios[] = {
+static const pbus_mmio_t usb1_mmios[] = {
+    {
+        .base = IMX8M_USB1_BASE,
+        .length = IMX8M_USB1_LENGTH,
+    },
+};
+static const pbus_irq_t usb1_irqs[] = {
+    {
+        .irq = IMX8M_A53_INTR_USB1,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+
+static const pbus_bti_t usb1_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = BTI_USB1,
+    },
+};
+
+// USB1 is USB-C OTG port
+static const pbus_dev_t usb1_dev = {
+    .name = "dwc3-1",
+    .vid = PDEV_VID_GENERIC,
+    .pid = PDEV_PID_GENERIC,
+    .did = PDEV_DID_USB_DWC3,
+    .mmios = usb1_mmios,
+    .mmio_count = countof(usb1_mmios),
+    .irqs = usb1_irqs,
+    .irq_count = countof(usb1_irqs),
+    .btis = usb1_btis,
+    .bti_count = countof(usb1_btis),
+};
+
+static const pbus_mmio_t usb2_mmios[] = {
     {
         .base = IMX8M_USB2_BASE,
         .length = IMX8M_USB2_LENGTH,
     },
 };
-static const pbus_irq_t dwc3_irqs[] = {
+static const pbus_irq_t usb2_irqs[] = {
     {
         .irq = IMX8M_A53_INTR_USB2,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
-static const pbus_bti_t dwc3_btis[] = {
+
+static const pbus_bti_t usb2_btis[] = {
     {
         .iommu_index = 0,
-        .bti_id = BTI_USB,
+        .bti_id = BTI_USB2,
     },
 };
 
-static const pbus_dev_t dwc3_dev = {
-    .name = "dwc3",
+// USB1 is USB-A port, host only
+static const pbus_dev_t usb2_dev = {
+    .name = "dwc3-2",
     .vid = PDEV_VID_GENERIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_USB_DWC3,
-    .mmios = dwc3_mmios,
-    .mmio_count = countof(dwc3_mmios),
-    .irqs = dwc3_irqs,
-    .irq_count = countof(dwc3_irqs),
-    .btis = dwc3_btis,
-    .bti_count = countof(dwc3_btis),
+    .mmios = usb2_mmios,
+    .mmio_count = countof(usb2_mmios),
+    .irqs = usb2_irqs,
+    .irq_count = countof(usb2_irqs),
+    .btis = usb2_btis,
+    .bti_count = countof(usb2_btis),
 };
+
+zx_status_t imx_usb_phy_init(zx_paddr_t usb_base, size_t usb_length, zx_handle_t bti) {
+    uint32_t reg;
+    io_buffer_t usb_buf;
+    zx_status_t status = io_buffer_init_physical(&usb_buf, bti, usb_base, usb_length,
+                                        get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s io_buffer_init_physical failed %d\n", __FUNCTION__, status);
+        return status;
+    }
+
+    volatile void* regs = io_buffer_virt(&usb_buf);
+    //TODO: More stuff might be needed if we were to boot from our own bootloader.
+    reg = readl(regs + USB_PHY_CTRL1);
+    reg &= ~(PHY_CTRL1_VDATSRCENB0 | PHY_CTRL1_VDATDETENB0);
+    reg |= PHY_CTRL1_RESET | PHY_CTRL1_ATERESET;
+    writel(reg, regs + USB_PHY_CTRL1);
+
+    reg = readl(regs + USB_PHY_CTRL0);
+    reg |= PHY_CTRL0_REF_SSP_EN;
+    writel(reg, regs + USB_PHY_CTRL0);
+
+    reg = readl(regs + USB_PHY_CTRL2);
+    reg |= PHY_CTRL2_TXENABLEN0;
+    writel(reg, regs + USB_PHY_CTRL2);
+
+    reg = readl(regs + USB_PHY_CTRL1);
+    reg &= ~(PHY_CTRL1_RESET | PHY_CTRL1_ATERESET);
+    writel(reg, regs + USB_PHY_CTRL1);
+
+    io_buffer_release(&usb_buf);
+    return ZX_OK;
+}
 
 zx_status_t imx_usb_init(imx8mevk_bus_t* bus) {
     zx_status_t status;
@@ -79,42 +148,26 @@ zx_status_t imx_usb_init(imx8mevk_bus_t* bus) {
         return status;
     }
 
-    uint32_t reg;
-    io_buffer_t usb_phy;
-    status = io_buffer_init_physical(&usb_phy, bti, IMX8M_USB2_BASE, IMX8M_USB2_LENGTH,
-                                        get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    status = imx_usb_phy_init(IMX8M_USB1_BASE, IMX8M_USB1_LENGTH, bti);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s io_buffer_init_physical failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: imx_usb_phy_init failed %d\n", __FUNCTION__, status);
         zx_handle_close(bti);
         return status;
     }
-
-    volatile void* regs = io_buffer_virt(&usb_phy);
-    regs += USBMIX_PHY_OFFSET;
-    //TODO: More stuff might be needed if we were to boot from our own bootloader.
-    reg = readl(regs + 0x4);
-    reg &= ~(PHY_CTRL1_VDATSRCENB0 | PHY_CTRL1_VDATDETENB0);
-    reg |= PHY_CTRL1_RESET | PHY_CTRL1_ATERESET;
-    writel(reg, regs + 0x4);
-
-    reg = readl(regs + 0x0);
-    reg |= PHY_CTRL0_REF_SSP_EN;
-    writel(reg, regs + 0x0);
-
-    reg = readl(regs + 0x8);
-    reg |= PHY_CTRL2_TXENABLEN0;
-    writel(reg, regs + 0x8);
-
-    reg = readl(regs + 0x4);
-    reg &= ~(PHY_CTRL1_RESET | PHY_CTRL1_ATERESET);
-    writel(reg, regs + 0x4);
-
-    io_buffer_release(&usb_phy);
-
+    status = imx_usb_phy_init(IMX8M_USB2_BASE, IMX8M_USB2_LENGTH, bti);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: imx_usb_phy_init failed %d\n", __FUNCTION__, status);
+        zx_handle_close(bti);
+        return status;
+    }
     zx_handle_close(bti);
 
-    if ((status = pbus_device_add(&bus->pbus, &dwc3_dev, 0)) != ZX_OK) {
-        zxlogf(ERROR, "hi3360_add_devices could not add dwc3_dev: %d\n", status);
+    if ((status = pbus_device_add(&bus->pbus, &usb1_dev, 0)) != ZX_OK) {
+        zxlogf(ERROR, "imx_usb_init could not add usb1_dev: %d\n", status);
+        return status;
+    }
+    if ((status = pbus_device_add(&bus->pbus, &usb2_dev, 0)) != ZX_OK) {
+        zxlogf(ERROR, "imx_usb_init could not add usb2_dev: %d\n", status);
         return status;
     }
     return ZX_OK;

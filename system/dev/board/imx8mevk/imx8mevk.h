@@ -16,7 +16,8 @@
 // BTI IDs for our devices
 enum {
     BTI_BOARD,
-    BTI_USB,
+    BTI_USB1,
+    BTI_USB2,
     BTI_DISPLAY,
     BTI_GPU,
     BTI_SDHCI,

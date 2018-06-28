@@ -257,10 +257,12 @@
  #define IMX8M_A53_INTR_PCIE_CTRL1zz                        (32 + 127)
 
 /* USB PHY CTRL Registers (undocumented) */
-#define USBMIX_PHY_OFFSET           (0xF0040)
+#define USB_PHY_CTRL0               (0xF0040)
 #define PHY_CTRL0_REF_SSP_EN        (1 << 2)
+#define USB_PHY_CTRL1               (0xF0044)
 #define PHY_CTRL1_RESET             (1 << 0)
 #define PHY_CTRL1_ATERESET          (1 << 3)
 #define PHY_CTRL1_VDATSRCENB0       (1 << 19)
 #define PHY_CTRL1_VDATDETENB0       (1 << 20)
+#define USB_PHY_CTRL2               (0xF0048)
 #define PHY_CTRL2_TXENABLEN0        (1 << 8)
