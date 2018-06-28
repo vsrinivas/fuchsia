@@ -28,7 +28,7 @@
 #include "lib/ui/scenic/fidl_helpers.h"
 #include "lib/ui/scenic/types.h"
 
-using namespace scenic_lib;
+using namespace scenic;
 
 namespace hello_stereo {
 
@@ -132,7 +132,7 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
   FXL_LOG(INFO) << "Creating new Session";
 
   // TODO: set up SessionListener.
-  session_ = std::make_unique<scenic_lib::Session>(scenic_.get());
+  session_ = std::make_unique<scenic::Session>(scenic_.get());
   session_->set_error_handler([this] {
     FXL_LOG(INFO) << "Session terminated.";
     loop_->Quit();

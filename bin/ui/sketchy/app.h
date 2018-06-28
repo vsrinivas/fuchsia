@@ -23,7 +23,7 @@ class App {
   async::Loop* const loop_;
   std::unique_ptr<fuchsia::sys::StartupContext> context_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
-  std::unique_ptr<scenic_lib::Session> session_;
+  std::unique_ptr<scenic::Session> session_;
   fidl::BindingSet<::fuchsia::ui::sketchy::Canvas> bindings_;
   std::unique_ptr<CanvasImpl> canvas_;
 };

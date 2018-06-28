@@ -11,7 +11,7 @@
 
 namespace sketchy_service {
 
-CanvasImpl::CanvasImpl(async::Loop* loop, scenic_lib::Session* session,
+CanvasImpl::CanvasImpl(async::Loop* loop, scenic::Session* session,
                        escher::Escher* escher)
     : loop_(loop),
       session_(session),

@@ -218,15 +218,14 @@ void App::InitializeServices() {
       Reset();
     });
 
-    session_ = std::make_unique<scenic_lib::Session>(scenic_.get());
+    session_ = std::make_unique<scenic::Session>(scenic_.get());
     session_->set_error_handler([this] {
       FXL_LOG(ERROR) << "Session died, destroying view trees.";
       Reset();
     });
 
-    compositor_ =
-        std::make_unique<scenic_lib::DisplayCompositor>(session_.get());
-    layer_stack_ = std::make_unique<scenic_lib::LayerStack>(session_.get());
+    compositor_ = std::make_unique<scenic::DisplayCompositor>(session_.get());
+    layer_stack_ = std::make_unique<scenic::LayerStack>(session_.get());
     compositor_->SetLayerStack(*layer_stack_.get());
     session_->Present(0, [](fuchsia::images::PresentationInfo info) {});
 

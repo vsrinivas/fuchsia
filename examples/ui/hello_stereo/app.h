@@ -34,8 +34,8 @@ class App {
   async::Loop* const loop_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
 
-  std::unique_ptr<scenic_lib::Session> session_;
-  std::unique_ptr<scenic_lib::DisplayCompositor> compositor_;
+  std::unique_ptr<scenic::Session> session_;
+  std::unique_ptr<scenic::DisplayCompositor> compositor_;
 
   // Time of the first update.  Animation of the "pane" content is based on the
   // time elapsed since this time.

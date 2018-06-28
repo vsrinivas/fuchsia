@@ -239,7 +239,7 @@ class ViewRegistry : public ViewInspector, public InputOwner {
 
   fuchsia::sys::StartupContext* startup_context_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
-  scenic_lib::Session session_;
+  scenic::Session session_;
 
   bool traversal_scheduled_ = false;
   bool present_session_scheduled_ = false;

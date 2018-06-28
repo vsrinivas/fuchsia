@@ -23,7 +23,7 @@ namespace sketchy_service {
 
 class CanvasImpl final : public ::fuchsia::ui::sketchy::Canvas {
  public:
-  CanvasImpl(async::Loop* loop, scenic_lib::Session* session,
+  CanvasImpl(async::Loop* loop, scenic::Session* session,
              escher::Escher* escher);
 
   // |::fuchsia::ui::sketchy::Canvas|
@@ -76,13 +76,13 @@ class CanvasImpl final : public ::fuchsia::ui::sketchy::Canvas {
   bool ApplyScenicAddChildCmd(fuchsia::ui::gfx::AddChildCmd add_child);
 
   async::Loop* const loop_;
-  scenic_lib::Session* const session_;
+  scenic::Session* const session_;
   SharedBufferPool shared_buffer_pool_;
 
   ::fidl::VectorPtr<::fuchsia::ui::sketchy::Command> commands_;
   ResourceMap resource_map_;
   bool is_scenic_present_requested_ = false;
-  std::vector<scenic_lib::Session::PresentCallback> callbacks_;
+  std::vector<scenic::Session::PresentCallback> callbacks_;
 
   StrokeManager stroke_manager_;
 };

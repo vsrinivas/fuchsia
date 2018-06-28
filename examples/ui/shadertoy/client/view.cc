@@ -70,19 +70,19 @@ ViewImpl::ViewImpl(fuchsia::sys::StartupContext* startup_context,
   // Pass the other end of the ImagePipe to the Session, and wrap the
   // resulting resource in a Material.
   uint32_t image_pipe_id = session()->AllocResourceId();
-  session()->Enqueue(scenic_lib::NewCreateImagePipeCmd(
+  session()->Enqueue(scenic::NewCreateImagePipeCmd(
       image_pipe_id, std::move(image_pipe_request)));
-  scenic_lib::Material material(session());
+  scenic::Material material(session());
   material.SetTexture(image_pipe_id);
   session()->ReleaseResource(image_pipe_id);
 
   // Create a rounded-rect shape to display the Shadertoy image on.
-  scenic_lib::RoundedRectangle shape(session(), kShapeWidth, kShapeHeight, 80,
+  scenic::RoundedRectangle shape(session(), kShapeWidth, kShapeHeight, 80,
                                      80, 80, 80);
 
   constexpr size_t kNodeCount = 16;
   for (size_t i = 0; i < kNodeCount; ++i) {
-    scenic_lib::ShapeNode node(session());
+    scenic::ShapeNode node(session());
     node.SetShape(shape);
     node.SetMaterial(material);
     parent_node()->AddChild(node);

@@ -25,7 +25,7 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   // Callback when the presentation is shut down.
   using ShutdownCallback = fit::closure;
 
-  virtual const scenic_lib::Layer& layer() const = 0;
+  virtual const scenic::Layer& layer() const = 0;
   virtual const YieldCallback& yield_callback() = 0;
 
   virtual void OnReport(uint32_t device_id,
@@ -41,7 +41,7 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
 
   virtual const DisplayMetrics& display_metrics() const = 0;
 
-  virtual scenic_lib::Camera* camera() = 0;
+  virtual scenic::Camera* camera() = 0;
 
   virtual void SetDisplayUsageWithoutApplyingChanges(
       fuchsia::ui::policy::DisplayUsage usage_) = 0;

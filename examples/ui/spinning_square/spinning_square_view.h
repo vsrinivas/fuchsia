@@ -22,8 +22,8 @@ class SpinningSquareView : public mozart::BaseView {
   // |BaseView|:
   void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
 
-  scenic_lib::ShapeNode background_node_;
-  scenic_lib::ShapeNode square_node_;
+  scenic::ShapeNode background_node_;
+  scenic::ShapeNode square_node_;
 
   uint64_t start_time_ = 0u;
 

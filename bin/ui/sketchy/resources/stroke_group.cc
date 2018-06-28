@@ -27,7 +27,7 @@ const ResourceTypeInfo StrokeGroup::kTypeInfo("StrokeGroup",
                                               ResourceType::kStrokeGroup,
                                               ResourceType::kResource);
 
-StrokeGroup::StrokeGroup(scenic_lib::Session* session)
+StrokeGroup::StrokeGroup(scenic::Session* session)
     : shape_node_(session), mesh_(session), material_(session) {
   material_.SetColor(255, 0, 255, 255);
   shape_node_.SetMaterial(material_);

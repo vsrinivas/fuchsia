@@ -70,7 +70,7 @@ std::pair<escher::BufferRange, escher::BufferRange> MeshBuffer::Reserve(
           index_buffer_->Reserve(index_size)};
 };
 
-void MeshBuffer::ProvideBuffersToScenicMesh(scenic_lib::Mesh* scenic_mesh) {
+void MeshBuffer::ProvideBuffersToScenicMesh(scenic::Mesh* scenic_mesh) {
   auto bb_min = bbox_.min();
   auto bb_max = bbox_.max();
   float bb_min_arr[] = {bb_min.x, bb_min.y, bb_min.z};
@@ -78,7 +78,7 @@ void MeshBuffer::ProvideBuffersToScenicMesh(scenic_lib::Mesh* scenic_mesh) {
   scenic_mesh->BindBuffers(
       index_buffer_->scenic_buffer(), kMeshIndexFormat, /* index_offset= */ 0,
       index_count_, vertex_buffer_->scenic_buffer(),
-      scenic_lib::NewMeshVertexFormat(kMeshVertexPositionType,
+      scenic::NewMeshVertexFormat(kMeshVertexPositionType,
                                       kMeshVertexNormalType,
                                       kMeshVertexTexCoodType),
       /* vertex_offset= */ 0, vertex_count_, bb_min_arr, bb_max_arr);

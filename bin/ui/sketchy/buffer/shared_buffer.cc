@@ -23,26 +23,26 @@ const vk::BufferUsageFlags kBufferUsageFlags =
 const vk::MemoryPropertyFlags kMemoryPropertyFlags =
     vk::MemoryPropertyFlagBits::eDeviceLocal;
 
-std::unique_ptr<scenic_lib::Buffer> NewScenicBufferFromEscherBuffer(
-    const escher::BufferPtr& buffer, scenic_lib::Session* session) {
+std::unique_ptr<scenic::Buffer> NewScenicBufferFromEscherBuffer(
+    const escher::BufferPtr& buffer, scenic::Session* session) {
   zx::vmo vmo = escher::ExportMemoryAsVmo(buffer->escher(), buffer->mem());
 
-  scenic_lib::Memory memory(session, std::move(vmo),
+  scenic::Memory memory(session, std::move(vmo),
                             fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
-  return std::make_unique<scenic_lib::Buffer>(memory, 0, buffer->size());
+  return std::make_unique<scenic::Buffer>(memory, 0, buffer->size());
 }
 
 }  // namespace
 
 namespace sketchy_service {
 
-SharedBufferPtr SharedBuffer::New(scenic_lib::Session* session,
+SharedBufferPtr SharedBuffer::New(scenic::Session* session,
                                   escher::BufferFactory* factory,
                                   vk::DeviceSize capacity) {
   return fxl::AdoptRef(new SharedBuffer(session, factory, capacity));
 }
 
-SharedBuffer::SharedBuffer(scenic_lib::Session* session,
+SharedBuffer::SharedBuffer(scenic::Session* session,
                            escher::BufferFactory* factory,
                            vk::DeviceSize capacity)
     : session_(session),

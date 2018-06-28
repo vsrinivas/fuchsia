@@ -15,7 +15,7 @@ ViewState::ViewState(ViewRegistry* registry,
                      ::fuchsia::ui::views_v1_token::ViewToken view_token,
                      fidl::InterfaceRequest<::fuchsia::ui::views_v1::View> view_request,
                      ::fuchsia::ui::views_v1::ViewListenerPtr view_listener,
-                     scenic_lib::Session* session, const std::string& label)
+                     scenic::Session* session, const std::string& label)
     : view_token_(std::move(view_token)),
       view_listener_(std::move(view_listener)),
       top_node_(session),

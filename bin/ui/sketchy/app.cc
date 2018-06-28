@@ -11,7 +11,7 @@ App::App(async::Loop* loop, escher::Escher* escher)
       context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       scenic_(
           context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>()),
-      session_(std::make_unique<scenic_lib::Session>(scenic_.get())),
+      session_(std::make_unique<scenic::Session>(scenic_.get())),
       canvas_(std::make_unique<CanvasImpl>(loop_, session_.get(), escher)) {
   context_->outgoing().AddPublicService(bindings_.GetHandler(canvas_.get()));
 

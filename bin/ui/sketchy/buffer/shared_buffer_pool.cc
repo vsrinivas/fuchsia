@@ -14,7 +14,7 @@ constexpr uint32_t kBaseBufferPower = 10;
 
 namespace sketchy_service {
 
-SharedBufferPool::SharedBufferPool(scenic_lib::Session* session,
+SharedBufferPool::SharedBufferPool(scenic::Session* session,
                                    escher::Escher* escher)
     : session_(session),
       escher_(escher),

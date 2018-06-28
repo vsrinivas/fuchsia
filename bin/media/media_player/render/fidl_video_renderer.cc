@@ -323,7 +323,7 @@ void FidlVideoRenderer::View::OnSceneInvalidated(
   }
 
   // Update the image.
-  const scenic_lib::HostImage* image = image_cycler_.AcquireImage(
+  const scenic::HostImage* image = image_cycler_.AcquireImage(
       video_size.width, video_size.height, video_size.width * 4u,
       fuchsia::images::PixelFormat::BGRA_8, fuchsia::images::ColorSpace::SRGB);
   FXL_DCHECK(image);

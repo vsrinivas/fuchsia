@@ -24,17 +24,17 @@ ShapesView::ShapesView(
       background_node_(session()),
       card_node_(session()),
       circle_node_(session()) {
-  scenic_lib::Material background_material(session());
+  scenic::Material background_material(session());
   background_material.SetColor(0x21, 0x21, 0x21, 0xff);  // Grey 900
   background_node_.SetMaterial(background_material);
   parent_node().AddChild(background_node_);
 
-  scenic_lib::Material card_material(session());
+  scenic::Material card_material(session());
   card_material.SetColor(0x67, 0x3a, 0xb7, 0xff);  // Deep Purple 500
   card_node_.SetMaterial(card_material);
   parent_node().AddChild(card_node_);
 
-  scenic_lib::Material circle_material(session());
+  scenic::Material circle_material(session());
   circle_material.SetColor(0xf5, 0x00, 0x57, 0xff);  // Pink A400
   circle_node_.SetMaterial(circle_material);
   parent_node().AddChild(circle_node_);
@@ -50,19 +50,19 @@ void ShapesView::OnSceneInvalidated(
   const float center_x = logical_size().width * .5f;
   const float center_y = logical_size().height * .5f;
 
-  scenic_lib::Rectangle background_shape(session(), logical_size().width,
+  scenic::Rectangle background_shape(session(), logical_size().width,
                                          logical_size().height);
   background_node_.SetShape(background_shape);
   background_node_.SetTranslation(center_x, center_y, kBackgroundElevation);
 
-  scenic_lib::RoundedRectangle card_shape(session(), logical_size().width * .9f,
+  scenic::RoundedRectangle card_shape(session(), logical_size().width * .9f,
                                           logical_size().height * .9f,
                                           kCardCornerRadius, kCardCornerRadius,
                                           kCardCornerRadius, kCardCornerRadius);
   card_node_.SetShape(card_shape);
   card_node_.SetTranslation((float[]){center_x, center_y, kCardElevation});
 
-  scenic_lib::Circle circle_shape(session(), kCircleRadius);
+  scenic::Circle circle_shape(session(), kCircleRadius);
   circle_node_.SetShape(circle_shape);
   circle_node_.SetTranslation(logical_size().width * .85f,
                               logical_size().height * .85f, kCircleElevation);

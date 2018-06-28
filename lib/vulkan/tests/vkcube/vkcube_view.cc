@@ -25,9 +25,9 @@ void VkCubeView::OnSceneInvalidated(
   size_ = logical_size();
   physical_size_ = physical_size();
 
-  scenic_lib::Rectangle pane_shape(session(), logical_size().width,
+  scenic::Rectangle pane_shape(session(), logical_size().width,
                                    logical_size().height);
-  scenic_lib::Material pane_material(session());
+  scenic::Material pane_material(session());
 
   pane_node_.SetShape(pane_shape);
   pane_node_.SetMaterial(pane_material);
@@ -40,7 +40,7 @@ void VkCubeView::OnSceneInvalidated(
   zx::channel::create(0, &endpoint0, &endpoint1);
 
   uint32_t image_pipe_id = session()->AllocResourceId();
-  session()->Enqueue(scenic_lib::NewCreateImagePipeCmd(
+  session()->Enqueue(scenic::NewCreateImagePipeCmd(
       image_pipe_id,
       fidl::InterfaceRequest<fuchsia::images::ImagePipe>(std::move(endpoint1))));
   pane_material.SetTexture(image_pipe_id);

@@ -25,14 +25,14 @@ TEST_F(ImportTest, ExportsResourceViaCmd) {
   scenic::ResourceId resource_id = 1;
 
   // Create an entity node.
-  ASSERT_TRUE(Apply(scenic_lib::NewCreateEntityNodeCmd(resource_id)));
+  ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(resource_id)));
 
   // Assert that the entity node was correctly mapped in.
   ASSERT_EQ(1u, session_->GetMappedResourceCount());
 
   // Apply the export command.
   ASSERT_TRUE(Apply(
-      scenic_lib::NewExportResourceCmd(resource_id, std::move(source))));
+      scenic::NewExportResourceCmd(resource_id, std::move(source))));
 }
 
 TEST_F(ImportTest, ImportsUnlinkedImportViaCmd) {
@@ -41,7 +41,7 @@ TEST_F(ImportTest, ImportsUnlinkedImportViaCmd) {
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   // Apply the import command.
-  ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCmd(
+  ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
       1 /* import resource ID */,
       ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
       std::move(destination))               /* endpoint */
@@ -71,7 +71,7 @@ TEST_F(ImportTest, PerformsFullLinking) {
   // Perform the import
   {
     // Apply the import command.
-    ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCmd(
+    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
         1 /* import resource ID */,
         ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
         std::move(destination))               /* endpoint */
@@ -99,14 +99,14 @@ TEST_F(ImportTest, PerformsFullLinking) {
   // Perform the export
   {
     // Create an entity node.
-    ASSERT_TRUE(Apply(scenic_lib::NewCreateEntityNodeCmd(2)));
+    ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(2)));
 
     // Assert that the entity node was correctly mapped in.
     ASSERT_EQ(2u, session_->GetMappedResourceCount());
 
     // Apply the export command.
     ASSERT_TRUE(
-        Apply(scenic_lib::NewExportResourceCmd(2, std::move(source))));
+        Apply(scenic::NewExportResourceCmd(2, std::move(source))));
   }
 
   // Bindings should have been resolved.
@@ -146,8 +146,8 @@ TEST_F(ImportTest, HandlesDeadSourceHandle) {
   }
 
   // Export an entity node with a dead handle.
-  ASSERT_TRUE(Apply(scenic_lib::NewCreateEntityNodeCmd(1)));
-  EXPECT_FALSE(Apply(scenic_lib::NewExportResourceCmd(
+  ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(1)));
+  EXPECT_FALSE(Apply(scenic::NewExportResourceCmd(
       1 /* resource id */, std::move(source_out))));
 }
 
@@ -164,8 +164,8 @@ TEST_F(ImportTest, HandlesDeadDestinationHandle) {
   }
 
   // Import an entity node with a dead handle.
-  ASSERT_TRUE(Apply(scenic_lib::NewCreateEntityNodeCmd(1)));
-  EXPECT_FALSE(Apply(scenic_lib::NewImportResourceCmd(
+  ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(1)));
+  EXPECT_FALSE(Apply(scenic::NewImportResourceCmd(
       1 /* resource id */, ::fuchsia::ui::gfx::ImportSpec::NODE,
       std::move(destination_out))));
 }
@@ -178,15 +178,15 @@ TEST_F(ImportTest, DestroyingExportedResourceSendsEvent) {
   // Export an entity node.
   scenic::ResourceId node_id = 1;
   scenic::ResourceId import_node = 2;
-  ASSERT_TRUE(Apply(scenic_lib::NewCreateEntityNodeCmd(node_id)));
+  ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(node_id)));
   EXPECT_TRUE(
-      Apply(scenic_lib::NewExportResourceCmd(node_id, std::move(source))));
-  EXPECT_TRUE(Apply(scenic_lib::NewImportResourceCmd(
+      Apply(scenic::NewExportResourceCmd(node_id, std::move(source))));
+  EXPECT_TRUE(Apply(scenic::NewImportResourceCmd(
       import_node, ::fuchsia::ui::gfx::ImportSpec::NODE,
       std::move(destination))));
 
   // Release the entity node.
-  EXPECT_TRUE(Apply(scenic_lib::NewReleaseResourceCmd(node_id)));
+  EXPECT_TRUE(Apply(scenic::NewReleaseResourceCmd(node_id)));
 
   // Run the message loop until we get an event.
   RunLoopUntilIdle();
@@ -208,15 +208,15 @@ TEST_F(ImportTest, ImportingNodeAfterDestroyingExportedResourceSendsEvent) {
   // Export an entity node.
   scenic::ResourceId node_id = 1;
   scenic::ResourceId import_node = 2;
-  ASSERT_TRUE(Apply(scenic_lib::NewCreateEntityNodeCmd(node_id)));
+  ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(node_id)));
   EXPECT_TRUE(
-      Apply(scenic_lib::NewExportResourceCmd(node_id, std::move(source))));
+      Apply(scenic::NewExportResourceCmd(node_id, std::move(source))));
 
   // Release the entity node.
-  EXPECT_TRUE(Apply(scenic_lib::NewReleaseResourceCmd(node_id)));
+  EXPECT_TRUE(Apply(scenic::NewReleaseResourceCmd(node_id)));
 
   // Try to import after the entity node has been released.
-  EXPECT_TRUE(Apply(scenic_lib::NewImportResourceCmd(
+  EXPECT_TRUE(Apply(scenic::NewImportResourceCmd(
       import_node, ::fuchsia::ui::gfx::ImportSpec::NODE,
       std::move(destination))));
 
@@ -248,7 +248,7 @@ TEST_F(ImportTest, KillingImportedResourceEvictsFromResourceLinker) {
     ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
     // Apply the import command.
-    ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCmd(
+    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
         1 /* import resource ID */,
         ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
         std::move(destination))               /* endpoint */
@@ -275,7 +275,7 @@ TEST_F(ImportTest, KillingImportedResourceEvictsFromResourceLinker) {
 
     // Release the import resource.
     ASSERT_TRUE(Apply(
-        scenic_lib::NewReleaseResourceCmd(1 /* import resource ID */)));
+        scenic::NewReleaseResourceCmd(1 /* import resource ID */)));
   });
 
   // Make sure the expiry handle tells us that the resource has expired.
@@ -323,18 +323,18 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
 
   async::PostTask(dispatcher(), [&]() {
     // Create the resource being exported.
-    Apply(scenic_lib::NewCreateEntityNodeCmd(exported_node_id));
+    Apply(scenic::NewCreateEntityNodeCmd(exported_node_id));
     auto exported_node = FindResource<EntityNode>(exported_node_id);
     ASSERT_TRUE(exported_node);
     ASSERT_EQ(false, exported_node->is_exported());
 
     // Apply the export command.
-    ASSERT_TRUE(Apply(scenic_lib::NewExportResourceCmd(exported_node_id,
+    ASSERT_TRUE(Apply(scenic::NewExportResourceCmd(exported_node_id,
                                                            std::move(source))));
     ASSERT_EQ(true, exported_node->is_exported());
 
     // Apply the import command.
-    ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCmd(
+    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
         import_node_id, ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
         CopyEventPair(destination))                           /* endpoint */
                       ));
@@ -353,7 +353,7 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
     async::PostTask(dispatcher(), [&]() {
       // Release the only import bound to the exported node.
       import_node_released = true;
-      EXPECT_TRUE(Apply(scenic_lib::NewReleaseResourceCmd(import_node_id)));
+      EXPECT_TRUE(Apply(scenic::NewReleaseResourceCmd(import_node_id)));
 
       async::PostTask(dispatcher(), [&]() {
         // Exported node should still be marked as exported.
@@ -412,18 +412,18 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
 
   async::PostTask(dispatcher(), [&]() {
     // Create the resource being exported.
-    Apply(scenic_lib::NewCreateEntityNodeCmd(exported_node_id));
+    Apply(scenic::NewCreateEntityNodeCmd(exported_node_id));
     auto exported_node = FindResource<EntityNode>(exported_node_id);
     ASSERT_TRUE(exported_node);
     ASSERT_EQ(false, exported_node->is_exported());
 
     // Apply the export command.
-    ASSERT_TRUE(Apply(scenic_lib::NewExportResourceCmd(exported_node_id,
+    ASSERT_TRUE(Apply(scenic::NewExportResourceCmd(exported_node_id,
                                                            std::move(source))));
     ASSERT_EQ(true, exported_node->is_exported());
 
     // Apply the import command.
-    ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCmd(
+    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
         import_node_id, ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
         CopyEventPair(destination))                           /* endpoint */
                       ));
@@ -453,7 +453,7 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
         // Release the only import bound to the exported node.
         import_node_released = true;
         EXPECT_TRUE(
-            Apply(scenic_lib::NewReleaseResourceCmd(import_node_id)));
+            Apply(scenic::NewReleaseResourceCmd(import_node_id)));
       });
     });
   });
@@ -504,18 +504,18 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
 
   async::PostTask(dispatcher(), [&]() {
     // Create the resource being exported.
-    Apply(scenic_lib::NewCreateEntityNodeCmd(exported_node_id));
+    Apply(scenic::NewCreateEntityNodeCmd(exported_node_id));
     auto exported_node = FindResource<EntityNode>(exported_node_id);
     ASSERT_TRUE(exported_node);
     ASSERT_EQ(false, exported_node->is_exported());
 
     // Apply the export command.
-    ASSERT_TRUE(Apply(scenic_lib::NewExportResourceCmd(exported_node_id,
+    ASSERT_TRUE(Apply(scenic::NewExportResourceCmd(exported_node_id,
                                                            std::move(source))));
     ASSERT_EQ(true, exported_node->is_exported());
 
     // Apply the import command.
-    ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCmd(
+    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
         import_node_id, ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
         CopyEventPair(destination1))                          /* endpoint */
                       ));
@@ -548,7 +548,7 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
         // Release the only import bound to the exported node.
         import_node_released = true;
         EXPECT_TRUE(
-            Apply(scenic_lib::NewReleaseResourceCmd(import_node_id)));
+            Apply(scenic::NewReleaseResourceCmd(import_node_id)));
 
         async::PostTask(dispatcher(), [&]() {
           // Exported node should still be marked as exported.
@@ -615,22 +615,22 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
 
   async::PostTask(dispatcher(), [&]() {
     // Create the resource being exported.
-    Apply(scenic_lib::NewCreateEntityNodeCmd(exported_node_id));
+    Apply(scenic::NewCreateEntityNodeCmd(exported_node_id));
     auto exported_node = FindResource<EntityNode>(exported_node_id);
     ASSERT_TRUE(exported_node);
     ASSERT_EQ(false, exported_node->is_exported());
 
     // Apply the export command.
-    ASSERT_TRUE(Apply(scenic_lib::NewExportResourceCmd(exported_node_id,
+    ASSERT_TRUE(Apply(scenic::NewExportResourceCmd(exported_node_id,
                                                            std::move(source))));
     ASSERT_EQ(true, exported_node->is_exported());
 
     // Apply the import commands.
-    ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCmd(
+    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
         import_node_id1, ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
         CopyEventPair(destination1))                           /* endpoint */
                       ));
-    ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCmd(
+    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
         import_node_id2, ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
         CopyEventPair(destination1))                           /* endpoint */
                       ));
@@ -666,7 +666,7 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
         // Release the only import bound to the exported node.
         import_node1_released = true;
         EXPECT_TRUE(
-            Apply(scenic_lib::NewReleaseResourceCmd(import_node_id1)));
+            Apply(scenic::NewReleaseResourceCmd(import_node_id1)));
 
         async::PostTask(dispatcher(), [&]() {
           // Exported node should still be marked as exported.
@@ -689,7 +689,7 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
 
             import_node2_released = true;
             EXPECT_TRUE(
-                Apply(scenic_lib::NewReleaseResourceCmd(import_node_id2)));
+                Apply(scenic::NewReleaseResourceCmd(import_node_id2)));
           });
         });
       });
@@ -708,7 +708,7 @@ TEST_F(ImportTest,
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   // Apply the import command.
-  ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCmd(
+  ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
       1 /* import resource ID */,
       ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
       std::move(destination))               /* endpoint */
@@ -753,7 +753,7 @@ TEST_F(ImportTest, UnlinkedImportedResourceCanAcceptCommands) {
     ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
     // Apply the import command.
-    ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCmd(
+    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
         1 /* import resource ID */,
         ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
         std::move(destination))               /* endpoint */
@@ -779,10 +779,10 @@ TEST_F(ImportTest, UnlinkedImportedResourceCanAcceptCommands) {
   {
     // Create the entity node.
     ASSERT_TRUE(Apply(
-        scenic_lib::NewCreateEntityNodeCmd(2 /* child resource id */)));
+        scenic::NewCreateEntityNodeCmd(2 /* child resource id */)));
 
     // Add the entity node to the import.
-    ASSERT_TRUE(Apply(scenic_lib::NewAddChildCmd(
+    ASSERT_TRUE(Apply(scenic::NewAddChildCmd(
         1 /* unlinked import resource */, 2 /* child resource */)));
   }
 }
@@ -795,7 +795,7 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptCommands) {
   // Perform the import
   {
     // Apply the import command.
-    ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCmd(
+    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
         1 /* import resource ID */,
         ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
         std::move(destination))               /* endpoint */
@@ -823,14 +823,14 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptCommands) {
   // Perform the export
   {
     // Create an entity node.
-    ASSERT_TRUE(Apply(scenic_lib::NewCreateEntityNodeCmd(2)));
+    ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(2)));
 
     // Assert that the entity node was correctly mapped in.
     ASSERT_EQ(2u, session_->GetMappedResourceCount());
 
     // Apply the export command.
     ASSERT_TRUE(
-        Apply(scenic_lib::NewExportResourceCmd(2, std::move(source))));
+        Apply(scenic::NewExportResourceCmd(2, std::move(source))));
   }
 
   // Bindings should have been resolved.
@@ -851,10 +851,10 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptCommands) {
   {
     // Create the entity node.
     ASSERT_TRUE(Apply(
-        scenic_lib::NewCreateEntityNodeCmd(3 /* child resource id */)));
+        scenic::NewCreateEntityNodeCmd(3 /* child resource id */)));
 
     // Add the entity node to the import.
-    ASSERT_TRUE(Apply(scenic_lib::NewAddChildCmd(
+    ASSERT_TRUE(Apply(scenic::NewAddChildCmd(
         1 /* unlinked import resource */, 3 /* child resource */)));
   }
 }
@@ -892,30 +892,30 @@ TEST_F(ImportTest, EmbedderCanEmbedNodesFromElsewhere) {
 
   // Embedder.
   {
-    ASSERT_TRUE(Apply(scenic_lib::NewCreateSceneCmd(1)));
-    ASSERT_TRUE(Apply(scenic_lib::NewCreateEntityNodeCmd(2)));
-    ASSERT_TRUE(Apply(scenic_lib::NewCreateEntityNodeCmd(3)));
-    ASSERT_TRUE(Apply(scenic_lib::NewAddChildCmd(1, 2)));
-    ASSERT_TRUE(Apply(scenic_lib::NewAddChildCmd(2, 3)));
+    ASSERT_TRUE(Apply(scenic::NewCreateSceneCmd(1)));
+    ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(2)));
+    ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(3)));
+    ASSERT_TRUE(Apply(scenic::NewAddChildCmd(1, 2)));
+    ASSERT_TRUE(Apply(scenic::NewAddChildCmd(2, 3)));
 
     // Export.
     ASSERT_TRUE(Apply(
-        scenic_lib::NewExportResourceCmd(1, std::move(export_token))));
+        scenic::NewExportResourceCmd(1, std::move(export_token))));
     ASSERT_EQ(1u, engine_->resource_linker()->NumExports());
   }
 
   // Embeddee.
   {
-    ASSERT_TRUE(Apply(scenic_lib::NewCreateEntityNodeCmd(1001)));
-    ASSERT_TRUE(Apply(scenic_lib::NewCreateEntityNodeCmd(1002)));
-    ASSERT_TRUE(Apply(scenic_lib::NewCreateEntityNodeCmd(1003)));
-    ASSERT_TRUE(Apply(scenic_lib::NewAddChildCmd(1001, 1002)));
-    ASSERT_TRUE(Apply(scenic_lib::NewAddChildCmd(1002, 1003)));
+    ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(1001)));
+    ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(1002)));
+    ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(1003)));
+    ASSERT_TRUE(Apply(scenic::NewAddChildCmd(1001, 1002)));
+    ASSERT_TRUE(Apply(scenic::NewAddChildCmd(1002, 1003)));
 
     // Import.
-    ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCmd(
+    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
         500, ::fuchsia::ui::gfx::ImportSpec::NODE, std::move(import_token))));
-    ASSERT_TRUE(Apply(scenic_lib::NewAddChildCmd(500, 1001)));
+    ASSERT_TRUE(Apply(scenic::NewAddChildCmd(500, 1001)));
   }
 
   // Check that the scene has an item in its imports. That is how the visitor

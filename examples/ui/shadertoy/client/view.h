@@ -42,7 +42,7 @@ class ViewImpl {
   fuchsia::examples::shadertoy::ShadertoyFactoryPtr shadertoy_factory_;
   fuchsia::examples::shadertoy::ShadertoyPtr shadertoy_;
 
-  std::vector<scenic_lib::ShapeNode> nodes_;
+  std::vector<scenic::ShapeNode> nodes_;
 
   enum AnimationState {
     kFourCorners,

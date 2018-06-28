@@ -70,9 +70,9 @@ TEST_F(GfxSystemTest, DISABLED_ReleaseFences) {
   {
     ::fidl::VectorPtr<fuchsia::ui::scenic::Command> commands;
     commands.push_back(
-        scenic_lib::NewCommand(scenic_lib::NewCreateCircleCmd(1, 50.f)));
+        scenic::NewCommand(scenic::NewCreateCircleCmd(1, 50.f)));
     commands.push_back(
-        scenic_lib::NewCommand(scenic_lib::NewCreateCircleCmd(2, 25.f)));
+        scenic::NewCommand(scenic::NewCreateCircleCmd(2, 25.f)));
 
     session->Enqueue(std::move(commands));
   }
@@ -115,9 +115,9 @@ TEST_F(GfxSystemTest, DISABLED_AcquireAndReleaseFences) {
   {
     ::fidl::VectorPtr<fuchsia::ui::scenic::Command> commands;
     commands.push_back(
-        scenic_lib::NewCommand(scenic_lib::NewCreateCircleCmd(1, 50.f)));
+        scenic::NewCommand(scenic::NewCreateCircleCmd(1, 50.f)));
     commands.push_back(
-        scenic_lib::NewCommand(scenic_lib::NewCreateCircleCmd(2, 25.f)));
+        scenic::NewCommand(scenic::NewCreateCircleCmd(2, 25.f)));
 
     session->Enqueue(std::move(commands));
   }

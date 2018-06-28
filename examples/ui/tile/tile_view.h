@@ -35,13 +35,13 @@ class TileView : public mozart::BaseView, public fuchsia::ui::policy::Presenter 
   struct ViewData {
     explicit ViewData(const std::string& url, uint32_t key,
                       fuchsia::sys::ComponentControllerPtr controller,
-                      scenic_lib::Session* session);
+                      scenic::Session* session);
     ~ViewData();
 
     const std::string url;
     const uint32_t key;
     fuchsia::sys::ComponentControllerPtr controller;
-    scenic_lib::EntityNode host_node;
+    scenic::EntityNode host_node;
 
     ::fuchsia::ui::views_v1::ViewProperties view_properties;
     ::fuchsia::ui::views_v1::ViewInfo view_info;
@@ -90,7 +90,7 @@ class TileView : public mozart::BaseView, public fuchsia::ui::policy::Presenter 
   TileParams params_;
 
   // The container for all views.
-  scenic_lib::EntityNode container_node_;
+  scenic::EntityNode container_node_;
 
   // The key we will assigned to the next child view which is added.
   uint32_t next_child_view_key_ = 1u;

@@ -125,10 +125,10 @@ class ViewStub {
   // This must be called by the view registry once it is time to bind the view's
   // graphical content to its host.  The host import token is consumed as
   // part of creating the host node.
-  void ImportHostNode(scenic_lib::Session* session);
+  void ImportHostNode(scenic::Session* session);
 
   // Gets the imported host node, or null if none.
-  scenic_lib::ImportNode* host_node() { return host_node_.get(); }
+  scenic::ImportNode* host_node() { return host_node_.get(); }
 
  private:
   void SetTreeRecursively(ViewTreeState* tree);
@@ -150,7 +150,7 @@ class ViewStub {
   bool unavailable_ = false;
 
   zx::eventpair host_import_token_;
-  std::unique_ptr<scenic_lib::ImportNode> host_node_;
+  std::unique_ptr<scenic::ImportNode> host_node_;
 
   // Non-null when we are waiting to transfer the |ViewOwner|.
   // Saves the |ViewOwner| we want to transfer ownership to, and a reference to

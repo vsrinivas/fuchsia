@@ -54,11 +54,11 @@ class BaseView : private ::fuchsia::ui::views_v1::ViewListener,
   ::fuchsia::ui::views_v1::ViewContainer* GetViewContainer();
 
   // Gets a wrapper for the view's session.
-  scenic_lib::Session* session() { return &session_; }
+  scenic::Session* session() { return &session_; }
 
   // Gets the imported parent node to which the session's tree of nodes
   // should be attached.
-  scenic_lib::ImportNode& parent_node() { return parent_node_; }
+  scenic::ImportNode& parent_node() { return parent_node_; }
 
   // Gets the current view properties.
   // Returns nullptr if unknown.
@@ -194,8 +194,8 @@ class BaseView : private ::fuchsia::ui::views_v1::ViewListener,
   bool need_square_metrics_ = false;
   fuchsia::ui::gfx::Metrics original_metrics_;
   fuchsia::ui::gfx::Metrics adjusted_metrics_;
-  scenic_lib::Session session_;
-  scenic_lib::ImportNode parent_node_;
+  scenic::Session session_;
+  scenic::ImportNode parent_node_;
 
   bool invalidate_pending_ = false;
   bool present_pending_ = false;

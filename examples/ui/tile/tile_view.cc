@@ -185,7 +185,7 @@ void TileView::OnSceneInvalidated(
 
 TileView::ViewData::ViewData(const std::string& url, uint32_t key,
                              fuchsia::sys::ComponentControllerPtr controller,
-                             scenic_lib::Session* session)
+                             scenic::Session* session)
     : url(url),
       key(key),
       controller(std::move(controller)),

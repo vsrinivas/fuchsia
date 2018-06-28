@@ -41,7 +41,7 @@ constexpr float kCursorElevation = 800;
 }  // namespace
 
 PresentationNew::PresentationNew(fuchsia::ui::scenic::Scenic* scenic,
-                                 scenic_lib::Session* session,
+                                 scenic::Session* session,
                                  zx::eventpair view_holder_token,
                                  RendererParams renderer_params)
     : scenic_(scenic),
@@ -643,7 +643,7 @@ void PresentationNew::PresentScene() {
     CursorState& state = it->second;
     if (state.visible) {
       if (!state.created) {
-        state.node = std::make_unique<scenic_lib::ShapeNode>(session_);
+        state.node = std::make_unique<scenic::ShapeNode>(session_);
         state.node->SetShape(cursor_shape_);
         state.node->SetMaterial(cursor_material_);
         scene_.AddChild(*state.node);

@@ -32,7 +32,7 @@ class VkCubeView : public mozart::BaseView {
 
   fuchsia::math::SizeF size_;
   fuchsia::math::Size physical_size_;
-  scenic_lib::ShapeNode pane_node_;
+  scenic::ShapeNode pane_node_;
   ResizeCallback resize_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(VkCubeView);

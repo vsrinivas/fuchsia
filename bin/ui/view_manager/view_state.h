@@ -48,7 +48,7 @@ class ViewState : public ViewContainerState {
   ViewState(ViewRegistry* registry, ::fuchsia::ui::views_v1_token::ViewToken view_token,
             fidl::InterfaceRequest<::fuchsia::ui::views_v1::View> view_request,
             ::fuchsia::ui::views_v1::ViewListenerPtr view_listener,
-            scenic_lib::Session* session, const std::string& label);
+            scenic::Session* session, const std::string& label);
   ~ViewState() override;
 
   fxl::WeakPtr<ViewState> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
@@ -64,7 +64,7 @@ class ViewState : public ViewContainerState {
   }
 
   // Gets the view's attachment point.
-  scenic_lib::EntityNode& top_node() { return top_node_; }
+  scenic::EntityNode& top_node() { return top_node_; }
 
   // Gets or sets the view stub which links this view into the
   // view hierarchy, or null if the view isn't linked anywhere.
@@ -118,7 +118,7 @@ class ViewState : public ViewContainerState {
 
   ::fuchsia::ui::views_v1_token::ViewToken view_token_;
   ::fuchsia::ui::views_v1::ViewListenerPtr view_listener_;
-  scenic_lib::EntityNode top_node_;
+  scenic::EntityNode top_node_;
 
   const std::string label_;
   mutable std::string formatted_label_cache_;

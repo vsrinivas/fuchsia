@@ -190,11 +190,11 @@ void ViewStub::ReleaseHost() {
   host_node_.reset();
 }
 
-void ViewStub::ImportHostNode(scenic_lib::Session* session) {
+void ViewStub::ImportHostNode(scenic::Session* session) {
   FXL_DCHECK(host_import_token_);
   FXL_DCHECK(!host_node_);
 
-  host_node_.reset(new scenic_lib::ImportNode(session));
+  host_node_.reset(new scenic::ImportNode(session));
   host_node_->Bind(std::move(host_import_token_));
 }
 

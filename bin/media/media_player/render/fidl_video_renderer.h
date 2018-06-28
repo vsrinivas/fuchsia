@@ -85,7 +85,7 @@ class FidlVideoRenderer
         fuchsia::images::PresentationInfo presentation_info) override;
 
     std::shared_ptr<FidlVideoRenderer> renderer_;
-    scenic_lib::HostImageCycler image_cycler_;
+    scenic::HostImageCycler image_cycler_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(View);
   };

@@ -34,9 +34,9 @@ class App {
   async::Loop* loop_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
 
-  std::unique_ptr<scenic_lib::Session> session_;
-  std::unique_ptr<scenic_lib::DisplayCompositor> compositor_;
-  std::unique_ptr<scenic_lib::Camera> camera_;
+  std::unique_ptr<scenic::Session> session_;
+  std::unique_ptr<scenic::DisplayCompositor> compositor_;
+  std::unique_ptr<scenic::Camera> camera_;
 
   zx::vmo pose_buffer_vmo_;
 

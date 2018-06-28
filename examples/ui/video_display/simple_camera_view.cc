@@ -46,11 +46,11 @@ SimpleCameraView::SimpleCameraView(
   // Create an ImagePipe and pass one end to the Session:
   fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe_handle;
   uint32_t image_pipe_id = session()->AllocResourceId();
-  session()->Enqueue(scenic_lib::NewCreateImagePipeCmd(
+  session()->Enqueue(scenic::NewCreateImagePipeCmd(
       image_pipe_id, image_pipe_handle.NewRequest()));
 
   // Create a material that has our image pipe mapped onto it:
-  scenic_lib::Material material(session());
+  scenic::Material material(session());
   material.SetTexture(image_pipe_id);
   session()->ReleaseResource(image_pipe_id);
 
@@ -69,7 +69,7 @@ SimpleCameraView::SimpleCameraView(
   simple_camera_->ConnectToCamera(0, std::move(image_pipe_handle));
 
   // Create a rounded-rect shape to display the camera image on.
-  scenic_lib::RoundedRectangle shape(session(), kShapeWidth, kShapeHeight, 80,
+  scenic::RoundedRectangle shape(session(), kShapeWidth, kShapeHeight, 80,
                                      80, 80, 80);
 
   node_.SetShape(shape);

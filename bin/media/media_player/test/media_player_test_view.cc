@@ -64,17 +64,17 @@ MediaPlayerTestView::MediaPlayerTestView(
   FXL_DCHECK(params_.is_valid());
   FXL_DCHECK(!params_.urls().empty());
 
-  scenic_lib::Material background_material(session());
+  scenic::Material background_material(session());
   background_material.SetColor(0x00, 0x00, 0x00, 0xff);
   background_node_.SetMaterial(background_material);
   parent_node().AddChild(background_node_);
 
-  scenic_lib::Material progress_bar_material(session());
+  scenic::Material progress_bar_material(session());
   progress_bar_material.SetColor(0x23, 0x23, 0x23, 0xff);
   progress_bar_node_.SetMaterial(progress_bar_material);
   parent_node().AddChild(progress_bar_node_);
 
-  scenic_lib::Material progress_bar_slider_material(session());
+  scenic::Material progress_bar_slider_material(session());
   progress_bar_slider_material.SetColor(0x00, 0x00, 0xff, 0xff);
   progress_bar_slider_node_.SetMaterial(progress_bar_slider_material);
   parent_node().AddChild(progress_bar_slider_node_);
@@ -104,7 +104,7 @@ MediaPlayerTestView::MediaPlayerTestView(
       video_view_owner.NewRequest());
 
   zx::eventpair video_host_import_token;
-  video_host_node_.reset(new scenic_lib::EntityNode(session()));
+  video_host_node_.reset(new scenic::EntityNode(session()));
   video_host_node_->ExportAsRequest(&video_host_import_token);
   parent_node().AddChild(*video_host_node_);
   GetViewContainer()->AddChild(kVideoChildKey, std::move(video_view_owner),
@@ -182,7 +182,7 @@ void MediaPlayerTestView::Layout() {
     return;
 
   // Make the background fill the space.
-  scenic_lib::Rectangle background_shape(session(), logical_size().width,
+  scenic::Rectangle background_shape(session(), logical_size().width,
                                          logical_size().height);
   background_node_.SetShape(background_shape);
   background_node_.SetTranslation(logical_size().width * .5f,
@@ -226,7 +226,7 @@ void MediaPlayerTestView::Layout() {
   controls_rect_.height = kControlsHeight;
 
   // Put the progress bar under the content.
-  scenic_lib::Rectangle progress_bar_shape(session(), controls_rect_.width,
+  scenic::Rectangle progress_bar_shape(session(), controls_rect_.width,
                                            controls_rect_.height);
   progress_bar_node_.SetShape(progress_bar_shape);
   progress_bar_node_.SetTranslation(
@@ -234,7 +234,7 @@ void MediaPlayerTestView::Layout() {
       controls_rect_.y + controls_rect_.height * 0.5f, kProgressBarElevation);
 
   // Put the progress bar slider on top of the progress bar.
-  scenic_lib::Rectangle progress_bar_slider_shape(
+  scenic::Rectangle progress_bar_slider_shape(
       session(), controls_rect_.width, controls_rect_.height);
   progress_bar_slider_node_.SetShape(progress_bar_slider_shape);
   progress_bar_slider_node_.SetTranslation(
@@ -266,7 +266,7 @@ void MediaPlayerTestView::OnSceneInvalidated(
 
   float progress_bar_slider_width =
       controls_rect_.width * normalized_progress();
-  scenic_lib::Rectangle progress_bar_slider_shape(
+  scenic::Rectangle progress_bar_slider_shape(
       session(), progress_bar_slider_width, controls_rect_.height);
   progress_bar_slider_node_.SetShape(progress_bar_slider_shape);
   progress_bar_slider_node_.SetTranslation(

@@ -42,44 +42,44 @@ TEST_F(SessionTest, ScheduleUpdateInOrder) {
 }
 
 TEST_F(SessionTest, ResourceIdAlreadyUsed) {
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateEntityNodeCmd(1)));
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeCmd(2)));
+  EXPECT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(1)));
+  EXPECT_TRUE(Apply(scenic::NewCreateShapeNodeCmd(2)));
   ExpectLastReportedError(nullptr);
-  EXPECT_FALSE(Apply(scenic_lib::NewCreateShapeNodeCmd(2)));
+  EXPECT_FALSE(Apply(scenic::NewCreateShapeNodeCmd(2)));
   ExpectLastReportedError(
       "scenic::gfx::ResourceMap::AddResource(): resource with ID 2 already "
       "exists.");
 }
 
 TEST_F(SessionTest, AddAndRemoveResource) {
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateEntityNodeCmd(1)));
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeCmd(2)));
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeCmd(3)));
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeCmd(4)));
-  EXPECT_TRUE(Apply(scenic_lib::NewAddChildCmd(1, 2)));
-  EXPECT_TRUE(Apply(scenic_lib::NewAddPartCmd(1, 3)));
+  EXPECT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(1)));
+  EXPECT_TRUE(Apply(scenic::NewCreateShapeNodeCmd(2)));
+  EXPECT_TRUE(Apply(scenic::NewCreateShapeNodeCmd(3)));
+  EXPECT_TRUE(Apply(scenic::NewCreateShapeNodeCmd(4)));
+  EXPECT_TRUE(Apply(scenic::NewAddChildCmd(1, 2)));
+  EXPECT_TRUE(Apply(scenic::NewAddPartCmd(1, 3)));
   EXPECT_EQ(4U, session_->GetTotalResourceCount());
   EXPECT_EQ(4U, session_->GetMappedResourceCount());
 
   // Even though we release node 2 and 3, they continue to exist because they
   // referenced by node 1.  Only node 4 is destroyed.
-  EXPECT_TRUE(Apply(scenic_lib::NewReleaseResourceCmd(2)));
-  EXPECT_TRUE(Apply(scenic_lib::NewReleaseResourceCmd(3)));
-  EXPECT_TRUE(Apply(scenic_lib::NewReleaseResourceCmd(4)));
+  EXPECT_TRUE(Apply(scenic::NewReleaseResourceCmd(2)));
+  EXPECT_TRUE(Apply(scenic::NewReleaseResourceCmd(3)));
+  EXPECT_TRUE(Apply(scenic::NewReleaseResourceCmd(4)));
   EXPECT_EQ(3U, session_->GetTotalResourceCount());
   EXPECT_EQ(1U, session_->GetMappedResourceCount());
 
   // Releasing node 1 causes nodes 1-3 to be destroyed.
-  EXPECT_TRUE(Apply(scenic_lib::NewReleaseResourceCmd(1)));
+  EXPECT_TRUE(Apply(scenic::NewReleaseResourceCmd(1)));
   EXPECT_EQ(0U, session_->GetTotalResourceCount());
   EXPECT_EQ(0U, session_->GetMappedResourceCount());
 }
 
 TEST_F(SessionTest, CreateViewWithBadTokenDies) {
   EXPECT_DEATH_IF_SUPPORTED(
-      Apply(scenic_lib::NewCreateViewCmd(1, zx::eventpair(), "")), "");
+      Apply(scenic::NewCreateViewCmd(1, zx::eventpair(), "")), "");
   EXPECT_DEATH_IF_SUPPORTED(
-      Apply(scenic_lib::NewCreateViewHolderCmd(2, zx::eventpair(), "")), "");
+      Apply(scenic::NewCreateViewHolderCmd(2, zx::eventpair(), "")), "");
 }
 
 TEST_F(SessionTest, Labeling) {
@@ -90,17 +90,17 @@ TEST_F(SessionTest, Labeling) {
   const std::string kTooLongLabel =
       std::string(::fuchsia::ui::gfx::kLabelMaxLength + 1, '?');
 
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeCmd(kNodeId)));
+  EXPECT_TRUE(Apply(scenic::NewCreateShapeNodeCmd(kNodeId)));
   auto shape_node = FindResource<ShapeNode>(kNodeId);
   EXPECT_TRUE(shape_node->label().empty());
-  EXPECT_TRUE(Apply(scenic_lib::NewSetLabelCmd(kNodeId, kShortLabel)));
+  EXPECT_TRUE(Apply(scenic::NewSetLabelCmd(kNodeId, kShortLabel)));
   EXPECT_EQ(kShortLabel, shape_node->label());
-  EXPECT_TRUE(Apply(scenic_lib::NewSetLabelCmd(kNodeId, kLongLabel)));
+  EXPECT_TRUE(Apply(scenic::NewSetLabelCmd(kNodeId, kLongLabel)));
   EXPECT_EQ(kLongLabel, shape_node->label());
-  EXPECT_TRUE(Apply(scenic_lib::NewSetLabelCmd(kNodeId, kTooLongLabel)));
+  EXPECT_TRUE(Apply(scenic::NewSetLabelCmd(kNodeId, kTooLongLabel)));
   EXPECT_EQ(kTooLongLabel.substr(0, ::fuchsia::ui::gfx::kLabelMaxLength),
             shape_node->label());
-  EXPECT_TRUE(Apply(scenic_lib::NewSetLabelCmd(kNodeId, "")));
+  EXPECT_TRUE(Apply(scenic::NewSetLabelCmd(kNodeId, "")));
   EXPECT_TRUE(shape_node->label().empty());
 
   // Bypass the truncation performed by session helpers.

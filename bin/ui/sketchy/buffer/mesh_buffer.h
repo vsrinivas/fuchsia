@@ -37,7 +37,7 @@ class MeshBuffer final {
 
   // Provide all the necessary parameters to
   // fuchsia::ui::gfx::Mesh::BindBuffers().
-  void ProvideBuffersToScenicMesh(scenic_lib::Mesh* scenic_mesh);
+  void ProvideBuffersToScenicMesh(scenic::Mesh* scenic_mesh);
 
   const SharedBufferPtr& vertex_buffer() const { return vertex_buffer_; }
   const SharedBufferPtr& index_buffer() const { return index_buffer_; }

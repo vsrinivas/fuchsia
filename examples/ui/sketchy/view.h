@@ -35,8 +35,8 @@ class View final : public mozart::BaseView {
 
  private:
   Canvas canvas_;
-  scenic_lib::ShapeNode background_node_;
-  scenic_lib::EntityNode import_node_holder_;
+  scenic::ShapeNode background_node_;
+  scenic::EntityNode import_node_holder_;
   ImportNode import_node_;
   StrokeGroup scratch_group_;
   StrokeGroup stable_group_;

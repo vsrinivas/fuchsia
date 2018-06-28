@@ -49,9 +49,9 @@ class App : public fuchsia::sys::ServiceProvider {
   std::unique_ptr<fuchsia::ui::app::ViewProvider> view_provider_impl_;
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
-  std::unique_ptr<scenic_lib::Session> session_;
-  std::unique_ptr<scenic_lib::DisplayCompositor> compositor_;
-  std::unique_ptr<scenic_lib::Camera> camera_;
+  std::unique_ptr<scenic::Session> session_;
+  std::unique_ptr<scenic::DisplayCompositor> compositor_;
+  std::unique_ptr<scenic::Camera> camera_;
   uint32_t view_id_ = 0;
   uint32_t root_node_id_ = 0;
 };

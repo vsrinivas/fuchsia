@@ -133,7 +133,7 @@ void StrokeGroup::Clear() const {
   EnqueueCmd(std::move(command));
 }
 
-ImportNode::ImportNode(Canvas* canvas, scenic_lib::EntityNode& export_node)
+ImportNode::ImportNode(Canvas* canvas, scenic::EntityNode& export_node)
     : Resource(canvas) {
   zx::eventpair token;
   export_node.ExportAsRequest(&token);

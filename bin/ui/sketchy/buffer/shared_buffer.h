@@ -22,7 +22,7 @@ using SharedBufferPtr = fxl::RefPtr<SharedBuffer>;
 // create the Scenic buffer.
 class SharedBuffer final : public fxl::RefCountedThreadSafe<SharedBuffer> {
  public:
-  static SharedBufferPtr New(scenic_lib::Session* session,
+  static SharedBufferPtr New(scenic::Session* session,
                              escher::BufferFactory* factory,
                              vk::DeviceSize capacity);
 
@@ -40,7 +40,7 @@ class SharedBuffer final : public fxl::RefCountedThreadSafe<SharedBuffer> {
   void Reset();
 
   const escher::BufferPtr& escher_buffer() const { return escher_buffer_; }
-  const scenic_lib::Buffer& scenic_buffer() const {
+  const scenic::Buffer& scenic_buffer() const {
     return *scenic_buffer_.get();
   }
   vk::DeviceSize capacity() const { return escher_buffer_->size(); }
@@ -49,12 +49,12 @@ class SharedBuffer final : public fxl::RefCountedThreadSafe<SharedBuffer> {
  private:
   friend class SharedBufferPool;
 
-  SharedBuffer(scenic_lib::Session* session, escher::BufferFactory* factory,
+  SharedBuffer(scenic::Session* session, escher::BufferFactory* factory,
                vk::DeviceSize capacity);
 
-  scenic_lib::Session* const session_;
+  scenic::Session* const session_;
   escher::BufferPtr escher_buffer_;
-  std::unique_ptr<scenic_lib::Buffer> scenic_buffer_;
+  std::unique_ptr<scenic::Buffer> scenic_buffer_;
   vk::DeviceSize size_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SharedBuffer);

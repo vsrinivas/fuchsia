@@ -77,10 +77,10 @@ class MediaPlayerTestView : public mozart::BaseView {
   const MediaPlayerTestParams& params_;
   size_t current_url_index_ = 0;
 
-  scenic_lib::ShapeNode background_node_;
-  scenic_lib::ShapeNode progress_bar_node_;
-  scenic_lib::ShapeNode progress_bar_slider_node_;
-  std::unique_ptr<scenic_lib::EntityNode> video_host_node_;
+  scenic::ShapeNode background_node_;
+  scenic::ShapeNode progress_bar_node_;
+  scenic::ShapeNode progress_bar_slider_node_;
+  std::unique_ptr<scenic::EntityNode> video_host_node_;
 
   fuchsia::mediaplayer::MediaPlayerPtr media_player_;
   fuchsia::math::Size video_size_;

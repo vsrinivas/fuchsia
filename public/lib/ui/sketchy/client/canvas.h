@@ -20,7 +20,7 @@ class Canvas final {
  public:
   Canvas(fuchsia::sys::StartupContext* context, async::Loop* loop);
   Canvas(::fuchsia::ui::sketchy::CanvasPtr canvas, async::Loop* loop);
-  void Present(uint64_t time, scenic_lib::Session::PresentCallback callback);
+  void Present(uint64_t time, scenic::Session::PresentCallback callback);
 
  private:
   friend class Resource;

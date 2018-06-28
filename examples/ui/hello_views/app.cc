@@ -86,12 +86,12 @@ App::App(async::Loop* loop, AppType type)
 
           // Create the View resource.
           view_id_ = session_->AllocResourceId();
-          session_->Enqueue(scenic_lib::NewCreateViewCmd(
+          session_->Enqueue(scenic::NewCreateViewCmd(
               view_id_, std::move(context.token), "Subview"));
 
           if (root_node_id_ != 0) {
             session_->Enqueue(
-                scenic_lib::NewAddChildCmd(view_id_, root_node_id_));
+                scenic::NewAddChildCmd(view_id_, root_node_id_));
           }
         });
   }
@@ -107,7 +107,7 @@ App::App(async::Loop* loop, AppType type)
     loop_->Quit();
   });
   FXL_LOG(INFO) << AppTypeString(type_) << "Creating new session.";
-  session_ = std::make_unique<scenic_lib::Session>(scenic_.get());
+  session_ = std::make_unique<scenic::Session>(scenic_.get());
   session_->set_error_handler([this]() {
     FXL_LOG(INFO) << AppTypeString(type_)
                   << "Session error.  Connection dropped.";
@@ -132,7 +132,7 @@ App::App(async::Loop* loop, AppType type)
 
     // Create the ViewHolder resource that will proxy the view.
     view_id_ = session_->AllocResourceId();
-    session_->Enqueue(scenic_lib::NewCreateViewHolderCmd(
+    session_->Enqueue(scenic::NewCreateViewHolderCmd(
         view_id_, std::move(view_holder_token), "Subview-Holder"));
   }
 
@@ -184,16 +184,16 @@ void App::CreateScene(float display_width, float display_height) {
   // rectangle, which the subview process is represented by the smaller pink
   // rectangle.
   auto session_ptr = session_.get();
-  scenic_lib::EntityNode root_node(session_ptr);
+  scenic::EntityNode root_node(session_ptr);
   root_node_id_ = root_node.id();
 
   if (type_ == AppType::CONTAINER) {
-    compositor_ = std::make_unique<scenic_lib::DisplayCompositor>(session_ptr);
-    scenic_lib::LayerStack layer_stack(session_ptr);
-    scenic_lib::Layer layer(session_ptr);
-    scenic_lib::Renderer renderer(session_ptr);
-    scenic_lib::Scene scene(session_ptr);
-    camera_ = std::make_unique<scenic_lib::Camera>(scene);
+    compositor_ = std::make_unique<scenic::DisplayCompositor>(session_ptr);
+    scenic::LayerStack layer_stack(session_ptr);
+    scenic::Layer layer(session_ptr);
+    scenic::Renderer renderer(session_ptr);
+    scenic::Scene scene(session_ptr);
+    camera_ = std::make_unique<scenic::Camera>(scene);
 
     compositor_->SetLayerStack(layer_stack);
     layer_stack.AddLayer(layer);
@@ -202,8 +202,8 @@ void App::CreateScene(float display_width, float display_height) {
     renderer.SetCamera(camera_->id());
 
     // Set up lights.
-    scenic_lib::AmbientLight ambient_light(session_ptr);
-    scenic_lib::DirectionalLight directional_light(session_ptr);
+    scenic::AmbientLight ambient_light(session_ptr);
+    scenic::DirectionalLight directional_light(session_ptr);
     scene.AddLight(ambient_light);
     scene.AddLight(directional_light);
     ambient_light.SetColor(0.3f, 0.3f, 0.3f);
@@ -218,10 +218,10 @@ void App::CreateScene(float display_width, float display_height) {
   static const float background_width = display_width - 2.f * kBackgroundMargin;
   static const float background_height =
       display_height - 2.f * kBackgroundMargin;
-  scenic_lib::ShapeNode background_node(session_ptr);
-  scenic_lib::RoundedRectangle background_shape(
+  scenic::ShapeNode background_node(session_ptr);
+  scenic::RoundedRectangle background_shape(
       session_ptr, background_width, background_height, 20.f, 20.f, 80.f, 10.f);
-  scenic_lib::Material background_material(session_ptr);
+  scenic::Material background_material(session_ptr);
   if (type_ == AppType::CONTAINER) {
     background_material.SetColor(120, 255, 120, 255);
   } else if (type_ == AppType::SUBVIEW) {
@@ -240,9 +240,9 @@ void App::CreateScene(float display_width, float display_height) {
 
   if (view_id_ != 0) {
     if (type_ == AppType::CONTAINER) {
-      session_->Enqueue(scenic_lib::NewAddChildCmd(root_node_id_, view_id_));
+      session_->Enqueue(scenic::NewAddChildCmd(root_node_id_, view_id_));
     } else if (type_ == AppType::SUBVIEW) {
-      session_->Enqueue(scenic_lib::NewAddChildCmd(view_id_, root_node_id_));
+      session_->Enqueue(scenic::NewAddChildCmd(view_id_, root_node_id_));
     }
   }
 }

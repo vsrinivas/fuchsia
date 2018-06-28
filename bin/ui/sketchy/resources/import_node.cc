@@ -12,7 +12,7 @@ const ResourceTypeInfo ImportNode::kTypeInfo("ImportNode",
                                              ResourceType::kImportNode,
                                              ResourceType::kResource);
 
-ImportNode::ImportNode(scenic_lib::Session* session, zx::eventpair token)
+ImportNode::ImportNode(scenic::Session* session, zx::eventpair token)
     : node_(session) {
   node_.Bind(std::move(token));
 }

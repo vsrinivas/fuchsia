@@ -35,7 +35,7 @@ class ShapesA11yView : public mozart::BaseView {
   void OnSceneInvalidated(
       fuchsia::images::PresentationInfo presentation_info) override;
 
-  scenic_lib::ShapeNode background_node_;
+  scenic::ShapeNode background_node_;
 
   fuchsia::sys::ServiceProviderImpl a11y_provider_;
   fuchsia::sys::ComponentControllerPtr controller_;

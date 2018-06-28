@@ -17,7 +17,7 @@ ShapesA11yView::ShapesA11yView(
     : BaseView(std::move(view_manager), std::move(view_owner_request),
                "Shapes_A11y"),
       background_node_(session()) {
-  scenic_lib::Material background_material(session());
+  scenic::Material background_material(session());
   background_material.SetColor(0xf2, 0xd8, 0x5b, 0xff);
   background_node_.SetMaterial(background_material);
   parent_node().AddChild(background_node_);
@@ -50,7 +50,7 @@ void ShapesA11yView::OnSceneInvalidated(
   const float center_x = logical_size().width * .5f;
   const float center_y = logical_size().height * .5f;
 
-  scenic_lib::Rectangle background_shape(session(), logical_size().width,
+  scenic::Rectangle background_shape(session(), logical_size().width,
                                          logical_size().height);
   background_node_.SetShape(background_shape);
   background_node_.SetTranslation(center_x, center_y, kBackgroundElevation);

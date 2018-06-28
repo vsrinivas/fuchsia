@@ -62,7 +62,7 @@ namespace root_presenter {
 class PresentationNew : public Presentation {
  public:
   PresentationNew(fuchsia::ui::scenic::Scenic* scenic,
-                  scenic_lib::Session* session, zx::eventpair view_holder_token,
+                  scenic::Session* session, zx::eventpair view_holder_token,
                   RendererParams renderer_params);
 
   ~PresentationNew() override;
@@ -81,7 +81,7 @@ class PresentationNew : public Presentation {
   void OnDeviceAdded(mozart::InputDeviceImpl* input_device) override;
   void OnDeviceRemoved(uint32_t device_id) override;
 
-  const scenic_lib::Layer& layer() const override { return layer_; }
+  const scenic::Layer& layer() const override { return layer_; }
 
   const YieldCallback& yield_callback() override { return yield_callback_; };
 
@@ -103,7 +103,7 @@ class PresentationNew : public Presentation {
     return display_metrics_;
   };
 
-  scenic_lib::Camera* camera() override { return &camera_; }
+  scenic::Camera* camera() override { return &camera_; }
 
  private:
   enum SessionPresentState {
@@ -196,22 +196,22 @@ class PresentationNew : public Presentation {
   void Shutdown();
 
   fuchsia::ui::scenic::Scenic* const scenic_;
-  scenic_lib::Session* const session_;
+  scenic::Session* const session_;
 
-  scenic_lib::Layer layer_;
-  scenic_lib::Renderer renderer_;
+  scenic::Layer layer_;
+  scenic::Renderer renderer_;
   // TODO(MZ-254): put camera before scene.
-  scenic_lib::Scene scene_;
-  scenic_lib::Camera camera_;
-  scenic_lib::AmbientLight ambient_light_;
+  scenic::Scene scene_;
+  scenic::Camera camera_;
+  scenic::AmbientLight ambient_light_;
   glm::vec3 light_direction_;
-  scenic_lib::DirectionalLight directional_light_;
-  scenic_lib::EntityNode view_holder_node_;
-  scenic_lib::EntityNode root_node_;
+  scenic::DirectionalLight directional_light_;
+  scenic::EntityNode view_holder_node_;
+  scenic::EntityNode root_node_;
   scenic::ViewHolder view_holder_;
 
-  scenic_lib::RoundedRectangle cursor_shape_;
-  scenic_lib::Material cursor_material_;
+  scenic::RoundedRectangle cursor_shape_;
+  scenic::Material cursor_material_;
 
   SessionPresentState session_present_state_ = kNoPresentPending;
 
@@ -265,7 +265,7 @@ class PresentationNew : public Presentation {
     bool created;
     bool visible;
     fuchsia::math::PointF position;
-    std::unique_ptr<scenic_lib::ShapeNode> node;
+    std::unique_ptr<scenic::ShapeNode> node;
   };
 
   std::map<uint32_t, CursorState> cursors_;

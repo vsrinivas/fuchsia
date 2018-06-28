@@ -33,7 +33,7 @@ using ShapeTest = SessionTest;
 
 TEST_F(ShapeTest, Circle) {
   const scenic::ResourceId id = 1;
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateCircleCmd(id, 50.f)));
+  EXPECT_TRUE(Apply(scenic::NewCreateCircleCmd(id, 50.f)));
 
   auto circle = FindResource<CircleShape>(id);
   ASSERT_NE(nullptr, circle.get());
@@ -92,7 +92,7 @@ TEST_F(ShapeTest, Circle) {
 
 TEST_F(ShapeTest, Rectangle) {
   const scenic::ResourceId id = 1;
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateRectangleCmd(id, 30.f, 40.f)));
+  EXPECT_TRUE(Apply(scenic::NewCreateRectangleCmd(id, 30.f, 40.f)));
 
   auto rectangle = FindResource<RectangleShape>(id);
   ASSERT_NE(nullptr, rectangle.get());
@@ -155,7 +155,7 @@ TEST_F(ShapeTest, Rectangle) {
 // not currently available in the engine for tests.
 TEST_F(ShapeTest, DISABLED_RoundedRectangle) {
   const scenic::ResourceId id = 1;
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateRoundedRectangleCmd(
+  EXPECT_TRUE(Apply(scenic::NewCreateRoundedRectangleCmd(
       id, 30.f, 40.f, 2.f, 4.f, 6.f, 8.f)));
 
   auto rounded_rectangle = FindResource<RoundedRectangleShape>(id);

@@ -19,7 +19,7 @@ View::View(async::Loop* loop, fuchsia::sys::StartupContext* startup_context,
       scratch_group_(&canvas_),
       stable_group_(&canvas_) {
   parent_node().AddChild(background_node_);
-  scenic_lib::Material background_material(session());
+  scenic::Material background_material(session());
   background_material.SetColor(220, 220, 220, 255);
   background_node_.SetMaterial(background_material);
 
@@ -33,7 +33,7 @@ void View::OnPropertiesChanged(
     ::fuchsia::ui::views_v1::ViewProperties old_properties) {
   float width = properties().view_layout->size.width;
   float height = properties().view_layout->size.height;
-  scenic_lib::Rectangle background_shape(session(), width, height);
+  scenic::Rectangle background_shape(session(), width, height);
   background_node_.SetShape(background_shape);
   background_node_.SetTranslation(width * .5f, height * .5f, .1f);
   canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),

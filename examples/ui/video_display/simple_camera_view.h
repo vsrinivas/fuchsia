@@ -35,7 +35,7 @@ class SimpleCameraView : public mozart::BaseView {
   void OnSceneInvalidated(
       fuchsia::images::PresentationInfo presentation_info) override;
 
-  scenic_lib::ShapeNode node_;
+  scenic::ShapeNode node_;
 
   // Client Application:
   fuchsia::sys::Services simple_camera_provider_;

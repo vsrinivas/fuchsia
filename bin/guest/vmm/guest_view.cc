@@ -71,8 +71,8 @@ GuestView::GuestView(
   image_info_.pixel_format = fuchsia::images::PixelFormat::BGRA_8;
 
   // Allocate a framebuffer and attach it as a GPU scanout.
-  memory_ = fbl::make_unique<scenic_lib::HostMemory>(
-      session(), scenic_lib::Image::ComputeSize(image_info_));
+  memory_ = fbl::make_unique<scenic::HostMemory>(
+      session(), scenic::Image::ComputeSize(image_info_));
   machina::GpuBitmap bitmap(kGuestViewDisplayWidth, kGuestViewDisplayHeight,
                             ZX_PIXEL_FORMAT_ARGB_8888,
                             reinterpret_cast<uint8_t*>(memory_->data_ptr()));
@@ -89,7 +89,7 @@ void GuestView::OnSceneInvalidated(
 
   const uint32_t width = logical_size().width;
   const uint32_t height = logical_size().height;
-  scenic_lib::Rectangle background_shape(session(), width, height);
+  scenic::Rectangle background_shape(session(), width, height);
   background_node_.SetShape(background_shape);
 
   static constexpr float kBackgroundElevation = 0.f;
@@ -97,7 +97,7 @@ void GuestView::OnSceneInvalidated(
   const float center_y = height * .5f;
   background_node_.SetTranslation(center_x, center_y, kBackgroundElevation);
 
-  scenic_lib::HostImage image(*memory_, 0u, image_info_);
+  scenic::HostImage image(*memory_, 0u, image_info_);
   material_.SetTexture(image);
 
   pointer_scale_x_ = static_cast<float>(kGuestViewDisplayWidth) / width;

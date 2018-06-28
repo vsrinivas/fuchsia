@@ -24,7 +24,7 @@ class StrokeGroup final : public Resource {
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
-  explicit StrokeGroup(scenic_lib::Session* session);
+  explicit StrokeGroup(scenic::Session* session);
 
   // Record the stroke to add.
   bool AddStroke(StrokePtr stroke);
@@ -38,7 +38,7 @@ class StrokeGroup final : public Resource {
   // Record the command to update the mesh.
   void UpdateMesh(Frame* frame);
 
-  const scenic_lib::ShapeNode& shape_node() const { return shape_node_; }
+  const scenic::ShapeNode& shape_node() const { return shape_node_; }
 
  private:
   // Record the command to merge the strokes to add.
@@ -47,9 +47,9 @@ class StrokeGroup final : public Resource {
   // Record the command to re-tessellate the strokes.
   void ReTessellateStrokes(Frame* frame);
 
-  scenic_lib::ShapeNode shape_node_;
-  scenic_lib::Mesh mesh_;
-  scenic_lib::Material material_;
+  scenic::ShapeNode shape_node_;
+  scenic::Mesh mesh_;
+  scenic::Material material_;
 
   std::set<StrokePtr> strokes_to_add_;
   std::set<StrokePtr> strokes_;

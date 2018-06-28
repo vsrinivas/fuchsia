@@ -92,7 +92,7 @@ class StrokeGroup final : public Resource {
 // Represents an imported node in a canvas.
 class ImportNode final : public Resource {
  public:
-  ImportNode(Canvas* canvas, scenic_lib::EntityNode& export_node);
+  ImportNode(Canvas* canvas, scenic::EntityNode& export_node);
   void AddChild(const Resource& child) const;
 
  private:

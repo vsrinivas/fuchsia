@@ -89,9 +89,9 @@ class App : public fuchsia::ui::policy::Presenter,
   ::fuchsia::ui::views_v1::ViewManagerPtr view_manager_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
 
-  std::unique_ptr<scenic_lib::Session> session_;
-  std::unique_ptr<scenic_lib::DisplayCompositor> compositor_;
-  std::unique_ptr<scenic_lib::LayerStack> layer_stack_;
+  std::unique_ptr<scenic::Session> session_;
+  std::unique_ptr<scenic::DisplayCompositor> compositor_;
+  std::unique_ptr<scenic::LayerStack> layer_stack_;
 
   RendererParams renderer_params_;
   std::vector<std::unique_ptr<Presentation>> presentations_;
