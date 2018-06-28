@@ -13,7 +13,7 @@
 
 // #define GPIO_TEST 1
 // #define I2C_TEST 1
-#define DSI_ENABLE 1
+//#define DSI_ENABLE 1
 
 static const pbus_mmio_t dwc3_mmios[] = {
     {
