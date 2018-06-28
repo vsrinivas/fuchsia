@@ -282,7 +282,8 @@ class Resumable : public internal::base_mixin {
 template <class D, template <typename> class... Mixins>
 class Device : public ::ddk::internal::base_device, public Mixins<D>... {
   public:
-    zx_status_t DdkAdd(const char* name, uint32_t flags = 0) {
+    zx_status_t DdkAdd(const char* name, uint32_t flags = 0, zx_device_prop_t* props = nullptr,
+                       uint32_t prop_count = 0) {
         if (zxdev_ != nullptr) {
             return ZX_ERR_BAD_STATE;
         }
@@ -295,6 +296,8 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
         args.ctx = static_cast<D*>(this);
         args.ops = &ddk_device_proto_;
         args.flags = flags;
+        args.props = props;
+        args.prop_count = prop_count;
         AddProtocol(&args);
 
         return device_add(parent_, &args, &zxdev_);
@@ -317,6 +320,19 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
         zx_device_t* dev = zxdev_;
         zxdev_ = nullptr;
         return device_remove(dev);
+    }
+
+    zx_status_t DdkGetMetadata(uint32_t type, void* buf, size_t buf_len, size_t* actual) {
+        return device_get_metadata(zxdev(), type, buf, buf_len, actual);
+    }
+
+    zx_status_t DdkAddMetadata(uint32_t type, const void* data, size_t length) {
+        return device_add_metadata(zxdev(), type, data, length);
+    }
+
+    zx_status_t DdkPublishMetadata(const char* path, uint32_t type, const void* data,
+                                   size_t length) {
+        return device_publish_metadata(zxdev(), path, type, data, length);
     }
 
     const char* name() const { return zxdev() ? device_get_name(zxdev()) : nullptr; }
