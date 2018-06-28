@@ -142,7 +142,7 @@ fn usage(appname: &str) -> () {
         "usage: {} <command>
 commands:
   scan: Scan for nearby devices and optionally connect to \
-         them
+         them (pass -h for additional usage)
   connect: Connect to a peer using its ID",
         appname
     );
