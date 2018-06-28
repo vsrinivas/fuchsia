@@ -136,14 +136,14 @@ func Update(cfg *Config) error {
 
 	var contentLines = []string{}
 	for line := range contentCollector {
-		contentLines = append(contentLines, line)
+		contentLines = append(contentLines, line+"\n")
 	}
 	sort.Strings(contentLines)
 
 	manifest.Paths["meta/contents"] = contentsPath
 
 	return ioutil.WriteFile(contentsPath,
-		[]byte(strings.Join(contentLines, "\n")), os.ModePerm)
+		[]byte(strings.Join(contentLines, "")), os.ModePerm)
 }
 
 // Sign creates a pubkey and signature file in the meta directory of the given
