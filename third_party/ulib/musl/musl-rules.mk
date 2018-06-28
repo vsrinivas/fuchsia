@@ -433,7 +433,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/misc/initgroups.c \
     $(LOCAL_DIR)/src/misc/issetugid.c \
     $(LOCAL_DIR)/src/misc/lockf.c \
-    $(LOCAL_DIR)/src/misc/mntent.c \
     $(LOCAL_DIR)/src/misc/openpty.c \
     $(LOCAL_DIR)/src/misc/ptsname.c \
     $(LOCAL_DIR)/src/misc/pty.c \
