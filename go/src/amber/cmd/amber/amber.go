@@ -6,8 +6,6 @@ package main
 
 import (
 	"bufio"
-	"crypto/sha512"
-	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -154,9 +152,7 @@ func startFIDLSvr(d *daemon.Daemon, s *daemon.SystemUpdateMonitor) {
 }
 
 func startupDaemon(store string) (*daemon.Daemon, error) {
-	reqSet := newPackageSet([]string{"/pkg/bin/app"})
-
-	d, err := daemon.NewDaemon(store, reqSet, daemon.ProcessPackage, []source.Source{})
+	d, err := daemon.NewDaemon(store, pkg.NewPackageSet(), daemon.ProcessPackage, []source.Source{})
 	if err != nil {
 		return nil, err
 	}
@@ -164,26 +160,6 @@ func startupDaemon(store string) (*daemon.Daemon, error) {
 	log.Println("monitoring for updates")
 
 	return d, err
-}
-
-func newPackageSet(files []string) *pkg.PackageSet {
-	reqSet := pkg.NewPackageSet()
-
-	d := sha512.New()
-	// get the current SHA512 hash of the file
-	for _, name := range files {
-		sha, err := digest(name, d)
-		d.Reset()
-		if err != nil {
-			continue
-		}
-
-		hexStr := hex.EncodeToString(sha)
-		pkg := pkg.Package{Name: name, Version: hexStr}
-		reqSet.Add(&pkg)
-	}
-
-	return reqSet
 }
 
 func digest(name string, hash hash.Hash) ([]byte, error) {
