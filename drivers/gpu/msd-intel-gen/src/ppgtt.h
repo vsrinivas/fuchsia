@@ -47,7 +47,7 @@ public:
 
     bool Clear(uint64_t addr) override;
     bool Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* buffer, uint64_t page_offset,
-                uint64_t page_count, CachingType caching_type) override;
+                uint64_t page_count) override;
 
     uint64_t get_pml4_bus_addr() { return pml4_table_->bus_addr(); }
 

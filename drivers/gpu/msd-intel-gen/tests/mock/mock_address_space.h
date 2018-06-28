@@ -23,7 +23,7 @@ public:
     bool Free(uint64_t addr) override;
     bool Clear(uint64_t addr) override;
     bool Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping, uint64_t offset,
-                uint64_t length, CachingType caching_type) override;
+                uint64_t length) override;
 
     bool is_allocated(uint64_t addr)
     {

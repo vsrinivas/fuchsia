@@ -255,7 +255,7 @@ bool PerProcessGtt::Free(uint64_t addr)
 }
 
 bool PerProcessGtt::Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
-                           uint64_t page_offset, uint64_t page_count, CachingType caching_type)
+                           uint64_t page_offset, uint64_t page_count)
 {
     if (kLogEnable)
         magma::log(magma::LOG_INFO,
@@ -295,7 +295,7 @@ bool PerProcessGtt::Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* 
         gen_pte_t pte;
         if (i < page_count) {
             // buffer pages
-            pte = gen_pte_encode(bus_addr_array[i], caching_type, true, true);
+            pte = gen_pte_encode(bus_addr_array[i], CACHING_LLC, true, true);
         } else if (i < page_count + kOverfetchPageCount) {
             // overfetch page: readable
             pte = gen_pte_encode(pml4_table_->scratch_page_bus_addr(), CACHING_NONE, true, false);

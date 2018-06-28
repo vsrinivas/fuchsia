@@ -51,14 +51,12 @@ std::unique_ptr<GpuMapping> AddressSpace::MapBufferGpu(std::shared_ptr<AddressSp
         if (!bus_mapping)
             return DRETP(nullptr, "failed to bus map the page range");
 
-        if (!address_space->Insert(gpu_addr, bus_mapping.get(), page_offset, page_count,
-                                   CACHING_LLC))
+        if (!address_space->Insert(gpu_addr, bus_mapping.get(), page_offset, page_count))
             return DRETP(nullptr, "failed to insert into address_space");
 
     } else {
         if (!static_cast<Gtt*>(address_space.get())
-                 ->GlobalGttInsert(gpu_addr, buffer->platform_buffer(), page_offset, page_count,
-                                   CACHING_LLC))
+                 ->GlobalGttInsert(gpu_addr, buffer->platform_buffer(), page_offset, page_count))
             return DRETP(nullptr, "failed to insert into address_space");
     }
 

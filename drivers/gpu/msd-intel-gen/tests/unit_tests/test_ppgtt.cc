@@ -63,7 +63,7 @@ public:
 
     static void check_pte_entries(PerProcessGtt* ppgtt,
                                   magma::PlatformBusMapper::BusMapping* bus_mapping,
-                                  uint64_t gpu_addr, CachingType caching_type)
+                                  uint64_t gpu_addr)
     {
         auto& bus_addr_array = bus_mapping->Get();
 
@@ -79,7 +79,11 @@ public:
 
             EXPECT_TRUE(pte & (1 << 0));
             EXPECT_EQ(static_cast<bool>(pte & (1 << 1)), i < bus_addr_array.size()); // writeable
-            EXPECT_EQ(pte & cache_bits(caching_type), cache_bits(caching_type));
+            if (i < bus_addr_array.size()) {
+                EXPECT_EQ(pte & cache_bits(CACHING_LLC), cache_bits(CACHING_LLC));
+            } else {
+                EXPECT_EQ(pte & cache_bits(CACHING_NONE), cache_bits(CACHING_NONE));
+            }
         }
     }
 
@@ -115,12 +119,10 @@ public:
 
         // Mismatch addr and buffer
         MockBusMapping mapping(0, 0);
-        EXPECT_FALSE(
-            ppgtt->Insert(addr[1], &mapping, 0, buffer[0]->size() / PAGE_SIZE, CACHING_NONE));
+        EXPECT_FALSE(ppgtt->Insert(addr[1], &mapping, 0, buffer[0]->size() / PAGE_SIZE));
 
         // Totally bogus addr
-        EXPECT_FALSE(
-            ppgtt->Insert(0xdead1000, &mapping, 0, buffer[0]->size() / PAGE_SIZE, CACHING_NONE));
+        EXPECT_FALSE(ppgtt->Insert(0xdead1000, &mapping, 0, buffer[0]->size() / PAGE_SIZE));
 
         // Bogus addr
         EXPECT_FALSE(ppgtt->Clear(0xdead1000));
@@ -161,13 +163,11 @@ public:
             phys_addr = phys_addr_base += PAGE_SIZE;
         }
 
-        EXPECT_TRUE(ppgtt->Insert(addr[0], bus_mapping[0].get(), 0, buffer[0]->size() / PAGE_SIZE,
-                                  CACHING_NONE));
-        check_pte_entries(ppgtt.get(), bus_mapping[0].get(), addr[0], CACHING_NONE);
+        EXPECT_TRUE(ppgtt->Insert(addr[0], bus_mapping[0].get(), 0, buffer[0]->size() / PAGE_SIZE));
+        check_pte_entries(ppgtt.get(), bus_mapping[0].get(), addr[0]);
 
-        EXPECT_TRUE(ppgtt->Insert(addr[1], bus_mapping[1].get(), 0, buffer[1]->size() / PAGE_SIZE,
-                                  CACHING_NONE));
-        check_pte_entries(ppgtt.get(), bus_mapping[1].get(), addr[1], CACHING_NONE);
+        EXPECT_TRUE(ppgtt->Insert(addr[1], bus_mapping[1].get(), 0, buffer[1]->size() / PAGE_SIZE));
+        check_pte_entries(ppgtt.get(), bus_mapping[1].get(), addr[1]);
 
         EXPECT_TRUE(ppgtt->Clear(addr[1]));
         check_pte_entries_clear(ppgtt.get(), addr[1], buffer[1]->size());

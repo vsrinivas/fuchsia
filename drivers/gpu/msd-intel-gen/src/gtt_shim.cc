@@ -28,17 +28,16 @@ public:
     bool Clear(uint64_t addr) override { return pci_device()->GetGtt()->Clear(addr); }
 
     bool Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
-                uint64_t page_offset, uint64_t page_count, CachingType caching_type) override
+                uint64_t page_offset, uint64_t page_count) override
     {
         DASSERT(false);
         return false;
     }
 
     bool GlobalGttInsert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t page_offset,
-                         uint64_t page_count, CachingType caching_type) override
+                         uint64_t page_count) override
     {
-        return pci_device()->GetGtt()->GlobalGttInsert(addr, buffer, page_offset, page_count,
-                                                       caching_type);
+        return pci_device()->GetGtt()->GlobalGttInsert(addr, buffer, page_offset, page_count);
     }
 
 private:
