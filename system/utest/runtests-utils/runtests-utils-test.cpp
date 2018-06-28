@@ -27,6 +27,9 @@ namespace {
 static constexpr char kEchoSuccessAndArgs[] = "echo Success! $@";
 static constexpr char kEchoFailureAndArgs[] = "echo Failure!  $@ 1>&2\nexit 77";
 static constexpr size_t kOneMegabyte = 1 << 20;
+static constexpr char kExpectedJSONOutputPrefix[] = "{\"tests\":[\n";
+// We don't want to count the null terminator.
+static constexpr size_t kExpectedJSONOutputPrefixSize = sizeof(kExpectedJSONOutputPrefix) - 1;
 
 ///////////////////////////////////////////////////////////////////////////////
 // HELPER CLASSES
@@ -168,9 +171,9 @@ int NumEntriesInDir(const char* dir_path) {
 // test at |test_path|, setting |output_file_rel_path| as its value if
 // successful.
 // Returns true iff successful.
-inline bool GetOutputFileRelPath(const fbl::StringPiece& output_dir,
-                                 const fbl::StringPiece& test_path,
-                                 fbl::String* output_file_rel_path) {
+bool GetOutputFileRelPath(const fbl::StringPiece& output_dir,
+                          const fbl::StringPiece& test_path,
+                          fbl::String* output_file_rel_path) {
     if (output_file_rel_path == nullptr) {
         printf("FAILURE: |output_file_rel_path| was null.");
         return false;
@@ -199,7 +202,7 @@ inline bool GetOutputFileRelPath(const fbl::StringPiece& output_dir,
                "single output file\n",
                num_entries, dir_of_test_output.c_str());
     }
-    return (num_entries == 1);
+    return num_entries == 1;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -778,17 +781,16 @@ bool RunAllTestsWithOutput() {
     ASSERT_TRUE(GetOutputFileRelPath(output_dir, fail_file_name,
                                      &failure_output_rel_path));
 
-    fbl::StringBuffer<1024> expected_output_buf;
-    expected_output_buf.Append("{\"tests\":[\n");
-    expected_output_buf.AppendPrintf(
-        "{\"name\":\"%s\",\"output_file\":\"%s\",\"result\":\"PASS\"},\n",
+    fbl::StringBuffer<1024> expected_pass_output_buf;
+    expected_pass_output_buf.AppendPrintf(
+        "{\"name\":\"%s\",\"output_file\":\"%s\",\"result\":\"PASS\"}",
         succeed_file_name.c_str(),
-        success_output_rel_path.c_str() + 1); // +1 to discard the leading backslash.
-    expected_output_buf.AppendPrintf(
+        success_output_rel_path.c_str() + 1); // +1 to discard the leading slash.
+    fbl::StringBuffer<1024> expected_fail_output_buf;
+    expected_fail_output_buf.AppendPrintf(
         "{\"name\":\"%s\",\"output_file\":\"%s\",\"result\":\"FAIL\"}",
         fail_file_name.c_str(),
-        failure_output_rel_path.c_str() + 1); // +1 to discared the leading backslash.
-    expected_output_buf.Append("\n]}\n");
+        failure_output_rel_path.c_str() + 1); // +1 to discared the leading slash.
 
     // Extract the actual output.
     const fbl::String output_path = JoinPath(output_dir, "summary.json");
@@ -799,7 +801,40 @@ bool RunAllTestsWithOutput() {
     EXPECT_LT(0, fread(buf, sizeof(buf[0]), sizeof(buf), output_file));
     fclose(output_file);
 
-    EXPECT_STR_EQ(expected_output_buf.c_str(), buf);
+    // The order of the tests in summary.json is not defined, so first check the prefix, then
+    // be permissive about order of the actual tests.
+    size_t buf_index = 0;
+    EXPECT_EQ(0,
+              strncmp(kExpectedJSONOutputPrefix, &buf[buf_index], kExpectedJSONOutputPrefixSize));
+    buf_index += kExpectedJSONOutputPrefixSize;
+
+    if (!strncmp(expected_pass_output_buf.c_str(),
+                 &buf[buf_index],
+                 expected_pass_output_buf.size())) {
+        buf_index += expected_pass_output_buf.size();
+        EXPECT_EQ(0, strncmp(",\n", &buf[buf_index], sizeof(",\n") - 1));
+        buf_index += sizeof(",\n") - 1;
+        EXPECT_EQ(0,
+                  strncmp(expected_fail_output_buf.c_str(),
+                          &buf[buf_index],
+                          expected_fail_output_buf.size()));
+        buf_index += expected_fail_output_buf.size();
+    } else if (!strncmp(expected_fail_output_buf.c_str(),
+                        &buf[buf_index],
+                        expected_fail_output_buf.size())) {
+        buf_index += expected_fail_output_buf.size();
+        EXPECT_EQ(0, strncmp(",\n", &buf[buf_index], sizeof(",\n") - 1));
+        buf_index += sizeof(",\n") - 1;
+        EXPECT_EQ(0,
+                  strncmp(expected_pass_output_buf.c_str(),
+                          &buf[buf_index],
+                          expected_pass_output_buf.size()));
+        buf_index += expected_pass_output_buf.size();
+    } else {
+        printf("Unexpected buffer contents: %s\n", buf);
+        EXPECT_TRUE(false, "output buf didn't contain expected pass or fail strings");
+    }
+    EXPECT_STR_EQ("\n]}\n", &buf[buf_index]);
 
     END_TEST;
 }
@@ -830,18 +865,7 @@ bool RunAllTestsWithSyslogOutput() {
     ASSERT_TRUE(GetOutputFileRelPath(output_dir, fail_file_name,
                                      &failure_output_rel_path));
 
-    fbl::StringBuffer<1024> expected_output_buf;
-    expected_output_buf.Append("{\"tests\":[\n");
-    expected_output_buf.AppendPrintf(
-        "{\"name\":\"%s\",\"output_file\":\"%s\",\"result\":\"PASS\"},\n",
-        succeed_file_name.c_str(),
-        success_output_rel_path.c_str() + 1); // +1 to discard the leading backslash.
-    expected_output_buf.AppendPrintf(
-        "{\"name\":\"%s\",\"output_file\":\"%s\",\"result\":\"FAIL\"}",
-        fail_file_name.c_str(),
-        failure_output_rel_path.c_str() + 1); // +1 to discard the leading backslash.
-    expected_output_buf.Append("\n],\n");
-    expected_output_buf.Append("\"outputs\":{\n\"syslog_file\":\"syslog.txt\"\n}}\n");
+    const char kExpectedOutputsStr[] = "\"outputs\":{\n\"syslog_file\":\"syslog.txt\"\n}";
 
     // Extract the actual output.
     const fbl::String output_path = JoinPath(output_dir, "summary.json");
@@ -852,7 +876,19 @@ bool RunAllTestsWithSyslogOutput() {
     EXPECT_LT(0, fread(buf, sizeof(buf[0]), sizeof(buf), output_file));
     fclose(output_file);
 
-    EXPECT_STR_EQ(expected_output_buf.c_str(), buf);
+    // We don't actually care if the string is at the beginning or the end of the JSON, so just
+    // search for it anywhere.
+    bool found_expected_outputs_str = false;
+    for (size_t buf_index = 0; buf[buf_index]; ++buf_index) {
+        if (!strncmp(kExpectedOutputsStr, &buf[buf_index], sizeof(kExpectedOutputsStr) - 1)) {
+            found_expected_outputs_str = true;
+            break;
+        }
+    }
+    if (!found_expected_outputs_str) {
+        printf("Unexpected buffer contents: %s\n", buf);
+    }
+    EXPECT_TRUE(found_expected_outputs_str, "Didn't find expected outputs str in buf");
 
     END_TEST;
 }
