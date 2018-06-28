@@ -406,7 +406,6 @@ static inline char* wmi_service_name(int service_id) {
             BITARR_SET(out, y); \
     } while (0)
 
-#if 0 // NEEDS PORTING
 static inline void wmi_10x_svc_map(const uint32_t* in, unsigned long* out,
                                    size_t len) {
     SVCMAP(WMI_10X_SERVICE_BEACON_OFFLOAD,
@@ -468,7 +467,6 @@ static inline void wmi_10x_svc_map(const uint32_t* in, unsigned long* out,
     SVCMAP(WMI_10X_SERVICE_PEER_STATS,
            WMI_SERVICE_PEER_STATS, len);
 }
-#endif // NEEDS PORTING
 
 static inline void wmi_main_svc_map(const uint32_t* in, unsigned long* out,
                                     size_t len) {
@@ -6588,6 +6586,9 @@ struct wmi_pdev_chan_info_req_cmd {
     MSG(ATH10K_MSG_TYPE_WMI, ATH10K_MSG_TYPE_HTC, sizeof(struct wmi_cmd_hdr)), \
     WMI_MSG(ECHO_CMD, wmi_echo_cmd),                                           \
     WMI_MSG(INIT_CMD_10_2, wmi_init_cmd_10_2),                                 \
+    WMI_MSG(PDEV_SET_PARAM, wmi_pdev_set_param_cmd),                           \
+    WMI_MSG(PDEV_SET_RD, wmi_pdev_set_regdomain_cmd),                          \
+    WMI_MSG(PDEV_SUSPEND, wmi_pdev_suspend_cmd),                               \
     WMI_MSG(VDEV_CREATE, wmi_vdev_create_cmd),                                 \
     WMI_MSG(VDEV_DELETE, wmi_vdev_delete_cmd),                                 \
     WMI_MSG(VDEV_DOWN, wmi_vdev_down_cmd),                                     \
