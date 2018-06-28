@@ -9,10 +9,7 @@
 namespace zx {
 
 zx_status_t timer::create(uint32_t options, zx_clock_t clock_id, timer* result) {
-    zx_handle_t h = ZX_HANDLE_INVALID;
-    zx_status_t status = zx_timer_create(options, clock_id, &h);
-    result->reset(h);
-    return status;
+    return zx_timer_create(options, clock_id, result->reset_and_get_address());
 }
 
 } // namespace zx

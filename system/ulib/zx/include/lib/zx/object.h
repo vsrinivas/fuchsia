@@ -72,7 +72,7 @@ protected:
 // Provides type-safe access to operations on a handle.
 template <typename T> class object : public object_base {
 public:
-    constexpr object() : object_base(ZX_HANDLE_INVALID) {}
+    constexpr object() = default;
 
     explicit object(zx_handle_t value) : object_base(value) {}
 
@@ -154,9 +154,11 @@ public:
 
     zx_status_t get_child(uint64_t koid, zx_rights_t rights,
                           object<T>* result) const {
-        zx_handle_t h = ZX_HANDLE_INVALID;
-        zx_status_t status = zx_object_get_child(value_, koid, rights, &h);
-        result->reset(h);
+        // Allow for the caller aliasing |result| to |this|.
+        object<T> h;
+        zx_status_t status = zx_object_get_child(
+            value_, koid, rights, h.reset_and_get_address());
+        result->reset(h.release());
         return status;
     }
 

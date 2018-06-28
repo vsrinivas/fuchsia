@@ -9,14 +9,7 @@
 namespace zx {
 
 zx_status_t port::create(uint32_t options, port* result) {
-    zx_handle_t h;
-    zx_status_t status = zx_port_create(options, &h);
-    if (status < 0) {
-        result->reset(ZX_HANDLE_INVALID);
-    } else {
-        result->reset(h);
-    }
-    return status;
+    return zx_port_create(options, result->reset_and_get_address());
 }
 
 } // namespace zx

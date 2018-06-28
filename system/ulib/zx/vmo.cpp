@@ -9,10 +9,7 @@
 namespace zx {
 
 zx_status_t vmo::create(uint64_t size, uint32_t options, vmo* result) {
-    zx_handle_t h = ZX_HANDLE_INVALID;
-    zx_status_t status = zx_vmo_create(size, options, &h);
-    result->reset(h);
-    return status;
+    return zx_vmo_create(size, options, result->reset_and_get_address());
 }
 
 } // namespace zx

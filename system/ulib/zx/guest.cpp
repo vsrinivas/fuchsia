@@ -10,14 +10,11 @@ namespace zx {
 
 zx_status_t guest::create(const resource& resource, uint32_t options,
                           const vmo& physmem, guest* result) {
-    zx_handle_t h;
-    zx_status_t status = zx_guest_create(resource.get(), options, physmem.get(), &h);
-    if (status < 0) {
-        result->reset(ZX_HANDLE_INVALID);
-    } else {
-        result->reset(h);
-    }
-    return status;
+    // Assume |result| uses a distinct container from |resource| and
+    // |physmem|, due to strict aliasing.
+    return zx_guest_create(
+        resource.get(), options, physmem.get(),
+        result->reset_and_get_address());
 }
 
 } // namespace zx

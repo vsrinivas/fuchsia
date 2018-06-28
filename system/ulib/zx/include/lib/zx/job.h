@@ -26,7 +26,10 @@ public:
         return *this;
     }
 
-    static zx_status_t create(zx_handle_t parent_job, uint32_t options, job* result);
+    static zx_status_t create(zx_handle_t parent_job, uint32_t options, job* result) {
+        return create(*unowned<job>(parent_job), options, result);
+    }
+    static zx_status_t create(const zx::job& parent, uint32_t options, job* result);
 
     zx_status_t set_policy(uint32_t options, uint32_t topic, void* policy, uint32_t count) const {
       return zx_job_set_policy(get(), options, topic, policy, count);

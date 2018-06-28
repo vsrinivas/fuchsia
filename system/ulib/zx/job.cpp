@@ -8,14 +8,12 @@
 
 namespace zx {
 
-zx_status_t job::create(zx_handle_t parent_job, uint32_t flags, job* result) {
-    zx_handle_t h;
-    zx_status_t status = zx_job_create(parent_job, flags, &h);
-    if (status < 0) {
-        result->reset(ZX_HANDLE_INVALID);
-    } else {
-        result->reset(h);
-    }
+zx_status_t job::create(const job& parent, uint32_t flags, job* result) {
+    // Allow for aliasing of the same container to |result| and |parent|.
+    job h;
+    zx_status_t status =
+        zx_job_create(parent.get(), flags, h.reset_and_get_address());
+    result->reset(h.release());
     return status;
 }
 

@@ -12,19 +12,13 @@
 
 namespace zx {
 
-zx_status_t process::create(const job& job, const char* name, uint32_t name_len, uint32_t flags,
-                            process* proc, vmar* vmar) {
-    zx_handle_t proc_h;
-    zx_handle_t vmar_h;
-    zx_status_t status = zx_process_create(job.get(), name, name_len, flags, &proc_h, &vmar_h);
-    if (status < 0) {
-        proc->reset(ZX_HANDLE_INVALID);
-        vmar->reset(ZX_HANDLE_INVALID);
-    } else {
-        proc->reset(proc_h);
-        vmar->reset(vmar_h);
-    }
-    return status;
+zx_status_t process::create(const job& job, const char* name, uint32_t name_len,
+                            uint32_t flags, process* proc, vmar* vmar) {
+    // Assume |proc|, |vmar| and |job| must refer to different containers, due
+    // to strict aliasing.
+    return zx_process_create(
+        job.get(), name, name_len, flags, proc->reset_and_get_address(),
+        vmar->reset_and_get_address());
 }
 
 zx_status_t process::start(const thread& thread_handle, uintptr_t entry,

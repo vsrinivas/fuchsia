@@ -10,12 +10,16 @@ namespace zx {
 
 zx_status_t eventpair::create(uint32_t flags, eventpair* endpoint0,
                               eventpair* endpoint1) {
-    zx_handle_t h0 = ZX_HANDLE_INVALID;
-    zx_handle_t h1 = ZX_HANDLE_INVALID;
-    zx_status_t result = zx_eventpair_create(flags, &h0, &h1);
-    endpoint0->reset(h0);
-    endpoint1->reset(h1);
-    return result;
+    // Ensure aliasing of both out parameters to the same container
+    // has a well-defined result, and does not leak.
+    eventpair h0;
+    eventpair h1;
+    zx_status_t status = zx_eventpair_create(
+        flags, h0.reset_and_get_address(),
+        h1.reset_and_get_address());
+    endpoint0->reset(h0.release());
+    endpoint1->reset(h1.release());
+    return status;
 }
 
 } // namespace zx

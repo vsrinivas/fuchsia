@@ -9,14 +9,7 @@
 namespace zx {
 
 zx_status_t event::create(uint32_t options, event* result) {
-    zx_handle_t h;
-    zx_status_t status = zx_event_create(options, &h);
-    if (status < 0) {
-        result->reset(ZX_HANDLE_INVALID);
-    } else {
-        result->reset(h);
-    }
-    return status;
+    return zx_event_create(options, result->reset_and_get_address());
 }
 
 } // namespace zx

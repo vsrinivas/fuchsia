@@ -10,11 +10,16 @@ namespace zx {
 
 zx_status_t socket::create(uint32_t flags, socket* endpoint0,
                            socket* endpoint1) {
-    zx_handle_t h0 = ZX_HANDLE_INVALID, h1 = ZX_HANDLE_INVALID;
-    zx_status_t result = zx_socket_create(flags, &h0, &h1);
-    endpoint0->reset(h0);
-    endpoint1->reset(h1);
-    return result;
+    // Ensure aliasing of both out parameters to the same container
+    // has a well-defined result, and does not leak.
+    socket h0;
+    socket h1;
+    zx_status_t status = zx_socket_create(
+        flags, h0.reset_and_get_address(),
+        h1.reset_and_get_address());
+    endpoint0->reset(h0.release());
+    endpoint1->reset(h1.release());
+    return status;
 }
 
 } // namespace zx
