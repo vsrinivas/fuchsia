@@ -19,7 +19,7 @@ typedef struct raw_nand_protocol_ops {
     zx_status_t (*read_page_hwecc)(void* ctx, void *data, void *oob,
                                    uint32_t nandpage, int *ecc_correct);
     // Write one nand page with hwecc.
-    zx_status_t (*write_page_hwecc)(void* ctx, void *data, void *oob,
+    zx_status_t (*write_page_hwecc)(void* ctx, const void* data, const void* oob,
                                     uint32_t nandpage);
     // Erase nand block.
     zx_status_t (*erase_block)(void* ctx, uint32_t nandpage);
@@ -44,8 +44,8 @@ static inline zx_status_t raw_nand_read_page_hwecc(raw_nand_protocol_t *raw_nand
                                          ecc_correct);
 }
 
-static inline zx_status_t raw_nand_write_page_hwecc(raw_nand_protocol_t *raw_nand,
-                                                    void *data, void *oob,
+static inline zx_status_t raw_nand_write_page_hwecc(raw_nand_protocol_t* raw_nand,
+                                                    const void* data, const void* oob,
                                                     uint32_t nand_page)
 {
     return raw_nand->ops->write_page_hwecc(raw_nand->ctx, data, oob, nand_page);

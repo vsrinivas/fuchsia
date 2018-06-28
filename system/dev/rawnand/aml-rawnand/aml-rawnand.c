@@ -245,8 +245,9 @@ static zx_status_t aml_get_oob_byte(aml_raw_nand_t* raw_nand,
 }
 
 static zx_status_t aml_set_oob_byte(aml_raw_nand_t* raw_nand,
-                                    uint8_t* oob_buf,
-                                    uint32_t ecc_pages) {
+                                    const uint8_t* oob_buf,
+                                    uint32_t ecc_pages)
+{
     struct aml_info_format* info;
     int count = 0;
 
@@ -538,10 +539,11 @@ static zx_status_t aml_read_page_hwecc(void* ctx,
  * is not needed. We should initiate DMA to/from pages passed in.
  */
 static zx_status_t aml_write_page_hwecc(void* ctx,
-                                        void* data,
-                                        void* oob,
-                                        uint32_t nand_page) {
-    aml_raw_nand_t* raw_nand = (aml_raw_nand_t*)ctx;
+                                        const void* data,
+                                        const void* oob,
+                                        uint32_t nand_page)
+{
+    aml_raw_nand_t *raw_nand = (aml_raw_nand_t*)ctx;
     uint32_t cmd;
     uint64_t daddr = raw_nand->data_buf_paddr;
     uint64_t iaddr = raw_nand->info_buf_paddr;
