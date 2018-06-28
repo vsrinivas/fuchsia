@@ -88,37 +88,51 @@ zx_status_t nand_erase_op(nand_device_t* dev, nand_op_t* nand_op) {
 }
 
 static zx_status_t nand_read_op(nand_device_t* dev, nand_op_t* nand_op) {
-    uint8_t* vaddr_data = NULL;
-    uint8_t* vaddr_oob = NULL;
+    uint8_t *aligned_vaddr_data = NULL;
+    uint8_t *aligned_vaddr_oob = NULL;
+    uint8_t *vaddr_data = NULL;
+    uint8_t *vaddr_oob = NULL;
+    size_t page_offset_bytes_data = 0;
+    size_t page_offset_bytes_oob = 0;
     zx_status_t status;
 
     // Map data.
     if (nand_op->rw.data_vmo != ZX_HANDLE_INVALID) {
+        const size_t offset_bytes = nand_op->rw.offset_data_vmo * dev->nand_info.page_size;
+        page_offset_bytes_data = offset_bytes & (PAGE_SIZE - 1);
+        const size_t aligned_offset_bytes = offset_bytes - page_offset_bytes_data;
         status = zx_vmar_map(zx_vmar_root_self(), 0, nand_op->rw.data_vmo,
-                             nand_op->rw.offset_data_vmo * dev->nand_info.page_size,
-                             nand_op->rw.length * dev->nand_info.page_size,
+                             aligned_offset_bytes,
+                             nand_op->rw.length * dev->nand_info.page_size + page_offset_bytes_data,
                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                             (uintptr_t*)&vaddr_data);
+                             (uintptr_t*)&aligned_vaddr_data);
         if (status != ZX_OK) {
             zxlogf(ERROR, "nand read page: Cannot map data vmo\n");
             return status;
         }
+        vaddr_data = aligned_vaddr_data + page_offset_bytes_data;
     }
 
     // Map oob.
     if (nand_op->rw.oob_vmo != ZX_HANDLE_INVALID) {
+        const size_t offset_bytes = nand_op->rw.offset_oob_vmo;
+        page_offset_bytes_oob = offset_bytes & (PAGE_SIZE - 1);
+        const size_t aligned_offset_bytes = offset_bytes - page_offset_bytes_oob;
         status = zx_vmar_map(zx_vmar_root_self(), 0, nand_op->rw.oob_vmo,
-                             nand_op->rw.offset_oob_vmo * dev->nand_info.page_size,
-                             nand_op->rw.length * dev->nand_info.oob_size,
-                             ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, (uintptr_t*)&vaddr_oob);
+                             aligned_offset_bytes,
+                             nand_op->rw.length * dev->nand_info.oob_size + page_offset_bytes_oob,
+                             ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+                             (uintptr_t*)&aligned_vaddr_oob);
         if (status != ZX_OK) {
             zxlogf(ERROR, "nand read page: Cannot map oob vmo\n");
-            if (vaddr_data != NULL) {
-                status = zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)vaddr_data,
-                                       dev->nand_info.page_size * nand_op->rw.length);
+            if (aligned_vaddr_data != NULL) {
+                status = zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)aligned_vaddr_data,
+                                       dev->nand_info.page_size * nand_op->rw.length +
+                                           page_offset_bytes_data);
             }
             return status;
         }
+        vaddr_oob = aligned_vaddr_oob + page_offset_bytes_oob;
     }
 
     uint32_t max_corrected_bits = 0;
@@ -143,16 +157,19 @@ static zx_status_t nand_read_op(nand_device_t* dev, nand_op_t* nand_op) {
     }
     nand_op->rw.corrected_bit_flips = max_corrected_bits;
 
-    if (vaddr_data != NULL) {
-        status = zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)vaddr_data,
-                               dev->nand_info.page_size * nand_op->rw.length);
+    if (aligned_vaddr_data != NULL) {
+        status = zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)aligned_vaddr_data,
+                               dev->nand_info.page_size * nand_op->rw.length +
+                                   page_offset_bytes_data);
         if (status != ZX_OK) {
             zxlogf(ERROR, "nand: Read Cannot unmap data %d\n", status);
         }
     }
-    if (vaddr_oob != NULL) {
-        status = zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)vaddr_oob,
-                               nand_op->rw.length * dev->nand_info.oob_size);
+    if (aligned_vaddr_oob != NULL) {
+        status = zx_vmar_unmap(zx_vmar_root_self(),
+                               (uintptr_t)aligned_vaddr_oob,
+                               nand_op->rw.length * dev->nand_info.oob_size +
+                                   page_offset_bytes_oob);
         if (status != ZX_OK) {
             zxlogf(ERROR, "nand: Read Cannot unmap oob %d\n", status);
         }
@@ -161,37 +178,51 @@ static zx_status_t nand_read_op(nand_device_t* dev, nand_op_t* nand_op) {
 }
 
 static zx_status_t nand_write_op(nand_device_t* dev, nand_op_t* nand_op) {
-    uint8_t* vaddr_data = NULL;
-    uint8_t* vaddr_oob = NULL;
+    uint8_t *aligned_vaddr_data = NULL;
+    uint8_t *aligned_vaddr_oob = NULL;
+    uint8_t *vaddr_data = NULL;
+    uint8_t *vaddr_oob = NULL;
+    size_t page_offset_bytes_data = 0;
+    size_t page_offset_bytes_oob = 0;
     zx_status_t status;
 
     // Map data.
     if (nand_op->rw.data_vmo != ZX_HANDLE_INVALID) {
+        const size_t offset_bytes = nand_op->rw.offset_data_vmo * dev->nand_info.page_size;
+        page_offset_bytes_data = offset_bytes & (PAGE_SIZE - 1);
+        const size_t aligned_offset_bytes = offset_bytes - page_offset_bytes_data;
         status = zx_vmar_map(zx_vmar_root_self(), 0, nand_op->rw.data_vmo,
-                             nand_op->rw.offset_data_vmo * dev->nand_info.page_size,
-                             nand_op->rw.length * dev->nand_info.page_size,
+                             aligned_offset_bytes,
+                             nand_op->rw.length * dev->nand_info.page_size + page_offset_bytes_data,
                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                             (uintptr_t*)&vaddr_data);
+                             (uintptr_t*)&aligned_vaddr_data);
         if (status != ZX_OK) {
             zxlogf(ERROR, "nand write page: Cannot map data vmo\n");
             return status;
         }
+        vaddr_data = aligned_vaddr_data + page_offset_bytes_data;
     }
 
     // Map oob.
     if (nand_op->rw.oob_vmo != ZX_HANDLE_INVALID) {
+        const size_t offset_bytes = nand_op->rw.offset_oob_vmo;
+        page_offset_bytes_oob = offset_bytes & (PAGE_SIZE - 1);
+        const size_t aligned_offset_bytes = offset_bytes - page_offset_bytes_oob;
         status = zx_vmar_map(zx_vmar_root_self(), 0, nand_op->rw.oob_vmo,
-                             nand_op->rw.offset_oob_vmo * dev->nand_info.page_size,
-                             nand_op->rw.length * dev->nand_info.oob_size,
-                             ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, (uintptr_t*)&vaddr_oob);
+                             aligned_offset_bytes,
+                             nand_op->rw.length * dev->nand_info.oob_size + page_offset_bytes_oob,
+                             ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+                             (uintptr_t*)&aligned_vaddr_oob);
         if (status != ZX_OK) {
             zxlogf(ERROR, "nand write page: Cannot map oob vmo\n");
             if (vaddr_data != NULL) {
-                status = zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)vaddr_data,
-                                       dev->nand_info.page_size * nand_op->rw.length);
+                status = zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)aligned_vaddr_data,
+                                       dev->nand_info.page_size * nand_op->rw.length +
+                                           page_offset_bytes_data);
             }
             return status;
         }
+        vaddr_oob = aligned_vaddr_oob + page_offset_bytes_oob;
     }
 
     for (uint32_t i = 0; i < nand_op->rw.length; i++) {
@@ -210,16 +241,18 @@ static zx_status_t nand_write_op(nand_device_t* dev, nand_op_t* nand_op) {
         }
     }
 
-    if (vaddr_data != NULL) {
-        status = zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)vaddr_data,
-                               dev->nand_info.page_size * nand_op->rw.length);
+    if (aligned_vaddr_data != NULL) {
+        status = zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)aligned_vaddr_data,
+                               dev->nand_info.page_size * nand_op->rw.length +
+                                   page_offset_bytes_data);
         if (status != ZX_OK) {
             zxlogf(ERROR, "nand: Write Cannot unmap data %d\n", status);
         }
     }
-    if (vaddr_oob != NULL) {
-        status = zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)vaddr_oob,
-                               nand_op->rw.length * dev->nand_info.oob_size);
+    if (aligned_vaddr_oob != NULL) {
+        status = zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)aligned_vaddr_oob,
+                               nand_op->rw.length * dev->nand_info.oob_size +
+                                   page_offset_bytes_oob);
         if (status != ZX_OK) {
             zxlogf(ERROR, "nand: Write Cannot unmap oob %d\n", status);
         }
