@@ -7,9 +7,6 @@
              gerrithost="https://fuchsia-review.googlesource.com"/>
   </projects>
   <hooks>
-    <hook name="build-update"
-          project="garnet"
-          action="tools/update.sh"/>
     <hook name="cipd-update"
           project="garnet"
           action="tools/cipd-update.sh"/>

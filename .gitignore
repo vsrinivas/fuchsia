@@ -23,7 +23,6 @@ tags
 target
 go/pkg
 *.orig
-last-update
 /.cipd
 tools/cipd.gni
 .idea/

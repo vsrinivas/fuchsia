@@ -4,16 +4,28 @@
 
 import("//build/package.gni")
 
+jiri_snapshot_file = "//.jiri_root/update_history/latest"
+last_update_file = "$target_gen_dir/last-update.txt"
+
 package("build_info") {
   deprecated_system_image = true
+  deps = [ ":last-update.txt" ]
   resources = [
     {
       dest = "build/last-update"
-      path = rebase_path("last-update")
+      path = last_update_file
     },
     {
       dest = "build/snapshot"
-      path = rebase_path("//.jiri_root/update_history/latest")
+      path = jiri_snapshot_file
     },
   ]
+}
+
+action("last-update.txt") {
+  visibility = [ ":*" ]
+  sources = [ jiri_snapshot_file ]
+  outputs = [ last_update_file ]
+  script = "tools/gen-last-update"
+  args = rebase_path(sources + outputs, root_build_dir)
 }
