@@ -16,124 +16,39 @@
 #define SET_BITS(dest, start, count, value) \
         ((dest & ~BIT_MASK(start, count)) | (((value) << (start)) & BIT_MASK(start, count)))
 
-static const pbus_mmio_t dwc3_mmios[] = {
+static const pbus_mmio_t xhci_mmios[] = {
     {
         .base = DWC3_MMIO_BASE,
         .length = DWC3_MMIO_LENGTH,
     },
 };
 
-static const pbus_irq_t dwc3_irqs[] = {
+static const pbus_irq_t xhci_irqs[] = {
     {
         .irq = DWC3_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
 
-static const pbus_bti_t usb_btis[] = {
+static const pbus_bti_t xhci_btis[] = {
     {
         .iommu_index = 0,
         .bti_id = BTI_USB_XHCI,
     },
 };
 
-static const pbus_dev_t dwc3_dev = {
-    .name = "dwc3",
-    .vid = PDEV_VID_GENERIC,
-    .pid = PDEV_PID_GENERIC,
-    .did = PDEV_DID_USB_DWC3,
-    .mmios = dwc3_mmios,
-    .mmio_count = countof(dwc3_mmios),
-    .irqs = dwc3_irqs,
-    .irq_count = countof(dwc3_irqs),
-    .btis = usb_btis,
-    .bti_count = countof(usb_btis),
-};
-
 static const pbus_dev_t xhci_dev = {
-    .name = "dwc3-xhci",
+    .name = "xhci",
     .vid = PDEV_VID_GENERIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_USB_XHCI,
-    .mmios = dwc3_mmios,
-    .mmio_count = countof(dwc3_mmios),
-    .irqs = dwc3_irqs,
-    .irq_count = countof(dwc3_irqs),
-    .btis = usb_btis,
-    .bti_count = countof(usb_btis),
+    .mmios = xhci_mmios,
+    .mmio_count = countof(xhci_mmios),
+    .irqs = xhci_irqs,
+    .irq_count = countof(xhci_irqs),
+    .btis = xhci_btis,
+    .bti_count = countof(xhci_btis),
 };
-
-// based on code from phy-aml-new-usb3.c
-static int phy_irq_thread(void* arg) {
-    gauss_bus_t* bus = arg;
-    volatile void* addr = io_buffer_virt(&bus->usb_phy);
-    volatile void* u2p_regs = addr + PHY_REGISTER_SIZE;
-    volatile void* usb_regs = addr + (4 * PHY_REGISTER_SIZE);
-    uint32_t temp;
-
-    gpio_config(&bus->gpio, USB_VBUS_GPIO, GPIO_DIR_OUT);
-
-    while (1) {
-        zx_status_t status = zx_interrupt_wait(bus->usb_phy_irq_handle, NULL);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "phy_irq_thread: zx_interrupt_wait returned %d\n", status);
-            break;
-        }
-        temp = readl(usb_regs + USB_R5_OFFSET);
-        temp &= ~USB_R5_IDDIG_IRQ;
-        writel(temp, usb_regs + USB_R5_OFFSET);
-
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
-
-        temp = readl(usb_regs + USB_R5_OFFSET);
-        bool host = !(temp & USB_R5_IDDIG_CURR);
-        zxlogf(INFO, "phy_irq_thread setting mode %s\n", (host ? "HOST" : "DEVICE"));
-
-        if (host) {
-            gpio_write(&bus->gpio, USB_VBUS_GPIO, 1);
-        }
-
-        temp = readl(usb_regs + USB_R0_OFFSET);
-        if (host) {
-            temp &= ~USB_R0_U2D_ACT;
-        } else {
-            temp |= USB_R0_U2D_ACT;
-        }
-        writel(temp, usb_regs + USB_R0_OFFSET);
-
-        temp = readl(usb_regs + USB_R4_OFFSET);
-        if (host) {
-            temp &= ~USB_R4_P21_SLEEPM0;
-        } else {
-            temp |= USB_R4_P21_SLEEPM0;
-        }
-        writel(temp, usb_regs + USB_R4_OFFSET);
-
-
-        temp = readl(u2p_regs + U2P_R0_OFFSET);
-        if (host) {
-            temp |= U2P_R0_DMPULLDOWN;
-            temp |= U2P_R0_DPPULLDOWN;
-            temp |= U2P_R0_POR;
-        } else {
-            temp &= ~U2P_R0_DMPULLDOWN;
-            temp &= ~U2P_R0_DPPULLDOWN;
-            temp |= U2P_R0_POR;
-        }
-        writel(temp, u2p_regs + U2P_R0_OFFSET);
-
-        zx_nanosleep(zx_deadline_after(ZX_USEC(500)));
-
-        temp = readl(u2p_regs + U2P_R0_OFFSET);
-        temp &= ~U2P_R0_POR;
-        writel(temp, u2p_regs + U2P_R0_OFFSET);
-
-        if (!host) {
-            gpio_write(&bus->gpio, USB_VBUS_GPIO, 0);
-        }
-    }
-    return 0;
-}
 
 zx_status_t gauss_usb_init(gauss_bus_t* bus) {
     zx_status_t status = io_buffer_init_physical(&bus->usb_phy, bus->bti_handle, 0xffe09000, 4096,
@@ -184,27 +99,10 @@ zx_status_t gauss_usb_init(gauss_bus_t* bus) {
     temp = SET_BITS(temp, USB_R5_IDDIG_TH_START, USB_R5_IDDIG_TH_BITS, 255);
     writel(temp, addr + USB_R5_OFFSET);
 
-    // add dwc3 device
-    if ((status = pbus_device_add(&bus->pbus, &dwc3_dev, 0)) != ZX_OK) {
-        zxlogf(ERROR, "a113_usb_init could not add dwc3_dev: %d\n", status);
-        return status;
-    }
-    // xhci_dev is enabled/disabled dynamically, so don't enable it here
-    if ((status = pbus_device_add(&bus->pbus, &xhci_dev, PDEV_ADD_DISABLED)) != ZX_OK) {
+    if ((status = pbus_device_add(&bus->pbus, &xhci_dev, 0)) != ZX_OK) {
         zxlogf(ERROR, "a113_usb_init could not add xhci_dev: %d\n", status);
         return status;
     }
 
-    thrd_create_with_name(&bus->phy_irq_thread, phy_irq_thread, bus, "phy_irq_thread");
-
-    return ZX_OK;
-}
-
-zx_status_t gauss_usb_set_mode(gauss_bus_t* bus, usb_mode_t mode) {
-    // TODO(voydanoff) more work will be needed here for switching to peripheral mode
-
-    // add or remove XHCI device
-    pbus_device_enable(&bus->pbus, PDEV_VID_GENERIC, PDEV_PID_GENERIC, PDEV_DID_USB_XHCI,
-                       mode == USB_MODE_HOST);
     return ZX_OK;
 }

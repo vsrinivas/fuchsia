@@ -74,21 +74,6 @@ static const pbus_dev_t led_dev = {
     .i2c_channel_count = countof(led_i2c_channels),
 };
 
-static zx_status_t gauss_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
-    *out_mode = USB_MODE_HOST;
-    return ZX_OK;
-}
-
-static zx_status_t gauss_set_mode(void* ctx, usb_mode_t mode) {
-    gauss_bus_t* bus = ctx;
-    return gauss_usb_set_mode(bus, mode);
-}
-
-usb_mode_switch_protocol_ops_t usb_mode_switch_ops = {
-    .get_initial_mode = gauss_get_initial_mode,
-    .set_mode = gauss_set_mode,
-};
-
 static void gauss_bus_release(void* ctx) {
     gauss_bus_t* bus = ctx;
     io_buffer_release(&bus->usb_phy);
@@ -168,11 +153,6 @@ static int gauss_start_thread(void* arg) {
     zxlogf(INFO,"Requested sample rate = %d, actual = %ld\n",GAUSS_TDM_SAMPLE_RATE,
                                                        actual_freq / GAUSS_TDM_CLK_N);
 
-    status = pbus_set_protocol(&bus->pbus, ZX_PROTOCOL_USB_MODE_SWITCH, &bus->usb_mode_switch);
-    if (status != ZX_OK) {
-        goto fail;
-    }
-
     if ((status = gauss_pcie_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "gauss_pcie_init failed: %d\n", status);
         goto fail;
@@ -233,8 +213,6 @@ static zx_status_t gauss_bus_bind(void* ctx, zx_device_t* parent) {
     }
 
     bus->parent = parent;
-    bus->usb_mode_switch.ops = &usb_mode_switch_ops;
-    bus->usb_mode_switch.ctx = bus;
 
    device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
