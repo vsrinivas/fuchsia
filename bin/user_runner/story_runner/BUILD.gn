@@ -7,15 +7,13 @@ import("//peridot/build/tests_package.gni")
 
 tests_package("story_runner_unittests") {
   deps = [
-    ":chain_impl_unittest",
     ":link_impl_unittest",
+    ":story_controller_impl_unittest",  # incomplete, for now.
   ]
 }
 
 source_set("story_runner") {
   sources = [
-    "chain_impl.cc",
-    "chain_impl.h",
     "link_impl.cc",
     "link_impl.h",
     "module_context_impl.cc",
@@ -38,7 +36,7 @@ source_set("story_runner") {
     "//peridot/bin/user_runner:component_context",
     "//peridot/bin/user_runner:focus",
     "//peridot/bin/user_runner:presentation_provider",
-    "//peridot/bin/user_runner/agent_runner:public",
+    "//peridot/bin/user_runner/agent_runner",
     "//peridot/bin/user_runner/message_queue",
     "//peridot/bin/user_runner/storage:constants_and_utils",
     "//peridot/lib/common:names",
@@ -88,19 +86,16 @@ executable_package("dev_story_shell") {
   ]
 }
 
-executable("chain_impl_unittest") {
+executable("story_controller_impl_unittest") {
   testonly = true
 
   sources = [
-    "chain_impl_unittest.cc",
+    "story_controller_impl_unittest.cc",
   ]
 
   deps = [
     ":story_runner",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-    "//peridot/bin/user_runner/agent_runner",
-    "//peridot/lib/testing:story_controller_mock",
+    "//peridot/lib/fidl:clone",
     "//third_party/googletest:gtest_main",
   ]
 }

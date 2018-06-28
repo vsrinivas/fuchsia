@@ -48,6 +48,9 @@ std::string MakeMessageQueueKey(const std::string& queue_token) {
 
 std::string EncodeModulePath(
     const fidl::VectorPtr<fidl::StringPtr>& module_path) {
+  if (!module_path)
+    return "";
+
   std::vector<std::string> segments;
   segments.reserve(module_path->size());
   for (const auto& module_path_part : *module_path) {

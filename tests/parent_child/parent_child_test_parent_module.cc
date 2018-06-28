@@ -19,10 +19,28 @@
 #include "peridot/tests/parent_child/defs.h"
 
 using modular::testing::Await;
+using modular::testing::Get;
+using modular::testing::Put;
 using modular::testing::Signal;
 using modular::testing::TestPoint;
 
 namespace {
+
+void StartModuleWithLinkMapping(
+    fuchsia::modular::ModuleContext* const module_context,
+    std::string link_name,
+    fidl::InterfaceRequest<fuchsia::modular::ModuleController> request) {
+  fuchsia::modular::Intent intent;
+  intent.action.handler = kChildModuleUrl;
+  fuchsia::modular::IntentParameter intent_parameter;
+  intent_parameter.name = "link";
+  intent_parameter.data = fuchsia::modular::IntentParameterData();
+  intent_parameter.data.set_link_name(link_name);
+  intent.parameters.push_back(std::move(intent_parameter));
+  module_context->StartModule(kChildModuleName, std::move(intent),
+                              std::move(request), nullptr,
+                              [](const fuchsia::modular::StartModuleStatus) {});
+}
 
 // Cf. README.md for what this test does and how.
 class TestApp {
@@ -36,6 +54,10 @@ class TestApp {
     modular::testing::Init(module_host->startup_context(), __FILE__);
     initialized_.Pass();
 
+    // The child module uses this TestStore value to track how many times
+    // it has been initialized.
+    Put("child_module_init_count", "0");
+
     StartChildModuleTwice();
   }
 
@@ -48,59 +70,68 @@ class TestApp {
   }
 
  private:
+  TestPoint second_child_module_controller_closed_{
+      "Second child module controller closed"};
+
   void StartChildModuleTwice() {
-    fuchsia::modular::Intent intent;
-    intent.action.handler = kChildModuleUrl;
-    fuchsia::modular::IntentParameter intent_parameter;
-    intent_parameter.name = "link";
-    intent_parameter.data = fuchsia::modular::IntentParameterData();
-    intent_parameter.data.set_link_name("module1link");
-    intent.parameters.push_back(std::move(intent_parameter));
-    module_host_->module_context()->StartModule(
-        kChildModuleName, std::move(intent), child_module_.NewRequest(),
-        nullptr, [](const fuchsia::modular::StartModuleStatus) {});
+    // We set the two links to different values ("1" and "2"). The child module
+    // checks this: the first time it is started, it will be attached to
+    // module1link, and expects to see "1" in its link. The second time, it
+    // expects to see "2". If it sees anything else, there was a failure in
+    // starting, or not, the module given the StartModule() request.
+    //
+    // Internally, the child module tracks how many times its instance was
+    // started.
+    module_host_->module_context()->GetLink("module1link", link1_.NewRequest());
+    link1_->Set(nullptr, "1");
+    module_host_->module_context()->GetLink("module2link", link2_.NewRequest());
+    link2_->Set(nullptr, "2");
 
-    // Once the module starts, start the same module again, but with a different
-    // link mapping. This stops the previous module instance and starts a new
-    // one.
-    Await("child_module_init", [this] {
-      child_module_.set_error_handler([this] { OnChildModuleStopped(); });
+    StartModuleWithLinkMapping(module_host_->module_context(), "module1link",
+                               child_module_.NewRequest());
+    child_module_.set_error_handler([this] { OnFirstChildModuleStopped(); });
 
-      fuchsia::modular::Intent intent;
-      intent.action.handler = kChildModuleUrl;
-      fuchsia::modular::IntentParameter intent_parameter;
-      intent_parameter.name = "link";
-      intent_parameter.data = fuchsia::modular::IntentParameterData();
-      intent_parameter.data.set_link_name("module2link");
-      intent.parameters.push_back(std::move(intent_parameter));
-      module_host_->module_context()->StartModule(
-          kChildModuleName, std::move(intent), child_module2_.NewRequest(),
-          nullptr, [](const fuchsia::modular::StartModuleStatus) {});
+    // Once the module starts, start the same module again with the same
+    // Intent, and then again but with a different link mapping. The second
+    // call stops the previous module instance and starts a new one.
+    Await("child_module_init_1", [this] {
+      StartModuleWithLinkMapping(module_host_->module_context(), "module1link",
+                                 child_module_again_.NewRequest());
+      child_module_again_.set_error_handler(
+          [this] { second_child_module_controller_closed_.Pass(); });
+      StartModuleWithLinkMapping(module_host_->module_context(), "module2link",
+                                 child_module2_.NewRequest());
     });
   }
 
-  TestPoint child_module_down_{"Child module killed for restart"};
+  TestPoint child_module1_stopped_{"Child module killed for restart"};
 
-  void OnChildModuleStopped() {
-    child_module_down_.Pass();
+  void OnFirstChildModuleStopped() {
+    child_module1_stopped_.Pass();
 
     // Confirm that the first module instance stopped, and then stop the second
     // module instance.
     Await("child_module_stop", [this] {
-      child_module2_->Stop([this] { OnChildModule2Stopped(); });
+      Await("child_module_init_2", [this] {
+        child_module2_->Stop([this] { OnChildModule2Stopped(); });
+      });
     });
   }
 
-  TestPoint child_module_stopped_{"Child module stopped"};
+  TestPoint child_module2_stopped_{"Second child module stopped"};
 
   void OnChildModule2Stopped() {
-    child_module_stopped_.Pass();
+    child_module2_stopped_.Pass();
     Signal(modular::testing::kTestShutdown);
   }
 
   modular::ModuleHost* module_host_;
   fuchsia::modular::ModuleControllerPtr child_module_;
+  fuchsia::modular::ModuleControllerPtr child_module_again_;
   fuchsia::modular::ModuleControllerPtr child_module2_;
+
+  fuchsia::modular::LinkPtr link1_;
+  fuchsia::modular::LinkPtr link2_;
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 

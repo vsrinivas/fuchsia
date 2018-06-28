@@ -38,7 +38,6 @@
 
 namespace modular {
 
-class ChainImpl;
 class ModuleControllerImpl;
 class ModuleContextImpl;
 class StoryProviderImpl;
@@ -287,10 +286,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
   // known to the story.
   Connection* FindAnchor(Connection* connection);
 
-  // The magic ingredient of a story: Chains. They group Links.
-  // TODO(thatguy): Remove ChainImpl, and rename this to mod_parameter_maps_.
-  std::vector<std::unique_ptr<ChainImpl>> chains_;
-
   // The second ingredient of a story: Links. They connect Modules.
   fidl::BindingSet<Link, std::unique_ptr<LinkImpl>> link_impls_;
 
@@ -321,6 +316,11 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryControllerImpl);
 };
+
+// NOTE: This is only exposed publicly for testing.
+bool ShouldRestartModuleForNewIntent(
+    const fuchsia::modular::Intent& old_intent,
+    const fuchsia::modular::Intent& new_intent);
 
 }  // namespace modular
 

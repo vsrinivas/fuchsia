@@ -32,7 +32,6 @@
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
 #include "peridot/bin/user_runner/storage/constants_and_utils.h"
 #include "peridot/bin/user_runner/storage/story_storage.h"
-#include "peridot/bin/user_runner/story_runner/chain_impl.h"
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
 #include "peridot/bin/user_runner/story_runner/module_context_impl.h"
 #include "peridot/bin/user_runner/story_runner/module_controller_impl.h"
@@ -84,6 +83,68 @@ fidl::VectorPtr<fidl::StringPtr> ParentModulePath(
 
 }  // namespace
 
+bool ShouldRestartModuleForNewIntent(
+    const fuchsia::modular::Intent& old_intent,
+    const fuchsia::modular::Intent& new_intent) {
+  if (old_intent.action.handler != new_intent.action.handler) {
+    return true;
+  }
+
+  if (old_intent.action.name != new_intent.action.name) {
+    return true;
+  }
+
+  std::map<fidl::StringPtr, const fuchsia::modular::IntentParameterData*>
+      old_params;
+  if (old_intent.parameters) {
+    for (const auto& entry : *old_intent.parameters) {
+      old_params[entry.name] = &entry.data;
+    }
+  }
+
+  std::map<fidl::StringPtr, const fuchsia::modular::IntentParameterData*>
+      new_params;
+  if (new_intent.parameters) {
+    for (const auto& entry : *new_intent.parameters) {
+      new_params[entry.name] = &entry.data;
+    }
+  }
+
+  if (new_params.size() != old_params.size()) {
+    return true;
+  }
+
+  for (const auto& entry : new_params) {
+    const auto& name = entry.first;
+    if (old_params.count(name) == 0) {
+      return true;
+    }
+
+    const auto& new_param = *entry.second;
+    const auto& old_param = *old_params[name];
+
+    // If a parameter type changed, or a link mapping changed, we
+    // need to relaunch.
+    if (old_param.Which() != new_param.Which()) {
+      return true;
+    }
+
+    if (old_param.is_link_name() &&
+        old_param.link_name() != new_param.link_name()) {
+      return true;
+    }
+    if (old_param.is_link_path() &&
+        old_param.link_path() != new_param.link_path()) {
+      return true;
+    }
+
+    // For now, if the param is static data (ie, json or entity_reference), we
+    // do NOT want to force restart, even if the data is different.
+  }
+
+  return false;
+}
+
 // Launches (brings up a running instance) of a module.
 //
 // If the module is to be composed into the story shell, notifies the story
@@ -124,7 +185,8 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
 
     // If the new module is already running, but with a different Intent, we
     // tear it down then launch a new instance.
-    if (connection->module_data->intent != module_data_.intent) {
+    if (ShouldRestartModuleForNewIntent(*connection->module_data->intent,
+                                        *module_data_.intent)) {
       connection->module_controller_impl->Teardown([this, flow] {
         // NOTE(mesch): |connection| is invalid at this point.
         Launch(flow);
@@ -161,20 +223,6 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
 
     Connection connection;
     connection.module_data = CloneOptional(module_data_);
-
-    // Ensure that the Module's Chain is available before we launch it.
-    // TODO(thatguy): Set up the ChainImpl based on information in
-    // fuchsia::modular::ModuleData.
-    auto i =
-        std::find_if(story_controller_impl_->chains_.begin(),
-                     story_controller_impl_->chains_.end(),
-                     [this](const std::unique_ptr<ChainImpl>& ptr) {
-                       return ptr->chain_path() == module_data_.module_path;
-                     });
-    if (i == story_controller_impl_->chains_.end()) {
-      story_controller_impl_->chains_.emplace_back(
-          new ChainImpl(module_data_.module_path, module_data_.parameter_map));
-    }
 
     // ModuleControllerImpl's constructor launches the child application.
     connection.module_controller_impl = std::make_unique<ModuleControllerImpl>(
@@ -1388,28 +1436,31 @@ void StoryControllerImpl::ConnectLinkPath(
 }
 
 fuchsia::modular::LinkPathPtr StoryControllerImpl::GetLinkPathForParameterName(
-    const fidl::VectorPtr<fidl::StringPtr>& module_path, fidl::StringPtr key) {
-  auto i = std::find_if(chains_.begin(), chains_.end(),
-                        [&module_path](const std::unique_ptr<ChainImpl>& ptr) {
-                          return ptr->chain_path() == module_path;
-                        });
+    const fidl::VectorPtr<fidl::StringPtr>& module_path, fidl::StringPtr name) {
+  auto mod_info = FindConnection(module_path);
+  // NOTE: |mod_info| will only be valid if the module at |module_path| is
+  // running. Strictly speaking, this is unsafe. The source of truth is the
+  // Ledger, accessible through StoryStorage, but the call would be async, which
+  // would change the flow of all clients of this method. For now, we leave
+  // as-is.
+  FXL_DCHECK(mod_info) << PathString(module_path);
+
+  const auto& param_map = mod_info->module_data->parameter_map;
+  auto it = std::find_if(
+      param_map.entries->begin(), param_map.entries->end(),
+      [&name](const fuchsia::modular::ModuleParameterMapEntry& data) {
+        return data.name == name;
+      });
 
   fuchsia::modular::LinkPathPtr link_path = nullptr;
-  if (i != chains_.end()) {
-    link_path = (*i)->GetLinkPathForParameterName(key);
-  } else {
-    // TODO(MI4-993): It should be an error that is returned to the client for
-    // that client to be able to make a request that results in this code
-    // path.
-    FXL_LOG(WARNING)
-        << "Looking for module params on module that doesn't exist: "
-        << PathString(module_path);
+  if (it != param_map.entries->end()) {
+    link_path = CloneOptional(it->link_path);
   }
 
   if (!link_path) {
     link_path = fuchsia::modular::LinkPath::New();
     link_path->module_path = module_path.Clone();
-    link_path->link_name = key;
+    link_path->link_name = name;
   }
 
   return link_path;
