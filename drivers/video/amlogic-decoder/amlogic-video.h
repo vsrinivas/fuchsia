@@ -18,11 +18,13 @@
 
 #include <future>
 #include <memory>
+#include <mutex>
 #include <thread>
 
 #include "decoder_core.h"
 #include "device_ctx.h"
 #include "firmware_blob.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
 #include "registers.h"
 #include "video_decoder.h"
 
@@ -100,6 +102,8 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   std::thread vdec1_interrupt_thread_;
 
   std::unique_ptr<DecoderCore> core_;
+  std::mutex video_decoder_lock_;
+  FXL_GUARDED_BY(video_decoder_lock_)
   std::unique_ptr<VideoDecoder> video_decoder_;
 };
 

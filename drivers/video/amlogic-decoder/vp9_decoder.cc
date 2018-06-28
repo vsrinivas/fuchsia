@@ -324,8 +324,10 @@ void Vp9Decoder::ProcessCompletedFrames() {
   if (!current_frame_)
     return;
 
-  if (current_frame_data_.show_frame && notifier_)
-    notifier_(current_frame_->frame.get());
+  if (current_frame_data_.show_frame && notifier_) {
+    current_frame_->refcount++;
+    notifier_(current_frame_->frame);
+  }
 
   for (uint32_t i = 0; i < fbl::count_of(reference_frame_map_); i++) {
     if (current_frame_data_.refresh_frame_flags & (1 << i)) {
@@ -345,6 +347,20 @@ void Vp9Decoder::ProcessCompletedFrames() {
   }
   last_frame_ = current_frame_;
   current_frame_ = nullptr;
+}
+
+void Vp9Decoder::ReturnFrame(std::shared_ptr<VideoFrame> frame) {
+  assert(frame->index < frames_.size());
+  auto& ref_frame = frames_[frame->index];
+  // Frame must still be valid if the refcount is > 0.
+  assert(ref_frame->frame == frame);
+  ref_frame->refcount--;
+  assert(ref_frame->refcount >= 0);
+
+  if (waiting_for_empty_frames_) {
+    waiting_for_empty_frames_ = false;
+    PrepareNewFrame();
+  }
 }
 
 void Vp9Decoder::HandleInterrupt() {
@@ -597,8 +613,10 @@ void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
     DECODE_ERROR("Showing existing frame that doesn't exist");
     return;
   }
-  if (notifier_)
-    notifier_(frame->frame.get());
+  if (notifier_) {
+    frame->refcount++;
+    notifier_(frame->frame);
+  }
   HevcDecStatusReg::Get()
       .FromValue(kVp9CommandDecodeSlice)
       .WriteTo(owner_->dosbus());
@@ -622,6 +640,12 @@ void Vp9Decoder::PrepareNewFrame() {
     ShowExistingFrame(&params);
     return;
   }
+
+  // If this is failing due to running out of buffers then the function will be
+  // retried once more are received.
+  if (!FindNewFrameBuffer(&params))
+    return;
+
   last_frame_data_ = current_frame_data_;
   current_frame_data_.keyframe = params.frame_type == 0;
   current_frame_data_.intra_only = params.intra_only;
@@ -632,11 +656,6 @@ void Vp9Decoder::PrepareNewFrame() {
   }
   current_frame_data_.error_resilient_mode = params.error_resilient_mode;
   current_frame_data_.show_frame = params.show_frame;
-
-  // TODO(MTWN-149): Wait for old frames to be returned before continuing to
-  // decode.
-  if (!FindNewFrameBuffer(&params))
-    return;
 
   SetRefFrames(&params);
 
@@ -679,7 +698,8 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params) {
     }
   }
   if (!new_frame) {
-    DECODE_ERROR("Couldn't allocate framebuffer - all in use\n");
+    waiting_for_empty_frames_ = true;
+    DLOG("Couldn't allocate framebuffer - all in use\n");
     return false;
   }
 
@@ -691,6 +711,8 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params) {
     video_frame->stride = fbl::round_up(video_frame->width, 32u);
     video_frame->uv_plane_offset =
         fbl::round_up(video_frame->stride * video_frame->height, 1u << 16);
+    video_frame->index = new_frame->index;
+
     assert(video_frame->height % 2 == 0);
     zx_status_t status = io_buffer_init_aligned(
         &video_frame->buffer, owner_->bti(),

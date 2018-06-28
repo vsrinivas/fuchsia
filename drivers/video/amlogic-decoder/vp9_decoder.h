@@ -25,6 +25,7 @@ class Vp9Decoder : public VideoDecoder {
   zx_status_t Initialize() override;
   void HandleInterrupt() override;
   void SetFrameReadyNotifier(FrameReadyNotifier notifier) override;
+  void ReturnFrame(std::shared_ptr<VideoFrame> frame) override;
 
  private:
   class WorkingBuffer;
@@ -89,7 +90,7 @@ class Vp9Decoder : public VideoDecoder {
     // current_frame_, and any buffers the ultimate consumers have outstanding.
     int32_t refcount = 0;
     // Allocated on demand.
-    std::unique_ptr<VideoFrame> frame;
+    std::shared_ptr<VideoFrame> frame;
     // With the MMU enabled the compressed frame header is stored separately
     // from the data itself, allowing the data to be allocated in noncontiguous
     // memory.
@@ -142,6 +143,7 @@ class Vp9Decoder : public VideoDecoder {
   std::unique_ptr<loop_filter_info_n> loop_filter_info_;
   std::unique_ptr<loopfilter> loop_filter_;
   std::unique_ptr<segmentation> segmentation_ = {};
+  bool waiting_for_empty_frames_ = false;
 
   // This is the count of frames decoded since this object was created.
   uint32_t decoded_frame_count_ = 0;

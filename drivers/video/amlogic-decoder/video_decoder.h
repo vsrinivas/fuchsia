@@ -48,7 +48,7 @@ class CanvasEntry {
 
 class VideoDecoder {
  public:
-  using FrameReadyNotifier = std::function<void(VideoFrame*)>;
+  using FrameReadyNotifier = std::function<void(std::shared_ptr<VideoFrame>)>;
   class Owner {
    public:
     virtual DosRegisterIo* dosbus() = 0;
@@ -65,6 +65,7 @@ class VideoDecoder {
   virtual zx_status_t Initialize() = 0;
   virtual void HandleInterrupt() = 0;
   virtual void SetFrameReadyNotifier(FrameReadyNotifier notifier) {}
+  virtual void ReturnFrame(std::shared_ptr<VideoFrame> frame) = 0;
   virtual ~VideoDecoder() {}
 };
 

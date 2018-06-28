@@ -168,24 +168,42 @@ class TestVP9 {
 
     EXPECT_EQ(ZX_OK, video->InitializeEsParser());
 
-    video->video_decoder_ = std::make_unique<Vp9Decoder>(video.get());
-    EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      video->video_decoder_ = std::make_unique<Vp9Decoder>(video.get());
+      EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
+    }
 
     uint32_t frame_count = 0;
     std::promise<void> wait_valid;
-    video->video_decoder_->SetFrameReadyNotifier(
-        [&frame_count, &wait_valid](VideoFrame* frame) {
-          ++frame_count;
-          DLOG("Got frame %d\n", frame_count);
+    std::vector<std::shared_ptr<VideoFrame>> frames_to_return;
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      video->video_decoder_->SetFrameReadyNotifier(
+          [&frames_to_return, &frame_count,
+           &wait_valid](std::shared_ptr<VideoFrame> frame) {
+            ++frame_count;
+            DLOG("Got frame %d\n", frame_count);
 #if DUMP_VIDEO_TO_FILE
-          DumpVideoFrameToFile(frame, "/tmp/bearvp9.yuv");
+            DumpVideoFrameToFile(frame, filename);
 #endif
-          if (frame_count == 26)
-            wait_valid.set_value();
-        });
+            frames_to_return.push_back(frame);
+            if (frame_count == 26)
+              wait_valid.set_value();
+          });
+    }
 
     auto aml_data = ConvertIvfToAmlV(bear_vp9_ivf, bear_vp9_ivf_len);
     video->ParseVideo(aml_data.data(), aml_data.size());
+
+    zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      for (auto frame : frames_to_return) {
+        video->video_decoder_->ReturnFrame(frame);
+      }
+    }
+
     EXPECT_EQ(std::future_status::ready,
               wait_valid.get_future().wait_for(std::chrono::seconds(1)));
 

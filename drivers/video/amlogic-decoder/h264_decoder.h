@@ -21,10 +21,11 @@ class H264Decoder : public VideoDecoder {
   zx_status_t Initialize() override;
   void HandleInterrupt() override;
   void SetFrameReadyNotifier(FrameReadyNotifier notifier) override;
+  void ReturnFrame(std::shared_ptr<VideoFrame> frame) override;
 
  private:
   struct ReferenceFrame {
-    std::unique_ptr<VideoFrame> frame;
+    std::shared_ptr<VideoFrame> frame;
     std::unique_ptr<CanvasEntry> y_canvas;
     std::unique_ptr<CanvasEntry> uv_canvas;
   };
@@ -37,6 +38,7 @@ class H264Decoder : public VideoDecoder {
   void InitializeStream();
   void ReceivedFrames(uint32_t frame_count);
   void SwitchStreams();
+  void TryReturnFrames();
 
   Owner* owner_;
   io_buffer_t codec_data_ = {};
@@ -47,6 +49,7 @@ class H264Decoder : public VideoDecoder {
 
   FrameReadyNotifier notifier_;
   std::vector<ReferenceFrame> video_frames_;
+  std::vector<std::shared_ptr<VideoFrame>> returned_frames_;
 };
 
 #endif  // H264_DECODER_H_

@@ -161,17 +161,36 @@ void Mpeg12Decoder::HandleInterrupt() {
   frame->width = std::min(width, kMaxWidth);
   frame->height = std::min(height, kMaxHeight);
   if (notifier_)
-    notifier_(frame.get());
+    notifier_(frame);
 
   MregBufferOut::Get().FromValue(0).WriteTo(owner_->dosbus());
+  // Some returned frames may have been buffered up earlier, so try to return
+  // them now that the firmware had a chance to do some work.
+  TryReturnFrames();
 
   if (AvScratchM::Get().ReadFrom(owner_->dosbus()).reg_value() & (1 << 16)) {
     DLOG("ccbuf has new data\n");
   }
+}
 
-  // Return buffer to decoder.
-  if (MregBufferIn::Get().ReadFrom(owner_->dosbus()).reg_value() == 0) {
-    MregBufferIn::Get().FromValue(index + 1).WriteTo(owner_->dosbus());
+void Mpeg12Decoder::ReturnFrame(std::shared_ptr<VideoFrame> video_frame) {
+  returned_frames_.push_back(video_frame);
+  TryReturnFrames();
+}
+
+void Mpeg12Decoder::TryReturnFrames() {
+  while (!returned_frames_.empty()) {
+    std::shared_ptr<VideoFrame> frame = returned_frames_.back();
+    assert(frame->index < video_frames_.size());
+    assert(video_frames_[frame->index].frame == frame);
+    // Return buffer to decoder.
+    if (MregBufferIn::Get().ReadFrom(owner_->dosbus()).reg_value() == 0) {
+      MregBufferIn::Get().FromValue(frame->index + 1).WriteTo(owner_->dosbus());
+    } else {
+      // No return slots are free, so give up for now.
+      return;
+    }
+    returned_frames_.pop_back();
   }
 }
 
@@ -191,6 +210,7 @@ zx_status_t Mpeg12Decoder::InitializeVideoBuffers() {
 
     frame->stride = kMaxWidth;
     frame->uv_plane_offset = kMaxWidth * kMaxHeight;
+    frame->index = i;
     io_buffer_cache_flush(&frame->buffer, 0, buffer_size);
 
     auto y_canvas = owner_->ConfigureCanvas(&frame->buffer, 0, frame->stride,

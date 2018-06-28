@@ -26,28 +26,32 @@ class TestH264 {
     status = video->InitializeStreamBuffer(use_parser);
     video->InitializeInterrupts();
     EXPECT_EQ(ZX_OK, status);
-    video->video_decoder_ = std::make_unique<H264Decoder>(video.get());
-    EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
-
-    uint32_t frame_count = 0;
     std::promise<void> first_wait_valid;
     std::promise<void> second_wait_valid;
-    video->video_decoder_->SetFrameReadyNotifier(
-        [&frame_count, &first_wait_valid,
-         &second_wait_valid](VideoFrame* frame) {
-          ++frame_count;
-          DLOG("Got frame %d width: %d height: %d\n", frame_count, frame->width,
-               frame->height);
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      video->video_decoder_ = std::make_unique<H264Decoder>(video.get());
+      EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
+
+      uint32_t frame_count = 0;
+      video->video_decoder_->SetFrameReadyNotifier(
+          [&video, &frame_count, &first_wait_valid,
+           &second_wait_valid](std::shared_ptr<VideoFrame> frame) {
+            ++frame_count;
+            DLOG("Got frame %d width: %d height: %d\n", frame_count,
+                 frame->width, frame->height);
 #if DUMP_VIDEO_TO_FILE
-          DumpVideoFrameToFile(frame, "/tmp/bearh264.yuv");
+            DumpVideoFrameToFile(frame, "/tmp/bearh264.yuv");
 #endif
-          constexpr uint32_t kFirstVideoFrameCount = 26;
-          constexpr uint32_t kSecondVideoFrameCount = 80;
-          if (frame_count == kFirstVideoFrameCount)
-            first_wait_valid.set_value();
-          if (frame_count == kFirstVideoFrameCount + kSecondVideoFrameCount)
-            second_wait_valid.set_value();
-        });
+            constexpr uint32_t kFirstVideoFrameCount = 26;
+            constexpr uint32_t kSecondVideoFrameCount = 80;
+            if (frame_count == kFirstVideoFrameCount)
+              first_wait_valid.set_value();
+            if (frame_count == kFirstVideoFrameCount + kSecondVideoFrameCount)
+              second_wait_valid.set_value();
+            ReturnFrame(video.get(), frame);
+          });
+    }
 
     if (use_parser) {
       EXPECT_EQ(ZX_OK, video->InitializeEsParser());
@@ -56,6 +60,7 @@ class TestH264 {
       video->core_->InitializeDirectInput();
       video->ProcessVideoNoParser(bear_h264, bear_h264_len);
     }
+
     EXPECT_EQ(std::future_status::ready,
               first_wait_valid.get_future().wait_for(std::chrono::seconds(1)));
 
@@ -71,8 +76,70 @@ class TestH264 {
 
     video.reset();
   }
+
+  static void DelayedReturn() {
+    auto video = std::make_unique<AmlogicVideo>();
+    ASSERT_TRUE(video);
+
+    zx_status_t status = video->InitRegisters(TestSupport::parent_device());
+    EXPECT_EQ(ZX_OK, status);
+
+    video->core_ = std::make_unique<Vdec1>(video.get());
+    video->core_->PowerOn();
+    status = video->InitializeStreamBuffer(true);
+    video->InitializeInterrupts();
+    EXPECT_EQ(ZX_OK, status);
+    std::promise<void> wait_valid;
+    // Guarded by decoder lock.
+    std::vector<std::shared_ptr<VideoFrame>> frames_to_return;
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      video->video_decoder_ = std::make_unique<H264Decoder>(video.get());
+      EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
+
+      uint32_t frame_count = 0;
+      video->video_decoder_->SetFrameReadyNotifier(
+          [&frames_to_return, &frame_count,
+           &wait_valid](std::shared_ptr<VideoFrame> frame) {
+            ++frame_count;
+            DLOG("Got frame %d width: %d height: %d\n", frame_count,
+                 frame->width, frame->height);
+            constexpr uint32_t kFirstVideoFrameCount = 26;
+            if (frame_count == kFirstVideoFrameCount)
+              wait_valid.set_value();
+            frames_to_return.push_back(frame);
+          });
+    }
+
+    EXPECT_EQ(ZX_OK, video->InitializeEsParser());
+    EXPECT_EQ(ZX_OK, video->ParseVideo(bear_h264, bear_h264_len));
+
+    zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
+
+    {
+      DLOG("Returning frames\n");
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      for (auto frame : frames_to_return) {
+        video->video_decoder_->ReturnFrame(frame);
+      }
+    }
+    EXPECT_EQ(std::future_status::ready,
+              wait_valid.get_future().wait_for(std::chrono::seconds(1)));
+
+    video.reset();
+  }
+
+ private:
+  // This is called from the interrupt handler, which already holds the lock.
+  static void ReturnFrame(AmlogicVideo* video,
+                          std::shared_ptr<VideoFrame> frame)
+      FXL_NO_THREAD_SAFETY_ANALYSIS {
+    video->video_decoder_->ReturnFrame(frame);
+  }
 };
 
 TEST(H264, Decode) { TestH264::Decode(true); }
 
 TEST(H264, DecodeNoParser) { TestH264::Decode(false); }
+
+TEST(H264, DelayedReturn) { TestH264::DelayedReturn(); }

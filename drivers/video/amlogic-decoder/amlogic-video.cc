@@ -463,7 +463,9 @@ void AmlogicVideo::InitializeInterrupts() {
           zx_interrupt_wait(vdec0_interrupt_handle_.get(), &time);
       if (status != ZX_OK)
         return;
-      video_decoder_->HandleInterrupt();
+      std::lock_guard<std::mutex> lock(video_decoder_lock_);
+      if (video_decoder_)
+        video_decoder_->HandleInterrupt();
     }
   });
 
@@ -491,7 +493,9 @@ void AmlogicVideo::InitializeInterrupts() {
         }
         return;
       }
-      video_decoder_->HandleInterrupt();
+      std::lock_guard<std::mutex> lock(video_decoder_lock_);
+      if (video_decoder_)
+        video_decoder_->HandleInterrupt();
     }
   });
 }

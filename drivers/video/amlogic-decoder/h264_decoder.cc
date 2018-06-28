@@ -284,13 +284,12 @@ void H264Decoder::SetFrameReadyNotifier(FrameReadyNotifier notifier) {
 
 zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
                                           uint32_t height) {
-  // TODO: Hold onto frames that are pending in a client (if the stream is
-  // currently switching).
   for (auto& frame : video_frames_) {
     owner_->FreeCanvas(std::move(frame.y_canvas));
     owner_->FreeCanvas(std::move(frame.uv_canvas));
   }
   video_frames_.clear();
+  returned_frames_.clear();
   for (uint32_t i = 0; i < frame_count; ++i) {
     auto frame = std::make_unique<VideoFrame>();
     zx_status_t status =
@@ -305,6 +304,7 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
     frame->stride = width;
     frame->width = width;
     frame->height = height;
+    frame->index = i;
 
     auto y_canvas = owner_->ConfigureCanvas(&frame->buffer, 0, frame->stride,
                                             frame->height, 0, 0);
@@ -323,6 +323,35 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
         {std::move(frame), std::move(y_canvas), std::move(uv_canvas)});
   }
   return ZX_OK;
+}
+
+void H264Decoder::ReturnFrame(std::shared_ptr<VideoFrame> video_frame) {
+  returned_frames_.push_back(video_frame);
+  TryReturnFrames();
+}
+
+void H264Decoder::TryReturnFrames() {
+  while (!returned_frames_.empty()) {
+    std::shared_ptr<VideoFrame> frame = returned_frames_.back();
+    if (frame->index >= video_frames_.size() ||
+        frame != video_frames_[frame->index].frame) {
+      // Possible if the stream size changed.
+      returned_frames_.pop_back();
+      continue;
+    }
+    if (AvScratch7::Get().ReadFrom(owner_->dosbus()).reg_value() == 0) {
+      AvScratch7::Get().FromValue(frame->index + 1).WriteTo(owner_->dosbus());
+    } else if (AvScratch8::Get().ReadFrom(owner_->dosbus()).reg_value() == 0) {
+      AvScratch8::Get().FromValue(frame->index + 1).WriteTo(owner_->dosbus());
+    } else {
+      // Neither return slot is free, so give up for now. An interrupt
+      // signaling completion of a frame should cause this to be tried again.
+      // TODO: Try returning frames again after a delay, to ensure this won't
+      // hang forever.
+      return;
+    }
+    returned_frames_.pop_back();
+  }
 }
 
 void H264Decoder::InitializeStream() {
@@ -399,15 +428,10 @@ void H264Decoder::ReceivedFrames(uint32_t frame_count) {
       hit_eos = true;
 
     if (notifier_)
-      notifier_(video_frames_[buffer_index].frame.get());
+      notifier_(video_frames_[buffer_index].frame);
     DLOG("Got buffer %d error %d error_count %d slice_type %d offset %x\n",
          buffer_index, pic_info.error(), error_count, slice_type,
          pic_info.stream_offset());
-    if (AvScratch7::Get().ReadFrom(owner_->dosbus()).reg_value() == 0) {
-      AvScratch7::Get().FromValue(buffer_index + 1).WriteTo(owner_->dosbus());
-    } else if (AvScratch8::Get().ReadFrom(owner_->dosbus()).reg_value() == 0) {
-      AvScratch8::Get().FromValue(buffer_index + 1).WriteTo(owner_->dosbus());
-    }
   }
   AvScratch0::Get().FromValue(0).WriteTo(owner_->dosbus());
 }
@@ -436,6 +460,11 @@ void H264Decoder::HandleInterrupt() {
     return;
 
   VdecAssistMbox1ClrReg::Get().FromValue(1).WriteTo(owner_->dosbus());
+
+  // Some returned frames may have been buffered up earlier, so try to return
+  // them now that the firmware had a chance to do some work.
+  TryReturnFrames();
+
   // The core signals the main processor what command to run using AvScratch0.
   // The main processor returns a result using AvScratch0 to trigger the decoder
   // to continue (possibly 0, if no result is needed).
