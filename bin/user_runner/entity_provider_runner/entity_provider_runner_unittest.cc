@@ -205,7 +205,7 @@ TEST_F(EntityProviderRunnerTest, Basic) {
                                  incoming_services.NewRequest(),
                                  agent_controller.NewRequest());
 
-  RunLoopUntilWithTimeout([&dummy_agent] {
+  RunLoopWithTimeoutOrUntil([&dummy_agent] {
     return dummy_agent.get() != nullptr &&
            dummy_agent->GetCallCount("Connect") == 1;
   });
@@ -221,7 +221,7 @@ TEST_F(EntityProviderRunnerTest, Basic) {
     entity_ref = retval;
   });
 
-  RunLoopUntilWithTimeout([&entity_ref] { return !entity_ref.is_null(); });
+  RunLoopWithTimeoutOrUntil([&entity_ref] { return !entity_ref.is_null(); });
   EXPECT_FALSE(entity_ref.is_null());
 
   // 3. Resolve the reference into an |fuchsia::modular::Entity|, make calls to
@@ -241,7 +241,7 @@ TEST_F(EntityProviderRunnerTest, Basic) {
     EXPECT_EQ("MyType:MyData", data.get());
     counts["GetData"]++;
   });
-  RunLoopUntilWithTimeout(
+  RunLoopWithTimeoutOrUntil(
       [&counts] { return counts["GetTypes"] == 1 && counts["GetData"] == 1; });
   EXPECT_EQ(1u, counts["GetTypes"]);
   EXPECT_EQ(1u, counts["GetData"]);
@@ -262,7 +262,7 @@ TEST_F(EntityProviderRunnerTest, DataEntity) {
   entity->GetTypes([&output_types](fidl::VectorPtr<fidl::StringPtr> result) {
     output_types = std::move(result);
   });
-  RunLoopUntilWithTimeout([&output_types] { return !output_types.is_null(); });
+  RunLoopWithTimeoutOrUntil([&output_types] { return !output_types.is_null(); });
 
   EXPECT_EQ(data.size(), output_types->size());
   EXPECT_EQ("type1", output_types->at(0));
@@ -271,7 +271,7 @@ TEST_F(EntityProviderRunnerTest, DataEntity) {
   entity->GetData("type1", [&output_data](fidl::StringPtr result) {
     output_data = result;
   });
-  RunLoopUntilWithTimeout([&output_data] { return !output_data.is_null(); });
+  RunLoopWithTimeoutOrUntil([&output_data] { return !output_data.is_null(); });
   EXPECT_EQ("data1", output_data);
 }
 

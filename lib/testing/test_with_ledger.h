@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/real_loop_fixture.h"
 #include "peridot/lib/testing/ledger_repository_for_testing.h"
 
 namespace modular {
@@ -26,7 +26,7 @@ namespace testing {
 //
 // A fixture class that extends this fixture and has its own SetUp() and
 // TearDown() must call this fixture's SetUp() and TearDown().
-class TestWithLedger : public gtest::TestWithMessageLoop {
+class TestWithLedger : public gtest::RealLoopFixture {
  public:
   TestWithLedger();
   ~TestWithLedger() override;
@@ -45,13 +45,11 @@ class TestWithLedger : public gtest::TestWithMessageLoop {
   //
   // Test cases involving ledger calls take about 300ms when running in CI.
   // Occasionally, however, they take much longer, presumably because of load on
-  // shared machines. With the default timeout of TestWithMessageLoop of 1s, we
+  // shared machines. With the default timeout of RealLoopFixture of 1s, we
   // see flakiness. Cf. FW-287.
-  bool RunLoopWithTimeout(
-      fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(10));
-  bool RunLoopUntilWithTimeout(
-      std::function<bool()> condition,
-      fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(10));
+  bool RunLoopWithTimeout(zx::duration timeout = zx::sec(10));
+  bool RunLoopWithTimeoutOrUntil(fit::function<bool()> condition,
+                                 zx::duration timeout = zx::sec(10));
 
  private:
   std::unique_ptr<testing::LedgerRepositoryForTesting> ledger_app_;

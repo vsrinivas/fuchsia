@@ -21,7 +21,7 @@ namespace {
 // Occasionally they take much longer, presumably because of load on
 // shared machines. With the default timeout, we see flakiness. Cf.
 // FW-287.
-const auto kTimeout = fxl::TimeDelta::FromSeconds(10);
+constexpr zx::duration kTimeout = zx::sec(10);
 
 class PageClientImpl : public PageClient {
  public:
@@ -134,7 +134,7 @@ TEST_F(PageClientTest, DISABLED_SimpleWriteObserve) {
 
   client->page()->Put(to_array("key"), to_array("value"), log("Put"));
 
-  RunLoopUntilWithTimeout([&] { return client->value("key") == "value"; },
+  RunLoopWithTimeoutOrUntil([&] { return client->value("key") == "value"; },
                           kTimeout);
 
   EXPECT_EQ(0, client->conflict_count());
@@ -152,7 +152,7 @@ TEST_F(PageClientTest, PrefixWriteObserve) {
   page->Put(to_array("a/key"), to_array("value"), log("Put"));
   page->Put(to_array("b/key"), to_array("value"), log("Put"));
 
-  RunLoopUntilWithTimeout(
+  RunLoopWithTimeoutOrUntil(
       [&] {
         return client_a->value("a/key") == "value" &&
                client_b->value("b/key") == "value";
@@ -177,7 +177,7 @@ TEST_F(PageClientTest, ConcurrentWrite) {
   page1->Put(to_array("key1"), to_array("value1"), log("Put key1"));
   page2->Put(to_array("key2"), to_array("value2"), log("Put key2"));
 
-  RunLoopUntilWithTimeout(
+  RunLoopWithTimeoutOrUntil(
       [&] {
         return client->value("key1") == "value1" &&
                client->value("key2") == "value2";
@@ -226,7 +226,7 @@ TEST_F(PageClientTest, ConflictWrite) {
                });
   });
 
-  RunLoopUntilWithTimeout(
+  RunLoopWithTimeoutOrUntil(
       [&] {
         return finished && resolved() && client->value("key") == "value3";
       },
@@ -274,7 +274,7 @@ TEST_F(PageClientTest, ConflictPrefixWrite) {
                });
   });
 
-  RunLoopUntilWithTimeout(
+  RunLoopWithTimeoutOrUntil(
       [&] {
         return finished && resolved() && client_a->value("a/key") == "value3";
       },
@@ -324,7 +324,7 @@ TEST_F(PageClientTest, ConcurrentConflictWrite) {
         });
   });
 
-  RunLoopUntilWithTimeout(
+  RunLoopWithTimeoutOrUntil(
       [&] {
         return finished && resolved() && client->value("key") == "value3" &&
                client->value("key1") == "value1" &&

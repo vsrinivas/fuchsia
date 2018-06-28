@@ -14,7 +14,7 @@ TestWithLedger::TestWithLedger() = default;
 TestWithLedger::~TestWithLedger() = default;
 
 void TestWithLedger::SetUp() {
-  TestWithMessageLoop::SetUp();
+  RealLoopFixture::SetUp();
 
   ledger_app_ = std::make_unique<testing::LedgerRepositoryForTesting>();
 
@@ -28,22 +28,22 @@ void TestWithLedger::TearDown() {
   bool terminated = false;
   ledger_app_->Terminate([&terminated] { terminated = true; });
   if (!terminated) {
-    RunLoopUntilWithTimeout([&terminated] { return terminated; });
+    RunLoopWithTimeoutOrUntil([&terminated] { return terminated; });
   }
 
   ledger_app_.reset();
 
-  TestWithMessageLoop::TearDown();
+  RealLoopFixture::TearDown();
 }
 
-bool TestWithLedger::RunLoopWithTimeout(fxl::TimeDelta timeout) {
-  return TestWithMessageLoop::RunLoopWithTimeout(timeout);
+bool TestWithLedger::RunLoopWithTimeout(zx::duration timeout) {
+  return RealLoopFixture::RunLoopWithTimeout(timeout);
 }
 
-bool TestWithLedger::RunLoopUntilWithTimeout(std::function<bool()> condition,
-                                             fxl::TimeDelta timeout) {
-  return TestWithMessageLoop::RunLoopUntilWithTimeout(std::move(condition),
-                                                      timeout);
+bool TestWithLedger::RunLoopWithTimeoutOrUntil(fit::function<bool()> condition,
+                                               zx::duration timeout) {
+  return RealLoopFixture::RunLoopWithTimeoutOrUntil(std::move(condition),
+                                                    timeout);
 }
 
 }  // namespace testing

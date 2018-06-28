@@ -85,7 +85,7 @@ TEST_F(LinkImplTest, GetNull) {
     get_done = true;
     EXPECT_EQ("null", value);
   });
-  EXPECT_TRUE(RunLoopUntilWithTimeout([&] { return get_done; }));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return get_done; }));
 
   get_done = false;
   fidl::VectorPtr<fidl::StringPtr> path;
@@ -94,7 +94,7 @@ TEST_F(LinkImplTest, GetNull) {
     get_done = true;
     EXPECT_EQ("null", value);
   });
-  EXPECT_TRUE(RunLoopUntilWithTimeout([&] { return get_done; }));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return get_done; }));
 }
 
 TEST_F(LinkImplTest, WatchDefaultBehavior) {
@@ -110,14 +110,14 @@ TEST_F(LinkImplTest, WatchDefaultBehavior) {
   });
   // We are only notified after the event loop runs.
   EXPECT_EQ(0, notified_count);
-  EXPECT_TRUE(RunLoopUntilWithTimeout([&] { return notified_count == 1; }));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return notified_count == 1; }));
 
   // Same for WatchAll.
   WatchAll(link.get(), [&](const fidl::StringPtr& value) {
     ++notified_count;
     EXPECT_EQ("null", value);
   });
-  EXPECT_TRUE(RunLoopUntilWithTimeout([&] { return notified_count == 2; }));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return notified_count == 2; }));
 }
 
 TEST_F(LinkImplTest, SetAndWatch) {
@@ -141,7 +141,7 @@ TEST_F(LinkImplTest, SetAndWatch) {
 
   bool synced{};
   link->Sync([&synced] { synced = true; });
-  EXPECT_TRUE(RunLoopUntilWithTimeout([&synced] { return synced; }));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&synced] { return synced; }));
 
   EXPECT_EQ(2, notified_count);
   EXPECT_EQ("42", notified_value);
@@ -172,7 +172,7 @@ TEST_F(LinkImplTest, SetAndWatchAndGet) {
 
   bool synced{};
   link->Sync([&synced] { synced = true; });
-  EXPECT_TRUE(RunLoopUntilWithTimeout([&] { return synced; }));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return synced; }));
 
   const std::string expected_value = R"({"one":1,"two":"two","three":3})";
   EXPECT_EQ(4, notified_count);  // initial, 3x Set
@@ -183,7 +183,7 @@ TEST_F(LinkImplTest, SetAndWatchAndGet) {
     get_done = true;
     EXPECT_EQ(expected_value, value);
   });
-  EXPECT_TRUE(RunLoopUntilWithTimeout([&] { return get_done; }));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return get_done; }));
 }
 
 TEST_F(LinkImplTest, Erase) {
@@ -204,7 +204,7 @@ TEST_F(LinkImplTest, Erase) {
     get_done = true;
     EXPECT_EQ(expected_value, value);
   });
-  EXPECT_TRUE(RunLoopUntilWithTimeout([&] { return get_done; }));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return get_done; }));
 }
 
 TEST_F(LinkImplTest, SetAndGetEntity) {
@@ -217,7 +217,7 @@ TEST_F(LinkImplTest, SetAndGetEntity) {
     EXPECT_EQ("ref", value);
     done = true;
   });
-  EXPECT_TRUE(RunLoopUntilWithTimeout([&] { return done; }));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return done; }));
 }
 
 }  // namespace
