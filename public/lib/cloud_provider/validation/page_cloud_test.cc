@@ -139,6 +139,20 @@ TEST_F(PageCloudTest, GetPageCloud) {
   ASSERT_TRUE(GetPageCloud(ToArray("app_id"), ToArray("page_id"), &page_cloud));
 }
 
+TEST_F(PageCloudTest, GetNoCommits) {
+  PageCloudSync2Ptr page_cloud;
+  ASSERT_TRUE(GetPageCloud(ToArray("app_id"), ToArray("page_id"), &page_cloud));
+
+  fidl::VectorPtr<Commit> commits;
+  std::unique_ptr<Token> token;
+  Status status = Status::INTERNAL_ERROR;
+  ASSERT_EQ(ZX_OK,
+            page_cloud->GetCommits(nullptr, &status, &commits, &token).statvs);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(0u, commits->size());
+  EXPECT_FALSE(token);
+}
+
 TEST_F(PageCloudTest, AddAndGetCommits) {
   PageCloudSync2Ptr page_cloud;
   ASSERT_TRUE(GetPageCloud(ToArray("app_id"), ToArray("page_id"), &page_cloud));

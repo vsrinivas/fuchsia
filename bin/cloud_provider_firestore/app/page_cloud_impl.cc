@@ -183,13 +183,17 @@ void PageCloudImpl::GetCommits(
           std::string timestamp;
 
           for (const auto& response : result) {
+            if (!response.has_document()) {
+              continue;
+            }
+
             fidl::VectorPtr<cloud_provider::Commit> batch_commits;
-            if (!response.has_document() ||
-                !DecodeCommitBatch(response.document(), &batch_commits,
+            if (!DecodeCommitBatch(response.document(), &batch_commits,
                                    &timestamp)) {
               callback(cloud_provider::Status::PARSE_ERROR,
                        fidl::VectorPtr<cloud_provider::Commit>::New(0),
                        nullptr);
+              return;
             }
 
             std::move(batch_commits->begin(), batch_commits->end(),
