@@ -165,7 +165,7 @@ public:
 
         for (uint32_t iteration = 0; iteration < num_iterations; iteration++) {
             auto dst_mapping = AddressSpace::MapBufferGpu(
-                device->gtt(), MsdIntelBuffer::Create(PAGE_SIZE, "dst"), PAGE_SIZE);
+                device->gtt(), MsdIntelBuffer::Create(PAGE_SIZE, "dst"));
             ASSERT_NE(dst_mapping, nullptr);
 
             void* dst_cpu_addr;
@@ -179,7 +179,7 @@ public:
             ASSERT_TRUE(batch_buffer->platform_buffer()->MapCpu(&batch_cpu_addr));
             uint32_t* batch_ptr = reinterpret_cast<uint32_t*>(batch_cpu_addr);
 
-            auto batch_mapping = AddressSpace::MapBufferGpu(device->gtt(), batch_buffer, PAGE_SIZE);
+            auto batch_mapping = AddressSpace::MapBufferGpu(device->gtt(), batch_buffer);
             ASSERT_NE(batch_mapping, nullptr);
 
             uint32_t expected_val = 0x8000000 + iteration;

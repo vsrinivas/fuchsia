@@ -37,7 +37,7 @@ public:
         EXPECT_GE(buffer->platform_buffer()->size(), size);
     }
 
-    static void MapGpu(uint32_t alignment)
+    static void MapGpu()
     {
         uint64_t base = PAGE_SIZE;
         uint64_t size = PAGE_SIZE * 10;
@@ -49,12 +49,10 @@ public:
         std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(PAGE_SIZE, "test"));
         ASSERT_NE(buffer, nullptr);
 
-        auto mapping = AddressSpace::MapBufferGpu(address_space, std::move(buffer), alignment);
+        auto mapping = AddressSpace::MapBufferGpu(address_space, std::move(buffer));
         ASSERT_NE(mapping, nullptr);
 
         gpu_addr_t gpu_addr = mapping->gpu_addr();
-        if (alignment)
-            EXPECT_TRUE((gpu_addr % alignment) == 0);
 
         EXPECT_TRUE(address_space->is_allocated(gpu_addr));
         EXPECT_FALSE(address_space->is_clear(gpu_addr));
@@ -67,10 +65,10 @@ public:
 
     static std::shared_ptr<GpuMapping>
     GetSharedGpuMapping(std::shared_ptr<AddressSpace> address_space,
-                        std::shared_ptr<MsdIntelBuffer> buffer, uint32_t alignment)
+                        std::shared_ptr<MsdIntelBuffer> buffer)
     {
         return AddressSpace::GetSharedGpuMapping(address_space, buffer, 0,
-                                                 buffer->platform_buffer()->size(), alignment);
+                                                 buffer->platform_buffer()->size());
     }
 
     static void CachedMapping()
@@ -87,12 +85,12 @@ public:
         {
             std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(kBufferSize, "test"));
             EXPECT_EQ(buffer->shared_mapping_count(), 0u);
-            auto shared_mapping = GetSharedGpuMapping(address_space, buffer, PAGE_SIZE);
+            auto shared_mapping = GetSharedGpuMapping(address_space, buffer);
             EXPECT_EQ(buffer->shared_mapping_count(), 1u);
             EXPECT_EQ(shared_mapping.use_count(), 1u);
             shared_mapping = nullptr;
             EXPECT_EQ(buffer->shared_mapping_count(), 0u);
-            shared_mapping = GetSharedGpuMapping(address_space, buffer, PAGE_SIZE);
+            shared_mapping = GetSharedGpuMapping(address_space, buffer);
             EXPECT_EQ(buffer->shared_mapping_count(), 1u);
             EXPECT_EQ(shared_mapping.use_count(), 1u);
         }
@@ -103,12 +101,12 @@ public:
         {
             std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(kBufferSize, "test"));
             EXPECT_EQ(buffer->shared_mapping_count(), 0u);
-            auto shared_mapping = GetSharedGpuMapping(address_space, buffer, PAGE_SIZE);
+            auto shared_mapping = GetSharedGpuMapping(address_space, buffer);
             EXPECT_EQ(buffer->shared_mapping_count(), 1u);
             EXPECT_EQ(shared_mapping.use_count(), 2u);
             shared_mapping = nullptr;
             EXPECT_EQ(buffer->shared_mapping_count(), 1u);
-            shared_mapping = GetSharedGpuMapping(address_space, buffer, PAGE_SIZE);
+            shared_mapping = GetSharedGpuMapping(address_space, buffer);
             EXPECT_EQ(buffer->shared_mapping_count(), 1u);
             EXPECT_EQ(shared_mapping.use_count(), 2u);
         }
@@ -123,11 +121,11 @@ public:
             EXPECT_EQ(buffer0->shared_mapping_count(), 0u);
             EXPECT_EQ(buffer1->shared_mapping_count(), 0u);
 
-            GetSharedGpuMapping(address_space, buffer0, PAGE_SIZE);
+            GetSharedGpuMapping(address_space, buffer0);
             EXPECT_EQ(buffer0->shared_mapping_count(), 1u);
             EXPECT_EQ(buffer1->shared_mapping_count(), 0u);
 
-            GetSharedGpuMapping(address_space, buffer1, PAGE_SIZE);
+            GetSharedGpuMapping(address_space, buffer1);
             EXPECT_EQ(buffer0->shared_mapping_count(), 1u);
             EXPECT_EQ(buffer1->shared_mapping_count(), 1u);
 
@@ -141,7 +139,7 @@ public:
         }
     }
 
-    static void SharedMapping(uint64_t size, uint32_t alignment)
+    static void SharedMapping(uint64_t size)
     {
         auto address_space_owner = std::make_unique<AddressSpaceOwner>();
         auto address_space = std::make_shared<MockAddressSpace>(address_space_owner.get(), 0,
@@ -152,16 +150,16 @@ public:
         ASSERT_NE(buffer, nullptr);
 
         std::unique_ptr<GpuMapping> unique_mapping =
-            AddressSpace::MapBufferGpu(address_space, buffer, alignment);
+            AddressSpace::MapBufferGpu(address_space, buffer);
         ASSERT_NE(unique_mapping, nullptr);
 
         EXPECT_EQ(buffer->shared_mapping_count(), 0u);
 
         std::shared_ptr<GpuMapping> shared_mapping =
-            buffer->FindBufferMapping(address_space, 0, size, alignment);
+            buffer->FindBufferMapping(address_space, 0, size);
         EXPECT_EQ(shared_mapping, nullptr);
 
-        shared_mapping = buffer->FindBufferMapping(address_space, 0, size, alignment);
+        shared_mapping = buffer->FindBufferMapping(address_space, 0, size);
         EXPECT_EQ(shared_mapping, nullptr);
 
         shared_mapping = buffer->ShareBufferMapping(std::move(unique_mapping));
@@ -171,14 +169,14 @@ public:
 
         {
             std::shared_ptr<GpuMapping> copy =
-                buffer->FindBufferMapping(address_space, 0, size, alignment);
+                buffer->FindBufferMapping(address_space, 0, size);
             ASSERT_NE(copy, nullptr);
             EXPECT_EQ(copy.get(), shared_mapping.get());
         }
 
         {
             std::shared_ptr<GpuMapping> copy =
-                GetSharedGpuMapping(address_space, buffer, alignment);
+                GetSharedGpuMapping(address_space, buffer);
             ASSERT_NE(copy, nullptr);
             EXPECT_EQ(copy.get(), shared_mapping.get());
         }
@@ -189,18 +187,18 @@ public:
 
         {
             std::shared_ptr<GpuMapping> copy =
-                buffer->FindBufferMapping(address_space, 0, size, alignment);
+                buffer->FindBufferMapping(address_space, 0, size);
             EXPECT_EQ(copy, nullptr);
         }
 
-        shared_mapping = GetSharedGpuMapping(address_space, buffer, alignment);
+        shared_mapping = GetSharedGpuMapping(address_space, buffer);
         ASSERT_NE(shared_mapping, nullptr);
 
         EXPECT_EQ(buffer->shared_mapping_count(), 1u);
 
         {
             std::shared_ptr<GpuMapping> copy =
-                buffer->FindBufferMapping(address_space, 0, size, alignment);
+                buffer->FindBufferMapping(address_space, 0, size);
             ASSERT_NE(copy, nullptr);
             EXPECT_EQ(copy.get(), shared_mapping.get());
         }
@@ -209,7 +207,7 @@ public:
 
         {
             std::shared_ptr<GpuMapping> copy =
-                GetSharedGpuMapping(address_space, buffer, alignment);
+                GetSharedGpuMapping(address_space, buffer);
             ASSERT_NE(copy, nullptr);
             EXPECT_EQ(copy.get(), shared_mapping.get());
         }
@@ -217,7 +215,7 @@ public:
         EXPECT_EQ(buffer->shared_mapping_count(), 1u);
     }
 
-    static void OverlappedMapping(uint32_t alignment)
+    static void OverlappedMapping()
     {
         auto address_space_owner = std::make_unique<AddressSpaceOwner>();
         auto address_space =
@@ -229,13 +227,13 @@ public:
         ASSERT_NE(buffer, nullptr);
 
         std::shared_ptr<GpuMapping> mapping_low =
-            AddressSpace::GetSharedGpuMapping(address_space, buffer, 0, kBufferSize / 2, alignment);
+            AddressSpace::GetSharedGpuMapping(address_space, buffer, 0, kBufferSize / 2);
         ASSERT_NE(mapping_low, nullptr);
 
         EXPECT_EQ(buffer->shared_mapping_count(), 1u);
 
         std::shared_ptr<GpuMapping> mapping_high = AddressSpace::GetSharedGpuMapping(
-            address_space, buffer, kBufferSize / 2, kBufferSize / 2, alignment);
+            address_space, buffer, kBufferSize / 2, kBufferSize / 2);
         ASSERT_NE(mapping_high, nullptr);
 
         EXPECT_EQ(buffer->shared_mapping_count(), 2u);
@@ -244,7 +242,7 @@ public:
         EXPECT_NE(mapping_low.get(), mapping_high.get());
 
         std::shared_ptr<GpuMapping> mapping_full =
-            AddressSpace::GetSharedGpuMapping(address_space, buffer, 0, kBufferSize, alignment);
+            AddressSpace::GetSharedGpuMapping(address_space, buffer, 0, kBufferSize);
         ASSERT_NE(mapping_full, nullptr);
         EXPECT_NE(mapping_full.get(), mapping_low.get());
         EXPECT_NE(mapping_full.get(), mapping_high.get());
@@ -257,14 +255,14 @@ public:
         EXPECT_EQ(buffer->shared_mapping_count(), 1u);
 
         mapping_low =
-            AddressSpace::GetSharedGpuMapping(address_space, buffer, 0, kBufferSize / 2, alignment);
+            AddressSpace::GetSharedGpuMapping(address_space, buffer, 0, kBufferSize / 2);
         ASSERT_NE(mapping_low, nullptr);
         EXPECT_NE(mapping_low.get(), mapping_full.get());
 
         EXPECT_EQ(buffer->shared_mapping_count(), 2u);
 
         mapping_high = AddressSpace::GetSharedGpuMapping(
-            address_space, buffer, kBufferSize - kBufferSize / 2, kBufferSize / 2, alignment);
+            address_space, buffer, kBufferSize - kBufferSize / 2, kBufferSize / 2);
         ASSERT_NE(mapping_high, nullptr);
         EXPECT_NE(mapping_high.get(), mapping_full.get());
 
@@ -274,34 +272,17 @@ public:
 
 TEST(MsdIntelBuffer, CreateAndDestroy) { TestMsdIntelBuffer::CreateAndDestroy(); }
 
-TEST(MsdIntelBuffer, MapGpu)
-{
-    TestMsdIntelBuffer::MapGpu(0);
-    TestMsdIntelBuffer::MapGpu(8);
-    TestMsdIntelBuffer::MapGpu(16);
-    TestMsdIntelBuffer::MapGpu(64);
-    TestMsdIntelBuffer::MapGpu(4096);
-    TestMsdIntelBuffer::MapGpu(8192);
-}
+TEST(MsdIntelBuffer, MapGpu) { TestMsdIntelBuffer::MapGpu(); }
 
 TEST(MsdIntelBuffer, SharedMapping)
 {
     std::vector<uint64_t> sizes = {0x400, 0x1000, 0x16000};
-    std::vector<uint32_t> alignments = {0, 8, 16, 64, 4096};
 
-    for (auto size : sizes)
-        for (auto alignment : alignments)
-            TestMsdIntelBuffer::SharedMapping(size, alignment);
+    for (auto size : sizes) {
+        TestMsdIntelBuffer::SharedMapping(size);
+    }
 }
 
-TEST(MsdIntelBuffer, OverlappedMapping)
-{
-    TestMsdIntelBuffer::OverlappedMapping(0);
-    TestMsdIntelBuffer::OverlappedMapping(8);
-    TestMsdIntelBuffer::OverlappedMapping(16);
-    TestMsdIntelBuffer::OverlappedMapping(64);
-    TestMsdIntelBuffer::OverlappedMapping(4096);
-    TestMsdIntelBuffer::OverlappedMapping(8192);
-}
+TEST(MsdIntelBuffer, OverlappedMapping) { TestMsdIntelBuffer::OverlappedMapping(); }
 
 TEST(MsdIntelBuffer, CachedMapping) { TestMsdIntelBuffer::CachedMapping(); }

@@ -31,7 +31,7 @@ bool Ringbuffer::Map(std::shared_ptr<AddressSpace> address_space)
 {
     DASSERT(!vaddr_);
 
-    gpu_mapping_ = AddressSpace::MapBufferGpu(address_space, buffer_, PAGE_SIZE);
+    gpu_mapping_ = AddressSpace::MapBufferGpu(address_space, buffer_);
     if (!gpu_mapping_)
         return DRETF(false, "failed to pin");
 

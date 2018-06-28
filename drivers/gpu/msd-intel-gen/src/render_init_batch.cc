@@ -31,7 +31,7 @@ std::unique_ptr<GpuMapping> RenderInitBatch::Init(std::unique_ptr<MsdIntelBuffer
     if (platform_buffer->size() < batch_size_)
         return DRETP(nullptr, "buffer too small");
 
-    auto mapping = AddressSpace::MapBufferGpu(address_space, std::move(buffer), PAGE_SIZE);
+    auto mapping = AddressSpace::MapBufferGpu(address_space, std::move(buffer));
     if (!mapping)
         return DRETP(nullptr, "failed to pin buffer");
 

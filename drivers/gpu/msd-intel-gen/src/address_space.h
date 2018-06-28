@@ -46,20 +46,17 @@ public:
 
     static std::unique_ptr<GpuMapping> MapBufferGpu(std::shared_ptr<AddressSpace> address_space,
                                                     std::shared_ptr<MsdIntelBuffer> buffer,
-                                                    uint64_t offset, uint64_t length,
-                                                    uint32_t alignment);
+                                                    uint64_t offset, uint64_t length);
 
     static std::unique_ptr<GpuMapping> MapBufferGpu(std::shared_ptr<AddressSpace> address_space,
-                                                    std::shared_ptr<MsdIntelBuffer> buffer,
-                                                    uint32_t alignment)
+                                                    std::shared_ptr<MsdIntelBuffer> buffer)
     {
-        return MapBufferGpu(address_space, buffer, 0, buffer->platform_buffer()->size(), alignment);
+        return MapBufferGpu(address_space, buffer, 0, buffer->platform_buffer()->size());
     }
 
     static std::shared_ptr<GpuMapping>
     GetSharedGpuMapping(std::shared_ptr<AddressSpace> address_space,
-                        std::shared_ptr<MsdIntelBuffer> buffer, uint64_t offset, uint64_t length,
-                        uint32_t alignment);
+                        std::shared_ptr<MsdIntelBuffer> buffer, uint64_t offset, uint64_t length);
 
     static uint64_t GetMappedSize(uint64_t buffer_size)
     {

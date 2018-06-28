@@ -45,18 +45,16 @@ std::shared_ptr<GpuMapping> MsdIntelBuffer::ShareBufferMapping(std::unique_ptr<G
 
 std::shared_ptr<GpuMapping>
 MsdIntelBuffer::FindBufferMapping(std::shared_ptr<AddressSpace> address_space, uint64_t offset,
-                                  uint64_t length, uint32_t alignment)
+                                  uint64_t length)
 {
     for (auto map_node : shared_mappings_) {
         std::shared_ptr<GpuMapping> shared_mapping = map_node.second.lock();
         if (!shared_mapping || shared_mapping->address_space().expired())
             continue;
 
-        gpu_addr_t gpu_addr = shared_mapping->gpu_addr();
         if (shared_mapping->address_space().lock() == address_space &&
             shared_mapping->offset() == offset &&
-            shared_mapping->length() == address_space->GetMappedSize(length) &&
-            (alignment == 0 || magma::round_up(gpu_addr, alignment) == gpu_addr))
+            shared_mapping->length() == address_space->GetMappedSize(length))
             return shared_mapping;
     }
 

@@ -7,14 +7,10 @@
 
 std::unique_ptr<GpuMapping> AddressSpace::MapBufferGpu(std::shared_ptr<AddressSpace> address_space,
                                                        std::shared_ptr<MsdIntelBuffer> buffer,
-                                                       uint64_t offset, uint64_t length,
-                                                       uint32_t alignment)
+                                                       uint64_t offset, uint64_t length)
 {
     DASSERT(address_space);
     DASSERT(buffer);
-
-    if (alignment == 0)
-        alignment = PAGE_SIZE;
 
     length = address_space->GetMappedSize(length);
 
@@ -30,7 +26,7 @@ std::unique_ptr<GpuMapping> AddressSpace::MapBufferGpu(std::shared_ptr<AddressSp
                      address_space->Size());
 
     uint64_t align_pow2;
-    if (!magma::get_pow2(alignment, &align_pow2))
+    if (!magma::get_pow2(PAGE_SIZE, &align_pow2))
         return DRETP(nullptr, "alignment is not power of 2");
 
     // Casting to uint8_t below
@@ -41,9 +37,8 @@ std::unique_ptr<GpuMapping> AddressSpace::MapBufferGpu(std::shared_ptr<AddressSp
     if (!address_space->Alloc(length, static_cast<uint8_t>(align_pow2), &gpu_addr))
         return DRETP(nullptr, "failed to allocate gpu address");
 
-    DLOG("MapBufferGpu offset 0x%lx length 0x%lx alignment 0x%x (pow2 0x%x) allocated gpu_addr "
-         "0x%lx",
-         offset, length, alignment, static_cast<uint32_t>(align_pow2), gpu_addr);
+    DLOG("MapBufferGpu offset 0x%lx length 0x%lx allocated gpu_addr 0x%lx",
+         offset, length, gpu_addr);
 
     uint64_t page_offset = offset / PAGE_SIZE;
     uint32_t page_count = length / PAGE_SIZE;
@@ -74,16 +69,16 @@ std::unique_ptr<GpuMapping> AddressSpace::MapBufferGpu(std::shared_ptr<AddressSp
 std::shared_ptr<GpuMapping>
 AddressSpace::GetSharedGpuMapping(std::shared_ptr<AddressSpace> address_space,
                                   std::shared_ptr<MsdIntelBuffer> buffer, uint64_t offset,
-                                  uint64_t length, uint32_t alignment)
+                                  uint64_t length)
 {
     DASSERT(address_space);
     DASSERT(buffer);
 
     std::shared_ptr<GpuMapping> mapping =
-        buffer->FindBufferMapping(address_space, offset, length, alignment);
+        buffer->FindBufferMapping(address_space, offset, length);
     if (!mapping) {
         std::unique_ptr<GpuMapping> new_mapping =
-            AddressSpace::MapBufferGpu(address_space, buffer, offset, length, alignment);
+            AddressSpace::MapBufferGpu(address_space, buffer, offset, length);
         if (!new_mapping)
             return DRETP(nullptr, "Couldn't map buffer to gtt");
         mapping = buffer->ShareBufferMapping(std::move(new_mapping));

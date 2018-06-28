@@ -221,7 +221,7 @@ bool CommandBuffer::MapResourcesGpu(std::shared_ptr<AddressSpace> address_space,
 
     for (auto res : exec_resources_) {
         std::shared_ptr<GpuMapping> mapping = AddressSpace::GetSharedGpuMapping(
-            address_space, res.buffer, res.offset, res.length, PAGE_SIZE);
+            address_space, res.buffer, res.offset, res.length);
         if (!mapping)
             return DRETF(false, "failed to map resource into GPU address space");
         DLOG("MapResourcesGpu aspace %p buffer 0x%" PRIx64 " offset 0x%" PRIx64 " length 0x%" PRIx64

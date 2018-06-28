@@ -35,8 +35,7 @@ public:
 
     // Returns exact match mappings only.
     std::shared_ptr<GpuMapping> FindBufferMapping(std::shared_ptr<AddressSpace> address_space,
-                                                  uint64_t offset, uint64_t length,
-                                                  uint32_t alignment);
+                                                  uint64_t offset, uint64_t length);
 
     // Returns a vector containing retained mappings for the given address space.
     std::vector<std::shared_ptr<GpuMapping>> GetSharedMappings(AddressSpace* address_space);

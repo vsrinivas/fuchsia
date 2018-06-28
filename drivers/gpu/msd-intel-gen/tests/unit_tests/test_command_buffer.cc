@@ -141,7 +141,7 @@ public:
         auto addr_space = exec_address_space();
 
         auto target_buffer_mapping = AddressSpace::MapBufferGpu(
-            addr_space, MsdIntelBuffer::Create(PAGE_SIZE, "test"), PAGE_SIZE);
+            addr_space, MsdIntelBuffer::Create(PAGE_SIZE, "test"));
         ASSERT_NE(target_buffer_mapping, nullptr);
 
         void* target_cpu_addr;
