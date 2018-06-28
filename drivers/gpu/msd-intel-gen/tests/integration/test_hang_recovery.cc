@@ -208,4 +208,4 @@ TEST(HangRecovery, Test)
     test->SubmitCommandBuffer(TestConnection::NORMAL);
 }
 
-TEST(HangRecovery, Stress) { TestConnection::Stress(1000); }
+TEST(HangRecovery, DISABLED_Stress) { TestConnection::Stress(1000); }

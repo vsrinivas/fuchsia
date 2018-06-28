@@ -168,4 +168,4 @@ static void test_shutdown(uint32_t iters)
 
 TEST(Shutdown, Test) { test_shutdown(1); }
 
-TEST(Shutdown, Stress) { test_shutdown(1000); }
+TEST(Shutdown, DISABLED_Stress) { test_shutdown(1000); }
