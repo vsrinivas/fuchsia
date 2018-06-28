@@ -92,7 +92,7 @@ bool ProcessCreateTest(perftest::RepeatState* state) {
         zx::vmar root_vmar;
         static const char kName[] = "perftest-process";
         ZX_ASSERT(zx::process::create(
-                      zx::job::default_job(), kName, sizeof(kName) - 1, 0,
+                      *zx::job::default_job(), kName, sizeof(kName) - 1, 0,
                       &process, &root_vmar) == ZX_OK);
         state->NextStep();
     }

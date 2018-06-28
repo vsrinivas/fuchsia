@@ -409,7 +409,7 @@ static bool job_default_test() {
     zx_handle_t raw = zx_job_default();
     ASSERT_EQ(validate_handle(raw), ZX_OK);
 
-    EXPECT_TRUE(reference_thing<zx::job>(zx::job::default_job()));
+    EXPECT_TRUE(reference_thing<zx::job>(*zx::job::default_job()));
     EXPECT_EQ(validate_handle(raw), ZX_OK);
 
     // This does not compile:

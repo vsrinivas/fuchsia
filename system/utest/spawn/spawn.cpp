@@ -86,7 +86,7 @@ static bool spawn_launcher_test(void) {
     // launcher process can launch the child.
     {
         zx::job job;
-        ASSERT_EQ(ZX_OK, zx::job::create(zx_job_default(), 0, &job));
+        ASSERT_EQ(ZX_OK, zx::job::create(*zx::job::default_job(), 0, &job));
 
         status = fdio_spawn(job.get(), FDIO_SPAWN_CLONE_ALL, kSpawnLauncher,
                             argv, process.reset_and_get_address());
@@ -99,7 +99,7 @@ static bool spawn_launcher_test(void) {
     // the launcher from launching the child.
     {
         zx::job job;
-        ASSERT_EQ(ZX_OK, zx::job::create(zx_job_default(), 0, &job));
+        ASSERT_EQ(ZX_OK, zx::job::create(*zx::job::default_job(), 0, &job));
         zx_policy_basic_t policy = {
             .condition = ZX_POL_NEW_PROCESS,
             .policy = ZX_POL_ACTION_DENY,
@@ -508,7 +508,7 @@ static bool spawn_errors_test(void) {
 
     {
         zx::job job;
-        ASSERT_EQ(ZX_OK, zx::job::default_job().duplicate(0, &job));
+        ASSERT_EQ(ZX_OK, zx::job::default_job()->duplicate(0, &job));
         ASSERT_EQ(ZX_ERR_ACCESS_DENIED,
                   fdio_spawn(job.get(), FDIO_SPAWN_CLONE_ALL, kSpawnChild,
                              argv, process.reset_and_get_address()));

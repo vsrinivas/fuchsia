@@ -131,7 +131,7 @@ bool traits_test() {
     {
         zx::process process;
         zx::vmar vmar;
-        ASSERT_EQ(zx::process::create(zx::job::default_job(), "", 0u, 0u, &process, &vmar), ZX_OK);
+        ASSERT_EQ(zx::process::create(*zx::job::default_job(), "", 0u, 0u, &process, &vmar), ZX_OK);
         duplicating(process);
         user_signaling(process);
         waiting(process);
@@ -140,7 +140,7 @@ bool traits_test() {
 
     {
         zx::job job;
-        ASSERT_EQ(zx::job::create(zx::job::default_job().get(), 0u, &job), ZX_OK);
+        ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0u, &job), ZX_OK);
         duplicating(job);
         user_signaling(job);
         waiting(job);

@@ -44,7 +44,7 @@ fbl::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
 
     zx_status_t status = ZX_OK;
     zx::job test_job;
-    status = zx::job::create(zx_job_default(), 0, &test_job);
+    status = zx::job::create(*zx::job::default_job(), 0, &test_job);
     if (status != ZX_OK) {
         printf("FAILURE: zx::job::create() returned %d\n", status);
         return fbl::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);

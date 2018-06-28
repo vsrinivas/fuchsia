@@ -34,7 +34,7 @@ static const unsigned kExceptionPortKey = 42u;
 // Basic job operation is tested by core-tests.
 static zx::job make_job() {
     zx::job job;
-    if (zx::job::create(zx_job_default(), 0u, &job) != ZX_OK)
+    if (zx::job::create(*zx::job::default_job(), 0u, &job) != ZX_OK)
         return zx::job();
     return job;
 }
