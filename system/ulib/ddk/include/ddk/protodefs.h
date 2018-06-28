@@ -84,6 +84,7 @@ DDK_PROTOCOL_DEF(MAILBOX,        'pMHU', "mailbox", PF_NOPUB)
 DDK_PROTOCOL_DEF(SCPI,           'pSCP', "scpi", PF_NOPUB)
 DDK_PROTOCOL_DEF(BACKLIGHT,      'pBKL', "backlight", 0)
 DDK_PROTOCOL_DEF(CANVAS,         'pCAN', "canvas", PF_NOPUB)
+DDK_PROTOCOL_DEF(SKIP_BLOCK,     'pSKB', "skip-block", 0)
 // Protocol definition at garnet/magma/src/magma_util/platform/zircon/zircon_platform_ioctl.h
 DDK_PROTOCOL_DEF(GPU,            'pGPU', "gpu", 0)
 DDK_PROTOCOL_DEF(RTC,            'pRTC', "rtc", 0)
