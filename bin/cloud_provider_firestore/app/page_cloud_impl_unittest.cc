@@ -4,6 +4,10 @@
 
 #include "peridot/bin/cloud_provider_firestore/app/page_cloud_impl.h"
 
+#include <iterator>
+
+#include <google/protobuf/util/time_util.h>
+
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 
 #include "lib/callback/capture.h"
@@ -16,6 +20,7 @@
 #include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/cloud_provider_firestore/app/testing/test_credentials_provider.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/encoding.h"
+#include "peridot/bin/cloud_provider_firestore/firestore/testing/encoding.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/test_firestore_service.h"
 #include "peridot/lib/convert/convert.h"
 
@@ -29,6 +34,43 @@ void SetTimestamp(google::firestore::v1beta1::Document* document,
   timestamp.set_seconds(seconds);
   timestamp.set_nanos(nanos);
 }
+
+class TestPageCloudWatcher : public cloud_provider::PageCloudWatcher {
+ public:
+  TestPageCloudWatcher() {}
+  ~TestPageCloudWatcher() override {}
+
+  std::vector<cloud_provider::Commit> received_commits;
+  std::vector<cloud_provider::Token> received_tokens;
+  OnNewCommitsCallback pending_on_new_commit_callback = nullptr;
+
+ private:
+  // cloud_provider::PageCloudWatcher:
+  void OnNewCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
+                    std::unique_ptr<cloud_provider::Token> position_token,
+                    OnNewCommitsCallback callback) override {
+    if (commits) {
+      std::move(commits->begin(), commits->end(),
+                std::back_inserter(received_commits));
+    }
+    if (position_token) {
+      received_tokens.push_back(std::move(*position_token));
+    }
+
+    EXPECT_FALSE(pending_on_new_commit_callback);
+    pending_on_new_commit_callback = std::move(callback);
+  }
+
+  void OnNewObject(fidl::VectorPtr<uint8_t> /*id*/,
+                   fuchsia::mem::Buffer /*buffer*/,
+                   OnNewObjectCallback /*callback*/) override {
+    FXL_NOTIMPLEMENTED();
+  }
+
+  void OnError(cloud_provider::Status /*status*/) override {
+    FXL_NOTIMPLEMENTED();
+  }
+};
 
 class PageCloudImplTest : public gtest::TestLoopFixture {
  public:
@@ -251,6 +293,165 @@ TEST_F(PageCloudImplTest, GetObjectParseError) {
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
   EXPECT_EQ(cloud_provider::Status::PARSE_ERROR, status);
+}
+
+TEST_F(PageCloudImplTest, SetWatcherResultOk) {
+  bool callback_called = false;
+  auto status = cloud_provider::Status::INTERNAL_ERROR;
+  TestPageCloudWatcher watcher_impl;
+  cloud_provider::PageCloudWatcherPtr watcher;
+  fidl::Binding<cloud_provider::PageCloudWatcher> watcher_binding(
+      &watcher_impl, watcher.NewRequest());
+  page_cloud_->SetWatcher(
+      nullptr, std::move(watcher),
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+
+  RunLoopUntilIdle();
+  EXPECT_EQ(1u, firestore_service_.listen_clients.size());
+  EXPECT_FALSE(callback_called);
+
+  auto response = google::firestore::v1beta1::ListenResponse();
+  response.mutable_target_change()->set_target_change_type(
+      google::firestore::v1beta1::TargetChange_TargetChangeType_CURRENT);
+  firestore_service_.listen_clients[0]->OnResponse(std::move(response));
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(callback_called);
+  EXPECT_EQ(cloud_provider::Status::OK, status);
+}
+
+TEST_F(PageCloudImplTest, SetWatcherGetCommits) {
+  bool callback_called = false;
+  auto status = cloud_provider::Status::INTERNAL_ERROR;
+  TestPageCloudWatcher watcher_impl;
+  cloud_provider::PageCloudWatcherPtr watcher;
+  fidl::Binding<cloud_provider::PageCloudWatcher> watcher_binding(
+      &watcher_impl, watcher.NewRequest());
+  page_cloud_->SetWatcher(
+      nullptr, std::move(watcher),
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+
+  RunLoopUntilIdle();
+  EXPECT_EQ(1u, firestore_service_.listen_clients.size());
+  EXPECT_FALSE(callback_called);
+
+  {
+    auto response = google::firestore::v1beta1::ListenResponse();
+    response.mutable_target_change()->set_target_change_type(
+        google::firestore::v1beta1::TargetChange_TargetChangeType_CURRENT);
+    firestore_service_.listen_clients[0]->OnResponse(std::move(response));
+  }
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(callback_called);
+  EXPECT_EQ(cloud_provider::Status::OK, status);
+
+  fidl::VectorPtr<cloud_provider::Commit> commits;
+  commits.push_back(cloud_provider::Commit{convert::ToArray("id0"),
+                                           convert::ToArray("data0")});
+  google::protobuf::Timestamp protobuf_timestamp;
+  ASSERT_TRUE(google::protobuf::util::TimeUtil::FromString(
+      "2018-06-26T14:39:22+00:00", &protobuf_timestamp));
+  std::string original_timestamp;
+  ASSERT_TRUE(protobuf_timestamp.SerializeToString(&original_timestamp));
+
+  auto response = google::firestore::v1beta1::ListenResponse();
+  ASSERT_TRUE(EncodeCommitBatchWithTimestamp(
+      commits, original_timestamp,
+      response.mutable_document_change()->mutable_document()));
+  firestore_service_.listen_clients[0]->OnResponse(std::move(response));
+
+  RunLoopUntilIdle();
+  EXPECT_EQ(1u, watcher_impl.received_commits.size());
+  EXPECT_EQ("id0", convert::ToString(watcher_impl.received_commits.front().id));
+  EXPECT_EQ("data0",
+            convert::ToString(watcher_impl.received_commits.front().data));
+  EXPECT_EQ(1u, watcher_impl.received_tokens.size());
+  EXPECT_EQ(original_timestamp,
+            convert::ToString(watcher_impl.received_tokens.front().opaque_id));
+  EXPECT_TRUE(watcher_impl.pending_on_new_commit_callback);
+}
+
+TEST_F(PageCloudImplTest, SetWatcherNotificationOneAtATime) {
+  bool callback_called = false;
+  auto status = cloud_provider::Status::INTERNAL_ERROR;
+  TestPageCloudWatcher watcher_impl;
+  cloud_provider::PageCloudWatcherPtr watcher;
+  fidl::Binding<cloud_provider::PageCloudWatcher> watcher_binding(
+      &watcher_impl, watcher.NewRequest());
+  page_cloud_->SetWatcher(
+      nullptr, std::move(watcher),
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+
+  RunLoopUntilIdle();
+
+  {
+    auto response = google::firestore::v1beta1::ListenResponse();
+    response.mutable_target_change()->set_target_change_type(
+        google::firestore::v1beta1::TargetChange_TargetChangeType_CURRENT);
+    firestore_service_.listen_clients[0]->OnResponse(std::move(response));
+  }
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(callback_called);
+  EXPECT_EQ(cloud_provider::Status::OK, status);
+
+  // Deliver a commit notificiation from the cloud.
+  {
+    fidl::VectorPtr<cloud_provider::Commit> commits;
+    commits.push_back(cloud_provider::Commit{convert::ToArray("id0"),
+                                             convert::ToArray("data0")});
+    google::protobuf::Timestamp protobuf_timestamp;
+    ASSERT_TRUE(google::protobuf::util::TimeUtil::FromString(
+        "2018-06-26T14:39:22+00:00", &protobuf_timestamp));
+    std::string timestamp;
+    ASSERT_TRUE(protobuf_timestamp.SerializeToString(&timestamp));
+
+    auto response = google::firestore::v1beta1::ListenResponse();
+    ASSERT_TRUE(EncodeCommitBatchWithTimestamp(
+        commits, timestamp,
+        response.mutable_document_change()->mutable_document()));
+    firestore_service_.listen_clients[0]->OnResponse(std::move(response));
+  }
+
+  // Verify that the notification was delivered to the watcher.
+  RunLoopUntilIdle();
+  EXPECT_EQ(1u, watcher_impl.received_commits.size());
+  EXPECT_TRUE(watcher_impl.pending_on_new_commit_callback);
+
+  // Deliver another commit notificiation from the cloud without calling the
+  // watcher pending callback.
+  {
+    fidl::VectorPtr<cloud_provider::Commit> commits;
+    commits.push_back(cloud_provider::Commit{convert::ToArray("id1"),
+                                             convert::ToArray("data1")});
+    google::protobuf::Timestamp protobuf_timestamp;
+    ASSERT_TRUE(google::protobuf::util::TimeUtil::FromString(
+        "2018-06-26T14:39:24+00:00", &protobuf_timestamp));
+    std::string timestamp;
+    ASSERT_TRUE(protobuf_timestamp.SerializeToString(&timestamp));
+
+    auto response = google::firestore::v1beta1::ListenResponse();
+    ASSERT_TRUE(EncodeCommitBatchWithTimestamp(
+        commits, timestamp,
+        response.mutable_document_change()->mutable_document()));
+    firestore_service_.listen_clients[0]->OnResponse(std::move(response));
+  }
+
+  // Verify that another commit notification was not delivered.
+  RunLoopUntilIdle();
+  EXPECT_EQ(1u, watcher_impl.received_commits.size());
+  EXPECT_TRUE(watcher_impl.pending_on_new_commit_callback);
+
+  // Call the pending callback and verify that the new commit notification was
+  // delivered.
+  watcher_impl.pending_on_new_commit_callback();
+  watcher_impl.pending_on_new_commit_callback = nullptr;
+  RunLoopUntilIdle();
+  EXPECT_EQ(2u, watcher_impl.received_commits.size());
+  EXPECT_EQ("id0", convert::ToString(watcher_impl.received_commits[0].id));
+  EXPECT_EQ("id1", convert::ToString(watcher_impl.received_commits[1].id));
+  EXPECT_TRUE(watcher_impl.pending_on_new_commit_callback);
 }
 
 }  // namespace

@@ -270,11 +270,119 @@ void PageCloudImpl::GetObject(fidl::VectorPtr<uint8_t> id,
 }
 
 void PageCloudImpl::SetWatcher(
-    std::unique_ptr<cloud_provider::Token> /*min_position_token*/,
-    fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> /*watcher*/,
+    std::unique_ptr<cloud_provider::Token> min_position_token,
+    fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
     SetWatcherCallback callback) {
-  FXL_NOTIMPLEMENTED();
-  callback(cloud_provider::Status::INTERNAL_ERROR);
+  std::unique_ptr<google::protobuf::Timestamp> timestamp_or_null;
+  if (min_position_token) {
+    timestamp_or_null = std::make_unique<google::protobuf::Timestamp>();
+    if (!timestamp_or_null->ParseFromString(
+            convert::ToString(min_position_token->opaque_id))) {
+      callback(cloud_provider::Status::ARGUMENT_ERROR);
+      return;
+    }
+  }
+
+  watcher_ = watcher.Bind();
+  watcher_.set_error_handler([this] { ShutDownWatcher(); });
+  watcher_timestamp_or_null_ = std::move(timestamp_or_null);
+  set_watcher_callback_ = std::move(callback);
+
+  ScopedGetCredentials([this](auto call_credentials) mutable {
+    // Initiate the listen RPC. We will receive a call on OnConnected() when the
+    // listen stream is ready.
+    listen_call_handler_ =
+        firestore_service_->Listen(std::move(call_credentials), this);
+  });
+}
+
+void PageCloudImpl::OnConnected() {
+  auto request = google::firestore::v1beta1::ListenRequest();
+  request.set_database(firestore_service_->GetDatabasePath());
+  google::firestore::v1beta1::Target::QueryTarget& query_target =
+      *request.mutable_add_target()->mutable_query();
+  query_target.set_parent(page_path_);
+  auto query = MakeCommitQuery(std::move(watcher_timestamp_or_null_));
+  query_target.mutable_structured_query()->Swap(&query);
+  listen_call_handler_->Write(std::move(request));
+}
+
+void PageCloudImpl::OnResponse(
+    google::firestore::v1beta1::ListenResponse response) {
+  if (response.has_target_change()) {
+    if (response.target_change().target_change_type() ==
+        google::firestore::v1beta1::TargetChange_TargetChangeType_CURRENT) {
+      if (set_watcher_callback_) {
+        set_watcher_callback_(cloud_provider::Status::OK);
+        set_watcher_callback_ = nullptr;
+      }
+    }
+    return;
+  }
+
+  if (response.has_document_change()) {
+    std::string timestamp;
+
+    fidl::VectorPtr<cloud_provider::Commit> commits;
+    if (!DecodeCommitBatch(response.document_change().document(), &commits,
+                           &timestamp)) {
+      watcher_->OnError(cloud_provider::Status::PARSE_ERROR);
+      ShutDownWatcher();
+    }
+
+    cloud_provider::Token token;
+    token.opaque_id = convert::ToArray(timestamp);
+    HandleCommits(std::move(commits), std::move(token));
+  }
+}
+
+void PageCloudImpl::OnFinished(grpc::Status status) {
+  if (status.error_code() == grpc::UNAVAILABLE ||
+      status.error_code() == grpc::UNAUTHENTICATED) {
+    if (watcher_) {
+      watcher_->OnError(cloud_provider::Status::NETWORK_ERROR);
+    }
+    return;
+  }
+  LogGrpcConnectionError(status);
+  watcher_.Unbind();
+}
+
+void PageCloudImpl::HandleCommits(
+    fidl::VectorPtr<cloud_provider::Commit> commits,
+    cloud_provider::Token token) {
+  std::move(commits->begin(), commits->end(),
+            std::back_inserter(*commits_waiting_for_ack_));
+  token_for_waiting_commits_ = std::move(token);
+
+  if (!waiting_for_watcher_to_ack_commits_) {
+    SendWaitingCommits();
+  }
+}
+
+void PageCloudImpl::SendWaitingCommits() {
+  FXL_DCHECK(watcher_);
+  FXL_DCHECK(!commits_waiting_for_ack_->empty());
+  auto token = std::make_unique<cloud_provider::Token>();
+  *token = std::move(token_for_waiting_commits_);
+  watcher_->OnNewCommits(std::move(commits_waiting_for_ack_), std::move(token),
+                         [this] {
+                           waiting_for_watcher_to_ack_commits_ = false;
+                           if (!commits_waiting_for_ack_->empty()) {
+                             SendWaitingCommits();
+                           }
+                         });
+  waiting_for_watcher_to_ack_commits_ = true;
+  commits_waiting_for_ack_->clear();
+}
+
+void PageCloudImpl::ShutDownWatcher() {
+  if (watcher_) {
+    watcher_.Unbind();
+  }
+  if (listen_call_handler_) {
+    listen_call_handler_.reset();
+  }
 }
 
 }  // namespace cloud_provider_firestore
