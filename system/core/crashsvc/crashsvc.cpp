@@ -6,7 +6,10 @@
 #include <fbl/unique_ptr.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
+#include <lib/zx/job.h>
 #include <lib/zx/port.h>
+#include <lib/zx/process.h>
+#include <lib/zx/thread.h>
 #include <lib/zx/time.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -15,7 +18,7 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls/exception.h>
 
-static bool GetChildKoids(const zx::handle& job, zx_object_info_topic_t child_kind,
+static bool GetChildKoids(const zx::job& job, zx_object_info_topic_t child_kind,
                           fbl::unique_ptr<zx_koid_t[]>* koids, size_t* num_koids) {
     size_t actual = 0;
     size_t available = 0;
@@ -47,14 +50,14 @@ static bool GetChildKoids(const zx::handle& job, zx_object_info_topic_t child_ki
     return true;
 }
 
-static bool FindProcess(const zx::handle& job, zx_koid_t process_koid, zx::handle* out) {
+static bool FindProcess(const zx::job& job, zx_koid_t process_koid, zx::process* out) {
     // Search this job for the process.
     fbl::unique_ptr<zx_koid_t[]> child_koids;
     size_t num_koids;
     if (GetChildKoids(job, ZX_INFO_JOB_PROCESSES, &child_koids, &num_koids)) {
         for (size_t i = 0; i < num_koids; ++i) {
             if (child_koids[i] == process_koid) {
-                zx::handle process;
+                zx::process process;
                 if (job.get_child(child_koids[i], ZX_RIGHT_SAME_RIGHTS, &process) != ZX_OK) {
                     return false;
                 }
@@ -67,7 +70,7 @@ static bool FindProcess(const zx::handle& job, zx_koid_t process_koid, zx::handl
     // Otherwise, search child jobs in the same way.
     if (GetChildKoids(job, ZX_INFO_JOB_CHILDREN, &child_koids, &num_koids)) {
         for (size_t i = 0; i < num_koids; ++i) {
-            zx::handle child_job;
+            zx::job child_job;
             if (job.get_child(child_koids[i], ZX_RIGHT_SAME_RIGHTS, &child_job) != ZX_OK) {
                 continue;
             }
@@ -80,15 +83,15 @@ static bool FindProcess(const zx::handle& job, zx_koid_t process_koid, zx::handl
     return false;
 }
 
-static void HandOffException(const zx::handle& root_job, const zx::channel& channel,
+static void HandOffException(const zx::job& root_job, const zx::channel& channel,
                              const zx_port_packet_t& packet) {
-    zx::handle exception_process;
+    zx::process exception_process;
     if (!FindProcess(root_job, packet.exception.pid, &exception_process)) {
         fprintf(stderr, "crashsvc: failed to find process for pid=%zu\n", packet.exception.pid);
         return;
     }
 
-    zx::handle exception_thread;
+    zx::thread exception_thread;
     if (exception_process.get_child(packet.exception.tid, ZX_RIGHT_SAME_RIGHTS,
                                     &exception_thread) != ZX_OK) {
         fprintf(stderr, "crashsvc: failed to find thread for tid=%zu\n", packet.exception.tid);
@@ -119,7 +122,7 @@ int main(int argc, char** argv) {
     // - the root job handle
     // - the exception port handle, already bound
     // - a channel on which to write messages when exceptions are encountered
-    zx::handle root_job(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
+    zx::job root_job(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
     if (!root_job.is_valid()) {
         fprintf(stderr, "crashsvc: no root job\n");
         return 1;

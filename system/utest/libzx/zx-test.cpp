@@ -549,6 +549,50 @@ static bool unowned_test() {
     END_TEST;
 }
 
+static bool get_child_test() {
+    BEGIN_TEST;
+
+    {
+        // Verify handle and job overrides of get_child() can find this process
+        // by KOID.
+        zx_info_handle_basic_t info = {};
+        ASSERT_EQ(zx_object_get_info(zx_process_self(), ZX_INFO_HANDLE_BASIC,
+                                     &info, sizeof(info), nullptr, nullptr),
+              ZX_OK);
+
+        zx::handle as_handle;
+        ASSERT_EQ(zx::job::default_job()->get_child(
+                      info.koid, ZX_RIGHT_SAME_RIGHTS, &as_handle), ZX_OK);
+        ASSERT_EQ(validate_handle(as_handle.get()), ZX_OK);
+
+        zx::process as_process;
+        ASSERT_EQ(zx::job::default_job()->get_child(
+                      info.koid, ZX_RIGHT_SAME_RIGHTS, &as_process), ZX_OK);
+        ASSERT_EQ(validate_handle(as_process.get()), ZX_OK);
+    }
+
+    {
+        // Verify handle and thread overrides of get_child() can find this
+        // thread by KOID.
+        zx_info_handle_basic_t info = {};
+        ASSERT_EQ(zx_object_get_info(zx_thread_self(), ZX_INFO_HANDLE_BASIC,
+                                     &info, sizeof(info), nullptr, nullptr),
+                  ZX_OK);
+
+        zx::handle as_handle;
+        ASSERT_EQ(zx::process::self().get_child(
+                      info.koid, ZX_RIGHT_SAME_RIGHTS, &as_handle), ZX_OK);
+        ASSERT_EQ(validate_handle(as_handle.get()), ZX_OK);
+
+        zx::thread as_thread;
+        ASSERT_EQ(zx::process::self().get_child(
+                      info.koid, ZX_RIGHT_SAME_RIGHTS, &as_thread), ZX_OK);
+        ASSERT_EQ(validate_handle(as_thread.get()), ZX_OK);
+    }
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(libzx_tests)
 RUN_TEST(handle_invalid_test)
 RUN_TEST(handle_close_test)
@@ -574,6 +618,7 @@ RUN_TEST(process_self_test)
 RUN_TEST(vmar_root_self_test)
 RUN_TEST(job_default_test)
 RUN_TEST(unowned_test)
+RUN_TEST(get_child_test)
 END_TEST_CASE(libzx_tests)
 
 int main(int argc, char** argv) {

@@ -49,6 +49,11 @@ public:
         return zx_process_write_memory(get(), vaddr, buffer, len, actual);
     }
 
+    // Provide strongly-typed overload, in addition to get_child(handle*).
+    using task<process>::get_child;
+    zx_status_t get_child(uint64_t koid, zx_rights_t rights,
+                          thread* result) const;
+
     static inline const legacy_unowned<process> self() {
         return legacy_unowned<process>(zx_process_self());
     }

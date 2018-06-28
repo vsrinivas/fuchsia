@@ -153,9 +153,10 @@ public:
     }
 
     zx_status_t get_child(uint64_t koid, zx_rights_t rights,
-                          object<T>* result) const {
-        // Allow for the caller aliasing |result| to |this|.
-        object<T> h;
+                          object<void>* result) const {
+        // Allow for |result| and |this| being the same container, though that
+        // can only happen for |T=void|, due to strict aliasing.
+        object<void> h;
         zx_status_t status = zx_object_get_child(
             value_, koid, rights, h.reset_and_get_address());
         result->reset(h.release());

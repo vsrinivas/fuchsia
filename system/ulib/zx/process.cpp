@@ -27,4 +27,12 @@ zx_status_t process::start(const thread& thread_handle, uintptr_t entry,
     return zx_process_start(get(), thread_handle.get(), entry, stack, arg_handle.release(), arg2);
 }
 
+zx_status_t process::get_child(uint64_t koid, zx_rights_t rights,
+                               thread* result) const {
+    // Assume |result| and |this| are distinct containers, due to strict
+    // aliasing.
+    return zx_object_get_child(
+        value_, koid, rights, result->reset_and_get_address());
+}
+
 } // namespace zx
