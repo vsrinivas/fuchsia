@@ -242,12 +242,7 @@ class PageStorageImpl : public PageStorage {
 
   callback::OperationSerializer commit_serializer_;
 
-#ifndef NDEBUG
-  // Only one commit insertion should be in progress at a time in storage.
-  // |commit_in_progress_| keeps track of whether such an insertion is in
-  // progress.
-  bool commit_in_progress_ = false;
-#endif
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageStorageImpl);
 };
 
 }  // namespace storage
