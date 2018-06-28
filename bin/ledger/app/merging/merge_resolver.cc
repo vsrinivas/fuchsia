@@ -173,9 +173,8 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
   for (const storage::CommitId& id : heads) {
     storage_->GetCommit(id, waiter->NewCallback());
   }
-  waiter->Finalize(TRACE_CALLBACK(
-      std::function<void(storage::Status,
-                         std::vector<std::unique_ptr<const storage::Commit>>)>(
+  waiter->Finalize(
+      TRACE_CALLBACK(
           task_runner_.MakeScoped(fxl::MakeCopyable(
               [this, delayed_status, cleanup = std::move(cleanup),
                tracing = std::move(tracing)](
@@ -225,9 +224,6 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                   storage_->StartMergeCommit(
                       commits[0]->GetId(), commits[1]->GetId(),
                       TRACE_CALLBACK(
-                          std::function<void(
-                              storage::Status,
-                              std::unique_ptr<storage::Journal>)>(
                               task_runner_.MakeScoped(fxl::MakeCopyable(
                                   [this, cleanup = std::move(cleanup),
                                    tracing = std::move(tracing)](
@@ -261,7 +257,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                                               ReportEvent(
                                                   CobaltEvent::COMMITS_MERGED);
                                             }));
-                                  }))),
+                                  })),
                           "ledger", "merge_same_commit_journal"));
                   return;
                 }
@@ -284,8 +280,6 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                     coroutine_service_, storage_, head1->Clone(),
                     head2->Clone(),
                     TRACE_CALLBACK(
-                        std::function<void(
-                            Status, std::unique_ptr<const storage::Commit>)>(
                             task_runner_.MakeScoped(fxl::MakeCopyable(
                                 [this, head1 = std::move(head1),
                                  head2 = std::move(head2),
@@ -327,10 +321,10 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                                       TRACE_CALLBACK(
                                           std::move(strategy_callback),
                                           "ledger", "merge_strategy_merge"));
-                                }))),
+                                })),
                         "ledger", "merge_find_common_ancestor"));
-              }))),
-      "ledger", "merge_get_commit_finalize"));
+              })),
+          "ledger", "merge_get_commit_finalize"));
 }
 
 }  // namespace ledger
