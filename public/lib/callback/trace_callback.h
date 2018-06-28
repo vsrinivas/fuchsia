@@ -87,7 +87,7 @@ class TracingLambda {
   const char* const category_;
   const char* const name_;
   const char* const callback_name_;
-  const C callback_;
+  C callback_;
   mutable bool did_run_or_moved_out_;
   bool trace_enabled_;
 
@@ -127,7 +127,7 @@ constexpr const char* CheckConstantCString(const char* value) {
 // time it's wrapped to the time it completes. Can be used only for callbacks
 // that will be called at most once.
 #define TRACE_CALLBACK(cb, category, name, args...)                            \
-  [&]() {                                                                      \
+  ([&]() mutable {                                                             \
     auto trace_local_cb__ = cb;                                                \
     return (                                                                   \
         TRACE_ENABLED()                                                        \
@@ -140,6 +140,6 @@ constexpr const char* CheckConstantCString(const char* value) {
                   name "_callback", ##args)                                    \
             : ::callback::internal::TraceCallback(                             \
                   std::move(trace_local_cb__)));                               \
-  }()
+  }())
 
 #endif  // LIB_CALLBACK_TRACE_CALLBACK_H_
