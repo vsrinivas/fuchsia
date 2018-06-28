@@ -39,10 +39,8 @@ UserControllerImpl::UserControllerImpl(
   if (!account) {
     // Guest user.
     // Generate a random number to be used in this case.
-    uint32_t random_number;
-    zx_status_t status =
-        zx_cprng_draw_new(&random_number, sizeof random_number);
-    FXL_CHECK(status == ZX_OK);
+    uint32_t random_number = 0;
+    zx_cprng_draw(&random_number, sizeof random_number);
     data_origin = std::string("/data/modular/USER_GUEST_") +
                   std::to_string(random_number);
   } else {

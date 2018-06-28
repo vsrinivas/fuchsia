@@ -223,11 +223,8 @@ std::string GenerateQueueToken() {
   constexpr size_t kCharsPerByte = 2;
   constexpr size_t kByteCount = kBitCount / kBitsPerByte;
   constexpr char kHex[] = "0123456789ABCDEF";
-  static_assert(kByteCount <= ZX_CPRNG_DRAW_MAX_LEN,
-                "Cannot draw more than ZX_CPRNG_DRAW_MAX_LEN at once.");
-  uint8_t bytes[kByteCount];
-  zx_status_t status = zx_cprng_draw_new(bytes, kByteCount);
-  FXL_CHECK(status == ZX_OK);
+  uint8_t bytes[kByteCount] = {};
+  zx_cprng_draw(bytes, kByteCount);
   std::string token(kByteCount * kCharsPerByte, '\0');
   for (size_t i = 0; i < kByteCount; ++i) {
     uint8_t byte = bytes[i];
