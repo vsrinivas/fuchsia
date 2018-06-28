@@ -394,19 +394,15 @@ int MsdIntelDevice::DeviceThreadLoop()
     std::unique_lock<std::mutex> lock(device_request_mutex_, std::defer_lock);
 
     while (true) {
-        if (progress_->work_outstanding()) {
-            DLOG("waiting with timeout");
-            // When the semaphore wait returns the semaphore will be reset.
-            // The reset may race with subsequent enqueue/signals on the semaphore,
-            // which is fine because we process everything available in the queue
-            // before returning here to wait.
-            bool timed_out = !device_request_semaphore_->Wait(kTimeoutMs);
-            if (timed_out)
-                HangCheckTimeout();
-        } else {
-            DLOG("waiting, no timeout");
-            device_request_semaphore_->Wait();
-        }
+        auto timeout = std::chrono::duration_cast<std::chrono::milliseconds>(
+            progress_->GetHangcheckTimeout(kTimeoutMs, std::chrono::steady_clock::now()));
+        // When the semaphore wait returns the semaphore will be reset.
+        // The reset may race with subsequent enqueue/signals on the semaphore,
+        // which is fine because we process everything available in the queue
+        // before returning here to wait.
+        bool timed_out = !device_request_semaphore_->Wait(timeout.count());
+        if (timed_out)
+            HangCheckTimeout();
 
         while (true) {
             lock.lock();
@@ -463,7 +459,7 @@ void MsdIntelDevice::ProcessCompletedCommandBuffers()
         hardware_status_page(RENDER_COMMAND_STREAMER)->read_sequence_number();
     render_engine_cs_->ProcessCompletedCommandBuffers(sequence_number);
 
-    progress_->Completed(sequence_number);
+    progress_->Completed(sequence_number, std::chrono::steady_clock::now());
 }
 
 magma::Status MsdIntelDevice::ProcessInterrupts(uint64_t interrupt_time_ns,

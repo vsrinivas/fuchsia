@@ -121,7 +121,7 @@ private:
     void batch_submitted(uint32_t sequence_number) override
     {
         DASSERT(progress_);
-        progress_->Submitted(sequence_number);
+        progress_->Submitted(sequence_number, std::chrono::steady_clock::now());
     }
 
     // MsdIntelConnection::Owner
