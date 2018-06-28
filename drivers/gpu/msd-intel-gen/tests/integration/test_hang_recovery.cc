@@ -79,12 +79,12 @@ public:
                 break;
             case FAULT:
                 // Intel won't actually fault because bad gpu addresses are valid
-                EXPECT_TRUE(list.WaitForCompletion(1200));
+                EXPECT_TRUE(list.WaitForCompletion(2000));
                 EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_get_error(connection_));
                 EXPECT_EQ(0xdeadbeef, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
                 break;
             case HANG:
-                EXPECT_TRUE(list.WaitForCompletion(1200));
+                EXPECT_TRUE(list.WaitForCompletion(2000));
                 EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_get_error(connection_));
                 EXPECT_EQ(kValue, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
                 break;
