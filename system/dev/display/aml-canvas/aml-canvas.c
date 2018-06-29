@@ -131,7 +131,8 @@ static zx_status_t aml_canvas_free(void* ctx, uint8_t canvas_idx) {
 
     mtx_lock(&canvas->lock);
 
-    zx_handle_close(canvas->pmt_handle[canvas_idx]);
+    zx_pmt_unpin(canvas->pmt_handle[canvas_idx]);
+    canvas->pmt_handle[canvas_idx] = ZX_HANDLE_INVALID;
 
     mtx_unlock(&canvas->lock);
     return ZX_OK;
