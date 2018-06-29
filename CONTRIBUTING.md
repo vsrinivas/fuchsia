@@ -74,7 +74,56 @@ Test: Added test X
 Changes to Zircon, Garnet, Peridot, and Topaz require a "Test:" line in the
 commit message.
 
-Specifically, commit messages must contain one of {test, tests, tested, testing}
+We normally expect all changes that modify behavior to include a test that
+demonstrates (some aspect of) the behavior change. The test label should name
+the test that was added or modified by the change:
+
+```
+Test: SandboxMetadata.ParseRapidJson
+```
+
+Some behavior changes are not appropriate to test in an automated fashion. In
+those cases, the test label should describe the manual testing performed by the
+author:
+
+```
+Test: Manually tested that the keyboard still worked after unplugging and
+      replugging the USB connector.
+```
+
+In some cases, we are not able to test certain behavior changes because we lack
+some particular piece of infrastructure. In that case, we should have an issue
+in the tracker about creating that infrastructure and the test label shoud
+mention the bug number in addition to describing how the change was manually
+tested:
+
+```
+Test: Manually tested that [...]. Automated testing needs US-XXXX
+```
+
+If the change does not change behavior, the test line should indicate that you
+did not intend to change any behavior:
+
+```
+Test: No behavior change
+```
+
+If there's a test suite that validates that your change did not change behavior,
+you can mention that test suite as well:
+
+```
+Test: blobfs-test
+```
+
+Alternatively, if the change involves updating a dependency for which the commit
+queue should provide appropriate acceptance testing, the test label should defer
+to the commit queue:
+
+```
+Test: CQ
+```
+
+Syntactically, commit messages must contain one of {test, tests, tested, testing}
 followed by ':' or '='. Any case (e.g., "TEST" or "Test") works.
 
 All of these are valid:
