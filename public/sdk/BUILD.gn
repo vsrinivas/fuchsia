@@ -52,6 +52,7 @@ sdk("garnet") {
     "//third_party/boringssl:ssl_sdk",
     "//zircon/public/lib/async:async_sdk",
     "//zircon/public/lib/async-default:async-default_sdk",
+    "//zircon/public/lib/backtrace:backtrace_sdk",
     "//zircon/public/lib/fdio:fdio_sdk",
     "//zircon/public/sysroot:sysroot_sdk",
     "//zircon/public/tool/bootserver:bootserver_sdk($host_toolchain)",
