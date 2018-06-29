@@ -114,6 +114,10 @@ H264Decoder::~H264Decoder() {
   io_buffer_release(&codec_data_);
   io_buffer_release(&sei_data_buffer_);
   io_buffer_release(&secondary_firmware_);
+  for (auto& frame : video_frames_) {
+    owner_->FreeCanvas(std::move(frame.y_canvas));
+    owner_->FreeCanvas(std::move(frame.uv_canvas));
+  }
 }
 
 zx_status_t H264Decoder::ResetHardware() {
@@ -282,13 +286,12 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
                                           uint32_t height) {
   // TODO: Hold onto frames that are pending in a client (if the stream is
   // currently switching).
+  for (auto& frame : video_frames_) {
+    owner_->FreeCanvas(std::move(frame.y_canvas));
+    owner_->FreeCanvas(std::move(frame.uv_canvas));
+  }
   video_frames_.clear();
   for (uint32_t i = 0; i < frame_count; ++i) {
-    // Try to avoid overlapping with any framebuffers.
-    // TODO(ZX-2154): Use canvas driver to allocate indices.
-    constexpr uint32_t kCanvasOffset = 5;
-    uint32_t y_index = i * 2 + kCanvasOffset;
-    uint32_t uv_index = y_index + 1;
     auto frame = std::make_unique<VideoFrame>();
     zx_status_t status =
         io_buffer_init(&frame->buffer, owner_->bti(), width * height * 3 / 2,
@@ -303,17 +306,21 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
     frame->width = width;
     frame->height = height;
 
-    uint32_t y_addr = truncate_to_32(io_buffer_phys(&frame->buffer));
-    uint32_t uv_addr = y_addr + frame->uv_plane_offset;
+    auto y_canvas = owner_->ConfigureCanvas(&frame->buffer, 0, frame->stride,
+                                            frame->height, 0, 0);
+    auto uv_canvas =
+        owner_->ConfigureCanvas(&frame->buffer, frame->uv_plane_offset,
+                                frame->stride, frame->height / 2, 0, 0);
+    if (!y_canvas || !uv_canvas) {
+      return ZX_ERR_NO_MEMORY;
+    }
 
-    owner_->ConfigureCanvas(y_index, y_addr, frame->stride, frame->height, 0,
-                            0);
-    owner_->ConfigureCanvas(uv_index, uv_addr, frame->stride, frame->height / 2,
-                            0, 0);
     AncNCanvasAddr::Get(i)
-        .FromValue((uv_index << 16) | (uv_index << 8) | (y_index))
+        .FromValue((uv_canvas->index() << 16) | (uv_canvas->index() << 8) |
+                   (y_canvas->index()))
         .WriteTo(owner_->dosbus());
-    video_frames_.push_back(std::move(frame));
+    video_frames_.push_back(
+        {std::move(frame), std::move(y_canvas), std::move(uv_canvas)});
   }
   return ZX_OK;
 }
@@ -392,7 +399,7 @@ void H264Decoder::ReceivedFrames(uint32_t frame_count) {
       hit_eos = true;
 
     if (notifier_)
-      notifier_(video_frames_[buffer_index].get());
+      notifier_(video_frames_[buffer_index].frame.get());
     DLOG("Got buffer %d error %d error_count %d slice_type %d offset %x\n",
          buffer_index, pic_info.error(), error_count, slice_type,
          pic_info.stream_offset());

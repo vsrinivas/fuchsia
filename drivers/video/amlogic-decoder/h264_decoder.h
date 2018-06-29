@@ -23,6 +23,12 @@ class H264Decoder : public VideoDecoder {
   void SetFrameReadyNotifier(FrameReadyNotifier notifier) override;
 
  private:
+  struct ReferenceFrame {
+    std::unique_ptr<VideoFrame> frame;
+    std::unique_ptr<CanvasEntry> y_canvas;
+    std::unique_ptr<CanvasEntry> uv_canvas;
+  };
+
   zx_status_t ResetHardware();
   zx_status_t LoadSecondaryFirmware(const uint8_t* data,
                                     uint32_t firmware_size);
@@ -40,7 +46,7 @@ class H264Decoder : public VideoDecoder {
   bool fatal_error_ = false;
 
   FrameReadyNotifier notifier_;
-  std::vector<std::unique_ptr<VideoFrame>> video_frames_;
+  std::vector<ReferenceFrame> video_frames_;
 };
 
 #endif  // H264_DECODER_H_

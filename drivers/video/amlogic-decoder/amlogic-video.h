@@ -9,6 +9,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/protocol/canvas.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
 #include <zircon/errors.h>
@@ -38,9 +39,11 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   zx_handle_t bti() override { return bti_.get(); }
   DeviceType device_type() override { return device_type_; }
   FirmwareBlob* firmware_blob() override { return firmware_.get(); }
-  zx_status_t ConfigureCanvas(uint32_t id, uint32_t addr, uint32_t width,
-                              uint32_t height, uint32_t wrap,
-                              uint32_t blockmode) override;
+  std::unique_ptr<CanvasEntry> ConfigureCanvas(io_buffer_t* io_buffer,
+                                               uint32_t offset, uint32_t width,
+                                               uint32_t height, uint32_t wrap,
+                                               uint32_t blockmode) override;
+  void FreeCanvas(std::unique_ptr<CanvasEntry> canvas) override;
   DecoderCore* core() override { return core_.get(); }
 
   // DecoderCore::Owner implementation.
@@ -61,6 +64,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   zx_device_t* parent_ = nullptr;
   platform_device_protocol_t pdev_;
+  canvas_protocol_t canvas_;
   DeviceType device_type_ = DeviceType::kUnknown;
   io_buffer_t mmio_cbus_ = {};
   io_buffer_t mmio_dosbus_ = {};

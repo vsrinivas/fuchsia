@@ -448,34 +448,6 @@ REGISTER_NAME(DmcReqCtrl, DmcRegisterIo, 0x0)
   DEF_BIT(13, vdec);
 };
 
-REGISTER_NAME(DmcCavLutDatal, DmcRegisterIo, 0x12)
-    DEF_FIELD(28, 0, addr) // Shifted down by 3
-    DEF_FIELD(31, 29, width_lower) // Shifted down by 3
-};
-
-REGISTER_NAME(DmcCavLutDatah, DmcRegisterIo, 0x13)
-    DEF_FIELD(8, 0, width_upper) // Shifted down by 6
-    DEF_FIELD(21, 9, height)
-    DEF_BIT(22, wrap_x)
-    DEF_BIT(23, wrap_y)
-    DEF_FIELD(25, 24, block_mode)
-    DEF_FIELD(29, 26, endianness)
-
-    enum {
-        kBlockModeLinear = 0,
-        kBlockMode32x32 = 1
-    };
-};
-
-REGISTER_NAME(DmcCavLutAddr, DmcRegisterIo, 0x14)
-    DEF_BIT(9, wr_en)
-    DEF_BIT(8, rd_en)
-    DEF_FIELD(7, 0, index)
-};
-
-DEFINE_REGISTER(DmcCavLutRdataL, DmcRegisterIo, 0x15)
-DEFINE_REGISTER(DmcCavLutRdataH, DmcRegisterIo, 0x16)
-
 DEFINE_REGISTER(Reset0Register, ResetRegisterIo, 0x1101);
 REGISTER_NAME(Reset1Register, ResetRegisterIo, 0x1102)
   DEF_BIT(8, parser)

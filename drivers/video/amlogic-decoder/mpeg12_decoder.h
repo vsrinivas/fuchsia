@@ -25,13 +25,18 @@ class Mpeg12Decoder : public VideoDecoder {
   void SetFrameReadyNotifier(FrameReadyNotifier notifier) override;
 
  private:
+  struct ReferenceFrame {
+    std::unique_ptr<VideoFrame> frame;
+    std::unique_ptr<CanvasEntry> y_canvas;
+    std::unique_ptr<CanvasEntry> uv_canvas;
+  };
   zx_status_t InitializeVideoBuffers();
   void ResetHardware();
 
   Owner* owner_;
 
   FrameReadyNotifier notifier_;
-  std::vector<std::unique_ptr<VideoFrame>> video_frames_;
+  std::vector<ReferenceFrame> video_frames_;
   io_buffer_t workspace_buffer_ = {};
 };
 

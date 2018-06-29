@@ -36,6 +36,10 @@ Mpeg12Decoder::~Mpeg12Decoder() {
   owner_->core()->StopDecoding();
   owner_->core()->WaitForIdle();
   io_buffer_release(&workspace_buffer_);
+  for (auto& frame : video_frames_) {
+    owner_->FreeCanvas(std::move(frame.y_canvas));
+    owner_->FreeCanvas(std::move(frame.uv_canvas));
+  }
 }
 
 void Mpeg12Decoder::SetFrameReadyNotifier(FrameReadyNotifier notifier) {
@@ -153,7 +157,7 @@ void Mpeg12Decoder::HandleInterrupt() {
       "Received buffer index: %d info: %x, offset: %x, width: %d, height: %d\n",
       index, info.reg_value(), offset.reg_value(), width, height);
 
-  auto& frame = video_frames_[index];
+  auto& frame = video_frames_[index].frame;
   frame->width = std::min(width, kMaxWidth);
   frame->height = std::min(height, kMaxHeight);
   if (notifier_)
@@ -189,24 +193,21 @@ zx_status_t Mpeg12Decoder::InitializeVideoBuffers() {
     frame->uv_plane_offset = kMaxWidth * kMaxHeight;
     io_buffer_cache_flush(&frame->buffer, 0, buffer_size);
 
-    uint32_t buffer_start = truncate_to_32(io_buffer_phys(&frame->buffer));
-    // Try to avoid overlapping with any framebuffers.
-    // TODO(ZX-2154): Use canvas driver to allocate indices.
-    constexpr uint32_t kCanvasOffset = 5;
-    // Linux code uses 32x32 block size (and different endianness) for these for
-    // some reason.
-    uint32_t y_index = 2 * i + kCanvasOffset;
-    uint32_t uv_index = y_index + 1;
-    // NV12 output format.
-    owner_->ConfigureCanvas(y_index, buffer_start, kMaxWidth, kMaxHeight, 0,
-                            DmcCavLutDatah::kBlockModeLinear);
-    owner_->ConfigureCanvas(uv_index, buffer_start + frame->uv_plane_offset,
-                            kMaxWidth, kMaxHeight / 2, 0,
-                            DmcCavLutDatah::kBlockModeLinear);
+    auto y_canvas = owner_->ConfigureCanvas(&frame->buffer, 0, frame->stride,
+                                            kMaxHeight, 0, 0);
+    auto uv_canvas =
+        owner_->ConfigureCanvas(&frame->buffer, frame->uv_plane_offset,
+                                frame->stride, kMaxHeight / 2, 0, 0);
+    if (!y_canvas || !uv_canvas) {
+      DECODE_ERROR("Failed to allocate canvases\n");
+      return ZX_ERR_NO_MEMORY;
+    }
     AvScratch::Get(i)
-        .FromValue(y_index | (uv_index << 8) | (uv_index << 16))
+        .FromValue(y_canvas->index() | (uv_canvas->index() << 8) |
+                   (uv_canvas->index() << 16))
         .WriteTo(owner_->dosbus());
-    video_frames_.push_back(std::move(frame));
+    video_frames_.push_back(
+        {std::move(frame), std::move(y_canvas), std::move(uv_canvas)});
   }
   return ZX_OK;
 }

@@ -135,33 +135,46 @@ zx_status_t AmlogicVideo::InitializeStreamBuffer(bool use_parser) {
   return ZX_OK;
 }
 
-zx_status_t AmlogicVideo::ConfigureCanvas(uint32_t id, uint32_t addr,
-                                          uint32_t width, uint32_t height,
-                                          uint32_t wrap, uint32_t blockmode) {
-  // TODO(ZX-2154): Use real canvas driver.
+std::unique_ptr<CanvasEntry> AmlogicVideo::ConfigureCanvas(
+    io_buffer_t* io_buffer, uint32_t offset, uint32_t width, uint32_t height,
+    uint32_t wrap, uint32_t blockmode) {
   assert(width % 8 == 0);
-  assert(addr % 8 == 0);
-  DmcCavLutDatal::Get()
-      .FromValue(0)
-      .set_addr(addr >> 3)
-      .set_width_lower((width / 8) & 7)
-      .WriteTo(dmc_.get());
+  assert(offset % 8 == 0);
+  canvas_info_t info;
+  info.height = height;
+  info.stride_bytes = width;
+  info.wrap = wrap;
+  info.blkmode = blockmode;
+  enum {
+    kSwapBytes = 1,
+    kSwapWords = 2,
+    kSwapDoublewords = 4,
+    kSwapQuadwords = 8,
+  };
+  info.endianness =
+      kSwapBytes | kSwapWords |
+      kSwapDoublewords;  // 64-bit big-endian to little-endian conversion.
 
-  uint32_t endianness = 0x7;  // 64-bit big-endian to little-endian conversion.
-  DmcCavLutDatah::Get()
-      .FromValue(0)
-      .set_width_upper((width / 8) >> 3)
-      .set_height(height)
-      .set_block_mode(blockmode)
-      .set_endianness(endianness)
-      .WriteTo(dmc_.get());
-  DmcCavLutAddr::Get().FromValue(0).set_wr_en(true).set_index(id).WriteTo(
-      dmc_.get());
+  zx::unowned_vmo vmo(io_buffer->vmo_handle);
+  zx::vmo dup_vmo;
+  zx_status_t status = vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+  if (status != ZX_OK) {
+    DECODE_ERROR("Failed to duplicate handle, status: %d\n", status);
+    return nullptr;
+  }
+  uint8_t idx;
+  status = canvas_config(&canvas_, dup_vmo.release(), offset, &info, &idx);
+  if (status != ZX_OK) {
+    DECODE_ERROR("Failed to configure canvas, status: %d\n", status);
+    return nullptr;
+  }
 
-  // Wait for write to go through.
-  DmcCavLutDatah::Get().ReadFrom(dmc_.get());
+  return std::make_unique<CanvasEntry>(idx);
+}
 
-  return ZX_OK;
+void AmlogicVideo::FreeCanvas(std::unique_ptr<CanvasEntry> canvas) {
+  canvas_free(&canvas_, canvas->index());
+  canvas->invalidate();
 }
 
 // This parser handles MPEG elementary streams.
@@ -332,6 +345,11 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to get parent protocol");
     return ZX_ERR_NO_MEMORY;
+  }
+  status = device_get_protocol(parent_, ZX_PROTOCOL_CANVAS, &canvas_);
+  if (status != ZX_OK) {
+    DECODE_ERROR("Could not get video CANVAS protocol\n");
+    return status;
   }
   pdev_device_info_t info;
   status = pdev_get_device_info(&pdev_, &info);
