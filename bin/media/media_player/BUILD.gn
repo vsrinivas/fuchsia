@@ -38,6 +38,7 @@ executable("media_player_bin") {
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/ui/views/fidl:v1",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
 }
@@ -84,6 +85,7 @@ executable("tests") {
     "//garnet/public/lib/media/transport",
     "//garnet/public/lib/ui/view_framework:view_provider",
     "//garnet/public/lib/url",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/hid",
   ]
 }

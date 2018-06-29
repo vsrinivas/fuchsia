@@ -48,6 +48,7 @@ executable("bin") {
     "//garnet/public/lib/netstack/fidl",
     "//garnet/public/lib/svc/cpp",
     "//third_party/rapidjson",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
   ]
 }

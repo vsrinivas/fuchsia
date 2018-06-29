@@ -30,5 +30,6 @@ executable("bin") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/audio",
     "//garnet/public/lib/media/fidl",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }

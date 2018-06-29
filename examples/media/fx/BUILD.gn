@@ -13,6 +13,7 @@ executable("fx") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/media/timeline",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/audio-utils",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/vmo-utils",

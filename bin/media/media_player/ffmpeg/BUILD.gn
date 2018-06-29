@@ -58,6 +58,7 @@ source_set("ffmpeg") {
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/media/timeline",
     "//zircon/public/lib/trace",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 
   defines = [

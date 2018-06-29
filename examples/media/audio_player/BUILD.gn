@@ -18,6 +18,7 @@ executable("audio_player") {
     "//garnet/public/lib/media/fidl:media_player",
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/url",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
   ]
 }

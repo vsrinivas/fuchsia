@@ -29,6 +29,7 @@ executable("bin") {
     "//garnet/public/lib/mdns/fidl",
     "//garnet/public/lib/netstack/fidl",
     "//garnet/public/lib/svc/cpp",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 

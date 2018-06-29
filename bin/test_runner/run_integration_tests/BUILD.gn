@@ -13,6 +13,6 @@ executable("run_integration_tests") {
     "//garnet/public/lib/test_runner/cpp",
     "//garnet/public/lib/test_runner/fidl",
     "//third_party/rapidjson",
-    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }

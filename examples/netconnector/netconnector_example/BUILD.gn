@@ -21,6 +21,7 @@ executable("netconnector_example") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/netconnector/cpp",
     "//garnet/public/lib/netconnector/fidl",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
   ]
 }

@@ -18,6 +18,7 @@ executable("tones") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/media/timeline",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/vmo-utils",

@@ -21,7 +21,7 @@ executable("dev_auth_provider") {
     "//garnet/public/lib/auth/fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
 }
-

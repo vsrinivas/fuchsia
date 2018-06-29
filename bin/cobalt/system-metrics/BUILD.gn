@@ -15,6 +15,7 @@ executable("system-metrics") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/fidl/cobalt:cobalt",
   ]
 }

@@ -43,6 +43,7 @@ executable("bin") {
     "//garnet/public/lib/netconnector/cpp",
     "//garnet/public/lib/netconnector/fidl",
     "//garnet/public/lib/url",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 

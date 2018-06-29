@@ -35,6 +35,7 @@ source_set("lib") {
     "//third_party/cobalt/util:pem_util",
     "//third_party/grpc:grpc++",
     "//third_party/protobuf:protobuf_lite",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/fidl/cobalt:cobalt",
   ]
 }

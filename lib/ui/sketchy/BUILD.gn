@@ -11,5 +11,6 @@ source_set("sketchy") {
   public_deps = [
     "//garnet/lib/ui/gfx",
     "//garnet/lib/ui/scenic",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }

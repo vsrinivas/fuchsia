@@ -102,6 +102,7 @@ executable("audio_server") {
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/media/transport",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/audio-proto-utils",
     "//zircon/public/lib/dispatcher-pool",
     "//zircon/public/lib/fbl",

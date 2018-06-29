@@ -19,6 +19,7 @@ executable("timezone_bin") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/time_zone/fidl",
     "//third_party/icu",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 

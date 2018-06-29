@@ -35,5 +35,6 @@ executable("bin") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/fidl",
     "//zircon/public/lib/vmo-utils",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
