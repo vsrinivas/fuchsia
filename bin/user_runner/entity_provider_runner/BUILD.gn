@@ -42,6 +42,7 @@ executable("entity_provider_runner_unittest") {
   deps = [
     ":entity_provider_runner",
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/cpp/testing:fake_launcher",
     "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -49,7 +50,6 @@ executable("entity_provider_runner_unittest") {
     "//peridot/bin/user_runner/message_queue",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/testing:fake_agent_runner_storage",
-    "//peridot/lib/testing:fake_launcher",
     "//peridot/lib/testing:mock_base",
     "//peridot/lib/testing:test_with_ledger",
     "//peridot/public/lib:fidl",

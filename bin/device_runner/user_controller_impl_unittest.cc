@@ -6,14 +6,15 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 
+#include "lib/app/cpp/testing/fake_launcher.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "peridot/lib/fidl/clone.h"
-#include "peridot/lib/testing/fake_launcher.h"
 
 namespace modular {
 namespace testing {
 namespace {
 
+using ::fuchsia::sys::testing::FakeLauncher;
 using UserControllerImplTest = gtest::TestLoopFixture;
 
 TEST_F(UserControllerImplTest, StartUserRunner) {
@@ -26,7 +27,7 @@ TEST_F(UserControllerImplTest, StartUserRunner) {
   auto token_provider_factory_request = token_provider_factory_ptr.NewRequest();
 
   bool callback_called = false;
-  launcher.RegisterApplication(
+  launcher.RegisterComponent(
       url, [&callback_called](
                fuchsia::sys::LaunchInfo launch_info,
                fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {

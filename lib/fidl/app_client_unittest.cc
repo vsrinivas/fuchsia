@@ -8,13 +8,14 @@
 #include <test/peridot/lib/fidl/appclient/cpp/fidl.h>
 
 #include "gtest/gtest.h"
+#include "lib/app/cpp/testing/fake_launcher.h"
 #include "lib/gtest/test_loop_fixture.h"
-#include "peridot/lib/testing/fake_launcher.h"
 
 namespace modular {
 namespace testing {
 namespace {
 
+using ::fuchsia::sys::testing::FakeLauncher;
 using ::test::peridot::lib::fidl::appclient::TerminateService;
 
 constexpr char kServiceName[] = "service1";
@@ -57,7 +58,7 @@ class AppClientTest : public gtest::TestLoopFixture {};
 TEST_F(AppClientTest, BaseRun_Success) {
   bool callback_called = false;
   FakeLauncher launcher;
-  launcher.RegisterApplication(
+  launcher.RegisterComponent(
       kTestUrl,
       [&callback_called](
           fuchsia::sys::LaunchInfo launch_info,
@@ -74,7 +75,7 @@ TEST_F(AppClientTest, BaseTerminate_Success) {
   FakeLauncher launcher;
   TestComponentController controller;
   bool callback_called = false;
-  launcher.RegisterApplication(
+  launcher.RegisterComponent(
       kTestUrl,
       [&callback_called, &controller](
           fuchsia::sys::LaunchInfo launch_info,
@@ -101,7 +102,7 @@ TEST_F(AppClientTest, BaseTerminate_Success) {
 TEST_F(AppClientTest, Run_Success) {
   bool callback_called = false;
   FakeLauncher launcher;
-  launcher.RegisterApplication(
+  launcher.RegisterComponent(
       kTestUrl,
       [&callback_called](
           fuchsia::sys::LaunchInfo launch_info,
@@ -124,7 +125,7 @@ TEST_F(AppClientTest, RunWithParams_Success) {
 
   bool callback_called = false;
   FakeLauncher launcher;
-  launcher.RegisterApplication(
+  launcher.RegisterComponent(
       kTestUrl,
       [&callback_called](
           fuchsia::sys::LaunchInfo launch_info,

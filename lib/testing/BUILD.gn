@@ -116,22 +116,6 @@ source_set("test_with_ledger") {
   ]
 }
 
-source_set("fake_launcher") {
-  testonly = true
-
-  sources = [
-    "fake_launcher.cc",
-    "fake_launcher.h",
-  ]
-
-  deps = [
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/app/fidl",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-  ]
-}
-
 source_set("fake_agent_runner_storage") {
   testonly = true
 

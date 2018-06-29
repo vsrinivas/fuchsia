@@ -16,6 +16,7 @@
 #include "lib/agent/cpp/agent_impl.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/service_provider_impl.h"
+#include "lib/app/cpp/testing/fake_launcher.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
@@ -25,13 +26,14 @@
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/testing/fake_agent_runner_storage.h"
-#include "peridot/lib/testing/fake_launcher.h"
 #include "peridot/lib/testing/mock_base.h"
 #include "peridot/lib/testing/test_with_ledger.h"
 
 namespace modular {
 namespace testing {
 namespace {
+
+using ::fuchsia::sys::testing::FakeLauncher;
 
 class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
  public:
@@ -188,7 +190,7 @@ class MyEntityProvider : AgentImpl::Delegate,
 TEST_F(EntityProviderRunnerTest, Basic) {
   std::unique_ptr<MyEntityProvider> dummy_agent;
   constexpr char kMyAgentUrl[] = "file:///my_agent";
-  launcher()->RegisterApplication(
+  launcher()->RegisterComponent(
       kMyAgentUrl,
       [&dummy_agent](
           fuchsia::sys::LaunchInfo launch_info,

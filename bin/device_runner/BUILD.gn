@@ -114,11 +114,11 @@ executable("user_controller_impl_unittest") {
   deps = [
     ":lib",
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/cpp/testing:fake_launcher",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
     "//peridot/lib/fidl:clone",
-    "//peridot/lib/testing:fake_launcher",
     "//third_party/googletest:gtest_main",
   ]
 }
