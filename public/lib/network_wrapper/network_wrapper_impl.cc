@@ -22,7 +22,7 @@ const int32_t kInvalidResponseErrorCode = -320;
 
 class NetworkWrapperImpl::RunningRequest {
  public:
-  explicit RunningRequest(std::function<http::URLRequest()> request_factory)
+  explicit RunningRequest(fit::function<http::URLRequest()> request_factory)
       : request_factory_(std::move(request_factory)), redirect_count_(0u) {}
 
   void Cancel() {
@@ -39,7 +39,7 @@ class NetworkWrapperImpl::RunningRequest {
     }
   }
 
-  void set_callback(std::function<void(http::URLResponse)> callback) {
+  void set_callback(fit::function<void(http::URLResponse)> callback) {
     // Once this class calls its callback, it must notify its container.
     callback_ = [this, callback = std::move(callback)](
                     http::URLResponse response) mutable {
@@ -54,8 +54,8 @@ class NetworkWrapperImpl::RunningRequest {
     };
   }
 
-  void set_on_empty(const fxl::Closure& on_empty_callback) {
-    on_empty_callback_ = on_empty_callback;
+  void set_on_empty(fit::closure on_empty_callback) {
+    on_empty_callback_ = std::move(on_empty_callback);
   }
 
  private:
@@ -142,9 +142,9 @@ class NetworkWrapperImpl::RunningRequest {
     return response;
   }
 
-  std::function<http::URLRequest()> request_factory_;
-  std::function<void(http::URLResponse)> callback_;
-  fxl::Closure on_empty_callback_;
+  fit::function<http::URLRequest()> request_factory_;
+  fit::function<void(http::URLResponse)> callback_;
+  fit::closure on_empty_callback_;
   std::string next_url_;
   uint32_t redirect_count_;
   http::HttpService* http_service_;
@@ -154,7 +154,7 @@ class NetworkWrapperImpl::RunningRequest {
 
 NetworkWrapperImpl::NetworkWrapperImpl(
     async_t* async, std::unique_ptr<backoff::Backoff> backoff,
-    std::function<http::HttpServicePtr()> http_service_factory)
+    fit::function<http::HttpServicePtr()> http_service_factory)
     : backoff_(std::move(backoff)),
       http_service_factory_(std::move(http_service_factory)),
       task_runner_(async) {}
@@ -162,8 +162,8 @@ NetworkWrapperImpl::NetworkWrapperImpl(
 NetworkWrapperImpl::~NetworkWrapperImpl() {}
 
 fxl::RefPtr<callback::Cancellable> NetworkWrapperImpl::Request(
-    std::function<http::URLRequest()> request_factory,
-    std::function<void(http::URLResponse)> callback) {
+    fit::function<http::URLRequest()> request_factory,
+    fit::function<void(http::URLResponse)> callback) {
   RunningRequest& request =
       running_requests_.emplace(std::move(request_factory));
 

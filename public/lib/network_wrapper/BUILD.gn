@@ -14,6 +14,7 @@ source_set("network_wrapper") {
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/net/oldhttp/fidl",
+    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
 }

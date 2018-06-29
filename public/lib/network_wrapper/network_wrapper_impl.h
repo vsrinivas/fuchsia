@@ -16,14 +16,15 @@ namespace network_wrapper {
 
 class NetworkWrapperImpl : public NetworkWrapper {
  public:
-  NetworkWrapperImpl(
-      async_t* async, std::unique_ptr<backoff::Backoff> backoff,
-      std::function<::fuchsia::net::oldhttp::HttpServicePtr()> http_service_factory);
+  NetworkWrapperImpl(async_t* async, std::unique_ptr<backoff::Backoff> backoff,
+                     fit::function<::fuchsia::net::oldhttp::HttpServicePtr()>
+                         http_service_factory);
   ~NetworkWrapperImpl() override;
 
   fxl::RefPtr<callback::Cancellable> Request(
-      std::function<::fuchsia::net::oldhttp::URLRequest()> request_factory,
-      std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback) override;
+      fit::function<::fuchsia::net::oldhttp::URLRequest()> request_factory,
+      fit::function<void(::fuchsia::net::oldhttp::URLResponse)> callback)
+      override;
 
  private:
   class RunningRequest;
@@ -34,7 +35,8 @@ class NetworkWrapperImpl : public NetworkWrapper {
 
   std::unique_ptr<backoff::Backoff> backoff_;
   bool in_backoff_ = false;
-  std::function<::fuchsia::net::oldhttp::HttpServicePtr()> http_service_factory_;
+  fit::function<::fuchsia::net::oldhttp::HttpServicePtr()>
+      http_service_factory_;
   ::fuchsia::net::oldhttp::HttpServicePtr http_service_;
   callback::AutoCleanableSet<RunningRequest> running_requests_;
 

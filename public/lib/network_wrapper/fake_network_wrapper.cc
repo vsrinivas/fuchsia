@@ -46,8 +46,8 @@ void FakeNetworkWrapper::SetStringResponse(const std::string& body,
 }
 
 fxl::RefPtr<callback::Cancellable> FakeNetworkWrapper::Request(
-    std::function<http::URLRequest()> request_factory,
-    std::function<void(http::URLResponse)> callback) {
+    fit::function<http::URLRequest()> request_factory,
+    fit::function<void(http::URLResponse)> callback) {
   std::unique_ptr<bool> cancelled = std::make_unique<bool>(false);
 
   bool* cancelled_ptr = cancelled.get();
@@ -57,15 +57,16 @@ fxl::RefPtr<callback::Cancellable> FakeNetworkWrapper::Request(
     return cancellable;
   }
 
-  async::PostTask(async_, [this, cancelled_ptr,
-                           callback = cancellable->WrapCallback(callback),
-                           request_factory = std::move(request_factory)] {
-    if (!*cancelled_ptr) {
-      request_received_ = fidl::MakeOptional(request_factory());
-      callback(std::move(*response_to_return_));
-      response_to_return_.reset();
-    }
-  });
+  async::PostTask(async_,
+                  [this, cancelled_ptr,
+                   callback = cancellable->WrapCallback(std::move(callback)),
+                   request_factory = std::move(request_factory)] {
+                    if (!*cancelled_ptr) {
+                      request_received_ = fidl::MakeOptional(request_factory());
+                      callback(std::move(*response_to_return_));
+                      response_to_return_.reset();
+                    }
+                  });
   return cancellable;
 }
 
