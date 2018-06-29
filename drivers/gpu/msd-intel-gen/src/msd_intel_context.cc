@@ -241,14 +241,6 @@ magma_status_t msd_context_execute_command_buffer(msd_context_t* ctx, msd_buffer
 
 void msd_context_release_buffer(msd_context_t* context, msd_buffer_t* buffer)
 {
-    auto abi_context = MsdIntelAbiContext::cast(context);
-    auto abi_buffer = MsdIntelAbiBuffer::cast(buffer);
-
-    std::shared_ptr<MsdIntelConnection> connection = abi_context->ptr()->connection().lock();
-    if (!connection)
-        return;
-
-    connection->ReleaseBuffer(abi_buffer->ptr());
 }
 
 magma_status_t msd_context_execute_immediate_commands(msd_context_t* ctx, uint64_t commands_size,

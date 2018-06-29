@@ -568,7 +568,9 @@ magma::Status MsdIntelDevice::ProcessReleaseBuffer(std::shared_ptr<AddressSpace>
     TRACE_DURATION("magma", "ProcessReleaseBuffer");
 
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
-    address_space->RemoveCachedMappings(buffer.get());
+
+    uint32_t released_count;
+    address_space->ReleaseBuffer(buffer->platform_buffer(), &released_count);
 
     return MAGMA_STATUS_OK;
 }

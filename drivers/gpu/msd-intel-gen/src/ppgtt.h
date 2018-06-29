@@ -34,8 +34,7 @@ public:
     class Owner : public AddressSpace::Owner {
     };
 
-    static std::unique_ptr<PerProcessGtt> Create(Owner* owner,
-                                                 std::shared_ptr<GpuMappingCache> cache);
+    static std::unique_ptr<PerProcessGtt> Create(Owner* owner);
 
     uint64_t Size() const override { return kSize; }
 
@@ -273,8 +272,7 @@ public:
     Pml4Table* pml4_table() { return pml4_table_.get(); }
 
 private:
-    PerProcessGtt(Owner* owner, std::unique_ptr<Pml4Table> pml4_table,
-                  std::shared_ptr<GpuMappingCache> cache);
+    PerProcessGtt(Owner* owner, std::unique_ptr<Pml4Table> pml4_table);
 
     static constexpr uint64_t kSize = kPml4Entries * kPageDirectoryPtrEntries *
                                       kPageDirectoryEntries * kPageTableEntries * PAGE_SIZE;

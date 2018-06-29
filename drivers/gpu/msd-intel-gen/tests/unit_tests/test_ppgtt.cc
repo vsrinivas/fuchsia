@@ -90,7 +90,7 @@ public:
     static void Init()
     {
         auto owner = std::make_unique<AddressSpaceOwner>();
-        auto ppgtt = PerProcessGtt::Create(owner.get(), GpuMappingCache::Create());
+        auto ppgtt = PerProcessGtt::Create(owner.get());
 
         check_pte_entries_clear(ppgtt.get(), (1ull << 48) - PAGE_SIZE, PAGE_SIZE);
         check_pte_entries_clear(ppgtt.get(), (1ull << 47) - PAGE_SIZE, PAGE_SIZE);
@@ -104,7 +104,7 @@ public:
     static void Insert()
     {
         auto owner = std::make_unique<AddressSpaceOwner>();
-        auto ppgtt = PerProcessGtt::Create(owner.get(), GpuMappingCache::Create());
+        auto ppgtt = PerProcessGtt::Create(owner.get());
 
         std::vector<uint64_t> addr(2);
         std::vector<std::unique_ptr<magma::PlatformBuffer>> buffer(2);

@@ -16,7 +16,7 @@ public:
         virtual magma::PlatformPciDevice* platform_device() = 0;
     };
 
-    Gtt(Owner* owner) : AddressSpace(owner, ADDRESS_SPACE_GGTT, nullptr) {}
+    Gtt(Owner* owner) : AddressSpace(owner, ADDRESS_SPACE_GGTT) {}
 
     virtual bool Init(uint64_t gtt_size) = 0;
 

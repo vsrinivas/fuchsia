@@ -72,26 +72,54 @@ AddressSpace::GetSharedGpuMapping(std::shared_ptr<AddressSpace> address_space,
     DASSERT(address_space);
     DASSERT(buffer);
 
-    std::shared_ptr<GpuMapping> mapping = buffer->FindBufferMapping(address_space, offset, length);
-    if (!mapping) {
-        std::unique_ptr<GpuMapping> new_mapping =
-            AddressSpace::MapBufferGpu(address_space, buffer, offset, length);
-        if (!new_mapping)
-            return DRETP(nullptr, "Couldn't map buffer to gtt");
-        mapping = buffer->ShareBufferMapping(std::move(new_mapping));
+    auto range = address_space->mappings_by_buffer_.equal_range(buffer->platform_buffer());
+    for (auto iter = range.first; iter != range.second; iter++) {
+        auto& mapping = iter->second->second;
+        if (mapping->offset() == offset && mapping->length() == GetMappedSize(length))
+            return mapping;
     }
-    if (address_space->cache_)
-        address_space->cache_->AddMapping(mapping);
+
+    std::shared_ptr<GpuMapping> mapping =
+        AddressSpace::MapBufferGpu(address_space, buffer, offset, length);
+    if (!mapping)
+        return DRETP(nullptr, "Couldn't map buffer");
+
+    if (!address_space->AddMapping(mapping))
+        return DRETP(nullptr, "Couldn't add mapping");
+
     return mapping;
 }
 
-void AddressSpace::RemoveCachedMappings(MsdIntelBuffer* buffer)
+bool AddressSpace::AddMapping(std::shared_ptr<GpuMapping> gpu_mapping)
 {
-    if (!cache_)
-        return;
+    auto iter = mappings_.upper_bound(gpu_mapping->gpu_addr());
+    if (iter != mappings_.end() &&
+        (gpu_mapping->gpu_addr() + gpu_mapping->length() > iter->second->gpu_addr()))
+        return DRETF(false, "Mapping overlaps existing mapping");
+    // Find the mapping with the highest VA that's <= this.
+    if (iter != mappings_.begin()) {
+        --iter;
+        // Check if the previous mapping overlaps this.
+        if (iter->second->gpu_addr() + iter->second->length() > gpu_mapping->gpu_addr())
+            return DRETF(false, "Mapping overlaps existing mapping");
+    }
 
-    std::vector<std::shared_ptr<GpuMapping>> mappings = buffer->GetSharedMappings(this);
-    for (auto& mapping : mappings) {
-        cache_->RemoveMapping(mapping);
+    std::pair<map_container_t::iterator, bool> result =
+        mappings_.insert({gpu_mapping->gpu_addr(), gpu_mapping});
+    DASSERT(result.second);
+
+    mappings_by_buffer_.insert({gpu_mapping->buffer()->platform_buffer(), result.first});
+
+    return true;
+}
+
+void AddressSpace::ReleaseBuffer(magma::PlatformBuffer* buffer, uint32_t* released_count_out)
+{
+    *released_count_out = 0;
+    auto range = mappings_by_buffer_.equal_range(buffer);
+    for (auto iter = range.first; iter != range.second;) {
+        mappings_.erase(iter->second);
+        iter = mappings_by_buffer_.erase(iter);
+        *released_count_out += 1;
     }
 }

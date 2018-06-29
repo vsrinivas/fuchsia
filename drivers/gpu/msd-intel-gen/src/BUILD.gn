@@ -24,8 +24,6 @@ source_set("src") {
     "global_context.h",
     "gpu_mapping.cc",
     "gpu_mapping.h",
-    "gpu_mapping_cache.cc",
-    "gpu_mapping_cache.h",
     "gtt.h",
     "gtt_shim.cc",
     "interrupt_manager.h",

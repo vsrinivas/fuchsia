@@ -47,15 +47,16 @@ magma_status_t msd_connection_commit_buffer(msd_connection_t* connection, msd_bu
     return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
-void msd_connection_release_buffer(msd_connection_t* connection, msd_buffer_t* buffer) {}
+void msd_connection_release_buffer(msd_connection_t* connection, msd_buffer_t* buffer)
+{
+    MsdIntelAbiConnection::cast(connection)
+        ->ptr()
+        ->ReleaseBuffer(MsdIntelAbiBuffer::cast(buffer)->ptr());
+}
 
 std::unique_ptr<MsdIntelConnection> MsdIntelConnection::Create(Owner* owner,
                                                                msd_client_id_t client_id)
 {
-    std::unique_ptr<GpuMappingCache> cache;
-#if MSD_INTEL_ENABLE_MAPPING_CACHE
-    cache = GpuMappingCache::Create();
-#endif
     return std::unique_ptr<MsdIntelConnection>(
-        new MsdIntelConnection(owner, PerProcessGtt::Create(owner, std::move(cache)), client_id));
+        new MsdIntelConnection(owner, PerProcessGtt::Create(owner), client_id));
 }

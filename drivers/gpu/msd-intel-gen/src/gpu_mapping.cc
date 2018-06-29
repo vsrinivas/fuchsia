@@ -16,8 +16,6 @@ GpuMapping::GpuMapping(std::shared_ptr<AddressSpace> address_space,
 
 GpuMapping::~GpuMapping()
 {
-    buffer_->RemoveSharedMapping(this);
-
     std::shared_ptr<AddressSpace> address_space = address_space_.lock();
     if (!address_space) {
         DLOG("Failed to lock address space");

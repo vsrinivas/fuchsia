@@ -30,26 +30,10 @@ public:
         return platform_buf_.get();
     }
 
-    // Retains a weak reference to the given mapping so it can be reused.
-    std::shared_ptr<GpuMapping> ShareBufferMapping(std::unique_ptr<GpuMapping> mapping);
-
-    // Returns exact match mappings only.
-    std::shared_ptr<GpuMapping> FindBufferMapping(std::shared_ptr<AddressSpace> address_space,
-                                                  uint64_t offset, uint64_t length);
-
-    // Returns a vector containing retained mappings for the given address space.
-    std::vector<std::shared_ptr<GpuMapping>> GetSharedMappings(AddressSpace* address_space);
-
-    // Removes the given |mapping| from the retained mappings list.
-    void RemoveSharedMapping(GpuMapping* mapping);
-
-    uint32_t shared_mapping_count() { return shared_mappings_.size(); }
-
 private:
     MsdIntelBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf);
 
     std::unique_ptr<magma::PlatformBuffer> platform_buf_;
-    std::unordered_map<GpuMapping*, std::weak_ptr<GpuMapping>> shared_mappings_;
 };
 
 class MsdIntelAbiBuffer : public msd_buffer_t {

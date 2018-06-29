@@ -6,10 +6,11 @@
 #define ADDRESS_SPACE_H
 
 #include "gpu_mapping.h"
-#include "gpu_mapping_cache.h"
 #include "msd_intel_buffer.h"
 #include "pagetable.h"
 #include "platform_bus_mapper.h"
+#include <map>
+#include <unordered_map>
 
 // Base class for various address spaces.
 class AddressSpace {
@@ -19,10 +20,7 @@ public:
         virtual magma::PlatformBusMapper* GetBusMapper() = 0;
     };
 
-    AddressSpace(Owner* owner, AddressSpaceType type, std::shared_ptr<GpuMappingCache> cache)
-        : owner_(owner), type_(type), cache_(cache)
-    {
-    }
+    AddressSpace(Owner* owner, AddressSpaceType type) : owner_(owner), type_(type) {}
 
     virtual ~AddressSpace() {}
 
@@ -57,17 +55,24 @@ public:
     GetSharedGpuMapping(std::shared_ptr<AddressSpace> address_space,
                         std::shared_ptr<MsdIntelBuffer> buffer, uint64_t offset, uint64_t length);
 
+    bool AddMapping(std::shared_ptr<GpuMapping> gpu_mapping);
+    void ReleaseBuffer(magma::PlatformBuffer* buffer, uint32_t* released_count_out);
+
     static uint64_t GetMappedSize(uint64_t buffer_size)
     {
         return magma::round_up(buffer_size, PAGE_SIZE);
     }
 
-    void RemoveCachedMappings(MsdIntelBuffer* buffer);
-
 private:
     Owner* owner_;
     AddressSpaceType type_;
-    std::shared_ptr<GpuMappingCache> cache_;
+    using map_container_t = std::map<gpu_addr_t, std::shared_ptr<GpuMapping>>;
+    // Container of gpu mappings by address
+    map_container_t mappings_;
+    // Container of references to entries in mappings_ by buffer;
+    // useful for cleaning up mappings when connections go away, and when
+    // buffers are released.
+    std::unordered_multimap<magma::PlatformBuffer*, map_container_t::iterator> mappings_by_buffer_;
 };
 
 #endif // ADDRESS_SPACE_H

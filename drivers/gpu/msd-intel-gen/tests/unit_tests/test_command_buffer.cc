@@ -4,7 +4,6 @@
 
 #include "test_command_buffer.h"
 #include "command_buffer.h"
-#include "gpu_mapping_cache.h"
 #include "helper/command_buffer_helper.h"
 #include "helper/platform_device_helper.h"
 #include "mock/mock_address_space.h"
@@ -44,9 +43,8 @@ public:
         ASSERT_TRUE(TestCommandBuffer::MapResourcesGpu(cmd_buf_.get(), addr_space, mappings));
 
         uint32_t i = 0;
-        gpu_addr_t addr;
         for (auto& map : mappings) {
-            addr = map->gpu_addr();
+            gpu_addr_t addr = map->gpu_addr();
             EXPECT_TRUE(addr_space->is_allocated(addr));
             EXPECT_FALSE(addr_space->is_clear(addr));
             EXPECT_GE(addr_space->allocated_size(addr), helper_->resources()[i++]->size());
@@ -55,7 +53,14 @@ public:
         TestCommandBuffer::UnmapResourcesGpu(cmd_buf_.get());
 
         for (auto& map : mappings) {
-            addr = map->gpu_addr();
+            gpu_addr_t addr = map->gpu_addr();
+            MsdIntelBuffer* buffer = map->buffer();
+
+            uint32_t released_count;
+            addr_space->ReleaseBuffer(buffer->platform_buffer(), &released_count);
+            EXPECT_EQ(1u, released_count);
+            EXPECT_TRUE(addr_space->is_allocated(addr));
+
             map.reset();
             EXPECT_FALSE(addr_space->is_allocated(addr));
         }

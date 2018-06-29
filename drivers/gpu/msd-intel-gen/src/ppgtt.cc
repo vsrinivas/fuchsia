@@ -124,20 +124,17 @@ std::unique_ptr<PerProcessGtt::Pml4Table> PerProcessGtt::Pml4Table::Create(Owner
     return table;
 }
 
-std::unique_ptr<PerProcessGtt> PerProcessGtt::Create(Owner* owner,
-                                                     std::shared_ptr<GpuMappingCache> cache)
+std::unique_ptr<PerProcessGtt> PerProcessGtt::Create(Owner* owner)
 {
     auto pml4_table = Pml4Table::Create(owner);
     if (!pml4_table)
         return DRETP(nullptr, "failed to create pml4table");
 
-    return std::unique_ptr<PerProcessGtt>(
-        new PerProcessGtt(owner, std::move(pml4_table), std::move(cache)));
+    return std::unique_ptr<PerProcessGtt>(new PerProcessGtt(owner, std::move(pml4_table)));
 }
 
-PerProcessGtt::PerProcessGtt(Owner* owner, std::unique_ptr<Pml4Table> pml4_table,
-                             std::shared_ptr<GpuMappingCache> cache)
-    : AddressSpace(owner, ADDRESS_SPACE_PPGTT, cache), pml4_table_(std::move(pml4_table))
+PerProcessGtt::PerProcessGtt(Owner* owner, std::unique_ptr<Pml4Table> pml4_table)
+    : AddressSpace(owner, ADDRESS_SPACE_PPGTT), pml4_table_(std::move(pml4_table))
 {
     // TODO(MA-465): remove this
     allocator_ = magma::SimpleAllocator::Create(0, Size());
