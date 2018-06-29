@@ -56,6 +56,14 @@ class Thread : public ClientObject {
   virtual Err Step() = 0;
   virtual void StepInstruction() = 0;
 
+  // Executes this thread until the given frame returns. The frame must be
+  // one of the ones from GetFrames() (i.e. a current frame from this thread).
+  //
+  // The callback will be executed when setup completes, not when execution
+  // leaves the given frame.
+  virtual void Finish(const Frame* frame,
+                      std::function<void(const Err&)> cb) = 0;
+
   // Access to the stack frames for this thread at its current stopped
   // position. If a thread is running, the stack frames are not available.
   //

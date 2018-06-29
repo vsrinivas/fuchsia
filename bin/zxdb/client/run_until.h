@@ -20,4 +20,11 @@ void RunUntil(Process* process, InputLocation location,
 void RunUntil(Thread* thread, InputLocation location,
               std::function<void(const Err&)> cb);
 
+// Runs the given thread until both its location match and checks the stack.
+// It will stop at the location only when the current stack frame is strictly
+// greater than the input end_sp (this means the stack has grown up to a
+// higher frame than was input).
+void RunUntil(Thread* thread, InputLocation location, uint64_t end_sp,
+              std::function<void(const Err&)> cb);
+
 }  // namespace zxdb

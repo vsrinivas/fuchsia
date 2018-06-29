@@ -8,6 +8,7 @@
 
 #include "garnet/bin/zxdb/client/client_object.h"
 #include "garnet/public/lib/fxl/macros.h"
+#include "garnet/public/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
@@ -19,6 +20,8 @@ class Frame : public ClientObject {
   explicit Frame(Session* session);
   virtual ~Frame();
 
+  fxl::WeakPtr<Frame> GetWeakPtr();
+
   // Guaranteed non-null.
   virtual Thread* GetThread() const = 0;
 
@@ -29,7 +32,12 @@ class Frame : public ClientObject {
   // GetLocation().address() since it doesn't need to be symbolized.
   virtual uint64_t GetAddress() const = 0;
 
+  // Returns the stack pointer at this location.
+  virtual uint64_t GetStackPointer() const = 0;
+
  private:
+  fxl::WeakPtrFactory<Frame> weak_factory_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(Frame);
 };
 

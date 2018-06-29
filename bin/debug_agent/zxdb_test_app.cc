@@ -23,6 +23,14 @@ void DebugBreak() {
 #endif
 }
 
+// This function is helpful to test handling of duplicate functions on the
+// stack for e.g. "finish".
+__attribute__ ((noinline)) void RecursiveCall(int times) {
+  if (times > 0)
+    RecursiveCall(times - 1);
+  zx_debug_write("hello\n", 6);  // Prevent tail recursion optimizations.
+}
+
 void PrintHello() {
   const char msg[] = "Hello from zxdb_test_app!\n";
   zx_debug_write(msg, strlen(msg));
@@ -44,5 +52,6 @@ int main(int arch, char* argv[]) {
 
   DebugBreak();
   PrintHello();
+  RecursiveCall(3);
   return 0;
 }

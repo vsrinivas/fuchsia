@@ -21,6 +21,7 @@ class DummyFrame : public Frame {
   Thread* GetThread() const override { return nullptr; }
   const Location& GetLocation() const override { return location_; }
   uint64_t GetAddress() const override { return location_.address(); }
+  uint64_t GetStackPointer() const override { return 0x12345678; }
 
  private:
   Location location_;

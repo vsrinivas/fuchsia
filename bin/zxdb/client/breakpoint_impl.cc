@@ -212,10 +212,6 @@ void BreakpointImpl::WillUnloadModuleSymbols(Process* process,
 
 void BreakpointImpl::WillDestroyTarget(Target* target) {
   if (target == settings_.scope_target) {
-    // By the time the target is destroyed, the process should be gone, and
-    // all registrations for breakpoints.
-    FXL_DCHECK(!HasEnabledLocation());
-
     // As with threads going away, when the target goes away for a
     // target-scoped breakpoint, convert to a disabled system-wide breakpoint.
     settings_.scope = BreakpointSettings::Scope::kSystem;

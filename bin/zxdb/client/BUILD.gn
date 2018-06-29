@@ -114,6 +114,7 @@ source_set("tests") {
     "session_unittest.cc",
     "string_util_unittest.cc",
     "target_impl_unittest.cc",
+    "thread_impl_unittest.cc",
   ]
 
   deps = [

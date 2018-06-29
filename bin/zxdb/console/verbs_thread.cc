@@ -108,6 +108,53 @@ Err DoContinue(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
+// finish ----------------------------------------------------------------------
+
+const char kFinishShortHelp[] =
+    "finish / fi: Finish execution of a stack frame.";
+const char kFinishHelp[] =
+    R"(finish / fi
+
+  Alias: "fi"
+
+  Resume thread execution until the selected stack frame returns. This means
+  that the current function call will execute normally until it finished.
+
+  See also "until".
+
+Examples
+
+  fi
+  finish
+      Exit the currently selected stack frame (see "frame").
+
+  pr 1 t 4 fi
+  process 1 thead 4 finish
+      Applies "finish" to process 1, thread 4.
+
+  f 2 fi
+  frame 2 finish
+      Exit frame 2, leaving program execution in what was frame 3. Try also
+      "frame 3 until" which will do the same thing when the function is not
+      recursive.
+)";
+Err DoFinish(ConsoleContext* context, const Command& cmd) {
+  // This command allows "frame" which AssertStoppedThreadCommand doesn't,
+  // so pass "false" to disabled noun checking and manually check ourselves.
+  Err err = AssertStoppedThreadCommand(context, cmd, false, "finish");
+  if (err.has_error())
+    return err;
+  err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
+  if (err.has_error())
+    return err;
+
+  cmd.thread()->Finish(cmd.frame(), [](const Err& err) {
+    if (err.has_error())
+      Console::get()->Output(err);
+  });
+  return Err();
+}
+
 // pause -----------------------------------------------------------------------
 
 const char kPauseShortHelp[] = "pause / pa: Pause a thread or process.";
@@ -183,6 +230,8 @@ const char kStepShortHelp[] =
     "step / s: Step one source line, going into subroutines.";
 const char kStepHelp[] =
     R"(step
+
+  Alias: "s"
 
   When a thread is stopped, "step" will execute one source line and stop the
   thread again. This will follow execution into subroutines. If the thread is
@@ -316,6 +365,8 @@ const char kUntilHelp[] =
   Normally this operation will apply only to the current thread. To apply to
   all threads in a process, use "process until" (see the examples below).
 
+  See also "finish".
+
 Location arguments
 
   Current frame's address (no input)
@@ -338,7 +389,7 @@ Examples
       stop when the current function returns. The exception is if the code
       in the calling function is called recursively from the current location,
       in which case the next invocation will stop ("until" does not match
-      stack frames on break).
+      stack frames on break). See "finish" for a stack-aware version.
 
   u 24
   until 24
@@ -423,6 +474,8 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kContinue] =
       VerbRecord(&DoContinue, {"continue", "c"}, kContinueShortHelp,
                  kContinueHelp, SourceAffinity::kSource);
+  (*verbs)[Verb::kFinish] =
+      VerbRecord(&DoFinish, {"finish", "fi"}, kFinishShortHelp, kFinishHelp);
   (*verbs)[Verb::kPause] =
       VerbRecord(&DoPause, {"pause", "pa"}, kPauseShortHelp, kPauseHelp);
   (*verbs)[Verb::kRegs] =

@@ -13,7 +13,7 @@ namespace zxdb {
 class ThreadImpl;
 
 // A frame is lazily symbolized.
-class FrameImpl : public Frame {
+class FrameImpl final : public Frame {
  public:
   FrameImpl(ThreadImpl* thread, const debug_ipc::StackFrame& stack_frame,
             Location location);
@@ -23,6 +23,7 @@ class FrameImpl : public Frame {
   Thread* GetThread() const override;
   const Location& GetLocation() const override;
   uint64_t GetAddress() const override;
+  uint64_t GetStackPointer() const override;
 
  private:
   void EnsureSymbolized();

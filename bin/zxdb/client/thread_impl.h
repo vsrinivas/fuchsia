@@ -31,9 +31,13 @@ class ThreadImpl : public Thread {
                      std::function<void(const Err&)> cb) override;
   Err Step() override;
   void StepInstruction() override;
+  void Finish(const Frame* frame, std::function<void(const Err&)> cb) override;
   std::vector<Frame*> GetFrames() const override;
   bool HasAllFrames() const override;
   void SyncFrames(std::function<void()> callback) override;
+  void GetRegisters(
+      std::function<void(const Err&, std::vector<debug_ipc::Register>)>)
+      override;
 
   // Updates the thread metadata with new state from the agent. Neither
   // function issues any notifications. When an exception is hit for example,
@@ -52,18 +56,19 @@ class ThreadImpl : public Thread {
   // thread stops.
   void OnException(const debug_ipc::NotifyException& notify);
 
-  virtual void GetRegisters(
-      std::function<void(const Err&, std::vector<debug_ipc::Register>)>)
-      override;
-
  private:
-  // Symbolizes the given stack frames, saves them, and issues the callback.
-  // The callback will only be issued if the Thread object is still valid.
+  // Saves the new frames for this thread.
   void SaveFrames(const std::vector<debug_ipc::StackFrame>& frames,
-                  std::function<void()> callback);
+                  bool have_all);
 
   // Invlidates the cached frames.
   void ClearFrames();
+
+  // Executes "Finish" once the stack frames are available. The IP/SP should
+  // correspond to the frame we're stepping OUT of (not the one we're stepping
+  // TO).
+  void FinishWithFrames(uint64_t frame_ip, uint64_t frame_sp,
+                        std::function<void(const Err&)> cb);
 
   ProcessImpl* const process_;
   uint64_t koid_;

@@ -5,6 +5,7 @@
 #include "garnet/bin/zxdb/client/thread_impl.h"
 
 #include <iostream>
+#include <limits>
 
 #include "garnet/bin/zxdb/client/frame_impl.h"
 #include "garnet/bin/zxdb/client/input_location.h"
@@ -92,6 +93,29 @@ void ThreadImpl::StepInstruction() {
       request, [](const Err& err, debug_ipc::ResumeReply) {});
 }
 
+void ThreadImpl::Finish(const Frame* frame,
+                        std::function<void(const Err&)> cb) {
+  // This stores the frame as IP/SP rather than as a weak frame pointer. If the
+  // thread stops in between the time this was issued and the time the callback
+  // runs, lower frames will be cleared even if they're still valid. Therefore,
+  // the only way we can re-match the stack frame is by IP/SP.
+  auto on_have_frames = [
+    weak_thread = weak_factory_.GetWeakPtr(), cb = std::move(cb),
+    ip = frame->GetAddress(), sp = frame->GetStackPointer()
+  ]() {
+    if (weak_thread) {
+      weak_thread->FinishWithFrames(ip, sp, std::move(cb));
+    } else {
+      cb(Err("The tread destroyed before \"Finish\" could be executed."));
+    }
+  };
+
+  if (!HasAllFrames())
+    SyncFrames(on_have_frames);
+  else
+    on_have_frames();
+}
+
 std::vector<Frame*> ThreadImpl::GetFrames() const {
   std::vector<Frame*> frames;
   frames.reserve(frames_.size());
@@ -107,21 +131,29 @@ void ThreadImpl::SyncFrames(std::function<void()> callback) {
   request.process_koid = process_->GetKoid();
   request.thread_koid = koid_;
 
-  ClearFrames();
-
   session()->remote_api()->Backtrace(
-      request, [callback, thread = weak_factory_.GetWeakPtr()](
+      request, [ callback, thread = weak_factory_.GetWeakPtr() ](
                    const Err& err, debug_ipc::BacktraceReply reply) {
         if (!thread)
           return;
+        thread->SaveFrames(reply.frames, true);
+        if (callback)
+          callback();
+      });
+}
 
-        thread->SaveFrames(reply.frames, [thread, callback]() {
-          // SaveFrames will only issue the callback if the ThreadImpl is
-          // still in scope so we don't need a weak pointer here.
-          thread->has_all_frames_ = true;
-          if (callback)
-            callback();
-        });
+void ThreadImpl::GetRegisters(
+    std::function<void(const Err&, std::vector<debug_ipc::Register>)>
+        callback) {
+  debug_ipc::RegistersRequest request;
+  request.process_koid = process_->GetKoid();
+  request.thread_koid = koid_;
+
+  session()->remote_api()->Registers(
+      request, [ process = weak_factory_.GetWeakPtr(), callback ](
+                   const Err& err, debug_ipc::RegistersReply reply) {
+        if (callback)
+          callback(err, std::move(reply.registers));
       });
 }
 
@@ -149,35 +181,45 @@ void ThreadImpl::SetMetadataFromException(
   // After an exception the thread should be blocked.
   FXL_DCHECK(state_ == debug_ipc::ThreadRecord::State::kBlocked);
 
-  has_all_frames_ = false;
-
   std::vector<debug_ipc::StackFrame> frames;
   frames.push_back(notify.frame);
-  SaveFrames(frames, std::function<void()>());
+  SaveFrames(frames, false);
 }
 
 void ThreadImpl::DispatchExceptionNotification(
-      debug_ipc::NotifyException::Type type,
-      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
+    debug_ipc::NotifyException::Type type,
+    const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
   for (auto& observer : observers())
     observer.OnThreadStopped(this, type, hit_breakpoints);
 }
 
 void ThreadImpl::SaveFrames(const std::vector<debug_ipc::StackFrame>& frames,
-                            std::function<void()> callback) {
-  // TODO(brettw) need to preserve stack frames that haven't changed.
-  std::vector<uint64_t> addresses;
-  for (const auto& frame : frames)
-    addresses.push_back(frame.ip);
+                            bool have_all) {
+  // The goal is to preserve pointer identity for frames. If a frame is the
+  // same, weak pointers to it should remain valid.
+  using IpSp = std::pair<uint64_t, uint64_t>;
+  std::map<IpSp, std::unique_ptr<FrameImpl>> existing;
+  for (auto& cur : frames_) {
+    IpSp key(cur->GetAddress(), cur->GetStackPointer());
+    existing[key] = std::move(cur);
+  }
 
   frames_.clear();
   for (size_t i = 0; i < frames.size(); i++) {
-    frames_.push_back(std::make_unique<FrameImpl>(
-        this, frames[i], Location(Location::State::kAddress, frames[i].ip)));
+    IpSp key(frames[i].ip, frames[i].sp);
+    auto found = existing.find(key);
+    if (found == existing.end()) {
+      // New frame we haven't seen.
+      frames_.push_back(std::make_unique<FrameImpl>(
+          this, frames[i], Location(Location::State::kAddress, frames[i].ip)));
+    } else {
+      // Can re-use existing pointer.
+      frames_.push_back(std::move(found->second));
+      existing.erase(found);
+    }
   }
 
-  if (callback)
-    callback();
+  has_all_frames_ = have_all;
 }
 
 void ThreadImpl::ClearFrames() {
@@ -191,19 +233,35 @@ void ThreadImpl::ClearFrames() {
     observer.OnThreadFramesInvalidated(this);
 }
 
-void ThreadImpl::GetRegisters(
-    std::function<void(const Err&, std::vector<debug_ipc::Register>)>
-        callback) {
-  debug_ipc::RegistersRequest request;
-  request.process_koid = process_->GetKoid();
-  request.thread_koid = koid_;
+void ThreadImpl::FinishWithFrames(uint64_t frame_ip, uint64_t frame_sp,
+                                  std::function<void(const Err&)> cb) {
+  // Find the frame corresponding to the reqested one.
+  constexpr size_t kNotFound = std::numeric_limits<size_t>::max();
+  size_t requested_index = kNotFound;
+  for (size_t i = 0; i < frames_.size(); i++) {
+    if (frames_[i]->GetAddress() == frame_ip &&
+        frames_[i]->GetStackPointer() == frame_sp) {
+      requested_index = i;
+      break;
+    }
+  }
+  if (requested_index == kNotFound) {
+    cb(Err("The stack frame was destroyed before \"finish\" could run."));
+    return;
+  }
 
-  session()->remote_api()->Registers(
-      request, [process = weak_factory_.GetWeakPtr(), callback](
-                   const Err& err, debug_ipc::RegistersReply reply) {
-        if (callback)
-          callback(err, std::move(reply.registers));
-      });
+  if (requested_index == frames_.size() - 1) {
+    // "Finish" from the bottom-most stack frame just continues the
+    // program to completion.
+    Continue();
+    cb(Err());
+    return;
+  }
+
+  // The stack frame to exit to is just the next one up. Be careful to avoid
+  // forcing symbolizing when getting the frame's address.
+  Frame* step_to = frames_[requested_index + 1].get();
+  RunUntil(this, InputLocation(step_to->GetAddress()), frame_sp, std::move(cb));
 }
 
 }  // namespace zxdb

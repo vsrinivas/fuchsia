@@ -29,6 +29,8 @@ const Location& FrameImpl::GetLocation() const {
 
 uint64_t FrameImpl::GetAddress() const { return location_.address(); }
 
+uint64_t FrameImpl::GetStackPointer() const { return stack_frame_.sp; }
+
 void FrameImpl::EnsureSymbolized() {
   if (location_.is_symbolized())
     return;

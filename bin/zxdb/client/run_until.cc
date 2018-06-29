@@ -7,11 +7,11 @@
 #include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/breakpoint_controller.h"
 #include "garnet/bin/zxdb/client/breakpoint_settings.h"
+#include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/input_location.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/process_observer.h"
 #include "garnet/bin/zxdb/client/session.h"
-//#include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/target_observer.h"
 #include "garnet/bin/zxdb/client/thread.h"
@@ -41,7 +41,13 @@ class RunUntilHelper : public ProcessObserver,
                        public BreakpointController {
  public:
   RunUntilHelper(Process* process, InputLocation location, Callback cb);
-  RunUntilHelper(Thread* thread, InputLocation location, Callback cb);
+
+  // Non-zero frame SPs will check the current frame's SP and only trigger the
+  // breakpoint when it matches. A zero SP will ignore the stack and always
+  // trigger at the location.
+  RunUntilHelper(Thread* thread, InputLocation location, uint64_t frame_sp,
+                 Callback cb);
+
   virtual ~RunUntilHelper();
 
   // ProcessObserver implementation:
@@ -63,13 +69,15 @@ class RunUntilHelper : public ProcessObserver,
   // double-deletes.
   void ScheduleDelete();
 
-private:
+ private:
   System* system_;
 
   // Only one of process_ or thread_ will be non-null, according to what
   // type of object this operation is associated with.
   Process* process_ = nullptr;
   Thread* thread_ = nullptr;
+
+  uint64_t frame_sp_ = 0;
 
   Callback set_callback_;
 
@@ -106,9 +114,10 @@ RunUntilHelper::RunUntilHelper(Process* process, InputLocation location,
 }
 
 RunUntilHelper::RunUntilHelper(Thread* thread, InputLocation location,
-                               Callback cb)
+                               uint64_t frame_sp, Callback cb)
     : system_(&thread->session()->system()),
       thread_(thread),
+      frame_sp_(frame_sp),
       set_callback_(std::move(cb)) {
   Process* process = thread->GetProcess();
   process->AddObserver(this);
@@ -123,7 +132,11 @@ RunUntilHelper::RunUntilHelper(Thread* thread, InputLocation location,
   settings.scope_target = process->GetTarget();
   settings.scope_thread = thread;
   settings.location = std::move(location);
-  settings.one_shot = true;
+
+  // Frame-tied triggers can't be one-shot because we need to check the stack
+  // every time it triggers. In the non-frame case the one-shot breakpoint will
+  // be slightly more efficient.
+  settings.one_shot = frame_sp_ == 0;
 
   breakpoint_->SetSettings(settings,
                            [this](const Err& err) { OnSetComplete(err); });
@@ -164,6 +177,32 @@ void RunUntilHelper::WillDestroyProcess(Target* target, Process* process,
 
 BreakpointAction RunUntilHelper::GetBreakpointHitAction(Breakpoint* bp,
                                                         Thread* thread) {
+  FXL_DCHECK(bp == breakpoint_.get());
+  if (!frame_sp_) {
+    // Always stop, not frame specific.
+    ScheduleDelete();
+    return BreakpointAction::kStop;
+  }
+
+  auto frames = thread->GetFrames();
+  if (frames.empty()) {
+    FXL_NOTREACHED();  // Should always have a current frame on stop.
+    return BreakpointAction::kContinue;
+  }
+
+  // The stack grows downward. Want to stop the thread only when the frame is
+  // before (greater than) the input one, which means anything <= should
+  // continue.
+  if (frames[0]->GetStackPointer() <= frame_sp_)
+    return BreakpointAction::kContinue;
+
+  // Got a match. We want to delete the breakpoint but can't because it's the
+  // object that just called into us. Disable it for now and schedule
+  // everything for deletion in the future.
+  BreakpointSettings settings = bp->GetSettings();
+  settings.enabled = false;
+  bp->SetSettings(settings, [](const Err&) {});
+
   ScheduleDelete();
   return BreakpointAction::kStop;
 }
@@ -206,7 +245,12 @@ void RunUntil(Process* process, InputLocation location,
 
 void RunUntil(Thread* thread, InputLocation location,
               std::function<void(const Err&)> cb) {
-  new RunUntilHelper(thread, location, std::move(cb));
+  new RunUntilHelper(thread, location, 0, std::move(cb));
+}
+
+void RunUntil(Thread* thread, InputLocation location, uint64_t frame_sp,
+              std::function<void(const Err&)> cb) {
+  new RunUntilHelper(thread, location, frame_sp, std::move(cb));
 }
 
 }  // namespace zxdb
