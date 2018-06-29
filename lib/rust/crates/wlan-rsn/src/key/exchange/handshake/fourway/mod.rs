@@ -516,7 +516,6 @@ mod tests {
     #[test]
     fn test_nonzero_mic_in_first_msg() {
         // Create a new instance of the 4-Way Handshake in Supplicant role.
-        msg1.key_mic = Bytes::from(vec![0xAA; 16]);
         let pmk = test_util::get_pmk();
         let cfg = Config{
             s_rsne: test_util::get_s_rsne(),
@@ -531,6 +530,7 @@ mod tests {
         // Send first message of Handshake to Supplicant and verify result.
         let a_nonce = test_util::get_nonce();
         let mut msg1 = test_util::get_4whs_msg1(&a_nonce[..], 1);
+        msg1.key_mic = Bytes::from(vec![0xAA; 16]);
         let updates = handshake.on_eapol_key_frame(&msg1)
             .expect("error processing first message");
         assert_eq!(updates.len(), 1);

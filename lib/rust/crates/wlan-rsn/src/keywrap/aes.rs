@@ -4,9 +4,10 @@
 
 use byteorder::{BigEndian, ByteOrder};
 use crypto::aes::{self, KeySize};
-use crypto::blockmodes;
+use crypto::aessafe;
+use crypto::blockmodes::{self, EcbEncryptor, EcbDecryptor, PaddingProcessor};
 use crypto::buffer::{self, WriteBuffer, ReadBuffer};
-use crypto::symmetriccipher::{BlockDecryptor, BlockEncryptor};
+use crypto::symmetriccipher::{BlockDecryptor, BlockEncryptor, Decryptor, Encryptor};
 use keywrap::Algorithm;
 use {Error, Result};
 
@@ -24,6 +25,52 @@ impl NistAes {
             24 => Ok(KeySize::KeySize192),
             32 => Ok(KeySize::KeySize256),
             _ => Err(Error::InvalidAesKeywrapKeySize(key_len)),
+        }
+    }
+}
+
+pub fn ecb_encryptor<X: PaddingProcessor + Send + 'static>(
+    key_size: KeySize,
+    key: &[u8],
+    padding: X) -> Box<Encryptor> {
+    match key_size {
+        KeySize::KeySize128 => {
+            let aes_enc = aessafe::AesSafe128Encryptor::new(key);
+            let enc = Box::new(EcbEncryptor::new(aes_enc, padding));
+            enc
+        }
+        KeySize::KeySize192 => {
+            let aes_enc = aessafe::AesSafe192Encryptor::new(key);
+            let enc = Box::new(EcbEncryptor::new(aes_enc, padding));
+            enc
+        }
+        KeySize::KeySize256 => {
+            let aes_enc = aessafe::AesSafe256Encryptor::new(key);
+            let enc = Box::new(EcbEncryptor::new(aes_enc, padding));
+            enc
+        }
+    }
+}
+
+pub fn ecb_decryptor<X: PaddingProcessor + Send + 'static>(
+    key_size: KeySize,
+    key: &[u8],
+    padding: X) -> Box<Decryptor> {
+    match key_size {
+        KeySize::KeySize128 => {
+            let aes_dec = aessafe::AesSafe128Decryptor::new(key);
+            let dec = Box::new(EcbDecryptor::new(aes_dec, padding));
+            dec
+        }
+        KeySize::KeySize192 => {
+            let aes_dec = aessafe::AesSafe192Decryptor::new(key);
+            let dec = Box::new(EcbDecryptor::new(aes_dec, padding));
+            dec
+        }
+        KeySize::KeySize256 => {
+            let aes_dec = aessafe::AesSafe256Decryptor::new(key);
+            let dec = Box::new(EcbDecryptor::new(aes_dec, padding));
+            dec
         }
     }
 }
@@ -57,7 +104,7 @@ impl Algorithm for NistAes {
                     {
                         let mut read_buf = buffer::RefReadBuffer::new(&aes_block[..]);
                         let mut write_buf = buffer::RefWriteBuffer::new(&mut b[..]);
-                        let mut cipher = aes::ecb_encryptor(
+                        let mut cipher = ecb_encryptor(
                             keysize,
                             key,
                             blockmodes::NoPadding);
@@ -107,7 +154,7 @@ impl Algorithm for NistAes {
                 {
                     let mut read_buf = buffer::RefReadBuffer::new(&aes_block[..]);
                     let mut write_buf = buffer::RefWriteBuffer::new(&mut b[..]);
-                    let mut cipher = aes::ecb_decryptor(
+                    let mut cipher = ecb_decryptor(
                         keysize,
                         key,
                         blockmodes::NoPadding);
