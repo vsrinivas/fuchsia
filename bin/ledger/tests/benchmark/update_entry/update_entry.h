@@ -39,7 +39,6 @@ class UpdateEntryBenchmark {
   void RunSingle(int i, fidl::VectorPtr<uint8_t> key);
   void CommitAndRunNext(int i, fidl::VectorPtr<uint8_t> key);
 
-  void CommitAndShutDown();
   void ShutDown();
   fit::closure QuitLoopClosure();
 

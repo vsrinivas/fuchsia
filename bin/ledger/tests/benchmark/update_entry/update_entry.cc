@@ -101,11 +101,7 @@ void UpdateEntryBenchmark::Run() {
 
 void UpdateEntryBenchmark::RunSingle(int i, fidl::VectorPtr<uint8_t> key) {
   if (i == entry_count_) {
-    if (transaction_size_ > 0) {
-      CommitAndShutDown();
-    } else {
-      ShutDown();
-    }
+    ShutDown();
     return;
   }
 
@@ -120,7 +116,8 @@ void UpdateEntryBenchmark::RunSingle(int i, fidl::VectorPtr<uint8_t> key) {
         }
         TRACE_ASYNC_END("benchmark", "put", i);
         if (transaction_size_ > 0 &&
-            i % transaction_size_ == transaction_size_ - 1) {
+            (i % transaction_size_ == transaction_size_ - 1 ||
+             i + 1 == entry_count_)) {
           CommitAndRunNext(i, std::move(key));
         } else {
           RunSingle(i + 1, std::move(key));
@@ -139,6 +136,10 @@ void UpdateEntryBenchmark::CommitAndRunNext(int i,
     TRACE_ASYNC_END("benchmark", "commit", i / transaction_size_);
     TRACE_ASYNC_END("benchmark", "transaction", i / transaction_size_);
 
+    if (i == entry_count_ - 1) {
+      RunSingle(i + 1, std::move(key));
+      return;
+    }
     page_->StartTransaction(fxl::MakeCopyable(
         [this, i = i + 1, key = std::move(key)](ledger::Status status) mutable {
           if (benchmark::QuitOnError(QuitLoopClosure(), status,
@@ -149,19 +150,6 @@ void UpdateEntryBenchmark::CommitAndRunNext(int i,
           RunSingle(i, std::move(key));
         }));
   }));
-}
-
-void UpdateEntryBenchmark::CommitAndShutDown() {
-  TRACE_ASYNC_BEGIN("benchmark", "commit", entry_count_ / transaction_size_);
-  page_->Commit([this](ledger::Status status) {
-    if (benchmark::QuitOnError(QuitLoopClosure(), status, "Page::Commit")) {
-      return;
-    }
-    TRACE_ASYNC_END("benchmark", "commit", entry_count_ / transaction_size_);
-    TRACE_ASYNC_END("benchmark", "transaction",
-                    entry_count_ / transaction_size_);
-    ShutDown();
-  });
 }
 
 void UpdateEntryBenchmark::ShutDown() {
