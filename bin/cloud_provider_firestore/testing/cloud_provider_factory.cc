@@ -27,7 +27,7 @@ class CloudProviderFactory::TokenProviderContainer {
  public:
   TokenProviderContainer(
       fuchsia::sys::StartupContext* startup_context, async_t* async,
-      std::string credentials_path,
+      std::string credentials_path, std::string user_id,
       fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request)
       : startup_context_(startup_context),
         network_wrapper_(
@@ -36,7 +36,7 @@ class CloudProviderFactory::TokenProviderContainer {
               return startup_context_
                   ->ConnectToEnvironmentService<http::HttpService>();
             }),
-        token_provider_(&network_wrapper_, fxl::GenerateUUID()),
+        token_provider_(&network_wrapper_, std::move(user_id)),
         binding_(&token_provider_, std::move(request)) {
     if (!token_provider_.LoadCredentials(credentials_path)) {
       FXL_LOG(ERROR) << "Failed to load token provider credentials at: "
@@ -78,18 +78,26 @@ void CloudProviderFactory::Init() {
 void CloudProviderFactory::MakeCloudProvider(
     std::string server_id, std::string api_key,
     fidl::InterfaceRequest<cloud_provider::CloudProvider> request) {
+  MakeCloudProviderWithGivenUserId(std::move(server_id), std::move(api_key),
+                                   fxl::GenerateUUID(), std::move(request));
+}
+
+void CloudProviderFactory::MakeCloudProviderWithGivenUserId(
+    std::string server_id, std::string api_key, std::string user_id,
+    fidl::InterfaceRequest<cloud_provider::CloudProvider> request) {
   if (api_key.empty()) {
     FXL_LOG(WARNING) << "Empty Firebase API key - this can possibly work "
                      << "only with unauthenticated server instances.";
   }
   fuchsia::modular::auth::TokenProviderPtr token_provider;
-  async::PostTask(services_loop_.async(),
-                  fxl::MakeCopyable(
-                      [this, request = token_provider.NewRequest()]() mutable {
-                        token_providers_.emplace(
-                            startup_context_, services_loop_.async(),
-                            credentials_path_, std::move(request));
-                      }));
+  async::PostTask(
+      services_loop_.async(),
+      fxl::MakeCopyable([this, user_id = std::move(user_id),
+                         request = token_provider.NewRequest()]() mutable {
+        token_providers_.emplace(startup_context_, services_loop_.async(),
+                                 credentials_path_, user_id,
+                                 std::move(request));
+      }));
 
   cloud_provider_firestore::Config firebase_config;
   firebase_config.server_id = server_id;
