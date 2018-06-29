@@ -331,11 +331,6 @@ usb_dci_protocol_ops_t dwc_dci_protocol = {
     .get_bti = dwc3_get_bti,
 };
 
-static zx_status_t dwc3_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
-    dwc3_t* dwc = ctx;
-    return usb_mode_switch_get_initial_mode(&dwc->ums, out_mode);
-}
-
 static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
     dwc3_t* dwc = ctx;
     zx_status_t status = ZX_OK;
@@ -392,7 +387,6 @@ fail:
 }
 
 usb_mode_switch_protocol_ops_t dwc_ums_protocol = {
-    .get_initial_mode = dwc3_get_initial_mode,
     .set_mode = dwc3_set_mode,
 };
 

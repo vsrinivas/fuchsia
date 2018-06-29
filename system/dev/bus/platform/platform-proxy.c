@@ -73,22 +73,6 @@ fail:
     return status;
 }
 
-static zx_status_t pdev_ums_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
-    platform_proxy_t* proxy = ctx;
-    pdev_req_t req = {
-        .op = PDEV_UMS_GET_INITIAL_MODE,
-    };
-    pdev_resp_t resp;
-
-    zx_status_t status = platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
-                                          NULL, 0, NULL, 0, NULL);
-    if (status != ZX_OK) {
-        return status;
-    }
-    *out_mode = resp.usb_mode;
-    return ZX_OK;
-}
-
 static zx_status_t pdev_ums_set_mode(void* ctx, usb_mode_t mode) {
     platform_proxy_t* proxy = ctx;
     pdev_req_t req = {
@@ -102,7 +86,6 @@ static zx_status_t pdev_ums_set_mode(void* ctx, usb_mode_t mode) {
 }
 
 usb_mode_switch_protocol_ops_t usb_mode_switch_ops = {
-    .get_initial_mode = pdev_ums_get_initial_mode,
     .set_mode = pdev_ums_set_mode,
 };
 

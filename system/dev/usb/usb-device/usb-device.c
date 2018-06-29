@@ -13,6 +13,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/usb-dci.h>
 #include <ddk/protocol/usb-function.h>
 #include <ddk/protocol/usb-mode-switch.h>
@@ -996,11 +997,14 @@ zx_status_t usb_dev_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    // Starting USB mode is determined by the platform bus driver.
+    // Starting USB mode is determined from device metadata.
     // We read initial value and store it in dev->usb_mode, but do not actually
     // enable it until after all of our functions have bound.
-    status = usb_mode_switch_get_initial_mode(&dev->usb_mode_switch, &dev->usb_mode);
-    if (status != ZX_OK) {
+    size_t actual;
+    status = device_get_metadata(parent, DEVICE_METADATA_USB_MODE,
+                                 &dev->usb_mode, sizeof(dev->usb_mode), &actual);
+    if (status != ZX_OK || actual != sizeof(dev->usb_mode)) {
+        zxlogf(ERROR, "usb_dev_bind: DEVICE_METADATA_USB_MODE not found\n");
         free(dev);
         return status;
     }

@@ -54,17 +54,11 @@ static const pbus_dev_t display_dev = {
     .bti_count = countof(imx8mevk_display_btis),
 };
 
-static zx_status_t imx8mevk_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
-    *out_mode = USB_MODE_HOST;
-    return ZX_OK;
-}
-
 static zx_status_t imx8mevk_set_mode(void* ctx, usb_mode_t mode) {
     return ZX_OK;
 }
 
 usb_mode_switch_protocol_ops_t usb_mode_switch_ops = {
-    .get_initial_mode = imx8mevk_get_initial_mode,
     .set_mode = imx8mevk_set_mode,
 };
 

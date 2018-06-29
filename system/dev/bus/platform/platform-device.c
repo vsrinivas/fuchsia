@@ -169,14 +169,6 @@ static zx_status_t pdev_rpc_get_bti(platform_dev_t* dev, uint32_t index, zx_hand
     return status;
 }
 
-static zx_status_t pdev_rpc_ums_get_initial_mode(platform_dev_t* dev, usb_mode_t* out_mode) {
-    platform_bus_t* bus = dev->bus;
-    if (!bus->ums.ops) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    return usb_mode_switch_get_initial_mode(&bus->ums, out_mode);
-}
-
 static zx_status_t pdev_rpc_ums_set_mode(platform_dev_t* dev, usb_mode_t mode) {
     platform_bus_t* bus = dev->bus;
     if (!bus->ums.ops) {
@@ -444,9 +436,6 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
         break;
     case PDEV_GET_DEVICE_INFO:
          resp.status = platform_dev_get_device_info(dev, &resp.info);
-        break;
-    case PDEV_UMS_GET_INITIAL_MODE:
-        resp.status = pdev_rpc_ums_get_initial_mode(dev, &resp.usb_mode);
         break;
     case PDEV_UMS_SET_MODE:
         resp.status = pdev_rpc_ums_set_mode(dev, req->usb_mode);

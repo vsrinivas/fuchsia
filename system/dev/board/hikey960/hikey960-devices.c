@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/platform-defs.h>
 #include <soc/hi3660/hi3660-hw.h>
 
@@ -36,6 +37,17 @@ static const pbus_bti_t dwc3_btis[] = {
     },
 };
 
+static usb_mode_t dwc3_mode = USB_MODE_HOST;
+
+static const pbus_metadata_t dwc2_metadata[] = {
+    {
+        .type       = DEVICE_METADATA_USB_MODE,
+        .extra      = 0,
+        .data       = &dwc3_mode,
+        .len        = sizeof(dwc3_mode),
+    }
+};
+
 static const pbus_dev_t dwc3_dev = {
     .name = "dwc3",
     .vid = PDEV_VID_GENERIC,
@@ -47,6 +59,8 @@ static const pbus_dev_t dwc3_dev = {
     .irq_count = countof(dwc3_irqs),
     .btis = dwc3_btis,
     .bti_count = countof(dwc3_btis),
+    .metadata = dwc2_metadata,
+    .metadata_count = countof(dwc2_metadata),
 };
 
 #ifdef DSI_ENABLE

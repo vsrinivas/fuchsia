@@ -26,11 +26,6 @@
 #include "hikey960.h"
 #include "hikey960-hw.h"
 
-static zx_status_t hikey960_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
-    *out_mode = USB_MODE_HOST;
-    return ZX_OK;
-}
-
 static zx_status_t hikey960_set_mode(void* ctx, usb_mode_t mode) {
     hikey960_t* hikey = ctx;
 
@@ -54,7 +49,6 @@ static zx_status_t hikey960_set_mode(void* ctx, usb_mode_t mode) {
 }
 
 usb_mode_switch_protocol_ops_t usb_mode_switch_ops = {
-    .get_initial_mode = hikey960_get_initial_mode,
     .set_mode = hikey960_set_mode,
 };
 
