@@ -231,7 +231,6 @@ zx_status_t AcpiCrOsEcMotionDevice::HidBusSetProtocol(uint8_t protocol) {
     return ZX_OK;
 }
 
-
 void AcpiCrOsEcMotionDevice::DdkRelease() {
     zxlogf(INFO, "acpi-cros-ec-motion: release\n");
     delete this;

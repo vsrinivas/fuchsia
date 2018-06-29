@@ -243,7 +243,6 @@ zx_status_t AcpiTbmcDevice::HidBusSetProtocol(uint8_t protocol) {
     return ZX_OK;
 }
 
-
 void AcpiTbmcDevice::DdkRelease() {
     zxlogf(INFO, "acpi-tbmc: release\n");
     delete this;

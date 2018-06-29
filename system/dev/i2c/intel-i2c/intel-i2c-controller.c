@@ -334,7 +334,7 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
         status = zx_interrupt_wait(dev->irq_handle, NULL);
         if (status != ZX_OK) {
             zxlogf(ERROR, "i2c: error waiting for interrupt: %d\n", status);
-            continue;
+            break;
         }
         uint32_t intr_stat = readl(&dev->regs->intr_stat);
         zxlogf(SPEW, "Received i2c interrupt: %x %x\n",

@@ -157,8 +157,19 @@ static zx_status_t acpi_thermal_ioctl(void* ctx, uint32_t op,
     }
 }
 
+static void acpi_thermal_notify(ACPI_HANDLE handle, UINT32 value, void* ctx) {
+    acpi_thermal_device_t* dev = ctx;
+    zxlogf(TRACE, "acpi-thermal: got event 0x%x\n", value);
+    switch (value) {
+    case INT3403_THERMAL_EVENT:
+        zx_object_signal(dev->event, 0, ZX_USER_SIGNAL_0);
+        break;
+    }
+}
+
 static void acpi_thermal_release(void* ctx) {
     acpi_thermal_device_t* dev = ctx;
+    AcpiRemoveNotifyHandler(dev->acpi_handle, ACPI_DEVICE_NOTIFY, acpi_thermal_notify);
     zx_handle_close(dev->event);
     free(dev);
 }
@@ -169,16 +180,6 @@ static zx_protocol_device_t acpi_thermal_device_proto = {
     .ioctl = acpi_thermal_ioctl,
     .release = acpi_thermal_release,
 };
-
-static void acpi_thermal_notify(ACPI_HANDLE handle, UINT32 value, void* ctx) {
-    acpi_thermal_device_t* dev = ctx;
-    zxlogf(TRACE, "acpi-thermal: got event 0x%x\n", value);
-    switch (value) {
-    case INT3403_THERMAL_EVENT:
-        zx_object_signal(dev->event, 0, ZX_USER_SIGNAL_0);
-        break;
-    }
-}
 
 zx_status_t thermal_init(zx_device_t* parent, ACPI_DEVICE_INFO* info, ACPI_HANDLE acpi_handle) {
     // only support sensors

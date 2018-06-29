@@ -42,6 +42,7 @@ typedef struct acpi_battery_device {
     power_info_t power_info;
     battery_info_t battery_info;
 
+    atomic_bool shutdown;
 } acpi_battery_device_t;
 
 static zx_status_t call_STA(acpi_battery_device_t* dev) {
@@ -266,6 +267,9 @@ err:
 
 static void acpi_battery_release(void* ctx) {
     acpi_battery_device_t* dev = ctx;
+    atomic_store(&dev->shutdown, true);
+    thrd_join(dev->poll_thread, NULL);
+
     AcpiRemoveNotifyHandler(dev->acpi_handle, ACPI_DEVICE_NOTIFY, acpi_battery_notify);
     if (dev->bst_buffer.Length != ACPI_ALLOCATE_BUFFER) {
         AcpiOsFree(dev->bst_buffer.Pointer);
@@ -279,15 +283,28 @@ static void acpi_battery_release(void* ctx) {
     free(dev);
 }
 
+static zx_status_t acpi_battery_suspend(void* ctx, uint32_t flags) {
+    acpi_battery_device_t* dev = ctx;
+
+    if (flags != DEVICE_SUSPEND_FLAG_MEXEC) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    atomic_store(&dev->shutdown, true);
+    thrd_join(dev->poll_thread, NULL);
+    return ZX_OK;
+}
+
 static zx_protocol_device_t acpi_battery_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = acpi_battery_ioctl,
     .release = acpi_battery_release,
+    .suspend = acpi_battery_suspend,
 };
 
 static int acpi_battery_poll_thread(void* arg) {
     acpi_battery_device_t* dev = arg;
-    for (;;) {
+    while (!atomic_load(&dev->shutdown)) {
         zx_status_t status = call_BST(dev);
         if (status != ZX_OK) {
             goto out;

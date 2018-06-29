@@ -17,6 +17,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/thread_annotations.h>
 #include <zxcpp/new.h>
+#include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/unique_ptr.h>
@@ -820,23 +821,26 @@ void AcpiOsReleaseLock(ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags) TA_REL(Handle
 
 // Wrapper structs for interfacing between our interrupt handler convention and
 // ACPICA's
-struct acpi_irq_thread_arg {
+struct AcpiIrqThread {
+    thrd_t thread;
     ACPI_OSD_HANDLER handler;
     zx_handle_t irq_handle;
     void *context;
 };
-static int acpi_irq_thread(void *arg) {
-    struct acpi_irq_thread_arg *real_arg = (struct acpi_irq_thread_arg *)arg;
+static int acpi_irq_thread(void* arg) {
+    auto real_arg = static_cast<AcpiIrqThread*>(arg);
     while (1) {
         zx_status_t status = zx_interrupt_wait(real_arg->irq_handle, NULL);
         if (status != ZX_OK) {
-            continue;
+            break;
         }
         // TODO: Should we do something with the return value from the handler?
         real_arg->handler(real_arg->context);
     }
     return 0;
 }
+
+static fbl::unique_ptr<AcpiIrqThread> sci_irq;
 
 /**
  * @brief Install a handler for a hardware interrupt.
@@ -872,8 +876,9 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(
 
     assert(InterruptLevel == 0x9); // SCI
 
-    struct acpi_irq_thread_arg *arg = (struct acpi_irq_thread_arg*)malloc(sizeof(*arg));
-    if (!arg) {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<AcpiIrqThread> arg(new (&ac) AcpiIrqThread());
+    if (!ac.check()) {
         return AE_NO_MEMORY;
     }
 
@@ -881,21 +886,18 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(
     zx_status_t status = zx_interrupt_create(root_resource_handle, InterruptLevel,
                         ZX_INTERRUPT_REMAP_IRQ, &handle);
     if (status != ZX_OK) {
-        free(arg);
         return AE_ERROR;
     }
     arg->handler = Handler;
     arg->context = Context;
     arg->irq_handle = handle;
 
-    thrd_t thread;
-    int ret = thrd_create(&thread, acpi_irq_thread, arg);
+    int ret = thrd_create(&arg->thread, acpi_irq_thread, arg.get());
     if (ret != 0) {
-        free(arg);
         return AE_ERROR;
     }
-    thrd_detach(thread);
 
+    sci_irq = fbl::move(arg);
     return AE_OK;
 }
 
@@ -915,8 +917,12 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(
 ACPI_STATUS AcpiOsRemoveInterruptHandler(
         UINT32 InterruptNumber,
         ACPI_OSD_HANDLER Handler) {
-    assert(false);
-    return AE_NOT_EXIST;
+    assert(InterruptNumber == 0x9); // SCI
+    assert(sci_irq);
+    zx_interrupt_destroy(sci_irq->irq_handle);
+    thrd_join(sci_irq->thread, nullptr);
+    sci_irq.reset();
+    return AE_OK;
 }
 
 /**

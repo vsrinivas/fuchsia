@@ -438,9 +438,32 @@ static void acpi_ec_release(void* ctx) {
     free(dev);
 }
 
+static zx_status_t acpi_ec_suspend(void* ctx, uint32_t flags) {
+    acpi_ec_device_t* dev = ctx;
+
+    if (flags != DEVICE_SUSPEND_FLAG_MEXEC) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    AcpiRemoveAddressSpaceHandler(ACPI_ROOT_OBJECT, ACPI_ADR_SPACE_EC, ec_space_request_handler);
+    dev->ec_space_setup = false;
+
+    AcpiDisableGpe(dev->gpe_block, dev->gpe);
+    AcpiRemoveGpeHandler(dev->gpe_block, dev->gpe, raw_ec_event_gpe_handler);
+    dev->gpe_setup = false;
+
+    zx_object_signal(dev->interrupt_event, 0, EC_THREAD_SHUTDOWN);
+    zx_object_wait_one(dev->interrupt_event, EC_THREAD_SHUTDOWN_DONE, ZX_TIME_INFINITE, NULL);
+    thrd_join(dev->evt_thread, NULL);
+    zx_handle_close(dev->interrupt_event);
+    dev->interrupt_event = ZX_HANDLE_INVALID;
+    return ZX_OK;
+}
+
 static zx_protocol_device_t acpi_ec_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .release = acpi_ec_release,
+    .suspend = acpi_ec_suspend,
 };
 
 zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
