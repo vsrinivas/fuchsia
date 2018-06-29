@@ -968,7 +968,7 @@ static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {
     // Populate board specific information
     aml_sd_emmc_config_t dev_config;
     size_t actual;
-    status = device_get_metadata(parent, DEVICE_METADATA_DRIVER_DATA,
+    status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE,
                                  &dev_config, sizeof(aml_sd_emmc_config_t), &actual);
     if (status != ZX_OK || actual != sizeof(aml_sd_emmc_config_t)) {
         zxlogf(ERROR, "aml_sd_emmc_bind: device_get_metadata failed\n");

@@ -73,9 +73,9 @@ static aml_sd_emmc_config_t config = {
     .supports_dma = true,
 };
 
-static const pbus_boot_metadata_t emmc_metadata[] = {
+static const pbus_metadata_t emmc_metadata[] = {
     {
-        .type       = DEVICE_METADATA_DRIVER_DATA,
+        .type       = DEVICE_METADATA_PRIVATE,
         .extra      = 0,
         .data       = &config,
         .len        = sizeof(config),
@@ -99,8 +99,8 @@ static const pbus_dev_t emmc_dev = {
     .bti_count = countof(emmc_btis),
     .gpios = emmc_gpios,
     .gpio_count = countof(emmc_gpios),
-    .boot_metadata = emmc_metadata,
-    .boot_metadata_count = countof(emmc_metadata),
+    .metadata = emmc_metadata,
+    .metadata_count = countof(emmc_metadata),
 };
 
 zx_status_t vim_sd_emmc_init(vim_bus_t* bus) {

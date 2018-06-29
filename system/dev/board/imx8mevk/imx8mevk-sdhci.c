@@ -47,7 +47,7 @@ static const pbus_bti_t sdhci_btis[] = {
     },
 };
 
-static const pbus_boot_metadata_t sdhci_metadata[] = {
+static const pbus_metadata_t sdhci_metadata[] = {
     {
         .type = DEVICE_METADATA_PARTITION_MAP,
         .extra = 0,
@@ -74,8 +74,8 @@ static pbus_dev_t sdhci_dev = {
     .bti_count = countof(sdhci_btis),
     .gpios = sdhci_gpios,
     .gpio_count = countof(sdhci_gpios),
-    .boot_metadata = sdhci_metadata,
-    .boot_metadata_count = countof(sdhci_metadata),
+    .metadata = sdhci_metadata,
+    .metadata_count = countof(sdhci_metadata),
 };
 
 zx_status_t imx8m_sdhci_init(imx8mevk_bus_t* bus) {

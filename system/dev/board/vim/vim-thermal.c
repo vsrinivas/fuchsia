@@ -128,9 +128,9 @@ static aml_thermal_config_t aml_vim2_config = {
     }
 };
 
-static const pbus_boot_metadata_t vim_thermal_metadata[] = {
+static const pbus_metadata_t vim_thermal_metadata[] = {
     {
-        .type       = DEVICE_METADATA_DRIVER_DATA,
+        .type       = DEVICE_METADATA_PRIVATE,
         .extra      = 0,
         .data       = &aml_vim2_config,
         .len        = sizeof(aml_vim2_config),
@@ -144,8 +144,8 @@ static const pbus_dev_t thermal_dev = {
     .did = PDEV_DID_AMLOGIC_THERMAL,
     .gpios = fanctl_gpios,
     .gpio_count = countof(fanctl_gpios),
-    .boot_metadata = vim_thermal_metadata,
-    .boot_metadata_count = countof(vim_thermal_metadata),
+    .metadata = vim_thermal_metadata,
+    .metadata_count = countof(vim_thermal_metadata),
 };
 
 zx_status_t vim2_thermal_init(vim_bus_t* bus) {

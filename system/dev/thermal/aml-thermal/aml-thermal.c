@@ -308,7 +308,7 @@ static zx_status_t aml_thermal_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
     size_t actual;
-    status = device_get_metadata(parent, DEVICE_METADATA_DRIVER_DATA,
+    status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE,
                                  dev_config, sizeof(aml_thermal_config_t), &actual);
     if (status != ZX_OK || actual != sizeof(aml_thermal_config_t)) {
         THERMAL_ERROR("Could not get metadata\n");

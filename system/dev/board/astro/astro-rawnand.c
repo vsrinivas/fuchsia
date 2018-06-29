@@ -40,7 +40,7 @@ static const pbus_bti_t raw_nand_btis[] = {
     },
 };
 
-static const pbus_boot_metadata_t raw_nand_metadata[] = {
+static const pbus_metadata_t raw_nand_metadata[] = {
     {
         .type = DEVICE_METADATA_PARTITION_MAP,
         .extra = 0,
@@ -58,8 +58,8 @@ static const pbus_dev_t raw_nand_dev = {
     .irq_count = countof(raw_nand_irqs),
     .btis = raw_nand_btis,
     .bti_count = countof(raw_nand_btis),
-    .boot_metadata = raw_nand_metadata,
-    .boot_metadata_count = countof(raw_nand_metadata),
+    .metadata = raw_nand_metadata,
+    .metadata_count = countof(raw_nand_metadata),
 };
 
 zx_status_t aml_raw_nand_init(aml_bus_t* bus) {

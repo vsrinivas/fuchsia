@@ -28,7 +28,7 @@ typedef struct {
     uint32_t i2c_channel_count;
     uint32_t clk_count;
     uint32_t bti_count;
-    uint32_t boot_metadata_count;
+    uint32_t metadata_count;
     uint32_t reserved[8];
 } pdev_device_info_t;
 

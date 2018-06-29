@@ -71,14 +71,14 @@ typedef struct {
     pbus_i2c_channel_t* i2c_channels;
     pbus_clk_t* clks;
     pbus_bti_t* btis;
-    pbus_boot_metadata_t* boot_metadata;
+    pbus_metadata_t* metadata;
     uint32_t mmio_count;
     uint32_t irq_count;
     uint32_t gpio_count;
     uint32_t i2c_channel_count;
     uint32_t clk_count;
     uint32_t bti_count;
-    uint32_t boot_metadata_count;
+    uint32_t metadata_count;
 } platform_dev_t;
 
 // platform-bus.c

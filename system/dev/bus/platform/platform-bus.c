@@ -114,33 +114,12 @@ static const char* platform_bus_get_board_name(void* ctx) {
     return bus->platform_id.board_name;
 }
 
-static zx_status_t platform_bus_publish_boot_metadata(void* ctx, uint32_t type, uint32_t extra,
-                                                      const char* path) {
-    platform_bus_t* bus = ctx;
-    uint8_t* metadata = bus->metadata;
-    zx_off_t offset = 0;
-
-    while (offset < bus->metadata_size) {
-        zbi_header_t* header = (zbi_header_t*)metadata;
-        size_t length = ZBI_ALIGN(sizeof(zbi_header_t) + header->length);
-
-        if (header->type == type && header->extra == extra) {
-            return device_publish_metadata(bus->zxdev, path, type, header + 1,
-                                           length - sizeof(zbi_header_t));
-        }
-        metadata += length;
-        offset += length;
-    }
-    return ZX_ERR_NOT_FOUND;
-}
-
 static platform_bus_protocol_ops_t platform_bus_proto_ops = {
     .set_protocol = platform_bus_set_protocol,
     .wait_protocol = platform_bus_wait_protocol,
     .device_add = platform_bus_device_add,
     .device_enable = platform_bus_device_enable,
     .get_board_name = platform_bus_get_board_name,
-    .publish_boot_metadata = platform_bus_publish_boot_metadata,
 };
 
 // not static so we can access from platform_dev_get_protocol()

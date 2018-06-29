@@ -113,7 +113,7 @@ static zx_status_t platform_dev_get_device_info(void* ctx, pdev_device_info_t* o
     out_info->i2c_channel_count = dev->i2c_channel_count;
     out_info->clk_count = dev->clk_count;
     out_info->bti_count = dev->bti_count;
-    out_info->boot_metadata_count = dev->boot_metadata_count;
+    out_info->metadata_count = dev->metadata_count;
 
     return ZX_OK;
 }
@@ -555,7 +555,7 @@ void platform_dev_free(platform_dev_t* dev) {
     free(dev->i2c_channels);
     free(dev->clks);
     free(dev->btis);
-    free(dev->boot_metadata);
+    free(dev->metadata);
     free(dev);
 }
 
@@ -638,15 +638,15 @@ zx_status_t platform_device_add(platform_bus_t* bus, const pbus_dev_t* pdev, uin
         memcpy(dev->btis, pdev->btis, sz);
         dev->bti_count = pdev->bti_count;
     }
-    if (pdev->boot_metadata_count) {
-        const size_t sz = pdev->boot_metadata_count * sizeof(*pdev->boot_metadata);
-        dev->boot_metadata = malloc(sz);
-        if (!dev->boot_metadata) {
+    if (pdev->metadata_count) {
+        const size_t sz = pdev->metadata_count * sizeof(*pdev->metadata);
+        dev->metadata = malloc(sz);
+        if (!dev->metadata) {
             status = ZX_ERR_NO_MEMORY;
             goto fail;
         }
-        memcpy(dev->boot_metadata, pdev->boot_metadata, sz);
-        dev->boot_metadata_count = pdev->boot_metadata_count;
+        memcpy(dev->metadata, pdev->metadata, sz);
+        dev->metadata_count = pdev->metadata_count;
     }
 
     dev->bus = bus;
@@ -672,8 +672,8 @@ fail:
 }
 
 static zx_status_t platform_device_add_metadata(platform_dev_t* dev, uint32_t index) {
-    uint32_t type = dev->boot_metadata[index].type;
-    uint32_t extra = dev->boot_metadata[index].extra;
+    uint32_t type = dev->metadata[index].type;
+    uint32_t extra = dev->metadata[index].extra;
     platform_bus_t* bus = dev->bus;
     uint8_t* metadata = bus->metadata;
     zx_off_t offset = 0;
@@ -722,7 +722,7 @@ zx_status_t platform_device_enable(platform_dev_t* dev, bool enable) {
             .prop_count = countof(props),
             .proxy_args = (new_devhost ? argstr : NULL),
             .flags = (new_devhost ? DEVICE_ADD_MUST_ISOLATE : 0) |
-                     (dev->boot_metadata_count ? DEVICE_ADD_INVISIBLE : 0),
+                     (dev->metadata_count ? DEVICE_ADD_INVISIBLE : 0),
         };
         // add PCI root at top level
         zx_device_t* parent = dev->bus->zxdev;
@@ -730,7 +730,7 @@ zx_status_t platform_device_enable(platform_dev_t* dev, bool enable) {
             parent = device_get_parent(parent);
         }
 
-        if (dev->boot_metadata_count) {
+        if (dev->metadata_count) {
             // keep device invisible until we add its metadata
             args.flags |= DEVICE_ADD_INVISIBLE;
         }
@@ -739,10 +739,10 @@ zx_status_t platform_device_enable(platform_dev_t* dev, bool enable) {
             return status;
         }
 
-        if (dev->boot_metadata_count) {
-            for (uint32_t i = 0; i < dev->boot_metadata_count; i++) {
-                pbus_boot_metadata_t* pbm = &dev->boot_metadata[i];
-                if (pbm->data && pbm->len && is_driver_meta(pbm->type)) {
+        if (dev->metadata_count) {
+            for (uint32_t i = 0; i < dev->metadata_count; i++) {
+                pbus_metadata_t* pbm = &dev->metadata[i];
+                if (pbm->data && pbm->len) {
                     device_add_metadata(dev->zxdev, pbm->type, pbm->data, pbm->len);
                 } else {
                     platform_device_add_metadata(dev, i);
