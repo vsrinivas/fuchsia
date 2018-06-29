@@ -174,21 +174,21 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    Connection* const connection =
-        story_controller_impl_->FindConnection(module_data_.module_path);
+    RunningModInfo* const running_mod_info =
+        story_controller_impl_->FindRunningModInfo(module_data_.module_path);
 
     // We launch the new module if it doesn't run yet.
-    if (!connection) {
+    if (!running_mod_info) {
       Launch(flow);
       return;
     }
 
     // If the new module is already running, but with a different Intent, we
     // tear it down then launch a new instance.
-    if (ShouldRestartModuleForNewIntent(*connection->module_data->intent,
+    if (ShouldRestartModuleForNewIntent(*running_mod_info->module_data->intent,
                                         *module_data_.intent)) {
-      connection->module_controller_impl->Teardown([this, flow] {
-        // NOTE(mesch): |connection| is invalid at this point.
+      running_mod_info->module_controller_impl->Teardown([this, flow] {
+        // NOTE(mesch): |running_mod_info| is invalid at this point.
         Launch(flow);
       });
       return;
@@ -198,7 +198,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     // |module_controller_request_| to the existing instance of
     // fuchsia::modular::ModuleController.
     if (module_controller_request_.is_valid()) {
-      connection->module_controller_impl->Connect(
+      running_mod_info->module_controller_impl->Connect(
           std::move(module_controller_request_));
     }
   }
@@ -221,21 +221,22 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     service_list->names.push_back(fuchsia::modular::ModuleContext::Name_);
     service_list->provider = std::move(module_context_provider);
 
-    Connection connection;
-    connection.module_data = CloneOptional(module_data_);
+    RunningModInfo running_mod_info;
+    running_mod_info.module_data = CloneOptional(module_data_);
 
     // ModuleControllerImpl's constructor launches the child application.
-    connection.module_controller_impl = std::make_unique<ModuleControllerImpl>(
-        story_controller_impl_,
-        story_controller_impl_->story_scope_.GetLauncher(),
-        std::move(module_config), connection.module_data.get(),
-        std::move(service_list), std::move(view_provider_request));
+    running_mod_info.module_controller_impl =
+        std::make_unique<ModuleControllerImpl>(
+            story_controller_impl_,
+            story_controller_impl_->story_scope_.GetLauncher(),
+            std::move(module_config), running_mod_info.module_data.get(),
+            std::move(service_list), std::move(view_provider_request));
 
     // Modules started with
     // fuchsia::modular::StoryController.fuchsia::modular::AddModule() don't
     // have a module controller request.
     if (module_controller_request_.is_valid()) {
-      connection.module_controller_impl->Connect(
+      running_mod_info.module_controller_impl->Connect(
           std::move(module_controller_request_));
     }
 
@@ -245,11 +246,12 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
         story_controller_impl_->story_provider_impl_
             ->user_intelligence_provider()};
 
-    connection.module_context_impl = std::make_unique<ModuleContextImpl>(
-        module_context_info, connection.module_data.get(),
+    running_mod_info.module_context_impl = std::make_unique<ModuleContextImpl>(
+        module_context_info, running_mod_info.module_data.get(),
         std::move(module_context_provider_request));
 
-    story_controller_impl_->connections_.emplace_back(std::move(connection));
+    story_controller_impl_->running_mod_infos_.emplace_back(
+        std::move(running_mod_info));
 
     for (auto& i : story_controller_impl_->watchers_.ptrs()) {
       fuchsia::modular::ModuleData module_data;
@@ -315,10 +317,11 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
       // will cause the calls to be queued. The first Stop() will cause the
       // fuchsia::modular::ModuleController to be closed, and so subsequent
       // Stop() attempts will not find a controller and will return.
-      auto* const connection =
-          story_controller_impl_->FindConnection(module_data_.module_path);
+      auto* const running_mod_info =
+          story_controller_impl_->FindRunningModInfo(
+              module_data_.module_path);
 
-      if (!connection) {
+      if (!running_mod_info) {
         FXL_LOG(INFO) << "No ModuleController for Module"
                       << " " << PathString(module_data_.module_path) << ". "
                       << "Was ModuleController.Stop() called twice?";
@@ -329,7 +332,7 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
       // done_() must be called BEFORE the Teardown() done callback returns. See
       // comment in StopModuleCall::Kill() before making changes here. Be aware
       // that done_ is NOT the Done() callback of the Operation.
-      connection->module_controller_impl->Teardown([this, flow] {
+      running_mod_info->module_controller_impl->Teardown([this, flow] {
         for (auto& i : story_controller_impl_->modules_watchers_.ptrs()) {
           fuchsia::modular::ModuleData module_data;
           module_data_.Clone(&module_data);
@@ -470,11 +473,11 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
       return;
     }
 
-    auto* const connection =
-        story_controller_impl_->FindConnection(module_data_.module_path);
-    FXL_CHECK(connection);  // Was just created.
+    auto* const running_mod_info =
+        story_controller_impl_->FindRunningModInfo(module_data_.module_path);
+    FXL_CHECK(running_mod_info);  // Was just created.
 
-    auto* const anchor = story_controller_impl_->FindAnchor(connection);
+    auto* const anchor = story_controller_impl_->FindAnchor(running_mod_info);
     if (anchor) {
       const auto anchor_view_id = PathString(anchor->module_data->module_path);
       if (story_controller_impl_->connected_views_.count(anchor_view_id)) {
@@ -531,14 +534,15 @@ class StoryControllerImpl::StopCall : public Operation<> {
   // StopCall may be run even on a story impl that is not running.
   void Run() override {
     std::vector<FuturePtr<>> did_teardowns;
-    did_teardowns.reserve(story_controller_impl_->connections_.size());
+    did_teardowns.reserve(story_controller_impl_->running_mod_infos_.size());
 
     // Tear down all connections with a fuchsia::modular::ModuleController
     // first, then the links between them.
-    for (auto& connection : story_controller_impl_->connections_) {
+    for (auto& running_mod_info : story_controller_impl_->running_mod_infos_) {
       auto did_teardown =
           Future<>::Create("StoryControllerImpl.StopCall.Run.did_teardown");
-      connection.module_controller_impl->Teardown(did_teardown->Completer());
+      running_mod_info.module_controller_impl->Teardown(
+          did_teardown->Completer());
       did_teardowns.emplace_back(did_teardown);
     }
 
@@ -718,11 +722,11 @@ class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
     }
 
     // Check for existing module at the given path.
-    auto* const connection =
-        story_controller_impl_->FindConnection(module_data_.module_path);
+    auto* const running_mod_info =
+        story_controller_impl_->FindRunningModInfo(module_data_.module_path);
     if (module_data_.module_stopped) {
       // If the module is running, kill it.
-      if (connection) {
+      if (running_mod_info) {
         operation_queue_.Add(new KillModuleCall(
             story_controller_impl_, std::move(module_data_), [flow] {}));
       }
@@ -759,8 +763,8 @@ class StoryControllerImpl::FocusCall : public Operation<> {
       return;
     }
 
-    Connection* const anchor = story_controller_impl_->FindAnchor(
-        story_controller_impl_->FindConnection(module_path_));
+    RunningModInfo* const anchor = story_controller_impl_->FindAnchor(
+        story_controller_impl_->FindRunningModInfo(module_path_));
     if (anchor) {
       // Focus modules relative to their anchor module.
       story_controller_impl_->story_shell_->FocusView(
@@ -1394,15 +1398,15 @@ void StoryControllerImpl::StopModule(
 
 void StoryControllerImpl::ReleaseModule(
     ModuleControllerImpl* const module_controller_impl) {
-  auto fit = std::find_if(connections_.begin(), connections_.end(),
-                          [module_controller_impl](const Connection& c) {
+  auto fit = std::find_if(running_mod_infos_.begin(), running_mod_infos_.end(),
+                          [module_controller_impl](const RunningModInfo& c) {
                             return c.module_controller_impl.get() ==
                                    module_controller_impl;
                           });
-  FXL_DCHECK(fit != connections_.end());
+  FXL_DCHECK(fit != running_mod_infos_.end());
   fit->module_controller_impl.release();
   pending_views_.erase(PathString(fit->module_data->module_path));
-  connections_.erase(fit);
+  running_mod_infos_.erase(fit);
 }
 
 fidl::StringPtr StoryControllerImpl::GetStoryId() const { return story_id_; }
@@ -1437,7 +1441,7 @@ void StoryControllerImpl::ConnectLinkPath(
 
 fuchsia::modular::LinkPathPtr StoryControllerImpl::GetLinkPathForParameterName(
     const fidl::VectorPtr<fidl::StringPtr>& module_path, fidl::StringPtr name) {
-  auto mod_info = FindConnection(module_path);
+  auto mod_info = FindRunningModInfo(module_path);
   // NOTE: |mod_info| will only be valid if the module at |module_path| is
   // running. Strictly speaking, this is unsafe. The source of truth is the
   // Ledger, accessible through StoryStorage, but the call would be async, which
@@ -1523,12 +1527,12 @@ void StoryControllerImpl::ProcessPendingViews() {
   std::vector<fidl::StringPtr> added_keys;
 
   for (auto& kv : pending_views_) {
-    auto* const connection = FindConnection(kv.second.module_path);
-    if (!connection) {
+    auto* const running_mod_info = FindRunningModInfo(kv.second.module_path);
+    if (!running_mod_info) {
       continue;
     }
 
-    auto* const anchor = FindAnchor(connection);
+    auto* const anchor = FindAnchor(running_mod_info);
     if (!anchor) {
       continue;
     }
@@ -1631,9 +1635,9 @@ void StoryControllerImpl::GetActiveModules(
         }
 
         fidl::VectorPtr<fuchsia::modular::ModuleData> result;
-        result.resize(connections_.size());
-        for (size_t i = 0; i < connections_.size(); i++) {
-          connections_[i].module_data->Clone(&result->at(i));
+        result.resize(running_mod_infos_.size());
+        for (size_t i = 0; i < running_mod_infos_.size(); i++) {
+          running_mod_infos_[i].module_data->Clone(&result->at(i));
         }
         callback(std::move(result));
       })));
@@ -1653,9 +1657,10 @@ void StoryControllerImpl::GetModuleController(
   operation_queue_.Add(new SyncCall(
       fxl::MakeCopyable([this, module_path = std::move(module_path),
                          request = std::move(request)]() mutable {
-        for (auto& connection : connections_) {
-          if (module_path == connection.module_data->module_path) {
-            connection.module_controller_impl->Connect(std::move(request));
+        for (auto& running_mod_info : running_mod_infos_) {
+          if (module_path == running_mod_info.module_data->module_path) {
+            running_mod_info.module_controller_impl->Connect(
+                std::move(request));
             return;
           }
         }
@@ -1749,7 +1754,7 @@ void StoryControllerImpl::SetState(
 
 bool StoryControllerImpl::IsExternalModule(
     const fidl::VectorPtr<fidl::StringPtr>& module_path) {
-  auto* const i = FindConnection(module_path);
+  auto* const i = FindRunningModInfo(module_path);
   if (!i) {
     return false;
   }
@@ -1758,9 +1763,10 @@ bool StoryControllerImpl::IsExternalModule(
          fuchsia::modular::ModuleSource::EXTERNAL;
 }
 
-StoryControllerImpl::Connection* StoryControllerImpl::FindConnection(
+StoryControllerImpl::RunningModInfo*
+StoryControllerImpl::FindRunningModInfo(
     const fidl::VectorPtr<fidl::StringPtr>& module_path) {
-  for (auto& c : connections_) {
+  for (auto& c : running_mod_infos_) {
     if (c.module_data->module_path == module_path) {
       return &c;
     }
@@ -1768,20 +1774,21 @@ StoryControllerImpl::Connection* StoryControllerImpl::FindConnection(
   return nullptr;
 }
 
-StoryControllerImpl::Connection* StoryControllerImpl::FindAnchor(
-    Connection* connection) {
-  if (!connection) {
+StoryControllerImpl::RunningModInfo* StoryControllerImpl::FindAnchor(
+    RunningModInfo* running_mod_info) {
+  if (!running_mod_info) {
     return nullptr;
   }
 
-  auto* anchor =
-      FindConnection(ParentModulePath(connection->module_data->module_path));
+  auto* anchor = FindRunningModInfo(
+      ParentModulePath(running_mod_info->module_data->module_path));
 
   // Traverse up until there is a non-embedded module. We recognize
   // non-embedded modules by having a non-null SurfaceRelation. If the root
   // module is there at all, it has a non-null surface relation.
   while (anchor && !anchor->module_data->surface_relation) {
-    anchor = FindConnection(ParentModulePath(anchor->module_data->module_path));
+    anchor = FindRunningModInfo(
+        ParentModulePath(anchor->module_data->module_path));
   }
 
   return anchor;

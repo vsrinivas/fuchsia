@@ -247,9 +247,9 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
   };
   std::map<fidl::StringPtr, PendingView> pending_views_;
 
-  // The first ingredient of a story: Modules. For each Module in the Story,
-  // there is one Connection to it.
-  struct Connection {
+  // The first ingredient of a story: Modules. For each *running* Module in the
+  // Story, there is one RunningModInfo.
+  struct RunningModInfo {
     // NOTE: |module_data| is a cached copy of what is stored in
     // |story_storage_|, the source of truth. It is updated in two
     // places:
@@ -269,22 +269,22 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
     std::unique_ptr<ModuleContextImpl> module_context_impl;
     std::unique_ptr<ModuleControllerImpl> module_controller_impl;
   };
-  std::vector<Connection> connections_;
+  std::vector<RunningModInfo> running_mod_infos_;
 
-  // Finds the active connection for a module at the given module path. May
+  // Finds the active RunningModInfo for a module at the given module path. May
   // return nullptr if the module at the path is not running, regardless of
   // whether a module at that path is known to the story.
-  Connection* FindConnection(
+  RunningModInfo* FindRunningModInfo(
       const fidl::VectorPtr<fidl::StringPtr>& module_path);
 
-  // Finds the active connection for the story shell anchor of a module with the
-  // given connection. The anchor is the closest ancestor module of the given
-  // module that is not embedded and actually known to the story shell. This
-  // requires that it must be running, otherwise it cannot be connected to the
-  // story shell. May return nullptr if the anchor module, or any intermediate
-  // module, is not running, regardless of whether a module at such path is
-  // known to the story.
-  Connection* FindAnchor(Connection* connection);
+  // Finds the active RunningModInfo for the story shell anchor of a module
+  // with the given |running_mod_info|. The anchor is the closest ancestor
+  // module of the given module that is not embedded and actually known to the
+  // story shell. This requires that it must be running, otherwise it cannot be
+  // connected to the story shell. May return nullptr if the anchor module, or
+  // any intermediate module, is not running, regardless of whether a module at
+  // such path is known to the story.
+  RunningModInfo* FindAnchor(RunningModInfo* running_mod_info);
 
   // The second ingredient of a story: Links. They connect Modules.
   fidl::BindingSet<Link, std::unique_ptr<LinkImpl>> link_impls_;
