@@ -53,15 +53,3 @@ blocks, but in some cases the C++ standard library either doesn't have something
 we need (e.g., a featureful logging system) or has a version of what we need
 doesn't meet our requirements (e.g., `std::shared_ptr` is twice as large as
 `fxl::RefPtr`).
-
-# FSL
-
-FSL is a Zircon-specific library containing high-level C++ concepts for working
-with the Zircon system calls. For example, FSL provides an `fsl::MessageLoop`
-abstraction on top of Zircon's underlying waiting primitives. FSL also contains
-helpers for working with Zircon primitives asynchronously that build upon
-`fsl::MessageLoop` (e.g., for draining a socket asynchronously).
-
-FSL depends on FXL and implements some interfaces defined in FXL, such as
-`fxl::TaskRunner`. FSL also depends on `libfidl` and implements FIDL's
-asynchronous waiter mechanism using `fsl::MessageLoop`.
