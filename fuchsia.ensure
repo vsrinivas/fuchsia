@@ -6,7 +6,7 @@ $VerifiedPlatform linux-amd64
 $VerifiedPlatform mac-amd64
 
 # vpython
-infra/tools/luci/vpython/${platform} git_revision:4fdf96945cb39cddf6e37f11c07acb9877557408
+infra/tools/luci/vpython/${platform} git_revision:b9c4670197dcefd8762d6e509302acd3efc6e303
 
 # LUCI editor
 infra/tools/luci/led/${platform} git_revision:4fdf96945cb39cddf6e37f11c07acb9877557408
