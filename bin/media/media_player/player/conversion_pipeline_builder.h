@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_PLAYER_CONVERSION_PIPELINE_BUILDER_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_PLAYER_CONVERSION_PIPELINE_BUILDER_H_
 
+#include "garnet/bin/media/media_player/decode/decoder.h"
 #include "garnet/bin/media/media_player/framework/graph.h"
 #include "garnet/bin/media/media_player/framework/packet.h"
 #include "garnet/bin/media/media_player/framework/types/stream_type.h"
@@ -18,7 +19,8 @@ namespace media_player {
 bool BuildConversionPipeline(
     const StreamType& in_type,
     const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
-    Graph* graph, OutputRef* output, std::unique_ptr<StreamType>* out_type);
+    Graph* graph, DecoderFactory* decoder_factory, OutputRef* output,
+    std::unique_ptr<StreamType>* out_type);
 
 }  // namespace media_player
 

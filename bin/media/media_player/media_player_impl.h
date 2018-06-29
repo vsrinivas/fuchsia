@@ -11,6 +11,8 @@
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
 
+#include "garnet/bin/media/media_player/decode/decoder.h"
+#include "garnet/bin/media/media_player/demux/demux.h"
 #include "garnet/bin/media/media_player/demux/reader.h"
 #include "garnet/bin/media/media_player/player/player.h"
 #include "garnet/bin/media/media_player/render/fidl_audio_renderer.h"
@@ -122,6 +124,8 @@ class MediaPlayerImpl : public fuchsia::mediaplayer::MediaPlayer {
   fit::closure quit_callback_;
   fidl::BindingSet<fuchsia::mediaplayer::MediaPlayer> bindings_;
   Player player_;
+  std::unique_ptr<DemuxFactory> demux_factory_;
+  std::unique_ptr<DecoderFactory> decoder_factory_;
 
   float gain_ = 1.0f;
   std::shared_ptr<FidlAudioRenderer> audio_renderer_;

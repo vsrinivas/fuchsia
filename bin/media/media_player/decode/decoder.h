@@ -10,20 +10,39 @@
 #include "garnet/bin/media/media_player/framework/payload_allocator.h"
 #include "garnet/bin/media/media_player/framework/result.h"
 #include "garnet/bin/media/media_player/framework/types/stream_type.h"
+#include "lib/app/cpp/startup_context.h"
 
 namespace media_player {
 
-// Abstract base class for transforms that decode compressed media.
+// Abstract base class for nodes that decode compressed media.
 class Decoder : public AsyncNode {
  public:
-  // Creates a Decoder object for a given stream type.
-  static Result Create(const StreamType& stream_type,
-                       std::shared_ptr<Decoder>* decoder_out);
-
   ~Decoder() override {}
 
   // Returns the type of the stream the decoder will produce.
   virtual std::unique_ptr<StreamType> output_stream_type() const = 0;
+};
+
+// Abstract base class for |Decoder| factories.
+class DecoderFactory {
+ public:
+  // Creates a decoder factory.
+  static std::unique_ptr<DecoderFactory> Create(
+      fuchsia::sys::StartupContext* startup_context);
+
+  virtual ~DecoderFactory() {}
+
+  // Creates a |Decoder| object for a given stream type.
+  virtual Result CreateDecoder(const StreamType& stream_type,
+                               std::shared_ptr<Decoder>* decoder_out) = 0;
+
+ protected:
+  DecoderFactory() {}
+
+ private:
+  // Disallow copy and assign.
+  DecoderFactory(const DecoderFactory&) = delete;
+  DecoderFactory& operator=(const DecoderFactory&) = delete;
 };
 
 }  // namespace media_player

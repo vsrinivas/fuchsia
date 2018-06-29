@@ -25,13 +25,13 @@ source_set("demux") {
     "//garnet/bin/media/media_player/fidl",
     "//garnet/bin/media/media_player/framework",
     "//garnet/bin/media/media_player/util",
-    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/net/oldhttp/fidl",
   ]
 
   public_deps = [
+    "//garnet/public/lib/app/cpp",
     "//zircon/public/lib/fit",
   ]
 }

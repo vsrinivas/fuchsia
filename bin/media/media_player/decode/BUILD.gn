@@ -9,6 +9,10 @@ source_set("decode") {
     "software_decoder.h",
   ]
 
+  public_deps = [
+    "//garnet/public/lib/app/cpp",
+  ]
+
   deps = [
     "//garnet/bin/media/media_player/framework",
     "//garnet/bin/media/media_player/metrics",

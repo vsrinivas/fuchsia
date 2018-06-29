@@ -13,13 +13,15 @@ namespace media_player {
 
 // static
 std::unique_ptr<RendererSinkSegment> RendererSinkSegment::Create(
-    std::shared_ptr<Renderer> renderer) {
-  return std::make_unique<RendererSinkSegment>(renderer);
+    std::shared_ptr<Renderer> renderer, DecoderFactory* decoder_factory) {
+  return std::make_unique<RendererSinkSegment>(renderer, decoder_factory);
 }
 
-RendererSinkSegment::RendererSinkSegment(std::shared_ptr<Renderer> renderer)
-    : renderer_(renderer) {
+RendererSinkSegment::RendererSinkSegment(std::shared_ptr<Renderer> renderer,
+                                         DecoderFactory* decoder_factory)
+    : renderer_(renderer), decoder_factory_(decoder_factory) {
   FXL_DCHECK(renderer_);
+  FXL_DCHECK(decoder_factory_);
 }
 
 RendererSinkSegment::~RendererSinkSegment() {}
@@ -50,7 +52,7 @@ void RendererSinkSegment::Connect(const StreamType& type, OutputRef output,
   std::unique_ptr<StreamType> out_type;
   OutputRef output_in_out = output;
   if (!BuildConversionPipeline(type, supported_stream_types, &graph(),
-                               &output_in_out, &out_type)) {
+                               decoder_factory_, &output_in_out, &out_type)) {
     ReportProblem(type.medium() == StreamType::Medium::kAudio
                       ? fuchsia::mediaplayer::kProblemAudioEncodingNotSupported
                       : fuchsia::mediaplayer::kProblemVideoEncodingNotSupported,

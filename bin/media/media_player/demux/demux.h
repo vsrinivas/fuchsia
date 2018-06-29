@@ -16,6 +16,7 @@
 #include "garnet/bin/media/media_player/framework/packet.h"
 #include "garnet/bin/media/media_player/framework/result.h"
 #include "garnet/bin/media/media_player/framework/types/stream_type.h"
+#include "lib/app/cpp/startup_context.h"
 
 namespace media_player {
 
@@ -42,9 +43,6 @@ class Demux : public AsyncNode {
     virtual media::TimelineRate pts_rate() const = 0;
   };
 
-  // Creates a Demux object for a given reader.
-  static std::shared_ptr<Demux> Create(std::shared_ptr<Reader> reader);
-
   ~Demux() override {}
 
   // Sets a callback to call when metadata or problem changes occur.
@@ -61,6 +59,28 @@ class Demux : public AsyncNode {
   // Seeks to the specified position and calls the callback. THE CALLBACK MAY
   // BE CALLED ON AN ARBITRARY THREAD.
   virtual void Seek(int64_t position, SeekCallback callback) = 0;
+};
+
+// Abstract base class for |Demux| factories.
+class DemuxFactory {
+ public:
+  // Creates a demux factory.
+  static std::unique_ptr<DemuxFactory> Create(
+      fuchsia::sys::StartupContext* startup_context);
+
+  virtual ~DemuxFactory() {}
+
+  // Creates a |Demux| object for a given reader.
+  virtual Result CreateDemux(std::shared_ptr<Reader> reader,
+                             std::shared_ptr<Demux>* demux_out) = 0;
+
+ protected:
+  DemuxFactory() {}
+
+ private:
+  // Disallow copy and assign.
+  DemuxFactory(const DemuxFactory&) = delete;
+  DemuxFactory& operator=(const DemuxFactory&) = delete;
 };
 
 }  // namespace media_player

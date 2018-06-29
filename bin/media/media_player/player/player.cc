@@ -80,8 +80,9 @@ void Player::SetSinkSegment(std::unique_ptr<SinkSegment> sink_segment,
   }
 
   sink_segment->Provision(&graph_, async_, [this]() {
-    // This callback notifies the player of changes to source_segment_'s
-    // problem() and/or end_of_stream() values.
+    // This callback notifies the player of changes to
+    // source_segment_'s problem() and/or
+    // end_of_stream() values.
     NotifyUpdate();
   });
 

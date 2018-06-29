@@ -589,19 +589,21 @@ void ExpectRealSegmentsGraph(const Player& player) {
 // Tests a player with real segments constructed source-first.
 TEST_F(PlayerTest, BuildGraphWithRealSegmentsSourceFirst) {
   Player player(dispatcher());
+  std::unique_ptr<DecoderFactory> decoder_factory =
+      DecoderFactory::Create(nullptr);
 
   player.SetSourceSegment(DemuxSourceSegment::Create(FakeDemux::Create()),
                           nullptr);
 
-  player.SetSinkSegment(
-      RendererSinkSegment::Create(FakeAudioRenderer::Create()),
-      StreamType::Medium::kAudio);
+  player.SetSinkSegment(RendererSinkSegment::Create(FakeAudioRenderer::Create(),
+                                                    decoder_factory.get()),
+                        StreamType::Medium::kAudio);
   RunLoopUntilIdle();
   EXPECT_TRUE(player.medium_connected(StreamType::Medium::kAudio));
 
-  player.SetSinkSegment(
-      RendererSinkSegment::Create(FakeVideoRenderer::Create()),
-      StreamType::Medium::kVideo);
+  player.SetSinkSegment(RendererSinkSegment::Create(FakeVideoRenderer::Create(),
+                                                    decoder_factory.get()),
+                        StreamType::Medium::kVideo);
   RunLoopUntilIdle();
   EXPECT_TRUE(player.medium_connected(StreamType::Medium::kVideo));
 
@@ -611,15 +613,17 @@ TEST_F(PlayerTest, BuildGraphWithRealSegmentsSourceFirst) {
 // Tests a player with real segments constructed sinks-first.
 TEST_F(PlayerTest, BuildGraphWithRealSegmentsSinksFirst) {
   Player player(dispatcher());
+  std::unique_ptr<DecoderFactory> decoder_factory =
+      DecoderFactory::Create(nullptr);
 
-  player.SetSinkSegment(
-      RendererSinkSegment::Create(FakeAudioRenderer::Create()),
-      StreamType::Medium::kAudio);
+  player.SetSinkSegment(RendererSinkSegment::Create(FakeAudioRenderer::Create(),
+                                                    decoder_factory.get()),
+                        StreamType::Medium::kAudio);
   EXPECT_FALSE(player.medium_connected(StreamType::Medium::kAudio));
 
-  player.SetSinkSegment(
-      RendererSinkSegment::Create(FakeVideoRenderer::Create()),
-      StreamType::Medium::kVideo);
+  player.SetSinkSegment(RendererSinkSegment::Create(FakeVideoRenderer::Create(),
+                                                    decoder_factory.get()),
+                        StreamType::Medium::kVideo);
   EXPECT_FALSE(player.medium_connected(StreamType::Medium::kVideo));
 
   player.SetSourceSegment(DemuxSourceSegment::Create(FakeDemux::Create()),

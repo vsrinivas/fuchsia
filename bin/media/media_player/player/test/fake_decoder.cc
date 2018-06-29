@@ -40,12 +40,24 @@ std::unique_ptr<StreamType> FakeDecoder::OutputStreamType(
   }
 }
 
-}  // namespace test
+FakeDecoderFactory::FakeDecoderFactory() {}
 
-Result Decoder::Create(const StreamType& stream_type,
-                       std::shared_ptr<Decoder>* decoder_out) {
+FakeDecoderFactory::~FakeDecoderFactory() {}
+
+Result FakeDecoderFactory::CreateDecoder(
+    const StreamType& stream_type, std::shared_ptr<Decoder>* decoder_out) {
+  FXL_DCHECK(decoder_out);
+
   *decoder_out = std::make_shared<test::FakeDecoder>(stream_type);
   return Result::kOk;
+}
+
+}  // namespace test
+
+// static
+std::unique_ptr<DecoderFactory> DecoderFactory::Create(
+    fuchsia::sys::StartupContext* startup_context) {
+  return std::make_unique<test::FakeDecoderFactory>();
 }
 
 }  // namespace media_player

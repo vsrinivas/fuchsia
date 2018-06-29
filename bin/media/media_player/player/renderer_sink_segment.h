@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_PLAYER_RENDERER_SINK_SEGMENT_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_PLAYER_RENDERER_SINK_SEGMENT_H_
 
+#include "garnet/bin/media/media_player/decode/decoder.h"
 #include "garnet/bin/media/media_player/player/sink_segment.h"
 #include "garnet/bin/media/media_player/render/renderer.h"
 
@@ -14,9 +15,10 @@ namespace media_player {
 class RendererSinkSegment : public SinkSegment {
  public:
   static std::unique_ptr<RendererSinkSegment> Create(
-      std::shared_ptr<Renderer> renderer);
+      std::shared_ptr<Renderer> renderer, DecoderFactory* decoder_factory);
 
-  RendererSinkSegment(std::shared_ptr<Renderer> renderer);
+  RendererSinkSegment(std::shared_ptr<Renderer> renderer,
+                      DecoderFactory* decoder_factory);
 
   ~RendererSinkSegment() override;
 
@@ -48,6 +50,7 @@ class RendererSinkSegment : public SinkSegment {
 
  private:
   std::shared_ptr<Renderer> renderer_;
+  DecoderFactory* decoder_factory_;
   NodeRef renderer_node_;
   OutputRef connected_output_;
 };

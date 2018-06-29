@@ -4,12 +4,13 @@
 
 #include "garnet/bin/media/media_player/demux/demux.h"
 
-#include "garnet/bin/media/media_player/ffmpeg/ffmpeg_demux.h"
+#include "garnet/bin/media/media_player/ffmpeg/ffmpeg_demux_factory.h"
 
 namespace media_player {
 
-std::shared_ptr<Demux> Demux::Create(std::shared_ptr<Reader> reader) {
-  return FfmpegDemux::Create(reader);
+std::unique_ptr<DemuxFactory> DemuxFactory::Create(
+    fuchsia::sys::StartupContext* startup_context) {
+  return FfmpegDemuxFactory::Create(startup_context);
 }
 
 }  // namespace media_player

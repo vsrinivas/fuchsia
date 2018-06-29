@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/media/media_player/ffmpeg/ffmpeg_decoder.h"
+#include "garnet/bin/media/media_player/ffmpeg/ffmpeg_decoder_factory.h"
 
 #include "garnet/bin/media/media_player/ffmpeg/av_codec_context.h"
 #include "garnet/bin/media/media_player/ffmpeg/ffmpeg_audio_decoder.h"
@@ -10,8 +10,18 @@
 
 namespace media_player {
 
-Result FfmpegDecoder::Create(const StreamType& stream_type,
-                             std::shared_ptr<Decoder>* decoder_out) {
+// static
+std::unique_ptr<DecoderFactory> FfmpegDecoderFactory::Create(
+    fuchsia::sys::StartupContext* startup_context) {
+  return std::make_unique<FfmpegDecoderFactory>();
+}
+
+FfmpegDecoderFactory::FfmpegDecoderFactory() {}
+
+FfmpegDecoderFactory::~FfmpegDecoderFactory() {}
+
+Result FfmpegDecoderFactory::CreateDecoder(
+    const StreamType& stream_type, std::shared_ptr<Decoder>* decoder_out) {
   FXL_DCHECK(decoder_out);
 
   AvCodecContextPtr av_codec_context(AvCodecContext::Create(stream_type));

@@ -55,6 +55,11 @@ MediaPlayerImpl::MediaPlayerImpl(
   FXL_DCHECK(startup_context_);
   FXL_DCHECK(quit_callback_);
 
+  demux_factory_ = DemuxFactory::Create(startup_context_);
+  FXL_DCHECK(demux_factory_);
+  decoder_factory_ = DecoderFactory::Create(startup_context_);
+  FXL_DCHECK(decoder_factory_);
+
   startup_context_->outgoing().debug_dir()->AddEntry(
       kDumpEntry,
       fbl::AdoptRef(new fs::BufferedPseudoFile([this](fbl::String* out) {
@@ -147,7 +152,8 @@ void MediaPlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
           audio_renderer_->SetGain(gain_);
         }
 
-        player_.SetSinkSegment(RendererSinkSegment::Create(audio_renderer_),
+        player_.SetSinkSegment(RendererSinkSegment::Create(
+                                   audio_renderer_, decoder_factory_.get()),
                                medium);
       }
       break;
@@ -157,7 +163,8 @@ void MediaPlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
         video_renderer_->SetGeometryUpdateCallback(
             [this]() { SendStatusUpdates(); });
 
-        player_.SetSinkSegment(RendererSinkSegment::Create(video_renderer_),
+        player_.SetSinkSegment(RendererSinkSegment::Create(
+                                   video_renderer_, decoder_factory_.get()),
                                medium);
       }
       break;
@@ -426,8 +433,9 @@ void MediaPlayerImpl::FinishSetReader() {
 
   MaybeCreateRenderer(StreamType::Medium::kAudio);
 
-  std::shared_ptr<Demux> demux =
-      Demux::Create(ReaderCache::Create(new_reader_));
+  std::shared_ptr<Demux> demux;
+  demux_factory_->CreateDemux(ReaderCache::Create(new_reader_), &demux);
+  // TODO(dalesat): Handle CreateDemux failure.
   FXL_DCHECK(demux);
 
   new_reader_ = nullptr;
@@ -486,8 +494,9 @@ void MediaPlayerImpl::SetAudioRenderer(
     audio_renderer_->SetGain(gain_);
   }
 
-  player_.SetSinkSegment(RendererSinkSegment::Create(audio_renderer_),
-                         StreamType::Medium::kAudio);
+  player_.SetSinkSegment(
+      RendererSinkSegment::Create(audio_renderer_, decoder_factory_.get()),
+      StreamType::Medium::kAudio);
 }
 
 void MediaPlayerImpl::AddBinding(

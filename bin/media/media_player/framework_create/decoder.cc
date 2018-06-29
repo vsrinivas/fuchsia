@@ -4,19 +4,13 @@
 
 #include "garnet/bin/media/media_player/decode/decoder.h"
 
-#include "garnet/bin/media/media_player/ffmpeg/ffmpeg_decoder.h"
+#include "garnet/bin/media/media_player/ffmpeg/ffmpeg_decoder_factory.h"
 
 namespace media_player {
 
-Result Decoder::Create(const StreamType& stream_type,
-                       std::shared_ptr<Decoder>* decoder_out) {
-  std::shared_ptr<Decoder> decoder;
-  Result result = FfmpegDecoder::Create(stream_type, &decoder);
-  if (result == Result::kOk) {
-    *decoder_out = decoder;
-  }
-
-  return result;
+std::unique_ptr<DecoderFactory> DecoderFactory::Create(
+    fuchsia::sys::StartupContext* startup_context) {
+  return FfmpegDecoderFactory::Create(startup_context);
 }
 
 }  // namespace media_player

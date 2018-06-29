@@ -66,6 +66,16 @@ class FakeDecoder : public Decoder {
   std::unique_ptr<StreamType> output_stream_type_;
 };
 
+class FakeDecoderFactory : public DecoderFactory {
+ public:
+  FakeDecoderFactory();
+
+  ~FakeDecoderFactory() override;
+
+  Result CreateDecoder(const StreamType& stream_type,
+                       std::shared_ptr<Decoder>* decoder_out) override;
+};
+
 }  // namespace test
 }  // namespace media_player
 
