@@ -67,7 +67,15 @@ based on the [Test Runner] framework, but runs the tests without requiring
 Run it from the fuchsia shell:
 
 ```
-$ /system/test/run_modular_tests.sh
+$ /pkgfs/packages/modular_tests/0/test/run_modular_tests.sh
+```
+
+You can also run specific tests by using their name. For example this
+will run only the *link_update* test (as described in
+[modular_tests.json](modular_tests.json)).
+
+```
+$ /pkgfs/packages/modular_tests/0/test/run_modular_tests.sh link_update
 ```
 
 
