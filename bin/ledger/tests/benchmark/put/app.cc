@@ -24,11 +24,17 @@ constexpr fxl::StringView kRefsOnFlag = "on";
 constexpr fxl::StringView kRefsOffFlag = "off";
 
 void PrintUsage(const char* executable_name) {
-  std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
-            << "=<int> --" << kTransactionSizeFlag << "=<int> --"
-            << kKeySizeFlag << "=<int> --" << kValueSizeFlag << "=<int> --"
-            << kRefsFlag << "=(" << kRefsOnFlag << "|" << kRefsOffFlag << ") ["
-            << kSeedFlag << "=<int>] [--" << kUpdateFlag << "]" << std::endl;
+  std::cout << "Usage: "
+            << executable_name
+            // Comment to make clang format not break formatting.
+            << " --" << kEntryCountFlag << "=<int>"
+            << " --" << kTransactionSizeFlag << "=<int>"
+            << " --" << kKeySizeFlag << "=<int>"
+            << " --" << kValueSizeFlag << "=<int>"
+            << " --" << kRefsFlag << "=(" << kRefsOnFlag << "|" << kRefsOffFlag
+            << ")"
+            << " [--" << kSeedFlag << "=<int>]"
+            << " [--" << kUpdateFlag << "]" << std::endl;
 }
 
 bool GetPositiveIntValue(const fxl::CommandLine& command_line,

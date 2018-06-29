@@ -36,11 +36,15 @@ constexpr fxl::StringView kRefsOffFlag = "off";
 constexpr size_t kKeySize = 100;
 
 void PrintUsage(const char* executable_name) {
-  std::cout << "Usage: " << executable_name << " --" << kChangeCountFlag
-            << "=<int> --" << kValueSizeFlag << "=<int> --"
-            << kEntriesPerChangeFlag << "=<int> --" << kRefsFlag << "=("
-            << kRefsOnFlag << "|" << kRefsOffFlag << ") --" << kServerIdFlag
-            << "=<string>" << std::endl;
+  std::cout << "Usage: "
+            << executable_name
+            // Comment to make clang format not break formatting.
+            << " --" << kChangeCountFlag << "=<int>"
+            << " --" << kValueSizeFlag << "=<int>"
+            << " --" << kEntriesPerChangeFlag << "=<int>"
+            << " --" << kRefsFlag << "=(" << kRefsOnFlag << "|" << kRefsOffFlag
+            << ")"
+            << " --" << kServerIdFlag << "=<string>" << std::endl;
 }
 
 }  // namespace

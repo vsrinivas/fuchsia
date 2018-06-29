@@ -38,11 +38,15 @@ constexpr size_t kKeySize = 100;
 const std::string kUserDirectory = "/backlog_user";
 
 void PrintUsage(const char* executable_name) {
-  std::cout << "Usage: " << executable_name << " --" << kUniqueKeyCountFlag
-            << "=<int> --" << kValueSizeFlag << "=<int> --" << kCommitCountFlag
-            << "=<int> --" << kRefsFlag << "=(" << kRefsOnFlag << "|"
-            << kRefsOffFlag << ") --" << kServerIdFlag << "=<string>"
-            << std::endl;
+  std::cout << "Usage: "
+            << executable_name
+            // Comment to make clang format not break formatting.
+            << " --" << kUniqueKeyCountFlag << "=<int>"
+            << " --" << kValueSizeFlag << "=<int>"
+            << " --" << kCommitCountFlag << "=<int>"
+            << " --" << kRefsFlag << "=(" << kRefsOnFlag << "|" << kRefsOffFlag
+            << ")"
+            << " --" << kServerIdFlag << "=<string>" << std::endl;
 }
 
 }  // namespace

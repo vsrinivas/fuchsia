@@ -25,8 +25,11 @@ constexpr fxl::StringView kPageCountFlag = "requests-count";
 constexpr fxl::StringView kReuseFlag = "reuse";
 
 void PrintUsage(const char* executable_name) {
-  std::cout << "Usage: " << executable_name << " --" << kPageCountFlag
-            << "=<int> [--" << kReuseFlag << "]" << std::endl;
+  std::cout << "Usage: "
+            << executable_name
+            // Comment to make clang format not break formatting.
+            << " --" << kPageCountFlag << "=<int>"
+            << " [--" << kReuseFlag << "]" << std::endl;
 }
 }  // namespace
 
@@ -66,16 +69,16 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
 
   TRACE_ASYNC_BEGIN("benchmark", "get page", requests_count_ - request_number);
   ledger::PagePtr page;
-  ledger_->GetPage(reuse_ ? fidl::Clone(page_id_) : nullptr, page.NewRequest(),
-                   [this, request_number](ledger::Status status) {
-                     if (QuitOnError(QuitLoopClosure(), status,
-                                     "Ledger::GetPage")) {
-                       return;
-                     }
-                     TRACE_ASYNC_END("benchmark", "get page",
-                                     requests_count_ - request_number);
-                     RunSingle(request_number - 1);
-                   });
+  ledger_->GetPage(
+      reuse_ ? fidl::Clone(page_id_) : nullptr, page.NewRequest(),
+      [this, request_number](ledger::Status status) {
+        if (QuitOnError(QuitLoopClosure(), status, "Ledger::GetPage")) {
+          return;
+        }
+        TRACE_ASYNC_END("benchmark", "get page",
+                        requests_count_ - request_number);
+        RunSingle(request_number - 1);
+      });
   pages_.push_back(std::move(page));
 }
 

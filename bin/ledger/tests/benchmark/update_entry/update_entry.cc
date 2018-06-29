@@ -31,9 +31,12 @@ constexpr fxl::StringView kTransactionSizeFlag = "transaction-size";
 const int kKeySize = 100;
 
 void PrintUsage(const char* executable_name) {
-  std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
-            << "=<int> --" << kValueSizeFlag << "=<int> --"
-            << kTransactionSizeFlag << "=<int>" << std::endl;
+  std::cout << "Usage: "
+            << executable_name
+            // Comment to make clang format not break formatting.
+            << " --" << kEntryCountFlag << "=<int>"
+            << " --" << kValueSizeFlag << "=<int>"
+            << " --" << kTransactionSizeFlag << "=<int>" << std::endl;
 }
 
 }  // namespace
@@ -108,21 +111,21 @@ void UpdateEntryBenchmark::RunSingle(int i, fidl::VectorPtr<uint8_t> key) {
 
   fidl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size_);
   TRACE_ASYNC_BEGIN("benchmark", "put", i);
-  page_->Put(fidl::Clone(key), std::move(value),
-             fxl::MakeCopyable([this, i, key = std::move(key)](
-                                   ledger::Status status) mutable {
-               if (benchmark::QuitOnError(QuitLoopClosure(), status,
-                                          "Page::Put")) {
-                 return;
-               }
-               TRACE_ASYNC_END("benchmark", "put", i);
-               if (transaction_size_ > 0 &&
-                   i % transaction_size_ == transaction_size_ - 1) {
-                 CommitAndRunNext(i, std::move(key));
-               } else {
-                 RunSingle(i + 1, std::move(key));
-               }
-             }));
+  page_->Put(
+      fidl::Clone(key), std::move(value),
+      fxl::MakeCopyable([this, i,
+                         key = std::move(key)](ledger::Status status) mutable {
+        if (benchmark::QuitOnError(QuitLoopClosure(), status, "Page::Put")) {
+          return;
+        }
+        TRACE_ASYNC_END("benchmark", "put", i);
+        if (transaction_size_ > 0 &&
+            i % transaction_size_ == transaction_size_ - 1) {
+          CommitAndRunNext(i, std::move(key));
+        } else {
+          RunSingle(i + 1, std::move(key));
+        }
+      }));
 }
 
 void UpdateEntryBenchmark::CommitAndRunNext(int i,

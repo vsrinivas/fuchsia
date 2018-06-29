@@ -34,9 +34,13 @@ constexpr size_t kKeySize = 100;
 const std::string kUserDirectory = "/fetch-user";
 
 void PrintUsage(const char* executable_name) {
-  std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
-            << "=<int> --" << kValueSizeFlag << "=<int> --" << kPartSizeFlag
-            << "=<int> --" << kServerIdFlag << "=<string>" << std::endl;
+  std::cout << "Usage: "
+            << executable_name
+            // Comment to make clang format not break formatting.
+            << " --" << kEntryCountFlag << "=<int>"
+            << " --" << kValueSizeFlag << "=<int>"
+            << " --" << kPartSizeFlag << "=<int>"
+            << " --" << kServerIdFlag << "=<string>" << std::endl;
 }
 
 }  // namespace

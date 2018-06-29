@@ -31,10 +31,13 @@ constexpr fxl::StringView kKeySizeFlag = "key-size";
 constexpr fxl::StringView kValueSizeFlag = "value-size";
 
 void PrintUsage(const char* executable_name) {
-  std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
-            << "=<int> --" << kTransactionSizeFlag << "=<int> --"
-            << kKeySizeFlag << "=<int> --" << kValueSizeFlag << "=<int>"
-            << std::endl;
+  std::cout << "Usage: "
+            << executable_name
+            // Comment to make clang format not break formatting.
+            << " --" << kEntryCountFlag << "=<int>"
+            << " --" << kTransactionSizeFlag << "=<int>"
+            << " --" << kKeySizeFlag << "=<int>"
+            << " --" << kValueSizeFlag << "=<int>" << std::endl;
 }
 
 }  // namespace
