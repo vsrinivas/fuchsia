@@ -9,6 +9,8 @@ source_set("definitions") {
     "data_element.cc",
     "data_element.h",
     "sdp.h",
+    "service_record.cc",
+    "service_record.h",
     "status.cc",
     "status.h",
   ]
@@ -41,6 +43,7 @@ source_set("tests") {
   sources = [
     "data_element_unittest.cc",
     "pdu_unittest.cc",
+    "service_record_unittest.cc",
   ]
 
   deps = [

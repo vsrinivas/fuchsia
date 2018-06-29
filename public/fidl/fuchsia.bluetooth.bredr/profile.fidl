@@ -12,7 +12,7 @@ enum SecurityLevel {
   NONE = 0;  // Only allowed for specific services.
   ENCRYPTION_OPTIONAL = 1; // MITM protection not required, min user interaction
   ENCRYPTION_REQUIRED = 2; // Encryption required, MITM protection not required
-  MITM_REQUIRED = 3; // MITM & Encryption required. User interaction acceptable
+  MITM_PROTECTED = 3; // MITM Protection & Encryption required. Interaction okay
   HIGH_STRENGTH = 4; // 128-bit or equivalent key required using FIPS algorithms
 };
 
