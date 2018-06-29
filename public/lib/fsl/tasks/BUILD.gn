@@ -8,10 +8,6 @@ source_set("tasks") {
   sources = [
     "fd_waiter.cc",
     "fd_waiter.h",
-    "incoming_task_queue.cc",
-    "incoming_task_queue.h",
-    "message_loop.cc",
-    "message_loop.h",
   ]
   libs = [
     "zircon",
@@ -20,7 +16,6 @@ source_set("tasks") {
     "//garnet/public/lib/fsl/handles",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-default",
-    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-testutils",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",

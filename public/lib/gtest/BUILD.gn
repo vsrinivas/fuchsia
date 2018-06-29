@@ -11,8 +11,6 @@ source_set("gtest") {
     "test_loop_fixture.h",
     "test_loop_fixture.cc",
     "test_loop_fixture.h",
-    "test_with_message_loop.cc",
-    "test_with_message_loop.h",
   ]
 
   deps = [
@@ -36,7 +34,6 @@ source_set("unittests") {
   sources = [
     "real_loop_fixture_unittest.cc",
     "test_loop_fixture_unittest.cc",
-    "test_with_message_loop_unittest.cc",
   ]
 
   deps = [
