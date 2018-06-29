@@ -7,9 +7,9 @@
 #include <zircon/assert.h>
 #include <stdlib.h>
 
+#if !_KERNEL
 // The kernel does not want non-AllocCheckered non-placement new
 // overloads, but userspace can have them.
-#if !_KERNEL
 void* operator new(size_t s) {
     if (s == 0u) {
         s = 1u;
@@ -31,7 +31,6 @@ void* operator new[](size_t s) {
     }
     return mem;
 }
-#endif // !_KERNEL
 
 void* operator new(size_t s, const std::nothrow_t&) noexcept {
     if (s == 0u) {
@@ -47,13 +46,24 @@ void* operator new[](size_t s, const std::nothrow_t&) noexcept {
     return ::malloc(s);
 }
 
-void* operator new(size_t , void *p) {
-    return p;
+#else // _KERNEL
+
+// kernel versions may pass through the call site to the underlying allocator
+void* operator new(size_t s, const std::nothrow_t&) noexcept {
+    if (s == 0u) {
+        s = 1u;
+    }
+    return ::malloc_debug_caller(s, __GET_CALLER());
 }
 
-void* operator new[](size_t , void* p) {
-    return p;
+void* operator new[](size_t s, const std::nothrow_t&) noexcept {
+    if (s == 0u) {
+        s = 1u;
+    }
+    return ::malloc_debug_caller(s, __GET_CALLER());
 }
+
+#endif // _KERNEL
 
 void operator delete(void *p) {
     return ::free(p);
@@ -70,3 +80,11 @@ void operator delete(void *p, size_t s) {
 void operator delete[](void *p, size_t s) {
     return ::free(p);
 }
+void* operator new(size_t , void *p) {
+    return p;
+}
+
+void* operator new[](size_t , void* p) {
+    return p;
+}
+
