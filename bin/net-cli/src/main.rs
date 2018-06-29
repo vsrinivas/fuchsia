@@ -6,6 +6,7 @@
 
 extern crate failure;
 extern crate fidl;
+extern crate fidl_fuchsia_net as net;
 extern crate fidl_fuchsia_net_stack as netstack;
 extern crate fuchsia_app as component;
 #[macro_use]
@@ -22,6 +23,8 @@ use netstack::{StackMarker, StackProxy};
 use structopt::StructOpt;
 
 mod opts;
+mod pretty;
+
 use opts::*;
 
 fn main() -> Result<(), Error> {
@@ -43,13 +46,23 @@ fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> impl Future<Item = (), Error = 
             stack
                 .list_interfaces()
                 .map_err(|e| e.context("error getting response").into())
-                .map(|response| println!("interfaces: {:02x?}", response))
+                .map(|response| {
+                    for info in response {
+                        println!("{}", pretty::InterfaceInfo::from(info));
+                    }
+                })
         }),
         IfCmd::Get { id } => IfFut::GetInfo({
             stack
                 .get_interface_info(id)
                 .map_err(|e| e.context("error getting response").into())
-                .map(move |response| println!("interface {}: {:02x?}", id, response))
+                .map(move |response| {
+                    if let Some(e) = response.1 {
+                        println!("Error getting interface {}: {:?}", id, e)
+                    } else {
+                        println!("{}", pretty::InterfaceInfo::from(*response.0.unwrap()))
+                    }
+                })
         }),
         IfCmd::Enable { id } => IfFut::Enable({
             stack

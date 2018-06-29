@@ -18,6 +18,7 @@ rustc_binary("bin") {
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures",
     "//third_party/rust-crates/rustc_deps:structopt",
+    "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/public/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
   ]
 }
