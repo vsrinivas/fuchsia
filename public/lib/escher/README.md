@@ -43,10 +43,10 @@ Escher can also build on Linux.  In order to do so, you need to:
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$VULKAN_SDK/lib
     export VK_LAYER_PATH=$VULKAN_SDK/etc/explicit_layer.d
     ```
-  * specify that you want to build only the Escher module, for Linux:
+  * specify that you want to build only Escher (+ examples/tests), for Linux:
     ```
     cd $FUCHSIA_DIR
-    fx set x64  --packages garnet/packages/experimental/examples_escher_linux,garnet/packages/experimental/tests_escher_linux
+    fx set x64  --packages garnet/packages/experimental/dev_escher_linux
     ```
     * See `$FUCHSIA_DIR/docs/getting_source.md` for how to set up the `fx` tool.
   * Do this once only:
