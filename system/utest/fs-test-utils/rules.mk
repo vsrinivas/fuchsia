@@ -10,6 +10,7 @@ MODULE_NAME := fs-test-utils-test
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/fixture_test.cpp \
+    $(LOCAL_DIR)/unittest_test.cpp \
     $(LOCAL_DIR)/main.cpp \
 
 MODULE_STATIC_LIBS := \

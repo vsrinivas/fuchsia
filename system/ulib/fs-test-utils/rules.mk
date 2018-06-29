@@ -23,6 +23,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/memfs.cpp \
     system/ulib/sync \
     system/ulib/trace \
+    system/ulib/unittest \
     system/ulib/zx \
     system/ulib/zxcpp \
 
