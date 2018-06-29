@@ -151,7 +151,7 @@ zx_status_t Worker::DecryptRead(block_op_t* block) {
         fbl::MakeAutoCall([root, address, length]() { zx_vmar_unmap(root, address, length); });
 
     // Decrypt in place
-    uint8_t* data = reinterpret_cast<uint8_t*>(address) + offset_vmo;
+    uint8_t* data = reinterpret_cast<uint8_t*>(address);
     if ((rc = decrypt_.Decrypt(data, offset_dev, length, data)) != ZX_OK) {
         zxlogf(ERROR, "failed to decrypt: %s\n", zx_status_get_string(rc));
         return rc;
