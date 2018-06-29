@@ -32,7 +32,7 @@ class Mpeg12Decoder : public VideoDecoder {
 
   FrameReadyNotifier notifier_;
   std::vector<std::unique_ptr<VideoFrame>> video_frames_;
-  io_buffer_t cc_buffer_ = {};
+  io_buffer_t workspace_buffer_ = {};
 };
 
 #endif  // MPEG12_DECODER_H_

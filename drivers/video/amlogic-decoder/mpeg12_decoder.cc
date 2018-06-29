@@ -35,7 +35,7 @@ using MregFatalError = AvScratchF;
 Mpeg12Decoder::~Mpeg12Decoder() {
   owner_->core()->StopDecoding();
   owner_->core()->WaitForIdle();
-  io_buffer_release(&cc_buffer_);
+  io_buffer_release(&workspace_buffer_);
 }
 
 void Mpeg12Decoder::SetFrameReadyNotifier(FrameReadyNotifier notifier) {
@@ -91,16 +91,21 @@ zx_status_t Mpeg12Decoder::Initialize() {
   if (status != ZX_OK)
     return status;
 
-  enum { kCcBufSize = 5 * 1024 };
+  enum { kWorkspaceSize = 2 * (1 << 16) }; // 128 kB
 
-  status = io_buffer_init(&cc_buffer_, owner_->bti(), kCcBufSize,
+  status = io_buffer_init(&workspace_buffer_, owner_->bti(), kWorkspaceSize,
                           IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
-    DECODE_ERROR("Failed to make cc buffer");
+    DECODE_ERROR("Failed to make workspace buffer");
     return status;
   }
+  io_buffer_cache_flush(&workspace_buffer_, 0, kWorkspaceSize);
+
+  // The first part of the workspace buffer is used for the CC buffer, which
+  // stores metadata that was encoded in the stream.
+  enum { kCcBufSize = 5 * 1024 };
   MregCoMvStart::Get()
-      .FromValue(truncate_to_32(io_buffer_phys(&cc_buffer_)) + kCcBufSize)
+      .FromValue(truncate_to_32(io_buffer_phys(&workspace_buffer_)) + kCcBufSize)
       .WriteTo(owner_->dosbus());
 
   Mpeg12Reg::Get().FromValue(0).WriteTo(owner_->dosbus());
@@ -155,6 +160,10 @@ void Mpeg12Decoder::HandleInterrupt() {
     notifier_(frame.get());
 
   MregBufferOut::Get().FromValue(0).WriteTo(owner_->dosbus());
+
+  if (AvScratchM::Get().ReadFrom(owner_->dosbus()).reg_value() & (1 << 16)) {
+    DLOG("ccbuf has new data\n");
+  }
 
   // Return buffer to decoder.
   if (MregBufferIn::Get().ReadFrom(owner_->dosbus()).reg_value() == 0) {
