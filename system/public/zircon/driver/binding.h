@@ -128,6 +128,11 @@ __BEGIN_CDECLS;
 
 // Bluetooth binding variables at 0x08XX
 #define BIND_BT_GATT_SVC_UUID16     0x0800
+// 128-bit UUID is split across 4 32-bit unsigned ints
+#define BIND_BT_GATT_SVC_UUID128_1     0x0801
+#define BIND_BT_GATT_SVC_UUID128_2     0x0802
+#define BIND_BT_GATT_SVC_UUID128_3     0x0803
+#define BIND_BT_GATT_SVC_UUID128_4     0x0804
 
 // SDIO binding variables at 0x09XX
 #define BIND_SDIO_VID             0x0900
