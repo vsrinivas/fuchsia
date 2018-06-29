@@ -227,7 +227,7 @@ int eth_add_mcast_filter(const mac_addr_t* addr) {
     return 0;
 }
 
-static volatile uint64_t net_timer = 0;
+static volatile zx_time_t net_timer = 0;
 
 void netifc_set_timer(uint32_t ms) {
     net_timer = zx_clock_get_monotonic() + ZX_MSEC(ms);
