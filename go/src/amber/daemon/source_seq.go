@@ -46,7 +46,7 @@ func (k *SourceKeeper) GetConfig() *amber.SourceConfig {
 	return k.src.GetConfig()
 }
 
-func (k *SourceKeeper) GetHttpClient() *http.Client {
+func (k *SourceKeeper) GetHttpClient() (*http.Client, error) {
 	return k.src.GetHttpClient()
 }
 

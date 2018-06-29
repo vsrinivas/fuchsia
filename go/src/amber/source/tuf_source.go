@@ -85,7 +85,8 @@ type TUFSource struct {
 	// the TUF database.
 	localStore tuf.LocalStore
 
-	httpClient *http.Client
+	tokenSource oauth2.TokenSource
+	httpClient  *http.Client
 
 	keys      []*tuf_data.Key
 	tufClient *tuf.Client
@@ -213,11 +214,16 @@ func (f *TUFSource) updateTUFClientLocked() error {
 
 	// If we have oauth2 configured, we need to wrap the client in order to
 	// inject the authentication header.
+	var tokenSource oauth2.TokenSource
 	if c := oauth2deviceConfig(f.cfg.Config.Oauth2Config); c != nil {
-		// Store the client in the context so oauth2 can use it.
+		// Store the client in the context so oauth2 can use it to
+		// fetch the token. This client's transport will also be used
+		// as the base of the client oauth2 returns to us, except for
+		// the request timeout, which we manually have to copy over.
 		ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
 
-		httpClient = c.Client(ctx, f.cfg.Oauth2Token)
+		tokenSource = c.TokenSource(ctx, f.cfg.Oauth2Token)
+		httpClient = oauth2.NewClient(ctx, tokenSource)
 	}
 
 	// Create a new tuf client that uses the new http client.
@@ -233,6 +239,7 @@ func (f *TUFSource) updateTUFClientLocked() error {
 	f.closeIdleConnections()
 
 	// We're done! Save the clients for the next time we update our source.
+	f.tokenSource = tokenSource
 	f.httpClient = httpClient
 	f.tufClient = tufClient
 
@@ -346,12 +353,40 @@ func (f *TUFSource) GetConfig() *amber.SourceConfig {
 	return f.cfg.Config
 }
 
-func (f *TUFSource) GetHttpClient() *http.Client {
+func (f *TUFSource) GetHttpClient() (*http.Client, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+
+	if err := f.refreshOauth2TokenLocked(); err != nil {
+		return nil, fmt.Errorf("failed to refresh oauth2 token: %s", err)
+	}
+
 	// http.Client itself is thread safe, but the member alias is not, so is
 	// guarded here.
-	return f.httpClient
+	return f.httpClient, nil
+}
+
+// Check if the token has refreshed. If so, save a new token
+func (f *TUFSource) refreshOauth2TokenLocked() error {
+	if f.cfg.Oauth2Token == nil {
+		return nil
+	}
+
+	// Grab the latest token from the token source. If the token has
+	// expired, it will automatically refresh it in the background and give
+	// us a new access token.
+	newToken, err := f.tokenSource.Token()
+	if err != nil {
+		return err
+	}
+
+	if newToken.AccessToken != f.cfg.Oauth2Token.AccessToken {
+		log.Printf("refreshed oauth2 token for: %s", f.cfg.Config.Id)
+		f.cfg.Oauth2Token = newToken
+		f.saveLocked()
+	}
+
+	return nil
 }
 
 func (f *TUFSource) Login() (*amber.DeviceCode, error) {
@@ -421,6 +456,10 @@ func (f *TUFSource) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pkg.P
 
 	if err := f.initLocalStoreLocked(); err != nil {
 		return nil, fmt.Errorf("tuf_source: source could not be initialized: %s", err)
+	}
+
+	if err := f.refreshOauth2TokenLocked(); err != nil {
+		return nil, fmt.Errorf("tuf_source: failed to refresh oauth2 token: %s", err)
 	}
 
 	_, err := f.tufClient.Update()
@@ -496,6 +535,11 @@ func (f *TUFSource) FetchPkg(pkg *pkg.Package) (*os.File, error) {
 		return nil, fmt.Errorf("tuf_source: source could not be initialized: %s", err)
 	}
 	lg.Log.Printf("tuf_source: requesting download for: %s\n", pkg.Name)
+
+	if err := f.refreshOauth2TokenLocked(); err != nil {
+		return nil, fmt.Errorf("failed to refresh oauth2 token: %s", err)
+	}
+
 	tmp, err := ioutil.TempFile("", pkg.Version)
 	if err != nil {
 		return nil, err

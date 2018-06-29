@@ -53,8 +53,8 @@ func (t *testSrc) GetConfig() *amber.SourceConfig {
 	return nil
 }
 
-func (t *testSrc) GetHttpClient() *http.Client {
-	return nil
+func (t *testSrc) GetHttpClient() (*http.Client, error) {
+	return nil, nil
 }
 
 func (t *testSrc) Login() (*amber.DeviceCode, error) {
