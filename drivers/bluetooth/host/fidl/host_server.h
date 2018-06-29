@@ -66,6 +66,9 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host>,
       ::fuchsia::bluetooth::control::OutputCapabilityType output,
       ::fidl::InterfaceHandle<::fuchsia::bluetooth::control::PairingDelegate>
           delegate) override;
+  void RequestProfile(
+      ::fidl::InterfaceRequest<fuchsia::bluetooth::bredr::Profile> profile)
+      override;
   void Close() override;
 
   // ::btlib::gap::PairingDelegate overrides:

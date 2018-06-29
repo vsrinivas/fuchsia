@@ -1,0 +1,172 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.bredr;
+
+// A building element in SDP.  Used for various low-level and custom parameters.
+enum DataElementType {
+  NOTHING = 0;
+  UNSIGNED_INTEGER = 1;
+  SIGNED_INTEGER = 2;
+  UUID = 3;
+  STRING = 4;
+  BOOLEAN = 5;
+  SEQUENCE = 6;
+  ALTERNATIVE = 7;
+  // URL = 8;  // TODO(jamuraa): support URLs
+};
+
+union DataElementData {
+  int64 integer;
+  string? str;
+  string? uuid;
+  bool b;
+  vector<uint8>? bytes;
+  //vector<DataElement>? sequence;
+};
+
+struct DataElement {
+  DataElementType type;
+  uint32 size;  // Size in bytes, used for integer types.
+  DataElementData data;
+};
+
+// Defined Protocol Identifiers for the Protocol Descriptor
+// We intentionally omit deprecated profile identifiers
+// From Bluetooth Assigned Numbers:
+// https://www.bluetooth.com/specifications/assigned-numbers/service-discovery
+enum ProtocolIdentifier {
+  SDP = 1;
+  RFCOMM = 3;
+  ATT = 7;
+  OBEX = 8;
+  BNEP = 15;
+  HIDP = 17;
+  HardcopyControlChannel = 18;
+  HardcopyDataChannel = 20;
+  HardcopyNotification = 22;
+  AVTCP = 23;
+  AVDTP = 25;
+  MCAPControlChannel = 30;
+  MCAPDataChannel = 31;
+  L2CAP = 256;
+};
+
+// Identifies a communications protocol along with protocol-specific parameters.
+struct ProtocolDescriptor {
+  ProtocolIdentifier protocol;
+  vector<DataElement> params;
+};
+
+// Identifiers that are valid for Bluetooth Classes / Profiles
+// We intentionally omit classes and profile IDs that are unsupported, deprecated,
+// or reserved for use by Fuchsia Bluetooth.
+// From Bluetooth Assigned Numbers for SDP
+// https://www.bluetooth.com/specifications/assigned-numbers/service-discovery
+enum ServiceClassProfileIdentifier {
+  // ServiceDiscoveryService and BrowseGroupDescriptorService used by Fuchsia
+  SerialPort = 0x1101; // Serial Port Profile (SPP)
+  DialupNetworking = 0x1103; // Dial-up Networking Profile (DUN)
+  ObexObjectPush = 0x1105; // Object Push Profile (OPP)
+  ObexFileTransfer = 0x1106; // File Transfer Profile (FTP)
+  // Headset Profile (HSP)
+  Headset = 0x1108;
+  HeadsetAudioGateway = 0x1112;
+  HeadsetHS = 0x1131;
+  // Advanced Audio Distribution Profile (A2DP)
+  AudioSource = 0x110A;
+  AudioSink = 0x110B;
+  AdvancedAudioDistribution = 0x110D;
+  // Audio/Video Remote Control Profil (AVRCP)
+  AVRemoteControlTarget = 0x110C;
+  AVRemoteControl = 0x110E;
+  AVRemoteControlController = 0x110F;
+  // Personal Area Networking (PAN)
+  PANU = 0x1115;
+  NAP = 0x1116;
+  GN = 0x1117;
+  // Basic Printing and Basic Imaging Profiles omitted (unsupported)
+  // Hands-Free Profile (HFP)
+  Handsfree = 0x111E;
+  HandsfreeAudioGateway = 0x111F;
+  // Human Interface Device and Hardcopy Cable Replacement Profile omitted (unsupported)
+  SIM_Access = 0x112D; // Sim Access Profile (SAP)
+  // Phonebook Access Profile (PBAP)
+  PhonebookPCE = 0x112E;
+  PhonebookPSE = 0x112F;
+  Phonebook = 0x1130;
+  // Message Access Profile (MAP)
+  MessageAccessServer = 0x1132;
+  MessageNotificationServer = 0x1133;
+  MessageAccessProfile = 0x1134;
+  // GNSS and 3DSP omitted (unsupported)
+  // Multi-Profile Specification (MPS)
+  MPSProfile = 0x113A;
+  MPSClass = 0x113B;
+  // Calendar, Task, and Notes Profile omitted (unsupported)
+  // Device ID used by Fuchsia
+  // Video Distribution Profile (VDP)
+  VideoSource = 0x1303;
+  VideoSink = 0x1304;
+  VideoDistribution = 0x1305;
+  // Health Device Profile (HDP)
+  HDP = 0x1400;
+  HDPSource = 0x1401;
+  HDPSink = 0x1402;
+};
+
+// A description of a profile that this service conforms to.
+struct ProfileDescriptor {
+  ServiceClassProfileIdentifier profile_id;
+  uint8 major_version;
+  uint8 minor_version;
+};
+
+// Human-readable information about a service. Strings are encoded in UTF-8.
+struct Information {
+  // Language that is represented.  Must be two characters long and a valid
+  // ICO 639:1988 identifier.
+  string language;
+
+  // Service name
+  string? name;
+
+  // A human-readable description
+  string? description;
+
+  // The provider of this service (person or organization)
+  string? provider;
+};
+
+// A generic attribute, used for protocol information;
+struct Attribute {
+  uint16 id;
+  DataElement elements;
+};
+
+struct ServiceDefinition {
+  // UUIDs of service classes that this service record conforms to.
+  vector<string> service_class_uuids;
+
+  // The protocols that can be used to gain access to this service, with their
+  // protocol-specific identifiers.
+  // This is ordered from lowest level to highest.
+  vector<ProtocolDescriptor> protocol_descriptors;
+
+  // Additional protocol descriptor lists, if the service requires more channels
+  // in addition to the main service.
+  vector<vector<ProtocolDescriptor>>? additional_protocol_descriptors;
+
+  // Bluetooth profiles that are supported by this service.
+  vector<ProfileDescriptor> profile_descriptors;
+
+  // Human-readable service information, in one or more languages.
+  // The first set of information is considered the primary language.
+  vector<Information> information;
+
+  // Additional attributes included in the Service Definition, for specific
+  // services.
+  // All of these attributes should have an Attribute ID above 0x0200.
+  vector<Attribute>? additional_attributes;
+};

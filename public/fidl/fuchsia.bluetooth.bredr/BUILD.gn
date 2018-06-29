@@ -4,16 +4,12 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("bluetooth_host") {
-  name = "fuchsia.bluetooth.host"
+fidl("fuchsia.bluetooth.bredr") {
   sources = [
-    "host.fidl",
+    "profile.fidl",
+    "service.fidl",
   ]
   public_deps = [
     "//garnet/public/fidl/fuchsia.bluetooth",
-    "//garnet/public/fidl/fuchsia.bluetooth.bredr",
-    "//garnet/public/fidl/fuchsia.bluetooth.control",
-    "//garnet/public/fidl/fuchsia.bluetooth.gatt",
-    "//garnet/public/fidl/fuchsia.bluetooth.le",
   ]
 }

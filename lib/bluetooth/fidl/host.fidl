@@ -8,6 +8,7 @@ using fuchsia.bluetooth;
 using fuchsia.bluetooth.control;
 using fuchsia.bluetooth.gatt;
 using fuchsia.bluetooth.le;
+using fuchsia.bluetooth.bredr;
 
 // Interface for interacting with a Bluetooth host device (bt-host)
 interface Host {
@@ -17,16 +18,17 @@ interface Host {
   1: RequestLowEnergyCentral(request<fuchsia.bluetooth.le.Central> central);
   2: RequestLowEnergyPeripheral(request<fuchsia.bluetooth.le.Peripheral> peripheral);
   3: RequestGattServer(request<fuchsia.bluetooth.gatt.Server> server);
+  4: RequestProfile(request<fuchsia.bluetooth.bredr.Profile> profile);
 
   // Closes all FIDL interface handles that are associated with this bt-host
   // device (excluding any Host interface handles).
-  4: Close();
+  5: Close();
 
   // Returns information about the Bluetooth adapter managed by this host.
-  5: GetInfo() -> (fuchsia.bluetooth.control.AdapterInfo @info);
+  6: GetInfo() -> (fuchsia.bluetooth.control.AdapterInfo @info);
 
   // Sets the local name for this adapter.
-  6: SetLocalName(string local_name) -> (fuchsia.bluetooth.Status @status);
+  7: SetLocalName(string local_name) -> (fuchsia.bluetooth.Status @status);
 
   // Initiates a general discovery procedure for BR/EDR and LE devices. On success, discovered
   // devices will be reported via AdapterDelegate.OnDeviceDiscovered().
@@ -35,7 +37,7 @@ interface Host {
   //
   // Discovery will continue until it is terminated via StopDiscovery() or if the proxy to the
   // Adapter gets disconnected.
-  7: StartDiscovery() -> (fuchsia.bluetooth.Status @status);
+  8: StartDiscovery() -> (fuchsia.bluetooth.Status @status);
 
   // Terminates discovery if one was started via StartDiscovery(). The AdapterDelegate will stop
   // receiving device discovery notifications.
@@ -43,18 +45,18 @@ interface Host {
   // NOTE: If another client is performing discovery (e.g. via its own Adapter interface handle),
   // then the system will continue performing device discovery even if this method results in
   // success.
-  8: StopDiscovery() -> (fuchsia.bluetooth.Status @status);
+  9: StopDiscovery() -> (fuchsia.bluetooth.Status @status);
 
   // Sets whether this host should be connectable.
-  9: SetConnectable(bool enabled) -> (fuchsia.bluetooth.Status @status);
+  10: SetConnectable(bool enabled) -> (fuchsia.bluetooth.Status @status);
 
   // Sets whether this host should be discoverable.
-  10: SetDiscoverable(bool enabled) -> (fuchsia.bluetooth.Status @status);
+  11: SetDiscoverable(bool enabled) -> (fuchsia.bluetooth.Status @status);
 
   // Assigns the pairing delegate that will respond to authentication challenges using the given
   // I/O capabilities. Setting a pairing delegate cancels any on-going pairing procedure started
-  // using a previous delegate. If no PairingDelegate has been set, reject.
-  11: SetPairingDelegate(
+  // using a previous delegate. If no PairingDelegate has ben set, reject.
+  12: SetPairingDelegate(
           fuchsia.bluetooth.control.InputCapabilityType input,
           fuchsia.bluetooth.control.OutputCapabilityType output,
           fuchsia.bluetooth.control.PairingDelegate? delegate);

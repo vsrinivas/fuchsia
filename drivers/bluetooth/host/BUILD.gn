@@ -39,6 +39,8 @@ source_set("sources") {
     "fidl/low_energy_central_server.h",
     "fidl/low_energy_peripheral_server.cc",
     "fidl/low_energy_peripheral_server.h",
+    "fidl/profile_server.cc",
+    "fidl/profile_server.h",
     "fidl/server_base.h",
   ]
 

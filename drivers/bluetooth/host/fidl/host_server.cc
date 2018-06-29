@@ -18,6 +18,7 @@
 #include "helpers.h"
 #include "low_energy_central_server.h"
 #include "low_energy_peripheral_server.h"
+#include "profile_server.h"
 
 namespace bthost {
 
@@ -352,7 +353,11 @@ void HostServer::SetPairingDelegate(
       FXL_VLOG(1) << "bt-host: Pairing Delegate disconnected";
     }
   });
+}
 
+void HostServer::RequestProfile(
+    fidl::InterfaceRequest<fuchsia::bluetooth::bredr::Profile> request) {
+  BindServer<ProfileServer>(std::move(request));
 }
 
 void HostServer::Close() {
