@@ -7,8 +7,9 @@
 
 #include <stdint.h>
 
+#include <memory>
+
 #include <lib/vmo-utils/vmo_mapper.h>
-#include <lib/fsl/tasks/message_loop.h>
 #include <zircon/status.h>
 #include <zx/event.h>
 #include <zx/vmo.h>

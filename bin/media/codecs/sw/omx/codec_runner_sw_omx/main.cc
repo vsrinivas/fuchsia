@@ -8,7 +8,6 @@
 #include <lib/async/cpp/time.h>
 
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 #include "codec_runner_component.h"
 

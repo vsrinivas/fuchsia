@@ -4,10 +4,10 @@
 
 #include <string>
 
-#include "codec_factory_app.h"
-
 #include <lib/app/cpp/startup_context.h>
-#include <lib/fsl/tasks/message_loop.h>
+#include <lib/async-loop/cpp/loop.h>
+
+#include "codec_factory_app.h"
 
 int main(int argc, char* argv[]) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);

@@ -5,10 +5,11 @@
 #ifndef GARNET_BIN_MEDIA_CODECS_SW_OMX_CODEC_RUNNER_SW_OMX_CODEC_RUNNER_H_
 #define GARNET_BIN_MEDIA_CODECS_SW_OMX_CODEC_RUNNER_SW_OMX_CODEC_RUNNER_H_
 
+#include <threads.h>
+
 #include <fuchsia/mediacodec/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 

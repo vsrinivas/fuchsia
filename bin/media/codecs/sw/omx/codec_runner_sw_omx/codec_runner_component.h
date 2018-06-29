@@ -9,7 +9,6 @@
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace codec_runner {
 

@@ -9,7 +9,6 @@
 
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/tasks/message_loop.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/log_settings_command_line.h>
 #include <lib/fxl/logging.h>

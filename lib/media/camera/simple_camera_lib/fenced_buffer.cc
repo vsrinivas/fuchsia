@@ -8,8 +8,10 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <memory>
 #include <utility>
 
+#include <lib/async/default.h>
 #include <lib/fdio/io.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/log_settings_command_line.h>

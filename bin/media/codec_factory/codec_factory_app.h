@@ -5,12 +5,14 @@
 #ifndef GARNET_BIN_MEDIA_CODEC_FACTORY_CODEC_FACTORY_APP_H_
 #define GARNET_BIN_MEDIA_CODEC_FACTORY_CODEC_FACTORY_APP_H_
 
-#include <fuchsia/mediacodec/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
-#include <lib/fsl/tasks/message_loop.h>
-
 #include <list>
 #include <memory>
+
+#include <fuchsia/mediacodec/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
+#include <lib/async-loop/cpp/loop.h>
+
+#include "lib/fxl/logging.h"
 
 namespace codec_factory {
 

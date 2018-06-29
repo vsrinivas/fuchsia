@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <garnet/lib/media/camera/simple_camera_lib/fake_camera_source.h>
+
+#include <lib/async/default.h>
 #include <zx/time.h>
 
 namespace simple_camera {

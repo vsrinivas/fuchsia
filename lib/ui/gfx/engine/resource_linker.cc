@@ -7,7 +7,6 @@
 #include <lib/async/default.h>
 
 #include "garnet/lib/ui/gfx/resources/import.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace scenic {
 namespace gfx {

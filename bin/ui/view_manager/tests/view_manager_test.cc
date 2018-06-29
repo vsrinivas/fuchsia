@@ -13,7 +13,6 @@
 #include "lib/ui/tests/mocks/mock_view_container_listener.h"
 #include "lib/ui/tests/mocks/mock_view_listener.h"
 #include "lib/ui/tests/mocks/mock_view_tree_listener.h"
-#include "lib/ui/tests/test_with_message_loop.h"
 
 extern std::unique_ptr<fuchsia::sys::StartupContext> g_startup_context;
 
