@@ -11,7 +11,6 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/gtest/test_loop_fixture.h"
-#include "lib/gtest/test_with_message_loop.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"

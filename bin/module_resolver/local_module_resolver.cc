@@ -11,7 +11,6 @@
 #include <lib/async/default.h>
 
 #include "lib/context/cpp/context_helper.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/strings/split_string.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/public/lib/entity/cpp/json.h"

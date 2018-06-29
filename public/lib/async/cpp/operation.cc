@@ -10,7 +10,6 @@
 #include <lib/async/default.h>
 #include <trace/event.h>
 
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
 namespace modular {

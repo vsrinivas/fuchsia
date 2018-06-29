@@ -15,7 +15,6 @@
 #include "gtest/gtest.h"
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/user_runner/entity_provider_runner/entity_provider_runner.h"

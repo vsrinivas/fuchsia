@@ -24,7 +24,6 @@
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/types/type_converters.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"

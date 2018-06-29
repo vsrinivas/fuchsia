@@ -14,7 +14,6 @@
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fit/function.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"

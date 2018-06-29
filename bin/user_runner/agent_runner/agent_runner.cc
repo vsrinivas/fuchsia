@@ -11,7 +11,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/user_runner/agent_runner/agent_context_impl.h"

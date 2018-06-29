@@ -16,7 +16,6 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_message_loop.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/last_one_wins_merge_strategy.h"
 #include "peridot/bin/ledger/app/merging/test_utils.h"

@@ -11,7 +11,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 
 namespace modular {

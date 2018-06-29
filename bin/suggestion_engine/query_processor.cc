@@ -7,7 +7,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/suggestion_engine/suggestion_engine_helper.h"
 #include "peridot/lib/fidl/json_xdr.h"
 
