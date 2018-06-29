@@ -78,6 +78,7 @@ executable("tests") {
     "//garnet/bin/media/media_player/framework",
     "//garnet/bin/media/media_player/framework_create",
     "//garnet/public/fidl/fuchsia.media",
+    "//garnet/public/fidl/fuchsia.mediacodec",
     "//garnet/public/fidl/fuchsia.mediaplayer",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",

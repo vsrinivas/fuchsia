@@ -7,6 +7,7 @@
 #include "garnet/bin/media/media_player/decode/decoder.h"
 
 #include "garnet/bin/media/media_player/ffmpeg/ffmpeg_decoder_factory.h"
+#include "garnet/bin/media/media_player/fidl/fidl_decoder_factory.h"
 
 namespace media_player {
 namespace {
@@ -89,6 +90,7 @@ void CompositeDecoderFactory::ContinueCreateDecoder(
 std::unique_ptr<DecoderFactory> DecoderFactory::Create(
     component::StartupContext* startup_context) {
   auto parent_factory = CompositeDecoderFactory::Create();
+  parent_factory->AddFactory(FidlDecoderFactory::Create(startup_context));
   parent_factory->AddFactory(FfmpegDecoderFactory::Create(startup_context));
   return parent_factory;
 }

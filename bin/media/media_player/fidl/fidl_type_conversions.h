@@ -6,6 +6,7 @@
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_FIDL_FIDL_TYPE_CONVERSIONS_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/mediacodec/cpp/fidl.h>
 #include <fuchsia/mediaplayer/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/framework/metadata.h"
@@ -150,6 +151,20 @@ struct TypeConverter<std::unique_ptr<media_player::Bytes>,
                      fidl::VectorPtr<uint8_t>> {
   static std::unique_ptr<media_player::Bytes> Convert(
       const fidl::VectorPtr<uint8_t>& input);
+};
+
+template <>
+struct TypeConverter<fuchsia::mediacodec::CodecFormatDetailsPtr,
+                     media_player::StreamType> {
+  static fuchsia::mediacodec::CodecFormatDetailsPtr Convert(
+      const media_player::StreamType& input);
+};
+
+template <>
+struct TypeConverter<std::unique_ptr<media_player::StreamType>,
+                     fuchsia::mediacodec::CodecFormatDetails> {
+  static std::unique_ptr<media_player::StreamType> Convert(
+      const fuchsia::mediacodec::CodecFormatDetails& input);
 };
 
 }  // namespace fxl

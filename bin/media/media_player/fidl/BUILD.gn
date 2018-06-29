@@ -12,10 +12,37 @@ source_set("fidl") {
     "//garnet/bin/media/media_player/framework",
     "//garnet/bin/media/media_player/util",
     "//garnet/public/fidl/fuchsia.media",
+    "//garnet/public/fidl/fuchsia.mediacodec",
     "//garnet/public/fidl/fuchsia.mediaplayer",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/media/transport",
+  ]
+}
+
+source_set("decoders") {
+  sources = [
+    "buffer_set.cc",
+    "buffer_set.h",
+    "fidl_decoder.cc",
+    "fidl_decoder.h",
+    "fidl_decoder_factory.cc",
+    "fidl_decoder_factory.h",
+  ]
+
+  deps = [
+    ":fidl",
+    "//garnet/bin/media/media_player/decode",
+    "//garnet/bin/media/media_player/framework",
+    "//garnet/bin/media/media_player/util",
+    "//garnet/public/fidl/fuchsia.media",
+    "//garnet/public/fidl/fuchsia.mediacodec",
+    "//garnet/public/lib/fostr",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/media/timeline",
+    "//garnet/public/lib/media/transport",
+    "//zircon/public/lib/vmo-utils",
   ]
 }

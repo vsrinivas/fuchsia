@@ -13,6 +13,8 @@ namespace fxl {
 
 namespace {
 
+static const char kAacMimeType[] = "audio/aac-adts";
+
 bool KnownEncodingsMatch() {
   return !strcmp(media_player::StreamType::kAudioEncodingAac,
                  fuchsia::media::AUDIO_ENCODING_AAC) &&
@@ -498,6 +500,57 @@ std::unique_ptr<media_player::Bytes> TypeConverter<
   std::memcpy(bytes->data(), input->data(), input->size());
 
   return bytes;
+}
+
+fuchsia::mediacodec::CodecFormatDetailsPtr TypeConverter<
+    fuchsia::mediacodec::CodecFormatDetailsPtr,
+    media_player::StreamType>::Convert(const media_player::StreamType& input) {
+  if (input.medium() != media_player::StreamType::Medium::kAudio ||
+      input.encoding() != media_player::StreamType::kAudioEncodingAac) {
+    return nullptr;
+  }
+
+  auto result = fuchsia::mediacodec::CodecFormatDetails::New();
+  result->format_details_version_ordinal = 0;
+  result->mime_type = kAacMimeType;
+  if (input.encoding_parameters()) {
+    result->codec_oob_bytes =
+        fxl::To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters());
+  }
+
+  return result;
+}
+
+std::unique_ptr<media_player::StreamType>
+TypeConverter<std::unique_ptr<media_player::StreamType>,
+              fuchsia::mediacodec::CodecFormatDetails>::
+    Convert(const fuchsia::mediacodec::CodecFormatDetails& input) {
+  if (input.mime_type != "audio/raw" || !input.domain->is_audio() ||
+      !input.domain->audio().is_uncompressed() ||
+      !input.domain->audio().uncompressed().is_pcm()) {
+    return nullptr;
+  }
+
+  auto& format = input.domain->audio().uncompressed().pcm();
+  if (format.pcm_mode != fuchsia::mediacodec::AudioPcmMode::LINEAR) {
+    return nullptr;
+  }
+
+  media_player::AudioStreamType::SampleFormat sample_format;
+  switch (format.bits_per_sample) {
+    case 8:
+      sample_format = media_player::AudioStreamType::SampleFormat::kUnsigned8;
+      break;
+    case 16:
+      sample_format = media_player::AudioStreamType::SampleFormat::kSigned16;
+      break;
+    default:
+      return nullptr;
+  }
+
+  return media_player::AudioStreamType::Create(
+      media_player::StreamType::kAudioEncodingLpcm, nullptr, sample_format,
+      format.channel_map->size(), format.frames_per_second);
 }
 
 }  // namespace fxl

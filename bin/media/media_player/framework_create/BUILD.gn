@@ -12,7 +12,7 @@ source_set("framework_create") {
     "//garnet/bin/media/media_player/decode",
     "//garnet/bin/media/media_player/demux",
     "//garnet/bin/media/media_player/ffmpeg",
-    "//garnet/bin/media/media_player/fidl",
+    "//garnet/bin/media/media_player/fidl:decoders",
     "//garnet/bin/media/media_player/framework",
     "//garnet/public/lib/fxl",
   ]
