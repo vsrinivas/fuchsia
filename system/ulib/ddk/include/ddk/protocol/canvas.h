@@ -14,7 +14,7 @@ typedef struct {
     uint32_t stride_bytes;
     uint32_t wrap;
     uint32_t blkmode;
-    uint32_t endianess;
+    uint32_t endianness;
 } canvas_info_t;
 
 typedef struct {

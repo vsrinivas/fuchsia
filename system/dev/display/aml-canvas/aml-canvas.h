@@ -40,6 +40,8 @@
 #define DMC_CAV_BLKMODE_MASK                3
 #define DMC_CAV_BLKMODE_BIT                 24
 
+#define DMC_CAV_ENDIANNESS_BIT              26
+#define DMC_CAV_ENDIANNESS_MASK             0xf
 
 #define DMC_CAV_LUT_ADDR_INDEX_MASK         0x7
 #define DMC_CAV_LUT_ADDR_RD_EN              (1 << 8)

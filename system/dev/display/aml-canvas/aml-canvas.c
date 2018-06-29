@@ -111,7 +111,8 @@ static zx_status_t aml_canvas_config(void* ctx, zx_handle_t vmo,
             ((height & DMC_CAV_HEIGHT_MASK) << DMC_CAV_HEIGHT_BIT) |
             ((info->blkmode & DMC_CAV_BLKMODE_MASK) << DMC_CAV_BLKMODE_BIT) |
             ((info->wrap & DMC_CAV_XWRAP) ? DMC_CAV_XWRAP : 0) |
-            ((info->wrap & DMC_CAV_YWRAP) ? DMC_CAV_YWRAP : 0);
+            ((info->wrap & DMC_CAV_YWRAP) ? DMC_CAV_YWRAP : 0) |
+            ((info->endianness & DMC_CAV_ENDIANNESS_MASK) << DMC_CAV_ENDIANNESS_BIT);
     WRITE32_DMC_REG(DMC_CAV_LUT_DATAH,value);
 
     WRITE32_DMC_REG(DMC_CAV_LUT_ADDR, DMC_CAV_LUT_ADDR_WR_EN | index);

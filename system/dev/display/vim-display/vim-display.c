@@ -110,7 +110,7 @@ static zx_status_t vim_import_vmo_image(void* ctx, image_t* image, zx_handle_t v
     info.stride_bytes   = stride * ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
     info.wrap           = 0;
     info.blkmode        = 0;
-    info.endianess      = 0;
+    info.endianness     = 0;
 
     zx_handle_t dup_vmo;
     status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
@@ -343,7 +343,7 @@ static zx_status_t setup_hdmi(vim2_display_t* display)
     info.stride_bytes   = display->stride * ZX_PIXEL_FORMAT_BYTES(display->format);
     info.wrap           = 0;
     info.blkmode        = 0;
-    info.endianess      = 0;
+    info.endianness     = 0;
 
     status = canvas_config(&display->canvas, fb_vmo_dup_handle,
                            0, &info, &display->fb_canvas_idx);
