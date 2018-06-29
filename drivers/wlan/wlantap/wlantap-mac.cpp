@@ -41,6 +41,9 @@ uint32_t ConvertDriverFeatures(const ::fidl::VectorPtr<wlan_device::DriverFeatur
             case wlan_device::DriverFeature::RATE_SELECTION:
                 ret |= WLAN_DRIVER_FEATURE_RATE_SELECTION;
                 break;
+            case wlan_device::DriverFeature::SYNTH:
+                ret |= WLAN_DRIVER_FEATURE_SYNTH;
+                break;
         }
     }
     return ret;
@@ -122,10 +125,8 @@ struct WlantapMacImpl : WlantapMac {
 
     static zx_status_t WlanmacQuery(void* ctx, uint32_t options, wlanmac_info_t* info) {
         auto& self = *static_cast<WlantapMacImpl*>(ctx);
-        info->eth_info.mtu = 1500;
         std::copy_n(self.phy_config_->phy_info.hw_mac_address.begin(), ETH_MAC_SIZE,
-                    info->eth_info.mac);
-        info->eth_info.features = ETHMAC_FEATURE_WLAN;
+                    info->mac_addr);
 
         info->supported_phys = ConvertSupportedPhys(self.phy_config_->phy_info.supported_phys);
         info->driver_features = ConvertDriverFeatures(

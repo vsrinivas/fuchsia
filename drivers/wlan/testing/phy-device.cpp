@@ -100,6 +100,8 @@ wlan_device::PhyInfo get_info() {
     info.supported_phys->push_back(wlan_device::SupportedPhy::OFDM);
     info.supported_phys->push_back(wlan_device::SupportedPhy::HT);
 
+    info.driver_features->push_back(wlan_device::DriverFeature::SYNTH);
+
     info.mac_roles->push_back(wlan_device::MacRole::CLIENT);
     info.mac_roles->push_back(wlan_device::MacRole::AP);
 

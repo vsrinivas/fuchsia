@@ -30,6 +30,7 @@ enum SupportedPhy {
 enum DriverFeature {
   SCAN_OFFLOAD = 0;
   RATE_SELECTION = 1;
+  SYNTH = 2;
 };
 
 enum MacRole {

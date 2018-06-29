@@ -80,13 +80,11 @@ zx_status_t IfaceDevice::Query(uint32_t options, wlanmac_info_t* info) {
     memset(info, 0, sizeof(*info));
 
     static uint8_t mac[ETH_MAC_SIZE] = {0x02, 0x02, 0x02, 0x03, 0x03, 0x03};
-    info->eth_info.features |= ETHMAC_FEATURE_WLAN;
-    info->eth_info.mtu = 1500;
-    std::memcpy(info->eth_info.mac, mac, ETH_MAC_SIZE);
+    std::memcpy(info->mac_addr, mac, ETH_MAC_SIZE);
 
     // Fill out a minimal set of wlan device capabilities
     info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT;
-    info->driver_features = 0;
+    info->driver_features = WLAN_DRIVER_FEATURE_SYNTH;
     info->mac_role = role_;
     info->caps = 0;
     info->num_bands = 2;

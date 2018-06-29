@@ -3526,9 +3526,7 @@ zx_status_t Device::WlanmacQuery(uint32_t options, wlanmac_info_t* info) {
     if (iface_role_ == 0) { return ZX_ERR_BAD_STATE; }
 
     memset(info, 0, sizeof(*info));
-    info->eth_info.mtu = 1500;
-    std::memcpy(info->eth_info.mac, mac_addr_, ETH_MAC_SIZE);
-    info->eth_info.features |= ETHMAC_FEATURE_WLAN;
+    std::memcpy(info->mac_addr, mac_addr_, ETH_MAC_SIZE);
 
     info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT;
     info->mac_role = iface_role_;

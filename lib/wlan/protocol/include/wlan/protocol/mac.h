@@ -72,6 +72,8 @@ enum {
     // Device or driver implements rate selection. The data_rate and mcs fields of wlan_tx_info_t
     // should not be populated, unless the MLME wishes to force a given rate for a packet.
     WLAN_DRIVER_FEATURE_RATE_SELECTION = (1 << 1),
+    // Device is not a physical device.
+    WLAN_DRIVER_FEATURE_SYNTH = (1 << 2)
 };
 
 enum {
@@ -143,7 +145,7 @@ typedef struct wlan_band_info {
 #define WLAN_MAX_BANDS 2
 
 typedef struct wlanmac_info {
-    ethmac_info_t eth_info;
+    uint8_t mac_addr[6];
     // The MAC role for the device.
     uint16_t mac_role;
     // Bitmask indicating the WLAN_PHY_* values supported by the hardware.

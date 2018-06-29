@@ -205,7 +205,7 @@ zx_status_t Dispatcher::HandleDeviceQueryRequest() {
     wlan_mlme::DeviceQueryConfirm resp;
     const wlanmac_info_t& info = device_->GetWlanInfo();
 
-    memcpy(resp.mac_addr.mutable_data(), info.eth_info.mac, ETH_MAC_SIZE);
+    memcpy(resp.mac_addr.mutable_data(), info.mac_addr, ETH_MAC_SIZE);
 
     switch (info.mac_role) {
     case WLAN_MAC_ROLE_CLIENT:

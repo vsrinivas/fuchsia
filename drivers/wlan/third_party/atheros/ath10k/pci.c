@@ -24,7 +24,6 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/binding.h>
 #include <wlan/protocol/mac.h>
@@ -3016,11 +3015,8 @@ static zx_status_t ath10k_pci_query(void* ctx, uint32_t options, wlanmac_info_t*
     memset(info, 0, sizeof(*info));
 
     // eth_info
-    ethmac_info_t* eth_info = &info->eth_info;
-    eth_info->features = ETHMAC_FEATURE_WLAN;
-    eth_info->mtu = IEEE80211_MSDU_SIZE_MAX;
     ZX_DEBUG_ASSERT(ETH_ALEN == ETH_MAC_SIZE);
-    memcpy(eth_info->mac, ar->mac_addr, ETH_MAC_SIZE);
+    memcpy(info->mac_addr, ar->mac_addr, ETH_MAC_SIZE);
 
     // mac_role
     info->mac_role = WLAN_MAC_ROLE_CLIENT;
