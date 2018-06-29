@@ -15,6 +15,7 @@
 #include <ddk/protocol/sdio.h>
 #include <hw/sdio.h>
 
+#include <zircon/process.h>
 #include <zircon/threads.h>
 
 #include "sdmmc.h"
@@ -51,23 +52,46 @@ zx_status_t sdio_rw_data(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn) {
 
     sdmmc_device_t *dev = ctx;
     zx_status_t st = ZX_OK;
-    uint32_t addr = txn->addr;
-    void *buf = txn->buf;
-    uint32_t data_size = txn->data_size;
-    uint32_t func_blk_size = (dev->sdio_info.funcs[fn_idx]).cur_blk_size;
-    uint32_t data_processed = 0;
-    uint32_t rem_blocks = (func_blk_size == 0) ? 0 : (data_size / func_blk_size);
+
     bool mbs = (dev->sdio_info.caps) & SDIO_CARD_MULTI_BLOCK;
+    bool dma_supported = sdmmc_use_dma(dev);
+
+    uint32_t addr = txn->addr;
+    uint32_t data_size = txn->data_size;
+    bool use_dma = txn->use_dma;
+    void *buf = use_dma ? NULL : txn->virt;
+    zx_handle_t dma_vmo = use_dma ? txn->dma_vmo : ZX_HANDLE_INVALID;
+    uint64_t buf_offset = txn->buf_offset;
+
+    uint32_t func_blk_size = (dev->sdio_info.funcs[fn_idx]).cur_blk_size;
+    uint32_t rem_blocks = (func_blk_size == 0) ? 0 : (data_size / func_blk_size);
+    uint32_t data_processed = 0;
+
+    if (txn->use_dma && !dma_supported) {
+        // host does not support dma
+        st = zx_vmar_map(zx_vmar_root_self(), 0, txn->dma_vmo,
+                         txn->buf_offset, data_size,
+                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+                         (uintptr_t*)&buf);
+        if (st != ZX_OK) {
+            zxlogf(TRACE, "sdio_rw_data: vmo map error %d\n", st);
+            return ZX_ERR_IO;
+        }
+        use_dma = false;
+        dma_vmo = ZX_HANDLE_INVALID;
+        buf_offset = 0; //set it to 0 since we mapped starting from offset.
+    }
 
     while (rem_blocks > 0) {
         uint32_t num_blocks = 1;
         uint32_t max_host_blocks = (dev->host_info.max_transfer_size) / (func_blk_size);
         if (mbs) {
-            //multiblock is supported, figure out max number of blocks per cmd
+            // multiblock is supported, determine max number of blocks per cmd
             num_blocks = MIN(MIN(SDIO_IO_RW_EXTD_MAX_BLKS_PER_CMD, max_host_blocks), rem_blocks);
         }
-        st = sdio_io_rw_extended(dev, txn->write, fn_idx, addr, txn->incr, buf, num_blocks,
-                                 func_blk_size);
+        st = sdio_io_rw_extended(dev, txn->write, fn_idx, addr, txn->incr, num_blocks,
+                                 func_blk_size, use_dma, buf, dma_vmo,
+                                 buf_offset + data_processed);
         if (st != ZX_OK) {
             zxlogf(ERROR, "sdio_rw_data: Error %sing data.func: %d status: %d\n",
                    txn->write ? "writ" : "read", fn_idx, st);
@@ -75,40 +99,23 @@ zx_status_t sdio_rw_data(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn) {
         }
         rem_blocks -= num_blocks;
         data_processed += num_blocks * func_blk_size;
-        buf += data_processed;
         if (txn->incr) {
             addr += data_processed;
         }
     }
 
     if (data_processed < data_size) {
-        //Write the remaining data.
+        // process remaining data.
         st = sdio_io_rw_extended(dev, txn->write, fn_idx, addr, txn->incr,
-                                 buf + data_processed, 1, (data_size - data_processed));
+                                 1, (data_size - data_processed), use_dma, buf, dma_vmo,
+                                 buf_offset + data_processed);
     }
+
+    if (txn->use_dma && !dma_supported) {
+        zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)buf, data_size);
+    }
+
     return st;
-}
-
-static zx_status_t sdio_read_data(sdmmc_device_t *dev, uint8_t fn_idx, uint32_t addr,
-                                  uint32_t data_size, void *buf) {
-    sdio_rw_txn_t txn;
-    txn.addr = addr;
-    txn.write = false;
-    txn.buf = buf;
-    txn.data_size = data_size;
-    txn.incr = true;
-    return sdio_rw_data(dev, fn_idx, &txn);
-}
-
-static zx_status_t sdio_write_data(sdmmc_device_t *dev, uint8_t fn_idx, uint32_t addr,
-                                   uint32_t data_size, void *buf) {
-    sdio_rw_txn_t txn;
-    txn.addr = addr;
-    txn.write = true;
-    txn.buf = buf;
-    txn.data_size = data_size;
-    txn.incr = true;
-    return sdio_rw_data(dev, fn_idx, &txn);
 }
 
 static zx_status_t sdio_read_data32(sdmmc_device_t *dev, uint8_t fn_idx, uint32_t addr,
@@ -116,9 +123,11 @@ static zx_status_t sdio_read_data32(sdmmc_device_t *dev, uint8_t fn_idx, uint32_
     sdio_rw_txn_t txn;
     txn.addr = addr;
     txn.write = false;
-    txn.buf = dword;
+    txn.virt = dword;
     txn.data_size = 4;
     txn.incr = true;
+    txn.use_dma = false;
+    txn.buf_offset = 0;
     return sdio_rw_data(dev, fn_idx, &txn);
 }
 
@@ -127,9 +136,11 @@ static zx_status_t sdio_write_data32(sdmmc_device_t *dev, uint8_t fn_idx, uint32
     sdio_rw_txn_t txn;
     txn.addr = addr;
     txn.write = true;
-    txn.buf = (void *)&dword;
+    txn.virt = (void *)&dword;
     txn.data_size = 4;
     txn.incr = true;
+    txn.use_dma = false;
+    txn.buf_offset = 0;
     return sdio_rw_data(dev, fn_idx, &txn);
 }
 
@@ -138,9 +149,11 @@ static zx_status_t sdio_read_data16(sdmmc_device_t *dev, uint8_t fn_idx, uint32_
     sdio_rw_txn_t txn;
     txn.addr = addr;
     txn.write = false;
-    txn.buf = word;
+    txn.virt = word;
     txn.data_size = 2;
     txn.incr = true;
+    txn.use_dma = false;
+    txn.buf_offset = 0;
     return sdio_rw_data(dev, fn_idx, &txn);
 }
 
@@ -149,31 +162,11 @@ static zx_status_t sdio_write_data16(sdmmc_device_t *dev, uint8_t fn_idx, uint32
     sdio_rw_txn_t txn;
     txn.addr = addr;
     txn.write = true;
-    txn.buf = (void *)&word;
+    txn.virt = (void *)&word;
     txn.data_size = 2;
     txn.incr = true;
-    return sdio_rw_data(dev, fn_idx, &txn);
-}
-
-static zx_status_t sdio_read_data_fifo(sdmmc_device_t *dev, uint8_t fn_idx, uint32_t addr,
-                                       uint32_t data_size, void *buf) {
-    sdio_rw_txn_t txn;
-    txn.addr = addr;
-    txn.write = false;
-    txn.buf = buf;
-    txn.data_size = 2;
-    txn.incr = false;
-    return sdio_rw_data(dev, fn_idx, &txn);
-}
-
-static zx_status_t sdio_write_data_fifo(sdmmc_device_t *dev, uint8_t fn_idx, uint32_t addr,
-                                        uint32_t data_size, void *buf) {
-    sdio_rw_txn_t txn;
-    txn.addr = addr;
-    txn.write = true;
-    txn.buf = buf;
-    txn.data_size = 2;
-    txn.incr = false;
+    txn.use_dma = false;
+    txn.buf_offset = 0;
     return sdio_rw_data(dev, fn_idx, &txn);
 }
 
@@ -198,8 +191,15 @@ static zx_status_t sdio_process_cccr(sdmmc_device_t *dev) {
     if (max_blk_sz >= SDIO_CIA_CCCR_NON_VENDOR_REG_SIZE) {
         uint8_t cccr[SDIO_CIA_CCCR_NON_VENDOR_REG_SIZE] = {0};
         //Read all of CCCR at a time to avoid multiple read commands
-        status = sdio_io_rw_extended(dev, false, 0, SDIO_CIA_CCCR_CCCR_SDIO_VER_ADDR, true,
-                                     cccr, 1, SDIO_CIA_CCCR_NON_VENDOR_REG_SIZE);
+        sdio_rw_txn_t txn;
+        txn.addr = SDIO_CIA_CCCR_CCCR_SDIO_VER_ADDR;
+        txn.write = false;
+        txn.virt = cccr;
+        txn.data_size = SDIO_CIA_CCCR_NON_VENDOR_REG_SIZE;
+        txn.incr = true;
+        txn.use_dma = false;
+        txn.buf_offset = 0;
+        status = sdio_rw_data(dev, 0, &txn);
         vsn_info = cccr[SDIO_CIA_CCCR_CCCR_SDIO_VER_ADDR];
         card_caps = cccr[SDIO_CIA_CCCR_CARD_CAPS_ADDR];
         bus_speed = cccr[SDIO_CIA_CCCR_BUS_SPEED_SEL_ADDR];
@@ -629,7 +629,7 @@ zx_status_t sdmmc_probe_sdio(sdmmc_device_t* dev) {
         }
     }
     if (ocr & SDIO_SEND_OP_COND_RESP_MEM_PRESENT) {
-        //TODO: Support combo cards later
+        //Combo cards not supported
         zxlogf(ERROR, "sdmmc_probe_sdio: Combo card not supported\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -667,7 +667,6 @@ zx_status_t sdmmc_probe_sdio(sdmmc_device_t* dev) {
             return st;
         }
     }*/
-
     sdio_modify_block_size(dev, 0, 0, true);
     if ((st = sdio_switch_hs(dev, true)) != ZX_OK) {
         zxlogf(ERROR, "sdmmc_probe_sdio: Switching to high speed failed, retcode = %d\n", st);
@@ -676,7 +675,7 @@ zx_status_t sdmmc_probe_sdio(sdmmc_device_t* dev) {
 
     //TODO: Setting this to 50 MHz fails the following I/O.May be because PORTA does
     //not operate at high frequency.
-    /*uint32_t new_freq = 10000000;
+    /*uint32_t new_freq = 8000000;
     if ((st = sdio_switch_freq(dev, new_freq)) != ZX_OK) {
         zxlogf(ERROR, "sdmmc_probe_sdio: Switch freq retcode = %d\n", st);
         return st;
@@ -691,7 +690,7 @@ zx_status_t sdmmc_probe_sdio(sdmmc_device_t* dev) {
         st = sdio_init_func(dev, i);
     }
 
-    zxlogf(INFO, "sdmmc_probe_sdio: sdio device initialized succesfully\n");
+    zxlogf(INFO, "sdmmc_probe_sdio: sdio device initialized successfully\n");
     zxlogf(INFO, "                  Manufacturer: 0x%x\n", dev->sdio_info.funcs[0].manufacturer_id);
     zxlogf(INFO, "                  Product: 0x%x\n", dev->sdio_info.funcs[0].product_id);
     zxlogf(INFO, "                  cccr vsn: 0x%x\n", dev->sdio_info.cccr_vsn);

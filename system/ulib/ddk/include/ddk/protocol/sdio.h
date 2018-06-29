@@ -13,8 +13,10 @@ typedef struct sdio_rw_txn {
     bool incr;
     bool fifo;
     bool write;
-    // Should the below need to be a vmo handle?
-    void *buf;
+    bool use_dma;
+    zx_handle_t dma_vmo; // Used if use_dma is true
+    void* virt;          // Used if use_dma is false
+    uint64_t buf_offset; // offset into dma_vmo or virt
 } sdio_rw_txn_t;
 
 typedef struct sdio_protocol_ops {

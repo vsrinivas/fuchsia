@@ -188,8 +188,9 @@ zx_status_t sdio_io_rw_direct(sdmmc_device_t* dev, bool write, uint32_t fn_idx,
 }
 
 zx_status_t sdio_io_rw_extended(sdmmc_device_t *dev, bool write, uint32_t fn_idx,
-                                uint32_t reg_addr, bool incr, uint8_t *buf,
-                                uint32_t blk_count, uint32_t blk_size) {
+                                uint32_t reg_addr, bool incr, uint32_t blk_count,
+                                uint32_t blk_size,  bool use_dma, uint8_t *buf,
+                                zx_handle_t dma_vmo, uint64_t buf_offset) {
 
     uint32_t cmd_arg = 0;
     if (write) {
@@ -225,9 +226,16 @@ zx_status_t sdio_io_rw_extended(sdmmc_device_t *dev, bool write, uint32_t fn_idx
                     (SDIO_IO_RW_DIRECT_EXTENDED_FLAGS | SDMMC_CMD_READ),
         .blockcount = blk_count,
         .blocksize = blk_size,
-        .virt = buf,
-        .use_dma = false,
     };
+
+    if (use_dma) {
+        req.virt = NULL;
+        req.dma_vmo = dma_vmo;
+        req.buf_offset = buf_offset;
+    } else {
+        req.virt = buf + buf_offset;
+    }
+    req.use_dma = use_dma;
 
     zx_status_t st = sdmmc_request(&dev->host, &req);
     if (st != ZX_OK) {
