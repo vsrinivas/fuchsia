@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "garnet/drivers/bluetooth/lib/hci/link_key.h"
 #include "garnet/drivers/bluetooth/lib/sm/smp.h"
 
 namespace btlib {
@@ -59,13 +60,34 @@ class SecurityProperties final {
   size_t enc_key_size() const { return enc_key_size_; }
   bool secure_connections() const { return sc_; }
 
+  // Returns a string representation of these properties.
+  std::string ToString() const;
+
+  // Compare two properties for equality.
+  inline bool operator==(const SecurityProperties& other) const {
+    return level_ == other.level_ && enc_key_size_ == other.enc_key_size_ &&
+           sc_ == other.sc_;
+  }
+
  private:
   SecurityLevel level_;
   size_t enc_key_size_;
   bool sc_;
 };
 
-// TODO(armansito): Add "Key" type.
+// Represents a Long Term Key.
+class LTK final {
+ public:
+  LTK() = default;
+  LTK(const SecurityProperties& security, const hci::LinkKey& key);
+
+  const SecurityProperties& security() const { return security_; }
+  const hci::LinkKey& key() const { return key_; }
+
+ private:
+  SecurityProperties security_;
+  hci::LinkKey key_;
+};
 
 }  // namespace sm
 }  // namespace btlib

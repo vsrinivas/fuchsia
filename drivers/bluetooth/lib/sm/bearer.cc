@@ -185,6 +185,44 @@ bool Bearer::SendRandomValue(const common::UInt128& random) {
   return true;
 }
 
+bool Bearer::SendEncryptionKey(const hci::LinkKey& link_key) {
+  if (!pairing_started()) {
+    FXL_VLOG(1) << "sm: Not pairing!";
+    return false;
+  }
+
+  // Only allowed on the LE transport.
+  if (chan_->link_type() != hci::Connection::LinkType::kLE) {
+    return false;
+  }
+
+  auto enc_info_pdu = NewPDU(sizeof(EncryptionInformationParams));
+  auto master_id_pdu = NewPDU(sizeof(MasterIdentificationParams));
+  if (!enc_info_pdu || !master_id_pdu) {
+    FXL_LOG(ERROR) << "sm: Out of memory!";
+    Abort(ErrorCode::kUnspecifiedReason);
+    return false;
+  }
+
+  // Send LTK
+  {
+    PacketWriter writer(kEncryptionInformation, enc_info_pdu.get());
+    *writer.mutable_payload<EncryptionInformationParams>() = link_key.value();
+    chan_->Send(std::move(enc_info_pdu));
+  }
+
+  // Send EDiv & Rand
+  {
+    PacketWriter writer(kMasterIdentification, master_id_pdu.get());
+    auto* params = writer.mutable_payload<MasterIdentificationParams>();
+    params->ediv = htole16(link_key.ediv());
+    params->rand = htole64(link_key.rand());
+    chan_->Send(std::move(master_id_pdu));
+  }
+
+  return true;
+}
+
 void Bearer::StopTimer() {
   if (timeout_task_.is_pending()) {
     zx_status_t status = timeout_task_.Cancel();
@@ -464,6 +502,56 @@ void Bearer::OnPairingRandom(const PacketReader& reader) {
   random_value_callback_(reader.payload<PairingRandomValue>());
 }
 
+void Bearer::OnEncryptionInformation(const PacketReader& reader) {
+  // Ignore the command if not pairing.
+  if (!pairing_started()) {
+    FXL_VLOG(1) << "sm: Dropped unexpected \"Encryption Information\"";
+    return;
+  }
+
+  // Only allowed on the LE transport.
+  if (chan_->link_type() != hci::Connection::LinkType::kLE) {
+    FXL_VLOG(1) << "sm: \"Encryption Information\" over BR/EDR not supported!";
+    Abort(ErrorCode::kCommandNotSupported);
+    return;
+  }
+
+  if (reader.payload_size() != sizeof(EncryptionInformationParams)) {
+    FXL_VLOG(1) << "sm: Malformed \"Encryption Information\" payload";
+    Abort(ErrorCode::kInvalidParameters);
+    return;
+  }
+
+  FXL_DCHECK(long_term_key_callback_);
+  long_term_key_callback_(reader.payload<EncryptionInformationParams>());
+}
+
+void Bearer::OnMasterIdentification(const PacketReader& reader) {
+  // Ignore the command if not pairing.
+  if (!pairing_started()) {
+    FXL_VLOG(1) << "sm: Dropped unexpected \"Master Identification\"";
+    return;
+  }
+
+  // Only allowed on the LE transport.
+  if (chan_->link_type() != hci::Connection::LinkType::kLE) {
+    FXL_VLOG(1) << "sm: \"Master Identification\" over BR/EDR not supported!";
+    Abort(ErrorCode::kCommandNotSupported);
+    return;
+  }
+
+  if (reader.payload_size() != sizeof(MasterIdentificationParams)) {
+    FXL_VLOG(1) << "sm: Malformed \"Master Identification\" payload";
+    Abort(ErrorCode::kInvalidParameters);
+    return;
+  }
+
+  FXL_DCHECK(master_id_callback_);
+
+  const auto& params = reader.payload<MasterIdentificationParams>();
+  master_id_callback_(le16toh(params.ediv), le64toh(params.rand));
+}
+
 void Bearer::SendPairingFailed(ErrorCode ecode) {
   auto pdu = NewPDU(sizeof(ErrorCode));
   PacketWriter writer(kPairingFailed, pdu.get());
@@ -514,6 +602,12 @@ void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
         break;
       case kPairingRandom:
         OnPairingRandom(reader);
+        break;
+      case kEncryptionInformation:
+        OnEncryptionInformation(reader);
+        break;
+      case kMasterIdentification:
+        OnMasterIdentification(reader);
         break;
       default:
         FXL_VLOG(2) << fxl::StringPrintf("sm: Unsupported command: 0x%02x",

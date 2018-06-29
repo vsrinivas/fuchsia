@@ -30,6 +30,7 @@ static_library("sm") {
 
   public_deps = [
     ":definitions",
+    "//garnet/drivers/bluetooth/lib/hci",
     "//garnet/drivers/bluetooth/lib/l2cap",
     "//third_party/boringssl",
   ]
@@ -46,6 +47,7 @@ source_set("tests") {
 
   deps = [
     ":sm",
+    "//garnet/drivers/bluetooth/lib/hci:testing",
     "//garnet/drivers/bluetooth/lib/l2cap:testing",
     "//third_party/googletest:gtest",
   ]

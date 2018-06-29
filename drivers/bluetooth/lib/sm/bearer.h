@@ -120,6 +120,21 @@ class Bearer final {
     random_value_callback_ = std::move(callback);
   }
 
+  // Sends the encryption information during the key distribution phase
+  // (Phase 3) of legacy pairing. Returns false if the command cannot be sent.
+  bool SendEncryptionKey(const hci::LinkKey& link_key);
+
+  // Set a callback to be called when the peer sends us a long term key.
+  void set_long_term_key_callback(ValueCallback callback) {
+    long_term_key_callback_ = std::move(callback);
+  }
+
+  // Set a callback to be called when the peer sends us EDiv and Rand values.
+  using MasterIdCallback = fit::function<void(uint16_t ediv, uint64_t random)>;
+  void set_master_id_callback(MasterIdCallback callback) {
+    master_id_callback_ = std::move(callback);
+  }
+
   // Stops the pairing timer. The pairing timer is started when a Pairing
   // Request or Security Request is sent or received and must be explicitly
   // stopped once all required keys have been distributed.
@@ -153,6 +168,8 @@ class Bearer final {
   void OnPairingResponse(const PacketReader& reader);
   void OnPairingConfirm(const PacketReader& reader);
   void OnPairingRandom(const PacketReader& reader);
+  void OnEncryptionInformation(const PacketReader& reader);
+  void OnMasterIdentification(const PacketReader& reader);
 
   // Sends a Pairing Failed command to the peer.
   void SendPairingFailed(ErrorCode ecode);
@@ -173,6 +190,8 @@ class Bearer final {
   FeatureExchangeCallback feature_exchange_callback_;
   ValueCallback confirm_value_callback_;
   ValueCallback random_value_callback_;
+  ValueCallback long_term_key_callback_;
+  MasterIdCallback master_id_callback_;
 
   // We use this buffer to store pairing request and response PDUs as they are
   // needed to complete the feature exchange (i.e. the "preq" and "pres"

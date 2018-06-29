@@ -232,7 +232,7 @@ using PairingFailedParams = ErrorCode;
 // =============================================
 // Encryption Information (LE Legacy Pairing only; Vol 3, Part H, 3.6.2)
 constexpr Code kEncryptionInformation = 0x06;
-using LTK = common::UInt128;
+using EncryptionInformationParams = common::UInt128;
 
 // ====================================================================
 // Master Identification (LE Legacy Pairing only; Vol 3, Part H, 3.6.3)

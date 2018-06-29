@@ -13,18 +13,33 @@ namespace btlib {
 using common::ByteBuffer;
 using common::DeviceAddress;
 using common::HostError;
+using common::MutableBufferView;
 using common::UInt128;
 
 namespace sm {
 
+namespace {
+
+SecurityProperties FeaturesToProperties(const PairingFeatures& features) {
+  return SecurityProperties(features.method == PairingMethod::kJustWorks
+                                ? SecurityLevel::kEncrypted
+                                : SecurityLevel::kAuthenticated,
+                            features.encryption_key_size,
+                            features.secure_connections);
+}
+
+}  // namespace
+
 PairingState::LegacyState::LegacyState()
     : stk_encrypted(false),
+      ltk_encrypted(false),
       obtained_remote_keys(0u),
       has_tk(false),
       has_peer_confirm(false),
       has_peer_rand(false),
       sent_local_confirm(false),
-      sent_local_rand(false) {}
+      sent_local_rand(false),
+      has_ltk(false) {}
 
 bool PairingState::LegacyState::InPhase1() const {
   return !features && !stk_encrypted;
@@ -39,13 +54,30 @@ bool PairingState::LegacyState::InPhase3() const {
 }
 
 bool PairingState::LegacyState::IsComplete() const {
-  return features && stk_encrypted && RequestedKeysObtained();
+  return features && stk_encrypted && RequestedKeysObtained() &&
+         !WaitingForEncryptionWithLTK();
 }
 
 bool PairingState::LegacyState::RequestedKeysObtained() const {
+  FXL_DCHECK(features);
+
   // Return true if we expect no keys from the remote.
   return !features->remote_key_distribution ||
          (features->remote_key_distribution == obtained_remote_keys);
+}
+
+bool PairingState::LegacyState::ShouldReceiveLTK() const {
+  FXL_DCHECK(features);
+  return (features->remote_key_distribution & KeyDistGen::kEncKey);
+}
+
+bool PairingState::LegacyState::ShouldSendLTK() const {
+  FXL_DCHECK(features);
+  return (features->local_key_distribution & KeyDistGen::kEncKey);
+}
+
+bool PairingState::LegacyState::WaitingForEncryptionWithLTK() const {
+  return (ShouldReceiveLTK() || ShouldSendLTK()) && !ltk_encrypted;
 }
 
 PairingState::PendingRequest::PendingRequest(SecurityLevel level,
@@ -54,30 +86,44 @@ PairingState::PendingRequest::PendingRequest(SecurityLevel level,
 
 PairingState::PairingState(IOCapability io_capability) : ioc_(io_capability) {}
 
-void PairingState::RegisterLE(fbl::RefPtr<l2cap::Channel> smp,
-                              hci::Connection::Role role,
-                              const DeviceAddress& local_addr,
-                              const DeviceAddress& peer_addr) {
+PairingState::~PairingState() {
+  if (le_link_) {
+    le_link_->set_encryption_change_callback({});
+  }
+}
+
+void PairingState::RegisterLE(fxl::WeakPtr<hci::Connection> link,
+                              fbl::RefPtr<l2cap::Channel> smp) {
+  FXL_DCHECK(link);
+  FXL_DCHECK(link->local_address().type() != DeviceAddress::Type::kBREDR);
+  FXL_DCHECK(link->local_address().type() != DeviceAddress::Type::kLEAnonymous);
+  FXL_DCHECK(link->peer_address().type() != DeviceAddress::Type::kBREDR);
+  FXL_DCHECK(link->peer_address().type() != DeviceAddress::Type::kLEAnonymous);
   FXL_DCHECK(!legacy_state_);
+  FXL_DCHECK(!le_link_);
   FXL_DCHECK(!le_smp_);
-  FXL_DCHECK(local_addr.type() != DeviceAddress::Type::kBREDR);
-  FXL_DCHECK(local_addr.type() != DeviceAddress::Type::kLEAnonymous);
-  FXL_DCHECK(peer_addr.type() != DeviceAddress::Type::kBREDR);
-  FXL_DCHECK(peer_addr.type() != DeviceAddress::Type::kLEAnonymous);
 
   le_sec_ = SecurityProperties();
-  le_local_addr_ = local_addr;
-  le_peer_addr_ = peer_addr;
+  le_local_addr_ = link->local_address();
+  le_peer_addr_ = link->peer_address();
+  le_link_ = link;
 
   // TODO(armansito): Enable SC when we support it.
   le_smp_ = std::make_unique<Bearer>(
-      std::move(smp), role, false /* sc */, ioc_,
+      std::move(smp), link->role(), false /* sc */, ioc_,
       fit::bind_member(this, &PairingState::OnLEPairingFailed),
       fit::bind_member(this, &PairingState::OnLEPairingFeatures));
   le_smp_->set_confirm_value_callback(
       fit::bind_member(this, &PairingState::OnLEPairingConfirm));
   le_smp_->set_random_value_callback(
       fit::bind_member(this, &PairingState::OnLEPairingRandom));
+  le_smp_->set_long_term_key_callback(
+      fit::bind_member(this, &PairingState::OnLELongTermKey));
+  le_smp_->set_master_id_callback(
+      fit::bind_member(this, &PairingState::OnLEMasterIdentification));
+
+  le_link_->set_encryption_change_callback(
+      fit::bind_member(this, &PairingState::OnLEEncryptionChange));
 }
 
 void PairingState::UpdateSecurity(SecurityLevel level,
@@ -111,15 +157,8 @@ void PairingState::UpdateSecurity(SecurityLevel level,
     return;
   }
 
-  if (level == SecurityLevel::kAuthenticated) {
-    le_smp_->set_mitm_required(true);
-  }
-
   request_queue_.emplace(level, std::move(callback));
-
-  // Start Phase 1.
-  legacy_state_ = std::make_unique<LegacyState>();
-  le_smp_->InitiateFeatureExchange();
+  BeginLegacyPairingPhase1(level);
 }
 
 void PairingState::AbortLegacyPairing(ErrorCode error_code) {
@@ -127,10 +166,22 @@ void PairingState::AbortLegacyPairing(ErrorCode error_code) {
   FXL_DCHECK(legacy_state_);
   FXL_DCHECK(le_smp_->pairing_started());
 
-  legacy_state_ = nullptr;
   le_smp_->Abort(error_code);
 
   // "Abort" should trigger OnLEPairingFailed.
+}
+
+void PairingState::BeginLegacyPairingPhase1(SecurityLevel level) {
+  FXL_DCHECK(le_smp_);
+  FXL_DCHECK(le_smp_->role() == hci::Connection::Role::kMaster);
+  FXL_DCHECK(!legacy_state_) << "Already pairing!";
+
+  if (level == SecurityLevel::kAuthenticated) {
+    le_smp_->set_mitm_required(true);
+  }
+
+  legacy_state_ = std::make_unique<LegacyState>();
+  le_smp_->InitiateFeatureExchange();
 }
 
 void PairingState::BeginLegacyPairingPhase2(const ByteBuffer& preq,
@@ -201,6 +252,85 @@ void PairingState::LegacySendRandomValue() {
   le_smp_->SendRandomValue(legacy_state_->local_rand);
 }
 
+void PairingState::EndLegacyPairingPhase2() {
+  FXL_DCHECK(legacy_state_);
+  FXL_DCHECK(legacy_state_->InPhase2());
+
+  // Update the current security level. Even though the link is encrypted with
+  // the STK (i.e. a temporary key) it provides a level of security.
+  le_sec_ = FeaturesToProperties(*legacy_state_->features);
+  legacy_state_->stk_encrypted = true;
+
+  // If the slave has no keys to send then we're done with pairing. Since we're
+  // only encrypted with the STK, the pairing will be short-term (this is the
+  // case if the "bonding" flag was not set).
+  if (legacy_state_->IsComplete()) {
+    CompleteLegacyPairing();
+
+    // TODO(NET-1088): Make sure IsComplete() returns false if we're the slave
+    // and have keys to distribute.
+    return;
+  }
+
+  FXL_DCHECK(legacy_state_->InPhase3());
+
+  if (legacy_state_->features->initiator) {
+    FXL_DCHECK(le_smp_->role() == hci::Connection::Role::kMaster);
+    FXL_VLOG(1) << "sm: Waiting to receive keys from the slave.";
+  } else {
+    FXL_DCHECK(le_smp_->role() == hci::Connection::Role::kSlave);
+
+    // TODO(NET-1088): Distribute the slave's (local) keys now.
+  }
+}
+
+void PairingState::CompleteLegacyPairing() {
+  FXL_DCHECK(legacy_state_);
+  FXL_DCHECK(legacy_state_->IsComplete());
+  FXL_DCHECK(le_smp_);
+  FXL_DCHECK(le_smp_->pairing_started());
+
+  le_smp_->StopTimer();
+
+  // Notify that we got a LTK. The security properties of |ltk| are defined by
+  // the security properties of the link when LTK was distributed (i.e. the
+  // properties of the STK). This is reflected by |le_sec_|.
+  if (legacy_state_->ltk) {
+    FXL_DCHECK(le_ltk_callback_);
+    le_ltk_callback_(LTK(le_sec_, *legacy_state_->ltk));
+  }
+
+  FXL_VLOG(1) << "sm: Legacy pairing complete";
+  legacy_state_ = nullptr;
+
+  // Separate out the requests that are satisifed by the current security level
+  // from the ones that require a higher level. We'll retry pairing for the
+  // latter.
+  std::queue<PendingRequest> satisfied;
+  std::queue<PendingRequest> unsatisfied;
+  while (!request_queue_.empty()) {
+    auto& request = request_queue_.front();
+    if (request.level <= le_sec_.level()) {
+      satisfied.push(std::move(request));
+    } else {
+      unsatisfied.push(std::move(request));
+    }
+    request_queue_.pop();
+  }
+
+  request_queue_ = std::move(unsatisfied);
+
+  // Notify the satisfied requests with success.
+  while (!satisfied.empty()) {
+    satisfied.front().callback(Status(), le_sec_);
+    satisfied.pop();
+  }
+
+  if (!unsatisfied.empty()) {
+    BeginLegacyPairingPhase1(unsatisfied.front().level);
+  }
+}
+
 void PairingState::OnLEPairingFeatures(const PairingFeatures& features,
                                        const ByteBuffer& preq,
                                        const ByteBuffer& pres) {
@@ -234,6 +364,12 @@ void PairingState::OnLEPairingFailed(Status status) {
   while (!requests.empty()) {
     requests.front().callback(status, le_sec_);
     requests.pop();
+  }
+
+  if (legacy_state_) {
+    FXL_DCHECK(le_link_);
+    le_link_->set_link_key(hci::LinkKey());
+    legacy_state_ = nullptr;
   }
 }
 
@@ -339,6 +475,8 @@ void PairingState::OnLEPairingRandom(const UInt128& random) {
       return;
     }
   } else {
+    FXL_DCHECK(le_smp_->role() == hci::Connection::Role::kSlave);
+
     // We cannot have sent the Srand without receiving Mrand first.
     FXL_DCHECK(!legacy_state_->sent_local_rand);
 
@@ -367,13 +505,161 @@ void PairingState::OnLEPairingRandom(const UInt128& random) {
     return;
   }
 
-  if (legacy_state_->features->initiator) {
-    // TODO(armansito): Generate STK and start encryption.
-  } else {
-    FXL_DCHECK(le_smp_->role() == hci::Connection::Role::kSlave);
+  FXL_DCHECK(le_link_);
 
+  // Generate the STK.
+  UInt128 stk;
+  util::S1(legacy_state_->tk, legacy_state_->peer_rand,
+           legacy_state_->local_rand, &stk);
+
+  // Mask the key based on the requested encryption key size.
+  uint8_t key_size = legacy_state_->features->encryption_key_size;
+  if (key_size < 16) {
+    MutableBufferView view(stk.data() + key_size, 16 - key_size);
+    view.SetToZeros();
+  }
+
+  // EDiv and Rand values are set to 0 to generate the STK (Vol 3, Part H,
+  // 2.4.4.1).
+  le_link_->set_link_key(hci::LinkKey(stk, 0, 0));
+
+  if (legacy_state_->features->initiator) {
+    // Initiate link layer encryption with STK.
+    if (!le_link_->StartEncryption()) {
+      FXL_LOG(ERROR) << "sm: Failed to start encryption";
+      AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
+    }
+  } else {
     // Send Srand and wait for the master to encrypt the link with the STK.
+    // |le_link_| will respond to the LE LTK request event with the STK that it
+    // got assigned above.
     LegacySendRandomValue();
+  }
+}
+
+void PairingState::OnLELongTermKey(const common::UInt128& ltk) {
+  if (!legacy_state_) {
+    FXL_VLOG(1) << "sm: Ignoring LTK received while not in legacy pairing";
+    return;
+  }
+
+  if (!legacy_state_->InPhase3()) {
+    // The link MUST be encrypted with the STK for the transfer of the LTK to be
+    // secure.
+    FXL_LOG(ERROR) << "sm: Abort pairing due to LTK received outside phase 3";
+    AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
+    return;
+  }
+
+  if (!legacy_state_->ShouldReceiveLTK()) {
+    FXL_LOG(ERROR) << "sm: Received unexpected LTK";
+    AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
+    return;
+  }
+
+  // Abort pairing if we received a second LTK from the peer.
+  if (legacy_state_->has_ltk) {
+    FXL_LOG(ERROR) << "sm: Already received LTK! Aborting";
+    AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
+    return;
+  }
+
+  FXL_DCHECK(!(legacy_state_->obtained_remote_keys & KeyDistGen::kEncKey));
+  legacy_state_->ltk_bytes = ltk;
+  legacy_state_->has_ltk = true;
+
+  // Wait to receive EDiv and Rand
+}
+
+void PairingState::OnLEMasterIdentification(uint16_t ediv, uint64_t random) {
+  if (!legacy_state_) {
+    FXL_VLOG(1)
+        << "sm: Ignoring ediv/rand received while not in legacy pairing";
+    return;
+  }
+
+  if (!legacy_state_->InPhase3()) {
+    // The link MUST be encrypted with the STK for the transfer of the LTK to be
+    // secure.
+    FXL_LOG(ERROR)
+        << "sm: Abort pairing due to ediv/rand received outside phase 3";
+    AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
+    return;
+  }
+
+  FXL_DCHECK(legacy_state_->stk_encrypted);
+
+  if (!legacy_state_->ShouldReceiveLTK()) {
+    FXL_LOG(ERROR) << "sm: Received unexpected ediv/rand";
+    AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
+    return;
+  }
+
+  // EDIV and Rand must be sent AFTER the LTK (Vol 3, Part H, 3.6.1).
+  if (!legacy_state_->has_ltk) {
+    FXL_LOG(ERROR) << "sm: Received EDIV and Rand before LTK!";
+    AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
+    return;
+  }
+
+  if (legacy_state_->obtained_remote_keys & KeyDistGen::kEncKey) {
+    FXL_LOG(ERROR) << "sm: Already received EDIV and Rand!";
+    AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
+    return;
+  }
+
+  // Store the LTK. We'll notify it when pairing is complete.
+  hci::LinkKey ltk(legacy_state_->ltk_bytes, random, ediv);
+  legacy_state_->obtained_remote_keys |= KeyDistGen::kEncKey;
+  legacy_state_->ltk = ltk;
+
+  // TODO(armansito): Move this to a subroutine called "MaybeCompletePhase3" and
+  // call after each received key.
+  FXL_DCHECK(!legacy_state_->ltk_encrypted);
+  if (legacy_state_->RequestedKeysObtained()) {
+    // We're no longer in Phase 3.
+    FXL_DCHECK(!legacy_state_->InPhase3());
+
+    // TODO(armansito): Distribute local keys if we are the master.
+
+    // We're done. Encrypt the link with the LTK.
+    le_link_->set_link_key(ltk);
+    if (!le_link_->StartEncryption()) {
+      FXL_LOG(ERROR) << "sm: Failed to start encryption";
+      AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
+    }
+  }
+}
+
+void PairingState::OnLEEncryptionChange(hci::Status status, bool enabled) {
+  // TODO(armansito): Have separate subroutines to handle this event for legacy
+  // and secure connections.
+  if (!legacy_state_) {
+    FXL_VLOG(2) << "sm: Ignoring encryption change while not pairing";
+    return;
+  }
+
+  if (!status || !enabled) {
+    FXL_LOG(ERROR) << "sm: Failed to encrypt link";
+    AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
+    return;
+  }
+
+  FXL_DCHECK(le_smp_->pairing_started());
+
+  if (legacy_state_->InPhase2()) {
+    FXL_VLOG(1) << "sm: Link encrypted with STK";
+    EndLegacyPairingPhase2();
+    return;
+  }
+
+  // If encryption was enabled after Phase 3 then this completes the pairing
+  // procedure.
+  if (legacy_state_->RequestedKeysObtained() &&
+      legacy_state_->WaitingForEncryptionWithLTK()) {
+    FXL_VLOG(1) << "sm: Link encrypted with LTK";
+    legacy_state_->ltk_encrypted = true;
+    CompleteLegacyPairing();
   }
 }
 
