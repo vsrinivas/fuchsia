@@ -117,3 +117,7 @@ func (k *SourceKeeper) Delete() error {
 func (k *SourceKeeper) Close() {
 	k.src.Close()
 }
+
+func (k *SourceKeeper) Enabled() bool {
+	return k.src.Enabled()
+}

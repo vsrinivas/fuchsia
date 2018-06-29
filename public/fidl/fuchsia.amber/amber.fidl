@@ -85,6 +85,10 @@ struct TransportConfig {
   TLSClientConfig? tlsClientConfig;
 };
 
+struct StatusConfig {
+  bool enabled;
+};
+
 struct SourceConfig {
   // A unique identifier that distinquishes this source from others.
   string id;
@@ -110,6 +114,8 @@ struct SourceConfig {
   TransportConfig? transportConfig;
 
   OAuth2Config? oauth2Config;
+
+  StatusConfig? statusConfig;
 };
 
 enum Status {

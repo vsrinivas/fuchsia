@@ -73,18 +73,28 @@ func NewDaemon(store string, r *pkg.PackageSet, f func(*GetResult, *pkg.PackageS
 		inProg:    make(map[pkg.Package]*upRec)}
 	mon := NewSourceMonitor(d, r, f, CheckInterval)
 	d.runCount.Add(1)
-	d.srcMons = append(d.srcMons, mon)
 	for k := range s {
-		d.addSrc(s[k])
+		d.addSource(s[k])
 	}
 	go func() {
 		mon.Run()
 		d.runCount.Done()
 	}()
+	d.srcMons = append(d.srcMons, mon)
 
+	var srcs []source.Source
+	var err error
 	// Ignore if the directory doesn't exist
-	if err := d.loadSourcesFromPath(store); err != nil && !os.IsNotExist(err) {
+	if srcs, err = loadSourcesFromPath(store); err != nil && !os.IsNotExist(err) {
 		return nil, err
+	}
+
+	for _, src := range srcs {
+		if src.Enabled() {
+			if err = d.addSource(src); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	return d, nil
@@ -92,33 +102,33 @@ func NewDaemon(store string, r *pkg.PackageSet, f func(*GetResult, *pkg.PackageS
 
 // loadSourcesFromPath loads sources from a directory, where each source gets
 // it's own directory.  The actual directory structure is source dependent.
-func (d *Daemon) loadSourcesFromPath(dir string) error {
+func loadSourcesFromPath(dir string) ([]source.Source, error) {
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	srcs := make([]source.Source, 0, len(files))
 	for _, f := range files {
 		p := filepath.Join(dir, f.Name())
 		src, err := source.LoadTUFSourceFromPath(p)
 		if err != nil {
-			return err
+			return nil, err
 		}
-
-		d.addTUFSource(src)
+		srcs = append(srcs, src)
 	}
 
-	return nil
+	return srcs, nil
 }
 
-func (d *Daemon) addSrc(s source.Source) {
+func (d *Daemon) addToActiveSrcs(s source.Source) {
 	d.muSrcs.Lock()
 	defer d.muSrcs.Unlock()
 
 	id := s.GetId()
 
 	if oldSource, ok := d.srcs[id]; ok {
-		log.Printf("overwriting source: %s", id)
+		log.Printf("overwriting active source: %s", id)
 		oldSource.Close()
 	}
 
@@ -142,17 +152,27 @@ func (d *Daemon) AddTUFSource(cfg *amber.SourceConfig) error {
 
 	// Save the config.
 	if err := src.Save(); err != nil {
-		log.Printf("failed to save TUF config: %v: %s", cfg.Id, err)
+		log.Printf("failed to save TUF config %v: %s", cfg.Id, err)
 		return err
 	}
 
-	return d.addTUFSource(src)
+	if !src.Enabled() {
+		d.muSrcs.Lock()
+		if _, ok := d.srcs[cfg.Id]; ok && cfg.BlobRepoUrl != "" {
+			d.RemoveBlobRepo(cfg.BlobRepoUrl)
+		}
+		delete(d.srcs, cfg.Id)
+		d.muSrcs.Unlock()
+		return nil
+	}
+
+	return d.addSource(src)
 }
 
-func (d *Daemon) addTUFSource(src *source.TUFSource) error {
+func (d *Daemon) addSource(src source.Source) error {
 	cfg := src.GetConfig()
 	if cfg == nil {
-		return fmt.Errorf("TUFSource does not have a config")
+		return fmt.Errorf("source does not have a config")
 	}
 
 	// Add the source's blob repo.
@@ -167,7 +187,7 @@ func (d *Daemon) addTUFSource(src *source.TUFSource) error {
 	}
 
 	// If we made it to this point, we're ready to actually add the source.
-	d.addSrc(src)
+	d.addToActiveSrcs(src)
 
 	// after the source is added, let the monitor(s) know so they can decide if they
 	// want to look again for updates
@@ -214,13 +234,13 @@ func (d *Daemon) removeTUFSource(id string) (source.Source, error) {
 	d.muSrcs.Lock()
 	defer d.muSrcs.Unlock()
 
-	s, ok := d.srcs[id]
-	if !ok {
-		log.Printf("source not found: %s", id)
+	s, err := d.srcLock(id)
+	if err != nil {
+		log.Printf("source %q not found: %s", id, err)
 		return nil, nil
 	}
 
-	err := s.DeleteConfig()
+	err = s.DeleteConfig()
 	if err != nil {
 		log.Printf("unable to remove source config from disk: %v", err)
 		return nil, err
@@ -231,15 +251,37 @@ func (d *Daemon) removeTUFSource(id string) (source.Source, error) {
 	return s, nil
 }
 
+// srcLock gets a source, either an enabled or disabled one. It is the
+// responsibility of the caller to hold muSrcs when calling.
+func (d *Daemon) srcLock(srcID string) (source.Source, error) {
+	src, ok := d.srcs[srcID]
+	if ok {
+		return src, nil
+	}
+
+	allSrcs, err := loadSourcesFromPath(d.store)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, src := range allSrcs {
+		if src.GetId() == srcID {
+			return src, nil
+		}
+	}
+
+	return nil, os.ErrNotExist
+}
+
 func (d *Daemon) Login(srcId string) (*amber.DeviceCode, error) {
 	log.Printf("logging into %s", srcId)
 	d.muSrcs.Lock()
-	src, ok := d.srcs[srcId]
+	src, err := d.srcLock(srcId)
 	d.muSrcs.Unlock()
 
-	if !ok {
-		log.Printf("unknown source id: %v", srcId)
-		return nil, fmt.Errorf("unknown source: %v", srcId)
+	if err != nil {
+		log.Printf("error getting source by ID: %s", err)
+		return nil, fmt.Errorf("unknown source: %s", err)
 	}
 
 	return src.Login()
@@ -583,6 +625,7 @@ func cleanupFiles(files []*os.File) {
 // on the Source to complete. This method returns ErrSrcNotFound if the supplied
 // Source is not know to this Daemon.
 func (d *Daemon) RemoveSource(src source.Source) error {
+	// TODO(PKG-154) unify this method with RemoveTUFSource
 	d.muSrcs.Lock()
 	defer d.muSrcs.Unlock()
 
@@ -605,6 +648,20 @@ func (d *Daemon) GetSources() map[string]source.Source {
 	srcs := make(map[string]source.Source)
 	for key, value := range d.srcs {
 		srcs[key] = value
+	}
+
+	// load any sources from disk that we may know about, but are not currently
+	// using
+	allSrcs, err := loadSourcesFromPath(d.store)
+	if err != nil {
+		log.Printf("couldn't load sources from disk: %s", err)
+	} else {
+		// don't override any in-memory entries
+		for _, src := range allSrcs {
+			if _, ok := srcs[src.GetId()]; !ok {
+				srcs[src.GetId()] = src
+			}
+		}
 	}
 
 	return srcs

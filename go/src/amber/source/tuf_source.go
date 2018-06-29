@@ -46,6 +46,12 @@ type tufSourceConfig struct {
 	Config *amber.SourceConfig
 
 	Oauth2Token *oauth2.Token
+
+	Status *SourceStatus
+}
+
+type SourceStatus struct {
+	Enabled *bool
 }
 
 func newTUFSourceConfig(cfg *amber.SourceConfig) (tufSourceConfig, error) {
@@ -61,8 +67,15 @@ func newTUFSourceConfig(cfg *amber.SourceConfig) (tufSourceConfig, error) {
 		return tufSourceConfig{}, fmt.Errorf("no root keys provided")
 	}
 
+	status := false
+	srcStatus := &SourceStatus{&status}
+	if cfg.StatusConfig != nil && cfg.StatusConfig.Enabled {
+		*srcStatus.Enabled = true
+	}
+
 	return tufSourceConfig{
 		Config: cfg,
+		Status: srcStatus,
 	}, nil
 }
 
@@ -126,6 +139,22 @@ func NewTUFSource(dir string, c *amber.SourceConfig) (*TUFSource, error) {
 	return &src, nil
 }
 
+// setEnabledStatus examines the config to see if the Status field exists and
+// if enabled is set. If either is not present the field is added and set to
+// enabled. If the sourceConfig is changed true is returned, otherwise false.
+func setEnabledStatus(cfg *tufSourceConfig) bool {
+	if cfg.Status == nil {
+		enabled := true
+		cfg.Status = &SourceStatus{&enabled}
+		return true
+	} else if cfg.Status.Enabled == nil {
+		enabled := true
+		cfg.Status.Enabled = &enabled
+		return true
+	}
+	return false
+}
+
 func LoadTUFSourceFromPath(dir string) (*TUFSource, error) {
 	log.Printf("loading source from %s", dir)
 
@@ -140,9 +169,15 @@ func LoadTUFSourceFromPath(dir string) (*TUFSource, error) {
 		return nil, err
 	}
 
+	dirty := setEnabledStatus(&cfg)
+
 	src := TUFSource{
 		cfg: cfg,
 		dir: dir,
+	}
+
+	if dirty {
+		src.Save()
 	}
 
 	if err := src.initSource(); err != nil {
@@ -150,6 +185,10 @@ func LoadTUFSourceFromPath(dir string) (*TUFSource, error) {
 	}
 
 	return &src, nil
+}
+
+func (f *TUFSource) Enabled() bool {
+	return *f.cfg.Status.Enabled
 }
 
 // This function finishes initializing the TUFSource by parsing out the config

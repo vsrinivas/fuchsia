@@ -43,6 +43,7 @@ type testSrc struct {
 	pkgs       map[string]struct{}
 	replyDelay time.Duration
 	limit      uint64
+	cfg        *amber.SourceConfig
 }
 
 func (t *testSrc) GetId() string {
@@ -50,7 +51,13 @@ func (t *testSrc) GetId() string {
 }
 
 func (t *testSrc) GetConfig() *amber.SourceConfig {
-	return nil
+	if t.cfg == nil {
+		t.cfg = &amber.SourceConfig{}
+		t.cfg.Id = t.id
+		t.cfg.BlobRepoUrl = "https://127.0.0.1:8083/test"
+		t.cfg.RepoUrl = "https://127.0.0.1:8083/test/blobs"
+	}
+	return t.cfg
 }
 
 func (t *testSrc) GetHttpClient() (*http.Client, error) {
@@ -122,6 +129,10 @@ func (t *testSrc) Delete() error {
 
 func (t *testSrc) Close() {
 	return
+}
+
+func (t *testSrc) Enabled() bool {
+	return true
 }
 
 type testTicker struct {
@@ -454,6 +465,7 @@ func TestAddTUFSource(t *testing.T) {
 				Value: "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307",
 			},
 		},
+		StatusConfig: &amber.StatusConfig{Enabled: true},
 	}
 	d.AddTUFSource(cfg1)
 
@@ -470,6 +482,7 @@ func TestAddTUFSource(t *testing.T) {
 				Value: "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307",
 			},
 		},
+		StatusConfig: &amber.StatusConfig{Enabled: true},
 	}
 	d.AddTUFSource(cfg2)
 
@@ -504,6 +517,7 @@ func TestRemoveTUFSource(t *testing.T) {
 				Value: "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307",
 			},
 		},
+		StatusConfig: &amber.StatusConfig{Enabled: true},
 	}
 	cfg2 := &amber.SourceConfig{
 		Id:          "testing2",
@@ -515,6 +529,7 @@ func TestRemoveTUFSource(t *testing.T) {
 				Value: "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307",
 			},
 		},
+		StatusConfig: &amber.StatusConfig{Enabled: true},
 	}
 	d.AddTUFSource(cfg1)
 	d.AddTUFSource(cfg2)

@@ -74,4 +74,6 @@ type Source interface {
 
 	// Close any resources we might have open.
 	Close()
+
+	Enabled() bool
 }
