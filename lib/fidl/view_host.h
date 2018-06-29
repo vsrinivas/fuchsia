@@ -46,7 +46,7 @@ class ViewHost : public mozart::BaseView {
 
   void UpdateScene();
 
-  scenic_lib::EntityNode container_node_;
+  scenic::EntityNode container_node_;
 
   std::map<uint32_t, std::unique_ptr<ViewData>> views_;
   uint32_t next_child_key_{1u};

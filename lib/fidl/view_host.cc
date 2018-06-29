@@ -11,9 +11,9 @@
 namespace modular {
 
 struct ViewHost::ViewData {
-  explicit ViewData(scenic_lib::Session* session) : host_node(session) {}
+  explicit ViewData(scenic::Session* session) : host_node(session) {}
 
-  scenic_lib::EntityNode host_node;
+  scenic::EntityNode host_node;
 };
 
 ViewHost::ViewHost(

@@ -41,7 +41,7 @@ class RecipeView : public mozart::BaseView {
     }
 
     if (view_owner) {
-      host_node_ = std::make_unique<scenic_lib::EntityNode>(session());
+      host_node_ = std::make_unique<scenic::EntityNode>(session());
 
       zx::eventpair host_import_token;
       host_node_->ExportAsRequest(&host_import_token);
@@ -63,7 +63,7 @@ class RecipeView : public mozart::BaseView {
     }
   }
 
-  std::unique_ptr<scenic_lib::EntityNode> host_node_;
+  std::unique_ptr<scenic::EntityNode> host_node_;
 };
 
 class RecipeApp : public modular::ViewApp {

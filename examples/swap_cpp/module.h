@@ -25,7 +25,7 @@ class ModuleView : public mozart::BaseView {
   void OnPropertiesChanged(
       fuchsia::ui::views_v1::ViewProperties old_properties) override;
 
-  scenic_lib::ShapeNode background_node_;
+  scenic::ShapeNode background_node_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleView);
 };

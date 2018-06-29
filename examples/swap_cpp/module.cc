@@ -16,7 +16,7 @@ ModuleView::ModuleView(
     : BaseView(std::move(view_manager), std::move(view_owner_request),
                "ModuleView"),
       background_node_(session()) {
-  scenic_lib::Material background_material(session());
+  scenic::Material background_material(session());
   background_material.SetColor((color >> 16) & 0xff, (color >> 8) & 0xff,
                                color & 0xff, (color >> 24) & 0xff);
   background_node_.SetMaterial(background_material);
@@ -24,7 +24,7 @@ ModuleView::ModuleView(
 }
 
 void ModuleView::OnPropertiesChanged(fuchsia::ui::views_v1::ViewProperties) {
-  scenic_lib::Rectangle background_shape(session(), logical_size().width,
+  scenic::Rectangle background_shape(session(), logical_size().width,
                                          logical_size().height);
   background_node_.SetShape(background_shape);
   background_node_.SetTranslation(logical_size().width * .5f,
