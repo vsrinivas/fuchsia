@@ -52,7 +52,10 @@ bool TestDdkGetSize(Volume::Version version, bool fvm) {
     struct stat parent_buf, zxcrypt_buf;
     ASSERT_EQ(fstat(parent.get(), &parent_buf), 0, strerror(errno));
     ASSERT_EQ(fstat(zxcrypt.get(), &zxcrypt_buf), 0, strerror(errno));
-    EXPECT_GT(zxcrypt_buf.st_size, 0);
+
+    ASSERT_GT(parent_buf.st_size, zxcrypt_buf.st_size);
+    EXPECT_EQ((parent_buf.st_size - zxcrypt_buf.st_size) / device.block_size(),
+              device.reserved_blocks());
 
     END_TEST;
 }

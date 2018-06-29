@@ -243,10 +243,13 @@ zx_status_t Device::DdkIoctl(uint32_t op, const void* in, size_t in_len, void* o
 }
 
 zx_off_t Device::DdkGetSize() {
-    block_info_t blk;
-    size_t ignored;
-    BlockQuery(&blk, &ignored);
-    return blk.block_count * blk.block_size;
+    zx_off_t reserved, size;
+    if (mul_overflow(info_->block_size, info_->reserved_blocks, &reserved) ||
+        sub_overflow(device_get_size(parent()), reserved, &size)) {
+        zxlogf(ERROR, "device_get_size returned less than what has been reserved\n");
+        return 0;
+    }
+    return size;
 }
 
 // TODO(aarongreen): See ZX-1138.  Currently, there's no good way to trigger
