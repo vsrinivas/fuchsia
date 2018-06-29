@@ -76,10 +76,10 @@ constexpr size_t kHugeBufferSize = 16384;
 // or HT A-MSDU of size 3,839 bytes.
 constexpr size_t kLargeBuffers = 32;
 constexpr size_t kLargeBufferSize = 4096;
-// Small buffers are for smaller control packets within the driver stack itself (though they could
-// be used for transfering small 802.11 frames as well).
-constexpr size_t kSmallBuffers = 1024;
-constexpr size_t kSmallBufferSize = 64;
+// Small buffers are for smaller control packets within the driver stack itself and
+// for transfering small 802.11 frames as well.
+constexpr size_t kSmallBuffers = 512;
+constexpr size_t kSmallBufferSize = 256;
 
 using HugeBufferTraits = SlabBufferTraits<kHugeBuffers, kHugeBufferSize>;
 using LargeBufferTraits = SlabBufferTraits<kLargeBuffers, kLargeBufferSize>;
