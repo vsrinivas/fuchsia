@@ -82,6 +82,7 @@ __BEGIN_CDECLS;
 // Broadcom
 #define PDEV_VID_BROADCOM           6
 #define PDEV_PID_BCM4356            1
+#define PDEV_PID_BCM43458           2
 
 //Hardkernel
 #define PDEV_VID_HARDKERNEL         7

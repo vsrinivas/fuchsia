@@ -38,6 +38,9 @@ zx_status_t aml_gpio_init(aml_bus_t* bus);
 // astro-i2c.c
 zx_status_t aml_i2c_init(aml_bus_t* bus);
 
+// astro-bluetooth.c
+zx_status_t aml_bluetooth_init(aml_bus_t* bus);
+
 // astro-usb.c
 zx_status_t aml_usb_init(aml_bus_t* bus);
 

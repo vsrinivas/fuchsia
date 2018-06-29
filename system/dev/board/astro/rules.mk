@@ -10,6 +10,7 @@ MODULE_TYPE := driver
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/astro.c \
+    $(LOCAL_DIR)/astro-bluetooth.c \
     $(LOCAL_DIR)/astro-gpio.c \
     $(LOCAL_DIR)/astro-i2c.c \
     $(LOCAL_DIR)/astro-usb.c \
