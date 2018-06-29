@@ -49,7 +49,7 @@ def check_json(packages):
                 json.load(file)
             except ValueError:
                 all_json = False
-                print('Non-JSON file: %s.' % package)
+                print('Non-JSON file: %s' % package)
     return all_json
 
 
@@ -70,7 +70,7 @@ def check_deps_exist(dep_map):
         for dep in deps:
             if not os.path.isfile(dep):
                 all_exist = False
-                print('Dependency of %s does not exist: %s.' % (package, dep))
+                print('Dependency of %s does not exist: %s' % (package, dep))
     return all_exist
 
 
@@ -89,13 +89,13 @@ def check_all(directory, dep_map, layer, is_root=True):
             return False
         all_package = os.path.join(dirpath, 'all')
         if not os.path.isfile(all_package):
-            print('Directory does not contain an "all" package: %s.' % dirpath)
+            print('Directory does not contain an "all" package: %s' % dirpath)
             return False
         known_deps = dep_map[all_package]
         has_all_files = True
         def verify(package):
             if package not in known_deps:
-                print('Missing dependency in %s: %s.' % (all_package, package))
+                print('Missing dependency in %s: %s' % (all_package, package))
                 return False
             return True
         for file in filenames:
@@ -122,7 +122,7 @@ def check_no_fuchsia_packages_in_all(packages):
             keys = set(data.keys())
             if not keys.issubset(allowed_keys):
                 all_clear = False
-                print('"all" should only contain imports: %s.' % package)
+                print('"all" should only contain imports: %s' % package)
     return all_clear
 
 
@@ -132,7 +132,7 @@ def check_root(base, layer):
     for file in ROOT_CANONICAL_PACKAGES + [layer]:
         if not os.path.isfile(os.path.join(base, file)):
             all_there = False
-            print('Missing root package: %s.' % file)
+            print('Missing root package: %s' % file)
     return all_there
 
 
