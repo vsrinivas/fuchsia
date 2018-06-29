@@ -130,7 +130,7 @@ public:
 
     // Move assignment
     RefPtr& operator=(RefPtr&& r) {
-        fbl::move(r).swap(*this);
+        RefPtr(fbl::move(r)).swap(*this);
         return *this;
     }
 

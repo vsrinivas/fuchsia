@@ -610,6 +610,33 @@ static bool ref_ptr_to_const_test() {
     END_TEST;
 }
 
+static bool ref_ptr_move_assign() {
+    BEGIN_TEST;
+    using RefCallPtr = fbl::RefPtr<RefCallCounter>;
+
+    RefCallCounter counter1, counter2;
+    RefCallPtr ptr1 = fbl::AdoptRef<RefCallCounter>(&counter1);
+    RefCallPtr ptr2 = fbl::AdoptRef<RefCallCounter>(&counter2);
+
+    EXPECT_NE(ptr1.get(), ptr2.get());
+    EXPECT_NONNULL(ptr1);
+    EXPECT_NONNULL(ptr2);
+
+    ptr1 = fbl::move(ptr2);
+    EXPECT_EQ(ptr1.get(), &counter2);
+    EXPECT_NULL(ptr2);
+
+    EXPECT_EQ(1, counter1.release_calls());
+    EXPECT_EQ(0, counter2.release_calls());
+
+    // Test self-assignment
+    ptr1 = fbl::move(ptr1);
+    EXPECT_EQ(ptr1.get(), &counter2);
+    EXPECT_EQ(0, counter2.release_calls());
+
+    END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(ref_ptr_tests)
@@ -618,4 +645,5 @@ RUN_NAMED_TEST("Ref Pointer Comparison", ref_ptr_compare_test)
 RUN_NAMED_TEST("Ref Pointer Upcast", upcasting::ref_ptr_upcast_test)
 RUN_NAMED_TEST("Ref Pointer Adopt null", ref_ptr_adopt_null_test)
 RUN_NAMED_TEST("Ref Pointer To Const", ref_ptr_to_const_test)
+RUN_NAMED_TEST("Ref Pointer Move Assignment", ref_ptr_move_assign)
 END_TEST_CASE(ref_ptr_tests);
