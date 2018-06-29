@@ -43,9 +43,8 @@ static zx_status_t aml_canvas_config(void* ctx, zx_handle_t vmo,
     uint32_t size = ROUNDUP((info->stride_bytes * info->height) +
                                 (offset & (PAGE_SIZE - 1)),
                             PAGE_SIZE);
-    uint32_t num_pages = size / PAGE_SIZE;
     uint32_t index;
-    zx_paddr_t paddr[num_pages];
+    zx_paddr_t paddr;
     mtx_lock(&canvas->lock);
 
     uint32_t height = info->height;
@@ -70,27 +69,16 @@ static zx_status_t aml_canvas_config(void* ctx, zx_handle_t vmo,
         goto fail;
     }
 
-    status = zx_bti_pin(canvas->bti, ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE,
+    status = zx_bti_pin(canvas->bti, ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS,
                         vmo, offset & ~(PAGE_SIZE - 1), size,
-                        paddr, num_pages,
+                        &paddr, 1,
                         &canvas->pmt_handle[index]);
     if (status != ZX_OK) {
         CANVAS_ERROR("zx_bti_pin failed %d \n", status);
         goto fail;
     }
 
-    // check if all pages are contiguous
-    for (uint32_t i = 0; i < num_pages - 1; i++) {
-        if (paddr[i] + PAGE_SIZE != paddr[i + 1]) {
-            CANVAS_ERROR("Pages are not contiguous\n");
-            zx_handle_close(canvas->pmt_handle[index]);
-            canvas->pmt_handle[index] = ZX_HANDLE_INVALID;
-            status = ZX_ERR_INVALID_ARGS;
-            goto fail;
-        }
-    }
-
-    if (!IS_ALIGNED(paddr[0], 8)) {
+    if (!IS_ALIGNED(paddr, 8)) {
         CANVAS_ERROR("Physical address is not aligned\n");
         status = ZX_ERR_INVALID_ARGS;
         zx_handle_close(canvas->pmt_handle[index]);
@@ -99,7 +87,7 @@ static zx_status_t aml_canvas_config(void* ctx, zx_handle_t vmo,
         goto fail;
     }
 
-    zx_paddr_t start_addr = paddr[0] + (offset & (PAGE_SIZE - 1));
+    zx_paddr_t start_addr = paddr + (offset & (PAGE_SIZE - 1));
 
     // set framebuffer address in DMC, read/modify/write
     uint32_t value = ((start_addr >> 3) & DMC_CAV_ADDR_LMASK) |

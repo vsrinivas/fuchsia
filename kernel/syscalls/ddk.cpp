@@ -318,6 +318,7 @@ zx_status_t sys_bti_pin(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint
     // Convert requested permissions and check against VMO rights
     uint32_t iommu_perms = 0;
     bool compress_results = false;
+    bool contiguous = false;
     if (options & ZX_BTI_PERM_READ) {
         if (!(vmo_rights & ZX_RIGHT_READ)) {
             return ZX_ERR_ACCESS_DENIED;
@@ -339,9 +340,15 @@ zx_status_t sys_bti_pin(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint
         iommu_perms |= IOMMU_FLAG_PERM_EXECUTE;
         options &= ~ZX_BTI_PERM_EXECUTE;
     }
-    if (options & ZX_BTI_COMPRESS) {
-        compress_results = true;
-        options &= ~ZX_BTI_COMPRESS;
+    if (!((options & ZX_BTI_COMPRESS) && (options & ZX_BTI_CONTIGUOUS))) {
+        if (options & ZX_BTI_COMPRESS) {
+            compress_results = true;
+            options &= ~ZX_BTI_COMPRESS;
+        }
+        if (options & ZX_BTI_CONTIGUOUS && vmo_dispatcher->vmo()->is_contiguous()) {
+            contiguous = true;
+            options &= ~ZX_BTI_CONTIGUOUS;
+        }
     }
     if (options) {
         return ZX_ERR_INVALID_ARGS;
@@ -363,7 +370,7 @@ zx_status_t sys_bti_pin(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint
     }
 
     status = static_cast<PinnedMemoryTokenDispatcher*>(new_pmt.get())
-            ->EncodeAddrs(compress_results, mapped_addrs.get(), addrs_count);
+            ->EncodeAddrs(compress_results, contiguous, mapped_addrs.get(), addrs_count);
     if (status != ZX_OK) {
         return status;
     }

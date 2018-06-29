@@ -347,6 +347,7 @@ typedef uint64_t zx_off_t;
 #define ZX_BTI_PERM_WRITE         ((uint32_t)1u << 1)
 #define ZX_BTI_PERM_EXECUTE       ((uint32_t)1u << 2)
 #define ZX_BTI_COMPRESS           ((uint32_t)1u << 3)
+#define ZX_BTI_CONTIGUOUS         ((uint32_t)1u << 4)
 
 typedef uint32_t zx_obj_type_t;
 

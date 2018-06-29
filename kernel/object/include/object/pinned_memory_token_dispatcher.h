@@ -55,11 +55,14 @@ public:
     // 1) If |compress_results|, |size_|/|bti_.minimum_contiguity()|, rounded up, in which
     // case each returned address represents a run of |bti_.minimum_contiguity()| bytes (with
     // the exception of the last which may be short)
-    // 2) Otherwise, |size_|/|PAGE_SIZE|, in which case each returned address represents a
+    // 2) If |contiguous|, 1, in which case the returned address is the start of the
+    // contiguous memory.
+    // 3) Otherwise, |size_|/|PAGE_SIZE|, in which case each returned address represents a
     // single page.
     //
     // Returns ZX_ERR_INVALID_ARGS if |mapped_addrs_count| is not exactly the value described above.
-    zx_status_t EncodeAddrs(bool compress_results, dev_vaddr_t* mapped_addrs, size_t mapped_addrs_count);
+    zx_status_t EncodeAddrs(bool compress_results, bool contiguous,
+                            dev_vaddr_t* mapped_addrs, size_t mapped_addrs_count);
 
     // Returns the number of bytes pinned by the PMT.
     uint64_t size() const { return size_; }

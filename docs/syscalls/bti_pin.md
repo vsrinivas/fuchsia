@@ -25,9 +25,12 @@ with the permissions specified in *options*.
 *offset* must be aligned to page boundaries.
 
 *options* is a bitfield that may contain one or more of *ZX_BTI_PERM_READ*,
-*ZX_BTI_PERM_WRITE*, *ZX_BTI_PERM_EXECUTE*, and *ZX_BTI_COMPRESS*.  In order
-for the call to succeed, *vmo* must have the READ/WRITE/EXECUTE rights
-corresponding to the permissions flags set in *options*.
+*ZX_BTI_PERM_WRITE*, *ZX_BTI_PERM_EXECUTE*, *ZX_BTI_COMPRESS*, and
+*ZX_BTI_CONTIGUOUS*.  In order for the call to succeed, *vmo* must have the
+READ/WRITE/EXECUTE rights corresponding to the permissions flags set in
+*options*. *ZX_BTI_CONTIGUOUS* is only allowed if *vmo* was allocated via
+**zx_vmo_create_contiguous**() or **zx_vmo_create_physical**().
+*ZX_BTI_COMPRESS* and *ZX_BTI_CONTIGUOUS* are mutually exclusive.
 
 If the range in *vmo* specified by *offset* and *size* contains non-committed
 pages, a successful invocation of this function will result in those pages
@@ -37,15 +40,16 @@ committed.
 *addrs* will be populated with the device-physical addresses of the requested
 VMO pages.  These addresses may be given to devices that issue memory
 transactions with the hardware transaction ID associated with the BTI.  The
-number of addresses returned depends on whether the *ZX_BTI_COMPRESS* option was
-given.  It number of addresses will be either
-1) If *ZX_BTI_COMPRESS* is not set, one per page (*size*/*PAGE_SIZE*)
+number of addresses returned depends on whether the *ZX_BTI_COMPRESS* or
+*ZX_BTI_CONTIGUOUS* options were given.  It number of addresses will be either
+1) If neither is set, one per page (*size*/*PAGE_SIZE*)
 2) If *ZX_BTI_COMPRESS* is set, *size*/*minimum-contiguity*, rounded up
    (each address representing the a run of *minimum-contiguity* run of bytes,
    with the last one being potentially short if *size* is not a multiple of
    *minimum-contiguity*).  It is guaranteed that all returned addresses will be
    *minimum-contiguity*-aligned.  Note that *minimum-contiguity* is discoverable
    via **[object_get_info](object_get_info.md)**().
+3) If *ZX_BTI_CONTIGUOUS* is set, the single address of the start of the memory.
 
 *addrs_count* is the number of entries in the *addrs* array.  It is an error for
 *addrs_count* to not match the value calculated above.

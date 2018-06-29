@@ -263,6 +263,7 @@ PinnedMemoryTokenDispatcher::PinnedMemoryTokenDispatcher(
 }
 
 zx_status_t PinnedMemoryTokenDispatcher::EncodeAddrs(bool compress_results,
+                                                     bool contiguous,
                                                      dev_vaddr_t* mapped_addrs,
                                                      size_t mapped_addrs_count) {
     Guard<fbl::Mutex> guard{get_lock()};
@@ -274,6 +275,11 @@ zx_status_t PinnedMemoryTokenDispatcher::EncodeAddrs(bool compress_results,
             return ZX_ERR_INVALID_ARGS;
         }
         memcpy(mapped_addrs, pmo_addrs.get(), found_addrs * sizeof(dev_vaddr_t));
+    } else if (contiguous) {
+        if (mapped_addrs_count != 1 || !is_contiguous_) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        *mapped_addrs = pmo_addrs.get()[0];
     } else {
         const size_t num_pages = size_ / PAGE_SIZE;
         if (num_pages != mapped_addrs_count) {

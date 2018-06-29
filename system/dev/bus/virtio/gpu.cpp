@@ -87,18 +87,12 @@ zx_status_t GpuDevice::virtio_gpu_import_vmo_image(void* ctx, image_t* image,
 
     unsigned pixel_size = ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
     unsigned size = ROUNDUP(image->width * image->height * pixel_size, PAGE_SIZE);
-    unsigned num_pages = size / PAGE_SIZE;
-    zx_paddr_t paddr[num_pages];
-    zx_status_t status = zx_bti_pin(gd->bti_.get(), ZX_BTI_PERM_READ, vmo, offset, size,
-                                    paddr, num_pages, import_data->pmt.reset_and_get_address());
+    zx_paddr_t paddr;
+    zx_status_t status = zx_bti_pin(gd->bti_.get(), ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS,
+                                    vmo, offset, size,
+                                    &paddr, 1, import_data->pmt.reset_and_get_address());
     if (status != ZX_OK) {
         return status;
-    }
-
-    for (unsigned i = 0; i < num_pages - 1; i++) {
-        if (paddr[i] + PAGE_SIZE != paddr[i + 1]) {
-            return ZX_ERR_INVALID_ARGS;
-        }
     }
 
     status = gd->allocate_2d_resource(&import_data->resource_id, image->width, image->height);
@@ -107,7 +101,7 @@ zx_status_t GpuDevice::virtio_gpu_import_vmo_image(void* ctx, image_t* image,
         return status;
     }
 
-    status = gd->attach_backing(import_data->resource_id, paddr[0], size);
+    status = gd->attach_backing(import_data->resource_id, paddr, size);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: failed to attach backing store\n", gd->tag());
         return status;
