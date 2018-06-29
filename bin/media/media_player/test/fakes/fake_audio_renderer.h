@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_AUDIO_RENDERER_H_
-#define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_AUDIO_RENDERER_H_
+#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_AUDIO_RENDERER_H_
+#define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_AUDIO_RENDERER_H_
 
 #include <memory>
 #include <queue>
@@ -131,4 +131,4 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer2 {
 }  // namespace test
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_AUDIO_RENDERER_H_
+#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_AUDIO_RENDERER_H_

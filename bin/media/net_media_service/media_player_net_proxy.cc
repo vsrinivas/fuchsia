@@ -6,8 +6,8 @@
 
 #include <vector>
 
-#include <lib/zx/channel.h>
 #include <fuchsia/netconnector/cpp/fidl.h>
+#include <lib/zx/channel.h>
 
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"

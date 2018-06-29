@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_WAV_READER_H_
-#define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_WAV_READER_H_
+#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_WAV_READER_H_
+#define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_WAV_READER_H_
 
 #include <vector>
 
@@ -80,4 +80,4 @@ class FakeWavReader : public fuchsia::mediaplayer::SeekingReader {
 
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_WAV_READER_H_
+#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_WAV_READER_H_

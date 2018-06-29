@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_PACKET_INFO_H_
-#define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_PACKET_INFO_H_
+#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_PACKET_INFO_H_
+#define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_PACKET_INFO_H_
 
 #include <cstddef>
 #include <cstdint>
@@ -31,4 +31,4 @@ class PacketInfo {
 }  // namespace test
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_PACKET_INFO_H_
+#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_PACKET_INFO_H_

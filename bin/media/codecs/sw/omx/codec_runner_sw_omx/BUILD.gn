@@ -43,7 +43,6 @@ executable("codec_runner_sw_omx") {
     # intent here.  We don't get this for free as a public_dep from any of the
     # .so codec libs because we use dlopen() on those.
     "//garnet/bin/media/codecs/sw/omx/common/omx_android_pal:omx_so_entry_point_config_source_set",
-
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

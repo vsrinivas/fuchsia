@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_SESSION_H_
-#define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_SESSION_H_
+#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_SESSION_H_
+#define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_SESSION_H_
 
 #include <memory>
 #include <unordered_map>
@@ -116,4 +116,4 @@ class FakeSession : public ::fuchsia::ui::scenic::Session {
 }  // namespace test
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_SESSION_H_
+#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_SESSION_H_

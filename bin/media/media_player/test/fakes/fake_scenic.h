@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_SCENIC_H_
-#define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_SCENIC_H_
+#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_SCENIC_H_
+#define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_SCENIC_H_
 
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
@@ -53,4 +53,4 @@ class FakeScenic : public ::fuchsia::ui::scenic::Scenic {
 }  // namespace test
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_SCENIC_H_
+#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_SCENIC_H_
