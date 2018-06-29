@@ -20,4 +20,3 @@ tests_package("peridot_tests") {
     "//peridot/public/lib:peridot_public_lib_unittests",
   ]
 }
-

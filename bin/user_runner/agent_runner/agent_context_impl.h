@@ -80,7 +80,8 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
       override;
   // |fuchsia::modular::AgentContext|
   void GetTokenProvider(
-      fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request) override;
+      fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request)
+      override;
   // |fuchsia::modular::AgentContext|
   void ScheduleTask(fuchsia::modular::TaskInfo task_info) override;
   // |fuchsia::modular::AgentContext|
@@ -117,7 +118,7 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   fuchsia::sys::ServiceProviderImpl service_provider_impl_;
 
   fuchsia::modular::auth::TokenProviderFactory* const
-      token_provider_factory_;                                  // Not owned.
+      token_provider_factory_;                          // Not owned.
   EntityProviderRunner* const entity_provider_runner_;  // Not owned.
   fuchsia::modular::UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned.

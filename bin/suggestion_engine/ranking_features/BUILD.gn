@@ -20,7 +20,7 @@ group("all") {
 source_set("ranking_feature") {
   sources = [
     "ranking_feature.cc",
-    "ranking_feature.h"
+    "ranking_feature.h",
   ]
 
   deps = [

@@ -50,8 +50,8 @@ package("common_null_module") {
 
   meta = [
     {
-       path = "common_null_module_manifest.json"
-       dest = "module.json"
+      path = "common_null_module_manifest.json"
+      dest = "module.json"
     },
   ]
 }
@@ -92,8 +92,8 @@ package("common_active_module") {
 
   meta = [
     {
-       path = "common_active_module_manifest.json"
-       dest = "module.json"
+      path = "common_active_module_manifest.json"
+      dest = "module.json"
     },
   ]
 }

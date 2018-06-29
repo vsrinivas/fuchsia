@@ -13,18 +13,19 @@ template("tests_package") {
     computed_tests += [
       {
         name = get_label_info(dep, "name")
-      }
+      },
     ]
   }
 
   package(target_name) {
     testonly = true
 
-    forward_variables_from(invoker, [
+    forward_variables_from(invoker,
+                           [
                              "deps",
                              "meta",
                              "resources",
-                             ])
+                           ])
     tests = computed_tests
   }
 }

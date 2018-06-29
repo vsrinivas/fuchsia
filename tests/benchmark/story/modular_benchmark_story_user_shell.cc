@@ -40,8 +40,7 @@ class Settings {
     }
 
     module_url = command_line.GetOptionValueWithDefault(
-        "module_url",
-        "modular_benchmark_story_module");
+        "module_url", "modular_benchmark_story_module");
   }
 
   int story_count{0};
@@ -192,8 +191,8 @@ class TestApp : public modular::SingleServiceApp<fuchsia::modular::UserShell> {
     FXL_LOG(INFO) << "Link()";
     fidl::VectorPtr<fidl::StringPtr> root_module_path;
     root_module_path.push_back(modular::kRootModuleName);
-    story_controller_->GetLink(std::move(root_module_path),
-                               nullptr, link_.NewRequest());
+    story_controller_->GetLink(std::move(root_module_path), nullptr,
+                               link_.NewRequest());
     link_watcher_.Watch(&link_);
     link_watcher_.Continue([this](fidl::StringPtr json) {
       FXL_LOG(INFO) << "Link() Watch: " << json;

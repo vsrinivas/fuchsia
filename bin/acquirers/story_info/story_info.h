@@ -30,10 +30,11 @@ class StoryWatcherImpl;
 // TODO(thatguy): Add Link value types to the Context engine and use them
 // here. Then update the resulting published value to remove its added JSON
 // structure, since it will all be represented in the metadata of the value.
-class StoryInfoAcquirer : public fuchsia::modular::VisibleStoriesWatcher,
-                          public fuchsia::modular::StoryProviderWatcher,
-                          public fuchsia::modular::FocusWatcher,
-                          public fuchsia::maxwell::internal::StoryInfoInitializer {
+class StoryInfoAcquirer
+    : public fuchsia::modular::VisibleStoriesWatcher,
+      public fuchsia::modular::StoryProviderWatcher,
+      public fuchsia::modular::FocusWatcher,
+      public fuchsia::maxwell::internal::StoryInfoInitializer {
  public:
   StoryInfoAcquirer(modular::AgentHost* agent_host);
   ~StoryInfoAcquirer() override;

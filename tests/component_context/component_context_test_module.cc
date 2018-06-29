@@ -94,9 +94,8 @@ class TestApp {
 
     Await("one_agent_connected", [this] {
       one_agent_connected_.Pass();
-      TestMessageQueue([this] {
-        TestAgentController([this] { steps_.Step(); });
-      });
+      TestMessageQueue(
+          [this] { TestAgentController([this] { steps_.Step(); }); });
     });
 
     TestUnstoppableAgent([this] { steps_.Step(); });

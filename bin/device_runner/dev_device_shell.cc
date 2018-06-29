@@ -107,8 +107,8 @@ class DevDeviceShellApp
   // |fuchsia::modular::DeviceShell|
   void GetAuthenticationContext(
       fidl::StringPtr /*username*/,
-      fidl::InterfaceRequest<fuchsia::modular::auth::AuthenticationContext> /*request*/)
-      override {
+      fidl::InterfaceRequest<
+          fuchsia::modular::auth::AuthenticationContext> /*request*/) override {
     FXL_LOG(INFO) << "fuchsia::modular::DeviceShell::GetAuthenticationContext()"
                      " is unimplemented.";
   }

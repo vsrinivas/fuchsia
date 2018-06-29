@@ -16,7 +16,8 @@ class PuppetMasterImpl;
 
 std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
     DispatchStoryCommandExecutor::OperationContainerAccessor factory) {
-  std::map<fuchsia::modular::StoryCommand::Tag, std::unique_ptr<CommandRunner>> command_runners;
+  std::map<fuchsia::modular::StoryCommand::Tag, std::unique_ptr<CommandRunner>>
+      command_runners;
   // TODO(thatguy): Add all required command runners.
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kSetLinkValue,
                           new SetLinkValueCommandRunner());

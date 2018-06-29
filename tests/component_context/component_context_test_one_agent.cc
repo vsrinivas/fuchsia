@@ -25,12 +25,10 @@ class TestApp : ComponentContextTestService {
     modular::testing::Init(agent_host->startup_context(), __FILE__);
     agent_host->agent_context()->GetComponentContext(
         component_context_.NewRequest());
-    agent_services_
-        .AddService<ComponentContextTestService>(
-            [this](fidl::InterfaceRequest<ComponentContextTestService>
-                       request) {
-              agent_interface_.AddBinding(this, std::move(request));
-            });
+    agent_services_.AddService<ComponentContextTestService>(
+        [this](fidl::InterfaceRequest<ComponentContextTestService> request) {
+          agent_interface_.AddBinding(this, std::move(request));
+        });
 
     // Connecting to the agent should start it up.
     fuchsia::sys::ServiceProviderPtr agent_services;
@@ -90,8 +88,7 @@ class TestApp : ComponentContextTestService {
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  modular::AgentDriver<TestApp> driver(context.get(),
-                                       [&loop] { loop.Quit(); });
+  modular::AgentDriver<TestApp> driver(context.get(), [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
 }

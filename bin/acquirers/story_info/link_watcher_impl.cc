@@ -63,9 +63,7 @@ LinkWatcherImpl::LinkWatcherImpl(
 
 LinkWatcherImpl::~LinkWatcherImpl() = default;
 
-void LinkWatcherImpl::Notify(fidl::StringPtr json) {
-  ProcessNewValue(json);
-}
+void LinkWatcherImpl::Notify(fidl::StringPtr json) { ProcessNewValue(json); }
 
 void LinkWatcherImpl::ProcessNewValue(const fidl::StringPtr& value) {
   // We are looking for the following |value| structures:

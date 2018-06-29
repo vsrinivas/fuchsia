@@ -57,8 +57,7 @@ class CreateStoryCall
       fuchsia::ledger::Ledger* const ledger,
       fuchsia::ledger::Page* const root_page,
       fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
-      bool is_kind_of_proto_story,
-      ResultCall result_call)
+      bool is_kind_of_proto_story, ResultCall result_call)
       : LedgerOperation("SessionStorage::CreateStoryCall", ledger, root_page,
                         std::move(result_call)),
         extra_info_(std::move(extra_info)),
@@ -129,10 +128,9 @@ FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> SessionStorage::CreateStory(
     bool is_kind_of_proto_story) {
   auto ret = Future<fidl::StringPtr, fuchsia::ledger::PageId>::Create(
       "SessionStorage.CreateStory.ret");
-  operation_queue_.Add(new CreateStoryCall(ledger_client_->ledger(), page(),
-                                           std::move(extra_info),
-                                           is_kind_of_proto_story,
-                                           ret->Completer()));
+  operation_queue_.Add(new CreateStoryCall(
+      ledger_client_->ledger(), page(), std::move(extra_info),
+      is_kind_of_proto_story, ret->Completer()));
   return ret;
 }
 

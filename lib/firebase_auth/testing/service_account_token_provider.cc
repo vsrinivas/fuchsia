@@ -81,7 +81,7 @@ std::string GetHeader() {
 }
 
 fuchsia::modular::auth::AuthErr GetError(fuchsia::modular::auth::Status status,
-                               std::string message) {
+                                         std::string message) {
   fuchsia::modular::auth::AuthErr error;
   error.status = status;
   error.message = message;
@@ -182,14 +182,14 @@ bool ServiceAccountTokenProvider::LoadCredentials(
 void ServiceAccountTokenProvider::GetAccessToken(
     GetAccessTokenCallback callback) {
   FXL_NOTIMPLEMENTED();
-  callback(nullptr,
-           GetError(fuchsia::modular::auth::Status::INTERNAL_ERROR, "Not implemented."));
+  callback(nullptr, GetError(fuchsia::modular::auth::Status::INTERNAL_ERROR,
+                             "Not implemented."));
 }
 
 void ServiceAccountTokenProvider::GetIdToken(GetIdTokenCallback callback) {
   FXL_NOTIMPLEMENTED();
-  callback(nullptr,
-           GetError(fuchsia::modular::auth::Status::INTERNAL_ERROR, "Not implemented."));
+  callback(nullptr, GetError(fuchsia::modular::auth::Status::INTERNAL_ERROR,
+                             "Not implemented."));
 }
 
 void ServiceAccountTokenProvider::GetFirebaseAuthToken(
@@ -309,8 +309,8 @@ bool ServiceAccountTokenProvider::GetCustomToken(std::string* custom_token) {
   return true;
 }
 
-fuchsia::modular::auth::FirebaseTokenPtr ServiceAccountTokenProvider::GetFirebaseToken(
-    const std::string& id_token) {
+fuchsia::modular::auth::FirebaseTokenPtr
+ServiceAccountTokenProvider::GetFirebaseToken(const std::string& id_token) {
   auto token = fuchsia::modular::auth::FirebaseToken::New();
   token->id_token = id_token;
   token->local_id = user_id_;
@@ -392,7 +392,8 @@ void ServiceAccountTokenProvider::HandleIdentityResponse(
   if (response.status_code != 200) {
     ResolveCallbacks(
         api_key, nullptr,
-        GetError(fuchsia::modular::auth::Status::OAUTH_SERVER_ERROR, response_body));
+        GetError(fuchsia::modular::auth::Status::OAUTH_SERVER_ERROR,
+                 response_body));
     return;
   }
 

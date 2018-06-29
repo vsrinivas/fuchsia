@@ -21,16 +21,15 @@ size_t ToFullPages(size_t value) {
 // running with ASAN.
 #if __has_feature(address_sanitizer)
 // ASAN doesn't support safe stack.
-static_assert(!__has_feature(safe_stack), "Add support for safe stack under ASAN");
+static_assert(!__has_feature(safe_stack),
+              "Add support for safe stack under ASAN");
 
 void AllocateASAN(size_t stack_size, uintptr_t* stack) {
   *stack = reinterpret_cast<uintptr_t>(malloc(stack_size));
   FXL_DCHECK(*stack);
 }
 
-void ReleaseASAN(uintptr_t stack) {
-  free(reinterpret_cast<void*>(stack));
-}
+void ReleaseASAN(uintptr_t stack) { free(reinterpret_cast<void*>(stack)); }
 
 #else  // __has_feature(address_sanitizer)
 
@@ -69,9 +68,7 @@ Stack::Stack(size_t stack_size) : stack_size_(ToFullPages(stack_size)) {
   AllocateASAN(stack_size_, &safe_stack_);
 }
 
-Stack::~Stack() {
-  ReleaseASAN(safe_stack_);
-}
+Stack::~Stack() { ReleaseASAN(safe_stack_); }
 
 void Stack::Release() {
   ReleaseASAN(safe_stack_);

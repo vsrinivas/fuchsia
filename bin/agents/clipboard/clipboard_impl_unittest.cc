@@ -74,7 +74,8 @@ TEST_F(ClipboardImplTest, PushAndPeekTwice) {
     callback_called++;
   });
 
-  RunLoopWithTimeoutOrUntil([&callback_called] { return callback_called == 2; });
+  RunLoopWithTimeoutOrUntil(
+      [&callback_called] { return callback_called == 2; });
 }
 
 }  // namespace

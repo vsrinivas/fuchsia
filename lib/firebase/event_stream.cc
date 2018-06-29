@@ -16,8 +16,7 @@ EventStream::EventStream() {}
 EventStream::~EventStream() {}
 
 void EventStream::Start(
-    zx::socket source,
-    const std::function<EventCallback>& event_callback,
+    zx::socket source, const std::function<EventCallback>& event_callback,
     const std::function<CompletionCallback>& completion_callback) {
   event_callback_ = event_callback;
   completion_callback_ = completion_callback;
@@ -41,9 +40,7 @@ void EventStream::OnDataAvailable(const void* data, size_t num_bytes) {
   }
 }
 
-void EventStream::OnDataComplete() {
-  completion_callback_();
-}
+void EventStream::OnDataComplete() { completion_callback_(); }
 
 // See https://www.w3.org/TR/eventsource/#event-stream-interpretation.
 bool EventStream::ProcessLine(fxl::StringView line) {

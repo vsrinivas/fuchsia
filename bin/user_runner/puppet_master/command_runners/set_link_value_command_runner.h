@@ -13,11 +13,12 @@ namespace modular {
 
 class SetLinkValueCommandRunner : public CommandRunner {
  public:
-   SetLinkValueCommandRunner();
-   ~SetLinkValueCommandRunner();
+  SetLinkValueCommandRunner();
+  ~SetLinkValueCommandRunner();
 
-   void Execute(fidl::StringPtr story_id, fuchsia::modular::StoryCommand command,
-                std::function<void(fuchsia::modular::ExecuteResult)> done) override;
+  void Execute(
+      fidl::StringPtr story_id, fuchsia::modular::StoryCommand command,
+      std::function<void(fuchsia::modular::ExecuteResult)> done) override;
 };
 
 }  // namespace modular

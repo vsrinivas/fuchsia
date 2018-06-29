@@ -4,7 +4,6 @@
 
 import("//peridot/build/executable_package.gni")
 
-
 group("all") {
   public_deps = [
     ":linear_ranker",

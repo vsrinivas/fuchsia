@@ -11,8 +11,8 @@ executable_package("module_package_indexer") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/lib/module_manifest_source:package_util",
     "//peridot/lib:maxwell_internal",
+    "//peridot/lib/module_manifest_source:package_util",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fdio",
   ]

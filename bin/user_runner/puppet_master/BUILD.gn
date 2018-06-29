@@ -90,13 +90,13 @@ executable("dispatch_story_command_executor_unittest") {
 
 source_set("make_production_impl") {
   sources = [
-    "make_production_impl.h",
     "make_production_impl.cc",
+    "make_production_impl.h",
   ]
 
   deps = [
-    ":puppet_master_impl",
     ":dispatch_story_command_executor",
+    ":puppet_master_impl",
     "//peridot/bin/user_runner/puppet_master/command_runners:set_link_value_command_runner",
     "//peridot/bin/user_runner/puppet_master/command_runners:update_mod_command_runner",
   ]

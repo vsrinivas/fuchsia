@@ -584,8 +584,8 @@ void StoryProviderImpl::GetStoryInfo(fidl::StringPtr story_id,
             }
             return fidl::MakeOptional(std::move(story_data->story_info));
           });
-  operation_queue_.Add(WrapFutureAsOperation(
-      "StoryProviderImpl::GetStoryInfo", on_run, done, callback));
+  operation_queue_.Add(WrapFutureAsOperation("StoryProviderImpl::GetStoryInfo",
+                                             on_run, done, callback));
 }
 
 // Called by StoryControllerImpl on behalf of ModuleContextImpl
@@ -724,8 +724,8 @@ void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
         story_id, zx_clock_get(ZX_CLOCK_UTC));
   });
   std::function<void()> callback = [] {};
-  operation_queue_.Add(WrapFutureAsOperation(
-      "StoryProviderImpl::OnFocusChange", on_run, done, callback));
+  operation_queue_.Add(WrapFutureAsOperation("StoryProviderImpl::OnFocusChange",
+                                             on_run, done, callback));
 }
 
 void StoryProviderImpl::NotifyStoryWatchers(

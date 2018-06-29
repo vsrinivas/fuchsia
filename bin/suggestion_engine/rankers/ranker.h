@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKER_H_
-#define PERIDOT_BIN_SUGGESTION_ENGINE_RANKER_H_
+#ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKERS_RANKER_H_
+#define PERIDOT_BIN_SUGGESTION_ENGINE_RANKERS_RANKER_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
 
@@ -28,4 +28,4 @@ class Ranker {
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKER_H_
+#endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKERS_RANKER_H_

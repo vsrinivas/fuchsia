@@ -13,8 +13,7 @@ SocketDrainerClient::SocketDrainerClient() : drainer_(this) {}
 SocketDrainerClient::~SocketDrainerClient() {}
 
 void SocketDrainerClient::Start(
-    zx::socket source,
-    const std::function<void(std::string)>& callback) {
+    zx::socket source, const std::function<void(std::string)>& callback) {
   callback_ = callback;
   drainer_.Start(std::move(source));
 }

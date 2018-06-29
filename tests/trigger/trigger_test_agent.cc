@@ -39,8 +39,7 @@ class TestApp : TriggerTestService {
     agent_host->agent_context()->ScheduleTask(std::move(task_info));
 
     agent_services_.AddService<TriggerTestService>(
-        [this](fidl::InterfaceRequest<TriggerTestService>
-                   request) {
+        [this](fidl::InterfaceRequest<TriggerTestService> request) {
           service_bindings_.AddBinding(this, std::move(request));
         });
 
@@ -100,8 +99,7 @@ class TestApp : TriggerTestService {
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  modular::AgentDriver<TestApp> driver(context.get(),
-                                       [&loop] { loop.Quit(); });
+  modular::AgentDriver<TestApp> driver(context.get(), [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
 }

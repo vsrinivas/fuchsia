@@ -36,7 +36,8 @@ std::unique_ptr<cloud_provider::Token> MakeToken(
   return token;
 }
 
-class PageUploadTest : public gtest::TestLoopFixture, public PageUpload::Delegate {
+class PageUploadTest : public gtest::TestLoopFixture,
+                       public PageUpload::Delegate {
  public:
   PageUploadTest()
       : storage_(dispatcher()),

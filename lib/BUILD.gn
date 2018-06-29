@@ -9,7 +9,6 @@ executable("peridot_lib_unittests") {
   testonly = true
 
   deps = [
-    "//third_party/googletest:gtest_main",
     "//peridot/lib/cobalt:unittests",
     "//peridot/lib/convert:unittests",
     "//peridot/lib/fidl:unittests",
@@ -20,6 +19,7 @@ executable("peridot_lib_unittests") {
     "//peridot/lib/scoped_tmpfs:unittests",
     "//peridot/lib/socket:unittests",
     "//peridot/lib/util:unittests",
+    "//third_party/googletest:gtest_main",
   ]
 }
 

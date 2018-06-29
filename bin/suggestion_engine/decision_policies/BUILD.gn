@@ -46,7 +46,7 @@ executable("rank_over_threshold_decision_policy_unittest") {
   ]
 
   deps = [
-     ":rank_over_threshold_decision_policy",
+    ":rank_over_threshold_decision_policy",
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest_main",
   ]

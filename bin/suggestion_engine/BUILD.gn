@@ -20,8 +20,8 @@ executable_package("suggestion_engine") {
   deps = [
     ":debug",
     ":suggestion_engine_impl",
-    "//peridot/public/lib:fidl",
     "//garnet/public/lib/app/cpp",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -82,7 +82,6 @@ tests_package("suggestion_engine_unittests") {
     "//peridot/bin/suggestion_engine/ranking_features:query_match_ranking_feature_unittest",
   ]
 }
-
 
 source_set("interruption_processor") {
   sources = [

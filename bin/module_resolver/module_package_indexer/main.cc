@@ -30,7 +30,8 @@ std::string FindModulePackageIndexerService() {
   // /hub/r/sys/<koid>/r/user-<userid>/<koid>/c/module_resolver/<koid>/out/debug
   auto glob_str = fxl::StringPrintf(
       "/hub/r/sys/*/r/user-*/*/c/module_resolver/*/out/"
-      "debug/%s", ModulePackageIndexer::Name_);
+      "debug/%s",
+      ModulePackageIndexer::Name_);
 
   glob_t globbuf;
   std::string service_path;

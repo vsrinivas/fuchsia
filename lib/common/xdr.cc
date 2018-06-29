@@ -8,7 +8,8 @@
 
 namespace modular {
 
-void XdrAccount_v1(XdrContext* const xdr, fuchsia::modular::auth::Account* const data) {
+void XdrAccount_v1(XdrContext* const xdr,
+                   fuchsia::modular::auth::Account* const data) {
   xdr->Field("id", &data->id);
   xdr->Field("identity_provider", &data->identity_provider);
   xdr->Field("display_name", &data->display_name);
@@ -16,7 +17,8 @@ void XdrAccount_v1(XdrContext* const xdr, fuchsia::modular::auth::Account* const
   xdr->Field("image_url", &data->image_url);
 }
 
-void XdrAccount_v2(XdrContext* const xdr, fuchsia::modular::auth::Account* const data) {
+void XdrAccount_v2(XdrContext* const xdr,
+                   fuchsia::modular::auth::Account* const data) {
   if (!xdr->Version(2)) {
     return;
   }

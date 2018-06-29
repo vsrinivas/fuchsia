@@ -41,7 +41,8 @@ void FakeTokenProvider::GetFirebaseAuthToken(
     callback(nullptr, std::move(error));
     return;
   }
-  fuchsia::modular::auth::FirebaseTokenPtr token = fuchsia::modular::auth::FirebaseToken::New();
+  fuchsia::modular::auth::FirebaseTokenPtr token =
+      fuchsia::modular::auth::FirebaseToken::New();
   token->id_token = firebase_id_token_;
   token->local_id = firebase_local_id_;
   token->email = email_;

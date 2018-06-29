@@ -79,15 +79,13 @@ inline ExtendedStringView ToStringView(ExtendedStringView value) {
 }
 
 // Returns the representation of the given value in LevelDB.
-inline leveldb::Slice ToSlice(ExtendedStringView value) {
-  return value;
-}
+inline leveldb::Slice ToSlice(ExtendedStringView value) { return value; }
 
 // Returns the fidl::VectorPtr representation of the given value.
 fidl::VectorPtr<uint8_t> ToArray(ExtendedStringView value);
 
 // Returns the fidl::Array representation of the given value.
-template<size_t N>
+template <size_t N>
 void ToArray(ExtendedStringView value, fidl::Array<uint8_t, N>* out) {
   ZX_ASSERT(value.size() == N);
   memcpy(out->mutable_data(), value.data(), N);
@@ -101,8 +99,7 @@ std::string ToHex(ExtendedStringView value);
 
 // Store the given value as a FlatBufferVector in the given builder.
 flatbuffers::Offset<flatbuffers::Vector<uint8_t>> ToFlatBufferVector(
-    flatbuffers::FlatBufferBuilder* builder,
-    ExtendedStringView value);
+    flatbuffers::FlatBufferBuilder* builder, ExtendedStringView value);
 
 // Comparator that allows heterogeneous lookup by StringView and
 // std::string in a container with the key type of std::string.

@@ -135,7 +135,7 @@ TEST_F(PageClientTest, DISABLED_SimpleWriteObserve) {
   client->page()->Put(to_array("key"), to_array("value"), log("Put"));
 
   RunLoopWithTimeoutOrUntil([&] { return client->value("key") == "value"; },
-                          kTimeout);
+                            kTimeout);
 
   EXPECT_EQ(0, client->conflict_count());
   EXPECT_EQ("value", client->value("key"));

@@ -14,7 +14,6 @@ constexpr char kChildModuleUrl[] = "parent_child_test_child_module";
 
 constexpr int kTimeoutMilliseconds = 5000;
 
-
 }  // namespace
 
 #endif  // PERIDOT_TESTS_PARENT_CHILD_DEFS_H_

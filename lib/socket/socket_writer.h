@@ -24,8 +24,7 @@ class SocketWriter {
  public:
   class Client {
    public:
-    virtual void GetNext(size_t offset,
-                         size_t max_size,
+    virtual void GetNext(size_t offset, size_t max_size,
                          std::function<void(fxl::StringView)> callback) = 0;
     virtual void OnDataComplete() = 0;
 
@@ -65,8 +64,7 @@ class StringSocketWriter : public SocketWriter::Client {
   void Start(std::string data, zx::socket destination);
 
  private:
-  void GetNext(size_t offset,
-               size_t max_size,
+  void GetNext(size_t offset, size_t max_size,
                std::function<void(fxl::StringView)> callback) override;
   void OnDataComplete() override;
 

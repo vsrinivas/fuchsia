@@ -13,11 +13,12 @@ namespace modular {
 
 class UpdateModCommandRunner : public CommandRunner {
  public:
-   UpdateModCommandRunner();
-   ~UpdateModCommandRunner();
+  UpdateModCommandRunner();
+  ~UpdateModCommandRunner();
 
-   void Execute(fidl::StringPtr story_id, fuchsia::modular::StoryCommand command,
-                std::function<void(fuchsia::modular::ExecuteResult)> done) override;
+  void Execute(
+      fidl::StringPtr story_id, fuchsia::modular::StoryCommand command,
+      std::function<void(fuchsia::modular::ExecuteResult)> done) override;
 };
 
 }  // namespace modular

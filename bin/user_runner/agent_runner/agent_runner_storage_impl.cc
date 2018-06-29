@@ -51,10 +51,9 @@ constexpr XdrFilterType<AgentRunnerStorage::TriggerInfo> XdrTriggerInfo[] = {
 
 class AgentRunnerStorageImpl::InitializeCall : public Operation<> {
  public:
-  InitializeCall(
-      NotificationDelegate* const delegate,
-      fuchsia::ledger::PageSnapshotPtr snapshot,
-      std::function<void()> done)
+  InitializeCall(NotificationDelegate* const delegate,
+                 fuchsia::ledger::PageSnapshotPtr snapshot,
+                 std::function<void()> done)
       : Operation("AgentRunnerStorageImpl::InitializeCall", std::move(done)),
         delegate_(delegate),
         snapshot_(std::move(snapshot)) {}

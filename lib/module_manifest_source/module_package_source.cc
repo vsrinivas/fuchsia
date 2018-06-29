@@ -37,8 +37,8 @@ ModulePackageSource::ModulePackageSource(
       ModulePackageIndexer::Name_,
       fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
         indexer_bindings_.AddBinding(
-            this, fidl::InterfaceRequest<ModulePackageIndexer>(
-                std::move(channel)));
+            this,
+            fidl::InterfaceRequest<ModulePackageIndexer>(std::move(channel)));
         return ZX_OK;
       })));
 }

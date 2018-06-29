@@ -25,8 +25,8 @@ class SessionStorageTest : public testing::TestWithLedger {
   // we're not testing CreateStory().
   fidl::StringPtr CreateStory(SessionStorage* storage,
                               bool is_kind_of_proto_story = false) {
-    auto future_story = storage->CreateStory(nullptr /* extra */,
-                                             is_kind_of_proto_story);
+    auto future_story =
+        storage->CreateStory(nullptr /* extra */, is_kind_of_proto_story);
     bool done{};
     fidl::StringPtr story_id;
     future_story->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId) {

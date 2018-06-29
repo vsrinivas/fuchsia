@@ -4,8 +4,8 @@
 
 source_set("command_runner") {
   sources = [
-    "command_runner.h",
     "command_runner.cc",
+    "command_runner.h",
   ]
 
   public_deps = [

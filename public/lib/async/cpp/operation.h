@@ -452,12 +452,11 @@ class FutureOperation : public Operation<Args...> {
 //
 template <typename... ResultArgs, typename... FutureArgs>
 OperationBase* WrapFutureAsOperation(
-    const char* const trace_name,
-    FuturePtr<> on_run, FuturePtr<FutureArgs...> done,
+    const char* const trace_name, FuturePtr<> on_run,
+    FuturePtr<FutureArgs...> done,
     std::function<void(ResultArgs...)> result_call) {
-  return new FutureOperation<ResultArgs...>(trace_name,
-                                            std::move(on_run), std::move(done),
-                                            std::move(result_call));
+  return new FutureOperation<ResultArgs...>(
+      trace_name, std::move(on_run), std::move(done), std::move(result_call));
 }
 
 template <typename... Args>
@@ -468,8 +467,7 @@ class FutureOperation2 : public Operation<Args...> {
 
   FutureOperation2(const char* const trace_name, RunOpCall run_op,
                    ResultCall done)
-      : Operation<Args...>(trace_name, std::move(done)),
-        run_op_(run_op) {}
+      : Operation<Args...>(trace_name, std::move(done)), run_op_(run_op) {}
 
  private:
   // |OperationBase|
@@ -522,8 +520,8 @@ OperationBase* NewCallbackOperation(
     const char* const trace_name,
     typename FutureOperation2<ResultArgs...>::RunOpCall run,
     typename FutureOperation2<ResultArgs...>::ResultCall done) {
-  return new FutureOperation2<ResultArgs...>(
-      trace_name, std::move(run), std::move(done));
+  return new FutureOperation2<ResultArgs...>(trace_name, std::move(run),
+                                             std::move(done));
 }
 
 // An operation which immediately calls its result callback. This is useful for

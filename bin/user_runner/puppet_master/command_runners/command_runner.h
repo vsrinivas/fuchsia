@@ -13,8 +13,9 @@ class CommandRunner {
  public:
   virtual ~CommandRunner();
 
-  virtual void Execute(fidl::StringPtr story_id, fuchsia::modular::StoryCommand command,
-                       std::function<void(fuchsia::modular::ExecuteResult)> done) = 0;
+  virtual void Execute(
+      fidl::StringPtr story_id, fuchsia::modular::StoryCommand command,
+      std::function<void(fuchsia::modular::ExecuteResult)> done) = 0;
 };
 
 }  // namespace modular

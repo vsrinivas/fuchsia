@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_PASSIVE_FILTER_H_
-#define PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_PASSIVE_FILTER_H_
+#ifndef PERIDOT_BIN_SUGGESTION_ENGINE_FILTERS_SUGGESTION_PASSIVE_FILTER_H_
+#define PERIDOT_BIN_SUGGESTION_ENGINE_FILTERS_SUGGESTION_PASSIVE_FILTER_H_
 
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 
@@ -21,4 +21,4 @@ class SuggestionPassiveFilter {
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_PASSIVE_FILTER_H_
+#endif  // PERIDOT_BIN_SUGGESTION_ENGINE_FILTERS_SUGGESTION_PASSIVE_FILTER_H_

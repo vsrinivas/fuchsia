@@ -82,18 +82,18 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
     ledger::Status status;
     ledger::LedgerPtr ledger;
     (*ledger_repository)
-        ->GetLedger(std::move(ledger_name), ledger.NewRequest(),
-                    callback::Capture(fxl::MakeCopyable(QuitLoopClosure()),
-                                      &status));
+        ->GetLedger(
+            std::move(ledger_name), ledger.NewRequest(),
+            callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
     RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure()
              << "GetLedger failed with status " << status;
     }
 
-    ledger->GetRootPage(page->NewRequest(),
-                        callback::Capture(fxl::MakeCopyable(QuitLoopClosure()),
-                                          &status));
+    ledger->GetRootPage(
+        page->NewRequest(),
+        callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
     RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure()
@@ -106,10 +106,9 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
                                                size_t* entry_count) {
     ledger::Status status;
     ledger::PageSnapshotPtr snapshot;
-    (*page)->GetSnapshot(snapshot.NewRequest(),
-                         fidl::VectorPtr<uint8_t>::New(0), nullptr,
-                         callback::Capture(fxl::MakeCopyable(QuitLoopClosure()),
-                                           &status));
+    (*page)->GetSnapshot(
+        snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr,
+        callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
     RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure()
@@ -119,8 +118,8 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
     std::unique_ptr<ledger::Token> next_token;
     snapshot->GetEntriesInline(
         fidl::VectorPtr<uint8_t>::New(0), nullptr,
-        callback::Capture(fxl::MakeCopyable(QuitLoopClosure()),
-                          &status, &entries, &next_token));
+        callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status,
+                          &entries, &next_token));
     RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure()

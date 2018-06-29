@@ -20,8 +20,7 @@ class StringClient : public SocketWriter::Client {
  public:
   explicit StringClient(std::string value) : value_(std::move(value)) {}
 
-  void GetNext(size_t offset,
-               size_t max_size,
+  void GetNext(size_t offset, size_t max_size,
                std::function<void(fxl::StringView)> callback) override {
     fxl::StringView data = value_;
     callback(data.substr(offset, max_size));
@@ -45,9 +44,7 @@ TEST_F(SocketWriterTest, WriteAndRead) {
   std::string value;
   auto drainer = std::make_unique<SocketDrainerClient>();
   drainer->Start(std::move(socket.socket2),
-                 [&value](const std::string& v) {
-                   value = v;
-                 });
+                 [&value](const std::string& v) { value = v; });
   RunLoopUntilIdle();
 
   EXPECT_EQ("bazinga\n", value);
@@ -71,9 +68,7 @@ TEST_F(SocketWriterTest, StringSocketWriter) {
   std::string value;
   auto drainer = std::make_unique<SocketDrainerClient>();
   drainer->Start(std::move(socket.socket2),
-                 [&value](const std::string& v) {
-                   value = v;
-                 });
+                 [&value](const std::string& v) { value = v; });
   RunLoopUntilIdle();
 
   EXPECT_EQ("bazinga\n", value);

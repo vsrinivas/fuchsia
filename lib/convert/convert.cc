@@ -41,18 +41,13 @@ fidl::VectorPtr<uint8_t> ToArray(ExtendedStringView value) {
   return value.ToArray();
 }
 
-std::string ToString(ExtendedStringView value) {
-  return value.ToString();
-}
+std::string ToString(ExtendedStringView value) { return value.ToString(); }
 
 flatbuffers::Offset<flatbuffers::Vector<uint8_t>> ToFlatBufferVector(
-    flatbuffers::FlatBufferBuilder* builder,
-    ExtendedStringView value) {
+    flatbuffers::FlatBufferBuilder* builder, ExtendedStringView value) {
   return value.ToFlatBufferVector(builder);
 }
 
-std::string ToHex(ExtendedStringView value) {
-  return value.ToHex();
-}
+std::string ToHex(ExtendedStringView value) { return value.ToHex(); }
 
 }  // namespace convert

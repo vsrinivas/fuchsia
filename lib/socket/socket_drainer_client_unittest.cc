@@ -21,9 +21,7 @@ TEST_F(SocketDrainerClientTest, DoNotCallOnDelete) {
   bool called = false;
   drainer->set_on_empty([&called] { called = true; });
   drainer->Start(std::move(socket.socket2),
-                 [&drainer](const std::string& v) {
-                   drainer.reset();
-                 });
+                 [&drainer](const std::string& v) { drainer.reset(); });
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 }

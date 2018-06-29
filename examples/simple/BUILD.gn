@@ -18,7 +18,6 @@ executable_package("simple_agent") {
     "//peridot/public/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
-
 }
 
 executable_package("simple_module") {

@@ -5,8 +5,8 @@
 #ifndef PERIDOT_LIB_TESTING_WAIT_UNTIL_IDLE_H_
 #define PERIDOT_LIB_TESTING_WAIT_UNTIL_IDLE_H_
 
-#include <lib/async/cpp/task.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/interface_ptr.h"
@@ -30,9 +30,7 @@ void WaitUntilIdle(fidl::InterfacePtr<Interface>* debug_interface_ptr,
   // We can't just use a synchronous ptr or
   // |fidl::InterfacePtr::WaitForResponse| because those don't run the message
   // loop while they wait.
-  (*debug_interface_ptr)->WaitUntilIdle([loop] {
-    loop->Quit();
-  });
+  (*debug_interface_ptr)->WaitUntilIdle([loop] { loop->Quit(); });
   loop->Run();
   loop->ResetQuit();
   // Finish processing any remaining messages.

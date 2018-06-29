@@ -19,12 +19,9 @@ constexpr size_t kDefaultSocketBufferSize = 256 * 1024u;
 SocketWriter::SocketWriter(Client* client, async_t* async)
     : client_(client), async_(async) {
   wait_.set_trigger(ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED);
-  wait_.set_handler([this](async_t* async,
-                           async::Wait* wait,
-                           zx_status_t status,
-                           const zx_packet_signal_t* signal) {
-    WriteData(data_view_);
-  });
+  wait_.set_handler(
+      [this](async_t* async, async::Wait* wait, zx_status_t status,
+             const zx_packet_signal_t* signal) { WriteData(data_view_); });
 }
 
 SocketWriter::~SocketWriter() = default;
@@ -104,15 +101,12 @@ void StringSocketWriter::Start(std::string data, zx::socket destination) {
 }
 
 void StringSocketWriter::GetNext(
-    size_t offset,
-    size_t max_size,
+    size_t offset, size_t max_size,
     std::function<void(fxl::StringView)> callback) {
   fxl::StringView data = data_;
   callback(data.substr(offset, max_size));
 }
 
-void StringSocketWriter::OnDataComplete() {
-  delete this;
-}
+void StringSocketWriter::OnDataComplete() { delete this; }
 
 }  // namespace socket

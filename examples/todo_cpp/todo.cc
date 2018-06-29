@@ -142,21 +142,21 @@ void TodoApp::OnChange(fuchsia::ledger::PageChange /*page_change*/,
 }
 
 void TodoApp::List(fuchsia::ledger::PageSnapshotPtr snapshot) {
-  GetEntries(std::move(snapshot), [this](fuchsia::ledger::Status status,
-                                         auto entries) {
-    if (status != fuchsia::ledger::Status::OK) {
-      FXL_LOG(ERROR) << "GetEntries failed";
-      loop_->Quit();
-      return;
-    }
+  GetEntries(std::move(snapshot),
+             [this](fuchsia::ledger::Status status, auto entries) {
+               if (status != fuchsia::ledger::Status::OK) {
+                 FXL_LOG(ERROR) << "GetEntries failed";
+                 loop_->Quit();
+                 return;
+               }
 
-    std::cout << "--- To Do ---" << std::endl;
-    for (auto& entry : entries) {
-      std::cout << (entry.value ? ToString(*entry.value) : "<empty>")
-                << std::endl;
-    }
-    std::cout << "---" << std::endl;
-  });
+               std::cout << "--- To Do ---" << std::endl;
+               for (auto& entry : entries) {
+                 std::cout << (entry.value ? ToString(*entry.value) : "<empty>")
+                           << std::endl;
+               }
+               std::cout << "---" << std::endl;
+             });
 }
 
 void TodoApp::GetKeys(std::function<void(fidl::VectorPtr<Key>)> callback) {

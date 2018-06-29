@@ -28,7 +28,7 @@ source_set("entity_provider_runner") {
 
 tests_package("entity_provider_runner_unittests") {
   deps = [
-    ":entity_provider_runner_unittest"
+    ":entity_provider_runner_unittest",
   ]
 }
 
@@ -59,4 +59,3 @@ executable("entity_provider_runner_unittest") {
     "//zircon/public/lib/trace",
   ]
 }
-

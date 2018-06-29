@@ -176,11 +176,11 @@ void XdrStoryData_v4(XdrContext* const xdr,
 }  // namespace
 
 XdrFilterType<fuchsia::modular::internal::StoryData> XdrStoryData[] = {
-    XdrStoryData_v4,
-    XdrStoryData_v3,
-    XdrStoryData_v2,
-    XdrStoryData_v1,
-    XdrStoryData_v0,
+    XdrStoryData_v4,  // No clang-format, please.
+    XdrStoryData_v3,  // No clang-format, please.
+    XdrStoryData_v2,  // No clang-format, please.
+    XdrStoryData_v1,  // No clang-format, please.
+    XdrStoryData_v0,  // No clang-format, please.
     nullptr,
 };
 

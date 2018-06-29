@@ -261,7 +261,8 @@ TEST_F(EntityProviderRunnerTest, DataEntity) {
   entity->GetTypes([&output_types](fidl::VectorPtr<fidl::StringPtr> result) {
     output_types = std::move(result);
   });
-  RunLoopWithTimeoutOrUntil([&output_types] { return !output_types.is_null(); });
+  RunLoopWithTimeoutOrUntil(
+      [&output_types] { return !output_types.is_null(); });
 
   EXPECT_EQ(data.size(), output_types->size());
   EXPECT_EQ("type1", output_types->at(0));

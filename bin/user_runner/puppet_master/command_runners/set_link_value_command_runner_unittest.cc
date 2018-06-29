@@ -15,8 +15,7 @@ class SetLinkValueCommandRunnerTest : public gtest::TestLoopFixture {
   std::unique_ptr<SetLinkValueCommandRunner> runner_;
 };
 
-TEST_F(SetLinkValueCommandRunnerTest, EmptyTest) {
-}
+TEST_F(SetLinkValueCommandRunnerTest, EmptyTest) {}
 
 }  // namespace
 }  // namespace modular

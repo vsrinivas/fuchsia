@@ -20,8 +20,7 @@ constexpr char kNetstack[] = "net.Netstack";
 MaxwellServiceProviderBridge::MaxwellServiceProviderBridge(
     fuchsia::sys::Environment* parent_env) {
   AddService<fuchsia::sys::Loader>(
-      [parent_env](
-          fidl::InterfaceRequest<fuchsia::sys::Loader> request) {
+      [parent_env](fidl::InterfaceRequest<fuchsia::sys::Loader> request) {
         fuchsia::sys::ServiceProviderPtr services;
         parent_env->GetServices(services.NewRequest());
         fuchsia::sys::ConnectToService(services.get(), std::move(request));

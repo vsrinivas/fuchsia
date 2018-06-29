@@ -283,9 +283,10 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
     // 3. Start OAuth Token Manager App.
     fuchsia::modular::AppConfig token_manager_config;
     token_manager_config.url = settings_.account_provider.url;
-    token_manager_ = std::make_unique<AppClient<fuchsia::modular::auth::AccountProvider>>(
-        context_->launcher().get(), std::move(token_manager_config),
-        "/data/modular/ACCOUNT_MANAGER");
+    token_manager_ =
+        std::make_unique<AppClient<fuchsia::modular::auth::AccountProvider>>(
+            context_->launcher().get(), std::move(token_manager_config),
+            "/data/modular/ACCOUNT_MANAGER");
     token_manager_->SetAppErrorHandler([] {
       FXL_CHECK(false) << "Token manager crashed. Stopping device runner.";
     });
@@ -340,8 +341,8 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
   // |AccountProviderContext|
   void GetAuthenticationContext(
       fidl::StringPtr account_id,
-      fidl::InterfaceRequest<fuchsia::modular::auth::AuthenticationContext> request)
-      override {
+      fidl::InterfaceRequest<fuchsia::modular::auth::AuthenticationContext>
+          request) override {
     device_shell_->GetAuthenticationContext(account_id, std::move(request));
   }
 
@@ -357,7 +358,8 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
   fidl::Binding<fuchsia::modular::auth::AccountProviderContext>
       account_provider_context_binding_;
 
-  std::unique_ptr<AppClient<fuchsia::modular::auth::AccountProvider>> token_manager_;
+  std::unique_ptr<AppClient<fuchsia::modular::auth::AccountProvider>>
+      token_manager_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> device_shell_app_;
   fuchsia::modular::DeviceShellPtr device_shell_;
 
@@ -382,7 +384,7 @@ int main(int argc, const char** argv) {
   }
 
   modular::Settings settings(command_line);
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   trace::TraceProvider trace_provider(loop.async());
   auto context = std::shared_ptr<fuchsia::sys::StartupContext>(
       fuchsia::sys::StartupContext::CreateFromStartupInfo());

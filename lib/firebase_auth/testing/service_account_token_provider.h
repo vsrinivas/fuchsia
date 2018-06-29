@@ -26,7 +26,8 @@ namespace service_account {
 // Console and click on the 'Generate new private key' button. This JSON file
 // must be available on the device, and its path must be passed to the
 // LoadCredentials() method to initialize this class.
-class ServiceAccountTokenProvider : public fuchsia::modular::auth::TokenProvider {
+class ServiceAccountTokenProvider
+    : public fuchsia::modular::auth::TokenProvider {
  public:
   ServiceAccountTokenProvider(network_wrapper::NetworkWrapper* network_wrapper,
                               std::string user_id);
@@ -52,7 +53,8 @@ class ServiceAccountTokenProvider : public fuchsia::modular::auth::TokenProvider
 
   std::string GetClaims();
   bool GetCustomToken(std::string* custom_token);
-  fuchsia::modular::auth::FirebaseTokenPtr GetFirebaseToken(const std::string& id_token);
+  fuchsia::modular::auth::FirebaseTokenPtr GetFirebaseToken(
+      const std::string& id_token);
   ::fuchsia::net::oldhttp::URLRequest GetIdentityRequest(
       const std::string& api_key, const std::string& custom_token);
   std::string GetIdentityRequestBody(const std::string& custom_token);

@@ -46,8 +46,8 @@ fuchsia::modular::AgentControllerPtr StartStoryInfoAgent(
       kStoryInfoAgentUrl, agent_services.NewRequest(), controller.NewRequest());
 
   using fuchsia::maxwell::internal::StoryInfoInitializer;
-  auto initializer =
-      fuchsia::sys::ConnectToService<StoryInfoInitializer>(agent_services.get());
+  auto initializer = fuchsia::sys::ConnectToService<StoryInfoInitializer>(
+      agent_services.get());
   initializer->Initialize(std::move(story_provider), std::move(focus_provider),
                           std::move(visible_stories_provider));
 

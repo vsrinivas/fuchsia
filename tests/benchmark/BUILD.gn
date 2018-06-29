@@ -55,12 +55,13 @@ package("modular_benchmarks") {
   ]
 }
 
-
 package("peridot_benchmarks") {
   testonly = true
 
-  binaries = [ {
-        name = rebase_path("peridot_benchmarks.sh")
-        dest = "benchmarks.sh"
-      } ]
+  binaries = [
+    {
+      name = rebase_path("peridot_benchmarks.sh")
+      dest = "benchmarks.sh"
+    },
+  ]
 }

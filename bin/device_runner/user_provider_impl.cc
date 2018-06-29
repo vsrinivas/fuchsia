@@ -29,10 +29,12 @@ fuchsia::modular::auth::AccountPtr Convert(
   account->id = user->id()->str();
   switch (user->identity_provider()) {
     case fuchsia::modular::IdentityProvider_DEV:
-      account->identity_provider = fuchsia::modular::auth::IdentityProvider::DEV;
+      account->identity_provider =
+          fuchsia::modular::auth::IdentityProvider::DEV;
       break;
     case fuchsia::modular::IdentityProvider_GOOGLE:
-      account->identity_provider = fuchsia::modular::auth::IdentityProvider::GOOGLE;
+      account->identity_provider =
+          fuchsia::modular::auth::IdentityProvider::GOOGLE;
       break;
     default:
       FXL_DCHECK(false) << "Unrecognized IdentityProvider"
@@ -157,12 +159,13 @@ void UserProviderImpl::PreviousUsers(PreviousUsersCallback callback) {
   callback(std::move(accounts));
 }
 
-void UserProviderImpl::AddUser(fuchsia::modular::auth::IdentityProvider identity_provider,
-                               AddUserCallback callback) {
+void UserProviderImpl::AddUser(
+    fuchsia::modular::auth::IdentityProvider identity_provider,
+    AddUserCallback callback) {
   account_provider_->AddAccount(
-      identity_provider,
-      [this, identity_provider, callback](fuchsia::modular::auth::AccountPtr account,
-                                          fidl::StringPtr error_code) {
+      identity_provider, [this, identity_provider, callback](
+                             fuchsia::modular::auth::AccountPtr account,
+                             fidl::StringPtr error_code) {
         if (!account) {
           callback(nullptr, error_code);
           return;

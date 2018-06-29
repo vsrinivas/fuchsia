@@ -67,7 +67,8 @@ class DispatchStoryCommandExecutorTest : public gtest::TestLoopFixture {
   }
 
   std::unique_ptr<StoryCommandExecutor> executor_;
-  std::map<fuchsia::modular::StoryCommand::Tag, std::unique_ptr<CommandRunner>> command_runners_;
+  std::map<fuchsia::modular::StoryCommand::Tag, std::unique_ptr<CommandRunner>>
+      command_runners_;
 };
 
 TEST_F(DispatchStoryCommandExecutorTest, InvalidStory) {

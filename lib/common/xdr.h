@@ -11,9 +11,9 @@ namespace fuchsia {
 namespace modular {
 namespace auth {
 class Account;
-} // namespace fuchsia
-} // namespace modular
-} // namespace auth
+}  // namespace auth
+}  // namespace modular
+}  // namespace fuchsia
 
 namespace modular {
 

@@ -43,8 +43,6 @@ fxl::RefPtr<callback::Cancellable> TestFirebaseAuth::GetFirebaseUserId(
   return cancellable;
 }
 
-void TestFirebaseAuth::TriggerConnectionErrorHandler() {
-  error_handler_();
-}
+void TestFirebaseAuth::TriggerConnectionErrorHandler() { error_handler_(); }
 
 }  // namespace firebase_auth

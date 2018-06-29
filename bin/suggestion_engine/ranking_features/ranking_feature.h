@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURE_H_
-#define PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURE_H_
+#ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_RANKING_FEATURE_H_
+#define PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_RANKING_FEATURE_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
 
@@ -59,4 +59,4 @@ class RankingFeature {
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURE_H_
+#endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_RANKING_FEATURE_H_

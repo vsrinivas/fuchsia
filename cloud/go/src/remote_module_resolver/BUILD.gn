@@ -8,23 +8,26 @@ import("//build/host.gni")
 import("//build/package.gni")
 
 remote_module_resolver_godeps = [
-    {
-      package = "remote_module_resolver"
-      source = "//peridot/cloud/go/src/remote_module_resolver"
-    },
-    {
-      package = "github.com/xeipuuv/gojsonpointer"
-      source = "//peridot/cloud/third_party/golibs/github.com/xeipuuv/gojsonpointer"
-    },
-    {
-      package = "github.com/xeipuuv/gojsonreference"
-      source = "//peridot/cloud/third_party/golibs/github.com/xeipuuv/gojsonreference"
-    },
-    {
-      package = "github.com/xeipuuv/gojsonschema"
-      source = "//peridot/cloud/third_party/golibs/github.com/xeipuuv/gojsonschema"
-    },
-  ]
+  {
+    package = "remote_module_resolver"
+    source = "//peridot/cloud/go/src/remote_module_resolver"
+  },
+  {
+    package = "github.com/xeipuuv/gojsonpointer"
+    source =
+        "//peridot/cloud/third_party/golibs/github.com/xeipuuv/gojsonpointer"
+  },
+  {
+    package = "github.com/xeipuuv/gojsonreference"
+    source =
+        "//peridot/cloud/third_party/golibs/github.com/xeipuuv/gojsonreference"
+  },
+  {
+    package = "github.com/xeipuuv/gojsonschema"
+    source =
+        "//peridot/cloud/third_party/golibs/github.com/xeipuuv/gojsonschema"
+  },
+]
 
 go_binary("remote_module_resolver") {
   gopackage = "remote_module_resolver"
@@ -38,11 +41,19 @@ go_test("remote_module_resolver_test") {
 }
 
 install_host_tools("host") {
-  deps = [":remote_module_resolver"]
-  outputs = ["remote_module_resolver"]
+  deps = [
+    ":remote_module_resolver",
+  ]
+  outputs = [
+    "remote_module_resolver",
+  ]
 }
 
 install_host_tools("host_tests") {
-  deps = [":remote_module_resolver_test"]
-  outputs = ["remote_module_resolver_test"]
+  deps = [
+    ":remote_module_resolver_test",
+  ]
+  outputs = [
+    "remote_module_resolver_test",
+  ]
 }

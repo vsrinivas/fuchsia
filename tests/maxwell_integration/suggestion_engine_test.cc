@@ -94,8 +94,7 @@ class AskProposinator : public Proposinator,
                         public fuchsia::modular::QueryHandler {
  public:
   AskProposinator(fuchsia::modular::SuggestionEngine* suggestion_engine,
-                  async::Loop* loop,
-                  fidl::StringPtr url = "AskProposinator")
+                  async::Loop* loop, fidl::StringPtr url = "AskProposinator")
       : Proposinator(suggestion_engine, url), loop_(loop), ask_binding_(this) {
     fidl::InterfaceHandle<fuchsia::modular::QueryHandler> query_handle;
     ask_binding_.Bind(query_handle.NewRequest());

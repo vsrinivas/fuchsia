@@ -18,8 +18,7 @@
 namespace firebase {
 
 // TODO(ppi): Use a client interface instead.
-using EventCallback = void(Status status,
-                           const std::string& event,
+using EventCallback = void(Status status, const std::string& event,
                            const std::string& data);
 using CompletionCallback = void();
 

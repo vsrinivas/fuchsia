@@ -43,7 +43,7 @@ class AgentRunner : fuchsia::modular::AgentProvider,
       MessageQueueManager* message_queue_manager,
       fuchsia::ledger::internal::LedgerRepository* ledger_repository,
       AgentRunnerStorage* agent_runner_storage,
-              fuchsia::modular::auth::TokenProviderFactory* token_provider_factory,
+      fuchsia::modular::auth::TokenProviderFactory* token_provider_factory,
       fuchsia::modular::UserIntelligenceProvider* user_intelligence_provider,
       EntityProviderRunner* const entity_provider_runner);
   ~AgentRunner() override;

@@ -15,8 +15,7 @@ class UpdateModCommandRunnerTest : public gtest::TestLoopFixture {
   std::unique_ptr<UpdateModCommandRunner> runner_;
 };
 
-TEST_F(UpdateModCommandRunnerTest, EmptyTest) {
-}
+TEST_F(UpdateModCommandRunnerTest, EmptyTest) {}
 
 }  // namespace
 }  // namespace modular
