@@ -9,6 +9,7 @@
 #include <spawn.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -18,33 +19,23 @@
 namespace runtests {
 namespace {
 
-// Creates a deep copy of |argv|, assumed to be null-terminated.
-char** CopyArgv(const char* const* argv) {
-    int argc = 0;
-    while(argv[argc] != nullptr){
-      ++argc;
-    }
-    // allocate memory and copy strings
-    char** argv_copy = static_cast<char**>(malloc((argc + 1) * sizeof(char*)));
-    for (int i = 0; i < argc; ++i) {
-        argv_copy[i] = static_cast<char*>(malloc(strlen(argv[i]) + 1));
-        strcpy(argv_copy[i], argv[i]);
-    }
-    argv_copy[argc] = nullptr;
-    return argv_copy;
-}
+// A whitelist of the names of environment variables names that we pass into the
+// spawned test subprocess.
+constexpr const char* const kEnvironmentWhitelist[] = {
+    // Paths to the symbolizer for various sanitizers.
+    "ASAN_SYMBOLIZER_PATH",
+    "LSAN_SYMBOLIZER_PATH",
+    "MSAN_SYMBOLIZER_PATH",
+    "UBSAN_SYMBOLIZER_PATH",
+};
 
 } // namespace
+
 fbl::unique_ptr<Result> PosixRunTest(const char* argv[],
                                      const char* output_filename) {
     int status;
     const char* path = argv[0];
     FILE* output_file = nullptr;
-
-    // Becuase posix_spawn takes arguments for the subprocess of type
-    // char* const*, it might mutate the values passed in: accordingly,
-    // we pass in a copy of |argv| instead.
-    char** argv_copy = CopyArgv(argv);
 
     // Initialize |file_actions|, which dictate what I/O will be performed in the
     // launched process, and ensure its destruction on function exit.
@@ -56,16 +47,27 @@ fbl::unique_ptr<Result> PosixRunTest(const char* argv[],
     }
 
     auto auto_tidy = fbl::MakeAutoCall([&] {
-        for (int i = 0; argv_copy[i] != nullptr; ++i) {
-            free(argv_copy[i]);
-        }
-        free(argv_copy);
-
         posix_spawn_file_actions_destroy(&file_actions);
         if (output_file != nullptr) {
             fclose(output_file);
         }
     });
+
+    // Construct the array of whitelisted environment variable strings of the
+    // form "<name>=<value>".  The env_strings array just keeps the underlying
+    // std::string objects alive so the envp pointers remain valid.
+    std::string env_strings[countof(kEnvironmentWhitelist)];
+    const char* envp[countof(env_strings)];
+    size_t i = 0;
+    for (const char* var : kEnvironmentWhitelist) {
+        const char* val = getenv(var);
+        if (val) {
+            env_strings[i] = std::string(var) + "=" + val;
+            envp[i] = env_strings[i].c_str();
+            ++i;
+        }
+    }
+    envp[i] = nullptr;
 
     // Tee output.
     if (output_filename != nullptr) {
@@ -76,13 +78,13 @@ fbl::unique_ptr<Result> PosixRunTest(const char* argv[],
         if ((status = posix_spawn_file_actions_addopen(
                  &file_actions, STDOUT_FILENO, output_filename,
                  O_WRONLY | O_CREAT | O_TRUNC, 0644))) {
-            printf("FAILURE: posix_spawn_file_actions_addope failed: %s\n",
+            printf("FAILURE: posix_spawn_file_actions_addopen failed: %s\n",
                    strerror(status));
             return fbl::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);
         }
         if ((status = posix_spawn_file_actions_adddup2(&file_actions, STDOUT_FILENO,
                                                        STDERR_FILENO))) {
-            printf("FAILURE: posix_spawn_file_actions_addup2 failed: %s\n",
+            printf("FAILURE: posix_spawn_file_actions_adddup2 failed: %s\n",
                    strerror(status));
             return fbl::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);
         }
@@ -90,7 +92,9 @@ fbl::unique_ptr<Result> PosixRunTest(const char* argv[],
 
     // Launch the test subprocess.
     pid_t test_pid;
-    if ((status = posix_spawn(&test_pid, path, &file_actions, nullptr, argv_copy, nullptr))) {
+    if ((status = posix_spawn(&test_pid, path, &file_actions, nullptr,
+                              const_cast<char**>(argv),
+                              const_cast<char**>(envp)))) {
         printf("FAILURE: posix_spawn failed: %s\n", strerror(status));
         return fbl::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);
     }
@@ -114,7 +118,7 @@ fbl::unique_ptr<Result> PosixRunTest(const char* argv[],
         return fbl::make_unique<Result>(path, FAILED_NONZERO_RETURN_CODE, 1);
     }
 
-    printf("FAILURE: test process with unexpected status: %d", status);
+    printf("FAILURE: test process with unexpected status: %#x", status);
     return fbl::make_unique<Result>(path, FAILED_UNKNOWN, 0);
 }
 
