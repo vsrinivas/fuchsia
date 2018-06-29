@@ -43,7 +43,7 @@ class ConflictResolverClientTest : public test::TestWithPageStorage {
         [] {}, &environment_, page_storage_,
         std::make_unique<test::TestBackoff>(nullptr));
     resolver->SetMergeStrategy(nullptr);
-    resolver->set_on_empty([this] { QuitLoop(); });
+    resolver->set_on_empty(fxl::MakeCopyable(QuitLoopClosure()));
     merge_resolver_ = resolver.get();
 
     page_manager_ = std::make_unique<PageManager>(
@@ -146,7 +146,8 @@ TEST_F(ConflictResolverClientTest, Error) {
   // Set the resolver.
   ConflictResolverPtr conflict_resolver_ptr;
   ConflictResolverImpl conflict_resolver_impl(
-      conflict_resolver_ptr.NewRequest(), [this] { QuitLoop(); });
+      conflict_resolver_ptr.NewRequest(),
+      fxl::MakeCopyable(QuitLoopClosure()));
   std::unique_ptr<CustomMergeStrategy> custom_merge_strategy =
       std::make_unique<CustomMergeStrategy>(std::move(conflict_resolver_ptr));
 
@@ -202,7 +203,8 @@ TEST_F(ConflictResolverClientTest, MergeNonConflicting) {
   // Set the resolver.
   ConflictResolverPtr conflict_resolver_ptr;
   ConflictResolverImpl conflict_resolver_impl(
-      conflict_resolver_ptr.NewRequest(), [this] { QuitLoop(); });
+      conflict_resolver_ptr.NewRequest(),
+      fxl::MakeCopyable(QuitLoopClosure()));
   std::unique_ptr<CustomMergeStrategy> custom_merge_strategy =
       std::make_unique<CustomMergeStrategy>(std::move(conflict_resolver_ptr));
 
@@ -281,7 +283,8 @@ TEST_F(ConflictResolverClientTest, MergeNonConflictingOrdering) {
   // Set the resolver.
   ConflictResolverPtr conflict_resolver_ptr;
   ConflictResolverImpl conflict_resolver_impl(
-      conflict_resolver_ptr.NewRequest(), [this] { QuitLoop(); });
+      conflict_resolver_ptr.NewRequest(),
+      fxl::MakeCopyable(QuitLoopClosure()));
   std::unique_ptr<CustomMergeStrategy> custom_merge_strategy =
       std::make_unique<CustomMergeStrategy>(std::move(conflict_resolver_ptr));
 

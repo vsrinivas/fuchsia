@@ -5,6 +5,7 @@
 #include "peridot/bin/ledger/testing/test_with_coroutines.h"
 
 #include "lib/fxl/functional/closure.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace test {
 
@@ -58,7 +59,8 @@ void TestWithCoroutines::RunInCoroutine(
   volatile bool ended = false;
   coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
     test_handler =
-        std::make_unique<TestCoroutineHandler>(handler, [this] { QuitLoop(); });
+        std::make_unique<TestCoroutineHandler>(
+            handler, fxl::MakeCopyable(QuitLoopClosure()));
     run_test(test_handler.get());
     ended = true;
   });

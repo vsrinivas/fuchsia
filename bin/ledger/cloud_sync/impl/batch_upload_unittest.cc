@@ -12,6 +12,7 @@
 
 #include "lib/callback/capture.h"
 #include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/gtest/test_loop_fixture.h"
@@ -643,8 +644,8 @@ TEST_F(BatchUploadTest, DoNotUploadSyncedCommitsOnRetry) {
 
   // Mark commit as synced.
   storage::Status status;
-  storage_.MarkCommitSynced("id",
-                            callback::Capture([this] { QuitLoop(); }, &status));
+  storage_.MarkCommitSynced(
+      "id", callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
   RunLoopUntilIdle();
   EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ(0u, storage_.unsynced_commits.size());
