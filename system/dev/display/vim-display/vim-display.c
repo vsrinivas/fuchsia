@@ -45,6 +45,12 @@ enum {
     MMIO_CBUS,
 };
 
+static uint32_t vim_compute_linear_stride(void* ctx, uint32_t width, zx_pixel_format_t format) {
+    // The vim2 display controller needs buffers with a stride that is an even
+    // multiple of 32.
+    return ROUNDUP(width, 32 / ZX_PIXEL_FORMAT_BYTES(format));
+}
+
 static void vim_set_display_controller_cb(void* ctx, void* cb_ctx, display_controller_cb_t* cb) {
     vim2_display_t* display = ctx;
     mtx_lock(&display->cb_lock);
@@ -89,17 +95,25 @@ static zx_status_t vim_import_vmo_image(void* ctx, image_t* image, zx_handle_t v
     }
 
     vim2_display_t* display = ctx;
+    zx_status_t status = ZX_OK;
     mtx_lock(&display->image_lock);
+
+    if (image->type != IMAGE_TYPE_SIMPLE || image->pixel_format != display->format) {
+        status = ZX_ERR_INVALID_ARGS;
+        goto fail;
+    }
+
+    uint32_t stride = vim_compute_linear_stride(display, image->width, image->pixel_format);
 
     canvas_info_t info;
     info.height         = image->height;
-    info.stride_bytes   = image->width * ZX_PIXEL_FORMAT_BYTES(display->format);
+    info.stride_bytes   = stride * ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
     info.wrap           = 0;
     info.blkmode        = 0;
     info.endianess      = 0;
 
     zx_handle_t dup_vmo;
-    zx_status_t status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+    status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
     if (status != ZX_OK) {
         goto fail;
     }
@@ -209,12 +223,6 @@ static void vim_apply_configuration(void* ctx,
     flip_osd2(display, addr);
 
     mtx_unlock(&display->display_lock);
-}
-
-static uint32_t vim_compute_linear_stride(void* ctx, uint32_t width, zx_pixel_format_t format) {
-    // The vim2 display controller needs buffers with a stride that is an even
-    // multiple of 32.
-    return ROUNDUP(width, 32 / ZX_PIXEL_FORMAT_BYTES(format));
 }
 
 static zx_status_t allocate_vmo(void* ctx, uint64_t size, zx_handle_t* vmo_out) {
