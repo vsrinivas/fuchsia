@@ -565,7 +565,7 @@ zx_time_t lvt_deadline(LocalApicState* local_apic_state) {
     return current_time() + ticks_to_nanos(local_apic_state->lvt_initial_count << divisor_shift);
 }
 
-static void update_timer(LocalApicState* local_apic_state, uint64_t deadline);
+static void update_timer(LocalApicState* local_apic_state, zx_time_t deadline);
 
 static void deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
     LocalApicState* local_apic_state = static_cast<LocalApicState*>(arg);
