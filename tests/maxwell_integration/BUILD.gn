@@ -72,6 +72,7 @@ source_set("context_common") {
   public_deps = [
     "//peridot/public/lib:fidl",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 

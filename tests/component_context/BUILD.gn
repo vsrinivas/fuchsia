@@ -40,6 +40,7 @@ executable_package("component_context_test_one_agent") {
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
     "//peridot/tests/common:defs",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 

@@ -84,6 +84,7 @@ executable_package("dev_story_shell") {
     "//peridot/lib/fidl:view_host",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 

@@ -192,6 +192,10 @@ source_set("wait_until_idle") {
     "wait_until_idle.h",
   ]
 
+  public_deps = [
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+
   deps = [
     "//garnet/public/lib/fsl",
     "//third_party/googletest:gtest",

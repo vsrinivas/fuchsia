@@ -17,7 +17,7 @@ source_set("environment") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
+    "//zircon/public/lib/async-cpp",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]
@@ -32,9 +32,8 @@ source_set("unittests") {
 
   deps = [
     ":environment",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//third_party/googletest:gtest",
+    "//garnet/public/lib/gtest",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

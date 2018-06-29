@@ -4,18 +4,17 @@
 
 #include "peridot/bin/ledger/environment/environment.h"
 
-#include <lib/async-loop/cpp/loop.h>
-
-#include "gtest/gtest.h"
+#include "lib/gtest/test_loop_fixture.h"
 
 namespace ledger {
 namespace {
 
-TEST(Environment, InitializationOfAsync) {
-  async::Loop loop;
-  Environment env = EnvironmentBuilder().SetAsync(loop.async()).Build();
+using EnvironmentTest = ::gtest::TestLoopFixture;
 
-  EXPECT_EQ(loop.async(), env.async());
+TEST_F(EnvironmentTest, InitializationOfAsync) {
+  Environment env = EnvironmentBuilder().SetAsync(dispatcher()).Build();
+
+  EXPECT_EQ(dispatcher(), env.async());
 }
 
 }  // namespace
