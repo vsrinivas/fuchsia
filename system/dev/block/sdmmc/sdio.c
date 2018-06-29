@@ -13,7 +13,6 @@
 #include <ddk/debug.h>
 #include <ddk/protocol/sdmmc.h>
 #include <ddk/protocol/sdio.h>
-#include <hw/sdio.h>
 
 #include <zircon/process.h>
 #include <zircon/threads.h>
@@ -53,7 +52,7 @@ zx_status_t sdio_rw_data(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn) {
     sdmmc_device_t *dev = ctx;
     zx_status_t st = ZX_OK;
 
-    bool mbs = (dev->sdio_info.caps) & SDIO_CARD_MULTI_BLOCK;
+    bool mbs = (dev->sdio_dev.hw_info.caps) & SDIO_CARD_MULTI_BLOCK;
     bool dma_supported = sdmmc_use_dma(dev);
 
     uint32_t addr = txn->addr;
@@ -63,7 +62,7 @@ zx_status_t sdio_rw_data(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn) {
     zx_handle_t dma_vmo = use_dma ? txn->dma_vmo : ZX_HANDLE_INVALID;
     uint64_t buf_offset = txn->buf_offset;
 
-    uint32_t func_blk_size = (dev->sdio_info.funcs[fn_idx]).cur_blk_size;
+    uint32_t func_blk_size = (dev->sdio_dev.funcs[fn_idx]).cur_blk_size;
     uint32_t rem_blocks = (func_blk_size == 0) ? 0 : (data_size / func_blk_size);
     uint32_t data_processed = 0;
 
@@ -174,6 +173,18 @@ zx_status_t sdio_get_oob_irq_host(void *ctx, zx_handle_t *oob_irq) {
     return sdmmc_get_sdio_oob_irq(ctx, oob_irq);
 }
 
+zx_status_t sdio_get_device_hw_info(void *ctx, sdio_hw_info_t *dev_info) {
+    sdmmc_device_t *dev = ctx;
+    sdio_device_t *sdio_dev = &(dev->sdio_dev);
+    memcpy(&(dev_info->dev_hw_info), &(sdio_dev->hw_info), sizeof(sdio_device_hw_info_t));
+    for (size_t i = 0; i < sdio_dev->hw_info.num_funcs; i++) {
+        memcpy(&(dev_info->funcs_hw_info[i]), &(sdio_dev->funcs[i].hw_info),
+                 sizeof(sdio_func_hw_info_t));
+    }
+    dev_info->host_max_transfer_size = dev->host_info.max_transfer_size;
+    return ZX_OK;
+}
+
 static uint32_t sdio_read_tuple_body(uint8_t *t_body, size_t start, size_t numbytes) {
     uint32_t res = 0;
 
@@ -186,7 +197,7 @@ static uint32_t sdio_read_tuple_body(uint8_t *t_body, size_t start, size_t numby
 static zx_status_t sdio_process_cccr(sdmmc_device_t *dev) {
     zx_status_t status = ZX_OK;
     uint8_t cccr_vsn, sdio_vsn, vsn_info, bus_speed, card_caps;
-    uint32_t max_blk_sz = dev->sdio_info.funcs[0].max_blk_size;
+    uint32_t max_blk_sz = dev->sdio_dev.funcs[0].hw_info.max_blk_size;
 
     if (max_blk_sz >= SDIO_CIA_CCCR_NON_VENDOR_REG_SIZE) {
         uint8_t cccr[SDIO_CIA_CCCR_NON_VENDOR_REG_SIZE] = {0};
@@ -227,40 +238,41 @@ static zx_status_t sdio_process_cccr(sdmmc_device_t *dev) {
     if ((cccr_vsn != SDIO_CCCR_FORMAT_VER_3) || (sdio_vsn != SDIO_SDIO_VER_3)) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    dev->sdio_info.cccr_vsn = cccr_vsn;
-    dev->sdio_info.sdio_vsn = sdio_vsn;
-    dev->sdio_info.caps = 0;
+    dev->sdio_dev.hw_info.cccr_vsn = cccr_vsn;
+    dev->sdio_dev.hw_info.sdio_vsn = sdio_vsn;
+    dev->sdio_dev.hw_info.caps = 0;
     if (card_caps & SDIO_CIA_CCCR_CARD_CAP_SMB) {
-        dev->sdio_info.caps |= SDIO_CARD_MULTI_BLOCK;
+        dev->sdio_dev.hw_info.caps |= SDIO_CARD_MULTI_BLOCK;
     }
     if (card_caps & SDIO_CIA_CCCR_CARD_CAP_LSC) {
-        dev->sdio_info.caps |= SDIO_CARD_LOW_SPEED;
+        dev->sdio_dev.hw_info.caps |= SDIO_CARD_LOW_SPEED;
     }
     if (card_caps & SDIO_CIA_CCCR_CARD_CAP_4BLS) {
-        dev->sdio_info.caps |= SDIO_CARD_4BIT_BUS;
+        dev->sdio_dev.hw_info.caps |= SDIO_CARD_4BIT_BUS;
     }
     if (bus_speed & SDIO_CIA_CCCR_BUS_SPEED_SEL_SHS) {
-        dev->sdio_info.caps |= SDIO_CARD_HIGH_SPEED;
+        dev->sdio_dev.hw_info.caps |= SDIO_CARD_HIGH_SPEED;
     }
     return status;
 }
 
 static zx_status_t sdio_parse_func_ext_tuple(sdmmc_device_t* dev, uint32_t fn_idx,
                                              sdio_func_tuple_t *tup) {
-    sdio_func_info_t *func = &(dev->sdio_info.funcs[fn_idx]);
+    sdio_function_t *func = &(dev->sdio_dev.funcs[fn_idx]);
     if (fn_idx == 0) {
         if (tup->t_body_size < SDIO_CIS_TPL_FUNC0_FUNCE_MIN_BDY_SZ) {
             return ZX_ERR_IO;
         }
-        func->max_blk_size = sdio_read_tuple_body(tup->t_body,
+        func->hw_info.max_blk_size = sdio_read_tuple_body(tup->t_body,
                                                   SDIO_CIS_TPL_FUNCE_FUNC0_MAX_BLK_SIZE_LOC, 2);
-        func->max_blk_size = MIN(dev->host_info.max_transfer_size, func->max_blk_size);
+        func->hw_info.max_blk_size = MIN(dev->host_info.max_transfer_size,
+                                         func->hw_info.max_blk_size);
         uint8_t speed_val = get_bits_u8(tup->t_body[3], SDIO_CIS_TPL_FUNCE_MAX_TRAN_SPEED_VAL_MASK,
                                         SDIO_CIS_TPL_FUNCE_MAX_TRAN_SPEED_VAL_LOC);
         uint8_t speed_unit = get_bits_u8(tup->t_body[3],
                                          SDIO_CIS_TPL_FUNCE_MAX_TRAN_SPEED_UNIT_MASK,
                                          SDIO_CIS_TPL_FUNCE_MAX_TRAN_SPEED_UNIT_LOC);
-        func->max_tran_speed = sdio_cis_tpl_funce_tran_speed_val[speed_val] *
+        func->hw_info.max_tran_speed = sdio_cis_tpl_funce_tran_speed_val[speed_val] *
                                sdio_cis_tpl_funce_tran_speed_unit[speed_unit];
         return ZX_OK;
     }
@@ -270,7 +282,7 @@ static zx_status_t sdio_parse_func_ext_tuple(sdmmc_device_t* dev, uint32_t fn_id
                tup->t_body_size);
         return ZX_ERR_IO;
     }
-    func->max_blk_size =  sdio_read_tuple_body(tup->t_body,
+    func->hw_info.max_blk_size =  sdio_read_tuple_body(tup->t_body,
                                                SDIO_CIS_TPL_FUNCE_FUNCx_MAX_BLK_SIZE_LOC, 2);
     return ZX_OK;
 }
@@ -280,9 +292,9 @@ static zx_status_t sdio_parse_mfid_tuple(sdmmc_device_t* dev, uint32_t fn_idx,
     if (tup->t_body_size < SDIO_CIS_TPL_MANFID_MIN_BDY_SZ) {
         return ZX_ERR_IO;
     }
-    sdio_func_info_t *func = &(dev->sdio_info.funcs[fn_idx]);
-    func->manufacturer_id = sdio_read_tuple_body(tup->t_body, 0, 2);
-    func->product_id = sdio_read_tuple_body(tup->t_body, 2, 2);
+    sdio_function_t *func = &(dev->sdio_dev.funcs[fn_idx]);
+    func->hw_info.manufacturer_id = sdio_read_tuple_body(tup->t_body, 0, 2);
+    func->hw_info.product_id = sdio_read_tuple_body(tup->t_body, 2, 2);
     return ZX_OK;
 }
 
@@ -379,7 +391,7 @@ static zx_status_t sdio_switch_hs(sdmmc_device_t *dev, bool enable) {
     zx_status_t st = ZX_OK;
     uint8_t speed = 0;
 
-    if (!(dev->sdio_info.caps & SDIO_CARD_HIGH_SPEED)) {
+    if (!(dev->sdio_dev.hw_info.caps & SDIO_CARD_HIGH_SPEED)) {
         zxlogf(ERROR, "sdio: High speed not supported, retcode = %d\n", st);
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -414,8 +426,8 @@ static zx_status_t sdio_switch_freq(sdmmc_device_t* dev, uint32_t new_freq) {
 
 static zx_status_t sdio_enable_4bit_bus(sdmmc_device_t *dev) {
     zx_status_t st = ZX_OK;
-    if ((dev->sdio_info.caps & SDIO_CARD_LOW_SPEED) &&
-        !(dev->sdio_info.caps & SDIO_CARD_4BIT_BUS)) {
+    if ((dev->sdio_dev.hw_info.caps & SDIO_CARD_LOW_SPEED) &&
+        !(dev->sdio_dev.hw_info.caps & SDIO_CARD_4BIT_BUS)) {
         zxlogf(ERROR, "sdio: Switching to 4-bit bus unsupported\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -459,7 +471,7 @@ static zx_status_t sdio_process_fbr(sdmmc_device_t *dev, uint8_t fn_idx) {
     zx_status_t st = ZX_OK;
     uint8_t fbr, fn_intf_code;
 
-    sdio_func_info_t *func = &(dev->sdio_info.funcs[fn_idx]);
+    sdio_function_t *func = &(dev->sdio_dev.funcs[fn_idx]);
     if ((st = sdio_io_rw_direct(dev, false, 0, SDIO_CIA_FBR_BASE_ADDR(fn_idx) +
                                 SDIO_CIA_FBR_STD_IF_CODE_ADDR, 0, &fbr)) != ZX_OK) {
         zxlogf(ERROR, "sdio: Error reading intf code: %d\n", st);
@@ -475,7 +487,14 @@ static zx_status_t sdio_process_fbr(sdmmc_device_t *dev, uint8_t fn_idx) {
             return st;
         }
     }
-    func->fn_intf_code = fn_intf_code;
+    func->hw_info.fn_intf_code = fn_intf_code;
+    return ZX_OK;
+}
+
+zx_status_t sdio_get_cur_block_size(void *ctx, uint8_t fn_idx,
+                                    uint16_t *cur_blk_size) {
+    sdmmc_device_t *dev = ctx;
+    *cur_blk_size = dev->sdio_dev.funcs[fn_idx].cur_blk_size;
     return ZX_OK;
 }
 
@@ -484,12 +503,12 @@ zx_status_t sdio_modify_block_size(void *ctx, uint8_t fn_idx, uint16_t blk_size,
     zx_status_t st = ZX_OK;
     sdmmc_device_t *dev = ctx;
 
-    sdio_func_info_t *func = &(dev->sdio_info.funcs[fn_idx]);
+    sdio_function_t *func = &(dev->sdio_dev.funcs[fn_idx]);
     if (set_default) {
-        blk_size = func->max_blk_size;
+        blk_size = func->hw_info.max_blk_size;
     }
 
-    if (blk_size > func->max_blk_size) {
+    if (blk_size > func->hw_info.max_blk_size) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -516,7 +535,7 @@ zx_status_t sdio_enable_function(void *ctx, uint8_t fn_idx) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    sdio_func_info_t *func = &(dev->sdio_info.funcs[fn_idx]);
+    sdio_function_t *func = &(dev->sdio_dev.funcs[fn_idx]);
     if (func->enabled) {
         return ZX_OK;
     }
@@ -563,7 +582,7 @@ zx_status_t sdio_disable_function(void *ctx, uint8_t fn_idx) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    sdio_func_info_t *func = &(dev->sdio_info.funcs[fn_idx]);
+    sdio_function_t *func = &(dev->sdio_dev.funcs[fn_idx]);
     if (!func->enabled) {
         zxlogf(ERROR, "sdio_disable_function: Func %d is not enabled\n", fn_idx);
         return ZX_ERR_IO;
@@ -635,8 +654,8 @@ zx_status_t sdmmc_probe_sdio(sdmmc_device_t* dev) {
     }
     dev->type = SDMMC_TYPE_SDIO;
     dev->signal_voltage = SDMMC_VOLTAGE_180;
-    dev->sdio_info.num_funcs = get_bits(ocr, SDIO_SEND_OP_COND_RESP_NUM_FUNC_MASK,
-                                        SDIO_SEND_OP_COND_RESP_NUM_FUNC_LOC);
+    dev->sdio_dev.hw_info.num_funcs = get_bits(ocr, SDIO_SEND_OP_COND_RESP_NUM_FUNC_MASK,
+                                               SDIO_SEND_OP_COND_RESP_NUM_FUNC_LOC);
     uint16_t addr = 0;
     if ((st = sd_send_relative_addr(dev, &addr)) != ZX_OK) {
         zxlogf(ERROR, "sdmcc_probe_sdio: SD_SEND_RELATIVE_ADDR failed, retcode = %d\n", st);
@@ -686,15 +705,15 @@ zx_status_t sdmmc_probe_sdio(sdmmc_device_t* dev) {
     }
 
     // 0 is the common function. Already initialized
-    for (size_t i = 1; i < dev->sdio_info.num_funcs; i++) {
+    for (size_t i = 1; i < dev->sdio_dev.hw_info.num_funcs; i++) {
         st = sdio_init_func(dev, i);
     }
 
-    zxlogf(INFO, "sdmmc_probe_sdio: sdio device initialized successfully\n");
-    zxlogf(INFO, "                  Manufacturer: 0x%x\n", dev->sdio_info.funcs[0].manufacturer_id);
-    zxlogf(INFO, "                  Product: 0x%x\n", dev->sdio_info.funcs[0].product_id);
-    zxlogf(INFO, "                  cccr vsn: 0x%x\n", dev->sdio_info.cccr_vsn);
-    zxlogf(INFO, "                  SDIO vsn: 0x%x\n", dev->sdio_info.sdio_vsn);
-    zxlogf(INFO, "                  num funcs: %d\n", dev->sdio_info.num_funcs);
+    zxlogf(INFO, "sdmmc_probe_sdio: sdio device initialized succesfully\n");
+    zxlogf(INFO, "          Manufacturer: 0x%x\n", dev->sdio_dev.funcs[0].hw_info.manufacturer_id);
+    zxlogf(INFO, "          Product: 0x%x\n", dev->sdio_dev.funcs[0].hw_info.product_id);
+    zxlogf(INFO, "          cccr vsn: 0x%x\n", dev->sdio_dev.hw_info.cccr_vsn);
+    zxlogf(INFO, "          SDIO vsn: 0x%x\n", dev->sdio_dev.hw_info.sdio_vsn);
+    zxlogf(INFO, "          num funcs: %d\n", dev->sdio_dev.hw_info.num_funcs);
     return ZX_OK;
 }

@@ -18,8 +18,6 @@
                                             SDMMC_RESP_DATA_PRESENT
 #define SDIO_SEND_OP_COND_FLAGS             SDMMC_RESP_R4
 
-#define SDIO_MAX_FUNCS                         8 // Including fn 0
-
 //(CMD5) Fields
 #define SDIO_SEND_OP_COND_IO_OCR_33V           (1 << 21)
 #define SDIO_SEND_OP_COND_CMD_S18R             (1 << 24)
@@ -186,6 +184,3 @@ static const uint32_t sdio_cis_tpl_funce_tran_speed_val[16] =
 static const uint32_t sdio_cis_tpl_funce_tran_speed_unit[8] =
     {1, 10, 100, 1000, 0, 0, 0, 0 }; //Kbit/sec
 
-static inline bool sdio_fn_idx_valid(uint8_t fn_idx) {
-    return (fn_idx < SDIO_MAX_FUNCS);
-}

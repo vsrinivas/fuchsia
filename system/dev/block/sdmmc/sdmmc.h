@@ -53,7 +53,7 @@ typedef struct sdmmc_device {
     uint8_t raw_ext_csd[512];
 
     // sdio
-    sdio_device_info_t sdio_info;
+    sdio_device_t sdio_dev;
     mtx_t lock;
 
     // blockio requests
@@ -111,6 +111,9 @@ zx_status_t sdio_disable_function(void *ctx, uint8_t fn_idx);
 zx_status_t sdio_modify_block_size(void *ctx, uint8_t fn_idx, uint16_t blk_sz, bool deflt);
 zx_status_t sdio_rw_data(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn);
 zx_status_t sdio_get_oob_irq_host(void *ctx, zx_handle_t *oob_irq);
+zx_status_t sdio_get_device_hw_info(void *ctx, sdio_hw_info_t *dev_info);
+zx_status_t sdio_get_cur_block_size(void *ctx, uint8_t fn_idx,
+                                    uint16_t *cur_blk_size);
 
 // MMC ops
 

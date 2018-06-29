@@ -225,7 +225,9 @@ static sdio_protocol_ops_t sdio_proto = {
     .enable_fn_intr = sdio_enable_interrupt,
     .disable_fn_intr = sdio_disable_interrupt,
     .update_block_size = sdio_modify_block_size,
+    .get_block_size = sdio_get_cur_block_size,
     .do_rw_txn = sdio_rw_data,
+    .get_dev_hw_info = sdio_get_device_hw_info,
 };
 
 static zx_status_t sdmmc_wait_for_tran(sdmmc_device_t* dev) {
@@ -397,8 +399,8 @@ static int sdmmc_worker_thread(void* arg) {
         //Remove block device and add SDIO device
         device_remove(dev->zxdev);
         zx_device_prop_t props[] = {
-             { BIND_SDIO_VID, 0, dev->sdio_info.funcs[0].manufacturer_id},
-             { BIND_SDIO_PID, 0, dev->sdio_info.funcs[0].product_id},
+             { BIND_SDIO_VID, 0, dev->sdio_dev.funcs[0].hw_info.manufacturer_id},
+             { BIND_SDIO_PID, 0, dev->sdio_dev.funcs[0].hw_info.product_id},
         };
 
         device_add_args_t sdio_args = {

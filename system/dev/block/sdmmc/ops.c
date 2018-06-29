@@ -205,7 +205,7 @@ zx_status_t sdio_io_rw_extended(sdmmc_device_t *dev, bool write, uint32_t fn_idx
     }
 
     if (blk_count > 1) {
-        if (dev->sdio_info.caps & SDIO_CARD_MULTI_BLOCK) {
+        if (dev->sdio_dev.hw_info.caps & SDIO_CARD_MULTI_BLOCK) {
             cmd_arg |= SDIO_IO_RW_EXTD_BLOCK_MODE;
             update_bits(&cmd_arg, SDIO_IO_RW_EXTD_BYTE_BLK_COUNT_MASK,
                         SDIO_IO_RW_EXTD_BYTE_BLK_COUNT_LOC, blk_count);

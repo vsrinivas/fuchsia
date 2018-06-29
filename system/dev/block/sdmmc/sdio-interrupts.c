@@ -24,7 +24,7 @@ zx_status_t sdio_enable_interrupt(void *ctx, uint8_t fn_idx) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    sdio_func_info_t *func = &(dev->sdio_info.funcs[fn_idx]);
+    sdio_function_t *func = &(dev->sdio_dev.funcs[fn_idx]);
     if (func->intr_enabled) {
         return ZX_OK;
     }
@@ -63,7 +63,7 @@ zx_status_t sdio_disable_interrupt(void *ctx, uint8_t fn_idx) {
     if (!sdio_fn_idx_valid(fn_idx)) {
         return ZX_ERR_INVALID_ARGS;
     }
-    sdio_func_info_t *func = &(dev->sdio_info.funcs[fn_idx]);
+    sdio_function_t *func = &(dev->sdio_dev.funcs[fn_idx]);
     if (!(func->intr_enabled)) {
         zxlogf(ERROR, "sdio_disable_interrupt: Interrupt is not enabled for %d\n", fn_idx);
         return ZX_ERR_BAD_STATE;
