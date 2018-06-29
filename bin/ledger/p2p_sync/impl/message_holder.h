@@ -52,8 +52,8 @@ class MessageHolder {
   MessageHolder& operator=(const MessageHolder<M>& other) = delete;
 
   // Allow MessageHolder<T> to be used as a T* for reading data.
-  const M* operator->() { return message_; }
-  const M& operator*() { return *message_; }
+  const M* operator->() const { return message_; }
+  const M& operator*() const { return *message_; }
 
  private:
   template <typename U>

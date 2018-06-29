@@ -160,6 +160,7 @@ class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
                               ledger::NetConnectorFactory* netconnector_factory,
                               std::string host_name)
       : services_dispatcher_(services_dispatcher),
+        environment_(BuildEnvironment(services_dispatcher)),
         netconnector_factory_(netconnector_factory),
         host_name_(std::move(host_name)),
         weak_ptr_factory_(this) {}
@@ -180,11 +181,12 @@ class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
             host_name_, std::move(netconnector),
             std::make_unique<FakeUserIdProvider>());
     return std::make_unique<p2p_sync::UserCommunicatorImpl>(
-        std::move(provider));
+        std::move(provider), environment_.coroutine_service());
   }
 
  private:
   async_t* const services_dispatcher_;
+  ledger::Environment environment_;
   ledger::NetConnectorFactory* const netconnector_factory_;
   std::string host_name_;
 

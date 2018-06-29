@@ -46,7 +46,8 @@ UserCommunicatorFactoryImpl::GetUserCommunicator(
   return std::make_unique<p2p_sync::UserCommunicatorImpl>(
       std::make_unique<p2p_provider::P2PProviderImpl>(
           host_name_buffer, std::move(net_connector),
-          std::move(user_id_provider)));
+          std::move(user_id_provider)),
+      environment_->coroutine_service());
 }
 
 }  // namespace p2p_sync

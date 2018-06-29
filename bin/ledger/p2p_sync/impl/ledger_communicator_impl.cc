@@ -11,9 +11,12 @@
 #include "peridot/bin/ledger/p2p_sync/impl/page_communicator_impl.h"
 
 namespace p2p_sync {
-LedgerCommunicatorImpl::LedgerCommunicatorImpl(std::string namespace_id,
-                                               DeviceMesh* mesh)
-    : namespace_id_(std::move(namespace_id)), mesh_(mesh) {}
+LedgerCommunicatorImpl::LedgerCommunicatorImpl(
+    coroutine::CoroutineService* coroutine_service, std::string namespace_id,
+    DeviceMesh* mesh)
+    : coroutine_service_(coroutine_service),
+      namespace_id_(std::move(namespace_id)),
+      mesh_(mesh) {}
 
 LedgerCommunicatorImpl::~LedgerCommunicatorImpl() {
   FXL_DCHECK(pages_.empty());
@@ -69,8 +72,9 @@ std::unique_ptr<PageCommunicator> LedgerCommunicatorImpl::GetPageCommunicator(
   FXL_DCHECK(pages_.find(page_id) == pages_.end());
 
   std::unique_ptr<PageCommunicatorImpl> page =
-      std::make_unique<PageCommunicatorImpl>(storage, sync_client,
-                                             namespace_id_, page_id, mesh_);
+      std::make_unique<PageCommunicatorImpl>(coroutine_service_, storage,
+                                             sync_client, namespace_id_,
+                                             page_id, mesh_);
   PageCommunicatorImpl* page_ptr = page.get();
   pages_.emplace(page_id, page_ptr);
   page->set_on_delete([this, page_id = std::move(page_id), page_ptr] {

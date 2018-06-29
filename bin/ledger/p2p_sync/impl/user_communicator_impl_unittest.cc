@@ -12,10 +12,11 @@
 
 // gtest matchers are in gmock and we cannot include the specific header file
 // directly as it is private to the library.
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fxl/macros.h>
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/p2p_provider/impl/p2p_provider_impl.h"
 #include "peridot/bin/ledger/p2p_provider/public/user_id_provider.h"
 #include "peridot/bin/ledger/p2p_sync/impl/page_communicator_impl.h"
@@ -72,7 +73,8 @@ class UserCommunicatorImplTest : public gtest::TestLoopFixture {
         std::make_unique<p2p_provider::P2PProviderImpl>(
             std::move(host_name), std::move(netconnector),
             std::make_unique<FakeUserIdProvider>(std::move(user_name)));
-    return std::make_unique<UserCommunicatorImpl>(std::move(provider));
+    return std::make_unique<UserCommunicatorImpl>(std::move(provider),
+                                                  &coroutine_service_);
   }
 
  protected:
@@ -81,6 +83,7 @@ class UserCommunicatorImplTest : public gtest::TestLoopFixture {
   ledger::NetConnectorFactory net_connector_factory_;
 
  private:
+  coroutine::CoroutineServiceImpl coroutine_service_;
   FXL_DISALLOW_COPY_AND_ASSIGN(UserCommunicatorImplTest);
 };
 

@@ -70,10 +70,19 @@ enum ObjectStatus : ushort {
   UNKNOWN_OBJECT,
 }
 
+// Whether an object is known to be synced to the cloud.
+enum ObjectSyncStatus : ubyte {
+  // The object is not known to be synced to the cloud.
+  UNSYNCED,
+  // The object is known to be synced to the cloud.
+  SYNCED_TO_CLOUD,
+}
+
 table Object {
   id: ObjectId;
   status: ObjectStatus;
   data: Data;
+  sync_status: ObjectSyncStatus;
 }
 
 table ObjectResponse {

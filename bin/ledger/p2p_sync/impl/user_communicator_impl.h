@@ -30,7 +30,8 @@ class UserCommunicatorImpl : public UserCommunicator,
                              public p2p_provider::P2PProvider::Client {
  public:
   explicit UserCommunicatorImpl(
-      std::unique_ptr<p2p_provider::P2PProvider> provider);
+      std::unique_ptr<p2p_provider::P2PProvider> provider,
+      coroutine::CoroutineService* coroutine_service);
   ~UserCommunicatorImpl() override;
 
   // UserCommunicator:
@@ -58,6 +59,7 @@ class UserCommunicatorImpl : public UserCommunicator,
   std::unique_ptr<fuchsia::sys::ServiceProviderImpl> network_service_provider_;
 
   std::unique_ptr<p2p_provider::P2PProvider> p2p_provider_;
+  coroutine::CoroutineService* const coroutine_service_;
 };
 
 }  // namespace p2p_sync

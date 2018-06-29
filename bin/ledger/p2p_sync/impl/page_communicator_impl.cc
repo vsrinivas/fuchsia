@@ -9,6 +9,7 @@
 #include <lib/fit/function.h>
 #include <lib/fxl/memory/ref_ptr.h>
 
+#include "peridot/bin/ledger/coroutine/coroutine_waiter.h"
 #include "peridot/bin/ledger/p2p_sync/impl/message_generated.h"
 #include "peridot/bin/ledger/storage/public/read_data_source.h"
 #include "peridot/lib/convert/convert.h"
@@ -81,12 +82,25 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
   fit::closure on_empty_;
 };
 
-PageCommunicatorImpl::PageCommunicatorImpl(storage::PageStorage* storage,
-                                           storage::PageSyncClient* sync_client,
-                                           std::string namespace_id,
-                                           std::string page_id,
-                                           DeviceMesh* mesh)
-    : namespace_id_(std::move(namespace_id)),
+// ObjectResponseHolder holds temporary data we collect in order to build
+// ObjectResponses.
+// This is necessary as object data (from |storage::Object|) and synchronization
+// data come from different asynchronous calls.
+struct PageCommunicatorImpl::ObjectResponseHolder {
+  storage::ObjectIdentifier identifier;
+  std::unique_ptr<const storage::Object> object;
+  bool is_synced = false;
+
+  ObjectResponseHolder(storage::ObjectIdentifier identifier)
+      : identifier(std::move(identifier)) {}
+};
+
+PageCommunicatorImpl::PageCommunicatorImpl(
+    coroutine::CoroutineService* coroutine_service,
+    storage::PageStorage* storage, storage::PageSyncClient* sync_client,
+    std::string namespace_id, std::string page_id, DeviceMesh* mesh)
+    : coroutine_manager_(coroutine_service),
+      namespace_id_(std::move(namespace_id)),
       page_id_(std::move(page_id)),
       mesh_(mesh),
       storage_(storage),
@@ -203,7 +217,9 @@ void PageCommunicatorImpl::OnNewRequest(fxl::StringView source,
       break;
     case RequestMessage_ObjectRequest:
       ProcessObjectRequest(
-          source, static_cast<const ObjectRequest*>(message->request()));
+          source, message.TakeAndMap<ObjectRequest>([](const Request* request) {
+            return static_cast<const ObjectRequest*>(request->request());
+          }));
       break;
     case RequestMessage_NONE:
       FXL_LOG(ERROR) << "The message received is malformed";
@@ -399,70 +415,92 @@ void PageCommunicatorImpl::BuildCommitBuffer(
   buffer->Finish(message);
 }
 
-void PageCommunicatorImpl::ProcessObjectRequest(fxl::StringView source,
-                                                const ObjectRequest* request) {
-  auto waiter = fxl::MakeRefCounted<callback::Waiter<
-      bool, std::pair<storage::ObjectIdentifier,
-                      std::unique_ptr<const storage::Object>>>>(true);
-  for (const ObjectId* object_id : *request->object_ids()) {
-    storage::ObjectIdentifier identifier{
-        object_id->key_index(), object_id->deletion_scope_id(),
-        convert::ExtendedStringView(object_id->digest()).ToString()};
-    auto callback = waiter->NewCallback();
-    auto get_piece_callback =
-        [callback = std::move(callback), identifier](
-            storage::Status status,
-            std::unique_ptr<const storage::Object> object) mutable {
-          if (status != storage::Status::OK) {
-            // Not finding an object is okay in this context: we'll just reply
-            // we don't have it. There is not need to abort processing the
-            // request.
-            callback(true, std::make_pair(std::move(identifier), nullptr));
-            return;
-          }
-          callback(true,
-                   std::make_pair(std::move(identifier), std::move(object)));
-        };
-    storage_->GetPiece(std::move(identifier), std::move(get_piece_callback));
-  }
+void PageCommunicatorImpl::ProcessObjectRequest(
+    fxl::StringView source, MessageHolder<ObjectRequest> request) {
+  coroutine_manager_.StartCoroutine(
+      [this, source = source.ToString(),
+       request = std::move(request)](coroutine::CoroutineHandler* handler) {
+        // We use a std::list so that we can keep a reference to an element
+        // while adding new items.
+        std::list<ObjectResponseHolder> object_responses;
+        auto response_waiter =
+            fxl::MakeRefCounted<callback::StatusWaiter<storage::Status>>(
+                storage::Status::OK);
+        for (const ObjectId* object_id : *request->object_ids()) {
+          storage::ObjectIdentifier identifier{
+              object_id->key_index(), object_id->deletion_scope_id(),
+              convert::ExtendedStringView(object_id->digest()).ToString()};
+          object_responses.emplace_back(identifier);
+          auto& response = object_responses.back();
+          storage_->GetPiece(
+              identifier,
+              [callback = response_waiter->NewCallback(), &response](
+                  storage::Status status,
+                  std::unique_ptr<const storage::Object> object) mutable {
+                if (status == storage::Status::NOT_FOUND) {
+                  // Not finding an object is okay in this context: we'll just
+                  // reply we don't have it. There is not need to abort
+                  // processing the request.
+                  callback(storage::Status::OK);
+                  return;
+                }
+                response.object = std::move(object);
+                callback(status);
+              });
+          storage_->IsPieceSynced(
+              std::move(identifier),
+              [callback = response_waiter->NewCallback(), &response](
+                  storage::Status status, bool is_synced) {
+                if (status == storage::Status::NOT_FOUND) {
+                  // Not finding an object is okay in this
+                  // context: we'll just reply we don't have it.
+                  // There is not need to abort processing the
+                  // request.
+                  callback(storage::Status::OK);
+                  return;
+                }
+                response.is_synced = is_synced;
+                callback(status);
+              });
+        }
 
-  waiter->Finalize(callback::MakeScoped(
-      weak_factory_.GetWeakPtr(),
-      [this, source = source.ToString()](
-          bool status,
-          std::vector<std::pair<storage::ObjectIdentifier,
-                                std::unique_ptr<const storage::Object>>>
-              results) mutable {
-        // We always return a true |status| to not abort early. See also the
-        // comment above.
-        FXL_DCHECK(status);
+        storage::Status status;
+        if (coroutine::Wait(handler, response_waiter, &status) ==
+            coroutine::ContinuationStatus::INTERRUPTED) {
+          return;
+        }
+
+        if (status != storage::Status::OK) {
+          FXL_LOG(WARNING) << "Error while retrieving objects: " << status;
+          return;
+        }
+
         flatbuffers::FlatBufferBuilder buffer;
-        BuildObjectResponseBuffer(&buffer, std::move(results));
+        BuildObjectResponseBuffer(&buffer, std::move(object_responses));
         char* buf = reinterpret_cast<char*>(buffer.GetBufferPointer());
         size_t size = buffer.GetSize();
 
         mesh_->Send(source, fxl::StringView(buf, size));
-      }));
+      });
 }
 
 void PageCommunicatorImpl::BuildObjectResponseBuffer(
     flatbuffers::FlatBufferBuilder* buffer,
-    std::vector<std::pair<storage::ObjectIdentifier,
-                          std::unique_ptr<const storage::Object>>>
-        results) {
+    std::list<ObjectResponseHolder> object_responses) {
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
       CreateNamespacePageId(*buffer,
                             convert::ToFlatBufferVector(buffer, namespace_id_),
                             convert::ToFlatBufferVector(buffer, page_id_));
   std::vector<flatbuffers::Offset<Object>> fb_objects;
-  for (const auto& object_pair : results) {
-    flatbuffers::Offset<ObjectId> fb_object_id = CreateObjectId(
-        *buffer, object_pair.first.key_index,
-        object_pair.first.deletion_scope_id,
-        convert::ToFlatBufferVector(buffer, object_pair.first.object_digest));
-    if (object_pair.second) {
+  for (const ObjectResponseHolder& object_response : object_responses) {
+    flatbuffers::Offset<ObjectId> fb_object_id =
+        CreateObjectId(*buffer, object_response.identifier.key_index,
+                       object_response.identifier.deletion_scope_id,
+                       convert::ToFlatBufferVector(
+                           buffer, object_response.identifier.object_digest));
+    if (object_response.object) {
       fxl::StringView data;
-      storage::Status status = object_pair.second->GetData(&data);
+      storage::Status status = object_response.object->GetData(&data);
       if (status != storage::Status::OK) {
         FXL_LOG(ERROR) << "Unable to read object data, aborting: " << status;
         // We do getData first so that we can continue in case of error
@@ -471,8 +509,11 @@ void PageCommunicatorImpl::BuildObjectResponseBuffer(
       }
       flatbuffers::Offset<Data> fb_data =
           CreateData(*buffer, convert::ToFlatBufferVector(buffer, data));
-      fb_objects.emplace_back(
-          CreateObject(*buffer, fb_object_id, ObjectStatus_OK, fb_data));
+      ObjectSyncStatus sync_status = object_response.is_synced
+                                         ? ObjectSyncStatus_SYNCED_TO_CLOUD
+                                         : ObjectSyncStatus_UNSYNCED;
+      fb_objects.emplace_back(CreateObject(
+          *buffer, fb_object_id, ObjectStatus_OK, fb_data, sync_status));
     } else {
       fb_objects.emplace_back(
           CreateObject(*buffer, fb_object_id, ObjectStatus_UNKNOWN_OBJECT));

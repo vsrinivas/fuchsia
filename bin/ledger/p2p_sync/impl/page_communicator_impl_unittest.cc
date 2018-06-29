@@ -9,10 +9,11 @@
 
 // gtest matchers are in gmock and we cannot include the specific header file
 // directly as it is private to the library.
-#include "gmock/gmock.h"
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include "gmock/gmock.h"
+#include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/p2p_sync/impl/device_mesh.h"
 #include "peridot/bin/ledger/storage/fake/fake_object.h"
 #include "peridot/bin/ledger/storage/testing/commit_empty_impl.h"
@@ -53,8 +54,26 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
   }
 
   void SetPiece(storage::ObjectIdentifier object_identifier,
-                std::string contents) {
+                std::string contents, bool is_synced = false) {
     objects_[object_identifier] = std::move(contents);
+    if (is_synced) {
+      synced_objects_.insert(std::move(object_identifier));
+    }
+  }
+
+  void IsPieceSynced(
+      storage::ObjectIdentifier object_identifier,
+      fit::function<void(storage::Status, bool)> callback) override {
+    async::PostTask(async_, [this, object_identifier,
+                             callback = std::move(callback)]() {
+      const auto& it = objects_.find(object_identifier);
+      if (it == objects_.end()) {
+        callback(storage::Status::NOT_FOUND, false);
+        return;
+      }
+      callback(storage::Status::OK, synced_objects_.find(object_identifier) !=
+                                        synced_objects_.end());
+    });
   }
 
   void AddCommitsFromSync(
@@ -82,6 +101,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
   async_t* const async_;
   const std::string page_id_;
   std::map<storage::ObjectIdentifier, std::string> objects_;
+  std::set<storage::ObjectIdentifier> synced_objects_;
 };
 
 class FakeCommit : public storage::CommitEmptyImpl {
@@ -174,22 +194,30 @@ void BuildObjectRequestBuffer(
 void BuildObjectResponseBuffer(
     flatbuffers::FlatBufferBuilder* buffer, fxl::StringView namespace_id,
     fxl::StringView page_id,
-    std::map<storage::ObjectIdentifier, std::string> data) {
+    std::vector<std::tuple<storage::ObjectIdentifier, std::string, bool>>
+        data) {
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
       CreateNamespacePageId(*buffer,
                             convert::ToFlatBufferVector(buffer, namespace_id),
                             convert::ToFlatBufferVector(buffer, page_id));
   std::vector<flatbuffers::Offset<Object>> fb_objects;
-  for (const auto& object_pair : data) {
+  for (const auto& object_tuple : data) {
+    const storage::ObjectIdentifier& object_identifier =
+        std::get<0>(object_tuple);
+    const std::string& data = std::get<1>(object_tuple);
+    bool is_synced = std::get<2>(object_tuple);
+
     flatbuffers::Offset<ObjectId> fb_object_id = CreateObjectId(
-        *buffer, object_pair.first.key_index,
-        object_pair.first.deletion_scope_id,
-        convert::ToFlatBufferVector(buffer, object_pair.first.object_digest));
-    if (!object_pair.second.empty()) {
-      flatbuffers::Offset<Data> fb_data = CreateData(
-          *buffer, convert::ToFlatBufferVector(buffer, object_pair.second));
+        *buffer, object_identifier.key_index,
+        object_identifier.deletion_scope_id,
+        convert::ToFlatBufferVector(buffer, object_identifier.object_digest));
+    if (!data.empty()) {
+      flatbuffers::Offset<Data> fb_data =
+          CreateData(*buffer, convert::ToFlatBufferVector(buffer, data));
       fb_objects.emplace_back(
-          CreateObject(*buffer, fb_object_id, ObjectStatus_OK, fb_data));
+          CreateObject(*buffer, fb_object_id, ObjectStatus_OK, fb_data,
+                       is_synced ? ObjectSyncStatus_SYNCED_TO_CLOUD
+                                 : ObjectSyncStatus_UNSYNCED));
     } else {
       fb_objects.emplace_back(
           CreateObject(*buffer, fb_object_id, ObjectStatus_UNKNOWN_OBJECT));
@@ -213,6 +241,8 @@ class PageCommunicatorImplTest : public gtest::TestLoopFixture {
  protected:
   void SetUp() override { ::testing::Test::SetUp(); }
 
+  coroutine::CoroutineServiceImpl coroutine_service_;
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageCommunicatorImplTest);
 };
@@ -221,8 +251,8 @@ TEST_F(PageCommunicatorImplTest, ConnectToExistingMesh) {
   FakeDeviceMesh mesh;
   mesh.devices_.emplace("device2");
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&storage, &storage, "ledger", "page",
-                                         &mesh);
+  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage,
+                                         &storage, "ledger", "page", &mesh);
 
   EXPECT_TRUE(mesh.messages_.empty());
 
@@ -252,8 +282,8 @@ TEST_F(PageCommunicatorImplTest, ConnectToExistingMesh) {
 TEST_F(PageCommunicatorImplTest, ConnectToNewMeshParticipant) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&storage, &storage, "ledger", "page",
-                                         &mesh);
+  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage,
+                                         &storage, "ledger", "page", &mesh);
   page_communicator.Start();
 
   EXPECT_TRUE(mesh.messages_.empty());
@@ -286,8 +316,8 @@ TEST_F(PageCommunicatorImplTest, ConnectToNewMeshParticipant) {
 TEST_F(PageCommunicatorImplTest, GetObject) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&storage, &storage, "ledger", "page",
-                                         &mesh);
+  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage,
+                                         &storage, "ledger", "page", &mesh);
   page_communicator.Start();
 
   flatbuffers::FlatBufferBuilder buffer;
@@ -342,8 +372,8 @@ TEST_F(PageCommunicatorImplTest, ObjectRequest) {
   FakePageStorage storage(dispatcher(), "page");
   storage.SetPiece(storage::ObjectIdentifier{0, 0, "object_digest"},
                    "some data");
-  PageCommunicatorImpl page_communicator(&storage, &storage, "ledger", "page",
-                                         &mesh);
+  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage,
+                                         &storage, "ledger", "page", &mesh);
   page_communicator.Start();
 
   // Send request to PageCommunicator. We request two objects: |object_digest|
@@ -389,16 +419,71 @@ TEST_F(PageCommunicatorImplTest, ObjectRequest) {
   EXPECT_EQ("object_digest", convert::ExtendedStringView(it->id()->digest()));
   EXPECT_EQ(ObjectStatus_OK, it->status());
   EXPECT_EQ("some data", convert::ExtendedStringView(it->data()->bytes()));
+  EXPECT_EQ(ObjectSyncStatus_UNSYNCED, it->sync_status());
   it++;
   EXPECT_EQ("object_digest2", convert::ExtendedStringView(it->id()->digest()));
   EXPECT_EQ(ObjectStatus_UNKNOWN_OBJECT, it->status());
 }
 
+TEST_F(PageCommunicatorImplTest, ObjectRequestSynced) {
+  FakeDeviceMesh mesh;
+  FakePageStorage storage(dispatcher(), "page");
+  storage.SetPiece(storage::ObjectIdentifier{0, 0, "object_digest"},
+                   "some data", true);
+  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage,
+                                         &storage, "ledger", "page", &mesh);
+  page_communicator.Start();
+
+  // Send request to PageCommunicator. We request two objects: |object_digest|
+  // and |object_digest2|. Only |object_digest| will be present in storage.
+  flatbuffers::FlatBufferBuilder request_buffer;
+  BuildObjectRequestBuffer(&request_buffer, "ledger", "page",
+                           {storage::ObjectIdentifier{0, 0, "object_digest"}});
+  MessageHolder<Message> request_message(convert::ToStringView(request_buffer),
+                                         &GetMessage);
+  page_communicator.OnNewRequest(
+      "device2",
+      request_message.TakeAndMap<Request>([](const Message* message) {
+        return static_cast<const Request*>(message->message());
+      }));
+
+  RunLoopUntilIdle();
+
+  // Verify the response.
+  ASSERT_EQ(1u, mesh.messages_.size());
+  EXPECT_EQ("device2", mesh.messages_[0].first);
+
+  flatbuffers::Verifier verifier(
+      reinterpret_cast<const unsigned char*>(mesh.messages_[0].second.data()),
+      mesh.messages_[0].second.size());
+  ASSERT_TRUE(VerifyMessageBuffer(verifier));
+
+  const Message* reply_message = GetMessage(mesh.messages_[0].second.data());
+  ASSERT_EQ(MessageUnion_Response, reply_message->message_type());
+  const Response* response =
+      static_cast<const Response*>(reply_message->message());
+  const NamespacePageId* response_namespace_page_id =
+      response->namespace_page();
+  EXPECT_EQ("ledger", convert::ExtendedStringView(
+                          response_namespace_page_id->namespace_id()));
+  EXPECT_EQ("page",
+            convert::ExtendedStringView(response_namespace_page_id->page_id()));
+  EXPECT_EQ(ResponseMessage_ObjectResponse, response->response_type());
+  const ObjectResponse* object_response =
+      static_cast<const ObjectResponse*>(response->response());
+  ASSERT_EQ(1u, object_response->objects()->size());
+  auto it = object_response->objects()->begin();
+  EXPECT_EQ("object_digest", convert::ExtendedStringView(it->id()->digest()));
+  EXPECT_EQ(ObjectStatus_OK, it->status());
+  EXPECT_EQ("some data", convert::ExtendedStringView(it->data()->bytes()));
+  EXPECT_EQ(ObjectSyncStatus_SYNCED_TO_CLOUD, it->sync_status());
+}
+
 TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&storage, &storage, "ledger", "page",
-                                         &mesh);
+  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage,
+                                         &storage, "ledger", "page", &mesh);
   page_communicator.Start();
 
   flatbuffers::FlatBufferBuilder buffer;
@@ -428,8 +513,10 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
   flatbuffers::FlatBufferBuilder response_buffer;
   BuildObjectResponseBuffer(
       &response_buffer, "ledger", "page",
-      {std::make_pair(storage::ObjectIdentifier{0, 0, "foo"}, "foo_data"),
-       std::make_pair(storage::ObjectIdentifier{0, 0, "bar"}, "bar_data")});
+      {std::make_tuple(storage::ObjectIdentifier{0, 0, "foo"}, "foo_data",
+                       false),
+       std::make_tuple(storage::ObjectIdentifier{0, 0, "bar"}, "bar_data",
+                       false)});
   MessageHolder<Message> response_message(
       convert::ToStringView(response_buffer), &GetMessage);
   page_communicator.OnNewResponse(
@@ -446,8 +533,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
 TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&storage, &storage, "ledger", "page",
-                                         &mesh);
+  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage,
+                                         &storage, "ledger", "page", &mesh);
   page_communicator.Start();
 
   flatbuffers::FlatBufferBuilder buffer;
@@ -475,7 +562,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
   flatbuffers::FlatBufferBuilder response_buffer;
   BuildObjectResponseBuffer(
       &response_buffer, "ledger", "page",
-      {std::make_pair(storage::ObjectIdentifier{0, 0, "foo"}, "")});
+      {std::make_tuple(storage::ObjectIdentifier{0, 0, "foo"}, "", false)});
   MessageHolder<Message> response_message(
       convert::ToStringView(response_buffer), &GetMessage);
   page_communicator.OnNewResponse(
@@ -492,8 +579,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
 TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&storage, &storage, "ledger", "page",
-                                         &mesh);
+  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage,
+                                         &storage, "ledger", "page", &mesh);
   page_communicator.Start();
 
   flatbuffers::FlatBufferBuilder buffer;
@@ -524,7 +611,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
   flatbuffers::FlatBufferBuilder response_buffer_1;
   BuildObjectResponseBuffer(
       &response_buffer_1, "ledger", "page",
-      {std::make_pair(storage::ObjectIdentifier{0, 0, "foo"}, "")});
+      {std::make_tuple(storage::ObjectIdentifier{0, 0, "foo"}, "", false)});
   MessageHolder<Message> message_1(convert::ToStringView(response_buffer_1),
                                    &GetMessage);
   page_communicator.OnNewResponse(
@@ -536,7 +623,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
   flatbuffers::FlatBufferBuilder response_buffer_2;
   BuildObjectResponseBuffer(
       &response_buffer_2, "ledger", "page",
-      {std::make_pair(storage::ObjectIdentifier{0, 0, "foo"}, "foo_data")});
+      {std::make_tuple(storage::ObjectIdentifier{0, 0, "foo"}, "foo_data",
+                       false)});
   MessageHolder<Message> message_2(convert::ToStringView(response_buffer_2),
                                    &GetMessage);
   page_communicator.OnNewResponse(
@@ -552,8 +640,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
 TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&storage, &storage, "ledger", "page",
-                                         &mesh);
+  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage,
+                                         &storage, "ledger", "page", &mesh);
   page_communicator.Start();
 
   flatbuffers::FlatBufferBuilder buffer;
@@ -584,7 +672,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
   flatbuffers::FlatBufferBuilder response_buffer_1;
   BuildObjectResponseBuffer(
       &response_buffer_1, "ledger", "page",
-      {std::make_pair(storage::ObjectIdentifier{0, 0, "foo"}, "")});
+      {std::make_tuple(storage::ObjectIdentifier{0, 0, "foo"}, "", false)});
   MessageHolder<Message> message_1(convert::ToStringView(response_buffer_1),
                                    &GetMessage);
   page_communicator.OnNewResponse(
@@ -596,7 +684,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
   flatbuffers::FlatBufferBuilder response_buffer_2;
   BuildObjectResponseBuffer(
       &response_buffer_2, "ledger", "page",
-      {std::make_pair(storage::ObjectIdentifier{0, 0, "foo"}, "")});
+      {std::make_tuple(storage::ObjectIdentifier{0, 0, "foo"}, "", false)});
   MessageHolder<Message> message_2(convert::ToStringView(response_buffer_2),
                                    &GetMessage);
   page_communicator.OnNewResponse(
@@ -612,8 +700,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
 TEST_F(PageCommunicatorImplTest, CommitUpdate) {
   FakeDeviceMesh mesh;
   FakePageStorage storage_1(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator_1(&storage_1, &storage_1, "ledger",
-                                           "page", &mesh);
+  PageCommunicatorImpl page_communicator_1(&coroutine_service_, &storage_1,
+                                           &storage_1, "ledger", "page", &mesh);
   page_communicator_1.Start();
 
   flatbuffers::FlatBufferBuilder buffer;
@@ -626,8 +714,8 @@ TEST_F(PageCommunicatorImplTest, CommitUpdate) {
   RunLoopUntilIdle();
 
   FakePageStorage storage_2(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator_2(&storage_2, &storage_2, "ledger",
-                                           "page", &mesh);
+  PageCommunicatorImpl page_communicator_2(&coroutine_service_, &storage_2,
+                                           &storage_2, "ledger", "page", &mesh);
   page_communicator_2.Start();
 
   std::vector<std::unique_ptr<const storage::Commit>> commits;
@@ -692,8 +780,8 @@ TEST_F(PageCommunicatorImplTest, CommitUpdate) {
 TEST_F(PageCommunicatorImplTest, GetObjectDisconnect) {
   FakeDeviceMesh mesh;
   FakePageStorage storage(dispatcher(), "page");
-  PageCommunicatorImpl page_communicator(&storage, &storage, "ledger", "page",
-                                         &mesh);
+  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage,
+                                         &storage, "ledger", "page", &mesh);
   page_communicator.Start();
 
   flatbuffers::FlatBufferBuilder buffer;

@@ -12,6 +12,8 @@
 #include <lib/fit/function.h>
 #include <lib/fxl/memory/weak_ptr.h>
 
+#include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/coroutine/coroutine_manager.h"
 #include "peridot/bin/ledger/p2p_provider/public/types.h"
 #include "peridot/bin/ledger/p2p_sync/impl/device_mesh.h"
 #include "peridot/bin/ledger/p2p_sync/impl/message_generated.h"
@@ -30,7 +32,8 @@ class PageCommunicatorImpl : public PageCommunicator,
                              public storage::PageSyncDelegate,
                              public storage::CommitWatcher {
  public:
-  PageCommunicatorImpl(storage::PageStorage* storage,
+  PageCommunicatorImpl(coroutine::CoroutineService* coroutine_service,
+                       storage::PageStorage* storage,
                        storage::PageSyncClient* sync_client,
                        std::string namespace_id, std::string page_id,
                        DeviceMesh* mesh);
@@ -66,6 +69,7 @@ class PageCommunicatorImpl : public PageCommunicator,
  private:
   friend class PageCommunicatorImplInspectorForTest;
   class PendingObjectRequestHolder;
+  struct ObjectResponseHolder;
 
   // These methods build the flatbuffer message corresponding to their name.
   void BuildWatchStartBuffer(flatbuffers::FlatBufferBuilder* buffer);
@@ -77,13 +81,11 @@ class PageCommunicatorImpl : public PageCommunicator,
       const std::vector<std::unique_ptr<const storage::Commit>>& commits);
   void BuildObjectResponseBuffer(
       flatbuffers::FlatBufferBuilder* buffer,
-      std::vector<std::pair<storage::ObjectIdentifier,
-                            std::unique_ptr<const storage::Object>>>
-          results);
+      std::list<ObjectResponseHolder> object_responses);
 
   // Processes an incoming ObjectRequest object.
   void ProcessObjectRequest(fxl::StringView source,
-                            const ObjectRequest* request);
+                            MessageHolder<ObjectRequest> request);
 
   // Map of pending requests for objects.
   callback::AutoCleanableMap<storage::ObjectIdentifier,
@@ -102,6 +104,7 @@ class PageCommunicatorImpl : public PageCommunicator,
   // uploading.
   std::vector<std::unique_ptr<const storage::Commit>> commits_to_upload_;
 
+  coroutine::CoroutineManager coroutine_manager_;
   const std::string namespace_id_;
   const std::string page_id_;
   DeviceMesh* const mesh_;

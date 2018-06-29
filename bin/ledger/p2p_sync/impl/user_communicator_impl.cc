@@ -16,8 +16,10 @@
 namespace p2p_sync {
 
 UserCommunicatorImpl::UserCommunicatorImpl(
-    std::unique_ptr<p2p_provider::P2PProvider> provider)
-    : p2p_provider_(std::move(provider)) {}
+    std::unique_ptr<p2p_provider::P2PProvider> provider,
+    coroutine::CoroutineService* coroutine_service)
+    : p2p_provider_(std::move(provider)),
+      coroutine_service_(coroutine_service) {}
 
 UserCommunicatorImpl::~UserCommunicatorImpl() { FXL_DCHECK(ledgers_.empty()); }
 
@@ -36,7 +38,8 @@ std::unique_ptr<LedgerCommunicator> UserCommunicatorImpl::GetLedgerCommunicator(
       << namespace_id;
 
   std::unique_ptr<LedgerCommunicatorImpl> ledger =
-      std::make_unique<LedgerCommunicatorImpl>(namespace_id, this);
+      std::make_unique<LedgerCommunicatorImpl>(coroutine_service_, namespace_id,
+                                               this);
   LedgerCommunicatorImpl* ledger_ptr = ledger.get();
   ledger->set_on_delete(
       [this, namespace_id]() mutable { ledgers_.erase(namespace_id); });

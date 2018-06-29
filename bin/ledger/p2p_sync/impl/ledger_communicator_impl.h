@@ -9,6 +9,7 @@
 
 #include <lib/fit/function.h>
 
+#include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/p2p_provider/public/types.h"
 #include "peridot/bin/ledger/p2p_sync/impl/device_mesh.h"
 #include "peridot/bin/ledger/p2p_sync/impl/message_generated.h"
@@ -23,7 +24,8 @@ class PageCommunicatorImpl;
 // Ledger-level P2P communicator.
 class LedgerCommunicatorImpl : public LedgerCommunicator {
  public:
-  LedgerCommunicatorImpl(std::string namespace_id, DeviceMesh* mesh);
+  LedgerCommunicatorImpl(coroutine::CoroutineService* coroutine_service,
+                         std::string namespace_id, DeviceMesh* mesh);
   ~LedgerCommunicatorImpl() override;
 
   void set_on_delete(fit::closure on_delete);
@@ -50,6 +52,7 @@ class LedgerCommunicatorImpl : public LedgerCommunicator {
       pages_;
 
   fit::closure on_delete_;
+  coroutine::CoroutineService* const coroutine_service_;
   const std::string namespace_id_;
   DeviceMesh* const mesh_;
 };
