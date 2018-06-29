@@ -27,6 +27,7 @@
 #include <zircon/boot/image.h>
 #include <zircon/device/block.h>
 #include <zircon/device/device.h>
+#include <zircon/device/skip-block.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zxcrypt/volume.h>
@@ -173,7 +174,7 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
 
 // Stream a raw (non-FVM) partition to a vmo.
 zx_status_t StreamPayloadToVmo(fzl::MappedVmo* mvmo, const fbl::unique_fd& src_fd,
-                               const block_info_t& info, size_t* payload_size) {
+                               uint32_t block_size_bytes, size_t* payload_size) {
     zx_status_t status;
     ssize_t r;
     size_t vmo_offset = 0;
@@ -195,9 +196,9 @@ zx_status_t StreamPayloadToVmo(fzl::MappedVmo* mvmo, const fbl::unique_fd& src_f
         return static_cast<zx_status_t>(r);
     }
 
-    if (vmo_offset % info.block_size) {
+    if (vmo_offset % block_size_bytes) {
         // We have a partial block to write.
-        const size_t rounded_length = fbl::round_up(vmo_offset, info.block_size);
+        const size_t rounded_length = fbl::round_up(vmo_offset, block_size_bytes);
         memset(&reinterpret_cast<uint8_t*>(mvmo->GetData())[vmo_offset], 0,
                rounded_length - vmo_offset);
         vmo_offset = rounded_length;
@@ -208,8 +209,8 @@ zx_status_t StreamPayloadToVmo(fzl::MappedVmo* mvmo, const fbl::unique_fd& src_f
 
 // Writes a raw (non-FVM) partition to a block device from a VMO.
 zx_status_t WriteVmoToBlock(fzl::MappedVmo* mvmo, size_t vmo_size,
-                            const fbl::unique_fd& partition_fd, const block_info_t& info) {
-    ZX_ASSERT(vmo_size % info.block_size == 0);
+                            const fbl::unique_fd& partition_fd, uint32_t block_size_bytes) {
+    ZX_ASSERT(vmo_size % block_size_bytes == 0);
 
     vmoid_t vmoid;
     block_client::Client client;
@@ -224,7 +225,7 @@ zx_status_t WriteVmoToBlock(fzl::MappedVmo* mvmo, size_t vmo_size,
     request.vmoid = vmoid;
     request.opcode = BLOCKIO_WRITE;
 
-    uint64_t length = vmo_size / info.block_size;
+    uint64_t length = vmo_size / block_size_bytes;
     if (length > UINT32_MAX) {
         ERROR("Error writing partition data: Too large\n");
         return ZX_ERR_OUT_OF_RANGE;
@@ -239,6 +240,36 @@ zx_status_t WriteVmoToBlock(fzl::MappedVmo* mvmo, size_t vmo_size,
     }
     return ZX_OK;
 }
+
+// Writes a raw (non-FVM) partition to a skip-block device from a VMO.
+zx_status_t WriteVmoToSkipBlock(fzl::MappedVmo* mvmo, size_t vmo_size,
+                                const fbl::unique_fd& partition_fd, uint32_t block_size_bytes) {
+    ZX_ASSERT(vmo_size % block_size_bytes == 0);
+
+    zx::vmo dup;
+    zx_status_t status;
+    if ((status = zx_handle_duplicate(mvmo->GetVmo(), ZX_RIGHT_SAME_RIGHTS,
+                                      dup.reset_and_get_address())) != ZX_OK) {
+        ERROR("Couldn't duplicate buffer vmo\n");
+        return status;
+    }
+
+    skip_block_rw_operation_t operation = {
+        .vmo = dup.release(),
+        .vmo_offset = 0,
+        .block = 0,
+        .block_count = static_cast<uint32_t>(vmo_size / block_size_bytes),
+    };
+    bool bad_block_grown;
+
+    if ((status = static_cast<zx_status_t>(ioctl_skip_block_write(
+             partition_fd.get(), &operation, &bad_block_grown))) < 0) {
+        ERROR("Error writing partition data: %d\n", status);
+        return status;
+    }
+    return ZX_OK;
+}
+
 // Checks first few bytes of buffer to ensure it is a ZBI.
 // Also validates architecture in kernel header matches the target.
 bool ValidateKernelZbi(const uint8_t* buffer, size_t size, Arch arch) {
@@ -273,6 +304,10 @@ bool ValidateKernelZbi(const uint8_t* buffer, size_t size, Arch arch) {
 // Parses a partition and validates that it matches the expected format.
 zx_status_t ValidateKernelPayload(fzl::MappedVmo* mvmo, size_t vmo_size, Partition partition_type,
                                   Arch arch) {
+    // TODO(surajmalhotra): Re-enable this as soon as we have a good way to
+    // determine whether the payload is signed or not. (Might require bootserver
+    // changes).
+#if 0
     const auto* buffer = reinterpret_cast<uint8_t*>(mvmo->GetData());
     switch (partition_type) {
     case Partition::kZirconA:
@@ -289,6 +324,7 @@ zx_status_t ValidateKernelPayload(fzl::MappedVmo* mvmo, size_t vmo_size, Partiti
         LOG("Skipping validation as payload is not a ZBI\n");
         break;
     }
+#endif
 
     return ZX_OK;
 }
@@ -366,8 +402,8 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
     // TODO(security): ZX-1130. We need to bind with channel in order to pass a key here.
     // TODO(security): ZX-1864. The created volume must marked as needing key rotation.
     crypto::Secret key;
-    uint8_t *tmp;
-    if((status = key.Allocate(zxcrypt::kZx1130KeyLen, &tmp)) != ZX_OK) {
+    uint8_t* tmp;
+    if ((status = key.Allocate(zxcrypt::kZx1130KeyLen, &tmp)) != ZX_OK) {
         return status;
     }
     memset(tmp, 0, key.len());
@@ -698,13 +734,13 @@ zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
         LOG("Partition already exists\n");
     }
 
-    block_info_t info;
-    if ((status = partitioner->GetBlockInfo(partition_fd, &info)) != ZX_OK) {
-        ERROR("Couldn't get partition block info\n");
+    uint32_t block_size_bytes;
+    if ((status = partitioner->GetBlockSize(partition_fd, &block_size_bytes)) != ZX_OK) {
+        ERROR("Couldn't get partition block size\n");
         return status;
     }
 
-    const size_t vmo_sz = fbl::round_up(1LU << 20, info.block_size);
+    const size_t vmo_sz = fbl::round_up(1LU << 20, block_size_bytes);
     fbl::unique_ptr<fzl::MappedVmo> mvmo;
     if ((status = fzl::MappedVmo::Create(vmo_sz, "partition-pave", &mvmo)) != ZX_OK) {
         ERROR("Failed to create stream VMO\n");
@@ -712,7 +748,8 @@ zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
     }
     // The streamed partition size may not line up with the mapped vmo size.
     size_t payload_size = 0;
-    if ((status = StreamPayloadToVmo(mvmo.get(), payload_fd, info, &payload_size)) != ZX_OK) {
+    if ((status = StreamPayloadToVmo(mvmo.get(), payload_fd, block_size_bytes,
+                                     &payload_size)) != ZX_OK) {
         ERROR("Failed to stream partition to VMO\n");
         return status;
     }
@@ -720,7 +757,11 @@ zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
         ERROR("Failed to validate partition\n");
         return status;
     }
-    status = WriteVmoToBlock(mvmo.get(), payload_size, partition_fd, info);
+    if (partitioner->UseSkipBlockInterface()) {
+        status = WriteVmoToSkipBlock(mvmo.get(), payload_size, partition_fd, block_size_bytes);
+    } else {
+        status = WriteVmoToBlock(mvmo.get(), payload_size, partition_fd, block_size_bytes);
+    }
     if (status != ZX_OK) {
         ERROR("Failed to write partition to block\n");
         return status;
