@@ -43,7 +43,7 @@ source_set("vkcube_common") {
     "//garnet/public/lib/ui/views/fidl:v1",
     "//garnet/public/lib/vulkan",
     "//garnet/public/lib/ui/scenic",
-    "//garnet/public/lib/ui/scenic:client",
+    "//garnet/public/lib/ui/scenic/cpp",
   ]
 
   public_deps = [

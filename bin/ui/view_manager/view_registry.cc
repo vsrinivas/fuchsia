@@ -22,7 +22,7 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/ui/input/cpp/formatting.h"
-#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/views/cpp/formatting.h"
 
 namespace view_manager {

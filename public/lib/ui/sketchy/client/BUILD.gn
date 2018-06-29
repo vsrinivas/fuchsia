@@ -15,7 +15,7 @@ source_set("client") {
   public_deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/ui/scenic:client",
+    "//garnet/public/lib/ui/scenic/cpp",
     "//garnet/public/lib/ui/sketchy/fidl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",

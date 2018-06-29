@@ -29,7 +29,7 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/ui/input/device_state.h"
 #include "lib/ui/input/input_device_impl.h"
-#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/cpp/resources.h"
 #if defined(countof)
 // Workaround for compiler error due to Zircon defining countof() as a macro.
 // Redefines countof() using GLM_COUNTOF(), which currently provides a more

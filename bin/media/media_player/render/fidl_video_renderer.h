@@ -15,7 +15,7 @@
 #include "garnet/bin/media/media_player/metrics/value_tracker.h"
 #include "garnet/bin/media/media_player/render/video_converter.h"
 #include "garnet/bin/media/media_player/render/video_renderer.h"
-#include "lib/ui/scenic/client/host_image_cycler.h"
+#include "lib/ui/scenic/cpp/host_image_cycler.h"
 #include "lib/ui/view_framework/base_view.h"
 
 namespace media_player {

@@ -20,7 +20,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/input/input_device_impl.h"
-#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/cpp/resources.h"
 
 namespace root_presenter {
 

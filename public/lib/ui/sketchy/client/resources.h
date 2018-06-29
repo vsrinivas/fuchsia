@@ -8,7 +8,7 @@
 #include <fuchsia/ui/sketchy/cpp/fidl.h>
 #include <garnet/public/lib/fxl/memory/ref_counted.h>
 
-#include "lib/ui/scenic/client/session.h"
+#include "lib/ui/scenic/cpp/session.h"
 #include "lib/ui/sketchy/client/types.h"
 
 namespace sketchy_lib {

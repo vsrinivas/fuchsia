@@ -18,7 +18,7 @@ executable("shapes_a11y") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/a11y/fidl",
     "//garnet/public/lib/ui/gfx/fidl",
-    "//garnet/public/lib/ui/scenic:client",
+    "//garnet/public/lib/ui/scenic/cpp",
     "//garnet/public/lib/ui/view_framework:view_provider",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//zircon/public/lib/async-loop-cpp",

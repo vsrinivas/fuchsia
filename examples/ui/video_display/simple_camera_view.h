@@ -12,7 +12,7 @@
 #include <lib/app/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fxl/macros.h>
-#include <lib/ui/scenic/client/resources.h>
+#include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/view_framework/base_view.h>
 
 namespace video_display {

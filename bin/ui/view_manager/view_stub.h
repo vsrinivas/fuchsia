@@ -13,7 +13,7 @@
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/cpp/resources.h"
 
 namespace view_manager {
 

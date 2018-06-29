@@ -9,8 +9,8 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "lib/app/cpp/startup_context.h"
-#include "lib/ui/scenic/client/resources.h"
-#include "lib/ui/scenic/client/session.h"
+#include "lib/ui/scenic/cpp/resources.h"
+#include "lib/ui/scenic/cpp/session.h"
 #include "lib/ui/sketchy/client/resources.h"
 
 namespace sketchy_lib {

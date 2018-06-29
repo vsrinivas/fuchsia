@@ -11,7 +11,7 @@
 #include "lib/escher/flib/fence_listener.h"
 #include "lib/escher/vk/buffer_factory.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/ui/scenic/client/session.h"
+#include "lib/ui/scenic/cpp/session.h"
 
 namespace sketchy_service {
 

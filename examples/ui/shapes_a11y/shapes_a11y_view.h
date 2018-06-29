@@ -13,7 +13,7 @@
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/services.h"
-#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/view_framework/base_view.h"
 
 class SkCanvas;

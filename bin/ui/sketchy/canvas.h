@@ -17,7 +17,7 @@
 #include "garnet/bin/ui/sketchy/stroke/stroke_manager.h"
 #include "lib/escher/escher.h"
 #include "lib/escher/vk/buffer_factory.h"
-#include "lib/ui/scenic/client/session.h"
+#include "lib/ui/scenic/cpp/session.h"
 
 namespace sketchy_service {
 

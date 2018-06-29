@@ -13,8 +13,8 @@
 #include "garnet/bin/ui/sketchy/stroke/stroke_fitter.h"
 #include "garnet/bin/ui/sketchy/stroke/stroke_path.h"
 #include "garnet/bin/ui/sketchy/stroke/stroke_tessellator.h"
-#include "lib/ui/scenic/client/resources.h"
-#include "lib/ui/scenic/client/session.h"
+#include "lib/ui/scenic/cpp/resources.h"
+#include "lib/ui/scenic/cpp/session.h"
 
 namespace sketchy_service {
 

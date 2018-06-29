@@ -11,7 +11,7 @@
 #include <lib/fit/function.h>
 
 #include "lib/fxl/macros.h"
-#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/view_framework/base_view.h"
 
 class VkCubeView : public mozart::BaseView {

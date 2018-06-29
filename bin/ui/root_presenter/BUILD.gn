@@ -43,7 +43,7 @@ executable("root_presenter") {
     "//garnet/public/lib/ui/input/cpp",
     "//garnet/public/lib/ui/input/fidl",
     "//garnet/public/lib/ui/policy/fidl",
-    "//garnet/public/lib/ui/scenic:client",
+    "//garnet/public/lib/ui/scenic/cpp",
     "//garnet/public/lib/ui/views/cpp",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//zircon/public/lib/async-loop-cpp",

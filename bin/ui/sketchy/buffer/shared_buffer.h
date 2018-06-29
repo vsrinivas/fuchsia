@@ -6,8 +6,8 @@
 #define GARNET_BIN_UI_SKETCHY_BUFFER_SHARED_BUFFER_H_
 
 #include "lib/escher/vk/buffer_factory.h"
-#include "lib/ui/scenic/client/resources.h"
-#include "lib/ui/scenic/client/session.h"
+#include "lib/ui/scenic/cpp/resources.h"
+#include "lib/ui/scenic/cpp/session.h"
 
 namespace sketchy_service {
 

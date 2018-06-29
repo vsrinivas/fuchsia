@@ -10,7 +10,7 @@
 
 #include "garnet/bin/ui/root_presenter/displays/display_model.h"
 #include "lib/ui/input/input_device_impl.h"
-#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/cpp/resources.h"
 
 namespace root_presenter {
 

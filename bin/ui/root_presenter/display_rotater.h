@@ -22,7 +22,7 @@
 
 #include "garnet/bin/ui/root_presenter/rk4_spring_simulation.h"
 #include "lib/fxl/macros.h"
-#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/cpp/resources.h"
 
 namespace root_presenter {
 

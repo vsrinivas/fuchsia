@@ -6,7 +6,7 @@
 #define GARNET_BIN_UI_ROOT_PRESENTER_PRESENTATION_SWITCHER_H_
 
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/cpp/resources.h"
 
 namespace root_presenter {
 

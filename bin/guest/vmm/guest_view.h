@@ -16,8 +16,8 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/ui/scenic/client/host_memory.h"
-#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/cpp/host_memory.h"
+#include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/view_framework/base_view.h"
 
 // For now we expose a fixed size display to the guest. Scenic will scale this
