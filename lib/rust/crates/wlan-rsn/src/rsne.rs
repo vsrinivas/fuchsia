@@ -28,7 +28,7 @@ pub const ID: u8 = 48;
 pub const VERSION: u16 = 1;
 
 // IEEE 802.11-2016, 9.4.2.25.1
-#[derive(Default, Debug, PartialOrd, PartialEq)]
+#[derive(Default, Debug, PartialOrd, PartialEq, Clone)]
 pub struct Rsne {
     pub version: u16,
     pub group_data_cipher_suite: Option<cipher::Cipher>,

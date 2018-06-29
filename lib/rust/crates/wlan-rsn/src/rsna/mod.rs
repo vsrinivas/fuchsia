@@ -6,7 +6,7 @@ use eapol;
 use failure;
 use key::exchange::Key;
 
-mod esssa;
+pub mod esssa;
 #[cfg(test)]
 pub mod test_util;
 

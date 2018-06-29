@@ -125,7 +125,7 @@ impl GtkInitState {
             (Some(gtk), Some(rsne)) => {
                 if &rsne == &shared.cfg.a_rsne {
                     let msg4 = self.create_message_4(shared, msg3)?;
-                    Ok((msg4, Gtk::from_gtk(gtk.gtk)))
+                    Ok((msg4, Gtk::from_gtk(gtk.gtk, gtk.info.key_id())))
                 } else {
                     Err(Error::InvalidKeyDataRsne.into())
                 }

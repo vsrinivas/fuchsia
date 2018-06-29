@@ -18,15 +18,15 @@ extern crate test;
 extern crate time;
 
 pub mod akm;
-mod auth;
+pub mod auth;
 pub mod cipher;
 mod crypto_utils;
 mod integrity;
-mod key;
+pub mod key;
 mod key_data;
 mod keywrap;
 mod pmkid;
-mod rsna;
+pub mod rsna;
 pub mod rsne;
 pub mod suite_selector;
 
