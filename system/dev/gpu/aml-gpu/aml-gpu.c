@@ -32,6 +32,7 @@ static void aml_gpu_set_clk_freq_source(aml_gpu_t* gpu, int32_t clk_source) {
     }
 
     aml_gpu_block_t* gpu_block = gpu->gpu_block;
+    GPU_INFO("Setting clock source to %d: %d\n", clk_source, gpu_block->gpu_clk_freq[clk_source]);
     uint32_t current_clk_cntl = READ32_HIU_REG(gpu_block->hhi_clock_cntl_offset);
     uint32_t enabled_mux = current_clk_cntl & (1 << FINAL_MUX_BIT_SHIFT);
     uint32_t new_mux = enabled_mux == 0;
@@ -65,6 +66,7 @@ static void aml_gpu_set_initial_clk_freq_source(aml_gpu_t* gpu, int32_t clk_sour
     if (current_clk_cntl & (1 << (mux_shift + CLK_ENABLED_BIT_SHIFT))) {
          aml_gpu_set_clk_freq_source(gpu, clk_source);
     } else {
+        GPU_INFO("Setting initial clock source to %d: %d\n", clk_source, gpu_block->gpu_clk_freq[clk_source]);
         // Switching the final dynamic mux from a disabled source to an enabled
         // source doesn't work. If the current clock source is disabled, then
         // enable it instead of switching.

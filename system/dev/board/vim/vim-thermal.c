@@ -67,7 +67,7 @@ static aml_thermal_config_t aml_vim2_config = {
             .fan_level                  = 0,
             .big_cluster_dvfs_opp       = 6,
             .little_cluster_dvfs_opp    = 4,
-            .gpu_clk_freq_source        = 2,
+            .gpu_clk_freq_source        = 3,
         },
         {
             .fan_level                  = 1,
@@ -75,7 +75,7 @@ static aml_thermal_config_t aml_vim2_config = {
             .down_temp                  = 43,
             .big_cluster_dvfs_opp       = 6,
             .little_cluster_dvfs_opp    = 4,
-            .gpu_clk_freq_source        = 2,
+            .gpu_clk_freq_source        = 3,
         },
         {
             .fan_level                  = 2,
@@ -83,7 +83,7 @@ static aml_thermal_config_t aml_vim2_config = {
             .down_temp                  = 53,
             .big_cluster_dvfs_opp       = 6,
             .little_cluster_dvfs_opp    = 4,
-            .gpu_clk_freq_source        = 2,
+            .gpu_clk_freq_source        = 3,
         },
         {
             .fan_level                  = 3,
@@ -91,7 +91,7 @@ static aml_thermal_config_t aml_vim2_config = {
             .down_temp                  = 58,
             .big_cluster_dvfs_opp       = 6,
             .little_cluster_dvfs_opp    = 4,
-            .gpu_clk_freq_source        = 2,
+            .gpu_clk_freq_source        = 3,
         },
         {
             .fan_level                  = 3,
