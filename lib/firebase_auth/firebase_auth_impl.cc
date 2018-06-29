@@ -24,12 +24,18 @@ constexpr int32_t kCobaltNoOpEncodingId = 3;
 // Returns true if the authentication failure may be transient.
 bool IsRetriableError(fuchsia::modular::auth::Status status) {
   switch (status) {
-    // TODO(AUTH-50): update once retriable errors are documented.
+    case fuchsia::modular::auth::Status::OK:  // This should never happen.
     case fuchsia::modular::auth::Status::BAD_REQUEST:
+    case fuchsia::modular::auth::Status::OAUTH_SERVER_ERROR:
+    case fuchsia::modular::auth::Status::USER_CANCELLED:
       return false;
-    default:
+    case fuchsia::modular::auth::Status::BAD_RESPONSE:
+    case fuchsia::modular::auth::Status::NETWORK_ERROR:
+    case fuchsia::modular::auth::Status::INTERNAL_ERROR:
       return true;
   }
+  // In case of unexpected status, retry just in case.
+  return true;
 }
 }  // namespace
 

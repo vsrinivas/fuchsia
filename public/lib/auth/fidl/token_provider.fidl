@@ -43,12 +43,28 @@ struct AuthErr {
 
 // Specifies the success/failure status.
 enum Status {
+  // Success
   OK = 0;
+  // A problem with client configuration such as invalid_client, missing params
+  // etc. This should happen only in development not at run-time, unless
+  // user/developer changes any of this config. No retry is required.
   BAD_REQUEST = 1;
+  // Unable to parse the server side response. Retry is optional, this error
+  // should be extremely rare.
   BAD_RESPONSE = 2;
+  // Server is reachable and propagated an error returned by OAuth Server
+  // backends.  That kind of error cannot be fixed on retries, and has some
+  // root cause that needs to be addressed either in the client's configuration
+  // or because the user explicitly revoked access to the client app.  For
+  // instance: invalid_token, expired_token, invalid_client_id, invalid_user,
+  // invalid_args, etc.
   OAUTH_SERVER_ERROR = 3;
+  // User cancelled the flow, no need to retry.
   USER_CANCELLED = 4;
+  // Network error, eg. unreachable. This may be temporary, a retry is
+  // recommended.
   NETWORK_ERROR = 5;
+  // Internal error. Retry is optional, this error should be rare.
   INTERNAL_ERROR = 6;
 };
 
