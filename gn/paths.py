@@ -9,7 +9,6 @@ import platform
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 FUCHSIA_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, os.pardir, os.pardir))
 GN_PATH = os.path.join(FUCHSIA_ROOT, "buildtools", "gn")
-MKBOOTFS_PATH = os.path.join(FUCHSIA_ROOT, "out", "build-zircon", "tools", "mkbootfs")
 BUILDTOOLS_PATH = os.path.join(FUCHSIA_ROOT, "buildtools", '%s-%s' % (
     platform.system().lower().replace('darwin', 'mac'),
     {
