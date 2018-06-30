@@ -55,33 +55,44 @@ pub fn listen_central_events(
             match evt {
                 CentralEvent::OnScanStateChanged { scanning } => {
                     eprintln!("  scan state changed: {}", scanning);
+                    Left(future::ok(()))
                 }
                 CentralEvent::OnDeviceDiscovered { device } => {
                     let id = device.identifier.clone();
                     let connectable = device.connectable;
+
                     eprintln!(" {}", RemoteDeviceWrapper(device));
+
                     let central = state.read();
-                    if central.scan_once || central.connect {
-                        // Stop scanning.
-                        if let Err(e) = central.svc.stop_scan() {
-                            eprintln!("request to stop scan failed: {}", e);
+                    if !central.scan_once && !central.connect {
+                        return Left(future::ok(()));
+                    }
+
+                    // Stop scanning.
+                    if let Err(e) = central.svc.stop_scan() {
+                        eprintln!("request to stop scan failed: {}", e);
+                        // TODO(armansito): kill the channel here instead
+                        exit(0);
+                        Left(future::ok(()))
+                    } else if central.connect && connectable {
+                        Right(connect_peripheral(state.clone(), id).recover(|_| {
                             // TODO(armansito): kill the channel here instead
                             exit(0);
-                        } else if central.connect && connectable {
-                            connect_peripheral(state.clone(), id);
-                        } else {
-                            // TODO(armansito): kill the channel here instead
-                            exit(0);
-                        }
+                            ()
+                        }))
+                    } else {
+                        // TODO(armansito): kill the channel here instead
+                        exit(0);
+                        Left(future::ok(()))
                     }
                 }
                 CentralEvent::OnPeripheralDisconnected { identifier } => {
                     eprintln!("  peer disconnected: {}", identifier);
                     // TODO(armansito): Close the channel here instead
                     exit(0);
+                    Left(future::ok(()))
                 }
             }
-            future::ok(())
         })
         .map(|_| ())
         .recover(|e| eprintln!("failed to subscribe to BLE Central events: {:?}", e))
@@ -107,7 +118,7 @@ fn connect_peripheral(
             .svc
             .connect_peripheral(&mut id, server)
             .map_err(|e| {
-                BTError::new(&format!("failed to initiaate connect request: {}", e)).into()
+                BTError::new(&format!("failed to initiate connect request: {}", e)).into()
             })
             .and_then(move |status| match status.error {
                 Some(e) => {
