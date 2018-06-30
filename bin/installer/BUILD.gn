@@ -2,14 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("install-fuchsia-c") {
-  sources = [ "install-fuchsia.c" ]
-  deps = [
-    "//zircon/public/lib/fdio",
-    "//zircon/public/lib/zx",
-  ]
-}
-
 copy("install-fuchsia") {
   sources = [ "install-fuchsia.sh" ]
   outputs = [ "$root_build_dir/install-fuchsia" ]
