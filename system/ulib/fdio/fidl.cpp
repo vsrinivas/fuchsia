@@ -422,6 +422,17 @@ zx_status_t zxrio_encode_response(zx_status_t status, zxrio_msg_t* msg, uint32_t
         encode_response_status<fuchsia_io_DirectoryRewindResponse>(msg, status, sz);
         break;
     }
+    case ZXFIDL_GET_TOKEN: {
+        auto response = encode_response_status<fuchsia_io_DirectoryGetTokenResponse>(msg, status, sz);
+        if (response->s != ZX_OK) {
+            response->token = FIDL_HANDLE_ABSENT;
+        } else {
+            handles[0] = response->token;
+            *hcount = 1;
+            response->token = FIDL_HANDLE_PRESENT;
+        }
+        break;
+    }
     case ZXFIDL_GET_VMO: {
         auto response = encode_response_status<fuchsia_io_FileGetVmoResponse>(msg, status, sz);
         if (response->s != ZX_OK) {

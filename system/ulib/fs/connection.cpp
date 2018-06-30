@@ -859,6 +859,16 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
 
         return vnode_->Truncate(length);
     }
+    case ZXFIDL_GET_TOKEN: {
+        TRACE_DURATION("vfs", "ZXFIDL_GET_TOKEN");
+        auto response = reinterpret_cast<fuchsia_io_DirectoryGetTokenResponse*>(msg);
+        zx::event returned_token;
+        zx_status_t status = vfs_->VnodeToToken(vnode_, &token_, &returned_token);
+        if (status == ZX_OK) {
+            response->token = returned_token.release();
+        }
+        return status;
+    }
     case ZXFIDL_RENAME:
     case ZXFIDL_LINK:
     case ZXRIO_RENAME:
