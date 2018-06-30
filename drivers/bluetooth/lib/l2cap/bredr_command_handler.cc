@@ -90,15 +90,17 @@ void BrEdrCommandHandler::InformationResponder::SendConnectionlessMtu(
 }
 
 void BrEdrCommandHandler::InformationResponder::SendExtendedFeaturesSupported(
-    uint32_t mask) {
-  mask = htole32(mask);
-  Send(InformationResult::kSuccess, BufferView(&mask, sizeof(mask)));
+    ExtendedFeatures extended_features) {
+  extended_features = htole32(extended_features);
+  Send(InformationResult::kSuccess,
+       BufferView(&extended_features, sizeof(extended_features)));
 }
 
 void BrEdrCommandHandler::InformationResponder::SendFixedChannelsSupported(
-    uint64_t mask) {
-  mask = htole64(mask);
-  Send(InformationResult::kSuccess, BufferView(&mask, sizeof(mask)));
+    FixedChannelsSupported channels_supported) {
+  channels_supported = htole64(channels_supported);
+  Send(InformationResult::kSuccess,
+       BufferView(&channels_supported, sizeof(channels_supported)));
 }
 
 void BrEdrCommandHandler::InformationResponder::Send(InformationResult result,

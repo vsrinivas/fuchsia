@@ -112,34 +112,32 @@ enum class InformationResult : uint16_t {
   kNotSupported = 0x0001,
 };
 
-// Bit masks for Extended Features Supported in the Information Response data
-// field (Vol 3, Part A, Section 4.12)
-enum class ExtendFeatures : uint32_t {
-  kFlowControl = 1 << 0,
-  kRetransmission = 1 << 1,
-  kBidirectionalQoS = 1 << 2,
-  kEnhancedRetransmission = 1 << 3,
-  kStreaming = 1 << 4,
-  kFCSOption = 1 << 5,
-  kExtendedFlowSpecification = 1 << 6,
-  kFixedChannels = 1 << 7,
-  kExtendedWindowSize = 1 << 8,
-  kUnicastConnectionlessDataRx = 1 << 9,
-};
+// Type and bit masks for Extended Features Supported in the Information
+// Response data field (Vol 3, Part A, Section 4.12)
+using ExtendedFeatures = uint32_t;
+constexpr ExtendedFeatures kExtendedFeaturesBitFlowControl = 1 << 0;
+constexpr ExtendedFeatures kExtendedFeaturesBitRetransmission = 1 << 1;
+constexpr ExtendedFeatures kExtendedFeaturesBitBidirectionalQoS = 1 << 2;
+constexpr ExtendedFeatures kExtendedFeaturesBitEnhancedRetransmission = 1 << 3;
+constexpr ExtendedFeatures kExtendedFeaturesBitStreaming = 1 << 4;
+constexpr ExtendedFeatures kExtendedFeaturesBitFCSOption = 1 << 5;
+constexpr ExtendedFeatures kExtendedFeaturesBitExtendedFlowSpecification = 1 << 6;
+constexpr ExtendedFeatures kExtendedFeaturesBitFixedChannels = 1 << 7;
+constexpr ExtendedFeatures kExtendedFeaturesBitExtendedWindowSize = 1 << 8;
+constexpr ExtendedFeatures kExtendedFeaturesBitUnicastConnectionlessDataRx = 1 << 9;
 
-// Bit masks for Fixed Channels Supported in the Information Response data
-// field (Vol 3, Part A, Section 4.12)
-enum class FixedChannelsSupported : uint64_t {
-  kNull = 1ULL << 0,
-  kSignaling = 1ULL << 1,
-  kConnectionless = 1ULL << 2,
-  kAMPManager = 1ULL << 3,
-  kATT = 1ULL << 4,
-  kLESignaling = 1ULL << 5,
-  kSMP = 1ULL << 6,
-  kSM = 1ULL << 7,
-  kAMPTestManager = 1ULL << 63,
-};
+// Type and bit masks for Fixed Channels Supported in the Information Response
+// data field (Vol 3, Part A, Section 4.12)
+using FixedChannelsSupported = uint64_t;
+constexpr FixedChannelsSupported kFixedChannelsSupportedBitNull = 1ULL << 0;
+constexpr FixedChannelsSupported kFixedChannelsSupportedBitSignaling = 1ULL << 1;
+constexpr FixedChannelsSupported kFixedChannelsSupportedBitConnectionless = 1ULL << 2;
+constexpr FixedChannelsSupported kFixedChannelsSupportedBitAMPManager = 1ULL << 3;
+constexpr FixedChannelsSupported kFixedChannelsSupportedBitATT = 1ULL << 4;
+constexpr FixedChannelsSupported kFixedChannelsSupportedBitLESignaling = 1ULL << 5;
+constexpr FixedChannelsSupported kFixedChannelsSupportedBitSMP = 1ULL << 6;
+constexpr FixedChannelsSupported kFixedChannelsSupportedBitSM = 1ULL << 7;
+constexpr FixedChannelsSupported kFixedChannelsSupportedBitAMPTestManager = 1ULL << 63;
 
 enum class ConnectionParameterUpdateResult : uint16_t {
   kAccepted = 0x0000,

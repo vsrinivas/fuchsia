@@ -242,9 +242,9 @@ class BrEdrCommandHandler final {
 
     void SendConnectionlessMtu(uint16_t mtu);
 
-    void SendExtendedFeaturesSupported(uint32_t mask);
+    void SendExtendedFeaturesSupported(ExtendedFeatures extended_features);
 
-    void SendFixedChannelsSupported(uint64_t mask);
+    void SendFixedChannelsSupported(FixedChannelsSupported channels_supported);
 
    private:
     void Send(InformationResult result, const common::ByteBuffer& data);
