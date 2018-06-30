@@ -26,7 +26,6 @@ namespace {
 
 static constexpr char kEchoSuccessAndArgs[] = "echo Success! $@";
 static constexpr char kEchoFailureAndArgs[] = "echo Failure!  $@ 1>&2\nexit 77";
-static constexpr size_t kOneMegabyte = 1 << 20;
 static constexpr char kExpectedJSONOutputPrefix[] = "{\"tests\":[\n";
 // We don't want to count the null terminator.
 static constexpr size_t kExpectedJSONOutputPrefixSize = sizeof(kExpectedJSONOutputPrefix) - 1;
@@ -165,6 +164,20 @@ int NumEntriesInDir(const char* dir_path) {
     }
     closedir(dp);
     return num_entries;
+}
+
+// Returns true if and only if the contents of |file| match |expected|.
+bool CompareFileContents(FILE* file, const char* expected) {
+    BEGIN_HELPER;
+    // Get the size of the file contents, copy it into a buffer, and compare.
+    ASSERT_EQ(0, fseek(file, 0, SEEK_END));
+    const long unsigned int size = ftell(file);
+    rewind(file);
+    fbl::unique_ptr<char[]> buf(new char[size + 1]);
+    buf[size] = 0;
+    ASSERT_EQ(size, fread(buf.get(), sizeof(char), size, file));
+    EXPECT_STR_EQ(expected, buf.get());
+    END_HELPER;
 }
 
 // Computes the relative path within |output_dir| of the output file of the
@@ -392,14 +405,13 @@ bool MkDirAllParentDoesNotExist() {
 bool WriteSummaryJSONSucceeds() {
     BEGIN_TEST;
 
-    // A reasonable guess that the function won't output more than this.
-    fbl::unique_ptr<char[]> buf(new char[kOneMegabyte]);
-    FILE* buf_file = fmemopen(buf.get(), kOneMegabyte, "w");
+    FILE* output_file = tmpfile();
+    ASSERT_NONNULL(output_file);
     fbl::Vector<fbl::unique_ptr<Result>> results;
     results.push_back(fbl::make_unique<Result>("/a", SUCCESS, 0));
     results.push_back(fbl::make_unique<Result>("b", FAILED_TO_LAUNCH, 0));
-    ASSERT_EQ(0, WriteSummaryJSON(results, "output.txt", "/tmp/file_path", buf_file));
-    fclose(buf_file);
+    ASSERT_EQ(0, WriteSummaryJSON(results, "output.txt", "/tmp/file_path",
+                                  output_file));
     // We don't have a JSON parser in zircon right now, so just hard-code the expected output.
     const char kExpectedJSONOutput[] = R"({"tests":[
 {"name":"/a","output_file":"a/output.txt","result":"PASS"},
@@ -409,7 +421,8 @@ bool WriteSummaryJSONSucceeds() {
 "syslog_file":"/tmp/file_path"
 }}
 )";
-    EXPECT_STR_EQ(kExpectedJSONOutput, buf.get());
+    EXPECT_TRUE(CompareFileContents(output_file, kExpectedJSONOutput));
+    fclose(output_file);
 
     END_TEST;
 }
@@ -417,14 +430,13 @@ bool WriteSummaryJSONSucceeds() {
 bool WriteSummaryJSONSucceedsWithoutSyslogPath() {
     BEGIN_TEST;
 
-    // A reasonable guess that the function won't output more than this.
-    fbl::unique_ptr<char[]> buf(new char[kOneMegabyte]);
-    FILE* buf_file = fmemopen(buf.get(), kOneMegabyte, "w");
+    FILE* output_file = tmpfile();
+    ASSERT_NONNULL(output_file);
     fbl::Vector<fbl::unique_ptr<Result>> results;
     results.push_back(fbl::make_unique<Result>("/a", SUCCESS, 0));
     results.push_back(fbl::make_unique<Result>("b", FAILED_TO_LAUNCH, 0));
-    ASSERT_EQ(0, WriteSummaryJSON(results, "output.txt", /*syslog_path=*/"", buf_file));
-    fclose(buf_file);
+    ASSERT_EQ(0, WriteSummaryJSON(results, "output.txt", /*syslog_path=*/"",
+                                  output_file));
     // With an empty syslog_path, we expect no values under "outputs" and "syslog_file" to
     // be generated in the JSON output.
     const char kExpectedJSONOutput[] = R"({"tests":[
@@ -432,7 +444,9 @@ bool WriteSummaryJSONSucceedsWithoutSyslogPath() {
 {"name":"b","output_file":"b/output.txt","result":"FAIL"}
 ]}
 )";
-    EXPECT_STR_EQ(kExpectedJSONOutput, buf.get(), );
+
+    EXPECT_TRUE(CompareFileContents(output_file, kExpectedJSONOutput));
+    fclose(output_file);
 
     END_TEST;
 }
@@ -440,15 +454,16 @@ bool WriteSummaryJSONSucceedsWithoutSyslogPath() {
 bool WriteSummaryJSONBadTestName() {
     BEGIN_TEST;
 
-    // A reasonable guess that the function won't output more than this.
-    fbl::unique_ptr<char[]> buf(new char[kOneMegabyte]);
-    FILE* buf_file = fmemopen(buf.get(), kOneMegabyte, "w");
+    FILE* output_file = tmpfile();
+    ASSERT_NONNULL(output_file);
     // A test name and output file consisting entirely of slashes should trigger an error.
     fbl::Vector<fbl::unique_ptr<Result>> results;
     results.push_back(fbl::make_unique<Result>("///", SUCCESS, 0));
     results.push_back(fbl::make_unique<Result>("b", FAILED_TO_LAUNCH, 0));
-    ASSERT_NE(0, WriteSummaryJSON(results, /*output_file_basename=*/"///", /*syslog_path=*/"/", buf_file));
-    fclose(buf_file);
+    ASSERT_NE(0, WriteSummaryJSON(results, /*output_file_basename=*/"///",
+                                  /*syslog_path=*/"/",
+                                  output_file));
+    fclose(output_file);
 
     END_TEST;
 }
@@ -923,9 +938,9 @@ RUN_TEST(MkDirAllParentDoesNotExist)
 END_TEST_CASE(MkDirAll)
 
 BEGIN_TEST_CASE(WriteSummaryJSON)
-RUN_TEST(WriteSummaryJSONSucceeds)
-RUN_TEST(WriteSummaryJSONSucceedsWithoutSyslogPath)
-RUN_TEST(WriteSummaryJSONBadTestName)
+RUN_TEST_MEDIUM(WriteSummaryJSONSucceeds)
+RUN_TEST_MEDIUM(WriteSummaryJSONSucceedsWithoutSyslogPath)
+RUN_TEST_MEDIUM(WriteSummaryJSONBadTestName)
 END_TEST_CASE(WriteSummaryJSON)
 
 BEGIN_TEST_CASE(ResolveGlobs)
