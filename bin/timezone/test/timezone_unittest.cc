@@ -13,11 +13,9 @@ using namespace fuchsia::timezone;
 using namespace time_zone;
 
 constexpr char kIcuDataPath[] =
-    // TODO(CP-76): use "/pkg/data/icudtl.dat"
+    // TODO(CP-77): use "/pkg/data/icudtl.dat"
     "/pkgfs/packages/timezone_tests/0/data/icudtl.dat";
-constexpr char kTzIdPath[] =
-    // TODO(CP-76): use some temp path in RAM
-    "/tmp/timezone-unittest-tz_id_path";
+constexpr char kTzIdPath[] = "/tmp/timezone-unittest-tz_id_path";
 
 class TimezoneUnitTest : public fuchsia::sys::testing::TestWithContext {
  protected:
