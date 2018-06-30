@@ -3,7 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/config/clang/clang.gni")
-import("//build/config/fuchsia/bootdata.gni")
+import("//build/config/fuchsia/zbi.gni")
+import("//build/config/fuchsia/zircon.gni")
 import("//build/gn/packages.gni")
 import("//build/images/boot.gni")
 import("//build/images/manifest.gni")
@@ -11,22 +12,7 @@ import("//build/package.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//garnet/go/src/amber/amber.gni")
 
-###
-### Zircon BOOTFS and kernel command-line BOOTDATA images.  These are not
-### directly usable, but they capture all the Zircon bits and are ready to
-### be combined with a system image to make a complete image.
-###
-
 declare_args() {
-  # File containing kernel command line arguments to roll into the
-  # bootdata image used for booting.
-  kernel_cmdline_file = ""
-
-  # When this is set, Crashpad will be used to handle exceptions (which uploads
-  # crashes to the crash server), rather than crashanalyzer in Zircon (which
-  # prints a backtrace the the system log).
-  enable_crashpad = false
-
   # Groups to include from the Zircon /boot manifest into /boot.
   # This is either "all" or a comma-separated list of one or more of:
   #   core -- necessary to boot
@@ -40,26 +26,14 @@ declare_args() {
   # (instead of into /boot like Zircon's own bootdata.bin does).
   # Should not include any groups that are also in zircon_boot_groups,
   # which see.  If zircon_boot_groups is "all" then this should be "".
+  # **TODO(mcgrathr)**: _Could default to "" for `!is_debug`, or "production
+  # build".  Note including `"test"` here places all of Zircon's tests into
+  # `/system/test`, which means that Fuchsia bots run those tests too._
+  zircon_system_groups = "misc,test"
   if (zircon_boot_groups == "all") {
     zircon_system_groups = ""
-  } else {
-    # TODO(mcgrathr): Could default to "" for !is_debug, or "production
-    # build".  Note including "test" here places all of Zircon's tests
-    # into /system/test, which means that Fuchsia bots run those tests
-    # too.
-    zircon_system_groups = "misc,test"
   }
 }
-
-# image_paths aggregates a list of environment variable style strings of the form:
-# IMAGE_{NAME}_{TYPE}=path
-# path is relative to $root_build_dir.
-# This will be written out at generation time and is later consumed by
-# //scripts and various tools to find the relevant images.
-# TYPE can be: SPARSE (sparse FVM), RAW (block image for any FS), ZBI (bootable
-# zircon image), RAM (ramdisk without kernel), VBOOT (bootable zircon image
-# with a vboot signature).
-image_paths = []
 
 if (zircon_boot_groups == "all") {
   assert(zircon_system_groups == "",
@@ -69,77 +43,40 @@ if (zircon_boot_groups == "all") {
          "zircon_system_groups cannot include core (or all)")
 }
 
-# Generate the manifest of pure Zircon components going into /boot.
-generate_manifest("boot.manifest") {
-  visibility = [ ":*" ]
-  zircon_groups = zircon_boot_groups
-  args = []
-}
+# This will collect a list of scopes describing each image exported.
+# Each scope contains:
+#
+#   deps (required)
+#     [list of labels] Target that generates the image file.
+#     If `sources` is not specified, this must be an action in this file.
+#
+#   installer (optional)
+#     [string] Put this image into the installer image under this name.
+#
+#   public (optional)
+#     [list of strings] Each is "IMAGE_{NAME}_{TYPE}" where `TYPE` can be:
+#     `SPARSE` (sparse FVM), `RAW` (block image for any FS), `ZBI`
+#     (bootable zircon image), `RAM` (ramdisk without kernel--obsolete),
+#     `VBOOT` (ZBI in a vboot container).  "IMAGE_{NAME}_{TYPE}={FILE}"
+#     will be written out (with `FILE` relative to `root_build_dir`), to be
+#     consumed by //scripts and various tools to find the relevant images.
+#
+#   sdk (optional)
+#     [string] Put this image into the SDK under this name.
+#
+#   sources (optional)
+#     [list of files] The image file.
+#
+#   updater (optional)
+#     [string] Put this image into the update manifest under this name.
+#
+images = []
 
-boot_manifest_outputs = get_target_outputs(":boot.manifest")
-boot_manifest = boot_manifest_outputs[0]
-boot_build_id_map = boot_manifest_outputs[1]
-
-# Generate a BOOTDATA container of the compressed BOOTFS image for /boot.
-# It only has to be compressed once, and then this container is combined
-# with more BOOTDATA below to make specific images for booting.
-bootdata("boot") {
-  visibility = [ ":*" ]
-  boot = true
-  deps = [
-    ":boot.manifest",
-  ]
-  inputs = [
-    boot_manifest,
-  ]
-}
-
-# Inject fixed kernel command-line arguments maintained in the source tree.
-bootdata_cmdline("cmdline") {
-  visibility = [ ":*" ]
-  inputs = [
-    "cmdline.txt",
-  ]
-}
-
-# Let the build configuration choose some extra fixed command-line arguments.
-if (kernel_cmdline_file != "") {
-  bootdata_cmdline("extra_cmdline") {
-    visibility = [ ":*" ]
-    inputs = [
-      kernel_cmdline_file,
-    ]
-  }
-}
-
-if (enable_crashpad) {
-  bootdata_cmdline("crashpad_cmdline") {
-    visibility = [ ":*" ]
-    inputs = [
-      "crashpad.kernel.args",
-    ]
-  }
-}
-
-# This makes the complete Zircon BOOTDATA image (sans the kernel itself).
-# This includes the /boot filesystem and the fixed kernel command line
-# settings from the build (cmdline.txt and build argument
-# `kernel_cmdline_file`).
-bootdata("bootdata") {
-  deps = [
-    ":boot",
-    ":cmdline",
-  ]
-  if (kernel_cmdline_file != "") {
-    deps += [ ":extra_cmdline" ]
-  }
-  if (enable_crashpad) {
-    deps += [ ":crashpad_cmdline" ]
-  }
-  inputs = []
-  foreach(label, deps) {
-    inputs += get_target_outputs(label)
-  }
+# TODO(mcgrathr): Temporary until scripts and recipes get updated.
+legacy_images_dir = "$root_out_dir/images"
+board = "qemu"
+if (target_cpu == "x64") {
+  board = "pc"
 }
 
 ###
@@ -175,7 +112,10 @@ action("system_package_key_check") {
 pkgsvr_index = "$target_out_dir/pkgsvr_index"
 
 action("pkgsvr_index") {
-  visibility = [ ":system_image.manifest", ":update_packages.manifest" ]
+  visibility = [
+    ":system_image.manifest",
+    ":update_packages.manifest",
+  ]
   testonly = true
 
   script = "manifest.py"
@@ -197,17 +137,20 @@ action("pkgsvr_index") {
   }
 }
 
+# The /boot and /system manifests have to be generated in concert.  Things
+# like drivers going into /system can affect what needs to go into /boot.
+boot_manifest = "$target_out_dir/boot.manifest"
+
 # The system_image "package" manifest is everything that appears in /system.
 generate_manifest("system_image.manifest") {
   visibility = [ ":*" ]
   testonly = true
 
-  # First we take the /boot manifest as a "dummy".  This means that its
-  # libraries are used to resolve references from binaries going into
-  # the output manifest (below) with the assumption that they'll be
-  # available to dynamic linking at runtime, but none of the files from
-  # the /boot manifest actually go into the output.
-  dummy_deps = [ ":boot.manifest" ]
+  # Create the /boot manifest that gets packed into BOOTFS in the ZBI.
+  # /system manifest files can assume that the /boot files are visible at
+  # runtime, so dependencies already in /boot won't be copied into /system.
+  bootfs_manifest = boot_manifest
+  bootfs_zircon_groups = zircon_boot_groups
 
   # Collect whatever we want from Zircon that didn't go into /boot.
   zircon_groups = zircon_system_groups
@@ -241,14 +184,10 @@ generate_manifest("system_image.manifest") {
   sources += [ pkgsvr_index ]
   args += [ "--entry=data/static_packages=" +
             rebase_path(pkgsvr_index, root_build_dir) ]
-
-  # Add pkgsvr, required to serve a system image package.
-  pkgsvr_binary_label = "//garnet/go/src/pmd:pkgsvr_bin"
-  deps += [ pkgsvr_binary_label ]
-  sources += [ get_label_info(pkgsvr_binary_label, "root_out_dir") + "/pkgsvr" ]
 }
 
 system_manifest_outputs = get_target_outputs(":system_image.manifest")
+assert(boot_manifest == system_manifest_outputs[2])
 system_manifest = system_manifest_outputs[0]
 system_build_id_map = system_manifest_outputs[1]
 
@@ -301,15 +240,12 @@ action("blob.manifest") {
 
 # Pack up all the blobs!
 zircon_tool_action("blob.blk") {
-  visibility = [
-    ":fvm.blk",
-    ":fvm.sparse.blk",
-  ]
+  visibility = [ ":*" ]
   testonly = true
   deps = [
     ":blob.manifest",
   ]
-  blob_image_path = "$images_dir/$target_name"
+  blob_image_path = "$target_out_dir/$target_name"
   outputs = [
     blob_image_path,
   ]
@@ -324,86 +260,173 @@ zircon_tool_action("blob.blk") {
     rebase_path(blob_manifest, root_build_dir),
   ]
 }
-blob_raw_image_path = get_target_outputs(":blob.blk")
-image_paths += [ "IMAGE_BLOB_RAW=" + rebase_path(blob_raw_image_path[0], root_build_dir) ]
+images += [
+  {
+    deps = [
+      ":blob.blk",
+    ]
+    public = [
+      "IMAGE_BLOB_RAW",
+    ]
+  },
+]
 
-# Calculate the merkleroots that go into the kernel command line switches.
-zircon_tool_action("system_image_merkleroots") {
-  visibility = [ ":*" ]
+###
+### Zircon Boot Images
+###
+
+declare_args() {
+  # When this is set, Crashpad will be used to handle exceptions (which uploads
+  # crashes to the crash server), rather than crashanalyzer in Zircon (which
+  # prints a backtrace the the system log).
+  enable_crashpad = false
+
+  # List of arguments to add to /boot/config/devmgr.
+  # These come after synthesized arguments to configure blobfs and pkgfs,
+  # and the one generated for [`enable_crashpad`](#enable_crashpad).
+  devmgr_config = []
+
+  # List of kernel command line arguments to bake into the boot image.
+  # See also //zircon/docs/kernel_cmdline.md and
+  # [`devmgr_config`](#devmgr_config).
+  kernel_cmdline_args = []
+
+  # Files containing additional kernel command line arguments to bake into
+  # the boot image.  The contents of these files (in order) come after any
+  # arguments directly in [`kernel_cmdline_args`](#kernel_cmdline_args).
+  # These can be GN `//` source pathnames or absolute system pathnames.
+  kernel_cmdline_files = []
+
+  # List of extra manifest entries for files to add to the BOOTFS.
+  # Each entry can be a "TARGET=SOURCE" string, or it can be a scope
+  # with `sources` and `outputs` in the style of a copy() target:
+  # `outputs[0]` is used as `TARGET` (see `gn help source_expansion`).
+  bootfs_extra = []
+}
+
+# Generate the /boot/config/devmgr file.  This looks like a kernel command
+# line file, but is read by devmgr (in addition to kernel command line
+# arguments), not by the kernel or boot loader.
+action("devmgr_config.txt") {
+  visibility = [ ":fuchsia" ]
   testonly = true
+
+  script = "manifest.py"
   outputs = [
     "$target_out_dir/$target_name",
   ]
-  pkgsvr_binary_label = "//garnet/go/src/pmd:pkgsvr_bin"
+
+  pkgfs_label = "//garnet/go/src/pmd:pkgsvr"
+  pkgfs = "bin/" + get_label_info(pkgfs_label, "name")
+  pkgfs_label += ".meta"
+  pkgfs_pkg_out_dir = get_label_info(pkgfs_label, "target_out_dir") + "/" +
+                      get_label_info(pkgfs_label, "name")
+  pkgfs_blob_manifest = "$pkgfs_pkg_out_dir/meta/contents"
+  system_image_merkleroot = "$target_out_dir/system_image.meta/meta.far.merkle"
+
   deps = [
     ":system_image.meta",
-    pkgsvr_binary_label,
+    pkgfs_label,
   ]
   sources = [
-    get_label_info(pkgsvr_binary_label, "root_out_dir") + "/pkgsvr",
-    "$target_out_dir/system_image.meta/meta.far",
-  ]
-  tool = "merkleroot"
-  args = [ "-o" ] + rebase_path(outputs + sources, root_build_dir)
-}
-
-# Massage that into the kernel command line text for
-# zircon.system.blob-init and zircon.system.blob-init-arg.
-action("system_image_cmdline.txt") {
-  visibility = [ ":*" ]
-  testonly = true
-  outputs = [
-    "$target_out_dir/$target_name",
-  ]
-  deps = [
-    ":system_image_merkleroots",
-  ]
-  sources = get_target_outputs(":system_image_merkleroots")
-  script = "system_image_cmdline.py"
-  args = rebase_path(outputs + sources, root_build_dir)
-}
-
-# Package that command line up as BOOTDATA.
-bootdata_cmdline("system_image_cmdline") {
-  visibility = [ ":*" ]
-  testonly = true
-  deps = [
-    ":system_image_cmdline.txt",
-  ]
-  inputs = get_target_outputs(":system_image_cmdline.txt")
-}
-
-# Combine the /boot, /system, and package build ID maps into one.
-action("ids.txt") {
-  testonly = true
-
-  deps = [
-    ":boot.manifest",
-    ":system_image.manifest",
-  ]
-  sources = [
-    boot_build_id_map,
-    system_build_id_map,
+    pkgfs_blob_manifest,
+    system_image_merkleroot,
   ]
 
-  foreach(pkg_label, package_targets) {
-    # Find the ids.txt file written by package().
-    manifest = get_label_info(pkg_label, "label_no_toolchain") + ".manifest"
-    manifest_target_name = get_label_info(manifest, "name")
-    manifest_target_out_dir = get_label_info(manifest, "target_out_dir")
-    deps += [ manifest ]
-    sources += [ "$manifest_target_out_dir/${manifest_target_name}.ids.txt" ]
+  args = [
+    "--output=" + rebase_path(outputs[0], root_build_dir),
+
+    # Start with the fixed options.
+    "--entry=devmgr.require-system=true",
+  ]
+
+  # Add the pkgfs command line, embedding the merkleroot of the system image.
+  args += [
+    "--contents",
+    "--rewrite=*=zircon.system.pkgfs.cmd={target}+{source}",
+    "--entry=${pkgfs}=" + rebase_path(system_image_merkleroot, root_build_dir),
+    "--no-contents",
+    "--reset-rewrite",
+  ]
+
+  # Embed the pkgfs blob manifest with the "zircon.system.pkgfs.file."
+  # prefix on target file names.
+  args += [
+    "--rewrite=*=zircon.system.pkgfs.file.{target}={source}",
+    "--manifest=" + rebase_path(pkgfs_blob_manifest, root_build_dir),
+    "--reset-rewrite",
+  ]
+
+  if (enable_crashpad) {
+    args += [ "--entry=crashsvc.analyzer=from-appmgr" ]
   }
 
-  script = "/usr/bin/sort"
-  outputs = [
-    "$root_out_dir/ids.txt",
+  foreach(entry, devmgr_config) {
+    args += [ "--entry=$entry" ]
+  }
+
+  # If there were any ASan drivers in the build, bin/devhost.asan
+  # should have been brought into the boot manifest.  devmgr needs to
+  # be told to use it in case there are ASan drivers in /system but
+  # none in /boot.  If there were any non-ASan drivers in the build,
+  # bin/devhost.asan will load them and needs to know to moderate the
+  # checking for interacting with uninstrumented code.
+  deps += [ ":system_image.manifest" ]
+  sources += [ boot_manifest ]
+  args += [
+    "--include=bin/devhost.asan",
+    "--include=bin/devhost",
+    "--rewrite=bin/devhost.asan=devmgr.devhost.asan=true",
+    "--rewrite=bin/devhost=devhost.asan.strict=false",
+    "--manifest=" + rebase_path(boot_manifest, root_build_dir),
   ]
-  args = [
-           "-u",
-           "-o",
-         ] + rebase_path(outputs + sources, root_build_dir)
 }
+
+# The main bootable image, which requires `blob.blk` to appear on some
+# attached storage device at runtime.
+zbi("fuchsia") {
+  testonly = true
+  deps = [
+    ":devmgr_config.txt",
+    ":system_image.manifest",
+  ]
+  inputs = [
+    "${zircon_build_dir}/zircon.bin",
+    boot_manifest,
+  ]
+  manifest = [
+    {
+      outputs = [
+        "config/devmgr",
+      ]
+      sources = get_target_outputs(":devmgr_config.txt")
+    },
+  ]
+  cmdline = kernel_cmdline_args
+  cmdline_inputs = kernel_cmdline_files
+  manifest += bootfs_extra
+}
+images += [
+  {
+    deps = [
+      ":fuchsia",
+    ]
+    sdk = "bootdata-blob.bin"
+    updater = "zbi"
+    public = [
+      "IMAGE_ZIRCONA_ZBI",
+
+      # TODO(mcgrathr): The complete ZBI can be used with a separate
+      # kernel too, the kernel image in it will just be ignored.  So
+      # just use the primary ZBI for this until all uses are
+      # converted to using the ZBI alone.  Then remove this as
+      # IMAGE_BOOT_RAM variable should no longer be in use.
+      "IMAGE_BOOT_RAM",
+    ]
+    legacy_copy = "bootdata-blob-${board}.bin"
+    legacy_copy_dir = root_out_dir
+  },
+]
 
 ###
 ### Complete images for booting and installing the whole system.
@@ -456,7 +479,7 @@ fvm_sparse_args = [
 # by the qemu run, via `fx run-fvm`.
 generate_fvm("fvm.blk") {
   testonly = true
-  output_name = "$images_dir/fvm.blk"
+  output_name = "$target_out_dir/fvm.blk"
   deps = [
     ":blob.blk",
   ]
@@ -469,22 +492,45 @@ generate_fvm("fvm.blk") {
   }
   args += [ "--blob" ]
 }
-fvm_raw_image_path = get_target_outputs(":fvm.blk")
-image_paths += [ "IMAGE_FVM_RAW=" + rebase_path(fvm_raw_image_path[0], root_build_dir) ]
+images += [
+  {
+    deps = [
+      ":fvm.blk",
+    ]
+    sdk = "fvm.blk"
+    public = [
+      "IMAGE_FVM_RAW",
+    ]
+    legacy_copy = "fvm.blk"
+    legacy_copy_dir = legacy_images_dir
+  },
+]
 
 # fvm.sparse.blk creates a sparse FVM partition image containing the blob
 # partition produced by blob.blk.  fvm.sparse.blk is primarily invoked and
 # used by the paver boot, via `fx boot-paver`.
 generate_fvm("fvm.sparse.blk") {
   testonly = true
-  output_name = "$images_dir/fvm.sparse.blk"
+  output_name = "$target_out_dir/fvm.sparse.blk"
   deps = [
     ":blob.blk",
   ]
   args = fvm_sparse_args + [ "--blob" ]
 }
-fvm_sparse_image_path = get_target_outputs(":fvm.sparse.blk")
-image_paths += [ "IMAGE_FVM_SPARSE=" + rebase_path(fvm_sparse_image_path[0], root_build_dir) ]
+images += [
+  {
+    deps = [
+      ":fvm.sparse.blk",
+    ]
+    installer = "fvm.sparse.blk"
+    sdk = "fvm.sparse.blk"
+    public = [
+      "IMAGE_FVM_SPARSE",
+    ]
+    legacy_copy = "fvm.sparse.blk"
+    legacy_copy_dir = legacy_images_dir
+  },
+]
 
 # data.blk creates an empty but initialized minfs data partition.
 # The partition is included in fvm.data.sparse.blk.
@@ -499,180 +545,148 @@ zircon_tool_action("data.blk") {
     "create",
   ]
 }
-data_raw_image_path = get_target_outputs(":data.blk")
-image_paths += [ "IMAGE_DATA_RAW=" + rebase_path(data_raw_image_path[0], root_build_dir) ]
+images += [
+  {
+    public = [
+      "IMAGE_DATA_RAW",
+    ]
+    deps = [
+      ":data.blk",
+    ]
+  },
+]
 
 # fmv.data.sparse.blk is an FVM image containing only data.blk. It is
 # used to pave new data partitions to a device.
 generate_fvm("fvm.data.sparse.blk") {
-  output_name = "$images_dir/fvm.data.sparse.blk"
+  output_name = "$target_out_dir/fvm.data.sparse.blk"
   deps = [
     ":data.blk",
   ]
   args = fvm_sparse_args + [ "--data" ]
 }
-data_fvm_raw_image_path = get_target_outputs(":fvm.data.sparse.blk")
-image_paths += [ "IMAGE_DATA_FVM_RAW=" + rebase_path(data_fvm_raw_image_path[0], root_build_dir) ]
+images += [
+  {
+    deps = [
+      ":fvm.data.sparse.blk",
+    ]
+    installer = "fvm.data.sparse.blk"
+    public = [
+      "IMAGE_DATA_FVM_RAW",
+    ]
+  },
+]
 
-# This packs up Zircon with the command line to enable /system.
-bootdata("bootdata-blob") {
-  visibility = [ ":*" ]
+# This rolls the primary ZBI together with a compressed RAMDISK image of
+# fvm.blk into a fat ZBI that boots the full system without using any real
+# storage.  The system decompresses the fvm.blk image into memory and then
+# sees that RAM disk just as if it were a real disk on the device.
+zbi("netboot") {
   testonly = true
   deps = [
-    ":bootdata",
-    ":system_image_cmdline",
-  ]
-  inputs = []
-  foreach(label, deps) {
-    inputs += get_target_outputs(label)
-  }
-}
-bootdata_image_path = get_target_outputs(":bootdata-blob")
-image_paths += [ "IMAGE_BOOT_RAM=" + rebase_path(bootdata_image_path[0], root_build_dir) ]
-
-# This packs up the kernel itself with bootdata-blob (above).  This can be
-# booted directly from a partition by a Zircon-compatible boot loader and
-# will find blobfs dynamically on storage.
-bootdata("zircon-boot-blob") {
-  visibility = [ ":*" ]
-  testonly = true
-  inputs = [
-    "${zircon_build_dir}/zircon.bin",
-  ]
-  deps = [
-    ":bootdata-blob",
-  ]
-}
-zircon_bin_image_path = get_target_outputs(":zircon-boot-blob")
-image_paths += [ "IMAGE_ZIRCON_ZBI=" + rebase_path(zircon_bin_image_path[0], root_build_dir) ]
-
-# This packs (compressed) fvm.blk into BOOTDATA_RAMDISK format,
-# used by the netboot-* targets below.
-bootdata_ramdisk("bootdata-fvm") {
-  visibility = [ ":*" ]
-  testonly = true
-  deps = [
+    ":fuchsia",
     ":fvm.blk",
   ]
-  inputs = []
-  foreach(label, deps) {
-    inputs += get_target_outputs(label)
-  }
+  inputs = get_target_outputs(":fuchsia")
+  ramdisk_inputs = get_target_outputs(":fvm.blk")
 }
+images += [
+  {
+    public = [
+      "IMAGE_NETBOOT_ZBI",
 
-# This packs up a single BOOTDATA container that includes fvm.blk as a
-# RAMDISK image.  This can be used for network booting the full system
-# without using any real storage.  The system decompresses the fvm.blk
-# image into memory and then sees that RAM disk just as if it were a
-# real disk on the device.
-bootdata("netboot") {
-  testonly = true
-  deps = [
-    ":bootdata-blob",
-    ":bootdata-fvm",
-  ]
-  inputs = []
-  foreach(label, deps) {
-    inputs += get_target_outputs(label)
-  }
-}
-netboot_ram_image_path = get_target_outputs(":netboot")
-image_paths += [ "IMAGE_NETBOOT_RAM=" + rebase_path(netboot_ram_image_path[0], root_build_dir) ]
-
-# This packs the kernel itself with netboot (above).  This can be booted
-# directly from a partition by a Zircon-compatible boot loader and will
-# find blobfs directly in the RAMDISK.
-bootdata("zircon-netboot") {
-  visibility = [ ":*" ]
-  testonly = true
-  inputs = [
-    "${zircon_build_dir}/zircon.bin",
-  ]
-  deps = [
-    ":netboot",
-  ]
-}
-netboot_zbi_image_path = get_target_outputs(":zircon-netboot")
-image_paths += [ "IMAGE_NETBOOT_ZBI=" + rebase_path(netboot_zbi_image_path[0], root_build_dir) ]
+      # TODO(mcgrathr): The complete ZBI can be used with a separate kernel
+      # too, the kernel image in it will just be ignored.  So just use the
+      # primary ZBI for this until all uses are converted to using the ZBI
+      # alone.  Then remove this as IMAGE_BOOT_RAM variable should no
+      # longer be in use.
+      "IMAGE_NETBOOT_RAM",
+    ]
+    deps = [
+      ":netboot",
+    ]
+  },
+]
 
 # ChromeOS vboot images.
-vboot("zircon") {
+vboot("vboot") {
   testonly = true
+  output_name = "fuchsia"
   deps = [
-    ":bootdata-blob",
+    ":fuchsia",
   ]
 }
-zircon_vboot_image_path = get_target_outputs(":zircon.vboot")
-image_paths += [ "IMAGE_ZIRCON_VBOOT=" + rebase_path(zircon_vboot_image_path[0], root_build_dir) ]
+images += [
+  {
+    deps = [
+      ":vboot",
+    ]
+    installer = "zircon.vboot"
+    sdk = "zircon.vboot"
+    updater = "kernc"
+    public = [
+      "IMAGE_ZIRCON_VBOOT",
+    ]
+    legacy_copy = "zircon-${board}.vboot"
+    legacy_copy_dir = legacy_images_dir
+  },
+]
 
-zbi("bootfs") {
-  manifest = boot_manifest
-  deps = [
-    ":boot.manifest",
-  ]
-}
-zircon_bootfs_label = ":bootfs.zbi"
-
-zbi("zircon") {
-  testonly = true
-  zircon_bin = "${zircon_build_dir}/zircon.bin"
-
-  cmdline = [
-    "cmdline.txt",
-  ] + get_target_outputs(":system_image_cmdline.txt")
-  if (kernel_cmdline_file != "") {
-    cmdline += [ kernel_cmdline_file ]
-  }
-
-  boot_output = get_target_outputs(zircon_bootfs_label)
-  bootdata = boot_output[0]
-  deps = [
-    ":system_image_cmdline.txt",
-    zircon_bootfs_label,
-  ]
-}
-zircon_image_path = get_target_outputs(":zircon.zbi")
-image_paths += [ "IMAGE_ZIRCONA_ZBI=" + rebase_path(zircon_image_path[0], root_build_dir) ]
-
+# The installer also wants the zedboot vboot image.
+images += [
+  {
+    deps = [
+      "zedboot:vboot",
+    ]
+    sources = [
+      "$root_out_dir/zedboot.vboot",
+    ]
+    installer = "zedboot.vboot"
+  },
+]
 
 if (target_cpu != "arm64") {
   # EFI ESP images.
-  esp("local") {
+  esp("esp") {
+    output_name = "fuchsia"
     testonly = true
     if (always_zedboot) {
       cmdline = "zedboot/efi_cmdline.txt"
     } else {
       cmdline = "efi_local_cmdline.txt"
     }
-
-    # XXX(raggi): this path is shared with //build/images/BUILD.gn.
-    zedboot_bin = "$root_out_dir/zedboot.bin"
-
-    zbi_label = ":zircon.zbi"
-    zbis = get_target_outputs(zbi_label)
-    zbi = zbis[0]
-
-    zircon_bin = zbi
-
     deps = [
-      zbi_label,
-      "zedboot:zedboot.bin",
+      ":fuchsia",
+      "zedboot:zbi",
     ]
+    fuchsia_zbi_outputs = get_target_outputs(":fuchsia")
+    zircon_bin = fuchsia_zbi_outputs[0]
+    zedboot = "$root_out_dir/zedboot.zbi"
   }
-  esp_image_path = get_target_outputs(":local.esp.blk")
-  image_paths += [ "IMAGE_ESP_RAW=" + rebase_path(esp_image_path[0], root_build_dir) ]
-}
-
-# The installer needs all images except for fvm.blk (it has fvm.sparse.blk):
-installer_images = [
-  "fvm.sparse.blk",
-  "fvm.data.sparse.blk",
-  "zircon.vboot",
-]
-installer_zedboot_images = [ "zedboot.vboot" ]
-if (target_cpu != "arm64") {
-  installer_images += [ "local.esp.blk" ]
-  installer_zedboot_images += [ "zedboot.esp.blk" ]
+  images += [
+    {
+      deps = [
+        ":esp",
+      ]
+      installer = "local.esp.blk"
+      sdk = "local.esp.blk"
+      updater = "efi"
+      public = [
+        "IMAGE_ESP_RAW",
+      ]
+      legacy_copy = "local-${board}.esp.blk"
+      legacy_copy_dir = legacy_images_dir
+    },
+    {
+      deps = [
+        "zedboot:esp",
+      ]
+      sources = [
+        "$root_out_dir/zedboot.esp.blk",
+      ]
+      installer = "zedboot.esp.blk"
+    },
+  ]
 }
 
 installer_label = "//garnet/bin/installer:install-fuchsia"
@@ -689,9 +703,20 @@ action("installer.manifest") {
     "--output-cwd=" + rebase_path(target_out_dir, root_build_dir),
     "--entry=install-fuchsia=" + rebase_path(installer_path, root_build_dir),
   ]
-  foreach(image, installer_images + installer_zedboot_images) {
-    args += [ "--entry=${image}=" +
-              rebase_path("$images_dir/$image", root_build_dir) ]
+  foreach(image, images) {
+    if (defined(image.installer)) {
+      image_sources = []
+      if (defined(image.sources)) {
+        image_sources += image.sources
+      } else {
+        foreach(label, image.deps) {
+          image_sources += get_target_outputs(label)
+        }
+      }
+      assert(image_sources == [ image_sources[0] ])
+      args += [ "--entry=${image.installer}=" +
+                rebase_path(image_sources[0], root_build_dir) ]
+    }
   }
 }
 
@@ -705,105 +730,92 @@ zircon_tool_action("installer") {
     installer_label,
   ]
   outputs = [
-    "$images_dir/installer.blk",
+    "$target_out_dir/installer.blk",
   ]
   sources = []
-  foreach(image, installer_images) {
-    deps += [ ":$image" ]
-    sources += [ "$images_dir/$image" ]
-  }
-  foreach(image, installer_zedboot_images) {
-    deps += [ "zedboot:$image" ]
-    sources += [ "$images_dir/$image" ]
+  foreach(image, images) {
+    if (defined(image.installer)) {
+      deps += image.deps
+      if (defined(image.sources)) {
+        sources += image.sources
+      } else {
+        foreach(label, image.deps) {
+          sources += get_target_outputs(label)
+        }
+      }
+    }
   }
   args = [
     rebase_path(outputs[0], root_build_dir),
     "create",
     "--manifest",
   ]
-  args += rebase_path(get_target_outputs(":installer.manifest"), root_build_dir)
+  args += rebase_path(get_target_outputs(deps[0]), root_build_dir)
 }
-installer_image_path = get_target_outputs(":installer")
-image_paths += [ "IMAGE_INSTALLER_RAW=" + rebase_path(installer_image_path[0], root_build_dir) ]
+images += [
+  {
+    public = [
+      "IMAGE_INSTALLER_RAW",
+    ]
+    deps = [
+      ":installer",
+    ]
+  },
+]
 
-# TODO(mcgrathr): Temporary until scripts and recipes get updated.
-board = "qemu"
-if (target_cpu == "x64") {
-  board = "pc"
-}
-copy("bootdata-blob-${board}.bin") {
+group("images") {
   testonly = true
-  outputs = [
-    "$root_out_dir/bootdata-blob-${board}.bin",
-  ]
-  sources = [
-    "$root_out_dir/bootdata-blob.bin",
-  ]
   deps = [
-    ":bootdata-blob",
+    ":ids.txt",
+    ":legacy-images",
+    "zedboot",
   ]
-}
-if (target_cpu == "x64") {
-  copy("local-${board}.esp.blk") {
-    testonly = true
-    outputs = [
-      "$images_dir/local-${board}.esp.blk",
-    ]
-    sources = [
-      "$images_dir/local.esp.blk",
-    ]
-    deps = [
-      ":local.esp.blk",
-    ]
+  foreach(image, images) {
+    deps += image.deps
   }
-  copy("zircon-${board}.vboot") {
-    testonly = true
-    outputs = [
-      "$images_dir/zircon-${board}.vboot",
-    ]
-    sources = [
-      "$images_dir/zircon.vboot",
-    ]
-    deps = [
-      ":zircon.vboot",
-    ]
+}
+
+legacy_images = []
+foreach(image, images) {
+  if (defined(image.legacy_copy)) {
+    copy("legacy_copy_" + image.legacy_copy) {
+      visibility = [ ":legacy-images" ]
+      testonly = true
+      deps = image.deps
+      outputs = [
+        "${image.legacy_copy_dir}/${image.legacy_copy}",
+      ]
+      sources = get_target_outputs(deps[0])
+    }
+    legacy_images += [ ":legacy_copy_${image.legacy_copy}" ]
   }
 }
 group("legacy-images") {
   visibility = [ ":images" ]
   testonly = true
-  deps = [
-    ":bootdata-blob-${board}.bin",
-  ]
-  if (target_cpu == "x64") {
-    deps += [
-      ":local-${board}.esp.blk",
-      ":zircon-${board}.vboot",
-    ]
-  }
+  deps = legacy_images
 }
 
-group("images") {
-  testonly = true
-  deps = [
-    ":fvm.blk",
-    ":fvm.data.sparse.blk",
-    ":fvm.sparse.blk",
-    ":ids.txt",
-    ":legacy-images",
-    ":zircon-boot-blob",
-    ":zircon.vboot",
-    ":zircon.zbi",
-    "zedboot",
-  ]
-  if (target_cpu != "arm64") {
-    deps += [ ":local.esp.blk" ]
+# See definition of images (above) for purpose.
+image_paths = []
+foreach(image, images) {
+  if (defined(image.public)) {
+    foreach(name, image.public) {
+      image_sources = []
+      if (defined(image.sources)) {
+        image_sources += image.sources
+      } else {
+        foreach(label, image.deps) {
+          image_sources += get_target_outputs(label)
+        }
+      }
+      assert(image_sources == [ image_sources[0] ])
+      image_paths +=
+          [ "${name}=" + rebase_path(image_sources[0], root_build_dir) ]
+    }
   }
 }
-
-# See definition of images_paths for purpose.
 write_file("$root_build_dir/image_paths.sh", image_paths)
-
 
 ###
 ### Amber updates.
@@ -816,7 +828,9 @@ action("update_packages.manifest") {
   testonly = true
 
   script = "manifest.py"
-  outputs = [ "$target_out_dir/$target_name" ]
+  outputs = [
+    "$target_out_dir/$target_name",
+  ]
   args = [
     "--contents",
     "--output",
@@ -826,7 +840,9 @@ action("update_packages.manifest") {
   sources = []
 
   deps += [ ":system_image.meta" ]
-  args += [ "--entry=system_image/0=" + rebase_path("$target_out_dir/system_image.meta/meta.far.merkle", root_build_dir)]
+  args += [ "--entry=system_image/0=" +
+            rebase_path("$target_out_dir/system_image.meta/meta.far.merkle",
+                        root_build_dir) ]
 
   foreach(pkg_label, package_targets) {
     # Find the response file written by package().
@@ -839,47 +855,70 @@ action("update_packages.manifest") {
   }
 }
 
-# The update package manifest contains the pkgsvr_index and the target system kernel images.
+# The update package manifest contains the pkgsvr_index and the target
+# system kernel images.
 action("update.manifest") {
   visibility = [ ":*" ]
   testonly = true
 
+  update_manifest = [
+    {
+      target = "packages"
+      deps = [
+        ":update_packages.manifest",
+      ]
+    },
+
+    # Add the meta/package JSON file that makes this the "update" package.
+    {
+      target = "meta/package"
+      sources = [
+        "update_package.json",
+      ]
+    },
+  ]
+
+  foreach(image, images) {
+    if (defined(image.updater)) {
+      update_manifest += [
+        {
+          target = image.updater
+          forward_variables_from(image,
+                                 [
+                                   "deps",
+                                   "sources",
+                                 ])
+        },
+      ]
+    }
+  }
+
   script = "manifest.py"
 
-  outputs = [ "$target_out_dir/$target_name" ]
+  outputs = [
+    "$target_out_dir/$target_name",
+  ]
 
   args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
   sources = []
   deps = []
 
-  # Add the meta/package JSON file that makes this the "update" package.
-  json = "update_package.json"
-  sources += [ json ]
-  args += [ "--entry=meta/package=" + rebase_path(json, root_build_dir) ]
-
-  update_package_manifest_label = ":update_packages.manifest"
-  update_package_manifests = get_target_outputs(update_package_manifest_label)
-  update_package_manifest = update_package_manifests[0]
-
-  deps += [ update_package_manifest_label ]
-  args += [ "--entry=packages=" + rebase_path(update_package_manifest, root_build_dir) ]
-
-  # TODO(raggi): reconcile what kernel images should be included, instead of
-  # simply including all of them.
-
-  if (target_cpu != "arm64") {
-    efi_label = ":local.esp.blk"
-    deps += [ efi_label ]
-    efi_image = get_target_outputs(efi_label)
-    args += [ "--entry=efi=" + rebase_path(efi_image[0], root_build_dir) ]
+  foreach(entry, update_manifest) {
+    entry_sources = []
+    if (defined(entry.deps)) {
+      deps += entry.deps
+      foreach(label, entry.deps) {
+        entry_sources += get_target_outputs(label)
+      }
+    }
+    if (defined(entry.sources)) {
+      entry_sources += entry.sources
+    }
+    foreach(source, entry_sources) {
+      source = rebase_path(source, root_build_dir)
+      args += [ "--entry=${entry.target}=${source}" ]
+    }
   }
-
-  # TODO(raggi): include ZBI as well here once it is ready.
-
-  vboot_label = ":zircon.vboot"
-  deps += [ vboot_label ]
-  vboot_image = get_target_outputs(vboot_label)
-  args += [ "--entry=kernc=" + rebase_path(vboot_image[0], root_build_dir) ]
 }
 
 pm_build_package("update.meta") {
@@ -897,13 +936,17 @@ action("update.sources.manifest") {
   visibility = [ ":*" ]
   testonly = true
   script = "manifest.py"
-  deps = [ ":update.manifest" ]
-  outputs = [ "$target_out_dir/update.sources.manifest" ]
+  deps = [
+    ":update.manifest",
+  ]
+  outputs = [
+    "$target_out_dir/update.sources.manifest",
+  ]
   update_manifests = get_target_outputs(deps[0])
   args = [
     "--sources",
     "--output=" + rebase_path(outputs[0], root_build_dir),
-    "--manifest=" + rebase_path(update_manifests[0])
+    "--manifest=" + rebase_path(update_manifests[0]),
   ]
 }
 
@@ -952,14 +995,23 @@ action("amber_index") {
     args += [ "@" + rebase_path(pkg_rspfile, root_build_dir) ]
   }
 
-  system_image_meta_dir = get_label_info(":system_image.meta", "target_out_dir") + "/system_image.meta"
+  system_image_meta_dir =
+      get_label_info(":system_image.meta", "target_out_dir") +
+      "/system_image.meta"
   system_image_meta_far = system_image_meta_dir + "/meta.far"
-  args += [ "--entry", "system_image/0=" + rebase_path(system_image_meta_far, root_build_dir) ]
+  args += [
+    "--entry",
+    "system_image/0=" + rebase_path(system_image_meta_far, root_build_dir),
+  ]
   deps += [ ":system_image.meta" ]
 
-  update_meta_dir = get_label_info(":update.meta", "target_out_dir") + "/update.meta"
+  update_meta_dir =
+      get_label_info(":update.meta", "target_out_dir") + "/update.meta"
   update_meta_far = update_meta_dir + "/meta.far"
-  args += [ "--entry", "update/0=" + rebase_path(update_meta_far, root_build_dir) ]
+  args += [
+    "--entry",
+    "update/0=" + rebase_path(update_meta_far, root_build_dir),
+  ]
   deps += [ ":update.meta" ]
 }
 
@@ -1038,42 +1090,74 @@ group("updates") {
   ]
 }
 
-# SDK
+###
+### Build ID maps.
+###
 
-sdk_atom("fvm.blk_sdk") {
-  domain = "image"
-  name = "fvm.blk"
-  category = "partner"
+# Combine the /boot, /system, and package build ID maps into one.
+# Nothing in the build uses this, but top-level targets always update
+# it so that debugging tools can rely on it.
+action("ids.txt") {
   testonly = true
 
-  files = [
-    {
-      source = "$images_dir/fvm.blk"
-      dest = "fvm.blk"
-    }
+  deps = [
+    ":system_image.manifest",
+  ]
+  sources = [
+    system_build_id_map,
   ]
 
-  non_sdk_deps = [
-    ":fvm.blk",
+  foreach(pkg_label, package_targets) {
+    # Find the ids.txt file written by package().
+    manifest = get_label_info(pkg_label, "label_no_toolchain") + ".manifest"
+    manifest_target_name = get_label_info(manifest, "name")
+    manifest_target_out_dir = get_label_info(manifest, "target_out_dir")
+    deps += [ manifest ]
+    sources += [ "$manifest_target_out_dir/${manifest_target_name}.ids.txt" ]
+  }
+
+  script = "/usr/bin/sort"
+  outputs = [
+    "$root_out_dir/ids.txt",
   ]
+  args = [
+           "-u",
+           "-o",
+         ] + rebase_path(outputs + sources, root_build_dir)
 }
 
-sdk_atom("bootdata-blob.bin_sdk") {
-  domain = "image"
-  name = "bootdata-blob.bin"
-  category = "partner"
-  testonly = true
+###
+### SDK
+###
 
-  files = [
-    {
-      source = "$root_out_dir/bootdata-blob.bin"
-      dest = "bootdata-blob.bin"
+foreach(image, images) {
+  if (defined(image.sdk)) {
+    sdk_atom("${image.sdk}_sdk") {
+      domain = "image"
+      name = image.sdk
+      category = "partner"
+      testonly = true
+
+      image_sources = []
+      if (defined(image.sources)) {
+        image_sources += image.sources
+      } else {
+        foreach(label, image.deps) {
+          image_sources += get_target_outputs(label)
+        }
+      }
+      assert(image_sources == [ image_sources[0] ])
+
+      files = [
+        {
+          source = image_sources[0]
+          dest = image.sdk
+        },
+      ]
+
+      non_sdk_deps = image.deps
     }
-  ]
-
-  non_sdk_deps = [
-    ":bootdata-blob",
-  ]
+  }
 }
 
 # TODO(alainv): Add dependency to zircon.bin when such a target exists.
@@ -1087,62 +1171,6 @@ sdk_atom("zircon.bin_sdk") {
     {
       source = "${zircon_build_dir}/zircon.bin"
       dest = "zircon.bin"
-    }
-  ]
-}
-
-sdk_atom("zircon.vboot_sdk") {
-  domain = "image"
-  name = "zircon.vboot"
-  category = "partner"
-  testonly = true
-
-  files = [
-    {
-      source = "$images_dir/zircon.vboot"
-      dest = "zircon.vboot"
-    }
-  ]
-
-  non_sdk_deps = [
-    ":zircon.vboot",
-  ]
-}
-
-if (target_cpu != "arm64") {
-  sdk_atom("local.esp.blk_sdk") {
-    domain = "image"
-    name = "local.esp.blk"
-    category = "partner"
-    testonly = true
-
-    files = [
-      {
-        source = "$images_dir/local.esp.blk"
-        dest = "local.esp.blk"
-      }
-    ]
-
-    non_sdk_deps = [
-      ":local.esp.blk",
-    ]
-  }
-}
-
-sdk_atom("fvm.sparse.blk_sdk") {
-  domain = "image"
-  name = "fvm.sparse.blk"
-  category = "partner"
-  testonly = true
-
-  files = [
-    {
-      source = "$images_dir/fvm.sparse.blk"
-      dest = "fvm.sparse.blk"
-    }
-  ]
-
-  non_sdk_deps = [
-    ":fvm.sparse.blk",
+    },
   ]
 }

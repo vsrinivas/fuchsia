@@ -6,25 +6,45 @@ import("//build/compiled_action.gni")
 import("//build/config/clang/clang.gni")
 import("//build/config/fuchsia/zircon.gni")
 
-images_dir = "$root_out_dir/images"
-
 # Build a "kernel partition" target for ChromeOS targets.
 #
 # Parameters
 #
 #   deps (required)
-#     [list of labels] Must be bootdata labels defined earlier in the file.
+#     [list of one label] Must be a `zbi()` target defined earlier in the file.
+#
+#   output_name (optional, default: `target_name`)
+#   output_extension (optional, default: `".vboot"`)
+#     [string] Determines the file name, in `root_out_dir`.
 #
 template("vboot") {
-  output_name = "${target_name}.vboot"
-  compiled_action(output_name) {
+  if (defined(invoker.output_name)) {
+    output_file = invoker.output_name
+  } else {
+    output_file = target_name
+  }
+  if (defined(invoker.output_extension)) {
+    if (invoker.output_extension != "") {
+      output_file += ".${invoker.output_extension}"
+    }
+  } else {
+    output_file += ".vboot"
+  }
+  output_file = "$root_out_dir/$output_file"
+
+  compiled_action(target_name) {
     forward_variables_from(invoker,
                            [
+                             "deps",
                              "testonly",
                              "visibility",
                            ])
 
     tool = "//garnet/tools/vboot_reference:futility"
+    outputs = [
+      output_file,
+    ]
+
     vboot_dir = "//third_party/vboot_reference"
     kernel_keyblock = "$vboot_dir/tests/devkeys/kernel.keyblock"
     private_keyblock = "$vboot_dir/tests/devkeys/kernel_data_key.vbprivk"
@@ -33,35 +53,32 @@ template("vboot") {
       private_keyblock,
     ]
 
-    deps = invoker.deps
-
-    bootdata_bins = []
-    foreach(bootdata_label, deps) {
-      bootdata_bins += get_target_outputs(bootdata_label)
+    assert(defined(deps), "vboot() requires deps")
+    zbi = []
+    foreach(label, deps) {
+      zbi += get_target_outputs(label)
     }
-    inputs += bootdata_bins
+    inputs += zbi
+    assert(zbi == [ zbi[0] ], "vboot() requires exactly one zbi() in deps")
 
-    bootdata_bin = bootdata_bins[0]
-    assert([ bootdata_bin ] == bootdata_bins)
-
+    # TODO(mcgrathr): Figure out how to reconcile vboot with the unitary
+    # complete ZBI case.  The tool requires both a kernel and a "bootloader"
+    # (which is actually the RAM disk).  So pack a separate copy into the
+    # vboot image.  The kernel is already in the ZBI but that copy will just
+    # be ignored at runtime.
     zircon_bin = "${zircon_build_dir}/zircon.bin"
     inputs += [ zircon_bin ]
-
-    output = "$images_dir/$output_name"
-    outputs = [
-      output,
-    ]
 
     args = [
       "vbutil_kernel",
       "--pack",
-      rebase_path(output),
+      rebase_path(output_file),
       "--keyblock",
       rebase_path(kernel_keyblock),
       "--signprivate",
       rebase_path(private_keyblock),
       "--bootloader",
-      rebase_path(bootdata_bin),
+      rebase_path(zbi[0]),
       "--vmlinuz",
       rebase_path(zircon_bin),
       "--version",
@@ -76,21 +93,41 @@ template("vboot") {
 #
 # Parameters
 #
+#   deps (optional)
+#     [list of labels] Targets that generate the other inputs.
+#
+#   output_name (optional, default: `target_name`)
+#   output_extension (optional, default: `".esp.blk"`)
+#     [string] Determines the file name, in `root_out_dir`.
+#
 #   bootdata_bin (optional)
 #     [path] Must be a ramdisk that compliments zircon_bin.
 #
 #   zircon_bin (optional)
 #     [path] A zircon kernel.
 #
-#   zedboot_bin (optional)
-#     [label] A Zedboot zbi bin.
+#   zedboot (optional)
+#     [label] A Zedboot `zbi()` target.
 #
 #   cmdline (optional)
 #     [path] A bootloader (Gigaboot) cmdline file to include in the EFI root.
 #
 template("esp") {
-  output_name = "${target_name}.esp.blk"
-  compiled_action(output_name) {
+  if (defined(invoker.output_name)) {
+    output_file = invoker.output_name
+  } else {
+    output_file = target_name
+  }
+  if (defined(invoker.output_extension)) {
+    if (invoker.output_extension != "") {
+      output_file += ".${invoker.output_extension}"
+    }
+  } else {
+    output_file += ".esp.blk"
+  }
+  output_file = "$root_out_dir/$output_file"
+
+  compiled_action(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -99,20 +136,17 @@ template("esp") {
                            ])
 
     tool = "//garnet/go/src/make-efi"
-    tool_output_name = "make-efi"
-
-    efi_image_path = "$images_dir/$output_name"
     mkfs_msdosfs_bin = "$zircon_tools_dir/mkfs-msdosfs"
 
     outputs = [
-      efi_image_path,
+      output_file,
     ]
     inputs = [
       mkfs_msdosfs_bin,
     ]
     args = [
       "--output",
-      rebase_path(efi_image_path),
+      rebase_path(output_file),
       "--mkfs",
       rebase_path(mkfs_msdosfs_bin),
     ]
@@ -133,12 +167,12 @@ template("esp") {
       inputs += [ invoker.bootdata_bin ]
     }
 
-    if (defined(invoker.zedboot_bin)) {
+    if (defined(invoker.zedboot)) {
       args += [
         "--zedboot",
-        rebase_path(invoker.zedboot_bin),
+        rebase_path(invoker.zedboot),
       ]
-      inputs += [ invoker.zedboot_bin ]
+      inputs += [ invoker.zedboot ]
     }
 
     if (defined(invoker.cmdline)) {
@@ -155,87 +189,6 @@ template("esp") {
         rebase_path(gigaboot_bin),
       ]
       inputs += [ gigaboot_bin ]
-    }
-  }
-}
-
-# Build a Zircon Boot Image (ZBI) that is a bootable "kernel partition".
-#
-# Parameters
-#
-#   deps (optional)
-#     [list of labels] Build targets that are necessary to produce any of the other arguments.
-#
-#   zircon_bin (optional)
-#     [path] A zircon kernel.
-#
-#   manifest (optional)
-#     [path] A bootfs manifest file.
-
-#   bootdata (optional)
-#     [path] A bootdata path defined earlier in the file.
-#
-#   cmdline (optional):
-#     [list of paths] Text files containing cmdline arguments.
-#
-template("zbi") {
-  output_name = "${target_name}.zbi"
-
-  zircon_tool_action(output_name) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "sources",
-                             "visibility",
-                             "testonly",
-                           ])
-    tool = "zbi"
-
-    zbi_image_path = "$images_dir/$output_name"
-    outputs = [
-      zbi_image_path,
-    ]
-
-    inputs = []
-
-    args = [
-      "-o",
-      rebase_path(zbi_image_path),
-    ]
-
-    if (defined(invoker.zircon_bin)) {
-      assert(!defined(invoker.manifest))
-      inputs += [ invoker.zircon_bin ]
-      args += [
-        rebase_path(invoker.zircon_bin),
-      ]
-    }
-
-    if (defined(invoker.manifest)) {
-      assert(!defined(invoker.zircon_bin))
-      inputs += [ invoker.manifest ]
-      args += [
-        "-c",
-        rebase_path(invoker.manifest),
-      ]
-    }
-
-    if (defined(invoker.bootdata)) {
-      inputs += [ invoker.bootdata ]
-      args += [
-        rebase_path(invoker.bootdata),
-      ]
-    }
-
-    if (defined(invoker.cmdline)) {
-      inputs += invoker.cmdline
-      args += [
-        "-T",
-        "cmdline",
-      ]
-      foreach(cmdline, invoker.cmdline) {
-        args += [ rebase_path(cmdline) ]
-      }
     }
   }
 }

@@ -482,8 +482,7 @@ template("package") {
           ":${pkg_target_name}.blob.rsp",
           ":${pkg_target_name}.pkgsvr_index.rsp",
           ":${pkg_target_name}.amber_index.rsp",
-          "//build/images:blob.manifest",
-          "//build/images:ids.txt",
+          "//build/images:*",
         ]
         sources = manifest_sources + get_target_outputs(":$pkg_meta_package")
         args = manifest_args +
@@ -498,6 +497,7 @@ template("package") {
           ":${pkg_target_name}.blob.rsp",
           ":${pkg_target_name}.pkgsvr_index.rsp",
           ":${pkg_target_name}.amber_index.rsp",
+          "//build/images:*",
         ]
         manifest = ":${pkg_target_name}.manifest"
       }

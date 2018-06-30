@@ -342,19 +342,8 @@ def emit_manifests(args, selected, unselected, input_binaries):
     binaries, nonbinaries = collect_binaries(selected, input_binaries,
                                              aux_binaries, examined)
 
-    # Prepare to collate groups.  outputs[group] is None for a dummy
-    # manifest whose entries all get elided from the output.
-    outputs = [None if file is None else output_manifest(file, [])
-               for file in args.output]
-
-    # Now filter out the binaries going to any dummy outputs.  We used
-    # those to resolve SONAME references presuming they'll be available
-    # at runtime, but we won't include them in our final set of binaries
-    # for either the manifest or the build ID map.
-    def dummy_entry(entry):
-        return entry.group is not None and outputs[entry.group] is not None
-    nonbinaries = filter(dummy_entry, nonbinaries)
-    binaries = filter(lambda binary: dummy_entry(binary.entry), binaries)
+    # Prepare to collate groups.
+    outputs = [output_manifest(file, []) for file in args.output]
 
     # Finalize the output binaries.
     binaries, debug_files = strip_binary_manifest(binaries,
@@ -370,17 +359,13 @@ def emit_manifests(args, selected, unselected, input_binaries):
     all_debug_files = {info.build_id: info for info in debug_files}
 
     # Emit each primary manifest.
-    depfile_output = None
     for output in outputs:
-        # Skip dummy manifests.
-        if output is not None:
-            if depfile_output is None:
-                depfile_output = output.file
-            # Sort so that functionally identical output is textually
-            # identical.
-            output.manifest.sort(key=lambda entry: entry.target)
-            update_file(output.file,
-                        manifest.format_manifest_file(output.manifest))
+        depfile_output = output.file
+        # Sort so that functionally identical output is textually
+        # identical.
+        output.manifest.sort(key=lambda entry: entry.target)
+        update_file(output.file,
+                    manifest.format_manifest_file(output.manifest))
 
     # Emit the build ID list.
     # Sort so that functionally identical output is textually identical.
@@ -416,8 +401,8 @@ Massage manifest files from the build to produce images.
 ''',
         epilog='''
 The --cwd and --group options apply to subsequent --manifest arguments.
-Each input --manifest is assigned to the preceding --dummy or --output
-argument file.  Any input --manifest that precedes all --output arguments
+Each input --manifest is assigned to the preceding --output argument file.
+Any input --manifest that precedes all --output arguments
 just supplies auxiliary files implicitly required by other (later) input
 manifests, but does not add all its files to any --output manifest.  This
 is used for shared libraries and the like.
@@ -428,9 +413,6 @@ is used for shared libraries and the like.
     parser.add_argument('--depfile',
                         metavar='DEPFILE',
                         help='Ninja depfile to write')
-    parser.add_argument('--dummy', dest='output',
-                        action='append_const', const=None,
-                        help='Treat following manifests as given')
     parser.add_argument('--binary', action=input_binary_action, default=[],
                         metavar='PATH',
                         help='Take matching binaries from auxiliary manifests')

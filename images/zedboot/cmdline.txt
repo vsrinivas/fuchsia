@@ -1,2 +1,0 @@
-netsvc.netboot=true
-virtcon.font=18x32
