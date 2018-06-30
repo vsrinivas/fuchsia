@@ -61,12 +61,12 @@ sdk("garnet") {
     "//zircon/public/tool/loglistener:loglistener_sdk($host_toolchain)",
     "//zircon/public/tool/merkleroot:merkleroot_sdk($host_toolchain)",
     "//zircon/public/tool/minfs:minfs_sdk($host_toolchain)",
-    "//zircon/public/tool/mkbootfs:mkbootfs_sdk($host_toolchain)",
     "//zircon/public/tool/mkfs-msdosfs:mkfs-msdosfs_sdk($host_toolchain)",
     "//zircon/public/tool/netaddr:netaddr_sdk($host_toolchain)",
     "//zircon/public/tool/netcp:netcp_sdk($host_toolchain)",
     "//zircon/public/tool/netls:netls_sdk($host_toolchain)",
     "//zircon/public/tool/netruncmd:netruncmd_sdk($host_toolchain)",
+    "//zircon/public/tool/zbi:zbi_sdk($host_toolchain)",
   ]
   if (target_cpu != "arm64") {
     deps += [
