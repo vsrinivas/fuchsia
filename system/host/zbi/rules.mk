@@ -21,4 +21,6 @@ MODULE_HOST_LIBS := \
     third_party/ulib/cksum.hostlib \
     system/ulib/fbl.hostlib \
 
+MODULE_PACKAGE := bin
+
 include make/module.mk
