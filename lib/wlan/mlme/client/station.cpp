@@ -23,7 +23,6 @@
 
 namespace wlan {
 
-namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
 using common::dBm;
 
@@ -49,13 +48,29 @@ void Station::Reset() {
     last_seen_ = zx::time();
     bssid_.Reset();
 }
-
-zx_status_t Station::HandleMlmeMessage(uint32_t ordinal) {
+zx_status_t Station::HandleAnyMlmeMsg(const BaseMlmeMsg& mlme_msg) {
     WLAN_STATS_INC(svc_msg.in);
-    // Always allow MLME-JOIN.request.
-    if (ordinal == fuchsia_wlan_mlme_MLMEJoinReqOrdinal) { return ZX_OK; }
+
+    // Always process MLME-JOIN.requests.
+    if (auto join_req = mlme_msg.As<wlan_mlme::JoinRequest>()) {
+        return HandleMlmeJoinReq(*join_req);
+    }
+
     // Drop other MLME requests if there is no BSSID set yet.
-    return (bssid() == nullptr ? ZX_ERR_STOP : ZX_OK);
+    if (bssid() == nullptr) { return ZX_OK; }
+
+    if (auto auth_req = mlme_msg.As<wlan_mlme::AuthenticateRequest>()) {
+        return HandleMlmeAuthReq(*auth_req);
+    } else if (auto deauth_req = mlme_msg.As<wlan_mlme::DeauthenticateRequest>()) {
+        return HandleMlmeDeauthReq(*deauth_req);
+    } else if (auto assoc_req = mlme_msg.As<wlan_mlme::AssociateRequest>()) {
+        return HandleMlmeAssocReq(*assoc_req);
+    } else if (auto eapol_req = mlme_msg.As<wlan_mlme::EapolRequest>()) {
+        return HandleMlmeEapolReq(*eapol_req);
+    } else if (auto setkeys_req = mlme_msg.As<wlan_mlme::SetKeysRequest>()) {
+        return HandleMlmeSetKeysReq(*setkeys_req);
+    }
+    return ZX_OK;
 }
 
 zx_status_t Station::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& req) {

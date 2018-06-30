@@ -242,40 +242,6 @@ zx_status_t HandleEthPacket(fbl::unique_ptr<Packet> packet, FrameHandler* target
 
 }  // namespace
 
-zx_status_t DispatchMlmeMsg(const BaseMlmeMsg& msg, FrameHandler* target) {
-    ZX_DEBUG_ASSERT(target != nullptr);
-    if (target == nullptr) { return ZX_ERR_INVALID_ARGS; }
-
-    if (auto reset_req = msg.As<wlan_mlme::ResetRequest>()) {
-        target->HandleFrame(*reset_req);
-    } else if (auto start_req = msg.As<wlan_mlme::StartRequest>()) {
-        target->HandleFrame(*start_req);
-    } else if (auto stop_req = msg.As<wlan_mlme::StopRequest>()) {
-        target->HandleFrame(*stop_req);
-    } else if (auto scan_req = msg.As<wlan_mlme::ScanRequest>()) {
-        target->HandleFrame(*scan_req);
-    } else if (auto join_req = msg.As<wlan_mlme::JoinRequest>()) {
-        target->HandleFrame(*join_req);
-    } else if (auto auth_req = msg.As<wlan_mlme::AuthenticateRequest>()) {
-        target->HandleFrame(*auth_req);
-    } else if (auto auth_resp = msg.As<wlan_mlme::AuthenticateResponse>()) {
-        target->HandleFrame(*auth_resp);
-    } else if (auto deauth_req = msg.As<wlan_mlme::DeauthenticateRequest>()) {
-        target->HandleFrame(*deauth_req);
-    } else if (auto assoc_req = msg.As<wlan_mlme::AssociateRequest>()) {
-        target->HandleFrame(*assoc_req);
-    } else if (auto assoc_resp = msg.As<wlan_mlme::AssociateResponse>()) {
-        target->HandleFrame(*assoc_resp);
-    } else if (auto eapol_req = msg.As<wlan_mlme::EapolRequest>()) {
-        target->HandleFrame(*eapol_req);
-    } else if (auto setkeys_req = msg.As<wlan_mlme::SetKeysRequest>()) {
-        target->HandleFrame(*setkeys_req);
-    } else {
-        ZX_DEBUG_ASSERT(false);
-    }
-    return ZX_OK;
-}
-
 zx_status_t DispatchFramePacket(fbl::unique_ptr<Packet> packet, FrameHandler* target) {
     debugfn();
     ZX_DEBUG_ASSERT(packet != nullptr);

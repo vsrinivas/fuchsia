@@ -5,23 +5,12 @@
 #pragma once
 
 #include <wlan/mlme/mac_frame.h>
-#include <wlan/mlme/service.h>
-
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
 
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
 #define WLAN_DECL_VIRT_FUNC_HANDLE(methodName, args...) \
     virtual zx_status_t methodName(args) { return ZX_OK; }
-
-#define WLAN_DECL_FUNC_HANDLE_MLME(methodName, mlmeMsgType) \
-    WLAN_DECL_VIRT_FUNC_HANDLE(methodName, const MlmeMsg<::fuchsia::wlan::mlme::mlmeMsgType>&)
-
-#define WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(methodName, mlmeMsgType)                              \
-    zx_status_t HandleMlmeFrameInternal(const MlmeMsg<::fuchsia::wlan::mlme::mlmeMsgType>& msg) { \
-        return methodName(msg);                                                                   \
-    }
 
 #define WLAN_DECL_FUNC_HANDLE_MGMT(mgmtFrameType) \
     WLAN_DECL_VIRT_FUNC_HANDLE(Handle##mgmtFrameType, const MgmtFrame<mgmtFrameType>&)
@@ -111,21 +100,6 @@ class FrameHandler {
     // Ethernet frame handlers.
     virtual zx_status_t HandleEthFrame(const EthFrame& frame) { return ZX_OK; }
 
-    // Service Message handlers.
-    virtual zx_status_t HandleMlmeMessage(uint32_t ordinal) { return ZX_OK; }
-    WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeResetReq, ResetRequest)
-    WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeScanReq, ScanRequest)
-    WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeJoinReq, JoinRequest)
-    WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeAuthReq, AuthenticateRequest)
-    WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeAuthResp, AuthenticateResponse)
-    WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeDeauthReq, DeauthenticateRequest)
-    WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeAssocReq, AssociateRequest)
-    WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeAssocResp, AssociateResponse)
-    WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeEapolReq, EapolRequest)
-    WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeSetKeysReq, SetKeysRequest)
-    WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeStartReq, StartRequest)
-    WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeStopReq, StopRequest)
-
     // Data frame handlers.
     virtual zx_status_t HandleDataFrame(const DataFrameHeader& hdr) { return ZX_OK; }
     WLAN_DECL_VIRT_FUNC_HANDLE_DATA(NullDataFrame, NilHeader)
@@ -151,26 +125,6 @@ class FrameHandler {
     WLAN_DECL_FUNC_HANDLE_CTRL(PsPollFrame)
 
    private:
-    // Internal Service Message handlers.
-    template <typename Message> zx_status_t HandleFrameInternal(const MlmeMsg<Message>& msg) {
-        auto status = HandleMlmeMessage(msg.ordinal());
-        if (status != ZX_OK) { return status; }
-
-        return HandleMlmeFrameInternal(msg);
-    }
-    WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeResetReq, ResetRequest)
-    WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeScanReq, ScanRequest)
-    WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeJoinReq, JoinRequest)
-    WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeAuthReq, AuthenticateRequest)
-    WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeAuthResp, AuthenticateResponse)
-    WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeDeauthReq, DeauthenticateRequest)
-    WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeAssocReq, AssociateRequest)
-    WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeAssocResp, AssociateResponse)
-    WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeEapolReq, EapolRequest)
-    WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeSetKeysReq, SetKeysRequest)
-    WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeStartReq, StartRequest)
-    WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeStopReq, StopRequest)
-
     // Internal Management frame handlers.
     template <typename Body> zx_status_t HandleFrameInternal(const MgmtFrame<Body>& frame) {
         auto status = HandleMgmtFrame(*frame.hdr());

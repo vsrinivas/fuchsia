@@ -4,6 +4,7 @@
 
 #include <wlan/mlme/ap/ap_mlme.h>
 #include <wlan/mlme/frame_dispatcher.h>
+#include <wlan/mlme/service.h>
 
 #include <fbl/ref_ptr.h>
 #include <wlan/common/logging.h>
@@ -49,7 +50,7 @@ zx_status_t ApMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
         return HandleMlmeStopReq(*stop_req);
     }
 
-    if (bss_ != nullptr) { return DispatchMlmeMsg(msg, bss_.get()); }
+    // TODO(hahnr): Forward MLME primitives to BSS.
     return ZX_OK;
 }
 

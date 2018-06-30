@@ -13,6 +13,4 @@ class BaseMlmeMsg;
 
 zx_status_t DispatchFramePacket(fbl::unique_ptr<Packet> packet, FrameHandler* target);
 
-zx_status_t DispatchMlmeMsg(const BaseMlmeMsg&, FrameHandler*);
-
 }  // namespace wlan

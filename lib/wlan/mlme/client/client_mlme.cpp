@@ -86,7 +86,7 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     }
 
     // Once the STA was spawned, let it handle all incoming MLME messages.
-    if (sta_ != nullptr) { DispatchMlmeMsg(msg, sta_.get()); }
+    if (sta_ != nullptr) { sta_->HandleAnyMlmeMsg(msg); }
     return ZX_OK;
 }
 

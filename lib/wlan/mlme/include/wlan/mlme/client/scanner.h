@@ -22,6 +22,8 @@ class Clock;
 class DeviceInterface;
 class Packet;
 class Timer;
+template<typename T>
+class MlmeMsg;
 
 class Scanner {
    public:

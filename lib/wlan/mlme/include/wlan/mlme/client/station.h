@@ -8,6 +8,7 @@
 #include <wlan/mlme/eapol.h>
 #include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/mac_frame.h>
+#include <wlan/mlme/service.h>
 #include <wlan/mlme/sequence.h>
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
@@ -21,6 +22,8 @@
 #include <zircon/types.h>
 
 namespace wlan {
+
+namespace wlan_mlme = wlan_mlme;
 
 class Packet;
 class Timer;
@@ -75,18 +78,7 @@ class Station : public FrameHandler {
 
     zx_status_t SendKeepAliveResponse();
 
-    zx_status_t HandleMlmeMessage(uint32_t ordinal) override;
-    zx_status_t HandleMlmeJoinReq(const MlmeMsg<::fuchsia::wlan::mlme::JoinRequest>& req) override;
-    zx_status_t HandleMlmeAuthReq(
-        const MlmeMsg<::fuchsia::wlan::mlme::AuthenticateRequest>& req) override;
-    zx_status_t HandleMlmeDeauthReq(
-        const MlmeMsg<::fuchsia::wlan::mlme::DeauthenticateRequest>& req) override;
-    zx_status_t HandleMlmeAssocReq(
-        const MlmeMsg<::fuchsia::wlan::mlme::AssociateRequest>& req) override;
-    zx_status_t HandleMlmeEapolReq(
-        const MlmeMsg<::fuchsia::wlan::mlme::EapolRequest>& req) override;
-    zx_status_t HandleMlmeSetKeysReq(
-        const MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest>& req) override;
+    zx_status_t HandleAnyMlmeMsg(const BaseMlmeMsg& mlme_msg);
 
     zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
     zx_status_t HandleBeacon(const MgmtFrame<Beacon>& frame) override;
@@ -117,6 +109,13 @@ class Station : public FrameHandler {
     ::fuchsia::wlan::stats::ClientMlmeStats stats() const;
 
    private:
+    zx_status_t HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& req);
+    zx_status_t HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequest>& req);
+    zx_status_t HandleMlmeDeauthReq(const MlmeMsg<wlan_mlme::DeauthenticateRequest>& req);
+    zx_status_t HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateRequest>& req);
+    zx_status_t HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& req);
+    zx_status_t HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysRequest>& req);
+
     zx_status_t SendAddBaRequestFrame();
 
     zx_status_t SetPowerManagementMode(bool ps_mode);
@@ -135,7 +134,7 @@ class Station : public FrameHandler {
 
     DeviceInterface* device_;
     fbl::unique_ptr<Timer> timer_;
-    ::fuchsia::wlan::mlme::BSSDescriptionPtr bss_;
+    wlan_mlme::BSSDescriptionPtr bss_;
     common::MacAddr bssid_;
     Sequence seq_;
 
