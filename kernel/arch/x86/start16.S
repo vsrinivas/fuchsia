@@ -122,7 +122,7 @@ FUNCTION_LABEL(_x86_secondary_cpu_long_mode_entry)
     // As of this point, %esi is invalid
 
     // Reload the GDT with one based off of non-identity mapping
-    lgdt _gdtr(%rip)
+    lgdt _temp_gdtr(%rip)
 
     // Zero our data segments
     xor %eax, %eax
@@ -166,7 +166,7 @@ FUNCTION_LABEL(_x86_suspend_wakeup)
     // As of this point, %esi is invalid
 
     // Reload the GDT with one based off of non-identity mapping
-    lgdt _gdtr(%rip)
+    lgdt _temp_gdtr(%rip)
 
     // Zero our data segments
     xor %eax, %eax

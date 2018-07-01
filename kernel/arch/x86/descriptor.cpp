@@ -15,14 +15,25 @@
 #include <assert.h>
 #include <bits.h>
 #include <err.h>
+#include <kernel/mp.h>
 #include <string.h>
 #include <trace.h>
+#include <vm/fault.h>
+#include <vm/pmm.h>
+#include <vm/vm_aspace.h>
+#include <vm/vm_object_paged.h>
+#include <vm/vm_object_physical.h>
 #include <zircon/compiler.h>
 
 #define TSS_DESC_BUSY_BIT (1ull << 41)
 
-/* the main global gdt in the system, declared in assembly */
-extern uint8_t _gdt[];
+/* Temporary GDT defined in assembly is used during AP/BP setup process */
+extern uint8_t _temp_gdt[];
+extern uint8_t _temp_gdt_end[];
+
+/* We create a new GDT after initialization is done and switch everyone to it */
+static uintptr_t gdt = (uintptr_t)_temp_gdt;
+
 static void x86_tss_assign_ists(struct x86_percpu* percpu, tss_t* tss);
 
 struct task_desc {
@@ -61,7 +72,7 @@ void x86_set_tss_sp(vaddr_t sp) {
 
 void x86_clear_tss_busy(seg_sel_t sel) {
     uint index = sel >> 3;
-    struct task_desc* desc = (struct task_desc*)(_gdt + index * 8);
+    struct task_desc* desc = (struct task_desc*)(gdt + index * 8);
     desc->low &= ~TSS_DESC_BUSY_BIT;
 }
 
@@ -112,6 +123,51 @@ void set_global_desc_64(seg_sel_t sel, uint64_t base, uint32_t limit,
     uint index = sel >> 3;
 
     // for x86_64 index is still in units of 8 bytes into the gdt table
-    struct seg_desc_64* g = (struct seg_desc_64*)(_gdt + index * 8);
+    struct seg_desc_64* g = (struct seg_desc_64*)(gdt + index * 8);
     *g = entry;
+}
+
+void gdt_setup() {
+    DEBUG_ASSERT(arch_curr_cpu_num() == 0);
+    DEBUG_ASSERT(mp_get_online_mask() == 1);
+    // Max GDT size is limited to 64K and we reserve the whole 64K area, but we map
+    // just enough pages to store GDT and leave the rest unmapped so all accesses
+    // beyond GDT last page are going to cause page fault.
+    // Why don't we just set a a proper limit value? That's because during VM exit
+    // on x86 architecture GDT limit is always set to 0xFFFF (see Intel SDM, Volume
+    // 3, 27.5.2 Loading Host Segment and Descriptor-Table Registers) and therefore
+    // requiring the hypervisor to restore GDT limit after VM exit using LGDT
+    // instruction which is a serializing instruction (see Intel SDM, Volume 3, 8.3
+    // Serializing Instructions).
+    uint32_t vmar_flags = VMAR_FLAG_CAN_MAP_SPECIFIC | VMAR_FLAG_CAN_MAP_READ | VMAR_FLAG_CAN_MAP_WRITE;
+    uint32_t mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+
+    size_t gdt_real_size = _temp_gdt_end - _temp_gdt;
+    size_t gdt_size = 0x10000;
+
+    fbl::RefPtr<VmObject> vmo;
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, /*options*/0u, gdt_real_size, &vmo);
+    ASSERT(status == ZX_OK);
+
+    fbl::RefPtr<VmAddressRegion> vmar;
+    status = VmAspace::kernel_aspace()->RootVmar()->CreateSubVmar(
+        0, gdt_size, PAGE_SIZE_SHIFT, vmar_flags, "gdt_vmar", &vmar);
+    ASSERT(status == ZX_OK);
+
+    fbl::RefPtr<VmMapping> mapping;
+    status = vmar->CreateVmMapping(
+        /*mapping_offset*/0u, gdt_real_size, PAGE_SIZE_SHIFT, VMAR_FLAG_SPECIFIC, fbl::move(vmo),
+        /*vmo_offset*/0u, mmu_flags, "gdt", &mapping);
+    ASSERT(status == ZX_OK);
+
+    status = mapping->MapRange(0, gdt_real_size, /*commit*/true);
+    ASSERT(status == ZX_OK);
+
+    memcpy((void*)mapping->base(), _temp_gdt, gdt_real_size);
+    gdt = mapping->base();
+    gdt_load(gdt_get());
+}
+
+uintptr_t gdt_get(void) {
+    return gdt;
 }

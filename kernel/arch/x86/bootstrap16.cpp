@@ -69,14 +69,14 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, fbl::RefPtr<VmAspace>* te
     });
 
     // Actual GDT address.
-    extern uint8_t _gdt;
-    extern uint8_t _gdt_end;
+    extern uint8_t _temp_gdt;
+    extern uint8_t _temp_gdt_end;
 
     // Compute what needs to go into the mappings
     paddr_t gdt_phys_page =
-        vaddr_to_paddr((void*)ROUNDDOWN((uintptr_t)&_gdt, PAGE_SIZE));
+        vaddr_to_paddr((void*)ROUNDDOWN((uintptr_t)&_temp_gdt, PAGE_SIZE));
     uintptr_t gdt_region_len =
-        ROUNDUP((uintptr_t)&_gdt_end, PAGE_SIZE) - ROUNDDOWN((uintptr_t)&_gdt, PAGE_SIZE);
+        ROUNDUP((uintptr_t)&_temp_gdt_end, PAGE_SIZE) - ROUNDDOWN((uintptr_t)&_temp_gdt, PAGE_SIZE);
 
     // Temporary aspace needs 5 regions mapped:
     struct map_range page_mappings[] = {
@@ -147,9 +147,9 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, fbl::RefPtr<VmAspace>* te
     bootstrap_data->phys_bootstrap_pml4 = static_cast<uint32_t>(phys_bootstrap_pml4);
     bootstrap_data->phys_kernel_pml4 = static_cast<uint32_t>(phys_kernel_pml4);
     bootstrap_data->phys_gdtr_limit =
-        static_cast<uint16_t>(&_gdt_end - &_gdt - 1);
+        static_cast<uint16_t>(&_temp_gdt_end - &_temp_gdt - 1);
     bootstrap_data->phys_gdtr_base =
-        reinterpret_cast<uintptr_t>(&_gdt) -
+        reinterpret_cast<uintptr_t>(&_temp_gdt) -
         reinterpret_cast<uintptr_t>(__code_start) +
         get_kernel_base_phys();
     bootstrap_data->phys_long_mode_entry = static_cast<uint32_t>(long_mode_entry);

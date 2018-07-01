@@ -86,10 +86,6 @@ END_FUNCTION(vmx_enter)
  * stack and registers to the state they were in when vmx_enter was called.
  */
 FUNCTION(vmx_exit_entry)
-    // Reload the global descriptor table in order to restore its limit. VMX
-    // always restores it with a limit of 0xffff, which is too large.
-    lgdt _gdtr(%rip)
-
     // Store the guest registers not covered by the VMCS. At this point,
     // vmx_state is in RSP.
     mov %rax, GS_RAX(%rsp)

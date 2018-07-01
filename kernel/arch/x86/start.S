@@ -131,11 +131,11 @@
 .endm
 
 // Load our new GDT by physical pointer.
-// _gdtr has it as a virtual pointer, so copy it and adjust.
+// _temp_gdtr has it as a virtual pointer, so copy it and adjust.
 // Clobbers %eax and %ecx.
 .macro load_phys_gdtr
-    movw PHYS(_gdtr), %ax
-    movl PHYS(_gdtr+2), %ecx
+    movw PHYS(_temp_gdtr), %ax
+    movl PHYS(_temp_gdtr+2), %ecx
     sub $PHYS_ADDR_DELTA, %ecx
     movw %ax, -6(%esp)
     movl %ecx, -4(%esp)
@@ -248,7 +248,7 @@ high_entry:
     // The fixup code won't be used again, so the memory can be reused now.
 
     /* reload the gdtr after relocations as it relies on relocated VAs */
-    lgdt _gdtr(%rip)
+    lgdt _temp_gdtr(%rip)
 
     // Set %gs.base to &bp_percpu.  It's statically initialized
     // with kernel_unsafe_sp set, so after this it's safe to call

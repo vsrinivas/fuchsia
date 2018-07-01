@@ -24,8 +24,6 @@
 #include "vmexit_priv.h"
 #include "vmx_cpu_state_priv.h"
 
-extern uint8_t _gdt[];
-
 static constexpr uint32_t kInterruptInfoValid = 1u << 31;
 static constexpr uint32_t kInterruptInfoDeliverErrorCode = 1u << 11;
 static constexpr uint32_t kInterruptTypeHardwareException = 3u << 8;
@@ -486,7 +484,7 @@ static zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entr
     vmcs.Write(VmcsFieldXX::HOST_FS_BASE, read_msr(X86_MSR_IA32_FS_BASE));
     vmcs.Write(VmcsFieldXX::HOST_GS_BASE, read_msr(X86_MSR_IA32_GS_BASE));
     vmcs.Write(VmcsFieldXX::HOST_TR_BASE, reinterpret_cast<uint64_t>(&percpu->default_tss));
-    vmcs.Write(VmcsFieldXX::HOST_GDTR_BASE, reinterpret_cast<uint64_t>(_gdt));
+    vmcs.Write(VmcsFieldXX::HOST_GDTR_BASE, reinterpret_cast<uint64_t>(gdt_get()));
     vmcs.Write(VmcsFieldXX::HOST_IDTR_BASE, reinterpret_cast<uint64_t>(idt_get_readonly()));
     vmcs.Write(VmcsFieldXX::HOST_IA32_SYSENTER_ESP, 0);
     vmcs.Write(VmcsFieldXX::HOST_IA32_SYSENTER_EIP, 0);
@@ -771,10 +769,6 @@ void vmx_exit(VmxState* vmx_state) {
     seg_sel_t selector = TSS_SELECTOR(arch_curr_cpu_num());
     x86_clear_tss_busy(selector);
     x86_ltr(selector);
-
-    // Reload the interrupt descriptor table in order to restore its limit. VMX
-    // always restores it with a limit of 0xffff, which is too large.
-    idt_load(idt_get_readonly());
 }
 
 zx_status_t Vcpu::Interrupt(uint32_t vector) {

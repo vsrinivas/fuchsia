@@ -147,6 +147,10 @@ static inline void x86_lidt(uintptr_t base) {
     __asm volatile("lidt (%0)" ::"r"(base)
                    : "memory");
 }
+static inline void x86_lgdt(uintptr_t base)
+{
+    __asm volatile("lgdt (%0)" :: "r"(base) : "memory");
+}
 
 static inline uint8_t inp(uint16_t _port) {
     uint8_t rv;

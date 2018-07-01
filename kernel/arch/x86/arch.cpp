@@ -60,6 +60,7 @@ void arch_init(void) {
 
     x86_mmu_init();
 
+    gdt_setup();
     idt_setup_readonly();
 
     x86_perfmon_init();
