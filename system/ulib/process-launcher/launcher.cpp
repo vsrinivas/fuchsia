@@ -290,6 +290,10 @@ void LauncherImpl::PrepareLaunchpad(const fidl::Message& message, launchpad_t** 
     launchpad_set_environ(lp, environs.get());
     launchpad_set_nametable(lp, nametable.size(), nametable.get());
     launchpad_add_handles(lp, ids_.size(), reinterpret_cast<zx_handle_t*>(handles_.get()), ids_.get());
+    // launchpad_add_handles() took ownership of the handles in handles_.
+    for (auto& handle : handles_) {
+        __UNUSED zx_handle_t old_handle = handle.release();
+    }
 
     *lp_out = lp;
 }
