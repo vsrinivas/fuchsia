@@ -336,9 +336,14 @@ int main(int argc, const char* argv[]) {
         }
     }
 
+    // Color layer which covers all displays
+    ColorLayer layer0(displays);
+    layers.push_back(&layer0);
+
     // Layer which covers all displays and uses page flipping.
     PrimaryLayer layer1(displays);
     layer1.SetLayerFlipping(true);
+    layer1.SetAlpha(true, .75);
     layers.push_back(&layer1);
 
     // Layer which covers the left half of the of the first display
@@ -369,7 +374,6 @@ int main(int argc, const char* argv[]) {
     layer3.SetPanDest(true);
     layer3.SetPanSrc(true);
     layer3.SetRotates(true);
-    layer3.SetAlpha(true, .5f);
     layers.push_back(&layer3);
 #else
     CursorLayer layer4(displays);

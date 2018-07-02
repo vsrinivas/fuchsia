@@ -38,8 +38,9 @@ public:
     // images which are displayed at the same time, images with a lower z-order
     // occur first.
     list_node_t images = LIST_INITIAL_VALUE(images);
-    // The number of layers in the applied configuration.
-    uint32_t layer_count;
+    // The number of layers in the applied configuration which are important for vsync (i.e.
+    // that have images).
+    uint32_t vsync_layer_count;
 
     // Set when a layer change occurs on this display and cleared in vsync
     // when the new layers are all active.

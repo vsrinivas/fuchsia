@@ -34,8 +34,8 @@ typedef struct layer {
 // A layer whose output can appear on multiple displays.
 class VirtualLayer {
 public:
-    VirtualLayer(Display* display);
-    VirtualLayer(const fbl::Vector<Display>& displays);
+    explicit VirtualLayer(Display* display);
+    explicit VirtualLayer(const fbl::Vector<Display>& displays);
 
     // Finish initializing the layer. All Set* methods should be called before this.
     virtual bool Init(zx_handle_t channel) = 0;
@@ -73,7 +73,7 @@ public:
         }
     }
 
-    bool is_done() const {
+    virtual bool is_done() const {
         bool done = true;
         for (unsigned i = 0; i < displays_.size(); i++) {
             done &= !layers_[i].active || layers_[i].done;
@@ -100,8 +100,8 @@ protected:
 
 class PrimaryLayer : public VirtualLayer {
 public:
-    PrimaryLayer(Display* display);
-    PrimaryLayer(const fbl::Vector<Display>& displays);
+    explicit PrimaryLayer(Display* display);
+    explicit PrimaryLayer(const fbl::Vector<Display>& displays);
 
     // Set* methods to configure the layer.
     void SetImageDimens(uint32_t width, uint32_t height) {
@@ -171,8 +171,8 @@ private:
 
 class CursorLayer : public VirtualLayer {
 public:
-    CursorLayer(Display* display);
-    CursorLayer(const fbl::Vector<Display>& displays);
+    explicit CursorLayer(Display* display);
+    explicit CursorLayer(const fbl::Vector<Display>& displays);
 
     bool Init(zx_handle_t channel) override;
     void StepLayout(int32_t frame_num) override;
@@ -196,4 +196,19 @@ private:
     uint32_t y_pos_ = 0;
 
     Image* image_;
+};
+
+class ColorLayer : public VirtualLayer {
+public:
+    explicit ColorLayer(Display* display);
+    explicit ColorLayer(const fbl::Vector<Display>& displays);
+
+    bool Init(zx_handle_t channel) override;
+
+    void SendLayout(zx_handle_t channel) override {};
+    void StepLayout(int32_t frame_num) override {};
+    bool WaitForReady() override { return true; }
+    void Render(int32_t frame_num) override {}
+    uint64_t image_id(uint64_t display_id) const override { return INVALID_ID; }
+    virtual bool is_done() const override { return true; }
 };

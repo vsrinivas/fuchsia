@@ -68,6 +68,10 @@ private:
     int32_t current_cursor_x_;
     int32_t current_cursor_y_;
 
+    // Storage for a color layer's color data bytes.
+    uint8_t pending_color_bytes_[4];
+    uint8_t current_color_bytes_[4];
+
     layer_node_t pending_node_;
     layer_node_t current_node_;
 
@@ -88,7 +92,7 @@ public:
         return ret;
     }
 
-    uint32_t current_layer_count() const { return current_.layer_count; }
+    uint32_t vsync_layer_count() const { return vsync_layer_count_; }
     const display_config_t* current_config() const { return &current_; }
     const fbl::SinglyLinkedList<layer_node_t*>& get_current_layers() const {
         return current_layers_;
@@ -109,6 +113,7 @@ private:
     fbl::unique_ptr<cursor_info_t[]> cursor_infos_;
     uint32_t cursor_info_count_;
 
+    uint32_t vsync_layer_count_;
     bool display_config_change_ = false;
 
     friend Client;
@@ -173,6 +178,9 @@ private:
             fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleSetLayerCursorPosition(
             const fuchsia_display_ControllerSetLayerCursorPositionRequest* req,
+            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void HandleSetLayerColorConfig(
+            const fuchsia_display_ControllerSetLayerColorConfigRequest* req,
             fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleSetLayerImageLegacy(uint64_t layer_id, uint64_t image_id,
                                    uint64_t wait_event_id, uint64_t present_event_id,

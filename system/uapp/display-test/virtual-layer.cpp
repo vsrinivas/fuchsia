@@ -390,3 +390,41 @@ void CursorLayer::SendLayout(zx_handle_t dc_handle) {
         display_start += displays_[i]->mode().horizontal_resolution;
     }
 }
+
+ColorLayer::ColorLayer(Display* display) : VirtualLayer(display) { }
+
+ColorLayer::ColorLayer(const fbl::Vector<Display>& displays) : VirtualLayer(displays) { }
+
+bool ColorLayer::Init(zx_handle_t dc_handle) {
+    for (unsigned i = 0; i < displays_.size(); i++) {
+        layer_t* layer = CreateLayer(dc_handle);
+        if (layer == nullptr) {
+            return false;
+        }
+
+        layer->active = true;
+
+        constexpr uint32_t kColorLayerFormat = ZX_PIXEL_FORMAT_ARGB_8888;
+        uint32_t kColorLayerColor = get_fg_color();
+
+        uint32_t size = sizeof(fuchsia_display_ControllerSetLayerColorConfigRequest)
+                + FIDL_ALIGN(ZX_PIXEL_FORMAT_BYTES(kColorLayerFormat));
+        uint8_t data[size];
+
+        auto config = reinterpret_cast<fuchsia_display_ControllerSetLayerColorConfigRequest*>(data);
+        config->hdr.ordinal = fuchsia_display_ControllerSetLayerColorConfigOrdinal;
+        config->layer_id = layer->id;
+        config->pixel_format = kColorLayerFormat;
+        config->color_bytes.count = ZX_PIXEL_FORMAT_BYTES(kColorLayerFormat);
+        config->color_bytes.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+
+        *reinterpret_cast<uint32_t*>(config + 1) = kColorLayerColor;
+
+        if (zx_channel_write(dc_handle, 0, data, size, nullptr, 0) != ZX_OK) {
+            printf("Setting layer config failed\n");
+            return false;
+        }
+    }
+
+    return true;
+}

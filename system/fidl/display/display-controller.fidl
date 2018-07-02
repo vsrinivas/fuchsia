@@ -277,6 +277,11 @@ interface Controller {
   // will clamp y to [-cursor_height + 1, display_height - 1].
   20: SetLayerCursorPosition(uint64 layer_id, int32 x, int32 y);
 
+  // Configures the layer as a color layer with the given color. The
+  // color_bytes vector is little-endian and must have length appropriate
+  // for the pixel format.
+  25: SetLayerColorConfig(uint64 layer_id, uint32 pixel_format, vector<uint8> color_bytes);
+
   // Sets the image for the layer. It is illegal to call this with an
   // image which doesn't match the layer's pending ImageConfig.
   //
@@ -358,6 +363,7 @@ interface Controller {
   // 22: SetLayerPrimaryAlpha
   // 23: EnableVsync
   // 24: Vsync
+  // 25: SetLayerColorConfig
 
   // TODO(stevensd): Delete this when nothing uses it anymore
   100: SetDisplayImage(uint64 display, uint64 image_id, uint64 wait_event_id, uint64 present_event_id, uint64 signal_event_id);

@@ -167,10 +167,18 @@ typedef struct cursor_layer {
     int32_t y_pos;
 } cursor_layer_t;
 
+typedef struct color_layer {
+    zx_pixel_format_t format;
+    // The color to use for the layer. The color is little-endian, and is
+    // guaranteed to be of the appropriate size.
+    uint8_t* color;
+} color_layer_t;
+
 // Types of layers.
 
 #define LAYER_PRIMARY 0
 #define LAYER_CURSOR 1
+#define LAYER_COLOR 2
 
 typedef struct layer {
     // One of the LAYER_* flags.
@@ -180,6 +188,7 @@ typedef struct layer {
     union {
         primary_layer_t primary;
         cursor_layer_t cursor;
+        color_layer_t color;
     } cfg;
 } layer_t;
 

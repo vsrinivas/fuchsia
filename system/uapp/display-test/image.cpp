@@ -86,8 +86,10 @@ Image* Image::Create(zx_handle_t dc_handle,
         return nullptr;
     }
 
-    void* ptr = reinterpret_cast<void*>(addr);
-    memset(ptr, 0xff, alloc_msg.size);
+    uint32_t* ptr = reinterpret_cast<uint32_t*>(addr);
+    for (unsigned i = 0; i < alloc_msg.size / sizeof(uint32_t); i++) {
+        ptr[i] = bg_color;
+    }
     zx_cache_flush(ptr, alloc_msg.size, ZX_CACHE_FLUSH_DATA);
 
     return new Image(width, height, stride_rsp.stride, format,

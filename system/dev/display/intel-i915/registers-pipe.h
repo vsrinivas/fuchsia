@@ -33,6 +33,18 @@ public:
     DEF_FIELD(11, 0, vertical_source_size);
 };
 
+// PIPE_BOTTOM_COLOR
+class PipeBottomColor : public hwreg::RegisterBase<PipeBottomColor, uint32_t> {
+public:
+    static constexpr uint32_t kBaseAddr = 0x70034;
+
+    DEF_BIT(31, gamma_enable);
+    DEF_BIT(30, csc_enable);
+    DEF_FIELD(29, 20, r);
+    DEF_FIELD(19, 10, g);
+    DEF_FIELD(9, 0, b);
+};
+
 
 // PLANE_SURF
 class PlaneSurface : public hwreg::RegisterBase<PlaneSurface, uint32_t> {
@@ -298,6 +310,9 @@ public:
 
     hwreg::RegisterAddr<registers::PipeSourceSize> PipeSourceSize() {
         return GetReg<registers::PipeSourceSize>();
+    }
+    hwreg::RegisterAddr<registers::PipeBottomColor> PipeBottomColor() {
+        return GetReg<registers::PipeBottomColor>();
     }
 
     hwreg::RegisterAddr<registers::PlaneSurface> PlaneSurface(int32_t plane_num) {

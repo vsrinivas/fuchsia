@@ -102,9 +102,9 @@ private:
     DisplayDevice* FindDevice(uint64_t display_id) __TA_REQUIRES(display_lock_);
 
     // Gets the layer_t* config for the given pipe/plane. Return false if there is no layer.
-    bool GetLayer(registers::Pipe pipe, uint32_t plane,
-                  const display_config_t** configs, uint32_t display_count,
-                  const layer_t** layer_out) __TA_REQUIRES(display_lock_);
+    bool GetPlaneLayer(registers::Pipe pipe, uint32_t plane,
+                       const display_config_t** configs, uint32_t display_count,
+                       const layer_t** layer_out) __TA_REQUIRES(display_lock_);
     // Returns false if no allocation is possible. When that happens,
     // plane 0 of the failing displays will be set to UINT16_MAX.
     bool CalculateMinimumAllocations(const display_config_t** display_configs,

@@ -44,6 +44,7 @@ zx_status_t decode_message(fidl::Message* msg) {
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerPrimaryAlpha);
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerCursorConfig);
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerCursorPosition);
+    SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerColorConfig);
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerImage);
     SELECT_TABLE_CASE(fuchsia_display_ControllerCheckConfig);
     SELECT_TABLE_CASE(fuchsia_display_ControllerApplyConfig);
@@ -176,6 +177,7 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
     HANDLE_REQUEST_CASE(SetLayerPrimaryAlpha);
     HANDLE_REQUEST_CASE(SetLayerCursorConfig);
     HANDLE_REQUEST_CASE(SetLayerCursorPosition);
+    HANDLE_REQUEST_CASE(SetLayerColorConfig);
     HANDLE_REQUEST_CASE(SetLayerImage);
     HANDLE_REQUEST_CASE(CheckConfig);
     HANDLE_REQUEST_CASE(ApplyConfig);
@@ -595,6 +597,34 @@ void Client::HandleSetLayerCursorPosition(
     layer->config_change_ = true;
 }
 
+void Client::HandleSetLayerColorConfig(
+        const fuchsia_display_ControllerSetLayerColorConfigRequest* req,
+        fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto layer = layers_.find(req->layer_id);
+    if (!layer.IsValid()) {
+        zxlogf(WARN, "SetLayerColorConfig on invalid layer\n");
+        return;
+    }
+
+    if (req->color_bytes.count != ZX_PIXEL_FORMAT_BYTES(req->pixel_format)) {
+        zxlogf(ERROR, "SetLayerColorConfig with invalid color bytes\n");
+        TearDown();
+        return;
+    }
+    // Increase the size of the static array when large color formats are introduced
+    ZX_ASSERT(req->color_bytes.count <= sizeof(layer->pending_color_bytes_));
+
+    layer->pending_layer_.type = LAYER_COLOR;
+    color_layer_t* color_layer = &layer->pending_layer_.cfg.color;
+
+    color_layer->format = req->pixel_format;
+    memcpy(layer->pending_color_bytes_, req->color_bytes.data, sizeof(layer->pending_color_bytes_));
+
+    layer->pending_image_ = nullptr;
+    layer->config_change_ = true;
+    pending_config_valid_ = false;
+}
+
 void Client::HandleSetLayerImageLegacy(uint64_t layer_id, uint64_t image_id,
                                        uint64_t wait_event_id, uint64_t present_event_id,
                                        uint64_t signal_event_id) {
@@ -656,6 +686,9 @@ void Client::HandleCheckConfig(const fuchsia_display_ControllerCheckConfigReques
                 layer.pending_cursor_x_ = layer.current_cursor_x_;
                 layer.pending_cursor_y_ = layer.current_cursor_y_;
             }
+
+            memcpy(layer.pending_color_bytes_,layer.current_color_bytes_,
+                   sizeof(layer.pending_color_bytes_));
         }
         // Reset each config's pending layers to their current layers. Clear
         // all displays first in case layers were moved between displays.
@@ -761,11 +794,11 @@ void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigReques
                 layer->current_layer_ = layer->pending_layer_;
                 layer->config_change_ = false;
 
-                image_t* new_config;
+                image_t* new_image_config = nullptr;
                 if (layer->current_layer_.type == LAYER_PRIMARY) {
-                    new_config = &layer->current_layer_.cfg.primary.image;
+                    new_image_config = &layer->current_layer_.cfg.primary.image;
                 } else if (layer->current_layer_.type == LAYER_CURSOR) {
-                    new_config = &layer->current_layer_.cfg.cursor.image;
+                    new_image_config = &layer->current_layer_.cfg.cursor.image;
 
                     layer->current_cursor_x_ = layer->pending_cursor_x_;
                     layer->current_cursor_y_ = layer->pending_cursor_y_;
@@ -773,35 +806,42 @@ void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigReques
                     display_mode_t* mode = &display_config.current_.mode;
                     layer->current_layer_.cfg.cursor.x_pos =
                             fbl::clamp(layer->current_cursor_x_,
-                                       -static_cast<int32_t>(new_config->width) + 1,
+                                       -static_cast<int32_t>(new_image_config->width) + 1,
                                        static_cast<int32_t>(mode->h_addressable) - 1);
                     layer->current_layer_.cfg.cursor.y_pos =
                             fbl::clamp(layer->current_cursor_y_,
-                                       -static_cast<int32_t>(new_config->height) + 1,
+                                       -static_cast<int32_t>(new_image_config->height) + 1,
                                        static_cast<int32_t>(mode->v_addressable) - 1);
+                    new_image_config = &layer->current_layer_.cfg.cursor.image;
+                } else if (layer->current_layer_.type == LAYER_COLOR) {
+                    memcpy(layer->current_color_bytes_, layer->pending_color_bytes_,
+                           sizeof(layer->current_color_bytes_));
+                    layer->current_layer_.cfg.color.color = layer->current_color_bytes_;
                 } else {
                     // type is validated in ::CheckConfig, so something must be very wrong.
                     ZX_ASSERT(false);
                 }
 
-                // If the layer's image configuration changed, drop any waiting images
-                if (!list_is_empty(&layer->waiting_images_)
-                        && !list_peek_head_type(&layer->waiting_images_, image_node_t, link)
-                                ->self->HasSameConfig(*new_config)) {
-                    do_early_retire(&layer->waiting_images_);
-                }
+                if (new_image_config) {
+                    // If the layer's image configuration changed, drop any waiting images
+                    if (!list_is_empty(&layer->waiting_images_)
+                            && !list_peek_head_type(&layer->waiting_images_, image_node_t, link)
+                                    ->self->HasSameConfig(*new_image_config)) {
+                        do_early_retire(&layer->waiting_images_);
+                    }
 
-                // Either retire the displayed image if the configuration changed or
-                // put it back into the new layer_t configuration
-                if (layer->displayed_image_ != nullptr) {
-                    if (!layer->displayed_image_->HasSameConfig(*new_config)) {
-                        {
-                            fbl::AutoLock lock(controller_->mtx());
-                            layer->displayed_image_->StartRetire();
+                    // Either retire the displayed image if the configuration changed or
+                    // put it back into the new layer_t configuration
+                    if (layer->displayed_image_ != nullptr) {
+                        if (!layer->displayed_image_->HasSameConfig(*new_image_config)) {
+                            {
+                                fbl::AutoLock lock(controller_->mtx());
+                                layer->displayed_image_->StartRetire();
+                            }
+                            layer->displayed_image_ = nullptr;
+                        } else {
+                            new_image_config->handle = layer->displayed_image_->info().handle;
                         }
-                        layer->displayed_image_ = nullptr;
-                    } else {
-                        new_config->handle = layer->displayed_image_->info().handle;
                     }
                 }
             }
@@ -888,6 +928,10 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
             .width = display_config.pending_.mode.h_addressable,
             .height = display_config.pending_.mode.v_addressable,
         };
+
+        // Do any work that needs to be done to make sure that the pending layer_t structs
+        // are up to date, and validate that the configuration doesn't violate any API
+        // constraints.
         for (auto& layer_node : display_config.pending_layers_) {
             layers[layer_idx++] = &layer_node.layer->pending_layer_;
 
@@ -902,8 +946,15 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
                 };
                 invalid = (!frame_contains(image_frame, layer->src_frame)
                         || !frame_contains(display_frame, layer->dest_frame));
+            } else if (layer_node.layer->pending_layer_.type == LAYER_CURSOR) {
+                // The image is already set, so nothing to do here, and there's
+                // nothing that could make this invald.
+            } else if (layer_node.layer->pending_layer_.type == LAYER_COLOR) {
+                // There aren't any API constraints on valid colors.
+                layer_node.layer->pending_layer_.cfg.color.color =
+                        layer_node.layer->pending_color_bytes_;
             } else {
-                invalid = layer_node.layer->pending_layer_.type != LAYER_CURSOR;
+                invalid = true;
             }
 
             if (invalid) {
@@ -1045,6 +1096,7 @@ void Client::ApplyConfig() {
     for (auto& display_config : configs_) {
         display_config.current_.layer_count = 0;
         display_config.current_.layers = layers + layer_idx;
+        display_config.vsync_layer_count_ = 0;
 
         // Displays with no current layers are filtered out in Controller::ApplyConfig,
         // after it updates its own image tracking logic.
@@ -1109,11 +1161,15 @@ void Client::ApplyConfig() {
             }
 
             // If the layer has no image, skip it
-            layer->is_skipped_ = layer->displayed_image_ == nullptr;
-
+            layer->is_skipped_ =
+                    layer->displayed_image_ == nullptr && layer->current_layer_.type != LAYER_COLOR;
             if (!layer->is_skipped_) {
                 display_config.current_.layer_count++;
                 layers[layer_idx++] = &layer->current_layer_;
+
+                if (layer->displayed_image_) {
+                    display_config.vsync_layer_count_++;
+                }
             }
         }
     }

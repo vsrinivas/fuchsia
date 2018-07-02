@@ -717,9 +717,9 @@ const fbl::unique_ptr<GttRegion>& Controller::GetGttRegion(void* handle) {
     ZX_ASSERT(false);
 }
 
-bool Controller::GetLayer(registers::Pipe pipe, uint32_t plane,
-                          const display_config_t** configs, uint32_t display_count,
-                          const layer_t** layer_out) {
+bool Controller::GetPlaneLayer(registers::Pipe pipe, uint32_t plane,
+                               const display_config_t** configs, uint32_t display_count,
+                               const layer_t** layer_out) {
     DisplayDevice* disp = nullptr;
     for (auto& d : display_devices_) {
         if (d->pipe() == pipe) {
@@ -736,9 +736,10 @@ bool Controller::GetLayer(registers::Pipe pipe, uint32_t plane,
         if (config->display_id != disp->id()) {
             continue;
         }
+        bool has_color_layer = config->layer_count && config->layers[0]->type == LAYER_COLOR;
         for (unsigned j = 0; j < config->layer_count; j++) {
             if (config->layers[j]->type == LAYER_PRIMARY) {
-                if (plane != config->layers[j]->z_index) {
+                if (plane != (config->layers[j]->z_index - has_color_layer)) {
                     continue;
                 }
             } else if (config->layers[j]->type == LAYER_CURSOR) {
@@ -747,6 +748,9 @@ bool Controller::GetLayer(registers::Pipe pipe, uint32_t plane,
                 if (plane != registers::kCursorPlane) {
                     continue;
                 }
+            } else if (config->layers[j]->type == LAYER_COLOR) {
+                // color layers aren't a plane
+                continue;
             } else {
                 ZX_ASSERT(false);
             }
@@ -772,7 +776,7 @@ bool Controller::CalculateMinimumAllocations(const display_config_t** display_co
 
         for (unsigned plane_num = 0; plane_num < registers::kImagePlaneCount; plane_num++) {
             const layer_t* layer;
-            if (!GetLayer(pipe, plane_num, display_configs, display_count, &layer)) {
+            if (!GetPlaneLayer(pipe, plane_num, display_configs, display_count, &layer)) {
                 min_allocs[pipe_num][plane_num] = 0;
                 continue;
             }
@@ -934,7 +938,7 @@ bool Controller::ReallocatePlaneBuffers(const display_config_t** display_configs
         registers::Pipe pipe = registers::kPipes[pipe_num];
         for (unsigned plane_num = 0; plane_num < registers::kImagePlaneCount; plane_num++) {
             const layer_t* layer;
-            if (!GetLayer(pipe, plane_num, display_configs, display_count, &layer)) {
+            if (!GetPlaneLayer(pipe, plane_num, display_configs, display_count, &layer)) {
                 data_rate[pipe_num][plane_num] = 0;
             } else if (layer->type == LAYER_PRIMARY) {
                 const primary_layer_t* primary = &layer->cfg.primary;
@@ -946,7 +950,7 @@ bool Controller::ReallocatePlaneBuffers(const display_config_t** display_configs
                 // Use a tiny data rate so the cursor gets the minimum number of buffers
                 data_rate[pipe_num][plane_num] = 1;
             } else {
-                // Other layers don't use pipe/planes, so GetLayer should have returned false
+                // Other layers don't use pipe/planes, so GetPlaneLayer should have returned false
                 ZX_ASSERT(false);
             }
         }
@@ -1116,7 +1120,10 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
     for (unsigned i = 0; i < display_count; i++) {
         auto* config = display_config[i];
 
-        bool merge_all = config->layer_count > 3;
+        bool merge_all = false;
+        if (config->layer_count > 3) {
+            merge_all = config->layer_count > 4 || config->layers[0]->type != LAYER_COLOR;
+        }
         if (!merge_all && config->cc_flags) {
             if (config->cc_flags & COLOR_CONVERSION_PREOFFSET) {
                 for (int i = 0; i < 3; i++) {
@@ -1191,6 +1198,17 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
                             && image->pixel_format == cursor_infos[x].format;
                 }
                 if (!found) {
+                    layer_cfg_result[i][j] |= CLIENT_USE_PRIMARY;
+                }
+                break;
+            }
+            case LAYER_COLOR: {
+                if (j != 0) {
+                    layer_cfg_result[i][j] |= CLIENT_USE_PRIMARY;
+                }
+                zx_pixel_format_t format = config->layers[j]->cfg.color.format;
+                if (format != ZX_PIXEL_FORMAT_RGB_x888
+                        && format != ZX_PIXEL_FORMAT_ARGB_8888) {
                     layer_cfg_result[i][j] |= CLIENT_USE_PRIMARY;
                 }
                 break;

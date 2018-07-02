@@ -66,7 +66,7 @@ void Controller::OnDisplaysChanged(uint64_t* displays_added, uint32_t added_coun
             break;
         }
         info->pending_layer_change = false;
-        info->layer_count = 0;
+        info->vsync_layer_count = 0;
 
         info->id = displays_added[i];
         if (ops_.ops->get_display_info(ops_.ctx, info->id, &info->info) != ZX_OK) {
@@ -132,13 +132,13 @@ void Controller::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
     // until the change is complete.
     if (info->pending_layer_change) {
         bool done;
-        if (handle_count != info->layer_count) {
+        if (handle_count != info->vsync_layer_count) {
             // There's an unexpected number of layers, so wait until the next vsync.
             done = false;
         } else if (list_is_empty(&info->images)) {
             // If the images list is empty, then we can't have any pending layers and
             // the change is done when there are no handles being displayed.
-            ZX_ASSERT(info->layer_count == 0);
+            ZX_ASSERT(info->vsync_layer_count == 0);
             done = handle_count == 0;
         } else {
             // Otherwise the change is done when the last handle_count==info->layer_count
@@ -278,10 +278,10 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count,
             display->switching_client = is_vc != vc_applied_;
             display->pending_layer_change =
                     config->apply_layer_change() || display->switching_client;
-            display->layer_count = config->current_layer_count();
+            display->vsync_layer_count = config->vsync_layer_count();
             display->delayed_apply = false;
 
-            if (display->layer_count == 0) {
+            if (display->vsync_layer_count == 0) {
                 continue;
             }
 
@@ -289,13 +289,11 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count,
 
             for (auto& layer_node : config->get_current_layers()) {
                 Layer* layer = layer_node.layer;
-                if (layer->is_skipped()) {
+                fbl::RefPtr<Image> image = layer->current_image();
+
+                if (layer->is_skipped() || !image) {
                     continue;
                 }
-
-
-                fbl::RefPtr<Image> image = layer->current_image();
-                ZX_ASSERT(image); // Displayed layers must always have images
 
                 // Set the image z index so vsync knows what layer the image is in
                 image->set_z_index(layer->z_order());
