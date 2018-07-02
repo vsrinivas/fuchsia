@@ -539,6 +539,7 @@ fail:
             memset(&msg, 0, sizeof(msg));
             msg.op = ZXRIO_ON_OPEN;
             msg.status = ZX_OK;
+            msg.extra_ptr = (zxrio_object_info_t*)FIDL_ALLOC_PRESENT;
             msg.extra.tag = FDIO_PROTOCOL_DIRECTORY;
             zx_channel_write(h, 0, &msg, sizeof(zxrio_describe_t), NULL, 0);
         }

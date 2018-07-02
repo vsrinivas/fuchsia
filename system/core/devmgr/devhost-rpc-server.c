@@ -49,6 +49,7 @@ static zx_status_t create_description(zx_device_t* dev, zxrio_describe_t* msg,
     msg->op = ZXRIO_ON_OPEN;
     msg->extra.tag = FDIO_PROTOCOL_DEVICE;
     msg->status = ZX_OK;
+    msg->extra_ptr = (zxrio_object_info_t*)FIDL_ALLOC_PRESENT;
     *handle = ZX_HANDLE_INVALID;
     if (dev->event != ZX_HANDLE_INVALID) {
         //TODO: read only?
