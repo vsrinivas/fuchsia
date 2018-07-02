@@ -318,8 +318,7 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
       // fuchsia::modular::ModuleController to be closed, and so subsequent
       // Stop() attempts will not find a controller and will return.
       auto* const running_mod_info =
-          story_controller_impl_->FindRunningModInfo(
-              module_data_.module_path);
+          story_controller_impl_->FindRunningModInfo(module_data_.module_path);
 
       if (!running_mod_info) {
         FXL_LOG(INFO) << "No ModuleController for Module"
@@ -1755,8 +1754,7 @@ bool StoryControllerImpl::IsExternalModule(
          fuchsia::modular::ModuleSource::EXTERNAL;
 }
 
-StoryControllerImpl::RunningModInfo*
-StoryControllerImpl::FindRunningModInfo(
+StoryControllerImpl::RunningModInfo* StoryControllerImpl::FindRunningModInfo(
     const fidl::VectorPtr<fidl::StringPtr>& module_path) {
   for (auto& c : running_mod_infos_) {
     if (c.module_data->module_path == module_path) {
@@ -1779,8 +1777,8 @@ StoryControllerImpl::RunningModInfo* StoryControllerImpl::FindAnchor(
   // non-embedded modules by having a non-null SurfaceRelation. If the root
   // module is there at all, it has a non-null surface relation.
   while (anchor && !anchor->module_data->surface_relation) {
-    anchor = FindRunningModInfo(
-        ParentModulePath(anchor->module_data->module_path));
+    anchor =
+        FindRunningModInfo(ParentModulePath(anchor->module_data->module_path));
   }
 
   return anchor;

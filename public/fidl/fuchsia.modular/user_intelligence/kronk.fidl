@@ -1,0 +1,13 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.modular;
+
+// This service is provided by a Kronk agent. When kronk is started, this
+// service is called by the intelligence framework and provided with
+// capabilities that Kronk may use.
+[Discoverable]
+interface KronkInitializer {
+  1: Initialize(FocusProvider focus_provider);
+};

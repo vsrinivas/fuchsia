@@ -198,6 +198,12 @@ void UserIntelligenceProviderImpl::StartActionLog(
 void UserIntelligenceProviderImpl::StartKronk() {
   component_context_->ConnectToAgent(kronk_url_, kronk_services_.NewRequest(),
                                      kronk_controller_.NewRequest());
+
+  fuchsia::modular::KronkInitializerPtr initializer;
+  fuchsia::sys::ConnectToService(kronk_services_.get(),
+                                 initializer.NewRequest());
+  initializer->Initialize(Duplicate(focus_provider_));
+
   // fuchsia::modular::Agent runner closes the agent controller connection when
   // the agent terminates. We restart the agent (up to a limit) when we notice
   // this.

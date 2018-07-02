@@ -47,10 +47,13 @@ interface UserShellContext {
   16: Logout();
 };
 
-// EXPERIMENTAL Service that allows the story shell of the given story to get a
-// connection to a Presentation service provided by the user shell. This allows
-// shell implementations to coordinate event and focus handling. An analog
-// mechanism exists between DeviceShell and UserShell.
+// User shell provides this service to the framework which may plumb it to
+// different subscribers, such as story shell and intelligence provider.
+//
+// EXPERIMENTAL Service that allows consumers of a given story to get a
+// connection to a Presentation, and visual state services provided by the user
+// shell. This allows story shell implementations to coordinate event and focus
+// handling. An analog mechanism exists between DeviceShell and UserShell.
 [Discoverable]  // Created by user shell components.
 interface UserShellPresentationProvider {
   // When a StoryShell calls StoryContext.GetPresentation(), this request

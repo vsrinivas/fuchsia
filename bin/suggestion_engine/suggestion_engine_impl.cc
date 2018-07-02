@@ -8,11 +8,11 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/context/cpp/context_helper.h>
-#include "lib/fidl/cpp/clone.h"
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/time/time_delta.h>
 #include <lib/fxl/time/time_point.h>
+#include "lib/fidl/cpp/clone.h"
 
 #include "peridot/bin/suggestion_engine/auto_select_first_query_listener.h"
 #include "peridot/bin/suggestion_engine/decision_policies/rank_over_threshold_decision_policy.h"
@@ -498,13 +498,22 @@ void SuggestionEngineImpl::PerformAddModuleAction(
   FXL_CHECK(!story_id.empty())
       << "Attempting to add module without specifying a story id.";
 
+  auto parent_module_path = add_module.surface_parent_module_path.Clone();
+
   fuchsia::modular::StoryControllerPtr story_controller;
   story_provider_->GetController(story_id, story_controller.NewRequest());
   fuchsia::modular::Intent intent;
   fidl::Clone(add_module.intent, &intent);
-  story_controller->AddModule(add_module.surface_parent_module_path.Clone(),
-                              module_name, std::move(intent),
+  story_controller->AddModule(parent_module_path.Clone(), module_name,
+                              std::move(intent),
                               fidl::MakeOptional(add_module.surface_relation));
+
+  // Focus the added module.
+  parent_module_path.push_back(module_name);
+  fuchsia::modular::ModuleControllerPtr mod_controller;
+  story_controller->GetModuleController(std::move(parent_module_path),
+                                        mod_controller.NewRequest());
+  mod_controller->Focus();
 }
 
 void SuggestionEngineImpl::PerformUpdateModuleAction(

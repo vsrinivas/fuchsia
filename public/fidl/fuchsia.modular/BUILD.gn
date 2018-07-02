@@ -71,6 +71,7 @@ fidl("fuchsia.modular") {
     "user/focus.fidl",
     "user/user_shell.fidl",
     "user_intelligence/intelligence_services.fidl",
+    "user_intelligence/kronk.fidl",
     "user_intelligence/scope.fidl",
     "user_intelligence/user_intelligence_provider.fidl",
   ]

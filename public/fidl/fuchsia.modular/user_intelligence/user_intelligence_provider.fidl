@@ -42,6 +42,8 @@ interface UserIntelligenceProvider {
   // The |ComponentContext| is used to create agents and use message queues.
   5: StartAgents(ComponentContext user_intelligence_context);
 
-  // A standard set of services provided to all agents at startup.
-  6: GetServicesForAgent(string url) -> (fuchsia.sys.ServiceList service_list);
+  // A standard set of services provided to all agents at startup,
+  // along with services particuarly for this agent.
+  6: GetServicesForAgent(string agent_url)
+      -> (fuchsia.sys.ServiceList service_list);
 };
