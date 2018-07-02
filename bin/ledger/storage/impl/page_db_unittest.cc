@@ -68,7 +68,7 @@ class PageDbTest : public ::test::TestWithCoroutines {
   }
 
  protected:
-  ledger::ScopedTmpFS tmpfs_;
+  scoped_tmpfs::ScopedTmpFS tmpfs_;
   encryption::FakeEncryptionService encryption_service_;
   PageStorageImpl page_storage_;
   PageDbImpl page_db_;

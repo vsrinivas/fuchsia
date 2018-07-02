@@ -63,7 +63,7 @@ class TestWithPageStorage : public gtest::TestLoopFixture {
   fit::closure MakeQuitTaskOnce();
 
  private:
-  ScopedTmpFS tmpfs_;
+  scoped_tmpfs::ScopedTmpFS tmpfs_;
   coroutine::CoroutineServiceImpl coroutine_service_;
   encryption::FakeEncryptionService encryption_service_;
 };

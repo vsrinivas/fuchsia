@@ -27,7 +27,7 @@ class LedgerStorageTest : public gtest::TestLoopFixture {
   ~LedgerStorageTest() override {}
 
  private:
-  ledger::ScopedTmpFS tmpfs_;
+  scoped_tmpfs::ScopedTmpFS tmpfs_;
   coroutine::CoroutineServiceImpl coroutine_service_;
   encryption::FakeEncryptionService encryption_service_;
 

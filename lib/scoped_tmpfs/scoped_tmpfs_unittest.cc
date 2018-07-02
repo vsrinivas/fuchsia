@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/files/unique_fd.h"
 
-namespace ledger {
+namespace scoped_tmpfs {
 namespace {
 
 TEST(ScopedTmpFsTest, ScopedTmpFs) {
@@ -30,4 +30,4 @@ TEST(ScopedTmpFsTest, ScopedTmpFs) {
 }
 
 }  // namespace
-}  // namespace ledger
+}  // namespace scoped_tmpfs

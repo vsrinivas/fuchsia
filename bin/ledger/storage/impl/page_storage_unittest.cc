@@ -173,7 +173,7 @@ class PageStorageTest : public ::test::TestWithCoroutines {
       storage_->SetSyncDelegate(nullptr);
       storage_.reset();
     }
-    tmpfs_ = std::make_unique<ledger::ScopedTmpFS>();
+    tmpfs_ = std::make_unique<scoped_tmpfs::ScopedTmpFS>();
     PageId id = RandomString(10);
     storage_ = std::make_unique<PageStorageImpl>(
         dispatcher(), &coroutine_service_, &encryption_service_,
@@ -559,7 +559,7 @@ class PageStorageTest : public ::test::TestWithCoroutines {
   }
 
   coroutine::CoroutineServiceImpl coroutine_service_;
-  std::unique_ptr<ledger::ScopedTmpFS> tmpfs_;
+  std::unique_ptr<scoped_tmpfs::ScopedTmpFS> tmpfs_;
   encryption::FakeEncryptionService encryption_service_;
   std::unique_ptr<PageStorageImpl> storage_;
 

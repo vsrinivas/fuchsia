@@ -10,7 +10,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace ledger {
+namespace scoped_tmpfs {
 
 namespace {
 async_loop_config_t MakeConfig() {
@@ -41,4 +41,4 @@ ScopedTmpFS::~ScopedTmpFS() {
   FXL_DCHECK(status == ZX_OK);
 }
 
-}  // namespace ledger
+}  // namespace scoped_tmpfs

@@ -10,7 +10,7 @@
 
 #include "lib/fxl/files/unique_fd.h"
 
-namespace ledger {
+namespace scoped_tmpfs {
 
 // Scoped temporary filesystem that will be destroyed when this class is
 // deleted. The filesystem is not mounted on the process namespace and should be
@@ -31,6 +31,6 @@ class ScopedTmpFS {
   fxl::UniqueFD root_fd_;
 };
 
-}  // namespace ledger
+}  // namespace scoped_tmpfs
 
 #endif  // PERIDOT_LIB_SCOPED_TMPFS_SCOPED_TMPFS_H_

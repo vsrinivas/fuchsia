@@ -58,7 +58,7 @@ class LedgerRepositoryImplTest : public gtest::TestLoopFixture {
   ~LedgerRepositoryImplTest() override {}
 
  protected:
-  ScopedTmpFS tmpfs_;
+  scoped_tmpfs::ScopedTmpFS tmpfs_;
   Environment environment_;
   std::unique_ptr<LedgerRepositoryImpl> repository_;
   FakePageEvictionManager* page_eviction_manager_;

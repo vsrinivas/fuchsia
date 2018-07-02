@@ -60,7 +60,7 @@ class UserSyncImplTest : public gtest::TestLoopFixture {
                               content.size());
   }
 
-  ledger::ScopedTmpFS tmpfs_;
+  scoped_tmpfs::ScopedTmpFS tmpfs_;
   ledger::Environment environment_;
   cloud_provider::CloudProviderPtr cloud_provider_ptr_;
   TestCloudProvider cloud_provider_;
