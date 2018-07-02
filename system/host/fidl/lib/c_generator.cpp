@@ -77,6 +77,37 @@ void EmitClientMethodDecl(std::ostream* file, StringView method_name,
     *file << ")";
 }
 
+void EmitServerMethodDecl(std::ostream* file, StringView method_name,
+                          const std::vector<CGenerator::Member>& request,
+                          bool has_response) {
+    *file << "zx_status_t (*" << method_name << ")(void* ctx";
+    for (const auto& member : request) {
+        *file << ", ";
+        EmitMemberDecl(file, member);
+    }
+    if (has_response) {
+        *file << ", fidl_txn_t* txn";
+    }
+    *file << ")";
+}
+
+void EmitServerDispatchDecl(std::ostream* file, StringView interface_name) {
+    *file << "zx_status_t " << interface_name
+            << "_dispatch(void* ctx, fidl_txn_t* txn, const fidl_msg_t* msg, const "
+            << interface_name << "_ops_t* ops)";
+
+}
+
+void EmitServerReplyDecl(std::ostream* file, StringView method_name,
+                          const std::vector<CGenerator::Member>& response) {
+    *file << "zx_status_t " << method_name << "_reply(fidl_txn_t* txn";
+    for (const auto& member : response) {
+        *file << ", ";
+        EmitMemberDecl(file, member);
+    }
+    *file << ")";
+}
+
 // Various computational helper routines.
 
 void EnumValue(types::PrimitiveSubtype type, const flat::Constant* constant,
@@ -213,13 +244,14 @@ void GetMethodParameters(const flat::Library* library,
                          const CGenerator::NamedMethod& method_info,
                          std::vector<CGenerator::Member>* request,
                          std::vector<CGenerator::Member>* response) {
-
-    request->reserve(method_info.request->parameters.size());
-    for (const auto& parameter : method_info.request->parameters) {
-        request->push_back(CreateMember(library, parameter));
+    if (request) {
+        request->reserve(method_info.request->parameters.size());
+        for (const auto& parameter : method_info.request->parameters) {
+            request->push_back(CreateMember(library, parameter));
+        }
     }
 
-    if (method_info.response) {
+    if (response && method_info.response) {
         response->reserve(method_info.request->parameters.size());
         for (const auto& parameter : method_info.response->parameters) {
             response->push_back(CreateMember<flat::Interface::Method::Parameter, NameFlatCOutType>(library, parameter));
@@ -320,12 +352,13 @@ CGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& 
     std::map<const flat::Decl*, NamedInterface> named_interfaces;
     for (const auto& interface_info : interface_infos) {
         NamedInterface named_interface;
-        std::string interface_name = NameInterface(*interface_info);
+        named_interface.c_name = NameInterface(*interface_info);
         for (const auto& method : interface_info->methods) {
             NamedMethod named_method;
-            std::string method_name = NameMethod(interface_name, method);
+            std::string method_name = NameMethod(named_interface.c_name, method);
             named_method.ordinal = method.ordinal.Value();
             named_method.ordinal_name = NameOrdinal(method_name);
+            named_method.identifier = NameIdentifier(method.name);
             named_method.c_name = method_name;
             if (method.maybe_request != nullptr) {
                 std::string c_name = NameMessage(method_name, types::MessageKind::kRequest);
@@ -568,6 +601,75 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
     }
 }
 
+void CGenerator::ProduceInterfaceServerDeclaration(const NamedInterface& named_interface) {
+    file_ << "typedef struct " << named_interface.c_name << "_ops {\n";
+    for (const auto& method_info : named_interface.methods) {
+        if (!method_info.request)
+            continue;
+        std::vector<Member> request;
+        GetMethodParameters(library_, method_info, &request, nullptr);
+        bool has_response = method_info.response != nullptr;
+        file_ << kIndent;
+        EmitServerMethodDecl(&file_, method_info.identifier, request, has_response);
+        file_ << ";\n";
+    }
+    file_ << "} " << named_interface.c_name << "_ops_t;\n\n";
+
+    EmitServerDispatchDecl(&file_, named_interface.c_name);
+    file_ << ";\n\n";
+
+    for (const auto& method_info : named_interface.methods) {
+        if (!method_info.request || !method_info.response)
+            continue;
+        std::vector<Member> response;
+        GetMethodParameters(library_, method_info, nullptr, &response);
+        EmitServerReplyDecl(&file_, method_info.c_name, response);
+        file_ << ";\n";
+    }
+
+    EmitBlank(&file_);
+}
+
+void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& named_interface) {
+    EmitServerDispatchDecl(&file_, named_interface.c_name);
+    file_ << " {\n";
+    file_ << kIndent << "if (msg->num_bytes < sizeof(fidl_message_header_t))\n";
+    file_ << kIndent << kIndent << "return ZX_ERR_INVALID_ARGS;\n";
+    file_ << kIndent << "fidl_message_header_t* hdr = (fidl_message_header_t*)msg->bytes;\n";
+    file_ << kIndent << "zx_status_t status = ZX_OK;\n";
+    file_ << kIndent << "switch (hdr->ordinal) {\n";
+
+    for (const auto& method_info : named_interface.methods) {
+        if (!method_info.request)
+            continue;
+        file_ << kIndent << "case " << method_info.ordinal_name << ": {\n";
+        file_ << kIndent << kIndent << "status = fidl_decode(&" << method_info.request->coded_name << ", msg->bytes, msg->num_bytes, msg->handles, msg->num_handles, NULL);\n";
+        file_ << kIndent << kIndent << "if (status != ZX_OK)\n";
+        file_ << kIndent << kIndent << kIndent << "break;\n";
+        file_ << kIndent << kIndent << method_info.request->c_name << "* request = (" << method_info.request->c_name << "*)msg->bytes;\n";
+        file_ << kIndent << kIndent << "status = (*ops->" << method_info.identifier << ")(ctx";
+        std::vector<Member> request;
+        GetMethodParameters(library_, method_info, &request, nullptr);
+        for (const auto& member : request)
+            file_ << ", request->" << member.name;
+        if (method_info.response != nullptr)
+            file_ << ", txn";
+        file_ << ");\n";
+        file_ << kIndent << kIndent << "break;\n";
+        file_ << kIndent << "}\n";
+    }
+    file_ << kIndent << "default: {\n";
+    file_ << kIndent << kIndent << "zx_handle_close_many(msg->handles, msg->num_handles);\n";
+    file_ << kIndent << kIndent << "status = ZX_ERR_NOT_SUPPORTED;\n";
+    file_ << kIndent << kIndent << "break;\n";
+    file_ << kIndent << "}\n";
+    file_ << kIndent << "}\n";
+    file_ << kIndent << "return status;\n";
+    file_ << "}\n\n";
+
+    // TODO(FIDL-184): Generate method reply implementations.
+}
+
 std::ostringstream CGenerator::ProduceHeader() {
     GeneratePrologues();
 
@@ -688,7 +790,7 @@ std::ostringstream CGenerator::ProduceHeader() {
         }
     }
 
-    file_ << "\n// Simple clients \n\n";
+    file_ << "\n// Simple bindings \n\n";
 
     for (const auto* decl : library_->declaration_order_) {
         switch (decl->kind) {
@@ -704,6 +806,7 @@ std::ostringstream CGenerator::ProduceHeader() {
             auto iter = named_interfaces.find(decl);
             if (iter != named_interfaces.end()) {
                 ProduceInterfaceClientDeclaration(iter->second);
+                ProduceInterfaceServerDeclaration(iter->second);
             }
             break;
         }
@@ -754,6 +857,37 @@ std::ostringstream CGenerator::ProduceClient() {
 }
 
 std::ostringstream CGenerator::ProduceServer() {
+    EmitFileComment(&file_);
+    EmitIncludeHeader(&file_, "<lib/fidl/coding.h>");
+    EmitIncludeHeader(&file_, "<zircon/syscalls.h>");
+    EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(library_->name()) + ">");
+    EmitBlank(&file_);
+
+    std::map<const flat::Decl*, NamedInterface> named_interfaces =
+        NameInterfaces(library_->interface_declarations_);
+
+    for (const auto* decl : library_->declaration_order_) {
+        switch (decl->kind) {
+        case flat::Decl::Kind::kConst:
+        case flat::Decl::Kind::kEnum:
+        case flat::Decl::Kind::kStruct:
+        case flat::Decl::Kind::kUnion:
+            // Only interfaces have client implementations.
+            break;
+        case flat::Decl::Kind::kInterface: {
+            if (!HasSimpleLayout(decl))
+                break;
+            auto iter = named_interfaces.find(decl);
+            if (iter != named_interfaces.end()) {
+                ProduceInterfaceServerImplementation(iter->second);
+            }
+            break;
+        }
+        default:
+            abort();
+        }
+    }
+
     return std::move(file_);
 }
 

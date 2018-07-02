@@ -50,6 +50,7 @@ public:
     struct NamedMethod {
         uint32_t ordinal;
         std::string ordinal_name;
+        std::string identifier;
         std::string c_name;
         std::unique_ptr<NamedMessage> request;
         std::unique_ptr<NamedMessage> response;
@@ -67,6 +68,7 @@ private:
     };
 
     struct NamedInterface {
+        std::string c_name;
         std::vector<NamedMethod> methods;
     };
 
@@ -118,6 +120,9 @@ private:
 
     void ProduceInterfaceClientDeclaration(const NamedInterface& named_interface);
     void ProduceInterfaceClientImplementation(const NamedInterface& named_interface);
+
+    void ProduceInterfaceServerDeclaration(const NamedInterface& named_interface);
+    void ProduceInterfaceServerImplementation(const NamedInterface& named_interface);
 
     const flat::Library* library_;
     std::ostringstream file_;

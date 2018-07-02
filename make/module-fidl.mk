@@ -9,7 +9,7 @@ $(error $(MODULE) $(MODULE_TYPE) fidl modules must use MODULE_FIDL_DEPS)
 endif
 
 # build static library
-$(MODULE_LIBNAME).a: $(MODULE_FIDL_OBJ)
+$(MODULE_LIBNAME).a: $(MODULE_FIDL_OBJS)
 	@$(MKDIR)
 	$(call BUILDECHO,linking $@)
 	@rm -f -- "$@"

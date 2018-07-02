@@ -11,6 +11,7 @@ MODULE_TYPE := usertest
 MODULE_SRCS += \
     $(LOCAL_DIR)/client_tests.c \
     $(LOCAL_DIR)/main.c \
+    $(LOCAL_DIR)/server_tests.c \
 
 MODULE_NAME := fidl-simple-test
 
