@@ -36,12 +36,14 @@ LOG_CATEGORY(kLogFinspect, 23);  // Packet decoder log
 LOG_CATEGORY(kLogBss, 24);
 LOG_CATEGORY(kLogPs, 25);
 LOG_CATEGORY(kLogClt, 26);
+LOG_CATEGORY(kLogBuffer, 27);
 
 #undef LOG_CATEGORY
 
 // Set this to tune log output
 constexpr uint64_t kLogLevel = kLogInfos;
 constexpr bool kFinspectEnabled = kLogLevel & kLogFinspect;
+constexpr bool kBufferDebugEnabled = kLogLevel & kLogBuffer;
 
 #define finspect(args...) wlogf(wlan::kLogFinspect, "[finspect] ", args)
 
@@ -65,6 +67,7 @@ constexpr bool kFinspectEnabled = kLogLevel & kLogFinspect;
 #define debugps(args...)  wlogf(wlan::kLogPs, "[V:PS  ] ", args)
 #define debugclt(args...)  wlogf(wlan::kLogClt, "[V:clt ] ", args)
 #define debugfhandler(args...)  wlogf(wlan::kLogFrameHandlerTrace, "[V:fhdl] ", args)
+#define debugbuf(args...)  wlogf(wlan::kLogBuffer, "[V:buf ]", args)
 // clang-format on
 
 #define MAC_ADDR_FMT "%02x:%02x:%02x:%02x:%02x:%02x"

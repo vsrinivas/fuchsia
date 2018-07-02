@@ -50,22 +50,39 @@ zx_status_t Packet::AsWlanTxPacket(wlan_tx_packet_t* tx_pkt) {
     return ZX_OK;
 }
 
+void LogAllocationFail(const char* str) {
+    BufferDebugger<SmallBufferAllocator, LargeBufferAllocator, HugeBufferAllocator,
+                   kBufferDebugEnabled>::Fail(str);
+}
+
 fbl::unique_ptr<Buffer> GetBuffer(size_t len) {
     fbl::unique_ptr<Buffer> buffer;
 
     if (len <= kSmallBufferSize) {
         buffer = SmallBufferAllocator::New();
-        if (buffer != nullptr) { return buffer; }
+        if (buffer != nullptr) {
+            return buffer;
+        } else {
+            LogAllocationFail("Small");
+        }
     }
 
     if (len <= kLargeBufferSize) {
         buffer = LargeBufferAllocator::New();
-        if (buffer != nullptr) { return buffer; }
+        if (buffer != nullptr) {
+            return buffer;
+        } else {
+            LogAllocationFail("Large");
+        }
     }
 
     if (len <= kHugeBufferSize) {
         buffer = HugeBufferAllocator::New();
-        if (buffer != nullptr) { return buffer; }
+        if (buffer != nullptr) {
+            return buffer;
+        } else {
+            LogAllocationFail("Huge");
+        }
     }
 
     return nullptr;
