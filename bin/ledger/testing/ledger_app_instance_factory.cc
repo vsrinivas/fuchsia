@@ -12,6 +12,7 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/lib/convert/convert.h"
+#include "peridot/lib/rio/fd.h"
 
 namespace test {
 namespace {
@@ -76,8 +77,9 @@ LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
   ledger_internal::LedgerRepositoryPtr repository;
   ledger::Status status;
   auto waiter = loop_controller_->NewWaiter();
-  ledger_repository_factory_->GetRepositoryDeprecated(
-      dir_.path(), MakeCloudProvider(), repository.NewRequest(),
+  ledger_repository_factory_->GetRepository(
+      rio::CloneChannel(tmpfs_.root_fd()), MakeCloudProvider(),
+      repository.NewRequest(),
       callback::Capture(waiter->GetCallback(), &status));
   waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);

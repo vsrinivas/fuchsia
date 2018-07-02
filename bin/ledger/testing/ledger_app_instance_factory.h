@@ -12,10 +12,10 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/fit/function.h>
 
-#include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
+#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace test {
 
@@ -93,7 +93,7 @@ class LedgerAppInstanceFactory {
     fidl::VectorPtr<uint8_t> test_ledger_name_;
     ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;
 
-    files::ScopedTempDir dir_;
+    scoped_tmpfs::ScopedTmpFS tmpfs_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(LedgerAppInstance);
   };

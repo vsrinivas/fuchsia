@@ -73,12 +73,14 @@ source_set("ledger_instance_factory") {
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/ledger/fidl/include",
     "//peridot/bin/ledger/fidl_helpers",
+    "//peridot/lib/scoped_tmpfs",
     "//peridot/public/lib/ledger/fidl",
   ]
 
   deps = [
     "//garnet/public/lib/callback",
     "//peridot/lib/convert",
+    "//peridot/lib/rio",
     "//third_party/googletest:gtest",
   ]
 
