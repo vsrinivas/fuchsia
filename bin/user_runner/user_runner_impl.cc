@@ -267,7 +267,7 @@ void UserRunnerImpl::InitializeLedger() {
 
   // The directory "/data" is the data root "/data/LEDGER" that the ledger app
   // client is configured to.
-  ledger_repository_factory_->GetRepository(
+  ledger_repository_factory_->GetRepositoryDeprecated(
       "/data", std::move(cloud_provider), ledger_repository_.NewRequest(),
       [this](fuchsia::ledger::Status status) {
         if (status != fuchsia::ledger::Status::OK) {

@@ -76,7 +76,7 @@ LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
   ledger_internal::LedgerRepositoryPtr repository;
   ledger::Status status;
   auto waiter = loop_controller_->NewWaiter();
-  ledger_repository_factory_->GetRepository(
+  ledger_repository_factory_->GetRepositoryDeprecated(
       dir_.path(), MakeCloudProvider(), repository.NewRequest(),
       callback::Capture(waiter->GetCallback(), &status));
   waiter->RunUntilCalled();

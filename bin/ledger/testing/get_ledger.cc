@@ -41,7 +41,7 @@ void GetLedger(
   auto repository = std::make_unique<ledger_internal::LedgerRepositoryPtr>();
   auto request = repository->NewRequest();
 
-  repository_factory_ptr->GetRepository(
+  repository_factory_ptr->GetRepositoryDeprecated(
       ledger_repository_path, std::move(cloud_provider), std::move(request),
       [repository_factory = std::move(repository_factory),
        repository = std::move(repository), ledger_name = std::move(ledger_name),

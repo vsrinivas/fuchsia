@@ -11,8 +11,10 @@ library fuchsia.ledger.internal;
 interface LedgerRepositoryFactory {
   // Binds to the repository stored under |repository_path|, creating it if
   // needed. If this is called multiple times for the same |repository_path|,
-  // only the first instance of |server_id| / |token_provider| will be used. Any
-  // subsequent ones will simply be ignored.
+  // only the first instance of |server_id| / |token_provider| will be used.
+  // Any subsequent ones will simply be ignored.
+  // TODO(qsr): This is deprecated, and will be removed as soon as all caller
+  //            are modified.
   //
   // Parameters:
   // |repository_path| absolute path of the disk directory where the
@@ -21,7 +23,26 @@ interface LedgerRepositoryFactory {
   // |cloud_provider| is used by the Ledger to synchronize data through the
   //     cloud. If |cloud_provider| is disconnected, Ledger shuts down the
   //     repository and disconnects all clients.
-  1: GetRepository(string repository_path,
+  1: GetRepositoryDeprecated(string repository_path,
+                             fuchsia.ledger.cloud.CloudProvider? cloud_provider,
+                             request<LedgerRepository> repository)
+      -> (fuchsia.ledger.Status @status);
+
+  // Binds to the directory referenced by |repository|. If this is called
+  // multiple times for the same directory, only the first instance of
+  // |server_id| / |token_provider| will be used. Any subsequent ones will
+  // simply be ignored.
+  //
+  // Parameters:
+  // |repository_directory| channel pointing to the disk directory where the
+  //     repository is stored. At any given time, at most one repository
+  //     instance backed by the same disk directory can be running
+  //     concurrently.
+  //     TODO(qsr): Use typed channel when remoteio has been migrated to FIDL2.
+  // |cloud_provider| is used by the Ledger to synchronize data through the
+  //     cloud. If |cloud_provider| is disconnected, Ledger shuts down the
+  //     repository and disconnects all clients.
+  2: GetRepository(handle<channel> repository_directory,
                    fuchsia.ledger.cloud.CloudProvider? cloud_provider,
                    request<LedgerRepository> repository)
       -> (fuchsia.ledger.Status @status);

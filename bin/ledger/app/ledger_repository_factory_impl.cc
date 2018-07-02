@@ -8,8 +8,10 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <lib/fdio/util.h>
 #include <lib/fit/function.h>
 #include <trace/event.h>
+#include <zircon/processargs.h>
 
 #include "lib/backoff/exponential_backoff.h"
 #include "lib/fxl/files/directory.h"
@@ -182,18 +184,48 @@ LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
 
 LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
 
-void LedgerRepositoryFactoryImpl::GetRepository(
+void LedgerRepositoryFactoryImpl::GetRepositoryDeprecated(
     fidl::StringPtr repository_path,
     fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
     fidl::InterfaceRequest<ledger_internal::LedgerRepository>
         repository_request,
-    GetRepositoryCallback callback) {
-  TRACE_DURATION("ledger", "repository_factory_get_repository");
+    GetRepositoryDeprecatedCallback callback) {
   fxl::UniqueFD root_fd(HANDLE_EINTR(open((*repository_path).c_str(), O_PATH)));
   if (!root_fd.is_valid()) {
     callback(Status::IO_ERROR);
     return;
   }
+  GetRepositoryByFD(std::move(root_fd), std::move(cloud_provider),
+                    std::move(repository_request), std::move(callback));
+}
+
+void LedgerRepositoryFactoryImpl::GetRepository(
+    zx::channel repository_handle,
+    fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
+    fidl::InterfaceRequest<ledger_internal::LedgerRepository>
+        repository_request,
+    GetRepositoryCallback callback) {
+  zx_handle_t handle = repository_handle.release();
+  uint32_t type = PA_FDIO_REMOTE;
+  int fd;
+  zx_status_t status = fdio_create_fd(&handle, &type, 1, &fd);
+  if (status != ZX_OK) {
+    callback(Status::IO_ERROR);
+    return;
+  }
+  fxl::UniqueFD root_fd(fd);
+  GetRepositoryByFD(std::move(root_fd), std::move(cloud_provider),
+                    std::move(repository_request), std::move(callback));
+}
+
+void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
+    fxl::UniqueFD root_fd,
+    fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
+    fidl::InterfaceRequest<ledger_internal::LedgerRepository>
+        repository_request,
+    GetRepositoryCallback callback) {
+  TRACE_DURATION("ledger", "repository_factory_get_repository");
+
   RepositoryInformation repository_information(root_fd.get());
   if (!repository_information.Init()) {
     callback(Status::IO_ERROR);

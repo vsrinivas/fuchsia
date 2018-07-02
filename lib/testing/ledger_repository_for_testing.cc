@@ -35,7 +35,7 @@ LedgerRepositoryForTesting::~LedgerRepositoryForTesting() = default;
 fuchsia::ledger::internal::LedgerRepository*
 LedgerRepositoryForTesting::ledger_repository() {
   if (!ledger_repo_) {
-    ledger_repo_factory_->GetRepository(
+    ledger_repo_factory_->GetRepositoryDeprecated(
         tmp_dir_.path(), nullptr, ledger_repo_.NewRequest(),
         [this](fuchsia::ledger::Status status) {
           FXL_CHECK(status == fuchsia::ledger::Status::OK);

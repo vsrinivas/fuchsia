@@ -146,7 +146,7 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
   fidl::SynchronousInterfacePtr<ledger_internal::LedgerRepository>
       ledger_repository;
   files::ScopedTempDir tmp_dir;
-  ledger_repository_factory_->GetRepository(
+  ledger_repository_factory_->GetRepositoryDeprecated(
       tmp_dir.path(), nullptr, ledger_repository.NewRequest(),
       callback::Capture(QuitLoopClosure(), &status));
   RunLoop();
@@ -220,7 +220,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       cloud_provider.get(), cloud_provider_ptr.NewRequest());
 
-  ledger_repository_factory_->GetRepository(
+  ledger_repository_factory_->GetRepositoryDeprecated(
       tmp_dir.path(), std::move(cloud_provider_ptr),
       ledger_repository.NewRequest(),
       callback::Capture(QuitLoopClosure(), &status));
@@ -272,7 +272,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       cloud_provider.get(), cloud_provider_ptr.NewRequest());
 
-  ledger_repository_factory_->GetRepository(
+  ledger_repository_factory_->GetRepositoryDeprecated(
       tmp_dir.path(), std::move(cloud_provider_ptr),
       ledger_repository.NewRequest(),
       callback::Capture(QuitLoopClosure(), &status));
@@ -308,7 +308,7 @@ TEST_F(LedgerEndToEndTest, ShutDownWhenCloudProviderDisconnects) {
   ledger::FakeCloudProvider cloud_provider;
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
-  ledger_repository_factory_->GetRepository(
+  ledger_repository_factory_->GetRepositoryDeprecated(
       tmp_dir.path(), std::move(cloud_provider_ptr),
       ledger_repository.NewRequest(),
       callback::Capture(QuitLoopClosure(), &status));
