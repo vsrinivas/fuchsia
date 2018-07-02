@@ -76,7 +76,8 @@ private:
     bool ResetTrans();
     bool ResetDdi();
 
-    void ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* primary, bool enable_csc);
+    void ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* primary,
+                               bool enable_csc, bool* scaler_1_claimed);
     void ConfigureCursorPlane(const cursor_layer_t* cursor, bool enable_csc);
     void SetColorConversionOffsets(bool preoffsets, const float vals[3]);
 
@@ -94,6 +95,9 @@ private:
     bool inited_ = false;
     display_mode_t info_ = {};
     edid::Edid edid_;
+
+    // For any scaled planes, this contains the (1-based) index of the active scaler
+    uint32_t scaled_planes_[registers::kPipeCount][registers::kImagePlaneCount] = {};
 
     zx_device_t* backlight_device_ = nullptr;
     display_ref_t* display_ref_ = nullptr;

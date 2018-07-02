@@ -352,6 +352,7 @@ int main(int argc, const char* argv[]) {
     layer2.SetImageDimens(displays[0].mode().horizontal_resolution / 2,
                           displays[0].mode().vertical_resolution);
     layer2.SetLayerToggle(true);
+    layer2.SetScaling(true);
     layers.push_back(&layer2);
 
 // Intel only supports 3 layers, so add ifdef for quick toggling of the 3rd layer

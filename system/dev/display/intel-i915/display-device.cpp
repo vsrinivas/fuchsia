@@ -292,6 +292,7 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
     }
     bottom_color.WriteTo(mmio_space());
 
+    bool scaler_1_claimed = false;
     for (unsigned plane = 0; plane < 3; plane++) {
         primary_layer_t* primary = nullptr;
         for (unsigned j = 0; j < config->layer_count; j++) {
@@ -301,7 +302,7 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
                 break;
             }
         }
-        ConfigurePrimaryPlane(plane, primary, !!config->cc_flags);
+        ConfigurePrimaryPlane(plane, primary, !!config->cc_flags, &scaler_1_claimed);
     }
     cursor_layer_t* cursor = nullptr;
     if (config->layer_count && config->layers[config->layer_count - 1]->type == LAYER_CURSOR) {
@@ -310,8 +311,8 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
     ConfigureCursorPlane(cursor, !!config->cc_flags);
 }
 
-void DisplayDevice::ConfigurePrimaryPlane(uint32_t plane_num,
-                                          const primary_layer_t* primary, bool enable_csc) {
+void DisplayDevice::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* primary,
+                                          bool enable_csc, bool* scaler_1_claimed) {
     registers::PipeRegs pipe_regs(pipe());
 
     auto plane_ctrl = pipe_regs.PlaneControl(plane_num).ReadFrom(controller_->mmio_space());
@@ -350,15 +351,57 @@ void DisplayDevice::ConfigurePrimaryPlane(uint32_t plane_num,
         y_offset = primary->src_frame.x_pos;
     }
 
+    if (plane_width == primary->dest_frame.width
+            && plane_height == primary->dest_frame.height) {
+        auto plane_pos = pipe_regs.PlanePosition(plane_num).FromValue(0);
+        plane_pos.set_x_pos(primary->dest_frame.x_pos);
+        plane_pos.set_y_pos(primary->dest_frame.y_pos);
+        plane_pos.WriteTo(mmio_space());
+
+        // If there's a scaler pointed at this plane, immediately disable it
+        // in case there's nothing else that will claim it this frame.
+        if (scaled_planes_[pipe()][plane_num]) {
+            uint32_t scaler_idx = scaled_planes_[pipe()][plane_num] - 1;
+            pipe_regs.PipeScalerCtrl(scaler_idx)
+                    .ReadFrom(mmio_space()).set_enable(0).WriteTo(mmio_space());
+            pipe_regs.PipeScalerWinSize(0).ReadFrom(mmio_space()).WriteTo(mmio_space());
+            scaled_planes_[pipe()][plane_num] = 0;
+        }
+    } else {
+        pipe_regs.PlanePosition(plane_num).FromValue(0).WriteTo(mmio_space());
+
+        auto ps_ctrl = pipe_regs.PipeScalerCtrl(*scaler_1_claimed).ReadFrom(mmio_space());
+        ps_ctrl.set_mode(ps_ctrl.kDynamic);
+        if (primary->src_frame.width > 2048) {
+            float max_dynamic_height = static_cast<float>(plane_height)
+                    * registers::PipeScalerCtrl::kDynamicMaxVerticalRatio2049;
+            if (static_cast<uint32_t>(max_dynamic_height) < primary->dest_frame.height) {
+                // TODO(stevensd): This misses some cases where 7x5 can be used.
+                ps_ctrl.set_enable(ps_ctrl.k7x5);
+            }
+        }
+        ps_ctrl.set_binding(plane_num + 1);
+        ps_ctrl.set_enable(1);
+        ps_ctrl.WriteTo(mmio_space());
+
+        auto ps_win_pos = pipe_regs.PipeScalerWinPosition(*scaler_1_claimed).FromValue(0);
+        ps_win_pos.set_x_pos(primary->dest_frame.x_pos);
+        ps_win_pos.set_x_pos(primary->dest_frame.y_pos);
+        ps_win_pos.WriteTo(mmio_space());
+
+        auto ps_win_size = pipe_regs.PipeScalerWinSize(*scaler_1_claimed).FromValue(0);
+        ps_win_size.set_x_size(primary->dest_frame.width);
+        ps_win_size.set_y_size(primary->dest_frame.height);
+        ps_win_size.WriteTo(mmio_space());
+
+        scaled_planes_[pipe()][plane_num] = (*scaler_1_claimed) + 1;
+        *scaler_1_claimed = true;
+    }
+
     auto plane_size = pipe_regs.PlaneSurfaceSize(plane_num).FromValue(0);
     plane_size.set_width_minus_1(plane_width - 1);
     plane_size.set_height_minus_1(plane_height - 1);
     plane_size.WriteTo(mmio_space());
-
-    auto plane_pos = pipe_regs.PlanePosition(plane_num).FromValue(0);
-    plane_pos.set_x_pos(primary->dest_frame.x_pos);
-    plane_pos.set_y_pos(primary->dest_frame.y_pos);
-    plane_pos.WriteTo(mmio_space());
 
     auto plane_offset = pipe_regs.PlaneOffset(plane_num).FromValue(0);
     plane_offset.set_start_x(x_offset);

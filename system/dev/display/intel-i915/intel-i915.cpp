@@ -376,6 +376,15 @@ bool Controller::BringUpDisplayEngine(bool resume) {
 
         registers::PipeRegs pipe_regs(registers::kPipes[i]);
 
+        // Disable the scalers (double buffered on PipeScalerWinSize), since
+        // we don't know what state they are in at boot.
+        pipe_regs.PipeScalerCtrl(0).ReadFrom(mmio_space()).set_enable(0).WriteTo(mmio_space());
+        pipe_regs.PipeScalerWinSize(0).ReadFrom(mmio_space()).WriteTo(mmio_space());
+        if (i != registers::PIPE_C) {
+            pipe_regs.PipeScalerCtrl(1).ReadFrom(mmio_space()).set_enable(0).WriteTo(mmio_space());
+            pipe_regs.PipeScalerWinSize(1).ReadFrom(mmio_space()).WriteTo(mmio_space());
+        }
+
         // Disable the cursor watermark
         for (int wm_num = 0; wm_num < 8; wm_num++) {
             auto wm = pipe_regs.PlaneWatermark(0, wm_num).FromValue(0);
@@ -413,14 +422,6 @@ void Controller::ResetPipe(registers::Pipe pipe) {
     for (int i = 0; i < 3; i++ ) {
         pipe_regs.PlaneControl(i).FromValue(0).WriteTo(mmio_space());
         pipe_regs.PlaneSurface(i).FromValue(0).WriteTo(mmio_space());
-    }
-
-    // Disable the scalers (double buffered on PipeScalerWinSize)
-    pipe_regs.PipeScalerCtrl(0).ReadFrom(mmio_space()).set_enable(0).WriteTo(mmio_space());
-    pipe_regs.PipeScalerWinSize(0).ReadFrom(mmio_space()).WriteTo(mmio_space());
-    if (pipe != registers::PIPE_C) {
-        pipe_regs.PipeScalerCtrl(1).ReadFrom(mmio_space()).set_enable(0).WriteTo(mmio_space());
-        pipe_regs.PipeScalerWinSize(1).ReadFrom(mmio_space()).WriteTo(mmio_space());
     }
 
     ZX_DEBUG_ASSERT(mtx_trylock(&display_lock_) == thrd_busy);
@@ -943,8 +944,11 @@ bool Controller::ReallocatePlaneBuffers(const display_config_t** display_configs
             } else if (layer->type == LAYER_PRIMARY) {
                 const primary_layer_t* primary = &layer->cfg.primary;
 
-                data_rate[pipe_num][plane_num] = primary->src_frame.width *
-                        primary->src_frame.height *
+                uint32_t scaled_width = primary->src_frame.width * primary->src_frame.width
+                        / primary->dest_frame.width;
+                uint32_t scaled_height = primary->src_frame.height * primary->src_frame.height
+                        / primary->dest_frame.height;
+                data_rate[pipe_num][plane_num] = scaled_width * scaled_height *
                         ZX_PIXEL_FORMAT_BYTES(primary->image.pixel_format);
             } else if (layer->type == LAYER_CURSOR) {
                 // Use a tiny data rate so the cursor gets the minimum number of buffers
@@ -1119,6 +1123,17 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
 
     for (unsigned i = 0; i < display_count; i++) {
         auto* config = display_config[i];
+        DisplayDevice* display = nullptr;
+        for (auto& d : display_devices_) {
+            if (d->id() == config->display_id) {
+                display = d.get();
+                break;
+            }
+        }
+        if (display == nullptr) {
+            // TODO(stevensd): Surface this to higher layers
+            ZX_ASSERT(false);
+        }
 
         bool merge_all = false;
         if (config->layer_count > 3) {
@@ -1147,6 +1162,7 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
             continue;
         }
 
+        uint32_t total_scalers_needed = 0;
         for (unsigned j = 0; j < config->layer_count; j++) {
             switch (config->layers[j]->type) {
             case LAYER_PRIMARY: {
@@ -1179,7 +1195,39 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
 
                 if (primary->dest_frame.width != src_width
                         || primary->dest_frame.height != src_height) {
-                    layer_cfg_result[i][j] |= CLIENT_FRAME_SCALE;
+                    float ratio = registers::PipeScalerCtrl::k7x5MaxRatio;
+                    uint32_t max_width =
+                            static_cast<uint32_t>(static_cast<float>(src_width) * ratio);
+                    uint32_t max_height =
+                            static_cast<uint32_t>(static_cast<float>(src_height) * ratio);
+                    uint32_t scalers_needed = 1;
+                    // The 7x5 scaler (i.e. 2 scaler resources) is required if the src width is
+                    // >2048 and the required vertical scaling is greater than 1.99.
+                    if (primary->src_frame.width > 2048) {
+                        float ratio = registers::PipeScalerCtrl::kDynamicMaxVerticalRatio2049;
+                        uint32_t max_dynamic_height =
+                                static_cast<uint32_t>(static_cast<float>(src_height) * ratio);
+                        if (max_dynamic_height < primary->dest_frame.height) {
+                            scalers_needed = 2;
+                        }
+                    }
+                    
+                    // Verify that there are enough scaler resources
+                    // Verify that the scaler input isn't too large or too small
+                    // Verify that the required scaling ratio isn't too large
+                    if ((total_scalers_needed + scalers_needed) >
+                            (display->pipe() == registers::PIPE_C
+                                ? registers::PipeScalerCtrl::kPipeCScalersAvailable
+                                : registers::PipeScalerCtrl::kPipeABScalersAvailable)
+                            || src_width > registers::PipeScalerCtrl::kMaxSrcWidthPx
+                            || src_width < registers::PipeScalerCtrl::kMinSrcSizePx
+                            || src_height < registers::PipeScalerCtrl::kMinSrcSizePx
+                            || max_width < primary->dest_frame.width
+                            || max_height < primary->dest_frame.height) {   
+                        layer_cfg_result[i][j] |= CLIENT_FRAME_SCALE;
+                    } else {
+                        total_scalers_needed += scalers_needed;
+                    }
                 }
                 break;
             }

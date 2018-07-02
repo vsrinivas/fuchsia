@@ -172,29 +172,6 @@ public:
     DEF_FIELD(31, 24, plane_alpha_value);
 };
 
-// PS_CTRL
-class PipeScalerCtrl : public hwreg::RegisterBase<PipeScalerCtrl, uint32_t> {
-public:
-    static constexpr uint32_t kBaseAddr = 0x68180;
-
-    DEF_BIT(31, enable);
-};
-
-// PS_WIN_SIZE
-class PipeScalerWinSize : public hwreg::RegisterBase<PipeScalerWinSize, uint32_t> {
-public:
-    static constexpr uint32_t kBaseAddr = 0x68174;
-
-    DEF_FIELD(28, 16, x_size);
-    DEF_FIELD(11, 0, y_size);
-};
-
-// DE_PIPE_INTERRUPT
-class PipeDeInterrupt : public hwreg::RegisterBase<PipeDeInterrupt, uint32_t> {
-public:
-    DEF_BIT(1, vsync);
-};
-
 // PLANE_OFFSET
 class PlaneOffset : public hwreg::RegisterBase<PlaneOffset, uint32_t> {
 public:
@@ -211,6 +188,60 @@ public:
 
     DEF_FIELD(28, 16, y_pos);
     DEF_FIELD(12, 0, x_pos);
+};
+
+// PS_CTRL
+class PipeScalerCtrl : public hwreg::RegisterBase<PipeScalerCtrl, uint32_t> {
+public:
+    static constexpr uint32_t kBaseAddr = 0x68180;
+
+    DEF_BIT(31, enable);
+    DEF_FIELD(29, 28, mode);
+    static constexpr uint32_t kDynamic = 0;
+    static constexpr uint32_t k7x5 = 1;
+
+    DEF_FIELD(27, 25, binding);
+    static constexpr uint32_t kPipeScaler = 0;
+    static constexpr uint32_t kPlane1 = 1;
+    static constexpr uint32_t kPlane2 = 2;
+    static constexpr uint32_t kPlane3 = 3;
+
+    DEF_FIELD(24, 23, filter_select);
+    static constexpr uint32_t kMedium = 0;
+    static constexpr uint32_t kEdgeEnhance = 2;
+    static constexpr uint32_t kBilienar = 3;
+
+    static constexpr uint32_t kMinSrcSizePx = 8;
+    static constexpr uint32_t kMaxSrcWidthPx = 4096;
+    static constexpr uint32_t kPipeABScalersAvailable = 2;
+    static constexpr uint32_t kPipeCScalersAvailable = 1;
+    static constexpr float k7x5MaxRatio = 2.99f;
+    static constexpr float kDynamicMaxRatio = 2.99f;
+    static constexpr float kDynamicMaxVerticalRatio2049 = 1.99f;
+};
+
+// PS_WIN_POS
+class PipeScalerWinPosition : public hwreg::RegisterBase<PipeScalerWinPosition, uint32_t> {
+public:
+    static constexpr uint32_t kBaseAddr = 0x68170;
+
+    DEF_FIELD(28, 16, x_pos);
+    DEF_FIELD(11, 0, y_pos);
+};
+
+// PS_WIN_SIZE
+class PipeScalerWinSize : public hwreg::RegisterBase<PipeScalerWinSize, uint32_t> {
+public:
+    static constexpr uint32_t kBaseAddr = 0x68174;
+
+    DEF_FIELD(28, 16, x_size);
+    DEF_FIELD(11, 0, y_size);
+};
+
+// DE_PIPE_INTERRUPT
+class PipeDeInterrupt : public hwreg::RegisterBase<PipeDeInterrupt, uint32_t> {
+public:
+    DEF_BIT(1, vsync);
 };
 
 // CUR_BASE
@@ -357,6 +388,11 @@ public:
     hwreg::RegisterAddr<registers::PipeScalerCtrl> PipeScalerCtrl(int num) {
         return hwreg::RegisterAddr<registers::PipeScalerCtrl>(
                 PipeScalerCtrl::kBaseAddr + 0x800 * pipe_ + num * 0x100);
+    }
+
+    hwreg::RegisterAddr<registers::PipeScalerWinPosition> PipeScalerWinPosition(int num) {
+        return hwreg::RegisterAddr<registers::PipeScalerWinPosition>(
+                PipeScalerWinPosition::kBaseAddr + 0x800 * pipe_ + num * 0x100);
     }
 
     hwreg::RegisterAddr<registers::PipeScalerWinSize> PipeScalerWinSize(int num) {

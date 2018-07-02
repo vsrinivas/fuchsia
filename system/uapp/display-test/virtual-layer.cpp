@@ -12,7 +12,7 @@
 static constexpr uint32_t kSrcFrameBouncePeriod = 90;
 static constexpr uint32_t kDestFrameBouncePeriod = 60;
 static constexpr uint32_t kRotationPeriod = 24;
-
+static constexpr uint32_t kScalePeriod = 45;
 
 static uint32_t get_fg_color() {
     static uint32_t layer_count = 0;
@@ -39,6 +39,10 @@ static bool compute_intersection(const frame_t& a, const frame_t& b, frame_t* in
     intersection->height = bottom - top;
 
     return true;
+}
+
+static uint32_t interpolate_scaling(uint32_t x, uint32_t frame_num) {
+    return x / 2 + interpolate(x / 2, frame_num, kScalePeriod);
 }
 
 VirtualLayer::VirtualLayer(Display* display) {
@@ -98,6 +102,10 @@ PrimaryLayer::PrimaryLayer(const fbl::Vector<Display>& displays) : VirtualLayer(
 }
 
 bool PrimaryLayer::Init(zx_handle_t dc_handle) {
+    if ((displays_.size() > 1 || rotates_) && scaling_) {
+        printf("Unsupported config\n");
+        return false;
+    }
     uint32_t fg_color = get_fg_color();
     uint32_t bg_color = alpha_enable_ ? 0x3fffffff : 0xffffffff;
 
@@ -208,11 +216,19 @@ void PrimaryLayer::StepLayout(int32_t frame_num) {
             // Find the subset of the src region which shows up on this display
             if (rotation_ == fuchsia_display_Transform_IDENTITY
                     || rotation_ == fuchsia_display_Transform_ROT_180) {
-                layers_[i].src.x_pos =
-                        src_frame_.x_pos + (layers_[i].dest.x_pos - dest_frame_.x_pos);
-                layers_[i].src.y_pos = src_frame_.y_pos;
-                layers_[i].src.width = layers_[i].dest.width;
-                layers_[i].src.height = layers_[i].dest.height;
+                if (!scaling_) {
+                    layers_[i].src.x_pos =
+                            src_frame_.x_pos + (layers_[i].dest.x_pos - dest_frame_.x_pos);
+                    layers_[i].src.y_pos = src_frame_.y_pos;
+                    layers_[i].src.width = layers_[i].dest.width;
+                    layers_[i].src.height = layers_[i].dest.height;
+                } else {
+                    layers_[i].src.x_pos = src_frame_.x_pos + interpolate_scaling(
+                            layers_[i].dest.x_pos - dest_frame_.x_pos, frame_num);
+                    layers_[i].src.y_pos = src_frame_.y_pos;
+                    layers_[i].src.width = interpolate_scaling(layers_[i].dest.width, frame_num);
+                    layers_[i].src.height = interpolate_scaling(layers_[i].dest.height, frame_num);
+                }
             } else {
                 layers_[i].src.x_pos = src_frame_.x_pos;
                 layers_[i].src.y_pos =
@@ -242,7 +258,7 @@ void PrimaryLayer::SendLayout(zx_handle_t channel) {
     if (layer_flipping_) {
         SetLayerImages(channel, alt_image_);
     }
-    if (pan_src_ || pan_dest_) {
+    if (scaling_ || pan_src_ || pan_dest_) {
         SetLayerPositions(channel);
     }
 }

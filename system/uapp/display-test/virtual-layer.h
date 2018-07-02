@@ -130,6 +130,9 @@ public:
         alpha_enable_ = enable;
         alpha_val_ = val;
     }
+    void SetScaling(bool enable) {
+        scaling_ = enable;
+    }
 
     bool Init(zx_handle_t channel) override;
     void StepLayout(int32_t frame_num) override;
@@ -164,6 +167,7 @@ private:
     bool rotates_ = false;
     bool alpha_enable_ = false;
     float alpha_val_ = 0.f;
+    bool scaling_ = false;
 
     bool alt_image_ = false;
     Image* images_[2];
