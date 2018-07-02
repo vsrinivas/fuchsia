@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_UI_ROOT_PRESENTER_PRESENTATION_NEW_H_
-#define GARNET_BIN_UI_ROOT_PRESENTER_PRESENTATION_NEW_H_
+#ifndef GARNET_BIN_UI_ROOT_PRESENTER_PRESENTATION2_H_
+#define GARNET_BIN_UI_ROOT_PRESENTER_PRESENTATION2_H_
 
 #include <map>
 #include <memory>
@@ -48,6 +48,8 @@ namespace root_presenter {
 // display the graphical content of the view passed to |PresentScene()|.  It
 // also wires up input dispatch and manages the mouse cursor.
 //
+// This will eventually replace Presentation1.
+//
 // The root ViewHolder has the presented (content) view as its child.
 //
 // The scene's node tree has the following structure:
@@ -59,13 +61,13 @@ namespace root_presenter {
 //   + child: cursor 1
 //   + child: cursor N
 //
-class PresentationNew : public Presentation {
+class Presentation2 : public Presentation {
  public:
-  PresentationNew(fuchsia::ui::scenic::Scenic* scenic,
-                  scenic::Session* session, zx::eventpair view_holder_token,
-                  RendererParams renderer_params);
+  Presentation2(fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session,
+                zx::eventpair view_holder_token,
+                RendererParams renderer_params);
 
-  ~PresentationNew() override;
+  ~Presentation2() override;
 
   // Present the specified view.
   // Invokes the callback if an error occurs.
@@ -293,11 +295,11 @@ class PresentationNew : public Presentation {
   fuchsia::ui::policy::PresentationMode presentation_mode_;
   std::unique_ptr<presentation_mode::Detector> presentation_mode_detector_;
 
-  fxl::WeakPtrFactory<PresentationNew> weak_factory_;
+  fxl::WeakPtrFactory<Presentation2> weak_factory_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(PresentationNew);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Presentation2);
 };
 
 }  // namespace root_presenter
 
-#endif  // GARNET_BIN_UI_ROOT_PRESENTER_PRESENTATION_NEW_H_
+#endif  // GARNET_BIN_UI_ROOT_PRESENTER_PRESENTATION2_H_

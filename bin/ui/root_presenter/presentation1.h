@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_UI_ROOT_PRESENTER_PRESENTATION_OLD_H_
-#define GARNET_BIN_UI_ROOT_PRESENTER_PRESENTATION_OLD_H_
+#ifndef GARNET_BIN_UI_ROOT_PRESENTER_PRESENTATION1_H_
+#define GARNET_BIN_UI_ROOT_PRESENTER_PRESENTATION1_H_
 
 #include <map>
 #include <memory>
@@ -48,6 +48,8 @@ namespace root_presenter {
 // display the graphical content of the view passed to |PresentScene()|.  It
 // also wires up input dispatch and manages the mouse cursor.
 //
+// Handles views_v1 and will be deprecated soon.
+//
 // The view tree consists of a root view which is implemented by this class
 // and which has the presented (content) view as its child.
 //
@@ -63,16 +65,16 @@ namespace root_presenter {
 //           + link: Content view's actual content
 //   + child: cursor 1
 //   + child: cursor N
-class PresentationOld : private ::fuchsia::ui::views_v1::ViewTreeListener,
-                        private ::fuchsia::ui::views_v1::ViewListener,
-                        private ::fuchsia::ui::views_v1::ViewContainerListener,
-                        public Presentation {
+class Presentation1 : private ::fuchsia::ui::views_v1::ViewTreeListener,
+                      private ::fuchsia::ui::views_v1::ViewListener,
+                      private ::fuchsia::ui::views_v1::ViewContainerListener,
+                      public Presentation {
  public:
-  PresentationOld(::fuchsia::ui::views_v1::ViewManager* view_manager,
-                  fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session,
-                  RendererParams renderer_params);
+  Presentation1(::fuchsia::ui::views_v1::ViewManager* view_manager,
+                fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session,
+                RendererParams renderer_params);
 
-  ~PresentationOld() override;
+  ~Presentation1() override;
 
   // Present the specified view.
   // Invokes the callback if an error occurs.
@@ -322,11 +324,11 @@ class PresentationOld : private ::fuchsia::ui::views_v1::ViewTreeListener,
   fuchsia::ui::policy::PresentationMode presentation_mode_;
   std::unique_ptr<presentation_mode::Detector> presentation_mode_detector_;
 
-  fxl::WeakPtrFactory<PresentationOld> weak_factory_;
+  fxl::WeakPtrFactory<Presentation1> weak_factory_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(PresentationOld);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Presentation1);
 };
 
 }  // namespace root_presenter
 
-#endif  // GARNET_BIN_UI_ROOT_PRESENTER_PRESENTATION_OLD_H_
+#endif  // GARNET_BIN_UI_ROOT_PRESENTER_PRESENTATION1_H_

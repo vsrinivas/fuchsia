@@ -13,8 +13,8 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include "garnet/bin/ui/input_reader/input_reader.h"
-#include "garnet/bin/ui/root_presenter/presentation_new.h"
-#include "garnet/bin/ui/root_presenter/presentation_old.h"
+#include "garnet/bin/ui/root_presenter/presentation1.h"
+#include "garnet/bin/ui/root_presenter/presentation2.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/command_line.h"
@@ -24,7 +24,7 @@
 
 namespace root_presenter {
 
-class PresentationOld;
+class Presentation1;
 
 // The presenter provides a |fuchsia::ui::policy::Presenter| service which
 // displays UI by attaching the provided view to the root of a new view tree

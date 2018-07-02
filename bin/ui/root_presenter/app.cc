@@ -80,7 +80,7 @@ void App::Present(
         presentation_request) {
   InitializeServices();
 
-  auto presentation = std::make_unique<PresentationOld>(
+  auto presentation = std::make_unique<Presentation1>(
       view_manager_.get(), scenic_.get(), session_.get(), renderer_params_);
   presentation->Present(view_owner_handle.Bind(),
                         std::move(presentation_request), GetYieldCallback(),
@@ -95,7 +95,7 @@ void App::PresentView(
         presentation_request) {
   InitializeServices();
 
-  auto presentation = std::make_unique<PresentationNew>(
+  auto presentation = std::make_unique<Presentation2>(
       scenic_.get(), session_.get(), std::move(view_holder_token),
       renderer_params_);
   presentation->PresentView(std::move(presentation_request), GetYieldCallback(),
