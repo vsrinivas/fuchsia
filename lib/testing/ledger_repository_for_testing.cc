@@ -20,7 +20,6 @@ LedgerRepositoryForTesting::LedgerRepositoryForTesting()
     : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
   fuchsia::modular::AppConfig ledger_config;
   ledger_config.url = kLedgerAppUrl;
-  ledger_config.args.push_back(kLedgerNoMinfsWaitFlag);
 
   auto& launcher = startup_context_->launcher();
   ledger_app_client_ =

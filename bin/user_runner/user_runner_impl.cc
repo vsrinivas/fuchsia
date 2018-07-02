@@ -218,7 +218,6 @@ void UserRunnerImpl::InitializeUser(
 void UserRunnerImpl::InitializeLedger() {
   fuchsia::modular::AppConfig ledger_config;
   ledger_config.url = kLedgerAppUrl;
-  ledger_config.args.push_back(kLedgerNoMinfsWaitFlag);
 
   fuchsia::sys::ServiceListPtr service_list = nullptr;
   if (account_) {

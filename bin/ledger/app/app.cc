@@ -30,11 +30,6 @@
 namespace ledger {
 
 namespace {
-
-constexpr fxl::StringView kPersistentFileSystem = "/data";
-constexpr fxl::StringView kMinFsName = "minfs";
-constexpr zx::duration kMaxPollingDelay = zx::sec(10);
-constexpr fxl::StringView kNoMinFsFlag = "no_minfs_wait";
 constexpr fxl::StringView kNoStatisticsReporting = "disable_reporting";
 
 struct AppParams {
@@ -117,29 +112,6 @@ class App : public ledger_internal::LedgerController {
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
-void WaitForData() {
-  backoff::ExponentialBackoff backoff(zx::msec(10), 2, zx::sec(1));
-  zx::time now = zx::clock::get(ZX_CLOCK_MONOTONIC);
-  while (zx::clock::get(ZX_CLOCK_MONOTONIC) - now < kMaxPollingDelay) {
-    fxl::UniqueFD fd(open(kPersistentFileSystem.data(), O_RDWR));
-    FXL_DCHECK(fd.is_valid());
-    char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
-    vfs_query_info_t* info = reinterpret_cast<vfs_query_info_t*>(buf);
-    ssize_t len = ioctl_vfs_query_fs(fd.get(), info, sizeof(buf) - 1);
-    FXL_DCHECK(len > static_cast<ssize_t>(sizeof(vfs_query_info_t)));
-    fxl::StringView fs_name(info->name, len - sizeof(vfs_query_info_t));
-
-    if (fs_name == kMinFsName) {
-      return;
-    }
-
-    FXL_DCHECK(zx::nanosleep(zx::deadline_after(backoff.GetNext())) == ZX_OK);
-  }
-
-  FXL_LOG(WARNING) << kPersistentFileSystem
-                   << " is not persistent. Did you forget to configure it?";
-}
-
 }  // namespace
 }  // namespace ledger
 
@@ -150,12 +122,6 @@ int main(int argc, const char** argv) {
   ledger::AppParams app_params;
   app_params.disable_statistics =
       command_line.HasOption(ledger::kNoStatisticsReporting);
-
-  if (!command_line.HasOption(ledger::kNoMinFsFlag.ToString())) {
-    // Poll until /data is persistent. This is need to retrieve the Ledger
-    // configuration.
-    ledger::WaitForData();
-  }
 
   ledger::App app(app_params);
   if (!app.Start()) {
