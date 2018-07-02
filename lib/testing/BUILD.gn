@@ -147,10 +147,12 @@ source_set("ledger_repository_for_testing") {
     "//peridot/lib/common:teardown",
     "//peridot/lib/fidl:app_client",
     "//peridot/lib/ledger_client:constants",
+    "//peridot/lib/rio",
     "//peridot/public/lib/ledger/fidl",
   ]
 
   public_deps = [
+    "//peridot/lib/scoped_tmpfs",
     "//peridot/public/lib:fidl",
   ]
 }

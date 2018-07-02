@@ -12,9 +12,9 @@
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "peridot/lib/fidl/app_client.h"
+#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace modular {
 namespace testing {
@@ -33,7 +33,7 @@ class LedgerRepositoryForTesting {
 
  private:
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
-  files::ScopedTempDir tmp_dir_;
+  scoped_tmpfs::ScopedTmpFS tmp_fs_;
   std::unique_ptr<AppClient<fuchsia::ledger::internal::LedgerController>>
       ledger_app_client_;
   fuchsia::ledger::internal::LedgerRepositoryFactoryPtr ledger_repo_factory_;

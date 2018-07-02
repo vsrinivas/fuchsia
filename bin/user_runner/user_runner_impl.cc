@@ -4,6 +4,7 @@
 
 #include "peridot/bin/user_runner/user_runner_impl.h"
 
+#include <fcntl.h>
 #include <memory>
 #include <string>
 
@@ -15,6 +16,7 @@
 
 #include "lib/app/cpp/connect.h"
 #include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -42,6 +44,7 @@
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/ledger_client/status.h"
+#include "peridot/lib/rio/fd.h"
 
 namespace modular {
 
@@ -70,12 +73,29 @@ constexpr char kUserShellLinkName[] = "user-shell-link";
 constexpr char kLedgerDashboardUrl[] = "ledger_dashboard";
 constexpr char kLedgerDashboardEnvLabel[] = "ledger-dashboard";
 constexpr char kClipboardAgentUrl[] = "clipboard_agent";
+constexpr char kLedgerRepositoryDirectory[] = "/data/LEDGER";
 
 fuchsia::ledger::cloud::firebase::Config GetLedgerFirebaseConfig() {
   fuchsia::ledger::cloud::firebase::Config firebase_config;
   firebase_config.server_id = kFirebaseServerId;
   firebase_config.api_key = kFirebaseApiKey;
   return firebase_config;
+}
+
+zx::channel GetLedgerRepositoryDirectory() {
+  if (!files::CreateDirectory(kLedgerRepositoryDirectory)) {
+    FXL_LOG(ERROR) << "Unable to create directory at "
+                   << kLedgerRepositoryDirectory;
+    return zx::channel();
+  }
+  fxl::UniqueFD dir(open(kLedgerRepositoryDirectory, O_PATH));
+  if (!dir.is_valid()) {
+    FXL_LOG(ERROR) << "Unable to open directory at "
+                   << kLedgerRepositoryDirectory << ". errno: " << errno;
+    return zx::channel();
+  }
+
+  return rio::CloneChannel(dir.get());
 }
 
 std::string GetAccountId(const fuchsia::modular::auth::AccountPtr& account) {
@@ -234,7 +254,7 @@ void UserRunnerImpl::InitializeLedger() {
 
   ledger_app_ =
       std::make_unique<AppClient<fuchsia::ledger::internal::LedgerController>>(
-          user_scope_->GetLauncher(), std::move(ledger_config), "/data/LEDGER",
+          user_scope_->GetLauncher(), std::move(ledger_config), "",
           std::move(service_list));
   ledger_app_->SetAppErrorHandler([this] {
     FXL_LOG(ERROR) << "Ledger seems to have crashed unexpectedly." << std::endl
@@ -267,9 +287,9 @@ void UserRunnerImpl::InitializeLedger() {
 
   // The directory "/data" is the data root "/data/LEDGER" that the ledger app
   // client is configured to.
-  ledger_repository_factory_->GetRepositoryDeprecated(
-      "/data", std::move(cloud_provider), ledger_repository_.NewRequest(),
-      [this](fuchsia::ledger::Status status) {
+  ledger_repository_factory_->GetRepository(
+      GetLedgerRepositoryDirectory(), std::move(cloud_provider),
+      ledger_repository_.NewRequest(), [this](fuchsia::ledger::Status status) {
         if (status != fuchsia::ledger::Status::OK) {
           FXL_LOG(ERROR)
               << "LedgerRepositoryFactory.GetRepository() failed: "

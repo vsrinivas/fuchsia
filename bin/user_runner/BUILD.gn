@@ -59,6 +59,7 @@ executable_package("user_runner") {
     "//peridot/lib/ledger_client:status",
     "//peridot/lib/ledger_client:types",
     "//peridot/lib/rapidjson",
+    "//peridot/lib/rio",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib:fidl_internal",
     "//peridot/public/lib/app_driver/cpp:app_driver",
