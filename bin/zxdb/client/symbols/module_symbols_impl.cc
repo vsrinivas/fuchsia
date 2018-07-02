@@ -62,7 +62,12 @@ std::vector<LineMatch> GetBestLineTableMatchesInUnit(
   std::string file_name;
   for (size_t i = 0; i < line_table->Rows.size(); i++) {
     const llvm::DWARFDebugLine::Row& row = line_table->Rows[i];
-    if (!row.IsStmt)
+    // EndSequence doesn't correspond to a line. Its purpose is to mark invalid
+    // code regions (say, padding between functions). Because of the format
+    // of the table, it will duplicate the line and column numbers from the
+    // previous row so it looks valid, but these are meaningless. Skip these
+    // rows.
+    if (!row.IsStmt || row.EndSequence)
       continue;
 
     auto file_id = row.File;  // 1-based!

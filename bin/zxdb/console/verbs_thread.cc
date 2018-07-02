@@ -420,16 +420,18 @@ Err DoUntil(ConsoleContext* context, const Command& cmd) {
 }  // namespace
 
 void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
-  (*verbs)[Verb::kContinue] = VerbRecord(&DoContinue, {"continue", "c"},
-                                         kContinueShortHelp, kContinueHelp);
+  (*verbs)[Verb::kContinue] =
+      VerbRecord(&DoContinue, {"continue", "c"}, kContinueShortHelp,
+                 kContinueHelp, SourceAffinity::kSource);
   (*verbs)[Verb::kPause] =
       VerbRecord(&DoPause, {"pause", "pa"}, kPauseShortHelp, kPauseHelp);
   (*verbs)[Verb::kRegs] =
       VerbRecord(&DoRegs, {"regs", "rg"}, kRegsShortHelp, kRegsHelp);
-  (*verbs)[Verb::kStep] =
-      VerbRecord(&DoStep, {"step", "s"}, kStepShortHelp, kStepHelp);
+  (*verbs)[Verb::kStep] = VerbRecord(&DoStep, {"step", "s"}, kStepShortHelp,
+                                     kStepHelp, SourceAffinity::kSource);
   (*verbs)[Verb::kStepi] =
-      VerbRecord(&DoStepi, {"stepi", "si"}, kStepiShortHelp, kStepiHelp);
+      VerbRecord(&DoStepi, {"stepi", "si"}, kStepiShortHelp, kStepiHelp,
+                 SourceAffinity::kAssembly);
   (*verbs)[Verb::kUntil] =
       VerbRecord(&DoUntil, {"until", "u"}, kUntilShortHelp, kUntilHelp);
 }

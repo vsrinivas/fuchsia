@@ -75,6 +75,23 @@ enum class Verb {
 
 std::string VerbToString(Verb v);
 
+// SourceAffinity --------------------------------------------------------------
+
+// Indicates whether a command implies either source or assembly context. This
+// can be used by the frontend as a hint for what to show for the next stop.
+enum SourceAffinity {
+  // The command applies to source code (e.g. "next").
+  kSource,
+
+  // The command applies to assembly code (e.g. "stepi", "disassemble").
+  kAssembly,
+
+  // This command does not imply any source or disassembly relation.
+  kNone
+};
+
+// Command ---------------------------------------------------------------------
+
 class Command {
  public:
   // This valid indicates that there was a noun specified but no index.
@@ -201,7 +218,8 @@ struct VerbRecord {
   // The help will be referenced by pointer. It is expected to be a static
   // string.
   VerbRecord(CommandExecutor exec, std::initializer_list<std::string> aliases,
-             const char* short_help, const char* help);
+             const char* short_help, const char* help,
+             SourceAffinity source_affinity = SourceAffinity::kNone);
   ~VerbRecord();
 
   CommandExecutor exec = nullptr;
@@ -213,6 +231,8 @@ struct VerbRecord {
   const char* short_help = nullptr;  // One-line help.
   const char* help = nullptr;
   std::vector<SwitchRecord> switches;  // Switches supported by this verb.
+
+  SourceAffinity source_affinity = SourceAffinity::kNone;
 };
 
 // Returns all known nouns. The contents of this map will never change once
@@ -222,6 +242,10 @@ const std::map<Noun, NounRecord>& GetNouns();
 // Returns all known verbs. The contents of this map will never change once
 // it is called.
 const std::map<Verb, VerbRecord>& GetVerbs();
+
+// Returns the record for the given verb. If the verb is not registered (should
+// not happen) or is kNone (this is what noun-only commands use), returns null.
+const VerbRecord* GetVerbRecord(Verb verb);
 
 // Returns the mappping from possible inputs to the noun/verb. This is an
 // inverted version of the map returned by GetNouns()/GetVerbs();

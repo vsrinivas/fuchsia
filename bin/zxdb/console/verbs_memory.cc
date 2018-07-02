@@ -256,7 +256,8 @@ void AppendMemoryVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kMemRead] = std::move(mem_read);
 
   VerbRecord disass(&DoDisassemble, {"disassemble", "di"},
-                    kDisassembleShortHelp, kDisassembleHelp);
+                    kDisassembleShortHelp, kDisassembleHelp,
+                    SourceAffinity::kAssembly);
   disass.switches.push_back(SwitchRecord(kNumSwitch, true, "num", 'n'));
   disass.switches.push_back(SwitchRecord(kRawSwitch, false, "raw", 'r'));
   (*verbs)[Verb::kDisassemble] = std::move(disass);

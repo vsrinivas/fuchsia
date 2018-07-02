@@ -226,8 +226,13 @@ NounRecord::~NounRecord() = default;
 VerbRecord::VerbRecord() = default;
 VerbRecord::VerbRecord(CommandExecutor exec,
                        std::initializer_list<std::string> aliases,
-                       const char* short_help, const char* help)
-    : exec(exec), aliases(aliases), short_help(short_help), help(help) {}
+                       const char* short_help, const char* help,
+                       SourceAffinity source_affinity)
+    : exec(exec),
+      aliases(aliases),
+      short_help(short_help),
+      help(help),
+      source_affinity(source_affinity) {}
 VerbRecord::~VerbRecord() = default;
 
 std::string NounToString(Noun n) {
@@ -281,6 +286,14 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
         << "You need to update the verb lookup table for additions to Verbs.";
   }
   return all_verbs;
+}
+
+const VerbRecord* GetVerbRecord(Verb verb) {
+  const auto& verbs = GetVerbs();
+  auto found = verbs.find(verb);
+  if (found == verbs.end())
+    return nullptr;
+  return &found->second;
 }
 
 const std::map<std::string, Noun>& GetStringNounMap() {

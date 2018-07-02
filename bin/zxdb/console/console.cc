@@ -87,6 +87,12 @@ Console::Result Console::DispatchInputLine(const std::string& line) {
       if (!err.has_error()) {
         err = DispatchCommand(&context_, cmd);
         previous_command_ = cmd;
+
+        if (cmd.thread() && cmd.verb() != Verb::kNone) {
+          // Show the right source/disassembly for the next listing.
+          context_.SetSourceAffinityForThread(
+              cmd.thread(), GetVerbRecord(cmd.verb())->source_affinity);
+        }
       }
     }
   }

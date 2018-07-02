@@ -9,6 +9,7 @@
 #include <string>
 
 #include "garnet/bin/zxdb/client/err.h"
+#include "garnet/bin/zxdb/console/command.h"
 
 namespace zxdb {
 
@@ -20,15 +21,17 @@ class Process;
 
 // Formats the given location and writes it to the console.
 //
-// If the location is symbolized, a source-code dump will be displayed.
-// Otherwise, a disassembly dump will be displayed.
+// If the location is symbolized and the source affinity is not "assembly", a
+// source-code dump will be displayed. Otherwise, a disassembly dump will be
+// displayed.
 //
 // Disassembly dumps will be done asynchronously since the memory must be
 // requested from the target system. Source dumps will be synchonous.
 //
 // An error will be returned if the location is symbolized but the file can't
 // be found or doesn't contain that line. In this case, nothing will be output.
-Err OutputSourceContext(Process* process, const Location& location);
+Err OutputSourceContext(Process* process, const Location& location,
+                        SourceAffinity source_affinity);
 
 struct FormatSourceOpts {
   // Range of lines to print, inclusive. This can be outside of the range of
