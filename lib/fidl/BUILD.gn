@@ -19,6 +19,7 @@ source_set("app_client") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//peridot/lib/common:async_holder",
+    "//peridot/lib/rio",
     "//peridot/public/lib:fidl",
   ]
 }

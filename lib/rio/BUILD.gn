@@ -1,0 +1,37 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [
+  "//peridot/bin/*",
+  "//peridot/lib/*",
+]
+
+source_set("rio") {
+  sources = [
+    "fd.cc",
+    "fd.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "fd_unittest.cc",
+  ]
+
+  deps = [
+    ":rio",
+    "//garnet/public/lib/fxl",
+    "//third_party/googletest:gtest",
+  ]
+}

@@ -13,36 +13,9 @@
 
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/unique_fd.h"
+#include "peridot/lib/rio/fd.h"
 
 namespace modular {
-namespace {
-
-zx::channel CloneChannel(int fd) {
-  zx_handle_t handle[FDIO_MAX_HANDLES];
-  uint32_t type[FDIO_MAX_HANDLES];
-
-  zx_status_t r = fdio_clone_fd(fd, 0, handle, type);
-  if (r < 0 || r == 0) {
-    return zx::channel();
-  }
-
-  if (type[0] != PA_FDIO_REMOTE) {
-    for (int i = 0; i < r; ++i) {
-      zx_handle_close(handle[i]);
-    }
-    return zx::channel();
-  }
-
-  // Close any extra handles.
-  for (int i = 1; i < r; ++i) {
-    zx_handle_close(handle[i]);
-  }
-
-  return zx::channel(handle[0]);
-}
-
-}  // namespace
-
 AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
                              fuchsia::modular::AppConfig config,
                              std::string data_origin,
@@ -72,7 +45,8 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
       return;
     }
 
-    launch_info.flat_namespace->directories.push_back(CloneChannel(dir.get()));
+    launch_info.flat_namespace->directories.push_back(
+        rio::CloneChannel(dir.get()));
     if (!launch_info.flat_namespace->directories->at(0)) {
       FXL_LOG(ERROR) << "Unable create a handle from  " << data_origin;
       return;
