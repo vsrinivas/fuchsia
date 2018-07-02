@@ -144,15 +144,32 @@ magma_status_t msd_context_execute_immediate_commands(msd_context_t* ctx, uint64
     if (!connection)
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Connection not valid");
 
-    size_t count = commands_size / sizeof(magma_arm_mali_atom);
-    magma_arm_mali_atom* atoms = static_cast<magma_arm_mali_atom*>(commands);
     std::deque<std::shared_ptr<magma::PlatformSemaphore>> semaphores;
     for (size_t i = 0; i < semaphore_count; i++) {
         semaphores.push_back(MsdArmAbiSemaphore::cast(msd_semaphores[i])->ptr());
     }
-    for (size_t i = 0; i < count; i++) {
-        if (!connection->ExecuteAtom(&atoms[i], &semaphores))
+    uint64_t offset = 0;
+    while (offset + sizeof(uint64_t) < commands_size) {
+        magma_arm_mali_atom* atom =
+            reinterpret_cast<magma_arm_mali_atom*>(static_cast<uint8_t*>(commands) + offset);
+        if (atom->size < sizeof(uint64_t)) {
+            return DRET_MSG(MAGMA_STATUS_CONTEXT_KILLED, "Atom size must be at least 8");
+        }
+        // Check for overflow (defined for unsigned types) or too large for buffer.
+        if ((offset + atom->size < offset) || offset + atom->size > commands_size) {
+            return DRET_MSG(MAGMA_STATUS_CONTEXT_KILLED, "Atom size %ld too large for buffer",
+                            atom->size);
+        }
+
+        // This check could be changed to allow for backwards compatibility in
+        // future versions.
+        if (atom->size < sizeof(magma_arm_mali_atom)) {
+            return DRET_MSG(MAGMA_STATUS_CONTEXT_KILLED, "Atom size %ld too small", atom->size);
+        }
+
+        if (!connection->ExecuteAtom(atom, &semaphores))
             return DRET(MAGMA_STATUS_CONTEXT_KILLED);
+        offset += atom->size;
     }
 
     return MAGMA_STATUS_OK;

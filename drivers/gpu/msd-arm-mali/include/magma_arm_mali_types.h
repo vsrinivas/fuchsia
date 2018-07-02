@@ -114,10 +114,12 @@ struct magma_arm_mali_user_data {
 } __attribute__((packed));
 
 struct magma_arm_mali_atom {
+    uint64_t size; // Size of this structure. Used for backwards compatibility.
     uint64_t job_chain_addr;
     struct magma_arm_mali_user_data data;
     uint32_t flags; // a set of AtomFlags.
     uint8_t atom_number;
+    int8_t priority; // 0 is default. < 0 is less important, > 0 is more important.
 
     magma_arm_mali_dependency dependencies[2];
 } __attribute__((packed));

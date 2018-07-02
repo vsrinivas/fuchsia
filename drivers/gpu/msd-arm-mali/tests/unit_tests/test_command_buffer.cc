@@ -20,10 +20,12 @@ public:
         ASSERT_TRUE(ctx);
 
         magma_arm_mali_atom atom[2];
+        atom[0].size = sizeof(atom[0]);
         atom[0].atom_number = 1;
         atom[0].flags = 1;
         atom[0].dependencies[0].atom_number = 0;
         atom[0].dependencies[1].atom_number = 0;
+        atom[1].size = sizeof(atom[1]);
         atom[1].atom_number = 2;
         atom[1].flags = 1;
         atom[1].dependencies[0].atom_number = 1;
@@ -34,16 +36,109 @@ public:
         EXPECT_EQ(MAGMA_STATUS_OK, status.get());
     }
 
+    void TestValidLarger()
+    {
+        auto ctx = InitializeContext();
+        ASSERT_TRUE(ctx);
+
+        uint8_t buffer[100];
+        ASSERT_GT(sizeof(buffer), sizeof(magma_arm_mali_atom));
+        auto atom = reinterpret_cast<magma_arm_mali_atom*>(buffer);
+        atom->size = sizeof(buffer);
+        atom->atom_number = 1;
+        atom->flags = 1;
+        atom->dependencies[0].atom_number = 0;
+        atom->dependencies[1].atom_number = 0;
+
+        magma::Status status = ctx->ExecuteImmediateCommands(sizeof(buffer), buffer, 0, nullptr);
+        EXPECT_EQ(MAGMA_STATUS_OK, status.get());
+    }
+
+    void TestInvalidTooLarge()
+    {
+        auto ctx = InitializeContext();
+        ASSERT_TRUE(ctx);
+
+        uint8_t buffer[100];
+        ASSERT_GT(sizeof(buffer), sizeof(magma_arm_mali_atom) + 1);
+        auto atom = reinterpret_cast<magma_arm_mali_atom*>(buffer);
+        atom->size = sizeof(buffer);
+        atom->atom_number = 1;
+        atom->flags = 1;
+        atom->dependencies[0].atom_number = 0;
+        atom->dependencies[1].atom_number = 0;
+
+        magma::Status status =
+            ctx->ExecuteImmediateCommands(sizeof(buffer) - 1, buffer, 0, nullptr);
+        EXPECT_EQ(MAGMA_STATUS_CONTEXT_KILLED, status.get());
+    }
+
+    void TestInvalidOverflow()
+    {
+        auto ctx = InitializeContext();
+        ASSERT_TRUE(ctx);
+
+        magma_arm_mali_atom atom[3];
+        for (uint32_t i = 0; i < 3; i++) {
+            atom[i].size = sizeof(atom[i]);
+            atom[i].atom_number = i + 1;
+            atom[i].flags = 1;
+            atom[i].dependencies[0].atom_number = 0;
+            atom[i].dependencies[1].atom_number = 0;
+        }
+        atom[2].size =
+            reinterpret_cast<uintptr_t>(&atom[1]) - reinterpret_cast<uintptr_t>(&atom[2]);
+        EXPECT_GE(atom[2].size, static_cast<uint64_t>(INT64_MAX));
+
+        magma::Status status = ctx->ExecuteImmediateCommands(sizeof(atom), atom, 0, nullptr);
+        EXPECT_EQ(MAGMA_STATUS_CONTEXT_KILLED, status.get());
+    }
+
+    void TestInvalidZeroSize()
+    {
+        auto ctx = InitializeContext();
+        ASSERT_TRUE(ctx);
+
+        magma_arm_mali_atom atom;
+        atom.size = 0;
+        atom.atom_number = 1;
+        atom.flags = 1;
+        atom.dependencies[0].atom_number = 0;
+        atom.dependencies[1].atom_number = 0;
+
+        // Shouldn't infinite loop, for example.
+        magma::Status status = ctx->ExecuteImmediateCommands(sizeof(atom), &atom, 0, nullptr);
+        EXPECT_EQ(MAGMA_STATUS_CONTEXT_KILLED, status.get());
+    }
+
+    void TestInvalidSmaller()
+    {
+        auto ctx = InitializeContext();
+        ASSERT_TRUE(ctx);
+
+        magma_arm_mali_atom atom;
+        atom.size = sizeof(atom) - 1;
+        atom.atom_number = 1;
+        atom.flags = 1;
+        atom.dependencies[0].atom_number = 0;
+        atom.dependencies[1].atom_number = 0;
+
+        magma::Status status = ctx->ExecuteImmediateCommands(sizeof(atom) - 1, &atom, 0, nullptr);
+        EXPECT_EQ(MAGMA_STATUS_CONTEXT_KILLED, status.get());
+    }
+
     void TestInvalidInUse()
     {
         auto ctx = InitializeContext();
         ASSERT_TRUE(ctx);
 
         magma_arm_mali_atom atom[2];
+        atom[0].size = sizeof(atom[0]);
         atom[0].atom_number = 0;
         atom[0].flags = 1;
         atom[0].dependencies[0].atom_number = 0;
         atom[0].dependencies[1].atom_number = 0;
+        atom[1].size = sizeof(atom[1]);
         atom[1].atom_number = 0;
         atom[1].flags = 1;
         atom[1].dependencies[0].atom_number = 0;
@@ -60,6 +155,7 @@ public:
         ASSERT_TRUE(ctx);
 
         magma_arm_mali_atom atom;
+        atom.size = sizeof(atom);
         atom.atom_number = 1;
         atom.flags = 1;
         // Can't depend on self or on later atoms.
@@ -77,10 +173,12 @@ public:
         ASSERT_TRUE(ctx);
 
         magma_arm_mali_atom atom[2];
+        atom[0].size = sizeof(atom[0]);
         atom[0].atom_number = 1;
         atom[0].flags = 1;
         atom[0].dependencies[0].atom_number = 0;
         atom[0].dependencies[1].atom_number = 0;
+        atom[1].size = sizeof(atom[1]);
         atom[1].atom_number = 2;
         atom[1].flags = 1;
         atom[1].dependencies[0].atom_number = 1;
@@ -97,6 +195,7 @@ public:
         ASSERT_TRUE(ctx);
 
         magma_arm_mali_atom atom;
+        atom.size = sizeof(atom);
         atom.atom_number = 0;
         atom.flags = kAtomFlagSemaphoreSet;
         atom.dependencies[0].atom_number = 0;
@@ -116,6 +215,7 @@ public:
         connection_->ImportObject(handle, magma::PlatformObject::SEMAPHORE);
 
         magma_arm_mali_atom atom;
+        atom.size = sizeof(atom);
         atom.atom_number = 0;
         atom.flags = kAtomFlagSemaphoreSet;
         atom.dependencies[0].atom_number = 0;
@@ -168,6 +268,11 @@ private:
 TEST(CommandBuffer, TestInvalidSemaphoreImmediate) { ::Test().TestInvalidSemaphoreImmediate(); }
 TEST(CommandBuffer, TestSemaphoreImmediate) { ::Test().TestSemaphoreImmediate(); }
 TEST(CommandBuffer, TestValidImmediate) { ::Test().TestValidImmediate(); }
+TEST(CommandBuffer, TestValidLarger) { ::Test().TestValidLarger(); }
+TEST(CommandBuffer, TestInvalidTooLarge) { ::Test().TestInvalidTooLarge(); }
+TEST(CommandBuffer, TestInvalidOverflow) { ::Test().TestInvalidOverflow(); }
+TEST(CommandBuffer, TestInvalidZeroSize) { ::Test().TestInvalidZeroSize(); }
+TEST(CommandBuffer, TestInvalidSmaller) { ::Test().TestInvalidSmaller(); }
 TEST(CommandBuffer, TestInvalidInUse) { ::Test().TestInvalidInUse(); }
 TEST(CommandBuffer, TestInvalidDependencyType) { ::Test().TestInvalidDependencyType(); }
 TEST(CommandBuffer, TestInvalidDependencyNotSubmitted)

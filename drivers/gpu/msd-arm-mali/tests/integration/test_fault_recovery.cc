@@ -124,6 +124,7 @@ public:
         memset(vaddr, 0, size);
 
         magma_arm_mali_atom* atom = static_cast<magma_arm_mali_atom*>(vaddr);
+        atom->size = sizeof(*atom);
         if (how == MMU_FAULT) {
             atom->job_chain_addr = job_va - PAGE_SIZE;
             if (atom->job_chain_addr == 0)
