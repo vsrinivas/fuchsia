@@ -27,3 +27,35 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 include make/module.mk
+
+# Unit tests.
+
+MODULE := $(LOCAL_DIR).test
+
+MODULE_TYPE := usertest
+
+MODULE_NAME := skip-block-test
+
+TEST_DIR := $(LOCAL_DIR)/test
+
+MODULE_SRCS := \
+    $(LOCAL_DIR)/logical-to-physical-map.cpp \
+    $(TEST_DIR)/logical-to-physical-map-test.cpp \
+    $(TEST_DIR)/main.cpp \
+
+MODULE_COMPILEFLAGS := \
+    -I$(LOCAL_DIR) \
+    -DTEST \
+
+MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
+    system/ulib/pretty \
+    system/ulib/zxcpp \
+
+MODULE_LIBS := \
+    system/ulib/c \
+    system/ulib/fdio \
+    system/ulib/unittest \
+    system/ulib/zircon \
+
+include make/module.mk
