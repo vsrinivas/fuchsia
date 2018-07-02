@@ -19,6 +19,7 @@
         "garnet/packages/tests/fidl_compatibility_test",
         "garnet/packages/tests/fidl_compatibility_test_bin",
         "garnet/packages/tests/fidl_compatibility_test_server_cpp",
+        "garnet/packages/tests/fostr",
         "garnet/packages/tests/fsl",
         "garnet/packages/tests/fxl",
         "garnet/packages/tests/go_far_tests",

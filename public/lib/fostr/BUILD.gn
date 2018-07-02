@@ -1,0 +1,65 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test.gni")
+
+source_set("fostr") {
+  sources = [
+    "fidl_types.h",
+    "hex_dump.cc",
+    "hex_dump.h",
+    "indent.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fidl/cpp",
+  ]
+
+  deps = [
+    ":fostr_shared",
+  ]
+
+  public_configs = [ "//garnet/public:config" ]
+}
+
+shared_library("fostr_shared") {
+  sources = [
+    "indent.cc",
+    "indent.h",
+  ]
+}
+
+test("tests") {
+  output_name = "fostr_unittests"
+
+  sources = [
+    "test/fidl_types_unittests.cc",
+    "test/hex_dump_unittests.cc",
+    "test/indent_unittests.cc",
+  ]
+
+  deps = [
+    ":fostr",
+    "//garnet/public/lib/fidl/cpp",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+package("tests_package") {
+  testonly = true
+  deprecated_system_image = true
+
+  package_name = "fostr_unittests"
+
+  deps = [
+    ":tests",
+  ]
+
+  tests = [
+    {
+      name = "fostr_unittests"
+    },
+  ]
+}
