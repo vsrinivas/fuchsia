@@ -169,15 +169,19 @@ Realm::Realm(RealmArgs args)
       info_vfs_(async_get_default()) {
   // parent_ is null if this is the root application environment. if so, we
   // derive from the application manager's job.
-  zx_handle_t parent_job =
-      parent_ != nullptr ? parent_->job_.get() : zx_job_default();
+  zx::unowned<zx::job> parent_job;
+  if (parent_) {
+    parent_job = zx::unowned<zx::job>(parent_->job_);
+  } else {
+    parent_job = zx::unowned<zx::job>(zx::job::default_job());
+  }
 
   // init svc service channel for root application environment
   if (parent_ == nullptr) {
     FXL_CHECK(zx::channel::create(0, &svc_channel_server_,
                                   &svc_channel_client_) == ZX_OK);
   }
-  FXL_CHECK(zx::job::create(parent_job, 0u, &job_) == ZX_OK);
+  FXL_CHECK(zx::job::create(*parent_job, 0u, &job_) == ZX_OK);
   FXL_CHECK(job_.duplicate(kChildJobRights, &job_for_child_) == ZX_OK);
 
   koid_ = std::to_string(fsl::GetKoid(job_.get()));
