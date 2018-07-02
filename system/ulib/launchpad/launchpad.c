@@ -840,10 +840,6 @@ bool launchpad_send_loader_message(launchpad_t* lp, bool do_send) {
 }
 
 zx_handle_t launchpad_use_loader_service(launchpad_t* lp, zx_handle_t svc) {
-    if (lp->error) {
-        zx_handle_close(svc);
-        return lp->error;
-    }
     zx_handle_t result = lp->special_handles[HND_LDSVC_LOADER];
     lp->special_handles[HND_LDSVC_LOADER] = svc;
     return result;
