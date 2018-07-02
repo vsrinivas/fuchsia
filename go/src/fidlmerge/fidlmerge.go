@@ -153,26 +153,6 @@ func (root Root) GetLibrary(name types.EncodedLibraryIdentifier) *types.Library 
 	return root.librariesByName[name]
 }
 
-// Gets an option by name.
-func (root Root) GetOption(name string) string {
-	return root.options[name]
-}
-
-// Gets an option by name.
-func (root Root) GetOptionAsIdentifier(name string) types.Identifier {
-	return types.Identifier(root.options[name])
-}
-
-// Gets an option by name.
-func (root Root) GetOptionAsEncodedLibraryIdentifier(name string) types.EncodedLibraryIdentifier {
-	return types.EncodedLibraryIdentifier(root.options[name])
-}
-
-// Gets an option by name.
-func (root Root) GetOptionAsEncodedCompoundIdentifier(name string) types.EncodedCompoundIdentifier {
-	return types.EncodedCompoundIdentifier(root.options[name])
-}
-
 // Generates code using the specified template.
 func GenerateFidl(templatePath string, fidl types.Root, outputBase *string, options Options) error {
 	bytes, err := ioutil.ReadFile(templatePath)
@@ -185,27 +165,50 @@ func GenerateFidl(templatePath string, fidl types.Root, outputBase *string, opti
 	root := NewRoot(fidl, *outputBase, tmpls, options)
 
 	funcMap := template.FuncMap{
+		// Gets the decltype for an EncodedCompoundIdentifier.
 		"declType": func(eci types.EncodedCompoundIdentifier) types.DeclType {
 			library := root.GetLibrary(eci.LibraryName())
 			return library.Decls[eci]
 		},
+		// Determines if an EncodedCompoundIdentifier refers to a local definition.
 		"isLocal": func(eci types.EncodedCompoundIdentifier) bool {
 			return root.Name == eci.LibraryName()
 		},
+		// Converts an identifier to snake case.
 		"toSnakeCase": func(id types.Identifier) string {
 			return common.ToSnakeCase(string(id))
 		},
+		// Converts an identifier to upper camel case.
 		"toUpperCamelCase": func(id types.Identifier) string {
 			return common.ToUpperCamelCase(string(id))
 		},
+		// Converts an identifier to lower camel case.
 		"toLowerCamelCase": func(id types.Identifier) string {
 			return common.ToLowerCamelCase(string(id))
 		},
+		// Converts an identifier to friendly case.
 		"toFriendlyCase": func(id types.Identifier) string {
 			return common.ToFriendlyCase(string(id))
 		},
+		// Removes a leading 'k' from an identifier.
 		"removeLeadingK": func(id types.Identifier) string {
 			return common.RemoveLeadingK(string(id))
+		},
+		// Gets an option value (as a string) by name.
+		"getOption": func(name string) string {
+			return root.options[name]
+		},
+		// Gets an option (as an Identifier) by name.
+		"getOptionAsIdentifier": func(name string) types.Identifier {
+			return types.Identifier(root.options[name])
+		},
+		// Gets an option (as an EncodedLibraryIdentifier) by name.
+		"getOptionAsEncodedLibraryIdentifier": func(name string) types.EncodedLibraryIdentifier {
+			return types.EncodedLibraryIdentifier(root.options[name])
+		},
+		// Gets an option (as an EncodedCompoundIdentifier) by name.
+		"getOptionAsEncodedCompoundIdentifier": func(name string) types.EncodedCompoundIdentifier {
+			return types.EncodedCompoundIdentifier(root.options[name])
 		},
 	}
 

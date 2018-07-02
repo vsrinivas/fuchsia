@@ -131,14 +131,12 @@ fidlmerge -template serviceimpl \
             {{- template "Id" .Identifier }}
         {{- else if eq $decl_type "interface" -}}
             ::fidl::InterfaceHandle<{{ template "Id" .Identifier }}>
-        {{- else if eq $decl_type "struct" }}
+        {{- else -}}
             {{- if .Nullable -}}
                 ::std::unique_ptr<{{ template "Id" .Identifier }}>
             {{- else }}
                 {{- template "Id" .Identifier }}
             {{- end }}
-        {{- else -}}
-            {{- template "Id" .Identifier }}
         {{- end }}
     {{- end }}
 {{- end }}
@@ -328,7 +326,7 @@ class {{ $name }}Impl {
 
 {{/* Produces declarations for a C++ binding include file from a template.Root. */}}
 {{- define "IncludeDecls" }}
-    {{- $interface := .GetInterface (.GetOptionAsEncodedCompoundIdentifier "interface") }}
+    {{- $interface := .GetInterface (getOptionAsEncodedCompoundIdentifier "interface") }}
     {{- template "InterfaceIncludeDecls" $interface }}
 {{- end }}
 
@@ -376,7 +374,7 @@ void {{ template "Id" $interface.Name }}Impl::{{ .Name }}({{ template "AsyncMeth
 
 {{/* Produces definitions for a C++ implementation file from a template.Root. */}}
 {{- define "ImplementationDefs" }}
-    {{- $interface := .GetInterface (.GetOptionAsEncodedCompoundIdentifier "interface") }}
+    {{- $interface := .GetInterface (getOptionAsEncodedCompoundIdentifier "interface") }}
     {{- template "InterfaceImplementationDefs" $interface }}
 {{- end }}
 
