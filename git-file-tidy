@@ -45,9 +45,6 @@ def find_ancestor_with(filepath, relpath):
 
 
 def get_out_dir(args):
-    if os.environ.get("FUCHSIA_BUILD_DIR"):
-        return os.environ.get("FUCHSIA_BUILD_DIR")
-
     if args.out_dir:
         out_dir = args.out_dir
 
@@ -58,6 +55,17 @@ def get_out_dir(args):
             print out_dir + " is not a directory"
             sys.exit(-1)
         return out_dir
+
+    if os.environ.get("FUCHSIA_BUILD_DIR"):
+        return os.environ.get("FUCHSIA_BUILD_DIR")
+
+    fuchsia_dir = os.environ.get("FUCHSIA_DIR", paths.FUCHSIA_ROOT)
+    fuchsia_config_file = os.path.join(fuchsia_dir, '.config')
+    if os.path.isfile(fuchsia_config_file):
+        fuchsia_config = open(fuchsia_config_file).read()
+        m = re.search(r'FUCHSIA_BUILD_DIR=[\'"]([^\s\'"]*)', fuchsia_config)
+        if m:
+            return os.path.join(fuchsia_dir, m.group(1))
 
     print("Couldn't find the output directory, pass --out-dir " +
           "(absolute or relative to Fuchsia root) or set FUCHSIA_BUILD_DIR.")
