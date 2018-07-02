@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ASYNC_TRAP_H_
+#define LIB_ASYNC_TRAP_H_
 
 #include <lib/async/dispatcher.h>
 
@@ -51,3 +52,5 @@ zx_status_t async_set_guest_bell_trap(async_dispatcher_t* dispatcher, async_gues
                                       zx_handle_t guest, zx_vaddr_t addr, size_t length);
 
 __END_CDECLS
+
+#endif  // LIB_ASYNC_TRAP_H_

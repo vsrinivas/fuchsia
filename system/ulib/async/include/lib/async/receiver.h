@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ASYNC_RECEIVER_H_
+#define LIB_ASYNC_RECEIVER_H_
 
 #include <lib/async/dispatcher.h>
 
@@ -47,3 +48,5 @@ zx_status_t async_queue_packet(async_dispatcher_t* dispatcher, async_receiver_t*
                                const zx_packet_user_t* data);
 
 __END_CDECLS
+
+#endif  // LIB_ASYNC_RECEIVER_H_

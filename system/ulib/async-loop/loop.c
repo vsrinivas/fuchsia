@@ -264,6 +264,15 @@ static zx_status_t async_loop_run_once(async_loop_t* loop, zx_time_t deadline) {
     return ZX_ERR_INTERNAL;
 }
 
+async_dispatcher_t* async_loop_get_dispatcher(async_loop_t* loop) {
+    // Note: The loop's implementation inherits from async_t so we can upcast to it.
+    return (async_t*)loop;
+}
+
+async_loop_t* async_loop_from_dispatcher(async_dispatcher_t* async) {
+    return (async_loop_t*)async;
+}
+
 static zx_status_t async_loop_dispatch_guest_bell_trap(async_loop_t* loop,
                                                        async_guest_bell_trap_t* trap,
                                                        zx_status_t status,

@@ -12,7 +12,8 @@
 // See README.md for example usage.
 //
 
-#pragma once
+#ifndef LIB_ASYNC_LOOP_LOOP_H_
+#define LIB_ASYNC_LOOP_LOOP_H_
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -78,19 +79,14 @@ zx_status_t async_loop_create(const async_loop_config_t* config,
                               async_loop_t** out_loop);
 
 // Gets the the message loop's asynchronous dispatch interface.
-static inline async_dispatcher_t* async_loop_get_dispatcher(async_loop_t* loop) {
-    // Note: The loop's implementation inherits from async_t so we can upcast to it.
-    return (async_dispatcher_t*)loop;
-}
+async_dispatcher_t* async_loop_get_dispatcher(async_loop_t* loop);
 
 // Gets the message loop associated with the specified asynchronous dispatch interface
 //
 // This function assumes the dispatcher is backed by an |async_loop_t| which was created
 // using |async_loop_create()|.  Its behavior is undefined if used with other dispatcher
 // implementations.
-static inline async_loop_t* async_loop_from_dispatcher(async_dispatcher_t* dispatcher) {
-    return (async_loop_t*)dispatcher;
-}
+async_loop_t* async_loop_from_dispatcher(async_dispatcher_t* dispatcher);
 
 // Shuts down the message loop, notifies handlers which asked to handle shutdown.
 // The message loop must not currently be running on any threads other than
@@ -151,11 +147,10 @@ void async_loop_quit(async_loop_t* loop);
 zx_status_t async_loop_reset_quit(async_loop_t* loop);
 
 // Returns the current state of the message loop.
-typedef enum {
-    ASYNC_LOOP_RUNNABLE = 0,
-    ASYNC_LOOP_QUIT = 1,
-    ASYNC_LOOP_SHUTDOWN = 2,
-} async_loop_state_t;
+typedef uint32_t async_loop_state_t;
+#define ASYNC_LOOP_RUNNABLE ((async_loop_state_t) 0)
+#define ASYNC_LOOP_QUIT ((async_loop_state_t) 1)
+#define ASYNC_LOOP_SHUTDOWN ((async_loop_state_t) 2)
 async_loop_state_t async_loop_get_state(async_loop_t* loop);
 
 // Starts a message loop running on a new thread.
@@ -175,3 +170,5 @@ zx_status_t async_loop_start_thread(async_loop_t* loop, const char* name,
 void async_loop_join_threads(async_loop_t* loop);
 
 __END_CDECLS
+
+#endif  // LIB_ASYNC_LOOP_LOOP_H_

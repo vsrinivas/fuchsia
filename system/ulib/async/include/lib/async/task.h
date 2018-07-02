@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ASYNC_TASK_H_
+#define LIB_ASYNC_TASK_H_
 
 #include <lib/async/dispatcher.h>
 
@@ -65,3 +66,5 @@ zx_status_t async_post_task(async_dispatcher_t* dispatcher, async_task_t* task);
 zx_status_t async_cancel_task(async_dispatcher_t* dispatcher, async_task_t* task);
 
 __END_CDECLS
+
+#endif  // LIB_ASYNC_TASK_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ASYNC_DISPATCHER_H_
+#define LIB_ASYNC_DISPATCHER_H_
 
 #include <zircon/compiler.h>
 #include <zircon/syscalls/port.h>
@@ -69,12 +70,13 @@ typedef struct {
 // fail to work with dispatchers that do not support the methods they need.
 // Therefore general-purpose dispatcher implementations are encouraged to support
 // the whole interface to ensure broad compatibility.
-enum {
-    ASYNC_OPS_V1 = 1,
-};
+typedef uint32_t async_ops_version_t;
+
+#define ASYNC_OPS_V1 ((async_ops_version_t) 1)
+
 typedef struct async_ops {
     // The interface version number, e.g. |ASYNC_OPS_V1|.
-    uint32_t version;
+    async_ops_version_t version;
 
     // Reserved for future expansion, set to zero.
     uint32_t reserved;
@@ -104,3 +106,5 @@ struct async_dispatcher {
 };
 
 __END_CDECLS
+
+#endif  // LIB_ASYNC_DISPATCHER_H_
