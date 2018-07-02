@@ -1025,24 +1025,28 @@ void X86PageTableBase::Destroy(vaddr_t base, size_t size) {
 
 #if LK_DEBUGLEVEL > 1
     PageTableLevel top = top_level();
-    pt_entry_t* table = static_cast<pt_entry_t*>(virt_);
-    uint start = vaddr_to_index(top, base);
-    uint end = vaddr_to_index(top, base + size - 1);
+    if (virt_) {
+        pt_entry_t* table = static_cast<pt_entry_t*>(virt_);
+        uint start = vaddr_to_index(top, base);
+        uint end = vaddr_to_index(top, base + size - 1);
 
-    // Don't check start if that table is shared with another aspace.
-    if (!page_aligned(top, base)) {
-        start += 1;
-    }
-    // Do check the end if it fills out the table entry.
-    if (page_aligned(top, base + size)) {
-        end += 1;
-    }
+        // Don't check start if that table is shared with another aspace.
+        if (!page_aligned(top, base)) {
+            start += 1;
+        }
+        // Do check the end if it fills out the table entry.
+        if (page_aligned(top, base + size)) {
+            end += 1;
+        }
 
-    for (uint i = start; i < end; ++i) {
-        DEBUG_ASSERT(!IS_PAGE_PRESENT(table[i]));
+        for (uint i = start; i < end; ++i) {
+            DEBUG_ASSERT(!IS_PAGE_PRESENT(table[i]));
+        }
     }
 #endif
 
-    pmm_free_page(paddr_to_vm_page(phys_));
-    phys_ = 0;
+    if (phys_) {
+        pmm_free_page(paddr_to_vm_page(phys_));
+        phys_ = 0;
+    }
 }
