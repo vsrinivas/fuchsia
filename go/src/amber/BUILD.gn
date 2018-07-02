@@ -179,6 +179,23 @@ copy("amber-srv-keys") {
   ]
 }
 
+package("test_config") {
+  deprecated_system_image = true
+  package_name = "amber_test_config"
+  testonly = true
+
+  resources = [
+    {
+      dest = "amber/test_sources/test1/config.json"
+      path = rebase_path("etc/sources/test1/config.json")
+    },
+    {
+      dest = "amber/test_sources/test2/config.json"
+      path = rebase_path("etc/sources/test2/config.json")
+    }
+  ]
+}
+
 package("config") {
   deprecated_system_image = true
   package_name = "amber_config"

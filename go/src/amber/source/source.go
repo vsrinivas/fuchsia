@@ -76,4 +76,6 @@ type Source interface {
 	Close()
 
 	Enabled() bool
+
+	SetEnabled(e bool)
 }

@@ -1,7 +1,7 @@
 {
-    "id": "localhost",
-    "repoUrl": "http://127.0.0.1:8083",
-    "blobRepoUrl": "http://127.0.0.1:8083/blobs",
+    "id": "test2",
+    "repoUrl": "http://127.0.0.1:9901",
+    "blobRepoUrl": "http://127.0.0.1:9901/blobs",
     "rateLimit": 0,
     "ratePeriod": 0,
     "rootKeys": [

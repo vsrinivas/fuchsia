@@ -6,12 +6,10 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"hash"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -122,48 +120,25 @@ func registerLogger(ctx *context.Context) {
 	log.SetOutput(&logWriter{})
 }
 
-// LoadSourceConfigs install source configs from a directory.  The directory
-// structure looks like:
+// addDefaultSourceConfigs installs source configs from a directory.
+// The directory structure looks like:
 //
 //     $dir/source1/config.json
 //     $dir/source2/config.json
 //     ...
 func addDefaultSourceConfigs(d *daemon.Daemon, dir string) error {
-	files, err := ioutil.ReadDir(dir)
+	configs, err := source.LoadSourceConfigs(dir)
 	if err != nil {
 		return err
 	}
 
-	for _, file := range files {
-		p := filepath.Join(dir, file.Name(), "config.json")
-		log.Printf("loading source config %s", p)
-
-		cfg, err := loadSourceConfig(p)
-		if err != nil {
-			return err
-		}
-
+	for _, cfg := range configs {
 		if err := d.AddTUFSource(cfg); err != nil {
 			return err
 		}
 	}
 
 	return nil
-}
-
-func loadSourceConfig(path string) (*amber_fidl.SourceConfig, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	var cfg amber_fidl.SourceConfig
-	if err := json.NewDecoder(f).Decode(&cfg); err != nil {
-		return nil, err
-	}
-
-	return &cfg, nil
 }
 
 func startFIDLSvr(ctx *context.Context, d *daemon.Daemon, s *daemon.SystemUpdateMonitor) {

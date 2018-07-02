@@ -54,6 +54,56 @@ type SourceStatus struct {
 	Enabled *bool
 }
 
+// LoadSourceConfigs loads source configs from a directory.  The directory
+// structure looks like:
+//
+//     $dir/source1/config.json
+//     $dir/source2/config.json
+//     ...
+//
+// If an error is encountered loading any config, none are returned.
+func LoadSourceConfigs(dir string) ([]*amber.SourceConfig, error) {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	configs := make([]*amber.SourceConfig, 0, len(files))
+	for _, file := range files {
+		p := filepath.Join(dir, file.Name(), configFileName)
+		log.Printf("loading source config %s", p)
+
+		cfg, err := LoadConfigFromDir(p)
+		if err != nil {
+			return nil, err
+		}
+		configs = append(configs, cfg)
+	}
+
+	return configs, nil
+}
+
+func LoadConfigFromDir(path string) (*amber.SourceConfig, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var cfg amber.SourceConfig
+	if err := json.NewDecoder(f).Decode(&cfg); err != nil {
+		return nil, err
+	}
+
+	// it is possible we encounter a config on disk that does not have
+	// this value set, set the defaults
+	if cfg.StatusConfig == nil {
+		cfg.StatusConfig = &amber.StatusConfig{true}
+	}
+
+	return &cfg, nil
+}
+
 func newTUFSourceConfig(cfg *amber.SourceConfig) (tufSourceConfig, error) {
 	if cfg.Id == "" {
 		return tufSourceConfig{}, fmt.Errorf("tuf source id cannot be empty")
@@ -143,16 +193,25 @@ func NewTUFSource(dir string, c *amber.SourceConfig) (*TUFSource, error) {
 // if enabled is set. If either is not present the field is added and set to
 // enabled. If the sourceConfig is changed true is returned, otherwise false.
 func setEnabledStatus(cfg *tufSourceConfig) bool {
+	dirty := false
 	if cfg.Status == nil {
 		enabled := true
 		cfg.Status = &SourceStatus{&enabled}
-		return true
+		dirty = true
 	} else if cfg.Status.Enabled == nil {
 		enabled := true
 		cfg.Status.Enabled = &enabled
-		return true
+		dirty = true
 	}
-	return false
+
+	// it is possible we encounter a config on disk that does not have
+	// this value set, set the defaults
+	if cfg.Config.StatusConfig == nil {
+		cfg.Config.StatusConfig = &amber.StatusConfig{true}
+		dirty = true
+	}
+
+	return dirty
 }
 
 func LoadTUFSourceFromPath(dir string) (*TUFSource, error) {
@@ -395,6 +454,10 @@ func (f *TUFSource) GetId() string {
 
 func (f *TUFSource) GetConfig() *amber.SourceConfig {
 	return f.cfg.Config
+}
+
+func (f *TUFSource) SetEnabled(enabled bool) {
+	f.cfg.Status.Enabled = &enabled
 }
 
 func (f *TUFSource) GetHttpClient() (*http.Client, error) {

@@ -3,6 +3,7 @@
         "garnet/packages/prod/amber"
     ],
     "packages": [
-        "//garnet/go/src/amber:amber_tests"
+        "//garnet/go/src/amber:amber_tests",
+        "//garnet/go/src/amber:test_config"
     ]
 }

@@ -121,3 +121,7 @@ func (k *SourceKeeper) Close() {
 func (k *SourceKeeper) Enabled() bool {
 	return k.src.Enabled()
 }
+
+func (k *SourceKeeper) SetEnabled(enabled bool) {
+	k.src.SetEnabled(enabled)
+}

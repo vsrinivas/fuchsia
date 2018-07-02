@@ -24,6 +24,8 @@ import (
 
 var letters = []rune("1234567890abcdef")
 
+const testSrcsPath = "/system/data/amber/test_sources"
+
 func randSeq(n int) string {
 	rand.Seed(time.Now().UnixNano())
 	runeLen := len(letters)
@@ -52,11 +54,12 @@ func (t *testSrc) GetId() string {
 
 func (t *testSrc) GetConfig() *amber.SourceConfig {
 	if t.cfg == nil {
-		t.cfg = &amber.SourceConfig{}
+		t.cfg = &amber.SourceConfig{StatusConfig: &amber.StatusConfig{true}}
 		t.cfg.Id = t.id
 		t.cfg.BlobRepoUrl = "https://127.0.0.1:8083/test"
 		t.cfg.RepoUrl = "https://127.0.0.1:8083/test/blobs"
 	}
+
 	return t.cfg
 }
 
@@ -132,7 +135,11 @@ func (t *testSrc) Close() {
 }
 
 func (t *testSrc) Enabled() bool {
-	return true
+	return t.cfg.StatusConfig.Enabled
+}
+
+func (t *testSrc) SetEnabled(enabled bool) {
+	t.cfg.StatusConfig.Enabled = enabled
 }
 
 type testTicker struct {
@@ -165,6 +172,142 @@ func processPackage(r *GetResult, pkgs *pkg.PackageSet) error {
 	}
 	pkgs.Replace(&r.Orig, &r.Update, false)
 	return nil
+}
+
+func TestSourceEnablementForAddedSources(t *testing.T) {
+	newTicker = time.NewTicker
+	srcConfigs, err := source.LoadSourceConfigs(testSrcsPath)
+	if err != nil {
+		t.Fatalf("failed loading test source configs from package: %s", err)
+	}
+
+	store, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(store)
+
+	d, err := NewDaemon(store, pkg.NewPackageSet(), processPackage, []source.Source{})
+	if err != nil {
+		t.Error(err)
+	}
+
+	for _, cfg := range srcConfigs {
+		d.AddTUFSource(cfg)
+	}
+
+	srcIDs := make(map[string]struct{})
+	for _, s := range srcConfigs {
+		srcIDs[s.Id] = struct{}{}
+	}
+
+	srcs := d.GetActiveSources()
+	for k := range srcs {
+		delete(srcIDs, k)
+	}
+	if len(srcIDs) > 0 {
+		t.Fatal("Not all sources were initially added")
+	}
+
+	// try disabling a source and make sure that it doesn't still show up
+	err = d.DisableSource(srcConfigs[0].Id)
+	if err != nil {
+		t.Fatalf("Failure disabling source: %s", err)
+	}
+
+	updatedConfigs := srcConfigs[1:]
+	srcIDs = make(map[string]struct{})
+
+	for _, s := range updatedConfigs {
+		srcIDs[s.Id] = struct{}{}
+	}
+
+	srcs = d.GetActiveSources()
+	if len(srcs) != len(updatedConfigs) {
+		t.Fatalf("expected %d enabled sources, but found %d", len(updatedConfigs), len(srcs))
+	}
+
+	for sID := range srcs {
+		delete(srcIDs, sID)
+	}
+	if len(srcIDs) > 0 {
+		t.Fatalf("%d sources which were expected to be enabled were not found", len(srcIDs))
+	}
+
+	err = d.EnableSource(srcConfigs[0].Id)
+	if err != nil {
+		t.Fatalf("Failed enabling source: %s", err)
+	}
+
+	srcs = d.GetActiveSources()
+	if len(srcs) != len(srcConfigs) {
+		t.Fatalf("expected %d enabled sources, but found %d", len(srcConfigs), len(srcs))
+	}
+
+	srcIDs = make(map[string]struct{})
+	for _, s := range srcConfigs {
+		srcIDs[s.Id] = struct{}{}
+	}
+
+	for sID := range srcs {
+		delete(srcIDs, sID)
+	}
+	if len(srcIDs) != 0 {
+		t.Fatalf("expected all sources enabled, but %d were not", len(srcIDs))
+	}
+}
+
+func TestSourceEnablementForLoadedSources(t *testing.T) {
+	// first create a daemon which adds a source and we disable that source.
+	// Then create a new daemon that uses the same data store and therefore
+	// know about that source and try to enable it.
+	newTicker = time.NewTicker
+	srcConfigs, err := source.LoadSourceConfigs(testSrcsPath)
+	if err != nil {
+		t.Fatalf("failed loading test source configs from package: %s", err)
+	}
+
+	store, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(store)
+
+	d, err := NewDaemon(store, pkg.NewPackageSet(), processPackage, []source.Source{})
+	if err != nil {
+		t.Error(err)
+	}
+
+	d.AddTUFSource(srcConfigs[0])
+	if err := d.DisableSource(srcConfigs[0].Id); err != nil {
+		t.Fatalf("error disabling source: %s", err)
+	}
+	srcs := d.GetActiveSources()
+	if len(srcs) != 0 {
+		t.Fatalf("failed disabling source")
+	}
+	d.CancelAll()
+
+	d, err = NewDaemon(store, pkg.NewPackageSet(), processPackage, []source.Source{})
+	srcs = d.GetSources()
+	if len(srcs) != 1 {
+		t.Fatalf("disabled source not available in new Daemon")
+	}
+
+	srcs = d.GetActiveSources()
+	if len(srcs) != 0 {
+		t.Fatalf("disabled source is present in active sources")
+	}
+
+	if err = d.EnableSource(srcConfigs[0].Id); err != nil {
+		t.Fatalf("error enabling source: %s", err)
+	}
+
+	srcs = d.GetActiveSources()
+	if len(srcs) != 1 {
+		t.Fatalf("source failed to enable")
+	}
+	d.CancelAll()
 }
 
 // TestDaemon tests daemon.go with a fake package source.
