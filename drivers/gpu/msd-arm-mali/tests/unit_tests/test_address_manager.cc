@@ -46,12 +46,12 @@ TEST(AddressManager, MultipleAtoms)
     AddressManager address_manager(&owner, 8);
     TestConnectionOwner connection_owner(&address_manager);
     std::shared_ptr<MsdArmConnection> connection1 = MsdArmConnection::Create(0, &connection_owner);
-    auto atom1 = std::make_unique<MsdArmAtom>(connection1, 0, 0, 0, magma_arm_mali_user_data());
+    auto atom1 = std::make_unique<MsdArmAtom>(connection1, 0, 0, 0, magma_arm_mali_user_data(), 0);
 
     EXPECT_TRUE(address_manager.AssignAddressSpace(atom1.get()));
 
     std::shared_ptr<MsdArmConnection> connection2 = MsdArmConnection::Create(0, &connection_owner);
-    auto atom2 = std::make_unique<MsdArmAtom>(connection2, 0, 0, 0, magma_arm_mali_user_data());
+    auto atom2 = std::make_unique<MsdArmAtom>(connection2, 0, 0, 0, magma_arm_mali_user_data(), 0);
     EXPECT_TRUE(address_manager.AssignAddressSpace(atom2.get()));
 
     EXPECT_EQ(0u, atom1->address_slot_mapping()->slot_number());
@@ -82,7 +82,7 @@ TEST(AddressManager, MultipleAtoms)
 
     address_manager.AtomFinished(atom2.get());
 
-    auto atom3 = std::make_unique<MsdArmAtom>(connection2, 0, 0, 0, magma_arm_mali_user_data());
+    auto atom3 = std::make_unique<MsdArmAtom>(connection2, 0, 0, 0, magma_arm_mali_user_data(), 0);
     EXPECT_TRUE(address_manager.AssignAddressSpace(atom3.get()));
     EXPECT_EQ(1u, atom3->address_slot_mapping()->slot_number());
 }
@@ -94,14 +94,14 @@ TEST(AddressManager, PreferUnused)
     AddressManager address_manager(&owner, 8);
     TestConnectionOwner connection_owner(&address_manager);
     std::shared_ptr<MsdArmConnection> connection1 = MsdArmConnection::Create(0, &connection_owner);
-    auto atom1 = std::make_unique<MsdArmAtom>(connection1, 0, 0, 0, magma_arm_mali_user_data());
+    auto atom1 = std::make_unique<MsdArmAtom>(connection1, 0, 0, 0, magma_arm_mali_user_data(), 0);
 
     EXPECT_TRUE(address_manager.AssignAddressSpace(atom1.get()));
     EXPECT_EQ(0u, atom1->address_slot_mapping()->slot_number());
     address_manager.AtomFinished(atom1.get());
 
     std::shared_ptr<MsdArmConnection> connection2 = MsdArmConnection::Create(0, &connection_owner);
-    auto atom2 = std::make_unique<MsdArmAtom>(connection2, 0, 0, 0, magma_arm_mali_user_data());
+    auto atom2 = std::make_unique<MsdArmAtom>(connection2, 0, 0, 0, magma_arm_mali_user_data(), 0);
     EXPECT_TRUE(address_manager.AssignAddressSpace(atom2.get()));
 
     // Slots that are mapped to connections should only be reused if empty
@@ -122,8 +122,8 @@ TEST(AddressManager, ReuseSlot)
     std::vector<std::unique_ptr<MsdArmAtom>> atoms;
     for (size_t i = 0; i < kNumberAddressSpaces; i++) {
         connections.push_back(MsdArmConnection::Create(0, &connection_owner));
-        atoms.push_back(
-            std::make_unique<MsdArmAtom>(connections.back(), 0, 0, 0, magma_arm_mali_user_data()));
+        atoms.push_back(std::make_unique<MsdArmAtom>(connections.back(), 0, 0, 0,
+                                                     magma_arm_mali_user_data(), 0));
         EXPECT_TRUE(address_manager.AssignAddressSpace(atoms.back().get()));
     }
 
@@ -136,7 +136,7 @@ TEST(AddressManager, ReuseSlot)
 
     connections.push_back(MsdArmConnection::Create(0, &connection_owner));
     atoms.push_back(
-        std::make_unique<MsdArmAtom>(connections.back(), 0, 0, 0, magma_arm_mali_user_data()));
+        std::make_unique<MsdArmAtom>(connections.back(), 0, 0, 0, magma_arm_mali_user_data(), 0));
     // Reduce timeout to make test faster.
     address_manager.set_acquire_slot_timeout_seconds(1);
     EXPECT_FALSE(address_manager.AssignAddressSpace(atoms.back().get()));
@@ -167,7 +167,7 @@ TEST(AddressManager, FlushAddressRange)
     TestConnectionOwner connection_owner(&address_manager);
     std::shared_ptr<MsdArmConnection> connection = MsdArmConnection::Create(0, &connection_owner);
 
-    auto atom = std::make_unique<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data());
+    auto atom = std::make_unique<MsdArmAtom>(connection, 0, 0, 0, magma_arm_mali_user_data(), 0);
     EXPECT_TRUE(address_manager.AssignAddressSpace(atom.get()));
 
     uint64_t addr = PAGE_SIZE * 0xbdefcccef;

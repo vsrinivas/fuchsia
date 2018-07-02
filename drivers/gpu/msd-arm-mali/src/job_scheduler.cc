@@ -10,7 +10,7 @@
 #include "platform_trace.h"
 
 JobScheduler::JobScheduler(Owner* owner, uint32_t job_slots)
-    : owner_(owner), job_slots_(job_slots), executing_atoms_(job_slots)
+    : owner_(owner), job_slots_(job_slots), executing_atoms_(job_slots), runnable_atoms_(job_slots)
 {
 }
 
@@ -36,61 +36,81 @@ static const char* AtomRunningString(uint32_t slot)
     }
 }
 
-void JobScheduler::TryToSchedule()
+void JobScheduler::MoveAtomsToRunnable()
 {
-    while (true) {
-        if (atoms_.empty())
-            break;
-        bool continue_scheduling = false;
-        for (auto it = atoms_.begin(); it != atoms_.end(); ++it) {
-            std::shared_ptr<MsdArmAtom> atom = *it;
-            bool dependencies_finished;
-            atom->UpdateDependencies(&dependencies_finished);
-            if (dependencies_finished) {
-                ArmMaliResultCode dep_status = atom->GetFinalDependencyResult();
-                if (dep_status != kArmMaliResultSuccess) {
-                    continue_scheduling = true;
-                    owner_->AtomCompleted(it->get(), dep_status);
-                    atoms_.erase(it);
-                    break;
-                }
-
-                auto soft_atom = MsdArmSoftAtom::cast(atom);
-                if (soft_atom) {
-                    continue_scheduling = true;
-                    atoms_.erase(it);
-                    soft_atom->SetExecutionStarted();
-                    ProcessSoftAtom(soft_atom);
-                    break;
-                } else if (atom->IsDependencyOnly()) {
-                    continue_scheduling = true;
-                    owner_->AtomCompleted(it->get(), kArmMaliResultSuccess);
-                    atoms_.erase(it);
-                    break;
-
-                } else {
-                    uint32_t slot = atom->slot();
-                    DASSERT(slot < executing_atoms_.size());
-                    if (!executing_atoms_[slot]) {
-                        continue_scheduling = true;
-                        atom->SetExecutionStarted();
-                        executing_atoms_[slot] = atom;
-                        atoms_.erase(it);
-                        std::shared_ptr<MsdArmConnection> connection = atom->connection().lock();
-                        msd_client_id_t id = connection ? connection->client_id() : 0;
-                        TRACE_ASYNC_BEGIN("magma", AtomRunningString(slot),
-                                          executing_atoms_[slot]->trace_nonce(), "id", id);
-                        owner_->RunAtom(executing_atoms_[slot].get());
-                        break;
-                    }
-                }
+    // Movement to next iterator happens inside loop.
+    // Atoms can't depend on those after them, so one pass through the loop
+    // should be enough.
+    for (auto it = atoms_.begin(); it != atoms_.end();) {
+        std::shared_ptr<MsdArmAtom> atom = *it;
+        bool dependencies_finished;
+        atom->UpdateDependencies(&dependencies_finished);
+        if (dependencies_finished) {
+            it = atoms_.erase(it);
+            auto soft_atom = MsdArmSoftAtom::cast(atom);
+            ArmMaliResultCode dep_status = atom->GetFinalDependencyResult();
+            if (dep_status != kArmMaliResultSuccess) {
+                owner_->AtomCompleted(atom.get(), dep_status);
+            } else if (soft_atom) {
+                soft_atom->SetExecutionStarted();
+                ProcessSoftAtom(soft_atom);
+            } else if (atom->IsDependencyOnly()) {
+                owner_->AtomCompleted(atom.get(), kArmMaliResultSuccess);
             } else {
-                DLOG("Skipping atom %lx due to dependency", (atom)->gpu_address());
+                DASSERT(atom->slot() < runnable_atoms_.size());
+                runnable_atoms_[atom->slot()].push_back(atom);
+            }
+        } else {
+            DLOG("Skipping atom %lx due to dependency", atom->gpu_address());
+            ++it;
+        }
+    }
+}
+
+void JobScheduler::ScheduleRunnableAtoms()
+{
+    for (uint32_t slot = 0; slot < runnable_atoms_.size(); slot++) {
+        if (executing_atoms_[slot])
+            continue;
+        auto& runnable = runnable_atoms_[slot];
+        if (runnable.empty())
+            continue;
+        std::shared_ptr<MsdArmAtom> atom = runnable.front();
+        DASSERT(!MsdArmSoftAtom::cast(atom));
+        DASSERT(atom->GetFinalDependencyResult() == kArmMaliResultSuccess);
+        DASSERT(!atom->IsDependencyOnly());
+        DASSERT(atom->slot() == slot);
+
+        for (auto preempting = std::next(runnable.begin()); preempting != runnable.end();
+             ++preempting) {
+            std::shared_ptr<MsdArmAtom> preempting_atom = *preempting;
+            if (preempting_atom->connection().lock() == atom->connection().lock() &&
+                preempting_atom->priority() > atom->priority()) {
+                // Swap the lower priority atom to the current location so we
+                // don't change the ratio of atoms executed between connections.
+                std::swap(atom, *preempting);
+                // Keep looping, as there may be an even higher priority
+                // atom.
             }
         }
-        if (!continue_scheduling)
-            break;
+        DASSERT(atom->slot() == slot);
+
+        atom->SetExecutionStarted();
+        executing_atoms_[slot] = atom;
+        runnable.erase(runnable.begin());
+        std::shared_ptr<MsdArmConnection> connection = atom->connection().lock();
+        msd_client_id_t id = connection ? connection->client_id() : 0;
+        TRACE_ASYNC_BEGIN("magma", AtomRunningString(slot), executing_atoms_[slot]->trace_nonce(),
+                          "id", id);
+        owner_->RunAtom(executing_atoms_[slot].get());
     }
+}
+
+void JobScheduler::TryToSchedule()
+{
+    MoveAtomsToRunnable();
+    ScheduleRunnableAtoms();
+
     UpdatePowerManager();
 }
 
@@ -105,6 +125,8 @@ void JobScheduler::CancelAtomsForConnection(std::shared_ptr<MsdArmConnection> co
         waiting_atoms_.end());
 
     atoms_.remove_if(removal_function);
+    for (auto& runnable_list : runnable_atoms_)
+        runnable_list.remove_if(removal_function);
 }
 
 void JobScheduler::JobCompleted(uint64_t slot, ArmMaliResultCode result_code)

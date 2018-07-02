@@ -76,12 +76,14 @@ public:
             MsdArmConnection::Create(0, &connection_owner);
         EXPECT_EQ(0u, owner.run_list().size());
         JobScheduler scheduler(&owner, 1);
-        auto atom1 = std::make_unique<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data());
+        auto atom1 =
+            std::make_unique<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data(), 0);
         MsdArmAtom* atom1_ptr = atom1.get();
         scheduler.EnqueueAtom(std::move(atom1));
         EXPECT_EQ(0u, owner.run_list().size());
 
-        auto atom2 = std::make_unique<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data());
+        auto atom2 =
+            std::make_unique<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data(), 0);
         MsdArmAtom* atom2_ptr = atom2.get();
         scheduler.EnqueueAtom(std::move(atom2));
         EXPECT_EQ(0u, owner.run_list().size());
@@ -106,10 +108,12 @@ public:
             MsdArmConnection::Create(0, &connection_owner);
         JobScheduler scheduler(&owner, 1);
 
-        auto atom1 = std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data());
+        auto atom1 =
+            std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data(), 0);
         scheduler.EnqueueAtom(std::move(atom1));
 
-        auto atom2 = std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data());
+        auto atom2 =
+            std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data(), 0);
         scheduler.EnqueueAtom(std::move(atom2));
 
         // Neither is scheduled, so they should be canceled immediately.
@@ -123,11 +127,11 @@ public:
             connection, kAtomFlagSemaphoreWait, semaphore, 0, magma_arm_mali_user_data());
         scheduler.EnqueueAtom(waiting_atom);
 
-        atom1 = std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data());
+        atom1 = std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data(), 0);
         MsdArmAtom* atom1_ptr = atom1.get();
         scheduler.EnqueueAtom(atom1);
 
-        atom2 = std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data());
+        atom2 = std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data(), 0);
         scheduler.EnqueueAtom(atom2);
         scheduler.TryToSchedule();
 
@@ -156,19 +160,22 @@ public:
         JobScheduler scheduler(&owner, 1);
 
         auto unqueued_atom1 =
-            std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data());
+            std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data(), 0);
 
         auto unqueued_atom2 =
-            std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data());
+            std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data(), 0);
 
-        auto atom2 = std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data());
+        auto atom2 =
+            std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data(), 0);
         atom2->set_dependencies({MsdArmAtom::Dependency{kArmMaliDependencyOrder, unqueued_atom1}});
         scheduler.EnqueueAtom(atom2);
 
-        auto atom3 = std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data());
+        auto atom3 =
+            std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data(), 0);
         scheduler.EnqueueAtom(atom3);
 
-        auto atom4 = std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data());
+        auto atom4 =
+            std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data(), 0);
         atom4->set_dependencies({MsdArmAtom::Dependency{kArmMaliDependencyOrder, atom3},
                                  MsdArmAtom::Dependency{kArmMaliDependencyOrder, unqueued_atom2}});
         scheduler.EnqueueAtom(atom4);
@@ -215,12 +222,13 @@ public:
         JobScheduler scheduler(&owner, 1);
 
         auto unqueued_atom1 =
-            std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data());
+            std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data(), 0);
 
         auto unqueued_atom2 =
-            std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data());
+            std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data(), 0);
 
-        auto atom2 = std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data());
+        auto atom2 =
+            std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data(), 0);
 
         atom2->set_dependencies({MsdArmAtom::Dependency{kArmMaliDependencyData, unqueued_atom1},
                                  MsdArmAtom::Dependency{kArmMaliDependencyData, unqueued_atom2}});
@@ -264,7 +272,8 @@ public:
         static constexpr uint64_t kTimeoutDurationMs = 10;
         scheduler.set_timeout_duration(kTimeoutDurationMs);
 
-        auto atom = std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data());
+        auto atom =
+            std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data(), 0);
         MsdArmAtom* atom_ptr = atom.get();
         scheduler.EnqueueAtom(atom);
         DASSERT(scheduler.GetCurrentTimeoutDuration() == JobScheduler::Clock::duration::max());
@@ -420,7 +429,8 @@ public:
         scheduler.EnqueueAtom(atom);
         DASSERT(scheduler.GetCurrentTimeoutDuration() == JobScheduler::Clock::duration::max());
 
-        auto atom2 = std::make_shared<MsdArmAtom>(connection, 0u, 0, 0, magma_arm_mali_user_data());
+        auto atom2 =
+            std::make_shared<MsdArmAtom>(connection, 0u, 0, 0, magma_arm_mali_user_data(), 0);
 
         atom2->set_dependencies({MsdArmAtom::Dependency{kArmMaliDependencyOrder, atom}});
         scheduler.EnqueueAtom(atom2);
@@ -471,7 +481,8 @@ public:
             MsdArmConnection::Create(0, &connection_owner);
         EXPECT_EQ(0u, owner.run_list().size());
         JobScheduler scheduler(&owner, 2);
-        auto atom1 = std::make_shared<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data());
+        auto atom1 =
+            std::make_shared<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data(), 0);
         scheduler.EnqueueAtom(atom1);
         EXPECT_EQ(0u, owner.run_list().size());
 
@@ -482,17 +493,17 @@ public:
         scheduler.EnqueueAtom(atom_semaphore);
 
         auto atom_null =
-            std::make_shared<MsdArmAtom>(connection, 0u, 0, 0, magma_arm_mali_user_data());
+            std::make_shared<MsdArmAtom>(connection, 0u, 0, 0, magma_arm_mali_user_data(), 0);
         atom_null->set_dependencies(MsdArmAtom::DependencyList{
             MsdArmAtom::Dependency{kArmMaliDependencyData, atom_semaphore}});
         scheduler.EnqueueAtom(atom_null);
 
         auto atom_slot0 =
-            std::make_shared<MsdArmAtom>(connection, 1u, 0u, 0, magma_arm_mali_user_data());
+            std::make_shared<MsdArmAtom>(connection, 1u, 0u, 0, magma_arm_mali_user_data(), 0);
         scheduler.EnqueueAtom(atom_slot0);
 
         auto atom_slot1 =
-            std::make_shared<MsdArmAtom>(connection, 1u, 1u, 0, magma_arm_mali_user_data());
+            std::make_shared<MsdArmAtom>(connection, 1u, 1u, 0, magma_arm_mali_user_data(), 0);
         atom_slot1->set_dependencies(
             MsdArmAtom::DependencyList{MsdArmAtom::Dependency{kArmMaliDependencyData, atom_null}});
         scheduler.EnqueueAtom(atom_slot1);
@@ -513,6 +524,46 @@ public:
         EXPECT_EQ(3u, owner.run_list().size());
         EXPECT_EQ(atom_slot0.get(), owner.run_list()[2]);
     }
+
+    void TestPriorities()
+    {
+        TestOwner owner;
+        TestConnectionOwner connection_owner;
+        std::shared_ptr<MsdArmConnection> connection1 =
+            MsdArmConnection::Create(0, &connection_owner);
+        std::shared_ptr<MsdArmConnection> connection2 =
+            MsdArmConnection::Create(0, &connection_owner);
+        JobScheduler scheduler(&owner, 2);
+        auto atom1 =
+            std::make_shared<MsdArmAtom>(connection1, 1u, 0, 0, magma_arm_mali_user_data(), -1);
+        scheduler.EnqueueAtom(atom1);
+
+        auto atom2 =
+            std::make_shared<MsdArmAtom>(connection2, 1u, 0, 0, magma_arm_mali_user_data(), 0);
+        scheduler.EnqueueAtom(atom2);
+
+        auto atom3 =
+            std::make_shared<MsdArmAtom>(connection2, 1u, 0, 0, magma_arm_mali_user_data(), 1);
+        scheduler.EnqueueAtom(atom3);
+        EXPECT_EQ(0u, owner.run_list().size());
+
+        // Atom priorities don't matter cross-connection, so atom1 should run first.
+        scheduler.TryToSchedule();
+        EXPECT_EQ(1u, owner.run_list().size());
+        EXPECT_EQ(atom1.get(), owner.run_list().back());
+
+        scheduler.JobCompleted(0, kArmMaliResultSuccess);
+
+        // atom3 should run next, since it's the highest-priority in its connection.
+        scheduler.TryToSchedule();
+        EXPECT_EQ(2u, owner.run_list().size());
+        EXPECT_EQ(atom3.get(), owner.run_list().back());
+
+        scheduler.JobCompleted(0, kArmMaliResultSuccess);
+        scheduler.TryToSchedule();
+        EXPECT_EQ(3u, owner.run_list().size());
+        EXPECT_EQ(atom2.get(), owner.run_list().back());
+    }
 };
 
 TEST(JobScheduler, RunBasic) { TestJobScheduler().TestRunBasic(); }
@@ -532,3 +583,5 @@ TEST(JobScheduler, SemaphoreTimeout) { TestJobScheduler().TestSemaphoreTimeout()
 TEST(JobScheduler, CancelNull) { TestJobScheduler().TestCancelNull(); }
 
 TEST(JobScheduler, MultipleSlots) { TestJobScheduler().TestMultipleSlots(); }
+
+TEST(JobScheduler, Priorities) { TestJobScheduler().TestPriorities(); }

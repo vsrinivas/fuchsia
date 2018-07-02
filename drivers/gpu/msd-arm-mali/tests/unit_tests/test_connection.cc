@@ -293,7 +293,7 @@ public:
         FakeConnectionOwner owner;
         auto connection = MsdArmConnection::Create(0, &owner);
         EXPECT_TRUE(connection);
-        MsdArmAtom atom(connection, 0, 1, 5, magma_arm_mali_user_data{7, 8});
+        MsdArmAtom atom(connection, 0, 1, 5, magma_arm_mali_user_data{7, 8}, 0);
 
         // Shouldn't do anything.
         connection->SendNotificationData(&atom, static_cast<ArmMaliResultCode>(10));
@@ -334,7 +334,7 @@ public:
         EXPECT_EQ(kArmMaliResultTerminated, g_status.result_code);
 
         // Shouldn't do anything.
-        MsdArmAtom atom(connection, 0, 1, 5, magma_arm_mali_user_data{7, 8});
+        MsdArmAtom atom(connection, 0, 1, 5, magma_arm_mali_user_data{7, 8}, 0);
         connection->SendNotificationData(&atom, static_cast<ArmMaliResultCode>(10));
         EXPECT_EQ(kArmMaliResultTerminated, g_status.result_code);
 

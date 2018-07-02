@@ -8,9 +8,10 @@
 #include "platform_trace.h"
 
 MsdArmAtom::MsdArmAtom(std::weak_ptr<MsdArmConnection> connection, uint64_t gpu_address,
-                       uint32_t slot, uint8_t atom_number, magma_arm_mali_user_data user_data)
+                       uint32_t slot, uint8_t atom_number, magma_arm_mali_user_data user_data,
+                       int8_t priority)
     : trace_nonce_(TRACE_NONCE()), connection_(connection), gpu_address_(gpu_address), slot_(slot),
-      atom_number_(atom_number), user_data_(user_data)
+      priority_(priority), atom_number_(atom_number), user_data_(user_data)
 {
 }
 

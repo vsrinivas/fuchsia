@@ -53,6 +53,8 @@ private:
     void ProcessSoftAtom(std::shared_ptr<MsdArmSoftAtom> atom);
     void SoftJobCompleted(std::shared_ptr<MsdArmSoftAtom> atom);
     void UpdatePowerManager();
+    void MoveAtomsToRunnable();
+    void ScheduleRunnableAtoms();
 
     void set_timeout_duration(uint64_t timeout_duration_ms)
     {
@@ -75,6 +77,7 @@ private:
     std::vector<std::shared_ptr<MsdArmSoftAtom>> waiting_atoms_;
     std::vector<std::shared_ptr<MsdArmAtom>> executing_atoms_;
     std::list<std::shared_ptr<MsdArmAtom>> atoms_;
+    std::vector<std::list<std::shared_ptr<MsdArmAtom>>> runnable_atoms_;
 
     friend class TestJobScheduler;
 

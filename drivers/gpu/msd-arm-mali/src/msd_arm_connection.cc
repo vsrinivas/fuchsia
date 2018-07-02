@@ -82,7 +82,7 @@ bool MsdArmConnection::ExecuteAtom(
             return false;
         }
         msd_atom = std::make_shared<MsdArmAtom>(shared_from_this(), atom->job_chain_addr, slot,
-                                                atom_number, user_data);
+                                                atom_number, user_data, atom->priority);
 
         if (flags & kAtomFlagRequireCycleCounter)
             msd_atom->set_require_cycle_counter();
