@@ -10,6 +10,9 @@
     <import remote="https://fuchsia.googlesource.com/build"
             manifest="manifest/build"
             name="build"/>
+    <import remote="https://fuchsia.googlesource.com/buildtools"
+            manifest="manifest/buildtools"
+            name="buildtools"/>
     <import remote="https://fuchsia.googlesource.com/scripts"
             manifest="manifest/scripts"
             name="scripts"/>
