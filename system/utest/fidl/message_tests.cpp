@@ -75,8 +75,9 @@ bool message_builder_test() {
     builder.header()->txid = 5u;
     builder.header()->ordinal = 42u;
 
-    zx_handle_t* handle = builder.New<zx_handle_t>();
-    *handle = e.get();
+    zx_handle_t* handle_ptr = builder.New<zx_handle_t>();
+    zx_handle_t handle_value = e.release();
+    *handle_ptr = handle_value;
 
     fidl::Message message;
     const char* error_msg;
@@ -85,7 +86,7 @@ bool message_builder_test() {
     EXPECT_EQ(message.txid(), 5u);
     EXPECT_EQ(message.ordinal(), 42u);
     EXPECT_EQ(message.handles().actual(), 1u);
-    EXPECT_EQ(message.handles().data()[0], e.get());
+    EXPECT_EQ(message.handles().data()[0], handle_value);
 
     END_TEST;
 }
