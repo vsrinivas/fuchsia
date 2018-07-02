@@ -9,13 +9,17 @@ import subprocess
 
 def _get_diff_base():
     """Returns the newest local commit that is also in the upstream branch, or
-    "HEAD" if there is no upstream branch.
+    "HEAD" if no such commit can be found. If no upstream branch is set, assumes
+    that origin/master is the upstream.
     """
     try:
         with open(os.devnull, 'w') as devnull:
-            upstream = subprocess.check_output([
-                "git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"
-            ], stderr = devnull).strip()
+            try:
+                upstream = subprocess.check_output([
+                    "git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"
+                ], stderr = devnull).strip()
+            except subprocess.CalledProcessError:
+                upstream = "origin/master"
             # Get local commits not in upstream.
             local_commits = filter(
                 len,

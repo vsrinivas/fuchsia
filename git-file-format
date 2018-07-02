@@ -5,8 +5,8 @@
 """Runs source formatters on modified files.
 
 In order to find the files to be formatted, this uses `git diff-index` against
-the newest parent commit in the upstream branch (or against HEAD if there is no
-upstream branch). In result, files that are locally modified, staged or touched
+the newest parent commit in the upstream branch (or against HEAD if no such
+commit is found).  In result, files that are locally modified, staged or touched
 by any commits introduced on the local branch are formatted.
 """
 

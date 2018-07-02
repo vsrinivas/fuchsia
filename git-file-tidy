@@ -5,9 +5,9 @@
 """Runs clang-tidy on modified files.
 
 The tool uses `git diff-index` against the newest parent commit in the upstream
-branch (or against HEAD if there is no upstream branch) in order to find the
-files to be formatted. In result, the tool lints files that are locally
-modified, staged or touched by any commits introduced on the local branch.
+branch (or against HEAD if no such commit is found) in order to find the files
+to be formatted. In result, the tool lints files that are locally modified,
+staged or touched by any commits introduced on the local branch.
 """
 
 import argparse
