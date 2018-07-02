@@ -7,7 +7,6 @@
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/ledger/fidl/include/types.h"

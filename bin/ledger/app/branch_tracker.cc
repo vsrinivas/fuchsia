@@ -11,7 +11,7 @@
 #include "lib/callback/scoped_callback.h"
 #include "lib/callback/waiter.h"
 #include "lib/fxl/functional/auto_call.h"
-#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/ledger/app/diff_utils.h"
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
 #include "peridot/bin/ledger/app/page_manager.h"
@@ -142,27 +142,25 @@ class BranchTracker::PageWatcherContainer {
                   fit::closure on_done) {
     interface_->OnChange(
         std::move(page_change), state,
-        fxl::MakeCopyable(
-            [this, state, new_commit = std::move(new_commit),
-             on_done = std::move(on_done)](
-                fidl::InterfaceRequest<PageSnapshot> snapshot_request) mutable {
-              if (snapshot_request) {
-                manager_->BindPageSnapshot(new_commit->Clone(),
-                                           std::move(snapshot_request),
-                                           key_prefix_);
-              }
-              if (state != ResultState::COMPLETED &&
-                  state != ResultState::PARTIAL_COMPLETED) {
-                on_done();
-                return;
-              }
-              change_in_flight_ = false;
-              last_commit_.swap(new_commit);
-              // SendCommit will start handling the following commit, so we need
-              // to make sure on_done() is called before that.
-              on_done();
-              SendCommit();
-            }));
+        [this, state, new_commit = std::move(new_commit),
+         on_done = std::move(on_done)](
+            fidl::InterfaceRequest<PageSnapshot> snapshot_request) mutable {
+          if (snapshot_request) {
+            manager_->BindPageSnapshot(
+                new_commit->Clone(), std::move(snapshot_request), key_prefix_);
+          }
+          if (state != ResultState::COMPLETED &&
+              state != ResultState::PARTIAL_COMPLETED) {
+            on_done();
+            return;
+          }
+          change_in_flight_ = false;
+          last_commit_.swap(new_commit);
+          // SendCommit will start handling the following commit, so we need
+          // to make sure on_done() is called before that.
+          on_done();
+          SendCommit();
+        });
   }
 
   // Sends a commit to the watcher if needed.
@@ -187,10 +185,9 @@ class BranchTracker::PageWatcherContainer {
         diff_utils::PaginationBehavior::NO_PAGINATION,
         callback::MakeScoped(
             weak_factory_.GetWeakPtr(),
-            fxl::MakeCopyable([this, new_commit = std::move(current_commit_)](
-                                  Status status,
-                                  std::pair<PageChangePtr, std::string>
-                                      page_change_ptr) mutable {
+            [this, new_commit = std::move(current_commit_)](
+                Status status,
+                std::pair<PageChangePtr, std::string> page_change_ptr) mutable {
               if (status != Status::OK) {
                 // This change notification is abandonned. At the next commit,
                 // we will try again (but not before). The next notification
@@ -215,7 +212,7 @@ class BranchTracker::PageWatcherContainer {
                            [] {});
                 return;
               }
-              coroutine_service_->StartCoroutine(fxl::MakeCopyable(
+              coroutine_service_->StartCoroutine(
                   [this, new_commit = std::move(new_commit),
                    paginated_changes = std::move(paginated_changes)](
                       coroutine::CoroutineHandler* handler) mutable {
@@ -234,21 +231,19 @@ class BranchTracker::PageWatcherContainer {
                       }
                       if (coroutine::SyncCall(
                               handler,
-                              fxl::MakeCopyable(
-                                  [this,
-                                   change = std::move(paginated_changes[i]),
-                                   state, new_commit = new_commit->Clone()](
-                                      fit::closure on_done) mutable {
-                                    SendChange(std::move(change), state,
-                                               std::move(new_commit),
-                                               std::move(on_done));
-                                  })) ==
+                              [this, change = std::move(paginated_changes[i]),
+                               state, new_commit = new_commit->Clone()](
+                                  fit::closure on_done) mutable {
+                                SendChange(std::move(change), state,
+                                           std::move(new_commit),
+                                           std::move(on_done));
+                              }) ==
                           coroutine::ContinuationStatus::INTERRUPTED) {
                         return;
                       }
                     }
-                  }));
-            })));
+                  });
+            }));
   }
 
   fit::closure on_drained_ = nullptr;

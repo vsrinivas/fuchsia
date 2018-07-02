@@ -15,7 +15,6 @@
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/p2p_provider/impl/p2p_provider_impl.h"
@@ -127,24 +126,23 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
       weak_ptr_factory_(this) {
   loop_.StartThread();
   async::PostTask(
-      loop_.async(),
-      fxl::MakeCopyable([this, request = std::move(repository_factory_request),
-                         user_communicator_factory =
-                             std::move(user_communicator_factory)]() mutable {
+      loop_.async(), [this, request = std::move(repository_factory_request),
+                      user_communicator_factory =
+                          std::move(user_communicator_factory)]() mutable {
         factory_container_ = std::make_unique<LedgerRepositoryFactoryContainer>(
             loop_.async(), std::move(request),
             std::move(user_communicator_factory));
-      }));
+      });
 }
 
 cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
   cloud_provider::CloudProviderPtr cloud_provider;
   async::PostTask(services_dispatcher_,
-                  fxl::MakeCopyable(callback::MakeScoped(
+                  callback::MakeScoped(
                       weak_ptr_factory_.GetWeakPtr(),
                       [this, request = cloud_provider.NewRequest()]() mutable {
                         cloud_provider_->AddBinding(std::move(request));
-                      })));
+                      }));
   return cloud_provider;
 }
 
@@ -170,14 +168,13 @@ class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
   std::unique_ptr<p2p_sync::UserCommunicator> GetUserCommunicator(
       ledger::DetachedPath /*user_directory*/) override {
     fuchsia::netconnector::NetConnectorPtr netconnector;
-    async::PostTask(
-        services_dispatcher_,
-        callback::MakeScoped(
-            weak_ptr_factory_.GetWeakPtr(),
-            fxl::MakeCopyable([this,
-                               request = netconnector.NewRequest()]() mutable {
-              netconnector_factory_->AddBinding(host_name_, std::move(request));
-            })));
+    async::PostTask(services_dispatcher_,
+                    callback::MakeScoped(
+                        weak_ptr_factory_.GetWeakPtr(),
+                        [this, request = netconnector.NewRequest()]() mutable {
+                          netconnector_factory_->AddBinding(host_name_,
+                                                            std::move(request));
+                        }));
     std::unique_ptr<p2p_provider::P2PProvider> provider =
         std::make_unique<p2p_provider::P2PProviderImpl>(
             host_name_, std::move(netconnector),

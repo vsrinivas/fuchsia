@@ -173,7 +173,7 @@ TEST_F(MergeResolverTest, Empty) {
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<test::TestBackoff>(nullptr));
   resolver.SetMergeStrategy(std::move(strategy));
-  resolver.set_on_empty(fxl::MakeCopyable(QuitLoopClosure()));
+  resolver.set_on_empty(QuitLoopClosure());
 
   bool called;
   storage::Status status;
@@ -273,7 +273,7 @@ TEST_F(MergeResolverTest, CommonAncestor) {
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<test::TestBackoff>(nullptr));
   resolver.SetMergeStrategy(std::move(strategy));
-  resolver.set_on_empty(fxl::MakeCopyable(QuitLoopClosure()));
+  resolver.set_on_empty(QuitLoopClosure());
 
   RunLoopUntilIdle();
   EXPECT_TRUE(resolver.IsEmpty());
@@ -379,7 +379,7 @@ TEST_F(MergeResolverTest, None) {
 
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<test::TestBackoff>(nullptr));
-  resolver.set_on_empty(fxl::MakeCopyable(QuitLoopClosure()));
+  resolver.set_on_empty(QuitLoopClosure());
   RunLoopUntilIdle();
   EXPECT_TRUE(resolver.IsEmpty());
   ids.clear();
@@ -450,7 +450,7 @@ TEST_F(MergeResolverTest, WaitOnMergeOfMerges) {
                          std::make_unique<test::TestBackoff>(&get_next_count));
   resolver.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   auto strategy = std::make_unique<RecordingTestStrategy>();
-  strategy->SetOnMerge(fxl::MakeCopyable(QuitLoopClosure()));
+  strategy->SetOnMerge(QuitLoopClosure());
   resolver.SetMergeStrategy(std::move(strategy));
 
   RunLoopUntilIdle();
@@ -630,7 +630,7 @@ TEST_F(MergeResolverTest, HasUnfinishedMerges) {
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<test::TestBackoff>(nullptr));
   resolver.SetMergeStrategy(nullptr);
-  resolver.set_on_empty(fxl::MakeCopyable(QuitLoopClosure()));
+  resolver.set_on_empty(QuitLoopClosure());
   RunLoopUntilIdle();
   EXPECT_FALSE(resolver.HasUnfinishedMerges());
 
@@ -655,7 +655,7 @@ TEST_F(MergeResolverTest, HasUnfinishedMerges) {
           dispatcher(), commit_1, commit_2,
           storage::kFirstPageCommitId.ToString());
   resolver.SetMergeStrategy(std::move(strategy));
-  resolver.set_on_empty(fxl::MakeCopyable(QuitLoopClosure()));
+  resolver.set_on_empty(QuitLoopClosure());
 
   RunLoopUntilIdle();
   // VerifyingResolver tells MergeResolver that the conflict is finished, but

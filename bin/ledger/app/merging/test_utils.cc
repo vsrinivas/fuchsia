@@ -125,12 +125,12 @@ TestWithPageStorage::DeleteKeyFromJournal(const std::string& key) {
 }
 
 fit::closure TestWithPageStorage::MakeQuitTaskOnce() {
-  return fxl::MakeCopyable([this, called = false]() mutable {
+  return [this, called = false]() mutable {
     if (!called) {
       called = true;
       QuitLoop();
     }
-  });
+  };
 }
 
 }  // namespace test

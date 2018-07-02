@@ -6,6 +6,8 @@
 
 #include <lib/fit/function.h>
 
+#include "lib/fxl/memory/ref_ptr.h"
+
 namespace storage {
 namespace btree {
 

@@ -10,8 +10,8 @@
 
 #include "lib/callback/waiter.h"
 #include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/random/rand.h"
 #include "peridot/lib/convert/convert.h"
 
@@ -64,21 +64,19 @@ void PageDataGenerator::PutEntry(ledger::PagePtr* page,
   }
   (*page)->CreateReferenceFromVmo(
       std::move(vmo).ToTransport(),
-      fxl::MakeCopyable(
-          [page, key = std::move(key), priority,
-           callback = std::move(callback)](
-              ledger::Status status, ledger::ReferencePtr reference) mutable {
-            if (LogOnError(status, "Page::CreateReferenceFromVmo")) {
+      [page, key = std::move(key), priority, callback = std::move(callback)](
+          ledger::Status status, ledger::ReferencePtr reference) mutable {
+        if (LogOnError(status, "Page::CreateReferenceFromVmo")) {
+          callback(status);
+          return;
+        }
+        (*page)->PutReference(
+            std::move(key), std::move(*reference), priority,
+            [callback = std::move(callback)](ledger::Status status) {
+              LogOnError(status, "Page::PutReference");
               callback(status);
-              return;
-            }
-            (*page)->PutReference(
-                std::move(key), std::move(*reference), priority,
-                [callback = std::move(callback)](ledger::Status status) {
-                  LogOnError(status, "Page::PutReference");
-                  callback(status);
-                });
-          }));
+            });
+      });
 }
 
 void PageDataGenerator::Populate(ledger::PagePtr* page,
@@ -112,43 +110,39 @@ void PageDataGenerator::PutInTransaction(
             keys.begin() + current_key_index + this_transaction_size,
             std::back_inserter(partial_keys));
 
-  (*page)->StartTransaction(fxl::MakeCopyable(
-      [this, page, partial_keys = std::move(partial_keys),
-       keys = std::move(keys), current_key_index, transaction_size, value_size,
-       ref_strategy, priority,
-       callback = std::move(callback)](ledger::Status status) mutable {
-        if (LogOnError(status, "Page::StartTransaction")) {
-          callback(status);
-          return;
-        }
-        PutMultipleEntries(
-            page, std::move(partial_keys), value_size, ref_strategy, priority,
-            fxl::MakeCopyable(
-                [this, page, keys = std::move(keys), current_key_index,
-                 value_size, ref_strategy, priority, transaction_size,
-                 callback =
-                     std::move(callback)](ledger::Status status) mutable {
-                  if (LogOnError(status, "PutMultipleEntries")) {
-                    callback(status);
-                    return;
-                  }
-                  (*page)->Commit(fxl::MakeCopyable(
-                      [this, page, keys = std::move(keys), current_key_index,
-                       value_size, ref_strategy, transaction_size, priority,
-                       callback =
-                           std::move(callback)](ledger::Status status) mutable {
-                        if (LogOnError(status, "Page::Commit")) {
-                          callback(status);
-                          return;
-                        }
-                        PutInTransaction(page, std::move(keys),
-                                         current_key_index + transaction_size,
-                                         value_size, transaction_size,
-                                         ref_strategy, priority,
-                                         std::move(callback));
-                      }));
-                }));
-      }));
+  (*page)->StartTransaction([this, page, partial_keys = std::move(partial_keys),
+                             keys = std::move(keys), current_key_index,
+                             transaction_size, value_size, ref_strategy,
+                             priority, callback = std::move(callback)](
+                                ledger::Status status) mutable {
+    if (LogOnError(status, "Page::StartTransaction")) {
+      callback(status);
+      return;
+    }
+    PutMultipleEntries(
+        page, std::move(partial_keys), value_size, ref_strategy, priority,
+        [this, page, keys = std::move(keys), current_key_index, value_size,
+         ref_strategy, priority, transaction_size,
+         callback = std::move(callback)](ledger::Status status) mutable {
+          if (LogOnError(status, "PutMultipleEntries")) {
+            callback(status);
+            return;
+          }
+          (*page)->Commit(
+              [this, page, keys = std::move(keys), current_key_index,
+               value_size, ref_strategy, transaction_size, priority,
+               callback = std::move(callback)](ledger::Status status) mutable {
+                if (LogOnError(status, "Page::Commit")) {
+                  callback(status);
+                  return;
+                }
+                PutInTransaction(page, std::move(keys),
+                                 current_key_index + transaction_size,
+                                 value_size, transaction_size, ref_strategy,
+                                 priority, std::move(callback));
+              });
+        });
+  });
 }
 
 void PageDataGenerator::PutMultipleEntries(

@@ -108,13 +108,14 @@ Status PageEvictionManagerImpl::CanEvictPage(
 
   Status status;
   PageClosedAndSynced sync_state;
-  auto sync_call_status = coroutine::SyncCall(
-      handler,
-      [this, ledger_name = ledger_name.ToString(),
-       page_id = page_id.ToString()](auto callback) {
-        state_reader_->PageIsClosedAndSynced(ledger_name, page_id, callback);
-      },
-      &status, &sync_state);
+  auto sync_call_status =
+      coroutine::SyncCall(handler,
+                          [this, ledger_name = ledger_name.ToString(),
+                           page_id = page_id.ToString()](auto callback) {
+                            state_reader_->PageIsClosedAndSynced(
+                                ledger_name, page_id, std::move(callback));
+                          },
+                          &status, &sync_state);
   if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERNAL_ERROR;
   }

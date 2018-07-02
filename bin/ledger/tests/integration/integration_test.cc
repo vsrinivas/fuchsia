@@ -10,7 +10,6 @@
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/tests/integration/test_utils.h"
 #include "peridot/lib/socket/socket_pair.h"
 #include "peridot/lib/socket/socket_writer.h"
@@ -53,12 +52,11 @@ void BaseIntegrationTest::TearDown() {
 
 zx::socket BaseIntegrationTest::StreamDataToSocket(std::string data) {
   socket::SocketPair sockets;
-  async::PostTask(loop_.async(),
-                  fxl::MakeCopyable([socket = std::move(sockets.socket1),
-                                     data = std::move(data)]() mutable {
-                    auto writer = new socket::StringSocketWriter();
-                    writer->Start(std::move(data), std::move(socket));
-                  }));
+  async::PostTask(loop_.async(), [socket = std::move(sockets.socket1),
+                                  data = std::move(data)]() mutable {
+    auto writer = new socket::StringSocketWriter();
+    writer->Start(std::move(data), std::move(socket));
+  });
   return std::move(sockets.socket2);
 }
 

@@ -16,7 +16,6 @@
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/ledger/storage/public/types.h"

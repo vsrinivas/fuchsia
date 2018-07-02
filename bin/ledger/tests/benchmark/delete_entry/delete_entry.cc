@@ -15,7 +15,6 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "peridot/bin/ledger/filesystem/get_directory_content_size.h"

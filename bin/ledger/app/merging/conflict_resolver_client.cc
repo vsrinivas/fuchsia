@@ -13,7 +13,7 @@
 
 #include "lib/callback/waiter.h"
 #include "lib/fsl/socket/strings.h"
-#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/app/diff_utils.h"
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
@@ -211,10 +211,9 @@ void ConflictResolverClient::Merge(fidl::VectorPtr<MergedValue> merged_values,
                                    MergeCallback callback) {
   has_merged_values_ = true;
   operation_serializer_.Serialize<Status>(
-      std::move(callback),
-      fxl::MakeCopyable([weak_this = weak_factory_.GetWeakPtr(),
-                         merged_values = std::move(merged_values)](
-                            MergeCallback callback) mutable {
+      std::move(callback), [weak_this = weak_factory_.GetWeakPtr(),
+                            merged_values = std::move(merged_values)](
+                               MergeCallback callback) mutable {
         if (!weak_this) {
           callback(Status::INTERNAL_ERROR);
           return;
@@ -260,7 +259,7 @@ void ConflictResolverClient::Merge(fidl::VectorPtr<MergedValue> merged_values,
                     callback(PageUtils::ConvertStatus(status));
                   });
             });
-      }));
+      });
 }
 
 void ConflictResolverClient::MergeNonConflictingEntries(

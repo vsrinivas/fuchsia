@@ -28,8 +28,8 @@
 #include "lib/fxl/files/file_descriptor.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/unique_fd.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
@@ -217,21 +217,21 @@ void PageStorageImpl::CommitJournal(
   auto managed_journal = managed_container_.Manage(std::move(journal));
   JournalImpl* journal_ptr = static_cast<JournalImpl*>(managed_journal->get());
 
-  journal_ptr->Commit(fxl::MakeCopyable(
+  journal_ptr->Commit(
       [journal_ptr, managed_journal = std::move(managed_journal),
        callback = std::move(callback)](
           Status status, std::unique_ptr<const Commit> commit) mutable {
         if (status != Status::OK) {
           // Commit failed, roll the journal back.
-          journal_ptr->Rollback(fxl::MakeCopyable(
+          journal_ptr->Rollback(
               [status, managed_journal = std::move(managed_journal),
                callback = std::move(callback)](Status /*rollback_status*/) {
                 callback(status, nullptr);
-              }));
+              });
           return;
         }
         callback(Status::OK, std::move(commit));
-      }));
+      });
 }
 
 void PageStorageImpl::RollbackJournal(std::unique_ptr<Journal> journal,
@@ -241,9 +241,9 @@ void PageStorageImpl::RollbackJournal(std::unique_ptr<Journal> journal,
   auto managed_journal = managed_container_.Manage(std::move(journal));
   JournalImpl* journal_ptr = static_cast<JournalImpl*>(managed_journal->get());
 
-  journal_ptr->Rollback(fxl::MakeCopyable(
+  journal_ptr->Rollback(
       [managed_journal = std::move(managed_journal),
-       callback = std::move(callback)](Status status) { callback(status); }));
+       callback = std::move(callback)](Status status) { callback(status); });
 }
 
 Status PageStorageImpl::AddCommitWatcher(CommitWatcher* watcher) {
@@ -374,40 +374,38 @@ void PageStorageImpl::AddObjectFromLocal(
   auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
   SplitDataSource(
       managed_data_source->get(),
-      fxl::MakeCopyable(
-          [this, waiter, managed_data_source = std::move(managed_data_source),
-           callback = std::move(traced_callback)](
-              IterationStatus status, ObjectDigest object_digest,
-              std::unique_ptr<DataSource::DataChunk> chunk) mutable {
-            if (status == IterationStatus::ERROR) {
-              callback(Status::IO_ERROR, ObjectIdentifier());
-              return ObjectIdentifier();
-            }
-            FXL_DCHECK(IsDigestValid(object_digest));
+      [this, waiter, managed_data_source = std::move(managed_data_source),
+       callback = std::move(traced_callback)](
+          IterationStatus status, ObjectDigest object_digest,
+          std::unique_ptr<DataSource::DataChunk> chunk) mutable {
+        if (status == IterationStatus::ERROR) {
+          callback(Status::IO_ERROR, ObjectIdentifier());
+          return ObjectIdentifier();
+        }
+        FXL_DCHECK(IsDigestValid(object_digest));
 
-            ObjectIdentifier identifier =
-                encryption_service_->MakeObjectIdentifier(
-                    std::move(object_digest));
+        ObjectIdentifier identifier =
+            encryption_service_->MakeObjectIdentifier(std::move(object_digest));
 
-            if (chunk) {
-              FXL_DCHECK(status == IterationStatus::IN_PROGRESS);
+        if (chunk) {
+          FXL_DCHECK(status == IterationStatus::IN_PROGRESS);
 
-              if (GetObjectDigestType(identifier.object_digest) !=
-                  ObjectDigestType::INLINE) {
-                AddPiece(identifier, std::move(chunk), ChangeSource::LOCAL,
-                         waiter->NewCallback());
-              }
-              return identifier;
-            }
+          if (GetObjectDigestType(identifier.object_digest) !=
+              ObjectDigestType::INLINE) {
+            AddPiece(identifier, std::move(chunk), ChangeSource::LOCAL,
+                     waiter->NewCallback());
+          }
+          return identifier;
+        }
 
-            FXL_DCHECK(status == IterationStatus::DONE);
-            waiter->Finalize(
-                [identifier = std::move(identifier),
-                 callback = std::move(callback)](Status status) mutable {
-                  callback(status, std::move(identifier));
-                });
-            return identifier;
-          }));
+        FXL_DCHECK(status == IterationStatus::DONE);
+        waiter->Finalize(
+            [identifier = std::move(identifier),
+             callback = std::move(callback)](Status status) mutable {
+              callback(status, std::move(identifier));
+            });
+        return identifier;
+      });
 }
 
 void PageStorageImpl::GetObject(
@@ -497,11 +495,11 @@ void PageStorageImpl::GetObject(
         auto final_object = std::make_unique<VmoObject>(
             std::move(object_identifier), std::move(vmo));
 
-        waiter->Finalize(fxl::MakeCopyable(
+        waiter->Finalize(
             [object = std::move(final_object),
              callback = std::move(callback)](Status status) mutable {
               callback(status, std::move(object));
-            }));
+            });
       });
 }
 
@@ -579,18 +577,17 @@ void PageStorageImpl::GetEntryFromCommit(
     return false;
   };
 
-  auto on_done =
-      fxl::MakeCopyable([key_found = std::move(key_found),
-                         callback = std::move(callback)](Status s) mutable {
-        if (*key_found) {
-          return;
-        }
-        if (s == Status::OK) {
-          callback(Status::NOT_FOUND, Entry());
-          return;
-        }
-        callback(s, Entry());
-      });
+  auto on_done = [key_found = std::move(key_found),
+                  callback = std::move(callback)](Status s) {
+    if (*key_found) {
+      return;
+    }
+    if (s == Status::OK) {
+      callback(Status::NOT_FOUND, Entry());
+      return;
+    }
+    callback(s, Entry());
+  };
   btree::ForEachEntry(coroutine_service_, this, commit.GetRootIdentifier(),
                       std::move(key), std::move(on_next), std::move(on_done));
 }
@@ -901,10 +898,9 @@ void PageStorageImpl::FillBufferWithObjectContent(
     size_t size, fit::function<void(Status)> callback) {
   GetPiece(
       object_identifier,
-      fxl::MakeCopyable([this, vmo = std::move(vmo), offset, size,
-                         callback = std::move(callback)](
-                            Status status,
-                            std::unique_ptr<const Object> object) mutable {
+      [this, vmo = std::move(vmo), offset, size,
+       callback = std::move(callback)](
+          Status status, std::unique_ptr<const Object> object) mutable {
         if (status != Status::OK) {
           callback(status);
           return;
@@ -978,7 +974,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
           sub_offset += child->size();
         }
         waiter->Finalize(std::move(callback));
-      }));
+      });
 }
 
 Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {

@@ -9,7 +9,7 @@
 #include <lib/fit/function.h>
 
 #include "lib/callback/waiter.h"
-#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 
@@ -69,7 +69,8 @@ storage::Status FindCommonAncestorSync(
     storage::Status status;
     std::vector<std::unique_ptr<const storage::Commit>> parents;
     if (coroutine::SyncCall(
-            handler, [waiter](auto callback) { waiter->Finalize(callback); },
+            handler,
+            [waiter](auto callback) { waiter->Finalize(std::move(callback)); },
             &status, &parents) == coroutine::ContinuationStatus::INTERRUPTED) {
       return storage::Status::INTERRUPTED;
     }
@@ -98,7 +99,7 @@ void FindCommonAncestor(
     std::unique_ptr<const storage::Commit> head2,
     fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
-  coroutine_service->StartCoroutine(fxl::MakeCopyable(
+  coroutine_service->StartCoroutine(
       [storage, head1 = std::move(head1), head2 = std::move(head2),
        callback =
            std::move(callback)](coroutine::CoroutineHandler* handler) mutable {
@@ -106,7 +107,7 @@ void FindCommonAncestor(
         storage::Status status = FindCommonAncestorSync(
             handler, storage, std::move(head1), std::move(head2), &result);
         callback(PageUtils::ConvertStatus(status), std::move(result));
-      }));
+      });
 }
 
 }  // namespace ledger

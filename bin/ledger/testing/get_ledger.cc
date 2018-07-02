@@ -12,7 +12,6 @@
 #include <lib/fit/function.h>
 
 #include "lib/callback/capture.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
@@ -45,43 +44,38 @@ void GetLedger(
 
   repository_factory_ptr->GetRepository(
       ledger_repository_path, std::move(cloud_provider), std::move(request),
-      fxl::MakeCopyable(
-          [repository_factory = std::move(repository_factory),
-           repository = std::move(repository),
-           ledger_name = std::move(ledger_name),
-           ledger_repository_path = std::move(ledger_repository_path),
-           error_handler = std::move(error_handler),
-           callback = std::move(callback)](ledger::Status status) mutable {
-            if (status != ledger::Status::OK) {
-              FXL_LOG(ERROR) << "Failure while getting repository.";
-              callback(status, nullptr);
-              return;
-            }
+      [repository_factory = std::move(repository_factory),
+       repository = std::move(repository), ledger_name = std::move(ledger_name),
+       ledger_repository_path = std::move(ledger_repository_path),
+       error_handler = std::move(error_handler),
+       callback = std::move(callback)](ledger::Status status) mutable {
+        if (status != ledger::Status::OK) {
+          FXL_LOG(ERROR) << "Failure while getting repository.";
+          callback(status, nullptr);
+          return;
+        }
 
-            auto repository_ptr = repository->get();
-            auto ledger = std::make_unique<ledger::LedgerPtr>();
-            auto request = ledger->NewRequest();
-            repository_ptr->GetLedger(
-                convert::ToArray(ledger_name), std::move(request),
-                fxl::MakeCopyable([repository = std::move(repository),
-                                   ledger = std::move(ledger),
-                                   error_handler = std::move(error_handler),
-                                   callback = std::move(callback)](
-                                      ledger::Status status) mutable {
-                  if (status != ledger::Status::OK) {
-                    FXL_LOG(ERROR) << "Failure while getting ledger.";
-                    callback(status, nullptr);
-                    return;
-                  }
-                  ledger->set_error_handler(
-                      [error_handler = std::move(error_handler)] {
-                        FXL_LOG(ERROR)
-                            << "The ledger connection was closed, quitting.";
-                        error_handler();
-                      });
-                  callback(ledger::Status::OK, std::move(*ledger));
-                }));
-          }));
+        auto repository_ptr = repository->get();
+        auto ledger = std::make_unique<ledger::LedgerPtr>();
+        auto request = ledger->NewRequest();
+        repository_ptr->GetLedger(
+            convert::ToArray(ledger_name), std::move(request),
+            [repository = std::move(repository), ledger = std::move(ledger),
+             error_handler = std::move(error_handler),
+             callback = std::move(callback)](ledger::Status status) mutable {
+              if (status != ledger::Status::OK) {
+                FXL_LOG(ERROR) << "Failure while getting ledger.";
+                callback(status, nullptr);
+                return;
+              }
+              ledger->set_error_handler([error_handler =
+                                             std::move(error_handler)] {
+                FXL_LOG(ERROR) << "The ledger connection was closed, quitting.";
+                error_handler();
+              });
+              callback(ledger::Status::OK, std::move(*ledger));
+            });
+      });
 }
 
 void GetPageEnsureInitialized(
@@ -93,28 +87,26 @@ void GetPageEnsureInitialized(
   auto request = page->NewRequest();
   (*ledger)->GetPage(
       std::move(requested_id), std::move(request),
-      fxl::MakeCopyable(
-          [page = std::move(page), error_handler = std::move(error_handler),
-           callback = std::move(callback)](ledger::Status status) mutable {
-            if (status != ledger::Status::OK) {
-              FXL_LOG(ERROR) << "Failure while getting a page.";
-              callback(status, nullptr, {});
-              return;
-            }
+      [page = std::move(page), error_handler = std::move(error_handler),
+       callback = std::move(callback)](ledger::Status status) mutable {
+        if (status != ledger::Status::OK) {
+          FXL_LOG(ERROR) << "Failure while getting a page.";
+          callback(status, nullptr, {});
+          return;
+        }
 
-            page->set_error_handler([error_handler = std::move(error_handler)] {
-              FXL_LOG(ERROR) << "The page connection was closed, quitting.";
-              error_handler();
-            });
+        page->set_error_handler([error_handler = std::move(error_handler)] {
+          FXL_LOG(ERROR) << "The page connection was closed, quitting.";
+          error_handler();
+        });
 
-            auto page_ptr = (*page).get();
-            page_ptr->GetId(fxl::MakeCopyable(
-                [page = std::move(page),
-                 callback = std::move(callback)](ledger::PageId page_id) {
-                  callback(ledger::Status::OK, std::move(*page),
-                           std::move(page_id));
-                }));
-          }));
+        auto page_ptr = (*page).get();
+        page_ptr->GetId([page = std::move(page),
+                         callback =
+                             std::move(callback)](ledger::PageId page_id) {
+          callback(ledger::Status::OK, std::move(*page), std::move(page_id));
+        });
+      });
 }
 
 void KillLedgerProcess(fuchsia::sys::ComponentControllerPtr* controller) {

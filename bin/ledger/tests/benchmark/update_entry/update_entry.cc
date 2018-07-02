@@ -14,7 +14,6 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
@@ -84,15 +83,15 @@ void UpdateEntryBenchmark::Run() {
               fidl::VectorPtr<uint8_t> key = generator_.MakeKey(0, key_size_);
               if (transaction_size_ > 0) {
                 page_->StartTransaction(
-                    fxl::MakeCopyable([this, key = std::move(key)](
-                                          ledger::Status status) mutable {
+                    [this,
+                     key = std::move(key)](ledger::Status status) mutable {
                       if (benchmark::QuitOnError(QuitLoopClosure(), status,
                                                  "Page::StartTransaction")) {
                         return;
                       }
                       TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
                       RunSingle(0, std::move(key));
-                    }));
+                    });
               } else {
                 RunSingle(0, std::move(key));
               }
@@ -110,8 +109,7 @@ void UpdateEntryBenchmark::RunSingle(int i, fidl::VectorPtr<uint8_t> key) {
   TRACE_ASYNC_BEGIN("benchmark", "put", i);
   page_->Put(
       fidl::Clone(key), std::move(value),
-      fxl::MakeCopyable([this, i,
-                         key = std::move(key)](ledger::Status status) mutable {
+      [this, i, key = std::move(key)](ledger::Status status) mutable {
         if (benchmark::QuitOnError(QuitLoopClosure(), status, "Page::Put")) {
           return;
         }
@@ -123,14 +121,13 @@ void UpdateEntryBenchmark::RunSingle(int i, fidl::VectorPtr<uint8_t> key) {
         } else {
           RunSingle(i + 1, std::move(key));
         }
-      }));
+      });
 }
 
 void UpdateEntryBenchmark::CommitAndRunNext(int i,
                                             fidl::VectorPtr<uint8_t> key) {
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
-  page_->Commit(fxl::MakeCopyable([this, i, key = std::move(key)](
-                                      ledger::Status status) mutable {
+  page_->Commit([this, i, key = std::move(key)](ledger::Status status) mutable {
     if (benchmark::QuitOnError(QuitLoopClosure(), status, "Page::Commit")) {
       return;
     }
@@ -141,7 +138,7 @@ void UpdateEntryBenchmark::CommitAndRunNext(int i,
       RunSingle(i + 1, std::move(key));
       return;
     }
-    page_->StartTransaction(fxl::MakeCopyable(
+    page_->StartTransaction(
         [this, i = i + 1, key = std::move(key)](ledger::Status status) mutable {
           if (benchmark::QuitOnError(QuitLoopClosure(), status,
                                      "Page::StartTransaction")) {
@@ -149,8 +146,8 @@ void UpdateEntryBenchmark::CommitAndRunNext(int i,
           }
           TRACE_ASYNC_BEGIN("benchmark", "transaction", i / transaction_size_);
           RunSingle(i, std::move(key));
-        }));
-  }));
+        });
+  });
 }
 
 void UpdateEntryBenchmark::ShutDown() {

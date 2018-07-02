@@ -10,7 +10,6 @@
 
 #include "lib/callback/scoped_callback.h"
 #include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/strings/concatenate.h"

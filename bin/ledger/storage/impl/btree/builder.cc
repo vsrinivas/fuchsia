@@ -7,7 +7,7 @@
 #include <lib/fit/function.h>
 
 #include "lib/callback/waiter.h"
-#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/ledger/storage/impl/btree/internal_helper.h"
 #include "peridot/bin/ledger/storage/impl/btree/synchronous_storage.h"
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
@@ -630,7 +630,7 @@ void ApplyChanges(
         callback,
     const NodeLevelCalculator* node_level_calculator) {
   FXL_DCHECK(storage::IsDigestValid(root_identifier.object_digest));
-  coroutine_service->StartCoroutine(fxl::MakeCopyable(
+  coroutine_service->StartCoroutine(
       [page_storage, root_identifier = std::move(root_identifier),
        changes = std::move(changes), callback = std::move(callback),
        node_level_calculator](coroutine::CoroutineHandler* handler) mutable {
@@ -666,7 +666,7 @@ void ApplyChanges(
           callback(status, std::move(object_identifier),
                    std::move(new_identifiers));
         });
-      }));
+      });
 }
 
 }  // namespace btree

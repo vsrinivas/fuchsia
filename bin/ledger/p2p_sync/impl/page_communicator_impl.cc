@@ -8,6 +8,7 @@
 
 #include "lib/callback/scoped_callback.h"
 #include "lib/callback/waiter.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/ledger/p2p_sync/impl/message_generated.h"
 #include "peridot/bin/ledger/storage/public/read_data_source.h"
 #include "peridot/lib/convert/convert.h"

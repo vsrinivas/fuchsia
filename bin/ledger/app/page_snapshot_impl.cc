@@ -16,7 +16,6 @@
 #include "lib/callback/waiter.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/ledger/app/constants.h"
@@ -142,9 +141,8 @@ void FillEntries(storage::PageStorage* page_storage,
   std::string start = token
                           ? convert::ToString(token->opaque_id)
                           : std::max(key_prefix, convert::ToString(key_start));
-  auto on_next = fxl::MakeCopyable([page_storage, &key_prefix,
-                                    context = context.get(),
-                                    waiter](storage::Entry entry) {
+  auto on_next = [page_storage, &key_prefix, context = context.get(),
+                  waiter](storage::Entry entry) {
     if (!PageUtils::MatchesPrefix(entry.key, key_prefix)) {
       return false;
     }
@@ -171,11 +169,11 @@ void FillEntries(storage::PageStorage* page_storage,
           }
         });
     return true;
-  });
+  };
 
-  auto on_done = fxl::MakeCopyable([waiter, context = std::move(context),
-                                    callback = std::move(timed_callback)](
-                                       storage::Status status) mutable {
+  auto on_done = [waiter, context = std::move(context),
+                  callback = std::move(timed_callback)](
+                     storage::Status status) mutable {
     if (status != storage::Status::OK) {
       FXL_LOG(ERROR) << "Error while reading: " << status;
       callback(Status::IO_ERROR, fidl::VectorPtr<EntryType>::New(0), nullptr);
@@ -183,7 +181,7 @@ void FillEntries(storage::PageStorage* page_storage,
     }
     fit::function<void(storage::Status,
                        std::vector<std::unique_ptr<const storage::Object>>)>
-        result_callback = fxl::MakeCopyable(
+        result_callback =
             [callback = std::move(callback), context = std::move(context)](
                 storage::Status status,
                 std::vector<std::unique_ptr<const storage::Object>>
@@ -252,9 +250,9 @@ void FillEntries(storage::PageStorage* page_storage,
                 return;
               }
               callback(Status::OK, std::move(context->entries), nullptr);
-            });
+            };
     waiter->Finalize(std::move(result_callback));
-  });
+  };
   page_storage->GetCommitContents(*commit, std::move(start), std::move(on_next),
                                   std::move(on_done));
 }
@@ -306,22 +304,20 @@ void PageSnapshotImpl::GetKeys(fidl::VectorPtr<uint8_t> key_start,
       TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get_keys");
 
   auto context = std::make_unique<Context>();
-  auto on_next =
-      fxl::MakeCopyable([this, context = context.get()](storage::Entry entry) {
-        if (!PageUtils::MatchesPrefix(entry.key, key_prefix_)) {
-          return false;
-        }
-        context->size +=
-            fidl_serialization::GetByteVectorSize(entry.key.size());
-        if (context->size > fidl_serialization::kMaxInlineDataSize) {
-          context->next_token = std::make_unique<Token>();
-          context->next_token->opaque_id = convert::ToArray(entry.key);
-          return false;
-        }
-        context->keys.push_back(convert::ToArray(entry.key));
-        return true;
-      });
-  auto on_done = fxl::MakeCopyable(
+  auto on_next = [this, context = context.get()](storage::Entry entry) {
+    if (!PageUtils::MatchesPrefix(entry.key, key_prefix_)) {
+      return false;
+    }
+    context->size += fidl_serialization::GetByteVectorSize(entry.key.size());
+    if (context->size > fidl_serialization::kMaxInlineDataSize) {
+      context->next_token = std::make_unique<Token>();
+      context->next_token->opaque_id = convert::ToArray(entry.key);
+      return false;
+    }
+    context->keys.push_back(convert::ToArray(entry.key));
+    return true;
+  };
+  auto on_done =
       [context = std::move(context),
        callback = std::move(timed_callback)](storage::Status status) {
         if (status != storage::Status::OK) {
@@ -336,7 +332,7 @@ void PageSnapshotImpl::GetKeys(fidl::VectorPtr<uint8_t> key_start,
         } else {
           callback(Status::OK, std::move(context->keys), nullptr);
         }
-      });
+      };
   if (token) {
     page_storage_->GetCommitContents(*commit_,
                                      convert::ToString(token->opaque_id),

@@ -10,7 +10,6 @@
 
 #include "garnet/public/lib/callback/capture.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/lib/convert/convert.h"
 

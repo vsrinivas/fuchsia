@@ -14,6 +14,7 @@
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
 #include "peridot/bin/ledger/fidl/include/types.h"

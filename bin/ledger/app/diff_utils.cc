@@ -13,7 +13,7 @@
 #include "lib/callback/waiter.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/storage/public/object.h"
@@ -143,10 +143,9 @@ void ComputePageChange(
   };
 
   // |on_done| is called when the full diff is computed.
-  auto on_done = fxl::MakeCopyable([waiter = std::move(waiter),
-                                    context = std::move(context),
-                                    callback = std::move(callback)](
-                                       storage::Status status) mutable {
+  auto on_done = [waiter = std::move(waiter), context = std::move(context),
+                  callback =
+                      std::move(callback)](storage::Status status) mutable {
     if (status != storage::Status::OK) {
       FXL_LOG(ERROR) << "Unable to compute diff for PageChange: " << status;
       callback(PageUtils::ConvertStatus(status), std::make_pair(nullptr, ""));
@@ -165,11 +164,10 @@ void ComputePageChange(
     // We need to retrieve the values for each changed key/value pair in order
     // to send it inside the PageChange object. |waiter| collates these
     // asynchronous calls and |result_callback| processes them.
-    auto result_callback = fxl::MakeCopyable([context = std::move(context),
-                                              callback = std::move(callback)](
-                                                 Status status,
-                                                 std::vector<fsl::SizedVmo>
-                                                     results) mutable {
+    auto result_callback = [context = std::move(context),
+                            callback = std::move(callback)](
+                               Status status,
+                               std::vector<fsl::SizedVmo> results) mutable {
       if (status != Status::OK) {
         FXL_LOG(ERROR)
             << "Error while reading changed values when computing PageChange: "
@@ -186,9 +184,9 @@ void ComputePageChange(
       }
       callback(Status::OK, std::make_pair(std::move(context->page_change),
                                           std::move(context->next_token)));
-    });
+    };
     waiter->Finalize(std::move(result_callback));
-  });
+  };
   storage->GetCommitContentsDiff(base, other, std::move(min_key),
                                  std::move(on_next), std::move(on_done));
 }
@@ -266,10 +264,9 @@ void ComputeThreeWayDiff(
   };
 
   // |on_done| is called when the full diff is computed.
-  auto on_done = fxl::MakeCopyable([waiter = std::move(waiter),
-                                    context = std::move(context),
-                                    callback = std::move(callback)](
-                                       storage::Status status) mutable {
+  auto on_done = [waiter = std::move(waiter), context = std::move(context),
+                  callback =
+                      std::move(callback)](storage::Status status) mutable {
     if (status != storage::Status::OK) {
       FXL_LOG(ERROR) << "Unable to compute diff for PageChange: " << status;
       callback(PageUtils::ConvertStatus(status),
@@ -285,11 +282,10 @@ void ComputeThreeWayDiff(
     // We need to retrieve the values for each changed key/value pair in order
     // to send it inside the PageChange object. |waiter| collates these
     // asynchronous calls and |result_callback| processes them.
-    auto result_callback = fxl::MakeCopyable([context = std::move(context),
-                                              callback = std::move(callback)](
-                                                 Status status,
-                                                 std::vector<fsl::SizedVmo>
-                                                     results) mutable {
+    auto result_callback = [context = std::move(context),
+                            callback = std::move(callback)](
+                               Status status,
+                               std::vector<fsl::SizedVmo> results) mutable {
       if (status != Status::OK) {
         FXL_LOG(ERROR)
             << "Error while reading changed values when computing PageChange: "
@@ -315,9 +311,9 @@ void ComputeThreeWayDiff(
       }
       callback(Status::OK, std::make_pair(std::move(context->changes),
                                           std::move(context->next_token)));
-    });
+    };
     waiter->Finalize(std::move(result_callback));
-  });
+  };
   storage->GetThreeWayContentsDiff(base, left, right, std::move(min_key),
                                    std::move(on_next), std::move(on_done));
 }

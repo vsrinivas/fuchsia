@@ -14,7 +14,6 @@
 
 #include "lib/callback/capture.h"
 #include "lib/fsl/socket/strings.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
@@ -89,8 +88,8 @@ void TestPageStorage::AddCommitsFromSync(
   }
 
   fit::closure confirm =
-      fxl::MakeCopyable([this, ids_and_bytes = std::move(ids_and_bytes),
-                         callback = std::move(callback)]() mutable {
+      [this, ids_and_bytes = std::move(ids_and_bytes),
+       callback = std::move(callback)]() mutable {
         for (auto& commit : ids_and_bytes) {
           received_commits[commit.id] = std::move(commit.bytes);
           unsynced_commits_to_return.erase(
@@ -106,7 +105,7 @@ void TestPageStorage::AddCommitsFromSync(
         async::PostTask(async_, [callback = std::move(callback)] {
           callback(storage::Status::OK);
         });
-      });
+      };
   if (should_delay_add_commit_confirmation) {
     delayed_add_commit_confirmations.push_back(std::move(confirm));
     return;
@@ -152,11 +151,10 @@ void TestPageStorage::GetUnsyncedCommits(
                  [](const std::unique_ptr<const storage::Commit>& commit) {
                    return commit->Clone();
                  });
-  async::PostTask(async_,
-                  fxl::MakeCopyable([results = std::move(results),
-                                     callback = std::move(callback)]() mutable {
-                    callback(storage::Status::OK, std::move(results));
-                  }));
+  async::PostTask(async_, [results = std::move(results),
+                           callback = std::move(callback)]() mutable {
+    callback(storage::Status::OK, std::move(results));
+  });
 }
 
 void TestPageStorage::MarkCommitSynced(

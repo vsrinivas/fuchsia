@@ -12,7 +12,6 @@
 #include <trace/event.h>
 
 #include "lib/fidl/cpp/interface_request.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/app/constants.h"
@@ -279,7 +278,7 @@ void LedgerManager::PageIsClosedAndSynced(
     });
   }
 
-  container->NewInternalRequest(fxl::MakeCopyable(
+  container->NewInternalRequest(
       [this, page_id = page_id.ToString(), on_return = std::move(on_return),
        callback = std::move(callback)](Status status, ExpiringToken token,
                                        PageManager* page_manager) mutable {
@@ -288,7 +287,7 @@ void LedgerManager::PageIsClosedAndSynced(
           return;
         }
         FXL_DCHECK(page_manager);
-        page_manager->IsSynced(fxl::MakeCopyable(
+        page_manager->IsSynced(
             [this, page_id = std::move(page_id),
              on_return = std::move(on_return), token = std::move(token),
              callback = std::move(callback)](Status status, bool is_synced) {
@@ -298,8 +297,8 @@ void LedgerManager::PageIsClosedAndSynced(
               }
               callback(Status::OK, is_synced ? PageClosedAndSynced::YES
                                              : PageClosedAndSynced::NO);
-            }));
-      }));
+            });
+      });
 }
 
 void LedgerManager::GetPage(storage::PageIdView page_id, PageState page_state,

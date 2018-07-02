@@ -13,7 +13,6 @@
 #include "lib/callback/trace_callback.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/path.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/filesystem/directory_reader.h"
@@ -68,17 +67,15 @@ void LedgerStorageImpl::CreatePageStorage(
   auto result = std::make_unique<PageStorageImpl>(
       async_, coroutine_service_, encryption_service_, std::move(path),
       std::move(page_id));
-  result->Init(
-      fxl::MakeCopyable([callback = std::move(timed_callback),
-                         result = std::move(result)](Status status) mutable {
-        if (status != Status::OK) {
-          FXL_LOG(ERROR) << "Failed to initialize PageStorage. Status: "
-                         << status;
-          callback(status, nullptr);
-          return;
-        }
-        callback(Status::OK, std::move(result));
-      }));
+  result->Init([callback = std::move(timed_callback),
+                result = std::move(result)](Status status) mutable {
+    if (status != Status::OK) {
+      FXL_LOG(ERROR) << "Failed to initialize PageStorage. Status: " << status;
+      callback(status, nullptr);
+      return;
+    }
+    callback(Status::OK, std::move(result));
+  });
 }
 
 void LedgerStorageImpl::GetPageStorage(
@@ -95,15 +92,14 @@ void LedgerStorageImpl::GetPageStorage(
   auto result = std::make_unique<PageStorageImpl>(
       async_, coroutine_service_, encryption_service_, std::move(path),
       std::move(page_id));
-  result->Init(
-      fxl::MakeCopyable([callback = std::move(timed_callback),
-                         result = std::move(result)](Status status) mutable {
-        if (status != Status::OK) {
-          callback(status, nullptr);
-          return;
-        }
-        callback(status, std::move(result));
-      }));
+  result->Init([callback = std::move(timed_callback),
+                result = std::move(result)](Status status) mutable {
+    if (status != Status::OK) {
+      callback(status, nullptr);
+      return;
+    }
+    callback(status, std::move(result));
+  });
 }
 
 bool LedgerStorageImpl::DeletePageStorage(PageIdView page_id) {

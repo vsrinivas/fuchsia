@@ -15,7 +15,6 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "peridot/bin/ledger/filesystem/get_directory_content_size.h"
@@ -256,23 +255,21 @@ void BacklogBenchmark::GetEntriesStep(std::unique_ptr<ledger::Token> token,
   if (reference_strategy_ == PageDataGenerator::ReferenceStrategy::INLINE) {
     reader_snapshot_->GetEntriesInline(
         fidl::VectorPtr<uint8_t>::New(0), std::move(token),
-        fxl::MakeCopyable([this, entries_left](ledger::Status status,
-                                               auto entries,
-                                               auto next_token) mutable {
+        [this, entries_left](ledger::Status status, auto entries,
+                             auto next_token) mutable {
           TRACE_ASYNC_END("benchmark", "get entries partial", entries_left);
           CheckStatusAndGetMore(status, entries_left - entries->size(),
                                 std::move(next_token));
-        }));
+        });
   } else {
     reader_snapshot_->GetEntries(
         fidl::VectorPtr<uint8_t>::New(0), std::move(token),
-        fxl::MakeCopyable([this, entries_left](ledger::Status status,
-                                               auto entries,
-                                               auto next_token) mutable {
+        [this, entries_left](ledger::Status status, auto entries,
+                             auto next_token) mutable {
           TRACE_ASYNC_END("benchmark", "get entries partial", entries_left);
           CheckStatusAndGetMore(status, entries_left - entries->size(),
                                 std::move(next_token));
-        }));
+        });
   }
 }
 

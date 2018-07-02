@@ -8,7 +8,6 @@
 
 #include <lib/async/cpp/task.h>
 
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/svc/cpp/services.h"
 
 namespace test {
@@ -41,10 +40,9 @@ void CloudProviderFirebaseFactory::MakeCloudProvider(
     fidl::InterfaceRequest<cloud_provider::CloudProvider> request) {
   fuchsia::modular::auth::TokenProviderPtr token_provider;
   async::PostTask(loop_.async(),
-                  fxl::MakeCopyable(
-                      [this, request = token_provider.NewRequest()]() mutable {
-                        token_provider_.AddBinding(std::move(request));
-                      }));
+                  [this, request = token_provider.NewRequest()]() mutable {
+                    token_provider_.AddBinding(std::move(request));
+                  });
 
   fuchsia::ledger::cloud::firebase::Config firebase_config;
   firebase_config.server_id = server_id;

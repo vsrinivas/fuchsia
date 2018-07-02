@@ -12,7 +12,6 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
@@ -31,8 +30,7 @@ class PageIntegrationTest : public IntegrationTest {
   // Returns the id of the given page.
   ledger::PageId PageGetId(ledger::PagePtr* page) {
     ledger::PageId id;
-    (*page)->GetId(callback::Capture(
-        fxl::MakeCopyable(QuitLoopClosure()), &id));
+    (*page)->GetId(callback::Capture(QuitLoopClosure(), &id));
     RunLoop();
     return id;
   }
@@ -67,9 +65,8 @@ TEST_P(PageIntegrationTest, GetRootPage) {
   ledger::LedgerPtr ledger = instance->GetTestLedger();
   ledger::Status status;
   ledger::PagePtr page;
-  ledger->GetRootPage(
-      page.NewRequest(),
-      callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
+  ledger->GetRootPage(page.NewRequest(),
+                      callback::Capture(QuitLoopClosure(), &status));
   RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
 }

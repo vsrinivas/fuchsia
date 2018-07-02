@@ -10,6 +10,7 @@
 #include <lib/fit/function.h>
 
 #include "lib/callback/waiter.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/app/page_utils.h"

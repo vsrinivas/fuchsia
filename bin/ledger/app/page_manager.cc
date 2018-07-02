@@ -177,44 +177,40 @@ void PageManager::GetSnapshot(
     GetSnapshotCallback callback) {
   page_storage_->GetCommit(
       convert::ToStringView(commit_id.id),
-      fxl::MakeCopyable(
-          [this, snapshot_request = std::move(snapshot_request),
-           callback = std::move(callback)](
-              storage::Status status,
-              std::unique_ptr<const storage::Commit> commit) mutable {
-            if (status == storage::Status::OK) {
-              BindPageSnapshot(std::move(commit), std::move(snapshot_request),
-                               "");
-            }
-            callback(
-                PageUtils::ConvertStatus(status, Status::INVALID_ARGUMENT));
-          }));
+      [this, snapshot_request = std::move(snapshot_request),
+       callback = std::move(callback)](
+          storage::Status status,
+          std::unique_ptr<const storage::Commit> commit) mutable {
+        if (status == storage::Status::OK) {
+          BindPageSnapshot(std::move(commit), std::move(snapshot_request), "");
+        }
+        callback(PageUtils::ConvertStatus(status, Status::INVALID_ARGUMENT));
+      });
 }
 
 void PageManager::GetCommit(ledger_internal::CommitId commit_id,
                             GetCommitCallback callback) {
   page_storage_->GetCommit(
       convert::ToStringView(commit_id.id),
-      fxl::MakeCopyable(
-          [callback = std::move(callback)](
-              storage::Status status,
-              std::unique_ptr<const storage::Commit> commit) mutable {
-            ledger_internal::CommitPtr commit_struct = NULL;
-            if (status == storage::Status::OK) {
-              commit_struct = ledger_internal::Commit::New();
-              commit_struct->commit_id.id = convert::ToArray(commit->GetId());
-              commit_struct->parents_ids.resize(0);
-              for (storage::CommitIdView parent : commit->GetParentIds()) {
-                ledger_internal::CommitId id;
-                id.id = convert::ToArray(parent);
-                commit_struct->parents_ids.push_back(std::move(id));
-              }
-              commit_struct->timestamp = commit->GetTimestamp();
-              commit_struct->generation = commit->GetGeneration();
-            }
-            callback(PageUtils::ConvertStatus(status, Status::INVALID_ARGUMENT),
-                     std::move(commit_struct));
-          }));
+      [callback = std::move(callback)](
+          storage::Status status,
+          std::unique_ptr<const storage::Commit> commit) mutable {
+        ledger_internal::CommitPtr commit_struct = NULL;
+        if (status == storage::Status::OK) {
+          commit_struct = ledger_internal::Commit::New();
+          commit_struct->commit_id.id = convert::ToArray(commit->GetId());
+          commit_struct->parents_ids.resize(0);
+          for (storage::CommitIdView parent : commit->GetParentIds()) {
+            ledger_internal::CommitId id;
+            id.id = convert::ToArray(parent);
+            commit_struct->parents_ids.push_back(std::move(id));
+          }
+          commit_struct->timestamp = commit->GetTimestamp();
+          commit_struct->generation = commit->GetGeneration();
+        }
+        callback(PageUtils::ConvertStatus(status, Status::INVALID_ARGUMENT),
+                 std::move(commit_struct));
+      });
 }
 
 }  // namespace ledger

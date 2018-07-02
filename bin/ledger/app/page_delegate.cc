@@ -15,7 +15,7 @@
 #include "lib/callback/waiter.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/socket/strings.h"
-#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/app/page_snapshot_impl.h"
@@ -77,13 +77,12 @@ void PageDelegate::GetSnapshot(
   // operation serializer.
   operation_serializer_.Serialize<Status>(
       std::move(callback),
-      fxl::MakeCopyable([this, snapshot_request = std::move(snapshot_request),
-                         key_prefix = std::move(key_prefix),
-                         watcher = std::move(watcher)](
-                            Page::GetSnapshotCallback callback) mutable {
+      [this, snapshot_request = std::move(snapshot_request),
+       key_prefix = std::move(key_prefix), watcher = std::move(watcher)](
+          Page::GetSnapshotCallback callback) mutable {
         storage_->GetCommit(
             GetCurrentCommitId(),
-            fxl::MakeCopyable(callback::MakeScoped(
+            callback::MakeScoped(
                 weak_factory_.GetWeakPtr(),
                 [this, snapshot_request = std::move(snapshot_request),
                  key_prefix = std::move(key_prefix),
@@ -104,8 +103,8 @@ void PageDelegate::GetSnapshot(
                                              std::move(snapshot_request),
                                              std::move(prefix));
                   callback(Status::OK);
-                })));
-      }));
+                }));
+      });
 }
 
 void PageDelegate::Put(fidl::VectorPtr<uint8_t> key,
@@ -128,10 +127,10 @@ void PageDelegate::PutWithPriority(fidl::VectorPtr<uint8_t> key,
 
   operation_serializer_.Serialize<Status>(
       std::move(callback),
-      fxl::MakeCopyable(
-          [this, promise = std::move(promise), key = std::move(key),
-           priority](Page::PutWithPriorityCallback callback) mutable {
-            promise->Finalize(fxl::MakeCopyable(callback::MakeScoped(
+      [this, promise = std::move(promise), key = std::move(key),
+       priority](Page::PutWithPriorityCallback callback) mutable {
+        promise->Finalize(
+            callback::MakeScoped(
                 weak_factory_.GetWeakPtr(),
                 [this, key = std::move(key), priority,
                  callback = std::move(callback)](
@@ -147,8 +146,8 @@ void PageDelegate::PutWithPriority(fidl::VectorPtr<uint8_t> key,
                                   ? storage::KeyPriority::EAGER
                                   : storage::KeyPriority::LAZY,
                               std::move(callback));
-                })));
-          }));
+                }));
+      });
 }
 
 void PageDelegate::PutReference(fidl::VectorPtr<uint8_t> key,
@@ -172,11 +171,11 @@ void PageDelegate::PutReference(fidl::VectorPtr<uint8_t> key,
 
   operation_serializer_.Serialize<Status>(
       std::move(callback),
-      fxl::MakeCopyable(
-          [this, promise = std::move(promise), key = std::move(key),
-           object_identifier = std::move(object_identifier),
-           priority](Page::PutReferenceCallback callback) mutable {
-            promise->Finalize(fxl::MakeCopyable(callback::MakeScoped(
+      [this, promise = std::move(promise), key = std::move(key),
+       object_identifier = std::move(object_identifier),
+       priority](Page::PutReferenceCallback callback) mutable {
+        promise->Finalize(
+            callback::MakeScoped(
                 weak_factory_.GetWeakPtr(),
                 [this, key = std::move(key),
                  object_identifier = std::move(object_identifier), priority,
@@ -193,28 +192,27 @@ void PageDelegate::PutReference(fidl::VectorPtr<uint8_t> key,
                                   ? storage::KeyPriority::EAGER
                                   : storage::KeyPriority::LAZY,
                               std::move(callback));
-                })));
-          }));
+                }));
+      });
 }
 
 void PageDelegate::Delete(fidl::VectorPtr<uint8_t> key,
                           Page::DeleteCallback callback) {
-  operation_serializer_.Serialize<Status>(
-      std::move(callback),
-      fxl::MakeCopyable(
+  operation_serializer_
+      .Serialize<Status>(
+          std::move(callback),
           [this, key = std::move(key)](Page::DeleteCallback callback) mutable {
             RunInTransaction(
-                fxl::MakeCopyable([key = std::move(key)](
-                                      storage::Journal* journal,
-                                      fit::function<void(Status)> callback) {
+                [key = std::move(key)](storage::Journal* journal,
+                                       fit::function<void(Status)> callback) {
                   journal->Delete(key, [callback = std::move(callback)](
                                            storage::Status status) {
                     callback(PageUtils::ConvertStatus(status,
                                                       Status::KEY_NOT_FOUND));
                   });
-                }),
+                },
                 std::move(callback));
-          }));
+          });
 }
 
 void PageDelegate::CreateReference(
@@ -337,17 +335,14 @@ void PageDelegate::PutInCommit(fidl::VectorPtr<uint8_t> key,
                                storage::KeyPriority priority,
                                fit::function<void(Status)> callback) {
   RunInTransaction(
-      fxl::MakeCopyable(
-          [key = std::move(key),
-           object_identifier = std::move(object_identifier),
-           priority](storage::Journal* journal,
-                     fit::function<void(Status status)> callback) mutable {
-            journal->Put(
-                key, std::move(object_identifier), priority,
-                [callback = std::move(callback)](storage::Status status) {
-                  callback(PageUtils::ConvertStatus(status));
-                });
-          }),
+      [key = std::move(key), object_identifier = std::move(object_identifier),
+       priority](storage::Journal* journal,
+                 fit::function<void(Status status)> callback) mutable {
+        journal->Put(key, std::move(object_identifier), priority,
+                     [callback = std::move(callback)](storage::Status status) {
+                       callback(PageUtils::ConvertStatus(status));
+                     });
+      },
       std::move(callback));
 }
 
@@ -382,7 +377,7 @@ void PageDelegate::RunInTransaction(
               return;
             }
             runnable(journal.get(),
-                     fxl::MakeCopyable(callback::MakeScoped(
+                     callback::MakeScoped(
                          weak_factory_.GetWeakPtr(),
                          [this, journal = std::move(journal),
                           callback = std::move(callback)](
@@ -410,7 +405,7 @@ void PageDelegate::RunInTransaction(
                                              : nullptr);
                                      callback(status);
                                    }));
-                         })));
+                         }));
           }));
 }
 

@@ -11,7 +11,6 @@
 
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
@@ -50,15 +49,13 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
       });
       return;
     }
-    async::PostTask(
-        async_,
-        fxl::MakeCopyable([this, ids_and_bytes = std::move(ids_and_bytes),
-                           callback = std::move(callback)]() mutable {
-          for (auto& commit : ids_and_bytes) {
-            received_commits[std::move(commit.id)] = std::move(commit.bytes);
-          }
-          callback(storage::Status::OK);
-        }));
+    async::PostTask(async_, [this, ids_and_bytes = std::move(ids_and_bytes),
+                             callback = std::move(callback)]() mutable {
+      for (auto& commit : ids_and_bytes) {
+        received_commits[std::move(commit.id)] = std::move(commit.bytes);
+      }
+      callback(storage::Status::OK);
+    });
   }
 
   void SetSyncMetadata(fxl::StringView key, fxl::StringView value,

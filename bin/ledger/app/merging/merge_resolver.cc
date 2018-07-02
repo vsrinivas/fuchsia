@@ -16,7 +16,7 @@
 #include "lib/callback/trace_callback.h"
 #include "lib/callback/waiter.h"
 #include "lib/fxl/functional/auto_call.h"
-#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/app/merging/common_ancestor.h"
 #include "peridot/bin/ledger/app/merging/ledger_merge_manager.h"
@@ -175,13 +175,13 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
     storage_->GetCommit(id, waiter->NewCallback());
   }
   waiter->Finalize(TRACE_CALLBACK(
-      task_runner_.MakeScoped(fxl::MakeCopyable([this, delayed_status,
-                                                 cleanup = std::move(cleanup),
-                                                 tracing = std::move(tracing)](
-                                                    storage::Status status,
-                                                    std::vector<std::unique_ptr<
-                                                        const storage::Commit>>
-                                                        commits) mutable {
+      task_runner_.MakeScoped([this, delayed_status,
+                               cleanup = std::move(cleanup),
+                               tracing = std::move(tracing)](
+                                  storage::Status status,
+                                  std::vector<
+                                      std::unique_ptr<const storage::Commit>>
+                                      commits) mutable {
         FXL_DCHECK(commits.size() == 2);
         FXL_DCHECK(commits[0]->GetTimestamp() <= commits[1]->GetTimestamp());
 
@@ -224,7 +224,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
           storage_->StartMergeCommit(
               commits[0]->GetId(), commits[1]->GetId(),
               TRACE_CALLBACK(
-                  task_runner_.MakeScoped(fxl::MakeCopyable(
+                  task_runner_.MakeScoped(
                       [this, cleanup = std::move(cleanup),
                        tracing = std::move(tracing)](
                           storage::Status status,
@@ -237,21 +237,20 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                         has_merged_ = true;
                         storage_->CommitJournal(
                             std::move(journal),
-                            fxl::MakeCopyable(
-                                [cleanup = std::move(cleanup),
-                                 tracing = std::move(tracing)](
-                                    storage::Status status,
-                                    std::unique_ptr<const storage::Commit>) {
-                                  if (status != storage::Status::OK) {
-                                    FXL_LOG(ERROR) << "Unable to merge "
-                                                      "identical commits.";
-                                    return;
-                                  }
+                            [cleanup = std::move(cleanup),
+                             tracing = std::move(tracing)](
+                                storage::Status status,
+                                std::unique_ptr<const storage::Commit>) {
+                              if (status != storage::Status::OK) {
+                                FXL_LOG(ERROR) << "Unable to merge "
+                                                  "identical commits.";
+                                return;
+                              }
 
-                                  // Report the merge.
-                                  ReportEvent(CobaltEvent::COMMITS_MERGED);
-                                }));
-                      })),
+                              // Report the merge.
+                              ReportEvent(CobaltEvent::COMMITS_MERGED);
+                            });
+                      }),
                   "ledger", "merge_same_commit_journal"));
           return;
         }
@@ -273,7 +272,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
         FindCommonAncestor(
             coroutine_service_, storage_, head1->Clone(), head2->Clone(),
             TRACE_CALLBACK(
-                task_runner_.MakeScoped(fxl::MakeCopyable(
+                task_runner_.MakeScoped(
                     [this, head1 = std::move(head1), head2 = std::move(head2),
                      cleanup = std::move(cleanup),
                      tracing = std::move(tracing)](
@@ -290,7 +289,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                                           "of head commits.";
                         return;
                       }
-                      auto strategy_callback = fxl::MakeCopyable(
+                      auto strategy_callback =
                           [cleanup = std::move(cleanup),
                            tracing = std::move(tracing)](Status status) {
                             if (status != Status::OK) {
@@ -300,16 +299,16 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                               return;
                             }
                             ReportEvent(CobaltEvent::COMMITS_MERGED);
-                          });
+                          };
                       has_merged_ = true;
                       strategy_->Merge(
                           storage_, page_manager_, std::move(head1),
                           std::move(head2), std::move(common_ancestor),
                           TRACE_CALLBACK(std::move(strategy_callback), "ledger",
                                          "merge_strategy_merge"));
-                    })),
+                    }),
                 "ledger", "merge_find_common_ancestor"));
-      })),
+      }),
       "ledger", "merge_get_commit_finalize"));
 }
 

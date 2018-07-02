@@ -9,7 +9,6 @@
 #include <trace/event.h>
 
 #include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
@@ -76,23 +75,23 @@ void PutBenchmark::Run() {
               }
               page_ = std::move(page);
 
-              InitializeKeys(fxl::MakeCopyable(
+              InitializeKeys(
                   [this](std::vector<fidl::VectorPtr<uint8_t>> keys) mutable {
                     if (transaction_size_ > 0) {
                       page_->StartTransaction(
-                          fxl::MakeCopyable([this, keys = std::move(keys)](
-                                                ledger::Status status) mutable {
+                          [this, keys = std::move(keys)](
+                              ledger::Status status) mutable {
                             if (QuitOnError(QuitLoopClosure(), status,
                                             "Page::StartTransaction")) {
                               return;
                             }
                             TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
                             BindWatcher(std::move(keys));
-                          }));
+                          });
                     } else {
                       BindWatcher(std::move(keys));
                     }
-                  }));
+                  });
             });
       });
 }
@@ -135,15 +134,14 @@ void PutBenchmark::InitializeKeys(
   page_data_generator_.Populate(
       &page_, std::move(keys_cloned), value_size_, keys_cloned.size(),
       reference_strategy_, ledger::Priority::EAGER,
-      fxl::MakeCopyable(
-          [this, keys = std::move(keys),
-           on_done = std::move(on_done)](ledger::Status status) mutable {
-            if (QuitOnError(QuitLoopClosure(), status,
-                            "PageDataGenerator::Populate")) {
-              return;
-            }
-            on_done(std::move(keys));
-          }));
+      [this, keys = std::move(keys),
+       on_done = std::move(on_done)](ledger::Status status) mutable {
+        if (QuitOnError(QuitLoopClosure(), status,
+                        "PageDataGenerator::Populate")) {
+          return;
+        }
+        on_done(std::move(keys));
+      });
 }
 
 void PutBenchmark::BindWatcher(std::vector<fidl::VectorPtr<uint8_t>> keys) {
@@ -151,13 +149,12 @@ void PutBenchmark::BindWatcher(std::vector<fidl::VectorPtr<uint8_t>> keys) {
   page_->GetSnapshot(
       snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
       page_watcher_binding_.NewBinding(),
-      fxl::MakeCopyable(
-          [this, keys = std::move(keys)](ledger::Status status) mutable {
-            if (QuitOnError(QuitLoopClosure(), status, "GetSnapshot")) {
-              return;
-            }
-            RunSingle(0, std::move(keys));
-          }));
+      [this, keys = std::move(keys)](ledger::Status status) mutable {
+        if (QuitOnError(QuitLoopClosure(), status, "GetSnapshot")) {
+          return;
+        }
+        RunSingle(0, std::move(keys));
+      });
 }
 
 void PutBenchmark::RunSingle(int i,
@@ -173,16 +170,15 @@ void PutBenchmark::RunSingle(int i,
     TRACE_ASYNC_BEGIN("benchmark", "local_change_notification", key_number);
   }
   PutEntry(std::move(keys[i]), std::move(value),
-           fxl::MakeCopyable(
-               [this, i, key_number, keys = std::move(keys)]() mutable {
-                 if (transaction_size_ > 0 &&
-                     (i % transaction_size_ == transaction_size_ - 1 ||
-                      i + 1 == entry_count_)) {
-                   CommitAndRunNext(i, key_number, std::move(keys));
-                 } else {
-                   RunSingle(i + 1, std::move(keys));
-                 }
-               }));
+           [this, i, key_number, keys = std::move(keys)]() mutable {
+             if (transaction_size_ > 0 &&
+                 (i % transaction_size_ == transaction_size_ - 1 ||
+                  i + 1 == entry_count_)) {
+               CommitAndRunNext(i, key_number, std::move(keys));
+             } else {
+               RunSingle(i + 1, std::move(keys));
+             }
+           });
 }
 
 void PutBenchmark::PutEntry(fidl::VectorPtr<uint8_t> key,
@@ -205,9 +201,9 @@ void PutBenchmark::PutEntry(fidl::VectorPtr<uint8_t> key,
   fsl::SizedVmo vmo;
   FXL_CHECK(fsl::VmoFromString(convert::ToStringView(value), &vmo));
   TRACE_ASYNC_BEGIN("benchmark", "create reference", trace_event_id);
-  page_->CreateReferenceFromVmo(
-      std::move(vmo).ToTransport(),
-      fxl::MakeCopyable(
+  page_
+      ->CreateReferenceFromVmo(
+          std::move(vmo).ToTransport(),
           [this, trace_event_id, key = std::move(key),
            on_done = std::move(on_done)](
               ledger::Status status, ledger::ReferencePtr reference) mutable {
@@ -229,36 +225,35 @@ void PutBenchmark::PutEntry(fidl::VectorPtr<uint8_t> key,
                   TRACE_ASYNC_END("benchmark", "put", trace_event_id);
                   on_done();
                 });
-          }));
+          });
 }
 
 void PutBenchmark::CommitAndRunNext(
     int i, size_t key_number, std::vector<fidl::VectorPtr<uint8_t>> keys) {
   TRACE_ASYNC_BEGIN("benchmark", "local_change_notification", key_number);
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
-  page_->Commit(fxl::MakeCopyable([this, i, keys = std::move(keys)](
-                                      ledger::Status status) mutable {
-    if (QuitOnError(QuitLoopClosure(), status, "Page::Commit")) {
-      return;
-    }
-    TRACE_ASYNC_END("benchmark", "commit", i / transaction_size_);
-    TRACE_ASYNC_END("benchmark", "transaction", i / transaction_size_);
+  page_->Commit(
+      [this, i, keys = std::move(keys)](ledger::Status status) mutable {
+        if (QuitOnError(QuitLoopClosure(), status, "Page::Commit")) {
+          return;
+        }
+        TRACE_ASYNC_END("benchmark", "commit", i / transaction_size_);
+        TRACE_ASYNC_END("benchmark", "transaction", i / transaction_size_);
 
-    if (i == entry_count_ - 1) {
-      RunSingle(i + 1, std::move(keys));
-      return;
-    }
-    page_->StartTransaction(
-        fxl::MakeCopyable([this, i = i + 1, keys = std::move(keys)](
-                              ledger::Status status) mutable {
+        if (i == entry_count_ - 1) {
+          RunSingle(i + 1, std::move(keys));
+          return;
+        }
+        page_->StartTransaction([this, i = i + 1, keys = std::move(keys)](
+                                    ledger::Status status) mutable {
           if (QuitOnError(QuitLoopClosure(), status,
                           "Page::StartTransaction")) {
             return;
           }
           TRACE_ASYNC_BEGIN("benchmark", "transaction", i / transaction_size_);
           RunSingle(i, std::move(keys));
-        }));
-  }));
+        });
+      });
 }
 
 void PutBenchmark::ShutDown() {

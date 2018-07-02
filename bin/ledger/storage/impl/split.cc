@@ -10,8 +10,8 @@
 #include <lib/fit/function.h>
 
 #include "lib/callback/waiter.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/ledger/storage/impl/constants.h"
 #include "peridot/bin/ledger/storage/impl/file_index.h"
 #include "peridot/bin/ledger/storage/impl/file_index_generated.h"
@@ -348,12 +348,11 @@ void SplitDataSource(
                                    std::unique_ptr<DataSource::DataChunk>)>
         callback) {
   SplitContext context(std::move(callback));
-  source->Get(
-      fxl::MakeCopyable([context = std::move(context)](
-                            std::unique_ptr<DataSource::DataChunk> chunk,
-                            DataSource::Status status) mutable {
-        context.AddChunk(std::move(chunk), status);
-      }));
+  source->Get([context = std::move(context)](
+                  std::unique_ptr<DataSource::DataChunk> chunk,
+                  DataSource::Status status) mutable {
+    context.AddChunk(std::move(chunk), status);
+  });
 }
 
 Status ForEachPiece(fxl::StringView index_content,

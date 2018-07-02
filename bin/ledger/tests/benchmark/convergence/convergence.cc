@@ -15,6 +15,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"

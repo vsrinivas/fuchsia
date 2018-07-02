@@ -17,6 +17,7 @@
 #include "lib/callback/waiter.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/random/rand.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/app/constants.h"

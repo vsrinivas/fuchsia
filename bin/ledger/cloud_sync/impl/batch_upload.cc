@@ -16,6 +16,7 @@
 #include "lib/callback/waiter.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/memory/ref_ptr.h"
 
 namespace cloud_sync {
 
@@ -100,9 +101,9 @@ void BatchUpload::UploadNextObject() {
       object_identifier_to_send,
       callback::MakeScoped(
           weak_ptr_factory_.GetWeakPtr(),
-          fxl::MakeCopyable([this, object_identifier_to_send](
-                                encryption::Status encryption_status,
-                                std::string object_name) mutable {
+          [this, object_identifier_to_send](
+              encryption::Status encryption_status,
+              std::string object_name) mutable {
             if (encryption_status != encryption::Status::OK) {
               EnqueueForRetryAndSignalError(
                   std::move(object_identifier_to_send));
@@ -111,7 +112,7 @@ void BatchUpload::UploadNextObject() {
 
             GetObjectContentAndUpload(std::move(object_identifier_to_send),
                                       std::move(object_name));
-          })));
+          }));
 }
 
 void BatchUpload::GetObjectContentAndUpload(

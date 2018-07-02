@@ -14,7 +14,6 @@
 #include <lib/zx/time.h>
 
 #include "lib/fsl/socket/strings.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/encryption/primitives/hash.h"
 #include "peridot/bin/ledger/storage/fake/fake_commit.h"
@@ -120,12 +119,11 @@ void FakePageStorage::CommitJournal(
         if (!drop_commit_notifications_) {
           for (CommitWatcher* watcher : watchers_) {
             async::PostTask(
-                async_, fxl::MakeCopyable([watcher,
-                                           commit = commit->Clone()]() mutable {
+                async_, [watcher, commit = commit->Clone()]() mutable {
                   std::vector<std::unique_ptr<const Commit>> commits;
                   commits.push_back(std::move(commit));
                   watcher->OnNewCommits(commits, ChangeSource::LOCAL);
-                }));
+                });
           }
         }
         callback(status, std::move(commit));
@@ -159,7 +157,7 @@ void FakePageStorage::AddObjectFromLocal(
     fit::function<void(Status, ObjectIdentifier)> callback) {
   auto value = std::make_unique<std::string>();
   auto data_source_ptr = data_source.get();
-  data_source_ptr->Get(fxl::MakeCopyable(
+  data_source_ptr->Get(
       [this, data_source = std::move(data_source), value = std::move(value),
        callback = std::move(callback)](
           std::unique_ptr<DataSource::DataChunk> chunk,
@@ -176,7 +174,7 @@ void FakePageStorage::AddObjectFromLocal(
           objects_[object_identifier] = std::move(*value);
           callback(Status::OK, std::move(object_identifier));
         }
-      }));
+      });
 }
 
 void FakePageStorage::GetObject(

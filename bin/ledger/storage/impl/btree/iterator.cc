@@ -7,7 +7,7 @@
 #include <lib/fit/function.h>
 
 #include "lib/callback/waiter.h"
-#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/ledger/storage/impl/btree/internal_helper.h"
 
 namespace storage {
@@ -167,15 +167,14 @@ void GetObjectIdentifiers(
     object_digests->insert(e.node_identifier);
     return true;
   };
-  auto on_done =
-      fxl::MakeCopyable([object_digests = std::move(object_digests),
-                         callback = std::move(callback)](Status status) {
-        if (status != Status::OK) {
-          callback(status, std::set<ObjectIdentifier>());
-          return;
-        }
-        callback(status, std::move(*object_digests));
-      });
+  auto on_done = [object_digests = std::move(object_digests),
+                  callback = std::move(callback)](Status status) {
+    if (status != Status::OK) {
+      callback(status, std::set<ObjectIdentifier>());
+      return;
+    }
+    callback(status, std::move(*object_digests));
+  };
   ForEachEntry(coroutine_service, page_storage, root_identifier, "",
                std::move(on_next), std::move(on_done));
 }

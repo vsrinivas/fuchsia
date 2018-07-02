@@ -11,7 +11,6 @@
 #include "lib/callback/waiter.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/vmo/vector.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
@@ -149,39 +148,35 @@ class NonAssociativeConflictResolverImpl : public ledger::ConflictResolver {
         merge_result_provider->get();
     merge_result_provider_ptr->GetFullDiff(
         nullptr,
-        fxl::MakeCopyable(
-            [merge_result_provider = std::move(merge_result_provider)](
-                ledger::Status status,
-                fidl::VectorPtr<ledger::DiffEntry> changes,
-                std::unique_ptr<ledger::Token> next_token) mutable {
-              ASSERT_EQ(ledger::Status::OK, status);
-              ASSERT_EQ(1u, changes->size());
+        [merge_result_provider = std::move(merge_result_provider)](
+            ledger::Status status, fidl::VectorPtr<ledger::DiffEntry> changes,
+            std::unique_ptr<ledger::Token> next_token) mutable {
+          ASSERT_EQ(ledger::Status::OK, status);
+          ASSERT_EQ(1u, changes->size());
 
-              double d1, d2;
-              EXPECT_TRUE(VmoToDouble(changes->at(0).left->value, &d1));
-              EXPECT_TRUE(VmoToDouble(changes->at(0).right->value, &d2));
-              double new_value = (4 * d1 + d2) / 3;
-              ledger::MergedValue merged_value;
-              merged_value.key = std::move(changes->at(0).key);
-              merged_value.source = ledger::ValueSource::NEW;
-              merged_value.new_value = ledger::BytesOrReference::New();
-              merged_value.new_value->set_bytes(DoubleToArray(new_value));
-              fidl::VectorPtr<ledger::MergedValue> merged_values;
-              merged_values.push_back(std::move(merged_value));
-              (*merge_result_provider)
-                  ->Merge(std::move(merged_values),
-                          fxl::MakeCopyable(
-                              [merge_result_provider =
-                                   std::move(merge_result_provider)](
-                                  ledger::Status merge_status) mutable {
-                                ASSERT_EQ(ledger::Status::OK, merge_status);
-                                (*merge_result_provider)
-                                    ->Done([](ledger::Status merge_status) {
-                                      ASSERT_EQ(ledger::Status::OK,
-                                                merge_status);
-                                    });
-                              }));
-            }));
+          double d1, d2;
+          EXPECT_TRUE(VmoToDouble(changes->at(0).left->value, &d1));
+          EXPECT_TRUE(VmoToDouble(changes->at(0).right->value, &d2));
+          double new_value = (4 * d1 + d2) / 3;
+          ledger::MergedValue merged_value;
+          merged_value.key = std::move(changes->at(0).key);
+          merged_value.source = ledger::ValueSource::NEW;
+          merged_value.new_value = ledger::BytesOrReference::New();
+          merged_value.new_value->set_bytes(DoubleToArray(new_value));
+          fidl::VectorPtr<ledger::MergedValue> merged_values;
+          merged_values.push_back(std::move(merged_value));
+          (*merge_result_provider)
+              ->Merge(
+                  std::move(merged_values),
+                  [merge_result_provider = std::move(merge_result_provider)](
+                      ledger::Status merge_status) mutable {
+                    ASSERT_EQ(ledger::Status::OK, merge_status);
+                    (*merge_result_provider)
+                        ->Done([](ledger::Status merge_status) {
+                          ASSERT_EQ(ledger::Status::OK, merge_status);
+                        });
+                  });
+        });
   }
 
   fidl::Binding<ledger::ConflictResolver> binding_;
@@ -246,10 +241,8 @@ class ConvergenceTest
           &ledger_ptr,
           // The first ledger gets a random page id, the others use the
           // same id for their pages.
-          i == 0 ? nullptr : fidl::MakeOptional(page_id),
-          QuitLoopClosure(),
-          callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status,
-                            &pages_[i], &page_id));
+          i == 0 ? nullptr : fidl::MakeOptional(page_id), QuitLoopClosure(),
+          callback::Capture(QuitLoopClosure(), &status, &pages_[i], &page_id));
       RunLoop();
       ASSERT_EQ(ledger::Status::OK, status);
     }
@@ -271,8 +264,7 @@ class ConvergenceTest
     ledger::Status status = ledger::Status::UNKNOWN_ERROR;
     (*page)->GetSnapshot(
         std::move(page_snapshot_request), fidl::VectorPtr<uint8_t>::New(0),
-        std::move(page_watcher),
-        callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
+        std::move(page_watcher), callback::Capture(QuitLoopClosure(), &status));
     RunLoop();
     EXPECT_EQ(ledger::Status::OK, status);
     return watcher;
@@ -282,9 +274,8 @@ class ConvergenceTest
     std::unique_ptr<SyncWatcherImpl> watcher =
         std::make_unique<SyncWatcherImpl>();
     ledger::Status status = ledger::Status::UNKNOWN_ERROR;
-    (*page)->SetSyncStateWatcher(
-        watcher->NewBinding(),
-        callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
+    (*page)->SetSyncStateWatcher(watcher->NewBinding(),
+                                 callback::Capture(QuitLoopClosure(), &status));
     RunLoop();
     EXPECT_EQ(ledger::Status::OK, status);
     return watcher;
@@ -300,8 +291,7 @@ class ConvergenceTest
       ledger::Status status = ledger::Status::UNKNOWN_ERROR;
       watchers[i]->GetInlineOnLatestSnapshot(
           convert::ToArray(key),
-          callback::Capture(fxl::MakeCopyable(QuitLoopClosure()),
-                            &status, &values[i]));
+          callback::Capture(QuitLoopClosure(), &status, &values[i]));
       RunLoop();
       EXPECT_EQ(ledger::Status::OK, status);
     }
@@ -346,7 +336,7 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
       ledger::LedgerPtr ledger = ledger_instances_[i]->GetTestLedger();
       ledger->SetConflictResolverFactory(
           std::move(resolver_factory_ptr),
-          callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
+          callback::Capture(QuitLoopClosure(), &status));
       RunLoop();
       EXPECT_EQ(ledger::Status::OK, status);
     }
@@ -354,19 +344,17 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
     watchers.push_back(WatchPageContents(&pages_[i]));
     sync_watchers.push_back(WatchPageSyncState(&pages_[i]));
 
-    pages_[i]->StartTransaction(
-        callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
+    pages_[i]->StartTransaction(callback::Capture(QuitLoopClosure(), &status));
     RunLoop();
     EXPECT_EQ(ledger::Status::OK, status);
 
     if (merge_function_type_ == MergeType::NON_ASSOCIATIVE_CUSTOM) {
       pages_[i]->Put(convert::ToArray("value"),
                      DoubleToArray(distribution(generator)),
-                     callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
+                     callback::Capture(QuitLoopClosure(), &status));
     } else {
-      pages_[i]->Put(
-          convert::ToArray("value"), data_generator_.MakeValue(50),
-          callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
+      pages_[i]->Put(convert::ToArray("value"), data_generator_.MakeValue(50),
+                     callback::Capture(QuitLoopClosure(), &status));
     }
     RunLoop();
     EXPECT_EQ(ledger::Status::OK, status);
@@ -379,8 +367,7 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
   for (int i = 0; i < num_ledgers_; i++) {
     pages_[i]->Commit(commit_waiter->NewCallback());
   }
-  commit_waiter->Finalize(
-      callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
+  commit_waiter->Finalize(callback::Capture(QuitLoopClosure(), &status));
   RunLoop();
 
   // Function to verify if the visible Ledger state has not changed since last

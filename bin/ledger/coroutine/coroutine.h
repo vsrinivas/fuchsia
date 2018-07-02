@@ -11,7 +11,8 @@
 
 #include "lib/callback/capture.h"
 #include "lib/fxl/functional/auto_call.h"
-#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_ptr.h"
 
 // This Coroutine library allows to use coroutines. A coroutine is a function
 // that can interrupt itself by yielding, and the computation will resume at the
@@ -73,7 +74,7 @@ class CoroutineService {
 // can capture local variables by reference.
 template <typename A, typename... Args>
 FXL_WARN_UNUSED_RESULT ContinuationStatus SyncCall(CoroutineHandler* handler,
-                                                   const A& async_call,
+                                                   A async_call,
                                                    Args*... parameters) {
   class TerminationSentinel
       : public fxl::RefCountedThreadSafe<TerminationSentinel> {
@@ -102,8 +103,8 @@ FXL_WARN_UNUSED_RESULT ContinuationStatus SyncCall(CoroutineHandler* handler,
         handler->Resume(ContinuationStatus::INTERRUPTED);
       });
   auto capture = callback::Capture(
-      fxl::MakeCopyable([&sync_state, &callback_called, handler,
-                         unblocker = std::move(unblocker)]() mutable {
+      [&sync_state, &callback_called, handler,
+       unblocker = std::move(unblocker)]() mutable {
         // |capture| is already gated by the termination sentinel below. No need
         // to re-check here.
 
@@ -114,7 +115,7 @@ FXL_WARN_UNUSED_RESULT ContinuationStatus SyncCall(CoroutineHandler* handler,
           return;
         }
         handler->Resume(ContinuationStatus::OK);
-      }),
+      },
       parameters...);
   async_call([termination_sentinel,
               capture = std::move(capture)](Args... args) mutable {

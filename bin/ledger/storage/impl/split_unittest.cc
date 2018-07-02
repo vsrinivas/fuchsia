@@ -9,7 +9,6 @@
 #include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/encryption/primitives/hash.h"
 #include "peridot/bin/ledger/storage/impl/constants.h"
@@ -82,28 +81,26 @@ struct SplitResult {
 void DoSplit(DataSource* source, fit::function<void(SplitResult)> callback) {
   auto result = std::make_unique<SplitResult>();
   SplitDataSource(
-      source,
-      fxl::MakeCopyable(
-          [result = std::move(result), callback = std::move(callback)](
-              IterationStatus status, ObjectDigest digest,
-              std::unique_ptr<DataSource::DataChunk> data) mutable {
-            EXPECT_TRUE(result);
-            if (status == IterationStatus::IN_PROGRESS) {
-              EXPECT_LE(data->Get().size(), kMaxChunkSize);
-              if (result->data.count(digest) != 0) {
-                EXPECT_EQ(result->data[digest]->Get(), data->Get());
-              } else {
-                result->data[digest] = std::move(data);
-              }
-            }
-            result->calls.push_back({status, digest});
-            if (status != IterationStatus::IN_PROGRESS) {
-              auto to_send = std::move(*result);
-              result.reset();
-              callback(std::move(to_send));
-            }
-            return encryption::MakeDefaultObjectIdentifier(std::move(digest));
-          }));
+      source, [result = std::move(result), callback = std::move(callback)](
+                  IterationStatus status, ObjectDigest digest,
+                  std::unique_ptr<DataSource::DataChunk> data) mutable {
+        EXPECT_TRUE(result);
+        if (status == IterationStatus::IN_PROGRESS) {
+          EXPECT_LE(data->Get().size(), kMaxChunkSize);
+          if (result->data.count(digest) != 0) {
+            EXPECT_EQ(result->data[digest]->Get(), data->Get());
+          } else {
+            result->data[digest] = std::move(data);
+          }
+        }
+        result->calls.push_back({status, digest});
+        if (status != IterationStatus::IN_PROGRESS) {
+          auto to_send = std::move(*result);
+          result.reset();
+          callback(std::move(to_send));
+        }
+        return encryption::MakeDefaultObjectIdentifier(std::move(digest));
+      });
 }
 
 ::testing::AssertionResult ReadFile(

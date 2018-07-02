@@ -4,7 +4,6 @@
 
 #include "peridot/bin/ledger/testing/netconnector/fake_netconnector.h"
 
-#include "lib/fxl/functional/make_copyable.h"
 
 namespace ledger {
 FakeNetConnector::FakeNetConnector(Delegate* delegate) : delegate_(delegate) {}
@@ -20,10 +19,10 @@ void FakeNetConnector::RegisterServiceProvider(
   fuchsia::sys::ServiceProviderPtr service_provider_ptr =
       service_provider.Bind();
   service_provider_impl_.AddServiceForName(
-      fxl::MakeCopyable([name, service_provider_ptr = std::move(
-                                   service_provider_ptr)](zx::channel channel) {
+      [name, service_provider_ptr =
+                 std::move(service_provider_ptr)](zx::channel channel) {
         service_provider_ptr->ConnectToService(name, std::move(channel));
-      }),
+      },
       name);
 }
 

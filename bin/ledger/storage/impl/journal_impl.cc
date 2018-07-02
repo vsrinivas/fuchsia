@@ -12,7 +12,7 @@
 #include <lib/fit/function.h>
 
 #include "lib/callback/waiter.h"
-#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/ledger/storage/impl/btree/builder.h"
 #include "peridot/bin/ledger/storage/impl/commit_impl.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
@@ -80,18 +80,17 @@ void JournalImpl::Commit(
           }
           page_storage_->GetJournalEntries(
               id_,
-              fxl::MakeCopyable([this, parents = std::move(parents),
-                                 callback = std::move(callback)](
-                                    Status status,
-                                    std::unique_ptr<Iterator<const EntryChange>>
-                                        changes) mutable {
+              [this, parents = std::move(parents),
+               callback = std::move(callback)](
+                  Status status, std::unique_ptr<Iterator<const EntryChange>>
+                                     changes) mutable {
                 if (status != Status::OK) {
                   callback(status, nullptr);
                   return;
                 }
                 CreateCommitFromChanges(std::move(parents), std::move(changes),
                                         std::move(callback));
-              }));
+              });
         });
       });
 }
@@ -168,10 +167,9 @@ void JournalImpl::CreateCommitFromChanges(
   btree::ApplyChanges(
       coroutine_service_, page_storage_, parents[0]->GetRootIdentifier(),
       std::move(changes),
-      fxl::MakeCopyable([this, parents = std::move(parents),
-                         callback = std::move(callback)](
-                            Status status, ObjectIdentifier object_identifier,
-                            std::set<ObjectIdentifier> new_nodes) mutable {
+      [this, parents = std::move(parents), callback = std::move(callback)](
+          Status status, ObjectIdentifier object_identifier,
+          std::set<ObjectIdentifier> new_nodes) mutable {
         if (status != Status::OK) {
           callback(status, nullptr);
           return;
@@ -183,23 +181,21 @@ void JournalImpl::CreateCommitFromChanges(
           // We are in an operation from the serializer: make sure not to sent
           // the rollback operation in the serializer as well, or a deadlock
           // will be created.
-          RollbackInternal(fxl::MakeCopyable(
+          RollbackInternal(
               [parent = std::move(parents.front()),
                callback = std::move(callback)](Status status) mutable {
                 callback(status, std::move(parent));
-              }));
+              });
           return;
         }
         std::unique_ptr<const storage::Commit> commit =
             CommitImpl::FromContentAndParents(page_storage_, object_identifier,
                                               std::move(parents));
-        GetObjectsToSync(fxl::MakeCopyable([this,
-                                            new_nodes = std::move(new_nodes),
-                                            commit = std::move(commit),
-                                            callback = std::move(callback)](
-                                               Status status,
-                                               std::vector<ObjectIdentifier>
-                                                   objects_to_sync) mutable {
+        GetObjectsToSync([this, new_nodes = std::move(new_nodes),
+                          commit = std::move(commit),
+                          callback = std::move(callback)](
+                             Status status, std::vector<ObjectIdentifier>
+                                                objects_to_sync) mutable {
           if (status != Status::OK) {
             callback(status, nullptr);
             return;
@@ -212,36 +208,35 @@ void JournalImpl::CreateCommitFromChanges(
                                  new_nodes.end());
           page_storage_->AddCommitFromLocal(
               commit->Clone(), std::move(objects_to_sync),
-              fxl::MakeCopyable([this, commit = std::move(commit),
-                                 callback = std::move(callback)](
-                                    Status status) mutable {
+              [this, commit = std::move(commit),
+               callback = std::move(callback)](Status status) mutable {
                 valid_ = false;
                 if (status != Status::OK) {
                   callback(status, nullptr);
                   return;
                 }
                 page_storage_->RemoveJournal(
-                    id_, fxl::MakeCopyable([commit = std::move(commit),
-                                            callback = std::move(callback)](
-                                               Status status) mutable {
+                    id_,
+                    [commit = std::move(commit),
+                     callback = std::move(callback)](Status status) mutable {
                       if (status != Status::OK) {
                         FXL_LOG(INFO)
                             << "Commit created, but failed to delete journal.";
                       }
                       callback(Status::OK, std::move(commit));
-                    }));
-              }));
-        }));
-      }));
+                    });
+              });
+        });
+      });
 }
 
 void JournalImpl::GetObjectsToSync(
     fit::function<void(Status status,
                        std::vector<ObjectIdentifier> objects_to_sync)>
         callback) {
-  page_storage_->GetJournalEntries(
-      id_,
-      fxl::MakeCopyable(
+  page_storage_
+      ->GetJournalEntries(
+          id_,
           [this, callback = std::move(callback)](
               Status s,
               std::unique_ptr<Iterator<const EntryChange>> entries) mutable {
@@ -287,7 +282,7 @@ void JournalImpl::GetObjectsToSync(
                         std::back_inserter(objects_to_sync));
               callback(Status::OK, std::move(objects_to_sync));
             });
-          }));
+          });
 }
 
 void JournalImpl::RollbackInternal(fit::function<void(Status)> callback) {

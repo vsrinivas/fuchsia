@@ -6,7 +6,6 @@
 
 #include "gtest/gtest.h"
 #include "lib/fxl/functional/auto_call.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 
 namespace coroutine {
@@ -248,13 +247,13 @@ TEST(Coroutine, ResumeCoroutineInOtherCoroutineDestructor) {
     handler1 = local_handler1;
     auto autocall =
         fxl::MakeAutoCall([&] { handler1->Resume(ContinuationStatus::OK); });
-    coroutine_service.StartCoroutine(fxl::MakeCopyable(
+    coroutine_service.StartCoroutine(
         [&handler2, &routine2_done,
          autocall = std::move(autocall)](CoroutineHandler* local_handler2) {
           handler2 = local_handler2;
           EXPECT_EQ(ContinuationStatus::OK, handler2->Yield());
           routine2_done = true;
-        }));
+        });
     EXPECT_EQ(ContinuationStatus::OK, handler1->Yield());
     routine1_done = true;
   });

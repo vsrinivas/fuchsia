@@ -7,7 +7,6 @@
 #include <lib/fit/function.h>
 
 #include "lib/callback/scoped_callback.h"
-#include "lib/fxl/functional/make_copyable.h"
 
 namespace cloud_sync {
 
@@ -101,9 +100,9 @@ void PageUpload::VerifyUnsyncedCommits(
 
   storage_->GetHeadCommitIds(callback::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(),
-      fxl::MakeCopyable([this, commits = std::move(commits)](
-                            storage::Status status,
-                            std::vector<storage::CommitId> heads) mutable {
+      [this, commits = std::move(commits)](
+          storage::Status status,
+          std::vector<storage::CommitId> heads) mutable {
         if (status != storage::Status::OK) {
           HandleError("Failed to retrieve the current heads");
           return;
@@ -127,7 +126,7 @@ void PageUpload::VerifyUnsyncedCommits(
         }
 
         HandleUnsyncedCommits(std::move(commits));
-      })));
+      }));
 }
 
 void PageUpload::HandleUnsyncedCommits(

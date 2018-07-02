@@ -15,7 +15,6 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
@@ -217,16 +216,15 @@ void FetchBenchmark::FetchValues(ledger::PageSnapshotPtr snapshot, size_t i) {
   TRACE_ASYNC_BEGIN("benchmark", "Fetch", i);
   snapshot_ptr->Fetch(
       std::move(keys_[i]),
-      fxl::MakeCopyable(
-          [this, snapshot = std::move(snapshot), i](
-              ledger::Status status, fuchsia::mem::BufferPtr value) mutable {
-            if (benchmark::QuitOnError(QuitLoopClosure(), status,
-                                       "PageSnapshot::Fetch")) {
-              return;
-            }
-            TRACE_ASYNC_END("benchmark", "Fetch", i);
-            FetchValues(std::move(snapshot), i + 1);
-          }));
+      [this, snapshot = std::move(snapshot), i](
+          ledger::Status status, fuchsia::mem::BufferPtr value) mutable {
+        if (benchmark::QuitOnError(QuitLoopClosure(), status,
+                                   "PageSnapshot::Fetch")) {
+          return;
+        }
+        TRACE_ASYNC_END("benchmark", "Fetch", i);
+        FetchValues(std::move(snapshot), i + 1);
+      });
 }
 
 void FetchBenchmark::FetchPart(ledger::PageSnapshotPtr snapshot, size_t i,
@@ -241,16 +239,15 @@ void FetchBenchmark::FetchPart(ledger::PageSnapshotPtr snapshot, size_t i,
   TRACE_ASYNC_BEGIN("benchmark", "FetchPartial", trace_event_id);
   snapshot_ptr->FetchPartial(
       keys_[i].Clone(), part * part_size_, part_size_,
-      fxl::MakeCopyable(
-          [this, snapshot = std::move(snapshot), i, part, trace_event_id](
-              ledger::Status status, fuchsia::mem::BufferPtr value) mutable {
-            if (benchmark::QuitOnError(QuitLoopClosure(), status,
-                                       "PageSnapshot::FetchPartial")) {
-              return;
-            }
-            TRACE_ASYNC_END("benchmark", "FetchPartial", trace_event_id);
-            FetchPart(std::move(snapshot), i, part + 1);
-          }));
+      [this, snapshot = std::move(snapshot), i, part, trace_event_id](
+          ledger::Status status, fuchsia::mem::BufferPtr value) mutable {
+        if (benchmark::QuitOnError(QuitLoopClosure(), status,
+                                   "PageSnapshot::FetchPartial")) {
+          return;
+        }
+        TRACE_ASYNC_END("benchmark", "FetchPartial", trace_event_id);
+        FetchPart(std::move(snapshot), i, part + 1);
+      });
 }
 
 void FetchBenchmark::ShutDown() {

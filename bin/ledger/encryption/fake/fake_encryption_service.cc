@@ -8,7 +8,6 @@
 #include <lib/fit/function.h>
 
 #include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 

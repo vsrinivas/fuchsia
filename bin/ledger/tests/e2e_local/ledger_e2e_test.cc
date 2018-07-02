@@ -17,7 +17,6 @@
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/gtest/real_loop_fixture.h"
 #include "lib/svc/cpp/services.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
@@ -83,18 +82,16 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
     ledger::Status status;
     ledger::LedgerPtr ledger;
     (*ledger_repository)
-        ->GetLedger(
-            std::move(ledger_name), ledger.NewRequest(),
-            callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
+        ->GetLedger(std::move(ledger_name), ledger.NewRequest(),
+                    callback::Capture(QuitLoopClosure(), &status));
     RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure()
              << "GetLedger failed with status " << status;
     }
 
-    ledger->GetRootPage(
-        page->NewRequest(),
-        callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
+    ledger->GetRootPage(page->NewRequest(),
+                        callback::Capture(QuitLoopClosure(), &status));
     RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure()
@@ -107,9 +104,9 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
                                                size_t* entry_count) {
     ledger::Status status;
     ledger::PageSnapshotPtr snapshot;
-    (*page)->GetSnapshot(
-        snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr,
-        callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
+    (*page)->GetSnapshot(snapshot.NewRequest(),
+                         fidl::VectorPtr<uint8_t>::New(0), nullptr,
+                         callback::Capture(QuitLoopClosure(), &status));
     RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure()
@@ -119,8 +116,7 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
     std::unique_ptr<ledger::Token> next_token;
     snapshot->GetEntriesInline(
         fidl::VectorPtr<uint8_t>::New(0), nullptr,
-        callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status,
-                          &entries, &next_token));
+        callback::Capture(QuitLoopClosure(), &status, &entries, &next_token));
     RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure()
@@ -153,7 +149,7 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
   files::ScopedTempDir tmp_dir;
   ledger_repository_factory_->GetRepository(
       tmp_dir.path(), nullptr, ledger_repository.NewRequest(),
-      callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
+      callback::Capture(QuitLoopClosure(), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
 
@@ -228,7 +224,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   ledger_repository_factory_->GetRepository(
       tmp_dir.path(), std::move(cloud_provider_ptr),
       ledger_repository.NewRequest(),
-      callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
+      callback::Capture(QuitLoopClosure(), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
 
@@ -280,7 +276,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
   ledger_repository_factory_->GetRepository(
       tmp_dir.path(), std::move(cloud_provider_ptr),
       ledger_repository.NewRequest(),
-      callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
+      callback::Capture(QuitLoopClosure(), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
 
@@ -316,7 +312,7 @@ TEST_F(LedgerEndToEndTest, ShutDownWhenCloudProviderDisconnects) {
   ledger_repository_factory_->GetRepository(
       tmp_dir.path(), std::move(cloud_provider_ptr),
       ledger_repository.NewRequest(),
-      callback::Capture(fxl::MakeCopyable(QuitLoopClosure()), &status));
+      callback::Capture(QuitLoopClosure(), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
 
