@@ -43,7 +43,7 @@ class TimezoneUnitTest : public fuchsia::sys::testing::TestWithContext {
 
 TEST_F(TimezoneUnitTest, SetTimezone_Unknown) {
   auto timezone_ptr = timezone();
-  bool status = false;
+  bool status = true;
   timezone_ptr->SetTimezone("invalid_timezone",
                             [&status](bool retval) { status = retval; });
   RunLoopUntilIdle();
@@ -74,9 +74,11 @@ TEST_F(TimezoneUnitTest, SetTimezone_GetTimezoneOffsetMinutes) {
                             [&success](bool retval) { success = retval; });
   RunLoopUntilIdle();
   ASSERT_TRUE(success);
+  // No sense in proceeding if SetTimezone failed because expectations below
+  // should fail in this case.
 
-  int32_t local_offset;
-  int32_t dst_offset;
+  int32_t local_offset = INT32_MAX;
+  int32_t dst_offset = INT32_MAX;
   int64_t milliseconds_since_epoch = 12345;
   timezone_ptr->GetTimezoneOffsetMinutes(
       milliseconds_since_epoch,
@@ -88,6 +90,8 @@ TEST_F(TimezoneUnitTest, SetTimezone_GetTimezoneOffsetMinutes) {
   EXPECT_EQ(local_offset, -480);
   EXPECT_EQ(dst_offset, 0);
 
+  // Test that we can change the timezone after it's already been set once
+  success = false;
   timezone_ptr->SetTimezone("Israel",
                             [&success](bool retval) { success = retval; });
   RunLoopUntilIdle();
