@@ -4,11 +4,13 @@
 
 #include "echo_server_app.h"
 
+#include <string>
 #include <lib/async-loop/cpp/loop.h>
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  echo2::EchoServerApp app;
+  bool quiet = (argc >= 2) && std::string("-q") == argv[1];
+  echo2::EchoServerApp app(quiet);
   loop.Run();
   return 0;
 }

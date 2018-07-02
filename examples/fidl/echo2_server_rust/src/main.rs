@@ -16,14 +16,19 @@ use futures::future;
 use futures::prelude::*;
 use fidl::endpoints2::{ServiceMarker, RequestStream};
 use fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream};
+use std::env;
 
-fn spawn_echo_server(chan: async::Channel) {
+fn spawn_echo_server(chan: async::Channel, quiet: bool) {
     async::spawn(EchoRequestStream::from_channel(chan)
-        .for_each(|EchoRequest::EchoString { value, responder }| {
-            println!("Received echo request for string {:?}", value);
+        .for_each(move |EchoRequest::EchoString { value, responder }| {
+            if !quiet {
+                println!("Received echo request for string {:?}", value);
+            }
             responder.send(value.as_ref().map(|s| &**s))
                .into_future()
-               .map(|_| println!("echo response sent successfully"))
+               .map(move |_| if !quiet {
+                   println!("echo response sent successfully");
+               })
                .recover(|e| eprintln!("error sending response: {:?}", e))
         })
         .map(|_| ())
@@ -32,9 +37,10 @@ fn spawn_echo_server(chan: async::Channel) {
 
 fn main() -> Result<(), Error> {
     let mut executor = async::Executor::new().context("Error creating executor")?;
+    let quiet = env::args().any(|arg| arg == "-q");
 
     let fut = ServicesServer::new()
-                .add_service((EchoMarker::NAME, |chan| spawn_echo_server(chan)))
+                .add_service((EchoMarker::NAME, move |chan| spawn_echo_server(chan, quiet)))
                 .start()
                 .context("Error starting echo services server")?;
 

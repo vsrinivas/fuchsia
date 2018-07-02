@@ -6,6 +6,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"app/context"
 	"fidl/bindings"
@@ -15,18 +16,23 @@ import (
 	echo2 "fidl/fidl/examples/echo"
 )
 
-type echoImpl struct{}
+type echoImpl struct {
+	quiet bool
+}
 
 func (echo *echoImpl) EchoString(inValue *string) (outValue *string, err error) {
-	log.Printf("server: %s\n", *inValue)
+	if !echo.quiet {
+		log.Printf("server: %s\n", *inValue)
+	}
 	return inValue, nil
 }
 
 func main() {
+	quiet := (len(os.Args) > 1) && os.Args[1] == "-q"
 	echoService := &echo2.EchoService{}
 	c := context.CreateFromStartupInfo()
 	c.OutgoingService.AddService(echo2.EchoName, func(c zx.Channel) error {
-		_, err := echoService.Add(&echoImpl{}, c, nil)
+		_, err := echoService.Add(&echoImpl{quiet}, c, nil)
 		return err
 	})
 	c.Serve()

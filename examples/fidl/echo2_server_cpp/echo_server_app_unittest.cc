@@ -14,7 +14,7 @@ class EchoServerAppForTest : public EchoServerApp {
  public:
   // Expose injecting constructor so we can pass an instrumented Context
   EchoServerAppForTest(std::unique_ptr<fuchsia::sys::StartupContext> context)
-      : EchoServerApp(std::move(context)) {}
+      : EchoServerApp(std::move(context), false) {}
 };
 
 class EchoServerAppTest : public fuchsia::sys::testing::TestWithContext {
