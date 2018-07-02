@@ -11,6 +11,7 @@ MODULE_NAME := fs-test-utils-test
 MODULE_SRCS := \
     $(LOCAL_DIR)/fixture_test.cpp \
     $(LOCAL_DIR)/unittest_test.cpp \
+    $(LOCAL_DIR)/perftest_test.cpp \
     $(LOCAL_DIR)/main.cpp \
 
 MODULE_STATIC_LIBS := \
@@ -23,9 +24,11 @@ MODULE_STATIC_LIBS := \
     system/ulib/fvm \
     system/ulib/fs \
     system/ulib/fs-test-utils \
+    system/ulib/fzl \
     system/ulib/gpt \
     system/ulib/memfs \
     system/ulib/memfs.cpp \
+    system/ulib/perftest \
     system/ulib/sync \
     system/ulib/trace \
     system/ulib/zx \

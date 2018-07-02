@@ -8,6 +8,7 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/fixture.cpp \
+    $(LOCAL_DIR)/perftest.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/async \
@@ -18,9 +19,11 @@ MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/fvm \
     system/ulib/fs \
+    system/ulib/fzl \
     system/ulib/gpt \
     system/ulib/memfs \
     system/ulib/memfs.cpp \
+    system/ulib/perftest \
     system/ulib/sync \
     system/ulib/trace \
     system/ulib/unittest \

@@ -32,7 +32,8 @@ internal::TestList* g_tests;
 
 class RepeatStateImpl : public RepeatState {
 public:
-    RepeatStateImpl(uint32_t run_count) : run_count_(run_count) {}
+    RepeatStateImpl(uint32_t run_count)
+        : run_count_(run_count) {}
 
     void SetBytesProcessedPerRun(uint64_t bytes) override {
         if (started_) {
@@ -280,7 +281,7 @@ private:
     uint64_t bytes_processed_per_run_ = 0;
 };
 
-}  // namespace
+} // namespace
 
 void RegisterTest(const char* name, fbl::Function<TestFunc> test_func) {
     if (!g_tests) {
@@ -428,7 +429,7 @@ void ParseCommandArgs(int argc, char** argv, CommandArgs* dest) {
     }
 }
 
-}  // namespace internal
+} // namespace internal
 
 static void* TraceProviderThread(void* thread_arg) {
     async::Loop loop;
@@ -556,4 +557,4 @@ int PerfTestMain(int argc, char** argv, const char* test_suite) {
     return success ? 0 : 1;
 }
 
-}  // namespace perftest
+} // namespace perftest
