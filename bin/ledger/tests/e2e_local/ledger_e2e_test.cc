@@ -16,12 +16,13 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/gtest/real_loop_fixture.h"
 #include "lib/svc/cpp/services.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/cloud_provider/fake_cloud_provider.h"
 #include "peridot/bin/ledger/testing/cloud_provider/types.h"
+#include "peridot/lib/rio/fd.h"
+#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace test {
 namespace e2e_local {
@@ -145,9 +146,10 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
   ledger::Status status;
   fidl::SynchronousInterfacePtr<ledger_internal::LedgerRepository>
       ledger_repository;
-  files::ScopedTempDir tmp_dir;
-  ledger_repository_factory_->GetRepositoryDeprecated(
-      tmp_dir.path(), nullptr, ledger_repository.NewRequest(),
+  scoped_tmpfs::ScopedTmpFS tmpfs;
+  ledger_repository_factory_->GetRepository(
+      rio::CloneChannel(tmpfs.root_fd()), nullptr,
+      ledger_repository.NewRequest(),
       callback::Capture(QuitLoopClosure(), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
@@ -196,19 +198,20 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
 
   ledger::Status status;
   ledger_internal::LedgerRepositoryPtr ledger_repository;
-  files::ScopedTempDir tmp_dir;
-  const std::string content_path = tmp_dir.path() + "/content";
+  scoped_tmpfs::ScopedTmpFS tmpfs;
+  const std::string content_path = "content";
   const std::string deletion_sentinel_path = content_path + "/sentinel";
-  ASSERT_TRUE(files::CreateDirectory(content_path));
-  ASSERT_TRUE(files::WriteFile(deletion_sentinel_path, "", 0));
-  ASSERT_TRUE(files::IsFile(deletion_sentinel_path));
+  ASSERT_TRUE(files::CreateDirectoryAt(tmpfs.root_fd(), content_path));
+  ASSERT_TRUE(
+      files::WriteFileAt(tmpfs.root_fd(), deletion_sentinel_path, "", 0));
+  ASSERT_TRUE(files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path));
 
   // Write a fingerprint file, so that Ledger will check if it is still in the
   // cloud device set.
   const std::string fingerprint_path = content_path + "/fingerprint";
   const std::string fingerprint = "bazinga";
-  ASSERT_TRUE(files::WriteFile(fingerprint_path, fingerprint.c_str(),
-                               fingerprint.size()));
+  ASSERT_TRUE(files::WriteFileAt(tmpfs.root_fd(), fingerprint_path,
+                                 fingerprint.c_str(), fingerprint.size()));
 
   // Create a cloud provider configured to trigger the cloude erase recovery on
   // initial check.
@@ -220,8 +223,8 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       cloud_provider.get(), cloud_provider_ptr.NewRequest());
 
-  ledger_repository_factory_->GetRepositoryDeprecated(
-      tmp_dir.path(), std::move(cloud_provider_ptr),
+  ledger_repository_factory_->GetRepository(
+      rio::CloneChannel(tmpfs.root_fd()), std::move(cloud_provider_ptr),
       ledger_repository.NewRequest(),
       callback::Capture(QuitLoopClosure(), &status));
   RunLoop();
@@ -233,10 +236,11 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
 
   // Run the message loop until Ledger clears the repo directory and disconnects
   // the client.
-  RunLoopUntil([deletion_sentinel_path, &repo_disconnected] {
-    return !files::IsFile(deletion_sentinel_path) && repo_disconnected;
+  RunLoopUntil([&] {
+    return !files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path) &&
+           repo_disconnected;
   });
-  EXPECT_FALSE(files::IsFile(deletion_sentinel_path));
+  EXPECT_FALSE(files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path));
   EXPECT_TRUE(repo_disconnected);
 
   // Verify that the Ledger app didn't crash.
@@ -255,12 +259,13 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
 
   ledger::Status status;
   ledger_internal::LedgerRepositoryPtr ledger_repository;
-  files::ScopedTempDir tmp_dir;
-  const std::string content_path = tmp_dir.path() + "/content";
+  scoped_tmpfs::ScopedTmpFS tmpfs;
+  const std::string content_path = "content";
   const std::string deletion_sentinel_path = content_path + "/sentinel";
-  ASSERT_TRUE(files::CreateDirectory(content_path));
-  ASSERT_TRUE(files::WriteFile(deletion_sentinel_path, "", 0));
-  ASSERT_TRUE(files::IsFile(deletion_sentinel_path));
+  ASSERT_TRUE(files::CreateDirectoryAt(tmpfs.root_fd(), content_path));
+  ASSERT_TRUE(
+      files::WriteFileAt(tmpfs.root_fd(), deletion_sentinel_path, "", 0));
+  ASSERT_TRUE(files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path));
 
   // Create a cloud provider configured to trigger the cloud erase recovery
   // while Ledger is connected.
@@ -272,8 +277,8 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       cloud_provider.get(), cloud_provider_ptr.NewRequest());
 
-  ledger_repository_factory_->GetRepositoryDeprecated(
-      tmp_dir.path(), std::move(cloud_provider_ptr),
+  ledger_repository_factory_->GetRepository(
+      rio::CloneChannel(tmpfs.root_fd()), std::move(cloud_provider_ptr),
       ledger_repository.NewRequest(),
       callback::Capture(QuitLoopClosure(), &status));
   RunLoop();
@@ -285,10 +290,11 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
 
   // Run the message loop until Ledger clears the repo directory and disconnects
   // the client.
-  RunLoopUntil([deletion_sentinel_path, &repo_disconnected] {
-    return !files::IsFile(deletion_sentinel_path) && repo_disconnected;
+  RunLoopUntil([&] {
+    return !files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path) &&
+           repo_disconnected;
   });
-  EXPECT_FALSE(files::IsFile(deletion_sentinel_path));
+  EXPECT_FALSE(files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path));
   EXPECT_TRUE(repo_disconnected);
 
   // Verify that the Ledger app didn't crash.
@@ -301,15 +307,15 @@ TEST_F(LedgerEndToEndTest, ShutDownWhenCloudProviderDisconnects) {
   RegisterShutdownCallback(
       [&ledger_app_shut_down] { ledger_app_shut_down = true; });
   ledger::Status status;
-  files::ScopedTempDir tmp_dir;
+  scoped_tmpfs::ScopedTmpFS tmpfs;
 
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
   ledger_internal::LedgerRepositoryPtr ledger_repository;
   ledger::FakeCloudProvider cloud_provider;
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
-  ledger_repository_factory_->GetRepositoryDeprecated(
-      tmp_dir.path(), std::move(cloud_provider_ptr),
+  ledger_repository_factory_->GetRepository(
+      rio::CloneChannel(tmpfs.root_fd()), std::move(cloud_provider_ptr),
       ledger_repository.NewRequest(),
       callback::Capture(QuitLoopClosure(), &status));
   RunLoop();
