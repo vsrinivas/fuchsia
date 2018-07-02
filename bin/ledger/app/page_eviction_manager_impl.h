@@ -12,19 +12,23 @@
 #include <lib/fit/function.h>
 
 #include "peridot/bin/ledger/app/page_state_reader.h"
+#include "peridot/bin/ledger/app/page_usage_db.h"
+#include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/coroutine/coroutine_manager.h"
 
 namespace ledger {
 
 class PageEvictionManagerImpl : public PageEvictionManager {
  public:
-  explicit PageEvictionManagerImpl(
-      coroutine::CoroutineService* coroutine_service);
-  ~PageEvictionManagerImpl() override;
+  PageEvictionManagerImpl(async_t* async,
+                          coroutine::CoroutineService* coroutine_service,
+                          ledger::DetachedPath db_path);
+  ~PageEvictionManagerImpl();
 
   // Initializes this PageEvictionManager. |IO_ERROR| will be returned in case
   // of an error while initializing the underlying database.
-  Status Init();
+  void Init(fit::function<void(Status)> callback);
 
   void SetPageStateReader(PageStateReader* state_reader);
 
@@ -38,6 +42,7 @@ class PageEvictionManagerImpl : public PageEvictionManager {
                     storage::PageIdView page_id) override;
 
  private:
+  // Removes the page from the local storage.
   Status EvictPage(fxl::StringView ledger_name, storage::PageIdView page_id);
 
   // Checks whether a page can be evicted. We can evict pages that are not
@@ -46,14 +51,14 @@ class PageEvictionManagerImpl : public PageEvictionManager {
                       fxl::StringView ledger_name, storage::PageIdView page_id,
                       bool* can_evict);
 
-  PageStateReader* state_reader_ = nullptr;
-  coroutine::CoroutineService* coroutine_service_;
+  // Computes the list of PageInfo for all pages that are not currently open,
+  // ordered by the timestamp of their last usage, in ascending order.
+  Status GetPagesByTimestamp(coroutine::CoroutineHandler* handler,
+                             std::vector<PageUsageDb::PageInfo>* pages);
 
-  // For each page, stores the timestamp from when it was last used. The key is
-  // a pair containing the ledger name and page id respectively, while the value
-  // is the timestamp. If a page is currently in use, value will be zx::time(0).
-  // TODO(nellyv): this information should be stored on disk instead.
-  std::map<std::pair<std::string, std::string>, zx::time> last_used_map_;
+  PageStateReader* state_reader_ = nullptr;
+  PageUsageDb db_;
+  coroutine::CoroutineManager coroutine_manager_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageEvictionManagerImpl);
 };

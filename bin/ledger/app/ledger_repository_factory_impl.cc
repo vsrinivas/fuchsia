@@ -37,6 +37,7 @@ namespace ledger {
 namespace {
 
 constexpr fxl::StringView kContentPath = "content";
+constexpr fxl::StringView kPageUsageDbPath = "page_usage_db";
 constexpr fxl::StringView kStagingPath = "staging";
 constexpr fxl::StringView kNamePath = "name";
 
@@ -163,6 +164,7 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
   explicit RepositoryInformation(int root_fd)
       : base_path(root_fd),
         content_path(base_path.SubPath(kContentPath)),
+        page_usage_db_path(base_path.SubPath(kPageUsageDbPath)),
         staging_path(base_path.SubPath(kStagingPath)) {}
 
   RepositoryInformation(const RepositoryInformation& other) = default;
@@ -172,6 +174,7 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
 
   DetachedPath base_path;
   DetachedPath content_path;
+  DetachedPath page_usage_db_path;
   DetachedPath staging_path;
   std::string name;
 };
@@ -214,13 +217,6 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
     callback(Status::IO_ERROR);
     return;
   }
-  auto page_eviction_manager = std::make_unique<PageEvictionManagerImpl>(
-      environment_->coroutine_service());
-  Status status = page_eviction_manager->Init();
-  if (status != Status::OK) {
-    callback(status);
-    return;
-  }
 
   auto it = repositories_.find(repository_information.name);
   if (it != repositories_.end()) {
@@ -229,39 +225,6 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
     return;
   }
 
-  if (!cloud_provider) {
-    FXL_LOG(WARNING) << "No cloud provider - Ledger will work locally but "
-                     << "not sync. (running in Guest mode?)";
-
-    auto ret = repositories_.emplace(
-        std::piecewise_construct,
-        std::forward_as_tuple(repository_information.name),
-        std::forward_as_tuple(std::move(root_fd)));
-    LedgerRepositoryContainer* container = &ret.first->second;
-    container->BindRepository(std::move(repository_request),
-                              std::move(callback));
-    std::unique_ptr<SyncWatcherSet> watchers =
-        std::make_unique<SyncWatcherSet>();
-    PageEvictionManagerImpl* page_eviction_manager_ptr =
-        page_eviction_manager.get();
-    auto repository = std::make_unique<LedgerRepositoryImpl>(
-        repository_information.content_path, environment_, std::move(watchers),
-        nullptr, std::move(page_eviction_manager));
-    page_eviction_manager_ptr->SetPageStateReader(repository.get());
-    container->SetRepository(Status::OK, std::move(repository));
-    return;
-  }
-
-  auto cloud_provider_ptr = cloud_provider.Bind();
-  cloud_provider_ptr.set_error_handler(
-      [this, name = repository_information.name] {
-        FXL_LOG(ERROR) << "Lost connection to the cloud provider, "
-                       << "shutting down the repository.";
-        auto find_repository = repositories_.find(name);
-        FXL_DCHECK(find_repository != repositories_.end());
-        repositories_.erase(find_repository);
-      });
-
   auto ret =
       repositories_.emplace(std::piecewise_construct,
                             std::forward_as_tuple(repository_information.name),
@@ -269,11 +232,55 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   LedgerRepositoryContainer* container = &ret.first->second;
   container->BindRepository(std::move(repository_request), std::move(callback));
 
-  cloud_sync::UserConfig user_config;
-  user_config.user_directory = repository_information.content_path;
-  user_config.cloud_provider = std::move(cloud_provider_ptr);
-  CreateRepository(container, repository_information, std::move(user_config),
-                   std::move(page_eviction_manager));
+  auto page_eviction_manager = std::make_unique<PageEvictionManagerImpl>(
+      environment_->async(), environment_->coroutine_service(),
+      repository_information.page_usage_db_path);
+  PageEvictionManagerImpl* page_eviction_manager_ptr =
+      page_eviction_manager.get();
+  page_eviction_manager_ptr->Init([this, container,
+                                   root_fd = std::move(root_fd),
+                                   cloud_provider = std::move(cloud_provider),
+                                   repository_information =
+                                       std::move(repository_information),
+                                   page_eviction_manager =
+                                       std::move(page_eviction_manager)](
+                                      Status status) mutable {
+    if (status != Status::OK) {
+      container->SetRepository(status, nullptr);
+      return;
+    }
+
+    if (!cloud_provider) {
+      FXL_LOG(WARNING) << "No cloud provider - Ledger will work locally but "
+                       << "not sync. (running in Guest mode?)";
+
+      PageEvictionManagerImpl* page_eviction_manager_ptr =
+          page_eviction_manager.get();
+      auto repository = std::make_unique<LedgerRepositoryImpl>(
+          repository_information.content_path, environment_,
+          std::make_unique<SyncWatcherSet>(), nullptr,
+          std::move(page_eviction_manager));
+      page_eviction_manager_ptr->SetPageStateReader(repository.get());
+      container->SetRepository(Status::OK, std::move(repository));
+      return;
+    }
+
+    auto cloud_provider_ptr = cloud_provider.Bind();
+    cloud_provider_ptr.set_error_handler(
+        [this, name = repository_information.name] {
+          FXL_LOG(ERROR) << "Lost connection to the cloud provider, "
+                         << "shutting down the repository.";
+          auto find_repository = repositories_.find(name);
+          FXL_DCHECK(find_repository != repositories_.end());
+          repositories_.erase(find_repository);
+        });
+
+    cloud_sync::UserConfig user_config;
+    user_config.user_directory = repository_information.content_path;
+    user_config.cloud_provider = std::move(cloud_provider_ptr);
+    CreateRepository(container, repository_information, std::move(user_config),
+                     std::move(page_eviction_manager));
+  });
 }
 
 void LedgerRepositoryFactoryImpl::CreateRepository(

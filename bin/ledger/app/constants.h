@@ -24,6 +24,9 @@ extern const fxl::StringView kRootPageId;
 // the repository dir of that user.
 constexpr fxl::StringView kServerIdFilename = "server_id";
 
+// The serialization version of PageUsage DB.
+constexpr fxl::StringView kPageUsageDbSerializationVersion = "1";
+
 }  // namespace ledger
 
 #endif  // PERIDOT_BIN_LEDGER_APP_CONSTANTS_H_

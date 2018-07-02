@@ -12,12 +12,19 @@ include:
 
 All data and metadata added in storage are persisted using LevelDB. For each
 [page](data_organization.md#Pages) a separate LevelDB instance is created in a
-dedicated filesystem path of the form: `{ledger dir}/{page_id_base64}/leveldb`.
+dedicated filesystem path of the form:
+`{repo_dir}/content/{ledger_dir}/{page_id_base64}/leveldb`.
+
+Additionally, metadata about all pages of a single user are persisted in a
+separate LevelDB instance. This includes information such as the last time a
+page was used.
 
 The rest of the document describes the key and value representation for each row
 created in LevelDB to store each data type.
 
 [TOC]
+
+# Per Page data storage
 
 ## Commit objects
 
@@ -141,7 +148,28 @@ The cloud sync component persists in storage rows with some metadata.
 Currently, cloud sync only stores a single such line, which contains the
 server-side timestamp of the last commit fetched from the cloud.
 
-## See also
+
+# Pages metadata storage
+
+Additionally to user-created content and metadata on this content, Ledger
+persists information on Page usage, such as the timestamp of when each page was
+last used. This information is used for page eviction, i.e. removing local
+copies of pages, in order to free up device storage when that is necessary.
+
+Page usage information is stored in a dedicated path: `{repo_dir}/page_usage_db`
+using LevelDB.
+
+## Timestamp of last usage
+For each page that is locally stored on the device a row is created in the
+underlying database:
+
+- Row key: `opened/{ledger_name}{page_id}`
+- Row value: `{timestamp}` or `{0}`
+
+`{timestamp}` is the timestamp from when the given page was last closed. If the
+page is currently open, the value is a 0 timestamp.
+
+# See also
 
 For more information see also:
  - [Life of a Put](life_of_a_put.md)

@@ -79,6 +79,8 @@ source_set("lib") {
     "page_snapshot_impl.cc",
     "page_snapshot_impl.h",
     "page_state_reader.h",
+    "page_usage_db.cc",
+    "page_usage_db.h",
     "page_utils.cc",
     "page_utils.h",
     "sync_watcher_set.cc",
@@ -132,6 +134,7 @@ source_set("unittests") {
     "merging/test_utils.h",
     "page_impl_unittest.cc",
     "page_manager_unittest.cc",
+    "page_usage_db_unittest.cc",
     "sync_watcher_set_unittest.cc",
   ]
 

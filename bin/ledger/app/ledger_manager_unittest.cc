@@ -306,11 +306,13 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckNotFound) {
   Status status;
   PageClosedAndSynced is_closed_and_synced;
 
+  ledger::PageId id = RandomId();
+
   // Check for a page that doesn't exist.
   storage_ptr->should_get_page_fail = true;
   ledger_manager_->PageIsClosedAndSynced(
-      "page_id", callback::Capture(callback::SetWhenCalled(&called), &status,
-                                   &is_closed_and_synced));
+      id.id, callback::Capture(callback::SetWhenCalled(&called), &status,
+                               &is_closed_and_synced));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::PAGE_NOT_FOUND, status);
