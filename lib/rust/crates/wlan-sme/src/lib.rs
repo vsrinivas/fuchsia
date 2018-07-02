@@ -18,8 +18,9 @@ use std::collections::HashSet;
 
 pub type Ssid = Vec<u8>;
 
-pub struct DeviceCapabilities {
-    pub supported_channels: HashSet<u8>
+pub struct DeviceInfo {
+    pub supported_channels: HashSet<u8>,
+    pub addr: [u8; 6],
 }
 
 pub enum MlmeRequest {

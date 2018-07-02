@@ -8,7 +8,7 @@ use std::collections::hash_map::Entry;
 use std::cmp::Ordering;
 use std::mem;
 use std::sync::Arc;
-use client::{bss::*, DeviceCapabilities, Ssid};
+use client::{bss::*, DeviceInfo, Ssid};
 
 // Scans can be performed for two different purposes:
 //      1) Discover available wireless networks. These scans are initiated by the "user",
@@ -40,7 +40,7 @@ pub struct ScanScheduler<D, J> {
     pending_join: Option<JoinScan<J>>,
     // A queue of pending discovery requests from the user
     pending_discovery: VecDeque<DiscoveryScan<D>>,
-    device_caps: Arc<DeviceCapabilities>
+    device_info: Arc<DeviceInfo>
 }
 
 #[derive(Debug, PartialEq)]
@@ -94,12 +94,12 @@ pub enum DiscoveryError {
 }
 
 impl<D, J> ScanScheduler<D, J> {
-    pub fn new(device_caps: Arc<DeviceCapabilities>) -> Self {
+    pub fn new(device_info: Arc<DeviceInfo>) -> Self {
         ScanScheduler {
             current: ScanState::NotScanning,
             pending_join: None,
             pending_discovery: VecDeque::new(),
-            device_caps,
+            device_info,
         }
     }
 
@@ -193,11 +193,11 @@ impl<D, J> ScanScheduler<D, J> {
         match &self.current {
             &ScanState::NotScanning => {
                 if let Some(join_scan) = self.pending_join.take() {
-                    let request = new_join_scan_request(&join_scan, &self.device_caps);
+                    let request = new_join_scan_request(&join_scan, &self.device_info);
                     self.current = ScanState::ScanningToJoin(join_scan);
                     Some(request)
                 } else if let Some(discovery_scan) = self.pending_discovery.pop_front() {
-                    let request = new_discovery_scan_request(&discovery_scan, &self.device_caps);
+                    let request = new_discovery_scan_request(&discovery_scan, &self.device_info);
                     self.current = ScanState::ScanningToDiscover(discovery_scan);
                     Some(request)
                 } else {
@@ -213,7 +213,7 @@ impl<D, J> ScanScheduler<D, J> {
 const WILDCARD_BSS_ID: [u8; 6] = [ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff ];
 
 fn new_join_scan_request<T>(join_scan: &JoinScan<T>,
-                            device_caps: &DeviceCapabilities) -> ScanRequest {
+                            device_info: &DeviceInfo) -> ScanRequest {
     ScanRequest {
         bss_type: fidl_mlme::BssTypes::Infrastructure,
         bssid: WILDCARD_BSS_ID.clone(),
@@ -221,7 +221,7 @@ fn new_join_scan_request<T>(join_scan: &JoinScan<T>,
         ssid: String::from_utf8_lossy(&join_scan.ssid).to_string(),
         scan_type: fidl_mlme::ScanTypes::Passive,
         probe_delay: 0,
-        channel_list: Some(get_channels_to_scan(&device_caps)),
+        channel_list: Some(get_channels_to_scan(&device_info)),
         min_channel_time: 100,
         max_channel_time: 300,
         ssid_list: None
@@ -229,14 +229,14 @@ fn new_join_scan_request<T>(join_scan: &JoinScan<T>,
 }
 
 fn new_discovery_scan_request<T>(_discovery_scan: &DiscoveryScan<T>,
-                                 device_caps: &DeviceCapabilities) -> ScanRequest {
+                                 device_info: &DeviceInfo) -> ScanRequest {
     ScanRequest {
         bss_type: fidl_mlme::BssTypes::Infrastructure,
         bssid: WILDCARD_BSS_ID.clone(),
         ssid: String::new(),
         scan_type: fidl_mlme::ScanTypes::Passive,
         probe_delay: 0,
-        channel_list: Some(get_channels_to_scan(&device_caps)),
+        channel_list: Some(get_channels_to_scan(&device_info)),
         min_channel_time: 100,
         max_channel_time: 300,
         ssid_list: None
@@ -274,9 +274,9 @@ fn best_bss_to_join(bss_set: Vec<BssDescription>, ssid: &[u8]) -> Option<BssDesc
         .max_by(compare_bss)
 }
 
-fn get_channels_to_scan(device_caps: &DeviceCapabilities) -> Vec<u8> {
+fn get_channels_to_scan(device_info: &DeviceInfo) -> Vec<u8> {
     SUPPORTED_CHANNELS.iter()
-        .filter(|chan| device_caps.supported_channels.contains(chan))
+        .filter(|chan| device_info.supported_channels.contains(chan))
         .map(|chan| *chan)
         .collect()
 }
@@ -299,6 +299,8 @@ mod tests {
     use super::*;
 
     use std::collections::HashSet;
+
+    const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 
     #[test]
     fn get_join_scan() {
@@ -331,8 +333,9 @@ mod tests {
 
     fn create_sched() -> ScanScheduler<i32, i32> {
         ScanScheduler::new(Arc::new(
-            DeviceCapabilities {
+            DeviceInfo {
                 supported_channels: HashSet::new(),
+                addr: CLIENT_ADDR,
             }
         ))
     }

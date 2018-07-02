@@ -161,12 +161,12 @@ fn serve_sme<S>(proxy: fidl_mlme::MlmeProxy,
     -> Result<(SmeServer, impl Future<Item = (), Error = Error>), Error>
     where S: Stream<Item = stats_scheduler::StatsRequest, Error = Never>
 {
-    let device_caps = convert_device_caps(&query_resp);
+    let device_info = convert_device_info(&query_resp);
     match query_resp.role {
         fidl_mlme::MacRole::Client => {
             let (sender, receiver) = mpsc::unbounded();
             let fut = station::serve_client_sme(
-                proxy, device_caps, event_stream, receiver, stats_requests);
+                proxy, device_info, event_stream, receiver, stats_requests);
             Ok((SmeServer::Client(sender), fut))
         },
         fidl_mlme::MacRole::Ap => {
@@ -175,12 +175,13 @@ fn serve_sme<S>(proxy: fidl_mlme::MlmeProxy,
     }
 }
 
-fn convert_device_caps(query_resp: &DeviceQueryConfirm) -> wlan_sme::DeviceCapabilities {
+fn convert_device_info(query_resp: &DeviceQueryConfirm) -> wlan_sme::DeviceInfo {
     let mut supported_channels = HashSet::new();
     for band in &query_resp.bands {
         supported_channels.extend(&band.channels);
     }
-    wlan_sme::DeviceCapabilities {
-        supported_channels
+    wlan_sme::DeviceInfo {
+        supported_channels,
+        addr: query_resp.mac_addr,
     }
 }

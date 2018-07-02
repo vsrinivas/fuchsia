@@ -8,6 +8,7 @@ use fidl_mlme::{self, BssDescription, MlmeEvent};
 use client::{ConnectResult, Status, Tokens};
 use client::internal::{MlmeSink, UserSink};
 use MlmeRequest;
+use super::DeviceInfo;
 use wlan_rsn::{akm, cipher, rsne, suite_selector::OUI};
 
 const DEFAULT_JOIN_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
@@ -46,7 +47,7 @@ pub enum State<T: Tokens> {
 }
 
 impl<T: Tokens> State<T> {
-    pub fn on_mlme_event(self, event: MlmeEvent, mlme_sink: &MlmeSink,
+    pub fn on_mlme_event(self, _device_info: &DeviceInfo, event: MlmeEvent, mlme_sink: &MlmeSink,
                          user_sink: &UserSink<T>) -> Self {
         match self {
             State::Idle => {

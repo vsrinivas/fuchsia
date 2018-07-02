@@ -10,7 +10,7 @@ use fidl_mlme::{MlmeEvent, ScanRequest};
 use self::scan::{DiscoveryScan, JoinScan, JoinScanFailure, ScanResult, ScanScheduler};
 use self::state::{ConnectCommand, State};
 use std::sync::Arc;
-use super::{DeviceCapabilities, MlmeRequest, MlmeStream, Ssid};
+use super::{DeviceInfo, MlmeRequest, MlmeStream, Ssid};
 use futures::channel::mpsc;
 
 pub use self::bss::{BssInfo, EssInfo};
@@ -64,6 +64,7 @@ pub struct ClientSme<T: Tokens> {
     scan_sched: ScanScheduler<T::ScanToken, T::ConnectToken>,
     mlme_sink: MlmeSink,
     user_sink: UserSink<T>,
+    device_info: Arc<DeviceInfo>,
 }
 
 pub enum ConnectResult {
@@ -91,16 +92,17 @@ pub struct Status {
 }
 
 impl<T: Tokens> ClientSme<T> {
-    pub fn new(caps: DeviceCapabilities) -> (Self, MlmeStream, UserStream<T>) {
-        let caps = Arc::new(caps);
+    pub fn new(info: DeviceInfo) -> (Self, MlmeStream, UserStream<T>) {
+        let device_info = Arc::new(info);
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (user_sink, user_stream) = mpsc::unbounded();
         (
             ClientSme {
                 state: Some(State::Idle),
-                scan_sched: ScanScheduler::new(caps),
+                scan_sched: ScanScheduler::new(Arc::clone(&device_info)),
                 mlme_sink: UnboundedSink{ sink: mlme_sink },
                 user_sink: UnboundedSink{ sink: user_sink },
+                device_info,
             },
             mlme_stream,
             user_stream
@@ -178,7 +180,7 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                 }
             },
             other => {
-                state.on_mlme_event(other, &self.mlme_sink, &self.user_sink)
+                state.on_mlme_event(&self.device_info, other, &self.mlme_sink, &self.user_sink)
             }
         });
     }
@@ -190,6 +192,8 @@ mod tests {
     use fidl_mlme;
     use std::collections::HashSet;
     use Station;
+
+    const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 
     #[test]
     fn status_connecting_to() {
@@ -242,8 +246,9 @@ mod tests {
     }
 
     fn create_sme() -> (ClientSme<FakeTokens>, MlmeStream, UserStream<FakeTokens>) {
-        ClientSme::new(DeviceCapabilities {
+        ClientSme::new(DeviceInfo {
             supported_channels: HashSet::new(),
+            addr: CLIENT_ADDR,
         })
     }
 
