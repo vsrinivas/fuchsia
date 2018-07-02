@@ -394,7 +394,8 @@ zx_handle_t ProcessDispatcher::MapHandleToValue(const HandleOwner& handle) const
     return map_handle_to_value(handle.get(), handle_rand_);
 }
 
-Handle* ProcessDispatcher::GetHandleLocked(zx_handle_t handle_value) {
+Handle* ProcessDispatcher::GetHandleLocked(zx_handle_t handle_value,
+                                           bool skip_policy) {
     auto handle = map_value_to_handle(handle_value, handle_rand_);
     if (handle && handle->process_id() == get_koid())
         return handle;
@@ -403,7 +404,8 @@ Handle* ProcessDispatcher::GetHandleLocked(zx_handle_t handle_value) {
     // depending on the job policy.  Note that we don't use the return
     // value from QueryPolicy() here: ZX_POL_ACTION_ALLOW and
     // ZX_POL_ACTION_DENY are equivalent for ZX_POL_BAD_HANDLE.
-    QueryPolicy(ZX_POL_BAD_HANDLE);
+    if (likely(!skip_policy))
+        QueryPolicy(ZX_POL_BAD_HANDLE);
     return nullptr;
 }
 
@@ -814,4 +816,9 @@ const char* StateToString(ProcessDispatcher::State state) {
 bool ProcessDispatcher::IsHandleValid(zx_handle_t handle_value) {
     AutoLock lock(&handle_table_lock_);
     return (GetHandleLocked(handle_value) != nullptr);
+}
+
+bool ProcessDispatcher::IsHandleValidNoPolicyCheck(zx_handle_t handle_value) {
+    AutoLock lock(&handle_table_lock_);
+    return (GetHandleLocked(handle_value, true) != nullptr);
 }

@@ -123,6 +123,17 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
                         __builtin_trap();
                     goto reply;
                 }
+                if (what & MINIP_CMD_VALIDATE_CLOSED_HANDLE) {
+                    what &= ~MINIP_CMD_VALIDATE_CLOSED_HANDLE;
+
+                    zx_handle_t event;
+                    if (ctx.event_create(0u, &event) != ZX_OK)
+                        __builtin_trap();
+                    ctx.handle_close(event);
+                    cmd.status = ctx.object_get_info(
+                        event, ZX_INFO_HANDLE_VALID, NULL, 0, NULL, NULL);
+                    goto reply;
+                }
 
                 // Neither MINIP_CMD_BUILTIN_TRAP nor MINIP_CMD_EXIT_NORMAL send a
                 // message so the client will get ZX_CHANNEL_PEER_CLOSED.

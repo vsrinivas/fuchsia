@@ -34,7 +34,8 @@ static zx_status_t write_ctx_message(
         .channel_create = get_syscall_addr(&zx_channel_create, vdso_base),
         .channel_read = get_syscall_addr(&zx_channel_read, vdso_base),
         .channel_write = get_syscall_addr(&zx_channel_write, vdso_base),
-        .process_exit = get_syscall_addr(&zx_process_exit, vdso_base)
+        .process_exit = get_syscall_addr(&zx_process_exit, vdso_base),
+        .object_get_info = get_syscall_addr(&zx_object_get_info, vdso_base)
     };
     return zx_channel_write(channel, 0u, &ctx, sizeof(ctx), &transferred_handle, 1u);
 }

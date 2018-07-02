@@ -32,6 +32,8 @@ __BEGIN_CDECLS
 // The process just calls zx_process_exit() immediately without replying.
 // The return value upon success is ZX_ERR_PEER_CLOSED.
 #define MINIP_CMD_EXIT_NORMAL                (1 << 6)
+// The process calls zx_object_info( ZX_INFO_HANDLE_VALID) on a closed handle.
+#define MINIP_CMD_VALIDATE_CLOSED_HANDLE     (1 << 7)
 
 // Create and run a minimal process with one thread that blocks forever.
 // Does not require a host binary.

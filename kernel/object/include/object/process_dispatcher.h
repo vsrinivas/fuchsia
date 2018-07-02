@@ -84,8 +84,10 @@ public:
     zx_handle_t MapHandleToValue(const HandleOwner& handle) const;
 
     // Maps a handle value into a Handle as long we can verify that
-    // it belongs to this process.
-    Handle* GetHandleLocked(zx_handle_t handle_value) TA_REQ(handle_table_lock_);
+    // it belongs to this process. Use |skip_policy = true| for testing that
+    // a handle is valid without potentially triggering a job policy exception.
+    Handle* GetHandleLocked(
+        zx_handle_t handle_value, bool skip_policy = false) TA_REQ(handle_table_lock_);
 
     // Adds |handle| to this process handle list. The handle->process_id() is
     // set to this process id().
@@ -163,6 +165,7 @@ public:
     zx_koid_t GetKoidForHandle(zx_handle_t handle_value);
 
     bool IsHandleValid(zx_handle_t handle_value);
+    bool IsHandleValidNoPolicyCheck(zx_handle_t handle_value);
 
     // Calls the provided
     // |zx_status_t func(zx_handle_t, zx_rights_t, fbl::RefPtr<Dispatcher>)|

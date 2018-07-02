@@ -92,6 +92,11 @@ implies **ZX_POL_ACTION_DENY**.
 **zx_job_set_policy**() returns **ZX_OK** on success.  In the event of failure,
 a negative error value is returned.
 
+## NOTES
+
+The **ZX_POL_BAD_HANDLE** policy does not apply when calling ``zx_object_get_info()``
+with the topic ZX_INFO_HANDLE_VALID.  All other topics and all other syscalls that
+take handles are subject to the policy.
 
 ## ERRORS
 
@@ -122,3 +127,4 @@ In a future build this error will no longer occur.
 
 [job_create](job_create.md).
 [process_create](job_create.md).
+[object_get_info](object_get_info.md).

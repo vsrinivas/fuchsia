@@ -42,7 +42,7 @@ If the buffer is insufficiently large, *avail* will be larger than *actual*.
 
 *buffer* type: **n/a**
 
-Returns **ZX_OK** if *handle* is valid, a negative status otherwise. No
+Returns **ZX_OK** if *handle* is valid, or **ZX_ERR_BAD_HANDLE** otherwise. No
 records are returned and *buffer* may be NULL.
 
 ### ZX_INFO_HANDLE_BASIC

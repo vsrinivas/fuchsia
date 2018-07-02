@@ -409,6 +409,19 @@ static bool test_exception_on_bad_handle() {
     END_TEST;
 }
 
+// The one exception for ZX_POL_BAD_HANDLE is zx_object_info( ZX_INFO_HANDLE_VALID).
+static bool test_get_info_on_bad_handle() {
+    BEGIN_TEST;
+
+    zx_policy_basic_t policy[] = {{
+        ZX_POL_BAD_HANDLE, ZX_POL_ACTION_DENY | ZX_POL_ACTION_EXCEPTION }};
+    test_invoking_policy(
+        policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_VALIDATE_CLOSED_HANDLE,
+        ZX_ERR_BAD_HANDLE);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(job_policy)
 RUN_TEST(invalid_calls_abs)
 RUN_TEST(invalid_calls_rel)
@@ -422,6 +435,7 @@ RUN_TEST(test_exception_on_new_event_and_deny)
 RUN_TEST(test_exception_on_new_event_but_allow)
 RUN_TEST(test_error_on_bad_handle)
 RUN_TEST(test_exception_on_bad_handle)
+RUN_TEST(test_get_info_on_bad_handle)
 END_TEST_CASE(job_policy)
 
 int main(int argc, char** argv) {

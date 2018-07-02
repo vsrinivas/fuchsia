@@ -16,6 +16,7 @@ typedef struct {
     __typeof(zx_channel_read)*      channel_read;
     __typeof(zx_channel_write)*     channel_write;
     __typeof(zx_process_exit)*      process_exit;
+    __typeof(zx_object_get_info)*   object_get_info;
 } minip_ctx_t;
 
 // Subsequent messages and replies are of this format. The |what| parameter is
