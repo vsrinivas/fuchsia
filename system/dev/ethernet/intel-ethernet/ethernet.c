@@ -271,6 +271,13 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
     edev->eth.iobase = (uintptr_t)io;
     edev->ioh = h;
 
+    zx_pcie_device_info_t pci_info;
+    status = pci_get_device_info(&edev->pci, &pci_info);
+    if (status != ZX_OK) {
+        goto fail;
+    }
+    edev->eth.pci_did = pci_info.device_id;
+
     if ((r = pci_enable_bus_master(&edev->pci, true)) < 0) {
         printf("eth: cannot enable bus master %d\n", r);
         goto fail;
@@ -340,8 +347,8 @@ ZIRCON_DRIVER_BEGIN(intel_ethernet, intel_ethernet_driver_ops, "zircon", "0.1", 
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15A3), // Broadwell
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x1570), // Skylake
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x1533), // I210 standalone
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x1539), // I211-AT
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x156f), // I219-LM (Dawson Canyon NUC)
+    BI_MATCH_IF(EQ, BIND_PCI_DID, IE_DID_I211_AT),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, IE_DID_I219_LM),
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15b7), // Skull Canyon NUC
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15b8), // I219-V
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15d8), // Kaby Lake NUC

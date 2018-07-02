@@ -8,6 +8,9 @@
 
 #include "ie-hw.h"
 
+#define IE_DID_I211_AT 0x1539
+#define IE_DID_I219_LM 0x156f
+
 typedef struct framebuf framebuf_t;
 typedef struct ethdev ethdev_t;
 
@@ -44,6 +47,8 @@ struct ethdev {
 
     uint8_t phy_addr;
     mtx_t send_lock;
+
+    uint16_t pci_did;
 };
 
 #define ETH_MTU 1500

@@ -19,10 +19,11 @@
 #include <zircon/syscalls.h>
 #include <ddk/driver.h>
 typedef int status_t;
-#define __nanosleep(x) zx_nanosleep(zx_deadline_after(x));
-#define REG32(addr) ((volatile uint32_t *)(uintptr_t)(addr))
+#define nanosleep(x) zx_nanosleep(zx_deadline_after(x));
+#define usleep(x)    nanosleep((x) * 1000)
+#define REG32(addr)  ((volatile uint32_t *)(uintptr_t)(addr))
 #define writel(v, a) (*REG32(eth->iobase + (a)) = (v))
-#define readl(a) (*REG32(eth->iobase + (a)))
+#define readl(a)     (*REG32(eth->iobase + (a)))
 #endif
 
 #include "ie.h"
@@ -175,7 +176,7 @@ static zx_status_t wait_for_mdic(ethdev_t* eth, uint32_t* reg_value) {
     uint32_t mdic;
     uint32_t iterations = 0;
     do {
-        __nanosleep(50);
+        nanosleep(50);
         mdic = readl(IE_MDIC);
         if (mdic & IE_MDIC_R) {
             goto success;
@@ -276,15 +277,50 @@ status_t eth_reset_hw(ethdev_t* eth) {
            eth->mac[0],eth->mac[1],eth->mac[2],
            eth->mac[3],eth->mac[4],eth->mac[5]);
 
-    writel(IE_CTRL_RST, IE_CTRL);
-    __nanosleep(5000);
+    // disable all interrupts
+    if (eth->pci_did == IE_DID_I211_AT) {
+        writel(0, IE_IAM);
+    }
+    writel(0xffffffff, IE_IMC);
 
-    if (readl(IE_CTRL) & IE_CTRL_RST) {
-        printf("eth: reset failed\n");
-        return ZX_ERR_BAD_STATE;
+    // disable tx/rx
+    writel(0, IE_RCTL);
+    writel(IE_TCTL_PSP, IE_TCTL);
+
+    // global reset
+    uint32_t reg = readl(IE_CTRL);
+    writel(reg | IE_CTRL_RST, IE_CTRL);
+
+    if (eth->pci_did == IE_DID_I211_AT) {
+        usleep(20);
+        reg = readl(IE_STATUS);
+        if (!(reg & IE_STATUS_PF_RST_DONE)) {
+            printf("eth: reset failed (1)\n");
+            return ZX_ERR_BAD_STATE;
+        }
+        reg = readl(IE_EEC);
+        if (!(reg & IE_EEC_AUTO_RD)) {
+            printf("eth: reset failed (2)\n");
+            return ZX_ERR_BAD_STATE;
+        }
+    } else {
+        usleep(5);
+
+        if (readl(IE_CTRL) & IE_CTRL_RST) {
+            printf("eth: reset failed\n");
+            return ZX_ERR_BAD_STATE;
+        }
     }
 
-    writel(IE_CTRL_ASDE | IE_CTRL_SLU, IE_CTRL);
+    // disable all interrupts
+    if (eth->pci_did == IE_DID_I211_AT) {
+        writel(0, IE_IAM);
+    }
+    writel(0xffffffff, IE_IMC);
+
+    // clear any pending interrupts
+    readl(IE_ICR);
+
     return ZX_OK;
 }
 
@@ -293,32 +329,74 @@ void eth_init_hw(ethdev_t* eth) {
     //TODO: TCTL COLD should be based on link state
     //TODO: use address filtering for multicast
 
+    // set link up (Must be set to enable communications between MAC and PHY.)
+    uint32_t reg = readl(IE_CTRL);
+    writel(reg | IE_CTRL_SLU, IE_CTRL);
+
+    usleep(15);
+
     // setup rx ring
     eth->rx_rd_ptr = 0;
-    writel(0, IE_RXCSUM);
-    writel((4 << 0) | (1 << 8) | (1 << 16) | (1 << 24), IE_RXDCTL);
     writel(eth->rxd_phys, IE_RDBAL);
     writel(eth->rxd_phys >> 32, IE_RDBAH);
     writel(ETH_RXBUF_COUNT * 16, IE_RDLEN);
+
+    reg = IE_RXDCTL_PTHRESH(12) | IE_RXDCTL_HTHRESH(10) | IE_RXDCTL_WTHRESH(1);
+    if (eth->pci_did == IE_DID_I211_AT) {
+        reg |= IE_RXDCTL_ENABLE;
+    } else {
+        reg |= IE_RXDCTL_GRAN;
+    }
+    writel(reg, IE_RXDCTL);
+
+    // wait for enable to complete
+    if (eth->pci_did == IE_DID_I211_AT) {
+        while (!(readl(IE_RXDCTL) & IE_RXDCTL_ENABLE)) {
+        }
+    }
+
     writel(ETH_RXBUF_COUNT - 1, IE_RDT);
-    writel(IE_RCTL_BSIZE2048 | IE_RCTL_DPF | IE_RCTL_SECRC | IE_RCTL_BAM | IE_RCTL_MPE | IE_RCTL_EN, IE_RCTL);
+    writel(IE_RCTL_BSIZE2048 | IE_RCTL_DPF | IE_RCTL_SECRC |
+           IE_RCTL_BAM | IE_RCTL_MPE | IE_RCTL_EN,
+           IE_RCTL);
 
     // setup tx ring
     eth->tx_wr_ptr = 0;
     eth->tx_rd_ptr = 0;
-    writel((4 << 0) | (1 << 8) | (1 << 16) | (1 << 24), IE_TXDCTL);
     writel(eth->txd_phys, IE_TDBAL);
     writel(eth->txd_phys >> 32, IE_TDBAH);
     writel(ETH_TXBUF_COUNT * 16, IE_TDLEN);
-    uint32_t tctl_rsvd = readl(IE_TCTL) & IE_TCTL_RESERVED;
-    writel(tctl_rsvd | IE_TCTL_CT(15) | IE_TCTL_COLD_FD | IE_TCTL_EN, IE_TCTL);
 
-    // disable all irqs (write to "clear" mask)
-    writel(0xFFFF, IE_IMC);
-    // enable rx irq (write to "set" mask)
-    writel(IE_INT_RXT0, IE_IMS);
-    // enable link status change irq
-    writel(IE_INT_LSC, IE_IMS);
+    reg = IE_TXDCTL_WTHRESH(1);
+    if (eth->pci_did == IE_DID_I211_AT) {
+        reg |= IE_TXDCTL_ENABLE;
+    } else {
+        reg |= IE_TXDCTL_GRAN;
+    }
+    writel(reg, IE_TXDCTL);
+
+    // wait for enable to complete
+    if (eth->pci_did == IE_DID_I211_AT) {
+        while (!(readl(IE_TXDCTL) & IE_TXDCTL_ENABLE)) {
+        }
+    }
+
+    if (eth->pci_did == IE_DID_I211_AT) {
+        reg = IE_TCTL_CT(15) | IE_TCTL_BST(64) | IE_TCTL_PSP | IE_TCTL_EN;
+    } else {
+        reg = readl(IE_TCTL) & IE_TCTL_RESERVED;
+        reg |= IE_TCTL_CT(15) | IE_TCTL_COLD_FD | IE_TCTL_EN;
+    }
+    writel(reg, IE_TCTL);
+
+    // enable interrupts
+    if (eth->pci_did == IE_DID_I211_AT) {
+        // Receiver Descriptor Write Back interrupt
+        writel(IE_INT_RXDW, IE_IMS);
+    } else {
+        // enable rx & link status change irqs
+        writel(IE_INT_RXT0 | IE_INT_LSC, IE_IMS);
+    }
 }
 
 void eth_setup_buffers(ethdev_t* eth, void* iomem, zx_paddr_t iophys) {
