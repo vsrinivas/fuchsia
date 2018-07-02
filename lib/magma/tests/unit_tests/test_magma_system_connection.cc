@@ -103,18 +103,21 @@ TEST(MagmaSystemConnection, BufferManagement)
     ASSERT_NE(buf, nullptr);
     EXPECT_GE(buf->size(), test_size);
 
-    uint32_t duplicate_handle;
-    ASSERT_TRUE(buf->duplicate_handle(&duplicate_handle));
+    uint32_t duplicate_handle1;
+    ASSERT_TRUE(buf->duplicate_handle(&duplicate_handle1));
 
     uint64_t id;
-    EXPECT_TRUE(connection.ImportBuffer(duplicate_handle, &id));
+    EXPECT_TRUE(connection.ImportBuffer(duplicate_handle1, &id));
 
     // should be able to get the buffer by handle
     auto get_buf = connection.LookupBuffer(id);
     EXPECT_NE(get_buf, nullptr);
     EXPECT_EQ(get_buf->id(), id); // they are shared ptrs after all
 
-    EXPECT_TRUE(connection.ImportBuffer(duplicate_handle, &id));
+    uint32_t duplicate_handle2;
+    ASSERT_TRUE(buf->duplicate_handle(&duplicate_handle2));
+
+    EXPECT_TRUE(connection.ImportBuffer(duplicate_handle2, &id));
 
     // freeing the allocated buffer should cause refcount to drop to 1
     EXPECT_TRUE(connection.ReleaseBuffer(id));
@@ -148,16 +151,19 @@ TEST(MagmaSystemConnection, Semaphores)
     // assert because if this fails the rest of this is gonna be bogus anyway
     ASSERT_NE(semaphore, nullptr);
 
-    uint32_t duplicate_handle;
-    ASSERT_TRUE(semaphore->duplicate_handle(&duplicate_handle));
+    uint32_t duplicate_handle1;
+    ASSERT_TRUE(semaphore->duplicate_handle(&duplicate_handle1));
 
-    EXPECT_TRUE(connection.ImportObject(duplicate_handle, magma::PlatformObject::SEMAPHORE));
+    EXPECT_TRUE(connection.ImportObject(duplicate_handle1, magma::PlatformObject::SEMAPHORE));
 
     auto system_semaphore = connection.LookupSemaphore(semaphore->id());
     EXPECT_NE(system_semaphore, nullptr);
     EXPECT_EQ(system_semaphore->platform_semaphore()->id(), semaphore->id());
 
-    EXPECT_TRUE(connection.ImportObject(duplicate_handle, magma::PlatformObject::SEMAPHORE));
+    uint32_t duplicate_handle2;
+    ASSERT_TRUE(semaphore->duplicate_handle(&duplicate_handle2));
+
+    EXPECT_TRUE(connection.ImportObject(duplicate_handle2, magma::PlatformObject::SEMAPHORE));
 
     // freeing the allocated semaphore should decrease refcount to 1
     EXPECT_TRUE(connection.ReleaseObject(semaphore->id(), magma::PlatformObject::SEMAPHORE));
