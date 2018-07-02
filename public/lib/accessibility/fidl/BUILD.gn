@@ -10,6 +10,7 @@ fidl("fidl") {
   sdk_category = "experimental"
 
   sources = [
+    "data.fidl",
     "manager.fidl",
     "semantics_provider.fidl",
     "test_client.fidl",

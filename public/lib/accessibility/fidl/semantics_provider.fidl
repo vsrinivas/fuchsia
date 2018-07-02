@@ -10,4 +10,7 @@ library fuchsia.accessibility;
 //
 // This is a stub implementation and is currently a work in progress.
 interface SemanticsProvider {
+  // Return the accessibility node of the element that the input event hits in the semantics
+  // provider. Returns null if nothing was hit.
+  1: GetHitNode(fuchsia.ui.input.InputEvent event) -> (Node? node);
 };
