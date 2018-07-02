@@ -78,7 +78,9 @@ class TestLoopFixture : public ::testing::Test {
   void QuitLoop() { loop_.Quit(); }
 
   // A callback that quits the message loop when called.
-  fit::closure QuitLoopClosure() { return [this] { loop_.Quit(); }; }
+  fit::closure QuitLoopClosure() {
+    return [this] { loop_.Quit(); };
+  }
 
  private:
   // The test message loop for the test fixture.

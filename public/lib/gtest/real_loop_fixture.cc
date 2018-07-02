@@ -15,16 +15,15 @@ bool RunGivenLoopWithTimeout(async::Loop* loop, zx::duration timeout) {
   // after this function returns.
   auto canceled = std::make_shared<bool>(false);
   bool timed_out = false;
-  async::PostDelayedTask(
-      loop->async(),
-      [loop, canceled, &timed_out] {
-        if (*canceled) {
-          return;
-        }
-        timed_out = true;
-        loop->Quit();
-      },
-      timeout);
+  async::PostDelayedTask(loop->async(),
+                         [loop, canceled, &timed_out] {
+                           if (*canceled) {
+                             return;
+                           }
+                           timed_out = true;
+                           loop->Quit();
+                         },
+                         timeout);
   loop->Run();
   loop->ResetQuit();
   // Another task can call Quit() on the message loop, which exits the
@@ -41,12 +40,11 @@ bool RunGivenLoopWithTimeout(async::Loop* loop, zx::duration timeout) {
 }
 
 bool RunGivenLoopWithTimeoutOrUntil(async::Loop* loop,
-                                   fit::function<bool()> condition,
-                                   zx::duration timeout,
-                                   zx::duration step) {
+                                    fit::function<bool()> condition,
+                                    zx::duration timeout, zx::duration step) {
   const zx::time deadline = (timeout == zx::sec(0))
-                            ? zx::time::infinite()
-                            : zx::deadline_after(timeout);
+                                ? zx::time::infinite()
+                                : zx::deadline_after(timeout);
   while (zx::clock::get(ZX_CLOCK_MONOTONIC) < deadline) {
     if (condition()) {
       return true;
@@ -73,12 +71,11 @@ bool RealLoopFixture::RunLoopWithTimeout(zx::duration timeout) {
   return RunGivenLoopWithTimeout(&loop_, timeout);
 }
 
-bool RealLoopFixture::RunLoopWithTimeoutOrUntil(
-    fit::function<bool()> condition,
-    zx::duration timeout,
-    zx::duration step) {
-  return RunGivenLoopWithTimeoutOrUntil(&loop_, std::move(condition),
-                                       timeout, step);
+bool RealLoopFixture::RunLoopWithTimeoutOrUntil(fit::function<bool()> condition,
+                                                zx::duration timeout,
+                                                zx::duration step) {
+  return RunGivenLoopWithTimeoutOrUntil(&loop_, std::move(condition), timeout,
+                                        step);
 }
 
 bool RealLoopFixture::RunLoopUntil(fit::function<bool()> condition,
@@ -92,9 +89,7 @@ void RealLoopFixture::RunLoopUntilIdle() {
   loop_.ResetQuit();
 }
 
-void RealLoopFixture::QuitLoop() {
-  loop_.Quit();
-}
+void RealLoopFixture::QuitLoop() { loop_.Quit(); }
 
 fit::closure RealLoopFixture::QuitLoopClosure() {
   return [this] { loop_.Quit(); };
