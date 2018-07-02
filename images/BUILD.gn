@@ -553,6 +553,8 @@ images += [
     deps = [
       ":data.blk",
     ]
+    legacy_copy = "fvm.data.sparse.blk"
+    legacy_copy_dir = legacy_images_dir
   },
 ]
 
