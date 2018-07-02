@@ -14,6 +14,15 @@ ROOT_PATH = os.path.abspath(__file__ + "/../../..")
 sys.path += [os.path.join(ROOT_PATH, "third_party", "pytoml")]
 import pytoml
 
+# List of packages that are part of the third-party build
+# that live in-tree. In order to unify the two packages in builds
+# that use the output cargo.tomls, we use `= "*"` as the version
+# for these libraries, causing them to resolve via the patch section.
+IN_TREE_THIRD_PARTY_PACKAGES = [
+    "fuchsia-zircon",
+    "fuchsia-zircon-sys",
+]
+
 CARGO_TOML_CONTENTS = '''\
 # Copyright %(year)s The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -82,10 +91,16 @@ def main():
                 crate_data = third_party_json["crates"][crate]
                 deps[crate] = crate_data["cargo_dependency_toml"]
             else:
-                deps[dep_data["package_name"]] = {
-                    "path": dep_data["cargo_toml_dir"],
-                    "version": dep_data["version"],
-                }
+                package_name = dep_data["package_name"]
+                if package_name in IN_TREE_THIRD_PARTY_PACKAGES:
+                    deps[package_name] = {
+                        "version": "*",
+                    }
+                else:
+                    deps[package_name] = {
+                        "path": dep_data["cargo_toml_dir"],
+                        "version": dep_data["version"],
+                    }
 
     with open(cargo_toml_path, "w") as file:
         file.write(CARGO_TOML_CONTENTS % {
