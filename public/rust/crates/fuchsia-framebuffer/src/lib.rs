@@ -1,3 +1,7 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 #![allow(dead_code)]
 #[macro_use]
 extern crate failure;
@@ -20,6 +24,7 @@ use std::os::unix::io::AsRawFd;
 use std::ptr;
 use std::rc::Rc;
 use zx::sys::{zx_cache_flush, zx_handle_t, ZX_CACHE_FLUSH_DATA};
+use zx::sys::zx_cache_policy_t::ZX_CACHE_POLICY_WRITE_COMBINING;
 use zx::VmarFlags;
 use zx::{Handle, Status, Vmar, Vmo};
 
@@ -178,6 +183,8 @@ impl Frame {
     pub fn new(framebuffer: &FrameBuffer, executor: &mut async::Executor) -> Result<Frame, Error> {
         let image_vmo = Self::allocate_image_vmo(framebuffer, executor)?;
 
+        image_vmo.set_cache_policy(ZX_CACHE_POLICY_WRITE_COMBINING)?;
+
         // map image VMO
         let pixel_buffer_addr = Vmar::root_self().map(
             0,
@@ -206,9 +213,11 @@ impl Frame {
     }
 
     pub fn write_pixel(&mut self, x: u32, y: u32, value: &[u8]) {
-        let pixel_size = self.config.pixel_size_bytes as usize;
-        let offset = self.linear_stride_bytes() * y as usize + x as usize * pixel_size;
-        self.pixel_buffer.write_at(offset, value);
+        if x < self.config.width && y < self.config.height {
+            let pixel_size = self.config.pixel_size_bytes as usize;
+            let offset = self.linear_stride_bytes() * y as usize + x as usize * pixel_size;
+            self.pixel_buffer.write_at(offset, value);
+        }
     }
 
     pub fn fill_rectangle(&mut self, x: u32, y: u32, width: u32, height: u32, value: &[u8]) {
@@ -249,6 +258,10 @@ impl Frame {
 
     fn linear_stride_bytes(&self) -> usize {
         self.config.linear_stride_pixels as usize * self.config.pixel_size_bytes as usize
+    }
+
+    pub fn pixel_size_bytes(&self) -> usize {
+        self.config.pixel_size_bytes as usize
     }
 }
 
@@ -375,10 +388,10 @@ impl FrameBuffer {
                 pixel_format: pixel_format as u32,
                 type_: 0,
             };
-            proxy.set_layer_primary_config(id, &mut image_config);
+            proxy.set_layer_primary_config(id, &mut image_config)?;
 
             let mut layers = std::iter::once(id);
-            proxy.set_display_layers(config.display_id, &mut layers);
+            proxy.set_display_layers(config.display_id, &mut layers)?;
             Ok(id)
         } else {
             Err(format_err!("Failed to create layer"))

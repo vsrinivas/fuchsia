@@ -11,9 +11,13 @@ rustc_binary("bin") {
   with_lto = "fat"
 
   deps = [
+    "//garnet/public/rust/crates/fuchsia-app",
     "//garnet/public/rust/crates/fuchsia-zircon",
     "//garnet/public/rust/crates/fuchsia-async",
     "//garnet/public/rust/crates/fuchsia-framebuffer",
+    "//garnet/public/fidl/fuchsia.amber:fuchsia.amber-rustc",
+    "//third_party/rust-crates/rustc_deps:font-rs",
+    "//third_party/rust-crates/rustc_deps:failure",
   ]
 }
 

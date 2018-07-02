@@ -83,6 +83,14 @@ impl Vmo {
         ok(status)
     }
 
+    /// Attempt to change the cache policy of a virtual memory object.
+    ///
+    /// Wraps the `zx_vmo_set_cache_policy` syscall.
+    pub fn set_cache_policy(&self, cache_policy: sys::zx_cache_policy_t) -> Result<(), Status> {
+        let status = unsafe { sys::zx_vmo_set_cache_policy(self.raw_handle(), cache_policy as u32) };
+        ok(status)
+    }
+
     /// Perform an operation on a range of a virtual memory object.
     ///
     /// Wraps the
