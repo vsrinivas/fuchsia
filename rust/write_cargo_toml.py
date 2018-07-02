@@ -27,9 +27,13 @@ CARGO_TOML_CONTENTS = '''\
 # Copyright %(year)s The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
+cargo-features = ["edition"]
+
 [package]
 name = "%(package_name)s"
 version = "%(version)s"
+edition = "%(edition)s"
 license = "BSD-3-Clause"
 authors = ["rust-fuchsia@fuchsia.com"]
 description = "Rust crate for Fuchsia OS"
@@ -56,6 +60,9 @@ def main():
                         required=True)
     parser.add_argument("--version",
                         help="Version of crate",
+                        required=True)
+    parser.add_argument("--edition",
+                        help="Edition of rust to use when compiling the crate",
                         required=True)
     parser.add_argument("--out-dir",
                         help="Path to directory where Cargo.toml should be written",
@@ -107,6 +114,7 @@ def main():
             "package_name": args.package_name,
             "crate_name": args.crate_name,
             "version": args.version,
+            "edition": args.edition,
             "deps": deps,
             "year": cur_year(),
             "bin_or_lib": "[[bin]]" if args.crate_type == "bin" else "[lib]",

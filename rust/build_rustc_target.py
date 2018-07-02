@@ -63,6 +63,10 @@ def main():
     parser.add_argument("--version",
                         help="Semver version of the crate being built",
                         required=True)
+    parser.add_argument("--edition",
+                        help="Edition of rust to use when compiling the crate",
+                        required=True,
+                        choices=["2015", "2018"])
     parser.add_argument("--opt-level",
                         help="Optimization level",
                         required=True,
@@ -132,6 +136,7 @@ def main():
     call_args = [
         args.rustc,
         args.crate_root,
+        "--edition=%s" % args.edition,
         "--crate-type=%s" % args.crate_type,
         "--crate-name=%s" % args.crate_name,
         "--target=%s" % args.target,

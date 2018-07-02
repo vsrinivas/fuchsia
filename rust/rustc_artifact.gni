@@ -95,6 +95,12 @@ template("rustc_artifact") {
     version = "0.1.0"
   }
 
+  if (defined(invoker.edition)) {
+    edition = invoker.edition
+  } else {
+    edition = "2015"
+  }
+
   assert(
       current_os == "mac" || current_os == "linux" || current_os == "fuchsia",
       "current_os was neither mac, linux, nor fuchsia")
@@ -267,6 +273,8 @@ template("rustc_artifact") {
       rebase_path(out_info_path),
       "--version",
       version,
+      "--edition",
+      edition,
     ]
     if (with_lto != "none") {
       args += [ "--lto", with_lto ]
@@ -347,6 +355,8 @@ template("rustc_artifact") {
       type,
       "--version",
       version,
+      "--edition",
+      edition,
       "--third-party-deps-data",
       rebase_path(third_party_deps_data),
     ]

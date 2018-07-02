@@ -15,6 +15,10 @@ import("//build/rust/rustc_artifact.gni")
 #   version (optional)
 #     Semver version of the crate as seen on crates.io.
 #
+#   edition (optional)
+#     Edition of the Rust language to be used.
+#     Options are "2015" and "2018". If unspecified, defaults to 2015.
+#
 #   deps (optional)
 #     List of rust_library GN targets on which this crate depends.
 #     Third party crates can be included through paths like
@@ -58,6 +62,7 @@ template("rustc_binary") {
                            [
                              "name",
                              "version",
+                             "edition",
                              "deps",
                              "non_rust_deps",
                              "with_unit_tests",
