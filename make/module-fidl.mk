@@ -16,7 +16,7 @@ $(MODULE_LIBNAME).a: $(MODULE_FIDL_OBJ)
 	$(call BUILDCMD,$(AR),cr $@ $^)
 
 # always build all libraries
-EXTRA_BUILDDEPS += $(MODULE_LIBNAME).a
+EXTRA_BUILDDEPS += $(MODULE_LIBNAME).a make/module-fidl.mk
 GENERATED += $(MODULE_LIBNAME).a
 
 MODULE_RULESMK := $(MODULE_SRCDIR)/rules.mk
@@ -27,6 +27,7 @@ endif
 
 # Export a list of files for dependent libraries to consume.
 MODULE_FIDL_SRCS_$(MODULE) := $(MODULE_SRCS)
+MODULE_FIDL_INCLUDE_$(MODULE) := $(MODULE_GENDIR)/include
 
 ifneq ($(strip $(MODULE_PACKAGE)),)
 

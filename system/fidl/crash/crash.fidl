@@ -5,7 +5,7 @@
 library fuchsia.crash;
 
 // Analyzes crashed processes.
-[Discoverable]
+[Discoverable, Layout="Simple"]
 interface Analyzer {
     // Requests that the crash analyzer analize the given |thread| in |process|,
     // which has crashed.

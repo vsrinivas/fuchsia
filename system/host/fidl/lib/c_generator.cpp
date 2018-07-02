@@ -189,11 +189,11 @@ std::vector<uint32_t> ArrayCounts(const flat::Library* library, const flat::Type
     }
 }
 
-template <typename T, std::string NameType(const flat::Type*) = NameFlatCType>
+template <typename T, std::string NameType(const flat::Library* library, const flat::Type*) = NameFlatCType>
 CGenerator::Member CreateMember(const flat::Library* library, const T& decl) {
     std::string name = NameIdentifier(decl.name);
     const flat::Type* type = decl.type.get();
-    auto type_name = NameType(type);
+    auto type_name = NameType(library, type);
     std::vector<uint32_t> array_counts = ArrayCounts(library, type);
     return CGenerator::Member{type_name, name, std::move(array_counts)};
 }
@@ -516,7 +516,7 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
         file_ << kIndent << "_request.hdr.ordinal = " << method_info.ordinal << ";\n";
         for (const auto& member : request) {
             const auto& name = member.name;
-            file_ << kIndent << "memcpy(&_request." << name << ", &" << name << ", sizeof(_request." << name << ");\n";
+            file_ << kIndent << "memcpy(&_request." << name << ", &" << name << ", sizeof(_request." << name << "));\n";
             // TODO(FIDL-162): Copy string data into the request.
         }
         StringView wr_handles = "NULL";

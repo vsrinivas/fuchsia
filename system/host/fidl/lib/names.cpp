@@ -250,7 +250,7 @@ std::string NameUnionTag(StringView union_name, const flat::Union::Member& membe
     return std::string(union_name) + "Tag" + NameIdentifier(member.name);
 }
 
-std::string NameFlatCType(const flat::Type* type) {
+std::string NameFlatCType(const flat::Library* library, const flat::Type* type) {
     for (;;) {
         switch (type->kind) {
         case flat::Type::Kind::kHandle:
@@ -275,17 +275,33 @@ std::string NameFlatCType(const flat::Type* type) {
 
         case flat::Type::Kind::kIdentifier: {
             auto identifier_type = static_cast<const flat::IdentifierType*>(type);
-            std::string name = NameName(identifier_type->name, "_", "_");
-            if (identifier_type->nullability == types::Nullability::kNullable) {
-                name.push_back('*');
+            auto named_decl = library->LookupType(identifier_type->name);
+            if (!named_decl)
+                abort();
+            switch (named_decl->kind) {
+                case flat::Decl::Kind::kConst: {
+                    abort();
+                }
+                case flat::Decl::Kind::kEnum:
+                case flat::Decl::Kind::kStruct:
+                case flat::Decl::Kind::kUnion: {
+                    std::string name = NameName(identifier_type->name, "_", "_");
+                    if (identifier_type->nullability == types::Nullability::kNullable) {
+                        name.push_back('*');
+                    }
+                    return name;
+                }
+                case flat::Decl::Kind::kInterface: {
+                    return "zx_handle_t";
+                }
+                default: { abort(); }
             }
-            return name;
         }
         }
     }
 }
 
-std::string NameFlatCOutType(const flat::Type* type) {
+std::string NameFlatCOutType(const flat::Library* library, const flat::Type* type) {
     for (;;) {
         switch (type->kind) {
         case flat::Type::Kind::kHandle:
@@ -310,12 +326,28 @@ std::string NameFlatCOutType(const flat::Type* type) {
 
         case flat::Type::Kind::kIdentifier: {
             auto identifier_type = static_cast<const flat::IdentifierType*>(type);
-            std::string name = NameName(identifier_type->name, "_", "_") + "*";
-            if (identifier_type->nullability == types::Nullability::kNullable) {
-                // Cannot make an out type for nullable types.
+            auto named_decl = library->LookupType(identifier_type->name);
+            if (!named_decl)
                 abort();
+            switch (named_decl->kind) {
+                case flat::Decl::Kind::kConst: {
+                    abort();
+                }
+                case flat::Decl::Kind::kEnum:
+                case flat::Decl::Kind::kStruct:
+                case flat::Decl::Kind::kUnion: {
+                    std::string name = NameName(identifier_type->name, "_", "_") + "*";
+                    if (identifier_type->nullability == types::Nullability::kNullable) {
+                        // Cannot make an out type for nullable types.
+                        abort();
+                    }
+                    return name;
+                }
+                case flat::Decl::Kind::kInterface: {
+                    return "zx_handle_t*";
+                }
+                default: { abort(); }
             }
-            return name;
         }
         }
     }

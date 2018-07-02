@@ -502,10 +502,6 @@ private:
     // will return a pointer to the declaration of the type.
     Decl* LookupType(const flat::Type* type) const;
 
-    // Returns nullptr when the |name| cannot be resolved to a
-    // Name. Otherwise it returns the declaration.
-    Decl* LookupType(const Name& name) const;
-
     bool DeclDependencies(Decl* decl, std::set<Decl*>* out_edges);
 
     bool SortDeclarations();
@@ -530,6 +526,10 @@ private:
     bool CompileType(Type* type, TypeShape* out_type_metadata);
 
 public:
+    // Returns nullptr when the |name| cannot be resolved to a
+    // Name. Otherwise it returns the declaration.
+    Decl* LookupType(const Name& name) const;
+
     // TODO(TO-702) Add a validate literal function. Some things
     // (e.g. array indexes) want to check the value but print the
     // constant, say.
