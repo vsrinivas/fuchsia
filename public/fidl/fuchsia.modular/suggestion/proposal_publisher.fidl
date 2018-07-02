@@ -19,5 +19,11 @@ interface ProposalPublisher {
   // Removes the Proposal with the given ID from the Next/Interruption channel
   // produced by this component.
   2: Remove(string proposal_id);
+
+  // Includes the navigation request in the Navigation channel from this
+  // publisher. Navigation events are immediate and not tracked by any id.
+  // TODO(ejia): Replace with puppetmaster.
+  // EXPERIMENTAL
+  3: ProposeNavigation(NavigationAction navigation);
 };
 

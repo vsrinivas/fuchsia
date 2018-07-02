@@ -47,6 +47,30 @@ interface SuggestionProvider {
 
   // TODO(rosswang): remove this if/when FeedbackListener is merged into Ask.
   5: RegisterFeedbackListener(FeedbackListener speech_listener);
+
+  // Creates a subscription to a "navigation" suggestion.
+  // Like an interruption, the navigation based suggestion will be provided as
+  // soon as it's available.
+  6: SubscribeToNavigation(NavigationListener listener);
+};
+
+// The navigation action requested to be performed
+enum NavigationAction {
+  UNKNOWN = 0;
+
+  // Navigate to the overview or home screen
+  HOME = 1;
+
+  // Navigate to the cover story
+  SCREENSAVER = 2;
+
+  // Launch the full settings
+  SETTINGS = 3;
+};
+
+interface NavigationListener {
+  // Notifies the user interface to perform the navigation requested
+  1: OnNavigation(NavigationAction action);
 };
 
 interface InterruptionListener {

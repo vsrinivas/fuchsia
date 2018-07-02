@@ -27,6 +27,11 @@ void ProposalPublisherImpl::Propose(fuchsia::modular::Proposal proposal) {
   engine_->AddNextProposal(this, std::move(proposal));
 }
 
+void ProposalPublisherImpl::ProposeNavigation(
+    fuchsia::modular::NavigationAction navigation) {
+  engine_->ProposeNavigation(navigation);
+}
+
 void ProposalPublisherImpl::Remove(fidl::StringPtr proposal_id) {
   engine_->RemoveNextProposal(component_url_, proposal_id);
 }

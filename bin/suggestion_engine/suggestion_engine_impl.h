@@ -16,6 +16,7 @@
 #include "peridot/bin/suggestion_engine/auto_select_first_query_listener.h"
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/bin/suggestion_engine/interruptions_processor.h"
+#include "peridot/bin/suggestion_engine/navigation_processor.h"
 #include "peridot/bin/suggestion_engine/next_processor.h"
 #include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"
 #include "peridot/bin/suggestion_engine/query_processor.h"
@@ -89,9 +90,18 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   void RemoveNextProposal(const std::string& component_url,
                           const std::string& proposal_id);
 
+  // Should only be called from ProposalPublisherImpl.
+  void ProposeNavigation(fuchsia::modular::NavigationAction navigation);
+
+
   // |fuchsia::modular::SuggestionProvider|
   void SubscribeToInterruptions(
       fidl::InterfaceHandle<fuchsia::modular::InterruptionListener> listener)
+      override;
+
+  // |fuchsia::modular::SuggestionProvider|
+  void SubscribeToNavigation(
+      fidl::InterfaceHandle<fuchsia::modular::NavigationListener> listener)
       override;
 
   // |fuchsia::modular::SuggestionProvider|
@@ -153,6 +163,7 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   void Terminate(std::function<void()> done) { done(); }
 
  private:
+  friend class NavigationProcessor;
   friend class NextProcessor;
   friend class QueryProcessor;
 
@@ -258,6 +269,9 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
 
   // query execution and processing
   QueryProcessor query_processor_;
+
+  // executes navigation actions
+  NavigationProcessor navigation_processor_;
 
   std::map<std::string, std::shared_ptr<RankingFeature>> ranking_features;
 

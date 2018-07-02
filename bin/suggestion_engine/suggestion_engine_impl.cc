@@ -70,6 +70,11 @@ void SuggestionEngineImpl::AddNextProposal(
   }
 }
 
+void SuggestionEngineImpl::ProposeNavigation(
+    const fuchsia::modular::NavigationAction navigation) {
+  navigation_processor_.Navigate(navigation);
+}
+
 void SuggestionEngineImpl::AddProposalWithRichSuggestion(
     ProposalPublisherImpl* source, fuchsia::modular::Proposal proposal) {
   auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
@@ -127,6 +132,12 @@ void SuggestionEngineImpl::Query(
 void SuggestionEngineImpl::SubscribeToInterruptions(
     fidl::InterfaceHandle<fuchsia::modular::InterruptionListener> listener) {
   next_processor_.RegisterInterruptionListener(std::move(listener));
+}
+
+// |fuchsia::modular::SuggestionProvider|
+void SuggestionEngineImpl::SubscribeToNavigation(
+    fidl::InterfaceHandle<fuchsia::modular::NavigationListener> listener) {
+  navigation_processor_.RegisterListener(std::move(listener));
 }
 
 // |fuchsia::modular::SuggestionProvider|
@@ -476,8 +487,7 @@ void SuggestionEngineImpl::PerformFocusStoryAction(
 void SuggestionEngineImpl::PerformAddModuleAction(
     const fuchsia::modular::Action& action,
     fidl::InterfaceHandle<fuchsia::modular::ProposalListener> listener,
-    const std::string& proposal_id,
-    const std::string& override_story_id) {
+    const std::string& proposal_id, const std::string& override_story_id) {
   if (!story_provider_) {
     FXL_LOG(WARNING) << "Unable to add module; no story provider";
     return;
