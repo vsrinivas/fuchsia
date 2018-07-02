@@ -64,7 +64,7 @@ class TracingLambda {
   }
 
   template <typename... ArgType>
-  auto operator()(ArgType&&... args) const {
+  auto operator()(ArgType&&... args) {
     FXL_DCHECK(!did_run_or_moved_out_);
     did_run_or_moved_out_ = true;
     if (trace_enabled_) {
