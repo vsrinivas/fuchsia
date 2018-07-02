@@ -414,7 +414,6 @@ class LocalModuleResolver::FindModulesByTypesCall
 void LocalModuleResolver::FindModules(fuchsia::modular::FindModulesQuery query,
                                       FindModulesCallback callback) {
   FXL_DCHECK(!query.action.is_null());
-  FXL_DCHECK(!query.parameter_constraints.is_null());
 
   operations_.Add(new FindModulesCall(this, std::move(query), callback));
 }
@@ -422,8 +421,6 @@ void LocalModuleResolver::FindModules(fuchsia::modular::FindModulesQuery query,
 void LocalModuleResolver::FindModulesByTypes(
     fuchsia::modular::FindModulesByTypesQuery query,
     FindModulesByTypesCallback callback) {
-  FXL_DCHECK(!query.parameter_constraints.is_null());
-
   operations_.Add(new FindModulesByTypesCall(this, std::move(query), callback));
 }
 
