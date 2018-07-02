@@ -514,31 +514,36 @@ static uint8_t ath10k_htc_get_credit_allocation(struct ath10k_htc* htc,
     return allocation;
 }
 
-zx_status_t ath10k_htc_wait_target(struct ath10k_htc* htc) {
+static zx_status_t ath10k_htc_wait_ctl_resp(struct ath10k_htc* htc) {
     struct ath10k* ar = htc->ar;
     int i;
-    zx_status_t status = ZX_OK;
-    struct ath10k_htc_msg* msg;
-    uint16_t message_id;
-
-    if (completion_wait(&htc->ctl_resp, ATH10K_HTC_WAIT_TIMEOUT) == ZX_ERR_TIMED_OUT) {
+    zx_status_t status = completion_wait(&htc->ctl_resp, ATH10K_HTC_WAIT_TIMEOUT);
+    if (status == ZX_ERR_TIMED_OUT) {
         /* Workaround: In some cases the PCI HIF doesn't
          * receive interrupt for the control response message
          * even if the buffer was completed. It is suspected
          * iomap writes unmasking PCI CE irqs aren't propagated
          * properly in KVM PCI-passthrough sometimes.
+         * Some symptoms are described in NET-992.
          */
         ath10k_warn("failed to receive control response completion, polling..\n");
 
         for (i = 0; i < CE_COUNT; i++) {
-            ath10k_hif_send_complete_check(htc->ar, i, 1);
+            ath10k_hif_send_complete_check(ar, i, 1);
         }
 
-        if (completion_wait(&htc->ctl_resp, ATH10K_HTC_WAIT_TIMEOUT) == ZX_ERR_TIMED_OUT) {
-            status = ZX_ERR_TIMED_OUT;
-        }
+        status = completion_wait(&htc->ctl_resp, ATH10K_HTC_WAIT_TIMEOUT);
     }
+    return status;
+}
 
+zx_status_t ath10k_htc_wait_target(struct ath10k_htc* htc) {
+    struct ath10k* ar = htc->ar;
+    zx_status_t status = ZX_OK;
+    struct ath10k_htc_msg* msg;
+    uint16_t message_id;
+
+    status = ath10k_htc_wait_ctl_resp(htc);
     if (status != ZX_OK) {
         ath10k_err("ctl_resp never came in (%d)\n", status);
         return status;
@@ -652,9 +657,11 @@ zx_status_t ath10k_htc_connect_service(struct ath10k_htc* htc,
     }
 
     /* wait for response */
-    if (completion_wait(&htc->ctl_resp, ATH10K_HTC_CONN_SVC_TIMEOUT) != ZX_OK) {
-        ath10k_err("Service connect timeout\n");
-        return ZX_ERR_TIMED_OUT;
+    status = ath10k_htc_wait_ctl_resp(htc);
+    if (status != ZX_OK) {
+        ath10k_err("Service connect error: %s\n", zx_status_get_string(status));
+        ath10k_msg_buf_free(msg_buf);
+        return status;
     }
 
     /* we controlled the buffer creation, it's aligned */

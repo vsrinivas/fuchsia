@@ -327,7 +327,6 @@ struct ath10k_htc_svc_conn_resp {
 #define ATH10K_HTC_WAIT_TIMEOUT (ZX_SEC(1))
 #define ATH10K_HTC_CONTROL_BUFFER_SIZE (ATH10K_HTC_MAX_CTRL_MSG_LEN + \
                                         sizeof(struct ath10k_htc_hdr))
-#define ATH10K_HTC_CONN_SVC_TIMEOUT (ZX_SEC(1))
 
 struct ath10k_htc_ep {
     struct ath10k_htc* htc;
