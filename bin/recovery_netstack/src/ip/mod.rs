@@ -165,7 +165,7 @@ fn lookup_route<A: IpAddr>(state: &IpLayerState, dst_ip: A) -> Option<Destinatio
 /// have sufficient space preceding the body for all encapsulating headers or
 /// does not have enough body plus padding bytes to satisfy the requirement
 /// passed to the callback.
-pub fn send_ip_packet<'a, A, B, F>(state: &mut StackState, dst_ip: A, proto: IpProto, get_buffer: F)
+pub fn send_ip_packet<A, B, F>(state: &mut StackState, dst_ip: A, proto: IpProto, get_buffer: F)
 where
     A: IpAddr,
     B: AsRef<[u8]> + AsMut<[u8]>,

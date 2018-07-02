@@ -38,8 +38,11 @@ enum DeviceProtocol {
 /// The state associated with the device layer.
 #[derive(Default)]
 pub struct DeviceLayerState {
-    // invariant: even though each protocol has its own hash map, keys are
-    // unique across all hash maps
+    // Invariant: even though each protocol has its own hash map, IDs (used as
+    // keys in the hash maps) are unique across all hash maps. This is
+    // guaranteed by allocating IDs sequentially, and never re-using an ID
+    // (which is a requirement of the FIDL API anyway).
+    next_id: u64,
     ethernet: HashMap<u64, EthernetDeviceState>,
 }
 
