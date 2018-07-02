@@ -231,30 +231,8 @@ int analyzer_starter(void* arg) {
         analyzer_request = ZX_HANDLE_INVALID;
         if (status != ZX_OK)
             goto cleanup;
-        fuchsia_crash_AnalyzerAnalyzeRequest request;
-        fuchsia_crash_AnalyzerAnalyzeResponse response;
-        memset(&request, 0, sizeof(request));
-        memset(&response, 0, sizeof(response));
-        request.hdr.ordinal = fuchsia_crash_AnalyzerAnalyzeOrdinal;
-        request.process = FIDL_HANDLE_PRESENT;
-        request.thread = FIDL_HANDLE_PRESENT;
-        {
-            zx_channel_call_args_t args = {
-                .wr_bytes = &request,
-                .wr_handles = handles,
-                .rd_bytes = &response,
-                .rd_handles = NULL,
-                .wr_num_bytes = sizeof(request),
-                .wr_num_handles = countof(handles),
-                .rd_num_bytes = sizeof(response),
-                .rd_num_handles = 0u,
-            };
-            uint32_t actual_bytes = 0u;
-            uint32_t actual_handles = 0u;
-            status = zx_channel_call(analyzer, 0, ZX_TIME_INFINITE, &args,
-                                    &actual_bytes, &actual_handles);
-        }
-        // zx_channel_call always consumes the handles.
+        status = fuchsia_crash_AnalyzerAnalyze(analyzer, handles[0], handles[1]);
+        // fuchsia_crash_AnalyzerAnalyze always consumes the handles.
         memset(handles, 0, sizeof(handles));
 
 cleanup:

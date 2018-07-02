@@ -505,9 +505,6 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
         std::vector<Member> response;
         GetMethodParameters(library_, method_info, &request, &response);
         EmitClientMethodDecl(&file_, method_info.c_name, request, response);
-        // TODO(FIDL-162): Compute max_wr_handles.
-        uint32_t max_wr_handles = 0;
-
         file_ << "{\n";
         file_ << kIndent << method_info.request->c_name << " _request;\n";
         // TODO(FIDL-162): Allocate message space for input strings.
@@ -519,59 +516,45 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
             file_ << kIndent << "memcpy(&_request." << name << ", &" << name << ", sizeof(_request." << name << "));\n";
             // TODO(FIDL-162): Copy string data into the request.
         }
-        StringView wr_handles = "NULL";
-        if (max_wr_handles > 0) {
-            wr_handles = "_wr_handles";
-            file_ << kIndent << "zx_handle_t _wr_handles[" << max_wr_handles << "];\n";
-        }
+        file_ << kIndent << "zx_handle_t _handles[ZX_CHANNEL_MAX_MSG_HANDLES];\n";
         file_ << kIndent << "uint32_t _wr_num_handles = 0u;\n";
         file_ << kIndent << "zx_status_t _status = fidl_encode(&" << method_info.request->coded_name
-              << ", &_request, _wr_num_bytes, " << wr_handles << ", " << max_wr_handles
+              << ", &_request, _wr_num_bytes, _handles, ZX_CHANNEL_MAX_MSG_HANDLES"
               << ", &_wr_num_handles, NULL);\n";
         // TODO(FIDL-162): Clean up handles on error.
         file_ << kIndent << "if (_status != ZX_OK)\n";
         file_ << kIndent << kIndent << "return _status;\n";
         if (!method_info.response) {
-            file_ << kIndent << "return zx_channel_write(_channel, 0u, &_request, _wr_num_bytes, "
-                  << wr_handles << ", _wr_num_handles);\n";
+            file_ << kIndent << "return zx_channel_write(_channel, 0u, &_request, _wr_num_bytes, _handles, _wr_num_handles);\n";
         } else {
-            // TODO(FIDL-162): Compute max_rd_handles.
-            uint32_t max_rd_handles = 0;
-
             file_ << kIndent << method_info.response->c_name << " _response;\n";
             // TODO(FIDL-162): Allocate message space for output strings.
             file_ << kIndent << "uint32_t _rd_num_bytes = sizeof(_request);\n";
 
-            StringView rd_handles = "NULL";
-            if (max_rd_handles > 0) {
-                rd_handles = "_rd_handles";
-                file_ << kIndent << "zx_handle_t _rd_handles[" << max_rd_handles << "];\n";
-            }
-
             file_ << kIndent << "zx_channel_call_args_t _args = {\n";
             file_ << kIndent << kIndent << ".wr_bytes = &_request,\n";
-            file_ << kIndent << kIndent << ".wr_handles = " << wr_handles << ",\n";
+            file_ << kIndent << kIndent << ".wr_handles = _handles,\n";
             file_ << kIndent << kIndent << ".rd_bytes = &_response,\n";
-            file_ << kIndent << kIndent << ".rd_handles = " << rd_handles << ",\n";
+            file_ << kIndent << kIndent << ".rd_handles = _handles,\n";
             file_ << kIndent << kIndent << ".wr_num_bytes = _wr_num_bytes,\n";
             file_ << kIndent << kIndent << ".wr_num_handles = _wr_num_handles,\n";
             file_ << kIndent << kIndent << ".rd_num_bytes = _rd_num_bytes,\n";
-            file_ << kIndent << kIndent << ".rd_num_handles = " << max_rd_handles << ",\n";
+            file_ << kIndent << kIndent << ".rd_num_handles = ZX_CHANNEL_MAX_MSG_HANDLES,\n";
             file_ << kIndent << "};\n";
 
             file_ << kIndent << "uint32_t _actual_num_bytes = 0u;\n";
             file_ << kIndent << "uint32_t _actual_num_handles = 0u;\n";
             file_ << kIndent << "_status = zx_channel_call(_channel, 0u, ZX_TIME_INFINITE, &_args, &_actual_num_bytes, &_actual_num_handles);\n";
-            // TODO(FIDL-162): Clean up handles on error.
             file_ << kIndent << "if (_status != ZX_OK)\n";
             file_ << kIndent << kIndent << "return _status;\n";
 
             // TODO(FIDL-162): Do we need to validate the response ordinal or does fidl_decode do that for us?
             file_ << kIndent << "_status = fidl_decode(&" << method_info.response->coded_name
-                  << ", &_response, _actual_num_bytes, " << wr_handles << ", _actual_num_handles, NULL);\n";
-            // TODO(FIDL-162): Clean up handles on error.
-            file_ << kIndent << "if (_status != ZX_OK)\n";
+                  << ", &_response, _actual_num_bytes, _handles, _actual_num_handles, NULL);\n";
+            file_ << kIndent << "if (_status != ZX_OK) {\n";
+            file_ << kIndent << kIndent << "zx_handle_close_many(_handles, _actual_num_handles);\n";
             file_ << kIndent << kIndent << "return _status;\n";
+            file_ << kIndent << "}\n";
 
             for (const auto& member : response) {
                 const auto& name = member.name;
