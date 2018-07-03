@@ -96,7 +96,7 @@ _impl_wrapper = rule(
     }
 )
 
-def cc_fidl_library(name, library, visibility=None):
+def cc_fidl_library(name, library, deps=[], visibility=None):
     gen_name = "%s_codegen" % name
     impl_name = "%s_impl" % name
 
@@ -124,7 +124,7 @@ def cc_fidl_library(name, library, visibility=None):
             # This is necessary in order to locate generated headers.
             gen_name + ".cc",
         ],
-        deps = [
+        deps = deps + [
             Label("//pkg/fidl_cpp"),
         ],
         visibility = visibility,
