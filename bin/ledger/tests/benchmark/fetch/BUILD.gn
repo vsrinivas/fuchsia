@@ -24,7 +24,7 @@ executable("ledger_benchmark_fetch") {
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/convert",
     "//peridot/lib/firebase_auth/testing",
-    "//peridot/public/lib/ledger/fidl",
+    "//peridot/public/fidl/fuchsia.ledger",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/trace-provider",

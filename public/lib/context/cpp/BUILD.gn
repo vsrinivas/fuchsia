@@ -9,7 +9,7 @@ source_set("context_helper") {
   ]
 
   deps = [
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }
 
@@ -21,7 +21,7 @@ source_set("context_metadata_builder") {
 
   deps = [
     "//garnet/public/lib/fidl/cpp",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }
 
@@ -32,6 +32,6 @@ source_set("formatting") {
   ]
 
   deps = [
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }

@@ -1,0 +1,86 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.modular") {
+  cpp_legacy_callbacks = true
+
+  sdk_category = "partner"
+
+  sources = [
+    "action_log/component.fidl",
+    "action_log/factory.fidl",
+    "action_log/listener.fidl",
+    "action_log/user.fidl",
+    "agent/agent.fidl",
+    "agent/agent_context.fidl",
+    "agent/agent_controller/agent_controller.fidl",
+    "agent/agent_provider.fidl",
+    "clipboard/clipboard.fidl",
+    "component/component_context.fidl",
+    "component/message_queue.fidl",
+    "config/config.fidl",
+    "context/context_engine.fidl",
+    "context/context_reader.fidl",
+    "context/context_writer.fidl",
+    "context/debug.fidl",
+    "context/metadata.fidl",
+    "context/value.fidl",
+    "context/value_type.fidl",
+    "device/device_runner_monitor.fidl",
+    "device/device_shell.fidl",
+    "device/user_provider.fidl",
+    "entity/entity.fidl",
+    "entity/entity_provider.fidl",
+    "entity/entity_reference_factory.fidl",
+    "entity/entity_resolver.fidl",
+    "intent/intent.fidl",
+    "lifecycle/lifecycle.fidl",
+    "module/link_path.fidl",
+    "module/module.fidl",
+    "module/module_context.fidl",
+    "module/module_controller.fidl",
+    "module/module_data.fidl",
+    "module/module_manifest.fidl",
+    "module/module_state.fidl",
+    "module_resolver/module_resolver.fidl",
+    "story/create_link.fidl",
+    "story/create_module_parameter_map.fidl",
+    "story/link.fidl",
+    "story/puppet_master.fidl",
+    "story/session_watcher.fidl",
+    "story/story_command.fidl",
+    "story/story_controller.fidl",
+    "story/story_info.fidl",
+    "story/story_provider.fidl",
+    "story/story_shell.fidl",
+    "story/story_state.fidl",
+    "suggestion/debug.fidl",
+    "suggestion/proposal.fidl",
+    "suggestion/proposal_publisher.fidl",
+    "suggestion/query_handler.fidl",
+    "suggestion/suggestion_display.fidl",
+    "suggestion/suggestion_engine.fidl",
+    "suggestion/suggestion_provider.fidl",
+    "suggestion/user_input.fidl",
+    "surface/container.fidl",
+    "surface/surface.fidl",
+    "user/device_map.fidl",
+    "user/focus.fidl",
+    "user/user_shell.fidl",
+    "user_intelligence/intelligence_services.fidl",
+    "user_intelligence/scope.fidl",
+    "user_intelligence/user_intelligence_provider.fidl",
+  ]
+
+  deps = [
+    "//garnet/public/lib/images/fidl",
+    "//garnet/public/lib/media/fidl",
+    "//garnet/public/lib/ui/policy/fidl",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//peridot/public/fidl/fuchsia.modular.auth",
+    "//peridot/public/fidl/fuchsia.speech",
+  ]
+}

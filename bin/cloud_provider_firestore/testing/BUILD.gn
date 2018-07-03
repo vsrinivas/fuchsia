@@ -20,7 +20,7 @@ source_set("testing") {
     "//peridot/bin/cloud_provider_firestore/fidl",
     "//peridot/bin/cloud_provider_firestore/include",
     "//peridot/lib/firebase_auth/testing:service_account",
-    "//peridot/public/lib/cloud_provider/fidl",
+    "//peridot/public/fidl/fuchsia.ledger.cloud",
     "//zircon/public/lib/async-loop-cpp",
   ]
 

@@ -31,7 +31,7 @@ source_set("lib") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/convert",
-    "//peridot/public/lib/ledger/fidl",
+    "//peridot/public/fidl/fuchsia.ledger",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
   ]

@@ -14,7 +14,7 @@ executable_package("device_runner_monitor") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

@@ -37,9 +37,9 @@ source_set("lib") {
     "//peridot/bin/ledger/fidl/include",
     "//peridot/bin/ledger/fidl_helpers",
     "//peridot/bin/ledger/filesystem",
-    "//peridot/public/lib/auth/fidl",
-    "//peridot/public/lib/cloud_provider/fidl",
-    "//peridot/public/lib/ledger/fidl",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//peridot/public/fidl/fuchsia.ledger.cloud",
+    "//peridot/public/fidl/fuchsia.modular.auth",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/trace-provider",
@@ -75,7 +75,7 @@ source_set("ledger_instance_factory") {
     "//peridot/bin/ledger/fidl/include",
     "//peridot/bin/ledger/fidl_helpers",
     "//peridot/lib/scoped_tmpfs",
-    "//peridot/public/lib/ledger/fidl",
+    "//peridot/public/fidl/fuchsia.ledger",
   ]
 
   deps = [

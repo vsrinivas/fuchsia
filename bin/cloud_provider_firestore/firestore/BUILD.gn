@@ -21,7 +21,7 @@ source_set("firestore") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/cloud_provider_firestore/grpc",
     "//peridot/bin/cloud_provider_firestore/include",
-    "//peridot/public/lib/cloud_provider/fidl",
+    "//peridot/public/fidl/fuchsia.ledger.cloud",
     "//third_party/googleapis/google/firestore/v1beta1",
     "//third_party/googleapis/google/firestore/v1beta1:service",
     "//third_party/grpc:grpc++",

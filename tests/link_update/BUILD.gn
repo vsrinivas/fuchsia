@@ -29,8 +29,8 @@ executable_package("link_update_test_user_shell") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl_internal",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.internal",
     "//peridot/tests/common:defs",
   ]
 }

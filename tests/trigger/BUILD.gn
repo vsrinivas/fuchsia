@@ -29,7 +29,7 @@ executable_package("trigger_test_user_shell") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/tests/common:defs",
   ]
 }
@@ -46,7 +46,7 @@ executable_package("trigger_test_module") {
     ":trigger_test_service",
     "//garnet/public/lib/callback",
     "//peridot/lib/testing",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/tests/common:defs",
     "//zircon/public/lib/async-loop-cpp",
@@ -64,7 +64,7 @@ executable_package("trigger_test_agent") {
     ":defs",
     ":trigger_test_service",
     "//peridot/lib/testing",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
     "//peridot/tests/common:defs",
     "//zircon/public/lib/async-loop-cpp",

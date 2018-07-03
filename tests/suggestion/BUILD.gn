@@ -24,7 +24,7 @@ executable_package("suggestion_test_module") {
     "//garnet/public/lib/callback",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/tests/common:defs",
     "//zircon/public/lib/async-loop-cpp",
@@ -42,7 +42,7 @@ executable_package("suggestion_test_user_shell") {
     ":defs",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/tests/common:defs",
   ]
 }

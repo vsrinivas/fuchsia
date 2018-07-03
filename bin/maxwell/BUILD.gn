@@ -24,7 +24,7 @@ executable_package("maxwell") {
     ":config",
     ":user_intelligence_provider",
     "//garnet/public/lib/app/cpp",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -55,7 +55,7 @@ source_set("user_intelligence_provider") {
     "//garnet/public/lib/net/oldhttp/fidl",
     "//peridot/lib:maxwell_internal",
     "//peridot/lib/util:rate_limited_retry",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//zircon/public/fidl/cobalt:cobalt",
   ]
 }
@@ -67,7 +67,7 @@ source_set("intelligence_services") {
   ]
 
   deps = [
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }
 

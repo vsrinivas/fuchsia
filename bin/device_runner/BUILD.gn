@@ -40,9 +40,9 @@ executable_package("device_runner") {
     "//peridot/lib/fidl:scope",
     "//peridot/lib/ledger_client:constants",
     "//peridot/lib/util:filesystem",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl_internal",
-    "//peridot/public/lib/auth/fidl",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.auth",
+    "//peridot/public/fidl/fuchsia.modular.internal",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
@@ -80,9 +80,9 @@ source_set("lib") {
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/fidl:scope",
     "//peridot/lib/util:filesystem",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl_internal",
-    "//peridot/public/lib/auth/fidl",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.auth",
+    "//peridot/public/fidl/fuchsia.modular.internal",
     "//zircon/public/lib/trace",
   ]
 }
@@ -98,7 +98,7 @@ executable_package("dev_device_shell") {
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/testing",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]

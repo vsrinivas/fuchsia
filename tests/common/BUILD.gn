@@ -27,7 +27,7 @@ executable("common_null_module_bin") {
     ":defs",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -69,7 +69,7 @@ executable("common_active_module_bin") {
     ":defs",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//zircon/public/lib/async-loop-cpp",
   ]

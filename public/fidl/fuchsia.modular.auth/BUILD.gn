@@ -7,8 +7,7 @@ import("//build/fidl/fidl.gni")
 # TODO(alhaad/ukode): Move token_provider.fidl into a separate rule since
 # third-party components should only depend on it.
 # TODO(alhaad/ukode): Also move these services to a separate repository.
-fidl("fidl") {
-  name = "fuchsia.modular.auth"
+fidl("fuchsia.modular.auth") {
   cpp_legacy_callbacks = true
 
   sdk_category = "partner"

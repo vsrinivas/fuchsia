@@ -13,7 +13,7 @@ fidl("fidl") {
   ]
 
   deps = [
-    "//peridot/public/lib/cloud_provider/fidl",
-    "//peridot/public/lib/ledger/fidl",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//peridot/public/fidl/fuchsia.ledger.cloud",
   ]
 }

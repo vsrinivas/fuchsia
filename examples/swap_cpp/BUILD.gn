@@ -38,7 +38,7 @@ source_set("module") {
 
   deps = [
     "//garnet/public/lib/ui/view_framework",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
   ]
 }
@@ -50,7 +50,7 @@ executable_package("swap_recipe") {
   deps = [
     "//garnet/public/lib/ui/view_framework",
     "//peridot/lib/fidl:single_service_app",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]

@@ -21,7 +21,7 @@ executable_package("suggestion_engine") {
     ":debug",
     ":suggestion_engine_impl",
     "//garnet/public/lib/app/cpp",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -62,7 +62,7 @@ source_set("suggestion_engine_impl") {
     "//peridot/lib/bound_set",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/util:rate_limited_retry",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/context/cpp:context_helper",
   ]
 }
@@ -93,7 +93,7 @@ source_set("interruption_processor") {
     ":models",
     "//peridot/bin/suggestion_engine/decision_policies:all",
     "//peridot/bin/suggestion_engine/ranking_features:ranking_feature",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }
 
@@ -109,7 +109,7 @@ source_set("state") {
     "//peridot/bin/suggestion_engine/filters:base",
     "//peridot/bin/suggestion_engine/rankers:ranker",
     "//peridot/bin/suggestion_engine/ranking_features:ranking_feature",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/context/cpp:context_helper",
   ]
 }
@@ -127,7 +127,7 @@ source_set("models") {
   ]
 
   public_deps = [
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }
 
@@ -141,7 +141,7 @@ source_set("debug") {
     ":models",
     ":state",
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 
   public_deps = [

@@ -18,7 +18,7 @@ source_set("ranker") {
   ]
 
   deps = [
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 
   public_deps = [
@@ -35,7 +35,7 @@ source_set("linear_ranker") {
   deps = [
     ":ranker",
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 
   public_deps = [

@@ -11,8 +11,8 @@ executable_package("todo_cpp") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib/ledger/fidl",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//peridot/public/fidl/fuchsia.modular",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
   ]

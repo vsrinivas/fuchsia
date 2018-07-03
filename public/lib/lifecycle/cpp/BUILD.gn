@@ -21,6 +21,6 @@ source_set("lifecycle_impl") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }

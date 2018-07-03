@@ -9,6 +9,6 @@ source_set("formatting") {
   ]
 
   deps = [
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }

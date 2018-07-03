@@ -22,7 +22,7 @@ source_set("entity_provider_runner") {
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/util",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }
 
@@ -52,9 +52,9 @@ executable("entity_provider_runner_unittest") {
     "//peridot/lib/testing:fake_agent_runner_storage",
     "//peridot/lib/testing:mock_base",
     "//peridot/lib/testing:test_with_ledger",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.auth",
     "//peridot/public/lib/agent/cpp",
-    "//peridot/public/lib/auth/fidl",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/trace",
   ]

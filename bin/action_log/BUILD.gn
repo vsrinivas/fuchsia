@@ -16,7 +16,7 @@ executable_package("action_log") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
   ]

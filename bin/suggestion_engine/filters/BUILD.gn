@@ -27,7 +27,7 @@ source_set("suggestion_passive_filter") {
 
   deps = [
     "//peridot/bin/suggestion_engine:models",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }
 
@@ -39,7 +39,7 @@ source_set("suggestion_active_filter") {
 
   deps = [
     "//peridot/bin/suggestion_engine:models",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }
 
@@ -51,7 +51,7 @@ source_set("conjugate_ranked_passive_filter") {
 
   deps = [
     ":suggestion_passive_filter",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 
   public_deps = [
@@ -81,7 +81,7 @@ source_set("ranked_active_filter") {
 
   deps = [
     ":suggestion_active_filter",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 
   public_deps = [

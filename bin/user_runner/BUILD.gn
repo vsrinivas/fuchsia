@@ -60,14 +60,14 @@ executable_package("user_runner") {
     "//peridot/lib/ledger_client:types",
     "//peridot/lib/rapidjson",
     "//peridot/lib/rio",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl_internal",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//peridot/public/fidl/fuchsia.ledger.cloud",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.auth",
+    "//peridot/public/fidl/fuchsia.modular.internal",
+    "//peridot/public/fidl/fuchsia.speech",
     "//peridot/public/lib/app_driver/cpp:app_driver",
     "//peridot/public/lib/async/cpp:operation",
-    "//peridot/public/lib/auth/fidl",
-    "//peridot/public/lib/cloud_provider/fidl",
-    "//peridot/public/lib/ledger/fidl",
-    "//peridot/public/lib/speech/fidl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
@@ -87,7 +87,7 @@ executable_package("dev_user_shell") {
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",
     "//peridot/lib/rapidjson",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -113,9 +113,9 @@ source_set("component_context") {
     "//peridot/lib/ledger_client:operations",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:types",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/async/cpp:operation",
-    "//peridot/public/lib/ledger/fidl",
   ]
 }
 
@@ -137,10 +137,10 @@ source_set("focus") {
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:types",
     "//peridot/lib/rapidjson",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl_internal",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.internal",
     "//peridot/public/lib/async/cpp:operation",
-    "//peridot/public/lib/ledger/fidl",
   ]
 }
 
@@ -154,6 +154,6 @@ source_set("presentation_provider") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/policy/fidl",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }

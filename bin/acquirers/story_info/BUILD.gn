@@ -26,7 +26,7 @@ executable_package("story_info") {
     "//peridot/lib:maxwell_internal",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/rapidjson",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//peridot/public/lib/context/cpp:formatting",

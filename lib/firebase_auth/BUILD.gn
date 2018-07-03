@@ -19,7 +19,7 @@ source_set("firebase_auth") {
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fxl",
     "//peridot/lib/cobalt",
-    "//peridot/public/lib/auth/fidl",
+    "//peridot/public/fidl/fuchsia.modular.auth",
     "//zircon/public/lib/fit",
   ]
 }

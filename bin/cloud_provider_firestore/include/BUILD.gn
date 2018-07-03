@@ -11,6 +11,6 @@ source_set("include") {
 
   public_deps = [
     "//peridot/bin/cloud_provider_firestore/fidl",
-    "//peridot/public/lib/cloud_provider/fidl",
+    "//peridot/public/fidl/fuchsia.ledger.cloud",
   ]
 }

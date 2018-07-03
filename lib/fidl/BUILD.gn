@@ -20,7 +20,7 @@ source_set("app_client") {
     "//garnet/public/lib/svc/cpp",
     "//peridot/lib/common:async_holder",
     "//peridot/lib/rio",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }
 
@@ -99,7 +99,7 @@ source_set("single_service_app") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/views/fidl:v1",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }
 
@@ -129,7 +129,7 @@ source_set("message_receiver_client") {
 
   deps = [
     "//garnet/public/lib/fidl/cpp",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }
 

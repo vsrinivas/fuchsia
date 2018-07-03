@@ -9,7 +9,7 @@ source_set("command_runner") {
   ]
 
   public_deps = [
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }
 

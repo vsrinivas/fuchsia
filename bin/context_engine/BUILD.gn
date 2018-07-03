@@ -13,7 +13,7 @@ executable_package("context_engine") {
   deps = [
     ":context_engine_impl",
     "//garnet/public/lib/app/cpp",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -34,7 +34,7 @@ source_set("context_index") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }
 
@@ -48,7 +48,7 @@ executable("context_index_unittest") {
   deps = [
     ":context_index",
     "//garnet/public/lib/fsl",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/cpp:formatting",
     "//third_party/googletest:gtest_main",
@@ -63,7 +63,7 @@ source_set("context_reader_impl") {
 
   deps = [
     ":context_repository",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/context/cpp:formatting",
   ]
 }
@@ -85,7 +85,7 @@ source_set("context_repository") {
     "//garnet/public/lib/fsl",
     "//peridot/lib/bound_set",
     "//peridot/lib/rapidjson",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/context/cpp:formatting",
     "//third_party/rapidjson",
   ]
@@ -101,7 +101,7 @@ executable("context_repository_unittest") {
   deps = [
     ":context_repository",
     "//garnet/public/lib/fsl",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//peridot/public/lib/context/cpp:formatting",
@@ -119,7 +119,7 @@ source_set("context_writer_impl") {
     ":context_repository",
     "//garnet/public/lib/fxl",
     "//peridot/lib/bound_set",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/async/cpp:future",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/entity/cpp",
@@ -143,7 +143,7 @@ source_set("context_engine_impl") {
     ":context_repository",
     ":context_writer_impl",
     "//garnet/public/lib/fidl/cpp",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }
 
@@ -155,7 +155,7 @@ source_set("scope_utils") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//third_party/boringssl",  # for sha256
   ]
 }

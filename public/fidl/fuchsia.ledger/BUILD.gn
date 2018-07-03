@@ -4,9 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fidl") {
-  name = "fuchsia.ledger"
-
+fidl("fuchsia.ledger") {
   sdk_category = "partner"
 
   sources = [

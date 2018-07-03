@@ -30,7 +30,7 @@ source_set("rank_over_threshold_decision_policy") {
 
   deps = [
     ":decision_policy",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 
   public_deps = [

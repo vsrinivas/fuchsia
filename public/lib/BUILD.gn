@@ -2,17 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/fidl/fidl.gni")
+import("//build/fidl/toolchain.gni")
 
 group("services") {
   deps = [
-    ":fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }
 
 group("just_fidl") {
   deps = [
-    ":fidl($fidl_toolchain)",
+    "//peridot/public/fidl/fuchsia.modular($fidl_toolchain)",
   ]
 }
 
@@ -23,100 +23,5 @@ executable("peridot_public_lib_unittests") {
     "async/cpp:unittests",
     "entity/cpp:unittests",
     "//third_party/googletest:gtest_main",
-  ]
-}
-
-fidl("fidl") {
-  name = "fuchsia.modular"
-  cpp_legacy_callbacks = true
-
-  sdk_category = "partner"
-
-  sources = [
-    "action_log/fidl/component.fidl",
-    "action_log/fidl/factory.fidl",
-    "action_log/fidl/listener.fidl",
-    "action_log/fidl/user.fidl",
-    "agent/fidl/agent.fidl",
-    "agent/fidl/agent_context.fidl",
-    "agent/fidl/agent_controller/agent_controller.fidl",
-    "agent/fidl/agent_provider.fidl",
-    "clipboard/fidl/clipboard.fidl",
-    "component/fidl/component_context.fidl",
-    "component/fidl/message_queue.fidl",
-    "config/fidl/config.fidl",
-    "context/fidl/context_engine.fidl",
-    "context/fidl/context_reader.fidl",
-    "context/fidl/context_writer.fidl",
-    "context/fidl/debug.fidl",
-    "context/fidl/metadata.fidl",
-    "context/fidl/value.fidl",
-    "context/fidl/value_type.fidl",
-    "device/fidl/device_runner_monitor.fidl",
-    "device/fidl/device_shell.fidl",
-    "device/fidl/user_provider.fidl",
-    "entity/fidl/entity.fidl",
-    "entity/fidl/entity_provider.fidl",
-    "entity/fidl/entity_reference_factory.fidl",
-    "entity/fidl/entity_resolver.fidl",
-    "intent/fidl/intent.fidl",
-    "lifecycle/fidl/lifecycle.fidl",
-    "module/fidl/link_path.fidl",
-    "module/fidl/module.fidl",
-    "module/fidl/module_context.fidl",
-    "module/fidl/module_controller.fidl",
-    "module/fidl/module_data.fidl",
-    "module/fidl/module_manifest.fidl",
-    "module/fidl/module_state.fidl",
-    "module_resolver/fidl/module_resolver.fidl",
-    "story/fidl/create_link.fidl",
-    "story/fidl/create_module_parameter_map.fidl",
-    "story/fidl/link.fidl",
-    "story/fidl/puppet_master.fidl",
-    "story/fidl/session_watcher.fidl",
-    "story/fidl/story_command.fidl",
-    "story/fidl/story_controller.fidl",
-    "story/fidl/story_info.fidl",
-    "story/fidl/story_provider.fidl",
-    "story/fidl/story_shell.fidl",
-    "story/fidl/story_state.fidl",
-    "suggestion/fidl/debug.fidl",
-    "suggestion/fidl/proposal.fidl",
-    "suggestion/fidl/proposal_publisher.fidl",
-    "suggestion/fidl/query_handler.fidl",
-    "suggestion/fidl/suggestion_display.fidl",
-    "suggestion/fidl/suggestion_engine.fidl",
-    "suggestion/fidl/suggestion_provider.fidl",
-    "suggestion/fidl/user_input.fidl",
-    "surface/fidl/container.fidl",
-    "surface/fidl/surface.fidl",
-    "user/fidl/device_map.fidl",
-    "user/fidl/focus.fidl",
-    "user/fidl/user_shell.fidl",
-    "user_intelligence/fidl/intelligence_services.fidl",
-    "user_intelligence/fidl/scope.fidl",
-    "user_intelligence/fidl/user_intelligence_provider.fidl",
-  ]
-
-  deps = [
-    "auth/fidl",
-    "ledger/fidl",
-    "speech/fidl",
-    "//garnet/public/lib/images/fidl",
-    "//garnet/public/lib/media/fidl",
-    "//garnet/public/lib/ui/policy/fidl",
-  ]
-}
-
-fidl("fidl_internal") {
-  name = "fuchsia.modular.internal"
-  cpp_legacy_callbacks = true
-
-  sources = [
-    "story/fidl/story_data.fidl",
-    "user/fidl/user_runner.fidl",
-  ]
-  deps = [
-    ":fidl",
   ]
 }

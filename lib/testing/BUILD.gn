@@ -44,7 +44,7 @@ source_set("component_context_fake") {
   public_deps = [
     ":entity_resolver_fake",
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }
 
@@ -58,7 +58,7 @@ source_set("entity_resolver_fake") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }
 
@@ -71,7 +71,7 @@ source_set("story_controller_mock") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 
   deps = [
@@ -88,7 +88,7 @@ source_set("story_provider_mock") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 
   deps = [
@@ -148,12 +148,12 @@ source_set("ledger_repository_for_testing") {
     "//peridot/lib/fidl:app_client",
     "//peridot/lib/ledger_client:constants",
     "//peridot/lib/rio",
-    "//peridot/public/lib/ledger/fidl",
+    "//peridot/public/fidl/fuchsia.ledger",
   ]
 
   public_deps = [
     "//peridot/lib/scoped_tmpfs",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }
 

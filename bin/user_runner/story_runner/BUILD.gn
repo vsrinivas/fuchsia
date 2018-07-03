@@ -52,19 +52,19 @@ source_set("story_runner") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/util",
     "//peridot/lib/util:debug",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl_internal",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.internal",
     "//peridot/public/lib/async/cpp:future",
     "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/entity/cpp:json",
-    "//peridot/public/lib/ledger/fidl",
   ]
 
   deps = [
     "//peridot/bin/user_runner/storage",
     "//peridot/lib/fidl:clone",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -80,7 +80,7 @@ executable_package("dev_story_shell") {
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]

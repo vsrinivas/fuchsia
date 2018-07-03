@@ -32,10 +32,10 @@ source_set("agent_runner") {
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:types",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.auth",
     "//peridot/public/lib/async/cpp:operation",
-    "//peridot/public/lib/auth/fidl",
-    "//peridot/public/lib/ledger/fidl",
   ]
 }
 
@@ -61,8 +61,8 @@ executable("agent_runner_unittest") {
     "//peridot/lib/testing:fake_agent_runner_storage",
     "//peridot/lib/testing:mock_base",
     "//peridot/lib/testing:test_with_ledger",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib/auth/fidl",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.auth",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/trace",
   ]
@@ -88,9 +88,9 @@ source_set("public") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/user_runner/entity_provider_runner",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.auth",
     "//peridot/public/lib/async/cpp:operation",
-    "//peridot/public/lib/auth/fidl",
-    "//peridot/public/lib/ledger/fidl",
   ]
 }

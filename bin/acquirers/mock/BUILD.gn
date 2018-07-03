@@ -17,6 +17,6 @@ source_set("gps") {
   deps = [
     "//garnet/public/lib/fsl",
     "//peridot/bin/acquirers:gps",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
   ]
 }

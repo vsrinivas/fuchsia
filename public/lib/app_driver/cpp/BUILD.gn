@@ -21,7 +21,7 @@ source_set("agent_driver") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/agent/cpp",
     "//peridot/public/lib/lifecycle/cpp",
   ]
@@ -53,7 +53,7 @@ source_set("module_driver") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/views/fidl:v1",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/lifecycle/cpp",
   ]
 }

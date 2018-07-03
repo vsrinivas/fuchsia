@@ -16,7 +16,7 @@ executable_package("clipboard_test_module") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/test_runner/fidl",
     "//peridot/lib/testing",
-    "//peridot/public/lib:fidl",
+    "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
     "//peridot/tests/common:defs",
     "//zircon/public/lib/async-loop-cpp",

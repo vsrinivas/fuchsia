@@ -27,7 +27,7 @@ source_set("cloud_provider") {
   deps = [
     "//peridot/bin/ledger/fidl_helpers",
     "//peridot/lib/convert",
-    "//peridot/public/lib/cloud_provider/fidl",
+    "//peridot/public/fidl/fuchsia.ledger.cloud",
     "//third_party/murmurhash",
   ]
 
