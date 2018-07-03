@@ -116,6 +116,10 @@ template("guest_package") {
         path = rebase_path("//garnet/bin/guest/pkg/meta/runtime")
         dest = "runtime"
       },
+      {
+        path = rebase_path("//garnet/bin/guest/pkg/meta/guest_package.cmx")
+        dest = "${target_name}.cmx"
+      },
     ]
 
     # Add kernel resource.

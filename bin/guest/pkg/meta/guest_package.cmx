@@ -1,0 +1,4 @@
+{
+  "program": "bin/app",
+  "runner": "guest_runner"
+}
