@@ -16,14 +16,18 @@ transitively depend on any of the private files in this repository.
 The `public/build/` directory contains files that support the build systems of
 clients of the `public/` directory.
 
+### public/fidl
+
+The `public/fidl` directory contains the FIDL definitions for this layer,
+which are language-agnostic definitions of interprocess communication
+protocols. Each subdirectory corresponds to a FIDL library and has a name that
+matches the name of the FIDL library.
+
 ### public/lib/
 
-The `public/lib/` directory contains libraries (both static and dynamic) that
-clients can link into their processes. Many of the libraries in this directory
-are defined in FIDL, which are language-agnostic definitions of interprocess
-communication protocols. However, this directory also contains manually
-implemented libraries in various languages. In these cases, both the headers and
-source files for these libraries are included in this directory.
+The `public/lib/` directory contains libraries (both static and dynamic) in
+various languages that clients can link into their processes. Both the headers
+and source files for these libraries are included in this directory.
 
 Libraries that are private implementation details of this repository (i.e., not
 part of this repository's public interface) should be in `lib/` instead.
