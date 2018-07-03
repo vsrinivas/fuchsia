@@ -222,11 +222,13 @@ static int imx8_gpio_irq_handler(void *arg) {
             WRITE32_GPIO_REG(gpio_block, IMX_GPIO_ISR, 1 << pin);
             pin = gpio_block*IMX_GPIO_PER_BLOCK + pin;
 
-            // Trigger the corresponding virtual interrupt
-            status = zx_interrupt_trigger(gpio->vinth[pin], 0, zx_clock_get_monotonic());
-            if (status != ZX_OK) {
-                zxlogf(ERROR, "%s: zx_interrupt_trigger failed %d \n", __FUNCTION__, status);
-                goto fail;
+            if (gpio->vinth[pin] != ZX_HANDLE_INVALID) {
+                // Trigger the corresponding virtual interrupt
+                status = zx_interrupt_trigger(gpio->vinth[pin], 0, zx_clock_get_monotonic());
+                if (status != ZX_OK) {
+                    zxlogf(ERROR, "%s: zx_interrupt_trigger failed %d \n", __FUNCTION__, status);
+                    goto fail;
+                }
             }
         }
     }
@@ -340,13 +342,12 @@ static zx_status_t imx8_gpio_release_interrupt(void *ctx, uint32_t pin) {
     // Mask the interrupt
     imx8_gpio_mask_irq(gpio, gpio_block, gpio_pin);
 
-    status = zx_handle_close(gpio->vinth[pin]);
+    zx_handle_close(gpio->vinth[pin]);
+    gpio->vinth[pin] = ZX_HANDLE_INVALID;
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: zx_handle_close failed %d \n", __FUNCTION__, status);
         goto fail;
     }
-
-    gpio->vinth[pin] = 0;
 
 fail:
     mtx_unlock(&gpio->gpio_lock);
