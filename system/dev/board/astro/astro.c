@@ -144,6 +144,11 @@ static int aml_start_thread(void* arg) {
         goto fail;
     }
 
+    if ((status = aml_canvas_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "aml_canvas_init failed: %d\n", status);
+        goto fail;
+    }
+
     if ((status = pbus_device_add(&bus->pbus, &video_dev, 0)) != ZX_OK) {
         zxlogf(ERROR, "aml_start_thread could not add video_dev: %d\n", status);
         goto fail;

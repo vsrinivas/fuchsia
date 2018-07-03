@@ -10,6 +10,7 @@ MODULE_TYPE := driver
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/astro-display.c \
+    $(LOCAL_DIR)/osd.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 

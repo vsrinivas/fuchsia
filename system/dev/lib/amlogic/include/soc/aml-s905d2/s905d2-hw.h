@@ -35,6 +35,9 @@
 #define S905D2_HIU_BASE                 0xff63c000
 #define S905D2_HIU_LENGTH               0x2000
 
+#define S905D2_VPU_BASE                 0xff900000
+#define S905D2_VPU_LENGTH               0x40000
+
 #define S905D2_MALI_BASE                0xffe40000
 #define S905D2_MALI_LENGTH              0x40000
 

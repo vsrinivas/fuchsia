@@ -31,30 +31,16 @@ typedef struct image_info {
     list_node_t node;
 } image_info_t;
 
-static zx_status_t config_canvas(astro_display_t* display, zx_paddr_t paddr, uint8_t* idx) {
-    uint32_t fbh = display->height * 2;
-    uint32_t fbw = display->stride * 2;
+// MMIO indices based on astro_display_mmios
+enum {
+    MMIO_DMC,
+    MMIO_VPU,
+};
 
-    // TODO: Find index dynamically
-    *idx = OSD2_DMC_CAV_INDEX;
-
-    DISP_INFO("Canvas Diminsions: w=%d h=%d\n", fbw, fbh);
-
-    // set framebuffer address in DMC, read/modify/write
-    WRITE32_DMC_REG(DMC_CAV_LUT_DATAL,
-        (((paddr + 7) >> 3) & DMC_CAV_ADDR_LMASK) |
-             ((((fbw + 7) >> 3) & DMC_CAV_WIDTH_LMASK) << DMC_CAV_WIDTH_LBIT));
-
-    WRITE32_DMC_REG(DMC_CAV_LUT_DATAH,
-        ((((fbw + 7) >> 3) >> DMC_CAV_WIDTH_LWID) << DMC_CAV_WIDTH_HBIT) |
-             ((fbh & DMC_CAV_HEIGHT_MASK) << DMC_CAV_HEIGHT_BIT));
-
-    WRITE32_DMC_REG(DMC_CAV_LUT_ADDR, DMC_CAV_LUT_ADDR_WR_EN | OSD2_DMC_CAV_INDEX );
-    // read a cbus to make sure last write finish.
-    READ32_DMC_REG(DMC_CAV_LUT_DATAH);
-
-    return ZX_OK;
-
+static uint32_t astro_compute_linear_stride(void* ctx, uint32_t width, zx_pixel_format_t format) {
+    // The astro display controller needs buffers with a stride that is an even
+    // multiple of 32.
+    return ROUNDUP(width, 32 / ZX_PIXEL_FORMAT_BYTES(format));
 }
 
 static void astro_set_display_controller_cb(void* ctx, void* cb_ctx, display_controller_cb_t* cb) {
@@ -96,28 +82,34 @@ static zx_status_t astro_import_vmo_image(void* ctx, image_t* image, zx_handle_t
         return ZX_ERR_NO_MEMORY;
     }
 
-    unsigned pixel_size = ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
-    unsigned size = ROUNDUP(image->width * image->height * pixel_size, PAGE_SIZE);
-    unsigned num_pages = size / PAGE_SIZE;
-    zx_paddr_t paddr[num_pages];
-
     astro_display_t* display = ctx;
+    zx_status_t status = ZX_OK;
     mtx_lock(&display->image_lock);
 
-    zx_status_t status = zx_bti_pin(display->bti, ZX_BTI_PERM_READ, vmo, offset, size,
-                                    paddr, num_pages, &import_info->pmt);
+    if (image->type != IMAGE_TYPE_SIMPLE || image->pixel_format != display->format) {
+        status = ZX_ERR_INVALID_ARGS;
+        goto fail;
+    }
+
+    uint32_t stride = astro_compute_linear_stride(display, image->width, image->pixel_format);
+
+    canvas_info_t canvas_info;
+    canvas_info.height =        image->height;
+    canvas_info.stride_bytes =  stride * ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
+    canvas_info.wrap =          0;
+    canvas_info.blkmode =       0;
+    canvas_info.endianness =    0;
+
+    zx_handle_t dup_vmo;
+    status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
     if (status != ZX_OK) {
         goto fail;
     }
 
-    for (unsigned i = 0; i < num_pages - 1; i++) {
-        if (paddr[i] + PAGE_SIZE != paddr[i + 1]) {
-            status = ZX_ERR_INVALID_ARGS;
-            goto fail;
-        }
-    }
-
-    if (config_canvas(display, paddr[0], &import_info->canvas_idx) != ZX_OK) {
+    status = canvas_config(&display->canvas, dup_vmo, offset, &canvas_info,
+        &import_info->canvas_idx);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not configure canvas: %d\n", status);
         status = ZX_ERR_NO_RESOURCES;
         goto fail;
     }
@@ -130,10 +122,6 @@ static zx_status_t astro_import_vmo_image(void* ctx, image_t* image, zx_handle_t
     return ZX_OK;
 fail:
     mtx_unlock(&display->image_lock);
-
-    if (import_info->pmt != ZX_HANDLE_INVALID) {
-        zx_handle_close(import_info->pmt);
-    }
     free(import_info);
     return status;
 }
@@ -153,8 +141,7 @@ static void astro_release_image(void* ctx, image_t* image) {
     mtx_unlock(&display->image_lock);
 
     if (info) {
-        // free_canvas_entry(display, info->canvas_idx);
-        zx_handle_close(info->pmt);
+        canvas_free(&display->canvas, info->canvas_idx);
         free(info);
     }
 }
@@ -201,13 +188,24 @@ static void astro_check_configuration(void* ctx,
 static void astro_apply_configuration(void* ctx,
                                       const display_config_t** display_configs,
                                       uint32_t display_count) {
-    // TODO: Nothing to do for now
-}
+    ZX_DEBUG_ASSERT(ctx);
+    ZX_DEBUG_ASSERT(display_configs);
+    ZX_DEBUG_ASSERT(&display_configs[0]);
 
-static uint32_t astro_compute_linear_stride(void* ctx, uint32_t width, zx_pixel_format_t format) {
-    // The astro display controller needs buffers with a stride that is an even
-    // multiple of 32.
-    return ROUNDUP(width, 32 / ZX_PIXEL_FORMAT_BYTES(format));
+    astro_display_t* display = ctx;
+    mtx_lock(&display->display_lock);
+
+    uint8_t addr;
+    if (display_count == 1 && display_configs[0]->layer_count) {
+        // Since Astro does not support plug'n play (fixed display), there is no way
+        // a checked configuration could be invalid at this point.
+        addr = (uint8_t) (uint64_t) display_configs[0]->layers[0]->cfg.primary.image.handle;
+    } else {
+        addr = display->fb_canvas_idx;
+    }
+    flip_osd(display, addr);
+
+    mtx_unlock(&display->display_lock);
 }
 
 static zx_status_t allocate_vmo(void* ctx, uint64_t size, zx_handle_t* vmo_out) {
@@ -234,6 +232,7 @@ static void display_release(void* ctx) {
         int res;
         thrd_join(display->vsync_thread, &res);
         io_buffer_release(&display->mmio_dmc);
+        io_buffer_release(&display->mmio_vpu);
         io_buffer_release(&display->fbuffer);
         zx_handle_close(display->bti);
         zx_handle_close(display->vsync_interrupt);
@@ -288,22 +287,51 @@ static zx_status_t setup_display_if(astro_display_t* display) {
     display->stride = astro_compute_linear_stride(
             display, display->width, display->format);
 
-    status = io_buffer_init(&display->fbuffer, display->bti,
-                            (display->stride * display->height *
-                             ZX_PIXEL_FORMAT_BYTES(display->format)),
-                            IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    size_t size = display->stride * display->height * ZX_PIXEL_FORMAT_BYTES(display->format);
+    status = allocate_vmo(display, size, &display->fb_vmo);
     if (status != ZX_OK) {
         goto fail;
     }
 
-    config_canvas(display, io_buffer_phys(&display->fbuffer), &display->fb_canvas_idx);
+    // Create a duplicate handle
+    zx_handle_t fb_vmo_dup_handle;
+    status = zx_handle_duplicate(display->fb_vmo, ZX_RIGHT_SAME_RIGHTS, &fb_vmo_dup_handle);
+    if (status != ZX_OK) {
+        DISP_ERROR("Unable to duplicate FB VMO handle\n");
+        goto fail;
+    }
+
+    zx_vaddr_t virt;
+    status = zx_vmar_map(zx_vmar_root_self(), 0, display->fb_vmo, 0, size,
+                                ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &virt);
+    if (status != ZX_OK) {
+        DISP_ERROR("zx_vmar_map failed %d size %zu\n", status, size);
+        goto fail;
+    }
+
+    // Configure Canvas memory
+    canvas_info_t canvas_info;
+    canvas_info.height              = display->height;
+    canvas_info.stride_bytes        = display->stride * ZX_PIXEL_FORMAT_BYTES(display->format);
+    canvas_info.wrap                = 0;
+    canvas_info.blkmode             = 0;
+    canvas_info.endianness          = 0;
+
+    status = canvas_config(&display->canvas, fb_vmo_dup_handle, 0, &canvas_info,
+                                &display->fb_canvas_idx);
+    if (status != ZX_OK) {
+        DISP_ERROR("Unable to configure canvas: %d\n", status);
+        goto fail;
+    }
+
+    configure_osd(display, display->fb_canvas_idx);
+
+    zx_framebuffer_set_range(get_root_resource(), display->fb_vmo,
+                             size, display->format,
+                             display->width, display->height,
+                             display->stride);
+
     init_backlight(display);
-
-    zx_framebuffer_set_range(get_root_resource(), display->fbuffer.vmo_handle,
-                             display->fbuffer.size, display->disp_info.format,
-                             display->disp_info.width, display->disp_info.height,
-                             display->disp_info.stride);
-
 
     mtx_unlock(&display->display_lock);
 
@@ -316,6 +344,9 @@ static zx_status_t setup_display_if(astro_display_t* display) {
     return ZX_OK;
 
 fail:
+    if (display->fb_vmo) {
+        zx_handle_close(display->fb_vmo);
+    }
     mtx_unlock(&display->display_lock);
     mtx_unlock(&display->cb_lock);
     return status;
@@ -386,6 +417,12 @@ zx_status_t astro_display_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
+    status = device_get_protocol(parent, ZX_PROTOCOL_CANVAS, &display->canvas);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not obtain CANVAS protocol\n");
+        goto fail;
+    }
+
     status = pdev_get_bti(&display->pdev, 0, &display->bti);
     if (status != ZX_OK) {
         DISP_ERROR("Could not get BTI handle\n");
@@ -393,10 +430,17 @@ zx_status_t astro_display_bind(void* ctx, zx_device_t* parent) {
     }
 
     // Map all the various MMIOs
-    status = pdev_map_mmio_buffer(&display->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&display->pdev, MMIO_DMC, ZX_CACHE_POLICY_UNCACHED_DEVICE,
         &display->mmio_dmc);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO DC\n");
+        goto fail;
+    }
+
+    status = pdev_map_mmio_buffer(&display->pdev, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+        &display->mmio_vpu);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not map display MMIO VPU\n");
         goto fail;
     }
 
