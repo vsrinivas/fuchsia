@@ -66,6 +66,10 @@ multiconst!(zx_rights_t, [
     ZX_RIGHT_SAME_RIGHTS  = 1 << 31;
 ]);
 
+multiconst!(u32, [
+    ZX_VMO_NON_RESIZABLE = 1;
+]);
+
 // TODO: add an alias for this type in the C headers.
 multiconst!(u32, [
     ZX_VMO_OP_COMMIT = 1;

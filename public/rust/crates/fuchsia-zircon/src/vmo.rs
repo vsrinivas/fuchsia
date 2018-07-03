@@ -27,9 +27,17 @@ impl Vmo {
     /// [Shared Memory: Virtual Memory Objects (VMOs)](https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md#Shared-Memory_Virtual-Memory-Objects-VMOs)
     /// for more information.
     pub fn create(size: u64) -> Result<Vmo, Status> {
+        Vmo::create_with_opts(VmoOptions::from_bits_truncate(0), size)
+    }
+
+    /// Create a virtual memory object with options.
+    ///
+    /// Wraps the
+    /// `zx_vmo_create`
+    /// syscall, allowing options to be passed.
+    pub fn create_with_opts(opts: VmoOptions, size: u64) -> Result<Vmo, Status> {
         let mut handle = 0;
-        let opts = 0;
-        let status = unsafe { sys::zx_vmo_create(size, opts, &mut handle) };
+        let status = unsafe { sys::zx_vmo_create(size, opts.bits(), &mut handle) };
         ok(status)?;
         unsafe {
             Ok(Vmo::from(Handle::from_raw(handle)))
@@ -103,6 +111,14 @@ impl Vmo {
     }
 }
 
+bitflags! {
+    /// Options that may be used when creating a `Vmo`.
+    #[repr(transparent)]
+    pub struct VmoOptions: u32 {
+        const NON_RESIZABLE = sys::ZX_VMO_NON_RESIZABLE;
+    }
+}
+
 /// VM Object opcodes
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
@@ -150,6 +166,17 @@ mod tests {
         let new_size = 8192;
         assert!(vmo.set_size(new_size).is_ok());
         assert_eq!(new_size, vmo.get_size().unwrap());
+    }
+
+    #[test]
+    fn vmo_set_size_fails_on_non_resizable() {
+        let size = 4096;
+        let vmo = Vmo::create_with_opts(VmoOptions::NON_RESIZABLE, size).unwrap();
+        assert_eq!(size, vmo.get_size().unwrap());
+
+        let new_size = 8192;
+        assert_eq!(Err(Status::UNAVAILABLE), vmo.set_size(new_size));
+        assert_eq!(size, vmo.get_size().unwrap());
     }
 
     #[test]
