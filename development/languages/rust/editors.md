@@ -2,10 +2,6 @@
 
 [TOC]
 
-## TextMate
-
-FIXME(robtsuk)
-
 ## Intellij
 
 See instructions on [the Intellij Rust site](https://intellij-rust.github.io/).
