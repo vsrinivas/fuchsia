@@ -70,39 +70,62 @@ void JobScheduler::MoveAtomsToRunnable()
 void JobScheduler::ScheduleRunnableAtoms()
 {
     for (uint32_t slot = 0; slot < runnable_atoms_.size(); slot++) {
-        if (executing_atoms_[slot])
-            continue;
-        auto& runnable = runnable_atoms_[slot];
-        if (runnable.empty())
-            continue;
-        std::shared_ptr<MsdArmAtom> atom = runnable.front();
-        DASSERT(!MsdArmSoftAtom::cast(atom));
-        DASSERT(atom->GetFinalDependencyResult() == kArmMaliResultSuccess);
-        DASSERT(!atom->IsDependencyOnly());
-        DASSERT(atom->slot() == slot);
-
-        for (auto preempting = std::next(runnable.begin()); preempting != runnable.end();
-             ++preempting) {
-            std::shared_ptr<MsdArmAtom> preempting_atom = *preempting;
-            if (preempting_atom->connection().lock() == atom->connection().lock() &&
-                preempting_atom->priority() > atom->priority()) {
-                // Swap the lower priority atom to the current location so we
-                // don't change the ratio of atoms executed between connections.
-                std::swap(atom, *preempting);
-                // Keep looping, as there may be an even higher priority
-                // atom.
+        if (executing_atoms_[slot]) {
+            std::shared_ptr<MsdArmAtom> atom = executing_atoms_[slot];
+            if (atom->soft_stopped()) {
+                // No point trying to soft-stop an atom that's already stopping.
+                continue;
             }
-        }
-        DASSERT(atom->slot() == slot);
+            auto& runnable = runnable_atoms_[slot];
+            bool found_preempter = false;
+            for (auto preempting = runnable.begin(); preempting != runnable.end(); ++preempting) {
+                std::shared_ptr<MsdArmAtom> preempting_atom = *preempting;
+                if (preempting_atom->connection().lock() == atom->connection().lock() &&
+                    preempting_atom->priority() > atom->priority()) {
+                    found_preempter = true;
+                    break;
+                }
+            }
+            if (found_preempter) {
+                atom->set_soft_stopped(true);
+                // If the atom's soft-stopped its current state will be saved in the job chain so it
+                // will restart at the place it left off. When JobCompleted is received it will be
+                // requeued so it can run again, priority permitting.
+                owner_->SoftStopAtom(atom.get());
+            }
+        } else {
+            auto& runnable = runnable_atoms_[slot];
+            if (runnable.empty())
+                continue;
+            std::shared_ptr<MsdArmAtom> atom = runnable.front();
+            DASSERT(!MsdArmSoftAtom::cast(atom));
+            DASSERT(atom->GetFinalDependencyResult() == kArmMaliResultSuccess);
+            DASSERT(!atom->IsDependencyOnly());
+            DASSERT(atom->slot() == slot);
 
-        atom->SetExecutionStarted();
-        executing_atoms_[slot] = atom;
-        runnable.erase(runnable.begin());
-        std::shared_ptr<MsdArmConnection> connection = atom->connection().lock();
-        msd_client_id_t id = connection ? connection->client_id() : 0;
-        TRACE_ASYNC_BEGIN("magma", AtomRunningString(slot), executing_atoms_[slot]->trace_nonce(),
-                          "id", id);
-        owner_->RunAtom(executing_atoms_[slot].get());
+            for (auto preempting = std::next(runnable.begin()); preempting != runnable.end();
+                 ++preempting) {
+                std::shared_ptr<MsdArmAtom> preempting_atom = *preempting;
+                if (preempting_atom->connection().lock() == atom->connection().lock() &&
+                    preempting_atom->priority() > atom->priority()) {
+                    // Swap the lower priority atom to the current location so we
+                    // don't change the ratio of atoms executed between connections.
+                    std::swap(atom, *preempting);
+                    // Keep looping, as there may be an even higher priority
+                    // atom.
+                }
+            }
+            DASSERT(atom->slot() == slot);
+
+            atom->SetExecutionStarted();
+            executing_atoms_[slot] = atom;
+            runnable.erase(runnable.begin());
+            std::shared_ptr<MsdArmConnection> connection = atom->connection().lock();
+            msd_client_id_t id = connection ? connection->client_id() : 0;
+            TRACE_ASYNC_BEGIN("magma", AtomRunningString(slot),
+                              executing_atoms_[slot]->trace_nonce(), "id", id);
+            owner_->RunAtom(executing_atoms_[slot].get());
+        }
     }
 }
 
@@ -131,10 +154,15 @@ void JobScheduler::CancelAtomsForConnection(std::shared_ptr<MsdArmConnection> co
 
 void JobScheduler::JobCompleted(uint64_t slot, ArmMaliResultCode result_code)
 {
-    DASSERT(executing_atoms_[slot]);
-    TRACE_ASYNC_END("magma", AtomRunningString(slot), executing_atoms_[slot]->trace_nonce());
-    owner_->AtomCompleted(executing_atoms_[slot].get(), result_code);
-    executing_atoms_[slot].reset();
+    std::shared_ptr<MsdArmAtom>& atom = executing_atoms_[slot];
+    DASSERT(atom);
+    TRACE_ASYNC_END("magma", AtomRunningString(slot), atom->trace_nonce());
+    if (result_code == kArmMaliResultSoftStopped) {
+        atom->set_soft_stopped(false);
+        runnable_atoms_[slot].push_front(atom);
+    }
+    owner_->AtomCompleted(atom.get(), result_code);
+    atom.reset();
     TryToSchedule();
 }
 

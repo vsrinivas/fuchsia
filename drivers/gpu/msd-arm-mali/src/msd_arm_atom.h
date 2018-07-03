@@ -37,7 +37,10 @@ public:
     const magma_arm_mali_user_data& user_data() const { return user_data_; }
 
     void set_require_cycle_counter() { require_cycle_counter_ = true; }
-    void set_using_cycle_counter() { using_cycle_counter_ = true; }
+    void set_using_cycle_counter(bool using_cycle_counter)
+    {
+        using_cycle_counter_ = using_cycle_counter;
+    }
     bool require_cycle_counter() const { return require_cycle_counter_; }
     bool using_cycle_counter() const { return using_cycle_counter_; }
 
@@ -61,6 +64,8 @@ public:
     }
     bool hard_stopped() const { return hard_stopped_; }
     void set_hard_stopped() { hard_stopped_ = true; }
+    bool soft_stopped() const { return soft_stopped_; }
+    void set_soft_stopped(bool stopped) { soft_stopped_ = stopped; }
     void SetExecutionStarted();
 
     std::chrono::time_point<std::chrono::steady_clock> execution_start_time() const
@@ -95,6 +100,7 @@ private:
     std::shared_ptr<AddressSlotMapping> address_slot_mapping_;
     std::chrono::time_point<std::chrono::steady_clock> execution_start_time_;
     bool hard_stopped_ = false;
+    bool soft_stopped_ = false;
     bool using_cycle_counter_ = false;
 };
 

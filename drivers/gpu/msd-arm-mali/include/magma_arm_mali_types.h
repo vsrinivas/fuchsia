@@ -52,6 +52,7 @@ enum ArmMaliResultCode {
 
     // These codes match the result codes from hardware.
     kArmMaliResultSuccess = 1,
+    kArmMaliResultSoftStopped = 3,
     // The atom was terminated with a hard stop.
     kArmMaliResultAtomTerminated = 4,
 

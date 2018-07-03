@@ -19,6 +19,7 @@ package("magma-test-build-only") {
       "vkcube",
       "vkext",
       "vkloop",
+      "vkpriority",
       "vkreadback",
     ]
   }
@@ -82,6 +83,7 @@ package("vulkan-tests") {
       "vkcube",
       "vkext",
       "vkloop",
+      "vkpriority",
       "vkreadback",
     ]
 
@@ -100,6 +102,9 @@ package("vulkan-tests") {
       },
       {
         name = "vkcopy"
+      },
+      {
+        name = "vkpriority"
       },
     ]
 

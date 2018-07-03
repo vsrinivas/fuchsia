@@ -372,6 +372,7 @@ static bool IsHardwareResultCode(uint32_t result)
 {
     switch (result) {
         case kArmMaliResultSuccess:
+        case kArmMaliResultSoftStopped:
         case kArmMaliResultAtomTerminated:
 
         case kArmMaliResultConfigFault:
@@ -409,12 +410,7 @@ magma::Status MsdArmDevice::ProcessJobInterrupt()
         clear_flags.WriteTo(register_io_.get());
         DLOG("Processing job interrupt status %x", irq_status.reg_value());
 
-        if (irq_status.failed_slots().get()) {
-            magma::log(magma::LOG_WARNING, "Got unexpected failed slots %x\n",
-                       irq_status.failed_slots().get());
-            ProcessDumpStatusToLog();
-        }
-
+        bool dumped_on_failure = false;
         uint32_t failed = irq_status.failed_slots().get();
         while (failed) {
             uint32_t slot = __builtin_ffs(failed) - 1;
@@ -423,6 +419,15 @@ magma::Status MsdArmDevice::ProcessJobInterrupt()
 
             if (!IsHardwareResultCode(result))
                 result = kArmMaliResultUnknownFault;
+
+            // Soft stopping isn't counted as an actual failure.
+            if (result != kArmMaliResultSoftStopped && !dumped_on_failure) {
+                magma::log(magma::LOG_WARNING, "Got unexpected failed slots %x\n",
+                           irq_status.failed_slots().get());
+                ProcessDumpStatusToLog();
+                dumped_on_failure = true;
+            }
+
             scheduler_->JobCompleted(slot, static_cast<ArmMaliResultCode>(result));
             failed &= ~(1 << slot);
         }
@@ -758,7 +763,7 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* regi
     }
     if (atom->require_cycle_counter()) {
         DASSERT(!atom->using_cycle_counter());
-        atom->set_using_cycle_counter();
+        atom->set_using_cycle_counter(true);
 
         if (++cycle_counter_refcount_ == 1) {
             register_io_->Write32(registers::GpuCommand::kOffset,
@@ -797,11 +802,15 @@ void MsdArmDevice::AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result)
             register_io_->Write32(registers::GpuCommand::kOffset,
                                   registers::GpuCommand::kCmdCycleCountStop);
         }
+        atom->set_using_cycle_counter(false);
     }
-    atom->set_result_code(result);
-    auto connection = atom->connection().lock();
-    if (connection)
-        connection->SendNotificationData(atom, result);
+    // Soft stopped atoms will be retried, so this result shouldn't be reported.
+    if (result != kArmMaliResultSoftStopped) {
+        atom->set_result_code(result);
+        auto connection = atom->connection().lock();
+        if (connection)
+            connection->SendNotificationData(atom, result);
+    }
 }
 
 void MsdArmDevice::HardStopAtom(MsdArmAtom* atom)
@@ -811,6 +820,15 @@ void MsdArmDevice::HardStopAtom(MsdArmAtom* atom)
     DLOG("Hard stopping atom slot %d\n", atom->slot());
     slot.Command()
         .FromValue(registers::JobSlotCommand::kCommandHardStop)
+        .WriteTo(register_io_.get());
+}
+
+void MsdArmDevice::SoftStopAtom(MsdArmAtom* atom)
+{
+    registers::JobSlotRegisters slot(atom->slot());
+    DLOG("Soft stopping atom slot %d\n", atom->slot());
+    slot.Command()
+        .FromValue(registers::JobSlotCommand::kCommandSoftStop)
         .WriteTo(register_io_.get());
 }
 

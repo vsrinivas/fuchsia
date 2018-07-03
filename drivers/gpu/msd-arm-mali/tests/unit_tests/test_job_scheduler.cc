@@ -27,18 +27,21 @@ public:
         completed_list_.push_back(ResultPair(atom, result_code));
     }
     void HardStopAtom(MsdArmAtom* atom) override { stopped_atoms_.push_back(atom); }
+    void SoftStopAtom(MsdArmAtom* atom) override { soft_stopped_atoms_.push_back(atom); }
     magma::PlatformPort* GetPlatformPort() override { return platform_port_.get(); }
     void UpdateGpuActive(bool active) override { gpu_active_ = active; }
 
     std::vector<MsdArmAtom*>& run_list() { return run_list_; }
     std::vector<ResultPair>& completed_list() { return completed_list_; }
     std::vector<MsdArmAtom*>& stopped_atoms() { return stopped_atoms_; }
+    std::vector<MsdArmAtom*>& soft_stopped_atoms() { return soft_stopped_atoms_; }
     bool gpu_active() { return gpu_active_; }
 
 private:
     std::vector<MsdArmAtom*> run_list_;
     std::vector<ResultPair> completed_list_;
     std::vector<MsdArmAtom*> stopped_atoms_;
+    std::vector<MsdArmAtom*> soft_stopped_atoms_;
     std::unique_ptr<magma::PlatformPort> platform_port_;
     bool gpu_active_ = false;
 };
@@ -542,6 +545,10 @@ public:
             std::make_shared<MsdArmAtom>(connection2, 1u, 0, 0, magma_arm_mali_user_data(), 0);
         scheduler.EnqueueAtom(atom2);
 
+        auto atom1_2 =
+            std::make_shared<MsdArmAtom>(connection1, 1u, 0, 0, magma_arm_mali_user_data(), -1);
+        scheduler.EnqueueAtom(atom1_2);
+
         auto atom3 =
             std::make_shared<MsdArmAtom>(connection2, 1u, 0, 0, magma_arm_mali_user_data(), 1);
         scheduler.EnqueueAtom(atom3);
@@ -559,10 +566,73 @@ public:
         EXPECT_EQ(2u, owner.run_list().size());
         EXPECT_EQ(atom3.get(), owner.run_list().back());
 
+        // atom1_2 should run before 2, because we're trying to keep the atom
+        // ratio the same.
         scheduler.JobCompleted(0, kArmMaliResultSuccess);
         scheduler.TryToSchedule();
         EXPECT_EQ(3u, owner.run_list().size());
+        EXPECT_EQ(atom1_2.get(), owner.run_list().back());
+
+        scheduler.JobCompleted(0, kArmMaliResultSuccess);
+        scheduler.TryToSchedule();
         EXPECT_EQ(atom2.get(), owner.run_list().back());
+
+        EXPECT_EQ(0u, owner.soft_stopped_atoms().size());
+    }
+
+    void TestPreemption(bool normal_completion)
+    {
+        TestOwner owner;
+        TestConnectionOwner connection_owner;
+        std::shared_ptr<MsdArmConnection> connection =
+            MsdArmConnection::Create(0, &connection_owner);
+        JobScheduler scheduler(&owner, 2);
+        auto atom1 =
+            std::make_shared<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data(), -1);
+        scheduler.EnqueueAtom(atom1);
+
+        scheduler.TryToSchedule();
+        EXPECT_EQ(1u, owner.run_list().size());
+        EXPECT_EQ(atom1.get(), owner.run_list().back());
+
+        auto atom2 =
+            std::make_shared<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data(), 0);
+        scheduler.EnqueueAtom(atom2);
+        scheduler.TryToSchedule();
+
+        EXPECT_EQ(1u, owner.soft_stopped_atoms().size());
+        EXPECT_EQ(atom1.get(), owner.soft_stopped_atoms().back());
+
+        // Trying to schedule again shouldn't cause another soft-stop.
+        scheduler.TryToSchedule();
+        EXPECT_EQ(1u, owner.soft_stopped_atoms().size());
+
+        // It's possible the atom won't be soft-stopped before it completes.
+        if (normal_completion) {
+            scheduler.JobCompleted(0, kArmMaliResultSuccess);
+            scheduler.TryToSchedule();
+
+            EXPECT_EQ(2u, owner.run_list().size());
+            EXPECT_EQ(atom2.get(), owner.run_list().back());
+
+            scheduler.JobCompleted(0, kArmMaliResultSuccess);
+            scheduler.TryToSchedule();
+            // atom1 shouldn't run again.
+            EXPECT_EQ(2u, owner.run_list().size());
+            EXPECT_EQ(atom2.get(), owner.run_list().back());
+        } else {
+            scheduler.JobCompleted(0, kArmMaliResultSoftStopped);
+            scheduler.TryToSchedule();
+
+            EXPECT_EQ(2u, owner.run_list().size());
+            EXPECT_EQ(atom2.get(), owner.run_list().back());
+
+            scheduler.JobCompleted(0, kArmMaliResultSuccess);
+            scheduler.TryToSchedule();
+
+            EXPECT_EQ(3u, owner.run_list().size());
+            EXPECT_EQ(atom1.get(), owner.run_list().back());
+        }
     }
 };
 
@@ -585,3 +655,7 @@ TEST(JobScheduler, CancelNull) { TestJobScheduler().TestCancelNull(); }
 TEST(JobScheduler, MultipleSlots) { TestJobScheduler().TestMultipleSlots(); }
 
 TEST(JobScheduler, Priorities) { TestJobScheduler().TestPriorities(); }
+
+TEST(JobScheduler, Preemption) { TestJobScheduler().TestPreemption(false); }
+
+TEST(JobScheduler, PreemptionNormalCompletion) { TestJobScheduler().TestPreemption(true); }

@@ -164,6 +164,7 @@ private:
     void RunAtom(MsdArmAtom* atom) override;
     void AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result) override;
     void HardStopAtom(MsdArmAtom* atom) override;
+    void SoftStopAtom(MsdArmAtom* atom) override;
     void ReleaseMappingsForAtom(MsdArmAtom* atom) override;
     magma::PlatformPort* GetPlatformPort() override;
     void UpdateGpuActive(bool active) override;

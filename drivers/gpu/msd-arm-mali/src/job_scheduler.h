@@ -20,6 +20,7 @@ public:
         virtual void RunAtom(MsdArmAtom* atom) = 0;
         virtual void AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result_code) = 0;
         virtual void HardStopAtom(MsdArmAtom* atom) {}
+        virtual void SoftStopAtom(MsdArmAtom* atom) {}
         virtual void ReleaseMappingsForAtom(MsdArmAtom* atom) {}
         virtual magma::PlatformPort* GetPlatformPort() { return nullptr; }
         virtual void UpdateGpuActive(bool active) {}
