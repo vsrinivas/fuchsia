@@ -14,17 +14,35 @@ copy("ls_svc_test") {
   ]
 }
 
+executable("config_test") {
+  testonly = true
+  output_name = "config_test"
+  sources = [
+    "config_test.cc",
+  ]
+  deps = [
+    "//garnet/bin/sysmgr:lib",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+  ]
+}
+
 package("sysmgr_tests") {
   testonly = true
   deprecated_system_image = true
 
   deps = [
+    ":config_test",
     ":ls_svc_test",
   ]
 
   tests = [
     {
       name = "ls_svc_test"
+    },
+    {
+      name = "config_test"
     },
   ]
 }

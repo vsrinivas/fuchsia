@@ -12,6 +12,16 @@
 
 constexpr char kConfigDir[] = "/system/data/sysmgr/";
 
+void PrintErrors(const sysmgr::Config& config, const std::string& filename) {
+  if (config.HasErrors()) {
+    FXL_LOG(ERROR) << "\n" << config.GetFailedConfig();
+    FXL_LOG(ERROR) << "Failed to parse " << filename;
+    for (const auto& error : config.GetErrors()) {
+      FXL_LOG(ERROR) << "   " << error;
+    }
+  }
+}
+
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
@@ -23,6 +33,10 @@ int main(int argc, const char** argv) {
     std::string unparsed_config;
     command_line.GetOptionValue("config", &unparsed_config);
     config.Parse(unparsed_config, "command line");
+    if (config.HasErrors()) {
+      PrintErrors(config, "command line");
+      return 1;
+    }
   } else {
     char buf[PATH_MAX];
     if (strlcpy(buf, kConfigDir, PATH_MAX) >= PATH_MAX) {
@@ -41,6 +55,10 @@ int main(int argc, const char** argv) {
             continue;
           }
           config.ReadFrom(buf);
+          if (config.HasErrors()) {
+            PrintErrors(config, buf);
+            return 1;
+          }
           buf[dir_len] = '\0';
         }
         closedir(cfg_dir);

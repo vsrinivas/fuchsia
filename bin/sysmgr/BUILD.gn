@@ -4,9 +4,7 @@
 
 import("//build/package.gni")
 
-executable("bin") {
-  output_name = "sysmgr"
-
+source_set("lib") {
   sources = [
     "app.cc",
     "app.h",
@@ -14,15 +12,27 @@ executable("bin") {
     "config.h",
     "delegating_loader.cc",
     "delegating_loader.h",
-    "main.cc",
   ]
 
-  deps = [
+  public_deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//third_party/rapidjson",
+  ]
+}
+
+executable("bin") {
+  output_name = "sysmgr"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
   ]

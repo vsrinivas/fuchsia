@@ -63,9 +63,12 @@ Appmgr::Appmgr(async_t* async, AppmgrArgs args)
     run_sysmgr();
     return;
   }
-  async::PostTask(async, [this, run_sysmgr] {
+  async::PostTask(async, [this, async, run_sysmgr] {
     run_sysmgr();
-    sysmgr_.set_error_handler(run_sysmgr);
+    sysmgr_.set_error_handler([async, run_sysmgr] {
+      FXL_LOG(ERROR) << "sysmgr failed, restarting in 5s";
+      async::PostDelayedTask(async, run_sysmgr, zx::sec(5));
+    });
   });
 }
 
