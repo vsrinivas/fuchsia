@@ -13,7 +13,6 @@ also provides core drivers and Fuchsia's libc implementation.
 
  - [Concepts][zircon-concepts]
  - [System Calls][zircon-syscalls] / VDSO (libzircon)
- - Boot Sequence
 
 ## Zircon Core
 
