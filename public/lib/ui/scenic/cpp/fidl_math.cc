@@ -26,7 +26,7 @@ fuchsia::ui::gfx::BoundingBox InsetBy(
 
 fuchsia::ui::gfx::BoundingBox ViewPropertiesLayoutBox(
     const fuchsia::ui::gfx::ViewProperties& view_properties) {
-  return InsetBy(view_properties.extents, view_properties.inset_from_min,
+  return InsetBy(view_properties.bounding_box, view_properties.inset_from_min,
                  view_properties.inset_from_max);
 }
 

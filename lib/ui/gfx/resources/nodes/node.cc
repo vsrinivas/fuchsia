@@ -9,9 +9,9 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include "garnet/lib/ui/gfx/resources/import.h"
 #include "garnet/lib/ui/gfx/resources/nodes/traversal.h"
-#include "garnet/lib/ui/gfx/resources/view.h"
-
+#include "garnet/lib/ui/gfx/resources/view_holder.h"
 #include "lib/escher/geometry/types.h"
+#include "lib/fxl/logging.h"
 
 namespace scenic {
 namespace gfx {
@@ -41,10 +41,15 @@ Node::Node(Session* session, scenic::ResourceId node_id,
 }
 
 Node::~Node() {
+  for (auto& view_holder : view_holders_) {
+    view_holder->Detach();
+  }
   ForEachDirectDescendantFrontToBack(*this, [](Node* node) {
     FXL_DCHECK(node->parent_relation_ != ParentRelation::kNone);
-    node->parent_relation_ = ParentRelation::kNone;
-    node->parent_ = nullptr;
+
+    // Detach without affecting parent Node (because thats us) or firing the
+    // on_detached_cb_ (because that shouldn't be up to us).
+    node->DetachInternal();
   });
 }
 
@@ -61,8 +66,8 @@ bool Node::SetEventMask(uint32_t event_mask) {
 }
 
 bool Node::AddChild(NodePtr child_node) {
-  // TODO(MZ-130): Some node types (e.g. Scenes) cannot be reparented. We must
-  // add verification to reject such operations.
+  // TODO(SCN-130): Some node types (e.g. Scenes) cannot be re-parented. We
+  // should add verification to reject such operations.
 
   if (!(type_flags() & kHasChildren)) {
     error_reporter()->ERROR() << "scenic::gfx::Node::AddChild(): node of type '"
@@ -74,12 +79,10 @@ bool Node::AddChild(NodePtr child_node) {
       child_node->parent_ == this) {
     return true;  // no change
   }
-  child_node->Detach();
 
-  // Add child to its new parent (i.e. us).
-  child_node->parent_relation_ = ParentRelation::kChild;
-  child_node->parent_ = this;
-  child_node->InvalidateGlobalTransform();
+  // Detach and re-attach Node to us.
+  child_node->Detach();
+  child_node->SetParent(this, ParentRelation::kChild);
   children_.push_back(std::move(child_node));
   return true;
 }
@@ -95,14 +98,44 @@ bool Node::AddPart(NodePtr part_node) {
       part_node->parent_ == this) {
     return true;  // no change
   }
-  part_node->Detach();
 
-  // Add part to its new parent (i.e. us).
-  part_node->parent_relation_ = ParentRelation::kPart;
-  part_node->parent_ = this;
-  part_node->InvalidateGlobalTransform();
+  // Detach and re-attach Node to us.
+  part_node->Detach();
+  part_node->SetParent(this, ParentRelation::kPart);
   parts_.push_back(std::move(part_node));
   return true;
+}
+
+void Node::SetParent(Node* parent, ParentRelation relation) {
+  FXL_DCHECK(parent_ == nullptr);
+
+  parent_ = parent;
+  parent_relation_ = relation;
+  RefreshScene(parent_->scene());
+}
+
+bool Node::AddViewHolder(ViewHolderPtr view_holder) {
+  // Just treat ViewHolders as children for the purposes of capabilities for
+  // now.
+  if (!(type_flags() & kHasChildren)) {
+    error_reporter()->ERROR()
+        << "scenic::gfx::Node::AddViewHolder(): node of type " << type_name()
+        << " cannot have children.";
+    return false;
+  }
+
+  if (view_holder->parent() == this) {
+    return true;  // no change
+  }
+
+  view_holder->SetParent(this);
+  view_holders_.insert(std::move(view_holder));
+
+  return true;
+}
+
+void Node::EraseViewHolder(ViewHolderPtr view_holder) {
+  view_holders_.erase(view_holder);
 }
 
 bool Node::Detach() {
@@ -122,33 +155,14 @@ bool Node::Detach() {
         break;
     }
 
-    // If our parent is a View, ensure it's aware that we've been re-parented.
-    if (view_) {
-      view_->DetachChild(this);
-      view_ = nullptr;
+    if (on_detached_cb_) {
+      on_detached_cb_(this);
+      on_detached_cb_ = nullptr;
     }
 
-    parent_relation_ = ParentRelation::kNone;
-    parent_ = nullptr;
-    InvalidateGlobalTransform();
+    DetachInternal();
   }
   return true;
-}
-
-void Node::ErasePart(Node* part) {
-  auto it =
-      std::find_if(parts_.begin(), parts_.end(),
-                   [part](const NodePtr& ptr) { return part == ptr.get(); });
-  FXL_DCHECK(it != parts_.end());
-  parts_.erase(it);
-}
-
-void Node::EraseChild(Node* child) {
-  auto it =
-      std::find_if(children_.begin(), children_.end(),
-                   [child](const NodePtr& ptr) { return child == ptr.get(); });
-  FXL_DCHECK(it != children_.end());
-  children_.erase(it);
 }
 
 bool Node::DetachChildren() {
@@ -159,11 +173,15 @@ bool Node::DetachChildren() {
     return false;
   }
   for (auto& child : children_) {
-    child->parent_relation_ = ParentRelation::kNone;
-    child->parent_ = nullptr;
-    child->InvalidateGlobalTransform();
+    // Detach without affecting parent Node (because thats us) or firing the
+    // on_detached_cb_ (because that shouldn't be up to us).
+    child->DetachInternal();
   }
   children_.clear();
+  for (auto& view_holder : view_holders_) {
+    view_holder->Detach();
+  }
+  view_holders_.clear();
   return true;
 }
 
@@ -315,23 +333,6 @@ bool Node::SetHitTestBehavior(
   return true;
 }
 
-void Node::InvalidateGlobalTransform() {
-  if (!global_transform_dirty_) {
-    global_transform_dirty_ = true;
-    ForEachDirectDescendantFrontToBack(
-        *this, [](Node* node) { node->InvalidateGlobalTransform(); });
-  }
-}
-
-void Node::ComputeGlobalTransform() const {
-  if (parent_) {
-    global_transform_ =
-        parent_->GetGlobalTransform() * static_cast<escher::mat4>(transform_);
-  } else {
-    global_transform_ = static_cast<escher::mat4>(transform_);
-  }
-}
-
 void Node::AddImport(Import* import) {
   Resource::AddImport(import);
 
@@ -356,6 +357,57 @@ void Node::RemoveImport(Import* import) {
 
 bool Node::GetIntersection(const escher::ray4& ray, float* out_distance) const {
   return false;
+}
+
+void Node::InvalidateGlobalTransform() {
+  if (!global_transform_dirty_) {
+    global_transform_dirty_ = true;
+    ForEachDirectDescendantFrontToBack(
+        *this, [](Node* node) { node->InvalidateGlobalTransform(); });
+  }
+}
+
+void Node::ComputeGlobalTransform() const {
+  if (parent_) {
+    global_transform_ =
+        parent_->GetGlobalTransform() * static_cast<escher::mat4>(transform_);
+  } else {
+    global_transform_ = static_cast<escher::mat4>(transform_);
+  }
+}
+
+void Node::EraseChild(Node* child) {
+  auto it =
+      std::find_if(children_.begin(), children_.end(),
+                   [child](const NodePtr& ptr) { return child == ptr.get(); });
+  FXL_DCHECK(it != children_.end());
+  children_.erase(it);
+}
+
+void Node::ErasePart(Node* part) {
+  auto it =
+      std::find_if(parts_.begin(), parts_.end(),
+                   [part](const NodePtr& ptr) { return part == ptr.get(); });
+  FXL_DCHECK(it != parts_.end());
+  parts_.erase(it);
+}
+
+void Node::DetachInternal() {
+  parent_relation_ = ParentRelation::kNone;
+  parent_ = nullptr;
+  RefreshScene(nullptr);
+  InvalidateGlobalTransform();
+}
+
+void Node::RefreshScene(Scene* new_scene) {
+  if (new_scene != scene_) {
+    scene_ = new_scene;
+    ForEachDirectDescendantFrontToBack(
+        *this, [this](Node* node) { node->RefreshScene(scene_); });
+    for (auto& view_holder : view_holders_) {
+      view_holder->RefreshScene();
+    }
+  }
 }
 
 }  // namespace gfx

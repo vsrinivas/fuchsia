@@ -17,6 +17,7 @@ union Event {
   // Events which are always delivered, regardless of mask.
   ImportUnboundEvent import_unbound;
   ViewDisconnectedEvent view_disconnected;
+  ViewHolderDisconnectedEvent view_holder_disconnected;
   ViewAddedToSceneEvent view_added_to_scene;
   ViewRemovedFromSceneEvent view_removed_from_scene;
   ViewPropertiesChangedEvent view_properties_changed;
@@ -44,10 +45,21 @@ struct ImportUnboundEvent {
   uint32 resource_id;
 };
 
-// Delivered when the View corresponding to the given ViewHolder is
-// disconnected/destroyed, or the other side of the connection is destroyed
-// before it was fully established.
+// Delivered to a View's Session when its peer ViewHolder is disconnected or
+// destroyed.
+//
+// If the ViewHolder is destroyed before the connection is established, then
+// this event will be delivered immediately when the View attempts to connect.
 struct ViewDisconnectedEvent {
+  uint32 view_id;
+};
+
+// Delivered to a ViewHolder's Session when its peer View is disconnected or
+// destroyed.
+//
+// If the View is destroyed before the connection is established, then this
+// event will be delivered immediately when the ViewHolder attempts to connect.
+struct ViewHolderDisconnectedEvent {
   uint32 view_holder_id;
 };
 

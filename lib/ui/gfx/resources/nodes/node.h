@@ -6,19 +6,24 @@
 #define GARNET_LIB_UI_GFX_RESOURCES_NODES_NODE_H_
 
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "garnet/lib/ui/gfx/resources/nodes/variable_binding.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "garnet/lib/ui/gfx/resources/variable.h"
 #include "lib/escher/geometry/transform.h"
+#include "lib/fxl/memory/ref_ptr.h"
 
 namespace scenic {
 namespace gfx {
 
 class Node;
-class View;
+class Scene;
+class ViewHolder;
+
 using NodePtr = fxl::RefPtr<Node>;
+using ViewHolderPtr = fxl::RefPtr<ViewHolder>;
 
 // Node is an abstract base class for all the concrete node types listed in
 // scene/services/nodes.fidl.
@@ -29,8 +34,11 @@ class Node : public Resource {
   virtual ~Node() override;
 
   bool AddChild(NodePtr child_node);
-  bool DetachChildren();
   bool AddPart(NodePtr part_node);
+  bool DetachChildren();
+
+  bool AddViewHolder(ViewHolderPtr view_holder);
+  void EraseViewHolder(ViewHolderPtr view_holder);
 
   bool SetTagValue(uint32_t tag_value);
   uint32_t tag_value() const { return tag_value_; }
@@ -69,16 +77,29 @@ class Node : public Resource {
 
   // |Resource|, DetachCmd.
   bool Detach() override;
+  // Sets a callback to be fired when the Node is Detached.  Takes ownership of
+  // the passed in callback.  Only one callback may be set on the Node; attempts
+  // to set another will fail.
+  //
+  // Currently made use of by View.
+  void set_on_detached_cb(fit::function<void(Node*)> on_detached_cb) {
+    FXL_DCHECK(on_detached_cb_ == nullptr);
+    on_detached_cb_ = std::move(on_detached_cb);
+  }
 
   Node* parent() const { return parent_; }
 
-  View* view() const { return view_; }
-
-  void set_view(View* view) { view_ = view; }
+  // Each Node caches its containing Scene.  This is nullptr if the Node is not
+  // part of a Scene.
+  Scene* scene() const { return scene_; }
 
   const std::vector<NodePtr>& children() const { return children_; }
 
   const std::vector<NodePtr>& parts() const { return parts_; }
+
+  const std::unordered_set<ViewHolderPtr>& view_holders() const {
+    return view_holders_;
+  }
 
   bool SetEventMask(uint32_t event_mask) override;
 
@@ -102,24 +123,37 @@ class Node : public Resource {
        const ResourceTypeInfo& type_info);
 
  private:
-  void InvalidateGlobalTransform();
-  void ComputeGlobalTransform() const;
-
-  void ErasePart(Node* part);
-  void EraseChild(Node* child);
-
   // Describes the manner in which a node is related to its parent.
   enum class ParentRelation { kNone, kChild, kPart, kImportDelegate };
 
-  // Identifies a specific property.
+  // Identifies a specific spatial property.
   enum NodeProperty { kTranslation, kScale, kRotation, kAnchor };
+
+  void InvalidateGlobalTransform();
+  void ComputeGlobalTransform() const;
+
+  void SetParent(Node* parent, ParentRelation relation);
+  void EraseChild(Node* part);
+  void ErasePart(Node* part);
+
+  // Reset the parent and any dependent properties like scene and global
+  // transform.  This allows "detaching" from the parent without affecting the
+  // parent itself or firing the on_detached callback (which affects the
+  // containing View).
+  //
+  // Only called internally by the Node on its children, never externally.
+  void DetachInternal();
+  void RefreshScene(Scene* new_scene);
 
   uint32_t tag_value_ = 0u;
   Node* parent_ = nullptr;
-  View* view_ = nullptr;
+  Scene* scene_ = nullptr;
   ParentRelation parent_relation_ = ParentRelation::kNone;
+  fit::function<void(Node*)> on_detached_cb_;
+
   std::vector<NodePtr> children_;
   std::vector<NodePtr> parts_;
+  std::unordered_set<ViewHolderPtr> view_holders_;
 
   std::unordered_map<NodeProperty, std::unique_ptr<VariableBinding>>
       bound_variables_;

@@ -513,8 +513,8 @@ fuchsia::ui::gfx::Command NewSetViewPropertiesCmd(
   fuchsia::ui::gfx::SetViewPropertiesCmd set_view_properties;
   set_view_properties.view_holder_id = view_holder_id;
   auto& props = set_view_properties.properties;
-  props.extents.min = NewVector3(bounding_box_min);
-  props.extents.max = NewVector3(bounding_box_max);
+  props.bounding_box.min = NewVector3(bounding_box_min);
+  props.bounding_box.max = NewVector3(bounding_box_max);
   props.inset_from_min = NewVector3(inset_from_min);
   props.inset_from_max = NewVector3(inset_from_max);
 

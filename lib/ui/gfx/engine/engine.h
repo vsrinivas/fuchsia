@@ -37,7 +37,7 @@ class View;
 class ViewHolder;
 class Swapchain;
 
-using ViewLinker = ObjectLinker<View, ViewHolder>;
+using ViewLinker = ObjectLinker<ViewHolder, View>;
 
 // Owns a group of sessions which can share resources with one another
 // using the same resource linker and which coexist within the same timing

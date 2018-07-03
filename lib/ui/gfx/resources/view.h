@@ -10,7 +10,6 @@
 #include <unordered_set>
 
 #include "garnet/lib/ui/gfx/engine/object_linker.h"
-#include "garnet/lib/ui/gfx/resources/nodes/node.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "garnet/lib/ui/gfx/resources/resource_type_info.h"
 #include "garnet/lib/ui/gfx/resources/resource_visitor.h"
@@ -21,39 +20,65 @@ namespace scenic {
 namespace gfx {
 
 class Session;
+class Node;
 class View;
 class ViewHolder;
-using ViewLinker = ObjectLinker<View, ViewHolder>;
 
-// View and ViewHolder work together to allow scene traversal
-// to cross Session boundaries.  Once linked by an ObjectLinker,
-// when traversal reaches a ViewHolder, it can proceed down
-// through the child Nodes of the corresponding View.
+using NodePtr = fxl::RefPtr<Node>;
+using ViewLinker = ObjectLinker<ViewHolder, View>;
+
+// View and ViewHolder work together via the ViewLinker to allow scene traversal
+// across Session boundaries.
+//
+// Once connected via their ImportLink and ExportLinks the View and ViewHolder
+// will directly connect their child and parent Nodes.  This allows traversal to
+// continue through them as if the View/ViewHolder were not present.  It works
+// even if the View and ViewHolder are in separate processes!
+//
+// Disconnected Views do not participate in the scene graph in any way.  The
+// link is only created once per View, so once a View is disconnected it may
+// not be re-connected.
+//
+// Destroying the View will automatically disconnect the link if it is
+// currently connected.
 class View final : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  View(Session* session, scenic::ResourceId id,
-       ::fuchsia::ui::gfx::ViewArgs args);
+  View(Session* session, scenic::ResourceId id, ViewLinker::ImportLink link);
   ~View() override;
 
   // | Resource |
   void Accept(class ResourceVisitor* visitor) override;
 
-  // | ObjectLinker::I |
-  void LinkResolved(ViewHolder* owner);
-  void PeerDestroyed();
-  void ConnectionClosed();
+  // Paired ViewHolder on the other side of the link.  This should be nullptr
+  // iff. connected() is false.
+  ViewHolder* view_holder() const { return view_holder_; }
 
-  void AddChild(NodePtr child_node);
-  void DetachChild(Node* child_node);
+  // Connection management.  Call once the View is created to initiate the link
+  // to its partner ViewHolder.
+  void Connect();
+  bool connected() const { return link_.initialized(); }
+
+  // Child Node management.
+  bool AddChild(NodePtr child);
   void DetachChildren();
   const std::unordered_set<NodePtr>& children() const { return children_; }
 
  private:
+  // | ViewLinker::ExportCallbacks |
+  void LinkResolved(ViewHolder* view_holder);
+  void LinkDisconnected();
+
+  // Fired as a callback when a child Node is destroyed.
+  void OnChildDestroyed(Node* child);
+
+  // Send an event to the parent ViewHolder's SessionListener.
+  void SendViewDisconnectedEvent();
+
+  ViewLinker::ImportLink link_;
+  ViewHolder* view_holder_ = nullptr;
   std::unordered_set<NodePtr> children_;
-  ViewHolder* owner_ = nullptr;
-  ViewLinker::ObjectId import_handle_ = 0;
 };
 using ViewPtr = fxl::RefPtr<View>;
 

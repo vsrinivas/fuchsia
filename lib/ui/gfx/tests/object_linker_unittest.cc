@@ -21,21 +21,9 @@ namespace test {
 
 class ObjectLinkerTest : public ErrorReportingTest {
  protected:
-  struct TestExportObj;
-  struct TestImportObj;
-  using TestObjectLinker = ObjectLinker<TestImportObj, TestExportObj>;
-
-  struct TestExportObj {
-    fit::function<void(TestObjectLinker*, TestImportObj*)> LinkResolved;
-    fit::function<void(void)> PeerDestroyed;
-    fit::function<void(void)> ConnectionClosed;
-  };
-
-  struct TestImportObj {
-    fit::function<void(TestExportObj*)> LinkResolved;
-    fit::function<void(void)> PeerDestroyed;
-    fit::function<void(void)> ConnectionClosed;
-  };
+  struct TestExportObj {};
+  struct TestImportObj {};
+  using TestObjectLinker = ObjectLinker<TestExportObj, TestImportObj>;
 
   TestObjectLinker object_linker_;
 };
@@ -49,532 +37,581 @@ TEST_F(ObjectLinkerTest, InitialState) {
 
 TEST_F(ObjectLinkerTest, AllowsExport) {
   zx::eventpair export_token, import_token;
-  TestExportObj export_obj{
-      .LinkResolved = ERROR_IF_CALLED("LinkResolved"),
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed"),
-  };
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
 
-  uint64_t export_handle = object_linker_.RegisterExport(
-      &export_obj, std::move(export_token), error_reporter());
+  TestObjectLinker::ExportLink export_link =
+      object_linker_.CreateExport(std::move(export_token), error_reporter());
   EXPECT_ERROR_COUNT(0);
-  EXPECT_NE(0u, export_handle);
+  EXPECT_TRUE(export_link.valid());
+  EXPECT_FALSE(export_link.initialized());
   EXPECT_EQ(1u, object_linker_.ExportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
 }
 
 TEST_F(ObjectLinkerTest, CannotExportInvalidToken) {
   zx::eventpair export_token{ZX_HANDLE_INVALID};
-  TestExportObj export_obj{
-      .LinkResolved = ERROR_IF_CALLED("LinkResolved"),
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed"),
-  };
 
-  uint64_t export_handle = object_linker_.RegisterExport(
-      &export_obj, std::move(export_token), error_reporter());
-  EXPECT_ERROR_COUNT(1);  // RegisterExport throws an error.
-  EXPECT_EQ(0u, export_handle);
+  TestObjectLinker::ExportLink export_link =
+      object_linker_.CreateExport(std::move(export_token), error_reporter());
+  EXPECT_ERROR_COUNT(1);  // CreateExport throws an error.
+  EXPECT_FALSE(export_link.valid());
+  EXPECT_FALSE(export_link.initialized());
   EXPECT_EQ(0u, object_linker_.ExportCount());
   EXPECT_EQ(0u, object_linker_.UnresolvedExportCount());
 }
 
-TEST_F(ObjectLinkerTest, CannotExportSameTokenTwice) {
-  zx::eventpair export_token, export_token2, import_token;
-  TestExportObj export_obj{
-      .LinkResolved = ERROR_IF_CALLED("LinkResolved.1"),
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed.1"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed.1"),
-  };
-  TestExportObj export_obj2{
-      .LinkResolved = ERROR_IF_CALLED("LinkResolved.2"),
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed.2"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed.2"),
-  };
-  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
-  EXPECT_EQ(ZX_OK,
-            export_token.duplicate(ZX_RIGHT_SAME_RIGHTS, &export_token2));
-
-  uint64_t export_handle = object_linker_.RegisterExport(
-      &export_obj, std::move(export_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);  // First RegisterExport is fine.
-  uint64_t export_handle2 = object_linker_.RegisterExport(
-      &export_obj2, std::move(export_token2), error_reporter());
-  EXPECT_ERROR_COUNT(1);  // Second RegisterExport throws an error.
-  EXPECT_NE(0u, export_handle);
-  EXPECT_EQ(0u, export_handle2);
-  EXPECT_EQ(1u, object_linker_.ExportCount());
-  EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
-}
-
 TEST_F(ObjectLinkerTest, CannotExportWithDeadExportToken) {
-  zx::eventpair export_token2;
-  zx::eventpair import_token;
-  TestExportObj export_obj{
-      .LinkResolved = ERROR_IF_CALLED("LinkResolved"),
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed"),
-  };
+  zx::eventpair export_token, import_token;
   {
-    zx::eventpair export_token;
-    EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
-    export_token2 = zx::eventpair{export_token.get()};
-    // export dies now.
+    zx::eventpair export_token2;
+    EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token2, &import_token));
+    export_token = zx::eventpair{export_token2.get()};
+    // |export_token2| dies now, |export_token| is an invalid copy.
   }
 
-  uint64_t export_handle = object_linker_.RegisterExport(
-      &export_obj, std::move(export_token2), error_reporter());
-  EXPECT_ERROR_COUNT(1);  // RegisterExport throws an error.
-  EXPECT_EQ(0u, export_handle);
+  TestObjectLinker::ExportLink export_link =
+      object_linker_.CreateExport(std::move(export_token), error_reporter());
+  EXPECT_ERROR_COUNT(1);  // CreateExport throws an error.
+  EXPECT_FALSE(export_link.valid());
+  EXPECT_FALSE(export_link.initialized());
   EXPECT_EQ(0u, object_linker_.ExportCount());
   EXPECT_EQ(0u, object_linker_.UnresolvedExportCount());
 }
 
 TEST_F(ObjectLinkerTest, CanExportWithDeadImportToken) {
-  zx::eventpair export_token;
-  zx::eventpair import_token2;
-  TestExportObj export_obj{
-      .LinkResolved = ERROR_IF_CALLED("LinkResolved"),
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed"),
-  };
+  zx::eventpair export_token, import_token;
   {
-    zx::eventpair import_token;
-    EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
-    import_token2 = zx::eventpair{import_token.get()};
-    // import dies now.
+    zx::eventpair import_token2;
+    EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token2));
+    import_token = zx::eventpair{import_token2.get()};
+    // |import_token2| dies now, |import_token| is an invalid copy.
   }
 
-  uint64_t export_handle = object_linker_.RegisterExport(
-      &export_obj, std::move(export_token), error_reporter());
+  TestObjectLinker::ExportLink export_link =
+      object_linker_.CreateExport(std::move(export_token), error_reporter());
   EXPECT_ERROR_COUNT(0);
-  EXPECT_NE(0u, export_handle);
+  EXPECT_TRUE(export_link.valid());
+  EXPECT_FALSE(export_link.initialized());
   EXPECT_EQ(1u, object_linker_.ExportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
 }
 
-TEST_F(ObjectLinkerTest, UnregisterRemovesExport) {
-  zx::eventpair export_token, import_token;
-  TestExportObj export_obj{
-      .LinkResolved = ERROR_IF_CALLED("LinkResolved.1"),
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed.1"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed.1"),
-  };
+TEST_F(ObjectLinkerTest, CannotExportSameTokenTwice) {
+  zx::eventpair export_token, export_token2, import_token;
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
+  EXPECT_EQ(ZX_OK,
+            export_token.duplicate(ZX_RIGHT_SAME_RIGHTS, &export_token2));
 
-  uint64_t export_handle = object_linker_.RegisterExport(
-      &export_obj, std::move(export_token), error_reporter());
+  TestObjectLinker::ExportLink export_link =
+      object_linker_.CreateExport(std::move(export_token), error_reporter());
   EXPECT_ERROR_COUNT(0);
-  EXPECT_NE(0u, export_handle);
+  EXPECT_TRUE(export_link.valid());
+  EXPECT_FALSE(export_link.initialized());
   EXPECT_EQ(1u, object_linker_.ExportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
 
-  object_linker_.UnregisterExport(export_handle);
-  EXPECT_ERROR_COUNT(0);
+  TestObjectLinker::ExportLink export_link2 =
+      object_linker_.CreateExport(std::move(export_token2), error_reporter());
+  EXPECT_ERROR_COUNT(1);  // CreateExport throws an error.
+  EXPECT_FALSE(export_link2.valid());
+  EXPECT_FALSE(export_link2.initialized());
+  EXPECT_EQ(1u, object_linker_.ExportCount());
+  EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
+}
+
+TEST_F(ObjectLinkerTest, LinkDeathRemovesExport) {
+  zx::eventpair export_token, import_token;
+  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
+
+  {
+    TestObjectLinker::ExportLink export_link =
+        object_linker_.CreateExport(std::move(export_token), error_reporter());
+    EXPECT_ERROR_COUNT(0);
+    EXPECT_TRUE(export_link.valid());
+    EXPECT_FALSE(export_link.initialized());
+    EXPECT_EQ(1u, object_linker_.ExportCount());
+    EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
+
+    // | export_link dies now. |
+  }
+
   EXPECT_EQ(0u, object_linker_.ExportCount());
   EXPECT_EQ(0u, object_linker_.UnresolvedExportCount());
 }
 
 TEST_F(ObjectLinkerTest, AllowsImport) {
   zx::eventpair export_token, import_token;
-  TestImportObj import_obj{
-      .LinkResolved = ERROR_IF_CALLED("LinkResolved"),
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed"),
-  };
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
 
-  uint64_t import_handle = object_linker_.RegisterImport(
-      &import_obj, std::move(import_token), error_reporter());
+  TestObjectLinker::ImportLink import_link =
+      object_linker_.CreateImport(std::move(import_token), error_reporter());
   EXPECT_ERROR_COUNT(0);
-  EXPECT_NE(0u, import_handle);
+  EXPECT_TRUE(import_link.valid());
+  EXPECT_FALSE(import_link.initialized());
   EXPECT_EQ(1u, object_linker_.ImportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
 }
 
 TEST_F(ObjectLinkerTest, CannotImportInvalidToken) {
   zx::eventpair import_token{ZX_HANDLE_INVALID};
-  TestImportObj import_obj{
-      .LinkResolved = ERROR_IF_CALLED("LinkResolved"),
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed"),
-  };
 
-  uint64_t import_handle = object_linker_.RegisterImport(
-      &import_obj, std::move(import_token), error_reporter());
-  EXPECT_ERROR_COUNT(1);  // RegisterImport throws an error.
-  EXPECT_EQ(0u, import_handle);
+  TestObjectLinker::ImportLink import_link =
+      object_linker_.CreateImport(std::move(import_token), error_reporter());
+  EXPECT_ERROR_COUNT(1);  // CreateImport throws an error.
+  EXPECT_FALSE(import_link.valid());
+  EXPECT_FALSE(import_link.initialized());
   EXPECT_EQ(0u, object_linker_.ImportCount());
   EXPECT_EQ(0u, object_linker_.UnresolvedImportCount());
 }
 
-TEST_F(ObjectLinkerTest, CannotImportSameTokenTwice) {
-  zx::eventpair export_token, import_token, import_token2;
-  TestImportObj import_obj{
-      .LinkResolved = ERROR_IF_CALLED("LinkResolved.1"),
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed.1"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed.1"),
-  };
-  TestImportObj import_obj2{
-      .LinkResolved = ERROR_IF_CALLED("LinkResolved.2"),
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed.2"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed.2"),
-  };
-  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
-  EXPECT_EQ(ZX_OK,
-            import_token.duplicate(ZX_RIGHT_SAME_RIGHTS, &import_token2));
-
-  uint64_t import_handle = object_linker_.RegisterImport(
-      &import_obj, std::move(import_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);  // First RegisterImport is fine.
-  uint64_t import_handle2 = object_linker_.RegisterImport(
-      &import_obj2, std::move(import_token2), error_reporter());
-  EXPECT_ERROR_COUNT(1);  // Second RegisterImport throws an error.
-  EXPECT_NE(0u, import_handle);
-  EXPECT_EQ(0u, import_handle2);
-  EXPECT_EQ(1u, object_linker_.ImportCount());
-  EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
-}
-
 TEST_F(ObjectLinkerTest, CannotImportWithDeadImportToken) {
-  zx::eventpair import_token2;
-  zx::eventpair export_token;
-  TestImportObj import_obj{
-      .LinkResolved = ERROR_IF_CALLED("LinkResolved"),
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed"),
-  };
+  zx::eventpair export_token, import_token;
   {
-    zx::eventpair import_token;
-    EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
-    import_token2 = zx::eventpair{import_token.get()};
-    // import dies now.
+    zx::eventpair import_token2;
+    EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token2));
+    import_token = zx::eventpair{import_token2.get()};
+    // |import_token2| dies now, |import_token| is an invalid copy.
   }
 
-  uint64_t import_handle = object_linker_.RegisterImport(
-      &import_obj, std::move(import_token2), error_reporter());
-  EXPECT_ERROR_COUNT(1);  // RegisterImport throws an error.
-  EXPECT_EQ(0u, import_handle);
+  TestObjectLinker::ImportLink import_link =
+      object_linker_.CreateImport(std::move(import_token), error_reporter());
+  EXPECT_ERROR_COUNT(1);  // CreateImport throws an error.
+  EXPECT_FALSE(import_link.valid());
+  EXPECT_FALSE(import_link.initialized());
   EXPECT_EQ(0u, object_linker_.ImportCount());
   EXPECT_EQ(0u, object_linker_.UnresolvedImportCount());
 }
 
 TEST_F(ObjectLinkerTest, CanImportWithDeadExportToken) {
-  zx::eventpair import_token;
-  zx::eventpair export_token2;
-  TestImportObj import_obj{
-      .LinkResolved = ERROR_IF_CALLED("LinkResolved"),
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed"),
-  };
+  zx::eventpair export_token, import_token;
   {
-    zx::eventpair export_token;
-    EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
-    export_token2 = zx::eventpair{export_token.get()};
-    // export dies now.
+    zx::eventpair export_token2;
+    EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token2, &import_token));
+    export_token = zx::eventpair{export_token2.get()};
+    // |export_token2| dies now, |export_token| is an invalid copy.
   }
 
-  uint64_t import_handle = object_linker_.RegisterImport(
-      &import_obj, std::move(import_token), error_reporter());
+  TestObjectLinker::ImportLink import_link =
+      object_linker_.CreateImport(std::move(import_token), error_reporter());
   EXPECT_ERROR_COUNT(0);
-  EXPECT_NE(0u, import_handle);
+  EXPECT_TRUE(import_link.valid());
+  EXPECT_FALSE(import_link.initialized());
   EXPECT_EQ(1u, object_linker_.ImportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
 }
 
-TEST_F(ObjectLinkerTest, UnregisterRemovesImport) {
-  zx::eventpair export_token, import_token;
-  TestImportObj import_obj{
-      .LinkResolved = ERROR_IF_CALLED("LinkResolved.1"),
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed.1"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed.1"),
-  };
+TEST_F(ObjectLinkerTest, CannotImportSameTokenTwice) {
+  zx::eventpair export_token, import_token, import_token2;
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
+  EXPECT_EQ(ZX_OK,
+            import_token.duplicate(ZX_RIGHT_SAME_RIGHTS, &import_token2));
 
-  uint64_t import_handle = object_linker_.RegisterImport(
-      &import_obj, std::move(import_token), error_reporter());
+  TestObjectLinker::ImportLink import_link =
+      object_linker_.CreateImport(std::move(import_token), error_reporter());
   EXPECT_ERROR_COUNT(0);
-  EXPECT_NE(0u, import_handle);
+  EXPECT_TRUE(import_link.valid());
+  EXPECT_FALSE(import_link.initialized());
   EXPECT_EQ(1u, object_linker_.ImportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
 
-  object_linker_.UnregisterImport(import_handle);
-  EXPECT_ERROR_COUNT(0);
+  TestObjectLinker::ImportLink import_link2 =
+      object_linker_.CreateImport(std::move(import_token2), error_reporter());
+  EXPECT_ERROR_COUNT(1);  // CreateImport throws an error.
+  EXPECT_FALSE(import_link2.valid());
+  EXPECT_FALSE(import_link2.initialized());
+  EXPECT_EQ(1u, object_linker_.ImportCount());
+  EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
+}
+
+TEST_F(ObjectLinkerTest, LinkDeathRemovesImport) {
+  zx::eventpair export_token, import_token;
+  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
+
+  {
+    TestObjectLinker::ImportLink import_link =
+        object_linker_.CreateImport(std::move(import_token), error_reporter());
+    EXPECT_ERROR_COUNT(0);
+    EXPECT_TRUE(import_link.valid());
+    EXPECT_FALSE(import_link.initialized());
+    EXPECT_EQ(1u, object_linker_.ImportCount());
+    EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
+
+    // | import_link dies now. |
+  }
+
   EXPECT_EQ(0u, object_linker_.ImportCount());
-  EXPECT_EQ(0u, object_linker_.UnresolvedImportCount());
 }
 
-TEST_F(ObjectLinkerTest, MatchingPeersAreLinked) {
+TEST_F(ObjectLinkerTest, InitializingLinkTwiceCausesDeath) {
+  TestExportObj export_obj, export_obj2;
   zx::eventpair export_token, import_token;
-  TestExportObj* linked_export_obj = nullptr;
-  TestImportObj* linked_import_obj = nullptr;
-  TestExportObj export_obj{
-      .LinkResolved =
-          [&linked_import_obj](TestObjectLinker* linker,
-                               TestImportObj* import_obj) {
-            linked_import_obj = import_obj;
-          },
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed.Export"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed.Export"),
-  };
-  TestImportObj import_obj{
-      .LinkResolved =
-          [&linked_export_obj](TestExportObj* export_obj) {
-            linked_export_obj = export_obj;
-          },
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed.Import"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed.Import"),
-  };
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
 
-  uint64_t export_handle = object_linker_.RegisterExport(
-      &export_obj, std::move(export_token), error_reporter());
+  TestObjectLinker::ExportLink export_link =
+      object_linker_.CreateExport(std::move(export_token), error_reporter());
   EXPECT_ERROR_COUNT(0);
-  EXPECT_NE(0u, export_handle);
-  EXPECT_EQ(nullptr, linked_export_obj);
-  EXPECT_EQ(nullptr, linked_import_obj);
+  EXPECT_TRUE(export_link.valid());
+  EXPECT_FALSE(export_link.initialized());
+
+  export_link.Initialize(&export_obj, ERROR_IF_CALLED("export.link_resolved"),
+                         ERROR_IF_CALLED("export.link_disconnected"));
+  EXPECT_ERROR_COUNT(0);
+  EXPECT_TRUE(export_link.initialized());
+
+  // 2nd Initialize() attempt dies with a DCHECK.
+  EXPECT_DEATH_IF_SUPPORTED(
+      export_link.Initialize(&export_obj2,
+                             ERROR_IF_CALLED("export.link_resolved"),
+                             ERROR_IF_CALLED("export.link_disconnected")),
+      "");
+}
+
+TEST_F(ObjectLinkerTest, InitializeLinksMatchingPeers) {
+  zx::eventpair export_token, import_token;
+  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
+  TestExportObj export_obj;
+  TestImportObj import_obj;
+  bool export_linked = false, import_linked = false;
+  bool export_disconnected = false, import_disconnected = false;
+  bool fail_on_disconnect_called = false;
+
+  TestObjectLinker::ExportLink export_link =
+      object_linker_.CreateExport(std::move(export_token), error_reporter());
+  EXPECT_ERROR_COUNT(0);
+  EXPECT_TRUE(export_link.valid());
+  EXPECT_FALSE(export_link.initialized());
   EXPECT_EQ(1u, object_linker_.ExportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
 
-  uint64_t import_handle = object_linker_.RegisterImport(
-      &import_obj, std::move(import_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);
-  EXPECT_NE(0u, import_handle);
-  EXPECT_EQ(&export_obj, linked_export_obj);
-  EXPECT_EQ(&import_obj, linked_import_obj);
-  EXPECT_EQ(1u, object_linker_.ExportCount());
-  EXPECT_EQ(0u, object_linker_.UnresolvedExportCount());
-  EXPECT_EQ(1u, object_linker_.ImportCount());
-  EXPECT_EQ(0u, object_linker_.UnresolvedImportCount());
+  {
+    TestObjectLinker::ImportLink import_link =
+        object_linker_.CreateImport(std::move(import_token), error_reporter());
+    EXPECT_ERROR_COUNT(0);
+    EXPECT_TRUE(import_link.valid());
+    EXPECT_FALSE(import_link.initialized());
+    EXPECT_EQ(1u, object_linker_.ImportCount());
+    EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
+
+    export_link.Initialize(
+        &export_obj,
+        [&import_obj, &import_linked](TestImportObj* obj) {
+          EXPECT_EQ(obj, &import_obj);
+          EXPECT_FALSE(import_linked);
+          import_linked = true;
+        },
+        [&fail_on_disconnect_called, &import_disconnected]() {
+          EXPECT_FALSE(fail_on_disconnect_called);
+          EXPECT_FALSE(import_disconnected);
+          import_disconnected = true;
+        });
+    EXPECT_ERROR_COUNT(0);
+    EXPECT_TRUE(export_link.initialized());
+    EXPECT_FALSE(export_linked);
+    EXPECT_FALSE(import_linked);
+    EXPECT_FALSE(export_disconnected);
+    EXPECT_FALSE(import_disconnected);
+    EXPECT_EQ(1u, object_linker_.ExportCount());
+    EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
+    EXPECT_EQ(1u, object_linker_.ImportCount());
+    EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
+
+    import_link.Initialize(
+        &import_obj,
+        [&export_obj, &export_linked](TestExportObj* obj) {
+          EXPECT_EQ(obj, &export_obj);
+          EXPECT_FALSE(export_linked);
+          export_linked = true;
+        },
+        [&fail_on_disconnect_called, &export_disconnected]() {
+          EXPECT_FALSE(fail_on_disconnect_called);
+          EXPECT_FALSE(export_disconnected);
+          export_disconnected = true;
+        });
+    EXPECT_ERROR_COUNT(0);
+    EXPECT_TRUE(import_link.initialized());
+    EXPECT_TRUE(export_linked);
+    EXPECT_TRUE(import_linked);
+    EXPECT_FALSE(export_disconnected);
+    EXPECT_FALSE(import_disconnected);
+    EXPECT_EQ(1u, object_linker_.ExportCount());
+    EXPECT_EQ(0u, object_linker_.UnresolvedExportCount());
+    EXPECT_EQ(1u, object_linker_.ImportCount());
+    EXPECT_EQ(0u, object_linker_.UnresolvedImportCount());
+
+    // |import_link| dies now.
+  }
+
+  EXPECT_TRUE(import_disconnected);
+  EXPECT_FALSE(export_disconnected);
+
+  // |export_link| dies now.  No disconnect callback should be called.
+  fail_on_disconnect_called = true;
 }
 
-TEST_F(ObjectLinkerTest, MatchingPeersAreLinkedWithImportBeforeExport) {
+TEST_F(ObjectLinkerTest, InitializeLinksMatchingPeersWithImportBeforeExport) {
   zx::eventpair export_token, import_token;
-  TestExportObj* linked_export_obj = nullptr;
-  TestImportObj* linked_import_obj = nullptr;
-  TestExportObj export_obj{
-      .LinkResolved =
-          [&linked_import_obj](TestObjectLinker* linker,
-                               TestImportObj* import_obj) {
-            linked_import_obj = import_obj;
-          },
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed.Export"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed.Export"),
-  };
-  TestImportObj import_obj{
-      .LinkResolved =
-          [&linked_export_obj](TestExportObj* export_obj) {
-            linked_export_obj = export_obj;
-          },
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed.Import"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed.Import"),
-  };
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
+  TestExportObj export_obj;
+  TestImportObj import_obj;
+  bool export_linked = false, import_linked = false;
+  bool export_disconnected = false, import_disconnected = false;
+  bool fail_on_disconnect_called = false;
 
-  uint64_t import_handle = object_linker_.RegisterImport(
-      &import_obj, std::move(import_token), error_reporter());
+  TestObjectLinker::ImportLink import_link =
+      object_linker_.CreateImport(std::move(import_token), error_reporter());
   EXPECT_ERROR_COUNT(0);
-  EXPECT_NE(0u, import_handle);
-  EXPECT_EQ(nullptr, linked_export_obj);
-  EXPECT_EQ(nullptr, linked_import_obj);
+  EXPECT_TRUE(import_link.valid());
+  EXPECT_FALSE(import_link.initialized());
   EXPECT_EQ(1u, object_linker_.ImportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
 
-  uint64_t export_handle = object_linker_.RegisterExport(
-      &export_obj, std::move(export_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);
-  EXPECT_NE(0u, export_handle);
-  EXPECT_EQ(&export_obj, linked_export_obj);
-  EXPECT_EQ(&import_obj, linked_import_obj);
-  EXPECT_EQ(1u, object_linker_.ExportCount());
-  EXPECT_EQ(0u, object_linker_.UnresolvedExportCount());
-  EXPECT_EQ(1u, object_linker_.ImportCount());
-  EXPECT_EQ(0u, object_linker_.UnresolvedImportCount());
+  {
+    import_link.Initialize(
+        &import_obj,
+
+        [&export_obj, &export_linked](TestExportObj* obj) {
+          EXPECT_EQ(obj, &export_obj);
+          EXPECT_FALSE(export_linked);
+          export_linked = true;
+        },
+        [&fail_on_disconnect_called, &export_disconnected]() {
+          EXPECT_FALSE(fail_on_disconnect_called);
+          EXPECT_FALSE(export_disconnected);
+          export_disconnected = true;
+        });
+    EXPECT_ERROR_COUNT(0);
+    EXPECT_TRUE(import_link.initialized());
+    EXPECT_FALSE(export_linked);
+    EXPECT_FALSE(import_linked);
+    EXPECT_FALSE(export_disconnected);
+    EXPECT_FALSE(import_disconnected);
+    EXPECT_EQ(1u, object_linker_.ImportCount());
+    EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
+
+    TestObjectLinker::ExportLink export_link =
+        object_linker_.CreateExport(std::move(export_token), error_reporter());
+    EXPECT_ERROR_COUNT(0);
+    EXPECT_TRUE(export_link.valid());
+    EXPECT_FALSE(export_link.initialized());
+    EXPECT_FALSE(export_linked);
+    EXPECT_FALSE(import_linked);
+    EXPECT_FALSE(export_disconnected);
+    EXPECT_FALSE(import_disconnected);
+    EXPECT_EQ(1u, object_linker_.ExportCount());
+    EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
+    EXPECT_EQ(1u, object_linker_.ImportCount());
+    EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
+
+    export_link.Initialize(
+        &export_obj,
+        [&import_obj, &import_linked](TestImportObj* obj) {
+          EXPECT_EQ(obj, &import_obj);
+          EXPECT_FALSE(import_linked);
+          import_linked = true;
+        },
+        [&fail_on_disconnect_called, &import_disconnected]() {
+          EXPECT_FALSE(fail_on_disconnect_called);
+          EXPECT_FALSE(import_disconnected);
+          import_disconnected = true;
+        });
+    EXPECT_ERROR_COUNT(0);
+    EXPECT_TRUE(export_link.initialized());
+    EXPECT_TRUE(export_linked);
+    EXPECT_TRUE(import_linked);
+    EXPECT_FALSE(export_disconnected);
+    EXPECT_FALSE(import_disconnected);
+    EXPECT_EQ(1u, object_linker_.ExportCount());
+    EXPECT_EQ(0u, object_linker_.UnresolvedExportCount());
+    EXPECT_EQ(1u, object_linker_.ImportCount());
+    EXPECT_EQ(0u, object_linker_.UnresolvedImportCount());
+
+    // |export_link| dies now.
+  }
+
+  EXPECT_TRUE(export_disconnected);
+  EXPECT_FALSE(import_disconnected);
+
+  // |import_link| dies now.  No disconnect callback should be called.
+  fail_on_disconnect_called = true;
 }
 
-TEST_F(ObjectLinkerTest, NonMatchingPeersAreNotLinked) {
+TEST_F(ObjectLinkerTest, InitializeDoesNotLinkNonMatchingPeers) {
   zx::eventpair export_token, import_token;
   zx::eventpair export_token2, import_token2;
-  TestExportObj* linked_export_obj = nullptr;
-  TestImportObj* linked_import_obj = nullptr;
-  TestExportObj export_obj{
-      .LinkResolved =
-          [&linked_import_obj](TestObjectLinker* linker,
-                               TestImportObj* import_obj) {
-            linked_import_obj = import_obj;
-          },
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed.Export"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed.Export"),
-  };
-  TestImportObj import_obj{
-      .LinkResolved =
-          [&linked_export_obj](TestExportObj* export_obj) {
-            linked_export_obj = export_obj;
-          },
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed.Import"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed.Import"),
-  };
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token2, &import_token2));
+  TestExportObj export_obj;
+  TestImportObj import_obj;
 
-  uint64_t export_handle = object_linker_.RegisterExport(
-      &export_obj, std::move(export_token), error_reporter());
+  TestObjectLinker::ImportLink import_link =
+      object_linker_.CreateImport(std::move(import_token), error_reporter());
   EXPECT_ERROR_COUNT(0);
-  EXPECT_NE(0u, export_handle);
-  EXPECT_EQ(nullptr, linked_import_obj);
-  EXPECT_EQ(1u, object_linker_.ExportCount());
-  EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
-  uint64_t import_handle = object_linker_.RegisterImport(
-      &import_obj, std::move(import_token2), error_reporter());
-  EXPECT_ERROR_COUNT(0);
-  EXPECT_NE(0u, export_handle);
-  EXPECT_NE(0u, import_handle);
-  EXPECT_EQ(nullptr, linked_export_obj);
-  EXPECT_EQ(nullptr, linked_import_obj);
-  EXPECT_EQ(1u, object_linker_.ExportCount());
-  EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
-  EXPECT_EQ(1u, object_linker_.ImportCount());
-  EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
-}
-
-TEST_F(ObjectLinkerTest, ImportTokenDeathCleansUpObjectExport) {
-  zx::eventpair export_token, import_token;
-  bool conn_closed_fired = false;
-  TestExportObj export_obj{
-      .LinkResolved = ERROR_IF_CALLED("LinkResolved"),
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed"),
-      .ConnectionClosed =
-          std::bind([&conn_closed_fired]() { conn_closed_fired = true; }),
-  };
-  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
-
-  uint64_t export_handle = object_linker_.RegisterExport(
-      &export_obj, std::move(export_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);
-  EXPECT_NE(0u, export_handle);
-  EXPECT_EQ(1u, object_linker_.ExportCount());
-  EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
-
-  // This should cause the export to die with a ConnectionClosed event on the
-  // next tick of the event loop.
-  import_token.reset();
-  EXPECT_TRUE(RunLoopUntilIdle());
-  EXPECT_TRUE(conn_closed_fired);
-  EXPECT_EQ(0u, object_linker_.ExportCount());
-  EXPECT_EQ(0u, object_linker_.UnresolvedExportCount());
-}
-
-TEST_F(ObjectLinkerTest, ExportTokenDeathCleansUpUnresolvedImports) {
-  zx::eventpair export_token, import_token;
-  bool conn_closed_fired = false;
-  TestImportObj import_obj{
-      .LinkResolved = ERROR_IF_CALLED("LinkResolved"),
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed"),
-      .ConnectionClosed =
-          std::bind([&conn_closed_fired]() { conn_closed_fired = true; }),
-  };
-  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
-
-  uint64_t import_handle = object_linker_.RegisterImport(
-      &import_obj, std::move(import_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);
-  EXPECT_NE(0u, import_handle);
+  EXPECT_TRUE(import_link.valid());
+  EXPECT_FALSE(import_link.initialized());
   EXPECT_EQ(1u, object_linker_.ImportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
 
-  // This should cause the import to die with a ConnectionClosed event on the
-  // next tick of the event loop.
-  export_token.reset();
-  EXPECT_TRUE(RunLoopUntilIdle());
-  EXPECT_TRUE(conn_closed_fired);
-  EXPECT_EQ(0u, object_linker_.ImportCount());
-  EXPECT_EQ(0u, object_linker_.UnresolvedImportCount());
-}
-
-TEST_F(ObjectLinkerTest, ImportAfterUnregisteredExportFails) {
-  zx::eventpair export_token, import_token;
-  bool conn_closed_fired = false;
-  TestExportObj export_obj{
-      .LinkResolved = ERROR_IF_CALLED("LinkResolved.Export"),
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed.Export"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed.Export"),
-  };
-  TestImportObj import_obj{
-      .LinkResolved = ERROR_IF_CALLED("LinkResolved.Import"),
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed.Import"),
-      .ConnectionClosed =
-          std::bind([&conn_closed_fired]() { conn_closed_fired = true; }),
-  };
-  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
-
-  uint64_t export_handle = object_linker_.RegisterExport(
-      &export_obj, std::move(export_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);
-  EXPECT_NE(0u, export_handle);
-  EXPECT_EQ(1u, object_linker_.ExportCount());
-  EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
-  object_linker_.UnregisterExport(export_handle);  // Release the export.
-  EXPECT_EQ(0u, object_linker_.ExportCount());
-  EXPECT_EQ(0u, object_linker_.UnresolvedExportCount());
-
-  // Now try to import. We should get a ConnectionClosed callback.
-  uint64_t import_handle = object_linker_.RegisterImport(
-      &import_obj, std::move(import_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);
-  EXPECT_NE(0u, import_handle);
-  EXPECT_TRUE(RunLoopUntilIdle());
-  EXPECT_TRUE(conn_closed_fired);
-  EXPECT_EQ(0u, object_linker_.ImportCount());
-  EXPECT_EQ(0u, object_linker_.UnresolvedImportCount());
-}
-
-TEST_F(ObjectLinkerTest, DISABLED_DuplicatedImportTokensAllowMultipleImports) {
-  zx::eventpair export_token, import_token;
-  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
-
-  size_t import_resolution_count = 0;
-  bool export_link_resolved_fired = false;
-  TestExportObj export_obj{
-      .LinkResolved = std::bind([&export_link_resolved_fired]() {
-        export_link_resolved_fired = true;
-      }),
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed.Export"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed.Export"),
-  };
-  TestImportObj import_obj{
-      .LinkResolved = std::bind(
-          [&import_resolution_count]() { import_resolution_count++; }),
-      .PeerDestroyed = ERROR_IF_CALLED("PeerDestroyed.Import"),
-      .ConnectionClosed = ERROR_IF_CALLED("ConnectionClosed.Import"),
-  };
-
-  // Import multiple times.
-  static const size_t kImportCount = 100;
-  for (size_t i = 1; i <= kImportCount; ++i) {
-    zx::eventpair dupe_import_token;
-    EXPECT_EQ(ZX_OK,
-              export_token.duplicate(ZX_RIGHT_SAME_RIGHTS, &dupe_import_token));
-    uint64_t import_handle = object_linker_.RegisterImport(
-        &import_obj, std::move(dupe_import_token), error_reporter());
+  {
+    TestObjectLinker::ExportLink export_link =
+        object_linker_.CreateExport(std::move(export_token2), error_reporter());
     EXPECT_ERROR_COUNT(0);
-    EXPECT_NE(0u, import_handle);
-    EXPECT_EQ(0u, import_resolution_count);
-    EXPECT_FALSE(export_link_resolved_fired);
-    EXPECT_EQ(0u, object_linker_.ExportCount());
-    EXPECT_EQ(i, object_linker_.UnresolvedImportCount());
+    EXPECT_TRUE(export_link.valid());
+    EXPECT_FALSE(export_link.initialized());
+    EXPECT_EQ(1u, object_linker_.ExportCount());
+    EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
+
+    import_link.Initialize(&import_obj, ERROR_IF_CALLED("export.link_resolved"),
+                           ERROR_IF_CALLED("export.link_disconnected"));
+    EXPECT_ERROR_COUNT(0);
+    EXPECT_TRUE(import_link.initialized());
+    EXPECT_EQ(1u, object_linker_.ExportCount());
+    EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
+    EXPECT_EQ(1u, object_linker_.ImportCount());
+    EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
+
+    export_link.Initialize(&export_obj, ERROR_IF_CALLED("export.link_resolved"),
+                           ERROR_IF_CALLED("export.link_disconnected"));
+    EXPECT_ERROR_COUNT(0);
+    EXPECT_TRUE(export_link.initialized());
+    EXPECT_EQ(1u, object_linker_.ExportCount());
+    EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
+    EXPECT_EQ(1u, object_linker_.ImportCount());
+    EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
+
+    // |export_link| dies now.  No disconnect callback should be called.
   }
 
-  // Export once, it should link to all imports.
-  uint64_t export_handle = object_linker_.RegisterExport(
-      &export_obj, std::move(export_token), error_reporter());
+  // |import_link| dies now.  No disconnect callback should be called.
+}
+
+TEST_F(ObjectLinkerTest, EarlyImportTokenDeathCausesExportDisconnection) {
+  zx::eventpair export_token, import_token;
+  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
+  TestExportObj export_obj;
+  bool import_disconnected = false;
+
+  TestObjectLinker::ExportLink export_link =
+      object_linker_.CreateExport(std::move(export_token), error_reporter());
   EXPECT_ERROR_COUNT(0);
-  EXPECT_NE(0u, export_handle);
-  EXPECT_TRUE(export_link_resolved_fired);
-  EXPECT_EQ(kImportCount, import_resolution_count);
+  EXPECT_TRUE(export_link.valid());
+  EXPECT_FALSE(export_link.initialized());
+  EXPECT_EQ(1u, object_linker_.ExportCount());
+  EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
+
+  // This should cause the export to get a link_disconnected event when it is
+  // initialized.
+  import_token.reset();
+  EXPECT_TRUE(RunLoopUntilIdle());
+  EXPECT_FALSE(import_disconnected);
   EXPECT_EQ(1u, object_linker_.ExportCount());
   EXPECT_EQ(0u, object_linker_.UnresolvedExportCount());
-  EXPECT_EQ(kImportCount, object_linker_.ImportCount());
+
+  export_link.Initialize(&export_obj, ERROR_IF_CALLED("export.link_resolved"),
+                         [&import_disconnected]() {
+                           EXPECT_FALSE(import_disconnected);
+                           import_disconnected = true;
+                         });
+  EXPECT_TRUE(export_link.initialized());
+  EXPECT_EQ(1u, object_linker_.ExportCount());
+  EXPECT_EQ(0u, object_linker_.UnresolvedExportCount());
+}
+
+TEST_F(ObjectLinkerTest, ImportTokenDeathCausesExportDisconnection) {
+  zx::eventpair export_token, import_token;
+  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
+  TestExportObj export_obj;
+  bool import_disconnected = false;
+
+  TestObjectLinker::ExportLink export_link =
+      object_linker_.CreateExport(std::move(export_token), error_reporter());
+  EXPECT_ERROR_COUNT(0);
+  EXPECT_TRUE(export_link.valid());
+  EXPECT_FALSE(export_link.initialized());
+  EXPECT_EQ(1u, object_linker_.ExportCount());
+  EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
+
+  export_link.Initialize(&export_obj, ERROR_IF_CALLED("export.link_resolved"),
+                         [&import_disconnected]() {
+                           EXPECT_FALSE(import_disconnected);
+                           import_disconnected = true;
+                         });
+  EXPECT_TRUE(export_link.initialized());
+  EXPECT_EQ(1u, object_linker_.ExportCount());
+  EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
+
+  // This should cause the export to get a link_disconnected event when the
+  // eventloop ticks.
+  import_token.reset();
+  EXPECT_TRUE(RunLoopUntilIdle());
+  EXPECT_TRUE(export_link.initialized());
+  EXPECT_TRUE(import_disconnected);
+  EXPECT_EQ(1u, object_linker_.ExportCount());
+  EXPECT_EQ(0u, object_linker_.UnresolvedExportCount());
+}
+
+TEST_F(ObjectLinkerTest, EarlyExportTokenDeathCausesImportDisconnection) {
+  zx::eventpair export_token, import_token;
+  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
+  TestImportObj import_obj;
+  bool export_disconnected = false;
+
+  TestObjectLinker::ImportLink import_link =
+      object_linker_.CreateImport(std::move(import_token), error_reporter());
+  EXPECT_ERROR_COUNT(0);
+  EXPECT_TRUE(import_link.valid());
+  EXPECT_FALSE(import_link.initialized());
+  EXPECT_EQ(1u, object_linker_.ImportCount());
+  EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
+
+  // This should cause the import to get a link_disconnected event when it is
+  // initialized.
+  export_token.reset();
+  EXPECT_TRUE(RunLoopUntilIdle());
+  EXPECT_FALSE(export_disconnected);
+  EXPECT_EQ(1u, object_linker_.ImportCount());
+  EXPECT_EQ(0u, object_linker_.UnresolvedImportCount());
+
+  import_link.Initialize(&import_obj, ERROR_IF_CALLED("import.link_resolved"),
+                         [&export_disconnected]() {
+                           EXPECT_FALSE(export_disconnected);
+                           export_disconnected = true;
+                         });
+  EXPECT_TRUE(import_link.initialized());
+  EXPECT_TRUE(export_disconnected);
+  EXPECT_EQ(1u, object_linker_.ImportCount());
+  EXPECT_EQ(0u, object_linker_.UnresolvedImportCount());
+}
+
+TEST_F(ObjectLinkerTest, ExportTokenDeathCausesImportDisconnection) {
+  zx::eventpair export_token, import_token;
+  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
+  TestImportObj import_obj;
+  bool export_disconnected = false;
+
+  TestObjectLinker::ImportLink import_link =
+      object_linker_.CreateImport(std::move(import_token), error_reporter());
+  EXPECT_ERROR_COUNT(0);
+  EXPECT_TRUE(import_link.valid());
+  EXPECT_FALSE(import_link.initialized());
+  EXPECT_EQ(1u, object_linker_.ImportCount());
+  EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
+
+  import_link.Initialize(&import_obj, ERROR_IF_CALLED("import.link_resolved"),
+                         [&export_disconnected]() {
+                           EXPECT_FALSE(export_disconnected);
+                           export_disconnected = true;
+                         });
+  EXPECT_TRUE(import_link.initialized());
+  EXPECT_EQ(1u, object_linker_.ImportCount());
+  EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
+
+  // This should cause the import to get a link_disconnected event when the
+  // eventloop ticks.
+  export_token.reset();
+  EXPECT_TRUE(RunLoopUntilIdle());
+  EXPECT_TRUE(import_link.initialized());
+  EXPECT_TRUE(export_disconnected);
+  EXPECT_EQ(1u, object_linker_.ImportCount());
   EXPECT_EQ(0u, object_linker_.UnresolvedImportCount());
 }
 

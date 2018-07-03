@@ -211,12 +211,11 @@ struct BoundingBox {
 // view's bounding box and that of its parent.
 //
 // The View's bounding box extents can be defined as:
-//    { extents.min - inset_from_min, extents.max + inset_from_max }
-//
+//    { bounding_box.min - inset_from_min, bounding_box.max + inset_from_max }
 // TODO(SCN-819): should we just have a vec3 extent instead of a bounding box
 // with a potentially non-zero min?
 struct ViewProperties {
-  BoundingBox extents;
+  BoundingBox bounding_box;
   vec3 inset_from_min;
   vec3 inset_from_max;
 };

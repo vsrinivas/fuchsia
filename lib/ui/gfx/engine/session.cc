@@ -316,22 +316,19 @@ bool Session::ApplyAddChildCmd(::fuchsia::ui::gfx::AddChildCmd command) {
   // - Nodes to Nodes
   // - ViewHolders to Nodes
   // - Nodes to Views
-  // TODO(SCN-795): Split these out into separate commands.
-  if (auto parent_node = resources_.FindResource<Node>(
+  // TODO(SCN-795): Split these out into separate commands?
+  if (auto parent = resources_.FindResource<Node>(
           command.node_id, ResourceMap::ErrorBehavior::kDontReportErrors)) {
-    if (auto child_node = resources_.FindResource<Node>(
+    if (auto child = resources_.FindResource<Node>(
             command.child_id, ResourceMap::ErrorBehavior::kDontReportErrors)) {
-      return parent_node->AddChild(std::move(child_node));
-    } else if (auto child_node =
+      return parent->AddChild(std::move(child));
+    } else if (auto child =
                    resources_.FindResource<ViewHolder>(command.child_id)) {
-      child_node->SetParent(std::move(parent_node));
-      return true;
+      return parent->AddViewHolder(std::move(child));
     }
-  } else if (auto parent_node =
-                 resources_.FindResource<View>(command.node_id)) {
-    if (auto child_node = resources_.FindResource<Node>(command.child_id)) {
-      parent_node->AddChild(std::move(child_node));
-      return true;
+  } else if (auto parent = resources_.FindResource<View>(command.node_id)) {
+    if (auto child = resources_.FindResource<Node>(command.child_id)) {
+      return parent->AddChild(std::move(child));
     }
   }
   return false;
@@ -964,21 +961,32 @@ bool Session::ApplyCreateMaterial(scenic::ResourceId id,
 
 bool Session::ApplyCreateView(scenic::ResourceId id,
                               ::fuchsia::ui::gfx::ViewArgs args) {
+  // Sanity check.  We also rely on FIDL to enforce this for us, although it
+  // does not at the moment.
   FXL_DCHECK(args.token)
       << "scenic::gfx::Session::ApplyCreateView(): no token provided.";
 
-  auto view = CreateView(id, std::move(args));
-  return view ? resources_.AddResource(id, std::move(view)) : false;
+  if (auto view = CreateView(id, std::move(args))) {
+    view->As<View>()->Connect();  // Initiate the link.
+    resources_.AddResource(id, std::move(view));
+    return true;
+  }
+  return false;
 }
 
 bool Session::ApplyCreateViewHolder(scenic::ResourceId id,
                                     ::fuchsia::ui::gfx::ViewHolderArgs args) {
+  // Sanity check.  We also rely on FIDL to enforce this for us, although it
+  // does not at the moment
   FXL_DCHECK(args.token)
       << "scenic::gfx::Session::ApplyCreateViewHolder(): no token provided.";
 
-  auto view_holder = CreateViewHolder(id, std::move(args));
-  return view_holder ? resources_.AddResource(id, std::move(view_holder))
-                     : false;
+  if (auto view_holder = CreateViewHolder(id, std::move(args))) {
+    view_holder->As<ViewHolder>()->Connect();  // Initiate the link.
+    resources_.AddResource(id, std::move(view_holder));
+    return true;
+  }
+  return false;
 }
 
 bool Session::ApplyCreateClipNode(scenic::ResourceId id,
@@ -1114,12 +1122,28 @@ ResourcePtr Session::CreateDirectionalLight(scenic::ResourceId id) {
 
 ResourcePtr Session::CreateView(scenic::ResourceId id,
                                 ::fuchsia::ui::gfx::ViewArgs args) {
-  return fxl::MakeRefCounted<View>(this, id, std::move(args));
+  ViewLinker* view_linker = engine()->view_linker();
+  ViewLinker::ImportLink link =
+      view_linker->CreateImport(std::move(args.token), error_reporter());
+
+  // Create a View if the Link was successfully registered.
+  if (link.valid()) {
+    return fxl::MakeRefCounted<View>(this, id, std::move(link));
+  }
+  return nullptr;
 }
 
 ResourcePtr Session::CreateViewHolder(scenic::ResourceId id,
                                       ::fuchsia::ui::gfx::ViewHolderArgs args) {
-  return fxl::MakeRefCounted<ViewHolder>(this, id, std::move(args));
+  ViewLinker* view_linker = engine()->view_linker();
+  ViewLinker::ExportLink link =
+      view_linker->CreateExport(std::move(args.token), error_reporter());
+
+  // Create a ViewHolder if the Link was successfully registered.
+  if (link.valid()) {
+    return fxl::MakeRefCounted<ViewHolder>(this, id, std::move(link));
+  }
+  return nullptr;
 }
 
 ResourcePtr Session::CreateClipNode(scenic::ResourceId id,

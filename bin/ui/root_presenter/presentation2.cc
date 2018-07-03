@@ -162,8 +162,8 @@ void Presentation2::HandleScenicEvent(const fuchsia::ui::scenic::Event& event) {
   switch (event.Which()) {
     case fuchsia::ui::scenic::Event::Tag::kGfx:
       switch (event.gfx().Which()) {
-        case fuchsia::ui::gfx::Event::Tag::kViewDisconnected: {
-          auto& evt = event.gfx().view_disconnected();
+        case fuchsia::ui::gfx::Event::Tag::kViewHolderDisconnected: {
+          auto& evt = event.gfx().view_holder_disconnected();
           FXL_DCHECK(view_holder_.id() == evt.view_holder_id);
           FXL_LOG(ERROR)
               << "Root presenter: Content view terminated unexpectedly.";
