@@ -101,7 +101,7 @@ void ProcessBuilder::CloneJob() {
   if (launch_info_.job)
     launch_info_.job.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_job);
   else
-    zx::job::default_job().duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_job);
+    zx::job::default_job()->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_job);
   SetDefaultJob(std::move(duplicate_job));
 }
 
@@ -172,8 +172,8 @@ zx_status_t ProcessBuilder::Prepare(std::string* error_message) {
   zx_status_t status = ZX_OK;
   launcher_->AddHandles(std::move(handles_));
   if (!launch_info_.job) {
-    status = zx::job::default_job().duplicate(ZX_RIGHT_SAME_RIGHTS,
-                                              &launch_info_.job);
+    status = zx::job::default_job()->duplicate(ZX_RIGHT_SAME_RIGHTS,
+                                               &launch_info_.job);
     if (status != ZX_OK)
       return status;
   }

@@ -873,7 +873,7 @@ void Initialize(Struct* s) {
                                          &eventpair1));
 
   ASSERT_EQ(ZX_OK,
-            zx::job::create(zx_job_default(), 0u, &s->handles.job_handle));
+            zx::job::create(*zx::job::default_job(), 0u, &s->handles.job_handle));
 
   uintptr_t vmar_addr;
   ASSERT_EQ(ZX_OK, zx::vmar::root_self().allocate(
