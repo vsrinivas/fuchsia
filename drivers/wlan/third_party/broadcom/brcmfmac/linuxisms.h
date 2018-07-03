@@ -184,39 +184,6 @@ static inline uint32_t get_unaligned_le32(void* addr) {
     return value;
 }
 
-LINUX_FUNCVI(brcmf_netbuf_realloc_head) // Realloc if necessary
-LINUX_FUNCVV(brcmf_netbuf_list_peek_tail) // netbuf list
-LINUX_FUNCVV(brcmf_netbuf_list_peek_head) // netbuf list
-LINUX_FUNCVV(brcmf_netbuf_list_add_head) // netbuf list
-LINUX_FUNCVI(brcmf_netbuf_list_is_empty) // netbuf list
-LINUX_FUNCVV(brcmf_netbuf_list_remove_head) // netbuf list
-LINUX_FUNCVV(brcmf_netbuf_list_remove_head_locked) // netbuf list
-LINUX_FUNCVI(brcmf_netbuf_list_length) // netbuf list
-LINUX_FUNCVI(brcmf_netbuf_set_length_to) // May either grow or shrink.
-LINUX_FUNCVI(brcmf_netbuf_list_remove) // netbuf list
-LINUX_FUNCVI(brcmf_netbuf_grow_head) // onion
-//LINUX_FUNCVU(brcmf_netbuf_head_space) // Already implemented
-//LINUX_FUNCVI(netbuf_cow_head) // Replaced using brcmf_netbuf_realloc_head()
-LINUX_FUNCVI(brcmf_netbuf_list_add_tail) // netbuf list
-//LINUX_FUNCVI(netbuf_queue_is_last) // Replaced using brcmf_netbuf_list_peek_tail()
-LINUX_FUNCVI(brcmf_netbuf_reduce_length_to) // If length is already shorter, NOP.
-//LINUX_FUNCVI(netbuf_linearize) // Not needed / used in this driver architecture
-LINUX_FUNCVI(brcmf_netbuf_add_after_locked) // netbuf list
-LINUX_FUNCVI(brcmf_netbuf_list_remove_locked) // netbuf list
-//LINUX_FUNCVI(brcmf_netbuf_grow_tail) // Already implemented
-LINUX_FUNCVI(brcmf_netbuf_list_init_nonlocked) // netbuf list
-LINUX_FUNCVI(brcmf_netbuf_add_tail_locked) // netbuf list
-LINUX_FUNCVV(brcmf_netbuf_remove_tail) // netbuf list
-LINUX_FUNCVV(brcmf_netbuf_list_prev) // netbuf list
-// LINUX_FUNCVV(netbuf_header_cloned) // Not needed / used in this driver architecture
-// LINUX_FUNCVI(__netbuf_insert) // Replaced by brcmf_netbuf_add_after_locked(): see fwsignal.c:1291
-// LINUX_FUNCVI(netbuf_orphan) // Not needed in this driver architecture
-#define brcmf_netbuf_list_for_every_safe(a, b, c)  \
-    for(({brcmf_err("Calling brcmf_netbuf_list_for_every_safe"); \
-                                        (void)c;}), b=(a)->next;true;)
-#define brcmf_netbuf_list_for_every(a, b) for(({brcmf_err("Calling brcmf_netbuf_list_for_every"); \
-                                    b=(a)->next;});true;)
-
 LINUX_FUNCVI(netdev_mc_count) // In core.c
 LINUX_FUNCVI(waitqueue_active) // In core.c
 LINUX_FUNCX(rtnl_lock) // In core.c and p2p.c

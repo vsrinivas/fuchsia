@@ -47,7 +47,7 @@ void brcmu_pkt_buf_free_netbuf(struct brcmf_netbuf* netbuf) {
         return;
     }
 
-    WARN_ON(netbuf->next);
+    WARN_ON(brcmf_netbuf_maybe_in_list(netbuf));
     brcmf_netbuf_free(netbuf);
 }
 EXPORT_SYMBOL(brcmu_pkt_buf_free_netbuf);
@@ -125,7 +125,7 @@ struct brcmf_netbuf* brcmu_pktq_pdeq_match(struct pktq* pq, int prec,
     q = &pq->q[prec].netbuf_list;
     brcmf_netbuf_list_for_every_safe(q, p, next) {
         if (match_fn == NULL || match_fn(p, arg)) {
-            brcmf_netbuf_list_remove(p, q);
+            brcmf_netbuf_list_remove(q, p);
             pq->len--;
             return p;
         }
@@ -139,7 +139,7 @@ struct brcmf_netbuf* brcmu_pktq_pdeq_tail(struct pktq* pq, int prec) {
     struct brcmf_netbuf* p;
 
     q = &pq->q[prec].netbuf_list;
-    p = brcmf_netbuf_remove_tail(q);
+    p = brcmf_netbuf_list_remove_tail(q);
     if (p == NULL) {
         return NULL;
     }
@@ -158,7 +158,7 @@ void brcmu_pktq_pflush(struct pktq* pq, int prec, bool dir, bool (*fn)(struct br
     q = &pq->q[prec].netbuf_list;
     brcmf_netbuf_list_for_every_safe(q, p, next) {
         if (fn == NULL || (*fn)(p, arg)) {
-            brcmf_netbuf_list_remove(p, q);
+            brcmf_netbuf_list_remove(q, p);
             brcmu_pkt_buf_free_netbuf(p);
             pq->len--;
         }
@@ -220,7 +220,7 @@ int brcmu_pktq_mlen(struct pktq* pq, uint prec_bmp) {
 
     for (prec = 0; prec <= pq->hi_prec; prec++)
         if (prec_bmp & (1 << prec)) {
-            len += pq->q[prec].netbuf_list.qlen;
+            len += pktq_plen(pq, prec);
         }
 
     return len;
@@ -301,19 +301,6 @@ char* brcmu_dotrev_str(uint32_t dotrev, char* buf) {
 EXPORT_SYMBOL(brcmu_dotrev_str);
 
 #if defined(DEBUG)
-/* pretty hex print a pkt buffer chain */
-void brcmu_prpkt(const char* msg, struct brcmf_netbuf* p0) {
-    struct brcmf_netbuf* p;
-
-    if (msg && (msg[0] != '\0')) {
-        zxlogf(INFO, "brcmfmac: %s:\n", msg);
-    }
-
-    for (p = p0; p; p = p->next) {
-        brcmf_hexdump(p->data, p->len + DUMP_PREFIX_OFFSET);
-    }
-}
-EXPORT_SYMBOL(brcmu_prpkt);
 
 void brcmu_dbg_hex_dump(const void* data, size_t size, const char* fmt, ...) {
     struct va_format vaf;

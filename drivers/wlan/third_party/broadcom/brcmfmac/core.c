@@ -254,10 +254,11 @@ static netdev_tx_t brcmf_netdev_start_xmit(struct brcmf_netbuf* netbuf, struct n
 
         brcmf_dbg(INFO, "%s: insufficient headroom (%d)\n", brcmf_ifname(ifp), head_delta);
         atomic_fetch_add(&drvr->bus_if->stats.pktcowed, 1);
-        ret = brcmf_netbuf_realloc_head(netbuf, ALIGN(head_delta, NET_NETBUF_PAD), 0, GFP_ATOMIC);
+        ret = brcmf_netbuf_grow_realloc(netbuf, ALIGN(head_delta, NET_NETBUF_PAD), 0);
         if (ret != ZX_OK) {
             brcmf_err("%s: failed to expand headroom\n", brcmf_ifname(ifp));
             atomic_fetch_add(&drvr->bus_if->stats.pktcow_failed, 1);
+            // TODO(cphoenix): Shouldn't I brcmf_netbuf_free here?
             goto done;
         }
     }

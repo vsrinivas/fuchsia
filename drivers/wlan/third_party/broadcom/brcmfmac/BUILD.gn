@@ -136,6 +136,27 @@ executable("workqueue_test") {
   ]
 }
 
+executable("netbuf_test") {
+  output_name = "netbuf_test"
+  testonly = true
+  sources = [
+    "netbuf.c",
+    "netbuf.h",
+    "netbuf_test.cc",
+  ]
+
+  deps = [
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/fbl",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/async-loop",
+  ]
+}
+
 package("brcmfmac") {
   deprecated_system_image = true
 
@@ -175,11 +196,15 @@ package("brcmfmac_test") {
 
   deps = [
     ":workqueue_test",
+    ":netbuf_test",
   ]
 
   tests = [
     {
       name = "workqueue_test"
+    },
+    {
+      name = "netbuf_test"
     },
   ]
 }

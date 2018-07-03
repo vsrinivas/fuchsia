@@ -363,7 +363,7 @@ zx_status_t brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct brcmf_
     uint32_t addr = sdiodev->cc_core->base;
     zx_status_t err = ZX_OK;
 
-    brcmf_dbg(SDIO, "addr = 0x%x, size = %d\n", addr, pktq->qlen);
+    brcmf_dbg(SDIO, "addr = 0x%x, size = %d\n", addr, brcmf_netbuf_list_length(pktq));
 
     err = brcmf_sdiod_set_backplane_window(sdiodev, addr);
     if (err != ZX_OK) {
@@ -373,8 +373,9 @@ zx_status_t brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct brcmf_
     addr &= SBSDIO_SB_OFT_ADDR_MASK;
     addr |= SBSDIO_SB_ACCESS_2_4B_FLAG;
 
-    if (pktq->qlen == 1) {
-        err = brcmf_sdiod_netbuf_read(sdiodev, sdiodev->func2, addr, pktq->next);
+    if (brcmf_netbuf_list_length(pktq) == 1) {
+        err = brcmf_sdiod_netbuf_read(sdiodev, sdiodev->func2, addr,
+                                      brcmf_netbuf_list_peek_head(pktq));
     } else {
         glom_netbuf = brcmu_pkt_buf_get_netbuf(totlen);
         if (!glom_netbuf) {
@@ -432,7 +433,7 @@ zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_ne
     uint32_t addr = sdiodev->cc_core->base;
     zx_status_t err;
 
-    brcmf_dbg(SDIO, "addr = 0x%x, size = %d\n", addr, pktq->qlen);
+    brcmf_dbg(SDIO, "addr = 0x%x, size = %d\n", addr, brcmf_netbuf_list_length(pktq));
 
     err = brcmf_sdiod_set_backplane_window(sdiodev, addr);
     if (err != ZX_OK) {

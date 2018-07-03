@@ -1888,7 +1888,8 @@ zx_status_t brcmf_p2p_ifchange(struct brcmf_cfg80211_info* cfg,
     // concurrency, either put in a paranoid-test like in all the other code paths, or support
     // it properly.
     if (brcmf_cfg80211_vif_event_armed(cfg)) {
-        brcmf_err("TODO(cphoenix): Concurrent vif events should never happen.");
+        // TODO(cphoenix): Deal with this better, or prevent it
+        brcmf_err(" * * Concurrent vif events should never happen.");
     }
 
     brcmf_cfg80211_arm_vif_event(cfg, vif, BRCMF_E_IF_CHANGE);

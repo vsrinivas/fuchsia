@@ -1174,7 +1174,7 @@ static void brcmf_sdio_free_glom(struct brcmf_sdio* bus) {
     struct brcmf_netbuf* next;
 
     brcmf_netbuf_list_for_every_safe(&bus->glom, cur, next) {
-        brcmf_netbuf_list_remove(cur, &bus->glom);
+        brcmf_netbuf_list_remove(&bus->glom, cur);
         brcmu_pkt_buf_free_netbuf(cur);
     }
 }
@@ -1561,15 +1561,18 @@ static uint8_t brcmf_sdio_rxglom(struct brcmf_sdio* bus, uint8_t rxseq) {
             brcmf_netbuf_shrink_head(pfirst, doff);
 
             if (pfirst->len == 0) {
-                brcmf_netbuf_list_remove(pfirst, &bus->glom);
+                brcmf_netbuf_list_remove(&bus->glom, pfirst);
                 brcmu_pkt_buf_free_netbuf(pfirst);
                 continue;
             }
 
             brcmf_dbg_hex_dump(BRCMF_GLOM_ON(), pfirst->data, min_t(int, pfirst->len, 32),
-                               "subframe %d to stack, %p (%p/%d) nxt/lnk %p/%p\n", bus->glom.qlen,
-                               pfirst, pfirst->data, pfirst->len, pfirst->next, pfirst->prev);
-            brcmf_netbuf_list_remove(pfirst, &bus->glom);
+                               "subframe %d to stack, %p (%p/%d) nxt/lnk %p/%p\n",
+                               brcmf_netbuf_list_length(&bus->glom),
+                               pfirst, pfirst->data, pfirst->len,
+                               brcmf_netbuf_list_next(&bus->glom, pfirst),
+                               brcmf_netbuf_list_prev(&bus->glom, pfirst));
+            brcmf_netbuf_list_remove(&bus->glom, pfirst);
             if (brcmf_sdio_fromevntchan(&dptr[SDPCM_HWHDR_LEN])) {
                 brcmf_rx_event(bus->sdiodev->dev, pfirst);
             } else {
@@ -1922,7 +1925,7 @@ static zx_status_t brcmf_sdio_txpkt_hdalign(struct brcmf_sdio* bus, struct brcmf
         if (brcmf_netbuf_head_space(pkt) < head_pad) {
             stats = &bus->sdiodev->bus_if->stats;
             atomic_fetch_add(&stats->pktcowed, 1);
-            if (brcmf_netbuf_realloc_head(pkt, head_pad)) {
+            if (brcmf_netbuf_grow_realloc(pkt, head_pad, 0)) {
                 atomic_fetch_add(&stats->pktcow_failed, 1);
                 return ZX_ERR_NO_MEMORY;
             }
@@ -1988,11 +1991,11 @@ static zx_status_t brcmf_sdio_txpkt_prep_sg(struct brcmf_sdio* bus, struct brcmf
         *(uint16_t*)(pkt_pad->workspace) = ALIGN_NETBUF_FLAG + tail_chop;
         brcmf_netbuf_reduce_length_to(pkt, pkt->len - tail_chop);
         brcmf_netbuf_reduce_length_to(pkt_pad, tail_pad + tail_chop);
-        brcmf_netbuf_add_after_locked(pktq, pkt, pkt_pad);
+        brcmf_netbuf_list_add_after(pktq, pkt, pkt_pad);
     } else {
-        ntail = pkt->allocated_size + tail_pad - (pkt->end - pkt->tail);
+        ntail = tail_pad - brcmf_netbuf_tail_space(pkt);
         if (ntail > 0)
-            if (brcmf_netbuf_realloc_head(pkt, 0, ntail, GFP_ATOMIC)) {
+            if (brcmf_netbuf_grow_realloc(pkt, 0, ntail)) {
                 return ZX_ERR_NO_MEMORY;
             }
         brcmf_netbuf_grow_tail(pkt, tail_pad);
@@ -2049,7 +2052,7 @@ static zx_status_t brcmf_sdio_txpkt_prep(struct brcmf_sdio* bus, struct brcmf_ne
 
         hd_info.len = pkt_next->len;
         hd_info.lastfrm = brcmf_netbuf_list_peek_tail(pktq) == pkt_next;
-        if (bus->txglom && pktq->qlen > 1) {
+        if (bus->txglom && brcmf_netbuf_list_length(pktq) > 1) {
             ret = brcmf_sdio_txpkt_prep_sg(bus, pktq, pkt_next, total_len, &hd_info.tail_pad);
             if (ret != ZX_OK) {
                 return ret;
@@ -2075,7 +2078,7 @@ static zx_status_t brcmf_sdio_txpkt_prep(struct brcmf_sdio* bus, struct brcmf_ne
      * length of the chain (including padding)
      */
     if (bus->txglom) {
-        brcmf_sdio_update_hwhdr(pktq->next->data, total_len);
+        brcmf_sdio_update_hwhdr(brcmf_netbuf_list_peek_head(pktq)->data, total_len);
     }
     return ZX_OK;
 }
@@ -2103,10 +2106,10 @@ static void brcmf_sdio_txpkt_postp(struct brcmf_sdio* bus, struct brcmf_netbuf_l
         if (dummy_flags & ALIGN_NETBUF_FLAG) {
             chop_len = dummy_flags & ALIGN_NETBUF_CHOP_LEN_MASK;
             if (chop_len) {
-                pkt_prev = pkt_next->prev;
+                pkt_prev = brcmf_netbuf_list_prev(pktq, pkt_next);
                 brcmf_netbuf_grow_tail(pkt_prev, chop_len);
             }
-            brcmf_netbuf_list_remove_locked(pkt_next, pktq);
+            brcmf_netbuf_list_remove(pktq, pkt_next);
             brcmu_pkt_buf_free_netbuf(pkt_next);
         } else {
             hdr = pkt_next->data + bus->tx_hdrlen - SDPCM_SWHDR_LEN;
@@ -2149,10 +2152,10 @@ static zx_status_t brcmf_sdio_txpkt(struct brcmf_sdio* bus, struct brcmf_netbuf_
 done:
     brcmf_sdio_txpkt_postp(bus, pktq);
     if (ret == ZX_OK) {
-        bus->tx_seq = (bus->tx_seq + pktq->qlen) % SDPCM_SEQ_WRAP;
+        bus->tx_seq = (bus->tx_seq + brcmf_netbuf_list_length(pktq)) % SDPCM_SEQ_WRAP;
     }
     brcmf_netbuf_list_for_every_safe(pktq, pkt_next, tmp) {
-        brcmf_netbuf_list_remove_locked(pkt_next, pktq);
+        brcmf_netbuf_list_remove(pktq, pkt_next);
         brcmf_proto_bcdc_txcomplete(bus->sdiodev->dev, pkt_next, ret == ZX_OK);
     }
     return ret;
@@ -2179,7 +2182,7 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
             pkt_num = min_t(uint8_t, bus->tx_max - bus->tx_seq, bus->sdiodev->txglomsz);
         }
         pkt_num = min_t(uint32_t, pkt_num, brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol));
-        brcmf_netbuf_list_init_nonlocked(&pktq);
+        brcmf_netbuf_list_init(&pktq);
         //spin_lock_bh(&bus->txq_lock);
         pthread_mutex_lock(&irq_callback_lock);
         for (i = 0; i < pkt_num; i++) {
@@ -2187,7 +2190,7 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
             if (pkt == NULL) {
                 break;
             }
-            brcmf_netbuf_add_tail_locked(&pktq, pkt);
+            brcmf_netbuf_list_add_tail(&pktq, pkt);
         }
         //spin_unlock_bh(&bus->txq_lock);
         pthread_mutex_unlock(&irq_callback_lock);

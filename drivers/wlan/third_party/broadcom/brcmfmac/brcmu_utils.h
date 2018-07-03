@@ -89,15 +89,15 @@ struct pktq {
 /* operations on a specific precedence in packet queue */
 
 static inline int pktq_plen(struct pktq* pq, int prec) {
-    return pq->q[prec].netbuf_list.qlen;
+    return brcmf_netbuf_list_length(&pq->q[prec].netbuf_list);
 }
 
 static inline int pktq_pavail(struct pktq* pq, int prec) {
-    return pq->q[prec].max - pq->q[prec].netbuf_list.qlen;
+    return pq->q[prec].max - pktq_plen(pq, prec);
 }
 
 static inline bool pktq_pfull(struct pktq* pq, int prec) {
-    return pq->q[prec].netbuf_list.qlen >= pq->q[prec].max;
+    return pktq_plen(pq, prec) >= pq->q[prec].max;
 }
 
 static inline bool pktq_pempty(struct pktq* pq, int prec) {
@@ -196,12 +196,6 @@ static inline void* brcmu_alloc_and_copy(const void* buf, size_t size) {
 
 /* externs */
 /* format/print */
-#ifdef DEBUG
-void brcmu_prpkt(const char* msg, struct brcmf_netbuf* p0);
-#else
-#define brcmu_prpkt(a, b)
-#endif /* DEBUG */
-
 #ifdef DEBUG
 __PRINTFLIKE(3, 4) void brcmu_dbg_hex_dump(const void* data, size_t size, const char* fmt, ...);
 #else
