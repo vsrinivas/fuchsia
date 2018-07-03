@@ -10,10 +10,8 @@ MODULE_TYPE := fidl
 
 MODULE_PACKAGE := fidl
 
-MODULE_FIDL_LIBRARY := fuchsia.net_stack
+MODULE_FIDL_LIBRARY := fuchsia.camera
 
-MODULE_FIDL_DEPS := system/fidl/net
-
-MODULE_SRCS += $(LOCAL_DIR)/stack.fidl
+MODULE_SRCS += $(LOCAL_DIR)/camera.fidl
 
 include make/module.mk

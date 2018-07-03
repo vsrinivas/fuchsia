@@ -37,7 +37,7 @@ MODULE_EXPORT := so
 MODULE_SO_NAME := fdio
 
 MODULE_FIDL_LIBS := \
-    system/fidl/process
+    system/fidl/fuchsia-process
 
 MODULE_STATIC_LIBS := \
     system/ulib/fidl \

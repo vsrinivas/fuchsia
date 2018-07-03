@@ -27,7 +27,7 @@ LOCAL_LIBS := \
     system/ulib/zircon \
     system/ulib/c
 
-LOCAL_FIDL_LIBS := system/fidl/display
+LOCAL_FIDL_LIBS := system/fidl/fuchsia-display
 
 # virtual-console
 

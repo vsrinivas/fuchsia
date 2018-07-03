@@ -16,7 +16,7 @@ MODULE_SRCS += \
 MODULE_NAME := fidl-simple-test
 
 MODULE_FIDL_LIBS := \
-    system/fidl/crash
+    system/fidl/fuchsia-crash
 
 MODULE_STATIC_LIBS := \
     system/ulib/fidl \

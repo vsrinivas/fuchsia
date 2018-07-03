@@ -13,7 +13,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/provider.cpp
 
 MODULE_FIDL_LIBS := \
-    system/fidl/process
+    system/fidl/fuchsia-process
 
 MODULE_HEADER_DEPS := \
     system/ulib/svc \

@@ -15,7 +15,7 @@ MODULE_SRCS += \
 MODULE_NAME := runtests
 
 MODULE_FIDL_LIBS := \
-    system/fidl/logger
+    system/fidl/fuchsia-logger
 
 # zxcpp required for fbl to work.
 MODULE_STATIC_LIBS := \

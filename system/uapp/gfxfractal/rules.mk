@@ -15,7 +15,7 @@ MODULE_SRCS += \
 MODULE_STATIC_LIBS := \
     system/ulib/gfx \
     system/ulib/framebuffer \
-    system/fidl/display
+    system/fidl/fuchsia-display
 
 MODULE_LIBS := system/ulib/zircon system/ulib/fdio system/ulib/c
 

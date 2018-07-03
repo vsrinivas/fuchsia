@@ -12,7 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/crashanalyzer.cpp
 
 MODULE_FIDL_LIBS := \
-    system/fidl/crash
+    system/fidl/fuchsia-crash
 
 MODULE_HEADER_DEPS := \
     system/ulib/svc \

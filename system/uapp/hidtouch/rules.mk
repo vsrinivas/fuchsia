@@ -14,7 +14,7 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := \
     system/ulib/framebuffer \
-    system/fidl/display
+    system/fidl/fuchsia-display
 
 MODULE_LIBS := \
     system/ulib/hid \

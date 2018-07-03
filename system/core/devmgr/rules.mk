@@ -28,7 +28,7 @@ MODULE_SRCS += \
 
 # We can avoid this dependency if crashsvc connects directly to the analyzer.
 MODULE_FIDL_LIBS := \
-    system/fidl/crash
+    system/fidl/fuchsia-crash
 
 # ddk is needed only for ddk/device.h
 MODULE_HEADER_DEPS := \

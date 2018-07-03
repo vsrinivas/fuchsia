@@ -20,7 +20,7 @@ MODULE_SRCS += \
 # We have to include this from runtests-utils because transitive dependencies don't
 # get linked in automatically.
 MODULE_FIDL_LIBS := \
-    system/fidl/logger
+    system/fidl/fuchsia-logger
 
 MODULE_STATIC_LIBS := \
     system/ulib/async \

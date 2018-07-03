@@ -21,7 +21,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/zx \
     system/ulib/zxcpp \
 
-MODULE_FIDL_LIBS := system/fidl/display
+MODULE_FIDL_LIBS := system/fidl/fuchsia-display
 
 MODULE_LIBS := system/ulib/zircon system/ulib/fdio system/ulib/c
 

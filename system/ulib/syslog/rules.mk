@@ -18,7 +18,7 @@ MODULE_EXPORT := so
 MODULE_SO_NAME := syslog
 
 MODULE_FIDL_LIBS := \
-    system/fidl/logger
+    system/fidl/fuchsia-logger
 
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \
