@@ -190,8 +190,13 @@ func (ifs *ifState) setDHCPStatus(enabled bool) {
 
 func (ifs *ifState) stateChange(s eth.State) {
 	switch s {
-	case eth.StateClosed, eth.StateDown:
+	case eth.StateDown:
 		ifs.onEthStop()
+	case eth.StateClosed:
+		ifs.onEthStop()
+		ifs.ns.mu.Lock()
+		delete(ifs.ns.ifStates, ifs.nic.ID)
+		ifs.ns.mu.Unlock()
 	case eth.StateStarted:
 		// Only call `restarted` if we are not in the initial state (which means we're still starting).
 		if ifs.state != eth.StateUnknown {
