@@ -195,6 +195,10 @@ mod tests {
         let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
             .expect("Failed to connect to wlan service");
 
+        // A temporary workaround for NET-1102
+        // TODO(gbonik): remove this once we transition to wlanstack2
+        ::std::thread::sleep(::std::time::Duration::from_millis(500));
+
         let proxy = helper.proxy();
         let scan_result = scan(&mut exec, &wlan_service, &proxy, &mut helper);
 
