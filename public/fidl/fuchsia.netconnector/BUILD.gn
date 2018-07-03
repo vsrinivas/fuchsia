@@ -5,8 +5,6 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.netconnector") {
-  cpp_legacy_callbacks = true
-
   sources = [
     "netconnector.fidl",
   ]
