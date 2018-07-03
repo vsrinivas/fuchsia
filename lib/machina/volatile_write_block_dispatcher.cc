@@ -17,7 +17,7 @@ zx_status_t VolatileWriteBlockDispatcher::Create(
     fbl::unique_ptr<BlockDispatcher>* out) {
   zx::vmo vmo;
   size_t size = dispatcher->size();
-  zx_status_t status = zx::vmo::create(size, 0, &vmo);
+  zx_status_t status = zx::vmo::create(size, ZX_VMO_NON_RESIZABLE, &vmo);
   if (status != ZX_OK) {
     return status;
   }

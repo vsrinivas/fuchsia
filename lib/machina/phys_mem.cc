@@ -13,7 +13,7 @@ static constexpr uint32_t kMapFlags =
 namespace machina {
 
 zx_status_t PhysMem::Init(size_t size) {
-  zx_status_t status = zx::vmo::create(size, 0, &vmo_);
+  zx_status_t status = zx::vmo::create(size, ZX_VMO_NON_RESIZABLE, &vmo_);
   if (status != ZX_OK) {
     return status;
   }
