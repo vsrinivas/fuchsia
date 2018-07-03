@@ -46,7 +46,9 @@ class LedgerManager::PageManagerContainer {
     for (const auto& request : debug_requests_) {
       request.second(Status::INTERNAL_ERROR);
     }
-    page_usage_listener_->OnPageClosed(ledger_name_, page_id_);
+    if (page_opened_notification_sent_) {
+      page_usage_listener_->OnPageClosed(ledger_name_, page_id_);
+    }
   }
 
   void set_on_empty(fit::closure on_empty_callback) {

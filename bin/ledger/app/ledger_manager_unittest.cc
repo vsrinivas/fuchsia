@@ -180,6 +180,30 @@ class FakeLedgerSync : public sync_coordinator::LedgerSync {
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerSync);
 };
 
+class FakePageEvictionManager : public PageEvictionManager {
+ public:
+  FakePageEvictionManager() {}
+  virtual ~FakePageEvictionManager() override {}
+
+  void OnPageOpened(fxl::StringView ledger_name,
+                    storage::PageIdView page_id) override {
+    ++page_opened_count;
+  }
+
+  void OnPageClosed(fxl::StringView ledger_name,
+                    storage::PageIdView page_id) override {
+    ++page_closed_count;
+  }
+
+  void TryCleanUp(fit::function<void(Status)> callback) override {}
+
+  int page_opened_count = 0;
+  int page_closed_count = 0;
+
+ private:
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakePageEvictionManager);
+};
+
 class LedgerManagerTest : public gtest::TestLoopFixture {
  public:
   LedgerManagerTest()
@@ -195,9 +219,7 @@ class LedgerManagerTest : public gtest::TestLoopFixture {
     storage_ptr = storage.get();
     std::unique_ptr<FakeLedgerSync> sync = std::make_unique<FakeLedgerSync>();
     sync_ptr = sync.get();
-    page_eviction_manager_ = std::make_unique<PageEvictionManagerImpl>(
-        environment_.coroutine_service());
-    FXL_CHECK(page_eviction_manager_->Init() == Status::OK);
+    page_eviction_manager_ = std::make_unique<FakePageEvictionManager>();
     ledger_manager_ = std::make_unique<LedgerManager>(
         &environment_, "test_ledger",
         std::make_unique<encryption::FakeEncryptionService>(dispatcher()),
@@ -210,7 +232,7 @@ class LedgerManagerTest : public gtest::TestLoopFixture {
   Environment environment_;
   FakeLedgerStorage* storage_ptr;
   FakeLedgerSync* sync_ptr;
-  std::unique_ptr<PageEvictionManagerImpl> page_eviction_manager_;
+  std::unique_ptr<FakePageEvictionManager> page_eviction_manager_;
   std::unique_ptr<LedgerManager> ledger_manager_;
   LedgerPtr ledger_;
   ledger_internal::LedgerDebugPtr ledger_debug_;
@@ -518,6 +540,75 @@ TEST_F(LedgerManagerTest, CallGetPagesList) {
             });
   for (size_t i = 0; i < ids.size(); i++)
     EXPECT_EQ(ids[i].id, actual_pages_list->at(i).id);
+}
+
+TEST_F(LedgerManagerTest, OnPageOpenedClosedCalls) {
+  PagePtr page1;
+  PagePtr page2;
+  ledger::PageId id = RandomId();
+
+  EXPECT_EQ(0, page_eviction_manager_->page_opened_count);
+  EXPECT_EQ(0, page_eviction_manager_->page_closed_count);
+
+  // Open a page and check that OnPageOpened was called once.
+  bool called = false;
+  ledger_->GetPage(fidl::MakeOptional(id), page1.NewRequest(),
+                   [&called](Status) { called = true; });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(1, page_eviction_manager_->page_opened_count);
+  EXPECT_EQ(0, page_eviction_manager_->page_closed_count);
+
+  // Open the page again and check that there is no new call to OnPageOpened.
+  called = false;
+  ledger_->GetPage(fidl::MakeOptional(id), page2.NewRequest(),
+                   [&called](Status) { called = true; });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(1, page_eviction_manager_->page_opened_count);
+  EXPECT_EQ(0, page_eviction_manager_->page_closed_count);
+
+  // Close one of the two connections and check that there is still no call to
+  // OnPageClosed.
+  page1.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_EQ(1, page_eviction_manager_->page_opened_count);
+  EXPECT_EQ(0, page_eviction_manager_->page_closed_count);
+
+  // Close the second connection and check that OnPageClosed was called once.
+  page2.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_EQ(1, page_eviction_manager_->page_opened_count);
+  EXPECT_EQ(1, page_eviction_manager_->page_closed_count);
+}
+
+TEST_F(LedgerManagerTest, OnPageOpenedClosedCallInternalRequest) {
+  PagePtr page1;
+  ledger::PageId id = RandomId();
+
+  EXPECT_EQ(0, page_eviction_manager_->page_opened_count);
+  EXPECT_EQ(0, page_eviction_manager_->page_closed_count);
+
+  // Make an internal request by calling PageIsClosedAndSynced. No calls to page
+  // opened/closed should be made.
+  bool called = false;
+  ledger_manager_->PageIsClosedAndSynced(
+      convert::ToString(id.id),
+      [&called](Status, PageClosedAndSynced) { called = true; });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(0, page_eviction_manager_->page_opened_count);
+  EXPECT_EQ(0, page_eviction_manager_->page_closed_count);
+
+  // Open the same page with an external request and check that OnPageOpened was
+  // called once.
+  called = false;
+  ledger_->GetPage(fidl::MakeOptional(id), page1.NewRequest(),
+                   [&called](Status) { called = true; });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(1, page_eviction_manager_->page_opened_count);
+  EXPECT_EQ(0, page_eviction_manager_->page_closed_count);
 }
 
 }  // namespace
