@@ -179,7 +179,7 @@ source_set("gfx") {
     "//garnet/lib/magma/src/libmagma",
     "//garnet/public/lib/escher/util:check_vulkan_support",
     "//garnet/public/lib/ui/scenic/cpp:fidl_helpers",
-    "//zircon/public/fidl/display:display",
+    "//zircon/public/fidl/fuchsia-display",
     "//zircon/public/lib/trace",
   ]
 }

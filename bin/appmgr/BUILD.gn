@@ -57,7 +57,7 @@ source_set("lib") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//third_party/rapidjson",
-    "//zircon/public/fidl/process",
+    "//zircon/public/fidl/fuchsia-process",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fs",

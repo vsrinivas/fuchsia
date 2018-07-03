@@ -14,6 +14,6 @@ rustc_library("fuchsia-framebuffer") {
     "//garnet/public/rust/crates/shared-buffer",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures",
-    "//zircon/public/fidl/display:display-rustc",
+    "//zircon/public/fidl/fuchsia-display:fuchsia-display-rustc",
   ]
 }

@@ -12,7 +12,7 @@ executable("bin") {
     "//third_party/crashpad/client",
     "//third_party/crashpad/handler",
     "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
-    "//zircon/public/fidl/crash:crash",
+    "//zircon/public/fidl/fuchsia-crash",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",

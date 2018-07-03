@@ -36,7 +36,7 @@ source_set("lib") {
     "//third_party/grpc:grpc++",
     "//third_party/protobuf:protobuf_lite",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/fidl/cobalt:cobalt",
+    "//zircon/public/fidl/fuchsia-cobalt",
   ]
 }
 
@@ -101,6 +101,6 @@ executable("cobalt_app_unittests") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
-    "//zircon/public/fidl/cobalt:cobalt",
+    "//zircon/public/fidl/fuchsia-cobalt",
   ]
 }

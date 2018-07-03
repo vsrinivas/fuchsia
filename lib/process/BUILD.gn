@@ -11,7 +11,7 @@ source_set("process") {
   ]
 
   public_deps = [
-    "//zircon/public/fidl/process",
+    "//zircon/public/fidl/fuchsia-process",
     "//zircon/public/lib/zx",
   ]
 

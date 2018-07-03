@@ -17,7 +17,7 @@ executable("cobalt_testapp") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/fidl/cobalt:cobalt",
+    "//zircon/public/fidl/fuchsia-cobalt",
   ]
 }
 

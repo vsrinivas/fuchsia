@@ -9,6 +9,6 @@ go_library("syslog") {
   name = "syslog"
   deps = [
     "//garnet/public/lib/app/go/src/app($go_toolchain)",
-    "//zircon/public/fidl/logger($go_toolchain)",
+    "//zircon/public/fidl/fuchsia-logger($go_toolchain)",
   ]
 }
