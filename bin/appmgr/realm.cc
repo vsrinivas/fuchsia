@@ -532,7 +532,21 @@ void Realm::CreateComponentFromPackage(
     }
   } else {
     RuntimeMetadata runtime;
-    if (!runtime.Parse(runtime_data)) {
+
+    // If meta/*.cmx exists, read runtime data from it.
+    if (!cmx_data.empty()) {
+      if (!runtime.Parse(cmx_data)) {
+        if (!runtime.Parse(runtime_data)) {
+          // If meta/*.cmx has no runtime data, fallback to the *package*'s
+          // meta/runtime.
+          FXL_LOG(ERROR) << "Failed to parse runtime metadata for "
+                         << launch_info.url;
+          return;
+        }
+      }
+    } else if (!runtime.Parse(runtime_data)) {
+      // If meta/*.cmx has no runtime data, fallback to the *package*'s
+      // meta/runtime.
       FXL_LOG(ERROR) << "Failed to parse runtime metadata for "
                      << launch_info.url;
       return;
