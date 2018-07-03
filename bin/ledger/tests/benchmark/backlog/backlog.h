@@ -59,8 +59,11 @@ class BacklogBenchmark : public ledger::SyncWatcher {
                         SyncStateChangedCallback callback) override;
 
  private:
+  void ConnectWriter();
   void Populate();
-  void WaitForWriterUpload();
+  void DisconnectAndRecordWriter();
+  void ConnectUploader();
+  void WaitForUploaderUpload();
   void ConnectReader();
   void WaitForReaderDownload();
 
@@ -89,16 +92,18 @@ class BacklogBenchmark : public ledger::SyncWatcher {
   files::ScopedTempDir writer_tmp_dir_;
   files::ScopedTempDir reader_tmp_dir_;
   fuchsia::sys::ComponentControllerPtr writer_controller_;
+  fuchsia::sys::ComponentControllerPtr uploader_controller_;
   fuchsia::sys::ComponentControllerPtr reader_controller_;
+  ledger::LedgerPtr uploader_;
   ledger::LedgerPtr writer_;
   ledger::LedgerPtr reader_;
   ledger::PageId page_id_;
   ledger::PagePtr writer_page_;
+  ledger::PagePtr uploader_page_;
   ledger::PagePtr reader_page_;
   ledger::PageSnapshotPtr reader_snapshot_;
   fit::function<void(ledger::SyncState, ledger::SyncState)>
       on_sync_state_changed_;
-  bool done_writing_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BacklogBenchmark);
 };

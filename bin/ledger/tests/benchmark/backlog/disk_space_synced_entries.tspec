@@ -15,6 +15,13 @@
     },
     {
       "type": "argument_value",
+      "event_name": "uploader_directory_size",
+      "event_category": "benchmark",
+      "argument_name": "directory_size",
+      "argument_unit": "B"
+    },
+    {
+      "type": "argument_value",
       "event_name": "reader_directory_size",
       "event_category": "benchmark",
       "argument_name": "directory_size",

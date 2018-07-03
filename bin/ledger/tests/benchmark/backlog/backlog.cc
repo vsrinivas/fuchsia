@@ -16,6 +16,7 @@
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <trace/event.h>
+#include "lib/fidl/cpp/clone.h"
 
 #include "peridot/bin/ledger/filesystem/get_directory_content_size.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
@@ -69,8 +70,7 @@ BacklogBenchmark::BacklogBenchmark(
       reference_strategy_(reference_strategy),
       server_id_(std::move(server_id)),
       writer_tmp_dir_(kStoragePath),
-      reader_tmp_dir_(kStoragePath),
-      done_writing_(false) {
+      reader_tmp_dir_(kStoragePath) {
   FXL_DCHECK(loop_);
   FXL_DCHECK(unique_key_count_ > 0);
   FXL_DCHECK(value_size_ > 0);
@@ -87,19 +87,17 @@ void BacklogBenchmark::SyncStateChanged(ledger::SyncState download,
   callback();
 }
 
-void BacklogBenchmark::Run() {
+void BacklogBenchmark::Run() { ConnectWriter(); }
+
+void BacklogBenchmark::ConnectWriter() {
   // Name of the storage directory currently identifies the user. Ensure the
   // most nested directory has the same name to make the ledgers sync.
   std::string writer_path = writer_tmp_dir_.path() + kUserDirectory;
   FXL_DCHECK(files::CreateDirectory(writer_path));
 
-  cloud_provider::CloudProviderPtr cloud_provider_writer;
-  cloud_provider_firebase_factory_.MakeCloudProvider(
-      server_id_, "backlog", cloud_provider_writer.NewRequest());
   test::GetLedger(
-      startup_context_.get(), writer_controller_.NewRequest(),
-      std::move(cloud_provider_writer), "backlog", writer_path,
-      QuitLoopClosure(),
+      startup_context_.get(), writer_controller_.NewRequest(), nullptr,
+      "backlog", writer_path, []() { FXL_LOG(INFO) << "Writer closed."; },
       [this](ledger::Status status, ledger::LedgerPtr writer) {
         if (QuitOnError(QuitLoopClosure(), status, "Get writer ledger")) {
           return;
@@ -107,7 +105,7 @@ void BacklogBenchmark::Run() {
         writer_ = std::move(writer);
 
         test::GetPageEnsureInitialized(
-            &writer_, nullptr, QuitLoopClosure(),
+            &writer_, nullptr, []() { FXL_LOG(INFO) << "Writer page closed."; },
             [this](ledger::Status status, ledger::PagePtr writer_page,
                    ledger::PageId page_id) {
               if (QuitOnError(QuitLoopClosure(), status,
@@ -118,8 +116,6 @@ void BacklogBenchmark::Run() {
               writer_page_ = std::move(writer_page);
               page_id_ = page_id;
 
-              WaitForWriterUpload();
-              TRACE_ASYNC_BEGIN("benchmark", "populate and upload", 0);
               TRACE_ASYNC_BEGIN("benchmark", "populate", 0);
               Populate();
             });
@@ -144,24 +140,62 @@ void BacklogBenchmark::Populate() {
           }
           return;
         }
-        done_writing_ = true;
         TRACE_ASYNC_END("benchmark", "populate", 0);
+        DisconnectAndRecordWriter();
       });
 }
 
-void BacklogBenchmark::WaitForWriterUpload() {
+void BacklogBenchmark::DisconnectAndRecordWriter() {
+  test::KillLedgerProcess(&writer_controller_);
+  RecordDirectorySize("writer_directory_size", writer_tmp_dir_.path());
+  ConnectUploader();
+}
+
+void BacklogBenchmark::ConnectUploader() {
+  // Name of the storage directory currently identifies the user. Ensure the
+  // most nested directory has the same name to make the ledgers sync.
+  std::string uploader_path = writer_tmp_dir_.path() + kUserDirectory;
+
+  cloud_provider::CloudProviderPtr cloud_provider_uploader;
+  cloud_provider_firebase_factory_.MakeCloudProvider(
+      server_id_, "backlog", cloud_provider_uploader.NewRequest());
+  test::GetLedger(
+      startup_context_.get(), uploader_controller_.NewRequest(),
+      std::move(cloud_provider_uploader), "backlog", uploader_path,
+      QuitLoopClosure(),
+      [this](ledger::Status status, ledger::LedgerPtr uploader) {
+        if (QuitOnError(QuitLoopClosure(), status, "Get uploader ledger")) {
+          return;
+        }
+        uploader_ = std::move(uploader);
+
+        TRACE_ASYNC_BEGIN("benchmark", "get_uploader_page", 0);
+        TRACE_ASYNC_BEGIN("benchmark", "upload", 0);
+        uploader_->GetPage(
+            fidl::MakeOptional(fidl::Clone(page_id_)),
+            uploader_page_.NewRequest(), [this](ledger::Status status) {
+              if (QuitOnError(QuitLoopClosure(), status, "GetPage")) {
+                return;
+              }
+              TRACE_ASYNC_END("benchmark", "get_uploader_page", 0);
+              WaitForUploaderUpload();
+            });
+      });
+}
+
+void BacklogBenchmark::WaitForUploaderUpload() {
   on_sync_state_changed_ = [this](ledger::SyncState download,
                                   ledger::SyncState upload) {
-    if ((upload == ledger::SyncState::IDLE) && done_writing_) {
+    if (upload == ledger::SyncState::IDLE) {
       on_sync_state_changed_ = nullptr;
-      TRACE_ASYNC_END("benchmark", "populate and upload", 0);
+      TRACE_ASYNC_END("benchmark", "upload", 0);
       // Stop watching sync state for this page.
       sync_watcher_binding_.Unbind();
       ConnectReader();
       return;
     }
   };
-  writer_page_->SetSyncStateWatcher(
+  uploader_page_->SetSyncStateWatcher(
       sync_watcher_binding_.NewBinding(),
       QuitOnErrorCallback(QuitLoopClosure(), "Page::SetSyncStateWatcher"));
 }
@@ -184,14 +218,14 @@ void BacklogBenchmark::ConnectReader() {
         reader_ = std::move(reader);
 
         TRACE_ASYNC_BEGIN("benchmark", "download", 0);
-        TRACE_ASYNC_BEGIN("benchmark", "get page", 0);
+        TRACE_ASYNC_BEGIN("benchmark", "get_reader_page", 0);
         reader_->GetPage(
             fidl::MakeOptional(page_id_), reader_page_.NewRequest(),
             [this](ledger::Status status) {
               if (QuitOnError(QuitLoopClosure(), status, "GetPage")) {
                 return;
               }
-              TRACE_ASYNC_END("benchmark", "get page", 0);
+              TRACE_ASYNC_END("benchmark", "get_reader_page", 0);
               WaitForReaderDownload();
             });
       });
@@ -216,7 +250,7 @@ void BacklogBenchmark::GetReaderSnapshot() {
   reader_page_->GetSnapshot(
       reader_snapshot_.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr,
       QuitOnErrorCallback(QuitLoopClosure(), "GetSnapshot"));
-  TRACE_ASYNC_BEGIN("benchmark", "get all entries", 0);
+  TRACE_ASYNC_BEGIN("benchmark", "get_all_entries", 0);
   GetEntriesStep(nullptr, unique_key_count_);
 }
 
@@ -231,11 +265,11 @@ void BacklogBenchmark::CheckStatusAndGetMore(
   }
 
   if (status == ledger::Status::OK) {
-    TRACE_ASYNC_END("benchmark", "get all entries", 0);
+    TRACE_ASYNC_END("benchmark", "get_all_entries", 0);
     FXL_DCHECK(entries_left == 0);
     FXL_DCHECK(!next_token);
     ShutDown();
-    RecordDirectorySize("writer_directory_size", writer_tmp_dir_.path());
+    RecordDirectorySize("uploader_directory_size", writer_tmp_dir_.path());
     RecordDirectorySize("reader_directory_size", reader_tmp_dir_.path());
     return;
   }
@@ -246,13 +280,13 @@ void BacklogBenchmark::CheckStatusAndGetMore(
 void BacklogBenchmark::GetEntriesStep(std::unique_ptr<ledger::Token> token,
                                       size_t entries_left) {
   FXL_DCHECK(entries_left > 0);
-  TRACE_ASYNC_BEGIN("benchmark", "get entries partial", entries_left);
+  TRACE_ASYNC_BEGIN("benchmark", "get_entries_partial", entries_left);
   if (reference_strategy_ == PageDataGenerator::ReferenceStrategy::INLINE) {
     reader_snapshot_->GetEntriesInline(
         fidl::VectorPtr<uint8_t>::New(0), std::move(token),
         [this, entries_left](ledger::Status status, auto entries,
                              auto next_token) mutable {
-          TRACE_ASYNC_END("benchmark", "get entries partial", entries_left);
+          TRACE_ASYNC_END("benchmark", "get_entries_partial", entries_left);
           CheckStatusAndGetMore(status, entries_left - entries->size(),
                                 std::move(next_token));
         });
@@ -261,7 +295,7 @@ void BacklogBenchmark::GetEntriesStep(std::unique_ptr<ledger::Token> token,
         fidl::VectorPtr<uint8_t>::New(0), std::move(token),
         [this, entries_left](ledger::Status status, auto entries,
                              auto next_token) mutable {
-          TRACE_ASYNC_END("benchmark", "get entries partial", entries_left);
+          TRACE_ASYNC_END("benchmark", "get_entries_partial", entries_left);
           CheckStatusAndGetMore(status, entries_left - entries->size(),
                                 std::move(next_token));
         });
@@ -277,7 +311,7 @@ void BacklogBenchmark::RecordDirectorySize(const std::string& event_name,
 }
 
 void BacklogBenchmark::ShutDown() {
-  test::KillLedgerProcess(&writer_controller_);
+  test::KillLedgerProcess(&uploader_controller_);
   test::KillLedgerProcess(&reader_controller_);
   loop_->Quit();
 }

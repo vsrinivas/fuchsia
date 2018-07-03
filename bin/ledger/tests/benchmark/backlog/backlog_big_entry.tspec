@@ -8,17 +8,22 @@
   "measure": [
     {
       "type": "duration",
-      "event_name": "populate and upload",
-      "event_category": "benchmark"
-    },
-    {
-      "type": "duration",
       "event_name": "populate",
       "event_category": "benchmark"
     },
     {
       "type": "duration",
-      "event_name": "get page",
+      "event_name": "get_uploader_page",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "event_name": "upload",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "event_name": "get_reader_page",
       "event_category": "benchmark"
     },
     {
@@ -28,7 +33,7 @@
     },
     {
       "type": "duration",
-      "event_name": "get all entries",
+      "event_name": "get_all_entries",
       "event_category": "benchmark"
     }
   ]
