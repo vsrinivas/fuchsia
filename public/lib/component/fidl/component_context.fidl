@@ -14,9 +14,11 @@ interface ComponentContext {
   1: GetLedger(request<fuchsia.ledger.Ledger> @request)
       -> (fuchsia.ledger.Status @status);
 
-  // Used to start a new agent in the user scope and connect to it.
-  2: ConnectToAgent(string url, request<fuchsia.sys.ServiceProvider> incoming_services,
-                   request<AgentController> controller);
+  // Used to start an agent in the user scope if it isn't already running, and
+  // connect to it.
+  2: ConnectToAgent(string url,
+                    request<fuchsia.sys.ServiceProvider> incoming_services,
+                    request<AgentController> controller);
 
   // Used to create or delete a message queue or retrieve an existing queue
   // identified by |name|. |name| is local to the calling component instance.

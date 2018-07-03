@@ -4,9 +4,10 @@
 
 library fuchsia.modular;
 
-// This interface is exposed to all agents. It allows to schedule tasks to be
-// scheduled in response to triggers. Triggers are conditions such as a message
-// arriving on a MessageQueue.
+// An instance of this service is exposed to agents in their namespace.
+// |AgentContext| allows an agent to schedule tasks which run in response to
+// triggers. Triggers are conditions such as a message arriving on a
+// MessageQueue.
 [Discoverable]
 interface AgentContext {
   // Connects to the ComponentContext which this AgentContext is a part of.
@@ -57,7 +58,7 @@ union TriggerCondition {
   string message_on_queue;
 
   // Triggers when a message queue is deleted.
-  // 
+  //
   // |queue_deleted| is the token for the message queue that is to be watched.
   // This allows both message queue readers and writers to watch for queue
   // deletions.

@@ -45,7 +45,7 @@ class AgentRunner : fuchsia::modular::AgentProvider,
       AgentRunnerStorage* agent_runner_storage,
       fuchsia::modular::auth::TokenProviderFactory* token_provider_factory,
       fuchsia::modular::UserIntelligenceProvider* user_intelligence_provider,
-      EntityProviderRunner* const entity_provider_runner);
+      EntityProviderRunner* entity_provider_runner);
   ~AgentRunner() override;
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::AgentProvider> request);
@@ -91,13 +91,13 @@ class AgentRunner : fuchsia::modular::AgentProvider,
   void DeleteTask(const std::string& agent_url, const std::string& task_id);
 
  private:
-  // Starts up an agent, or waits until the agent can start up if it is already
-  // in a terminating state. Calls |done| once the agent has started.
-  // Note that the agent could be in an INITIALIZING state.
-  void MaybeRunAgent(const std::string& agent_url,
-                     const std::function<void()>& done);
+  // Schedules the agent to start running if it isn't already running (e.g., it
+  // could be not running or in the middle of terminating). Once the agent is in
+  // a running state, calls |done|.
+  void EnsureAgentIsRunning(const std::string& agent_url,
+                            const std::function<void()>& done);
 
-  // Actually starts up an agent (used by |MaybeRunAgent()| above).
+  // Actually starts up an agent (used by |EnsureAgentIsRunning()| above).
   void RunAgent(const std::string& agent_url);
 
   // Will also start and initialize the agent as a consequence.

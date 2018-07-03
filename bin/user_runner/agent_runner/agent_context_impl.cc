@@ -101,7 +101,7 @@ class AgentContextImpl::InitializeCall : public Operation<> {
     // stop the agent.
     agent_context_impl_->agent_controller_bindings_.set_empty_set_handler(
         [agent_context_impl = agent_context_impl_] {
-          agent_context_impl->MaybeStopAgent();
+          agent_context_impl->StopAgentIfIdle();
         });
 
     agent_context_impl_->state_ = State::RUNNING;
@@ -239,7 +239,7 @@ void AgentContextImpl::NewTask(const std::string& task_id) {
     incomplete_task_count_++;
     agent_->RunTask(task_id, [this] {
       incomplete_task_count_--;
-      MaybeStopAgent();
+      StopAgentIfIdle();
     });
   }));
 }
@@ -278,7 +278,7 @@ void AgentContextImpl::DeleteTask(fidl::StringPtr task_id) {
   agent_runner_->DeleteTask(url_, task_id);
 }
 
-void AgentContextImpl::MaybeStopAgent() {
+void AgentContextImpl::StopAgentIfIdle() {
   operation_queue_.Add(new StopCall(false /* is agent runner terminating? */,
                                     this, [this](bool stopped) {
                                       if (stopped) {

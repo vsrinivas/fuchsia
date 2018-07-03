@@ -38,6 +38,9 @@ struct AgentContextInfo {
 class AgentContextImpl : fuchsia::modular::AgentContext,
                          fuchsia::modular::AgentController {
  public:
+  // Starts the agent specified in |agent_config| and provides it:
+  //  1) AgentContext service
+  //  2) A set of services from UserIntelligenceProvider for this agent's url.
   explicit AgentContextImpl(const AgentContextInfo& info,
                             fuchsia::modular::AppConfig agent_config);
   ~AgentContextImpl() override;
@@ -99,7 +102,7 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   // Done() if this agent is not |ready_|. Else if there are no active
   // AgentControllers and no outstanding task, fuchsia::modular::Agent.Stop() is
   // called with a timeout.
-  void MaybeStopAgent();
+  void StopAgentIfIdle();
 
   const std::string url_;
 

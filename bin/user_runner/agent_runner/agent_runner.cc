@@ -94,8 +94,8 @@ void AgentRunner::Teardown(const std::function<void()>& callback) {
                          kTeardownTimeout);
 }
 
-void AgentRunner::MaybeRunAgent(const std::string& agent_url,
-                                const std::function<void()>& done) {
+void AgentRunner::EnsureAgentIsRunning(const std::string& agent_url,
+                                       const std::function<void()>& done) {
   auto agent_it = running_agents_.find(agent_url);
   if (agent_it != running_agents_.end()) {
     if (agent_it->second->state() == AgentContextImpl::State::TERMINATING) {
@@ -154,7 +154,7 @@ void AgentRunner::ConnectToAgent(
       {requestor_url, std::move(incoming_services_request),
        std::move(agent_controller_request)});
 
-  MaybeRunAgent(agent_url, [this, agent_url] {
+  EnsureAgentIsRunning(agent_url, [this, agent_url] {
     // If the agent was terminating and has restarted, forwarding connections
     // here is redundant, since it was already forwarded earlier.
     ForwardConnectionsToAgent(agent_url);
@@ -175,7 +175,7 @@ void AgentRunner::ConnectToEntityProvider(
   pending_entity_provider_connections_[agent_url] = {
       std::move(entity_provider_request), std::move(agent_controller_request)};
 
-  MaybeRunAgent(agent_url, [this, agent_url] {
+  EnsureAgentIsRunning(agent_url, [this, agent_url] {
     auto it = pending_entity_provider_connections_.find(agent_url);
     FXL_DCHECK(it != pending_entity_provider_connections_.end());
     running_agents_[agent_url]->NewEntityProviderConnection(
@@ -361,7 +361,7 @@ void AgentRunner::ScheduleMessageQueueDeletionTask(
           return;
         }
 
-        MaybeRunAgent(agent_url, [agent_url, task_id, this] {
+        EnsureAgentIsRunning(agent_url, [agent_url, task_id, this] {
           running_agents_[agent_url]->NewTask(task_id);
         });
       });
@@ -401,7 +401,7 @@ void AgentRunner::ScheduleMessageQueueNewMessageTask(
           return;
         }
 
-        MaybeRunAgent(agent_url, [agent_url, task_id, this] {
+        EnsureAgentIsRunning(agent_url, [agent_url, task_id, this] {
           running_agents_[agent_url]->NewTask(task_id);
         });
       });
@@ -445,7 +445,7 @@ void AgentRunner::ScheduleAlarmTask(const std::string& agent_url,
           return;
         }
 
-        MaybeRunAgent(agent_url, [agent_url, task_id, found_it, this]() {
+        EnsureAgentIsRunning(agent_url, [agent_url, task_id, found_it, this]() {
           running_agents_[agent_url]->NewTask(task_id);
           ScheduleAlarmTask(agent_url, task_id, found_it->second[task_id],
                             false);
