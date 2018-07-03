@@ -7,12 +7,17 @@ package main
 import (
 	"amber/ipcserver"
 	"app/context"
+	"bytes"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fidl/fuchsia/amber"
 	"flag"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -38,7 +43,9 @@ Commands
         -i: content ID of the blob
 
     add_src   - add a source to the list we can use
+        -n: name of the update source
         -f: path to a source config file
+        -h: SHA256 hash of source config file (required if path is a URL, ignored otherwise)
         -s: location of the package source
         -b: location of the blob source
         -k: the hex string of the public ED25519 key for the source
@@ -58,6 +65,7 @@ Commands
 var (
 	fs         = flag.NewFlagSet("default", flag.ExitOnError)
 	pkgFile    = fs.String("f", "", "Path to a source config file")
+	hash       = fs.String("h", "", "SHA256 hash of source config file (required if -f is a URL, ignored otherwise)")
 	name       = fs.String("n", "", "Name of a source or package")
 	pkgVersion = fs.String("v", "", "Version of a package")
 	srcUrl     = fs.String("s", "", "The location of a package source")
@@ -147,13 +155,55 @@ func addSource(a *amber.ControlInterface) error {
 			},
 		}
 	} else {
-		f, err := os.Open(*pkgFile)
-		if err != nil {
-			return fmt.Errorf("failed to open file: %v", err)
-		}
-		defer f.Close()
+		var source io.Reader
+		url, err := url.Parse(*pkgFile)
+		if err == nil && url.IsAbs() {
+			hash := strings.TrimSpace(*hash)
+			if len(hash) == 0 {
+				return fmt.Errorf("no source config hash provided")
+			}
 
-		if err := json.NewDecoder(f).Decode(&cfg); err != nil {
+			expectedHash, err := hex.DecodeString(hash)
+			if err != nil {
+				return fmt.Errorf("hash is not a hex encoded string: %v", err)
+			}
+
+			resp, err := http.Get(*pkgFile)
+			if err != nil {
+				return fmt.Errorf("failed to GET file: %v", err)
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != 200 {
+				io.Copy(ioutil.Discard, resp.Body)
+				return fmt.Errorf("GET response: %v", resp.Status)
+			}
+
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return fmt.Errorf("failed to read file body: %v", err)
+			}
+
+			hasher := sha256.New()
+			hasher.Write(body)
+			actualHash := hasher.Sum(nil)
+
+			if !bytes.Equal(expectedHash, actualHash) {
+				return fmt.Errorf("hash of config file does not match!")
+			}
+
+			source = bytes.NewReader(body)
+
+		} else {
+			f, err := os.Open(*pkgFile)
+			if err != nil {
+				return fmt.Errorf("failed to open file: %v", err)
+			}
+			defer f.Close()
+
+			source = f
+		}
+
+		if err := json.NewDecoder(source).Decode(&cfg); err != nil {
 			return fmt.Errorf("failed to parse source config: %v", err)
 		}
 	}
