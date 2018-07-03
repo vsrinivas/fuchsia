@@ -42,6 +42,7 @@ executable("mac_tests") {
     "energy_unittest.cpp",
     "mac_frame_unittest.cpp",
     "macaddr_unittest.cpp",
+    "packet_unittest.cpp",
     "sequence_unittest.cpp",
     "tim_unittest.cpp",
   ]

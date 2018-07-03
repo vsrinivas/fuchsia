@@ -70,14 +70,17 @@ class SlabBuffer final : public internal::FixedBuffer<BufferSize>,
                          public fbl::SlabAllocated<SlabBufferTraits<NumBuffers, BufferSize>> {};
 
 // Huge buffers are used for sending lots of data between drivers and the wlanstack.
+constexpr size_t kHugeSlabs = 2;
 constexpr size_t kHugeBuffers = 8;
 constexpr size_t kHugeBufferSize = 16384;
 // Large buffers can hold the largest 802.11 MSDU, standard Ethernet MTU,
 // or HT A-MSDU of size 3,839 bytes.
+constexpr size_t kLargeSlabs = 20;
 constexpr size_t kLargeBuffers = 32;
 constexpr size_t kLargeBufferSize = 4096;
 // Small buffers are for smaller control packets within the driver stack itself and
 // for transfering small 802.11 frames as well.
+constexpr size_t kSmallSlabs = 40;
 constexpr size_t kSmallBuffers = 512;
 constexpr size_t kSmallBufferSize = 256;
 
