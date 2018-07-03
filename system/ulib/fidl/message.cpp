@@ -49,8 +49,7 @@ zx_status_t Message::Decode(const fidl_type_t* type,
     zx_status_t status = fidl_decode(type, bytes_.data(), bytes_.actual(),
                                      handles_.data(), handles_.actual(),
                                      error_msg_out);
-    if (status == ZX_OK)
-        ClearHandlesUnsafe();
+    ClearHandlesUnsafe();
     return status;
 }
 

@@ -91,10 +91,8 @@ bool TraceProviderImpl::Connection::ReadMessage() {
     if (status != ZX_OK)
         return false;
 
-    if (!DecodeAndDispatch(buffer, num_bytes, handles, num_handles)) {
-        zx_handle_close_many(handles, num_handles);
+    if (!DecodeAndDispatch(buffer, num_bytes, handles, num_handles))
         return false;
-    }
 
     return true;
 }
@@ -102,8 +100,10 @@ bool TraceProviderImpl::Connection::ReadMessage() {
 bool TraceProviderImpl::Connection::DecodeAndDispatch(
     uint8_t* buffer, uint32_t num_bytes,
     zx_handle_t* handles, uint32_t num_handles) {
-    if (num_bytes < sizeof(fidl_message_header_t))
+    if (num_bytes < sizeof(fidl_message_header_t)) {
+        zx_handle_close_many(handles, num_handles);
         return false;
+    }
 
     auto hdr = reinterpret_cast<fidl_message_header_t*>(buffer);
     switch (hdr->ordinal) {
