@@ -39,8 +39,12 @@ struct ColSpec {
 };
 
 // Formats the given rows in the output as a series of horizontally aligned (if
-// possible) columns. The number of columns in the spec vector and in each row
-// must match.
+// possible) columns.
+//
+// If the number of items in a row is less than the number of items in the
+// spec, the last element in the rows will occupy the remaining space and it
+// won't affect other columns (like you used colspan in HTML). Such items will
+// always be left-aligned.
 void FormatTable(const std::vector<ColSpec>& spec,
                  const std::vector<std::vector<std::string>>& rows,
                  OutputBuffer* out);

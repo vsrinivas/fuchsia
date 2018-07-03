@@ -49,6 +49,14 @@ TEST(FormatTable, Basic) {
   FormatTable({ColSpec(Align::kRight, 1), ColSpec(Align::kLeft, 0)}, rows,
               &out);
   EXPECT_EQ("0 Hello, world\n12345 Hello\n", out.AsString());
+
+  // The last item in a row expands to fill all remaining columns. Make the
+  // last row have only one really long string.
+  out = OutputBuffer();
+  rows[1].resize(1);
+  rows[1][0] = "This is a really long contents.";
+  FormatTable({ColSpec(Align::kLeft, 1), ColSpec(Align::kLeft, 0)}, rows, &out);
+  EXPECT_EQ("0 Hello, world\nThis is a really long contents.\n", out.AsString());
 }
 
 }  // namespace zxdb

@@ -12,6 +12,15 @@ namespace zxdb {
 
 namespace {
 
+template<typename CellType>
+bool SpansRemainingCols(const std::vector<ColSpec>& spec,
+                        const std::vector<CellType>& row,
+                        size_t column) {
+  // The last item in a row will span all remaining columns if there are more
+  // in the column spec.
+  return column == row.size() - 1 && column < spec.size() - 1;
+}
+
 // Character width for both cell types.
 int CellWidth(const std::string& str) {
   return static_cast<int>(UnicodeCharWidth(str));
@@ -61,18 +70,21 @@ void FormatTableT(const std::vector<ColSpec>& spec,
   // Max widths of headings.
   bool has_head = false;
   for (const auto& col : spec) {
-    max.push_back(col.head.size());
+    max.push_back(UnicodeCharWidth(col.head));
     has_head |= !col.head.empty();
   }
 
   // Max widths of contents.
   for (const auto& row : rows) {
-    FXL_DCHECK(row.size() == max.size()) << "Column spec size doesn't match.";
+    FXL_DCHECK(row.size() <= max.size()) << "Column spec size is too small.";
     for (size_t i = 0; i < row.size(); i++) {
-      // Only count the ones that don't overflow.
-      int cell_size = CellWidth(row[i]);
-      if (spec[i].max_width == 0 || cell_size <= spec[i].max_width)
-        max[i] = std::max(max[i], cell_size);
+      // Only count the ones that don't overflow (either because they span the
+      // remaining columns, or because they're beyond max_width).
+      if (!SpansRemainingCols(spec, row, i)) {
+        int cell_size = CellWidth(row[i]);
+        if (spec[i].max_width == 0 || cell_size <= spec[i].max_width)
+          max[i] = std::max(max[i], cell_size);
+      }
     }
   }
 
@@ -93,10 +105,14 @@ void FormatTableT(const std::vector<ColSpec>& spec,
     std::string text;
     for (size_t i = 0; i < row.size(); i++) {
       const ColSpec& col = spec[i];
-      if (col.pad_left)
-        out->Append(Syntax::kNormal, std::string(col.pad_left, ' '));
-      AppendPadded(row[i], max[i], col.align, col.syntax, i == max.size() - 1,
-                   out);
+      if (SpansRemainingCols(spec, row, i)) {
+        AppendCell(row[i], col.syntax, out);
+      } else {
+        if (col.pad_left)
+          out->Append(Syntax::kNormal, std::string(col.pad_left, ' '));
+        AppendPadded(row[i], max[i], col.align, col.syntax, i == max.size() - 1,
+                     out);
+      }
     }
     out->Append("\n");
   }
