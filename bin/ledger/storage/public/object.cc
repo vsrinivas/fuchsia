@@ -16,6 +16,7 @@ Status Object::GetVmo(fsl::SizedVmo* vmo) const {
   }
 
   if (!fsl::VmoFromString(data, vmo)) {
+    FXL_LOG(WARNING) << "Unable to produce VMO for data.";
     return Status::INTERNAL_IO_ERROR;
   }
 

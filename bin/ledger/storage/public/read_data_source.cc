@@ -22,6 +22,7 @@ void ReadDataSource(
                 std::unique_ptr<DataSource::DataChunk> chunk,
                 DataSource::Status status) mutable {
         if (status == DataSource::Status::ERROR) {
+          FXL_LOG(WARNING) << "Error while reading data source content.";
           callback(Status::INTERNAL_IO_ERROR, nullptr);
           return;
         }

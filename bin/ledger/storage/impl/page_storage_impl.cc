@@ -459,6 +459,7 @@ void PageStorageImpl::GetObject(
         zx_status_t zx_status =
             zx::vmo::create(file_index->size(), 0, &raw_vmo);
         if (zx_status != ZX_OK) {
+          FXL_LOG(WARNING) << "Unable to create VMO of size: " << file_index->size();
           callback(Status::INTERNAL_IO_ERROR, nullptr);
           return;
         }
