@@ -27,6 +27,7 @@ fx set x64 --release --args "rustc_prefix=\"/path/to/bin/dir\""
 
 ## Going further
 
+- [Editor setup](editors.md)
 - [Managing third-party dependencies](third_party.md)
 - [Unsafe code](unsafe.md)
 - [Unstable features](unstable.md)
