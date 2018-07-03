@@ -9,15 +9,20 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userapp
 MODULE_GROUP := misc
 
-MODULE_SRCS += $(LOCAL_DIR)/iochk.c
+MODULE_SRCS += $(LOCAL_DIR)/iochk.cpp
 
 MODULE_STATIC_LIBS := \
     system/ulib/block-client \
-    system/ulib/sync
+    system/ulib/fbl \
+    system/ulib/fzl \
+    system/ulib/sync \
+    system/ulib/zx \
+    system/ulib/zxcpp \
 
 MODULE_LIBS := \
+    system/ulib/c \
     system/ulib/fdio \
+    system/ulib/syslog \
     system/ulib/zircon \
-    system/ulib/c
 
 include make/module.mk
