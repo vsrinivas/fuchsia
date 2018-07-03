@@ -6,8 +6,6 @@
 
 #include <assert.h>
 #include <dev/udisplay.h>
-#include <vm/vm_aspace.h>
-#include <vm/vm_object.h>
 #include <lib/debuglog.h>
 #include <lib/gfxconsole.h>
 #include <lib/io.h>
@@ -15,6 +13,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+#include <vm/vm_aspace.h>
+#include <vm/vm_object.h>
 
 #include <qrcodegen/qrcode.h>
 
@@ -39,7 +39,7 @@ static void crashlog_print_callback(print_callback_t* cb, const char* str, size_
 static print_callback_t crashlog_cb = {
     .entry = {},
     .print = crashlog_print_callback,
-    .context = nullptr
+    .context = nullptr,
 };
 
 struct udisplay_info {
@@ -55,12 +55,7 @@ zx_status_t udisplay_init(void) {
     return ZX_OK;
 }
 
-void dlog_bluescreen_halt(void) {
-    platform_stow_crashlog(crashlogbuf, crashlogptr);
-
-    if (g_udisplay.framebuffer_virt == 0)
-        return;
-
+static void build_qrcode_and_display(void) {
     if (qrcode.encodeBinary(crashlogbuf, crashlogptr, qrcodegen::Ecc::LOW)) {
         printf("cannot create qrcode\n");
         return;
@@ -72,7 +67,7 @@ void dlog_bluescreen_halt(void) {
     // qrcode.pixel() returns infinite white pixels if you
     // access outside of the body of the qrcode, which we
     // take advantage of to draw a border around the qrcode
-    // (necessary for good recogniation) by overshooting 3
+    // (necessary for good recognition) by overshooting 3
     // "pixels" in every direction.
     int sz = qrcode.size() + 6;
     int px = 1;
@@ -98,6 +93,13 @@ void dlog_bluescreen_halt(void) {
     gfxconsole_flush();
 }
 
+void dlog_bluescreen_halt(void) {
+    platform_stow_crashlog(crashlogbuf, crashlogptr);
+    if (g_udisplay.framebuffer_virt == 0)
+        return;
+    build_qrcode_and_display();
+}
+
 void udisplay_clear_framebuffer_vmo() {
     if (g_udisplay.framebuffer_vmo_mapping) {
         g_udisplay.framebuffer_size = 0;
@@ -113,8 +115,8 @@ zx_status_t udisplay_set_framebuffer(fbl::RefPtr<VmObject> vmo) {
     const size_t size = vmo->size();
     fbl::RefPtr<VmMapping> mapping;
     zx_status_t status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
-            0 /* ignored */, size, 0 /* align pow2 */, 0 /* vmar flags */,
-            fbl::move(vmo), 0, kFramebufferArchMmuFlags, "framebuffer_vmo", &mapping);
+        0 /* ignored */, size, 0 /* align pow2 */, 0 /* vmar flags */,
+        fbl::move(vmo), 0, kFramebufferArchMmuFlags, "framebuffer_vmo", &mapping);
     if (status != ZX_OK)
         return status;
 
