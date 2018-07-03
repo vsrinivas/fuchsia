@@ -116,7 +116,6 @@ executable("unittests") {
 
 package("debug_agent_tests") {
   testonly = true
-  deprecated_system_image = true
 
   package_name = "debug_agent_tests"
 

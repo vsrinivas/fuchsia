@@ -21,7 +21,6 @@ rustc_library("wlan-sme") {
 }
 
 package("wlan-sme-tests") {
-  deprecated_system_image = true
   testonly = true
 
   deps = [

@@ -22,7 +22,6 @@ package("image-pipe-swapchain") {
 
 package("image-pipe-swapchain-tests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     "tests/unit:test_image_pipe_swapchain",

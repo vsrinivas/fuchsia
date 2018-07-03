@@ -24,7 +24,6 @@ go_test("device_settings_integration_test") {
 
 package("device_settings_gotests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":device_settings_integration_test",

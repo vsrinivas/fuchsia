@@ -41,7 +41,6 @@ package("power_manager") {
 }
 
 package("power_manager_tests") {
-  deprecated_system_image = true
   testonly = true
 
   deps = [

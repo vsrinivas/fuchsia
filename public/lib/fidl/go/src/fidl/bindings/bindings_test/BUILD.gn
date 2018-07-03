@@ -27,7 +27,6 @@ go_test("go_fidl_bindings_test") {
 }
 
 package("go_fidl_bindings_tests") {
-  deprecated_system_image = true
 
   deps = [
     ":go_fidl_bindings_test",

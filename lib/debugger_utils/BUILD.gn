@@ -85,7 +85,6 @@ executable("tests") {
 
 package("debugger_utils_tests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":tests",

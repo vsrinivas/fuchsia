@@ -8,7 +8,6 @@ import("//build/package.gni")
 
 package("scenic_benchmarks") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":process_scenic_trace",

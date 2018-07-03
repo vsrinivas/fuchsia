@@ -167,7 +167,6 @@ executable("test_amlogic_codec_factory") {
 package("test_amlogic_codec_factory_package") {
   # TODO(dustingreen): Do we need deprecated_system_image to be able to run a
   # test manually from fx shell?
-  deprecated_system_image = true
   testonly = true
   deps = [
     ":test_amlogic_codec_factory",

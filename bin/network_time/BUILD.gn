@@ -28,7 +28,6 @@ package("network_time") {
 
 package("network_time_tests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":tests",

@@ -170,7 +170,6 @@ package("brcmfmac") {
 
 package("brcmfmac_test") {
   testonly = true
-  deprecated_system_image = true
 
   package_name = "brcmfmac_test"
 

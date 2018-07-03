@@ -165,7 +165,6 @@ executable("machina_unittests") {
 
 package("machina_tests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":machina_unittests",

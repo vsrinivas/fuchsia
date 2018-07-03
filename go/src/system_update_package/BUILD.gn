@@ -57,7 +57,6 @@ package("system_updater") {
 }
 
 package("system_updater_tests") {
-  deprecated_system_image = true
   testonly = true
 
   deps = [

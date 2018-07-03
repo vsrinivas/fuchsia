@@ -5,7 +5,6 @@
 import("//build/package.gni")
 
 package("run_integration_tests") {
-  deprecated_system_image = true
 
   deps = [
     "report_result",
@@ -24,7 +23,6 @@ package("run_integration_tests") {
 
 package("test_runner_tests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     "test",

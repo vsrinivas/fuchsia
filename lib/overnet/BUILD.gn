@@ -81,7 +81,6 @@ executable("overnet_unittests") {
 
 package("overnet_tests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":overnet_unittests",

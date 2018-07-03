@@ -196,7 +196,6 @@ foreach(test, test_targets) {
 }
 
 package("amber_tests") {
-  deprecated_system_image = true
   testonly = true
 
   deps = []

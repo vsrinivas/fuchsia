@@ -16,7 +16,6 @@ executable("bt-host-unittests") {
 
 package("bluetooth_tests") {
   testonly = true
-  deprecated_system_image = true
 
   package_name = "bluetooth_tests"
 

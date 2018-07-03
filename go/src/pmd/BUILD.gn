@@ -99,7 +99,6 @@ package("installblob") {
 }
 
 package("pmd_tests") {
-  deprecated_system_image = true
   testonly = true
 
   deps = []

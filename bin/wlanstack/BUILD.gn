@@ -48,7 +48,6 @@ package("wlanstack2") {
 }
 
 package("wlanstack2-tests") {
-  deprecated_system_image = true
   testonly = true
 
   deps = [

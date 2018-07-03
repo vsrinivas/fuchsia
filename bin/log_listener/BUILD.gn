@@ -34,7 +34,6 @@ package("log_listener") {
 }
 
 package("log_listener_tests") {
-  deprecated_system_image = true
   testonly = true
 
   deps = [

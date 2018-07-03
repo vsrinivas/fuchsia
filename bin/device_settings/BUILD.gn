@@ -43,7 +43,6 @@ package("device_settings_manager") {
 }
 
 package("device_settings_manager_tests") {
-  deprecated_system_image = true
   testonly = true
 
   deps = [

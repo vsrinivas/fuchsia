@@ -54,7 +54,6 @@ package("netstack_tools") {
 
 package("netstack_gotests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":netstack_filter_test",

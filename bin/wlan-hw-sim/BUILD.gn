@@ -41,7 +41,6 @@ package("wlan-hw-sim") {
 }
 
 package("wlan-hw-sim-tests") {
-    deprecated_system_image = true
     testonly = true
 
     deps = [

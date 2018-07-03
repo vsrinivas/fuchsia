@@ -99,7 +99,6 @@ executable("http_service_tests_bin") {
 
 package("http_service_tests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":http_service_tests_bin",

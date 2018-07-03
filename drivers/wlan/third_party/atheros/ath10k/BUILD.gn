@@ -162,7 +162,6 @@ executable("sparse_array_tests") {
 
 package("ath10k_test") {
   testonly = true
-  deprecated_system_image = true
 
   package_name = "ath10k_test"
 

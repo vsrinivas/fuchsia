@@ -6,7 +6,6 @@ import("//build/package.gni")
 
 package("rust-crates-tests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     "fdio",

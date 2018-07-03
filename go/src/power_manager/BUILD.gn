@@ -24,7 +24,6 @@ go_test("power_manager_test") {
 
 package("power_manager_gotests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":power_manager_test",

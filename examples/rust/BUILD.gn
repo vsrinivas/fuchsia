@@ -6,7 +6,6 @@ import("//build/package.gni")
 
 package("garnet-rust-examples") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     "testing:testing-tests", #TARGET

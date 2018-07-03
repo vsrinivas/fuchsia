@@ -29,7 +29,6 @@ executable("unittests") {
 
 package("mime_sniffer_unittests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":unittests",

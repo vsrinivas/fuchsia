@@ -71,7 +71,6 @@ executable("guestmgr_unittests") {
 
 package("guestmgr_tests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":guestmgr_unittests",

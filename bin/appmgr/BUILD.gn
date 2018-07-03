@@ -142,7 +142,6 @@ package("appmgr") {
 
 package("appmgr_unittests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":tests",
@@ -156,7 +155,6 @@ package("appmgr_unittests") {
 
 package("appmgr_integrationtests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     "integration_tests:tests",

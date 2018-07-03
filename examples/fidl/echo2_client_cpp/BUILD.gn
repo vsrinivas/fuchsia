@@ -59,7 +59,6 @@ executable("echo2_client_cpp_unittests") {
 
 package("echo2_client_cpp_tests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":echo2_client_cpp_unittests",
