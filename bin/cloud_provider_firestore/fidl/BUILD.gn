@@ -6,7 +6,6 @@ import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
   name = "fuchsia.ledger.cloud.firestore"
-  cpp_legacy_callbacks = true
 
   sources = [
     "factory.fidl",

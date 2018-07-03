@@ -35,7 +35,7 @@ void FactoryImpl::GetCloudProvider(
       firebase_auth_ptr->GetFirebaseUserId(fxl::MakeCopyable(
           [this, config = std::move(config),
            firebase_auth = std::move(firebase_auth),
-           cloud_provider = std::move(cloud_provider), callback](
+           cloud_provider = std::move(cloud_provider), callback = std::move(callback)](
               firebase_auth::AuthStatus status, std::string user_id) mutable {
             if (status != firebase_auth::AuthStatus::OK) {
               FXL_LOG(ERROR)

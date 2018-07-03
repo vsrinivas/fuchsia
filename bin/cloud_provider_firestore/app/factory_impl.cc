@@ -59,7 +59,7 @@ void FactoryImpl::GetCloudProvider(
           [this, config = std::move(config),
            firebase_auth = std::move(firebase_auth),
            cloud_provider_request = std::move(cloud_provider_request),
-           callback](firebase_auth::AuthStatus status,
+           callback = std::move(callback)](firebase_auth::AuthStatus status,
                      std::string user_id) mutable {
             if (status != firebase_auth::AuthStatus::OK) {
               FXL_LOG(ERROR)
