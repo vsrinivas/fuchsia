@@ -83,6 +83,34 @@ static bool dispatch_test(void) {
     END_TEST;
 }
 
+typedef struct my_connection {
+    fidl_txn_t txn;
+    size_t count;
+} my_connection_t;
+
+static zx_status_t reply_handler(fidl_txn_t* txn, const fidl_msg_t* msg) {
+    my_connection_t* my_txn = (my_connection_t*)txn;
+    EXPECT_EQ(sizeof(fidl_message_header_t), msg->num_bytes, "");
+    EXPECT_EQ(0u, msg->num_handles, "");
+    ++my_txn->count;
+    return ZX_OK;
+}
+
+static bool reply_test(void) {
+    BEGIN_TEST;
+
+    my_connection_t conn;
+    conn.txn.reply = reply_handler;
+    conn.count = 0u;
+
+    zx_status_t status = fuchsia_crash_AnalyzerAnalyze_reply(&conn.txn);
+    ASSERT_EQ(ZX_OK, status, "");
+    EXPECT_EQ(1u, conn.count, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(server_tests)
 RUN_NAMED_TEST("fuchsia.crash.Analyzer dispatch test", dispatch_test)
+RUN_NAMED_TEST("fuchsia.crash.Analyzer reply test", reply_test)
 END_TEST_CASE(server_tests);

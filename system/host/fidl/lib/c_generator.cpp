@@ -100,7 +100,7 @@ void EmitServerDispatchDecl(std::ostream* file, StringView interface_name) {
 
 void EmitServerReplyDecl(std::ostream* file, StringView method_name,
                           const std::vector<CGenerator::Member>& response) {
-    *file << "zx_status_t " << method_name << "_reply(fidl_txn_t* txn";
+    *file << "zx_status_t " << method_name << "_reply(fidl_txn_t* _txn";
     for (const auto& member : response) {
         *file << ", ";
         EmitMemberDecl(file, member);
@@ -538,7 +538,7 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
         std::vector<Member> response;
         GetMethodParameters(library_, method_info, &request, &response);
         EmitClientMethodDecl(&file_, method_info.c_name, request, response);
-        file_ << "{\n";
+        file_ << " {\n";
         file_ << kIndent << method_info.request->c_name << " _request;\n";
         // TODO(FIDL-162): Allocate message space for input strings.
         file_ << kIndent << "uint32_t _wr_num_bytes = sizeof(_request);\n";
@@ -667,7 +667,40 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
     file_ << kIndent << "return status;\n";
     file_ << "}\n\n";
 
-    // TODO(FIDL-184): Generate method reply implementations.
+    for (const auto& method_info : named_interface.methods) {
+        if (!method_info.request || !method_info.response)
+            continue;
+        std::vector<Member> response;
+        GetMethodParameters(library_, method_info, nullptr, &response);
+        EmitServerReplyDecl(&file_, method_info.c_name, response);
+        file_ << " {\n";
+        file_ << kIndent << method_info.response->c_name << " _response;\n";
+        // TODO(FIDL-184): Allocate message space for strings.
+        file_ << kIndent << "uint32_t _num_bytes = sizeof(_response);\n";
+        file_ << kIndent << "memset(&_response, 0, _num_bytes);\n";
+        file_ << kIndent << "_response.hdr.ordinal = " << method_info.ordinal << ";\n";
+        for (const auto& member : response) {
+            const auto& name = member.name;
+            file_ << kIndent << "memcpy(&_response." << name << ", &" << name << ", sizeof(_response." << name << "));\n";
+            // TODO(FIDL-184): Copy string data into the response.
+        }
+        file_ << kIndent << "zx_handle_t _handles[ZX_CHANNEL_MAX_MSG_HANDLES];\n";
+        file_ << kIndent << "uint32_t _num_handles = 0u;\n";
+        file_ << kIndent << "zx_status_t _status = fidl_encode(&" << method_info.response->coded_name
+              << ", &_response, _num_bytes, _handles, ZX_CHANNEL_MAX_MSG_HANDLES"
+              << ", &_num_handles, NULL);\n";
+        // TODO(FIDL-184): Clean up handles on error.
+        file_ << kIndent << "if (_status != ZX_OK)\n";
+        file_ << kIndent << kIndent << "return _status;\n";
+        file_ << kIndent << "fidl_msg_t _msg = {\n";
+        file_ << kIndent << kIndent << ".bytes = &_response,\n";
+        file_ << kIndent << kIndent << ".handles = _handles,\n";
+        file_ << kIndent << kIndent << ".num_bytes = _num_bytes,\n";
+        file_ << kIndent << kIndent << ".num_handles = _num_handles,\n";
+        file_ << kIndent << "};\n";
+        file_ << kIndent << "return _txn->reply(_txn, &_msg);\n";
+        file_ << "}\n\n";
+    }
 }
 
 std::ostringstream CGenerator::ProduceHeader() {
@@ -859,6 +892,7 @@ std::ostringstream CGenerator::ProduceClient() {
 std::ostringstream CGenerator::ProduceServer() {
     EmitFileComment(&file_);
     EmitIncludeHeader(&file_, "<lib/fidl/coding.h>");
+    EmitIncludeHeader(&file_, "<string.h>");
     EmitIncludeHeader(&file_, "<zircon/syscalls.h>");
     EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(library_->name()) + ">");
     EmitBlank(&file_);
