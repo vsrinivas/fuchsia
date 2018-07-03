@@ -551,20 +551,24 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedCalls) {
   EXPECT_EQ(0, page_eviction_manager_->page_closed_count);
 
   // Open a page and check that OnPageOpened was called once.
-  bool called = false;
-  ledger_->GetPage(fidl::MakeOptional(id), page1.NewRequest(),
-                   [&called](Status) { called = true; });
+  bool called;
+  Status status;
+  ledger_->GetPage(
+      fidl::MakeOptional(id), page1.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(1, page_eviction_manager_->page_opened_count);
   EXPECT_EQ(0, page_eviction_manager_->page_closed_count);
 
   // Open the page again and check that there is no new call to OnPageOpened.
-  called = false;
-  ledger_->GetPage(fidl::MakeOptional(id), page2.NewRequest(),
-                   [&called](Status) { called = true; });
+  ledger_->GetPage(
+      fidl::MakeOptional(id), page2.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(1, page_eviction_manager_->page_opened_count);
   EXPECT_EQ(0, page_eviction_manager_->page_closed_count);
 
@@ -583,7 +587,7 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedCalls) {
 }
 
 TEST_F(LedgerManagerTest, OnPageOpenedClosedCallInternalRequest) {
-  PagePtr page1;
+  PagePtr page;
   ledger::PageId id = RandomId();
 
   EXPECT_EQ(0, page_eviction_manager_->page_opened_count);
@@ -591,22 +595,28 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedCallInternalRequest) {
 
   // Make an internal request by calling PageIsClosedAndSynced. No calls to page
   // opened/closed should be made.
-  bool called = false;
+  bool called;
+  Status status;
+  PageClosedAndSynced page_state;
   ledger_manager_->PageIsClosedAndSynced(
       convert::ToString(id.id),
-      [&called](Status, PageClosedAndSynced) { called = true; });
+      callback::Capture(callback::SetWhenCalled(&called), &status,
+                        &page_state));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(PageClosedAndSynced::NO, page_state);
   EXPECT_EQ(0, page_eviction_manager_->page_opened_count);
   EXPECT_EQ(0, page_eviction_manager_->page_closed_count);
 
-  // Open the same page with an external request and check that OnPageOpened was
-  // called once.
-  called = false;
-  ledger_->GetPage(fidl::MakeOptional(id), page1.NewRequest(),
-                   [&called](Status) { called = true; });
+  // Open the same page with an external request and check that OnPageOpened
+  // was called once.
+  ledger_->GetPage(
+      fidl::MakeOptional(id), page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(1, page_eviction_manager_->page_opened_count);
   EXPECT_EQ(0, page_eviction_manager_->page_closed_count);
 }
