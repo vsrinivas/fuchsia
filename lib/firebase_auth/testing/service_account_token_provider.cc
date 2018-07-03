@@ -197,7 +197,7 @@ void ServiceAccountTokenProvider::GetFirebaseAuthToken(
   // A request is in progress to get a token. Registers the callback that will
   // be called when the request ends.
   if (!in_progress_callbacks_[firebase_api_key].empty()) {
-    in_progress_callbacks_[firebase_api_key].push_back(callback);
+    in_progress_callbacks_[firebase_api_key].push_back(std::move(callback));
     return;
   }
 
@@ -220,9 +220,10 @@ void ServiceAccountTokenProvider::GetFirebaseAuthToken(
     callback(GetFirebaseToken(nullptr),
              GetError(fuchsia::modular::auth::Status::INTERNAL_ERROR,
                       "Unable to compute custom authentication token."));
+    return;
   }
 
-  in_progress_callbacks_[firebase_api_key].push_back(callback);
+  in_progress_callbacks_[firebase_api_key].push_back(std::move(callback));
 
   in_progress_requests_.emplace(network_wrapper_->Request(
       [this, firebase_api_key = firebase_api_key.get(),

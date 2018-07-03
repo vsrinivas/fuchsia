@@ -32,13 +32,11 @@ void TestTokenProvider::GetFirebaseAuthToken(
   fidl::Clone(token_to_return_, &token_to_return_copy);
   fuchsia::modular::auth::AuthErr error_to_return_copy;
   fidl::Clone(error_to_return_, &error_to_return_copy);
-  async::PostTask(
-      async_,
-      fxl::MakeCopyable([token_to_return = std::move(token_to_return_copy),
-                         error_to_return = std::move(error_to_return_copy),
-                         callback]() mutable {
-        callback(std::move(token_to_return), std::move(error_to_return));
-      }));
+  async::PostTask(async_, [token_to_return = std::move(token_to_return_copy),
+                           error_to_return = std::move(error_to_return_copy),
+                           callback = std::move(callback)]() mutable {
+    callback(std::move(token_to_return), std::move(error_to_return));
+  });
 }
 
 void TestTokenProvider::GetClientId(GetClientIdCallback /*callback*/) {
