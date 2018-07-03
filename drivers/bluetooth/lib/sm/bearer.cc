@@ -286,8 +286,17 @@ ErrorCode Bearer::ResolveFeatures(bool local_initiator,
   bool init_oob = preq.oob_data_flag == OOBDataFlag::kPresent;
   bool rsp_oob = pres.oob_data_flag == OOBDataFlag::kPresent;
 
+  IOCapability local_ioc, peer_ioc;
+  if (local_initiator) {
+    local_ioc = preq.io_capability;
+    peer_ioc = pres.io_capability;
+  } else {
+    local_ioc = pres.io_capability;
+    peer_ioc = preq.io_capability;
+  }
+
   PairingMethod method = util::SelectPairingMethod(
-      sc, init_oob, rsp_oob, mitm, preq.io_capability, pres.io_capability);
+      sc, init_oob, rsp_oob, mitm, local_ioc, peer_ioc, local_initiator);
 
   // If MITM protection is required but the pairing method cannot provide MITM,
   // then reject the pairing.

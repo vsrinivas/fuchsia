@@ -40,8 +40,11 @@ enum class PairingMethod {
   // Unauthenticated
   kJustWorks,
 
-  // Authenticated
-  kPasskeyEntry,
+  // Local host inputs passkey. Authenticated.
+  kPasskeyEntryInput,
+
+  // Local host displays passkey. Authenticated.
+  kPasskeyEntryDisplay,
 
   // Authenticated, LE Secure Connections only.
   kNumericComparison,

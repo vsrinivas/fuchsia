@@ -51,9 +51,27 @@ void Xor128(const UInt128& int1, const UInt128& int2, UInt128* out) {
 
 }  // namespace
 
+std::string PairingMethodToString(PairingMethod method) {
+  switch (method) {
+    case PairingMethod::kJustWorks:
+      return "Just Works";
+    case PairingMethod::kPasskeyEntryInput:
+      return "Passkey Entry (input)";
+    case PairingMethod::kPasskeyEntryDisplay:
+      return "Passkey Entry (display)";
+    case PairingMethod::kNumericComparison:
+      return "Numeric Comparison";
+    case PairingMethod::kOutOfBand:
+      return "OOB";
+    default:
+      break;
+  }
+  return "(unknown)";
+}
+
 PairingMethod SelectPairingMethod(bool sec_conn, bool local_oob, bool peer_oob,
                                   bool mitm_required, IOCapability local_ioc,
-                                  IOCapability peer_ioc) {
+                                  IOCapability peer_ioc, bool local_initiator) {
   if ((sec_conn && (local_oob || peer_oob)) ||
       (!sec_conn && local_oob && peer_oob)) {
     return PairingMethod::kOutOfBand;
@@ -76,7 +94,7 @@ PairingMethod SelectPairingMethod(bool sec_conn, bool local_oob, bool peer_oob,
       switch (peer_ioc) {
         case IOCapability::kKeyboardOnly:
         case IOCapability::kKeyboardDisplay:
-          return PairingMethod::kPasskeyEntry;
+          return PairingMethod::kPasskeyEntryDisplay;
         default:
           break;
       }
@@ -89,25 +107,38 @@ PairingMethod SelectPairingMethod(bool sec_conn, bool local_oob, bool peer_oob,
                           : PairingMethod::kJustWorks;
         case IOCapability::kKeyboardDisplay:
           return sec_conn ? PairingMethod::kNumericComparison
-                          : PairingMethod::kPasskeyEntry;
+                          : PairingMethod::kPasskeyEntryDisplay;
         case IOCapability::kKeyboardOnly:
-          return PairingMethod::kPasskeyEntry;
+          return PairingMethod::kPasskeyEntryDisplay;
         default:
           break;
       }
       break;
 
     case IOCapability::kKeyboardOnly:
-      return PairingMethod::kPasskeyEntry;
+      return PairingMethod::kPasskeyEntryInput;
 
     case IOCapability::kKeyboardDisplay:
-      if (peer_ioc == IOCapability::kKeyboardOnly ||
-          peer_ioc == IOCapability::kDisplayOnly) {
-        return PairingMethod::kPasskeyEntry;
+      switch (peer_ioc) {
+        case IOCapability::kKeyboardOnly:
+          return PairingMethod::kPasskeyEntryDisplay;
+        case IOCapability::kDisplayOnly:
+          return PairingMethod::kPasskeyEntryInput;
+        case IOCapability::kDisplayYesNo:
+          return sec_conn ? PairingMethod::kNumericComparison
+                          : PairingMethod::kPasskeyEntryInput;
+        default:
+          break;
       }
 
-      return sec_conn ? PairingMethod::kNumericComparison
-                      : PairingMethod::kPasskeyEntry;
+      // If both devices have KeyboardDisplay then use Numeric Comparison
+      // if S.C. is supported. Otherwise, the initiator always displays and the
+      // responder inputs a passkey.
+      if (sec_conn) {
+        return PairingMethod::kNumericComparison;
+      }
+      return local_initiator ? PairingMethod::kPasskeyEntryDisplay
+                             : PairingMethod::kPasskeyEntryInput;
   }
 
   return PairingMethod::kJustWorks;

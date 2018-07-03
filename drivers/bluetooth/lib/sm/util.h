@@ -12,6 +12,9 @@ namespace btlib {
 namespace sm {
 namespace util {
 
+// Returns a string representation of a given pairing method.
+std::string PairingMethodToString(PairingMethod method);
+
 // Used to select the key generation method as described in Vol 3, Part H,
 // 2.3.5.1 based on local and peer authentication parameters:
 //   - |secure_connections|: True if Secure Connections pairing is used. False
@@ -20,11 +23,13 @@ namespace util {
 //   - |peer_oob|: Peer OOB auth data is available.
 //   - |mitm_required|: True means at least one of the devices requires MITM
 //     protection.
-//   - |local_ioc|, |peer_ioc|: Indicate local and peer IO capabilities.
+//   - |local_ioc|, |peer_ioc|: Local and peer IO capabilities.
+//   - |local_initiator|: True means that the local device is the initiator and
+//     |local_ioc| represents the initiator's I/O capabilities.
 PairingMethod SelectPairingMethod(bool secure_connections, bool local_oob,
                                   bool peer_oob, bool mitm_required,
-                                  IOCapability local_ioc,
-                                  IOCapability peer_ioc);
+                                  IOCapability local_ioc, IOCapability peer_ioc,
+                                  bool local_initiator);
 
 // Implements the "Security Function 'e'" defined in Vol 3, Part H, 2.2.1.
 void Encrypt(const common::UInt128& key, const common::UInt128& plaintext_data,

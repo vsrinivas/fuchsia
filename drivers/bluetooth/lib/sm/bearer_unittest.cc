@@ -358,7 +358,7 @@ TEST_F(SMP_BearerTest, FeatureExchangePairingResponseMITM) {
 
   EXPECT_TRUE(features().initiator);
   EXPECT_FALSE(features().secure_connections);
-  EXPECT_EQ(PairingMethod::kPasskeyEntry, features().method);
+  EXPECT_EQ(PairingMethod::kPasskeyEntryDisplay, features().method);
   EXPECT_EQ(7, features().encryption_key_size);
   EXPECT_TRUE(KeyDistGen::kEncKey & features().local_key_distribution);
   EXPECT_TRUE(KeyDistGen::kEncKey & features().remote_key_distribution);
@@ -589,7 +589,7 @@ TEST_F(SMP_BearerTest, FeatureExchangeResponderMITM) {
   EXPECT_EQ(1, feature_exchange_count());
   EXPECT_FALSE(features().initiator);
   EXPECT_FALSE(features().secure_connections);
-  EXPECT_EQ(PairingMethod::kPasskeyEntry, features().method);
+  EXPECT_EQ(PairingMethod::kPasskeyEntryDisplay, features().method);
   EXPECT_EQ(7, features().encryption_key_size);
   EXPECT_TRUE(KeyDistGen::kEncKey & features().local_key_distribution);
   EXPECT_TRUE(KeyDistGen::kEncKey & features().remote_key_distribution);

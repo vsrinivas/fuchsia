@@ -25,39 +25,46 @@ TEST(SMP_UtilTest, SelectPairingMethodOOB) {
             SelectPairingMethod(true /* sc */, true /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kKeyboardDisplay /* local */,
-                                IOCapability::kKeyboardDisplay /* peer */));
+                                IOCapability::kKeyboardDisplay /* peer */,
+                                true /* local_initiator */));
   EXPECT_EQ(PairingMethod::kOutOfBand,
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 true /* peer_oob */, true /* mitm */,
                                 IOCapability::kKeyboardDisplay /* local */,
-                                IOCapability::kKeyboardDisplay /* peer */));
+                                IOCapability::kKeyboardDisplay /* peer */,
+                                true /* local_initiator */));
   EXPECT_NE(PairingMethod::kOutOfBand,
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kKeyboardDisplay /* local */,
-                                IOCapability::kKeyboardDisplay /* peer */));
+                                IOCapability::kKeyboardDisplay /* peer */,
+                                true /* local_initiator */));
 
   // In legacy OOB is selected if both devices have OOB data.
   EXPECT_EQ(PairingMethod::kOutOfBand,
             SelectPairingMethod(false /* sc */, true /* local_oob */,
                                 true /* peer_oob */, true /* mitm */,
                                 IOCapability::kKeyboardDisplay /* local */,
-                                IOCapability::kKeyboardDisplay /* peer */));
+                                IOCapability::kKeyboardDisplay /* peer */,
+                                true /* local_initiator */));
   EXPECT_NE(PairingMethod::kOutOfBand,
             SelectPairingMethod(false /* sc */, false /* local_oob */,
                                 true /* peer_oob */, true /* mitm */,
                                 IOCapability::kKeyboardDisplay /* local */,
-                                IOCapability::kKeyboardDisplay /* peer */));
+                                IOCapability::kKeyboardDisplay /* peer */,
+                                true /* local_initiator */));
   EXPECT_NE(PairingMethod::kOutOfBand,
             SelectPairingMethod(false /* sc */, true /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kKeyboardDisplay /* local */,
-                                IOCapability::kKeyboardDisplay /* peer */));
+                                IOCapability::kKeyboardDisplay /* peer */,
+                                true /* local_initiator */));
   EXPECT_NE(PairingMethod::kOutOfBand,
             SelectPairingMethod(false /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kKeyboardDisplay /* local */,
-                                IOCapability::kKeyboardDisplay /* peer */));
+                                IOCapability::kKeyboardDisplay /* peer */,
+                                true /* local_initiator */));
 }
 
 TEST(SMP_UtilTest, SelectPairingMethodNoMITM) {
@@ -67,7 +74,8 @@ TEST(SMP_UtilTest, SelectPairingMethodNoMITM) {
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, false /* mitm */,
                                 IOCapability::kKeyboardDisplay /* local */,
-                                IOCapability::kKeyboardDisplay /* peer */));
+                                IOCapability::kKeyboardDisplay /* peer */,
+                                true /* local_initiator */));
 
   // Shouldn't default to "Just Works" if at least one device requires MITM
   // protection.
@@ -75,7 +83,8 @@ TEST(SMP_UtilTest, SelectPairingMethodNoMITM) {
             SelectPairingMethod(false /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kKeyboardDisplay /* local */,
-                                IOCapability::kKeyboardDisplay /* peer */));
+                                IOCapability::kKeyboardDisplay /* peer */,
+                                true /* local_initiator */));
 }
 
 // Tests all combinations that result in the "Just Works" pairing method.
@@ -85,24 +94,28 @@ TEST(SMP_UtilTest, SelectPairingMethodJustWorks) {
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kDisplayOnly /* local */,
-                                IOCapability::kDisplayOnly /* peer */));
+                                IOCapability::kDisplayOnly /* peer */,
+                                true /* local_initiator */));
   EXPECT_EQ(PairingMethod::kJustWorks,
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kDisplayOnly /* local */,
-                                IOCapability::kDisplayYesNo /* peer */));
+                                IOCapability::kDisplayYesNo /* peer */,
+                                true /* local_initiator */));
   EXPECT_EQ(PairingMethod::kJustWorks,
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kDisplayOnly /* local */,
-                                IOCapability::kNoInputNoOutput /* peer */));
+                                IOCapability::kNoInputNoOutput /* peer */,
+                                true /* local_initiator */));
 
   // Local: DisplayYesNo
   EXPECT_EQ(PairingMethod::kJustWorks,
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kDisplayYesNo /* local */,
-                                IOCapability::kDisplayOnly /* peer */));
+                                IOCapability::kDisplayOnly /* peer */,
+                                true /* local_initiator */));
   // If both devices are DisplayYesNo, then "Just Works" is selected for LE
   // legacy pairing (i.e. at least one device doesn't support Secure
   // Connections).
@@ -110,104 +123,166 @@ TEST(SMP_UtilTest, SelectPairingMethodJustWorks) {
             SelectPairingMethod(false /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kDisplayYesNo /* local */,
-                                IOCapability::kDisplayYesNo /* peer */));
+                                IOCapability::kDisplayYesNo /* peer */,
+                                true /* local_initiator */));
   EXPECT_EQ(PairingMethod::kJustWorks,
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kDisplayYesNo /* local */,
-                                IOCapability::kNoInputNoOutput /* peer */));
+                                IOCapability::kNoInputNoOutput /* peer */,
+                                true /* local_initiator */));
 
   // Local: KeyboardOnly
   EXPECT_EQ(PairingMethod::kJustWorks,
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kKeyboardOnly /* local */,
-                                IOCapability::kNoInputNoOutput /* peer */));
+                                IOCapability::kNoInputNoOutput /* peer */,
+                                true /* local_initiator */));
 
   // Local: NoInputNoOutput. Always "Just Works".
   EXPECT_EQ(PairingMethod::kJustWorks,
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kNoInputNoOutput /* local */,
-                                IOCapability::kDisplayOnly /* peer */));
+                                IOCapability::kDisplayOnly /* peer */,
+                                true /* local_initiator */));
   EXPECT_EQ(PairingMethod::kJustWorks,
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kNoInputNoOutput /* local */,
-                                IOCapability::kDisplayYesNo /* peer */));
+                                IOCapability::kDisplayYesNo /* peer */,
+                                true /* local_initiator */));
   EXPECT_EQ(PairingMethod::kJustWorks,
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kNoInputNoOutput /* local */,
-                                IOCapability::kKeyboardOnly /* peer */));
+                                IOCapability::kKeyboardOnly /* peer */,
+                                true /* local_initiator */));
   EXPECT_EQ(PairingMethod::kJustWorks,
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kNoInputNoOutput /* local */,
-                                IOCapability::kNoInputNoOutput /* peer */));
+                                IOCapability::kNoInputNoOutput /* peer */,
+                                true /* local_initiator */));
   EXPECT_EQ(PairingMethod::kJustWorks,
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kNoInputNoOutput /* local */,
-                                IOCapability::kKeyboardDisplay /* peer */));
+                                IOCapability::kKeyboardDisplay /* peer */,
+                                true /* local_initiator */));
 
   // Local: KeyboardDisplay
   EXPECT_EQ(PairingMethod::kJustWorks,
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kKeyboardDisplay /* local */,
-                                IOCapability::kNoInputNoOutput /* peer */));
+                                IOCapability::kNoInputNoOutput /* peer */,
+                                true /* local_initiator */));
 }
 
-// Tests all combinations that result in the "Passkey Entry" pairing method.
-TEST(SMP_UtilTest, SelectPairingMethodPasskeyEntry) {
+// Tests all combinations that result in the "Passkey Entry (input)" pairing
+// method.
+TEST(SMP_UtilTest, SelectPairingMethodPasskeyEntryInput) {
+  // Local: KeyboardOnly
+  EXPECT_EQ(PairingMethod::kPasskeyEntryInput,
+            SelectPairingMethod(true /* sc */, false /* local_oob */,
+                                false /* peer_oob */, true /* mitm */,
+                                IOCapability::kKeyboardOnly /* local */,
+                                IOCapability::kDisplayOnly /* peer */,
+                                true /* local_initiator */));
+  EXPECT_EQ(PairingMethod::kPasskeyEntryInput,
+            SelectPairingMethod(true /* sc */, false /* local_oob */,
+                                false /* peer_oob */, true /* mitm */,
+                                IOCapability::kKeyboardOnly /* local */,
+                                IOCapability::kDisplayYesNo /* peer */,
+                                true /* local_initiator */));
+  EXPECT_EQ(PairingMethod::kPasskeyEntryInput,
+            SelectPairingMethod(true /* sc */, false /* local_oob */,
+                                false /* peer_oob */, true /* mitm */,
+                                IOCapability::kKeyboardOnly /* local */,
+                                IOCapability::kKeyboardOnly /* peer */,
+                                true /* local_initiator */));
+  EXPECT_EQ(PairingMethod::kPasskeyEntryInput,
+            SelectPairingMethod(true /* sc */, false /* local_oob */,
+                                false /* peer_oob */, true /* mitm */,
+                                IOCapability::kKeyboardOnly /* local */,
+                                IOCapability::kKeyboardDisplay /* peer */,
+                                true /* local_initiator */));
+
+  // Local: KeyboardDisplay
+  EXPECT_EQ(PairingMethod::kPasskeyEntryInput,
+            SelectPairingMethod(true /* sc */, false /* local_oob */,
+                                false /* peer_oob */, true /* mitm */,
+                                IOCapability::kKeyboardDisplay /* local */,
+                                IOCapability::kDisplayOnly /* peer */,
+                                true /* local_initiator */));
+  EXPECT_EQ(PairingMethod::kPasskeyEntryInput,
+            SelectPairingMethod(false /* sc */, false /* local_oob */,
+                                false /* peer_oob */, true /* mitm */,
+                                IOCapability::kKeyboardDisplay /* local */,
+                                IOCapability::kDisplayYesNo /* peer */,
+                                true /* local_initiator */));
+
+  // If both devices have the KeyboardDisplay capability then the responder
+  // inputs.
+  EXPECT_EQ(PairingMethod::kPasskeyEntryInput,
+            SelectPairingMethod(false /* sc */, false /* local_oob */,
+                                false /* peer_oob */, true /* mitm */,
+                                IOCapability::kKeyboardDisplay /* local */,
+                                IOCapability::kKeyboardDisplay /* peer */,
+                                false /* local_initiator */));
+}
+
+// Tests all combinations that result in the "Passkey Entry (display)" pairing
+// method.
+TEST(SMP_UtilTest, SelectPairingMethodPasskeyEntryDisplay) {
   // Local: DisplayOnly
-  EXPECT_EQ(PairingMethod::kPasskeyEntry,
+  EXPECT_EQ(PairingMethod::kPasskeyEntryDisplay,
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kDisplayOnly /* local */,
-                                IOCapability::kKeyboardOnly /* peer */));
-  EXPECT_EQ(PairingMethod::kPasskeyEntry,
+                                IOCapability::kKeyboardOnly /* peer */,
+                                true /* local_initiator */));
+  EXPECT_EQ(PairingMethod::kPasskeyEntryDisplay,
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kDisplayOnly /* local */,
-                                IOCapability::kKeyboardDisplay /* peer */));
+                                IOCapability::kKeyboardDisplay /* peer */,
+                                true /* local_initiator */));
 
   // Local: DisplayYesNo
-  EXPECT_EQ(PairingMethod::kPasskeyEntry,
+  EXPECT_EQ(PairingMethod::kPasskeyEntryDisplay,
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kDisplayYesNo /* local */,
-                                IOCapability::kKeyboardOnly /* peer */));
+                                IOCapability::kKeyboardOnly /* peer */,
+                                true /* local_initiator */));
   // If the peer has a display then use "Passkey Entry" only for LE Legacy
   // pairing.
-  EXPECT_EQ(PairingMethod::kPasskeyEntry,
+  EXPECT_EQ(PairingMethod::kPasskeyEntryDisplay,
             SelectPairingMethod(false /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kDisplayYesNo /* local */,
-                                IOCapability::kKeyboardDisplay /* peer */));
+                                IOCapability::kKeyboardDisplay /* peer */,
+                                true /* local_initiator */));
 
-  // Local: KeyboardOnly
-  EXPECT_EQ(PairingMethod::kPasskeyEntry,
+  // Local: KeyboardDisplay
+  EXPECT_EQ(PairingMethod::kPasskeyEntryDisplay,
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
-                                IOCapability::kKeyboardOnly /* local */,
-                                IOCapability::kDisplayOnly /* peer */));
-  EXPECT_EQ(PairingMethod::kPasskeyEntry,
-            SelectPairingMethod(true /* sc */, false /* local_oob */,
+                                IOCapability::kKeyboardDisplay /* local */,
+                                IOCapability::kKeyboardOnly /* peer */,
+                                true /* local_initiator */));
+
+  // If both devices have the KeyboardDisplay capability then the initiator
+  // displays.
+  EXPECT_EQ(PairingMethod::kPasskeyEntryDisplay,
+            SelectPairingMethod(false /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
-                                IOCapability::kKeyboardOnly /* local */,
-                                IOCapability::kDisplayYesNo /* peer */));
-  EXPECT_EQ(PairingMethod::kPasskeyEntry,
-            SelectPairingMethod(true /* sc */, false /* local_oob */,
-                                false /* peer_oob */, true /* mitm */,
-                                IOCapability::kKeyboardOnly /* local */,
-                                IOCapability::kKeyboardOnly /* peer */));
-  EXPECT_EQ(PairingMethod::kPasskeyEntry,
-            SelectPairingMethod(true /* sc */, false /* local_oob */,
-                                false /* peer_oob */, true /* mitm */,
-                                IOCapability::kKeyboardOnly /* local */,
-                                IOCapability::kKeyboardDisplay /* peer */));
+                                IOCapability::kKeyboardDisplay /* local */,
+                                IOCapability::kKeyboardDisplay /* peer */,
+                                true /* local_initiator */));
 }
 
 // Tests all combinations that result in the "Numeric Comparison" pairing
@@ -219,24 +294,28 @@ TEST(SMP_UtilTest, SelectPairingMethodNumericComparison) {
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kDisplayYesNo /* local */,
-                                IOCapability::kDisplayYesNo /* peer */));
+                                IOCapability::kDisplayYesNo /* peer */,
+                                true /* local_initiator */));
   EXPECT_EQ(PairingMethod::kNumericComparison,
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kDisplayYesNo /* local */,
-                                IOCapability::kKeyboardDisplay /* peer */));
+                                IOCapability::kKeyboardDisplay /* peer */,
+                                true /* local_initiator */));
 
   // Local: KeyboardDisplay
   EXPECT_EQ(PairingMethod::kNumericComparison,
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kKeyboardDisplay /* local */,
-                                IOCapability::kDisplayYesNo /* peer */));
+                                IOCapability::kDisplayYesNo /* peer */,
+                                true /* local_initiator */));
   EXPECT_EQ(PairingMethod::kNumericComparison,
             SelectPairingMethod(true /* sc */, false /* local_oob */,
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kKeyboardDisplay /* local */,
-                                IOCapability::kKeyboardDisplay /* peer */));
+                                IOCapability::kKeyboardDisplay /* peer */,
+                                true /* local_initiator */));
 }
 
 // Tests "c1" using the sample data from Vol 3, Part H, 2.2.3.
