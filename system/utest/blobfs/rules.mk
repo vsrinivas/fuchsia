@@ -30,6 +30,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/trace \
     system/ulib/zx \
     system/ulib/zxcpp \
+    third_party/ulib/lz4 \
     third_party/ulib/uboringssl \
 
 MODULE_LIBS := \

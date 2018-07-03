@@ -41,7 +41,7 @@ zx_status_t Compressor::Initialize(void* buf, size_t buf_max) {
     buf_max_ = buf_max;
     buf_used_ = 0;
 
-    size_t r = LZ4F_compressBegin(ctx_, Buffer(), buf_max_, nullptr);
+    size_t r = LZ4F_compressBegin(ctx_, Buffer(), buf_remaining(), nullptr);
     if (LZ4F_isError(r)) {
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
@@ -51,7 +51,7 @@ zx_status_t Compressor::Initialize(void* buf, size_t buf_max) {
 }
 
 zx_status_t Compressor::Update(const void* data, size_t length) {
-    size_t r = LZ4F_compressUpdate(ctx_, Buffer(), buf_max_, data, length, nullptr);
+    size_t r = LZ4F_compressUpdate(ctx_, Buffer(), buf_remaining(), data, length, nullptr);
     if (LZ4F_isError(r)) {
         return ZX_ERR_IO_DATA_INTEGRITY;
     }
@@ -60,7 +60,7 @@ zx_status_t Compressor::Update(const void* data, size_t length) {
 }
 
 zx_status_t Compressor::End() {
-    size_t r = LZ4F_compressEnd(ctx_, Buffer(), buf_max_, nullptr);
+    size_t r = LZ4F_compressEnd(ctx_, Buffer(), buf_remaining(), nullptr);
     if (LZ4F_isError(r)) {
         return ZX_ERR_IO_DATA_INTEGRITY;
     }

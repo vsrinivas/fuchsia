@@ -56,6 +56,8 @@ private:
         return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(buf_) + buf_used_);
     }
 
+    size_t buf_remaining() const { return buf_max_ - buf_used_; }
+
     LZ4F_compressionContext_t ctx_;
     void* buf_;
     size_t buf_max_;

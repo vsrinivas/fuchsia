@@ -13,11 +13,11 @@
 #include <utime.h>
 
 #include <blobfs/format.h>
+#include <blobfs/lz4.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
-#include <lib/fdio/io.h>
-#include <fbl/atomic.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/atomic.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
@@ -28,12 +28,13 @@
 #include <fs-management/ramdisk.h>
 #include <fvm/fvm.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/io.h>
 #include <lib/memfs/memfs.h>
+#include <unittest/unittest.h>
 #include <zircon/device/device.h>
 #include <zircon/device/ramdisk.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
-#include <unittest/unittest.h>
 
 #include "blobfs-test.h"
 
@@ -2285,6 +2286,33 @@ static bool CreateWriteReopen(void) {
     END_TEST;
 }
 
+// Ensure Compressor returns an error if we try to compress more data than the buffer can hold.
+static bool TestCompressorBufferTooSmall(void) {
+    BEGIN_TEST;
+    blobfs::Compressor c;
+
+    // Pretend we're going to compress only one byte of data.
+    const size_t buf_size = c.BufferMax(1);
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<char[]> buf(new (&ac) char[buf_size]);
+    EXPECT_EQ(ac.check(), true);
+    ASSERT_EQ(c.Initialize(buf.get(), buf_size), ZX_OK);
+
+    // Keep compressing data until Compressor returns an error.
+    unsigned int seed = 0;
+    zx_status_t result = ZX_OK;
+    for (;;) {
+        char data = static_cast<char>(rand_r(&seed));
+        result = c.Update(&data, 1);
+        if (result != ZX_OK) {
+            break;
+        }
+    }
+    ASSERT_EQ(result, ZX_ERR_IO_DATA_INTEGRITY);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(blobfs_tests)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestBasic)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestNullBlob)
@@ -2325,6 +2353,7 @@ RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestReadOnly)
 RUN_TEST_MEDIUM(ResizePartition<FsTestType::kFvm>)
 RUN_TEST_MEDIUM(CorruptAtMount<FsTestType::kFvm>)
 RUN_TEST_FOR_ALL_TYPES(LARGE, CreateWriteReopen)
+RUN_TEST(TestCompressorBufferTooSmall);
 END_TEST_CASE(blobfs_tests)
 
 static void print_test_help(FILE* f) {
