@@ -33,7 +33,7 @@ void FakeNetConnector::GetDeviceServiceProvider(
 
 void FakeNetConnector::GetKnownDeviceNames(
     uint64_t version_last_seen, GetKnownDeviceNamesCallback callback) {
-  delegate_->GetDevicesNames(version_last_seen, callback);
+  delegate_->GetDevicesNames(version_last_seen, std::move(callback));
 }
 
 }  // namespace ledger

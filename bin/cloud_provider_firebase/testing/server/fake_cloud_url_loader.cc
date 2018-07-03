@@ -41,7 +41,7 @@ void FakeCloudURLLoader::Start(http::URLRequest request,
   FXL_DCHECK(url.is_valid());
 
   if (StringEndsWith(url.host(), kFirebaseHosts)) {
-    firebase_servers_[url.host()].Serve(std::move(request), callback);
+    firebase_servers_[url.host()].Serve(std::move(request), std::move(callback));
     return;
   }
 
@@ -53,7 +53,7 @@ void FakeCloudURLLoader::Start(http::URLRequest request,
     size_t slash_pos = url_view.find("/", 0);
     FXL_DCHECK(slash_pos != std::string::npos);
     std::string bucket_name = url_view.substr(0, slash_pos).ToString();
-    gcs_servers_[std::move(bucket_name)].Serve(std::move(request), callback);
+    gcs_servers_[std::move(bucket_name)].Serve(std::move(request), std::move(callback));
     return;
   }
 
