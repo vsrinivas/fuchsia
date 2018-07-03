@@ -607,6 +607,8 @@ images += [
     deps = [
       ":netboot",
     ]
+    legacy_copy = "netboot.bin"
+    legacy_copy_dir = root_out_dir
   },
 ]
 
