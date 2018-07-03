@@ -601,7 +601,8 @@ static ssize_t eth_set_iobuf_locked(ethdev_t* edev, const void* in_buf, size_t i
     }
 
     if ((status = zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size,
-                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
+                              ZX_VM_FLAG_REQUIRE_NON_RESIZABLE,
                               (uintptr_t*)&edev->io_buf)) < 0) {
         zxlogf(ERROR, "eth [%s]: could not map io_buf: %d\n", edev->name, status);
         goto fail;
