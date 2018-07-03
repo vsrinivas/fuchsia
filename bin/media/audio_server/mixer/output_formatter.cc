@@ -37,6 +37,18 @@ class DstConverter;
 
 template <typename DType>
 class DstConverter<
+    DType, typename std::enable_if<std::is_same<DType, uint8_t>::value>::type> {
+ public:
+  static inline constexpr DType Convert(float sample) {
+    return fbl::clamp<int32_t>(
+        round(sample * kFloatToInt8) + kOffsetInt8ToUint8,
+        std::numeric_limits<uint8_t>::min(),
+        std::numeric_limits<uint8_t>::max());
+  }
+};
+
+template <typename DType>
+class DstConverter<
     DType, typename std::enable_if<std::is_same<DType, int16_t>::value>::type> {
  public:
   static inline constexpr DType Convert(float sample) {
@@ -48,13 +60,11 @@ class DstConverter<
 
 template <typename DType>
 class DstConverter<
-    DType, typename std::enable_if<std::is_same<DType, uint8_t>::value>::type> {
+    DType, typename std::enable_if<std::is_same<DType, int32_t>::value>::type> {
  public:
   static inline constexpr DType Convert(float sample) {
-    return fbl::clamp<int32_t>(
-        round(sample * kFloatToInt8) + kOffsetInt8ToUint8,
-        std::numeric_limits<uint8_t>::min(),
-        std::numeric_limits<uint8_t>::max());
+    return fbl::clamp<int64_t>(round(sample * kFloatToInt24In32), kMinInt24In32,
+                               kMaxInt24In32);
   }
 };
 
@@ -75,6 +85,7 @@ class SilenceMaker;
 template <typename DType>
 class SilenceMaker<
     DType, typename std::enable_if<std::is_same<DType, int16_t>::value ||
+                                   std::is_same<DType, int32_t>::value ||
                                    std::is_same<DType, float>::value>::type> {
  public:
   static inline void Fill(void* dest, size_t samples) {
@@ -137,6 +148,8 @@ OutputFormatterPtr OutputFormatter::Select(
       return OutputFormatterPtr(new OutputFormatterImpl<uint8_t>(format));
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
       return OutputFormatterPtr(new OutputFormatterImpl<int16_t>(format));
+    case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
+      return OutputFormatterPtr(new OutputFormatterImpl<int32_t>(format));
     case fuchsia::media::AudioSampleFormat::FLOAT:
       return OutputFormatterPtr(new OutputFormatterImpl<float>(format));
     default:

@@ -42,48 +42,54 @@ zx_status_t SelectBestFormat(
   constexpr uint32_t U8_FMT =
       AUDIO_SAMPLE_FORMAT_8BIT | AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED;
   constexpr uint32_t S16_FMT = AUDIO_SAMPLE_FORMAT_16BIT;
+  constexpr uint32_t S24_FMT = AUDIO_SAMPLE_FORMAT_24BIT_IN32;
   constexpr uint32_t F32_FMT = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
 
-  // For now, users should only ask for unsigned-8, signed-16 or float-32. If
-  // they ask for anything else, change their preference to signed-16.
+  // Users should only ask for unsigned-8, signed-16, signed-24in32 or float-32.
+  // If they ask for anything else, change their preference to signed-16.
   //
   // TODO(johngro) : clean this up as part of fixing MTWN-54
   if ((pref_sample_format & AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN) ||
       (((pref_sample_format & U8_FMT) != U8_FMT) &&
        ((pref_sample_format & S16_FMT) != S16_FMT) &&
+       ((pref_sample_format & S24_FMT) != S24_FMT) &&
        ((pref_sample_format & F32_FMT) != F32_FMT))) {
     pref_sample_format = AUDIO_SAMPLE_FORMAT_16BIT;
   }
 
   for (const auto& range : fmts) {
     // Start by scoring our sample format.  Right now, we only support 8-bit
-    // unsigned, 16-bit signed and 32-bit float in the mixer.  If this
-    // sample format range does not support any of these, just skip it for now.
-    // Otherwise, 4 points if you match the requested format, 3 for signed-16,
-    // 2 for float-32, or 1 for unsigned-8.
+    // unsigned, 16-bit signed, 24-bit-in-32 signed, and 32-bit float in the
+    // mixer.  If this sample format range does not support any of these, just
+    // skip it for now. Otherwise, 5 points if you match the requested format, 4
+    // for signed-16, 3 for float-32, 2 for signed-24, or 1 for unsigned-8.
     //
-    // TODO(mpuryear): once we can validate float-32 with hardware that natively
-    // handles it, change this algorithm to prefer float-32 over signed-16.
+    // TODO(mpuryear): once we validate float or 24in32 on hardware with native
+    // support, change this algorithm to prefer either of these over signed-16.
     audio_sample_format_t this_sample_format;
     int sample_format_score;
 
     bool supports_u8 = (range.sample_formats & U8_FMT) == U8_FMT;
     bool supports_s16 = (range.sample_formats & S16_FMT) == S16_FMT;
+    bool supports_s24 = (range.sample_formats & S24_FMT) == S24_FMT;
     bool supports_f32 = (range.sample_formats & F32_FMT) == F32_FMT;
     if ((range.sample_formats & AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN) ||
-        (!supports_u8 && !supports_s16 && !supports_f32)) {
+        (!supports_u8 && !supports_s16 && !supports_s24 && !supports_f32)) {
       continue;  // Skip -- this isn't a sample container we understand.
     }
 
     if ((pref_sample_format & range.sample_formats) == pref_sample_format) {
       // Direct match.
       this_sample_format = pref_sample_format;
-      sample_format_score = 4;
+      sample_format_score = 5;
     } else if (supports_s16) {
       this_sample_format = AUDIO_SAMPLE_FORMAT_16BIT;
-      sample_format_score = 3;
+      sample_format_score = 4;
     } else if (supports_f32) {
       this_sample_format = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
+      sample_format_score = 3;
+    } else if (supports_s24) {
+      this_sample_format = AUDIO_SAMPLE_FORMAT_24BIT_IN32;
       sample_format_score = 2;
     } else {
       FXL_DCHECK(supports_u8);

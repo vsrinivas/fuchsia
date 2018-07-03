@@ -36,13 +36,18 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
   if (std::is_same<T, uint8_t>::value) {
     mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 48000,
                         1, 48000, Resampler::SampleAndHold);
-    amplitude = std::numeric_limits<int8_t>::max();
+    amplitude = kFullScaleInt8InputAmplitude;
     expected_amplitude = kFullScaleInt8AccumAmplitude;
   } else if (std::is_same<T, int16_t>::value) {
     mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000,
                         1, 48000, Resampler::SampleAndHold);
-    amplitude = std::numeric_limits<int16_t>::max();
+    amplitude = kFullScaleInt16InputAmplitude;
     expected_amplitude = kFullScaleInt16AccumAmplitude;
+  } else if (std::is_same<T, int32_t>::value) {
+    mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1,
+                        48000, 1, 48000, Resampler::SampleAndHold);
+    amplitude = kFullScaleInt24In32InputAmplitude;
+    expected_amplitude = kFullScaleInt24In32AccumAmplitude;
   } else if (std::is_same<T, float>::value) {
     mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 48000, 1,
                         48000, Resampler::SampleAndHold);
@@ -90,10 +95,11 @@ TEST(NoiseFloor, Source_8) {
   AudioResult::LevelToleranceSource8 =
       fmax(AudioResult::LevelToleranceSource8, abs(AudioResult::LevelSource8));
 
-  EXPECT_GE(AudioResult::FloorSource8, AudioResult::kPrevFloorSource8);
+  EXPECT_GE(AudioResult::FloorSource8, AudioResult::kPrevFloorSource8)
+      << std::setprecision(10) << AudioResult::FloorSource8;
 }
 
-// Measure level response and noise floor for 1kHz sine from 16bit source.
+// Measure level response and noise floor for 1kHz sine from 16-bit source.
 TEST(NoiseFloor, Source_16) {
   AudioResult::LevelSource16 =
       MeasureSourceNoiseFloor<int16_t>(&AudioResult::FloorSource16);
@@ -103,10 +109,25 @@ TEST(NoiseFloor, Source_16) {
   AudioResult::LevelToleranceSource16 = fmax(
       AudioResult::LevelToleranceSource16, abs(AudioResult::LevelSource16));
 
-  EXPECT_GE(AudioResult::FloorSource16, AudioResult::kPrevFloorSource16);
+  EXPECT_GE(AudioResult::FloorSource16, AudioResult::kPrevFloorSource16)
+      << std::setprecision(10) << AudioResult::FloorSource16;
 }
 
-// Measure level response and noise floor for 1kHz sine from 16bit source.
+// Measure level response and noise floor for 1kHz sine from 24-bit source.
+TEST(NoiseFloor, Source_24) {
+  AudioResult::LevelSource24 =
+      MeasureSourceNoiseFloor<int32_t>(&AudioResult::FloorSource24);
+
+  EXPECT_NEAR(AudioResult::LevelSource24, 0.0,
+              AudioResult::kPrevLevelToleranceSource24);
+  AudioResult::LevelToleranceSource24 = fmax(
+      AudioResult::LevelToleranceSource24, abs(AudioResult::LevelSource24));
+
+  EXPECT_GE(AudioResult::FloorSource24, AudioResult::kPrevFloorSource24)
+      << std::setprecision(10) << AudioResult::FloorSource24;
+}
+
+// Measure level response and noise floor for 1kHz sine from float source.
 TEST(NoiseFloor, Source_Float) {
   AudioResult::LevelSourceFloat =
       MeasureSourceNoiseFloor<float>(&AudioResult::FloorSourceFloat);
@@ -117,7 +138,8 @@ TEST(NoiseFloor, Source_Float) {
       fmax(AudioResult::LevelToleranceSourceFloat,
            abs(AudioResult::LevelSourceFloat));
 
-  EXPECT_GE(AudioResult::FloorSourceFloat, AudioResult::kPrevFloorSourceFloat);
+  EXPECT_GE(AudioResult::FloorSourceFloat, AudioResult::kPrevFloorSourceFloat)
+      << std::setprecision(10) << AudioResult::FloorSourceFloat;
 }
 
 // Calculate magnitude of primary signal strength, compared to max value. Do the
@@ -139,13 +161,18 @@ double MeasureOutputNoiseFloor(double* sinad_db) {
   if (std::is_same<T, uint8_t>::value) {
     output_formatter =
         SelectOutputFormatter(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1);
-    expected_amplitude = std::numeric_limits<int8_t>::max();
+    expected_amplitude = kFullScaleInt8InputAmplitude;
     amplitude = kFullScaleInt8AccumAmplitude;
   } else if (std::is_same<T, int16_t>::value) {
     output_formatter =
         SelectOutputFormatter(fuchsia::media::AudioSampleFormat::SIGNED_16, 1);
-    expected_amplitude = std::numeric_limits<int16_t>::max();
-    amplitude = kFullScaleInt8AccumAmplitude;
+    expected_amplitude = kFullScaleInt16InputAmplitude;
+    amplitude = kFullScaleInt16AccumAmplitude;
+  } else if (std::is_same<T, int32_t>::value) {
+    output_formatter = SelectOutputFormatter(
+        fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1);
+    expected_amplitude = kFullScaleInt24In32InputAmplitude;
+    amplitude = kFullScaleInt24In32AccumAmplitude;
   } else if (std::is_same<T, float>::value) {
     output_formatter =
         SelectOutputFormatter(fuchsia::media::AudioSampleFormat::FLOAT, 1);
@@ -175,7 +202,7 @@ double MeasureOutputNoiseFloor(double* sinad_db) {
   return ValToDb(magn_signal / expected_amplitude);
 }
 
-// Measure level response and noise floor for 1kHz sine, to an 8bit output.
+// Measure level response and noise floor for 1kHz sine, to an 8-bit output.
 TEST(NoiseFloor, Output_8) {
   AudioResult::LevelOutput8 =
       MeasureOutputNoiseFloor<uint8_t>(&AudioResult::FloorOutput8);
@@ -185,10 +212,11 @@ TEST(NoiseFloor, Output_8) {
   AudioResult::LevelToleranceOutput8 =
       fmax(AudioResult::LevelToleranceOutput8, abs(AudioResult::LevelOutput8));
 
-  EXPECT_GE(AudioResult::FloorOutput8, AudioResult::kPrevFloorOutput8);
+  EXPECT_GE(AudioResult::FloorOutput8, AudioResult::kPrevFloorOutput8)
+      << std::setprecision(10) << AudioResult::FloorOutput8;
 }
 
-// Measure level response and noise floor for 1kHz sine, to a 16bit output.
+// Measure level response and noise floor for 1kHz sine, to a 16-bit output.
 TEST(NoiseFloor, Output_16) {
   AudioResult::LevelOutput16 =
       MeasureOutputNoiseFloor<int16_t>(&AudioResult::FloorOutput16);
@@ -198,10 +226,25 @@ TEST(NoiseFloor, Output_16) {
   AudioResult::LevelToleranceOutput16 = fmax(
       AudioResult::LevelToleranceOutput16, abs(AudioResult::LevelOutput16));
 
-  EXPECT_GE(AudioResult::FloorOutput16, AudioResult::kPrevFloorOutput16);
+  EXPECT_GE(AudioResult::FloorOutput16, AudioResult::kPrevFloorOutput16)
+      << std::setprecision(10) << AudioResult::FloorOutput16;
 }
 
-// Measure level response and noise floor for 1kHz sine, to a 16bit output.
+// Measure level response and noise floor for 1kHz sine, to a 24-bit output.
+TEST(NoiseFloor, Output_24) {
+  AudioResult::LevelOutput24 =
+      MeasureOutputNoiseFloor<int32_t>(&AudioResult::FloorOutput24);
+
+  EXPECT_NEAR(AudioResult::LevelOutput24, 0.0,
+              AudioResult::kPrevLevelToleranceOutput24);
+  AudioResult::LevelToleranceOutput24 = fmax(
+      AudioResult::LevelToleranceOutput24, abs(AudioResult::LevelOutput24));
+
+  EXPECT_GE(AudioResult::FloorOutput24, AudioResult::kPrevFloorOutput24)
+      << std::setprecision(10) << AudioResult::FloorOutput24;
+}
+
+// Measure level response and noise floor for 1kHz sine, to a float output.
 TEST(NoiseFloor, Output_Float) {
   AudioResult::LevelOutputFloat =
       MeasureOutputNoiseFloor<float>(&AudioResult::FloorOutputFloat);
@@ -212,7 +255,8 @@ TEST(NoiseFloor, Output_Float) {
       fmax(AudioResult::LevelToleranceOutputFloat,
            abs(AudioResult::LevelOutputFloat));
 
-  EXPECT_GE(AudioResult::FloorOutputFloat, AudioResult::kPrevFloorOutputFloat);
+  EXPECT_GE(AudioResult::FloorOutputFloat, AudioResult::kPrevFloorOutputFloat)
+      << std::setprecision(10) << AudioResult::FloorOutputFloat;
 }
 
 // Ideal frequency response measurement is 0.00 dB across the audible spectrum

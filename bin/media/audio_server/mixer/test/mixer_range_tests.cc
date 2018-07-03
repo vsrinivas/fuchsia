@@ -236,13 +236,18 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   if (std::is_same<T, uint8_t>::value) {
     mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 48000,
                         1, 48000, Resampler::SampleAndHold);
-    amplitude = std::numeric_limits<int8_t>::max();
+    amplitude = kFullScaleInt8InputAmplitude;
     expected_amplitude = kFullScaleInt8AccumAmplitude;
   } else if (std::is_same<T, int16_t>::value) {
     mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000,
                         1, 48000, Resampler::SampleAndHold);
-    amplitude = std::numeric_limits<int16_t>::max();
+    amplitude = kFullScaleInt16InputAmplitude;
     expected_amplitude = kFullScaleInt16AccumAmplitude;
+  } else if (std::is_same<T, int32_t>::value) {
+    mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1,
+                        48000, 1, 48000, Resampler::SampleAndHold);
+    amplitude = kFullScaleInt24In32InputAmplitude;
+    expected_amplitude = kFullScaleInt24In32AccumAmplitude;
   } else {
     mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 48000, 1,
                         48000, Resampler::SampleAndHold);
@@ -294,7 +299,8 @@ TEST(DynamicRange, Mix_8) {
   // 8-bit noise floor should be approx -48dBFS. Because 8-bit sources are
   // normalized up to 16-bit level, they can take advantage of fractional
   // "footroom"; hence we still expect sinad of ~48dB.
-  EXPECT_GE(AudioResult::FloorMix8, AudioResult::kPrevFloorMix8);
+  EXPECT_GE(AudioResult::FloorMix8, AudioResult::kPrevFloorMix8)
+      << std::setprecision(10) << AudioResult::FloorMix8;
 }
 
 // Test our mix level and noise floor, when accumulating 16-bit sources.
@@ -308,7 +314,23 @@ TEST(DynamicRange, Mix_16) {
 
   // 16-bit noise floor should be approx -96dBFS. Noise is summed along with
   // signal; therefore we expect sinad of ~90 dB.
-  EXPECT_GE(AudioResult::FloorMix16, AudioResult::kPrevFloorMix16);
+  EXPECT_GE(AudioResult::FloorMix16, AudioResult::kPrevFloorMix16)
+      << std::setprecision(10) << AudioResult::FloorMix16;
+}
+
+// Test our mix level and noise floor, when accumulating 24-bit sources.
+TEST(DynamicRange, Mix_24) {
+  MeasureMixFloor<int32_t>(&AudioResult::LevelMix24, &AudioResult::FloorMix24);
+
+  EXPECT_NEAR(AudioResult::LevelMix24, 0.0,
+              AudioResult::kPrevLevelToleranceMix24);
+  AudioResult::LevelToleranceMix24 =
+      fmax(AudioResult::LevelToleranceMix24, abs(AudioResult::LevelMix24));
+
+  // 24-bit noise floor should be approx -144dBFS. Noise is summed along with
+  // signal; therefore we expect sinad of ~138 dB.
+  EXPECT_GE(AudioResult::FloorMix24, AudioResult::kPrevFloorMix24)
+      << std::setprecision(10) << AudioResult::FloorMix24;
 }
 
 // Test our mix level and noise floor, when accumulating float sources.
@@ -324,7 +346,8 @@ TEST(DynamicRange, Mix_Float) {
   // This should be same as 16-bit (~91dB), per accumulator precision. Once we
   // increase accumulator precision, we expect this to improve, while Mix_16
   // would not, as precision will still be limited by its 16-bit source.
-  EXPECT_GE(AudioResult::FloorMixFloat, AudioResult::kPrevFloorMixFloat);
+  EXPECT_GE(AudioResult::FloorMixFloat, AudioResult::kPrevFloorMixFloat)
+      << std::setprecision(10) << AudioResult::FloorMixFloat;
 }
 
 }  // namespace test

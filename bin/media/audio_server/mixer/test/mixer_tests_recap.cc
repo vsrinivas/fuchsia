@@ -24,7 +24,7 @@ TEST(Recap, FreqResp) {
   uint32_t num_freqs;
   if (FrequencySet::UseFullFrequencySet) {
     printf("                88.2k->48k               44.1k->48k");
-    printf("                24k->48k                Micro-SRC");
+    printf("                24k->48k                 Micro-SRC");
     num_freqs = FrequencySet::kReferenceFreqs.size();
   } else {
     num_freqs = FrequencySet::kSummaryIdxs.size();
@@ -86,7 +86,7 @@ TEST(Recap, FreqResp) {
   }
   printf("                88.2k->48k               44.1k->48k");
   if (FrequencySet::UseFullFrequencySet) {
-    printf("                24k->48k                Micro-SRC");
+    printf("                24k->48k                 Micro-SRC");
   }
   for (uint32_t idx = 0; idx < num_freqs; ++idx) {
     uint32_t freq = FrequencySet::UseFullFrequencySet
@@ -292,28 +292,38 @@ TEST(Recap, NoiseFloor) {
   printf("\n   (in dB, with prior results)");
 
   printf("\n\n   Sources");
-  printf("\n\t     8-bit           16-bit            Float");
-  printf("\n\t %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)",
-         AudioResult::FloorSource8, AudioResult::kPrevFloorSource8,
-         AudioResult::FloorSource16, AudioResult::kPrevFloorSource16,
-         AudioResult::FloorSourceFloat, AudioResult::kPrevFloorSourceFloat);
+  printf(
+      "\n\t     8-bit           16-bit            24-bit              Float");
+  printf(
+      "\n\t %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)   %6.2lf  (%6.2lf)   %6.2lf  "
+      "(%6.2lf)",
+      AudioResult::FloorSource8, AudioResult::kPrevFloorSource8,
+      AudioResult::FloorSource16, AudioResult::kPrevFloorSource16,
+      AudioResult::FloorSource24, AudioResult::kPrevFloorSource24,
+      AudioResult::FloorSourceFloat, AudioResult::kPrevFloorSourceFloat);
 
   printf("\n\n   Mix Floor");
-  printf("\n\t     8-bit           16-bit          ");
-  printf("  Float         Stereo->Mono");
-  printf("\n\t %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf) ", AudioResult::FloorMix8,
-         AudioResult::kPrevFloorMix8, AudioResult::FloorMix16,
-         AudioResult::kPrevFloorMix16);
-  printf("  %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)", AudioResult::FloorMixFloat,
-         AudioResult::kPrevFloorMixFloat, AudioResult::FloorStereoMono,
-         AudioResult::kPrevFloorStereoMono);
+  printf("\n\t     8-bit           16-bit            24-bit     ");
+  printf("         Float           Stereo->Mono");
+  printf(
+      "\n\t %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)   %6.2lf  (%6.2lf)   %6.2lf  "
+      "(%6.2lf)   %6.2lf  (%6.2lf)",
+      AudioResult::FloorMix8, AudioResult::kPrevFloorMix8,
+      AudioResult::FloorMix16, AudioResult::kPrevFloorMix16,
+      AudioResult::FloorMix24, AudioResult::kPrevFloorMix24,
+      AudioResult::FloorMixFloat, AudioResult::kPrevFloorMixFloat,
+      AudioResult::FloorStereoMono, AudioResult::kPrevFloorStereoMono);
 
   printf("\n\n   Outputs");
-  printf("\n\t     8-bit           16-bit            Float");
-  printf("\n\t %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)",
-         AudioResult::FloorOutput8, AudioResult::kPrevFloorOutput8,
-         AudioResult::FloorOutput16, AudioResult::kPrevFloorOutput16,
-         AudioResult::FloorOutputFloat, AudioResult::kPrevFloorOutputFloat);
+  printf(
+      "\n\t     8-bit           16-bit            24-bit              Float");
+  printf(
+      "\n\t %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)   %6.2lf  (%6.2lf)   %6.2lf  "
+      "(%6.2lf)",
+      AudioResult::FloorOutput8, AudioResult::kPrevFloorOutput8,
+      AudioResult::FloorOutput16, AudioResult::kPrevFloorOutput16,
+      AudioResult::FloorOutput24, AudioResult::kPrevFloorOutput24,
+      AudioResult::FloorOutputFloat, AudioResult::kPrevFloorOutputFloat);
 
   printf("\n\n");
 }

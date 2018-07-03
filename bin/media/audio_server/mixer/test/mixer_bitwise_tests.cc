@@ -37,18 +37,17 @@ TEST(DataFormats, PointSampler_16) {
                                  1, 44100, 2, 11025, Resampler::Default));
 }
 
+// Create PointSampler objects for incoming buffers of type int24-in-32
+TEST(DataFormats, PointSampler_24) {
+  EXPECT_NE(nullptr,
+            SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 2,
+                        8000, 1, 8000, Resampler::SampleAndHold));
+}
+
 // Create PointSampler objects for incoming buffers of type float
 TEST(DataFormats, PointSampler_Float) {
   EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2,
                                  48000, 2, 16000));
-}
-
-// Create PointSampler objects for other formats of incoming buffers
-// This is not expected to work, as these are not yet implemented
-TEST(DataFormats, PointSampler_Other) {
-  EXPECT_EQ(nullptr,
-            SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 2,
-                        8000, 1, 8000, Resampler::SampleAndHold));
 }
 
 // If the source sample rate is NOT an integer-multiple of the destination rate
@@ -66,27 +65,23 @@ TEST(DataFormats, LinearSampler_8) {
 
 // Create LinearSampler objects for incoming buffers of type int16
 TEST(DataFormats, LinearSampler_16) {
-  EXPECT_NE(nullptr,
-            SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 16000,
-                        2, 48000, Resampler::LinearInterpolation));
   EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16,
                                  2, 44100, 1, 48000, Resampler::Default));
   EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16,
                                  8, 48000, 8, 44100));
 }
 
+// Create LinearSampler objects for incoming buffers of type int24-in-32
+TEST(DataFormats, LinearSampler_24) {
+  EXPECT_NE(nullptr,
+            SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 2,
+                        16000, 2, 48000, Resampler::LinearInterpolation));
+}
+
 // Create LinearSampler objects for incoming buffers of type float
 TEST(DataFormats, LinearSampler_Float) {
   EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2,
                                  48000, 2, 44100));
-}
-
-// Create LinearSampler objects for other formats of incoming buffers
-// This is not expected to work, as these are not yet implemented
-TEST(DataFormats, LinearSampler_Other) {
-  EXPECT_EQ(nullptr,
-            SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 2,
-                        8000, 1, 11025));
 }
 
 // Create OutputFormatter objects for outgoing buffers of type uint8
@@ -101,18 +96,17 @@ TEST(DataFormats, OutputFormatter_16) {
                          fuchsia::media::AudioSampleFormat::SIGNED_16, 4));
 }
 
+// Create OutputFormatter objects for outgoing buffers of type int24-in-32
+TEST(DataFormats, OutputFormatter_24) {
+  EXPECT_NE(nullptr,
+            SelectOutputFormatter(
+                fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 3));
+}
+
 // Create OutputFormatter objects for outgoing buffers of type float
 TEST(DataFormats, OutputFormatter_Float) {
   EXPECT_NE(nullptr,
             SelectOutputFormatter(fuchsia::media::AudioSampleFormat::FLOAT, 1));
-}
-
-// Create OutputFormatter objects for other output formats
-// This is not expected to work, as these are not yet implemented
-TEST(DataFormats, OutputFormatter_Other) {
-  EXPECT_EQ(nullptr,
-            SelectOutputFormatter(
-                fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 3));
 }
 
 //
@@ -168,6 +162,33 @@ TEST(PassThru, Source_16) {
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 4, 48000, 4,
                       48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum) / 4);
+  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+}
+
+// Can 24-bit values flow unchanged (1-1, N-N) thru the system? With 1:1 frame
+// conversion, unity scale and no accumulation, we expect bit-equality.
+TEST(PassThru, Source_24) {
+  int32_t source[] = {kMinInt24In32, kMaxInt24In32, -0x67A7E700,
+                      0x4D4D4D00,    -0x1234500,    0,
+                      0x26006200,    -0x2DCBA900};
+  float accum[8];
+
+  float expect[] = {-0x08000000, 0x07FFFFF0, -0x067A7E70, 0x04D4D4D0,
+                    -0x00123450, 0,          0x02600620,  -0x02DCBA90};
+  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
+
+  // Try in 1-channel mode
+  MixerPtr mixer =
+      SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1, 48000,
+                  1, 48000, Resampler::SampleAndHold);
+  DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum));
+  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+
+  ::memset(accum, 0, sizeof(accum));
+  // Now try in 8-channel mode
+  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 8,
+                      48000, 8, 48000, Resampler::SampleAndHold);
+  DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum) / 8);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 }
 
@@ -292,9 +313,9 @@ TEST(PassThru, Accumulate) {
 
 // Are all valid data values rounded correctly to 8-bit outputs?
 TEST(PassThru, Output_8) {
-  float accum[] = {-0x08080000, -0x08000000, -0x04080000, -0x00001000,
+  float accum[] = {-0x08989000, -0x08000000, -0x04080000, -0x00001000,
                    //   ^^^^^  clamp to uint8   vvvvv
-                   0, 0x04080000, 0x07FFF000, 0x08000000};
+                   0, 0x04080000, 0x07FFFFF0, 0x08989000};
   NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
 
   // Dest completely overwritten, except for last value: we only mix(8)
@@ -311,9 +332,9 @@ TEST(PassThru, Output_8) {
 
 // Are all valid data values passed correctly to 16-bit outputs?
 TEST(PassThru, Output_16) {
-  float accum[] = {-0x08080000, -0x08000000, -0x04080000, -0x00001000,
+  float accum[] = {-0x08989000, -0x08000000, -0x04080000, -0x00001000,
                    //   ^^^^^   clamp to int16   vvvvv
-                   0, 0x04080000, 0x07FFF000, 0x08000000};
+                   0, 0x04080000, 0x07FFFFF0, 0x08989000};
   NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
 
   // Dest buffer is overwritten, EXCEPT for last value: we only mix(8)
@@ -329,18 +350,39 @@ TEST(PassThru, Output_16) {
   EXPECT_TRUE(CompareBuffers(dest, expect, fbl::count_of(dest)));
 }
 
+// Are all valid data values passed correctly to 24-bit outputs?
+TEST(PassThru, Output_24) {
+  float accum[] = {-0x08989000, -0x08000000, -0x04080000, -0x00000010,
+                   //   ^^^^^   clamp to int24   vvvvv
+                   0, 0x04080000, 0x07FFFFF0, 0x08989000};
+  NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
+
+  // Dest buffer is overwritten, EXCEPT for last value: we only mix(8)
+  int32_t dest[] = {0123, 1234, 2345, 3456, 4567, 5678, 6789, 7890, -42};
+  int32_t expect[] = {
+      kMinInt24In32, kMinInt24In32, -0x40800000,   -0x00000100, 0,
+      0x40800000,    kMaxInt24In32, kMaxInt24In32, -42};
+
+  OutputFormatterPtr output_formatter = SelectOutputFormatter(
+      fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 4);
+
+  output_formatter->ProduceOutput(accum, reinterpret_cast<void*>(dest),
+                                  fbl::count_of(accum) / 4);
+  EXPECT_TRUE(CompareBuffers(dest, expect, fbl::count_of(dest)));
+}
+
 // Are all valid data values passed correctly to float outputs
 TEST(PassThru, Output_Float) {
-  float accum[] = {-0x08080000, -0x08000000, -0x04080000, -0x00001000,
+  float accum[] = {-0x08989000, -0x08000000, -0x04080000, -0x00001000,
                    //   ^^^^ clamp to [-1.0,1.0] vvvv
-                   0, 0x04080000, 0x07FFF000, 0x08080000};
+                   0, 0x04080000, 0x07FFFFF0, 0x08989000};
   NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
 
   float dest[] = {1.2f, 2.3f, 3.4f, 4.5f, 5.6f, 6.7f, 7.8f, 8.9f, 4.2f};
   // Dest completely overwritten, except for last value: we only mix(8)
 
   float expect[] = {-1.0f, -1.0f,       -0.50390625f, -0.000030517578f,
-                    0.0f,  0.50390625f, 0.99996948f,  1.0f,
+                    0.0f,  0.50390625f, 0.99999988f,  1.0f,
                     4.2f};
 
   audio::OutputFormatterPtr output_formatter =
@@ -380,6 +422,21 @@ TEST(PassThru, Output_16_Silence) {
                                     (fbl::count_of(dest) - 1) / 3);
   EXPECT_TRUE(CompareBufferToVal(dest, static_cast<int16_t>(0),
                                  fbl::count_of(dest) - 1));
+  EXPECT_EQ(dest[fbl::count_of(dest) - 1], 7890);  // should survive
+}
+
+// Are 24-bit output buffers correctly silenced? Do we stop when we should?
+TEST(PassThru, Output_24_Silence) {
+  int32_t dest[] = {1234, 2345, 3456, 4567, 5678, 6789, 7890};
+  // should be overwritten, except for the last value: we only fill(6)
+
+  OutputFormatterPtr output_formatter = SelectOutputFormatter(
+      fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1);
+  ASSERT_NE(output_formatter, nullptr);
+
+  output_formatter->FillWithSilence(reinterpret_cast<void*>(dest),
+                                    fbl::count_of(dest) - 1);
+  EXPECT_TRUE(CompareBufferToVal(dest, 0, fbl::count_of(dest) - 1));
   EXPECT_EQ(dest[fbl::count_of(dest) - 1], 7890);  // should survive
 }
 

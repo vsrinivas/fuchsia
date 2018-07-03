@@ -396,6 +396,8 @@ static inline MixerPtr SelectPSM(
       return SelectPSM<DChCount, uint8_t>(src_format, dst_format);
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
       return SelectPSM<DChCount, int16_t>(src_format, dst_format);
+    case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
+      return SelectPSM<DChCount, int32_t>(src_format, dst_format);
     case fuchsia::media::AudioSampleFormat::FLOAT:
       return SelectPSM<DChCount, float>(src_format, dst_format);
     default:
@@ -410,6 +412,8 @@ static inline MixerPtr SelectNxNPSM(
       return MixerPtr(new NxNPointSamplerImpl<uint8_t>(src_format.channels));
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
       return MixerPtr(new NxNPointSamplerImpl<int16_t>(src_format.channels));
+    case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
+      return MixerPtr(new NxNPointSamplerImpl<int32_t>(src_format.channels));
     case fuchsia::media::AudioSampleFormat::FLOAT:
       return MixerPtr(new NxNPointSamplerImpl<float>(src_format.channels));
     default:

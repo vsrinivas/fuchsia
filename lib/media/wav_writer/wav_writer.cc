@@ -148,15 +148,19 @@ zx_status_t WriteNewHeader(int file_desc,
   }
 
   WavHeader wave_header;
+  // wave_four_cc already set
+  // fmt_four_cc already set
+  // fmt_chunk_len already set
   wave_header.format =
       (sample_format == fuchsia::media::AudioSampleFormat::FLOAT) ? FORMAT_FLOAT
                                                                   : FORMAT_LPCM;
   wave_header.channel_count = channel_count;
   wave_header.frame_rate = frame_rate;
-  wave_header.frame_size = (bits_per_sample >> 3) * channel_count;
   wave_header.average_byte_rate =
       (bits_per_sample >> 3) * channel_count * frame_rate;
+  wave_header.frame_size = (bits_per_sample >> 3) * channel_count;
   wave_header.bits_per_sample = bits_per_sample;
+
   wave_header.FixupEndian();
   if (::write(file_desc, &wave_header, sizeof(wave_header)) < 0) {
     return ZX_ERR_IO;

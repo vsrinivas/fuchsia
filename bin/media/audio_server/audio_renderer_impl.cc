@@ -193,11 +193,11 @@ void AudioRendererImpl::SetPcmStreamType(
   switch (format.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
+    case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
     case fuchsia::media::AudioSampleFormat::FLOAT:
       break;
 
-    // TODO(johngro): Add more sample formats (24 bit, etc..) as the
-    // mixer core learns to handle them.
+    // TODO(johngro): Add more sample formats as the mixer learns to handle them
     default:
       FXL_LOG(ERROR)
           << "Unsupported sample format ("

@@ -28,6 +28,8 @@ static const std::string kVerboseOption = "v";
 static const std::string kLoopbackOption = "loopback";
 static const std::string kAsyncModeOption = "async-mode";
 static const std::string kFloatFormatOption = "float";
+static const std::string k24In32FormatOption = "int24";
+static const std::string kPacked24FormatOption = "packed24";
 static const std::string kFrameRateOption = "frame-rate";
 static const std::string kChannelsOption = "channels";
 
@@ -88,14 +90,18 @@ void WavRecorder::Usage() {
   printf("  --%s : be verbose\n", kVerboseOption.c_str());
   printf("  --%s : record from loopback\n", kLoopbackOption.c_str());
   printf("  --%s : capture using 'async-mode'\n", kAsyncModeOption.c_str());
-  printf("  --%s : use floating-point format\n", kFloatFormatOption.c_str());
-  printf("  --%s=<rate> : desired capture frame rate, on the range [%u, %u].\n",
+  printf("\n    Default is to record and save as 16-bit integer\n");
+  printf("  --%s : record and save as 32-bit float\n",
+         kFloatFormatOption.c_str());
+  printf("  --%s : record and save as 24-in-32 int (left-justify)\n",
+         k24In32FormatOption.c_str());
+  printf("  --%s : record as 24-in-32 int (left-justify), save as packed-24\n",
+         kPacked24FormatOption.c_str());
+  printf("\n  --%s=<rate> : frame rate at which to capture (range [%u, %u])\n",
          kFrameRateOption.c_str(), fuchsia::media::MIN_PCM_FRAMES_PER_SECOND,
          fuchsia::media::MAX_PCM_FRAMES_PER_SECOND);
-  printf(
-      "  --%s=<count> : desired number of channels to capture, on the range "
-      "[%u, %u].\n",
-      kChannelsOption.c_str(), kMinChannels, kMaxChannels);
+  printf("  --%s=<count> : number of channels to capture (range [%u, %u])\n",
+         kChannelsOption.c_str(), kMinChannels, kMaxChannels);
 }
 
 void WavRecorder::Shutdown() {
@@ -177,9 +183,18 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
 
   const auto& fmt = type.medium_specific.audio();
 
-  sample_format_ = cmd_line_.HasOption(kFloatFormatOption)
-                       ? fuchsia::media::AudioSampleFormat::FLOAT
-                       : fuchsia::media::AudioSampleFormat::SIGNED_16;
+  // If user erroneously specifies float AND 24-in-32, prefer float.
+  if (cmd_line_.HasOption(kFloatFormatOption)) {
+    sample_format_ = fuchsia::media::AudioSampleFormat::FLOAT;
+  } else if (cmd_line_.HasOption(kPacked24FormatOption)) {
+    pack_24bit_samples_ = true;
+    sample_format_ = fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
+  } else if (cmd_line_.HasOption(k24In32FormatOption)) {
+    sample_format_ = fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
+  } else {
+    sample_format_ = fuchsia::media::AudioSampleFormat::SIGNED_16;
+  }
+
   channel_count_ = fmt.channels;
   frames_per_second_ = fmt.frames_per_second;
 
@@ -199,7 +214,7 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
 
     if ((rate < fuchsia::media::MIN_PCM_FRAMES_PER_SECOND) ||
         (rate > fuchsia::media::MAX_PCM_FRAMES_PER_SECOND)) {
-      printf("Frame rate (%u) must be on the range [%u, %u]\n", rate,
+      printf("Frame rate (%u) must be within range [%u, %u]\n", rate,
              fuchsia::media::MIN_PCM_FRAMES_PER_SECOND,
              fuchsia::media::MAX_PCM_FRAMES_PER_SECOND);
       return;
@@ -219,7 +234,7 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
     }
 
     if ((count < kMinChannels) || (count > kMaxChannels)) {
-      printf("Channel count (%u) must be on the range [%u, %u]\n", count,
+      printf("Channel count (%u) must be within range [%u, %u]\n", count,
              kMinChannels, kMaxChannels);
       return;
     }
@@ -233,9 +248,16 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   uint32_t bytes_per_sample =
       (sample_format_ == fuchsia::media::AudioSampleFormat::FLOAT)
           ? sizeof(float)
-          : sizeof(int16_t);
+          : (sample_format_ ==
+             fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32)
+                ? sizeof(int32_t)
+                : sizeof(int16_t);
   bytes_per_frame_ = channel_count_ * bytes_per_sample;
   uint32_t bits_per_sample = bytes_per_sample * 8;
+  if (sample_format_ == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32 &&
+      pack_24bit_samples_ == true) {
+    bits_per_sample = 24;
+  }
 
   // Write the inital WAV header
   if (!wav_writer_.Initialize(filename_, sample_format_, channel_count_,
@@ -254,6 +276,11 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
     stream_type.medium_specific = std::move(medium_specific_stream_type);
     stream_type.encoding = fuchsia::media::AUDIO_ENCODING_LPCM;
     capturer_->SetStreamType(std::move(stream_type));
+  }
+
+  // Record at unity gain.
+  if (change_format) {
+    capturer_->SetGain(0.0f);
   }
 
   // Create our shared payload buffer, map it into place, then dup the handle
@@ -291,12 +318,24 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
     capturer_->StartAsyncCapture(capture_frames_per_chunk_);
   }
 
-  printf("Recording %s, %u Hz, %u channel linear PCM from %s into '%s'\n",
-         sample_format_ == fuchsia::media::AudioSampleFormat::FLOAT
-             ? "32-bit float"
-             : "16-bit signed",
-         frames_per_second_, channel_count_,
-         loopback_ ? "loopback" : "default input", filename_);
+  if (sample_format_ == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32) {
+    FXL_DCHECK(bits_per_sample == (pack_24bit_samples_ ? 24 : 32));
+    if (pack_24bit_samples_ == true) {
+      compress_32_24_buff_ =
+          std::make_unique<uint8_t[]>(payload_buf_size_ * 3 / 4);
+    }
+  }
+
+  printf(
+      "Recording %s, %u Hz, %u channel linear PCM from %s into '%s'\n",
+      sample_format_ == fuchsia::media::AudioSampleFormat::FLOAT
+          ? "32-bit float"
+          : sample_format_ == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32
+                ? (pack_24bit_samples_ ? "packed 24-bit signed int"
+                                       : "24-bit-in-32-bit signed int")
+                : "16-bit signed int",
+      frames_per_second_, channel_count_,
+      loopback_ ? "loopback" : "default input", filename_);
 
   cleanup.cancel();
 }
@@ -315,8 +354,26 @@ void WavRecorder::OnPacketCaptured(fuchsia::media::MediaPacket pkt) {
 
     auto tgt =
         reinterpret_cast<uint8_t*>(payload_buf_virt_) + pkt.payload_offset;
-    if (!wav_writer_.Write(reinterpret_cast<void* const>(tgt),
-                           pkt.payload_size)) {
+
+    uint32_t write_size = pkt.payload_size;
+    // If 24_in_32, write as packed-24, skipping the first, least-significant of
+    // each four bytes). Assuming Write does not buffer, compress locally and
+    // call Write just once, to avoid potential performance problems.
+    if (sample_format_ == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32 &&
+        pack_24bit_samples_) {
+      uint32_t write_idx = 0;
+      uint32_t read_idx = 0;
+      while (read_idx < pkt.payload_size) {
+        ++read_idx;
+        compress_32_24_buff_[write_idx++] = tgt[read_idx++];
+        compress_32_24_buff_[write_idx++] = tgt[read_idx++];
+        compress_32_24_buff_[write_idx++] = tgt[read_idx++];
+      }
+      write_size = write_idx;
+      tgt = compress_32_24_buff_.get();
+    }
+
+    if (!wav_writer_.Write(reinterpret_cast<void* const>(tgt), write_size)) {
       printf("File write failed. Trying to save any already-written data.\n");
       if (!wav_writer_.Close()) {
         printf("File close failed as well.\n");

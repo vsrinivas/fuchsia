@@ -53,6 +53,13 @@ class SampleNormalizer<
 
 template <typename SType>
 class SampleNormalizer<
+    SType, typename std::enable_if<std::is_same<SType, int32_t>::value>::type> {
+ public:
+  static inline float Read(const SType* src) { return kInt24In32ToFloat * (*src); }
+};
+
+template <typename SType>
+class SampleNormalizer<
     SType, typename std::enable_if<std::is_same<SType, float>::value>::type> {
  public:
   static inline float Read(const SType* src) { return *src; }

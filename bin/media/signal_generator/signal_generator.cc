@@ -29,7 +29,9 @@ void MediaApp::Run(component::StartupContext* app_context) {
   }
 
   printf("\nRenderer configured for %d-channel %s at %u Hz.\nContent is ",
-         num_channels_, (use_int16_) ? "int16" : "float32", frame_rate_);
+         num_channels_,
+         (use_int24_ ? "int24" : (use_int16_ ? "int16" : "float32")),
+         frame_rate_);
 
   if (output_signal_type_ == kOutputTypeNoise) {
     printf("white noise");
@@ -55,7 +57,12 @@ void MediaApp::Run(component::StartupContext* app_context) {
     return;
   }
 
-  if (use_int16_) {
+  if (use_int24_) {
+    WriteAudioIntoBuffer<int32_t>(
+        reinterpret_cast<int32_t*>(payload_buffer_.start()), frames_per_period_,
+        amplitude_scalar_, frames_per_payload_ * num_payloads_, num_channels_,
+        output_signal_type_);
+  } else if (use_int16_) {
     WriteAudioIntoBuffer<int16_t>(
         reinterpret_cast<int16_t*>(payload_buffer_.start()), frames_per_period_,
         amplitude_scalar_, frames_per_payload_ * num_payloads_, num_channels_,
@@ -67,11 +74,15 @@ void MediaApp::Run(component::StartupContext* app_context) {
         output_signal_type_);
   }
 
+  // 24-bit buffers use 32-bit samples (lowest byte zero), and when this
+  // particular utility saves to .wav file, we save the entire 32 bits.
   if (save_to_file_) {
     if (!wav_writer_.Initialize(
             file_name_.c_str(),
-            use_int16_ ? fuchsia::media::AudioSampleFormat::SIGNED_16
-                       : fuchsia::media::AudioSampleFormat::FLOAT,
+            use_int24_
+                ? fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32
+                : (use_int16_ ? fuchsia::media::AudioSampleFormat::SIGNED_16
+                              : fuchsia::media::AudioSampleFormat::FLOAT),
             num_channels_, frame_rate_, sample_size_ * 8)) {
       FXL_LOG(ERROR) << "WavWriter::Initialize() failed";
     }
@@ -129,11 +140,15 @@ bool MediaApp::SetupPayloadCoefficients() {
   frames_per_period_ = frame_rate_ / frequency_;
 
   amplitude_scalar_ = amplitude_;
-  if (use_int16_) {
+  if (use_int24_) {
+    amplitude_scalar_ *= (std::numeric_limits<int32_t>::max() & 0xFFFFFF00);
+  } else if (use_int16_) {
     amplitude_scalar_ *= std::numeric_limits<int16_t>::max();
   }
 
-  sample_size_ = (use_int16_) ? sizeof(int16_t) : sizeof(float);
+  // As mentioned above, for 24-bit audio we use 32-bit samples (low byte 0).
+  sample_size_ = use_int24_ ? sizeof(int32_t)
+                            : (use_int16_ ? sizeof(int16_t) : sizeof(float));
 
   payload_size_ = frames_per_payload_ * num_channels_ * sample_size_;
 
@@ -175,8 +190,9 @@ void MediaApp::SetStreamType() {
   fuchsia::media::AudioStreamType format;
 
   format.sample_format =
-      (use_int16_ ? fuchsia::media::AudioSampleFormat::SIGNED_16
-                  : fuchsia::media::AudioSampleFormat::FLOAT);
+      (use_int24_ ? fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32
+                  : (use_int16_ ? fuchsia::media::AudioSampleFormat::SIGNED_16
+                                : fuchsia::media::AudioSampleFormat::FLOAT));
   format.channels = num_channels_;
   format.frames_per_second = frame_rate_;
 
@@ -235,8 +251,12 @@ void MediaApp::WriteAudioIntoBuffer(SampleType* audio_buffer,
         raw_val = sin(rads_per_frame * frame);
     }
 
+    SampleType val = raw_val * amp_scalar;
+    if (std::is_same<SampleType, int32_t>::value) {
+      val = static_cast<int32_t>(val) & 0xFFFFFF00;
+    }
     for (size_t chan_num = 0; chan_num < num_chans; ++chan_num) {
-      audio_buffer[frame * num_chans + chan_num] = raw_val * amp_scalar;
+      audio_buffer[frame * num_chans + chan_num] = val;
     }
   }
 }
@@ -278,8 +298,7 @@ void MediaApp::OnSendPacketComplete() {
   }
 }
 
-// Unmap memory, quit message loop (FIDL interfaces auto-delete upon
-// ~MediaApp).
+// Unmap memory, quit message loop (FIDL interfaces auto-delete upon ~MediaApp).
 void MediaApp::Shutdown() {
   if (save_to_file_) {
     if (!wav_writer_.Close()) {

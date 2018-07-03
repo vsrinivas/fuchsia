@@ -19,22 +19,27 @@ namespace test {
 //
 double AudioResult::LevelToleranceSource8 = 0.0;
 double AudioResult::LevelToleranceSource16 = 0.0;
+double AudioResult::LevelToleranceSource24 = 0.0;
 double AudioResult::LevelToleranceSourceFloat = 0.0;
 
 constexpr double AudioResult::kPrevLevelToleranceSource8;
 constexpr double AudioResult::kPrevLevelToleranceSource16;
+constexpr double AudioResult::kPrevLevelToleranceSource24;
 constexpr double AudioResult::kPrevLevelToleranceSourceFloat;
 
 double AudioResult::LevelSource8 = -INFINITY;
 double AudioResult::LevelSource16 = -INFINITY;
+double AudioResult::LevelSource24 = -INFINITY;
 double AudioResult::LevelSourceFloat = -INFINITY;
 
 double AudioResult::FloorSource8 = -INFINITY;
 double AudioResult::FloorSource16 = -INFINITY;
+double AudioResult::FloorSource24 = -INFINITY;
 double AudioResult::FloorSourceFloat = -INFINITY;
 
 constexpr double AudioResult::kPrevFloorSource8;
 constexpr double AudioResult::kPrevFloorSource16;
+constexpr double AudioResult::kPrevFloorSource24;
 constexpr double AudioResult::kPrevFloorSourceFloat;
 
 //
@@ -408,26 +413,32 @@ constexpr double AudioResult::kPrevSinad60Down;
 //
 double AudioResult::LevelToleranceMix8 = 0.0;
 double AudioResult::LevelToleranceMix16 = 0.0;
+double AudioResult::LevelToleranceMix24 = 0.0;
 double AudioResult::LevelToleranceMixFloat = 0.0;
 
 constexpr double AudioResult::kPrevLevelToleranceMix8;
 constexpr double AudioResult::kPrevLevelToleranceMix16;
+constexpr double AudioResult::kPrevLevelToleranceMix24;
 constexpr double AudioResult::kPrevLevelToleranceMixFloat;
 
 double AudioResult::LevelMix8 = -INFINITY;
 double AudioResult::LevelMix16 = -INFINITY;
+double AudioResult::LevelMix24 = -INFINITY;
 double AudioResult::LevelMixFloat = -INFINITY;
 
 constexpr double AudioResult::kPrevLevelMix8;
 constexpr double AudioResult::kPrevLevelMix16;
+constexpr double AudioResult::kPrevLevelMix24;
 constexpr double AudioResult::kPrevLevelMixFloat;
 
 double AudioResult::FloorMix8 = -INFINITY;
 double AudioResult::FloorMix16 = -INFINITY;
+double AudioResult::FloorMix24 = -INFINITY;
 double AudioResult::FloorMixFloat = -INFINITY;
 
 constexpr double AudioResult::kPrevFloorMix8;
 constexpr double AudioResult::kPrevFloorMix16;
+constexpr double AudioResult::kPrevFloorMix24;
 constexpr double AudioResult::kPrevFloorMixFloat;
 
 //
@@ -436,26 +447,32 @@ constexpr double AudioResult::kPrevFloorMixFloat;
 //
 double AudioResult::LevelToleranceOutput8 = -INFINITY;
 double AudioResult::LevelToleranceOutput16 = -INFINITY;
+double AudioResult::LevelToleranceOutput24 = -INFINITY;
 double AudioResult::LevelToleranceOutputFloat = -INFINITY;
 
 constexpr double AudioResult::kPrevLevelToleranceOutput8;
 constexpr double AudioResult::kPrevLevelToleranceOutput16;
+constexpr double AudioResult::kPrevLevelToleranceOutput24;
 constexpr double AudioResult::kPrevLevelToleranceOutputFloat;
 
 double AudioResult::LevelOutput8 = -INFINITY;
 double AudioResult::LevelOutput16 = -INFINITY;
+double AudioResult::LevelOutput24 = -INFINITY;
 double AudioResult::LevelOutputFloat = -INFINITY;
 
 constexpr double AudioResult::kPrevLevelOutput8;
 constexpr double AudioResult::kPrevLevelOutput16;
+constexpr double AudioResult::kPrevLevelOutput24;
 constexpr double AudioResult::kPrevLevelOutputFloat;
 
 double AudioResult::FloorOutput8 = -INFINITY;
 double AudioResult::FloorOutput16 = -INFINITY;
+double AudioResult::FloorOutput24 = -INFINITY;
 double AudioResult::FloorOutputFloat = -INFINITY;
 
 constexpr double AudioResult::kPrevFloorOutput8;
 constexpr double AudioResult::kPrevFloorOutput16;
+constexpr double AudioResult::kPrevFloorOutput24;
 constexpr double AudioResult::kPrevFloorOutputFloat;
 
 // The subsequent methods are used when updating the kPrev threshold arrays.
@@ -530,6 +547,10 @@ void AudioResult::DumpLevelValues() {
          AudioResult::LevelSource16, AudioResult::LevelMix16,
          AudioResult::LevelOutput16);
 
+  printf("\n       24-bit:  Source %15.8le  Mix %15.8le  Output %15.8le",
+         AudioResult::LevelSource24, AudioResult::LevelMix24,
+         AudioResult::LevelOutput24);
+
   printf("\n       Float:   Source %15.8le  Mix %15.8le  Output %15.8le",
          AudioResult::LevelSourceFloat, AudioResult::LevelMixFloat,
          AudioResult::LevelOutputFloat);
@@ -545,6 +566,10 @@ void AudioResult::DumpLevelToleranceValues() {
   printf("\n       16-bit:  Source %15.8le  Mix %15.8le  Output %15.8le",
          AudioResult::LevelToleranceSource16, AudioResult::LevelToleranceMix16,
          AudioResult::LevelToleranceOutput16);
+
+  printf("\n       24-bit:  Source %15.8le  Mix %15.8le  Output %15.8le",
+         AudioResult::LevelToleranceSource24, AudioResult::LevelToleranceMix24,
+         AudioResult::LevelToleranceOutput24);
 
   printf("\n       Float:   Source %15.8le  Mix %15.8le  Output %15.8le",
          AudioResult::LevelToleranceSourceFloat,
@@ -564,6 +589,9 @@ void AudioResult::DumpNoiseFloorValues() {
   printf("\n       16-bit:  Source %11.7lf  Mix %11.7lf  Output %11.7lf",
          AudioResult::FloorSource16, AudioResult::FloorMix16,
          AudioResult::FloorOutput16);
+  printf("\n       24-bit:  Source %11.7lf  Mix %11.7lf  Output %11.7lf",
+         AudioResult::FloorSource24, AudioResult::FloorMix24,
+         AudioResult::FloorOutput24);
   printf("\n       Float:   Source %11.7lf  Mix %11.7lf  Output %11.7lf",
          AudioResult::FloorSourceFloat, AudioResult::FloorMixFloat,
          AudioResult::FloorOutputFloat);

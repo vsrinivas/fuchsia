@@ -9,14 +9,20 @@
 
 namespace media {
 namespace audio {
+
+constexpr int32_t kMaxInt24In32 = std::numeric_limits<int32_t>::max() & ~0x0FF;
+constexpr int32_t kMinInt24In32 = std::numeric_limits<int32_t>::min();
+
 constexpr int32_t kFloatToInt8 = -std::numeric_limits<int8_t>::min();
 constexpr int32_t kFloatToInt16 = -std::numeric_limits<int16_t>::min();
+constexpr int64_t kFloatToInt24In32 = -static_cast<int64_t>(kMinInt24In32);
 
 constexpr int32_t kOffsetInt8ToUint8 =
     std::numeric_limits<uint8_t>::min() - std::numeric_limits<int8_t>::min();
 
 constexpr float kInt8ToFloat = 1.0f / kFloatToInt8;
 constexpr float kInt16ToFloat = 1.0f / kFloatToInt16;
+constexpr double kInt24In32ToFloat = 1.0 / kFloatToInt24In32;
 
 // The number of fractional bits used when expressing timestamps (in frame
 // units) as fixed point integers.  Ultimately, this determines the resolution
@@ -42,9 +48,8 @@ constexpr uint32_t kPtsFractionalBits = 13;
 // Used in places where PTS must be an integral number of frames.
 constexpr uint32_t kPtsFractionalMask = (1 << kPtsFractionalBits) - 1;
 
-// A compile time constant which is guaranteed to never be used as a valid
-// generation ID (by any of the various things which use generation IDs to track
-// changes to state).
+// Compile time constant guaranteed to never be used as a valid generation ID
+// (by the various things which use generation IDs to track state changes).
 constexpr uint32_t kInvalidGenerationId = 0;
 
 }  // namespace audio

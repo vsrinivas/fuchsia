@@ -53,18 +53,22 @@ class AudioResult {
   // must be within this distance (above OR below) from the reference dB level.
   static double LevelToleranceSource8;
   static double LevelToleranceSource16;
+  static double LevelToleranceSource24;
   static double LevelToleranceSourceFloat;
 
   static constexpr double kPrevLevelToleranceSource8 = 6.7219077e-02;
   static constexpr double kPrevLevelToleranceSource16 = 1.0548786e-06;
-  static constexpr double kPrevLevelToleranceSourceFloat = 1.0548786e-06;
+  static constexpr double kPrevLevelToleranceSource24 = 3.0346074e-09;
+  static constexpr double kPrevLevelToleranceSourceFloat = 5.3282082e-10;
 
   static double LevelSource8;
   static double LevelSource16;
+  static double LevelSource24;
   static double LevelSourceFloat;
 
   static constexpr double kPrevLevelSource8 = 0.0;
   static constexpr double kPrevLevelSource16 = 0.0;
+  static constexpr double kPrevLevelSource24 = 0.0;
   static constexpr double kPrevLevelSourceFloat = 0.0;
 
   // What is our best-case noise floor in absence of rechannel/gain/SRC/mix.
@@ -74,12 +78,14 @@ class AudioResult {
   // frequency-independent fidelity in our audio processing pipeline.
   static double FloorSource8;
   static double FloorSource16;
+  static double FloorSource24;
   static double FloorSourceFloat;
 
   // Val-being-checked (in dBr to reference signal) must be >= these values.
   static constexpr double kPrevFloorSource8 = 49.952957;
   static constexpr double kPrevFloorSource16 = 98.104753;
-  static constexpr double kPrevFloorSourceFloat = 98.104911;
+  static constexpr double kPrevFloorSource24 = 146.30926;
+  static constexpr double kPrevFloorSourceFloat = 153.74509;
 
   //
   //
@@ -315,27 +321,33 @@ class AudioResult {
   // must be within this distance (above OR below) from the reference dB level.
   static double LevelToleranceMix8;
   static double LevelToleranceMix16;
+  static double LevelToleranceMix24;
   static double LevelToleranceMixFloat;
 
   static constexpr double kPrevLevelToleranceMix8 = 6.7219077e-02;
   static constexpr double kPrevLevelToleranceMix16 = 1.7031199e-04;
-  static constexpr double kPrevLevelToleranceMixFloat = 1.7069356e-04;
+  static constexpr double kPrevLevelToleranceMix24 = 3.0346074e-09;
+  static constexpr double kPrevLevelToleranceMixFloat = 5.3282082e-10;
 
   static double LevelMix8;
   static double LevelMix16;
+  static double LevelMix24;
   static double LevelMixFloat;
 
   static constexpr double kPrevLevelMix8 = 0.0;
   static constexpr double kPrevLevelMix16 = 0.0;
+  static constexpr double kPrevLevelMix24 = 0.0;
   static constexpr double kPrevLevelMixFloat = 0.0;
 
   static double FloorMix8;
   static double FloorMix16;
+  static double FloorMix24;
   static double FloorMixFloat;
 
   static constexpr double kPrevFloorMix8 = 49.952317;
   static constexpr double kPrevFloorMix16 = 90.677331;
-  static constexpr double kPrevFloorMixFloat = 91.484408;
+  static constexpr double kPrevFloorMix24 = 146.30926;
+  static constexpr double kPrevFloorMixFloat = 153.74509;
 
   //
   //
@@ -345,19 +357,22 @@ class AudioResult {
   // must be within this distance (above OR below) from the reference dB level.
   static double LevelToleranceOutput8;
   static double LevelToleranceOutput16;
+  static double LevelToleranceOutput24;
   static double LevelToleranceOutputFloat;
 
   static constexpr double kPrevLevelToleranceOutput8 = 6.5638245e-02;
   static constexpr double kPrevLevelToleranceOutput16 = 6.7860087e-02;
-  // was: 8.4876728e-05;
+  static constexpr double kPrevLevelToleranceOutput24 = 3.0250373e-07;
   static constexpr double kPrevLevelToleranceOutputFloat = 6.8541681e-07;
 
   static double LevelOutput8;
   static double LevelOutput16;
+  static double LevelOutput24;
   static double LevelOutputFloat;
 
   static constexpr double kPrevLevelOutput8 = 0.0;
   static constexpr double kPrevLevelOutput16 = 0.0;
+  static constexpr double kPrevLevelOutput24 = 0.0;
   static constexpr double kPrevLevelOutputFloat = 0.0;
 
   // What is our best-case noise floor in absence of rechannel/gain/SRC/mix.
@@ -367,11 +382,13 @@ class AudioResult {
   // frequency-independent fidelity in our audio processing pipeline.
   static double FloorOutput8;
   static double FloorOutput16;
+  static double FloorOutput24;
   static double FloorOutputFloat;
 
   static constexpr double kPrevFloorOutput8 = 45.920261;
   static constexpr double kPrevFloorOutput16 = 97.944722;
-  static constexpr double kPrevFloorOutputFloat = 98.104753;
+  static constexpr double kPrevFloorOutput24 = 146.22129;
+  static constexpr double kPrevFloorOutputFloat = 153.74509;
 
   // class is static only - prevent attempts to instantiate it
   AudioResult() = delete;
@@ -397,6 +414,17 @@ class AudioResult {
 /*
     AudioResult journal - updated upon each CL that affects these measurements
 
+    2018-07-16  Added high-precision fixed-point data type 24-in-32-integer
+                support in the normalize and output functions (mixer_utils.h and
+                output_formatter.cc, respectively). Added level and noise-floor
+                test thresholds for 24-bit sources, outputs and mixes.
+    2018-06-29  Converted internal processing pipeline to 32-bit floating-point.
+                Gain-scaling, stereo-to-mono rechannelization, interpolation and
+                summing are all done in the float domain (although PTS subframes
+                are still 19.13 fixed-point). Converted all generic frequency
+                response and dynamic range tests over to use float data type.
+                Also added level and noise-floor test thresholds for float
+                sources, outputs and mixes.
     2018-05-08  Added modulo & denominator parameters, to express resampling
                 precision that cannot be captured by a single frac_step_size
                 uint32. We can now send mix jobs of any size (even 64k) without
