@@ -11,6 +11,7 @@ executable("tests") {
 
   sources = [
     "hub_integration_test.cc",
+    "realm_integration_test.cc",
   ]
 
   deps = [
@@ -19,6 +20,7 @@ executable("tests") {
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
   ]

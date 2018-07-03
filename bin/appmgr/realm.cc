@@ -41,8 +41,6 @@
 namespace component {
 namespace {
 
-constexpr zx_rights_t kChildJobRights = ZX_RIGHTS_BASIC | ZX_RIGHTS_IO;
-
 constexpr char kNumberedLabelFormat[] = "env-%d";
 constexpr char kAppPath[] = "bin/app";
 constexpr char kAppArv0[] = "/pkg/bin/app";
@@ -182,7 +180,6 @@ Realm::Realm(RealmArgs args)
                                   &svc_channel_client_) == ZX_OK);
   }
   FXL_CHECK(zx::job::create(*parent_job, 0u, &job_) == ZX_OK);
-  FXL_CHECK(job_.duplicate(kChildJobRights, &job_for_child_) == ZX_OK);
 
   koid_ = std::to_string(fsl::GetKoid(job_.get()));
   if (args.label->size() == 0)
@@ -318,10 +315,15 @@ void Realm::CreateShell(const std::string& path, zx::channel svc) {
   if (!fsl::VmoFromFilename(path, &executable))
     return;
 
+  zx::job child_job;
+  zx_status_t status = zx::job::create(job_, 0u, &child_job);
+  if (status != ZX_OK)
+    return;
+
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = path;
   zx::process process =
-      CreateProcess(job_for_child_, std::move(executable), path,
+      CreateProcess(child_job, std::move(executable), path,
                     std::move(launch_info), zx::channel(), builder.Build());
 }
 
@@ -384,16 +386,21 @@ void Realm::CreateComponentWithProcess(
   if (!fsl::SizedVmo::FromTransport(std::move(*package->data), &executable))
     return;
 
+  zx::job child_job;
+  zx_status_t status = zx::job::create(job_, 0u, &child_job);
+  if (status != ZX_OK)
+    return;
+
   const std::string args = Util::GetArgsString(launch_info.arguments);
   const std::string url = launch_info.url;  // Keep a copy before moving it.
   auto channels = Util::BindDirectory(&launch_info);
   zx::process process =
-      CreateProcess(job_for_child_, std::move(executable), url,
+      CreateProcess(child_job, std::move(executable), url,
                     std::move(launch_info), zx::channel(), builder.Build());
 
   if (process) {
     auto application = std::make_unique<ComponentControllerImpl>(
-        std::move(controller), this, koid_, std::move(process), url,
+        std::move(controller), this, std::move(child_job), std::move(process), url,
         std::move(args), Util::GetLabelFromURL(url), std::move(ns),
         ExportedDirType::kPublicDebugCtrlLayout,
         std::move(channels.exported_dir), std::move(channels.client_request));
@@ -513,16 +520,22 @@ void Realm::CreateComponentFromPackage(
   builder.AddFlatNamespace(std::move(launch_info.flat_namespace));
 
   if (app_data) {
+
+    zx::job child_job;
+    zx_status_t status = zx::job::create(job_, 0u, &child_job);
+    if (status != ZX_OK)
+      return;
+
     const std::string args = Util::GetArgsString(launch_info.arguments);
     const std::string url = launch_info.url;  // Keep a copy before moving it.
     auto channels = Util::BindDirectory(&launch_info);
     zx::process process = CreateProcess(
-        job_for_child_, std::move(app_data), kAppArv0, std::move(launch_info),
+        child_job, std::move(app_data), kAppArv0, std::move(launch_info),
         std::move(loader_service), builder.Build());
 
     if (process) {
       auto application = std::make_unique<ComponentControllerImpl>(
-          std::move(controller), this, koid_, std::move(process), url,
+          std::move(controller), this, std::move(child_job), std::move(process), url,
           std::move(args), Util::GetLabelFromURL(url), std::move(ns),
           exported_dir_layout, std::move(channels.exported_dir),
           std::move(channels.client_request));

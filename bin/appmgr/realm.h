@@ -112,7 +112,6 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   const bool run_virtual_console_;
 
   zx::job job_;
-  zx::job job_for_child_;
 
   fxl::RefPtr<Namespace> default_namespace_;
 

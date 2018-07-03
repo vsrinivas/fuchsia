@@ -55,19 +55,23 @@ class ComponentControllerTest : public gtest::RealLoopFixture {
   void SetUp() override {
     gtest::RealLoopFixture::SetUp();
 
+    // create child job
+    zx_status_t status = zx::job::create(*zx::job::default_job(), 0u, &job_);
+    ASSERT_EQ(status, ZX_OK);
+
     // create process
     const char* argv[] = {"sh", NULL};
     char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-    zx_status_t status = fdio_spawn_etc(
-        ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, "/boot/bin/sh", argv, NULL, 0,
+    status = fdio_spawn_etc(
+        job_.get(), FDIO_SPAWN_CLONE_ALL, "/boot/bin/sh", argv, NULL, 0,
         NULL, process_.reset_and_get_address(), err_msg);
     ASSERT_EQ(status, ZX_OK) << err_msg;
     process_koid_ = std::to_string(fsl::GetKoid(process_.get()));
   }
 
   void TearDown() override {
-    if (process_) {
-      process_.kill();
+    if (job_) {
+      job_.kill();
     }
     gtest::RealLoopFixture::TearDown();
   }
@@ -77,13 +81,20 @@ class ComponentControllerTest : public gtest::RealLoopFixture {
       fuchsia::sys::ComponentControllerPtr& controller,
       ExportedDirType export_dir_type = ExportedDirType::kLegacyFlatLayout,
       zx::channel export_dir = zx::channel()) {
+    // job_ is used later in a test to check the job-id, so we need to make a
+    // clone of it to pass into std::move
+    zx::job job_clone;
+    zx_status_t status = job_.duplicate(ZX_RIGHT_SAME_RIGHTS, &job_clone);
+    if (status != ZX_OK)
+      return NULL;
     return std::make_unique<ComponentControllerImpl>(
-        controller.NewRequest(), &realm_, realm_.koid(), std::move(process_),
+        controller.NewRequest(), &realm_, std::move(job_clone), std::move(process_),
         "test-url", "test-arg", "test-label", nullptr, export_dir_type,
         std::move(export_dir), zx::channel());
   }
 
   FakeRealm realm_;
+  zx::job job_;
   std::string process_koid_;
   zx::process process_;
 };
@@ -286,7 +297,7 @@ TEST_F(ComponentControllerTest, Hub) {
   EXPECT_STREQ(get_value(component->hub_dir(), "name").c_str(), "test-label");
   EXPECT_STREQ(get_value(component->hub_dir(), "args").c_str(), "test-arg");
   EXPECT_STREQ(get_value(component->hub_dir(), "job-id").c_str(),
-               realm_.koid().c_str());
+               std::to_string(fsl::GetKoid(job_.get())).c_str());
   EXPECT_STREQ(get_value(component->hub_dir(), "url").c_str(), "test-url");
   EXPECT_STREQ(get_value(component->hub_dir(), "process-id").c_str(),
                process_koid_.c_str());

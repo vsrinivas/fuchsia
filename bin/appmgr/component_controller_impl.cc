@@ -74,7 +74,7 @@ void ComponentControllerBase::Detach() { binding_.set_error_handler(nullptr); }
 
 ComponentControllerImpl::ComponentControllerImpl(
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
-    ComponentContainer<ComponentControllerImpl>* container, std::string job_id,
+    ComponentContainer<ComponentControllerImpl>* container, zx::job job,
     zx::process process, std::string url, std::string args, std::string label,
     fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
     zx::channel exported_dir, zx::channel client_request)
@@ -84,13 +84,14 @@ ComponentControllerImpl::ComponentControllerImpl(
           std::move(export_dir_type), std::move(exported_dir),
           std::move(client_request)),
       container_(container),
+      job_(std::move(job)),
       process_(std::move(process)),
       koid_(std::to_string(fsl::GetKoid(process_.get()))),
       wait_(this, process_.get(), ZX_TASK_TERMINATED) {
   zx_status_t status = wait_.Begin(async_get_default());
   FXL_DCHECK(status == ZX_OK);
 
-  hub()->SetJobId(job_id);
+  hub()->SetJobId(std::to_string(fsl::GetKoid(job_.get())));
   hub()->SetProcessId(koid_);
 }
 
@@ -99,11 +100,16 @@ ComponentControllerImpl::~ComponentControllerImpl() {
   // 1) OnHandleReady() destroys this object; in which case, process is dead.
   // 2) Our owner destroys this object; in which case, the process may still be
   //    alive.
-  if (process_)
-    process_.kill();
+  if (job_)
+    job_.kill();
 }
 
-void ComponentControllerImpl::Kill() { process_.kill(); }
+void ComponentControllerImpl::Kill() {
+  if (job_) {
+    job_.kill();
+    job_.reset();
+  }
+}
 
 bool ComponentControllerImpl::SendReturnCodeIfTerminated() {
   // Get process info.

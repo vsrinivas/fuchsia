@@ -73,10 +73,9 @@ class ComponentControllerImpl : public ComponentControllerBase {
   ComponentControllerImpl(
       fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
       ComponentContainer<ComponentControllerImpl>* container,
-      std::string job_id, zx::process process, std::string url,
-      std::string args, std::string label, fxl::RefPtr<Namespace> ns,
-      ExportedDirType export_dir_type, zx::channel exported_dir,
-      zx::channel client_request);
+      zx::job job, zx::process process, std::string url, std::string args,
+      std::string label, fxl::RefPtr<Namespace> ns, ExportedDirType
+      export_dir_type, zx::channel exported_dir, zx::channel client_request);
   ~ComponentControllerImpl() override;
 
   const std::string& koid() const { return koid_; }
@@ -95,6 +94,7 @@ class ComponentControllerImpl : public ComponentControllerBase {
   bool SendReturnCodeIfTerminated();
 
   ComponentContainer<ComponentControllerImpl>* container_;
+  zx::job job_;
   zx::process process_;
   const std::string koid_;
   std::vector<WaitCallback> wait_callbacks_;
