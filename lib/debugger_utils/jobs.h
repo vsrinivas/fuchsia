@@ -26,26 +26,31 @@ using JobTreeThreadCallback = std::function<zx_status_t(
     zx::thread& thread, zx_koid_t koid, zx_koid_t parent_koid, int depth)>;
 
 // Walk the job tree of |job|, beginning at |job| and descending to all its
-// children.
-// The walk continues until any callback returns something other than ZX_OK.
-// By convention if tree walking has successfully completed and you want to
-// "early exit" then return ZX_ERR_STOP from a callback.
+// children. Jobs are searched in depth-first order.
+// The initial |job| argument of WalkJobTree() is not consumed, however a
+// callback may consume it (see below).
 //
-// A reference to the task object is passed to each callback.
-// If the callback wishes to take over ownership of the handle it can do so
-// with task.release(). All other handles obtained during the walk are
-// automagically closed by the time WalkJobTree() returns.
-// Jobs are searched in depth-first order. If ownership of a job is taken by
-// the callback then further decent into the tree is not possible. The walk
-// will continue with any remaining tasks at the same level, but the walk
-// will not look at the job's child jobs. Callers wishing a handle of a job,
-// and decending into the job's child jobs, must make a duplicate handle.
-// Making a duplicate handle is only necessary for jobs. Callbacks can freely
-// call task.release() on processes and threads.
+// A reference to the task object (job,process,thread) is passed to each
+// callback. If the callback wishes to take over ownership of the handle it
+// can do so with task.release(), with one caveat for job and process handles:
+// Even though the handle is now owned by the callback, it is loaned to
+// WalkJobTree, and the callback must not close/replace/transfer/whatever the
+// handle until WalkJobTree returns.
+// All other handles obtained during the walk are automagically closed by the
+// time WalkJobTree() returns.
 //
-// TODO(dje): It's easy enough to allow the caller to take ownership of job
-// handles and still continue decent into the tree, with the restriction that
-// the caller can't close the handle until WalkJobTree() returns.
+// The walk continues until either of the following happens:
+// 1) Any callback returns something other than ZX_OK.
+//    By convention if tree walking has successfully completed and you want to
+//    "early exit" then return ZX_ERR_STOP from a callback.
+// 2) |job_callback| has taken ownership of the |zx::job| object.
+//    Processes of the job and their threads are still walked, but no further
+//    jobs are walked, and ZX_ERR_STOP is returned.
+//    Remember the job handle must remain open until WalkJobTree() returns.
+//
+// TODO(dje): Maybe allow a callback to take ownership of a job handle and
+// still continue walking of further jobs (maintaining the restriction that
+// the caller can't close the handle until WalkJobTree() returns).
 
 zx_status_t WalkJobTree(zx::job& job, JobTreeJobCallback* job_callback,
                         JobTreeProcessCallback* process_callback,

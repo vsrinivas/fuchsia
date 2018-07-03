@@ -23,11 +23,6 @@
 namespace debugserver {
 namespace util {
 
-// zx_status_t code different from any ZX_* code.
-// This is used to notify the walker the callback took over ownership
-// of the task's handle. It is never returned to the caller of WalkJobTree().
-constexpr zx_status_t kWalkHandleReleased = 1;
-
 struct WalkContext {
   JobTreeJobCallback* job_callback;
   JobTreeProcessCallback* process_callback;
@@ -102,22 +97,15 @@ class KoidTable {
 // Jobs aren't normally nested *that* deep, but we can't assume that of course.
 class JobKoidTableStackEntry {
  public:
-  explicit JobKoidTableStackEntry(zx_handle_t job, bool job_borrowed,
-                                  zx_koid_t jid, int depth,
+  explicit JobKoidTableStackEntry(zx::job job, zx_koid_t jid, int depth,
                                   std::unique_ptr<KoidTable> subjob_koids)
-      : job_(job),
-        job_borrowed_(job_borrowed),
+      : job_(std::move(job)),
         jid_(jid),
         depth_(depth),
         subjob_koids_(std::move(subjob_koids)),
         current_subjob_index_(0) {}
-  ~JobKoidTableStackEntry() {
-    if (!job_borrowed_) {
-      zx_handle_close(job_);
-    }
-  }
 
-  zx_handle_t job() const { return job_; }
+  zx_handle_t job() const { return job_.get(); }
 
   zx_koid_t jid() const { return jid_; }
 
@@ -133,10 +121,7 @@ class JobKoidTableStackEntry {
   }
 
  private:
-  zx_handle_t job_;
-  // True if we don't own |job_|. This is the case for the initial |job|
-  // parameter to the walk.
-  bool job_borrowed_;
+  zx::job job_;
   zx_koid_t jid_;
   int depth_;
   std::unique_ptr<KoidTable> subjob_koids_;
@@ -274,12 +259,13 @@ static zx_status_t DoProcesses(const WalkContext* ctx, zx_handle_t job,
 }
 
 static zx_status_t DoJob(JobKoidTableStack* stack, const WalkContext* ctx,
-                         zx_handle_t job_h, bool job_borrowed, zx_koid_t jid,
+                         zx::job& job, bool job_is_top_level_job, zx_koid_t jid,
                          zx_koid_t parent_jid, int depth) {
   zx_status_t status;
 
-  zx::job job(job_h);
-
+  // Things are a bit tricky here as |job_callback| could take ownership of
+  // the job, but we still need to call DoProcesses().
+  auto job_h = job.get();
   if (ctx->job_callback) {
     status = (*ctx->job_callback)(job, jid, parent_jid, depth);
     if (status != ZX_OK) {
@@ -294,9 +280,10 @@ static zx_status_t DoJob(JobKoidTableStack* stack, const WalkContext* ctx,
     }
   }
 
-  // If the job callback took ownership of the handle, that's it.
+  // If the job callback took ownership of the handle, that's it, we
+  // can't continue.
   if (!job.is_valid()) {
-    return kWalkHandleReleased;
+    return ZX_ERR_STOP;
   }
 
   auto subjob_koids = std::unique_ptr<KoidTable>(new KoidTable());
@@ -306,10 +293,20 @@ static zx_status_t DoJob(JobKoidTableStack* stack, const WalkContext* ctx,
     return status;
   }
   if (!subjob_koids->empty()) {
-    // Note: |job_borrowed| is only true for the top level job passed in
-    // by the caller to WalkJobTree().
-    stack->emplace_front(job.release(), job_borrowed, jid, depth + 1,
-                         std::move(subjob_koids));
+    if (job_is_top_level_job) {
+      // Don't consume the |job| argument to WalkJobTree(), make a dupe.
+      // We've already processed the job, so if the callback was going to
+      // consume it, it already would have.
+      zx::job dupe_job;
+      status = job.duplicate(ZX_RIGHT_SAME_RIGHTS, &dupe_job);
+      if (status != ZX_OK)
+        return status;
+      stack->emplace_front(std::move(dupe_job), jid, depth + 1,
+                           std::move(subjob_koids));
+    } else {
+      stack->emplace_front(std::move(job), jid, depth + 1,
+                           std::move(subjob_koids));
+    }
   }
 
   return ZX_OK;
@@ -326,12 +323,13 @@ static zx_status_t WalkJobTreeInternal(JobKoidTableStack* stack,
       auto parent_jid = stack_entry.jid();
       auto depth = stack_entry.depth();
       auto jid = stack_entry.PopNext();
-      zx_handle_t job;
-      auto status = GetChild(parent_job, parent_jid, jid, &job);
+      zx_handle_t job_h;
+      auto status = GetChild(parent_job, parent_jid, jid, &job_h);
       if (status != ZX_OK) {
         return status;
       }
 
+      zx::job job(job_h);
       status = DoJob(stack, ctx, job, false, jid, parent_jid, depth);
       if (status != ZX_OK) {
         return status;
@@ -365,7 +363,7 @@ zx_status_t WalkJobTree(zx::job& job, JobTreeJobCallback* job_callback,
   ctx.thread_callback = thread_callback;
 
   JobKoidTableStack stack;
-  status = DoJob(&stack, &ctx, job.get(), true, jid, parent_jid, 0);
+  status = DoJob(&stack, &ctx, job, true, jid, parent_jid, 0);
   if (status != ZX_OK) {
     return status;
   }

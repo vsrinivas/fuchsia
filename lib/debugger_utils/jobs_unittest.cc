@@ -48,6 +48,7 @@ TEST(JobsTest, ThisJobAndStop) {
     return ZX_OK;
   };
   EXPECT_EQ(WalkJobTree(job, &job_callback, nullptr, nullptr), ZX_ERR_STOP);
+  EXPECT_TRUE(job.is_valid());
 }
 
 TEST(JobsTest, ThisProcessAndStop) {
@@ -160,6 +161,44 @@ TEST(JobsTest, FindProcess) {
   zx_info_handle_basic_t info;
   ASSERT_EQ(GetHandleInfo(process.get(), &info), ZX_OK);
   EXPECT_EQ(info.koid, pid);
+}
+
+TEST(JobsTest, TakeRootJobOwnership) {
+  auto top_job = GetDefaultJob();
+  auto top_job_koid = GetKoid(top_job.get());
+  zx::job my_job;
+
+  JobTreeJobCallback job_callback = [&](zx::job& job, zx_koid_t koid,
+                                        zx_koid_t parent_koid,
+                                        int depth) -> zx_status_t {
+    my_job = std::move(job);
+    return ZX_OK;
+  };
+  EXPECT_EQ(WalkJobTree(top_job, &job_callback, nullptr, nullptr), ZX_ERR_STOP);
+  EXPECT_FALSE(top_job.is_valid());
+  EXPECT_TRUE(my_job.is_valid());
+  EXPECT_EQ(GetKoid(my_job.get()), top_job_koid);
+}
+
+TEST(JobsTest, TakeChildJobOwnership) {
+  auto top_job = GetDefaultJob();
+  zx::job child_job;
+  ASSERT_EQ(zx::job::create(top_job, 0, &child_job), ZX_OK);
+  auto child_job_koid = GetKoid(child_job.get());
+  zx::job my_job;
+
+  JobTreeJobCallback job_callback = [&](zx::job& job, zx_koid_t koid,
+                                        zx_koid_t parent_koid,
+                                        int depth) -> zx_status_t {
+    if (koid == child_job_koid) {
+      my_job = std::move(job);
+    }
+    return ZX_OK;
+  };
+  EXPECT_EQ(WalkJobTree(top_job, &job_callback, nullptr, nullptr), ZX_ERR_STOP);
+  EXPECT_TRUE(top_job.is_valid());
+  EXPECT_TRUE(my_job.is_valid());
+  EXPECT_EQ(GetKoid(my_job.get()), child_job_koid);
 }
 
 }  // namespace
