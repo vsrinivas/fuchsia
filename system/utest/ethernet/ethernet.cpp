@@ -196,7 +196,7 @@ public:
         bufsize_ = bufsize;
 
         vmo_size_ = 2 * nbufs_ * bufsize_;
-        zx_status_t status = zx::vmo::create(vmo_size_, 0u, &buf_);
+        zx_status_t status = zx::vmo::create(vmo_size_, ZX_VMO_NON_RESIZABLE, &buf_);
         if (status != ZX_OK) {
             fprintf(stderr, "could not create a vmo of size %" PRIu64 ": %s\n", vmo_size_,
                     mxstrerror(status));
