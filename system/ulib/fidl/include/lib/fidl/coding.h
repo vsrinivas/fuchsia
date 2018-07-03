@@ -18,20 +18,26 @@ __BEGIN_CDECLS
 // See
 // https://fuchsia.googlesource.com/zircon/+/HEAD/docs/fidl/c-language-bindings.md#fidl_encode
 zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
-                        zx_handle_t* handles, uint32_t max_handles, uint32_t* actual_handles_out,
-                        const char** error_msg_out);
+                        zx_handle_t* handles, uint32_t max_handles,
+                        uint32_t* out_actual_handles, const char** out_error_msg);
+zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_msg_t* msg,
+                            uint32_t* out_actual_handles, const char** out_error_msg);
 
 // See
 // https://fuchsia.googlesource.com/zircon/+/HEAD/docs/fidl/c-language-bindings.md#fidl_decode
 zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                         const zx_handle_t* handles, uint32_t num_handles,
                         const char** error_msg_out);
+zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_msg_t* msg,
+                            const char** out_error_msg);
 
 // Validates an encoded message against the given |type|.
 //
 // The |bytes| are not modified.
 zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t num_bytes,
                           uint32_t num_handles, const char** error_msg_out);
+zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_msg_t* msg,
+                              const char** out_error_msg);
 
 // Stores the name of a fidl type into the provided buffer.
 // Truncates the name if it is too long to fit into the buffer.

@@ -26,16 +26,16 @@ static_assert(offsetof(fidl_vector_t, data) == 8u, "");
 class FidlValidator {
 public:
     FidlValidator(const fidl_type_t* type, const void* bytes, uint32_t num_bytes,
-                  uint32_t num_handles, const char** error_msg_out)
+                  uint32_t num_handles, const char** out_error_msg)
         : type_(type), bytes_(static_cast<const uint8_t*>(bytes)), num_bytes_(num_bytes),
-          num_handles_(num_handles), error_msg_out_(error_msg_out) {}
+          num_handles_(num_handles), out_error_msg_(out_error_msg) {}
 
     zx_status_t ValidateMessage();
 
 private:
     zx_status_t WithError(const char* error_msg) {
-        if (error_msg_out_ != nullptr) {
-            *error_msg_out_ = error_msg;
+        if (out_error_msg_ != nullptr) {
+            *out_error_msg_ = error_msg;
         }
         // TODO(TO-509): close all handles.
         return ZX_ERR_INVALID_ARGS;
@@ -260,7 +260,7 @@ private:
     const uint8_t* const bytes_;
     const uint32_t num_bytes_;
     const uint32_t num_handles_;
-    const char** error_msg_out_;
+    const char** out_error_msg_;
 
     // Internal state.
     uint32_t handle_idx_ = 0u;
@@ -489,7 +489,13 @@ zx_status_t FidlValidator::ValidateMessage() {
 } // namespace
 
 zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t num_bytes,
-                          uint32_t num_handles, const char** error_msg_out) {
-    FidlValidator validator(type, bytes, num_bytes, num_handles, error_msg_out);
+                          uint32_t num_handles, const char** out_error_msg) {
+    FidlValidator validator(type, bytes, num_bytes, num_handles, out_error_msg);
     return validator.ValidateMessage();
+}
+
+zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_msg_t* msg,
+                              const char** out_error_msg) {
+    return fidl_validate(type, msg->bytes, msg->num_bytes, msg->num_handles,
+                         out_error_msg);
 }

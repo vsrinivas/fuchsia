@@ -27,16 +27,16 @@ static_assert(offsetof(fidl_vector_t, data) == 8u, "");
 class FidlDecoder {
 public:
     FidlDecoder(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
-                const zx_handle_t* handles, uint32_t num_handles, const char** error_msg_out)
+                const zx_handle_t* handles, uint32_t num_handles, const char** out_error_msg)
         : type_(type), bytes_(static_cast<uint8_t*>(bytes)), num_bytes_(num_bytes),
-          handles_(handles), num_handles_(num_handles), error_msg_out_(error_msg_out) {}
+          handles_(handles), num_handles_(num_handles), out_error_msg_(out_error_msg) {}
 
     zx_status_t DecodeMessage();
 
 private:
     zx_status_t WithError(const char* error_msg) {
-        if (error_msg_out_ != nullptr) {
-            *error_msg_out_ = error_msg;
+        if (out_error_msg_ != nullptr) {
+            *out_error_msg_ = error_msg;
         }
         if (handles_) {
             // Return value intentionally ignored: this is best-effort cleanup.
@@ -262,7 +262,7 @@ private:
     const uint32_t num_bytes_;
     const zx_handle_t* const handles_;
     const uint32_t num_handles_;
-    const char** error_msg_out_;
+    const char** out_error_msg_;
 
     // Internal state.
     uint32_t handle_idx_ = 0u;
@@ -502,7 +502,13 @@ zx_status_t FidlDecoder::DecodeMessage() {
 
 zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                         const zx_handle_t* handles, uint32_t num_handles,
-                        const char** error_msg_out) {
-    FidlDecoder decoder(type, bytes, num_bytes, handles, num_handles, error_msg_out);
+                        const char** out_error_msg) {
+    FidlDecoder decoder(type, bytes, num_bytes, handles, num_handles, out_error_msg);
     return decoder.DecodeMessage();
+}
+
+zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_msg_t* msg,
+                            const char** out_error_msg) {
+    return fidl_decode(type, msg->bytes, msg->num_bytes, msg->handles,
+                       msg->num_handles, out_error_msg);
 }

@@ -27,23 +27,23 @@ static_assert(offsetof(fidl_vector_t, data) == 8u, "");
 class FidlEncoder {
 public:
     FidlEncoder(const fidl_type_t* type, void* bytes, uint32_t num_bytes, zx_handle_t* handles,
-                uint32_t max_handles, uint32_t* actual_handles_out, const char** error_msg_out)
+                uint32_t max_handles, uint32_t* out_actual_handles, const char** out_error_msg)
         : type_(type), bytes_(static_cast<uint8_t*>(bytes)), num_bytes_(num_bytes),
-          handles_(handles), max_handles_(max_handles), actual_handles_out_(actual_handles_out),
-          error_msg_out_(error_msg_out) {}
+          handles_(handles), max_handles_(max_handles), out_actual_handles_(out_actual_handles),
+          out_error_msg_(out_error_msg) {}
 
     zx_status_t EncodeMessage();
 
 private:
     void SetError(const char* error_msg) {
-        // If status has already been set to an error, then we don't want to clobber error_msg_out_.
+        // If status has already been set to an error, then we don't want to clobber out_error_msg_.
         // We report the first error encountered.
         if (status_ != ZX_OK) {
             return;
         }
         status_ = ZX_ERR_INVALID_ARGS;
-        if (error_msg_out_ != nullptr) {
-            *error_msg_out_ = error_msg;
+        if (out_error_msg_ != nullptr) {
+            *out_error_msg_ = error_msg;
         }
         if (handles_ != nullptr) {
             // Return value intentionally ignored: this is best-effort cleanup.
@@ -282,8 +282,8 @@ private:
     const uint32_t num_bytes_;
     zx_handle_t* const handles_;
     const uint32_t max_handles_;
-    uint32_t* const actual_handles_out_;
-    const char** error_msg_out_;
+    uint32_t* const out_actual_handles_;
+    const char** out_error_msg_;
 
     // Internal state.
     uint32_t handle_idx_ = 0u;
@@ -310,8 +310,8 @@ zx_status_t FidlEncoder::EncodeMessage() {
         return status_;
     }
 
-    if (actual_handles_out_ == nullptr) {
-        SetError("Cannot encode with null actual_handles_out");
+    if (out_actual_handles_ == nullptr) {
+        SetError("Cannot encode with null out_actual_handles");
         return status_;
     }
 
@@ -507,7 +507,7 @@ zx_status_t FidlEncoder::EncodeMessage() {
               SetError("did not encode the entire provided buffer");
             }
             if (status_ == ZX_OK) {
-                *actual_handles_out_ = handle_idx_;
+                *out_actual_handles_ = handle_idx_;
             }
             return status_;
         }
@@ -518,9 +518,15 @@ zx_status_t FidlEncoder::EncodeMessage() {
 } // namespace
 
 zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
-                        zx_handle_t* handles, uint32_t max_handles, uint32_t* actual_handles_out,
-                        const char** error_msg_out) {
-    FidlEncoder encoder(type, bytes, num_bytes, handles, max_handles, actual_handles_out,
-                        error_msg_out);
+                        zx_handle_t* handles, uint32_t max_handles, uint32_t* out_actual_handles,
+                        const char** out_error_msg) {
+    FidlEncoder encoder(type, bytes, num_bytes, handles, max_handles, out_actual_handles,
+                        out_error_msg);
     return encoder.EncodeMessage();
+}
+
+zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_msg_t* msg,
+                            uint32_t* out_actual_handles, const char** out_error_msg) {
+    return fidl_encode(type, msg->bytes, msg->num_bytes, msg->handles, msg->num_handles,
+                       out_actual_handles, out_error_msg);
 }

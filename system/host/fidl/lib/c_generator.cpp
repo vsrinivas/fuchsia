@@ -93,7 +93,7 @@ void EmitServerMethodDecl(std::ostream* file, StringView method_name,
 
 void EmitServerDispatchDecl(std::ostream* file, StringView interface_name) {
     *file << "zx_status_t " << interface_name
-            << "_dispatch(void* ctx, fidl_txn_t* txn, const fidl_msg_t* msg, const "
+            << "_dispatch(void* ctx, fidl_txn_t* txn, fidl_msg_t* msg, const "
             << interface_name << "_ops_t* ops)";
 
 }
@@ -643,7 +643,7 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
         if (!method_info.request)
             continue;
         file_ << kIndent << "case " << method_info.ordinal_name << ": {\n";
-        file_ << kIndent << kIndent << "status = fidl_decode(&" << method_info.request->coded_name << ", msg->bytes, msg->num_bytes, msg->handles, msg->num_handles, NULL);\n";
+        file_ << kIndent << kIndent << "status = fidl_decode_msg(&" << method_info.request->coded_name << ", msg, NULL);\n";
         file_ << kIndent << kIndent << "if (status != ZX_OK)\n";
         file_ << kIndent << kIndent << kIndent << "break;\n";
         file_ << kIndent << kIndent << method_info.request->c_name << "* request = (" << method_info.request->c_name << "*)msg->bytes;\n";
@@ -685,19 +685,17 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
             // TODO(FIDL-184): Copy string data into the response.
         }
         file_ << kIndent << "zx_handle_t _handles[ZX_CHANNEL_MAX_MSG_HANDLES];\n";
-        file_ << kIndent << "uint32_t _num_handles = 0u;\n";
-        file_ << kIndent << "zx_status_t _status = fidl_encode(&" << method_info.response->coded_name
-              << ", &_response, _num_bytes, _handles, ZX_CHANNEL_MAX_MSG_HANDLES"
-              << ", &_num_handles, NULL);\n";
-        // TODO(FIDL-184): Clean up handles on error.
-        file_ << kIndent << "if (_status != ZX_OK)\n";
-        file_ << kIndent << kIndent << "return _status;\n";
         file_ << kIndent << "fidl_msg_t _msg = {\n";
         file_ << kIndent << kIndent << ".bytes = &_response,\n";
         file_ << kIndent << kIndent << ".handles = _handles,\n";
         file_ << kIndent << kIndent << ".num_bytes = _num_bytes,\n";
-        file_ << kIndent << kIndent << ".num_handles = _num_handles,\n";
+        file_ << kIndent << kIndent << ".num_handles = ZX_CHANNEL_MAX_MSG_HANDLES,\n";
         file_ << kIndent << "};\n";
+        file_ << kIndent << "zx_status_t _status = fidl_encode_msg(&"
+              << method_info.response->coded_name << ", &_msg, &_msg.num_handles, NULL);\n";
+        // TODO(FIDL-184): Clean up handles on error.
+        file_ << kIndent << "if (_status != ZX_OK)\n";
+        file_ << kIndent << kIndent << "return _status;\n";
         file_ << kIndent << "return _txn->reply(_txn, &_msg);\n";
         file_ << "}\n\n";
     }
