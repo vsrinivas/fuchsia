@@ -60,12 +60,13 @@ func Run(cfg *build.Config) error {
 		var line string
 		line, err = buf.ReadString('\n')
 		nameMerkle := strings.SplitN(strings.TrimSpace(line), "=", 2)
+
 		if len(nameMerkle) != 2 {
 			if err == nil {
 				continue
 			}
 			if err == io.EOF {
-				return nil
+				break
 			}
 			return err
 		}
