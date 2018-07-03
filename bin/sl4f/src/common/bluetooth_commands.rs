@@ -8,9 +8,12 @@ use bt::error::Error as BTError;
 use common::bluetooth_facade::BluetoothFacade;
 use failure::{Error, ResultExt};
 use fidl_ble::{AdvertisingData, PeripheralMarker, PeripheralProxy};
+use futures::FutureExt;
+use parking_lot::{RwLock, RwLockWriteGuard};
 use serde_json::Value;
+use std::sync::Arc;
 
-// Takes a serde_json::Value and converts it to arguments required for 
+// Takes a serde_json::Value and converts it to arguments required for
 // a FIDL ble_advertise command
 fn ble_advertise_to_fidl(
     adv_args_raw: Value,
@@ -47,7 +50,11 @@ fn ble_advertise_to_fidl(
 
 // TODO(aniramakri): Implement translation layer that converts method to
 // respective FIDL method
-pub fn convert_to_fidl(method_name: String, args: Value) -> Result<(), Error> {
+pub fn convert_to_fidl(
+    method_name: String,
+    args: Value,
+    bt_facade: Arc<RwLock<BluetoothFacade>>,
+) -> Result<(), Error> {
     // Translate test suite method to FIDL method
     match method_name.as_ref() {
         "BleAdvertise" => {
@@ -56,31 +63,32 @@ pub fn convert_to_fidl(method_name: String, args: Value) -> Result<(), Error> {
                 Err(e) => return Err(e),
             };
 
-            // TODO(@aniramakri): Move BTFacade object to main() scope + thread safe.
-            let mut bt_facade: BluetoothFacade = BluetoothFacade::new(None, None);
-
-            start_adv_sync(ad, interval, &mut bt_facade)
+            start_adv_sync(ad, interval, bt_facade.write())
         }
         _ => Err(BTError::new("Invalid fidl method.").into()),
     }
 }
 
-// Synchronous implementation for advertising
+// Synchronous wrapper for advertising
 pub fn start_adv_sync(
     ad: Option<AdvertisingData>,
     interval: Option<u32>,
-    bt_facade: &mut BluetoothFacade,
+    mut bt_facade: RwLockWriteGuard<BluetoothFacade>,
 ) -> Result<(), Error> {
     let mut executor = async::Executor::new().context("Error creating event loop")?;
 
-    //Set up periph proxy and initialize this in our BTF object
+    // Set up periph proxy and initialize this in our BTF object
     let peripheral_svc: PeripheralProxy = app::client::connect_to_service::<PeripheralMarker>()
         .context("Failed to connect to BLE Peripheral service.")?;
-    bt_facade.update_peripheral(peripheral_svc);
+    bt_facade.set_peripheral_proxy(peripheral_svc)?;
 
-    //Initialize the start advertising futures
-    let adv_fut = bt_facade.start_adv(ad, interval);
+    // Initialize the start advertising futures
+    // TODO(aniramakri): Setup peripheral state cleanup for all peripheral commands
+    let adv_fut = bt_facade.start_adv(ad, interval).then(|res| {
+        bt_facade.cleanup_peripheral();
+        res
+    });
 
-    //Run future to completion
+    // Run future to completion
     executor.run_singlethreaded(adv_fut).map_err(Into::into)
 }

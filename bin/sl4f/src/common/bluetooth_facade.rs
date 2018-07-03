@@ -10,6 +10,8 @@ use fidl_ble::{AdvertisingData, PeripheralProxy};
 use futures::future;
 use futures::future::Either::{Left, Right};
 use futures::prelude::*;
+use parking_lot::RwLock;
+use std::sync::Arc;
 
 // BluetoothFacade: Stores Central and Peripheral proxies used for
 // bluetooth scan and advertising requests.
@@ -20,11 +22,11 @@ use futures::prelude::*;
 // found via scan, allowing for ease of state transfer between similar/related
 // requests.
 //
-// Use: Create once per server instantiation. Calls to update_peripheral()
+// Use: Create once per server instantiation. Calls to set_peripheral_proxy()
 // and update_central() will update Facade object with proxy if no such proxy
 // currently exists. If such a proxy exists, then update() will use pre-existing
 // proxy.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BluetoothFacade {
     // central: CentralProxy used for Bluetooth connections
     central: Option<CentralProxy>,
@@ -37,20 +39,39 @@ impl BluetoothFacade {
     pub fn new(
         central_proxy: Option<CentralProxy>,
         peripheral_proxy: Option<PeripheralProxy>,
-    ) -> BluetoothFacade {
-        BluetoothFacade {
+    ) -> Arc<RwLock<BluetoothFacade>> {
+        Arc::new(RwLock::new(BluetoothFacade {
             central: central_proxy,
             peripheral: peripheral_proxy,
-        }
+        }))
     }
 
-    pub fn update_peripheral(&mut self, peripheral_proxy: PeripheralProxy) {
+    // Set the peripheral proxy only if none exists,
+    pub fn set_peripheral_proxy(&mut self, peripheral_proxy: PeripheralProxy) -> Result<(), Error> {
         let new_periph = match self.peripheral.clone() {
-            Some(p) => Some(p),
+            Some(p) => {
+                eprintln!(
+                    "Current peripheral: {:?}. New peripheral: {:?}",
+                    p, peripheral_proxy
+                );
+                return Err(BTError::new(
+                    "Advertisement peripheral already exists! Aborting command.",
+                ).into());
+            }
             None => Some(peripheral_proxy),
         };
 
         self.peripheral = new_periph;
+        Ok(())
+    }
+
+    pub fn cleanup_peripheral(&mut self) {
+        self.peripheral = None;
+    }
+
+    pub fn cleanup_facade(&mut self) {
+        self.cleanup_peripheral();
+        self.central = None;
     }
 
     pub fn start_adv(

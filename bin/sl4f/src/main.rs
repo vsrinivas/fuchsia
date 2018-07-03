@@ -20,7 +20,10 @@ extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
 
-use parking_lot::Mutex;
+use bt::error::Error as BTError;
+use common::bluetooth_facade::BluetoothFacade;
+use failure::Error;
+use parking_lot::{Mutex, RwLock};
 use rouille::{Request, Response};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -29,56 +32,7 @@ use std::sync::Arc;
 
 mod common;
 use common::bluetooth_commands::convert_to_fidl;
-
-// Information about each client that has connected
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct ClientData {
-    // device: string name of Fuchsia device
-    device: String,
-
-    // host_address: String IP of Fuchsia device
-    host_address: String,
-
-    // client_id: String ID of client (ACTS test suite)
-    client_id: String,
-}
-
-// Required fields for making a request
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct CommandRequest {
-    // method: name of method to be called
-    method: String,
-
-    // id: Integer id of command
-    id: u32,
-
-    // params: Arguments required for method
-    params: Value,
-}
-
-// TODO(aniramakri): Add support for proper error handling over JSON RPC
-// Return packet after SL4F runs command
-#[derive(Serialize, Debug)]
-struct CommandResponse {
-    // id: Integer id of command
-    id: u32,
-
-    // result: Result value of method call, can be None
-    result: Option<Value>,
-
-    // error: Error message of method call, can be None
-    error: Option<String>,
-}
-
-impl CommandResponse {
-    fn new(id: u32, result: Option<Value>, error: Option<String>) -> CommandResponse {
-        CommandResponse {
-            id: id,
-            result: result,
-            error: error,
-        }
-    }
-}
+use common::sl4f_types::{ClientData, CommandRequest, CommandResponse};
 
 // Config, flexible for any ip/port combination
 const SERVER_IP: &str = "0.0.0.0";
@@ -90,21 +44,27 @@ fn main() {
 
     eprintln!("Now listening on: {}", address);
 
+    // Create empty hash table + bt facade for storing state
     let clients: Arc<Mutex<HashMap<String, ClientData>>> = Arc::new(Mutex::new(HashMap::new()));
+    let bt_facade: Arc<RwLock<BluetoothFacade>> = BluetoothFacade::new(None, None);
 
     // Start listening on address
     rouille::start_server(address, move |request| {
-        handle_traffic(&request, clients.clone())
+        serve(&request, clients.clone(), bt_facade.clone())
     });
 }
 
 // Handles all incoming requests to SL4F server, routes accordingly
-fn handle_traffic(request: &Request, clients: Arc<Mutex<HashMap<String, ClientData>>>) -> Response {
+fn serve(
+    request: &Request,
+    clients: Arc<Mutex<HashMap<String, ClientData>>>,
+    bt_facade: Arc<RwLock<BluetoothFacade>>,
+) -> Response {
     router!(request,
             (GET) (/) => {
                 // Parse the command request
                 eprintln!("Command request.");
-                test_request(&request)
+                client_request(&request,  bt_facade.clone())
             },
             (GET) (/init) => {
                 // Initialize a client
@@ -117,6 +77,10 @@ fn handle_traffic(request: &Request, clients: Arc<Mutex<HashMap<String, ClientDa
                 const PRINT_ACK: &str = "Successfully printed clients.";
                 rouille::Response::json(&PRINT_ACK)
             },
+            (GET) (/cleanup) => {
+                eprintln!("Recieved request for cleaning up SL4F server.");
+                server_cleanup(&request, bt_facade.clone())
+            },
             _ => {
                 // TODO(aniramakri): Better error handling for unkown queries
                 const FAIL_REQUEST_ACK: &str = "Unknown GET request. Aborting.";
@@ -128,33 +92,15 @@ fn handle_traffic(request: &Request, clients: Arc<Mutex<HashMap<String, ClientDa
 
 // Given the request, map the test request to a FIDL query and execute
 // asynchronously
-fn test_request(request: &Request) -> Response {
+fn client_request(request: &Request, bt_facade: Arc<RwLock<BluetoothFacade>>) -> Response {
     const FAIL_TEST_ACK: &str = "Command failed";
 
-    let mut data = match request.data() {
-        Some(d) => d,
-        None => return Response::json(&FAIL_TEST_ACK),
-    };
-
-    let mut buf: String = String::new();
-    if data.read_to_string(&mut buf).is_err() {
-        return Response::json(&FAIL_TEST_ACK);
-    }
-
-    let request_data: CommandRequest = match serde_json::from_str(&buf) {
-        Ok(tdata) => tdata,
+    let (method_id, method_name, method_params) = match parse_request(request) {
+        Ok(res) => res,
         Err(_) => return Response::json(&FAIL_TEST_ACK),
     };
 
-    let method_id = request_data.id.clone();
-    let method_name = request_data.method.clone();
-    let method_params = request_data.params.clone();
-    eprintln!(
-        "method id: {:?}, name: {:?}, args: {:?}",
-        method_id, method_name, method_params
-    );
-
-    let fidl_response = convert_to_fidl(method_name, method_params);
+    let fidl_response = convert_to_fidl(method_name, method_params, bt_facade);
     eprintln!("Recieved fidl method response: {:?}", fidl_response);
 
     // TODO(aniramakri): Add better error descriptions
@@ -180,32 +126,80 @@ fn client_init(request: &Request, clients: Arc<Mutex<HashMap<String, ClientData>
     const INIT_ACK: &str = "Recieved init request.";
     const FAIL_INIT_ACK: &str = "Failed to init client.";
 
-    let mut data = match request.data() {
-        Some(d) => d,
-        None => return Response::json(&FAIL_INIT_ACK),
-    };
-
-    let mut buf: String = String::new();
-    if data.read_to_string(&mut buf).is_err() {
-        return Response::json(&FAIL_INIT_ACK);
-    }
-
-    let curr_client_data: ClientData = match serde_json::from_str(&buf) {
-        Ok(cdata) => cdata,
+    let (_, _, method_params) = match parse_request(request) {
+        Ok(res) => res,
         Err(_) => return Response::json(&FAIL_INIT_ACK),
     };
 
-    let curr_client_id: String = curr_client_data.client_id.clone();
+    let client_id_raw = match method_params.get("client_id") {
+        Some(id) => Some(id).unwrap().clone(),
+        None => return Response::json(&FAIL_INIT_ACK),
+    };
 
-    if clients.lock().contains_key(&curr_client_id) {
+    let client_id = client_id_raw.as_str().map(String::from).unwrap();
+    let client_data = ClientData {
+        client_id: client_id.clone(),
+    };
+
+    if clients.lock().contains_key(&client_id) {
         eprintln!(
             "handle_init error! Key: {:?} already exists in clients. ",
-            curr_client_id
+            &client_id
         );
         return rouille::Response::json(&FAIL_INIT_ACK);
     }
 
-    clients.lock().insert(curr_client_id, curr_client_data);
+    clients.lock().insert(client_id, client_data);
+    eprintln!("Updated clients: {:?}", clients);
 
     rouille::Response::json(&INIT_ACK)
+}
+
+// Given a request, grabs the method id, name, and parameters
+// Return BTError if fail
+fn parse_request(request: &Request) -> Result<(u32, String, Value), Error> {
+    let mut data = match request.data() {
+        Some(d) => d,
+        None => return Err(BTError::new("Failed to parse request buffer.").into()),
+    };
+
+    let mut buf: String = String::new();
+    if data.read_to_string(&mut buf).is_err() {
+        return Err(BTError::new("Failed to read request buffer.").into());
+    }
+
+    let request_data: CommandRequest = match serde_json::from_str(&buf) {
+        Ok(tdata) => tdata,
+        Err(_) => return Err(BTError::new("Failed to unpack request data.").into()),
+    };
+
+    let method_id = request_data.id.clone();
+    let method_name = request_data.method.clone();
+    let method_params = request_data.params.clone();
+    eprintln!(
+        "method id: {:?}, name: {:?}, args: {:?}",
+        method_id, method_name, method_params
+    );
+
+    Ok((method_id, method_name, method_params))
+}
+
+fn server_cleanup(request: &Request, bt_facade: Arc<RwLock<BluetoothFacade>>) -> Response {
+    const FAIL_CLEANUP_ACK: &str = "Failed to cleanup SL4F resources.";
+    const CLEANUP_ACK: &str = "Successful cleanup of SL4F resources.";
+    eprintln!("Cleanup request: {:?}", request);
+
+    let (method_id, _, _) = match parse_request(request) {
+        Ok(res) => res,
+        Err(_) => return Response::json(&FAIL_CLEANUP_ACK),
+    };
+
+    bt_facade.write().cleanup_facade();
+
+    let res = CommandResponse {
+        result: None,
+        error: serde::export::Some(CLEANUP_ACK.to_string()),
+        id: method_id,
+    };
+    rouille::Response::json(&res)
 }
