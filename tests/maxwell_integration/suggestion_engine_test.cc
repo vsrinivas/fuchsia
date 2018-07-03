@@ -307,6 +307,11 @@ class SuggestionEngineTest : public ContextEngineTestBase,
   // Whether or not a successful create story action has been observed.
   bool created_story_action_;
 
+  // Story ID when a proposal is accepted. This is the ID of a story that was
+  // created as result of the execution of a proposal actions, either through
+  // CreateStory or for a rich suggestion.
+  std::string accepted_proposal_story_id_;
+
  private:
   void Interact(const std::string& suggestion_id,
                 fuchsia::modular::InteractionType interaction_type) {
@@ -320,8 +325,9 @@ class SuggestionEngineTest : public ContextEngineTestBase,
   void OnProposalAccepted(fidl::StringPtr proposal_id,
                           fidl::StringPtr story_id) override {
     accepted_proposal_id_ = proposal_id;
-    if (story_id->length() > 0) {
+    if (!story_id->empty()) {
       created_story_action_ = true;
+      accepted_proposal_story_id_ = story_id;
     }
     accepted_proposal_count_++;
   }
@@ -859,10 +865,17 @@ TEST_F(SuggestionInteractionTest, ProposalWithRichSuggestion) {
   WaitUntilIdle();
   EXPECT_EQ(1, suggestion_count());
 
+  // Ensure no call to OnProposalAccepted is made when creating a rich
+  // suggestion.
+  EXPECT_TRUE(accepted_proposal_story_id_.empty());
+
   // There should be one suggestion, and the add module action should have
   // been executed. A KindOfProtoStory should have been created, but not
   // yet promoted. That only happens if the 'user' accepts the suggestion.
-  EXPECT_EQ(GetOnlySuggestion()->preloaded_story_id, "kindoffoo");
+  auto suggestion = GetOnlySuggestion();
+  EXPECT_EQ(suggestion->preloaded_story_id, "kindoffoo");
+  EXPECT_EQ(suggestion->display.headline, "1");
+
   EXPECT_EQ(story_provider()->last_created_kind_of_story(), "kindoffoo");
   EXPECT_EQ(module_id,
             story_provider()->story_controller().last_added_module());
@@ -876,6 +889,8 @@ TEST_F(SuggestionInteractionTest, ProposalWithRichSuggestion) {
   // The story provider mock uses "kindoffoo" as the story id for KindOfProto
   // stories.
   EXPECT_EQ(story_provider()->last_promoted_story(), "kindoffoo");
+  EXPECT_EQ(accepted_proposal_id_, "1");
+  EXPECT_EQ(accepted_proposal_story_id_, "kindoffoo");
 }
 
 TEST_F(SuggestionInteractionTest, AcceptSugestion_QueryAction) {

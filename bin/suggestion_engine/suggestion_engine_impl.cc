@@ -62,7 +62,8 @@ void SuggestionEngineImpl::AddNextProposal(
       CanComponentUseRichSuggestions(source->component_url())) {
     AddProposalWithRichSuggestion(source, std::move(proposal));
   } else {
-    auto story_id = StoryIdFromName(source->component_url(), proposal.story_name);
+    auto story_id =
+        StoryIdFromName(source->component_url(), proposal.story_name);
     next_processor_.AddProposal(source->component_url(), story_id,
                                 std::move(proposal));
   }
@@ -76,9 +77,13 @@ void SuggestionEngineImpl::AddProposalWithRichSuggestion(
                          source_url = source->component_url(),
                          activity](fidl::StringPtr preloaded_story_id) mutable {
         auto story_id = StoryIdFromName(source_url, proposal.story_name);
+        // Keep display around since the suggestion could be displayed in some
+        // places using the display data instead of the preloaded story.
+        fuchsia::modular::SuggestionDisplay cloned_display;
+        proposal.display.Clone(&cloned_display);
         ExecuteActions(std::move(proposal.on_selected),
-                       std::move(proposal.listener), proposal.id,
-                       std::move(proposal.display), story_id);
+                       nullptr /* proposal_listener */, proposal.id,
+                       std::move(cloned_display), story_id);
         next_processor_.AddProposal(source_url, story_id, preloaded_story_id,
                                     std::move(proposal));
       }));
@@ -171,6 +176,10 @@ void SuggestionEngineImpl::NotifyInteraction(
         auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
         story_provider_->PromoteKindOfProtoStory(preloaded_story_id,
                                                  [activity]() {});
+        if (proposal.listener) {
+          auto listener = proposal.listener.Bind();
+          listener->OnProposalAccepted(proposal_id, preloaded_story_id);
+        }
       }
     }
 
@@ -601,6 +610,7 @@ bool SuggestionEngineImpl::CanComponentUseRichSuggestions(
     const std::string& component_url) {
   // Only kronk is allowed to preload stories in suggestions to make
   // rich suggestions.
+  // Proposinator is used for testing.
   return component_url.find("kronk") != std::string::npos ||
          component_url.find("Proposinator") != std::string::npos;
 }
