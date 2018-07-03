@@ -81,32 +81,61 @@ TEST(DynamicRange, Epsilon) {
   EXPECT_GE(AudioResult::SinadEpsilonDown, AudioResult::kPrevSinadEpsilonDown);
 }
 
+// Measure dynamic range (signal level, noise floor) when gain is -30dB.
+TEST(DynamicRange, 30Down) {
+  Gain gain;
+
+  // Set renderer gain to +24dB (note: this combines with -54 to make -30dB).
+  gain.SetRendererGain(24.0f);
+  // Retrieve the total gainscale multiplier, if system gain is -54dB.
+  const Gain::AScale scale = gain.GetGainScale(-54.0f);
+
+  MeasureSummaryDynamicRange(scale, &AudioResult::Level30Down,
+                             &AudioResult::Sinad30Down);
+  AudioResult::DynRangeTolerance = fmax(AudioResult::DynRangeTolerance,
+                                        abs(AudioResult::Level30Down + 30.0));
+
+  EXPECT_NEAR(AudioResult::Level30Down, -30.0,
+              AudioResult::kPrevDynRangeTolerance);
+  EXPECT_GE(AudioResult::Sinad30Down, AudioResult::kPrevSinad30Down);
+}
+
 // Measure dynamic range (signal level, noise floor) when gain is -60dB.
 TEST(DynamicRange, 60Down) {
   Gain gain;
 
+  // Set renderer gain to -60dB.
   gain.SetRendererGain(-60.0f);
+  // Retrieve the combined gain scale multiplier, if system gain is 0dB.
   const Gain::AScale scale = gain.GetGainScale(0.0f);
 
   MeasureSummaryDynamicRange(scale, &AudioResult::Level60Down,
                              &AudioResult::Sinad60Down);
-
-  EXPECT_NEAR(AudioResult::Level60Down, -60.0,
-              AudioResult::kPrevDynRangeTolerance);
   AudioResult::DynRangeTolerance = fmax(AudioResult::DynRangeTolerance,
                                         abs(AudioResult::Level60Down + 60.0));
 
+  EXPECT_NEAR(AudioResult::Level60Down, -60.0,
+              AudioResult::kPrevDynRangeTolerance);
   EXPECT_GE(AudioResult::Sinad60Down, AudioResult::kPrevSinad60Down);
+}
 
-  // Equivalent gain combo (per-stream, master) should make identical results.
-  gain.SetRendererGain(0.0f);
-  const Gain::AScale scale2 = gain.GetGainScale(-60.0f);
+// Measure dynamic range (signal level, noise floor) when gain is -90dB.
+TEST(DynamicRange, 90Down) {
+  Gain gain;
 
-  double level_db, sinad_db;
-  MeasureSummaryDynamicRange(scale2, &level_db, &sinad_db);
+  // Set renderer gain to -44dB (note: this combines with -46 to make -90dB).
+  gain.SetRendererGain(-44.0f);
+  // Retrieve the combined gain scale multiplier, if system gain is -46dB.
+  const Gain::AScale scale = gain.GetGainScale(-46.0f);
 
-  EXPECT_EQ(level_db, AudioResult::Level60Down);
-  EXPECT_EQ(sinad_db, AudioResult::Sinad60Down);
+  MeasureSummaryDynamicRange(scale, &AudioResult::Level90Down,
+                             &AudioResult::Sinad90Down);
+  AudioResult::DynRangeTolerance = fmax(AudioResult::DynRangeTolerance,
+                                        abs(AudioResult::Level90Down + 90.0));
+
+  EXPECT_NEAR(AudioResult::Level90Down, -90.0,
+              AudioResult::kPrevDynRangeTolerance);
+  EXPECT_GE(AudioResult::Sinad90Down, AudioResult::kPrevSinad90Down);
 }
 
 // Test our mix level and noise floor, when rechannelizing mono into stereo.

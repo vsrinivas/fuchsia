@@ -344,16 +344,17 @@ void MeasureFreqRespSinad(MixerPtr mixer, uint32_t src_buf_size,
 // Given result and limit arrays, compare them as frequency response results.
 // I.e., ensure greater-than-or-equal-to, plus a less-than-or-equal-to check
 // against the overall level tolerance (for level results greater than 0 dB).
+// 'summary_only' force-limits evaluation to the three basic frequencies.
 void EvaluateFreqRespResults(double* freq_resp_results,
-                             const double* freq_resp_limits) {
-  uint32_t num_freqs = FrequencySet::UseFullFrequencySet
-                           ? FrequencySet::kReferenceFreqs.size()
-                           : FrequencySet::kSummaryIdxs.size();
+                             const double* freq_resp_limits,
+                             bool summary_only = false) {
+  bool use_full_set = (!summary_only) && FrequencySet::UseFullFrequencySet;
+  uint32_t num_freqs = use_full_set ? FrequencySet::kReferenceFreqs.size()
+                                    : FrequencySet::kSummaryIdxs.size();
 
   for (uint32_t idx = 0; idx < num_freqs; ++idx) {
-    uint32_t freq = FrequencySet::UseFullFrequencySet
-                        ? idx
-                        : FrequencySet::kSummaryIdxs[idx];
+    uint32_t freq = use_full_set ? idx : FrequencySet::kSummaryIdxs[idx];
+
     EXPECT_GE(freq_resp_results[freq], freq_resp_limits[freq])
         << " [" << freq << "]  " << std::scientific << std::setprecision(9)
         << freq_resp_results[freq];
@@ -368,15 +369,16 @@ void EvaluateFreqRespResults(double* freq_resp_results,
 
 // Given result and limit arrays, compare them as SINAD results. This simply
 // means apply a strict greater-than-or-equal-to, without additional tolerance.
-void EvaluateSinadResults(double* sinad_results, const double* sinad_limits) {
-  uint32_t num_freqs = FrequencySet::UseFullFrequencySet
-                           ? FrequencySet::kReferenceFreqs.size()
-                           : FrequencySet::kSummaryIdxs.size();
+// 'summary_only' force-limits evaluation to the three basic frequencies.
+void EvaluateSinadResults(double* sinad_results, const double* sinad_limits,
+                          bool summary_only = false) {
+  bool use_full_set = (!summary_only) && FrequencySet::UseFullFrequencySet;
+  uint32_t num_freqs = use_full_set ? FrequencySet::kReferenceFreqs.size()
+                                    : FrequencySet::kSummaryIdxs.size();
 
   for (uint32_t idx = 0; idx < num_freqs; ++idx) {
-    uint32_t freq = FrequencySet::UseFullFrequencySet
-                        ? idx
-                        : FrequencySet::kSummaryIdxs[idx];
+    uint32_t freq = use_full_set ? idx : FrequencySet::kSummaryIdxs[idx];
+
     EXPECT_GE(sinad_results[freq], sinad_limits[freq])
         << " [" << freq << "]  " << std::scientific << std::setprecision(9)
         << sinad_results[freq];
@@ -691,6 +693,163 @@ TEST(Sinad, Linear_MicroSRC) {
 
   EvaluateSinadResults(AudioResult::SinadLinearMicro.data(),
                        AudioResult::kPrevSinadLinearMicro.data());
+}
+
+// For each summary frequency, populate a sinusoid into a mono buffer, and copy-
+// interleave mono[] into one of the channels of the N-channel source.
+void PopulateNxNSourceBuffer(float* source, uint32_t num_frames,
+                             uint32_t num_chans) {
+  std::unique_ptr<float[]> mono = std::make_unique<float[]>(num_frames);
+
+  // For each summary frequency, populate a sinusoid into mono, and copy-
+  // interleave mono into one of the channels of the N-channel source.
+  for (uint32_t idx = 0; idx < num_chans; ++idx) {
+    uint32_t freq_idx = FrequencySet::kSummaryIdxs[idx];
+
+    // If frequency is too high to be characterized in this buffer length, stop.
+    if (FrequencySet::kReferenceFreqs[freq_idx] * 2 > num_frames) {
+      break;
+    }
+
+    // Populate mono[] with a sinusoid at this reference-frequency.
+    OverwriteCosine(mono.get(), num_frames,
+                    FrequencySet::kReferenceFreqs[freq_idx]);
+
+    // Copy-interleave mono into the N-channel source[].
+    for (uint32_t frame_num = 0; frame_num < num_frames; ++frame_num) {
+      source[frame_num * num_chans + idx] = mono[frame_num];
+    }
+    // Provide 1 extra: some interpolators need it to produce enough output.
+    source[num_frames * num_chans + idx] = mono[0];
+  }
+}
+
+// For the given resampler, test NxN fidelity equivalence with mono/stereo.
+//
+// Populate a multi-channel buffer with sinusoids at the summary frequencies
+// (one in each channel); mix the multi-channel buffer (at micro-SRC); split the
+// multi-channel result and analyze each, comparing to existing mono results.
+void TestNxNEquivalence(Resampler sampler_type, double* freq_resp_results,
+                        double* sinad_results) {
+  static_assert(
+      FrequencySet::kNumSummaryIdxs <= fuchsia::media::MAX_PCM_CHANNEL_COUNT,
+      "Cannot allocate every summary frequency--rework this test.");
+
+  if (!std::isnan(freq_resp_results[0])) {
+    // This run already has NxN frequency response and SINAD results for this
+    // sampler and resampling ratio; don't waste time and cycles rerunning it.
+    return;
+  }
+
+  freq_resp_results[0] = -INFINITY;
+
+  double source_rate = 47999.0;
+  double dest_rate = 48000.0;
+
+  uint32_t num_chans = FrequencySet::kNumSummaryIdxs;
+  uint32_t num_source_frames =
+      round(kFreqTestBufSize * source_rate / dest_rate);
+  uint32_t num_dest_frames = kFreqTestBufSize;
+
+  // Populate different frequencies into each channel of N-channel source[].
+  // source[] has an additional element because depending on resampling ratio,
+  // some resamplers need it in order to produce the final dest value.
+  std::unique_ptr<float[]> source =
+      std::make_unique<float[]>(num_chans * (num_source_frames + 1));
+  PopulateNxNSourceBuffer(source.get(), num_source_frames, num_chans);
+
+  // Mix the N-channel source[] into the N-channel accum[].
+  MixerPtr mixer =
+      SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, num_chans,
+                  source_rate, num_chans, dest_rate, sampler_type);
+  uint32_t frac_src_frames =
+      num_chans * (num_source_frames + 1) * Mixer::FRAC_ONE;
+  uint32_t step_size = (Mixer::FRAC_ONE * num_source_frames) / num_dest_frames;
+  uint32_t modulo =
+      (Mixer::FRAC_ONE * num_source_frames) - (step_size * num_dest_frames);
+
+  std::unique_ptr<float[]> accum =
+      std::make_unique<float[]>(num_chans * num_dest_frames);
+  for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
+    uint32_t dst_frames =
+        num_dest_frames * (packet + 1) / kResamplerTestNumPackets;
+    uint32_t dst_offset = num_dest_frames * packet / kResamplerTestNumPackets;
+    int32_t frac_src_offset =
+        (static_cast<int64_t>(num_source_frames) * Mixer::FRAC_ONE * packet) /
+        kResamplerTestNumPackets;
+
+    mixer->Mix(accum.get(), dst_frames, &dst_offset, source.get(),
+               frac_src_frames, &frac_src_offset, step_size, Gain::kUnityScale,
+               false, modulo, num_dest_frames);
+    EXPECT_EQ(dst_frames, dst_offset);
+  }
+
+  // Copy-deinterleave each accum[] channel into mono[] and frequency-analyze.
+  std::unique_ptr<float[]> mono = std::make_unique<float[]>(num_dest_frames);
+  for (uint32_t idx = 0; idx < num_chans; ++idx) {
+    uint32_t freq_idx = FrequencySet::kSummaryIdxs[idx];
+
+    // If frequency is too high to be characterized in this buffer length, stop.
+    if (FrequencySet::kReferenceFreqs[freq_idx] * 2 > num_source_frames) {
+      break;
+    }
+
+    for (uint32_t i = 0; i <= num_source_frames; ++i) {
+      mono[i] = accum[i * num_chans + idx];
+    }
+
+    double magn_signal = -INFINITY, magn_other = INFINITY;
+    MeasureAudioFreq(mono.get(), num_dest_frames,
+                     FrequencySet::kReferenceFreqs[freq_idx], &magn_signal,
+                     &magn_other);
+
+    freq_resp_results[freq_idx] = ValToDb(magn_signal);
+    sinad_results[freq_idx] = ValToDb(magn_signal / magn_other);
+  }
+}
+
+// Measure Freq Response for NxN Point sampler, with minimum rate change.
+TEST(FrequencyResponse, Point_NxN) {
+  TestNxNEquivalence(Resampler::SampleAndHold,
+                     AudioResult::FreqRespPointNxN.data(),
+                     AudioResult::SinadPointNxN.data());
+
+  // Final param signals to evaluate only at summary frequencies.
+  EvaluateFreqRespResults(AudioResult::FreqRespPointNxN.data(),
+                          AudioResult::kPrevFreqRespPointMicro.data(), true);
+}
+
+// Measure SINAD for NxN Point sampler, with minimum rate change.
+TEST(Sinad, Point_NxN) {
+  TestNxNEquivalence(Resampler::SampleAndHold,
+                     AudioResult::FreqRespPointNxN.data(),
+                     AudioResult::SinadPointNxN.data());
+
+  // Final param signals to evaluate only at summary frequencies.
+  EvaluateSinadResults(AudioResult::SinadPointNxN.data(),
+                       AudioResult::kPrevSinadPointMicro.data(), true);
+}
+
+// Measure Freq Response for NxN Linear sampler, with minimum rate change.
+TEST(FrequencyResponse, Linear_NxN) {
+  TestNxNEquivalence(Resampler::LinearInterpolation,
+                     AudioResult::FreqRespLinearNxN.data(),
+                     AudioResult::SinadLinearNxN.data());
+
+  // Final param signals to evaluate only at summary frequencies.
+  EvaluateFreqRespResults(AudioResult::FreqRespLinearNxN.data(),
+                          AudioResult::kPrevFreqRespLinearMicro.data(), true);
+}
+
+// Measure SINAD for NxN Linear sampler, with minimum rate change.
+TEST(Sinad, Linear_NxN) {
+  TestNxNEquivalence(Resampler::LinearInterpolation,
+                     AudioResult::FreqRespLinearNxN.data(),
+                     AudioResult::SinadLinearNxN.data());
+
+  // Final param signals to evaluate only at summary frequencies.
+  EvaluateSinadResults(AudioResult::SinadLinearNxN.data(),
+                       AudioResult::kPrevSinadLinearMicro.data(), true);
 }
 
 }  // namespace test

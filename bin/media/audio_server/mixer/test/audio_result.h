@@ -178,6 +178,9 @@ class AudioResult {
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevFreqRespLinearMicro;
 
+  static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespPointNxN;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespLinearNxN;
+
   // Signal-to-Noise-And-Distortion (SINAD)
   //
   // Sinad (signal-to-noise-and-distortion) is the ratio (in dBr) of reference
@@ -228,6 +231,9 @@ class AudioResult {
       kPrevSinadLinearUp2;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevSinadLinearMicro;
+
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointNxN;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearNxN;
 
   //
   //
@@ -286,12 +292,12 @@ class AudioResult {
   // determine a system's sensitivity to gain changes. We measure not only the
   // output level of the signal, but also the noise level across all other
   // frequencies. Performing these same measurements (output level and noise
-  // level) with a gain of -60 dB as well is the standard definition of Dynamic
-  // Range testing: by adding 60 dB to the measured signal-to-noise, one
-  // determines a system's usable range of data values (translatable into the
-  // more accessible Effective Number Of Bits metric). The level measurement at
-  // -60 dB is useful not only as a component of the "noise in the presence of
-  // signal" calculation, but also as a second avenue toward measuring a
+  // level) with other gains as well (-30dB, -60dB, -90dB) is the standard
+  // definition of Dynamic Range testing: adding these gains to the measured
+  // signal-to-noise determines a system's usable data range (translatable into
+  // the more accessible Effective Number Of Bits metric). Level measurements at
+  // these different gains are useful not only as components of the "noise in
+  // the presence of signal" calculation, but also as avenues toward measuring a
   // system's linearity/accuracy/precision with regard to data scaling and gain.
   static double DynRangeTolerance;
   static constexpr double kPrevDynRangeTolerance = 7.5380325e-03;
@@ -300,18 +306,25 @@ class AudioResult {
   static double LevelEpsilonDown;
   static constexpr double kPrevLevelEpsilonDown = -1.6807164e-04;
 
-  static double SinadEpsilonDown;
   // Previously-cached sinad when applying the smallest-detectable gain change.
-  static constexpr double kPrevSinadEpsilonDown = 93.232593;
+  static double SinadEpsilonDown;
+  static constexpr double kPrevSinadEpsilonDown = 91.3090642;
 
   // Level and unwanted artifacts -- as well as previously-cached threshold
-  // limits for the same -- when applying -60dB gain (measures dynamic range).
+  // limits for the same -- when applying -30dB gain (measures dynamic range).
+  static double Level30Down;
   static double Level60Down;
-  static constexpr double kPrevLevel60Down = 60.0;
+  static double Level90Down;
+
+  // Current and previously-cached sinad, when applying -30 / -60 / -90 dB gain.
+  static double Sinad30Down;
+  static constexpr double kPrevSinad30Down = 64.091308;
 
   static double Sinad60Down;
-  // Previously-cached sinad when applying exactly -60.0 dB gain.
-  static constexpr double kPrevSinad60Down = 34.196374;
+  static constexpr double kPrevSinad60Down = 34.196326;
+
+  static double Sinad90Down;
+  static constexpr double kPrevSinad90Down = 2.8879823;
 
   //
   //

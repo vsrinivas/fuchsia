@@ -88,6 +88,11 @@ std::array<double, FrequencySet::kNumReferenceFreqs>
 std::array<double, FrequencySet::kNumReferenceFreqs>
     AudioResult::FreqRespLinearMicro = {NAN};
 
+std::array<double, FrequencySet::kNumReferenceFreqs>
+    AudioResult::FreqRespPointNxN = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs>
+    AudioResult::FreqRespLinearNxN = {NAN};
+
 // clang-format off
 const std::array<double, FrequencySet::kNumReferenceFreqs>
     AudioResult::kPrevFreqRespPointUnity = {
@@ -248,6 +253,11 @@ std::array<double, FrequencySet::kNumReferenceFreqs>
 std::array<double, FrequencySet::kNumReferenceFreqs>
     AudioResult::SinadLinearMicro = {NAN};
 
+std::array<double, FrequencySet::kNumReferenceFreqs>
+    AudioResult::SinadPointNxN = {-INFINITY};
+std::array<double, FrequencySet::kNumReferenceFreqs>
+    AudioResult::SinadLinearNxN = {-INFINITY};
+
 // clang-format off
 const std::array<double, FrequencySet::kNumReferenceFreqs>
     AudioResult::kPrevSinadPointUnity = {
@@ -401,11 +411,18 @@ constexpr double AudioResult::kPrevLevelEpsilonDown;
 double AudioResult::SinadEpsilonDown = -INFINITY;
 constexpr double AudioResult::kPrevSinadEpsilonDown;
 
+double AudioResult::Level30Down = -INFINITY;
 double AudioResult::Level60Down = -INFINITY;
-constexpr double AudioResult::kPrevLevel60Down;
+double AudioResult::Level90Down = -INFINITY;
+
+double AudioResult::Sinad30Down = -INFINITY;
+constexpr double AudioResult::kPrevSinad30Down;
 
 double AudioResult::Sinad60Down = -INFINITY;
 constexpr double AudioResult::kPrevSinad60Down;
+
+double AudioResult::Sinad90Down = -INFINITY;
+constexpr double AudioResult::kPrevSinad90Down;
 
 //
 //
@@ -492,6 +509,9 @@ void AudioResult::DumpThresholdValues() {
   DumpFreqRespValues(AudioResult::FreqRespLinearUp2.data(), "FR-LinearUp2");
   DumpFreqRespValues(AudioResult::FreqRespLinearMicro.data(), "FR-LinearMicro");
 
+  DumpFreqRespValues(AudioResult::FreqRespPointNxN.data(), "FR-PointNxN");
+  DumpFreqRespValues(AudioResult::FreqRespLinearNxN.data(), "FR-LinearNxN");
+
   DumpSinadValues(AudioResult::SinadPointUnity.data(), "SinadPointUnity");
   DumpSinadValues(AudioResult::SinadPointDown1.data(), "SinadPointDown1");
   DumpSinadValues(AudioResult::SinadPointDown2.data(), "SinadPointDown2");
@@ -505,6 +525,9 @@ void AudioResult::DumpThresholdValues() {
   DumpSinadValues(AudioResult::SinadLinearUp1.data(), "SinadLinearUp1");
   DumpSinadValues(AudioResult::SinadLinearUp2.data(), "SinadLinearUp2");
   DumpSinadValues(AudioResult::SinadLinearMicro.data(), "SinadLinearMicro");
+
+  DumpSinadValues(AudioResult::SinadPointNxN.data(), "SinadPointNxN");
+  DumpSinadValues(AudioResult::SinadLinearNxN.data(), "SinadLinearNxN");
 
   DumpLevelValues();
   DumpLevelToleranceValues();
@@ -605,9 +628,17 @@ void AudioResult::DumpDynamicRangeValues() {
   printf("  Level: %12.8lf dB  Sinad: %10.6lf dB",
          AudioResult::LevelEpsilonDown, AudioResult::SinadEpsilonDown);
 
+  printf("\n       -30 dB down:                            ");
+  printf("  Level: %12.8lf dB  Sinad: %10.6lf dB", AudioResult::Level30Down,
+         AudioResult::Sinad30Down);
+
   printf("\n       -60 dB down:                            ");
   printf("  Level: %12.8lf dB  Sinad: %10.6lf dB", AudioResult::Level60Down,
          AudioResult::Sinad60Down);
+
+  printf("\n       -90 dB down:                            ");
+  printf("  Level: %12.8lf dB  Sinad: %10.6lf dB", AudioResult::Level90Down,
+         AudioResult::Sinad90Down);
 
   printf("\n       Gain Accuracy:     +/- %12.6le dB",
          AudioResult::DynRangeTolerance);

@@ -340,9 +340,15 @@ TEST(Recap, DynamicRange) {
          GainScaleToDb(AudioResult::kPrevScaleEpsilon),
          AudioResult::LevelEpsilonDown, AudioResult::kPrevLevelEpsilonDown,
          AudioResult::SinadEpsilonDown, AudioResult::kPrevSinadEpsilonDown);
+  printf("\n    -30.0000    %8.4lf   (+/- %6.4lf  )   %6.2lf (%5.2lf)",
+         AudioResult::Level30Down, AudioResult::kPrevDynRangeTolerance,
+         AudioResult::Sinad30Down, AudioResult::kPrevSinad30Down);
   printf("\n    -60.0000    %8.4lf   (+/- %6.4lf  )   %6.2lf (%5.2lf)",
          AudioResult::Level60Down, AudioResult::kPrevDynRangeTolerance,
          AudioResult::Sinad60Down, AudioResult::kPrevSinad60Down);
+  printf("\n    -90.0000    %8.4lf   (+/- %6.4lf  )   %6.2lf (%5.2lf)",
+         AudioResult::Level90Down, AudioResult::kPrevDynRangeTolerance,
+         AudioResult::Sinad90Down, AudioResult::kPrevSinad90Down);
   printf("\n\n");
 }
 
