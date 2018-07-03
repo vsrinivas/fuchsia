@@ -20,6 +20,7 @@ template("fidl_example") {
 }
 
 fidl_example("alignment") {}
+fidl_example("empty") {}
 fidl_example("enums") {}
 fidl_example("events") {}
 fidl_example("example-0") { nick = "example0" }
