@@ -51,7 +51,7 @@ pub fn listen_central_events(
 ) -> impl Future<Item = (), Error = Never> + Send {
     let evt_stream = state.read().get_svc().take_event_stream();
     evt_stream
-        .for_each(move |evt| {
+        .for_each_concurrent(move |evt| {
             match evt {
                 CentralEvent::OnScanStateChanged { scanning } => {
                     eprintln!("  scan state changed: {}", scanning);
