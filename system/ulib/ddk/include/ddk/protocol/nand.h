@@ -52,22 +52,9 @@ struct nand_info {
 // NOTE: The protocol can be extended with barriers to support controllers that
 // may issue multiple simultaneous request to the IO chips.
 
-
 #define NAND_OP_READ                    0x00000001
 #define NAND_OP_WRITE                   0x00000002
 #define NAND_OP_ERASE                   0x00000003
-
-// These operations are deprecated. Don't use for new code. See ZX-2233.
-#define NAND_OP_READ_DATA               0x00000001
-#define NAND_OP_WRITE_DATA              0x00000002
-#define NAND_OP_READ_OOB                0x00000004
-#define NAND_OP_WRITE_OOB               0x00000005
-
-#define NAND_OP_READ_PAGE_DATA_OOB      0x00000006      // Read exactly 1 page data+oob.
-#define NAND_OP_WRITE_PAGE_DATA_OOB     0x00000007      // Write exactly 1 page data+oob
-                                                        // one of data/oob can be absent.
-                                                        // Allows for data+oob to be updated
-                                                        // in 1 IO
 
 typedef struct nand_op nand_op_t;
 
@@ -120,48 +107,6 @@ struct nand_op {
             // be recycled.
             uint32_t corrected_bit_flips;
         } rw;
-
-        // NAND_OP_READ_PAGE_DATA_OOB, NAND_OP_WRITE_DATA_OOB, NAND_OP_READ_PAGE0
-        struct {
-            uint32_t command;            // Command.
-            uint32_t page_num;           // NAND page to read/write
-            struct {
-                zx_handle_t vmo;         // vmo of data to read or write
-                uint32_t length;         // data transfer length in pages
-                                         // permitted values are 0 or 1
-                                         // 0: no data to transfer
-                                         // 1: transfer exactly 1 page
-                uint64_t offset_vmo;     // vmo offset in pages
-            } data;
-            struct {
-                zx_handle_t vmo;         // vmo of data to read or write.
-                uint32_t length;         // transfer length in bytes.
-                                         // 0: no oob to transfer
-                                         // > 0: transfer oob bytes
-                uint64_t offset_vmo;     // vmo offset in *bytes*.
-            } oob;
-            // Return value from READ_PAGE_DATA_OOB, max corrected bit flips in any
-            // underlying ECC chunk read. The caller can compare this value
-            // against ecc_bits to decide whether the nand erase block needs to
-            // be recycled.
-            uint32_t corrected_bit_flips;
-        } rw_data_oob;
-
-        // TODO: Remove this
-        struct {
-            // This operation reads or writes OOB data for a single page.
-            uint32_t command;            // Command.
-            zx_handle_t vmo;             // vmo of data to read or write.
-            uint32_t length;             // Transfer length in bytes.
-                                         // (0 is invalid).
-            uint32_t page_num;           // Offset into nand, in pages.
-            uint64_t offset_vmo;         // vmo offset in bytes.
-            // Return value from READ_OOB, max corrected bit flips in any
-            // underlying ECC chunk read in order to access the OOB data. The
-            // caller can compare this value against ecc_bits to decide whether
-            // the nand erase block needs to be recycled.
-            uint32_t corrected_bit_flips;
-        } oob;
 
         // NAND_OP_ERASE.
         struct {

@@ -45,9 +45,8 @@ static zx_status_t nand_test_get_info(nand_device_t* dev, void* reply, size_t ma
     return ZX_OK;
 }
 
-static zx_status_t nand_test_read_page_data_oob(nand_device_t* dev, const void* cmd,
-                                                size_t cmd_length, void* reply, size_t max_reply_sz,
-                                                size_t* out_actual) {
+static zx_status_t nand_test_read(nand_device_t* dev, const void* cmd, size_t cmd_length,
+                                  void* reply, size_t max_reply_sz, size_t* out_actual) {
     nand_info_t nand_info;
     size_t nand_op_size_out;
     nand_io_t nand_io;
@@ -90,22 +89,14 @@ static zx_status_t nand_test_read_page_data_oob(nand_device_t* dev, const void* 
 
     completion_t completion = COMPLETION_INIT;
 
-    nand_op->command = NAND_OP_READ_PAGE_DATA_OOB;
-    nand_op->rw_data_oob.page_num = cmd_read_page->nand_page;
-    if (do_data) {
-        nand_op->rw_data_oob.data.vmo = vmo_data;
-        nand_op->rw_data_oob.data.length = 1;
-        nand_op->rw_data_oob.data.offset_vmo = 0;
-    } else {
-        nand_op->rw_data_oob.data.length = 0;
-    }
-    if (do_oob) {
-        nand_op->rw_data_oob.oob.vmo = vmo_oob;
-        nand_op->rw_data_oob.oob.length = cmd_read_page->oob_len;
-        nand_op->rw_data_oob.oob.offset_vmo = 0;
-    } else {
-        nand_op->rw_data_oob.oob.length = 0;
-    }
+    nand_op->command = NAND_OP_READ;
+    nand_op->rw.offset_nand = cmd_read_page->nand_page;
+    nand_op->rw.length = 1;
+    nand_op->rw.offset_data_vmo = 0;
+    nand_op->rw.offset_oob_vmo = 0;
+
+    nand_op->rw.data_vmo = do_data ? vmo_data : ZX_HANDLE_INVALID;
+    nand_op->rw.oob_vmo = do_oob ? vmo_oob : ZX_HANDLE_INVALID;
 
     nand_op->completion_cb = nandtest_complete;
     nand_op->cookie = &completion;
@@ -127,9 +118,8 @@ static zx_status_t nand_test_read_page_data_oob(nand_device_t* dev, const void* 
     return status;
 }
 
-static zx_status_t nand_test_write_page_data_oob(nand_device_t* dev, const void* cmd,
-                                                 size_t cmd_length, void* reply, size_t max_reply_sz,
-                                                 size_t* out_actual) {
+static zx_status_t nand_test_write(nand_device_t* dev, const void* cmd, size_t cmd_length,
+                                   void* reply, size_t max_reply_sz, size_t* out_actual) {
     nand_info_t nand_info;
     size_t nand_op_size_out;
     nand_io_t nand_io;
@@ -177,22 +167,14 @@ static zx_status_t nand_test_write_page_data_oob(nand_device_t* dev, const void*
     completion_t completion = COMPLETION_INIT;
 
     // Create nand_op.
-    nand_op->command = NAND_OP_WRITE_PAGE_DATA_OOB;
-    nand_op->rw_data_oob.page_num = cmd_write_page->nand_page;
-    if (do_data) {
-        nand_op->rw_data_oob.data.vmo = vmo_data;
-        nand_op->rw_data_oob.data.length = 1;
-        nand_op->rw_data_oob.data.offset_vmo = 0;
-    } else {
-        nand_op->rw_data_oob.data.length = 0;
-    }
-    if (do_oob) {
-        nand_op->rw_data_oob.oob.vmo = vmo_oob;
-        nand_op->rw_data_oob.oob.length = cmd_write_page->oob_len;
-        nand_op->rw_data_oob.oob.offset_vmo = 0;
-    } else {
-        nand_op->rw_data_oob.oob.length = 0;
-    }
+    nand_op->command = NAND_OP_WRITE;
+    nand_op->rw.offset_nand = cmd_write_page->nand_page;
+    nand_op->rw.length = 1;
+    nand_op->rw.offset_data_vmo = 0;
+    nand_op->rw.offset_oob_vmo = 0;
+
+    nand_op->rw.data_vmo = do_data ? vmo_data : ZX_HANDLE_INVALID;
+    nand_op->rw.oob_vmo = do_oob ? vmo_oob : ZX_HANDLE_INVALID;
 
     nand_op->completion_cb = nandtest_complete;
     nand_op->cookie = &completion;
@@ -278,11 +260,11 @@ zx_status_t nand_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmd_lengt
 
     // Read data + oob for a single page.
     case IOCTL_NAND_READ_PAGE_DATA_OOB:
-        return nand_test_read_page_data_oob(dev, cmd, cmd_length, reply, max_reply_sz, out_actual);
+        return nand_test_read(dev, cmd, cmd_length, reply, max_reply_sz, out_actual);
 
     // Write data + oob for a single page.
     case IOCTL_NAND_WRITE_PAGE_DATA_OOB:
-        return nand_test_write_page_data_oob(dev, cmd, cmd_length, reply, max_reply_sz, out_actual);
+        return nand_test_write(dev, cmd, cmd_length, reply, max_reply_sz, out_actual);
 
     // Construct and queue a ERASE command (for the block range) to the
     // nand driver, and send back the status.
