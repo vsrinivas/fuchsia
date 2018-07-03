@@ -12,9 +12,11 @@
 namespace btlib {
 namespace l2cap {
 
-Channel::Channel(ChannelId id, hci::Connection::LinkType link_type,
+Channel::Channel(ChannelId id, ChannelId remote_id,
+                 hci::Connection::LinkType link_type,
                  hci::ConnectionHandle link_handle)
     : id_(id),
+      remote_id_(remote_id),
       link_type_(link_type),
       link_handle_(link_handle),
 
@@ -37,9 +39,10 @@ void RunTask(async_dispatcher_t* dispatcher, fit::closure task) {
   task();
 }
 
-ChannelImpl::ChannelImpl(ChannelId id, fxl::WeakPtr<internal::LogicalLink> link,
+ChannelImpl::ChannelImpl(ChannelId id, ChannelId remote_id,
+                         fxl::WeakPtr<internal::LogicalLink> link,
                          std::list<PDU> buffered_pdus)
-    : Channel(id, link->type(), link->handle()),
+    : Channel(id, remote_id, link->type(), link->handle()),
       active_(false),
       dispatcher_(nullptr),
       link_(link),
@@ -108,7 +111,7 @@ void ChannelImpl::Deactivate() {
   closed_cb_ = {};
 
   // Tell the link to release this channel on its thread.
-  async::PostTask(link_->dispatcher(), [this, link = link_, id = id()] {
+  async::PostTask(link_->dispatcher(), [this, link = link_] {
     // If |link| is still alive than |this| must be valid since |link| holds a
     // reference to us.
     if (link) {
@@ -150,7 +153,7 @@ bool ChannelImpl::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
     return false;
 
   async::PostTask(link_->dispatcher(),
-                  [id = id(), link = link_, sdu = std::move(sdu)] {
+                  [id = remote_id(), link = link_, sdu = std::move(sdu)] {
                     if (link) {
                       link->SendBasicFrame(id, *sdu);
                     }

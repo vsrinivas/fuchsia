@@ -12,13 +12,9 @@ namespace btlib {
 namespace l2cap {
 namespace testing {
 
-void FakeLayer::Initialize() {
-  initialized_ = true;
-}
+void FakeLayer::Initialize() { initialized_ = true; }
 
-void FakeLayer::ShutDown() {
-  initialized_ = false;
-}
+void FakeLayer::ShutDown() { initialized_ = false; }
 
 void FakeLayer::TriggerLEConnectionParameterUpdate(
     hci::ConnectionHandle handle,
@@ -30,8 +26,9 @@ void FakeLayer::TriggerLEConnectionParameterUpdate(
       << "l2cap: fake link not found: (handle: " << handle << ")";
 
   LinkData& link_data = iter->second;
-  async::PostTask(link_data.dispatcher,
-                  [params, cb = link_data.le_conn_param_cb.share()] { cb(params); });
+  async::PostTask(
+      link_data.dispatcher,
+      [params, cb = link_data.le_conn_param_cb.share()] { cb(params); });
 }
 
 void FakeLayer::AddACLConnection(hci::ConnectionHandle handle,
@@ -53,14 +50,14 @@ void FakeLayer::AddLEConnection(
   if (!initialized_)
     return;
 
-  LinkData* data = RegisterInternal(handle, role,
-                                    hci::Connection::LinkType::kLE,
-                                    std::move(link_error_cb), dispatcher);
+  LinkData* data =
+      RegisterInternal(handle, role, hci::Connection::LinkType::kLE,
+                       std::move(link_error_cb), dispatcher);
   data->le_conn_param_cb = std::move(conn_param_cb);
 
   // Open the ATT and SMP fixed channels.
-  auto att = OpenFakeChannel(data, kATTChannelId);
-  auto smp = OpenFakeChannel(data, kLESMPChannelId);
+  auto att = OpenFakeFixedChannel(data, kATTChannelId);
+  auto smp = OpenFakeFixedChannel(data, kLESMPChannelId);
   async::PostTask(dispatcher, [att = std::move(att), smp = std::move(smp),
                                cb = std::move(channel_callback)]() mutable {
     cb(std::move(att), std::move(smp));
@@ -71,8 +68,10 @@ void FakeLayer::RemoveConnection(hci::ConnectionHandle handle) {
   links_.erase(handle);
 }
 
-fbl::RefPtr<Channel> FakeLayer::OpenFakeChannel(LinkData* link, ChannelId id) {
-  auto chan = fbl::AdoptRef(new FakeChannel(id, link->handle, link->type));
+fbl::RefPtr<Channel> FakeLayer::OpenFakeChannel(LinkData* link, ChannelId id,
+                                                ChannelId remote_id) {
+  auto chan =
+      fbl::AdoptRef(new FakeChannel(id, remote_id, link->handle, link->type));
   chan->SetLinkErrorCallback(link->link_error_cb.share(), link->dispatcher);
 
   if (chan_cb_) {
@@ -83,10 +82,8 @@ fbl::RefPtr<Channel> FakeLayer::OpenFakeChannel(LinkData* link, ChannelId id) {
 }
 
 FakeLayer::LinkData* FakeLayer::RegisterInternal(
-    hci::ConnectionHandle handle,
-    hci::Connection::Role role,
-    hci::Connection::LinkType link_type,
-    LinkErrorCallback link_error_cb,
+    hci::ConnectionHandle handle, hci::Connection::Role role,
+    hci::Connection::LinkType link_type, LinkErrorCallback link_error_cb,
     async_dispatcher_t* dispatcher) {
   FXL_DCHECK(links_.find(handle) == links_.end())
       << "l2cap: Connection handle re-used!";

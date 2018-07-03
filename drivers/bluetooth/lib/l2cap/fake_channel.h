@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_FAKE_CHANNEL_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_FAKE_CHANNEL_H_
 
 #include <memory>
 
@@ -24,8 +25,7 @@ namespace testing {
 // channel.
 class FakeChannel : public Channel {
  public:
-  FakeChannel(ChannelId id,
-              hci::ConnectionHandle handle,
+  FakeChannel(ChannelId id, ChannelId remote_id, hci::ConnectionHandle handle,
               hci::Connection::LinkType link_type);
   ~FakeChannel() override = default;
 
@@ -63,8 +63,7 @@ class FakeChannel : public Channel {
 
  protected:
   // Channel overrides:
-  bool Activate(RxCallback rx_callback,
-                ClosedCallback closed_callback,
+  bool Activate(RxCallback rx_callback, ClosedCallback closed_callback,
                 async_dispatcher_t* dispatcher) override;
   void Deactivate() override;
   void SignalLinkError() override;
@@ -101,3 +100,5 @@ class FakeChannel : public Channel {
 }  // namespace testing
 }  // namespace l2cap
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_FAKE_CHANNEL_H_

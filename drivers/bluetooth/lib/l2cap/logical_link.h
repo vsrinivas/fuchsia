@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_LOGICAL_LINK_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_LOGICAL_LINK_H_
 
 #include <list>
 #include <memory>
@@ -41,10 +42,8 @@ class SignalingChannel;
 // Instances are created and owned by a ChannelManager.
 class LogicalLink final {
  public:
-  LogicalLink(hci::ConnectionHandle handle,
-              hci::Connection::LinkType type,
-              hci::Connection::Role role,
-              async_dispatcher_t* dispatcher,
+  LogicalLink(hci::ConnectionHandle handle, hci::Connection::LinkType type,
+              hci::Connection::Role role, async_dispatcher_t* dispatcher,
               fxl::RefPtr<hci::Transport> hci);
 
   // When a logical link is destroyed it notifies all of its channels to close
@@ -62,13 +61,15 @@ class LogicalLink final {
   void HandleRxPacket(hci::ACLDataPacketPtr packet);
 
   // Sends a B-frame PDU out over the ACL data channel, where |payload| is the
-  // B-frame information payload. |id| identifies the L2CAP channel that this
-  // frame is coming from. This must be called on the creation thread.
-  void SendBasicFrame(ChannelId id, const common::ByteBuffer& payload);
+  // B-frame information payload. |remote_id| identifies the destination peer's
+  // L2CAP channel endpoint for this frame. This must be called on the creation
+  // thread.
+  void SendBasicFrame(ChannelId remote_id, const common::ByteBuffer& payload);
 
   // Assigns the link error callback to be invoked when a channel signals a link
   // error.
-  void set_error_callback(fit::closure callback, async_dispatcher_t* dispatcher);
+  void set_error_callback(fit::closure callback,
+                          async_dispatcher_t* dispatcher);
 
   // Returns the dispatcher that this LogicalLink operates on.
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
@@ -137,3 +138,5 @@ class LogicalLink final {
 }  // namespace internal
 }  // namespace l2cap
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_LOGICAL_LINK_H_

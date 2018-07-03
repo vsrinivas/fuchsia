@@ -45,7 +45,8 @@ constexpr bool IsValidBREDRFixedChannel(ChannelId id) {
 
 LogicalLink::LogicalLink(hci::ConnectionHandle handle,
                          hci::Connection::LinkType type,
-                         hci::Connection::Role role, async_dispatcher_t* dispatcher,
+                         hci::Connection::Role role,
+                         async_dispatcher_t* dispatcher,
                          fxl::RefPtr<hci::Transport> hci)
     : hci_(hci),
       dispatcher_(dispatcher),
@@ -106,8 +107,10 @@ fbl::RefPtr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
     pending_pdus_.erase(pp_iter);
   }
 
-  auto chan = fbl::AdoptRef(
-      new ChannelImpl(id, weak_ptr_factory_.GetWeakPtr(), std::move(pending)));
+  // A fixed channel's endpoints have the same local and remote identifiers.
+  auto chan = fbl::AdoptRef(new ChannelImpl(id /* id */, id /* remote_id */,
+                                            weak_ptr_factory_.GetWeakPtr(),
+                                            std::move(pending)));
   channels_[id] = chan;
 
   return chan;

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_FAKE_LAYER_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_FAKE_LAYER_H_
 
 #include <unordered_map>
 
@@ -72,7 +73,11 @@ class FakeLayer final : public L2CAP {
                              hci::Connection::LinkType link_type,
                              LinkErrorCallback link_error_callback,
                              async_dispatcher_t* dispatcher);
-  fbl::RefPtr<Channel> OpenFakeChannel(LinkData* link, ChannelId id);
+  fbl::RefPtr<Channel> OpenFakeChannel(LinkData* link, ChannelId id,
+                                       ChannelId remote_id);
+  fbl::RefPtr<Channel> OpenFakeFixedChannel(LinkData* link, ChannelId id) {
+    return OpenFakeChannel(link, id, id);
+  }
 
   bool initialized_ = false;
   std::unordered_map<hci::ConnectionHandle, LinkData> links_;
@@ -84,3 +89,5 @@ class FakeLayer final : public L2CAP {
 }  // namespace testing
 }  // namespace l2cap
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_FAKE_LAYER_H_

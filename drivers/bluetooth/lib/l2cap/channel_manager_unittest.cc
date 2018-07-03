@@ -56,8 +56,7 @@ class L2CAP_ChannelManagerTest : public TestingBase {
   }
 
   fbl::RefPtr<Channel> ActivateNewFixedChannel(
-      ChannelId id,
-      hci::ConnectionHandle conn_handle = kTestHandle1,
+      ChannelId id, hci::ConnectionHandle conn_handle = kTestHandle1,
       Channel::ClosedCallback closed_cb = DoNothing,
       Channel::RxCallback rx_cb = NopRxCallback) {
     auto chan = chanmgr()->OpenFixedChannel(conn_handle, id);
@@ -457,13 +456,51 @@ TEST_F(L2CAP_ChannelManagerTest, SendBasicSdu) {
   EXPECT_TRUE(common::ContainersEqual(expected, *received));
 }
 
+TEST_F(L2CAP_ChannelManagerTest, SendDynamicChannelSdu) {
+  constexpr ChannelId kLocalId = 0x0040;
+  constexpr ChannelId kRemoteId = 0x9042;
+
+  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
+                        [](auto) {}, DoNothing, dispatcher());
+
+  // For testing how the SDU is encoded, open a "fixed" channel then assign it
+  // different local and remote channel IDs in the dynamic channels range (as
+  // would be likely in production).
+  // TODO(xow): Fix this test after dynamic channels are implemented for
+  // ChannelManager
+  auto dyn_chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
+  FXL_DCHECK(dyn_chan);
+  dyn_chan->set_id_for_testing(kLocalId);
+  dyn_chan->set_remote_id_for_testing(kRemoteId);
+
+  std::unique_ptr<common::ByteBuffer> received;
+  auto data_cb = [&received](const common::ByteBuffer& bytes) {
+    received = std::make_unique<common::DynamicByteBuffer>(bytes);
+  };
+  test_device()->SetDataCallback(data_cb, dispatcher());
+
+  EXPECT_TRUE(dyn_chan->Send(common::NewBuffer('T', 'e', 's', 't')));
+
+  RunLoopUntilIdle();
+  ASSERT_TRUE(received);
+
+  auto expected = common::CreateStaticByteBuffer(
+      // ACL data header (handle: 1, length 7)
+      0x01, 0x00, 0x08, 0x00,
+
+      // L2CAP B-frame: (length: 3, channel-id: 0x9042)
+      0x04, 0x00, 0x42, 0x90, 'T', 'e', 's', 't');
+
+  EXPECT_TRUE(common::ContainersEqual(expected, *received));
+}
+
 // Tests that fragmentation of LE vs BR/EDR packets is based on the same
 // fragment size.
 TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdus) {
   constexpr size_t kMaxNumPackets =
       100;  // Make this large to avoid simulating flow-control.
   constexpr size_t kMaxDataSize = 5;
-  //constexpr size_t kExpectedNumFragments = 5;
+  // constexpr size_t kExpectedNumFragments = 5;
 
   // No LE buffers.
   TearDown();
@@ -564,7 +601,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdusDifferentBuffers) {
       100;  // This is large to avoid having to simulate flow-control
   constexpr size_t kMaxACLDataSize = 6;
   constexpr size_t kMaxLEDataSize = 10;
-  //constexpr size_t kExpectedNumFragments = 3;
+  // constexpr size_t kExpectedNumFragments = 3;
 
   TearDown();
   SetUp(hci::DataBufferInfo(kMaxACLDataSize, kMaxNumPackets),
@@ -643,9 +680,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdusDifferentBuffers) {
 
 TEST_F(L2CAP_ChannelManagerTest, LEChannelSignalLinkError) {
   bool link_error = false;
-  auto link_error_cb = [&link_error, this] {
-    link_error = true;
-  };
+  auto link_error_cb = [&link_error, this] { link_error = true; };
   chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
                         [](auto) {}, link_error_cb, dispatcher());
 
@@ -662,9 +697,7 @@ TEST_F(L2CAP_ChannelManagerTest, LEChannelSignalLinkError) {
 
 TEST_F(L2CAP_ChannelManagerTest, ACLChannelSignalLinkError) {
   bool link_error = false;
-  auto link_error_cb = [&link_error, this] {
-    link_error = true;
-  };
+  auto link_error_cb = [&link_error, this] { link_error = true; };
   chanmgr()->RegisterACL(kTestHandle1, hci::Connection::Role::kMaster,
                          link_error_cb, dispatcher());
 

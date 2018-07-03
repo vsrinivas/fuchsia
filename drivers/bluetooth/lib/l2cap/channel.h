@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_CHANNEL_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_CHANNEL_H_
 
 #include <atomic>
 #include <list>
@@ -53,7 +54,19 @@ namespace l2cap {
 // Activate().
 class Channel : public fbl::RefCounted<Channel> {
  public:
+  // Identifier for this channel's endpoint on this device. It can be prior-
+  // specified for fixed channels or allocated for dynamic channels per v5.0,
+  // Vol 3, Part A, Section 2.1 "Channel Identifiers." Channels on a link will
+  // have unique identifiers to each other.
   ChannelId id() const { return id_; }
+
+  // Identifier for this channel's endpoint on the remote peer. Same value as
+  // |id()| for fixed channels and allocated by the remote for dynamic channels.
+  ChannelId remote_id() const { return remote_id_; }
+
+  // TODO(xow): Remove setters after fixing tests to no longer mutate Channels
+  void set_id_for_testing(ChannelId id) { id_ = id; }
+  void set_remote_id_for_testing(ChannelId id) { remote_id_ = id; }
 
   // Callback invoked when this channel has been closed without an explicit
   // request from the owner of this instance. For example, this can happen when
@@ -111,11 +124,13 @@ class Channel : public fbl::RefCounted<Channel> {
 
  protected:
   friend class fbl::RefPtr<Channel>;
-  Channel(ChannelId id, hci::Connection::LinkType link_type,
+  Channel(ChannelId id, ChannelId remote_id,
+          hci::Connection::LinkType link_type,
           hci::ConnectionHandle link_handle);
   virtual ~Channel() = default;
 
   ChannelId id_;
+  ChannelId remote_id_;
   hci::Connection::LinkType link_type_;
   hci::ConnectionHandle link_handle_;
 
@@ -144,7 +159,8 @@ class ChannelImpl : public Channel {
   friend class fbl::RefPtr<ChannelImpl>;
   friend class internal::LogicalLink;
 
-  ChannelImpl(ChannelId id, fxl::WeakPtr<internal::LogicalLink> link,
+  ChannelImpl(ChannelId id, ChannelId remote_id,
+              fxl::WeakPtr<internal::LogicalLink> link,
               std::list<PDU> buffered_pdus);
   ~ChannelImpl() override = default;
 
@@ -191,3 +207,5 @@ class ChannelImpl : public Channel {
 }  // namespace internal
 }  // namespace l2cap
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_CHANNEL_H_

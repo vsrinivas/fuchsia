@@ -12,8 +12,8 @@ namespace testing {
 
 fbl::RefPtr<FakeChannel> FakeChannelTest::CreateFakeChannel(
     const ChannelOptions& options) {
-  auto fake_chan = fbl::AdoptRef(
-      new FakeChannel(options.id, options.conn_handle, options.link_type));
+  auto fake_chan = fbl::AdoptRef(new FakeChannel(
+      options.id, options.remote_id, options.conn_handle, options.link_type));
   fake_chan_ = fake_chan->AsWeakPtr();
   return fake_chan;
 }
