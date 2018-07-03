@@ -17,7 +17,7 @@ var (
 	defaultx64Arg = Arg{
 		Name: "default",
 		DefaultVal: argValue{
-			Val:  false,
+			Val:  "false",
 			File: "//test/BUILD.gn",
 			Line: 2,
 		},
@@ -28,7 +28,7 @@ var (
 	defaultarm64Arg = Arg{
 		Name: "default",
 		DefaultVal: argValue{
-			Val:  false,
+			Val:  "false",
 			File: "//test/BUILD.gn",
 			Line: 2,
 		},
@@ -55,12 +55,12 @@ var (
 	defaultx64ArgWithCurrent = Arg{
 		Name: "default_current",
 		CurrentVal: argValue{
-			Val:  3,
+			Val:  "3",
 			File: "//build/BUILD.gn",
 			Line: 24,
 		},
 		DefaultVal: argValue{
-			Val:  4,
+			Val:  "4",
 			File: "//base/BUILD.gn",
 			Line: 2,
 		},
@@ -71,10 +71,10 @@ var (
 	x64Arg = Arg{
 		Name: "x64",
 		CurrentVal: argValue{
-			Val: 1,
+			Val: "1",
 		},
 		DefaultVal: argValue{
-			Val: 2,
+			Val: "2",
 		},
 		Comment: "Description of x64 arg that references //build/path.py, //sources, and //base.\n",
 		Key:     "target_cpu = x64",
@@ -139,6 +139,15 @@ var (
 		Comment: "Description of x64 arg.\n",
 		Key:     "target_cpu = x64, package='other/package/default'",
 	}
+
+	newLineValueArg = Arg{
+		Name: "NewLine",
+		DefaultVal: argValue{
+			Val: "{\n  base = \"//build/toolchain/fuchsia:x64\"\n}",
+		},
+		Comment: "Description of newline arg.\n",
+		Key:     "target_cpu = x64, package='other/package/default'",
+	}
 )
 
 func Sources() *SourceMap {
@@ -169,7 +178,8 @@ func TestDefault(t *testing.T) {
 Description of default arg.
 
 **Current value (from the default):** ` + "`false`" + `
-	From //test/BUILD.gn:2
+
+From //test/BUILD.gn:2
 
 `
 	if expected != actual {
@@ -198,16 +208,20 @@ func TestDefaultWithCurrent(t *testing.T) {
 Description of default_current arg.
 
 **Current value for ` + "`target_cpu = arm64`:** `[1, 2]`" + `
-	From [//build/BUILD.gn:24](http://fuchsia.com/build/BUILD.gn#24)
+
+From [//build/BUILD.gn:24](http://fuchsia.com/build/BUILD.gn#24)
 
 **Overridden from the default:** ` + "`[3, 4]`" + `
-	From [//base/BUILD.gn:4](http://fuchsia.com/base/BUILD.gn#4)
+
+From [//base/BUILD.gn:4](http://fuchsia.com/base/BUILD.gn#4)
 
 **Current value for ` + "`target_cpu = x64`:** `3`" + `
-	From [//build/BUILD.gn:24](http://fuchsia.com/build/BUILD.gn#24)
+
+From [//build/BUILD.gn:24](http://fuchsia.com/build/BUILD.gn#24)
 
 **Overridden from the default:**` + " `4`" + `
-	From [//base/BUILD.gn:2](http://fuchsia.com/base/BUILD.gn#2)
+
+From [//base/BUILD.gn:2](http://fuchsia.com/base/BUILD.gn#2)
 
 `
 
@@ -309,5 +323,38 @@ Description of x64 arg.
 `
 	if expected != actual {
 		t.Fatalf("In TestUnique, expected \n%s but got \n%s", expected, actual)
+	}
+}
+
+func TestValueNewLine(t *testing.T) {
+
+	gnArgs := []Arg{newLineValueArg}
+	argMap := NewArgMap(Sources())
+	for _, arg := range gnArgs {
+		argMap.AddArg(arg)
+	}
+
+	// No file name emits to stdout.
+	var buffer bytes.Buffer
+	argMap.EmitMarkdown(&buffer)
+
+	actual := buffer.String()
+	expected := `# GN Build Arguments
+
+## All builds
+
+### NewLine
+Description of newline arg.
+
+**Current value (from the default):**
+` + "```" + `
+{
+  base = "//build/toolchain/fuchsia:x64"
+}
+` + "```" + `
+
+`
+	if expected != actual {
+		t.Fatalf("In TestDefault, expected \n%s but got \n%s", expected, actual)
 	}
 }

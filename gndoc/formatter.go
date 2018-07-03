@@ -38,17 +38,24 @@ func writeArgs(args []Arg, out io.Writer, sources *SourceMap) {
 
 // writeValue emits the value of a given argument value, along with the associated Markdown link to its declaration and build (if present).
 func writeValue(a *argValue, out io.Writer, sources *SourceMap) {
+	var value string
+	if strings.Contains(a.Val, "\n") {
+		value = fmt.Sprintf("\n```\n%s\n```", a.Val)
+	} else {
+		value = fmt.Sprintf(" `%s`", a.Val)
+	}
+
 	if a.File == "" {
 		// If there is no declaration file, emit just the value.
-		fmt.Fprintf(out, "`%v`\n\n", a.Val)
+		fmt.Fprintf(out, "%s\n\n", value)
 	} else {
 		// Otherwise, emit the value with a link to the declaration.
 		link := sources.GetSourceLink(a.File, a.Line)
 		if link == "" {
-			fmt.Fprintf(out, "`%v`\n\tFrom %s:%d\n\n", a.Val, a.File, a.Line)
+			fmt.Fprintf(out, "%s\n\nFrom %s:%d\n\n", value, a.File, a.Line)
 			return
 		}
-		fmt.Fprintf(out, "`%v`\n\tFrom [%s:%d](%s)\n\n", a.Val, a.File, a.Line, link)
+		fmt.Fprintf(out, "%s\n\nFrom [%s:%d](%s)\n\n", value, a.File, a.Line, link)
 	}
 }
 
@@ -66,13 +73,13 @@ func writeAllValues(args []Arg, out io.Writer, sources *SourceMap) {
 	emptyArgValue := argValue{}
 	for _, a := range args {
 		if a.CurrentVal == emptyArgValue || a.CurrentVal == a.DefaultVal {
-			fmt.Fprintf(out, "**Current value (from the default):** ")
+			fmt.Fprintf(out, "**Current value (from the default):**")
 			writeValue(&a.DefaultVal, out, sources)
 			return
 		}
-		fmt.Fprintf(out, "**Current value for `%s`:** ", a.Key)
+		fmt.Fprintf(out, "**Current value for `%s`:**", a.Key)
 		writeValue(&a.CurrentVal, out, sources)
-		fmt.Fprintf(out, "**Overridden from the default:** ")
+		fmt.Fprintf(out, "**Overridden from the default:**")
 		writeValue(&a.DefaultVal, out, sources)
 	}
 }

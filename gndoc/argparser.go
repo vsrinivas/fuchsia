@@ -23,9 +23,9 @@ type Arg struct {
 
 // ArgValue holds a value, its filepath and line number, and the build associated with the value.
 type argValue struct {
-	Val  interface{} `json:"value"`
-	File string      `json:"file"`
-	Line int         `json:"line"`
+	Val  string `json:"value"`
+	File string `json:"file"`
+	Line int    `json:"line"`
 }
 
 // ParseGNArgs runs the necessary gn commands and decodes the json output into a channel of GNArgs.
