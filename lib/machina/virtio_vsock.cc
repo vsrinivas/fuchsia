@@ -170,13 +170,17 @@ void VirtioVsock::ConnectCallback(ConnectionKey key, zx_status_t status,
 
   {
     fbl::AutoLock lock(&mutex_);
-    AddConnectionLocked(key, std::move(new_conn));
+    zx_status_t add_status = AddConnectionLocked(key, std::move(new_conn));
+    if (add_status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to add connection " << add_status;
+      return;
+    } else if (status != ZX_OK) {
+      conn->UpdateOp(VIRTIO_VSOCK_OP_RST);
+      status = WaitOnQueueLocked(key, &readable_, &rx_stream_);
+      return;
+    }
   }
 
-  if (status != ZX_OK) {
-    conn->UpdateOp(VIRTIO_VSOCK_OP_RST);
-    return;
-  }
   conn->socket = std::move(socket);
   conn->UpdateOp(VIRTIO_VSOCK_OP_RESPONSE);
   status = SetupConnection(key, conn);
@@ -559,11 +563,17 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
 
     Connection* conn = GetConnectionLocked(key);
     if (header->op == VIRTIO_VSOCK_OP_REQUEST) {
-      // We received a request for the guest to connect to an external CID.
-      // If we don't have a socket connector then implicitly just refuse any
-      // outbound connections. Otherwise send out a request for a socket
-      // connection to the remote CID.
-      if (connector_) {
+      if (conn != nullptr) {
+        // If a connection already exists, then the device is in a bad state and
+        // the connection should be shut down.
+        set_shutdown(header);
+        FXL_LOG(ERROR) << "Connection request for an existing connection";
+      } else if (connector_) {
+        // We received a request for the guest to connect to an external CID.
+        //
+        // If we don't have a socket connector then implicitly just refuse any
+        // outbound connections. Otherwise send out a request for a socket
+        // connection to the remote CID.
         connector_->Connect(header->src_port, header->dst_cid, header->dst_port,
                             [this, key](zx_status_t status, zx::socket socket) {
                               ConnectCallback(key, status, std::move(socket));
