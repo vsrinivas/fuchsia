@@ -5,8 +5,6 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.net.oldhttp") {
-  cpp_legacy_callbacks = true
-
   sources = [
     "http_error.fidl",
     "http_header.fidl",

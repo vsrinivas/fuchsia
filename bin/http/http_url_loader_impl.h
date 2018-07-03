@@ -30,11 +30,11 @@ class URLLoaderImpl : public ::fuchsia::net::oldhttp::URLLoader {
   template <typename T>
   class HTTPClient;
 
-  using Callback = std::function<void(::fuchsia::net::oldhttp::URLResponse)>;
+  using Callback = fit::function<void(::fuchsia::net::oldhttp::URLResponse)>;
 
   // URLLoader methods:
-  void Start(::fuchsia::net::oldhttp::URLRequest request, Callback callback) override;
-  void FollowRedirect(Callback callback) override;
+  void Start(::fuchsia::net::oldhttp::URLRequest request, StartCallback callback) override;
+  void FollowRedirect(FollowRedirectCallback callback) override;
   void QueryStatus(QueryStatusCallback callback) override;
 
   void SendError(int error_code);

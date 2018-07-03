@@ -41,7 +41,7 @@ void URLLoaderImpl::Start(oldhttp::URLRequest request, Callback callback) {
 
 void URLLoaderImpl::FollowRedirect(Callback callback) {
   FXL_NOTIMPLEMENTED();
-  callback_ = callback;
+  callback_ = std::move(callback);
   SendError(HTTP_ERR_NOT_IMPLEMENTED);
 }
 
