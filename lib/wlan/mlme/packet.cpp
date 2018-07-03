@@ -52,24 +52,23 @@ zx_status_t Packet::AsWlanTxPacket(wlan_tx_packet_t* tx_pkt) {
 
 fbl::unique_ptr<Buffer> GetBuffer(size_t len) {
     fbl::unique_ptr<Buffer> buffer;
-    // TODO(tkilbourn): implement a better fallback system here
-    if (len > kLargeBufferSize) {
-        buffer = HugeBufferAllocator::New();
-    } else if (len > kSmallBufferSize) {
-        buffer = LargeBufferAllocator::New();
-        if (buffer == nullptr) {
-            // Fallback to huge buffers.
-            buffer = HugeBufferAllocator::New();
-        }
-    } else {
+
+    if (len <= kSmallBufferSize) {
         buffer = SmallBufferAllocator::New();
-        if (buffer == nullptr) {
-            // Fall back to the large buffers if we're out of small buffers.
-            buffer = LargeBufferAllocator::New();
-            if (buffer == nullptr) { buffer = HugeBufferAllocator::New(); }
-        }
+        if (buffer != nullptr) { return buffer; }
     }
-    return buffer;
+
+    if (len <= kLargeBufferSize) {
+        buffer = LargeBufferAllocator::New();
+        if (buffer != nullptr) { return buffer; }
+    }
+
+    if (len <= kHugeBufferSize) {
+        buffer = HugeBufferAllocator::New();
+        if (buffer != nullptr) { return buffer; }
+    }
+
+    return nullptr;
 }
 
 }  // namespace wlan
