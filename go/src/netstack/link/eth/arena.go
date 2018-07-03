@@ -38,7 +38,7 @@ type Arena struct {
 // NewArena creates a new Arena of fixed size.
 func NewArena() (*Arena, error) {
 	iosize := uint64(numBuffers * bufferSize)
-	iovmo, err := zx.NewVMO(uint64(iosize), 0)
+	iovmo, err := zx.NewVMO(uint64(iosize), zx.VMOOptionNonResizable)
 	if err != nil {
 		return nil, fmt.Errorf("eth: cannot allocate I/O VMO: %v", err)
 	}
