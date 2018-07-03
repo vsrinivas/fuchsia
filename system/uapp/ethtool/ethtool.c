@@ -156,7 +156,7 @@ int initialize_ethernet(ethtool_options_t* options) {
     unsigned count = fifos.rx_depth / 2;
     zx_handle_t iovmo;
     // allocate shareable ethernet buffer data heap
-    if ((status = zx_vmo_create(count * BUFSIZE, 0, &iovmo)) < 0) {
+    if ((status = zx_vmo_create(count * BUFSIZE, ZX_VMO_NON_RESIZABLE, &iovmo)) < 0) {
         return -1;
     }
 

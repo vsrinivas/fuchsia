@@ -210,7 +210,7 @@ int main(int argc, char** argv) {
     // followed by BUFS entries representing tx buffers.
     unsigned count = BUFS * 2;
     zx_handle_t iovmo;
-    if ((status = zx_vmo_create(count * BUFSIZE, 0, &iovmo)) < 0) {
+    if ((status = zx_vmo_create(count * BUFSIZE, ZX_VMO_NON_RESIZABLE, &iovmo)) < 0) {
         return -1;
     }
     char* iobuf;
