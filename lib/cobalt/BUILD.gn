@@ -22,7 +22,7 @@ source_set("cobalt") {
   deps = [
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/callback",
-    "//zircon/public/fidl/cobalt:cobalt",
+    "//zircon/public/fidl/fuchsia-cobalt",
   ]
 }
 

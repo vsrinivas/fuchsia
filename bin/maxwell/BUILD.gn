@@ -56,7 +56,7 @@ source_set("user_intelligence_provider") {
     "//peridot/lib:maxwell_internal",
     "//peridot/lib/util:rate_limited_retry",
     "//peridot/public/fidl/fuchsia.modular",
-    "//zircon/public/fidl/cobalt:cobalt",
+    "//zircon/public/fidl/fuchsia-cobalt",
   ]
 }
 

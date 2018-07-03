@@ -19,7 +19,7 @@ source_set("cobalt") {
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/callback",
     "//peridot/lib/cobalt",
-    "//zircon/public/fidl/cobalt:cobalt",
+    "//zircon/public/fidl/fuchsia-cobalt",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]
