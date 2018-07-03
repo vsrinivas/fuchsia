@@ -249,8 +249,7 @@ void LegacyLowEnergyScanner::OnAdvertisingReportEvent(
       case LEAdvertisingEventType::kAdvDirectInd:
         // TODO(armansito): Forward this to a subroutine that can be shared with
         // the LE Directed Advertising eport event handler.
-        FXL_LOG(WARNING)
-            << "gap: LegacyLowEnergyScanner: ignoring ADV_DIRECT_IND";
+        FXL_VLOG(2) << "gap: LegacyLowEnergyScanner: ignoring ADV_DIRECT_IND";
         continue;
       case LEAdvertisingEventType::kAdvInd:
         connectable = true;
