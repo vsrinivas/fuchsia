@@ -912,7 +912,6 @@ bool Library::SortDeclarations() {
         return Fail("There is an includes-cycle in declarations");
     }
 
-    assert(declaration_order_.size() != 0u);
     return true;
 }
 
