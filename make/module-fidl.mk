@@ -34,8 +34,6 @@ ifneq ($(strip $(MODULE_PACKAGE)),)
 MODULE_PKG_FILE := $(MODULE_BUILDDIR)/$(MODULE_NAME).pkg
 MODULE_EXP_FILE := $(BUILDDIR)/export/$(MODULE_NAME).pkg
 
-MODULE_PKG_INCS += $(foreach inc,$(sort $(ABIGEN_PUBLIC_HEADERS)),$(patsubst $(ABIGEN_BUILDDIR)/%,%,$(inc))=$(patsubst $(BUILDDIR)/%,BUILD/%,$(inc)))
-
 MODULE_PKG_SRCS := $(MODULE_SRCS)
 MODULE_PKG_DEPS := $(MODULE_FIDL_DEPS)
 

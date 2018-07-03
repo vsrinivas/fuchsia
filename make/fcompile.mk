@@ -21,6 +21,10 @@ MODULE_FIDL_OBJS := $(MODULE_FIDL_CPPOBJS) $(MODULE_FIDL_COBJS)
 MODULE_SRCDEPS += $(MODULE_FIDL_H) $(MODULE_FIDL_CPP)
 MODULE_GEN_HDR += $(MODULE_FIDL_H)
 
+# There is probably a more correct way to express this dependency, but having
+# this dependency here makes the build non-flakey.
+MODULE_SRCDEPS += $(BUILDDIR)/gen/abigen-stamp
+
 #$(info MODULE_FIDLSRCS = $(MODULE_FIDLSRCS))
 
 $(MODULE_FIDL_COBJS): MODULE_OPTFLAGS:=$(MODULE_OPTFLAGS)
