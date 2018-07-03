@@ -41,12 +41,6 @@ class LedgerRepositoryFactoryImpl
   struct RepositoryInformation;
 
   // LedgerRepositoryFactory:
-  void GetRepositoryDeprecated(
-      fidl::StringPtr repository_path,
-      fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
-      fidl::InterfaceRequest<ledger_internal::LedgerRepository>
-          repository_request,
-      GetRepositoryDeprecatedCallback callback) override;
   void GetRepository(
       zx::channel repository_handle,
       fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,

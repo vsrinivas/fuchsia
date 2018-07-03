@@ -184,21 +184,6 @@ LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
 
 LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
 
-void LedgerRepositoryFactoryImpl::GetRepositoryDeprecated(
-    fidl::StringPtr repository_path,
-    fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
-    fidl::InterfaceRequest<ledger_internal::LedgerRepository>
-        repository_request,
-    GetRepositoryDeprecatedCallback callback) {
-  fxl::UniqueFD root_fd(HANDLE_EINTR(open((*repository_path).c_str(), O_PATH)));
-  if (!root_fd.is_valid()) {
-    callback(Status::IO_ERROR);
-    return;
-  }
-  GetRepositoryByFD(std::move(root_fd), std::move(cloud_provider),
-                    std::move(repository_request), std::move(callback));
-}
-
 void LedgerRepositoryFactoryImpl::GetRepository(
     zx::channel repository_handle,
     fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,

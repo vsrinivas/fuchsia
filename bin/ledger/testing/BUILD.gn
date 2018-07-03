@@ -54,6 +54,7 @@ source_set("lib") {
     "//peridot/bin/ledger/fidl",
     "//peridot/lib/convert",
     "//peridot/lib/firebase_auth/testing",
+    "//peridot/lib/rio",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

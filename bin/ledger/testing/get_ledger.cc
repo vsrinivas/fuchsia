@@ -4,18 +4,21 @@
 
 #include "peridot/bin/ledger/testing/get_ledger.h"
 
+#include <fcntl.h>
 #include <utility>
 
 #include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/callback/capture.h>
+#include <lib/fxl/files/unique_fd.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/logging.h>
 #include <lib/svc/cpp/services.h>
 
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/lib/convert/convert.h"
+#include "peridot/lib/rio/fd.h"
 
 namespace test {
 void GetLedger(
@@ -41,8 +44,16 @@ void GetLedger(
   auto repository = std::make_unique<ledger_internal::LedgerRepositoryPtr>();
   auto request = repository->NewRequest();
 
-  repository_factory_ptr->GetRepositoryDeprecated(
-      ledger_repository_path, std::move(cloud_provider), std::move(request),
+  fxl::UniqueFD dir(open(ledger_repository_path.c_str(), O_PATH));
+  if (!dir.is_valid()) {
+    FXL_LOG(ERROR) << "Unable to open directory at " << ledger_repository_path
+                   << ". errno: " << errno;
+    callback(ledger::Status::IO_ERROR, nullptr);
+    return;
+  }
+
+  repository_factory_ptr->GetRepository(
+      rio::CloneChannel(dir.get()), std::move(cloud_provider), std::move(request),
       [repository_factory = std::move(repository_factory),
        repository = std::move(repository), ledger_name = std::move(ledger_name),
        ledger_repository_path = std::move(ledger_repository_path),
