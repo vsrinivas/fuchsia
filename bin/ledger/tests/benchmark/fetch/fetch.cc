@@ -104,7 +104,7 @@ void FetchBenchmark::Run() {
                 return;
               }
               writer_page_ = std::move(page);
-              page_id_ = std::move(id);
+              page_id_ = id;
 
               Populate();
             });
@@ -166,7 +166,7 @@ void FetchBenchmark::ConnectReader() {
         reader_ = std::move(ledger);
 
         reader_->GetPage(
-            fidl::MakeOptional(std::move(page_id_)), reader_page_.NewRequest(),
+            fidl::MakeOptional(page_id_), reader_page_.NewRequest(),
             [this](ledger::Status status) {
               if (QuitOnError(QuitLoopClosure(), status, "GetPage")) {
                 return;

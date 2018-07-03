@@ -100,7 +100,7 @@ void ConvergenceBenchmark::Run() {
         QuitLoopClosure(),
         [this, device_context = device_context.get(),
          callback = waiter->NewCallback()](ledger::Status status,
-                                           ledger::LedgerPtr ledger) {
+                                           ledger::LedgerPtr ledger) mutable {
           if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
             return;
           }

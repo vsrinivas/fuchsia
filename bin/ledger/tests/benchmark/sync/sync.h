@@ -51,7 +51,7 @@ class SyncBenchmark : public ledger::PageWatcher {
                 OnChangeCallback callback) override;
 
  private:
-  void RunSingleChange(size_t i);
+  void RunSingleChange(size_t change_number);
 
   void ShutDown();
   fit::closure QuitLoopClosure();

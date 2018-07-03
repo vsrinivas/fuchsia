@@ -43,7 +43,8 @@ class PageDataGenerator {
   void Populate(ledger::PagePtr* page,
                 std::vector<fidl::VectorPtr<uint8_t>> keys, size_t value_size,
                 size_t transaction_size, ReferenceStrategy ref_strategy,
-                ledger::Priority priority, fit::function<void(ledger::Status)>);
+                ledger::Priority priority,
+                fit::function<void(ledger::Status)> /*callback*/);
 
  private:
   // Run PutEntry |transaction_size| times on provided keys |keys| with random
@@ -64,7 +65,7 @@ class PageDataGenerator {
                           std::vector<fidl::VectorPtr<uint8_t>> keys,
                           size_t value_size, ReferenceStrategy ref_strategy,
                           ledger::Priority priority,
-                          fit::function<void(ledger::Status)>);
+                          fit::function<void(ledger::Status)> /*callback*/);
 
   DataGenerator generator_;
 };

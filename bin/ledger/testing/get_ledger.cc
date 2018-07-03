@@ -111,11 +111,11 @@ void GetPageEnsureInitialized(
         });
 
         auto page_ptr = (*page).get();
-        page_ptr->GetId([page = std::move(page),
-                         callback =
-                             std::move(callback)](ledger::PageId page_id) {
-          callback(ledger::Status::OK, std::move(*page), std::move(page_id));
-        });
+        page_ptr->GetId(
+            [page = std::move(page),
+             callback = std::move(callback)](ledger::PageId page_id) {
+              callback(ledger::Status::OK, std::move(*page), page_id);
+            });
       });
 }
 

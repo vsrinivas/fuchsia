@@ -104,7 +104,9 @@ class FakeLedgerStorage : public storage::LedgerStorage {
         });
   }
 
-  bool DeletePageStorage(storage::PageIdView page_id) override { return false; }
+  bool DeletePageStorage(storage::PageIdView /*page_id*/) override {
+    return false;
+  }
 
   void ClearCalls() {
     create_page_calls.clear();
@@ -183,15 +185,15 @@ class FakeLedgerSync : public sync_coordinator::LedgerSync {
 class FakePageEvictionManager : public PageEvictionManager {
  public:
   FakePageEvictionManager() {}
-  virtual ~FakePageEvictionManager() override {}
+  ~FakePageEvictionManager() override {}
 
-  void OnPageOpened(fxl::StringView ledger_name,
-                    storage::PageIdView page_id) override {
+  void OnPageOpened(fxl::StringView /*ledger_name*/,
+                    storage::PageIdView /*page_id*/) override {
     ++page_opened_count;
   }
 
-  void OnPageClosed(fxl::StringView ledger_name,
-                    storage::PageIdView page_id) override {
+  void OnPageClosed(fxl::StringView /*ledger_name*/,
+                    storage::PageIdView /*page_id*/) override {
     ++page_closed_count;
   }
 
@@ -209,7 +211,7 @@ class LedgerManagerTest : public gtest::TestLoopFixture {
   LedgerManagerTest()
       : environment_(EnvironmentBuilder().SetAsync(dispatcher()).Build()) {}
 
-  ~LedgerManagerTest() {}
+  ~LedgerManagerTest() override {}
 
   // gtest::TestLoopFixture:
   void SetUp() override {

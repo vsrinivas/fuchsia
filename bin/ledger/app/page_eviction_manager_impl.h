@@ -18,8 +18,9 @@ namespace ledger {
 
 class PageEvictionManagerImpl : public PageEvictionManager {
  public:
-  PageEvictionManagerImpl(coroutine::CoroutineService* coroutine_service);
-  ~PageEvictionManagerImpl();
+  explicit PageEvictionManagerImpl(
+      coroutine::CoroutineService* coroutine_service);
+  ~PageEvictionManagerImpl() override;
 
   // Initializes this PageEvictionManager. |IO_ERROR| will be returned in case
   // of an error while initializing the underlying database.

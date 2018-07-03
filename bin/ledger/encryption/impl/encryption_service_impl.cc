@@ -217,9 +217,8 @@ void EncryptionServiceImpl::GetReferenceKey(
   DeletionScopeSeed seed = {object_identifier.key_index,
                             std::move(deletion_scope_seed)};
   reference_keys_.Get(
-      std::move(seed),
-      [callback = std::move(callback)](
-          Status status, const std::string& value) { callback(value); });
+      seed, [callback = std::move(callback)](
+                Status status, const std::string& value) { callback(value); });
 }
 
 void EncryptionServiceImpl::Encrypt(

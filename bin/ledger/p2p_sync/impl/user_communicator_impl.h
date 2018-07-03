@@ -44,10 +44,9 @@ class UserCommunicatorImpl : public UserCommunicator,
 
  private:
   // P2PProvider::Client
-  void OnDeviceChange(fxl::StringView device_name,
+  void OnDeviceChange(fxl::StringView remote_device,
                       p2p_provider::DeviceChangeType change_type) override;
-  void OnNewMessage(fxl::StringView device_name,
-                    fxl::StringView message) override;
+  void OnNewMessage(fxl::StringView source, fxl::StringView data) override;
 
   // Set of active ledgers.
   std::map<std::string, LedgerCommunicatorImpl*, convert::StringViewComparator>

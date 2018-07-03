@@ -151,9 +151,9 @@ void PageDataGenerator::PutMultipleEntries(
     ledger::Priority priority, fit::function<void(ledger::Status)> callback) {
   auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<ledger::Status>>(
       ledger::Status::OK);
-  for (size_t i = 0; i < keys.size(); i++) {
+  for (auto& key : keys) {
     fidl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size);
-    PutEntry(page, std::move(keys[i]), std::move(value), ref_strategy, priority,
+    PutEntry(page, std::move(key), std::move(value), ref_strategy, priority,
              waiter->NewCallback());
   }
   waiter->Finalize(std::move(callback));

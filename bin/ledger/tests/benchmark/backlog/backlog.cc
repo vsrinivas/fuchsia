@@ -116,7 +116,7 @@ void BacklogBenchmark::Run() {
               }
 
               writer_page_ = std::move(writer_page);
-              page_id_ = std::move(page_id);
+              page_id_ = page_id;
 
               WaitForWriterUpload();
               TRACE_ASYNC_BEGIN("benchmark", "populate and upload", 0);

@@ -67,7 +67,7 @@ class BacklogBenchmark : public ledger::SyncWatcher {
   void GetReaderSnapshot();
   void GetEntriesStep(std::unique_ptr<ledger::Token> token,
                       size_t entries_left);
-  void CheckStatusAndGetMore(ledger::Status status, size_t entries_read,
+  void CheckStatusAndGetMore(ledger::Status status, size_t entries_left,
                              std::unique_ptr<ledger::Token> next_token);
 
   void RecordDirectorySize(const std::string& event_name,

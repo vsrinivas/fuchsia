@@ -283,6 +283,7 @@ std::vector<LedgerAppInstanceFactory*> GetLedgerAppInstanceFactories() {
     }
   });
   std::vector<LedgerAppInstanceFactory*> factories;
+  factories.reserve(factories_impl.size());
   for (const auto& factory : factories_impl) {
     factories.push_back(factory.get());
   }

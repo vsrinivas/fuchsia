@@ -44,7 +44,7 @@ class PageStorage : public PageSyncClient {
   enum Location { LOCAL, NETWORK };
 
   PageStorage() {}
-  virtual ~PageStorage() {}
+  ~PageStorage() override {}
 
   // Returns the id of this page.
   virtual PageId GetId() = 0;

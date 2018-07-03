@@ -110,7 +110,7 @@ void PageStorageEmptyImpl::MarkPieceSynced(
 }
 
 void PageStorageEmptyImpl::IsPieceSynced(
-    ObjectIdentifier object_identifier,
+    ObjectIdentifier /*object_identifier*/,
     fit::function<void(Status, bool)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, false);

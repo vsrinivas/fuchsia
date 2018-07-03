@@ -43,7 +43,7 @@ class PageUsageListener {
 class PageEvictionManager : public PageUsageListener {
  public:
   PageEvictionManager() {}
-  virtual ~PageEvictionManager() {}
+  ~PageEvictionManager() override {}
 
   // Tries to evict from the local storage the least recently used page among
   // those that have been backed up in the cloud and are not currectly in use.

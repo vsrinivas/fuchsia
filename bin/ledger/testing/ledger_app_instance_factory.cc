@@ -18,11 +18,12 @@ namespace test {
 namespace {
 class CallbackWaiterImpl : public LedgerAppInstanceFactory::CallbackWaiter {
  public:
-  CallbackWaiterImpl(LedgerAppInstanceFactory::LoopController* loop_controller)
+  explicit CallbackWaiterImpl(
+      LedgerAppInstanceFactory::LoopController* loop_controller)
       : loop_controller_(loop_controller) {}
   CallbackWaiterImpl(const CallbackWaiterImpl&) = delete;
   CallbackWaiterImpl& operator=(const CallbackWaiterImpl&) = delete;
-  virtual ~CallbackWaiterImpl() = default;
+  ~CallbackWaiterImpl() override = default;
 
   fit::function<void()> GetCallback() override {
     return [this] {

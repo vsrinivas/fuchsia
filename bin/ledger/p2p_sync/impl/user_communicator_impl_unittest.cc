@@ -38,7 +38,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
  public:
   explicit FakePageStorage(std::string page_id)
       : page_id_(std::move(page_id)) {}
-  ~FakePageStorage() {}
+  ~FakePageStorage() override {}
 
   storage::PageId GetId() override { return page_id_; }
 

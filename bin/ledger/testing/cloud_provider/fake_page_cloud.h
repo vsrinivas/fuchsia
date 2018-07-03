@@ -19,7 +19,7 @@ namespace ledger {
 
 class FakePageCloud : public cloud_provider::PageCloud {
  public:
-  FakePageCloud(InjectNetworkError inject_network_error);
+  explicit FakePageCloud(InjectNetworkError inject_network_error);
   ~FakePageCloud() override;
 
   void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }

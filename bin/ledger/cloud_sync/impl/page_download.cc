@@ -207,8 +207,8 @@ void PageDownload::OnNewCommits(
   if (batch_download_) {
     // If there is already a commit batch being downloaded, save the new commits
     // to be downloaded when it is done.
-    for (size_t i = 0; i < commits->size(); ++i) {
-      commits_to_download_.push_back(std::move(commits->at(i)));
+    for (auto& commit : *commits) {
+      commits_to_download_.push_back(std::move(commit));
     }
     position_token_ = std::move(position_token);
     callback();

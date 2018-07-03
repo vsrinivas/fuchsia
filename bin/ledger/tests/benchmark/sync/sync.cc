@@ -91,9 +91,10 @@ void SyncBenchmark::Run() {
       server_id_, "", cloud_provider_alpha.NewRequest());
   test::GetLedger(
       startup_context_.get(), alpha_controller_.NewRequest(),
-      std::move(cloud_provider_alpha), "sync", alpha_path, QuitLoopClosure(),
-      [this, beta_path = std::move(beta_path)](ledger::Status status,
-                                               ledger::LedgerPtr ledger) {
+      std::move(cloud_provider_alpha), "sync", std::move(alpha_path),
+      QuitLoopClosure(),
+      [this, beta_path = std::move(beta_path)](
+          ledger::Status status, ledger::LedgerPtr ledger) mutable {
         if (QuitOnError(QuitLoopClosure(), status, "alpha ledger")) {
           return;
         };
@@ -107,8 +108,7 @@ void SyncBenchmark::Run() {
             startup_context_.get(), beta_controller_.NewRequest(),
             std::move(cloud_provider_beta), "sync", beta_path,
             QuitLoopClosure(),
-            [this, beta_path = std::move(beta_path)](ledger::Status status,
-                                                     ledger::LedgerPtr ledger) {
+            [this, beta_path](ledger::Status status, ledger::LedgerPtr ledger) {
               if (QuitOnError(QuitLoopClosure(), status, "beta ledger")) {
                 return;
               }
@@ -122,10 +122,9 @@ void SyncBenchmark::Run() {
                       return;
                     }
                     alpha_page_ = std::move(page);
-                    page_id_ = std::move(id);
+                    page_id_ = id;
                     beta_->GetPage(
-                        fidl::MakeOptional(std::move(id)),
-                        beta_page_.NewRequest(),
+                        fidl::MakeOptional(id), beta_page_.NewRequest(),
                         QuitOnErrorCallback(QuitLoopClosure(), "GetPage"));
 
                     ledger::PageSnapshotPtr snapshot;
@@ -147,7 +146,7 @@ void SyncBenchmark::Run() {
 void SyncBenchmark::OnChange(ledger::PageChange page_change,
                              ledger::ResultState result_state,
                              OnChangeCallback callback) {
-  FXL_DCHECK(page_change.changed_entries->size() > 0);
+  FXL_DCHECK(!page_change.changed_entries->empty());
   size_t i =
       std::stoul(convert::ToString(page_change.changed_entries->at(0).key));
   changed_entries_received_ += page_change.changed_entries->size();

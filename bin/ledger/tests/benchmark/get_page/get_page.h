@@ -26,7 +26,7 @@ namespace benchmark {
 //   new page with a random id is requested every time.
 class GetPageBenchmark {
  public:
-  GetPageBenchmark(async::Loop* async, size_t requests_count, bool reuse);
+  GetPageBenchmark(async::Loop* loop, size_t requests_count, bool reuse);
 
   void Run();
 

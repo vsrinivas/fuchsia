@@ -155,6 +155,7 @@ void BuildObjectRequestBuffer(
                             convert::ToFlatBufferVector(buffer, namespace_id),
                             convert::ToFlatBufferVector(buffer, page_id));
   std::vector<flatbuffers::Offset<ObjectId>> fb_object_ids;
+  fb_object_ids.reserve(object_ids.size());
   for (const storage::ObjectIdentifier& object_id : object_ids) {
     fb_object_ids.emplace_back(CreateObjectId(
         *buffer, object_id.key_index, object_id.deletion_scope_id,

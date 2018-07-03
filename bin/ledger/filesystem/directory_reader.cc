@@ -38,7 +38,7 @@ bool DirectoryReader::GetDirectoryEntriesAt(
   }
   std::unique_ptr<DIR, decltype(&SafeCloseDir)> dir(fdopendir(dir_fd),
                                                     SafeCloseDir);
-  if (!dir.get())
+  if (!dir)
     return false;
   for (struct dirent* entry = readdir(dir.get()); entry != nullptr;
        entry = readdir(dir.get())) {

@@ -24,9 +24,9 @@ class DetachedPath {
   explicit DetachedPath(int root_fd = AT_FDCWD, std::string path = ".");
   ~DetachedPath();
   DetachedPath(const DetachedPath& other);
-  DetachedPath(DetachedPath&& other);
+  DetachedPath(DetachedPath&& other) noexcept;
   DetachedPath& operator=(const DetachedPath& other);
-  DetachedPath& operator=(DetachedPath&&);
+  DetachedPath& operator=(DetachedPath&& /*unused*/) noexcept;
 
   // The file descriptor to the base directory of this path.
   int root_fd() const { return root_fd_; };

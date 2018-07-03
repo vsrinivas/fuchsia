@@ -20,10 +20,10 @@ class Environment {
   Environment(async_t* async,
               std::unique_ptr<coroutine::CoroutineService> coroutine_service,
               BackoffFactory backoff_factory);
-  Environment(Environment&& other);
+  Environment(Environment&& other) noexcept;
   ~Environment();
 
-  Environment& operator=(Environment&& other);
+  Environment& operator=(Environment&& other) noexcept;
 
   async_t* async() { return async_; }
 

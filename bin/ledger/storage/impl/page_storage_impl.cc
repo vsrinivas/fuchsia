@@ -778,7 +778,7 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
                 [this, object_identifier](
                     fit::function<void(Status, ChangeSource,
                                        std::unique_ptr<DataSource::DataChunk>)>
-                        callback) {
+                        callback) mutable {
                   page_sync_->GetObject(std::move(object_identifier),
                                         std::move(callback));
                 },

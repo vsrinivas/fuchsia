@@ -6,20 +6,22 @@
 
 #include <lib/fxl/strings/concatenate.h>
 
+#include <utility>
+
 namespace ledger {
 
 DetachedPath::DetachedPath(int root_fd, std::string path)
-    : root_fd_(root_fd), path_(path) {}
+    : root_fd_(root_fd), path_(std::move(path)) {}
 
 DetachedPath::~DetachedPath() {}
 
 DetachedPath::DetachedPath(const DetachedPath& other) = default;
 
-DetachedPath::DetachedPath(DetachedPath&& other) = default;
+DetachedPath::DetachedPath(DetachedPath&& other) noexcept = default;
 
 DetachedPath& DetachedPath::operator=(const DetachedPath& other) = default;
 
-DetachedPath& DetachedPath::operator=(DetachedPath&&) = default;
+DetachedPath& DetachedPath::operator=(DetachedPath&&) noexcept = default;
 
 DetachedPath DetachedPath::SubPath(fxl::StringView path) const {
   return DetachedPath(root_fd_, fxl::Concatenate({path_, "/", path}));
@@ -28,7 +30,7 @@ DetachedPath DetachedPath::SubPath(fxl::StringView path) const {
 DetachedPath DetachedPath::SubPath(
     std::initializer_list<fxl::StringView> components) const {
   std::string end_path = path_;
-  for (auto component : components) {
+  for (const auto& component : components) {
     end_path.push_back('/');
     end_path.append(component.data(), component.size());
   }

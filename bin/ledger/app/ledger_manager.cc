@@ -34,8 +34,8 @@ class LedgerManager::PageManagerContainer {
  public:
   PageManagerContainer(std::string ledger_name, storage::PageId page_id,
                        PageUsageListener* page_usage_listener)
-      : ledger_name_(ledger_name),
-        page_id_(page_id),
+      : ledger_name_(std::move(ledger_name)),
+        page_id_(std::move(page_id)),
         page_usage_listener_(page_usage_listener),
         weak_factory_(this) {}
 
@@ -220,7 +220,7 @@ LedgerManager::LedgerManager(
     std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync,
     PageUsageListener* page_usage_listener)
     : environment_(environment),
-      ledger_name_(ledger_name),
+      ledger_name_(std::move(ledger_name)),
       encryption_service_(std::move(encryption_service)),
       storage_(std::move(storage)),
       ledger_sync_(std::move(ledger_sync)),
@@ -320,7 +320,7 @@ void LedgerManager::GetPage(storage::PageIdView page_id, PageState page_state,
 
   InitPageManagerContainer(container, page_id,
                            [this, container, page_id = page_id.ToString(),
-                            page_state](Status status) {
+                            page_state](Status status) mutable {
                              // Create the page if it wasn't found.
                              if (status == Status::PAGE_NOT_FOUND) {
                                CreatePageStorage(std::move(page_id), page_state,
@@ -329,7 +329,7 @@ void LedgerManager::GetPage(storage::PageIdView page_id, PageState page_state,
                            });
 }
 
-Status LedgerManager::DeletePage(convert::ExtendedStringView page_id) {
+Status LedgerManager::DeletePage(convert::ExtendedStringView /*page_id*/) {
   FXL_NOTIMPLEMENTED();
   return Status::INTERNAL_ERROR;
 }

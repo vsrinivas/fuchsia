@@ -175,8 +175,8 @@ void FakePageCloud::AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
     callback(cloud_provider::Status::NETWORK_ERROR);
     return;
   }
-  for (size_t i = 0; i < commits->size(); ++i) {
-    commits_.push_back(std::move(commits->at(i)));
+  for (auto& commit : *commits) {
+    commits_.push_back(std::move(commit));
   }
   SendPendingCommits();
   callback(cloud_provider::Status::OK);

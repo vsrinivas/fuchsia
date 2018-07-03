@@ -65,7 +65,7 @@ void PageDelegate::Init(fit::function<void(Status)> on_done) {
 void PageDelegate::GetId(Page::GetIdCallback callback) {
   ledger::PageId page_id;
   convert::ToArray(storage_->GetId(), &page_id.id);
-  callback(std::move(page_id));
+  callback(page_id);
 }
 
 void PageDelegate::GetSnapshot(

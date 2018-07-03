@@ -38,8 +38,8 @@ class SyncIntegrationTest : public IntegrationTest {
       if (status != ledger::Status::OK) {
         return ::testing::AssertionFailure() << "Unable to retrieve entries";
       }
-      for (size_t i = 0; i < new_entries->size(); ++i) {
-        entries->push_back(std::move(new_entries->at(i)));
+      for (auto& new_entry : *new_entries) {
+        entries->push_back(std::move(new_entry));
       }
       token = std::move(next_token);
     } while (token);

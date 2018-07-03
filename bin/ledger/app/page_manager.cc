@@ -195,12 +195,12 @@ void PageManager::GetCommit(ledger_internal::CommitId commit_id,
       [callback = std::move(callback)](
           storage::Status status,
           std::unique_ptr<const storage::Commit> commit) mutable {
-        ledger_internal::CommitPtr commit_struct = NULL;
+        ledger_internal::CommitPtr commit_struct = nullptr;
         if (status == storage::Status::OK) {
           commit_struct = ledger_internal::Commit::New();
           commit_struct->commit_id.id = convert::ToArray(commit->GetId());
           commit_struct->parents_ids.resize(0);
-          for (storage::CommitIdView parent : commit->GetParentIds()) {
+          for (const storage::CommitIdView& parent : commit->GetParentIds()) {
             ledger_internal::CommitId id;
             id.id = convert::ToArray(parent);
             commit_struct->parents_ids.push_back(std::move(id));

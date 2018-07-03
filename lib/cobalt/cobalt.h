@@ -26,7 +26,7 @@ class CobaltObservation {
   CobaltObservation(uint32_t metric_id,
                     fidl::VectorPtr<fuchsia::cobalt::ObservationValue> parts);
   CobaltObservation(const CobaltObservation&);
-  CobaltObservation(CobaltObservation&&);
+  CobaltObservation(CobaltObservation&&) noexcept;
   ~CobaltObservation();
   std::string ValueRepr();
 
@@ -35,7 +35,7 @@ class CobaltObservation {
               fit::function<void(fuchsia::cobalt::Status)> callback) &&;
 
   CobaltObservation& operator=(const CobaltObservation&);
-  CobaltObservation& operator=(CobaltObservation&&);
+  CobaltObservation& operator=(CobaltObservation&&) noexcept;
   bool operator<(const CobaltObservation& rhs) const;
 
  private:

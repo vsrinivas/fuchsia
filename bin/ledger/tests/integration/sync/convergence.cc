@@ -32,6 +32,7 @@ fidl::VectorPtr<uint8_t> DoubleToArray(double dbl) {
 
 ::testing::AssertionResult VmoToDouble(const fuchsia::mem::BufferPtr& vmo,
                                        double* dbl) {
+  *dbl = 0;
   if (vmo->size != sizeof(double)) {
     return ::testing::AssertionFailure()
            << "VMO has the wrong size: " << vmo->size << " instead of "
@@ -438,14 +439,13 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
         });
       }
       return false;
-    } else {
+    }
       merge_done = false;
       if (waiter) {
         waiter->Cancel();
         waiter = nullptr;
       }
       return false;
-    }
   };
 
   // If |RunLoopUntil| returns, the condition is met, thus the ledgers have

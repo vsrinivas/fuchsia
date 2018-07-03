@@ -23,7 +23,7 @@ namespace {
 class FakePageEvictionManager : public PageEvictionManager {
  public:
   FakePageEvictionManager() {}
-  virtual ~FakePageEvictionManager() override {}
+  ~FakePageEvictionManager() override {}
 
   void OnPageOpened(fxl::StringView ledger_name,
                     storage::PageIdView page_id) override {}

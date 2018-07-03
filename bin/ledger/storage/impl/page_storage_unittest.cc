@@ -1406,10 +1406,10 @@ TEST_F(PageStorageTest, PageIsSynced) {
   EXPECT_FALSE(is_synced);
   // Mark objects (and the root tree node) as synced and expect that the page is
   // still unsynced.
-  for (size_t i = 0; i < size; ++i) {
+  for (const auto& data : data_array) {
     called = false;
     storage_->MarkPieceSynced(
-        data_array[i].object_identifier,
+        data.object_identifier,
         callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);

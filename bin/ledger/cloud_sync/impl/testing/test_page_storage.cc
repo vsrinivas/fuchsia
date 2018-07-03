@@ -49,7 +49,7 @@ void TestPageStorage::GetHeadCommitIds(
              std::vector<storage::CommitId>(returned_head_count));
   };
   if (should_delay_get_head_commit_ids) {
-    delayed_get_head_commit_ids.push_back(std::move(confirm));
+    delayed_get_head_commit_ids.emplace_back(std::move(confirm));
     return;
   }
 
@@ -76,7 +76,7 @@ void TestPageStorage::GetCommit(
 
 void TestPageStorage::AddCommitsFromSync(
     std::vector<PageStorage::CommitIdAndBytes> ids_and_bytes,
-    storage::ChangeSource source,
+    storage::ChangeSource /*source*/,
     fit::function<void(storage::Status status)> callback) {
   add_commits_from_sync_calls++;
 

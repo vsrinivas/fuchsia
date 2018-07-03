@@ -97,7 +97,7 @@ class JournalEntryRow {
                                  KeyPriority priority);
 
   static Status ExtractObjectIdentifier(fxl::StringView db_value,
-                                        ObjectIdentifier* digest);
+                                        ObjectIdentifier* object_identifier);
 };
 
 }  // namespace storage
