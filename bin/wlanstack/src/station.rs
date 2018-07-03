@@ -93,7 +93,7 @@ fn serve_mlme_sme<STA, SRS>(proxy: MlmeProxy, event_stream: MlmeEventStream,
         .map_err(|e| e.never_into())
         .for_each(move |e| {
             match e {
-                MlmeRequest::Scan(mut req) => proxy.scan_req(&mut req),
+                MlmeRequest::Scan(mut req) => proxy.start_scan(&mut req),
                 MlmeRequest::Join(mut req) => proxy.join_req(&mut req),
                 MlmeRequest::Authenticate(mut req) => proxy.authenticate_req(&mut req),
                 MlmeRequest::Associate(mut req) => proxy.associate_req(&mut req),

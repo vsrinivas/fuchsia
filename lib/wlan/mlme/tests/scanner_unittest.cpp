@@ -100,13 +100,13 @@ TEST_F(ScannerTest, Start_InvalidChannelTimes) {
 
     EXPECT_EQ(0u, mock_dev_.GetChannelNumber());
 
-    EXPECT_EQ(ZX_OK, Start());
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, Start());
     EXPECT_FALSE(scanner_.IsRunning());
     EXPECT_EQ(0u, mock_dev_.GetChannelNumber());
 
     EXPECT_EQ(ZX_OK, DeserializeScanResponse());
     EXPECT_EQ(0u, resp_.bss_description_set->size());
-    EXPECT_EQ(wlan_mlme::ScanResultCodes::NOT_SUPPORTED, resp_.result_code);
+    EXPECT_EQ(wlan_mlme::ScanResultCodes::INVALID_ARGS, resp_.result_code);
 }
 
 TEST_F(ScannerTest, Start_NoChannels) {
@@ -115,13 +115,13 @@ TEST_F(ScannerTest, Start_NoChannels) {
 
     EXPECT_EQ(0u, mock_dev_.GetChannelNumber());
 
-    EXPECT_EQ(ZX_OK, Start());
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, Start());
     EXPECT_FALSE(scanner_.IsRunning());
     EXPECT_EQ(0u, mock_dev_.GetChannelNumber());
 
     EXPECT_EQ(ZX_OK, DeserializeScanResponse());
     EXPECT_EQ(0u, resp_.bss_description_set->size());
-    EXPECT_EQ(wlan_mlme::ScanResultCodes::NOT_SUPPORTED, resp_.result_code);
+    EXPECT_EQ(wlan_mlme::ScanResultCodes::INVALID_ARGS, resp_.result_code);
 }
 
 TEST_F(ScannerTest, Reset) {
@@ -241,7 +241,7 @@ TEST_F(ScannerTest, ScanResponse) {
     memcpy(packet->mut_field<uint8_t*>(0), kBeacon, sizeof(kBeacon));
     auto beacon = MgmtFrameView<Beacon>(packet.get());
 
-    EXPECT_EQ(ZX_OK, scanner_.HandleBeacon(beacon));
+    scanner_.HandleBeacon(beacon);
     mock_dev_.SetTime(zx::time(1));
     EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
 

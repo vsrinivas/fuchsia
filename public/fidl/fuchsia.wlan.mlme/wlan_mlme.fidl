@@ -48,6 +48,8 @@ struct WlanChan {
 // LINT.ThenChange(//garnet/lib/wlan/protocol/include/wlan/protocol/mac.h)
 
 struct ScanRequest {
+    // For now, the special value of 0 indicates "use legacy non-incremental ScanConf message"
+    uint64 txn_id;
     BSSTypes bss_type;
     array<uint8>:6 bssid;
     string ssid;
@@ -92,9 +94,21 @@ struct BSSDescription {
 enum ScanResultCodes {
     SUCCESS = 0;
     NOT_SUPPORTED = 1;
-    //LAST = NOT_SUPPORTED;
+    INVALID_ARGS = 2;
+    INTERNAL_ERROR = 3;
 };
 
+struct ScanResult {
+    uint64 txn_id;
+    BSSDescription bss;
+};
+
+struct ScanEnd {
+    uint64 txn_id;
+    ScanResultCodes code;
+};
+
+// TODO(gbonik): remove after transition to wlanstack2
 struct ScanConfirm {
     vector<BSSDescription> bss_description_set;
     // BSSDescriptionFromMeasurementPilotSet
@@ -461,8 +475,37 @@ struct EapolConfirm {
 // Because these methods rely on an external entity to provide a response, events are used instead
 // of return values.
 interface MLME {
-    1: ScanReq(ScanRequest req);
+    // ==== 01xxxx: scanning ====
+    // We deviate from the spec here in order to support incremental scan
+    // results easily. We could stay closer to 802.11ai, but the protocol
+    // that is described there is more difficult to implement correctly.
+
+    // Initiate a scan transaction. The caller is responsible for filling
+    // the `txn_id` field in `req` with a unique number that will be used
+    // to identify the transaction.
+    //
+    // Zero or more `OnScanResult` events with a matching `txn_id` will be sent
+    // in response.
+    //
+    // At the end on the transaction, whether it is successful or not,
+    // a `OnScanEnd` event with a matching `txn_id` is guaranteed to be sent
+    // in response (unless the channel is closed first).
+    //
+    // After `OnScanEnd`, no further events with the same `txn_id` shall be sent.
+    010000: StartScan(ScanRequest req);
+
+    // An incremental scan result containing information about a single BSS.
+    // Only one event per unique BSSID per transaction will be sent.
+    010100: -> OnScanResult(ScanResult result);
+
+    // An event that signals the end of a scan transaction.
+    010200: -> OnScanEnd(ScanEnd end);
+
+    // Legacy non-incremental scan result
+    // TODO(gbonik): remove after transition to wlanstack2
     2: -> ScanConf(ScanConfirm resp);
+
+    // ====
 
     3: JoinReq(JoinRequest req);
     4: -> JoinConf(JoinConfirm resp);

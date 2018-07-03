@@ -26,7 +26,7 @@ struct MacAddr {
     uint8_t byte[kMacAddrLen];
 
     MacAddr() {}
-    explicit MacAddr(const MacAddr& addr) { Set(addr); }
+    MacAddr(const MacAddr& addr) { Set(addr); }
     explicit MacAddr(const std::string& addr) { Set(addr); }
     explicit MacAddr(const uint8_t addr[kMacAddrLen]) { Set(addr); }
     explicit MacAddr(std::initializer_list<uint8_t> addr) { Set(addr); }

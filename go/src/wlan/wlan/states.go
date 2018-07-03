@@ -327,7 +327,7 @@ func (s *scanState) run(c *Client) (time.Duration, error) {
 		if debug {
 			log.Printf("scan req: %v timeout: %v", req, timeout)
 		}
-		err := c.SendMessage(req, mlme.MlmeScanReqOrdinal)
+		err := c.SendMessage(req, mlme.MlmeStartScanOrdinal)
 		if err != nil {
 			return 0, err
 		}

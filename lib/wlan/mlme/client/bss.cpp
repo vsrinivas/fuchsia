@@ -228,12 +228,12 @@ BeaconHash Bss::GetBeaconSignature(const Beacon& beacon, size_t frame_len) const
     return hash;
 }
 
-fidl::StringPtr Bss::SsidToFidlString() {
+fidl::StringPtr Bss::SsidToFidlString() const {
     // TODO(porce): Merge into SSID Element upon IE revamp.
     return fidl::StringPtr(reinterpret_cast<const char*>(ssid_), ssid_len_);
 }
 
-wlan_mlme::BSSDescription Bss::ToFidl() {
+wlan_mlme::BSSDescription Bss::ToFidl() const {
     // Translates the Bss object into FIDL message.
     // Note, this API does not directly handle Beacon frame or ProbeResponse frame.
 

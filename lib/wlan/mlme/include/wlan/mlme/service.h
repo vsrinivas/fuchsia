@@ -6,6 +6,7 @@
 
 #include <wlan/common/energy.h>
 #include <wlan/common/macaddr.h>
+#include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 #include <zircon/fidl.h>
@@ -20,7 +21,22 @@ namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
-class DeviceInterface;
+template<typename T>
+static zx_status_t SendServiceMsg(DeviceInterface* device, T* message, uint32_t ordinal) {
+    // TODO(FIDL-2): replace this when we can get the size of the serialized response.
+    size_t buf_len = 16384;
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
+    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
+    packet->set_peer(Packet::Peer::kService);
+    zx_status_t status = SerializeServiceMsg(packet.get(), ordinal, message);
+    if (status != ZX_OK) {
+        errorf("could not serialize FIDL message: %d\n", status);
+        return status;
+    }
+    return device->SendService(std::move(packet));
+}
 
 template <typename T>
 zx_status_t DeserializeServiceMsg(const Packet& packet, uint32_t ordinal, T* out) {

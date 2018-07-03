@@ -44,8 +44,8 @@ class Scanner {
 
     zx_status_t HandleMlmeScanReq(const MlmeMsg<::fuchsia::wlan::mlme::ScanRequest>& req);
 
-    zx_status_t HandleBeacon(const MgmtFrameView<Beacon>& frame);
-    zx_status_t HandleProbeResponse(const MgmtFrameView<ProbeResponse>& frame);
+    void HandleBeacon(const MgmtFrameView<Beacon>& frame);
+    void HandleProbeResponse(const MgmtFrameView<ProbeResponse>& frame);
     zx_status_t HandleTimeout();
     zx_status_t HandleError(zx_status_t error_code);
 
@@ -54,28 +54,17 @@ class Scanner {
    private:
     bool ShouldDropMgmtFrame(const MgmtFrameHeader& hdr);
     zx::time InitialTimeout() const;
-    zx_status_t SendScanConfirm();
     zx_status_t SendProbeRequest();
-    // Removes stale BSS entries from the neighbor BSS map. Pruning will only take effect every
-    // kBssPruneDelay seconds, and hence, multiple calls to this method in a short time frame have
-    // no effect.
-    void RemoveStaleBss();
-    zx_status_t ProcessBeacon(const MgmtFrameView<Beacon>& bcn_frame);
-
-    static constexpr size_t kMaxBssEntries = 20;  // Limited by zx.Channel buffer size.
-    static constexpr zx::duration kBssExpiry = zx::sec(60);
-    static constexpr zx::duration kBssPruneDelay = zx::sec(5);
+    void ProcessBeacon(const MgmtFrameView<Beacon>& bcn_frame);
 
     DeviceInterface* device_;
     fbl::unique_ptr<Timer> timer_;
     ::fuchsia::wlan::mlme::ScanRequestPtr req_ = nullptr;
-    ::fuchsia::wlan::mlme::ScanConfirmPtr resp_ = nullptr;
 
     size_t channel_index_ = 0;
     zx::time channel_start_;
 
-    // TODO(porce): Decouple neighbor BSS management from scanner.
-    BssMap nbrs_bss_ = {kMaxBssEntries};
+    std::unordered_map<uint64_t, Bss> current_bss_;
 };
 
 }  // namespace wlan

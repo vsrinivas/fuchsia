@@ -146,7 +146,7 @@ zx_status_t Dispatcher::HandleSvcPacket(fbl::unique_ptr<Packet> packet) {
         return HandleMlmeMessage<wlan_mlme::StartRequest>(fbl::move(packet), hdr->ordinal);
     case fuchsia_wlan_mlme_MLMEStopReqOrdinal:
         return HandleMlmeMessage<wlan_mlme::StopRequest>(fbl::move(packet), hdr->ordinal);
-    case fuchsia_wlan_mlme_MLMEScanReqOrdinal:
+    case fuchsia_wlan_mlme_MLMEStartScanOrdinal:
         return HandleMlmeMessage<wlan_mlme::ScanRequest>(fbl::move(packet), hdr->ordinal);
     case fuchsia_wlan_mlme_MLMEJoinReqOrdinal:
         return HandleMlmeMessage<wlan_mlme::JoinRequest>(fbl::move(packet), hdr->ordinal);

@@ -4,7 +4,6 @@
 
 #include <wlan/mlme/service.h>
 
-#include <wlan/mlme/device_interface.h>
 #include <fuchsia/wlan/mlme/c/fidl.h>
 
 namespace wlan {

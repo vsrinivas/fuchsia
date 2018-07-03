@@ -215,6 +215,7 @@ const WILDCARD_BSS_ID: [u8; 6] = [ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff ];
 fn new_join_scan_request<T>(join_scan: &JoinScan<T>,
                             device_info: &DeviceInfo) -> ScanRequest {
     ScanRequest {
+        txn_id: 0,
         bss_type: fidl_mlme::BssTypes::Infrastructure,
         bssid: WILDCARD_BSS_ID.clone(),
         // TODO(gbonik): change MLME interface to use bytes instead of string for SSID
@@ -231,6 +232,7 @@ fn new_join_scan_request<T>(join_scan: &JoinScan<T>,
 fn new_discovery_scan_request<T>(_discovery_scan: &DiscoveryScan<T>,
                                  device_info: &DeviceInfo) -> ScanRequest {
     ScanRequest {
+        txn_id: 0,
         bss_type: fidl_mlme::BssTypes::Infrastructure,
         bssid: WILDCARD_BSS_ID.clone(),
         ssid: String::new(),
@@ -246,7 +248,9 @@ fn new_discovery_scan_request<T>(_discovery_scan: &DiscoveryScan<T>,
 fn convert_discovery_result(msg: fidl_mlme::ScanConfirm) -> DiscoveryResult {
     match msg.result_code {
         ScanResultCodes::Success => Ok(group_networks(msg.bss_description_set)),
-        ScanResultCodes::NotSupported => Err(DiscoveryError::NotSupported)
+        // TODO(gbonik): actually convert the errors
+        // This is to keep the change smaller
+        _ => Err(DiscoveryError::NotSupported)
     }
 }
 

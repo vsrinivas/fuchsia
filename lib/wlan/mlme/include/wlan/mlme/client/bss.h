@@ -54,8 +54,8 @@ class Bss : public fbl::RefCounted<Bss> {
         }
     }
 
-    ::fuchsia::wlan::mlme::BSSDescription ToFidl();
-    fidl::StringPtr SsidToFidlString();
+    ::fuchsia::wlan::mlme::BSSDescription ToFidl() const;
+    fidl::StringPtr SsidToFidlString() const;
     const common::MacAddr& bssid() { return bssid_; }
     zx::time_utc ts_refreshed() { return ts_refreshed_; }
 
