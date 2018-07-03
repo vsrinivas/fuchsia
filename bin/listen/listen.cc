@@ -60,7 +60,8 @@ class Service {
       exit(1);
     }
 
-    FXL_CHECK(zx::job::create(zx_job_default(), 0, &job_) == ZX_OK);
+    FXL_CHECK(zx::job::create(
+        *zx::unowned<zx::job>(zx::job::default_job()), 0, &job_) == ZX_OK);
     std::string job_name = fxl::StringPrintf("tcp:%d", port);
     FXL_CHECK(job_.set_property(ZX_PROP_NAME, job_name.data(),
                                 job_name.size()) == ZX_OK);
@@ -113,7 +114,7 @@ class Service {
   void Launch(int conn, const std::string& peer_name) {
     // Create a new job to run the child in.
     zx::job child_job;
-    FXL_CHECK(zx::job::create(job_.get(), 0, &child_job) == ZX_OK);
+    FXL_CHECK(zx::job::create(job_, 0, &child_job) == ZX_OK);
     FXL_CHECK(child_job.set_property(ZX_PROP_NAME, peer_name.data(),
                                      peer_name.size()) == ZX_OK);
     FXL_CHECK(child_job.replace(kChildJobRights, &child_job) == ZX_OK);
