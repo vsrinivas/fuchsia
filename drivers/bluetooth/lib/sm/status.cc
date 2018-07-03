@@ -25,7 +25,7 @@ std::string ErrorToString(sm::ErrorCode ecode) {
     case sm::ErrorCode::kCommandNotSupported:
       return "command not supported";
     case sm::ErrorCode::kUnspecifiedReason:
-      return "unspecified ecode";
+      return "unspecified reason";
     case sm::ErrorCode::kRepeatedAttempts:
       return "repeated attempts";
     case sm::ErrorCode::kInvalidParameters:

@@ -30,8 +30,9 @@ SecurityProperties FeaturesToProperties(const PairingFeatures& features) {
 
 }  // namespace
 
-PairingState::LegacyState::LegacyState()
-    : stk_encrypted(false),
+PairingState::LegacyState::LegacyState(uint64_t id)
+    : id(id),
+      stk_encrypted(false),
       ltk_encrypted(false),
       obtained_remote_keys(0u),
       has_tk(false),
@@ -46,7 +47,7 @@ bool PairingState::LegacyState::InPhase1() const {
 }
 
 bool PairingState::LegacyState::InPhase2() const {
-  return features && !stk_encrypted;
+  return features && has_tk && !stk_encrypted;
 }
 
 bool PairingState::LegacyState::InPhase3() const {
@@ -56,6 +57,10 @@ bool PairingState::LegacyState::InPhase3() const {
 bool PairingState::LegacyState::IsComplete() const {
   return features && stk_encrypted && RequestedKeysObtained() &&
          !WaitingForEncryptionWithLTK();
+}
+
+bool PairingState::LegacyState::WaitingForTK() const {
+  return features && !has_tk && !stk_encrypted;
 }
 
 bool PairingState::LegacyState::RequestedKeysObtained() const {
@@ -84,7 +89,8 @@ PairingState::PendingRequest::PendingRequest(SecurityLevel level,
                                              PairingCallback callback)
     : level(level), callback(std::move(callback)) {}
 
-PairingState::PairingState(IOCapability io_capability) : ioc_(io_capability) {}
+PairingState::PairingState(IOCapability io_capability)
+    : next_pairing_id_(0), ioc_(io_capability), weak_ptr_factory_(this) {}
 
 PairingState::~PairingState() {
   if (le_link_) {
@@ -180,14 +186,14 @@ void PairingState::BeginLegacyPairingPhase1(SecurityLevel level) {
     le_smp_->set_mitm_required(true);
   }
 
-  legacy_state_ = std::make_unique<LegacyState>();
+  legacy_state_ = std::make_unique<LegacyState>(next_pairing_id_++);
   le_smp_->InitiateFeatureExchange();
 }
 
 void PairingState::BeginLegacyPairingPhase2(const ByteBuffer& preq,
                                             const ByteBuffer& pres) {
   FXL_DCHECK(legacy_state_);
-  FXL_DCHECK(legacy_state_->InPhase2());
+  FXL_DCHECK(legacy_state_->WaitingForTK());
   FXL_DCHECK(!legacy_state_->features->secure_connections);
   FXL_DCHECK(!legacy_state_->has_tk);
   FXL_DCHECK(!legacy_state_->has_peer_confirm);
@@ -195,41 +201,65 @@ void PairingState::BeginLegacyPairingPhase2(const ByteBuffer& preq,
   FXL_DCHECK(!legacy_state_->sent_local_confirm);
   FXL_DCHECK(!legacy_state_->sent_local_rand);
 
-  // TODO(armansito): For now we only support Just Works and without involving
-  // the user. Fix this so that:
-  //   1. At a minimum a user confirmation is involved for Just Works.
-  //   2. Other pairing methods are also supported.
-  if (legacy_state_->features->method != PairingMethod::kJustWorks) {
-    FXL_LOG(WARNING) << "sm: Only \"Just Works\" pairing is supported for now!";
-    AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
-    return;
-  }
-
+  // Cache |preq| and |pres|. These are used for confirm value generation.
   FXL_DCHECK(preq.size() == legacy_state_->preq.size());
   FXL_DCHECK(pres.size() == legacy_state_->pres.size());
-
   preq.Copy(&legacy_state_->preq);
   pres.Copy(&legacy_state_->pres);
 
-  // TODO(armansito): Obtain the TK asynchronously, involving the
-  // PairingDelegate.
-  legacy_state_->tk.fill(0);
-  legacy_state_->has_tk = true;
+  auto self = weak_ptr_factory_.GetWeakPtr();
+  auto tk_callback = [self, id = legacy_state_->id](bool success, uint32_t tk) {
+    if (!self) {
+      return;
+    }
 
-  // We have the TK, so we can generate the confirm value.
-  DeviceAddress *ia, *ra;
-  LEPairingAddresses(&ia, &ra);
-  fxl::RandBytes(legacy_state_->local_rand.data(),
-                 legacy_state_->local_rand.size());
-  util::C1(legacy_state_->tk, legacy_state_->local_rand, preq, pres, *ia, *ra,
-           &legacy_state_->local_confirm);
+    auto* state = self->legacy_state_.get();
+    if (!state || id != state->id) {
+      FXL_VLOG(1) << "sm: Ignoring TK callback for expired pairing: (id = "
+                  << id << ")";
+      return;
+    }
 
-  // If we are the initiator then we just generated the "Mconfirm" value. We
-  // start the exchange by sending this value to the peer. Otherwise this is the
-  // "Sconfirm" value and we'll send it when the peer sends us its Mconfirm.
-  if (legacy_state_->features->initiator) {
-    LegacySendConfirmValue();
-  }
+    if (!success) {
+      FXL_VLOG(1) << "sm: TK delegate responded with error; aborting";
+      if (state->features->method == PairingMethod::kPasskeyEntryInput) {
+        self->AbortLegacyPairing(ErrorCode::kPasskeyEntryFailed);
+      } else {
+        self->AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
+      }
+      return;
+    }
+
+    FXL_DCHECK(state->WaitingForTK());
+
+    // Set the lower bits to |tk|.
+    tk = htole32(tk);
+    state->tk.fill(0);
+    std::memcpy(state->tk.data(), &tk, sizeof(tk));
+    state->has_tk = true;
+
+    FXL_DCHECK(state->InPhase2());
+
+    // We have TK so we can generate the confirm value now.
+    DeviceAddress *ia, *ra;
+    self->LEPairingAddresses(&ia, &ra);
+    fxl::RandBytes(state->local_rand.data(), state->local_rand.size());
+    util::C1(state->tk, state->local_rand, state->preq, state->pres, *ia, *ra,
+             &state->local_confirm);
+
+    // If we are the initiator then we just generated the "Mconfirm" value. We
+    // start the exchange by sending this value to the peer. Otherwise this is
+    // the "Sconfirm" value and we either:
+    //    a. send it now if the peer has sent us its confirm value while we were
+    //    waiting for the TK.
+    //    b. send it later when we receive Mconfirm.
+    if (state->features->initiator || state->has_peer_confirm) {
+      self->LegacySendConfirmValue();
+    }
+  };
+
+  FXL_DCHECK(le_tk_delegate_);
+  le_tk_delegate_(legacy_state_->features->method, std::move(tk_callback));
 }
 
 void PairingState::LegacySendConfirmValue() {
@@ -346,7 +376,7 @@ void PairingState::OnLEPairingFeatures(const PairingFeatures& features,
       return;
     }
 
-    legacy_state_ = std::make_unique<LegacyState>();
+    legacy_state_ = std::make_unique<LegacyState>(next_pairing_id_++);
   }
 
   FXL_DCHECK(legacy_state_);
@@ -381,18 +411,17 @@ void PairingState::OnLEPairingConfirm(const UInt128& confirm) {
     return;
   }
 
-  if (!legacy_state_->InPhase2()) {
+  // Allow this command if:
+  //    a. we are in Phase 2, or
+  //    b. we are the responder but still waiting for a TK.
+  // Reject pairing if neither of these is true.
+  if (!legacy_state_->InPhase2() &&
+      (!legacy_state_->WaitingForTK() || legacy_state_->features->initiator)) {
     FXL_LOG(ERROR)
         << "sm: Abort pairing due to confirm value received outside phase 2";
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
-
-  // TODO(armansito): For now Phase 2 implies that we have a temporary key.
-  // Remove this assertion when TK is obtained asynchronously. In that scenario,
-  // if the TK hasn't yet been obtained and we are the initiator, then abort
-  // pairing.
-  FXL_DCHECK(legacy_state_->has_tk);
 
   // Abort pairing if we received a second confirm value from the peer. The
   // specification defines a certain order for the phase 2 commands.
@@ -415,15 +444,20 @@ void PairingState::OnLEPairingConfirm(const UInt128& confirm) {
   legacy_state_->has_peer_confirm = true;
 
   if (legacy_state_->features->initiator) {
+    // We MUST have a TK and have previously generated an Mconfirm.
+    FXL_DCHECK(legacy_state_->has_tk);
+
     // We are the master and have previously sent Mconfirm and just received
     // Sconfirm. We now send Mrand for the slave to compare.
     FXL_DCHECK(le_smp_->role() == hci::Connection::Role::kMaster);
     LegacySendRandomValue();
   } else {
-    // We are the slave and have just received Mconfirm. We now send Sconfirm to
-    // the master.
+    // We are the slave and have just received Mconfirm.
     FXL_DCHECK(le_smp_->role() == hci::Connection::Role::kSlave);
-    LegacySendConfirmValue();
+
+    if (!legacy_state_->WaitingForTK()) {
+      LegacySendConfirmValue();
+    }
   }
 }
 
@@ -442,16 +476,14 @@ void PairingState::OnLEPairingRandom(const UInt128& random) {
     return;
   }
 
-  // TODO(armansito): For now Phase 2 implies that we have a temporary key.
-  // Remove this assertion when TK is obtained asynchronously. In that scenario,
-  // if the TK hasn't yet been obtained and we are the initiator, then abort
-  // pairing.
+  // We must have a TK and sent a confirm value by now (this is implied by
+  // InPhase2() above).
   FXL_DCHECK(legacy_state_->has_tk);
 
   // Abort pairing if we received a second random value from the peer. The
   // specification defines a certain order for the phase 2 commands.
   if (legacy_state_->has_peer_rand) {
-    FXL_LOG(ERROR) << "sm: Already received confirm value! Aborting";
+    FXL_LOG(ERROR) << "sm: Already received random value! Aborting";
     AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
     return;
   }
