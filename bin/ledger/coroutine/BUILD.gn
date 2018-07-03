@@ -10,6 +10,7 @@ source_set("coroutine") {
     "coroutine_impl.cc",
     "coroutine_impl.h",
     "coroutine_manager.h",
+    "coroutine_waiter.h",
   ]
 
   public_deps = [
@@ -30,6 +31,7 @@ source_set("unittests") {
   sources = [
     "coroutine_manager_unittest.cc",
     "coroutine_unittest.cc",
+    "coroutine_waiter_unittest.cc",
   ]
 
   deps = [

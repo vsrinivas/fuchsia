@@ -8,6 +8,7 @@
 #include <lib/fit/function.h>
 #include <lib/fxl/memory/ref_ptr.h>
 
+#include "peridot/bin/ledger/coroutine/coroutine_waiter.h"
 #include "peridot/bin/ledger/storage/impl/btree/internal_helper.h"
 #include "peridot/bin/ledger/storage/impl/btree/synchronous_storage.h"
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
@@ -328,11 +329,8 @@ Status NodeBuilder::Build(SynchronousStorage* page_storage,
           });
     }
     Status status;
-    if (coroutine::SyncCall(page_storage->handler(),
-                            [&waiter](fit::function<void(Status)> callback) {
-                              waiter->Finalize(std::move(callback));
-                            },
-                            &status) ==
+
+    if (coroutine::Wait(page_storage->handler(), std::move(waiter), &status) ==
         coroutine::ContinuationStatus::INTERRUPTED) {
       return Status::INTERRUPTED;
     }

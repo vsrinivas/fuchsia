@@ -33,6 +33,7 @@
 #include <trace/event.h>
 
 #include "peridot/bin/ledger/cobalt/cobalt.h"
+#include "peridot/bin/ledger/coroutine/coroutine_waiter.h"
 #include "peridot/bin/ledger/lock/lock.h"
 #include "peridot/bin/ledger/storage/impl/btree/diff.h"
 #include "peridot/bin/ledger/storage/impl/btree/iterator.h"
@@ -833,13 +834,8 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
           return;
         }
 
-        if (coroutine::SyncCall(
-                handler,
-                [waiter =
-                     std::move(waiter)](fit::function<void(Status)> callback) {
-                  waiter->Finalize(std::move(callback));
-                },
-                &status) == coroutine::ContinuationStatus::INTERRUPTED) {
+        if (coroutine::Wait(handler, std::move(waiter), &status) ==
+            coroutine::ContinuationStatus::INTERRUPTED) {
           callback(Status::INTERRUPTED);
           return;
         }
@@ -1033,12 +1029,8 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
         });
   }
 
-  if (coroutine::SyncCall(
-          handler,
-          [waiter = std::move(waiter)](fit::function<void(Status)> callback) {
-            waiter->Finalize(std::move(callback));
-          },
-          &s) == coroutine::ContinuationStatus::INTERRUPTED) {
+  if (coroutine::Wait(handler, std::move(waiter), &s) ==
+      coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERRUPTED;
   }
   return s;
@@ -1152,12 +1144,8 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
   }
 
   Status waiter_status;
-  if (coroutine::SyncCall(
-          handler,
-          [waiter = std::move(waiter)](fit::function<void(Status)> callback) {
-            waiter->Finalize(std::move(callback));
-          },
-          &waiter_status) == coroutine::ContinuationStatus::INTERRUPTED) {
+  if (coroutine::Wait(handler, std::move(waiter), &waiter_status) ==
+      coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERRUPTED;
   }
   if (waiter_status != Status::OK) {
@@ -1184,13 +1172,8 @@ Status PageStorageImpl::SynchronousGetUnsyncedCommits(
   }
 
   std::vector<std::unique_ptr<const Commit>> result;
-  if (coroutine::SyncCall(
-          handler,
-          [waiter = std::move(waiter)](
-              fit::function<void(Status,
-                                 std::vector<std::unique_ptr<const Commit>>)>
-                  callback) { waiter->Finalize(std::move(callback)); },
-          &s, &result) == coroutine::ContinuationStatus::INTERRUPTED) {
+  if (coroutine::Wait(handler, std::move(waiter), &s, &result) ==
+      coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERRUPTED;
   }
   if (s != Status::OK) {

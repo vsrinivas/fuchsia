@@ -12,6 +12,7 @@
 
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/coroutine/coroutine_waiter.h"
 
 namespace ledger {
 
@@ -68,10 +69,8 @@ storage::Status FindCommonAncestorSync(
     }
     storage::Status status;
     std::vector<std::unique_ptr<const storage::Commit>> parents;
-    if (coroutine::SyncCall(
-            handler,
-            [waiter](auto callback) { waiter->Finalize(std::move(callback)); },
-            &status, &parents) == coroutine::ContinuationStatus::INTERRUPTED) {
+    if (coroutine::Wait(handler, std::move(waiter), &status, &parents) ==
+        coroutine::ContinuationStatus::INTERRUPTED) {
       return storage::Status::INTERRUPTED;
     }
     if (status != storage::Status::OK) {

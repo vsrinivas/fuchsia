@@ -7,6 +7,8 @@
 #include <lib/fit/function.h>
 #include <lib/fxl/memory/ref_ptr.h>
 
+#include "peridot/bin/ledger/coroutine/coroutine_waiter.h"
+
 namespace storage {
 namespace btree {
 
@@ -42,12 +44,8 @@ Status SynchronousStorage::TreeNodesFromIdentifiers(
                              waiter->NewCallback());
   }
   Status status;
-  if (coroutine::SyncCall(
-          handler_,
-          [waiter](fit::function<void(
-                       Status, std::vector<std::unique_ptr<const TreeNode>>)>
-                       callback) { waiter->Finalize(std::move(callback)); },
-          &status, result) == coroutine::ContinuationStatus::INTERRUPTED) {
+  if (coroutine::Wait(handler_, std::move(waiter), &status, result) ==
+      coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERRUPTED;
   }
   return status;
