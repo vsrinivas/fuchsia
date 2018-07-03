@@ -7,15 +7,16 @@ import("//build/package.gni")
 visibility = [ "//peridot/*" ]
 
 package("ledger") {
-  deprecated_system_image = true
-
   deps = [
     "app",
   ]
 
-  binaries = [
+  binary = "ledger"
+
+  meta = [
     {
-      name = "ledger"
+      path = rebase_path("meta/ledger.cmx")
+      dest = "ledger.cmx"
     },
   ]
 }
