@@ -42,12 +42,19 @@ class CoroutineManager {
   template <typename Callback, typename Runnable>
   void StartCoroutine(Callback callback, Runnable runnable) {
     service_->StartCoroutine(
-        [this, final_callback = std::move(callback),
+        [this, callback = std::move(callback),
          runnable = std::move(runnable)](CoroutineHandler* handler) mutable {
-          auto callback =
-              UpdateActiveHandlersCallback(handler, std::move(final_callback));
+          auto iter = handlers_.insert(handlers_.cend(), handler);
+          auto final_callback = [this, iter,
+                                 callback = std::move(callback)](auto... args) {
+            // Remove the handler before calling the final callback. Otherwise
+            // the handler might be unnecessarily interrupted, if this object
+            // destructor is called in the callback.
+            handlers_.erase(iter);
+            callback(std::move(args)...);
+          };
 
-          runnable(handler, std::move(callback));
+          runnable(handler, std::move(final_callback));
 
           // Verify that the handler is correctly unregistered. It would be a
           // bug otherwise.
@@ -56,23 +63,22 @@ class CoroutineManager {
         });
   }
 
- private:
-  // Immediately adds the |handler| in the set of active ones, and once the
-  // returned callback is called, removes the |handler| from the set, and calls
-  // the given |callback|.
-  template <typename Callback>
-  auto UpdateActiveHandlersCallback(coroutine::CoroutineHandler* handler,
-                                    Callback callback) {
-    auto iter = handlers_.insert(handlers_.cend(), handler);
-    return [this, iter, callback = std::move(callback)](auto... args) {
-      // Remove the handler before calling the final callback. Otherwise the
-      // handler might be unnecessarily interrupted, if this PageStorage
-      // destructor is called in the callback.
+  // Starts a managed coroutine. This coroutine will be automatically
+  // interrupted if this |CoroutineManager| object is destroyed.
+  //
+  // |runnable| must be a callable object with the following signature:
+  //   void(CoroutineHandler*)
+  template <typename Runnable>
+  void StartCoroutine(Runnable runnable) {
+    service_->StartCoroutine([this, runnable = std::move(runnable)](
+                                 CoroutineHandler* handler) mutable {
+      auto iter = handlers_.insert(handlers_.cend(), handler);
+      runnable(handler);
       handlers_.erase(iter);
-      callback(std::move(args)...);
-    };
+    });
   }
 
+ private:
   std::list<coroutine::CoroutineHandler*> handlers_;
   CoroutineService* const service_;
 };

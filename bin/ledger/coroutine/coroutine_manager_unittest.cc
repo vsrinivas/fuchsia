@@ -19,7 +19,7 @@ TEST(CoroutineManager, CallbackIsCalled) {
   CoroutineManager manager(&coroutine_service);
 
   bool called = false;
-  CoroutineHandler* handler;
+  CoroutineHandler* handler = nullptr;
   manager.StartCoroutine(callback::SetWhenCalled(&called),
                          [&handler](CoroutineHandler* current_handler,
                                     fit::function<void()> callback) {
@@ -28,7 +28,7 @@ TEST(CoroutineManager, CallbackIsCalled) {
                            callback();
                          });
 
-  EXPECT_TRUE(handler);
+  ASSERT_TRUE(handler);
   EXPECT_FALSE(called);
   handler->Resume(ContinuationStatus::OK);
   EXPECT_TRUE(called);
@@ -40,7 +40,7 @@ TEST(CoroutineManager, InterruptCoroutineOnDestruction) {
       std::make_unique<CoroutineManager>(&coroutine_service);
 
   bool called = false;
-  CoroutineHandler* handler;
+  CoroutineHandler* handler = nullptr;
   manager->StartCoroutine(callback::SetWhenCalled(&called),
                           [&handler](CoroutineHandler* current_handler,
                                      fit::function<void()> callback) {
@@ -50,10 +50,24 @@ TEST(CoroutineManager, InterruptCoroutineOnDestruction) {
                             callback();
                           });
 
-  EXPECT_TRUE(handler);
+  ASSERT_TRUE(handler);
   EXPECT_FALSE(called);
   manager.reset();
   EXPECT_TRUE(called);
+}
+
+TEST(CoroutineManager, NoCallback) {
+  CoroutineServiceImpl coroutine_service;
+  CoroutineManager manager(&coroutine_service);
+
+  CoroutineHandler* handler = nullptr;
+  manager.StartCoroutine([&handler](CoroutineHandler* current_handler) {
+    handler = current_handler;
+    EXPECT_EQ(ContinuationStatus::OK, handler->Yield());
+  });
+
+  ASSERT_TRUE(handler);
+  handler->Resume(ContinuationStatus::OK);
 }
 
 }  // namespace
