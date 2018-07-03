@@ -82,16 +82,15 @@ void UpdateEntryBenchmark::Run() {
               page_ = std::move(page);
               fidl::VectorPtr<uint8_t> key = generator_.MakeKey(0, key_size_);
               if (transaction_size_ > 0) {
-                page_->StartTransaction(
-                    [this,
-                     key = std::move(key)](ledger::Status status) mutable {
-                      if (benchmark::QuitOnError(QuitLoopClosure(), status,
-                                                 "Page::StartTransaction")) {
-                        return;
-                      }
-                      TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
-                      RunSingle(0, std::move(key));
-                    });
+                page_->StartTransaction([this, key = std::move(key)](
+                                            ledger::Status status) mutable {
+                  if (benchmark::QuitOnError(QuitLoopClosure(), status,
+                                             "Page::StartTransaction")) {
+                    return;
+                  }
+                  TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
+                  RunSingle(0, std::move(key));
+                });
               } else {
                 RunSingle(0, std::move(key));
               }

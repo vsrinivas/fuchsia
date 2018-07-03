@@ -87,25 +87,24 @@ void TestPageStorage::AddCommitsFromSync(
     return;
   }
 
-  fit::closure confirm =
-      [this, ids_and_bytes = std::move(ids_and_bytes),
-       callback = std::move(callback)]() mutable {
-        for (auto& commit : ids_and_bytes) {
-          received_commits[commit.id] = std::move(commit.bytes);
-          unsynced_commits_to_return.erase(
-              std::remove_if(
-                  unsynced_commits_to_return.begin(),
-                  unsynced_commits_to_return.end(),
-                  [commit_id = std::move(commit.id)](
-                      const std::unique_ptr<const storage::Commit>& commit) {
-                    return commit->GetId() == commit_id;
-                  }),
-              unsynced_commits_to_return.end());
-        }
-        async::PostTask(async_, [callback = std::move(callback)] {
-          callback(storage::Status::OK);
-        });
-      };
+  fit::closure confirm = [this, ids_and_bytes = std::move(ids_and_bytes),
+                          callback = std::move(callback)]() mutable {
+    for (auto& commit : ids_and_bytes) {
+      received_commits[commit.id] = std::move(commit.bytes);
+      unsynced_commits_to_return.erase(
+          std::remove_if(
+              unsynced_commits_to_return.begin(),
+              unsynced_commits_to_return.end(),
+              [commit_id = std::move(commit.id)](
+                  const std::unique_ptr<const storage::Commit>& commit) {
+                return commit->GetId() == commit_id;
+              }),
+          unsynced_commits_to_return.end());
+    }
+    async::PostTask(async_, [callback = std::move(callback)] {
+      callback(storage::Status::OK);
+    });
+  };
   if (should_delay_add_commit_confirmation) {
     delayed_add_commit_confirmations.push_back(std::move(confirm));
     return;

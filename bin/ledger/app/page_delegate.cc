@@ -129,24 +129,23 @@ void PageDelegate::PutWithPriority(fidl::VectorPtr<uint8_t> key,
       std::move(callback),
       [this, promise = std::move(promise), key = std::move(key),
        priority](Page::PutWithPriorityCallback callback) mutable {
-        promise->Finalize(
-            callback::MakeScoped(
-                weak_factory_.GetWeakPtr(),
-                [this, key = std::move(key), priority,
-                 callback = std::move(callback)](
-                    storage::Status status,
-                    storage::ObjectIdentifier object_identifier) mutable {
-                  if (status != storage::Status::OK) {
-                    callback(PageUtils::ConvertStatus(status));
-                    return;
-                  }
+        promise->Finalize(callback::MakeScoped(
+            weak_factory_.GetWeakPtr(),
+            [this, key = std::move(key), priority,
+             callback = std::move(callback)](
+                storage::Status status,
+                storage::ObjectIdentifier object_identifier) mutable {
+              if (status != storage::Status::OK) {
+                callback(PageUtils::ConvertStatus(status));
+                return;
+              }
 
-                  PutInCommit(std::move(key), std::move(object_identifier),
-                              priority == Priority::EAGER
-                                  ? storage::KeyPriority::EAGER
-                                  : storage::KeyPriority::LAZY,
-                              std::move(callback));
-                }));
+              PutInCommit(std::move(key), std::move(object_identifier),
+                          priority == Priority::EAGER
+                              ? storage::KeyPriority::EAGER
+                              : storage::KeyPriority::LAZY,
+                          std::move(callback));
+            }));
       });
 }
 
@@ -174,45 +173,43 @@ void PageDelegate::PutReference(fidl::VectorPtr<uint8_t> key,
       [this, promise = std::move(promise), key = std::move(key),
        object_identifier = std::move(object_identifier),
        priority](Page::PutReferenceCallback callback) mutable {
-        promise->Finalize(
-            callback::MakeScoped(
-                weak_factory_.GetWeakPtr(),
-                [this, key = std::move(key),
-                 object_identifier = std::move(object_identifier), priority,
-                 callback = std::move(callback)](
-                    storage::Status status,
-                    std::unique_ptr<const storage::Object> object) mutable {
-                  if (status != storage::Status::OK) {
-                    callback(PageUtils::ConvertStatus(
-                        status, Status::REFERENCE_NOT_FOUND));
-                    return;
-                  }
-                  PutInCommit(std::move(key), std::move(object_identifier),
-                              priority == Priority::EAGER
-                                  ? storage::KeyPriority::EAGER
-                                  : storage::KeyPriority::LAZY,
-                              std::move(callback));
-                }));
+        promise->Finalize(callback::MakeScoped(
+            weak_factory_.GetWeakPtr(),
+            [this, key = std::move(key),
+             object_identifier = std::move(object_identifier), priority,
+             callback = std::move(callback)](
+                storage::Status status,
+                std::unique_ptr<const storage::Object> object) mutable {
+              if (status != storage::Status::OK) {
+                callback(PageUtils::ConvertStatus(status,
+                                                  Status::REFERENCE_NOT_FOUND));
+                return;
+              }
+              PutInCommit(std::move(key), std::move(object_identifier),
+                          priority == Priority::EAGER
+                              ? storage::KeyPriority::EAGER
+                              : storage::KeyPriority::LAZY,
+                          std::move(callback));
+            }));
       });
 }
 
 void PageDelegate::Delete(fidl::VectorPtr<uint8_t> key,
                           Page::DeleteCallback callback) {
-  operation_serializer_
-      .Serialize<Status>(
-          std::move(callback),
-          [this, key = std::move(key)](Page::DeleteCallback callback) mutable {
-            RunInTransaction(
-                [key = std::move(key)](storage::Journal* journal,
-                                       fit::function<void(Status)> callback) {
-                  journal->Delete(key, [callback = std::move(callback)](
-                                           storage::Status status) {
-                    callback(PageUtils::ConvertStatus(status,
-                                                      Status::KEY_NOT_FOUND));
-                  });
-                },
-                std::move(callback));
-          });
+  operation_serializer_.Serialize<Status>(
+      std::move(callback),
+      [this, key = std::move(key)](Page::DeleteCallback callback) mutable {
+        RunInTransaction(
+            [key = std::move(key)](storage::Journal* journal,
+                                   fit::function<void(Status)> callback) {
+              journal->Delete(key, [callback = std::move(callback)](
+                                       storage::Status status) {
+                callback(
+                    PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND));
+              });
+            },
+            std::move(callback));
+      });
 }
 
 void PageDelegate::CreateReference(
@@ -376,36 +373,36 @@ void PageDelegate::RunInTransaction(
               branch_tracker_.StopTransaction(nullptr);
               return;
             }
-            runnable(journal.get(),
-                     callback::MakeScoped(
-                         weak_factory_.GetWeakPtr(),
-                         [this, journal = std::move(journal),
-                          callback = std::move(callback)](
-                             Status ledger_status) mutable {
-                           if (ledger_status != Status::OK) {
-                             callback(ledger_status);
-                             storage_->RollbackJournal(
-                                 std::move(journal),
-                                 [](storage::Status /*rollback_status*/) {});
-                             branch_tracker_.StopTransaction(nullptr);
-                             return;
-                           }
+            runnable(
+                journal.get(),
+                callback::MakeScoped(
+                    weak_factory_.GetWeakPtr(),
+                    [this, journal = std::move(journal),
+                     callback =
+                         std::move(callback)](Status ledger_status) mutable {
+                      if (ledger_status != Status::OK) {
+                        callback(ledger_status);
+                        storage_->RollbackJournal(
+                            std::move(journal),
+                            [](storage::Status /*rollback_status*/) {});
+                        branch_tracker_.StopTransaction(nullptr);
+                        return;
+                      }
 
-                           CommitJournal(
-                               std::move(journal),
-                               callback::MakeScoped(
-                                   weak_factory_.GetWeakPtr(),
-                                   [this, callback = std::move(callback)](
-                                       Status status,
-                                       std::unique_ptr<const storage::Commit>
-                                           commit) {
-                                     branch_tracker_.StopTransaction(
-                                         status == Status::OK
-                                             ? std::move(commit)
-                                             : nullptr);
-                                     callback(status);
-                                   }));
-                         }));
+                      CommitJournal(
+                          std::move(journal),
+                          callback::MakeScoped(
+                              weak_factory_.GetWeakPtr(),
+                              [this, callback = std::move(callback)](
+                                  Status status,
+                                  std::unique_ptr<const storage::Commit>
+                                      commit) {
+                                branch_tracker_.StopTransaction(
+                                    status == Status::OK ? std::move(commit)
+                                                         : nullptr);
+                                callback(status);
+                              }));
+                    }));
           }));
 }
 

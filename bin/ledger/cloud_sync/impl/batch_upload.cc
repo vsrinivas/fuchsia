@@ -99,20 +99,20 @@ void BatchUpload::UploadNextObject() {
   // retrieving the object content.
   encryption_service_->GetObjectName(
       object_identifier_to_send,
-      callback::MakeScoped(
-          weak_ptr_factory_.GetWeakPtr(),
-          [this, object_identifier_to_send](
-              encryption::Status encryption_status,
-              std::string object_name) mutable {
-            if (encryption_status != encryption::Status::OK) {
-              EnqueueForRetryAndSignalError(
-                  std::move(object_identifier_to_send));
-              return;
-            }
+      callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
+                           [this, object_identifier_to_send](
+                               encryption::Status encryption_status,
+                               std::string object_name) mutable {
+                             if (encryption_status != encryption::Status::OK) {
+                               EnqueueForRetryAndSignalError(
+                                   std::move(object_identifier_to_send));
+                               return;
+                             }
 
-            GetObjectContentAndUpload(std::move(object_identifier_to_send),
-                                      std::move(object_name));
-          }));
+                             GetObjectContentAndUpload(
+                                 std::move(object_identifier_to_send),
+                                 std::move(object_name));
+                           }));
 }
 
 void BatchUpload::GetObjectContentAndUpload(

@@ -85,23 +85,23 @@ class FakeLedgerStorage : public storage::LedgerStorage {
                                          std::unique_ptr<storage::PageStorage>)>
                           callback) override {
     get_page_calls.push_back(page_id);
-    async::PostTask(async_, [this, callback = std::move(callback),
-                             page_id]() mutable {
-      if (should_get_page_fail) {
-        callback(storage::Status::NOT_FOUND, nullptr);
-      } else {
-        auto fake_page_storage =
-            std::make_unique<DelayIsSyncedCallbackFakePageStorage>(page_id);
-        // If the page was opened before, restore the previous sync state.
-        fake_page_storage->set_syned(synced_pages_.find(page_id) !=
-                                     synced_pages_.end());
-        fake_page_storage->DelayIsSyncedCallback(
-            pages_with_delayed_callback.find(page_id) !=
-            pages_with_delayed_callback.end());
-        page_storages_[std::move(page_id)] = fake_page_storage.get();
-        callback(storage::Status::OK, std::move(fake_page_storage));
-      }
-    });
+    async::PostTask(
+        async_, [this, callback = std::move(callback), page_id]() mutable {
+          if (should_get_page_fail) {
+            callback(storage::Status::NOT_FOUND, nullptr);
+          } else {
+            auto fake_page_storage =
+                std::make_unique<DelayIsSyncedCallbackFakePageStorage>(page_id);
+            // If the page was opened before, restore the previous sync state.
+            fake_page_storage->set_syned(synced_pages_.find(page_id) !=
+                                         synced_pages_.end());
+            fake_page_storage->DelayIsSyncedCallback(
+                pages_with_delayed_callback.find(page_id) !=
+                pages_with_delayed_callback.end());
+            page_storages_[std::move(page_id)] = fake_page_storage.get();
+            callback(storage::Status::OK, std::move(fake_page_storage));
+          }
+        });
   }
 
   bool DeletePageStorage(storage::PageIdView page_id) override { return false; }

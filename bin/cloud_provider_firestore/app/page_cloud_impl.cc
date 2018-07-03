@@ -254,29 +254,31 @@ void PageCloudImpl::GetObject(fidl::VectorPtr<uint8_t> id,
   auto request = google::firestore::v1beta1::GetDocumentRequest();
   request.set_name(GetObjectPath(page_path_, convert::ToString(id)));
 
-  ScopedGetCredentials([this, request = std::move(request),
-                        callback = std::move(callback)](
-                           auto call_credentials) mutable {
-    firestore_service_->GetDocument(
-        std::move(request), std::move(call_credentials),
-        [callback = std::move(callback)](auto status, auto result) {
-          if (LogGrpcRequestError(status)) {
-            callback(ConvertGrpcStatus(status.error_code()), 0u, zx::socket());
-            return;
-          }
+  ScopedGetCredentials(
+      [this, request = std::move(request),
+       callback = std::move(callback)](auto call_credentials) mutable {
+        firestore_service_->GetDocument(
+            std::move(request), std::move(call_credentials),
+            [callback = std::move(callback)](auto status, auto result) {
+              if (LogGrpcRequestError(status)) {
+                callback(ConvertGrpcStatus(status.error_code()), 0u,
+                         zx::socket());
+                return;
+              }
 
-          if (result.fields().count(kDataKey) != 1) {
-            FXL_LOG(ERROR)
-                << "Incorrect format of the retrieved object document";
-            callback(cloud_provider::Status::PARSE_ERROR, 0u, zx::socket());
-            return;
-          }
+              if (result.fields().count(kDataKey) != 1) {
+                FXL_LOG(ERROR)
+                    << "Incorrect format of the retrieved object document";
+                callback(cloud_provider::Status::PARSE_ERROR, 0u, zx::socket());
+                return;
+              }
 
-          const std::string& bytes = result.fields().at(kDataKey).bytes_value();
-          callback(cloud_provider::Status::OK, bytes.size(),
-                   fsl::WriteStringToSocket(bytes));
-        });
-  });
+              const std::string& bytes =
+                  result.fields().at(kDataKey).bytes_value();
+              callback(cloud_provider::Status::OK, bytes.size(),
+                       fsl::WriteStringToSocket(bytes));
+            });
+      });
 }
 
 void PageCloudImpl::SetWatcher(

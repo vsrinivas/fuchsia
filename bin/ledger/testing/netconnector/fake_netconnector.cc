@@ -4,7 +4,6 @@
 
 #include "peridot/bin/ledger/testing/netconnector/fake_netconnector.h"
 
-
 namespace ledger {
 FakeNetConnector::FakeNetConnector(Delegate* delegate) : delegate_(delegate) {}
 

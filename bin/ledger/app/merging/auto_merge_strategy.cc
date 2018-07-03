@@ -249,34 +249,33 @@ void AutoMergeStrategy::AutoMerger::ApplyDiffOnJournal(
     }
   }
 
-  waiter->Finalize(
-      [weak_this = weak_factory_.GetWeakPtr(),
-       journal = std::move(journal)](storage::Status s) mutable {
-        if (!weak_this) {
-          return;
-        }
-        if (weak_this->cancelled_) {
-          weak_this->Done(Status::INTERNAL_ERROR);
-          return;
-        }
-        if (s != storage::Status::OK) {
-          FXL_LOG(ERROR) << "Unable to commit merge journal: " << s;
-          weak_this->Done(PageUtils::ConvertStatus(s));
-          return;
-        }
-        weak_this->storage_->CommitJournal(
-            std::move(journal),
-            [weak_this = std::move(weak_this)](
-                storage::Status s,
-                std::unique_ptr<const storage::Commit> /*commit*/) {
-              if (s != storage::Status::OK) {
-                FXL_LOG(ERROR) << "Unable to commit merge journal: " << s;
-              }
-              if (weak_this) {
-                weak_this->Done(PageUtils::ConvertStatus(s));
-              }
-            });
-      });
+  waiter->Finalize([weak_this = weak_factory_.GetWeakPtr(),
+                    journal = std::move(journal)](storage::Status s) mutable {
+    if (!weak_this) {
+      return;
+    }
+    if (weak_this->cancelled_) {
+      weak_this->Done(Status::INTERNAL_ERROR);
+      return;
+    }
+    if (s != storage::Status::OK) {
+      FXL_LOG(ERROR) << "Unable to commit merge journal: " << s;
+      weak_this->Done(PageUtils::ConvertStatus(s));
+      return;
+    }
+    weak_this->storage_->CommitJournal(
+        std::move(journal),
+        [weak_this = std::move(weak_this)](
+            storage::Status s,
+            std::unique_ptr<const storage::Commit> /*commit*/) {
+          if (s != storage::Status::OK) {
+            FXL_LOG(ERROR) << "Unable to commit merge journal: " << s;
+          }
+          if (weak_this) {
+            weak_this->Done(PageUtils::ConvertStatus(s));
+          }
+        });
+  });
 }
 
 void AutoMergeStrategy::AutoMerger::Cancel() {

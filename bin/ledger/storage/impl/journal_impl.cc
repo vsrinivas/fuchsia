@@ -234,55 +234,53 @@ void JournalImpl::GetObjectsToSync(
     fit::function<void(Status status,
                        std::vector<ObjectIdentifier> objects_to_sync)>
         callback) {
-  page_storage_
-      ->GetJournalEntries(
-          id_,
-          [this, callback = std::move(callback)](
-              Status s,
-              std::unique_ptr<Iterator<const EntryChange>> entries) mutable {
-            if (s != Status::OK) {
-              callback(s, {});
-              return;
+  page_storage_->GetJournalEntries(
+      id_, [this, callback = std::move(callback)](
+               Status s,
+               std::unique_ptr<Iterator<const EntryChange>> entries) mutable {
+        if (s != Status::OK) {
+          callback(s, {});
+          return;
+        }
+        // Compute the key-value pairs added in this journal.
+        std::map<std::string, ObjectIdentifier> key_values;
+        while (entries->Valid()) {
+          const Entry& entry = (*entries)->entry;
+          if ((*entries)->deleted) {
+            key_values.erase(entry.key);
+          } else {
+            key_values[entry.key] = entry.object_identifier;
+          }
+          entries->Next();
+        }
+        auto waiter =
+            fxl::MakeRefCounted<callback::Waiter<Status, bool>>(Status::OK);
+        for (const auto& key_value : key_values) {
+          page_storage_->ObjectIsUntracked(key_value.second,
+                                           waiter->NewCallback());
+        }
+        waiter->Finalize([key_values = std::move(key_values),
+                          callback = std::move(callback)](
+                             Status s, std::vector<bool> is_untracked) {
+          if (s != Status::OK) {
+            callback(s, {});
+            return;
+          }
+          // Compute the set of values.
+          std::set<ObjectIdentifier> result_set;
+          size_t i = 0;
+          for (const auto& key_value : key_values) {
+            // Only untracked objects should be synced.
+            if (is_untracked[i++]) {
+              result_set.insert(key_value.second);
             }
-            // Compute the key-value pairs added in this journal.
-            std::map<std::string, ObjectIdentifier> key_values;
-            while (entries->Valid()) {
-              const Entry& entry = (*entries)->entry;
-              if ((*entries)->deleted) {
-                key_values.erase(entry.key);
-              } else {
-                key_values[entry.key] = entry.object_identifier;
-              }
-              entries->Next();
-            }
-            auto waiter =
-                fxl::MakeRefCounted<callback::Waiter<Status, bool>>(Status::OK);
-            for (const auto& key_value : key_values) {
-              page_storage_->ObjectIsUntracked(key_value.second,
-                                               waiter->NewCallback());
-            }
-            waiter->Finalize([key_values = std::move(key_values),
-                              callback = std::move(callback)](
-                                 Status s, std::vector<bool> is_untracked) {
-              if (s != Status::OK) {
-                callback(s, {});
-                return;
-              }
-              // Compute the set of values.
-              std::set<ObjectIdentifier> result_set;
-              size_t i = 0;
-              for (const auto& key_value : key_values) {
-                // Only untracked objects should be synced.
-                if (is_untracked[i++]) {
-                  result_set.insert(key_value.second);
-                }
-              }
-              std::vector<ObjectIdentifier> objects_to_sync;
-              std::copy(result_set.begin(), result_set.end(),
-                        std::back_inserter(objects_to_sync));
-              callback(Status::OK, std::move(objects_to_sync));
-            });
-          });
+          }
+          std::vector<ObjectIdentifier> objects_to_sync;
+          std::copy(result_set.begin(), result_set.end(),
+                    std::back_inserter(objects_to_sync));
+          callback(Status::OK, std::move(objects_to_sync));
+        });
+      });
 }
 
 void JournalImpl::RollbackInternal(fit::function<void(Status)> callback) {

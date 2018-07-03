@@ -156,21 +156,21 @@ void DeviceSetImpl::Erase(EraseCallback callback) {
   request.set_parent(user_path_);
   request.set_collection_id(kDeviceCollection);
 
-  ScopedGetCredentials([this, request = std::move(request),
-                        callback = std::move(callback)](
-                           auto call_credentials) mutable {
-    firestore_service_->ListDocuments(
-        std::move(request), call_credentials,
-        [this, call_credentials, callback = std::move(callback)](
-            auto status, auto result) mutable {
-          if (LogGrpcRequestError(status)) {
-            callback(ConvertGrpcStatus(status.error_code()));
-            return;
-          }
-          OnGotDocumentsToErase(std::move(call_credentials), std::move(result),
-                                std::move(callback));
-        });
-  });
+  ScopedGetCredentials(
+      [this, request = std::move(request),
+       callback = std::move(callback)](auto call_credentials) mutable {
+        firestore_service_->ListDocuments(
+            std::move(request), call_credentials,
+            [this, call_credentials, callback = std::move(callback)](
+                auto status, auto result) mutable {
+              if (LogGrpcRequestError(status)) {
+                callback(ConvertGrpcStatus(status.error_code()));
+                return;
+              }
+              OnGotDocumentsToErase(std::move(call_credentials),
+                                    std::move(result), std::move(callback));
+            });
+      });
 }
 
 void DeviceSetImpl::OnGotDocumentsToErase(

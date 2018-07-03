@@ -317,22 +317,22 @@ void PageSnapshotImpl::GetKeys(fidl::VectorPtr<uint8_t> key_start,
     context->keys.push_back(convert::ToArray(entry.key));
     return true;
   };
-  auto on_done =
-      [context = std::move(context),
-       callback = std::move(timed_callback)](storage::Status status) {
-        if (status != storage::Status::OK) {
-          FXL_LOG(ERROR) << "Error while reading: " << status;
-          callback(Status::IO_ERROR,
-                   fidl::VectorPtr<fidl::VectorPtr<uint8_t>>::New(0), nullptr);
-          return;
-        }
-        if (context->next_token) {
-          callback(Status::PARTIAL_RESULT, std::move(context->keys),
-                   std::move(context->next_token));
-        } else {
-          callback(Status::OK, std::move(context->keys), nullptr);
-        }
-      };
+  auto on_done = [context = std::move(context),
+                  callback =
+                      std::move(timed_callback)](storage::Status status) {
+    if (status != storage::Status::OK) {
+      FXL_LOG(ERROR) << "Error while reading: " << status;
+      callback(Status::IO_ERROR,
+               fidl::VectorPtr<fidl::VectorPtr<uint8_t>>::New(0), nullptr);
+      return;
+    }
+    if (context->next_token) {
+      callback(Status::PARTIAL_RESULT, std::move(context->keys),
+               std::move(context->next_token));
+    } else {
+      callback(Status::OK, std::move(context->keys), nullptr);
+    }
+  };
   if (token) {
     page_storage_->GetCommitContents(*commit_,
                                      convert::ToString(token->opaque_id),

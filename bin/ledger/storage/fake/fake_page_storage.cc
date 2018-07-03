@@ -157,24 +157,24 @@ void FakePageStorage::AddObjectFromLocal(
     fit::function<void(Status, ObjectIdentifier)> callback) {
   auto value = std::make_unique<std::string>();
   auto data_source_ptr = data_source.get();
-  data_source_ptr->Get(
-      [this, data_source = std::move(data_source), value = std::move(value),
-       callback = std::move(callback)](
-          std::unique_ptr<DataSource::DataChunk> chunk,
-          DataSource::Status status) mutable {
-        if (status == DataSource::Status::ERROR) {
-          callback(Status::IO_ERROR, {});
-          return;
-        }
-        auto view = chunk->Get();
-        value->append(view.data(), view.size());
-        if (status == DataSource::Status::DONE) {
-          ObjectIdentifier object_identifier =
-              encryption_service_.MakeObjectIdentifier(ComputeDigest(*value));
-          objects_[object_identifier] = std::move(*value);
-          callback(Status::OK, std::move(object_identifier));
-        }
-      });
+  data_source_ptr->Get([this, data_source = std::move(data_source),
+                        value = std::move(value),
+                        callback = std::move(callback)](
+                           std::unique_ptr<DataSource::DataChunk> chunk,
+                           DataSource::Status status) mutable {
+    if (status == DataSource::Status::ERROR) {
+      callback(Status::IO_ERROR, {});
+      return;
+    }
+    auto view = chunk->Get();
+    value->append(view.data(), view.size());
+    if (status == DataSource::Status::DONE) {
+      ObjectIdentifier object_identifier =
+          encryption_service_.MakeObjectIdentifier(ComputeDigest(*value));
+      objects_[object_identifier] = std::move(*value);
+      callback(Status::OK, std::move(object_identifier));
+    }
+  });
 }
 
 void FakePageStorage::GetObject(

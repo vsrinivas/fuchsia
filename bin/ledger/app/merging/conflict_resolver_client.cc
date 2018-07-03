@@ -227,38 +227,38 @@ void ConflictResolverClient::Merge(fidl::VectorPtr<MergedValue> merged_values,
         for (const MergedValue& merged_value : *merged_values) {
           weak_this->OnNextMergeResult(merged_value, waiter);
         }
-        waiter->Finalize(
-            [weak_this, merged_values = std::move(merged_values),
-             callback = std::move(callback)](
-                storage::Status status, std::vector<storage::ObjectIdentifier>
-                                            object_identifiers) mutable {
-              if (!weak_this) {
-                callback(Status::INTERNAL_ERROR);
-                return;
-              }
-              if (!weak_this->IsInValidStateAndNotify(callback, status)) {
-                return;
-              }
+        waiter->Finalize([weak_this, merged_values = std::move(merged_values),
+                          callback = std::move(callback)](
+                             storage::Status status,
+                             std::vector<storage::ObjectIdentifier>
+                                 object_identifiers) mutable {
+          if (!weak_this) {
+            callback(Status::INTERNAL_ERROR);
+            return;
+          }
+          if (!weak_this->IsInValidStateAndNotify(callback, status)) {
+            return;
+          }
 
-              auto waiter =
-                  fxl::MakeRefCounted<callback::StatusWaiter<storage::Status>>(
-                      storage::Status::OK);
-              for (size_t i = 0; i < object_identifiers.size(); ++i) {
-                if (object_identifiers[i].object_digest.empty()) {
-                  continue;
-                }
-                weak_this->journal_->Put(
-                    merged_values->at(i).key, object_identifiers[i],
-                    merged_values->at(i).priority == Priority::EAGER
-                        ? storage::KeyPriority::EAGER
-                        : storage::KeyPriority::LAZY,
-                    waiter->NewCallback());
-              }
-              waiter->Finalize(
-                  [callback = std::move(callback)](storage::Status status) {
-                    callback(PageUtils::ConvertStatus(status));
-                  });
-            });
+          auto waiter =
+              fxl::MakeRefCounted<callback::StatusWaiter<storage::Status>>(
+                  storage::Status::OK);
+          for (size_t i = 0; i < object_identifiers.size(); ++i) {
+            if (object_identifiers[i].object_digest.empty()) {
+              continue;
+            }
+            weak_this->journal_->Put(
+                merged_values->at(i).key, object_identifiers[i],
+                merged_values->at(i).priority == Priority::EAGER
+                    ? storage::KeyPriority::EAGER
+                    : storage::KeyPriority::LAZY,
+                waiter->NewCallback());
+          }
+          waiter->Finalize(
+              [callback = std::move(callback)](storage::Status status) {
+                callback(PageUtils::ConvertStatus(status));
+              });
+        });
       });
 }
 

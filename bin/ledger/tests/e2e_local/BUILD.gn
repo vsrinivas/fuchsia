@@ -20,8 +20,8 @@ executable("e2e_local") {
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/bin/ledger/testing/cloud_provider",
-    "//peridot/lib/scoped_tmpfs",
     "//peridot/lib/rio",
+    "//peridot/lib/scoped_tmpfs",
     "//peridot/public/lib/ledger/fidl",
     "//third_party/googletest:gtest_main",
   ]

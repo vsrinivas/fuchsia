@@ -37,8 +37,7 @@ void BaseIntegrationTest::StopLoop() { QuitLoop(); }
 
 void BaseIntegrationTest::SetUp() {
   ::testing::Test::SetUp();
-  trace_provider_ =
-      std::make_unique<trace::TraceProvider>(dispatcher());
+  trace_provider_ = std::make_unique<trace::TraceProvider>(dispatcher());
   loop_.StartThread();
   if (server_id) {
     GetAppFactory()->SetServerId(*server_id);

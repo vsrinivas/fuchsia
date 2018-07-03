@@ -201,59 +201,57 @@ void PutBenchmark::PutEntry(fidl::VectorPtr<uint8_t> key,
   fsl::SizedVmo vmo;
   FXL_CHECK(fsl::VmoFromString(convert::ToStringView(value), &vmo));
   TRACE_ASYNC_BEGIN("benchmark", "create reference", trace_event_id);
-  page_
-      ->CreateReferenceFromVmo(
-          std::move(vmo).ToTransport(),
-          [this, trace_event_id, key = std::move(key),
-           on_done = std::move(on_done)](
-              ledger::Status status, ledger::ReferencePtr reference) mutable {
-            if (QuitOnError(QuitLoopClosure(), status,
-                            "Page::CreateReferenceFromVmo")) {
-              return;
-            }
-            TRACE_ASYNC_END("benchmark", "create reference", trace_event_id);
-            TRACE_ASYNC_BEGIN("benchmark", "put reference", trace_event_id);
-            page_->PutReference(
-                std::move(key), std::move(*reference), ledger::Priority::EAGER,
-                [this, trace_event_id,
-                 on_done = std::move(on_done)](ledger::Status status) {
-                  if (QuitOnError(QuitLoopClosure(), status,
-                                  "Page::PutReference")) {
-                    return;
-                  }
-                  TRACE_ASYNC_END("benchmark", "put reference", trace_event_id);
-                  TRACE_ASYNC_END("benchmark", "put", trace_event_id);
-                  on_done();
-                });
-          });
+  page_->CreateReferenceFromVmo(
+      std::move(vmo).ToTransport(),
+      [this, trace_event_id, key = std::move(key),
+       on_done = std::move(on_done)](ledger::Status status,
+                                     ledger::ReferencePtr reference) mutable {
+        if (QuitOnError(QuitLoopClosure(), status,
+                        "Page::CreateReferenceFromVmo")) {
+          return;
+        }
+        TRACE_ASYNC_END("benchmark", "create reference", trace_event_id);
+        TRACE_ASYNC_BEGIN("benchmark", "put reference", trace_event_id);
+        page_->PutReference(
+            std::move(key), std::move(*reference), ledger::Priority::EAGER,
+            [this, trace_event_id,
+             on_done = std::move(on_done)](ledger::Status status) {
+              if (QuitOnError(QuitLoopClosure(), status,
+                              "Page::PutReference")) {
+                return;
+              }
+              TRACE_ASYNC_END("benchmark", "put reference", trace_event_id);
+              TRACE_ASYNC_END("benchmark", "put", trace_event_id);
+              on_done();
+            });
+      });
 }
 
 void PutBenchmark::CommitAndRunNext(
     int i, size_t key_number, std::vector<fidl::VectorPtr<uint8_t>> keys) {
   TRACE_ASYNC_BEGIN("benchmark", "local_change_notification", key_number);
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
-  page_->Commit(
-      [this, i, keys = std::move(keys)](ledger::Status status) mutable {
-        if (QuitOnError(QuitLoopClosure(), status, "Page::Commit")) {
-          return;
-        }
-        TRACE_ASYNC_END("benchmark", "commit", i / transaction_size_);
-        TRACE_ASYNC_END("benchmark", "transaction", i / transaction_size_);
+  page_->Commit([this, i,
+                 keys = std::move(keys)](ledger::Status status) mutable {
+    if (QuitOnError(QuitLoopClosure(), status, "Page::Commit")) {
+      return;
+    }
+    TRACE_ASYNC_END("benchmark", "commit", i / transaction_size_);
+    TRACE_ASYNC_END("benchmark", "transaction", i / transaction_size_);
 
-        if (i == entry_count_ - 1) {
-          RunSingle(i + 1, std::move(keys));
-          return;
-        }
-        page_->StartTransaction([this, i = i + 1, keys = std::move(keys)](
-                                    ledger::Status status) mutable {
-          if (QuitOnError(QuitLoopClosure(), status,
-                          "Page::StartTransaction")) {
-            return;
-          }
-          TRACE_ASYNC_BEGIN("benchmark", "transaction", i / transaction_size_);
-          RunSingle(i, std::move(keys));
-        });
-      });
+    if (i == entry_count_ - 1) {
+      RunSingle(i + 1, std::move(keys));
+      return;
+    }
+    page_->StartTransaction([this, i = i + 1, keys = std::move(keys)](
+                                ledger::Status status) mutable {
+      if (QuitOnError(QuitLoopClosure(), status, "Page::StartTransaction")) {
+        return;
+      }
+      TRACE_ASYNC_BEGIN("benchmark", "transaction", i / transaction_size_);
+      RunSingle(i, std::move(keys));
+    });
+  });
 }
 
 void PutBenchmark::ShutDown() {

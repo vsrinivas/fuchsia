@@ -6,7 +6,6 @@
 
 #include <lib/fit/function.h>
 
-
 namespace storage {
 
 void ReadDataSource(

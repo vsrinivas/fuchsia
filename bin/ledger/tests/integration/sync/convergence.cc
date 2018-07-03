@@ -414,40 +414,39 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
   // In addition of verifying that the external states of the ledgers have
   // converged, we also verify we are not currently performing a merge in the
   // background, indicating that the convergence did not finish.
-  auto is_sync_and_merge_complete =
-      [this, &has_state_converged, &merge_done, &wait_status, &waiter] {
-        TRACE_DURATION("ledger", "ledger_test_is_sync_and_merge_complete");
+  auto is_sync_and_merge_complete = [this, &has_state_converged, &merge_done,
+                                     &wait_status, &waiter] {
+    TRACE_DURATION("ledger", "ledger_test_is_sync_and_merge_complete");
 
-        if (has_state_converged()) {
-          if (merge_done &&
-              wait_status ==
-                  ledger::ConflictResolutionWaitStatus::NO_CONFLICTS) {
-            return true;
-          }
-          if (!waiter) {
-            waiter = fxl::MakeRefCounted<
-                callback::StatusWaiter<ledger::ConflictResolutionWaitStatus>>(
-                ledger::ConflictResolutionWaitStatus::NO_CONFLICTS);
-            for (int i = 0; i < num_ledgers_; i++) {
-              pages_[i]->WaitForConflictResolution(waiter->NewCallback());
-            }
-            waiter->Finalize([&merge_done, &wait_status, &waiter](
-                                 ledger::ConflictResolutionWaitStatus status) {
-              merge_done = true;
-              wait_status = status;
-              waiter = nullptr;
-            });
-          }
-          return false;
-        } else {
-          merge_done = false;
-          if (waiter) {
-            waiter->Cancel();
-            waiter = nullptr;
-          }
-          return false;
+    if (has_state_converged()) {
+      if (merge_done &&
+          wait_status == ledger::ConflictResolutionWaitStatus::NO_CONFLICTS) {
+        return true;
+      }
+      if (!waiter) {
+        waiter = fxl::MakeRefCounted<
+            callback::StatusWaiter<ledger::ConflictResolutionWaitStatus>>(
+            ledger::ConflictResolutionWaitStatus::NO_CONFLICTS);
+        for (int i = 0; i < num_ledgers_; i++) {
+          pages_[i]->WaitForConflictResolution(waiter->NewCallback());
         }
-      };
+        waiter->Finalize([&merge_done, &wait_status, &waiter](
+                             ledger::ConflictResolutionWaitStatus status) {
+          merge_done = true;
+          wait_status = status;
+          waiter = nullptr;
+        });
+      }
+      return false;
+    } else {
+      merge_done = false;
+      if (waiter) {
+        waiter->Cancel();
+        waiter = nullptr;
+      }
+      return false;
+    }
+  };
 
   // If |RunLoopUntil| returns, the condition is met, thus the ledgers have
   // converged.
