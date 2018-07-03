@@ -13,7 +13,7 @@ source_set("network_wrapper") {
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/net/oldhttp/fidl",
+    "//garnet/public/fidl/fuchsia.net.oldhttp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
@@ -49,7 +49,7 @@ source_set("unittests") {
     "//garnet/public/lib/backoff/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/netstack/fidl",
+    "//garnet/public/fidl/fuchsia.netstack",
     "//third_party/googletest:gtest",
   ]
 }

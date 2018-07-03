@@ -11,8 +11,8 @@ executable("set_renderer_params") {
     "//garnet/bin/ui/root_presenter:renderer_params",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/ui/gfx/fidl",
-    "//garnet/public/lib/ui/policy/fidl",
+    "//garnet/public/fidl/fuchsia.ui.gfx",
+    "//garnet/public/fidl/fuchsia.ui.policy",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

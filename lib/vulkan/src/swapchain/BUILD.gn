@@ -21,7 +21,7 @@ shared_library("swapchain") {
   deps = [
     "$loader_build_root:extra_vulkan_headers",
     "$loader_build_root/layers:layer_common",
-    "//garnet/public/lib/images/fidl",
+    "//garnet/public/fidl/fuchsia.images",
     "//garnet/public/lib/fxl",
   ]
 }

@@ -10,8 +10,8 @@ rustc_binary("audio_player_rust") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/lib/media/fidl:media_player-rustc",
-    "//garnet/public/lib/ui/geometry/fidl:fidl-rustc",
+    "//garnet/public/fidl/fuchsia.mediaplayer:fuchsia.mediaplayer-rustc",
+    "//garnet/public/fidl/fuchsia.math:fuchsia.math-rustc",
     "//garnet/public/rust/crates/fdio",
     "//garnet/public/rust/crates/fuchsia-app",
     "//garnet/public/rust/crates/fuchsia-async",

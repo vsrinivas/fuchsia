@@ -48,9 +48,9 @@ wlan_go_dependencies = [
 ]
 
 wlan_gn_deps = [
-  "//garnet/public/lib/app/fidl($go_toolchain)",
-  "//garnet/public/lib/netstack/fidl($go_toolchain)",
-  "//garnet/public/lib/wlan/fidl:service($go_toolchain)",
+  "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
+  "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
+  "//garnet/public/fidl/fuchsia.wlan.service($go_toolchain)",
   "//garnet/public/lib/app/go/src/app",
   "//garnet/public/lib/fidl/go/src/fidl/bindings",
 ]
@@ -100,7 +100,7 @@ go_test("eapol_handshake_test_bin") {
   ]
 
   extra_dependencies = wlan_gn_deps
-  extra_dependencies += [ "//garnet/public/lib/wlan/fidl:mlme($go_toolchain)" ]
+  extra_dependencies += [ "//garnet/public/fidl/fuchsia.wlan.mlme($go_toolchain)" ]
 }
 
 go_test("eapol_crypto_test_bin") {
@@ -124,9 +124,9 @@ go_binary("wlanstack_bin") {
   go_dependencies = wlan_go_dependencies
   extra_dependencies = wlan_gn_deps
   extra_dependencies += [
-    "//garnet/public/lib/netstack/fidl($go_toolchain)",
-    "//garnet/public/lib/wlan/fidl:service($go_toolchain)",
-    "//garnet/public/lib/wlan/fidl:mlme($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.wlan.service($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.wlan.mlme($go_toolchain)",
   ]
 }
 
@@ -140,9 +140,9 @@ go_binary("wlantool_bin") {
     },
   ]
   extra_dependencies = [
-    "//garnet/public/lib/app/fidl($go_toolchain)",
-    "//garnet/public/lib/netstack/fidl($go_toolchain)",
-    "//garnet/public/lib/wlan/fidl:service($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.wlan.service($go_toolchain)",
     "//garnet/public/lib/app/go/src/app",
     "//garnet/public/lib/fidl/go/src/fidl/bindings",
   ]
@@ -154,8 +154,8 @@ go_test("wlanstack_test_bin") {
   go_dependencies = wlan_go_dependencies
   extra_dependencies = wlan_gn_deps
   extra_dependencies += [
-    "//garnet/public/lib/netstack/fidl($go_toolchain)",
-    "//garnet/public/lib/wlan/fidl:mlme($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.wlan.mlme($go_toolchain)",
   ]
 }
 

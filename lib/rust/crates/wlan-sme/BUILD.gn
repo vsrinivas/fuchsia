@@ -12,7 +12,7 @@ rustc_library("wlan-sme") {
 
   deps = [
     "//garnet/lib/rust/crates/wlan-rsn",
-    "//garnet/public/lib/wlan/fidl:mlme-rustc",
+    "//garnet/public/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//garnet/public/rust/crates/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:bytes",
     "//third_party/rust-crates/rustc_deps:failure",

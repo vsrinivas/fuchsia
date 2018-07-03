@@ -12,7 +12,7 @@ executable("simple_sine_sync") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/media/fidl",
+    "//garnet/public/fidl/fuchsia.media",
     "//garnet/public/lib/media/transport",
     "//zircon/public/lib/vmo-utils",
   ]

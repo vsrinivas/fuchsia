@@ -16,7 +16,7 @@ executable("bt_beacon_reader") {
   deps = [
     "//garnet/bin/bluetooth/tools/lib",
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/bluetooth/fidl",
+    "//garnet/public/fidl/fuchsia.bluetooth",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
   ]

@@ -16,7 +16,7 @@ executable("tones") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/media/fidl",
+    "//garnet/public/fidl/fuchsia.media",
     "//garnet/public/lib/media/timeline",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fbl",

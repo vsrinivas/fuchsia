@@ -15,7 +15,7 @@ executable("bin") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/time_zone/fidl",
+    "//garnet/public/fidl/fuchsia.timezone",
   ]
 }
 

@@ -13,7 +13,7 @@ source_set("reporting") {
   ]
 
   deps = [
-    "//garnet/public/lib/test_runner/fidl",
+    "//garnet/public/fidl/fuchsia.testing.runner",
   ]
 
   public_deps = [

@@ -14,6 +14,6 @@ source_set("wav_writer") {
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fbl",
-    "//garnet/public/lib/media/fidl",
+    "//garnet/public/fidl/fuchsia.media",
   ]
 }

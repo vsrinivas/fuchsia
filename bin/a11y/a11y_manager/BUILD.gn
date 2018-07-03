@@ -26,7 +26,7 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/accessibility/fidl",
+    "//garnet/public/fidl/fuchsia.accessibility",
   ]
 
   deps = [
@@ -34,6 +34,6 @@ source_set("lib") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/ui/input/fidl",
+    "//garnet/public/fidl/fuchsia.ui.input",
   ]
 }

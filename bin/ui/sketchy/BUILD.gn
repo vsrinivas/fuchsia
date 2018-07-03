@@ -53,7 +53,7 @@ executable("bin") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/escher",
     "//garnet/public/lib/ui/scenic/cpp",
-    "//garnet/public/lib/ui/sketchy/fidl",
+    "//garnet/public/fidl/fuchsia.ui.sketchy",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]

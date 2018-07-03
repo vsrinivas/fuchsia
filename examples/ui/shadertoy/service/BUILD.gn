@@ -34,7 +34,7 @@ executable("service") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/ui/gfx/fidl",
+    "//garnet/public/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/ui/scenic/cpp:fidl_helpers",
     "//garnet/public/lib/vulkan",
     "//zircon/public/lib/fit",

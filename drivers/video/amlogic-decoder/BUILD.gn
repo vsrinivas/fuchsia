@@ -87,7 +87,7 @@ source_set("sources") {
     "third_party/libvpx",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/media/fidl:media_codec",
+    "//garnet/public/fidl/fuchsia.mediacodec",
   ]
   if (amlogic_decoder_tests) {
     testonly = true
@@ -103,7 +103,7 @@ source_set("tests") {
     ":sources",
     ":test_support",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/media/fidl:media_codec",
+    "//garnet/public/fidl/fuchsia.mediacodec",
     "//third_party/googletest:gtest",
   ]
   sources = [
@@ -159,7 +159,7 @@ executable("test_amlogic_codec_factory") {
   ]
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/media/fidl:media_codec",
+    "//garnet/public/fidl/fuchsia.mediacodec",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

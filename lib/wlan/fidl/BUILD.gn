@@ -30,7 +30,7 @@ fidl("service") {
   public_deps = [
     ":fidl",
     ":sme",
-    "//garnet/public/lib/wlan/fidl:stats"
+    "//garnet/public/fidl/fuchsia.wlan.stats"
   ]
 }
 

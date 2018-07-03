@@ -21,7 +21,7 @@ executable("google_oauth_demo") {
   deps = [
     "//garnet/bin/auth/store:credentials",
     "//garnet/bin/auth/store:lib",
-    "//garnet/public/lib/auth/fidl",
+    "//garnet/public/fidl/fuchsia.auth",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

@@ -13,7 +13,7 @@ source_set("input") {
   public_deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/ui/input/fidl",
+    "//garnet/public/fidl/fuchsia.ui.input",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/fit",
   ]

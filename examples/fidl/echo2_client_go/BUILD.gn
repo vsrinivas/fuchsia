@@ -31,7 +31,7 @@ go_binary("echo2_client_go_bin") {
   ]
 
   extra_dependencies = [
-    "//garnet/public/lib/app/fidl($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/examples/fidl/services:echo2($go_toolchain)",
   ]
 }

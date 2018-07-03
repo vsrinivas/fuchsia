@@ -1,0 +1,19 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.ui.policy") {
+  sdk_category = "partner"
+
+  sources = [
+    "display_usage.fidl",
+    "presentation.fidl",
+    "presenter.fidl",
+  ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
+  ]
+}

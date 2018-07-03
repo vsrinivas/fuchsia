@@ -7,7 +7,7 @@ templates here that can be copied into new C++-related templates.
 Example usage:
 
 fidlmerge -template serviceimpl \
-    -json out/x64/fidling/gen/garnet/public/lib/media/fidl/fidl.fidl.json \
+    -json out/x64/fidling/gen/garnet/public/fidl/fuchsia.media/fidl.fidl.json \
     -output-base audio_renderer2_impl \
     -options interface=fuchsia.media/AudioRenderer2
 

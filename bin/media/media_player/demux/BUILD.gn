@@ -27,7 +27,7 @@ source_set("demux") {
     "//garnet/bin/media/media_player/util",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/net/oldhttp/fidl",
+    "//garnet/public/fidl/fuchsia.net.oldhttp",
   ]
 
   public_deps = [

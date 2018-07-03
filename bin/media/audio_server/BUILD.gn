@@ -23,7 +23,7 @@ source_set("audio_mixer_lib") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/media/fidl",
+    "//garnet/public/fidl/fuchsia.media",
   ]
 
   deps = [
@@ -99,7 +99,7 @@ executable("audio_server") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/audio",
-    "//garnet/public/lib/media/fidl",
+    "//garnet/public/fidl/fuchsia.media",
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/media/transport",
     "//zircon/public/lib/async-loop-cpp",
@@ -129,7 +129,7 @@ test("tests") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/media/fidl",
+    "//garnet/public/fidl/fuchsia.media",
     "//third_party/googletest:gtest_main",
   ]
 }

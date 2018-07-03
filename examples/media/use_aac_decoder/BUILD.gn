@@ -29,7 +29,7 @@ source_set("use_aac_decoder_source_set") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/media/fidl:media_codec",
+    "//garnet/public/fidl/fuchsia.mediacodec",
 
     # Because use_aac_decoder.h includes openssl/sha.h.
     "//third_party/boringssl:crypto",

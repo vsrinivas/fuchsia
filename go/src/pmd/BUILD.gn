@@ -38,8 +38,8 @@ go_binary("pkgsvr_bin") {
   output_name = "pkgsvr"
   gopackage = "fuchsia.googlesource.com/pmd/cmd/pkgsvr"
   extra_dependencies = [
-    "//garnet/public/lib/amber/fidl($go_toolchain)",
-    "//garnet/public/lib/app/fidl($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.amber($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/lib/app/go/src/app",
     "//garnet/public/lib/fidl/go/src/fidl/bindings",
   ]
@@ -60,8 +60,8 @@ foreach(testpkg, test_packages) {
   go_test("pmd_${testpkg}_test") {
     gopackage = "fuchsia.googlesource.com/pmd/${testpkg}"
     extra_dependencies = [
-      "//garnet/public/lib/amber/fidl($go_toolchain)",
-      "//garnet/public/lib/app/fidl($go_toolchain)",
+      "//garnet/public/fidl/fuchsia.amber($go_toolchain)",
+      "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
       "//garnet/public/lib/app/go/src/app",
       "//garnet/public/lib/fidl/go/src/fidl/bindings",
     ]

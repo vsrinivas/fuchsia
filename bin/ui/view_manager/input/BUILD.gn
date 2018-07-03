@@ -22,9 +22,9 @@ source_set("input") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/geometry/cpp",
     "//garnet/public/lib/ui/input/cpp",
-    "//garnet/public/lib/ui/input/fidl",
+    "//garnet/public/fidl/fuchsia.ui.input",
     "//garnet/public/lib/ui/views/cpp",
-    "//garnet/public/lib/ui/views/fidl:v1",
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//zircon/public/lib/fit",
   ]
 

@@ -15,7 +15,7 @@ executable("font_server") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/fonts/fidl",
+    "//garnet/public/fidl/fuchsia.fonts",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//third_party/rapidjson",

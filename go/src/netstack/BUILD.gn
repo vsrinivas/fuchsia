@@ -98,9 +98,9 @@ go_binary("netstack_bin") {
   ]
 
   extra_dependencies = [
-    "//garnet/public/lib/app/fidl($go_toolchain)",
-    "//garnet/public/lib/netstack/fidl($go_toolchain)",
-    "//garnet/public/lib/device_settings/fidl($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.devicesettings($go_toolchain)",
     "//garnet/public/lib/app/go/src/app",
     "//garnet/public/lib/fidl/go/src/fidl/bindings",
   ]

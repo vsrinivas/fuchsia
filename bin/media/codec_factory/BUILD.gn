@@ -13,7 +13,7 @@ executable("codec_factory") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/media/fidl:media_codec",
+    "//garnet/public/fidl/fuchsia.mediacodec",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]

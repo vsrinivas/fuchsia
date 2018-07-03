@@ -14,7 +14,7 @@ source_set("lib") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/time_zone/fidl",
+    "//garnet/public/fidl/fuchsia.timezone",
     "//third_party/icu",
     "//zircon/public/lib/async-loop-cpp",
   ]

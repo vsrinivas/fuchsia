@@ -23,11 +23,11 @@ executable("bin") {
     ":lib",
     "//garnet/bin/media/util",
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/app/fidl",
+    "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/mdns/fidl",
-    "//garnet/public/lib/netstack/fidl",
+    "//garnet/public/fidl/fuchsia.mdns",
+    "//garnet/public/fidl/fuchsia.netstack",
     "//garnet/public/lib/svc/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -92,7 +92,7 @@ source_set("lib") {
   deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/netstack/fidl",
+    "//garnet/public/fidl/fuchsia.netstack",
   ]
 
   public_deps = [

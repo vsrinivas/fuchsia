@@ -10,9 +10,9 @@ fidl("bluetooth_host") {
     "host.fidl",
   ]
   public_deps = [
-    "//garnet/public/lib/bluetooth/fidl/common",
-    "//garnet/public/lib/bluetooth/fidl/control",
-    "//garnet/public/lib/bluetooth/fidl/gatt",
-    "//garnet/public/lib/bluetooth/fidl/le",
+    "//garnet/public/fidl/fuchsia.bluetooth",
+    "//garnet/public/fidl/fuchsia.bluetooth.control",
+    "//garnet/public/fidl/fuchsia.bluetooth.gatt",
+    "//garnet/public/fidl/fuchsia.bluetooth.le",
   ]
 }

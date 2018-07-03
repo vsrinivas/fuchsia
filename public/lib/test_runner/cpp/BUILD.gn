@@ -16,7 +16,7 @@ source_set("cpp") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/test_runner/fidl",
+    "//garnet/public/fidl/fuchsia.testing.runner",
     "//third_party/rapidjson",
   ]
 }

@@ -1,0 +1,28 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.ui.views_v1") {
+  sdk_category = "partner"
+
+  sources = [
+    "view_containers.fidl",
+    "view_manager.fidl",
+    "view_properties.fidl",
+    "view_provider.fidl",
+    "view_tree_token.fidl",
+    "view_trees.fidl",
+    "views.fidl",
+  ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.ui.views_v1_token",
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/fidl/fuchsia.math",
+    "//garnet/public/fidl/fuchsia.ui.gfx",
+    "//garnet/public/fidl/fuchsia.ui.input",
+    "//garnet/public/fidl/fuchsia.ui.scenic",
+  ]
+}

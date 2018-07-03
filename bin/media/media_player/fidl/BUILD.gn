@@ -13,8 +13,8 @@ source_set("fidl") {
     "//garnet/bin/media/media_player/util",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/media/fidl",
-    "//garnet/public/lib/media/fidl:media_player",
+    "//garnet/public/fidl/fuchsia.media",
+    "//garnet/public/fidl/fuchsia.mediaplayer",
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/media/transport",
   ]

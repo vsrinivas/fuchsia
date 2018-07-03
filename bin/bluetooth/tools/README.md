@@ -61,7 +61,7 @@ $ wireshark ./btsnoop.log
 ## bluetoothcli
 
 `bluetoothcli` is a command-line interface for the Generic Access Profile (using
-the [control](../../public/lib/bluetooth/fidl/control.fidl) FIDL interfaces).
+the [control](../../public/fidl/fuchsia.bluetooth.control.fidl) FIDL interfaces).
 This can be used to query available Bluetooth controllers, to perform dual-mode
 discovery and connection procedures, and to respond to pairing requests.
 

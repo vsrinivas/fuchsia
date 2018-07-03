@@ -38,7 +38,7 @@ and [`ble_battery_service`](../../examples/bluetooth/ble_battery_service) exampl
 ### Control API
 
 Dual-mode (LE + Classic) GAP operations that are typically exposed to privileged
-clients are performed using the [control.fidl](../../public/lib/bluetooth/fidl/control.fidl)
+clients are performed using the [control.fidl](../../public/fidl/fuchsia.bluetooth.control.fidl)
 API. This API is intended for managing local adapters, device discovery & discoverability,
 pairing/bonding, and other settings.
 

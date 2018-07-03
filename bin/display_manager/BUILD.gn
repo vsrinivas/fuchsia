@@ -17,7 +17,7 @@ executable("bin") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/device/fidl",
+    "//garnet/public/fidl/fuchsia.device.display",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",

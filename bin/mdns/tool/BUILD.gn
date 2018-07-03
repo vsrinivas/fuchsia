@@ -32,7 +32,7 @@ executable("bin") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/mdns/cpp",
-    "//garnet/public/lib/mdns/fidl",
+    "//garnet/public/fidl/fuchsia.mdns",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

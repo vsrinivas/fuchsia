@@ -11,7 +11,7 @@ rustc_binary("dev_auth_provider_rust_bin") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/lib/auth/fidl:fidl-rustc",
+    "//garnet/public/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//garnet/public/rust/crates/fuchsia-app",
     "//garnet/public/rust/crates/fuchsia-async",
     "//garnet/public/rust/crates/fuchsia-zircon",

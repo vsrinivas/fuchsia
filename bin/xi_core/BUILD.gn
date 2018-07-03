@@ -9,7 +9,7 @@ rustc_binary("bin") {
   name = "xi_core"
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/lib/xi/fidl:fidl-rustc",
+    "//garnet/public/fidl/fuchsia.xi:fuchsia.xi-rustc",
     "//garnet/public/rust/crates/fuchsia-zircon",
     "//garnet/public/rust/crates/fuchsia-app",
     "//garnet/public/rust/crates/fuchsia-async",

@@ -2,24 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/fidl/fidl.gni")
-
-fidl("fidl") {
-  name = "fuchsia.ui.scenic"
-
-  sdk_category = "partner"
-
-  sources = [
-    "commands.fidl",
-    "events.fidl",
-    "scenic.fidl",
-    "session.fidl",
-  ]
-
+group("fidl") {
   public_deps = [
-    "//garnet/public/lib/images/fidl",
-    "//garnet/public/lib/mem/fidl",
-    "//garnet/public/lib/ui/gfx/fidl",
-    "//garnet/public/lib/ui/views/fidl:v2",
+    "//garnet/public/fidl/fuchsia.ui.scenic",
   ]
 }

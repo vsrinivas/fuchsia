@@ -13,7 +13,7 @@ fidlmerge -template <template path> -json <json path> -output-base <output file 
 
 Example templates reside in the examples subdirectory.
 
-The json path is something like out/x64/fidling/gen/garnet/public/lib/netstack/fidl.fidl.json.
+The json path is something like out/x64/fidling/gen/garnet/public/fidl/fuchsia.netstack.fidl.json.
 
 The output file base name is used to generate output file names. The template
 can add extensions to the base name.

@@ -7,10 +7,10 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("ble_battery_service") {
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/lib/bluetooth/fidl:bluetooth-rustc",
-    "//garnet/public/lib/bluetooth/fidl/gatt:gatt-rustc",
-    "//garnet/public/lib/bluetooth/fidl/le:le-rustc",
-    "//garnet/public/lib/power_manager/fidl:fidl-rustc",
+    "//garnet/public/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
+    "//garnet/public/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
+    "//garnet/public/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
+    "//garnet/public/fidl/fuchsia.power:fuchsia.power-rustc",
     "//garnet/public/rust/crates/fuchsia-app:fuchsia-app-rustc",
     "//garnet/public/rust/crates/fuchsia-async:fuchsia-async-rustc",
     "//garnet/public/rust/crates/fuchsia-zircon",

@@ -36,7 +36,7 @@ executable("codec_runner_sw_omx") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/media/fidl:media_codec",
+    "//garnet/public/fidl/fuchsia.mediacodec",
 
     # This is a reduced set of include paths vs. what the whole pal uses - just
     # the paths necessary to use the OMX aspects of the .so entry point is the

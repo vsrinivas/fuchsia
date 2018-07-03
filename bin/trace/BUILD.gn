@@ -42,7 +42,7 @@ source_set("trace_app") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/tracing/fidl",
+    "//garnet/public/fidl/fuchsia.tracing",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",

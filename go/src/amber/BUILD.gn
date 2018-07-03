@@ -68,8 +68,8 @@ amber_target_binaries = [
 ]
 
 common_extra_dependencies = [
-  "//garnet/public/lib/amber/fidl($go_toolchain)",
-  "//garnet/public/lib/app/fidl($go_toolchain)",
+  "//garnet/public/fidl/fuchsia.amber($go_toolchain)",
+  "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
   "//garnet/public/lib/app/go/src/app",
   "//garnet/public/lib/fidl/go/src/fidl/bindings",
 ]

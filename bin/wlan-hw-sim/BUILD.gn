@@ -13,7 +13,7 @@ rustc_binary("bin") {
   deps = [
     "//garnet/lib/rust/crates/wlantap-client",
     "//garnet/lib/wlan/fidl:fidl-rustc",
-    "//garnet/public/lib/wlan/fidl:service-rustc",
+    "//garnet/public/fidl/fuchsia.wlan.service:fuchsia.wlan.service-rustc",
     "//garnet/lib/wlan/fidl:wlantap-rustc",
     "//garnet/public/rust/crates/fuchsia-app",
     "//garnet/public/rust/crates/fuchsia-async",

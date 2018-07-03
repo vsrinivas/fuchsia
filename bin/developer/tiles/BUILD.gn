@@ -12,12 +12,12 @@ source_set("tiles_lib") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/developer/tiles/fidl",
+    "//garnet/public/fidl/fuchsia.developer.tiles",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/ui/policy/fidl",
+    "//garnet/public/fidl/fuchsia.ui.policy",
     "//garnet/public/lib/ui/view_framework:view_provider",
     "//garnet/public/lib/ui/views/cpp",
-    "//garnet/public/lib/ui/views/fidl:v1",
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
   ]
 }
 
@@ -32,10 +32,10 @@ executable("bin") {
     ":tiles_lib",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/ui/policy/fidl",
+    "//garnet/public/fidl/fuchsia.ui.policy",
     "//garnet/public/lib/ui/view_framework:view_provider",
     "//garnet/public/lib/ui/views/cpp",
-    "//garnet/public/lib/ui/views/fidl:v1",
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]

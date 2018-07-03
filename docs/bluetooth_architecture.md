@@ -74,7 +74,7 @@ devices. A bt-host device claims the HCI control and data endpoints of the under
 Host devices are managed by the Bluetooth system service ([bin/bluetooth](../bin/bluetooth)).
 The service allows only one bt-host to be accessed for service requests at a given
 time. This bt-host is represented as the "active Adapter".
-[control.fidl](../public/lib/bluetooth/fidl/control.fidl) provides a management
+[control.fidl](../public/fidl/fuchsia.bluetooth.control.fidl) provides a management
 interface to designate an active adapter when multiple adapters are present.
 
 bt-host devices implement the [host.fidl](../lib/bluetooth/fidl/host.fidl)
@@ -92,7 +92,7 @@ Bluetooth environment services are the primary way to implement Bluetooth
 services and applications.
 
 The "control" services (defined in 
-[control.fidl](../public/lib/bluetooth/fidl/control.fidl)) are interfaces
+[control.fidl](../public/fidl/fuchsia.bluetooth.control.fidl)) are interfaces
 intended for privileged clients and is for device-level control/policy.
 
 TODO: describe other services

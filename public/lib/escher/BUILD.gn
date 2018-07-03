@@ -367,7 +367,7 @@ source_set("escher") {
       "util/fuchsia_utils.h",
     ]
     public_deps += [
-      "//garnet/public/lib/images/fidl",
+      "//garnet/public/fidl/fuchsia.images",
       "//zircon/public/lib/fit",
     ]
     deps += [ "//zircon/public/lib/trace" ]

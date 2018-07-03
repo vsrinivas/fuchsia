@@ -12,7 +12,7 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/developer/tiles/fidl",
+    "//garnet/public/fidl/fuchsia.developer.tiles",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/fdio",

@@ -28,8 +28,8 @@ source_set("common") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/wlan/fidl:mlme",
-    "//garnet/public/lib/wlan/fidl:stats",
+    "//garnet/public/fidl/fuchsia.wlan.mlme",
+    "//garnet/public/fidl/fuchsia.wlan.stats",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]

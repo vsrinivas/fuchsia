@@ -14,9 +14,9 @@
 #include <zircon/types.h>
 
 #include "example_view_provider_service.h"
-#include "garnet/public/lib/ui/scenic/fidl_helpers.h"
 #include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"
+#include "lib/ui/scenic/fidl_helpers.h"
 
 static fuchsia::sys::FileDescriptorPtr CloneFileDescriptor(int fd) {
   zx_handle_t handles[FDIO_MAX_HANDLES] = {0, 0, 0};
@@ -90,8 +90,7 @@ App::App(async::Loop* loop, AppType type)
               view_id_, std::move(context.token), "Subview"));
 
           if (root_node_id_ != 0) {
-            session_->Enqueue(
-                scenic::NewAddChildCmd(view_id_, root_node_id_));
+            session_->Enqueue(scenic::NewAddChildCmd(view_id_, root_node_id_));
           }
         });
   }

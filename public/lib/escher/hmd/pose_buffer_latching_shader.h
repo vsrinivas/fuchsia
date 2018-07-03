@@ -12,7 +12,7 @@ namespace escher {
 namespace hmd {
 
 // Uses a simple compute shader to latch a pose out of the pose buffer.
-// public/lib/ui/gfx/fidl/commands.fidl for details on pose buffer.
+// public/fidl/fuchsia.ui.gfx/commands.fidl for details on pose buffer.
 class PoseBufferLatchingShader {
  public:
   PoseBufferLatchingShader(Escher* escher);
@@ -32,7 +32,7 @@ class PoseBufferLatchingShader {
   // to LatchStereoPose.
   //
   // For details on pose buffers and the layout of the Pose struct see
-  // //garnet/public/lib/ui/gfx/fidl/commands.fidl
+  // //garnet/public/fidl/fuchsia.ui.gfx/commands.fidl
   BufferPtr LatchPose(const FramePtr& frame,
                       const Camera& camera,
                       PoseBuffer pose_buffer,

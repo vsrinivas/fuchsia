@@ -17,8 +17,8 @@ go_binary("sys_updater") {
   gopackage = "system_update_package/cmd/updater"
 
   extra_dependencies = [
-    "//garnet/public/lib/amber/fidl($go_toolchain)",
-    "//garnet/public/lib/app/fidl($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.amber($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/lib/app/go/src/app",
     "//garnet/public/lib/fidl/go/src/fidl/bindings",
     "//garnet/go/src/system_update_package:system_update_package_lib",
@@ -28,8 +28,8 @@ go_binary("sys_updater") {
 go_test("processor_test") {
   gopackage = "system_update_package"
   extra_dependencies = [
-    "//garnet/public/lib/amber/fidl($go_toolchain)",
-    "//garnet/public/lib/app/fidl($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.amber($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/lib/app/go/src/app",
     "//garnet/public/lib/fidl/go/src/fidl/bindings",
   ]

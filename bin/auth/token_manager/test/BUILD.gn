@@ -18,7 +18,7 @@ executable("dev_auth_provider") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp",
-    "//garnet/public/lib/auth/fidl",
+    "//garnet/public/fidl/fuchsia.auth",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",

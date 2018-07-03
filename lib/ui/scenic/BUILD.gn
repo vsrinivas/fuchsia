@@ -18,8 +18,8 @@ source_set("scenic") {
 
   public_deps = [
     "//garnet/lib/ui/scenic/util",
-    "//garnet/public/lib/ui/gfx/fidl",
-    "//garnet/public/lib/ui/scenic/fidl",
+    "//garnet/public/fidl/fuchsia.ui.gfx",
+    "//garnet/public/fidl/fuchsia.ui.scenic",
     "//zircon/public/lib/fit",
   ]
 

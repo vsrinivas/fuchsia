@@ -9,7 +9,7 @@ go_library("app") {
   name = "app"
 
   deps = [
-    "//garnet/public/lib/app/fidl($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/lib/fidl/go/src/fidl/bindings",
     "//garnet/public/lib/svc/go/src/svc",
   ]

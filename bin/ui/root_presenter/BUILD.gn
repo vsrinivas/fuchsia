@@ -38,14 +38,14 @@ executable("root_presenter") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/ui/gfx/fidl",
+    "//garnet/public/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/ui/input",
     "//garnet/public/lib/ui/input/cpp",
-    "//garnet/public/lib/ui/input/fidl",
-    "//garnet/public/lib/ui/policy/fidl",
+    "//garnet/public/fidl/fuchsia.ui.input",
+    "//garnet/public/fidl/fuchsia.ui.policy",
     "//garnet/public/lib/ui/scenic/cpp",
     "//garnet/public/lib/ui/views/cpp",
-    "//garnet/public/lib/ui/views/fidl:v1",
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/hid",
@@ -65,6 +65,6 @@ source_set("renderer_params") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/ui/gfx/fidl",
+    "//garnet/public/fidl/fuchsia.ui.gfx",
   ]
 }

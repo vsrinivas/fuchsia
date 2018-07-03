@@ -169,8 +169,8 @@ source_set("gfx") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/geometry/cpp",
-    "//garnet/public/lib/ui/geometry/fidl",
-    "//garnet/public/lib/ui/gfx/fidl",
+    "//garnet/public/fidl/fuchsia.math",
+    "//garnet/public/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/vulkan",
     "//zircon/public/lib/fit",
   ]

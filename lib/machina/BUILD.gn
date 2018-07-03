@@ -97,7 +97,7 @@ source_set("machina") {
 
   public_deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/guest/fidl",
+    "//garnet/public/fidl/fuchsia.guest",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fit",

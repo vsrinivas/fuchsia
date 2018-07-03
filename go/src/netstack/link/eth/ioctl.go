@@ -28,7 +28,7 @@ const (
 
 // LINT.ThenChange(
 //	 //zircon/system/public/zircon/device/ethernet.h,
-//	 //garnet/public/lib/netstack/fidl/netstack.fidl
+//	 //garnet/public/fidl/fuchsia.netstack/netstack.fidl
 // )
 
 type ethfifos struct {

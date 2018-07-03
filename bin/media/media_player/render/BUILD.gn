@@ -20,7 +20,7 @@ source_set("render") {
     "//garnet/bin/media/media_player/framework",
     "//garnet/bin/media/media_player/metrics",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/media/fidl",
+    "//garnet/public/fidl/fuchsia.media",
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/media/transport",
     "//garnet/public/lib/ui/view_framework",
@@ -40,7 +40,7 @@ source_set("video_converter") {
   deps = [
     "//garnet/bin/media/media_player/framework",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/media/fidl",
+    "//garnet/public/fidl/fuchsia.media",
     "//garnet/public/lib/ui/geometry/cpp",
     "//zircon/public/lib/trace",
   ]

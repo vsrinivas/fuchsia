@@ -1,6 +1,6 @@
 # Sketchy Canvas
 
-This package contains implementation for FIDLs in `//garnet/public/lib/ui/sketchy/fidl`. It allows client to draw strokes on a canvas, and generates meshes for `scenic` to render. On one hand, it is a service that handles drawing commands from client. On the other hand, it is client to `scenic` that provides meshes to render.
+This package contains implementation for FIDLs in `//garnet/public/fidl/fuchsia.ui.sketchy`. It allows client to draw strokes on a canvas, and generates meshes for `scenic` to render. On one hand, it is a service that handles drawing commands from client. On the other hand, it is client to `scenic` that provides meshes to render.
 
 * `buffer` contains helper classes for different types of buffers.
 * `resources` contains resources that are defined in `fidl`.

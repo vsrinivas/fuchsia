@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 #include "vkcube_view.h"
-#include "garnet/public/lib/ui/scenic/fidl_helpers.h"
 #include "lib/ui/geometry/cpp/geometry_util.h"
+#include "lib/ui/scenic/fidl_helpers.h"
 
 VkCubeView::VkCubeView(
     ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
+    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+        view_owner_request,
     ResizeCallback resize_callback)
     : BaseView(std::move(view_manager), std::move(view_owner_request),
                "vkcube"),
@@ -19,14 +20,16 @@ VkCubeView::~VkCubeView() {}
 
 void VkCubeView::OnSceneInvalidated(
     fuchsia::images::PresentationInfo presentation_info) {
-  if (!has_metrics()) return;
-  if (size_ == logical_size() && physical_size_ == physical_size()) return;
+  if (!has_metrics())
+    return;
+  if (size_ == logical_size() && physical_size_ == physical_size())
+    return;
 
   size_ = logical_size();
   physical_size_ = physical_size();
 
   scenic::Rectangle pane_shape(session(), logical_size().width,
-                                   logical_size().height);
+                               logical_size().height);
   scenic::Material pane_material(session());
 
   pane_node_.SetShape(pane_shape);
@@ -41,8 +44,8 @@ void VkCubeView::OnSceneInvalidated(
 
   uint32_t image_pipe_id = session()->AllocResourceId();
   session()->Enqueue(scenic::NewCreateImagePipeCmd(
-      image_pipe_id,
-      fidl::InterfaceRequest<fuchsia::images::ImagePipe>(std::move(endpoint1))));
+      image_pipe_id, fidl::InterfaceRequest<fuchsia::images::ImagePipe>(
+                         std::move(endpoint1))));
   pane_material.SetTexture(image_pipe_id);
   session()->ReleaseResource(image_pipe_id);
 

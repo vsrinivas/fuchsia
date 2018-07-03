@@ -10,9 +10,9 @@ rustc_binary("bt-le-central") {
 
   deps = [
     "//garnet/lib/rust/crates/fuchsia-bluetooth",
-    "//garnet/public/lib/bluetooth/fidl/common:common-rustc",
-    "//garnet/public/lib/bluetooth/fidl/gatt:gatt-rustc",
-    "//garnet/public/lib/bluetooth/fidl/le:le-rustc",
+    "//garnet/public/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
+    "//garnet/public/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
+    "//garnet/public/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/crates/fdio",
     "//garnet/public/rust/crates/fuchsia-app",

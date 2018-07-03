@@ -11,7 +11,7 @@ source_set("util") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/ui/gfx/fidl",
+    "//garnet/public/fidl/fuchsia.ui.gfx",
   ]
 
   deps = [

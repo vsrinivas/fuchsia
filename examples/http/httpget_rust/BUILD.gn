@@ -10,8 +10,8 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/lib/mem/fidl:fidl-rustc",
-    "//garnet/public/lib/net/oldhttp/fidl:fidl-rustc",
+    "//garnet/public/fidl/fuchsia.mem:fuchsia.mem-rustc",
+    "//garnet/public/fidl/fuchsia.net.oldhttp:fuchsia.net.oldhttp-rustc",
     "//garnet/public/rust/crates/fuchsia-app",
     "//garnet/public/rust/crates/fuchsia-async",
     "//garnet/public/rust/crates/fuchsia-zircon",

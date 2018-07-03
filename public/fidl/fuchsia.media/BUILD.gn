@@ -1,0 +1,22 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.media") {
+  sdk_category = "partner"
+
+  sources = [
+    "audio.fidl",
+    "audio_capturer.fidl",
+    "audio_device_enumerator.fidl",
+    "audio_renderer.fidl",
+    "media_renderer.fidl",
+    "media_result.fidl",
+    "media_transport.fidl",
+    "media_types.fidl",
+    "timeline_controller.fidl",
+    "timelines.fidl",
+  ]
+}

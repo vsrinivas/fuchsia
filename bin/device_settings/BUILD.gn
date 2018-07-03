@@ -10,7 +10,7 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/public/lib/device_settings/fidl:fidl-rustc",
+    "//garnet/public/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/crates/fdio",
     "//garnet/public/rust/crates/fuchsia-app",

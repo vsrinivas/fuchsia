@@ -15,7 +15,7 @@ executable("gralloc_service") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/gralloc/fidl",
+    "//garnet/public/fidl/fuchsia.gralloc",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

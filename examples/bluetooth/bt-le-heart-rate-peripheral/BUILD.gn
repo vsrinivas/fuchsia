@@ -17,7 +17,7 @@ executable("bt-le-heart-rate-peripheral") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/bluetooth/fidl",
+    "//garnet/public/fidl/fuchsia.bluetooth.le",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
