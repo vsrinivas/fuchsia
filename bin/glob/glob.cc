@@ -25,7 +25,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
   for (size_t i = 0; i < globbuf.gl_pathc; i++) {
-    fprintf(stdout, "%s\n", globbuf.gl_pathv[0]);
+    fprintf(stdout, "%s\n", globbuf.gl_pathv[i]);
   }
   globfree(&globbuf);
   return 0;
