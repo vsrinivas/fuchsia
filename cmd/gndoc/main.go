@@ -59,7 +59,10 @@ func main() {
 	defer sources.Close()
 
 	ctx := context.Background()
-	sourceMap := gndoc.NewSourceMap(sources)
+	sourceMap, err := gndoc.NewSourceMap(sources)
+	if err != nil {
+		log.Fatalf("Error: %s", err)
+	}
 	argMap := gndoc.NewArgMap(sourceMap)
 
 	args, errs := gndoc.ParseGNArgs(ctx, inputFiles, keyArgs)

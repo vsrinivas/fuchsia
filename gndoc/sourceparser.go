@@ -14,13 +14,13 @@ import (
 
 type SourceMap map[string]string
 
-func NewSourceMap(input io.Reader) *SourceMap {
+func NewSourceMap(input io.Reader) (*SourceMap, error) {
 	s := SourceMap(make(map[string]string))
 	err := s.parseJson(input)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return &s
+	return &s, nil
 }
 
 // parseJson extracts the source project information into the map.
@@ -33,7 +33,11 @@ func (s SourceMap) parseJson(input io.Reader) error {
 	}
 
 	for _, source := range sources {
-		s[source["name"].(string)] = fmt.Sprintf("%v/+/master", source["remote"])
+		if revision, ok := source["revision"]; ok {
+			s[source["name"].(string)] = fmt.Sprintf("%v/+/%s", source["remote"], revision)
+		} else {
+			s[source["name"].(string)] = fmt.Sprintf("%v/+/master", source["remote"])
+		}
 	}
 
 	return nil
