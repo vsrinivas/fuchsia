@@ -115,6 +115,43 @@ private:
     fvm::fvm_t* SuperBlock() const;
 };
 
+class CompressionContext {
+public:
+    CompressionContext() {}
+    ~CompressionContext() {}
+    zx_status_t Setup(size_t max_len);
+    zx_status_t Compress(const void* data, size_t length);
+    zx_status_t Finish();
+
+    const void* GetData() const { return data_.get(); }
+    size_t GetLength() const { return offset_; }
+
+private:
+    void IncreaseOffset(size_t value) {
+        offset_ += value;
+        ZX_DEBUG_ASSERT(offset_ <= size_);
+    }
+
+    size_t GetRemaining() const {
+        return size_ - offset_;
+    }
+
+    void* GetBuffer() const {
+        return data_.get() + offset_;
+    }
+
+    void Reset(size_t size) {
+        data_.reset(new uint8_t[size]);
+        size_ = size;
+        offset_ = 0;
+    }
+
+    LZ4F_compressionContext_t cctx_;
+    fbl::unique_ptr<uint8_t[]> data_;
+    size_t size_ = 0;
+    size_t offset_ = 0;
+};
+
 class SparseContainer final : public Container {
     typedef struct {
         fvm::partition_descriptor_t descriptor;
@@ -139,34 +176,13 @@ private:
     size_t extent_size_;
     fvm::sparse_image_t image_;
     fbl::Vector<partition_info_t> partitions_;
+    CompressionContext compression_;
 
     zx_status_t AllocatePartition(fbl::unique_ptr<Format> format);
     zx_status_t AllocateExtent(uint32_t part_index, uint64_t slice_start, uint64_t slice_count,
                                uint64_t extent_length);
 
-    typedef struct {
-        LZ4F_compressionContext_t cctx;
-        size_t data_size = 0;
-        size_t offset = 0;
-        fbl::unique_ptr<uint8_t[]> data;
-
-        size_t size() {
-            return data_size;
-        }
-
-        void* buf() {
-            return data.get() + offset;
-        }
-
-        bool reset(size_t size) {
-            data_size = size;
-            fbl::AllocChecker ac;
-            data.reset(new (&ac) uint8_t[size]);
-            return ac.check();
-        }
-    } compression_t;
-
-    zx_status_t SetupCompression(compression_t* comp, size_t max_len);
-    zx_status_t WriteData(const void* data, size_t length, compression_t* comp);
-    zx_status_t FinishCompression(compression_t* comp);
+    zx_status_t PrepareWrite(size_t max_len);
+    zx_status_t WriteData(const void* data, size_t length);
+    zx_status_t CompleteWrite();
 };

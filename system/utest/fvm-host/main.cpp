@@ -487,6 +487,27 @@ bool TestPartitions() {
     END_TEST;
 }
 
+// Test to ensure that compression will fail if the buffer is too small.
+bool TestCompressorBufferTooSmall() {
+    BEGIN_TEST;
+
+    CompressionContext compression;
+    ASSERT_EQ(compression.Setup(1), ZX_OK);
+
+    unsigned int seed = 0;
+    zx_status_t status = ZX_OK;
+    for (;;) {
+        char data = static_cast<char>(rand_r(&seed));
+        if ((status = compression.Compress(&data, 1)) != ZX_OK) {
+            break;
+        }
+    }
+
+    ASSERT_EQ(status, ZX_ERR_INTERNAL);
+    ASSERT_EQ(compression.Finish(), ZX_OK);
+    END_TEST;
+}
+
 bool GeneratePartitionPath(fs_type_t fs_type, guid_type_t guid_type) {
     BEGIN_HELPER;
     // Make sure we have not already created a partition with the same fs/guid type combo.
@@ -577,6 +598,7 @@ RUN_FOR_ALL_TYPES_EMPTY(DEFAULT_SLICE_SIZE)
 RUN_FOR_ALL_TYPES(10, 100, (1 << 20), 8192)
 RUN_FOR_ALL_TYPES(10, 100, (1 << 20), 32768)
 RUN_FOR_ALL_TYPES(10, 100, (1 << 20), DEFAULT_SLICE_SIZE)
+RUN_TEST_MEDIUM(TestCompressorBufferTooSmall)
 END_TEST_CASE(fvm_host_tests)
 
 int main(int argc, char** argv) {
