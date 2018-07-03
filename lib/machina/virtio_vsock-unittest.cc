@@ -389,12 +389,13 @@ TEST_F(VirtioVsockTest, ListenMultipleTimesSamePort) {
                                    kVirtioVsockHostPort,
                                    kVirtioVsockGuestEphemeralPort));
 
-  GuestConnectOnPortRequest(kVirtioVsockHostPort, kVirtioVsockGuestEphemeralPort);
+  GuestConnectOnPortRequest(kVirtioVsockHostPort,
+                            kVirtioVsockGuestEphemeralPort);
   GuestConnectOnPortResponse(kVirtioVsockHostPort, VIRTIO_VSOCK_OP_RST,
                              kVirtioVsockGuestEphemeralPort);
   EXPECT_FALSE(vsock_.HasConnection(fuchsia::guest::kHostCid,
-                                   kVirtioVsockHostPort,
-                                   kVirtioVsockGuestEphemeralPort));
+                                    kVirtioVsockHostPort,
+                                    kVirtioVsockGuestEphemeralPort));
 }
 
 TEST_F(VirtioVsockTest, ListenRefused) {

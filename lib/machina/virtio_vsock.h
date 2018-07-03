@@ -43,6 +43,8 @@ class VirtioVsock
   VirtioQueue* rx_queue() { return queue(0); }
   VirtioQueue* tx_queue() { return queue(1); }
 
+  class Connection;
+
  private:
   // |fuchsia::guest::SocketEndpoint|
   void SetContextId(
@@ -71,39 +73,6 @@ class VirtioVsock
       return ((static_cast<size_t>(key.local_cid) << 32) | key.local_port) ^
              (key.remote_port << 16);
     }
-  };
-  class Connection {
-   public:
-    ~Connection();
-
-    // The number of bytes the guest expects us to have in our socket buffer.
-    // This is the last credit_update sent minus any bytes we've received since
-    // that update was sent.
-    //
-    // When this is 0 we'll need to send a CREDIT_UPDATE once buffer space has
-    // been free'd so that the guest knows it can resume transmitting.
-    size_t reported_buf_avail = 0;
-
-    uint32_t flags = 0;
-    uint32_t rx_cnt = 0;
-    uint32_t tx_cnt = 0;
-    uint32_t peer_buf_alloc = 0;
-    uint32_t peer_fwd_cnt = 0;
-    zx::socket socket;
-    zx::socket remote_socket;
-    async::Wait rx_wait;
-    async::Wait tx_wait;
-    fuchsia::guest::SocketAcceptor::AcceptCallback acceptor;
-
-    uint16_t op() const { return op_; }
-    void UpdateOp(uint16_t op);
-
-    uint32_t peer_free() const {
-      return peer_buf_alloc - (tx_cnt - peer_fwd_cnt);
-    }
-
-   private:
-    uint16_t op_ = VIRTIO_VSOCK_OP_REQUEST;
   };
   using ConnectionMap =
       std::unordered_map<ConnectionKey, fbl::unique_ptr<Connection>,
@@ -142,10 +111,11 @@ class VirtioVsock
   void OnSocketReady(async_t* async, async::Wait* wait, zx_status_t status,
                      const zx_packet_signal_t* signal, ConnectionKey key);
 
+  zx_status_t Send(VirtioVsock::Connection* conn, virtio_vsock_hdr_t* header,
+                   virtio_desc_t* desc, uint32_t* used);
   void Mux(zx_status_t status, uint16_t index);
-  zx_status_t SendMessageForConnectionLocked(const ConnectionKey& key,
-                                             Connection* conn, uint16_t desc,
-                                             uint32_t* used)
+  zx_status_t ReceiveLocked(ConnectionKey key, VirtioVsock::Connection* conn,
+                            virtio_vsock_hdr_t* header, virtio_desc_t* desc)
       __TA_REQUIRES(mutex_);
   void Demux(zx_status_t status, uint16_t index);
 
@@ -162,6 +132,40 @@ class VirtioVsock
   fidl::BindingSet<fuchsia::guest::SocketAcceptor> acceptor_bindings_;
   fidl::BindingSet<fuchsia::guest::SocketEndpoint> endpoint_bindings_;
   fuchsia::guest::SocketConnectorPtr connector_;
+};
+
+class VirtioVsock::Connection {
+ public:
+  ~Connection();
+
+  // The number of bytes the guest expects us to have in our socket buffer.
+  // This is the last credit_update sent minus any bytes we've received since
+  // that update was sent.
+  //
+  // When this is 0 we'll need to send a CREDIT_UPDATE once buffer space has
+  // been free'd so that the guest knows it can resume transmitting.
+  size_t reported_buf_avail = 0;
+
+  uint32_t flags = 0;
+  uint32_t rx_cnt = 0;
+  uint32_t tx_cnt = 0;
+  uint32_t peer_buf_alloc = 0;
+  uint32_t peer_fwd_cnt = 0;
+  zx::socket socket;
+  zx::socket remote_socket;
+  async::Wait rx_wait;
+  async::Wait tx_wait;
+  fuchsia::guest::SocketAcceptor::AcceptCallback acceptor;
+
+  uint16_t op() const { return op_; }
+  void UpdateOp(uint16_t op);
+
+  uint32_t peer_free() const {
+    return peer_buf_alloc - (tx_cnt - peer_fwd_cnt);
+  }
+
+ private:
+  uint16_t op_ = VIRTIO_VSOCK_OP_REQUEST;
 };
 
 }  // namespace machina
