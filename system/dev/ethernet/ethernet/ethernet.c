@@ -121,8 +121,8 @@ typedef struct ethdev {
     zx_handle_t pmt;
 
     tx_info_t all_tx_bufs[FIFO_DEPTH];
-    mtx_t lock;  // Protects free_tx_bufs
-    list_node_t free_tx_bufs;  // tx_info_t elements
+    mtx_t lock;               // Protects free_tx_bufs
+    list_node_t free_tx_bufs; // tx_info_t elements
 
     // fifo thread
     thrd_t tx_thr;
@@ -254,7 +254,6 @@ static ssize_t eth_test_clear_multicast_promisc_locked(ethdev_t* edev) {
     }
     return status;
 }
-
 
 static ssize_t eth_config_multicast_locked(ethdev_t* edev, eth_multicast_config_t* config) {
     switch (config->op) {
@@ -526,8 +525,8 @@ static int eth_tx_thread(void* arg) {
                 zx_signals_t observed;
                 if ((status = zx_object_wait_one(edev->tx_fifo,
                                                  ZX_FIFO_READABLE |
-                                                 ZX_FIFO_PEER_CLOSED |
-                                                 kSignalFifoTerminate,
+                                                     ZX_FIFO_PEER_CLOSED |
+                                                     kSignalFifoTerminate,
                                                  ZX_TIME_INFINITE,
                                                  &observed)) < 0) {
                     zxlogf(ERROR, "eth [%s]: tx_fifo: error waiting: %d\n", edev->name, status);
@@ -587,7 +586,7 @@ static ssize_t eth_set_iobuf_locked(ethdev_t* edev, const void* in_buf, size_t i
     if (in_len < sizeof(zx_handle_t)) {
         return ZX_ERR_INVALID_ARGS;
     }
-    if (edev->io_vmo != ZX_HANDLE_INVALID) {
+    if (edev->io_vmo != ZX_HANDLE_INVALID || edev->io_buf != NULL) {
         return ZX_ERR_ALREADY_BOUND;
     }
 
@@ -632,7 +631,9 @@ static ssize_t eth_set_iobuf_locked(ethdev_t* edev, const void* in_buf, size_t i
 
 fail:
     if (edev->io_buf) {
-        zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)edev->io_buf, 0);
+        zx_status_t unmap_status =
+            zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)edev->io_buf, size);
+        ZX_DEBUG_ASSERT(unmap_status == ZX_OK);
         edev->io_buf = NULL;
     }
     free(edev->paddr_map);
@@ -734,7 +735,7 @@ static ssize_t eth_set_client_name_locked(ethdev_t* edev, const void* in_buf, si
 }
 
 static zx_status_t eth_get_status_locked(ethdev_t* edev, void* out_buf, size_t out_len,
-                                  size_t* out_actual) {
+                                         size_t* out_actual) {
     if (out_len < sizeof(uint32_t)) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -848,7 +849,7 @@ static void eth_kill_locked(ethdev_t* edev) {
     }
 
     zxlogf(TRACE, "eth [%s]: kill: tearing down%s\n",
-            edev->name, (edev->state & ETHDEV_TX_THREAD) ? " tx thread" : "");
+           edev->name, (edev->state & ETHDEV_TX_THREAD) ? " tx thread" : "");
     eth_set_promisc_locked(edev, false);
 
     // make sure any future ioctls or other ops will fail
@@ -881,7 +882,9 @@ static void eth_kill_locked(ethdev_t* edev) {
     }
 
     if (edev->io_buf) {
-        zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)edev->io_buf, 0);
+        zx_status_t status =
+            zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)edev->io_buf, edev->io_size);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
         edev->io_buf = NULL;
     }
     if (edev->paddr_map != NULL) {
@@ -1058,6 +1061,8 @@ static zx_driver_ops_t eth_driver_ops = {
     .bind = eth_bind,
 };
 
+// clang-format off
 ZIRCON_DRIVER_BEGIN(ethernet, eth_driver_ops, "zircon", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_ETHERNET_IMPL),
 ZIRCON_DRIVER_END(ethernet)
+// clang-format on
