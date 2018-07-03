@@ -23,7 +23,7 @@ const int kWhite = 0xeeeeee;
 const int kGreen = 0x4dac26;
 const int kRed = 0xd01c8b;
 
-const int kMinExpectedPixels = 1000000;  // Typical value is ~1.5M
+const int kMinExpectedPixels = 950000;  // Typical value is ~1.5M
 const int kMinPixelsForReport = 50000;
 
 int main(int argc, const char** argv) {
