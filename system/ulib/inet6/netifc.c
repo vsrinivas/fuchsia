@@ -306,7 +306,7 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
     if (iobuf == NULL) {
         // allocate shareable ethernet buffer data heap
         size_t iosize = 2 * NET_BUFFERS * NET_BUFFERSZ;
-        if ((status = zx_vmo_create(iosize, 0, &iovmo)) < 0) {
+        if ((status = zx_vmo_create(iosize, ZX_VMO_NON_RESIZABLE, &iovmo)) < 0) {
             goto fail_close_fd;
         }
         zx_object_set_property(iovmo, ZX_PROP_NAME, "eth-buffers", 11);
