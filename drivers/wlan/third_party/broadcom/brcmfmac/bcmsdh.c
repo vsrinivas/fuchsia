@@ -317,184 +317,6 @@ static zx_status_t brcmf_sdiod_netbuf_write(struct brcmf_sdio_dev* sdiodev, stru
     return err;
 }
 
-/**
- * brcmf_sdiod_sglist_rw - SDIO interface function for block data access
- * @sdiodev: brcmfmac sdio device
- * @func: SDIO function
- * @write: direction flag
- * @addr: dongle memory address as source/destination
- * @pkt: netbuf pointer
- *
- * This function takes the responsibility as the interface function to MMC
- * stack for block data access. It assumes that the netbuf passed down by the
- * caller has already been padded and aligned.
- */
-static zx_status_t brcmf_sdiod_sglist_rw(struct brcmf_sdio_dev* sdiodev, struct sdio_func* func,
-                                         bool write, uint32_t addr,
-                                         struct brcmf_netbuf_list* pktlist) {
-    unsigned int req_sz, func_blk_sz, sg_cnt, sg_data_sz, pkt_offset;
-    unsigned int max_req_sz, orig_offset, dst_offset;
-    unsigned short max_seg_cnt, seg_sz;
-    unsigned char* pkt_data;
-    unsigned char* orig_data;
-    unsigned char* dst_data;
-    struct brcmf_netbuf* pkt_next = NULL;
-    struct brcmf_netbuf* local_pkt_next;
-    struct brcmf_netbuf_list local_list;
-    struct brcmf_netbuf_list* target_list;
-    struct mmc_request mmc_req;
-    struct mmc_command mmc_cmd;
-    struct mmc_data mmc_dat;
-    struct scatterlist* sgl;
-    zx_status_t ret = ZX_OK;
-
-    if (!pktlist->qlen) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    target_list = pktlist;
-    /* for host with broken sg support, prepare a page aligned list */
-    brcmf_netbuf_list_init_nonlocked(&local_list);
-    if (!write && sdiodev->settings->bus.sdio.broken_sg_support) {
-        req_sz = 0;
-        brcmf_netbuf_list_for_every(pktlist, pkt_next) req_sz += pkt_next->len;
-        req_sz = ALIGN(req_sz, func->cur_blksize);
-        while (req_sz > PAGE_SIZE) {
-            pkt_next = brcmu_pkt_buf_get_netbuf(PAGE_SIZE);
-            if (pkt_next == NULL) {
-                ret = ZX_ERR_NO_MEMORY;
-                goto exit;
-            }
-            brcmf_netbuf_add_tail_locked(&local_list, pkt_next);
-            req_sz -= PAGE_SIZE;
-        }
-        pkt_next = brcmu_pkt_buf_get_netbuf(req_sz);
-        if (pkt_next == NULL) {
-            ret = ZX_ERR_NO_MEMORY;
-            goto exit;
-        }
-        brcmf_netbuf_add_tail_locked(&local_list, pkt_next);
-        target_list = &local_list;
-    }
-
-    func_blk_sz = func->cur_blksize;
-    max_req_sz = sdiodev->max_request_size;
-    max_seg_cnt = min_t(unsigned short, sdiodev->max_segment_count, target_list->qlen);
-    seg_sz = target_list->qlen;
-    pkt_offset = 0;
-    pkt_next = target_list->next;
-
-    memset(&mmc_req, 0, sizeof(struct mmc_request));
-    memset(&mmc_cmd, 0, sizeof(struct mmc_command));
-    memset(&mmc_dat, 0, sizeof(struct mmc_data));
-
-    mmc_dat.sg = sdiodev->sgtable.sgl;
-    mmc_dat.blksz = func_blk_sz;
-    mmc_dat.flags = write ? MMC_DATA_WRITE : MMC_DATA_READ;
-    mmc_cmd.opcode = SD_IO_RW_EXTENDED;
-    mmc_cmd.arg = write ? 1 << 31 : 0;      /* write flag  */
-    mmc_cmd.arg |= (func->num & 0x7) << 28; /* SDIO func num */
-    mmc_cmd.arg |= 1 << 27;                 /* block mode */
-    /* for function 1 the addr will be incremented */
-    mmc_cmd.arg |= (func->num == 1) ? 1 << 26 : 0;
-    mmc_cmd.flags = MMC_RSP_SPI_R5 | MMC_RSP_R5 | MMC_CMD_ADTC;
-    mmc_req.cmd = &mmc_cmd;
-    mmc_req.data = &mmc_dat;
-
-    while (seg_sz) {
-        req_sz = 0;
-        sg_cnt = 0;
-        sgl = sdiodev->sgtable.sgl;
-        /* prep sg table */
-        while (pkt_next != (struct brcmf_netbuf*)target_list) {
-            pkt_data = pkt_next->data + pkt_offset;
-            sg_data_sz = pkt_next->len - pkt_offset;
-            if (sg_data_sz > sdiodev->max_segment_size) {
-                sg_data_sz = sdiodev->max_segment_size;
-            }
-            if (sg_data_sz > max_req_sz - req_sz) {
-                sg_data_sz = max_req_sz - req_sz;
-            }
-
-            sg_set_buf(sgl, pkt_data, sg_data_sz);
-
-            sg_cnt++;
-            sgl = sg_next(sgl);
-            req_sz += sg_data_sz;
-            pkt_offset += sg_data_sz;
-            if (pkt_offset == pkt_next->len) {
-                pkt_offset = 0;
-                pkt_next = pkt_next->next;
-            }
-
-            if (req_sz >= max_req_sz || sg_cnt >= max_seg_cnt) {
-                break;
-            }
-        }
-        seg_sz -= sg_cnt;
-
-        if (req_sz % func_blk_sz != 0) {
-            brcmf_err("sg request length %u is not %u aligned\n", req_sz, func_blk_sz);
-            ret = ZX_ERR_INTERNAL;
-            goto exit;
-        }
-
-        mmc_dat.sg_len = sg_cnt;
-        mmc_dat.blocks = req_sz / func_blk_sz;
-        mmc_cmd.arg |= (addr & 0x1FFFF) << 9;  /* address */
-        mmc_cmd.arg |= mmc_dat.blocks & 0x1FF; /* block count */
-        /* incrementing addr for function 1 */
-        if (func->num == 1) {
-            addr += req_sz;
-        }
-
-        mmc_set_data_timeout(&mmc_dat, func->card);
-        mmc_wait_for_req(func->card->host, &mmc_req);
-
-        ret = mmc_cmd.error ? mmc_cmd.error : mmc_dat.error;
-        if (ret == ZX_ERR_IO_REFUSED) {
-            brcmf_sdiod_change_state(sdiodev, BRCMF_SDIOD_NOMEDIUM);
-            break;
-        } else if (ret != ZX_OK) {
-            brcmf_err("CMD53 sg block %s failed %d\n", write ? "write" : "read", ret);
-            ret = ZX_ERR_IO;
-            break;
-        }
-    }
-
-    if (!write && sdiodev->settings->bus.sdio.broken_sg_support) {
-        local_pkt_next = local_list.next;
-        orig_offset = 0;
-        brcmf_netbuf_list_for_every(pktlist, pkt_next) {
-            dst_offset = 0;
-            do {
-                req_sz = local_pkt_next->len - orig_offset;
-                req_sz = min_t(uint, pkt_next->len - dst_offset, req_sz);
-                orig_data = local_pkt_next->data + orig_offset;
-                dst_data = pkt_next->data + dst_offset;
-                memcpy(dst_data, orig_data, req_sz);
-                orig_offset += req_sz;
-                dst_offset += req_sz;
-                if (orig_offset == local_pkt_next->len) {
-                    orig_offset = 0;
-                    local_pkt_next = local_pkt_next->next;
-                }
-                if (dst_offset == pkt_next->len) {
-                    break;
-                }
-            } while (!brcmf_netbuf_list_is_empty(&local_list));
-        }
-    }
-
-exit:
-    sg_init_table(sdiodev->sgtable.sgl, sdiodev->sgtable.orig_nents);
-    while ((pkt_next = brcmf_netbuf_list_remove_head_locked(&local_list)) != NULL) {
-        brcmu_pkt_buf_free_netbuf(pkt_next);
-    }
-
-    return ret;
-}
-
 zx_status_t brcmf_sdiod_recv_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, uint nbytes) {
     struct brcmf_netbuf* mypkt;
     zx_status_t err;
@@ -553,7 +375,7 @@ zx_status_t brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct brcmf_
 
     if (pktq->qlen == 1) {
         err = brcmf_sdiod_netbuf_read(sdiodev, sdiodev->func2, addr, pktq->next);
-    } else if (!sdiodev->sg_support) {
+    } else {
         glom_netbuf = brcmu_pkt_buf_get_netbuf(totlen);
         if (!glom_netbuf) {
             return ZX_ERR_NO_MEMORY;
@@ -567,8 +389,6 @@ zx_status_t brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct brcmf_
             memcpy(netbuf->data, glom_netbuf->data, netbuf->len);
             brcmf_netbuf_shrink_head(glom_netbuf, netbuf->len);
         }
-    } else {
-        err = brcmf_sdiod_sglist_rw(sdiodev, sdiodev->func2, false, addr, pktq);
     }
 
 done:
@@ -622,15 +442,11 @@ zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_ne
     addr &= SBSDIO_SB_OFT_ADDR_MASK;
     addr |= SBSDIO_SB_ACCESS_2_4B_FLAG;
 
-    if (pktq->qlen == 1 || !sdiodev->sg_support) {
-        brcmf_netbuf_list_for_every(pktq, netbuf) {
-            err = brcmf_sdiod_netbuf_write(sdiodev, sdiodev->func2, addr, netbuf);
-            if (err != ZX_OK) {
-                break;
-            }
+    brcmf_netbuf_list_for_every(pktq, netbuf) {
+        err = brcmf_sdiod_netbuf_write(sdiodev, sdiodev->func2, addr, netbuf);
+        if (err != ZX_OK) {
+            break;
         }
-    } else {
-        err = brcmf_sdiod_sglist_rw(sdiodev, sdiodev->func2, true, addr, pktq);
     }
 
     return err;
@@ -718,40 +534,6 @@ zx_status_t brcmf_sdiod_abort(struct brcmf_sdio_dev* sdiodev, struct sdio_func* 
 
     brcmf_dbg(SDIO, "Exit\n");
     return ZX_OK;
-}
-
-void brcmf_sdiod_sgtable_alloc(struct brcmf_sdio_dev* sdiodev) {
-    struct sdio_func* func;
-    struct mmc_host* host;
-    uint max_blocks;
-    uint nents;
-    int err;
-
-    func = sdiodev->func2;
-    host = func->card->host;
-    sdiodev->sg_support = host->max_segs > 1;
-    max_blocks = min_t(uint, host->max_blk_count, 511u);
-    sdiodev->max_request_size = min_t(uint, host->max_req_size, max_blocks * func->cur_blksize);
-    sdiodev->max_segment_count = min_t(uint, host->max_segs, SG_MAX_SINGLE_ALLOC);
-    sdiodev->max_segment_size = host->max_seg_size;
-
-    if (!sdiodev->sg_support) {
-        return;
-    }
-
-    nents = max(BRCMF_DEFAULT_RXGLOM_SIZE, (uint)sdiodev->settings->bus.sdio.txglomsz);
-    nents += (nents >> 4) + 1;
-
-    WARN_ON(nents > sdiodev->max_segment_count);
-
-    brcmf_dbg(TRACE, "nents=%d\n", nents);
-    err = sg_alloc_table(&sdiodev->sgtable, nents, GFP_KERNEL);
-    if (err < 0) {
-        brcmf_err("allocation failed: disable scatter-gather");
-        sdiodev->sg_support = false;
-    }
-
-    sdiodev->txglomsz = sdiodev->settings->bus.sdio.txglomsz;
 }
 
 #ifdef CONFIG_PM_SLEEP
@@ -846,7 +628,6 @@ static zx_status_t brcmf_sdiod_remove(struct brcmf_sdio_dev* sdiodev) {
     sdio_disable_func(sdiodev->func1);
     sdio_release_host(sdiodev->func1);
 
-    sg_free_table(&sdiodev->sgtable);
     sdiodev->sbwad = 0;
 
     pm_runtime_allow(sdiodev->func1->card->host->parent);

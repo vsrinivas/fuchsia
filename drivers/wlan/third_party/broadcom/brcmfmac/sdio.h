@@ -196,12 +196,7 @@ struct brcmf_sdio_dev {
     bool irq_en; /* irq enable flags */
     //spinlock_t irq_en_lock;
     bool irq_wake; /* irq wake enable flags */
-    bool sg_support;
-    uint max_request_size;
-    ushort max_segment_count;
-    uint max_segment_size;
     uint txglomsz;
-    struct sg_table sgtable;
     char fw_name[BRCMF_FW_NAME_LEN];
     char nvram_name[BRCMF_FW_NAME_LEN];
     bool wowl_enabled;
@@ -358,7 +353,6 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
 /* Issue an abort to the specified function */
 int brcmf_sdiod_abort(struct brcmf_sdio_dev* sdiodev, struct sdio_func* func);
 
-void brcmf_sdiod_sgtable_alloc(struct brcmf_sdio_dev* sdiodev);
 void brcmf_sdiod_change_state(struct brcmf_sdio_dev* sdiodev, enum brcmf_sdiod_state state);
 #ifdef CONFIG_PM_SLEEP
 bool brcmf_sdiod_freezing(struct brcmf_sdio_dev* sdiodev);

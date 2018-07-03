@@ -3278,7 +3278,6 @@ static zx_status_t brcmf_sdio_bus_preinit(struct brcmf_device* dev) {
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
     struct brcmf_sdio* bus = sdiodev->bus;
     struct brcmf_core* core = bus->sdio_core;
-    uint pad_size;
     uint32_t value;
     zx_status_t err;
 
@@ -3303,19 +3302,6 @@ static zx_status_t brcmf_sdio_bus_preinit(struct brcmf_device* dev) {
     }
 
     bus->tx_hdrlen = SDPCM_HWHDR_LEN + SDPCM_SWHDR_LEN;
-    if (sdiodev->sg_support) {
-        bus->txglom = false;
-        value = 1;
-        pad_size = bus->sdiodev->func2->cur_blksize << 1;
-        err = brcmf_iovar_data_set(bus->sdiodev->dev, "bus:rxglom", &value, sizeof(uint32_t));
-        if (err != ZX_OK) {
-            /* bus:rxglom is allowed to fail */
-            err = ZX_OK;
-        } else {
-            bus->txglom = true;
-            bus->tx_hdrlen += SDPCM_HWEXT_LEN;
-        }
-    }
     brcmf_bus_add_txhdrlen(bus->sdiodev->dev, bus->tx_hdrlen);
 
 done:
@@ -3715,11 +3701,6 @@ static bool brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
     if (sdiodev->settings->bus.sdio.sd_sgentry_align > ALIGNMENT) {
         bus->sgentry_align = sdiodev->settings->bus.sdio.sd_sgentry_align;
     }
-
-    /* allocate scatter-gather table. sg support
-     * will be disabled upon allocation failure.
-     */
-    brcmf_sdiod_sgtable_alloc(sdiodev);
 
 #ifdef CONFIG_PM_SLEEP
     /* wowl can be supported when KEEP_POWER is true and (WAKE_SDIO_IRQ

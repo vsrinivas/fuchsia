@@ -274,9 +274,6 @@ LINUX_FUNCII(request_irq) // SDIO only
 LINUX_FUNCII(enable_irq_wake) // SDIO only
 LINUX_FUNCII(disable_irq_wake) // SDIO only
 LINUX_FUNCVI(mmc_set_data_timeout) // SDIO only
-// NOTE: mmc_wait_for_req sets .error fields of mmc_command and mmc_data structs
-// to ENOMEDIUM sometimes.
-LINUX_FUNCVI(mmc_wait_for_req) // SDIO only
 LINUX_FUNCVI(of_device_is_compatible)
 LINUX_FUNCVI(of_property_read_u32)
 LINUX_FUNCVI(of_find_property)
@@ -284,11 +281,6 @@ LINUX_FUNCVI(irq_of_parse_and_map) // OF only
 LINUX_FUNCII(irqd_get_trigger_type) // OF only
 LINUX_FUNCII(irq_get_irq_data) // OF only
 LINUX_FUNCII(free_irq) // PCI & SDIO only
-LINUX_FUNCVI(sg_set_buf)
-LINUX_FUNCVV(sg_next)
-LINUX_FUNCVI(sg_init_table)
-LINUX_FUNCVI(sg_free_table)
-LINUX_FUNCVI(sg_alloc_table)
 LINUX_FUNCII(allow_signal) // SDIO only
 LINUX_FUNCX(kthread_should_stop) // SDIO only
 LINUX_FUNCVS(kthread_run) // SDIO only
@@ -531,7 +523,6 @@ enum {
     MMC_DATA_WRITE,
     BRCMF_SCAN_IE_LEN_MAX,
     SD_IO_RW_EXTENDED,
-    SG_MAX_SINGLE_ALLOC,
     MMC_CAP_NONREMOVABLE,
     SDIO_VENDOR_ID_BROADCOM,
     SDIO_DEVICE_ID_BROADCOM_43143,
@@ -620,11 +611,6 @@ enum brcmf_bus_type { BRCMF_BUSTYPE_SDIO, BRCMF_BUSTYPE_USB, BRCMF_BUSTYPE_PCIE 
 #define __iomem            // May want it later
 #define IS_ENABLED(a) (a)  // not in compiler.h
 #define HZ (60)
-
-struct sg_table {
-    void* sgl;
-    int orig_nents;
-};
 
 struct brcmfmac_pd_cc_entry {
     uint8_t* iso3166;
@@ -806,7 +792,6 @@ struct brcmfmac_sdio_pd {
     size_t txglomsz;
     int oob_irq_flags;
     int oob_irq_supported;
-    int broken_sg_support;
 };
 
 struct seq_file {
@@ -1165,9 +1150,7 @@ struct mmc_command {
 };
 
 struct mmc_data {
-    int sg_len;
     int blocks;
-    void* sg;
     int blksz;
     uint32_t flags;
     zx_status_t error;
