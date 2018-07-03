@@ -8,8 +8,7 @@
 #include <utility>
 
 #include <fuchsia/modular/cpp/fidl.h>
-
-#include "lib/fidl/cpp/vector.h"
+#include <lib/fidl/cpp/vector.h>
 
 namespace modular {
 

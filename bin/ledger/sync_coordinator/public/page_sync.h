@@ -8,8 +8,8 @@
 #include <functional>
 
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/sync_coordinator/public/sync_state_watcher.h"
 
 namespace sync_coordinator {

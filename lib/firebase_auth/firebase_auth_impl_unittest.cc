@@ -7,13 +7,13 @@
 #include <utility>
 
 #include <fuchsia/modular/auth/cpp/fidl.h>
+#include <lib/backoff/testing/test_backoff.h>
+#include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fxl/functional/make_copyable.h>
+#include <lib/gtest/test_loop_fixture.h>
 
-#include "lib/backoff/testing/test_backoff.h"
-#include "lib/callback/capture.h"
-#include "lib/callback/set_when_called.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/lib/firebase_auth/testing/test_token_provider.h"
 
 namespace firebase_auth {

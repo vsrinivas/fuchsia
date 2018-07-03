@@ -6,15 +6,15 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fsl/socket/strings.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/macros.h>
+#include <lib/gtest/test_loop_fixture.h>
 
-#include "lib/callback/capture.h"
-#include "lib/callback/set_when_called.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fsl/socket/strings.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
-#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/testing/test_page_cloud_handler.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"

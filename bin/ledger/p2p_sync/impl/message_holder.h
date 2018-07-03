@@ -10,8 +10,7 @@
 #include <vector>
 
 #include <lib/fit/function.h>
-
-#include "lib/fxl/strings/string_view.h"
+#include <lib/fxl/strings/string_view.h>
 
 namespace p2p_sync {
 // MessageHolder is used to hold a parsed Flatbuffer message along with its

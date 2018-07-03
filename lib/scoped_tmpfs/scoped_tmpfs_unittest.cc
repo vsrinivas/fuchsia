@@ -7,8 +7,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <lib/fxl/files/unique_fd.h>
+
 #include "gtest/gtest.h"
-#include "lib/fxl/files/unique_fd.h"
 
 namespace scoped_tmpfs {
 namespace {

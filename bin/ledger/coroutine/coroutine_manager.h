@@ -9,8 +9,8 @@
 #include <list>
 
 #include <lib/fit/function.h>
+#include <lib/fxl/functional/auto_call.h>
 
-#include "lib/fxl/functional/auto_call.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 
 namespace coroutine {

@@ -6,8 +6,9 @@
 
 #include <memory>
 
+#include <lib/fxl/macros.h>
+
 #include "gtest/gtest.h"
-#include "lib/fxl/macros.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_id.h"

@@ -9,8 +9,8 @@
 #include <string>
 
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/storage/public/object.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/lib/convert/convert.h"

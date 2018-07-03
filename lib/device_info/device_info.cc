@@ -7,13 +7,14 @@
 #include <limits.h>
 #include <unistd.h>
 
-#include "lib/fxl/files/directory.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/random/uuid.h"
-#include "lib/fxl/strings/string_printf.h"
-#include "lib/fxl/strings/trim.h"
+#include <lib/fxl/files/directory.h>
+#include <lib/fxl/files/file.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/random/uuid.h>
+#include <lib/fxl/strings/string_printf.h>
+#include <lib/fxl/strings/trim.h>
+
 #include "peridot/lib/util/filesystem.h"
 
 namespace modular {

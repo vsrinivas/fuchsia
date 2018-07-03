@@ -8,17 +8,16 @@
 #include <unistd.h>
 #include <memory>
 
+#include <lib/fxl/files/file.h>
+#include <lib/fxl/files/unique_fd.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/strings/string_printf.h>
+#include <lib/fxl/strings/string_view.h>
+#include <lib/fxl/time/time_delta.h>
+#include <lib/fxl/time/time_point.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
-
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/files/unique_fd.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_printf.h"
-#include "lib/fxl/strings/string_view.h"
-#include "lib/fxl/time/time_delta.h"
-#include "lib/fxl/time/time_point.h"
 
 namespace modular {
 

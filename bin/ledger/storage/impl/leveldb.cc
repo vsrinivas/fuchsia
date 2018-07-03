@@ -8,11 +8,11 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/files/directory.h>
+#include <lib/fxl/files/path.h>
+#include <lib/fxl/logging.h>
 #include <trace/event.h>
 
-#include "lib/fxl/files/directory.h"
-#include "lib/fxl/files/path.h"
-#include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/storage/impl/object_impl.h"

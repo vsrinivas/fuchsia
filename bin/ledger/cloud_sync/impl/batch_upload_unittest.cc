@@ -9,13 +9,13 @@
 #include <utility>
 
 #include <lib/async/dispatcher.h>
+#include <lib/callback/capture.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/strings/string_view.h>
+#include <lib/gtest/test_loop_fixture.h>
 
-#include "lib/callback/capture.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_view.h"
-#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_cloud.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/public/commit.h"

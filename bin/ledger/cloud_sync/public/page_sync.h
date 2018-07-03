@@ -8,8 +8,8 @@
 #include <functional>
 
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 
 namespace cloud_sync {

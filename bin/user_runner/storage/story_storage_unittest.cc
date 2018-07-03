@@ -6,8 +6,9 @@
 
 #include <memory>
 
+#include <lib/async/cpp/future.h>
+
 #include "gtest/gtest.h"
-#include "lib/async/cpp/future.h"
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/testing/test_with_ledger.h"
 

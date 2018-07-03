@@ -12,11 +12,11 @@
 #include <fuchsia/maxwell/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/util.h>
+#include <lib/fxl/command_line.h>
+#include <lib/fxl/files/file.h>
+#include <lib/fxl/log_settings_command_line.h>
+#include <lib/fxl/strings/string_printf.h>
 
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/log_settings_command_line.h"
-#include "lib/fxl/strings/string_printf.h"
 #include "peridot/lib/module_manifest_source/package_util.h"
 
 using ::fuchsia::maxwell::internal::ModulePackageIndexer;

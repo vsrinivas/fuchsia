@@ -11,10 +11,10 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/socket/strings.h>
+#include <lib/fxl/logging.h>
 #include <lib/zx/time.h>
 
-#include "lib/fsl/socket/strings.h"
-#include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/encryption/primitives/hash.h"
 #include "peridot/bin/ledger/storage/fake/fake_commit.h"
 #include "peridot/bin/ledger/storage/fake/fake_journal.h"

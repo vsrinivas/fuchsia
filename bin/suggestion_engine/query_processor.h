@@ -9,8 +9,8 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/fxl/memory/weak_ptr.h>
 
-#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/suggestion_engine/media_player.h"
 #include "peridot/bin/suggestion_engine/query_runner.h"
 #include "peridot/bin/suggestion_engine/rankers/ranker.h"

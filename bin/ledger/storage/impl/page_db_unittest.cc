@@ -12,11 +12,11 @@
 #include <vector>
 
 #include <lib/async/cpp/task.h>
+#include <lib/callback/set_when_called.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/random/rand.h>
 
 #include "gtest/gtest.h"
-#include "lib/callback/set_when_called.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/random/rand.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/impl/commit_impl.h"
 #include "peridot/bin/ledger/storage/impl/commit_random_impl.h"

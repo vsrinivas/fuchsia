@@ -4,13 +4,13 @@
 
 #include "peridot/bin/ledger/storage/public/read_data_source.h"
 
+#include <lib/callback/capture.h>
+#include <lib/callback/scoped_task_runner.h>
+#include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
+#include <lib/gtest/test_loop_fixture.h>
 
 #include "gtest/gtest.h"
-#include "lib/callback/capture.h"
-#include "lib/callback/scoped_task_runner.h"
-#include "lib/callback/set_when_called.h"
-#include "lib/gtest/test_loop_fixture.h"
 
 namespace storage {
 namespace {

@@ -7,8 +7,9 @@
 #include <stdlib.h>
 #include <limits>
 
+#include <lib/fxl/logging.h>
+
 #include "gtest/gtest.h"
-#include "lib/fxl/logging.h"
 
 namespace bup {
 namespace {

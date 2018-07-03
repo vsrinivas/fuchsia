@@ -6,13 +6,13 @@
 
 #include <flatbuffers/flatbuffers.h>
 #include <lib/async/cpp/task.h>
+#include <lib/callback/scoped_callback.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/memory/weak_ptr.h>
+#include <lib/fxl/strings/concatenate.h>
 
-#include "lib/callback/scoped_callback.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/memory/weak_ptr.h"
-#include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/encryption/impl/encrypted_commit_generated.h"
 #include "peridot/bin/ledger/encryption/primitives/encrypt.h"
 #include "peridot/bin/ledger/encryption/primitives/kdf.h"

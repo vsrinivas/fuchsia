@@ -10,10 +10,10 @@
 #include <vector>
 
 #include <lib/fit/function.h>
+#include <lib/fsl/vmo/sized_vmo.h>
+#include <lib/fxl/macros.h>
 #include <lib/zx/socket.h>
 
-#include "lib/fsl/vmo/sized_vmo.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/commit.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/commit_watcher.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/record.h"

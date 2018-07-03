@@ -7,11 +7,11 @@
 
 #include <vector>
 
+#include <lib/app/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
 
-#include "lib/app/cpp/startup_context.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
 

@@ -4,8 +4,8 @@
 
 #include "story_provider_watcher_base.h"
 
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fidl/cpp/string.h"
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/string.h>
 
 namespace modular {
 

@@ -4,10 +4,11 @@
 
 #include "peridot/bin/suggestion_engine/ranking_features/mod_pair_ranking_feature.h"
 
+#include <lib/fxl/files/file.h>
+#include <lib/fxl/files/path.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
+
 #include "gtest/gtest.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/files/path.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
 
 namespace modular {
 namespace {

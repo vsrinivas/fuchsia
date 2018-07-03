@@ -8,10 +8,10 @@
 #include <functional>
 
 #include <lib/fit/function.h>
+#include <lib/fsl/vmo/sized_vmo.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/strings/string_view.h>
 
-#include "lib/fsl/vmo/sized_vmo.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/lib/convert/convert.h"

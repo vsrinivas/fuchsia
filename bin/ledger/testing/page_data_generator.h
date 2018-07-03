@@ -8,8 +8,8 @@
 #include <vector>
 
 #include <lib/fit/function.h>
+#include <lib/fxl/strings/string_view.h>
 
-#include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
 

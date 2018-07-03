@@ -8,11 +8,11 @@
 #include <functional>
 #include <memory>
 
+#include <lib/backoff/backoff.h>
 #include <lib/fit/function.h>
+#include <lib/gtest/test_loop_fixture.h>
 
 #include "gtest/gtest.h"
-#include "lib/backoff/backoff.h"
-#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/public/journal.h"

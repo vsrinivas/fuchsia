@@ -5,7 +5,7 @@
 #ifndef PERIDOT_LIB_COMMON_TEARDOWN_H_
 #define PERIDOT_LIB_COMMON_TEARDOWN_H_
 
-#include "lib/fxl/time/time_delta.h"
+#include <lib/fxl/time/time_delta.h>
 
 namespace modular {
 

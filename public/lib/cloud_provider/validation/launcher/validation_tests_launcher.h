@@ -10,9 +10,8 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-
-#include "lib/app/cpp/service_provider_impl.h"
-#include "lib/app/cpp/startup_context.h"
+#include <lib/app/cpp/service_provider_impl.h>
+#include <lib/app/cpp/startup_context.h>
 
 namespace cloud_provider {
 

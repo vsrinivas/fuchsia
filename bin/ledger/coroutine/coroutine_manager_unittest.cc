@@ -6,8 +6,9 @@
 
 #include <memory>
 
+#include <lib/callback/set_when_called.h>
+
 #include "gtest/gtest.h"
-#include "lib/callback/set_when_called.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 
 namespace coroutine {

@@ -5,7 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_FAKE_FAKE_OBJECT_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_FAKE_FAKE_OBJECT_H_
 
-#include "lib/fxl/strings/string_view.h"
+#include <lib/fxl/strings/string_view.h>
+
 #include "peridot/bin/ledger/storage/public/object.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 

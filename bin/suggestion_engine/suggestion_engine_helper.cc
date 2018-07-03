@@ -4,7 +4,7 @@
 
 #include "peridot/bin/suggestion_engine/suggestion_engine_helper.h"
 
-#include "lib/fxl/random/uuid.h"
+#include <lib/fxl/random/uuid.h>
 
 namespace modular {
 

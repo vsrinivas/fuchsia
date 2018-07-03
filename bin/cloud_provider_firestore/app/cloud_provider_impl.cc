@@ -6,9 +6,10 @@
 
 #include <utility>
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/concatenate.h"
-#include "lib/fxl/strings/string_view.h"
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/concatenate.h>
+#include <lib/fxl/strings/string_view.h>
+
 #include "peridot/bin/cloud_provider_firestore/app/credentials_provider_impl.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/encoding.h"
 #include "peridot/bin/ledger/storage/public/constants.h"

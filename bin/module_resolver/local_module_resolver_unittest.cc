@@ -4,11 +4,12 @@
 
 #include "peridot/bin/module_resolver/local_module_resolver.h"
 
-#include "lib/entity/cpp/json.h"
-#include "lib/fsl/types/type_converters.h"
-#include "lib/fxl/files/file.h"
-#include "lib/gtest/test_loop_fixture.h"
-#include "lib/module_resolver/cpp/formatting.h"
+#include <lib/entity/cpp/json.h>
+#include <lib/fsl/types/type_converters.h>
+#include <lib/fxl/files/file.h>
+#include <lib/gtest/test_loop_fixture.h>
+#include <lib/module_resolver/cpp/formatting.h>
+
 #include "peridot/lib/testing/entity_resolver_fake.h"
 
 namespace modular {

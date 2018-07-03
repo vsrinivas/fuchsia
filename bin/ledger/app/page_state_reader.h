@@ -7,7 +7,8 @@
 
 #include <functional>
 
-#include "lib/fxl/strings/string_view.h"
+#include <lib/fxl/strings/string_view.h>
+
 #include "peridot/bin/ledger/app/types.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 

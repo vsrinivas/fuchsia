@@ -9,12 +9,12 @@
 
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fxl/command_line.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/app/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/macros.h"
 #include "peridot/examples/todo_cpp/generator.h"
 
 namespace todo {

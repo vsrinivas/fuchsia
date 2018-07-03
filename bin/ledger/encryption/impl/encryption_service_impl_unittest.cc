@@ -4,10 +4,11 @@
 
 #include "peridot/bin/ledger/encryption/impl/encryption_service_impl.h"
 
+#include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
+#include <lib/gtest/test_loop_fixture.h>
+
 #include "gtest/gtest.h"
-#include "lib/callback/capture.h"
-#include "lib/callback/set_when_called.h"
-#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/storage/fake/fake_object.h"
 
 namespace encryption {

@@ -7,9 +7,10 @@
 
 #include <memory>
 
-#include "lib/fxl/functional/closure.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_view.h"
+#include <lib/fxl/functional/closure.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/strings/string_view.h>
+
 #include "peridot/bin/ledger/cloud_sync/public/ledger_sync.h"
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_config.h"

@@ -4,7 +4,7 @@
 
 #include "peridot/bin/ledger/filesystem/detached_path.h"
 
-#include "lib/fxl/strings/concatenate.h"
+#include <lib/fxl/strings/concatenate.h>
 
 namespace ledger {
 

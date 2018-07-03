@@ -11,13 +11,13 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
+#include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fxl/command_line.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/app/cpp/startup_context.h"
-#include "lib/app_driver/cpp/app_driver.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/fidl/view_host.h"
 

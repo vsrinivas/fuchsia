@@ -4,12 +4,12 @@
 
 #include <fuchsia/modular/examples/simple/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/app/cpp/connect.h>
+#include <lib/app/cpp/startup_context.h>
+#include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fxl/functional/make_copyable.h>
 
-#include "lib/app/cpp/connect.h"
-#include "lib/app/cpp/startup_context.h"
-#include "lib/app_driver/cpp/module_driver.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/lib/fidl/message_receiver_client.h"
 
 using ::fuchsia::modular::examples::simple::SimplePtr;

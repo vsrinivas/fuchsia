@@ -7,9 +7,9 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fidl/cpp/interface_ptr.h>
 
 #include "gtest/gtest.h"
-#include "lib/fidl/cpp/interface_ptr.h"
 
 namespace util {
 

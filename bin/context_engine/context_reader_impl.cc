@@ -4,8 +4,9 @@
 
 #include "peridot/bin/context_engine/context_reader_impl.h"
 
-#include "lib/context/cpp/formatting.h"
-#include "lib/fidl/cpp/clone.h"
+#include <lib/context/cpp/formatting.h>
+#include <lib/fidl/cpp/clone.h>
+
 #include "peridot/bin/context_engine/context_repository.h"
 
 namespace modular {

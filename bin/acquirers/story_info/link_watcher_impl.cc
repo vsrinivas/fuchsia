@@ -7,12 +7,13 @@
 #include <set>
 #include <sstream>
 
-#include "lib/context/cpp/context_metadata_builder.h"
-#include "lib/context/cpp/formatting.h"
-#include "lib/entity/cpp/json.h"
-#include "lib/fidl/cpp/clone.h"
-#include "lib/fidl/cpp/optional.h"
-#include "lib/fxl/functional/make_copyable.h"
+#include <lib/context/cpp/context_metadata_builder.h>
+#include <lib/context/cpp/formatting.h>
+#include <lib/entity/cpp/json.h>
+#include <lib/fidl/cpp/clone.h>
+#include <lib/fidl/cpp/optional.h>
+#include <lib/fxl/functional/make_copyable.h>
+
 #include "peridot/bin/acquirers/story_info/story_watcher_impl.h"
 #include "peridot/bin/user_runner/storage/constants_and_utils.h"  // MakeLinkKey
 #include "peridot/lib/fidl/json_xdr.h"

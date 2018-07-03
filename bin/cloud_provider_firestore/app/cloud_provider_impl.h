@@ -7,10 +7,10 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/firestore/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firestore/app/device_set_impl.h"
 #include "peridot/bin/cloud_provider_firestore/app/page_cloud_impl.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service.h"

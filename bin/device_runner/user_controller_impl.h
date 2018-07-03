@@ -11,14 +11,14 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
+#include <lib/fidl/cpp/array.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/interface_handle.h>
+#include <lib/fidl/cpp/interface_ptr_set.h>
+#include <lib/fidl/cpp/interface_request.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/app/cpp/startup_context.h"
-#include "lib/fidl/cpp/array.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fidl/cpp/interface_handle.h"
-#include "lib/fidl/cpp/interface_ptr_set.h"
-#include "lib/fidl/cpp/interface_request.h"
-#include "lib/fxl/macros.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/scope.h"
 

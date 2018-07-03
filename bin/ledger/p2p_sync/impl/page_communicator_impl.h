@@ -6,12 +6,12 @@
 #define PERIDOT_BIN_LEDGER_P2P_SYNC_IMPL_PAGE_COMMUNICATOR_IMPL_H_
 
 #include <flatbuffers/flatbuffers.h>
+#include <lib/callback/auto_cleanable.h>
+#include <lib/callback/cancellable.h>
+#include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/memory/weak_ptr.h>
 
-#include "lib/callback/auto_cleanable.h"
-#include "lib/callback/cancellable.h"
-#include "lib/callback/waiter.h"
-#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/p2p_provider/public/types.h"
 #include "peridot/bin/ledger/p2p_sync/impl/device_mesh.h"
 #include "peridot/bin/ledger/p2p_sync/impl/message_generated.h"

@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-#include "lib/fxl/strings/concatenate.h"
+#include <lib/fxl/strings/concatenate.h>
 
 namespace todo {
 Generator::Generator(std::default_random_engine* rng) : rng_(rng) {

@@ -7,10 +7,10 @@
 
 #include <memory>
 
+#include <lib/callback/auto_cleanable.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/memory/weak_ptr.h>
 
-#include "lib/callback/auto_cleanable.h"
-#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/app/page_snapshot_impl.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/storage/public/commit_watcher.h"

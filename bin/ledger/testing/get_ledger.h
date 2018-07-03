@@ -10,13 +10,12 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/memory/ref_ptr.h>
+#include <lib/fxl/strings/string_view.h>
 
-#include "lib/app/cpp/startup_context.h"
-#include "lib/fit/function.h"
-#include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 
 namespace test {

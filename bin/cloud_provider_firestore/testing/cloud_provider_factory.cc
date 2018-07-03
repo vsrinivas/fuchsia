@@ -8,12 +8,11 @@
 
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/backoff/exponential_backoff.h>
 #include <lib/fit/function.h>
-
-#include "lib/backoff/exponential_backoff.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/random/uuid.h"
-#include "lib/svc/cpp/services.h"
+#include <lib/fxl/functional/make_copyable.h>
+#include <lib/fxl/random/uuid.h>
+#include <lib/svc/cpp/services.h>
 
 namespace cloud_provider_firestore {
 

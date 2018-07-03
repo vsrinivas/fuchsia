@@ -4,8 +4,9 @@
 
 #include "peridot/bin/user_runner/puppet_master/command_runners/update_mod_command_runner.h"
 
+#include <lib/gtest/test_loop_fixture.h>
+
 #include "gtest/gtest.h"
-#include "lib/gtest/test_loop_fixture.h"
 
 namespace modular {
 namespace {

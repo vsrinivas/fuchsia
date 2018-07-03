@@ -7,7 +7,8 @@
 
 #include <memory>
 
-#include "lib/fxl/build_config.h"
+#include <lib/fxl/build_config.h>
+
 #include "peridot/bin/ledger/coroutine/context/stack.h"
 
 #if defined(ARCH_CPU_X86_64)

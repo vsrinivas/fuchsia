@@ -5,8 +5,8 @@
 #include "peridot/bin/cloud_provider_firebase/testing/server/server.h"
 
 #include <lib/fit/function.h>
+#include <lib/fxl/strings/string_number_conversions.h>
 
-#include "lib/fxl/strings/string_number_conversions.h"
 #include "peridot/lib/socket/socket_pair.h"
 #include "peridot/lib/socket/socket_writer.h"
 

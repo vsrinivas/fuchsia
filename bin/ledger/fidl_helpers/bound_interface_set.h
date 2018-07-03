@@ -5,10 +5,9 @@
 #ifndef PERIDOT_BIN_LEDGER_FIDL_HELPERS_BOUND_INTERFACE_SET_H_
 #define PERIDOT_BIN_LEDGER_FIDL_HELPERS_BOUND_INTERFACE_SET_H_
 
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
-
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/macros.h"
+#include <lib/fxl/macros.h>
 
 namespace ledger {
 namespace fidl_helpers {

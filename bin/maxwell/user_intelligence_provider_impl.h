@@ -8,9 +8,9 @@
 #include <deque>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
+#include <lib/svc/cpp/services.h>
 
-#include "lib/app/cpp/startup_context.h"
-#include "lib/svc/cpp/services.h"
 #include "peridot/bin/maxwell/agent_launcher.h"
 #include "peridot/bin/maxwell/config.h"
 #include "peridot/lib/util/rate_limited_retry.h"

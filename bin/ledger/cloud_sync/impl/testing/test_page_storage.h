@@ -11,10 +11,10 @@
 #include <vector>
 
 #include <lib/async/dispatcher.h>
+#include <lib/callback/capture.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/socket/strings.h>
 
-#include "lib/callback/capture.h"
-#include "lib/fsl/socket/strings.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"

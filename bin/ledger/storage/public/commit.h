@@ -9,7 +9,8 @@
 #include <string>
 #include <vector>
 
-#include "lib/fxl/macros.h"
+#include <lib/fxl/macros.h>
+
 #include "peridot/bin/ledger/storage/public/types.h"
 
 namespace storage {

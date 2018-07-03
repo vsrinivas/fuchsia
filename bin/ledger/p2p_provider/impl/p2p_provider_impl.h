@@ -10,10 +10,10 @@
 #include <string>
 
 #include <fuchsia/netconnector/cpp/fidl.h>
+#include <lib/app/cpp/service_provider_impl.h>
+#include <lib/callback/auto_cleanable.h>
+#include <lib/netconnector/cpp/message_relay.h>
 
-#include "lib/app/cpp/service_provider_impl.h"
-#include "lib/callback/auto_cleanable.h"
-#include "lib/netconnector/cpp/message_relay.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/p2p_provider/impl/remote_connection.h"
 #include "peridot/bin/ledger/p2p_provider/public/p2p_provider.h"

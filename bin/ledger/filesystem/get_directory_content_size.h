@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_FILESYSTEM_GET_DIRECTORY_CONTENT_SIZE_H_
 #define PERIDOT_BIN_LEDGER_FILESYSTEM_GET_DIRECTORY_CONTENT_SIZE_H_
 
-#include "lib/fxl/strings/string_view.h"
+#include <lib/fxl/strings/string_view.h>
 
 namespace ledger {
 

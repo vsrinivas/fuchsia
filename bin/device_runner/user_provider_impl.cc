@@ -6,11 +6,12 @@
 
 #include <utility>
 
-#include "lib/fxl/files/directory.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/files/path.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/strings/string_printf.h"
+#include <lib/fxl/files/directory.h>
+#include <lib/fxl/files/file.h>
+#include <lib/fxl/files/path.h>
+#include <lib/fxl/functional/make_copyable.h>
+#include <lib/fxl/strings/string_printf.h>
+
 #include "peridot/bin/device_runner/users_generated.h"
 #include "peridot/lib/common/xdr.h"
 #include "peridot/lib/fidl/clone.h"

@@ -6,11 +6,11 @@
 
 #include <algorithm>
 
+#include <lib/callback/trace_callback.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/random/rand.h>
 
-#include "lib/callback/trace_callback.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/random/rand.h"
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/storage/impl/number_serialization.h"

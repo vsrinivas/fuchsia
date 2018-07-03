@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <string>
 
-#include "lib/fxl/strings/string_view.h"
+#include <lib/fxl/strings/string_view.h>
 
 namespace ledger {
 

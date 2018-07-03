@@ -7,8 +7,7 @@
 #include <algorithm>
 
 #include <gtest/gtest.h>
-
-#include "lib/fxl/random/rand.h"
+#include <lib/fxl/random/rand.h>
 
 namespace encryption {
 namespace {

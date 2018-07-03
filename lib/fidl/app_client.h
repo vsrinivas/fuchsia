@@ -10,12 +10,12 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/interface_request.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/time/time_delta.h>
+#include <lib/svc/cpp/services.h>
 
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fidl/cpp/interface_request.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/time/time_delta.h"
-#include "lib/svc/cpp/services.h"
 #include "peridot/lib/common/async_holder.h"
 
 namespace modular {

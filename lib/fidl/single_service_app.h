@@ -10,10 +10,9 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-
-#include "lib/app/cpp/startup_context.h"
-#include "lib/fidl/cpp/interface_request.h"
-#include "lib/fxl/macros.h"
+#include <lib/app/cpp/startup_context.h>
+#include <lib/fidl/cpp/interface_request.h>
+#include <lib/fxl/macros.h>
 
 namespace modular {
 

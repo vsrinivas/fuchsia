@@ -7,8 +7,7 @@
 #include <utility>
 
 #include <lib/async/cpp/task.h>
-
-#include "lib/svc/cpp/services.h"
+#include <lib/svc/cpp/services.h>
 
 namespace test {
 namespace {

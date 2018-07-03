@@ -4,7 +4,7 @@
 
 #include "peridot/bin/cloud_provider_firestore/app/grpc_status.h"
 
-#include "lib/fxl/logging.h"
+#include <lib/fxl/logging.h>
 
 namespace cloud_provider_firestore {
 

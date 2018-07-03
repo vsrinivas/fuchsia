@@ -7,8 +7,9 @@
 #include <string>
 #include <vector>
 
+#include <lib/fxl/strings/string_view.h>
+
 #include "gtest/gtest.h"
-#include "lib/fxl/strings/string_view.h"
 
 namespace modular {
 namespace {

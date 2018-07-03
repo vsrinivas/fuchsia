@@ -6,8 +6,9 @@
 
 #include <utility>
 
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/logging.h"
+#include <lib/fxl/files/file.h>
+#include <lib/fxl/logging.h>
+
 #include "peridot/lib/rapidjson/rapidjson.h"
 
 namespace modular {

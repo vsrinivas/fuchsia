@@ -5,13 +5,13 @@
 #include <utility>
 
 #include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fsl/socket/strings.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
+#include <lib/svc/cpp/services.h>
 
 #include "gtest/gtest.h"
-#include "lib/app/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fsl/socket/strings.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/svc/cpp/services.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"

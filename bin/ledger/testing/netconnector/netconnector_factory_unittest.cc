@@ -7,12 +7,12 @@
 #include <memory>
 
 #include <fuchsia/netconnector/cpp/fidl.h>
+#include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
+#include <lib/fxl/macros.h>
+#include <lib/gtest/test_loop_fixture.h>
+#include <lib/netconnector/cpp/message_relay.h>
 
-#include "lib/callback/capture.h"
-#include "lib/callback/set_when_called.h"
-#include "lib/fxl/macros.h"
-#include "lib/gtest/test_loop_fixture.h"
-#include "lib/netconnector/cpp/message_relay.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/lib/convert/convert.h"
 

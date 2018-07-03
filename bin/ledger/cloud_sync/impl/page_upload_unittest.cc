@@ -8,14 +8,14 @@
 #include <utility>
 #include <vector>
 
+#include <lib/backoff/backoff.h>
+#include <lib/backoff/testing/test_backoff.h>
+#include <lib/callback/capture.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/socket/strings.h>
+#include <lib/fxl/macros.h>
+#include <lib/gtest/test_loop_fixture.h>
 
-#include "lib/backoff/backoff.h"
-#include "lib/backoff/testing/test_backoff.h"
-#include "lib/callback/capture.h"
-#include "lib/fsl/socket/strings.h"
-#include "lib/fxl/macros.h"
-#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_cloud.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_storage.h"

@@ -10,16 +10,16 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fxl/command_line.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/tasks/task_runner.h>
+#include <lib/fxl/time/time_delta.h>
 
-#include "lib/app/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/tasks/task_runner.h"
-#include "lib/fxl/time/time_delta.h"
 #include "peridot/lib/common/names.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/rapidjson/rapidjson.h"

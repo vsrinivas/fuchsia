@@ -11,12 +11,12 @@
 #include <thread>
 
 #include <lib/async/cpp/task.h>
+#include <lib/backoff/exponential_backoff.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/memory/weak_ptr.h>
+#include <lib/network_wrapper/network_wrapper_impl.h>
 
-#include "lib/backoff/exponential_backoff.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/memory/weak_ptr.h"
-#include "lib/network_wrapper/network_wrapper_impl.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/firebase/firebase_impl.h"
 #include "peridot/lib/module_manifest_source/xdr.h"

@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/fit/function.h>
+#include <lib/fxl/functional/auto_call.h>
 
 #include "gtest/gtest.h"
-#include "lib/fxl/functional/auto_call.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 
 namespace coroutine {

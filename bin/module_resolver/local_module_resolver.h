@@ -11,10 +11,10 @@
 #include <vector>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/async/cpp/operation.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fxl/memory/weak_ptr.h>
 
-#include "lib/async/cpp/operation.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
 
 namespace modular {

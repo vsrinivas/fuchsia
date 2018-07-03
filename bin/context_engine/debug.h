@@ -6,8 +6,8 @@
 #define PERIDOT_BIN_CONTEXT_ENGINE_DEBUG_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/fidl/cpp/interface_ptr_set.h>
 
-#include "lib/fidl/cpp/interface_ptr_set.h"
 #include "peridot/bin/context_engine/index.h"
 #include "peridot/lib/util/idle_waiter.h"
 

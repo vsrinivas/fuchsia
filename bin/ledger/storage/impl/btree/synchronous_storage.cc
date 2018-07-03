@@ -5,8 +5,7 @@
 #include "peridot/bin/ledger/storage/impl/btree/synchronous_storage.h"
 
 #include <lib/fit/function.h>
-
-#include "lib/fxl/memory/ref_ptr.h"
+#include <lib/fxl/memory/ref_ptr.h>
 
 namespace storage {
 namespace btree {

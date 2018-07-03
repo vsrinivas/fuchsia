@@ -5,10 +5,9 @@
 #include "peridot/lib/firebase_auth/testing/test_token_provider.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/fidl/cpp/clone.h>
+#include <lib/fidl/cpp/optional.h>
 #include <lib/fxl/logging.h>
-
-#include "lib/fidl/cpp/clone.h"
-#include "lib/fidl/cpp/optional.h"
 
 namespace firebase_auth {
 TestTokenProvider::TestTokenProvider(async_t* async) : async_(async) {

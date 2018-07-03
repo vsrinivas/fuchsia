@@ -8,8 +8,8 @@
 #include <memory>
 
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 

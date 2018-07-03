@@ -8,8 +8,8 @@
 #include <string>
 #include <vector>
 
-#include "lib/fidl/cpp/string.h"
-#include "lib/fidl/cpp/vector.h"
+#include <lib/fidl/cpp/string.h>
+#include <lib/fidl/cpp/vector.h>
 
 namespace modular {
 

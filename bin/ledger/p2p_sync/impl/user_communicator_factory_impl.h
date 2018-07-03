@@ -8,7 +8,8 @@
 #include <memory>
 #include <string>
 
-#include "lib/app/cpp/startup_context.h"
+#include <lib/app/cpp/startup_context.h>
+
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/p2p_sync/public/user_communicator.h"
 #include "peridot/bin/ledger/p2p_sync/public/user_communicator_factory.h"

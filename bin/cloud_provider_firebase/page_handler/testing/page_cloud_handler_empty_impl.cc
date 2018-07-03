@@ -5,8 +5,7 @@
 #include "peridot/bin/cloud_provider_firebase/page_handler/testing/page_cloud_handler_empty_impl.h"
 
 #include <lib/fit/function.h>
-
-#include "lib/fxl/logging.h"
+#include <lib/fxl/logging.h>
 
 namespace cloud_provider_firebase {
 void PageCloudHandlerEmptyImpl::AddCommits(

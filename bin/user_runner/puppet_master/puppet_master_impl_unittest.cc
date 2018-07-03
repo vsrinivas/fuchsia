@@ -5,9 +5,9 @@
 #include "peridot/bin/user_runner/puppet_master/puppet_master_impl.h"
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/gtest/test_loop_fixture.h>
 
 #include "gtest/gtest.h"
-#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/user_runner/puppet_master/story_command_executor.h"
 
 namespace modular {

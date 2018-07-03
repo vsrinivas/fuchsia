@@ -5,12 +5,12 @@
 #ifndef PERIDOT_TESTS_MAXWELL_INTEGRATION_TEST_H_
 #define PERIDOT_TESTS_MAXWELL_INTEGRATION_TEST_H_
 
+#include <lib/app/cpp/connect.h>
+#include <lib/app/cpp/service_provider_impl.h>
+#include <lib/app/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include "gtest/gtest.h"
-#include "lib/app/cpp/connect.h"
-#include "lib/app/cpp/service_provider_impl.h"
-#include "lib/app/cpp/startup_context.h"
 #include "peridot/bin/maxwell/agent_launcher.h"
 #include "peridot/lib/testing/component_context_fake.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"

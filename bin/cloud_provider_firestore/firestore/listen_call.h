@@ -10,9 +10,9 @@
 #include <google/firestore/v1beta1/firestore.grpc.pb.h>
 #include <grpc++/grpc++.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/listen_call_client.h"
 #include "peridot/bin/cloud_provider_firestore/grpc/stream_controller.h"
 #include "peridot/bin/cloud_provider_firestore/grpc/stream_reader.h"

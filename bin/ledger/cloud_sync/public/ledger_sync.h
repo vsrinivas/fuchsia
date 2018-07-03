@@ -10,8 +10,8 @@
 #include <string>
 
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/cloud_sync/public/page_sync.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"

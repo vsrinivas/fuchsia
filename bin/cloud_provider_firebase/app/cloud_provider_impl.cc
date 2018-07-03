@@ -6,7 +6,8 @@
 
 #include <utility>
 
-#include "lib/fxl/logging.h"
+#include <lib/fxl/logging.h>
+
 #include "peridot/bin/cloud_provider_firebase/app/convert_status.h"
 #include "peridot/bin/cloud_provider_firebase/device_set/cloud_device_set_impl.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage_impl.h"

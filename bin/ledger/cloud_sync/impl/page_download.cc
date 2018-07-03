@@ -5,8 +5,8 @@
 #include "peridot/bin/ledger/cloud_sync/impl/page_download.h"
 
 #include <lib/fit/function.h>
+#include <lib/fxl/strings/concatenate.h>
 
-#include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 #include "peridot/bin/ledger/storage/public/data_source.h"
 #include "peridot/bin/ledger/storage/public/read_data_source.h"

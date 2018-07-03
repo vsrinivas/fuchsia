@@ -5,8 +5,9 @@
 #ifndef PERIDOT_BIN_LEDGER_P2P_PROVIDER_PUBLIC_P2P_PROVIDER_H_
 #define PERIDOT_BIN_LEDGER_P2P_PROVIDER_PUBLIC_P2P_PROVIDER_H_
 
-#include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_view.h"
+#include <lib/fxl/macros.h>
+#include <lib/fxl/strings/string_view.h>
+
 #include "peridot/bin/ledger/p2p_provider/public/types.h"
 
 namespace p2p_provider {

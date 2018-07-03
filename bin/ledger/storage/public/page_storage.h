@@ -10,9 +10,9 @@
 #include <utility>
 
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/strings/string_view.h>
 
-#include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/commit_watcher.h"
 #include "peridot/bin/ledger/storage/public/data_source.h"

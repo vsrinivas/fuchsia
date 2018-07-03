@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_CONSTANTS_H_
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_CONSTANTS_H_
 
-#include "lib/fxl/strings/string_view.h"
+#include <lib/fxl/strings/string_view.h>
 
 namespace cloud_sync {
 

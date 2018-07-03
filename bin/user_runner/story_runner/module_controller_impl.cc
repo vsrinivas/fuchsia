@@ -6,12 +6,12 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fidl/cpp/interface_handle.h>
+#include <lib/fidl/cpp/interface_ptr.h>
+#include <lib/fidl/cpp/interface_request.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/time/time_delta.h>
 
-#include "lib/fidl/cpp/interface_handle.h"
-#include "lib/fidl/cpp/interface_ptr.h"
-#include "lib/fidl/cpp/interface_request.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/time/time_delta.h"
 #include "peridot/bin/user_runner/story_runner/story_controller_impl.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/clone.h"

@@ -4,7 +4,8 @@
 
 #include "peridot/lib/socket/socket_drainer_client.h"
 
-#include "lib/gtest/test_loop_fixture.h"
+#include <lib/gtest/test_loop_fixture.h>
+
 #include "peridot/lib/socket/socket_pair.h"
 
 namespace socket {

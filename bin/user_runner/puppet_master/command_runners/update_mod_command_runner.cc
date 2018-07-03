@@ -4,7 +4,7 @@
 
 #include "peridot/bin/user_runner/puppet_master/command_runners/update_mod_command_runner.h"
 
-#include "lib/fxl/logging.h"
+#include <lib/fxl/logging.h>
 
 namespace modular {
 

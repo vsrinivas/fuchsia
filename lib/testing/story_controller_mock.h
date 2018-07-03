@@ -8,9 +8,8 @@
 #include <string>
 
 #include <fuchsia/modular/cpp/fidl.h>
-
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fidl/cpp/interface_ptr_set.h"
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/interface_ptr_set.h>
 
 namespace modular {
 

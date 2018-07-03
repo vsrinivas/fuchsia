@@ -5,10 +5,11 @@
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/async/cpp/operation.h>
+#include <lib/entity/cpp/json.h>
+#include <lib/fidl/cpp/array.h>
 
 #include "gtest/gtest.h"
-#include "lib/async/cpp/operation.h"
-#include "lib/fidl/cpp/array.h"
 #include "peridot/bin/user_runner/storage/constants_and_utils.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"
@@ -18,7 +19,6 @@
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/test_with_ledger.h"
-#include "peridot/public/lib/entity/cpp/json.h"
 
 using fuchsia::modular::CreateLinkInfo;
 using fuchsia::modular::CreateLinkInfoPtr;

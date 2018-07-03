@@ -7,11 +7,11 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/app/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
 #include "peridot/lib/common/story_provider_watcher_base.h"
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/testing.h"

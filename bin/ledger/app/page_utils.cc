@@ -7,9 +7,9 @@
 #include <memory>
 
 #include <lib/fit/function.h>
+#include <lib/fsl/vmo/sized_vmo.h>
+#include <lib/fsl/vmo/strings.h>
 
-#include "lib/fsl/vmo/sized_vmo.h"
-#include "lib/fsl/vmo/strings.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/storage/public/object.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"

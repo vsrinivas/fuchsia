@@ -7,8 +7,9 @@
 
 #include <memory>
 
-#include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_view.h"
+#include <lib/fxl/macros.h>
+#include <lib/fxl/strings/string_view.h>
+
 #include "peridot/bin/ledger/p2p_sync/public/page_communicator.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 

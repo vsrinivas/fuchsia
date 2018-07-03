@@ -12,12 +12,12 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/netconnector/cpp/fidl.h>
+#include <lib/callback/auto_cleanable.h>
+#include <lib/callback/cancellable.h>
+#include <lib/callback/managed_container.h>
+#include <lib/fxl/files/unique_fd.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/callback/auto_cleanable.h"
-#include "lib/callback/cancellable.h"
-#include "lib/callback/managed_container.h"
-#include "lib/fxl/files/unique_fd.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/ledger_repository_impl.h"
 #include "peridot/bin/ledger/app/page_eviction_manager_impl.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_config.h"

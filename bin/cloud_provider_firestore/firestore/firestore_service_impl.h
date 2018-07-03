@@ -9,9 +9,9 @@
 #include <thread>
 
 #include <lib/async/dispatcher.h>
+#include <lib/callback/auto_cleanable.h>
 #include <lib/fit/function.h>
 
-#include "lib/callback/auto_cleanable.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/listen_call.h"
 #include "peridot/bin/cloud_provider_firestore/grpc/read_stream_drainer.h"

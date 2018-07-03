@@ -8,12 +8,12 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
+#include <lib/context/cpp/formatting.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/app/cpp/startup_context.h"
-#include "lib/context/cpp/formatting.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/component_base.h"

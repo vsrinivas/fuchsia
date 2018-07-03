@@ -7,8 +7,8 @@
 
 #include <memory>
 
-#include "lib/fidl/cpp/optional.h"
-#include "lib/fidl/cpp/vector.h"
+#include <lib/fidl/cpp/optional.h>
+#include <lib/fidl/cpp/vector.h>
 
 namespace modular {
 

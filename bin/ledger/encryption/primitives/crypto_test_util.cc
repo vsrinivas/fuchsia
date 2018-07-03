@@ -4,7 +4,7 @@
 
 #include "peridot/bin/ledger/encryption/primitives/crypto_test_util.h"
 
-#include "lib/fxl/strings/string_number_conversions.h"
+#include <lib/fxl/strings/string_number_conversions.h>
 
 namespace encryption {
 

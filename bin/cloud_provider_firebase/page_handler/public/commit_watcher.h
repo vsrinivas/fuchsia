@@ -7,7 +7,8 @@
 
 #include <vector>
 
-#include "lib/fxl/macros.h"
+#include <lib/fxl/macros.h>
+
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/commit.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/record.h"
 

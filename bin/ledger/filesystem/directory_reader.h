@@ -8,8 +8,8 @@
 #include <functional>
 
 #include <lib/fit/function.h>
+#include <lib/fxl/strings/string_view.h>
 
-#include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
 
 namespace ledger {

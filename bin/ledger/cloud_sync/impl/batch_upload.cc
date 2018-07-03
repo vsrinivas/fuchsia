@@ -8,15 +8,14 @@
 #include <set>
 #include <utility>
 
+#include <lib/callback/scoped_callback.h>
+#include <lib/callback/trace_callback.h>
+#include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/memory/ref_ptr.h>
 #include <trace/event.h>
-
-#include "lib/callback/scoped_callback.h"
-#include "lib/callback/trace_callback.h"
-#include "lib/callback/waiter.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/memory/ref_ptr.h"
 
 namespace cloud_sync {
 

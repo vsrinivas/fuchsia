@@ -9,10 +9,9 @@
 
 #include <flatbuffers/flatbuffers.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/strings/string_view.h>
+#include <lib/netconnector/cpp/message_relay.h>
 #include <lib/zx/channel.h>
-
-#include "lib/fxl/strings/string_view.h"
-#include "lib/netconnector/cpp/message_relay.h"
 
 namespace p2p_provider {
 // RemoteConnection holds a connection with a single remote device.

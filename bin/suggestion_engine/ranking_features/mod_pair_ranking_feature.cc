@@ -4,8 +4,9 @@
 
 #include "peridot/bin/suggestion_engine/ranking_features/mod_pair_ranking_feature.h"
 
-#include "lib/context/cpp/context_helper.h"
-#include "lib/fxl/logging.h"
+#include <lib/context/cpp/context_helper.h>
+#include <lib/fxl/logging.h>
+
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/schema.h"
 

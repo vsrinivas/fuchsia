@@ -4,8 +4,9 @@
 
 #include "peridot/bin/ledger/p2p_sync/impl/user_communicator_impl.h"
 
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/logging.h"
+#include <lib/fxl/files/file.h>
+#include <lib/fxl/logging.h>
+
 #include "peridot/bin/ledger/p2p_sync/impl/flatbuffer_message_factory.h"
 #include "peridot/bin/ledger/p2p_sync/impl/ledger_communicator_impl.h"
 #include "peridot/bin/ledger/p2p_sync/impl/message_generated.h"

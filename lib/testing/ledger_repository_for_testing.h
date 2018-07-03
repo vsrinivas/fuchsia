@@ -9,10 +9,10 @@
 
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/app/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 

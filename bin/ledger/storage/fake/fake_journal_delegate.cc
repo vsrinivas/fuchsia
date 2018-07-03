@@ -7,8 +7,8 @@
 #include <utility>
 
 #include <lib/fit/function.h>
+#include <lib/fxl/random/rand.h>
 
-#include "lib/fxl/random/rand.h"
 #include "peridot/bin/ledger/storage/fake/fake_commit.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 

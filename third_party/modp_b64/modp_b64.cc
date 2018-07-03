@@ -49,7 +49,7 @@
  * If you are ripping this out of the library, comment out the next
  * line and uncomment the next lines as approrpiate
  */
-#include "lib/fxl/build_config.h"
+#include <lib/fxl/build_config.h>
 
 #ifndef ARCH_CPU_LITTLE_ENDIAN
 

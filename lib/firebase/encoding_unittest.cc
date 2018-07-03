@@ -6,9 +6,10 @@
 
 #include <string>
 
+#include <lib/fxl/random/rand.h>
+#include <lib/fxl/strings/utf_codecs.h>
+
 #include "gtest/gtest.h"
-#include "lib/fxl/random/rand.h"
-#include "lib/fxl/strings/utf_codecs.h"
 
 namespace firebase {
 namespace {

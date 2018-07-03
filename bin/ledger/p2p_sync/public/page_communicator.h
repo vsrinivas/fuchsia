@@ -9,8 +9,8 @@
 
 #include <memory>
 
-#include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_view.h"
+#include <lib/fxl/macros.h>
+#include <lib/fxl/strings/string_view.h>
 
 namespace p2p_sync {
 // PageCommunicator handles page-level data transfer between peers.

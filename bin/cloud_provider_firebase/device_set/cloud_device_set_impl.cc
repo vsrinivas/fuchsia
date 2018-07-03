@@ -5,9 +5,8 @@
 #include "peridot/bin/cloud_provider_firebase/device_set/cloud_device_set_impl.h"
 
 #include <lib/fit/function.h>
-
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/concatenate.h"
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/concatenate.h>
 
 namespace cloud_provider_firebase {
 

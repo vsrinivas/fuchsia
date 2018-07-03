@@ -4,8 +4,9 @@
 
 #include "peridot/bin/cloud_provider_firebase/app/page_cloud_impl.h"
 
-#include "lib/fsl/vmo/sized_vmo.h"
-#include "lib/fxl/functional/make_copyable.h"
+#include <lib/fsl/vmo/sized_vmo.h>
+#include <lib/fxl/functional/make_copyable.h>
+
 #include "peridot/bin/cloud_provider_firebase/app/convert_status.h"
 #include "peridot/lib/convert/convert.h"
 

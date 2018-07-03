@@ -7,15 +7,15 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/callback/capture.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/strings/string_printf.h>
 
 #include "garnet/public/lib/callback/capture.h"
 #include "gtest/gtest.h"
-#include "lib/callback/capture.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fidl/cpp/optional.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
 #include "peridot/bin/ledger/fidl/include/types.h"

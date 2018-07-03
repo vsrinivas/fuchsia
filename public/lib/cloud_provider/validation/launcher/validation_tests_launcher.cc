@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/public/lib/cloud_provider/validation/launcher/validation_tests_launcher.h"
+#include <lib/cloud_provider/validation/launcher/validation_tests_launcher.h>
 
-#include "lib/fidl/cpp/optional.h"
-#include "lib/fxl/logging.h"
+#include <lib/fidl/cpp/optional.h>
+#include <lib/fxl/logging.h>
 
 namespace cloud_provider {
 

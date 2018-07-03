@@ -7,10 +7,9 @@
 #include <string>
 
 #include <fuchsia/modular/cpp/fidl.h>
-
-#include "lib/fidl/cpp/optional.h"
-#include "lib/media/timeline/timeline.h"
-#include "lib/media/timeline/timeline_rate.h"
+#include <lib/fidl/cpp/optional.h>
+#include <lib/media/timeline/timeline.h>
+#include <lib/media/timeline/timeline_rate.h>
 
 namespace modular {
 

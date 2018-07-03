@@ -5,10 +5,11 @@
 #include <utility>
 #include <vector>
 
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/strings/string_printf.h>
+
 #include "gtest/gtest.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
 #include "peridot/bin/ledger/tests/integration/test_utils.h"

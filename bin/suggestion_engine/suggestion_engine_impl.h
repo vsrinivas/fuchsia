@@ -10,9 +10,9 @@
 #include <vector>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/fidl/cpp/interface_ptr_set.h>
+#include <lib/fxl/memory/weak_ptr.h>
 
-#include "lib/fidl/cpp/interface_ptr_set.h"
-#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/suggestion_engine/auto_select_first_query_listener.h"
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/bin/suggestion_engine/interruptions_processor.h"

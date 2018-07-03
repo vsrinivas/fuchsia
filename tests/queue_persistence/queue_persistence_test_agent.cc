@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/app_driver/cpp/agent_driver.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fxl/logging.h>
 #include <test/peridot/tests/queuepersistence/cpp/fidl.h>
 
-#include "lib/app_driver/cpp/agent_driver.h"
-#include "lib/fxl/logging.h"
 #include "peridot/lib/fidl/message_receiver_client.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"

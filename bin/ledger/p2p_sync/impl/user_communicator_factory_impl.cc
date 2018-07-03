@@ -6,8 +6,8 @@
 
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/netconnector/cpp/fidl.h>
+#include <lib/fxl/logging.h>
 
-#include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/p2p_provider/impl/p2p_provider_impl.h"
 #include "peridot/bin/ledger/p2p_provider/impl/user_id_provider_impl.h"
 #include "peridot/bin/ledger/p2p_sync/impl/user_communicator_impl.h"

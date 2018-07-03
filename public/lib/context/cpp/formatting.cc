@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/context/cpp/formatting.h"
+#include <lib/context/cpp/formatting.h>
 
 #include <fuchsia/modular/cpp/fidl.h>
-
-#include "lib/fidl/cpp/vector.h"
+#include <lib/fidl/cpp/vector.h>
 
 namespace fuchsia {
 namespace modular {

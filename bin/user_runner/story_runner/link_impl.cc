@@ -7,15 +7,15 @@
 #include <functional>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/entity/cpp/json.h>
+#include <lib/fidl/cpp/interface_handle.h>
+#include <lib/fidl/cpp/interface_request.h>
+#include <lib/fidl/cpp/optional.h>
+#include <lib/fxl/functional/make_copyable.h>
+#include <lib/fxl/logging.h>
 
-#include "lib/fidl/cpp/interface_handle.h"
-#include "lib/fidl/cpp/interface_request.h"
-#include "lib/fidl/cpp/optional.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/logging.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/util/debug.h"
-#include "peridot/public/lib/entity/cpp/json.h"
 
 using fuchsia::modular::LinkWatcherPtr;
 

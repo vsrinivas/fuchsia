@@ -4,9 +4,8 @@
 
 #include "peridot/bin/ledger/encryption/primitives/hash.h"
 
+#include <lib/fxl/logging.h>
 #include <openssl/sha.h>
-
-#include "lib/fxl/logging.h"
 
 namespace encryption {
 

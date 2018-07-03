@@ -7,11 +7,11 @@
 #include <utility>
 
 #include <lib/fit/function.h>
+#include <lib/fxl/files/file.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/random/rand.h>
+#include <lib/fxl/strings/concatenate.h>
 
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/random/rand.h"
-#include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
 #include "peridot/lib/convert/convert.h"
 

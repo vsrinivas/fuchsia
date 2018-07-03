@@ -6,13 +6,13 @@
 
 #include <memory>
 
+#include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/memory/ref_ptr.h>
+#include <lib/fxl/random/rand.h>
 
-#include "lib/callback/waiter.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/random/rand.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace {

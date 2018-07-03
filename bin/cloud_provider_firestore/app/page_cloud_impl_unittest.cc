@@ -6,18 +6,17 @@
 
 #include <iterator>
 
-#include <google/protobuf/util/time_util.h>
-
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <google/protobuf/util/time_util.h>
+#include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/vector.h>
+#include <lib/fsl/socket/strings.h>
+#include <lib/fsl/vmo/sized_vmo.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/gtest/test_loop_fixture.h>
 
-#include "lib/callback/capture.h"
-#include "lib/callback/set_when_called.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fidl/cpp/vector.h"
-#include "lib/fsl/socket/strings.h"
-#include "lib/fsl/vmo/sized_vmo.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/cloud_provider_firestore/app/testing/test_credentials_provider.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/encoding.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/encoding.h"

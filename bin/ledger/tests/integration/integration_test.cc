@@ -5,11 +5,11 @@
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fsl/socket/strings.h>
+#include <lib/fxl/command_line.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
 
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fsl/socket/strings.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
 #include "peridot/bin/ledger/tests/integration/test_utils.h"
 #include "peridot/lib/socket/socket_pair.h"
 #include "peridot/lib/socket/socket_writer.h"

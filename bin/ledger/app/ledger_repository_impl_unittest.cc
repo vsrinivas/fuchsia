@@ -4,15 +4,15 @@
 
 #include "peridot/bin/ledger/app/ledger_repository_impl.h"
 
+#include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/strings/string_view.h>
+#include <lib/gtest/test_loop_fixture.h>
 
 #include "gtest/gtest.h"
-#include "lib/callback/capture.h"
-#include "lib/callback/set_when_called.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_view.h"
-#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"

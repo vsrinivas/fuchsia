@@ -4,9 +4,9 @@
 
 #include "peridot/bin/ledger/testing/netconnector/netconnector_factory.h"
 
+#include <lib/fidl/cpp/clone.h>
 #include <lib/fit/function.h>
 
-#include "lib/fidl/cpp/clone.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {

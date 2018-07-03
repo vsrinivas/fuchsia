@@ -5,12 +5,12 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/app/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/action_log/action_log_impl.h"
 
 namespace {

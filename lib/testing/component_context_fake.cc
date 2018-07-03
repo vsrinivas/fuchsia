@@ -4,7 +4,7 @@
 
 #include "peridot/lib/testing/component_context_fake.h"
 
-#include "lib/fxl/logging.h"
+#include <lib/fxl/logging.h>
 
 namespace modular {
 

@@ -8,10 +8,9 @@
 #include <map>
 
 #include <fuchsia/modular/auth/cpp/fidl.h>
-
-#include "lib/callback/cancellable.h"
-#include "lib/fxl/macros.h"
-#include "lib/network_wrapper/network_wrapper.h"
+#include <lib/callback/cancellable.h>
+#include <lib/fxl/macros.h>
+#include <lib/network_wrapper/network_wrapper.h>
 
 namespace service_account {
 

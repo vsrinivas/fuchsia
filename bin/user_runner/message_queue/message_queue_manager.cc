@@ -9,10 +9,10 @@
 #include <utility>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/strings/string_printf.h>
 
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/user_runner/message_queue/persistent_queue.h"
 #include "peridot/bin/user_runner/storage/constants_and_utils.h"
 #include "peridot/lib/fidl/array_to_string.h"

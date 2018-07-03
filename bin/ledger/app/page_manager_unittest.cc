@@ -8,16 +8,16 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/backoff/exponential_backoff.h>
+#include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
+#include <lib/fidl/cpp/clone.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/macros.h>
+#include <lib/gtest/test_loop_fixture.h>
 
 #include "gtest/gtest.h"
-#include "lib/backoff/exponential_backoff.h"
-#include "lib/callback/capture.h"
-#include "lib/callback/set_when_called.h"
-#include "lib/fidl/cpp/clone.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/macros.h"
-#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"

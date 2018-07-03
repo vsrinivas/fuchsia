@@ -6,11 +6,10 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/logging.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 #include <trace/observer.h>
-
-#include "lib/fxl/logging.h"
 
 namespace test {
 namespace benchmark {

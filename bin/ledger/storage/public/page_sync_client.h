@@ -5,7 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_PUBLIC_PAGE_SYNC_CLIENT_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_PUBLIC_PAGE_SYNC_CLIENT_H_
 
-#include "lib/fxl/macros.h"
+#include <lib/fxl/macros.h>
+
 #include "peridot/bin/ledger/storage/public/page_sync_delegate.h"
 
 namespace storage {

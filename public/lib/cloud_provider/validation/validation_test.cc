@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/public/lib/cloud_provider/validation/validation_test.h"
+#include <lib/cloud_provider/validation/validation_test.h>
 
 namespace cloud_provider {
 

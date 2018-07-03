@@ -14,14 +14,14 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <lib/async/cpp/operation.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/interface_ptr.h>
+#include <lib/fidl/cpp/interface_ptr_set.h>
+#include <lib/fidl/cpp/interface_request.h>
+#include <lib/fidl/cpp/string.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/async/cpp/operation.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fidl/cpp/interface_ptr.h"
-#include "lib/fidl/cpp/interface_ptr_set.h"
-#include "lib/fidl/cpp/interface_request.h"
-#include "lib/fidl/cpp/string.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/user_runner/agent_runner/agent_runner.h"
 #include "peridot/bin/user_runner/component_context_impl.h"
 #include "peridot/bin/user_runner/message_queue/message_queue_manager.h"

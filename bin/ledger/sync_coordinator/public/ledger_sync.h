@@ -9,8 +9,8 @@
 #include <memory>
 
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/cloud_sync/public/ledger_sync.h"
 #include "peridot/bin/ledger/p2p_sync/public/ledger_communicator.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"

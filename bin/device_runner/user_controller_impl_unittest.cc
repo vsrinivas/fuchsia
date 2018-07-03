@@ -5,9 +5,9 @@
 #include "peridot/bin/device_runner/user_controller_impl.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/app/cpp/testing/fake_launcher.h>
+#include <lib/gtest/test_loop_fixture.h>
 
-#include "lib/app/cpp/testing/fake_launcher.h"
-#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/lib/fidl/clone.h"
 
 namespace modular {

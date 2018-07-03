@@ -9,9 +9,9 @@
 #include <memory>
 
 #include <grpc++/grpc++.h>
+#include <lib/callback/cancellable.h>
 #include <lib/fit/function.h>
 
-#include "lib/callback/cancellable.h"
 #include "peridot/bin/cloud_provider_firestore/app/credentials_provider.h"
 #include "peridot/lib/firebase_auth/firebase_auth.h"
 

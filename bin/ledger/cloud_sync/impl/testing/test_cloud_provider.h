@@ -8,10 +8,10 @@
 #include <memory>
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/fidl/cpp/array.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/fidl/cpp/array.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_device_set.h"
 
 namespace cloud_sync {

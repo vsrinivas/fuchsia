@@ -7,12 +7,12 @@
 #include <map>
 
 #include <lib/async/cpp/task.h>
+#include <lib/callback/capture.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
+#include <lib/gtest/test_loop_fixture.h>
 
 #include "gtest/gtest.h"
-#include "lib/callback/capture.h"
-#include "lib/fxl/macros.h"
-#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_cloud.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"

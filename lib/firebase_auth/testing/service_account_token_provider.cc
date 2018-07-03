@@ -6,6 +6,14 @@
 
 #include <time.h>
 
+#include <lib/fidl/cpp/clone.h>
+#include <lib/fidl/cpp/optional.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/arraysize.h>
+#include <lib/fxl/files/file.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_number_conversions.h>
+#include <lib/fxl/strings/string_view.h>
 #include <openssl/bio.h>
 #include <openssl/digest.h>
 #include <openssl/hmac.h>
@@ -15,14 +23,6 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-#include "lib/fidl/cpp/clone.h"
-#include "lib/fidl/cpp/optional.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/arraysize.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/fxl/strings/string_view.h"
 #include "peridot/lib/base64url/base64url.h"
 #include "peridot/lib/convert/convert.h"
 

@@ -5,10 +5,9 @@
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 #include <lib/fdio/util.h>
+#include <lib/fxl/logging.h>
 #include <sync/completion.h>
 #include <zircon/processargs.h>
-
-#include "lib/fxl/logging.h"
 
 namespace scoped_tmpfs {
 

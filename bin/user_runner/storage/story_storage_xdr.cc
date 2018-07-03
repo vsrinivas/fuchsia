@@ -4,7 +4,7 @@
 
 #include "peridot/bin/user_runner/storage/story_storage_xdr.h"
 
-#include "lib/fidl/cpp/clone.h"
+#include <lib/fidl/cpp/clone.h>
 
 namespace modular {
 

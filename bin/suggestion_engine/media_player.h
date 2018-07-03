@@ -9,9 +9,9 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
+#include <lib/fidl/cpp/interface_ptr_set.h>
 
-#include "lib/app/cpp/startup_context.h"
-#include "lib/fidl/cpp/interface_ptr_set.h"
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/lib/util/idle_waiter.h"
 

@@ -7,9 +7,8 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-
-#include "lib/fidl/cpp/interface_request.h"
-#include "lib/fxl/macros.h"
+#include <lib/fidl/cpp/interface_request.h>
+#include <lib/fxl/macros.h>
 
 namespace modular {
 

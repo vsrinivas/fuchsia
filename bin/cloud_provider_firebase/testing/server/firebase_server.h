@@ -10,9 +10,9 @@
 
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <lib/url/gurl.h>
 #include <rapidjson/document.h>
 
-#include "lib/url/gurl.h"
 #include "peridot/bin/cloud_provider_firebase/testing/server/server.h"
 #include "peridot/lib/convert/collection_view.h"
 

@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_ENCRYPTION_PRIMITIVES_ENCRYPT_H_
 #define PERIDOT_BIN_LEDGER_ENCRYPTION_PRIMITIVES_ENCRYPT_H_
 
-#include "lib/fxl/strings/string_view.h"
+#include <lib/fxl/strings/string_view.h>
 
 namespace encryption {
 

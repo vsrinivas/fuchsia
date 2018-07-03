@@ -5,7 +5,8 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_PUBLIC_RECORD_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_PUBLIC_RECORD_H_
 
-#include "lib/fxl/macros.h"
+#include <lib/fxl/macros.h>
+
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/commit.h"
 
 namespace cloud_provider_firebase {

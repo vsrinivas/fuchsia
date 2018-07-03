@@ -8,10 +8,10 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/maxwell/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/app/cpp/connect.h>
+#include <lib/fxl/files/file.h>
+#include <lib/fxl/functional/make_copyable.h>
 
-#include "lib/app/cpp/connect.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/maxwell/intelligence_services_impl.h"
 
 namespace maxwell {

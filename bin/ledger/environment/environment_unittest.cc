@@ -4,7 +4,7 @@
 
 #include "peridot/bin/ledger/environment/environment.h"
 
-#include "lib/gtest/test_loop_fixture.h"
+#include <lib/gtest/test_loop_fixture.h>
 
 namespace ledger {
 namespace {

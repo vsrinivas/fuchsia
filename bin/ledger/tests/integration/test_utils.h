@@ -8,7 +8,8 @@
 #include <string>
 #include <vector>
 
-#include "lib/fsl/vmo/sized_vmo.h"
+#include <lib/fsl/vmo/sized_vmo.h>
+
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 

@@ -7,11 +7,11 @@
 #include <limits>
 #include <sstream>
 
+#include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/memory/ref_ptr.h>
 
-#include "lib/callback/waiter.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/ledger/storage/impl/constants.h"
 #include "peridot/bin/ledger/storage/impl/file_index.h"
 #include "peridot/bin/ledger/storage/impl/file_index_generated.h"

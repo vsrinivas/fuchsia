@@ -7,9 +7,9 @@
 
 #include <vector>
 
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fidl/cpp/interface_ptr.h"
-#include "lib/fxl/logging.h"
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/interface_ptr.h>
+#include <lib/fxl/logging.h>
 
 namespace modular {
 

@@ -7,9 +7,8 @@
 #include <utility>
 
 #include <lib/fit/function.h>
-
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/trim.h"
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/trim.h>
 
 namespace firebase {
 

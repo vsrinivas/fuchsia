@@ -4,10 +4,9 @@
 
 #include "peridot/bin/ledger/encryption/primitives/kdf.h"
 
+#include <lib/fxl/logging.h>
 #include <openssl/digest.h>
 #include <openssl/hkdf.h>
-
-#include "lib/fxl/logging.h"
 
 namespace encryption {
 

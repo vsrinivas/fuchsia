@@ -9,11 +9,11 @@
 #include <set>
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/backoff/backoff.h>
+#include <lib/callback/scoped_task_runner.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 
-#include "lib/backoff/backoff.h"
-#include "lib/callback/scoped_task_runner.h"
-#include "lib/fidl/cpp/binding.h"
 #include "peridot/bin/ledger/cloud_sync/impl/aggregator.h"
 #include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_sync.h"

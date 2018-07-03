@@ -8,11 +8,10 @@
 #include <functional>
 #include <memory>
 
+#include <lib/fxl/macros.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 #include <trace/observer.h>
-
-#include "lib/fxl/macros.h"
 
 namespace modular {
 

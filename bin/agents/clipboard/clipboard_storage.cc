@@ -4,8 +4,8 @@
 
 #include "peridot/bin/agents/clipboard/clipboard_storage.h"
 
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/functional/make_copyable.h"
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/functional/make_copyable.h>
 
 namespace modular {
 namespace {

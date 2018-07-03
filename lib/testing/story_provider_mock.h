@@ -8,10 +8,10 @@
 #include <string>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/clone.h>
+#include <lib/fidl/cpp/interface_ptr_set.h>
 
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fidl/cpp/clone.h"
-#include "lib/fidl/cpp/interface_ptr_set.h"
 #include "peridot/lib/testing/story_controller_mock.h"
 
 namespace modular {

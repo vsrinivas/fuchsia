@@ -6,8 +6,7 @@
 #define PERIDOT_BIN_LEDGER_P2P_PROVIDER_PUBLIC_USER_ID_PROVIDER_H_
 
 #include <lib/fit/function.h>
-
-#include "lib/fxl/macros.h"
+#include <lib/fxl/macros.h>
 
 namespace p2p_provider {
 // UserIdProvider abstracts the unique User ID shared accross all devices of a

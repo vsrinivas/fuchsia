@@ -9,8 +9,8 @@
 #include <string>
 
 #include <lib/fit/function.h>
+#include <lib/fxl/strings/string_view.h>
 
-#include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 
 namespace test {

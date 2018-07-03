@@ -8,9 +8,9 @@
 #include <map>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/fxl/logging.h>
 
 #include "gtest/gtest.h"
-#include "lib/fxl/logging.h"
 
 namespace modular {
 

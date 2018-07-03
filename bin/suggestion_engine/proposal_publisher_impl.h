@@ -6,9 +6,9 @@
 #define PERIDOT_BIN_SUGGESTION_ENGINE_PROPOSAL_PUBLISHER_IMPL_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fxl/memory/weak_ptr.h>
 
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/bound_set/bound_set.h"
 
 namespace modular {

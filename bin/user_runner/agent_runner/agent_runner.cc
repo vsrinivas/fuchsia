@@ -10,9 +10,9 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/functional/make_copyable.h>
 
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/user_runner/agent_runner/agent_context_impl.h"
 #include "peridot/bin/user_runner/agent_runner/agent_runner_storage_impl.h"
 #include "peridot/bin/user_runner/storage/constants_and_utils.h"

@@ -4,12 +4,12 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/context/cpp/context_helper.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/optional.h>
+#include <lib/fxl/logging.h>
+#include <lib/svc/cpp/services.h>
 
-#include "lib/context/cpp/context_helper.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fidl/cpp/optional.h"
-#include "lib/fxl/logging.h"
-#include "lib/svc/cpp/services.h"
 #include "peridot/bin/acquirers/mock/mock_gps.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/story_provider_mock.h"

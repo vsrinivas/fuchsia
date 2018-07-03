@@ -9,12 +9,12 @@
 #include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
+#include <lib/callback/auto_cleanable.h>
+#include <lib/callback/cancellable.h>
+#include <lib/fxl/functional/closure.h>
+#include <lib/fxl/macros.h>
+#include <lib/network_wrapper/network_wrapper.h>
 
-#include "lib/callback/auto_cleanable.h"
-#include "lib/callback/cancellable.h"
-#include "lib/fxl/functional/closure.h"
-#include "lib/fxl/macros.h"
-#include "lib/network_wrapper/network_wrapper.h"
 #include "peridot/bin/cloud_provider_firebase/app/cloud_provider_impl.h"
 
 namespace cloud_provider_firebase {

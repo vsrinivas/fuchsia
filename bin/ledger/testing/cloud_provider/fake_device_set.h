@@ -9,10 +9,10 @@
 #include <string>
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/fidl/cpp/array.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/fidl/cpp/array.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/cloud_provider/types.h"
 

@@ -9,9 +9,9 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <google/firestore/v1beta1/document.pb.h>
+#include <lib/fidl/cpp/vector.h>
+#include <lib/fxl/strings/string_view.h>
 
-#include "lib/fidl/cpp/vector.h"
-#include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/cloud_provider_firestore/include/types.h"
 
 namespace cloud_provider_firestore {

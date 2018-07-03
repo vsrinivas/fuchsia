@@ -5,11 +5,11 @@
 #include "peridot/bin/cloud_provider_firebase/testing/server/gcs_server.h"
 
 #include <lib/fit/function.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_number_conversions.h>
+#include <lib/url/gurl.h>
 
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/url/gurl.h"
 #include "peridot/lib/socket/socket_pair.h"
 #include "peridot/lib/socket/socket_writer.h"
 

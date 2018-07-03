@@ -5,12 +5,12 @@
 #include <iostream>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fxl/command_line.h>
+#include <lib/fxl/files/file.h>
+#include <lib/fxl/strings/split_string.h>
 
-#include "lib/app/cpp/startup_context.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/strings/split_string.h"
 #include "peridot/bin/maxwell/config.h"
 #include "peridot/bin/maxwell/user_intelligence_provider_impl.h"
 #include "rapidjson/document.h"

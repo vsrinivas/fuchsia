@@ -4,10 +4,9 @@
 
 #include "peridot/bin/ledger/sync_coordinator/impl/page_sync_impl.h"
 
+#include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
-
-#include "lib/callback/waiter.h"
-#include "lib/fxl/memory/ref_ptr.h"
+#include <lib/fxl/memory/ref_ptr.h>
 
 namespace sync_coordinator {
 namespace {

@@ -5,11 +5,11 @@
 #include "peridot/bin/ledger/app/merging/test_utils.h"
 
 #include <lib/async/dispatcher.h>
+#include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
-#include "lib/callback/capture.h"
-#include "lib/callback/set_when_called.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/encryption/primitives/hash.h"
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"

@@ -4,10 +4,11 @@
 
 #include "peridot/bin/ledger/filesystem/get_directory_content_size.h"
 
+#include <lib/fxl/files/directory.h>
+#include <lib/fxl/files/file.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
+
 #include "gtest/gtest.h"
-#include "lib/fxl/files/directory.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
 
 namespace ledger {
 namespace {

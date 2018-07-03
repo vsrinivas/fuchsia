@@ -35,7 +35,7 @@ interface Simple {
 The first step to writing an `fuchsia::modular::Agent` is implementing the initializer:
 
 ```c++
-#include "lib/app_driver/cpp/agent_driver.h"
+#include <lib/app_driver/cpp/agent_driver.h>
 
 class SimpleAgent {
   public:

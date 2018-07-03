@@ -5,10 +5,10 @@
 #include "peridot/bin/ledger/testing/get_ledger.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
 
 #include "garnet/public/lib/callback/capture.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
 
 namespace test {
 namespace {

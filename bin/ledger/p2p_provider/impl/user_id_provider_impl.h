@@ -8,9 +8,9 @@
 #include <string>
 
 #include <fuchsia/modular/auth/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
 #include <lib/fit/function.h>
 
-#include "lib/app/cpp/startup_context.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
 #include "peridot/bin/ledger/p2p_provider/public/user_id_provider.h"

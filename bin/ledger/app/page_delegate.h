@@ -10,12 +10,12 @@
 #include <string>
 #include <vector>
 
+#include <lib/callback/operation_serializer.h>
+#include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/memory/weak_ptr.h>
 
-#include "lib/callback/operation_serializer.h"
-#include "lib/fidl/cpp/interface_ptr_set.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/app/branch_tracker.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 #include "peridot/bin/ledger/app/page_impl.h"

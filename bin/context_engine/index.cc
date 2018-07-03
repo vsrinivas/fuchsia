@@ -7,9 +7,9 @@
 #include <algorithm>
 #include <sstream>
 
-#include "lib/fidl/cpp/clone.h"
-#include "lib/fidl/cpp/optional.h"
-#include "lib/fxl/logging.h"
+#include <lib/fidl/cpp/clone.h>
+#include <lib/fidl/cpp/optional.h>
+#include <lib/fxl/logging.h>
 
 namespace modular {
 

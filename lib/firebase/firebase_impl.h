@@ -10,12 +10,12 @@
 #include <string>
 #include <vector>
 
+#include <lib/callback/auto_cleanable.h>
+#include <lib/callback/cancellable.h>
 #include <lib/fit/function.h>
+#include <lib/network_wrapper/network_wrapper.h>
 #include <rapidjson/document.h>
 
-#include "lib/callback/auto_cleanable.h"
-#include "lib/callback/cancellable.h"
-#include "lib/network_wrapper/network_wrapper.h"
 #include "peridot/lib/firebase/event_stream.h"
 #include "peridot/lib/firebase/firebase.h"
 #include "peridot/lib/firebase/status.h"

@@ -9,9 +9,8 @@
 
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/memory/ref_ptr.h"
+#include <lib/fxl/functional/make_copyable.h>
+#include <lib/fxl/memory/ref_ptr.h>
 
 namespace firebase_auth {
 

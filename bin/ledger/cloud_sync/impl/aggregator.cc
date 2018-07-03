@@ -6,7 +6,8 @@
 
 #include <memory>
 
-#include "lib/fxl/logging.h"
+#include <lib/fxl/logging.h>
+
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 
 namespace cloud_sync {

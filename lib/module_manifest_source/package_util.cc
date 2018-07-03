@@ -4,7 +4,7 @@
 
 #include "peridot/lib/module_manifest_source/package_util.h"
 
-#include "lib/fxl/strings/string_printf.h"
+#include <lib/fxl/strings/string_printf.h>
 
 namespace modular {
 

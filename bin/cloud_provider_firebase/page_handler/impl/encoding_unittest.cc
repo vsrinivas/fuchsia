@@ -6,8 +6,9 @@
 
 #include <memory>
 
+#include <lib/fxl/time/time_delta.h>
+
 #include "gtest/gtest.h"
-#include "lib/fxl/time/time_delta.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/timestamp_conversions.h"
 
 namespace cloud_provider_firebase {

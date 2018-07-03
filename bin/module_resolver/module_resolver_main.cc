@@ -4,22 +4,22 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
+#include <lib/app/cpp/connect.h>
+#include <lib/app/cpp/startup_context.h>
+#include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
+#include <lib/entity/cpp/json.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/optional.h>
+#include <lib/fxl/command_line.h>
+#include <lib/fxl/functional/make_copyable.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/app/cpp/connect.h"
-#include "lib/app/cpp/startup_context.h"
-#include "lib/app_driver/cpp/app_driver.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fidl/cpp/optional.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/module_resolver/local_module_resolver.h"
 #include "peridot/lib/module_manifest_source/firebase_source.h"
 #include "peridot/lib/module_manifest_source/module_package_source.h"
-#include "peridot/public/lib/entity/cpp/json.h"
 
 namespace modular {
 namespace {

@@ -6,9 +6,8 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fxl/logging.h>
 #include <lib/zx/time.h>
-
-#include "lib/fxl/logging.h"
 
 namespace modular {
 

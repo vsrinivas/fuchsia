@@ -5,10 +5,10 @@
 #include "peridot/bin/cloud_provider_firestore/app/cloud_provider_impl.h"
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fxl/macros.h>
+#include <lib/gtest/test_loop_fixture.h>
 
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
-#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/test_firestore_service.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
 

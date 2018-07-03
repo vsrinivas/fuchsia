@@ -9,10 +9,10 @@
 #include <string>
 
 #include <lib/fit/function.h>
+#include <lib/fsl/vmo/sized_vmo.h>
+#include <lib/fxl/macros.h>
 #include <lib/zx/socket.h>
 
-#include "lib/fsl/vmo/sized_vmo.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/status.h"
 
 namespace gcs {

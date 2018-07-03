@@ -4,7 +4,8 @@
 
 #include "peridot/bin/user_runner/puppet_master/puppet_master_impl.h"
 
-#include "lib/fxl/logging.h"
+#include <lib/fxl/logging.h>
+
 #include "peridot/bin/user_runner/puppet_master/story_puppet_master_impl.h"
 
 namespace modular {

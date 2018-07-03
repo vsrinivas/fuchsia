@@ -4,9 +4,9 @@
 
 #include "peridot/lib/fidl/view_host.h"
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
-#include "lib/ui/view_framework/base_view.h"
+#include <lib/fxl/logging.h>
+#include <lib/fxl/macros.h>
+#include <lib/ui/view_framework/base_view.h>
 
 namespace modular {
 

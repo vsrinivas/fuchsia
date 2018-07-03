@@ -4,8 +4,8 @@
 
 #include "peridot/bin/cloud_provider_firebase/testing/server/fake_cloud_url_loader.h"
 
-#include "lib/fxl/strings/string_view.h"
-#include "lib/url/gurl.h"
+#include <lib/fxl/strings/string_view.h>
+#include <lib/url/gurl.h>
 
 namespace ledger {
 

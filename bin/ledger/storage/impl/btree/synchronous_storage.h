@@ -8,7 +8,8 @@
 #include <memory>
 #include <vector>
 
-#include "lib/callback/waiter.h"
+#include <lib/callback/waiter.h>
+
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/storage/impl/btree/tree_node.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"

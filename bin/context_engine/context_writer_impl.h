@@ -9,9 +9,9 @@
 #include <string>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/async/cpp/future.h>
+#include <lib/fxl/memory/weak_ptr.h>
 
-#include "lib/async/cpp/future.h"
-#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/context_engine/context_repository.h"
 #include "peridot/lib/bound_set/bound_set.h"
 

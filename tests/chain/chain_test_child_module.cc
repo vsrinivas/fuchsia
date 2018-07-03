@@ -5,11 +5,11 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fxl/functional/make_copyable.h>
+#include <lib/fxl/time/time_delta.h>
 
-#include "lib/app_driver/cpp/module_driver.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/time/time_delta.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 #include "peridot/tests/chain/defs.h"

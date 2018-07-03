@@ -9,11 +9,11 @@
 
 #include <grpc++/grpc++.h>
 #include <grpc++/support/async_stream.h>
+#include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
-#include "lib/callback/capture.h"
-#include "lib/callback/set_when_called.h"
 
 namespace cloud_provider_firestore {
 namespace {

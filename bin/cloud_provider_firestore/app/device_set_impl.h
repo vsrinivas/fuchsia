@@ -8,12 +8,12 @@
 #include <memory>
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/vector.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/memory/weak_ptr.h>
 
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fidl/cpp/vector.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/cloud_provider_firestore/app/credentials_provider.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/listen_call_client.h"

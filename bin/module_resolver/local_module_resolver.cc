@@ -9,11 +9,11 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/context/cpp/context_helper.h>
+#include <lib/entity/cpp/json.h>
+#include <lib/fxl/strings/split_string.h>
 
-#include "lib/context/cpp/context_helper.h"
-#include "lib/fxl/strings/split_string.h"
 #include "peridot/lib/fidl/clone.h"
-#include "peridot/public/lib/entity/cpp/json.h"
 
 namespace modular {
 

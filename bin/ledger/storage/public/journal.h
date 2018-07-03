@@ -6,8 +6,8 @@
 #define PERIDOT_BIN_LEDGER_STORAGE_PUBLIC_JOURNAL_H_
 
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/lib/convert/convert.h"

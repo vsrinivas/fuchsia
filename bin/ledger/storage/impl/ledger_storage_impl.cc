@@ -8,13 +8,13 @@
 #include <algorithm>
 #include <iterator>
 
+#include <lib/callback/trace_callback.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/files/directory.h>
+#include <lib/fxl/files/path.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/concatenate.h>
 
-#include "lib/callback/trace_callback.h"
-#include "lib/fxl/files/directory.h"
-#include "lib/fxl/files/path.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/filesystem/directory_reader.h"
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/public/constants.h"

@@ -8,9 +8,10 @@
 #include <memory>
 #include <set>
 
-#include "lib/context/cpp/formatting.h"
-#include "lib/fidl/cpp/clone.h"
-#include "lib/fidl/cpp/optional.h"
+#include <lib/context/cpp/formatting.h>
+#include <lib/fidl/cpp/clone.h>
+#include <lib/fidl/cpp/optional.h>
+
 #include "peridot/bin/context_engine/debug.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "rapidjson/document.h"

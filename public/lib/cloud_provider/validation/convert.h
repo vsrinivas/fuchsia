@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "lib/fidl/cpp/vector.h"
+#include <lib/fidl/cpp/vector.h>
 
 namespace cloud_provider {
 

@@ -6,9 +6,9 @@
 #define PERIDOT_BIN_LEDGER_TESTING_TEST_WITH_COROUTINES_H_
 
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
+#include <lib/gtest/test_loop_fixture.h>
 
-#include "lib/fxl/macros.h"
-#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 
 namespace test {

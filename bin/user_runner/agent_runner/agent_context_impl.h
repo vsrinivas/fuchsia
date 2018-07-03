@@ -10,12 +10,12 @@
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/app/cpp/service_provider_impl.h>
+#include <lib/async/cpp/operation.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/app/cpp/service_provider_impl.h"
-#include "lib/async/cpp/operation.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/user_runner/component_context_impl.h"
 #include "peridot/lib/fidl/app_client.h"
 

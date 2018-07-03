@@ -10,13 +10,12 @@
 #include <utility>
 
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
+#include <lib/backoff/exponential_backoff.h>
 #include <lib/fit/function.h>
-
-#include "lib/app/cpp/startup_context.h"
-#include "lib/backoff/exponential_backoff.h"
-#include "lib/fxl/functional/auto_call.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_ptr.h"
+#include <lib/fxl/functional/auto_call.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/memory/ref_ptr.h>
 
 namespace cobalt {
 

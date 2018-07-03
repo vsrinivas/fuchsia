@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/async/cpp/operation.h"
+#include <lib/async/cpp/operation.h>
 
 #include <utility>
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fxl/logging.h>
 #include <trace/event.h>
-
-#include "lib/fxl/logging.h"
 
 namespace modular {
 

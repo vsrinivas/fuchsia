@@ -6,15 +6,15 @@
 #include <stdio.h>
 #include <algorithm>
 
+#include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/socket/strings.h>
+#include <lib/fxl/arraysize.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_printf.h>
 
 #include "gtest/gtest.h"
-#include "lib/callback/capture.h"
-#include "lib/callback/set_when_called.h"
-#include "lib/fsl/socket/strings.h"
-#include "lib/fxl/arraysize.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/impl/btree/builder.h"

@@ -7,12 +7,12 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/context/cpp/formatting.h>
+#include <lib/entity/cpp/json.h>
+#include <lib/fidl/cpp/clone.h>
+#include <lib/fxl/functional/auto_call.h>
+#include <lib/fxl/functional/make_copyable.h>
 
-#include "lib/context/cpp/formatting.h"
-#include "lib/entity/cpp/json.h"
-#include "lib/fidl/cpp/clone.h"
-#include "lib/fxl/functional/auto_call.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/context_engine/debug.h"
 #include "rapidjson/document.h"
 

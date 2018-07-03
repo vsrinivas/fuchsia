@@ -6,8 +6,9 @@
 
 #include <algorithm>
 
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/functional/make_copyable.h"
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/functional/make_copyable.h>
+
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/ledger_client/page_client.h"

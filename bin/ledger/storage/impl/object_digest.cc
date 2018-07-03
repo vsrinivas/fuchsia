@@ -4,7 +4,8 @@
 
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
 
-#include "lib/fxl/strings/concatenate.h"
+#include <lib/fxl/strings/concatenate.h>
+
 #include "peridot/bin/ledger/encryption/primitives/hash.h"
 #include "peridot/bin/ledger/storage/impl/constants.h"
 

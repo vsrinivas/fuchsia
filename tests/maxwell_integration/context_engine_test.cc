@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/context/cpp/context_helper.h>
+#include <lib/context/cpp/context_metadata_builder.h>
+#include <lib/context/cpp/formatting.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/clone.h>
+#include <lib/fidl/cpp/optional.h>
 
-#include "lib/context/cpp/context_helper.h"
-#include "lib/context/cpp/context_metadata_builder.h"
-#include "lib/context/cpp/formatting.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fidl/cpp/clone.h"
-#include "lib/fidl/cpp/optional.h"
 #include "peridot/bin/context_engine/scope_utils.h"
 #include "peridot/tests/maxwell_integration/context_engine_test_base.h"
 

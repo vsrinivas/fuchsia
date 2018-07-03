@@ -5,12 +5,11 @@
 #ifndef PERIDOT_BIN_LEDGER_COBALT_COBALT_H_
 #define PERIDOT_BIN_LEDGER_COBALT_COBALT_H_
 
+#include <lib/app/cpp/startup_context.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
-
-#include "lib/app/cpp/startup_context.h"
-#include "lib/fxl/functional/auto_call.h"
-#include "lib/fxl/memory/ref_ptr.h"
+#include <lib/fxl/functional/auto_call.h>
+#include <lib/fxl/memory/ref_ptr.h>
 
 namespace ledger {
 

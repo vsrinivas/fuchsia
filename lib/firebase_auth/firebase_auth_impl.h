@@ -10,13 +10,13 @@
 #include <string>
 
 #include <fuchsia/modular/auth/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
 #include <lib/async/dispatcher.h>
+#include <lib/backoff/backoff.h>
+#include <lib/callback/cancellable.h>
+#include <lib/callback/scoped_task_runner.h>
 #include <lib/fit/function.h>
 
-#include "lib/app/cpp/startup_context.h"
-#include "lib/backoff/backoff.h"
-#include "lib/callback/cancellable.h"
-#include "lib/callback/scoped_task_runner.h"
 #include "peridot/lib/cobalt/cobalt.h"
 #include "peridot/lib/firebase_auth/firebase_auth.h"
 

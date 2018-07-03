@@ -5,8 +5,7 @@
 #include "peridot/bin/ledger/cloud_sync/testing/page_sync_empty_impl.h"
 
 #include <lib/fit/function.h>
-
-#include "lib/fxl/logging.h"
+#include <lib/fxl/logging.h>
 
 namespace cloud_sync {
 

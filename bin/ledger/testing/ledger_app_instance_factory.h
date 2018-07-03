@@ -11,9 +11,9 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/memory/ref_ptr.h>
 
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 

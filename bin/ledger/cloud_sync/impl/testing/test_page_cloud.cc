@@ -5,9 +5,9 @@
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_cloud.h"
 
 #include <lib/fit/function.h>
+#include <lib/fsl/socket/strings.h>
+#include <lib/fsl/vmo/strings.h>
 
-#include "lib/fsl/socket/strings.h"
-#include "lib/fsl/vmo/strings.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace cloud_sync {

@@ -8,8 +8,7 @@
 #include <functional>
 
 #include <fuchsia/modular/auth/cpp/fidl.h>
-
-#include "lib/fxl/macros.h"
+#include <lib/fxl/macros.h>
 
 namespace firebase_auth {
 // FakeTokenProvider is a dummy implementation of a TokenProvider intended to be

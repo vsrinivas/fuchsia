@@ -4,10 +4,11 @@
 
 #include "peridot/bin/ledger/storage/impl/btree/diff.h"
 
+#include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
+#include <lib/fxl/macros.h>
+
 #include "gtest/gtest.h"
-#include "lib/callback/capture.h"
-#include "lib/callback/set_when_called.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/impl/btree/builder.h"

@@ -10,10 +10,11 @@
 #include <type_traits>
 #include <vector>
 
-#include "lib/fidl/cpp/array.h"
-#include "lib/fidl/cpp/string.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
+#include <lib/fidl/cpp/array.h>
+#include <lib/fidl/cpp/string.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/macros.h>
+
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "rapidjson/document.h"
 

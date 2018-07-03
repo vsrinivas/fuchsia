@@ -8,7 +8,8 @@
 #include <map>
 #include <string>
 
-#include "lib/fxl/strings/string_view.h"
+#include <lib/fxl/strings/string_view.h>
+
 #include "peridot/bin/ledger/storage/public/types.h"
 
 namespace storage {

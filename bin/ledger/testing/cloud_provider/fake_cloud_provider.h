@@ -6,10 +6,10 @@
 #define PERIDOT_BIN_LEDGER_TESTING_CLOUD_PROVIDER_FAKE_CLOUD_PROVIDER_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/callback/auto_cleanable.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/callback/auto_cleanable.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/testing/cloud_provider/fake_device_set.h"
 #include "peridot/bin/ledger/testing/cloud_provider/fake_page_cloud.h"

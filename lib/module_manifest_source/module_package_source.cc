@@ -9,14 +9,14 @@
 
 #include <fs/service.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fxl/files/directory.h>
+#include <lib/fxl/files/file.h>
+#include <lib/fxl/functional/make_copyable.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/memory/weak_ptr.h>
+#include <lib/fxl/strings/split_string.h>
+#include <lib/fxl/strings/string_printf.h>
 
-#include "lib/fxl/files/directory.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/memory/weak_ptr.h"
-#include "lib/fxl/strings/split_string.h"
-#include "lib/fxl/strings/string_printf.h"
 #include "peridot/lib/module_manifest_source/json.h"
 #include "peridot/lib/module_manifest_source/package_util.h"
 

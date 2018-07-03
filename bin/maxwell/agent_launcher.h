@@ -6,9 +6,9 @@
 #define PERIDOT_BIN_MAXWELL_AGENT_LAUNCHER_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/svc/cpp/services.h>
 
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/svc/cpp/services.h"
 #include "peridot/lib/environment_host/maxwell_service_provider_bridge.h"
 
 namespace maxwell {

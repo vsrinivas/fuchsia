@@ -7,10 +7,10 @@
 
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/interface_request.h>
 
-#include "lib/app/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fidl/cpp/interface_request.h"
 #include "peridot/bin/device_runner/user_controller_impl.h"
 
 namespace fuchsia {

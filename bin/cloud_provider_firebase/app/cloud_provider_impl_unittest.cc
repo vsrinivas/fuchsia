@@ -5,12 +5,12 @@
 #include "peridot/bin/cloud_provider_firebase/app/cloud_provider_impl.h"
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/callback/set_when_called.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fxl/macros.h>
+#include <lib/gtest/test_loop_fixture.h>
+#include <lib/network_wrapper/fake_network_wrapper.h>
 
-#include "lib/callback/set_when_called.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
-#include "lib/gtest/test_loop_fixture.h"
-#include "lib/network_wrapper/fake_network_wrapper.h"
 #include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
 

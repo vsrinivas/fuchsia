@@ -9,10 +9,10 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fxl/memory/ref_ptr.h>
 
-#include "lib/app/cpp/startup_context.h"
-#include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/lib/firebase_auth/testing/fake_token_provider.h"

@@ -4,7 +4,7 @@
 
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_cloud_provider.h"
 
-#include "lib/fxl/logging.h"
+#include <lib/fxl/logging.h>
 
 namespace cloud_sync {
 

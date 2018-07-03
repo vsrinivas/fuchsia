@@ -7,11 +7,11 @@
 #include <string>
 #include <vector>
 
-#include "lib/async/cpp/operation.h"
-#include "lib/fsl/types/type_converters.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/type_converter.h"
-#include "peridot/public/lib/entity/cpp/json.h"
+#include <lib/async/cpp/operation.h>
+#include <lib/entity/cpp/json.h>
+#include <lib/fsl/types/type_converters.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/type_converter.h>
 
 namespace modular {
 

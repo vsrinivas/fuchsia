@@ -10,20 +10,20 @@
 #include <vector>
 
 #include <lib/async/cpp/task.h>
+#include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/socket/strings.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/memory/ref_ptr.h>
+#include <lib/gtest/test_loop_fixture.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/vmo.h>
 #include <rapidjson/document.h>
 
 #include "gtest/gtest.h"
-#include "lib/callback/capture.h"
-#include "lib/callback/set_when_called.h"
-#include "lib/fsl/socket/strings.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_ptr.h"
-#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/timestamp_conversions.h"
 #include "peridot/lib/firebase/encoding.h"

@@ -9,9 +9,9 @@
 #include <memory>
 
 #include <grpc++/grpc++.h>
+#include <lib/callback/scoped_task_runner.h>
 #include <lib/fit/function.h>
 
-#include "lib/callback/scoped_task_runner.h"
 #include "peridot/bin/cloud_provider_firestore/app/credentials_provider.h"
 
 namespace cloud_provider_firestore {

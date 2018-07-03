@@ -7,9 +7,10 @@
 
 #include <vector>
 
-#include "lib/fsl/vmo/sized_vmo.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_view.h"
+#include <lib/fsl/vmo/sized_vmo.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/strings/string_view.h>
+
 #include "peridot/bin/ledger/storage/public/types.h"
 
 namespace storage {

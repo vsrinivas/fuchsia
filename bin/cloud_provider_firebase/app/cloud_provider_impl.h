@@ -8,13 +8,13 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
+#include <lib/callback/auto_cleanable.h>
+#include <lib/callback/cancellable.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
+#include <lib/network_wrapper/network_wrapper.h>
 
-#include "lib/callback/auto_cleanable.h"
-#include "lib/callback/cancellable.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
-#include "lib/network_wrapper/network_wrapper.h"
 #include "peridot/bin/cloud_provider_firebase/app/device_set_impl.h"
 #include "peridot/bin/cloud_provider_firebase/app/page_cloud_impl.h"
 #include "peridot/lib/firebase/firebase_impl.h"

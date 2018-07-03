@@ -8,15 +8,14 @@
 #include <string>
 
 #include <lib/fit/function.h>
-
-#include "lib/gtest/test_loop_fixture.h"
+#include <lib/gtest/test_loop_fixture.h>
 
 // gtest matchers are in gmock and we cannot include the specific header file
 // directly as it is private to the library.
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fxl/macros.h>
 #include "peridot/bin/ledger/p2p_provider/impl/p2p_provider_impl.h"
 #include "peridot/bin/ledger/p2p_provider/public/user_id_provider.h"
 #include "peridot/bin/ledger/p2p_sync/impl/page_communicator_impl.h"

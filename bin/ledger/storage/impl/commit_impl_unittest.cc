@@ -6,8 +6,9 @@
 
 #include <tuple>
 
+#include <lib/fxl/macros.h>
+
 #include "gtest/gtest.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/impl/commit_random_impl.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"

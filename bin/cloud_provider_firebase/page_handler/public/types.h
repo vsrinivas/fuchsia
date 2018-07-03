@@ -7,7 +7,8 @@
 
 #include <string>
 
-#include "lib/fxl/strings/string_view.h"
+#include <lib/fxl/strings/string_view.h>
+
 #include "peridot/bin/cloud_provider_firebase/gcs/status.h"
 #include "peridot/lib/firebase/status.h"
 

@@ -4,8 +4,8 @@
 
 #include "peridot/bin/cloud_provider_firebase/app/factory_impl.h"
 
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/logging.h"
+#include <lib/fxl/functional/make_copyable.h>
+#include <lib/fxl/logging.h>
 
 namespace cloud_provider_firebase {
 

@@ -5,11 +5,11 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
+#include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fidl/cpp/binding_set.h>
 
-#include "lib/app/cpp/startup_context.h"
-#include "lib/app_driver/cpp/app_driver.h"
-#include "lib/fidl/cpp/binding_set.h"
 #include "peridot/bin/context_engine/context_engine_impl.h"
 
 namespace modular {

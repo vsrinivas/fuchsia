@@ -11,15 +11,15 @@
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/agent/cpp/agent_impl.h>
+#include <lib/app/cpp/connect.h>
+#include <lib/app/cpp/service_provider_impl.h>
+#include <lib/app/cpp/testing/fake_launcher.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
+#include <lib/fxl/macros.h>
 
 #include "gtest/gtest.h"
-#include "lib/agent/cpp/agent_impl.h"
-#include "lib/app/cpp/connect.h"
-#include "lib/app/cpp/service_provider_impl.h"
-#include "lib/app/cpp/testing/fake_launcher.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/user_runner/agent_runner/agent_runner.h"
 #include "peridot/bin/user_runner/entity_provider_runner/entity_provider_launcher.h"
 #include "peridot/bin/user_runner/message_queue/message_queue_manager.h"

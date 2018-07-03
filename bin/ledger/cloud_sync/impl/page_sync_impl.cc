@@ -11,8 +11,8 @@
 #include <vector>
 
 #include <lib/fit/function.h>
+#include <lib/fxl/logging.h>
 
-#include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 

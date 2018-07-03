@@ -11,8 +11,8 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/page_cloud_handler.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/testing/page_cloud_handler_empty_impl.h"
 

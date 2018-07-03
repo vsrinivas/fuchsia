@@ -6,8 +6,8 @@
 #define PERIDOT_BIN_LEDGER_P2P_SYNC_IMPL_FLATBUFFER_MESSAGE_FACTORY_H_
 
 #include <flatbuffers/flatbuffers.h>
+#include <lib/fxl/strings/string_view.h>
 
-#include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/p2p_sync/impl/message_generated.h"
 
 namespace p2p_sync {

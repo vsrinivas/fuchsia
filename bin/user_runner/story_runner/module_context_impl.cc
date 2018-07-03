@@ -6,9 +6,10 @@
 
 #include <string>
 
-#include "lib/fidl/cpp/interface_request.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/strings/join_strings.h"
+#include <lib/fidl/cpp/interface_request.h>
+#include <lib/fxl/functional/make_copyable.h>
+#include <lib/fxl/strings/join_strings.h>
+
 #include "peridot/bin/user_runner/storage/constants_and_utils.h"
 #include "peridot/bin/user_runner/story_runner/story_controller_impl.h"
 #include "peridot/lib/fidl/clone.h"

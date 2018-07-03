@@ -6,10 +6,10 @@
 #define PERIDOT_BIN_LEDGER_TESTING_NETCONNECTOR_NETCONNECTOR_FACTORY_H_
 
 #include <fuchsia/netconnector/cpp/fidl.h>
+#include <lib/callback/auto_cleanable.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/callback/auto_cleanable.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
 #include "peridot/bin/ledger/testing/netconnector/fake_netconnector.h"

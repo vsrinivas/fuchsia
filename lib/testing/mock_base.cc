@@ -4,8 +4,9 @@
 
 #include "peridot/lib/testing/mock_base.h"
 
+#include <lib/fxl/logging.h>
+
 #include "gtest/gtest.h"
-#include "lib/fxl/logging.h"
 
 namespace modular {
 namespace testing {

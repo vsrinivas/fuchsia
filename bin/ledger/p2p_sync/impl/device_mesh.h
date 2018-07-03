@@ -8,7 +8,8 @@
 #include <memory>
 #include <set>
 
-#include "lib/fxl/strings/string_view.h"
+#include <lib/fxl/strings/string_view.h>
+
 #include "peridot/lib/convert/convert.h"
 
 namespace p2p_sync {

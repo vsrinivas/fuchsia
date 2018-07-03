@@ -6,11 +6,12 @@
 
 #include <utility>
 
-#include "lib/backoff/backoff.h"
-#include "lib/backoff/testing/test_backoff.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/macros.h"
-#include "lib/gtest/test_loop_fixture.h"
+#include <lib/backoff/backoff.h>
+#include <lib/backoff/testing/test_backoff.h>
+#include <lib/fxl/files/file.h>
+#include <lib/fxl/macros.h>
+#include <lib/gtest/test_loop_fixture.h>
+
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_cloud_provider.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"

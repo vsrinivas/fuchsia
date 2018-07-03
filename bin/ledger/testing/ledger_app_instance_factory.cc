@@ -6,11 +6,11 @@
 
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/memory/ref_ptr.h>
 #include <lib/zx/time.h>
 
 #include "garnet/public/lib/callback/capture.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rio/fd.h"
 

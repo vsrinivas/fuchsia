@@ -6,7 +6,7 @@
 
 #include <sstream>
 
-#include "lib/fidl/cpp/clone.h"
+#include <lib/fidl/cpp/clone.h>
 
 namespace modular {
 

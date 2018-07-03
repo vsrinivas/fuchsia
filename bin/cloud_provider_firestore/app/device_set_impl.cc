@@ -5,13 +5,13 @@
 #include "peridot/bin/cloud_provider_firestore/app/device_set_impl.h"
 
 #include <google/firestore/v1beta1/firestore.pb.h>
+#include <lib/callback/scoped_callback.h>
+#include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/concatenate.h>
+#include <lib/fxl/strings/string_view.h>
 
-#include "lib/callback/scoped_callback.h"
-#include "lib/callback/waiter.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/concatenate.h"
-#include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/cloud_provider_firestore/app/grpc_status.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/encoding.h"
 #include "peridot/lib/convert/convert.h"

@@ -11,9 +11,9 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/memory/weak_ptr.h>
 
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/storage/public/commit.h"

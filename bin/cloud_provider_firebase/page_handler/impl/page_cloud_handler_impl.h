@@ -10,9 +10,9 @@
 #include <string>
 
 #include <lib/fit/function.h>
+#include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/zx/socket.h>
 
-#include "lib/fsl/vmo/sized_vmo.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/watch_client_impl.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/page_cloud_handler.h"

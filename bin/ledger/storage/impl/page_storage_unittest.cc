@@ -9,19 +9,19 @@
 #include <set>
 
 #include <lib/async/cpp/task.h>
+#include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/socket/strings.h>
+#include <lib/fxl/arraysize.h>
+#include <lib/fxl/files/directory.h>
+#include <lib/fxl/files/file.h>
+#include <lib/fxl/files/path.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/memory/ref_ptr.h>
+#include <lib/fxl/strings/string_printf.h>
 
 #include "gtest/gtest.h"
-#include "lib/callback/capture.h"
-#include "lib/callback/set_when_called.h"
-#include "lib/fsl/socket/strings.h"
-#include "lib/fxl/arraysize.h"
-#include "lib/fxl/files/directory.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/files/path.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/encryption/primitives/hash.h"

@@ -4,15 +4,15 @@
 
 #include "peridot/bin/cloud_provider_firestore/app/page_cloud_impl.h"
 
+#include <lib/callback/scoped_callback.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/socket/strings.h>
+#include <lib/fsl/vmo/sized_vmo.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/functional/make_copyable.h>
+#include <lib/fxl/random/uuid.h>
+#include <lib/fxl/strings/concatenate.h>
 
-#include "lib/callback/scoped_callback.h"
-#include "lib/fsl/socket/strings.h"
-#include "lib/fsl/vmo/sized_vmo.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/random/uuid.h"
-#include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/cloud_provider_firestore/app/grpc_status.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/encoding.h"
 #include "peridot/lib/convert/convert.h"

@@ -6,18 +6,18 @@
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
+#include <lib/callback/capture.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/files/directory.h>
+#include <lib/fxl/files/file.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/svc/cpp/services.h>
 
 #include "gtest/gtest.h"
-#include "lib/app/cpp/startup_context.h"
-#include "lib/callback/capture.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fidl/cpp/synchronous_interface_ptr.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/files/directory.h"
-#include "lib/fxl/files/file.h"
-#include "lib/gtest/real_loop_fixture.h"
-#include "lib/svc/cpp/services.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/cloud_provider/fake_cloud_provider.h"
 #include "peridot/bin/ledger/testing/cloud_provider/types.h"

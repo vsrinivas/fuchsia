@@ -10,9 +10,9 @@
 #include <vector>
 
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
 #include <rapidjson/document.h>
 
-#include "lib/fxl/macros.h"
 #include "peridot/lib/firebase/status.h"
 #include "peridot/lib/firebase/watch_client.h"
 

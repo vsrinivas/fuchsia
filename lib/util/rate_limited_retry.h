@@ -5,8 +5,8 @@
 #ifndef PERIDOT_LIB_UTIL_RATE_LIMITED_RETRY_H_
 #define PERIDOT_LIB_UTIL_RATE_LIMITED_RETRY_H_
 
-#include "lib/fxl/time/time_delta.h"
-#include "lib/fxl/time/time_point.h"
+#include <lib/fxl/time/time_delta.h>
+#include <lib/fxl/time/time_point.h>
 
 namespace modular {
 

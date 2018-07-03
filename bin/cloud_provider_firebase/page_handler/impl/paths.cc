@@ -6,7 +6,8 @@
 
 #include <string>
 
-#include "lib/fxl/strings/concatenate.h"
+#include <lib/fxl/strings/concatenate.h>
+
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/lib/firebase/encoding.h"
 

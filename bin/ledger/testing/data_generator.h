@@ -9,7 +9,8 @@
 #include <random>
 #include <vector>
 
-#include "lib/fidl/cpp/vector.h"
+#include <lib/fidl/cpp/vector.h>
+
 #include "peridot/bin/ledger/fidl/include/types.h"
 
 namespace test {

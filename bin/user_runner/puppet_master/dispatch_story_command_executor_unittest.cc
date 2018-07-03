@@ -8,13 +8,13 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/async/cpp/operation.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+#include <lib/fidl/cpp/string.h>
+#include <lib/gtest/test_loop_fixture.h>
 
 #include "gtest/gtest.h"
-#include "lib/async/cpp/task.h"
-#include "lib/async/default.h"
-#include "lib/fidl/cpp/string.h"
-#include "lib/gtest/test_loop_fixture.h"
-#include "peridot/public/lib/async/cpp/operation.h"
 
 namespace modular {
 namespace {

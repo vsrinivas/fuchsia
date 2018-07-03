@@ -5,7 +5,8 @@
 #ifndef PERIDOT_BIN_USER_RUNNER_PUPPET_MASTER_DISPATCH_STORY_COMMAND_EXECUTOR_H_
 #define PERIDOT_BIN_USER_RUNNER_PUPPET_MASTER_DISPATCH_STORY_COMMAND_EXECUTOR_H_
 
-#include "lib/fidl/cpp/string.h"
+#include <lib/fidl/cpp/string.h>
+
 #include "peridot/bin/user_runner/puppet_master/command_runners/command_runner.h"
 #include "peridot/bin/user_runner/puppet_master/story_command_executor.h"
 

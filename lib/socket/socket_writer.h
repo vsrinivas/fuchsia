@@ -12,10 +12,9 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/strings/string_view.h>
 #include <lib/zx/socket.h>
-
-#include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_view.h"
 
 namespace socket {
 

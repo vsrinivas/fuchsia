@@ -4,14 +4,13 @@
 
 #include "peridot/lib/cobalt/cobalt.h"
 
+#include <lib/app/cpp/service_provider_impl.h>
 #include <lib/async/default.h>
-
-#include "lib/app/cpp/service_provider_impl.h"
-#include "lib/fidl/cpp/clone.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
-#include "lib/gtest/test_loop_fixture.h"
-#include "lib/svc/cpp/service_provider_bridge.h"
+#include <lib/fidl/cpp/clone.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/macros.h>
+#include <lib/gtest/test_loop_fixture.h>
+#include <lib/svc/cpp/service_provider_bridge.h>
 
 namespace cobalt {
 namespace {

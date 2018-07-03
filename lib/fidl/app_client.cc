@@ -9,10 +9,10 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/util.h>
+#include <lib/fxl/files/directory.h>
+#include <lib/fxl/files/unique_fd.h>
 #include <zircon/processargs.h>
 
-#include "lib/fxl/files/directory.h"
-#include "lib/fxl/files/unique_fd.h"
 #include "peridot/lib/rio/fd.h"
 
 namespace modular {

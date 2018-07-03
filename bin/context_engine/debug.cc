@@ -4,8 +4,9 @@
 
 #include "peridot/bin/context_engine/debug.h"
 
-#include "lib/fidl/cpp/clone.h"
-#include "lib/fidl/cpp/optional.h"
+#include <lib/fidl/cpp/clone.h>
+#include <lib/fidl/cpp/optional.h>
+
 #include "peridot/bin/context_engine/context_repository.h"
 
 namespace modular {

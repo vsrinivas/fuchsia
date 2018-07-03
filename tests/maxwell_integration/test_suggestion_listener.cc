@@ -4,7 +4,7 @@
 
 #include "peridot/tests/maxwell_integration/test_suggestion_listener.h"
 
-#include "lib/suggestion/cpp/formatting.h"
+#include <lib/suggestion/cpp/formatting.h>
 
 bool suggestion_less(const fuchsia::modular::Suggestion* a,
                      const fuchsia::modular::Suggestion* b) {

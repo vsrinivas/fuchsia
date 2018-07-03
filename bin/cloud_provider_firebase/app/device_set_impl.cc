@@ -4,7 +4,8 @@
 
 #include "peridot/bin/cloud_provider_firebase/app/device_set_impl.h"
 
-#include "lib/fxl/logging.h"
+#include <lib/fxl/logging.h>
+
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/paths.h"
 #include "peridot/lib/convert/convert.h"
 

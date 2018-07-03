@@ -6,10 +6,10 @@
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_BATCH_DOWNLOAD_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/fidl/cpp/array.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/memory/weak_ptr.h>
 
-#include "lib/fidl/cpp/array.h"
-#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"

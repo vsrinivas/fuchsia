@@ -5,14 +5,14 @@
 #include <memory>
 #include <string>
 
+#include <lib/callback/cancellable_helper.h>
+#include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
+#include <lib/fxl/macros.h>
 
 #include "gtest/gtest.h"
-#include "lib/callback/cancellable_helper.h"
-#include "lib/callback/capture.h"
-#include "lib/callback/set_when_called.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/custom_merge_strategy.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"

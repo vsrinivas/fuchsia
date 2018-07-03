@@ -5,10 +5,10 @@
 #include "peridot/bin/cloud_provider_firestore/app/factory_impl.h"
 
 #include <fuchsia/ledger/cloud/firestore/cpp/fidl.h>
+#include <lib/callback/capture.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/gtest/test_loop_fixture.h>
 
-#include "lib/callback/capture.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/lib/firebase_auth/testing/test_token_provider.h"
 
 namespace cloud_provider_firestore {

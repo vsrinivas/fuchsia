@@ -10,12 +10,12 @@
 
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/async/cpp/operation.h>
+#include <lib/fidl/cpp/array.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/string.h>
 
-#include "lib/async/cpp/operation.h"
-#include "lib/fidl/cpp/array.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fidl/cpp/string.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"

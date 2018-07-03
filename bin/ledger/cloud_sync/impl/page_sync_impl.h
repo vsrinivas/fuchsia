@@ -10,12 +10,12 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
+#include <lib/backoff/backoff.h>
+#include <lib/callback/scoped_task_runner.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/memory/ref_ptr.h>
+#include <lib/fxl/time/time_delta.h>
 
-#include "lib/backoff/backoff.h"
-#include "lib/callback/scoped_task_runner.h"
-#include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/time/time_delta.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_download.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_upload.h"
 #include "peridot/bin/ledger/cloud_sync/impl/page_download.h"

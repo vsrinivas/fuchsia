@@ -9,15 +9,15 @@
 #include <vector>
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/time/time_delta.h>
 #include <lib/zx/time.h>
 
 #include "garnet/public/lib/callback/capture.h"
 #include "gtest/gtest.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/time/time_delta.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/lib/convert/convert.h"
 

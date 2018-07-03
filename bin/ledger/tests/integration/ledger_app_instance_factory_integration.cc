@@ -7,14 +7,14 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+#include <lib/backoff/exponential_backoff.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/handles/object_info.h>
+#include <lib/fsl/socket/strings.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
 
 #include "gtest/gtest.h"
-#include "lib/backoff/exponential_backoff.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fsl/handles/object_info.h"
-#include "lib/fsl/socket/strings.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/p2p_provider/impl/p2p_provider_impl.h"

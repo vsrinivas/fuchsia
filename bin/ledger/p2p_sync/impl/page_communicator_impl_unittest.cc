@@ -10,9 +10,9 @@
 // gtest matchers are in gmock and we cannot include the specific header file
 // directly as it is private to the library.
 #include "gmock/gmock.h"
-#include "lib/callback/capture.h"
-#include "lib/callback/set_when_called.h"
-#include "lib/gtest/test_loop_fixture.h"
+#include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
+#include <lib/gtest/test_loop_fixture.h>
 #include "peridot/bin/ledger/p2p_sync/impl/device_mesh.h"
 #include "peridot/bin/ledger/storage/fake/fake_object.h"
 #include "peridot/bin/ledger/storage/testing/commit_empty_impl.h"

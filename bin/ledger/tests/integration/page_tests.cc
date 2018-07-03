@@ -6,13 +6,13 @@
 #include <vector>
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
+#include <lib/callback/capture.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/optional.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
+#include <lib/fxl/macros.h>
 
 #include "gtest/gtest.h"
-#include "lib/callback/capture.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fidl/cpp/optional.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
 #include "peridot/bin/ledger/tests/integration/test_utils.h"

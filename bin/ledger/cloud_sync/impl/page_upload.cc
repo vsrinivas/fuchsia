@@ -4,9 +4,8 @@
 
 #include "peridot/bin/ledger/cloud_sync/impl/page_upload.h"
 
+#include <lib/callback/scoped_callback.h>
 #include <lib/fit/function.h>
-
-#include "lib/callback/scoped_callback.h"
 
 namespace cloud_sync {
 

@@ -11,15 +11,14 @@
 #include <iostream>
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
+#include <lib/app/cpp/connect.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
-
-#include "lib/app/cpp/connect.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_printf.h"
-#include "lib/fxl/time/time_delta.h"
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/functional/make_copyable.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_printf.h>
+#include <lib/fxl/time/time_delta.h>
 
 namespace todo {
 

@@ -4,7 +4,8 @@
 
 #include "peridot/bin/user_runner/entity_provider_runner/entity_provider_controller.h"
 
-#include "lib/fxl/logging.h"
+#include <lib/fxl/logging.h>
+
 #include "peridot/bin/user_runner/entity_provider_runner/entity_provider_launcher.h"
 #include "peridot/bin/user_runner/entity_provider_runner/entity_provider_runner.h"
 

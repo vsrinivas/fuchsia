@@ -9,8 +9,8 @@
 #include <memory>
 
 #include <lib/fit/function.h>
+#include <lib/fxl/memory/ref_counted.h>
 
-#include "lib/fxl/memory/ref_counted.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"

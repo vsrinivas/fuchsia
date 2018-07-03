@@ -6,10 +6,9 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
-
-#include "lib/fsl/socket/strings.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/functional/make_copyable.h"
+#include <lib/fsl/socket/strings.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/functional/make_copyable.h>
 
 namespace cloud_provider_firebase {
 TestPageCloudHandler::TestPageCloudHandler(async_t* async) : async_(async) {}

@@ -7,9 +7,9 @@
 
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/testing/server/fake_cloud_url_loader.h"
 
 namespace ledger {

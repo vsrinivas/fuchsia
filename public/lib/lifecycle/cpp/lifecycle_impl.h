@@ -9,10 +9,9 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
-
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
-#include "lib/svc/cpp/service_namespace.h"
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fxl/macros.h>
+#include <lib/svc/cpp/service_namespace.h>
 
 namespace modular {
 

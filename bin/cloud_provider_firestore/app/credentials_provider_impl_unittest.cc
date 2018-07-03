@@ -5,10 +5,10 @@
 #include "peridot/bin/cloud_provider_firestore/app/credentials_provider_impl.h"
 
 #include <gtest/gtest.h>
+#include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
+#include <lib/gtest/test_loop_fixture.h>
 
-#include "lib/callback/capture.h"
-#include "lib/callback/set_when_called.h"
-#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
 
 namespace cloud_provider_firestore {

@@ -9,11 +9,11 @@
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fxl/macros.h>
+#include <lib/gtest/real_loop_fixture.h>
 #include <trace-provider/provider.h>
 
 #include "gtest/gtest.h"
-#include "lib/fxl/macros.h"
-#include "lib/gtest/real_loop_fixture.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 

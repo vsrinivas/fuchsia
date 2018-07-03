@@ -8,9 +8,8 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
-
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/memory/weak_ptr.h"
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fxl/memory/weak_ptr.h>
 
 namespace modular {
 

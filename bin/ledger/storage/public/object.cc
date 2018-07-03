@@ -4,7 +4,7 @@
 
 #include "peridot/bin/ledger/storage/public/object.h"
 
-#include "lib/fsl/vmo/strings.h"
+#include <lib/fsl/vmo/strings.h>
 
 namespace storage {
 

@@ -4,12 +4,12 @@
 
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/watch_client_impl.h"
 
+#include <lib/fxl/logging.h>
+#include <lib/fxl/time/time_delta.h>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/time/time_delta.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/encoding.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/timestamp_conversions.h"
 

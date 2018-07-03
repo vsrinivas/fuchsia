@@ -6,15 +6,15 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+#include <lib/cloud_provider/validation/launcher/validation_tests_launcher.h>
+#include <lib/fxl/command_line.h>
+#include <lib/fxl/files/file.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/concatenate.h>
+#include <lib/fxl/strings/string_view.h>
 
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/concatenate.h"
-#include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/cloud_provider_firestore/include/types.h"
 #include "peridot/bin/cloud_provider_firestore/testing/cloud_provider_factory.h"
-#include "peridot/public/lib/cloud_provider/validation/launcher/validation_tests_launcher.h"
 
 namespace cloud_provider_firestore {
 namespace {

@@ -8,8 +8,7 @@
 #include <string>
 
 #include <fuchsia/testing/runner/cpp/fidl.h>
-
-#include "lib/app/cpp/startup_context.h"
+#include <lib/app/cpp/startup_context.h>
 
 using fuchsia::testing::runner::TestRunnerStore;
 

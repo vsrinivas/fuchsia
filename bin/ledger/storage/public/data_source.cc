@@ -5,9 +5,9 @@
 #include "peridot/bin/ledger/storage/public/data_source.h"
 
 #include <lib/fit/function.h>
+#include <lib/fsl/socket/socket_drainer.h>
 #include <lib/zx/vmar.h>
 
-#include "lib/fsl/socket/socket_drainer.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace storage {

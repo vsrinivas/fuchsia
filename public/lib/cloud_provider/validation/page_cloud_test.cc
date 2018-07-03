@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/cloud_provider/validation/convert.h>
+#include <lib/cloud_provider/validation/types.h>
+#include <lib/cloud_provider/validation/validation_test.h>
+#include <lib/fsl/socket/strings.h>
+#include <lib/fsl/vmo/sized_vmo.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/random/uuid.h>
 
 #include "gtest/gtest.h"
-#include "lib/fsl/socket/strings.h"
-#include "lib/fsl/vmo/sized_vmo.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/random/uuid.h"
-#include "peridot/public/lib/cloud_provider/validation/convert.h"
-#include "peridot/public/lib/cloud_provider/validation/types.h"
-#include "peridot/public/lib/cloud_provider/validation/validation_test.h"
 
 namespace cloud_provider {
 namespace {

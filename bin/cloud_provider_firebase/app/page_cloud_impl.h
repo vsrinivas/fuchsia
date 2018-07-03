@@ -9,12 +9,12 @@
 #include <utility>
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/callback/cancellable.h>
+#include <lib/fidl/cpp/array.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/callback/cancellable.h"
-#include "lib/fidl/cpp/array.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"
 #include "peridot/bin/cloud_provider_firebase/include/types.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/commit_watcher.h"

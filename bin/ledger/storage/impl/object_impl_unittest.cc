@@ -4,10 +4,11 @@
 
 #include "peridot/bin/ledger/storage/impl/object_impl.h"
 
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
+#include <lib/fxl/random/rand.h>
+
 #include "gtest/gtest.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/random/rand.h"
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
 #include "third_party/leveldb/include/leveldb/db.h"
 

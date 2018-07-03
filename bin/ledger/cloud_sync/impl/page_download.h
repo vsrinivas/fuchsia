@@ -6,14 +6,14 @@
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_PAGE_DOWNLOAD_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/backoff/backoff.h>
+#include <lib/callback/managed_container.h>
+#include <lib/callback/scoped_task_runner.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/memory/ref_ptr.h>
 
-#include "lib/backoff/backoff.h"
-#include "lib/callback/managed_container.h"
-#include "lib/callback/scoped_task_runner.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_download.h"
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"

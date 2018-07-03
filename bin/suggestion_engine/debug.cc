@@ -6,7 +6,7 @@
 
 #include <functional>
 
-#include "lib/fidl/cpp/optional.h"
+#include <lib/fidl/cpp/optional.h>
 
 namespace modular {
 

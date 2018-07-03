@@ -7,7 +7,8 @@
 
 #include <string>
 
-#include "lib/fxl/macros.h"
+#include <lib/fxl/macros.h>
+
 #include "peridot/lib/device_info/device_info.h"
 
 namespace modular {

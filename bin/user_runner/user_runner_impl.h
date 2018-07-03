@@ -18,11 +18,11 @@
 #include <fuchsia/speech/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <lib/app/cpp/service_provider_impl.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/interface_ptr.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/app/cpp/service_provider_impl.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fidl/cpp/interface_ptr.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/user_runner/agent_runner/agent_runner_storage_impl.h"
 #include "peridot/bin/user_runner/entity_provider_runner/entity_provider_launcher.h"
 #include "peridot/bin/user_runner/entity_provider_runner/entity_provider_runner.h"

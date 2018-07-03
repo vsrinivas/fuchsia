@@ -7,12 +7,12 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/firestore/cpp/fidl.h>
+#include <lib/app/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fxl/memory/ref_ptr.h>
+#include <lib/network_wrapper/network_wrapper_impl.h>
 
-#include "lib/app/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/memory/ref_ptr.h"
-#include "lib/network_wrapper/network_wrapper_impl.h"
 #include "peridot/bin/cloud_provider_firestore/include/types.h"
 #include "peridot/lib/firebase_auth/testing/service_account_token_provider.h"
 

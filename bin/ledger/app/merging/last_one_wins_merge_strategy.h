@@ -7,10 +7,10 @@
 
 #include <memory>
 
+#include <lib/callback/auto_cleanable.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/callback/auto_cleanable.h"
-#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/merging/merge_strategy.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"

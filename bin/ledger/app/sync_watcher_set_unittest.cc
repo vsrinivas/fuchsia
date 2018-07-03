@@ -7,10 +7,11 @@
 #include <algorithm>
 #include <string>
 
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fxl/macros.h>
+#include <lib/gtest/test_loop_fixture.h>
+
 #include "gtest/gtest.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
-#include "lib/gtest/test_loop_fixture.h"
 
 namespace ledger {
 namespace {

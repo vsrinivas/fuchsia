@@ -6,11 +6,11 @@
 
 #include <algorithm>
 
+#include <lib/fxl/logging.h>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-#include "lib/fxl/logging.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/timestamp_conversions.h"
 #include "peridot/lib/firebase/encoding.h"
 
