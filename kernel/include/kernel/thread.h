@@ -265,6 +265,11 @@ void thread_owner_name(thread_t* t, char out_name[THREAD_NAME_LENGTH]);
 // print the backtrace on the current thread
 void thread_print_current_backtrace(void);
 
+// append the backtrace of the current thread to the passed in char pointer up
+// to `len' characters.
+// return the number of chars appended.
+size_t thread_append_current_backtrace(char* out, size_t len);
+
 // print the backtrace of the passed in thread, if possible
 zx_status_t thread_print_backtrace(thread_t* t);
 

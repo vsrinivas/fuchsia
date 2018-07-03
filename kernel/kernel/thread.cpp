@@ -1357,6 +1357,37 @@ void thread_print_current_backtrace(void) {
     _thread_print_backtrace(get_current_thread(), __GET_FRAME(0));
 }
 
+// append the backtrace of the current thread to the passed in char pointer.
+// return the number of chars appended.
+size_t thread_append_current_backtrace(char* out, const size_t out_len) {
+    thread_t* current = get_current_thread();
+    void* fp = __GET_FRAME(0);
+
+    if (!current || !fp) {
+        return 0;
+    }
+
+    thread_backtrace_t tb;
+    size_t count = thread_get_backtrace(current, fp, &tb);
+    if (count == 0) {
+        return 0;
+    }
+
+    char* buf = out;
+    size_t remain = out_len;
+    size_t len;
+    for (size_t n = 0; n < count; n++) {
+        len = snprintf(buf, remain, "%02zu %p\n", n, tb.pc[n]);
+        if (len > remain) {
+            return out_len;
+        }
+        remain -= len;
+        buf += len;
+    }
+
+    return out_len - remain;
+}
+
 // print the backtrace of a passed in thread, if possible
 zx_status_t thread_print_backtrace(thread_t* t) {
     // get the starting point if it's in a usable state

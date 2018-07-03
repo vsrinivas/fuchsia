@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <dev/udisplay.h>
+#include <lib/crashlog.h>
 #include <lib/debuglog.h>
 #include <lib/gfxconsole.h>
 #include <lib/io.h>
@@ -21,21 +22,6 @@
 constexpr uint kFramebufferArchMmuFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
 
 static char crashlogbuf[4096u];
-static size_t crashlogptr;
-
-static void crashlog_print_callback(print_callback_t* cb, const char* str, size_t len) {
-    if (len > (sizeof(crashlogbuf) - crashlogptr))
-        len = (sizeof(crashlogbuf) - crashlogptr);
-
-    memcpy(crashlogbuf + crashlogptr, str, len);
-    crashlogptr += len;
-}
-
-static print_callback_t crashlog_cb = {
-    .entry = {},
-    .print = crashlog_print_callback,
-    .context = nullptr,
-};
 
 struct udisplay_info {
     void* framebuffer_virt;
@@ -51,7 +37,8 @@ zx_status_t udisplay_init(void) {
 }
 
 void dlog_bluescreen_halt(void) {
-    platform_stow_crashlog(crashlogbuf, crashlogptr);
+    size_t len = crashlog_to_string(crashlogbuf, sizeof(crashlogbuf));
+    platform_stow_crashlog(crashlogbuf, len);
     if (g_udisplay.framebuffer_virt == 0)
         return;
 }
@@ -94,8 +81,6 @@ zx_status_t udisplay_set_display_info(struct display_info* display) {
 }
 
 zx_status_t udisplay_bind_gfxconsole(void) {
-    register_print_callback(&crashlog_cb);
-
     if (g_udisplay.framebuffer_virt == 0)
         return ZX_ERR_NOT_FOUND;
 

@@ -10,6 +10,7 @@
 #include <err.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
+#include <lib/crashlog.h>
 #include <lib/io.h>
 #include <lib/version.h>
 #include <lk/init.h>
@@ -339,8 +340,8 @@ void dlog_bluescreen_init(void) {
 
     // replay debug log?
 
-    dprintf(INFO, "\nZIRCON KERNEL PANIC\n\nUPTIME: %" PRIu64 "ms\n",
-            current_time() / ZX_MSEC(1));
+    dprintf(INFO, "\nZIRCON KERNEL PANIC\n\n");
+    dprintf(INFO, "UPTIME: %" PRIu64 "ms\n", current_time() / ZX_MSEC(1));
     dprintf(INFO, "BUILDID %s\n\n", version.buildid);
 
     // Log the ELF build ID in the format the symbolizer scripts understand.
@@ -348,6 +349,8 @@ void dlog_bluescreen_init(void) {
         dprintf(INFO, "dso: id=%s base=%#lx name=zircon.elf\n",
                 version.elf_build_id, (uintptr_t)__code_start);
     }
+
+    crashlog.base_address = (uintptr_t)__code_start;
 }
 
 static void dlog_init_hook(uint level) {

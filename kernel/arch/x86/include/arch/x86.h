@@ -35,6 +35,7 @@ struct x86_64_iframe {
 };
 
 typedef struct x86_64_iframe x86_iframe_t;
+typedef struct x86_64_iframe iframe_t;
 
 void x86_exception_handler(x86_iframe_t* frame);
 void platform_irq(x86_iframe_t* frame);

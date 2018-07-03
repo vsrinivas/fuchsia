@@ -110,6 +110,7 @@ void arm64_el3_to_el1(void);
 void arm64_sync_exception(struct arm64_iframe_long* iframe, uint exception_flags, uint32_t esr);
 void arm64_thread_process_pending_signals(struct arm64_iframe_long* iframe);
 
+typedef struct arm64_iframe_long iframe_t;
 typedef struct arm64_iframe_short iframe;
 
 void platform_irq(iframe* frame);

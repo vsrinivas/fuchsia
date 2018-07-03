@@ -21,6 +21,8 @@
 #include <kernel/interrupt.h>
 #include <kernel/thread.h>
 
+#include <lib/crashlog.h>
+
 #include <platform.h>
 #include <trace.h>
 #include <vm/fault.h>
@@ -84,6 +86,7 @@ __NO_RETURN static void exception_die(x86_iframe_t* frame, const char* msg) {
     printf("vector %lu\n", (ulong)frame->vector);
     dprintf(CRITICAL, "%s", msg);
     dump_fault_frame(frame);
+    crashlog.iframe = frame;
 
     // try to dump the user stack
     if (is_user_address(frame->user_sp)) {
@@ -408,7 +411,7 @@ static void handle_exception_types(x86_iframe_t* frame) {
         break;
     }
     /* pass all other non-Intel defined irq vectors to the platform */
-    case X86_INT_PLATFORM_BASE... X86_INT_PLATFORM_MAX: {
+    case X86_INT_PLATFORM_BASE ... X86_INT_PLATFORM_MAX: {
         kcounter_add(exceptions_irq, 1);
         platform_irq(frame);
         break;

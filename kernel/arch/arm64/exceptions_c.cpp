@@ -25,6 +25,7 @@
 #include <vm/vm.h>
 
 #include <lib/counters.h>
+#include <lib/crashlog.h>
 
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
@@ -89,6 +90,7 @@ __NO_RETURN static void exception_die(struct arm64_iframe_long* iframe, uint32_t
     /* fatal exception, die here */
     printf("ESR 0x%x: ec 0x%x, il 0x%x, iss 0x%x\n", esr, ec, il, iss);
     dump_iframe(iframe);
+    crashlog.iframe = iframe;
 
     platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
 }

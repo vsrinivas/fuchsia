@@ -34,6 +34,7 @@ MODULE_SRCS += \
 MODULE_DEPS += \
 	kernel/dev/iommu/dummy \
 	kernel/lib/bitmap \
+	kernel/lib/crashlog \
 	kernel/object \
 
 KERNEL_DEFINES += \
