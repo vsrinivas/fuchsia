@@ -42,6 +42,8 @@ Err AssertRunningTarget(ConsoleContext* context, const char* command_name,
 Err AssertStoppedThreadCommand(ConsoleContext* context, const Command& cmd,
                                bool validate_nouns, const char* command_name);
 
+[[nodiscard]] Err StringToInt(const std::string& s, int* out);
+[[nodiscard]] Err StringToUint32(const std::string& s, uint32_t* out);
 [[nodiscard]] Err StringToUint64(const std::string& s, uint64_t* out);
 
 // Reads an int64 from the given index of the command args. Returns an error

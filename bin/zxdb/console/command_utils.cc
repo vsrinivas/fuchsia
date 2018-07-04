@@ -62,6 +62,48 @@ Err AssertStoppedThreadCommand(ConsoleContext* context, const Command& cmd,
   return Err();
 }
 
+Err StringToInt(const std::string& s, int* out) {
+  if (s.empty())
+    return Err(ErrType::kInput, "The empty string is not a number.");
+
+  // Re-uses StringToUint64's error handling and just adds support for '-' at
+  // the beginning and size-checks the output.
+  uint64_t absolute_val;
+  if (s[0] == '-') {
+    Err err = StringToUint64(s.substr(1), &absolute_val);
+    if (err.has_error())
+      return err;
+    if (absolute_val >
+        -static_cast<int64_t>(std::numeric_limits<int>::lowest()))
+      return Err("This value is too small for an integer.");
+    *out = -static_cast<int>(absolute_val);
+  } else {
+    Err err = StringToUint64(s, &absolute_val);
+    if (err.has_error())
+      return err;
+    if (absolute_val > std::numeric_limits<int>::max())
+      return Err("This value is too large for an integer.");
+    *out = static_cast<int>(absolute_val);
+  }
+
+  return Err();
+}
+
+Err StringToUint32(const std::string& s, uint32_t* out) {
+  // Re-uses StringToUint64's error handling and just size-checks the output.
+  uint64_t value64;
+  Err err = StringToUint64(s, &value64);
+  if (err.has_error())
+    return err;
+
+  if (value64 > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
+    return Err(fxl::StringPrintf(
+        "Expected 32-bit unsigned value, but %s is too large.", s.c_str()));
+  }
+  *out = static_cast<uint32_t>(value64);
+  return Err();
+}
+
 Err StringToUint64(const std::string& s, uint64_t* out) {
   *out = 0;
   if (s.empty())
@@ -197,8 +239,9 @@ std::string BreakpointScopeToString(const ConsoleContext* context,
                                context->IdForTarget(settings.scope_target));
     case BreakpointSettings::Scope::kThread:
       return fxl::StringPrintf(
-          "pr %d t %d", context->IdForTarget(
-                            settings.scope_thread->GetProcess()->GetTarget()),
+          "pr %d t %d",
+          context->IdForTarget(
+              settings.scope_thread->GetProcess()->GetTarget()),
           context->IdForThread(settings.scope_thread));
   }
   FXL_NOTREACHED();

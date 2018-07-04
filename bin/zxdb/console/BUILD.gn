@@ -4,6 +4,8 @@
 
 static_library("console") {
   sources = [
+    "analyze_memory.cc",
+    "analyze_memory.h",
     "command.cc",
     "command.h",
     "command_parser.cc",

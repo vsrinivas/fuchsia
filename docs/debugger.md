@@ -83,11 +83,11 @@ run the `libs` command which will force discovery of them. Symbols won't work
 until you do this.
 
 ```
-[zxdb] connect 192.168.3.20 2345
+[zxdb] connect 192.168.3.53 2345
 Connecting (use "disconnect" to cancel)...
 Connected successfully.
 
-[zxdb] run /system/test/zxdb_test_app
+[zxdb] run /pkgfs/packages/debug_agent_tests/0/test/zxdb_test_app
 
 [zxdb] libs
     Load address  Name
@@ -132,4 +132,9 @@ if you're working on the debugger client.
 
 ```sh
 out/x64/host_x64/zxdb_tests
+```
+
+The debug agent tests are in
+```
+/pkgfs/packages/debug_agent_tests/0/test/debug_agent_tests
 ```

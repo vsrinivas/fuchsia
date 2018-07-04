@@ -4,12 +4,57 @@
 
 #include "garnet/bin/zxdb/console/command_utils.h"
 
+#include <inttypes.h>
+
+#include <limits>
+
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "gtest/gtest.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
+
+TEST(CommandUtils, StringToInt) {
+  // Leading 0's not octal.
+  int result = 0;
+  EXPECT_FALSE(StringToInt("010", &result).has_error());
+  EXPECT_EQ(10, result);
+
+  // Negative hexadecimal.
+  EXPECT_FALSE(StringToInt("-0x1a", &result).has_error());
+  EXPECT_EQ(-0x1a, result);
+
+  // Test at the limits.
+  constexpr int kMax = std::numeric_limits<int>::max();
+  EXPECT_FALSE(StringToInt(fxl::StringPrintf("%d", kMax), &result).has_error());
+  EXPECT_EQ(kMax, result);
+
+  constexpr int kMin = std::numeric_limits<int>::lowest();
+  EXPECT_FALSE(StringToInt(fxl::StringPrintf("%d", kMin), &result).has_error());
+  EXPECT_EQ(kMin, result);
+
+  // Test just beyond the limits.
+  int64_t kBeyondMax = static_cast<int64_t>(kMax) + 1;
+  EXPECT_TRUE(StringToInt(fxl::StringPrintf("%" PRId64, kBeyondMax), &result)
+                  .has_error());
+
+  int64_t kBeyondMin = static_cast<int64_t>(kMin) - 1;
+  EXPECT_TRUE(StringToInt(fxl::StringPrintf("%" PRId64, kBeyondMin), &result)
+                  .has_error());
+}
+
+TEST(CommandUtils, StringToUint32) {
+  uint32_t result = 0;
+  EXPECT_FALSE(StringToUint32("032", &result).has_error());
+  EXPECT_EQ(32u, result);
+
+  // Test at and just beyond the limits.
+  EXPECT_FALSE(StringToUint32("0xffffffff", &result).has_error());
+  EXPECT_EQ(0xffffffff, result);
+  EXPECT_TRUE(StringToUint32("0x100000000", &result).has_error());
+}
 
 TEST(CommandUtils, StringToUint64) {
   uint64_t result = 0;

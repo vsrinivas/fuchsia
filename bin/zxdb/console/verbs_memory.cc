@@ -17,6 +17,7 @@
 #include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/target.h"
+#include "garnet/bin/zxdb/console/analyze_memory.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
@@ -32,7 +33,209 @@ namespace {
 
 constexpr int kSizeSwitch = 1;
 constexpr int kNumSwitch = 2;
-constexpr int kRawSwitch = 3;
+constexpr int kOffsetSwitch = 3;
+constexpr int kRawSwitch = 4;
+
+// Gives 20 lines of output which fits on a terminal without scrolling (plus
+// one line of help text, the next prompt, and the command itself).
+constexpr uint32_t kDefaultAnalyzeByteSize = 160;
+
+// Shared for commands that take both a num (lines, 8 bytes each), or a byte
+// size.
+Err ReadNumAndSize(const Command& cmd, uint32_t default_size,
+                   uint32_t* out_size) {
+  if (cmd.HasSwitch(kNumSwitch) && cmd.HasSwitch(kSizeSwitch))
+    return Err("Can't specify both --num and --size.");
+
+  if (cmd.HasSwitch(kSizeSwitch)) {
+    // Size argument.
+    Err err = StringToUint32(cmd.GetSwitchValue(kSizeSwitch), out_size);
+    if (err.has_error())
+      return err;
+  } else if (cmd.HasSwitch(kNumSwitch)) {
+    // Num lines argument.
+    Err err = StringToUint32(cmd.GetSwitchValue(kNumSwitch), out_size);
+    if (err.has_error())
+      return err;
+    *out_size *= sizeof(uint64_t);  // Convert pointer count to size.
+  } else {
+    *out_size = default_size;
+  }
+  return Err();
+}
+
+// stack -----------------------------------------------------------------------
+
+const char kStackShortHelp[] = "stack / st: Analyze the stack.";
+const char kStackHelp[] =
+    R"(stack [ --offset=<offset> ] [ --num=<lines> ] [ --size=<bytes> ]
+           [ <address> ]
+
+  Alias: "st"
+
+  Prints a stack analysis. This is a special case of "mem-analyze" that
+  defaults to showing the memory address starting at the current frame's stack
+  pointer, and annotates the values with the current thread's registers and
+  stack frames.
+
+  An explicit address can optionally be provided to begin dumping to dump at
+  somewhere other than the current frame's stack pointer, or you can provide an
+  --offset from the current stack position.
+
+Arguments
+
+  --num=<lines> | -n <lines>
+      The number of output lines. Each line is the size of one pointer, so
+      the amount of memory displayed on a 64-bit system will be 8 × num_lines.
+      Mutually exclusive with --size.
+
+  --offset=<offset> | -o <offset>
+      Offset from the stack pointer to begin dumping. Mutually exclusive with
+      <address>.
+
+  --size=<bytes> | -s <bytes>
+      The number of bytes to analyze. This will be rounded up to the nearest
+      pointer boundary. Mutually exclusive with --num.
+
+Examples
+
+  stack
+  thread 2 stack
+
+  stack --num=128 0x43011a14bfc8
+)";
+Err DoStack(ConsoleContext* context, const Command& cmd) {
+  // FIXME(brettw) should be AssertStoppedThreadCommand like "finish".
+  if (!cmd.frame())
+    return Err("Can't analyze the stack without a valid frame.");
+
+  AnalyzeMemoryOptions opts;
+  opts.process = cmd.target()->GetProcess();
+  opts.thread = cmd.thread();
+
+  // Begin address.
+  if (cmd.args().size() == 1) {
+    // Explicitly provided start address.
+    Err err = StringToUint64(cmd.args()[0], &opts.begin_address);
+    if (err.has_error())
+      return err;
+  } else if (cmd.args().size() > 1) {
+    return Err("Too many args to \"stack\", expecting 0 or 1.");
+  } else {
+    // Use implicit SP from the frame (with optional --offset).
+    opts.begin_address = cmd.frame()->GetStackPointer();
+    if (cmd.HasSwitch(kOffsetSwitch)) {
+      int offset = 0;
+      Err err = StringToInt(cmd.GetSwitchValue(kOffsetSwitch), &offset);
+      if (err.has_error())
+        return err;
+      opts.begin_address += offset;
+    }
+  }
+
+  // Length parameters.
+  Err err = ReadNumAndSize(cmd, kDefaultAnalyzeByteSize, &opts.bytes_to_read);
+  if (err.has_error())
+    return err;
+
+  AnalyzeMemory(opts, [bytes_to_read = opts.bytes_to_read](const Err& err,
+                                                           OutputBuffer output,
+                                                           uint64_t next_addr) {
+    if (err.has_error()) {
+      output.OutputErr(err);
+    } else {
+      // Help text for continuation.
+      output.Append(
+          Syntax::kComment,
+          fxl::StringPrintf("↓ For more lines: stack -n %d 0x%" PRIx64,
+                            static_cast<int>(bytes_to_read / sizeof(uint64_t)),
+                            next_addr));
+    }
+    Console::get()->Output(std::move(output));
+  });
+  return Err();
+}
+
+// mem-analyze -----------------------------------------------------------------
+
+const char kMemAnalyzeShortHelp[] =
+    "mem-analyze / ma: Analyze a memory region.";
+const char kMemAnalyzeHelp[] =
+    R"(mem-analyze [ --num=<lines> ] [ --size=<size> ] <address>
+
+  Alias: "ma"
+
+  Prints a memory analysis. A memory analysis attempts to find pointers to
+  code in pointer-aligned locations and annotates those values.
+
+  See also "stack" which is specialized more for stacks (it includes the
+  current thread's registers), and "mem-read" to display a simple hex dump.
+
+Arguments
+
+  --num=<lines> | -n <lines>
+      The number of output lines. Each line is the size of one pointer, so
+      the amount of memory displayed on a 64-bit system will be 8 × num_lines.
+      Mutually exclusive with --size.
+
+  --size=<bytes> | -s <bytes>
+      The number of bytes to analyze. This will be rounded up to the nearest
+      pointer boundary. Mutually exclusive with --num.
+
+Examples
+
+  ma 0x43011a14bfc8
+
+  mem-analyze 0x43011a14bfc8
+
+  process 3 mem-analyze 0x43011a14bfc8
+
+  mem-analyze --num=128 0x43011a14bfc8
+)";
+Err DoMemAnalyze(ConsoleContext* context, const Command& cmd) {
+  // Only a process can have its memory read.
+  Err err = cmd.ValidateNouns({Noun::kProcess});
+  if (err.has_error())
+    return err;
+  err = AssertRunningTarget(context, "mem-analyze", cmd.target());
+  if (err.has_error())
+    return err;
+
+  AnalyzeMemoryOptions opts;
+  opts.process = cmd.target()->GetProcess();
+
+  // Begin address.
+  if (cmd.args().size() == 1) {
+    // Explicitly provided start address.
+    err = StringToUint64(cmd.args()[0], &opts.begin_address);
+    if (err.has_error())
+      return err;
+  } else if (cmd.args().size() > 1) {
+    return Err("mam-analyze requires exactly one arg for the start address.");
+  }
+
+  // Length parameters.
+  err = ReadNumAndSize(cmd, kDefaultAnalyzeByteSize, &opts.bytes_to_read);
+  if (err.has_error())
+    return err;
+
+  AnalyzeMemory(opts, [bytes_to_read = opts.bytes_to_read](const Err& err,
+                                                           OutputBuffer output,
+                                                           uint64_t next_addr) {
+    if (err.has_error()) {
+      output.OutputErr(err);
+    } else {
+      // Help text for continuation.
+      output.Append(
+          Syntax::kComment,
+          fxl::StringPrintf("↓ For more lines: ma -n %d 0x%" PRIx64,
+                            static_cast<int>(bytes_to_read / sizeof(uint64_t)),
+                            next_addr));
+    }
+    Console::get()->Output(std::move(output));
+  });
+  return Err();
+}
 
 // mem-read --------------------------------------------------------------------
 
@@ -61,6 +264,9 @@ const char kMemReadHelp[] =
 
   Reads memory from the process at the given address and prints it to the
   screen. Currently, only a byte-oriented hex dump format is supported.
+
+  See also "a-mem" to print a memory analysis and "a-stack" to print a more
+  useful dump of the raw stack.
 
 Arguments
 
@@ -238,29 +444,48 @@ Err DoDisassemble(ConsoleContext* context, const Command& cmd) {
 
   // Schedule memory request.
   Process* process = cmd.target()->GetProcess();
-  process->ReadMemory(
-      address, size, [ options, process = process->GetWeakPtr() ](
-                         const Err& err, MemoryDump dump) {
-        CompleteDisassemble(err, std::move(dump), std::move(process), options);
-      });
+  process->ReadMemory(address, size,
+                      [options, process = process->GetWeakPtr()](
+                          const Err& err, MemoryDump dump) {
+                        CompleteDisassemble(err, std::move(dump),
+                                            std::move(process), options);
+                      });
   return Err();
 }
 
 }  // namespace
 
 void AppendMemoryVerbs(std::map<Verb, VerbRecord>* verbs) {
-  // "x" is the GDB command to read memory.
-  VerbRecord mem_read(&DoMemRead, {"mem-read", "x"}, kMemReadShortHelp,
-                      kMemReadHelp);
-  mem_read.switches.push_back(SwitchRecord(kSizeSwitch, true, "size", 's'));
-  (*verbs)[Verb::kMemRead] = std::move(mem_read);
+  SwitchRecord size_switch(kSizeSwitch, true, "size", 's');
+  SwitchRecord num_switch(kNumSwitch, true, "num", 'n');
 
+  // Disassemble.
   VerbRecord disass(&DoDisassemble, {"disassemble", "di"},
                     kDisassembleShortHelp, kDisassembleHelp,
                     SourceAffinity::kAssembly);
-  disass.switches.push_back(SwitchRecord(kNumSwitch, true, "num", 'n'));
+  disass.switches.push_back(num_switch);
   disass.switches.push_back(SwitchRecord(kRawSwitch, false, "raw", 'r'));
   (*verbs)[Verb::kDisassemble] = std::move(disass);
+
+  // Mem-analyze
+  VerbRecord mem_analyze(&DoMemAnalyze, {"mem-analyze", "ma"},
+                         kMemAnalyzeShortHelp, kMemAnalyzeHelp);
+  mem_analyze.switches.push_back(num_switch);
+  mem_analyze.switches.push_back(size_switch);
+  (*verbs)[Verb::kMemAnalyze] = std::move(mem_analyze);
+
+  // Mem-read. Note: "x" is the GDB command to read memory.
+  VerbRecord mem_read(&DoMemRead, {"mem-read", "x"}, kMemReadShortHelp,
+                      kMemReadHelp);
+  mem_read.switches.push_back(size_switch);
+  (*verbs)[Verb::kMemRead] = std::move(mem_read);
+
+  // Stack.
+  VerbRecord stack(&DoStack, {"stack", "st"}, kStackShortHelp, kStackHelp);
+  stack.switches.push_back(num_switch);
+  stack.switches.push_back(size_switch);
+  stack.switches.push_back(SwitchRecord(kOffsetSwitch, true, "offset", 'o'));
+  (*verbs)[Verb::kStack] = std::move(stack);
 }
 
 }  // namespace zxdb

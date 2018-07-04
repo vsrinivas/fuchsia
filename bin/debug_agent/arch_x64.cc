@@ -42,9 +42,36 @@ uint64_t* SPInRegs(zx_thread_state_general_regs* regs) { return &regs->rsp; }
 
 ::debug_ipc::Arch GetArch() { return ::debug_ipc::Arch::kX64; }
 
-bool GetRegisterStateFromCPU(const zx::thread&,
-                             std::vector<debug_ipc::Register>*) {
-  // TODO(donosoc): Implement the x64 logic
+bool GetRegisterStateFromCPU(const zx::thread& thread,
+                             std::vector<debug_ipc::Register>* registers) {
+  registers->clear();
+
+  // We get the general state registers
+  zx_thread_state_general_regs general_registers;
+  zx_status_t status =
+      thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &general_registers,
+                        sizeof(general_registers));
+  if (status != ZX_OK)
+    return false;
+
+  registers->push_back({"RAX", general_registers.rax});
+  registers->push_back({"RBX", general_registers.rbx});
+  registers->push_back({"RCX", general_registers.rcx});
+  registers->push_back({"RDX", general_registers.rdx});
+  registers->push_back({"RSI", general_registers.rsi});
+  registers->push_back({"RDI", general_registers.rdi});
+  registers->push_back({"RBP", general_registers.rbp});
+  registers->push_back({"RSP", general_registers.rsp});
+  registers->push_back({"R8", general_registers.r8});
+  registers->push_back({"R9", general_registers.r9});
+  registers->push_back({"R10", general_registers.r10});
+  registers->push_back({"R11", general_registers.r11});
+  registers->push_back({"R12", general_registers.r12});
+  registers->push_back({"R13", general_registers.r13});
+  registers->push_back({"R14", general_registers.r14});
+  registers->push_back({"R15", general_registers.r15});
+  registers->push_back({"RIP", general_registers.rip});
+  registers->push_back({"RFLAGS", general_registers.rflags});
   return false;
 }
 

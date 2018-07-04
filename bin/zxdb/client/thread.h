@@ -15,6 +15,7 @@
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/observer_list.h"
+#include "garnet/public/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
@@ -33,6 +34,8 @@ class Thread : public ClientObject {
 
   void AddObserver(ThreadObserver* observer);
   void RemoveObserver(ThreadObserver* observer);
+
+  fxl::WeakPtr<Thread> GetWeakPtr();
 
   // Guaranteed non-null.
   virtual Process* GetProcess() const = 0;
@@ -105,6 +108,7 @@ class Thread : public ClientObject {
 
  private:
   fxl::ObserverList<ThreadObserver> observers_;
+  fxl::WeakPtrFactory<Thread> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Thread);
 };
