@@ -16,3 +16,8 @@ A: TBD
 ## Q: Do we have Fuzzers enabled?
 
 A: No, sanitizer work takes precedence. Automated fuzz testing is SEC-44.
+
+## Q: Do we use gmock?
+
+A: Using the mocking functionality of gmock is
+[disallowed](library_restrictions.md).
