@@ -82,7 +82,9 @@ class Proposinator {
     out_->Propose(std::move(proposal));
   }
 
-  void Remove(const std::string& id) { out_->Remove(id); }
+  void Remove(const std::string& id) {
+    out_->Remove(id);
+  }
 
   void KillPublisher() { out_.Unbind(); }
 
@@ -891,6 +893,41 @@ TEST_F(SuggestionInteractionTest, ProposalWithRichSuggestion) {
   EXPECT_EQ(story_provider()->last_promoted_story(), "kindoffoo");
   EXPECT_EQ(accepted_proposal_id_, "1");
   EXPECT_EQ(accepted_proposal_story_id_, "kindoffoo");
+}
+
+TEST_F(SuggestionInteractionTest, DeleteProposalWithRichSuggestion) {
+  Proposinator p(suggestion_engine());
+  StartListening(10 /* max_results */);
+
+  auto module_id = "foo://bar1";
+
+  fuchsia::modular::AddModule add_module;
+  add_module.story_id = "foo://bar";
+  add_module.module_name = module_id;
+  add_module.intent.action.handler = module_id;
+  add_module.surface_parent_module_path =
+      fidl::VectorPtr<fidl::StringPtr>::New(0);
+  add_module.surface_relation = fuchsia::modular::SurfaceRelation();
+
+  fuchsia::modular::Action action;
+  action.set_add_module(std::move(add_module));
+  fidl::VectorPtr<fuchsia::modular::Action> actions;
+  actions.push_back(std::move(action));
+
+  auto proposal = CreateProposal("1", "1", std::move(actions),
+                                 fuchsia::modular::AnnoyanceType::NONE);
+  AddProposalListenerBinding(proposal.listener.NewRequest());
+  proposal.wants_rich_suggestion = true;
+  p.Propose(std::move(proposal));
+
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
+
+  p.Remove("1");
+  WaitUntilIdle();
+
+  EXPECT_EQ(0, suggestion_count());
+  EXPECT_NE(story_provider()->deleted_kind_of_proto_story(), "");
 }
 
 TEST_F(SuggestionInteractionTest, AcceptSugestion_QueryAction) {

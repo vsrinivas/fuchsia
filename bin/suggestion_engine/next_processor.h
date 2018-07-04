@@ -64,8 +64,17 @@ class NextProcessor {
                    const std::string& preloaded_story_id,
                    fuchsia::modular::Proposal proposal);
 
+  // Removes the identified proposal from the next processor.
+  //
+  // |component_url| The url of the component that created the proposal.
+  // |proposal_id| The identifier for the proposal.
   void RemoveProposal(const std::string& component_url,
                       const std::string& proposal_id);
+
+  // Returns a pointer to the suggestion associated with the provided
+  // |component_url| and |proposal_id|, or nullptr if no such suggestion exists.
+  SuggestionPrototype* GetSuggestion(const std::string& component_url,
+                                     const std::string& proposal_id) const;
 
   void SetActiveFilters(
       std::vector<std::unique_ptr<SuggestionActiveFilter>>&& active_filters);

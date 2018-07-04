@@ -85,6 +85,16 @@ void NextProcessor::RemoveProposal(const std::string& component_url,
   }
 }
 
+SuggestionPrototype* NextProcessor::GetSuggestion(
+    const std::string& component_url, const std::string& proposal_id) const {
+  RankedSuggestion* ranked_suggestion =
+      suggestions_.GetSuggestion(component_url, proposal_id);
+  if (ranked_suggestion) {
+    return ranked_suggestion->prototype;
+  }
+  return nullptr;
+}
+
 void NextProcessor::RemoveProposalFromList(const std::string& component_url,
                                            const std::string& proposal_id) {
   NotifyOfProcessingChange(true);

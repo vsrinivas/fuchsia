@@ -92,6 +92,12 @@ void SuggestionEngineImpl::AddProposalWithRichSuggestion(
 
 void SuggestionEngineImpl::RemoveNextProposal(const std::string& component_url,
                                               const std::string& proposal_id) {
+  SuggestionPrototype* suggestion =
+      next_processor_.GetSuggestion(component_url, proposal_id);
+  if (suggestion && !suggestion->preloaded_story_id.empty()) {
+    story_provider_->DeleteKindOfProtoStory(suggestion->preloaded_story_id,
+                                            [] {});
+  }
   next_processor_.RemoveProposal(component_url, proposal_id);
 }
 
