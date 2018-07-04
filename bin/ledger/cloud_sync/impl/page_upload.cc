@@ -28,14 +28,17 @@ PageUpload::PageUpload(callback::ScopedTaskRunner* task_runner,
 PageUpload::~PageUpload() {}
 
 void PageUpload::StartUpload() {
-  // Prime the upload process.
   if (external_state_ == UPLOAD_STOPPED) {
+    // When called for the first time (UPLOAD_STOPPED is the initial state),
+    // this method is responsible for handling the initial setup.
     SetState(UPLOAD_SETUP);
     // Starting to watch right away is not an issue, because new commit
     // notifications are used as a tickle only, and we use a separate call to
     // get unsynced commits.
     storage_->AddCommitWatcher(this);
   }
+  // Whether called for the first time or to restart upload, prime the upload
+  // process.
   NextState();
 }
 
@@ -196,6 +199,8 @@ bool PageUpload::IsIdle() {
   switch (external_state_) {
     case UPLOAD_STOPPED:
     case UPLOAD_IDLE:
+    // Note: this is considered idle because the reason for being blocked is
+    // external to the class - there's nothing to do on our side.
     case UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS:
     case UPLOAD_PERMANENT_ERROR:
       return true;

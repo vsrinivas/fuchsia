@@ -26,8 +26,13 @@ namespace cloud_sync {
 // This ensures there is only one stream of work at any given time, and one in
 // "backlog".
 enum PageUploadState {
+  // No upload attempt is in progress.
   NO_COMMIT = 0,
+  // An upload attempt is in progress and after completing we should become
+  // idle.
   PROCESSING,
+  // An upload attempt is in progress and after completing we should start a new
+  // one.
   PROCESSING_NEW_COMMIT,
 };
 
@@ -53,8 +58,11 @@ class PageUpload : public storage::CommitWatcher {
 
   ~PageUpload() override;
 
-  // Uploads the initial backlog of local unsynced commits, and sets up the
-  // storage watcher upon success.
+  // Starts or restarts the upload process.
+  //
+  // The first time this method is called this sets up the storage watcher. It
+  // might be called again in the future to restart the upload after it's
+  // stopped due to a remote download in progress.
   void StartUpload();
 
   // Returns true if PageUpload is idle.
@@ -79,8 +87,17 @@ class PageUpload : public storage::CommitWatcher {
 
   void RetryWithBackoff(fit::closure callable);
 
-  // Manages the internal state machine.
+  // These methods manage the internal state machine.
+
+  // Registers a signal to trigger an upload attempt, and triggers it if
+  // appropriate, that is, if we don't have an upload process already in
+  // progress.
   void NextState();
+
+  // Registers completion of an upload attempt, for example due to an error, or
+  // because it completed. This will trigger another upload attempt if
+  // appropriate, that is, if a signal to trigger an upload attempt was
+  // delivered while an earlier upload attempt was in progress.
   void PreviousState();
 
   // Owned by whoever owns this class.
