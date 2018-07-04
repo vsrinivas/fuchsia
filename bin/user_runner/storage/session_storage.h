@@ -96,7 +96,13 @@ class SessionStorage : public PageClient {
   FuturePtr<fidl::VectorPtr<fuchsia::modular::internal::StoryData>>
   GetAllStoryData();
 
+  // Returns a Future that promotes the story with |story_id| to a regular
+  // story.
   FuturePtr<> PromoteKindOfProtoStory(fidl::StringPtr story_id);
+
+  // Deletes the story with |story_id| provided that it has not been promoted to
+  // a regular story.
+  FuturePtr<> DeleteKindOfProtoStory(fidl::StringPtr story_id);
 
   // TODO(thatguy): Eliminate all users of this, and remove it. We want all
   // interfaces with the Ledger to be contained within *Storage classes.

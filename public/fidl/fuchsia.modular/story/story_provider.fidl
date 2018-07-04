@@ -81,6 +81,11 @@ interface StoryProvider {
   // the StoryInfo of |story_id| will be returned in PreviousStories().
   // EXPERIMENTAL
   14: PromoteKindOfProtoStory(string story_id) -> ();
+
+  // Deletes the "kind-of" proto story if it has not yet been promoted to a
+  // regular story.
+  // EXPERIMENTAL
+  15: DeleteKindOfProtoStory(string story_id) -> ();
 };
 
 // Implemented by clients of StoryProvider.

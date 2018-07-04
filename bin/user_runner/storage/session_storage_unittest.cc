@@ -323,5 +323,78 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete_Remote) {
   EXPECT_EQ(created_story_id, deleted_story_id);
 }
 
+// Tests that a "kind-of" proto story that has *not* been promoted to a regular
+// story gets deleted when calling DeleteKindOfProtoStory.
+TEST_F(SessionStorageTest, ObserveCreateDeleteKindOfProtoStory) {
+  auto storage = CreateStorage("page");
+  auto story_id = CreateStory(storage.get(), true /* is_kind_of_proto_story */);
+
+  auto story_data_future = storage->GetStoryData(story_id);
+  bool got_story_data{};
+  story_data_future->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
+    EXPECT_TRUE(data->is_kind_of_proto_story);
+    got_story_data = true;
+  });
+  RunLoopUntil([&] { return got_story_data; });
+
+  bool done{};
+  FuturePtr<> deletion_future = storage->DeleteKindOfProtoStory(story_id);
+  deletion_future->Then([&]() { done = true; });
+
+  RunLoopUntil([&] { return done; });
+
+  auto all_story_data_future = storage->GetAllStoryData();
+  bool got_data{};
+  fidl::VectorPtr<fuchsia::modular::internal::StoryData> all_data;
+  all_story_data_future->Then(
+      [&](fidl::VectorPtr<fuchsia::modular::internal::StoryData> data) {
+        all_data = std::move(data);
+        got_data = true;
+      });
+
+  RunLoopUntil([&] { return got_data; });
+
+  EXPECT_EQ(0u, all_data->size());
+}
+
+// Tests that a "kind-of" proto story that has been promoted to a regular story
+// does not get deleted when calling DeleteKindOfProtoStory.
+TEST_F(SessionStorageTest, ObserveCreatePromoteDeleteKindOfProtoStory) {
+  auto storage = CreateStorage("page");
+  auto story_id = CreateStory(storage.get(), true /* is_kind_of_proto_story */);
+
+  bool promoted_story{};
+  auto promote_story_future = storage->PromoteKindOfProtoStory(story_id);
+  promote_story_future->Then([&]() { promoted_story = true; });
+  RunLoopUntil([&] { return promoted_story; });
+
+  auto story_data_future = storage->GetStoryData(story_id);
+  bool got_story_data{};
+  story_data_future->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
+    EXPECT_FALSE(data->is_kind_of_proto_story);
+    got_story_data = true;
+  });
+  RunLoopUntil([&] { return got_story_data; });
+
+  bool done{};
+  FuturePtr<> deletion_future = storage->DeleteKindOfProtoStory(story_id);
+  deletion_future->Then([&]() { done = true; });
+
+  RunLoopUntil([&] { return done; });
+
+  auto all_story_data_future = storage->GetAllStoryData();
+  bool got_data{};
+  fidl::VectorPtr<fuchsia::modular::internal::StoryData> all_data;
+  all_story_data_future->Then(
+      [&](fidl::VectorPtr<fuchsia::modular::internal::StoryData> data) {
+        all_data = std::move(data);
+        got_data = true;
+      });
+
+  RunLoopUntil([&] { return got_data; });
+
+  EXPECT_EQ(1u, all_data->size());
+}
+
 }  // namespace
 }  // namespace modular

@@ -661,6 +661,18 @@ void StoryProviderImpl::PromoteKindOfProtoStory(
       "StoryProviderImpl::PromoteKindOfProtoStory", on_run, done, callback));
 }
 
+// |fuchsia::modular::StoryProvider|
+void StoryProviderImpl::DeleteKindOfProtoStory(
+    fidl::StringPtr story_id, DeleteKindOfProtoStoryCallback callback) {
+  auto on_run =
+      Future<>::Create("StoryProviderImpl.DeleteKindOfProtoStory.on_run");
+  auto done = on_run->AsyncMap([this, story_id] {
+    return session_storage_->DeleteKindOfProtoStory(story_id);
+  });
+  operation_queue_.Add(WrapFutureAsOperation(
+      "StoryProviderImpl::DeleteKindOfProtoStory", on_run, done, callback));
+}
+
 void StoryProviderImpl::OnStoryStorageUpdated(
     fidl::StringPtr story_id,
     fuchsia::modular::internal::StoryData story_data) {
@@ -686,9 +698,9 @@ void StoryProviderImpl::OnStoryStorageDeleted(fidl::StringPtr story_id) {
   }
 
   // NOTE: DeleteStoryCall is used here, as well as in DeleteStory(). In this
-  // case, either another device deleted the story, or we did and the Ledger is
-  // now notifying us. In this case, we pass |already_deleted = true| so that we
-  // don't ask to delete the story data again.
+  // case, either another device deleted the story, or we did and the Ledger
+  // is now notifying us. In this case, we pass |already_deleted = true| so
+  // that we don't ask to delete the story data again.
   operation_queue_.Add(
       new DeleteStoryCall(session_storage_, story_id, &story_controller_impls_,
                           component_context_info_.message_queue_manager,
@@ -715,10 +727,10 @@ void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
   // Last focus time is recorded in the ledger, and story provider watchers
   // are notified through watching SessionStorage.
   auto on_run = Future<>::Create("StoryProviderImpl.OnFocusChange.on_run");
-  // TODO(apang): Using AsyncMap() here is a hack to work around a problem where
-  // FutureOperation will destroy |done| and lead to a crash; AsyncMap happens
-  // to increase the future's refcount, which avoids this. We still need a
-  // proper fix. See MI4-1028 for the details.
+  // TODO(apang): Using AsyncMap() here is a hack to work around a problem
+  // where FutureOperation will destroy |done| and lead to a crash; AsyncMap
+  // happens to increase the future's refcount, which avoids this. We still
+  // need a proper fix. See MI4-1028 for the details.
   auto done = on_run->AsyncMap([this, story_id = info->focused_story_id] {
     return session_storage_->UpdateLastFocusedTimestamp(
         story_id, zx_clock_get(ZX_CLOCK_UTC));

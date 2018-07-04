@@ -254,6 +254,33 @@ FuturePtr<> SessionStorage::PromoteKindOfProtoStory(fidl::StringPtr story_id) {
   return ret;
 }
 
+FuturePtr<> SessionStorage::DeleteKindOfProtoStory(fidl::StringPtr story_id) {
+  auto returned_future =
+      Future<>::Create("SessionStorage.DeleteKindOfProtoStory.returned_future");
+
+  operation_queue_.Add(MakeGetStoryDataCall(
+      page(), story_id,
+      [this, returned_future,
+       story_id](fuchsia::modular::internal::StoryDataPtr story_data) {
+        if (story_data && story_data->is_kind_of_proto_story) {
+          page()->Delete(
+              to_array(StoryIdToLedgerKey(story_id)),
+              [this, returned_future](fuchsia::ledger::Status status) {
+                // Deleting a key that doesn't exist is OK, not
+                // KEY_NOT_FOUND.
+                if (status != fuchsia::ledger::Status::OK) {
+                  FXL_LOG(ERROR) << "SessionStorage: Page.Delete() " << status;
+                }
+                returned_future->Complete();
+              });
+        } else {
+          returned_future->Complete();
+        }
+      }));
+
+  return returned_future;
+}
+
 void SessionStorage::OnPageChange(const std::string& key,
                                   const std::string& value) {
   auto story_data = fuchsia::modular::internal::StoryData::New();
