@@ -21,7 +21,7 @@ source_set("impl") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/netconnector/cpp",
-    "//garnet/public/lib/netconnector/fidl",
+    "//garnet/public/fidl/fuchsia.netconnector",
     "//peridot/bin/ledger/filesystem",
     "//peridot/bin/ledger/p2p_provider/public",
     "//peridot/lib/convert",

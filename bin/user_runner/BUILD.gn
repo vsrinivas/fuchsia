@@ -27,9 +27,9 @@ executable_package("user_runner") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/net/oldhttp/fidl",
-    "//garnet/public/lib/ui/policy/fidl",
-    "//garnet/public/lib/ui/views/fidl:v1",
+    "//garnet/public/fidl/fuchsia.net.oldhttp",
+    "//garnet/public/fidl/fuchsia.ui.policy",
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//peridot/bin/cloud_provider_firebase/fidl",
     "//peridot/bin/device_runner/cobalt",
     "//peridot/bin/ledger/fidl",
@@ -82,7 +82,7 @@ executable_package("dev_user_shell") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/view_framework",
-    "//garnet/public/lib/ui/views/fidl:v1",
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",
@@ -153,7 +153,7 @@ source_set("presentation_provider") {
   deps = [
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/ui/policy/fidl",
+    "//garnet/public/fidl/fuchsia.ui.policy",
     "//peridot/public/fidl/fuchsia.modular",
   ]
 }

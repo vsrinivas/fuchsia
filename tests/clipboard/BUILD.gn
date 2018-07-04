@@ -14,7 +14,7 @@ executable_package("clipboard_test_module") {
     ":defs",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/test_runner/fidl",
+    "//garnet/public/fidl/fuchsia.testing.runner",
     "//peridot/lib/testing",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",

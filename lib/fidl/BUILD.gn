@@ -95,10 +95,10 @@ source_set("single_service_app") {
 
   public_deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/app/fidl",
+    "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/ui/views/fidl:v1",
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//peridot/public/fidl/fuchsia.modular",
   ]
 }
@@ -117,7 +117,7 @@ source_set("view_host") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/view_framework",
-    "//garnet/public/lib/ui/views/fidl:v1",
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
   ]
 }
 

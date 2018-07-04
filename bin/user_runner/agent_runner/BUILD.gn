@@ -19,7 +19,7 @@ source_set("agent_runner") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/app/fidl",
+    "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -51,7 +51,7 @@ executable("agent_runner_unittest") {
     ":public",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/cpp/testing:fake_launcher",
-    "//garnet/public/lib/app/fidl",
+    "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/user_runner/entity_provider_runner",
@@ -83,7 +83,7 @@ source_set("public") {
   ]
 
   deps = [
-    "//garnet/public/lib/app/fidl",
+    "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/fidl",

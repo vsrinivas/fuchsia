@@ -41,7 +41,7 @@ source_set("firebase_source") {
     ":xdr",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/net/oldhttp/fidl",
+    "//garnet/public/fidl/fuchsia.net.oldhttp",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/firebase",
     "//third_party/rapidjson",

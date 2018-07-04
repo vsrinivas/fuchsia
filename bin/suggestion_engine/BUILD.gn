@@ -53,7 +53,7 @@ source_set("suggestion_engine_impl") {
     ":models",
     ":state",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/media/fidl",
+    "//garnet/public/fidl/fuchsia.media",
     "//garnet/public/lib/media/timeline",
     "//peridot/bin/suggestion_engine/decision_policies:all",
     "//peridot/bin/suggestion_engine/filters:all",

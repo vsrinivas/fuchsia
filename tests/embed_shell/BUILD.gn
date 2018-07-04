@@ -21,7 +21,7 @@ executable_package("embed_shell_test_child_module") {
 
   deps = [
     ":defs",
-    "//garnet/public/lib/ui/views/fidl:v1",
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//peridot/lib/testing",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
@@ -40,7 +40,7 @@ executable_package("embed_shell_test_parent_module") {
   deps = [
     ":defs",
     "//garnet/public/lib/callback",
-    "//garnet/public/lib/ui/views/fidl:v1",
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//peridot/lib/testing",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
@@ -60,8 +60,8 @@ executable_package("embed_shell_test_story_shell") {
     ":defs",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/test_runner/fidl",
-    "//garnet/public/lib/ui/views/fidl:v1",
+    "//garnet/public/fidl/fuchsia.testing.runner",
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",

@@ -14,6 +14,6 @@ fidl("fuchsia.speech") {
   ]
 
   deps = [
-    "//garnet/public/lib/media/fidl",
+    "//garnet/public/fidl/fuchsia.media",
   ]
 }

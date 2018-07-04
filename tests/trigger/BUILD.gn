@@ -25,7 +25,7 @@ executable_package("trigger_test_user_shell") {
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/test_runner/fidl",
+    "//garnet/public/fidl/fuchsia.testing.runner",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",

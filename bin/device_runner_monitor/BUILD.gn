@@ -12,7 +12,7 @@ executable_package("device_runner_monitor") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/app/fidl",
+    "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/fxl",
     "//peridot/public/fidl/fuchsia.modular",
     "//zircon/public/lib/async-loop-cpp",

@@ -76,9 +76,9 @@ fidl("fuchsia.modular") {
   ]
 
   deps = [
-    "//garnet/public/lib/images/fidl",
-    "//garnet/public/lib/media/fidl",
-    "//garnet/public/lib/ui/policy/fidl",
+    "//garnet/public/fidl/fuchsia.images",
+    "//garnet/public/fidl/fuchsia.media",
+    "//garnet/public/fidl/fuchsia.ui.policy",
     "//peridot/public/fidl/fuchsia.ledger",
     "//peridot/public/fidl/fuchsia.modular.auth",
     "//peridot/public/fidl/fuchsia.speech",

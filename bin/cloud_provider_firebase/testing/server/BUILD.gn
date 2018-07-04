@@ -22,8 +22,8 @@ source_set("server") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/net/oldhttp/fidl",
-    "//garnet/public/lib/netstack/fidl",
+    "//garnet/public/fidl/fuchsia.net.oldhttp",
+    "//garnet/public/fidl/fuchsia.netstack",
     "//peridot/lib/socket",
   ]
 

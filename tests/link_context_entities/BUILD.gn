@@ -23,8 +23,8 @@ executable_package("link_context_entities_test_user_shell") {
     ":defs",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/test_runner/fidl",
-    "//garnet/public/lib/ui/views/fidl:v1",
+    "//garnet/public/fidl/fuchsia.testing.runner",
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/rapidjson",
@@ -47,7 +47,7 @@ executable_package("link_context_entities_test_module") {
 
   deps = [
     ":defs",
-    "//garnet/public/lib/ui/views/fidl:v1",
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/fidl/fuchsia.modular",

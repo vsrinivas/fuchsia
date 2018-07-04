@@ -12,7 +12,7 @@ executable_package("modular_benchmark_story_module") {
   ]
   deps = [
     ":tracing_waiter",
-    "//garnet/public/lib/ui/views/fidl:v1",
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//zircon/public/lib/async-loop-cpp",
@@ -27,8 +27,8 @@ executable_package("modular_benchmark_story_user_shell") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/test_runner/fidl",
-    "//garnet/public/lib/ui/views/fidl:v1",
+    "//garnet/public/fidl/fuchsia.testing.runner",
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//peridot/lib/common:names",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
