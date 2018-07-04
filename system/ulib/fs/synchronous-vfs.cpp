@@ -13,7 +13,7 @@ namespace fs {
 
 SynchronousVfs::SynchronousVfs() : is_shutting_down_(false) {}
 
-SynchronousVfs::SynchronousVfs(async_t* async) : Vfs(async),
+SynchronousVfs::SynchronousVfs(async_dispatcher_t* dispatcher) : Vfs(dispatcher),
     is_shutting_down_(false) {}
 
 SynchronousVfs::~SynchronousVfs() {

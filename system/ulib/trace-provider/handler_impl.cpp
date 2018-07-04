@@ -37,7 +37,7 @@ TraceHandlerImpl::~TraceHandlerImpl() {
     ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
-zx_status_t TraceHandlerImpl::StartEngine(async_t* async,
+zx_status_t TraceHandlerImpl::StartEngine(async_dispatcher_t* dispatcher,
                                           zx::vmo buffer, zx::eventpair fence,
                                           fbl::Vector<fbl::String> enabled_categories) {
     ZX_DEBUG_ASSERT(buffer);
@@ -58,7 +58,7 @@ zx_status_t TraceHandlerImpl::StartEngine(async_t* async,
     auto handler = new TraceHandlerImpl(reinterpret_cast<void*>(buffer_ptr),
                                         buffer_num_bytes, fbl::move(fence),
                                         fbl::move(enabled_categories));
-    status = trace_start_engine(async, handler,
+    status = trace_start_engine(dispatcher, handler,
                                 handler->buffer_, handler->buffer_num_bytes_);
     if (status != ZX_OK) {
         delete handler;
@@ -92,7 +92,7 @@ void TraceHandlerImpl::TraceStarted() {
                     status == ZX_ERR_PEER_CLOSED);
 }
 
-void TraceHandlerImpl::TraceStopped(async_t* async, zx_status_t disposition,
+void TraceHandlerImpl::TraceStopped(async_dispatcher_t* dispatcher, zx_status_t disposition,
                                     size_t buffer_bytes_written) {
     // TODO: Report the disposition and bytes written back to the tracing system
     // so it has a better idea of what happened.

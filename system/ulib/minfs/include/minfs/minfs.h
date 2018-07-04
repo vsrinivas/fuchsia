@@ -36,10 +36,10 @@ zx_status_t Mkfs(fbl::unique_ptr<Bcache> bc);
 // Mount the filesystem backed by |bc| using the VFS layer |vfs|,
 // and serve the root directory under the provided |mount_channel|.
 //
-// This function does not start the async_t object owned by |vfs|;
-// requests will not be dispatched if that async_t object is not
+// This function does not start the async_dispatcher_t object owned by |vfs|;
+// requests will not be dispatched if that async_dispatcher_t object is not
 // active.
-zx_status_t MountAndServe(const minfs_options_t* options, async_t* async,
+zx_status_t MountAndServe(const minfs_options_t* options, async_dispatcher_t* dispatcher,
                           fbl::unique_ptr<Bcache> bc,
                           zx::channel mount_channel, fbl::Closure on_unmount);
 #endif

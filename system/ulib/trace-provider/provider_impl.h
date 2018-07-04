@@ -21,7 +21,7 @@ namespace internal {
 
 class TraceProviderImpl final : public trace_provider_t {
 public:
-    TraceProviderImpl(async_t* async, zx::channel channel);
+    TraceProviderImpl(async_dispatcher_t* dispatcher, zx::channel channel);
     ~TraceProviderImpl();
 
 private:
@@ -31,7 +31,7 @@ private:
         ~Connection();
 
     private:
-        void Handle(async_t* async,
+        void Handle(async_dispatcher_t* dispatcher,
                     async::WaitBase* wait,
                     zx_status_t status,
                     const zx_packet_signal_t* signal);
@@ -50,7 +50,7 @@ private:
                fbl::Vector<fbl::String> enabled_categories);
     void Stop();
 
-    async_t* const async_;
+    async_dispatcher_t* const dispatcher_;
     Connection connection_;
     bool running_ = false;
 

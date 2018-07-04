@@ -35,7 +35,7 @@ typedef struct zx_service_ops {
     //
     // This function takes ownership of |request| and should close |request| on
     // error.
-    zx_status_t (*connect)(void* ctx, async_t* async, const char* service_name,
+    zx_status_t (*connect)(void* ctx, async_dispatcher_t* dispatcher, const char* service_name,
                            zx_handle_t request);
 
     // Called before the service is unloaded.

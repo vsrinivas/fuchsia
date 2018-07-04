@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async-testutils/async_stub.h>
+#include <lib/async-testutils/dispatcher_stub.h>
 #include <lib/async/cpp/trap.h>
 #include <unittest/unittest.h>
 
@@ -18,7 +18,7 @@ const zx_packet_guest_bell_t dummy_bell{
     .reserved2 = 0u,
 };
 
-class MockAsync : public async::AsyncStub {
+class MockDispatcher : public async::DispatcherStub {
 public:
     zx_status_t SetGuestBellTrap(async_guest_bell_trap_t* trap,
                                  const zx::guest& guest,
@@ -38,7 +38,7 @@ public:
 
 class Harness {
 public:
-    void Handler(async_t* async,
+    void Handler(async_dispatcher_t* dispatcher,
                  async::GuestBellTrapBase* trap,
                  zx_status_t status,
                  const zx_packet_guest_bell_t* bell) {
@@ -61,9 +61,9 @@ public:
     async::GuestBellTrapBase& trap() override { return trap_; }
 
 private:
-    async::GuestBellTrap trap_{[this](async_t* async, async::GuestBellTrap* trap,
+    async::GuestBellTrap trap_{[this](async_dispatcher_t* dispatcher, async::GuestBellTrap* trap,
                                       zx_status_t status, const zx_packet_guest_bell_t* bell) {
-        Handler(async, trap, status, bell);
+        Handler(dispatcher, trap, status, bell);
     }};
 };
 
@@ -82,13 +82,13 @@ bool guest_bell_trap_set_handler_test() {
         async::GuestBellTrap trap;
         EXPECT_FALSE(trap.has_handler());
 
-        trap.set_handler([](async_t* async, async::GuestBellTrap* trap,
+        trap.set_handler([](async_dispatcher_t* dispatcher, async::GuestBellTrap* trap,
                             zx_status_t status, const zx_packet_guest_bell_t* bell) {});
         EXPECT_TRUE(trap.has_handler());
     }
 
     {
-        async::GuestBellTrap trap([](async_t* async, async::GuestBellTrap* trap,
+        async::GuestBellTrap trap([](async_dispatcher_t* dispatcher, async::GuestBellTrap* trap,
                                      zx_status_t status, const zx_packet_guest_bell_t* bell) {});
         EXPECT_TRUE(trap.has_handler());
     }
@@ -100,16 +100,16 @@ template <typename Harness>
 bool guest_bell_trap_test() {
     BEGIN_TEST;
 
-    MockAsync async;
+    MockDispatcher dispatcher;
     Harness harness;
 
-    EXPECT_EQ(ZX_OK, harness.trap().SetTrap(&async, zx::unowned_guest::wrap(dummy_guest),
+    EXPECT_EQ(ZX_OK, harness.trap().SetTrap(&dispatcher, zx::unowned_guest::wrap(dummy_guest),
                                             dummy_addr, dummy_length));
-    EXPECT_EQ(dummy_guest, async.last_guest);
-    EXPECT_EQ(dummy_addr, async.last_addr);
-    EXPECT_EQ(dummy_length, async.last_length);
+    EXPECT_EQ(dummy_guest, dispatcher.last_guest);
+    EXPECT_EQ(dummy_addr, dispatcher.last_addr);
+    EXPECT_EQ(dummy_length, dispatcher.last_length);
 
-    async.last_trap->handler(&async, async.last_trap, ZX_OK, &dummy_bell);
+    dispatcher.last_trap->handler(&dispatcher, dispatcher.last_trap, ZX_OK, &dummy_bell);
     EXPECT_TRUE(harness.handler_ran);
     EXPECT_EQ(&harness.trap(), harness.last_trap);
     EXPECT_EQ(ZX_OK, harness.last_status);

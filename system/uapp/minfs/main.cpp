@@ -40,11 +40,11 @@ int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc,
     }
 
     async::Loop loop;
-    trace::TraceProvider trace_provider(loop.async());
+    trace::TraceProvider trace_provider(loop.dispatcher());
 
     auto loop_quit = [&loop]() { loop.Quit(); };
     zx_status_t status;
-    if ((status = MountAndServe(options, loop.async(), fbl::move(bc),
+    if ((status = MountAndServe(options, loop.dispatcher(), fbl::move(bc),
                                 zx::channel(h), fbl::move(loop_quit)) != ZX_OK)) {
         if (options->verbose) {
             fprintf(stderr, "minfs: Failed to mount: %d\n", status);

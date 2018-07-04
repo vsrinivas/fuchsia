@@ -29,7 +29,7 @@ public:
 // imported/released (i.e. can be released while still in use).
 class Fence : public fbl::RefCounted<Fence>, public IdMappable<fbl::RefPtr<Fence>> {
 public:
-    Fence(FenceCallback* cb, async_t* async, uint64_t id, zx::event&& event);
+    Fence(FenceCallback* cb, async_dispatcher_t* dispatcher, uint64_t id, zx::event&& event);
     ~Fence();
 
     // Creates a new FenceReference when an event is imported.
@@ -56,12 +56,12 @@ private:
     // signaled, the signal will be cleared and the first fence ref will be marked ready.
     fbl::DoublyLinkedList<fbl::RefPtr<FenceReference>> armed_refs_;
 
-    void OnReady(async_t* async, async::WaitBase* self,
+    void OnReady(async_dispatcher_t* dispatcher, async::WaitBase* self,
                  zx_status_t status, const zx_packet_signal_t* signal);
     async::WaitMethod<Fence, &Fence::OnReady> ready_wait_{this};
 
     FenceCallback* cb_;
-    async_t* async_;
+    async_dispatcher_t* dispatcher_;
     zx::event event_;
     int ref_count_ = 0;
 

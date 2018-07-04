@@ -20,7 +20,6 @@
 
 #include <zircon/compiler.h>
 
-#include <lib/async/default.h>
 #include <lib/async/dispatcher.h>
 
 __BEGIN_CDECLS
@@ -38,7 +37,7 @@ typedef struct async_loop_config {
     //
     // If false, the loop will not do this.  The loop's creator is then
     // resposible for retrieving the loop's dispatcher using |async_loop_get_dispatcher()|
-    // and passing it around explicitly or calling |async_set_default()| as needed.
+    // and passing it around explicitly or calling |async_set_default_dispatcher()| as needed.
     //
     // Note that the loop can be used even without setting it as the current
     // thread's default.
@@ -79,9 +78,9 @@ zx_status_t async_loop_create(const async_loop_config_t* config,
                               async_loop_t** out_loop);
 
 // Gets the the message loop's asynchronous dispatch interface.
-static inline async_t* async_loop_get_dispatcher(async_loop_t* loop) {
+static inline async_dispatcher_t* async_loop_get_dispatcher(async_loop_t* loop) {
     // Note: The loop's implementation inherits from async_t so we can upcast to it.
-    return (async_t*)loop;
+    return (async_dispatcher_t*)loop;
 }
 
 // Gets the message loop associated with the specified asynchronous dispatch interface
@@ -89,8 +88,8 @@ static inline async_t* async_loop_get_dispatcher(async_loop_t* loop) {
 // This function assumes the dispatcher is backed by an |async_loop_t| which was created
 // using |async_loop_create()|.  Its behavior is undefined if used with other dispatcher
 // implementations.
-static inline async_loop_t* async_loop_from_dispatcher(async_t* async) {
-    return (async_loop_t*)async;
+static inline async_loop_t* async_loop_from_dispatcher(async_dispatcher_t* dispatcher) {
+    return (async_loop_t*)dispatcher;
 }
 
 // Shuts down the message loop, notifies handlers which asked to handle shutdown.

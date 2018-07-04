@@ -17,7 +17,7 @@ namespace async {
 // Returns |ZX_OK| if the task was successfully posted.
 // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
 // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
-zx_status_t PostTask(async_t* async, fbl::Closure handler);
+zx_status_t PostTask(async_dispatcher_t* dispatcher, fbl::Closure handler);
 
 // Posts a task to invoke |handler| with a deadline expressed as a |delay| from now.
 //
@@ -26,7 +26,7 @@ zx_status_t PostTask(async_t* async, fbl::Closure handler);
 // Returns |ZX_OK| if the task was successfully posted.
 // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
 // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
-zx_status_t PostDelayedTask(async_t* async, fbl::Closure handler, zx::duration delay);
+zx_status_t PostDelayedTask(async_dispatcher_t* dispatcher, fbl::Closure handler, zx::duration delay);
 
 // Posts a task to invoke |handler| with the specified |deadline|.
 //
@@ -35,7 +35,7 @@ zx_status_t PostDelayedTask(async_t* async, fbl::Closure handler, zx::duration d
 // Returns |ZX_OK| if the task was successfully posted.
 // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
 // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
-zx_status_t PostTaskForTime(async_t* async, fbl::Closure handler, zx::time deadline);
+zx_status_t PostTaskForTime(async_dispatcher_t* dispatcher, fbl::Closure handler, zx::time deadline);
 
 // Holds context for a task and its handler, with RAII semantics.
 // Automatically cancels the task when it goes out of scope.
@@ -64,7 +64,7 @@ protected:
 
 public:
     // Returns true if the task has been posted and has not yet executed or been canceled.
-    bool is_pending() const { return async_ != nullptr; }
+    bool is_pending() const { return dispatcher_ != nullptr; }
 
     // The last deadline with which the task was posted, or |zx::time::infinite()|
     // if it has never been posted.
@@ -77,7 +77,7 @@ public:
     // task is already pending.
     // Returns |ZX_ERR_ALREADY_EXISTS| if the task is already pending.
     // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
-    zx_status_t Post(async_t* async);
+    zx_status_t Post(async_dispatcher_t* dispatcher);
 
     // Posts a task to invoke the handler with a deadline expressed as a |delay| from now.
     //
@@ -86,7 +86,7 @@ public:
     // task is already pending.
     // Returns |ZX_ERR_ALREADY_EXISTS| if the task is already pending.
     // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
-    zx_status_t PostDelayed(async_t* async, zx::duration delay);
+    zx_status_t PostDelayed(async_dispatcher_t* dispatcher, zx::duration delay);
 
     // Posts a task to invoke the handler with the specified |deadline|.
     //
@@ -99,7 +99,7 @@ public:
     // task is already pending.
     // Returns |ZX_ERR_ALREADY_EXISTS| if the task is already pending.
     // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
-    zx_status_t PostForTime(async_t* async, zx::time deadline);
+    zx_status_t PostForTime(async_dispatcher_t* dispatcher, zx::time deadline);
 
     // Cancels the task.
     //
@@ -118,13 +118,13 @@ protected:
     static T* Dispatch(async_task_t* task) {
         static_assert(offsetof(TaskBase, task_) == 0, "");
         auto self = reinterpret_cast<TaskBase*>(task);
-        self->async_ = nullptr;
+        self->dispatcher_ = nullptr;
         return static_cast<T*>(self);
     }
 
 private:
     async_task_t task_;
-    async_t* async_ = nullptr;
+    async_dispatcher_t* dispatcher_ = nullptr;
 };
 
 // A task whose handler is bound to a |async::Task::Handler| function.
@@ -138,7 +138,7 @@ public:
     // The |status| is |ZX_OK| if the task's deadline elapsed and the task should run.
     // The |status| is |ZX_ERR_CANCELED| if the dispatcher was shut down before
     // the task's handler ran or the task was canceled.
-    using Handler = fbl::Function<void(async_t* async, async::Task* task, zx_status_t status)>;
+    using Handler = fbl::Function<void(async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status)>;
 
     explicit Task(Handler handler = nullptr);
     ~Task();
@@ -147,7 +147,7 @@ public:
     bool has_handler() const { return !!handler_; }
 
 private:
-    static void CallHandler(async_t* async, async_task_t* task, zx_status_t status);
+    static void CallHandler(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t status);
 
     Handler handler_;
 };
@@ -157,11 +157,11 @@ private:
 // Usage:
 //
 // class Foo {
-//     void Handle(async_t* async, async::TaskBase* task, zx_status_t status) { ... }
+//     void Handle(async_dispatcher_t* dispatcher, async::TaskBase* task, zx_status_t status) { ... }
 //     async::TaskMethod<Foo, &Foo::Handle> task_{this};
 // };
 template <class Class,
-          void (Class::*method)(async_t* async, async::TaskBase* task, zx_status_t status)>
+          void (Class::*method)(async_dispatcher_t* dispatcher, async::TaskBase* task, zx_status_t status)>
 class TaskMethod final : public TaskBase {
 public:
     explicit TaskMethod(Class* instance)
@@ -169,9 +169,9 @@ public:
     ~TaskMethod() = default;
 
 private:
-    static void CallHandler(async_t* async, async_task_t* task, zx_status_t status) {
+    static void CallHandler(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t status) {
         auto self = Dispatch<TaskMethod>(task);
-        (self->instance_->*method)(async, self, status);
+        (self->instance_->*method)(dispatcher, self, status);
     }
 
     Class* const instance_;
@@ -192,7 +192,7 @@ public:
     bool has_handler() const { return !!handler_; }
 
 private:
-    static void CallHandler(async_t* async, async_task_t* task, zx_status_t status);
+    static void CallHandler(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t status);
 
     fbl::Closure handler_;
 };
@@ -216,7 +216,7 @@ public:
     ~TaskClosureMethod() = default;
 
 private:
-    static void CallHandler(async_t* async, async_task_t* task, zx_status_t status) {
+    static void CallHandler(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t status) {
         auto self = Dispatch<TaskClosureMethod>(task); // must do this if status is not ok
         if (status == ZX_OK) {
             (self->instance_->*method)();

@@ -40,7 +40,7 @@ struct instance_state {
 // the same instance behave the same.
 struct loader_service {
     atomic_int refcount;
-    async_t* async;
+    async_dispatcher_t* dispatcher;
 
     const loader_service_ops_t* ops;
     void* ctx;
@@ -249,7 +249,7 @@ static zx_status_t loader_service_rpc(zx_handle_t h, session_state_t* session_st
     return ZX_OK;
 }
 
-zx_status_t loader_service_create(async_t* async,
+zx_status_t loader_service_create(async_dispatcher_t* dispatcher,
                                   const loader_service_ops_t* ops,
                                   void* ctx,
                                   loader_service_t** out) {
@@ -262,7 +262,7 @@ zx_status_t loader_service_create(async_t* async,
         return ZX_ERR_NO_MEMORY;
     }
 
-    if (!async) {
+    if (!dispatcher) {
         async_loop_t* loop;
         zx_status_t status = async_loop_create(NULL, &loop);
         if (status != ZX_OK) {
@@ -277,10 +277,10 @@ zx_status_t loader_service_create(async_t* async,
             return status;
         }
 
-        async = async_loop_get_dispatcher(loop);
+        dispatcher = async_loop_get_dispatcher(loop);
     }
 
-    svc->async = async;
+    svc->dispatcher = dispatcher;
     svc->ops = ops;
     svc->ctx = ctx;
 
@@ -302,7 +302,7 @@ static const char* const fs_lib_paths[] = {"system/lib", "boot/lib", NULL};
 // paths are loaded relative to |root_dir_fd| and among the array of
 // subdirectories given by |lib_paths| (NULL-terminated), with data published
 // in the location given by |data_sink_dir_fd|.
-zx_status_t loader_service_create_default(async_t* async,
+zx_status_t loader_service_create_default(async_dispatcher_t* dispatcher,
                                           int root_dir_fd,
                                           int data_sink_dir_fd,
                                           const char* const* lib_paths,
@@ -316,7 +316,7 @@ zx_status_t loader_service_create_default(async_t* async,
     instance_state->lib_paths = lib_paths? lib_paths : fd_lib_paths;
 
     loader_service_t* svc;
-    zx_status_t status = loader_service_create(async, &fd_ops, NULL, &svc);
+    zx_status_t status = loader_service_create(dispatcher, &fd_ops, NULL, &svc);
     if (status == ZX_OK) {
       svc->ctx = instance_state;
       *out = svc;
@@ -326,20 +326,20 @@ zx_status_t loader_service_create_default(async_t* async,
     return status;
 }
 
-zx_status_t loader_service_create_fs(async_t* async, loader_service_t** out) {
+zx_status_t loader_service_create_fs(async_dispatcher_t* dispatcher, loader_service_t** out) {
     int root_dir_fd = open("/", O_RDONLY | O_DIRECTORY);
     if (root_dir_fd < 0){
       return ZX_ERR_NOT_FOUND;
     }
-    return loader_service_create_default(async, root_dir_fd, -1, fs_lib_paths,
+    return loader_service_create_default(dispatcher, root_dir_fd, -1, fs_lib_paths,
                                          out);
 }
 
-zx_status_t loader_service_create_fd(async_t* async,
+zx_status_t loader_service_create_fd(async_dispatcher_t* dispatcher,
                                      int root_dir_fd,
                                      int data_sink_dir_fd,
                                      loader_service_t** out) {
-    return loader_service_create_default(async, root_dir_fd, data_sink_dir_fd,
+    return loader_service_create_default(dispatcher, root_dir_fd, data_sink_dir_fd,
                                          fd_lib_paths, out);
 }
 
@@ -351,7 +351,7 @@ zx_status_t loader_service_release(loader_service_t* svc) {
     return ZX_OK;
 }
 
-static void loader_service_handler(async_t* async,
+static void loader_service_handler(async_dispatcher_t* dispatcher,
                                    async_wait_t* wait,
                                    zx_status_t status,
                                    const zx_packet_signal_t* signal) {
@@ -361,7 +361,7 @@ static void loader_service_handler(async_t* async,
     status = loader_service_rpc(wait->object, session_state);
     if (status != ZX_OK)
         goto stop;
-    status = async_begin_wait(async, wait);
+    status = async_begin_wait(dispatcher, wait);
     if (status != ZX_OK)
         goto stop;
     return;
@@ -392,7 +392,7 @@ zx_status_t loader_service_attach(loader_service_t* svc, zx_handle_t h) {
     session_state->wait.trigger = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     session_state->svc = svc;
 
-    status = async_begin_wait(svc->async, &session_state->wait);
+    status = async_begin_wait(svc->dispatcher, &session_state->wait);
 
     if (status == ZX_OK) {
         loader_service_addref(svc); // Balanced in |loader_service_handler|.

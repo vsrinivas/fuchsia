@@ -40,7 +40,11 @@ public:
     async_loop_t* loop() const { return loop_; }
 
     // Gets the loop's asynchronous dispatch interface.
-    async_t* async() const { return async_loop_get_dispatcher(loop_); }
+    async_dispatcher_t* dispatcher() const { return async_loop_get_dispatcher(loop_); }
+
+    // TODO(davemoore): ZX-2337 Remove after all external references have been changed
+    // to async_dispatcher_t.
+    async_dispatcher_t* async() const { return dispatcher(); }
 
     // Shuts down the message loop, notifies handlers which asked to handle shutdown.
     // The message loop must not currently be running on any threads other than

@@ -12,7 +12,7 @@ __BEGIN_CDECLS
 //
 // The |status| is |ZX_OK| if the bell was received and |bell| contains the
 // information from the packet, otherwise |bell| is null.
-typedef void(async_guest_bell_trap_handler_t)(async_t* async,
+typedef void(async_guest_bell_trap_handler_t)(async_dispatcher_t* dispatcher,
                                               async_guest_bell_trap_t* trap,
                                               zx_status_t status,
                                               const zx_packet_guest_bell_t* bell);
@@ -47,7 +47,7 @@ struct async_guest_bell_trap {
 // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
 //
 // This operation is thread-safe.
-zx_status_t async_set_guest_bell_trap(async_t* async, async_guest_bell_trap_t* trap,
+zx_status_t async_set_guest_bell_trap(async_dispatcher_t* dispatcher, async_guest_bell_trap_t* trap,
                                       zx_handle_t guest, zx_vaddr_t addr, size_t length);
 
 __END_CDECLS

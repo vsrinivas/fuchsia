@@ -227,7 +227,7 @@ private:
     // TODO(stevensd): Delete this when client stop using SetDisplayImage
     uint64_t display_image_layer_ = INVALID_ID;
 
-    void HandleControllerApi(async_t* async, async::WaitBase* self,
+    void HandleControllerApi(async_dispatcher_t* dispatcher, async::WaitBase* self,
                              zx_status_t status, const zx_packet_signal_t* signal);
     async::WaitMethod<Client, &Client::HandleControllerApi> api_wait_{this};
 

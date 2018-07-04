@@ -2417,7 +2417,7 @@ int main(int argc, char** argv) {
         fprintf(stderr, "Error: Cannot initialize local tmpfs loop\n");
         return -1;
     }
-    if (memfs_install_at(loop.async(), TMPFS_PATH) != ZX_OK) {
+    if (memfs_install_at(loop.dispatcher(), TMPFS_PATH) != ZX_OK) {
         fprintf(stderr, "Error: Cannot install local tmpfs\n");
         return -1;
     }

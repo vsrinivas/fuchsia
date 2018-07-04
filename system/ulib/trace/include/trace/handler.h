@@ -49,7 +49,7 @@ public:
     // |buffer_bytes_written| is number of bytes which were written to the trace buffer.
     //
     // Called on an asynchronous dispatch thread.
-    virtual void TraceStopped(async_t* async,
+    virtual void TraceStopped(async_dispatcher_t* dispatcher,
                               zx_status_t disposition, size_t buffer_bytes_written) {}
 
     // Called by the trace engine to indicate a record got dropped because
@@ -59,7 +59,7 @@ public:
 private:
     static bool CallIsCategoryEnabled(trace_handler_t* handler, const char* category);
     static void CallTraceStarted(trace_handler_t* handler);
-    static void CallTraceStopped(trace_handler_t* handler, async_t* async,
+    static void CallTraceStopped(trace_handler_t* handler, async_dispatcher_t* dispatcher,
                                  zx_status_t disposition, size_t buffer_bytes_written);
     static void CallBufferOverflow(trace_handler_t* handler);
 

@@ -23,7 +23,7 @@ public:
     explicit LauncherImpl(zx::channel channel);
     ~LauncherImpl();
 
-    zx_status_t Begin(async_t* async);
+    zx_status_t Begin(async_dispatcher_t* dispatcher);
 
     void set_error_handler(ErrorCallback error_handler) {
         error_handler_ = fbl::move(error_handler);
@@ -33,7 +33,7 @@ public:
     static size_t GetHash(const LauncherImpl* impl) { return reinterpret_cast<uintptr_t>(impl); }
 
 private:
-    void OnHandleReady(async_t* async, async::WaitBase* wait, zx_status_t status,
+    void OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                        const zx_packet_signal_t* signal);
     zx_status_t ReadAndDispatchMessage(fidl::MessageBuffer* buffer);
 

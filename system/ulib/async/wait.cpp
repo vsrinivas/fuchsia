@@ -10,32 +10,32 @@ WaitBase::WaitBase(zx_handle_t object, zx_signals_t trigger, async_wait_handler_
     : wait_{{ASYNC_STATE_INIT}, handler, object, trigger} {}
 
 WaitBase::~WaitBase() {
-    if (async_) {
+    if (dispatcher_) {
         // Failure to cancel here may result in a dangling pointer...
-        zx_status_t status = async_cancel_wait(async_, &wait_);
+        zx_status_t status = async_cancel_wait(dispatcher_, &wait_);
         ZX_ASSERT_MSG(status == ZX_OK, "status=%d", status);
     }
 }
 
-zx_status_t WaitBase::Begin(async_t* async) {
-    if (async_)
+zx_status_t WaitBase::Begin(async_dispatcher_t* dispatcher) {
+    if (dispatcher_)
         return ZX_ERR_ALREADY_EXISTS;
 
-    async_ = async;
-    zx_status_t status = async_begin_wait(async, &wait_);
+    dispatcher_ = dispatcher;
+    zx_status_t status = async_begin_wait(dispatcher, &wait_);
     if (status != ZX_OK) {
-        async_ = nullptr;
+        dispatcher_ = nullptr;
     }
     return status;
 }
 
 zx_status_t WaitBase::Cancel() {
-    if (!async_)
+    if (!dispatcher_)
         return ZX_ERR_NOT_FOUND;
 
-    async_t* async = async_;
-    async_ = nullptr;
-    return async_cancel_wait(async, &wait_);
+    async_dispatcher_t* dispatcher = dispatcher_;
+    dispatcher_ = nullptr;
+    return async_cancel_wait(dispatcher, &wait_);
 }
 
 Wait::Wait(zx_handle_t object, zx_signals_t trigger, Handler handler)
@@ -43,10 +43,10 @@ Wait::Wait(zx_handle_t object, zx_signals_t trigger, Handler handler)
 
 Wait::~Wait() = default;
 
-void Wait::CallHandler(async_t* async, async_wait_t* wait,
+void Wait::CallHandler(async_dispatcher_t* dispatcher, async_wait_t* wait,
                        zx_status_t status, const zx_packet_signal_t* signal) {
     auto self = Dispatch<Wait>(wait);
-    self->handler_(async, self, status, signal);
+    self->handler_(dispatcher, self, status, signal);
 }
 
 } // namespace async

@@ -14,11 +14,11 @@
 
 int main(int argc, char** argv) {
     async::Loop loop;
-    trace::TraceProvider provider(loop.async());
+    trace::TraceProvider provider(loop.dispatcher());
 
     puts("Doing work for 30 seconds...");
 
-    zx::time start_time = async::Now(loop.async());
+    zx::time start_time = async::Now(loop.dispatcher());
     zx::time quit_time = start_time + zx::sec(30);
 
     int iteration = 0;
@@ -30,16 +30,16 @@ int main(int argc, char** argv) {
         zx::nanosleep(zx::deadline_after(zx::msec(500)));
 
         // Stop if quitting.
-        zx::time now = async::Now(loop.async());
+        zx::time now = async::Now(loop.dispatcher());
         if (now > quit_time) {
             loop.Quit();
             return;
         }
 
         // Schedule more work in a little bit.
-        task.PostForTime(loop.async(), now + zx::msec(200));
+        task.PostForTime(loop.dispatcher(), now + zx::msec(200));
     });
-    task.PostForTime(loop.async(), start_time);
+    task.PostForTime(loop.dispatcher(), start_time);
 
     loop.Run();
 

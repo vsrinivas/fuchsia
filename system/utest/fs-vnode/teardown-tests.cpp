@@ -102,7 +102,7 @@ bool send_sync(const zx::channel& client) {
 bool sync_start(completion_t* completions, async::Loop* loop,
                 fbl::unique_ptr<fs::ManagedVfs>* vfs) {
     BEGIN_HELPER;
-    *vfs = fbl::make_unique<fs::ManagedVfs>(loop->async());
+    *vfs = fbl::make_unique<fs::ManagedVfs>(loop->dispatcher());
     ASSERT_EQ(loop->StartThread(), ZX_OK);
 
     auto vn = fbl::AdoptRef(new AsyncTearDownVnode(completions));
@@ -166,7 +166,7 @@ bool test_posted_teardown() {
 
     completion_t* vnode_destroyed = &completions[2];
     completion_t shutdown_done;
-    ASSERT_EQ(async::PostTask(loop.async(), [&]() {
+    ASSERT_EQ(async::PostTask(loop.dispatcher(), [&]() {
         vfs->Shutdown([&vnode_destroyed, &shutdown_done](zx_status_t status) {
             ZX_ASSERT(status == ZX_OK);
             // C) Issue an explicit shutdown, check that the Vnode has
@@ -251,7 +251,7 @@ bool test_teardown_slow_clone() {
 
     async::Loop loop;
     completion_t completions[3];
-    auto vfs = fbl::make_unique<fs::ManagedVfs>(loop.async());
+    auto vfs = fbl::make_unique<fs::ManagedVfs>(loop.dispatcher());
     ASSERT_EQ(loop.StartThread(), ZX_OK);
 
     auto vn = fbl::AdoptRef(new AsyncTearDownVnode(completions));
@@ -309,7 +309,7 @@ bool test_synchronous_teardown() {
 
     {
         // Tear down the VFS while the async loop is running.
-        auto vfs = fbl::make_unique<fs::SynchronousVfs>(loop.async());
+        auto vfs = fbl::make_unique<fs::SynchronousVfs>(loop.dispatcher());
         auto vn = fbl::AdoptRef(new FdCountVnode());
         zx::channel server;
         ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
@@ -321,7 +321,7 @@ bool test_synchronous_teardown() {
 
     {
         // Tear down the VFS while the async loop is not running.
-        auto vfs = fbl::make_unique<fs::SynchronousVfs>(loop.async());
+        auto vfs = fbl::make_unique<fs::SynchronousVfs>(loop.dispatcher());
         auto vn = fbl::AdoptRef(new FdCountVnode());
         zx::channel server;
         ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
@@ -331,7 +331,7 @@ bool test_synchronous_teardown() {
 
     {
         // Tear down the VFS with no active connections.
-        auto vfs = fbl::make_unique<fs::SynchronousVfs>(loop.async());
+        auto vfs = fbl::make_unique<fs::SynchronousVfs>(loop.dispatcher());
     }
 
     END_TEST;

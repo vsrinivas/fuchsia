@@ -8,8 +8,8 @@
 
 namespace svc {
 
-Outgoing::Outgoing(async_t* async)
-    : vfs_(async),
+Outgoing::Outgoing(async_dispatcher_t* dispatcher)
+    : vfs_(dispatcher),
       root_dir_(fbl::MakeRefCounted<fs::PseudoDir>()),
       public_dir_(fbl::MakeRefCounted<fs::PseudoDir>()) {
     root_dir_->AddEntry("public", public_dir_);

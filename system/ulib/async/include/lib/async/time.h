@@ -11,6 +11,6 @@ __BEGIN_CDECLS
 // Returns the current time in the dispatcher's timebase.
 // For most loops, this is generally obtained from |ZX_CLOCK_MONOTONIC|
 // but certain loops may use a different tiembase, notably for testing.
-zx_time_t async_now(async_t* async);
+zx_time_t async_now(async_dispatcher_t* dispatcher);
 
 __END_CDECLS

@@ -25,9 +25,9 @@ struct memfs_filesystem {
     memfs::Vfs vfs;
 };
 
-zx_status_t memfs_create_filesystem(async_t* async, memfs_filesystem_t** out_fs,
+zx_status_t memfs_create_filesystem(async_dispatcher_t* dispatcher, memfs_filesystem_t** out_fs,
                                     zx_handle_t* out_root) {
-    ZX_DEBUG_ASSERT(async != nullptr);
+    ZX_DEBUG_ASSERT(dispatcher != nullptr);
     ZX_DEBUG_ASSERT(out_fs != nullptr);
     ZX_DEBUG_ASSERT(out_root != nullptr);
 
@@ -38,7 +38,7 @@ zx_status_t memfs_create_filesystem(async_t* async, memfs_filesystem_t** out_fs,
     }
 
     fbl::unique_ptr<memfs_filesystem_t> fs = fbl::make_unique<memfs_filesystem_t>();
-    fs->vfs.SetAsync(async);
+    fs->vfs.SetDispatcher(dispatcher);
 
     fbl::RefPtr<memfs::VnodeDir> root;
     if ((status = memfs::createFilesystem("<tmp>", &fs->vfs, &root)) != ZX_OK) {
@@ -53,7 +53,7 @@ zx_status_t memfs_create_filesystem(async_t* async, memfs_filesystem_t** out_fs,
     return ZX_OK;
 }
 
-zx_status_t memfs_install_at(async_t* async, const char* path) {
+zx_status_t memfs_install_at(async_dispatcher_t* dispatcher, const char* path) {
     fdio_ns_t* ns;
     zx_status_t status = fdio_ns_get_installed(&ns);
     if (status != ZX_OK) {
@@ -62,7 +62,7 @@ zx_status_t memfs_install_at(async_t* async, const char* path) {
 
     memfs_filesystem_t* fs;
     zx_handle_t root;
-    status = memfs_create_filesystem(async, &fs, &root);
+    status = memfs_create_filesystem(dispatcher, &fs, &root);
     if (status != ZX_OK) {
         return status;
     }

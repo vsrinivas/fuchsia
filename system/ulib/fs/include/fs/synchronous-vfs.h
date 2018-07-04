@@ -32,7 +32,7 @@ namespace fs {
 class SynchronousVfs : public Vfs {
 public:
     SynchronousVfs();
-    SynchronousVfs(async_t* async);
+    SynchronousVfs(async_dispatcher_t* dispatcher);
 
     // The SynchronousVfs destructor terminates all open
     // connections.

@@ -35,15 +35,15 @@ public:
     //
     // |async| the asynchronous dispatcher, must not be null.
     // |callback| the callback which is invoked whenever a state change is observed.
-    void Start(async_t* async, fbl::Closure callback);
+    void Start(async_dispatcher_t* dispatcher, fbl::Closure callback);
 
     // Stops watching for state changes.
     void Stop();
 
 private:
-    void Handle(async_t* async, async::WaitBase* wait, zx_status_t status,
+    void Handle(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                 const zx_packet_signal_t* signal);
-    void BeginWait(async_t* async);
+    void BeginWait(async_dispatcher_t* dispatcher);
 
     fbl::Closure callback_;
     zx::event event_;

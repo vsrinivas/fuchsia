@@ -19,8 +19,8 @@
 namespace trace {
 namespace internal {
 
-TraceProviderImpl::TraceProviderImpl(async_t* async, zx::channel channel)
-    : async_(async), connection_(this, fbl::move(channel)) {
+TraceProviderImpl::TraceProviderImpl(async_dispatcher_t* dispatcher, zx::channel channel)
+    : dispatcher_(dispatcher), connection_(this, fbl::move(channel)) {
 }
 
 TraceProviderImpl::~TraceProviderImpl() = default;
@@ -31,7 +31,7 @@ void TraceProviderImpl::Start(zx::vmo buffer, zx::eventpair fence,
         return;
 
     zx_status_t status = TraceHandlerImpl::StartEngine(
-        async_, fbl::move(buffer), fbl::move(fence),
+        dispatcher_, fbl::move(buffer), fbl::move(fence),
         fbl::move(enabled_categories));
     if (status == ZX_OK)
         running_ = true;
@@ -50,7 +50,7 @@ TraceProviderImpl::Connection::Connection(TraceProviderImpl* impl,
     : impl_(impl), channel_(fbl::move(channel)),
       wait_(this, channel_.get(),
             ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED) {
-    zx_status_t status = wait_.Begin(impl_->async_);
+    zx_status_t status = wait_.Begin(impl_->dispatcher_);
     if (status != ZX_OK) {
         Close();
     }
@@ -61,13 +61,13 @@ TraceProviderImpl::Connection::~Connection() {
 }
 
 void TraceProviderImpl::Connection::Handle(
-    async_t* async, async::WaitBase* wait, zx_status_t status,
+    async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
     const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
         printf("TraceProvider wait failed: status=%d\n", status);
     } else if (signal->observed & ZX_CHANNEL_READABLE) {
         if (ReadMessage()) {
-            if (wait_.Begin(async) == ZX_OK) {
+            if (wait_.Begin(dispatcher) == ZX_OK) {
                 return;
             }
         } else {
@@ -150,8 +150,8 @@ void TraceProviderImpl::Connection::Close() {
 } // namespace internal
 } // namespace trace
 
-trace_provider_t* trace_provider_create(async_t* async) {
-    ZX_DEBUG_ASSERT(async);
+trace_provider_t* trace_provider_create(async_dispatcher_t* dispatcher) {
+    ZX_DEBUG_ASSERT(dispatcher);
 
     // Connect to the trace registry.
     zx::channel registry_client;
@@ -182,7 +182,7 @@ trace_provider_t* trace_provider_create(async_t* async) {
     if (status != ZX_OK)
         return nullptr;
 
-    return new trace::internal::TraceProviderImpl(async, fbl::move(provider_service));
+    return new trace::internal::TraceProviderImpl(dispatcher, fbl::move(provider_service));
 }
 
 void trace_provider_destroy(trace_provider_t* provider) {

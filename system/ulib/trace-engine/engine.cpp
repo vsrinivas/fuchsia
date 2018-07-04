@@ -45,7 +45,7 @@ zx_status_t g_disposition{ZX_OK};
 // Rules:
 //   - can only be modified while holding g_engine_mutex and engine is stopped
 //   - can be read outside the lock only while the engine is not stopped
-async_t* g_async{nullptr};
+async_dispatcher_t* g_dispatcher{nullptr};
 
 // Trace handler.
 // Rules:
@@ -98,7 +98,7 @@ constexpr zx_signals_t SIGNAL_CONTEXT_RELEASED = ZX_USER_SIGNAL_1;
 // engine is running.  Use of these structures is guarded by the engine lock.
 async_wait_t g_event_wait;
 
-void handle_event(async_t* async, async_wait_t* wait,
+void handle_event(async_dispatcher_t* dispatcher, async_wait_t* wait,
                   zx_status_t status, const zx_packet_signal_t* signal);
 
 // must hold g_engine_mutex
@@ -127,11 +127,11 @@ void notify_engine_all_observers_started_if_needed_locked() {
 /*** Trace engine functions ***/
 
 // thread-safe
-zx_status_t trace_start_engine(async_t* async,
+zx_status_t trace_start_engine(async_dispatcher_t* dispatcher,
                                trace_handler_t* handler,
                                void* buffer,
                                size_t buffer_num_bytes) {
-    ZX_DEBUG_ASSERT(async);
+    ZX_DEBUG_ASSERT(dispatcher);
     ZX_DEBUG_ASSERT(handler);
     ZX_DEBUG_ASSERT(buffer);
 
@@ -154,13 +154,13 @@ zx_status_t trace_start_engine(async_t* async,
         .object = event.get(),
         .trigger = (SIGNAL_ALL_OBSERVERS_STARTED |
                     SIGNAL_CONTEXT_RELEASED)};
-    status = async_begin_wait(async, &g_event_wait);
+    status = async_begin_wait(dispatcher, &g_event_wait);
     if (status != ZX_OK)
         return status;
 
     // Initialize the trace engine state and context.
     g_state.store(TRACE_STARTED, fbl::memory_order_relaxed);
-    g_async = async;
+    g_dispatcher = dispatcher;
     g_handler = handler;
     g_disposition = ZX_OK;
     g_context = new trace_context(buffer, buffer_num_bytes, handler);
@@ -230,7 +230,7 @@ void handle_all_observers_started() {
     }
 }
 
-void handle_context_released(async_t* async) {
+void handle_context_released(async_dispatcher_t* dispatcher) {
     // All ready to clean up.
     // Grab the mutex while modifying shared state.
     zx_status_t disposition;
@@ -251,7 +251,7 @@ void handle_context_released(async_t* async) {
         buffer_bytes_written = g_context->bytes_allocated();
 
         // Tidy up.
-        g_async = nullptr;
+        g_dispatcher = nullptr;
         g_handler = nullptr;
         g_disposition = ZX_OK;
         g_event.reset();
@@ -263,13 +263,13 @@ void handle_context_released(async_t* async) {
     }
 
     // Notify the handler about the final disposition.
-    handler->ops->trace_stopped(handler, async, disposition, buffer_bytes_written);
+    handler->ops->trace_stopped(handler, dispatcher, disposition, buffer_bytes_written);
 }
 
 // Handles the case where the asynchronous dispatcher has encountered an error
 // and will no longer be servicing the wait callback.  Consequently, this is
 // our last chance to stop the engine and await for all contexts to be released.
-void handle_hard_shutdown(async_t* async) {
+void handle_hard_shutdown(async_dispatcher_t* dispatcher) {
     // Stop the engine, in case it hasn't noticed yet.
     trace_stop_engine(ZX_ERR_CANCELED);
 
@@ -286,7 +286,7 @@ void handle_hard_shutdown(async_t* async) {
         zx::deadline_after(kSynchronousShutdownTimeout),
         nullptr);
     if (status == ZX_OK) {
-        handle_context_released(async);
+        handle_context_released(dispatcher);
         return;
     }
 
@@ -298,7 +298,7 @@ void handle_hard_shutdown(async_t* async) {
            kSynchronousShutdownTimeout.get());
 }
 
-void handle_event(async_t* async, async_wait_t* wait,
+void handle_event(async_dispatcher_t* dispatcher, async_wait_t* wait,
                   zx_status_t status, const zx_packet_signal_t* signal) {
     // Note: This function may get both SIGNAL_ALL_OBSERVERS_STARTED
     // and SIGNAL_CONTEXT_RELEASED at the same time.
@@ -308,14 +308,14 @@ void handle_event(async_t* async, async_wait_t* wait,
             handle_all_observers_started();
         }
         if (signal->observed & SIGNAL_CONTEXT_RELEASED) {
-            handle_context_released(async);
+            handle_context_released(dispatcher);
             return; // trace engine is completely stopped now
         }
-        status = async_begin_wait(async, &g_event_wait);
+        status = async_begin_wait(dispatcher, &g_event_wait);
     }
 
     if (status != ZX_OK) {
-        handle_hard_shutdown(async);
+        handle_hard_shutdown(dispatcher);
     }
 }
 

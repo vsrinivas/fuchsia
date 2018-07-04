@@ -33,7 +33,7 @@ static zx_status_t provider_init(zx_service_provider_instance_t* instance) {
 }
 
 static zx_status_t provider_publish(zx_service_provider_instance_t* instance,
-                                    async_t* async, const fbl::RefPtr<fs::PseudoDir>& dir) {
+                                    async_dispatcher_t* dispatcher, const fbl::RefPtr<fs::PseudoDir>& dir) {
     const zx_service_provider_t* provider = instance->provider;
 
     if (!provider->services || !provider->ops->connect)
@@ -43,8 +43,8 @@ static zx_status_t provider_publish(zx_service_provider_instance_t* instance,
         const char* service_name = provider->services[i];
         zx_status_t status = dir->AddEntry(
             service_name,
-            fbl::MakeRefCounted<fs::Service>([instance, async, service_name](zx::channel request) {
-                return instance->provider->ops->connect(instance->ctx, async, service_name, request.release());
+            fbl::MakeRefCounted<fs::Service>([instance, dispatcher, service_name](zx::channel request) {
+                return instance->provider->ops->connect(instance->ctx, dispatcher, service_name, request.release());
             }));
         if (status != ZX_OK) {
             for (size_t j = 0; j < i; ++j)
@@ -63,7 +63,7 @@ static void provider_release(zx_service_provider_instance_t* instance) {
 }
 
 static zx_status_t provider_load(zx_service_provider_instance_t* instance,
-                                 async_t* async, const fbl::RefPtr<fs::PseudoDir>& dir) {
+                                 async_dispatcher_t* dispatcher, const fbl::RefPtr<fs::PseudoDir>& dir) {
     if (instance->provider->version != SERVICE_PROVIDER_VERSION) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -73,7 +73,7 @@ static zx_status_t provider_load(zx_service_provider_instance_t* instance,
         return status;
     }
 
-    status = provider_publish(instance, async, dir);
+    status = provider_publish(instance, dispatcher, dir);
     if (status != ZX_OK) {
         provider_release(instance);
         return status;
@@ -139,8 +139,8 @@ void publish_deprecated_services(const fbl::RefPtr<fs::PseudoDir>& dir) {
 
 int main(int argc, char** argv) {
     async::Loop loop;
-    async_t* async = loop.async();
-    svc::Outgoing outgoing(async);
+    async_dispatcher_t* dispatcher = loop.dispatcher();
+    svc::Outgoing outgoing(dispatcher);
 
     appmgr_svc = zx_take_startup_handle(PA_HND(PA_USER0, 0));
 
@@ -157,7 +157,7 @@ int main(int argc, char** argv) {
     };
 
     for (size_t i = 0; i < fbl::count_of(service_providers); ++i) {
-        status = provider_load(&service_providers[i], async, outgoing.public_dir());
+        status = provider_load(&service_providers[i], dispatcher, outgoing.public_dir());
         if (status != ZX_OK) {
             fprintf(stderr, "svchost: error: Failed to load service provider %zu: %d (%s).\n",
                     i, status, zx_status_get_string(status));

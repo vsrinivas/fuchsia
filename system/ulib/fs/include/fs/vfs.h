@@ -152,10 +152,10 @@ public:
     zx_status_t Readdir(Vnode* vn, vdircookie_t* cookie,
                         void* dirents, size_t len, size_t* out_actual) __TA_EXCLUDES(vfs_lock_);
 
-    Vfs(async_t* async);
+    Vfs(async_dispatcher_t* dispatcher);
 
-    async_t* async() { return async_; }
-    void SetAsync(async_t* async) { async_ = async; }
+    async_dispatcher_t* dispatcher() { return dispatcher_; }
+    void SetDispatcher(async_dispatcher_t* dispatcher) { dispatcher_ = dispatcher; }
 
     // Begins serving VFS messages over the specified connection.
     zx_status_t ServeConnection(fbl::unique_ptr<Connection> connection) __TA_EXCLUDES(vfs_lock_);
@@ -236,7 +236,7 @@ private:
     // empty; "remote_list" is a member of the bss section.
     MountNode::ListType remote_list_ __TA_GUARDED(vfs_lock_){};
 
-    async_t* async_{};
+    async_dispatcher_t* dispatcher_{};
 
 protected:
     // A lock which should be used to protect lookup and walk operations

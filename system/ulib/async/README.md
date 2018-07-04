@@ -32,7 +32,7 @@ and structures declared in the following headers:
 default asynchronous dispatcher as declared in [async/default.h](include/lib/async/default.h).
 
 See also [libasync-loop.a](../async-loop/README.md) which provides a general-purpose
-implementation of `async_t`.
+implementation of `async_dispatcher_t`.
 
 ## Using the asynchronous dispatcher
 
@@ -53,16 +53,16 @@ See [async/wait.h](include/lib/async/wait.h) for details.
 
 ```c
 #include <lib/async/wait.h>     // for async_begin_wait()
-#include <lib/async/default.h>  // for async_get_default()
+#include <lib/async/default.h>  // for async_get_default_dispatcher()
 
-void handler(async_t* async, async_wait_t* wait,
+void handler(async_dispatcher_t* async, async_wait_t* wait,
              zx_status_t status, const zx_packet_signal_t* signal) {
     printf("signal received: status=%d, observed=%d", status, signal ? signal->observed : 0);
     free(wait);
 }
 
 zx_status_t await(zx_handle_t object, zx_signals_t trigger, void* data) {
-    async_t* async = async_get_default();
+    async_dispatcher_t* async = async_get_default_dispatcher();
     async_wait_t* wait = calloc(1, sizeof(async_wait_t));
     wait->handler = handler;
     wait->object = object;
@@ -101,21 +101,21 @@ See [async/task.h](include/lib/async/task.h) for details.
 ```c
 #include <lib/async/task.h>     // for async_post_task()
 #include <lib/async/time.h>     // for async_now()
-#include <lib/async/default.h>  // for async_get_default()
+#include <lib/async/default.h>  // for async_get_default_dispatcher()
 
 typedef struct {
     async_task_t task;
     void* data;
 } task_data_t;
 
-void handler(async_t* async, async_task_t* task, zx_status_t status) {
+void handler(async_dispatcher_t* async, async_task_t* task, zx_status_t status) {
     task_data_t* task_data = (task_data_t*)task;
     printf("task deadline elapsed: status=%d, data=%p", status, task_data->data);
     free(task_data);
 }
 
 zx_status_t schedule_work(void* data) {
-    async_t* async = async_get_default();
+    async_dispatcher_t* async = async_get_default_dispatcher();
     task_data_t* task_data = calloc(1, sizeof(task_data_t));
     task_data->task.handler = handler;
     task_data->task.deadline = async_now(async) + ZX_SEC(2);
@@ -141,9 +141,9 @@ See [async/receiver.h](include/lib/async/receiver.h) for details.
 
 ```c
 #include <lib/async/receiver.h>  // for async_queue_packet()
-#include <lib/async/default.h>   // for async_get_default()
+#include <lib/async/default.h>   // for async_get_default_dispatcher()
 
-void handler(async_t* async, async_receiver_t* receiver, zx_status_t status,
+void handler(async_dispatcher_t* async, async_receiver_t* receiver, zx_status_t status,
              const zx_packet_user_t* data) {
     printf("packet received: status=%d, data.u32[0]=%d", status, data ? data.u32[0] : 0);
 }
@@ -154,24 +154,24 @@ const async_receiver_t receiver = {
 }
 
 zx_status_t send(const zx_packet_user_t* data) {
-    async_t* async = async_get_default();
+    async_dispatcher_t* async = async_get_default_dispatcher();
     return async_queue_packet(async, &receiver, data);
 }
 ```
 
 ## The default async dispatcher
 
-As a client of the async dispatcher, where should you get your `async_t*` from?
+As a client of the async dispatcher, where should you get your `async_dispatcher_t*` from?
 
-The ideal answer is for the `async_t*` to be passed into your code when it is
+The ideal answer is for the `async_dispatcher_t*` to be passed into your code when it is
 initialized.  However sometimes this becomes burdensome or isn't practical.
 
 For this reason, the `libasync-default.so` shared library provides functions
-for getting or setting a thread-local default `async_t*` using
-`async_get_default()` or `async_set_default()`.
+for getting or setting a thread-local default `async_dispatcher_t*` using
+`async_get_default_dispatcher()` or `async_set_default_dispatcher()`.
 
-This makes it easy to retrieve the `async_t*` from the ambient environment
-by calling `async_get_default()`, which is used by many libraries.
+This makes it easy to retrieve the `async_dispatcher_t*` from the ambient environment
+by calling `async_get_default_dispatcher()`, which is used by many libraries.
 
 Message loop implementations should register themselves as the default
 dispatcher any threads they service.

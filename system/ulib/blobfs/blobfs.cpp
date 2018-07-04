@@ -627,13 +627,13 @@ zx_status_t VnodeBlob::CloneVmo(zx_rights_t rights, zx_handle_t* out) {
         //
         // We'll release it when no client-held VMOs are in use.
         clone_ref_ = fbl::RefPtr<VnodeBlob>(this);
-        clone_watcher_.Begin(blobfs_->async());
+        clone_watcher_.Begin(blobfs_->dispatcher());
     }
 
     return ZX_OK;
 }
 
-void VnodeBlob::HandleNoClones(async_t* async, async::WaitBase* wait,
+void VnodeBlob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                zx_status_t status, const zx_packet_signal_t* signal) {
     ZX_DEBUG_ASSERT(status == ZX_OK);
     ZX_DEBUG_ASSERT((signal->observed & ZX_VMO_ZERO_CHILDREN) != 0);
@@ -926,7 +926,7 @@ void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
 
         // 2b) Flush all pending work to blobfs to the underlying storage.
         Sync([this, cb = fbl::move(cb)](zx_status_t status) mutable {
-            async::PostTask(async(), [this, cb = fbl::move(cb)]() mutable {
+            async::PostTask(dispatcher(), [this, cb = fbl::move(cb)]() mutable {
                 // 3) Ensure the underlying disk has also flushed.
                 fsync(blockfd_.get());
 
@@ -1570,7 +1570,7 @@ zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd blockfd) 
     return ZX_OK;
 }
 
-zx_status_t blobfs_mount(async_t* async, fbl::unique_fd blockfd,
+zx_status_t blobfs_mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
                          const blob_options_t* options, zx::channel root,
                          fbl::Closure on_unmount) {
     zx_status_t status;
@@ -1584,7 +1584,7 @@ zx_status_t blobfs_mount(async_t* async, fbl::unique_fd blockfd,
         return status;
     }
 
-    fs->SetAsync(async);
+    fs->SetDispatcher(dispatcher);
     fs->SetReadonly(options->readonly);
     if (options->metrics) {
         fs->CollectMetrics();

@@ -126,7 +126,7 @@ static void populate_image(const fuchsia_display_ImageConfig& image, image_t* im
 
 namespace display {
 
-void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
+void Client::HandleControllerApi(async_dispatcher_t* dispatcher, async::WaitBase* self,
                                  zx_status_t status, const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
         zxlogf(INFO, "Unexpected status async status %d\n", status);
@@ -145,7 +145,7 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
     fidl::Message msg(fidl::BytePart(in_byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES),
                       fidl::HandlePart(&in_handle, 1));
     status = msg.Read(server_handle_, 0);
-    api_wait_.Begin(controller_->loop().async());
+    api_wait_.Begin(controller_->loop().dispatcher());
 
     if (status != ZX_OK) {
         zxlogf(TRACE, "Channel read failed %d\n", status);
@@ -263,7 +263,7 @@ void Client::HandleImportEvent(const fuchsia_display_ControllerImportEventReques
         auto fence = fences_.find(req->id);
         if (!fence.IsValid()) {
             fbl::AllocChecker ac;
-            auto new_fence = fbl::AdoptRef(new (&ac) Fence(this, controller_->loop().async(),
+            auto new_fence = fbl::AdoptRef(new (&ac) Fence(this, controller_->loop().dispatcher(),
                                                            req->id, fbl::move(event)));
             if (ac.check() && new_fence->CreateRef()) {
                 fences_.insert_or_find(fbl::move(new_fence));
@@ -1444,7 +1444,7 @@ zx_status_t Client::Init(zx_handle_t server_handle) {
 
     api_wait_.set_object(server_handle);
     api_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-    if ((status = api_wait_.Begin(controller_->loop().async())) != ZX_OK) {
+    if ((status = api_wait_.Begin(controller_->loop().dispatcher())) != ZX_OK) {
         // Clear the object, since that's used to detect whether or not api_wait_ is inited.
         api_wait_.set_object(ZX_HANDLE_INVALID);
         zxlogf(ERROR, "Failed to start waiting %d\n", status);
@@ -1467,7 +1467,7 @@ Client::~Client() {
 void ClientProxy::SetOwnership(bool is_owner) {
     auto task = new async::Task();
     task->set_handler([client_handler = &handler_, is_owner]
-                       (async_t* async, async::Task* task, zx_status_t status) {
+                       (async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
             if (status == ZX_OK && client_handler->IsValid()) {
                 client_handler->SetOwnership(is_owner);
             }
@@ -1475,7 +1475,7 @@ void ClientProxy::SetOwnership(bool is_owner) {
             delete task;
 
     });
-    task->Post(controller_->loop().async());
+    task->Post(controller_->loop().dispatcher());
 }
 
 zx_status_t ClientProxy::OnDisplaysChanged(const uint64_t* displays_added,
@@ -1505,7 +1505,7 @@ zx_status_t ClientProxy::OnDisplaysChanged(const uint64_t* displays_added,
     task->set_handler([client_handler = &handler_,
                        added_ptr = added.release(), removed_ptr = removed.release(),
                        added_count, removed_count]
-                       (async_t* async, async::Task* task, zx_status_t status) {
+                       (async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
             if (status == ZX_OK && client_handler->IsValid()) {
                 client_handler->OnDisplaysChanged(added_ptr, added_count,
                                                   removed_ptr, removed_count);
@@ -1515,7 +1515,7 @@ zx_status_t ClientProxy::OnDisplaysChanged(const uint64_t* displays_added,
             delete[] removed_ptr;
             delete task;
     });
-    return task->Post(controller_->loop().async());
+    return task->Post(controller_->loop().dispatcher());
 }
 
 void ClientProxy::ReapplyConfig() {
@@ -1527,7 +1527,7 @@ void ClientProxy::ReapplyConfig() {
     }
 
     task->set_handler([client_handler = &handler_]
-                       (async_t* async, async::Task* task, zx_status_t status) {
+                       (async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
             if (status == ZX_OK && client_handler->IsValid()) {
                 client_handler->ApplyConfig();
             }
@@ -1535,7 +1535,7 @@ void ClientProxy::ReapplyConfig() {
             delete task;
 
     });
-    task->Post(controller_->loop().async());
+    task->Post(controller_->loop().dispatcher());
 }
 
 void ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
@@ -1583,7 +1583,7 @@ void ClientProxy::Close() {
         auto task = new async::Task();
         task->set_handler([client_handler = &handler_,
                            cnd_ptr = &cnd, mtx_ptr = &mtx, done_ptr = &done]
-                           (async_t* async, async::Task* task, zx_status_t status) {
+                           (async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
                 mtx_lock(mtx_ptr);
 
                 client_handler->TearDown();
@@ -1594,7 +1594,7 @@ void ClientProxy::Close() {
 
                 delete task;
         });
-        if (task->Post(controller_->loop().async()) != ZX_OK) {
+        if (task->Post(controller_->loop().dispatcher()) != ZX_OK) {
             // Tasks only fail to post if the looper is dead. That shouldn't actually
             // happen, but if it does then it's safe to call Reset on this thread anyway.
             delete task;

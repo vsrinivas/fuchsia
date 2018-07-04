@@ -27,7 +27,7 @@ See [async/loop.h](include/async/loop.h) for details.
 #include <lib/async-loop/loop.h>
 #include <lib/async/task.h>      // for async_post_task()
 #include <lib/async/time.h>      // for async_now()
-#include <lib/async/default.h>   // for async_get_default()
+#include <lib/async/default.h>   // for async_get_default_dispatcher()
 
 static async_loop_t* g_loop;
 
@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-void handler(async_t* async, async_task_t* task, zx_status_t status) {
+void handler(async_dispatcher_t* async, async_task_t* task, zx_status_t status) {
     printf("task deadline elapsed: status=%d", status);
     free(task);
 
@@ -50,7 +50,7 @@ void handler(async_t* async, async_task_t* task, zx_status_t status) {
 }
 
 zx_status_t do_stuff() {
-    async_t* async = async_get_default();
+    async_dispatcher_t* async = async_get_default_dispatcher();
     async_task_t* task = calloc(1, sizeof(async_task_t));
     task->handler = handler;
     task->deadline = async_now(async) + ZX_SEC(2);

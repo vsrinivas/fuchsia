@@ -87,7 +87,7 @@ private:
         uint32_t dropped_logs;
     };
 
-    void OnHandleReady(async_t* async, async::WaitBase* wait, zx_status_t status,
+    void OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                        const zx_packet_signal_t* signal);
 
     // Decodes channel message and dispatches to correct handler.

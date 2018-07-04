@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async-testutils/async_stub.h>
+#include <lib/async-testutils/dispatcher_stub.h>
 #include <lib/async/cpp/task.h>
 #include <unittest/unittest.h>
 
 namespace {
 
-class MockAsync : public async::AsyncStub {
+class MockDispatcher : public async::DispatcherStub {
 public:
     enum class Op {
         NONE,
@@ -46,7 +46,7 @@ public:
         last_status = ZX_ERR_INTERNAL;
     }
 
-    void Handler(async_t* async, async::TaskBase* task, zx_status_t status) {
+    void Handler(async_dispatcher_t* dispatcher, async::TaskBase* task, zx_status_t status) {
         handler_ran = true;
         last_task = task;
         last_status = status;
@@ -72,8 +72,8 @@ public:
     bool dispatches_failures() override { return true; }
 
 private:
-    async::Task task_{[this](async_t* async, async::Task* task, zx_status_t status) {
-        Handler(async, task, status);
+    async::Task task_{[this](async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
+        Handler(dispatcher, task, status);
     }};
 };
 
@@ -115,12 +115,12 @@ bool task_set_handler_test() {
         EXPECT_FALSE(task.is_pending());
         EXPECT_EQ(zx::time::infinite().get(), task.last_deadline().get());
 
-        task.set_handler([](async_t* async, async::Task* task, zx_status_t status) {});
+        task.set_handler([](async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {});
         EXPECT_TRUE(task.has_handler());
     }
 
     {
-        async::Task task([](async_t* async, async::Task* task, zx_status_t status) {});
+        async::Task task([](async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {});
         EXPECT_TRUE(task.has_handler());
         EXPECT_FALSE(task.is_pending());
         EXPECT_EQ(zx::time::infinite().get(), task.last_deadline().get());
@@ -156,37 +156,37 @@ template <typename Harness>
 bool task_post_test() {
     BEGIN_TEST;
 
-    MockAsync async;
+    MockDispatcher dispatcher;
 
     {
         Harness harness;
-        async.next_status = ZX_OK;
-        EXPECT_EQ(ZX_OK, harness.task().Post(&async));
-        EXPECT_EQ(MockAsync::Op::POST_TASK, async.last_op);
-        EXPECT_EQ(async.now.get(), async.last_task->deadline);
-        EXPECT_EQ(async.now.get(), harness.task().last_deadline().get());
+        dispatcher.next_status = ZX_OK;
+        EXPECT_EQ(ZX_OK, harness.task().Post(&dispatcher));
+        EXPECT_EQ(MockDispatcher::Op::POST_TASK, dispatcher.last_op);
+        EXPECT_EQ(dispatcher.now.get(), dispatcher.last_task->deadline);
+        EXPECT_EQ(dispatcher.now.get(), harness.task().last_deadline().get());
         EXPECT_TRUE(harness.task().is_pending());
         EXPECT_FALSE(harness.handler_ran);
 
         harness.Reset();
-        async.last_op = MockAsync::Op::NONE;
-        EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, harness.task().Post(&async));
-        EXPECT_EQ(MockAsync::Op::NONE, async.last_op);
+        dispatcher.last_op = MockDispatcher::Op::NONE;
+        EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, harness.task().Post(&dispatcher));
+        EXPECT_EQ(MockDispatcher::Op::NONE, dispatcher.last_op);
         EXPECT_FALSE(harness.handler_ran);
     }
-    EXPECT_EQ(MockAsync::Op::CANCEL_TASK, async.last_op);
+    EXPECT_EQ(MockDispatcher::Op::CANCEL_TASK, dispatcher.last_op);
 
     {
         Harness harness;
-        async.next_status = ZX_ERR_BAD_STATE;
-        EXPECT_EQ(ZX_ERR_BAD_STATE, harness.task().Post(&async));
-        EXPECT_EQ(MockAsync::Op::POST_TASK, async.last_op);
-        EXPECT_EQ(async.now.get(), async.last_task->deadline);
-        EXPECT_EQ(async.now.get(), harness.task().last_deadline().get());
+        dispatcher.next_status = ZX_ERR_BAD_STATE;
+        EXPECT_EQ(ZX_ERR_BAD_STATE, harness.task().Post(&dispatcher));
+        EXPECT_EQ(MockDispatcher::Op::POST_TASK, dispatcher.last_op);
+        EXPECT_EQ(dispatcher.now.get(), dispatcher.last_task->deadline);
+        EXPECT_EQ(dispatcher.now.get(), harness.task().last_deadline().get());
         EXPECT_FALSE(harness.task().is_pending());
         EXPECT_FALSE(harness.handler_ran);
     }
-    EXPECT_EQ(MockAsync::Op::POST_TASK, async.last_op);
+    EXPECT_EQ(MockDispatcher::Op::POST_TASK, dispatcher.last_op);
 
     END_TEST;
 }
@@ -195,37 +195,37 @@ template <typename Harness>
 bool task_post_delayed_test() {
     BEGIN_TEST;
 
-    MockAsync async;
+    MockDispatcher dispatcher;
 
     {
         Harness harness;
-        async.next_status = ZX_OK;
-        EXPECT_EQ(ZX_OK, harness.task().PostDelayed(&async, zx::nsec(5)));
-        EXPECT_EQ(MockAsync::Op::POST_TASK, async.last_op);
-        EXPECT_EQ(async.now.get() + 5, async.last_task->deadline);
-        EXPECT_EQ(async.now.get() + 5, harness.task().last_deadline().get());
+        dispatcher.next_status = ZX_OK;
+        EXPECT_EQ(ZX_OK, harness.task().PostDelayed(&dispatcher, zx::nsec(5)));
+        EXPECT_EQ(MockDispatcher::Op::POST_TASK, dispatcher.last_op);
+        EXPECT_EQ(dispatcher.now.get() + 5, dispatcher.last_task->deadline);
+        EXPECT_EQ(dispatcher.now.get() + 5, harness.task().last_deadline().get());
         EXPECT_TRUE(harness.task().is_pending());
         EXPECT_FALSE(harness.handler_ran);
 
         harness.Reset();
-        async.last_op = MockAsync::Op::NONE;
-        EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, harness.task().Post(&async));
-        EXPECT_EQ(MockAsync::Op::NONE, async.last_op);
+        dispatcher.last_op = MockDispatcher::Op::NONE;
+        EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, harness.task().Post(&dispatcher));
+        EXPECT_EQ(MockDispatcher::Op::NONE, dispatcher.last_op);
         EXPECT_FALSE(harness.handler_ran);
     }
-    EXPECT_EQ(MockAsync::Op::CANCEL_TASK, async.last_op);
+    EXPECT_EQ(MockDispatcher::Op::CANCEL_TASK, dispatcher.last_op);
 
     {
         Harness harness;
-        async.next_status = ZX_ERR_BAD_STATE;
-        EXPECT_EQ(ZX_ERR_BAD_STATE, harness.task().PostDelayed(&async, zx::nsec(6)));
-        EXPECT_EQ(MockAsync::Op::POST_TASK, async.last_op);
-        EXPECT_EQ(async.now.get() + 6, async.last_task->deadline);
-        EXPECT_EQ(async.now.get() + 6, harness.task().last_deadline().get());
+        dispatcher.next_status = ZX_ERR_BAD_STATE;
+        EXPECT_EQ(ZX_ERR_BAD_STATE, harness.task().PostDelayed(&dispatcher, zx::nsec(6)));
+        EXPECT_EQ(MockDispatcher::Op::POST_TASK, dispatcher.last_op);
+        EXPECT_EQ(dispatcher.now.get() + 6, dispatcher.last_task->deadline);
+        EXPECT_EQ(dispatcher.now.get() + 6, harness.task().last_deadline().get());
         EXPECT_FALSE(harness.task().is_pending());
         EXPECT_FALSE(harness.handler_ran);
     }
-    EXPECT_EQ(MockAsync::Op::POST_TASK, async.last_op);
+    EXPECT_EQ(MockDispatcher::Op::POST_TASK, dispatcher.last_op);
 
     END_TEST;
 }
@@ -234,37 +234,37 @@ template <typename Harness>
 bool task_post_for_time_test() {
     BEGIN_TEST;
 
-    MockAsync async;
+    MockDispatcher dispatcher;
 
     {
         Harness harness;
-        async.next_status = ZX_OK;
-        EXPECT_EQ(ZX_OK, harness.task().PostForTime(&async, zx::time(55)));
-        EXPECT_EQ(MockAsync::Op::POST_TASK, async.last_op);
-        EXPECT_EQ(55, async.last_task->deadline);
+        dispatcher.next_status = ZX_OK;
+        EXPECT_EQ(ZX_OK, harness.task().PostForTime(&dispatcher, zx::time(55)));
+        EXPECT_EQ(MockDispatcher::Op::POST_TASK, dispatcher.last_op);
+        EXPECT_EQ(55, dispatcher.last_task->deadline);
         EXPECT_EQ(55, harness.task().last_deadline().get());
         EXPECT_TRUE(harness.task().is_pending());
         EXPECT_FALSE(harness.handler_ran);
 
         harness.Reset();
-        async.last_op = MockAsync::Op::NONE;
-        EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, harness.task().Post(&async));
-        EXPECT_EQ(MockAsync::Op::NONE, async.last_op);
+        dispatcher.last_op = MockDispatcher::Op::NONE;
+        EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, harness.task().Post(&dispatcher));
+        EXPECT_EQ(MockDispatcher::Op::NONE, dispatcher.last_op);
         EXPECT_FALSE(harness.handler_ran);
     }
-    EXPECT_EQ(MockAsync::Op::CANCEL_TASK, async.last_op);
+    EXPECT_EQ(MockDispatcher::Op::CANCEL_TASK, dispatcher.last_op);
 
     {
         Harness harness;
-        async.next_status = ZX_ERR_BAD_STATE;
-        EXPECT_EQ(ZX_ERR_BAD_STATE, harness.task().PostForTime(&async, zx::time(56)));
-        EXPECT_EQ(MockAsync::Op::POST_TASK, async.last_op);
-        EXPECT_EQ(56, async.last_task->deadline);
+        dispatcher.next_status = ZX_ERR_BAD_STATE;
+        EXPECT_EQ(ZX_ERR_BAD_STATE, harness.task().PostForTime(&dispatcher, zx::time(56)));
+        EXPECT_EQ(MockDispatcher::Op::POST_TASK, dispatcher.last_op);
+        EXPECT_EQ(56, dispatcher.last_task->deadline);
         EXPECT_EQ(56, harness.task().last_deadline().get());
         EXPECT_FALSE(harness.task().is_pending());
         EXPECT_FALSE(harness.handler_ran);
     }
-    EXPECT_EQ(MockAsync::Op::POST_TASK, async.last_op);
+    EXPECT_EQ(MockDispatcher::Op::POST_TASK, dispatcher.last_op);
 
     END_TEST;
 }
@@ -273,30 +273,30 @@ template <typename Harness>
 bool task_cancel_test() {
     BEGIN_TEST;
 
-    MockAsync async;
+    MockDispatcher dispatcher;
 
     {
         Harness harness;
         EXPECT_FALSE(harness.task().is_pending());
 
         EXPECT_EQ(ZX_ERR_NOT_FOUND, harness.task().Cancel());
-        EXPECT_EQ(MockAsync::Op::NONE, async.last_op);
+        EXPECT_EQ(MockDispatcher::Op::NONE, dispatcher.last_op);
         EXPECT_FALSE(harness.task().is_pending());
 
-        EXPECT_EQ(ZX_OK, harness.task().Post(&async));
-        EXPECT_EQ(MockAsync::Op::POST_TASK, async.last_op);
+        EXPECT_EQ(ZX_OK, harness.task().Post(&dispatcher));
+        EXPECT_EQ(MockDispatcher::Op::POST_TASK, dispatcher.last_op);
         EXPECT_TRUE(harness.task().is_pending());
 
         EXPECT_EQ(ZX_OK, harness.task().Cancel());
-        EXPECT_EQ(MockAsync::Op::CANCEL_TASK, async.last_op);
+        EXPECT_EQ(MockDispatcher::Op::CANCEL_TASK, dispatcher.last_op);
         EXPECT_FALSE(harness.task().is_pending());
 
-        async.last_op = MockAsync::Op::NONE;
+        dispatcher.last_op = MockDispatcher::Op::NONE;
         EXPECT_EQ(ZX_ERR_NOT_FOUND, harness.task().Cancel());
-        EXPECT_EQ(MockAsync::Op::NONE, async.last_op);
+        EXPECT_EQ(MockDispatcher::Op::NONE, dispatcher.last_op);
         EXPECT_FALSE(harness.task().is_pending());
     }
-    EXPECT_EQ(MockAsync::Op::NONE, async.last_op);
+    EXPECT_EQ(MockDispatcher::Op::NONE, dispatcher.last_op);
 
     END_TEST;
 }
@@ -305,42 +305,42 @@ template <typename Harness>
 bool task_run_handler_test() {
     BEGIN_TEST;
 
-    MockAsync async;
+    MockDispatcher dispatcher;
 
     // success status
     {
         Harness harness;
         EXPECT_FALSE(harness.task().is_pending());
 
-        EXPECT_EQ(ZX_OK, harness.task().Post(&async));
-        EXPECT_EQ(MockAsync::Op::POST_TASK, async.last_op);
+        EXPECT_EQ(ZX_OK, harness.task().Post(&dispatcher));
+        EXPECT_EQ(MockDispatcher::Op::POST_TASK, dispatcher.last_op);
         EXPECT_TRUE(harness.task().is_pending());
 
         harness.Reset();
-        async.last_task->handler(&async, async.last_task, ZX_OK);
+        dispatcher.last_task->handler(&dispatcher, dispatcher.last_task, ZX_OK);
         EXPECT_TRUE(harness.handler_ran);
         EXPECT_EQ(&harness.task(), harness.last_task);
         EXPECT_EQ(ZX_OK, harness.last_status);
         EXPECT_FALSE(harness.task().is_pending());
 
-        async.last_op = MockAsync::Op::NONE;
+        dispatcher.last_op = MockDispatcher::Op::NONE;
         EXPECT_EQ(ZX_ERR_NOT_FOUND, harness.task().Cancel());
-        EXPECT_EQ(MockAsync::Op::NONE, async.last_op);
+        EXPECT_EQ(MockDispatcher::Op::NONE, dispatcher.last_op);
         EXPECT_FALSE(harness.task().is_pending());
     }
-    EXPECT_EQ(MockAsync::Op::NONE, async.last_op);
+    EXPECT_EQ(MockDispatcher::Op::NONE, dispatcher.last_op);
 
     // failure status
     {
         Harness harness;
         EXPECT_FALSE(harness.task().is_pending());
 
-        EXPECT_EQ(ZX_OK, harness.task().Post(&async));
-        EXPECT_EQ(MockAsync::Op::POST_TASK, async.last_op);
+        EXPECT_EQ(ZX_OK, harness.task().Post(&dispatcher));
+        EXPECT_EQ(MockDispatcher::Op::POST_TASK, dispatcher.last_op);
         EXPECT_TRUE(harness.task().is_pending());
 
         harness.Reset();
-        async.last_task->handler(&async, async.last_task, ZX_ERR_CANCELED);
+        dispatcher.last_task->handler(&dispatcher, dispatcher.last_task, ZX_ERR_CANCELED);
         EXPECT_FALSE(harness.task().is_pending());
         if (harness.dispatches_failures()) {
             EXPECT_TRUE(harness.handler_ran);
@@ -350,12 +350,12 @@ bool task_run_handler_test() {
             EXPECT_FALSE(harness.handler_ran);
         }
 
-        async.last_op = MockAsync::Op::NONE;
+        dispatcher.last_op = MockDispatcher::Op::NONE;
         EXPECT_EQ(ZX_ERR_NOT_FOUND, harness.task().Cancel());
-        EXPECT_EQ(MockAsync::Op::NONE, async.last_op);
+        EXPECT_EQ(MockDispatcher::Op::NONE, dispatcher.last_op);
         EXPECT_FALSE(harness.task().is_pending());
     }
-    EXPECT_EQ(MockAsync::Op::NONE, async.last_op);
+    EXPECT_EQ(MockDispatcher::Op::NONE, dispatcher.last_op);
 
     END_TEST;
 }
@@ -363,9 +363,9 @@ bool task_run_handler_test() {
 bool unsupported_post_task_test() {
     BEGIN_TEST;
 
-    async::AsyncStub async;
+    async::DispatcherStub dispatcher;
     async_task_t task{};
-    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_post_task(&async, &task), "valid args");
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_post_task(&dispatcher, &task), "valid args");
 
     END_TEST;
 }
@@ -373,9 +373,9 @@ bool unsupported_post_task_test() {
 bool unsupported_cancel_task_test() {
     BEGIN_TEST;
 
-    async::AsyncStub async;
+    async::DispatcherStub dispatcher;
     async_task_t task{};
-    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_cancel_task(&async, &task), "valid args");
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_cancel_task(&dispatcher, &task), "valid args");
 
     END_TEST;
 }

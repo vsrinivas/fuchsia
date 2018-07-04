@@ -13,7 +13,7 @@ __BEGIN_CDECLS
 // The |status| is |ZX_OK| if the task's deadline elapsed and the task should run.
 // The |status| is |ZX_ERR_CANCELED| if the dispatcher was shut down before
 // the task's handler ran or the task was canceled.
-typedef void(async_task_handler_t)(async_t* async,
+typedef void(async_task_handler_t)(async_dispatcher_t* dispatcher,
                                    async_task_t* task,
                                    zx_status_t status);
 
@@ -48,7 +48,7 @@ struct async_task {
 // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
 //
 // This operation is thread-safe.
-zx_status_t async_post_task(async_t* async, async_task_t* task);
+zx_status_t async_post_task(async_dispatcher_t* dispatcher, async_task_t* task);
 
 // Cancels the task associated with |task|.
 //
@@ -62,6 +62,6 @@ zx_status_t async_post_task(async_t* async, async_task_t* task);
 // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
 //
 // This operation is thread-safe.
-zx_status_t async_cancel_task(async_t* async, async_task_t* task);
+zx_status_t async_cancel_task(async_dispatcher_t* dispatcher, async_task_t* task);
 
 __END_CDECLS

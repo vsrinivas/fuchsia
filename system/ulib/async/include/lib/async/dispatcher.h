@@ -12,7 +12,11 @@ __BEGIN_CDECLS
 
 // Dispatcher interface for performing asynchronous operations.
 // There may be multiple implementations of this interface.
-typedef struct async_dispatcher async_t;
+typedef struct async_dispatcher async_dispatcher_t;
+
+// TODO(davemoore): ZX-2337 Remove after all external references have been changed
+// to async_dispatcher_t.
+typedef async_dispatcher_t async_t;
 
 // Forward declarations for asynchronous operation structures.
 typedef struct async_guest_bell_trap async_guest_bell_trap_t;
@@ -78,20 +82,20 @@ typedef struct async_ops {
     // Operations supported by |ASYNC_OPS_V1|.
     struct v1 {
         // See |async_now()| for details.
-        zx_time_t (*now)(async_t* async);
+        zx_time_t (*now)(async_dispatcher_t* dispatcher);
         // See |async_begin_wait()| for details.
-        zx_status_t (*begin_wait)(async_t* async, async_wait_t* wait);
+        zx_status_t (*begin_wait)(async_dispatcher_t* dispatcher, async_wait_t* wait);
         // See |async_cancel_wait()| for details.
-        zx_status_t (*cancel_wait)(async_t* async, async_wait_t* wait);
+        zx_status_t (*cancel_wait)(async_dispatcher_t* dispatcher, async_wait_t* wait);
         // See |async_post_task()| for details.
-        zx_status_t (*post_task)(async_t* async, async_task_t* task);
+        zx_status_t (*post_task)(async_dispatcher_t* dispatcher, async_task_t* task);
         // See |async_cancel_task()| for details.
-        zx_status_t (*cancel_task)(async_t* async, async_task_t* task);
+        zx_status_t (*cancel_task)(async_dispatcher_t* dispatcher, async_task_t* task);
         // See |async_queue_packet()| for details.
-        zx_status_t (*queue_packet)(async_t* async, async_receiver_t* receiver,
+        zx_status_t (*queue_packet)(async_dispatcher_t* dispatcher, async_receiver_t* receiver,
                                     const zx_packet_user_t* data);
         // See |async_set_guest_bell_trap()| for details.
-        zx_status_t (*set_guest_bell_trap)(async_t* async, async_guest_bell_trap_t* trap,
+        zx_status_t (*set_guest_bell_trap)(async_dispatcher_t* dispatcher, async_guest_bell_trap_t* trap,
                                            zx_handle_t guest, zx_vaddr_t addr, size_t length);
     } v1;
 } async_ops_t;

@@ -167,7 +167,7 @@ int main(int argc, char** argv) {
   if (status != ZX_OK) exit(1);
 
   // Create the trace provider.
-  trace::TraceProvider trace_provider(loop.async());
+  trace::TraceProvider trace_provider(loop.dispatcher());
 
   // Do something...
 
@@ -197,8 +197,8 @@ int main(int argc, char** argv) {
   if (status != ZX_OK) exit(1);
 
   // Create the trace provider.
-  async_t* async = async_loop_get_dispatcher(loop);
-  trace_provider = trace_provider_create(async);
+  async_dispatcher_t* dispatcher = async_loop_get_dispatcher(loop);
+  trace_provider = trace_provider_create(dispatcher);
   if (!trace_provider) exit(1);
 
   // Do something...

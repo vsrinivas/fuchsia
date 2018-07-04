@@ -15,7 +15,7 @@ struct RetainedTask : public async_task_t {
 
     fbl::Closure handler;
 
-    static void Handler(async_t* async, async_task_t* task, zx_status_t status) {
+    static void Handler(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t status) {
         auto self = static_cast<RetainedTask*>(task);
         if (status == ZX_OK)
             self->handler();
@@ -25,19 +25,19 @@ struct RetainedTask : public async_task_t {
 
 } // namespace internal
 
-zx_status_t PostTask(async_t* async, fbl::Closure handler) {
-    return PostTaskForTime(async, static_cast<fbl::Closure&&>(handler),
-                           async::Now(async));
+zx_status_t PostTask(async_dispatcher_t* dispatcher, fbl::Closure handler) {
+    return PostTaskForTime(dispatcher, static_cast<fbl::Closure&&>(handler),
+                           async::Now(dispatcher));
 }
 
-zx_status_t PostDelayedTask(async_t* async, fbl::Closure handler, zx::duration delay) {
-    return PostTaskForTime(async, static_cast<fbl::Closure&&>(handler),
-                           async::Now(async) + delay);
+zx_status_t PostDelayedTask(async_dispatcher_t* dispatcher, fbl::Closure handler, zx::duration delay) {
+    return PostTaskForTime(dispatcher, static_cast<fbl::Closure&&>(handler),
+                           async::Now(dispatcher) + delay);
 }
 
-zx_status_t PostTaskForTime(async_t* async, fbl::Closure handler, zx::time deadline) {
+zx_status_t PostTaskForTime(async_dispatcher_t* dispatcher, fbl::Closure handler, zx::time deadline) {
     auto* task = new internal::RetainedTask(static_cast<fbl::Closure&&>(handler), deadline);
-    zx_status_t status = async_post_task(async, task);
+    zx_status_t status = async_post_task(dispatcher, task);
     if (status != ZX_OK)
         delete task;
     return status;
@@ -47,41 +47,41 @@ TaskBase::TaskBase(async_task_handler_t* handler)
     : task_{{ASYNC_STATE_INIT}, handler, ZX_TIME_INFINITE} {}
 
 TaskBase::~TaskBase() {
-    if (async_) {
+    if (dispatcher_) {
         // Failure to cancel here may result in a dangling pointer...
-        zx_status_t status = async_cancel_task(async_, &task_);
+        zx_status_t status = async_cancel_task(dispatcher_, &task_);
         ZX_ASSERT_MSG(status == ZX_OK, "status=%d", status);
     }
 }
 
-zx_status_t TaskBase::Post(async_t* async) {
-    return PostForTime(async, async::Now(async));
+zx_status_t TaskBase::Post(async_dispatcher_t* dispatcher) {
+    return PostForTime(dispatcher, async::Now(dispatcher));
 }
 
-zx_status_t TaskBase::PostDelayed(async_t* async, zx::duration delay) {
-    return PostForTime(async, async::Now(async) + delay);
+zx_status_t TaskBase::PostDelayed(async_dispatcher_t* dispatcher, zx::duration delay) {
+    return PostForTime(dispatcher, async::Now(dispatcher) + delay);
 }
 
-zx_status_t TaskBase::PostForTime(async_t* async, zx::time deadline) {
-    if (async_)
+zx_status_t TaskBase::PostForTime(async_dispatcher_t* dispatcher, zx::time deadline) {
+    if (dispatcher_)
         return ZX_ERR_ALREADY_EXISTS;
 
-    async_ = async;
+    dispatcher_ = dispatcher;
     task_.deadline = deadline.get();
-    zx_status_t status = async_post_task(async, &task_);
+    zx_status_t status = async_post_task(dispatcher, &task_);
     if (status != ZX_OK) {
-        async_ = nullptr;
+        dispatcher_ = nullptr;
     }
     return status;
 }
 
 zx_status_t TaskBase::Cancel() {
-    if (!async_)
+    if (!dispatcher_)
         return ZX_ERR_NOT_FOUND;
 
-    async_t* async = async_;
-    async_ = nullptr;
-    return async_cancel_task(async, &task_);
+    async_dispatcher_t* dispatcher = dispatcher_;
+    dispatcher_ = nullptr;
+    return async_cancel_task(dispatcher, &task_);
 }
 
 Task::Task(Handler handler)
@@ -89,9 +89,9 @@ Task::Task(Handler handler)
 
 Task::~Task() = default;
 
-void Task::CallHandler(async_t* async, async_task_t* task, zx_status_t status) {
+void Task::CallHandler(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t status) {
     auto self = Dispatch<Task>(task);
-    self->handler_(async, self, status);
+    self->handler_(dispatcher, self, status);
 }
 
 TaskClosure::TaskClosure(fbl::Closure handler)
@@ -99,7 +99,7 @@ TaskClosure::TaskClosure(fbl::Closure handler)
 
 TaskClosure::~TaskClosure() = default;
 
-void TaskClosure::CallHandler(async_t* async, async_task_t* task, zx_status_t status) {
+void TaskClosure::CallHandler(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t status) {
     auto self = Dispatch<TaskClosure>(task); // must do this if status is not ok
     if (status == ZX_OK) {
         self->handler_();

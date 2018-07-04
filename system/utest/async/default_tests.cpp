@@ -6,7 +6,7 @@
 
 #include <threads.h>
 
-#include <lib/async-testutils/async_stub.h>
+#include <lib/async-testutils/dispatcher_stub.h>
 #include <unittest/unittest.h>
 
 namespace {
@@ -14,11 +14,11 @@ namespace {
 int default_test_thread(void*) {
     BEGIN_TEST;
 
-    EXPECT_NULL(async_get_default(), "other thread's default is initially null");
+    EXPECT_NULL(async_get_default_dispatcher(), "other thread's default is initially null");
 
-    async::AsyncStub async;
-    async_set_default(&async);
-    EXPECT_EQ(&async, async_get_default(), "other thread's default can be changed");
+    async::DispatcherStub async;
+    async_set_default_dispatcher(&async);
+    EXPECT_EQ(&async, async_get_default_dispatcher(), "other thread's default can be changed");
 
     END_TEST;
     return 1;
@@ -28,12 +28,12 @@ bool get_set_default_test() {
     BEGIN_TEST;
 
     // Default is initially null.
-    EXPECT_NULL(async_get_default(), "default is initially null");
+    EXPECT_NULL(async_get_default_dispatcher(), "default is initially null");
 
     // Default can be changed.
-    async::AsyncStub async;
-    async_set_default(&async);
-    EXPECT_EQ(&async, async_get_default(), "default can be changed");
+    async::DispatcherStub async;
+    async_set_default_dispatcher(&async);
+    EXPECT_EQ(&async, async_get_default_dispatcher(), "default can be changed");
 
     // Default is thread-local.
     thrd_t thread;
@@ -41,9 +41,9 @@ bool get_set_default_test() {
     int result;
     ASSERT_EQ(thrd_success, thrd_join(thread, &result), "thrd_join");
     EXPECT_EQ(1, result, "other thread has its own default");
-    EXPECT_EQ(&async, async_get_default(), "this thread's default is unchanged");
+    EXPECT_EQ(&async, async_get_default_dispatcher(), "this thread's default is unchanged");
 
-    async_set_default(nullptr);
+    async_set_default_dispatcher(nullptr);
     END_TEST;
 }
 

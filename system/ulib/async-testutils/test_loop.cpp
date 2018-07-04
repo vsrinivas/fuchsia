@@ -8,11 +8,11 @@
 namespace async {
 
 TestLoop::TestLoop() {
-    async_set_default(&dispatcher_);
+    async_set_default_dispatcher(&dispatcher_);
 }
 
 TestLoop::~TestLoop() {
-    async_set_default(nullptr);
+    async_set_default_dispatcher(nullptr);
 }
 
 } // namespace async

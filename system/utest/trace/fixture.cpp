@@ -46,7 +46,7 @@ public:
         loop_.StartThread("trace test");
 
         // Asynchronously start the engine.
-        zx_status_t status = trace_start_engine(loop_.async(), this,
+        zx_status_t status = trace_start_engine(loop_.dispatcher(), this,
                                                 buffer_.get(), buffer_.size());
         ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
     }
@@ -102,12 +102,12 @@ private:
         return category[0] == '+';
     }
 
-    void TraceStopped(async_t* async,
+    void TraceStopped(async_dispatcher_t* dispatcher,
                       zx_status_t disposition,
                       size_t buffer_bytes_written) override {
         ZX_DEBUG_ASSERT(!observed_stopped_callback_);
         observed_stopped_callback_ = true;
-        ZX_DEBUG_ASSERT(async = loop_.async());
+        ZX_DEBUG_ASSERT(dispatcher = loop_.dispatcher());
         disposition_ = disposition;
         buffer_bytes_written_ = buffer_bytes_written;
 

@@ -177,10 +177,10 @@ void Connection::SyncTeardown() {
 
 zx_status_t Connection::Serve() {
     wait_.set_object(channel_.get());
-    return wait_.Begin(vfs_->async());
+    return wait_.Begin(vfs_->dispatcher());
 }
 
-void Connection::HandleSignals(async_t* async, async::WaitBase* wait, zx_status_t status,
+void Connection::HandleSignals(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                                const zx_packet_signal_t* signal) {
     ZX_DEBUG_ASSERT(is_open());
 
@@ -197,7 +197,7 @@ void Connection::HandleSignals(async_t* async, async::WaitBase* wait, zx_status_
             case ERR_DISPATCHER_ASYNC:
                 return;
             case ZX_OK:
-                status = wait_.Begin(async);
+                status = wait_.Begin(dispatcher);
                 if (status == ZX_OK) {
                     return;
                 }
@@ -991,7 +991,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
             zxrio_write_response(channel_.get(), status, &msg);
 
             // Try to reset the wait object
-            ZX_ASSERT_MSG(wait_.Begin(vfs_->async()) == ZX_OK, "Dispatch loop unexpectedly ended");
+            ZX_ASSERT_MSG(wait_.Begin(vfs_->dispatcher()) == ZX_OK, "Dispatch loop unexpectedly ended");
         });
 
         vnode_->Sync(fbl::move(closure));

@@ -8,32 +8,32 @@
 #include <lib/async/trap.h>
 #include <lib/async/wait.h>
 
-zx_time_t async_now(async_t* async) {
-    return async->ops->v1.now(async);
+zx_time_t async_now(async_dispatcher_t* dispatcher) {
+    return dispatcher->ops->v1.now(dispatcher);
 }
 
-zx_status_t async_begin_wait(async_t* async, async_wait_t* wait) {
-    return async->ops->v1.begin_wait(async, wait);
+zx_status_t async_begin_wait(async_dispatcher_t* dispatcher, async_wait_t* wait) {
+    return dispatcher->ops->v1.begin_wait(dispatcher, wait);
 }
 
-zx_status_t async_cancel_wait(async_t* async, async_wait_t* wait) {
-    return async->ops->v1.cancel_wait(async, wait);
+zx_status_t async_cancel_wait(async_dispatcher_t* dispatcher, async_wait_t* wait) {
+    return dispatcher->ops->v1.cancel_wait(dispatcher, wait);
 }
 
-zx_status_t async_post_task(async_t* async, async_task_t* task) {
-    return async->ops->v1.post_task(async, task);
+zx_status_t async_post_task(async_dispatcher_t* dispatcher, async_task_t* task) {
+    return dispatcher->ops->v1.post_task(dispatcher, task);
 }
 
-zx_status_t async_cancel_task(async_t* async, async_task_t* task) {
-    return async->ops->v1.cancel_task(async, task);
+zx_status_t async_cancel_task(async_dispatcher_t* dispatcher, async_task_t* task) {
+    return dispatcher->ops->v1.cancel_task(dispatcher, task);
 }
 
-zx_status_t async_queue_packet(async_t* async, async_receiver_t* receiver,
+zx_status_t async_queue_packet(async_dispatcher_t* dispatcher, async_receiver_t* receiver,
                                const zx_packet_user_t* data) {
-    return async->ops->v1.queue_packet(async, receiver, data);
+    return dispatcher->ops->v1.queue_packet(dispatcher, receiver, data);
 }
 
-zx_status_t async_set_guest_bell_trap(async_t* async, async_guest_bell_trap_t* trap,
+zx_status_t async_set_guest_bell_trap(async_dispatcher_t* dispatcher, async_guest_bell_trap_t* trap,
                                       zx_handle_t guest, zx_vaddr_t addr, size_t length) {
-    return async->ops->v1.set_guest_bell_trap(async, trap, guest, addr, length);
+    return dispatcher->ops->v1.set_guest_bell_trap(dispatcher, trap, guest, addr, length);
 }

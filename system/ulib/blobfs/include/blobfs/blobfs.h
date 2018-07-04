@@ -167,7 +167,7 @@ private:
     // Monitors the current VMO, keeping a reference to the Vnode
     // alive while the |out| VMO (and any clones it may have) are open.
     zx_status_t CloneVmo(zx_rights_t rights, zx_handle_t* out);
-    void HandleNoClones(async_t* async, async::WaitBase* wait,
+    void HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                         zx_status_t status, const zx_packet_signal_t* signal);
 
     void QueueUnlink();
@@ -589,7 +589,7 @@ typedef struct {
 } blob_options_t;
 
 zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd blockfd);
-zx_status_t blobfs_mount(async_t* async, fbl::unique_fd blockfd,
+zx_status_t blobfs_mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
                          const blob_options_t* options, zx::channel root,
                          fbl::Closure on_unmount);
 } // namespace blobfs

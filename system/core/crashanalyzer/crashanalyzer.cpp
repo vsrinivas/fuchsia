@@ -376,7 +376,7 @@ static zx_status_t handle_message(zx_handle_t channel, fidl::MessageBuffer* buff
     }
 }
 
-static void handle_ready(async_t* async,
+static void handle_ready(async_dispatcher_t* dispatcher,
                          async::Wait* wait,
                          zx_status_t status,
                          const zx_packet_signal_t* signal) {
@@ -392,7 +392,7 @@ static void handle_ready(async_t* async,
             if (status != ZX_OK)
                 goto done;
         }
-        status = wait->Begin(async);
+        status = wait->Begin(dispatcher);
         if (status != ZX_OK)
             goto done;
         return;
@@ -421,13 +421,13 @@ static zx_status_t init(void** out_ctx) {
     return ZX_OK;
 }
 
-static zx_status_t connect(void* ctx, async_t* async, const char* service_name,
+static zx_status_t connect(void* ctx, async_dispatcher_t* dispatcher, const char* service_name,
                            zx_handle_t request) {
     if (!strcmp(service_name, "fuchsia.crash.Analyzer")) {
         auto wait = new async::Wait(request,
                                     ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                     handle_ready);
-        zx_status_t status = wait->Begin(async);
+        zx_status_t status = wait->Begin(dispatcher);
 
         if (status != ZX_OK) {
             delete wait;

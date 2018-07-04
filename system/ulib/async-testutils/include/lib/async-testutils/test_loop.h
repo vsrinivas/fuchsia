@@ -16,7 +16,10 @@ public:
     TestLoop();
     ~TestLoop();
 
-    async_t* async() { return &dispatcher_; }
+    async_dispatcher_t* dispatcher() { return &dispatcher_; }
+    // TODO(davemoore): ZX-2337 Remove after all external references have been changed
+    // to async_dispatcher_t.
+    async_dispatcher_t* async() { return dispatcher(); }
 
     // Returns the current fake clock time.
     zx::time Now() { return dispatcher_.Now(); }

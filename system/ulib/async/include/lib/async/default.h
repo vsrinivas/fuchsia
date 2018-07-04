@@ -10,10 +10,15 @@ __BEGIN_CDECLS
 
 // Gets the current thread's default asynchronous dispatcher interface.
 // Returns |NULL| if none.
-async_t* async_get_default(void);
+async_dispatcher_t* async_get_default_dispatcher(void);
 
 // Sets the current thread's default asynchronous dispatcher interface.
 // May be set to |NULL| if this thread doesn't have a default dispatcher.
+void async_set_default_dispatcher(async_dispatcher_t* dispatcher);
+
+// TODO(davemoore): ZX-2337 Remove after all external references have been changed
+// to async_dispatcher_t.
+async_t* async_get_default(void);
 void async_set_default(async_t* async);
 
 __END_CDECLS

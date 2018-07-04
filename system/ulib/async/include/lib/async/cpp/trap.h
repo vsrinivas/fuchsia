@@ -46,7 +46,7 @@ public:
     // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
     //
     // This operation is thread-safe.
-    zx_status_t SetTrap(async_t* async, const zx::guest& guest,
+    zx_status_t SetTrap(async_dispatcher_t* dispatcher, const zx::guest& guest,
                         zx_vaddr_t addr, size_t length);
 
 protected:
@@ -71,7 +71,7 @@ public:
     //
     // The |status| is |ZX_OK| if the bell was received and |bell| contains the
     // information from the packet, otherwise |bell| is null.
-    using Handler = fbl::Function<void(async_t* async, async::GuestBellTrap* trap,
+    using Handler = fbl::Function<void(async_dispatcher_t* dispatcher, async::GuestBellTrap* trap,
                                        zx_status_t status, const zx_packet_guest_bell_t* bell)>;
 
     explicit GuestBellTrap(Handler handler = nullptr);
@@ -81,7 +81,7 @@ public:
     bool has_handler() const { return !!handler_; }
 
 private:
-    static void CallHandler(async_t* async, async_guest_bell_trap_t* trap,
+    static void CallHandler(async_dispatcher_t* dispatcher, async_guest_bell_trap_t* trap,
                             zx_status_t status, const zx_packet_guest_bell_t* bell);
 
     Handler handler_;
@@ -92,12 +92,12 @@ private:
 // Usage:
 //
 // class Foo {
-//     void Handle(async_t* async, async::GuestBellTrapBase* trap, zx_status_t status,
+//     void Handle(async_dispatcher_t* dispatcher, async::GuestBellTrapBase* trap, zx_status_t status,
 //                 const zx_packet_guest_bell_t* bell) { ... }
 //     async::GuestBellTrapMethod<Foo, &Foo::Handle> trap_{this};
 // };
 template <class Class,
-          void (Class::*method)(async_t* async, async::GuestBellTrapBase* trap,
+          void (Class::*method)(async_dispatcher_t* dispatcher, async::GuestBellTrapBase* trap,
                                 zx_status_t status, const zx_packet_guest_bell_t* bell)>
 class GuestBellTrapMethod final : public GuestBellTrapBase {
 public:
@@ -106,10 +106,10 @@ public:
           instance_(instance) {}
 
 private:
-    static void CallHandler(async_t* async, async_guest_bell_trap_t* trap,
+    static void CallHandler(async_dispatcher_t* dispatcher, async_guest_bell_trap_t* trap,
                             zx_status_t status, const zx_packet_guest_bell_t* bell) {
         auto self = Dispatch<GuestBellTrapMethod>(trap);
-        (self->instance_->*method)(async, self, status, bell);
+        (self->instance_->*method)(dispatcher, self, status, bell);
     }
 
     Class* const instance_;

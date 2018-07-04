@@ -39,7 +39,7 @@ public:
     // Returns |ZX_OK| if the packet was successfully enqueued.
     // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
     // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
-    zx_status_t QueuePacket(async_t* async, const zx_packet_user_t* data = nullptr);
+    zx_status_t QueuePacket(async_dispatcher_t* dispatcher, const zx_packet_user_t* data = nullptr);
 
 protected:
     template <typename T>
@@ -63,7 +63,7 @@ public:
     //
     // The |status| is |ZX_OK| if the packet was successfully delivered and |data|
     // contains the information from the packet, otherwise |data| is null.
-    using Handler = fbl::Function<void(async_t* async,
+    using Handler = fbl::Function<void(async_dispatcher_t* dispatcher,
                                        async::Receiver* receiver,
                                        zx_status_t status,
                                        const zx_packet_user_t* data)>;
@@ -75,7 +75,7 @@ public:
     bool has_handler() const { return !!handler_; }
 
 private:
-    static void CallHandler(async_t* async, async_receiver_t* receiver,
+    static void CallHandler(async_dispatcher_t* dispatcher, async_receiver_t* receiver,
                             zx_status_t status, const zx_packet_user_t* data);
 
     Handler handler_;
@@ -86,12 +86,12 @@ private:
 // Usage:
 //
 // class Foo {
-//     void Handle(async_t* async, async::ReceiverBase* receiver, zx_status_t status,
+//     void Handle(async_dispatcher_t* dispatcher, async::ReceiverBase* receiver, zx_status_t status,
 //                 const zx_packet_user_t* data) { ... }
 //     async::ReceiverMethod<Foo, &Foo::Handle> receiver_{this};
 // };
 template <class Class,
-          void (Class::*method)(async_t* async, async::ReceiverBase* receiver,
+          void (Class::*method)(async_dispatcher_t* dispatcher, async::ReceiverBase* receiver,
                                 zx_status_t status, const zx_packet_user_t* data)>
 class ReceiverMethod final : public ReceiverBase {
 public:
@@ -99,10 +99,10 @@ public:
         : ReceiverBase(&ReceiverMethod::CallHandler), instance_(instance) {}
 
 private:
-    static void CallHandler(async_t* async, async_receiver_t* receiver,
+    static void CallHandler(async_dispatcher_t* dispatcher, async_receiver_t* receiver,
                             zx_status_t status, const zx_packet_user_t* data) {
         auto self = Dispatch<ReceiverMethod>(receiver);
-        (self->instance_->*method)(async, self, status, data);
+        (self->instance_->*method)(dispatcher, self, status, data);
     }
 
     Class* const instance_;

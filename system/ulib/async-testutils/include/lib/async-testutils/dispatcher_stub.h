@@ -10,10 +10,10 @@
 
 namespace async {
 
-struct AsyncStub : public async_t {
+struct DispatcherStub : public async_dispatcher_t {
 public:
-    AsyncStub();
-    virtual ~AsyncStub();
+    DispatcherStub();
+    virtual ~DispatcherStub();
 
     virtual zx::time Now();
     virtual zx_status_t BeginWait(async_wait_t* wait);

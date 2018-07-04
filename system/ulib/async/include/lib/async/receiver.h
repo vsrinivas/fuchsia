@@ -12,7 +12,7 @@ __BEGIN_CDECLS
 //
 // The |status| is |ZX_OK| if the packet was successfully delivered and |data|
 // contains the information from the packet, otherwise |data| is null.
-typedef void(async_receiver_handler_t)(async_t* async,
+typedef void(async_receiver_handler_t)(async_dispatcher_t* dispatcher,
                                        async_receiver_t* receiver,
                                        zx_status_t status,
                                        const zx_packet_user_t* data);
@@ -43,7 +43,7 @@ struct async_receiver {
 // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
 //
 // This operation is thread-safe.
-zx_status_t async_queue_packet(async_t* async, async_receiver_t* receiver,
+zx_status_t async_queue_packet(async_dispatcher_t* dispatcher, async_receiver_t* receiver,
                                const zx_packet_user_t* data);
 
 __END_CDECLS

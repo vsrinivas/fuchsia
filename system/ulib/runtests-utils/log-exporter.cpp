@@ -26,7 +26,7 @@ LogExporter::LogExporter(zx::channel channel, FILE* output_file)
     : channel_(fbl::move(channel)),
       wait_(this, channel_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED),
       output_file_(output_file) {
-    wait_.Begin(loop_.async());
+    wait_.Begin(loop_.dispatcher());
 }
 
 LogExporter::~LogExporter() {
@@ -55,7 +55,7 @@ zx_status_t LogExporter::RunUntilIdle() {
     return loop_.RunUntilIdle();
 }
 
-void LogExporter::OnHandleReady(async_t* async, async::WaitBase* wait, zx_status_t status,
+void LogExporter::OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                                 const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
         NotifyError(status);
@@ -73,7 +73,7 @@ void LogExporter::OnHandleReady(async_t* async, async::WaitBase* wait, zx_status
                 return;
             }
         }
-        status = wait_.Begin(async);
+        status = wait_.Begin(dispatcher);
         if (status != ZX_OK) {
             NotifyError(status);
         }

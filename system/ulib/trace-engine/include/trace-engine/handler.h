@@ -65,7 +65,7 @@ struct trace_handler_ops {
     // |buffer_bytes_written| is number of bytes which were written to the trace buffer.
     //
     // Called on an asynchronous dispatch thread.
-    void (*trace_stopped)(trace_handler_t* handler, async_t* async,
+    void (*trace_stopped)(trace_handler_t* handler, async_dispatcher_t* dispatcher,
                           zx_status_t disposition, size_t buffer_bytes_written);
 
     // Called by the trace engine after an attempt to allocate space
@@ -104,7 +104,7 @@ struct trace_handler_ops {
 //
 // Better yet, don't shut down the trace engine's asynchronous dispatcher unless
 // the process is already about to exit.
-zx_status_t trace_start_engine(async_t* async,
+zx_status_t trace_start_engine(async_dispatcher_t* dispatcher,
                                trace_handler_t* handler,
                                void* buffer,
                                size_t buffer_num_bytes);

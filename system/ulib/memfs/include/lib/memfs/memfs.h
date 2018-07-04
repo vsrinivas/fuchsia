@@ -20,7 +20,7 @@ typedef struct memfs_filesystem memfs_filesystem_t;
 // must be freed by memfs_free_filesystem.
 //
 // Returns a handle to the root directory in |out_root|.
-zx_status_t memfs_create_filesystem(async_t* async, memfs_filesystem_t** out_fs,
+zx_status_t memfs_create_filesystem(async_dispatcher_t* dispatcher, memfs_filesystem_t** out_fs,
                                     zx_handle_t* out_root);
 
 // Frees a MemFS filesystem, unmounting any sub-filesystems that
@@ -39,7 +39,7 @@ void memfs_free_filesystem(memfs_filesystem_t* fs, completion_t* unmounted);
 //
 // Returns |ZX_ERR_ALREADY_EXISTS| if |path| already exists in the namespace for
 // this process.
-zx_status_t memfs_install_at(async_t* async, const char* path);
+zx_status_t memfs_install_at(async_dispatcher_t* dispatcher, const char* path);
 
 __END_CDECLS
 

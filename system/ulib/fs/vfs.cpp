@@ -112,8 +112,8 @@ Vfs::Vfs() = default;
 Vfs::~Vfs() = default;
 
 #ifdef __Fuchsia__
-Vfs::Vfs(async_t* async)
-    : async_(async) {}
+Vfs::Vfs(async_dispatcher_t* dispatcher)
+    : dispatcher_(dispatcher) {}
 #endif
 
 zx_status_t Vfs::Open(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,

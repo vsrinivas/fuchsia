@@ -63,7 +63,7 @@ public:
     zx_status_t Serve();
 
 private:
-    void HandleSignals(async_t* async, async::WaitBase* wait, zx_status_t status,
+    void HandleSignals(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                        const zx_packet_signal_t* signal);
     // Closes the connection and unregisters it from the VFS object.
     void Terminate(bool call_close);

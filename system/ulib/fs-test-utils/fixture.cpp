@@ -62,7 +62,7 @@ zx_status_t MountMemFs(async::Loop* loop) {
         return result;
     }
 
-    result = memfs_install_at(loop->async(), kMemFsPath);
+    result = memfs_install_at(loop->dispatcher(), kMemFsPath);
 
     return result;
 }

@@ -9,7 +9,7 @@
 
 __BEGIN_CDECLS
 
-typedef struct async_dispatcher async_t; // From <async/dispatcher.h>
+typedef struct async_dispatcher async_dispatcher_t; // From <lib/async/dispatcher.h>
 
 // These functions provide an implementation of the shared library loading
 // service.  See <zircon/loader.fidl> for a definition of the protocol.
@@ -34,7 +34,7 @@ typedef struct loader_service loader_service_t;
 //
 // Requests will be processed on the given |async|. If |async| is NULL, this
 // library will create a new thread and listen for requests on that thread.
-zx_status_t loader_service_create_fs(async_t* async, loader_service_t** out);
+zx_status_t loader_service_create_fs(async_dispatcher_t* dispatcher, loader_service_t** out);
 
 // Create a new file-descriptor backed loader service capable of handling any
 // number of clients.
@@ -44,7 +44,7 @@ zx_status_t loader_service_create_fs(async_t* async, loader_service_t** out);
 // Paths and objects will be loaded relative to |root_dir_fd| and data will be
 // published relative to |data_sink_dir_fd|; the two file descriptors
 // are consumed on success.
-zx_status_t loader_service_create_fd(async_t* async,
+zx_status_t loader_service_create_fd(async_dispatcher_t* dispatcher,
                                      int root_dir_fd,
                                      int data_sink_dir_fd,
                                      loader_service_t** out);
@@ -76,7 +76,7 @@ typedef struct loader_service_ops {
 //
 // Requests will be processed on the given |async|. If |async| is NULL, this
 // library will create a new thread and listen for requests on that thread.
-zx_status_t loader_service_create(async_t* async,
+zx_status_t loader_service_create(async_dispatcher_t* dispatcher,
                                   const loader_service_ops_t* ops,
                                   void* ctx,
                                   loader_service_t** out);

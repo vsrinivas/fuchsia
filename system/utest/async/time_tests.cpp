@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <lib/async/time.h>
-#include <lib/async-testutils/async_stub.h>
+#include <lib/async-testutils/dispatcher_stub.h>
 #include <unittest/unittest.h>
 
 
 namespace {
 
-class FakeClockAsync : public async::AsyncStub {
+class FakeClockAsync : public async::DispatcherStub {
 public:
     zx::time Now() override { return current_time_; }
     void SetTime(zx::time t) { current_time_ = t; }
@@ -21,17 +21,17 @@ private:
 bool time_telling_test() {
     BEGIN_TEST;
 
-    FakeClockAsync async;
-    EXPECT_EQ(0u, async.Now().get());
-    EXPECT_EQ(0u, async_now(&async));
+    FakeClockAsync dispatcher;
+    EXPECT_EQ(0u, dispatcher.Now().get());
+    EXPECT_EQ(0u, async_now(&dispatcher));
 
-    async.SetTime(zx::time(4u));
-    EXPECT_EQ(4u, async.Now().get());
-    EXPECT_EQ(4u, async_now(&async));
+    dispatcher.SetTime(zx::time(4u));
+    EXPECT_EQ(4u, dispatcher.Now().get());
+    EXPECT_EQ(4u, async_now(&dispatcher));
 
-    async.SetTime(zx::time(1853u));
-    EXPECT_EQ(1853u, async.Now().get());
-    EXPECT_EQ(1853u, async_now(&async));
+    dispatcher.SetTime(zx::time(1853u));
+    EXPECT_EQ(1853u, dispatcher.Now().get());
+    EXPECT_EQ(1853u, async_now(&dispatcher));
 
     END_TEST;
 }

@@ -38,7 +38,7 @@ zx_status_t Fence::OnRefArmed(fbl::RefPtr<FenceReference>&& ref) {
         ready_wait_.set_object(event_.get());
         ready_wait_.set_trigger(ZX_EVENT_SIGNALED);
 
-        zx_status_t status = ready_wait_.Begin(async_);
+        zx_status_t status = ready_wait_.Begin(dispatcher_);
         if (status != ZX_OK) {
             return status;
         }
@@ -55,7 +55,7 @@ void Fence::OnRefDisarmed(FenceReference* ref) {
     }
 }
 
-void Fence::OnReady(async_t* async, async::WaitBase* self,
+void Fence::OnReady(async_dispatcher_t* dispatcher, async::WaitBase* self,
                     zx_status_t status, const zx_packet_signal_t* signal) {
     ZX_DEBUG_ASSERT(status == ZX_OK && (signal->observed & ZX_EVENT_SIGNALED));
 
@@ -66,12 +66,12 @@ void Fence::OnReady(async_t* async, async::WaitBase* self,
     cb_->OnFenceFired(ref.get());
 
     if (!armed_refs_.is_empty()) {
-        ready_wait_.Begin(async_);
+        ready_wait_.Begin(dispatcher_);
     }
 }
 
-Fence::Fence(FenceCallback* cb, async_t* async, uint64_t fence_id, zx::event&& event)
-        : cb_(cb), async_(async), event_(fbl::move(event)) {
+Fence::Fence(FenceCallback* cb, async_dispatcher_t* dispatcher, uint64_t fence_id, zx::event&& event)
+        : cb_(cb), dispatcher_(dispatcher), event_(fbl::move(event)) {
     id = fence_id;
 }
 

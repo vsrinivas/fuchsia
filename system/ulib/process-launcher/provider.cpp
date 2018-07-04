@@ -8,12 +8,12 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
-static zx_status_t connect(void* ctx, async_t* async, const char* service_name,
+static zx_status_t connect(void* ctx, async_dispatcher_t* dispatcher, const char* service_name,
                            zx_handle_t request) {
     if (!strcmp(service_name, "fuchsia.process.Launcher")) {
         auto launcher = new launcher::LauncherImpl(zx::channel(request));
 
-        zx_status_t status = launcher->Begin(async);
+        zx_status_t status = launcher->Begin(dispatcher);
         if (status != ZX_OK) {
             delete launcher;
             return status;

@@ -34,7 +34,7 @@ typedef struct trace_provider trace_provider_t;
 // The trace provider will start and stop the trace engine in response to requests
 // from the tracing system.
 //
-// |async| is the asynchronous dispatcher which the trace provider and trace
+// |dispatcher| is the asynchronous dispatcher which the trace provider and trace
 // engine will use for dispatch.  This must outlive the trace provider instance.
 //
 // Returns the trace provider, or null if creation failed.
@@ -43,7 +43,7 @@ typedef struct trace_provider trace_provider_t;
 // Switch to passively exporting the trace provider via the "hub" through
 // the process's exported directory once that stuff is implemented.  We'll
 // probably need to pass some extra parameters to the trace provider then.
-trace_provider_t* trace_provider_create(async_t* async);
+trace_provider_t* trace_provider_create(async_dispatcher_t* dispatcher);
 
 // Destroys the trace provider.
 void trace_provider_destroy(trace_provider_t* provider);
@@ -57,8 +57,8 @@ namespace trace {
 class TraceProvider {
 public:
     // Creates a trace provider.
-    TraceProvider(async_t* async)
-        : provider_(trace_provider_create(async)) {}
+    TraceProvider(async_dispatcher_t* dispatcher)
+        : provider_(trace_provider_create(dispatcher)) {}
 
     // Destroys a trace provider.
     ~TraceProvider() {

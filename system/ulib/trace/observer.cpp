@@ -15,8 +15,8 @@ TraceObserver::~TraceObserver() {
     Stop();
 }
 
-void TraceObserver::Start(async_t* async, fbl::Closure callback) {
-    ZX_DEBUG_ASSERT(async);
+void TraceObserver::Start(async_dispatcher_t* dispatcher, fbl::Closure callback) {
+    ZX_DEBUG_ASSERT(dispatcher);
     ZX_DEBUG_ASSERT(callback);
 
     Stop();
@@ -28,7 +28,7 @@ void TraceObserver::Start(async_t* async, fbl::Closure callback) {
 
     wait_.set_object(event_.get());
     wait_.set_trigger(ZX_EVENT_SIGNALED);
-    BeginWait(async);
+    BeginWait(dispatcher);
 }
 
 void TraceObserver::Stop() {
@@ -41,7 +41,7 @@ void TraceObserver::Stop() {
     }
 }
 
-void TraceObserver::Handle(async_t* async, async::WaitBase* wait, zx_status_t status,
+void TraceObserver::Handle(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                            const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
         Stop();
@@ -64,11 +64,11 @@ void TraceObserver::Handle(async_t* async, async::WaitBase* wait, zx_status_t st
     trace_notify_observer_updated(event_.get());
 
     // Wait again!
-    BeginWait(async);
+    BeginWait(dispatcher);
 }
 
-void TraceObserver::BeginWait(async_t* async) {
-    zx_status_t status = wait_.Begin(async);
+void TraceObserver::BeginWait(async_dispatcher_t* dispatcher) {
+    zx_status_t status = wait_.Begin(dispatcher);
     if (status != ZX_OK)
         Stop();
 }

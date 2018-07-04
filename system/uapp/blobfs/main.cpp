@@ -48,9 +48,9 @@ int do_blobfs_mount(fbl::unique_fd fd, blobfs::blob_options_t* options) {
     }
 
     async::Loop loop;
-    trace::TraceProvider provider(loop.async());
+    trace::TraceProvider provider(loop.dispatcher());
     auto loop_quit = [&loop]() { loop.Quit(); };
-    if (blobfs::blobfs_mount(loop.async(), fbl::move(fd), options,
+    if (blobfs::blobfs_mount(loop.dispatcher(), fbl::move(fd), options,
                              fbl::move(root), fbl::move(loop_quit)) != ZX_OK) {
         return -1;
     }

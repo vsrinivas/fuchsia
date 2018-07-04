@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async-testutils/async_stub.h>
+#include <lib/async-testutils/dispatcher_stub.h>
 #include <lib/async/cpp/wait.h>
 #include <unittest/unittest.h>
 
@@ -17,7 +17,7 @@ const zx_packet_signal_t dummy_signal{
     .reserved0 = 0u,
     .reserved1 = 0u};
 
-class MockAsync : public async::AsyncStub {
+class MockDispatcher : public async::DispatcherStub {
 public:
     enum class Op {
         NONE,
@@ -53,7 +53,7 @@ public:
         last_signal = nullptr;
     }
 
-    void Handler(async_t* async, async::WaitBase* wait, zx_status_t status,
+    void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                  const zx_packet_signal_t* signal) {
         handler_ran = true;
         last_wait = wait;
@@ -74,9 +74,9 @@ public:
     LambdaHarness(zx_handle_t object = ZX_HANDLE_INVALID,
                   zx_signals_t trigger = ZX_SIGNAL_NONE)
         : wait_{object, trigger,
-                [this](async_t* async, async::Wait* wait, zx_status_t status,
+                [this](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
                        const zx_packet_signal_t* signal) {
-                    Handler(async, wait, status, signal);
+                    Handler(dispatcher, wait, status, signal);
                 }} {}
 
     async::WaitBase& wait() override { return wait_; }
@@ -105,14 +105,14 @@ bool wait_set_handler_test() {
         EXPECT_FALSE(wait.has_handler());
         EXPECT_FALSE(wait.is_pending());
 
-        wait.set_handler([](async_t* async, async::Wait* wait, zx_status_t status,
+        wait.set_handler([](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
                             const zx_packet_signal_t* signal) {});
         EXPECT_TRUE(wait.has_handler());
     }
 
     {
         async::Wait wait(ZX_HANDLE_INVALID, ZX_SIGNAL_NONE,
-                         [](async_t* async, async::Wait* wait, zx_status_t status,
+                         [](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
                             const zx_packet_signal_t* signal) {});
         EXPECT_TRUE(wait.has_handler());
         EXPECT_FALSE(wait.is_pending());
@@ -142,39 +142,39 @@ template <typename Harness>
 bool wait_begin_test() {
     BEGIN_TEST;
 
-    MockAsync async;
+    MockDispatcher dispatcher;
 
     {
         Harness harness(dummy_handle, dummy_trigger);
         EXPECT_FALSE(harness.wait().is_pending());
 
-        async.next_status = ZX_OK;
-        EXPECT_EQ(ZX_OK, harness.wait().Begin(&async));
+        dispatcher.next_status = ZX_OK;
+        EXPECT_EQ(ZX_OK, harness.wait().Begin(&dispatcher));
         EXPECT_TRUE(harness.wait().is_pending());
-        EXPECT_EQ(MockAsync::Op::BEGIN_WAIT, async.last_op);
-        EXPECT_EQ(dummy_handle, async.last_wait->object);
-        EXPECT_EQ(dummy_trigger, async.last_wait->trigger);
+        EXPECT_EQ(MockDispatcher::Op::BEGIN_WAIT, dispatcher.last_op);
+        EXPECT_EQ(dummy_handle, dispatcher.last_wait->object);
+        EXPECT_EQ(dummy_trigger, dispatcher.last_wait->trigger);
         EXPECT_FALSE(harness.handler_ran);
 
         harness.Reset();
-        async.last_op = MockAsync::Op::NONE;
-        EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, harness.wait().Begin(&async));
-        EXPECT_EQ(MockAsync::Op::NONE, async.last_op);
+        dispatcher.last_op = MockDispatcher::Op::NONE;
+        EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, harness.wait().Begin(&dispatcher));
+        EXPECT_EQ(MockDispatcher::Op::NONE, dispatcher.last_op);
         EXPECT_FALSE(harness.handler_ran);
     }
-    EXPECT_EQ(MockAsync::Op::CANCEL_WAIT, async.last_op);
+    EXPECT_EQ(MockDispatcher::Op::CANCEL_WAIT, dispatcher.last_op);
 
     {
         Harness harness(dummy_handle, dummy_trigger);
         EXPECT_FALSE(harness.wait().is_pending());
 
-        async.next_status = ZX_ERR_BAD_STATE;
-        EXPECT_EQ(ZX_ERR_BAD_STATE, harness.wait().Begin(&async));
-        EXPECT_EQ(MockAsync::Op::BEGIN_WAIT, async.last_op);
+        dispatcher.next_status = ZX_ERR_BAD_STATE;
+        EXPECT_EQ(ZX_ERR_BAD_STATE, harness.wait().Begin(&dispatcher));
+        EXPECT_EQ(MockDispatcher::Op::BEGIN_WAIT, dispatcher.last_op);
         EXPECT_FALSE(harness.wait().is_pending());
         EXPECT_FALSE(harness.handler_ran);
     }
-    EXPECT_EQ(MockAsync::Op::BEGIN_WAIT, async.last_op);
+    EXPECT_EQ(MockDispatcher::Op::BEGIN_WAIT, dispatcher.last_op);
 
     END_TEST;
 }
@@ -183,30 +183,30 @@ template <typename Harness>
 bool wait_cancel_test() {
     BEGIN_TEST;
 
-    MockAsync async;
+    MockDispatcher dispatcher;
 
     {
         Harness harness(dummy_handle, dummy_trigger);
         EXPECT_FALSE(harness.wait().is_pending());
 
         EXPECT_EQ(ZX_ERR_NOT_FOUND, harness.wait().Cancel());
-        EXPECT_EQ(MockAsync::Op::NONE, async.last_op);
+        EXPECT_EQ(MockDispatcher::Op::NONE, dispatcher.last_op);
         EXPECT_FALSE(harness.wait().is_pending());
 
-        EXPECT_EQ(ZX_OK, harness.wait().Begin(&async));
-        EXPECT_EQ(MockAsync::Op::BEGIN_WAIT, async.last_op);
+        EXPECT_EQ(ZX_OK, harness.wait().Begin(&dispatcher));
+        EXPECT_EQ(MockDispatcher::Op::BEGIN_WAIT, dispatcher.last_op);
         EXPECT_TRUE(harness.wait().is_pending());
 
         EXPECT_EQ(ZX_OK, harness.wait().Cancel());
-        EXPECT_EQ(MockAsync::Op::CANCEL_WAIT, async.last_op);
+        EXPECT_EQ(MockDispatcher::Op::CANCEL_WAIT, dispatcher.last_op);
         EXPECT_FALSE(harness.wait().is_pending());
 
-        async.last_op = MockAsync::Op::NONE;
+        dispatcher.last_op = MockDispatcher::Op::NONE;
         EXPECT_EQ(ZX_ERR_NOT_FOUND, harness.wait().Cancel());
-        EXPECT_EQ(MockAsync::Op::NONE, async.last_op);
+        EXPECT_EQ(MockDispatcher::Op::NONE, dispatcher.last_op);
         EXPECT_FALSE(harness.wait().is_pending());
     }
-    EXPECT_EQ(MockAsync::Op::NONE, async.last_op);
+    EXPECT_EQ(MockDispatcher::Op::NONE, dispatcher.last_op);
 
     END_TEST;
 }
@@ -215,30 +215,30 @@ template <typename Harness>
 bool wait_run_handler_test() {
     BEGIN_TEST;
 
-    MockAsync async;
+    MockDispatcher dispatcher;
 
     {
         Harness harness(dummy_handle, dummy_trigger);
         EXPECT_FALSE(harness.wait().is_pending());
 
-        EXPECT_EQ(ZX_OK, harness.wait().Begin(&async));
-        EXPECT_EQ(MockAsync::Op::BEGIN_WAIT, async.last_op);
+        EXPECT_EQ(ZX_OK, harness.wait().Begin(&dispatcher));
+        EXPECT_EQ(MockDispatcher::Op::BEGIN_WAIT, dispatcher.last_op);
         EXPECT_TRUE(harness.wait().is_pending());
 
         harness.Reset();
-        async.last_wait->handler(&async, async.last_wait, ZX_OK, &dummy_signal);
+        dispatcher.last_wait->handler(&dispatcher, dispatcher.last_wait, ZX_OK, &dummy_signal);
         EXPECT_TRUE(harness.handler_ran);
         EXPECT_EQ(&harness.wait(), harness.last_wait);
         EXPECT_EQ(ZX_OK, harness.last_status);
         EXPECT_EQ(&dummy_signal, harness.last_signal);
         EXPECT_FALSE(harness.wait().is_pending());
 
-        async.last_op = MockAsync::Op::NONE;
+        dispatcher.last_op = MockDispatcher::Op::NONE;
         EXPECT_EQ(ZX_ERR_NOT_FOUND, harness.wait().Cancel());
-        EXPECT_EQ(MockAsync::Op::NONE, async.last_op);
+        EXPECT_EQ(MockDispatcher::Op::NONE, dispatcher.last_op);
         EXPECT_FALSE(harness.wait().is_pending());
     }
-    EXPECT_EQ(MockAsync::Op::NONE, async.last_op);
+    EXPECT_EQ(MockDispatcher::Op::NONE, dispatcher.last_op);
 
     END_TEST;
 }
@@ -246,9 +246,9 @@ bool wait_run_handler_test() {
 bool unsupported_begin_wait_test() {
     BEGIN_TEST;
 
-    async::AsyncStub async;
+    async::DispatcherStub dispatcher;
     async_wait_t wait{};
-    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_begin_wait(&async, &wait), "valid args");
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_begin_wait(&dispatcher, &wait), "valid args");
 
     END_TEST;
 }
@@ -256,9 +256,9 @@ bool unsupported_begin_wait_test() {
 bool unsupported_cancel_wait_test() {
     BEGIN_TEST;
 
-    async::AsyncStub async;
+    async::DispatcherStub dispatcher;
     async_wait_t wait{};
-    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_cancel_wait(&async, &wait), "valid args");
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_cancel_wait(&dispatcher, &wait), "valid args");
 
     END_TEST;
 }

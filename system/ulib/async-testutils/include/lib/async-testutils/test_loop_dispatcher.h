@@ -9,21 +9,22 @@
 #include <lib/async/dispatcher.h>
 #include <lib/async/task.h>
 #include <lib/async/wait.h>
-#include <lib/async-testutils/async_stub.h>
+#include <lib/async-testutils/dispatcher_stub.h>
 
 #include <lib/zx/port.h>
 #include <lib/zx/time.h>
 
 namespace async {
 
-// A C++ implementation of async_t (to which this class can always be upcast),
-// providing an ecapsulation of the dispatch methods at the core of |TestLoop|.
-class TestLoopDispatcher : public AsyncStub {
+// A C++ implementation of async_dispatcher_t (to which this class can always be
+// upcast), providing an ecapsulation of the dispatch methods at the core of
+// |TestLoop|.
+class TestLoopDispatcher : public DispatcherStub {
 public:
     TestLoopDispatcher();
     ~TestLoopDispatcher();
 
-    // async_t operation implementations.
+    // async_dispatcher_t operation implementations.
     zx::time Now() override { return current_time_; };
     zx_status_t BeginWait(async_wait_t* wait) override;
     zx_status_t CancelWait(async_wait_t* wait) override;

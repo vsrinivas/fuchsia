@@ -25,9 +25,9 @@ void TraceHandler::CallTraceStarted(trace_handler_t* handler) {
     static_cast<TraceHandler*>(handler)->TraceStarted();
 }
 
-void TraceHandler::CallTraceStopped(trace_handler_t* handler, async_t* async,
+void TraceHandler::CallTraceStopped(trace_handler_t* handler, async_dispatcher_t* dispatcher,
                                     zx_status_t disposition, size_t buffer_bytes_written) {
-    static_cast<TraceHandler*>(handler)->TraceStopped(async,
+    static_cast<TraceHandler*>(handler)->TraceStopped(dispatcher,
                                                       disposition, buffer_bytes_written);
 }
 

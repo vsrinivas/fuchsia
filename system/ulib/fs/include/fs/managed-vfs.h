@@ -30,7 +30,7 @@ namespace fs {
 class ManagedVfs : public Vfs {
 public:
     ManagedVfs();
-    ManagedVfs(async_t* async);
+    ManagedVfs(async_dispatcher_t* dispatcher);
 
     // The ManagedVfs destructor is only safe to execute if
     // no connections are actively registered.
@@ -58,7 +58,7 @@ private:
     // Invokes the handler from |Shutdown| once all connections have been
     // released. Additionally, unmounts all sub-mounted filesystems, if any
     // exist.
-    void OnShutdownComplete(async_t*, async::TaskBase*, zx_status_t status);
+    void OnShutdownComplete(async_dispatcher_t*, async::TaskBase*, zx_status_t status);
 
     void RegisterConnection(fbl::unique_ptr<Connection> connection) final;
     void UnregisterConnection(Connection* connection) final;

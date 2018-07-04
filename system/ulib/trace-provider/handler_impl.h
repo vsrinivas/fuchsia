@@ -20,7 +20,7 @@ namespace internal {
 
 class TraceHandlerImpl final : public trace::TraceHandler {
 public:
-    static zx_status_t StartEngine(async_t* async, zx::vmo buffer,
+    static zx_status_t StartEngine(async_dispatcher_t* dispatcher, zx::vmo buffer,
                                    zx::eventpair fence,
                                    fbl::Vector<fbl::String> enabled_categories);
     static zx_status_t StopEngine();
@@ -34,7 +34,7 @@ private:
     // |trace::TraceHandler|
     bool IsCategoryEnabled(const char* category) override;
     void TraceStarted() override;
-    void TraceStopped(async_t* async,
+    void TraceStopped(async_dispatcher_t* dispatcher,
                       zx_status_t disposition, size_t buffer_bytes_written) override;
     void BufferOverflow() override;
 

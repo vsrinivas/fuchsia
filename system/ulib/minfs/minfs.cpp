@@ -720,7 +720,7 @@ zx_status_t minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, fbl::RefPtr<VnodeMinf
 }
 
 #ifdef __Fuchsia__
-zx_status_t MountAndServe(const minfs_options_t* options, async_t* async,
+zx_status_t MountAndServe(const minfs_options_t* options, async_dispatcher_t* dispatcher,
                           fbl::unique_ptr<Bcache> bc, zx::channel mount_channel,
                           fbl::Closure on_unmount) {
     TRACE_DURATION("minfs", "MountAndServe");
@@ -735,14 +735,14 @@ zx_status_t MountAndServe(const minfs_options_t* options, async_t* async,
     vfs->SetReadonly(options->readonly);
     vfs->SetMetrics(options->metrics);
     vfs->SetUnmountCallback(fbl::move(on_unmount));
-    vfs->SetAsync(async);
+    vfs->SetDispatcher(dispatcher);
     return vfs->ServeDirectory(fbl::move(vn), fbl::move(mount_channel));
 }
 
 void Minfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
     ManagedVfs::Shutdown([this, cb = fbl::move(cb)] (zx_status_t status) mutable {
         Sync([this, cb = fbl::move(cb)](zx_status_t) mutable {
-            async::PostTask(async(), [this, cb = fbl::move(cb)]() mutable {
+            async::PostTask(dispatcher(), [this, cb = fbl::move(cb)]() mutable {
                 // Ensure writeback buffer completes before auxilliary structures
                 // are deleted.
                 writeback_ = nullptr;

@@ -189,8 +189,8 @@ VnodeDir* vfs_create_global_root() {
 
         memfs::global_loop.reset(new async::Loop());
         memfs::global_loop->StartThread("root-dispatcher");
-        memfs::root_vfs.SetAsync(memfs::global_loop->async());
-        memfs::system_vfs.SetAsync(memfs::global_loop->async());
+        memfs::root_vfs.SetDispatcher(memfs::global_loop->dispatcher());
+        memfs::system_vfs.SetDispatcher(memfs::global_loop->dispatcher());
     }
     return memfs::global_root.get();
 }
@@ -231,7 +231,7 @@ void vfs_global_init(VnodeDir* root) {
 }
 
 void vfs_watch_exit(zx_handle_t event) {
-    memfs::global_shutdown.set_handler([event](async_t* async,
+    memfs::global_shutdown.set_handler([event](async_dispatcher_t* dispatcher,
                                                async::Wait* wait,
                                                zx_status_t status,
                                                const zx_packet_signal_t* signal) {
@@ -242,7 +242,7 @@ void vfs_watch_exit(zx_handle_t event) {
 
     memfs::global_shutdown.set_object(event);
     memfs::global_shutdown.set_trigger(FSHOST_SIGNAL_EXIT);
-    memfs::global_shutdown.Begin(memfs::global_loop->async());
+    memfs::global_shutdown.Begin(memfs::global_loop->dispatcher());
 }
 
 // Return a RIO handle to the global root

@@ -13,7 +13,7 @@ namespace svc {
 
 class Outgoing {
 public:
-    explicit Outgoing(async_t* async);
+    explicit Outgoing(async_dispatcher_t* dispatcher);
     ~Outgoing();
 
     const fbl::RefPtr<fs::PseudoDir>& root_dir() const { return root_dir_; }
