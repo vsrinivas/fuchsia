@@ -4,6 +4,8 @@
 
 #include "lib/callback/cancellable_helper.h"
 
+#include <lib/fit/function.h>
+
 namespace callback {
 namespace {
 class DoneCancellable : public Cancellable {

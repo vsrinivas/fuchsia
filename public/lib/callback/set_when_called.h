@@ -5,7 +5,7 @@
 #ifndef LIB_CALLBACK_SET_WHEN_CALLED_H_
 #define LIB_CALLBACK_SET_WHEN_CALLED_H_
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
 
 namespace callback {
 
@@ -13,7 +13,7 @@ namespace callback {
 // whether an asynchronous call results in the expected callback.
 //
 // When this function is called, it initially sets the boolean value to false.
-fxl::Closure SetWhenCalled(bool* value);
+fit::closure SetWhenCalled(bool* value);
 
 }  // namespace callback
 

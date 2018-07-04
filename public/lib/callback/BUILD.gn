@@ -42,7 +42,7 @@ source_set("unittests") {
     "capture_unittest.cc",
     "destruction_sentinel_unittest.cc",
     "managed_container_unittest.cc",
-    "operation_serializer_unittests.cc",
+    "operation_serializer_unittest.cc",
     "scoped_callback_unittest.cc",
     "scoped_task_runner_unittest.cc",
     "set_when_called_unittest.cc",

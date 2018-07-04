@@ -9,6 +9,7 @@
 #include <queue>
 
 #include <lib/fit/function.h>
+
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -20,7 +21,7 @@ namespace internal {
 
 // Defines the type of the callback function to be used in Serialize method of
 // OperationSerializer. Note that this is necessary for template resolution:
-// Trying to directly define callback as `std::function<void(C...)>` causes a
+// Trying to directly define callback as `fit::function<void(C...)>` causes a
 // compile error when calling Serialize, as automatic cast of lambdas fails.
 template <class... C>
 struct Signature {
@@ -34,9 +35,9 @@ struct Signature {
 //     OperationSerializer serializer;
 //
 // and then for each operation to be serialized:
-//     std::function<void(Status)> on_done = ...;
+//     fit::function<void(Status)> on_done = ...;
 //     serializer.Serialize<Status>(std::move(on_done),
-//                                  [](std::function<void(Status)> callback) {
+//                                  [](fit::function<void(Status)> callback) {
 //                                    // Code for the operation...
 //                                    callback(Status::/* result */);
 //                                  });
@@ -52,24 +53,24 @@ class OperationSerializer {
   //
   // The resolved type of this method is
   //   void Serialize(fit::function<void(C...)> callback,
-  //                  fit::function<void(std::function<void(C...)>)> operation)
+  //                  fit::function<void(fit::function<void(C...)>)> operation)
   template <class... C>
   void Serialize(
       fit::function<typename internal::Signature<C...>::CallbackType> callback,
       fit::function<
-          void(std::function<typename internal::Signature<C...>::CallbackType>)>
+          void(fit::function<typename internal::Signature<C...>::CallbackType>)>
           operation) {
     auto closure = [this, callback = std::move(callback),
                     operation = std::move(operation)]() mutable {
-      operation(fxl::MakeCopyable([weak_ptr_ = weak_factory_.GetWeakPtr(),
-                                   callback = std::move(callback)](C... args) {
+      operation([weak_ptr_ = weak_factory_.GetWeakPtr(),
+                 callback = std::move(callback)](C... args) {
         // First run the callback and then, make sure this has not been deleted.
         callback(std::forward<C>(args)...);
         if (!weak_ptr_) {
           return;
         }
         weak_ptr_->UpdateOperationsAndCallNext();
-      }));
+      });
     };
     queued_operations_.emplace(std::move(closure));
     if (queued_operations_.size() == 1) {

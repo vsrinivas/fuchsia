@@ -149,7 +149,7 @@ class CompletionAccumulator {
 template <typename A, typename R, typename... Args>
 class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
  public:
-  std::function<void(Args...)> NewCallback() {
+  fit::function<void(Args...)> NewCallback() {
     FXL_DCHECK(!finalized_) << "Waiter was already finalized.";
     FXL_DCHECK(!cancelled_) << "Waiter has been cancelled.";
     if (done_) {

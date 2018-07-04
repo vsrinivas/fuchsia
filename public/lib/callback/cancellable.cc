@@ -6,6 +6,8 @@
 
 #include <utility>
 
+#include <lib/fit/function.h>
+
 namespace callback {
 
 Cancellable::Cancellable() {}

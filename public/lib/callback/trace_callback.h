@@ -9,6 +9,7 @@
 #include <functional>
 #include <utility>
 
+#include <lib/fit/function.h>
 #include <trace/event.h>
 
 #include "lib/fxl/functional/auto_call.h"
@@ -44,7 +45,7 @@ class TracingLambda {
         trace_enabled_(false) {}
 
   // Copy constructor so that the resulting callback can be used as an
-  // std::function, but acts as a move constructor. Only the last copy is valid.
+  // fit::function, but acts as a move constructor. Only the last copy is valid.
   TracingLambda(TracingLambda&& other) noexcept
       : id_(other.id_),
         category_(other.category_),
@@ -64,7 +65,7 @@ class TracingLambda {
   }
 
   template <typename... ArgType>
-  auto operator()(ArgType&&... args) {
+  auto operator()(ArgType&&... args) const {
     FXL_DCHECK(!did_run_or_moved_out_);
     did_run_or_moved_out_ = true;
     if (trace_enabled_) {
@@ -87,7 +88,7 @@ class TracingLambda {
   const char* const category_;
   const char* const name_;
   const char* const callback_name_;
-  C callback_;
+  mutable C callback_;
   mutable bool did_run_or_moved_out_;
   bool trace_enabled_;
 
@@ -104,13 +105,13 @@ auto TraceCallback(C callback,
                    ArgType... args) {  // NOLINT
   uint64_t id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN(category, name, id, std::forward<ArgType>(args)...);
-  return fxl::MakeCopyable(
-      TracingLambda<C>(std::move(callback), id, category, name, callback_name));
+  return TracingLambda<C>(std::move(callback), id, category, name,
+                          callback_name);
 }
 
 template <typename C>
 auto TraceCallback(C callback) {
-  return fxl::MakeCopyable(TracingLambda<C>(std::move(callback)));
+  return TracingLambda<C>(std::move(callback));
 }
 
 // Identity functions. This is used to ensure that a C string is a compile time

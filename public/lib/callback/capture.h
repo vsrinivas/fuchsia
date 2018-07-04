@@ -8,7 +8,6 @@
 #include <functional>
 #include <utility>
 
-#include "lib/fxl/functional/closure.h"
 
 namespace callback {
 namespace internal {

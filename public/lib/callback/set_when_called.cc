@@ -4,9 +4,11 @@
 
 #include "lib/callback/set_when_called.h"
 
+#include <lib/fit/function.h>
+
 namespace callback {
 
-fxl::Closure SetWhenCalled(bool* value) {
+fit::closure SetWhenCalled(bool* value) {
   *value = false;
   return [value] { *value = true; };
 }

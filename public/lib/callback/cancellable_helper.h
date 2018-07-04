@@ -7,6 +7,8 @@
 
 #include <type_traits>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/cancellable.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -21,8 +23,8 @@ class WrappedCancellableCallback {
  public:
   WrappedCancellableCallback(T wrapped_callback, bool* is_done_ptr,
                              fit::closure post_run)
-      : wrapped_callback_(std::make_shared<T>(std::move(wrapped_callback))),
-        post_run_(std::make_shared<fit::closure>(std::move(post_run))),
+      : wrapped_callback_(std::move(wrapped_callback)),
+        post_run_(std::move(post_run)),
         is_done_ptr_(is_done_ptr) {
     FXL_DCHECK(post_run_);
   }
@@ -39,15 +41,13 @@ class WrappedCancellableCallback {
       return;
     }
     *is_done_ptr_ = true;
-    auto call_on_exit = fxl::MakeAutoCall(std::move(*post_run_));
-    return (*wrapped_callback_)(std::forward<ArgType>(args)...);
+    auto call_on_exit = fxl::MakeAutoCall(std::move(post_run_));
+    return wrapped_callback_(std::forward<ArgType>(args)...);
   }
 
  private:
-  // TODO(qsr): LE-502 Remove these shared_ptr and make this class move only
-  // when every usage is converted to not require copyable function-like object.
-  std::shared_ptr<T> wrapped_callback_;
-  std::shared_ptr<fit::closure> post_run_;
+  mutable T wrapped_callback_;
+  mutable fit::closure post_run_;
   // This is safe as long as a refptr to the CancellableImpl is held by
   // |post_run_| callback.
   bool* is_done_ptr_;

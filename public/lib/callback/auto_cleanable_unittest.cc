@@ -5,6 +5,7 @@
 #include "lib/callback/auto_cleanable.h"
 
 #include <lib/fit/function.h>
+
 #include "gtest/gtest.h"
 
 namespace callback {
