@@ -105,7 +105,7 @@ void TokenManagerImpl::Authorize(
   auth_context_provider_->GetAuthenticationUIContext(
       auth_ui_context.NewRequest());
 
-  auth_ui_context.set_error_handler([this, callback] {
+  auth_ui_context.set_error_handler([this, callback = callback.share()] {
     FXL_LOG(INFO) << "Auth UI Context disconnected";
     callback(Status::INTERNAL_ERROR, nullptr);
     return;
@@ -113,7 +113,8 @@ void TokenManagerImpl::Authorize(
 
   it->second->GetPersistentCredential(
       std::move(auth_ui_context),
-      [this, auth_provider_type = app_config.auth_provider_type, callback](
+      [this, auth_provider_type = app_config.auth_provider_type,
+       callback = std::move(callback)](
           AuthProviderStatus status, fidl::StringPtr credential,
           fuchsia::auth::UserProfileInfoPtr user_profile_info) {
         if (status != AuthProviderStatus::OK || credential.get().empty()) {
@@ -128,6 +129,7 @@ void TokenManagerImpl::Authorize(
                 cred_id, credential)) != store::Status::kOK) {
           // TODO: Log error
           callback(Status::INTERNAL_ERROR, nullptr);
+          return;
         }
 
         callback(Status::OK, std::move(user_profile_info));
@@ -160,8 +162,8 @@ void TokenManagerImpl::GetAccessToken(
 
   it->second->GetAppAccessToken(
       fidl::StringPtr(credential), app_config.client_id, std::move(app_scopes),
-      [this, callback, cache_key, tokens](AuthProviderStatus status,
-                                          AuthTokenPtr access_token) mutable {
+      [this, callback = std::move(callback), cache_key, tokens](
+          AuthProviderStatus status, AuthTokenPtr access_token) mutable {
         std::string access_token_val;
         if (access_token) {
           access_token_val = access_token->token;
@@ -212,8 +214,8 @@ void TokenManagerImpl::GetIdToken(AppConfig app_config,
 
   it->second->GetAppIdToken(
       fidl::StringPtr(credential), audience,
-      [this, callback, cache_key, tokens](AuthProviderStatus status,
-                                          AuthTokenPtr id_token) mutable {
+      [this, callback = std::move(callback), cache_key, tokens](
+          AuthProviderStatus status, AuthTokenPtr id_token) mutable {
         std::string id_token_val;
         if (id_token) {
           id_token_val = id_token->token;
@@ -267,8 +269,9 @@ void TokenManagerImpl::GetFirebaseToken(AppConfig app_config,
   }
 
   GetIdToken(std::move(app_config), user_profile_id, audience,
-             [this, it, callback, cache_key, firebase_api_key](
-                 Status status, fidl::StringPtr id_token) {
+             [this, it, callback = std::move(callback), cache_key,
+              firebase_api_key](Status status,
+                                fidl::StringPtr id_token) mutable {
                if (status != Status::OK) {
                  callback(Status::AUTH_PROVIDER_SERVER_ERROR, nullptr);
                  // TODO: log error here
@@ -277,8 +280,9 @@ void TokenManagerImpl::GetFirebaseToken(AppConfig app_config,
 
                it->second->GetAppFirebaseToken(
                    id_token, firebase_api_key,
-                   [this, callback, cache_key, firebase_api_key](
-                       AuthProviderStatus status, FirebaseTokenPtr fb_token) {
+                   [this, callback = std::move(callback), cache_key,
+                    firebase_api_key](AuthProviderStatus status,
+                                      FirebaseTokenPtr fb_token) {
                      if (status != AuthProviderStatus::OK) {
                        callback(Status::AUTH_PROVIDER_SERVER_ERROR, nullptr);
                        return;
@@ -323,7 +327,8 @@ void TokenManagerImpl::DeleteAllTokens(AppConfig app_config,
 
   it->second->RevokeAppOrPersistentCredential(
       fidl::StringPtr(credential),
-      [this, app_config, user_profile_id, callback](AuthProviderStatus status) {
+      [this, app_config, user_profile_id,
+       callback = std::move(callback)](AuthProviderStatus status) {
         if (status != AuthProviderStatus::OK) {
           callback(Status::AUTH_PROVIDER_SERVER_ERROR);
           return;
