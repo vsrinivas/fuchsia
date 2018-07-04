@@ -46,15 +46,6 @@ class VirtioVsock
   class Connection;
 
  private:
-  // |fuchsia::guest::SocketEndpoint|
-  void SetContextId(
-      uint32_t cid,
-      fidl::InterfaceHandle<fuchsia::guest::SocketConnector> connector,
-      fidl::InterfaceRequest<fuchsia::guest::SocketAcceptor> acceptor) override;
-  // |fuchsia::guest::SocketAcceptor|
-  void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
-              AcceptCallback callback) override;
-
   struct ConnectionKey {
     // The host-side of the connection is represented by local_cid and
     // local_port.
@@ -91,32 +82,26 @@ class VirtioVsock
     VirtioQueueWaiter waiter_;
   };
 
+  // |fuchsia::guest::SocketEndpoint|
+  void SetContextId(
+      uint32_t cid,
+      fidl::InterfaceHandle<fuchsia::guest::SocketConnector> connector,
+      fidl::InterfaceRequest<fuchsia::guest::SocketAcceptor> acceptor) override;
+  // |fuchsia::guest::SocketAcceptor|
+  void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
+              SocketAcceptor::AcceptCallback callback) override;
   void ConnectCallback(ConnectionKey key, zx_status_t status,
                        zx::socket socket);
-  zx_status_t SetupConnection(ConnectionKey key, Connection* conn);
+
   zx_status_t AddConnectionLocked(ConnectionKey key,
                                   fbl::unique_ptr<Connection> conn)
       __TA_REQUIRES(mutex_);
   Connection* GetConnectionLocked(ConnectionKey key) __TA_REQUIRES(mutex_);
-  virtio_vsock_hdr_t* GetHeaderLocked(VirtioQueue* queue, uint16_t index,
-                                      virtio_desc_t* desc, bool writable)
+  bool MaybeEraseLocked(ConnectionKey key, zx_status_t status)
       __TA_REQUIRES(mutex_);
+  void WaitOnQueueLocked(ConnectionKey key) __TA_REQUIRES(mutex_);
 
-  template <StreamFunc F>
-  zx_status_t WaitOnQueueLocked(ConnectionKey key, ConnectionSet* keys,
-                                Stream<F>* stream) __TA_REQUIRES(mutex_);
-  void WaitOnSocketLocked(zx_status_t status, ConnectionKey key,
-                          async::Wait* wait) __TA_REQUIRES(mutex_);
-
-  void OnSocketReady(async_t* async, async::Wait* wait, zx_status_t status,
-                     const zx_packet_signal_t* signal, ConnectionKey key);
-
-  zx_status_t Send(VirtioVsock::Connection* conn, virtio_vsock_hdr_t* header,
-                   virtio_desc_t* desc, uint32_t* used);
   void Mux(zx_status_t status, uint16_t index);
-  zx_status_t ReceiveLocked(ConnectionKey key, VirtioVsock::Connection* conn,
-                            virtio_vsock_hdr_t* header, virtio_desc_t* desc)
-      __TA_REQUIRES(mutex_);
   void Demux(zx_status_t status, uint16_t index);
 
   async_t* const async_;
@@ -129,43 +114,94 @@ class VirtioVsock
   ConnectionSet readable_ __TA_GUARDED(mutex_);
   // NOTE(abdulla): We ignore the event queue, as we don't support VM migration.
 
-  fidl::BindingSet<fuchsia::guest::SocketAcceptor> acceptor_bindings_;
   fidl::BindingSet<fuchsia::guest::SocketEndpoint> endpoint_bindings_;
+  fidl::BindingSet<fuchsia::guest::SocketAcceptor> acceptor_bindings_;
   fuchsia::guest::SocketConnectorPtr connector_;
+
+  class NullConnection;
+  class SocketConnection;
 };
 
 class VirtioVsock::Connection {
  public:
-  ~Connection();
+  virtual ~Connection(){};
 
+  uint32_t flags() const { return flags_; }
+  uint16_t op() const { return op_; }
+  void UpdateOp(uint16_t op);
+
+  uint32_t PeerFree() const;
+  void ReadCredit(virtio_vsock_hdr_t* header);
+  virtual zx_status_t WriteCredit(virtio_vsock_hdr_t* header) = 0;
+
+  virtual zx_status_t Accept(async_t* async) = 0;
+  virtual zx_status_t Shutdown(uint32_t flags) = 0;
+  virtual zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
+                           virtio_desc_t* desc, uint32_t* used) = 0;
+  virtual zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
+                            virtio_desc_t* desc) = 0;
+
+  zx_status_t WaitOnTransmit(async_t* async, zx_status_t status);
+  zx_status_t WaitOnReceive(async_t* async, zx_status_t status);
+
+ protected:
   // The number of bytes the guest expects us to have in our socket buffer.
   // This is the last credit_update sent minus any bytes we've received since
   // that update was sent.
   //
   // When this is 0 we'll need to send a CREDIT_UPDATE once buffer space has
   // been free'd so that the guest knows it can resume transmitting.
-  size_t reported_buf_avail = 0;
+  size_t reported_buf_avail_ = 0;
 
-  uint32_t flags = 0;
-  uint32_t rx_cnt = 0;
-  uint32_t tx_cnt = 0;
-  uint32_t peer_buf_alloc = 0;
-  uint32_t peer_fwd_cnt = 0;
-  zx::socket socket;
-  zx::socket remote_socket;
-  async::Wait rx_wait;
-  async::Wait tx_wait;
-  fuchsia::guest::SocketAcceptor::AcceptCallback acceptor;
+  uint32_t flags_ = 0;
+  uint32_t rx_cnt_ = 0;
+  uint32_t tx_cnt_ = 0;
+  uint32_t peer_buf_alloc_ = 0;
+  uint32_t peer_fwd_cnt_ = 0;
+  uint16_t op_ = VIRTIO_VSOCK_OP_REQUEST;
 
-  uint16_t op() const { return op_; }
-  void UpdateOp(uint16_t op);
+  async::Wait rx_wait_;
+  async::Wait tx_wait_;
+};
 
-  uint32_t peer_free() const {
-    return peer_buf_alloc - (tx_cnt - peer_fwd_cnt);
+class VirtioVsock::NullConnection final : public VirtioVsock::Connection {
+  zx_status_t WriteCredit(virtio_vsock_hdr_t* header) override { return ZX_OK; }
+
+  zx_status_t Accept(async_t* async) override { return ZX_OK; }
+  zx_status_t Shutdown(uint32_t flags) override { return ZX_OK; }
+  zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
+                   virtio_desc_t* desc, uint32_t* used) override {
+    return ZX_OK;
   }
+  zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
+                    virtio_desc_t* desc) override {
+    return ZX_OK;
+  }
+};
+
+class VirtioVsock::SocketConnection final : public VirtioVsock::Connection {
+ public:
+  SocketConnection(zx::socket socket, zx::socket remote_socket,
+                   fuchsia::guest::SocketAcceptor::AcceptCallback callback);
+  ~SocketConnection() override;
+
+  zx_status_t Init(async_t* async, fit::closure queue_callback);
+  zx_status_t WriteCredit(virtio_vsock_hdr_t* header) override;
+
+  zx_status_t Accept(async_t* async) override;
+  zx_status_t Shutdown(uint32_t flags) override;
+  zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
+                   virtio_desc_t* desc, uint32_t* used) override;
+  zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
+                    virtio_desc_t* desc) override;
 
  private:
-  uint16_t op_ = VIRTIO_VSOCK_OP_REQUEST;
+  void OnReady(zx_status_t status, const zx_packet_signal_t* signal);
+
+  zx::socket socket_;
+  zx::socket remote_socket_;
+  fuchsia::guest::SocketAcceptor::AcceptCallback accept_callback_;
+  fit::closure queue_callback_;
 };
 
 }  // namespace machina

@@ -282,7 +282,7 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
     RxBuffer* rx_buffer = DoReceive();
     ASSERT_NE(nullptr, rx_buffer);
     VerifyHeader(&rx_buffer->header, host_port, guest_port, 0, op, 0);
-    if (op == VIRTIO_VSOCK_OP_RST) {
+    if (remote_sockets_.empty()) {
       EXPECT_EQ(rx_buffer->header.buf_alloc, 0u);
     } else {
       EXPECT_GT(rx_buffer->header.buf_alloc, 0u);
