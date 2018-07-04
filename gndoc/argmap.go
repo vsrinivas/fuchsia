@@ -63,6 +63,11 @@ func (a *ArgMap) sortedArgs() (map[string]map[string][]Arg, []string) {
 	// Get the keys in alphabetical order
 	keys := make([]string, 0, numKeys)
 	for k := range args {
+		// Sort by name first, then by key
+		for argName := range args[k] {
+			sort.Slice(args[k][argName], func(i, j int) bool { return args[k][argName][i].Key < args[k][argName][j].Key })
+		}
+
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)

@@ -197,17 +197,17 @@ func TestDefaultWithCurrent(t *testing.T) {
 ### default_current
 Description of default_current arg.
 
-**Current value for ` + "`target_cpu = x64`:** `3`" + `
-	From [//build/BUILD.gn:24](http://fuchsia.com/build/BUILD.gn#24)
-
-**Overridden from the default:**` + " `4`" + `
-	From [//base/BUILD.gn:2](http://fuchsia.com/base/BUILD.gn#2)
-
 **Current value for ` + "`target_cpu = arm64`:** `[1, 2]`" + `
 	From [//build/BUILD.gn:24](http://fuchsia.com/build/BUILD.gn#24)
 
 **Overridden from the default:** ` + "`[3, 4]`" + `
 	From [//base/BUILD.gn:4](http://fuchsia.com/base/BUILD.gn#4)
+
+**Current value for ` + "`target_cpu = x64`:** `3`" + `
+	From [//build/BUILD.gn:24](http://fuchsia.com/build/BUILD.gn#24)
+
+**Overridden from the default:**` + " `4`" + `
+	From [//base/BUILD.gn:2](http://fuchsia.com/base/BUILD.gn#2)
 
 `
 
