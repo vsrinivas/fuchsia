@@ -77,9 +77,10 @@ type clientLib struct {
 }
 
 var (
-	hostOs     string
-	hostCpu    string
-	components []component
+	hostOs      string
+	hostCpu     string
+	components  []component
+	privateDirs []string
 )
 
 func init() {
@@ -275,6 +276,12 @@ func init() {
 	}
 	for _, f := range files {
 		components = append(components, component{f.flag, f.src, f.dst, fileType, nil})
+	}
+	privateDirs = []string{
+		"arch/arm64/sysroot/include/zircon/device",
+		"arch/x64/sysroot/include/zircon/device",
+		"sysroot/aarch64-fuchsia/include/zircon/device",
+		"sysroot/x86_64-fuchsia/include/zircon/device",
 	}
 }
 
@@ -508,6 +515,9 @@ only module.
 				}
 			}
 		}
+	}
+	for _, d := range privateDirs {
+		os.RemoveAll(filepath.Join(*outDir, d))
 	}
 	if *archive {
 		if err := createTar(*outDir, *output); err != nil {
