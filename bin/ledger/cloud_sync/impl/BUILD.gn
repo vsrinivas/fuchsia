@@ -70,6 +70,7 @@ source_set("unittests") {
     "//peridot/bin/ledger/storage/testing",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/scoped_tmpfs",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
 

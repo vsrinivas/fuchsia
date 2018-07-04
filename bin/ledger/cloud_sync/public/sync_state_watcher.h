@@ -5,6 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_PUBLIC_SYNC_STATE_WATCHER_H_
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_PUBLIC_SYNC_STATE_WATCHER_H_
 
+#include <ostream>
+
 namespace cloud_sync {
 // Detail of the download part of the synchronization state.
 enum DownloadSyncState {
@@ -104,6 +106,8 @@ bool operator==(const SyncStateWatcher::SyncStateContainer& lhs,
                 const SyncStateWatcher::SyncStateContainer& rhs);
 bool operator!=(const SyncStateWatcher::SyncStateContainer& lhs,
                 const SyncStateWatcher::SyncStateContainer& rhs);
+std::ostream& operator<<(
+    std::ostream& strm, const SyncStateWatcher::SyncStateContainer& sync_state);
 
 }  // namespace cloud_sync
 

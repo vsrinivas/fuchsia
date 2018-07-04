@@ -39,4 +39,10 @@ bool operator!=(const SyncStateWatcher::SyncStateContainer& lhs,
   return !(lhs == rhs);
 }
 
+std::ostream& operator<<(
+    std::ostream& strm,
+    const SyncStateWatcher::SyncStateContainer& sync_state) {
+  return strm << "{" << sync_state.download << ", " << sync_state.upload << "}";
+}
+
 }  // namespace cloud_sync
