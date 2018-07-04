@@ -79,7 +79,7 @@ class EngineForTest : public Engine {
  public:
   EngineForTest(DisplayManager* display_manager,
                 std::unique_ptr<escher::ReleaseFenceSignaller> r,
-                escher::Escher* escher = nullptr);
+                escher::EscherWeakPtr escher = escher::EscherWeakPtr());
 };
 
 }  // namespace test

@@ -44,6 +44,7 @@ class Demo {
   const escher::VulkanContext& vulkan_context() const {
     return vulkan_context_;
   }
+  escher::EscherWeakPtr GetEscherWeakPtr() { return escher_.GetWeakPtr(); }
 
  protected:
   void ToggleTracing();

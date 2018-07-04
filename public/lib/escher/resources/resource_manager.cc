@@ -10,8 +10,8 @@ namespace escher {
 
 // TODO: DemoHarness::SwapchainImageOwner is currently instantiated before
 // an Escher exists.  Fix this, then assert that Escher is non-null here.
-ResourceManager::ResourceManager(Escher* escher)
-    : escher_(escher),
-      vulkan_context_(escher ? escher->vulkan_context() : VulkanContext()) {}
+ResourceManager::ResourceManager(EscherWeakPtr weak_escher)
+    : escher_(std::move(weak_escher)),
+      vulkan_context_(escher_ ? escher_->vulkan_context() : VulkanContext()) {}
 
 }  // namespace escher

@@ -19,7 +19,7 @@ class GlslToSpirvCompiler;
 // push-constants for in/output.
 class ComputeShader {
  public:
-  ComputeShader(Escher* escher, const std::vector<vk::ImageLayout>& layouts,
+  ComputeShader(EscherWeakPtr escher, const std::vector<vk::ImageLayout>& layouts,
                 const std::vector<vk::DescriptorType>& buffer_types,
                 size_t push_constants_size, const char* source_code);
   ~ComputeShader();

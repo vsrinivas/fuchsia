@@ -9,11 +9,11 @@
 
 namespace escher {
 
-BufferFactory::BufferFactory(Escher* escher) : ResourceRecycler(escher) {}
+BufferFactory::BufferFactory(EscherWeakPtr escher)
+    : ResourceRecycler(std::move(escher)) {}
 
 BufferPtr BufferFactory::NewBuffer(
-    vk::DeviceSize size,
-    vk::BufferUsageFlags usage_flags,
+    vk::DeviceSize size, vk::BufferUsageFlags usage_flags,
     vk::MemoryPropertyFlags memory_property_flags) {
   return Buffer::New(this, escher()->gpu_allocator(), size, usage_flags,
                      memory_property_flags);
@@ -21,8 +21,7 @@ BufferPtr BufferFactory::NewBuffer(
 
 BufferPtr BufferFactory::NewBuffer(GpuMemPtr mem,
                                    vk::BufferUsageFlags usage_flags,
-                                   vk::DeviceSize size,
-                                   vk::DeviceSize offset) {
+                                   vk::DeviceSize size, vk::DeviceSize offset) {
   return Buffer::New(this, mem, usage_flags, size, offset);
 }
 

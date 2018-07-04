@@ -14,7 +14,7 @@ class BufferFactory;
 
 class RoundedRectFactory : private ResourceRecycler {
  public:
-  explicit RoundedRectFactory(Escher* escher);
+  explicit RoundedRectFactory(EscherWeakPtr escher);
   ~RoundedRectFactory() override;
 
   MeshPtr NewRoundedRect(const RoundedRectSpec& spec,

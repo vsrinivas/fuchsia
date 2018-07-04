@@ -18,21 +18,16 @@ typedef fxl::RefPtr<MomentShadowMapRenderer> MomentShadowMapRendererPtr;
 class MomentShadowMapRenderer final : public ShadowMapRenderer {
  public:
   static MomentShadowMapRendererPtr New(
-      Escher* escher,
-      const impl::ModelDataPtr& model_data,
+      EscherWeakPtr escher, const impl::ModelDataPtr& model_data,
       const impl::ModelRendererPtr& model_renderer);
 
   // |ShadowMapRenderer|
   ShadowMapPtr GenerateDirectionalShadowMap(
-      const FramePtr& frame,
-      const Stage& stage,
-      const Model& model,
-      const glm::vec3& direction,
-      const glm::vec3& light_color) override;
+      const FramePtr& frame, const Stage& stage, const Model& model,
+      const glm::vec3& direction, const glm::vec3& light_color) override;
 
  protected:
-  MomentShadowMapRenderer(Escher* escher,
-                          vk::Format shadow_map_format,
+  MomentShadowMapRenderer(EscherWeakPtr escher, vk::Format shadow_map_format,
                           vk::Format depth_format,
                           const impl::ModelDataPtr& model_data,
                           const impl::ModelRendererPtr& model_renderer,

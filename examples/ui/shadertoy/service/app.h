@@ -26,10 +26,11 @@ class ShadertoyState;
 class App : public fuchsia::examples::shadertoy::ShadertoyFactory {
  public:
   App(async::Loop* loop, fuchsia::sys::StartupContext* app_context,
-      escher::Escher* escher);
+      escher::EscherWeakPtr escher);
   ~App();
 
-  escher::Escher* escher() const { return escher_; }
+  escher::Escher* escher() const { return escher_.get(); }
+
   Compiler* compiler() { return &compiler_; }
   Renderer* renderer() { return &renderer_; }
 
@@ -61,7 +62,7 @@ class App : public fuchsia::examples::shadertoy::ShadertoyFactory {
                    std::unique_ptr<ShadertoyImpl>>
       shadertoy_bindings_;
 
-  escher::Escher* const escher_;
+  const escher::EscherWeakPtr escher_;
   Renderer renderer_;
   Compiler compiler_;
 

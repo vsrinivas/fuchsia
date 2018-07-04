@@ -50,7 +50,7 @@ typedef fxl::RefPtr<DescriptorSetAllocation> DescriptorSetAllocationPtr;
 // they can be reused.
 class DescriptorSetPool : public ResourceManager {
  public:
-  DescriptorSetPool(Escher* escher,
+  DescriptorSetPool(EscherWeakPtr escher,
                     const vk::DescriptorSetLayoutCreateInfo& layout_info,
                     uint32_t initial_capacity = 10);
   ~DescriptorSetPool();

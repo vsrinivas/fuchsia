@@ -10,17 +10,18 @@
 
 namespace escher {
 
-const ResourceTypeInfo Buffer::kTypeInfo("Buffer",
-                                         ResourceType::kResource,
+const ResourceTypeInfo Buffer::kTypeInfo("Buffer", ResourceType::kResource,
                                          ResourceType::kWaitableResource,
                                          ResourceType::kBuffer);
 
-BufferPtr Buffer::New(ResourceManager* manager,
-                      GpuAllocator* allocator,
-                      vk::DeviceSize size,
-                      vk::BufferUsageFlags usage_flags,
+BufferPtr Buffer::New(ResourceManager* manager, GpuAllocator* allocator,
+                      vk::DeviceSize size, vk::BufferUsageFlags usage_flags,
                       vk::MemoryPropertyFlags memory_property_flags) {
+  FXL_DCHECK(manager);
+  FXL_DCHECK(allocator);
+
   auto device = manager->vulkan_context().device;
+  FXL_DCHECK(device);
 
   // Create buffer.
   vk::BufferCreateInfo buffer_create_info;
@@ -37,10 +38,8 @@ BufferPtr Buffer::New(ResourceManager* manager,
   return fxl::MakeRefCounted<Buffer>(manager, std::move(mem), vk_buffer, size);
 }
 
-BufferPtr Buffer::New(ResourceManager* manager,
-                      GpuMemPtr mem,
-                      vk::BufferUsageFlags usage_flags,
-                      vk::DeviceSize size,
+BufferPtr Buffer::New(ResourceManager* manager, GpuMemPtr mem,
+                      vk::BufferUsageFlags usage_flags, vk::DeviceSize size,
                       vk::DeviceSize offset) {
   auto device = manager->vulkan_context().device;
 
@@ -56,11 +55,8 @@ BufferPtr Buffer::New(ResourceManager* manager,
                                      offset);
 }
 
-Buffer::Buffer(ResourceManager* manager,
-               GpuMemPtr mem,
-               vk::Buffer buffer,
-               vk::DeviceSize size,
-               vk::DeviceSize offset)
+Buffer::Buffer(ResourceManager* manager, GpuMemPtr mem, vk::Buffer buffer,
+               vk::DeviceSize size, vk::DeviceSize offset)
     : WaitableResource(manager),
       mem_(std::move(mem)),
       buffer_(buffer),
@@ -71,8 +67,6 @@ Buffer::Buffer(ResourceManager* manager,
                                            mem_->offset() + offset);
 }
 
-Buffer::~Buffer() {
-  vulkan_context().device.destroyBuffer(buffer_);
-}
+Buffer::~Buffer() { vulkan_context().device.destroyBuffer(buffer_); }
 
 }  // namespace escher

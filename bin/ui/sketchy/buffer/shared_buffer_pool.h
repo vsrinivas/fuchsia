@@ -19,7 +19,7 @@ namespace sketchy_service {
 // management and multi-buffering.
 class SharedBufferPool final {
  public:
-  SharedBufferPool(scenic::Session* session, escher::Escher* escher);
+  SharedBufferPool(scenic::Session* session, escher::EscherWeakPtr escher);
 
   // Gets a buffer with at least |capacity_req|.
   SharedBufferPtr GetBuffer(vk::DeviceSize capacity_req);
@@ -33,7 +33,7 @@ class SharedBufferPool final {
   // be useful when we support removing strokes.
 
   scenic::Session* session() const { return session_; }
-  escher::Escher* escher() const { return escher_; }
+  escher::Escher* escher() const { return escher_.get(); }
   escher::BufferFactory* factory() const { return factory_.get(); }
 
  private:
@@ -44,8 +44,8 @@ class SharedBufferPool final {
   // Recycles the buffer to |free_buffers_| for future use.
   void RecycleBuffer(SharedBufferPtr buffer);
 
-  scenic::Session* session_;
-  escher::Escher* escher_;
+  scenic::Session* const session_;
+  const escher::EscherWeakPtr escher_;
   std::unique_ptr<escher::BufferFactory> factory_;
   std::set<SharedBufferPtr> used_buffers_;
   // Groups free buffers into lists that contain buffers that have the same

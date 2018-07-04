@@ -15,7 +15,7 @@ VK_TEST(RoundedRectFactory, NegativeBounds) {
   auto escher = test::GetEscher();
   RoundedRectSpec rect_spec(-1.f, -1.f, -2.f, -2.f, -2.f, -2.f);
   MeshSpec mesh_spec{MeshAttribute::kPosition2D | MeshAttribute::kUV};
-  auto factory = std::make_unique<RoundedRectFactory>(escher);
+  auto factory = std::make_unique<RoundedRectFactory>(escher->GetWeakPtr());
   auto mesh = factory->NewRoundedRect(rect_spec, mesh_spec);
   EXPECT_NE(MeshPtr(), mesh);
 

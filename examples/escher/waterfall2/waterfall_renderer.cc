@@ -16,19 +16,20 @@
 
 using namespace escher;
 
-WaterfallRendererPtr WaterfallRenderer::New(Escher* escher,
-                                            escher::ShaderProgramPtr program) {
-  return fxl::AdoptRef(new WaterfallRenderer(escher, std::move(program)));
+WaterfallRendererPtr WaterfallRenderer::New(EscherWeakPtr escher,
+                                            ShaderProgramPtr program) {
+  return fxl::AdoptRef(
+      new WaterfallRenderer(std::move(escher), std::move(program)));
 }
 
-WaterfallRenderer::WaterfallRenderer(Escher* escher,
-                                     escher::ShaderProgramPtr program)
-    : Renderer(escher), program_(std::move(program)) {
+WaterfallRenderer::WaterfallRenderer(EscherWeakPtr weak_escher,
+                                     ShaderProgramPtr program)
+    : Renderer(std::move(weak_escher)), program_(std::move(program)) {
   uniforms_ =
-      Buffer::New(escher->resource_recycler(), escher->gpu_allocator(), 10000,
-                  vk::BufferUsageFlagBits::eTransferDst |
-                      vk::BufferUsageFlagBits::eTransferSrc |
-                      vk::BufferUsageFlagBits::eUniformBuffer,
+      Buffer::New(escher()->resource_recycler(), escher()->gpu_allocator(),
+                  10000, vk::BufferUsageFlagBits::eTransferDst |
+                             vk::BufferUsageFlagBits::eTransferSrc |
+                             vk::BufferUsageFlagBits::eUniformBuffer,
                   vk::MemoryPropertyFlagBits::eHostVisible |
                       vk::MemoryPropertyFlagBits::eHostCoherent);
 

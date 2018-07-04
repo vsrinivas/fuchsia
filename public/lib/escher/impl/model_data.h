@@ -118,7 +118,7 @@ class ModelData : public fxl::RefCountedThreadSafe<ModelData> {
 
  private:
   // If no allocator is provided, Escher's default one will be used.
-  explicit ModelData(Escher* escher, GpuAllocator* allocator = nullptr);
+  explicit ModelData(EscherWeakPtr escher, GpuAllocator* allocator = nullptr);
 
   ~ModelData();
 

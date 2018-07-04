@@ -22,7 +22,7 @@ class ModelData;
 // ModelRenderer is a subcomponent used by PaperRenderer.
 class ModelRenderer final : public fxl::RefCountedThreadSafe<ModelRenderer> {
  public:
-  static ModelRendererPtr New(Escher* escher, ModelDataPtr model_data);
+  static ModelRendererPtr New(EscherWeakPtr escher, ModelDataPtr model_data);
 
   void Draw(const Stage& stage, const ModelDisplayListPtr& display_list,
             CommandBuffer* command_buffer, const Camera::Viewport& viewport);
@@ -42,10 +42,10 @@ class ModelRenderer final : public fxl::RefCountedThreadSafe<ModelRenderer> {
   const MeshPtr& GetMeshForShape(const Shape& shape) const;
 
  private:
-  ModelRenderer(Escher* escher, ModelDataPtr model_data);
+  ModelRenderer(EscherWeakPtr escher, ModelDataPtr model_data);
   ~ModelRenderer();
 
-  Escher* const escher_;
+  const EscherWeakPtr escher_;
   vk::Device device_;
 
   ResourceRecycler* const resource_recycler_;

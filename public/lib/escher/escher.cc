@@ -49,10 +49,10 @@ std::unique_ptr<impl::CommandBufferPool> NewTransferCommandBufferPool(
 
 // Constructor helper.
 std::unique_ptr<impl::GpuUploader> NewGpuUploader(
-    Escher* escher, impl::CommandBufferPool* main_pool,
+    EscherWeakPtr escher, impl::CommandBufferPool* main_pool,
     impl::CommandBufferPool* transfer_pool, GpuAllocator* allocator) {
   return std::make_unique<impl::GpuUploader>(
-      escher, transfer_pool ? transfer_pool : main_pool, allocator);
+      std::move(escher), transfer_pool ? transfer_pool : main_pool, allocator);
 }
 
 // Constructor helper.
@@ -79,22 +79,9 @@ Escher::Escher(VulkanDeviceQueuesPtr device)
           vulkan_context_, command_buffer_sequencer_.get())),
       glsl_compiler_(std::make_unique<impl::GlslToSpirvCompiler>()),
       shaderc_compiler_(std::make_unique<shaderc::Compiler>()),
-      image_cache_(std::make_unique<impl::ImageCache>(this, gpu_allocator())),
-      gpu_uploader_(NewGpuUploader(this, command_buffer_pool(),
-                                   transfer_command_buffer_pool(),
-                                   gpu_allocator())),
-      resource_recycler_(std::make_unique<ResourceRecycler>(this)),
-      mesh_manager_(
-          NewMeshManager(command_buffer_pool(), transfer_command_buffer_pool(),
-                         gpu_allocator(), gpu_uploader(), resource_recycler())),
       pipeline_cache_(std::make_unique<impl::PipelineCache>()),
-      pipeline_layout_cache_(
-          std::make_unique<impl::PipelineLayoutCache>(resource_recycler())),
-      render_pass_cache_(
-          std::make_unique<impl::RenderPassCache>(resource_recycler())),
-      framebuffer_allocator_(std::make_unique<impl::FramebufferAllocator>(
-          resource_recycler(), render_pass_cache_.get())),
-      renderer_count_(0) {
+      renderer_count_(0),
+      weak_factory_(this) {
   FXL_DCHECK(vulkan_context_.instance);
   FXL_DCHECK(vulkan_context_.physical_device);
   FXL_DCHECK(vulkan_context_.device);
@@ -102,6 +89,26 @@ Escher::Escher(VulkanDeviceQueuesPtr device)
   // TODO: additional validation, e.g. ensure that queue supports both graphics
   // and compute.
 
+  // Initialize instance variables that require |weak_factory_| to already have
+  // been initialized.
+  image_cache_ =
+      std::make_unique<impl::ImageCache>(GetWeakPtr(), gpu_allocator());
+
+  gpu_uploader_ =
+      NewGpuUploader(GetWeakPtr(), command_buffer_pool(),
+                     transfer_command_buffer_pool(), gpu_allocator());
+  resource_recycler_ = std::make_unique<ResourceRecycler>(GetWeakPtr());
+  mesh_manager_ =
+      NewMeshManager(command_buffer_pool(), transfer_command_buffer_pool(),
+                     gpu_allocator(), gpu_uploader(), resource_recycler());
+  pipeline_layout_cache_ =
+      std::make_unique<impl::PipelineLayoutCache>(resource_recycler()),
+  render_pass_cache_ =
+      std::make_unique<impl::RenderPassCache>(resource_recycler()),
+  framebuffer_allocator_ = std::make_unique<impl::FramebufferAllocator>(
+      resource_recycler(), render_pass_cache_.get());
+
+  // Query relevant Vulkan properties.
   auto device_properties = vk_physical_device().getProperties();
   timestamp_period_ = device_properties.limits.timestampPeriod;
   auto queue_properties =
@@ -114,6 +121,18 @@ Escher::~Escher() {
   FXL_DCHECK(renderer_count_ == 0);
   vk_device().waitIdle();
   Cleanup();
+
+  // Everything that refers to a ResourceRecycler must be released before their
+  // ResourceRecycler is.
+  framebuffer_allocator_.reset();
+  render_pass_cache_.reset();
+  pipeline_layout_cache_.reset();
+  mesh_manager_.reset();
+
+  // ResourceRecyclers must be released before the CommandBufferSequencer is,
+  // since they register themselves with it.
+  resource_recycler_.reset();
+  gpu_uploader_.reset();
 }
 
 bool Escher::Cleanup() {

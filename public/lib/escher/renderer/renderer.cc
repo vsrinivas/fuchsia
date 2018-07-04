@@ -19,20 +19,16 @@
 
 namespace escher {
 
-Renderer::Renderer(Escher* escher)
-    : context_(escher->vulkan_context()), escher_(escher) {
-  escher->IncrementRendererCount();
+Renderer::Renderer(EscherWeakPtr weak_escher)
+    : context_(weak_escher->vulkan_context()), escher_(std::move(weak_escher)) {
+  escher()->IncrementRendererCount();
 }
 
-Renderer::~Renderer() {
-  escher()->DecrementRendererCount();
-}
+Renderer::~Renderer() { escher()->DecrementRendererCount(); }
 
 void Renderer::RunOffscreenBenchmark(
-    uint32_t framebuffer_width,
-    uint32_t framebuffer_height,
-    vk::Format framebuffer_format,
-    size_t frame_count,
+    uint32_t framebuffer_width, uint32_t framebuffer_height,
+    vk::Format framebuffer_format, size_t frame_count,
     std::function<void(const FramePtr& frame, const ImagePtr&)> draw_func) {
   constexpr uint64_t kSecondsToNanoseconds = 1000000000;
   const char* kTraceLiteral = "RunOffscreenBenchmark";
@@ -93,8 +89,8 @@ void Renderer::RunOffscreenBenchmark(
       throttle = command_buffer;
     }
 
-    auto frame = escher()->NewFrame(
-        kTraceLiteral, ++frame_number, current_frame == frame_count - 1);
+    auto frame = escher()->NewFrame(kTraceLiteral, ++frame_number,
+                                    current_frame == frame_count - 1);
     draw_func(frame, images[image_index]);
     frame->EndFrame(semaphores[image_index], nullptr);
   }

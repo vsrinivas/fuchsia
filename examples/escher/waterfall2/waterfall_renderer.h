@@ -14,7 +14,7 @@ using WaterfallRendererPtr = fxl::RefPtr<WaterfallRenderer>;
 
 class WaterfallRenderer final : public escher::Renderer {
  public:
-  static WaterfallRendererPtr New(escher::Escher* escher,
+  static WaterfallRendererPtr New(escher::EscherWeakPtr escher,
                                   escher::ShaderProgramPtr program);
 
   void DrawFrame(const escher::FramePtr& frame, const escher::Stage& stage,
@@ -28,7 +28,8 @@ class WaterfallRenderer final : public escher::Renderer {
   void SetNumDepthBuffers(size_t count);
 
  private:
-  explicit WaterfallRenderer(escher::Escher*, escher::ShaderProgramPtr program);
+  explicit WaterfallRenderer(escher::EscherWeakPtr,
+                             escher::ShaderProgramPtr program);
 
   escher::ShaderProgramPtr program_;
   escher::BufferPtr uniforms_;

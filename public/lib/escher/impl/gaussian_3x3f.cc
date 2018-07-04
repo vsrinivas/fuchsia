@@ -78,25 +78,21 @@ void main() {
 namespace escher {
 namespace impl {
 
-Gaussian3x3f::Gaussian3x3f(Escher* escher) : escher_(escher) {}
+Gaussian3x3f::Gaussian3x3f(EscherWeakPtr escher) : escher_(std::move(escher)) {}
 
-void Gaussian3x3f::Apply(CommandBuffer* command_buffer,
-                         const TexturePtr& input,
+void Gaussian3x3f::Apply(CommandBuffer* command_buffer, const TexturePtr& input,
                          const TexturePtr& output) {
   if (!kernel_) {
     kernel_ = std::make_unique<ComputeShader>(
-        escher_,
-        std::vector<vk::ImageLayout>{
-            vk::ImageLayout::eGeneral,
-            vk::ImageLayout::eGeneral},
+        escher_, std::vector<vk::ImageLayout>{vk::ImageLayout::eGeneral,
+                                              vk::ImageLayout::eGeneral},
         std::vector<vk::DescriptorType>{},
         /* push_constants_size= */ 0, kShaderCode);
   }
-  kernel_->Dispatch(
-      {input, output}, {}, command_buffer,
-      (input->width() + kGroupSizeX - 1) / kGroupSizeX,
-      (input->height() + kGroupSizeY - 1) / kGroupSizeY,
-      /* z= */ 1, /* push_constants= */ nullptr);
+  kernel_->Dispatch({input, output}, {}, command_buffer,
+                    (input->width() + kGroupSizeX - 1) / kGroupSizeX,
+                    (input->height() + kGroupSizeY - 1) / kGroupSizeY,
+                    /* z= */ 1, /* push_constants= */ nullptr);
 }
 
 }  // namespace impl

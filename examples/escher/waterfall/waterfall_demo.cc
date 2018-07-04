@@ -31,11 +31,13 @@ static constexpr size_t kOffscreenBenchmarkFrameCount = 1000;
 
 WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
     : Demo(harness),
-      renderer_(escher::PaperRenderer::New(escher())),
+      renderer_(escher::PaperRenderer::New(GetEscherWeakPtr())),
       shadow_renderer_(escher::ShadowMapRenderer::New(
-          escher(), renderer_->model_data(), renderer_->model_renderer())),
+          GetEscherWeakPtr(), renderer_->model_data(),
+          renderer_->model_renderer())),
       moment_shadow_renderer_(escher::MomentShadowMapRenderer::New(
-          escher(), renderer_->model_data(), renderer_->model_renderer())),
+          GetEscherWeakPtr(), renderer_->model_data(),
+          renderer_->model_renderer())),
       swapchain_helper_(harness->GetVulkanSwapchain(),
                         escher()->vulkan_context().device,
                         escher()->vulkan_context().queue) {
@@ -207,9 +209,8 @@ static escher::Camera GenerateCamera(int camera_projection_mode,
 
     case 1:
       return escher::Camera::NewPerspective(
-          volume,
-          glm::translate(
-              vec3(-volume.width() / 2, -volume.height() / 2, -10000)),
+          volume, glm::translate(
+                      vec3(-volume.width() / 2, -volume.height() / 2, -10000)),
           glm::radians(8.f));
     case 2: {
       vec3 eye(volume.width() / 3, 6000, 3000);
@@ -296,8 +297,8 @@ void WaterfallDemo::DrawFrame() {
       escher::vec2(light_azimuth_radians_, kLightElevationRadians),
       kLightDispersion, vec3(kLightIntensity)));
 
-  auto frame = escher()->NewFrame(
-      "Waterfall Demo", ++frame_count_, profile_one_frame_);
+  auto frame =
+      escher()->NewFrame("Waterfall Demo", ++frame_count_, profile_one_frame_);
 
   escher::ShadowMapPtr shadow_map;
   if (shadow_mode_ == kShadowMap || shadow_mode_ == kMomentShadowMap) {

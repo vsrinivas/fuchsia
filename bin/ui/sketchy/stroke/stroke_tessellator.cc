@@ -161,8 +161,8 @@ void SetUpMemoryBarrier(const escher::BufferPtr& buffer,
 
 namespace sketchy_service {
 
-StrokeTessellator::StrokeTessellator(escher::Escher* escher)
-    : kernel_(escher, std::vector<vk::ImageLayout>{},
+StrokeTessellator::StrokeTessellator(escher::EscherWeakPtr escher)
+    : kernel_(std::move(escher), std::vector<vk::ImageLayout>{},
               std::vector<vk::DescriptorType>{
                   // Binding 0: |stroke_info_buffer|
                   vk::DescriptorType::eUniformBuffer,

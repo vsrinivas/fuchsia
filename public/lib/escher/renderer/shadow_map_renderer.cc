@@ -20,31 +20,27 @@
 namespace escher {
 
 ShadowMapRendererPtr ShadowMapRenderer::New(
-    Escher* escher,
-    const impl::ModelDataPtr& model_data,
+    EscherWeakPtr escher, const impl::ModelDataPtr& model_data,
     const impl::ModelRendererPtr& model_renderer) {
+  auto* resource_recycler = escher->resource_recycler();
   constexpr vk::Format kShadowMapFormat = vk::Format::eR16Unorm;
   vk::Format depth_format = ESCHER_CHECKED_VK_RESULT(
       impl::GetSupportedDepthStencilFormat(escher->vk_physical_device()));
   return fxl::MakeRefCounted<ShadowMapRenderer>(
-      escher, kShadowMapFormat, depth_format, model_data, model_renderer,
+      std::move(escher), kShadowMapFormat, depth_format, model_data,
+      model_renderer,
       fxl::MakeRefCounted<impl::ModelShadowMapPass>(
-          escher->resource_recycler(),
-          model_data,
-          kShadowMapFormat,
-          depth_format,
+          resource_recycler, model_data, kShadowMapFormat, depth_format,
           /* sample_count= */ 1));
 }
 
 ShadowMapRenderer::ShadowMapRenderer(
-    Escher* escher,
-    vk::Format shadow_map_format,
-    vk::Format depth_format,
-    const impl::ModelDataPtr& model_data,
+    EscherWeakPtr weak_escher, vk::Format shadow_map_format,
+    vk::Format depth_format, const impl::ModelDataPtr& model_data,
     const impl::ModelRendererPtr& model_renderer,
     const impl::ModelRenderPassPtr& model_render_pass)
-    : Renderer(escher),
-      image_cache_(escher->image_cache()),
+    : Renderer(std::move(weak_escher)),
+      image_cache_(escher()->image_cache()),
       shadow_map_format_(shadow_map_format),
       depth_format_(depth_format),
       model_data_(model_data),
@@ -54,16 +50,11 @@ ShadowMapRenderer::ShadowMapRenderer(
           {vk::ClearColorValue(std::array<float, 4>{{0.f, 0.f, 0.f, 1.f}}),
            vk::ClearDepthStencilValue(1.f, 0.f)}) {}
 
-ShadowMapRenderer::~ShadowMapRenderer() {
-  escher()->Cleanup();
-}
+ShadowMapRenderer::~ShadowMapRenderer() { escher()->Cleanup(); }
 
 ShadowMapPtr ShadowMapRenderer::GenerateDirectionalShadowMap(
-    const FramePtr& frame,
-    const Stage& stage,
-    const Model& model,
-    const glm::vec3& direction,
-    const glm::vec3& light_color) {
+    const FramePtr& frame, const Stage& stage, const Model& model,
+    const glm::vec3& direction, const glm::vec3& light_color) {
   auto command_buffer = frame->command_buffer();
   auto camera =
       Camera::NewForDirectionalShadowMap(stage.viewing_volume(), direction);
@@ -74,25 +65,24 @@ ShadowMapPtr ShadowMapRenderer::GenerateDirectionalShadowMap(
   auto height = static_cast<uint32_t>(shadow_stage.height());
   auto color_image = GetTransitionedColorImage(command_buffer, width, height);
   auto depth_image = GetTransitionedDepthImage(command_buffer, width, height);
-  DrawShadowPass(
-      command_buffer, shadow_stage, model, camera, color_image, depth_image);
+  DrawShadowPass(command_buffer, shadow_stage, model, camera, color_image,
+                 depth_image);
   frame->AddTimestamp("generated shadow map");
   return SubmitPartialFrameAndBuildShadowMap<ShadowMap>(
       frame, camera, color_image, light_color);
 }
 
 ImagePtr ShadowMapRenderer::GetTransitionedColorImage(
-    impl::CommandBuffer* command_buffer,
-    uint32_t width, uint32_t height) {
+    impl::CommandBuffer* command_buffer, uint32_t width, uint32_t height) {
   ImageInfo info;
   info.format = shadow_map_format_;
   info.width = width;
   info.height = height;
   info.sample_count = 1;
   info.usage = vk::ImageUsageFlagBits::eColorAttachment |
-      vk::ImageUsageFlagBits::eSampled |
-      vk::ImageUsageFlagBits::eTransferSrc |
-      vk::ImageUsageFlagBits::eStorage;
+               vk::ImageUsageFlagBits::eSampled |
+               vk::ImageUsageFlagBits::eTransferSrc |
+               vk::ImageUsageFlagBits::eStorage;
   auto color_image = escher()->image_cache()->NewImage(info);
   command_buffer->TransitionImageLayout(
       color_image, vk::ImageLayout::eUndefined,
@@ -101,12 +91,10 @@ ImagePtr ShadowMapRenderer::GetTransitionedColorImage(
 }
 
 ImagePtr ShadowMapRenderer::GetTransitionedDepthImage(
-    impl::CommandBuffer* command_buffer,
-    uint32_t width,
-    uint32_t height) {
-  auto depth_image = image_utils::NewDepthImage(
-      escher()->image_cache(), depth_format_, width, height,
-      vk::ImageUsageFlags());
+    impl::CommandBuffer* command_buffer, uint32_t width, uint32_t height) {
+  auto depth_image =
+      image_utils::NewDepthImage(escher()->image_cache(), depth_format_, width,
+                                 height, vk::ImageUsageFlags());
   command_buffer->TransitionImageLayout(
       depth_image, vk::ImageLayout::eUndefined,
       vk::ImageLayout::eDepthStencilAttachmentOptimal);
@@ -115,8 +103,7 @@ ImagePtr ShadowMapRenderer::GetTransitionedDepthImage(
 
 void ShadowMapRenderer::DrawShadowPass(impl::CommandBuffer* command_buffer,
                                        const Stage& shadow_stage,
-                                       const Model& model,
-                                       const Camera& camera,
+                                       const Model& model, const Camera& camera,
                                        ImagePtr& color_image,
                                        ImagePtr& depth_image) {
   auto fb = fxl::MakeRefCounted<Framebuffer>(escher(), color_image, depth_image,
@@ -141,10 +128,9 @@ void ShadowMapRenderer::ComputeShadowStageFromSceneStage(
     const Stage& scene_stage, Stage& shadow_stage) {
   uint32_t shadow_size = static_cast<uint32_t>(
       .75f * std::max(scene_stage.width(), scene_stage.height()));
-  shadow_stage.set_viewing_volume(
-      escher::ViewingVolume(shadow_size, shadow_size,
-                            scene_stage.viewing_volume().top(),
-                            scene_stage.viewing_volume().bottom()));
+  shadow_stage.set_viewing_volume(escher::ViewingVolume(
+      shadow_size, shadow_size, scene_stage.viewing_volume().top(),
+      scene_stage.viewing_volume().bottom()));
   shadow_stage.set_key_light(scene_stage.key_light());
   shadow_stage.set_fill_light(scene_stage.fill_light());
 }

@@ -27,9 +27,9 @@ DescriptorSetAllocation::~DescriptorSetAllocation() {
 }
 
 DescriptorSetPool::DescriptorSetPool(
-    Escher* escher, const vk::DescriptorSetLayoutCreateInfo& layout_info,
+    EscherWeakPtr escher, const vk::DescriptorSetLayoutCreateInfo& layout_info,
     uint32_t initial_capacity)
-    : ResourceManager(escher),
+    : ResourceManager(std::move(escher)),
       layout_(ESCHER_CHECKED_VK_RESULT(
           vk_device().createDescriptorSetLayout(layout_info))) {
   std::map<vk::DescriptorType, uint32_t> descriptor_type_counts;

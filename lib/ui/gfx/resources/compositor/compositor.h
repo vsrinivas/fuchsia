@@ -10,6 +10,7 @@
 
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "garnet/lib/ui/gfx/swapchain/swapchain.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace escher {
 class Escher;
@@ -20,6 +21,7 @@ class PaperRenderer;
 class Semaphore;
 class ShadowMapRenderer;
 class Stage;
+using EscherWeakPtr = fxl::WeakPtr<Escher>;
 using FramePtr = fxl::RefPtr<Frame>;
 using ImagePtr = fxl::RefPtr<Image>;
 using SemaphorePtr = fxl::RefPtr<Semaphore>;
@@ -78,7 +80,7 @@ class Compositor : public Resource {
   // Returns the list of drawable layers from the layer stack.
   std::vector<Layer*> GetDrawableLayers() const;
 
-  escher::Escher* escher() const { return escher_; }
+  escher::Escher* escher() const { return escher_.get(); }
 
   Compositor(Session* session, scenic::ResourceId id,
              const ResourceTypeInfo& type_info,
@@ -101,7 +103,7 @@ class Compositor : public Resource {
                  const escher::ImagePtr& output_image,
                  const escher::Model* overlay_model);
 
-  escher::Escher* const escher_;
+  const escher::EscherWeakPtr escher_;
   std::unique_ptr<Swapchain> swapchain_;
   LayerStackPtr layer_stack_;
   std::unique_ptr<escher::hmd::PoseBufferLatchingShader>

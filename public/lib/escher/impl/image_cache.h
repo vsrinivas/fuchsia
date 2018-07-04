@@ -32,7 +32,7 @@ class ImageCache : public ResourceManager, public ImageFactory {
  public:
   // The allocator is used to allocate memory for newly-created images.  If no
   // allocator is provided, Escher's default allocator is used.
-  explicit ImageCache(Escher* escher, GpuAllocator* allocator = nullptr);
+  explicit ImageCache(EscherWeakPtr escher, GpuAllocator* allocator = nullptr);
   ~ImageCache() override;
 
   // Obtain an unused Image with the required properties.  A new Image might be

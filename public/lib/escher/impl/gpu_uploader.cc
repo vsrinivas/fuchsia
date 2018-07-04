@@ -108,14 +108,16 @@ void GpuUploader::Writer::WriteImage(const ImagePtr& target,
   command_buffer_->KeepAlive(target);
 }
 
-GpuUploader::GpuUploader(Escher* escher, CommandBufferPool* command_buffer_pool,
+GpuUploader::GpuUploader(EscherWeakPtr weak_escher,
+                         CommandBufferPool* command_buffer_pool,
                          GpuAllocator* allocator)
-    : ResourceRecycler(escher),
-      command_buffer_pool_(command_buffer_pool ? command_buffer_pool
-                                               : escher->command_buffer_pool()),
+    : ResourceRecycler(std::move(weak_escher)),
+      command_buffer_pool_(command_buffer_pool
+                               ? command_buffer_pool
+                               : escher()->command_buffer_pool()),
       device_(command_buffer_pool_->device()),
       queue_(command_buffer_pool_->queue()),
-      allocator_(allocator ? allocator : escher->gpu_allocator()),
+      allocator_(allocator ? allocator : escher()->gpu_allocator()),
       current_offset_(0) {
   FXL_DCHECK(command_buffer_pool_);
   FXL_DCHECK(allocator_);

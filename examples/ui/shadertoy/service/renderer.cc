@@ -16,8 +16,6 @@
 #include "lib/escher/vk/simple_image_factory.h"
 #include "lib/escher/vk/texture.h"
 
-using escher::Escher;
-
 namespace shadertoy {
 
 static vk::RenderPass CreateRenderPass(vk::Device device,
@@ -91,14 +89,15 @@ static vk::RenderPass CreateRenderPass(vk::Device device,
   return result.value;
 }
 
-Renderer::Renderer(Escher* escher, vk::Format framebuffer_format)
-    : escher::Renderer(escher),
-      device_(escher->vulkan_context().device),
+Renderer::Renderer(escher::EscherWeakPtr weak_escher,
+                   vk::Format framebuffer_format)
+    : escher::Renderer(std::move(weak_escher)),
+      device_(escher()->vulkan_context().device),
       framebuffer_format_(framebuffer_format),
       render_pass_(CreateRenderPass(device_, framebuffer_format)),
-      full_screen_(NewFullScreenMesh(escher->mesh_manager())),
+      full_screen_(NewFullScreenMesh(escher()->mesh_manager())),
       white_texture_(CreateWhiteTexture()),
-      descriptor_set_pool_(escher,
+      descriptor_set_pool_(escher()->GetWeakPtr(),
                            Compiler::GetDescriptorSetLayoutCreateInfo()) {}
 
 escher::Texture* Renderer::GetChannelTexture(const escher::FramePtr& frame,

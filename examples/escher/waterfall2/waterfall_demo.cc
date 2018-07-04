@@ -53,7 +53,7 @@ WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
     : Demo(harness),
       filesystem_(CreateFilesystem()),
       renderer_(WaterfallRenderer::New(
-          escher(), CreateShaderProgram(escher(), filesystem_))),
+          GetEscherWeakPtr(), CreateShaderProgram(escher(), filesystem_))),
       swapchain_helper_(harness->GetVulkanSwapchain(),
                         escher()->vulkan_context().device,
                         escher()->vulkan_context().queue) {

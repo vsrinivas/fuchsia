@@ -16,7 +16,7 @@ namespace escher {
 // recycling of fixed-size Buffers.
 class BufferFactory : private ResourceRecycler {
  public:
-  explicit BufferFactory(Escher* escher);
+  explicit BufferFactory(EscherWeakPtr escher);
 
   // Creates a buffer, along with a new memory.
   virtual BufferPtr NewBuffer(vk::DeviceSize size,
@@ -24,10 +24,8 @@ class BufferFactory : private ResourceRecycler {
                               vk::MemoryPropertyFlags memory_property_flags);
 
   // Creates a buffer for the given memory.
-  virtual BufferPtr NewBuffer(GpuMemPtr mem,
-                              vk::BufferUsageFlags usage_flags,
-                              vk::DeviceSize size,
-                              vk::DeviceSize offset);
+  virtual BufferPtr NewBuffer(GpuMemPtr mem, vk::BufferUsageFlags usage_flags,
+                              vk::DeviceSize size, vk::DeviceSize offset);
 
   // Expose escher()... this is one aspect of ResourceRecycler that we want to
   // inherit publicly.

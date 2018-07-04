@@ -6,13 +6,14 @@
 
 namespace sketchy_service {
 
-App::App(async::Loop* loop, escher::Escher* escher)
+App::App(async::Loop* loop, escher::EscherWeakPtr weak_escher)
     : loop_(loop),
       context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       scenic_(
           context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>()),
       session_(std::make_unique<scenic::Session>(scenic_.get())),
-      canvas_(std::make_unique<CanvasImpl>(loop_, session_.get(), escher)) {
+      canvas_(std::make_unique<CanvasImpl>(loop_, session_.get(),
+                                           std::move(weak_escher))) {
   context_->outgoing().AddPublicService(bindings_.GetHandler(canvas_.get()));
 
   session_->set_error_handler([this] {

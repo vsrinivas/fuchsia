@@ -5,10 +5,8 @@
 #ifndef LIB_ESCHER_FORWARD_DECLARATIONS_H_
 #define LIB_ESCHER_FORWARD_DECLARATIONS_H_
 
-namespace fxl {
-template <typename T>
-class RefPtr;
-}  // namespace fxl
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace escher {
 
@@ -54,7 +52,7 @@ struct VulkanSwapchain;
 
 typedef fxl::RefPtr<Buffer> BufferPtr;
 typedef fxl::RefPtr<CommandBuffer> CommandBufferPtr;
-typedef fxl::RefPtr<Escher> EscherPtr;
+typedef fxl::WeakPtr<Escher> EscherWeakPtr;
 typedef fxl::RefPtr<Frame> FramePtr;
 typedef fxl::RefPtr<Framebuffer> FramebufferPtr;
 typedef fxl::RefPtr<GpuMem> GpuMemPtr;

@@ -50,7 +50,7 @@ std::unique_ptr<CommandDispatcher> GfxSystem::CreateCommandDispatcher(
 }
 
 std::unique_ptr<Engine> GfxSystem::InitializeEngine() {
-  return std::make_unique<Engine>(&display_manager_, escher_.get());
+  return std::make_unique<Engine>(&display_manager_, escher_->GetWeakPtr());
 }
 
 std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
@@ -58,15 +58,14 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
   escher::VulkanInstance::Params instance_params(
       {{},
        {
-           VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
-           VK_KHR_SURFACE_EXTENSION_NAME,
+           VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_KHR_SURFACE_EXTENSION_NAME,
            VK_KHR_MAGMA_SURFACE_EXTENSION_NAME,
            VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
            VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME,
        },
        true});
 
-  // Only enable Vulkan validation layers when in debug mode.
+// Only enable Vulkan validation layers when in debug mode.
 #if !defined(NDEBUG)
   instance_params.layer_names.insert("VK_LAYER_LUNARG_standard_validation");
 #endif
@@ -159,8 +158,9 @@ void GfxSystem::GetDisplayInfo(
   if (initialized_) {
     GetDisplayInfoImmediately(std::move(callback));
   } else {
-    run_after_initialized_.push_back(
-        [this, callback = std::move(callback)]() mutable { GetDisplayInfoImmediately(std::move(callback)); });
+    run_after_initialized_.push_back([
+      this, callback = std::move(callback)
+    ]() mutable { GetDisplayInfoImmediately(std::move(callback)); });
   }
 };
 
@@ -192,8 +192,9 @@ void GfxSystem::GetDisplayOwnershipEvent(
   if (initialized_) {
     GetDisplayOwnershipEventImmediately(std::move(callback));
   } else {
-    run_after_initialized_.push_back(
-        [this, callback = std::move(callback)]() mutable { GetDisplayOwnershipEventImmediately(std::move(callback)); });
+    run_after_initialized_.push_back([
+      this, callback = std::move(callback)
+    ]() mutable { GetDisplayOwnershipEventImmediately(std::move(callback)); });
   }
 }
 

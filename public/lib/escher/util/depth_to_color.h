@@ -15,14 +15,13 @@ namespace escher {
 // directly bliting a depth image into a color image.
 class DepthToColor {
  public:
-  DepthToColor(Escher* escher, ImageFactory* image_factory);
+  DepthToColor(EscherWeakPtr escher, ImageFactory* image_factory);
 
-  TexturePtr Convert(const FramePtr& frame,
-                     const TexturePtr& depth_texture,
+  TexturePtr Convert(const FramePtr& frame, const TexturePtr& depth_texture,
                      vk::ImageUsageFlags image_flags);
 
  private:
-  Escher* const escher_;
+  const EscherWeakPtr escher_;
   ImageFactory* const image_factory_;
   std::unique_ptr<impl::ComputeShader> kernel_;
 

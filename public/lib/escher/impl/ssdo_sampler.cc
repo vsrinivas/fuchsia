@@ -521,7 +521,7 @@ vk::RenderPass CreateRenderPass(vk::Device device, vk::Format color_format) {
 
 }  // namespace
 
-SsdoSampler::SsdoSampler(Escher* escher, MeshPtr full_screen,
+SsdoSampler::SsdoSampler(EscherWeakPtr escher, MeshPtr full_screen,
                          ImagePtr noise_image, ModelData* model_data)
     : device_(escher->vulkan_context().device),
       color_format_(ChooseColorFormat(escher->vk_physical_device())),

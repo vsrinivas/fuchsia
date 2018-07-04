@@ -21,11 +21,11 @@ escher::ImagePtr CreateSimilarImage(escher::Escher* escher,
   info.width = input->width();
   info.height = input->height();
   info.sample_count = 1;
-  info.usage = vk::ImageUsageFlagBits::eSampled |
-               vk::ImageUsageFlagBits::eStorage;
+  info.usage =
+      vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage;
   auto output = escher->image_cache()->NewImage(info);
-  command_buffer->TransitionImageLayout(
-      output, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
+  command_buffer->TransitionImageLayout(output, vk::ImageLayout::eUndefined,
+                                        vk::ImageLayout::eGeneral);
   return output;
 }
 
@@ -34,43 +34,33 @@ escher::ImagePtr CreateSimilarImage(escher::Escher* escher,
 namespace escher {
 
 MomentShadowMapRendererPtr MomentShadowMapRenderer::New(
-    Escher* escher,
-    const impl::ModelDataPtr& model_data,
+    EscherWeakPtr escher, const impl::ModelDataPtr& model_data,
     const impl::ModelRendererPtr& model_renderer) {
+  auto* resource_recycler = escher->resource_recycler();
   constexpr vk::Format kShadowMapFormat = vk::Format::eR16G16B16A16Sfloat;
   vk::Format depth_format = ESCHER_CHECKED_VK_RESULT(
       impl::GetSupportedDepthStencilFormat(escher->vk_physical_device()));
+
   return fxl::MakeRefCounted<MomentShadowMapRenderer>(
-      escher, kShadowMapFormat, depth_format, model_data, model_renderer,
+      std::move(escher), kShadowMapFormat, depth_format, model_data,
+      model_renderer,
       fxl::MakeRefCounted<impl::ModelMomentShadowMapPass>(
-          escher->resource_recycler(),
-          model_data,
-          kShadowMapFormat,
-          depth_format,
+          resource_recycler, model_data, kShadowMapFormat, depth_format,
           /* sample_count= */ 1));
 }
 
 MomentShadowMapRenderer::MomentShadowMapRenderer(
-    Escher* escher,
-    vk::Format shadow_map_format,
-    vk::Format depth_format,
+    EscherWeakPtr escher, vk::Format shadow_map_format, vk::Format depth_format,
     const impl::ModelDataPtr& model_data,
     const impl::ModelRendererPtr& model_renderer,
     const impl::ModelRenderPassPtr& model_render_pass)
-    : ShadowMapRenderer(escher,
-                        shadow_map_format,
-                        depth_format,
-                        model_data,
-                        model_renderer,
-                        model_render_pass),
-      gaussian3x3f16_(escher) {}
+    : ShadowMapRenderer(escher, shadow_map_format, depth_format, model_data,
+                        model_renderer, model_render_pass),
+      gaussian3x3f16_(std::move(escher)) {}
 
 ShadowMapPtr MomentShadowMapRenderer::GenerateDirectionalShadowMap(
-    const FramePtr& frame,
-    const Stage& stage,
-    const Model& model,
-    const glm::vec3& direction,
-    const glm::vec3& light_color) {
+    const FramePtr& frame, const Stage& stage, const Model& model,
+    const glm::vec3& direction, const glm::vec3& light_color) {
   auto command_buffer = frame->command_buffer();
   auto camera =
       Camera::NewForDirectionalShadowMap(stage.viewing_volume(), direction);
@@ -81,8 +71,8 @@ ShadowMapPtr MomentShadowMapRenderer::GenerateDirectionalShadowMap(
   auto height = static_cast<uint32_t>(shadow_stage.height());
   auto color_image = GetTransitionedColorImage(command_buffer, width, height);
   auto depth_image = GetTransitionedDepthImage(command_buffer, width, height);
-  DrawShadowPass(
-      command_buffer, shadow_stage, model, camera, color_image, depth_image);
+  DrawShadowPass(command_buffer, shadow_stage, model, camera, color_image,
+                 depth_image);
   frame->AddTimestamp("generated moment shadow map");
 
   command_buffer->TransitionImageLayout(
@@ -92,8 +82,8 @@ ShadowMapPtr MomentShadowMapRenderer::GenerateDirectionalShadowMap(
 
   auto input_texture = fxl::MakeRefCounted<Texture>(
       escher()->resource_recycler(), color_image, vk::Filter::eNearest);
-  auto blurred_image = CreateSimilarImage(
-      escher(), command_buffer, color_image);
+  auto blurred_image =
+      CreateSimilarImage(escher(), command_buffer, color_image);
   auto output_texture = fxl::MakeRefCounted<Texture>(
       escher()->resource_recycler(), blurred_image, vk::Filter::eNearest);
   gaussian3x3f16_.Apply(command_buffer, input_texture, output_texture);

@@ -29,18 +29,20 @@
 namespace escher {
 namespace impl {
 
-ModelRendererPtr ModelRenderer::New(Escher* escher, ModelDataPtr model_data) {
-  return fxl::AdoptRef(new ModelRenderer(escher, std::move(model_data)));
+ModelRendererPtr ModelRenderer::New(EscherWeakPtr weak_escher,
+                                    ModelDataPtr model_data) {
+  return fxl::AdoptRef(
+      new ModelRenderer(std::move(weak_escher), std::move(model_data)));
 }
 
-ModelRenderer::ModelRenderer(Escher* escher, ModelDataPtr model_data)
-    : escher_(escher),
-      device_(escher->vk_device()),
-      resource_recycler_(escher->resource_recycler()),
+ModelRenderer::ModelRenderer(EscherWeakPtr weak_escher, ModelDataPtr model_data)
+    : escher_(std::move(weak_escher)),
+      device_(escher_->vk_device()),
+      resource_recycler_(escher_->resource_recycler()),
       model_data_(std::move(model_data)) {
   rectangle_ = CreateRectangle();
   circle_ = CreateCircle();
-  white_texture_ = CreateWhiteTexture(escher);
+  white_texture_ = CreateWhiteTexture(escher_.get());
 }
 
 ModelRenderer::~ModelRenderer() {}

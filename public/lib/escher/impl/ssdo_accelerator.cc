@@ -365,8 +365,9 @@ void main() {
 
 }  // namespace
 
-SsdoAccelerator::SsdoAccelerator(Escher* escher, ImageFactory* image_factory)
-    : escher_(escher), image_factory_(image_factory) {}
+SsdoAccelerator::SsdoAccelerator(EscherWeakPtr escher,
+                                 ImageFactory* image_factory)
+    : escher_(std::move(escher)), image_factory_(image_factory) {}
 
 SsdoAccelerator::~SsdoAccelerator() {}
 
@@ -375,8 +376,7 @@ const VulkanContext& SsdoAccelerator::vulkan_context() const {
 }
 
 TexturePtr SsdoAccelerator::GenerateLookupTable(
-    const FramePtr& frame,
-    const TexturePtr& depth_texture,
+    const FramePtr& frame, const TexturePtr& depth_texture,
     vk::ImageUsageFlags image_flags) {
   if (!enabled_) {
     return GenerateNullLookupTable(frame, depth_texture, image_flags);
@@ -424,8 +424,7 @@ TexturePtr SsdoAccelerator::GenerateLookupTable(
 }
 
 TexturePtr SsdoAccelerator::GenerateNullLookupTable(
-    const FramePtr& frame,
-    const TexturePtr& depth_texture,
+    const FramePtr& frame, const TexturePtr& depth_texture,
     vk::ImageUsageFlags image_flags) {
   uint32_t width = depth_texture->width();
   uint32_t height = depth_texture->height();
@@ -468,10 +467,8 @@ TexturePtr SsdoAccelerator::GenerateNullLookupTable(
 }
 
 TexturePtr SsdoAccelerator::UnpackLookupTable(
-    const FramePtr& frame,
-    const TexturePtr& packed_lookup_table,
-    uint32_t width,
-    uint32_t height) {
+    const FramePtr& frame, const TexturePtr& packed_lookup_table,
+    uint32_t width, uint32_t height) {
   constexpr uint32_t kSize = 8;
   FXL_DCHECK(width <= packed_lookup_table->width() * 4);
   FXL_DCHECK(height <= packed_lookup_table->height() * 4);

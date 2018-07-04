@@ -24,7 +24,7 @@ namespace sketchy_service {
 class CanvasImpl final : public ::fuchsia::ui::sketchy::Canvas {
  public:
   CanvasImpl(async::Loop* loop, scenic::Session* session,
-             escher::Escher* escher);
+             escher::EscherWeakPtr escher);
 
   // |::fuchsia::ui::sketchy::Canvas|
   void Init(::fidl::InterfaceHandle<::fuchsia::ui::sketchy::CanvasListener>
@@ -45,21 +45,15 @@ class CanvasImpl final : public ::fuchsia::ui::sketchy::Canvas {
   bool CreateStrokeGroup(ResourceId id,
                          ::fuchsia::ui::sketchy::StrokeGroup stroke_group);
 
-  bool ApplySetPathCmd(
-      ::fuchsia::ui::sketchy::SetStrokePathCmd command);
+  bool ApplySetPathCmd(::fuchsia::ui::sketchy::SetStrokePathCmd command);
   bool ApplyAddStrokeCmd(::fuchsia::ui::sketchy::AddStrokeCmd command);
-  bool ApplyRemoveStrokeCmd(
-      ::fuchsia::ui::sketchy::RemoveStrokeCmd command);
+  bool ApplyRemoveStrokeCmd(::fuchsia::ui::sketchy::RemoveStrokeCmd command);
 
-  bool ApplyBeginStrokeCmd(
-      ::fuchsia::ui::sketchy::BeginStrokeCmd command);
-  bool ApplyExtendStrokeCmd(
-      ::fuchsia::ui::sketchy::ExtendStrokeCmd command);
-  bool ApplyFinishStrokeCmd(
-      ::fuchsia::ui::sketchy::FinishStrokeCmd command);
+  bool ApplyBeginStrokeCmd(::fuchsia::ui::sketchy::BeginStrokeCmd command);
+  bool ApplyExtendStrokeCmd(::fuchsia::ui::sketchy::ExtendStrokeCmd command);
+  bool ApplyFinishStrokeCmd(::fuchsia::ui::sketchy::FinishStrokeCmd command);
 
-  bool ApplyClearGroupCmd(
-      ::fuchsia::ui::sketchy::ClearGroupCmd command);
+  bool ApplyClearGroupCmd(::fuchsia::ui::sketchy::ClearGroupCmd command);
 
   bool ApplyScenicImportResourceCmd(
       fuchsia::ui::gfx::ImportResourceCmd import_resource);

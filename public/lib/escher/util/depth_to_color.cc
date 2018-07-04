@@ -35,8 +35,8 @@ constexpr char g_kernel_src[] = R"GLSL(
 
 namespace escher {
 
-DepthToColor::DepthToColor(Escher* escher, ImageFactory* image_factory)
-    : escher_(escher), image_factory_(image_factory) {}
+DepthToColor::DepthToColor(EscherWeakPtr escher, ImageFactory* image_factory)
+    : escher_(std::move(escher)), image_factory_(image_factory) {}
 
 TexturePtr DepthToColor::Convert(const FramePtr& frame,
                                  const TexturePtr& depth_texture,

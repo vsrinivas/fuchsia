@@ -23,7 +23,8 @@ using escher::ShapeModifier;
 using escher::vec2;
 using escher::vec3;
 
-RingTricks2::RingTricks2(Demo* demo) : Scene(demo), factory_(demo->escher()) {}
+RingTricks2::RingTricks2(Demo* demo)
+    : Scene(demo), factory_(demo->GetEscherWeakPtr()) {}
 
 void RingTricks2::Init(escher::Stage* stage) {
   red_ = fxl::MakeRefCounted<escher::Material>();
@@ -65,8 +66,7 @@ void RingTricks2::Init(escher::Stage* stage) {
 RingTricks2::~RingTricks2() {}
 
 escher::Model* RingTricks2::Update(const escher::Stopwatch& stopwatch,
-                                   uint64_t frame_count,
-                                   escher::Stage* stage) {
+                                   uint64_t frame_count, escher::Stage* stage) {
   float current_time_sec = stopwatch.GetElapsedSeconds();
 
   float screen_width = stage->viewing_volume().width();

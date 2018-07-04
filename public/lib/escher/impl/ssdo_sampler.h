@@ -49,7 +49,7 @@ class SsdoSampler {
   static const vk::DescriptorSetLayoutCreateInfo&
   GetDescriptorSetLayoutCreateInfo();
 
-  SsdoSampler(Escher* escher, MeshPtr full_screen, ImagePtr noise_image,
+  SsdoSampler(EscherWeakPtr escher, MeshPtr full_screen, ImagePtr noise_image,
               ModelData* model_data);
   ~SsdoSampler();
 

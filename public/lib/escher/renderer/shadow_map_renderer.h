@@ -20,7 +20,7 @@ typedef fxl::RefPtr<ShadowMapRenderer> ShadowMapRendererPtr;
 // stage/model, for a specified light type/position/direction/etc.
 class ShadowMapRenderer : public Renderer {
  public:
-  static ShadowMapRendererPtr New(Escher* escher,
+  static ShadowMapRendererPtr New(EscherWeakPtr escher,
                                   const impl::ModelDataPtr& model_data,
                                   const impl::ModelRendererPtr& model_renderer);
 
@@ -29,15 +29,11 @@ class ShadowMapRenderer : public Renderer {
   // sun), where the light intensity and direction to the light don't change
   // appreciably as an object is moved around the stage.
   virtual ShadowMapPtr GenerateDirectionalShadowMap(
-      const FramePtr& frame,
-      const Stage& stage,
-      const Model& model,
-      const glm::vec3& direction,
-      const glm::vec3& light_color);
+      const FramePtr& frame, const Stage& stage, const Model& model,
+      const glm::vec3& direction, const glm::vec3& light_color);
 
  protected:
-  ShadowMapRenderer(Escher* escher,
-                    vk::Format shadow_map_format,
+  ShadowMapRenderer(EscherWeakPtr escher, vk::Format shadow_map_format,
                     vk::Format depth_format,
                     const impl::ModelDataPtr& model_data,
                     const impl::ModelRendererPtr& model_renderer,
@@ -52,17 +48,13 @@ class ShadowMapRenderer : public Renderer {
   ImagePtr GetTransitionedDepthImage(impl::CommandBuffer* command_buffer,
                                      uint32_t width, uint32_t height);
   void DrawShadowPass(impl::CommandBuffer* command_buffer,
-                      const Stage& shadow_stage,
-                      const Model& model,
-                      const Camera& camera,
-                      ImagePtr& color_image,
+                      const Stage& shadow_stage, const Model& model,
+                      const Camera& camera, ImagePtr& color_image,
                       ImagePtr& depth_image);
 
   template <typename ShadowMapT>
   fxl::RefPtr<ShadowMapT> SubmitPartialFrameAndBuildShadowMap(
-      const FramePtr& frame,
-      const Camera& camera,
-      ImagePtr& color_image,
+      const FramePtr& frame, const Camera& camera, ImagePtr& color_image,
       const glm::vec3& light_color) {
     auto semaphore = escher::Semaphore::New(escher()->vk_device());
     frame->SubmitPartialFrame(semaphore);
@@ -70,13 +62,10 @@ class ShadowMapRenderer : public Renderer {
 
     // NOTE: the bias matrix used for shadowmapping in Vulkan is different than
     // OpenGL, so we can't use glm::scaleBias().
-    const mat4 bias(0.5, 0.0, 0.0, 0.0,
-                    0.0, 0.5, 0.0, 0.0,
-                    0.0, 0.0, 1.0, 0.0,
+    const mat4 bias(0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
                     0.5, 0.5, 0.0, 1.0);
     return fxl::AdoptRef(new ShadowMapT(
-        std::move(color_image),
-        bias * camera.projection() * camera.transform(),
+        std::move(color_image), bias * camera.projection() * camera.transform(),
         light_color));
   }
 

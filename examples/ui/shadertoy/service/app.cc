@@ -11,10 +11,10 @@
 namespace shadertoy {
 
 App::App(async::Loop* loop, fuchsia::sys::StartupContext* app_context,
-         escher::Escher* escher)
-    : escher_(escher),
-      renderer_(escher, kDefaultImageFormat),
-      compiler_(loop, escher, renderer_.render_pass(),
+         escher::EscherWeakPtr weak_escher)
+    : escher_(std::move(weak_escher)),
+      renderer_(escher_, kDefaultImageFormat),
+      compiler_(loop, escher_, renderer_.render_pass(),
                 renderer_.descriptor_set_layout()) {
   app_context->outgoing().AddPublicService(factory_bindings_.GetHandler(this));
 }

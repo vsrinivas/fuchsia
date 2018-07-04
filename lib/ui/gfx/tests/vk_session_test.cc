@@ -24,7 +24,7 @@ std::unique_ptr<Engine> VkSessionTest::CreateEngine() {
   escher_ = std::make_unique<escher::Escher>(vulkan_device);
 
   return std::make_unique<EngineForTest>(&display_manager_, nullptr,
-                                         escher_.get());
+                                         escher_->GetWeakPtr());
 }
 
 }  // namespace test

@@ -17,24 +17,23 @@ namespace escher {
 class Renderer : public fxl::RefCountedThreadSafe<Renderer> {
  public:
   void RunOffscreenBenchmark(
-      uint32_t framebuffer_width,
-      uint32_t framebuffer_height,
-      vk::Format framebuffer_format,
-      size_t frame_count,
+      uint32_t framebuffer_width, uint32_t framebuffer_height,
+      vk::Format framebuffer_format, size_t frame_count,
       std::function<void(const FramePtr&, const ImagePtr&)> draw_func);
 
   const VulkanContext& vulkan_context() { return context_; }
 
-  Escher* escher() const { return escher_; }
+  Escher* escher() const { return escher_.get(); }
+  EscherWeakPtr GetEscherWeakPtr() { return escher_; }
 
  protected:
-  explicit Renderer(Escher* escher);
+  explicit Renderer(EscherWeakPtr escher);
   virtual ~Renderer();
 
   const VulkanContext context_;
 
  private:
-  Escher* const escher_;
+  const EscherWeakPtr escher_;
 
   FRIEND_REF_COUNTED_THREAD_SAFE(Renderer);
   FXL_DISALLOW_COPY_AND_ASSIGN(Renderer);

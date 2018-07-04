@@ -20,7 +20,7 @@ namespace escher {
 class ResourceRecycler : public ResourceManager,
                          public impl::CommandBufferSequencerListener {
  public:
-  explicit ResourceRecycler(Escher* escher);
+  explicit ResourceRecycler(EscherWeakPtr escher);
 
   virtual ~ResourceRecycler();
 

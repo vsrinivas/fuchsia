@@ -38,7 +38,7 @@ int main(int argc, const char** argv) {
     async::Loop loop(&kAsyncLoopConfigMakeDefault);
     trace::TraceProvider trace_provider(loop.async());
 
-    sketchy_service::App app(&loop, &escher);
+    sketchy_service::App app(&loop, escher.GetWeakPtr());
     loop.Run();
   }
   escher::GlslangFinalizeProcess();

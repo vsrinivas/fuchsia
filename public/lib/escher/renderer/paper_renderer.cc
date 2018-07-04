@@ -51,47 +51,44 @@ constexpr uint32_t kLightingPassSampleCount = 1;
 
 }  // namespace
 
-fxl::RefPtr<PaperRenderer> PaperRenderer::New(Escher* escher) {
+fxl::RefPtr<PaperRenderer> PaperRenderer::New(EscherWeakPtr escher) {
   return fxl::MakeRefCounted<PaperRenderer>(
       escher, fxl::MakeRefCounted<impl::ModelData>(escher));
 }
 
-PaperRenderer::PaperRenderer(Escher* escher, impl::ModelDataPtr model_data)
-    : Renderer(escher),
-      full_screen_(NewFullScreenMesh(escher->mesh_manager())),
-      image_cache_(escher->image_cache()),
+PaperRenderer::PaperRenderer(EscherWeakPtr weak_escher,
+                             impl::ModelDataPtr model_data)
+    : Renderer(std::move(weak_escher)),
+      full_screen_(NewFullScreenMesh(escher()->mesh_manager())),
+      image_cache_(escher()->image_cache()),
       depth_format_(ESCHER_CHECKED_VK_RESULT(
           impl::GetSupportedDepthStencilFormat(context_.physical_device))),
       model_data_(std::move(model_data)),
-      model_renderer_(impl::ModelRenderer::New(escher, model_data_)),
+      model_renderer_(
+          impl::ModelRenderer::New(GetEscherWeakPtr(), model_data_)),
       ssdo_(std::make_unique<impl::SsdoSampler>(
-          escher,
-          full_screen_,
-          image_utils::NewNoiseImage(image_cache_,
-                                     escher->gpu_uploader(),
+          GetEscherWeakPtr(), full_screen_,
+          image_utils::NewNoiseImage(image_cache_, escher()->gpu_uploader(),
                                      impl::SsdoSampler::kNoiseSize,
                                      impl::SsdoSampler::kNoiseSize,
                                      vk::ImageUsageFlagBits::eSampled),
           model_data_.get())),
-      ssdo_accelerator_(
-          std::make_unique<impl::SsdoAccelerator>(escher, image_cache_)),
-      depth_to_color_(std::make_unique<DepthToColor>(escher, image_cache_)),
+      ssdo_accelerator_(std::make_unique<impl::SsdoAccelerator>(
+          GetEscherWeakPtr(), image_cache_)),
+      depth_to_color_(
+          std::make_unique<DepthToColor>(GetEscherWeakPtr(), image_cache_)),
       clear_values_(
           {vk::ClearColorValue(std::array<float, 4>{{0.f, 0.f, 0.f, 1.f}}),
            vk::ClearDepthStencilValue(kMaxDepth, 0)}),
       ambient_light_color_(1.f) {}
 
-PaperRenderer::~PaperRenderer() {
-  escher()->Cleanup();
-}
+PaperRenderer::~PaperRenderer() { escher()->Cleanup(); }
 
 void PaperRenderer::DrawDepthPrePass(const FramePtr& frame,
                                      const ImagePtr& depth_image,
                                      const ImagePtr& dummy_color_image,
-                                     float scale,
-                                     const Stage& stage,
-                                     const Model& model,
-                                     const Camera& camera) {
+                                     float scale, const Stage& stage,
+                                     const Model& model, const Camera& camera) {
   TRACE_DURATION("gfx", "escher::PaperRenderer::DrawDepthPrePass", "width",
                  depth_image->width(), "height", depth_image->height());
 
@@ -255,17 +252,11 @@ void PaperRenderer::UpdateRenderPasses(vk::Format prepass_color_format,
 }
 
 void PaperRenderer::DrawLightingPass(
-    const FramePtr& frame,
-    uint32_t sample_count,
-    const FramebufferPtr& framebuffer,
-    const TexturePtr& shadow_texture,
-    const mat4& shadow_matrix,
-    const vec3& ambient_light_color,
-    const vec3& direct_light_color,
-    const impl::ModelRenderPassPtr& render_pass,
-    const Stage& stage,
-    const Model& model,
-    const Camera& camera,
+    const FramePtr& frame, uint32_t sample_count,
+    const FramebufferPtr& framebuffer, const TexturePtr& shadow_texture,
+    const mat4& shadow_matrix, const vec3& ambient_light_color,
+    const vec3& direct_light_color, const impl::ModelRenderPassPtr& render_pass,
+    const Stage& stage, const Model& model, const Camera& camera,
     const Model* overlay_model) {
   TRACE_DURATION("gfx", "escher::PaperRenderer::DrawLightingPass", "width",
                  framebuffer->width(), "height", framebuffer->height());
@@ -395,10 +386,8 @@ void PaperRenderer::DrawDebugOverlays(const FramePtr& frame,
   }
 }
 
-void PaperRenderer::DrawFrame(const FramePtr& frame,
-                              const Stage& stage,
-                              const Model& model,
-                              const Camera& camera,
+void PaperRenderer::DrawFrame(const FramePtr& frame, const Stage& stage,
+                              const Model& model, const Camera& camera,
                               const ImagePtr& color_image_out,
                               const ShadowMapPtr& shadow_map,
                               const Model* overlay_model) {
@@ -474,13 +463,9 @@ void PaperRenderer::DrawFrameWithNoShadows(const FramePtr& frame,
 }
 
 void PaperRenderer::DrawFrameWithShadowMapShadows(
-    const FramePtr& frame,
-    const Stage& stage,
-    const Model& model,
-    const Camera& camera,
-    const ImagePtr& color_image_out,
-    const ShadowMapPtr& shadow_map,
-    const Model* overlay_model) {
+    const FramePtr& frame, const Stage& stage, const Model& model,
+    const Camera& camera, const ImagePtr& color_image_out,
+    const ShadowMapPtr& shadow_map, const Model* overlay_model) {
   FXL_DCHECK(shadow_map);
   FXL_DCHECK(shadow_map->IsKindOf<ShadowMap>());
 
@@ -514,13 +499,9 @@ void PaperRenderer::DrawFrameWithShadowMapShadows(
 }
 
 void PaperRenderer::DrawFrameWithMomentShadowMapShadows(
-    const FramePtr& frame,
-    const Stage& stage,
-    const Model& model,
-    const Camera& camera,
-    const ImagePtr& color_image_out,
-    const ShadowMapPtr& shadow_map,
-    const Model* overlay_model) {
+    const FramePtr& frame, const Stage& stage, const Model& model,
+    const Camera& camera, const ImagePtr& color_image_out,
+    const ShadowMapPtr& shadow_map, const Model* overlay_model) {
   FXL_DCHECK(shadow_map);
   FXL_DCHECK(shadow_map->IsKindOf<MomentShadowMap>());
 

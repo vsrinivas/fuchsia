@@ -19,7 +19,8 @@ namespace test {
 class ImagePipeTest : public SessionTest, public escher::ResourceManager {
  public:
   ImagePipeTest()
-      : escher::ResourceManager(nullptr), command_buffer_sequencer_() {}
+      : escher::ResourceManager(escher::EscherWeakPtr()),
+        command_buffer_sequencer_() {}
 
   std::unique_ptr<Engine> CreateEngine() override {
     auto r = std::make_unique<ReleaseFenceSignallerForTest>(
@@ -130,9 +131,11 @@ TEST_F(ImagePipeTest, PresentImagesOutOfOrder) {
   fuchsia::images::ImagePipe::PresentImageCallback callback = [](auto) {};
 
   image_pipe->PresentImage(imageId1, 1, CopyEventIntoFidlArray(CreateEvent()),
-                           CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+                           CopyEventIntoFidlArray(CreateEvent()),
+                           std::move(callback));
   image_pipe->PresentImage(imageId1, 0, CopyEventIntoFidlArray(CreateEvent()),
-                           CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+                           CopyEventIntoFidlArray(CreateEvent()),
+                           std::move(callback));
 
   EXPECT_EQ(
       "scenic::gfx::ImagePipe: Present called with out-of-order presentation "
@@ -161,9 +164,11 @@ TEST_F(ImagePipeTest, PresentImagesInOrder) {
   fuchsia::images::ImagePipe::PresentImageCallback callback = [](auto) {};
 
   image_pipe->PresentImage(imageId1, 1, CopyEventIntoFidlArray(CreateEvent()),
-                           CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+                           CopyEventIntoFidlArray(CreateEvent()),
+                           std::move(callback));
   image_pipe->PresentImage(imageId1, 1, CopyEventIntoFidlArray(CreateEvent()),
-                           CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+                           CopyEventIntoFidlArray(CreateEvent()),
+                           std::move(callback));
 
   EXPECT_TRUE(reported_errors_.empty());
 }

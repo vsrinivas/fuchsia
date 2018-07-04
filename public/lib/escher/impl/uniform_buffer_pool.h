@@ -23,7 +23,7 @@ namespace impl {
 class UniformBufferPool : public ResourceManager {
  public:
   UniformBufferPool(
-      Escher* escher,
+      EscherWeakPtr escher,
       // If no allocator is provided, Escher's default allocator will be used.
       GpuAllocator* allocator = nullptr,
       vk::MemoryPropertyFlags additional_flags = vk::MemoryPropertyFlags());

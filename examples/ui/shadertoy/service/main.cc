@@ -47,7 +47,7 @@ int main(int argc, const char** argv) {
     std::unique_ptr<fuchsia::sys::StartupContext> app_context(
         fuchsia::sys::StartupContext::CreateFromStartupInfo());
 
-    shadertoy::App app(&loop, app_context.get(), &escher);
+    shadertoy::App app(&loop, app_context.get(), escher.GetWeakPtr());
     loop.Run();
   }
   escher::GlslangFinalizeProcess();

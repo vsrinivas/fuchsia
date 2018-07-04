@@ -12,11 +12,11 @@
 namespace sketchy_service {
 
 CanvasImpl::CanvasImpl(async::Loop* loop, scenic::Session* session,
-                       escher::Escher* escher)
+                       escher::EscherWeakPtr weak_escher)
     : loop_(loop),
       session_(session),
-      shared_buffer_pool_(session, escher),
-      stroke_manager_(escher) {}
+      shared_buffer_pool_(session, weak_escher),
+      stroke_manager_(std::move(weak_escher)) {}
 
 void CanvasImpl::Init(
     fidl::InterfaceHandle<::fuchsia::ui::sketchy::CanvasListener> listener) {
@@ -54,8 +54,8 @@ void CanvasImpl::RequestScenicPresent(uint64_t presentation_time) {
   }
   is_scenic_present_requested_ = true;
 
-  auto session_callback = [this, callbacks = std::move(callbacks_)](
-                              fuchsia::images::PresentationInfo info) {
+  auto session_callback = [ this, callbacks = std::move(callbacks_) ](
+      fuchsia::images::PresentationInfo info) {
     FXL_DCHECK(is_scenic_present_requested_);
     is_scenic_present_requested_ = false;
     for (auto& callback : callbacks) {

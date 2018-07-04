@@ -4,8 +4,8 @@
 
 #include "garnet/examples/ui/shadertoy/service/compiler.h"
 
-#include <lib/async/cpp/task.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
 
 #include "garnet/examples/ui/shadertoy/service/renderer.h"
 #include "lib/escher/impl/glsl_compiler.h"
@@ -103,12 +103,12 @@ void main() {
 
 namespace shadertoy {
 
-Compiler::Compiler(async::Loop* loop, escher::Escher* escher,
+Compiler::Compiler(async::Loop* loop, escher::EscherWeakPtr weak_escher,
                    vk::RenderPass render_pass,
                    vk::DescriptorSetLayout descriptor_set_layout)
     : loop_(loop),
-      escher_(escher),
-      model_data_(fxl::MakeRefCounted<escher::impl::ModelData>(escher)),
+      escher_(std::move(weak_escher)),
+      model_data_(fxl::MakeRefCounted<escher::impl::ModelData>(escher_)),
       render_pass_(render_pass),
       descriptor_set_layout_(descriptor_set_layout) {
   FXL_DCHECK(render_pass_);
@@ -195,10 +195,9 @@ void Compiler::ProcessRequestQueue() {
 
     auto pipeline = CompileGlslToPipeline(req.glsl);
 
-    async::PostTask(loop_->async(), [result = Result{std::move(pipeline)},
-                                     callback = std::move(req.callback)] {
-      callback(std::move(result));
-    });
+    async::PostTask(loop_->async(), [
+      result = Result{std::move(pipeline)}, callback = std::move(req.callback)
+    ] { callback(std::move(result)); });
   }
 }
 

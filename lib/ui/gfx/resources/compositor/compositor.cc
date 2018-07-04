@@ -38,7 +38,7 @@ Compositor::Compositor(Session* session, scenic::ResourceId id,
                        const ResourceTypeInfo& type_info,
                        std::unique_ptr<Swapchain> swapchain)
     : Resource(session, id, type_info),
-      escher_(session->engine()->escher()),
+      escher_(session->engine()->GetEscherWeakPtr()),
       swapchain_(std::move(swapchain)),
       pose_buffer_latching_shader_(
           std::make_unique<escher::hmd::PoseBufferLatchingShader>(escher_)) {
@@ -279,12 +279,13 @@ bool Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
 
   bool success = swapchain_->DrawAndPresentFrame(
       frame_timings,
-      [this, frame{std::move(frame)}, frame_timings, escher_renderer,
-       shadow_renderer, bottom_layer = drawable_layers[0],
-       overlay = overlay_model.get()](
-          const escher::ImagePtr& output_image,
-          const escher::SemaphorePtr& acquire_semaphore,
-          const escher::SemaphorePtr& frame_done_semaphore) {
+      [
+        this, frame{std::move(frame)}, frame_timings, escher_renderer,
+        shadow_renderer, bottom_layer = drawable_layers[0],
+        overlay = overlay_model.get()
+      ](const escher::ImagePtr& output_image,
+        const escher::SemaphorePtr& acquire_semaphore,
+        const escher::SemaphorePtr& frame_done_semaphore) {
         output_image->SetWaitSemaphore(acquire_semaphore);
         DrawLayer(frame, frame_timings, escher_renderer, shadow_renderer,
                   bottom_layer, output_image, overlay);

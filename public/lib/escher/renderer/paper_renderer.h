@@ -22,15 +22,11 @@ enum class PaperRendererShadowType {
 
 class PaperRenderer : public Renderer {
  public:
-  static fxl::RefPtr<PaperRenderer> New(Escher* escher);
+  static fxl::RefPtr<PaperRenderer> New(EscherWeakPtr escher);
 
-  void DrawFrame(const FramePtr& frame,
-                 const Stage& stage,
-                 const Model& model,
-                 const Camera& camera,
-                 const ImagePtr& color_image_out,
-                 const ShadowMapPtr& shadow_map,
-                 const Model* overlay_model);
+  void DrawFrame(const FramePtr& frame, const Stage& stage, const Model& model,
+                 const Camera& camera, const ImagePtr& color_image_out,
+                 const ShadowMapPtr& shadow_map, const Model* overlay_model);
 
   // Set whether one or more debug-overlays is to be show.
   void set_show_debug_info(bool b) { show_debug_info_ = b; }
@@ -61,60 +57,46 @@ class PaperRenderer : public Renderer {
   }
 
  private:
-  PaperRenderer(Escher* escher, impl::ModelDataPtr model_data);
+  PaperRenderer(EscherWeakPtr escher, impl::ModelDataPtr model_data);
   ~PaperRenderer() override;
 
   static constexpr uint32_t kFramebufferColorAttachmentIndex = 0;
   static constexpr uint32_t kFramebufferDepthAttachmentIndex = 1;
 
-  void DrawFrameWithNoShadows(const FramePtr& frame,
-                              const Stage& stage,
-                              const Model& model,
-                              const Camera& camera,
+  void DrawFrameWithNoShadows(const FramePtr& frame, const Stage& stage,
+                              const Model& model, const Camera& camera,
                               const ImagePtr& color_image_out,
                               const Model* overlay_model);
 
-  void DrawFrameWithSsdoShadows(const FramePtr& frame,
-                                const Stage& stage,
-                                const Model& model,
-                                const Camera& camera,
+  void DrawFrameWithSsdoShadows(const FramePtr& frame, const Stage& stage,
+                                const Model& model, const Camera& camera,
                                 const ImagePtr& color_image_out,
                                 const Model* overlay_model);
 
-  void DrawFrameWithShadowMapShadows(const FramePtr& frame,
-                                     const Stage& stage,
-                                     const Model& model,
-                                     const Camera& camera,
+  void DrawFrameWithShadowMapShadows(const FramePtr& frame, const Stage& stage,
+                                     const Model& model, const Camera& camera,
                                      const ImagePtr& color_image_out,
                                      const ShadowMapPtr& shadow_map,
                                      const Model* overlay_model);
 
-  void DrawFrameWithMomentShadowMapShadows(const FramePtr& frame,
-                                           const Stage& stage,
-                                           const Model& model,
-                                           const Camera& camera,
-                                           const ImagePtr& color_image_out,
-                                           const ShadowMapPtr& shadow_map,
-                                           const Model* overlay_model);
+  void DrawFrameWithMomentShadowMapShadows(
+      const FramePtr& frame, const Stage& stage, const Model& model,
+      const Camera& camera, const ImagePtr& color_image_out,
+      const ShadowMapPtr& shadow_map, const Model* overlay_model);
 
   // Render pass that generates a depth buffer, but no color fragments.  The
   // resulting depth buffer is used by DrawSsdoPasses() in order to compute
   // per-pixel occlusion, and by DrawLightingPass().
-  void DrawDepthPrePass(const FramePtr& frame,
-                        const ImagePtr& depth_image,
-                        const ImagePtr& dummy_color_image,
-                        float scale,
-                        const Stage& stage,
-                        const Model& model,
+  void DrawDepthPrePass(const FramePtr& frame, const ImagePtr& depth_image,
+                        const ImagePtr& dummy_color_image, float scale,
+                        const Stage& stage, const Model& model,
                         const Camera& camera);
 
   // Multiple render passes.  The first samples the depth buffer to generate
   // per-pixel occlusion information, and subsequent passes filter this noisy
   // data.
-  void DrawSsdoPasses(const FramePtr& frame,
-                      const ImagePtr& depth_in,
-                      const ImagePtr& color_out,
-                      const ImagePtr& color_aux,
+  void DrawSsdoPasses(const FramePtr& frame, const ImagePtr& depth_in,
+                      const ImagePtr& color_out, const ImagePtr& color_aux,
                       const TexturePtr& accelerator_texture,
                       const Stage& stage);
 
@@ -126,23 +108,18 @@ class PaperRenderer : public Renderer {
   // might save bandwidth at the cost of more per-fragment computation (but
   // the latter might be mitigated by sorting front-to-back, etc.).  Revisit
   // after doing performance profiling.
-  void DrawLightingPass(const FramePtr& frame,
-                        uint32_t sample_count,
+  void DrawLightingPass(const FramePtr& frame, uint32_t sample_count,
                         const FramebufferPtr& framebuffer,
                         const TexturePtr& shadow_texture,
                         const mat4& shadow_matrix,
                         const vec3& ambient_light_color,
                         const vec3& direct_light_color,
                         const impl::ModelRenderPassPtr& render_pass,
-                        const Stage& stage,
-                        const Model& model,
-                        const Camera& camera,
-                        const Model* overlay_model);
+                        const Stage& stage, const Model& model,
+                        const Camera& camera, const Model* overlay_model);
 
-  void DrawDebugOverlays(const FramePtr& frame,
-                         const ImagePtr& output,
-                         const ImagePtr& depth,
-                         const ImagePtr& illumination,
+  void DrawDebugOverlays(const FramePtr& frame, const ImagePtr& output,
+                         const ImagePtr& depth, const ImagePtr& illumination,
                          const TexturePtr& ssdo_accel,
                          const TexturePtr& ssdo_accel_depth);
 

@@ -63,9 +63,9 @@ std::unique_ptr<SessionHandler> SessionManagerForTest::CreateSessionHandler(
 
 EngineForTest::EngineForTest(DisplayManager* display_manager,
                              std::unique_ptr<escher::ReleaseFenceSignaller> r,
-                             escher::Escher* escher)
+                             escher::EscherWeakPtr escher)
     : Engine(display_manager, std::move(r),
-             std::make_unique<SessionManagerForTest>(), escher) {}
+             std::make_unique<SessionManagerForTest>(), std::move(escher)) {}
 
 }  // namespace test
 }  // namespace gfx

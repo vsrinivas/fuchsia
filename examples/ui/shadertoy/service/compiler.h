@@ -27,7 +27,7 @@ namespace shadertoy {
 class Compiler final {
  public:
   // |render_pass| is not owned by us; we don't need to destroy it.
-  explicit Compiler(async::Loop* loop, escher::Escher* escher,
+  explicit Compiler(async::Loop* loop, escher::EscherWeakPtr escher,
                     vk::RenderPass render_pass,
                     vk::DescriptorSetLayout descriptor_set_layout);
   ~Compiler();
@@ -72,7 +72,7 @@ class Compiler final {
                                 const escher::MeshSpec& mesh_spec);
 
   async::Loop* const loop_;
-  escher::Escher* const escher_;
+  const escher::EscherWeakPtr escher_;
   escher::impl::ModelDataPtr model_data_;
   vk::RenderPass render_pass_;
   vk::DescriptorSetLayout descriptor_set_layout_;

@@ -126,7 +126,7 @@ inline void InitWriteDescriptorSet(
 }  // namespace
 
 ComputeShader::ComputeShader(
-    Escher* escher, const std::vector<vk::ImageLayout>& layouts,
+    EscherWeakPtr escher, const std::vector<vk::ImageLayout>& layouts,
     const std::vector<vk::DescriptorType>& buffer_types,
     size_t push_constants_size, const char* source_code)
     : device_(escher->vulkan_context().device),

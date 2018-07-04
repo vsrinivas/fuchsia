@@ -15,7 +15,7 @@ namespace hmd {
 // public/fidl/fuchsia.ui.gfx/commands.fidl for details on pose buffer.
 class PoseBufferLatchingShader {
  public:
-  PoseBufferLatchingShader(Escher* escher);
+  PoseBufferLatchingShader(EscherWeakPtr escher);
 
   // Latches a pose from the pose buffer for |latch_time|.
   // The returned buffer will contain the raw latched pose as well as a
@@ -33,10 +33,8 @@ class PoseBufferLatchingShader {
   //
   // For details on pose buffers and the layout of the Pose struct see
   // //garnet/public/fidl/fuchsia.ui.gfx/commands.fidl
-  BufferPtr LatchPose(const FramePtr& frame,
-                      const Camera& camera,
-                      PoseBuffer pose_buffer,
-                      uint64_t latch_time,
+  BufferPtr LatchPose(const FramePtr& frame, const Camera& camera,
+                      PoseBuffer pose_buffer, uint64_t latch_time,
                       bool host_accessible_output = false);
 
   // The same as LatchPose but takes two cameras and computes a ViewProjection
@@ -48,15 +46,13 @@ class PoseBufferLatchingShader {
   //   mat4  left_vp_matrix;
   //   mat4  right_vp_matrix;
   // }
-  BufferPtr LatchStereoPose(const FramePtr& frame,
-                            const Camera& left_camera,
-                            const Camera& right_camera,
-                            PoseBuffer pose_buffer,
+  BufferPtr LatchStereoPose(const FramePtr& frame, const Camera& left_camera,
+                            const Camera& right_camera, PoseBuffer pose_buffer,
                             uint64_t latch_time,
                             bool host_accessible_output = false);
 
  private:
-  Escher* const escher_;
+  const EscherWeakPtr escher_;
   std::unique_ptr<impl::ComputeShader> kernel_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PoseBufferLatchingShader);

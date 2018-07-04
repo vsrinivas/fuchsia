@@ -33,7 +33,7 @@ class Renderer : public escher::Renderer {
     Params();
   };
 
-  explicit Renderer(escher::Escher* escher, vk::Format color_format);
+  explicit Renderer(escher::EscherWeakPtr escher, vk::Format color_format);
 
   void DrawFrame(const escher::FramebufferPtr& framebuffer,
                  const PipelinePtr& pipeline, const Params& params,

@@ -44,7 +44,7 @@ using ViewLinker = ObjectLinker<View, ViewHolder>;
 // which belong to different engines to communicate with one another.
 class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
  public:
-  Engine(DisplayManager* display_manager, escher::Escher* escher);
+  Engine(DisplayManager* display_manager, escher::EscherWeakPtr escher);
 
   ~Engine() override;
 
@@ -54,7 +54,8 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   }
 
   DisplayManager* display_manager() const { return display_manager_; }
-  escher::Escher* escher() const { return escher_; }
+  escher::Escher* escher() const { return escher_.get(); }
+  escher::EscherWeakPtr GetEscherWeakPtr() const { return escher_; }
 
   vk::Device vk_device() {
     return escher_ ? escher_->vulkan_context().device : vk::Device();
@@ -115,7 +116,7 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   Engine(DisplayManager* display_manager,
          std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
          std::unique_ptr<SessionManager> session_manager,
-         escher::Escher* escher);
+         escher::EscherWeakPtr escher);
 
  private:
   friend class Compositor;
@@ -145,7 +146,7 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   void CleanupEscher();
 
   DisplayManager* const display_manager_;
-  escher::Escher* const escher_;
+  const escher::EscherWeakPtr escher_;
   escher::PaperRendererPtr paper_renderer_;
   escher::ShadowMapRendererPtr shadow_renderer_;
 

@@ -14,7 +14,8 @@ namespace impl {
 // TODO: obtain max uniform-buffer size from Vulkan.  64kB is typical.
 constexpr vk::DeviceSize kBufferSize = 65536;
 
-UniformBufferPool::UniformBufferPool(Escher* escher, GpuAllocator* allocator,
+UniformBufferPool::UniformBufferPool(EscherWeakPtr escher,
+                                     GpuAllocator* allocator,
                                      vk::MemoryPropertyFlags additional_flags)
     : ResourceManager(escher),
       allocator_(allocator ? allocator : escher->gpu_allocator()),

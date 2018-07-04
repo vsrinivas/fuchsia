@@ -30,6 +30,8 @@ class Escher : public MeshBuilderFactory {
   explicit Escher(VulkanDeviceQueuesPtr device);
   ~Escher();
 
+  EscherWeakPtr GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
+
   // Implement MeshBuilderFactory interface.
   MeshBuilderPtr NewMeshBuilder(const MeshSpec& spec, size_t max_vertex_count,
                                 size_t max_index_count) override;
@@ -142,19 +144,23 @@ class Escher : public MeshBuilderFactory {
   VulkanDeviceQueuesPtr device_;
   VulkanContext vulkan_context_;
 
+  // These can be constructed without an EscherWeakPtr.
   std::unique_ptr<GpuAllocator> gpu_allocator_;
   std::unique_ptr<impl::CommandBufferSequencer> command_buffer_sequencer_;
   std::unique_ptr<impl::CommandBufferPool> command_buffer_pool_;
   std::unique_ptr<impl::CommandBufferPool> transfer_command_buffer_pool_;
   std::unique_ptr<impl::GlslToSpirvCompiler> glsl_compiler_;
   std::unique_ptr<shaderc::Compiler> shaderc_compiler_;
+  std::unique_ptr<impl::PipelineCache> pipeline_cache_;
+  // Everything below this point requires |weak_factory_| to be initialized
+  // before they can be constructed.
+
   std::unique_ptr<impl::ImageCache> image_cache_;
 
   std::unique_ptr<impl::GpuUploader> gpu_uploader_;
   std::unique_ptr<ResourceRecycler> resource_recycler_;
   std::unique_ptr<impl::MeshManager> mesh_manager_;
 
-  std::unique_ptr<impl::PipelineCache> pipeline_cache_;
   std::unique_ptr<impl::PipelineLayoutCache> pipeline_layout_cache_;
 
   std::unique_ptr<impl::RenderPassCache> render_pass_cache_;
@@ -167,6 +173,8 @@ class Escher : public MeshBuilderFactory {
 
   bool supports_timer_queries_ = false;
   float timestamp_period_ = 0.f;
+
+  fxl::WeakPtrFactory<Escher> weak_factory_;  // must be last
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Escher);
 };

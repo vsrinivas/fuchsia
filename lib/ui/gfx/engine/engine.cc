@@ -54,22 +54,23 @@ static uint32_t GetImportedMemoryTypeIndex(vk::PhysicalDevice physical_device,
       vk::MemoryPropertyFlagBits::eDeviceLocal);
 }
 
-Engine::Engine(DisplayManager* display_manager, escher::Escher* escher)
+Engine::Engine(DisplayManager* display_manager,
+               escher::EscherWeakPtr weak_escher)
     : display_manager_(display_manager),
-      escher_(escher),
-      paper_renderer_(escher::PaperRenderer::New(escher)),
+      escher_(std::move(weak_escher)),
+      paper_renderer_(escher::PaperRenderer::New(escher_)),
       shadow_renderer_(
-          escher::ShadowMapRenderer::New(escher, paper_renderer_->model_data(),
+          escher::ShadowMapRenderer::New(escher_, paper_renderer_->model_data(),
                                          paper_renderer_->model_renderer())),
       image_factory_(std::make_unique<escher::SimpleImageFactory>(
-          escher->resource_recycler(), escher->gpu_allocator())),
+          escher()->resource_recycler(), escher()->gpu_allocator())),
       rounded_rect_factory_(
-          std::make_unique<escher::RoundedRectFactory>(escher)),
+          std::make_unique<escher::RoundedRectFactory>(escher_)),
       release_fence_signaller_(std::make_unique<escher::ReleaseFenceSignaller>(
-          escher->command_buffer_sequencer())),
+          escher()->command_buffer_sequencer())),
       session_manager_(std::make_unique<SessionManager>()),
       imported_memory_type_index_(GetImportedMemoryTypeIndex(
-          escher->vk_physical_device(), escher->vk_device())),
+          escher()->vk_physical_device(), escher()->vk_device())),
       weak_factory_(this) {
   FXL_DCHECK(display_manager_);
   FXL_DCHECK(escher_);
@@ -82,15 +83,15 @@ Engine::Engine(
     DisplayManager* display_manager,
     std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
     std::unique_ptr<SessionManager> session_manager,
-    escher::Escher* escher = nullptr)
+    escher::EscherWeakPtr weak_escher)
     : display_manager_(display_manager),
-      escher_(escher),
+      escher_(std::move(weak_escher)),
       release_fence_signaller_(std::move(release_fence_signaller)),
       session_manager_(std::move(session_manager)),
       imported_memory_type_index_(
-          escher ? GetImportedMemoryTypeIndex(escher->vk_physical_device(),
-                                              escher->vk_device())
-                 : 0),
+          escher_ ? GetImportedMemoryTypeIndex(escher_->vk_physical_device(),
+                                               escher_->vk_device())
+                  : 0),
       weak_factory_(this) {
   FXL_DCHECK(display_manager_);
 

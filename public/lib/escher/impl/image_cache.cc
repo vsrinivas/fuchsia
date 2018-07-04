@@ -13,7 +13,7 @@
 namespace escher {
 namespace impl {
 
-ImageCache::ImageCache(Escher* escher, GpuAllocator* allocator)
+ImageCache::ImageCache(EscherWeakPtr escher, GpuAllocator* allocator)
     : ResourceManager(escher),
       allocator_(allocator ? allocator : escher->gpu_allocator()) {}
 

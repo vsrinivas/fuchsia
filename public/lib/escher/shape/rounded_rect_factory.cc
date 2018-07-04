@@ -12,10 +12,10 @@
 
 namespace escher {
 
-RoundedRectFactory::RoundedRectFactory(Escher* escher)
-    : ResourceRecycler(escher),
-      buffer_factory_(std::make_unique<BufferFactory>(escher)),
-      uploader_(escher->gpu_uploader()) {}
+RoundedRectFactory::RoundedRectFactory(EscherWeakPtr weak_escher)
+    : ResourceRecycler(std::move(weak_escher)),
+      buffer_factory_(std::make_unique<BufferFactory>(GetEscherWeakPtr())),
+      uploader_(escher()->gpu_uploader()) {}
 
 RoundedRectFactory::~RoundedRectFactory() {}
 
@@ -28,11 +28,10 @@ MeshPtr RoundedRectFactory::NewRoundedRect(const RoundedRectSpec& spec,
   uint32_t index_count = counts.second;
   size_t vertex_buffer_size = vertex_count * mesh_spec.GetStride();
 
-  auto vertex_buffer =
-      buffer_factory_->NewBuffer(vertex_buffer_size,
-                                 vk::BufferUsageFlagBits::eVertexBuffer |
-                                     vk::BufferUsageFlagBits::eTransferDst,
-                                 vk::MemoryPropertyFlagBits::eDeviceLocal);
+  auto vertex_buffer = buffer_factory_->NewBuffer(
+      vertex_buffer_size, vk::BufferUsageFlagBits::eVertexBuffer |
+                              vk::BufferUsageFlagBits::eTransferDst,
+      vk::MemoryPropertyFlagBits::eDeviceLocal);
 
   impl::GpuUploader::Writer writer = uploader_->GetWriter(vertex_buffer_size);
   GenerateRoundedRectVertices(spec, mesh_spec, writer.ptr(), writer.size());
@@ -60,11 +59,10 @@ BufferPtr RoundedRectFactory::GetIndexBuffer(const RoundedRectSpec& spec,
     uint32_t index_count = GetRoundedRectMeshVertexAndIndexCounts(spec).second;
     size_t index_buffer_size = index_count * MeshSpec::kIndexSize;
 
-    index_buffer_ =
-        buffer_factory_->NewBuffer(index_buffer_size,
-                                   vk::BufferUsageFlagBits::eIndexBuffer |
-                                       vk::BufferUsageFlagBits::eTransferDst,
-                                   vk::MemoryPropertyFlagBits::eDeviceLocal);
+    index_buffer_ = buffer_factory_->NewBuffer(
+        index_buffer_size, vk::BufferUsageFlagBits::eIndexBuffer |
+                               vk::BufferUsageFlagBits::eTransferDst,
+        vk::MemoryPropertyFlagBits::eDeviceLocal);
 
     impl::GpuUploader::Writer writer = uploader_->GetWriter(index_buffer_size);
     GenerateRoundedRectIndices(spec, mesh_spec, writer.ptr(), writer.size());

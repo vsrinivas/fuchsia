@@ -19,7 +19,7 @@ namespace impl {
 // Not thread-safe.
 class WobbleModifierAbsorber {
  public:
-  WobbleModifierAbsorber(Escher* escher);
+  WobbleModifierAbsorber(EscherWeakPtr escher);
   ~WobbleModifierAbsorber() {}
   void AbsorbWobbleIfAny(Model* model);
 
@@ -29,7 +29,7 @@ class WobbleModifierAbsorber {
   void ApplyBarrierForUniformBuffer(CommandBuffer* command_buffer,
                                     const BufferPtr& buffer_ptr);
 
-  Escher* const escher_;
+  const EscherWeakPtr escher_;
   const VulkanContext& vulkan_context_;
   CommandBufferPool* const command_buffer_pool_;
   GlslToSpirvCompiler* const compiler_;

@@ -8,10 +8,11 @@
 
 namespace escher {
 
-ResourceRecycler::ResourceRecycler(Escher* escher) : ResourceManager(escher) {
+ResourceRecycler::ResourceRecycler(EscherWeakPtr escher)
+    : ResourceManager(std::move(escher)) {
   // Register ourselves for sequence number updates. Register() is defined in
   // our superclass CommandBufferSequenceListener.
-  Register(escher->command_buffer_sequencer());
+  Register(this->escher()->command_buffer_sequencer());
 }
 
 ResourceRecycler::~ResourceRecycler() {

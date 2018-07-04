@@ -17,7 +17,7 @@ namespace sketchy_service {
 
 class App {
  public:
-  App(async::Loop* loop, escher::Escher* escher);
+  App(async::Loop* loop, escher::EscherWeakPtr escher);
 
  private:
   async::Loop* const loop_;

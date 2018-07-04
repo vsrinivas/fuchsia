@@ -324,7 +324,7 @@ escher::VulkanContext DemoHarness::GetVulkanContext() {
 }
 
 DemoHarness::SwapchainImageOwner::SwapchainImageOwner()
-    : escher::ResourceManager(nullptr) {}
+    : escher::ResourceManager(escher::EscherWeakPtr()) {}
 
 void DemoHarness::SwapchainImageOwner::OnReceiveOwnable(
     std::unique_ptr<escher::Resource> resource) {

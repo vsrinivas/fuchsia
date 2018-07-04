@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "lib/escher/hmd/pose_buffer.h"
 #include "garnet/public/lib/escher/escher.h"
 #include "garnet/public/lib/escher/hmd/pose_buffer_latching_shader.h"
 #include "garnet/public/lib/escher/renderer/frame.h"
@@ -10,7 +11,6 @@
 #include "garnet/public/lib/escher/test/gtest_vulkan.h"
 #include "garnet/public/lib/escher/vk/buffer.h"
 #include "gtest/gtest.h"
-#include "lib/escher/hmd/pose_buffer.h"
 #include "lib/escher/util/epsilon_compare.h"
 
 #include <glm/gtc/type_ptr.hpp>
@@ -19,8 +19,7 @@ namespace escher {
 namespace test {
 
 // Returns true iff |a| and |b| are the same within optional |epsilon|.
-bool ComparePose(escher::hmd::Pose* p0,
-                 escher::hmd::Pose* p1,
+bool ComparePose(escher::hmd::Pose* p0, escher::hmd::Pose* p1,
                  float epsilon = 0.0) {
   bool compare = true;
 
@@ -86,7 +85,7 @@ VK_TEST(PoseBuffer, ComputeShaderLatching) {
                           memory_property_flags),
       num_entries, base_time, time_interval);
 
-  hmd::PoseBufferLatchingShader test_shader(escher.get());
+  hmd::PoseBufferLatchingShader test_shader(escher->GetWeakPtr());
 
   // Fill the pose buffer.
   ASSERT_NE(nullptr, pose_buffer.buffer->ptr());

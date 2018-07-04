@@ -16,7 +16,7 @@ namespace sketchy_service {
 // Manages strokes and stroke groups.
 class StrokeManager {
  public:
-  explicit StrokeManager(escher::Escher* escher);
+  explicit StrokeManager(escher::EscherWeakPtr escher);
 
   bool AddNewGroup(StrokeGroupPtr group);
   bool AddStrokeToGroup(StrokePtr stroke, StrokeGroupPtr group);

@@ -107,13 +107,13 @@ constexpr char g_compute_wobble_src[] = R"GLSL(
 
 }  // namespace
 
-WobbleModifierAbsorber::WobbleModifierAbsorber(Escher* escher)
-    : escher_(escher),
-      vulkan_context_(escher->vulkan_context()),
-      command_buffer_pool_(escher->command_buffer_pool()),
-      compiler_(escher->glsl_compiler()),
-      allocator_(escher->gpu_allocator()),
-      recycler_(escher->resource_recycler()),
+WobbleModifierAbsorber::WobbleModifierAbsorber(EscherWeakPtr weak_escher)
+    : escher_(std::move(weak_escher)),
+      vulkan_context_(escher_->vulkan_context()),
+      command_buffer_pool_(escher_->command_buffer_pool()),
+      compiler_(escher_->glsl_compiler()),
+      allocator_(escher_->gpu_allocator()),
+      recycler_(escher_->resource_recycler()),
       kernel_(NewKernel()),
       per_model_uniform_buffer_(NewUniformBuffer(sizeof(ModelData::PerModel))),
       per_model_uniform_data_(reinterpret_cast<ModelData::PerModel*>(

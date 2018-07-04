@@ -18,15 +18,14 @@ namespace impl {
 constexpr uint32_t kInitialPerModelDescriptorSetCount = 50;
 constexpr uint32_t kInitialPerObjectDescriptorSetCount = 200;
 
-ModelData::ModelData(Escher* escher, GpuAllocator* allocator)
+ModelData::ModelData(EscherWeakPtr escher, GpuAllocator* allocator)
     : device_(escher->vulkan_context().device),
       uniform_buffer_pool_(escher, allocator),
       per_model_descriptor_set_pool_(escher,
                                      GetPerModelDescriptorSetLayoutCreateInfo(),
                                      kInitialPerModelDescriptorSetCount),
       per_object_descriptor_set_pool_(
-          escher,
-          GetPerObjectDescriptorSetLayoutCreateInfo(),
+          escher, GetPerObjectDescriptorSetLayoutCreateInfo(),
           kInitialPerObjectDescriptorSetCount) {}
 
 ModelData::~ModelData() {}

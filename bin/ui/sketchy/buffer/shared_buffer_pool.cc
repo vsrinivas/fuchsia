@@ -15,10 +15,10 @@ constexpr uint32_t kBaseBufferPower = 10;
 namespace sketchy_service {
 
 SharedBufferPool::SharedBufferPool(scenic::Session* session,
-                                   escher::Escher* escher)
+                                   escher::EscherWeakPtr weak_escher)
     : session_(session),
-      escher_(escher),
-      factory_(std::make_unique<escher::BufferFactory>(escher)),
+      escher_(weak_escher),
+      factory_(std::make_unique<escher::BufferFactory>(std::move(weak_escher))),
       weak_factory_(this) {}
 
 SharedBufferPtr SharedBufferPool::GetBuffer(vk::DeviceSize capacity_req) {
@@ -48,14 +48,14 @@ void SharedBufferPool::ReturnBuffer(SharedBufferPtr buffer,
   auto pair = fence_listeners_.insert(
       std::make_unique<escher::FenceListener>(std::move(release_fence)));
   auto fence_listener = pair.first;
-  (*fence_listener)
-      ->WaitReadyAsync(
-          [weak = weak_factory_.GetWeakPtr(), fence_listener, buffer] {
-            if (weak) {
-              weak->fence_listeners_.erase(fence_listener);
-              weak->RecycleBuffer(buffer);
-            }
-          });
+  (*fence_listener)->WaitReadyAsync([
+    weak = weak_factory_.GetWeakPtr(), fence_listener, buffer
+  ] {
+    if (weak) {
+      weak->fence_listeners_.erase(fence_listener);
+      weak->RecycleBuffer(buffer);
+    }
+  });
 }
 
 void SharedBufferPool::RecycleBuffer(SharedBufferPtr buffer) {

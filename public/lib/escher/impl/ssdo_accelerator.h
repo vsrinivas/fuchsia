@@ -17,7 +17,7 @@ namespace impl {
 // whether SSDO sampling/filtering can be skipped for a given pixel.
 class SsdoAccelerator {
  public:
-  SsdoAccelerator(Escher* escher, ImageFactory* image_factory);
+  SsdoAccelerator(EscherWeakPtr escher, ImageFactory* image_factory);
   ~SsdoAccelerator();
 
   // Generates a packed lookup table to accelerate SSDO sampling/filtering.
@@ -45,8 +45,7 @@ class SsdoAccelerator {
   // otherwise 0.0.
   TexturePtr UnpackLookupTable(const FramePtr& frame,
                                const TexturePtr& packed_lookup_table,
-                               uint32_t output_width,
-                               uint32_t output_height);
+                               uint32_t output_width, uint32_t output_height);
 
   bool enabled() const { return enabled_; }
   void set_enabled(bool enabled) { enabled_ = enabled; }
@@ -60,7 +59,7 @@ class SsdoAccelerator {
                                      const TexturePtr& depth_texture,
                                      vk::ImageUsageFlags image_flags);
 
-  Escher* const escher_;
+  const EscherWeakPtr escher_;
   ImageFactory* const image_factory_;
 
   // Used by GenerateLookupTable().

@@ -7,8 +7,8 @@
 
 namespace sketchy_service {
 
-StrokeManager::StrokeManager(escher::Escher* escher)
-    : stroke_tessellator_(escher) {}
+StrokeManager::StrokeManager(escher::EscherWeakPtr weak_escher)
+    : stroke_tessellator_(std::move(weak_escher)) {}
 
 bool StrokeManager::AddNewGroup(StrokeGroupPtr group) {
   group->SetNeedsReTessellation();

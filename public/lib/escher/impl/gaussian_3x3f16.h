@@ -19,17 +19,17 @@ namespace impl {
 // TODO(SCN-619): Investigate the performance issue.
 class Gaussian3x3f16 {
  public:
-  explicit Gaussian3x3f16(Escher* escher);
+  explicit Gaussian3x3f16(EscherWeakPtr escher);
 
   // Apply two-pass gaussian on the input texture, and render into the output
   // texture. Mipmap is not supported. Assumes the image layout is
   // vk::ImageLayout::eGeneral.ss
 
-  void Apply(CommandBuffer* command_buffer,
-             const TexturePtr& input,
+  void Apply(CommandBuffer* command_buffer, const TexturePtr& input,
              const TexturePtr& output);
 
-  Escher* escher_;
+ private:
+  EscherWeakPtr escher_;
   std::unique_ptr<ComputeShader> kernel_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Gaussian3x3f16);
