@@ -16,8 +16,8 @@ zx_status_t VolatileWriteBlockDispatcher::Create(
     fbl::unique_ptr<BlockDispatcher> dispatcher,
     fbl::unique_ptr<BlockDispatcher>* out) {
   zx::vmo vmo;
-  size_t size = dispatcher->size();
-  zx_status_t status = zx::vmo::create(size, ZX_VMO_NON_RESIZABLE, &vmo);
+  zx_status_t status =
+      zx::vmo::create(dispatcher->size(), ZX_VMO_NON_RESIZABLE, &vmo);
   if (status != ZX_OK) {
     return status;
   }
@@ -28,31 +28,32 @@ zx_status_t VolatileWriteBlockDispatcher::Create(
     FXL_LOG(ERROR) << "Failed to set VMO name";
   }
 
-  uintptr_t map_address;
+  uintptr_t vmar_addr;
   status = zx::vmar::root_self().map(
-      0, vmo, 0, size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-      &map_address);
+      0, vmo, 0, dispatcher->size(),
+      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &vmar_addr);
   if (status != ZX_OK) {
     return status;
   }
 
   *out = fbl::unique_ptr<VolatileWriteBlockDispatcher>(
       new VolatileWriteBlockDispatcher(fbl::move(dispatcher), fbl::move(vmo),
-                                       map_address, size));
+                                       vmar_addr));
   return ZX_OK;
 }
 
 VolatileWriteBlockDispatcher::VolatileWriteBlockDispatcher(
     fbl::unique_ptr<BlockDispatcher> dispatcher, zx::vmo vmo,
-    uintptr_t map_address, size_t vmo_size)
+    uintptr_t vmar_addr)
     : BlockDispatcher(dispatcher->size(), false /* read-only */),
       dispatcher_(fbl::move(dispatcher)),
       vmo_(fbl::move(vmo)),
-      vmo_addr_(map_address),
-      vmo_size_(vmo_size) {}
+      vmar_addr_(vmar_addr) {}
 
 VolatileWriteBlockDispatcher::~VolatileWriteBlockDispatcher() {
-  FXL_CHECK(ZX_OK == zx::vmar::root_self().unmap(vmo_addr_, vmo_size_));
+  __UNUSED zx_status_t status =
+      zx::vmar::root_self().unmap(vmar_addr_, dispatcher_->size());
+  FXL_DCHECK(status == ZX_OK);
 }
 
 zx_status_t VolatileWriteBlockDispatcher::Flush() {
@@ -88,7 +89,7 @@ zx_status_t VolatileWriteBlockDispatcher::Read(off_t disk_offset, void* buf,
     } else {
       // Region is at least partially cached.
       size_t cached_size = (first_unallocated_block - block) * kBlockSize;
-      memcpy(dest, reinterpret_cast<void*>(vmo_addr_ + disk_offset),
+      memcpy(dest, reinterpret_cast<void*>(vmar_addr_ + disk_offset),
              cached_size);
       disk_offset += cached_size;
       dest += cached_size;
@@ -115,7 +116,7 @@ zx_status_t VolatileWriteBlockDispatcher::Write(off_t disk_offset,
   if (status != ZX_OK) {
     return status;
   }
-  memcpy(reinterpret_cast<uint8_t*>(vmo_addr_ + disk_offset), buf, size);
+  memcpy(reinterpret_cast<uint8_t*>(vmar_addr_ + disk_offset), buf, size);
   return ZX_OK;
 }
 

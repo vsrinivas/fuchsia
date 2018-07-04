@@ -33,8 +33,7 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
 
  private:
   VolatileWriteBlockDispatcher(fbl::unique_ptr<BlockDispatcher> dispatcher,
-                               zx::vmo vmo, uintptr_t map_address,
-                               size_t vmo_size);
+                               zx::vmo vmo, uintptr_t vmar_address);
 
   bool ValidateBlockParams(off_t disk_offset, size_t size);
 
@@ -44,8 +43,7 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
 
   bitmap::RleBitmap bitmap_ __TA_GUARDED(mutex_);
   zx::vmo vmo_;
-  uintptr_t vmo_addr_;
-  size_t vmo_size_;
+  uintptr_t vmar_addr_;
 };
 
 }  // namespace machina
