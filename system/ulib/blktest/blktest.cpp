@@ -22,6 +22,7 @@
 #include <fbl/array.h>
 #include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
+#include <fbl/unique_fd.h>
 #include <pretty/hexdump.h>
 #include <unittest/unittest.h>
 
@@ -47,59 +48,67 @@ static int get_testdev(uint64_t* blk_size, uint64_t* blk_count) {
 }
 
 static bool blkdev_test_simple(void) {
-    uint64_t blk_size, blk_count;
-    uint8_t buf[PAGE_SIZE];
-    uint8_t out[PAGE_SIZE];
-
     BEGIN_TEST;
-    int fd = get_testdev(&blk_size, &blk_count);
-    memset(buf, 'a', sizeof(buf));
-    memset(out, 0, sizeof(out));
 
-    // Write a page and a half
-    ASSERT_EQ(write(fd, buf, sizeof(buf)), (ssize_t) sizeof(buf), "");
-    ASSERT_EQ(write(fd, buf, sizeof(buf) / 2), (ssize_t) (sizeof(buf) / 2), "");
+    uint64_t blk_size, blk_count;
+    fbl::unique_fd fd(get_testdev(&blk_size, &blk_count));
+    int64_t buffer_size = blk_size * 2;
+
+    fbl::AllocChecker checker;
+    fbl::unique_ptr<uint8_t[]> buf(new (&checker) uint8_t[buffer_size]);
+    ASSERT_TRUE(checker.check());
+    fbl::unique_ptr<uint8_t[]> out(new (&checker) uint8_t[buffer_size]);
+    ASSERT_TRUE(checker.check());
+
+    memset(buf.get(), 'a', sizeof(buf));
+    memset(out.get(), 0, sizeof(out));
+
+    // Write three blocks.
+    ASSERT_EQ(write(fd.get(), buf.get(), buffer_size), buffer_size);
+    ASSERT_EQ(write(fd.get(), buf.get(), buffer_size / 2), buffer_size / 2);
 
     // Seek to the start of the device and read the contents
-    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
-    ASSERT_EQ(read(fd, out, sizeof(out)), (ssize_t) sizeof(out), "");
-    ASSERT_EQ(memcmp(out, buf, sizeof(out)), 0, "");
+    ASSERT_EQ(lseek(fd.get(), 0, SEEK_SET), 0, "");
+    ASSERT_EQ(read(fd.get(), out.get(), buffer_size), buffer_size);
+    ASSERT_EQ(memcmp(out.get(), buf.get(), buffer_size), 0);
+    ASSERT_EQ(read(fd.get(), out.get(), buffer_size / 2), buffer_size / 2);
+    ASSERT_EQ(memcmp(out.get(), buf.get(), buffer_size / 2), 0);
 
-    close(fd);
     END_TEST;
 }
 
 bool blkdev_test_bad_requests(void) {
-    uint64_t blk_size, blk_count;
-    uint8_t buf[PAGE_SIZE];
-
     BEGIN_TEST;
-    int fd = get_testdev(&blk_size, &blk_count);
-    memset(buf, 'a', sizeof(buf));
-    ASSERT_LE(blk_size, PAGE_SIZE, "Block size is too big");
+
+    uint64_t blk_size, blk_count;
+    fbl::unique_fd fd(get_testdev(&blk_size, &blk_count));
+
+    fbl::AllocChecker checker;
+    fbl::unique_ptr<uint8_t[]> buf(new (&checker) uint8_t[blk_size * 4]);
+    ASSERT_TRUE(checker.check());
+    memset(buf.get(), 'a', blk_size * 4);
 
     // Read / write non-multiples of the block size
-    ASSERT_EQ(write(fd, buf, blk_size - 1), -1, "");
-    ASSERT_EQ(write(fd, buf, blk_size / 2), -1, "");
-    ASSERT_EQ(write(fd, buf, blk_size * 2 - 1), -1, "");
-    ASSERT_EQ(read(fd, buf, blk_size - 1), -1, "");
-    ASSERT_EQ(read(fd, buf, blk_size / 2), -1, "");
-    ASSERT_EQ(read(fd, buf, blk_size * 2 - 1), -1, "");
+    ASSERT_EQ(write(fd.get(), buf.get(), blk_size - 1), -1);
+    ASSERT_EQ(write(fd.get(), buf.get(), blk_size / 2), -1);
+    ASSERT_EQ(write(fd.get(), buf.get(), blk_size * 2 - 1), -1);
+    ASSERT_EQ(read(fd.get(), buf.get(), blk_size - 1), -1);
+    ASSERT_EQ(read(fd.get(), buf.get(), blk_size / 2), -1);
+    ASSERT_EQ(read(fd.get(), buf.get(), blk_size * 2 - 1), -1);
 
     // Read / write from unaligned offset
-    ASSERT_EQ(lseek(fd, 1, SEEK_SET), 1, "");
-    ASSERT_EQ(write(fd, buf, blk_size), -1, "");
-    ASSERT_EQ(errno, EINVAL, "");
-    ASSERT_EQ(read(fd, buf, blk_size), -1, "");
-    ASSERT_EQ(errno, EINVAL, "");
+    ASSERT_EQ(lseek(fd.get(), 1, SEEK_SET), 1);
+    ASSERT_EQ(write(fd.get(), buf.get(), blk_size), -1);
+    ASSERT_EQ(errno, EINVAL);
+    ASSERT_EQ(read(fd.get(), buf.get(), blk_size), -1);
+    ASSERT_EQ(errno, EINVAL);
 
     // Read / write from beyond end of device
     off_t dev_size = blk_size * blk_count;
-    ASSERT_EQ(lseek(fd, dev_size, SEEK_SET), dev_size, "");
-    ASSERT_EQ(write(fd, buf, blk_size), -1, "");
-    ASSERT_EQ(read(fd, buf, blk_size), -1, "");
+    ASSERT_EQ(lseek(fd.get(), dev_size, SEEK_SET), dev_size);
+    ASSERT_EQ(write(fd.get(), buf.get(), blk_size), -1);
+    ASSERT_EQ(read(fd.get(), buf.get(), blk_size), -1);
 
-    close(fd);
     END_TEST;
 }
 
