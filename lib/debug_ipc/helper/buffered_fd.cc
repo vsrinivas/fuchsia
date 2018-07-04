@@ -17,11 +17,12 @@ bool BufferedFD::Init(fxl::UniqueFD fd) {
   fd_ = std::move(fd);
   stream_.set_writer(this);
 
-  // Register for socket updates from the message loop.
+  // Register for socket updates from the message loop. Here we assume we're in
+  // a writable state already (this will be re-evaluated when we actually try
+  // to write) so only need to watch for readable.
   MessageLoop* loop = MessageLoop::Current();
   FXL_DCHECK(loop);
-  watch_handle_ =
-      loop->WatchFD(MessageLoop::WatchMode::kReadWrite, fd_.get(), this);
+  watch_handle_ = loop->WatchFD(MessageLoop::WatchMode::kRead, fd_.get(), this);
   return watch_handle_.watching();
 }
 
@@ -36,7 +37,23 @@ void BufferedFD::OnFDReadable(int fd) {
     buffer.resize(kBufSize);
 
     ssize_t num_read = read(fd_.get(), &buffer[0], kBufSize);
-    if (num_read > 0) {
+    if (num_read == 0) {
+      // We asked for data and it had none. Since this assumes async input,
+      // that means EOF (otherwise it will return -1 and errno will be EAGAIN).
+      OnFDError(fd_.get());
+    } else if (num_read == -1) {
+      if (errno == EAGAIN) {
+        // No data now.
+        break;
+      } else if (errno == EINTR) {
+        // Try again.
+        continue;
+      } else {
+        // Unrecoverable.
+        OnFDError(fd_.get());
+        return;
+      }
+    } else if (num_read > 0) {
       buffer.resize(num_read);
       stream_.AddReadData(std::move(buffer));
     } else {
@@ -50,10 +67,55 @@ void BufferedFD::OnFDReadable(int fd) {
     callback_();
 }
 
-void BufferedFD::OnFDWritable(int fd) { stream_.SetWritable(); }
+void BufferedFD::OnFDWritable(int fd) {
+  // If we get a writable notifications, we know we were registered for
+  // read/write update. Go back to only readable watching, if the write buffer
+  // is full this will be re-evaluated when the write fails.
+  watch_handle_ = MessageLoop::WatchHandle();
+  watch_handle_ = MessageLoop::Current()->WatchFD(MessageLoop::WatchMode::kRead,
+                                                  fd_.get(), this);
+  stream_.SetWritable();
+}
+
+void BufferedFD::OnFDError(int fd) {
+  watch_handle_ = MessageLoop::WatchHandle();
+  fd_.reset();
+  if (error_callback_)
+    error_callback_();
+}
 
 size_t BufferedFD::ConsumeStreamBufferData(const char* data, size_t len) {
-  return std::max(0l, write(fd_.get(), data, len));
+  // Loop for handling EINTR.
+  ssize_t written;
+  while (true) {
+    written = write(fd_.get(), data, len);
+    if (written == 0) {
+      // We asked for data and it had none. Since this assumes async input,
+      // that means EOF (otherwise it will return -1 and errno will be EAGAIN).
+      OnFDError(fd_.get());
+    } else if (written == -1) {
+      if (errno == EAGAIN) {
+        // Can't write data, fall through to partial write case below.
+        written = 0;
+      } else if (errno == EINTR) {
+        // Try write again.
+        continue;
+      } else {
+        // Unrecoverable.
+        OnFDError(fd_.get());
+        return 0;
+      }
+    }
+    break;
+  }
+
+  if (written < static_cast<ssize_t>(len)) {
+    // Partial write, register for updates.
+    watch_handle_ = MessageLoop::WatchHandle();
+    watch_handle_ = MessageLoop::Current()->WatchFD(
+        MessageLoop::WatchMode::kReadWrite, fd_.get(), this);
+  }
+  return written;
 }
 
 }  // namespace debug_ipc

@@ -214,21 +214,46 @@ void MessageLoopPoll::OnHandleSignaled(int fd, short events, int watch_id) {
   }
   FXL_DCHECK(fd == found->second.fd);
 
+  // Since notifications can cause the watcher to be removed, this flag tracks
+  // if anything has been issued and therefore we should re-check the watcher
+  // registration before dereferencing anything.
+  bool sent_notification = false;
+
   if (events & POLLIN) {
     FXL_DCHECK(found->second.mode == WatchMode::kRead ||
                found->second.mode == WatchMode::kReadWrite);
     found->second.watcher->OnFDReadable(fd);
+    sent_notification = true;
   }
 
-  found = watches_.find(watch_id);
-  if (found == watches_.end()) {
-    // Could have been closed in response to "readable" call.
-    return;
-  }
   if (events & POLLOUT) {
+    if (sent_notification) {
+      found = watches_.find(watch_id);
+      if (found == watches_.end())
+        return;
+    }
     FXL_DCHECK(found->second.mode == WatchMode::kWrite ||
                found->second.mode == WatchMode::kReadWrite);
     found->second.watcher->OnFDWritable(fd);
+    sent_notification = true;
+  }
+
+  if (sent_notification)
+    return;  // ERASEME
+
+  if ((events & POLLERR) || (events & POLLHUP) ||
+      (events & POLLNVAL)
+#if defined(POLLRDHUP)  // Mac doesn't have this.
+      || (events & POLLRDHUP)
+#endif
+  ) {
+    if (sent_notification) {
+      found = watches_.find(watch_id);
+      if (found == watches_.end())
+        return;
+    }
+    found->second.watcher->OnFDError(fd);
+    sent_notification = true;
   }
 }
 

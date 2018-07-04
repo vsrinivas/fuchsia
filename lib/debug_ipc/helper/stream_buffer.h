@@ -16,7 +16,9 @@ class StreamBuffer {
   class Writer {
    public:
     // Consumes as much of the given data as possible, returning how many bytes
-    // were consumed.
+    // were consumed. If less than "len" bytes are written, the system will
+    // notify the stream buffer when more data can be written via
+    // SetWriteable().
     virtual size_t ConsumeStreamBufferData(const char* data, size_t len) = 0;
   };
 

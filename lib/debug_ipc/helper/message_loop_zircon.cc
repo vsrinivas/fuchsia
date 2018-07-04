@@ -280,19 +280,36 @@ void MessageLoopZircon::OnFdioSignal(int watch_id, const WatchInfo& info,
                                      const zx_port_packet_t& packet) {
   uint32_t events = 0;
   __fdio_wait_end(info.fdio, packet.signal.observed, &events);
-  if (events & POLLIN)
-    info.fd_watcher->OnFDReadable(info.fd);
 
-  // When signaling both readable and writable, make sure the readable handler
-  // didn't remove the watch.
-  if ((events & POLLIN) && (events & POLLOUT)) {
-    std::lock_guard<std::mutex> guard(mutex_);
-    if (watches_.find(packet.key) == watches_.end())
-      return;
+  if ((events & POLLERR) || (events & POLLHUP) || (events & POLLNVAL) ||
+      (events & POLLRDHUP)) {
+    info.fd_watcher->OnFDError(info.fd);
+
+    // Don't dispatch any other notifications when there's an error. Zircon
+    // seems to set readable and writable on error even if there's nothing
+    // there.
+    return;
   }
 
-  if (events & POLLOUT)
+  // Since notifications can cause the watcher to be removed, this flag tracks
+  // if anything has been issued and therefore we should re-check the watcher
+  // registration before dereferencing anything.
+  bool sent_notification = false;
+
+  if (events & POLLIN) {
+    info.fd_watcher->OnFDReadable(info.fd);
+    sent_notification = true;
+  }
+
+  if (events & POLLOUT) {
+    if (sent_notification) {
+      std::lock_guard<std::mutex> guard(mutex_);
+      if (watches_.find(packet.key) == watches_.end())
+        return;
+    }
     info.fd_watcher->OnFDWritable(info.fd);
+    sent_notification = true;
+  }
 }
 
 void MessageLoopZircon::OnProcessException(const WatchInfo& info,

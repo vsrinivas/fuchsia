@@ -12,6 +12,7 @@ class FDWatcher {
  public:
   virtual void OnFDReadable(int fd) {}
   virtual void OnFDWritable(int fd) {}
+  virtual void OnFDError(int fd) {}
 };
 
 }  // namespace debug_ipc

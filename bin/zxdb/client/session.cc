@@ -189,6 +189,10 @@ void Session::PendingConnection::ConnectCompleteMainThread(
 
   buffer_->set_data_available_callback(
       [owner = std::move(owner)]() { owner->DataAvailableMainThread(owner); });
+  buffer_->set_error_callback([owner = std::move(owner)]() {
+    owner->HelloCompleteMainThread(owner, Err("Connection error."),
+                                   debug_ipc::HelloReply());
+  });
 }
 
 void Session::PendingConnection::DataAvailableMainThread(
@@ -218,15 +222,18 @@ void Session::PendingConnection::DataAvailableMainThread(
     reply = debug_ipc::HelloReply();
   }
 
-  // Prevent future notifications to this function.
-  buffer_->set_data_available_callback(std::function<void()>());
-
   HelloCompleteMainThread(owner, err, reply);
 }
 
 void Session::PendingConnection::HelloCompleteMainThread(
     fxl::RefPtr<PendingConnection> owner, const Err& err,
     const debug_ipc::HelloReply& reply) {
+  // Prevent future notifications.
+  if (buffer_.get()) {
+    buffer_->set_data_available_callback(std::function<void()>());
+    buffer_->set_error_callback(std::function<void()>());
+  }
+
   if (session_) {
     // The buffer must be created here on the main thread since it will
     // register with the message loop to watch the FD.
@@ -353,6 +360,12 @@ void Session::OnStreamReadable() {
   }
 }
 
+void Session::OnStreamError() {
+  ClearConnectionData();
+  // TODO(brettw) DX-301 issue some kind of notification and mark all processes
+  // as terminated.
+}
+
 bool Session::IsConnected() const { return !!stream_; }
 
 void Session::Connect(const std::string& host, uint16_t port,
@@ -407,15 +420,19 @@ void Session::Disconnect(std::function<void(const Err&)> callback) {
     }
   }
 
-  stream_ = nullptr;
-  connection_storage_.reset();
-  arch_info_.reset();
-  arch_ = debug_ipc::Arch::kUnknown;
+  ClearConnectionData();
 
   if (callback) {
     debug_ipc::MessageLoop::Current()->PostTask(
         [callback]() { callback(Err()); });
   }
+}
+
+void Session::ClearConnectionData() {
+  stream_ = nullptr;
+  connection_storage_.reset();
+  arch_info_.reset();
+  arch_ = debug_ipc::Arch::kUnknown;
 }
 
 void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
@@ -603,6 +620,8 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending,
   stream_ = &connection_storage_->stream();
   connection_storage_->set_data_available_callback(
       [this]() { OnStreamReadable(); });
+  connection_storage_->set_error_callback(
+      [this]() { OnStreamError(); });
 
   if (callback)
     callback(Err());

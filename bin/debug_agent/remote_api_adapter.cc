@@ -48,25 +48,26 @@ RemoteAPIAdapter::RemoteAPIAdapter(RemoteAPI* remote_api,
 RemoteAPIAdapter::~RemoteAPIAdapter() {}
 
 void RemoteAPIAdapter::OnStreamReadable() {
-  debug_ipc::MsgHeader header;
-  size_t bytes_read =
-      stream_->Peek(reinterpret_cast<char*>(&header), sizeof(header));
-  if (bytes_read != sizeof(header))
-    return;  // Don't have enough data for the header.
-  if (!stream_->IsAvailable(header.size))
-    return;  // Entire message hasn't arrived yet.
+  while (true) {
+    debug_ipc::MsgHeader header;
+    size_t bytes_read =
+        stream_->Peek(reinterpret_cast<char*>(&header), sizeof(header));
+    if (bytes_read != sizeof(header))
+      return;  // Don't have enough data for the header.
+    if (!stream_->IsAvailable(header.size))
+      return;  // Entire message hasn't arrived yet.
 
-  // The message size includes the header.
-  std::vector<char> buffer(header.size);
-  stream_->Read(&buffer[0], header.size);
+    // The message size includes the header.
+    std::vector<char> buffer(header.size);
+    stream_->Read(&buffer[0], header.size);
 
-  // Range check the message type.
-  if (header.type == debug_ipc::MsgHeader::Type::kNone ||
-      header.type >= debug_ipc::MsgHeader::Type::kNumMessages) {
-    fprintf(stderr, "Invalid message type %u, ignoring.\n",
-            static_cast<unsigned>(header.type));
-    return;
-  }
+    // Range check the message type.
+    if (header.type == debug_ipc::MsgHeader::Type::kNone ||
+        header.type >= debug_ipc::MsgHeader::Type::kNumMessages) {
+      fprintf(stderr, "Invalid message type %u, ignoring.\n",
+              static_cast<unsigned>(header.type));
+      return;
+    }
 
 // Dispatches a message type assuming the handler function name, request
 // struct type, and reply struct type are all based on the message type name.
@@ -78,41 +79,42 @@ void RemoteAPIAdapter::OnStreamReadable() {
         this, &RemoteAPI::On##msg_type, std::move(buffer), #msg_type);         \
     break
 
-  switch (header.type) {
-    DISPATCH(Hello);
-    DISPATCH(Launch);
-    DISPATCH(Kill);
-    DISPATCH(Pause);
-    DISPATCH(ProcessTree);
-    DISPATCH(Threads);
-    DISPATCH(Modules);
-    DISPATCH(ReadMemory);
-    DISPATCH(Registers);
-    DISPATCH(Resume);
-    DISPATCH(Detach);
-    DISPATCH(AddOrChangeBreakpoint);
-    DISPATCH(RemoveBreakpoint);
-    DISPATCH(Backtrace);
-    DISPATCH(AddressSpace);
+    switch (header.type) {
+      DISPATCH(Hello);
+      DISPATCH(Launch);
+      DISPATCH(Kill);
+      DISPATCH(Pause);
+      DISPATCH(ProcessTree);
+      DISPATCH(Threads);
+      DISPATCH(Modules);
+      DISPATCH(ReadMemory);
+      DISPATCH(Registers);
+      DISPATCH(Resume);
+      DISPATCH(Detach);
+      DISPATCH(AddOrChangeBreakpoint);
+      DISPATCH(RemoveBreakpoint);
+      DISPATCH(Backtrace);
+      DISPATCH(AddressSpace);
 
-    // Attach is special (see remote_api.h): forward the raw data instead of
-    // a deserizlied version.
-    case debug_ipc::MsgHeader::Type::kAttach:
-      api_->OnAttach(std::move(buffer));
-      break;
+      // Attach is special (see remote_api.h): forward the raw data instead of
+      // a deserizlied version.
+      case debug_ipc::MsgHeader::Type::kAttach:
+        api_->OnAttach(std::move(buffer));
+        break;
 
-    // Explicitly no "default" to get warnings about unhandled message types,
-    // but need to handle these "not a message" types to avoid this warning.
-    case debug_ipc::MsgHeader::Type::kNone:
-    case debug_ipc::MsgHeader::Type::kNumMessages:
-    case debug_ipc::MsgHeader::Type::kNotifyProcessExiting:
-    case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:
-    case debug_ipc::MsgHeader::Type::kNotifyThreadExiting:
-    case debug_ipc::MsgHeader::Type::kNotifyException:
-      break;  // Avoid warning
-  }
+      // Explicitly no "default" to get warnings about unhandled message types,
+      // but need to handle these "not a message" types to avoid this warning.
+      case debug_ipc::MsgHeader::Type::kNone:
+      case debug_ipc::MsgHeader::Type::kNumMessages:
+      case debug_ipc::MsgHeader::Type::kNotifyProcessExiting:
+      case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:
+      case debug_ipc::MsgHeader::Type::kNotifyThreadExiting:
+      case debug_ipc::MsgHeader::Type::kNotifyException:
+        break;  // Avoid warning
+    }
 
 #undef DISPATCH
+  }
 }
 
 }  // namespace debug_agent

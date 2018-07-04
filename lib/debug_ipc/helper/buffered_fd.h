@@ -14,6 +14,7 @@ namespace debug_ipc {
 class BufferedFD final : public FDWatcher, public StreamBuffer::Writer {
  public:
   using DataAvailableCallback = std::function<void()>;
+  using ErrorCallback = std::function<void()>;
 
   BufferedFD();
   ~BufferedFD();
@@ -24,6 +25,7 @@ class BufferedFD final : public FDWatcher, public StreamBuffer::Writer {
   bool Init(fxl::UniqueFD fd);
 
   void set_data_available_callback(DataAvailableCallback cb) { callback_ = cb; }
+  void set_error_callback(ErrorCallback cb) { error_callback_ = cb; }
 
   StreamBuffer& stream() { return stream_; }
   const StreamBuffer& stream() const { return stream_; }
@@ -32,6 +34,7 @@ class BufferedFD final : public FDWatcher, public StreamBuffer::Writer {
   // FDWatcher implementation:
   void OnFDReadable(int fd) override;
   void OnFDWritable(int fd) override;
+  void OnFDError(int fd) override;
 
   // StreamBuffer::Writer implementation.
   size_t ConsumeStreamBufferData(const char* data, size_t len) override;
@@ -39,7 +42,9 @@ class BufferedFD final : public FDWatcher, public StreamBuffer::Writer {
   fxl::UniqueFD fd_;
   StreamBuffer stream_;
   MessageLoop::WatchHandle watch_handle_;
+
   DataAvailableCallback callback_;
+  ErrorCallback error_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BufferedFD);
 };

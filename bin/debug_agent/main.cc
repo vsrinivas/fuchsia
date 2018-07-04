@@ -66,9 +66,12 @@ bool SocketConnection::Accept(int server_fd) {
   agent_ = std::make_unique<debug_agent::DebugAgent>(&buffer_.stream());
   adapter_ = std::make_unique<debug_agent::RemoteAPIAdapter>(agent_.get(),
                                                              &buffer_.stream());
-  buffer_.set_data_available_callback([adapter = adapter_.get()]() {
-    adapter->OnStreamReadable();
-  });
+  buffer_.set_data_available_callback(
+      [adapter = adapter_.get()]() { adapter->OnStreamReadable(); });
+
+  // Exit the message loop on error.
+  buffer_.set_error_callback(
+      []() { debug_ipc::MessageLoop::Current()->QuitNow(); });
 
   printf("Accepted connection.\n");
   return true;
@@ -135,6 +138,8 @@ bool SocketServer::Run(int port) {
 
     // Run the debug agent for this connection.
     message_loop_.Run();
+
+    printf("Connection closed.\n");
   }
 
   return true;

@@ -48,8 +48,9 @@ class Session {
   // The RempteAPI for sending messages to the debug_agent.
   RemoteAPI* remote_api() { return remote_api_.get(); }
 
-  // Notification that data is available to be read on the StreamBuffer.
+  // Notification about the stream.
   void OnStreamReadable();
+  void OnStreamError();
 
   // Returns true if there is currently a connection.
   bool IsConnected() const;
@@ -67,6 +68,10 @@ class Session {
   // pending connection. The Connect() callback will still be issued but
   // will indicate failure.
   void Disconnect(std::function<void(const Err&)> callback);
+
+  // Frees all connection-related data. A helper for different modes of
+  // cleanup.
+  void ClearConnectionData();
 
   // Access to the singleton corresponding to the debugged system.
   System& system() { return system_; }
