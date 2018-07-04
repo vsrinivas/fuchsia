@@ -45,14 +45,16 @@ void MessageLoop::PostTask(std::function<void()> fn) {
     needs_awaken = task_queue_.empty();
     task_queue_.push_back(std::move(fn));
   }
-  if (needs_awaken) SetHasTasks();
+  if (needs_awaken)
+    SetHasTasks();
 }
 
 void MessageLoop::QuitNow() { should_quit_ = true; }
 
 bool MessageLoop::ProcessPendingTask() {
   // This function will be called with the mutex held.
-  if (task_queue_.empty()) return false;
+  if (task_queue_.empty())
+    return false;
 
   std::function<void()> task = std::move(task_queue_.front());
   task_queue_.pop_front();
@@ -75,7 +77,8 @@ MessageLoop::WatchHandle::WatchHandle(WatchHandle&& other)
 }
 
 MessageLoop::WatchHandle::~WatchHandle() {
-  if (watching()) msg_loop_->StopWatching(id_);
+  if (watching())
+    msg_loop_->StopWatching(id_);
 }
 
 MessageLoop::WatchHandle& MessageLoop::WatchHandle::operator=(
@@ -83,7 +86,8 @@ MessageLoop::WatchHandle& MessageLoop::WatchHandle::operator=(
   // Should never get into a self-assignment situation since this is not
   // copyable and every ID should be unique.
   FXL_DCHECK(msg_loop_ != other.msg_loop_ || id_ != other.id_);
-  if (watching()) msg_loop_->StopWatching(id_);
+  if (watching())
+    msg_loop_->StopWatching(id_);
   msg_loop_ = other.msg_loop_;
   id_ = other.id_;
 

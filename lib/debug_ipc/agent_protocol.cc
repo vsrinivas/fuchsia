@@ -345,7 +345,7 @@ void WriteReply(const ModulesReply& reply, uint32_t transaction_id,
   Serialize(reply.modules, writer);
 }
 
-// Registers ---------------------------------------------------------------------
+// Registers -------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, RegistersRequest* request,
                  uint32_t* transaction_id) {

@@ -15,7 +15,8 @@ MessageReader::MessageReader(std::vector<char> message)
 MessageReader::~MessageReader() {}
 
 bool MessageReader::ReadBytes(uint32_t len, void* output) {
-  if (message_.size() - offset_ < len) return SetError();
+  if (message_.size() - offset_ < len)
+    return SetError();
   memcpy(output, &message_[offset_], len);
   offset_ += len;
   return true;
@@ -37,12 +38,15 @@ bool MessageReader::ReadUint64(uint64_t* output) {
 bool MessageReader::ReadString(std::string* output) {
   // Size header.
   uint32_t str_len;
-  if (!ReadUint32(&str_len)) return SetError();
-  if (str_len > remaining()) return SetError();
+  if (!ReadUint32(&str_len))
+    return SetError();
+  if (str_len > remaining())
+    return SetError();
 
   // String bytes.
   output->resize(str_len);
-  if (str_len == 0) return true;
+  if (str_len == 0)
+    return true;
   if (!ReadBytes(str_len, &(*output)[0])) {
     *output = std::string();
     return SetError();
@@ -62,10 +66,12 @@ bool MessageReader::ReadBool(bool* output) {
 }
 
 bool MessageReader::ReadHeader(MsgHeader* output) {
-  if (!ReadUint32(&output->size)) return false;
+  if (!ReadUint32(&output->size))
+    return false;
 
   uint32_t type;
-  if (!ReadUint32(&type)) return false;
+  if (!ReadUint32(&type))
+    return false;
   if (type >= static_cast<uint32_t>(MsgHeader::Type::kNumMessages))
     return false;
   output->type = static_cast<MsgHeader::Type>(type);

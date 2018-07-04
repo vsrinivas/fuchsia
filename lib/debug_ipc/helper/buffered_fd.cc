@@ -46,7 +46,8 @@ void BufferedFD::OnFDReadable(int fd) {
     // data so this pipe doesn't starve the entire app.
   }
 
-  if (callback_) callback_();
+  if (callback_)
+    callback_();
 }
 
 void BufferedFD::OnFDWritable(int fd) { stream_.SetWritable(); }

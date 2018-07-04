@@ -46,7 +46,8 @@ void BufferedZxSocket::OnSocketReadable(zx_handle_t) {
     // data so this pipe doesn't starve the entire app.
   }
 
-  if (callback_) callback_();
+  if (callback_)
+    callback_();
 }
 
 void BufferedZxSocket::OnSocketWritable(zx_handle_t) { stream_.SetWritable(); }

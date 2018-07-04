@@ -27,17 +27,20 @@ template <typename T>
 inline void Serialize(const std::vector<T>& v, MessageWriter* writer) {
   uint32_t size = static_cast<uint32_t>(v.size());
   writer->WriteUint32(size);
-  for (uint32_t i = 0; i < size; i++) Serialize(v[i], writer);
+  for (uint32_t i = 0; i < size; i++)
+    Serialize(v[i], writer);
 }
 
 // Will call Deserialize for each element in the vector.
 template <typename T>
 inline bool Deserialize(MessageReader* reader, std::vector<T>* v) {
   uint32_t size = 0;
-  if (!reader->ReadUint32(&size)) return false;
+  if (!reader->ReadUint32(&size))
+    return false;
   v->resize(size);
   for (uint32_t i = 0; i < size; i++) {
-    if (!Deserialize(reader, &(*v)[i])) return false;
+    if (!Deserialize(reader, &(*v)[i]))
+      return false;
   }
   return true;
 }
