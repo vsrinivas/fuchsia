@@ -105,8 +105,8 @@ TEST_F(ImagePipeTest, ImagePipeImageIdMustNotBeZero) {
                          CopyVmo(checkerboard->vmo()),
                          fuchsia::images::MemoryType::HOST_MEMORY, 0);
 
-    EXPECT_EQ("ImagePipe::AddImage: Image can not be assigned an ID of 0.",
-              reported_errors_.back());
+    ExpectLastReportedError(
+        "ImagePipe::AddImage: Image can not be assigned an ID of 0.");
   }
 }
 
@@ -137,10 +137,9 @@ TEST_F(ImagePipeTest, PresentImagesOutOfOrder) {
                            CopyEventIntoFidlArray(CreateEvent()),
                            std::move(callback));
 
-  EXPECT_EQ(
+  ExpectLastReportedError(
       "scenic::gfx::ImagePipe: Present called with out-of-order presentation "
-      "time.presentation_time=0, last scheduled presentation time=1",
-      reported_errors_.back());
+      "time.presentation_time=0, last scheduled presentation time=1");
 }
 
 // Call Present with in-order presentation times, and expect no error.
@@ -170,7 +169,7 @@ TEST_F(ImagePipeTest, PresentImagesInOrder) {
                            CopyEventIntoFidlArray(CreateEvent()),
                            std::move(callback));
 
-  EXPECT_TRUE(reported_errors_.empty());
+  EXPECT_ERROR_COUNT(0);
 }
 
 // Present two frames on the ImagePipe, making sure that acquire fence is

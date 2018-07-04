@@ -13,12 +13,19 @@ group("tests") {
 source_set("testing_deps") {
   testonly = true
   sources = [
+    "error_reporting_test.h",
+    "error_reporting_test.cc",
     "mocks.cc",
     "mocks.h",
+    "session_test.cc",
+    "session_test.h",
+    "vk_session_test.cc",
+    "vk_session_test.h",
   ]
   public_deps = [
     ":util",
     "//garnet/lib/ui/gfx",
+    "//garnet/lib/ui/scenic/util",
     "//garnet/public/lib/escher",
     "//garnet/public/lib/escher/test:gtest_vulkan",
     "//garnet/public/lib/gtest",
@@ -55,13 +62,9 @@ executable("unittests") {
     "object_linker_unittest.cc",
     "pose_buffer_unit_test.cc",
     "resource_linker_unittest.cc",
-    "session_test.cc",
-    "session_test.h",
     "session_unittest.cc",
     "shape_unittest.cc",
     "stereo_camera_unittest.cc",
-    "vk_session_test.cc",
-    "vk_session_test.h",
   ]
   deps = [
     ":testing_deps",

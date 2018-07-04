@@ -8,7 +8,6 @@
 #include <lib/zx/event.h>
 #include <lib/zx/eventpair.h>
 
-#include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "lib/fidl/cpp/vector.h"
 #include "lib/fsl/vmo/shared_vmo.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -45,22 +44,6 @@ fidl::VectorPtr<zx::event> CreateEventArray(size_t n);
 // for it, and wraps in a |fsl::SharedVmo| to make it easy to map it into the
 // caller's address space.
 fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size);
-
-// An ErrorReporter that can be used in tests to assert and log errors.
-class TestErrorReporter : public ErrorReporter {
- public:
-  TestErrorReporter() = default;
-  ~TestErrorReporter();
-
-  void InitExpectedErrorCount(uint32_t errors_expected);
-
- private:
-  virtual void ReportError(fxl::LogSeverity severity, std::string error_string);
-
-  std::vector<std::string> error_strings_;
-  uint32_t errors_expected_{0};
-  bool initialized_{false};
-};
 
 }  // namespace test
 }  // namespace gfx
