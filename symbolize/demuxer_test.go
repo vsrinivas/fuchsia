@@ -86,8 +86,6 @@ func ExampleDummyProcess() {
 	presenter.Start(out)
 
 	//Output:
-	//{{{module:4fcb712aa6387724a9f465a32cd8c14b:libc.so:1}}}
-	//{{{mmap:0x12345000:0xcf6bc:load:1:rx:0x0}}}
 	//atan2 at atan2.c:33
 	//blarg
 	//[0.000] 00000.00000> This should be on it's own line
@@ -116,8 +114,8 @@ func ExampleDemux() {
 	demuxer := NewDemuxer(repo, symbo)
 
 	// define a little message that will need to be parsed
-	msg := "[131.200] 1234.5678> {{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
-		"[131.301] 1234.5678> {{{module:2:libcrypto.so:elf:b4b6c520ccf0aa11ff71d8ded7d6a2bc03037aa1}}}\n" +
+	msg := "[131.200] 1234.5678> keep {{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
+		"[131.301] 1234.5678> {{{module:2:libcrypto.so:elf:b4b6c520ccf0aa11ff71d8ded7d6a2bc03037aa1}}} keep\n" +
 		"[131.402] 1234.5678> {{{mmap:0x12345000:0xcf6bc:load:1:rx:0x0}}}\n" +
 		"[131.503] 1234.5678> {{{mmap:0x23456000:0x83c80:load:2:rx:0x80000}}}\n" +
 		"[131.604] 1234.5678> \033[1mError at {{{pc:0x123879c0}}}\n"
@@ -132,10 +130,8 @@ func ExampleDemux() {
 	presenter.Start(out)
 
 	//Output:
-	//[131.200] 01234.05678> {{{module:4fcb712aa6387724a9f465a32cd8c14b:libc.so:1}}}
-	//[131.301] 01234.05678> {{{module:b4b6c520ccf0aa11ff71d8ded7d6a2bc03037aa1:libcrypto.so:2}}}
-	//[131.402] 01234.05678> {{{mmap:0x12345000:0xcf6bc:load:1:rx:0x0}}}
-	//[131.503] 01234.05678> {{{mmap:0x23456000:0x83c80:load:2:rx:0x80000}}}
+	//[131.200] 01234.05678> keep {{{module:4fcb712aa6387724a9f465a32cd8c14b:libc.so:1}}}
+	//[131.301] 01234.05678> {{{module:b4b6c520ccf0aa11ff71d8ded7d6a2bc03037aa1:libcrypto.so:2}}} keep
 	//[131.604] 01234.05678> Error at atan2 at atan2.c:49
 }
 
@@ -173,8 +169,6 @@ func ExampleBadAddr() {
 	presenter.Start(out)
 
 	//Output:
-	//[131.200] 01234.05678> {{{module:4fcb712aa6387724a9f465a32cd8c14b:libc.so:1}}}
-	//[131.402] 01234.05678> {{{mmap:0x12345000:0xcf6bc:load:1:rx:0x0}}}
 	//[131.604] 01234.05678> <libc.so>+0x429ff
 	//[131.605] 01234.05678> atan2 at <libc.so>+0x429c0
 	//[131.606] 01234.05678> pow.c:67
