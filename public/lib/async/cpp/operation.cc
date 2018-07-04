@@ -13,9 +13,9 @@
 
 namespace modular {
 
-constexpr const char kModularTraceCategory[] = "modular";
-constexpr const char kTraceIdKey[] = "id";
-constexpr const char kTraceInfoKey[] = "info";
+constexpr char kModularTraceCategory[] = "modular";
+constexpr char kTraceIdKey[] = "id";
+constexpr char kTraceInfoKey[] = "info";
 
 OperationContainer::OperationContainer() = default;
 

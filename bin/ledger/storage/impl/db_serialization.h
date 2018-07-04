@@ -75,13 +75,13 @@ class JournalEntryRow {
   static constexpr fxl::StringView kPrefix = "journals/";
 
   static constexpr fxl::StringView kJournalEntry = "entry/";
-  static const char kImplicitPrefix = 'I';
-  static const char kExplicitPrefix = 'E';
+  static constexpr char kImplicitPrefix = 'I';
+  static constexpr char kExplicitPrefix = 'E';
   static const size_t kPrefixSize =
       kPrefix.size() + kJournalIdSize + 1 + kJournalEntry.size();
 
   // Journal values
-  static const char kAddPrefix = 'A';
+  static constexpr char kAddPrefix = 'A';
   static constexpr fxl::StringView kDeletePrefix = "D";
   static const char kLazyPrefix = 'L';
   static const char kEagerPrefix = 'E';
