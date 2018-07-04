@@ -5,6 +5,7 @@
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 #include <lib/fdio/util.h>
+#include <lib/fsl/io/fd.h>
 #include <lib/fxl/logging.h>
 #include <sync/completion.h>
 #include <zircon/processargs.h>
@@ -25,11 +26,8 @@ ScopedTmpFS::ScopedTmpFS() : config_(MakeConfig()), loop_(&config_) {
   zx_handle_t root_handle;
   status = memfs_create_filesystem(loop_.async(), &memfs_, &root_handle);
   FXL_CHECK(status == ZX_OK);
-  uint32_t type = PA_FDIO_REMOTE;
-  int fd;
-  status = fdio_create_fd(&root_handle, &type, 1, &fd);
-  FXL_CHECK(status == ZX_OK);
-  root_fd_.reset(fd);
+  root_fd_ = fsl::OpenChannelAsFileDescriptor(zx::channel(root_handle));
+  FXL_CHECK(root_fd_.is_valid());
 }
 
 ScopedTmpFS::~ScopedTmpFS() {

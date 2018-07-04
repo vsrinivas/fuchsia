@@ -11,6 +11,7 @@
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/fdio/util.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/io/fd.h>
 #include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/eintr_wrapper.h>
 #include <lib/fxl/files/file.h>
@@ -190,15 +191,12 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     fidl::InterfaceRequest<ledger_internal::LedgerRepository>
         repository_request,
     GetRepositoryCallback callback) {
-  zx_handle_t handle = repository_handle.release();
-  uint32_t type = PA_FDIO_REMOTE;
-  int fd;
-  zx_status_t status = fdio_create_fd(&handle, &type, 1, &fd);
-  if (status != ZX_OK) {
+  fxl::UniqueFD root_fd =
+      fsl::OpenChannelAsFileDescriptor(std::move(repository_handle));
+  if (!root_fd.is_valid()) {
     callback(Status::IO_ERROR);
     return;
   }
-  fxl::UniqueFD root_fd(fd);
   GetRepositoryByFD(std::move(root_fd), std::move(cloud_provider),
                     std::move(repository_request), std::move(callback));
 }

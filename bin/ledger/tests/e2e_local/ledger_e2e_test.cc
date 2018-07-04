@@ -11,6 +11,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/io/fd.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/file.h>
@@ -21,7 +22,6 @@
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/cloud_provider/fake_cloud_provider.h"
 #include "peridot/bin/ledger/testing/cloud_provider/types.h"
-#include "peridot/lib/rio/fd.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace test {
@@ -148,7 +148,7 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
       ledger_repository;
   scoped_tmpfs::ScopedTmpFS tmpfs;
   ledger_repository_factory_->GetRepository(
-      rio::CloneChannel(tmpfs.root_fd()), nullptr,
+      fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()), nullptr,
       ledger_repository.NewRequest(),
       callback::Capture(QuitLoopClosure(), &status));
   RunLoop();
@@ -224,8 +224,8 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
       cloud_provider.get(), cloud_provider_ptr.NewRequest());
 
   ledger_repository_factory_->GetRepository(
-      rio::CloneChannel(tmpfs.root_fd()), std::move(cloud_provider_ptr),
-      ledger_repository.NewRequest(),
+      fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
+      std::move(cloud_provider_ptr), ledger_repository.NewRequest(),
       callback::Capture(QuitLoopClosure(), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
@@ -278,8 +278,8 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
       cloud_provider.get(), cloud_provider_ptr.NewRequest());
 
   ledger_repository_factory_->GetRepository(
-      rio::CloneChannel(tmpfs.root_fd()), std::move(cloud_provider_ptr),
-      ledger_repository.NewRequest(),
+      fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
+      std::move(cloud_provider_ptr), ledger_repository.NewRequest(),
       callback::Capture(QuitLoopClosure(), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
@@ -315,8 +315,8 @@ TEST_F(LedgerEndToEndTest, ShutDownWhenCloudProviderDisconnects) {
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
   ledger_repository_factory_->GetRepository(
-      rio::CloneChannel(tmpfs.root_fd()), std::move(cloud_provider_ptr),
-      ledger_repository.NewRequest(),
+      fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
+      std::move(cloud_provider_ptr), ledger_repository.NewRequest(),
       callback::Capture(QuitLoopClosure(), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);

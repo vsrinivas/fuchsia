@@ -14,6 +14,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <lib/app/cpp/connect.h>
+#include <lib/fsl/io/fd.h>
 #include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/unique_fd.h>
 #include <lib/fxl/functional/make_copyable.h>
@@ -44,7 +45,6 @@
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/ledger_client/status.h"
-#include "peridot/lib/rio/fd.h"
 
 namespace modular {
 
@@ -95,7 +95,7 @@ zx::channel GetLedgerRepositoryDirectory() {
     return zx::channel();
   }
 
-  return rio::CloneChannel(dir.get());
+  return fsl::CloneChannelFromFileDescriptor(dir.get());
 }
 
 std::string GetAccountId(const fuchsia::modular::auth::AccountPtr& account) {

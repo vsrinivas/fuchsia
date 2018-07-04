@@ -6,13 +6,13 @@
 
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/io/fd.h>
 #include <lib/fxl/memory/ref_ptr.h>
 #include <lib/zx/time.h>
 
 #include "garnet/public/lib/callback/capture.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
-#include "peridot/lib/rio/fd.h"
 
 namespace test {
 namespace {
@@ -79,8 +79,8 @@ LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
   ledger::Status status;
   auto waiter = loop_controller_->NewWaiter();
   ledger_repository_factory_->GetRepository(
-      rio::CloneChannel(tmpfs_.root_fd()), MakeCloudProvider(),
-      repository.NewRequest(),
+      fsl::CloneChannelFromFileDescriptor(tmpfs_.root_fd()),
+      MakeCloudProvider(), repository.NewRequest(),
       callback::Capture(waiter->GetCallback(), &status));
   waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);

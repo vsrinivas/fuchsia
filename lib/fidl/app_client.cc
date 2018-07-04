@@ -9,11 +9,10 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/util.h>
+#include <lib/fsl/io/fd.h>
 #include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/unique_fd.h>
 #include <zircon/processargs.h>
-
-#include "peridot/lib/rio/fd.h"
 
 namespace modular {
 AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
@@ -46,7 +45,7 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
     }
 
     launch_info.flat_namespace->directories.push_back(
-        rio::CloneChannel(dir.get()));
+        fsl::CloneChannelFromFileDescriptor(dir.get()));
     if (!launch_info.flat_namespace->directories->at(0)) {
       FXL_LOG(ERROR) << "Unable create a handle from  " << data_origin;
       return;

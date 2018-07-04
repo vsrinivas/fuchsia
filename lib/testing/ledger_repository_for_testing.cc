@@ -7,11 +7,11 @@
 #include <utility>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/fsl/io/fd.h>
 
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/ledger_client/constants.h"
-#include "peridot/lib/rio/fd.h"
 
 namespace modular {
 
@@ -37,7 +37,7 @@ fuchsia::ledger::internal::LedgerRepository*
 LedgerRepositoryForTesting::ledger_repository() {
   if (!ledger_repo_) {
     ledger_repo_factory_->GetRepository(
-        rio::CloneChannel(tmp_fs_.root_fd()), nullptr,
+        fsl::CloneChannelFromFileDescriptor(tmp_fs_.root_fd()), nullptr,
         ledger_repo_.NewRequest(), [this](fuchsia::ledger::Status status) {
           FXL_CHECK(status == fuchsia::ledger::Status::OK);
         });

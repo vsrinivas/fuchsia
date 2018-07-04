@@ -11,14 +11,14 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/callback/capture.h>
-#include <lib/fxl/files/unique_fd.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/io/fd.h>
+#include <lib/fxl/files/unique_fd.h>
 #include <lib/fxl/logging.h>
 #include <lib/svc/cpp/services.h>
 
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/lib/convert/convert.h"
-#include "peridot/lib/rio/fd.h"
 
 namespace test {
 void GetLedger(
@@ -53,7 +53,8 @@ void GetLedger(
   }
 
   repository_factory_ptr->GetRepository(
-      rio::CloneChannel(dir.get()), std::move(cloud_provider), std::move(request),
+      fsl::CloneChannelFromFileDescriptor(dir.get()), std::move(cloud_provider),
+      std::move(request),
       [repository_factory = std::move(repository_factory),
        repository = std::move(repository), ledger_name = std::move(ledger_name),
        ledger_repository_path = std::move(ledger_repository_path),

@@ -54,7 +54,6 @@ source_set("lib") {
     "//peridot/bin/ledger/fidl",
     "//peridot/lib/convert",
     "//peridot/lib/firebase_auth/testing",
-    "//peridot/lib/rio",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]
@@ -80,8 +79,8 @@ source_set("ledger_instance_factory") {
 
   deps = [
     "//garnet/public/lib/callback",
+    "//garnet/public/lib/fsl",
     "//peridot/lib/convert",
-    "//peridot/lib/rio",
     "//third_party/googletest:gtest",
   ]
 

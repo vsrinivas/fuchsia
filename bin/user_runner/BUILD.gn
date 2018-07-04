@@ -24,12 +24,13 @@ executable_package("user_runner") {
     ":component_context",
     ":focus",
     ":presentation_provider",
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/fidl/cpp",
-    "//garnet/public/lib/fxl",
     "//garnet/public/fidl/fuchsia.net.oldhttp",
     "//garnet/public/fidl/fuchsia.ui.policy",
     "//garnet/public/fidl/fuchsia.ui.views_v1",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//peridot/bin/cloud_provider_firebase/fidl",
     "//peridot/bin/device_runner/cobalt",
     "//peridot/bin/ledger/fidl",
@@ -59,7 +60,6 @@ executable_package("user_runner") {
     "//peridot/lib/ledger_client:status",
     "//peridot/lib/ledger_client:types",
     "//peridot/lib/rapidjson",
-    "//peridot/lib/rio",
     "//peridot/public/fidl/fuchsia.ledger",
     "//peridot/public/fidl/fuchsia.ledger.cloud",
     "//peridot/public/fidl/fuchsia.modular",
@@ -79,10 +79,10 @@ executable_package("dev_user_shell") {
   ]
 
   deps = [
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/view_framework",
-    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",
@@ -151,9 +151,9 @@ source_set("presentation_provider") {
   ]
 
   deps = [
+    "//garnet/public/fidl/fuchsia.ui.policy",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/fidl/fuchsia.ui.policy",
     "//peridot/public/fidl/fuchsia.modular",
   ]
 }
