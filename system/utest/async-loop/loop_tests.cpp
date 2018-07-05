@@ -356,10 +356,10 @@ bool time_test() {
     // Verify that the dispatcher's time-telling is strictly monotonic,
     // which is constent with ZX_CLOCK_MONOTONIC.
     async::Loop loop;
-    zx::time t0 = zx::clock::get<ZX_CLOCK_MONOTONIC>();
+    zx::time t0 = zx::clock::get_monotonic();
     zx::time t1 = async::Now(loop.async());
     zx::time t2 = async::Now(loop.async());
-    zx::time t3 = zx::clock::get<ZX_CLOCK_MONOTONIC>();
+    zx::time t3 = zx::clock::get_monotonic();
 
     EXPECT_LE(t0.get(), t1.get());
     EXPECT_LE(t1.get(), t2.get());

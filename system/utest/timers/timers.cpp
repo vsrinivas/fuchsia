@@ -115,7 +115,7 @@ static bool signals_asserted_immediately() {
     ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
 
     for (int i = 0; i < 100; i++) {
-        zx::time now = zx::clock::get<ZX_CLOCK_MONOTONIC>();
+        zx::time now = zx::clock::get_monotonic();
 
         EXPECT_EQ(timer.set(now, zx::nsec(0)), ZX_OK);
 

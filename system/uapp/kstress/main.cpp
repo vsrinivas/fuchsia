@@ -151,7 +151,7 @@ int main(int argc, char** argv) {
     // set stdin to non blocking
     fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
 
-    zx::time start_time = zx::clock::get<ZX_CLOCK_MONOTONIC>();
+    zx::time start_time = zx::clock::get_monotonic();
     bool stop = false;
     for (;;) {
         // look for ctrl-c for terminals that do not support it
@@ -170,7 +170,7 @@ int main(int argc, char** argv) {
         zx::nanosleep(zx::deadline_after(zx::sec(1)));
 
         if (run_duration != zx::duration::infinite()) {
-            zx::time now = zx::clock::get<ZX_CLOCK_MONOTONIC>();
+            zx::time now = zx::clock::get_monotonic();
             if (now - start_time >= run_duration) {
                 break;
             }

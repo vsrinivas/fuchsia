@@ -152,7 +152,7 @@ private:
     zx_ticks_t value_ = 0;
 };
 
-template <uint32_t kClockId>
+template <zx_clock_t kClockId>
 class base_time {
 public:
     constexpr base_time() = default;
@@ -202,14 +202,24 @@ using time = base_time<ZX_CLOCK_MONOTONIC>;
 using time_utc = base_time<ZX_CLOCK_UTC>;
 using time_thread = base_time<ZX_CLOCK_THREAD>;
 
-namespace clock {
+class clock {
+public:
+    clock() = delete;
 
-template <uint32_t kClockId>
-static inline base_time<kClockId> get() {
-    return base_time<kClockId>(zx_clock_get(kClockId));
-}
+    template <zx_clock_t kClockId>
+    static base_time<kClockId> get() {
+        return base_time<kClockId>(zx_clock_get(kClockId));
+    }
 
-} // namespace clock
+    template <zx_clock_t kClockId>
+    static zx_status_t get(base_time<kClockId>* result) {
+        return zx_clock_get_new(kClockId, result->get_address());
+    }
+
+    static time get_monotonic() {
+      return time(zx_clock_get_monotonic());
+    }
+};
 
 constexpr inline duration nsec(uint64_t n) { return duration(ZX_NSEC(n)); }
 
