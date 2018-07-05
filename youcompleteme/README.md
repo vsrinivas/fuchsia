@@ -34,6 +34,13 @@ You'll need to set the ycmd config option `global_ycm_extra_conf` to point to
 `${FUCHSIA_DIR}/scripts/youcompleteme/ycm_extra_conf.py`.
 Note you may need to manually replace `${FUCHSIA_DIR}` with the correct path.
 
+Alternatively, you can create a `.ycm_extra_conf.py` symbolic link to let YCM
+automatically find the config for any fuchsia repository:
+
+```
+ln -s $FUCHSIA_DIR/scripts/youcompleteme/ycm_extra_conf.py $FUCHSIA_DIR/.ycm_extra_conf.py
+```
+
 ## See also
 
 [Zircon editor integration](
