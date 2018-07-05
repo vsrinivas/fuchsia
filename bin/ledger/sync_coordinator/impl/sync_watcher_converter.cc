@@ -11,7 +11,7 @@ namespace {
 DownloadSyncState ConvertToDownloadSyncState(
     cloud_sync::DownloadSyncState download) {
   switch (download) {
-    case cloud_sync::DOWNLOAD_STOPPED:
+    case cloud_sync::DOWNLOAD_NOT_STARTED:
       return DownloadSyncState::DOWNLOAD_IDLE;
     case cloud_sync::DOWNLOAD_BACKLOG:
       return DownloadSyncState::DOWNLOAD_IN_PROGRESS;
@@ -30,7 +30,7 @@ DownloadSyncState ConvertToDownloadSyncState(
 
 UploadSyncState ConvertToUploadSyncState(cloud_sync::UploadSyncState upload) {
   switch (upload) {
-    case cloud_sync::UPLOAD_STOPPED:
+    case cloud_sync::UPLOAD_NOT_STARTED:
       return UploadSyncState::UPLOAD_IDLE;
     case cloud_sync::UPLOAD_SETUP:
       return UploadSyncState::UPLOAD_IDLE;

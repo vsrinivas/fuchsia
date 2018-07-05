@@ -125,8 +125,8 @@ class PageSyncImpl : public PageSync,
   // Watcher of the synchronization state that reports to the LedgerSync object.
   std::unique_ptr<SyncStateWatcher> ledger_watcher_;
   SyncStateWatcher* page_watcher_ = nullptr;
-  DownloadSyncState download_state_ = DOWNLOAD_STOPPED;
-  UploadSyncState upload_state_ = UPLOAD_STOPPED;
+  DownloadSyncState download_state_ = DOWNLOAD_NOT_STARTED;
+  UploadSyncState upload_state_ = UPLOAD_NOT_STARTED;
 
   // Must be the last member field.
   callback::ScopedTaskRunner task_runner_;

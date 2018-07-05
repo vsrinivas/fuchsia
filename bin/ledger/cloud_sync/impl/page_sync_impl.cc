@@ -64,7 +64,7 @@ void PageSyncImpl::EnableUpload() {
     return;
   }
 
-  if (upload_state_ == UPLOAD_STOPPED) {
+  if (upload_state_ == UPLOAD_NOT_STARTED) {
     page_upload_->StartUpload();
   }
 }

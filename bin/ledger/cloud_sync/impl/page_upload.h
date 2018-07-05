@@ -117,7 +117,7 @@ class PageUpload : public storage::CommitWatcher {
   PageUploadState internal_state_ = PageUploadState::NO_COMMIT;
 
   // External state.
-  UploadSyncState external_state_ = UPLOAD_STOPPED;
+  UploadSyncState external_state_ = UPLOAD_NOT_STARTED;
 
   // Must be the last member.
   fxl::WeakPtrFactory<PageUpload> weak_ptr_factory_;

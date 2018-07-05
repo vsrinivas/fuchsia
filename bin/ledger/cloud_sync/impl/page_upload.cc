@@ -28,9 +28,9 @@ PageUpload::PageUpload(callback::ScopedTaskRunner* task_runner,
 PageUpload::~PageUpload() {}
 
 void PageUpload::StartUpload() {
-  if (external_state_ == UPLOAD_STOPPED) {
-    // When called for the first time (UPLOAD_STOPPED is the initial state),
-    // this method is responsible for handling the initial setup.
+  if (external_state_ == UPLOAD_NOT_STARTED) {
+    // When called for the first time, this method is responsible for handling
+    // the initial setup.
     SetState(UPLOAD_SETUP);
     // Starting to watch right away is not an issue, because new commit
     // notifications are used as a tickle only, and we use a separate call to
@@ -197,7 +197,7 @@ void PageUpload::SetState(UploadSyncState new_state) {
 
 bool PageUpload::IsIdle() {
   switch (external_state_) {
-    case UPLOAD_STOPPED:
+    case UPLOAD_NOT_STARTED:
     case UPLOAD_IDLE:
     // Note: this is considered idle because the reason for being blocked is
     // external to the class - there's nothing to do on our side.

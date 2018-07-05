@@ -146,7 +146,7 @@ TEST_F(PageSyncImplTest, UploadBacklog) {
 
   EXPECT_THAT(
       state_watcher_->states,
-      ElementsAre(MakeStates(DOWNLOAD_BACKLOG, UPLOAD_STOPPED),
+      ElementsAre(MakeStates(DOWNLOAD_BACKLOG, UPLOAD_NOT_STARTED),
                   MakeStates(DOWNLOAD_BACKLOG, UPLOAD_WAIT_REMOTE_DOWNLOAD),
                   MakeStates(DOWNLOAD_SETTING_REMOTE_WATCHER,
                              UPLOAD_WAIT_REMOTE_DOWNLOAD),
@@ -172,8 +172,8 @@ TEST_F(PageSyncImplTest, PageWatcher) {
 
   EXPECT_THAT(
       watcher.states,
-      ElementsAre(MakeStates(DOWNLOAD_STOPPED, UPLOAD_STOPPED),
-                  MakeStates(DOWNLOAD_BACKLOG, UPLOAD_STOPPED),
+      ElementsAre(MakeStates(DOWNLOAD_NOT_STARTED, UPLOAD_NOT_STARTED),
+                  MakeStates(DOWNLOAD_BACKLOG, UPLOAD_NOT_STARTED),
                   MakeStates(DOWNLOAD_BACKLOG, UPLOAD_WAIT_REMOTE_DOWNLOAD),
                   MakeStates(DOWNLOAD_SETTING_REMOTE_WATCHER,
                              UPLOAD_WAIT_REMOTE_DOWNLOAD),

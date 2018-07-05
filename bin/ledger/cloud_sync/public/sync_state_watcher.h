@@ -12,7 +12,7 @@ namespace cloud_sync {
 enum DownloadSyncState {
   // Download has not started.
   // Possible successor states: DOWNLOAD_BACKLOG.
-  DOWNLOAD_STOPPED = 0,
+  DOWNLOAD_NOT_STARTED = 0,
   // Download is downloading the commit backlog.
   // Possible successor states: DOWNLOAD_TEMPORARY_ERROR,
   // DOWNLOAD_SETTING_REMOTE_WATCHER.
@@ -42,7 +42,7 @@ enum DownloadSyncState {
 enum UploadSyncState {
   // Upload has not started.
   // Possible successor states: UPLOAD_SETUP.
-  UPLOAD_STOPPED = 0,
+  UPLOAD_NOT_STARTED = 0,
   // Upload is started and being prepared.
   // Possible successor states: UPLOAD_IDLE, UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS,
   // UPLOAD_WAIT_REMOTE_DOWNLOAD, UPLOAD_PERMANENT_ERROR.

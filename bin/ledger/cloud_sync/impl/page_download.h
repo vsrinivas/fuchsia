@@ -123,10 +123,10 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
 
   // State:
   // Commit download state.
-  DownloadSyncState commit_state_ = DOWNLOAD_STOPPED;
+  DownloadSyncState commit_state_ = DOWNLOAD_NOT_STARTED;
   int current_get_object_calls_ = 0;
   // Merged state of commit and object download.
-  DownloadSyncState merged_state_ = DOWNLOAD_STOPPED;
+  DownloadSyncState merged_state_ = DOWNLOAD_NOT_STARTED;
 
   fidl::Binding<cloud_provider::PageCloudWatcher> watcher_binding_;
 

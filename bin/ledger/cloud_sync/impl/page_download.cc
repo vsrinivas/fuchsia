@@ -141,7 +141,7 @@ void PageDownload::StartDownload() {
 
 bool PageDownload::IsIdle() {
   switch (GetMergedState(commit_state_, current_get_object_calls_)) {
-    case DOWNLOAD_STOPPED:
+    case DOWNLOAD_NOT_STARTED:
     case DOWNLOAD_IDLE:
     case DOWNLOAD_PERMANENT_ERROR:
       return true;
