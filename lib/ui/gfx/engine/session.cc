@@ -695,7 +695,7 @@ bool Session::ApplySetStereoCameraProjectionCmd(
 
 bool Session::ApplySetCameraPoseBufferCmd(
     ::fuchsia::ui::gfx::SetCameraPoseBufferCmd command) {
-  if (zx::time(command.base_time) > zx::clock::get(ZX_CLOCK_MONOTONIC)) {
+  if (zx::time(command.base_time) > zx::clock::get<ZX_CLOCK_MONOTONIC>()) {
     error_reporter_->ERROR()
         << "scenic::gfx::Session::ApplySetCameraPoseBufferCmd(): "
            "base time not in the past";

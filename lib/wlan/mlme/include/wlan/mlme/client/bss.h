@@ -57,7 +57,7 @@ class Bss : public fbl::RefCounted<Bss> {
     ::fuchsia::wlan::mlme::BSSDescription ToFidl();
     fidl::StringPtr SsidToFidlString();
     const common::MacAddr& bssid() { return bssid_; }
-    zx::time ts_refreshed() { return ts_refreshed_; }
+    zx::time_utc ts_refreshed() { return ts_refreshed_; }
 
    private:
     bool IsBeaconValid(const Beacon& beacon) const;
@@ -74,7 +74,7 @@ class Bss : public fbl::RefCounted<Bss> {
     uint32_t GetBeaconSignature(const Beacon& beacon, size_t len) const;
 
     common::MacAddr bssid_;  // From Addr3 of Mgmt Header.
-    zx::time ts_refreshed_;  // Last time of Bss object update.
+    zx::time_utc ts_refreshed_;  // Last time of Bss object update.
 
     // TODO(porce): Don't trust instantaneous values. Keep history.
     common::dBm rssi_dbm_{WLAN_RSSI_DBM_INVALID};

@@ -140,7 +140,7 @@ void App::CreateExampleScene(float display_width, float display_height) {
   status = pose_buffer_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
   FXL_DCHECK(status == ZX_OK);
 
-  uint64_t base_time = zx::clock::get(ZX_CLOCK_MONOTONIC).get();
+  uint64_t base_time = zx::clock::get<ZX_CLOCK_MONOTONIC>().get();
   uint64_t time_interval = 1024 * 1024 * 60 / 3.0;  // 16.67 ms
   uint32_t num_entries = 1;
 

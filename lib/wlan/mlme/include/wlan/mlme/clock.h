@@ -20,12 +20,9 @@ class Clock {
 
 class SystemClock : public Clock {
    public:
-    SystemClock(uint32_t clock_id = ZX_CLOCK_MONOTONIC) : clock_id_(clock_id) {}
+    SystemClock() {}
 
-    zx::time Now() const override { return zx::clock::get(clock_id_); }
-
-   private:
-    uint32_t clock_id_;
+    zx::time Now() const override { return zx::clock::get<ZX_CLOCK_MONOTONIC>(); }
 };
 
 class TestClock : public Clock {

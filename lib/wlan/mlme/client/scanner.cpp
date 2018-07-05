@@ -145,8 +145,8 @@ void Scanner::RemoveStaleBss() {
     // TODO(porce): Implement a complex preemption logic here.
 
     // Only prune if necessary time passed.
-    static zx::time ts_last_prune;
-    auto now = zx::clock::get(ZX_CLOCK_UTC);
+    static zx::time_utc ts_last_prune;
+    auto now = zx::clock::get<ZX_CLOCK_UTC>();
     if (ts_last_prune + kBssPruneDelay > now) { return; }
 
     // Prune stale entries.
