@@ -498,7 +498,31 @@ func (ios *iostate) loopControl(s *socketServer, cookie int64) {
 	}
 }
 
-func (s *socketServer) newIostate(h zx.Handle, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, isAccept bool, openProto int) (reterr error) {
+type iostateResponse func(zx.Handle)
+
+func fdioIostateResponse(h zx.Handle, openProto int) iostateResponse {
+	return func(peerS zx.Handle) {
+		switch openProto {
+		case 2:
+			ro := fdio.RioDescription{
+				Status: errStatus(nil),
+			}
+			ro.Info.Tag = fdio.ProtocolSocket
+			ro.SetOp(fdio.OpOnOpen)
+			ro.Info.Socket().Handle = peerS
+			ro.Write(h, 0)
+		case 3:
+			r := openReply{
+				Status: errStatus(nil),
+				Handle: peerS,
+			}
+			r.Write(h)
+		}
+		h.Close()
+	}
+}
+
+func (s *socketServer) newIostate(h zx.Handle, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, isAccept bool, openProto int, responder iostateResponse) (reterr error) {
 	var peerS zx.Handle
 	ios := &iostate{
 		netProto:   netProto,
@@ -573,23 +597,7 @@ func (s *socketServer) newIostate(h zx.Handle, netProto tcpip.NetworkProtocolNum
 			return err
 		}
 	} else {
-		switch openProto {
-		case 2:
-			ro := fdio.RioDescription{
-				Status: errStatus(nil),
-			}
-			ro.Info.Tag = fdio.ProtocolSocket
-			ro.SetOp(fdio.OpOnOpen)
-			ro.Info.Socket().Handle = peerS
-			ro.Write(h, 0)
-		case 3:
-			r := openReply{
-				Status: errStatus(nil),
-				Handle: peerS,
-			}
-			r.Write(h)
-		}
-		h.Close()
+		responder(peerS)
 	}
 
 	if ep != nil {
@@ -625,23 +633,33 @@ type socketServer struct {
 	io   map[cookie]*iostate
 }
 
-func (s *socketServer) opSocket(h zx.Handle, path string, openProto int) (err error) {
+type socketPath struct {
+	version  int
+	domain   int
+	typ      int
+	protocol int
+}
+
+func parseSocketPath(path string) (socketPath, error) {
 	var version, domain, typ, protocol int
 	if n, _ := fmt.Sscanf(path, "socket-v%d/%d/%d/%d\x00", &version, &domain, &typ, &protocol); n != 4 {
-		return mxerror.Errorf(zx.ErrInvalidArgs, "socket: bad path %q (n=%d)", path, n)
+		return socketPath{}, mxerror.Errorf(zx.ErrInvalidArgs, "socket: bad path %q (n=%d)", path, n)
 	}
+	return socketPath{version: version, domain: domain, typ: typ, protocol: protocol}, nil
+}
 
+func (s *socketServer) opSocket(h zx.Handle, path socketPath, iostateResponder iostateResponse) (err error) {
 	var n tcpip.NetworkProtocolNumber
-	switch domain {
+	switch path.domain {
 	case AF_INET:
 		n = ipv4.ProtocolNumber
 	case AF_INET6:
 		n = ipv6.ProtocolNumber
 	default:
-		return mxerror.Errorf(zx.ErrNotSupported, "socket: unknown network protocol: %d", domain)
+		return mxerror.Errorf(zx.ErrNotSupported, "socket: unknown network protocol: %d", path.domain)
 	}
 
-	transProto, err := sockProto(typ, protocol)
+	transProto, err := sockProto(path.typ, path.protocol)
 	if err != nil {
 		return err
 	}
@@ -659,7 +677,7 @@ func (s *socketServer) opSocket(h zx.Handle, path string, openProto int) (err er
 			log.Printf("socket: setsockopt v6only option failed: %v", err)
 		}
 	}
-	err = s.newIostate(h, n, transProto, wq, ep, false, openProto)
+	err = s.newIostate(h, n, transProto, wq, ep, false, path.version, iostateResponder)
 	if err != nil {
 		if debug {
 			log.Printf("socket: new iostate: %v", err)
@@ -1085,7 +1103,7 @@ func (s *socketServer) loopListen(ios *iostate, inCh chan struct{}) {
 			}
 		}
 
-		err = s.newIostate(ios.dataHandle, ios.netProto, ios.transProto, newwq, newep, true, ios.openProto)
+		err = s.newIostate(ios.dataHandle, ios.netProto, ios.transProto, newwq, newep, true, ios.openProto, fdioIostateResponse(ios.dataHandle, ios.openProto))
 		if err != nil {
 			if debug {
 				log.Printf("listen: newIostate failed: %v", err)
@@ -1467,15 +1485,16 @@ func (s *socketServer) fdioHandler(msg *fdio.Msg, rh zx.Handle, cookieVal int64)
 		switch {
 		case strings.HasPrefix(path, "none-v2"):
 			openProto := 2
-			err = s.newIostate(msg.Handle[0], ipv4.ProtocolNumber, tcp.ProtocolNumber, nil, nil, false, openProto)
+			err = s.newIostate(msg.Handle[0], ipv4.ProtocolNumber, tcp.ProtocolNumber, nil, nil, false, openProto, fdioIostateResponse(msg.Handle[0], openProto))
 		case strings.HasPrefix(path, "none-v3"): // ZXRIO_SOCKET_DIR_NONE
 
-			err = s.newIostate(msg.Handle[0], ipv4.ProtocolNumber, tcp.ProtocolNumber, nil, nil, false, openProto)
-		case strings.HasPrefix(path, "socket-v2/"):
-			openProto := 2
-			err = s.opSocket(msg.Handle[0], path, openProto)
-		case strings.HasPrefix(path, "socket-v3/"): // ZXRIO_SOCKET_DIR_SOCKET
-			err = s.opSocket(msg.Handle[0], path, openProto)
+			err = s.newIostate(msg.Handle[0], ipv4.ProtocolNumber, tcp.ProtocolNumber, nil, nil, false, openProto, fdioIostateResponse(msg.Handle[0], openProto))
+		case strings.HasPrefix(path, "socket-v"):
+			var sp socketPath
+			if sp, err = parseSocketPath(path); err == nil {
+				openProto = sp.version
+				err = s.opSocket(msg.Handle[0], sp, fdioIostateResponse(msg.Handle[0], openProto))
+			}
 		default:
 			if debug2 {
 				log.Printf("open: unknown path=%q", path)

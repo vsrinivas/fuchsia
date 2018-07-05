@@ -60,6 +60,9 @@ func main() {
 	if err := AddStackService(ctx); err != nil {
 		log.Fatal(err)
 	}
+	if err := AddLegacySocketProvider(ctx); err != nil {
+		log.Fatal(err)
+	}
 
 	arena, err := eth.NewArena()
 	if err != nil {
