@@ -28,11 +28,13 @@ class SyncWatcherImpl : public ledger::SyncWatcher {
 
   ledger::SyncState download_state = ledger::SyncState::PENDING;
   ledger::SyncState upload_state = ledger::SyncState::PENDING;
+  int state_change_count = 0;
 
  private:
   // ledger::SyncWatcher:
   void SyncStateChanged(ledger::SyncState download, ledger::SyncState upload,
                         SyncStateChangedCallback callback) override {
+    state_change_count++;
     download_state = download;
     upload_state = upload;
     callback();
@@ -45,36 +47,6 @@ class SyncWatcherImpl : public ledger::SyncWatcher {
 
 class SyncIntegrationTest : public IntegrationTest {
  protected:
-  ::testing::AssertionResult GetEntries(
-      ledger::Page* page, fidl::VectorPtr<ledger::Entry>* entries) {
-    ledger::PageSnapshotPtr snapshot;
-    ledger::Status status;
-    page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                      nullptr, callback::Capture(QuitLoopClosure(), &status));
-    RunLoop();
-    if (status != ledger::Status::OK) {
-      return ::testing::AssertionFailure() << "Unable to retrieve a snapshot";
-    }
-    entries->resize(0);
-    std::unique_ptr<ledger::Token> token = nullptr;
-    std::unique_ptr<ledger::Token> next_token = nullptr;
-    do {
-      fidl::VectorPtr<ledger::Entry> new_entries;
-      snapshot->GetEntries(fidl::VectorPtr<uint8_t>::New(0), std::move(token),
-                           callback::Capture(QuitLoopClosure(), &status,
-                                             &new_entries, &next_token));
-      RunLoop();
-      if (status != ledger::Status::OK) {
-        return ::testing::AssertionFailure() << "Unable to retrieve entries";
-      }
-      for (auto& new_entry : *new_entries) {
-        entries->push_back(std::move(new_entry));
-      }
-      token = std::move(next_token);
-    } while (token);
-    return ::testing::AssertionSuccess();
-  }
-
   std::unique_ptr<SyncWatcherImpl> WatchPageSyncState(ledger::PagePtr* page) {
     auto watcher = std::make_unique<SyncWatcherImpl>();
 
@@ -127,17 +99,7 @@ TEST_P(SyncIntegrationTest, SerialConnection) {
   auto page2 =
       instance2->GetPage(fidl::MakeOptional(page_id), ledger::Status::OK);
   auto page2_state_watcher = WatchPageSyncState(&page2);
-
-  // TODO(ppi): just wait until sync is idle rather than retrieving entries when
-  // LE-369 is fixed. Before that we can get the sync state of IDLE, IDLE before
-  // any synchronization happens.
-  EXPECT_TRUE(RunLoopUntil([this, &page2] {
-    fidl::VectorPtr<ledger::Entry> entries;
-    if (!GetEntries(page2.get(), &entries)) {
-      return true;
-    }
-    return !entries->empty();
-  }));
+  EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
 
   ledger::PageSnapshotPtr snapshot;
   page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
@@ -176,6 +138,10 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   auto page2 =
       instance2->GetPage(fidl::MakeOptional(page_id), ledger::Status::OK);
   auto page2_state_watcher = WatchPageSyncState(&page2);
+  // Wait until the sync on the second device is idle.
+  EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
+  int page2_initial_state_change_count =
+      page2_state_watcher->state_change_count;
 
   ledger::Status status;
   page1->Put(convert::ToArray("Hello"), convert::ToArray("World"),
@@ -183,16 +149,17 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
 
-  // TODO(ppi): just wait until sync is idle rather than retrieving entries when
-  // LE-369 is fixed. Before that we can get the sync state of IDLE, IDLE before
-  // any synchronization happens.
-  EXPECT_TRUE(RunLoopUntil([this, &page2] {
-    fidl::VectorPtr<ledger::Entry> entries;
-    if (!GetEntries(page2.get(), &entries)) {
-      return true;
-    }
-    return !entries->empty();
-  }));
+  // Note that we cannot just wait for the sync to become idle on the second
+  // instance, as it might still be idle upon the first check because the device
+  // hasn't yet received the remote notification about new commits. This is why
+  // we also check that another state change notification was delivered.
+  EXPECT_TRUE(
+      RunLoopUntil([&page2_state_watcher, page2_initial_state_change_count] {
+        return page2_state_watcher->state_change_count >
+                   page2_initial_state_change_count &&
+               page2_state_watcher->Equals(ledger::SyncState::IDLE,
+                                           ledger::SyncState::IDLE);
+      }));
 
   ledger::PageSnapshotPtr snapshot;
   page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),

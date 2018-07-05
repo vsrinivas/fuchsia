@@ -12,7 +12,7 @@ DownloadSyncState ConvertToDownloadSyncState(
     cloud_sync::DownloadSyncState download) {
   switch (download) {
     case cloud_sync::DOWNLOAD_NOT_STARTED:
-      return DownloadSyncState::DOWNLOAD_IDLE;
+      return DownloadSyncState::DOWNLOAD_PENDING;
     case cloud_sync::DOWNLOAD_BACKLOG:
       return DownloadSyncState::DOWNLOAD_IN_PROGRESS;
     case cloud_sync::DOWNLOAD_TEMPORARY_ERROR:
@@ -31,9 +31,9 @@ DownloadSyncState ConvertToDownloadSyncState(
 UploadSyncState ConvertToUploadSyncState(cloud_sync::UploadSyncState upload) {
   switch (upload) {
     case cloud_sync::UPLOAD_NOT_STARTED:
-      return UploadSyncState::UPLOAD_IDLE;
+      return UploadSyncState::UPLOAD_PENDING;
     case cloud_sync::UPLOAD_SETUP:
-      return UploadSyncState::UPLOAD_IDLE;
+      return UploadSyncState::UPLOAD_PENDING;
     case cloud_sync::UPLOAD_IDLE:
       return UploadSyncState::UPLOAD_IDLE;
     case cloud_sync::UPLOAD_PENDING:

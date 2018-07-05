@@ -75,7 +75,6 @@ class FetchBenchmark : public ledger::SyncWatcher {
   std::vector<fidl::VectorPtr<uint8_t>> keys_;
   fit::function<void(ledger::SyncState, ledger::SyncState)>
       on_sync_state_changed_;
-  ledger::SyncState previous_state_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FetchBenchmark);
 };

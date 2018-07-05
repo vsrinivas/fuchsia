@@ -98,7 +98,6 @@ class BacklogBenchmark : public ledger::SyncWatcher {
   ledger::PageSnapshotPtr reader_snapshot_;
   fit::function<void(ledger::SyncState, ledger::SyncState)>
       on_sync_state_changed_;
-  ledger::SyncState previous_state_;
   bool done_writing_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BacklogBenchmark);

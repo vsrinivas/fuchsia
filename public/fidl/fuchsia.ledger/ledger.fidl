@@ -499,11 +499,14 @@ enum SyncState {
   // There are no pending operations.
   IDLE = 0;
   // There are pending operations, but there is no syncing in progress. This
-  // could be because of a connection error, because another operation is in
-  // progress (e.g. a download), or due to another reason, such us a pending
-  // merge.
+  // could be because of (possibly a combination of):
+  //  - waiting for better connectivity
+  //  - waiting due to internal policies (e.g. batching network requests,
+  //      waiting for a merge to happen before uploading)
+  //  - waiting to determine if synchronization is needed (e.g. during initial
+  //      setup)
   PENDING = 1;
-  // Sync is in progress.
+  // Synchronization is in progress.
   IN_PROGRESS = 2;
   // An internal error occurred while trying to sync.
   ERROR = 3;

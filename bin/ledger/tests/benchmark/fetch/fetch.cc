@@ -129,18 +129,15 @@ void FetchBenchmark::Populate() {
 }
 
 void FetchBenchmark::WaitForWriterUpload() {
-  previous_state_ = ledger::SyncState::IDLE;
   on_sync_state_changed_ = [this](ledger::SyncState download,
                                   ledger::SyncState upload) {
-    if (upload == ledger::SyncState::IDLE &&
-        previous_state_ != ledger::SyncState::IDLE) {
+    if (upload == ledger::SyncState::IDLE) {
       on_sync_state_changed_ = nullptr;
       // Stop watching sync state for this page.
       sync_watcher_binding_.Unbind();
       ConnectReader();
       return;
     }
-    previous_state_ = upload;
   };
   writer_page_->SetSyncStateWatcher(
       sync_watcher_binding_.NewBinding(),
@@ -177,11 +174,9 @@ void FetchBenchmark::ConnectReader() {
 }
 
 void FetchBenchmark::WaitForReaderDownload() {
-  previous_state_ = ledger::SyncState::IDLE;
   on_sync_state_changed_ = [this](ledger::SyncState download,
                                   ledger::SyncState upload) {
-    if (download == ledger::SyncState::IDLE &&
-        previous_state_ != ledger::SyncState::IDLE) {
+    if (download == ledger::SyncState::IDLE) {
       on_sync_state_changed_ = nullptr;
       ledger::PageSnapshotPtr snapshot;
       reader_page_->GetSnapshot(
@@ -190,9 +185,6 @@ void FetchBenchmark::WaitForReaderDownload() {
       FetchValues(std::move(snapshot), 0);
       return;
     }
-    // Workaround to skip first (IDLE, IDLE) state before the download starts,
-    // see LE-369
-    previous_state_ = download;
   };
   reader_page_->SetSyncStateWatcher(
       sync_watcher_binding_.NewBinding(),

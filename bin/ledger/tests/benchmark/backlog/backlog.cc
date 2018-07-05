@@ -198,19 +198,14 @@ void BacklogBenchmark::ConnectReader() {
 }
 
 void BacklogBenchmark::WaitForReaderDownload() {
-  previous_state_ = ledger::SyncState::IDLE;
   on_sync_state_changed_ = [this](ledger::SyncState download,
                                   ledger::SyncState upload) {
-    if (download == ledger::SyncState::IDLE &&
-        previous_state_ != ledger::SyncState::IDLE) {
+    if (download == ledger::SyncState::IDLE) {
       on_sync_state_changed_ = nullptr;
       TRACE_ASYNC_END("benchmark", "download", 0);
       GetReaderSnapshot();
       return;
     }
-    // Workaround to skip first (IDLE, IDLE) state before the download starts,
-    // see LE-369
-    previous_state_ = download;
   };
   reader_page_->SetSyncStateWatcher(
       sync_watcher_binding_.NewBinding(),
