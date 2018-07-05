@@ -152,66 +152,61 @@ private:
     zx_ticks_t value_ = 0;
 };
 
-class time {
+template <uint32_t kClockId>
+class base_time {
 public:
-    constexpr time() = default;
+    constexpr base_time() = default;
 
-    explicit constexpr time(zx_time_t value) : value_(value) {}
+    explicit constexpr base_time(zx_time_t value) : value_(value) {}
 
-    static constexpr time infinite() { return time(ZX_TIME_INFINITE); }
+    static constexpr base_time<kClockId> infinite() { return base_time<kClockId>(ZX_TIME_INFINITE); }
 
     constexpr zx_time_t get() const { return value_; }
 
     zx_time_t* get_address() { return &value_; }
 
-    constexpr duration operator-(time other) const {
+    constexpr duration operator-(base_time<kClockId> other) const {
         return duration(value_ - other.value_);
     }
 
-    constexpr time operator+(duration delta) const {
-        return time(value_ + delta.get());
+    constexpr base_time<kClockId> operator+(duration delta) const {
+        return base_time<kClockId>(value_ + delta.get());
     }
 
-    constexpr time operator-(duration delta) const {
-        return time(value_ - delta.get());
+    constexpr base_time<kClockId> operator-(duration delta) const {
+        return base_time<kClockId>(value_ - delta.get());
     }
 
-    time& operator+=(duration delta) {
+    base_time<kClockId>& operator+=(duration delta) {
       value_ += delta.get();
       return *this;
     }
 
-    time& operator-=(duration delta) {
+    base_time<kClockId>& operator-=(duration delta) {
       value_ -= delta.get();
       return *this;
     }
 
-    constexpr bool operator==(time other) const { return value_ == other.value_; }
-    constexpr bool operator!=(time other) const { return value_ != other.value_; }
-    constexpr bool operator<(time other) const { return value_ < other.value_; }
-    constexpr bool operator<=(time other) const { return value_ <= other.value_; }
-    constexpr bool operator>(time other) const { return value_ > other.value_; }
-    constexpr bool operator>=(time other) const { return value_ >= other.value_; }
+    constexpr bool operator==(base_time<kClockId> other) const { return value_ == other.value_; }
+    constexpr bool operator!=(base_time<kClockId> other) const { return value_ != other.value_; }
+    constexpr bool operator<(base_time<kClockId> other) const { return value_ < other.value_; }
+    constexpr bool operator<=(base_time<kClockId> other) const { return value_ <= other.value_; }
+    constexpr bool operator>(base_time<kClockId> other) const { return value_ > other.value_; }
+    constexpr bool operator>=(base_time<kClockId> other) const { return value_ >= other.value_; }
 
 private:
     zx_time_t value_ = 0;
 };
 
-template <uint32_t kClockId>
-using base_time = zx::time;
-
-using time_utc = zx::time;
-using time_thread = zx::time;
+using time = base_time<ZX_CLOCK_MONOTONIC>;
+using time_utc = base_time<ZX_CLOCK_UTC>;
+using time_thread = base_time<ZX_CLOCK_THREAD>;
 
 namespace clock {
 
 template <uint32_t kClockId>
 static inline base_time<kClockId> get() {
-  return base_time<kClockId>(zx_clock_get(kClockId));
-}
-
-static inline time get(zx_clock_t clock_id) {
-    return time(zx_clock_get(clock_id));
+    return base_time<kClockId>(zx_clock_get(kClockId));
 }
 
 } // namespace clock
