@@ -28,15 +28,12 @@ class GpuUploader;
 // Not thread-safe.
 class MeshManager : public MeshBuilderFactory {
  public:
-  MeshManager(CommandBufferPool* command_buffer_pool,
-              GpuAllocator* allocator,
-              GpuUploader* uploader,
-              ResourceRecycler* resource_recycler);
+  MeshManager(CommandBufferPool* command_buffer_pool, GpuAllocator* allocator,
+              GpuUploader* uploader, ResourceRecycler* resource_recycler);
   virtual ~MeshManager();
 
   // The returned MeshBuilder is not thread-safe.
-  MeshBuilderPtr NewMeshBuilder(const MeshSpec& spec,
-                                size_t max_vertex_count,
+  MeshBuilderPtr NewMeshBuilder(const MeshSpec& spec, size_t max_vertex_count,
                                 size_t max_index_count) override;
 
   ResourceRecycler* resource_recycler() const { return resource_recycler_; }
@@ -46,10 +43,8 @@ class MeshManager : public MeshBuilderFactory {
 
   class MeshBuilder : public escher::MeshBuilder {
    public:
-    MeshBuilder(MeshManager* manager,
-                const MeshSpec& spec,
-                size_t max_vertex_count,
-                size_t max_index_count,
+    MeshBuilder(MeshManager* manager, const MeshSpec& spec,
+                size_t max_vertex_count, size_t max_index_count,
                 GpuUploader::Writer vertex_writer,
                 GpuUploader::Writer index_writer);
     ~MeshBuilder() override;

@@ -65,26 +65,19 @@ class SubOwnable2 : public Ownable2 {
 };
 
 const OwnableTypeInfo OwnableBaseClassForTest::kTypeInfo(
-    "OwnableBaseClassForTest",
-    OwnableTypes::kOwnableBaseClassForTest);
+    "OwnableBaseClassForTest", OwnableTypes::kOwnableBaseClassForTest);
 const OwnableTypeInfo Ownable1::kTypeInfo(
-    "Ownable1",
-    OwnableTypes::kOwnableBaseClassForTest,
+    "Ownable1", OwnableTypes::kOwnableBaseClassForTest,
     OwnableTypes::kOwnable1);
 const OwnableTypeInfo Ownable2::kTypeInfo(
-    "Ownable2",
-    OwnableTypes::kOwnableBaseClassForTest,
+    "Ownable2", OwnableTypes::kOwnableBaseClassForTest,
     OwnableTypes::kOwnable2);
 const OwnableTypeInfo SubOwnable1::kTypeInfo(
-    "SubOwnable1",
-    OwnableTypes::kOwnableBaseClassForTest,
-    OwnableTypes::kOwnable1,
-    OwnableTypes::kSubOwnable1);
+    "SubOwnable1", OwnableTypes::kOwnableBaseClassForTest,
+    OwnableTypes::kOwnable1, OwnableTypes::kSubOwnable1);
 const OwnableTypeInfo SubOwnable2::kTypeInfo(
-    "SubOwnable2",
-    OwnableTypes::kOwnableBaseClassForTest,
-    OwnableTypes::kOwnable2,
-    OwnableTypes::kSubOwnable2);
+    "SubOwnable2", OwnableTypes::kOwnableBaseClassForTest,
+    OwnableTypes::kOwnable2, OwnableTypes::kSubOwnable2);
 
 class TestOwner
     : public escher::Owner<OwnableBaseClassForTest, OwnableTypeInfo> {

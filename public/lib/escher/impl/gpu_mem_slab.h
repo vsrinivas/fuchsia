@@ -39,11 +39,8 @@ class GpuMemSlab final : public GpuMem {
                            vk::MemoryRequirements reqs,
                            vk::MemoryPropertyFlags flags,
                            GpuAllocator* allocator);
-  GpuMemSlab(vk::Device device,
-             vk::DeviceMemory base,
-             vk::DeviceSize size,
-             uint8_t* mapped_ptr,
-             uint32_t memory_type_index,
+  GpuMemSlab(vk::Device device, vk::DeviceMemory base, vk::DeviceSize size,
+             uint8_t* mapped_ptr, uint32_t memory_type_index,
              GpuAllocator* allocator);
 
   void OnAllocationDestroyed(vk::DeviceSize size,

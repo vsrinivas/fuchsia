@@ -60,11 +60,8 @@ VertexAttributePointers GetVertexAttributePointers(uint8_t* vertex,
   return attribute_pointers;
 }
 
-MeshPtr NewCircleMesh(MeshBuilderFactory* factory,
-                      const MeshSpec& spec,
-                      int subdivisions,
-                      vec2 center,
-                      float radius,
+MeshPtr NewCircleMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
+                      int subdivisions, vec2 center, float radius,
                       float offset_magnitude) {
   // Compute the number of vertices in the tessellated circle.
   FXL_DCHECK(subdivisions >= 0);
@@ -136,13 +133,9 @@ MeshPtr NewCircleMesh(MeshBuilderFactory* factory,
   return mesh;
 }
 
-MeshPtr NewRingMesh(MeshBuilderFactory* factory,
-                    const MeshSpec& spec,
-                    int subdivisions,
-                    vec2 center,
-                    float outer_radius,
-                    float inner_radius,
-                    float outer_offset_magnitude,
+MeshPtr NewRingMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
+                    int subdivisions, vec2 center, float outer_radius,
+                    float inner_radius, float outer_offset_magnitude,
                     float inner_offset_magnitude) {
   // Compute the number of vertices in the tessellated circle.
   FXL_DCHECK(subdivisions >= 0);
@@ -241,11 +234,8 @@ MeshPtr NewSimpleRectangleMesh(MeshBuilderFactory* factory) {
       .Build();
 }
 
-MeshPtr NewRectangleMesh(MeshBuilderFactory* factory,
-                         const MeshSpec& spec,
-                         int subdivisions,
-                         vec2 size,
-                         vec2 top_left,
+MeshPtr NewRectangleMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
+                         int subdivisions, vec2 size, vec2 top_left,
                          float top_offset_magnitude,
                          float bottom_offset_magnitude) {
   // Compute the number of vertices in the tessellated circle.
@@ -326,11 +316,8 @@ MeshPtr NewFullScreenMesh(MeshBuilderFactory* factory) {
       .Build();
 }
 
-MeshPtr NewSphereMesh(MeshBuilderFactory* factory,
-                      const MeshSpec& spec,
-                      int subdivisions,
-                      vec3 center,
-                      float radius) {
+MeshPtr NewSphereMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
+                      int subdivisions, vec3 center, float radius) {
   FXL_DCHECK(subdivisions >= 0);
   FXL_DCHECK(spec.IsValid());
   size_t vertex_count = 9;

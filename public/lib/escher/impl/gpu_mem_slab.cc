@@ -11,12 +11,9 @@
 namespace escher {
 namespace impl {
 
-GpuMemSlab::GpuMemSlab(vk::Device device,
-                       vk::DeviceMemory base,
-                       vk::DeviceSize size,
-                       uint8_t* mapped_ptr,
-                       uint32_t memory_type_index,
-                       GpuAllocator* allocator)
+GpuMemSlab::GpuMemSlab(vk::Device device, vk::DeviceMemory base,
+                       vk::DeviceSize size, uint8_t* mapped_ptr,
+                       uint32_t memory_type_index, GpuAllocator* allocator)
     : GpuMem(base, size, 0, mapped_ptr),
       device_(device),
       memory_type_index_(memory_type_index),

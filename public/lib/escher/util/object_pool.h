@@ -35,14 +35,12 @@ class DefaultObjectPoolPolicy {
 
   // Default block initialization policy is to do nothing; each object is
   // constructed one-by-one via InitializePoolObject().
-  inline void InitializePoolObjectBlock(T* objects,
-                                        size_t block_index,
+  inline void InitializePoolObjectBlock(T* objects, size_t block_index,
                                         size_t num_objects) {}
 
   // Default block destruction policy is to do nothing; each object is destroyed
   // one-by-one via DestroyPoolObject().
-  inline void DestroyPoolObjectBlock(T* objects,
-                                     size_t block_index,
+  inline void DestroyPoolObjectBlock(T* objects, size_t block_index,
                                      size_t num_objects) {}
 };
 

@@ -15,10 +15,8 @@ namespace impl {
 
 class ModelPipeline {
  public:
-  ModelPipeline(const ModelPipelineSpec& spec,
-                vk::Device device,
-                vk::Pipeline pipeline,
-                vk::PipelineLayout pipeline_layout);
+  ModelPipeline(const ModelPipelineSpec& spec, vk::Device device,
+                vk::Pipeline pipeline, vk::PipelineLayout pipeline_layout);
   ~ModelPipeline();
 
   vk::Pipeline pipeline() const { return pipeline_; }

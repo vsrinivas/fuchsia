@@ -22,8 +22,7 @@ std::pair<escher::SemaphorePtr, zx::event> NewSemaphoreEventPair(
 // Exports a Semaphore into an event.
 zx::event GetEventForSemaphore(
     const escher::VulkanDeviceQueues::ProcAddrs& proc_addresses,
-    const vk::Device& device,
-    const escher::SemaphorePtr& semaphore);
+    const vk::Device& device, const escher::SemaphorePtr& semaphore);
 
 // Export the escher::GpuMem as a zx::vmo.
 zx::vmo ExportMemoryAsVmo(escher::Escher* escher, const escher::GpuMemPtr& mem);

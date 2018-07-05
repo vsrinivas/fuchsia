@@ -73,8 +73,7 @@ class GpuAllocator {
   void OnSlabDestroyed(vk::DeviceSize slab_size);
   // Notify the GpuAllocator that a sub-allocated range of memory is no longer
   // used within the specified slab.
-  virtual void OnSuballocationDestroyed(GpuMem* slab,
-                                        vk::DeviceSize size,
+  virtual void OnSuballocationDestroyed(GpuMem* slab, vk::DeviceSize size,
                                         vk::DeviceSize offset) = 0;
 
   vk::PhysicalDevice physical_device_;

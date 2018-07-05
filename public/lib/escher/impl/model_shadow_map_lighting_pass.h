@@ -25,10 +25,8 @@ class ModelShadowMapLightingPass : public ModelRenderPass {
       const ModelPipelineSpec& spec) override;
 
   ModelShadowMapLightingPass(ResourceRecycler* recycler,
-                             ModelDataPtr model_data,
-                             vk::Format color_format,
-                             vk::Format depth_format,
-                             uint32_t sample_count);
+                             ModelDataPtr model_data, vk::Format color_format,
+                             vk::Format depth_format, uint32_t sample_count);
 
  protected:
   // |ModelRenderPass|

@@ -85,8 +85,9 @@ void Gaussian3x3f16::Apply(CommandBuffer* command_buffer,
                            const TexturePtr& input, const TexturePtr& output) {
   if (!kernel_) {
     kernel_ = std::make_unique<ComputeShader>(
-        escher_, std::vector<vk::ImageLayout>{vk::ImageLayout::eGeneral,
-                                              vk::ImageLayout::eGeneral},
+        escher_,
+        std::vector<vk::ImageLayout>{vk::ImageLayout::eGeneral,
+                                     vk::ImageLayout::eGeneral},
         std::vector<vk::DescriptorType>{},
         /* push_constants_size= */ 0, kShaderCode);
   }

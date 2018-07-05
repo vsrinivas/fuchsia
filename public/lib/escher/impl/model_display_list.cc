@@ -11,8 +11,7 @@ namespace escher {
 namespace impl {
 
 const ResourceTypeInfo ModelDisplayList::kTypeInfo(
-    "ModelDisplayList",
-    ResourceType::kResource,
+    "ModelDisplayList", ResourceType::kResource,
     ResourceType::kImplModelDisplayList);
 
 ModelDisplayList::ModelDisplayList(ResourceRecycler* resource_recycler,

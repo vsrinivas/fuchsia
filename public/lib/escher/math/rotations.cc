@@ -12,8 +12,7 @@
 
 namespace escher {
 
-void RotationBetweenVectors(const glm::vec3& u,
-                            const glm::vec3& v,
+void RotationBetweenVectors(const glm::vec3& u, const glm::vec3& v,
                             glm::quat* rotation) {
   // http://lolengine.net/blog/2014/02/24/quaternion-from-two-vectors-final
   float norm_u_norm_v = sqrt(dot(u, u) * glm::dot(v, v));

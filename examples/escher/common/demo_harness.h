@@ -33,8 +33,7 @@ class DemoHarness {
   using InstanceParams = escher::VulkanInstance::Params;
 
   static std::unique_ptr<DemoHarness> New(
-      DemoHarness::WindowParams window_params,
-      InstanceParams instance_params);
+      DemoHarness::WindowParams window_params, InstanceParams instance_params);
   virtual ~DemoHarness();
 
   const WindowParams& GetWindowParams() const { return window_params_; }
@@ -119,12 +118,10 @@ class DemoHarness {
   // Redirect to instance method.
   static VkBool32 RedirectDebugReport(VkDebugReportFlagsEXT flags,
                                       VkDebugReportObjectTypeEXT objectType,
-                                      uint64_t object,
-                                      size_t location,
+                                      uint64_t object, size_t location,
                                       int32_t messageCode,
                                       const char* pLayerPrefix,
-                                      const char* pMessage,
-                                      void* pUserData) {
+                                      const char* pMessage, void* pUserData) {
     return reinterpret_cast<DemoHarness*>(pUserData)->HandleDebugReport(
         flags, objectType, object, location, messageCode, pLayerPrefix,
         pMessage);
@@ -132,10 +129,8 @@ class DemoHarness {
 
   VkBool32 HandleDebugReport(VkDebugReportFlagsEXT flags,
                              VkDebugReportObjectTypeEXT objectType,
-                             uint64_t object,
-                             size_t location,
-                             int32_t messageCode,
-                             const char* pLayerPrefix,
+                             uint64_t object, size_t location,
+                             int32_t messageCode, const char* pLayerPrefix,
                              const char* pMessage);
 
   WindowParams window_params_;

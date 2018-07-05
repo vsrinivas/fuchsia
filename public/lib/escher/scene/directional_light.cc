@@ -27,8 +27,7 @@ DirectionalLight::DirectionalLight(vec3 direction, float dispersion, vec3 color)
   FXL_DCHECK(glm::epsilonEqual(1.f, glm::length(direction), 0.0001f));
 }
 
-DirectionalLight::DirectionalLight(vec2 polar_direction,
-                                   float dispersion,
+DirectionalLight::DirectionalLight(vec2 polar_direction, float dispersion,
                                    vec3 color)
     : polar_direction_(std::move(polar_direction)),
       dispersion_(dispersion),

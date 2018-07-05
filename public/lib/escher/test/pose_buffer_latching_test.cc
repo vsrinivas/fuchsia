@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/escher/hmd/pose_buffer.h"
 #include "garnet/public/lib/escher/escher.h"
 #include "garnet/public/lib/escher/hmd/pose_buffer_latching_shader.h"
 #include "garnet/public/lib/escher/renderer/frame.h"
@@ -11,6 +10,7 @@
 #include "garnet/public/lib/escher/test/gtest_vulkan.h"
 #include "garnet/public/lib/escher/vk/buffer.h"
 #include "gtest/gtest.h"
+#include "lib/escher/hmd/pose_buffer.h"
 #include "lib/escher/util/epsilon_compare.h"
 
 #include <glm/gtc/type_ptr.hpp>

@@ -14,10 +14,8 @@ namespace impl {
 // a shadow map.
 class ModelShadowMapPass : public ModelRenderPass {
  public:
-  ModelShadowMapPass(ResourceRecycler* recycler,
-                     ModelDataPtr model_data,
-                     vk::Format color_format,
-                     vk::Format depth_format,
+  ModelShadowMapPass(ResourceRecycler* recycler, ModelDataPtr model_data,
+                     vk::Format color_format, vk::Format depth_format,
                      uint32_t sample_count);
 
  protected:

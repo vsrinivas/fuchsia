@@ -39,8 +39,7 @@ class FenceListener {
   const zx::event& event() { return fence_; }
 
  private:
-  void OnFenceSignalled(zx_status_t status,
-                        const zx_packet_signal* signal);
+  void OnFenceSignalled(zx_status_t status, const zx_packet_signal* signal);
 
   void ClearHandler();
 

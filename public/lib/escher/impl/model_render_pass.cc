@@ -20,13 +20,9 @@ static constexpr uint32_t kSoleSubpassIndex = 0;
 
 ModelRenderPass::ModelRenderPass(ResourceRecycler* recycler,
                                  vk::Format color_format,
-                                 vk::Format depth_format,
-                                 uint32_t sample_count)
-    : RenderPass(recycler,
-                 kColorAttachmentCount,
-                 kDepthAttachmentCount,
-                 kAttachmentReferenceCount,
-                 kSubpassCount,
+                                 vk::Format depth_format, uint32_t sample_count)
+    : RenderPass(recycler, kColorAttachmentCount, kDepthAttachmentCount,
+                 kAttachmentReferenceCount, kSubpassCount,
                  kSubpassDependencyCount),
       sample_count_(sample_count) {
   // Sanity check that these indices correspond to the first color and depth

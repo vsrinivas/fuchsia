@@ -9,8 +9,7 @@
 namespace escher {
 namespace impl {
 
-ModelPipeline::ModelPipeline(const ModelPipelineSpec& spec,
-                             vk::Device device,
+ModelPipeline::ModelPipeline(const ModelPipelineSpec& spec, vk::Device device,
                              vk::Pipeline pipeline,
                              vk::PipelineLayout pipeline_layout)
     : spec_(spec),

@@ -24,12 +24,9 @@ using escher::vec3;
 
 const float kRectYPos = 40.f;
 
-WobblyRingsScene::WobblyRingsScene(Demo* demo,
-                                   vec3 clear_color,
-                                   vec3 ring1_color,
-                                   vec3 ring2_color,
-                                   vec3 ring3_color,
-                                   vec3 circle_color,
+WobblyRingsScene::WobblyRingsScene(Demo* demo, vec3 clear_color,
+                                   vec3 ring1_color, vec3 ring2_color,
+                                   vec3 ring3_color, vec3 circle_color,
                                    vec3 checkerboard_color)
     : Scene(demo), clear_color_(clear_color) {
   ring1_color_ = fxl::MakeRefCounted<escher::Material>();

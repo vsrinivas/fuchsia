@@ -17,8 +17,7 @@ namespace escher {
 namespace impl {
 
 MeshManager::MeshManager(CommandBufferPool* command_buffer_pool,
-                         GpuAllocator* allocator,
-                         GpuUploader* uploader,
+                         GpuAllocator* allocator, GpuUploader* uploader,
                          ResourceRecycler* resource_recycler)
     : command_buffer_pool_(command_buffer_pool),
       allocator_(allocator),
@@ -28,9 +27,7 @@ MeshManager::MeshManager(CommandBufferPool* command_buffer_pool,
       queue_(command_buffer_pool->queue()),
       builder_count_(0) {}
 
-MeshManager::~MeshManager() {
-  FXL_DCHECK(builder_count_ == 0);
-}
+MeshManager::~MeshManager() { FXL_DCHECK(builder_count_ == 0); }
 
 MeshBuilderPtr MeshManager::NewMeshBuilder(const MeshSpec& spec,
                                            size_t max_vertex_count,
@@ -48,9 +45,7 @@ MeshManager::MeshBuilder::MeshBuilder(MeshManager* manager,
                                       size_t max_index_count,
                                       GpuUploader::Writer vertex_writer,
                                       GpuUploader::Writer index_writer)
-    : escher::MeshBuilder(max_vertex_count,
-                          max_index_count,
-                          spec.GetStride(),
+    : escher::MeshBuilder(max_vertex_count, max_index_count, spec.GetStride(),
                           vertex_writer.ptr(),
                           reinterpret_cast<uint32_t*>(index_writer.ptr())),
       manager_(manager),

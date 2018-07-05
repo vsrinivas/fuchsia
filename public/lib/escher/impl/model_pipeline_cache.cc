@@ -18,8 +18,7 @@ namespace escher {
 namespace impl {
 
 const ResourceTypeInfo ModelPipelineCache::kTypeInfo(
-    "ModelPipelineCache",
-    ResourceType::kResource,
+    "ModelPipelineCache", ResourceType::kResource,
     ResourceType::kImplModelPipelineCache);
 
 ModelPipelineCache::ModelPipelineCache(ResourceRecycler* recycler,
@@ -33,9 +32,7 @@ ModelPipelineCache::ModelPipelineCache(ResourceRecycler* recycler,
   FXL_DCHECK(render_pass_);
 }
 
-ModelPipelineCache::~ModelPipelineCache() {
-  pipelines_.clear();
-}
+ModelPipelineCache::~ModelPipelineCache() { pipelines_.clear(); }
 
 ModelPipeline* ModelPipelineCache::GetPipeline(const ModelPipelineSpec& spec) {
   auto it = pipelines_.find(spec);
@@ -52,17 +49,12 @@ namespace {
 
 // Creates a new PipelineLayout and Pipeline using only the provided arguments.
 std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
-    ModelData* model_data,
-    vk::ShaderModule vertex_module,
-    vk::ShaderModule fragment_module,
-    bool enable_depth_test,
-    bool enable_depth_write,
-    bool enable_blending,
-    vk::CompareOp depth_compare_op,
-    vk::RenderPass render_pass,
+    ModelData* model_data, vk::ShaderModule vertex_module,
+    vk::ShaderModule fragment_module, bool enable_depth_test,
+    bool enable_depth_write, bool enable_blending,
+    vk::CompareOp depth_compare_op, vk::RenderPass render_pass,
     std::vector<vk::DescriptorSetLayout> descriptor_set_layouts,
-    const ModelPipelineSpec& spec,
-    vk::SampleCountFlagBits sample_count) {
+    const ModelPipelineSpec& spec, vk::SampleCountFlagBits sample_count) {
   vk::Device device = model_data->device();
 
   // Depending on configuration, more dynamic states may be added later.

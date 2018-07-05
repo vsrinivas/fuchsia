@@ -9,8 +9,7 @@ namespace escher {
 const ShadowMapTypeInfo MomentShadowMap::kTypeInfo("MomentShadowMap",
                                                    ShadowMapType::kMoment);
 
-MomentShadowMap::MomentShadowMap(const ImagePtr& image,
-                                 const mat4& matrix,
+MomentShadowMap::MomentShadowMap(const ImagePtr& image, const mat4& matrix,
                                  const vec3& light_color)
     : ShadowMap(image, matrix, light_color) {}
 

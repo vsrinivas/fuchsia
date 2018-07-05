@@ -27,15 +27,13 @@ class GlslToSpirvCompiler {
   // string is returned.
   std::future<SpirvData> Compile(vk::ShaderStageFlagBits stage,
                                  std::vector<std::string> glsl_source_code,
-                                 std::string preamble,
-                                 std::string entry_point);
+                                 std::string preamble, std::string entry_point);
 
  private:
   // Same as Compile(), but completes synchronously.
   SpirvData SynchronousCompile(vk::ShaderStageFlagBits stage,
                                std::vector<std::string> glsl_source_code,
-                               std::string preamble,
-                               std::string entry_point);
+                               std::string preamble, std::string entry_point);
 
   // Helper for SynchronousCompile.
   SpirvData SynchronousCompileImpl(vk::ShaderStageFlagBits stage,

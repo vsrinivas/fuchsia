@@ -41,15 +41,9 @@ namespace escher {
 namespace impl {
 
 ModelMomentShadowMapPass::ModelMomentShadowMapPass(
-    ResourceRecycler* recycler,
-    const ModelDataPtr& model_data,
-    vk::Format color_format,
-    vk::Format depth_format,
-    uint32_t sample_count)
-    : ModelShadowMapPass(recycler,
-                         model_data,
-                         color_format,
-                         depth_format,
+    ResourceRecycler* recycler, const ModelDataPtr& model_data,
+    vk::Format color_format, vk::Format depth_format, uint32_t sample_count)
+    : ModelShadowMapPass(recycler, model_data, color_format, depth_format,
                          sample_count) {}
 
 std::string ModelMomentShadowMapPass::GetFragmentShaderSourceCode(

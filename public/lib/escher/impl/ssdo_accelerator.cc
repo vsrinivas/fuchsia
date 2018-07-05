@@ -493,8 +493,9 @@ TexturePtr SsdoAccelerator::UnpackLookupTable(
   if (!unpack_kernel_) {
     FXL_DLOG(INFO) << "Lazily instantiating unpack_kernel_";
     unpack_kernel_ = std::make_unique<ComputeShader>(
-        escher_, std::vector<vk::ImageLayout>{vk::ImageLayout::eGeneral,
-                                              vk::ImageLayout::eGeneral},
+        escher_,
+        std::vector<vk::ImageLayout>{vk::ImageLayout::eGeneral,
+                                     vk::ImageLayout::eGeneral},
         std::vector<vk::DescriptorType>{}, 0, g_unpack_kernel_src);
   }
   unpack_kernel_->Dispatch({packed_lookup_table, result_texture}, {},

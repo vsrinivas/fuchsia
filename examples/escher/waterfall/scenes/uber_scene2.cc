@@ -62,8 +62,7 @@ void UberScene2::Init(escher::Stage* stage) {
 UberScene2::~UberScene2() {}
 
 escher::Model* UberScene2::Update(const escher::Stopwatch& stopwatch,
-                                  uint64_t frame_count,
-                                  escher::Stage* stage) {
+                                  uint64_t frame_count, escher::Stage* stage) {
   float current_time_sec = stopwatch.GetElapsedSeconds();
 
   float screen_width = stage->viewing_volume().width();
@@ -236,8 +235,7 @@ escher::Model* UberScene2::Update(const escher::Stopwatch& stopwatch,
 }
 
 escher::Model* UberScene2::UpdateOverlay(const escher::Stopwatch& stopwatch,
-                                         uint64_t frame_count,
-                                         uint32_t width,
+                                         uint64_t frame_count, uint32_t width,
                                          uint32_t height) {
   const float quarter_width = static_cast<float>(width) * 0.25f;
   const float half_height = static_cast<float>(height) * 0.5f;

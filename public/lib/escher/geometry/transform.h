@@ -28,24 +28,17 @@ struct Transform {
     return translate_mat * rotate_mat * scale_mat * anchor_mat;
   }
 
-  Transform(vec3 translation,
-            vec3 scale = vec3(1, 1, 1),
-            quat rotation = quat(),
-            vec3 anchor = vec3(0, 0, 0))
+  Transform(vec3 translation, vec3 scale = vec3(1, 1, 1),
+            quat rotation = quat(), vec3 anchor = vec3(0, 0, 0))
       : translation(translation),
         scale(scale),
         rotation(rotation),
         anchor(anchor) {}
 
-  Transform(vec3 translation,
-            vec3 scale,
-            float rotation_radians,
-            vec3 rotation_axis,
-            vec3 anchor = vec3(0, 0, 0))
-      : Transform(translation,
-                  scale,
-                  glm::angleAxis(rotation_radians, rotation_axis),
-                  anchor) {}
+  Transform(vec3 translation, vec3 scale, float rotation_radians,
+            vec3 rotation_axis, vec3 anchor = vec3(0, 0, 0))
+      : Transform(translation, scale,
+                  glm::angleAxis(rotation_radians, rotation_axis), anchor) {}
 
   Transform() : scale(vec3(1, 1, 1)) {}
 

@@ -16,8 +16,7 @@ class ModelMomentShadowMapPass final : public ModelShadowMapPass {
  public:
   ModelMomentShadowMapPass(ResourceRecycler* recycler,
                            const ModelDataPtr& model_data,
-                           vk::Format color_format,
-                           vk::Format depth_format,
+                           vk::Format color_format, vk::Format depth_format,
                            uint32_t sample_count);
 
  protected:

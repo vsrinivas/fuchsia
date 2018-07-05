@@ -76,11 +76,8 @@ void main() {
 )GLSL";
 
 ModelShadowMapLightingPass::ModelShadowMapLightingPass(
-    ResourceRecycler* recycler,
-    ModelDataPtr model_data,
-    vk::Format color_format,
-    vk::Format depth_format,
-    uint32_t sample_count)
+    ResourceRecycler* recycler, ModelDataPtr model_data,
+    vk::Format color_format, vk::Format depth_format, uint32_t sample_count)
     : ModelRenderPass(recycler, color_format, depth_format, sample_count) {
   vk::AttachmentDescription* color_attachment =
       attachment(kColorAttachmentIndex);

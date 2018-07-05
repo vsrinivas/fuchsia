@@ -24,11 +24,8 @@ class Displacement {
   Displacement();
   ~Displacement();
 
-  static Displacement MakeWave(const vec2& start,
-                               const vec2& end,
-                               float max,
-                               float theta_min = -M_PI,
-                               float theta_max = M_PI);
+  static Displacement MakeWave(const vec2& start, const vec2& end, float max,
+                               float theta_min = -M_PI, float theta_max = M_PI);
 
   Type type() const { return type_; }
   float max() const { return max_; }

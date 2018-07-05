@@ -7,8 +7,7 @@
 namespace escher {
 
 Object::Object(const Transform& transform, MeshPtr mesh, MaterialPtr material)
-    : Object(static_cast<mat4>(transform),
-             std::move(mesh),
+    : Object(static_cast<mat4>(transform), std::move(mesh),
              std::move(material)) {}
 
 Object::Object(const mat4& transform, MeshPtr mesh, MaterialPtr material)
@@ -26,15 +25,12 @@ Object::Object(std::vector<Object> clippers, std::vector<Object> clippees)
 
 Object::~Object() {}
 
-Object Object::NewRect(const vec2& top_left_position,
-                       const vec2& size,
-                       float z,
+Object Object::NewRect(const vec2& top_left_position, const vec2& size, float z,
                        MaterialPtr material) {
   return NewRect(vec3(top_left_position, z), size, std::move(material));
 }
 
-Object Object::NewRect(const vec3& top_left_position,
-                       const vec2& size,
+Object Object::NewRect(const vec3& top_left_position, const vec2& size,
                        MaterialPtr material) {
   mat4 transform(1);
   transform[0][0] = size.x;
@@ -54,15 +50,12 @@ Object Object::NewRect(const mat4& transform, MaterialPtr material) {
   return Object(transform, Shape(Shape::Type::kRect), std::move(material));
 }
 
-Object Object::NewCircle(const vec2& center_position,
-                         float radius,
-                         float z,
+Object Object::NewCircle(const vec2& center_position, float radius, float z,
                          MaterialPtr material) {
   return NewCircle(vec3(center_position, z), radius, std::move(material));
 }
 
-Object Object::NewCircle(const vec3& center_position,
-                         float radius,
+Object Object::NewCircle(const vec3& center_position, float radius,
                          MaterialPtr material) {
   mat4 transform(1);
   transform[0][0] = radius;
@@ -73,8 +66,7 @@ Object Object::NewCircle(const vec3& center_position,
   return Object(transform, Shape(Shape::Type::kCircle), std::move(material));
 }
 
-Object Object::NewCircle(const mat4& transform,
-                         float radius,
+Object Object::NewCircle(const mat4& transform, float radius,
                          MaterialPtr material) {
   return Object(glm::scale(transform, glm::vec3(radius, radius, 1)),
                 Shape(Shape::Type::kCircle), std::move(material));

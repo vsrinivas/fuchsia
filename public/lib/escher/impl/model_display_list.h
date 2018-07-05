@@ -26,8 +26,7 @@ class ModelDisplayList : public Resource {
   };
 
   ModelDisplayList(ResourceRecycler* resource_recycler,
-                   vk::DescriptorSet stage_data,
-                   std::vector<Item> items,
+                   vk::DescriptorSet stage_data, std::vector<Item> items,
                    std::vector<TexturePtr> textures,
                    std::vector<ResourcePtr> resources);
 

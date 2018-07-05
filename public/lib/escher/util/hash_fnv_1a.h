@@ -14,8 +14,7 @@ constexpr uint64_t kHashFnv1Prime64 = 1099511628211ull;
 constexpr uint64_t kHashFnv1OffsetBasis64 = 14695981039346656037ull;
 
 // FNV-1a 64-bit Hash (http://www.isthe.com/chongo/tech/comp/fnv/index.html)
-inline uint64_t hash_fnv_1a_64(const uint8_t* data,
-                               size_t len,
+inline uint64_t hash_fnv_1a_64(const uint8_t* data, size_t len,
                                uint64_t previous = kHashFnv1OffsetBasis64) {
   uint64_t n = previous;
   while (len-- > 0) {

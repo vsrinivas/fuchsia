@@ -23,8 +23,7 @@ class CommandBuffer;
 class CommandBufferPool : CommandBufferSequencerController {
  public:
   // The CommandBufferPool does not take ownership of the device and queue.
-  CommandBufferPool(vk::Device device,
-                    vk::Queue queue,
+  CommandBufferPool(vk::Device device, vk::Queue queue,
                     uint32_t queue_family_index,
                     CommandBufferSequencer* sequencer,
                     bool supports_graphics_and_compute);

@@ -315,8 +315,9 @@ void PaperRenderer::DrawDebugOverlays(const FramePtr& frame,
                                       const TexturePtr& ssdo_accel,
                                       const TexturePtr& ssdo_accel_depth) {
   if (show_debug_info_) {
-    TexturePtr ssdo_accel_depth_as_color = depth_to_color_->Convert(
-        frame, ssdo_accel_depth, vk::ImageUsageFlagBits::eStorage |
+    TexturePtr ssdo_accel_depth_as_color =
+        depth_to_color_->Convert(frame, ssdo_accel_depth,
+                                 vk::ImageUsageFlagBits::eStorage |
                                      vk::ImageUsageFlagBits::eTransferSrc);
 
     int32_t dst_width = output->width();

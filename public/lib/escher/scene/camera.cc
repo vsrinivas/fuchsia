@@ -13,8 +13,7 @@
 namespace escher {
 
 static std::pair<float, float> ComputeNearAndFarPlanes(
-    const ViewingVolume& volume,
-    const mat4& camera_transform) {
+    const ViewingVolume& volume, const mat4& camera_transform) {
   float width = volume.width();
   float height = volume.height();
   float bottom = volume.bottom();
@@ -105,8 +104,7 @@ Camera Camera::NewForDirectionalShadowMap(const ViewingVolume& volume,
 }
 
 Camera Camera::NewPerspective(const ViewingVolume& volume,
-                              const mat4& transform,
-                              float fovy) {
+                              const mat4& transform, float fovy) {
   auto near_and_far = ComputeNearAndFarPlanes(volume, transform);
   float aspect = volume.width() / volume.height();
   mat4 projection =

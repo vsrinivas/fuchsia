@@ -27,9 +27,8 @@ struct HashMapHasher {
 // Use SFINAE to provide a specialized implementation for any type that declares
 // a HashMapHasher type.
 template <typename T>
-struct HashMapHasher<T,
-                     typename std::enable_if<std::is_class<
-                         typename T::HashMapHasher>::value>::type> {
+struct HashMapHasher<T, typename std::enable_if<std::is_class<
+                            typename T::HashMapHasher>::value>::type> {
   inline size_t operator()(const T& hashee) const {
     typename T::HashMapHasher h;
     return h(hashee);

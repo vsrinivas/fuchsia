@@ -8,9 +8,7 @@
 
 namespace escher {
 
-Reffable::~Reffable() {
-  FXL_DCHECK(ref_count_ == 0);
-}
+Reffable::~Reffable() { FXL_DCHECK(ref_count_ == 0); }
 
 #ifndef NDEBUG
 void Reffable::Adopt() {

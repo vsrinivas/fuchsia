@@ -56,15 +56,13 @@ class TestObjPreinitializePolicy {
 
   void InitializePoolObject(TestObj* ptr) {}
   void DestroyPoolObject(TestObj* ptr) {}
-  void InitializePoolObjectBlock(TestObj* objects,
-                                 size_t block_index,
+  void InitializePoolObjectBlock(TestObj* objects, size_t block_index,
                                  size_t num_objects) {
     for (size_t i = 0; i < num_objects; ++i) {
       new (objects + i) TestObj(leak_count_, block_index, i);
     }
   }
-  void DestroyPoolObjectBlock(TestObj* objects,
-                              size_t block_index,
+  void DestroyPoolObjectBlock(TestObj* objects, size_t block_index,
                               size_t num_objects) {
     for (size_t i = 0; i < num_objects; ++i) {
       EXPECT_EQ(objects[i].one(), block_index);

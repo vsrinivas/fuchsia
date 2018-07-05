@@ -27,10 +27,12 @@ class StackAllocator {
   // the requested number is zero, or if there is not enough space available.
   // The contents of the pointed-to memory are undefined.
   T* Allocate(size_t count = 1) {
-    if (count == 0) return nullptr;
+    if (count == 0)
+      return nullptr;
 
     size_t to_be_used = used_ + count;
-    if (to_be_used > N) return nullptr;
+    if (to_be_used > N)
+      return nullptr;
 
     T* ptr = base_ + used_;
     used_ = to_be_used;

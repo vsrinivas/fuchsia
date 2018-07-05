@@ -7,10 +7,8 @@
 namespace escher {
 namespace impl {
 
-Pipeline::Pipeline(vk::Device device,
-                   vk::Pipeline pipeline,
-                   PipelineLayoutPtr layout,
-                   PipelineSpec spec)
+Pipeline::Pipeline(vk::Device device, vk::Pipeline pipeline,
+                   PipelineLayoutPtr layout, PipelineSpec spec)
     : device_(device),
       pipeline_(pipeline),
       layout_(std::move(layout)),

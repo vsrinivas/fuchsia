@@ -33,8 +33,7 @@ class FenceSetListener {
   bool ready() const { return num_signalled_fences_ == fences_->size(); }
 
  private:
-  void OnFenceSignalled(zx_koid_t import_koid,
-                        zx_status_t status,
+  void OnFenceSignalled(zx_koid_t import_koid, zx_status_t status,
                         const zx_packet_signal* signal);
 
   void ClearHandlers();

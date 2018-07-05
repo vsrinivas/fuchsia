@@ -22,20 +22,13 @@ class ModelDisplayListBuilder {
  public:
   // OK to pass null |shadow_texture|; in that case, |white_texture| will
   // be used instead.
-  ModelDisplayListBuilder(vk::Device device,
-                          const Stage& stage,
-                          const Model& model,
-                          const Camera& camera,
-                          float scale,
-                          const TexturePtr& white_texture,
-                          const TexturePtr& shadow_texture,
-                          const mat4& shadow_matrix,
-                          vec3 ambient_light_intensity,
-                          vec3 direct_light_intensity,
-                          ModelData* model_data,
-                          ModelRenderer* renderer,
-                          ModelRenderPassPtr render_pass,
-                          ModelDisplayListFlags flags);
+  ModelDisplayListBuilder(
+      vk::Device device, const Stage& stage, const Model& model,
+      const Camera& camera, float scale, const TexturePtr& white_texture,
+      const TexturePtr& shadow_texture, const mat4& shadow_matrix,
+      vec3 ambient_light_intensity, vec3 direct_light_intensity,
+      ModelData* model_data, ModelRenderer* renderer,
+      ModelRenderPassPtr render_pass, ModelDisplayListFlags flags);
 
   ~ModelDisplayListBuilder();
 

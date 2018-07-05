@@ -8,12 +8,8 @@
 
 namespace escher {
 
-void GlslangInitializeProcess() {
-  glslang::InitializeProcess();
-}
+void GlslangInitializeProcess() { glslang::InitializeProcess(); }
 
-void GlslangFinalizeProcess() {
-  glslang::FinalizeProcess();
-}
+void GlslangFinalizeProcess() { glslang::FinalizeProcess(); }
 
 }  // namespace escher

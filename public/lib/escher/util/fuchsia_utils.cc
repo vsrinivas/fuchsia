@@ -46,8 +46,7 @@ std::pair<escher::SemaphorePtr, zx::event> NewSemaphoreEventPair(
 
 zx::event GetEventForSemaphore(
     const escher::VulkanDeviceQueues::ProcAddrs& proc_addresses,
-    const vk::Device& device,
-    const escher::SemaphorePtr& semaphore) {
+    const vk::Device& device, const escher::SemaphorePtr& semaphore) {
   zx_handle_t semaphore_handle;
 
   vk::SemaphoreGetFuchsiaHandleInfoKHR info(

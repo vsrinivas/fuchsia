@@ -16,10 +16,8 @@ void main() {
 )GLSL";
 
 ModelDepthPass::ModelDepthPass(ResourceRecycler* recycler,
-                               ModelDataPtr model_data,
-                               vk::Format color_format,
-                               vk::Format depth_format,
-                               uint32_t sample_count)
+                               ModelDataPtr model_data, vk::Format color_format,
+                               vk::Format depth_format, uint32_t sample_count)
     : ModelRenderPass(recycler, color_format, depth_format, sample_count) {
   vk::AttachmentDescription* color_attachment =
       attachment(kColorAttachmentIndex);

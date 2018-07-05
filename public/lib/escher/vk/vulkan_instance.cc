@@ -64,9 +64,7 @@ VulkanInstance::VulkanInstance(vk::Instance instance, Params params)
       params_(std::move(params)),
       proc_addrs_(instance_, params_.requires_surface) {}
 
-VulkanInstance::~VulkanInstance() {
-  instance_.destroy();
-}
+VulkanInstance::~VulkanInstance() { instance_.destroy(); }
 
 bool VulkanInstance::ValidateLayers(
     const std::set<std::string>& required_layer_names) {

@@ -113,8 +113,7 @@ class NaiveGpuAllocatorForCallbackTest : public NaiveGpuAllocator {
         last_size_(last_size),
         last_offset_(last_offset) {}
 
-  void OnSuballocationDestroyed(GpuMem* slab,
-                                vk::DeviceSize size,
+  void OnSuballocationDestroyed(GpuMem* slab, vk::DeviceSize size,
                                 vk::DeviceSize offset) override {
     *last_slab_ = slab;
     *last_size_ = size;
@@ -178,9 +177,7 @@ TEST(GpuMem, AllocatorCallbacks) {
 namespace {
 class FakeGpuMem : public GpuMem {
  public:
-  FakeGpuMem(vk::DeviceMemory base,
-             vk::DeviceSize size,
-             vk::DeviceSize offset,
+  FakeGpuMem(vk::DeviceMemory base, vk::DeviceSize size, vk::DeviceSize offset,
              uint8_t* mapped_ptr)
       : GpuMem(base, size, offset, mapped_ptr) {}
 };

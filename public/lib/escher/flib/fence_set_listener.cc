@@ -33,9 +33,8 @@ void FenceSetListener::WaitReadyAsync(fxl::Closure ready_callback) {
 
   // Wait for |kFenceSignalled| on each fence.
   for (auto& fence : *fences_) {
-    auto wait = std::make_unique<async::Wait>(
-        fence.get(),          // handle
-        kFenceSignalled       // trigger
+    auto wait = std::make_unique<async::Wait>(fence.get(),     // handle
+                                              kFenceSignalled  // trigger
     );
     wait->set_handler(std::bind(&FenceSetListener::OnFenceSignalled, this,
                                 waiter_index, std::placeholders::_3,
@@ -50,10 +49,8 @@ void FenceSetListener::WaitReadyAsync(fxl::Closure ready_callback) {
   ready_callback_ = std::move(ready_callback);
 }
 
-void FenceSetListener::OnFenceSignalled(
-    size_t waiter_index,
-    zx_status_t status,
-    const zx_packet_signal* signal) {
+void FenceSetListener::OnFenceSignalled(size_t waiter_index, zx_status_t status,
+                                        const zx_packet_signal* signal) {
   if (status == ZX_OK) {
     zx_signals_t pending = signal->observed;
     FXL_DCHECK(pending & kFenceSignalled);

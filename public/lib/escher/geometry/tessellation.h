@@ -14,11 +14,8 @@ namespace escher {
 
 // Tessellate a circle.  The coarsest circle (i.e. subdivisions == 0) is a
 // square; increasing the number of subdivisions doubles the number of vertices.
-MeshPtr NewCircleMesh(MeshBuilderFactory* factory,
-                      const MeshSpec& spec,
-                      int subdivisions,
-                      vec2 center,
-                      float radius,
+MeshPtr NewCircleMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
+                      int subdivisions, vec2 center, float radius,
                       float offset_magnitude = 0.f);
 
 // Tessellate a basic rectangle
@@ -27,10 +24,8 @@ MeshPtr NewSimpleRectangleMesh(MeshBuilderFactory* factory);
 // Tessellate a rectangle with multiple vertices along the top and bottom edges.
 // Increasing subdivisions by 1 doubles the number of vertices. If the spec
 // has kPositionOffset, the top offset points up and the bottom points down.
-MeshPtr NewRectangleMesh(MeshBuilderFactory* factory,
-                         const MeshSpec& spec,
-                         int subdivisions,
-                         vec2 size,
+MeshPtr NewRectangleMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
+                         int subdivisions, vec2 size,
                          vec2 top_left = vec2(0.f, 0.f),
                          float top_offset_magnitude = 0.f,
                          float bottom_offset_magnitude = 0.f);
@@ -39,13 +34,9 @@ MeshPtr NewRectangleMesh(MeshBuilderFactory* factory,
 // Increasing subdivisions by 1 doubles the number of vertices.  If the spec
 // has kPositionOffset, the outer offset points outward (away from the center of
 // the ring) and the inner offset points inward (toward the center of the ring).
-MeshPtr NewRingMesh(MeshBuilderFactory* factory,
-                    const MeshSpec& spec,
-                    int subdivisions,
-                    vec2 center,
-                    float outer_radius,
-                    float inner_radius,
-                    float outer_offset_magnitude = 0.f,
+MeshPtr NewRingMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
+                    int subdivisions, vec2 center, float outer_radius,
+                    float inner_radius, float outer_offset_magnitude = 0.f,
                     float inner_offset_magnitude = 0.f);
 
 // Tessellate a full-screen mesh.  The returned mesh has only position and UV
@@ -74,11 +65,8 @@ MeshPtr NewFullScreenMesh(MeshBuilderFactory* factory);
 // without inserting two vertices for every edge, one at each half-edge) is
 // non-trivial, especially without a traversal-friendly mesh representation such
 // as Rossignac's "corner table".
-MeshPtr NewSphereMesh(MeshBuilderFactory* factory,
-                      const MeshSpec& spec,
-                      int subdivisions,
-                      vec3 center,
-                      float radius);
+MeshPtr NewSphereMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
+                      int subdivisions, vec3 center, float radius);
 
 }  // namespace escher
 

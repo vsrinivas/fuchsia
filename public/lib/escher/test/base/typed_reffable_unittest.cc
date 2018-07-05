@@ -73,18 +73,14 @@ class SubSubSubTwo : public SubSubTwo {
 const TestTypeInfo Base::kTypeInfo("Base");
 const TestTypeInfo One::kTypeInfo("One", TestTypes::kOne);
 const TestTypeInfo Two::kTypeInfo("Two", TestTypes::kTwo);
-const TestTypeInfo SubOne::kTypeInfo("SubOne",
-                                     TestTypes::kOne,
+const TestTypeInfo SubOne::kTypeInfo("SubOne", TestTypes::kOne,
                                      TestTypes::kSubOne);
-const TestTypeInfo SubTwo::kTypeInfo("SubTwo",
-                                     TestTypes::kTwo,
+const TestTypeInfo SubTwo::kTypeInfo("SubTwo", TestTypes::kTwo,
                                      TestTypes::kSubTwo);
-const TestTypeInfo SubSubTwo::kTypeInfo("SubSubTwo",
-                                        TestTypes::kTwo,
+const TestTypeInfo SubSubTwo::kTypeInfo("SubSubTwo", TestTypes::kTwo,
                                         TestTypes::kSubTwo,
                                         TestTypes::kSubSubTwo);
-const TestTypeInfo SubSubSubTwo::kTypeInfo("SubSubSubTwo",
-                                           TestTypes::kTwo,
+const TestTypeInfo SubSubSubTwo::kTypeInfo("SubSubSubTwo", TestTypes::kTwo,
                                            TestTypes::kSubTwo,
                                            TestTypes::kSubSubTwo,
                                            TestTypes::kSubSubSubTwo);

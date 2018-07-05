@@ -35,12 +35,8 @@ Quad Quad::CreateFillClipSpace(float z) {
   return CreateFromRect(vec2(-1.0f, 1.0f), vec2(2.0f, -2.0f), z);
 }
 
-const unsigned short* Quad::GetIndices() {
-  return g_indices;
-}
+const unsigned short* Quad::GetIndices() { return g_indices; }
 
-int Quad::GetIndexCount() {
-  return arraysize(g_indices);
-}
+int Quad::GetIndexCount() { return arraysize(g_indices); }
 
 }  // namespace escher

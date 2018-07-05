@@ -30,8 +30,7 @@ class Camera {
 
   // Create a camera with a perspective projection.
   static Camera NewPerspective(const ViewingVolume& volume,
-                               const mat4& transform,
-                               float fovy);
+                               const mat4& transform, float fovy);
 
   const mat4& transform() const { return transform_; }
   const mat4& projection() const { return projection_; }

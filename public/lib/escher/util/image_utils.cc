@@ -86,10 +86,9 @@ vk::ImageAspectFlags FormatToColorOrDepthStencilAspectFlags(vk::Format format) {
 
   if (is_depth) {
     // Maybe also stencil?
-    return is_stencil
-               ? vk::ImageAspectFlagBits::eDepth |
-                     vk::ImageAspectFlagBits::eStencil
-               : vk::ImageAspectFlagBits::eDepth;
+    return is_stencil ? vk::ImageAspectFlagBits::eDepth |
+                            vk::ImageAspectFlagBits::eStencil
+                      : vk::ImageAspectFlagBits::eDepth;
   } else if (is_stencil) {
     // Only stencil, not depth.
     return vk::ImageAspectFlagBits::eStencil;

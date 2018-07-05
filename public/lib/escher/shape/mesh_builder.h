@@ -59,10 +59,8 @@ class MeshBuilder : public fxl::RefCountedThreadSafe<MeshBuilder> {
   }
 
  protected:
-  MeshBuilder(size_t max_vertex_count,
-              size_t max_index_count,
-              size_t vertex_stride,
-              uint8_t* vertex_staging_buffer,
+  MeshBuilder(size_t max_vertex_count, size_t max_index_count,
+              size_t vertex_stride, uint8_t* vertex_staging_buffer,
               uint32_t* index_staging_buffer);
   FRIEND_REF_COUNTED_THREAD_SAFE(MeshBuilder);
   virtual ~MeshBuilder();

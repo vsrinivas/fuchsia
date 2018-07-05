@@ -22,13 +22,9 @@ struct VulkanContext {
   const vk::Queue transfer_queue;
   const uint32_t transfer_queue_family_index;
 
-  VulkanContext(vk::Instance instance,
-                vk::PhysicalDevice physical_device,
-                vk::Device device,
-                vk::Queue queue,
-                uint32_t queue_family_index,
-                vk::Queue transfer_queue,
-                uint32_t transfer_queue_family_index)
+  VulkanContext(vk::Instance instance, vk::PhysicalDevice physical_device,
+                vk::Device device, vk::Queue queue, uint32_t queue_family_index,
+                vk::Queue transfer_queue, uint32_t transfer_queue_family_index)
       : instance(instance),
         physical_device(physical_device),
         device(device),

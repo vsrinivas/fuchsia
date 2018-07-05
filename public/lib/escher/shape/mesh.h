@@ -21,13 +21,9 @@ class Mesh : public WaitableResource {
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
-  Mesh(ResourceRecycler* resource_recycler,
-       MeshSpec spec,
-       BoundingBox bounding_box,
-       uint32_t num_vertices,
-       uint32_t num_indices,
-       BufferPtr vertex_buffer,
-       BufferPtr index_buffer,
+  Mesh(ResourceRecycler* resource_recycler, MeshSpec spec,
+       BoundingBox bounding_box, uint32_t num_vertices, uint32_t num_indices,
+       BufferPtr vertex_buffer, BufferPtr index_buffer,
        vk::DeviceSize vertex_buffer_offset = 0,
        vk::DeviceSize index_buffer_offset = 0);
 

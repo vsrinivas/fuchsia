@@ -34,8 +34,7 @@ class ModelPipelineCache : public Resource {
   // index within it in order to create a pipeline (as opposed to e.g. Metal,
   // which only requires attachment descriptions).  It somehow feels janky to
   // pass these to the ModelPipelineCache constructor, but what else can we do?
-  ModelPipelineCache(ResourceRecycler* recycler,
-                     ModelDataPtr model_data,
+  ModelPipelineCache(ResourceRecycler* recycler, ModelDataPtr model_data,
                      ModelRenderPass* render_pass);
   ~ModelPipelineCache();
 

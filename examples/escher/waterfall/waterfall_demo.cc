@@ -209,8 +209,9 @@ static escher::Camera GenerateCamera(int camera_projection_mode,
 
     case 1:
       return escher::Camera::NewPerspective(
-          volume, glm::translate(
-                      vec3(-volume.width() / 2, -volume.height() / 2, -10000)),
+          volume,
+          glm::translate(
+              vec3(-volume.width() / 2, -volume.height() / 2, -10000)),
           glm::radians(8.f));
     case 2: {
       vec3 eye(volume.width() / 3, 6000, 3000);

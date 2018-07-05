@@ -18,8 +18,7 @@ class MomentShadowMap final : public ShadowMap {
   const TypeInfo& type_info() const override { return kTypeInfo; }
 
  protected:
-  MomentShadowMap(const ImagePtr& image,
-                  const mat4& matrix,
+  MomentShadowMap(const ImagePtr& image, const mat4& matrix,
                   const vec3& light_color);
 
  private:

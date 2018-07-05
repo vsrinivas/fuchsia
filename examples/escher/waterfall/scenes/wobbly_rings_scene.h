@@ -14,20 +14,15 @@ using escher::vec3;
 
 class WobblyRingsScene : public Scene {
  public:
-  WobblyRingsScene(Demo* demo,
-                   vec3 clear_color,
-                   vec3 ring1_color,
-                   vec3 ring2_color,
-                   vec3 ring3_color,
-                   vec3 circle_color,
+  WobblyRingsScene(Demo* demo, vec3 clear_color, vec3 ring1_color,
+                   vec3 ring2_color, vec3 ring3_color, vec3 circle_color,
                    vec3 checkerboard_color);
   ~WobblyRingsScene();
 
   void Init(escher::Stage* stage) override;
 
   escher::Model* Update(const escher::Stopwatch& stopwatch,
-                        uint64_t frame_count,
-                        escher::Stage* stage) override;
+                        uint64_t frame_count, escher::Stage* stage) override;
 
  private:
   std::unique_ptr<escher::Model> model_;

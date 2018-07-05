@@ -26,10 +26,8 @@ GlslToSpirvCompiler::~GlslToSpirvCompiler() {
 }
 
 std::future<SpirvData> GlslToSpirvCompiler::Compile(
-    vk::ShaderStageFlagBits stage,
-    std::vector<std::string> source_code,
-    std::string preamble,
-    std::string entry_point) {
+    vk::ShaderStageFlagBits stage, std::vector<std::string> source_code,
+    std::string preamble, std::string entry_point) {
   // Count will be decremented by SynchronousCompile.
   ++active_compile_count_;
 #if !defined(ESCHER_DISABLE_BACKGROUND_COMPILATION)
@@ -45,10 +43,8 @@ std::future<SpirvData> GlslToSpirvCompiler::Compile(
 }
 
 SpirvData GlslToSpirvCompiler::SynchronousCompile(
-    vk::ShaderStageFlagBits stage,
-    std::vector<std::string> source_code,
-    std::string preamble,
-    std::string entry_point) {
+    vk::ShaderStageFlagBits stage, std::vector<std::string> source_code,
+    std::string preamble, std::string entry_point) {
   TRACE_DURATION("gfx", "escher::GlslToSpirvCompiler::SynchronousCompile");
 
   // SynchronousCompileImpl has many return points; wrap it so that we don't
@@ -64,10 +60,8 @@ SpirvData GlslToSpirvCompiler::SynchronousCompile(
 // SynchronousCompileImpl has many return points; wrap it so that we don't
 // forget to --active_compile_count_ at one of them.
 SpirvData GlslToSpirvCompiler::SynchronousCompileImpl(
-    vk::ShaderStageFlagBits stage_in,
-    std::vector<std::string> source_code,
-    std::string preamble,
-    std::string entry_point) {
+    vk::ShaderStageFlagBits stage_in, std::vector<std::string> source_code,
+    std::string preamble, std::string entry_point) {
   EShLanguage stage;
   switch (stage_in) {
     case vk::ShaderStageFlagBits::eVertex:

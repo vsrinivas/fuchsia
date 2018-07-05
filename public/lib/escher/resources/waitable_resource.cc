@@ -7,8 +7,7 @@
 namespace escher {
 
 const ResourceTypeInfo WaitableResource::kTypeInfo(
-    "WaitableResource",
-    ResourceType::kResource,
+    "WaitableResource", ResourceType::kResource,
     ResourceType::kWaitableResource);
 
 WaitableResource::WaitableResource(ResourceManager* owner) : Resource(owner) {}

@@ -19,15 +19,13 @@ namespace {
 
 // Generates a unique frame count for each created frame.
 static uint64_t NextFrameNumber() {
-    static std::atomic<uint64_t> counter(0);
-    return ++counter;
+  static std::atomic<uint64_t> counter(0);
+  return ++counter;
 }
 
 }  // anonymous namespace
 
-Frame::Frame(Escher* escher,
-             uint64_t frame_number,
-             const char* trace_literal,
+Frame::Frame(Escher* escher, uint64_t frame_number, const char* trace_literal,
              bool enable_gpu_logging)
     : escher_(escher),
       frame_number_(frame_number),

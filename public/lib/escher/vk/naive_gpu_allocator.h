@@ -26,8 +26,7 @@ class NaiveGpuAllocator : public GpuAllocator {
  private:
   // No-op, because NaiveGpuAllocator does not perform sub-allocation.  This
   // can only be called if a client manually sub-allocates from the allocation.
-  void OnSuballocationDestroyed(GpuMem* slab,
-                                vk::DeviceSize size,
+  void OnSuballocationDestroyed(GpuMem* slab, vk::DeviceSize size,
                                 vk::DeviceSize offset) override;
 };
 

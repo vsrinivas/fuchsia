@@ -23,17 +23,14 @@ class GpuMem : public fxl::RefCountedThreadSafe<GpuMem> {
  public:
   // Create a GpuMem that wraps a newly-allocated vk::DeviceMemory, which will
   // be destroyed when the GpuMem dies.
-  static GpuMemPtr New(vk::Device device,
-                       vk::PhysicalDevice physical_device,
+  static GpuMemPtr New(vk::Device device, vk::PhysicalDevice physical_device,
                        vk::MemoryRequirements reqs,
                        vk::MemoryPropertyFlags flags);
 
   // Create a GpuMem that takes ownership of |mem|, which will be destroyed hen
   // the GpuMem dies. Guaranteed to return non-null result.
-  static GpuMemPtr New(vk::Device device,
-                       vk::DeviceMemory mem,
-                       vk::DeviceSize size,
-                       uint32_t memory_type_index);
+  static GpuMemPtr New(vk::Device device, vk::DeviceMemory mem,
+                       vk::DeviceSize size, uint32_t memory_type_index);
 
   // Sub-allocate a GpuMem that represents a sub-range of the memory in this
   // GpuMem.  Since these sub-allocations reference the parent GpuMem, the
@@ -51,9 +48,7 @@ class GpuMem : public fxl::RefCountedThreadSafe<GpuMem> {
  protected:
   // |offset| + |size| must be <= the size of |base|.  Takes ownership of
   // |base|.
-  GpuMem(vk::DeviceMemory base,
-         vk::DeviceSize size,
-         vk::DeviceSize offset,
+  GpuMem(vk::DeviceMemory base, vk::DeviceSize size, vk::DeviceSize offset,
          uint8_t* mapped_ptr);
 
   FRIEND_REF_COUNTED_THREAD_SAFE(GpuMem);

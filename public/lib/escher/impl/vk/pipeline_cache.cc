@@ -12,8 +12,7 @@ PipelineCache::PipelineCache() {}
 PipelineCache::~PipelineCache() {}
 
 std::shared_future<PipelinePtr> PipelineCache::GetPipeline(
-    const PipelineSpec& spec,
-    const PipelineFactoryPtr& factory) {
+    const PipelineSpec& spec, const PipelineFactoryPtr& factory) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto it = map_.find(spec);
   if (it != map_.end()) {

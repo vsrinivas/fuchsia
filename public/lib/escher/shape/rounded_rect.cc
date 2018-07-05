@@ -38,10 +38,8 @@ struct PosUvVertex {
 
 }  // anonymous namespace
 
-RoundedRectSpec::RoundedRectSpec(float width,
-                                 float height,
-                                 float top_left_radius,
-                                 float top_right_radius,
+RoundedRectSpec::RoundedRectSpec(float width, float height,
+                                 float top_left_radius, float top_right_radius,
                                  float bottom_right_radius,
                                  float bottom_left_radius)
     : width(width),
@@ -60,8 +58,7 @@ std::pair<uint32_t, uint32_t> GetRoundedRectMeshVertexAndIndexCounts(
 
 // See escher/shape/doc/RoundedRectTessellation.JPG.
 void GenerateRoundedRectIndices(const RoundedRectSpec& spec,
-                                const MeshSpec& mesh_spec,
-                                void* indices_out,
+                                const MeshSpec& mesh_spec, void* indices_out,
                                 uint32_t max_bytes) {
   FXL_DCHECK(max_bytes == kIndexCount * sizeof(uint32_t));
   uint32_t* indices = static_cast<uint32_t*>(indices_out);
@@ -150,8 +147,7 @@ void GenerateRoundedRectIndices(const RoundedRectSpec& spec,
 }
 
 void GenerateRoundedRectVertices(const RoundedRectSpec& spec,
-                                 const MeshSpec& mesh_spec,
-                                 void* vertices_out,
+                                 const MeshSpec& mesh_spec, void* vertices_out,
                                  uint32_t max_bytes) {
   const float width = spec.width;
   const float height = spec.height;
