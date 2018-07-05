@@ -52,6 +52,7 @@ class PageSyncImpl : public PageSync, public storage::PageSyncDelegate {
       storage::ObjectIdentifier object_identifier,
       fit::function<void(storage::Status status,
                          storage::ChangeSource change_source,
+                         storage::IsObjectSynced is_object_synced,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback) override;
 

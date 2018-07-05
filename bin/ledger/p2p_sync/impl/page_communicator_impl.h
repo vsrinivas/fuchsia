@@ -58,6 +58,7 @@ class PageCommunicatorImpl : public PageCommunicator,
   void GetObject(
       storage::ObjectIdentifier object_identifier,
       fit::function<void(storage::Status, storage::ChangeSource,
+                         storage::IsObjectSynced,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback) override;
 

@@ -46,12 +46,12 @@ namespace storage {
 class PageStorageImplAccessorForTest {
  public:
   static void AddPiece(const std::unique_ptr<PageStorageImpl>& storage,
-                       ObjectIdentifier object_identifier,
+                       ObjectIdentifier object_identifier, ChangeSource source,
+                       IsObjectSynced is_object_synced,
                        std::unique_ptr<DataSource::DataChunk> chunk,
-                       ChangeSource source,
                        fit::function<void(Status)> callback) {
-    storage->AddPiece(std::move(object_identifier), std::move(chunk), source,
-                      std::move(callback));
+    storage->AddPiece(std::move(object_identifier), source, is_object_synced,
+                      std::move(chunk), std::move(callback));
   }
 
   static PageDb& GetDb(const std::unique_ptr<PageStorageImpl>& storage) {
@@ -114,13 +114,13 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
   }
 
   void GetObject(ObjectIdentifier object_identifier,
-                 fit::function<void(Status, ChangeSource,
+                 fit::function<void(Status, ChangeSource, IsObjectSynced,
                                     std::unique_ptr<DataSource::DataChunk>)>
                      callback) override {
     std::string& value = digest_to_value_[object_identifier];
     object_requests.insert(std::move(object_identifier));
     on_get_object_([callback = std::move(callback), value] {
-      callback(Status::OK, ChangeSource::CLOUD,
+      callback(Status::OK, ChangeSource::CLOUD, IsObjectSynced::YES,
                DataSource::DataChunk::Create(value));
     });
   }
@@ -1151,7 +1151,8 @@ TEST_F(PageStorageTest, AddLocalPiece) {
     bool called;
     Status status;
     PageStorageImplAccessorForTest::AddPiece(
-        storage_, data.object_identifier, data.ToChunk(), ChangeSource::LOCAL,
+        storage_, data.object_identifier, ChangeSource::LOCAL,
+        IsObjectSynced::NO, data.ToChunk(),
         callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
@@ -1174,7 +1175,8 @@ TEST_F(PageStorageTest, AddSyncPiece) {
     bool called;
     Status status;
     PageStorageImplAccessorForTest::AddPiece(
-        storage_, data.object_identifier, data.ToChunk(), ChangeSource::CLOUD,
+        storage_, data.object_identifier, ChangeSource::CLOUD,
+        IsObjectSynced::YES, data.ToChunk(),
         callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
@@ -1187,6 +1189,30 @@ TEST_F(PageStorageTest, AddSyncPiece) {
     EXPECT_EQ(data.value, content);
     EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, false));
     EXPECT_TRUE(IsPieceSynced(data.object_identifier, true));
+  });
+}
+
+TEST_F(PageStorageTest, AddP2PPiece) {
+  RunInCoroutine([this](CoroutineHandler* handler) {
+    ObjectData data("Some data", InlineBehavior::PREVENT);
+
+    bool called;
+    Status status;
+    PageStorageImplAccessorForTest::AddPiece(
+        storage_, data.object_identifier, ChangeSource::P2P, IsObjectSynced::NO,
+        data.ToChunk(),
+        callback::Capture(callback::SetWhenCalled(&called), &status));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(Status::OK, status);
+
+    std::unique_ptr<const Object> object;
+    ASSERT_EQ(Status::OK, ReadObject(handler, data.object_identifier, &object));
+    fxl::StringView content;
+    ASSERT_EQ(Status::OK, object->GetData(&content));
+    EXPECT_EQ(data.value, content);
+    EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, false));
+    EXPECT_TRUE(IsPieceSynced(data.object_identifier, false));
   });
 }
 

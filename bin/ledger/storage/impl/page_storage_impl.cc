@@ -394,8 +394,8 @@ void PageStorageImpl::AddObjectFromLocal(
 
           if (GetObjectDigestType(identifier.object_digest) !=
               ObjectDigestType::INLINE) {
-            AddPiece(identifier, std::move(chunk), ChangeSource::LOCAL,
-                     waiter->NewCallback());
+            AddPiece(identifier, ChangeSource::LOCAL, IsObjectSynced::NO,
+                     std::move(chunk), waiter->NewCallback());
           }
           return identifier;
         }
@@ -745,17 +745,19 @@ bool PageStorageImpl::IsFirstCommit(CommitIdView id) {
 }
 
 void PageStorageImpl::AddPiece(ObjectIdentifier object_identifier,
-                               std::unique_ptr<DataSource::DataChunk> data,
                                ChangeSource source,
+                               IsObjectSynced is_object_synced,
+                               std::unique_ptr<DataSource::DataChunk> data,
                                fit::function<void(Status)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, object_identifier = std::move(object_identifier),
-       data = std::move(data),
-       source](CoroutineHandler* handler,
-               fit::function<void(Status)> callback) mutable {
+       data = std::move(data), source,
+       is_object_synced](CoroutineHandler* handler,
+                         fit::function<void(Status)> callback) mutable {
         callback(SynchronousAddPiece(handler, std::move(object_identifier),
-                                     std::move(data), source));
+                                     source, is_object_synced,
+                                     std::move(data)));
       });
 }
 
@@ -772,27 +774,24 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
           fit::function<void(Status)> callback) mutable {
         Status status;
         ChangeSource source;
+        IsObjectSynced is_object_synced;
         std::unique_ptr<DataSource::DataChunk> chunk;
 
         if (coroutine::SyncCall(
                 handler,
                 [this, object_identifier](
-                    fit::function<void(Status, ChangeSource,
+                    fit::function<void(Status, ChangeSource, IsObjectSynced,
                                        std::unique_ptr<DataSource::DataChunk>)>
                         callback) mutable {
                   page_sync_->GetObject(std::move(object_identifier),
                                         std::move(callback));
                 },
-                &status, &source,
+                &status, &source, &is_object_synced,
                 &chunk) == coroutine::ContinuationStatus::INTERRUPTED) {
           callback(Status::INTERRUPTED);
           return;
         }
 
-        if (status != Status::OK) {
-          callback(status);
-          return;
-        }
         if (status != Status::OK) {
           callback(status);
           return;
@@ -811,7 +810,8 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
 
         if (object_digest_type == ObjectDigestType::VALUE_HASH) {
           callback(SynchronousAddPiece(handler, std::move(object_identifier),
-                                       std::move(chunk), source));
+                                       source, is_object_synced,
+                                       std::move(chunk)));
           return;
         }
 
@@ -847,7 +847,8 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
         }
 
         callback(SynchronousAddPiece(handler, std::move(object_identifier),
-                                     std::move(chunk), source));
+                                     source, is_object_synced,
+                                     std::move(chunk)));
       });
 }
 
@@ -1352,7 +1353,8 @@ Status PageStorageImpl::SynchronousAddCommits(
 
 Status PageStorageImpl::SynchronousAddPiece(
     CoroutineHandler* handler, ObjectIdentifier object_identifier,
-    std::unique_ptr<DataSource::DataChunk> data, ChangeSource source) {
+    ChangeSource source, IsObjectSynced is_object_synced,
+    std::unique_ptr<DataSource::DataChunk> data) {
   FXL_DCHECK(GetObjectDigestType(object_identifier.object_digest) !=
              ObjectDigestType::INLINE);
   FXL_DCHECK(object_identifier.object_digest ==
@@ -1363,9 +1365,17 @@ Status PageStorageImpl::SynchronousAddPiece(
   std::unique_ptr<const Object> object;
   Status status = db_->ReadObject(handler, object_identifier, &object);
   if (status == Status::NOT_FOUND) {
-    PageDbObjectStatus object_status =
-        (source == ChangeSource::LOCAL ? PageDbObjectStatus::TRANSIENT
-                                       : PageDbObjectStatus::SYNCED);
+    PageDbObjectStatus object_status;
+    switch (is_object_synced) {
+      case IsObjectSynced::NO:
+        object_status =
+            (source == ChangeSource::LOCAL ? PageDbObjectStatus::TRANSIENT
+                                           : PageDbObjectStatus::LOCAL);
+        break;
+      case IsObjectSynced::YES:
+        object_status = PageDbObjectStatus::SYNCED;
+        break;
+    }
     return db_->WriteObject(handler, object_identifier, std::move(data),
                             object_status);
   }

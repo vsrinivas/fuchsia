@@ -158,9 +158,10 @@ class PageStorageImpl : public PageStorage {
   // Adds the given synced object. |object_identifier| will be validated against
   // the expected one based on the |data| and an |OBJECT_DIGEST_MISSMATCH| error
   // will be returned in case of missmatch.
-  void AddPiece(ObjectIdentifier object_identifier,
+  void AddPiece(ObjectIdentifier object_identifier, ChangeSource source,
+                IsObjectSynced is_object_synced,
                 std::unique_ptr<DataSource::DataChunk> data,
-                ChangeSource source, fit::function<void(Status)> callback);
+                fit::function<void(Status)> callback);
 
   // Download all the chunks of the object with the given id.
   void DownloadFullObject(ObjectIdentifier object_identifier,
@@ -209,7 +210,8 @@ class PageStorageImpl : public PageStorage {
 
   FXL_WARN_UNUSED_RESULT Status SynchronousAddPiece(
       coroutine::CoroutineHandler* handler, ObjectIdentifier object_identifier,
-      std::unique_ptr<DataSource::DataChunk> data, ChangeSource source);
+      ChangeSource source, IsObjectSynced is_object_synced,
+      std::unique_ptr<DataSource::DataChunk> data);
 
   async_dispatcher_t* const dispatcher_;
   coroutine::CoroutineService* const coroutine_service_;

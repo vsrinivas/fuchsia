@@ -75,6 +75,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
   void GetObject(
       storage::ObjectIdentifier object_identifier,
       fit::function<void(storage::Status, storage::ChangeSource,
+                         storage::IsObjectSynced,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback) override;
 
@@ -82,6 +83,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
       storage::ObjectIdentifier object_identifier,
       std::unique_ptr<storage::DataSource> content,
       fit::function<void(storage::Status, storage::ChangeSource,
+                         storage::IsObjectSynced,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback);
 
@@ -89,6 +91,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
       storage::ObjectIdentifier object_identifier, bool is_permanent,
       const char error_name[],
       fit::function<void(storage::Status, storage::ChangeSource,
+                         storage::IsObjectSynced,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback);
 

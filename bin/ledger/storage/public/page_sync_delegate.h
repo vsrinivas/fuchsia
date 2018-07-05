@@ -26,6 +26,7 @@ class PageSyncDelegate {
   virtual void GetObject(
       ObjectIdentifier object_identifier,
       fit::function<void(Status status, ChangeSource source,
+                         IsObjectSynced is_object_synced,
                          std::unique_ptr<DataSource::DataChunk>)>
           callback) = 0;
 

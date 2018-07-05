@@ -27,6 +27,7 @@ class SyncProviderHolderBase : public storage::PageSyncClient,
       storage::ObjectIdentifier object_identifier,
       fit::function<void(storage::Status status,
                          storage::ChangeSource change_source,
+                         storage::IsObjectSynced is_object_synced,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback) override;
 
@@ -47,6 +48,7 @@ void SyncProviderHolderBase::GetObject(
     storage::ObjectIdentifier object_identifier,
     fit::function<void(storage::Status status,
                        storage::ChangeSource change_source,
+                       storage::IsObjectSynced is_object_synced,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
   page_sync_delegate_->GetObject(std::move(object_identifier),
@@ -182,6 +184,7 @@ void PageSyncImpl::SetSyncWatcher(SyncStateWatcher* watcher) {
 void PageSyncImpl::GetObject(
     storage::ObjectIdentifier object_identifier,
     fit::function<void(storage::Status, storage::ChangeSource,
+                       storage::IsObjectSynced is_object_synced,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
   // AnyWaiter returns the first successful value to its Finalize callback. For
@@ -190,18 +193,20 @@ void PageSyncImpl::GetObject(
   // the P2P-returned value immediately.
   auto waiter = fxl::MakeRefCounted<callback::AnyWaiter<
       storage::Status,
-      std::pair<storage::ChangeSource,
-                std::unique_ptr<storage::DataSource::DataChunk>>>>(
+      std::tuple<storage::ChangeSource, storage::IsObjectSynced,
+                 std::unique_ptr<storage::DataSource::DataChunk>>>>(
       storage::Status::OK, storage::Status::NOT_FOUND,
-      std::pair<storage::ChangeSource,
-                std::unique_ptr<storage::DataSource::DataChunk>>());
+      std::tuple<storage::ChangeSource, storage::IsObjectSynced,
+                 std::unique_ptr<storage::DataSource::DataChunk>>());
   if (cloud_sync_) {
     cloud_sync_->GetObject(
         object_identifier,
         [callback = waiter->NewCallback()](
             storage::Status status, storage::ChangeSource source,
+            storage::IsObjectSynced is_object_synced,
             std::unique_ptr<storage::DataSource::DataChunk> data) {
-          callback(status, std::make_pair(source, std::move(data)));
+          callback(status,
+                   std::make_tuple(source, is_object_synced, std::move(data)));
         });
   }
   if (p2p_sync_) {
@@ -209,16 +214,21 @@ void PageSyncImpl::GetObject(
         std::move(object_identifier),
         [callback = waiter->NewCallback()](
             storage::Status status, storage::ChangeSource source,
+            storage::IsObjectSynced is_object_synced,
             std::unique_ptr<storage::DataSource::DataChunk> data) {
-          callback(status, std::make_pair(source, std::move(data)));
+          callback(status,
+                   std::make_tuple(source, is_object_synced, std::move(data)));
         });
   }
   waiter->Finalize(
       [callback = std::move(callback)](
           storage::Status status,
-          std::pair<storage::ChangeSource,
-                    std::unique_ptr<storage::DataSource::DataChunk>>
-              pair) { callback(status, pair.first, std::move(pair.second)); });
+          std::tuple<storage::ChangeSource, storage::IsObjectSynced,
+                     std::unique_ptr<storage::DataSource::DataChunk>>
+              data) {
+        callback(status, std::get<0>(data), std::get<1>(data),
+                 std::move(std::get<2>(data)));
+      });
 }
 
 }  // namespace sync_coordinator

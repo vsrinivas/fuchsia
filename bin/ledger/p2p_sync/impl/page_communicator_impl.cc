@@ -30,6 +30,7 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
  public:
   explicit PendingObjectRequestHolder(
       fit::function<void(storage::Status, storage::ChangeSource,
+                         storage::IsObjectSynced,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback)
       : callback_(std::move(callback)) {}
@@ -54,7 +55,7 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
       }
       // All requests have returned and none is valid: return an error.
       callback_(storage::Status::NOT_FOUND, storage::ChangeSource::P2P,
-                nullptr);
+                storage::IsObjectSynced::NO, nullptr);
       if (on_empty_) {
         on_empty_();
       }
@@ -64,7 +65,16 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
     std::unique_ptr<storage::DataSource::DataChunk> chunk =
         storage::DataSource::DataChunk::Create(
             convert::ToString(object->data()->bytes()));
-    callback_(storage::Status::OK, storage::ChangeSource::P2P,
+    storage::IsObjectSynced is_object_synced;
+    switch (object->sync_status()) {
+      case ObjectSyncStatus_UNSYNCED:
+        is_object_synced = storage::IsObjectSynced::NO;
+        break;
+      case ObjectSyncStatus_SYNCED_TO_CLOUD:
+        is_object_synced = storage::IsObjectSynced::YES;
+        break;
+    }
+    callback_(storage::Status::OK, storage::ChangeSource::P2P, is_object_synced,
               std::move(chunk));
     if (on_empty_) {
       on_empty_();
@@ -72,9 +82,9 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
   }
 
  private:
-  fit::function<void(storage::Status, storage::ChangeSource,
-                     std::unique_ptr<storage::DataSource::DataChunk>)> const
-      callback_;
+  fit::function<void(
+      storage::Status, storage::ChangeSource, storage::IsObjectSynced,
+      std::unique_ptr<storage::DataSource::DataChunk>)> const callback_;
   // Set of devices for which we are waiting an answer.
   // We might be able to get rid of this list and just use a counter (or even
   // nothing at all) once we have a timeout on requests.
@@ -284,6 +294,7 @@ void PageCommunicatorImpl::OnNewResponse(fxl::StringView source,
 void PageCommunicatorImpl::GetObject(
     storage::ObjectIdentifier object_identifier,
     fit::function<void(storage::Status, storage::ChangeSource,
+                       storage::IsObjectSynced,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
   flatbuffers::FlatBufferBuilder buffer;

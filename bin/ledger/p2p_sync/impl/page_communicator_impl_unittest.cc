@@ -333,11 +333,12 @@ TEST_F(PageCommunicatorImplTest, GetObject) {
   bool called;
   storage::Status status;
   storage::ChangeSource source;
+  storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
   page_communicator.GetObject(
       storage::ObjectIdentifier{0, 0, "foo"},
       callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                        &data));
+                        &is_object_synced, &data));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 
@@ -499,11 +500,12 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
   bool called;
   storage::Status status;
   storage::ChangeSource source;
+  storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
   page_communicator.GetObject(
       storage::ObjectIdentifier{0, 0, "foo"},
       callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                        &data));
+                        &is_object_synced, &data));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 
@@ -528,6 +530,58 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
   EXPECT_TRUE(called);
   EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ("foo_data", data->Get());
+  EXPECT_EQ(storage::IsObjectSynced::NO, is_object_synced);
+}
+
+TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSynced) {
+  FakeDeviceMesh mesh;
+  FakePageStorage storage(dispatcher(), "page");
+  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage,
+                                         &storage, "ledger", "page", &mesh);
+  page_communicator.Start();
+
+  flatbuffers::FlatBufferBuilder buffer;
+  BuildWatchStartBuffer(&buffer, "ledger", "page");
+  MessageHolder<Message> new_device_message(convert::ToStringView(buffer),
+                                            &GetMessage);
+  page_communicator.OnNewRequest(
+      "device2",
+      new_device_message.TakeAndMap<Request>([](const Message* message) {
+        return static_cast<const Request*>(message->message());
+      }));
+
+  bool called;
+  storage::Status status;
+  storage::ChangeSource source;
+  storage::IsObjectSynced is_object_synced;
+  std::unique_ptr<storage::DataSource::DataChunk> data;
+  page_communicator.GetObject(
+      storage::ObjectIdentifier{0, 0, "foo"},
+      callback::Capture(callback::SetWhenCalled(&called), &status, &source,
+                        &is_object_synced, &data));
+  RunLoopUntilIdle();
+  EXPECT_FALSE(called);
+
+  ASSERT_EQ(1u, mesh.messages_.size());
+  EXPECT_EQ("device2", mesh.messages_[0].first);
+
+  flatbuffers::FlatBufferBuilder response_buffer;
+  BuildObjectResponseBuffer(
+      &response_buffer, "ledger", "page",
+      {std::make_tuple(storage::ObjectIdentifier{0, 0, "foo"}, "foo_data",
+                       true)});
+  MessageHolder<Message> response_message(
+      convert::ToStringView(response_buffer), &GetMessage);
+  page_communicator.OnNewResponse(
+      "device2",
+      response_message.TakeAndMap<Response>([](const Message* message) {
+        return static_cast<const Response*>(message->message());
+      }));
+
+  EXPECT_TRUE(called);
+  EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_EQ("foo_data", data->Get());
+  EXPECT_EQ(storage::IsObjectSynced::YES, is_object_synced);
 }
 
 TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
@@ -548,11 +602,12 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
   bool called;
   storage::Status status;
   storage::ChangeSource source;
+  storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
   page_communicator.GetObject(
       storage::ObjectIdentifier{0, 0, "foo"},
       callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                        &data));
+                        &is_object_synced, &data));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 
@@ -599,11 +654,12 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
   bool called;
   storage::Status status;
   storage::ChangeSource source;
+  storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
   page_communicator.GetObject(
       storage::ObjectIdentifier{0, 0, "foo"},
       callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                        &data));
+                        &is_object_synced, &data));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
   EXPECT_EQ(2u, mesh.messages_.size());
@@ -635,6 +691,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
   EXPECT_TRUE(called);
   EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ("foo_data", data->Get());
+  EXPECT_EQ(storage::ChangeSource::P2P, source);
+  EXPECT_EQ(storage::IsObjectSynced::NO, is_object_synced);
 }
 
 TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
@@ -660,11 +718,12 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
   bool called;
   storage::Status status;
   storage::ChangeSource source;
+  storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
   page_communicator.GetObject(
       storage::ObjectIdentifier{0, 0, "foo"},
       callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                        &data));
+                        &is_object_synced, &data));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
   EXPECT_EQ(2u, mesh.messages_.size());
@@ -795,23 +854,25 @@ TEST_F(PageCommunicatorImplTest, GetObjectDisconnect) {
   bool called1, called2, called3, called4;
   storage::Status status1, status2, status3, status4;
   storage::ChangeSource source1, source2, source3, source4;
+  storage::IsObjectSynced is_object_synced1, is_object_synced2,
+      is_object_synced3, is_object_synced4;
   std::unique_ptr<storage::DataSource::DataChunk> data1, data2, data3, data4;
   page_communicator.GetObject(
       storage::ObjectIdentifier{0, 0, "foo1"},
       callback::Capture(callback::SetWhenCalled(&called1), &status1, &source1,
-                        &data1));
+                        &is_object_synced1, &data1));
   page_communicator.GetObject(
       storage::ObjectIdentifier{0, 0, "foo2"},
       callback::Capture(callback::SetWhenCalled(&called2), &status2, &source2,
-                        &data2));
+                        &is_object_synced2, &data2));
   page_communicator.GetObject(
       storage::ObjectIdentifier{0, 0, "foo3"},
       callback::Capture(callback::SetWhenCalled(&called3), &status3, &source3,
-                        &data3));
+                        &is_object_synced3, &data3));
   page_communicator.GetObject(
       storage::ObjectIdentifier{0, 0, "foo4"},
       callback::Capture(callback::SetWhenCalled(&called4), &status4, &source4,
-                        &data4));
+                        &is_object_synced4, &data4));
   RunLoopUntilIdle();
   EXPECT_FALSE(called1);
   EXPECT_FALSE(called2);
