@@ -14,6 +14,7 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <fuchsia/net/c/fidl.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
@@ -25,6 +26,10 @@
 
 #include "private.h"
 #include "unistd.h"
+
+#ifndef FIDL_SOCKET_PROVIDER
+#define FIDL_SOCKET_PROVIDER 0
+#endif
 
 zx_status_t zxsio_open(fdio_t** io, zx_handle_t svc, const char* name);
 zx_status_t zxsio_accept(fdio_t* io, zx_handle_t* s2);
@@ -84,10 +89,17 @@ static zx_status_t get_dns(zx_handle_t* out) {
     return get_service_with_retries("/svc/dns.DNS", &saved, &lock, out);
 }
 
+static zx_status_t get_socket_provider(zx_handle_t* out) {
+    static zx_handle_t saved = ZX_HANDLE_INVALID;
+    static mtx_t lock = MTX_INIT;
+    return get_service_with_retries("/svc/fuchsia.net.LegacySocketProvider", &saved, &lock, out);
+}
+
 int socket(int domain, int type, int protocol) {
     fdio_t* io = NULL;
     zx_status_t r;
 
+#if !FIDL_SOCKET_PROVIDER
     // SOCK_NONBLOCK and SOCK_CLOEXEC in type are handled locally rather than
     // remotely so do not include them in path.
     char path[1024];
@@ -104,6 +116,50 @@ int socket(int domain, int type, int protocol) {
     if ((r = zxsio_open(&io, svc, path)) != ZX_OK) {
         return ERROR(r);
     }
+
+#else  // FIDL_SOCKET_PROVIDER
+
+    zx_handle_t sp;
+    r = get_socket_provider(&sp);
+    if (r != ZX_OK) {
+        return ERRNO(EIO);
+    }
+
+    fuchsia_net_LegacySocketProviderOpenSocketRequest req;
+    memset(&req, 0, sizeof(req));
+    req.hdr.ordinal = fuchsia_net_LegacySocketProviderOpenSocketOrdinal;
+    req.domain = domain;
+    req.type = type & ~(SOCK_NONBLOCK|SOCK_CLOEXEC);
+    req.protocol = protocol;
+
+    fuchsia_net_LegacySocketProviderOpenSocketResponse resp;
+    memset(&resp, 0, sizeof(resp));
+
+    zx_channel_call_args_t args;
+    args.wr_bytes = &req;
+    args.wr_handles = NULL;
+    args.rd_bytes = &resp;
+    args.rd_handles = &resp.s;
+    args.wr_num_bytes = sizeof(req);
+    args.wr_num_handles = 0;
+    args.rd_num_bytes = sizeof(resp);
+    args.rd_num_handles = 1;
+
+    uint32_t actual_bytes = 0;
+    uint32_t actual_handles = 0;
+
+    r = zx_channel_call(sp, 0, ZX_TIME_INFINITE, &args,
+                        &actual_bytes, &actual_handles);
+    if (r != ZX_OK) {
+        return ERRNO(EIO);
+    }
+    io = fdio_socket_create(resp.s, 0);
+#endif
+
+    if (io == NULL) {
+        return ERRNO(EIO);
+    }
+
     if (type & SOCK_STREAM) {
         fdio_socket_set_stream_ops(io);
     } else if (type & SOCK_DGRAM) {
