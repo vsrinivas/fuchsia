@@ -110,13 +110,13 @@ Status PageUsageDb::MarkPageClosed(coroutine::CoroutineHandler* handler,
                                    fxl::StringView legder_name,
                                    storage::PageIdView page_id) {
   FXL_DCHECK(page_id.size() == kPageIdSize);
-  zx::time now = zx::clock::get(ZX_CLOCK_UTC);
+  zx::time_utc now = zx::clock::get<ZX_CLOCK_UTC>();
   return Put(handler, GetKeyForOpenedPage(legder_name, page_id),
              storage::SerializeNumber(now.get()));
 }
 
 Status PageUsageDb::MarkAllPagesClosed(coroutine::CoroutineHandler* handler) {
-  zx::time now = zx::clock::get(ZX_CLOCK_UTC);
+  zx::time_utc now = zx::clock::get<ZX_CLOCK_UTC>();
 
   std::unique_ptr<storage::Iterator<const std::pair<
       convert::ExtendedStringView, convert::ExtendedStringView>>>
