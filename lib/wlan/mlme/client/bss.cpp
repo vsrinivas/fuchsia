@@ -73,7 +73,7 @@ void Bss::Renew(const Beacon& beacon, const wlan_rx_info_t* rx_info) {
     timestamp_ = beacon.timestamp;
 
     // TODO(porce): Take a deep look. Which resolution do we want to track?
-    ts_refreshed_ = zx::clock::get<ZX_CLOCK_UTC>();
+    if (zx::clock::get(&ts_refreshed_) != ZX_OK) { ts_refreshed_ = zx::time_utc(); }
 
     // Radio statistics.
     if (rx_info == nullptr) return;

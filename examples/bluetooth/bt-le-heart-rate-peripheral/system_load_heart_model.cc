@@ -52,7 +52,7 @@ SystemLoadHeartModel::SystemLoadHeartModel()
     : root_resource_(GetRootResource()),
       cpu_stats_(ReadCpuCount(root_resource_)),
       last_cpu_stats_(cpu_stats_.size()),
-      last_read_time_(zx::clock::get<ZX_CLOCK_MONOTONIC>()) {
+      last_read_time_(zx::clock::get_monotonic()) {
   FXL_DCHECK(root_resource_);
   FXL_DCHECK(!cpu_stats_.empty());
 
@@ -64,7 +64,7 @@ bool SystemLoadHeartModel::ReadMeasurement(Measurement* measurement) {
   if (!ReadCpuStats())
     return false;
 
-  const zx::time read_time = zx::clock::get<ZX_CLOCK_MONOTONIC>();
+  const zx::time read_time = zx::clock::get_monotonic();
   zx::duration idle_sum;
   for (size_t i = 0; i < cpu_stats_.size(); i++) {
     idle_sum +=

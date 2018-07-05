@@ -22,7 +22,7 @@ class SystemClock : public Clock {
    public:
     SystemClock() {}
 
-    zx::time Now() const override { return zx::clock::get<ZX_CLOCK_MONOTONIC>(); }
+    zx::time Now() const override { return zx::clock::get_monotonic(); }
 };
 
 class TestClock : public Clock {

@@ -29,7 +29,7 @@ VK_TEST_F(PoseBufferTest, Validation) {
   zx_status_t status = zx::vmo::create(vmo_size, 0u, &vmo);
   ASSERT_EQ(ZX_OK, status);
 
-  uint64_t base_time = zx::clock::get<ZX_CLOCK_MONOTONIC>().get();
+  uint64_t base_time = zx::clock::get_monotonic().get();
   uint64_t time_interval = 1024 * 1024;  // 1 ms
   uint32_t num_entries = 1;
 

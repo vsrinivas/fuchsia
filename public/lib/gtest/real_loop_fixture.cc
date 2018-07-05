@@ -45,7 +45,7 @@ bool RunGivenLoopWithTimeoutOrUntil(async::Loop* loop,
   const zx::time deadline = (timeout == zx::sec(0))
                                 ? zx::time::infinite()
                                 : zx::deadline_after(timeout);
-  while (zx::clock::get<ZX_CLOCK_MONOTONIC>() < deadline) {
+  while (zx::clock::get_monotonic() < deadline) {
     if (condition()) {
       return true;
     }
