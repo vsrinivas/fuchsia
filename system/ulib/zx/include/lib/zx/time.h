@@ -197,7 +197,18 @@ private:
     zx_time_t value_ = 0;
 };
 
+template <uint32_t kClockId>
+using base_time = zx::time;
+
+using time_utc = zx::time;
+using time_thread = zx::time;
+
 namespace clock {
+
+template <uint32_t kClockId>
+static inline base_time<kClockId> get() {
+  return base_time<kClockId>(zx_clock_get(kClockId));
+}
 
 static inline time get(zx_clock_t clock_id) {
     return time(zx_clock_get(clock_id));

@@ -201,7 +201,7 @@ int TestDevice::WakeThread(void* arg) {
     ssize_t res;
     do {
         zx::nanosleep(zx::deadline_after(zx::msec(100)));
-        if (device->wake_deadline_ < zx::clock::get(ZX_CLOCK_MONOTONIC)) {
+        if (device->wake_deadline_ < zx::clock::get<ZX_CLOCK_MONOTONIC>()) {
             printf("Received %lu of %lu transactions before timing out.\n", counts.received,
                    device->wake_after_);
             return ZX_ERR_TIMED_OUT;

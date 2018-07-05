@@ -40,7 +40,7 @@ public:
     int64_t DurationInMsecs() override { return (Now() - start_time_).to_msecs(); }
 
 private:
-    zx::time Now() const { return zx::clock::get(ZX_CLOCK_MONOTONIC); }
+    zx::time Now() const { return zx::clock::get<ZX_CLOCK_MONOTONIC>(); }
 
     zx::time start_time_;
 };
