@@ -41,5 +41,5 @@ interface ViewProvider {
   // inter-process scene graph.
   1: CreateView(handle<eventpair> token,
                  request<fuchsia.sys.ServiceProvider>? incoming_services,
-                 fuchsia.sys.ServiceProvider outgoing_services);
+                 fuchsia.sys.ServiceProvider? outgoing_services);
 };

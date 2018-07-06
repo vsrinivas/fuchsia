@@ -122,6 +122,7 @@ package("scenic_tools") {
     "screencap",
     "set_renderer_params_HACK:set_renderer_params",
     "set_root_view",
+    "present_view",
   ]
 
   binaries = [
@@ -133,6 +134,9 @@ package("scenic_tools") {
     },
     {
       name = "set_renderer_params"
+    },
+    {
+      name = "present_view"
     },
     {
       name = "print_input"

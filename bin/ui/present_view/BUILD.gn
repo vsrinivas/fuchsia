@@ -1,0 +1,19 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("present_view") {
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/svc/cpp",
+    "//garnet/public/fidl/fuchsia.ui.policy",
+    "//garnet/public/fidl/fuchsia.ui.app",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
