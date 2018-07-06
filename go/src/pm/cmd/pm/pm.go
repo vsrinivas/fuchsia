@@ -12,6 +12,7 @@ import (
 
 	"fuchsia.googlesource.com/pm/build"
 	"fuchsia.googlesource.com/pm/cmd/pm/archive"
+	buildcmd "fuchsia.googlesource.com/pm/cmd/pm/build"
 	"fuchsia.googlesource.com/pm/cmd/pm/expand"
 	"fuchsia.googlesource.com/pm/cmd/pm/genkey"
 	initcmd "fuchsia.googlesource.com/pm/cmd/pm/init"
@@ -56,53 +57,40 @@ func main() {
 
 	flag.Parse()
 
-	var args = flag.Args()[1:]
-
 	var err error
 	switch flag.Arg(0) {
 	case "archive":
-		err = archive.Run(cfg)
+		err = archive.Run(cfg, flag.Args()[1:])
 
 	case "build":
-		err = update.Run(cfg)
-		if err != nil {
-			die(err)
-		}
-		err = sign.Run(cfg)
-		if err != nil {
-			die(err)
-		}
-		err = seal.Run(cfg)
-		if err != nil {
-			die(err)
-		}
+		err = buildcmd.Run(cfg, flag.Args()[1:])
 
 	case "expand":
-		err = expand.Run(cfg)
+		err = expand.Run(cfg, flag.Args()[1:])
 
 	case "genkey":
-		err = genkey.Run(cfg)
+		err = genkey.Run(cfg, flag.Args()[1:])
 
 	case "init":
-		err = initcmd.Run(cfg)
+		err = initcmd.Run(cfg, flag.Args()[1:])
 
 	case "install":
-		err = install.Run(cfg)
+		err = install.Run(cfg, flag.Args()[1:])
 
 	case "seal":
-		err = seal.Run(cfg)
+		err = seal.Run(cfg, flag.Args()[1:])
 
 	case "sign":
-		err = sign.Run(cfg)
+		err = sign.Run(cfg, flag.Args()[1:])
 
 	case "serve":
-		err = serve.Run(cfg, args)
+		err = serve.Run(cfg, flag.Args()[1:])
 
 	case "update":
-		err = update.Run(cfg)
+		err = update.Run(cfg, flag.Args()[1:])
 
 	case "verify":
-		err = verify.Run(cfg)
+		err = verify.Run(cfg, flag.Args()[1:])
 
 	default:
 		flag.Usage()

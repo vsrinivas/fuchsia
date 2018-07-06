@@ -6,17 +6,35 @@
 package genkey
 
 import (
+	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"fuchsia.googlesource.com/pm/build"
 	"fuchsia.googlesource.com/pm/keys"
 )
 
+const usage = `Usage: %s genkey
+generate a new private key
+`
+
 // Run generates a new keypair and writes it to `key` in binary format.
 // The generated keys are suitable for use with EdDSA, specifically for `pm
 // sign`
-func Run(cfg *build.Config) error {
+func Run(cfg *build.Config, args []string) error {
+	fs := flag.NewFlagSet("genkey", flag.ExitOnError)
+
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, usage, filepath.Base(os.Args[0]))
+		fmt.Fprintln(os.Stderr)
+		fs.PrintDefaults()
+	}
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
 	if cfg.KeyPath == "" {
 		return fmt.Errorf("error: signing key flag is required")
 	}

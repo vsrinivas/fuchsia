@@ -26,13 +26,29 @@ import (
 
 const metaFar = "meta.far"
 
+const usage = `Usage: %s expand <archive>
+expand a single .far representation of a package into a repository
+`
+
 var merklePat = regexp.MustCompile("^[0-9a-f]{64}$")
 
 // Run reads an archive given in flags.Arg(1) (the first argument after
 // `expand`) and unpacks the archive, adding it's contents to the appropriate
 // locations in the output directory to install the package.
-func Run(cfg *build.Config) error {
-	af, err := os.Open(flag.Arg(1))
+func Run(cfg *build.Config, args []string) error {
+	fs := flag.NewFlagSet("expand", flag.ExitOnError)
+
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, usage, filepath.Base(os.Args[0]))
+		fmt.Fprintln(os.Stderr)
+		fs.PrintDefaults()
+	}
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	af, err := os.Open(fs.Arg(0))
 	if err != nil {
 		return err
 	}

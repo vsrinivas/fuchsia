@@ -6,10 +6,31 @@
 package update
 
 import (
+	"flag"
+	"fmt"
+	"os"
+	"path/filepath"
+
 	"fuchsia.googlesource.com/pm/build"
 )
 
+const usage = `Usage: %s update
+update the merkle roots in meta/contents
+`
+
 // Run executes the `pm update` command
-func Run(cfg *build.Config) error {
+func Run(cfg *build.Config, args []string) error {
+	fs := flag.NewFlagSet("update", flag.ExitOnError)
+
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, usage, filepath.Base(os.Args[0]))
+		fmt.Fprintln(os.Stderr)
+		fs.PrintDefaults()
+	}
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
 	return build.Update(cfg)
 }

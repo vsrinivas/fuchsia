@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	usage      = "usage: pm serve -d=<directory_path>"
+	usage      = "usage: %s serve -d=<directory_path>"
 	serverBase = "amber-files"
 	maxLen     = 50
 	trailLen   = 20
@@ -29,7 +29,8 @@ func Run(cfg *build.Config, args []string) error {
 	quiet := fs.Bool("q", false, "Don't print out information about requests")
 
 	fs.Usage = func() {
-		fmt.Println(usage)
+		fmt.Fprintf(os.Stderr, usage, filepath.Base(os.Args[0]))
+		fmt.Fprintln(os.Stderr)
 		fs.PrintDefaults()
 	}
 

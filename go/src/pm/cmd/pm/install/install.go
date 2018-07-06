@@ -23,11 +23,27 @@ import (
 	"fuchsia.googlesource.com/pm/build"
 )
 
+const usage = `Usage: %s install
+install a single .far representation of the package
+`
+
 // Run reads an archive given in flags.Arg(1) (the first argument after
 // `install`) and unpacks the archive, adding it's contents to the appropriate
 // locations in /pkgfs to install the package.
-func Run(cfg *build.Config) error {
-	af, err := os.Open(flag.Arg(1))
+func Run(cfg *build.Config, args []string) error {
+	fs := flag.NewFlagSet("install", flag.ExitOnError)
+
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, usage, filepath.Base(os.Args[0]))
+		fmt.Fprintln(os.Stderr)
+		fs.PrintDefaults()
+	}
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	af, err := os.Open(fs.Arg(0))
 	if err != nil {
 		return err
 	}
