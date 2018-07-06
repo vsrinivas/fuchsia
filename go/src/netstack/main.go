@@ -51,14 +51,9 @@ func main() {
 	if err := AddNetstackService(ctx); err != nil {
 		log.Fatal(err)
 	}
-	ctx.Serve()
-	go bindings.Serve()
-
 	if err := AddStackService(ctx); err != nil {
 		log.Fatal(err)
 	}
-	ctx.Serve()
-	go bindings.Serve()
 
 	arena, err := eth.NewArena()
 	if err != nil {
@@ -84,6 +79,13 @@ func main() {
 	}
 
 	s.setNetstack(ns)
+
+	// Serve FIDL bindings on two threads. Since the Go FIDL bindings are blocking,
+	// this allows two outstanding requests at a time.
+	// TODO(tkilbourn): revisit this and tune the number of serving threads.
+	ctx.Serve()
+	go bindings.Serve()
+	go bindings.Serve()
 
 	const ethdir = "/dev/class/ethernet"
 	w, err := watcher.NewWatcher(ethdir)
