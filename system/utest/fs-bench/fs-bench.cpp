@@ -2,215 +2,251 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <errno.h>
 #include <fcntl.h>
-#include <limits.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
 
-#include <zircon/device/vfs.h>
-#include <zircon/syscalls.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/string_piece.h>
-#include <fbl/unique_ptr.h>
+#include <fbl/function.h>
+#include <fbl/string.h>
+#include <fbl/string_buffer.h>
+#include <fbl/string_printf.h>
+#include <fbl/unique_fd.h>
+#include <fs-management/mount.h>
+#include <fs-test-utils/fixture.h>
+#include <fs-test-utils/perftest.h>
+#include <perftest/perftest.h>
 #include <unittest/unittest.h>
 
-#define MOUNT_POINT "/tmp/benchmark"
+namespace fs_bench {
+namespace {
 
-constexpr size_t KB = (1 << 10);
-constexpr size_t MB = (1 << 20);
+using fs_test_utils::Fixture;
+using fs_test_utils::FixtureOptions;
+using fs_test_utils::PerformanceTestOptions;
+using fs_test_utils::TestCaseInfo;
+using fs_test_utils::TestInfo;
+
 constexpr uint8_t kMagicByte = 0xee;
-
-// Return "true" if the fs matches the 'banned' criteria.
-template <size_t len>
-bool benchmark_banned(int fd, const char (&banned_fs)[len]) {
-    char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
-    vfs_query_info_t* info = reinterpret_cast<vfs_query_info_t*>(buf);
-    ssize_t r = ioctl_vfs_query_fs(fd, info, sizeof(buf) - 1);
-
-    if (r != static_cast<ssize_t>(sizeof(vfs_query_info_t) + len)) {
-        return false;
-    }
-
-    buf[r] = '\0';
-    const char* name = reinterpret_cast<const char*>(buf + sizeof(vfs_query_info_t));
-    return strncmp(banned_fs, name, len - 1) == 0;
-}
-
-inline void time_end(const char *str, zx_ticks_t start) {
-    zx_ticks_t end = zx_ticks_get();
-    zx_ticks_t ticks_per_msec = zx_ticks_per_second() / 1000;
-    printf("Benchmark %s: [%10lu] msec\n", str, (end - start) / ticks_per_msec);
-}
 
 constexpr int kWriteReadCycles = 3;
 
-// The goal of this benchmark is to get a basic idea of some large read / write
-// times for a file.
-//
-// Caching will no doubt play a part with this benchmark, but it's simple,
-// and should give us a rough rule-of-thumb regarding how we're doing.
-template <size_t DataSize, size_t NumOps>
-bool benchmark_write_read(void) {
-    BEGIN_TEST;
-    int fd = open(MOUNT_POINT "/bigfile", O_CREAT | O_RDWR, 0644);
-    ASSERT_GT(fd, 0, "Cannot create file (FS benchmarks assume mounted FS"
-              "exists at '/tmp/benchmark')");
-    const size_t size_mb = (DataSize * NumOps) / MB;
-    if (size_mb > 64 && benchmark_banned(fd, "memfs")) {
-        return true;
-    }
-    printf("\nBenchmarking Write + Read (%lu MB)\n", size_mb);
-
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<uint8_t[]> data(new (&ac) uint8_t[DataSize]);
-    ASSERT_EQ(ac.check(), true);
-    memset(data.get(), kMagicByte, DataSize);
-
-    zx_ticks_t start;
-    size_t count;
-
-    for (int i = 0; i < kWriteReadCycles; i++) {
-        char str[100];
-        snprintf(str, sizeof(str), "write %d", i);
-
-        start = zx_ticks_get();
-        count = NumOps;
-        while (count--) {
-            ASSERT_EQ(write(fd, data.get(), DataSize), DataSize);
-        }
-        time_end(str, start);
-
-        ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
-        snprintf(str, sizeof(str), "read %d", i);
-
-        start = zx_ticks_get();
-        count = NumOps;
-        while (count--) {
-            ASSERT_EQ(read(fd, data.get(), DataSize), DataSize);
-            ASSERT_EQ(data[0], kMagicByte);
-        }
-        time_end(str, start);
-
-        ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
-    }
-
-    ASSERT_EQ(syncfs(fd), 0);
-    ASSERT_EQ(close(fd), 0);
-    ASSERT_EQ(unlink(MOUNT_POINT "/bigfile"), 0);
-
-    END_TEST;
+fbl::String GetBigFilePath(const Fixture& fixture) {
+    fbl::String path = fbl::StringPrintf("%s/bigfile.txt", fixture.fs_path().c_str());
+    return path;
 }
 
-#define START_STRING "/aaa"
+bool WriteBigFile(ssize_t data_size, perftest::RepeatState* state, Fixture* fixture) {
+    BEGIN_HELPER;
 
-size_t constexpr kComponentLength = fbl::constexpr_strlen(START_STRING);
+    fbl::unique_fd fd(open(GetBigFilePath(*fixture).c_str(), O_CREAT | O_WRONLY));
+    ASSERT_TRUE(fd);
+    state->DeclareStep("write");
+    uint8_t data[data_size];
+    // TODO(gevalentino): make kMagicByte random. Make Fixture take a seed parameter,
+    // and use that seed to generate this value, then we pick the seed randomly by default,
+    // or pass it via parameters(reproduceability) and errors need to log the seed
+    // if the data depends on a randomized value.
+    memset(data, kMagicByte, data_size);
 
-template <size_t len>
-void increment_str(char* str) {
-    // "Increment" the string alphabetically.
-    // '/aaa' --> '/aab, '/aaz' --> '/aba', etc
-    for (size_t j = len - 1; j > 0; j--) {
-        str[j] = static_cast<char>(str[j] + 1);
-        if (str[j] > 'z') {
-            str[j] = 'a';
-        } else {
-            return;
+    while (state->KeepRunning()) {
+        ASSERT_EQ(write(fd.get(), data, data_size), data_size);
+    }
+
+    END_HELPER;
+}
+
+bool ReadBigFile(ssize_t data_size, perftest::RepeatState* state, Fixture* fixture) {
+    BEGIN_HELPER;
+
+    fbl::unique_fd fd(open(GetBigFilePath(*fixture).c_str(), O_RDONLY));
+    ASSERT_TRUE(fd);
+    state->DeclareStep("read");
+    uint8_t data[data_size];
+
+    while (state->KeepRunning()) {
+        ASSERT_EQ(read(fd.get(), data, data_size), data_size);
+        ASSERT_EQ(data[0], kMagicByte);
+    }
+
+    END_HELPER;
+}
+
+constexpr char kBaseComponent[] = "/aaa";
+
+constexpr size_t kComponentLength = fbl::constexpr_strlen(kBaseComponent);
+
+struct PathComponentGen {
+    PathComponentGen() { memcpy(current, kBaseComponent, kComponentLength + 1); }
+
+    // Advances current to the next component, following alphabetical order.
+    // E.g: /aaa -> /aab ..../aaz -> /aba
+    void Next() {
+        for (int i = 3; i > 0; --i) {
+            char next = static_cast<char>(static_cast<uint8_t>(current[i]) + 1);
+            if (next > 'z') {
+                current[i] = 'a';
+            } else {
+                current[i] = next;
+                break;
+            }
         }
     }
-}
+    // Add extra byte for null termination.
+    char current[kComponentLength + 1];
+};
 
-template <size_t MaxComponents>
-bool walk_down_path_components(char* path, bool (*cb)(const char* path)) {
+bool PathWalkDown(const fbl::String& op_name, const fbl::Function<int(const char*)>& op,
+                  perftest::RepeatState* state, Fixture* fixture,
+                  fbl::StringBuffer<fs_test_utils::kPathSize>* path) {
     BEGIN_HELPER;
-    static_assert(MaxComponents * kComponentLength + fbl::constexpr_strlen(MOUNT_POINT) < PATH_MAX,
-                  "Path depth is too long");
-    size_t path_len = strlen(path);
-    char path_component[kComponentLength + 1];
-    strcpy(path_component, START_STRING);
+    PathComponentGen component;
+    path->Append(fixture->fs_path());
 
-    for (size_t i = 0; i < MaxComponents; i++) {
-        strcpy(path + path_len, path_component);
-        path_len += kComponentLength;
-        ASSERT_TRUE(cb(path), "Callback failure");
-
-        increment_str<kComponentLength>(path_component);
+    state->DeclareStep(op_name.c_str());
+    state->DeclareStep("path_update");
+    while (state->KeepRunning()) {
+        path->Append(component.current);
+        ASSERT_EQ(op(path->c_str()), 0);
+        state->NextStep();
+        component.Next();
     }
     END_HELPER;
 }
 
-bool walk_up_path_components(char* path, bool (*cb)(const char* path)) {
+bool PathWalkUp(const fbl::String& op_name, const fbl::Function<int(const char*)>& op,
+                perftest::RepeatState* state, Fixture* fixture,
+                fbl::StringBuffer<fs_test_utils::kPathSize>* path) {
     BEGIN_HELPER;
-    size_t path_len = strlen(path);
-
-    while (path_len != fbl::constexpr_strlen(MOUNT_POINT)) {
-        ASSERT_TRUE(cb(path), "Callback failure");
-        path[path_len - kComponentLength] = 0;
-        path_len -= kComponentLength;
+    state->DeclareStep(op_name.c_str());
+    state->DeclareStep("path_update");
+    while (state->KeepRunning() && *path != fixture->fs_path()) {
+        ASSERT_EQ(op(path->c_str()), 0, path->c_str());
+        state->NextStep();
+        uint32_t new_size = static_cast<uint32_t>(path->length() - kComponentLength);
+        path->Resize(new_size);
     }
     END_HELPER;
 }
 
-bool mkdir_callback(const char* path) {
+// Wrapper so state can be shared across calls.
+class PathWalkOp {
+public:
+    PathWalkOp() = default;
+    PathWalkOp(const PathWalkOp&) = delete;
+    PathWalkOp(PathWalkOp&&) = delete;
+    PathWalkOp& operator=(const PathWalkOp&) = delete;
+    PathWalkOp& operator=(PathWalkOp&&) = delete;
+    ~PathWalkOp() = default;
+
+    // Will add components until |state::KeepGoing| returns false.
+    bool Mkdir(perftest::RepeatState* state, Fixture* fixture) {
+        path_.Clear();
+        return PathWalkDown("mkdir", [](const char* path) { return mkdir(path, 0666); }, state,
+                            fixture, &path_);
+    }
+
+    // Will stat components until |state::KeepGoing| returns false.
+    bool Stat(perftest::RepeatState* state, Fixture* fixture) {
+        path_.Clear();
+        return PathWalkDown("stat",
+                            [](const char* path) {
+                                struct stat buff;
+                                return stat(path, &buff);
+                            },
+                            state, fixture, &path_);
+    }
+
+    // Will unlink components until |state::KeepGoing| returns false.
+    bool Unlink(perftest::RepeatState* state, Fixture* fixture) {
+        return PathWalkUp("unlink", unlink, state, fixture, &path_);
+    }
+
+private:
+    fbl::StringBuffer<fs_test_utils::kPathSize> path_;
+};
+
+} // namespace
+
+bool RunBenchmark(int argc, char** argv) {
     BEGIN_HELPER;
-    ASSERT_EQ(mkdir(path, 0666), 0, "Could not make directory");
+    FixtureOptions f_opts = FixtureOptions::Default(DISK_FORMAT_MINFS);
+    PerformanceTestOptions p_opts;
+    const int rw_test_sample_counts[] = {
+        1024, 2048, 4096, 8192, 16384,
+    };
+
+    ASSERT_TRUE(fs_test_utils::ParseCommandLineArgs(argc, argv, &f_opts, &p_opts));
+    fbl::Vector<TestCaseInfo> testcases;
+    // Just do a single cycle for unittest mode.
+    int cycles = (p_opts.is_unittest) ? 1 : kWriteReadCycles;
+    // Read Write tests.
+    for (int test_sample_count : rw_test_sample_counts) {
+        TestCaseInfo testcase;
+        testcase.sample_count = test_sample_count;
+        testcase.name = fbl::StringPrintf("%s/Bigfile/16Kbytes/%d-Ops",
+                                          disk_format_string_[f_opts.fs_type], test_sample_count);
+        testcase.teardown = false;
+        for (int cycle = 0; cycle < cycles; ++cycle) {
+            TestInfo write_test, read_test;
+            write_test.name =
+                fbl::StringPrintf("%s/%dCycle/Write", testcase.name.c_str(), cycle + 1);
+            write_test.test_fn = [](perftest::RepeatState* state, Fixture* fixture) {
+                return WriteBigFile(16 * (1 << 10), state, fixture);
+            };
+            write_test.required_disk_space = test_sample_count * 16 * 1024;
+            testcase.tests.push_back(fbl::move(write_test));
+
+            read_test.name =
+                fbl::StringPrintf("%s/%d-Cycle/Read", testcase.name.c_str(), cycle + 1);
+            read_test.test_fn = [](perftest::RepeatState* state, Fixture* fixture) {
+                return ReadBigFile(16 * (1 << 10), state, fixture);
+            };
+            read_test.required_disk_space = test_sample_count * 16 * 1024;
+            testcase.tests.push_back(fbl::move(read_test));
+        }
+        testcases.push_back(fbl::move(testcase));
+    }
+
+    // Path walk tests.
+    const int path_walk_sample_counts[] = {
+        125,
+        250,
+        500,
+        1000,
+    };
+
+    PathWalkOp pw_op;
+    for (int test_sample_count : path_walk_sample_counts) {
+        TestCaseInfo testcase;
+        testcase.name = fbl::StringPrintf("%s/PathWalk/%d-Components",
+                                          disk_format_string_[f_opts.fs_type], test_sample_count);
+        testcase.sample_count = test_sample_count;
+        testcase.teardown = false;
+
+        TestInfo mkdir_test;
+        mkdir_test.name = fbl::StringPrintf("%s/Mkdir", testcase.name.c_str());
+        mkdir_test.test_fn = fbl::BindMember(&pw_op, &PathWalkOp::Mkdir);
+        testcase.tests.push_back(fbl::move(mkdir_test));
+
+        TestInfo stat_test;
+        stat_test.name = fbl::StringPrintf("%s/Stat", testcase.name.c_str());
+        stat_test.test_fn = fbl::BindMember(&pw_op, &PathWalkOp::Stat);
+        testcase.tests.push_back(fbl::move(stat_test));
+
+        TestInfo unlink_test;
+        unlink_test.name = fbl::StringPrintf("%s/Unlink", testcase.name.c_str());
+        unlink_test.test_fn = fbl::BindMember(&pw_op, &PathWalkOp::Unlink);
+
+        testcase.tests.push_back(fbl::move(unlink_test));
+        testcases.push_back(fbl::move(testcase));
+    }
+
+    ASSERT_TRUE(fs_test_utils::RunTestCases(f_opts, p_opts, testcases));
     END_HELPER;
 }
+} // namespace fs_bench
 
-bool stat_callback(const char* path) {
-    BEGIN_HELPER;
-    struct stat buf;
-    ASSERT_EQ(stat(path, &buf), 0, "Could not stat directory");
-    END_HELPER;
+int main(int argc, char** argv) {
+    return fs_test_utils::RunWithMemFs(
+        [argc, argv]() { return fs_bench::RunBenchmark(argc, argv) ? 0 : -1; });
 }
-
-bool unlink_callback(const char* path) {
-    BEGIN_HELPER;
-    ASSERT_EQ(unlink(path), 0, "Could not unlink directory");
-    END_HELPER;
-}
-
-template <size_t MaxComponents>
-bool benchmark_path_walk(void) {
-    BEGIN_TEST;
-    printf("\nBenchmarking Long path walk (%lu components)\n", MaxComponents);
-    char path[PATH_MAX];
-    strcpy(path, MOUNT_POINT);
-    zx_ticks_t start;
-
-    start = zx_ticks_get();
-    ASSERT_TRUE(walk_down_path_components<MaxComponents>(path, mkdir_callback));
-    time_end("mkdir", start);
-
-    strcpy(path, MOUNT_POINT);
-    start = zx_ticks_get();
-    ASSERT_TRUE(walk_down_path_components<MaxComponents>(path, stat_callback));
-    time_end("stat", start);
-
-    start = zx_ticks_get();
-    ASSERT_TRUE(walk_up_path_components(path, unlink_callback));
-    time_end("unlink", start);
-
-    int fd = open(MOUNT_POINT, O_DIRECTORY | O_RDONLY);
-    ASSERT_GE(fd, 0);
-    ASSERT_EQ(syncfs(fd), 0);
-    ASSERT_EQ(close(fd), 0);
-    END_TEST;
-}
-
-BEGIN_TEST_CASE(basic_benchmarks)
-RUN_TEST_PERFORMANCE((benchmark_write_read<16 * KB, 1024>))
-RUN_TEST_PERFORMANCE((benchmark_write_read<16 * KB, 2048>))
-RUN_TEST_PERFORMANCE((benchmark_write_read<16 * KB, 4096>))
-RUN_TEST_PERFORMANCE((benchmark_write_read<16 * KB, 8192>))
-RUN_TEST_PERFORMANCE((benchmark_write_read<16 * KB, 16384>))
-RUN_TEST_PERFORMANCE((benchmark_path_walk<125>))
-RUN_TEST_PERFORMANCE((benchmark_path_walk<250>))
-RUN_TEST_PERFORMANCE((benchmark_path_walk<500>))
-RUN_TEST_PERFORMANCE((benchmark_path_walk<1000>))
-END_TEST_CASE(basic_benchmarks)

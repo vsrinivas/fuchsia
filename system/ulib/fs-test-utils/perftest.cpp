@@ -206,8 +206,8 @@ void RunTestCase(const FixtureOptions& fixture_options,
         if (actual_sample_count == 0 || performance_test_options.is_unittest) {
             actual_sample_count = performance_test_options.sample_count;
         }
-        RunTest(test_case.name, test, actual_sample_count, skip_tests, &fixture,
-                result_set, global_stats, out);
+        RunTest(test_case.name, test, actual_sample_count, skip_tests, &fixture, result_set,
+                global_stats, out);
         if (test_case.teardown) {
             fixture.TearDown();
             setUp = true;
