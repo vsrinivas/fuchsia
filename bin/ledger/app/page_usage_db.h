@@ -57,6 +57,11 @@ class PageUsageDb {
                         fxl::StringView ledger_name,
                         storage::PageIdView page_id);
 
+  // Marks the page with the given id as evicted.
+  Status MarkPageEvicted(coroutine::CoroutineHandler* handler,
+                         fxl::StringView ledger_name,
+                         storage::PageIdView page_id);
+
   // Marks all open pages as closed.
   Status MarkAllPagesClosed(coroutine::CoroutineHandler* handler);
 
@@ -67,11 +72,14 @@ class PageUsageDb {
       std::unique_ptr<storage::Iterator<const PageUsageDb::PageInfo>>* pages);
 
  private:
-  storage::LevelDb db_;
-
   // Inserts the given |key|-|value| pair in the underlying database.
   Status Put(coroutine::CoroutineHandler* handler, fxl::StringView key,
              fxl::StringView value);
+
+  // Deletes the row with the given |key| in the underlying database.
+  Status Delete(coroutine::CoroutineHandler* handler, fxl::StringView key);
+
+  storage::LevelDb db_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageUsageDb);
 };

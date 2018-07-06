@@ -49,6 +49,15 @@ void LedgerRepositoryImpl::PageIsClosedAndSynced(
   ledger_manager->PageIsClosedAndSynced(page_id, std::move(callback));
 }
 
+void LedgerRepositoryImpl::DeletePageStorage(
+    fxl::StringView ledger_name, storage::PageIdView page_id,
+    fit::function<void(Status)> callback) {
+  LedgerManager* ledger_manager =
+      GetLedgerManager(ledger_name, CreateIfMissing::YES);
+  FXL_DCHECK(ledger_manager);
+  return ledger_manager->DeletePageStorage(page_id, std::move(callback));
+}
+
 std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>>
 LedgerRepositoryImpl::Unbind() {
   std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>>

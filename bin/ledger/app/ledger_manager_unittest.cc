@@ -107,8 +107,7 @@ class FakeLedgerStorage : public storage::LedgerStorage {
   void DeletePageStorage(
       storage::PageIdView /*page_id*/,
       fit::function<void(storage::Status)> callback) override {
-    FXL_NOTIMPLEMENTED();
-    callback(storage::Status::NOT_IMPLEMENTED);
+    delete_page_storage_callback = std::move(callback);
   }
 
   void ClearCalls() {
@@ -155,6 +154,7 @@ class FakeLedgerStorage : public storage::LedgerStorage {
   bool should_get_page_fail = false;
   std::vector<storage::PageId> create_page_calls;
   std::vector<storage::PageId> get_page_calls;
+  fit::function<void(storage::Status)> delete_page_storage_callback;
 
  private:
   async_dispatcher_t* const dispatcher_;
@@ -626,6 +626,61 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedCallInternalRequest) {
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(1, page_eviction_manager_->page_opened_count);
   EXPECT_EQ(0, page_eviction_manager_->page_closed_count);
+}
+
+TEST_F(LedgerManagerTest, DeletePageStorageWhenPageOpenFails) {
+  PagePtr page;
+  ledger::PageId id = RandomId();
+  bool called;
+  Status status;
+
+  ledger_->GetPage(
+      fidl::MakeOptional(id), page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+
+  // Try to delete the page while it is open. Expect to get an error.
+  ledger_manager_->DeletePageStorage(
+      id.id, callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::ILLEGAL_STATE, status);
+}
+
+TEST_F(LedgerManagerTest, OpenPageWithDeletePageStorageInProgress) {
+  PagePtr page;
+  ledger::PageId id = RandomId();
+
+  // Start deleting the page.
+  bool delete_called;
+  Status delete_status;
+  ledger_manager_->DeletePageStorage(
+      id.id, callback::Capture(callback::SetWhenCalled(&delete_called),
+                               &delete_status));
+  RunLoopUntilIdle();
+  EXPECT_FALSE(delete_called);
+
+  // Try to open the same page.
+  bool get_page_called;
+  Status get_page_status;
+  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest(),
+                   callback::Capture(callback::SetWhenCalled(&get_page_called),
+                                     &get_page_status));
+  RunLoopUntilIdle();
+  EXPECT_FALSE(get_page_called);
+
+  // After calling the callback registered in |DeletePageStorage| both
+  // operations should terminate without an error.
+  storage_ptr->delete_page_storage_callback(storage::Status::OK);
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(delete_called);
+  EXPECT_EQ(Status::OK, delete_status);
+
+  EXPECT_TRUE(get_page_called);
+  EXPECT_EQ(Status::OK, get_page_status);
 }
 
 }  // namespace

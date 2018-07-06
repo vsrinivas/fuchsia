@@ -22,11 +22,47 @@
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 
 namespace ledger {
+namespace {
 
 // A token that performs a given action on destruction.
 // ExpiringToken objects are used with internal page requests to notify the
 // PageManagerContainer that the requested PageManager is no longer used.
 using ExpiringToken = fxl::AutoCall<fit::closure>;
+
+}  // namespace
+
+void LedgerManager::PageAvailabilityManager::MarkPageBusy(
+    convert::ExtendedStringView page_id) {
+  auto result =
+      busy_pages_.emplace(page_id.ToString(), std::vector<fit::closure>());
+  FXL_DCHECK(result.second)
+      << "Page " << convert::ToHex(page_id) << " is already busy.";
+}
+
+void LedgerManager::PageAvailabilityManager::MarkPageAvailable(
+    convert::ExtendedStringView page_id) {
+  storage::PageId page_id_str = page_id.ToString();
+  auto it = busy_pages_.find(page_id_str);
+  if (it == busy_pages_.end()) {
+    return;
+  }
+
+  for (auto& page_callback : it->second) {
+    page_callback();
+  }
+  busy_pages_.erase(it);
+}
+
+void LedgerManager::PageAvailabilityManager::OnPageAvailable(
+    convert::ExtendedStringView page_id, fit::closure on_page_available) {
+  storage::PageId page_id_str = page_id.ToString();
+  auto it = busy_pages_.find(page_id_str);
+  if (it == busy_pages_.end()) {
+    on_page_available();
+    return;
+  }
+  it->second.push_back(std::move(on_page_available));
+}
 
 // Container for a PageManager that keeps tracks of in-flight page requests and
 // callbacks and fires them when the PageManager is available.
@@ -303,6 +339,24 @@ void LedgerManager::PageIsClosedAndSynced(
       });
 }
 
+void LedgerManager::DeletePageStorage(convert::ExtendedStringView page_id,
+                                      fit::function<void(Status)> callback) {
+  auto it = page_managers_.find(page_id);
+  if (it != page_managers_.end()) {
+    callback(Status::ILLEGAL_STATE);
+    return;
+  }
+
+  // Block all page requests until deletion is complete.
+  page_availability_manager_.MarkPageBusy(page_id);
+  storage_->DeletePageStorage(
+      page_id, [this, page_id = page_id.ToString(),
+                callback = std::move(callback)](storage::Status status) {
+        page_availability_manager_.MarkPageAvailable(page_id);
+        callback(PageUtils::ConvertStatus(status));
+      });
+}
+
 void LedgerManager::GetPage(storage::PageIdView page_id, PageState page_state,
                             fidl::InterfaceRequest<Page> page_request,
                             fit::function<void(Status)> callback) {
@@ -337,50 +391,59 @@ Status LedgerManager::DeletePage(convert::ExtendedStringView /*page_id*/) {
 void LedgerManager::InitPageManagerContainer(
     PageManagerContainer* container, convert::ExtendedStringView page_id,
     fit::function<void(Status)> callback) {
-  storage_->GetPageStorage(
-      page_id.ToString(),
-      [this, container, page_id = page_id.ToString(),
-       callback = std::move(callback)](
-          storage::Status storage_status,
-          std::unique_ptr<storage::PageStorage> page_storage) mutable {
-        Status status = PageUtils::ConvertStatus(storage_status, Status::OK);
-        if (status != Status::OK) {
-          container->SetPageManager(status, nullptr);
-          callback(status);
-          return;
-        }
+  page_availability_manager_.OnPageAvailable(
+      page_id, [this, container, page_id = page_id.ToString(),
+                callback = std::move(callback)]() mutable {
+        storage_->GetPageStorage(
+            std::move(page_id),
+            [this, container, callback = std::move(callback)](
+                storage::Status storage_status,
+                std::unique_ptr<storage::PageStorage> page_storage) mutable {
+              Status status =
+                  PageUtils::ConvertStatus(storage_status, Status::OK);
+              if (status != Status::OK) {
+                container->SetPageManager(status, nullptr);
+                callback(status);
+                return;
+              }
 
-        // If the page was found locally, just use it and return.
-        if (page_storage) {
-          container->SetPageManager(
-              Status::OK,
-              NewPageManager(std::move(page_storage),
-                             PageManager::PageStorageState::AVAILABLE));
-          callback(status);
-          return;
-        }
+              // If the page was found locally, just use it and return.
+              if (page_storage) {
+                container->SetPageManager(
+                    Status::OK,
+                    NewPageManager(std::move(page_storage),
+                                   PageManager::PageStorageState::AVAILABLE));
+                callback(status);
+                return;
+              }
 
-        callback(Status::PAGE_NOT_FOUND);
+              callback(Status::PAGE_NOT_FOUND);
+            });
       });
 }
 
 void LedgerManager::CreatePageStorage(storage::PageId page_id,
                                       PageState page_state,
                                       PageManagerContainer* container) {
-  storage_->CreatePageStorage(
-      page_id, [this, page_state, container](
-                   storage::Status status,
-                   std::unique_ptr<storage::PageStorage> page_storage) {
-        if (status != storage::Status::OK) {
-          container->SetPageManager(Status::INTERNAL_ERROR, nullptr);
-          return;
-        }
-        container->SetPageManager(
-            Status::OK,
-            NewPageManager(std::move(page_storage),
-                           page_state == PageState::NEW
-                               ? PageManager::PageStorageState::AVAILABLE
-                               : PageManager::PageStorageState::NEEDS_SYNC));
+  page_availability_manager_.OnPageAvailable(
+      page_id, [this, page_id = std::move(page_id), page_state, container] {
+        storage_->CreatePageStorage(
+            std::move(page_id),
+            [this, page_state, container](
+                storage::Status status,
+                std::unique_ptr<storage::PageStorage> page_storage) {
+              if (status != storage::Status::OK) {
+                container->SetPageManager(Status::INTERNAL_ERROR, nullptr);
+                return;
+              }
+              container->SetPageManager(
+                  Status::OK,
+                  NewPageManager(
+                      std::move(page_storage),
+                      page_state == PageState::NEW
+                          ? PageManager::PageStorageState::AVAILABLE
+                          : PageManager::PageStorageState::NEEDS_SYNC));
+            });
       });
 }
 

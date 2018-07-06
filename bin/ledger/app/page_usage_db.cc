@@ -17,10 +17,10 @@ namespace {
 
 constexpr fxl::StringView kOpenedPagePrefix = "opened/";
 
-std::string GetKeyForOpenedPage(fxl::StringView legder_name,
+std::string GetKeyForOpenedPage(fxl::StringView ledger_name,
                                 storage::PageIdView page_id) {
   FXL_DCHECK(page_id.size() == kPageIdSize);
-  return fxl::Concatenate({kOpenedPagePrefix, legder_name, page_id});
+  return fxl::Concatenate({kOpenedPagePrefix, ledger_name, page_id});
 }
 
 void GetPageFromOpenedRow(fxl::StringView row, std::string* ledger_name,
@@ -100,22 +100,28 @@ PageUsageDb::~PageUsageDb() {}
 Status PageUsageDb::Init() { return PageUtils::ConvertStatus(db_.Init()); }
 
 Status PageUsageDb::MarkPageOpened(coroutine::CoroutineHandler* handler,
-                                   fxl::StringView legder_name,
+                                   fxl::StringView ledger_name,
                                    storage::PageIdView page_id) {
-  return Put(handler, GetKeyForOpenedPage(legder_name, page_id),
+  return Put(handler, GetKeyForOpenedPage(ledger_name, page_id),
              storage::SerializeNumber<zx_time_t>(0));
 }
 
 Status PageUsageDb::MarkPageClosed(coroutine::CoroutineHandler* handler,
-                                   fxl::StringView legder_name,
+                                   fxl::StringView ledger_name,
                                    storage::PageIdView page_id) {
   FXL_DCHECK(page_id.size() == kPageIdSize);
   zx::time_utc now;
   if (zx::clock::get(&now) != ZX_OK) {
     return Status::IO_ERROR;
   }
-  return Put(handler, GetKeyForOpenedPage(legder_name, page_id),
+  return Put(handler, GetKeyForOpenedPage(ledger_name, page_id),
              storage::SerializeNumber(now.get()));
+}
+
+Status PageUsageDb::MarkPageEvicted(coroutine::CoroutineHandler* handler,
+                                    fxl::StringView ledger_name,
+                                    storage::PageIdView page_id) {
+  return Delete(handler, GetKeyForOpenedPage(ledger_name, page_id));
 }
 
 Status PageUsageDb::MarkAllPagesClosed(coroutine::CoroutineHandler* handler) {
@@ -169,6 +175,20 @@ Status PageUsageDb::Put(coroutine::CoroutineHandler* handler,
     return PageUtils::ConvertStatus(status);
   }
   status = batch->Put(handler, key, value);
+  if (status != storage::Status::OK) {
+    return PageUtils::ConvertStatus(status);
+  }
+  return PageUtils::ConvertStatus(batch->Execute(handler));
+}
+
+Status PageUsageDb::Delete(coroutine::CoroutineHandler* handler,
+                           fxl::StringView key) {
+  std::unique_ptr<storage::Db::Batch> batch;
+  storage::Status status = db_.StartBatch(handler, &batch);
+  if (status != storage::Status::OK) {
+    return PageUtils::ConvertStatus(status);
+  }
+  status = batch->Delete(handler, key);
   if (status != storage::Status::OK) {
     return PageUtils::ConvertStatus(status);
   }

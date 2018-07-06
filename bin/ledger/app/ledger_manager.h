@@ -58,6 +58,11 @@ class LedgerManager : public LedgerImpl::Delegate,
       storage::PageIdView page_id,
       fit::function<void(Status, PageClosedAndSynced)> callback);
 
+  // Deletes the local copy of the page. If the page is currently open, the
+  // callback will be called with |ILLEGAL_STATE|.
+  void DeletePageStorage(convert::ExtendedStringView page_id,
+                         fit::function<void(Status)> callback);
+
   // LedgerImpl::Delegate:
   void GetPage(convert::ExtendedStringView page_id, PageState page_state,
                fidl::InterfaceRequest<Page> page_request,
@@ -75,6 +80,30 @@ class LedgerManager : public LedgerImpl::Delegate,
 
  private:
   class PageManagerContainer;
+
+  // Stores whether a given page is busy or available. After |MarkPageBusy| has
+  // been called, all calls to |OnPageAvailable| will be delayed until a call to
+  // |MarkPageAvailable|. By default, all pages are available.
+  class PageAvailabilityManager {
+   public:
+    // Marks the page as busy and delays calling the callback in
+    // |OnPageAvailable| for this page. It is an error to call this method for a
+    // page that is already busy.
+    void MarkPageBusy(convert::ExtendedStringView page_id);
+
+    // Marks the page as available and calls any pending callbacks from
+    // |OnPageAvailable| for this page.
+    void MarkPageAvailable(convert::ExtendedStringView page_id);
+
+    // If the page is available calls the given callback directly. Otherwise,
+    // the callback is registered util the page becomes available.
+    void OnPageAvailable(convert::ExtendedStringView page_id,
+                         fit::closure on_page_available);
+
+   private:
+    // For each busy page, stores the list of pending callbacks.
+    std::map<storage::PageId, std::vector<fit::closure>> busy_pages_;
+  };
 
   // Requests a PageStorage object for the given |container|. If the page is not
   // locally available, the |callback| is called with |PAGE_NOT_FOUND|.
@@ -130,6 +159,8 @@ class LedgerManager : public LedgerImpl::Delegate,
   fit::closure on_empty_callback_;
 
   fidl::BindingSet<LedgerDebug> ledger_debug_bindings_;
+
+  PageAvailabilityManager page_availability_manager_;
 
   // |page_was_opened_map_| is used to track whether pages checked for their
   // sync state were opened during the operation: When |PageIsClosedAndSynced()|

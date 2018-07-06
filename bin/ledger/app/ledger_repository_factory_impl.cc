@@ -260,7 +260,7 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
           repository_information.content_path, environment_,
           std::make_unique<SyncWatcherSet>(), nullptr,
           std::move(page_eviction_manager));
-      page_eviction_manager_ptr->SetPageStateReader(repository.get());
+      page_eviction_manager_ptr->SetDelegate(repository.get());
       container->SetRepository(Status::OK, std::move(repository));
       return;
     }
@@ -307,7 +307,7 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
   auto repository = std::make_unique<LedgerRepositoryImpl>(
       repository_information.content_path, environment_, std::move(watchers),
       std::move(user_sync), std::move(page_eviction_manager));
-  page_eviction_manager_ptr->SetPageStateReader(repository.get());
+  page_eviction_manager_ptr->SetDelegate(repository.get());
   container->SetRepository(Status::OK, std::move(repository));
 }
 

@@ -43,11 +43,11 @@ void PageEvictionManagerImpl::Init(fit::function<void(Status)> callback) {
       });
 }
 
-void PageEvictionManagerImpl::SetPageStateReader(
-    PageStateReader* state_reader) {
-  FXL_DCHECK(state_reader);
-  FXL_DCHECK(!state_reader_);
-  state_reader_ = state_reader;
+void PageEvictionManagerImpl::SetDelegate(
+    PageEvictionManager::Delegate* delegate) {
+  FXL_DCHECK(delegate);
+  FXL_DCHECK(!delegate_);
+  delegate_ = delegate;
 }
 
 void PageEvictionManagerImpl::TryCleanUp(fit::function<void(Status)> callback) {
@@ -68,12 +68,19 @@ void PageEvictionManagerImpl::TryCleanUp(fit::function<void(Status)> callback) {
           bool can_evict;
           Status status = CanEvictPage(handler, page_info.ledger_name,
                                        page_info.page_id, &can_evict);
+          if (status == Status::PAGE_NOT_FOUND) {
+            // The page was already removed, maybe from a previous call to
+            // |TryCleanUp|. Mark it as evicted in the Page Usage DB.
+            MarkPageEvicted(page_info.ledger_name, page_info.page_id);
+            continue;
+          }
           if (status != Status::OK) {
             callback(status);
             return;
           }
           if (can_evict) {
-            callback(EvictPage(page_info.ledger_name, page_info.page_id));
+            EvictPage(page_info.ledger_name, page_info.page_id,
+                      std::move(callback));
             return;
           }
         }
@@ -83,16 +90,16 @@ void PageEvictionManagerImpl::TryCleanUp(fit::function<void(Status)> callback) {
 
 void PageEvictionManagerImpl::OnPageOpened(fxl::StringView ledger_name,
                                            storage::PageIdView page_id) {
-  coroutine_manager_.StartCoroutine(
-      [this, ledger_name = ledger_name.ToString(),
-       page_id = page_id.ToString()](coroutine::CoroutineHandler* handler) {
-        Status status = db_.MarkPageOpened(handler, ledger_name, page_id);
-        if (status != Status::OK) {
-          FXL_LOG(ERROR)
-              << "Failed to mark page as opened in PageUsage DB. Ledger name: "
-              << ledger_name << ". Page ID: " << convert::ToHex(page_id);
-        }
-      });
+  coroutine_manager_.StartCoroutine([this, ledger_name = ledger_name.ToString(),
+                                     page_id = page_id.ToString()](
+                                        coroutine::CoroutineHandler* handler) {
+    Status status = db_.MarkPageOpened(handler, ledger_name, page_id);
+    if (status != Status::OK) {
+      FXL_LOG(ERROR)
+          << "Failed to mark the page as opened in PageUsage DB. Ledger name: "
+          << ledger_name << ". Page ID: " << convert::ToHex(page_id);
+    }
+  });
 }
 
 void PageEvictionManagerImpl::OnPageClosed(fxl::StringView ledger_name,
@@ -100,28 +107,46 @@ void PageEvictionManagerImpl::OnPageClosed(fxl::StringView ledger_name,
   fit::function<void(Status)> callback =
       [ledger_name = ledger_name.ToString(),
        page_id = page_id.ToString()](Status status) {};
-  coroutine_manager_.StartCoroutine(
-      [this, ledger_name = ledger_name.ToString(),
-       page_id = page_id.ToString()](coroutine::CoroutineHandler* handler) {
-        Status status = db_.MarkPageClosed(handler, ledger_name, page_id);
-        if (status != Status::OK) {
-          FXL_LOG(ERROR)
-              << "Failed to mark page as closed in PageUsage DB. Ledger name: "
-              << ledger_name << ". Page ID: " << convert::ToHex(page_id);
-        }
-      });
+  coroutine_manager_.StartCoroutine([this, ledger_name = ledger_name.ToString(),
+                                     page_id = page_id.ToString()](
+                                        coroutine::CoroutineHandler* handler) {
+    Status status = db_.MarkPageClosed(handler, ledger_name, page_id);
+    if (status != Status::OK) {
+      FXL_LOG(ERROR)
+          << "Failed to mark the page as closed in PageUsage DB. Ledger name: "
+          << ledger_name << ". Page ID: " << convert::ToHex(page_id);
+    }
+  });
 }
 
-Status PageEvictionManagerImpl::EvictPage(fxl::StringView /*ledger_name*/,
-                                          storage::PageIdView /*page_id*/) {
-  FXL_NOTIMPLEMENTED();
-  return Status::UNKNOWN_ERROR;
+void PageEvictionManagerImpl::EvictPage(fxl::StringView ledger_name,
+                                        storage::PageIdView page_id,
+                                        fit::function<void(Status)> callback) {
+  FXL_DCHECK(delegate_);
+  // We cannot delete the page storage and mark the deletion atomically. We thus
+  // delete the page first, and then mark it as evicted in Page Usage DB. If at
+  // some point a page gets deleted, but marking fails, on the next attempt to
+  // evict it we will get a |PAGE_NOT_FOUND| error, indicating we should remove
+  // the entry then. Therefore, |PAGE_NOT_FOUND| errors are handled internally
+  // and never returned to the callback.
+  delegate_->DeletePageStorage(
+      ledger_name, page_id,
+      [this, ledger_name = ledger_name.ToString(), page_id = page_id.ToString(),
+       callback = std::move(callback)](Status status) {
+        // |PAGE_NOT_FOUND| is not an error, but it must have been handled
+        // before we try to evict the page.
+        FXL_DCHECK(status != Status::PAGE_NOT_FOUND);
+        if (status == Status::OK) {
+          MarkPageEvicted(std::move(ledger_name), std::move(page_id));
+        }
+        callback(status);
+      });
 }
 
 Status PageEvictionManagerImpl::CanEvictPage(
     coroutine::CoroutineHandler* handler, fxl::StringView ledger_name,
     storage::PageIdView page_id, bool* can_evict) {
-  FXL_DCHECK(state_reader_);
+  FXL_DCHECK(delegate_);
 
   Status status;
   PageClosedAndSynced sync_state;
@@ -129,7 +154,7 @@ Status PageEvictionManagerImpl::CanEvictPage(
       coroutine::SyncCall(handler,
                           [this, ledger_name = ledger_name.ToString(),
                            page_id = page_id.ToString()](auto callback) {
-                            state_reader_->PageIsClosedAndSynced(
+                            delegate_->PageIsClosedAndSynced(
                                 ledger_name, page_id, std::move(callback));
                           },
                           &status, &sync_state);
@@ -138,7 +163,7 @@ Status PageEvictionManagerImpl::CanEvictPage(
   }
   *can_evict = (sync_state == PageClosedAndSynced::YES);
 
-  return Status::OK;
+  return status;
 }
 
 Status PageEvictionManagerImpl::GetPagesByTimestamp(
@@ -176,6 +201,19 @@ Status PageEvictionManagerImpl::GetPagesByTimestamp(
 
   pages_info->swap(pages);
   return Status::OK;
+}
+
+void PageEvictionManagerImpl::MarkPageEvicted(std::string ledger_name,
+                                              storage::PageId page_id) {
+  coroutine_manager_.StartCoroutine([this, ledger_name = std::move(ledger_name),
+                                     page_id = std::move(page_id)](
+                                        coroutine::CoroutineHandler* handler) {
+    Status status = db_.MarkPageEvicted(handler, ledger_name, page_id);
+    if (status != Status::OK) {
+      FXL_LOG(ERROR) << "Failed to mark the page as evicted. Ledger name: "
+                     << ledger_name << ". Page ID: " << convert::ToHex(page_id);
+    }
+  });
 }
 
 }  // namespace ledger

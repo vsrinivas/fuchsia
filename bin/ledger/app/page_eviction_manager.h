@@ -12,6 +12,7 @@
 #include <lib/fxl/macros.h>
 #include <lib/fxl/strings/string_view.h>
 
+#include "peridot/bin/ledger/app/types.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 
@@ -42,6 +43,25 @@ class PageUsageListener {
 // Manages page eviction based on page usage information.
 class PageEvictionManager : public PageUsageListener {
  public:
+  // A Delegate, providing the necessary functionality to allow
+  // PageEvictionManager to perform storage clean up operations.
+  class Delegate {
+   public:
+    // Checks whether the given page is closed and synced. The result returned
+    // in the callback will be |PageClosedAndSynced:UNKNOWN| if the page is
+    // opened after calling this method and before the callback is called.
+    // Otherwise it will be |YES| or |NO| depending on whether the page is
+    // synced.
+    virtual void PageIsClosedAndSynced(
+        fxl::StringView ledger_name, storage::PageIdView page_id,
+        fit::function<void(Status, PageClosedAndSynced)> callback) = 0;
+
+    // Deletes the local copy of the given page from storage.
+    virtual void DeletePageStorage(fxl::StringView ledger_name,
+                                   storage::PageIdView page_id,
+                                   fit::function<void(Status)> callback) = 0;
+  };
+
   PageEvictionManager() {}
   ~PageEvictionManager() override {}
 

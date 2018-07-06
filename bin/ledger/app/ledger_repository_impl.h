@@ -16,7 +16,6 @@
 
 #include "peridot/bin/ledger/app/ledger_manager.h"
 #include "peridot/bin/ledger/app/page_eviction_manager.h"
-#include "peridot/bin/ledger/app/page_state_reader.h"
 #include "peridot/bin/ledger/app/sync_watcher_set.h"
 #include "peridot/bin/ledger/app/types.h"
 #include "peridot/bin/ledger/encryption/impl/encryption_service_factory_impl.h"
@@ -31,7 +30,7 @@ namespace ledger {
 
 class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
                              public ledger_internal::LedgerRepositoryDebug,
-                             public PageStateReader {
+                             public PageEvictionManager::Delegate {
  public:
   LedgerRepositoryImpl(
       DetachedPath content_path, Environment* environment,
@@ -50,10 +49,13 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
   // Releases all handles bound to this repository impl.
   std::vector<fidl::InterfaceRequest<LedgerRepository>> Unbind();
 
-  // PageStateReader:
+  // PageEvictionManagerImpl::Delegate:
   void PageIsClosedAndSynced(
       fxl::StringView ledger_name, storage::PageIdView page_id,
       fit::function<void(Status, PageClosedAndSynced)> callback) override;
+  void DeletePageStorage(fxl::StringView ledger_name,
+                         storage::PageIdView page_id,
+                         fit::function<void(Status)> callback) override;
 
   // LedgerRepository:
   void GetLedger(fidl::VectorPtr<uint8_t> ledger_name,

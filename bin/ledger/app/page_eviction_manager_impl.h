@@ -11,7 +11,6 @@
 
 #include <lib/fit/function.h>
 
-#include "peridot/bin/ledger/app/page_state_reader.h"
 #include "peridot/bin/ledger/app/page_usage_db.h"
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
@@ -30,7 +29,9 @@ class PageEvictionManagerImpl : public PageEvictionManager {
   // of an error while initializing the underlying database.
   void Init(fit::function<void(Status)> callback);
 
-  void SetPageStateReader(PageStateReader* state_reader);
+  // Sets the delegate for this PageEvictionManagerImpl. The delegate should
+  // outlive this object.
+  void SetDelegate(PageEvictionManager::Delegate* delegate);
 
   // PageEvictionManager:
   void TryCleanUp(fit::function<void(Status)> callback) override;
@@ -43,7 +44,8 @@ class PageEvictionManagerImpl : public PageEvictionManager {
 
  private:
   // Removes the page from the local storage.
-  Status EvictPage(fxl::StringView ledger_name, storage::PageIdView page_id);
+  void EvictPage(fxl::StringView ledger_name, storage::PageIdView page_id,
+                 fit::function<void(Status)> callback);
 
   // Checks whether a page can be evicted. We can evict pages that are not
   // currently used and have no unsynced commits or objects.
@@ -56,7 +58,10 @@ class PageEvictionManagerImpl : public PageEvictionManager {
   Status GetPagesByTimestamp(coroutine::CoroutineHandler* handler,
                              std::vector<PageUsageDb::PageInfo>* pages);
 
-  PageStateReader* state_reader_ = nullptr;
+  // Marks the given page as evicted in the page usage database.
+  void MarkPageEvicted(std::string ledger_name, storage::PageId page_id);
+
+  PageEvictionManager::Delegate* delegate_ = nullptr;
   PageUsageDb db_;
   coroutine::CoroutineManager coroutine_manager_;
 
