@@ -59,16 +59,30 @@ void Describe(const fbl::RefPtr<Vnode>& vn, uint32_t flags,
                                                                  FIDL_ALLOC_ABSENT);
 }
 
-// Performs a path walk and opens a connection to another node.
-void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent, zx::channel channel,
-            fbl::StringPiece path, uint32_t flags, uint32_t mode) {
+void FilterFlags(uint32_t flags, uint32_t* out_flags, bool* out_describe) {
     // Filter out flags that are invalid when combined with REF_ONLY.
     if (IsPathOnly(flags)) {
         flags &= ZX_FS_FLAG_VNODE_REF_ONLY | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_DESCRIBE;
     }
 
-    bool describe = flags & ZX_FS_FLAG_DESCRIBE;
-    uint32_t open_flags = flags & (~ZX_FS_FLAG_DESCRIBE);
+    *out_describe = flags & ZX_FS_FLAG_DESCRIBE;
+    *out_flags = flags & (~ZX_FS_FLAG_DESCRIBE);
+}
+
+void VnodeServe(Vfs* vfs, fbl::RefPtr<Vnode> vnode, zx::channel channel, uint32_t open_flags) {
+    if (IsPathOnly(open_flags)) {
+        vnode->Vnode::Serve(vfs, fbl::move(channel), open_flags);
+    } else {
+        vnode->Serve(vfs, fbl::move(channel), open_flags);
+    }
+}
+
+// Performs a path walk and opens a connection to another node.
+void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent, zx::channel channel,
+            fbl::StringPiece path, uint32_t flags, uint32_t mode) {
+    bool describe;
+    uint32_t open_flags;
+    FilterFlags(flags, &open_flags, &describe);
 
     fbl::RefPtr<Vnode> vnode;
     zx_status_t r = vfs->Open(fbl::move(parent), &vnode, path, &path, open_flags, mode);
@@ -122,12 +136,7 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent, zx::channel channel,
         return;
     }
 
-    // If r == ZX_OK, then we hold a reference to vn from open.
-    if (IsPathOnly(open_flags)) {
-        vnode->Vnode::Serve(vfs, fbl::move(channel), open_flags);
-    } else {
-        vnode->Serve(vfs, fbl::move(channel), open_flags);
-    }
+    VnodeServe(vfs, fbl::move(vnode), fbl::move(channel), open_flags);
 }
 
 } // namespace
@@ -316,22 +325,35 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
             channel.reset(msg->handle[0]); // take ownership
             flags = arg;
         }
+
+        bool describe;
+        uint32_t open_flags;
+        FilterFlags(flags, &open_flags, &describe);
+        // TODO(smklein): Avoid automatically inheriting rights
+        // from the cloned file descriptor; allow de-scoping.
+        // Currently, this is difficult, since the remote IO interface
+        // to clone does not specify a reduced set of rights.
+        open_flags |= (flags_ & ZX_FS_RIGHTS);
+
         fbl::RefPtr<Vnode> vn(vnode_);
-        zx_status_t status = OpenVnode(flags_, &vn);
-        bool describe = flags & ZX_FS_FLAG_DESCRIBE;
+        zx_status_t status = ZX_OK;
+        if (!IsPathOnly(open_flags)) {
+            status = OpenVnode(open_flags, &vn);
+        }
         if (describe) {
             zxrio_describe_t response;
             memset(&response, 0, sizeof(response));
             response.status = status;
             zx_handle_t extra = ZX_HANDLE_INVALID;
             if (status == ZX_OK) {
-                Describe(vnode_, flags_, &response, &extra);
+                Describe(vnode_, open_flags, &response, &extra);
             }
             uint32_t hcount = (extra != ZX_HANDLE_INVALID) ? 1 : 0;
             channel.write(0, &response, sizeof(zxrio_describe_t), &extra, hcount);
         }
+
         if (status == ZX_OK) {
-            vn->Serve(vfs_, fbl::move(channel), flags_);
+            VnodeServe(vfs_, fbl::move(vn), fbl::move(channel), open_flags);
         }
         return ERR_DISPATCHER_INDIRECT;
     }
