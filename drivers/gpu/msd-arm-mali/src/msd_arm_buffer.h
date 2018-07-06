@@ -61,9 +61,6 @@ public:
 
     std::shared_ptr<MsdArmBuffer> base_ptr() { return base_ptr_; }
 
-    // Get a new buffer referencing the same memory.
-    std::shared_ptr<MsdArmBuffer> CloneBuffer();
-
 private:
     std::shared_ptr<MsdArmBuffer> base_ptr_;
 

@@ -78,13 +78,8 @@ public:
     }
     std::shared_ptr<AddressSpace::Owner> GetSharedPtr() override { return shared_from_this(); }
 
-    // Get a buffer dedicated to this connection that's safe to use from the
-    // connection thread without locking.
-    std::shared_ptr<MsdArmBuffer> GetBuffer(MsdArmAbiBuffer* buffer);
-    void ReleaseBuffer(MsdArmAbiBuffer* buffer);
-
     bool PageInMemory(uint64_t address);
-    bool CommitMemoryForBuffer(MsdArmAbiBuffer* buffer, uint64_t page_offset, uint64_t page_count);
+    bool CommitMemoryForBuffer(MsdArmBuffer* buffer, uint64_t page_offset, uint64_t page_count);
 
 private:
     static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
@@ -100,8 +95,6 @@ private:
     FXL_PT_GUARDED_BY(address_lock_) std::unique_ptr<AddressSpace> address_space_;
     // Map GPU va to a mapping.
     FXL_GUARDED_BY(address_lock_) std::map<uint64_t, std::unique_ptr<GpuMapping>> gpu_mappings_;
-
-    std::unordered_map<MsdArmAbiBuffer*, std::shared_ptr<MsdArmBuffer>> buffers_;
 
     Owner* owner_;
 

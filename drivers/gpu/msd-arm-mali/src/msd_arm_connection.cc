@@ -182,7 +182,7 @@ MsdArmConnection::MsdArmConnection(msd_client_id_t client_id, Owner* owner)
 {
 }
 
-MsdArmConnection::~MsdArmConnection() { DASSERT(buffers_.empty()); }
+MsdArmConnection::~MsdArmConnection() {}
 
 static bool access_flags_from_flags(uint64_t mapping_flags, bool cache_coherent,
                                     uint64_t* flags_out)
@@ -369,11 +369,11 @@ bool MsdArmConnection::PageInMemory(uint64_t address)
     return buffer->SetCommittedPages(buffer->start_committed_pages(), committed_page_count);
 }
 
-bool MsdArmConnection::CommitMemoryForBuffer(MsdArmAbiBuffer* buffer, uint64_t page_offset,
+bool MsdArmConnection::CommitMemoryForBuffer(MsdArmBuffer* buffer, uint64_t page_offset,
                                              uint64_t page_count)
 {
     std::lock_guard<std::mutex> lock(address_lock_);
-    return GetBuffer(buffer)->SetCommittedPages(page_offset, page_count);
+    return buffer->SetCommittedPages(page_offset, page_count);
 }
 
 void MsdArmConnection::SetNotificationCallback(msd_connection_notification_callback_t callback,
@@ -428,24 +428,6 @@ void MsdArmConnection::MarkDestroyed()
     token_ = 0;
 }
 
-std::shared_ptr<MsdArmBuffer> MsdArmConnection::GetBuffer(MsdArmAbiBuffer* buffer)
-{
-    auto it = buffers_.find(buffer);
-    if (it != buffers_.end())
-        return it->second;
-
-    auto cloned_buffer = buffer->CloneBuffer();
-    buffers_[buffer] = cloned_buffer;
-    return cloned_buffer;
-}
-
-void MsdArmConnection::ReleaseBuffer(MsdArmAbiBuffer* buffer)
-{
-    // A per-connection buffer may not have been retrieved, so this may erase
-    // nothing.
-    buffers_.erase(buffer);
-}
-
 magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* abi_connection,
                                              msd_buffer_t* abi_buffer, uint64_t gpu_va,
                                              uint64_t page_offset, uint64_t page_count,
@@ -453,10 +435,10 @@ magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* abi_connection,
 {
     TRACE_DURATION("magma", "msd_connection_map_buffer_gpu", "page_count", page_count);
     MsdArmConnection* connection = MsdArmAbiConnection::cast(abi_connection)->ptr().get();
-    std::shared_ptr<MsdArmBuffer> buffer = connection->GetBuffer(MsdArmAbiBuffer::cast(abi_buffer));
 
-    auto mapping = std::make_unique<GpuMapping>(gpu_va, page_offset, page_count * PAGE_SIZE, flags,
-                                                connection, buffer);
+    auto mapping =
+        std::make_unique<GpuMapping>(gpu_va, page_offset, page_count * PAGE_SIZE, flags, connection,
+                                     MsdArmAbiBuffer::cast(abi_buffer)->base_ptr());
     if (!connection->AddMapping(std::move(mapping)))
         return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "AddMapping failed");
     return MAGMA_STATUS_OK;
@@ -476,8 +458,8 @@ magma_status_t msd_connection_commit_buffer(msd_connection_t* abi_connection,
                                             uint64_t page_count)
 {
     MsdArmConnection* connection = MsdArmAbiConnection::cast(abi_connection)->ptr().get();
-    if (!connection->CommitMemoryForBuffer(MsdArmAbiBuffer::cast(abi_buffer), page_offset,
-                                           page_count))
+    if (!connection->CommitMemoryForBuffer(MsdArmAbiBuffer::cast(abi_buffer)->base_ptr().get(),
+                                           page_offset, page_count))
         return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "CommitMemoryForBuffer failed");
     return MAGMA_STATUS_OK;
 }
@@ -492,6 +474,4 @@ void msd_connection_set_notification_callback(msd_connection_t* abi_connection,
 void msd_connection_release_buffer(msd_connection_t* abi_connection,
                                    msd_buffer_t* abi_buffer)
 {
-    MsdArmConnection* connection = MsdArmAbiConnection::cast(abi_connection)->ptr().get();
-    connection->ReleaseBuffer(MsdArmAbiBuffer::cast(abi_buffer));
 }

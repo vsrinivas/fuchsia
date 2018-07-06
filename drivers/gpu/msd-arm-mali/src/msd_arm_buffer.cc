@@ -53,14 +53,6 @@ void MsdArmBuffer::RemoveMapping(GpuMapping* mapping)
     gpu_mappings_.erase(mapping);
 }
 
-std::shared_ptr<MsdArmBuffer> MsdArmAbiBuffer::CloneBuffer()
-{
-    uint32_t buffer_handle;
-    bool status = base_ptr_->platform_buffer()->duplicate_handle(&buffer_handle);
-    DASSERT(status);
-    return std::shared_ptr<MsdArmBuffer>(MsdArmBuffer::Import(buffer_handle));
-}
-
 bool MsdArmBuffer::SetCommittedPages(uint64_t start_page, uint64_t page_count)
 {
     if ((start_page + page_count) * PAGE_SIZE > platform_buffer()->size())
