@@ -80,16 +80,14 @@ public:
 
     zx_status_t StartReadyWait();
     void ResetReadyWait();
-    // Sets the fences which will be signaled immedately when this fence is ready.
-    void SetImmediateRelease(fbl::RefPtr<FenceReference>&& fence1,
-                             fbl::RefPtr<FenceReference>&& fence2);
+    // Sets the fence which will be signaled immedately when this fence is ready.
+    void SetImmediateRelease(fbl::RefPtr<FenceReference>&& fence);
 
     void OnReady();
 private:
     fbl::RefPtr<Fence> fence_;
 
-    fbl::RefPtr<FenceReference> release_fence1_;
-    fbl::RefPtr<FenceReference> release_fence2_;
+    fbl::RefPtr<FenceReference> release_fence_;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(FenceReference);
 };

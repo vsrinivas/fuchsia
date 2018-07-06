@@ -52,7 +52,6 @@ private:
 
     // Event ids passed to SetLayerImage which haven't been applied yet.
     uint64_t pending_wait_event_id_;
-    uint64_t pending_present_event_id_;
     uint64_t pending_signal_event_id_;
 
     // The image given to SetLayerImage which hasn't been applied yet.
@@ -151,8 +150,6 @@ private:
                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleReleaseEvent(const fuchsia_display_ControllerReleaseEventRequest* req,
                             fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleSetDisplayImage(const fuchsia_display_ControllerSetDisplayImageRequest* req,
-                               fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleCreateLayer(const fuchsia_display_ControllerCreateLayerRequest* req,
                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleDestroyLayer(const fuchsia_display_ControllerDestroyLayerRequest* req,
@@ -182,9 +179,6 @@ private:
     void HandleSetLayerColorConfig(
             const fuchsia_display_ControllerSetLayerColorConfigRequest* req,
             fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleSetLayerImageLegacy(uint64_t layer_id, uint64_t image_id,
-                                   uint64_t wait_event_id, uint64_t present_event_id,
-                                   uint64_t signal_event_id);
     void HandleSetLayerImage(const fuchsia_display_ControllerSetLayerImageRequest* req,
                              fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleCheckConfig(const fuchsia_display_ControllerCheckConfigRequest* req,
@@ -202,8 +196,6 @@ private:
                            fidl::Builder* resp_builder,
                            zx_handle_t* handle_out, bool* has_handle_out,
                            const fidl_type_t** resp_table);
-
-    zx_status_t CreateLayer(uint64_t* layer_id);
 
     // Cleans up layer state associated with an image. If image == nullptr, then
     // cleans up all image state. Return true if a current layer was modified.

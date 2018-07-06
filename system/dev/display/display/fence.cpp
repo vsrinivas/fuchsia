@@ -88,20 +88,14 @@ void FenceReference::ResetReadyWait() {
     fence_->OnRefDisarmed(this);
 }
 
-void FenceReference::SetImmediateRelease(fbl::RefPtr<FenceReference>&& fence1,
-                                         fbl::RefPtr<FenceReference>&& fence2) {
-    release_fence1_ = fbl::move(fence1);
-    release_fence2_ = fbl::move(fence2);
+void FenceReference::SetImmediateRelease(fbl::RefPtr<FenceReference>&& fence) {
+    release_fence_ = fbl::move(fence);
 }
 
 void FenceReference::OnReady() {
-    if (release_fence1_) {
-        release_fence1_->Signal();
-        release_fence1_ = nullptr;
-    }
-    if (release_fence2_) {
-        release_fence2_->Signal();
-        release_fence2_ = nullptr;
+    if (release_fence_) {
+        release_fence_->Signal();
+        release_fence_ = nullptr;
     }
 }
 

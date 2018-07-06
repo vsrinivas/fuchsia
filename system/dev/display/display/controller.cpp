@@ -206,12 +206,11 @@ void Controller::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
     image_node_t* cur;
     image_node_t* tmp;
     list_for_every_entry_safe(&info->images, cur, tmp, image_node_t, link) {
-        bool handle_match = false;
         bool z_already_matched = false;
         for (unsigned i = 0; i < handle_count; i++) {
             if (handles[i] == cur->self->info().handle) {
-                handle_match = true;
                 z_indices[i] = cur->self->z_index();
+                z_already_matched = true;
                 break;
             } else if (z_indices[i] == cur->self->z_index()) {
                 z_already_matched = true;
@@ -219,13 +218,12 @@ void Controller::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
             }
         }
 
+        // Retire any images for which we don't already have a z-match, since
+        // those are older than whatever is currently in their layer.
         if (!z_already_matched) {
-            cur->self->OnPresent();
-            if (!handle_match) {
-                list_delete(&cur->link);
-                cur->self->OnRetire();
-                cur->self.reset();
-            }
+            list_delete(&cur->link);
+            cur->self->OnRetire();
+            cur->self.reset();
         }
     }
 }

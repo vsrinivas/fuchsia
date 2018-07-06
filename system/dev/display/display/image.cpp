@@ -19,10 +19,9 @@ Image::~Image() {
     controller_->ReleaseImage(this);
 }
 
-void Image::PrepareFences(fbl::RefPtr<FenceReference>&& wait, fbl::RefPtr<FenceReference>&& present,
+void Image::PrepareFences(fbl::RefPtr<FenceReference>&& wait,
                           fbl::RefPtr<FenceReference>&& signal) {
     wait_fence_ = fbl::move(wait);
-    present_fence_ = fbl::move(present);
     signal_fence_ = fbl::move(signal);
 
     if (wait_fence_) {
@@ -48,7 +47,7 @@ void Image::StartPresent() {
 
 void Image::EarlyRetire() {
     if (wait_fence_) {
-        wait_fence_->SetImmediateRelease(fbl::move(present_fence_), fbl::move(signal_fence_));
+        wait_fence_->SetImmediateRelease(fbl::move(signal_fence_));
         wait_fence_ = nullptr;
     }
     fbl::atomic_store(&in_use_, false);
@@ -58,13 +57,6 @@ void Image::StartRetire() {
     ZX_DEBUG_ASSERT(wait_fence_ == nullptr);
 
     if (!presenting_) {
-        // We can fall into this case if the image was presented but then we switched to
-        // the other client.
-        if (present_fence_) {
-            present_fence_->Signal();
-            present_fence_ = nullptr;
-        }
-
         if (signal_fence_) {
             signal_fence_->Signal();
             signal_fence_ = nullptr;
@@ -73,14 +65,6 @@ void Image::StartRetire() {
     } else {
         retiring_ = true;
         armed_signal_fence_ = fbl::move(signal_fence_);
-    }
-}
-
-void Image::OnPresent() {
-    if (present_fence_) {
-        present_fence_->Signal();
-        // Set to null since an image can be active for many vsync
-        present_fence_ = nullptr;
     }
 }
 
@@ -118,7 +102,6 @@ void Image::ResetFences() {
     }
 
     wait_fence_ = nullptr;
-    present_fence_ = nullptr;
     armed_signal_fence_ = nullptr;
     signal_fence_ = nullptr;
 }

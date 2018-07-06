@@ -34,14 +34,12 @@ public:
     // Marks the image as not in use. Should only be called before PrepareFences.
     void DiscardAcquire();
     // Called to set this image's fences and prepare the image to be displayed.
-    void PrepareFences(fbl::RefPtr<FenceReference>&& wait, fbl::RefPtr<FenceReference>&& present,
+    void PrepareFences(fbl::RefPtr<FenceReference>&& wait,
                        fbl::RefPtr<FenceReference>&& signal);
     // Called to immedately retire the image if StartPresent hasn't been called yet.
     void EarlyRetire();
     // Called when the image is passed to the display hardware.
     void StartPresent();
-    // Called on vsync when the image is presented.
-    void OnPresent();
     // Called when another image is presented after this one.
     void StartRetire();
     // Called on vsync after StartRetire has been called.
@@ -81,7 +79,6 @@ private:
     uint32_t z_index_;
 
     fbl::RefPtr<FenceReference> wait_fence_ = nullptr;
-    fbl::RefPtr<FenceReference> present_fence_ = nullptr;
     fbl::RefPtr<FenceReference> signal_fence_ = nullptr;
     // See comment in ::OnRetire for why this is necessary
     fbl::RefPtr<FenceReference> armed_signal_fence_ = nullptr;

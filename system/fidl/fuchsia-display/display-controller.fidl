@@ -162,6 +162,9 @@ struct ConfigResult {
 // client. The primary client is obtained by directly opening the devfs device,
 // while the virtcon client is obtained by opening a 'virtcon' child of the
 // device.
+//
+// Performing illegal actions on the interface will result in the interface
+// being closed.
 interface Controller {
   // Event fired when displays are added or removed. This event will be fired
   // when the callback is registered if there are any connected displays.
@@ -187,10 +190,9 @@ interface Controller {
 
   // Imports an event into the driver and associates it with the given id.
   //
-  // Id must not be equal to invalidId and must uniquely identify the underlying
-  // event. It is not well defined to import one event with two different ids or
-  // to import two different events with the same id. Note that ids map well to
-  // koids.
+  // It is illegal for id to be equal to invalidId, and it is undefined to
+  // import one event with two different ids or to import two different events
+  // with the same id (note that ids map well to koids).
   4: ImportEvent(handle<event> event, uint64 id);
 
   // Releases the event imported with the given id.
@@ -199,21 +201,24 @@ interface Controller {
   // waited up or signaled as appropriate before its resources are released.
   5: ReleaseEvent(uint64 id);
 
-  // Creates a new layer. Layers are not associated with a particular
-  // display, but they can only be shown on at most one display at any
-  // given time.
+  // Creates a new layer.
+  //
+  // Layers are not associated with a particular display, but they can only be
+  // shown on at most one display at any given time.  A layer is considered in
+  // use from the time it is passed to SetDisplayLayers until a subsequent
+  // configuration is applied which does not include the layer or until its
+  // display is removed.
   6: CreateLayer() -> (status res, uint64 layer_id);
 
-  // Destroys the given layer. A layer is considered in use from the time it
-  // is passed to SetDisplayLayers until a subsequent call to SetDisplayLayers
-  // removes it from its display or until its display is removed. It is illegal
-  // to destroy a layer which is in use or in a pending configuration.
+  // Destroys the given layer.
+  //
+  // It is illegal to destroy a layer which does not exist or which is in use.
   7: DestroyLayer(uint64 layer_id);
 
   // Sets the display mode for the given display.
   //
   // It is illegal to pass a display mode which was not part of the display's Info.
-  18: SetDisplayMode(uint64 display_id, Mode mode);
+  8: SetDisplayMode(uint64 display_id, Mode mode);
 
   // Set the color conversion applied to the display. The conversion is applied to
   // to each pixel according to the formula:
@@ -225,17 +230,18 @@ interface Controller {
   // |coefficients| is passed in row-major order. If the first entry of an
   // array is NaN, the array is treated as the identity element for the relevant
   // operation.
-  21: SetDisplayColorConversion(uint64 display_id,
-                                array<float32>:3 preoffsets,
-                                array<float32>:9 coefficients,
-                                array<float32>:3 postoffsets);
+  9: SetDisplayColorConversion(uint64 display_id,
+                               array<float32>:3 preoffsets,
+                               array<float32>:9 coefficients,
+                               array<float32>:3 postoffsets);
 
   // Sets which layers are on a display. The list is in increasing z-order.
   //
   // It is illegal to use a layer on multiple displays concurrently. If a layer
   // needs to be moved between displays, it must be removed from the first display's
-  // pending config before being added to the second display's pending config.
-  8: SetDisplayLayers(uint64 display_id, vector<uint64> layer_ids);
+  // pending config before being added to the second display's pending config. It
+  // is also illegal to pass an invalid layer id.
+  10: SetDisplayLayers(uint64 display_id, vector<uint64> layer_ids);
 
   // Configures the layer as a primary layer with no image and the default
   // config (no src_frame cropping, the identity transform, positioned in the
@@ -245,16 +251,20 @@ interface Controller {
   // image currently being displayed and any pending images will be dropped
   // before the next frame, regardless of whether or not the layer's new image
   // is ready to be displayed.
-  9: SetLayerPrimaryConfig(uint64 layer_id, ImageConfig image_config);
+  //
+  // It is illegal to pass an invalid layer id.
+  11: SetLayerPrimaryConfig(uint64 layer_id, ImageConfig image_config);
 
-  // Sets the layer transform, scaling, and positioning. Calling this on a
-  // non-primary layer is illegal.
+  // Sets the layer transform, scaling, and positioning.
   //
   // |src_frame| must be non-empty and must fit entirely within the source
   // image. |dest_frame| must be non-empty and must fit entirely within the
   // composed output. CheckConfig will return CONFIG_ERROR if any of these
   // conditions is violated.
-  10: SetLayerPrimaryPosition(uint64 layer_id, Transform transform, Frame src_frame, Frame dest_frame);
+  //
+  // Calling this on a non-primary layer or passing an invalid transform
+  // is illegal.
+  12: SetLayerPrimaryPosition(uint64 layer_id, Transform transform, Frame src_frame, Frame dest_frame);
 
   // Sets the alpha mode of the plane.
   //
@@ -268,59 +278,72 @@ interface Controller {
   // alpha. Additionally, if |mode| == PREMULTIPLIED, then the hardware
   // premultiplies the color channel with |val| before blending.
   //
-  // If |val| is not NaN, it must be in the range [0, 1].
-  22: SetLayerPrimaryAlpha(uint64 layer_id, AlphaMode mode, float32 val); 
+  // It is illegal to call this on a non-primary layer, to pass an
+  // invalid mode, or to pass a value of |val| which is not NaN or
+  // in the range [0, 1].
+  13: SetLayerPrimaryAlpha(uint64 layer_id, AlphaMode mode, float32 val);
 
   // Configures the layer as a cursor layer with the given config. The
   // default position is (0, 0).
-  19: SetLayerCursorConfig(uint64 layer_id, ImageConfig image_config);
+  //
+  // It is illegal to call this on an invalid layer.
+  14: SetLayerCursorConfig(uint64 layer_id, ImageConfig image_config);
 
-  // Updates the cursor position. Illegal if called on a non-cursor layer.
+  // Updates the cursor position.
   //
   // The driver will clamp x to [-cursor_width + 1, display_width - 1] and
   // will clamp y to [-cursor_height + 1, display_height - 1].
-  20: SetLayerCursorPosition(uint64 layer_id, int32 x, int32 y);
+  //
+  // It is illegal to call this on a non-cursor layer.
+  15: SetLayerCursorPosition(uint64 layer_id, int32 x, int32 y);
 
   // Configures the layer as a color layer with the given color. The
   // color_bytes vector is little-endian and must have length appropriate
   // for the pixel format.
-  25: SetLayerColorConfig(uint64 layer_id, uint32 pixel_format, vector<uint8> color_bytes);
+  //
+  // It is illegal to call this on an invalid layer or for the length of
+  // color_bytes to mismatch the size of the supplied format.
+  16: SetLayerColorConfig(uint64 layer_id, uint32 pixel_format, vector<uint8> color_bytes);
 
-  // Sets the image for the layer. It is illegal to call this with an
-  // image which doesn't match the layer's pending ImageConfig.
+  // Sets the image for the layer.
   //
   // If wait_event_id corresponds to an imported event, the driver will
   // wait for ZX_EVENT_SIGNALED on the object before presenting the image.
   //
-  // If signal_event_id is valid, then the driver will signal the event when
-  // the image is no longer being presented.
+  // If signal_event_id is valid, then the driver will signal the event with
+  // ZX_EVENT_SIGNALED when the image is no longer being presented.
   //
   // The driver will queue the images that are not yet ready. When an image is
-  // ready, any older images which are not yet ready will be dropped and their
-  // present and signal events will immediately be signaled. The driver also
-  // does not attempt to synchronize with vsync. If multiple images are ready
-  // within one vsync period, then only the last image will actually be
-  // displayed.
+  // ready, any older images which are not yet ready will immediately be dropped
+  // and their signal events will be signaled as soon as their wait events are
+  // fired. The driver also does not attempt to synchronize with vsync. If
+  // multiple images become ready within one vsync period, then only the last
+  // image will actually be displayed.
   //
   // An image cannot be used for multiple layers simultaneously, nor can an
   // image be given back to the display controller while it is still in use.
-  // An image is considered used when it is part of a pending configuration or
-  // from when its configuration is applied until its signal_event_id is
+  // An image is considered in use when it is part of a pending configuration
+  // or from when its configuration is applied until its signal_event_id is
   // signaled.
-  11: SetLayerImage(uint64 layer_id, uint64 image_id, uint64 wait_event_id, uint64 signal_event_id);
+  //
+  // It is illegal to call this with an invalid layer or image id, to
+  // call it on a color layer, or to call it with an image and layer whose
+  // ImageConfigs do not match.
+  17: SetLayerImage(uint64 layer_id, uint64 image_id, uint64 wait_event_id, uint64 signal_event_id);
 
   // Attempts to validate the current configuration.
   //
   // When CheckConfig is called, the driver will validate the pending
-  // configuration. Any errors or client configuration will be returned in
-  // the res vector. If the vector is empty, the configuration is valid.
+  // configuration. Any errors or required client composition ops will
+  // be returned in the res vector. If the vector is empty, then the
+  // configuration is valid.
   //
   // Most SetX operation require re-validating the configuration. The exception
   // are SetLayerCursorPosition and SetLayerImage - these operations do not
   // modify the configuration in a way which requires revalidation.
   //
   // If discard is true, the pending changes will be discarded after validation.
-  12: CheckConfig(bool discard) -> (vector<ConfigResult> res);
+  18: CheckConfig(bool discard) -> (vector<ConfigResult> res);
 
   // Applies any pending changes to the current configuration. This will
   // not apply pending changes to layers which are not on any display.
@@ -328,47 +351,34 @@ interface Controller {
   // If the pending configuration cannot be applied, this call will silently
   // fail, so the client should ensure its configuration is valid with
   // CheckConfig.
-  13: ApplyConfig();
+  19: ApplyConfig();
 
   // Sets whether or not vsync events will be given to this client. Defaults
   // to false.
-  23: EnableVsync(bool enable);
+  20: EnableVsync(bool enable);
 
   // Event sent for every vsync.
   //
   // display_id is the identifies the display on which the vsync occurred, and
   // timestamp indicates the time the vsync occurred. images is a (possibly
   // empty) vector of all images where were actively being displayed.
-  24: -> Vsync(uint64 display_id, uint64 timestamp, vector<uint64> images);
+  21: -> Vsync(uint64 display_id, uint64 timestamp, vector<uint64> images);
 
   // Sets the visibility behavior of the virtcon. It is illegal to call this
   // from the primary client.
-  14: SetVirtconMode(uint8 mode);
+  22: SetVirtconMode(uint8 mode);
 
   // Event fired when the client gains or loses ownership of the displays.
   //
   // New clients should assume they do not have ownership of the display
   // until this event informs them otherwise.
-  15: -> ClientOwnershipChange(bool has_ownership);
+  23: -> ClientOwnershipChange(bool has_ownership);
 
   // Computes the stride (in pixels) necessary for a linear image with the
   // given width and pixel format. Returns 0 on error.
-  16: ComputeLinearImageStride(uint32 width, uint32 pixel_format) -> (uint32 stride);
+  24: ComputeLinearImageStride(uint32 width, uint32 pixel_format) -> (uint32 stride);
 
   // Allocates a VMO of the requested size which can be used for images.
   // TODO: move this into a seperate video buffer management system.
-  17: AllocateVmo(uint64 size) -> (status res, handle<vmo>? vmo);
-
-  // TODO(stevensd): Renumber method ordinals in declaration order
-  // 18: SetDisplayMode
-  // 19: SetLayerCursorConfig
-  // 20: SetLayerCursorPosition
-  // 21: SetDisplayColorConversion
-  // 22: SetLayerPrimaryAlpha
-  // 23: EnableVsync
-  // 24: Vsync
-  // 25: SetLayerColorConfig
-
-  // TODO(stevensd): Delete this when nothing uses it anymore
-  100: SetDisplayImage(uint64 display, uint64 image_id, uint64 wait_event_id, uint64 present_event_id, uint64 signal_event_id);
+  25: AllocateVmo(uint64 size) -> (status res, handle<vmo>? vmo);
 };

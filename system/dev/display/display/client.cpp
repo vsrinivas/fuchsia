@@ -33,7 +33,6 @@ zx_status_t decode_message(fidl::Message* msg) {
     SELECT_TABLE_CASE(fuchsia_display_ControllerReleaseImage);
     SELECT_TABLE_CASE(fuchsia_display_ControllerImportEvent);
     SELECT_TABLE_CASE(fuchsia_display_ControllerReleaseEvent);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerSetDisplayImage);
     SELECT_TABLE_CASE(fuchsia_display_ControllerCreateLayer);
     SELECT_TABLE_CASE(fuchsia_display_ControllerDestroyLayer);
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetDisplayMode);
@@ -166,7 +165,6 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
     HANDLE_REQUEST_CASE(ReleaseImage);
     HANDLE_REQUEST_CASE(ImportEvent);
     HANDLE_REQUEST_CASE(ReleaseEvent);
-    HANDLE_REQUEST_CASE(SetDisplayImage);
     HANDLE_REQUEST_CASE(CreateLayer);
     HANDLE_REQUEST_CASE(DestroyLayer);
     HANDLE_REQUEST_CASE(SetDisplayMode);
@@ -292,57 +290,23 @@ void Client::HandleReleaseEvent(const fuchsia_display_ControllerReleaseEventRequ
     }
 }
 
-void Client::HandleSetDisplayImage(const fuchsia_display_ControllerSetDisplayImageRequest* req,
-                                   fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
-    // Transform old API calls into new API calls. Don't bother supporting
-    // multiple displays or cleaning anything up.
-    auto image = images_.find(req->image_id);
-    ZX_ASSERT(image.IsValid());
-
-    if (display_image_layer_ == INVALID_ID) {
-        ZX_ASSERT(CreateLayer(&display_image_layer_) == ZX_OK);
-
-        fuchsia_display_ControllerSetLayerPrimaryConfigRequest fake_req;
-        fake_req.layer_id = display_image_layer_;
-        fake_req.image_config.height = image->info().height;
-        fake_req.image_config.width = image->info().width;
-        fake_req.image_config.pixel_format = image->info().pixel_format;
-        fake_req.image_config.type = image->info().type;
-
-        HandleSetLayerPrimaryConfig(&fake_req, nullptr, nullptr);
-
-        auto layer = layers_.find(display_image_layer_);
-        auto config = configs_.find(req->display);
-        ZX_ASSERT(layer.IsValid() && config.IsValid());
-
-        layer->pending_layer_.z_index = 0;
-        config->pending_layer_change_ = true;
-        config->pending_layers_.push_front(&layer->pending_node_);
-        config->pending_.layer_count = 1;
-    }
-
-    HandleSetLayerImageLegacy(display_image_layer_, req->image_id,
-                              req->wait_event_id, req->present_event_id, req->signal_event_id);
-}
-
 void Client::HandleCreateLayer(const fuchsia_display_ControllerCreateLayerRequest* req,
                                fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto resp = resp_builder->New<fuchsia_display_ControllerCreateLayerResponse>();
     *resp_table = &fuchsia_display_ControllerCreateLayerResponseTable;
-    resp->res = CreateLayer(&resp->layer_id);
-}
 
-zx_status_t Client::CreateLayer(uint64_t* layer_id) {
     if (layers_.size() == kMaxLayers) {
-        return ZX_ERR_NO_RESOURCES;
+        resp->res = ZX_ERR_NO_RESOURCES;
+        return;
     }
 
     fbl::AllocChecker ac;
     auto new_layer = fbl::make_unique_checked<Layer>(&ac);
     if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
+        resp->res = ZX_ERR_NO_MEMORY;
+        return;
     }
-    *layer_id = next_layer_id++;
+    resp->layer_id = next_layer_id++;
 
     memset(&new_layer->pending_layer_, 0, sizeof(layer_t));
     memset(&new_layer->current_layer_, 0, sizeof(layer_t));
@@ -350,24 +314,25 @@ zx_status_t Client::CreateLayer(uint64_t* layer_id) {
     new_layer->pending_node_.layer = new_layer.get();
     new_layer->current_node_.layer = new_layer.get();
     new_layer->current_display_id_ = INVALID_DISPLAY_ID;
-    new_layer->id = *layer_id;
+    new_layer->id = resp->layer_id;
     new_layer->current_layer_.type = kInvalidLayerType;
     new_layer->pending_layer_.type = kInvalidLayerType;
 
     layers_.insert(fbl::move(new_layer));
 
-    return ZX_OK;
+    resp->res = ZX_OK;
 }
 
 void Client::HandleDestroyLayer(const fuchsia_display_ControllerDestroyLayerRequest* req,
                                 fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto layer = layers_.find(req->layer_id);
     if (!layer.IsValid()) {
-        zxlogf(INFO, "Tried to destroy invalid layer %ld\n", req->layer_id);
+        zxlogf(ERROR, "Tried to destroy invalid layer %ld\n", req->layer_id);
+        TearDown();
         return;
     }
     if (layer->current_node_.InContainer() || layer->pending_node_.InContainer()) {
-        zxlogf(ERROR, "Destroyed layer which was in use\n");
+        zxlogf(ERROR, "Destroyed layer %ld which was in use\n", req->layer_id);
         TearDown();
         return;
     }
@@ -473,7 +438,8 @@ void Client::HandleSetLayerPrimaryConfig(
         fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto layer = layers_.find(req->layer_id);
     if (!layer.IsValid()) {
-        zxlogf(WARN, "SetLayerPrimaryConfig on invalid layer\n");
+        zxlogf(ERROR, "SetLayerPrimaryConfig on invalid layer\n");
+        TearDown();
         return;
     }
 
@@ -541,7 +507,8 @@ void Client::HandleSetLayerPrimaryAlpha(
         return;
     }
 
-    if (req->mode > fuchsia_display_AlphaMode_HW_MULTIPLY || req->val < 0 || req->val > 1) {
+    if (req->mode > fuchsia_display_AlphaMode_HW_MULTIPLY ||
+            (!isnan(req->val) && (req->val < 0 || req->val > 1))) {
         zxlogf(ERROR, "Invalid args %d %f\n", req->mode, req->val);
         TearDown();
         return;
@@ -565,7 +532,8 @@ void Client::HandleSetLayerCursorConfig(
         fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto layer = layers_.find(req->layer_id);
     if (!layer.IsValid()) {
-        zxlogf(WARN, "SetLayerCursorConfig on invalid layer\n");
+        zxlogf(ERROR, "SetLayerCursorConfig on invalid layer\n");
+        TearDown();
         return;
     }
 
@@ -602,7 +570,7 @@ void Client::HandleSetLayerColorConfig(
         fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto layer = layers_.find(req->layer_id);
     if (!layer.IsValid()) {
-        zxlogf(WARN, "SetLayerColorConfig on invalid layer\n");
+        zxlogf(ERROR, "SetLayerColorConfig on invalid layer\n");
         return;
     }
 
@@ -625,16 +593,15 @@ void Client::HandleSetLayerColorConfig(
     pending_config_valid_ = false;
 }
 
-void Client::HandleSetLayerImageLegacy(uint64_t layer_id, uint64_t image_id,
-                                       uint64_t wait_event_id, uint64_t present_event_id,
-                                       uint64_t signal_event_id) {
-    auto layer = layers_.find(layer_id);
-    if (!layer.IsValid()) {
+void Client::HandleSetLayerImage(const fuchsia_display_ControllerSetLayerImageRequest* req,
+                                 fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto layer = layers_.find(req->layer_id);
+    if (!layer.IsValid() || layer->pending_layer_.type == LAYER_COLOR) {
         zxlogf(ERROR, "SetLayerImage ordinal with invalid layer\n");
         TearDown();
         return;
     }
-    auto image = images_.find(image_id);
+    auto image = images_.find(req->image_id);
     if (!image.IsValid() || !image->Acquire()) {
         zxlogf(ERROR, "SetLayerImage ordinal with %s image\n", image.IsValid() ? "invl" : "busy");
         TearDown();
@@ -655,15 +622,8 @@ void Client::HandleSetLayerImageLegacy(uint64_t layer_id, uint64_t image_id,
     }
 
     layer->pending_image_ = image.CopyPointer();
-    layer->pending_wait_event_id_ = wait_event_id;
-    layer->pending_present_event_id_ = present_event_id;
-    layer->pending_signal_event_id_ = signal_event_id;
-}
-
-void Client::HandleSetLayerImage(const fuchsia_display_ControllerSetLayerImageRequest* req,
-                                 fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
-    HandleSetLayerImageLegacy(req->layer_id, req->image_id,
-                              req->wait_event_id, INVALID_ID, req->signal_event_id);
+    layer->pending_wait_event_id_ = req->wait_event_id;
+    layer->pending_signal_event_id_ = req->signal_event_id;
 }
 
 void Client::HandleCheckConfig(const fuchsia_display_ControllerCheckConfigRequest* req,
@@ -747,7 +707,6 @@ void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigReques
             if (layer->pending_image_) {
                 layer_node.layer->pending_image_->PrepareFences(
                         GetFence(layer->pending_wait_event_id_),
-                        GetFence(layer->pending_present_event_id_),
                         GetFence(layer->pending_signal_event_id_));
                 list_add_tail(&layer->waiting_images_, &layer->pending_image_->node.link);
                 layer->pending_image_->node.self = fbl::move(layer->pending_image_);
