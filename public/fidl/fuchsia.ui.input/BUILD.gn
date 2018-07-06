@@ -8,6 +8,7 @@ fidl("fuchsia.ui.input") {
   sdk_category = "partner"
 
   sources = [
+    "commands.fidl",
     "ime_service.fidl",
     "input_connection.fidl",
     "input_device_registry.fidl",

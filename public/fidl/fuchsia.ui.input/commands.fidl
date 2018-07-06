@@ -1,0 +1,19 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.input;
+
+// Commands for conveying input events to a |Session|.
+union Command {
+  SendKeyboardInput send_keyboard_input;
+  SendPointerInput send_pointer_input;
+};
+
+struct SendKeyboardInput {
+  KeyboardEvent event;
+};
+
+struct SendPointerInput {
+  PointerEvent event;
+};

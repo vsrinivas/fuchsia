@@ -16,9 +16,10 @@ fidl("fuchsia.ui.scenic") {
 
   public_deps = [
     "//garnet/public/fidl/fuchsia.images",
-    "//zircon/public/fidl/fuchsia-mem",
     "//garnet/public/fidl/fuchsia.ui.gfx",
+    "//garnet/public/fidl/fuchsia.ui.input",
     "//garnet/public/fidl/fuchsia.ui.vectorial",
     "//garnet/public/fidl/fuchsia.ui.views",
+    "//zircon/public/fidl/fuchsia-mem",
   ]
 }
