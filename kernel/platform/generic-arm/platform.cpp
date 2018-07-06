@@ -583,9 +583,17 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* zbi, const size_t len) {
     return ZX_OK;
 }
 
+void platform_mexec_prep(uintptr_t new_bootimage_addr, size_t new_bootimage_len) {
+    DEBUG_ASSERT(!arch_ints_disabled());
+    DEBUG_ASSERT(mp_get_online_mask() == cpu_num_to_mask(BOOT_CPU_ID));
+}
+
 void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
                     uintptr_t new_bootimage_addr, size_t new_bootimage_len,
                     uintptr_t entry64_addr) {
+    DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(mp_get_online_mask() == cpu_num_to_mask(BOOT_CPU_ID));
+
     paddr_t kernel_src_phys = (paddr_t)ops[0].src;
     paddr_t kernel_dst_phys = (paddr_t)ops[0].dst;
 

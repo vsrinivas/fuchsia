@@ -44,7 +44,8 @@ __END_CDECLS
 
 /* Allocates a page of memory that has the same physical and virtual addresses.
  */
-static zx_status_t identity_page_allocate(void** result_addr) {
+static zx_status_t identity_page_allocate(fbl::RefPtr<VmAspace>* new_aspace,
+                                          void** result_addr) {
     zx_status_t result;
 
     // Start by obtaining an unused physical page. This address will eventually
@@ -76,8 +77,7 @@ static zx_status_t identity_page_allocate(void** result_addr) {
     if (result != ZX_OK)
         return result;
 
-    vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(identity_aspace.get()));
-
+    *new_aspace = fbl::move(identity_aspace);
     *result_addr = identity_address;
 
     return ZX_OK;
@@ -276,26 +276,33 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo, zx_ha
         }
     }
 
-    // WARNING
-    // It is unsafe to return from this function beyond this point.
-    // This is because we have swapped out the user address space and halted the
-    // secondary cores and there is no trivial way to bring both of these back.
-    thread_migrate_to_cpu(BOOT_CPU_ID);
-
     void* id_page_addr = 0x0;
-    result = identity_page_allocate(&id_page_addr);
+    fbl::RefPtr<VmAspace> aspace;
+    result = identity_page_allocate(&aspace, &id_page_addr);
     if (result != ZX_OK) {
-        panic("Unable to allocate identity page");
+        return result;
     }
 
     LTRACEF("zx_system_mexec allocated identity mapped page at %p\n",
             id_page_addr);
+
+    thread_migrate_to_cpu(BOOT_CPU_ID);
 
     // We assume that when the system starts, only one CPU is running. We denote
     // this as the boot CPU.
     // We want to make sure that this is the CPU that eventually branches into
     // the new kernel so we attempt to migrate this thread to that cpu.
     platform_halt_secondary_cpus();
+
+    platform_mexec_prep(new_bootimage_addr, new_bootimage_len);
+
+    arch_disable_ints();
+
+    // WARNING
+    // It is unsafe to return from this function beyond this point.
+    // This is because we have swapped out the user address space and halted the
+    // secondary cores and there is no trivial way to bring both of these back.
+    vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(aspace.get()));
 
     // We're going to copy this into our identity page, make sure it's not
     // longer than a single page.
@@ -304,8 +311,6 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo, zx_ha
 
     memcpy(id_page_addr, (const void*)mexec_asm, mexec_asm_length);
     arch_sync_cache_range((addr_t)id_page_addr, mexec_asm_length);
-
-    arch_disable_ints();
 
     // We must pass in an arg that represents a list of memory regions to
     // shuffle around. We put this args list immediately after the mexec
@@ -339,9 +344,6 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo, zx_ha
     arch_clean_cache_range((addr_t)id_page_addr, PAGE_SIZE);
 
     shutdown_interrupts();
-
-    mp_set_curr_cpu_active(false);
-    mp_set_curr_cpu_online(false);
 
     // Ask the platform to mexec into the next kernel.
     mexec_asm_func mexec_assembly = (mexec_asm_func)id_page_addr;

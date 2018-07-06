@@ -40,7 +40,13 @@ void mexec_stash_crashlog(fbl::RefPtr<VmObject> vmo);
  */
 zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len);
 
+/* This function is called at the beginning of mexec.  Interrupts are not yet
+ * disabled, but only one CPU is running.
+ */
+void platform_mexec_prep(uintptr_t new_bootimage_addr, size_t new_bootimage_len);
+
 /* Ask the platform to mexec into the next kernel.
+ * This function is called after platform_mexec_prep(), with interrupts disabled.
  */
 void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
                     uintptr_t new_bootimage_addr, size_t new_bootimage_len,
