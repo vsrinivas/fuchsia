@@ -83,7 +83,7 @@ class TestApp {
     parameter.data = std::move(parameter_data);
 
     fuchsia::modular::Intent intent;
-    intent.action.handler = kModule1Url;
+    intent.handler = kModule1Url;
     intent.parameters.push_back(std::move(parameter));
 
     module_context_->StartModule("module1", std::move(intent),
@@ -98,7 +98,7 @@ class TestApp {
     parameter.data = std::move(parameter_data);
 
     intent = fuchsia::modular::Intent();
-    intent.action.handler = kModule2Url;
+    intent.handler = kModule2Url;
     intent.parameters.push_back(std::move(parameter));
 
     module_context_->StartModule("module2", std::move(intent),

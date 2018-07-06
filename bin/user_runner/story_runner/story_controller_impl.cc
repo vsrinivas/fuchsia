@@ -86,11 +86,11 @@ fidl::VectorPtr<fidl::StringPtr> ParentModulePath(
 bool ShouldRestartModuleForNewIntent(
     const fuchsia::modular::Intent& old_intent,
     const fuchsia::modular::Intent& new_intent) {
-  if (old_intent.action.handler != new_intent.action.handler) {
+  if (old_intent.handler != new_intent.handler) {
     return true;
   }
 
-  if (old_intent.action.name != new_intent.action.name) {
+  if (old_intent.action != new_intent.action) {
     return true;
   }
 
@@ -859,40 +859,40 @@ class StoryControllerImpl::FindModulesCall
  private:
   void Run() {
     FlowToken flow{this, &response_};
-    if (intent_->action.handler) {
+    if (intent_->handler) {
       // We don't need to find a module if we already know which one to use, but
       // we do need to ask the resolver for a copy of its manifest.
       story_controller_impl_->story_provider_impl_->module_resolver()
           ->GetModuleManifest(
-              intent_->action.handler,
+              intent_->handler,
               [this, flow](fuchsia::modular::ModuleManifestPtr manifest) {
                 fuchsia::modular::FindModulesResult result;
-                result.module_id = intent_->action.handler;
+                result.module_id = intent_->handler;
                 result.manifest = CloneOptional(manifest);
                 response_.results.push_back(std::move(result));
               });
       return;
     }
 
-    FXL_DCHECK(intent_->action.name);
+    FXL_DCHECK(intent_->action);
 
     constraint_futs_.reserve(intent_->parameters->size());
 
     constraint_params_.resize(0);
     constraint_params_->reserve(intent_->parameters->size());
 
-    resolver_query_.action = intent_->action.name;
+    resolver_query_.action = intent_->action;
     resolver_query_.parameter_constraints.resize(0);
     resolver_query_.parameter_constraints->reserve(intent_->parameters->size());
 
     for (const auto& param : *intent_->parameters) {
-      if (param.name.is_null() && intent_->action.handler.is_null()) {
+      if (param.name.is_null() && intent_->handler.is_null()) {
         // It is not allowed to have a null intent name (left in for backwards
         // compatibility with old code: MI4-736) and rely on action-based
         // resolution.
         // TODO(thatguy): Return an error string.
         FXL_LOG(WARNING) << "A null-named module parameter is not allowed "
-                         << "when using fuchsia::modular::Intent.action.name.";
+                         << "when using fuchsia::modular::Intent.action.";
         return;
       }
 

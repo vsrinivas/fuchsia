@@ -168,7 +168,7 @@ class ModuleResolverApp : fuchsia::modular::ContextListener {
       const std::map<QueryParamName, fuchsia::modular::LinkMetadata>& remember,
       fuchsia::modular::Intent* intent_out) {
     fuchsia::modular::Intent intent;
-    intent.action.handler = module_result.module_id;
+    intent.handler = module_result.module_id;
     fidl::VectorPtr<fuchsia::modular::IntentParameter> parameters;
     fidl::VectorPtr<fidl::StringPtr> parent_mod_path;
 

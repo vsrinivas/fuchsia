@@ -7,20 +7,18 @@ library fuchsia.modular;
 // The Intent struct is a runtime descriptor for an abstract action to be initiated
 // in Fuchsia. For details please see docs/intent.md.
 struct Intent {
-  // The action represented by this Intent.
-  IntentAction action;
+  // The name of the action represented by this Intent.
+  //
+  // This is nullable for backwards compatibility.
+  // TODO(MI4-1100): Make action non-nullable.
+  string? action;
+  
+  // An explicit handler for the Intent. Specified as the package name of the 
+  // module.
+  string? handler;
 
   // The parameters that will be passed to the handler of |action|.
   vector<IntentParameter>? parameters;
-};
-
-// A struct containing an action name and an optional specific handler for that action.
-struct IntentAction {
-  // The name of the action.
-  string? name;
-
-  // An optional specific handler for the intent (i.e. the mod at the |handler| url).
-  string? handler;
 };
 
 // A struct representing a parameter that is passed to the handler of an Intent's

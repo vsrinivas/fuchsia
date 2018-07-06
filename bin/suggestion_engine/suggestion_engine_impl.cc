@@ -407,10 +407,10 @@ void SuggestionEngineImpl::PerformCreateStoryAction(
   fuchsia::modular::Intent intent;
   create_story.intent.Clone(&intent);
 
-  if (intent.action.handler) {
-    FXL_LOG(INFO) << "Creating story with module " << intent.action.handler;
-  } else {  // intent.action.name
-    FXL_LOG(INFO) << "Creating story with action " << intent.action.name;
+  if (intent.handler) {
+    FXL_LOG(INFO) << "Creating story with module " << intent.handler;
+  } else {  // intent.action
+    FXL_LOG(INFO) << "Creating story with action " << intent.action;
   }
 
   // TODO(MI4-997): Use a separate enum for internal ranking vs. what is exposed

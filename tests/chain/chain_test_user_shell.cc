@@ -68,7 +68,7 @@ class TestApp
 
   void AddRootModule() {
     fuchsia::modular::Intent intent;
-    intent.action.handler = kModuleUrl;
+    intent.handler = kModuleUrl;
 
     fuchsia::modular::IntentParameterData data;
     data.set_json(R"("initial data for the story")");

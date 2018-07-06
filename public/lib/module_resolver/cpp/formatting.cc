@@ -8,7 +8,7 @@ namespace modular {
 
 std::ostream& operator<<(std::ostream& os,
                          const fuchsia::modular::Intent& intent) {
-  os << "{ action: " << intent.action.name << ", parameters: [" << std::endl;
+  os << "{ action: " << intent.action << ", parameters: [" << std::endl;
   for (auto it = intent.parameters->begin(); it != intent.parameters->end();
        ++it) {
     os << "    " << it->name << ": " << it->data << "," << std::endl;

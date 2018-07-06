@@ -52,17 +52,17 @@ TEST(StoryControllerImplTest, ShouldRestartModuleForNewIntent) {
   Intent two;
 
   // Handler differs.
-  one.action.handler = "handler1";
-  two.action.handler = "handler2";
+  one.handler = "handler1";
+  two.handler = "handler2";
   EXPECT_TRUE(ShouldRestartModuleForNewIntent(one, two));
-  two.action.handler = "handler1";
+  two.handler = "handler1";
   EXPECT_FALSE(ShouldRestartModuleForNewIntent(one, two));
 
   // Action name differs.
-  one.action.name = "name1";
-  two.action.name = "name2";
+  one.action = "name1";
+  two.action = "name2";
   EXPECT_TRUE(ShouldRestartModuleForNewIntent(one, two));
-  two.action.name = "name1";
+  two.action = "name1";
   EXPECT_FALSE(ShouldRestartModuleForNewIntent(one, two));
 
   // Param count differs.

@@ -131,7 +131,7 @@ class TestApp
     //
     // The observability of the STOPPED state, however, is guaranteed.
     fuchsia::modular::Intent intent;
-    intent.action.handler = kCommonNullModule;
+    intent.handler = kCommonNullModule;
     story_controller_->AddModule(nullptr /* parent_module_path */, "module1",
                                  std::move(intent),
                                  nullptr /* surface_relation */);
@@ -192,7 +192,7 @@ class TestApp
     // the controller connection is just closed, and flow of control would need
     // to resume from the connection error handler of the module controller.
     fuchsia::modular::Intent intent;
-    intent.action.handler = kCommonNullModule;
+    intent.handler = kCommonNullModule;
     story_controller_->AddModule(nullptr /* parent_module_path */, "module2",
                                  std::move(intent),
                                  nullptr /* surface_relation */);

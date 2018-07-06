@@ -147,7 +147,7 @@ class TestApp
     fidl::VectorPtr<fidl::StringPtr> parent_one;
     parent_one.push_back("root");
     fuchsia::modular::Intent intent_one;
-    intent_one.action.name = kCommonNullAction;
+    intent_one.action = kCommonNullAction;
     story_controller_->AddModule(std::move(parent_one), "one",
                                  std::move(intent_one),
                                  nullptr /* surface_relation */);
@@ -156,7 +156,7 @@ class TestApp
     parent_two.push_back("root");
     parent_two.push_back("one");
     fuchsia::modular::Intent intent_two;
-    intent_two.action.name = kCommonNullAction;
+    intent_two.action = kCommonNullAction;
     story_controller_->AddModule(std::move(parent_two), "two",
                                  std::move(intent_two),
                                  nullptr /* surface_relation */);
@@ -224,7 +224,7 @@ class TestApp
     fidl::VectorPtr<fidl::StringPtr> parent_one;
     parent_one.push_back("root");
     fuchsia::modular::Intent intent_one;
-    intent_one.action.handler = kCommonNullModule;
+    intent_one.handler = kCommonNullModule;
     story_controller_->AddModule(std::move(parent_one), "one",
                                  std::move(intent_one),
                                  nullptr /*surface_relation) */);
@@ -233,7 +233,7 @@ class TestApp
     parent_two.push_back("root");
     parent_two.push_back("one");
     fuchsia::modular::Intent intent_two;
-    intent_two.action.handler = kCommonNullModule;
+    intent_two.handler = kCommonNullModule;
     story_controller_->AddModule(std::move(parent_two), "two",
                                  std::move(intent_two),
                                  nullptr /* surface_relation */);

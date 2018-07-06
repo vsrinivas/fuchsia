@@ -35,7 +35,7 @@ class TestApp : fuchsia::modular::ModuleWatcher {
  private:
   void StartChildModule() {
     fuchsia::modular::Intent intent;
-    intent.action.handler = kCommonNullModule;
+    intent.handler = kCommonNullModule;
     module_host_->module_context()->StartModule(
         kChildModuleName, std::move(intent), child_module_.NewRequest(),
         nullptr /* surface_relation */,

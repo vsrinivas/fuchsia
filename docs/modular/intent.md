@@ -36,8 +36,8 @@ parameter.name = "contacts";
 parameter.data = parameter_data;
 
 Intent intent;
-intent.action.handler = url_to_contacts_picker_module;
-intent.action.name = "com.google.fuchsia.pick-contacts";
+intent.handler = url_to_contacts_picker_module;
+intent.action = "com.google.fuchsia.pick-contacts";
 intent.parameters = { parameter };
 
 module_context.StartModule("contacts-picker", intent ...);

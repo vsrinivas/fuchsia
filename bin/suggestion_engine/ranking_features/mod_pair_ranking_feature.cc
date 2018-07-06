@@ -53,11 +53,11 @@ double ModPairRankingFeature::ComputeFeatureInternal(
     fidl::StringPtr module_url;
     switch (action.Which()) {
       case fuchsia::modular::Action::Tag::kCreateStory: {
-        module_url = action.create_story().intent.action.handler;
+        module_url = action.create_story().intent.handler;
         break;
       }
       case fuchsia::modular::Action::Tag::kAddModule: {
-        module_url = action.add_module().intent.action.handler;
+        module_url = action.add_module().intent.handler;
         break;
       }
       case fuchsia::modular::Action::Tag::kCustomAction:

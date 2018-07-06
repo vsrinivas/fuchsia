@@ -475,7 +475,7 @@ void LocalModuleResolver::OnQuery(fuchsia::modular::UserInput query,
       proposal.id = entry.binary;
 
       fuchsia::modular::CreateStory create_story;
-      create_story.intent.action.handler = entry.binary;
+      create_story.intent.handler = entry.binary;
 
       fuchsia::modular::Action action;
       action.set_create_story(std::move(create_story));

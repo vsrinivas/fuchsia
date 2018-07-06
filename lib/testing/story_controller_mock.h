@@ -87,7 +87,7 @@ class StoryControllerMock : public fuchsia::modular::StoryController {
       fidl::VectorPtr<fidl::StringPtr> module_path, fidl::StringPtr module_name,
       fuchsia::modular::Intent intent,
       fuchsia::modular::SurfaceRelationPtr surface_relation) override {
-    last_added_module_ = intent.action.handler;
+    last_added_module_ = intent.handler;
   }
 
   std::string last_added_module_;

@@ -54,7 +54,7 @@ class TestApp {
 
   void StartChildModule() {
     fuchsia::modular::Intent intent;
-    intent.action.handler = kChildModuleUrl;
+    intent.handler = kChildModuleUrl;
     module_host_->module_context()->EmbedModule(
         kChildModuleName, std::move(intent), child_module_.NewRequest(),
         child_view_.NewRequest(),

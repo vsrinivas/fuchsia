@@ -681,7 +681,7 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
 
   fuchsia::modular::CreateStory create_story;
   fuchsia::modular::Intent intent;
-  intent.action.handler = "foo://bar";
+  intent.handler = "foo://bar";
   create_story.intent = std::move(intent);
 
   fuchsia::modular::Action action;
@@ -706,7 +706,7 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestionCallback) {
 
   fuchsia::modular::CreateStory create_story;
   fuchsia::modular::Intent intent;
-  intent.action.handler = "foo://bar";
+  intent.handler = "foo://bar";
   create_story.intent = std::move(intent);
 
   fuchsia::modular::Action action;
@@ -733,7 +733,7 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestionToCreateStory) {
 
   fuchsia::modular::CreateStory create_story;
   fuchsia::modular::Intent intent;
-  intent.action.handler = "foo://bar";
+  intent.handler = "foo://bar";
   create_story.intent = std::move(intent);
 
   fuchsia::modular::Action action;
@@ -762,7 +762,7 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestionToCreateMultipleStories) {
 
   fuchsia::modular::CreateStory create_story;
   fuchsia::modular::Intent intent;
-  intent.action.handler = "foo://bar";
+  intent.handler = "foo://bar";
   create_story.intent = std::move(intent);
 
   fuchsia::modular::Action action;
@@ -791,7 +791,7 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_CreateStoryIntent) {
   StartListening(10);
 
   fuchsia::modular::Intent intent;
-  intent.action.handler = "foo://bar";
+  intent.handler = "foo://bar";
   fuchsia::modular::CreateStory create_story;
   create_story.intent = std::move(intent);
 
@@ -818,7 +818,7 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
   fuchsia::modular::AddModule add_module;
   add_module.story_id = "foo://bar";
   add_module.module_name = module_id;
-  add_module.intent.action.handler = module_id;
+  add_module.intent.handler = module_id;
   add_module.surface_parent_module_path =
       fidl::VectorPtr<fidl::StringPtr>::New(0);
   add_module.surface_relation = fuchsia::modular::SurfaceRelation();
@@ -848,7 +848,7 @@ TEST_F(SuggestionInteractionTest, ProposalWithRichSuggestion) {
   fuchsia::modular::AddModule add_module;
   add_module.story_id = "foo://bar";
   add_module.module_name = module_id;
-  add_module.intent.action.handler = module_id;
+  add_module.intent.handler = module_id;
   add_module.surface_parent_module_path =
       fidl::VectorPtr<fidl::StringPtr>::New(0);
   add_module.surface_relation = fuchsia::modular::SurfaceRelation();
@@ -904,7 +904,7 @@ TEST_F(SuggestionInteractionTest, DeleteProposalWithRichSuggestion) {
   fuchsia::modular::AddModule add_module;
   add_module.story_id = "foo://bar";
   add_module.module_name = module_id;
-  add_module.intent.action.handler = module_id;
+  add_module.intent.handler = module_id;
   add_module.surface_parent_module_path =
       fidl::VectorPtr<fidl::StringPtr>::New(0);
   add_module.surface_relation = fuchsia::modular::SurfaceRelation();
@@ -958,7 +958,7 @@ TEST_F(SuggestionInteractionTest, AcceptSugestion_QueryAction) {
   // Response from fuchsia::modular::QueryHandler.
   fuchsia::modular::CreateStory create_story;
   fuchsia::modular::Intent intent;
-  intent.action.handler = "foo://bar";
+  intent.handler = "foo://bar";
   create_story.intent = std::move(intent);
 
   fuchsia::modular::Action action2;
@@ -1152,7 +1152,7 @@ TEST_F(SuggestionFilteringTest, Baseline) {
 
   fuchsia::modular::CreateStory create_story;
   fuchsia::modular::Intent intent;
-  intent.action.handler = "foo://bar";
+  intent.handler = "foo://bar";
   create_story.intent = std::move(intent);
 
   fuchsia::modular::Action action;
@@ -1180,7 +1180,7 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
 
   fuchsia::modular::CreateStory create_story;
   fuchsia::modular::Intent intent;
-  intent.action.handler = "foo://bar";
+  intent.handler = "foo://bar";
   create_story.intent = std::move(intent);
 
   fuchsia::modular::Action action;

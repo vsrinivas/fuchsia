@@ -47,7 +47,7 @@ class TestApp : fuchsia::modular::LinkWatcher {
     param2.data.set_link_name(nullptr);
 
     fuchsia::modular::Intent intent;
-    intent.action.handler = kModule3Url;
+    intent.handler = kModule3Url;
     intent.parameters.push_back(std::move(param1));
     intent.parameters.push_back(std::move(param2));
 

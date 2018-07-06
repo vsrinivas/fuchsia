@@ -139,8 +139,8 @@ void XdrIntentParameter(XdrContext* const xdr,
 }
 
 void XdrIntent(XdrContext* const xdr, fuchsia::modular::Intent* const data) {
-  xdr->Field("action_name", &data->action.name);
-  xdr->Field("action_handler", &data->action.handler);
+  xdr->Field("action_name", &data->action);
+  xdr->Field("action_handler", &data->handler);
   xdr->Field("parameters", &data->parameters, XdrIntentParameter);
 }
 

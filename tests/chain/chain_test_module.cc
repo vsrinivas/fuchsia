@@ -61,7 +61,7 @@ class TestApp {
   TestPoint start_intent_{"Started child Intent"};
 
   void EmbedModule() {
-    intent_.action.handler = kChildModuleUrl;
+    intent_.handler = kChildModuleUrl;
     intent_.parameters.resize(4);
 
     // We'll put three parameters "one", "two" and "three" on the

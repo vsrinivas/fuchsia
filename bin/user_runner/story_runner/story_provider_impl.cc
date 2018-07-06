@@ -55,7 +55,7 @@ class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
         extra_info_(std::move(extra_info)),
         is_kind_of_proto_story_(is_kind_of_proto_story),
         start_time_(zx_clock_get(ZX_CLOCK_UTC)) {
-    intent_.action.handler = std::move(url);
+    intent_.handler = std::move(url);
 
     if (!root_json.is_null()) {
       fuchsia::modular::IntentParameter param;
@@ -84,7 +84,7 @@ class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
               session_storage_->ledger_client(), story_page_id_);
           controller_ = std::make_unique<StoryControllerImpl>(
               story_id_, storage_.get(), story_provider_impl_);
-          if (intent_.action.handler) {
+          if (intent_.handler) {
             controller_->AddModule({} /* parent_module_path */, kRootModuleName,
                                    std::move(intent_),
                                    nullptr /* surface_relation */);

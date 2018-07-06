@@ -63,7 +63,7 @@ void AddValueToContextUpdate(
 
 TEST_F(ModPairRankingFeatureTest, ComputeFeatureCreateStoryAction) {
   fuchsia::modular::Intent intent;
-  intent.action.handler = "mod3";
+  intent.handler = "mod3";
 
   fuchsia::modular::CreateStory create_story;
   create_story.intent = std::move(intent);
@@ -88,7 +88,7 @@ TEST_F(ModPairRankingFeatureTest, ComputeFeatureCreateStoryAction) {
 
 TEST_F(ModPairRankingFeatureTest, ComputeFeatureAddModuleAction) {
   fuchsia::modular::Intent intent;
-  intent.action.handler = "mod4";
+  intent.handler = "mod4";
   fuchsia::modular::AddModule add_module;
   add_module.intent = std::move(intent);
   fuchsia::modular::Action action;
@@ -109,7 +109,7 @@ TEST_F(ModPairRankingFeatureTest, ComputeFeatureAddModuleAction) {
 
 TEST_F(ModPairRankingFeatureTest, ComputeFeatureNoModule) {
   fuchsia::modular::Intent intent;
-  intent.action.handler = "mod-fiction";
+  intent.handler = "mod-fiction";
   fuchsia::modular::AddModule add_module;
   add_module.intent = std::move(intent);
   fuchsia::modular::Action action;
@@ -130,7 +130,7 @@ TEST_F(ModPairRankingFeatureTest, ComputeFeatureNoModule) {
 
 TEST_F(ModPairRankingFeatureTest, ComputeFeatureMultipleActions) {
   fuchsia::modular::AddModule add_module;
-  add_module.intent.action.handler = "mod-fiction";
+  add_module.intent.handler = "mod-fiction";
   fuchsia::modular::Action action;
   action.set_add_module(std::move(add_module));
   fuchsia::modular::Proposal proposal;
@@ -141,7 +141,7 @@ TEST_F(ModPairRankingFeatureTest, ComputeFeatureMultipleActions) {
   suggestion.prototype = &prototype;
 
   add_module = fuchsia::modular::AddModule();
-  add_module.intent.action.handler = "mod3";
+  add_module.intent.handler = "mod3";
   fuchsia::modular::Action action2;
   action2.set_add_module(std::move(add_module));
   suggestion.prototype->proposal.on_selected.push_back(std::move(action2));
