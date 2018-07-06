@@ -46,8 +46,6 @@
 
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS
-
 /*
  * Public include files for use by code that will interface to ACPICA.
  *
@@ -58,6 +56,10 @@ __BEGIN_CDECLS
  * Note: The order of these include files is important.
  */
 #include "platform/acenv.h"     /* Environment-specific items */
+
+// Wrap ACPICA's code with an extern C block so we can use it from C++.  We
+// don't include acenv.h/acenvex.h, since they might #include C++ code.
+__BEGIN_CDECLS
 #include "acnames.h"            /* Common ACPI names and strings */
 #include "actypes.h"            /* ACPICA data types and structures */
 #include "acexcep.h"            /* ACPICA exceptions */
@@ -66,8 +68,8 @@ __BEGIN_CDECLS
 #include "acrestyp.h"           /* Resource Descriptor structs */
 #include "acpiosxf.h"           /* OSL interfaces (ACPICA-to-OS) */
 #include "acpixf.h"             /* ACPI core subsystem external interfaces */
-#include "platform/acenvex.h"   /* Extra environment-specific items */
-
 __END_CDECLS
+
+#include "platform/acenvex.h"   /* Extra environment-specific items */
 
 #endif /* __ACPI_H__ */
