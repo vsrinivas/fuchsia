@@ -14,6 +14,7 @@ use std::str::FromStr;
 use vfs_watcher::{Watcher, WatchEvent};
 use wlan;
 use wlan_dev;
+use zx::Status as zx_Status;
 
 const PHY_PATH: &str = "/dev/class/wlanphy";
 const IFACE_PATH: &str = "/dev/class/wlanif";
@@ -55,7 +56,11 @@ pub fn watch_iface_devices()
 
 fn handle_open_error<T>(path: &PathBuf, r: Result<T, failure::Error>) -> Option<T> {
     if let Err(ref e) = &r {
-        eprintln!("Error opening device '{}': {}", path.display(), e);
+        if let Some(&zx_Status::ALREADY_BOUND) = e.cause().downcast_ref::<zx_Status>() {
+            info!("iface {:?} already open, deferring", path.display())
+        } else {
+            error!("Error opening device '{}': {}", path.display(), e);
+        }
     }
     r.ok()
 }
