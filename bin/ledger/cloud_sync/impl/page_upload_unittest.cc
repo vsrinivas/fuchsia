@@ -89,7 +89,7 @@ TEST_F(PageUploadTest, UploadBacklog) {
   bool upload_is_idle = false;
   SetOnNewStateCallback(
       [this, &upload_is_idle] { upload_is_idle = page_upload_->IsIdle(); });
-  page_upload_->StartUpload();
+  page_upload_->StartOrRestartUpload();
 
   RunLoopUntilIdle();
   ASSERT_TRUE(upload_is_idle);
@@ -117,7 +117,7 @@ TEST_F(PageUploadTest, UploadBacklogOnlyOnSingleHead) {
   storage_.NewCommit("id1", "content1");
   SetOnNewStateCallback(
       [this, &upload_is_idle] { upload_is_idle = page_upload_->IsIdle(); });
-  page_upload_->StartUpload();
+  page_upload_->StartOrRestartUpload();
 
   RunLoopUntilIdle();
   ASSERT_TRUE(upload_is_idle);
@@ -170,7 +170,7 @@ TEST_F(PageUploadTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
       upload_wait_remote_download = true;
     }
   });
-  page_upload_->StartUpload();
+  page_upload_->StartOrRestartUpload();
   RunLoopUntilIdle();
   ASSERT_TRUE(upload_wait_remote_download);
 
@@ -181,7 +181,7 @@ TEST_F(PageUploadTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
   bool upload_is_idle = false;
   SetOnNewStateCallback(
       [this, &upload_is_idle] { upload_is_idle = page_upload_->IsIdle(); });
-  page_upload_->StartUpload();
+  page_upload_->StartOrRestartUpload();
   RunLoopUntilIdle();
   ASSERT_TRUE(upload_is_idle);
 
@@ -204,7 +204,7 @@ TEST_F(PageUploadTest, UploadNewCommits) {
   bool upload_is_idle = false;
   SetOnNewStateCallback(
       [this, &upload_is_idle] { upload_is_idle = page_upload_->IsIdle(); });
-  page_upload_->StartUpload();
+  page_upload_->StartOrRestartUpload();
   RunLoopUntilIdle();
   ASSERT_TRUE(upload_is_idle);
   upload_is_idle = false;
@@ -246,7 +246,7 @@ TEST_F(PageUploadTest, UploadNewCommitsOnlyOnSingleHead) {
   bool upload_is_idle = false;
   SetOnNewStateCallback(
       [this, &upload_is_idle] { upload_is_idle = page_upload_->IsIdle(); });
-  page_upload_->StartUpload();
+  page_upload_->StartOrRestartUpload();
   RunLoopUntilIdle();
   ASSERT_TRUE(upload_is_idle);
   upload_is_idle = false;
@@ -309,7 +309,7 @@ TEST_F(PageUploadTest, UploadExistingAndNewCommits) {
   bool upload_is_idle = false;
   SetOnNewStateCallback(
       [this, &upload_is_idle] { upload_is_idle = page_upload_->IsIdle(); });
-  page_upload_->StartUpload();
+  page_upload_->StartOrRestartUpload();
   RunLoopUntilIdle();
   ASSERT_TRUE(upload_is_idle);
   upload_is_idle = false;
@@ -336,7 +336,7 @@ TEST_F(PageUploadTest, UploadExistingAndNewCommits) {
 // Verifies that failing uploads are retried. In production the retries are
 // delayed, here we set the delays to 0.
 TEST_F(PageUploadTest, DISABLED_RetryUpload) {
-  page_upload_->StartUpload();
+  page_upload_->StartOrRestartUpload();
   bool upload_is_idle = false;
   SetOnNewStateCallback(
       [this, &upload_is_idle] { upload_is_idle = page_upload_->IsIdle(); });
@@ -381,7 +381,7 @@ TEST_F(PageUploadTest, UploadIdleStatus) {
       on_idle_calls++;
     }
   });
-  page_upload_->StartUpload();
+  page_upload_->StartOrRestartUpload();
 
   // Verify that the idle callback is called once both commits are uploaded.
   RunLoopUntilIdle();
@@ -414,7 +414,7 @@ TEST_F(PageUploadTest, FailToListCommits) {
     }
   });
 
-  page_upload_->StartUpload();
+  page_upload_->StartOrRestartUpload();
   RunLoopUntilIdle();
   EXPECT_EQ(1, error_calls);
   EXPECT_EQ(0u, page_cloud_.received_commits.size());
@@ -425,7 +425,7 @@ TEST_F(PageUploadTest, DoNotUploadSyncedCommits) {
   bool upload_is_idle = false;
   SetOnNewStateCallback(
       [this, &upload_is_idle] { upload_is_idle = page_upload_->IsIdle(); });
-  page_upload_->StartUpload();
+  page_upload_->StartOrRestartUpload();
   RunLoopUntilIdle();
   ASSERT_TRUE(upload_is_idle);
   upload_is_idle = false;
@@ -451,7 +451,7 @@ TEST_F(PageUploadTest, DoNotUploadSyncedCommitsOnRetry) {
       QuitLoop();
     }
   });
-  page_upload_->StartUpload();
+  page_upload_->StartOrRestartUpload();
   RunLoopUntilIdle();
   ASSERT_TRUE(upload_is_idle);
   upload_is_idle = false;
@@ -488,7 +488,7 @@ TEST_F(PageUploadTest, UploadNewCommitsConcurrentNoCrash) {
   bool upload_is_idle = false;
   SetOnNewStateCallback(
       [this, &upload_is_idle] { upload_is_idle = page_upload_->IsIdle(); });
-  page_upload_->StartUpload();
+  page_upload_->StartOrRestartUpload();
   RunLoopUntilIdle();
   ASSERT_TRUE(upload_is_idle);
   upload_is_idle = false;

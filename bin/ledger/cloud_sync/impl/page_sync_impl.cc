@@ -65,7 +65,7 @@ void PageSyncImpl::EnableUpload() {
   }
 
   if (upload_state_ == UPLOAD_NOT_STARTED) {
-    page_upload_->StartUpload();
+    page_upload_->StartOrRestartUpload();
   }
 }
 
@@ -75,7 +75,7 @@ void PageSyncImpl::Start() {
 
   page_download_->StartDownload();
   if (enable_upload_) {
-    page_upload_->StartUpload();
+    page_upload_->StartOrRestartUpload();
   }
 }
 
@@ -144,7 +144,7 @@ void PageSyncImpl::SetDownloadState(DownloadSyncState next_download_state) {
 
   if (download_state_ != DOWNLOAD_IDLE &&
       next_download_state == DOWNLOAD_IDLE && enable_upload_) {
-    page_upload_->StartUpload();
+    page_upload_->StartOrRestartUpload();
   }
 
   download_state_ = next_download_state;

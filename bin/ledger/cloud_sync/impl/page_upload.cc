@@ -27,7 +27,7 @@ PageUpload::PageUpload(callback::ScopedTaskRunner* task_runner,
 
 PageUpload::~PageUpload() {}
 
-void PageUpload::StartUpload() {
+void PageUpload::StartOrRestartUpload() {
   if (external_state_ == UPLOAD_NOT_STARTED) {
     // When called for the first time, this method is responsible for handling
     // the initial setup.

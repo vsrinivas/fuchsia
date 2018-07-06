@@ -63,7 +63,7 @@ class PageUpload : public storage::CommitWatcher {
   // The first time this method is called this sets up the storage watcher. It
   // might be called again in the future to restart the upload after it's
   // stopped due to a remote download in progress.
-  void StartUpload();
+  void StartOrRestartUpload();
 
   // Returns true if PageUpload is idle.
   bool IsIdle();
