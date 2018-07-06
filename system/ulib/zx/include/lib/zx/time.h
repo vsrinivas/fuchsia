@@ -207,11 +207,6 @@ public:
     clock() = delete;
 
     template <zx_clock_t kClockId>
-    static basic_time<kClockId> get() {
-        return basic_time<kClockId>(zx_clock_get(kClockId));
-    }
-
-    template <zx_clock_t kClockId>
     static zx_status_t get(basic_time<kClockId>* result) {
         return zx_clock_get_new(kClockId, result->get_address());
     }
