@@ -43,12 +43,11 @@ public:
     // Gets the fence reference for the current import. An individual fence reference cannot
     // be used for multiple things simultaniously.
     fbl::RefPtr<FenceReference> GetReference();
-
-    void Reset();
 private:
     void Signal();
     void OnRefDied();
     zx_status_t OnRefArmed(fbl::RefPtr<FenceReference>&& ref);
+    void OnRefDisarmed(FenceReference* ref);
 
     // The fence reference corresponding to the current event import.
     fbl::RefPtr<FenceReference> cur_ref_;
@@ -80,6 +79,7 @@ public:
     void Signal();
 
     zx_status_t StartReadyWait();
+    void ResetReadyWait();
     // Sets the fences which will be signaled immedately when this fence is ready.
     void SetImmediateRelease(fbl::RefPtr<FenceReference>&& fence1,
                              fbl::RefPtr<FenceReference>&& fence2);

@@ -50,6 +50,10 @@ public:
     // Called on all waiting images when any fence fires.
     void OnFenceReady(FenceReference* fence);
 
+    // Called to reset fences when client releases the image. Releasing fences
+    // is independent of the rest of the image lifecycle.
+    void ResetFences();
+
     bool IsReady() const { return wait_fence_ == nullptr; }
 
     bool HasSameConfig(const image_t& config) const {

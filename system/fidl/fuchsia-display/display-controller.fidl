@@ -176,9 +176,13 @@ interface Controller {
   // outside the scope of this API.
   2: ImportVmoImage(ImageConfig image_config, handle<vmo> vmo, int32 offset) -> (status res, uint64 image_id);
 
-  // Releases an image. It is safe to call this on an image which is currently
-  // in use, but the resources associated with such an image will not be
-  // released until the image is no longer in use.
+  // Releases an image.
+  //
+  // It is safe to call this at any time. When an image is released, it
+  // is immediately removed from any pending or active configurations,
+  // and any fences associated with the image are dropped. The resources
+  // associated with the image will be released as soon as the image is
+  // no longer in use.
   3: ReleaseImage(uint64 image_id);
 
   // Imports an event into the driver and associates it with the given id.

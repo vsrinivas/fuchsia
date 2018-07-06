@@ -205,9 +205,9 @@ private:
 
     zx_status_t CreateLayer(uint64_t* layer_id);
 
-    // Cleans up layer state associated with image id. If id == INVALID_ID, then
-    // cleans up all image layer state. Return true if a current layer was modified.
-    bool CleanUpImageLayerState(uint64_t id);
+    // Cleans up layer state associated with an image. If image == nullptr, then
+    // cleans up all image state. Return true if a current layer was modified.
+    bool CleanUpImage(Image* image);
 
     Controller* controller_;
     ClientProxy* proxy_;

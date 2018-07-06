@@ -112,4 +112,15 @@ bool Image::Acquire() {
     return !fbl::atomic_exchange(&in_use_, true);
 }
 
+void Image::ResetFences() {
+    if (wait_fence_) {
+        wait_fence_->ResetReadyWait();
+    }
+
+    wait_fence_ = nullptr;
+    present_fence_ = nullptr;
+    armed_signal_fence_ = nullptr;
+    signal_fence_ = nullptr;
+}
+
 } // namespace display

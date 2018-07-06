@@ -48,6 +48,10 @@ zx_status_t Fence::OnRefArmed(fbl::RefPtr<FenceReference>&& ref) {
     return ZX_OK;
 }
 
+void Fence::OnRefDisarmed(FenceReference* ref) {
+    armed_refs_.erase(*ref);
+}
+
 void Fence::OnReady(async_t* async, async::WaitBase* self,
                     zx_status_t status, const zx_packet_signal_t* signal) {
     ZX_DEBUG_ASSERT(status == ZX_OK && (signal->observed & ZX_EVENT_SIGNALED));
@@ -63,29 +67,22 @@ void Fence::OnReady(async_t* async, async::WaitBase* self,
     }
 }
 
-// Fences need to be manually reset because of circular references in fences that are
-// being waited upon. Signal fences could still exist after a fence is reset.
-void Fence::Reset() {
-    // The only time a Fence is destroyed with outstanding armed refs is
-    // when the client is torn down, in which case dropping events is fine.
-    if (!armed_refs_.is_empty()) {
-        ready_wait_.Cancel();
-        armed_refs_.clear();
-    }
-    cur_ref_ = nullptr;
-}
-
 Fence::Fence(FenceCallback* cb, async_t* async, uint64_t fence_id, zx::event&& event)
         : cb_(cb), async_(async), event_(fbl::move(event)) {
     id = fence_id;
 }
 
 Fence::~Fence() {
+    ZX_DEBUG_ASSERT(armed_refs_.is_empty());
     ZX_DEBUG_ASSERT(ref_count_ == 0);
 }
 
 zx_status_t FenceReference::StartReadyWait() {
     return fence_->OnRefArmed(fbl::RefPtr<FenceReference>(this));
+}
+
+void FenceReference::ResetReadyWait() {
+    fence_->OnRefDisarmed(this);
 }
 
 void FenceReference::SetImmediateRelease(fbl::RefPtr<FenceReference>&& fence1,

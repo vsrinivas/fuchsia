@@ -242,12 +242,12 @@ void Client::HandleImportVmoImage(const fuchsia_display_ControllerImportVmoImage
 
 void Client::HandleReleaseImage(const fuchsia_display_ControllerReleaseImageRequest* req,
                                 fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
-    auto image = images_.erase(req->image_id);
-    if (!image) {
+    auto image = images_.find(req->image_id);
+    if (!image.IsValid()) {
         return;
     }
 
-    if (CleanUpImageLayerState(image->id)) {
+    if (CleanUpImage(&(*image))) {
         ApplyConfig();
     }
 }
@@ -1397,6 +1397,8 @@ void Client::TearDown() {
     }
     server_handle_ = ZX_HANDLE_INVALID;
 
+    CleanUpImage(nullptr);
+
     // Use a temporary list to prevent double locking when resetting
     fbl::SinglyLinkedList<fbl::RefPtr<Fence>> fences;
     {
@@ -1406,12 +1408,8 @@ void Client::TearDown() {
         }
     }
     while (!fences.is_empty()) {
-        fences.pop_front()->Reset();
+        fences.pop_front()->ClearRef();
     }
-
-    CleanUpImageLayerState(INVALID_ID);
-
-    images_.clear();
 
     for (auto& config : configs_) {
         config.pending_layers_.clear();
@@ -1426,19 +1424,32 @@ void Client::TearDown() {
     proxy_->OnClientDead();
 }
 
-bool Client::CleanUpImageLayerState(uint64_t id) {
+bool Client::CleanUpImage(Image* image) {
+    // Clean up any fences associated with the image
+    {
+        fbl::AutoLock lock(controller_->mtx());
+        if (image) {
+            image->ResetFences();
+        } else {
+            for (auto& image : images_) {
+                image.ResetFences();
+            }
+        }
+    }
+
+    // Clean up any layer state associated with the images
     bool current_config_change = false;
     for (auto& layer : layers_) {
-        if (layer.pending_image_ && (id == INVALID_ID || layer.pending_image_->id == id)) {
+        if (layer.pending_image_ && (image == nullptr || layer.pending_image_.get() == image)) {
             layer.pending_image_->DiscardAcquire();
             layer.pending_image_ = nullptr;
         }
-        if (id == INVALID_ID) {
+        if (image == nullptr) {
             do_early_retire(&layer.waiting_images_, nullptr);
         } else {
             image_node_t* waiting;
             list_for_every_entry(&layer.waiting_images_, waiting, image_node_t, link) {
-                if (waiting->self->id == id) {
+                if (waiting->self.get() == image) {
                     list_delete(&waiting->link);
                     waiting->self->EarlyRetire();
                     waiting->self.reset();
@@ -1446,7 +1457,7 @@ bool Client::CleanUpImageLayerState(uint64_t id) {
                 }
             }
         }
-        if (layer.displayed_image_ && (id == INVALID_ID || layer.displayed_image_->id == id)) {
+        if (layer.displayed_image_ && (image == nullptr || layer.displayed_image_.get() == image)) {
             {
                 fbl::AutoLock lock(controller_->mtx());
                 layer.displayed_image_->StartRetire();
@@ -1458,6 +1469,14 @@ bool Client::CleanUpImageLayerState(uint64_t id) {
             }
         }
     }
+
+    // Clean up the image id map
+    if (image) {
+        images_.erase(*image);
+    } else {
+        images_.clear();
+    }
+
     return current_config_change;
 }
 
