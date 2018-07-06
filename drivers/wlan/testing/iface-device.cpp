@@ -79,17 +79,19 @@ zx_status_t IfaceDevice::Query(uint32_t options, wlanmac_info_t* info) {
     zxlogf(INFO, "wlan::testing::IfaceDevice::Query()\n");
     memset(info, 0, sizeof(*info));
 
+    wlan_info_t* ifc_info = &info->ifc_info;
+
     static uint8_t mac[ETH_MAC_SIZE] = {0x02, 0x02, 0x02, 0x03, 0x03, 0x03};
-    std::memcpy(info->mac_addr, mac, ETH_MAC_SIZE);
+    std::memcpy(ifc_info->mac_addr, mac, ETH_MAC_SIZE);
 
     // Fill out a minimal set of wlan device capabilities
-    info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT;
-    info->driver_features = WLAN_DRIVER_FEATURE_SYNTH;
-    info->mac_role = role_;
-    info->caps = 0;
-    info->num_bands = 2;
+    ifc_info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT;
+    ifc_info->driver_features = WLAN_DRIVER_FEATURE_SYNTH;
+    ifc_info->mac_role = role_;
+    ifc_info->caps = 0;
+    ifc_info->num_bands = 2;
     // clang-format off
-    info->bands[0] = {
+    ifc_info->bands[0] = {
         .desc = "2.4 GHz",
         .ht_caps = {},
         .vht_supported = false,
@@ -101,7 +103,7 @@ zx_status_t IfaceDevice::Query(uint32_t options, wlanmac_info_t* info) {
                 .channels = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
             },
     };
-    info->bands[1] = {
+    ifc_info->bands[1] = {
         .desc = "5 GHz",
         .ht_caps = {},
         .vht_supported = false,

@@ -125,18 +125,20 @@ struct WlantapMacImpl : WlantapMac {
 
     static zx_status_t WlanmacQuery(void* ctx, uint32_t options, wlanmac_info_t* info) {
         auto& self = *static_cast<WlantapMacImpl*>(ctx);
-        std::copy_n(self.phy_config_->phy_info.hw_mac_address.begin(), ETH_MAC_SIZE,
-                    info->mac_addr);
+        wlan_info_t* ifc_info = &info->ifc_info;
 
-        info->supported_phys = ConvertSupportedPhys(self.phy_config_->phy_info.supported_phys);
-        info->driver_features = ConvertDriverFeatures(
+        std::copy_n(self.phy_config_->phy_info.hw_mac_address.begin(), ETH_MAC_SIZE,
+                    ifc_info->mac_addr);
+
+        ifc_info->supported_phys = ConvertSupportedPhys(self.phy_config_->phy_info.supported_phys);
+        ifc_info->driver_features = ConvertDriverFeatures(
             self.phy_config_->phy_info.driver_features);
-        info->mac_role = ConvertMacRole(self.role_);
-        info->caps = ConvertCaps(self.phy_config_->phy_info.caps);
-        info->num_bands = std::min(self.phy_config_->phy_info.bands->size(),
+        ifc_info->mac_role = ConvertMacRole(self.role_);
+        ifc_info->caps = ConvertCaps(self.phy_config_->phy_info.caps);
+        ifc_info->num_bands = std::min(self.phy_config_->phy_info.bands->size(),
                                    static_cast<size_t>(WLAN_MAX_BANDS));
-        for (size_t i = 0; i < info->num_bands; ++i) {
-            ConvertBandInfo((*self.phy_config_->phy_info.bands)[i], &info->bands[i]);
+        for (size_t i = 0; i < ifc_info->num_bands; ++i) {
+            ConvertBandInfo((*self.phy_config_->phy_info.bands)[i], &ifc_info->bands[i]);
         }
         return ZX_OK;
     }

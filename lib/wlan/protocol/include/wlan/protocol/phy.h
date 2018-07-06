@@ -4,9 +4,15 @@
 
 #pragma once
 
+#include <wlan/protocol/info.h>
 #include <zircon/compiler.h>
 
 __BEGIN_CDECLS
+
+typedef struct wlanphy_info {
+    // Phy wlan capabilities information
+    wlan_info_t wlan_info;
+} wlanphy_info_t;
 
 typedef struct wlanphy_protocol_ops {
     uint32_t reserved;

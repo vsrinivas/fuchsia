@@ -2991,7 +2991,8 @@ static void ath10k_chan_query_info(const struct ath10k_channel* dev_channel, voi
 
 static void ath10k_band_query_info(const struct ath10k_band* dev_band, void* cookie) {
     wlanmac_info_t* info = cookie;
-    wlan_band_info_t* wlan_band = &info->bands[info->num_bands++];
+    wlan_info_t* ifc_info = &info->ifc_info;
+    wlan_band_info_t* wlan_band = &ifc_info->bands[ifc_info->num_bands++];
     strncpy(wlan_band->desc, dev_band->name, WLAN_BAND_DESC_MAX_LEN);
     ZX_DEBUG_ASSERT(sizeof(wlan_band->ht_caps) == sizeof(dev_band->ht_caps));
     memcpy(&wlan_band->ht_caps, &dev_band->ht_caps, sizeof(wlan_band->ht_caps));
@@ -3014,28 +3015,31 @@ static zx_status_t ath10k_pci_query(void* ctx, uint32_t options, wlanmac_info_t*
 
     memset(info, 0, sizeof(*info));
 
+    wlan_info_t* ifc_info = &info->ifc_info;
+
     // eth_info
     ZX_DEBUG_ASSERT(ETH_ALEN == ETH_MAC_SIZE);
-    memcpy(info->mac_addr, ar->mac_addr, ETH_MAC_SIZE);
+    memcpy(ifc_info->mac_addr, ar->mac_addr, ETH_MAC_SIZE);
 
     // mac_role
-    info->mac_role = WLAN_MAC_ROLE_CLIENT;
+    ifc_info->mac_role = WLAN_MAC_ROLE_CLIENT;
 
     // supported_phys
-    info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM;
+    ifc_info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM;
     if (ar->ht_cap_info & WMI_HT_CAP_ENABLED) {
-        info->supported_phys |= WLAN_PHY_HT;
+        ifc_info->supported_phys |= WLAN_PHY_HT;
     }
-    info->supported_phys |= WLAN_PHY_VHT;
+    ifc_info->supported_phys |= WLAN_PHY_VHT;
 
     // driver_features
-    info->driver_features = WLAN_DRIVER_FEATURE_SCAN_OFFLOAD | WLAN_DRIVER_FEATURE_RATE_SELECTION;
+    ifc_info->driver_features = WLAN_DRIVER_FEATURE_SCAN_OFFLOAD |
+                                WLAN_DRIVER_FEATURE_RATE_SELECTION;
 
     // caps
-    info->caps = WLAN_CAP_SHORT_PREAMBLE | WLAN_CAP_SPECTRUM_MGMT | WLAN_CAP_SHORT_SLOT_TIME;
+    ifc_info->caps = WLAN_CAP_SHORT_PREAMBLE | WLAN_CAP_SPECTRUM_MGMT | WLAN_CAP_SHORT_SLOT_TIME;
 
     // bands
-    ath10k_foreach_band(ath10k_band_query_info, info);
+    ath10k_foreach_band(ath10k_band_query_info, ifc_info);
 
     return ZX_OK;
 }

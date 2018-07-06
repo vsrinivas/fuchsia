@@ -101,10 +101,12 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
         errorf("could not query wlanmac device: %d\n", status);
         return status;
     }
-    state_->set_address(common::MacAddr(wlanmac_info_.mac_addr));
+    state_->set_address(common::MacAddr(wlanmac_info_.ifc_info.mac_addr));
 
     fbl::unique_ptr<Mlme> mlme;
-    switch (wlanmac_info_.mac_role) {
+
+    // mac_role is a bitfield, but only a single value is supported for an interface
+    switch (wlanmac_info_.ifc_info.mac_role) {
     case WLAN_MAC_ROLE_CLIENT:
         mlme.reset(new ClientMlme(this));
         break;
@@ -112,7 +114,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
         mlme.reset(new ApMlme(this));
         break;
     default:
-        errorf("unsupported MAC role: %u\n", wlanmac_info_.mac_role);
+        errorf("unsupported MAC role: %u\n", wlanmac_info_.ifc_info.mac_role);
         return ZX_ERR_NOT_SUPPORTED;
     }
     ZX_DEBUG_ASSERT(mlme != nullptr);
@@ -260,9 +262,9 @@ zx_status_t Device::EthmacQuery(uint32_t options, ethmac_info_t* info) {
     if (info == nullptr) return ZX_ERR_INVALID_ARGS;
 
     memset(info, 0, sizeof(*info));
-    memcpy(info->mac, wlanmac_info_.mac_addr, ETH_MAC_SIZE);
+    memcpy(info->mac, wlanmac_info_.ifc_info.mac_addr, ETH_MAC_SIZE);
     info->features = ETHMAC_FEATURE_WLAN;
-    if (wlanmac_info_.driver_features & WLAN_DRIVER_FEATURE_SYNTH) {
+    if (wlanmac_info_.ifc_info.driver_features & WLAN_DRIVER_FEATURE_SYNTH) {
         info->features |= ETHMAC_FEATURE_SYNTH;
     }
     info->mtu = 1500;

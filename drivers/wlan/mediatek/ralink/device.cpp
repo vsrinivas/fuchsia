@@ -3526,13 +3526,14 @@ zx_status_t Device::WlanmacQuery(uint32_t options, wlanmac_info_t* info) {
     if (iface_role_ == 0) { return ZX_ERR_BAD_STATE; }
 
     memset(info, 0, sizeof(*info));
-    std::memcpy(info->mac_addr, mac_addr_, ETH_MAC_SIZE);
+    wlan_info_t* ifc_info = &info->ifc_info;
+    std::memcpy(ifc_info->mac_addr, mac_addr_, ETH_MAC_SIZE);
 
-    info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT;
-    info->mac_role = iface_role_;
-    info->caps = WLAN_CAP_SHORT_PREAMBLE | WLAN_CAP_SHORT_SLOT_TIME;
-    info->num_bands = 1;
-    info->bands[0] = {
+    ifc_info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT;
+    ifc_info->mac_role = iface_role_;
+    ifc_info->caps = WLAN_CAP_SHORT_PREAMBLE | WLAN_CAP_SHORT_SLOT_TIME;
+    ifc_info->num_bands = 1;
+    ifc_info->bands[0] = {
         .desc = "2.4 GHz",
         // TODO(tkilbourn): verify these
         // (*) represents a property to verify later
@@ -3597,10 +3598,10 @@ zx_status_t Device::WlanmacQuery(uint32_t options, wlanmac_info_t* info) {
             },
     };
     if (rt_type_ == RT5592) {
-        info->num_bands = 2;
+        ifc_info->num_bands = 2;
         // Add MCS 8-15 to band 0
-        info->bands[0].ht_caps.supported_mcs_set[1] = 0xff;
-        info->bands[1] = {
+        ifc_info->bands[0].ht_caps.supported_mcs_set[1] = 0xff;
+        ifc_info->bands[1] = {
             .desc = "5 GHz",
             // See above for descriptions of these capabilities
             .ht_caps =

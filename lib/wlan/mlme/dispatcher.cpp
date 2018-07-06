@@ -203,10 +203,11 @@ zx_status_t Dispatcher::HandleDeviceQueryRequest() {
     debugfn();
 
     wlan_mlme::DeviceQueryConfirm resp;
-    const wlanmac_info_t& info = device_->GetWlanInfo();
+    const wlan_info_t& info = device_->GetWlanInfo().ifc_info;
 
     memcpy(resp.mac_addr.mutable_data(), info.mac_addr, ETH_MAC_SIZE);
 
+    // mac_role is a bitfield, but only a single value is supported for an interface
     switch (info.mac_role) {
     case WLAN_MAC_ROLE_CLIENT:
         resp.role = wlan_mlme::MacRole::CLIENT;
@@ -215,7 +216,7 @@ zx_status_t Dispatcher::HandleDeviceQueryRequest() {
         resp.role = wlan_mlme::MacRole::AP;
         break;
     default:
-        // TODO(tkilbourn): return an error?
+        // TODO(NET-1116): return an error!
         break;
     }
 
