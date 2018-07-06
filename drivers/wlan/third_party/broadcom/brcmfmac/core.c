@@ -121,7 +121,7 @@ static void _brcmf_set_multicast_list(struct work_struct* work) {
     uint32_t buflen;
     zx_status_t err;
 
-    ifp = container_of(work, struct brcmf_if, multicast_work);
+    ifp = containerof(work, struct brcmf_if, multicast_work);
 
     brcmf_dbg(TRACE, "Enter, bsscfgidx=%d\n", ifp->bsscfgidx);
 
@@ -185,7 +185,7 @@ static void _brcmf_update_ndtable(struct work_struct* work) {
     int i;
     zx_status_t ret;
 
-    ifp = container_of(work, struct brcmf_if, ndoffload_work);
+    ifp = containerof(work, struct brcmf_if, ndoffload_work);
 
     /* clear the table in firmware */
     ret = brcmf_fil_iovar_data_set(ifp, "nd_hostip_clear", NULL, 0);
@@ -811,7 +811,7 @@ static zx_status_t brcmf_psm_watchdog_notify(struct brcmf_if* ifp,
 #ifdef CONFIG_INET
 #define ARPOL_MAX_ENTRIES 8
 static int brcmf_inetaddr_changed(struct notifier_block* nb, unsigned long action, void* data) {
-    struct brcmf_pub* drvr = container_of(nb, struct brcmf_pub, inetaddr_notifier);
+    struct brcmf_pub* drvr = containerof(nb, struct brcmf_pub, inetaddr_notifier);
     struct in_ifaddr* ifa = data;
     struct net_device* ndev = ifa->ifa_dev->dev;
     struct brcmf_if* ifp;
@@ -902,7 +902,7 @@ static int brcmf_inetaddr_changed(struct notifier_block* nb, unsigned long actio
 
 #if IS_ENABLED(CONFIG_IPV6)
 static int brcmf_inet6addr_changed(struct notifier_block* nb, unsigned long action, void* data) {
-    struct brcmf_pub* drvr = container_of(nb, struct brcmf_pub, inet6addr_notifier);
+    struct brcmf_pub* drvr = containerof(nb, struct brcmf_pub, inet6addr_notifier);
     struct inet6_ifaddr* ifa = data;
     struct brcmf_if* ifp;
     int i;

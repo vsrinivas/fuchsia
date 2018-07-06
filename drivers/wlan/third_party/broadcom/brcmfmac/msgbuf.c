@@ -527,9 +527,9 @@ static struct brcmf_msgbuf_work_item* brcmf_msgbuf_dequeue_work(struct brcmf_msg
 
     //spin_lock_irqsave(&msgbuf->flowring_work_lock, flags);
     pthread_mutex_lock(&irq_callback_lock);
-    if (!list_empty(&msgbuf->work_queue)) {
-        work = list_first_entry(&msgbuf->work_queue, struct brcmf_msgbuf_work_item, queue);
-        list_del(&work->queue);
+    if (!list_is_empty(&msgbuf->work_queue)) {
+        work = list_peek_head_type(&msgbuf->work_queue, struct brcmf_msgbuf_work_item, queue);
+        list_delete(&work->queue);
     }
     //spin_unlock_irqrestore(&msgbuf->flowring_work_lock, flags);
     pthread_mutex_unlock(&irq_callback_lock);
@@ -603,7 +603,7 @@ static void brcmf_msgbuf_flowring_worker(struct work_struct* work) {
     struct brcmf_msgbuf* msgbuf;
     struct brcmf_msgbuf_work_item* create;
 
-    msgbuf = container_of(work, struct brcmf_msgbuf, flowring_work);
+    msgbuf = containerof(work, struct brcmf_msgbuf, flowring_work);
 
     while ((create = brcmf_msgbuf_dequeue_work(msgbuf))) {
         brcmf_msgbuf_flowring_create_worker(msgbuf, create);
@@ -714,7 +714,7 @@ static void brcmf_msgbuf_txflow_worker(struct work_struct* worker) {
     struct brcmf_msgbuf* msgbuf;
     uint32_t flowid;
 
-    msgbuf = container_of(worker, struct brcmf_msgbuf, txflow_work);
+    msgbuf = containerof(worker, struct brcmf_msgbuf, txflow_work);
     for_each_set_bit(flowid, msgbuf->flow_map, msgbuf->max_flowrings) {
         brcmf_clear_bit_in_array(flowid, msgbuf->flow_map);
         brcmf_msgbuf_txflow(msgbuf, flowid);
@@ -1412,7 +1412,7 @@ zx_status_t brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr) {
 
     workqueue_init_work(&msgbuf->flowring_work, brcmf_msgbuf_flowring_worker);
     //spin_lock_init(&msgbuf->flowring_work_lock);
-    INIT_LIST_HEAD(&msgbuf->work_queue);
+    list_initialize(&msgbuf->work_queue);
 
     brcmf_debugfs_add_entry(drvr, "msgbuf_stats", brcmf_msgbuf_stats_read);
 
@@ -1440,9 +1440,9 @@ void brcmf_proto_msgbuf_detach(struct brcmf_pub* drvr) {
     if (drvr->proto->pd) {
         msgbuf = (struct brcmf_msgbuf*)drvr->proto->pd;
         workqueue_cancel_work(&msgbuf->flowring_work);
-        while (!list_empty(&msgbuf->work_queue)) {
-            work = list_first_entry(&msgbuf->work_queue, struct brcmf_msgbuf_work_item, queue);
-            list_del(&work->queue);
+        while (!list_is_empty(&msgbuf->work_queue)) {
+            work = list_peek_head_type(&msgbuf->work_queue, struct brcmf_msgbuf_work_item, queue);
+            list_delete(&work->queue);
             free(work);
         }
         free(msgbuf->flow_map);

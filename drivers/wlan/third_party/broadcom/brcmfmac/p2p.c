@@ -1054,8 +1054,8 @@ exit:
  *
  */
 static void brcmf_p2p_afx_handler(struct work_struct* work) {
-    struct afx_hdl* afx_hdl = container_of(work, struct afx_hdl, afx_work);
-    struct brcmf_p2p_info* p2p = container_of(afx_hdl, struct brcmf_p2p_info, afx_hdl);
+    struct afx_hdl* afx_hdl = containerof(work, struct afx_hdl, afx_work);
+    struct brcmf_p2p_info* p2p = containerof(afx_hdl, struct brcmf_p2p_info, afx_hdl);
     zx_status_t err;
 
     if (!afx_hdl->is_active) {
@@ -2142,7 +2142,7 @@ zx_status_t brcmf_p2p_del_vif(struct wiphy* wiphy, struct wireless_dev* wdev) {
     zx_status_t err;
 
     brcmf_dbg(TRACE, "delete P2P vif\n");
-    vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
+    vif = containerof(wdev, struct brcmf_cfg80211_vif, wdev);
 
     iftype = vif->wdev.iftype;
     brcmf_cfg80211_arm_vif_event(cfg, vif, BRCMF_E_IF_DEL);
@@ -2224,7 +2224,7 @@ zx_status_t brcmf_p2p_start_device(struct wiphy* wiphy, struct wireless_dev* wde
     struct brcmf_cfg80211_vif* vif;
     zx_status_t err;
 
-    vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
+    vif = containerof(wdev, struct brcmf_cfg80211_vif, wdev);
     mtx_lock(&cfg->usr_sync);
     err = brcmf_p2p_enable_discovery(p2p);
     if (err == ZX_OK) {
@@ -2239,7 +2239,7 @@ void brcmf_p2p_stop_device(struct wiphy* wiphy, struct wireless_dev* wdev) {
     struct brcmf_p2p_info* p2p = &cfg->p2p;
     struct brcmf_cfg80211_vif* vif;
 
-    vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
+    vif = containerof(wdev, struct brcmf_cfg80211_vif, wdev);
     /* This call can be result of the unregister_wdev call. In that case
      * we dont want to do anything anymore. Just return. The config vif
      * will have been cleared at this point.

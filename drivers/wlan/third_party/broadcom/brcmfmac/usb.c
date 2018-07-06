@@ -475,13 +475,15 @@ static struct brcmf_usbreq* brcmf_usb_deq(struct brcmf_usbdev_info* devinfo, str
     struct brcmf_usbreq* req;
     //spin_lock_irqsave(&devinfo->qlock, flags);
     pthread_mutex_lock(&irq_callback_lock);
-    if (list_empty(q)) {
+    if (list_is_empty(q)) {
         //spin_unlock_irqrestore(&devinfo->qlock, flags);
         pthread_mutex_unlock(&irq_callback_lock);
         return NULL;
     }
-    req = list_entry(q->next, struct brcmf_usbreq, list);
-    list_del_init(q->next);
+    req = containerof(q->next, struct brcmf_usbreq, list);
+    struct list_node* next = q->next;
+    list_delete(next);
+    list_initialize(next);
     if (counter) {
         (*counter)--;
     }
@@ -527,12 +529,12 @@ static struct brcmf_usbreq* brcmf_usbdev_qinit(struct brcmf_usbdev_info* devinfo
     return reqs;
 fail:
     brcmf_err("fail!\n");
-    while (!list_empty(q)) {
-        req = list_entry(q->next, struct brcmf_usbreq, list);
+    while (!list_is_empty(q)) {
+        req = containerof(q->next, struct brcmf_usbreq, list);
         if (req) {
             brcmf_usb_free_urb(req->urb);
         }
-        list_del(q->next);
+        list_delete(q->next);
     }
     free(reqs);
     return NULL;
@@ -542,7 +544,7 @@ static void brcmf_usb_free_q(struct brcmf_usbdev_info* devinfo, struct list_node
     struct brcmf_usbreq* req;
     struct brcmf_usbreq* next;
 
-    list_for_each_entry_safe(req, next, q, list) {
+    list_for_every_entry_safe(q, req, next, struct brcmf_usbreq, list) {
         if (!req->urb) {
             brcmf_err("bad req\n");
             break; // TODO(cphoenix): Should this be a "continue"?
@@ -551,7 +553,8 @@ static void brcmf_usb_free_q(struct brcmf_usbdev_info* devinfo, struct list_node
             usb_cancel_all(devinfo->protocol, req->urb->zxurb->header.ep_address);
         } else {
             brcmf_usb_free_urb(req->urb);
-            list_del_init(&req->list);
+            list_delete(&req->list);
+            list_initialize(&req->list);
         }
     }
 }
@@ -559,7 +562,8 @@ static void brcmf_usb_free_q(struct brcmf_usbdev_info* devinfo, struct list_node
 static void brcmf_usb_del_fromq(struct brcmf_usbdev_info* devinfo, struct brcmf_usbreq* req) {
     //spin_lock_irqsave(&devinfo->qlock, flags);
     pthread_mutex_lock(&irq_callback_lock);
-    list_del_init(&req->list);
+    list_delete(&req->list);
+    list_initialize(&req->list);
     //spin_unlock_irqrestore(&devinfo->qlock, flags);
     pthread_mutex_unlock(&irq_callback_lock);
 }
@@ -1217,11 +1221,11 @@ static struct brcmf_usbdev* brcmf_usb_attach(struct brcmf_usbdev_info* devinfo, 
     //spin_lock_init(&devinfo->qlock);
     //spin_lock_init(&devinfo->tx_flowblock_lock);
 
-    INIT_LIST_HEAD(&devinfo->rx_freeq);
-    INIT_LIST_HEAD(&devinfo->rx_postq);
+    list_initialize(&devinfo->rx_freeq);
+    list_initialize(&devinfo->rx_postq);
 
-    INIT_LIST_HEAD(&devinfo->tx_freeq);
-    INIT_LIST_HEAD(&devinfo->tx_postq);
+    list_initialize(&devinfo->tx_freeq);
+    list_initialize(&devinfo->tx_postq);
 
     devinfo->tx_flowblock = false;
 

@@ -847,7 +847,7 @@ static zx_status_t brcmf_ops_sdio_suspend(struct brcmf_device* dev) {
     struct brcmf_sdio_dev* sdiodev;
     mmc_pm_flag_t sdio_flags;
 
-    func = container_of(dev, struct sdio_func, dev);
+    func = containerof(dev, struct sdio_func, dev);
     brcmf_dbg(SDIO, "Enter: F%d\n", func->num);
     if (func->num != 1) {
         return ZX_OK;
@@ -876,7 +876,7 @@ static zx_status_t brcmf_ops_sdio_suspend(struct brcmf_device* dev) {
 static zx_status_t brcmf_ops_sdio_resume(struct brcmf_device* dev) {
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
-    struct sdio_func* func = container_of(dev, struct sdio_func, dev);
+    struct sdio_func* func = containerof(dev, struct sdio_func, dev);
 
     brcmf_dbg(SDIO, "Enter: F%d\n", func->num);
     if (func->num != 2) {

@@ -38,19 +38,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-// TODO(cphoenix): Clean up the list stuff
-#define INIT_LIST_HEAD(head) list_initialize(head)
-#define list_empty(list) list_is_empty(list)
-#define list_del(item) list_delete(item)
-#define list_first_entry(list, type, element) list_peek_head_type(list, type, element)
-#define list_entry(list, type, element) containerof(list, type, element)
-#define list_del_init(item) list_delete(item)
-#define list_for_each_entry(cursor, list, field)  \
-    list_for_every_entry(list, cursor, __typeof__(*cursor), field)
-#define list_for_each_entry_safe(cursor, temp, list, field) \
-    list_for_every_entry_safe(list, cursor, temp, __typeof__(*cursor), field)
-#define container_of containerof
-
 typedef uint16_t __be16;
 typedef uint32_t __be32;
 typedef uint64_t __be64;

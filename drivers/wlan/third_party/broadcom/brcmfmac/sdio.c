@@ -3455,7 +3455,7 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
 }
 
 static void brcmf_sdio_dataworker(struct work_struct* work) {
-    struct brcmf_sdio* bus = container_of(work, struct brcmf_sdio, datawork);
+    struct brcmf_sdio* bus = containerof(work, struct brcmf_sdio, datawork);
 
     bus->dpc_running = true;
     wmb();

@@ -47,7 +47,7 @@ static zx_status_t brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
+    vif = containerof(wdev, struct brcmf_cfg80211_vif, wdev);
     ifp = vif->ifp;
 
     brcmf_dbg(TRACE, "ifidx=%d, cmd=%d\n", ifp->ifidx, cmdhdr->cmd);

@@ -366,7 +366,7 @@ static inline struct brcmf_cfg80211_info* wdev_to_cfg(struct wireless_dev* wd) {
 
 static inline struct net_device* cfg_to_ndev(struct brcmf_cfg80211_info* cfg) {
     struct brcmf_cfg80211_vif* vif;
-    vif = list_first_entry(&cfg->vif_list, struct brcmf_cfg80211_vif, list);
+    vif = list_peek_head_type(&cfg->vif_list, struct brcmf_cfg80211_vif, list);
     return vif->wdev.netdev;
 }
 

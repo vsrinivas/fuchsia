@@ -2144,7 +2144,7 @@ static void brcmf_fws_dequeue_worker(struct work_struct* worker) {
     uint32_t ifidx;
     zx_status_t ret;
 
-    fws = container_of(worker, struct brcmf_fws_info, fws_dequeue_work);
+    fws = containerof(worker, struct brcmf_fws_info, fws_dequeue_work);
     drvr = fws->drvr;
 
     brcmf_fws_lock(fws);

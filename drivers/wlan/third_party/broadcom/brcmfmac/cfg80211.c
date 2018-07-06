@@ -427,7 +427,7 @@ static zx_status_t brcmf_vif_change_validate(struct brcmf_cfg80211_info* cfg,
         .num_different_channels = 1,
     };
 
-    list_for_each_entry(pos, &cfg->vif_list, list) {
+    list_for_every_entry(&cfg->vif_list, pos, struct brcmf_cfg80211_vif, list) {
         if (pos == vif) {
             params.iftype_num[new_type]++;
         } else {
@@ -451,7 +451,9 @@ static zx_status_t brcmf_vif_add_validate(struct brcmf_cfg80211_info* cfg,
         .num_different_channels = 1,
     };
 
-    list_for_each_entry(pos, &cfg->vif_list, list) params.iftype_num[pos->wdev.iftype]++;
+    list_for_every_entry(&cfg->vif_list, pos, struct brcmf_cfg80211_vif, list) {
+        params.iftype_num[pos->wdev.iftype]++;
+    }
 
     params.iftype_num[new_type]++;
     return cfg80211_check_combinations(cfg->wiphy, &params);
@@ -489,7 +491,7 @@ static void brcmf_cfg80211_update_proto_addr_mode(struct wireless_dev* wdev) {
     struct brcmf_cfg80211_vif* vif;
     struct brcmf_if* ifp;
 
-    vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
+    vif = containerof(wdev, struct brcmf_cfg80211_vif, wdev);
     ifp = vif->ifp;
 
     if ((wdev->iftype == NL80211_IFTYPE_ADHOC) || (wdev->iftype == NL80211_IFTYPE_AP) ||
@@ -1069,7 +1071,7 @@ zx_status_t brcmf_cfg80211_scan(struct wiphy* wiphy, struct cfg80211_scan_reques
     zx_status_t err = ZX_OK;
 
     brcmf_dbg(TRACE, "Enter\n");
-    vif = container_of(request->wdev, struct brcmf_cfg80211_vif, wdev);
+    vif = containerof(request->wdev, struct brcmf_cfg80211_vif, wdev);
     if (!check_vif_up(vif)) {
         brcmf_dbg(TEMP, "Vif not up");
         return ZX_ERR_IO;
@@ -2968,7 +2970,7 @@ void brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg) {
 
 static void brcmf_cfg80211_escan_timeout_worker(struct work_struct* work) {
     struct brcmf_cfg80211_info* cfg =
-        container_of(work, struct brcmf_cfg80211_info, escan_timeout_work);
+        containerof(work, struct brcmf_cfg80211_info, escan_timeout_work);
 
     brcmf_inform_bss(cfg);
     brcmf_notify_escan_complete(cfg, cfg->escan_info.ifp, true, true);
@@ -3627,7 +3629,7 @@ static zx_status_t brcmf_cfg80211_suspend(struct wiphy* wiphy, struct cfg80211_w
 
     if (wowl == NULL) {
         brcmf_bus_wowl_config(cfg->pub->bus_if, false);
-        list_for_each_entry(vif, &cfg->vif_list, list) {
+        list_for_every_entry(&cfg->vif_list, vif, struct brcmf_cfg80211_vif, list) {
             if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_READY, &vif->sme_state)) {
                 continue;
             }
@@ -4668,7 +4670,7 @@ static void brcmf_cfg80211_mgmt_frame_register(struct wiphy* wiphy, struct wirel
     brcmf_dbg(TRACE, "Enter, frame_type %04x, reg=%d\n", frame_type, reg);
 
     mgmt_type = (frame_type & IEEE80211_FCTL_STYPE) >> 4;
-    vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
+    vif = containerof(wdev, struct brcmf_cfg80211_vif, wdev);
     if (reg) {
         vif->mgmt_rx_reg |= BIT(mgmt_type);
     } else {
@@ -4705,7 +4707,7 @@ static zx_status_t brcmf_cfg80211_mgmt_tx(struct wiphy* wiphy, struct wireless_d
         return ZX_ERR_WRONG_TYPE;
     }
 
-    vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
+    vif = containerof(wdev, struct brcmf_cfg80211_vif, wdev);
 
     if (ieee80211_is_probe_resp(mgmt->frame_control)) {
         /* Right now the only reason to get a probe response */
@@ -4863,7 +4865,7 @@ static zx_status_t brcmf_cfg80211_crit_proto_start(struct wiphy* wiphy, struct w
     struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
     struct brcmf_cfg80211_vif* vif;
 
-    vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
+    vif = containerof(wdev, struct brcmf_cfg80211_vif, wdev);
 
     /* only DHCP support for now */
     if (proto != NL80211_CRIT_PROTO_DHCP) {
@@ -4881,7 +4883,7 @@ static void brcmf_cfg80211_crit_proto_stop(struct wiphy* wiphy, struct wireless_
     struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
     struct brcmf_cfg80211_vif* vif;
 
-    vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
+    vif = containerof(wdev, struct brcmf_cfg80211_vif, wdev);
 
     brcmf_btcoex_set_mode(vif, BRCMF_BTCOEX_ENABLED, 0);
     brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status);
@@ -5096,7 +5098,7 @@ zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, enum nl80211_iftype
 
     if (type == NL80211_IFTYPE_AP) {
         mbss = false;
-        list_for_each_entry(vif_walk, &cfg->vif_list, list) {
+        list_for_every_entry(&cfg->vif_list, vif_walk, struct brcmf_cfg80211_vif, list) {
             if (vif_walk->wdev.iftype == NL80211_IFTYPE_AP) {
                 mbss = true;
                 break;
@@ -5113,7 +5115,7 @@ zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, enum nl80211_iftype
 }
 
 void brcmf_free_vif(struct brcmf_cfg80211_vif* vif) {
-    list_del(&vif->list);
+    list_delete(&vif->list);
     free(vif);
 }
 
@@ -6509,7 +6511,7 @@ enum nl80211_iftype brcmf_cfg80211_get_iftype(struct brcmf_if* ifp) {
 bool brcmf_get_vif_state_any(struct brcmf_cfg80211_info* cfg, unsigned long state) {
     struct brcmf_cfg80211_vif* vif;
 
-    list_for_each_entry(vif, &cfg->vif_list, list) {
+    list_for_every_entry(&cfg->vif_list, vif, struct brcmf_cfg80211_vif, list) {
         if (brcmf_test_bit_in_array(state, &vif->sme_state)) {
             return true;
         }
@@ -6718,7 +6720,7 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
     cfg->ops = ops;
     cfg->pub = drvr;
     init_vif_event(&cfg->vif_event);
-    INIT_LIST_HEAD(&cfg->vif_list);
+    list_initialize(&cfg->vif_list);
 
     err = brcmf_alloc_vif(cfg, NL80211_IFTYPE_STATION, &vif);
     if (err != ZX_OK) {

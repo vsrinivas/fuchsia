@@ -200,9 +200,9 @@ static struct brcmf_fweh_queue_item* brcmf_fweh_dequeue_event(struct brcmf_fweh_
 
     //spin_lock_irqsave(&fweh->evt_q_lock, flags);
     pthread_mutex_lock(&irq_callback_lock);
-    if (!list_empty(&fweh->event_q)) {
-        event = list_first_entry(&fweh->event_q, struct brcmf_fweh_queue_item, q);
-        list_del(&event->q);
+    if (!list_is_empty(&fweh->event_q)) {
+        event = list_peek_head_type(&fweh->event_q, struct brcmf_fweh_queue_item, q);
+        list_delete(&event->q);
     }
     //spin_unlock_irqrestore(&fweh->evt_q_lock, flags);
     pthread_mutex_unlock(&irq_callback_lock);
@@ -224,8 +224,8 @@ static void brcmf_fweh_event_worker(struct work_struct* work) {
     struct brcmf_event_msg_be* emsg_be;
     struct brcmf_event_msg emsg;
 
-    fweh = container_of(work, struct brcmf_fweh_info, event_work);
-    drvr = container_of(fweh, struct brcmf_pub, fweh);
+    fweh = containerof(work, struct brcmf_fweh_info, event_work);
+    drvr = containerof(fweh, struct brcmf_pub, fweh);
 
     while ((event = brcmf_fweh_dequeue_event(fweh))) {
         brcmf_dbg(EVENT, "event %s (%u) ifidx %u bsscfg %u addr %pM\n",
@@ -291,7 +291,7 @@ void brcmf_fweh_attach(struct brcmf_pub* drvr) {
     struct brcmf_fweh_info* fweh = &drvr->fweh;
     workqueue_init_work(&fweh->event_work, brcmf_fweh_event_worker);
     //spin_lock_init(&fweh->evt_q_lock);
-    INIT_LIST_HEAD(&fweh->event_q);
+    list_initialize(&fweh->event_q);
 }
 
 /**
@@ -311,7 +311,7 @@ void brcmf_fweh_detach(struct brcmf_pub* drvr) {
     }
     /* cancel the worker */
     workqueue_cancel_work(&fweh->event_work);
-    WARN_ON(!list_empty(&fweh->event_q));
+    WARN_ON(!list_is_empty(&fweh->event_q));
     memset(fweh->evt_handler, 0, sizeof(fweh->evt_handler));
 }
 
