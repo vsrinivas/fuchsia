@@ -88,8 +88,9 @@ void PageEvictionManagerImpl::OnPageOpened(fxl::StringView ledger_name,
        page_id = page_id.ToString()](coroutine::CoroutineHandler* handler) {
         Status status = db_.MarkPageOpened(handler, ledger_name, page_id);
         if (status != Status::OK) {
-          FXL_LOG(ERROR) << "Failed to mark page as opened. Ledger name: "
-                         << ledger_name << ". Page ID: " << page_id;
+          FXL_LOG(ERROR)
+              << "Failed to mark page as opened in PageUsage DB. Ledger name: "
+              << ledger_name << ". Page ID: " << convert::ToHex(page_id);
         }
       });
 }
@@ -104,8 +105,9 @@ void PageEvictionManagerImpl::OnPageClosed(fxl::StringView ledger_name,
        page_id = page_id.ToString()](coroutine::CoroutineHandler* handler) {
         Status status = db_.MarkPageClosed(handler, ledger_name, page_id);
         if (status != Status::OK) {
-          FXL_LOG(ERROR) << "Failed to mark page as closed. Ledger name: "
-                         << ledger_name << ". Page ID: " << page_id;
+          FXL_LOG(ERROR)
+              << "Failed to mark page as closed in PageUsage DB. Ledger name: "
+              << ledger_name << ". Page ID: " << convert::ToHex(page_id);
         }
       });
 }
