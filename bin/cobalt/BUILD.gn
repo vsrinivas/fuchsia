@@ -40,6 +40,8 @@ package("cobalt_tests") {
 
     {
       name = "cobalt_utils_unittests"
+
+      disabled = true
     },
 
     {
