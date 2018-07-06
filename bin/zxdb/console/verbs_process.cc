@@ -363,8 +363,7 @@ std::string PrintRegionSize(uint64_t size) {
 }
 
 std::string PrintRegionName(uint64_t depth, const std::string& name) {
-  return fxl::StringPrintf("%*c%s", static_cast<int>(depth * 2), ' ',
-                           name.c_str());
+  return std::string(depth * 2, ' ') + name;
 }
 
 const char kAspaceShortHelp[] =

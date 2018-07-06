@@ -17,6 +17,7 @@ const char kBoldEscapeCode[] = "\x1b[1m";      // "[1m" = Bold.
 const char kCommentEscapeCode[] = "\x1b[2m";   // "[2m" = Faint.
 const char kErrorEscapeCode[] = "\x1b[31m";    // "[31m" = Red.
 const char kWarningEscapeCode[] = "\x1b[33m";  // "[33m" = Yellow.
+const char kSpecialEscapeCode[] = "\x1b[34m";  // "[34m" = blue.
 
 }  // namespace
 
@@ -83,6 +84,8 @@ void OutputBuffer::WriteToStdout() const {
       fwrite(kErrorEscapeCode, 1, strlen(kErrorEscapeCode), stdout);
     else if (span.syntax == Syntax::kWarning)
       fwrite(kWarningEscapeCode, 1, strlen(kWarningEscapeCode), stdout);
+    else if (span.syntax == Syntax::kSpecial)
+      fwrite(kSpecialEscapeCode, 1, strlen(kSpecialEscapeCode), stdout);
 
     fwrite(span.text.data(), 1, span.text.size(), stdout);
 

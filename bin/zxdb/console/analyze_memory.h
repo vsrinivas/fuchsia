@@ -10,16 +10,14 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/client/memory_dump.h"
+#include "garnet/lib/debug_ipc/records.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/memory/weak_ptr.h"
-
-namespace debug_ipc {
-struct Register;
-}
 
 namespace zxdb {
 
 class Err;
+class Frame;
 class OutputBuffer;
 class Process;
 class Thread;
@@ -48,9 +46,9 @@ struct AnalyzeMemoryOptions {
 // On error, the Err will be set, the output buffer will be empty, and
 // next_addr will be 0.
 void AnalyzeMemory(const AnalyzeMemoryOptions& opts,
-                   std::function<void(const Err& err,
-                                      OutputBuffer analysis,
-                                      uint64_t next_addr)> cb);
+                   std::function<void(const Err& err, OutputBuffer analysis,
+                                      uint64_t next_addr)>
+                       cb);
 
 namespace internal {
 
@@ -61,7 +59,8 @@ namespace internal {
 // asynchronous callbacks to issue the final complete callback.
 class MemoryAnalysis : public fxl::RefCountedThreadSafe<MemoryAnalysis> {
  public:
-  using Callback = std::function<void(const Err& err, OutputBuffer analysis, uint64_t next_addr)>;
+  using Callback = std::function<void(const Err& err, OutputBuffer analysis,
+                                      uint64_t next_addr)>;
 
   MemoryAnalysis(const AnalyzeMemoryOptions& opts, Callback cb);
   ~MemoryAnalysis() = default;
@@ -70,10 +69,18 @@ class MemoryAnalysis : public fxl::RefCountedThreadSafe<MemoryAnalysis> {
   // is unsafe (the process and thread pointers aren't weak and may disappear).
   void Schedule(const AnalyzeMemoryOptions& opts);
 
+  // Tests can call these functions to manually provide the data that would
+  // normally be provided via IPC call. To use, call before "Schedule".
+  void SetAspace(std::vector<debug_ipc::AddressRegion> aspace);
+  void SetFrames(const std::vector<Frame*>& frames);
+  void SetMemory(MemoryDump dump);
+  void SetRegisters(const std::vector<debug_ipc::Register>& regs);
+
  private:
   void DoAnalysis();
 
   // Request callbacks.
+  void OnAspace(const Err& err, std::vector<debug_ipc::AddressRegion> aspace);
   void OnRegisters(const Err& err,
                    const std::vector<debug_ipc::Register>& regs);
   void OnMemory(const Err& err, MemoryDump dump);
@@ -117,6 +124,8 @@ class MemoryAnalysis : public fxl::RefCountedThreadSafe<MemoryAnalysis> {
 
   MemoryDump memory_;
 
+  std::vector<debug_ipc::AddressRegion> aspace_;
+
   // Set when an asynchronous operation has failed. The callback will already
   // have been issued, so everything should immediately exit when this flag is
   // set.
@@ -126,6 +135,7 @@ class MemoryAnalysis : public fxl::RefCountedThreadSafe<MemoryAnalysis> {
   bool have_registers_ = false;
   bool have_memory_ = false;
   bool have_frames_ = false;
+  bool have_aspace_ = false;
 };
 
 }  // namespace internal

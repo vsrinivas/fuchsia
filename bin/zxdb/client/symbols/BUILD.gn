@@ -65,6 +65,8 @@ static_library("test_support") {
   sources = [
     "mock_module_symbols.cc",
     "mock_module_symbols.h",
+    "mock_process_symbols.cc",
+    "mock_process_symbols.h",
   ]
 
   deps = [

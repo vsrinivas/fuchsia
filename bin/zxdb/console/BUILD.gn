@@ -62,6 +62,7 @@ static_library("console") {
 source_set("tests") {
   testonly = true
   sources = [
+    "analyze_memory_unittest.cc",
     "command_parser_unittest.cc",
     "command_utils_unittest.cc",
     "flags_unittest.cc",
@@ -75,6 +76,8 @@ source_set("tests") {
 
   deps = [
     ":console",
+    "//garnet/bin/zxdb/client:test_support",
+    "//garnet/bin/zxdb/client/symbols:test_support",
     "//third_party/googletest:gtest",
   ]
 }

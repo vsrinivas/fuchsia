@@ -3,7 +3,10 @@
 # found in the LICENSE file.
 
 static_library("client") {
-  friend = [ ":tests" ]
+  friend = [
+    ":tests",
+    ":test_support",
+  ]
 
   public = [
     "arch_info.h",
@@ -102,6 +105,24 @@ static_library("common") {
   ]
 }
 
+source_set("test_support") {
+  testonly = true
+  sources = [
+    "mock_frame.cc",
+    "mock_frame.h",
+    "mock_process.cc",
+    "mock_process.h",
+    "remote_api_test.cc",
+    "remote_api_test.h",
+  ]
+
+  public_deps = [
+    ":client",
+    "symbols:test_support",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 source_set("tests") {
   testonly = true
   sources = [
@@ -109,8 +130,6 @@ source_set("tests") {
     "disassembler_unittest.cc",
     "file_util_unittest.cc",
     "memory_dump_unittest.cc",
-    "remote_api_test.cc",
-    "remote_api_test.h",
     "session_unittest.cc",
     "string_util_unittest.cc",
     "target_impl_unittest.cc",
@@ -119,6 +138,7 @@ source_set("tests") {
 
   deps = [
     ":client",
+    ":test_support",
     "symbols:test_support",
     "symbols:tests",
     "//third_party/googletest:gtest",

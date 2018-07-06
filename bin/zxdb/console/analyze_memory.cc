@@ -16,6 +16,9 @@
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/lib/debug_ipc/helper/message_loop.h"
+#include "garnet/lib/debug_ipc/records.h"
+#include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -26,6 +29,11 @@ namespace {
 // pointers are on the debugged platform. This may need to be configurable in
 // the future.
 constexpr uint64_t kAlign = sizeof(uint64_t);
+
+// Aspace entries this size or larger will be ignored for annotation purposes.
+// These large regions generally represent the process's available address
+// space rather than actually used memory.
+constexpr uint64_t kMaxAspaceRegion = 128000000000;  // 128GB
 
 }  // namespace
 
@@ -52,19 +60,22 @@ void MemoryAnalysis::Schedule(const AnalyzeMemoryOptions& opts) {
 
   if (opts.thread) {
     // Request registers.
-    opts.thread->GetRegisters(
-        [this_ref](const Err& err, std::vector<debug_ipc::Register> regs) {
-          this_ref->OnRegisters(err, regs);
-        });
+    if (!have_registers_) {
+      opts.thread->GetRegisters(
+          [this_ref](const Err& err, std::vector<debug_ipc::Register> regs) {
+            this_ref->OnRegisters(err, regs);
+          });
+    }
 
     // Request stack dump.
-    if (opts.thread->HasAllFrames()) {
-      OnFrames(opts.thread->GetWeakPtr());
-    } else {
-      opts.thread->SyncFrames(
-          [this_ref, weak_thread = opts.thread->GetWeakPtr()]() {
-            this_ref->OnFrames(weak_thread);
-          });
+    if (!have_frames_) {
+      if (opts.thread->HasAllFrames()) {
+        OnFrames(opts.thread->GetWeakPtr());
+      } else {
+        opts.thread->SyncFrames([
+          this_ref, weak_thread = opts.thread->GetWeakPtr()
+        ]() { this_ref->OnFrames(weak_thread); });
+      }
     }
   } else {
     // Mark these as complete so we can continue when everything else is done.
@@ -73,10 +84,63 @@ void MemoryAnalysis::Schedule(const AnalyzeMemoryOptions& opts) {
   }
 
   // Request memory dump.
-  opts.process->ReadMemory(begin_address_, bytes_to_read_,
-                           [this_ref](const Err& err, MemoryDump dump) {
-                             this_ref->OnMemory(err, std::move(dump));
-                           });
+  if (!have_memory_) {
+    opts.process->ReadMemory(begin_address_, bytes_to_read_,
+                             [this_ref](const Err& err, MemoryDump dump) {
+                               this_ref->OnMemory(err, std::move(dump));
+                             });
+  }
+
+  // Request address space dump.
+  if (!have_aspace_) {
+    opts.process->GetAspace(
+        0, [this_ref](const Err& err,
+                      std::vector<debug_ipc::AddressRegion> aspace) {
+          this_ref->OnAspace(err, std::move(aspace));
+        });
+  }
+
+  // Test code could have set everything, in which case trigger a run.
+  if (HasEverything()) {
+    debug_ipc::MessageLoop::Current()->PostTask(
+        [this_ref]() { this_ref->DoAnalysis(); });
+  }
+}
+
+void MemoryAnalysis::SetAspace(std::vector<debug_ipc::AddressRegion> aspace) {
+  FXL_DCHECK(!have_aspace_);
+  have_aspace_ = true;
+  aspace_ = std::move(aspace);
+}
+
+void MemoryAnalysis::SetFrames(const std::vector<Frame*>& frames) {
+  FXL_DCHECK(!have_frames_);
+  have_frames_ = true;
+
+  // Note that this skips frame 0. Frame 0 SP will always be the SP register
+  // which will be annotated also.
+  //
+  // Note: if we add more stuff per frame (like return addresses and base
+  // pointers), we'll wan to change this so frame 0's relevant stuff is
+  // added but not its SP.
+  for (int i = 1; i < static_cast<int>(frames.size()); i++) {
+    AddAnnotation(frames[i]->GetStackPointer(),
+                  fxl::StringPrintf("frame %d SP", i));
+  }
+}
+
+void MemoryAnalysis::SetMemory(MemoryDump dump) {
+  FXL_DCHECK(!have_memory_);
+  have_memory_ = true;
+  memory_ = std::move(dump);
+}
+
+void MemoryAnalysis::SetRegisters(
+    const std::vector<debug_ipc::Register>& regs) {
+  FXL_DCHECK(!have_registers_);
+  have_registers_ = true;
+  for (const auto& reg : regs)
+    AddAnnotation(reg.value, reg.name);
 }
 
 void MemoryAnalysis::DoAnalysis() {
@@ -109,7 +173,9 @@ void MemoryAnalysis::DoAnalysis() {
 
     OutputBuffer comments;
     if (!annotation.empty()) {
-      comments.Append(std::move(annotation));
+      // Mark things pointing into the stack as special since they're important
+      // and can get drowned out by the "pointed to" annotations.
+      comments.Append(Syntax::kSpecial, std::move(annotation));
       if (!pointed_to.empty())
         comments.Append(". ");  // Separator between sections.
     }
@@ -119,23 +185,33 @@ void MemoryAnalysis::DoAnalysis() {
   }
 
   OutputBuffer out;
-  FormatTable({ColSpec(Align::kRight), ColSpec(Align::kRight), ColSpec()}, rows,
-              &out);
+  FormatTable({ColSpec(Align::kRight, 0, "Address"),
+               ColSpec(Align::kRight, 0, "Data"), ColSpec()},
+              rows, &out);
   callback_(Err(), std::move(out), begin_address_ + bytes_to_read_);
+}
+
+void MemoryAnalysis::OnAspace(const Err& err,
+                              std::vector<debug_ipc::AddressRegion> aspace) {
+  if (aborted_)
+    return;
+
+  // This function can continue without address space annotations so ignore
+  // errors.
+  SetAspace(std::move(aspace));
+
+  if (HasEverything())
+    DoAnalysis();
 }
 
 void MemoryAnalysis::OnRegisters(const Err& err,
                                  const std::vector<debug_ipc::Register>& regs) {
   if (aborted_)
     return;
-  have_registers_ = true;
 
   // This function can continue without registers (say, if the thread has been
   // resumed by the time the request got executed). So just ignore failures.
-  if (!err.has_error()) {
-    for (const auto& reg : regs)
-      AddAnnotation(reg.value, reg.name);
-  }
+  SetRegisters(regs);
 
   if (HasEverything())
     DoAnalysis();
@@ -149,8 +225,7 @@ void MemoryAnalysis::OnMemory(const Err& err, MemoryDump dump) {
     return;
   }
 
-  have_memory_ = true;
-  memory_ = std::move(dump);
+  SetMemory(std::move(dump));
 
   if (HasEverything())
     DoAnalysis();
@@ -159,30 +234,21 @@ void MemoryAnalysis::OnMemory(const Err& err, MemoryDump dump) {
 void MemoryAnalysis::OnFrames(fxl::WeakPtr<Thread> thread) {
   if (aborted_)
     return;
-  have_frames_ = true;
 
   // This function can continue even if the thread is gone, it just won't get
   // the frame annotations.
-  if (thread) {
-    auto frames = thread->GetFrames();
-    // Note that this skips frame 0. Frame 0 SP will always be the SP register
-    // which will be annotated also.
-    //
-    // Note: if we add more stuff per frame (like return addresses and base
-    // pointers), we'll wan to change this so frame 0's relevant stuff is
-    // added but not its SP.
-    for (int i = 1; i < static_cast<int>(frames.size()); i++) {
-      AddAnnotation(frames[i]->GetStackPointer(),
-                    fxl::StringPrintf("frame %d SP", i));
-    }
-  }
+  std::vector<Frame*> frames;
+  if (thread)
+    frames = thread->GetFrames();
+
+  SetFrames(frames);
 
   if (HasEverything())
     DoAnalysis();
 }
 
 bool MemoryAnalysis::HasEverything() const {
-  return have_registers_ && have_memory_ && have_frames_;
+  return have_registers_ && have_memory_ && have_frames_ && have_aspace_;
 }
 
 void MemoryAnalysis::IssueError(const Err& err) {
@@ -247,9 +313,24 @@ std::string MemoryAnalysis::GetPointedToAnnotation(uint64_t data) const {
     return std::string();
   Location loc = process_->GetSymbols()->LocationForAddress(data);
   if (!loc.has_symbols()) {
-    // TODO(brettw) we should check if this points to a valid mapped memory
-    // region (like aspace returns) and indicate that.
-    return std::string();
+    // Check if this points into any relevant aspace entries. Want the deepest
+    // one smaller than the max size threshold.
+    int max_depth = -1;
+    size_t found_entry = aspace_.size();  // Indicates not found.
+    for (size_t i = 0; i < aspace_.size(); i++) {
+      const auto& region = aspace_[i];
+      if (region.size < kMaxAspaceRegion && data >= region.base &&
+          data < region.base + region.size &&
+          max_depth < static_cast<int>(region.depth)) {
+        max_depth = static_cast<int>(region.depth);
+        found_entry = i;
+      }
+    }
+
+    if (found_entry == aspace_.size())
+      return std::string();  // Not found.
+    return fxl::StringPrintf("▷ inside map \"%s\"",
+                             aspace_[found_entry].name.c_str());
   }
   // TODO(brettw) this should indicate the byte offset from the beginning of
   // the function, or maybe the file/line number.
