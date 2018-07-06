@@ -20,9 +20,6 @@
 
 #include "fwil.h"
 
-//#include <linux/kernel.h>
-//#include <linux/netdevice.h>
-
 #include <threads.h>
 
 #include "brcmu_utils.h"

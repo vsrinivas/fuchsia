@@ -16,8 +16,6 @@
 #ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_P2P_H_
 #define GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_P2P_H_
 
-//#include <net/cfg80211.h>
-
 #include <sync/completion.h>
 
 #include "core.h"

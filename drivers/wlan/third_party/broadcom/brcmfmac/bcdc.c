@@ -19,9 +19,6 @@
  * For certain dcmd codes, the dongle interprets string data from the host.
  ******************************************************************************/
 
-//#include <linux/netdevice.h>
-//#include <linux/types.h>
-
 #include "bcdc.h"
 
 #include "brcmu_utils.h"

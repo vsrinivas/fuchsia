@@ -14,15 +14,6 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-//#include <linux/etherdevice.h>
-//#include <linux/inetdevice.h>
-//#include <linux/kernel.h>
-//#include <linux/module.h>
-//#include <net/addrconf.h>
-//#include <net/cfg80211.h>
-//#include <net/ipv6.h>
-//#include <net/rtnetlink.h>
-
 #include "core.h"
 
 #include <ddk/device.h>

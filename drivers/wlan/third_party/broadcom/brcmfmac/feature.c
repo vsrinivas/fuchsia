@@ -14,8 +14,7 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-//#include <linux/module.h>
-//#include <linux/netdevice.h>
+#include "feature.h"
 
 #include <string.h>
 
@@ -25,7 +24,6 @@
 #include "common.h"
 #include "core.h"
 #include "debug.h"
-#include "feature.h"
 #include "fwil.h"
 #include "fwil_types.h"
 #include "linuxisms.h"

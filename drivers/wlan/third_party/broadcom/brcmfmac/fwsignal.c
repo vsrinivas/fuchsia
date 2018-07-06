@@ -14,17 +14,6 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-//#include <linux/err.h>
-//#include <linux/etherdevice.h>
-//#include <linux/if_ether.h>
-//#include <linux/jiffies.h>
-//#include <linux/module.h>
-//#include <linux/netdevice.h>
-//#include <linux/skbuff.h>
-//#include <linux/spinlock.h>
-//#include <linux/types.h>
-//#include <net/cfg80211.h>
-
 #include "fwsignal.h"
 
 #include <threads.h>

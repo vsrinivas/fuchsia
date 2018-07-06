@@ -14,16 +14,12 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-//#include <linux/debugfs.h>
-//#include <linux/devcoredump.h>
-//#include <linux/module.h>
-//#include <linux/netdevice.h>
+#include "debug.h"
 
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
 #include "bus.h"
 #include "core.h"
-#include "debug.h"
 #include "device.h"
 #include "linuxisms.h"
 #include "fweh.h"

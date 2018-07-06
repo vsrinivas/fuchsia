@@ -16,6 +16,8 @@
 #ifndef _BRCMF_FEATURE_H
 #define _BRCMF_FEATURE_H
 
+#include "core.h"
+
 /*
  * Features:
  *

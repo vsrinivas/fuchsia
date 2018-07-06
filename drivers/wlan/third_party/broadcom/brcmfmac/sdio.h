@@ -17,9 +17,6 @@
 #ifndef BRCMFMAC_SDIO_H
 #define BRCMFMAC_SDIO_H
 
-//#include <linux/firmware.h>
-//#include <linux/skbuff.h>
-
 #include "defs.h"
 #include "device.h"
 #include "firmware.h"

@@ -14,10 +14,6 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-//#include <linux/vmalloc.h>
-//#include <net/cfg80211.h>
-//#include <net/netlink.h>
-
 #include "vendor.h"
 
 #include <limits.h>

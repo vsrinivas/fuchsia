@@ -17,8 +17,6 @@
 #ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_INCLUDE_DEFS_H_
 #define GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_INCLUDE_DEFS_H_
 
-//#include <linux/types.h>
-
 #include "linuxisms.h"
 
 #define SI_BUS 0

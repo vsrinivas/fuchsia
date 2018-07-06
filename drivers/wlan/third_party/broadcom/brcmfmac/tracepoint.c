@@ -14,14 +14,13 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-//#include <linux/module.h> /* bug in tracepoint.h, it should include this */
+#include "tracepoint.h"
 
 #include "linuxisms.h"
 
 #ifndef __CHECKER__
 #define CREATE_TRACE_POINTS
 #include "debug.h"
-#include "tracepoint.h"
 
 void __brcmf_err(const char* func, const char* fmt, ...) {
     char msg[512]; // Same value hard-coded throughout devhost.c

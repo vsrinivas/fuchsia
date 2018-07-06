@@ -14,19 +14,13 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-//#include <linux/bcma/bcma.h>
-//#include <linux/bcma/bcma_regs.h>
-//#include <linux/delay.h>
-//#include <linux/kernel.h>
-//#include <linux/list.h>
-//#include <linux/ssb/ssb_regs.h>
+#include "chip.h"
 
 #include <zircon/listnode.h>
 #include <zircon/status.h>
 
 #include "brcm_hw_ids.h"
 #include "brcmu_utils.h"
-#include "chip.h"
 #include "chipcommon.h"
 #include "debug.h"
 #include "defs.h"

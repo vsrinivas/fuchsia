@@ -17,9 +17,6 @@
     defined(TRACE_HEADER_MULTI_READ)
 #define GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_TRACEPOINT_H_
 
-//#include <linux/tracepoint.h>
-//#include <linux/types.h>
-
 #include "linuxisms.h"
 
 #if 0
@@ -106,8 +103,6 @@ TRACE_EVENT(brcmf_sdpcm_hdr, TP_PROTO(uint8_t dir, void* data), TP_ARGS(dir, dat
 #define TRACE_INCLUDE_FILE tracepoint
 
 #endif  // LINUX cphoenix
-
-//#include <trace/define_trace.h>
 
 #endif /* CONFIG_BRCM_TRACING */
 

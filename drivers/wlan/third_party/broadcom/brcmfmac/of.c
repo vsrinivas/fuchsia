@@ -14,10 +14,6 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-//#include <linux/init.h>
-//#include <linux/of.h>
-//#include <linux/of_irq.h>
-
 #include "of.h"
 
 #include "common.h"

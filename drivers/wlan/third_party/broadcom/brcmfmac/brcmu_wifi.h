@@ -17,9 +17,6 @@
 #ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_INCLUDE_BRCMU_WIFI_H_
 #define GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_INCLUDE_BRCMU_WIFI_H_
 
-//#include <linux/ieee80211.h> /* for WLAN_PMKID_LEN */
-//#include <linux/if_ether.h>  /* for ETH_ALEN */
-
 #include "linuxisms.h"
 
 /*

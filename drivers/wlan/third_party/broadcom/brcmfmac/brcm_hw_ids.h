@@ -17,9 +17,6 @@
 #ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_INCLUDE_BRCM_HW_IDS_H_
 #define GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_INCLUDE_BRCM_HW_IDS_H_
 
-//#include <linux/mmc/sdio_ids.h>
-//#include <linux/pci_ids.h>
-
 #include "linuxisms.h"
 
 #define BRCM_USB_VENDOR_ID_BROADCOM 0x0a5c

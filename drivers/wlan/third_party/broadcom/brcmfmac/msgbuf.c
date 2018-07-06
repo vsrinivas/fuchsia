@@ -18,10 +18,6 @@
  * For certain dcmd codes, the dongle interprets string data from the host.
  ******************************************************************************/
 
-//#include <linux/etherdevice.h>
-//#include <linux/netdevice.h>
-//#include <linux/types.h>
-
 #include "msgbuf.h"
 
 #include <stdatomic.h>

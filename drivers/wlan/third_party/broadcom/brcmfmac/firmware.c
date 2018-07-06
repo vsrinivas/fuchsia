@@ -14,13 +14,6 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-//#include <linux/bcm47xx_nvram.h>
-//#include <linux/device.h>
-//#include <linux/firmware.h>
-//#include <linux/kernel.h>
-//#include <linux/module.h>
-//#include <linux/slab.h>
-
 #include "firmware.h"
 
 #include <zircon/syscalls.h>

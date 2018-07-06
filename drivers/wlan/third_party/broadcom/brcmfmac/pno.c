@@ -14,10 +14,6 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-//#include <linux/gcd.h>
-//#include <linux/netdevice.h>
-//#include <net/cfg80211.h>
-
 #include "pno.h"
 
 #include <threads.h>

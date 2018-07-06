@@ -15,6 +15,8 @@
 #ifndef BRCMFMAC_COMMONRING_H
 #define BRCMFMAC_COMMONRING_H
 
+#include <zircon/types.h>
+
 struct brcmf_commonring {
     uint16_t r_ptr;
     uint16_t w_ptr;

@@ -15,9 +15,6 @@
 #ifndef BRCMFMAC_COMMON_H
 #define BRCMFMAC_COMMON_H
 
-//#include <linux/platform_data/brcmfmac.h>
-//#include <linux/platform_device.h>
-
 #include "core.h"
 #include "device.h"
 #include "fwil_types.h"

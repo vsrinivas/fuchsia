@@ -14,12 +14,6 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-//#include <linux/firmware.h>
-//#include <linux/kernel.h>
-//#include <linux/module.h>
-//#include <linux/usb.h>
-//#include <linux/vmalloc.h>
-
 #include "usb.h"
 
 #include <ddk/protocol/usb.h>

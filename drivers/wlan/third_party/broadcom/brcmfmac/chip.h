@@ -16,8 +16,6 @@
 #ifndef BRCMF_CHIP_H
 #define BRCMF_CHIP_H
 
-//#include <linux/types.h>
-
 #include "linuxisms.h"
 
 #define CORE_CC_REG(base, field) (base + offsetof(struct chipcregs, field))

@@ -15,28 +15,9 @@
  */
 /* ****************** SDIO CARD Interface Functions **************************/
 
-//#include <linux/acpi.h>
-//#include <linux/completion.h>
-//#include <linux/errno.h>
-//#include <linux/interrupt.h>
-//#include <linux/mmc/card.h>
-//#include <linux/mmc/core.h>
-//#include <linux/mmc/host.h>
-//#include <linux/mmc/sdio.h>
-//#include <linux/mmc/sdio_func.h>
-//#include <linux/module.h>
-//#include <linux/netdevice.h>
-//#include <linux/pci.h>
-//#include <linux/pci_ids.h>
-//#include <linux/pm_runtime.h>
-//#include <linux/scatterlist.h>
-//#include <linux/sched.h>
-//#include <linux/suspend.h>
-//#include <linux/types.h>
-//#include <net/cfg80211.h>
+#include <sync/completion.h>
 
 #include <stdatomic.h>
-#include <sync/completion.h>
 
 #include "brcm_hw_ids.h"
 #include "brcmu_utils.h"

@@ -17,11 +17,6 @@
 #ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_FWEH_H_
 #define GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_FWEH_H_
 
-//#include <asm/unaligned.h>
-//#include <linux/if.h>
-//#include <linux/if_ether.h>
-//#include <linux/skbuff.h>
-
 #include <zircon/listnode.h>
 
 #include <endian.h>

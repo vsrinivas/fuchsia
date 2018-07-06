@@ -14,19 +14,15 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-//#include <linux/netdevice.h>
-//#include <linux/slab.h>
-//#include <linux/types.h>
-
-#include "linuxisms.h"
+#include "proto.h"
 
 #include "brcmu_wifi.h"
 #include "bcdc.h"
 #include "bus.h"
 #include "core.h"
 #include "debug.h"
+#include "linuxisms.h"
 #include "msgbuf.h"
-#include "proto.h"
 
 zx_status_t brcmf_proto_attach(struct brcmf_pub* drvr) {
     struct brcmf_proto* proto;

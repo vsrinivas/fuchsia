@@ -14,7 +14,6 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-//#include <linux/netdevice.h>
 #include "fweh.h"
 
 #include <threads.h>

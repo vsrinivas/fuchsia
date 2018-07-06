@@ -21,8 +21,6 @@
 #ifndef BRCMFMAC_CORE_H
 #define BRCMFMAC_CORE_H
 
-//#include <net/cfg80211.h>
-
 #include <netinet/if_ether.h>
 #include <sync/completion.h>
 

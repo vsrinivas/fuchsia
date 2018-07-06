@@ -16,12 +16,6 @@
 
 /* Toplevel file. Relies on dhd_linux.c to send commands to the dongle. */
 
-//#include <linux/etherdevice.h>
-//#include <linux/kernel.h>
-//#include <linux/module.h>
-//#include <linux/vmalloc.h>
-//#include <net/cfg80211.h>
-//#include <net/netlink.h>
 #include "cfg80211.h"
 
 #include <zircon/status.h>

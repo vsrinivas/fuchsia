@@ -13,17 +13,6 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-//#include <asm/unaligned.h>
-//#include <linux/bcma/bcma.h>
-//#include <linux/delay.h>
-//#include <linux/firmware.h>
-//#include <linux/interrupt.h>
-//#include <linux/kernel.h>
-//#include <linux/module.h>
-//#include <linux/pci.h>
-//#include <linux/sched.h>
-//#include <linux/vmalloc.h>
-
 #include "pcie.h"
 
 #include <ddk/driver.h>

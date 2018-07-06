@@ -15,13 +15,10 @@
  */
 /*********************channel spec common functions*********************/
 
-//#include <linux/module.h>
-
-#include "linuxisms.h"
-
 #include "brcmu_d11.h"
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
+#include "linuxisms.h"
 
 static uint16_t d11n_sb(enum brcmu_chan_sb sb) {
     switch (sb) {

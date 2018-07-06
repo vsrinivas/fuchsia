@@ -14,15 +14,10 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-//#include <linux/netdevice.h>
-//#include <linux/slab.h>
-//#include <net/cfg80211.h>
-
-#include "linuxisms.h"
+#include "btcoex.h"
 
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
-#include "btcoex.h"
 #include "cfg80211.h"
 #include "core.h"
 #include "debug.h"
@@ -30,6 +25,7 @@
 #include "device.h"
 #include "fwil.h"
 #include "fwil_types.h"
+#include "linuxisms.h"
 #include "p2p.h"
 #include "workqueue.h"
 

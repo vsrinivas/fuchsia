@@ -13,10 +13,6 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-//#include <linux/etherdevice.h>
-//#include <linux/netdevice.h>
-//#include <linux/types.h>
-
 #include "flowring.h"
 
 #include <threads.h>

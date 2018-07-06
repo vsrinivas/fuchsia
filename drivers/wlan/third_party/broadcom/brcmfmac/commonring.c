@@ -13,14 +13,12 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-//#include <linux/netdevice.h>
-//#include <linux/types.h>
+#include "commonring.h"
 
 #include <threads.h>
 
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
-#include "commonring.h"
 #include "core.h"
 #include "device.h"
 #include "linuxisms.h"

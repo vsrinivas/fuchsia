@@ -14,12 +14,6 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-//#include <linux/etherdevice.h>
-//#include <linux/netdevice.h>
-//#include <linux/rtnetlink.h>
-//#include <linux/slab.h>
-//#include <net/cfg80211.h>
-
 #include "p2p.h"
 
 #include <threads.h>
