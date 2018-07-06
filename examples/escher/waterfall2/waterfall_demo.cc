@@ -120,7 +120,8 @@ void WaterfallDemo::DrawFrame() {
   const float y = 700.f + sin(static_cast<float>(frame_count_) / 80.f) * 400.f;
   Model model({Object(Transform(vec3(x, y, 20)), ring_, material_)});
 
-  auto frame = escher()->NewFrame("Waterfall Demo", profile_one_frame_);
+  auto frame =
+      escher()->NewFrame("Waterfall Demo", frame_count_, profile_one_frame_);
 
   swapchain_helper_.DrawFrame(
       [&](const ImagePtr& output_image, const SemaphorePtr& render_finished) {
