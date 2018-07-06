@@ -138,7 +138,8 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   auto page2 =
       instance2->GetPage(fidl::MakeOptional(page_id), ledger::Status::OK);
   auto page2_state_watcher = WatchPageSyncState(&page2);
-  // Wait until the sync on the second device is idle.
+  // Wait until the sync on the second device is idle and record the number of
+  // state updates.
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
   int page2_initial_state_change_count =
       page2_state_watcher->state_change_count;
@@ -148,6 +149,9 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
              callback::Capture(QuitLoopClosure(), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
+
+  // Wait until page1 finishes uploading the changes.
+  EXPECT_TRUE(WaitUntilSyncIsIdle(page1_state_watcher.get()));
 
   // Note that we cannot just wait for the sync to become idle on the second
   // instance, as it might still be idle upon the first check because the device
@@ -175,8 +179,7 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   ASSERT_TRUE(inlined_value);
   ASSERT_EQ("World", convert::ToString(inlined_value->value));
 
-  // Verify that the sync states of both pages eventually become idle.
-  EXPECT_TRUE(WaitUntilSyncIsIdle(page1_state_watcher.get()));
+  // Verify that the sync states of page2 eventually become idle.
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
 }
 
