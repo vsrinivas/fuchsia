@@ -2,11 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fxl/strings/string_printf.h>
+
 #include "garnet/bin/appmgr/appmgr.h"
 
 namespace component {
 namespace {
 constexpr char kRootLabel[] = "app";
+constexpr zx::duration kMinSmsmgrBackoff = zx::msec(200);
+constexpr zx::duration kMaxSysmgrBackoff = zx::sec(15);
+constexpr zx::duration kSysmgrAliveReset = zx::sec(5);
 }  // namespace
 
 Appmgr::Appmgr(async_t* async, AppmgrArgs args)
@@ -15,7 +20,9 @@ Appmgr::Appmgr(async_t* async, AppmgrArgs args)
       publish_vfs_(async),
       publish_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       sysmgr_url_(std::move(args.sysmgr_url)),
-      sysmgr_args_(std::move(args.sysmgr_args)) {
+      sysmgr_args_(std::move(args.sysmgr_args)),
+      sysmgr_backoff_(kMinSmsmgrBackoff, kMaxSysmgrBackoff, kSysmgrAliveReset),
+      sysmgr_permanently_failed_(false) {
   // 1. Serve loader.
   loader_dir_->AddEntry(
       fuchsia::sys::Loader::Name_,
@@ -53,22 +60,45 @@ Appmgr::Appmgr(async_t* async, AppmgrArgs args)
 
   // 3. Run sysmgr
   auto run_sysmgr = [this] {
+    sysmgr_backoff_.Start();
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = sysmgr_url_;
     launch_info.arguments.reset(sysmgr_args_);
-    root_realm_->CreateComponent(std::move(launch_info), sysmgr_.NewRequest());
+    // TODO(CP-82): Create a generic solution to the Wait race condition.
+    auto req = sysmgr_.NewRequest();
+    sysmgr_->Wait([this](zx_status_t status) {
+      if (status == ZX_ERR_INVALID_ARGS) {
+        FXL_LOG(ERROR) << "sysmgr reported invalid arguments";
+        sysmgr_permanently_failed_ = true;
+      } else {
+        FXL_LOG(ERROR) << "sysmgr exited with status " << status;
+      }
+    });
+    root_realm_->CreateComponent(std::move(launch_info), std::move(req));
   };
 
   if (!args.retry_sysmgr_crash) {
     run_sysmgr();
     return;
   }
+
   async::PostTask(async, [this, async, run_sysmgr] {
     run_sysmgr();
-    sysmgr_.set_error_handler([async, run_sysmgr] {
-      FXL_LOG(ERROR) << "sysmgr failed, restarting in 5s";
-      async::PostDelayedTask(async, run_sysmgr, zx::sec(5));
-    });
+
+    auto retry_handler = [this, async, run_sysmgr] {
+      if (sysmgr_permanently_failed_) {
+        FXL_LOG(ERROR)
+            << "sysmgr permanently failed. Check system configuration.";
+        return;
+      }
+
+      auto delay_duration = sysmgr_backoff_.GetNext();
+      FXL_LOG(ERROR) << fxl::StringPrintf("sysmgr failed, restarting in %.3fs",
+                                          .001f * delay_duration.to_msecs());
+      async::PostDelayedTask(async, run_sysmgr, delay_duration);
+    };
+
+    sysmgr_.set_error_handler(retry_handler);
   });
 }
 

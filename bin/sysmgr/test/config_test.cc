@@ -21,7 +21,7 @@ TEST(ConfigTest, FailsIfEmpty) {
   Config config;
   config.Parse("", "test");
   EXPECT_TRUE(config.HasErrors());
-  EXPECT_THAT(config.GetErrors(), ElementsAre("The document is empty."));
+  EXPECT_THAT(config.GetErrors(), ElementsAre("test: The document is empty."));
   EXPECT_EQ(config.GetFailedConfig(), "");
 }
 
@@ -30,7 +30,7 @@ TEST(ConfigTest, InvalidValue) {
   config.Parse("3", "test");
   EXPECT_TRUE(config.HasErrors());
   EXPECT_THAT(config.GetErrors(),
-              ElementsAre("Config file is not a JSON object"));
+              ElementsAre("test: Config file is not a JSON object"));
   EXPECT_EQ(config.GetFailedConfig(), "3");
 }
 
@@ -43,7 +43,7 @@ TEST(ConfigTest, ParseErrorWithLine) {
   config.Parse(kTestCase, "test");
   EXPECT_TRUE(config.HasErrors());
   EXPECT_THAT(config.GetErrors(),
-              ElementsAre("2:38 Invalid encoding in string."));
+              ElementsAre("test:2:38 Invalid encoding in string."));
   EXPECT_EQ(config.GetFailedConfig(), kTestCase);
 }
 
@@ -55,7 +55,7 @@ TEST(ConfigTest, ServicesError) {
       "other": ["a", 3]
     }})json";
   const auto kErrorFormat =
-      "%s must be a string or a non-empty array of strings";
+      "test: %s must be a string or a non-empty array of strings";
 
   Config config;
   config.Parse(kTestCase, "test");
@@ -73,7 +73,8 @@ TEST(ConfigTest, AppsError) {
   Config config;
   config.Parse(kTestCase, "test");
   EXPECT_TRUE(config.HasErrors());
-  EXPECT_THAT(config.GetErrors(), ElementsAre("apps value is not an array"));
+  EXPECT_THAT(config.GetErrors(),
+              ElementsAre("test: apps value is not an array"));
   EXPECT_EQ(config.GetFailedConfig(), kTestCase);
 }
 
@@ -84,7 +85,7 @@ TEST(ConfigTest, StartupServicesError) {
   config.Parse(kTestCase, "test");
   EXPECT_TRUE(config.HasErrors());
   EXPECT_THAT(config.GetErrors(),
-              ElementsAre("startup_services is not an array of strings"));
+              ElementsAre("test: startup_services is not an array of strings"));
   EXPECT_EQ(config.GetFailedConfig(), kTestCase);
 }
 

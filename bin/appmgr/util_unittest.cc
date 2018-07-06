@@ -64,5 +64,39 @@ TEST(UtilTests, BindDirectory) {
   EXPECT_STREQ(got2, msg2);
 }
 
+class RestartBackOffTester : public RestartBackOff {
+ public:
+  RestartBackOffTester(zx::duration min_backoff, zx::duration max_backoff,
+                       zx::duration alive_reset_limit)
+      : RestartBackOff(min_backoff, max_backoff, alive_reset_limit) {}
+  void SetCurrentTime(zx::time time) { current_time_ = time; }
+
+ protected:
+  zx::time GetCurrentTime() const override { return current_time_; }
+
+ private:
+  zx::time current_time_;
+};
+
+TEST(RestartBackOffTest, WaitIncreasesAndResets) {
+  auto start_time = zx::time() + zx::hour(10);
+  auto within_limit = start_time + zx::msec(100);
+  auto after_limit = start_time + zx::msec(1100);
+  RestartBackOffTester util(zx::sec(1), zx::sec(10), zx::sec(1));
+  util.SetCurrentTime(start_time);
+  util.Start();
+  util.SetCurrentTime(within_limit);
+  EXPECT_GE(util.GetNext(), zx::sec(1));
+  for (int i = 0; i < 10; i++) {
+    util.GetNext();
+  }
+  // Ensure we don't go over the limit.
+  EXPECT_EQ(util.GetNext(), zx::sec(10));
+
+  // If the task succeeded for long enough, ensure backoff is reset.
+  util.SetCurrentTime(after_limit);
+  EXPECT_LT(util.GetNext(), zx::sec(10));
+}
+
 }  // namespace
 }  // namespace component

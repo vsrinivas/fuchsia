@@ -38,16 +38,21 @@ class Config {
   bool HasErrors() const { return !errors_.empty(); }
 
   ServiceMap TakeServices() { return std::move(services_); }
+
   StartupServiceVector TakeStartupServices() {
     return std::move(startup_services_);
   }
+
   ServiceMap TakeAppLoaders() { return std::move(app_loaders_); }
+
   AppVector TakeApps() { return std::move(apps_); }
+
   // GetErrors obtains a reference to the list of errors from parsing.
   const std::vector<std::string>& GetErrors() const { return errors_; }
+
   // GetFailedConfig returns the content of the config file. This method returns
   // an empty string if the config was parsed correctly.
-  const std::string& GetFailedConfig() const { return config_data_; }
+  const std::string& GetFailedConfig() const { return failed_config_data_; }
 
  private:
   ServiceMap services_;
@@ -55,7 +60,8 @@ class Config {
   ServiceMap app_loaders_;
   AppVector apps_;
   std::vector<std::string> errors_;
-  std::string config_data_;
+  // If an error occurred, this is the failing config file content.
+  std::string failed_config_data_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Config);
 };

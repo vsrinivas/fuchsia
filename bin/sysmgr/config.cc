@@ -135,20 +135,21 @@ void Config::Parse(const std::string& string, const std::string& config_file) {
   // purposes.
   auto store_debug_on_error = fxl::MakeAutoCall([&]() {
     if (HasErrors()) {
-      config_data_ = string;
+      failed_config_data_ = string;
     }
   });
 
-  auto error_callback = [this, &string](size_t offset,
-                                        const std::string& error) {
+  auto error_callback = [this, &string, &config_file](
+                            size_t offset, const std::string& error) {
     int32_t line;
     int32_t column;
     GetLineAndColumnForOffset(string, offset, &line, &column);
     if (line == 0) {
-      errors_.emplace_back(error);
-    } else {
       errors_.emplace_back(
-          StringPrintf("%d:%d %s", line, column, error.c_str()));
+          StringPrintf("%s: %s", config_file.c_str(), error.c_str()));
+    } else {
+      errors_.emplace_back(StringPrintf("%s:%d:%d %s", config_file.c_str(),
+                                        line, column, error.c_str()));
     }
   };
 

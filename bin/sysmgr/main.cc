@@ -12,12 +12,12 @@
 
 constexpr char kConfigDir[] = "/system/data/sysmgr/";
 
-void PrintErrors(const sysmgr::Config& config, const std::string& filename) {
+void PrintErrors(const sysmgr::Config& config) {
   if (config.HasErrors()) {
     FXL_LOG(ERROR) << "\n" << config.GetFailedConfig();
-    FXL_LOG(ERROR) << "Failed to parse " << filename;
+    FXL_LOG(ERROR) << "Failed to parse config";
     for (const auto& error : config.GetErrors()) {
-      FXL_LOG(ERROR) << "   " << error;
+      FXL_LOG(ERROR) << error;
     }
   }
 }
@@ -33,10 +33,6 @@ int main(int argc, const char** argv) {
     std::string unparsed_config;
     command_line.GetOptionValue("config", &unparsed_config);
     config.Parse(unparsed_config, "command line");
-    if (config.HasErrors()) {
-      PrintErrors(config, "command line");
-      return 1;
-    }
   } else {
     char buf[PATH_MAX];
     if (strlcpy(buf, kConfigDir, PATH_MAX) >= PATH_MAX) {
@@ -56,8 +52,7 @@ int main(int argc, const char** argv) {
           }
           config.ReadFrom(buf);
           if (config.HasErrors()) {
-            PrintErrors(config, buf);
-            return 1;
+            break;
           }
           buf[dir_len] = '\0';
         }
@@ -66,6 +61,11 @@ int main(int argc, const char** argv) {
         FXL_LOG(WARNING) << "Could not open config directory" << kConfigDir;
       }
     }
+  }
+
+  if (config.HasErrors()) {
+    PrintErrors(config);
+    return ZX_ERR_INVALID_ARGS;
   }
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);

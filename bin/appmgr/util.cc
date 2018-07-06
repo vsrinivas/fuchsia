@@ -59,4 +59,24 @@ zx::channel Util::OpenAsDirectory(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> node) {
   return h2;
 }
 
+RestartBackOff::RestartBackOff(zx::duration min_backoff,
+                               zx::duration max_backoff,
+                               zx::duration alive_reset_limit)
+    : backoff_(min_backoff, 2u, max_backoff),
+      alive_reset_limit_(alive_reset_limit),
+      start_time_(0) {}
+
+zx::duration RestartBackOff::GetNext() {
+  if (GetCurrentTime() - start_time_ > alive_reset_limit_) {
+    backoff_.Reset();
+  }
+  return backoff_.GetNext();
+}
+
+void RestartBackOff::Start() { start_time_ = GetCurrentTime(); }
+
+zx::time RestartBackOff::GetCurrentTime() const {
+  return zx::clock::get_monotonic();
+}
+
 }  // namespace component

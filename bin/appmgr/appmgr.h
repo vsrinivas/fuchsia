@@ -11,6 +11,7 @@
 
 #include "garnet/bin/appmgr/realm.h"
 #include "garnet/bin/appmgr/root_loader.h"
+#include "garnet/bin/appmgr/util.h"
 #include "lib/fxl/macros.h"
 
 namespace component {
@@ -40,6 +41,8 @@ class Appmgr {
   fuchsia::sys::ComponentControllerPtr sysmgr_;
   std::string sysmgr_url_;
   fidl::VectorPtr<fidl::StringPtr> sysmgr_args_;
+  RestartBackOff sysmgr_backoff_;
+  bool sysmgr_permanently_failed_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Appmgr);
 };
