@@ -2,74 +2,37 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/syscalls.h>
-
-#include <stdio.h>
-
-#include <zircon/assert.h>
-
-#include <fbl/array.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async/cpp/task.h>
-#include <trace/handler.h>
-
 #include "benchmarks.h"
+
+#include "runner.h"
 
 namespace {
 
-// Trace buffer size.
-// Should be sized so it does not overflow during the test.
-static constexpr size_t kBufferSizeBytes = 16 * 1024 * 1024;
-
-class BenchmarkHandler : public trace::TraceHandler {
-public:
-    BenchmarkHandler(async::Loop* loop)
-        : loop_(loop), buffer_(new uint8_t[kBufferSizeBytes], kBufferSizeBytes) {
-    }
-
-    void Start() {
-        zx_status_t status = trace_start_engine(loop_->dispatcher(), this,
-                                                buffer_.get(), buffer_.size());
-        ZX_DEBUG_ASSERT(status == ZX_OK);
-
-        puts("\nTrace started\n");
-    }
-
-private:
-    bool IsCategoryEnabled(const char* category) override {
-        // Any category beginning with "+" is enabled.
-        return category[0] == '+';
-    }
-
-    void TraceStopped(async_dispatcher_t* dispatcher,
-                      zx_status_t disposition,
-                      size_t buffer_bytes_written) override {
-        puts("\nTrace stopped");
-
-        ZX_DEBUG_ASSERT(disposition == ZX_OK);
-        loop_->Quit();
-    }
-
-    async::Loop* loop_;
-    fbl::Array<uint8_t> buffer_;
-};
+// "large" must be sized so it does not overflow during oneshot tests.
+// The benchmark will assert-fail if the buffer fills: Otherwise the benchmark
+// is invalid.
+static constexpr size_t kLargeBufferSizeBytes = 16 * 1024 * 1024;
 
 } // namespace
 
 int main(int argc, char** argv) {
-    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-    BenchmarkHandler handler(&loop);
-
     RunTracingDisabledBenchmarks();
-    handler.Start();
+    RunNoTraceBenchmarks();
 
-    async::PostTask(loop.dispatcher(), []() {
-        RunTracingEnabledBenchmarks();
-        RunNoTraceBenchmarks();
+    static const BenchmarkSpec specs[] = {
+        {
+            // The buffer is not allowed to fill in oneshot mode, so there's
+            // no use in reporting the buffer size in the name here.
+            "oneshot",
+            kLargeBufferSizeBytes,
+            kDefaultRunIterations,
+        },
+    };
 
-        trace_stop_engine(ZX_OK);
-    });
+    for (const auto& spec : specs) {
+        RunTracingEnabledBenchmarks(&spec);
+    }
 
-    loop.Run(); // run until quit
+    printf("\nTracing benchmarks completed.\n");
     return 0;
 }
