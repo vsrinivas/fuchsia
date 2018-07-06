@@ -7,8 +7,7 @@ import { AngularFireModule } from 'angularfire2';
 import { AngularFireDatabaseModule } from 'angularfire2/database';
 import { AngularFireAuthModule } from 'angularfire2/auth';
 import { environment } from '../environments/environment';
-import { MdButtonModule, MdCardModule, MdToolbarModule } from '@angular/material';
-
+import { MatButtonModule, MatCardModule, MatToolbarModule } from '@angular/material';
 
 @NgModule({
   declarations: [
@@ -19,9 +18,9 @@ import { MdButtonModule, MdCardModule, MdToolbarModule } from '@angular/material
     AngularFireModule.initializeApp(environment.firebase),
     AngularFireDatabaseModule,
     AngularFireAuthModule,
-    MdButtonModule,
-    MdCardModule,
-    MdToolbarModule
+    MatButtonModule,
+    MatCardModule,
+    MatToolbarModule
   ],
   providers: [],
   bootstrap: [AppComponent]

@@ -1,44 +1,44 @@
-<md-toolbar color="primary">
+<mat-toolbar color="primary">
   <span>Ledger Cloud Dashboard</span>
-</md-toolbar>
+</mat-toolbar>
 <div class="lcd-container">
   <div *ngIf="!authenticated">
-    <md-card class="lcd-card">
-      <md-card-content>
+    <mat-card class="lcd-card">
+      <mat-card-content>
         <h1>Authentication required</h1>
         <p>Please authenticate in order to use the dashboard.</p>
-      </md-card-content>
-      <md-card-actions>
-        <button md-raised-button color="accent" (click)="login()">Login</button>
-      </md-card-actions>
-    </md-card>
+      </mat-card-content>
+      <mat-card-actions>
+        <button mat-raised-button color="accent" (click)="login()">Login</button>
+      </mat-card-actions>
+    </mat-card>
   </div>
 
   <div *ngIf="deleteInProgress">
-    <md-card class="lcd-card">
-      <md-card-content>
+    <mat-card class="lcd-card">
+      <mat-card-content>
         <h1>Delete in progress</h1>
         <p>Please don't close the tab.</p>
-      </md-card-content>
-    </md-card>
+      </mat-card-content>
+    </mat-card>
   </div>
 
   <div *ngIf="authenticated && !deleteInProgress">
     <!-- Info about the user -->
-    <md-card class="lcd-card">
-      <md-card-content>
+    <mat-card class="lcd-card">
+      <mat-card-content>
         <h1>User</h1>
         <p>You are signed in as <b>{{ (user | async)?.email }}</b>
           a.k.a {{ uid }} (Firebase user ID).</p>
-      </md-card-content>
-      <md-card-actions>
-        <button md-raised-button color="accent" (click)="logout()">Logout</button>
-      </md-card-actions>
-    </md-card>
+      </mat-card-content>
+      <mat-card-actions>
+        <button mat-raised-button color="accent" (click)="logout()">Logout</button>
+      </mat-card-actions>
+    </mat-card>
 
     <!-- State -->
-    <md-card class="lcd-card">
-      <md-card-content>
+    <mat-card class="lcd-card">
+      <mat-card-content>
         <h1>State</h1>
         <div *ngIf="loading">
           <p>Loading the state.</p>
@@ -51,27 +51,28 @@
           <p>There are <b>{{ (devices | async)?.length }}</b> devices syncing.</p>
           <ul>
             <li class="text" *ngFor="let device of devices | async">
-              {{device.$key}}
-              -- Last connection at
-              {{device.$value | date:'yyyy-MM-dd HH:mm:ss Z'}}
+              {{device.key}}
+              <span *ngIf="device.value != true">
+                -- Last connection at
+                {{device.value | date:'yyyy-MM-dd HH:mm:ss Z'}}</span>
             </li>
           </ul>
           <p>Device IDs are opaque and meaningful only to Ledger.</p>
         </div>
-      </md-card-content>
-    </md-card>
+      </mat-card-content>
+    </mat-card>
 
     <!-- Cloud delete -->
-    <md-card class="lcd-card">
-      <md-card-content>
+    <mat-card class="lcd-card">
+      <mat-card-content>
         <h1>Reset Ledger state</h1>
         <p><i>Why do we even have this lever?</i></p>
         <p><b>This will also trigger erase of the local data, the next time each of
             the devices sync</b></p>
-      </md-card-content>
-      <md-card-actions>
-        <button md-raised-button color="warn" (click)="erase()">Permanently erase all my data</button>
-      </md-card-actions>
-    </md-card>
+      </mat-card-content>
+      <mat-card-actions>
+        <button mat-raised-button color="warn" (click)="erase()">Permanently erase all my data</button>
+      </mat-card-actions>
+    </mat-card>
   </div>
 </div>

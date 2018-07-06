@@ -1,7 +1,8 @@
 import { Component } from '@angular/core';
-import { AngularFireDatabase, FirebaseListObservable } from 'angularfire2/database';
+import { AngularFireDatabase, AngularFireList } from 'angularfire2/database';
 import { AngularFireAuth } from 'angularfire2/auth';
-import { Observable } from 'rxjs/Observable';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import * as firebase from 'firebase/app';
 
 @Component({
@@ -19,8 +20,8 @@ export class AppComponent {
   deleteInProgress = false;
 
   user: Observable<firebase.User>;
-  devices: FirebaseListObservable<any[]>;
-  root: FirebaseListObservable<any[]>;
+  devices: Observable<any[]>;
+  root: AngularFireList<any[]>;
 
   constructor(public afAuth: AngularFireAuth, private db: AngularFireDatabase) {
     this.user = afAuth.authState;
@@ -62,16 +63,21 @@ export class AppComponent {
 
   registerWatchers() {
     this.root = this.db.list(this.rootPath());
-    this.root.subscribe((state) => {
+    this.root.snapshotChanges().pipe(
+      map(actions => actions.map(a => ({ key: a.key, ...a.payload.val() })))
+    ).subscribe(version_objects => {
       let next_version = 0;
-      for (const version_object of state) {
-        if (Number(version_object.$key) > Number(next_version)) {
-          next_version = version_object.$key;
+      for (const version_object of version_objects) {
+        if (Number(version_object.key) > Number(next_version)) {
+          next_version = Number(version_object.key);
         }
       }
       this.version = next_version;
-      this.devices = this.db.list(this.userDevicesPath());
+      this.devices = this.db.list(this.userDevicesPath()).snapshotChanges().pipe(
+      map(actions => actions.map(a => ({ key: a.key, value: a.payload.val() })))
+    );
       this.loading = false;
+      return version_objects.map(version_object => version_object.key);
     });
   }
 
@@ -82,7 +88,7 @@ export class AppComponent {
 
   erase() {
     this.deleteInProgress = true;
-    this.devices.remove();
+    this.db.list(this.userDevicesPath()).remove();
     setTimeout(() => {
       this.root.remove();
       this.deleteInProgress = false;
