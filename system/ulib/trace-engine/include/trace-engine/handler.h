@@ -72,7 +72,7 @@ struct trace_handler_ops {
     // for a new record has failed because the buffer is full.
     //
     // Called by instrumentation on any thread.  Must be thread-safe.
-    void (*buffer_overflow)(trace_handler_t* handler);
+    void (*notify_buffer_full)(trace_handler_t* handler);
 };
 
 // Asynchronously starts the trace engine.

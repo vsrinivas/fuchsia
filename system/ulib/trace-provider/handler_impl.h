@@ -36,7 +36,7 @@ private:
     void TraceStarted() override;
     void TraceStopped(async_dispatcher_t* dispatcher,
                       zx_status_t disposition, size_t buffer_bytes_written) override;
-    void BufferOverflow() override;
+    void NotifyBufferFull() override;
 
     void* buffer_;
     size_t buffer_num_bytes_;

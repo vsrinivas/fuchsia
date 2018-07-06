@@ -996,7 +996,7 @@ uint64_t* trace_context::AllocRecord(size_t num_bytes) {
                                                   fbl::memory_order_relaxed)) {
         // Notify the trace manager so it can notify the user that a record
         // (likely) got dropped.
-        handler_->ops->buffer_overflow(handler_);
+        handler_->ops->notify_buffer_full(handler_);
     }
 
     return nullptr;

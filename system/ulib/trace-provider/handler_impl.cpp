@@ -99,7 +99,7 @@ void TraceHandlerImpl::TraceStopped(async_dispatcher_t* dispatcher, zx_status_t 
     delete this;
 }
 
-void TraceHandlerImpl::BufferOverflow() {
+void TraceHandlerImpl::NotifyBufferFull() {
     auto status = fence_.signal_peer(0u, TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW);
     ZX_DEBUG_ASSERT(status == ZX_OK ||
                     status == ZX_ERR_PEER_CLOSED);
