@@ -10,6 +10,8 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"path/filepath"
+	"sort"
 	"sync"
 	"testing"
 	"time"
@@ -110,6 +112,14 @@ func (t *testSrc) Save() error {
 	return nil
 }
 
+func (t *testSrc) DeleteConfig() error {
+	return nil
+}
+
+func (t *testSrc) Delete() error {
+	return nil
+}
+
 func (t *testSrc) Close() {
 	return
 }
@@ -158,6 +168,7 @@ func TestDaemon(t *testing.T) {
 		tickerGroup.Done()
 		return t
 	}
+	defer func() { newTicker = time.NewTicker }()
 
 	// wait for one signal from building the ticker itself and one
 	// from appending it to the tickers list
@@ -247,6 +258,7 @@ func TestGetRequest(t *testing.T) {
 		tickers = append(tickers, tt)
 		return t
 	}
+	defer func() { newTicker = time.NewTicker }()
 
 	tickerGroup.Add(1)
 
@@ -354,6 +366,7 @@ func TestRequestCollapse(t *testing.T) {
 		tickers = append(tickers, tt)
 		return t
 	}
+	defer func() { newTicker = time.NewTicker }()
 
 	tickerGroup.Add(1)
 
@@ -402,6 +415,177 @@ func TestRequestCollapse(t *testing.T) {
 	res := d.GetUpdates(pkgSetB)
 	verifyReqCount(t, testSrcs, pkgSet, 4)
 	verifyGetResults(t, pkgSetB, res)
+
+	d.CancelAll()
+}
+
+func TestAddTUFSource(t *testing.T) {
+	pkgSet := pkg.NewPackageSet()
+	sources := []source.Source{}
+
+	store, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(store)
+
+	d, err := NewDaemon(store, pkgSet, processPackage, sources)
+	if err != nil {
+		t.Error(err)
+	}
+
+	actual_sources := d.GetSources()
+	if len(actual_sources) != 0 {
+		t.Errorf("Daemon started with non-zero sources")
+	}
+
+	blob_repos := d.blobRepos()
+	if len(blob_repos) != 0 {
+		t.Errorf("Daemon started with non-zero blob repos")
+	}
+
+	cfg1 := &amber.SourceConfig{
+		Id:          "testing",
+		RepoUrl:     "http://127.0.0.1:8083",
+		BlobRepoUrl: "http://127.0.0.1:8083/blobs",
+		RootKeys: []amber.KeyConfig{
+			amber.KeyConfig{
+				Type:  "ed25519",
+				Value: "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307",
+			},
+		},
+	}
+	d.AddTUFSource(cfg1)
+
+	verifySourceConfigs(t, []*amber.SourceConfig{cfg1}, d.GetSources())
+	verifyBlobRepos(t, []string{cfg1.BlobRepoUrl}, d.blobRepos())
+
+	cfg2 := &amber.SourceConfig{
+		Id:          "testing2",
+		RepoUrl:     "http://127.0.0.2:8083",
+		BlobRepoUrl: "http://127.0.0.2:8083/blobs",
+		RootKeys: []amber.KeyConfig{
+			amber.KeyConfig{
+				Type:  "ed25519",
+				Value: "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307",
+			},
+		},
+	}
+	d.AddTUFSource(cfg2)
+
+	verifySourceConfigs(t, []*amber.SourceConfig{cfg1, cfg2}, d.GetSources())
+	verifyBlobRepos(t, []string{cfg1.BlobRepoUrl, cfg2.BlobRepoUrl}, d.blobRepos())
+
+	d.CancelAll()
+}
+
+func TestRemoveTUFSource(t *testing.T) {
+	pkgSet := pkg.NewPackageSet()
+	sources := make([]source.Source, 0)
+
+	store, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(store)
+
+	d, err := NewDaemon(store, pkgSet, processPackage, sources)
+	if err != nil {
+		t.Error(err)
+	}
+
+	cfg1 := &amber.SourceConfig{
+		Id:          "testing",
+		RepoUrl:     "http://127.0.0.1:8083",
+		BlobRepoUrl: "http://127.0.0.1:8083/blobs",
+		RootKeys: []amber.KeyConfig{
+			amber.KeyConfig{
+				Type:  "ed25519",
+				Value: "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307",
+			},
+		},
+	}
+	cfg2 := &amber.SourceConfig{
+		Id:          "testing2",
+		RepoUrl:     "http://127.0.0.2:8083",
+		BlobRepoUrl: "http://127.0.0.2:8083/blobs",
+		RootKeys: []amber.KeyConfig{
+			amber.KeyConfig{
+				Type:  "ed25519",
+				Value: "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307",
+			},
+		},
+	}
+	d.AddTUFSource(cfg1)
+	d.AddTUFSource(cfg2)
+
+	verifySourceConfigs(t, []*amber.SourceConfig{cfg1, cfg2}, d.GetSources())
+	verifyBlobRepos(t, []string{cfg1.BlobRepoUrl, cfg2.BlobRepoUrl}, d.blobRepos())
+	verifySourceDirectories(t, []string{"testing", "testing2"}, store)
+
+	status, err := d.RemoveTUFSource("testing2")
+
+	if err != nil {
+		t.Errorf("RemoveTUFSource returned an error: %v\n", err)
+	}
+
+	if status != amber.StatusOk {
+		t.Errorf("RemoveTUFSource returned an unexpected status: %v\n", status)
+	}
+
+	verifySourceConfigs(t, []*amber.SourceConfig{cfg1}, d.GetSources())
+	verifyBlobRepos(t, []string{cfg1.BlobRepoUrl}, d.blobRepos())
+	verifySourceDirectories(t, []string{"testing"}, store)
+
+	status, err = d.RemoveTUFSource("testing")
+
+	if err != nil {
+		t.Errorf("RemoveTUFSource returned an error: %v\n", err)
+	}
+
+	if status != amber.StatusOk {
+		t.Errorf("RemoveTUFSource returned an unexpected status: %v\n", status)
+	}
+
+	verifySourceConfigs(t, []*amber.SourceConfig{}, d.GetSources())
+	verifyBlobRepos(t, []string{}, d.blobRepos())
+	verifySourceDirectories(t, []string{}, store)
+
+	d.CancelAll()
+}
+
+func TestRemoveTUFSourceNonexisting(t *testing.T) {
+	pkgSet := pkg.NewPackageSet()
+	sources := make([]source.Source, 0)
+
+	store, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(store)
+
+	d, err := NewDaemon(store, pkgSet, processPackage, sources)
+	if err != nil {
+		t.Error(err)
+	}
+
+	verifySourceConfigs(t, []*amber.SourceConfig{}, d.GetSources())
+	verifyBlobRepos(t, []string{}, d.blobRepos())
+	verifySourceDirectories(t, []string{}, store)
+
+	status, err := d.RemoveTUFSource("does_not_exist")
+
+	if err != nil {
+		t.Errorf("RemoveTUFSource returned an error: %v\n", err)
+	}
+
+	if status != amber.StatusErrNotFound {
+		t.Errorf("RemoveTUFSource returned an unexpected status: %v\n", status)
+	}
+
+	verifySourceConfigs(t, []*amber.SourceConfig{}, d.GetSources())
+	verifyBlobRepos(t, []string{}, d.blobRepos())
+	verifySourceDirectories(t, []string{}, store)
 
 	d.CancelAll()
 }
@@ -484,6 +668,81 @@ func verifyGetResults(t *testing.T, pkgSet *pkg.PackageSet,
 
 		if r.Orig.Name != p.Name || r.Orig.Version != p.Version {
 			t.Errorf("Update result does not match original key, expected %q, but found %q", r.Orig.String(), p.String())
+		}
+	}
+}
+
+func verifySourceConfigs(t *testing.T, expected []*amber.SourceConfig, actual map[string]source.Source) {
+	if len(expected) != len(actual) {
+		t.Errorf("Expected %d sources, but found %d\n", len(expected), len(actual))
+	}
+
+	for _, cfg := range expected {
+		src, ok := actual[cfg.Id]
+
+		if !ok {
+			t.Errorf("daemon has no source called %s\n", cfg.Id)
+			continue
+		}
+
+		actual_config := src.GetConfig()
+		if actual_config == nil {
+			t.Errorf("source '%s' has nil config\n", cfg.Id)
+			continue
+		}
+
+		if cfg != actual_config {
+			t.Errorf("cfg != actual_config\n")
+		}
+	}
+}
+
+func verifyBlobRepos(t *testing.T, expected []string, blobs []BlobRepo) {
+	if len(expected) != len(blobs) {
+		t.Errorf("Expected %d blob repos, but found %d\n", len(expected), len(blobs))
+	}
+
+	actual := make([]string, 0, len(expected))
+
+	for _, blob := range blobs {
+		actual = append(actual, blob.Address)
+	}
+
+	sort.Strings(expected)
+	sort.Strings(actual)
+
+	if len(expected) != len(actual) {
+		t.Errorf("Expected %d blob repos, but found %d\n", len(expected), len(actual))
+	}
+	for i, a := range expected {
+		b := actual[i]
+		if a != b {
+			t.Errorf("Unexpected blob repo: %v != %v\n", expected, actual)
+		}
+	}
+}
+
+func verifySourceDirectories(t *testing.T, expected []string, store string) {
+	entries, err := ioutil.ReadDir(store)
+	if err != nil {
+		t.Fatal("Error reading store", err)
+	}
+
+	actual := make([]string, 0)
+	for _, entry := range entries {
+		actual = append(actual, entry.Name())
+	}
+	if len(expected) != len(actual) {
+		t.Errorf("Expected %d source directories, but found %d\n", len(expected), len(actual))
+	}
+	for i, a := range actual {
+		b := expected[i]
+		if a != b {
+			t.Errorf("Unexpected source directory: %v != %v\n", expected, actual)
+		}
+		source_dir := filepath.Join(store, a)
+		if _, err := os.Stat(filepath.Join(source_dir, "config.json")); err != nil {
+			t.Errorf("Source directory has no config: %s\n", source_dir)
 		}
 	}
 }

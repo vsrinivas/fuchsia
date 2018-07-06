@@ -53,8 +53,8 @@ Commands
         -p: length of time (in milliseconds) over which the limit passed to
             '-l' applies, 0 for no limit
 
-    rm_src    - remove a source
-        -s: location of the source
+    rm_src    - remove a source, if it exists
+        -n: name of the update source
 
     list_srcs - list the set of sources we can use
 
@@ -127,10 +127,8 @@ func addSource(a *amber.ControlInterface) error {
 		}
 
 		blobUrl := strings.TrimSpace(*blobUrl)
-		if blobUrl != "" {
-			if _, err := url.ParseRequestURI(blobUrl); err != nil {
-				return fmt.Errorf("provided URL %q is not valid: %s", blobUrl, err)
-			}
+		if _, err := url.ParseRequestURI(blobUrl); err != nil {
+			return fmt.Errorf("provided URL %q is not valid: %s", blobUrl, err)
 		}
 
 		srcKey := strings.TrimSpace(*srcKey)
@@ -219,6 +217,28 @@ func addSource(a *amber.ControlInterface) error {
 	return nil
 }
 
+func rmSource(a *amber.ControlInterface) error {
+	name := strings.TrimSpace(*name)
+	if len(name) == 0 {
+		return fmt.Errorf("no source id provided")
+	}
+
+	status, err := a.RemoveSrc(name)
+	if err != nil {
+		return fmt.Errorf("IPC encountered an error: %s", err)
+	}
+	switch status {
+	case amber.StatusOk:
+		return nil
+	case amber.StatusErrNotFound:
+		return fmt.Errorf("Source not found")
+	case amber.StatusErr:
+		return fmt.Errorf("Unspecified error")
+	default:
+		return fmt.Errorf("Unexpected status: %v", status)
+	}
+}
+
 func getUp(a *amber.ControlInterface) error {
 	// the amber daemon wants package names that start with "/", if not present
 	// add this as a prefix
@@ -304,8 +324,10 @@ func main() {
 			os.Exit(1)
 		}
 	case "rm_src":
-		log.Printf("%q not yet supported", os.Args[1])
-		os.Exit(1)
+		if err := rmSource(proxy); err != nil {
+			log.Printf("error removing source: %s", err)
+			os.Exit(1)
+		}
 	case "list_srcs":
 		if err := listSources(proxy); err != nil {
 			log.Printf("error listing sources: %s", err)

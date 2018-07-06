@@ -106,6 +106,14 @@ func (k *SourceKeeper) Save() error {
 	return k.src.Save()
 }
 
+func (k *SourceKeeper) DeleteConfig() error {
+	return k.src.DeleteConfig()
+}
+
+func (k *SourceKeeper) Delete() error {
+	return k.src.Delete()
+}
+
 func (k *SourceKeeper) Close() {
 	k.src.Close()
 }

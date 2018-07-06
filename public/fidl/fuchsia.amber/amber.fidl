@@ -112,6 +112,11 @@ struct SourceConfig {
   OAuth2Config? oauth2Config;
 };
 
+enum Status {
+  OK = 0;
+  ERR = 1;
+  ERR_NOT_FOUND = 2;
+};
 
 [Discoverable]
 interface Control {
@@ -121,9 +126,10 @@ interface Control {
   // Add a TUF source repository.
   2: AddSrc(SourceConfig source) -> (bool res);
 
-  // Remove a source previously provided to AddSrc. SourceConfigs that were
-  // bundled when the system was built can not be removed.
-  3: RemoveSrc(string url) -> (bool res);
+  // Remove a TUF source repository. SourceConfigs that were bundled when the
+  // system was built may be removed, but that funcionality may change in the
+  // future. See PKG-150.
+  3: RemoveSrc(string id) -> (Status res);
 
   // Check for updates to any persistently registered packages
   4: Check() -> (bool res);

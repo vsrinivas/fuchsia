@@ -86,8 +86,8 @@ func (c *ControlSrvr) CheckForSystemUpdate() (bool, error) {
 	return false, nil
 }
 
-func (c *ControlSrvr) RemoveSrc(url string) (bool, error) {
-	return true, nil
+func (c *ControlSrvr) RemoveSrc(id string) (amber.Status, error) {
+	return c.daemon.RemoveTUFSource(id)
 }
 
 func (c *ControlSrvr) Check() (bool, error) {

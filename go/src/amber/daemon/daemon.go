@@ -155,13 +155,7 @@ func (d *Daemon) addTUFSource(src *source.TUFSource) error {
 		return fmt.Errorf("TUFSource does not have a config")
 	}
 
-	// Add the source's blob repo. If not specified, assume the blobs are
-	// found under $RepoURL/blobs.
-	blobRepoUrl := cfg.BlobRepoUrl
-	if blobRepoUrl == "" {
-		blobRepoUrl = filepath.Join(cfg.RepoUrl, "blobs")
-	}
-
+	// Add the source's blob repo.
 	blobRepo := BlobRepo{
 		Source:   src,
 		Address:  cfg.BlobRepoUrl,
@@ -184,6 +178,57 @@ func (d *Daemon) addTUFSource(src *source.TUFSource) error {
 	log.Printf("added TUF source %s %v\n", cfg.Id, cfg.RepoUrl)
 
 	return nil
+}
+
+func (d *Daemon) RemoveTUFSource(id string) (amber.Status, error) {
+	// If this method succeeds, the source should be removed from the
+	// running service and not be loaded after a service restart. Delete
+	// the config file before removing the source from the service to
+	// ensure this behavior.
+	s, err := d.removeTUFSource(id)
+	if err != nil {
+		return amber.StatusErr, nil
+	} else if s == nil {
+		return amber.StatusErrNotFound, nil
+	}
+
+	cfg := s.GetConfig()
+	if cfg != nil {
+		if found := d.RemoveBlobRepo(cfg.BlobRepoUrl); !found {
+			log.Printf("blob repo not found: %s", cfg.BlobRepoUrl)
+		}
+	}
+
+	s.Close()
+
+	err = s.Delete()
+	if err != nil {
+		log.Printf("unable to remove TUFSource from disk: %v\n", err)
+	}
+	log.Printf("removed source: %s", id)
+
+	return amber.StatusOk, nil
+}
+
+func (d *Daemon) removeTUFSource(id string) (source.Source, error) {
+	d.muSrcs.Lock()
+	defer d.muSrcs.Unlock()
+
+	s, ok := d.srcs[id]
+	if !ok {
+		log.Printf("source not found: %s", id)
+		return nil, nil
+	}
+
+	err := s.DeleteConfig()
+	if err != nil {
+		log.Printf("unable to remove source config from disk: %v", err)
+		return nil, err
+	}
+
+	delete(d.srcs, id)
+
+	return s, nil
 }
 
 func (d *Daemon) Login(srcId string) (*amber.DeviceCode, error) {
@@ -229,15 +274,18 @@ func (d *Daemon) GetBlob(blob string) error {
 	return FetchBlob(repos, blob, DstBlob)
 }
 
-func (d *Daemon) RemoveBlobRepo(r BlobRepo) {
+func (d *Daemon) RemoveBlobRepo(blobUrl string) bool {
 	d.muRepos.Lock()
+	defer d.muRepos.Unlock()
+
 	for i := range d.repos {
-		if d.repos[i] == r {
+		if d.repos[i].Address == blobUrl {
 			d.repos = append(d.repos[:i], d.repos[i+1:]...)
-			break
+			log.Printf("removed blob repo: %v\n", blobUrl)
+			return true
 		}
 	}
-	d.muRepos.Unlock()
+	return false
 }
 
 type upRec struct {

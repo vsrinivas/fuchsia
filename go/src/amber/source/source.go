@@ -59,7 +59,14 @@ type Source interface {
 	// Equals should return true if the provide Source is the same as the receiver.
 	Equals(s Source) bool
 
+	// Write config to disk.
 	Save() error
+
+	// Delete config from disk, preventing the source from loading on service restart.
+	DeleteConfig() error
+
+	// Delete all state on disk, including the source config (if present).
+	Delete() error
 
 	// Log into the TUF remote server and return the oauth2 device flow
 	// code to complete the authentication process.

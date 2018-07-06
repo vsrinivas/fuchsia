@@ -543,6 +543,20 @@ func (f *TUFSource) Save() error {
 	return f.saveLocked()
 }
 
+func (f *TUFSource) DeleteConfig() error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	return os.Remove(filepath.Join(f.dir, configFileName))
+}
+
+func (f *TUFSource) Delete() error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	return os.RemoveAll(f.dir)
+}
+
 func (f *TUFSource) Close() {
 	f.closeIdleConnections()
 }
