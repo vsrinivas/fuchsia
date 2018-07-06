@@ -49,6 +49,7 @@ struct nand_chip_table {
     const char* manufacturer_name;
     const char* device_name;
     struct nand_timings timings;
+    uint32_t chip_delay_us;     /* delay us after enqueuing command */
     /*
      * extended_id_nand -> pagesize, erase blocksize, OOB size
      * could vary given the same device id.
@@ -69,6 +70,6 @@ struct nand_chip_table* find_nand_chip_table(uint8_t manuf_id,
                                              uint8_t device_id);
 void onfi_command(raw_nand_protocol_t* proto, uint32_t command,
                   int32_t column, int32_t page_addr,
-                  uint32_t capacity_mb, uint32_t controller_delay_us,
+                  uint32_t capacity_mb, uint32_t chip_delay_us,
                   int buswidth_16);
 zx_status_t onfi_wait(raw_nand_protocol_t* proto, uint32_t timeout_ms);

@@ -23,9 +23,9 @@
  * Database of settings for the NAND flash devices we support
  */
 struct nand_chip_table nand_chip_table[] = {
-    {0xEC, 0xDC, "Samsung", "K9F4G08U0F", {25, 20, 15}, true, 512, 0, 0, 0, 0},
+    {0xEC, 0xDC, "Samsung", "K9F4G08U0F", {25, 20, 15}, 30, true, 512, 0, 0, 0, 0},
     /* TODO: This works. but doublecheck Toshiba nand_timings from datasheet */
-    {0x98, 0xDC, "Toshiba", "TC58NVG2S0F", {25, 20, /* 15 */ 25}, true, 512, 0, 0, 0, 0},
+    {0x98, 0xDC, "Toshiba", "TC58NVG2S0F", {25, 20, /* 15 */ 25}, 20, true, 512, 0, 0, 0, 0},
 };
 
 #define NAND_CHIP_TABLE_SIZE \
@@ -80,7 +80,7 @@ zx_status_t onfi_wait(raw_nand_protocol_t* proto, uint32_t timeout_ms) {
  */
 void onfi_command(raw_nand_protocol_t* proto, uint32_t command,
                   int32_t column, int32_t page_addr,
-                  uint32_t capacity_mb, uint32_t controller_delay_us,
+                  uint32_t capacity_mb, uint32_t chip_delay_us,
                   int buswidth_16) {
     raw_nand_cmd_ctrl(proto, command, NAND_NCE | NAND_CLE | NAND_CTRL_CHANGE);
     if (column != -1 || page_addr != -1) {
@@ -110,7 +110,7 @@ void onfi_command(raw_nand_protocol_t* proto, uint32_t command,
         command == NAND_CMD_SEQIN || command == NAND_CMD_PAGEPROG)
         return;
     if (command == NAND_CMD_RESET) {
-        usleep(controller_delay_us);
+        usleep(chip_delay_us);
         raw_nand_cmd_ctrl(proto, NAND_CMD_STATUS,
                           NAND_NCE | NAND_CLE | NAND_CTRL_CHANGE);
         raw_nand_cmd_ctrl(proto, NAND_CMD_NONE,
@@ -126,5 +126,5 @@ void onfi_command(raw_nand_protocol_t* proto, uint32_t command,
         raw_nand_cmd_ctrl(proto, NAND_CMD_NONE,
                           NAND_NCE | NAND_CTRL_CHANGE);
     }
-    usleep(controller_delay_us);
+    usleep(chip_delay_us);
 }

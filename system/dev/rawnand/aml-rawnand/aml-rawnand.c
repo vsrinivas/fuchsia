@@ -479,7 +479,7 @@ static zx_status_t aml_read_page_hwecc(void* ctx,
                                      ecc_pages * sizeof(struct aml_info_format));
     /* Send the page address into the controller */
     onfi_command(&raw_nand->raw_nand_proto, NAND_CMD_READ0, 0x00,
-                 nand_page, raw_nand->chipsize, raw_nand->controller_delay,
+                 nand_page, raw_nand->chipsize, raw_nand->chip_delay,
                  (raw_nand->controller_params.options & NAND_BUSWIDTH_16));
     cmd = GENCMDDADDRL(AML_CMD_ADL, daddr);
     writel(cmd, reg + P_NAND_CMD);
@@ -574,7 +574,7 @@ static zx_status_t aml_write_page_hwecc(void* ctx,
     }
 
     onfi_command(&raw_nand->raw_nand_proto, NAND_CMD_SEQIN, 0x00, nand_page,
-                 raw_nand->chipsize, raw_nand->controller_delay,
+                 raw_nand->chipsize, raw_nand->chip_delay,
                  (raw_nand->controller_params.options & NAND_BUSWIDTH_16));
     cmd = GENCMDDADDRL(AML_CMD_ADL, daddr);
     writel(cmd, reg + P_NAND_CMD);
@@ -602,7 +602,7 @@ static zx_status_t aml_write_page_hwecc(void* ctx,
         return status;
     }
     onfi_command(&raw_nand->raw_nand_proto, NAND_CMD_PAGEPROG, -1, -1,
-                 raw_nand->chipsize, raw_nand->controller_delay,
+                 raw_nand->chipsize, raw_nand->chip_delay,
                  (raw_nand->controller_params.options & NAND_BUSWIDTH_16));
     status = onfi_wait(&raw_nand->raw_nand_proto, AML_WRITE_PAGE_TIMEOUT);
 
@@ -624,10 +624,10 @@ static zx_status_t aml_erase_block(void* ctx, uint32_t nand_page) {
         return ZX_ERR_INVALID_ARGS;
     }
     onfi_command(&raw_nand->raw_nand_proto, NAND_CMD_ERASE1, -1, nand_page,
-                 raw_nand->chipsize, raw_nand->controller_delay,
+                 raw_nand->chipsize, raw_nand->chip_delay,
                  (raw_nand->controller_params.options & NAND_BUSWIDTH_16));
     onfi_command(&raw_nand->raw_nand_proto, NAND_CMD_ERASE2, -1, -1,
-                 raw_nand->chipsize, raw_nand->controller_delay,
+                 raw_nand->chipsize, raw_nand->chip_delay,
                  (raw_nand->controller_params.options & NAND_BUSWIDTH_16));
     status = onfi_wait(&raw_nand->raw_nand_proto, AML_ERASE_BLOCK_TIMEOUT);
     return status;
@@ -639,17 +639,17 @@ static zx_status_t aml_get_flash_type(aml_raw_nand_t* raw_nand) {
     struct nand_chip_table* nand_chip;
 
     onfi_command(&raw_nand->raw_nand_proto, NAND_CMD_RESET, -1, -1,
-                 raw_nand->chipsize, raw_nand->controller_delay,
+                 raw_nand->chipsize, raw_nand->chip_delay,
                  (raw_nand->controller_params.options & NAND_BUSWIDTH_16));
     onfi_command(&raw_nand->raw_nand_proto, NAND_CMD_READID, 0x00, -1,
-                 raw_nand->chipsize, raw_nand->controller_delay,
+                 raw_nand->chipsize, raw_nand->chip_delay,
                  (raw_nand->controller_params.options & NAND_BUSWIDTH_16));
     /* Read manufacturer and device IDs */
     nand_maf_id = aml_read_byte(&raw_nand->raw_nand_proto);
     nand_dev_id = aml_read_byte(&raw_nand->raw_nand_proto);
     /* Read again */
     onfi_command(&raw_nand->raw_nand_proto, NAND_CMD_READID, 0x00, -1,
-                 raw_nand->chipsize, raw_nand->controller_delay,
+                 raw_nand->chipsize, raw_nand->chip_delay,
                  (raw_nand->controller_params.options & NAND_BUSWIDTH_16));
     /* Read entire ID string */
     for (uint32_t i = 0; i < sizeof(id_data); i++)
@@ -706,11 +706,20 @@ static zx_status_t aml_get_flash_type(aml_raw_nand_t* raw_nand) {
      * We found a matching device in our database, use it to
      * initialize. Adjust timings and set various parameters.
      */
-    zxlogf(INFO, "Adjusting timings based on datasheet values\n");
     aml_adjust_timings(raw_nand,
                        nand_chip->timings.tRC_min,
                        nand_chip->timings.tREA_max,
                        nand_chip->timings.RHOH_min);
+    /*
+     * chip_delay is used onfi_command(), after sending down some commands
+     * to the NAND chip.
+     */
+    raw_nand->chip_delay = nand_chip->chip_delay_us;
+    zxlogf(INFO, "NAND %s %s: chip size = %lu(GB), page size = %u, oob size = %u\n"
+           "eraseblock size = %u, chip delay (us) = %u\n",
+           nand_chip->manufacturer_name, nand_chip->device_name,
+           raw_nand->chipsize, raw_nand->writesize, raw_nand->oobsize, raw_nand->erasesize,
+           raw_nand->chip_delay);
     return ZX_OK;
 }
 
@@ -912,15 +921,6 @@ static zx_status_t aml_nand_init(aml_raw_nand_t* raw_nand) {
     raw_nand->controller_params.rand_mode = aml_params.rand_mode;
     raw_nand->controller_params.options = NAND_USE_BOUNCE_BUFFER;
     raw_nand->controller_params.bch_mode = aml_params.bch_mode;
-    /*
-     * TODO: Controller Delay Tuning.
-     * Experimentally, a 20us controller delay works, but need to
-     * 1) Test this across all Amlogic controlers/NAND combinations.
-     * 2) Check with Amlogic if this should be controller specific, and
-     * if so, find out what the delays should be for the different controllers,
-     * and make this a controller-based parameter.
-     */
-    raw_nand->controller_delay = 200;
 
     /*
      * Note on OOB byte settings.

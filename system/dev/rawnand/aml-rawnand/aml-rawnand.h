@@ -29,7 +29,7 @@ typedef struct {
     bool enabled;
     aml_controller_t controller_params;
     uint32_t chip_select;
-    int controller_delay;
+    int chip_delay;
     uint32_t writesize; /* NAND pagesize - bytes */
     uint32_t erasesize; /* size of erase block - bytes */
     uint32_t erasesize_pages;
