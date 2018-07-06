@@ -165,13 +165,11 @@ var stackService *stack.StackService
 // AddStackService registers the StackService with the application context,
 // allowing it to respond to FIDL queries.
 func AddStackService(ctx *context.Context) error {
-	log.Printf("AddStackService called")
 	if stackService != nil {
 		return fmt.Errorf("AddNetworkService must be called only once")
 	}
 	stackService = &stack.StackService{}
 	ctx.OutgoingService.AddService(stack.StackName, func(c zx.Channel) error {
-		log.Printf("adding Stack Service")
 		_, err := stackService.Add(&stackImpl{}, c, nil)
 		return err
 	})
