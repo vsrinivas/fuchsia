@@ -215,6 +215,5 @@ TEST(MagmaSystemConnection, BufferSharing)
     auto buf_0 = connection_0.LookupBuffer(buf_id_0);
     auto buf_1 = connection_1.LookupBuffer(buf_id_1);
 
-    // should also be shared pointers to the same MagmaSystemBuffer
-    EXPECT_EQ(buf_0, buf_1);
+    EXPECT_EQ(buf_0->id(), buf_1->id());
 }

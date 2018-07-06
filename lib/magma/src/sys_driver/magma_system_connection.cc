@@ -23,14 +23,12 @@ MagmaSystemConnection::MagmaSystemConnection(std::weak_ptr<MagmaSystemDevice> we
 
 MagmaSystemConnection::~MagmaSystemConnection()
 {
+    for (auto iter = buffer_map_.begin(); iter != buffer_map_.end();) {
+        msd_connection_release_buffer(msd_connection(), iter->second.buffer->msd_buf());
+        iter = buffer_map_.erase(iter);
+    }
     auto device = device_.lock();
     if (device) {
-        for (auto iter = buffer_map_.begin(); iter != buffer_map_.end();) {
-            auto id = iter->first;
-            msd_connection_release_buffer(msd_connection(), iter->second.buffer->msd_buf());
-            iter = buffer_map_.erase(iter);
-            device->ReleaseBuffer(id);
-        }
         device->ConnectionClosed(std::this_thread::get_id());
     }
 }
@@ -125,15 +123,11 @@ magma::Status MagmaSystemConnection::ExecuteImmediateCommands(uint32_t context_i
 
 bool MagmaSystemConnection::ImportBuffer(uint32_t handle, uint64_t* id_out)
 {
-    auto device = device_.lock();
-    if (!device)
-        return DRETF(false, "failed to lock device");
+    auto buffer = magma::PlatformBuffer::Import(handle);
+    if (!buffer)
+        return DRETF(false, "failed to import buffer");
 
-    auto buf = device->ImportBuffer(handle);
-    if (!buf)
-        return DRETF(false, "failed to get buffer for handle");
-
-    uint64_t id = buf->id();
+    uint64_t id = buffer->id();
 
     auto iter = buffer_map_.find(id);
     if (iter != buffer_map_.end()) {
@@ -142,19 +136,15 @@ bool MagmaSystemConnection::ImportBuffer(uint32_t handle, uint64_t* id_out)
     }
 
     BufferReference ref;
-    ref.buffer = buf;
+    ref.buffer = MagmaSystemBuffer::Create(std::move(buffer));
 
-    buffer_map_.insert(std::make_pair(id, ref));
+    buffer_map_.insert({id, ref});
     *id_out = id;
     return true;
 }
 
 bool MagmaSystemConnection::ReleaseBuffer(uint64_t id)
 {
-    auto device = device_.lock();
-    if (!device)
-        return DRETF(false, "failed to lock device");
-
     auto iter = buffer_map_.find(id);
     if (iter == buffer_map_.end())
         return DRETF(false, "Attempting to free invalid buffer id");
@@ -168,9 +158,6 @@ bool MagmaSystemConnection::ReleaseBuffer(uint64_t id)
 
     msd_connection_release_buffer(msd_connection(), iter->second.buffer->msd_buf());
     buffer_map_.erase(iter);
-    // Now that our shared reference has been dropped we tell our
-    // device that we're done with the buffer
-    device->ReleaseBuffer(id);
 
     return true;
 }

@@ -49,11 +49,6 @@ public:
     // Returns the device id. 0 is invalid.
     uint32_t GetDeviceId();
 
-    // Takes ownership of handle and either wraps it up in new MagmaSystemBuffer or
-    // closes it and returns an existing MagmaSystemBuffer backed by the same memory
-    std::shared_ptr<MagmaSystemBuffer> ImportBuffer(uint32_t handle);
-    void ReleaseBuffer(uint64_t id);
-
     // Called on driver thread
     void Shutdown();
 
@@ -72,9 +67,6 @@ public:
 
 private:
     msd_device_unique_ptr_t msd_dev_;
-
-    std::unordered_map<uint64_t, std::weak_ptr<MagmaSystemBuffer>> buffer_map_;
-    std::mutex buffer_map_mutex_;
 
     struct Connection {
         std::thread thread;

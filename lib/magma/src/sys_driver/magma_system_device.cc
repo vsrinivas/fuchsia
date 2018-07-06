@@ -33,33 +33,6 @@ MagmaSystemDevice::Open(std::shared_ptr<MagmaSystemDevice> device, msd_client_id
         std::move(device), MsdConnectionUniquePtr(msd_connection), capabilities));
 }
 
-std::shared_ptr<MagmaSystemBuffer> MagmaSystemDevice::ImportBuffer(uint32_t handle)
-{
-    auto platform_buf = magma::PlatformBuffer::Import(handle);
-    uint64_t id = platform_buf->id();
-
-    std::unique_lock<std::mutex> lock(buffer_map_mutex_);
-
-    auto iter = buffer_map_.find(id);
-    if (iter != buffer_map_.end()) {
-        auto buf = iter->second.lock();
-        if (buf)
-            return buf;
-    }
-
-    std::shared_ptr<MagmaSystemBuffer> buf = MagmaSystemBuffer::Create(std::move(platform_buf));
-    buffer_map_.insert(std::make_pair(id, buf));
-    return buf;
-}
-
-void MagmaSystemDevice::ReleaseBuffer(uint64_t id)
-{
-    std::unique_lock<std::mutex> lock(buffer_map_mutex_);
-    auto iter = buffer_map_.find(id);
-    if (iter != buffer_map_.end() && iter->second.expired())
-        buffer_map_.erase(iter);
-}
-
 void MagmaSystemDevice::StartConnectionThread(
     std::shared_ptr<magma::PlatformConnection> platform_connection)
 {
