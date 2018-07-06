@@ -1,0 +1,101 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### register dev host as target's update source
+
+## usage: fx add-update-source [--name=NAME] [--device=hostname] [--remove-localhost]
+##
+## Configure target device to use the dev host as its update source.
+## Register a new update source using the dev host's address as seen from a
+## target fuchsia device.  Also, if requested, remove any "localhost" update
+## source that requires an active ssh tunnel.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+fx-config-read
+
+function usage {
+  fx-command-help add-update-source
+}
+
+function main {
+  fx-standard-switches "$@"
+  set -- "${FX_ARGV[@]}"
+
+  source_name="devhost"
+  device_name=""
+  device_arg=""
+  remove_localhost=false
+  while [[ $# -ne 0 ]]; do
+    case "$1" in
+      --name)
+        source_name="$2"
+        shift
+        ;;
+      -d|--device)
+        device_name="$2"
+        device_arg="-d $2"
+        shift
+        ;;
+      --remove-localhost)
+        remove_localhost=true
+        ;;
+    esac
+    shift
+  done
+
+  if ! [[ -x "$(command -v sha256sum)" ]]; then
+    echo "'sha256sum' binary not found"
+    exit 1
+  fi
+
+  if ! [[ -x "$(command -v cut)" ]]; then
+    echo "'cut' binary not found"
+    exit 1
+  fi
+
+  device_addr="$(fx-command-run netaddr --local $device_name)"
+  if [[ $? -ne 0 || -z "${device_addr}" ]]; then
+    echo "Unable to determine host's IP.  Is the target up?"
+    exit 1
+  fi
+  # Strip interface name suffix.
+  device_addr="${device_addr%%%*}"
+
+  repository_dir="${FUCHSIA_BUILD_DIR}/amber-files/repository"
+  if [[ ! -d "${repository_dir}" ]]; then
+    echo "Amber repository does not exist.  Run a build first."
+    exit 1
+  fi
+
+  config_dir="${repository_dir}/devhost"
+  mkdir -p "${config_dir}"
+  config_path="${config_dir}/config.json"
+  config_url="http://[${device_addr}]:8083/devhost/config.json"
+
+  "${FUCHSIA_DIR}/scripts/generate-update-source-config.py" \
+    --build-dir="${FUCHSIA_BUILD_DIR}" \
+    --name="${source_name}" \
+    --repo-url="http://[${device_addr}]:8083" \
+    --blobs-url="http://[${device_addr}]:8083/blobs" \
+    --output "${config_path}" \
+    || exit $?
+
+  config_hash=$(sha256sum $config_path | cut -f1 -d' ')
+
+  fx-command-run shell $device_arg amber_ctl add_src \
+    -f "${config_url}" \
+    -h "${config_hash}"
+
+  if [[ $? -ne 0 ]]; then
+    echo "Unable to register update source.  Is 'fx serve' or 'fx serve-updates' running?"
+    exit 1
+  fi
+
+  if $remove_localhost; then
+    fx-command-run shell $device_arg amber_ctl rm_src -n localhost
+  fi
+}
+
+main "$@"
