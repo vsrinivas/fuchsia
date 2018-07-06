@@ -23,6 +23,7 @@ namespace {
 // A whitelist of the names of environment variables names that we pass into the
 // spawned test subprocess.
 constexpr const char* const kEnvironmentWhitelist[] = {
+    "TMPDIR",
     // Paths to the symbolizer for various sanitizers.
     "ASAN_SYMBOLIZER_PATH",
     "LSAN_SYMBOLIZER_PATH",
