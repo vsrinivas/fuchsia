@@ -37,7 +37,7 @@ public:
                   registers::Ddi ddi, registers::Trans trans, registers::Pipe pipe);
     virtual ~DisplayDevice();
 
-    void ApplyConfiguration(const display_config_t* config);
+    void ApplyConfiguration(const display_config_t* config, registers::pipe_arming_regs* regs);
 
     bool Init();
     bool Resume();
@@ -77,8 +77,10 @@ private:
     bool ResetDdi();
 
     void ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* primary,
-                               bool enable_csc, bool* scaler_1_claimed);
-    void ConfigureCursorPlane(const cursor_layer_t* cursor, bool enable_csc);
+                               bool enable_csc, bool* scaler_1_claimed,
+                               registers::pipe_arming_regs* regs);
+    void ConfigureCursorPlane(const cursor_layer_t* cursor, bool enable_csc,
+                              registers::pipe_arming_regs* regs);
     void SetColorConversionOffsets(bool preoffsets, const float vals[3]);
 
     // Borrowed reference to Controller instance

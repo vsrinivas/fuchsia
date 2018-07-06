@@ -1319,7 +1319,23 @@ void Controller::ApplyConfiguration(const display_config_t** display_config,
                     break;
                 }
             }
-            display->ApplyConfiguration(config);
+
+            registers::pipe_arming_regs_t regs;
+
+            display->ApplyConfiguration(config, &regs);
+
+            registers::PipeRegs pipe_regs(display->pipe());
+            pipe_regs.CscMode().FromValue(regs.csc_mode).WriteTo(mmio_space());
+            pipe_regs.PipeBottomColor().FromValue(regs.pipe_bottom_color).WriteTo(mmio_space());
+            pipe_regs.CursorBase().FromValue(regs.cur_base).WriteTo(mmio_space());
+            pipe_regs.CursorPos().FromValue(regs.cur_pos).WriteTo(mmio_space());
+            for (unsigned i = 0; i < registers::kImagePlaneCount; i++) {
+                pipe_regs.PlaneSurface(i).FromValue(regs.plane_surf[i]).WriteTo(mmio_space());
+            }
+            pipe_regs.PipeScalerWinSize(0).FromValue(regs.ps_win_sz[0]).WriteTo(mmio_space());
+            if (display->pipe() != registers::PIPE_C) {
+                pipe_regs.PipeScalerWinSize(1).FromValue(regs.ps_win_sz[1]).WriteTo(mmio_space());
+            }
 
             // The hardware only gives vsyncs if at least one plane is enabled, so
             // fake one if we need to, to inform the client that we're done with the

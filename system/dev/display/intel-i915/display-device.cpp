@@ -227,7 +227,8 @@ bool DisplayDevice::Resume() {
     return true;
 }
 
-void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
+void DisplayDevice::ApplyConfiguration(const display_config_t* config,
+                                       registers::pipe_arming_regs_t* regs) {
     if (config == nullptr) {
         ResetPipe();
         return;
@@ -244,11 +245,6 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
     }
 
     registers::PipeRegs pipe_regs(pipe());
-
-    auto pipe_size = pipe_regs.PipeSourceSize().FromValue(0);
-    pipe_size.set_horizontal_source_size(info_.h_addressable - 1);
-    pipe_size.set_vertical_source_size(info_.v_addressable - 1);
-    pipe_size.WriteTo(mmio_space());
 
     if (config->cc_flags) {
         float zero_offset[3] = {};
@@ -272,10 +268,8 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
                 reg.WriteTo(mmio_space());
             }
         }
-
-        // CSC registers are double buffered on CscMode
-        pipe_regs.CscMode().ReadFrom(mmio_space()).WriteTo(mmio_space());
     }
+    regs->csc_mode = pipe_regs.CscMode().ReadFrom(mmio_space()).reg_value();
 
     auto bottom_color = pipe_regs.PipeBottomColor().FromValue(0);
     bottom_color.set_csc_enable(!!config->cc_flags);
@@ -290,7 +284,7 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
         bottom_color.set_g(encode_pipe_color_component(static_cast<uint8_t>(color >> 8)));
         bottom_color.set_b(encode_pipe_color_component(static_cast<uint8_t>(color)));
     }
-    bottom_color.WriteTo(mmio_space());
+    regs->pipe_bottom_color = bottom_color.reg_value();
 
     bool scaler_1_claimed = false;
     for (unsigned plane = 0; plane < 3; plane++) {
@@ -302,23 +296,24 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
                 break;
             }
         }
-        ConfigurePrimaryPlane(plane, primary, !!config->cc_flags, &scaler_1_claimed);
+        ConfigurePrimaryPlane(plane, primary, !!config->cc_flags, &scaler_1_claimed, regs);
     }
     cursor_layer_t* cursor = nullptr;
     if (config->layer_count && config->layers[config->layer_count - 1]->type == LAYER_CURSOR) {
         cursor = &config->layers[config->layer_count - 1]->cfg.cursor;
     }
-    ConfigureCursorPlane(cursor, !!config->cc_flags);
+    ConfigureCursorPlane(cursor, !!config->cc_flags, regs);
 }
 
 void DisplayDevice::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* primary,
-                                          bool enable_csc, bool* scaler_1_claimed) {
+                                          bool enable_csc, bool* scaler_1_claimed,
+                                          registers::pipe_arming_regs_t* regs) {
     registers::PipeRegs pipe_regs(pipe());
 
     auto plane_ctrl = pipe_regs.PlaneControl(plane_num).ReadFrom(controller_->mmio_space());
     if (primary == nullptr) {
         plane_ctrl.set_plane_enable(0).WriteTo(mmio_space());
-        pipe_regs.PlaneSurface(plane_num).FromValue(0).WriteTo(mmio_space());
+        regs->plane_surf[plane_num] = 0;
         return;
     }
 
@@ -364,8 +359,8 @@ void DisplayDevice::ConfigurePrimaryPlane(uint32_t plane_num, const primary_laye
             uint32_t scaler_idx = scaled_planes_[pipe()][plane_num] - 1;
             pipe_regs.PipeScalerCtrl(scaler_idx)
                     .ReadFrom(mmio_space()).set_enable(0).WriteTo(mmio_space());
-            pipe_regs.PipeScalerWinSize(0).ReadFrom(mmio_space()).WriteTo(mmio_space());
             scaled_planes_[pipe()][plane_num] = 0;
+            regs->ps_win_sz[scaler_idx] = 0;
         }
     } else {
         pipe_regs.PlanePosition(plane_num).FromValue(0).WriteTo(mmio_space());
@@ -392,7 +387,7 @@ void DisplayDevice::ConfigurePrimaryPlane(uint32_t plane_num, const primary_laye
         auto ps_win_size = pipe_regs.PipeScalerWinSize(*scaler_1_claimed).FromValue(0);
         ps_win_size.set_x_size(primary->dest_frame.width);
         ps_win_size.set_y_size(primary->dest_frame.height);
-        ps_win_size.WriteTo(mmio_space());
+        regs->ps_win_sz[*scaler_1_claimed] = ps_win_size.reg_value();
 
         scaled_planes_[pipe()][plane_num] = (*scaler_1_claimed) + 1;
         *scaler_1_claimed = true;
@@ -462,10 +457,11 @@ void DisplayDevice::ConfigurePrimaryPlane(uint32_t plane_num, const primary_laye
 
     auto plane_surface = pipe_regs.PlaneSurface(plane_num).ReadFrom(controller_->mmio_space());
     plane_surface.set_surface_base_addr(base_address >> plane_surface.kRShiftCount);
-    plane_surface.WriteTo(controller_->mmio_space());
+    regs->plane_surf[plane_num] = plane_surface.reg_value();
 }
 
-void DisplayDevice::ConfigureCursorPlane(const cursor_layer_t* cursor, bool enable_csc) {
+void DisplayDevice::ConfigureCursorPlane(const cursor_layer_t* cursor, bool enable_csc,
+                                         registers::pipe_arming_regs_t* regs) {
     registers::PipeRegs pipe_regs(pipe());
 
     auto cursor_ctrl = pipe_regs.CursorCtrl().ReadFrom(controller_->mmio_space());
@@ -473,7 +469,7 @@ void DisplayDevice::ConfigureCursorPlane(const cursor_layer_t* cursor, bool enab
     // so disable the plane if there is no overlap.
     if (cursor == nullptr) {
         cursor_ctrl.set_mode_select(cursor_ctrl.kDisabled).WriteTo(mmio_space());
-        pipe_regs.CursorBase().FromValue(0).WriteTo(mmio_space());
+        regs->cur_base = regs->cur_pos = 0;
         return;
     }
 
@@ -503,13 +499,13 @@ void DisplayDevice::ConfigureCursorPlane(const cursor_layer_t* cursor, bool enab
     } else {
         cursor_pos.set_y_pos(cursor->y_pos);
     }
-    cursor_pos.WriteTo(mmio_space());
+    regs->cur_pos = cursor_pos.reg_value();
 
     uint32_t base_address =
             static_cast<uint32_t>(reinterpret_cast<uint64_t>(cursor->image.handle));
     auto cursor_base = pipe_regs.CursorBase().ReadFrom(controller_->mmio_space());
     cursor_base.set_cursor_base(base_address >> cursor_base.kPageShift);
-    cursor_base.WriteTo(controller_->mmio_space());
+    regs->cur_base = cursor_base.reg_value();
 }
 
 void DisplayDevice::SetColorConversionOffsets(bool preoffsets, const float vals[3]) {

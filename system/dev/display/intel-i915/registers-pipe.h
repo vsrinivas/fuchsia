@@ -452,4 +452,14 @@ private:
     Pipe pipe_;
 };
 
+// Struct of registers which arm double buffered registers
+typedef struct pipe_arming_regs {
+    uint32_t csc_mode;
+    uint32_t pipe_bottom_color;
+    uint32_t cur_base;
+    uint32_t cur_pos;
+    uint32_t plane_surf[kImagePlaneCount];
+    uint32_t ps_win_sz[2];
+} pipe_arming_regs_t;
+
 } // namespace registers
