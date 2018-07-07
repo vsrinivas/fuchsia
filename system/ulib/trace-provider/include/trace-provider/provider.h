@@ -15,15 +15,45 @@
 
 __BEGIN_CDECLS
 
-// Signals to pass to zx_object_signal_peer(fence).
+// The format of fifo packets for messages passed between the trace manager
+// and trace providers.
+typedef struct trace_provider_packet {
+    // One of TRACE_PROVIDER_*.
+    uint16_t request;
+
+    // For alignment and future concerns, must be zero.
+    uint16_t reserved;
+
+    // Optional data for the request.
+    // The contents depend on the request.
+    // If unused they must be passed as zero.
+    uint32_t data32;
+    uint64_t data64;
+} trace_provider_packet_t;
+
+// The protocol version we are using.
+// This is non-zero to catch initialization bugs.
+#define TRACE_PROVIDER_FIFO_PROTOCOL_VERSION 1
+
+// Provider->Manager
+// Zero is reserved to catch initialization bugs.
 
 // Indicate the provider successfully started.
-#define TRACE_PROVIDER_SIGNAL_STARTED ZX_USER_SIGNAL_0
+// |data32| is TRACE_PROVIDER_FIFO_PROTOCOL_VERSION
+// |data64| is unused (must be zero).
+#define TRACE_PROVIDER_STARTED (0x1)
 
-// Indicate a record was dropped because the trace buffer is full.
-#define TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW ZX_USER_SIGNAL_1
+// Provider->Manager
+// The buffer is full and at least one packet was dropped.
+// |data32,data64| are unused (must be zero).
+#define TRACE_PROVIDER_BUFFER_OVERFLOW (0x2)
 
-// End signals for zx_object_signal_peer(fence).
+// Next Provider->Manager packet = 0x2
+
+// There are currently no packets going the other way (Manager->Provider).
+// Next Manager->Provider packet = 0x100
+
+// End fifo packet descriptions.
 
 // Represents a trace provider.
 typedef struct trace_provider trace_provider_t;

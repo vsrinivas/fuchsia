@@ -61,7 +61,7 @@ struct fuchsia_tracelink_ProviderStartRequest {
     FIDL_ALIGNDECL
     fidl_message_header_t hdr;
     zx_handle_t buffer;
-    zx_handle_t fence;
+    zx_handle_t fifo;
     fidl_vector_t categories;
 };
 

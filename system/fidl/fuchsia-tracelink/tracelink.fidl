@@ -11,13 +11,13 @@ library fuchsia.tracelink;
 // this interface which can easily be configured by an application.
 interface Provider {
     // Starts writing trace records for events in the specified |categories|
-    // into |buffer| using |fence| for signaling.
+    // into |buffer| using |fifo| for signaling.
     //
     // When the trace provider fills the buffer completely, it must stop tracing
-    // and close both |buffer| and |fence| to indicate to the trace manager
+    // and close both |buffer| and |fifo| to indicate to the trace manager
     // that tracing is finished.
     //
-    // When the trace provider observes |ZX_EVENTPAIR_CLOSED| on |fence|, it must
+    // When the trace provider observes |ZX_FIFO_PEER_CLOSED| on |fifo|, it must
     // assume the trace manager has terminated abnormally (since |Stop| was
     // not received as usual) and stop tracing automatically.
     //
@@ -25,25 +25,22 @@ interface Provider {
     // receives a request to start tracing while already tracing, it must
     // ignore the request.
     //
-    // There is no result. If the provider successfully starts it must call
-    // zx_object_signal_peer() on |fence| passing |TRACE_PROVIDER_SIGNAL_STARTED|.
-    // #include <trace-provider/provider.h> to get |TRACE_PROVIDER_SIGNAL_STARTED|.
-    // To indicate failure to start close |fence|.
+    // There is no result. If the provider successfully starts it must send a
+    // TRACE_PROVIDER_STARTED packet on |fifo|.
+    // #include <trace-provider/provider.h> to get |TRACE_PROVIDER_STARTED|.
+    // To indicate failure to start close |fifo|.
     //
-    // If the provider drops a record because its buffer is full it must call
-    // zx_object_signal_peer() on |fence| passing
-    // |TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW|.
+    // If the provider drops a record because its buffer is full it must send
+    // a TRACE_PROVIDER_BUFFER_OVERFLOW packet on |fifo|.
     //
     // TODO(jeffbrown): Implement half-full signal and streaming protocol.
-    // TODO(jeffbrown): We should make Zircon constants visible to fidl in some
-    // way so that we can define constants with meaningful names like
-    // TRACE_PROVIDER_SIGNAL_STARTED = ZX_USER_SIGNAL_1.
-    1: Start(handle<vmo> buffer, handle<eventpair> fence, vector<string:100>:100 categories);
+    1: Start(handle<vmo> buffer, handle<fifo> fifo,
+             vector<string:100>:100 categories);
 
     // Stops tracing.
     //
     // Once the provider has finished writing any final events to the trace
-    // buffer, it must close both |buffer| and |fence| to indicate to the trace
+    // buffer, it must close both |buffer| and |fifo| to indicate to the trace
     // manager that tracing is finished.
     2: Stop();
 };

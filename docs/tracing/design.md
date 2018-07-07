@@ -255,3 +255,41 @@ These are some important invariants of the transport protocol:
 - Trace clients never see the original trace buffers; they receive trace
   archives over a socket from the trace manager.  This protects trace providers
   from manipulation by trace clients.
+
+## Trace Manager/Provider FIFO Protocol
+
+Notification of trace provider startup and shutdown is done via a FIFO,
+the handle of which is passed from the trace manager to each trace provider
+as part of the initial "start tracing" request. The form of each message is
+defined in `<trace-provider/provider.h>`. Packets are fixed size with the
+following format:
+
+```cpp
+typedef struct trace_provider_packet {
+    // One of TRACE_PROVIDER_*.
+    uint16_t request;
+
+    // For alignment and future concerns, must be zero.
+    uint16_t reserved;
+
+    // Optional data for the request.
+    // The contents depend on the request.
+    // If unused they must be passed as zero.
+    uint32_t data32;
+    uint64_t data64;
+} trace_provider_packet_t;
+```
+
+### FIFO Packets
+
+The following packets are defined:
+
+**TRACE_PROVIDER_STARTED**
+
+Notify the trace manager that the provider has received the "start tracing"
+request and is starting to collect trace data.
+The `data32` field of the packet contains the version number of the FIFO
+protocol that the provider is using. The value is specified by
+**TRACE_PROVIDER_FIFO_PROTOCOL_VERSION** in `<trace-provider/provider.h>`.
+If the trace manager sees a protocol it doesn't understand it will close
+its side of the FIFO and ignore all trace data from the provider.

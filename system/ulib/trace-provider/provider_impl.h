@@ -9,7 +9,7 @@
 #include <fbl/vector.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/eventpair.h>
+#include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
 #include <trace-provider/provider.h>
 
@@ -46,7 +46,7 @@ private:
         async::WaitMethod<Connection, &Connection::Handle> wait_;
     };
 
-    void Start(zx::vmo buffer, zx::eventpair fence,
+    void Start(zx::vmo buffer, zx::fifo fifo,
                fbl::Vector<fbl::String> enabled_categories);
     void Stop();
 

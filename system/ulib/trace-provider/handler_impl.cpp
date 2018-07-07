@@ -18,11 +18,13 @@ namespace trace {
 namespace internal {
 
 TraceHandlerImpl::TraceHandlerImpl(void* buffer, size_t buffer_num_bytes,
-                                   zx::eventpair fence,
+                                   zx::fifo fifo,
                                    fbl::Vector<fbl::String> enabled_categories)
     : buffer_(buffer),
       buffer_num_bytes_(buffer_num_bytes),
-      fence_(fbl::move(fence)),
+      fifo_(fbl::move(fifo)),
+      fifo_wait_(this, fifo_.get(),
+                 ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED),
       enabled_categories_(fbl::move(enabled_categories)) {
     // Build a quick lookup table for IsCategoryEnabled().
     for (const auto& cat : enabled_categories_) {
@@ -35,13 +37,15 @@ TraceHandlerImpl::~TraceHandlerImpl() {
     zx_status_t status = zx::vmar::root_self()->unmap(
         reinterpret_cast<uintptr_t>(buffer_), buffer_num_bytes_);
     ZX_DEBUG_ASSERT(status == ZX_OK);
+    status = fifo_wait_.Cancel();
+    ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_NOT_FOUND);
 }
 
 zx_status_t TraceHandlerImpl::StartEngine(async_dispatcher_t* dispatcher,
-                                          zx::vmo buffer, zx::eventpair fence,
+                                          zx::vmo buffer, zx::fifo fifo,
                                           fbl::Vector<fbl::String> enabled_categories) {
     ZX_DEBUG_ASSERT(buffer);
-    ZX_DEBUG_ASSERT(fence);
+    ZX_DEBUG_ASSERT(fifo);
 
     uint64_t buffer_num_bytes;
     zx_status_t status = buffer.get_size(&buffer_num_bytes);
@@ -56,8 +60,15 @@ zx_status_t TraceHandlerImpl::StartEngine(async_dispatcher_t* dispatcher,
         return status;
 
     auto handler = new TraceHandlerImpl(reinterpret_cast<void*>(buffer_ptr),
-                                        buffer_num_bytes, fbl::move(fence),
+                                        buffer_num_bytes, fbl::move(fifo),
                                         fbl::move(enabled_categories));
+
+    status = handler->fifo_wait_.Begin(dispatcher);
+    if (status != ZX_OK) {
+        delete handler;
+        return status;
+    }
+
     status = trace_start_engine(dispatcher, handler,
                                 handler->buffer_, handler->buffer_num_bytes_);
     if (status != ZX_OK) {
@@ -78,6 +89,51 @@ zx_status_t TraceHandlerImpl::StopEngine() {
     return status;
 }
 
+void TraceHandlerImpl::HandleFifo(async_dispatcher_t* dispatcher,
+                                  async::WaitBase* wait,
+                                  zx_status_t status,
+                                  const zx_packet_signal_t* signal) {
+    if (status == ZX_ERR_CANCELED) {
+        // The wait could be canceled if we're shutting down, e.g., the
+        // program is exiting.
+        return;
+    }
+    if (status != ZX_OK) {
+        printf("TraceHandler: FIFO wait failed: status=%d\n", status);
+    } else if (signal->observed & ZX_FIFO_READABLE) {
+        if (ReadFifoMessage()) {
+            if (wait->Begin(dispatcher) == ZX_OK) {
+                return;
+            }
+            printf("TraceHandler: Error re-registering FIFO wait\n");
+        }
+    } else {
+        ZX_DEBUG_ASSERT(signal->observed & ZX_FIFO_PEER_CLOSED);
+    }
+
+    // TraceManager is gone or other error with the fifo.
+    StopEngine();
+}
+
+bool TraceHandlerImpl::ReadFifoMessage() {
+    trace_provider_packet_t packet;
+    auto status = fifo_.read(sizeof(packet), &packet, 1u, nullptr);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+    if (packet.reserved != 0) {
+        printf("TraceHandler: Reserved field non-zero from TraceManager: %u\n",
+               packet.reserved);
+        return false;
+    }
+    switch (packet.request) {
+    default:
+        printf("TraceHandler: Bad request from TraceManager: %u\n",
+               packet.request);
+        return false;
+    }
+
+    return true;
+}
+
 bool TraceHandlerImpl::IsCategoryEnabled(const char* category) {
     if (enabled_categories_.size() == 0) {
       // If none are specified, enable all categories.
@@ -87,7 +143,10 @@ bool TraceHandlerImpl::IsCategoryEnabled(const char* category) {
 }
 
 void TraceHandlerImpl::TraceStarted() {
-    auto status = fence_.signal_peer(0u, TRACE_PROVIDER_SIGNAL_STARTED);
+    trace_provider_packet_t packet{};
+    packet.request = TRACE_PROVIDER_STARTED;
+    packet.data32 = TRACE_PROVIDER_FIFO_PROTOCOL_VERSION;
+    auto status = fifo_.write(sizeof(packet), &packet, 1, nullptr);
     ZX_DEBUG_ASSERT(status == ZX_OK ||
                     status == ZX_ERR_PEER_CLOSED);
 }
@@ -100,7 +159,10 @@ void TraceHandlerImpl::TraceStopped(async_dispatcher_t* dispatcher, zx_status_t 
 }
 
 void TraceHandlerImpl::NotifyBufferFull() {
-    auto status = fence_.signal_peer(0u, TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW);
+    trace_provider_packet_t packet{};
+    packet.request = TRACE_PROVIDER_BUFFER_OVERFLOW;
+    auto status = fifo_.write(sizeof(packet), &packet, 1, nullptr);
+    // TODO(dje): Handle fifo full.
     ZX_DEBUG_ASSERT(status == ZX_OK ||
                     status == ZX_ERR_PEER_CLOSED);
 }

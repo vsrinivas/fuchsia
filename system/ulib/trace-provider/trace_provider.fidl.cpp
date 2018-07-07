@@ -26,7 +26,7 @@ extern "C" {
 
 static const fidl_type_t HandlevmononnullableTable = fidl_type_t(::fidl::FidlCodedHandle(ZX_OBJ_TYPE_VMO, ::fidl::kNonnullable));
 
-static const fidl_type_t HandleeventpairnonnullableTable = fidl_type_t(::fidl::FidlCodedHandle(ZX_OBJ_TYPE_EVENTPAIR, ::fidl::kNonnullable));
+static const fidl_type_t HandlefifononnullableTable = fidl_type_t(::fidl::FidlCodedHandle(ZX_OBJ_TYPE_FIFO, ::fidl::kNonnullable));
 
 static const fidl_type_t String100nonnullableTable = fidl_type_t(::fidl::FidlCodedString(100, ::fidl::kNonnullable));
 
@@ -35,7 +35,7 @@ static const fidl_type_t VectorString100nonnullable100nonnullableTable = fidl_ty
 extern const fidl_type_t fuchsia_tracelink_ProviderStartRequestTable;
 static const ::fidl::FidlField fuchsia_tracelink_ProviderStartRequestFields[] = {
     ::fidl::FidlField(&HandlevmononnullableTable, 16),
-    ::fidl::FidlField(&HandleeventpairnonnullableTable, 20),
+    ::fidl::FidlField(&HandlefifononnullableTable, 20),
     ::fidl::FidlField(&VectorString100nonnullable100nonnullableTable, 24)
 };
 const fidl_type_t fuchsia_tracelink_ProviderStartRequestTable = fidl_type_t(::fidl::FidlCodedStruct(fuchsia_tracelink_ProviderStartRequestFields, 3, 40, ""));

@@ -4,8 +4,6 @@
 
 #include "provider_impl.h"
 
-#include <inttypes.h>
-
 #include <fbl/algorithm.h>
 #include <fbl/type_support.h>
 #include <lib/fdio/util.h>
@@ -25,13 +23,13 @@ TraceProviderImpl::TraceProviderImpl(async_dispatcher_t* dispatcher, zx::channel
 
 TraceProviderImpl::~TraceProviderImpl() = default;
 
-void TraceProviderImpl::Start(zx::vmo buffer, zx::eventpair fence,
+void TraceProviderImpl::Start(zx::vmo buffer, zx::fifo fifo,
                               fbl::Vector<fbl::String> enabled_categories) {
     if (running_)
         return;
 
     zx_status_t status = TraceHandlerImpl::StartEngine(
-        dispatcher_, fbl::move(buffer), fbl::move(fence),
+        dispatcher_, fbl::move(buffer), fbl::move(fifo),
         fbl::move(enabled_categories));
     if (status == ZX_OK)
         running_ = true;
@@ -88,11 +86,16 @@ bool TraceProviderImpl::Connection::ReadMessage() {
     zx_status_t status = channel_.read(
         0u, buffer, sizeof(buffer), &num_bytes,
         handles, static_cast<uint32_t>(fbl::count_of(handles)), &num_handles);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
+        printf("TraceProvider channel read failed\n");
         return false;
+    }
 
-    if (!DecodeAndDispatch(buffer, num_bytes, handles, num_handles))
+    if (!DecodeAndDispatch(buffer, num_bytes, handles, num_handles)) {
+        printf("TraceProvider DecodeAndDispatch failed\n");
+        zx_handle_close_many(handles, num_handles);
         return false;
+    }
 
     return true;
 }
@@ -116,13 +119,13 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(
 
         auto request = reinterpret_cast<fuchsia_tracelink_ProviderStartRequest*>(buffer);
         auto buffer = zx::vmo(request->buffer);
-        auto fence = zx::eventpair(request->fence);
+        auto fifo = zx::fifo(request->fifo);
         fbl::Vector<fbl::String> categories;
         auto strings = reinterpret_cast<fidl_string_t*>(request->categories.data);
         for (size_t i = 0; i < request->categories.count; i++) {
             categories.push_back(fbl::String(strings[i].data, strings[i].size));
         }
-        impl_->Start(fbl::move(buffer), fbl::move(fence), fbl::move(categories));
+        impl_->Start(fbl::move(buffer), fbl::move(fifo), fbl::move(categories));
         return true;
     }
     case fuchsia_tracelink_ProviderStopOrdinal: {

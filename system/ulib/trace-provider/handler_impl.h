@@ -6,7 +6,8 @@
 
 #include <trace/handler.h>
 
-#include <lib/zx/eventpair.h>
+#include <lib/async/cpp/wait.h>
+#include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/macros.h>
@@ -21,13 +22,13 @@ namespace internal {
 class TraceHandlerImpl final : public trace::TraceHandler {
 public:
     static zx_status_t StartEngine(async_dispatcher_t* dispatcher, zx::vmo buffer,
-                                   zx::eventpair fence,
+                                   zx::fifo fifo,
                                    fbl::Vector<fbl::String> enabled_categories);
     static zx_status_t StopEngine();
 
 private:
     TraceHandlerImpl(void* buffer, size_t buffer_num_bytes,
-                     zx::eventpair fence,
+                     zx::fifo fifo,
                      fbl::Vector<fbl::String> enabled_categories);
     ~TraceHandlerImpl() override;
 
@@ -36,11 +37,17 @@ private:
     void TraceStarted() override;
     void TraceStopped(async_dispatcher_t* dispatcher,
                       zx_status_t disposition, size_t buffer_bytes_written) override;
+    void HandleFifo(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                    zx_status_t status,
+                    const zx_packet_signal_t* signal);
+    bool ReadFifoMessage();
+
     void NotifyBufferFull() override;
 
     void* buffer_;
     size_t buffer_num_bytes_;
-    zx::eventpair fence_;
+    zx::fifo fifo_;
+    async::WaitMethod<TraceHandlerImpl, &TraceHandlerImpl::HandleFifo> fifo_wait_;
     fbl::Vector<fbl::String> const enabled_categories_;
 
     using CString = const char*;
