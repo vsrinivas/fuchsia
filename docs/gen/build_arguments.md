@@ -2,17 +2,26 @@
 
 ## All builds
 
-### amber_repository_dir
- Directory containing files named by their merkleroot content IDs in
- ASCII hex.  The [//build/image](https://fuchsia.googlesource.com/build/+/master/image):amber_publish_blobs target populates
- this with copies of build products, but never removes old files.
+### target_cpu
 
-**Current value (from the default):** `"//root_build_dir/amber-files"`
+**Current value for `target_cpu = "arm64"`:** `"arm64"`
+	From //root_build_dir/args.gn:1
 
-### enable_crashpad
- When this is set, Crashpad will be used to handle exceptions (which uploads
- crashes to the crash server), rather than crashanalyzer in Zircon (which
- prints a backtrace the the system log).
+**Overridden from the default:** `""`
+
+**Current value for `target_cpu = "x64"`:** `"x64"`
+	From //root_build_dir/args.gn:1
+
+**Overridden from the default:** `""`
+
+### use_lto
+ Use link time optimization (LTO).
+
+**Current value (from the default):** `false`
+
+### use_scudo
+ Enable the [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html)
+ memory allocator.
 
 **Current value (from the default):** `false`
 
@@ -20,19 +29,27 @@
 
 **Current value (from the default):** `true`
 
-### extra_authorized_keys_file
- Additional SSH authorized_keys file to include in the build.
- For example:
-   extra_authorized_keys_file=\"$HOME/.ssh/id_rsa.pub\"
+### kernel_cmdline_files
+ Files containing additional kernel command line arguments to bake into
+ the boot image.  The contents of these files (in order) come after any
+ arguments directly in [`kernel_cmdline_args`](#kernel_cmdline_args).
+ These can be GN `//` source pathnames or absolute system pathnames.
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `[]`
 
-### zircon_build_abi_dir
- Zircon build directory for `target_cpu`, containing link-time `.so.abi`
- files that GN `deps` on [//zircon/public](https://fuchsia.googlesource.com/zircon/+/master/public) libraries will link against.
- This should not be a sanitizer build.
+### scenic_vulkan_swapchain
 
-**Current value (from the default):** `"//out/build-zircon/build-arm64"`
+**Current value (from the default):** `1`
+
+### universal_variants
+
+**Current value (from the default):** `[{
+  toolchain_args = {
+  is_debug = false
+}
+  configs = []
+  name = "release"
+}]`
 
 ### use_vulkan_loader_for_tests
  Mesa doesn't properly handle loader-less operation;
@@ -42,89 +59,29 @@
 
 **Current value (from the default):** `true`
 
-### clang_prefix
+### zircon_system_groups
+ Groups to include from the Zircon /boot manifest into /system
+ (instead of into /boot like Zircon's own bootdata.bin does).
+ Should not include any groups that are also in zircon_boot_groups,
+ which see.  If zircon_boot_groups is "all" then this should be "".
+ **TODO(mcgrathr)**: _Could default to "" for `!is_debug`, or "production
+ build".  Note including `"test"` here places all of Zircon's tests into
+ `/system/test`, which means that Fuchsia bots run those tests too._
 
-**Current value (from the default):** `"../buildtools/linux-x64/clang/bin"`
+**Current value (from the default):** `"misc,test"`
 
-### msd_intel_gen_build_root
+### enable_value_subsystem
 
-**Current value (from the default):** `"//garnet/drivers/gpu/msd-intel-gen"`
+**Current value (from the default):** `false`
 
-### prebuilt_libvulkan_arm_path
+### scudo_default_options
+ Default [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html)
+ options (before the `SCUDO_OPTIONS` environment variable is read at
+ runtime).  *NOTE:* This affects only components using the `scudo`
+ variant (see GN build argument `select_variant`), and does not affect
+ anything when the `use_scudo` build flag is set instead.
 
-**Current value (from the default):** `""`
-
-### rustc_prefix
- Sets a custom base directory for `rustc` and `cargo`.
- This can be used to test custom Rust toolchains.
-
-**Current value (from the default):** `"//buildtools/linux-x64/rust/bin"`
-
-### target_os
-
-**Current value (from the default):** `""`
-
-### enable_sketchy_subsystem
-
-**Current value (from the default):** `true`
-
-### toolchain_variant
- *This should never be set as a build argument.*
- It exists only to be set in `toolchain_args`.
- See [//build/toolchain/clang_toolchain.gni](https://fuchsia.googlesource.com/build/+/master/toolchain/clang_toolchain.gni) for details.
- This variable is a scope giving details about the current toolchain:
-     `toolchain_variant.base`
-         [label] The "base" toolchain for this variant, *often the
-         right thing to use in comparisons, not `current_toolchain`.*
-         This is the toolchain actually referenced directly in GN
-         source code.  If the current toolchain is not
-         `shlib_toolchain` or a variant toolchain, this is the same
-         as `current_toolchain`.  In one of those derivative
-         toolchains, this is the toolchain the GN code probably
-         thought it was in.  This is the right thing to use in a test
-         like `toolchain_variant.base == target_toolchain`, rather
-         rather than comparing against `current_toolchain`.
-     `toolchain_variant.name`
-         [string] The name of this variant, as used in `variant` fields
-         in [`select_variant`](#select_variant) clauses.  In the base
-         toolchain and its `shlib_toolchain`, this is `""`.
-     `toolchain_variant.suffix`
-         [string] This is "-${toolchain_variant.name}", "" if name is empty.
-     `toolchain_variant.is_pic_default`
-         [bool] This is true in `shlib_toolchain`.
- The other fields are the variant's effects as defined in
- [`known_variants`](#known_variants).
-
-**Current value (from the default):** `{
-  base = "//build/toolchain/fuchsia:arm64"
-}`
-
-### use_boringssl_for_http_transport_socket
-
-**Current value (from the default):** `true`
-
-### zircon_boot_groups
- Groups to include from the Zircon /boot manifest into /boot.
- This is either "all" or a comma-separated list of one or more of:
-   core -- necessary to boot
-   misc -- utilities in /bin
-   test -- test binaries in /bin and /test
-
-**Current value (from the default):** `"core"`
-
-### amber_repository_blobs_dir
-
-**Current value (from the default):** `"//root_build_dir/amber-files/repository/blobs"`
-
-### build_msd_arm_mali
-
-**Current value (from the default):** `true`
-
-### extra_variants
- Additional variant toolchain configs to support.
- This is just added to [`known_variants`](#known_variants).
-
-**Current value (from the default):** `[]`
+**Current value (from the default):** `["abort_on_error=1", "QuarantineSizeKb=0", "ThreadLocalQuarantineSizeKb=0", "DeallocationTypeMismatch=false", "DeleteSizeMismatch=false"]`
 
 ### goma_dir
  Absolute directory containing the Goma source code.
@@ -218,39 +175,45 @@
 }
 }]`
 
-### build_vsl_gc
+### msd_intel_gen_build_root
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `"//garnet/drivers/gpu/msd-intel-gen"`
 
-### use_lto
- Use link time optimization (LTO).
+### rustc_prefix
+ Sets a custom base directory for `rustc` and `cargo`.
+ This can be used to test custom Rust toolchains.
+
+**Current value (from the default):** `"//buildtools/linux-x64/rust/bin"`
+
+### thinlto_cache_dir
+ ThinLTO cache directory path.
+
+**Current value (from the default):** `"arm64-shared/thinlto-cache"`
+
+### use_goma
+ Set to true to enable distributed compilation using Goma.
 
 **Current value (from the default):** `false`
 
-### use_prebuilt_ffmpeg
- Use a prebuilt ffmpeg binary rather than building it locally.  See
- [//garnet/bin/media/media_player/ffmpeg/README.md](https://fuchsia.googlesource.com/garnet/+/master/bin/media/media_player/ffmpeg/README.md) for details.  This is
- ignored when building media_player in variant builds (e.g. sanitizers);
- in that case, ffmpeg is always built from source so as to be built with
- the selected variant's config.  When this is false (either explicitly
- or because media_player is a variant build) then //third_party/ffmpeg
- must be in the source tree, which requires:
- `jiri import -name garnet manifest/ffmpeg https://fuchsia.googlesource.com/garnet`
+### use_thinlto
+ Use ThinLTO variant of LTO if use_lto = true.
 
 **Current value (from the default):** `true`
 
-### zircon_boot_manifests
- Manifest files describing files to go into the `/boot` filesystem.
- Can be either // source paths or absolute system paths.
- `zircon_boot_groups` controls which files are actually selected.
+### vk_loader_debug
 
- Since Zircon manifest files are relative to a Zircon source directory
- rather than to the directory containing the manifest, these are assumed
- to reside in a build directory that's a direct subdirectory of the
- Zircon source directory and thus their contents can be taken as
- relative to `get_path_info(entry, "dir") + "/.."`.
+**Current value (from the default):** `"warn,error"`
 
-**Current value (from the default):** `["//out/build-zircon/build-arm64/bootfs.manifest"]`
+### zircon_build_root
+
+**Current value (from the default):** `"//zircon"`
+
+### amber_repository_dir
+ Directory containing files named by their merkleroot content IDs in
+ ASCII hex.  The [//build/image](https://fuchsia.googlesource.com/build/+/master/image):amber_publish_blobs target populates
+ this with copies of build products, but never removes old files.
+
+**Current value (from the default):** `"//root_build_dir/amber-files"`
 
 ### host_tools_dir
  This is the directory where host tools intended for manual use by
@@ -263,6 +226,10 @@
 
 **Current value (from the default):** `"//root_build_dir/tools"`
 
+### magma_python_path
+
+**Current value (from the default):** `"/b/s/w/ir/kitchen-workdir/third_party/mako"`
+
 ### select_variant_canonical
  *This should never be set as a build argument.*
  It exists only to be set in `toolchain_args`.
@@ -270,67 +237,93 @@
 
 **Current value (from the default):** `[]`
 
-### target_cpu
+### zircon_build_abi_dir
+ Zircon build directory for `target_cpu`, containing link-time `.so.abi`
+ files that GN `deps` on [//zircon/public](https://fuchsia.googlesource.com/zircon/+/master/public) libraries will link against.
+ This should not be a sanitizer build.
 
-**Current value for `target_cpu = "arm64"`:** `"arm64"`
-	From //root_build_dir/args.gn:1
+**Current value (from the default):** `"//out/build-zircon/build-arm64"`
 
-**Overridden from the default:** `""`
-
-**Current value for `target_cpu = "x64"`:** `"x64"`
-	From //root_build_dir/args.gn:1
-
-**Overridden from the default:** `""`
-
-### target_sysroot
- The absolute path of the sysroot that is used with the target toolchain.
-
-**Current value (from the default):** `""`
-
-### use_thinlto
- Use ThinLTO variant of LTO if use_lto = true.
+### enable_gfx_subsystem
 
 **Current value (from the default):** `true`
 
-### zedboot_devmgr_config
- List of arguments to populate /boot/config/devmgr in the Zedboot image.
+### host_byteorder
 
-**Current value (from the default):** `["netsvc.netboot=true", "virtcon.font=18x32"]`
+**Current value (from the default):** `"undefined"`
 
-### zircon_asserts
+### toolchain_variant
+ *This should never be set as a build argument.*
+ It exists only to be set in `toolchain_args`.
+ See [//build/toolchain/clang_toolchain.gni](https://fuchsia.googlesource.com/build/+/master/toolchain/clang_toolchain.gni) for details.
+ This variable is a scope giving details about the current toolchain:
+     `toolchain_variant.base`
+         [label] The "base" toolchain for this variant, *often the
+         right thing to use in comparisons, not `current_toolchain`.*
+         This is the toolchain actually referenced directly in GN
+         source code.  If the current toolchain is not
+         `shlib_toolchain` or a variant toolchain, this is the same
+         as `current_toolchain`.  In one of those derivative
+         toolchains, this is the toolchain the GN code probably
+         thought it was in.  This is the right thing to use in a test
+         like `toolchain_variant.base == target_toolchain`, rather
+         rather than comparing against `current_toolchain`.
+     `toolchain_variant.name`
+         [string] The name of this variant, as used in `variant` fields
+         in [`select_variant`](#select_variant) clauses.  In the base
+         toolchain and its `shlib_toolchain`, this is `""`.
+     `toolchain_variant.suffix`
+         [string] This is "-${toolchain_variant.name}", "" if name is empty.
+     `toolchain_variant.is_pic_default`
+         [bool] This is true in `shlib_toolchain`.
+ The other fields are the variant's effects as defined in
+ [`known_variants`](#known_variants).
+
+**Current value (from the default):** `{
+  base = "//build/toolchain/fuchsia:arm64"
+}`
+
+### build_msd_arm_mali
 
 **Current value (from the default):** `true`
 
-### build_intel_gen
+### build_vsl_gc
+
+**Current value (from the default):** `true`
+
+### system_package_key
+ The package key to use for signing Fuchsia packages made by the
+ `package()` template (and the `system_image` packge).  If this
+ doesn't exist yet when it's needed, it will be generated.  New
+ keys can be generated with the `pm -k FILE genkey` host command.
+
+**Current value (from the default):** `"//build/development.key"`
+
+### always_zedboot
+ Build boot images that prefer Zedboot over local boot.
 
 **Current value (from the default):** `false`
 
-### build_libvulkan
- This is a list of targets that will be built as vulkan ICDS. If more than one
- target is given then use_vulkan_loader_for_tests must be set to true, as
- otherwise tests won't know which libvulkan to use.
+### crashpad_dependencies
+ Determines various flavors of build configuration, and which concrete
+ targets to use for dependencies. Valid values are "standalone",
+ "chromium", and "fuchsia". Defaulted to "fuchsia" because
+ "is_fuchsia_tree" is set.
+
+**Current value (from the default):** `"fuchsia"`
+
+### data_image_size
+ The size of the minfs data partition image to create. Normally this image
+ is added to FVM, and can therefore expand as needed. It must be at least
+ 10mb (the default) in order to be succesfully initialized.
+
+**Current value (from the default):** `"10m"`
+
+### extra_variants
+ Additional variant toolchain configs to support.
+ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
-
-### current_cpu
-
-**Current value (from the default):** `""`
-
-### universal_variants
-
-**Current value (from the default):** `[{
-  toolchain_args = {
-  is_debug = false
-}
-  configs = []
-  name = "release"
-}]`
-
-### use_scudo
- Enable the [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html)
- memory allocator.
-
-**Current value (from the default):** `false`
 
 ### fuchsia_packages
  List of packages (a GN list of strings).  If unset, guessed based
@@ -348,94 +341,33 @@
 **Overridden from the default:** `[]`
 	From [//build/gn/packages.gni:8](https://fuchsia.googlesource.com/build/+/master/gn/packages.gni#8)
 
-### glm_build_root
+### fvm_image_size
+ The size in bytes of the FVM partition image to create. Normally this is
+ computed to be just large enough to fit the blob and data images. The
+ default value is "", which means to size based on inputs. Specifying a size
+ that is too small will result in build failure.
 
-**Current value (from the default):** `"//third_party/glm"`
+**Current value (from the default):** `""`
 
 ### host_cpu
 
 **Current value (from the default):** `"x64"`
 
-### thinlto_jobs
- Number of parallel ThinLTO jobs.
-
-**Current value (from the default):** `8`
-
-### zircon_tools_dir
- Where to find Zircon's host-side tools that are run as part of the build.
-
-**Current value (from the default):** `"//out/build-zircon/tools"`
-
-### current_os
-
-**Current value (from the default):** `""`
-
-### magma_enable_tracing
- Enable this to include fuchsia tracing capability
+### use_prebuilt_ffmpeg
+ Use a prebuilt ffmpeg binary rather than building it locally.  See
+ [//garnet/bin/media/media_player/ffmpeg/README.md](https://fuchsia.googlesource.com/garnet/+/master/bin/media/media_player/ffmpeg/README.md) for details.  This is
+ ignored when building media_player in variant builds (e.g. sanitizers);
+ in that case, ffmpeg is always built from source so as to be built with
+ the selected variant's config.  When this is false (either explicitly
+ or because media_player is a variant build) then //third_party/ffmpeg
+ must be in the source tree, which requires:
+ `jiri import -name garnet manifest/ffmpeg https://fuchsia.googlesource.com/garnet`
 
 **Current value (from the default):** `true`
 
-### use_ccache
- Set to true to enable compiling with ccache
-
-**Current value (from the default):** `false`
-
-### zircon_build_root
-
-**Current value (from the default):** `"//zircon"`
-
-### is_debug
- Debug build.
+### zircon_asserts
 
 **Current value (from the default):** `true`
-
-### magma_build_root
-
-**Current value (from the default):** `"//garnet/lib/magma"`
-
-### zircon_system_groups
- Groups to include from the Zircon /boot manifest into /system
- (instead of into /boot like Zircon's own bootdata.bin does).
- Should not include any groups that are also in zircon_boot_groups,
- which see.  If zircon_boot_groups is "all" then this should be "".
- **TODO(mcgrathr)**: _Could default to "" for `!is_debug`, or "production
- build".  Note including `"test"` here places all of Zircon's tests into
- `/system/test`, which means that Fuchsia bots run those tests too._
-
-**Current value (from the default):** `"misc,test"`
-
-### zircon_build_dir
- Zircon build directory for `target_cpu`, containing `.manifest` and
- `.zbi` files for Zircon's BOOTFS and kernel.  This provides the kernel
- and Zircon components used in the boot image.  It also provides the
- Zircon shared libraries used at runtime in Fuchsia packages.
-
- If left `""` (the default), then this is computed from
- [`zircon_build_abi_dir`](#zircon_build_abi_dir) and
- [`zircon_use_asan`](#zircon_use_asan).
-
-**Current value (from the default):** `""`
-
-### zircon_use_asan
- Set this if [`zircon_build_dir`](#zircon_build_dir) was built with
- `USE_ASAN=true`, e.g. `[//scripts/build-zircon.sh](https://fuchsia.googlesource.com/scripts/+/master/build-zircon.sh) -A`.  This mainly
- affects the defaults for [`zircon_build_dir`](#zircon_build_dir) and
- [`zircon_build_abi_dir`](#zircon_build_abi_dir).  It also gets noticed
- by [//scripts/fx](https://fuchsia.googlesource.com/scripts/+/master/fx) commands that rebuild Zircon so that they use `-A`
- again next time.
-
-**Current value (from the default):** `false`
-
-### data_image_size
- The size of the minfs data partition image to create. Normally this image
- is added to FVM, and can therefore expand as needed. It must be at least
- 10mb (the default) in order to be succesfully initialized.
-
-**Current value (from the default):** `"10m"`
-
-### enable_value_subsystem
-
-**Current value (from the default):** `false`
 
 ### magma_enable_developer_build
  Enable this to have the msd include a suite of tests and invoke them
@@ -443,51 +375,105 @@
 
 **Current value (from the default):** `false`
 
-### magma_python_path
+### target_sysroot
+ The absolute path of the sysroot that is used with the target toolchain.
 
-**Current value (from the default):** `"/b/s/w/ir/kitchen-workdir/third_party/mako"`
+**Current value (from the default):** `""`
 
-### scenic_vulkan_swapchain
+### zedboot_devmgr_config
+ List of arguments to populate /boot/config/devmgr in the Zedboot image.
 
-**Current value (from the default):** `1`
+**Current value (from the default):** `["netsvc.netboot=true", "virtcon.font=18x32"]`
 
-### vk_loader_debug
+### zircon_boot_manifests
+ Manifest files describing files to go into the `/boot` filesystem.
+ Can be either // source paths or absolute system paths.
+ `zircon_boot_groups` controls which files are actually selected.
 
-**Current value (from the default):** `"warn,error"`
+ Since Zircon manifest files are relative to a Zircon source directory
+ rather than to the directory containing the manifest, these are assumed
+ to reside in a build directory that's a direct subdirectory of the
+ Zircon source directory and thus their contents can be taken as
+ relative to `get_path_info(entry, "dir") + "/.."`.
 
-### always_zedboot
- Build boot images that prefer Zedboot over local boot.
+**Current value (from the default):** `["//out/build-zircon/build-arm64/bootfs.manifest"]`
 
-**Current value (from the default):** `false`
+### zircon_tools_dir
+ Where to find Zircon's host-side tools that are run as part of the build.
 
-### host_byteorder
+**Current value (from the default):** `"//out/build-zircon/tools"`
 
-**Current value (from the default):** `"undefined"`
+### expat_build_root
 
-### system_package_key
- The package key to use for signing Fuchsia packages made by the
- `package()` template (and the `system_image` packge).  If this
- doesn't exist yet when it's needed, it will be generated.  New
- keys can be generated with the `pm -k FILE genkey` host command.
+**Current value (from the default):** `"//third_party/expat"`
 
-**Current value (from the default):** `"//build/development.key"`
+### icu_use_data_file
+ Tells icu to load an external data file rather than rely on the icudata
+ being linked directly into the binary.
 
-### thinlto_cache_dir
- ThinLTO cache directory path.
+ This flag is a bit confusing. As of this writing, icu.gyp set the value to
+ 0 but common.gypi sets the value to 1 for most platforms (and the 1 takes
+ precedence).
 
-**Current value (from the default):** `"arm64-shared/thinlto-cache"`
+ TODO(GYP) We'll probably need to enhance this logic to set the value to
+ true or false in similar circumstances.
 
-### use_goma
- Set to true to enable distributed compilation using Goma.
+**Current value (from the default):** `true`
 
-**Current value (from the default):** `false`
+### sdk_dirs
+ The directories to search for parts of the SDK.
 
-### devmgr_config
- List of arguments to add to /boot/config/devmgr.
- These come after synthesized arguments to configure blobfs and pkgfs,
- and the one generated for [`enable_crashpad`](#enable_crashpad).
+ By default, we search the public directories for the various layers.
+ In the future, we'll search a pre-built SDK as well.
+
+**Current value (from the default):** `["//garnet/public", "//peridot/public", "//topaz/public"]`
+
+### select_variant_shortcuts
+ List of short names for commonly-used variant selectors.  Normally this
+ is not set as a build argument, but it serves to document the available
+ set of short-cut names for variant selectors.  Each element of this list
+ is a scope where `.name` is the short name and `.select_variant` is a
+ a list that can be spliced into [`select_variant`](#select_variant).
+
+**Current value (from the default):** `[{
+  select_variant = [{
+  variant = "asan_no_detect_leaks"
+  host = true
+  dir = ["//third_party/yasm", "//third_party/vboot_reference", "//garnet/tools/vboot_reference"]
+}, {
+  variant = "asan"
+  host = true
+}]
+  name = "host_asan"
+}]`
+
+### zedboot_cmdline_args
+ List of kernel command line arguments to bake into the Zedboot image.
+ See [//zircon/docs/kernel_cmdline.md](https://fuchsia.googlesource.com/zircon/+/master/docs/kernel_cmdline.md) and
+ [`zedboot_devmgr_config`](#zedboot_devmgr_config).
 
 **Current value (from the default):** `[]`
+
+### amber_keys_dir
+ Directory containing signing keys used by amber-publish.
+
+**Current value (from the default):** `"//garnet/go/src/amber/keys"`
+
+### glm_build_root
+
+**Current value (from the default):** `"//third_party/glm"`
+
+### kernel_cmdline_args
+ List of kernel command line arguments to bake into the boot image.
+ See also [//zircon/docs/kernel_cmdline.md](https://fuchsia.googlesource.com/zircon/+/master/docs/kernel_cmdline.md) and
+ [`devmgr_config`](#devmgr_config).
+
+**Current value (from the default):** `[]`
+
+### magma_enable_tracing
+ Enable this to include fuchsia tracing capability
+
+**Current value (from the default):** `true`
 
 ### rust_lto
  Sets the default LTO type for rustc bulids.
@@ -509,24 +495,47 @@
 
 **Current value (from the default):** `[]`
 
-### zedboot_cmdline_args
- List of kernel command line arguments to bake into the Zedboot image.
- See [//zircon/docs/kernel_cmdline.md](https://fuchsia.googlesource.com/zircon/+/master/docs/kernel_cmdline.md) and
- [`zedboot_devmgr_config`](#zedboot_devmgr_config).
+### toolchain_manifests
+ Manifest files describing target libraries from toolchains.
+ Can be either // source paths or absolute system paths.
+
+**Current value (from the default):** `["/b/s/w/ir/kitchen-workdir/buildtools/linux-x64/clang/lib/aarch64-fuchsia.manifest"]`
+
+### zircon_boot_groups
+ Groups to include from the Zircon /boot manifest into /boot.
+ This is either "all" or a comma-separated list of one or more of:
+   core -- necessary to boot
+   misc -- utilities in /bin
+   test -- test binaries in /bin and /test
+
+**Current value (from the default):** `"core"`
+
+### build_libvulkan
+ This is a list of targets that will be built as vulkan ICDS. If more than one
+ target is given then use_vulkan_loader_for_tests must be set to true, as
+ otherwise tests won't know which libvulkan to use.
 
 **Current value (from the default):** `[]`
 
-### expat_build_root
+### extra_authorized_keys_file
+ Additional SSH authorized_keys file to include in the build.
+ For example:
+   extra_authorized_keys_file=\"$HOME/.ssh/id_rsa.pub\"
 
-**Current value (from the default):** `"//third_party/expat"`
+**Current value (from the default):** `""`
 
-### sdk_dirs
- The directories to search for parts of the SDK.
+### is_debug
+ Debug build.
 
- By default, we search the public directories for the various layers.
- In the future, we'll search a pre-built SDK as well.
+**Current value (from the default):** `true`
 
-**Current value (from the default):** `["//garnet/public", "//peridot/public", "//topaz/public"]`
+### prebuilt_libvulkan_arm_path
+
+**Current value (from the default):** `""`
+
+### use_boringssl_for_http_transport_socket
+
+**Current value (from the default):** `true`
 
 ### zedboot_cmdline_files
  Files containing additional kernel command line arguments to bake into
@@ -535,31 +544,6 @@
  These can be GN `//` source pathnames or absolute system pathnames.
 
 **Current value (from the default):** `[]`
-
-### select_variant_shortcuts
- List of short names for commonly-used variant selectors.  Normally this
- is not set as a build argument, but it serves to document the available
- set of short-cut names for variant selectors.  Each element of this list
- is a scope where `.name` is the short name and `.select_variant` is a
- a list that can be spliced into [`select_variant`](#select_variant).
-
-**Current value (from the default):** `[{
-  select_variant = [{
-  variant = "asan_no_detect_leaks"
-  host = true
-  dir = ["//third_party/yasm", "//third_party/vboot_reference", "//garnet/tools/vboot_reference"]
-}, {
-  variant = "asan"
-  host = true
-}]
-  name = "host_asan"
-}]`
-
-### toolchain_manifests
- Manifest files describing target libraries from toolchains.
- Can be either // source paths or absolute system paths.
-
-**Current value (from the default):** `["/b/s/w/ir/kitchen-workdir/buildtools/linux-x64/clang/lib/aarch64-fuchsia.manifest"]`
 
 ### zircon_aux_manifests
  Manifest files describing extra libraries from a Zircon build
@@ -576,47 +560,33 @@
 
 **Current value (from the default):** `["//out/build-zircon/build-arm64/bootfs.manifest"]`
 
-### bootfs_extra
- List of extra manifest entries for files to add to the BOOTFS.
- Each entry can be a "TARGET=SOURCE" string, or it can be a scope
- with `sources` and `outputs` in the style of a copy() target:
- `outputs[0]` is used as `TARGET` (see `gn help source_expansion`).
+### zircon_build_dir
+ Zircon build directory for `target_cpu`, containing `.manifest` and
+ `.zbi` files for Zircon's BOOTFS and kernel.  This provides the kernel
+ and Zircon components used in the boot image.  It also provides the
+ Zircon shared libraries used at runtime in Fuchsia packages.
 
-**Current value (from the default):** `[]`
+ If left `""` (the default), then this is computed from
+ [`zircon_build_abi_dir`](#zircon_build_abi_dir) and
+ [`zircon_use_asan`](#zircon_use_asan).
 
-### enable_gfx_subsystem
+**Current value (from the default):** `""`
 
-**Current value (from the default):** `true`
+### amber_repository_blobs_dir
 
-### icu_use_data_file
- Tells icu to load an external data file rather than rely on the icudata
- being linked directly into the binary.
+**Current value (from the default):** `"//root_build_dir/amber-files/repository/blobs"`
 
- This flag is a bit confusing. As of this writing, icu.gyp set the value to
- 0 but common.gypi sets the value to 1 for most platforms (and the 1 takes
- precedence).
+### current_cpu
 
- TODO(GYP) We'll probably need to enhance this logic to set the value to
- true or false in similar circumstances.
+**Current value (from the default):** `""`
 
-**Current value (from the default):** `true`
+### current_os
 
-### kernel_cmdline_files
- Files containing additional kernel command line arguments to bake into
- the boot image.  The contents of these files (in order) come after any
- arguments directly in [`kernel_cmdline_args`](#kernel_cmdline_args).
- These can be GN `//` source pathnames or absolute system pathnames.
+**Current value (from the default):** `""`
 
-**Current value (from the default):** `[]`
+### magma_build_root
 
-### scudo_default_options
- Default [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html)
- options (before the `SCUDO_OPTIONS` environment variable is read at
- runtime).  *NOTE:* This affects only components using the `scudo`
- variant (see GN build argument `select_variant`), and does not affect
- anything when the `use_scudo` build flag is set instead.
-
-**Current value (from the default):** `["abort_on_error=1", "QuarantineSizeKb=0", "ThreadLocalQuarantineSizeKb=0", "DeallocationTypeMismatch=false", "DeleteSizeMismatch=false"]`
+**Current value (from the default):** `"//garnet/lib/magma"`
 
 ### select_variant
  List of "selectors" to request variant builds of certain targets.
@@ -687,37 +657,67 @@
 
 **Current value (from the default):** `[]`
 
-### amber_keys_dir
- Directory containing signing keys used by amber-publish.
+### use_ccache
+ Set to true to enable compiling with ccache
 
-**Current value (from the default):** `"//garnet/go/src/amber/keys"`
+**Current value (from the default):** `false`
 
-### crashpad_dependencies
- Determines various flavors of build configuration, and which concrete
- targets to use for dependencies. Valid values are "standalone",
- "chromium", and "fuchsia". Defaulted to "fuchsia" because
- "is_fuchsia_tree" is set.
+### clang_prefix
 
-**Current value (from the default):** `"fuchsia"`
-
-### fvm_image_size
- The size in bytes of the FVM partition image to create. Normally this is
- computed to be just large enough to fit the blob and data images. The
- default value is "", which means to size based on inputs. Specifying a size
- that is too small will result in build failure.
-
-**Current value (from the default):** `""`
+**Current value (from the default):** `"../buildtools/linux-x64/clang/bin"`
 
 ### host_os
 
 **Current value (from the default):** `"linux"`
 
-### kernel_cmdline_args
- List of kernel command line arguments to bake into the boot image.
- See also [//zircon/docs/kernel_cmdline.md](https://fuchsia.googlesource.com/zircon/+/master/docs/kernel_cmdline.md) and
- [`devmgr_config`](#devmgr_config).
+### target_os
+
+**Current value (from the default):** `""`
+
+### thinlto_jobs
+ Number of parallel ThinLTO jobs.
+
+**Current value (from the default):** `8`
+
+### bootfs_extra
+ List of extra manifest entries for files to add to the BOOTFS.
+ Each entry can be a "TARGET=SOURCE" string, or it can be a scope
+ with `sources` and `outputs` in the style of a copy() target:
+ `outputs[0]` is used as `TARGET` (see `gn help source_expansion`).
 
 **Current value (from the default):** `[]`
+
+### build_intel_gen
+
+**Current value (from the default):** `false`
+
+### devmgr_config
+ List of arguments to add to /boot/config/devmgr.
+ These come after synthesized arguments to configure blobfs and pkgfs,
+ and the one generated for [`enable_crashpad`](#enable_crashpad).
+
+**Current value (from the default):** `[]`
+
+### zircon_use_asan
+ Set this if [`zircon_build_dir`](#zircon_build_dir) was built with
+ `USE_ASAN=true`, e.g. `[//scripts/build-zircon.sh](https://fuchsia.googlesource.com/scripts/+/master/build-zircon.sh) -A`.  This mainly
+ affects the defaults for [`zircon_build_dir`](#zircon_build_dir) and
+ [`zircon_build_abi_dir`](#zircon_build_abi_dir).  It also gets noticed
+ by [//scripts/fx](https://fuchsia.googlesource.com/scripts/+/master/fx) commands that rebuild Zircon so that they use `-A`
+ again next time.
+
+**Current value (from the default):** `false`
+
+### enable_crashpad
+ When this is set, Crashpad will be used to handle exceptions (which uploads
+ crashes to the crash server), rather than crashanalyzer in Zircon (which
+ prints a backtrace the the system log).
+
+**Current value (from the default):** `false`
+
+### enable_sketchy_subsystem
+
+**Current value (from the default):** `true`
 
 ## `target_cpu = "arm64"`
 
