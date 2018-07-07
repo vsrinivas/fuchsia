@@ -74,7 +74,33 @@ fbl::Vector<Observer> g_observers;
 //   - transition from 0 to 1 only happens when engine is started
 //   - the engine stops when the reference count goes to 0
 //     (in other words, holding a context reference prevents the engine from stopping)
+//
+// There are two separate counters here that collectively provide the full
+// count: buffer acquisitions and prolonged acquisitions. Buffer acquisitions
+// are for the purpose of writing to the trace buffer. Prolonged acquisitions
+// are for things like adhoc trace providers where they want to maintain a
+// reference to the context for the duration of the trace.
+// Buffer acquisitions increment/decrement the count by
+// |kBufferCounterIncrement|. Prolonged acquisitions increment/decrement the
+// count by |kProlongedCounterIncrement|.
+// To maintain the property that the full count only transitions from 0 to 1
+// when the engine is started |kProlongedCounterIncrement| == 1.
 fbl::atomic_uint32_t g_context_refs{0u};
+
+// The uint32_t context ref count is split this way:
+// |31 ... 8| = buffer acquisition count
+// |7 ... 0| = prolonged acquisition count
+// There are generally only a handful of prolonged acquisitions. The code will
+// assert-fail if there are more. This allows for 2^24 buffer acquisitions
+// which is basically 2^24 threads. The values are also chosen so that the
+// full count is easily interpreted when printed in hex.
+constexpr uint32_t kProlongedCounterShift = 0;
+constexpr uint32_t kProlongedCounterIncrement = 1 << kProlongedCounterShift;
+constexpr uint32_t kMaxProlongedCounter = 127;
+constexpr uint32_t kProlongedCounterMask = 0xff;
+constexpr uint32_t kBufferCounterShift = 8;
+constexpr uint32_t kBufferCounterIncrement = 1 << kBufferCounterShift;
+constexpr uint32_t kBufferCounterMask = 0xffffff00;
 
 // Trace context.
 // Rules:
@@ -97,6 +123,14 @@ constexpr zx_signals_t SIGNAL_CONTEXT_RELEASED = ZX_USER_SIGNAL_1;
 // Asynchronous operations posted to the asynchronous dispatcher while the
 // engine is running.  Use of these structures is guarded by the engine lock.
 async_wait_t g_event_wait;
+
+inline uint32_t get_prolonged_context_refs(uint32_t raw) {
+    return (raw & kProlongedCounterMask) >> kProlongedCounterShift;
+}
+
+inline uint32_t get_buffer_context_refs(uint32_t raw) {
+    return (raw & kBufferCounterMask) >> kBufferCounterShift;
+}
 
 void handle_event(async_dispatcher_t* dispatcher, async_wait_t* wait,
                   zx_status_t status, const zx_packet_signal_t* signal);
@@ -171,7 +205,7 @@ zx_status_t trace_start_engine(async_dispatcher_t* dispatcher,
     trace_context_write_initialization_record(g_context, zx_ticks_per_second());
 
     // After this point clients can acquire references to the trace context.
-    g_context_refs.store(1u, fbl::memory_order_release);
+    g_context_refs.store(kProlongedCounterIncrement, fbl::memory_order_release);
 
     // Notify observers that the state changed.
     if (g_observers.is_empty()) {
@@ -210,7 +244,8 @@ zx_status_t trace_stop_engine(zx_status_t disposition) {
     // Release the trace engine's own reference to the trace context.
     // |handle_context_released()| will be called asynchronously when the last
     // reference is released.
-    trace_release_context(g_context);
+    trace_release_prolonged_context(reinterpret_cast<trace_prolonged_context_t*>(g_context));
+
     return ZX_OK;
 }
 
@@ -291,10 +326,14 @@ void handle_hard_shutdown(async_dispatcher_t* dispatcher) {
     }
 
     // Uh oh.
-    printf("Timed out waiting for %u trace context references to be released "
-           "after %lu ns while the asynchronous dispatcher was shutting down.\n"
+    auto context_refs = g_context_refs.load(fbl::memory_order_relaxed);
+    printf("Timed out waiting for %u buffer, %u prolonged trace context\n"
+           "references (raw 0x%x) to be released after %lu ns\n"
+           "while the asynchronous dispatcher was shutting down.\n"
            "Tracing will no longer be available in this process.",
-           g_context_refs.load(fbl::memory_order_relaxed),
+           get_buffer_context_refs(context_refs),
+           get_prolonged_context_refs(context_refs),
+           context_refs,
            kSynchronousShutdownTimeout.get());
 }
 
@@ -353,7 +392,8 @@ trace_context_t* trace_acquire_context() {
     //
     // Note the ACQUIRE fence here since the trace context may have changed
     // from the perspective of this thread.
-    while (!g_context_refs.compare_exchange_weak(&count, count + 1,
+    while (!g_context_refs.compare_exchange_weak(&count,
+                                                 count + kBufferCounterIncrement,
                                                  fbl::memory_order_acquire,
                                                  fbl::memory_order_relaxed)) {
         if (unlikely(count == 0u))
@@ -381,11 +421,55 @@ trace_context_t* trace_acquire_context_for_category(const char* category_literal
 // thread-safe, never-fail, lock-free
 void trace_release_context(trace_context_t* context) {
     ZX_DEBUG_ASSERT(context == g_context);
-    ZX_DEBUG_ASSERT(g_context_refs.load(fbl::memory_order_relaxed) != 0u);
+    ZX_DEBUG_ASSERT(get_buffer_context_refs(g_context_refs.load(fbl::memory_order_relaxed)) != 0u);
 
     // Note the RELEASE fence here since the trace context and trace buffer
     // contents may have changes from the perspective of other threads.
-    if (unlikely(g_context_refs.fetch_sub(1u, fbl::memory_order_release) == 1u)) {
+    auto previous = g_context_refs.fetch_sub(kBufferCounterIncrement,
+                                             fbl::memory_order_release);
+    if (unlikely(previous == kBufferCounterIncrement)) {
+        // Notify the engine that the last reference was released.
+        zx_status_t status = g_event.signal(0u, SIGNAL_CONTEXT_RELEASED);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
+    }
+}
+
+// thread-safe, fail-fast, lock-free
+trace_prolonged_context_t* trace_acquire_prolonged_context() {
+    // There's no need for extreme efficiency here, but for consistency with
+    // |trace_acquire_context()| we copy what it does.
+    uint32_t count = g_context_refs.load(fbl::memory_order_relaxed);
+    if (likely(count == 0u))
+        return nullptr;
+
+    // Attempt to increment the reference count.
+    // This also acts as a fence for future access to buffer state variables.
+    //
+    // Note the ACQUIRE fence here since the trace context may have changed
+    // from the perspective of this thread.
+    while (!g_context_refs.compare_exchange_weak(&count,
+                                                 count + kProlongedCounterIncrement,
+                                                 fbl::memory_order_acquire,
+                                                 fbl::memory_order_relaxed)) {
+        if (likely(count == 0u))
+            return nullptr;
+    }
+    ZX_DEBUG_ASSERT(get_prolonged_context_refs(g_context_refs.load(fbl::memory_order_relaxed)) <=
+                    kMaxProlongedCounter);
+    return reinterpret_cast<trace_prolonged_context_t*>(g_context);
+}
+
+// thread-safe, never-fail, lock-free
+void trace_release_prolonged_context(trace_prolonged_context_t* context) {
+    auto tcontext = reinterpret_cast<trace_context_t*>(context);
+    ZX_DEBUG_ASSERT(tcontext == g_context);
+    ZX_DEBUG_ASSERT(get_prolonged_context_refs(g_context_refs.load(fbl::memory_order_relaxed)) != 0u);
+
+    // Note the RELEASE fence here since the trace context and trace buffer
+    // contents may have changes from the perspective of other threads.
+    auto previous = g_context_refs.fetch_sub(kProlongedCounterIncrement,
+                                             fbl::memory_order_release);
+    if (unlikely(previous == kProlongedCounterIncrement)) {
         // Notify the engine that the last reference was released.
         zx_status_t status = g_event.signal(0u, SIGNAL_CONTEXT_RELEASED);
         ZX_DEBUG_ASSERT(status == ZX_OK);

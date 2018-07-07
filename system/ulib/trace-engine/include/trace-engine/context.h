@@ -40,6 +40,10 @@ __BEGIN_CDECLS
 // Most functions in this header require a valid trace context to operate.
 typedef struct trace_context trace_context_t;
 
+// Opaque type representing a trace context that is held for prolonged
+// periods of time.
+typedef struct trace_prolonged_context trace_prolonged_context_t;
+
 // Returns true if tracing of the specified category has been enabled.
 //
 // Use |trace_context_register_category_literal()| if you intend to immediately
@@ -553,7 +557,7 @@ void trace_context_write_string_record(
 // Discards the record if it cannot be written.
 //
 // |context| must be a valid trace context reference.
-// |index| is the index of the thread, between |TRACE_ENCODED_STRING_REF_MIN_INDEX|
+// |index| is the index of the thread, between |TRACE_ENCODED_THREAD_REF_MIN_INDEX|
 //         and |TRACE_ENCODED_THREAD_REF_MAX_INDEX| inclusive.
 // |process_koid| is the koid of the process which contains the thread.
 // |thread_koid| is the koid of the thread being described.

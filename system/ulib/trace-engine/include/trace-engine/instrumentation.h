@@ -130,6 +130,35 @@ trace_context_t* trace_acquire_context_for_category(const char* category_literal
 // This function is thread-safe, never-fail, and lock-free.
 void trace_release_context(trace_context_t* context);
 
+// Acquires a reference to the trace engine's context, for prolonged use.
+// This cannot be used to acquire the context for the purposes of writing to
+// the trace buffer. Instead, this is intended for uses like the ktrace
+// provider where it wishes to hold a copy of the context for the duration of
+// the trace.
+// Must be balanced by a call to |trace_release_prolonged_context()| when the
+// result is non-NULL.
+//
+// This function is optimized to return quickly when tracing is not enabled.
+//
+// Trace engine shutdown is deferred until all references to the trace context
+// have been released, therefore it is important for clients to promptly
+// release their reference to the trace context once they have finished with
+// it.
+//
+// Returns a valid trace context if tracing is enabled.
+// Returns NULL otherwise.
+//
+// This function is thread-safe, fail-fast, and lock-free.
+trace_prolonged_context_t* trace_acquire_prolonged_context(void);
+
+// Releases a reference to the trace engine's prolonged context.
+// Must balance a prior successful call to |trace_acquire_prolonged_context()|.
+//
+// |context| must be a valid trace context reference.
+//
+// This function is thread-safe, never-fail, and lock-free.
+void trace_release_prolonged_context(trace_prolonged_context_t* context);
+
 // Registers an event handle which the trace engine will signal when the
 // trace state or set of enabled categories changes.
 //
