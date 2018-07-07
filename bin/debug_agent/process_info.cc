@@ -5,10 +5,13 @@
 #include "garnet/bin/debug_agent/process_info.h"
 
 #include <elf.h>
+#include <inttypes.h>
 #include <lib/zx/thread.h>
 #include <link.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
+
+#include <algorithm>
 
 #include "garnet/bin/debug_agent/object_util.h"
 #include "lib/fxl/logging.h"
@@ -250,6 +253,104 @@ zx_status_t GetModulesForProcess(const zx::process& process,
     lmap = next;
   }
   return ZX_OK;
+}
+
+std::vector<zx_info_maps_t> GetProcessMaps(const zx::process& process) {
+  const size_t kRegionsCountGuess = 64u;
+  const size_t kNewRegionsCountGuess = 4u;
+
+  size_t count_guess = kRegionsCountGuess;
+
+  std::vector<zx_info_maps_t> map;
+  size_t actual;
+  size_t avail;
+
+  while (true) {
+    map.resize(count_guess);
+
+    zx_status_t status =
+        process.get_info(ZX_INFO_PROCESS_MAPS, &map[0],
+                         sizeof(zx_info_maps) * map.size(), &actual, &avail);
+
+    if (status != ZX_OK) {
+      fprintf(stderr, "error %d for zx_object_get_info\n", status);
+      actual = 0;
+      break;
+    } else if (actual == avail) {
+      break;
+    }
+
+    count_guess = avail + kNewRegionsCountGuess;
+  }
+
+  map.resize(actual);
+  return map;
+}
+
+bool ReadProcessMemoryBlock(const zx::process& process, uint64_t address,
+                            uint32_t size, debug_ipc::MemoryBlock* block) {
+  block->address = address;
+  block->size = size;
+  block->data.resize(size);
+
+  size_t bytes_read = 0;
+  if (process.read_memory(address, &block->data[0], block->size, &bytes_read) ==
+          ZX_OK &&
+      bytes_read == size) {
+    block->valid = true;
+    return true;
+  }
+  block->valid = false;
+  block->data.resize(0);
+  return false;
+}
+
+void ReadProcessMemoryBlocks(const zx::process& process, uint64_t address,
+                             uint32_t size,
+                             std::vector<debug_ipc::MemoryBlock>* blocks) {
+  // Optimistically assume the read will work which will be faster in the
+  // common case.
+  blocks->resize(1);
+  if (ReadProcessMemoryBlock(process, address, size, &(*blocks)[0]))
+    return;
+
+  // Failure reading, this memory is either not mapped or it may cross mapping
+  // boundaries. To solve the multiple boundary problem, get the memory mapping
+  // and compute all mapping boundaries in the requested region. Then try to
+  // read each of the resulting blocks (which may be valid or invalid).
+  //
+  // This computed boundaries array will contain all boundaries (including the
+  // end address and some duplicates) except the begin address (this will be
+  // implicit in the later computation).
+  std::vector<uint64_t> boundaries;
+  for (const zx_info_maps_t& map : GetProcessMaps(process)) {
+    // The returned maps should be sorted so any mapping region starting past
+    // our region means all relevant boundaries have been found.
+    if (map.base > address + size)
+      break;
+    if (map.base > address)
+      boundaries.push_back(map.base);
+    uint64_t end = map.base + map.size;
+    if (end > address && end < address + size)
+      boundaries.push_back(end);
+  }
+  boundaries.push_back(address + size);
+  std::sort(boundaries.begin(), boundaries.end());
+
+  blocks->clear();
+  uint64_t begin = address;
+  for (uint64_t end : boundaries) {
+    // There will be some duplicates in the boundaries array so skip anything
+    // that's empty. These duplicates are caused by a range which a child
+    // inside it that is coincident with one of the parent boundaries, or
+    // two regions that abut each other.
+    if (end == begin)
+      continue;
+    blocks->emplace_back();
+    ReadProcessMemoryBlock(process, begin, static_cast<uint32_t>(end - begin),
+                           &blocks->back());
+    begin = end;
+  }
 }
 
 }  // namespace debug_agent

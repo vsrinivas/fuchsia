@@ -99,8 +99,7 @@ void MemoryAnalysis::DoAnalysis() {
       row.push_back(OutputBuffer::WithContents(
           fxl::StringPrintf("0x%016" PRIx64, data_value)));
     } else {
-      // TODO(brettw) Remove the bug reference when DX-300 is fixed.
-      row.push_back(OutputBuffer::WithContents("<invalid memory, see DX-300>"));
+      row.push_back(OutputBuffer::WithContents("<invalid memory>"));
     }
 
     std::string annotation = GetAnnotationsBetween(address, address + kAlign);

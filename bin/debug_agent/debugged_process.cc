@@ -67,25 +67,8 @@ void DebuggedProcess::OnResume(const debug_ipc::ResumeRequest& request) {
 
 void DebuggedProcess::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
                                    debug_ipc::ReadMemoryReply* reply) {
-  // TODO(brettw) break into blocks if a portion of the memory range is mapped
-  // but a portion isn't. Currently this assumes the entire range is in one
-  // block.
-  debug_ipc::MemoryBlock block;
-  block.address = request.address;
-  block.size = request.size;
-  block.data.resize(request.size);
-
-  size_t bytes_read = 0;
-  if (process_.read_memory(request.address, &block.data[0], block.size,
-                           &bytes_read) == ZX_OK &&
-      bytes_read == block.size) {
-    block.valid = true;
-  } else {
-    block.valid = false;
-    block.data.resize(0);
-  }
-
-  reply->blocks.emplace_back(std::move(block));
+  ReadProcessMemoryBlocks(process_, request.address, request.size,
+                          &reply->blocks);
 }
 
 void DebuggedProcess::OnKill(const debug_ipc::KillRequest& request,
@@ -222,34 +205,7 @@ void DebuggedProcess::OnException(zx_koid_t process_koid, zx_koid_t thread_koid,
 void DebuggedProcess::OnAddressSpace(
     const debug_ipc::AddressSpaceRequest& request,
     debug_ipc::AddressSpaceReply* reply) {
-  const size_t kRegionsCountGuess = 64u;
-  const size_t kNewRegionsCountGuess = 4u;
-
-  size_t count_guess = kRegionsCountGuess;
-
-  std::vector<zx_info_maps_t> map;
-  size_t actual;
-  size_t avail;
-
-  while (true) {
-    map.resize(count_guess);
-
-    zx_status_t status =
-        zx_object_get_info(process_.get(), ZX_INFO_PROCESS_MAPS, &map[0],
-                           sizeof(zx_info_maps) * map.size(), &actual, &avail);
-
-    if (status != ZX_OK) {
-      fprintf(stderr, "error %d for zx_object_get_info\n", status);
-      return;
-    } else if (actual == avail) {
-      break;
-    }
-
-    count_guess = avail + kNewRegionsCountGuess;
-  }
-
-  map.resize(actual);
-
+  std::vector<zx_info_maps_t> map = GetProcessMaps(process_);
   if (request.address != 0u) {
     for (const auto& entry : map) {
       if (request.address < entry.base)
@@ -260,8 +216,6 @@ void DebuggedProcess::OnAddressSpace(
     }
     return;
   }
-
-  reply->map.resize(actual);
 
   size_t ix = 0;
   for (const auto& entry : map) {
