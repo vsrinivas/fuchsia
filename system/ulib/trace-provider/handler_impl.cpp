@@ -42,6 +42,7 @@ TraceHandlerImpl::~TraceHandlerImpl() {
 }
 
 zx_status_t TraceHandlerImpl::StartEngine(async_dispatcher_t* dispatcher,
+                                          trace_buffering_mode_t buffering_mode,
                                           zx::vmo buffer, zx::fifo fifo,
                                           fbl::Vector<fbl::String> enabled_categories) {
     ZX_DEBUG_ASSERT(buffer);
@@ -69,7 +70,7 @@ zx_status_t TraceHandlerImpl::StartEngine(async_dispatcher_t* dispatcher,
         return status;
     }
 
-    status = trace_start_engine(dispatcher, handler,
+    status = trace_start_engine(dispatcher, handler, buffering_mode,
                                 handler->buffer_, handler->buffer_num_bytes_);
     if (status != ZX_OK) {
         delete handler;

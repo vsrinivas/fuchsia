@@ -11,7 +11,8 @@
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
 #include <lib/zx/event.h>
-#include <trace-engine/instrumentation.h>
+#include <trace/event.h>
+#include <trace/handler.h>
 
 namespace {
 int RunClosure(void* arg) {

@@ -13,13 +13,21 @@ interface Provider {
     // Starts writing trace records for events in the specified |categories|
     // into |buffer| using |fifo| for signaling.
     //
-    // When the trace provider fills the buffer completely, it must stop tracing
-    // and close both |buffer| and |fifo| to indicate to the trace manager
-    // that tracing is finished.
+    // |buffering_mode| specifies what happens when the buffer fills.
+    // ONESHOT: The provider must stop tracing.
+    // CIRCULAR: Continue tracing, dropping oldest records to make room
+    //   for new ones.
+    // STREAMING: As the buffer fills notify TraceManager that it needs to be
+    //   saved so that tracing can continue without dropping records. Whether
+    //   records get dropped depends on how fast TraceManager is able to save
+    //   intermediate buffers. No guarantee is made that records won't be
+    //   dropped. Coordination of the saving of buffers is done via |fifo|.
+    //   See trace-provider/provider.h for details.
     //
     // When the trace provider observes |ZX_FIFO_PEER_CLOSED| on |fifo|, it must
     // assume the trace manager has terminated abnormally (since |Stop| was
-    // not received as usual) and stop tracing automatically.
+    // not received as usual) and stop tracing automatically, discarding
+    // any in-flight trace data.
     //
     // At most one trace can be running at a time.  If the trace provider
     // receives a request to start tracing while already tracing, it must
@@ -30,11 +38,9 @@ interface Provider {
     // #include <trace-provider/provider.h> to get |TRACE_PROVIDER_STARTED|.
     // To indicate failure to start close |fifo|.
     //
-    // If the provider drops a record because its buffer is full it must send
-    // a TRACE_PROVIDER_BUFFER_OVERFLOW packet on |fifo|.
-    //
     // TODO(jeffbrown): Implement half-full signal and streaming protocol.
-    1: Start(handle<vmo> buffer, handle<fifo> fifo,
+    1: Start(BufferingMode buffering_mode,
+             handle<vmo> buffer, handle<fifo> fifo,
              vector<string:100>:100 categories);
 
     // Stops tracing.
@@ -52,4 +58,27 @@ interface Registry {
     // Registers the trace provider.
     // To unregister, simply close the TraceProvider pipe.
     1: RegisterTraceProvider(Provider provider);
+};
+
+// The trace buffering mode.
+enum BufferingMode : uint8 {
+    // In oneshot mode there is only one buffer that is not reused. When the
+    // buffer fills the provider just keeps dropping records, keeping a count,
+    // and then when tracing stops the header is updated to record final state.
+    ONESHOT = 0;
+
+    // In circular mode, the buffer is effectively split into two pieces.
+    // When a buffer fills writing immediately continues with the other
+    // buffer, and this continues until tracing stops.
+    CIRCULAR = 1;
+
+    // In streaming mode, the buffer is effectively split into two pieces.
+    // When a buffer fills the provider:
+    // - TODO(dje): Say more here.
+    // and then, when the buffer is saved, the manager:
+    // - TODO(dje): Say more here.
+    // If the manager hasn't saved the buffer in time, and the other buffer
+    // fills, then the provider is required to keep dropping records until
+    // the buffer is ready.
+    STREAMING = 2;
 };

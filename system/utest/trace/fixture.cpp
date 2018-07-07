@@ -24,13 +24,12 @@
 
 namespace {
 
-static constexpr size_t kBufferSizeBytes = 1024 * 1024;
-
 class Fixture : private trace::TraceHandler {
 public:
-    Fixture()
+    Fixture(trace_buffering_mode_t mode, size_t buffer_size)
         : loop_(&kAsyncLoopConfigNoAttachToThread),
-          buffer_(new uint8_t[kBufferSizeBytes], kBufferSizeBytes) {
+          buffering_mode_(mode),
+          buffer_(new uint8_t[buffer_size], buffer_size) {
         zx_status_t status = zx::event::create(0u, &trace_stopped_);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     }
@@ -48,6 +47,7 @@ public:
 
         // Asynchronously start the engine.
         zx_status_t status = trace_start_engine(loop_.dispatcher(), this,
+                                                buffering_mode_,
                                                 buffer_.get(), buffer_.size());
         ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
     }
@@ -84,8 +84,12 @@ public:
     bool ReadRecords(fbl::Vector<trace::Record>* out_records,
                      fbl::Vector<fbl::String>* out_errors) {
         trace::TraceReader reader(
-            [out_records](trace::Record record) { out_records->push_back(fbl::move(record)); },
-            [out_errors](fbl::String error) { out_errors->push_back(fbl::move(error)); });
+            [out_records](trace::Record record) {
+                out_records->push_back(fbl::move(record));
+            },
+            [out_errors](fbl::String error) {
+                out_errors->push_back(fbl::move(error));
+            });
         trace::Chunk chunk(reinterpret_cast<uint64_t*>(buffer_.get()),
                            buffer_bytes_written_ / 8u);
         if (buffer_bytes_written_ & 7u) {
@@ -113,9 +117,13 @@ private:
         buffer_bytes_written_ = buffer_bytes_written;
 
         trace_stopped_.signal(0u, ZX_EVENT_SIGNALED);
+
+        // The normal provider support does "delete this" here.
+        // We don't need nor want it as we still have to verify the results.
     }
 
     async::Loop loop_;
+    trace_buffering_mode_t buffering_mode_;
     fbl::Array<uint8_t> buffer_;
     bool trace_running_ = false;
     zx_status_t disposition_ = ZX_ERR_INTERNAL;
@@ -133,9 +141,9 @@ struct FixtureSquelch {
     regex_t regex;
 };
 
-void fixture_set_up(void) {
+void fixture_set_up(trace_buffering_mode_t mode, size_t buffer_size) {
     ZX_DEBUG_ASSERT(!g_fixture);
-    g_fixture = new Fixture();
+    g_fixture = new Fixture(mode, buffer_size);
 }
 
 void fixture_tear_down(void) {

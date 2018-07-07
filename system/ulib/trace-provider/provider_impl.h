@@ -11,6 +11,7 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
+#include <trace-engine/types.h>
 #include <trace-provider/provider.h>
 
 // Provide a definition for the opaque type declared in provider.h.
@@ -46,8 +47,8 @@ private:
         async::WaitMethod<Connection, &Connection::Handle> wait_;
     };
 
-    void Start(zx::vmo buffer, zx::fifo fifo,
-               fbl::Vector<fbl::String> enabled_categories);
+    void Start(trace_buffering_mode_t buffering_mode, zx::vmo buffer,
+               zx::fifo fifo, fbl::Vector<fbl::String> enabled_categories);
     void Stop();
 
     async_dispatcher_t* const dispatcher_;

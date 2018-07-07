@@ -106,6 +106,7 @@ struct trace_handler_ops {
 // the process is already about to exit.
 __EXPORT zx_status_t trace_start_engine(async_dispatcher_t* dispatcher,
                                         trace_handler_t* handler,
+                                        trace_buffering_mode_t buffering_mode,
                                         void* buffer,
                                         size_t buffer_num_bytes);
 

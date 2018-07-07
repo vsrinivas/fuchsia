@@ -10,6 +10,7 @@
 
 struct BenchmarkSpec {
     const char* name;
+    trace_buffering_mode_t mode;
     size_t buffer_size;
     // The number of iterations is a parameter to make it easier to
     // experiment and debug.

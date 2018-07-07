@@ -34,11 +34,11 @@ static const fidl_type_t VectorString100nonnullable100nonnullableTable = fidl_ty
 
 extern const fidl_type_t fuchsia_tracelink_ProviderStartRequestTable;
 static const ::fidl::FidlField fuchsia_tracelink_ProviderStartRequestFields[] = {
-    ::fidl::FidlField(&HandlevmononnullableTable, 16),
-    ::fidl::FidlField(&HandlefifononnullableTable, 20),
-    ::fidl::FidlField(&VectorString100nonnullable100nonnullableTable, 24)
+    ::fidl::FidlField(&HandlevmononnullableTable, 20),
+    ::fidl::FidlField(&HandlefifononnullableTable, 24),
+    ::fidl::FidlField(&VectorString100nonnullable100nonnullableTable, 32)
 };
-const fidl_type_t fuchsia_tracelink_ProviderStartRequestTable = fidl_type_t(::fidl::FidlCodedStruct(fuchsia_tracelink_ProviderStartRequestFields, 3, 40, ""));
+const fidl_type_t fuchsia_tracelink_ProviderStartRequestTable = fidl_type_t(::fidl::FidlCodedStruct(fuchsia_tracelink_ProviderStartRequestFields, 3, 48, ""));
 
 extern const fidl_type_t fuchsia_tracelink_ProviderStopRequestTable;
 static const ::fidl::FidlField fuchsia_tracelink_ProviderStopRequestFields[] = {};

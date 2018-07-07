@@ -331,6 +331,18 @@ typedef enum {
 // to allow room for reasonably sized blob names should they get inlined.
 #define TRACE_MAX_BLOB_SIZE ((size_t)32000u)
 
+// The buffering mode.
+typedef enum {
+    // Keep filling the trace buffer until it is full and then stop tracing.
+    TRACE_BUFFERING_MODE_ONESHOT = 0,
+    // When the buffer fills start overwriting records from the beginning.
+    TRACE_BUFFERING_MODE_CIRCULAR = 1,
+    // When the buffer reaches a critical point notify the trace manager to
+    // save the trace thus far. Essentially this is an implementation of
+    // double buffering, though the underlying details are unspecified.
+    TRACE_BUFFERING_MODE_STREAMING = 2,
+} trace_buffering_mode_t;
+
 __END_CDECLS
 
 #ifdef __cplusplus

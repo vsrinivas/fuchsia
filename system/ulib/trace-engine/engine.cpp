@@ -163,11 +163,19 @@ void notify_engine_all_observers_started_if_needed_locked() {
 // thread-safe
 zx_status_t trace_start_engine(async_dispatcher_t* dispatcher,
                                trace_handler_t* handler,
+                               trace_buffering_mode_t buffering_mode,
                                void* buffer,
                                size_t buffer_num_bytes) {
     ZX_DEBUG_ASSERT(dispatcher);
     ZX_DEBUG_ASSERT(handler);
     ZX_DEBUG_ASSERT(buffer);
+
+    switch (buffering_mode) {
+    case TRACE_BUFFERING_MODE_ONESHOT:
+        break;
+    default:
+        return ZX_ERR_INVALID_ARGS;
+    }
 
     fbl::AutoLock lock(&g_engine_mutex);
 

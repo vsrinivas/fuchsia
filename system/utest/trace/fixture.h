@@ -53,7 +53,7 @@ bool fixture_compare_n_records(size_t max_num_records, const char* expected,
 
 __BEGIN_CDECLS
 
-void fixture_set_up(void);
+void fixture_set_up(trace_buffering_mode_t mode, size_t buffer_size);
 void fixture_tear_down(void);
 void fixture_start_tracing(void);
 void fixture_stop_tracing(void);
@@ -65,11 +65,17 @@ static inline void fixture_scope_cleanup(bool* scope) {
     fixture_tear_down();
 }
 
-#define BEGIN_TRACE_TEST                                          \
+#define DEFAULT_BUFFER_SIZE_BYTES (1024u * 1024u)
+
+#define BEGIN_TRACE_TEST_ETC(mode, buffer_size)                   \
     BEGIN_TEST;                                                   \
     __attribute__((cleanup(fixture_scope_cleanup))) bool __scope; \
     (void)__scope;                                                \
-    fixture_set_up();
+    fixture_set_up((mode), (buffer_size));
+
+#define BEGIN_TRACE_TEST \
+    BEGIN_TRACE_TEST_ETC(TRACE_BUFFERING_MODE_ONESHOT, \
+                         DEFAULT_BUFFER_SIZE_BYTES)
 
 #define END_TRACE_TEST \
     END_TEST;

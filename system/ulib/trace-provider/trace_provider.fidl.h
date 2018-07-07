@@ -42,6 +42,11 @@ extern "C" {
 
 // Forward declarations
 
+typedef uint8_t fuchsia_tracelink_BufferingMode;
+#define fuchsia_tracelink_BufferingMode_ONESHOT UINT8_C(0)
+#define fuchsia_tracelink_BufferingMode_CIRCULAR UINT8_C(1)
+#define fuchsia_tracelink_BufferingMode_STREAMING UINT8_C(2)
+
 #define fuchsia_tracelink_ProviderStartOrdinal ((uint32_t)1)
 typedef struct fuchsia_tracelink_ProviderStartRequest fuchsia_tracelink_ProviderStartRequest;
 #define fuchsia_tracelink_ProviderStopOrdinal ((uint32_t)2)
@@ -60,6 +65,7 @@ extern const fidl_type_t fuchsia_tracelink_RegistryRegisterTraceProviderRequestT
 struct fuchsia_tracelink_ProviderStartRequest {
     FIDL_ALIGNDECL
     fidl_message_header_t hdr;
+    fuchsia_tracelink_BufferingMode buffering_mode;
     zx_handle_t buffer;
     zx_handle_t fifo;
     fidl_vector_t categories;

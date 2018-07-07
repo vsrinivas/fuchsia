@@ -24,6 +24,7 @@ int main(int argc, char** argv) {
             // The buffer is not allowed to fill in oneshot mode, so there's
             // no use in reporting the buffer size in the name here.
             "oneshot",
+            TRACE_BUFFERING_MODE_ONESHOT,
             kLargeBufferSizeBytes,
             kDefaultRunIterations,
         },

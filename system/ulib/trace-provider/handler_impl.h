@@ -21,8 +21,9 @@ namespace internal {
 
 class TraceHandlerImpl final : public trace::TraceHandler {
 public:
-    static zx_status_t StartEngine(async_dispatcher_t* dispatcher, zx::vmo buffer,
-                                   zx::fifo fifo,
+    static zx_status_t StartEngine(async_dispatcher_t* dispatcher,
+                                   trace_buffering_mode_t buffering_mode,
+                                   zx::vmo buffer, zx::fifo fifo,
                                    fbl::Vector<fbl::String> enabled_categories);
     static zx_status_t StopEngine();
 

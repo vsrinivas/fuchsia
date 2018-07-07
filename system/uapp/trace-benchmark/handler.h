@@ -16,14 +16,16 @@
 class BenchmarkHandler : public trace::TraceHandler {
 public:
     BenchmarkHandler(async::Loop* loop, const char* name,
-                     size_t buffer_size)
+                     trace_buffering_mode_t mode, size_t buffer_size)
         : loop_(loop),
           name_(name),
+          mode_(mode),
           buffer_(new uint8_t[buffer_size], buffer_size) {
     }
 
     void Start() {
-        zx_status_t status = trace_start_engine(loop_->dispatcher(), this,
+        zx_status_t status = trace_start_engine(loop_->dispatcher(),
+                                                this, mode_,
                                                 buffer_.get(), buffer_.size());
         ZX_DEBUG_ASSERT(status == ZX_OK);
 
@@ -55,5 +57,6 @@ private:
 
     async::Loop* loop_;
     const char* name_;
+    trace_buffering_mode_t mode_;
     fbl::Array<uint8_t> buffer_;
 };

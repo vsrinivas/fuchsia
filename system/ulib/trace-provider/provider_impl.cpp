@@ -23,13 +23,14 @@ TraceProviderImpl::TraceProviderImpl(async_dispatcher_t* dispatcher, zx::channel
 
 TraceProviderImpl::~TraceProviderImpl() = default;
 
-void TraceProviderImpl::Start(zx::vmo buffer, zx::fifo fifo,
+void TraceProviderImpl::Start(trace_buffering_mode_t buffering_mode,
+                              zx::vmo buffer, zx::fifo fifo,
                               fbl::Vector<fbl::String> enabled_categories) {
     if (running_)
         return;
 
     zx_status_t status = TraceHandlerImpl::StartEngine(
-        dispatcher_, fbl::move(buffer), fbl::move(fifo),
+        dispatcher_, buffering_mode, fbl::move(buffer), fbl::move(fifo),
         fbl::move(enabled_categories));
     if (status == ZX_OK)
         running_ = true;
@@ -118,6 +119,7 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(
             break;
 
         auto request = reinterpret_cast<fuchsia_tracelink_ProviderStartRequest*>(buffer);
+        auto buffering_mode = request->buffering_mode;
         auto buffer = zx::vmo(request->buffer);
         auto fifo = zx::fifo(request->fifo);
         fbl::Vector<fbl::String> categories;
@@ -125,7 +127,22 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(
         for (size_t i = 0; i < request->categories.count; i++) {
             categories.push_back(fbl::String(strings[i].data, strings[i].size));
         }
-        impl_->Start(fbl::move(buffer), fbl::move(fifo), fbl::move(categories));
+        trace_buffering_mode_t trace_buffering_mode;
+        switch (buffering_mode) {
+        case fuchsia_tracelink_BufferingMode_ONESHOT:
+            trace_buffering_mode = TRACE_BUFFERING_MODE_ONESHOT;
+            break;
+        case fuchsia_tracelink_BufferingMode_CIRCULAR:
+            trace_buffering_mode = TRACE_BUFFERING_MODE_CIRCULAR;
+            break;
+        case fuchsia_tracelink_BufferingMode_STREAMING:
+            trace_buffering_mode = TRACE_BUFFERING_MODE_STREAMING;
+            break;
+        default:
+            return false;
+        }
+        impl_->Start(trace_buffering_mode, fbl::move(buffer), fbl::move(fifo),
+                     fbl::move(categories));
         return true;
     }
     case fuchsia_tracelink_ProviderStopOrdinal: {
