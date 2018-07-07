@@ -9,8 +9,47 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
+#include <stddef.h>
 #include <unittest/unittest.h>
+#include <zircon/compiler.h>
+
+#ifdef __cplusplus
+#include <fbl/string.h>
+#include <fbl/vector.h>
+#include <trace-reader/records.h>
+#endif
+
+#ifdef __cplusplus
+
+// FixtureSquelch is used to filter out elements of a trace record that may
+// vary run to run or even within a run and are not germaine to determining
+// correctness. The canonical example is record timestamps.
+// The term "squelch" derives from radio circuitry used to remove noise.
+struct FixtureSquelch;
+
+// |regex_str| is a regular expression consistenting of one or more
+// subexpressions, the text in the parenthesis of each matching expressions
+// is replaced with '<>'.
+// Best illustration is an example. This example removes decimal numbers,
+// koids, timestamps ("ts"), and lowercase hex numbers.
+// const char regex[] = "([0-9]+/[0-9]+)"
+//   "|koid\\(([0-9]+)\\)"
+//   "|koid: ([0-9]+)"
+//   "|ts: ([0-9]+)"
+//   "|(0x[0-9a-f]+)";
+// So "ts: 123 42 mumble koid(456) foo koid: 789, bar 0xabcd"
+// becomes "ts: <> <> mumble koid(<>) foo koid: <>, bar <>".
+bool fixture_create_squelch(const char* regex_str, FixtureSquelch** out_squelch);
+void fixture_destroy_squelch(FixtureSquelch* squelch);
+fbl::String fixture_squelch(FixtureSquelch* squelch, const char* str);
+
+bool fixture_compare_raw_records(const fbl::Vector<trace::Record>& records,
+                                 size_t start_record, size_t max_num_records,
+                                 const char* expected);
+bool fixture_compare_n_records(size_t max_num_records, const char* expected,
+                               fbl::Vector<trace::Record>* records);
+
+#endif
 
 __BEGIN_CDECLS
 

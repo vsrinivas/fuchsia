@@ -128,6 +128,11 @@ Fixture* g_fixture{nullptr};
 
 } // namespace
 
+struct FixtureSquelch {
+    // Records the compiled regex.
+    regex_t regex;
+};
+
 void fixture_set_up(void) {
     ZX_DEBUG_ASSERT(!g_fixture);
     g_fixture = new Fixture();
@@ -159,7 +164,83 @@ zx_status_t fixture_get_disposition(void) {
     return g_fixture->disposition();
 }
 
-bool fixture_compare_records(const char* expected) {
+bool fixture_create_squelch(const char* regex_str, FixtureSquelch** out_squelch) {
+    // We don't make any assumptions about the copyability of |regex_t|.
+    // Therefore we construct it in place.
+    auto squelch = new FixtureSquelch;
+    if (regcomp(&squelch->regex, regex_str, REG_EXTENDED | REG_NEWLINE) != 0) {
+        return false;
+    }
+    *out_squelch = squelch;
+    return true;
+}
+
+void fixture_destroy_squelch(FixtureSquelch* squelch) {
+    regfree(&squelch->regex);
+    delete squelch;
+}
+
+fbl::String fixture_squelch(FixtureSquelch* squelch, const char* str) {
+    fbl::StringBuffer<1024u> buf;
+    const char* cur = str;
+    const char* end = str + strlen(str);
+    while (*cur) {
+        // size must be 1 + number of parenthesized subexpressions
+        size_t match_count = squelch->regex.re_nsub + 1;
+        regmatch_t match[match_count];
+        if (regexec(&squelch->regex, cur, match_count, match, 0) != 0) {
+            buf.Append(cur, end - cur);
+            break;
+        }
+        size_t offset = 0u;
+        for (size_t i = 1; i < match_count; i++) {
+            if (match[i].rm_so == -1)
+                continue;
+            buf.Append(cur, match[i].rm_so - offset);
+            buf.Append("<>");
+            cur += match[i].rm_eo - offset;
+            offset = match[i].rm_eo;
+        }
+    }
+    return buf;
+}
+
+bool fixture_compare_raw_records(const fbl::Vector<trace::Record>& records,
+                                 size_t start_record, size_t max_num_records,
+                                 const char* expected) {
+    BEGIN_HELPER;
+
+    // Append |num_records| records to the buffer, replacing each match of a parenthesized
+    // subexpression of the regex with "<>".  This is used to strip out timestamps
+    // and other varying data that is not controlled by these tests.
+    FixtureSquelch* squelch;
+    ASSERT_TRUE(fixture_create_squelch(
+                    "([0-9]+/[0-9]+)"
+                    "|koid\\(([0-9]+)\\)"
+                    "|koid: ([0-9]+)"
+                    "|ts: ([0-9]+)"
+                    "|(0x[0-9a-f]+)",
+                    &squelch), "error creating squelch");
+
+    fbl::StringBuffer<16384u> buf;
+    size_t num_recs = 0;
+    for (size_t i = start_record; i < records.size(); ++i) {
+        if (num_recs == max_num_records)
+            break;
+        const auto& record = records[i];
+        fbl::String str = record.ToString();
+        buf.Append(fixture_squelch(squelch, str.c_str()));
+        buf.Append('\n');
+        ++num_recs;
+    }
+    EXPECT_STR_EQ(expected, buf.c_str(), "unequal cstr");
+    fixture_destroy_squelch(squelch);
+
+    END_HELPER;
+}
+
+bool fixture_compare_n_records(size_t max_num_records, const char* expected,
+                               fbl::Vector<trace::Record>* out_records) {
     ZX_DEBUG_ASSERT(g_fixture);
     BEGIN_HELPER;
 
@@ -180,42 +261,15 @@ bool fixture_compare_records(const char* expected) {
               records[0].GetInitialization().ticks_per_second);
     records.erase(0);
 
-    // Append all records to the buffer, replacing each match of a parenthesized
-    // subexpression of the regex with "<>".  This is used to strip out timestamps
-    // and other varying data that is not controlled by these tests.
-    regex_t regex;
-    ASSERT_EQ(0, regcomp(&regex,
-                         "([0-9]+/[0-9]+)"
-                         "|koid\\(([0-9]+)\\)"
-                         "|koid: ([0-9]+)"
-                         "|ts: ([0-9]+)"
-                         "|(0x[0-9a-f]+)",
-                         REG_EXTENDED | REG_NEWLINE));
+    EXPECT_TRUE(fixture_compare_raw_records(records, 0, max_num_records, expected));
 
-    fbl::StringBuffer<16384u> buf;
-    for (const auto& record : records) {
-        fbl::String str = record.ToString();
-        const char* cur = str.c_str();
-        while (*cur) {
-            regmatch_t match[6]; // count must be 1 + number of parenthesized subexpressions
-            if (regexec(&regex, cur, fbl::count_of(match), match, 0) != 0) {
-                buf.Append(cur, str.end() - cur);
-                break;
-            }
-            size_t offset = 0u;
-            for (size_t i = 1; i < fbl::count_of(match); i++) {
-                if (match[i].rm_so == -1)
-                    continue;
-                buf.Append(cur, match[i].rm_so - offset);
-                buf.Append("<>");
-                cur += match[i].rm_eo - offset;
-                offset = match[i].rm_eo;
-            }
-        }
-        buf.Append('\n');
+    if (out_records) {
+        *out_records = fbl::move(records);
     }
-    EXPECT_STR_EQ(expected, buf.c_str(), "unequal cstr");
-    regfree(&regex);
 
     END_HELPER;
+}
+
+bool fixture_compare_records(const char* expected) {
+    return fixture_compare_n_records(SIZE_MAX, expected, nullptr);
 }
