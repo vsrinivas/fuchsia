@@ -31,6 +31,7 @@ executable("bin") {
     "//zircon/public/fidl/fuchsia-tracelink",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/trace-reader",
   ]
 
   public_deps = [

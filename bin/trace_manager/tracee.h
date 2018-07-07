@@ -10,6 +10,7 @@
 #include <lib/zx/fifo.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/vmo.h>
+#include <trace-reader/reader_internal.h>
 
 #include <iosfwd>
 
@@ -39,13 +40,16 @@ class Tracee {
   enum class TransferStatus {
     // The transfer is complete.
     kComplete,
-    // The transfer is incomplete and subsequent
-    // transfers should not be executed as the underlying
-    // stream has been corrupted.
+    // The transfer is incomplete and subsequent transfers should not be
+    // executed as the underlying stream (or other part of the tracee,
+    // e.g., vmo) has been corrupted.
     kCorrupted,
     // The receiver of the transfer went away.
     kReceiverDead,
   };
+
+  // The size of the initialization record.
+  static constexpr size_t kInitRecordSizeBytes = 16;
 
   explicit Tracee(TraceProviderBundle* bundle);
   ~Tracee();
@@ -70,6 +74,11 @@ class Tracee {
   // TODO(dje): The value will need playing with.
   static constexpr size_t kFifoSizeInPackets = 4u;
 
+  // Given |wrapped_count|, return the corresponding buffer number.
+  static int get_buffer_number(uint32_t wrapped_count) {
+    return wrapped_count & 1;
+  }
+
   void TransitionToState(State new_state);
   void OnHandleReady(async_dispatcher_t* dispatcher,
                      async::WaitBase* wait,
@@ -78,6 +87,12 @@ class Tracee {
   void OnFifoReadable(async_dispatcher_t* dispatcher,
                       async::WaitBase* wait);
   void OnHandleError(zx_status_t status);
+
+  bool VerifyBufferHeader(const trace::internal::BufferHeaderReader* header) const;
+
+  TransferStatus WriteChunk(const zx::socket& socket,
+                            size_t vmo_offset, size_t size,
+                            const char* name) const;
 
   TransferStatus WriteProviderInfoRecord(const zx::socket& socket) const;
   TransferStatus WriteProviderBufferOverflowEvent(
@@ -93,7 +108,6 @@ class Tracee {
   fit::closure stopped_callback_;
   async_dispatcher_t* dispatcher_ = nullptr;
   async::WaitMethod<Tracee, &Tracee::OnHandleReady> wait_;
-  bool buffer_overflow_ = false;
 
   fxl::WeakPtrFactory<Tracee> weak_ptr_factory_;
   FXL_DISALLOW_COPY_AND_ASSIGN(Tracee);

@@ -4,6 +4,7 @@
 
 #include "garnet/bin/trace_manager/tracee.h"
 
+#include <fbl/algorithm.h>
 #include <lib/async/default.h>
 #include <trace-engine/fields.h>
 #include <trace-provider/provider.h>
@@ -11,6 +12,7 @@
 #include "lib/fxl/logging.h"
 
 namespace tracing {
+
 namespace {
 
 // Writes |len| bytes from |buffer| to |socket|. Returns
@@ -51,6 +53,20 @@ Tracee::TransferStatus WriteBufferToSocket(const zx::socket& socket,
   }
 
   return Tracee::TransferStatus::kComplete;
+}
+
+fuchsia::tracelink::BufferingMode EngineBufferingModeToTracelinkMode(
+    trace_buffering_mode_t mode) {
+  switch (mode) {
+  case TRACE_BUFFERING_MODE_ONESHOT:
+    return fuchsia::tracelink::BufferingMode::ONESHOT;
+  case TRACE_BUFFERING_MODE_CIRCULAR:
+    return fuchsia::tracelink::BufferingMode::CIRCULAR;
+  case TRACE_BUFFERING_MODE_STREAMING:
+    return fuchsia::tracelink::BufferingMode::STREAMING;
+  default:
+    __UNREACHABLE;
+  }
 }
 
 }  // namespace
@@ -224,7 +240,6 @@ void Tracee::OnFifoReadable(async_dispatcher_t* dispatcher,
       FXL_LOG(WARNING)
         << *bundle_
         << ": Records got dropped, probably due to buffer overflow";
-      buffer_overflow_ = true;
     } else {
       FXL_LOG(WARNING)
         << *bundle_
@@ -250,6 +265,46 @@ void Tracee::OnHandleError(zx_status_t status) {
   TransitionToState(State::kStopped);
 }
 
+bool Tracee::VerifyBufferHeader(const trace::internal::BufferHeaderReader* header) const {
+  if (EngineBufferingModeToTracelinkMode(
+        static_cast<trace_buffering_mode_t>(header->buffering_mode())) !=
+      buffering_mode_) {
+    FXL_LOG(ERROR) << *bundle_ << ": header corrupt, wrong buffering mode: "
+                   << header->buffering_mode();
+    return false;
+  }
+
+  return true;
+}
+
+Tracee::TransferStatus Tracee::WriteChunk(const zx::socket& socket,
+                                          size_t vmo_offset,
+                                          size_t size,
+                                          const char* name) const {
+  FXL_VLOG(2) << *bundle_ << ": Writing chunk for " << name
+              << ": vmo offset 0x" << std::hex << vmo_offset
+              << ", size 0x" << std::hex << size;
+
+  // TODO(dje): Loop on smaller buffer.
+  // Better yet, be able to pass the entire vmo to the socket (still in
+  // three chunks: the writer will need vmo,offset,size parameters).
+  std::vector<uint8_t> buffer(size);
+
+  if (buffer_vmo_.read(buffer.data(), vmo_offset, size) != ZX_OK) {
+    FXL_LOG(ERROR) << *bundle_
+                   << ": Failed to read data from buffer_vmo: "
+                   << "offset=" << vmo_offset << ", size=" << size;
+    return TransferStatus::kCorrupted;
+  }
+
+  auto status = WriteBufferToSocket(socket, buffer.data(), size);
+  if (status != TransferStatus::kComplete) {
+      FXL_LOG(ERROR) << *bundle_
+                     << ": Failed to write " << name << " records";
+  }
+  return status;
+}
+
 Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
   FXL_DCHECK(socket);
   FXL_DCHECK(buffer_vmo_);
@@ -263,8 +318,29 @@ Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
     return transfer_status;
   }
 
-  if (buffer_overflow_) {
-    // If we can't write the provider event record, it's not the end of the
+  // TODO(dje): Need a way to get size of header without getting definition.
+  trace::internal::trace_buffer_header header_buffer;
+  if (buffer_vmo_.read(&header_buffer, 0, sizeof(header_buffer)) != ZX_OK) {
+    FXL_LOG(ERROR) << *bundle_ << ": Failed to read header from buffer_vmo";
+    return TransferStatus::kCorrupted;
+  }
+
+  fbl::unique_ptr<trace::internal::BufferHeaderReader> header;
+  auto error = trace::internal::BufferHeaderReader::Create(
+      &header_buffer, buffer_vmo_size_, &header);
+  if (error != "") {
+    FXL_LOG(ERROR) << *bundle_ << ": header corrupt, " << error.c_str();
+    return TransferStatus::kCorrupted;
+  }
+  if (!VerifyBufferHeader(header.get())) {
+    return TransferStatus::kCorrupted;
+  }
+
+  if (header->num_records_dropped() > 0) {
+    FXL_LOG(WARNING)
+      << *bundle_
+      << ": " << header->num_records_dropped() << " records were dropped";
+    // If we can't write the buffer overflow record, it's not the end of the
     // world.
     if (WriteProviderBufferOverflowEvent(socket) != TransferStatus::kComplete) {
       FXL_LOG(ERROR) << *bundle_
@@ -273,28 +349,63 @@ Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
     }
   }
 
-  std::vector<uint8_t> buffer(buffer_vmo_size_);
-
-  if (buffer_vmo_.read(buffer.data(), 0, buffer_vmo_size_) != ZX_OK) {
-    FXL_LOG(WARNING) << *bundle_ << ": Failed to read data from buffer_vmo: "
-                     << "expected size=" << buffer_vmo_size_;
-  }
-
-  const uint64_t* start = reinterpret_cast<const uint64_t*>(buffer.data());
-  const uint64_t* current = start;
-  const uint64_t* end = start + trace::BytesToWords(buffer.size());
-
-  while (current < end) {
-    auto length = trace::RecordFields::RecordSize::Get<uint16_t>(*current);
-    if (length == 0 || length > trace::RecordFields::kMaxRecordSizeBytes ||
-        current + length >= end) {
-      break;
+  if (header->durable_data_end() > 0) {
+    auto offset = header->get_durable_buffer_offset();
+    auto size = header->durable_data_end();
+    if ((transfer_status = WriteChunk(socket, offset, size, "durable")) !=
+        TransferStatus::kComplete) {
+      return transfer_status;
     }
-    current += length;
   }
 
-  return WriteBufferToSocket(socket, buffer.data(),
-                             trace::WordsToBytes(current - start));
+  // There's only two buffers, thus the earlier one is not the current one.
+  // It's important to process them in chronological order on the off
+  // chance that the earlier buffer provides a stringref or threadref
+  // referenced by the later buffer.
+
+  auto write_chunk = [this, &socket, &header](int buffer_number) {
+    auto size = header->nondurable_data_end(buffer_number);
+    if (size > 0) {
+      auto offset = header->GetNondurableBufferOffset(buffer_number);
+      auto name = buffer_number == 0
+        ? "nondurable buffer 0" : "nondurable buffer 1";
+      return WriteChunk(socket, offset, size, name);
+    }
+    return TransferStatus::kComplete;
+  };
+
+ if (header->wrapped_count() > 0) {
+   int buffer_number = get_buffer_number(header->wrapped_count() - 1);
+   transfer_status = write_chunk(buffer_number);
+   if (transfer_status != TransferStatus::kComplete) {
+     return transfer_status;
+    }
+  }
+  int buffer_number = get_buffer_number(header->wrapped_count());
+  transfer_status = write_chunk(buffer_number);
+  if (transfer_status != TransferStatus::kComplete) {
+    return transfer_status;
+  }
+
+  // Print some stats to assist things like buffer size calculations.
+  if (header->buffering_mode() != TRACE_BUFFERING_MODE_ONESHOT &&
+      // Don't print anything if nothing was written.
+      header->durable_data_end() > kInitRecordSizeBytes) {
+    FXL_LOG(INFO) << *bundle_ << " trace stats";
+    FXL_LOG(INFO) << "Wrapped count: " << header->wrapped_count();
+    FXL_LOG(INFO) << "Durable buffer: 0x"
+                  << std::hex << header->durable_data_end()
+                  << ", size 0x"
+                  << std::hex << header->durable_buffer_size();
+    FXL_LOG(INFO) << "Non-durable buffer: 0x"
+                  << std::hex << header->nondurable_data_end(0)
+                  << ",0x"
+                  << std::hex << header->nondurable_data_end(1)
+                  << ", size 0x"
+                  << std::hex << header->nondurable_buffer_size();
+  }
+
+  return TransferStatus::kComplete;
 }
 
 Tracee::TransferStatus Tracee::WriteProviderInfoRecord(
