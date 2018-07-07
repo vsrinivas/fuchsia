@@ -40,7 +40,9 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   // unrecoverable errors that render the session dead.
   explicit TraceSession(zx::socket destination,
                         fidl::VectorPtr<fidl::StringPtr> categories,
-                        size_t trace_buffer_size, fit::closure abort_handler);
+                        size_t trace_buffer_size,
+                        fuchsia::tracelink::BufferingMode buffering_mode,
+                        fit::closure abort_handler);
   // Frees all allocated resources and closes the outgoing
   // connection.
   ~TraceSession();
@@ -83,6 +85,7 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   zx::socket destination_;
   fidl::VectorPtr<fidl::StringPtr> categories_;
   size_t trace_buffer_size_;
+  fuchsia::tracelink::BufferingMode buffering_mode_;
   std::list<std::unique_ptr<Tracee>> tracees_;
   async::TaskMethod<TraceSession, &TraceSession::SessionStartTimeout>
       session_start_timeout_{this};

@@ -42,6 +42,13 @@ struct KnownCategory {
   string description;
 };
 
+// This is a copy of tracelink.fidl:BufferingMode.
+enum BufferingMode : uint8 {
+  ONESHOT = 0;
+  CIRCULAR = 1;
+  STREAMING = 2;
+};
+
 // Provides options for the trace.
 struct TraceOptions {
   // The trace categories to record, or an empty array for all.
@@ -52,4 +59,6 @@ struct TraceOptions {
 
   // Acknowledge start request after at most |start_timeout_milliseconds|.
   uint64 start_timeout_milliseconds = 5000;
+
+  BufferingMode buffering_mode = ONESHOT;
 };

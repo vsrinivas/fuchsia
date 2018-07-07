@@ -70,8 +70,9 @@ bool Tracee::operator==(TraceProviderBundle* bundle) const {
   return bundle_ == bundle;
 }
 
-bool Tracee::Start(size_t buffer_size,
-                   fidl::VectorPtr<fidl::StringPtr> categories,
+bool Tracee::Start(fidl::VectorPtr<fidl::StringPtr> categories,
+                   size_t buffer_size,
+                   fuchsia::tracelink::BufferingMode buffering_mode,
                    fit::closure started_callback,
                    fit::closure stopped_callback) {
   FXL_DCHECK(state_ == State::kReady);
@@ -108,10 +109,12 @@ bool Tracee::Start(size_t buffer_size,
     return false;
   }
 
-  bundle_->provider->Start(std::move(buffer_vmo_for_provider),
+  bundle_->provider->Start(buffering_mode,
+                           std::move(buffer_vmo_for_provider),
                            std::move(fifo_for_provider),
                            std::move(categories));
 
+  buffering_mode_ = buffering_mode;
   buffer_vmo_ = std::move(buffer_vmo);
   buffer_vmo_size_ = buffer_size;
   fifo_ = std::move(fifo);

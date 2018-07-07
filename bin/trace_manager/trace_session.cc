@@ -14,10 +14,13 @@ namespace tracing {
 
 TraceSession::TraceSession(zx::socket destination,
                            fidl::VectorPtr<fidl::StringPtr> categories,
-                           size_t trace_buffer_size, fit::closure abort_handler)
+                           size_t trace_buffer_size,
+                           fuchsia::tracelink::BufferingMode buffering_mode,
+                           fit::closure abort_handler)
     : destination_(std::move(destination)),
       categories_(std::move(categories)),
       trace_buffer_size_(trace_buffer_size),
+      buffering_mode_(buffering_mode),
       abort_handler_(std::move(abort_handler)),
       weak_ptr_factory_(this) {}
 
@@ -43,7 +46,7 @@ void TraceSession::AddProvider(TraceProviderBundle* bundle) {
   fidl::VectorPtr<fidl::StringPtr> categories_clone;
   fidl::Clone(categories_, &categories_clone);
   if (!tracees_.back()->Start(
-          trace_buffer_size_, std::move(categories_clone),
+          std::move(categories_clone), trace_buffer_size_, buffering_mode_,
           [weak = weak_ptr_factory_.GetWeakPtr(), bundle]() {
             if (weak)
               weak->CheckAllProvidersStarted();

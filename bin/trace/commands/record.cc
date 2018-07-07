@@ -36,8 +36,18 @@ const char kDetach[] = "detach";
 const char kDecouple[] = "decouple";
 const char kLaunchpad[] = "launchpad";
 const char kBufferSize[] = "buffer-size";
+const char kBufferingMode[] = "buffering-mode";
 const char kBenchmarkResultsFile[] = "benchmark-results-file";
 const char kTestSuite[] = "test-suite";
+
+const struct {
+  const char* name;
+  fuchsia::tracing::BufferingMode mode;
+} kBufferingModes[] = {
+  { "oneshot", fuchsia::tracing::BufferingMode::ONESHOT },
+  { "circular", fuchsia::tracing::BufferingMode::CIRCULAR },
+  { "streaming", fuchsia::tracing::BufferingMode::STREAMING },
+};
 
 zx_handle_t Launch(const std::vector<std::string>& args) {
   zx_handle_t subprocess = ZX_HANDLE_INVALID;
@@ -88,8 +98,8 @@ bool WaitForExit(zx_handle_t process, int* exit_code) {
 bool Record::Options::Setup(const fxl::CommandLine& command_line) {
   const std::unordered_set<std::string> known_options = {
       kSpecFile, kCategories, kAppendArgs, kOutputFile, kDuration,
-      kDetach,   kDecouple,   kLaunchpad,  kBufferSize, kBenchmarkResultsFile,
-      kTestSuite};
+      kDetach,   kDecouple,   kLaunchpad,  kBufferSize, kBufferingMode,
+      kBenchmarkResultsFile,  kTestSuite};
 
   for (auto& option : command_line.options()) {
     if (known_options.count(option.name) == 0) {
@@ -182,6 +192,24 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
     buffer_size_megabytes_hint = megabytes;
   }
 
+  // --buffering-mode=oneshot|circular|streaming
+  if (command_line.HasOption(kBufferingMode, &index)) {
+    bool found = false;
+    for (const auto& mode : kBufferingModes) {
+      if (command_line.options()[index].value == mode.name) {
+        buffering_mode = mode.mode;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      FXL_LOG(ERROR) << "Failed to parse command-line option "
+                     << kBufferingMode << ": "
+                     << command_line.options()[index].value;
+      return false;
+    }
+  }
+
   // --benchmark-results-file=<file>
   if (command_line.HasOption(kBenchmarkResultsFile, &index)) {
     benchmark_results_file = command_line.options()[index].value;
@@ -231,6 +259,8 @@ Command::Info Record::Describe() {
         "using this option"},
        {"buffer-size=[4]",
         "Maximum size of trace buffer for each provider in megabytes"},
+       {"buffering-mode=oneshot|circular|streaming",
+        "The buffering mode to use"},
        {"benchmark-results-file=[none]",
         "Destination for exported benchmark results"},
        {"test-suite=[none]",
@@ -288,6 +318,7 @@ void Record::Start(const fxl::CommandLine& command_line) {
   trace_options.buffer_size_megabytes_hint =
       options_.buffer_size_megabytes_hint;
   // TODO(dje): start_timeout_milliseconds
+  trace_options.buffering_mode = options_.buffering_mode;
 
   tracer_->Start(
       std::move(trace_options),
