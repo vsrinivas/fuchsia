@@ -18,9 +18,9 @@ namespace {
 // successfully transferred. A return value of
 // TransferStatus::kReceiverDead indicates that the peer was closed
 // during the transfer.
-Tracee::TransferStatus WriteBufferToSocket(const uint8_t* buffer,
-                                           size_t len,
-                                           const zx::socket& socket) {
+Tracee::TransferStatus WriteBufferToSocket(const zx::socket& socket,
+                                           const uint8_t* buffer,
+                                           size_t len) {
   size_t offset = 0;
   while (offset < len) {
     zx_status_t status = ZX_OK;
@@ -142,7 +142,7 @@ void Tracee::TransitionToState(State new_state) {
 void Tracee::OnHandleReady(async_dispatcher_t* dispatcher,
                            async::WaitBase* wait,
                            zx_status_t status,
-                          const zx_packet_signal_t* signal) {
+                           const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     OnHandleError(status);
     return;
@@ -223,7 +223,7 @@ Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
   FXL_DCHECK(socket);
   FXL_DCHECK(buffer_vmo_);
 
-  Tracee::TransferStatus transfer_status = TransferStatus::kComplete;
+  auto transfer_status = TransferStatus::kComplete;
 
   if ((transfer_status = WriteProviderInfoRecord(socket)) !=
       TransferStatus::kComplete) {
@@ -262,8 +262,8 @@ Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
     current += length;
   }
 
-  return WriteBufferToSocket(buffer.data(),
-                             trace::WordsToBytes(current - start), socket);
+  return WriteBufferToSocket(socket, buffer.data(),
+                             trace::WordsToBytes(current - start));
 }
 
 Tracee::TransferStatus Tracee::WriteProviderInfoRecord(
@@ -281,8 +281,8 @@ Tracee::TransferStatus Tracee::WriteProviderInfoRecord(
       trace::ProviderInfoMetadataRecordFields::Id::Make(bundle_->id) |
       trace::ProviderInfoMetadataRecordFields::NameLength::Make(label.size());
   memcpy(&record[1], label.c_str(), label.size());
-  return WriteBufferToSocket(reinterpret_cast<uint8_t*>(record.data()),
-                             trace::WordsToBytes(num_words), socket);
+  return WriteBufferToSocket(socket, reinterpret_cast<uint8_t*>(record.data()),
+                             trace::WordsToBytes(num_words));
 }
 
 Tracee::TransferStatus Tracee::WriteProviderBufferOverflowEvent(
@@ -298,8 +298,8 @@ Tracee::TransferStatus Tracee::WriteProviderBufferOverflowEvent(
       trace::ProviderEventMetadataRecordFields::Id::Make(bundle_->id) |
       trace::ProviderEventMetadataRecordFields::Event::Make(
           trace::ToUnderlyingType(trace::ProviderEventType::kBufferOverflow));
-  return WriteBufferToSocket(reinterpret_cast<uint8_t*>(record.data()),
-                             trace::WordsToBytes(num_words), socket);
+  return WriteBufferToSocket(socket, reinterpret_cast<uint8_t*>(record.data()),
+                             trace::WordsToBytes(num_words));
 }
 
 std::ostream& operator<<(std::ostream& out, Tracee::State state) {

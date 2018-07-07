@@ -55,9 +55,12 @@ class Tracee {
              fit::closure started_callback,
              fit::closure stopped_callback);
   void Stop();
+
+  // Called once at the end of the trace to transfer all collected records
+  // to |socket|.
   TransferStatus TransferRecords(const zx::socket& socket) const;
 
-  TraceProviderBundle* bundle() const { return bundle_; }
+  const TraceProviderBundle* bundle() const { return bundle_; }
   State state() const { return state_; }
 
  private:
@@ -72,7 +75,7 @@ class Tracee {
   TransferStatus WriteProviderBufferOverflowEvent(
       const zx::socket& socket) const;
 
-  TraceProviderBundle* bundle_;
+  const TraceProviderBundle* const bundle_;
   State state_ = State::kReady;
   zx::vmo buffer_vmo_;
   size_t buffer_vmo_size_ = 0u;

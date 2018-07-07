@@ -274,6 +274,7 @@ void Record::Start(const fxl::CommandLine& command_line) {
       fxl::To<fidl::VectorPtr<fidl::StringPtr>>(options_.categories);
   trace_options.buffer_size_megabytes_hint =
       options_.buffer_size_megabytes_hint;
+  // TODO(dje): start_timeout_milliseconds
 
   tracer_->Start(
       std::move(trace_options),
