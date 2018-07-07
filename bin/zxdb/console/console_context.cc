@@ -189,7 +189,7 @@ SourceAffinity ConsoleContext::GetSourceAffinityForThread(
 
 void ConsoleContext::SetSourceAffinityForThread(
     const Thread* thread, SourceAffinity source_affinity) {
-  if (source_affinity == kNone)
+  if (source_affinity == SourceAffinity::kNone)
     return;  // Don't change anything, previous command still stands.
 
   ThreadRecord* record = GetThreadRecord(thread);

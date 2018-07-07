@@ -36,6 +36,15 @@ Console::~Console() {
   singleton_ = nullptr;
 }
 
+/* TODO(brettw) add this somewhere when the action patch has landed.
+  OutputBuffer help;
+  help.Append("👉 ");
+  help.Append(
+      Syntax::kComment,
+      "Please \"connect <ip>:<port>\" matching what you passed to\n   "
+      "\"debug_agent --port=<port>\" on the target system. Or try \"help\".");
+  Output(std::move(help));
+*/
 void Console::Init() {
   line_input_.BeginReadLine();
 

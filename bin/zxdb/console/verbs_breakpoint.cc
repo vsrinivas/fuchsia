@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/console/verbs.h"
 #include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/breakpoint_location.h"
 #include "garnet/bin/zxdb/client/breakpoint_settings.h"
@@ -16,6 +15,7 @@
 #include "garnet/bin/zxdb/console/format_context.h"
 #include "garnet/bin/zxdb/console/input_location_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/bin/zxdb/console/verbs.h"
 
 namespace zxdb {
 
@@ -179,7 +179,7 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd,
 
 // break -----------------------------------------------------------------------
 
-const char kBreakShortHelp[] = "break / br: Create a breakpoint.";
+const char kBreakShortHelp[] = "break / b: Create a breakpoint.";
 const char kBreakHelp[] =
     R"(break <location>
 
@@ -405,19 +405,23 @@ void AppendBreakpointVerbs(std::map<Verb, VerbRecord>* verbs) {
   SwitchRecord enable_switch(kEnableSwitch, true, "enable", 'e');
   SwitchRecord stop_switch(kStopSwitch, true, "stop", 's');
 
-  VerbRecord break_record(&DoBreak, {"break", "b"}, kBreakShortHelp,
-                          kBreakHelp);
+  VerbRecord break_record(&DoBreak, {"break", "b"}, kBreakShortHelp, kBreakHelp,
+                          CommandGroup::kBreakpoint);
   break_record.switches.push_back(enable_switch);
   break_record.switches.push_back(stop_switch);
   (*verbs)[Verb::kBreak] = break_record;
 
-  VerbRecord edit_record(&DoEdit, {"edit", "ed"}, kEditShortHelp, kEditHelp);
+  // Note: if "edit" becomes more general than just for breakpoints, we'll
+  // want to change the command category.
+  VerbRecord edit_record(&DoEdit, {"edit", "ed"}, kEditShortHelp, kEditHelp,
+                         CommandGroup::kBreakpoint);
   edit_record.switches.push_back(enable_switch);
   edit_record.switches.push_back(stop_switch);
   (*verbs)[Verb::kEdit] = edit_record;
 
   (*verbs)[Verb::kClear] =
-      VerbRecord(&DoClear, {"clear", "cl"}, kClearShortHelp, kClearHelp);
+      VerbRecord(&DoClear, {"clear", "cl"}, kClearShortHelp, kClearHelp,
+                 CommandGroup::kBreakpoint);
 }
 
 }  // namespace zxdb

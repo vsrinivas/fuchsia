@@ -219,19 +219,25 @@ SwitchRecord::~SwitchRecord() = default;
 
 NounRecord::NounRecord() = default;
 NounRecord::NounRecord(std::initializer_list<std::string> aliases,
-                       const char* short_help, const char* help)
-    : aliases(aliases), short_help(short_help), help(help) {}
+                       const char* short_help, const char* help,
+                       CommandGroup command_group)
+    : aliases(aliases),
+      short_help(short_help),
+      help(help),
+      command_group(command_group) {}
 NounRecord::~NounRecord() = default;
 
 VerbRecord::VerbRecord() = default;
 VerbRecord::VerbRecord(CommandExecutor exec,
                        std::initializer_list<std::string> aliases,
                        const char* short_help, const char* help,
+                       CommandGroup command_group,
                        SourceAffinity source_affinity)
     : exec(exec),
       aliases(aliases),
       short_help(short_help),
       help(help),
+      command_group(command_group),
       source_affinity(source_affinity) {}
 VerbRecord::~VerbRecord() = default;
 
@@ -255,13 +261,15 @@ const std::map<Noun, NounRecord>& GetNouns() {
   static std::map<Noun, NounRecord> all_nouns;
   if (all_nouns.empty()) {
     all_nouns[Noun::kBreakpoint] =
-        NounRecord({"breakpoint", "bp"}, kBreakpointShortHelp, kBreakpointHelp);
-    all_nouns[Noun::kFrame] =
-        NounRecord({"frame", "f"}, kFrameShortHelp, kFrameHelp);
-    all_nouns[Noun::kThread] =
-        NounRecord({"thread", "t"}, kThreadShortHelp, kThreadHelp);
+        NounRecord({"breakpoint", "bp"}, kBreakpointShortHelp, kBreakpointHelp,
+                   CommandGroup::kBreakpoint);
+    all_nouns[Noun::kFrame] = NounRecord({"frame", "f"}, kFrameShortHelp,
+                                         kFrameHelp, CommandGroup::kQuery);
+    all_nouns[Noun::kThread] = NounRecord({"thread", "t"}, kThreadShortHelp,
+                                          kThreadHelp, CommandGroup::kProcess);
     all_nouns[Noun::kProcess] =
-        NounRecord({"process", "pr"}, kProcessShortHelp, kProcessHelp);
+        NounRecord({"process", "pr"}, kProcessShortHelp, kProcessHelp,
+                   CommandGroup::kProcess);
 
     // Everything but Noun::kNone (= 0) should be in the map.
     FXL_DCHECK(all_nouns.size() == static_cast<size_t>(Noun::kLast) - 1)

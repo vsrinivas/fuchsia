@@ -444,19 +444,21 @@ Err DoAspace(ConsoleContext* context, const Command& cmd) {
 }  // namespace
 
 void AppendProcessVerbs(std::map<Verb, VerbRecord>* verbs) {
-  (*verbs)[Verb::kNew] = VerbRecord(&DoNew, {"new"}, kNewShortHelp, kNewHelp);
-  (*verbs)[Verb::kRun] =
-      VerbRecord(&DoRun, {"run", "r"}, kRunShortHelp, kRunHelp);
-  (*verbs)[Verb::kKill] =
-      VerbRecord(&DoKill, {"kill", "k"}, kKillShortHelp, kKillHelp);
-  (*verbs)[Verb::kAttach] =
-      VerbRecord(&DoAttach, {"attach"}, kAttachShortHelp, kAttachHelp);
-  (*verbs)[Verb::kDetach] =
-      VerbRecord(&DoDetach, {"detach"}, kDetachShortHelp, kDetachHelp);
-  (*verbs)[Verb::kLibs] =
-      VerbRecord(&DoLibs, {"libs"}, kLibsShortHelp, kLibsHelp);
+  (*verbs)[Verb::kNew] = VerbRecord(&DoNew, {"new"}, kNewShortHelp, kNewHelp,
+                                    CommandGroup::kProcess);
+  (*verbs)[Verb::kRun] = VerbRecord(&DoRun, {"run", "r"}, kRunShortHelp,
+                                    kRunHelp, CommandGroup::kProcess);
+  (*verbs)[Verb::kKill] = VerbRecord(&DoKill, {"kill", "k"}, kKillShortHelp,
+                                     kKillHelp, CommandGroup::kProcess);
+  (*verbs)[Verb::kAttach] = VerbRecord(&DoAttach, {"attach"}, kAttachShortHelp,
+                                       kAttachHelp, CommandGroup::kProcess);
+  (*verbs)[Verb::kDetach] = VerbRecord(&DoDetach, {"detach"}, kDetachShortHelp,
+                                       kDetachHelp, CommandGroup::kProcess);
+  (*verbs)[Verb::kLibs] = VerbRecord(&DoLibs, {"libs"}, kLibsShortHelp,
+                                     kLibsHelp, CommandGroup::kQuery);
   (*verbs)[Verb::kAspace] =
-      VerbRecord(&DoAspace, {"aspace", "as"}, kAspaceShortHelp, kAspaceHelp);
+      VerbRecord(&DoAspace, {"aspace", "as"}, kAspaceShortHelp, kAspaceHelp,
+                 CommandGroup::kQuery);
 }
 
 }  // namespace zxdb

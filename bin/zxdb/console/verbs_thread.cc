@@ -473,20 +473,23 @@ Err DoUntil(ConsoleContext* context, const Command& cmd) {
 void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kContinue] =
       VerbRecord(&DoContinue, {"continue", "c"}, kContinueShortHelp,
-                 kContinueHelp, SourceAffinity::kSource);
+                 kContinueHelp, CommandGroup::kStep, SourceAffinity::kSource);
   (*verbs)[Verb::kFinish] =
-      VerbRecord(&DoFinish, {"finish", "fi"}, kFinishShortHelp, kFinishHelp);
+      VerbRecord(&DoFinish, {"finish", "fi"}, kFinishShortHelp, kFinishHelp,
+                 CommandGroup::kStep);
   (*verbs)[Verb::kPause] =
-      VerbRecord(&DoPause, {"pause", "pa"}, kPauseShortHelp, kPauseHelp);
-  (*verbs)[Verb::kRegs] =
-      VerbRecord(&DoRegs, {"regs", "rg"}, kRegsShortHelp, kRegsHelp);
-  (*verbs)[Verb::kStep] = VerbRecord(&DoStep, {"step", "s"}, kStepShortHelp,
-                                     kStepHelp, SourceAffinity::kSource);
+      VerbRecord(&DoPause, {"pause", "pa"}, kPauseShortHelp, kPauseHelp,
+                 CommandGroup::kProcess);
+  (*verbs)[Verb::kRegs] = VerbRecord(&DoRegs, {"regs", "rg"}, kRegsShortHelp,
+                                     kRegsHelp, CommandGroup::kAssembly);
+  (*verbs)[Verb::kStep] =
+      VerbRecord(&DoStep, {"step", "s"}, kStepShortHelp, kStepHelp,
+                 CommandGroup::kStep, SourceAffinity::kSource);
   (*verbs)[Verb::kStepi] =
       VerbRecord(&DoStepi, {"stepi", "si"}, kStepiShortHelp, kStepiHelp,
-                 SourceAffinity::kAssembly);
-  (*verbs)[Verb::kUntil] =
-      VerbRecord(&DoUntil, {"until", "u"}, kUntilShortHelp, kUntilHelp);
+                 CommandGroup::kAssembly, SourceAffinity::kAssembly);
+  (*verbs)[Verb::kUntil] = VerbRecord(&DoUntil, {"until", "u"}, kUntilShortHelp,
+                                      kUntilHelp, CommandGroup::kStep);
 }
 
 }  // namespace zxdb

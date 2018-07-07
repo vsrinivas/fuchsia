@@ -132,9 +132,11 @@ Err DoSymNear(ConsoleContext* context, const Command& cmd) {
 
 void AppendSymbolVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kSymStat] =
-      VerbRecord(&DoSymStat, {"sym-stat"}, kSymStatShortHelp, kSymStatHelp);
-  (*verbs)[Verb::kSymNear] = VerbRecord(&DoSymNear, {"sym-near", "sn"},
-                                        kSymNearShortHelp, kSymNearHelp);
+      VerbRecord(&DoSymStat, {"sym-stat"}, kSymStatShortHelp, kSymStatHelp,
+                 CommandGroup::kQuery);
+  (*verbs)[Verb::kSymNear] =
+      VerbRecord(&DoSymNear, {"sym-near", "sn"}, kSymNearShortHelp,
+                 kSymNearHelp, CommandGroup::kQuery);
 }
 
 }  // namespace zxdb

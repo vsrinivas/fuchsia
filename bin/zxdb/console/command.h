@@ -82,7 +82,7 @@ std::string VerbToString(Verb v);
 
 // Indicates whether a command implies either source or assembly context. This
 // can be used by the frontend as a hint for what to show for the next stop.
-enum SourceAffinity {
+enum class SourceAffinity {
   // The command applies to source code (e.g. "next").
   kSource,
 
@@ -91,6 +91,18 @@ enum SourceAffinity {
 
   // This command does not imply any source or disassembly relation.
   kNone
+};
+
+// CommandGroup ----------------------------------------------------------------
+
+// Used to group similar commands in the help.
+enum class CommandGroup {
+  kAssembly,
+  kBreakpoint,
+  kGeneral,
+  kProcess,
+  kQuery,
+  kStep,
 };
 
 // Command ---------------------------------------------------------------------
@@ -204,7 +216,7 @@ using CommandExecutor = Err (*)(ConsoleContext*, const Command& cmd);
 struct NounRecord {
   NounRecord();
   NounRecord(std::initializer_list<std::string> aliases, const char* short_help,
-             const char* help);
+             const char* help, CommandGroup command_group);
   ~NounRecord();
 
   // These are the user-typed strings that will name this noun. The [0]th one
@@ -213,6 +225,8 @@ struct NounRecord {
 
   const char* short_help = nullptr;  // One-line help.
   const char* help = nullptr;
+
+  CommandGroup command_group;
 };
 
 struct VerbRecord {
@@ -221,7 +235,7 @@ struct VerbRecord {
   // The help will be referenced by pointer. It is expected to be a static
   // string.
   VerbRecord(CommandExecutor exec, std::initializer_list<std::string> aliases,
-             const char* short_help, const char* help,
+             const char* short_help, const char* help, CommandGroup group,
              SourceAffinity source_affinity = SourceAffinity::kNone);
   ~VerbRecord();
 
@@ -235,6 +249,7 @@ struct VerbRecord {
   const char* help = nullptr;
   std::vector<SwitchRecord> switches;  // Switches supported by this verb.
 
+  CommandGroup command_group = CommandGroup::kGeneral;
   SourceAffinity source_affinity = SourceAffinity::kNone;
 };
 

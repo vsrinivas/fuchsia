@@ -65,8 +65,9 @@ Err DoListProcesses(ConsoleContext* context, const Command& cmd) {
 }  // namespace
 
 void AppendSystemVerbs(std::map<Verb, VerbRecord>* verbs) {
-  (*verbs)[Verb::kListProcesses] = VerbRecord(
-      &DoListProcesses, {"ps"}, kListProcessesShortHelp, kListProcessesHelp);
+  (*verbs)[Verb::kListProcesses] =
+      VerbRecord(&DoListProcesses, {"ps"}, kListProcessesShortHelp,
+                 kListProcessesHelp, CommandGroup::kGeneral);
 }
 
 }  // namespace zxdb

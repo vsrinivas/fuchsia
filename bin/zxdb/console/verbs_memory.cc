@@ -462,26 +462,28 @@ void AppendMemoryVerbs(std::map<Verb, VerbRecord>* verbs) {
   // Disassemble.
   VerbRecord disass(&DoDisassemble, {"disassemble", "di"},
                     kDisassembleShortHelp, kDisassembleHelp,
-                    SourceAffinity::kAssembly);
+                    CommandGroup::kAssembly, SourceAffinity::kAssembly);
   disass.switches.push_back(num_switch);
   disass.switches.push_back(SwitchRecord(kRawSwitch, false, "raw", 'r'));
   (*verbs)[Verb::kDisassemble] = std::move(disass);
 
   // Mem-analyze
   VerbRecord mem_analyze(&DoMemAnalyze, {"mem-analyze", "ma"},
-                         kMemAnalyzeShortHelp, kMemAnalyzeHelp);
+                         kMemAnalyzeShortHelp, kMemAnalyzeHelp,
+                         CommandGroup::kQuery);
   mem_analyze.switches.push_back(num_switch);
   mem_analyze.switches.push_back(size_switch);
   (*verbs)[Verb::kMemAnalyze] = std::move(mem_analyze);
 
   // Mem-read. Note: "x" is the GDB command to read memory.
   VerbRecord mem_read(&DoMemRead, {"mem-read", "x"}, kMemReadShortHelp,
-                      kMemReadHelp);
+                      kMemReadHelp, CommandGroup::kQuery);
   mem_read.switches.push_back(size_switch);
   (*verbs)[Verb::kMemRead] = std::move(mem_read);
 
   // Stack.
-  VerbRecord stack(&DoStack, {"stack", "st"}, kStackShortHelp, kStackHelp);
+  VerbRecord stack(&DoStack, {"stack", "st"}, kStackShortHelp, kStackHelp,
+                   CommandGroup::kQuery);
   stack.switches.push_back(num_switch);
   stack.switches.push_back(size_switch);
   stack.switches.push_back(SwitchRecord(kOffsetSwitch, true, "offset", 'o'));
