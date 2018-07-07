@@ -107,14 +107,14 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(
 
     auto hdr = reinterpret_cast<fidl_message_header_t*>(buffer);
     switch (hdr->ordinal) {
-    case ProviderStartOrdinal: {
-        zx_status_t status = fidl_decode(&_ProviderStartRequestTable,
+    case fuchsia_tracelink_ProviderStartOrdinal: {
+        zx_status_t status = fidl_decode(&fuchsia_tracelink_ProviderStartRequestTable,
                                          buffer, num_bytes, handles, num_handles,
                                          nullptr);
         if (status != ZX_OK)
             break;
 
-        auto request = reinterpret_cast<ProviderStartRequest*>(buffer);
+        auto request = reinterpret_cast<fuchsia_tracelink_ProviderStartRequest*>(buffer);
         auto buffer = zx::vmo(request->buffer);
         auto fence = zx::eventpair(request->fence);
         fbl::Vector<fbl::String> categories;
@@ -125,8 +125,8 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(
         impl_->Start(fbl::move(buffer), fbl::move(fence), fbl::move(categories));
         return true;
     }
-    case ProviderStopOrdinal: {
-        zx_status_t status = fidl_decode(&_ProviderStopRequestTable,
+    case fuchsia_tracelink_ProviderStopOrdinal: {
+        zx_status_t status = fidl_decode(&fuchsia_tracelink_ProviderStopRequestTable,
                                          buffer, num_bytes, handles, num_handles,
                                          nullptr);
         if (status != ZX_OK)
@@ -173,8 +173,8 @@ trace_provider_t* trace_provider_create(async_dispatcher_t* dispatcher) {
         return nullptr;
 
     // Register the trace provider.
-    RegistryRegisterTraceProviderRequest request = {};
-    request.hdr.ordinal = RegistryRegisterTraceProviderOrdinal;
+    fuchsia_tracelink_RegistryRegisterTraceProviderRequest request = {};
+    request.hdr.ordinal = fuchsia_tracelink_RegistryRegisterTraceProviderOrdinal;
     request.provider = FIDL_HANDLE_PRESENT;
     zx_handle_t handles[] = {provider_client.release()};
     status = registry_client.write(0u, &request, sizeof(request),
