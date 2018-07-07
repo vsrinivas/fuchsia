@@ -327,9 +327,8 @@ TEST_P(DevTokenManagerAppTest, GetAccessTokenFromCache) {
 // credentials then verify that short lived credentials are based on the most
 // recent long lived credentials.
 
-// TODO(jsankey): Add a parameterization for Rust once it can pass.
 INSTANTIATE_TEST_CASE_P(Cpp, DevTokenManagerAppTest,
-                        ::testing::Values("token_manager"));
+                        ::testing::Values("token_manager", "token_manager_rust"));
 }  // namespace
 }  // namespace e2e_dev
 

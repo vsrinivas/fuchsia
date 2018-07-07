@@ -8,6 +8,8 @@ rustc_binary("token_manager_rust") {
   name = "token_manager_rust"
 
   deps = [
+    "//garnet/bin/auth/rust/cache",
+    "//garnet/bin/auth/rust/store",
     "//garnet/public/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/crates/fuchsia-app",

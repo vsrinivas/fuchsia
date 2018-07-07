@@ -29,7 +29,7 @@ package("token_manager_rust") {
   meta = [
     {
       path = rebase_path("rust/meta/token_manager.cmx")
-      dest = "token_manager.cmx"
+      dest = "token_manager_rust.cmx"
     },
   ]
 }

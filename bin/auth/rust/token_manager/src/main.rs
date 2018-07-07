@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+extern crate auth_cache;
+extern crate auth_store;
+#[macro_use]
 extern crate failure;
 extern crate fidl;
 extern crate fidl_fuchsia_auth;
@@ -13,14 +16,19 @@ extern crate futures;
 #[macro_use]
 extern crate log;
 
-mod factory;
-mod manager;
+#[macro_use]
+mod macros;
+mod auth_context_client;
+mod auth_provider_client;
+mod error;
+mod token_manager;
+mod token_manager_factory;
 
 use component::server::ServicesServer;
-use factory::TokenManagerFactory;
 use failure::{Error, ResultExt};
 use fidl::endpoints2::ServiceMarker;
 use fidl_fuchsia_auth::TokenManagerFactoryMarker;
+use token_manager_factory::TokenManagerFactory;
 
 fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["auth"]).expect("Can't init logger");

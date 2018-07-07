@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use async;
-use fidl::Error;
 use fidl::endpoints2::RequestStream;
+use fidl::Error;
 use fidl_fuchsia_auth::{TokenManagerFactoryRequest, TokenManagerFactoryRequestStream};
 use futures::future::{self, FutureResult};
 use futures::prelude::*;
 
-use super::manager::TokenManager;
+use super::token_manager::TokenManager;
 
 /// A factory to create instances of the TokenManager for individual users.
 pub struct TokenManagerFactory;
@@ -22,7 +22,7 @@ impl TokenManagerFactory {
             TokenManagerFactoryRequestStream::from_channel(chan)
                 .for_each(Self::handle_request)
                 .map(|_| ())
-                .recover(|e| warn!("Error running TokenManagerFactory {:?}", e)),
+                .recover(|e| error!("Error running TokenManagerFactory {:?}", e)),
         )
     }
 
