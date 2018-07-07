@@ -21,6 +21,7 @@
 #include <ddk/protocol/sdio.h>
 #include <ddk/protocol/usb.h>
 #include <netinet/if_ether.h>
+#include <wlan/protocol/phy-impl.h>
 
 #include <endian.h>
 #include <pthread.h>
@@ -521,17 +522,54 @@ static const struct net_device_ops brcmf_netdev_ops_pri = {
     .ndo_set_rx_mode = brcmf_netdev_set_multicast_list
 };
 
-static zx_protocol_device_t device_ops = {
+static void brcmf_release_zx_device(void* ctx) {
+    // TODO(cphoenix): Implement release
+    brcmf_err("* * Need to unload and release all driver structs");
+}
+
+static zx_protocol_device_t phy_impl_device_ops = {
     .version = DEVICE_OPS_VERSION,
+    .release = brcmf_release_zx_device,
 };
 
-zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
-    struct brcmf_pub* drvr = ifp->drvr;
-    struct net_device* ndev;
-    zx_status_t result;
+zx_status_t brcmf_phy_query(void* ctx, wlanphy_info_t* phy_info) {
+    struct brcmf_if* ifp = ctx;
+    // See wlan/protocol/info.h
+    wlan_info_t* info = &phy_info->wlan_info;
+    memset(info, 0, sizeof(*info));
+    memcpy(info->mac_addr, ifp->mac_addr, ETH_ALEN);
+    info->mac_role = WLAN_MAC_ROLE_CLIENT;
+    info->supported_phys = 0x1f; //WLAN_PHY_;
+    info->driver_features = WLAN_DRIVER_FEATURE_SCAN_OFFLOAD;
+    info->caps = 0xf; //WLAN_CAP_;
+    info->num_bands = 1;
+    strlcpy(info->bands[0].desc, "2.4 GHz", WLAN_BAND_DESC_MAX_LEN);
+    // TODO(cphoenix): Once this isn't temp/stub code anymore, remove unnecessary "= 0" lines.
+    info->bands[0].ht_caps.ht_capability_info = 0;
+    info->bands[0].ht_caps.ampdu_params = 0;
+    // info->bands[0].ht_caps.supported_mcs_set[ 16 entries ] = 0;
+    info->bands[0].ht_caps.ht_ext_capabilities = 0;
+    info->bands[0].ht_caps.tx_beamforming_capabilities = 0;
+    info->bands[0].ht_caps.asel_capabilities = 0;
+    info->bands[0].vht_supported = false;
+    info->bands[0].vht_caps.vht_capability_info = 0;
+    info->bands[0].vht_caps.supported_vht_mcs_and_nss_set = 0;
+    // info->bands[0].basic_rates[ 12 entries ] = 0;
+    info->bands[0].supported_channels.base_freq = 0;
+    // info->bands[0].supported_channels.channels[ 64 entries ] = 0;
+    return ZX_OK;
+}
 
-    brcmf_dbg(TRACE, "Enter, bsscfgidx=%d mac=%pM\n", ifp->bsscfgidx, ifp->mac_addr);
-    ndev = ifp->ndev;
+zx_status_t brcmf_phy_create_iface(void* ctx, uint16_t role, uint16_t* iface_id) {
+    struct brcmf_if* ifp = ctx;
+    struct net_device* ndev = ifp->ndev;
+    struct brcmf_pub* drvr = ifp->drvr;
+
+    brcmf_dbg(TEMP, "brcmf_phy_create_iface called!");
+    // TODO(cphoenix): Once the wlan-if-generic driver lands, this is where I'll device_add()
+    // my interface to it.
+
+    *iface_id = 42;
 
     /* set appropriate operations */
     ndev->netdev_ops = &brcmf_netdev_ops_pri;
@@ -541,22 +579,42 @@ zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
 
     /* set the mac address & netns */
     memcpy(ndev->dev_addr, ifp->mac_addr, ETH_ALEN);
+    ndev->priv_destructor = brcmf_free_net_device_vif;
+    brcmf_dbg(INFO, "%s: Broadcom Dongle Host Driver\n", ndev->name);
+
     brcmf_dbg(TEMP, " * * Tried to call dev_net_set(ndev, wiphy_net(cfg_to_wiphy(drvr->config)));");
     brcmf_dbg(TEMP, "  to 'set the nd_net of net_device to the specified net namespace'");
     brcmf_dbg(TEMP, "  (Note to self: see Downloads/linuxkernnet.pdf)");
+    return ZX_OK;
+}
+
+zx_status_t brcmf_phy_destroy_iface(void* ctx, uint16_t id) {
+    brcmf_err("Don't know how to destroy iface yet");
+    return ZX_ERR_IO;
+}
+
+static wlanphy_impl_protocol_ops_t phy_impl_proto_ops = {
+    .query = brcmf_phy_query,
+    .create_iface = brcmf_phy_create_iface,
+    .destroy_iface = brcmf_phy_destroy_iface,
+};
+
+zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
+    struct brcmf_pub* drvr = ifp->drvr;
+    zx_status_t result;
+
+    brcmf_dbg(TRACE, "Enter-New, bsscfgidx=%d mac=%pM\n", ifp->bsscfgidx, ifp->mac_addr);
 
     workqueue_init_work(&ifp->multicast_work, _brcmf_set_multicast_list);
     workqueue_init_work(&ifp->ndoffload_work, _brcmf_update_ndtable);
 
-    ndev->priv_destructor = brcmf_free_net_device_vif;
-
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "broadcom-wlan",
-        .ctx = NULL,
-        .ops = &device_ops,
-        .proto_id = ZX_PROTOCOL_WLANPHY,
-        .proto_ops = NULL,
+        .name = "broadcom-wlanphy",
+        .ctx = ifp,
+        .ops = &phy_impl_device_ops,
+        .proto_id = ZX_PROTOCOL_WLANPHY_IMPL,
+        .proto_ops = &phy_impl_proto_ops,
     };
 
     struct brcmf_device* device = ifp->drvr->bus_if->dev;
@@ -565,14 +623,12 @@ zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
         brcmf_err("Failed to device_add");
         goto fail;
     }
+    brcmf_dbg(TEMP, "device_add() succeeded. Added phy hooks.");
 
-    ndev->priv_destructor = brcmf_free_net_device_vif;
-    brcmf_dbg(INFO, "%s: Broadcom Dongle Host Driver\n", ndev->name);
     return ZX_OK;
 
 fail:
     drvr->iflist[ifp->bsscfgidx] = NULL;
-    ndev->netdev_ops = NULL;
     return ZX_ERR_IO_NOT_PRESENT;
 }
 

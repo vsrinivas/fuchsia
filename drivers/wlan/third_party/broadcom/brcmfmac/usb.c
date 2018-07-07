@@ -1295,6 +1295,10 @@ static const struct brcmf_bus_ops brcmf_usb_bus_ops = {
     .get_fwname = brcmf_usb_get_fwname,
 };
 
+// TODO(cphoenix): Remove the code inside TRY_TEMP_SCAN once we have an end-to-end integrated
+// system that can be tested. For now, uncomment the next line to test whether scanning works.
+//#define TRY_TEMP_SCAN
+#ifdef TRY_TEMP_SCAN
 #include "cfg80211.h" // Temp, for call to Scan
 
 static uint8_t* brcmf_fill_ie(uint8_t* ieptr, uint8_t ie_num, void* ie_data, size_t ie_len) {
@@ -1307,6 +1311,7 @@ static uint8_t* brcmf_fill_ie(uint8_t* ieptr, uint8_t ie_num, void* ie_data, siz
     memcpy(ieptr + 2, ie_data, ie_len);
     return ieptr + 2 + ie_len;
 }
+#endif
 
 static zx_status_t brcmf_usb_bus_setup(struct brcmf_usbdev_info* devinfo) {
     zx_status_t ret;
@@ -1327,6 +1332,7 @@ static zx_status_t brcmf_usb_bus_setup(struct brcmf_usbdev_info* devinfo) {
     if (ret != ZX_OK) {
         goto fail;
     }
+#ifdef TRY_TEMP_SCAN
     brcmf_dbg(TEMP, "Starting scan prepare");
     PAUSE;
     struct brcmf_bus* bus_if = dev_to_bus(devinfo->dev);
@@ -1403,6 +1409,7 @@ static zx_status_t brcmf_usb_bus_setup(struct brcmf_usbdev_info* devinfo) {
     brcmf_dbg(TEMP, "Back from connect, about to sleep 10 seconds....");
     msleep(10000);
     brcmf_dbg(TEMP, "Back from sleep, all done!");
+#endif // TRY_TEMP_SCAN
     return ZX_OK;
 fail:
     brcmf_detach(devinfo->dev);

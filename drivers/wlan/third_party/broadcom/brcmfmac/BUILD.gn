@@ -99,6 +99,7 @@ driver_module("brcmfmac_driver") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/async-loop",
+    "//garnet/lib/wlan/protocol"
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
