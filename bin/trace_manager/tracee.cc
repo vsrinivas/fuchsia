@@ -97,28 +97,29 @@ bool Tracee::Start(size_t buffer_size,
     return false;
   }
 
-  zx::eventpair fence, fence_for_provider;
-  status = zx::eventpair::create(0u, &fence, &fence_for_provider);
+  zx::fifo fifo, fifo_for_provider;
+  status = zx::fifo::create(kFifoSizeInPackets,
+                            sizeof(trace_provider_packet_t), 0u,
+                            &fifo, &fifo_for_provider);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << *bundle_
-                   << ": Failed to create trace buffer fence: status="
+                   << ": Failed to create trace buffer fifo: status="
                    << status;
     return false;
   }
 
   bundle_->provider->Start(std::move(buffer_vmo_for_provider),
-                           std::move(fence_for_provider),
+                           std::move(fifo_for_provider),
                            std::move(categories));
 
   buffer_vmo_ = std::move(buffer_vmo);
   buffer_vmo_size_ = buffer_size;
-  fence_ = std::move(fence);
+  fifo_ = std::move(fifo);
   started_callback_ = std::move(started_callback);
   stopped_callback_ = std::move(stopped_callback);
-  wait_.set_object(fence_.get());
-  wait_.set_trigger(TRACE_PROVIDER_SIGNAL_STARTED |
-                    TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW |
-                    ZX_EVENTPAIR_PEER_CLOSED);
+  wait_.set_object(fifo_.get());
+  wait_.set_trigger(ZX_FIFO_READABLE |
+                    ZX_FIFO_PEER_CLOSED);
   dispatcher_ = async_get_default_dispatcher();
   status = wait_.Begin(dispatcher_);
   FXL_CHECK(status == ZX_OK) << "Failed to add handler: status=" << status;
@@ -150,22 +151,60 @@ void Tracee::OnHandleReady(async_dispatcher_t* dispatcher,
 
   zx_signals_t pending = signal->observed;
   FXL_VLOG(2) << *bundle_ << ": pending=0x" << std::hex << pending;
-  FXL_DCHECK(pending &
-             (TRACE_PROVIDER_SIGNAL_STARTED |
-              TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW | ZX_EVENTPAIR_PEER_CLOSED));
+  FXL_DCHECK(pending & (ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED));
   FXL_DCHECK(state_ == State::kStartPending || state_ == State::kStarted ||
              state_ == State::kStopping);
 
-  // Handle this before BUFFER_OVERFLOW so that if they arrive together we'll
-  // have first transitioned to state kStarted before processing
-  // BUFFER_OVERFLOW.
-  if (pending & TRACE_PROVIDER_SIGNAL_STARTED) {
-    // Clear the signal before invoking the callback:
-    // a) It remains set until we do so,
-    // b) Clear it before the call back in case we get back to back
-    //    notifications.
-    zx_object_signal(wait_.object(), TRACE_PROVIDER_SIGNAL_STARTED, 0u);
-    // The provider should only be signalling us when it has finished startup.
+  if (pending & ZX_FIFO_READABLE) {
+    OnFifoReadable(dispatcher, wait);
+    // Keep reading packets, one per call, until the peer goes away.
+    status = wait->Begin(dispatcher);
+    if (status != ZX_OK)
+      OnHandleError(status);
+    return;
+  }
+
+  FXL_DCHECK(pending & ZX_FIFO_PEER_CLOSED);
+  wait_.set_object(ZX_HANDLE_INVALID);
+  dispatcher_ = nullptr;
+  TransitionToState(State::kStopped);
+  fit::closure stopped_callback = std::move(stopped_callback_);
+  FXL_DCHECK(stopped_callback);
+  stopped_callback();
+}
+
+void Tracee::OnFifoReadable(async_dispatcher_t* dispatcher,
+                            async::WaitBase* wait) {
+  trace_provider_packet_t packet;
+  auto status2 = zx_fifo_read(wait_.object(), sizeof(packet), &packet, 1u,
+                              nullptr);
+  FXL_DCHECK(status2 == ZX_OK);
+  if (packet.reserved != 0) {
+    FXL_LOG(ERROR) << *bundle_
+                   << ": Received bad packet, non-zero reserved field: "
+                   << packet.reserved;
+    Stop();
+    return;
+  }
+
+  switch (packet.request) {
+  case TRACE_PROVIDER_STARTED:
+    // The provider should only be signalling us when it has finished
+    // startup.
+    if (packet.data32 != TRACE_PROVIDER_FIFO_PROTOCOL_VERSION) {
+      FXL_LOG(ERROR) << *bundle_
+                     << ": Received bad packet, unexpected version: "
+                     << packet.data32;
+      Stop();
+      break;
+    }
+    if (packet.data64 != 0) {
+      FXL_LOG(ERROR) << *bundle_
+                     << ": Received bad packet, non-zero data64 field: "
+                     << packet.data64;
+      Stop();
+      break;
+    }
     if (state_ == State::kStartPending) {
       TransitionToState(State::kStarted);
       fit::closure started_callback = std::move(started_callback_);
@@ -173,40 +212,29 @@ void Tracee::OnHandleReady(async_dispatcher_t* dispatcher,
       started_callback();
     } else {
       FXL_LOG(WARNING) << *bundle_
-                       << ": Received TRACE_PROVIDER_SIGNAL_STARTED in state "
+                       << ": Received TRACE_PROVIDER_STARTED in state "
                        << state_;
     }
-  }
-
-  if (pending & TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW) {
-    // The signal remains set until we clear it.
-    zx_object_signal(wait_.object(), TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW, 0u);
+    break;
+  case TRACE_PROVIDER_BUFFER_OVERFLOW:
     if (state_ == State::kStarted || state_ == State::kStopping) {
       FXL_LOG(WARNING)
-          << *bundle_
-          << ": Records got dropped, probably due to buffer overflow";
+        << *bundle_
+        << ": Records got dropped, probably due to buffer overflow";
       buffer_overflow_ = true;
     } else {
       FXL_LOG(WARNING)
-          << *bundle_
-          << ": Received TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW in state "
-          << state_;
+        << *bundle_
+        << ": Received TRACE_PROVIDER_BUFFER_OVERFLOW in state "
+        << state_;
     }
+    break;
+  default:
+    FXL_LOG(ERROR) << *bundle_ << ": Received bad packet, unknown request: "
+                   << packet.request;
+    Stop();
+    break;
   }
-
-  if (pending & ZX_EVENTPAIR_PEER_CLOSED) {
-    wait_.set_object(ZX_HANDLE_INVALID);
-    dispatcher_ = nullptr;
-    TransitionToState(State::kStopped);
-    fit::closure stopped_callback = std::move(stopped_callback_);
-    FXL_DCHECK(stopped_callback);
-    stopped_callback();
-    return;
-  }
-
-  status = wait->Begin(dispatcher);
-  if (status != ZX_OK)
-    OnHandleError(status);
 }
 
 void Tracee::OnHandleError(zx_status_t status) {

@@ -7,6 +7,7 @@
 
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
+#include <lib/zx/fifo.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/vmo.h>
 
@@ -64,11 +65,17 @@ class Tracee {
   State state() const { return state_; }
 
  private:
+  // The size of the fifo, in packets.
+  // TODO(dje): The value will need playing with.
+  static constexpr size_t kFifoSizeInPackets = 4u;
+
   void TransitionToState(State new_state);
   void OnHandleReady(async_dispatcher_t* dispatcher,
                      async::WaitBase* wait,
                      zx_status_t status,
                      const zx_packet_signal_t* signal);
+  void OnFifoReadable(async_dispatcher_t* dispatcher,
+                      async::WaitBase* wait);
   void OnHandleError(zx_status_t status);
 
   TransferStatus WriteProviderInfoRecord(const zx::socket& socket) const;
@@ -79,7 +86,7 @@ class Tracee {
   State state_ = State::kReady;
   zx::vmo buffer_vmo_;
   size_t buffer_vmo_size_ = 0u;
-  zx::eventpair fence_;
+  zx::fifo fifo_;
   fit::closure started_callback_;
   fit::closure stopped_callback_;
   async_dispatcher_t* dispatcher_ = nullptr;
