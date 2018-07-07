@@ -38,7 +38,9 @@ class App {
   std::unique_ptr<component::StartupContext> startup_context_;
   trace::TraceObserver trace_observer_;
   TraceConfig trace_config_;
-  trace_context_t* context_ = nullptr;
+  // This context keeps the trace context alive until we've written our trace
+  // records, which doesn't happen until after tracing has stopped.
+  trace_prolonged_context_t* context_ = nullptr;
   std::unique_ptr<cpuperf::Controller> controller_;
 
   trace_ticks_t start_time_ = 0;

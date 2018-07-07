@@ -30,7 +30,9 @@ class App {
   trace::TraceObserver trace_observer_;
   LogImporter log_importer_;
   uint32_t current_group_mask_ = 0u;
-  trace_context_t* context_ = nullptr;
+  // This context keeps the trace context alive until we've written our trace
+  // records, which doesn't happen until after tracing has stopped.
+  trace_prolonged_context_t* context_ = nullptr;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

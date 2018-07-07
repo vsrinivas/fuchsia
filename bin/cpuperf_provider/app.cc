@@ -113,7 +113,7 @@ void App::StartTracing(const TraceConfig& trace_config) {
 
   FXL_VLOG(1) << "Starting trace, config = " << trace_config.ToString();
 
-  context_ = trace_acquire_context();
+  context_ = trace_acquire_prolonged_context();
   if (!context_) {
     // Tracing was disabled in the meantime.
     return;
@@ -129,7 +129,7 @@ void App::StartTracing(const TraceConfig& trace_config) {
   return;
 
 Fail:
-  trace_release_context(context_);
+  trace_release_prolonged_context(context_);
   context_ = nullptr;
 }
 
@@ -145,9 +145,12 @@ void App::StopTracing() {
 
   stop_time_ = zx_ticks_get();
 
+  // Acquire a context for writing to the trace buffer.
+  auto buffer_context = trace_acquire_context();
+
   auto reader = controller_->GetReader();
   if (reader->is_valid()) {
-    Importer importer(context_, &trace_config_, start_time_, stop_time_);
+    Importer importer(buffer_context, &trace_config_, start_time_, stop_time_);
     if (!importer.Import(*reader)) {
       FXL_LOG(ERROR) << "Errors encountered while importing cpuperf data";
     }
@@ -155,7 +158,8 @@ void App::StopTracing() {
     FXL_LOG(ERROR) << "Unable to initialize reader";
   }
 
-  trace_release_context(context_);
+  trace_release_context(buffer_context);
+  trace_release_prolonged_context(context_);
   context_ = nullptr;
   trace_config_.Reset();
   controller_.reset();

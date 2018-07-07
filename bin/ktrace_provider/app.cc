@@ -110,7 +110,7 @@ void App::StartKTrace(uint32_t group_mask) {
     return;
   }
 
-  context_ = trace_acquire_context();
+  context_ = trace_acquire_prolonged_context();
   if (!context_) {
     // Tracing was disabled in the meantime.
     return;
@@ -136,13 +136,17 @@ void App::StopKTrace() {
     IoctlKtraceStop(fd.get());
   }
 
+  // Acquire a context for writing to the trace buffer.
+  auto buffer_context = trace_acquire_context();
+
   Reader reader;
-  Importer importer(context_);
+  Importer importer(buffer_context);
   if (!importer.Import(reader)) {
     FXL_LOG(ERROR) << "Errors encountered while importing ktrace data";
   }
 
-  trace_release_context(context_);
+  trace_release_context(buffer_context);
+  trace_release_prolonged_context(context_);
   context_ = nullptr;
   current_group_mask_ = 0u;
 }
