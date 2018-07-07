@@ -10,6 +10,7 @@ rustc_library("cache") {
   with_unit_tests = true
 
   deps = [
+      "//garnet/public/fidl/fuchsia.auth:fuchsia.auth-rustc",
       "//third_party/rust-crates/rustc_deps:failure",
   ]
 }

@@ -48,10 +48,10 @@ impl serde::ser::Serialize for CredentialValue {
     {
         let mut state =
             serializer.serialize_struct("CredentialValue", 3 /* Number of fields */)?;
-        state.serialize_field("identity_provider", &self.credential_id.identity_provider)?;
+        state.serialize_field("identity_provider", &self.credential_key.identity_provider)?;
         state.serialize_field(
             "id",
-            &base64::encode_config(&self.credential_id.id, CHARSET),
+            &base64::encode_config(&self.credential_key.id, CHARSET),
         )?;
         state.serialize_field(
             "refresh_token",
@@ -155,14 +155,14 @@ impl Serializer for JsonSerializer {
 
 #[cfg(test)]
 mod tests {
-    use super::super::CredentialIdentifier;
+    use super::super::CredentialKey;
     use super::*;
     use std::io::Cursor;
     use std::str;
 
     fn build_test_creds(suffix: &str) -> CredentialValue {
         CredentialValue {
-            credential_id: CredentialIdentifier {
+            credential_key: CredentialKey {
                 identity_provider: "test".to_string(),
                 id: "id".to_string() + suffix,
             },

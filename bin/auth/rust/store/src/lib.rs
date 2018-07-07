@@ -42,9 +42,9 @@ pub enum AuthDbError {
     CredentialNotFound,
 }
 
-/// Unique identifier for a user credential.
+/// Unique identifier for a user credential as stored in the auth db.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub struct CredentialIdentifier {
+pub struct CredentialKey {
     /// A string identifier for an configured identity provider, such as
     /// 'Google'.
     identity_provider: String,
@@ -53,19 +53,16 @@ pub struct CredentialIdentifier {
     id: String,
 }
 
-impl CredentialIdentifier {
-    /// Create a new CredentialIdentifier, or returns an Error if any input is
+impl CredentialKey {
+    /// Create a new CredentialKey, or returns an Error if any input is
     /// empty.
-    pub fn new(
-        identity_provider: String,
-        id: String,
-    ) -> result::Result<CredentialIdentifier, Error> {
+    pub fn new(identity_provider: String, id: String) -> result::Result<CredentialKey, Error> {
         if identity_provider.is_empty() {
             Err(format_err!("identity_provider cannot be empty"))
         } else if id.is_empty() {
             Err(format_err!("id cannot be empty"))
         } else {
-            Ok(CredentialIdentifier {
+            Ok(CredentialKey {
                 identity_provider,
                 id,
             })
@@ -76,8 +73,8 @@ impl CredentialIdentifier {
 /// The set of data to be stored for a user credential.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct CredentialValue {
-    /// A unique identifier for the account.
-    credential_id: CredentialIdentifier,
+    /// A unique identifier for credential including the IdP and account.
+    credential_key: CredentialKey,
     /// An OAuth refresh token.
     refresh_token: String,
 }
@@ -93,7 +90,7 @@ impl CredentialValue {
             Err(format_err!("refresh_token cannot be empty"))
         } else {
             Ok(CredentialValue {
-                credential_id: CredentialIdentifier::new(identity_provider, id)?,
+                credential_key: CredentialKey::new(identity_provider, id)?,
                 refresh_token,
             })
         }
@@ -109,14 +106,14 @@ pub trait AuthDb {
     fn add_credential(&mut self, credential: CredentialValue) -> Result<()>;
 
     /// Deletes the specified existing user credential from the database.
-    fn delete_credential(&mut self, credential_id: &CredentialIdentifier) -> Result<()>;
+    fn delete_credential(&mut self, credential_key: &CredentialKey) -> Result<()>;
 
     /// Returns all the credentials provisioned in this instance of the
     /// database.
     fn get_all_credentials<'a>(&'a self) -> Result<Vec<&'a CredentialValue>>;
 
     /// Returns the refresh token for a specified user credential.
-    fn get_refresh_token<'a>(&'a self, credential_id: &CredentialIdentifier) -> Result<&'a str>;
+    fn get_refresh_token<'a>(&'a self, credential_key: &CredentialKey) -> Result<&'a str>;
 }
 
 #[cfg(test)]
@@ -134,8 +131,8 @@ mod tests {
             TEST_ID.to_string(),
             TEST_REFRESH_TOKEN.to_string(),
         ).unwrap();
-        assert_eq!(cred.credential_id.identity_provider, TEST_IDP);
-        assert_eq!(cred.credential_id.id, TEST_ID);
+        assert_eq!(cred.credential_key.identity_provider, TEST_IDP);
+        assert_eq!(cred.credential_key.id, TEST_ID);
         assert_eq!(cred.refresh_token, TEST_REFRESH_TOKEN);
     }
 

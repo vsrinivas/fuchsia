@@ -5,7 +5,7 @@
 extern crate tempdir;
 
 use super::serializer::{JsonSerializer, Serializer};
-use super::{AuthDb, AuthDbError, CredentialIdentifier, CredentialValue};
+use super::{AuthDb, AuthDbError, CredentialKey, CredentialValue};
 
 use std::collections::BTreeMap;
 use std::fs::{self, File};
@@ -20,7 +20,7 @@ pub struct AuthDbFile<S: Serializer> {
     file_path: PathBuf,
     /// The database contents, stored as a BTreeMap to retain a consistent
     /// order.
-    credentials: BTreeMap<CredentialIdentifier, CredentialValue>,
+    credentials: BTreeMap<CredentialKey, CredentialValue>,
     /// An object implementing the Serializer trait that we use to convert
     /// between CredentialValues and byte strings.
     serializer: S,
@@ -44,7 +44,7 @@ impl<S: Serializer> AuthDbFile<S> {
             let credentials_vec = serializer.deserialize(credentials_file)?;
             credentials_vec
                 .into_iter()
-                .map(|cred| (cred.credential_id.clone(), cred))
+                .map(|cred| (cred.credential_key.clone(), cred))
                 .collect()
         } else {
             // ...if not, create its directory and start with an empty map.
@@ -107,12 +107,12 @@ impl<S: Serializer> AuthDbFile<S> {
 impl<S: Serializer> AuthDb for AuthDbFile<S> {
     fn add_credential(&mut self, credential: CredentialValue) -> Result<()> {
         self.credentials
-            .insert(credential.credential_id.clone(), credential);
+            .insert(credential.credential_key.clone(), credential);
         self.save()
     }
 
-    fn delete_credential(&mut self, credential_id: &CredentialIdentifier) -> Result<()> {
-        if self.credentials.remove(credential_id).is_none() {
+    fn delete_credential(&mut self, credential_key: &CredentialKey) -> Result<()> {
+        if self.credentials.remove(credential_key).is_none() {
             Err(AuthDbError::CredentialNotFound)
         } else {
             self.save()
@@ -123,8 +123,8 @@ impl<S: Serializer> AuthDb for AuthDbFile<S> {
         Ok(self.credentials.values().collect())
     }
 
-    fn get_refresh_token<'a>(&'a self, credential_id: &CredentialIdentifier) -> Result<&'a str> {
-        match self.credentials.get(credential_id) {
+    fn get_refresh_token<'a>(&'a self, credential_key: &CredentialKey) -> Result<&'a str> {
+        match self.credentials.get(credential_key) {
             None => Err(AuthDbError::CredentialNotFound),
             Some(value) => Ok(&value.refresh_token),
         }
@@ -168,11 +168,11 @@ mod test {
             let mut db = AuthDbFile::new(&temp_location.path).unwrap();
             db.add_credential(cred_1.clone()).unwrap();
             assert_eq!(
-                db.get_refresh_token(&cred_1.credential_id).unwrap(),
+                db.get_refresh_token(&cred_1.credential_key).unwrap(),
                 &cred_1.refresh_token
             );
             assert_match!(
-                db.get_refresh_token(&cred_2.credential_id),
+                db.get_refresh_token(&cred_2.credential_key),
                 Err(AuthDbError::CredentialNotFound)
             );
         }
@@ -181,12 +181,12 @@ mod test {
             // Load a second database from the same file and verify contents are retained.
             let mut db = AuthDbFile::new(&temp_location.path).unwrap();
             assert_eq!(
-                db.get_refresh_token(&cred_1.credential_id).unwrap(),
+                db.get_refresh_token(&cred_1.credential_key).unwrap(),
                 &cred_1.refresh_token
             );
             db.add_credential(cred_2.clone()).unwrap();
             assert_eq!(
-                db.get_refresh_token(&cred_2.credential_id).unwrap(),
+                db.get_refresh_token(&cred_2.credential_key).unwrap(),
                 &cred_2.refresh_token
             );
             assert_eq!(db.get_all_credentials().unwrap(), vec![&cred_1, &cred_2]);
@@ -203,9 +203,9 @@ mod test {
             let mut db = AuthDbFile::new(&temp_location.path).unwrap();
             db.add_credential(cred_1.clone()).unwrap();
             // Check the credential can be deleted only once.
-            assert!(db.delete_credential(&cred_1.credential_id).is_ok());
+            assert!(db.delete_credential(&cred_1.credential_key).is_ok());
             assert_match!(
-                db.delete_credential(&cred_1.credential_id),
+                db.delete_credential(&cred_1.credential_key),
                 Err(AuthDbError::CredentialNotFound)
             );
         }
