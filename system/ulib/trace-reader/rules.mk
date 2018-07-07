@@ -13,6 +13,7 @@ MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS = \
     $(LOCAL_DIR)/reader.cpp \
+    $(LOCAL_DIR)/reader_internal.cpp \
     $(LOCAL_DIR)/records.cpp
 
 MODULE_STATIC_LIBS := \

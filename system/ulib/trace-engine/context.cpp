@@ -4,6 +4,10 @@
 
 #include "context_impl.h"
 
+#include <assert.h>
+#include <inttypes.h>
+#include <string.h>
+
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 
@@ -14,6 +18,7 @@
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <trace-engine/fields.h>
+#include <trace-engine/handler.h>
 
 namespace trace {
 namespace {
@@ -897,6 +902,7 @@ void trace_context_write_flow_end_event_record(
     }
 }
 
+// TODO(dje): Move data to header?
 void trace_context_write_initialization_record(
     trace_context_t* context,
     zx_ticks_t ticks_per_second) {
@@ -955,17 +961,28 @@ void* trace_context_alloc_record(trace_context_t* context, size_t num_bytes) {
     return context->AllocRecord(num_bytes);
 }
 
+void trace_context_snapshot_buffer_header(
+    trace_context_t* context,
+    ::trace::internal::trace_buffer_header* header) {
+    context->UpdateBufferHeaderAfterStopped();
+    memcpy(header, context->buffer_header(), sizeof(*header));
+}
+
 /* struct trace_context */
 
 trace_context::trace_context(void* buffer, size_t buffer_num_bytes,
+                             trace_buffering_mode_t buffering_mode,
                              trace_handler_t* handler)
     : generation_(trace::g_next_generation.fetch_add(1u, fbl::memory_order_relaxed) + 1u),
-      buffer_start_(static_cast<uint8_t*>(buffer)),
+      buffering_mode_(buffering_mode),
+      buffer_start_(reinterpret_cast<uint8_t*>(buffer)),
       buffer_end_(buffer_start_ + buffer_num_bytes),
-      buffer_current_(reinterpret_cast<uintptr_t>(buffer_start_)),
-      buffer_full_mark_(0u),
+      header_(reinterpret_cast<trace_buffer_header*>(buffer)),
       handler_(handler) {
+    ZX_DEBUG_ASSERT(buffer_num_bytes >= kMinPhysicalBufferSize);
+    ZX_DEBUG_ASSERT(buffer_num_bytes <= kMaxPhysicalBufferSize);
     ZX_DEBUG_ASSERT(generation_ != 0u);
+    ComputeBufferSizes();
 }
 
 trace_context::~trace_context() = default;
@@ -974,31 +991,26 @@ uint64_t* trace_context::AllocRecord(size_t num_bytes) {
     ZX_DEBUG_ASSERT((num_bytes & 7) == 0);
     if (unlikely(num_bytes > TRACE_ENCODED_RECORD_MAX_LENGTH))
         return nullptr;
+    static_assert(TRACE_ENCODED_RECORD_MAX_LENGTH < kMaxNondurableBufferSize, "");
 
-    uint8_t* ptr = reinterpret_cast<uint8_t*>(
-        buffer_current_.fetch_add(num_bytes,
-                                  fbl::memory_order_relaxed));
-    if (likely(ptr + num_bytes <= buffer_end_)) {
-        ZX_DEBUG_ASSERT(ptr + num_bytes >= buffer_start_);
+    // TODO(dje): This can be optimized a bit. Later.
+    uint64_t offset_plus_counter =
+        nondurable_buffer_current_.fetch_add(num_bytes,
+                                             fbl::memory_order_relaxed);
+    uint32_t wrapped_count = GetWrappedCount(offset_plus_counter);
+    int buffer_number = GetBufferNumber(wrapped_count);
+    uint64_t buffer_offset  = GetBufferOffset(offset_plus_counter);
+    // Note: There's no worry of an overflow in the calcs here.
+    if (likely(buffer_offset + num_bytes <= nondurable_buffer_size_)) {
+        uint8_t* ptr = nondurable_buffer_start_[buffer_number] + buffer_offset;
         return reinterpret_cast<uint64_t*>(ptr); // success!
     }
 
     // Buffer is full!
-    // Snap to the endpoint to reduce likelihood of pointer wrap-around.
-    buffer_current_.store(reinterpret_cast<uintptr_t>(buffer_end_),
-                          fbl::memory_order_relaxed);
 
-    // Mark the end point if not already marked.
-    uintptr_t expected_mark = 0u;
-    if (buffer_full_mark_.compare_exchange_strong(&expected_mark,
-                                                  reinterpret_cast<uintptr_t>(ptr),
-                                                  fbl::memory_order_relaxed,
-                                                  fbl::memory_order_relaxed)) {
-        // Notify the trace manager so it can notify the user that a record
-        // (likely) got dropped.
-        handler_->ops->notify_buffer_full(handler_);
-    }
-
+    ZX_DEBUG_ASSERT(wrapped_count == 0);
+    ZX_DEBUG_ASSERT(buffer_number == 0);
+    MarkOneshotBufferFull(buffer_offset);
     return nullptr;
 }
 
@@ -1024,4 +1036,95 @@ bool trace_context::AllocStringIndex(trace_string_index_t* out_index) {
     }
     *out_index = index;
     return true;
+}
+
+void trace_context::ComputeBufferSizes() {
+    size_t full_buffer_size = buffer_end_ - buffer_start_;
+    ZX_DEBUG_ASSERT(full_buffer_size >= kMinPhysicalBufferSize);
+    ZX_DEBUG_ASSERT(full_buffer_size <= kMaxPhysicalBufferSize);
+    size_t header_size = sizeof(trace_buffer_header);
+    switch (buffering_mode_) {
+    case TRACE_BUFFERING_MODE_ONESHOT:
+        // Create one big buffer, where durable and non-durable records share
+        // the same buffer. There is no separate buffer for durable records.
+        durable_buffer_start_ = nullptr;
+        durable_buffer_size_ = 0;
+        nondurable_buffer_start_[0] = buffer_start_ + header_size;
+        nondurable_buffer_size_ = full_buffer_size - header_size;
+        // The second non-durable record buffer is not used.
+        nondurable_buffer_start_[1] = nullptr;
+        break;
+    default:
+        __UNREACHABLE;
+    }
+
+    durable_buffer_current_.store(0);
+    durable_buffer_full_mark_.store(0);
+    nondurable_buffer_current_.store(0);
+    nondurable_buffer_full_mark_[0].store(0);
+    nondurable_buffer_full_mark_[1].store(0);
+}
+
+void trace_context::InitBufferHeader() {
+    memset(header_, 0, sizeof(*header_));
+
+    header_->magic = TRACE_BUFFER_HEADER_MAGIC;
+    header_->version = TRACE_BUFFER_HEADER_V0;
+    header_->buffering_mode = static_cast<uint8_t>(buffering_mode_);
+    header_->total_size = buffer_end_ - buffer_start_;
+    header_->durable_buffer_size = durable_buffer_size_;
+    header_->nondurable_buffer_size = nondurable_buffer_size_;
+}
+
+void trace_context::UpdateBufferHeaderAfterStopped() {
+    // If the buffer filled, then the current pointer is "snapped" to the end.
+    // Therefore in that case we need to use the buffer_full_mark.
+    uint64_t durable_last_offset = durable_buffer_current_.load(fbl::memory_order_relaxed);
+    uint64_t durable_buffer_full_mark = durable_buffer_full_mark_.load(fbl::memory_order_relaxed);
+    if (durable_buffer_full_mark != 0)
+        durable_last_offset = durable_buffer_full_mark;
+    header_->durable_data_end = durable_last_offset;
+
+    uint64_t offset_plus_counter =
+        nondurable_buffer_current_.load(fbl::memory_order_relaxed);
+    uint64_t last_offset = GetBufferOffset(offset_plus_counter);
+    uint32_t wrapped_count = GetWrappedCount(offset_plus_counter);
+    header_->wrapped_count = wrapped_count;
+    int buffer_number = GetBufferNumber(wrapped_count);
+    uint64_t buffer_full_mark = nondurable_buffer_full_mark_[buffer_number].load(fbl::memory_order_relaxed);
+    if (buffer_full_mark != 0)
+        last_offset = buffer_full_mark;
+    header_->nondurable_data_end[buffer_number] = last_offset;
+
+    header_->num_records_dropped = num_records_dropped();
+}
+
+size_t trace_context::bytes_allocated() const {
+    switch (buffering_mode_) {
+    case TRACE_BUFFERING_MODE_ONESHOT: {
+        // There is a window during the processing of buffer-full where
+        // |nondurable_buffer_current_| may point beyond the end of the buffer.
+        // This is ok, we don't promise anything better.
+        uint64_t full_bytes = nondurable_buffer_full_mark_[0].load(fbl::memory_order_relaxed);
+        if (full_bytes != 0)
+            return full_bytes;
+        return nondurable_buffer_current_.load(fbl::memory_order_relaxed);
+    }
+    default:
+        __UNREACHABLE;
+    }
+}
+
+void trace_context::MarkOneshotBufferFull(uint64_t last_offset) {
+    SnapToEnd(0);
+
+    // Mark the end point if not already marked.
+    uintptr_t expected_mark = 0u;
+    if (nondurable_buffer_full_mark_[0].compare_exchange_strong(
+            &expected_mark, last_offset,
+            fbl::memory_order_relaxed, fbl::memory_order_relaxed)) {
+        header_->nondurable_data_end[0] = last_offset;
+    }
+
+    MarkRecordDropped();
 }

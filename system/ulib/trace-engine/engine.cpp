@@ -177,6 +177,13 @@ zx_status_t trace_start_engine(async_dispatcher_t* dispatcher,
         return ZX_ERR_INVALID_ARGS;
     }
 
+    if (buffer_num_bytes < trace_context::min_buffer_size()) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (buffer_num_bytes > trace_context::max_buffer_size()) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
     fbl::AutoLock lock(&g_engine_mutex);
 
     // We must have fully stopped a prior tracing session before starting a new one.
@@ -205,8 +212,10 @@ zx_status_t trace_start_engine(async_dispatcher_t* dispatcher,
     g_dispatcher = dispatcher;
     g_handler = handler;
     g_disposition = ZX_OK;
-    g_context = new trace_context(buffer, buffer_num_bytes, handler);
+    g_context = new trace_context(buffer, buffer_num_bytes, buffering_mode, handler);
     g_event = fbl::move(event);
+
+    g_context->InitBufferHeader();
 
     // Write the trace initialization record first before allowing clients to
     // get in and write their own trace records.
@@ -286,8 +295,11 @@ void handle_context_released(async_dispatcher_t* dispatcher) {
         ZX_DEBUG_ASSERT(g_context_refs.load(fbl::memory_order_relaxed) == 0u);
         ZX_DEBUG_ASSERT(g_context != nullptr);
 
+        // Update final buffer state.
+        g_context->UpdateBufferHeaderAfterStopped();
+
         // Get final disposition.
-        if (g_context->is_buffer_full())
+        if (g_context->record_dropped())
             update_disposition_locked(ZX_ERR_NO_MEMORY);
         disposition = g_disposition;
         handler = g_handler;

@@ -19,6 +19,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/event.h>
 #include <trace-reader/reader.h>
+#include <trace-reader/reader_internal.h>
 #include <trace/handler.h>
 #include <unittest/unittest.h>
 
@@ -90,15 +91,16 @@ public:
             [out_errors](fbl::String error) {
                 out_errors->push_back(fbl::move(error));
             });
-        trace::Chunk chunk(reinterpret_cast<uint64_t*>(buffer_.get()),
-                           buffer_bytes_written_ / 8u);
-        if (buffer_bytes_written_ & 7u) {
-            out_errors->push_back(fbl::String("Buffer contains extraneous bytes"));
-        }
-        if (!reader.ReadRecords(chunk)) {
-            out_errors->push_back(fbl::String("Trace data is corrupted"));
-        }
-        return out_errors->is_empty();
+        trace::internal::TraceBufferReader buffer_reader(
+            [&reader](trace::Chunk chunk) {
+                if (!reader.ReadRecords(chunk)) {
+                    // Nothing to do, error already recorded.
+                }
+            },
+            [out_errors](fbl::String error) {
+                out_errors->push_back(fbl::move(error));
+            });
+        return buffer_reader.ReadChunks(buffer_.get(), buffer_.size());
     }
 
 private:

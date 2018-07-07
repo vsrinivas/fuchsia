@@ -6,6 +6,7 @@
 
 #include <trace-reader/records.h>
 
+#include <fbl/algorithm.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/macros.h>
@@ -14,11 +15,22 @@
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 
+#include <zircon/assert.h>
+
 namespace trace {
 
 class Chunk;
 
 // Reads trace records.
+// The input is a collection of |Chunk| objects (see class Chunk below).
+//
+// One use-case is reading records across an entire trace, which means across
+// multiple providers, and makes no assumptions about the ordering of records
+// it receives other than requiring objects referenced by ID (threads, strings)
+// are defined before they are used. Note that as a consequence of this, one
+// |TraceReader| class will maintain state of reading the entire trace: it
+// generally doesn't work to create multiple |TraceReader| classes for one
+// trace.
 class TraceReader {
 public:
     // Called once for each record read by |ReadRecords|.
@@ -53,6 +65,8 @@ public:
     // Gets the name of the specified provider, or an empty string if there is
     // no such provider.
     fbl::String GetProviderName(ProviderId id) const;
+
+    const ErrorHandler& error_handler() const { return error_handler_; }
 
 private:
     bool ReadMetadataRecord(Chunk& record,
@@ -143,12 +157,17 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(TraceReader);
 };
 
-// Provides support for reading sequences of 64-bit words from a buffer.
+// Provides support for reading sequences of 64-bit words from a contiguous
+// region of memory. The main use-case of this class is input to |TraceReader|.
 class Chunk final {
 public:
     Chunk();
     explicit Chunk(const uint64_t* begin, size_t num_words);
 
+    uint64_t current_byte_offset() const {
+        return (reinterpret_cast<const uint8_t*>(current_) -
+                reinterpret_cast<const uint8_t*>(begin_));
+    }
     uint64_t remaining_words() const { return end_ - current_; }
 
     // Reads from the chunk, maintaining proper alignment.
@@ -162,6 +181,7 @@ public:
     bool ReadInPlace(size_t num_words, const void** out_ptr);
 
 private:
+    const uint64_t* begin_;
     const uint64_t* current_;
     const uint64_t* end_;
 };
