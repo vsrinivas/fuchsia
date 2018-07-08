@@ -229,7 +229,8 @@ typedef struct {
     zbi_header_t hdr_file;
     zbi_header_t hdr_kernel;
     zbi_kernel_t data_kernel;
-    uint8_t reserved[/*data_kernel.reserve_memory_size*/];
+    uint8_t contents[/*hdr_kernel.length - sizeof(zbi_kernel_t)*/];
+    // data_kernel.reserve_memory_size bytes in memory are free after contents.
 } zircon_kernel_t;
 #endif
 

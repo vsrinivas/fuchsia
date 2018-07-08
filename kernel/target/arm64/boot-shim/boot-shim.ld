@@ -31,19 +31,19 @@ SECTIONS
     }
 
     /*
-     * Pad the shim image out the alignment the kernel requires.
-     * Its BOOTDATA_CONTAINER bootdata_t appears right after.
+     * Pad the shim image out to the alignment the kernel requires.
+     * A complete arm64 ZBI can be appended directly to the shim.
      */
-    PROVIDE_HIDDEN(kernel_bootdata = ALIGN(KERNEL_ALIGN));
+    PROVIDE_HIDDEN(embedded_zbi = ALIGN(KERNEL_ALIGN));
 
     /*
      * We need some nonzero contents to prevent the linker from treating
      * this as part of bss, i.e. not actually in the image.  The magic
      * number is 'BOOTSHIM' in little-endian, but nothing should care.
      */
-    .pad kernel_bootdata - 8 : {
+    .pad embedded_zbi - 8 : {
 	QUAD(0x4d494853544f4f42);
-        ASSERT(ABSOLUTE(.) == ABSOLUTE(kernel_bootdata), "shim size check");
+        ASSERT(ABSOLUTE(.) == ABSOLUTE(embedded_zbi), "shim size check");
     }
 }
 

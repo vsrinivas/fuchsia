@@ -14,7 +14,11 @@ BOOT_SHIM_SRCS := \
     $(BOOT_SHIM_DIR)/debug.c \
     $(BOOT_SHIM_DIR)/devicetree.c \
     $(BOOT_SHIM_DIR)/util.c \
+    kernel/lib/libc/string/memcpy.c \
+    kernel/lib/libc/string/memmove.c \
     kernel/lib/libc/string/memset.c \
+    kernel/lib/libc/string/strcmp.c \
+    kernel/lib/libc/string/strncmp.c \
     system/ulib/libzbi/zbi.c \
 
 BOOT_SHIM_OBJS := $(BOOT_SHIM_SRCS:%=$(BOOT_SHIM_BUILDDIR)/%.o)
