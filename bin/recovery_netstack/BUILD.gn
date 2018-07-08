@@ -23,4 +23,11 @@ package("recovery_netstack") {
   ]
 
   binary = "rust_crates/recovery_netstack"
+
+  meta = [
+    {
+      path = rebase_path("meta/recovery_netstack.cmx")
+      dest = "recovery_netstack.cmx"
+    },
+  ]
 }
