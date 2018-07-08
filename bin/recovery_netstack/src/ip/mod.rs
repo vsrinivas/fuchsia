@@ -12,7 +12,7 @@ mod types;
 
 pub use self::types::*;
 
-use std::fmt::Debug;
+use std::fmt::{self, Debug, Formatter};
 use std::mem;
 use std::ops::Range;
 
@@ -65,6 +65,11 @@ pub fn receive_ip_packet<I: Ip>(
         };
     trace!("receive_ip_packet: parsed packet: {:?}", packet);
 
+    println!(
+        "received IP packet from={:?} to={:?}",
+        packet.src_ip(),
+        packet.dst_ip()
+    );
     if I::LOOPBACK_SUBNET.contains(packet.dst_ip()) {
         // A packet from outside this host was sent with the destination IP of
         // the loopback address, which is illegal. Loopback traffic is handled
@@ -285,7 +290,7 @@ fn max_header_len<I: Ip>() -> usize {
     specialize_ip!(
         fn max_header_len() -> usize {
             Ipv4 => { ::wire::ipv4::MAX_HEADER_LEN }
-            Ipv6 => { log_unimplemented!(0, "ip::max_header_len: Ipv6 not implemented") }
+            Ipv6 => { log_unimplemented!(60, "ip::max_header_len: Ipv6 not implemented") }
         }
     );
     I::max_header_len()
@@ -296,7 +301,7 @@ fn min_header_len<I: Ip>() -> usize {
     specialize_ip!(
         fn min_header_len() -> usize {
             Ipv4 => { ::wire::ipv4::MIN_HEADER_LEN }
-            Ipv6 => { log_unimplemented!(0, "ip::min_header_len: Ipv6 not implemented") }
+            Ipv6 => { ::wire::ipv6::MIN_HEADER_LEN }
         }
     );
     I::min_header_len()

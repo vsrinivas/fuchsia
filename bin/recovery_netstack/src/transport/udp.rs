@@ -17,6 +17,7 @@ pub struct UdpState;
 pub fn receive_ip_packet<A: IpAddr, B: AsMut<[u8]>>(
     state: &mut StackState, src_ip: A, dst_ip: A, mut buffer: BufferAndRange<B>,
 ) {
+    println!("received udp packet: {:x?}", buffer.as_mut());
     let (packet, body_range) =
         if let Ok((packet, body_range)) = UdpPacket::parse(buffer.as_mut(), src_ip, dst_ip) {
             (packet, body_range)

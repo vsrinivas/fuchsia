@@ -21,9 +21,13 @@
 #![deny(unreachable_patterns)]
 
 extern crate byteorder;
+extern crate ethernet as eth;
 #[macro_use]
 extern crate failure;
+extern crate fuchsia_async as fasync;
 extern crate fuchsia_syslog;
+extern crate fuchsia_zircon as zx;
+extern crate futures;
 #[macro_use]
 extern crate log;
 #[cfg(test)]
@@ -45,8 +49,15 @@ pub mod wire;
 
 use device::DeviceLayerState;
 use eventloop::EventLoop;
+use failure::{Error, ResultExt};
+use futures::prelude::*;
 use ip::IpLayerState;
 use transport::TransportLayerState;
+
+use std::env;
+use std::fs::File;
+
+const DEFAULT_ETH: &str = "/dev/class/ethernet/000";
 
 fn main() -> Result<(), failure::Error> {
     fuchsia_syslog::init()?;
@@ -54,7 +65,41 @@ fn main() -> Result<(), failure::Error> {
     fuchsia_syslog::set_severity(-1);
 
     let event_loop = EventLoop {};
-    Ok(())
+    let mut state = StackState::default();
+
+    let vmo = zx::Vmo::create_with_opts(
+        zx::VmoOptions::NON_RESIZABLE,
+        256 * eth::DEFAULT_BUFFER_SIZE as u64,
+    )?;
+
+    let mut executor = fasync::Executor::new().context("could not create executor")?;
+
+    let path = env::args()
+        .nth(1)
+        .unwrap_or_else(|| String::from(DEFAULT_ETH));
+    let dev = File::open(path)?;
+    let client = eth::Client::new(dev, vmo, eth::DEFAULT_BUFFER_SIZE, "recovery-ns")?;
+
+    client.start()?;
+    let eth_id = state
+        .device
+        .add_ethernet_device(device::ethernet::EthernetDeviceState::default());
+
+    let mut buf = [0; 2048];
+    let stream = client.get_stream().for_each(|evt| {
+        match evt {
+            eth::Event::Receive(rx) => {
+                let len = rx.read(&mut buf);
+                device::receive_frame(&mut state, eth_id, &mut buf[..len]);
+            }
+            _ => (),
+        }
+        futures::future::ok(())
+    });
+    executor
+        .run_singlethreaded(stream)
+        .map(|_| ())
+        .map_err(Into::into)
 }
 
 /// The state associated with the network stack.
