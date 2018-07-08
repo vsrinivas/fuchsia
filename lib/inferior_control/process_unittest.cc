@@ -14,13 +14,15 @@ namespace debugserver {
 namespace {
 
 // TODO(dje): Obtain path more cleanly.
-const char helper_program[] = "/system/test/helper/inferior_control_test_helper";
+const char helper_program[] =
+    "/pkgfs/packages/inferior_control_tests/0/bin/"
+    "inferior_control_test_helper";
 
 using ProcessTest = TestServer;
 
 TEST_F(ProcessTest, Launch) {
   std::vector<std::string> argv{
-    helper_program,
+      helper_program,
   };
   ASSERT_TRUE(SetupInferior(argv));
 
@@ -71,8 +73,8 @@ class AttachTest : public TestServer {
 
 TEST_F(AttachTest, Attach) {
   std::vector<std::string> argv{
-    helper_program,
-    "test-attach",
+      helper_program,
+      "test-attach",
   };
   ASSERT_TRUE(SetupInferior(argv));
 

@@ -60,7 +60,7 @@ static_library("inferior_control") {
   public_deps = [
     "//garnet/lib/process",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/fit"
+    "//zircon/public/lib/fit",
   ]
 
   include_dirs = [ ".." ]
@@ -74,7 +74,7 @@ executable("tests") {
     "io_loop_unittest.cc",
     "process_unittest.cc",
     "test_server.cc",
-    "test_server.h"
+    "test_server.h",
   ]
 
   deps = [
@@ -99,20 +99,21 @@ executable("test_helper") {
 
 package("inferior_control_tests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
-    ":tests",
     ":test_helper",
+    ":tests",
+  ]
+
+  binaries = [
+    {
+      name = "inferior_control_test_helper"
+    },
   ]
 
   tests = [
     {
       name = "inferior_control_tests"
-    },
-    {
-      name = "inferior_control_test_helper"
-      dest = "helper/inferior_control_test_helper"
     },
   ]
 }
