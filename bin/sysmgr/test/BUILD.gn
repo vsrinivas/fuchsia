@@ -30,7 +30,6 @@ executable("config_test") {
 
 package("sysmgr_tests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":config_test",
