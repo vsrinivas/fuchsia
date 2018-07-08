@@ -32,7 +32,8 @@ namespace {
 // file is governed by a BSD-style license that can be found in the LICENSE
 // file."
 constexpr char kInputFilePath[] =
-    "/system/data/media_test_data/test_audio.adts";
+    "/pkgfs/packages/media_examples_tests/0/data/media_test_data/"
+    "test_audio.adts";
 
 // Both of these outputs sound "correct".  When compared with "cmp -l" (octal
 // byte values), most bytes are the same, and those that differ are different by

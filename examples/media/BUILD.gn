@@ -6,8 +6,8 @@ import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 
 package("media") {
-  deprecated_system_image = true
   package_name = "media_examples"
+  deprecated_system_image = true
 
   deps = [
     "audio_player",
@@ -55,9 +55,6 @@ package("media") {
 
 package("tests") {
   testonly = true
-
-  # TODO(dustingreen) - do we need this to make a test package work?:
-  deprecated_system_image = true
 
   package_name = "media_examples_tests"
 
