@@ -58,7 +58,6 @@ TEST(MagmaUtil, InflightList)
     EXPECT_TRUE(list.is_inflight(buffer_id));
 
     EXPECT_FALSE(list.WaitForCompletion(100));
-    connection.channel[0].write(0, &buffer_id, sizeof(buffer_id), nullptr, 0);
     connection.channel[1].write(0, &buffer_id, sizeof(buffer_id), nullptr, 0);
     EXPECT_TRUE(list.WaitForCompletion(100));
 
