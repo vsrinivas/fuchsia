@@ -102,7 +102,6 @@ executable("trace_tests_bin") {
 
 package("trace_tests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":trace_tests_bin",
