@@ -58,7 +58,7 @@ package("magma-intel-gen") {
 
 package("nonhardware-tests") {
   testonly = true
-  deprecated_system_image = true
+  package_name = "magma_intel_gen_nonhardware_tests"
 
   if (build_intel_gen) {
     deps = [
