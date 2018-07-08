@@ -74,9 +74,12 @@ CommandBuffer::~CommandBuffer()
     }
 
     std::shared_ptr<MsdIntelConnection> connection = locked_context_->connection().lock();
-    uint64_t batch_buffer_id = GetBatchBufferId();
-    if (connection && batch_buffer_id) {
-        connection->SendNotification(batch_buffer_id);
+    if (connection) {
+        std::vector<uint64_t> buffer_ids(num_resources());
+        for (uint32_t i = 0; i < num_resources(); i++) {
+            buffer_ids[i] = exec_resources_[i].buffer->platform_buffer()->id();
+        }
+        connection->SendNotification(buffer_ids);
     }
 
     TRACE_ASYNC_END("magma-exec", "CommandBuffer Exec", nonce_);

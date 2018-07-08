@@ -55,7 +55,10 @@ public:
     }
 
     // Called by the device thread when command buffers complete.
-    void SendNotification(uint64_t buffer_id) { notifications_.SendBufferId(buffer_id); }
+    void SendNotification(const std::vector<uint64_t>& buffer_ids)
+    {
+        notifications_.SendBufferIds(buffer_ids);
+    }
 
     void SendContextKilled() { notifications_.SendContextKilled(); }
 
@@ -77,15 +80,24 @@ private:
 
     class Notifications {
     public:
-        void SendBufferId(uint64_t buffer_id)
+        void SendBufferIds(const std::vector<uint64_t>& buffer_ids)
         {
             std::lock_guard<std::mutex> lock(mutex_);
             if (callback_ && token_) {
                 msd_notification_t notification = {};
                 notification.type = MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND;
-                *reinterpret_cast<uint64_t*>(notification.u.channel_send.data) = buffer_id;
-                notification.u.channel_send.size = sizeof(buffer_id);
-                callback_(token_, &notification);
+                const uint32_t max = MSD_CHANNEL_SEND_MAX_SIZE / sizeof(uint64_t);
+
+                uint32_t dst_index = 0;
+                for (uint32_t src_index = 0; src_index < buffer_ids.size();) {
+                    reinterpret_cast<uint64_t*>(notification.u.channel_send.data)[dst_index++] =
+                        buffer_ids[src_index++];
+                    if (dst_index == max || src_index == buffer_ids.size()) {
+                        notification.u.channel_send.size = dst_index * sizeof(uint64_t);
+                        dst_index = 0;
+                        callback_(token_, &notification);
+                    }
+                }
             }
         }
 

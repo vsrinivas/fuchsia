@@ -67,11 +67,11 @@ public:
     // Read all outstanding completions and update the inflight list.
     void ServiceCompletions(magma_connection_t* connection)
     {
-        uint64_t buffer_id;
+        uint64_t buffer_ids[8];
         uint64_t bytes_available = 0;
         while (true) {
             magma_status_t status = magma_read_notification_channel(
-                connection, &buffer_id, sizeof(buffer_id), &bytes_available);
+                connection, buffer_ids, sizeof(buffer_ids), &bytes_available);
             if (status != MAGMA_STATUS_OK) {
                 DLOG("magma_read_notification_channel returned %d", status);
                 Shutdown();
@@ -79,9 +79,11 @@ public:
             }
             if (bytes_available == 0)
                 return;
-            DASSERT(bytes_available == sizeof(buffer_id));
-            DASSERT(is_inflight(buffer_id));
-            release(buffer_id);
+            DASSERT(bytes_available % sizeof(uint64_t) == 0);
+            for (uint32_t i = 0; i < bytes_available / sizeof(uint64_t); i++) {
+                DASSERT(is_inflight(buffer_ids[i]));
+                release(buffer_ids[i]);
+            }
         }
     }
 
