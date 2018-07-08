@@ -35,7 +35,7 @@ namespace {
 
 const std::string kTestUserId = "tq_auth_user_1";
 const std::string kTestUserProfileId = "tq_auth_user_profile_1";
-const std::string kTestAppUrl = "/system/test/dev_auth_provider";
+const std::string kTestAppUrl = "/pkgfs/packages/dev_auth_provider/bin/app";
 const std::string kDevIdp = "Dev";
 
 fuchsia::auth::AppConfig MakeDevAppConfig() {
@@ -80,7 +80,7 @@ class DevTokenManagerAppTest : public gtest::RealLoopFixture,
 
     fuchsia::auth::AuthProviderConfig dev_config;
     dev_config.auth_provider_type = kDevIdp;
-    dev_config.url = "dev_auth_provider_rust";
+    dev_config.url = "/pkgfs/packages/token_manager_tests/0/bin/dev_auth_provider_rust";
 
     fidl::VectorPtr<fuchsia::auth::AuthProviderConfig> auth_provider_configs;
     auth_provider_configs.push_back(std::move(dev_config));

@@ -51,7 +51,7 @@ package("oauth_examples") {
 
 package("rust_tests") {
   testonly = true
-  deprecated_system_image = true
+  package_name = "auth_rust_tests"
 
   deps = [
     "rust/cache:cache",
@@ -68,8 +68,6 @@ package("rust_tests") {
 
 package("tests") {
   testonly = true
-  deprecated_system_image = true
-
   package_name = "token_manager_tests"
 
   deps = [
