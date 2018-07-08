@@ -141,8 +141,8 @@ interfaces to be used from different languages. Below are the implementation
 files created for C++, assuming that your build flavor is `x64`.
 
 ```
-./out/x64/fidling/gen/echo2/cpp/fidl.cc
-./out/x64/fidling/gen/echo2/cpp/fidl.h
+./out/x64/fidling/gen/fidl/examples/echo/cpp/fidl.cc
+./out/x64/fidling/gen/fidl/examples/echo/cpp/fidl.h
 ```
 
 Generated files for C++ will follow the same pattern.
