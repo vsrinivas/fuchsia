@@ -17,7 +17,6 @@ go_test("syslog_go_tests") {
 
 package("syslog_gotests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":syslog_go_tests",
