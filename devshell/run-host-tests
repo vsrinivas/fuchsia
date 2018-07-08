@@ -6,27 +6,42 @@
 ### run host tests
 
 ##
-## Runs host tests with the runtests binary.
-## If no args are passed, all host tests will be run.
-## For additional documentation, run
-## $ fx run-host-tests -h
+## Usage: fx run-host-tests [-z] [host test names ...]
+## Builds and runs the given host tests.
+## With "-z" passed, only Zircon tests will be run - and
+## without it only tests from Garnet and above.
+## If no host test names are provided, then all available
+## host tests will be run.
 ##
 
 set -o errexit
 set -o pipefail
 
-DEVSHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${DEVSHELL_DIR}/lib/vars.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
+function main {
+  if [[ $# -gt 0 ]] && [[ $1 = "-z" ]]; then
+    host_test_dir="${ZIRCON_BUILD_DIR}/host_tests"
+    fx-command-run build-zircon "-v"
+    shift
+  else
+    host_test_dir="${FUCHSIA_BUILD_DIR}/host_tests"
+    fx-command-run build "${@/#/host_tests\/}"
+  fi
 
-runtests="${ZIRCON_TOOLS_DIR}/runtests"
-zircon_host_tests="${ZIRCON_BUILD_DIR}/host_tests"
-fuchsia_host_tests="${FUCHSIA_BUILD_DIR}/host_tests"
+  runtests_cmd="${ZIRCON_TOOLS_DIR}/runtests -v"
 
-# If no arguments are provided, run all host tests by default.
-if [[ $# -eq 0 ]]; then
-  "${runtests}" "${zircon_host_tests}" "${fuchsia_host_tests}"
-else
-  "${runtests}" "$@"
-fi
+  if [[ $# -gt 0 ]]; then
+    # Comma-separated list of host test names to filter by.
+    local IFS=","
+    filtered_host_tests="'$*'"
+
+    runtests_cmd="${runtests_cmd} -t ${filtered_host_tests}"
+  fi
+
+  runtests_cmd="${runtests_cmd} ${host_test_dir}"
+  eval "${runtests_cmd}"
+}
+
+main "$@"
