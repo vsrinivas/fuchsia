@@ -4,4 +4,4 @@
 
 #pragma once
 
-constexpr const char HELPER_PATH[] = "/system/bin/zircon_benchmarks";
+constexpr const char HELPER_PATH[] = "/pkgfs/packages/zircon_benchmarks/0/bin/app";

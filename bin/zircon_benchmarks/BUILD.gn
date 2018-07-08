@@ -78,18 +78,17 @@ fidl("fidl_interface") {
 
 package("zircon_benchmarks") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":bin",
     ":test",
   ]
 
-  binaries = [ {
-        name = "zircon_benchmarks"
-      } ]
+  binary = "zircon_benchmarks"
 
-  tests = [ {
-        name = "zircon_benchmarks_test"
-      } ]
+  tests = [
+    {
+      name = "zircon_benchmarks_test"
+    },
+  ]
 }
