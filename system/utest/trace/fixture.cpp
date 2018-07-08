@@ -33,6 +33,8 @@ public:
           buffer_(new uint8_t[buffer_size], buffer_size) {
         zx_status_t status = zx::event::create(0u, &trace_stopped_);
         ZX_DEBUG_ASSERT(status == ZX_OK);
+        status = zx::event::create(0u, &buffer_full_);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
     }
 
     ~Fixture() {
@@ -78,8 +80,33 @@ public:
         trace_running_ = false;
     }
 
+    bool WaitBufferFullNotification() {
+        auto status = buffer_full_.wait_one(ZX_EVENT_SIGNALED,
+                                            zx::deadline_after(zx::msec(1000)), nullptr);
+        buffer_full_.signal(ZX_EVENT_SIGNALED, 0u);
+        return status == ZX_OK;
+    }
+
     zx_status_t disposition() const {
         return disposition_;
+    }
+
+    bool observed_notify_buffer_full_callback() const {
+        return observed_notify_buffer_full_callback_;
+    }
+
+    bool observed_buffer_full_wrapped_count() const {
+        return observed_buffer_full_wrapped_count_;
+    }
+
+    bool observed_buffer_full_durable_data_end() const {
+        return observed_buffer_full_durable_data_end_;
+    }
+
+    void ResetBufferFullNotification() {
+        observed_notify_buffer_full_callback_ = false;
+        observed_buffer_full_wrapped_count_ = 0;
+        observed_buffer_full_durable_data_end_ = 0;
     }
 
     bool ReadRecords(fbl::Vector<trace::Record>* out_records,
@@ -124,6 +151,14 @@ private:
         // We don't need nor want it as we still have to verify the results.
     }
 
+    void NotifyBufferFull(uint32_t wrapped_count, uint64_t durable_data_end)
+            override {
+        observed_notify_buffer_full_callback_ = true;
+        observed_buffer_full_wrapped_count_ = wrapped_count;
+        observed_buffer_full_durable_data_end_ = durable_data_end;
+        buffer_full_.signal(0u, ZX_EVENT_SIGNALED);
+    }
+
     async::Loop loop_;
     trace_buffering_mode_t buffering_mode_;
     fbl::Array<uint8_t> buffer_;
@@ -131,7 +166,11 @@ private:
     zx_status_t disposition_ = ZX_ERR_INTERNAL;
     size_t buffer_bytes_written_ = 0u;
     zx::event trace_stopped_;
+    zx::event buffer_full_;
     bool observed_stopped_callback_ = false;
+    bool observed_notify_buffer_full_callback_ = false;
+    uint32_t observed_buffer_full_wrapped_count_ = 0;
+    uint64_t observed_buffer_full_durable_data_end_ = 0;
 };
 
 Fixture* g_fixture{nullptr};
@@ -172,6 +211,21 @@ void fixture_stop_tracing_hard() {
 zx_status_t fixture_get_disposition(void) {
     ZX_DEBUG_ASSERT(g_fixture);
     return g_fixture->disposition();
+}
+
+bool fixture_wait_buffer_full_notification() {
+    ZX_DEBUG_ASSERT(g_fixture);
+    return g_fixture->WaitBufferFullNotification();
+}
+
+uint32_t fixture_get_buffer_full_wrapped_count() {
+    ZX_DEBUG_ASSERT(g_fixture);
+    return g_fixture->observed_buffer_full_wrapped_count();
+}
+
+void fixture_reset_buffer_full_notification() {
+    ZX_DEBUG_ASSERT(g_fixture);
+    g_fixture->ResetBufferFullNotification();
 }
 
 bool fixture_create_squelch(const char* regex_str, FixtureSquelch** out_squelch) {
@@ -282,4 +336,9 @@ bool fixture_compare_n_records(size_t max_num_records, const char* expected,
 
 bool fixture_compare_records(const char* expected) {
     return fixture_compare_n_records(SIZE_MAX, expected, nullptr);
+}
+
+void fixture_snapshot_buffer_header(trace_buffer_header* header) {
+    auto context = trace::TraceProlongedContext::Acquire();
+    trace_context_snapshot_buffer_header(context.get(), header);
 }

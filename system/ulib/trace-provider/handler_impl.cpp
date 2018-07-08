@@ -4,6 +4,7 @@
 
 #include "handler_impl.h"
 
+#include <inttypes.h>
 #include <stdio.h>
 
 #include <zircon/assert.h>
@@ -126,6 +127,24 @@ bool TraceHandlerImpl::ReadFifoMessage() {
         return false;
     }
     switch (packet.request) {
+    case TRACE_PROVIDER_BUFFER_SAVED: {
+        auto wrapped_count = packet.data32;
+        auto durable_data_end = packet.data64;
+#if 0 // TODO(DX-367): Don't delete this, save for conversion to syslog.
+        printf("TraceHandler: Received buffer_saved message"
+               ", wrapped_count=%u, durable_data_end=0x%" PRIx64 "\n",
+               wrapped_count, durable_data_end);
+#endif
+        status = MarkBufferSaved(wrapped_count, durable_data_end);
+        if (status == ZX_ERR_BAD_STATE) {
+            // This happens when tracing has stopped. Ignore it.
+        } else if (status != ZX_OK) {
+            printf("TraceHandler: MarkBufferSaved failed: status=%d\n",
+                   status);
+            return false;
+        }
+        break;
+    }
     default:
         printf("TraceHandler: Bad request from TraceManager: %u\n",
                packet.request);
@@ -133,6 +152,12 @@ bool TraceHandlerImpl::ReadFifoMessage() {
     }
 
     return true;
+}
+
+zx_status_t TraceHandlerImpl::MarkBufferSaved(uint32_t wrapped_count,
+                                              uint64_t durable_data_end) {
+    return trace_engine_mark_buffer_saved(wrapped_count,
+                                          durable_data_end);
 }
 
 bool TraceHandlerImpl::IsCategoryEnabled(const char* category) {
@@ -154,16 +179,20 @@ void TraceHandlerImpl::TraceStarted() {
 
 void TraceHandlerImpl::TraceStopped(async_dispatcher_t* dispatcher, zx_status_t disposition,
                                     size_t buffer_bytes_written) {
-    // TODO: Report the disposition and bytes written back to the tracing system
-    // so it has a better idea of what happened.
+    // There's no need to notify the trace manager that records were dropped
+    // here. That can be determined from the buffer header.
     delete this;
 }
 
-void TraceHandlerImpl::NotifyBufferFull() {
+void TraceHandlerImpl::NotifyBufferFull(uint32_t wrapped_count,
+                                        uint64_t durable_data_end) {
     trace_provider_packet_t packet{};
-    packet.request = TRACE_PROVIDER_BUFFER_OVERFLOW;
+    packet.request = TRACE_PROVIDER_SAVE_BUFFER;
+    packet.data32 = wrapped_count;
+    packet.data64 = durable_data_end;
     auto status = fifo_.write(sizeof(packet), &packet, 1, nullptr);
-    // TODO(dje): Handle fifo full.
+    // There's something wrong in our protocol or implementation if we fill
+    // the fifo buffer.
     ZX_DEBUG_ASSERT(status == ZX_OK ||
                     status == ZX_ERR_PEER_CLOSED);
 }

@@ -86,6 +86,9 @@ __EXPORT bool trace_is_category_enabled(const char* category_literal);
 // have been released, therefore it is important for clients to promptly
 // release their reference to the trace context once they have finished
 // writing records into the trace buffer.
+// It is also important to release the context promptly to maintain proper
+// operation in streaming mode: The buffer can't be saved until all writers
+// have released their context.
 //
 // Returns a valid trace context if tracing is enabled.
 // Returns NULL otherwise.
@@ -103,6 +106,9 @@ __EXPORT trace_context_t* trace_acquire_context(void);
 // have been released, therefore it is important for clients to promptly
 // release their reference to the trace context once they have finished
 // writing records into the trace buffer.
+// It is also important to release the context promptly to maintain proper
+// operation in streaming mode: The buffer can't be saved until all writers
+// have released their context.
 //
 // This function is equivalent to calling |trace_acquire_context()| to acquire
 // the engine's context, then calling |trace_context_register_category_literal()|
@@ -262,6 +268,57 @@ private:
     trace_context_t* context_;
 
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(TraceContext);
+};
+
+// Holds and retains ownership of a prolonged trace context.
+// Releases the context automatically when destroyed.
+class TraceProlongedContext final {
+public:
+    TraceProlongedContext()
+        : context_(nullptr) {}
+
+    TraceProlongedContext(trace_prolonged_context_t* context)
+        : context_(context) {}
+
+    TraceProlongedContext(TraceProlongedContext&& other)
+        : context_(other.context_) {
+        other.context_ = nullptr;
+    }
+
+    ~TraceProlongedContext() {
+        Release();
+    }
+
+    // Gets the trace context, or null if there is none.
+    trace_prolonged_context_t* get() const { return context_; }
+
+    // Returns true if the holder contains a valid context.
+    explicit operator bool() const { return context_ != nullptr; }
+
+    // Acquires a reference to the trace engine's context.
+    static TraceProlongedContext Acquire() {
+        return TraceProlongedContext(trace_acquire_prolonged_context());
+    }
+
+    // Releases the trace context.
+    void Release() {
+        if (context_) {
+            trace_release_prolonged_context(context_);
+            context_ = nullptr;
+        }
+    }
+
+    TraceProlongedContext& operator=(TraceProlongedContext&& other) {
+        Release();
+        context_ = other.context_;
+        other.context_ = nullptr;
+        return *this;
+    }
+
+private:
+    trace_prolonged_context_t* context_;
+
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(TraceProlongedContext);
 };
 
 } // namespace trace

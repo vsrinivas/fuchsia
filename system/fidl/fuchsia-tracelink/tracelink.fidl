@@ -37,8 +37,6 @@ interface Provider {
     // TRACE_PROVIDER_STARTED packet on |fifo|.
     // #include <trace-provider/provider.h> to get |TRACE_PROVIDER_STARTED|.
     // To indicate failure to start close |fifo|.
-    //
-    // TODO(jeffbrown): Implement half-full signal and streaming protocol.
     1: Start(BufferingMode buffering_mode,
              handle<vmo> buffer, handle<fifo> fifo,
              vector<string:100>:100 categories);

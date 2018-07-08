@@ -31,8 +31,11 @@ void TraceHandler::CallTraceStopped(trace_handler_t* handler, async_dispatcher_t
                                                       disposition, buffer_bytes_written);
 }
 
-void TraceHandler::CallNotifyBufferFull(trace_handler_t* handler) {
-    static_cast<TraceHandler*>(handler)->NotifyBufferFull();
+void TraceHandler::CallNotifyBufferFull(trace_handler_t* handler,
+                                        uint32_t wrapped_count,
+                                        uint64_t durable_data_end) {
+    static_cast<TraceHandler*>(handler)->NotifyBufferFull(wrapped_count,
+                                                          durable_data_end);
 }
 
 } // namespace trace

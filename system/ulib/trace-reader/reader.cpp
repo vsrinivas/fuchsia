@@ -15,6 +15,8 @@ TraceReader::TraceReader(RecordConsumer record_consumer,
                          ErrorHandler error_handler)
     : record_consumer_(fbl::move(record_consumer)),
       error_handler_(fbl::move(error_handler)) {
+    // Provider ids begin at 1. We don't have a provider yet but we want to
+    // set the current provider. So set it to non-existent provider 0.
     RegisterProvider(0u, "");
 }
 
@@ -546,6 +548,7 @@ void TraceReader::SetCurrentProvider(ProviderId id) {
         current_provider_ = &*it;
         return;
     }
+    ReportError(fbl::StringPrintf("Registering non-existent provider %u\n", id));
     RegisterProvider(id, "");
 }
 

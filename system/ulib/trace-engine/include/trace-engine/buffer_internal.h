@@ -26,17 +26,19 @@ namespace internal {
 // For "oneshot" mode the vmo is one big simple buffer.
 //   Using one big buffer means durable and non-durable records all share the
 //   same buffer.
+//   For simplicity in the code, oneshot mode uses rolling buffer 0.
 // For "circular" and "streaming" buffering modes, the vmo is treated as a
 // "virtual buffer" and is split into three logical parts:
 //   - one buffer for "durable" records
-//   - two buffers, labeled 0 and 1, for "non-durable" records
-// Writing switches back and forth between the two non-durable buffers as each
+//   - two buffers, labeled 0 and 1, for "non-durable" records, called
+//     "rolling buffers"
+// Writing switches back and forth between the two rolling buffers as each
 // fills. Streaming buffering differs from circular buffering in that the Trace
-// Manager is involved in saving each non-durable buffer as it fills.
+// Manager is involved in saving each rolling buffer as it fills.
 // Besides consistency, a nice property of using two separate buffers for
 // circular mode is that, because records are variable sized, there are no
 // issues trying to find the "first" non-durable record in the complete virtual
-// buffer after a wrap: It's always the first record of the other non-durable
+// buffer after a wrap: It's always the first record of the other rolling
 // buffer.
 //
 // To help preserve data integrity tracing stops when the durable buffer fills,
@@ -60,9 +62,9 @@ namespace internal {
 //
 // It is an invariant that:
 // oneshot:
-//   total_size == header + nondurable_buffer_size
+//   total_size == header + rolling_buffer_size
 // circular/streaming:
-//   total_size == header + durable_buffer_size + 2 * nondurable_buffer_size
+//   total_size == header + durable_buffer_size + 2 * rolling_buffer_size
 //
 // All buffer sizes must be a multiple of 8 as all records are a multiple of 8.
 
@@ -93,8 +95,8 @@ struct trace_buffer_header {
     // This is zero in oneshot mode.
     uint64_t durable_buffer_size;
 
-    // The size in bytes of each of the non-durable record buffers.
-    uint64_t nondurable_buffer_size;
+    // The size in bytes of each of the rolling record buffers.
+    uint64_t rolling_buffer_size;
 
     // The offset, from the first data byte, to the end of recorded durable
     // data. This starts at zero and is not written to while writing the buffer
@@ -107,7 +109,7 @@ struct trace_buffer_header {
     // In oneshot mode only [0] is used. This starts at zero and is not written
     // to while writing the buffer is active. It is written to when the buffer
     // fills or when tracing is stopped.
-    uint64_t nondurable_data_end[2];
+    uint64_t rolling_data_end[2];
 
     // Total number of records dropped thus far.
     uint64_t num_records_dropped;
@@ -125,12 +127,9 @@ static_assert(sizeof(trace_buffer_header) == 128, "");
 
 // Update the buffer header and snapshot a copy of it.
 // This is only intended to be used for testing purposes.
-// Testcases needing the definition need to do:
-// #include <trace-engine/buffer.h>
-// using trace::internal::trace_buffer_header;
 //
 // This function is not thread-safe relative to the collected data, and
 // assumes tracing is stopped or at least paused.
-void trace_context_snapshot_buffer_header(
-    trace_context_t* context,
+__EXPORT void trace_context_snapshot_buffer_header(
+    trace_prolonged_context_t* context,
     ::trace::internal::trace_buffer_header* header);

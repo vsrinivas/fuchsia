@@ -12,6 +12,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
+#include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/event.h>
 #include <trace-engine/instrumentation.h>
@@ -71,7 +72,7 @@ fbl::Vector<Observer> g_observers;
 //   - acquiring a reference acts as an ACQUIRE fence
 //   - releasing a reference acts as a RELEASE fence
 //   - always 0 when engine stopped
-//   - transition from 0 to 1 only happens when engine is started
+//   - transition from 0 to non-zero only happens when engine is started
 //   - the engine stops when the reference count goes to 0
 //     (in other words, holding a context reference prevents the engine from stopping)
 //
@@ -108,7 +109,7 @@ constexpr uint32_t kBufferCounterMask = 0xffffff00;
 //   - can be accessed outside the lock while holding a context reference
 trace_context_t* g_context{nullptr};
 
-// Event for tracking two things:
+// Event for tracking:
 // - when all observers has started
 //   (SIGNAL_ALL_OBSERVERS_STARTED)
 // - when the trace context reference count has dropped to zero
@@ -172,15 +173,20 @@ zx_status_t trace_start_engine(async_dispatcher_t* dispatcher,
 
     switch (buffering_mode) {
     case TRACE_BUFFERING_MODE_ONESHOT:
+    case TRACE_BUFFERING_MODE_CIRCULAR:
+    case TRACE_BUFFERING_MODE_STREAMING:
         break;
     default:
         return ZX_ERR_INVALID_ARGS;
     }
 
-    if (buffer_num_bytes < trace_context::min_buffer_size()) {
+    // The buffer size must be a multiple of 4096 (simplifies buffer size
+    // calcs).
+    if ((buffer_num_bytes & 0xfff) != 0) {
         return ZX_ERR_INVALID_ARGS;
     }
-    if (buffer_num_bytes > trace_context::max_buffer_size()) {
+    if (buffer_num_bytes < trace_context::min_buffer_size() ||
+        buffer_num_bytes > trace_context::max_buffer_size()) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -266,6 +272,53 @@ zx_status_t trace_stop_engine(zx_status_t disposition) {
     return ZX_OK;
 }
 
+// This is an internal function, only called from context.cpp.
+// thread-safe
+bool trace_engine_is_buffer_context_released() {
+    return (g_context_refs.load(fbl::memory_order_relaxed) &
+            kBufferCounterMask) == 0;
+}
+
+// This is an internal function, only called from context.cpp.
+// thread-safe
+void trace_engine_request_save_buffer(uint32_t wrapped_count,
+                                      uint64_t durable_data_end) {
+    // Handle the request on the engine's async loop. This may be get called
+    // while servicing a client trace request, and we don't want to handle it
+    // there.
+    async::PostTask(g_dispatcher, [wrapped_count, durable_data_end] () {
+        auto context = trace_acquire_prolonged_context();
+        if (context) {
+            auto tcontext = reinterpret_cast<trace_context_t*>(context);
+            tcontext->HandleSaveRollingBufferRequest(wrapped_count, durable_data_end);
+        }
+        trace_release_prolonged_context(context);
+    });
+}
+
+// This is called by the handler after it has saved a buffer.
+// |wrapped_count| and |durable_end| are the values that were passed to it,
+// and are passed back to us for sanity checking purposes.
+// thread-safe
+zx_status_t trace_engine_mark_buffer_saved(uint32_t wrapped_count,
+                                           uint64_t durable_data_end) {
+    auto context = trace_acquire_prolonged_context();
+
+    // No point in updating if there's no active trace.
+    if (!context) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    // Do this now, instead of as a separate iteration on the async loop.
+    // The concern is that we want to update buffer state ASAP to reduce the
+    // window where records might be dropped because the buffer is full.
+    auto tcontext = reinterpret_cast<trace_context_t*>(context);
+    tcontext->MarkRollingBufferSaved(wrapped_count, durable_data_end);
+
+    trace_release_prolonged_context(context);
+    return ZX_OK;
+}
+
 namespace {
 
 void handle_all_observers_started() {
@@ -299,11 +352,12 @@ void handle_context_released(async_dispatcher_t* dispatcher) {
         g_context->UpdateBufferHeaderAfterStopped();
 
         // Get final disposition.
-        if (g_context->record_dropped())
+        if (g_context->WasRecordDropped())
             update_disposition_locked(ZX_ERR_NO_MEMORY);
         disposition = g_disposition;
         handler = g_handler;
-        buffer_bytes_written = g_context->bytes_allocated();
+        buffer_bytes_written = (g_context->RollingBytesAllocated() +
+                                g_context->DurableBytesAllocated());
 
         // Tidy up.
         g_dispatcher = nullptr;
@@ -359,8 +413,7 @@ void handle_hard_shutdown(async_dispatcher_t* dispatcher) {
 
 void handle_event(async_dispatcher_t* dispatcher, async_wait_t* wait,
                   zx_status_t status, const zx_packet_signal_t* signal) {
-    // Note: This function may get both SIGNAL_ALL_OBSERVERS_STARTED
-    // and SIGNAL_CONTEXT_RELEASED at the same time.
+    // Note: This function may get all signals at the same time.
 
     if (status == ZX_OK) {
         if (signal->observed & SIGNAL_ALL_OBSERVERS_STARTED) {

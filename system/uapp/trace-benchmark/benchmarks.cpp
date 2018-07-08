@@ -4,10 +4,12 @@
 
 #include "benchmarks.h"
 
+#include <inttypes.h>
 #include <stdio.h>
 
 #include <fbl/function.h>
 #include <lib/async/cpp/task.h>
+#include <trace-engine/buffer_internal.h>
 #include <trace-engine/instrumentation.h>
 #include <trace/event.h>
 
@@ -25,20 +27,42 @@ public:
 
     void Run(const char* name, Benchmark benchmark) {
         if (enabled_) {
+            // The trace engine needs to run in its own thread in order to
+            // process buffer full requests in streaming mode while the
+            // benchmark is running. Note that records will still get lost
+            // if the engine thread is not scheduled frequently enough. This
+            // is a stress test so all the app is doing is filling the trace
+            // buffer. :-)
             async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
             BenchmarkHandler handler(&loop, spec_->name, spec_->mode,
                                      spec_->buffer_size);
 
+            loop.StartThread("trace-engine loop", nullptr);
             handler.Start();
 
-            async::PostTask(loop.dispatcher(), [spec=spec_, name,
-                                           benchmark=fbl::move(benchmark)]() {
-                RunAndMeasure(name, spec->num_iterations, benchmark);
-                trace_stop_engine(ZX_OK);
-            });
+            RunAndMeasure(name, spec_->num_iterations, benchmark);
 
-            loop.Run(); // run until quit
+            // Acquire the context before we stop. We can't after we stop
+            // as the context has likely been released (no more
+            // references).
+            trace::internal::trace_buffer_header header;
+            {
+                auto context = trace::TraceProlongedContext::Acquire();
+                trace_stop_engine(ZX_OK);
+                trace_context_snapshot_buffer_header(context.get(), &header);
+            }
+            if (handler.mode() == TRACE_BUFFERING_MODE_ONESHOT) {
+                ZX_DEBUG_ASSERT(header.wrapped_count == 0);
+            } else {
+                printf("Trace buffer wrapped %u times, %" PRIu64 " records dropped\n",
+                       header.wrapped_count, header.num_records_dropped);
+            }
+
+            loop.JoinThreads();
         } else {
+            // For the disabled benchmarks we just use the default number
+            // of iterations.
+            ZX_DEBUG_ASSERT(spec_ == nullptr);
             RunAndMeasure(name, benchmark);
         }
     }

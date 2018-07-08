@@ -60,12 +60,12 @@ fbl::String BufferHeaderReader::Validate(const trace_buffer_header& header,
                                  header.total_size);
     }
 
-    auto nondurable_buffer_size = header.nondurable_buffer_size;
+    auto rolling_buffer_size = header.rolling_buffer_size;
     auto durable_buffer_size = header.durable_buffer_size;
 
-    if ((nondurable_buffer_size & 7) != 0) {
-        return fbl::StringPrintf("bad nondurable buffer size: 0x%" PRIx64,
-                                 nondurable_buffer_size);
+    if ((rolling_buffer_size & 7) != 0) {
+        return fbl::StringPrintf("bad rolling buffer size: 0x%" PRIx64,
+                                 rolling_buffer_size);
     }
     if ((durable_buffer_size & 7) != 0) {
         return fbl::StringPrintf("bad durable buffer size: 0x%" PRIx64,
@@ -73,35 +73,35 @@ fbl::String BufferHeaderReader::Validate(const trace_buffer_header& header,
     }
 
     if (header.buffering_mode == TRACE_BUFFERING_MODE_ONESHOT) {
-        if (nondurable_buffer_size != buffer_size - sizeof(trace_buffer_header)) {
-            return fbl::StringPrintf("bad nondurable buffer size: 0x%" PRIx64,
-                                     nondurable_buffer_size);
+        if (rolling_buffer_size != buffer_size - sizeof(trace_buffer_header)) {
+            return fbl::StringPrintf("bad rolling buffer size: 0x%" PRIx64,
+                                     rolling_buffer_size);
         }
         if (durable_buffer_size != 0) {
             return fbl::StringPrintf("bad durable buffer size: 0x%" PRIx64,
                                      durable_buffer_size);
         }
     } else {
-        if (nondurable_buffer_size >= buffer_size / 2) {
-            return fbl::StringPrintf("bad nondurable buffer size: 0x%" PRIx64,
-                                     nondurable_buffer_size);
+        if (rolling_buffer_size >= buffer_size / 2) {
+            return fbl::StringPrintf("bad rolling buffer size: 0x%" PRIx64,
+                                     rolling_buffer_size);
         }
-        if (durable_buffer_size >= nondurable_buffer_size) {
+        if (durable_buffer_size >= rolling_buffer_size) {
             return fbl::StringPrintf("bad durable buffer size: 0x%" PRIx64,
                                      durable_buffer_size);
         }
         if ((sizeof(trace_buffer_header) + durable_buffer_size +
-             2 * nondurable_buffer_size) != buffer_size) {
+             2 * rolling_buffer_size) != buffer_size) {
             return fbl::StringPrintf("buffer sizes don't add up:"
                                      " 0x%" PRIx64 ", 0x%" PRIx64,
                                      durable_buffer_size,
-                                     nondurable_buffer_size);
+                                     rolling_buffer_size);
         }
     }
 
-    for (size_t i = 0; i < fbl::count_of(header.nondurable_data_end); ++i) {
-        auto data_end = header.nondurable_data_end[i];
-        if (data_end > nondurable_buffer_size ||
+    for (size_t i = 0; i < fbl::count_of(header.rolling_data_end); ++i) {
+        auto data_end = header.rolling_data_end[i];
+        if (data_end > rolling_buffer_size ||
             (data_end & 7) != 0) {
             return fbl::StringPrintf("bad data end for buffer %zu: 0x%" PRIx64,
                                      i, data_end);
@@ -145,14 +145,14 @@ bool TraceBufferReader::ReadChunks(const void* buffer, size_t buffer_size) {
         earlier_buffer = header->GetBufferNumber(header->wrapped_count() - 1);
 
     if (earlier_buffer != later_buffer) {
-        CallChunkConsumerIfNonEmpty(header->GetNondurableBuffer(buffer,
-                                                                earlier_buffer),
-                                    header->nondurable_data_end(earlier_buffer));
+        CallChunkConsumerIfNonEmpty(header->GetRollingBuffer(buffer,
+                                                             earlier_buffer),
+                                    header->rolling_data_end(earlier_buffer));
     }
 
-    CallChunkConsumerIfNonEmpty(header->GetNondurableBuffer(buffer,
-                                                            later_buffer),
-                                header->nondurable_data_end(later_buffer));
+    CallChunkConsumerIfNonEmpty(header->GetRollingBuffer(buffer,
+                                                         later_buffer),
+                                header->rolling_data_end(later_buffer));
 
     return true;
 }

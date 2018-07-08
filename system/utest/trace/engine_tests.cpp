@@ -388,6 +388,233 @@ bool test_event_with_inline_everything() {
     END_TRACE_TEST;
 }
 
+bool test_circular_mode() {
+    const size_t kBufferSize = 4096u;
+    BEGIN_TRACE_TEST_ETC(TRACE_BUFFERING_MODE_CIRCULAR, kBufferSize);
+
+    fixture_start_tracing();
+
+    // Fill the buffers with one kind of record, then fill them with another.
+    // We should see only the second kind remaining.
+
+    for (size_t i = 0; i < kBufferSize / 8; ++i) {
+        TRACE_INSTANT("+enabled", "name", TRACE_SCOPE_GLOBAL,
+                      "k1", TA_INT32(1));
+    }
+
+    // IWBN to verify the contents of the buffer at this point, but that
+    // requires stopping the trace. There's no current way to pause it.
+
+    // Now fill the buffer with a different kind of record.
+
+    for (size_t i = 0; i < kBufferSize / 8; ++i) {
+        TRACE_INSTANT("+enabled", "name", TRACE_SCOPE_GLOBAL,
+                      "k2", TA_INT32(2));
+    }
+
+    // TODO(dje): There is a 1-second wait here. Not sure what to do about it.
+    EXPECT_FALSE(fixture_wait_buffer_full_notification());
+
+    // Prepare a squelcher to remove timestamps.
+    FixtureSquelch* ts_squelch;
+    ASSERT_TRUE(fixture_create_squelch("ts: ([0-9]+)", &ts_squelch));
+
+    // These records come from the durable buffer.
+    const char expected_initial_records[] = "\
+String(index: 1, \"+enabled\")\n\
+String(index: 2, \"k1\")\n\
+String(index: 3, \"process\")\n\
+KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n\
+Thread(index: 1, <>)\n\
+String(index: 4, \"name\")\n\
+String(index: 5, \"k2\")\n\
+Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Instant(scope: global), {k2: int32(2)})\n\
+";
+
+    fbl::Vector<trace::Record> records;
+    const size_t kDataRecordOffset = 7;
+    ASSERT_N_RECORDS(kDataRecordOffset + 1, /*empty*/, expected_initial_records,
+                     &records);
+
+    // Verify all trailing records are the same (sans timestamp).
+    auto test_record = records[kDataRecordOffset].ToString();
+    auto test_str = fixture_squelch(ts_squelch, test_record.c_str());
+    for (size_t i = kDataRecordOffset + 1; i < records.size(); ++i) {
+        // FIXME(dje): Moved this here from outside the for loop to get things
+        // working. Why was it necessary?
+        auto test_cstr = test_str.c_str();
+        auto record_str = fixture_squelch(ts_squelch,
+                                          records[i].ToString().c_str());
+        auto record_cstr = record_str.c_str();
+        EXPECT_STR_EQ(test_cstr, record_cstr, "bad data record");
+    }
+
+    fixture_destroy_squelch(ts_squelch);
+
+    END_TRACE_TEST;
+}
+
+bool test_streaming_mode() {
+    const size_t kBufferSize = 4096u;
+    BEGIN_TRACE_TEST_ETC(TRACE_BUFFERING_MODE_STREAMING, kBufferSize);
+
+    fixture_start_tracing();
+
+    // Fill the buffers with one kind of record.
+    // Both buffers should fill since there's no one to save them.
+
+    for (size_t i = 0; i < kBufferSize / 8; ++i) {
+        TRACE_INSTANT("+enabled", "name", TRACE_SCOPE_GLOBAL,
+                      "k1", TA_INT32(1));
+    }
+
+    EXPECT_TRUE(fixture_wait_buffer_full_notification());
+    EXPECT_EQ(fixture_get_buffer_full_wrapped_count(), 0);
+    fixture_reset_buffer_full_notification();
+
+    // N.B. While we're examining the header we assume tracing is paused.
+
+    trace_buffer_header header;
+    fixture_snapshot_buffer_header(&header);
+
+    EXPECT_EQ(header.version, 0, "");
+    EXPECT_EQ(header.buffering_mode, TRACE_BUFFERING_MODE_STREAMING, "");
+    EXPECT_EQ(header.reserved1, 0, "");
+    EXPECT_EQ(header.wrapped_count, 1, "");
+    EXPECT_EQ(header.total_size, kBufferSize, "");
+    EXPECT_NE(header.durable_buffer_size, 0, "");
+    EXPECT_NE(header.rolling_buffer_size, 0, "");
+    EXPECT_EQ(sizeof(header) + header.durable_buffer_size + 
+              2 * header.rolling_buffer_size, kBufferSize, "");
+    EXPECT_NE(header.durable_data_end, 0, "");
+    EXPECT_LE(header.durable_data_end, header.durable_buffer_size, "");
+    EXPECT_NE(header.rolling_data_end[0], 0, "");
+    EXPECT_LE(header.rolling_data_end[0], header.rolling_buffer_size, "");
+    EXPECT_NE(header.rolling_data_end[1], 0, "");
+    EXPECT_LE(header.rolling_data_end[1], header.rolling_buffer_size, "");
+    // All the records are the same size, so each buffer should end up at
+    // the same place.
+    EXPECT_EQ(header.rolling_data_end[0], header.rolling_data_end[1], "");
+
+    // Try to fill the buffer with a different kind of record.
+    // These should all be dropped.
+
+    for (size_t i = 0; i < kBufferSize / 8; ++i) {
+        TRACE_INSTANT("+enabled", "name", TRACE_SCOPE_GLOBAL,
+                      "k2", TA_INT32(2));
+    }
+
+    // TODO(dje): There is a 1-second wait here. Not sure what to do about it.
+    EXPECT_FALSE(fixture_wait_buffer_full_notification());
+
+    // Pretend to save the older of the two buffers.
+    {
+        auto context = trace::TraceProlongedContext::Acquire();
+        trace_context_snapshot_buffer_header(context.get(), &header);
+    }
+    EXPECT_EQ(header.wrapped_count, 1, "");
+
+    // Buffer zero is older.
+    trace_engine_mark_buffer_saved(0, 0);
+
+    {
+        auto context = trace::TraceProlongedContext::Acquire();
+        trace_context_snapshot_buffer_header(context.get(), &header);
+    }
+    EXPECT_EQ(header.rolling_data_end[0], 0, "");
+    // The wrapped count shouldn't be updated until the next record is written.
+    EXPECT_EQ(header.wrapped_count, 1, "");
+
+    // Fill the buffer with a different kind of record.
+
+    for (size_t i = 0; i < kBufferSize / 8; ++i) {
+        TRACE_INSTANT("+enabled", "name", TRACE_SCOPE_GLOBAL,
+                      "k3", TA_INT32(3));
+    }
+
+    EXPECT_TRUE(fixture_wait_buffer_full_notification());
+    EXPECT_EQ(fixture_get_buffer_full_wrapped_count(), 1);
+
+    {
+        auto context = trace::TraceProlongedContext::Acquire();
+        trace_context_snapshot_buffer_header(context.get(), &header);
+    }
+    EXPECT_EQ(header.wrapped_count, 2, "");
+    EXPECT_NE(header.rolling_data_end[0], 0, "");
+    EXPECT_EQ(header.rolling_data_end[0], header.rolling_data_end[1], "");
+
+    // One buffer should now have the first kind of record, and the other
+    // should have the new kind of record. And the newer records should be
+    // read after the older ones.
+
+    FixtureSquelch* ts_squelch;
+    ASSERT_TRUE(fixture_create_squelch("ts: ([0-9]+)", &ts_squelch));
+
+    const char expected_initial_records[] =
+        // These records come from the durable buffer.
+        "\
+String(index: 1, \"+enabled\")\n\
+String(index: 2, \"k1\")\n\
+String(index: 3, \"process\")\n\
+KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n\
+Thread(index: 1, <>)\n\
+String(index: 4, \"name\")\n\
+String(index: 5, \"k2\")\n\
+String(index: 6, \"k3\")\n"
+        // This record is the first record in the rolling buffer
+        "\
+Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Instant(scope: global), {k1: int32(1)})\n";
+
+    // There is no DATA2_RECORD, those records are dropped (buffer is full).
+    const char data3_record[] = "\
+Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Instant(scope: global), {k3: int32(3)})\n";
+
+    fbl::Vector<trace::Record> records;
+    const size_t kDataRecordOffset = 8;
+    ASSERT_N_RECORDS(kDataRecordOffset + 1, /*empty*/, expected_initial_records,
+                     &records);
+
+    // Verify the first set of data records are the same (sans timestamp).
+    auto test_record = records[kDataRecordOffset].ToString();
+    auto test_str = fixture_squelch(ts_squelch, test_record.c_str());
+    size_t num_data_records = 1;
+    size_t i;
+    for (i = kDataRecordOffset + 1; i < records.size(); ++i) {
+        auto test_cstr = test_str.c_str();
+        auto record_str = fixture_squelch(ts_squelch,
+                                          records[i].ToString().c_str());
+        auto record_cstr = record_str.c_str();
+        if (strcmp(test_cstr, record_cstr) != 0)
+            break;
+        ++num_data_records;
+    }
+    EXPECT_GE(num_data_records, 2);
+    // The records are all of equal size, therefore they should evenly fit
+    // in the number of bytes written. Buffer 1 holds the older records.
+    EXPECT_EQ(header.rolling_data_end[1] % num_data_records, 0);
+
+    // There should be the same number of records remaining.
+    EXPECT_EQ(num_data_records, records.size() - i);
+
+    // The next record should be |data3_record|.
+    EXPECT_TRUE(fixture_compare_raw_records(records, i, 1, data3_record));
+
+    // All remaining records should match (sans timestamp).
+    test_record = records[i].ToString();
+    test_str = fixture_squelch(ts_squelch, test_record.c_str());
+    for (i = i + 1; i < records.size(); ++i) {
+        auto test_cstr = test_str.c_str();
+        auto record_str = fixture_squelch(ts_squelch,
+                                          records[i].ToString().c_str());
+        auto record_cstr = record_str.c_str();
+        EXPECT_STR_EQ(test_cstr, record_cstr, "bad data record");
+    }
+
+    fixture_destroy_squelch(ts_squelch);
+
+    END_TRACE_TEST;
+}
+
 // NOTE: The functions for writing trace records are exercised by other trace tests.
 
 } // namespace
@@ -407,4 +634,6 @@ RUN_TEST(test_register_string_literal_multiple_threads)
 RUN_TEST(test_register_string_literal_table_overflow)
 RUN_TEST(test_maximum_record_length)
 RUN_TEST(test_event_with_inline_everything)
+RUN_TEST(test_circular_mode)
+RUN_TEST(test_streaming_mode)
 END_TEST_CASE(engine_tests)

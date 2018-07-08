@@ -7,6 +7,7 @@
 #include <stdio.h>
 
 #include <zircon/assert.h>
+#include <zircon/status.h>
 
 #include <fbl/array.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -22,6 +23,8 @@ public:
           mode_(mode),
           buffer_(new uint8_t[buffer_size], buffer_size) {
     }
+
+    trace_buffering_mode_t mode() const { return mode_; }
 
     void Start() {
         zx_status_t status = trace_start_engine(loop_->dispatcher(),
@@ -41,22 +44,37 @@ private:
     void TraceStopped(async_dispatcher_t* async,
                       zx_status_t disposition,
                       size_t buffer_bytes_written) override {
-        puts("Trace stopped");
+        printf("Trace stopped, disposition = %s\n",
+               zx_status_get_string(disposition));
 
-        // In oneshot mode we shouldn't have dropped any records.
-        ZX_DEBUG_ASSERT(disposition == ZX_OK);
+        if (mode_ == TRACE_BUFFERING_MODE_STREAMING) {
+            ZX_DEBUG_ASSERT(disposition == ZX_OK ||
+                            // Some records could have been dropped while
+                            // "saving" the buffer.
+                            disposition == ZX_ERR_NO_MEMORY);
+        } else {
+            // In oneshot and circular modes we shouldn't have dropped
+            // any records.
+            ZX_DEBUG_ASSERT(disposition == ZX_OK);
+        }
 
         loop_->Quit();
     }
 
-    void NotifyBufferFull() override {
-        // If we get this in oneshot mode then the buffer wasn't big enough,
-        // the benchmarks are defined to run without filling the buffer.
-        ZX_DEBUG_ASSERT(false);
+    void NotifyBufferFull(uint32_t wrapped_count,
+                          uint64_t durable_data_end) override {
+        // We shouldn't get this in oneshot or circular modes.
+        ZX_DEBUG_ASSERT(mode_ == TRACE_BUFFERING_MODE_STREAMING);
+
+        // The intent isn't to include buffer-save time in the benchmarks,
+        // so just immediately flag the buffer as saved. Alas since we're
+        // running on a separate thread records may get dropped. It depends on
+        // how well we're scheduled.
+        trace_engine_mark_buffer_saved(wrapped_count, durable_data_end);
     }
 
-    async::Loop* loop_;
-    const char* name_;
-    trace_buffering_mode_t mode_;
-    fbl::Array<uint8_t> buffer_;
+    async::Loop* const loop_;
+    const char* const name_;
+    const trace_buffering_mode_t mode_;
+    fbl::Array<uint8_t> const buffer_;
 };

@@ -72,7 +72,9 @@ struct trace_handler_ops {
     // for a new record has failed because the buffer is full.
     //
     // Called by instrumentation on any thread.  Must be thread-safe.
-    void (*notify_buffer_full)(trace_handler_t* handler);
+    void (*notify_buffer_full)(trace_handler_t* handler,
+                               uint32_t wrapped_count,
+                               uint64_t durable_data_end);
 };
 
 // Asynchronously starts the trace engine.
@@ -123,5 +125,15 @@ __EXPORT zx_status_t trace_start_engine(async_dispatcher_t* dispatcher,
 //
 // This function is thread-safe.
 __EXPORT zx_status_t trace_stop_engine(zx_status_t disposition);
+
+// Asynchronously notifies the engine that buffers up to |wrapped_count|
+// have been saved.
+//
+// Returns |ZX_OK| if the current state is |TRACE_STARTED| or |TRACE_STOPPING|.
+// Returns |ZX_ERR_BAD_STATE| if current state is |TRACE_STOPPED|.
+//
+// This function is thread-safe.
+__EXPORT zx_status_t trace_engine_mark_buffer_saved(uint32_t wrapped_count,
+                                                    uint64_t durable_data_end);
 
 __END_CDECLS

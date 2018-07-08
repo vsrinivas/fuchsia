@@ -44,14 +44,26 @@ typedef struct trace_provider_packet {
 #define TRACE_PROVIDER_STARTED (0x1)
 
 // Provider->Manager
-// The buffer is full and at least one packet was dropped.
-// |data32,data64| are unused (must be zero).
+// A buffer is full and needs to be saved (streaming mode only).
+// |data32| is the "wrapped count", which is a count of the number of times
+// a buffer has filled.
+// |data64| is current offset in the durable buffer
+#define TRACE_PROVIDER_SAVE_BUFFER (0x2)
+
+// Temporary to ease soft-roll into garnet.
+// Can be removed when garnet side lands.
 #define TRACE_PROVIDER_BUFFER_OVERFLOW (0x2)
 
-// Next Provider->Manager packet = 0x2
+// Next Provider->Manager packet = 0x3
 
-// There are currently no packets going the other way (Manager->Provider).
-// Next Manager->Provider packet = 0x100
+// Manager->Provider
+// A buffer has been saved (streaminng mode only).
+// |data32| is the "wrapped count", which is a count of the number of times
+// a buffer has filled.
+// |data64| is unused (must be zero).
+#define TRACE_PROVIDER_BUFFER_SAVED (0x100)
+
+// Next Manager->Provider packet = 0x101
 
 // End fifo packet descriptions.
 

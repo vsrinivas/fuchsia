@@ -45,23 +45,31 @@ public:
     //
     // |async| is the trace engine's asynchronous dispatcher.
     // |disposition| is |ZX_OK| if tracing stopped normally, otherwise indicates
-    // that tracing was aborted due to an error.
+    // that tracing was aborted due to an error. If records were dropped (due
+    // to the trace buffer being full) then |disposition| is |ZX_ERR_NO_MEMORY|.
     // |buffer_bytes_written| is number of bytes which were written to the trace buffer.
     //
     // Called on an asynchronous dispatch thread.
     virtual void TraceStopped(async_dispatcher_t* dispatcher,
                               zx_status_t disposition, size_t buffer_bytes_written) {}
 
-    // Called by the trace engine to indicate a record got dropped because
-    // the buffer was full.
-    virtual void NotifyBufferFull() {}
+    // Called by the trace engine in streaming mode to indicate a buffer is full.
+    // This is only used in streaming mode where double-buffering is used.
+    // |wrapped_count| is the number of times writing to the buffer has
+    // switched from one buffer to the other.
+    // |durable_data_end| is the offset into the durable buffer when the
+    // buffer filled. It is provided so that TraceManager can save the data
+    // thus far written to the durable buffer.
+    virtual void NotifyBufferFull(uint32_t wrapped_count, uint64_t durable_data_end) {}
 
 private:
     static bool CallIsCategoryEnabled(trace_handler_t* handler, const char* category);
     static void CallTraceStarted(trace_handler_t* handler);
     static void CallTraceStopped(trace_handler_t* handler, async_dispatcher_t* dispatcher,
                                  zx_status_t disposition, size_t buffer_bytes_written);
-    static void CallNotifyBufferFull(trace_handler_t* handler);
+    static void CallNotifyBufferFull(trace_handler_t* handler,
+                                     uint32_t wrapped_count,
+                                     uint64_t durable_data_end);
 
     static const trace_handler_ops_t kOps;
 };

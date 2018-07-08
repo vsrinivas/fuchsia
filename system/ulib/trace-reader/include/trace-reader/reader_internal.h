@@ -31,7 +31,7 @@ public:
     static int GetBufferNumber(uint32_t wrapped_count) {
         static_assert(fbl::count_of(
                           static_cast<trace_buffer_header*>(
-                              nullptr)->nondurable_data_end) == 2, "");
+                              nullptr)->rolling_data_end) == 2, "");
         return wrapped_count & 1;
     }
 
@@ -47,16 +47,16 @@ public:
         return header_->durable_buffer_size;
     }
 
-    uint64_t nondurable_buffer_size() const {
-        return header_->nondurable_buffer_size;
+    uint64_t rolling_buffer_size() const {
+        return header_->rolling_buffer_size;
     }
 
     uint64_t durable_data_end() const { return header_->durable_data_end; }
 
-    uint64_t nondurable_data_end(int buffer_number) const {
-        //static_assert(fbl::count_of(header_->nondurable_data_end) == 2, "");
+    uint64_t rolling_data_end(int buffer_number) const {
+        //static_assert(fbl::count_of(header_->rolling_data_end) == 2, "");
         ZX_DEBUG_ASSERT(buffer_number >= 0 && buffer_number <= 1);
-        return header_->nondurable_data_end[buffer_number];
+        return header_->rolling_data_end[buffer_number];
     }
 
     uint64_t num_records_dropped() const {
@@ -75,23 +75,39 @@ public:
         return buf + get_durable_buffer_offset();
     }
 
-    // Return the offset of nondurable buffer |buffer_number|.
-    uint64_t GetNondurableBufferOffset(int buffer_number) const {
-        //static_assert(fbl::count_of(header_->nondurable_data_end) == 2, "");
+    // Return the offset of rolling buffer |buffer_number|.
+    uint64_t GetRollingBufferOffset(int buffer_number) const {
+        //static_assert(fbl::count_of(header_->rolling_data_end) == 2, "");
         ZX_DEBUG_ASSERT(buffer_number >= 0 && buffer_number <= 1);
         auto offset = sizeof(trace_buffer_header) + durable_buffer_size();
         if (buffer_number == 1) {
-            offset += nondurable_buffer_size();
+            offset += rolling_buffer_size();
         }
         return offset;
     }
 
-    // Given a pointer to a trace buffer and a nondurable buffer number,
-    // return a pointer to the nondurable buffer contained therein.
-    const void* GetNondurableBuffer(const void* buffer, int buffer_number) const {
+    // Given a pointer to a trace buffer and a rolling buffer number,
+    // return a pointer to the rolling buffer contained therein.
+    const void* GetRollingBuffer(const void* buffer, int buffer_number) const {
         auto buf = reinterpret_cast<const uint8_t*>(buffer);
-        return buf + GetNondurableBufferOffset(buffer_number);
+        return buf + GetRollingBufferOffset(buffer_number);
     }
+
+    // These are temporary to allow a soft-roll of streaming support into
+    // garnet. Delete after garnet side lands.
+    uint64_t nondurable_buffer_size() const {
+        return rolling_buffer_size();
+    }
+    uint64_t nondurable_data_end(int buffer_number) const {
+        return rolling_data_end(buffer_number);
+    }
+    uint64_t GetNondurableBufferOffset(int buffer_number) const {
+        return GetRollingBufferOffset(buffer_number);
+    }
+    const void* GetNondurableBuffer(const void* buffer, int buffer_number) const {
+        return GetRollingBuffer(buffer, buffer_number);
+    }
+    // End of temporary soft-roll changes.
 
 private:
     explicit BufferHeaderReader(const trace_buffer_header* header);

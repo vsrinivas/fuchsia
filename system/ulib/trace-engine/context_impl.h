@@ -7,12 +7,20 @@
 #include <zircon/assert.h>
 
 #include <fbl/atomic.h>
-
+#include <fbl/mutex.h>
+#include <lib/zx/event.h>
 #include <trace-engine/buffer_internal.h>
 #include <trace-engine/context.h>
 #include <trace-engine/handler.h>
 
 using trace::internal::trace_buffer_header;
+
+// Return true if there are no buffer acquisitions of the trace context.
+bool trace_engine_is_buffer_context_released();
+
+// Called from trace_context to notify the engine a buffer needs saving.
+void trace_engine_request_save_buffer(uint32_t wrapped_count,
+                                      uint64_t durable_data_end);
 
 // Maintains state for a single trace session.
 // This structure is accessed concurrently from many threads which hold trace
@@ -30,8 +38,8 @@ struct trace_context {
 
     static size_t max_buffer_size() { return kMaxPhysicalBufferSize; }
 
-    static size_t usable_buffer_end() {
-        return 1ull << kUsableBufferOffsetBits;
+    static size_t MaxUsableBufferOffset() {
+        return (1ull << kUsableBufferOffsetBits) - sizeof(uint64_t);
     }
 
     uint32_t generation() const { return generation_; }
@@ -44,28 +52,42 @@ struct trace_context {
         return num_records_dropped_.load(fbl::memory_order_relaxed);
     }
 
-    // Return true if at least one record was dropped.
-    bool record_dropped() const { return num_records_dropped() != 0u; }
+    bool UsingDurableBuffer() const {
+        return buffering_mode_ != TRACE_BUFFERING_MODE_ONESHOT;
+    }
 
-    // Return the number of bytes currently allocated in the buffer.
-    // This does not include the durable buffer.
-    // TODO(dje): Renaming this to nondurable_bytes_allocated() is ugly,
-    // which suggests removing all nondurable_ prefixes.
-    size_t bytes_allocated() const;
+    // Return true if at least one record was dropped.
+    bool WasRecordDropped() const { return num_records_dropped() != 0u; }
+
+    // Return the number of bytes currently allocated in the rolling buffer(s).
+    size_t RollingBytesAllocated() const;
+
+    size_t DurableBytesAllocated() const;
 
     void InitBufferHeader();
     void UpdateBufferHeaderAfterStopped();
 
     uint64_t* AllocRecord(size_t num_bytes);
+    uint64_t* AllocDurableRecord(size_t num_bytes);
     bool AllocThreadIndex(trace_thread_index_t* out_index);
     bool AllocStringIndex(trace_string_index_t* out_index);
 
-private:
-    // The maximum nondurable buffer size in bits.
-    static constexpr size_t kNondurableBufferSizeBits = 32;
+    // This is called by the handler when it has been notified that a buffer
+    // has been saved.
+    // |wrapped_count| is the wrapped count at the time the buffer save request
+    // was made. Similarly for |durable_data_end|.
+    void MarkRollingBufferSaved(uint32_t wrapped_count, uint64_t durable_data_end);
 
-    // Maximum size, in bytes, of a nondurable buffer.
-    static constexpr size_t kMaxNondurableBufferSize = 1ull << kNondurableBufferSizeBits;
+    // This is only called from the engine to initiate a buffer save.
+    void HandleSaveRollingBufferRequest(uint32_t wrapped_count,
+                                        uint64_t durable_data_end);
+
+private:
+    // The maximum rolling buffer size in bits.
+    static constexpr size_t kRollingBufferSizeBits = 32;
+
+    // Maximum size, in bytes, of a rolling buffer.
+    static constexpr size_t kMaxRollingBufferSize = 1ull << kRollingBufferSizeBits;
 
     // The number of usable bits in the buffer pointer.
     // This is several bits more than the maximum buffer size to allow a
@@ -75,13 +97,13 @@ private:
     // modifying state and thus obtaining the lock (streaming mode is not
     // lock-free). Instead the offset keeps growing.
     // kUsableBufferOffsetBits = 40 bits = 1TB.
-    // Max nondurable buffer size = 32 bits = 4GB.
+    // Max rolling buffer size = 32 bits = 4GB.
     // Thus we assume TraceManager can save 4GB of trace before the client
     // writes 1TB of trace data (lest the offset part of
-    // |nondurable_buffer_current_| overflows). But, just in case, if
+    // |rolling_buffer_current_| overflows). But, just in case, if
     // TraceManager still can't keep up we stop tracing when the offset
     // approaches overflowing. See AllocRecord().
-    static constexpr int kUsableBufferOffsetBits = kNondurableBufferSizeBits + 8;
+    static constexpr int kUsableBufferOffsetBits = kRollingBufferSizeBits + 8;
 
     // The number of bits used to record the buffer pointer.
     // This includes one more bit to support overflow in offset calcs.
@@ -106,7 +128,40 @@ private:
 
     // The physical buffer can be at most this big.
     // To keep things simple we ignore the header.
-    static constexpr size_t kMaxPhysicalBufferSize = kMaxNondurableBufferSize;
+    static constexpr size_t kMaxPhysicalBufferSize = kMaxRollingBufferSize;
+
+    // The minimum size of the durable buffer.
+    // There must be enough space for at least the initialization record.
+    static constexpr size_t kMinDurableBufferSize = 16;
+
+    // The maximum size of the durable buffer.
+    // We need enough space for:
+    // - initialization record = 16 bytes
+    // - string table (max TRACE_ENCODED_STRING_REF_MAX_INDEX = 0x7fffu entries)
+    // - thread table (max TRACE_ENCODED_THREAD_REF_MAX_INDEX = 0xff entries)
+    // String entries are 8 bytes + length-round-to-8-bytes.
+    // Strings have a max size of TRACE_ENCODED_STRING_REF_MAX_LENGTH bytes
+    // = 32000. We assume most are < 64 bytes.
+    // Thread entries are 8 bytes + pid + tid = 24 bytes.
+    // If we assume 10000 registered strings, typically 64 bytes, plus max
+    // number registered threads, that works out to:
+    // 16 /*initialization record*/
+    // + 10000 * (8 + 64) /*strings*/
+    // + 255 * 24 /*threads*/
+    // = 726136.
+    // We round this up to 1MB.
+    static constexpr size_t kMaxDurableBufferSize = 1024 * 1024;
+
+    // Given a buffer of size |SIZE| in bytes, not including the header,
+    // return how much to use for the durable buffer. This is further adjusted
+    // to be at most |kMaxDurableBufferSize|, and to account for rolling
+    // buffer size alignment constraints.
+#define GET_DURABLE_BUFFER_SIZE(size) ((size) / 16)
+
+    // Ensure the smallest buffer is still large enough to hold
+    // |kMinDurableBufferSize|.
+    static_assert(GET_DURABLE_BUFFER_SIZE(kMinPhysicalBufferSize - sizeof(trace_buffer_header)) >=
+                  kMinDurableBufferSize, "");
 
     static uintptr_t GetBufferOffset(uint64_t offset_plus_counter) {
         return offset_plus_counter & ((1ul << kBufferOffsetBits) - 1);
@@ -124,23 +179,58 @@ private:
         return wrapped_count & 1;
     }
 
+    bool IsDurableBufferFull() const {
+        return durable_buffer_full_mark_.load(fbl::memory_order_relaxed) != 0;
+    }
+
+    // Return true if |buffer_number| is ready to be written to.
+    bool IsRollingBufferReady(int buffer_number) const {
+        return rolling_buffer_full_mark_[buffer_number].load(fbl::memory_order_relaxed) == 0;
+    }
+
+    // Return true if the other rolling buffer is ready to be written to.
+    bool IsOtherRollingBufferReady(int buffer_number) const {
+        return IsRollingBufferReady(!buffer_number);
+    }
+
+    uint32_t CurrentWrappedCount() const {
+        auto current = rolling_buffer_current_.load(fbl::memory_order_relaxed);
+        return GetWrappedCount(current);
+    }
+
     void ComputeBufferSizes();
 
+    void MarkDurableBufferFull(uint64_t last_offset);
+
     void MarkOneshotBufferFull(uint64_t last_offset);
+
+    void MarkRollingBufferFull(uint32_t wrapped_count, uint64_t last_offset);
+
+    bool SwitchRollingBuffer(uint32_t wrapped_count, uint64_t buffer_offset);
+
+    void SwitchRollingBufferLocked(uint32_t prev_wrapped_count, uint64_t prev_last_offset);
+
+    void StreamingBufferFullCheck(uint32_t wrapped_count,
+                                  uint64_t buffer_offset);
+
+    void MarkTracingArtificiallyStopped();
 
     void SnapToEnd(uint32_t wrapped_count) {
         // Snap to the endpoint for simplicity.
         // Several threads could all hit buffer-full with each one
         // continually incrementing the offset.
         uint64_t full_offset_plus_counter =
-            MakeOffsetPlusCounter(nondurable_buffer_size_, wrapped_count);
-        nondurable_buffer_current_.store(full_offset_plus_counter,
-                                         fbl::memory_order_relaxed);
+            MakeOffsetPlusCounter(rolling_buffer_size_, wrapped_count);
+        rolling_buffer_current_.store(full_offset_plus_counter,
+                                      fbl::memory_order_relaxed);
     }
 
     void MarkRecordDropped() {
         num_records_dropped_.fetch_add(1, fbl::memory_order_relaxed);
     }
+
+    void NotifyRollingBufferFullLocked(uint32_t wrapped_count,
+                                       uint64_t durable_data_end);
 
     // The generation counter associated with this context to distinguish
     // it from previously created contexts.
@@ -163,13 +253,13 @@ private:
     // The size of the durable buffer;
     size_t durable_buffer_size_;
 
-    // Non-durable record buffer start.
+    // Rolling buffer start.
     // To simplify switching between them we don't record the buffer end,
     // and instead record their size (which is identical).
-    uint8_t* nondurable_buffer_start_[2];
+    uint8_t* rolling_buffer_start_[2];
 
-    // The size of both non-durable buffers.
-    size_t nondurable_buffer_size_;
+    // The size of both rolling buffers.
+    size_t rolling_buffer_size_;
 
     // Current allocation pointer for durable records.
     // This only used in circular and streaming modes.
@@ -199,15 +289,26 @@ private:
     //
     // This value is also used for durable records in oneshot mode: in
     // oneshot mode durable and non-durable records share the same buffer.
-    fbl::atomic<uint64_t> nondurable_buffer_current_;
+    fbl::atomic<uint64_t> rolling_buffer_current_;
 
     // Offset beyond the last successful allocation, or zero if not full.
     // Only ever set to non-zero once when the buffer fills.
     // This will only be set in oneshot and streaming modes.
-    fbl::atomic<uint64_t> nondurable_buffer_full_mark_[2];
+    fbl::atomic<uint64_t> rolling_buffer_full_mark_[2];
 
     // A count of the number of records that have been dropped.
     fbl::atomic<uint64_t> num_records_dropped_{0};
+
+    // A count of the number of records that have been dropped.
+    fbl::atomic<uint64_t> num_records_dropped_after_buffer_switch_{0};
+
+    // Set to true if the engine needs to stop tracing for some reason.
+    bool tracing_artificially_stopped_ __TA_GUARDED(buffer_switch_mutex_) = false;
+
+    // This is used when switching rolling buffers.
+    // It's a relatively rare operation, and this simplifies reasoning about
+    // correctness.
+    mutable fbl::Mutex buffer_switch_mutex_; // TODO(dje): more guards?
 
     // Handler associated with the trace session.
     trace_handler_t* const handler_;
