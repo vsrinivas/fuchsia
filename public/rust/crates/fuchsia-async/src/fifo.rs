@@ -96,7 +96,7 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
     /// get a notification when the fifo does become writable. That is, this
     /// is only suitable for calling in a `Future::poll` method and will
     /// automatically handle ensuring a retry once the fifo is writable again.
-    fn poll_write(&self, cx: &mut task::Context) -> Poll<(), zx::Status> {
+    pub fn poll_write(&self, cx: &mut task::Context) -> Poll<(), zx::Status> {
         self.handle.poll_write(cx)
     }
 
@@ -130,7 +130,7 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
     /// get a notification when the fifo does become readable. That is, this
     /// is only suitable for calling in a `Future::poll` method and will
     /// automatically handle ensuring a retry once the fifo is readable again.
-    fn poll_read(&self, cx: &mut task::Context) -> Poll<(), zx::Status> {
+    pub fn poll_read(&self, cx: &mut task::Context) -> Poll<(), zx::Status> {
         self.handle.poll_read(cx)
     }
 
