@@ -101,7 +101,6 @@ executable("vmm_unittests") {
 
 package("vmm_tests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":vmm_unittests",
