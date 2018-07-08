@@ -39,7 +39,6 @@ package("wlantool2") {
 }
 
 package("wlantool2-tests") {
-  deprecated_system_image = true
   testonly = true
 
   deps = [
