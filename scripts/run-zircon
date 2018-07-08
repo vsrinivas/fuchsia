@@ -30,9 +30,11 @@ function HELP {
     echo "-q <directory>       : location of qemu, defaults to looking in prebuilt/downloads/qemu/bin, then \$PATH"
     echo "-r                   : run release build"
     echo "-s <number of cpus>  : number of cpus, 1 for uniprocessor, default is 4"
+    echo "-t <binary>          : use <binary> as the QEMU->ZBI trampoline"
     echo "-u <path>            : execute qemu startUp script, default is no script"
     echo "-V                   : try to use virtio devices"
     echo "-x <bootdata>        : use specified bootdata"
+    echo "-z <zbi>             : boot specified complete ZBI via trampoline"
     echo "--audio[=<host_drv>] : use Intel HD Audio"
     echo "                     : <host_drv> should be one of (alsa, pa, wav, none)"
     echo "--ahci=<disk image>  : run with disk image file as raw ahci drive"
@@ -79,6 +81,8 @@ SERIAL=1
 SMP=4
 INITRD=
 CMDLINE=""
+QEMU_KERNEL=
+QEMU_INITRD=
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
   IFNAME="tap0"
@@ -86,7 +90,7 @@ else
   IFNAME="qemu"
 fi
 
-while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:q:rs:u:Vx:h-:" FLAG; do
+while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:q:rst::u:Vx:z:h-:" FLAG; do
     case $FLAG in
         A) ASAN=1;;
         a) ARCH=$OPTARG;;
@@ -108,9 +112,11 @@ while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:q:rs:u:Vx:h-:" FLAG; do
         q) QEMUDIR=${OPTARG}/;;
         r) RELEASE=1;;
         s) SMP=$OPTARG;;
+        t) QEMU_KERNEL=$OPTARG;;
         u) UPSCRIPT=$OPTARG;;
         V) VIRTIO=1;;
         x) INITRD=$OPTARG;;
+        z) QEMU_INITRD=$OPTARG;;
         h) HELP;;
         \?)
             echo unrecognized option
@@ -197,6 +203,31 @@ fi
 
 if [[ -z $BUILDDIR ]]; then
   BUILDDIR="$(dirname "$DIR")/build-$PROJECT$BUILDDIR_SUFFIX"
+fi
+
+if [[ -n "$QEMU_INITRD" && -n "$INITRD" ]]; then
+    echo >&2 "ZBI booting with -z is incompatible with deprecated -x"
+    exit 2
+fi
+
+if [[ -n "$QEMU_INITRD" && -z "$QEMU_KERNEL" ]]; then
+    case $ARCH in
+    arm64) QEMU_KERNEL="$BUILDDIR/qemu-boot-shim.bin" ;;
+    x64) QEMU_KERNEL="$BUILDDIR/multiboot.bin" ;;
+    *)
+        echo >&2 "No QEMU trampoline for $ARCH"
+        exit 2
+        ;;
+    esac
+fi
+
+if (( $BUILD )); then
+    if [[ -n "$QEMU_INITRD" && "$QEMU_INITRD" != $BUILDDIR/* ]]; then
+        echo >&2 "WARNING: ZBI $QEMU_INITRD not in $BUILDDIR just built"
+    fi
+    if [[ -n "$QEMU_KERNEL" && "$QEMU_KERNEL" != $BUILDDIR/* ]]; then
+        echo >&2 "WARNING: trampoline $QEMU_KERNEL not in $BUILDDIR just built"
+    fi
 fi
 
 # construct the args for qemu
@@ -343,7 +374,7 @@ fi
 case $ARCH in
     arm64)
         QEMU=${QEMUDIR}qemu-system-aarch64
-        ARGS+=" -kernel $BUILDDIR/qemu-zircon.bin"
+        KERNEL="$BUILDDIR/qemu-zircon.bin"
         if (( $DO_KVM )); then
           ARGS+=" -enable-kvm -cpu host"
           GIC=host
@@ -363,7 +394,8 @@ case $ARCH in
         ;;
     x64)
         QEMU=${QEMUDIR}qemu-system-x86_64
-        ARGS+=" -machine q35 -kernel $BUILDDIR/zircon.bin"
+        KERNEL="$BUILDDIR/zircon.bin"
+        ARGS+=" -machine q35"
         ARGS+=" -device isa-debug-exit,iobase=0xf4,iosize=0x04"
         if (( $DO_KVM )); then
           ARGS+=" -enable-kvm -cpu host,migratable=no,+invtsc"
@@ -384,11 +416,15 @@ case $ARCH in
         ;;
 esac
 
-# ramdisk image
-if [[ -n $INITRD ]]; then
-    ARGS+=" -initrd $INITRD"
-elif [[ -f "$BOOTDATA" ]]; then
-    ARGS+=" -initrd $BOOTDATA"
+if [[ -n "$QEMU_INITRD" ]]; then
+    ARGS+=" -kernel $QEMU_KERNEL -initrd $QEMU_INITRD"
+else
+    ARGS+=" -kernel $KERNEL"
+    if [[ -n $INITRD ]]; then
+        ARGS+=" -initrd $INITRD"
+    elif [[ -f "$BOOTDATA" ]]; then
+        ARGS+=" -initrd $BOOTDATA"
+    fi
 fi
 
 # Propagate our TERM environment variable as a kernel command line
