@@ -24,7 +24,8 @@ TEST_F(TestSysmgr, ServiceStartup) {
   fidl::VectorPtr<fidl::StringPtr> sysmgr_args;
   sysmgr_args.push_back(
       "--config={\"services\": { \"test.sysmgr.Interface\": "
-      "\"test_sysmgr_service_startup\" } }");
+      "\"/pkgfs/packages/sysmgr_integration_tests/0/bin/"
+      "test_sysmgr_service_startup\" } }");
   component::AppmgrArgs args{.pa_directory_request = h2.release(),
                              .sysmgr_url = "sysmgr",
                              .sysmgr_args = std::move(sysmgr_args),
@@ -38,11 +39,11 @@ TEST_F(TestSysmgr, ServiceStartup) {
             fdio_service_connect_at(h1.get(), "svc", svc_server.release()));
 
   ::test::sysmgr::InterfacePtr interface_ptr;
-  ASSERT_EQ(ZX_OK, fdio_service_connect_at(
-                       svc_client.get(), ::test::sysmgr::Interface::Name_,
-                       interface_ptr.NewRequest(dispatcher())
-                           .TakeChannel()
-                           .release()));
+  ASSERT_EQ(
+      ZX_OK,
+      fdio_service_connect_at(
+          svc_client.get(), ::test::sysmgr::Interface::Name_,
+          interface_ptr.NewRequest(dispatcher()).TakeChannel().release()));
 
   bool received_response = false;
   std::string response;

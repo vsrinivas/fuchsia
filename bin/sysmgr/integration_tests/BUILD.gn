@@ -49,7 +49,7 @@ executable("service_startup_test") {
 
 package("integration_tests") {
   testonly = true
-  deprecated_system_image = true
+  package_name = "sysmgr_integration_tests"
 
   deps = [
     ":service",
