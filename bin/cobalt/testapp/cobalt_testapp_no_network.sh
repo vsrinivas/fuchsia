@@ -5,10 +5,8 @@
 # found in the LICENSE file.
 
 # This script wraps cobalt_testapp in a way that's suitable to run in
-# in the stand-alone cobalt_client CI but not in the Garnet CI.
-# Because we do not pass the flag --no_network_for_testing, the
-# real network is used. See cobalt_testapp_no_environment.
+# continuous integration jobs, by disabling the network for testing.
 
 set -e
 
-/system/bin/cobalt_testapp --skip_environment_test
+/pkgfs/packages/cobalt_tests/0/bin/cobalt_testapp --no_network_for_testing

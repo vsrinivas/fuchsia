@@ -15,15 +15,12 @@ executable("cobalt_encoder_unittests") {
 
 package("cobalt_tests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":cobalt_encoder_unittests",
     "app:app",
     "app:cobalt_app_unittests",
     "testapp:cobalt_testapp",
-    "testapp:cobalt_testapp_no_environment",
-    "testapp:cobalt_testapp_no_network",
     "utils:cobalt_utils_unittests",
   ]
 
@@ -49,11 +46,13 @@ package("cobalt_tests") {
     },
 
     {
-      name = "cobalt_testapp_no_network"
+      name = rebase_path("testapp/cobalt_testapp_no_network.sh")
+      dest = "cobalt_testapp_no_network"
     },
 
     {
-      name = "cobalt_testapp_no_environment"
+      name = rebase_path("testapp/cobalt_testapp_no_environment.sh")
+      dest = "cobalt_testapp_no_network"
 
       # We don't want to run this version cobalt_testapp in the Garnet
       # CI/CQ  because it uses the real network. We run cobalt_testap_no_network
