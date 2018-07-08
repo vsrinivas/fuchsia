@@ -6,6 +6,7 @@
         "garnet/packages/examples/components",
         "garnet/packages/examples/crust",
         "garnet/packages/examples/escher",
+        "garnet/packages/examples/eth-rs",
         "garnet/packages/examples/fidl",
         "garnet/packages/examples/http",
         "garnet/packages/examples/media",
