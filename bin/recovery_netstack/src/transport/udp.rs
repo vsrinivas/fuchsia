@@ -10,6 +10,7 @@ use wire::BufferAndRange;
 use StackState;
 
 /// The state associated with the UDP protocol.
+#[derive(Default)]
 pub struct UdpState;
 
 /// Receive a UDP packet in an IP packet.

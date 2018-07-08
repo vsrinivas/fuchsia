@@ -22,11 +22,13 @@ use self::conn::Conn;
 use self::listen::Listener;
 
 /// The state associated with the TCP protocol.
+#[derive(Default)]
 pub struct TcpState {
     v4: TcpStateInner<Ipv4>,
     v6: TcpStateInner<Ipv6>,
 }
 
+#[derive(Default)]
 struct TcpStateInner<I: Ip> {
     conns: HashMap<FourTuple<I::Addr>, Conn>,
     listeners: HashMap<TwoTuple<I::Addr>, Listener>,

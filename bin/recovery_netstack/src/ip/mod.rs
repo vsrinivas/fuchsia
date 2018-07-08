@@ -23,11 +23,13 @@ use StackState;
 const DEFAULT_TTL: u8 = 64;
 
 /// The state associated with the IP layer.
+#[derive(Default)]
 pub struct IpLayerState {
     v4: IpLayerStateInner<Ipv4>,
     v6: IpLayerStateInner<Ipv6>,
 }
 
+#[derive(Default)]
 struct IpLayerStateInner<I: Ip> {
     forward: bool,
     table: ForwardingTable<I>,

@@ -81,7 +81,7 @@ pub trait Ip: Sized + self::sealed::Sealed {
 /// IPv4.
 ///
 /// `Ipv4` implements `Ip` for IPv4.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Ipv4;
 
 impl Ip for Ipv4 {
@@ -108,7 +108,7 @@ impl Ipv4 {
 /// IPv6.
 ///
 /// `Ipv6` implements `Ip` for IPv6.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Ipv6;
 
 impl Ip for Ipv6 {
@@ -125,7 +125,7 @@ impl Ip for Ipv6 {
 /// An IPv4 or IPv6 address.
 pub trait IpAddr
 where
-    Self: Sized + Eq + PartialEq + Hash + Copy + Display + self::sealed::Sealed,
+    Self: Sized + Eq + PartialEq + Hash + Copy + Display + Debug + self::sealed::Sealed,
 {
     /// The number of bytes in an address of this type.
     ///

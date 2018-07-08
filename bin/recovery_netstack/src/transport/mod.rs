@@ -12,6 +12,7 @@ use wire::BufferAndRange;
 use StackState;
 
 /// The state associated with the transport layer.
+#[derive(Default)]
 pub struct TransportLayerState {
     tcp: self::tcp::TcpState,
     udp: self::udp::UdpState,

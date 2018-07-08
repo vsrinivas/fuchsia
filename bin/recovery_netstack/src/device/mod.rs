@@ -36,10 +36,19 @@ enum DeviceProtocol {
 }
 
 /// The state associated with the device layer.
+#[derive(Default)]
 pub struct DeviceLayerState {
     // invariant: even though each protocol has its own hash map, keys are
     // unique across all hash maps
     ethernet: HashMap<u64, EthernetDeviceState>,
+}
+
+impl DeviceLayerState {
+    /// Add a new ethernet device to the device layer.
+    pub fn add_ethernet_device(&mut self, id: u64, state: EthernetDeviceState) -> DeviceId{
+        self.ethernet.insert(id, state);
+        DeviceId::new_ethernet(id)
+    }
 }
 
 /// Send an IP packet in a device layer frame.

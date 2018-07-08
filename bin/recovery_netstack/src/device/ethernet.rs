@@ -95,6 +95,7 @@ impl EtherType {
 }
 
 /// The state associated with an Ethernet device.
+#[derive(Default)]
 pub struct EthernetDeviceState {
     ipv4_addr: Option<(Ipv4Addr, Subnet<Ipv4Addr>)>,
     ipv6_addr: Option<(Ipv6Addr, Subnet<Ipv6Addr>)>,

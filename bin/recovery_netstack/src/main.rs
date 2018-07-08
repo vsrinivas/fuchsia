@@ -46,6 +46,7 @@ fn main() {}
 
 /// The state associated with the network stack.
 #[allow(missing_docs)]
+#[derive(Default)]
 pub struct StackState {
     pub transport: TransportLayerState,
     pub ip: IpLayerState,
