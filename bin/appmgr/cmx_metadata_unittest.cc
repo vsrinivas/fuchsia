@@ -23,12 +23,21 @@ TEST(CmxMetadata, ParseSandboxMetadata) {
   EXPECT_FALSE(sandbox.HasMember("other"));
 }
 
-// Test that we return an error when parsing invalid sandbox metadata instead.
-TEST(CmxMetadata, ParseInvalidSandboxMetadata) {
+// Test that we return an error when parsing invalid JSON
+TEST(CmxMetadata, ParseInvalidJson) {
   CmxMetadata cmx;
   rapidjson::Value sandbox;
   EXPECT_FALSE(cmx.ParseSandboxMetadata(R"JSON({ ,,, })JSON", &sandbox));
+  EXPECT_FALSE(sandbox.IsObject());
+}
 
+// Test that we return an error when "sandbox" is missing
+TEST(CmxMetadata, ParseMissingSandbox) {
+  CmxMetadata cmx;
+  rapidjson::Value sandbox;
+  EXPECT_FALSE(cmx.ParseSandboxMetadata(
+      R"JSON({ "sandwich": { "ingredients": [ "bacon", "lettuce", "tomato" ] } })JSON",
+      &sandbox));
   EXPECT_FALSE(sandbox.IsObject());
 }
 

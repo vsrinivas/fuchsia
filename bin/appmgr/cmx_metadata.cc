@@ -30,6 +30,8 @@ bool CmxMetadata::ParseSandboxMetadata(const std::string& data,
   if (!document.IsObject())
     return false;
   auto sandbox = document.FindMember(kSandbox);
+  if (sandbox == document.MemberEnd() || !sandbox->value.IsObject())
+    return false;
 
   *parsed_value = sandbox->value;
   return true;

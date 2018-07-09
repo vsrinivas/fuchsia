@@ -38,6 +38,10 @@ bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value) {
   dev_.clear();
   features_.clear();
 
+  if (!sandbox_value.IsObject()) {
+    return false;
+  }
+
   auto dev = sandbox_value.FindMember(kDev);
   if (dev != sandbox_value.MemberEnd()) {
     if (!CopyArrayToVector(dev->value, &dev_))
