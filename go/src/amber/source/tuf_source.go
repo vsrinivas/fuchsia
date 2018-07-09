@@ -215,6 +215,7 @@ func (f *TUFSource) updateTUFClientLocked() error {
 	// If we have oauth2 configured, we need to wrap the client in order to
 	// inject the authentication header.
 	var tokenSource oauth2.TokenSource
+
 	if c := oauth2deviceConfig(f.cfg.Config.Oauth2Config); c != nil {
 		// Store the client in the context so oauth2 can use it to
 		// fetch the token. This client's transport will also be used
@@ -222,8 +223,12 @@ func (f *TUFSource) updateTUFClientLocked() error {
 		// the request timeout, which we manually have to copy over.
 		ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
 
+		timeout := httpClient.Timeout
+
 		tokenSource = c.TokenSource(ctx, f.cfg.Oauth2Token)
 		httpClient = oauth2.NewClient(ctx, tokenSource)
+
+		httpClient.Timeout = timeout
 	}
 
 	// Create a new tuf client that uses the new http client.
