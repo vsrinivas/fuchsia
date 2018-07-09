@@ -508,7 +508,7 @@ static int aml_sd_emmc_irq_thread(void *ctx) {
         }
         mtx_lock(&dev->mtx);
         aml_sd_emmc_regs_t* regs = dev->regs;
-        sdmmc_req_t *req = dev->cur_req;
+        sdmmc_req_t* req = dev->cur_req;
 
         if (req == NULL) {
             status = ZX_ERR_IO_INVALID;
@@ -573,13 +573,28 @@ static int aml_sd_emmc_irq_thread(void *ctx) {
             req->response[0] = regs->sd_emmc_cmd_rsp;
         }
         if ((!req->use_dma) && (req->cmd_flags & SDMMC_CMD_READ)) {
-            volatile uint64_t *dest = (uint64_t *)req->virt;
             uint32_t length = req->blockcount * req->blocksize;
-            volatile uint64_t *end = (uint64_t *)(req->virt + length);
-            volatile uint64_t *src = (uint64_t *)(io_buffer_virt(&dev->mmio) +
+            uint32_t data_copied = 0;
+            if (length >= 8) {
+                uint64_t* dest = (uint64_t*)req->virt;
+                volatile uint64_t* src = (uint64_t*)(io_buffer_virt(&dev->mmio) +
                                                   AML_SD_EMMC_PING_BUFFER_BASE);
-            while (dest < end) {
+                while (length >= 8) {
+                    *dest++ = *src++;
+                    length -= 8;
+                    data_copied += 8;
+                }
+            }
+
+            if (length == 0) {
+                goto complete;
+            }
+            uint8_t* dest = (uint8_t*)req->virt + data_copied;
+            volatile uint8_t* src = (uint8_t*)(io_buffer_virt(&dev->mmio) +
+                                                  AML_SD_EMMC_PING_BUFFER_BASE + data_copied);
+            while (length > 0) {
                 *dest++ = *src++;
+                length--;
             }
         }
 
@@ -750,13 +765,30 @@ static zx_status_t aml_sd_emmc_setup_data_descs_pio(aml_sd_emmc_t *dev, sdmmc_re
     desc->cmd_info |= AML_SD_EMMC_CMD_INFO_DATA_IO;
     if (!(req->cmd_flags & SDMMC_CMD_READ)) {
         desc->cmd_info |= AML_SD_EMMC_CMD_INFO_DATA_WR;
-        volatile uint64_t *src = (uint64_t *)req->virt;
-        volatile uint64_t *end = (uint64_t *)(req->virt + length);
-        volatile uint64_t *dest = (uint64_t *)(io_buffer_virt(&dev->mmio) +
-                                               AML_SD_EMMC_PING_BUFFER_BASE);
-        while (src < end) {
-            *dest++ = *src++;
+        uint32_t data_copied = 0;
+        uint32_t data_remaining = length;
+        if (data_remaining >= 8) {
+            uint64_t* src = (uint64_t*)req->virt;
+            volatile uint64_t* dest = (uint64_t*)(io_buffer_virt(&dev->mmio) +
+                                              AML_SD_EMMC_PING_BUFFER_BASE);
+            while (data_remaining >= 8) {
+                *dest++ = *src++;
+                data_remaining -= 8;
+                data_copied += 8;
+            }
         }
+
+        if (data_remaining == 0) {
+            goto complete;
+        }
+        uint8_t* src = (uint8_t*)req->virt + data_copied;
+        volatile uint8_t* dest = (uint8_t*)(io_buffer_virt(&dev->mmio) +
+                                              AML_SD_EMMC_PING_BUFFER_BASE + data_copied);
+        while (data_remaining > 0) {
+            *dest++ = *src++;
+            data_remaining--;
+        }
+complete:
         io_buffer_cache_flush(&dev->mmio, AML_SD_EMMC_PING_BUFFER_BASE, length);
     } else if (req->cmd_flags & SDMMC_CMD_READ) {
         io_buffer_cache_flush_invalidate(&dev->mmio, AML_SD_EMMC_PING_BUFFER_BASE, length);
