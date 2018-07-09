@@ -7,7 +7,8 @@
 
 #include "garnet/bin/guest/vmm/guest_config.h"
 
-zx_status_t setup_linux(const GuestConfig cfg, const machina::PhysMem& phys_mem,
-                        uintptr_t* guest_ip, uintptr_t* boot_ptr);
+zx_status_t setup_linux(const GuestConfig& cfg,
+                        const machina::PhysMem& phys_mem, uintptr_t* guest_ip,
+                        uintptr_t* boot_ptr);
 
 #endif  // GARNET_BIN_GUEST_VMM_LINUX_H_

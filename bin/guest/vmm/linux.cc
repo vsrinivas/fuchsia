@@ -283,9 +283,7 @@ static zx_status_t write_boot_params(const machina::PhysMem& phys_mem,
     bp(phys_mem, SETUP_DATA) = kDtbOffset;
   }
 
-#if __aarch64__
-  return ZX_OK;
-#elif __x86_64__
+#if __x86_64__
   // Setup e820 memory map.
   size_t e820_entries = machina::e820_entries(phys_mem.size());
   if (e820_entries > kMaxE820Entries) {
@@ -293,9 +291,12 @@ static zx_status_t write_boot_params(const machina::PhysMem& phys_mem,
     return ZX_ERR_BAD_STATE;
   }
   bp(phys_mem, E820_COUNT) = static_cast<uint8_t>(e820_entries);
-
-  return machina::create_e820(phys_mem, kKernelOffset + kE820MapOffset);
+  const size_t e820_size = machina::e820_size(phys_mem.size());
+  void* e820_addr =
+      phys_mem.as<void>(kKernelOffset + kE820MapOffset, e820_size);
+  machina::create_e820(e820_addr, phys_mem.size());
 #endif
+  return ZX_OK;
 }
 
 static zx_status_t read_mz(const machina::PhysMem& phys_mem,
@@ -474,8 +475,9 @@ static std::string linux_cmdline(std::string cmdline) {
 #endif
 }
 
-zx_status_t setup_linux(const GuestConfig cfg, const machina::PhysMem& phys_mem,
-                        uintptr_t* guest_ip, uintptr_t* boot_ptr) {
+zx_status_t setup_linux(const GuestConfig& cfg,
+                        const machina::PhysMem& phys_mem, uintptr_t* guest_ip,
+                        uintptr_t* boot_ptr) {
   // Read the kernel image.
   zx_status_t status = load_kernel(cfg.kernel_path(), phys_mem, kKernelOffset);
   if (status != ZX_OK) {
