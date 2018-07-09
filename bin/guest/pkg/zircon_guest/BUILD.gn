@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/fuchsia/bootdata.gni")
 import("//build/config/fuchsia/zircon.gni")
 import("//garnet/bin/guest/pkg/guest_package.gni")
 
@@ -22,26 +21,17 @@ action("gpt_image") {
   ]
 }
 
-bootdata("guest-bootdata") {
-  visibility = [ ":*" ]
-  boot = true
-  inputs = zircon_boot_manifests
-  deps = []
-  foreach(label, deps) {
-    inputs += get_target_outputs(label)
-  }
-}
-
 guest_package("zircon_guest") {
+  # TODO(PD-162): This should just use zircon.zbi as zircon and have no
+  # ramdisk, when the guest loader supports that.
+  zircon = "$zircon_build_dir/kernel.zbi"
+  ramdisk = "$zircon_build_dir/zircon.zbi"
+
   deps = [
     ":gpt_image",
-    ":guest-bootdata",
   ]
 
   cmdline = "TERM=uart console.path=/dev/class/console/virtio-console"
-  bootdata_outputs = get_target_outputs(":guest-bootdata")
-  ramdisk = bootdata_outputs[0]
-  zircon = "$zircon_build_dir/zircon.bin"
 
   gpt_outputs = get_target_outputs(":gpt_image")
   gpt_filename = "gpt.img"
