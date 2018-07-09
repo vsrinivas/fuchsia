@@ -116,20 +116,23 @@ void MdnsImpl::Subscribe(const std::string& service_name) {
   std::cout << "press escape key to quit\n";
   fuchsia::mdns::MdnsServiceSubscriptionPtr subscription;
   mdns_service_->SubscribeToService(service_name, subscription.NewRequest());
-  subscriber_.Init(
-      std::move(subscription),
-      [this](const fuchsia::mdns::MdnsServiceInstance* from,
-             const fuchsia::mdns::MdnsServiceInstance* to) {
-        if (from == nullptr) {
-          FXL_DCHECK(to != nullptr);
-          std::cout << "added:\n" << indent << begl << *to << outdent << "\n";
-        } else if (to == nullptr) {
-          std::cout << "removed:\n"
-                    << indent << begl << *from << outdent << "\n";
-        } else {
-          std::cout << "changed:\n" << indent << begl << *to << outdent << "\n";
-        }
-      });
+  subscriber_.Init(std::move(subscription),
+                   [this](const fuchsia::mdns::MdnsServiceInstance* from,
+                          const fuchsia::mdns::MdnsServiceInstance* to) {
+                     if (from == nullptr) {
+                       FXL_DCHECK(to != nullptr);
+                       std::cout << "added:" << fostr::Indent << fostr::NewLine
+                                 << *to << fostr::Outdent << "\n";
+                     } else if (to == nullptr) {
+                       std::cout << "removed:" << fostr::Indent
+                                 << fostr::NewLine << *from << fostr::Outdent
+                                 << "\n";
+                     } else {
+                       std::cout << "changed:" << fostr::Indent
+                                 << fostr::NewLine << *to << fostr::Outdent
+                                 << "\n";
+                     }
+                   });
 
   WaitForKeystroke();
 }

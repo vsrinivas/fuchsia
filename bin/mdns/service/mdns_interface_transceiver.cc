@@ -19,6 +19,7 @@
 #include "garnet/bin/mdns/service/mdns_addresses.h"
 #include "garnet/bin/mdns/service/mdns_interface_transceiver_v4.h"
 #include "garnet/bin/mdns/service/mdns_interface_transceiver_v6.h"
+#include "lib/fostr/hex_dump.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
@@ -204,7 +205,7 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status,
   } else {
     inbound_buffer_.resize(result);
     FXL_LOG(ERROR) << "Couldn't parse message from " << reply_address << ", "
-                   << result << " bytes: " << inbound_buffer_;
+                   << result << " bytes: " << fostr::HexDump(inbound_buffer_);
     inbound_buffer_.resize(kMaxPacketSize);
   }
 

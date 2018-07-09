@@ -10,12 +10,9 @@
 #include <memory>
 
 #include "garnet/bin/mdns/service/dns_message.h"
+#include "lib/fostr/indent.h"
 
 namespace mdns {
-
-inline std::ostream& begl(std::ostream& os);
-inline std::ostream& indent(std::ostream& os);
-inline std::ostream& outdent(std::ostream& os);
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
@@ -25,14 +22,11 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
 
   int index = 0;
   for (const T& element : value) {
-    os << "\n" << begl << "[" << index++ << "] " << element;
+    os << fostr::NewLine << "[" << index++ << "] " << element;
   }
 
   return os;
 }
-
-template <>
-std::ostream& operator<<(std::ostream& os, const std::vector<uint8_t>& value);
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::shared_ptr<T>& value) {

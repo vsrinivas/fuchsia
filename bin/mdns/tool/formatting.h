@@ -10,13 +10,10 @@
 
 #include <fuchsia/mdns/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
-#include <fuchsia/mdns/cpp/fidl.h>
+
+#include "lib/fostr/indent.h"
 
 namespace mdns {
-
-std::ostream& begl(std::ostream& os);
-std::ostream& indent(std::ostream& os);
-std::ostream& outdent(std::ostream& os);
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const fidl::VectorPtr<T>& value) {
@@ -26,7 +23,7 @@ std::ostream& operator<<(std::ostream& os, const fidl::VectorPtr<T>& value) {
 
   int index = 0;
   for (const T& element : *value) {
-    os << "\n" << begl << "[" << index++ << "] " << element;
+    os << fostr::NewLine << "[" << index++ << "] " << element;
   }
 
   return os;

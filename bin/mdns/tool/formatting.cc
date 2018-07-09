@@ -9,50 +9,25 @@
 #include "lib/fxl/logging.h"
 
 namespace mdns {
-namespace {
-
-int ostream_indent_index() {
-  static int i = std::ios_base::xalloc();
-  return i;
-}
-
-}  // namespace
-
-std::ostream& begl(std::ostream& os) {
-  for (long i = 0; i < os.iword(ostream_indent_index()); i++) {
-    os << "    ";
-  }
-  return os;
-}
-
-std::ostream& indent(std::ostream& os) {
-  ++os.iword(ostream_indent_index());
-  return os;
-}
-
-std::ostream& outdent(std::ostream& os) {
-  --os.iword(ostream_indent_index());
-  return os;
-}
 
 std::ostream& operator<<(std::ostream& os,
                          const fuchsia::mdns::MdnsServiceInstance& value) {
   os << value.service_name << " " << value.instance_name;
-  os << indent;
+  os << fostr::Indent;
 
   if (value.v4_address) {
-    os << "\n" << begl << "IPv4 address: " << *value.v4_address;
+    os << fostr::NewLine << "IPv4 address: " << *value.v4_address;
   }
 
   if (value.v6_address) {
-    os << "\n" << begl << "IPv6 address: " << *value.v6_address;
+    os << fostr::NewLine << "IPv6 address: " << *value.v6_address;
   }
 
   if (value.text) {
-    os << "\n" << begl << "text: " << value.text;
+    os << fostr::NewLine << "text: " << value.text;
   }
 
-  return os << outdent;
+  return os << fostr::Outdent;
 }
 
 std::ostream& operator<<(std::ostream& os,

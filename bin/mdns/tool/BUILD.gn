@@ -29,6 +29,7 @@ executable("bin") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fostr",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/mdns/cpp",

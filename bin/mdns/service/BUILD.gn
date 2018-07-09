@@ -90,6 +90,7 @@ source_set("lib") {
   ]
 
   deps = [
+    "//garnet/public/lib/fostr",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/fidl/fuchsia.netstack",

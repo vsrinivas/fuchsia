@@ -8,82 +8,9 @@
 #include <iostream>
 
 #include "garnet/bin/mdns/service/dns_message.h"
+#include "lib/fostr/hex_dump.h"
 
 namespace mdns {
-namespace {
-
-int ostream_indent_index() {
-  static int i = std::ios_base::xalloc();
-  return i;
-}
-
-static constexpr size_t kBytesPerLine = 16;
-
-}  // namespace
-
-std::ostream& begl(std::ostream& os) {
-  for (long i = 0; i < os.iword(ostream_indent_index()); i++) {
-    os << "    ";
-  }
-  return os;
-}
-
-std::ostream& indent(std::ostream& os) {
-  ++os.iword(ostream_indent_index());
-  return os;
-}
-
-std::ostream& outdent(std::ostream& os) {
-  --os.iword(ostream_indent_index());
-  return os;
-}
-
-template <>
-std::ostream& operator<<(std::ostream& os, const std::vector<uint8_t>& value) {
-  os << indent;
-
-  size_t line_offset = 0;
-  size_t byte_count = value.size();
-  const uint8_t* bytes = value.data();
-
-  while (true) {
-    os << "\n"
-       << begl << std::hex << std::setw(4) << std::setfill('0') << line_offset
-       << " ";
-
-    std::string chars(kBytesPerLine, ' ');
-
-    for (size_t i = 0; i < kBytesPerLine; ++i) {
-      if (i == kBytesPerLine / 2) {
-        os << " ";
-      }
-
-      if (i >= byte_count) {
-        os << "   ";
-        ++bytes;
-      } else {
-        os << " " << std::hex << std::setw(2) << std::setfill('0')
-           << static_cast<uint16_t>(*bytes);
-        if (*bytes >= ' ' && *bytes <= '~') {
-          chars[i] = *bytes;
-        } else {
-          chars[i] = '.';
-        }
-        ++bytes;
-      }
-    }
-
-    os << "  " << chars;
-
-    if (byte_count <= kBytesPerLine) {
-      break;
-    }
-    line_offset += kBytesPerLine;
-    byte_count -= kBytesPerLine;
-  }
-
-  return os << std::dec << outdent;
-}
 
 std::ostream& operator<<(std::ostream& os, DnsType value) {
   switch (value) {
@@ -144,78 +71,76 @@ std::ostream& operator<<(std::ostream& os, const DnsV6Address& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsHeader& value) {
-  os << "\n";
-  os << indent;
-  os << begl << "id: " << value.id_ << "\n";
-  os << begl << "flags: 0x" << std::hex << std::setw(4) << std::setfill('0')
-     << value.flags_ << std::dec;
-  return os << outdent;
+  os << fostr::Indent;
+  os << fostr::NewLine << "id: " << value.id_;
+  os << fostr::NewLine << "flags: 0x" << std::hex << std::setw(4)
+     << std::setfill('0') << value.flags_ << std::dec;
+  return os << fostr::Outdent;
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsQuestion& value) {
-  os << "\n";
-  os << indent;
-  os << begl << "name: " << value.name_ << "\n";
-  os << begl << "type: " << value.type_ << "\n";
-  os << begl << "class: " << value.class_ << "\n";
-  os << begl << "unicast_response: " << value.unicast_response_;
-  return os << outdent;
+  os << fostr::Indent;
+  os << fostr::NewLine << "name: " << value.name_;
+  os << fostr::NewLine << "type: " << value.type_;
+  os << fostr::NewLine << "class: " << value.class_;
+  os << fostr::NewLine << "unicast_response: " << value.unicast_response_;
+  return os << fostr::Outdent;
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsResourceDataA& value) {
-  return os << begl << "address: " << value.address_;
+  return os << fostr::NewLine << "address: " << value.address_;
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsResourceDataNs& value) {
-  return os << begl
+  return os << fostr::NewLine
             << "name_server_domain_name: " << value.name_server_domain_name_;
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsResourceDataCName& value) {
-  return os << begl << "canonical_name: " << value.canonical_name_;
+  return os << fostr::NewLine << "canonical_name: " << value.canonical_name_;
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsResourceDataPtr& value) {
-  return os << begl << "pointer_domain_name_: " << value.pointer_domain_name_;
+  return os << fostr::NewLine
+            << "pointer_domain_name_: " << value.pointer_domain_name_;
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsResourceDataTxt& value) {
-  os << begl << "text: ";
-  os << indent;
+  os << fostr::NewLine << "text: ";
+  os << fostr::Indent;
   for (auto& string : value.strings_) {
-    os << "\n" << begl << "\"" << string << "\"";
+    os << fostr::NewLine << "\"" << string << "\"";
   }
-  return os << outdent;
+  return os << fostr::Outdent;
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsResourceDataAaaa& value) {
-  return os << begl << "address: " << value.address_;
+  return os << fostr::NewLine << "address: " << value.address_;
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsResourceDataSrv& value) {
-  os << begl << "priority: " << value.priority_ << "\n";
-  os << begl << "weight: " << value.weight_ << "\n";
-  os << begl << "port: " << value.port_ << "\n";
-  return os << begl << "target: " << value.target_;
+  os << fostr::NewLine << "priority: " << value.priority_;
+  os << fostr::NewLine << "weight: " << value.weight_;
+  os << fostr::NewLine << "port: " << value.port_;
+  return os << fostr::NewLine << "target: " << value.target_;
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsResourceDataOpt& value) {
-  return os << begl << "options: " << value.options_;
+  return os << fostr::NewLine << "options: " << fostr::HexDump(value.options_);
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsResourceDataNSec& value) {
-  os << begl << "next_domain: " << value.next_domain_ << "\n";
-  return os << begl << "bits: " << value.bits_;
+  os << fostr::NewLine << "next_domain: " << value.next_domain_;
+  return os << fostr::NewLine << "bits: " << fostr::HexDump(value.bits_);
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsResource& value) {
-  os << "\n";
-  os << indent;
-  os << begl << "name: " << value.name_ << "\n";
-  os << begl << "type: " << value.type_ << "\n";
-  os << begl << "class: " << value.class_ << "\n";
-  os << begl << "cache_flush: " << value.cache_flush_ << "\n";
-  os << begl << "time_to_live: " << value.time_to_live_ << "\n";
+  os << fostr::Indent;
+  os << fostr::NewLine << "name: " << value.name_;
+  os << fostr::NewLine << "type: " << value.type_;
+  os << fostr::NewLine << "class: " << value.class_;
+  os << fostr::NewLine << "cache_flush: " << value.cache_flush_;
+  os << fostr::NewLine << "time_to_live: " << value.time_to_live_;
   switch (value.type_) {
     case DnsType::kA:
       os << value.a_;
@@ -247,26 +172,25 @@ std::ostream& operator<<(std::ostream& os, const DnsResource& value) {
     default:
       break;
   }
-  return os << outdent;
+  return os << fostr::Outdent;
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsMessage& value) {
-  os << "\n";
-  os << indent;
-  os << begl << "header: " << value.header_;
+  os << fostr::Indent;
+  os << fostr::NewLine << "header: " << value.header_;
   if (!value.questions_.empty()) {
-    os << "\n" << begl << "questions: " << value.questions_;
+    os << fostr::NewLine << "questions: " << value.questions_;
   }
   if (!value.answers_.empty()) {
-    os << "\n" << begl << "answers: " << value.answers_;
+    os << fostr::NewLine << "answers: " << value.answers_;
   }
   if (!value.authorities_.empty()) {
-    os << "\n" << begl << "authorities: " << value.authorities_;
+    os << fostr::NewLine << "authorities: " << value.authorities_;
   }
   if (!value.additionals_.empty()) {
-    os << "\n" << begl << "additionals: " << value.additionals_;
+    os << fostr::NewLine << "additionals: " << value.additionals_;
   }
-  return os << outdent;
+  return os << fostr::Outdent;
 }
 
 }  // namespace mdns
