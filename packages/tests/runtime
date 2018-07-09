@@ -1,6 +1,7 @@
 {
     "imports": [
-        "garnet/packages/prod/runtime"
+        "garnet/packages/prod/runtime",
+        "garnet/bin/appmgr/integration_tests/sandbox/tests"
     ],
     "packages": [
         "//garnet/bin/appmgr:appmgr_unittests",

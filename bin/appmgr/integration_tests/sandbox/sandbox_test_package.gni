@@ -1,0 +1,62 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+# A test that exercises component functionality.
+# See CP-42 for more context.
+template("sandbox_test_package") {
+  binary_rule = "${target_name}_bin"
+  binary_name = target_name
+  test_wrapper_name = "run_${target_name}"
+  test_name = "${target_name}"
+
+  executable(binary_rule) {
+    testonly = true
+    output_name = "${binary_name}"
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "target_name",
+                             "testonly",
+                             "output_name",
+                           ])
+  }
+
+  # Work around CP-77 by generating a script that runs the package and using that as the test.
+  # When CP-77 is fixed, this can be removed, and the executable above can be launched as a test
+  # directly.
+  action(test_wrapper_name) {
+    testonly = true
+    script = "//garnet/bin/appmgr/integration_tests/sandbox/gen_test_wrapper.sh"
+    outputs = [
+      "$target_out_dir/${test_wrapper_name}",
+    ]
+    args = [
+      "${test_name}",
+      rebase_path("$target_out_dir/${test_wrapper_name}", root_out_dir),
+    ]
+  }
+
+  package(target_name) {
+    testonly = true
+    binary = binary_name
+    meta = [
+      {
+        path = "meta/${target_name}.cmx"
+        dest = "${target_name}.cmx"
+      },
+    ]
+    deps = [
+      ":${binary_rule}",
+      ":${test_wrapper_name}",
+    ]
+    tests = [
+      {
+        name = "$target_out_dir/${test_wrapper_name}"
+        dest = "${test_wrapper_name}"
+      },
+    ]
+  }
+}

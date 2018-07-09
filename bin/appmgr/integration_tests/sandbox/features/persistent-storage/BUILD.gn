@@ -1,0 +1,25 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/bin/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
+
+sandbox_test_package("has_persistent_storage") {
+  sources = [
+    "has_persistent_storage.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl/test:gtest_main",
+  ]
+}
+
+sandbox_test_package("no_persistent_storage") {
+  sources = [
+    "no_persistent_storage.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl/test:gtest_main",
+  ]
+}
