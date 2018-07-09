@@ -16,7 +16,7 @@ use std::{cmp, fmt, mem};
 use std::cell::RefCell;
 use std::sync::Arc;
 use std::collections::BinaryHeap;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::thread;
 use std::{usize, u64};
 
@@ -24,10 +24,25 @@ const EMPTY_WAKEUP_ID: u64 = u64::MAX;
 const TASK_READY_WAKEUP_ID: u64 = u64::MAX - 1;
 
 /// Spawn a new task to be run on the global executor.
+///
+/// Tasks spawned using this method must be threadsafe (implement the `Send` trait),
+/// as they may be run on either a singlethreaded or multithreaded executor.
 pub fn spawn<F>(future: F)
     where F: Future<Item = (), Error = Never> + Send + 'static
 {
     Inner::spawn(&EHandle::local().inner, Box::new(future));
+}
+
+/// Spawn a new task to be run on the global executor.
+///
+/// This is similar to the `spawn` function, but tasks spawned using this method
+/// do not have to be threadsafe (implement the `Send` trait). In return, this method
+/// requires that the current executor never be run in a multithreaded mode-- only
+/// `run_singlethreaded` can be used.
+pub fn spawn_local<F>(future: F)
+    where F: Future<Item = (), Error = Never> + 'static
+{
+    Inner::spawn_local(&EHandle::local().inner, Box::new(future));
 }
 
 /// A trait for handling the arrival of a packet on a `zx::Port`.
@@ -117,6 +132,7 @@ impl Executor {
             inner: Arc::new(Inner {
                 port: zx::Port::create()?,
                 done: AtomicBool::new(false),
+                threadiness: Threadiness::default(),
                 threads: Mutex::new(Vec::new()),
                 receivers: Mutex::new(Slab::new()),
                 ready_tasks: SegQueue::new(),
@@ -247,6 +263,10 @@ impl Executor {
         where F: Future + Send + 'static,
               Result<F::Item, F::Error>: Send + 'static,
     {
+        self.inner.threadiness.require_multithreaded()
+            .expect("Error: called `run` on executor after using `spawn_local`. \
+                    Use `run_singlethreaded` instead.");
+
         let pair = Arc::new((Mutex::new(None), Condvar::new()));
         let pair2 = pair.clone();
 
@@ -472,9 +492,56 @@ impl EHandle {
     }
 }
 
+/// The executor has not been run in multithreaded mode and no thread-unsafe
+/// futures have been spawned.
+const THREADINESS_ANY: usize = 0;
+/// The executor has not been run in multithreaded mode, but thread-unsafe
+/// futures have been spawned, so it cannot ever be run in multithreaded mode.
+const THREADINESS_SINGLE: usize = 1;
+/// The executor has been run in multithreaded mode.
+/// No thread-unsafe futures can be spawned.
+const THREADINESS_MULTI: usize = 2;
+
+/// Tracks the multihthreaded-compatibility state of the executor.
+struct Threadiness(AtomicUsize);
+
+impl Default for Threadiness {
+    fn default() -> Self {
+        Threadiness(AtomicUsize::new(THREADINESS_ANY))
+    }
+}
+
+impl Threadiness {
+    fn try_become(&self, target: usize) -> Result<(), ()> {
+        match self.0.compare_exchange(
+            /* current */ THREADINESS_ANY,
+            /* new */ target,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        ) {
+            Ok(_) => Ok(()),
+            Err(x) if x == target => Ok(()),
+            Err(_) => Err(())
+        }
+    }
+
+    /// Attempts to switch the threadiness to singlethreaded-only mode.
+    /// Will fail iff a prior call to `require_multithreaded` was made.
+    fn require_singlethreaded(&self) -> Result<(), ()> {
+        self.try_become(THREADINESS_SINGLE)
+    }
+
+    /// Attempts to switch the threadiness to multithreaded mode.
+    /// Will fail iff a prior call to `require_singlethreaded` was made.
+    fn require_multithreaded(&self) -> Result<(), ()> {
+        self.try_become(THREADINESS_MULTI)
+    }
+}
+
 struct Inner {
     port: zx::Port,
     done: AtomicBool,
+    threadiness: Threadiness,
     threads: Mutex<Vec<thread::JoinHandle<()>>>,
     receivers: Mutex<Slab<Arc<PacketReceiver>>>,
     ready_tasks: SegQueue<Arc<Task>>,
@@ -523,6 +590,24 @@ impl Inner {
 
         arc_self.ready_tasks.push(task);
         arc_self.notify_task_ready();
+    }
+
+    fn spawn_local(arc_self: &Arc<Self>, future: Box<Future<Item = (), Error = Never>>) {
+        arc_self.threadiness.require_singlethreaded()
+            .expect("Error: called `spawn_local` after calling `run` on executor. \
+                    Use `spawn` or `run_singlethreaded` instead.");
+        Inner::spawn(
+            arc_self,
+            // Unsafety: we've confirmed that the boxed futures here will never be used
+            // across multiple threads, so we can safely convert from a non-`Send`able
+            // future to a `Send`able one.
+            unsafe {
+                mem::transmute::<
+                    Box<Future<Item = (), Error = Never>>,
+                    Box<Future<Item = (), Error = Never> + Send>,
+                >(future)
+            },
+        )
     }
 
     fn notify_task_ready(&self) {

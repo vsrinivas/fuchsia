@@ -34,7 +34,7 @@ pub use socket::Socket;
 mod timer;
 pub use timer::{Interval, Timer, TimeoutExt, OnTimeout};
 mod executor;
-pub use executor::{Executor, EHandle, spawn};
+pub use executor::{Executor, EHandle, spawn, spawn_local};
 mod fifo;
 pub use fifo::{Fifo, FifoEntry, FifoReadable, FifoWritable, ReadEntry, WriteEntry};
 pub mod net;
