@@ -113,7 +113,7 @@ class BazelBuilder(Builder):
         if self.is_overlay:
             return
 
-        name = remove_dashes(atom.id.name)
+        name = sanitize(atom.id.name)
         package_name = atom.tags['package_name']
         library = model.DartLibrary(name, package_name)
         base = self.dest('dart', name)
@@ -123,7 +123,7 @@ class BazelBuilder(Builder):
             shutil.copy2(file.source, dest)
 
         for dep in atom.deps:
-            library.deps.append('//dart/' + remove_dashes(dep.name))
+            library.deps.append('//dart/' + sanitize(dep.name))
 
         self.write_file(os.path.join(base, 'BUILD'), 'dart_library', library)
 
