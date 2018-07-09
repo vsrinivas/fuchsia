@@ -291,6 +291,12 @@ using SDP_VersionNumberListType = std::vector<DataElement>;
 // service records are added or deleted from the database.
 constexpr AttributeId kSDP_ServiceDatabaseState = 0x0201;
 
+// ===== Advanced Audio Distribution Profile Attribute Definitions ======
+// These attributes are defined as valid for the AudioSource and AudioSink
+// Service Class UUIDs in the Assigned Numbers for SDP
+// https://www.bluetooth.com/specifications/assigned-numbers/service-discovery
+constexpr AttributeId kA2DP_SupportedFeatures = 0x0311;
+
 }  // namespace sdp
 }  // namespace btlib
 

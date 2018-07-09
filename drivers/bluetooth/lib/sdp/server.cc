@@ -175,6 +175,20 @@ ServiceHandle Server::GetNextHandle() {
   return next_handle_++;
 }
 
+ServiceSearchResponse Server::SearchServices(
+    const std::unordered_set<common::UUID>& pattern) {
+  ServiceSearchResponse resp;
+  std::vector<ServiceHandle> matched;
+  for (const auto& it : records_) {
+    if (it.second.FindUUID(pattern)) {
+      matched.push_back(it.first);
+    }
+  }
+  bt_log(SPEW, "sdp", "ServiceSearch matched %d records", matched.size());
+  resp.set_service_record_handle_list(matched);
+  return resp;
+}
+
 void Server::OnChannelClosed(const std::string& peer_id) {
   channels_.erase(peer_id);
 }
@@ -193,7 +207,7 @@ void Server::OnRxBFrame(const std::string& peer_id, const l2cap::SDU& sdu) {
   }
   l2cap::SDU::Reader reader(&sdu);
 
-  reader.ReadNext(length, [length, chan = it->second.share()](
+  reader.ReadNext(length, [this, length, chan = it->second.share()](
                               const common::ByteBuffer& pdu) {
     ZX_ASSERT(pdu.size() == length);
     common::PacketView<Header> packet(&pdu);
@@ -206,7 +220,23 @@ void Server::OnRxBFrame(const std::string& peer_id, const l2cap::SDU& sdu) {
       return;
     }
 
+    packet.Resize(param_length);
+
     switch (packet.header().pdu_id) {
+      case kServiceSearchRequest: {
+        ServiceSearchRequest request(packet.payload_data());
+        if (!request.valid()) {
+          bt_log(TRACE, "sdp", "ServiceSearchRequest not valid");
+          ErrorResponse response(ErrorCode::kInvalidRequestSyntax);
+          chan->Send(
+              response.GetPDU(0 /* ignored */, tid, common::BufferView()));
+          return;
+        }
+        auto resp = SearchServices(request.service_search_pattern());
+        chan->Send(resp.GetPDU(request.max_service_record_count(), tid,
+                               common::BufferView()));
+        return;
+      }
       case kErrorResponse: {
         ErrorResponse response(ErrorCode::kInvalidRequestSyntax);
         chan->Send(response.GetPDU(0 /* ignored */, tid, common::BufferView()));

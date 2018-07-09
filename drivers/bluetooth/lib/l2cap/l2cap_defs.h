@@ -156,7 +156,7 @@ enum class LECreditBasedConnectionResult : uint16_t {
 // including those dynamically-assigned/-obtained
 using PSM = uint16_t;
 
-// Well-knonn Protocol and Service Multiplexer values defined by the Bluetooth
+// Well-known Protocol and Service Multiplexer values defined by the Bluetooth
 // SIG in Logical Link Control Assigned Numbers
 // https://www.bluetooth.com/specifications/assigned-numbers/logical-link-control
 constexpr PSM kSDP = 0x0001;

@@ -120,6 +120,76 @@ class ErrorResponse : public Response {
   ErrorCode error_code_;
 };
 
+class ServiceSearchRequest : public Request {
+ public:
+  // Create an empty search request.
+  ServiceSearchRequest();
+  // Parse the parameters given in |params| to initialize this request.
+  explicit ServiceSearchRequest(const common::ByteBuffer& params);
+
+  // Request overrides
+  bool valid() const override;
+  common::ByteBufferPtr GetPDU(TransactionId tid) const override;
+
+  // A service search pattern matches if every UUID in the pattern is contained
+  // within one of the services' attribute values.  They don't need to be in any
+  // specific attribute or in any particular order, and extraneous UUIDs are
+  // allowed to exist in the attribute value.
+  // See v5.0, Volume 3, Part B, Sec 2.5.2.
+  void set_search_pattern(std::unordered_set<common::UUID> pattern) {
+    service_search_pattern_ = pattern;
+  }
+  const std::unordered_set<common::UUID>& service_search_pattern() const {
+    return service_search_pattern_;
+  }
+
+  // The maximum count of records that should be included in any
+  // response.
+  void set_max_service_record_count(uint16_t count) {
+    max_service_record_count_ = count;
+  }
+  uint16_t max_service_record_count() const {
+    return max_service_record_count_;
+  }
+
+ private:
+  std::unordered_set<common::UUID> service_search_pattern_;
+  uint16_t max_service_record_count_;
+};
+
+class ServiceSearchResponse : public Response {
+ public:
+  ServiceSearchResponse();
+
+  // Response overrides
+  bool complete() const override;
+  const common::BufferView ContinuationState() const override;
+  Status Parse(const common::ByteBuffer& buf) override;
+  common::MutableByteBufferPtr GetPDU(
+      uint16_t max, TransactionId tid,
+      const common::ByteBuffer& cont_state) const override;
+
+  // The ServiceRecordHandleList contains as list of service record handles.
+  // This should be set to the list of handles that match the request.
+  // Limiting the response to the maximum requested is handled by
+  // GetParameters();
+  void set_service_record_handle_list(std::vector<ServiceHandle> handles) {
+    service_record_handle_list_ = handles;
+    total_service_record_count_ = handles.size();
+  }
+  std::vector<ServiceHandle> service_record_handle_list() const {
+    return service_record_handle_list_;
+  }
+
+ private:
+  // The list of service record handles.
+  std::vector<ServiceHandle> service_record_handle_list_;
+  // The total number of service records in the full response.
+  uint16_t total_service_record_count_;
+
+  common::ByteBufferPtr continuation_state_;
+};
+
 }  // namespace sdp
 }  // namespace btlib
 

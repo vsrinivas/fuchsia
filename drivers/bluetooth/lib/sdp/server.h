@@ -12,6 +12,7 @@
 
 #include "garnet/drivers/bluetooth/lib/l2cap/scoped_channel.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
+#include "garnet/drivers/bluetooth/lib/sdp/pdu.h"
 #include "garnet/drivers/bluetooth/lib/sdp/sdp.h"
 #include "garnet/drivers/bluetooth/lib/sdp/service_record.h"
 
@@ -60,6 +61,11 @@ class Server final {
 
   // Returns the next unused Service Handle, or 0 if none are available.
   ServiceHandle GetNextHandle();
+
+  // Performs a Service Search, returning any service record that contains
+  // any UUID from the |search_pattern|
+  ServiceSearchResponse SearchServices(
+      const std::unordered_set<common::UUID>& pattern);
 
   // l2cap::channel callbacks
   void OnChannelClosed(const std::string& peer_id);

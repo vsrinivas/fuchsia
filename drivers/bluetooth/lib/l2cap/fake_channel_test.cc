@@ -4,6 +4,7 @@
 
 #include "fake_channel_test.h"
 
+#include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 
 namespace btlib {
@@ -19,8 +20,10 @@ fbl::RefPtr<FakeChannel> FakeChannelTest::CreateFakeChannel(
 }
 
 bool FakeChannelTest::Expect(const common::ByteBuffer& expected) {
-  if (!fake_chan())
+  if (!fake_chan()) {
+    bt_log(ERROR, "testing", "no channel, failing!");
     return false;
+  }
 
   bool success = false;
   auto cb = [&expected, &success, this](auto cb_packet) {
@@ -36,8 +39,10 @@ bool FakeChannelTest::Expect(const common::ByteBuffer& expected) {
 bool FakeChannelTest::ReceiveAndExpect(
     const common::ByteBuffer& packet,
     const common::ByteBuffer& expected_response) {
-  if (!fake_chan())
+  if (!fake_chan()) {
+    bt_log(ERROR, "testing", "no channel, failing!");
     return false;
+  }
 
   fake_chan()->Receive(packet);
 
