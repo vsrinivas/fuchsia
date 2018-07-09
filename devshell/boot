@@ -7,6 +7,7 @@
 
 ## usage: fx boot [--netboot] [--no-data]
 ##                [--artifacts <dir>]
+##                [--sign-tool <path_to_sign_tool>]
 ##                [<type>] [bootserver arguments]
 ##   <type>        see "--help" for list (default: x64 for x64 / none for arm64)
 ##   --netboot     Boot from ramdisk containing FVM
@@ -15,6 +16,7 @@
 ##   --artifacts   a directory to load files to send to the target where the
 ##                 root of the directory base zircon.bin and its bootdata file
 ##                 and an images sub-directory has all the images to pave
+##   --sign-tool   Optional executable to kernel images.
 ##
 ## If <type> is omitted, a guess is made based on $FUCHSIA_ARCH. For x64, all
 ## x64 images will be supplied (resulting in an FVM pave). For arm64 the default
@@ -41,6 +43,7 @@ usage() {
 netboot=false
 add_data=true
 ip_targ=()
+sign_tool=""
 while [[ "$1" =~ ^- ]]; do
   case "$1" in
   -h|--help)
@@ -60,6 +63,10 @@ while [[ "$1" =~ ^- ]]; do
     echo "## kind of 'incognito' fashion, as /data will be backed by ram."
     echo "##"
     add_data=false
+    ;;
+  --sign-tool)
+    shift
+    sign_tool="$1"
     ;;
   --artifacts)
     shift
@@ -116,6 +123,36 @@ case "${machine_type}" in
   arm)
     disks=("${disks[@]}" --zircona "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}"
       --zirconr "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}")
+  ;;
+  gauss)
+    if [[ ! -z "${sign_tool}" ]]; then
+      GAUSS_SIGN_TOOL="${sign_tool}"
+    elif [[ -z "${GAUSS_SIGN_TOOL}" ]]; then
+      echo "Sign tool is required." >&2
+      usage
+    fi
+    "${GAUSS_SIGN_TOOL}" -z "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}" \
+                         -o "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}.gauss.signed"
+    "${GAUSS_SIGN_TOOL}" -z "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}" \
+                        -o "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}.gauss.signed"
+    disks=("${disks[@]}" --zircona "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}.gauss.signed" \
+                         --zirconr "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}.gauss.signed")
+    add_fvm=false
+  ;;
+  astro)
+    if [[ ! -z "${sign_tool}" ]]; then
+      ASTRO_SIGN_TOOL="${sign_tool}"
+    elif [[ -z "${ASTRO_SIGN_TOOL}" ]]; then
+      echo "Sign tool is required." >&2
+      usage
+    fi
+    "${ASTRO_SIGN_TOOL}" -z "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}" \
+                         -o "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}.astro.signed"
+    "${ASTRO_SIGN_TOOL}" -z "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}" \
+                         -o "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}.astro.signed"
+    disks=("${disks[@]}" --zircona "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}.astro.signed"\
+                         --zirconr "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}.astro.signed")
+    add_fvm=false
   ;;
   *)
     if [[ "$FUCHSIA_ARCH" == "x64" ]]; then
