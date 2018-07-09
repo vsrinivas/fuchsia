@@ -90,10 +90,10 @@ devices in the same devhost, but in cases of driver isolation, they may take
 place via RPC to a "higher" devhost.
 
 Devices may implement Interfaces, which are RPC protocols that clients (services,
-applications, etc).  The base device interface supports posix style open/close/read/write
-style IO.  Currently Interfaces are supported via the ioctl operation in the base
-device interface.  In the future, Fuchsia's interface definition language and bindings
-(FIDL) will be supported.
+applications, etc) use.  The base device interface supports posix style
+open/close/read/write style IO.  Currently, Interfaces are supported via the ioctl
+operation in the base device interface.  In the future, Fuchsia's interface definition
+language and bindings (FIDL) will be supported.
 
 In many cases a Protocol is used to allow drivers to be simpler by taking advantage
 of a common implementation of an Interface.  For example, the "block" driver implements
@@ -188,7 +188,7 @@ it then holds a reference on that device until it eventually calls `device_remov
 If a device is opened by a remote process via the Device Filesystem, a reference
 is acquired there as well.  When a device's parent is removed, its `unbind()`
 method is invoked.  This signals to the driver that it should start shutting
-the device down and remove and child devices it has created by calling `device_remove()`
+the device down and remove any child devices it has created by calling `device_remove()`
 on them.
 
 Since a child device may have work in progress when its `unbind()` method is
@@ -199,7 +199,7 @@ the parent device should arrange for these methods to return errors, so that
 calls from a child before the child removal is completed do not start more
 work or cause unexpected interactions.
 
-From the moment that `device_add()` is called without the **DEVICE_ADD_INVSIBLE**
+From the moment that `device_add()` is called without the **DEVICE_ADD_INVISIBLE**
 flag, or `device_make_visible()` is called on an invisible device, other device
 ops may be called by the Device Host.
 
