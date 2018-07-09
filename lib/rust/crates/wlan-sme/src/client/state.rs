@@ -9,19 +9,34 @@ use client::{ConnectResult, Status, Tokens};
 use client::internal::{MlmeSink, UserSink};
 use MlmeRequest;
 use super::DeviceInfo;
-use wlan_rsn::{akm, cipher, rsne, suite_selector::OUI};
+use wlan_rsn::{akm, cipher, rsna::esssa::EssSa, rsne, rsne::Rsne, suite_selector::OUI};
 
 const DEFAULT_JOIN_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
 const DEFAULT_AUTH_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
 
 pub enum LinkState {
-    _ShakingHands,
+    _EstablishingRsna,
     LinkUp
 }
 
 pub struct ConnectCommand<T> {
     pub bss: Box<BssDescription>,
     pub token: Option<T>
+}
+
+pub struct Rsna {
+    _s_rsne: Rsne,
+    _esssa: EssSa,
+}
+
+impl Rsna {
+    fn _new(s_rsne: Rsne, esssa: EssSa) -> Rsna {
+        assert_eq!(s_rsne.pairwise_cipher_suites.len(), 1);
+        assert_eq!(s_rsne.akm_suites.len(), 1);
+        assert!(s_rsne.group_data_cipher_suite.is_none());
+
+        Rsna {_s_rsne: s_rsne, _esssa: esssa}
+    }
 }
 
 pub enum State<T: Tokens> {
@@ -34,11 +49,13 @@ pub enum State<T: Tokens> {
     },
     Associating {
         cmd: ConnectCommand<T::ConnectToken>,
+        s_rsne: Option<Rsne>,
     },
     Associated {
         bss: Box<BssDescription>,
         last_rssi: Option<i8>,
         link_state: LinkState,
+        rsna: Option<Rsna>,
     },
     Deauthenticating {
         // Network to join after the deauthentication process is finished
@@ -88,14 +105,17 @@ impl<T: Tokens> State<T> {
                 },
                 _ => State::Authenticating{ cmd }
             },
-            State::Associating{ cmd } => match event {
+            State::Associating{ cmd, s_rsne } => match event {
                 MlmeEvent::AssociateConf { resp } => match resp.result_code {
                     fidl_mlme::AssociateResultCodes::Success => {
                         report_connect_finished(cmd.token, user_sink, ConnectResult::Success);
                         State::Associated {
                             bss: cmd.bss,
                             last_rssi: None,
-                            link_state: LinkState::LinkUp
+                            // TODO(hahnr): Construct RSNA and adjust LinkState when connecting to
+                            // a protected BSS.
+                            link_state: LinkState::LinkUp,
+                            rsna: None,
                         }
                     },
                     other => {
@@ -104,9 +124,9 @@ impl<T: Tokens> State<T> {
                         State::Idle
                     }
                 },
-                _ => State::Associating{ cmd }
+                _ => State::Associating{ cmd, s_rsne }
             },
-            State::Associated { bss, last_rssi, link_state } => match event {
+            State::Associated { bss, last_rssi, link_state, rsna } => match event {
                 MlmeEvent::DisassociateInd{ .. } => {
                     let cmd = ConnectCommand{ bss, token: None };
                     to_associating_state(cmd, mlme_sink)
@@ -118,11 +138,11 @@ impl<T: Tokens> State<T> {
                     State::Associated {
                         bss,
                         last_rssi: Some(ind.rssi_dbm),
-                        link_state
+                        link_state,
+                        rsna
                     }
                 },
-                // TODO(gbonik): Also handle EapolInd and EapolConf
-                _ => State::Associated{ bss, last_rssi, link_state }
+                _ => State::Associated{ bss, last_rssi, link_state, rsna }
             },
             State::Deauthenticating{ next_cmd } => match event {
                 MlmeEvent::DeauthenticateConf{ .. } => {
@@ -143,11 +163,11 @@ impl<T: Tokens> State<T> {
                 report_connect_finished(cmd.token, user_sink, ConnectResult::Canceled);
                 disconnect_or_join(next_bss_to_join, mlme_sink)
             },
-            State::Associating{ cmd } => {
+            State::Associating{ cmd, .. } => {
                 report_connect_finished(cmd.token, user_sink, ConnectResult::Canceled);
                 to_deauthenticating_state(cmd.bss, next_bss_to_join, mlme_sink)
             },
-            State::Associated { bss, ..} => {
+            State::Associated { bss, .. } => {
                 to_deauthenticating_state(bss, next_bss_to_join, mlme_sink)
             },
             State::Deauthenticating { next_cmd } => {
@@ -169,7 +189,7 @@ impl<T: Tokens> State<T> {
             },
             &State::Joining { ref cmd }
                 | &State::Authenticating { ref cmd }
-                | &State::Associating { ref cmd }
+                | &State::Associating { ref cmd, .. }
                 | &State::Deauthenticating { next_cmd: Some(ref cmd) }  =>
             {
                 Status {
@@ -177,7 +197,7 @@ impl<T: Tokens> State<T> {
                     connecting_to: Some(cmd.bss.ssid.as_bytes().to_vec()),
                 }
             },
-            &State::Associated { ref bss, link_state: LinkState::_ShakingHands, .. } => Status {
+            &State::Associated { ref bss, link_state: LinkState::_EstablishingRsna, .. } => Status {
                 connected_to: None,
                 connecting_to: Some(bss.ssid.as_bytes().to_vec()),
             },
@@ -230,13 +250,20 @@ fn to_associating_state<T>(cmd: ConnectCommand<T::ConnectToken>, mlme_sink: &Mlm
     -> State<T>
     where T: Tokens
 {
+    let s_rsne = derive_s_rsne(&cmd.bss.bssid[..], cmd.bss.rsn.as_ref());
+    let s_rsne_data = s_rsne.as_ref().map(|s_rsne_ref| {
+        let mut buf = Vec::with_capacity(s_rsne_ref.len());
+        s_rsne_ref.as_bytes(&mut buf);
+        buf
+    });
+
     mlme_sink.send(MlmeRequest::Associate(
         fidl_mlme::AssociateRequest {
             peer_sta_address: cmd.bss.bssid.clone(),
-            rsn: derive_s_rsne(&cmd.bss.bssid[..], cmd.bss.rsn.as_ref()),
+            rsn: s_rsne_data,
         }
     ));
-    State::Associating { cmd }
+    State::Associating { cmd, s_rsne }
 }
 
 fn report_connect_finished<T>(token: Option<T::ConnectToken>,
@@ -272,7 +299,7 @@ fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescription {
     }
 }
 
-fn derive_s_rsne(bssid: &[u8], rsne: Option<&Vec<u8>>) -> Option<Vec<u8>> {
+fn derive_s_rsne(bssid: &[u8], rsne: Option<&Vec<u8>>) -> Option<Rsne> {
     // Supported Ciphers and AKMs:
     // Group: CCMP-128, TKIP
     // Pairwise: CCMP-128
@@ -307,17 +334,14 @@ fn derive_s_rsne(bssid: &[u8], rsne: Option<&Vec<u8>>) -> Option<Vec<u8>> {
     }
 
     // If Authenticator's RSNE is supported, construct Supplicant's RSNE.
-    let mut s_rsne = rsne::Rsne::new();
+    let mut s_rsne = Rsne::new();
     s_rsne.group_data_cipher_suite = a_rsne.group_data_cipher_suite;
     let pairwise_cipher =
         cipher::Cipher{oui: Bytes::from(&OUI[..]), suite_type: cipher::CCMP_128 };
     s_rsne.pairwise_cipher_suites.push(pairwise_cipher);
     let akm = akm::Akm{oui: Bytes::from(&OUI[..]), suite_type: akm::PSK };
     s_rsne.akm_suites.push(akm);
-
-    let mut buf = Vec::with_capacity(s_rsne.len());
-    s_rsne.as_bytes(&mut buf);
-    Some(buf)
+    Some(s_rsne)
 }
 
 #[cfg(test)]
@@ -335,7 +359,7 @@ mod tests {
     }
 
     fn make_rsne(data: Option<u8>, pairwise: Vec<u8>, akms: Vec<u8>) -> Option<Vec<u8>> {
-        let a_rsne = rsne::Rsne {
+        let a_rsne = Rsne {
             version: 1,
             group_data_cipher_suite: data.map(|t| make_cipher(t)),
             pairwise_cipher_suites: pairwise.into_iter().map(|t| make_cipher(t)).collect(),
@@ -345,6 +369,12 @@ mod tests {
         let mut buf = Vec::with_capacity(a_rsne.len());
         a_rsne.as_bytes(&mut buf);
         Some(buf)
+    }
+
+    fn rsne_as_bytes(s_rsne: Rsne) -> Vec<u8> {
+        let mut buf = Vec::with_capacity(s_rsne.len());
+        s_rsne.as_bytes(&mut buf);
+        buf
     }
 
     #[test]
@@ -373,7 +403,7 @@ mod tests {
         let a_rsne = make_rsne(Some(cipher::TKIP), vec![cipher::CCMP_128], vec![akm::PSK]);
         let s_rsne = derive_s_rsne(&BSSID[..], a_rsne.as_ref());
         let expected_rsne_bytes = vec![48, 18, 1, 0, 0, 15, 172, 2, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 2];
-        assert_eq!(s_rsne, Some(expected_rsne_bytes));
+        assert_eq!(rsne_as_bytes(s_rsne.expect("expected RSNE to be Some")), expected_rsne_bytes);
     }
 
     #[test]
@@ -381,7 +411,7 @@ mod tests {
         let a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
         let s_rsne = derive_s_rsne(&BSSID[..], a_rsne.as_ref());
         let expected_rsne_bytes = vec![48, 18, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 2];
-        assert_eq!(s_rsne, Some(expected_rsne_bytes));
+        assert_eq!(rsne_as_bytes(s_rsne.expect("expected RSNE to be Some")), expected_rsne_bytes);
     }
 
     #[test]
@@ -389,7 +419,7 @@ mod tests {
         let a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128, cipher::TKIP], vec![akm::PSK, akm::FT_PSK]);
         let s_rsne = derive_s_rsne(&BSSID[..], a_rsne.as_ref());
         let expected_rsne_bytes = vec![48, 18, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 2];
-        assert_eq!(s_rsne, Some(expected_rsne_bytes));
+        assert_eq!(rsne_as_bytes(s_rsne.expect("expected RSNE to be Some")), expected_rsne_bytes);
     }
 
     #[test]

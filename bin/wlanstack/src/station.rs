@@ -98,6 +98,8 @@ fn serve_mlme_sme<STA, SRS>(proxy: MlmeProxy, event_stream: MlmeEventStream,
                 MlmeRequest::Authenticate(mut req) => proxy.authenticate_req(&mut req),
                 MlmeRequest::Associate(mut req) => proxy.associate_req(&mut req),
                 MlmeRequest::Deauthenticate(mut req) => proxy.deauthenticate_req(&mut req),
+                MlmeRequest::Eapol(mut req) => proxy.eapol_req(&mut req),
+                MlmeRequest::SetKeys(mut req) => proxy.set_keys_req(&mut req),
             }
         })
         .then(|r| match r {

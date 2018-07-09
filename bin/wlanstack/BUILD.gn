@@ -11,6 +11,7 @@ rustc_binary("bin") {
   with_lto = "fat"
 
   deps = [
+    "//garnet/lib/rust/crates/eapol",
     "//garnet/lib/rust/crates/fuchsia-wlan-dev",
     "//garnet/lib/rust/crates/wlan-sme",
     "//garnet/lib/rust/crates/wlantap-client",

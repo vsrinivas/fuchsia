@@ -29,6 +29,8 @@ pub enum MlmeRequest {
     Authenticate(fidl_mlme::AuthenticateRequest),
     Associate(fidl_mlme::AssociateRequest),
     Deauthenticate(fidl_mlme::DeauthenticateRequest),
+    Eapol(fidl_mlme::EapolRequest),
+    SetKeys(fidl_mlme::SetKeysRequest),
 }
 
 pub trait Station {
