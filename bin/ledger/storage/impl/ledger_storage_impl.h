@@ -35,13 +35,16 @@ class LedgerStorageImpl : public LedgerStorage {
                       fit::function<void(Status, std::unique_ptr<PageStorage>)>
                           callback) override;
 
-  bool DeletePageStorage(PageIdView page_id) override;
+  Status DeletePageStorage(PageIdView page_id) override;
 
   // For debugging only.
   std::vector<PageId> ListLocalPages();
 
  private:
   ledger::DetachedPath GetPathFor(PageIdView page_id);
+
+  // Returns the staging path for the given |page_id|.
+  ledger::DetachedPath GetStagingPathFor(PageIdView page_id);
 
   async_t* const async_;
   coroutine::CoroutineService* const coroutine_service_;

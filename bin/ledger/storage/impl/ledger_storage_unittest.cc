@@ -93,7 +93,7 @@ TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
   EXPECT_EQ(Status::OK, status);
   EXPECT_NE(nullptr, page_storage);
 
-  EXPECT_TRUE(storage_.DeletePageStorage(page_id));
+  EXPECT_EQ(Status::OK, storage_.DeletePageStorage(page_id));
   storage_.GetPageStorage(
       page_id, callback::Capture(callback::SetWhenCalled(&called), &status,
                                  &page_storage));
@@ -101,6 +101,12 @@ TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::NOT_FOUND, status);
   EXPECT_EQ(nullptr, page_storage);
+}
+
+TEST_F(LedgerStorageTest, DeletePageStorageNotFound) {
+  PageId page_id = "1234";
+
+  EXPECT_EQ(Status::NOT_FOUND, storage_.DeletePageStorage(page_id));
 }
 
 }  // namespace

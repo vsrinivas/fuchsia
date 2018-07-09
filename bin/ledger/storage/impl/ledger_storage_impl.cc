@@ -8,10 +8,13 @@
 #include <algorithm>
 #include <iterator>
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 #include <lib/callback/trace_callback.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/path.h>
+#include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/concatenate.h>
 
@@ -23,6 +26,8 @@
 namespace storage {
 
 namespace {
+
+constexpr fxl::StringView kStagingPathPrefix = "staging";
 
 // Encodes opaque bytes in a way that is usable as a directory name.
 std::string GetDirectoryName(fxl::StringView bytes) {
@@ -102,16 +107,29 @@ void LedgerStorageImpl::GetPageStorage(
   });
 }
 
-bool LedgerStorageImpl::DeletePageStorage(PageIdView page_id) {
+Status LedgerStorageImpl::DeletePageStorage(PageIdView page_id) {
   ledger::DetachedPath path = GetPathFor(page_id);
+  ledger::DetachedPath staging_path = GetStagingPathFor(page_id);
   if (!files::IsDirectoryAt(path.root_fd(), path.path())) {
-    return false;
+    return Status::NOT_FOUND;
   }
-  if (!files::DeletePathAt(path.root_fd(), path.path(), true)) {
-    FXL_LOG(ERROR) << "Unable to delete: " << path.path();
-    return false;
+  files::ScopedTempDirAt tmp_directory(staging_path.root_fd(),
+                                       staging_path.path());
+  std::string destination = tmp_directory.path() + "/content";
+
+  if (renameat(path.root_fd(), path.path().c_str(), tmp_directory.root_fd(),
+               destination.c_str()) != 0) {
+    FXL_LOG(ERROR) << "Unable to move local page storage to " << destination
+                   << ". Error: " << strerror(errno);
+    return Status::IO_ERROR;
   }
-  return true;
+
+  if (!files::DeletePathAt(tmp_directory.root_fd(), destination, true)) {
+    FXL_LOG(ERROR) << "Unable to delete local staging storage at: "
+                   << destination;
+    return Status::IO_ERROR;
+  }
+  return Status::OK;
 }
 
 std::vector<PageId> LedgerStorageImpl::ListLocalPages() {
@@ -127,6 +145,12 @@ std::vector<PageId> LedgerStorageImpl::ListLocalPages() {
 ledger::DetachedPath LedgerStorageImpl::GetPathFor(PageIdView page_id) {
   FXL_DCHECK(!page_id.empty());
   return storage_dir_.SubPath(GetDirectoryName(page_id));
+}
+
+ledger::DetachedPath LedgerStorageImpl::GetStagingPathFor(PageIdView page_id) {
+  FXL_DCHECK(!page_id.empty());
+  return storage_dir_.SubPath(
+      fxl::Concatenate({kStagingPathPrefix, GetDirectoryName(page_id)}));
 }
 
 }  // namespace storage

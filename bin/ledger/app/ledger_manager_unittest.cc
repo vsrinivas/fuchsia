@@ -104,8 +104,9 @@ class FakeLedgerStorage : public storage::LedgerStorage {
         });
   }
 
-  bool DeletePageStorage(storage::PageIdView /*page_id*/) override {
-    return false;
+  storage::Status DeletePageStorage(storage::PageIdView /*page_id*/) override {
+    FXL_NOTIMPLEMENTED();
+    return storage::Status::NOT_IMPLEMENTED;
   }
 
   void ClearCalls() {
