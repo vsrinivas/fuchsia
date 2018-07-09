@@ -70,7 +70,7 @@ struct ImageConfig {
   uint32 height;
 
   // A zx_pixel_format_t constant that defines the pixel format of the data.
-  int32 pixel_format;
+  uint32 pixel_format;
 
   // Type conveys information about what is providing the pixel data. If this
   // is not typeSimple, it is up to the driver and image producer to
@@ -353,7 +353,7 @@ interface Controller {
 
   // Computes the stride (in pixels) necessary for a linear image with the
   // given width and pixel format. Returns 0 on error.
-  16: ComputeLinearImageStride(uint32 width, int32 pixel_format) -> (uint32 stride);
+  16: ComputeLinearImageStride(uint32 width, uint32 pixel_format) -> (uint32 stride);
 
   // Allocates a VMO of the requested size which can be used for images.
   // TODO: move this into a seperate video buffer management system.
