@@ -674,4 +674,14 @@ bool HdmiDisplay::ConfigureDdi() {
     return true;
 }
 
+bool HdmiDisplay::CheckDisplayLimits(const display_config_t* config) {
+    uint32_t refresh_rate = Controller::DisplayModeToRefreshRate(&config->mode);
+    uint32_t width = config->mode.h_addressable;
+    uint32_t height = config->mode.v_addressable;
+
+    // See comments in DpDisplay::CheckDisplayLimits for details about constants
+    return (width <= 1920 && height <= 1200 && refresh_rate <= 60)
+            || (is_hdmi_display_ && width <= 4096 && height <= 2160 && refresh_rate <= 30);
+}
+
 } // namespace i915

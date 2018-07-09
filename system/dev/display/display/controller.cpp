@@ -34,6 +34,20 @@ display_controller_cb_t dc_cb = {
 
 namespace display {
 
+void Controller::PopulateDisplayMode(const edid::timing_params_t& params, display_mode_t* mode) {
+    mode->pixel_clock_10khz = params.pixel_freq_10khz;
+    mode->h_addressable = params.horizontal_addressable;
+    mode->h_front_porch = params.horizontal_front_porch;
+    mode->h_sync_pulse = params.horizontal_sync_pulse;
+    mode->h_blanking = params.horizontal_blanking;
+    mode->v_addressable = params.vertical_addressable;
+    mode->v_front_porch = params.vertical_front_porch;
+    mode->v_sync_pulse = params.vertical_sync_pulse;
+    mode->v_blanking = params.vertical_blanking;
+    mode->mode_flags = (params.vertical_sync_polarity ? MODE_FLAG_VSYNC_POSITIVE : 0)
+            | (params.horizontal_sync_polarity ? MODE_FLAG_HSYNC_POSITIVE : 0);
+}
+
 void Controller::OnDisplaysChanged(uint64_t* displays_added, uint32_t added_count,
                                    uint64_t* displays_removed, uint32_t removed_count) {
     uint64_t added_success[added_count];
@@ -78,6 +92,59 @@ void Controller::OnDisplaysChanged(uint64_t* displays_added, uint32_t added_coun
             if (!info->edid.Init(info->info.panel.edid.data,
                                  info->info.panel.edid.length, &edid_err)) {
                 zxlogf(TRACE, "Failed to parse edid \"%s\"\n", edid_err);
+                continue;
+            }
+
+            // Go through all the display mode timings and record whether or not
+            // a basic layer configuration is acceptable.
+            layer_t test_layer = {};
+            layer_t* test_layers[] = { &test_layer };
+            test_layer.cfg.primary.image.pixel_format = info->info.pixel_formats[0];
+
+            display_config_t test_config;
+            const display_config_t* test_configs[] = { &test_config };
+            test_config.display_id = displays_added[i];
+            test_config.layer_count = 1;
+            test_config.layers = test_layers;
+
+            auto timings = info->edid.begin();
+            uint32_t idx = 0;
+            bool found_timing = false;
+            while (timings != info->edid.end()) {
+                uint32_t width = timings->horizontal_addressable;
+                uint32_t height = timings->vertical_addressable;
+
+                test_layer.cfg.primary.image.width = width;
+                test_layer.cfg.primary.image.height = height;
+                test_layer.cfg.primary.src_frame.width = width;
+                test_layer.cfg.primary.src_frame.height = height;
+                test_layer.cfg.primary.dest_frame.width = width;
+                test_layer.cfg.primary.dest_frame.height = height;
+                PopulateDisplayMode(*timings, &test_config.mode);
+
+                uint32_t display_cfg_result;
+                uint32_t layer_result = 0;
+                uint32_t* display_layer_results[] = { &layer_result };
+                ops_.ops->check_configuration(ops_.ctx, test_configs, &display_cfg_result,
+                                              display_layer_results, 1);
+                if (display_cfg_result != CONFIG_DISPLAY_OK) {
+                    fbl::AllocChecker ac;
+                    info->skipped_edid_timings.push_back(idx, &ac);
+                    if (!ac.check()) {
+                        zxlogf(WARN, "Edid skip allocation failed\n");
+                        found_timing = false;
+                        break;
+                    }
+                } else {
+                    found_timing = true;
+                }
+
+                idx++;
+                ++timings;
+            }
+
+            if (!found_timing) {
+                zxlogf(INFO, "Display with no compatible edid timings\n");
                 continue;
             }
 
@@ -362,12 +429,14 @@ void Controller::OnClientDead(ClientProxy* client) {
 }
 
 bool Controller::GetPanelConfig(uint64_t display_id, const edid::Edid** edid,
+                                const fbl::Vector<uint32_t>** skipped_edid_timings,
                                 const display_params_t** params) {
     ZX_DEBUG_ASSERT(mtx_trylock(&mtx_) == thrd_busy);
     for (auto& display : displays_) {
         if (display.id == display_id) {
             if (display.info.edid_present) {
                 *edid = &display.edid;
+                *skipped_edid_timings = &display.skipped_edid_timings;
                 *params = nullptr;
             } else {
                 *params = &display.info.panel.params;

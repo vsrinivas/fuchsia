@@ -183,22 +183,12 @@ bool apply_config() {
     auto check_rsp =
             reinterpret_cast<fuchsia_display_ControllerCheckConfigResponse*>(msg.bytes().data());
 
-    if (check_rsp->res.count) {
-        printf("Config not valid\n");
-        fuchsia_display_ConfigResult* arr =
-                static_cast<fuchsia_display_ConfigResult*>(check_rsp->res.data);
-        for (unsigned i = 0; i < check_rsp->res.count; i++) {
-            printf("Display %ld\n", arr[i].display_id);
-            if (arr[i].error) {
-                printf("  Display error: %d\n", arr[i].error);
-            }
-
-            uint64_t* layers = static_cast<uint64_t*>(arr[i].layers.data);
-            fuchsia_display_ClientCompositionOp* ops =
-                    static_cast<fuchsia_display_ClientCompositionOp*>(arr[i].client_ops.data);
-            for (unsigned j = 0; j < arr[i].layers.count; j++) {
-                printf("  Layer %ld: %d\n", layers[j], ops[j]);
-            }
+    if (check_rsp->res != fuchsia_display_ConfigResult_OK) {
+        printf("Config not valid (%d)\n", check_rsp->res);
+        auto* arr = static_cast<fuchsia_display_ClientCompositionOp*>(check_rsp->ops.data);
+        for (unsigned i = 0; i < check_rsp->ops.count; i++) {
+            printf("Client composition op (display %ld, layer %ld): %d\n",
+                   arr[i].display_id, arr[i].layer_id, arr[i].opcode);
         }
         return false;
     }

@@ -15,6 +15,7 @@
 #include <assert.h>
 #include <fbl/unique_ptr.h>
 #include <inttypes.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -144,6 +145,13 @@ static int finish_init(void* arg) {
 } // namespace
 
 namespace i915 {
+
+uint32_t Controller::DisplayModeToRefreshRate(const display_mode_t* mode) {
+    double total_pxls = (mode->h_addressable + mode->h_blanking) *
+            (mode->v_addressable + mode->v_blanking);
+    double pixel_clock_hz = mode->pixel_clock_10khz * 1000 * 10;
+    return static_cast<uint32_t>(round(pixel_clock_hz / total_pxls));
+}
 
 void Controller::EnableBacklight(bool enable) {
     if (flags_ & FLAGS_BACKLIGHT) {
@@ -1117,15 +1125,54 @@ void Controller::ReallocatePipeBuffers(bool is_hotplug) {
     }
 }
 
+bool Controller::CheckDisplayLimits(const display_config_t** display_configs,
+                                    uint32_t display_count) {
+    for (unsigned i = 0; i < display_count; i++) {
+        const display_config_t* config = display_configs[i];
+        DisplayDevice* display = FindDevice(config->display_id);
+        if (display == nullptr) {
+            continue;
+        }
+
+        // TODO(stevensd): The current display limits check only check that the mode is
+        // supported - it also needs to check that the layer configuration is supported,
+        // and return layer errors if it isn't.
+        // TODO(stevensd): Check maximum memory read bandwidth, watermark
+
+        if (config->mode.h_addressable > 4096 || config->mode.v_addressable > 8192
+                || !display->CheckDisplayLimits(config)) {
+            // The API guarantees that if there are multiple displays, then each
+            // display is supported in isolation. Debug assert if that's violated.
+            ZX_DEBUG_ASSERT(display_count == 1);
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void Controller::CheckConfiguration(const display_config_t** display_config,
-                                    uint32_t** layer_cfg_result, uint32_t display_count) {
+                                    uint32_t* display_cfg_result, uint32_t** layer_cfg_result,
+                                    uint32_t display_count) {
     if (display_count > registers::kPipeCount) {
-        // TODO(stevensd): Surface this to higher layers
-        ZX_ASSERT(false);
+        *display_cfg_result = CONFIG_DISPLAY_TOO_MANY;
+        return;
     }
 
     fbl::AutoLock lock(&display_lock_);
 
+    if (display_count == 0) {
+        // All displays off is supported
+        *display_cfg_result = CONFIG_DISPLAY_OK;
+        return;
+    }
+
+    if (!CheckDisplayLimits(display_config, display_count)) {
+        *display_cfg_result = CONFIG_DISPLAY_UNSUPPORTED_MODES;
+        return;
+    }
+
+    *display_cfg_result = CONFIG_DISPLAY_OK;
     for (unsigned i = 0; i < display_count; i++) {
         auto* config = display_config[i];
         DisplayDevice* display = nullptr;
@@ -1136,8 +1183,8 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
             }
         }
         if (display == nullptr) {
-            // TODO(stevensd): Surface this to higher layers
-            ZX_ASSERT(false);
+            LOG_INFO("Got config with no display - assuming hotplug and skipping");
+            continue;
         }
 
         bool merge_all = false;

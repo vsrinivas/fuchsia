@@ -348,7 +348,7 @@ static zx_status_t set_active_image(uint64_t layer_id, uint64_t image_id) {
         return status;
     }
 
-    if (check_rsp.res.count != 0) {
+    if (check_rsp.res != fuchsia_display_ConfigResult_OK) {
         printf("vc: Config not valid\n");
         return ZX_ERR_INTERNAL;
     }

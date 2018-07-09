@@ -1355,4 +1355,29 @@ void DpDisplay::GetBacklightState(bool* power, uint8_t* brightness) {
     *brightness = static_cast<uint8_t>(GetBacklightBrightness() * 255);
 }
 
+bool DpDisplay::CheckDisplayLimits(const display_config_t* config) {
+    uint32_t refresh_rate = Controller::DisplayModeToRefreshRate(&config->mode);
+    uint32_t width = config->mode.h_addressable;
+    uint32_t height = config->mode.v_addressable;
+
+    // Approximate maximum display resolution capabilities taken from Intel display docs.
+    // TODO(stevensd): Actually do the calculations, since some larger/higher refresh
+    // rate displays actually are supported.
+    switch (registers::CdClockCtl::Get().ReadFrom(mmio_space()).cd_freq_select()) {
+    case registers::CdClockCtl::kFreqSelect6XX:
+        return ((width <= 3840 && height <= 2560) || (width <= 4096 && height <= 2304))
+                && refresh_rate <= 60;
+    case registers::CdClockCtl::kFreqSelect540:
+        return width <= 3840 && height <= 2160 && refresh_rate <= 60;
+    case registers::CdClockCtl::kFreqSelect4XX:
+        return width <= 3200 && height <= 2000 && refresh_rate <= 60;
+    case registers::CdClockCtl::kFreqSelect3XX:
+        return (width <= 2880 && height <= 1620 && refresh_rate <= 60)
+                || (width <= 4096 && height <= 2160 && refresh_rate <= 30);
+    default:
+        ZX_ASSERT(false);
+    }
+    return false;
+}
+
 } // namespace i915

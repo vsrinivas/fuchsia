@@ -239,6 +239,18 @@ typedef struct display_config {
     layer_t** layers;
 } display_config_t;
 
+// The display mode configuration is valid. Note that this is distinct from
+// whether or not the layer configuration is valid.
+#define CONFIG_DISPLAY_OK 0
+// Error indicating that the hardware cannot simultaniously support the
+// requested number of displays.
+#define CONFIG_DISPLAY_TOO_MANY 1
+// Error indicating that the hardware cannot simultaniously support the given
+// set of display modes. To support a mode, the display must be able to display
+// a single layer with width and height equal to the requested mode and the
+// preferred pixel format.
+#define CONFIG_DISPLAY_UNSUPPORTED_MODES 2
+
 // The client should convert the corresponding layer to a primary layer.
 #define CLIENT_USE_PRIMARY (1 << 0)
 // The client should compose all layers with MERGE_BASE and MERGE_SRC into a new,
@@ -296,14 +308,18 @@ typedef struct display_controller_protocol_ops {
     // place of another image with a matching configuration. It also cannot depend on the
     // cursor position, as that can be updated without another call to check_configuration.
     //
+    // display_cfg_result should be set to a CONFIG_DISPLAY_* error if the combination of
+    // display modes is not supported.
+    //
     // layer_cfg_result points to an array of arrays. The primary length is display_count, the
-    // secondary lengths are the corresponding display_cfg's layer_count. Any errors in layer
-    // configuration should be returned as a CLIENT* flag in the corresponding layer_cfg_result
-    // entry.
+    // secondary lengths are the corresponding display_cfg's layer_count. If display_cfg_result
+    // is CONFIG_DISPLAY_OK, any errors in layer configuration should be returned as a CLIENT*
+    // flag in the corresponding layer_cfg_result entry.
     //
     // The driver must not retain references to the configuration after this function returns.
     void (*check_configuration)(void* ctx, const display_config_t** display_config,
-                                uint32_t** layer_cfg_result, uint32_t display_count);
+                                uint32_t* display_cfg_result, uint32_t** layer_cfg_result,
+                                uint32_t display_count);
 
     // Applies the configuration.
     //

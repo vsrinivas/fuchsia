@@ -291,6 +291,10 @@ public:
             return params_;
         }
 
+        const timing_params* operator->() const {
+            return &params_;
+        }
+
         bool operator!=(const timing_iterator& rhs) const {
             return !(edid_ == rhs.edid_
                     && block_idx_ == rhs.block_idx_

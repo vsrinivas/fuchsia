@@ -62,6 +62,8 @@ public:
     virtual void SetBacklightState(bool power, uint8_t brightness) {}
     virtual void GetBacklightState(bool* power, uint8_t* brightness) {}
 
+    virtual bool CheckDisplayLimits(const display_config_t* config) = 0;
+
 protected:
     // Queries the DisplayDevice to see if there is a supported display attached. If
     // there is, then returns true and populates |edid| and |info|.

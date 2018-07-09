@@ -123,6 +123,7 @@ void GpuDevice::virtio_gpu_release_image(void* ctx, image_t* image) {
 
 void GpuDevice::virtio_gpu_check_configuration(void* ctx,
                                                const display_config_t** display_configs,
+                                               uint32_t* display_cfg_result,
                                                uint32_t** layer_cfg_results,
                                                uint32_t display_count) {
     GpuDevice* gd = static_cast<GpuDevice*>(ctx);

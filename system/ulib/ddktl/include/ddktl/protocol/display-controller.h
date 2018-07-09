@@ -50,8 +50,10 @@ class DisplayControllerProtocol : public internal::base_protocol {
     }
 
     static void CheckConfiguration(void* ctx, const display_config_t** display_config,
-                                   uint32_t** layer_cfg_result, uint32_t display_count) {
-        static_cast<D*>(ctx)->CheckConfiguration(display_config, layer_cfg_result, display_count);
+                                   uint32_t* display_cfg_result, uint32_t** layer_cfg_result,
+                                   uint32_t display_count) {
+        static_cast<D*>(ctx)->CheckConfiguration(display_config, display_cfg_result,
+                                                 layer_cfg_result, display_count);
     }
 
     static void ApplyConfiguration(void* ctx, const display_config_t** display_config,

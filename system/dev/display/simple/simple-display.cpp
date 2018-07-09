@@ -72,6 +72,7 @@ void SimpleDisplay::ReleaseImage(image_t* image) {
 }
 
 void SimpleDisplay::CheckConfiguration(const display_config_t** display_configs,
+                                       uint32_t* display_cfg_result,
                                        uint32_t** layer_cfg_results,
                                        uint32_t display_count) {
     if (display_count != 1) {

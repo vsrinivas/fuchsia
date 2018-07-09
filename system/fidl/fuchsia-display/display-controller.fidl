@@ -110,7 +110,7 @@ struct Frame {
   uint32 height;
 };
 
-enum ClientCompositionOp : uint8 {
+enum ClientCompositionOpcode : uint8 {
   // The client should convert the corresponding layer to a primary layer.
   CLIENT_USE_PRIMARY = 0;
   // The client should compose all layers with MERGE_BASE and MERGE_SRC into a new,
@@ -137,23 +137,24 @@ enum ClientCompositionOp : uint8 {
   CLIENT_ALPHA = 7;
 };
 
-enum ConfigError : uint8 {
+enum ConfigResult : uint32 {
   OK = 0;
   // The requested layer configuration is invalid.
   INVALID_CONFIG = 1;
+  // The requested layer configuration cannot be supported by the hardware. See
+  // CheckConfig struct for mode details.
+  UNSUPPORTED_CONFIG = 2;
+  // The number of requested displays cannot be supported.
+  TOO_MANY_DISPLAYS = 3;
+  // The hardware cannot support the requested modes for the displays. The client
+  // should try a different set of displays or display modes.
+  UNSUPPORTED_DISPLAY_MODES = 4;
 };
 
-struct ConfigResult {
+struct ClientCompositionOp {
   uint64 display_id;
-
-  // There was an unrecoverable error with the configuration. If this is set,
-  // then layers and client_ops will be empty.
-  ConfigError error;
-
-  // If present, layers and client_ops are parallel vectors which specify all
-  // (layer, ClientCompositionOp) on the the display specified by display_id.
-  vector<uint64> layers;
-  vector<ClientCompositionOp> client_ops;
+  uint64 layer_id;
+  ClientCompositionOpcode opcode;
 };
 
 // Interface for accessing the display hardware.
@@ -259,7 +260,7 @@ interface Controller {
   //
   // |src_frame| must be non-empty and must fit entirely within the source
   // image. |dest_frame| must be non-empty and must fit entirely within the
-  // composed output. CheckConfig will return CONFIG_ERROR if any of these
+  // composed output. CheckConfig will return INVALID_CONFIG if any of these
   // conditions is violated.
   //
   // Calling this on a non-primary layer or passing an invalid transform
@@ -334,16 +335,15 @@ interface Controller {
   // Attempts to validate the current configuration.
   //
   // When CheckConfig is called, the driver will validate the pending
-  // configuration. Any errors or required client composition ops will
-  // be returned in the res vector. If the vector is empty, then the
-  // configuration is valid.
+  // configuration. If res is UNSUPPORTED_CONFIG, then ops will be
+  // non-empty.
   //
   // Most SetX operation require re-validating the configuration. The exception
   // are SetLayerCursorPosition and SetLayerImage - these operations do not
   // modify the configuration in a way which requires revalidation.
   //
   // If discard is true, the pending changes will be discarded after validation.
-  18: CheckConfig(bool discard) -> (vector<ConfigResult> res);
+  18: CheckConfig(bool discard) -> (ConfigResult res, vector<ClientCompositionOp> ops);
 
   // Applies any pending changes to the current configuration. This will
   // not apply pending changes to layers which are not on any display.

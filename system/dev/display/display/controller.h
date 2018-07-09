@@ -33,6 +33,7 @@ public:
     display_info_t info;
 
     edid::Edid edid;
+    fbl::Vector<uint32_t> skipped_edid_timings;
 
     // A list of all images which have been sent to display driver. For multiple
     // images which are displayed at the same time, images with a lower z-order
@@ -59,6 +60,8 @@ class Controller : public ControllerParent,
 public:
     Controller(zx_device_t* parent);
 
+    static void PopulateDisplayMode(const edid::timing_params_t& params, display_mode_t* mode);
+
     zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
     zx_status_t DdkOpenAt(zx_device_t** dev_out, const char* path, uint32_t flags);
     void DdkUnbind();
@@ -81,6 +84,7 @@ public:
     // Calling GetPanelConfig requires holding |mtx()|, and it must be held
     // for as long as |edid| and |params| are retained.
     bool GetPanelConfig(uint64_t display_id, const edid::Edid** edid,
+                        const fbl::Vector<uint32_t>** skipped_edid_timings,
                         const display_params_t** params) __TA_NO_THREAD_SAFETY_ANALYSIS;
     // Calling GetSupportedPixelFormats requires holding |mtx()|
     bool GetSupportedPixelFormats(uint64_t display_id, uint32_t* count_out,

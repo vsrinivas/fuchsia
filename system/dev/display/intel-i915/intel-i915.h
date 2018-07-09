@@ -41,6 +41,8 @@ public:
     Controller(zx_device_t* parent);
     ~Controller();
 
+    static uint32_t DisplayModeToRefreshRate(const display_mode_t* mode);
+
     void DdkUnbind();
     void DdkRelease();
     zx_status_t DdkSuspend(uint32_t reason);
@@ -54,7 +56,8 @@ public:
     zx_status_t ImportVmoImage(image_t* image, const zx::vmo& vmo, size_t offset);
     void ReleaseImage(image_t* image);
     void CheckConfiguration(const display_config_t** display_config,
-                            uint32_t** layer_cfg_result, uint32_t display_count);
+                            uint32_t* display_cfg_result, uint32_t** layer_cfg_result,
+                            uint32_t display_count);
     void ApplyConfiguration(const display_config_t** display_config, uint32_t display_count);
     uint32_t ComputeLinearStride(uint32_t width, zx_pixel_format_t format);
     zx_status_t AllocateVmo(uint64_t size, zx_handle_t* vmo_out);
@@ -125,6 +128,11 @@ private:
     // Reallocates plane buffers based on the given layer config.
     bool ReallocatePlaneBuffers(const display_config_t** display_configs,
                                 uint32_t display_count) __TA_REQUIRES(display_lock_);
+
+    // Validates that a basic layer configuration can be supported for the
+    // given modes of the displays.
+    bool CheckDisplayLimits(const display_config_t** display_configs,
+                            uint32_t display_count) __TA_REQUIRES(display_lock_);
 
     zx_device_t* zx_gpu_dev_ = nullptr;
     bool gpu_released_ = false;

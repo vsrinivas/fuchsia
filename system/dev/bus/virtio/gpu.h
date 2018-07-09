@@ -45,7 +45,8 @@ private:
     static void virtio_gpu_release_image(void* ctx, image_t* image);
     static void virtio_gpu_check_configuration(
             void* ctx, const display_config_t** display_configs,
-            uint32_t** layer_cfg_result, uint32_t display_count);
+            uint32_t* display_cfg_result, uint32_t** layer_cfg_result,
+            uint32_t display_count);
     static void virtio_gpu_apply_configuration(
             void* ctx, const display_config_t** display_configs, uint32_t display_count);
     static uint32_t virtio_gpu_compute_linear_stride(

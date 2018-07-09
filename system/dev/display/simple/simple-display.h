@@ -34,7 +34,8 @@ public:
     zx_status_t ImportVmoImage(image_t* image, const zx::vmo& vmo, size_t offset);
     void ReleaseImage(image_t* image);
     void CheckConfiguration(const display_config_t** display_config,
-                            uint32_t** layer_cfg_result, uint32_t display_count);
+                            uint32_t* display_cfg_result, uint32_t** layer_cfg_result,
+                            uint32_t display_count);
     void ApplyConfiguration(const display_config_t** display_config, uint32_t display_count);
     uint32_t ComputeLinearStride(uint32_t width, zx_pixel_format_t format);
     zx_status_t AllocateVmo(uint64_t size, zx_handle_t* vmo_out);

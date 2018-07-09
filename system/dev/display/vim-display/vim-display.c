@@ -161,10 +161,16 @@ static void vim_release_image(void* ctx, image_t* image) {
 
 static void vim_check_configuration(void* ctx,
                                     const display_config_t** display_configs,
+                                    uint32_t* display_cfg_result,
                                     uint32_t** layer_cfg_results,
                                     uint32_t display_count) {
     if (display_count != 1) {
-        ZX_DEBUG_ASSERT(display_count == 0);
+        if (display_count > 1) {
+            // The core display driver should never see a configuration with more
+            // than 1 display, so this is a bug in the core driver.
+            ZX_DEBUG_ASSERT(false);
+            *display_cfg_result = CONFIG_DISPLAY_TOO_MANY;
+        }
         return;
     }
     vim2_display_t* display = ctx;
@@ -173,6 +179,14 @@ static void vim_check_configuration(void* ctx,
     // no-op, just wait for the client to try a new config
     if (!display->display_attached || display_configs[0]->display_id != display->display_id) {
         mtx_unlock(&display->display_lock);
+        return;
+    }
+
+    // TODO: Add support for modesetting
+    if (display_configs[0]->mode.h_addressable != display->width
+            || display_configs[0]->mode.v_addressable != display->height) {
+        mtx_unlock(&display->display_lock);
+        *display_cfg_result = CONFIG_DISPLAY_UNSUPPORTED_MODES;
         return;
     }
 

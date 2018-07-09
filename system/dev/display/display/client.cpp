@@ -85,21 +85,6 @@ uint32_t calculate_refresh_rate_e2(const edid::timing_params_t params) {
     return static_cast<uint32_t>(round(100 * pixel_clock_hz / total_pxls));
 }
 
-void populate_display_mode(const edid::timing_params_t params, display_mode_t* mode) {
-    mode->pixel_clock_10khz = params.pixel_freq_10khz;
-    mode->h_addressable = params.horizontal_addressable;
-    mode->h_front_porch = params.horizontal_front_porch;
-    mode->h_sync_pulse = params.horizontal_sync_pulse;
-    mode->h_blanking = params.horizontal_blanking;
-    mode->v_addressable = params.vertical_addressable;
-    mode->v_front_porch = params.vertical_front_porch;
-    mode->v_sync_pulse = params.vertical_sync_pulse;
-    mode->v_blanking = params.vertical_blanking;
-    mode->pixel_clock_10khz = params.pixel_freq_10khz;
-    mode->mode_flags = (params.vertical_sync_polarity ? MODE_FLAG_VSYNC_POSITIVE : 0)
-            | (params.horizontal_sync_polarity ? MODE_FLAG_HSYNC_POSITIVE : 0);
-}
-
 // Removes and invokes EarlyRetire on all entries before end.
 static void do_early_retire(list_node_t* list, display::image_node_t* end = nullptr) {
     display::image_node_t* node;
@@ -356,19 +341,28 @@ void Client::HandleSetDisplayMode(const fuchsia_display_ControllerSetDisplayMode
 
     fbl::AutoLock lock(controller_->mtx());
     const edid::Edid* edid;
+    const fbl::Vector<uint32_t>* skipped_edid_timings;
     const display_params_t* params;
-    controller_->GetPanelConfig(req->display_id, &edid, &params);
+    controller_->GetPanelConfig(req->display_id, &edid, &skipped_edid_timings, &params);
 
     if (edid) {
-        for (auto timings = edid->begin(); timings != edid->end(); ++timings) {
-            if ((*timings).horizontal_addressable == req->mode.horizontal_resolution
+        uint32_t idx = 0;
+        auto skip_iter = skipped_edid_timings->begin();
+        auto timings = edid->begin();
+        while (timings != edid->end()) {
+            if (skip_iter != skipped_edid_timings->end() && idx == *skip_iter) {
+                skip_iter++;
+            } else if ((*timings).horizontal_addressable == req->mode.horizontal_resolution
                     && (*timings).vertical_addressable == req->mode.vertical_resolution
                     && calculate_refresh_rate_e2(*timings) == req->mode.refresh_rate_e2) {
-                populate_display_mode(*timings, &config->pending_.mode);
+                Controller::PopulateDisplayMode(*timings, &config->pending_.mode);
                 pending_config_valid_ = false;
                 config->display_config_change_ = true;
                 return;
             }
+
+            idx++;
+            ++timings;
         }
         zxlogf(ERROR, "Invalid display mode\n");
     } else {
@@ -853,14 +847,15 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
     const display_config_t* configs[configs_.size()];
     layer_t* layers[layers_.size()];
     uint32_t layer_cfg_results[layers_.size()];
-    uint32_t* display_cfg_results[configs_.size()];
+    uint32_t* display_layer_cfg_results[configs_.size()];
     memset(layer_cfg_results, 0, layers_.size() * sizeof(uint32_t));
 
     fuchsia_display_ControllerCheckConfigResponse* resp = nullptr;
     if (resp_builder) {
         resp = resp_builder->New<fuchsia_display_ControllerCheckConfigResponse>();
-        resp->res.count = 0;
-        resp->res.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+        resp->res = fuchsia_display_ConfigResult_OK;
+        resp->ops.count = 0;
+        resp->ops.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
     }
 
     bool config_fail = false;
@@ -875,7 +870,7 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
         configs[config_idx] = &display_config.pending_;
 
         // Set the index in the primary result array with this display's layer result array
-        display_cfg_results[config_idx++] = layer_cfg_results + layer_idx;
+        display_layer_cfg_results[config_idx++] = layer_cfg_results + layer_idx;
 
         // Create this display's compact layer_t* array
         display_config.pending_.layers = layers + layer_idx;
@@ -917,17 +912,7 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
             }
 
             if (invalid) {
-                // Populate the response and continue to the next display, since
-                // there's nothing more to check for this one.
-                if (resp) {
-                    resp->res.count++;
-                    auto disp_res = resp_builder->New<fuchsia_display_ConfigResult>();
-                    disp_res->display_id = display_config.id;
-                    disp_res->error = fuchsia_display_ConfigError_INVALID_CONFIG;
-                    disp_res->layers.count = 0;
-                    disp_res->layers.data = (void*) FIDL_ALLOC_PRESENT;
-                    disp_res->client_ops = disp_res->layers;
-                }
+                // Continue to the next display, since there's nothing more to check for this one.
                 config_fail = true;
                 break;
             }
@@ -935,67 +920,70 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
     }
 
     if (config_fail) {
+        if (resp) {
+            resp->res = fuchsia_display_ConfigResult_INVALID_CONFIG;
+        }
         // If the config is invalid, there's no point in sending it to the impl driver.
         return false;
     }
 
-    DC_IMPL_CALL(check_configuration, configs, display_cfg_results, config_idx);
+    uint32_t display_cfg_result;
+    DC_IMPL_CALL(check_configuration, configs, &display_cfg_result,
+                 display_layer_cfg_results, config_idx);
 
-    // Count the number of displays that had an error
-    int display_fail_count = 0;
-    for (int i = 0; i < config_idx; i++) {
-        for (unsigned j = 0; j < configs[i]->layer_count; j++) {
-            if (display_cfg_results[i][j]) {
-                display_fail_count++;
-                break;
+    if (display_cfg_result != CONFIG_DISPLAY_OK) {
+        if (resp) {
+            resp->res = display_cfg_result == CONFIG_DISPLAY_TOO_MANY
+                    ? fuchsia_display_ConfigResult_TOO_MANY_DISPLAYS
+                    : fuchsia_display_ConfigResult_UNSUPPORTED_DISPLAY_MODES;
+        }
+        return false;
+    }
+
+    bool layer_fail = false;
+    for (int i = 0; i < config_idx && !layer_fail; i++) {
+        for (unsigned j = 0; j < configs[i]->layer_count && !layer_fail; j++) {
+            if (display_layer_cfg_results[i][j]) {
+                layer_fail = true;
             }
         }
     }
 
-    // If there is a response builder, allocate the response
-    fuchsia_display_ConfigResult* display_failures = nullptr;
-    if (resp_builder && display_fail_count) {
-        resp->res.count = display_fail_count;
-        display_failures = resp_builder->NewArray<fuchsia_display_ConfigResult>(display_fail_count);
-    }
-
     // Return unless we need to finish constructing the response
-    if (display_fail_count == 0) {
+    if (!layer_fail) {
         return true;
     } else if (!resp_builder) {
         return false;
     }
+    resp->res = fuchsia_display_ConfigResult_UNSUPPORTED_CONFIG;
 
-    static_assert((1 << fuchsia_display_ClientCompositionOp_CLIENT_USE_PRIMARY)
+    static_assert((1 << fuchsia_display_ClientCompositionOpcode_CLIENT_USE_PRIMARY)
             == CLIENT_USE_PRIMARY, "Const mismatch");
-    static_assert((1 << fuchsia_display_ClientCompositionOp_CLIENT_MERGE_BASE)
+    static_assert((1 << fuchsia_display_ClientCompositionOpcode_CLIENT_MERGE_BASE)
             == CLIENT_MERGE_BASE, "Const mismatch");
-    static_assert((1 << fuchsia_display_ClientCompositionOp_CLIENT_MERGE_SRC)
+    static_assert((1 << fuchsia_display_ClientCompositionOpcode_CLIENT_MERGE_SRC)
             == CLIENT_MERGE_SRC, "Const mismatch");
-    static_assert((1 << fuchsia_display_ClientCompositionOp_CLIENT_FRAME_SCALE)
+    static_assert((1 << fuchsia_display_ClientCompositionOpcode_CLIENT_FRAME_SCALE)
             == CLIENT_FRAME_SCALE, "Const mismatch");
-    static_assert((1 << fuchsia_display_ClientCompositionOp_CLIENT_SRC_FRAME)
+    static_assert((1 << fuchsia_display_ClientCompositionOpcode_CLIENT_SRC_FRAME)
             == CLIENT_SRC_FRAME, "Const mismatch");
-    static_assert((1 << fuchsia_display_ClientCompositionOp_CLIENT_TRANSFORM)
+    static_assert((1 << fuchsia_display_ClientCompositionOpcode_CLIENT_TRANSFORM)
             == CLIENT_TRANSFORM, "Const mismatch");
-    static_assert((1 << fuchsia_display_ClientCompositionOp_CLIENT_COLOR_CONVERSION)
+    static_assert((1 << fuchsia_display_ClientCompositionOpcode_CLIENT_COLOR_CONVERSION)
             == CLIENT_COLOR_CONVERSION, "Const mismatch");
-    static_assert((1 << fuchsia_display_ClientCompositionOp_CLIENT_ALPHA)
+    static_assert((1 << fuchsia_display_ClientCompositionOpcode_CLIENT_ALPHA)
             == CLIENT_ALPHA, "Const mismatch");
     constexpr uint32_t kAllErrors = (CLIENT_ALPHA << 1) - 1;
 
-    config_idx = 0;
+
     layer_idx = 0;
     for (auto& display_config : configs_) {
         if (display_config.pending_layers_.is_empty()) {
             continue;
         }
 
-        // Count how many layer errors were on this display
-        int fail_count = 0;
-        int32_t start_layer_idx = layer_idx;
         bool seen_base = false;
-        for (__UNUSED auto& layer_node : display_config.pending_layers_) {
+        for (auto& layer_node : display_config.pending_layers_) {
             uint32_t err = kAllErrors & layer_cfg_results[layer_idx];
             // Fixup the error flags if the driver impl incorrectly set multiple MERGE_BASEs
             if (err & CLIENT_MERGE_BASE) {
@@ -1007,42 +995,18 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
                     err &= ~CLIENT_MERGE_SRC;
                 }
             }
-            layer_cfg_results[layer_idx++] = err;
 
-            while (err) {
-                fail_count += (err & 1);
-                err >>= 1;
-            }
-        }
-
-        if (fail_count == 0) {
-            continue;
-        }
-        layer_idx = start_layer_idx;
-
-        // Populate this display's layer errors
-        display_failures->display_id = display_config.id;
-        display_failures->layers.data = (void*) FIDL_ALLOC_PRESENT;
-        display_failures->layers.count = fail_count;
-        display_failures->client_ops.data = (void*) FIDL_ALLOC_PRESENT;
-        display_failures->client_ops.count = fail_count;
-        display_failures++;
-
-        uint64_t* fail_layers = resp_builder->NewArray<uint64_t>(fail_count);
-        fuchsia_display_ClientCompositionOp* fail_ops =
-                resp_builder->NewArray<fuchsia_display_ClientCompositionOp>(fail_count);
-
-        for (auto& layer_node : display_config.pending_layers_) {
-            uint32_t err = layer_cfg_results[layer_idx];
             for (uint8_t i = 0; i < 32; i++) {
                 if (err & (1 << i)) {
-                    *(fail_layers++) = layer_node.layer->id;
-                    *(fail_ops++) = i;
+                    auto op = resp_builder->New<fuchsia_display_ClientCompositionOp>();
+                    op->display_id = display_config.id;
+                    op->layer_id = layer_node.layer->id;
+                    op->opcode = i;
+                    resp->ops.count++;
                 }
             }
             layer_idx++;
         }
-        config_idx++;
     }
     return false;
 }
@@ -1195,32 +1159,6 @@ void Client::OnDisplaysChanged(uint64_t* displays_added,
 
             config->id = displays_added[i];
 
-            const edid::Edid* edid;
-            const display_params_t* params;
-            if (!controller_->GetPanelConfig(config->id, &edid, &params)) {
-                // This can only happen if the display was already disconnected.
-                zxlogf(WARN, "No config when adding display\n");
-                continue;
-            }
-            req->added.count++;
-
-            config->current_.display_id = config->id;
-            config->current_.layers = nullptr;
-            config->current_.layer_count = 0;
-
-            if (edid) {
-                auto timings = edid->begin();
-                populate_display_mode(*timings, &config->current_.mode);
-            } else {
-                config->current_.mode = {};
-                config->current_.mode.h_addressable = params->width;
-                config->current_.mode.v_addressable = params->height;
-            }
-
-            config->current_.cc_flags = 0;
-
-            config->pending_ = config->current_;
-
             if (!controller_->GetSupportedPixelFormats(config->id,
                                                        &config->pixel_format_count_,
                                                        &config->pixel_formats_)) {
@@ -1233,6 +1171,41 @@ void Client::OnDisplaysChanged(uint64_t* displays_added,
                 zxlogf(WARN, "Failed to get cursor info when processing hotplug\n");
                 continue;
             }
+
+            const edid::Edid* edid;
+            const fbl::Vector<uint32_t>* skipped_edid_timings;
+            const display_params_t* params;
+            if (!controller_->GetPanelConfig(config->id, &edid, &skipped_edid_timings, &params)) {
+                // This can only happen if the display was already disconnected.
+                zxlogf(WARN, "No config when adding display\n");
+                continue;
+            }
+            req->added.count++;
+
+            config->current_.display_id = config->id;
+            config->current_.layers = nullptr;
+            config->current_.layer_count = 0;
+
+            if (edid) {
+                auto timings = edid->begin();
+                uint32_t idx = 0;
+                auto skip_iter = skipped_edid_timings->begin();
+                while (skip_iter != skipped_edid_timings->end() && idx == *skip_iter) {
+                    skip_iter++;
+                    idx++;
+                    ++timings;
+                }
+                Controller::PopulateDisplayMode(*timings, &config->current_.mode);
+            } else {
+                config->current_.mode = {};
+                config->current_.mode.h_addressable = params->width;
+                config->current_.mode.v_addressable = params->height;
+            }
+
+            config->current_.cc_flags = 0;
+
+            config->pending_ = config->current_;
+
             configs_.insert(fbl::move(config));
         }
 
@@ -1251,8 +1224,9 @@ void Client::OnDisplaysChanged(uint64_t* displays_added,
             }
 
             const edid::Edid* edid;
+            const fbl::Vector<uint32_t>* skipped_edid_timings;
             const display_params_t* params;
-            controller_->GetPanelConfig(config->id, &edid, &params);
+            controller_->GetPanelConfig(config->id, &edid, &skipped_edid_timings, &params);
 
             coded_configs[i].id = config->id;
             coded_configs[i].pixel_format.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
@@ -1261,16 +1235,23 @@ void Client::OnDisplaysChanged(uint64_t* displays_added,
 
             if (edid) {
                 auto timings = edid->begin();
+                uint32_t idx = 0;
+                auto skip_iter = skipped_edid_timings->begin();
 
                 coded_configs[i].modes.count = 0;
                 while (timings != edid->end()) {
-                    coded_configs[i].modes.count++;
-                    auto mode = builder.New<fuchsia_display_Mode>();
+                    if (skip_iter != skipped_edid_timings->end() && idx == *skip_iter) {
+                        skip_iter++;
+                    } else {
+                        coded_configs[i].modes.count++;
+                        auto mode = builder.New<fuchsia_display_Mode>();
 
-                    mode->horizontal_resolution = (*timings).horizontal_addressable;
-                    mode->vertical_resolution = (*timings).vertical_addressable;
-                    mode->refresh_rate_e2 = calculate_refresh_rate_e2(*timings);
+                        mode->horizontal_resolution = (*timings).horizontal_addressable;
+                        mode->vertical_resolution = (*timings).vertical_addressable;
+                        mode->refresh_rate_e2 = calculate_refresh_rate_e2(*timings);
+                    }
 
+                    idx++;
                     ++timings;
                 }
             } else {

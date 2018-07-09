@@ -148,6 +148,7 @@ static void astro_release_image(void* ctx, image_t* image) {
 
 static void astro_check_configuration(void* ctx,
                                       const display_config_t** display_configs,
+                                      uint32_t* display_cfg_result,
                                       uint32_t** layer_cfg_results,
                                       uint32_t display_count) {
     if (display_count != 1) {

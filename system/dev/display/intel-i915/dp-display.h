@@ -20,6 +20,8 @@ private:
     bool ConfigureDdi() final;
     bool DdcRead(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) final;
 
+    bool CheckDisplayLimits(const display_config_t* config) final;
+
     bool DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, size_t size);
     bool DpAuxReadChunk(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, uint32_t size_in,
                         size_t* size_out);
