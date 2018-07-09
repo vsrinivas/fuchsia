@@ -5,11 +5,6 @@
 import("//build/package.gni")
 
 source_set("lib") {
-  visibility = [
-    ":*",
-    "integration_tests:*",
-  ]
-
   sources = [
     "cmx_metadata.cc",
     "cmx_metadata.h",
