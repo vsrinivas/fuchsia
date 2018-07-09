@@ -42,11 +42,10 @@ pub fn get_a_rsne() -> Rsne {
     rsne
 }
 
-pub fn get_rsne_bytes(rsne: &Rsne) -> Bytes {
-    let mut a_rsne_data = BytesMut::with_capacity(rsne.len());
-    rsne.as_bytes(&mut a_rsne_data)
-        .expect("couldn't write RSNE to buffer");
-    a_rsne_data.freeze()
+pub fn get_rsne_bytes(rsne: &Rsne) -> Vec<u8> {
+    let mut a_rsne_data = Vec::with_capacity(rsne.len());
+    rsne.as_bytes(&mut a_rsne_data);
+    a_rsne_data
 }
 
 pub fn get_s_rsne() -> Rsne {
@@ -103,10 +102,8 @@ pub fn compute_mic(kck: &[u8], frame: &eapol::KeyFrame) -> Vec<u8> {
     let akm = get_akm();
     let integrity_alg = akm.integrity_algorithm()
         .expect("error AKM has no known integrity Algorithm");
-    let mut buf = BytesMut::with_capacity(frame.len());
-    frame
-        .as_bytes(true, &mut buf)
-        .expect("could not convert frame to a byte stream");
+    let mut buf = Vec::with_capacity(frame.len());
+    frame.as_bytes(true, &mut buf);
     let written = buf.len();
     buf.truncate(written);
     let mut mic: Vec<u8> = integrity_alg
@@ -164,30 +161,24 @@ pub fn get_4whs_msg1(anonce: &[u8], replay_counter: u64) -> eapol::KeyFrame {
 }
 
 pub fn get_4whs_msg3(ptk: &Ptk, anonce: &[u8], replay_counter: u64, gtk: &[u8]) -> eapol::KeyFrame {
-    let mut buf = BytesMut::from(vec![]);
-    buf.reserve(256);
+    let mut buf = Vec::with_capacity(256);
 
     // Write GTK KDE
     let gtk_kde = kde::Gtk::new(2, kde::GtkInfoTx::BothRxTx, gtk);
     if let key_data::Element::Gtk(hdr, gtk) = gtk_kde {
-        hdr.as_bytes(&mut buf)
-            .expect("couldn't write GTK KDE header to key data");
-        gtk.as_bytes(&mut buf)
-            .expect("couldn't write GTK KDE to key data");
+        hdr.as_bytes(&mut buf);
+        gtk.as_bytes(&mut buf);
     }
 
     // Write RSNE
     let a_rsne = get_a_rsne();
-    a_rsne
-        .as_bytes(&mut buf)
-        .expect("couldn't write RSNE to key data");
+    a_rsne.as_bytes(&mut buf);
 
     // Add optional padding
     key_data::add_padding(&mut buf);
 
     // Encrypt key data
-    let key_data = buf.freeze();
-    let encrypted_key_data = Bytes::from(encrypt_key_data(ptk.kek(), &key_data[..]));
+    let encrypted_key_data = encrypt_key_data(ptk.kek(), &buf[..]);
 
     let mut msg = eapol::KeyFrame {
         version: 1,

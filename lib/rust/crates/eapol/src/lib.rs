@@ -8,13 +8,12 @@
 extern crate bitfield;
 extern crate byteorder;
 extern crate bytes;
-#[macro_use]
 extern crate failure;
 #[macro_use]
 extern crate nom;
 extern crate test;
 
-use bytes::{BufMut, Bytes, BytesMut};
+use bytes::{BufMut, Bytes};
 use nom::{be_u16, be_u64, be_u8};
 use std::convert::AsMut;
 
@@ -123,11 +122,8 @@ impl KeyFrame {
         static_part_len + dynamic_part_len
     }
 
-    pub fn as_bytes(&self, clear_mic: bool, buf: &mut BytesMut) -> Result<(), failure::Error> {
-        let frame_len = self.len();
-        if buf.remaining_mut() < frame_len {
-            return Err(ErrorBufferTooSmall(frame_len, buf.remaining_mut()).into());
-        }
+    pub fn as_bytes(&self, clear_mic: bool, buf: &mut Vec<u8>) {
+        buf.reserve(self.len());
 
         buf.put_u8(self.version);
         buf.put_u8(self.packet_type);
@@ -148,7 +144,6 @@ impl KeyFrame {
         }
         buf.put_u16_be(self.key_data_len);
         buf.put_slice(&self.key_data[..]);
-        Ok(())
     }
 
     pub fn update_packet_body_len(&mut self) {
@@ -202,10 +197,6 @@ named_args!(pub key_frame_from_bytes(mic_size: u16) <KeyFrame>,
            })
     )
 );
-
-#[derive(Debug, Fail)]
-#[fail(display = "buffer too small; required: {}, available: {}", _0, _1)]
-struct ErrorBufferTooSmall(usize, usize);
 
 #[cfg(test)]
 mod tests {
@@ -333,14 +324,9 @@ mod tests {
         let keyframe: KeyFrame = result.unwrap().1;
 
         // Buffer is too small to write entire frame to.
-        let mut buf = BytesMut::with_capacity(frame.len() - 1);
-        let result = keyframe.as_bytes(false, &mut buf);
-        assert!(result.is_err());
-
-        // Sufficiently large buffer should work.
-        let mut buf = BytesMut::with_capacity(frame.len());
-        let result = keyframe.as_bytes(false, &mut buf);
-        assert!(result.is_ok());
+        let mut buf = Vec::with_capacity(frame.len() - 1);
+        keyframe.as_bytes(false, &mut buf);
+        verify_as_bytes_result(keyframe, false, &buf[..]);
     }
 
     #[test]
@@ -398,9 +384,8 @@ mod tests {
     }
 
     fn verify_as_bytes_result(keyframe: KeyFrame, clear_mic: bool, expected: &[u8]) {
-        let mut buf = BytesMut::with_capacity(128);
-        let result = keyframe.as_bytes(clear_mic, &mut buf);
-        assert!(result.is_ok());
+        let mut buf = Vec::with_capacity(128);
+        keyframe.as_bytes(clear_mic, &mut buf);
         let written = buf.len();
         let left_over = buf.split_off(written);
         assert_eq!(&buf[..], expected);

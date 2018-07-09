@@ -245,10 +245,9 @@ impl Fourway {
             match self.ptk.as_ref() {
                 None => Err(Error::UnexpectedMic.into()),
                 Some(ptk) => {
-                    let mut buf = BytesMut::with_capacity(frame.len());
-                    frame.as_bytes(true, &mut buf)?;
+                    let mut buf = Vec::with_capacity(frame.len());
+                    frame.as_bytes(true, &mut buf);
                     let written = buf.len();
-                    buf.truncate(written);
                     let valid_mic = akm.integrity_algorithm()
                         .ok_or(Error::UnsupportedAkmSuite)?
                         .verify(ptk.kck(), &buf[..], &frame.key_mic[..]);
@@ -513,8 +512,7 @@ mod tests {
     use rsna::test_util;
     use bytes::Bytes;
 
-    #[test]
-    fn test_nonzero_mic_in_first_msg() {
+    fn make_handshake() -> Fourway {
         // Create a new instance of the 4-Way Handshake in Supplicant role.
         let pmk = test_util::get_pmk();
         let cfg = Config{
@@ -524,8 +522,12 @@ mod tests {
             a_addr: test_util::A_ADDR,
             role: Role::Supplicant
         };
-        let mut handshake = Fourway::new(cfg, pmk)
-            .expect("error while creating 4-Way Handshake");
+        Fourway::new(cfg, pmk).expect("error while creating 4-Way Handshake")
+    }
+
+    #[test]
+    fn test_nonzero_mic_in_first_msg() {
+        let mut handshake = make_handshake();
 
         // Send first message of Handshake to Supplicant and verify result.
         let a_nonce = test_util::get_nonce();
@@ -533,7 +535,6 @@ mod tests {
         msg1.key_mic = Bytes::from(vec![0xAA; 16]);
         let updates = handshake.on_eapol_key_frame(&msg1)
             .expect("error processing first message");
-        assert_eq!(updates.len(), 1);
         let update = updates.get(0).expect("expected at least one update");
         match update {
             SecAssocUpdate::TxEapolKeyFrame(_) => {},

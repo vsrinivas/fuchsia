@@ -316,10 +316,8 @@ fn derive_s_rsne(bssid: &[u8], rsne: Option<&Vec<u8>>) -> Option<Vec<u8>> {
     s_rsne.akm_suites.push(akm);
 
     let mut buf = Vec::with_capacity(s_rsne.len());
-    match s_rsne.as_bytes(&mut buf) {
-        Ok(_) => Some(buf),
-        _ => None,
-    }
+    s_rsne.as_bytes(&mut buf);
+    Some(buf)
 }
 
 #[cfg(test)]
@@ -345,7 +343,7 @@ mod tests {
             ..Default::default()
         };
         let mut buf = Vec::with_capacity(a_rsne.len());
-        a_rsne.as_bytes(&mut buf).expect("could not write Authenticator's RSNE to buffer");
+        a_rsne.as_bytes(&mut buf);
         Some(buf)
     }
 

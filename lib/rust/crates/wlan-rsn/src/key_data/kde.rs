@@ -44,16 +44,12 @@ impl Header {
         }
     }
 
-    pub fn as_bytes(&self, buf: &mut BytesMut) -> Result<(), failure::Error> {
-        if buf.remaining_mut() < HDR_LEN {
-            Err(Error::BufferTooSmall(HDR_LEN, buf.remaining_mut()).into())
-        } else {
-            buf.put_u8(self.type_);
-            buf.put_u8(self.len);
-            buf.put_slice(&self.oui[..]);
-            buf.put_u8(self.data_type);
-            Ok(())
-        }
+    pub fn as_bytes(&self, buf: &mut Vec<u8>) {
+        buf.reserve(HDR_LEN);
+        buf.put_u8(self.type_);
+        buf.put_u8(self.len);
+        buf.put_slice(&self.oui[..]);
+        buf.put_u8(self.data_type);
     }
 }
 
@@ -106,15 +102,11 @@ impl Gtk {
         self.gtk.len() + 2
     }
 
-    pub fn as_bytes(&self, buf: &mut BytesMut) -> Result<(), failure::Error> {
-        if buf.remaining_mut() < self.len() {
-            Err(Error::BufferTooSmall(self.len(), buf.remaining_mut()).into())
-        } else {
-            buf.put_u8(self.info.value());
-            buf.put_u8(0);
-            buf.put_slice(&self.gtk[..]);
-            Ok(())
-        }
+    pub fn as_bytes(&self, buf: &mut Vec<u8>) {
+        buf.reserve(2 + self.gtk.len());
+        buf.put_u8(self.info.value());
+        buf.put_u8(0);
+        buf.put_slice(&self.gtk[..]);
     }
 }
 
@@ -187,15 +179,12 @@ mod tests {
 
     #[test]
     fn test_hdr_as_bytes() {
-        let mut buf = BytesMut::from(vec![]);
-        buf.reserve(256);
+        let mut buf = Vec::with_capacity(256);
         let kde_hdr = Header::new(0x11, 0x12, &vec![0x13, 0x14, 0x15][..], 0xAC);
-        kde_hdr
-            .as_bytes(&mut buf)
-            .expect("couldn't write KDE Header to buffer");
+        kde_hdr.as_bytes(&mut buf);
 
         let mut expected: Vec<u8> = vec![0x11, 0x12, 0x13, 0x14, 0x15, 0xAC];
-        assert_eq!(&buf.freeze()[..], &expected[..]);
+        assert_eq!(&buf[..], &expected[..]);
     }
 
     #[test]
@@ -250,32 +239,26 @@ mod tests {
 
     #[test]
     fn test_gtk_as_bytes() {
-        let mut buf = BytesMut::from(vec![]);
-        buf.reserve(256);
+        let mut buf = Vec::with_capacity(256);
         let gtk_kde = Gtk {
             info: GtkInfo(3),
             gtk: vec![42; 32],
         };
-        gtk_kde
-            .as_bytes(&mut buf)
-            .expect("couldn't write GTK KDE to buffer");
+        gtk_kde.as_bytes(&mut buf);
 
         let mut expected: Vec<u8> = vec![0x03, 0x00];
         expected.append(&mut vec![42; 32]);
-        assert_eq!(&buf.freeze()[..], &expected[..]);
+        assert_eq!(&buf[..], &expected[..]);
     }
 
     #[test]
     fn test_gtk_as_bytes_too_short() {
-        let mut buf = BytesMut::from(vec![]);
-        buf.reserve(32);
+        let mut buf = Vec::with_capacity(32);
         let gtk_kde = Gtk {
             info: GtkInfo(3),
             gtk: vec![42; 32],
         };
-        gtk_kde
-            .as_bytes(&mut buf)
-            .expect_err("expected to fail writing GTK KDE to short buffer");
+        gtk_kde.as_bytes(&mut buf);
     }
 
 }

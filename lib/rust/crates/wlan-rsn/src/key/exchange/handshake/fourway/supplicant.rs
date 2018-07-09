@@ -67,8 +67,8 @@ impl PtkInitState {
         key_info.set_key_type(msg1.key_info.key_type());
         key_info.set_key_mic(true);
 
-        let mut key_data = BytesMut::with_capacity(shared.cfg.a_rsne.len());
-        shared.cfg.a_rsne.as_bytes(&mut key_data)?;
+        let mut key_data = vec![];
+        shared.cfg.a_rsne.as_bytes(&mut key_data);
 
         let mut msg2 = eapol::KeyFrame {
             version: msg1.version,
@@ -83,7 +83,7 @@ impl PtkInitState {
             key_iv: [0u8; 16],
             key_nonce: eapol::to_array(snonce),
             key_data_len: key_data.len() as u16,
-            key_data: key_data.freeze(),
+            key_data: Bytes::from(key_data),
         };
         msg2.update_packet_body_len();
 
@@ -319,8 +319,8 @@ fn update_mic(
     alg: Box<integrity::Algorithm>,
     frame: &mut eapol::KeyFrame,
 ) -> Result<(), failure::Error> {
-    let mut buf = BytesMut::with_capacity(frame.len());
-    frame.as_bytes(true, &mut buf)?;
+    let mut buf = Vec::with_capacity(frame.len());
+    frame.as_bytes(true, &mut buf);
     let written = buf.len();
     buf.truncate(written);
     let mic = alg.compute(kck, &buf[..])?;

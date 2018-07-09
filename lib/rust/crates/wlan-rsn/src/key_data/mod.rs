@@ -63,7 +63,7 @@ pub fn extract_elements(key_data: &[u8]) -> Result<Vec<Element>> {
 
 // IEEE Std 802.11-2016, 12.7.2 j)
 // Adds padding to a given key data if necessary and truncates all remaining bytes of the buffer.
-pub fn add_padding(buf: &mut BytesMut) {
+pub fn add_padding(buf: &mut Vec<u8>) {
     let padding_len = if buf.len() < 16 {
         16 - buf.len()
     } else {
@@ -72,17 +72,11 @@ pub fn add_padding(buf: &mut BytesMut) {
 
     if padding_len != 0 {
         // Buffer too small to hold padding; grow buffer.
-        if buf.remaining_mut() < padding_len {
-            let remaining = buf.remaining_mut();
-            buf.reserve(padding_len - remaining);
-        }
+        buf.reserve(padding_len);
 
         buf.put_u8(kde::TYPE);
         buf.put(&vec![0u8; padding_len - 1][..]);
     }
-
-    let written_bytes = buf.len();
-    buf.truncate(written_bytes);
 }
 
 #[cfg(test)]
@@ -95,32 +89,32 @@ mod tests {
 
     #[test]
     fn test_add_padding_min_length() {
-        let mut buf = BytesMut::from(vec![]);
+        let mut buf = vec![];
         add_padding(&mut buf);
         assert_eq!(buf.len(), 16);
         assert_eq!(buf[0], 0xDD);
         assert!(is_zero(&buf[1..]));
 
-        let mut buf = BytesMut::from(vec![0xFF]);
+        let mut buf = vec![0xFF];
         add_padding(&mut buf);
         assert_eq!(buf.len(), 16);
         assert_eq!(buf[1], 0xDD);
         assert!(is_zero(&buf[2..]));
 
         // Although length is a multiple of 8, the minimum length should be 16.
-        let mut buf = BytesMut::from(vec![0xFF; 8]);
+        let mut buf = vec![0xFF; 8];
         add_padding(&mut buf);
         assert_eq!(buf.len(), 16);
         assert_eq!(buf[8], 0xDD);
         assert!(is_zero(&buf[9..]));
 
-        let mut buf = BytesMut::from(vec![0xFF; 14]);
+        let mut buf = vec![0xFF; 14];
         add_padding(&mut buf);
         assert_eq!(buf.len(), 16);
         assert_eq!(buf[14], 0xDD);
         assert!(is_zero(&buf[15..]));
 
-        let mut buf = BytesMut::from(vec![0xFF; 16]);
+        let mut buf = vec![0xFF; 16];
         add_padding(&mut buf);
         assert_eq!(buf.len(), 16);
         assert_eq!(buf[15], 0xFF);
@@ -128,24 +122,24 @@ mod tests {
 
     #[test]
     fn test_add_padding_8_multiple_length() {
-        let mut buf = BytesMut::from(vec![0xFF; 17]);
+        let mut buf = vec![0xFF; 17];
         add_padding(&mut buf);
         assert_eq!(buf.len(), 24);
         assert_eq!(buf[17], 0xDD);
         assert!(is_zero(&buf[18..]));
 
-        let mut buf = BytesMut::from(vec![0xFF; 22]);
+        let mut buf = vec![0xFF; 22];
         add_padding(&mut buf);
         assert_eq!(buf.len(), 24);
         assert_eq!(buf[22], 0xDD);
         assert!(is_zero(&buf[23..]));
 
-        let mut buf = BytesMut::from(vec![0xFF; 24]);
+        let mut buf = vec![0xFF; 24];
         add_padding(&mut buf);
         assert_eq!(buf.len(), 24);
         assert_eq!(buf[23], 0xFF);
 
-        let mut buf = BytesMut::from(vec![0xFF; 25]);
+        let mut buf = vec![0xFF; 25];
         add_padding(&mut buf);
         assert_eq!(buf.len(), 32);
         assert_eq!(buf[25], 0xDD);
