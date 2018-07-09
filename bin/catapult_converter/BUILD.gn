@@ -1,0 +1,60 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("converter") {
+  testonly = true
+  sources = [
+    "converter.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//third_party/rapidjson",
+  ]
+}
+
+executable("converter_bin") {
+  output_name = "catapult_converter"
+  testonly = true
+  sources = [
+    "main.cc",
+  ]
+  deps = [
+    ":converter",
+  ]
+}
+
+executable("unittest") {
+  output_name = "catapult_converter_test"
+  testonly = true
+  sources = [
+    "converter_unittest.cc",
+  ]
+  deps = [
+    ":converter",
+    "//garnet/public/lib/fxl",
+    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
+    "//third_party/rapidjson",
+  ]
+}
+
+package("catapult_converter") {
+  testonly = true
+  deprecated_system_image = true
+
+  deps = [
+    ":converter_bin",
+    ":unittest",
+  ]
+
+  binaries = [ {
+        name = "catapult_converter"
+      } ]
+
+  tests = [ {
+        name = "catapult_converter_test"
+      } ]
+}
