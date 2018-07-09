@@ -16,10 +16,12 @@ namespace zxdb {
 class OutputBuffer;
 class Session;
 
+// The console has some virtual functions for ease of mocking the interace
+// for tests.
 class Console : public debug_ipc::FDWatcher {
  public:
   explicit Console(Session* session);
-  ~Console();
+  virtual ~Console();
 
   static Console* get() { return singleton_; }
 
@@ -33,12 +35,22 @@ class Console : public debug_ipc::FDWatcher {
   void Output(const std::string& s);
   void Output(const Err& err);
 
- private:
   // The result of dispatching input is either to keep running or quit the
   // message loop to exit.
   enum class Result { kContinue, kQuit };
 
-  Result DispatchInputLine(const std::string& line);
+  // DispatchInputLine will generate the result by parsing the command.
+  // Depending on this result, this function could stop the MessageLoop.
+  // We pass the result out for callers to use and react accordingly, which
+  // can indicate whether they want the console to continue processing
+  // commands.
+  virtual Result ProcessInputLine(
+      const std::string& line,
+      CommandCallback callback = nullptr);
+
+ protected:
+  Result DispatchInputLine(const std::string& line,
+                           CommandCallback callback = nullptr);
 
   // FDWatcher implementation.
   void OnFDReadable(int fd) override;

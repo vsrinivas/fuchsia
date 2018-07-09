@@ -211,7 +211,13 @@ struct SwitchRecord {
 // Command dispatch ------------------------------------------------------------
 
 // Type for the callback that runs a command.
-using CommandExecutor = Err (*)(ConsoleContext*, const Command& cmd);
+using CommandExecutor = std::function<Err(ConsoleContext*, const Command&)>;
+
+// Type for a callback that a CommandExecutor will receive
+using CommandCallback = std::function<void(Err)>;
+// Executor that is able to receive a callback that it can then pass on.
+using CommandExecutorWithCallback =
+    std::function<Err(ConsoleContext*, const Command&, CommandCallback)>;
 
 struct NounRecord {
   NounRecord();
@@ -237,9 +243,14 @@ struct VerbRecord {
   VerbRecord(CommandExecutor exec, std::initializer_list<std::string> aliases,
              const char* short_help, const char* help, CommandGroup group,
              SourceAffinity source_affinity = SourceAffinity::kNone);
+  VerbRecord(CommandExecutorWithCallback exec_cb,
+             std::initializer_list<std::string> aliases, const char* short_help,
+             const char* help, CommandGroup group,
+             SourceAffinity source_affinity = SourceAffinity::kNone);
   ~VerbRecord();
 
   CommandExecutor exec = nullptr;
+  CommandExecutorWithCallback exec_cb = nullptr;
 
   // These are the user-typed strings that will name this verb. The [0]th one
   // is the canonical name.
@@ -271,6 +282,7 @@ const std::map<std::string, Noun>& GetStringNounMap();
 const std::map<std::string, Verb>& GetStringVerbMap();
 
 // Runs the given command.
-Err DispatchCommand(ConsoleContext* context, const Command& cmd);
+Err DispatchCommand(ConsoleContext* context, const Command& cmd,
+                    CommandCallback callback = nullptr);
 
 }  // namespace zxdb

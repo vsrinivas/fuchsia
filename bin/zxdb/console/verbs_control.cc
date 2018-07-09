@@ -12,6 +12,7 @@
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/public/lib/fxl/functional/auto_call.h"
 
 namespace zxdb {
 
@@ -184,7 +185,8 @@ Examples
   connect [1234:5678::9abc]:1234
 )";
 
-Err DoConnect(ConsoleContext* context, const Command& cmd) {
+Err DoConnect(ConsoleContext* context, const Command& cmd,
+              CommandCallback callback = nullptr) {
   // Can accept either one or two arg forms.
   std::string host;
   uint16_t port = 0;
@@ -203,7 +205,7 @@ Err DoConnect(ConsoleContext* context, const Command& cmd) {
     return Err(ErrType::kInput, "Too many arguments.");
   }
 
-  context->session()->Connect(host, port, [](const Err& err) {
+  context->session()->Connect(host, port, [callback](const Err& err) {
     if (err.has_error()) {
       // Don't display error message if they canceled the connection.
       if (err.type() != ErrType::kCanceled)
@@ -216,6 +218,9 @@ Err DoConnect(ConsoleContext* context, const Command& cmd) {
                  "<process koid>\".");
       Console::get()->Output(std::move(msg));
     }
+
+    if (callback)
+      callback(err);
   });
   Console::get()->Output("Connecting (use \"disconnect\" to cancel)...\n");
 
@@ -232,15 +237,20 @@ const char kDisconnectHelp[] =
   Disconnects from the remote system. There are no arguments.
 )";
 
-Err DoDisconnect(ConsoleContext* context, const Command& cmd) {
+Err DoDisconnect(ConsoleContext* context, const Command& cmd,
+                 CommandCallback callback = nullptr) {
   if (!cmd.args().empty())
     return Err(ErrType::kInput, "\"disconnect\" takes no arguments.");
 
-  context->session()->Disconnect([](const Err& err) {
+  context->session()->Disconnect([callback](const Err& err) {
     if (err.has_error())
       Console::get()->Output(err);
     else
       Console::get()->Output("Disconnected successfully.");
+
+    // We call the given callbasck
+    if (callback)
+      callback(err);
   });
 
   return Err();

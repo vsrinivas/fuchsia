@@ -6,54 +6,122 @@
 #include <sstream>
 
 #include "garnet/bin/zxdb/console/flags.h"
+#include "garnet/bin/zxdb/console/flags_impl.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
-namespace {
-
 using Option = fxl::CommandLine::Option;
 
-// A Flag consists in a standard set of description values.
-// The quickest way to install a flag is to define those expected values as
-// constants with a standard name and use the following macro in the flag
-// initialization function.
-//
-// NOTE: All values must be defined for the macro to work, even if the flag
-// doesn't use them.
-#define INSTALL_FLAG(flag_name)                                         \
-  flags.push_back({k##flag_name##Name, k##flag_name##LongForm,          \
-                   k##flag_name##ShortForm, k##flag_name##LongHelp,     \
-                   k##flag_name##ShortHelp, k##flag_name##ArgumentName, \
-                   k##flag_name##DefaultValue})
-// help ------------------------------------------------------------------------
+// Flag Processing -------------------------------------------------------------
 
-const char* kHelpName = "Help";
-const char* kHelpLongForm = "help";
-const char* kHelpShortForm = "h";
-const char* kHelpLongHelp =
-    R"(Display information about the flags available in the system.)";
-const char* kHelpShortHelp = R"(Displays this help message.)";
-const char* kHelpArgumentName = "OPTION";
-const char* kHelpDefaultValue = "";
+namespace {
 
-// -----------------------------------------------------------------------------
+Err VerifyFlag(const FlagRecord& flag, const std::string& value) {
+  if (!flag.argument_name) {
+    // We check if we got an argument we weren't expecting
+    if (!value.empty()) {
+      return Err(fxl::StringPrintf("Flag \"%s\" doesn't receive arguments.",
+                                   flag.long_form));
+    }
+  } else {
+    if (!flag.default_value) {
+      if (value.empty()) {
+        return Err(fxl::StringPrintf("Flag \"%s\" expects an argument.",
+                                     flag.long_form));
+      }
+    }
+  }
+  return Err();
+}
 
-std::vector<FlagRecord> InitializeFlags(
-    const std::vector<FlagRecord>* mock_flags) {
-  if (mock_flags) {
-    return *mock_flags;
+Err VerifyFlags(const fxl::CommandLine& cmd_line) {
+  // We see if we found an unexistent flag.
+  for (const Option& option : cmd_line.options()) {
+    const FlagRecord* flag = GetFlagFromOption(option);
+    if (!flag) {
+      return Err(
+          fxl::StringPrintf("Unrecognized flag \"%s\"", option.name.c_str()));
+    }
+
+    Err flag_err = VerifyFlag(*flag, option.value);
+    if (flag_err.has_error()) {
+      return flag_err;
+    }
+  }
+  return Err();
+}
+
+}  // namespace
+
+FlagProcessResult ProcessCommandLine(const fxl::CommandLine& cmd_line,
+                                     Err* out_err,
+                                     std::vector<Action>* actions) {
+  Err flag_err = VerifyFlags(cmd_line);
+
+  // Check for errors.
+  if (flag_err.has_error()) {
+    *out_err = flag_err;
+    return FlagProcessResult::kError;
   }
 
-  std::vector<FlagRecord> flags;
-  INSTALL_FLAG(Help);
+  // Flags should be processed by priority.
+  size_t flag_index;
+  if (cmd_line.HasOption("version", &flag_index)) {
+    PrintVersion();
+    return FlagProcessResult::kQuit;
+  }
 
-  // We sort the flags
-  std::sort(flags.begin(), flags.end(), [](const auto& lhs, const auto& rhs) {
-    return lhs.name < rhs.name;
-  });
+  if (cmd_line.HasOption("help", &flag_index)) {
+    const Option& option = cmd_line.options()[flag_index];
+    Err err = PrintHelp(option.value);
+    if (err.has_error()) {
+      *out_err = err;
+      return FlagProcessResult::kError;
+    }
+    return FlagProcessResult::kQuit;
+  }
 
+  if (cmd_line.HasOption("script-file", &flag_index)) {
+    const Option& option = cmd_line.options()[flag_index];
+    // We pass the global action callback for the action linking.
+    Err err = ProcessScriptFile(option.value, actions);
+    if (err.has_error()) {
+      *out_err = err;
+      return FlagProcessResult::kError;
+    }
+    return FlagProcessResult::kActions;
+  }
+
+  *out_err = Err();
+  return FlagProcessResult::kContinue;
+}
+
+// FlagRecord ------------------------------------------------------------------
+
+FlagRecord::FlagRecord(const char* name, const char* long_form,
+                       const char* short_form, const char* long_help,
+                       const char* short_help, const char* argument_name,
+                       const char* default_value)
+    : name(name),
+      long_form(long_form),
+      short_form(short_form),
+      long_help(long_help),
+      short_help(short_help),
+      argument_name(argument_name),
+      default_value(default_value) {}
+
+// Flag Helpers ----------------------------------------------------------------
+
+const std::vector<FlagRecord>& GetFlags() {
+  static auto flags = InitializeFlags();
   return flags;
+}
+
+void OverrideFlags(const std::vector<FlagRecord>& mock_flags) {
+  const auto& flags = GetFlags();
+  auto& nc = const_cast<std::vector<FlagRecord>&>(flags);
+  nc = mock_flags;
 }
 
 const FlagRecord* GetFlagFromName(const std::string& name) {
@@ -69,7 +137,15 @@ const FlagRecord* GetFlagFromOption(const Option& option) {
   return GetFlagFromName(option.name);
 }
 
-#define SEPARATOR "\n\n"
+std::string GetFlagLongDescription(const FlagRecord& flag) {
+  std::stringstream ss;
+
+  ss << flag.name << std::endl;
+  ss << "Usage: " << GetFlagSignature(flag) << "\n\n";
+  ss << flag.long_help << std::endl;
+
+  return ss.str();
+}
 
 std::string GetFlagSignature(const FlagRecord& flag) {
   std::stringstream ss;
@@ -80,119 +156,11 @@ std::string GetFlagSignature(const FlagRecord& flag) {
   char var_bracket_open = flag.default_value ? '[' : '<';
   char var_bracked_close = flag.default_value ? ']' : '>';
 
-  // Arguments
+  // Arguments.
   if (flag.argument_name) {
     ss << " " << var_bracket_open << flag.argument_name << var_bracked_close;
   }
   return ss.str();
-}
-
-std::string GetFlagLongDescription(const FlagRecord& flag) {
-  std::stringstream ss;
-
-  ss << flag.name << std::endl;
-  ss << "Usage: " << GetFlagSignature(flag) << SEPARATOR;
-  ss << flag.long_help << std::endl;
-
-  return ss.str();
-}
-
-Err GenerateHelp(const Option& option, std::string* out, bool* quit) {
-  // Help always quits
-  *quit = true;
-
-  // We see if we're asking for specific information on a specific flag.
-  if (!option.value.empty()) {
-    const FlagRecord* flag = GetFlagFromName(option.value);
-    if (flag) {
-      *out = GetFlagLongDescription(*flag);
-      return Err();
-    } else {
-      return Err(
-          fxl::StringPrintf("Unrecognized flag \"%s\"", option.value.c_str()));
-    }
-  }
-
-  // We're asking for generic help, so we print all the flags' short help.
-  std::stringstream ss;
-  ss << "Usage: zxdb [OPTION ...]" << SEPARATOR;
-  ss << "options:" << std::endl;
-  for (const auto& flag : GetFlags()) {
-    ss << GetFlagSignature(flag) << ": " << flag.short_help << std::endl;
-  }
-
-  *out = ss.str();
-  return Err();
-}
-
-Err ProcessFlag(const Option& option, const FlagRecord& flag,
-                std::string* out) {
-  if (!flag.argument_name) {
-    // We check if we got an argument we weren't expecting
-    if (!option.value.empty()) {
-      return Err(fxl::StringPrintf("Flag \"%s\" doesn't receive arguments.",
-                                   flag.long_form));
-    }
-  } else {
-    if (!flag.default_value) {
-      if (option.value.empty()) {
-        return Err(fxl::StringPrintf("Flag \"%s\" expects an argument.",
-                                     flag.long_form));
-      }
-    }
-  }
-
-  return Err();
-}
-
-}  // namespace
-
-FlagRecord::FlagRecord(const char* name, const char* long_form,
-                       const char* short_form, const char* long_help,
-                       const char* short_help, const char* argument_name,
-                       const char* default_value)
-    : name(name),
-      long_form(long_form),
-      short_form(short_form),
-      long_help(long_help),
-      short_help(short_help),
-      argument_name(argument_name),
-      default_value(default_value) {}
-
-const std::vector<FlagRecord>& SetupFlagsOnce(
-    const std::vector<FlagRecord>* mock_flags) {
-  static auto flags = InitializeFlags(mock_flags);
-  return flags;
-}
-
-const std::vector<FlagRecord>& GetFlags() { return SetupFlagsOnce(); }
-
-Err ProcessCommandLine(const fxl::CommandLine& cmd_line, std::string* out,
-                       bool* quit) {
-  // Normally we don't quit.
-  *quit = false;
-
-  // We look for help first.
-  size_t help_index;
-  if (cmd_line.HasOption("help", &help_index)) {
-    // Out will be filled with the output or and error message
-    return GenerateHelp(cmd_line.options()[help_index], out, quit);
-  }
-
-  // We see if we found an unexistent flag.
-  for (const Option& option : cmd_line.options()) {
-    const FlagRecord* flag = GetFlagFromOption(option);
-    if (!flag) {
-      return Err(
-          fxl::StringPrintf("Unrecognized flag \"%s\"", option.name.c_str()));
-    }
-
-    return ProcessFlag(option, *flag, out);
-  }
-
-  // No erronous flags, no message returned.
-  *out = std::string();
-  return Err();
 }
 
 }  // namespace zxdb

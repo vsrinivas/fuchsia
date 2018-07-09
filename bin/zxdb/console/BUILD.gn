@@ -4,6 +4,8 @@
 
 static_library("console") {
   sources = [
+    "actions.cc",
+    "actions.h",
     "analyze_memory.cc",
     "analyze_memory.h",
     "command.cc",
@@ -18,6 +20,7 @@ static_library("console") {
     "console_context.h",
     "flags.cc",
     "flags.h",
+    "flags_impl.cc",
     "format_context.cc",
     "format_context.h",
     "format_table.cc",
@@ -66,6 +69,7 @@ source_set("tests") {
     "command_parser_unittest.cc",
     "command_utils_unittest.cc",
     "flags_unittest.cc",
+    "flags_impl_unittest.cc",
     "format_context_unittest.cc",
     "format_table_unittest.cc",
     "input_location_parser_unittest.cc",

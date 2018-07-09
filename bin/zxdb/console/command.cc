@@ -239,6 +239,17 @@ VerbRecord::VerbRecord(CommandExecutor exec,
       help(help),
       command_group(command_group),
       source_affinity(source_affinity) {}
+VerbRecord::VerbRecord(CommandExecutorWithCallback exec_cb,
+                       std::initializer_list<std::string> aliases,
+                       const char* short_help, const char* help,
+                       CommandGroup command_group,
+                       SourceAffinity source_affinity)
+    : exec_cb(exec_cb),
+      aliases(aliases),
+      short_help(short_help),
+      help(help),
+      command_group(command_group),
+      source_affinity(source_affinity) {}
 VerbRecord::~VerbRecord() = default;
 
 std::string NounToString(Noun n) {
@@ -328,7 +339,8 @@ const std::map<std::string, Verb>& GetStringVerbMap() {
   return map;
 }
 
-Err DispatchCommand(ConsoleContext* context, const Command& cmd) {
+Err DispatchCommand(ConsoleContext* context, const Command& cmd,
+                    CommandCallback callback) {
   if (cmd.verb() == Verb::kNone)
     return ExecuteNoun(context, cmd);
 
@@ -338,7 +350,27 @@ Err DispatchCommand(ConsoleContext* context, const Command& cmd) {
     return Err(ErrType::kInput,
                "Invalid verb \"" + VerbToString(cmd.verb()) + "\".");
   }
-  return found->second.exec(context, cmd);
+
+  auto& verb_record = found->second;
+  if (verb_record.exec_cb) {
+    return verb_record.exec_cb(context, cmd, callback);
+  }
+  else {
+    Err original_err = verb_record.exec(context, cmd);
+    if (callback) {
+      // We need to call the callback to let the caller know they ran a command
+      // that doesn't receive callbacks.
+      Err callback_err =
+          original_err.has_error()
+              ? original_err
+              : Err("Command was processed but it doesn't receive "
+                    "callbacks. Going to interactive mode.");
+      // Commands without callbacks never quit by callback.
+      callback(callback_err);
+
+    }
+    return original_err;
+  }
 }
 
 }  // namespace zxdb

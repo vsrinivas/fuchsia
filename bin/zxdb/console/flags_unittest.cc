@@ -8,14 +8,26 @@
 
 namespace zxdb {
 
+using Option = fxl::CommandLine::Option;
+// Macro for doing the ProcessFunction signature. We just want to know if it
+// was called.
+#define CALLED_FUNC(func_name, called_bool)                     \
+  FlagRecord::ProcessFunction func_name =                       \
+      [called = &called_bool](const Option&, const FlagRecord&, \
+                              std::vector<Action>* actions) {           \
+        *called = true;                                         \
+        actions->push_back({}); \
+        return Err();                                           \
+      }
+
 const char* kNoArgumentName = "k-no-argument-name";
 const char* kNoArgumentLongForm = "k-no-argument-long-form";
 const char* kNoArgumentLongHelp = "k-no-argument-long-help";
 const char* kNoArgumentShortHelp = "k-no-argument-short-help";
 
-FlagRecord kNoArgument =
-    FlagRecord(kNoArgumentName, kNoArgumentLongForm, nullptr,
-               kNoArgumentLongHelp, kNoArgumentShortHelp, nullptr, nullptr);
+FlagRecord kNoArgument = FlagRecord(
+    kNoArgumentName, kNoArgumentLongForm, nullptr, kNoArgumentLongHelp,
+    kNoArgumentShortHelp, nullptr, nullptr);
 
 const char* kArgumentName = "k-argument-name";
 const char* kArgumentLongForm = "k-argument-long-form";
@@ -23,9 +35,9 @@ const char* kArgumentLongHelp = "k-argument-long-help";
 const char* kArgumentShortHelp = "k-argument-short-help";
 const char* kArgumentArgumentName = "k-argument-argument-name";
 
-FlagRecord kArgument =
-    FlagRecord(kArgumentName, kArgumentLongForm, nullptr, kArgumentLongHelp,
-               kArgumentShortHelp, kArgumentArgumentName, nullptr);
+FlagRecord kArgument = FlagRecord(
+    kArgumentName, kArgumentLongForm, nullptr, kArgumentLongHelp,
+    kArgumentShortHelp, kArgumentArgumentName, nullptr);
 
 const char* kDefaultArgumentName = "k-default-argument-name";
 const char* kDefaultArgumentLongForm = "k-default-argument-long-form";
@@ -42,129 +54,102 @@ FlagRecord kDefaultArgument =
 
 // Return value used to set up a static variable to ensure this function is
 // only called once.
-int InitializeMockFlags() {
+void ReplaceFlags() {
   std::vector<FlagRecord> mock_flags;
   mock_flags.push_back(kNoArgument);
   mock_flags.push_back(kArgument);
   mock_flags.push_back(kDefaultArgument);
 
   // Setup the static flags
-  SetupFlagsOnce(&mock_flags);
-
-  return 0;
+  OverrideFlags(mock_flags);
 }
 
-class FlagTest : public testing::Test {
+class FlagsTest : public testing::Test {
  protected:
-  FlagTest() {
-    // Be sure that the flags are initialized before the tests
-    // We only need to run this once
-    static auto __tmp = InitializeMockFlags();
-    (void)__tmp;  // No un-used warning
+  FlagsTest() {
+    // We override flags
+    ReplaceFlags();
   }
+
+  ActionFlow flow;
 };
 
-TEST_F(FlagTest, NoArgument) {
-  bool quit;
-  // Normal
-  std::string out;
-  std::string call = fxl::StringPrintf("--%s", kNoArgumentLongForm);
+TEST_F(FlagsTest, NoArgument) {
+  // SETUP
+  Err err;
+  FlagProcessResult flag_res;
+  std::vector<Action> actions;
+
+  // Wrong argument
+  std::string call = fxl::StringPrintf("--%s=AAA", kNoArgumentLongForm);
   auto cmd_line = fxl::CommandLineFromInitializerList({"bin", call.c_str()});
+  flag_res = ProcessCommandLine(cmd_line, &err, &actions);
 
-  Err err = ProcessCommandLine(cmd_line, &out, &quit);
-  EXPECT_FALSE(err.has_error());
-  EXPECT_FALSE(quit);
-
-  // No Argument
-  call = fxl::StringPrintf("--%s=AAA", kNoArgumentLongForm);
-  cmd_line = fxl::CommandLineFromInitializerList({"bin", call.c_str()});
-  err = ProcessCommandLine(cmd_line, &out, &quit);
+  EXPECT_EQ(flag_res, FlagProcessResult::kError);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ(err.msg(),
             fxl::StringPrintf("Flag \"%s\" doesn't receive arguments.",
                               kNoArgumentLongForm));
-  EXPECT_FALSE(quit);
+
+  // Normal
+  actions.clear();
+  call = fxl::StringPrintf("--%s", kNoArgumentLongForm);
+  cmd_line = fxl::CommandLineFromInitializerList({"bin", call.c_str()});
+  flag_res = ProcessCommandLine(cmd_line, &err, &actions);
+
+  EXPECT_EQ(flag_res, FlagProcessResult::kContinue);
+  EXPECT_FALSE(err.has_error()) << err.msg();
 }
 
-TEST_F(FlagTest, Argument) {
-  bool quit;
-  std::string out;
+TEST_F(FlagsTest, Argument) {
+  // SETUP
+  Err err;
+  FlagProcessResult flag_res;
+  std::vector<Action> actions;
+
+  // Argument needed
   std::string call = fxl::StringPrintf("--%s", kArgumentLongForm);
   auto cmd_line = fxl::CommandLineFromInitializerList({"bin", call.c_str()});
+  flag_res = ProcessCommandLine(cmd_line, &err, &actions);
 
-  Err err = ProcessCommandLine(cmd_line, &out, &quit);
+  EXPECT_EQ(flag_res, FlagProcessResult::kError);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ(err.msg(), fxl::StringPrintf("Flag \"%s\" expects an argument.",
                                          kArgumentLongForm));
-  EXPECT_FALSE(quit);
+  EXPECT_TRUE(actions.empty());
 
+  // Expected
+  actions.clear();
   call = fxl::StringPrintf("--%s=AAA", kArgumentLongForm);
   cmd_line = fxl::CommandLineFromInitializerList({"bin", call.c_str()});
-  err = ProcessCommandLine(cmd_line, &out, &quit);
+  flag_res = ProcessCommandLine(cmd_line, &err, &actions);
+
+  EXPECT_EQ(flag_res, FlagProcessResult::kContinue);
   EXPECT_FALSE(err.has_error());
-  EXPECT_FALSE(quit);
 }
 
-TEST_F(FlagTest, DefaultArgument) {
-  bool quit;
-  std::string out;
+TEST_F(FlagsTest, DefaultArgument) {
+  // SETUP
+  Err err;
+  FlagProcessResult flag_res;
+  std::vector<Action> actions;
+
+  // Default
   std::string call = fxl::StringPrintf("--%s", kDefaultArgumentLongForm);
   auto cmd_line = fxl::CommandLineFromInitializerList({"bin", call.c_str()});
+  flag_res = ProcessCommandLine(cmd_line, &err, &actions);
 
-  Err err = ProcessCommandLine(cmd_line, &out, &quit);
+  EXPECT_EQ(flag_res, FlagProcessResult::kContinue);
   EXPECT_FALSE(err.has_error());
-  EXPECT_FALSE(quit);
 
+  // With argument
+  actions.clear();
   call = fxl::StringPrintf("--%s=AAA", kDefaultArgumentLongForm);
   cmd_line = fxl::CommandLineFromInitializerList({"bin", call.c_str()});
-  err = ProcessCommandLine(cmd_line, &out, &quit);
+  flag_res = ProcessCommandLine(cmd_line, &err, &actions);
+
+  EXPECT_EQ(flag_res, FlagProcessResult::kContinue);
   EXPECT_FALSE(err.has_error());
-  EXPECT_FALSE(quit);
-}
-
-TEST_F(FlagTest, Help) {
-  bool quit;
-  std::string out;
-  auto cmd_line = fxl::CommandLineFromInitializerList({"bin", "--help"});
-  Err err = ProcessCommandLine(cmd_line, &out, &quit);
-
-  EXPECT_FALSE(err.has_error());
-  EXPECT_TRUE(quit);
-
-  std::stringstream ss;
-  ss << "Usage: zxdb [OPTION ...]\n\n"
-     << "options:\n";
-  ss << "--" << kNoArgumentLongForm << ": " << kNoArgumentShortHelp
-     << std::endl;
-
-  ss << "--" << kArgumentLongForm << " <" << kArgumentArgumentName
-     << ">: " << kArgumentShortHelp << std::endl;
-
-  ss << "--" << kDefaultArgumentLongForm << " [" << kDefaultArgumentArgumentName
-     << "]: " << kDefaultArgumentShortHelp << std::endl;
-
-  EXPECT_EQ(out, ss.str());
-}
-
-TEST_F(FlagTest, SpecificHelp) {
-  bool quit;
-  std::string out;
-
-  std::string call = fxl::StringPrintf("--help=%s", kDefaultArgumentLongForm);
-  auto cmd_line = fxl::CommandLineFromInitializerList({"bin", call.c_str()});
-  Err err = ProcessCommandLine(cmd_line, &out, &quit);
-
-  EXPECT_FALSE(err.has_error());
-  EXPECT_TRUE(quit);
-
-  std::stringstream ss;
-  ss << kDefaultArgumentName << std::endl;
-  ss << "Usage: "
-     << "--" << kDefaultArgumentLongForm << " [" << kDefaultArgumentArgumentName
-     << "]\n\n";
-  ss << kDefaultArgumentLongHelp << std::endl;
-
-  EXPECT_EQ(out, ss.str());
 }
 
 }  // namespace zxdb
