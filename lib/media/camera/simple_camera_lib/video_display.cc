@@ -82,7 +82,7 @@ zx_status_t VideoDisplay::IncomingBufferFilled(
   // Now we know that the buffer exists.
   // If we have not reserved the buffer, do so now. ReserveIncomingBuffer
   // will quietly return if the buffer is already reserved.
-  if (frame.metadata.timestamp <= 0) {
+  if (frame.metadata.timestamp < 0) {
     FXL_LOG(ERROR) << "Frame has bad timestamp: " << frame.metadata.timestamp;
     return ZX_ERR_OUT_OF_RANGE;
   }
