@@ -38,6 +38,7 @@ public:
     virtual ~DisplayDevice();
 
     void ApplyConfiguration(const display_config_t* config, registers::pipe_arming_regs* regs);
+    void ClearConfig();
 
     bool Init();
     bool Resume();

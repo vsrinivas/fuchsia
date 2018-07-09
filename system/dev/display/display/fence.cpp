@@ -50,6 +50,9 @@ zx_status_t Fence::OnRefArmed(fbl::RefPtr<FenceReference>&& ref) {
 
 void Fence::OnRefDisarmed(FenceReference* ref) {
     armed_refs_.erase(*ref);
+    if (armed_refs_.is_empty()) {
+        ready_wait_.Cancel();
+    }
 }
 
 void Fence::OnReady(async_t* async, async::WaitBase* self,

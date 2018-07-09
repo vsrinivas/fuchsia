@@ -227,12 +227,13 @@ bool DisplayDevice::Resume() {
     return true;
 }
 
+void DisplayDevice::ClearConfig() {
+    ResetPipe();
+}
+
 void DisplayDevice::ApplyConfiguration(const display_config_t* config,
                                        registers::pipe_arming_regs_t* regs) {
-    if (config == nullptr) {
-        ResetPipe();
-        return;
-    }
+    ZX_ASSERT(config);
 
     if (memcmp(&config->mode, &info_, sizeof(display_mode_t)) != 0) {
         ResetPipe();
