@@ -39,24 +39,25 @@ void PacketTimingTracker::Reset() {
 }
 
 std::ostream& operator<<(std::ostream& os, const PacketTimingTracker& value) {
-  os << newl << "nominal           " << value.nominal_count();
+  os << fostr::NewLine << "nominal           " << value.nominal_count();
 
   if (value.late_count() != 0) {
-    os << newl << "late              " << value.late_count();
+    os << fostr::NewLine << "late              " << value.late_count();
   }
 
   if (value.no_packet_count() != 0) {
-    os << newl << "no packet         " << value.no_packet_count();
+    os << fostr::NewLine << "no packet         " << value.no_packet_count();
   }
 
-  os << newl << "not progressing   " << value.not_progressing_count();
-  os << newl << "total             " << value.count();
+  os << fostr::NewLine << "not progressing   " << value.not_progressing_count();
+  os << fostr::NewLine << "total             " << value.count();
 
   if (value.nominal_count()) {
-    os << newl << "presentation offset:";
-    os << newl << "    minimum       " << AsNs(value.min_earliness());
-    os << newl << "    average       " << AsNs(value.average_earliness());
-    os << newl << "    maximum       " << AsNs(value.max_earliness());
+    os << fostr::NewLine << "presentation offset:";
+    os << fostr::NewLine << "    minimum       " << AsNs(value.min_earliness());
+    os << fostr::NewLine << "    average       "
+       << AsNs(value.average_earliness());
+    os << fostr::NewLine << "    maximum       " << AsNs(value.max_earliness());
   }
 
   return os;

@@ -11,21 +11,6 @@
 
 namespace media_player {
 
-int ostream_indent_index() {
-  static int i = std::ios_base::xalloc();
-  return i;
-}
-
-std::ostream& begl(std::ostream& os) {
-  for (long i = 0; i < os.iword(ostream_indent_index()); i++) {
-    os << "    ";
-  }
-
-  return os;
-}
-
-std::ostream& newl(std::ostream& os) { return os << "\n" << begl; }
-
 // Prints an ns value in 0.123,456,789 format.
 std::ostream& operator<<(std::ostream& os, AsNs value) {
   if (value.value_ == fuchsia::media::kUnspecifiedTime) {
@@ -101,60 +86,70 @@ std::ostream& operator<<(std::ostream& os, const PacketPtr& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const StreamType& value) {
-  os << indent;
-  os << newl << "medium:               " << value.medium();
-  os << newl << "encoding:             " << value.encoding();
-  os << newl << "encoding parameters:  " << value.encoding_parameters();
+  os << fostr::Indent;
+  os << fostr::NewLine << "medium:               " << value.medium();
+  os << fostr::NewLine << "encoding:             " << value.encoding();
+  os << fostr::NewLine
+     << "encoding parameters:  " << value.encoding_parameters();
 
   switch (value.medium()) {
     case StreamType::Medium::kAudio:
-      os << newl << "sample format:        " << value.audio()->sample_format();
-      os << newl << "channels:             " << value.audio()->channels();
-      os << newl
+      os << fostr::NewLine
+         << "sample format:        " << value.audio()->sample_format();
+      os << fostr::NewLine
+         << "channels:             " << value.audio()->channels();
+      os << fostr::NewLine
          << "frames per second:    " << value.audio()->frames_per_second();
       break;
     case StreamType::Medium::kVideo:
-      os << newl << "profile:              " << value.video()->profile();
-      os << newl << "pixel format:         " << value.video()->pixel_format();
-      os << newl << "color space:          " << value.video()->color_space();
-      os << newl << "size:                 " << value.video()->width() << "x"
-         << value.video()->height();
-      os << newl << "coded size:           " << value.video()->coded_width()
-         << "x" << value.video()->coded_height();
-      os << newl << "pixel aspect ratio:   "
+      os << fostr::NewLine
+         << "profile:              " << value.video()->profile();
+      os << fostr::NewLine
+         << "pixel format:         " << value.video()->pixel_format();
+      os << fostr::NewLine
+         << "color space:          " << value.video()->color_space();
+      os << fostr::NewLine << "size:                 " << value.video()->width()
+         << "x" << value.video()->height();
+      os << fostr::NewLine
+         << "coded size:           " << value.video()->coded_width() << "x"
+         << value.video()->coded_height();
+      os << fostr::NewLine << "pixel aspect ratio:   "
          << value.video()->pixel_aspect_ratio_width() << "x"
          << value.video()->pixel_aspect_ratio_height();
-      os << newl << "line stride:          "
+      os << fostr::NewLine << "line stride:          "
          << AsInlineVector<uint32_t>(value.video()->line_stride());
-      os << newl << "plane offsets:        "
+      os << fostr::NewLine << "plane offsets:        "
          << AsInlineVector<uint32_t>(value.video()->plane_offset());
       break;
     default:
       break;
   }
 
-  return os << outdent;
+  return os << fostr::Outdent;
 }
 
 std::ostream& operator<<(std::ostream& os, const StreamTypeSet& value) {
-  os << indent;
-  os << newl << "medium:            " << value.medium();
-  os << newl << "encodings:         " << value.encodings();
+  os << fostr::Indent;
+  os << fostr::NewLine << "medium:            " << value.medium();
+  os << fostr::NewLine << "encodings:         " << value.encodings();
   switch (value.medium()) {
     case StreamType::Medium::kAudio:
-      os << newl << "sample format:     " << value.audio()->sample_format();
-      os << newl << "channels:          " << value.audio()->channels();
-      os << newl << "frames per second: " << value.audio()->frames_per_second();
+      os << fostr::NewLine
+         << "sample format:     " << value.audio()->sample_format();
+      os << fostr::NewLine
+         << "channels:          " << value.audio()->channels();
+      os << fostr::NewLine
+         << "frames per second: " << value.audio()->frames_per_second();
       break;
     case StreamType::Medium::kVideo:
-      os << newl << "width:             " << value.video()->width();
-      os << newl << "height:            " << value.video()->height();
+      os << fostr::NewLine << "width:             " << value.video()->width();
+      os << fostr::NewLine << "height:            " << value.video()->height();
       break;
     default:
       break;
   }
 
-  return os << outdent;
+  return os << fostr::Outdent;
 }
 
 std::ostream& operator<<(std::ostream& os, StreamType::Medium value) {

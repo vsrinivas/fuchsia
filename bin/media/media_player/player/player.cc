@@ -379,7 +379,7 @@ void Player::Dump(std::ostream& os) const {
     NodeRef node = backlog.front();
     backlog.pop();
 
-    os << newl << newl;
+    os << fostr::NewLine << fostr::NewLine;
     node.GetGenericNode()->Dump(os);
 
     for (size_t output_index = 0; output_index < node.output_count();

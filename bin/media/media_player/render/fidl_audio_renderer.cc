@@ -84,26 +84,30 @@ void FidlAudioRenderer::Dump(std::ostream& os) const {
   FXL_DCHECK(async_get_default() == async());
   Renderer::Dump(os);
 
-  os << indent;
-  os << newl << "priming:               " << !!prime_callback_;
-  os << newl << "flushed:               " << flushed_;
-  os << newl << "presentation time:     "
+  os << fostr::Indent;
+  os << fostr::NewLine << "priming:               " << !!prime_callback_;
+  os << fostr::NewLine << "flushed:               " << flushed_;
+  os << fostr::NewLine << "presentation time:     "
      << AsNs(current_timeline_function()(media::Timeline::local_now()));
-  os << newl << "last supplied pts:     " << AsNs(last_supplied_pts_ns_);
-  os << newl << "last departed pts:     " << AsNs(last_departed_pts_ns_);
-  os << newl << "supplied - departed:   "
+  os << fostr::NewLine
+     << "last supplied pts:     " << AsNs(last_supplied_pts_ns_);
+  os << fostr::NewLine
+     << "last departed pts:     " << AsNs(last_departed_pts_ns_);
+  os << fostr::NewLine << "supplied - departed:   "
      << AsNs(last_supplied_pts_ns_ - last_departed_pts_ns_);
-  os << newl << "minimum lead time:     " << AsNs(min_lead_time_ns_);
+  os << fostr::NewLine << "minimum lead time:     " << AsNs(min_lead_time_ns_);
 
   if (arrivals_.count() != 0) {
-    os << newl << "packet arrivals: " << indent << arrivals_ << outdent;
+    os << fostr::NewLine << "packet arrivals: " << fostr::Indent << arrivals_
+       << fostr::Outdent;
   }
 
   if (departures_.count() != 0) {
-    os << newl << "packet departures: " << indent << departures_ << outdent;
+    os << fostr::NewLine << "packet departures: " << fostr::Indent
+       << departures_ << fostr::Outdent;
   }
 
-  os << outdent;
+  os << fostr::Outdent;
 }
 
 void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,

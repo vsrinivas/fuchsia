@@ -66,45 +66,53 @@ MediaPlayerImpl::MediaPlayerImpl(
         std::ostringstream os;
 
         if (status_.metadata) {
-          os << newl
+          os << fostr::NewLine
              << "duration:           " << AsNs(status_.metadata->duration);
 
           if (status_.metadata->title) {
-            os << newl << "title:              " << status_.metadata->title;
+            os << fostr::NewLine
+               << "title:              " << status_.metadata->title;
           }
 
           if (status_.metadata->artist) {
-            os << newl << "artist:             " << status_.metadata->artist;
+            os << fostr::NewLine
+               << "artist:             " << status_.metadata->artist;
           }
 
           if (status_.metadata->album) {
-            os << newl << "album:              " << status_.metadata->album;
+            os << fostr::NewLine
+               << "album:              " << status_.metadata->album;
           }
 
           if (status_.metadata->publisher) {
-            os << newl << "publisher:          " << status_.metadata->publisher;
+            os << fostr::NewLine
+               << "publisher:          " << status_.metadata->publisher;
           }
 
           if (status_.metadata->genre) {
-            os << newl << "genre:              " << status_.metadata->genre;
+            os << fostr::NewLine
+               << "genre:              " << status_.metadata->genre;
           }
 
           if (status_.metadata->composer) {
-            os << newl << "composer:           " << status_.metadata->composer;
+            os << fostr::NewLine
+               << "composer:           " << status_.metadata->composer;
           }
         }
 
-        os << newl << "state:              " << ToString(state_);
+        os << fostr::NewLine << "state:              " << ToString(state_);
         if (state_ == State::kWaiting) {
           os << " " << waiting_reason_;
         }
 
         if (target_state_ != state_) {
-          os << newl << "transitioning to:   " << ToString(target_state_);
+          os << fostr::NewLine
+             << "transitioning to:   " << ToString(target_state_);
         }
 
         if (target_position_ != fuchsia::media::kUnspecifiedTime) {
-          os << newl << "pending seek to:    " << AsNs(target_position_);
+          os << fostr::NewLine
+             << "pending seek to:    " << AsNs(target_position_);
         }
 
         player_.Dump(os << std::boolalpha);

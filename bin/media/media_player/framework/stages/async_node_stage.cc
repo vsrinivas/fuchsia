@@ -34,25 +34,25 @@ AsyncNodeStageImpl::~AsyncNodeStageImpl() {}
 
 void AsyncNodeStageImpl::Dump(std::ostream& os) const {
   if (inputs_.size() == 1) {
-    os << newl << "input:";
+    os << fostr::NewLine << "input:";
     DumpInputDetail(os, inputs_[0]);
   } else if (inputs_.size() > 1) {
-    os << newl << "inputs:";
+    os << fostr::NewLine << "inputs:";
     int index = 0;
     for (auto& input : inputs_) {
-      os << newl << "[" << index++ << "] ";
+      os << fostr::NewLine << "[" << index++ << "] ";
       DumpInputDetail(os, input);
     }
   }
 
   if (outputs_.size() == 1) {
-    os << newl << "output:";
+    os << fostr::NewLine << "output:";
     DumpOutputDetail(os, outputs_[0]);
   } else if (outputs_.size() > 1) {
-    os << newl << "outputs:";
+    os << fostr::NewLine << "outputs:";
     int index = 0;
     for (auto& output : outputs_) {
-      os << newl << "[" << index++ << "] ";
+      os << fostr::NewLine << "[" << index++ << "] ";
       DumpOutputDetail(os, output);
     }
   }
@@ -60,43 +60,43 @@ void AsyncNodeStageImpl::Dump(std::ostream& os) const {
 
 void AsyncNodeStageImpl::DumpInputDetail(std::ostream& os,
                                          const Input& input) const {
-  os << indent;
+  os << fostr::Indent;
   if (input.connected()) {
-    os << newl << "connected to:  " << *input.mate();
+    os << fostr::NewLine << "connected to:  " << *input.mate();
   } else {
-    os << newl << "connected to:  <nothing>";
+    os << fostr::NewLine << "connected to:  <nothing>";
   }
 
-  os << newl << "prepared:      " << input.prepared();
-  os << newl << "needs packet:  " << input.needs_packet();
-  os << newl << "packet:        " << input.packet();
-  os << outdent;
+  os << fostr::NewLine << "prepared:      " << input.prepared();
+  os << fostr::NewLine << "needs packet:  " << input.needs_packet();
+  os << fostr::NewLine << "packet:        " << input.packet();
+  os << fostr::Outdent;
 }
 
 void AsyncNodeStageImpl::DumpOutputDetail(std::ostream& os,
                                           const Output& output) const {
-  os << indent;
-  os << newl << "needs packet:  " << output.needs_packet();
+  os << fostr::Indent;
+  os << fostr::NewLine << "needs packet:  " << output.needs_packet();
 
   std::lock_guard<std::mutex> locker(packets_per_output_mutex_);
   auto& packets = packets_per_output_[output.index()];
   if (!packets.empty()) {
-    os << newl << "queued packets:" << indent;
+    os << fostr::NewLine << "queued packets:" << fostr::Indent;
 
     for (auto& packet : packets) {
-      os << newl << packet;
+      os << fostr::NewLine << packet;
     }
 
-    os << outdent;
+    os << fostr::Outdent;
   }
 
   if (output.connected()) {
-    os << newl << "connected to:  " << *output.mate();
+    os << fostr::NewLine << "connected to:  " << *output.mate();
   } else {
-    os << newl << "connected to:  <nothing>";
+    os << fostr::NewLine << "connected to:  <nothing>";
   }
 
-  os << outdent;
+  os << fostr::Outdent;
 }
 
 void AsyncNodeStageImpl::OnShutDown() {}

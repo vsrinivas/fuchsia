@@ -267,10 +267,10 @@ void SoftwareDecoder::WorkerDoneWithInputPacket() {
 void SoftwareDecoder::Dump(std::ostream& os) const {
   FXL_DCHECK(is_main_thread());
 
-  os << label() << indent;
+  os << label() << fostr::Indent;
   stage()->Dump(os);
-  os << newl << "output stream type:" << output_stream_type();
-  os << newl << "state:             ";
+  os << fostr::NewLine << "output stream type:" << output_stream_type();
+  os << fostr::NewLine << "state:             ";
 
   switch (output_state_) {
     case OutputState::kIdle:
@@ -287,28 +287,29 @@ void SoftwareDecoder::Dump(std::ostream& os) const {
       break;
   }
 
-  os << newl << "flushing:          " << flushing_;
-  os << newl << "end of input:      " << end_of_input_stream_;
-  os << newl << "end of output:     " << end_of_output_stream_;
+  os << fostr::NewLine << "flushing:          " << flushing_;
+  os << fostr::NewLine << "end of input:      " << end_of_input_stream_;
+  os << fostr::NewLine << "end of output:     " << end_of_output_stream_;
 
   if (input_packet_) {
-    os << newl << "input packet:      " << input_packet_;
+    os << fostr::NewLine << "input packet:      " << input_packet_;
   }
 
   {
     std::lock_guard<std::mutex> locker(decode_duration_mutex_);
     if (decode_duration_.count() != 0) {
-      os << newl << "decodes:           " << decode_duration_.count();
-      os << newl << "decode durations:";
-      os << indent;
-      os << newl << "minimum        " << AsNs(decode_duration_.min());
-      os << newl << "average        " << AsNs(decode_duration_.average());
-      os << newl << "maximum        " << AsNs(decode_duration_.max());
-      os << outdent;
+      os << fostr::NewLine << "decodes:           " << decode_duration_.count();
+      os << fostr::NewLine << "decode durations:";
+      os << fostr::Indent;
+      os << fostr::NewLine << "minimum        " << AsNs(decode_duration_.min());
+      os << fostr::NewLine << "average        "
+         << AsNs(decode_duration_.average());
+      os << fostr::NewLine << "maximum        " << AsNs(decode_duration_.max());
+      os << fostr::Outdent;
     }
   }
 
-  os << outdent;
+  os << fostr::Outdent;
 }
 
 }  // namespace media_player

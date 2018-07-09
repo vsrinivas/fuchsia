@@ -26,14 +26,16 @@ void Renderer::Deprovision() {
 }
 
 void Renderer::Dump(std::ostream& os) const {
-  os << label() << indent;
+  os << label() << fostr::Indent;
   stage()->Dump(os);
-  os << newl << "timeline:              " << current_timeline_function();
-  os << newl << "end of stream:         " << end_of_stream();
-  os << newl << "end of stream pts:     " << AsNs(end_of_stream_pts());
-  os << newl << "minimum pts:           " << AsNs(program_0_min_pts_);
-  os << newl << "maximum pts:           " << AsNs(program_0_max_pts_);
-  os << outdent;
+  os << fostr::NewLine
+     << "timeline:              " << current_timeline_function();
+  os << fostr::NewLine << "end of stream:         " << end_of_stream();
+  os << fostr::NewLine
+     << "end of stream pts:     " << AsNs(end_of_stream_pts());
+  os << fostr::NewLine << "minimum pts:           " << AsNs(program_0_min_pts_);
+  os << fostr::NewLine << "maximum pts:           " << AsNs(program_0_max_pts_);
+  os << fostr::Outdent;
 }
 
 void Renderer::GetConfiguration(size_t* input_count, size_t* output_count) {

@@ -15,42 +15,27 @@
 #include "garnet/bin/media/media_player/framework/types/audio_stream_type.h"
 #include "garnet/bin/media/media_player/framework/types/stream_type.h"
 #include "garnet/bin/media/media_player/framework/types/video_stream_type.h"
+#include "lib/fostr/indent.h"
 #include "lib/media/timeline/timeline_function.h"
 
 //
 // This file declares a bunch of << operator overloads for dumping media stuff.
 //
 // Sufficiently short output is written with no leading or trailing whitespace
-// or newlines. The caller should provide initial whitespace and terminating
-// newlines as appropriate.
+// or fostr::NewLineines. The caller should provide initial whitespace and
+// terminating fostr::NewLineines as appropriate.
 //
 // Multiline output follows the same rules. Multiple lines will be output,
-// usually with an initial newline so the output starts on a new line. The
-// last line of the output isn't terminated. Newlines in multiline output are
-// padded on the left using the |begl| function, so the caller should set
-// indentation (using indent() and outdent()) so that new lines are indented as
-// desired.
+// usually with an initial fostr::NewLineine so the output starts on a new line.
+// The last line of the output isn't terminated. Newlines in multiline output
+// are padded on the left using the |begl| function, so the caller should set
+// indentation (using fostr::Indent() and fostr::Outdent()) so that new lines
+// are indented as desired.
 //
 
 namespace media_player {
 
-int ostream_indent_index();
-
-std::ostream& begl(std::ostream& os);
-
-std::ostream& newl(std::ostream& os);
-
-inline std::ostream& indent(std::ostream& os) {
-  ++os.iword(ostream_indent_index());
-  return os;
-}
-
-inline std::ostream& outdent(std::ostream& os) {
-  --os.iword(ostream_indent_index());
-  return os;
-}
-
-// The following overloads produce no newlines.
+// The following overloads produce no fostr::NewLineines.
 
 std::ostream& operator<<(std::ostream& os, Result value);
 std::ostream& operator<<(std::ostream& os, const PacketPtr& value);
@@ -131,7 +116,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
 
   int index = 0;
   for (const T& element : value) {
-    os << newl << "[" << index++ << "] " << element;
+    os << fostr::NewLine << "[" << index++ << "] " << element;
   }
 
   return os;

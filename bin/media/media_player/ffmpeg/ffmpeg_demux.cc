@@ -198,19 +198,20 @@ void FfmpegDemuxImpl::Seek(int64_t position, SeekCallback callback) {
 const char* FfmpegDemuxImpl::label() const { return "demux"; }
 
 void FfmpegDemuxImpl::Dump(std::ostream& os) const {
-  os << label() << indent;
-  os << newl << "stream types per output:";
+  os << label() << fostr::Indent;
+  os << fostr::NewLine << "stream types per output:";
 
   {
     std::lock_guard<std::mutex> locker(mutex_);
 
     for (auto& stream : streams_) {
-      os << newl << "[" << stream->index() << "] " << stream->stream_type();
+      os << fostr::NewLine << "[" << stream->index() << "] "
+         << stream->stream_type();
     }
   }
 
   stage()->Dump(os);
-  os << outdent;
+  os << fostr::Outdent;
 }
 
 void FfmpegDemuxImpl::GetConfiguration(size_t* input_count,

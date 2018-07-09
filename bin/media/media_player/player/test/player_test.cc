@@ -25,9 +25,8 @@ std::ostream& operator<<(std::ostream& os, NodeRef value) {
   os << value.GetGenericNode()->label();
   for (size_t output_index = 0; output_index < value.output_count();
        output_index++) {
-    os << "\n"
-       << begl << "[" << output_index << "] " << indent
-       << value.output(output_index).mate().node() << outdent;
+    os << fostr::NewLine << "[" << output_index << "] " << fostr::Indent
+       << value.output(output_index).mate().node() << fostr::Outdent;
   }
 
   return os;

@@ -198,9 +198,10 @@ FfmpegDecoderBase::DecoderPacket::~DecoderPacket() {
 void FfmpegDecoderBase::Dump(std::ostream& os) const {
   SoftwareDecoder::Dump(os);
 
-  os << indent;
-  os << newl << "next pts:          " << AsNs(next_pts_) << "@" << pts_rate_;
-  os << outdent;
+  os << fostr::Indent;
+  os << fostr::NewLine << "next pts:          " << AsNs(next_pts_) << "@"
+     << pts_rate_;
+  os << fostr::Outdent;
 }
 
 }  // namespace media_player
