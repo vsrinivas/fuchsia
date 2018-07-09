@@ -234,7 +234,7 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
             goto err;
         }
 
-        if ((status = fb_present_image(image_id, -1, -1, -1)) != ZX_OK) {
+        if ((status = fb_present_image(image_id, INVALID_ID, INVALID_ID, INVALID_ID)) != ZX_OK) {
             *err_msg_out = "Failed to present single_buffer mode framebuffer";
             goto err;
         }
