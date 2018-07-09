@@ -281,15 +281,50 @@ enum class SlabAllocatorFlavor {
 
 // fwd decls
 template <typename T,
-          size_t   SLAB_SIZE,
+          size_t SLAB_SIZE,
           typename LockType,
-          SlabAllocatorFlavor AllocatorFlavor> struct SlabAllocatorTraits;
+          SlabAllocatorFlavor AllocatorFlavor,
+          bool ENABLE_OBJ_COUNT>
+struct SlabAllocatorTraits;
 template <typename SATraits, typename = void> class SlabAllocator;
 template <typename SATraits, typename = void> class SlabAllocated;
 
 constexpr size_t DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE = (16 << 10u);
 
 namespace internal {
+
+template <bool>
+class SAObjCounter;
+
+template <>
+class SAObjCounter<false> {
+public:
+    void Inc(void*) {}
+    void Dec() {}
+    void ResetMaxObjCount() {}
+    size_t obj_count() const { return 0; }
+    size_t max_obj_count() const { return 0; }
+};
+
+template <>
+class SAObjCounter<true> {
+public:
+    void Inc(void* allocated_ptr) {
+        if (allocated_ptr == nullptr) {
+          return;
+        }
+        ++obj_count_;
+        max_obj_count_ = max(obj_count_, max_obj_count_);
+    }
+    void Dec() { --obj_count_; }
+    void ResetMaxObjCount() { max_obj_count_ = obj_count_; }
+    size_t obj_count() const { return obj_count_; }
+    size_t max_obj_count() const { return max_obj_count_; }
+
+private:
+    size_t obj_count_ = 0;
+    size_t max_obj_count_ = 0;
+};
 
 // internal fwd-decls
 template <typename T> struct SlabAllocatorPtrTraits;
@@ -431,6 +466,7 @@ public:
     }
 
     size_t max_slabs() const { return max_slabs_; }
+    size_t slab_count() const { return slab_count_; }
 
 protected:
     void* AllocateLocked() {
@@ -559,13 +595,32 @@ public:
         return PtrTraits::CreatePtr(obj);
     }
 
+    size_t obj_count() const {
+        static_assert(SATraits::ENABLE_OBJ_COUNT,
+                      "Error accessing obj_count: Object counter not enabled in SATraits.");
+        return sa_obj_counter_.obj_count();
+    }
+    size_t max_obj_count() const {
+        static_assert(SATraits::ENABLE_OBJ_COUNT,
+                      "Error accessing max_obj_count: Object counter not enabled in SATraits.");
+        return sa_obj_counter_.max_obj_count();
+    }
+    void ResetMaxObjCount() {
+        static_assert(SATraits::ENABLE_OBJ_COUNT,
+                      "Error performing ResetMaxObjCount: Object counter not enabled in SATraits.");
+        AutoLock alloc_lock(&alloc_lock_);
+        sa_obj_counter_.ResetMaxObjCount();
+    }
+
 protected:
     friend class ::fbl::SlabAllocator<SATraits>;
     friend class ::fbl::SlabAllocated<SATraits>;
 
     void* Allocate() {
         AutoLock alloc_lock(&this->alloc_lock_);
-        return AllocateLocked();
+        void* ptr = AllocateLocked();
+        sa_obj_counter_.Inc(ptr);
+        return ptr;
     }
 
     void ReturnToFreeList(void* ptr) {
@@ -573,10 +628,12 @@ protected:
         {
             AutoLock alloc_lock(&alloc_lock_);
             ReturnToFreeListLocked(free_obj);
+            sa_obj_counter_.Dec();
         }
     }
 
     typename SATraits::LockType alloc_lock_;
+    SAObjCounter<SATraits::ENABLE_OBJ_COUNT> sa_obj_counter_;
 };
 }  // namespace internal
 
@@ -622,7 +679,8 @@ protected:
 template <typename T,
           size_t   _SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
           typename _LockType  = ::fbl::Mutex,
-          SlabAllocatorFlavor _AllocatorFlavor = SlabAllocatorFlavor::INSTANCED>
+          SlabAllocatorFlavor _AllocatorFlavor = SlabAllocatorFlavor::INSTANCED,
+          bool _ENABLE_OBJ_COUNT = false>
 struct SlabAllocatorTraits {
     using PtrTraits     = internal::SlabAllocatorPtrTraits<T>;
     using PtrType       = typename PtrTraits::PtrType;
@@ -631,6 +689,7 @@ struct SlabAllocatorTraits {
 
     static constexpr size_t SLAB_SIZE = _SLAB_SIZE;
     static constexpr SlabAllocatorFlavor AllocatorFlavor = _AllocatorFlavor;
+    static constexpr bool ENABLE_OBJ_COUNT = _ENABLE_OBJ_COUNT;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -737,31 +796,40 @@ protected:
 // superfluous as the default is instanced)
 template <typename T,
           size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
-          typename LockType  = ::fbl::Mutex>
+          typename LockType  = ::fbl::Mutex,
+          bool     ENABLE_OBJ_COUNT = false>
 using InstancedSlabAllocatorTraits =
-    SlabAllocatorTraits<T, SLAB_SIZE, LockType, SlabAllocatorFlavor::INSTANCED>;
+    SlabAllocatorTraits<T, SLAB_SIZE, LockType, SlabAllocatorFlavor::INSTANCED, ENABLE_OBJ_COUNT>;
 
 template <typename T,
-          size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE>
+          size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
+          bool     ENABLE_OBJ_COUNT = false>
 using UnlockedInstancedSlabAllocatorTraits =
-    SlabAllocatorTraits<T, SLAB_SIZE, ::fbl::NullLock, SlabAllocatorFlavor::INSTANCED>;
+    SlabAllocatorTraits<T, SLAB_SIZE, ::fbl::NullLock, SlabAllocatorFlavor::INSTANCED,
+                        ENABLE_OBJ_COUNT>;
 
 template <typename T,
-          size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE>
+          size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
+          bool     ENABLE_OBJ_COUNT = false>
 using UnlockedSlabAllocatorTraits =
-    SlabAllocatorTraits<T, SLAB_SIZE, ::fbl::NullLock>;
+    SlabAllocatorTraits<T, SLAB_SIZE, ::fbl::NullLock, SlabAllocatorFlavor::INSTANCED,
+                        ENABLE_OBJ_COUNT>;
 
 // Shorthand for declaring the properties of a MANUAL_DELETE slab allocator.
 template <typename T,
           size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
-          typename LockType  = ::fbl::Mutex>
+          typename LockType  = ::fbl::Mutex,
+          bool     ENABLE_OBJ_COUNT = false>
 using ManualDeleteSlabAllocatorTraits =
-    SlabAllocatorTraits<T, SLAB_SIZE, LockType, SlabAllocatorFlavor::MANUAL_DELETE>;
+    SlabAllocatorTraits<T, SLAB_SIZE, LockType, SlabAllocatorFlavor::MANUAL_DELETE,
+                        ENABLE_OBJ_COUNT>;
 
 template <typename T,
-          size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE>
+          size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
+          bool     ENABLE_OBJ_COUNT = false>
 using UnlockedManualDeleteSlabAllocatorTraits =
-    SlabAllocatorTraits<T, SLAB_SIZE, ::fbl::NullLock, SlabAllocatorFlavor::MANUAL_DELETE>;
+    SlabAllocatorTraits<T, SLAB_SIZE, ::fbl::NullLock, SlabAllocatorFlavor::MANUAL_DELETE,
+                        ENABLE_OBJ_COUNT>;
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -790,6 +858,10 @@ public:
     }
 
     static size_t max_slabs() { return allocator_.max_slabs(); }
+    static size_t obj_count() { return allocator_.obj_count(); }
+    static size_t max_obj_count() { return allocator_.max_obj_count(); }
+    static size_t slab_count() { return allocator_.slab_count(); }
+    static void ResetMaxObjCount() { allocator_.ResetMaxObjCount(); }
 
 private:
     friend class SlabAllocated<SATraits>;           // SlabAllocated<> gets to call ReturnToFreeList
@@ -825,14 +897,17 @@ public:
 // Shorthand for declaring the properties of a static allocator
 template <typename T,
           size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
-          typename LockType  = ::fbl::Mutex>
+          typename LockType  = ::fbl::Mutex,
+          bool     ENABLE_OBJ_COUNT = false>
 using StaticSlabAllocatorTraits =
-    SlabAllocatorTraits<T, SLAB_SIZE, LockType, SlabAllocatorFlavor::STATIC>;
+    SlabAllocatorTraits<T, SLAB_SIZE, LockType, SlabAllocatorFlavor::STATIC, ENABLE_OBJ_COUNT>;
 
 template <typename T,
-          size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE>
+          size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
+          bool     ENABLE_OBJ_COUNT = false>
 using UnlockedStaticSlabAllocatorTraits =
-    SlabAllocatorTraits<T, SLAB_SIZE, ::fbl::NullLock, SlabAllocatorFlavor::STATIC>;
+    SlabAllocatorTraits<T, SLAB_SIZE, ::fbl::NullLock, SlabAllocatorFlavor::STATIC,
+                        ENABLE_OBJ_COUNT>;
 
 // Shorthand for declaring the global storage required for a static allocator
 #define DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(ALLOC_TRAITS, ...) \

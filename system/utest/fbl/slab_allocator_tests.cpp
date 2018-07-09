@@ -118,11 +118,13 @@ struct ReleaseHelper<SATraits, typename fbl::enable_if<
 
 // Traits which define the various test flavors.
 template <typename LockType,
-          fbl::SlabAllocatorFlavor AllocatorFlavor = fbl::SlabAllocatorFlavor::INSTANCED>
+          fbl::SlabAllocatorFlavor AllocatorFlavor = fbl::SlabAllocatorFlavor::INSTANCED,
+          bool ENABLE_OBJ_COUNT = false>
 struct UnmanagedTestTraits {
     class ObjType;
     using PtrType       = ObjType*;
-    using AllocTraits   = fbl::SlabAllocatorTraits<PtrType, 1024, LockType, AllocatorFlavor>;
+    using AllocTraits   = fbl::SlabAllocatorTraits
+        <PtrType, 1024, LockType, AllocatorFlavor, ENABLE_OBJ_COUNT>;
     using AllocatorType = fbl::SlabAllocator<AllocTraits>;
     using RefList       = fbl::DoublyLinkedList<PtrType>;
 
@@ -141,11 +143,12 @@ struct UnmanagedTestTraits {
     static constexpr size_t MaxAllocs(size_t slabs) { return AllocatorType::AllocsPerSlab * slabs; }
 };
 
-template <typename LockType>
+template <typename LockType, bool ENABLE_OBJ_COUNT = false>
 struct UniquePtrTestTraits {
     class ObjType;
     using PtrType       = fbl::unique_ptr<ObjType>;
-    using AllocTraits   = fbl::SlabAllocatorTraits<PtrType, 1024, LockType>;
+    using AllocTraits   = fbl::SlabAllocatorTraits
+        <PtrType, 1024, LockType, fbl::SlabAllocatorFlavor::INSTANCED, ENABLE_OBJ_COUNT>;
     using AllocatorType = fbl::SlabAllocator<AllocTraits>;
     using RefList       = fbl::DoublyLinkedList<PtrType>;
 
@@ -165,11 +168,12 @@ struct UniquePtrTestTraits {
     static constexpr size_t MaxAllocs(size_t slabs) { return AllocatorType::AllocsPerSlab * slabs; }
 };
 
-template <typename LockType>
+template <typename LockType, bool ENABLE_OBJ_COUNT = false>
 struct RefPtrTestTraits {
     class ObjType;
     using PtrType       = fbl::RefPtr<ObjType>;
-    using AllocTraits   = fbl::SlabAllocatorTraits<PtrType, 1024, LockType>;
+    using AllocTraits   = fbl::SlabAllocatorTraits
+        <PtrType, 1024,LockType, fbl::SlabAllocatorFlavor::INSTANCED, ENABLE_OBJ_COUNT>;
     using AllocatorType = fbl::SlabAllocator<AllocTraits>;
     using RefList       = fbl::DoublyLinkedList<PtrType>;
 
@@ -189,18 +193,72 @@ struct RefPtrTestTraits {
     static constexpr size_t MaxAllocs(size_t slabs) { return AllocatorType::AllocsPerSlab * slabs; }
 };
 
+template <typename, bool> struct ObjCounterHelper;
+
+template <typename SA> struct ObjCounterHelper<SA, true> {
+    static bool CheckObjCount(const SA& allocator, size_t expected) {
+        return (allocator.obj_count() == expected);
+    }
+    static bool CheckMaxObjCount(const SA& allocator, size_t expected) {
+        return (allocator.max_obj_count() == expected);
+    }
+    static void ResetMaxObjCount(SA* allocator) {
+        allocator->ResetMaxObjCount();
+    }
+    static bool StaticCheckObjCount(size_t expected) {
+        return (SA::obj_count() == expected);
+    }
+    static bool StaticCheckMaxObjCount(size_t expected) {
+        return (SA::max_obj_count() == expected);
+    }
+    static void StaticResetMaxObjCount() {
+        SA::ResetMaxObjCount();
+    }
+};
+
+template <typename SA> struct ObjCounterHelper<SA, false> {
+    static bool CheckObjCount(const SA&, size_t) {
+        return true;
+    }
+    static bool CheckMaxObjCount(const SA&, size_t) {
+        return true;
+    }
+    static void ResetMaxObjCount(SA*) {}
+    static bool StaticCheckObjCount(size_t) {
+        return true;
+    }
+    static bool StaticCheckMaxObjCount(size_t) {
+        return true;
+    }
+    static void StaticResetMaxObjCount() {}
+};
+
 template <typename Traits>
 bool do_slab_test(typename Traits::AllocatorType& allocator, size_t test_allocs) {
     BEGIN_TEST;
 
     const size_t MAX_ALLOCS = Traits::MaxAllocs(allocator.max_slabs());
     typename Traits::RefList ref_list;
+    const bool ENB_OBJ_COUNT = Traits::AllocTraits::ENABLE_OBJ_COUNT;
+    using AllocatorType = typename Traits::AllocatorType;
+
+    ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::ResetMaxObjCount(&allocator);
+    bool res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::CheckObjCount(allocator, 0);
+    EXPECT_TRUE(res);
+    res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::CheckMaxObjCount(allocator, 0);
+    EXPECT_TRUE(res);
 
     // Allocate up to the test limit.
     for (size_t i = 0; i < test_allocs; ++i) {
         typename Traits::PtrType ptr;
 
         EXPECT_EQ(fbl::min(i, MAX_ALLOCS), TestBase::allocated_obj_count());
+        res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::CheckObjCount
+            (allocator,TestBase::allocated_obj_count());
+        EXPECT_TRUE(res);
+        res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::CheckMaxObjCount
+            (allocator, TestBase::allocated_obj_count());
+        EXPECT_TRUE(res);
 
         // Allocate the object; exercise the various constructors
         switch (i % 4) {
@@ -218,15 +276,28 @@ bool do_slab_test(typename Traits::AllocatorType& allocator, size_t test_allocs)
         }
 
         EXPECT_EQ(fbl::min(i + 1, MAX_ALLOCS), TestBase::allocated_obj_count());
+        res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::CheckObjCount
+            (allocator, TestBase::allocated_obj_count());
+        EXPECT_TRUE(res);
+        res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::CheckMaxObjCount
+            (allocator, TestBase::allocated_obj_count());
+        EXPECT_TRUE(res);
     }
 
     // Now remove and de-allocate.
+    size_t max_obj_count = TestBase::allocated_obj_count();
     size_t i;
     for (i = 0; !ref_list.is_empty(); ++i) {
         auto ptr = ref_list.pop_back();
 
         ASSERT_NONNULL(ptr, "nullptr in ref list!  This should be impossible.");
         EXPECT_EQ(fbl::min(test_allocs, MAX_ALLOCS) - i, TestBase::allocated_obj_count());
+        res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::CheckObjCount
+            (allocator, TestBase::allocated_obj_count());
+        EXPECT_TRUE(res);
+        res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::CheckMaxObjCount
+            (allocator, max_obj_count);
+        EXPECT_TRUE(res);
 
         switch (i % 4) {
         case 0:
@@ -245,10 +316,37 @@ bool do_slab_test(typename Traits::AllocatorType& allocator, size_t test_allocs)
 
         // Release the reference (how this gets done depends on allocator flavor and pointer type)
         ReleaseHelper<typename Traits::AllocTraits>::ReleasePtr(allocator, ptr);
+
+        if (i % 2 == 1) {
+            ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::ResetMaxObjCount(&allocator);
+            max_obj_count = TestBase::allocated_obj_count();
+        }
+        res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::CheckMaxObjCount
+            (allocator, max_obj_count);
+        EXPECT_TRUE(res);
     }
 
     EXPECT_EQ(fbl::min(test_allocs, MAX_ALLOCS), i);
+    res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::CheckObjCount
+        (allocator, 0);
+    EXPECT_TRUE(res);
+    res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::CheckMaxObjCount
+        (allocator, i % 2);
+    EXPECT_TRUE(res);
+    ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::ResetMaxObjCount(&allocator);
+    res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::CheckMaxObjCount
+        (allocator, 0);
+    EXPECT_TRUE(res);
 
+#if TEST_WILL_NOT_COMPILE || 0
+    allocator.obj_count();
+#endif
+#if TEST_WILL_NOT_COMPILE || 0
+    allocator.max_obj_count();
+#endif
+#if TEST_WILL_NOT_COMPILE || 0
+    allocator.ResetMaxObjCount();
+#endif
     END_TEST;
 }
 
@@ -271,11 +369,11 @@ bool slab_test() {
     END_TEST;
 }
 
-template <typename LockType>
+template <typename LockType, bool ENABLE_OBJ_COUNT = false>
 struct StaticUnmanagedTestTraits {
     class ObjType;
     using PtrType       = ObjType*;
-    using AllocTraits   = fbl::StaticSlabAllocatorTraits<PtrType, 1024, LockType>;
+    using AllocTraits   = fbl::StaticSlabAllocatorTraits<PtrType, 1024, LockType, ENABLE_OBJ_COUNT>;
     using AllocatorType = fbl::SlabAllocator<AllocTraits>;
     using RefList       = fbl::DoublyLinkedList<PtrType>;
 
@@ -294,12 +392,14 @@ struct StaticUnmanagedTestTraits {
     static constexpr size_t MaxSlabs  = 4;
     static constexpr bool   IsManaged = false;
 };
-
 template <typename LockType>
+using StaticCountedUnmanagedTestTraits = StaticUnmanagedTestTraits<LockType, true>;
+
+template <typename LockType, bool ENABLE_OBJ_COUNT = false>
 struct StaticUniquePtrTestTraits {
     class ObjType;
     using PtrType       = fbl::unique_ptr<ObjType>;
-    using AllocTraits   = fbl::StaticSlabAllocatorTraits<PtrType, 1024, LockType>;
+    using AllocTraits   = fbl::StaticSlabAllocatorTraits<PtrType, 1024, LockType, ENABLE_OBJ_COUNT>;
     using AllocatorType = fbl::SlabAllocator<AllocTraits>;
     using RefList       = fbl::DoublyLinkedList<PtrType>;
 
@@ -320,10 +420,13 @@ struct StaticUniquePtrTestTraits {
 };
 
 template <typename LockType>
+using StaticCountedUniquePtrTestTraits = StaticUniquePtrTestTraits<LockType, true>;
+
+template <typename LockType, bool ENABLE_OBJ_COUNT = false>
 struct StaticRefPtrTestTraits {
     class ObjType;
     using PtrType       = fbl::RefPtr<ObjType>;
-    using AllocTraits   = fbl::StaticSlabAllocatorTraits<PtrType, 1024, LockType>;
+    using AllocTraits   = fbl::StaticSlabAllocatorTraits<PtrType, 1024, LockType, ENABLE_OBJ_COUNT>;
     using AllocatorType = fbl::SlabAllocator<AllocTraits>;
     using RefList       = fbl::DoublyLinkedList<PtrType>;
 
@@ -346,20 +449,35 @@ struct StaticRefPtrTestTraits {
     }
 };
 
+template <typename LockType>
+using StaticCountedRefPtrTestTraits = StaticRefPtrTestTraits<LockType, true>;
+
 template <typename Traits>
 bool do_static_slab_test(size_t test_allocs) {
     BEGIN_TEST;
 
+    const bool ENB_OBJ_COUNT = Traits::AllocTraits::ENABLE_OBJ_COUNT;
     using AllocatorType = typename Traits::AllocatorType;
 
     const size_t MAX_ALLOCS = Traits::MaxAllocs();
     typename Traits::RefList ref_list;
+    ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::StaticResetMaxObjCount();
+    bool res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::StaticCheckObjCount(0);
+    EXPECT_TRUE(res);
+    res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::StaticCheckMaxObjCount(0);
+    EXPECT_TRUE(res);
 
     // Allocate up to the test limit.
     for (size_t i = 0; i < test_allocs; ++i) {
         typename Traits::PtrType ptr;
 
         EXPECT_EQ(fbl::min(i, MAX_ALLOCS), TestBase::allocated_obj_count());
+        res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::StaticCheckObjCount
+            (TestBase::allocated_obj_count());
+        EXPECT_TRUE(res);
+        res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::StaticCheckMaxObjCount
+            (TestBase::allocated_obj_count());
+        EXPECT_TRUE(res);
 
         // Allocate the object; exercise the various constructors
         switch (i % 4) {
@@ -377,15 +495,27 @@ bool do_static_slab_test(size_t test_allocs) {
         }
 
         EXPECT_EQ(fbl::min(i + 1, MAX_ALLOCS), TestBase::allocated_obj_count());
+        res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::StaticCheckObjCount
+            (TestBase::allocated_obj_count());
+        EXPECT_TRUE(res);
+        res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::StaticCheckMaxObjCount
+            (TestBase::allocated_obj_count());
+        EXPECT_TRUE(res);
     }
 
     // Now remove and de-allocate.
+    size_t max_obj_count = TestBase::allocated_obj_count();
     size_t i;
     for (i = 0; !ref_list.is_empty(); ++i) {
         auto ptr = ref_list.pop_back();
 
         ASSERT_NONNULL(ptr, "nullptr in ref list!  This should be impossible.");
         EXPECT_EQ(fbl::min(test_allocs, MAX_ALLOCS) - i, TestBase::allocated_obj_count());
+        res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::StaticCheckObjCount
+            (TestBase::allocated_obj_count());
+        EXPECT_TRUE(res);
+        res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::StaticCheckMaxObjCount(max_obj_count);
+        EXPECT_TRUE(res);
 
         switch (i % 4) {
         case 0:
@@ -404,9 +534,33 @@ bool do_static_slab_test(size_t test_allocs) {
 
         // Release the reference (how this gets done depends on allocator flavor and pointer type)
         ReleaseHelper<typename Traits::AllocTraits>::ReleasePtr(ptr);
+        if (i % 2 == 1) {
+            ObjCounterHelper<AllocatorType,
+                           ENB_OBJ_COUNT>::StaticResetMaxObjCount();
+            max_obj_count = TestBase::allocated_obj_count();
+        }
+        res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::StaticCheckMaxObjCount(max_obj_count);
+        EXPECT_TRUE(res);
     }
 
     EXPECT_EQ(fbl::min(test_allocs, MAX_ALLOCS), i);
+    res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::StaticCheckObjCount(0);
+    EXPECT_TRUE(res);
+    res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::StaticCheckMaxObjCount(i % 2);
+    EXPECT_TRUE(res);
+    ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::StaticResetMaxObjCount();
+    res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::StaticCheckMaxObjCount(0);
+    EXPECT_TRUE(res);
+#if TEST_WILL_NOT_COMPILE || 0
+    AllocatorType::obj_count();
+#endif
+#if TEST_WILL_NOT_COMPILE || 0
+    AllocatorType::max_obj_count();
+#endif
+#if TEST_WILL_NOT_COMPILE || 0
+    AllocatorType::ResetMaxObjCount();
+#endif
+
     END_TEST;
 }
 
@@ -441,6 +595,14 @@ DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(StaticUnmanagedTestTraits<NullLock>::Alloc
 DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(StaticUniquePtrTestTraits<NullLock>::AllocTraits, 1);
 DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(StaticRefPtrTestTraits<NullLock>::AllocTraits, 1);
 
+DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(StaticCountedUnmanagedTestTraits<MutexLock>::AllocTraits, 1);
+DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(StaticCountedUniquePtrTestTraits<MutexLock>::AllocTraits, 1);
+DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(StaticCountedRefPtrTestTraits<MutexLock>::AllocTraits, 1);
+
+DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(StaticCountedUnmanagedTestTraits<NullLock>::AllocTraits, 1);
+DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(StaticCountedUniquePtrTestTraits<NullLock>::AllocTraits, 1);
+DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(StaticCountedRefPtrTestTraits<NullLock>::AllocTraits, 1);
+
 BEGIN_TEST_CASE(slab_allocator_tests)
 RUN_NAMED_TEST("Unmanaged Single Slab (mutex)", (slab_test<UnmanagedTestTraits<MutexLock>, 1>))
 RUN_NAMED_TEST("Unmanaged Multi Slab  (mutex)", (slab_test<UnmanagedTestTraits<MutexLock>>))
@@ -472,4 +634,56 @@ RUN_NAMED_TEST("Static RefPtr    (mutex)", (static_slab_test<StaticRefPtrTestTra
 RUN_NAMED_TEST("Static Unmanaged (unlock)", (static_slab_test<StaticUnmanagedTestTraits<NullLock>>))
 RUN_NAMED_TEST("Static UniquePtr (unlock)", (static_slab_test<StaticUniquePtrTestTraits<NullLock>>))
 RUN_NAMED_TEST("Static RefPtr    (unlock)", (static_slab_test<StaticRefPtrTestTraits<NullLock>>))
+
+RUN_NAMED_TEST("Counted Unmanaged Single Slab (mutex)",(slab_test
+    <UnmanagedTestTraits<MutexLock, fbl::SlabAllocatorFlavor::INSTANCED, true>, 1>))
+RUN_NAMED_TEST("Counted Unmanaged Multi Slab  (mutex)", (slab_test
+    <UnmanagedTestTraits<MutexLock, fbl::SlabAllocatorFlavor::INSTANCED, true>>))
+RUN_NAMED_TEST("Counted UniquePtr Single Slab (mutex)", (slab_test
+    <UniquePtrTestTraits<MutexLock, true>, 1>))
+RUN_NAMED_TEST("Counted UniquePtr Multi Slab  (mutex)", (slab_test
+    <UniquePtrTestTraits<MutexLock, true>>))
+RUN_NAMED_TEST("Counted RefPtr Single Slab    (mutex)", (slab_test
+    <RefPtrTestTraits<MutexLock, true>, 1>))
+RUN_NAMED_TEST("Counted RefPtr Multi Slab     (mutex)", (slab_test
+    <RefPtrTestTraits<MutexLock, true>>))
+
+RUN_NAMED_TEST("Counted Unmanaged Single Slab (unlock)", (slab_test
+    <UnmanagedTestTraits<NullLock, fbl::SlabAllocatorFlavor::INSTANCED, true>, 1>))
+RUN_NAMED_TEST("Counted Unmanaged Multi Slab  (unlock)", (slab_test
+    <UnmanagedTestTraits<NullLock, fbl::SlabAllocatorFlavor::INSTANCED, true>>))
+RUN_NAMED_TEST("Counted UniquePtr Single Slab (unlock)", (slab_test
+    <UniquePtrTestTraits<NullLock, true>, 1>))
+RUN_NAMED_TEST("Counted UniquePtr Multi Slab  (unlock)", (slab_test
+    <UniquePtrTestTraits<NullLock, true>>))
+RUN_NAMED_TEST("Counted RefPtr Single Slab    (unlock)", (slab_test
+    <RefPtrTestTraits<NullLock, true>, 1>))
+RUN_NAMED_TEST("Counted RefPtr Multi Slab     (unlock)", (slab_test
+    <RefPtrTestTraits<NullLock, true>>))
+
+RUN_NAMED_TEST("Counted Manual Delete Unmanaged (mutex)", (slab_test
+    <UnmanagedTestTraits<MutexLock, fbl::SlabAllocatorFlavor::MANUAL_DELETE, true>>))
+RUN_NAMED_TEST("Counted Manual Delete Unmanaged (unlock)", (slab_test
+    <UnmanagedTestTraits<NullLock, fbl::SlabAllocatorFlavor::MANUAL_DELETE, true>>))
+
+RUN_NAMED_TEST("Counted Static Unmanaged (unlock)", (static_slab_test
+    <StaticUnmanagedTestTraits<NullLock, true>>))
+RUN_NAMED_TEST("Counted Static UniquePtr (unlock)", (static_slab_test
+    <StaticUniquePtrTestTraits<NullLock, true>>))
+RUN_NAMED_TEST("Counted Static RefPtr    (unlock)", (static_slab_test
+    <StaticRefPtrTestTraits<NullLock, true>>))
+
+RUN_NAMED_TEST("Counted Static Unmanaged (mutex)", (static_slab_test
+    <StaticUnmanagedTestTraits<MutexLock, true>>))
+RUN_NAMED_TEST("Counted Static UniquePtr (mutex)", (static_slab_test
+    <StaticUniquePtrTestTraits<MutexLock, true>>))
+RUN_NAMED_TEST("Counted Static RefPtr    (mutex)", (static_slab_test
+    <StaticRefPtrTestTraits<MutexLock, true>>))
+
+RUN_NAMED_TEST("Counted Static Unmanaged (unlock)", (static_slab_test
+    <StaticUnmanagedTestTraits<NullLock, true>>))
+RUN_NAMED_TEST("Counted Static UniquePtr (unlock)", (static_slab_test
+    <StaticUniquePtrTestTraits<NullLock, true>>))
+RUN_NAMED_TEST("Counted Static RefPtr    (unlock)", (static_slab_test
+    <StaticRefPtrTestTraits<NullLock, true>>))
 END_TEST_CASE(slab_allocator_tests);
