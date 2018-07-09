@@ -364,8 +364,12 @@ typedef struct zx_info_resource {
 #define ZX_PROP_REGISTER_FS                 4u
 #endif
 
-// Argument is the value of ld.so's _dl_debug_addr, a uintptr_t.
+// Argument is the value of ld.so's _dl_debug_addr, a uintptr_t. If the
+// property is set to the magic value of ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET
+// on process startup, ld.so will trigger a debug breakpoint immediately after
+// setting the property to the correct value.
 #define ZX_PROP_PROCESS_DEBUG_ADDR          5u
+#define ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET 1u
 
 // Argument is the base address of the vDSO mapping (or zero), a uintptr_t.
 #define ZX_PROP_PROCESS_VDSO_BASE_ADDRESS   6u

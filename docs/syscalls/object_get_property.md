@@ -76,7 +76,13 @@ Only defined for x86-64.
 
 Allowed operations: **get**, **set**
 
-The value of ld.so's `_dl_debug_addr`.
+The value of ld.so's `_dl_debug_addr`. This can be used by debuggers to
+interrogate the state of the dynamic loader.
+
+If this value is set to `ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET` on process
+creation, the loader will manually issue a debug breakpoint when the property
+has been set to its correct value. This gives an opportunity to read or modify
+the initial state of the program.
 
 ### ZX_PROP_PROCESS_VDSO_BASE_ADDRESS
 

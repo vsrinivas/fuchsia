@@ -776,8 +776,9 @@ zx_status_t ProcessDispatcher::set_debug_addr(uintptr_t addr) {
     if (addr == 0u)
         return ZX_ERR_INVALID_ARGS;
     AutoLock lock(get_lock());
-    // Only allow the value to be set once: Once ld.so has set it that's it.
-    if (debug_addr_ != 0u)
+    // Only allow the value to be set to a nonzero or magic debug break once:
+    // Once ld.so has set it that's it.
+    if (!(debug_addr_ == 0u || debug_addr_ == ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET))
         return ZX_ERR_ACCESS_DENIED;
     debug_addr_ = addr;
     return ZX_OK;

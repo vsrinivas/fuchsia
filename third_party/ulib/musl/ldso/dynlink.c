@@ -167,6 +167,20 @@ NO_ASAN static int dl_strcmp(const char* l, const char* r) {
 }
 #define strcmp(l, r) dl_strcmp(l, r)
 
+// Signals a debug breakpoint. It does't use __builtin_trap() because that's
+// actually an "undefined instruction" rather than a debug breakpoint, and
+// __builtin_trap() documented to never return. We don't want the compiler to
+// optimize later code away because it assumes the trap will never be returned
+// from.
+static void debug_break(void) {
+#if defined(__x86_64__)
+    __asm__("int3");
+#elif defined(__aarch64__)
+    __asm__("brk 0");
+#else
+#error
+#endif
+}
 
 // Simple bump allocator for dynamic linker internal data structures.
 // This allocator is single-threaded: it can be used only at startup or
@@ -1850,6 +1864,18 @@ __NO_SAFESTACK static void* dls3(zx_handle_t exec_vmo, int argc, char** argv) {
     debug.r_ldbase = ldso.l_map.l_addr;
     debug.r_state = 0;
 
+    // The ZX_PROP_PROCESS_DEBUG_ADDR being set to 1 on startup is a signal
+    // to issue a debug breakpoint after setting the property to signal to a
+    // debugger that the property is now valid.
+    intptr_t existing_debug_addr = 0;
+    status = _zx_object_get_property(__zircon_process_self,
+                                    ZX_PROP_PROCESS_DEBUG_ADDR,
+                                    &existing_debug_addr,
+                                    sizeof(existing_debug_addr));
+    bool break_after_set =
+        (status == ZX_OK) &&
+        (existing_debug_addr == ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET);
+
     status = _zx_object_set_property(__zircon_process_self,
                                      ZX_PROP_PROCESS_DEBUG_ADDR,
                                      &_dl_debug_addr, sizeof(_dl_debug_addr));
@@ -1859,6 +1885,9 @@ __NO_SAFESTACK static void* dls3(zx_handle_t exec_vmo, int argc, char** argv) {
         // TODO(dje): Is there a way to detect we're here because of being
         // an injected process (launchpad_start_injected)? IWBN to print a
         // warning here but launchpad_start_injected can trigger this.
+    }
+    if (break_after_set) {
+        debug_break();
     }
 
     _dl_debug_state();

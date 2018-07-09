@@ -41,6 +41,7 @@
 + [task_bind_exception_port](syscalls/task_bind_exception_port.md) - attach an exception port to a task
 + [task_kill](syscalls/task_kill.md) - cause a task to stop running
 + [task_resume](syscalls/task_resume.md) - cause a suspended task to continue running
++ [task_resume_from_exception](syscalls/task_resume_from_exception.md) - resume a task from a previously caught exception
 + [task_suspend](syscalls/task_suspend.md) - cause a task to be suspended
 
 ## Channels
