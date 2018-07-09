@@ -238,7 +238,7 @@ impl Frame {
         }
         framebuffer
             .controller
-            .set_display_image(self.config.display_id, self.image_id, 0, 0, 0)?;
+            .set_layer_image(framebuffer.layer_id, self.image_id, 0, 0)?;
         framebuffer.controller.apply_config()?;
         Ok(())
     }
@@ -265,6 +265,7 @@ pub struct FrameBuffer {
     display_controller: File,
     controller: ControllerProxy,
     config: Config,
+    layer_id: u64,
 }
 
 impl FrameBuffer {
@@ -299,38 +300,19 @@ impl FrameBuffer {
     fn create_config_from_event_stream(
         proxy: &ControllerProxy, executor: &mut async::Executor,
     ) -> Result<Config, Error> {
-        let config: Rc<RefCell<Option<Config>>> = Rc::new(RefCell::new(None));
+        let display_info: Rc<RefCell<Option<(u64, u32, u32, u32)>>> = Rc::new(RefCell::new(None));
         let stream = proxy.take_event_stream();
         let event_listener = stream
             .filter(|event| {
                 if let ControllerEvent::DisplaysChanged { added, .. } = event {
-                    let mut display_id;
-                    let mut zx_pixel_format = 0;
-                    let mut linear_stride_pixels = 0;
-                    let mut pixel_format = PixelFormat::Unknown;
-                    let mut pixel_size_bytes = 0;
                     if added.len() > 0 {
                         let first_added = &added[0];
-                        display_id = first_added.id;
-                        if first_added.pixel_format.len() > 0 {
-                            zx_pixel_format = first_added.pixel_format[0];
-                            pixel_format = zx_pixel_format.into();
-                        }
-                        if first_added.modes.len() > 0 {
-                            let mode = &first_added.modes[0];
-                            if pixel_format != PixelFormat::Unknown {
-                                pixel_size_bytes = pixel_format_bytes(zx_pixel_format);
-                                linear_stride_pixels = mode.horizontal_resolution;
-                            }
-                            let calculated_config = Config {
-                                display_id: display_id,
-                                width: mode.horizontal_resolution,
-                                height: mode.vertical_resolution,
-                                linear_stride_pixels,
-                                format: pixel_format,
-                                pixel_size_bytes: pixel_size_bytes as u32,
-                            };
-                            config.replace(Some(calculated_config));
+                        if first_added.pixel_format.len() > 0 && first_added.modes.len() > 0 {
+                            let display_id = first_added.id;
+                            let pixel_format = first_added.pixel_format[0];
+                            let width = first_added.modes[0].horizontal_resolution;
+                            let height = first_added.modes[0].vertical_resolution;
+                            display_info.replace(Some((display_id, pixel_format, width, height)));
                         }
                     }
                 }
@@ -342,11 +324,64 @@ impl FrameBuffer {
             .run_singlethreaded(event_listener)
             .map_err(|(e, _rest_of_stream)| e)?;
 
-        let config = config.replace(None);
-        if let Some(config) = config {
-            Ok(config)
+        let display_info = display_info.replace(None);
+        if let Some((display_id, pixel_format, width, height)) = display_info {
+            let stride: Rc<RefCell<u32>> = Rc::new(RefCell::new(0));
+            let stride_response = proxy
+                .compute_linear_image_stride(width, pixel_format)
+                .map(|px_stride| {
+                    stride.replace(px_stride);
+                });
+
+            executor.run_singlethreaded(stride_response)?;
+
+            let stride = stride.replace(0);
+            if 0 == stride {
+                Err(format_err!("Could not calculate stride"))
+            } else {
+                Ok(Config {
+                    display_id: display_id,
+                    width: width,
+                    height: height,
+                    linear_stride_pixels: stride,
+                    format: pixel_format.into(),
+                    pixel_size_bytes: pixel_format_bytes(pixel_format) as u32,
+                })
+            }
         } else {
             Err(format_err!("Could not find display"))
+        }
+    }
+
+    fn configure_layer(
+        config: Config, proxy: &ControllerProxy, executor: &mut async::Executor,
+    ) -> Result<u64, Error> {
+        let layer_id: Rc<RefCell<Option<u64>>> = Rc::new(RefCell::new(None));
+        let layer_id_response = proxy
+            .create_layer()
+            .map(|(status, id)| {
+                if status == Status::OK {
+                    layer_id.replace(Some(id));
+                }
+            });
+
+        executor.run_singlethreaded(layer_id_response)?;
+        let layer_id = layer_id.replace(None);
+        if let Some(id) = layer_id {
+            let pixel_format: u32 = config.format.into();
+            let mut image_config = ImageConfig {
+                width: config.width,
+                height: config.height,
+                pixel_format: pixel_format as u32,
+                type_: 0,
+            };
+            proxy.set_layer_primary_config(id, &mut image_config);
+
+            let mut layers = std::iter::once(id);
+            proxy.set_display_layers(config.display_id, &mut layers);
+            Ok(id)
+        } else {
+            Err(format_err!("Failed to create layer"))
         }
     }
 
@@ -362,11 +397,13 @@ impl FrameBuffer {
         let channel = async::Channel::from_channel(zx_handle.into())?;
         let proxy = ControllerProxy::new(channel);
         let config = Self::create_config_from_event_stream(&proxy, executor)?;
+        let layer = Self::configure_layer(config, &proxy, executor)?;
 
         Ok(FrameBuffer {
             display_controller: file,
             controller: proxy,
             config: config,
+            layer_id: layer,
         })
     }
 
