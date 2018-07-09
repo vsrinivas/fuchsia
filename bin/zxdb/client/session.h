@@ -111,6 +111,7 @@ class Session {
   void DispatchNotifyThread(debug_ipc::MsgHeader::Type type,
                             const debug_ipc::NotifyThread& notify);
   void DispatchNotifyException(const debug_ipc::NotifyException& notify);
+  void DispatchNotifyModules(const debug_ipc::NotifyModules& notify);
 
   // Returns the thread object from the given koids, or null.
   ThreadImpl* ThreadImplFromKoid(uint64_t process_koid, uint64_t thread_koid);

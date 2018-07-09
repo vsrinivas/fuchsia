@@ -99,6 +99,33 @@ void DebuggedProcess::PopulateCurrentThreads() {
   }
 }
 
+bool DebuggedProcess::RegisterDebugState() {
+  if (dl_debug_addr_)
+    return true;  // Previously set.
+
+  uintptr_t debug_addr = 0;
+  if (process_.get_property(ZX_PROP_PROCESS_DEBUG_ADDR, &debug_addr,
+                            sizeof(debug_addr)) != ZX_OK)
+    return false;  // Can't read value.
+
+  if (!debug_addr || debug_addr == ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET)
+    return false;  // Still not set.
+
+  dl_debug_addr_ = debug_addr;
+
+  // TODO(brettw) register breakpoint for dynamic loads. This current code
+  // only notifies for the inital set of binaries loaded by the process.
+
+  // Notify the client of any libraries.
+  debug_ipc::NotifyModules notify;
+  notify.process_koid = koid_;
+  GetModulesForProcess(process_, dl_debug_addr_, &notify.modules);
+  debug_ipc::MessageWriter writer;
+  debug_ipc::WriteNotifyModules(notify, &writer);
+  debug_agent_->stream()->Write(writer.MessageComplete());
+  return true;
+}
+
 ProcessBreakpoint* DebuggedProcess::FindProcessBreakpointForAddr(
     uint64_t address) {
   auto found = breakpoints_.find(address);
@@ -226,6 +253,12 @@ void DebuggedProcess::OnAddressSpace(
     reply->map[ix].depth = entry.depth;
     ++ix;
   }
+}
+
+void DebuggedProcess::OnModules(debug_ipc::ModulesReply* reply) {
+  // Modules can only be read after the debug state is set.
+  if (dl_debug_addr_)
+    GetModulesForProcess(process_, dl_debug_addr_, &reply->modules);
 }
 
 zx_status_t DebuggedProcess::ReadProcessMemory(uintptr_t address, void* buffer,

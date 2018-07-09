@@ -147,8 +147,9 @@ void DebuggedThread::GetBacktrace(
     return;
 
   constexpr size_t kMaxStackDepth = 256;
-  UnwindStack(process_->process(), thread_, *arch::IPInRegs(&regs),
-              *arch::SPInRegs(&regs), kMaxStackDepth, frames);
+  UnwindStack(process_->process(), process_->dl_debug_addr(), thread_,
+              *arch::IPInRegs(&regs), *arch::SPInRegs(&regs), kMaxStackDepth,
+              frames);
 }
 
 void DebuggedThread::GetRegisters(
@@ -206,6 +207,15 @@ void DebuggedThread::UpdateForSoftwareBreakpoint(
       if (status != ZX_OK) {
         fprintf(stderr, "Warning: could not update IP on thread, error = %d.",
                 static_cast<int>(status));
+      }
+
+      if (!process_->dl_debug_addr() && process_->RegisterDebugState()) {
+        // This breakpoint was the explicit breakpoint ld.so executes to notify
+        // us that the loader is ready.
+        // TODO(brettw) Don't notify of an exception as we do now by falling
+        // through, but instead encode the "everything was suspended" state in
+        // the module load message. The client should unsuspend the process
+        // manually when it's ready (it may need to set breakpoints and stuff).
       }
     } else {
       // Not a breakpoint instruction. Probably the breakpoint instruction used

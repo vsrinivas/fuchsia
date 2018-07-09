@@ -4,6 +4,10 @@
 
 #include "garnet/bin/debug_agent/launcher.h"
 
+#include <inttypes.h>
+
+#include "garnet/bin/debug_agent/object_util.h"
+
 namespace debug_agent {
 
 zx_status_t Launcher::Setup(const std::vector<std::string>& argv) {
@@ -30,7 +34,15 @@ zx_status_t Launcher::Setup(const std::vector<std::string>& argv) {
   builder_.CloneNamespace();
   builder_.CloneEnvironment();
 
-  return builder_.Prepare(nullptr);
+  status = builder_.Prepare(nullptr);
+  if (status != ZX_OK)
+    return status;
+
+  // Setting this property before startup will signal to the loader to debug
+  // break once the DEBUG_ADDR property is set properly.
+  const intptr_t kMagicValue = ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET;
+  return builder_.data().process.set_property(
+      ZX_PROP_PROCESS_DEBUG_ADDR, &kMagicValue, sizeof(kMagicValue));
 }
 
 zx::process Launcher::GetProcess() const {

@@ -27,21 +27,6 @@ ProcessSymbolsImpl::ProcessSymbolsImpl(Notifications* notifications,
 
 ProcessSymbolsImpl::~ProcessSymbolsImpl() = default;
 
-void ProcessSymbolsImpl::AddModule(
-    const debug_ipc::Module& module,
-    std::function<void(const std::string&)> callback) {
-  Err sym_load_err;
-  ModuleInfo* info = SaveModuleInfo(module, &sym_load_err);
-
-  // Send notifications.
-  if (sym_load_err.has_error()) {
-    notifications_->OnSymbolLoadFailure(sym_load_err);
-  } else {
-    target_symbols_->AddModule(info->symbols->module());
-    notifications_->DidLoadModuleSymbols(info->symbols.get());
-  }
-}
-
 void ProcessSymbolsImpl::SetModules(
     const std::vector<debug_ipc::Module>& modules) {
   // Map from load address to index into |modules| argument.

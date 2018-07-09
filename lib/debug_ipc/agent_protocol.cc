@@ -404,4 +404,10 @@ void WriteNotifyException(const NotifyException& notify,
   Serialize(notify.hit_breakpoints, writer);
 }
 
+void WriteNotifyModules(const NotifyModules& notify, MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kNotifyModules, 0);
+  writer->WriteUint64(notify.process_koid);
+  Serialize(notify.modules, writer);
+}
+
 }  // namespace debug_ipc

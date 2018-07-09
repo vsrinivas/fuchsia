@@ -208,18 +208,12 @@ void FillThreadRecord(const zx::thread& thread,
 }
 
 zx_status_t GetModulesForProcess(const zx::process& process,
+                                 uint64_t dl_debug_addr,
                                  std::vector<debug_ipc::Module>* modules) {
-  // The address of the link map in the process is stored in a property.
-  uint64_t debug_addr = 0;
-  zx_status_t status = process.get_property(ZX_PROP_PROCESS_DEBUG_ADDR,
-                                            &debug_addr, sizeof(debug_addr));
-  if (status != ZX_OK)
-    return status;
-
   size_t num_read = 0;
   uint64_t lmap = 0;
-  status = process.read_memory(debug_addr + offsetof(r_debug, r_map), &lmap,
-                               sizeof(lmap), &num_read);
+  zx_status_t status = process.read_memory(
+      dl_debug_addr + offsetof(r_debug, r_map), &lmap, sizeof(lmap), &num_read);
   if (status != ZX_OK)
     return status;
 

@@ -101,7 +101,7 @@ bool ReadRequest(MessageReader* reader, RegistersRequest* request,
 void WriteReply(const RegistersReply& reply, uint32_t transaction_id,
                 MessageWriter* writer);
 
-// Addres space
+// Address space
 bool ReadRequest(MessageReader* reader, AddressSpaceRequest* request,
                  uint32_t* transaction_id);
 void WriteReply(const AddressSpaceReply& reply, uint32_t transaction_id,
@@ -115,5 +115,6 @@ void WriteNotifyProcess(const NotifyProcess& notify, MessageWriter* writer);
 void WriteNotifyThread(MsgHeader::Type type, const NotifyThread& notify,
                        MessageWriter* writer);
 void WriteNotifyException(const NotifyException& notify, MessageWriter* writer);
+void WriteNotifyModules(const NotifyModules& notify, MessageWriter* writer);
 
 }  // namespace debug_ipc

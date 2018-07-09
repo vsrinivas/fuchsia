@@ -114,5 +114,6 @@ bool ReadReply(MessageReader* reader, AddressSpaceReply* reply,
 bool ReadNotifyProcess(MessageReader* reader, NotifyProcess* notify);
 bool ReadNotifyThread(MessageReader* reader, NotifyThread* notify);
 bool ReadNotifyException(MessageReader* reader, NotifyException* notify);
+bool ReadNotifyModules(MessageReader* reader, NotifyModules* notify);
 
 }  // namespace debug_ipc

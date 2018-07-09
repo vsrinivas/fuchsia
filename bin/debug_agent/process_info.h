@@ -27,7 +27,10 @@ void FillThreadRecord(const zx::thread& thread,
                       debug_ipc::ThreadRecord* record);
 
 // Fills the given vector with the module information for the process.
+// "dl_debug_addr" is the address inside "process" of the dynamic loader's
+// debug state.
 zx_status_t GetModulesForProcess(const zx::process& process,
+                                 uint64_t dl_debug_addr,
                                  std::vector<debug_ipc::Module>* modules);
 
 // Returns the memory mapping for the process. Returns empty on failure.

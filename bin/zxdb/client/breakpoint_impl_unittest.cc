@@ -136,12 +136,14 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
           kBuildID2, std::move(module2));
 
   // Cause the process to load module 1.
+  std::vector<debug_ipc::Module> modules;
   const uint64_t kModule1Base = 0x1000000;
   debug_ipc::Module load1;
   load1.name = "test";
   load1.base = kModule1Base;
   load1.build_id = kBuildID1;
-  target->process()->NotifyModuleLoaded(load1);
+  modules.push_back(load1);
+  target->process()->OnModules(modules);
 
   // That should have notified the breakpoint which should have added the two
   // addresses to the backend.
@@ -172,7 +174,8 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   load2.name = "test2";
   load2.base = kModule2Base;
   load2.build_id = kBuildID2;
-  target->process()->NotifyModuleLoaded(load2);
+  modules.push_back(load2);
+  target->process()->OnModules(modules);
   ASSERT_TRUE(sink().adds.empty());
 
   // Disabling should send the delete message.

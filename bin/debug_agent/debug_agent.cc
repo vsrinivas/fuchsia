@@ -160,7 +160,7 @@ void DebugAgent::OnModules(const debug_ipc::ModulesRequest& request,
                            debug_ipc::ModulesReply* reply) {
   DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
   if (proc)
-    GetModulesForProcess(proc->process(), &reply->modules);
+    proc->OnModules(reply);
 }
 
 void DebugAgent::OnProcessTree(const debug_ipc::ProcessTreeRequest& request,
@@ -183,11 +183,10 @@ void DebugAgent::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
     proc->OnReadMemory(request, reply);
 }
 
-void DebugAgent::OnRegisters(
-    const debug_ipc::RegistersRequest& request,
-    debug_ipc::RegistersReply* reply) {
-  DebuggedThread *thread = GetDebuggedThread(request.process_koid,
-                                             request.thread_koid);
+void DebugAgent::OnRegisters(const debug_ipc::RegistersRequest& request,
+                             debug_ipc::RegistersReply* reply) {
+  DebuggedThread* thread =
+      GetDebuggedThread(request.process_koid, request.thread_koid);
   if (thread)
     thread->GetRegisters(&reply->registers);
 }

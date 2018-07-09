@@ -459,4 +459,14 @@ bool ReadNotifyException(MessageReader* reader, NotifyException* notify) {
   return Deserialize(reader, &notify->hit_breakpoints);
 }
 
+bool ReadNotifyModules(MessageReader* reader, NotifyModules* notify) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  if (!reader->ReadUint64(&notify->process_koid))
+    return false;
+
+  return Deserialize(reader, &notify->modules);
+}
+
 }  // namespace debug_ipc

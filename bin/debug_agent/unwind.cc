@@ -36,12 +36,13 @@ int LookupDso(void* context, unw_word_t pc, unw_word_t* base,
 
 }  // namespace
 
-zx_status_t UnwindStack(const zx::process& process, const zx::thread& thread,
-                        uint64_t ip, uint64_t sp, size_t max_depth,
+zx_status_t UnwindStack(const zx::process& process, uint64_t dl_debug_addr,
+                        const zx::thread& thread, uint64_t ip, uint64_t sp,
+                        size_t max_depth,
                         std::vector<debug_ipc::StackFrame>* stack) {
   // Get the modules sorted by load address.
   ModuleVector modules;
-  zx_status_t status = GetModulesForProcess(process, &modules);
+  zx_status_t status = GetModulesForProcess(process, dl_debug_addr, &modules);
   if (status != ZX_OK)
     return status;
   std::sort(modules.begin(), modules.end(),

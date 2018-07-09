@@ -464,6 +464,12 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
         DispatchNotifyException(notify);
       break;
     }
+    case debug_ipc::MsgHeader::Type::kNotifyModules: {
+      debug_ipc::NotifyModules notify;
+      if (debug_ipc::ReadNotifyModules(&reader, &notify))
+        DispatchNotifyModules(notify);
+      break;
+    }
     default:
       FXL_NOTREACHED();  // Unexpected notification.
   }
@@ -562,6 +568,18 @@ void Session::DispatchNotifyException(
       impl->BackendBreakpointRemoved();
       system_.DeleteBreakpoint(impl);
     }
+  }
+}
+
+void Session::DispatchNotifyModules(const debug_ipc::NotifyModules& notify) {
+  ProcessImpl* process = system_.ProcessImplFromKoid(notify.process_koid);
+  if (process) {
+      process->OnModules(notify.modules);
+  } else {
+    fprintf(stderr,
+            "Warning: received modules notification for an "
+            "unexpected process %" PRIu64 ".",
+            notify.process_koid);
   }
 }
 

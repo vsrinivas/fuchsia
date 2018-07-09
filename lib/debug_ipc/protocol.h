@@ -43,6 +43,7 @@ struct MsgHeader {
     kNotifyThreadStarting,
     kNotifyThreadExiting,
     kNotifyException,
+    kNotifyModules,
 
     kNumMessages
   };
@@ -271,6 +272,13 @@ struct NotifyException {
   // Be sure to check should_delete on each of these and update local state as
   // necessary.
   std::vector<BreakpointStats> hit_breakpoints;
+};
+
+// Indicates the loaded modules may have changed. The entire list of current
+// modules is sent every time.
+struct NotifyModules {
+  uint64_t process_koid = 0;
+  std::vector<Module> modules;
 };
 
 #pragma pack(pop)

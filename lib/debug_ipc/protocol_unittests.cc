@@ -568,4 +568,25 @@ TEST(Protocol, NotifyException) {
             second.hit_breakpoints[1].should_delete);
 }
 
+TEST(Protocol, NotifyModules) {
+  NotifyModules initial;
+  initial.process_koid = 23;
+  initial.modules.resize(2);
+  initial.modules[0].name = "foo";
+  initial.modules[0].base = 0x12345;
+  initial.modules[1].name = "bar";
+  initial.modules[1].base = 0x43567;
+
+  NotifyModules second;
+  ASSERT_TRUE(SerializeDeserializeNotification(
+      initial, &second, &WriteNotifyModules, &ReadNotifyModules));
+
+  EXPECT_EQ(initial.process_koid, second.process_koid);
+  ASSERT_EQ(initial.modules.size(), second.modules.size());
+  EXPECT_EQ(initial.modules[0].name, second.modules[0].name);
+  EXPECT_EQ(initial.modules[0].base, second.modules[0].base);
+  EXPECT_EQ(initial.modules[1].name, second.modules[1].name);
+  EXPECT_EQ(initial.modules[1].base, second.modules[1].base);
+}
+
 }  // namespace debug_ipc

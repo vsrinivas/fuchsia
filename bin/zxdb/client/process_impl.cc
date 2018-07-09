@@ -168,8 +168,8 @@ void ProcessImpl::OnThreadExiting(const debug_ipc::ThreadRecord& record) {
   threads_.erase(found);
 }
 
-void ProcessImpl::NotifyModuleLoaded(const debug_ipc::Module& module) {
-  symbols_.AddModule(module, std::function<void(const std::string&)>());
+void ProcessImpl::OnModules(const std::vector<debug_ipc::Module>& modules) {
+  symbols_.SetModules(modules);
 }
 
 void ProcessImpl::UpdateThreads(
