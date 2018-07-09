@@ -75,6 +75,29 @@ The current list of reviewers is as follows:
 
 This list includes all of the unstable features currently used in Fuchsia.
 
+* Rust 2018 Edition
+    * Summary: The Rust 2018 edition is the upcoming release of Rust that makes several breaking
+      changes while still allowing interop with non-Rust 2018 crates. The main source of
+      breakages are (1) changes to the module system and (2) the addition of new keywords.
+      For more details on how editions work, see [the edition guide].
+    * Use in Fuchsia: An “edition” key has been added to the rustc_xxx set of GN templates.
+      All Rust targets will gradually move towards the use of `edition = “2018”` to prepare
+      for the upcoming release and allow for early use of the async/await feature. `async`
+      blocks and closures are only allowed in Rust 2018 because `async` was not a keyword in
+      Rust 2015.
+    * Remaining before stabilization: There’s some ongoing discussion around final non-breaking
+      tweaks to the new module system and perhaps some in-band-lifetimes lints against single-letter
+      lifetimes in impl body headers, but overall the edition is shaping up fast and is set to
+      ship later this year.
+      For more details, see [Rust 2018: an early preview] and [Rust 2018: the home stretch].
+      There are no major breaking changes expected before stabilization, and shipping the 2018
+      edition is a primary goal for this year, so the risk of never stabilizing is extremely low.
+    * Owner: cramertj@
+
+[the edition guide]: https://rust-lang-nursery.github.io/edition-guide/editions/index.html
+[Rust 2018: an early preview]: https://internals.rust-lang.org/t/rust-2018-an-early-preview/7776
+[Rust 2018: the home stretch]: https://internals.rust-lang.org/t/rust-2018-the-home-stretch/7810
+
 [buildtools]: https://fuchsia.googlesource.com/buildtools/+/master/fuchsia.ensure#46
 [rust builder]: https://ci.chromium.org/p/fuchsia/g/rust/console
 [third_party/rust]: https://fuchsia.googlesource.com/third_party/rust/
