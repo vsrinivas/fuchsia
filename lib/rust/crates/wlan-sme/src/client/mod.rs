@@ -6,6 +6,9 @@ mod bss;
 mod scan;
 mod state;
 
+#[cfg(test)]
+mod test_utils;
+
 use fidl_mlme::{MlmeEvent, ScanRequest};
 use self::scan::{DiscoveryScan, JoinScan, JoinScanFailure, ScanResult, ScanScheduler};
 use self::state::{ConnectCommand, State};
@@ -150,8 +153,12 @@ impl<T: Tokens> ClientSme<T> {
 impl<T: Tokens> super::Station for ClientSme<T> {
     fn on_mlme_event(&mut self, event: MlmeEvent) {
         self.state = self.state.take().map(|state| match event {
-            MlmeEvent::ScanConf{ resp } => {
-                let (result, request) = self.scan_sched.on_mlme_scan_confirm(resp);
+            MlmeEvent::OnScanResult { result } => {
+                self.scan_sched.on_mlme_scan_result(result);
+                state
+            },
+            MlmeEvent::OnScanEnd { end } => {
+                let (result, request) = self.scan_sched.on_mlme_scan_end(end);
                 self.send_scan_request(request);
                 match result {
                     ScanResult::None => state,
@@ -189,6 +196,7 @@ impl<T: Tokens> super::Station for ClientSme<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::test_utils::fake_bss_description;
     use fidl_mlme;
     use std::collections::HashSet;
     use Station;
@@ -212,10 +220,16 @@ mod tests {
 
         // Push a fake scan result into SME. We should still be connecting to "foo",
         // but the status should now come from the state machine and not from the scanner.
-        sme.on_mlme_event(MlmeEvent::ScanConf {
-            resp: fidl_mlme::ScanConfirm {
-                bss_description_set: vec![fake_bss_description(b"foo".to_vec())],
-                result_code: fidl_mlme::ScanResultCodes::Success,
+        sme.on_mlme_event(MlmeEvent::OnScanResult {
+            result: fidl_mlme::ScanResult {
+                txn_id: 1,
+                bss: fake_bss_description(b"foo".to_vec()),
+            }
+        });
+        sme.on_mlme_event(MlmeEvent::OnScanEnd {
+            end: fidl_mlme::ScanEnd {
+                txn_id: 1,
+                code: fidl_mlme::ScanResultCodes::Success,
             }
         });
         assert_eq!(Some(b"foo".to_vec()),
@@ -250,22 +264,5 @@ mod tests {
             supported_channels: HashSet::new(),
             addr: CLIENT_ADDR,
         })
-    }
-
-    fn fake_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
-        fidl_mlme::BssDescription {
-            bssid: [0, 0, 0, 0, 0, 0],
-            ssid: String::from_utf8_lossy(&ssid).to_string(),
-            bss_type: fidl_mlme::BssTypes::Infrastructure,
-            beacon_period: 100,
-            dtim_period: 100,
-            timestamp: 0,
-            local_time: 0,
-            rsn: None,
-            chan: fidl_mlme::WlanChan { primary: 1, secondary80: 0, cbw: fidl_mlme::Cbw::Cbw20 },
-            rssi_dbm: -30,
-            rcpi_dbmh: -60,
-            rsni_dbh: 20
-        }
     }
 }

@@ -245,6 +245,7 @@ fn send_scan_results(token: fidl_sme::ScanTransactionControlHandle,
             token.send_on_error(&mut fidl_sme::ScanError {
                 code: match &e {
                     DiscoveryError::NotSupported => fidl_sme::ScanErrorCode::NotSupported,
+                    DiscoveryError::InternalError => fidl_sme::ScanErrorCode::InternalError,
                 },
                 message: e.to_string()
             })?;

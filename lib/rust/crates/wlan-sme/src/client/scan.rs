@@ -40,14 +40,23 @@ pub struct ScanScheduler<D, J> {
     pending_join: Option<JoinScan<J>>,
     // A queue of pending discovery requests from the user
     pending_discovery: VecDeque<DiscoveryScan<D>>,
-    device_info: Arc<DeviceInfo>
+    device_info: Arc<DeviceInfo>,
+    last_mlme_txn_id: u64,
 }
 
 #[derive(Debug, PartialEq)]
 enum ScanState<D, J> {
     NotScanning,
-    ScanningToJoin(JoinScan<J>),
-    ScanningToDiscover(DiscoveryScan<D>),
+    ScanningToJoin {
+        cmd: JoinScan<J>,
+        mlme_txn_id: u64,
+        best_bss: Option<BssDescription>
+    },
+    ScanningToDiscover {
+        cmd: DiscoveryScan<D>,
+        mlme_txn_id: u64,
+        bss_list: Vec<BssDescription>
+    },
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -91,6 +100,8 @@ pub type DiscoveryResult = Result<Vec<EssInfo>, DiscoveryError>;
 pub enum DiscoveryError {
     #[fail(display = "Scanning not supported by device")]
     NotSupported,
+    #[fail(display = "Internal error occurred")]
+    InternalError,
 }
 
 impl<D, J> ScanScheduler<D, J> {
@@ -100,6 +111,7 @@ impl<D, J> ScanScheduler<D, J> {
             pending_join: None,
             pending_discovery: VecDeque::new(),
             device_info,
+            last_mlme_txn_id: 0,
         }
     }
 
@@ -127,50 +139,72 @@ impl<D, J> ScanScheduler<D, J> {
         self.start_next_scan()
     }
 
-    // Should be called for every ScanConfirm message received from MLME.
+    // Should be called for every OnScanResult event received from MLME.
+    pub fn on_mlme_scan_result(&mut self, msg: fidl_mlme::ScanResult) {
+        if !self.matching_mlme_txn_id(msg.txn_id) {
+            return;
+        }
+        match &mut self.current {
+            ScanState::NotScanning => {},
+            ScanState::ScanningToJoin { cmd, best_bss, .. } => {
+                if cmd.ssid == msg.bss.ssid.as_bytes() {
+                    match best_bss {
+                        Some(best_bss) if
+                            compare_bss(best_bss, &msg.bss) != Ordering::Less => {},
+                        other => *other = Some(msg.bss),
+                    }
+                }
+            },
+            ScanState::ScanningToDiscover { bss_list, .. } => {
+                bss_list.push(msg.bss)
+            }
+        }
+    }
+
+    // Should be called for every OnScanEnd event received from MLME.
     // The caller is expected to take action based on the returned ScanResult.
     // If a ScanRequest is returned, the caller is responsible for forwarding it to MLME.
-    pub fn on_mlme_scan_confirm(&mut self, msg: fidl_mlme::ScanConfirm)
+    pub fn on_mlme_scan_end(&mut self, msg: fidl_mlme::ScanEnd)
         -> (ScanResult<D, J>, Option<ScanRequest>)
     {
+        if !self.matching_mlme_txn_id(msg.txn_id) {
+            return (ScanResult::None, None);
+        }
         let old_state = mem::replace(&mut self.current, ScanState::NotScanning);
         let result = match old_state {
-            ScanState::NotScanning => {
-                eprintln!("Unexpected ScanConfirm message from MLME");
-                ScanResult::None
-            },
-            ScanState::ScanningToJoin(join_scan) => {
+            ScanState::NotScanning => ScanResult::None,
+            ScanState::ScanningToJoin{ cmd, best_bss, .. } => {
                 if self.pending_join.is_some() {
                     // The scan that just finished was superseded by a newer join scan request
                     ScanResult::CannotJoin {
-                        token: join_scan.token,
+                        token: cmd.token,
                         reason: JoinScanFailure::Canceled,
                     }
                 } else {
-                    match msg.result_code {
+                    match msg.code {
                         ScanResultCodes::Success => {
-                            match best_bss_to_join(msg.bss_description_set, &join_scan.ssid) {
-                                None => ScanResult::CannotJoin{
-                                    token: join_scan.token,
+                            match best_bss {
+                                None => ScanResult::CannotJoin {
+                                    token: cmd.token,
                                     reason: JoinScanFailure::NoMatchingBssFound,
                                 },
                                 Some(bss) => ScanResult::ReadyToJoin {
-                                    token: join_scan.token,
+                                    token: cmd.token,
                                     best_bss: bss,
                                 },
                             }
                         },
                         other => ScanResult::CannotJoin {
-                            token: join_scan.token,
+                            token: cmd.token,
                             reason: JoinScanFailure::ScanFailed(other),
                         }
                     }
                 }
             },
-            ScanState::ScanningToDiscover(discover_scan) => {
+            ScanState::ScanningToDiscover{ cmd, bss_list, .. } => {
                 ScanResult::DiscoveryFinished {
-                    token: discover_scan.token,
-                    result: convert_discovery_result(msg),
+                    token: cmd.token,
+                    result: convert_discovery_result(msg, bss_list),
                 }
             }
         };
@@ -182,10 +216,19 @@ impl<D, J> ScanScheduler<D, J> {
     pub fn get_join_scan(&self) -> Option<&JoinScan<J>> {
         if let &Some(ref s) = &self.pending_join {
             Some(s)
-        } else if let &ScanState::ScanningToJoin(ref s) = &self.current {
-            Some(s)
+        } else if let &ScanState::ScanningToJoin{ ref cmd, .. } = &self.current {
+            Some(cmd)
         } else {
             None
+        }
+    }
+
+    fn matching_mlme_txn_id(&self, incoming_txn_id: u64) -> bool {
+        match &self.current {
+            ScanState::NotScanning => false,
+            ScanState::ScanningToJoin { mlme_txn_id, .. }
+                | ScanState::ScanningToDiscover { mlme_txn_id, .. }
+                => *mlme_txn_id == incoming_txn_id
         }
     }
 
@@ -193,12 +236,24 @@ impl<D, J> ScanScheduler<D, J> {
         match &self.current {
             &ScanState::NotScanning => {
                 if let Some(join_scan) = self.pending_join.take() {
-                    let request = new_join_scan_request(&join_scan, &self.device_info);
-                    self.current = ScanState::ScanningToJoin(join_scan);
+                    self.last_mlme_txn_id += 1;
+                    let request = new_join_scan_request(
+                        self.last_mlme_txn_id, &join_scan, &self.device_info);
+                    self.current = ScanState::ScanningToJoin {
+                        cmd: join_scan,
+                        mlme_txn_id: self.last_mlme_txn_id,
+                        best_bss: None,
+                    };
                     Some(request)
                 } else if let Some(discovery_scan) = self.pending_discovery.pop_front() {
-                    let request = new_discovery_scan_request(&discovery_scan, &self.device_info);
-                    self.current = ScanState::ScanningToDiscover(discovery_scan);
+                    self.last_mlme_txn_id += 1;
+                    let request = new_discovery_scan_request(
+                        self.last_mlme_txn_id, &discovery_scan, &self.device_info);
+                    self.current = ScanState::ScanningToDiscover{
+                        cmd: discovery_scan,
+                        mlme_txn_id: self.last_mlme_txn_id,
+                        bss_list: Vec::new(),
+                    };
                     Some(request)
                 } else {
                     None
@@ -212,10 +267,11 @@ impl<D, J> ScanScheduler<D, J> {
 
 const WILDCARD_BSS_ID: [u8; 6] = [ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff ];
 
-fn new_join_scan_request<T>(join_scan: &JoinScan<T>,
+fn new_join_scan_request<T>(mlme_txn_id: u64,
+                            join_scan: &JoinScan<T>,
                             device_info: &DeviceInfo) -> ScanRequest {
     ScanRequest {
-        txn_id: 0,
+        txn_id: mlme_txn_id,
         bss_type: fidl_mlme::BssTypes::Infrastructure,
         bssid: WILDCARD_BSS_ID.clone(),
         // TODO(gbonik): change MLME interface to use bytes instead of string for SSID
@@ -229,10 +285,11 @@ fn new_join_scan_request<T>(join_scan: &JoinScan<T>,
     }
 }
 
-fn new_discovery_scan_request<T>(_discovery_scan: &DiscoveryScan<T>,
+fn new_discovery_scan_request<T>(mlme_txn_id: u64,
+                                 _discovery_scan: &DiscoveryScan<T>,
                                  device_info: &DeviceInfo) -> ScanRequest {
     ScanRequest {
-        txn_id: 0,
+        txn_id: mlme_txn_id,
         bss_type: fidl_mlme::BssTypes::Infrastructure,
         bssid: WILDCARD_BSS_ID.clone(),
         ssid: String::new(),
@@ -245,12 +302,16 @@ fn new_discovery_scan_request<T>(_discovery_scan: &DiscoveryScan<T>,
     }
 }
 
-fn convert_discovery_result(msg: fidl_mlme::ScanConfirm) -> DiscoveryResult {
-    match msg.result_code {
-        ScanResultCodes::Success => Ok(group_networks(msg.bss_description_set)),
-        // TODO(gbonik): actually convert the errors
-        // This is to keep the change smaller
-        _ => Err(DiscoveryError::NotSupported)
+fn convert_discovery_result(msg: fidl_mlme::ScanEnd,
+                            bss_list: Vec<BssDescription>) -> DiscoveryResult {
+    match msg.code {
+        ScanResultCodes::Success => Ok(group_networks(bss_list)),
+        ScanResultCodes::NotSupported => Err(DiscoveryError::NotSupported),
+        ScanResultCodes::InvalidArgs => {
+            eprintln!("Scan returned INVALID_ARGS");
+            Err(DiscoveryError::InternalError)
+        },
+        ScanResultCodes::InternalError => Err(DiscoveryError::InternalError),
     }
 }
 
@@ -270,12 +331,6 @@ fn group_networks(bss_set: Vec<BssDescription>) -> Vec<EssInfo> {
                 best_bss: convert_bss_description(&bss)
             })
         .collect()
-}
-
-fn best_bss_to_join(bss_set: Vec<BssDescription>, ssid: &[u8]) -> Option<BssDescription> {
-    bss_set.into_iter()
-        .filter(|bss_desc| bss_desc.ssid.as_bytes() == ssid)
-        .max_by(compare_bss)
 }
 
 fn get_channels_to_scan(device_info: &DeviceInfo) -> Vec<u8> {
@@ -303,8 +358,100 @@ mod tests {
     use super::*;
 
     use std::collections::HashSet;
+    use client::test_utils::fake_bss_description;
 
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
+
+    #[test]
+    fn discovery_scan() {
+        let mut sched = create_sched();
+        let req = sched.enqueue_scan_to_discover(DiscoveryScan { token: 10 })
+            .expect("expected a ScanRequest");
+        let txn_id = req.txn_id;
+        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
+            txn_id,
+            bss: fake_bss_description(b"foo".to_vec()),
+        });
+        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
+            txn_id: txn_id + 100, // mismatching transaction id
+            bss: fake_bss_description(b"bar".to_vec()),
+        });
+        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
+            txn_id,
+            bss: fake_bss_description(b"qux".to_vec()),
+        });
+        let (result, req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
+            txn_id,
+            code: fidl_mlme::ScanResultCodes::Success,
+        });
+        assert!(req.is_none());
+        let result = match result {
+            ScanResult::DiscoveryFinished { token, result } => {
+                assert_eq!(10, token);
+                result
+            },
+            _ => panic!("expected ScanResult::DiscoveryFinished")
+        };
+        let mut ssid_list = result.expect("expected a successful scan result")
+            .into_iter().map(|ess| ess.best_bss.ssid).collect::<Vec<_>>();
+        ssid_list.sort();
+        assert_eq!(vec![b"foo".to_vec(), b"qux".to_vec()], ssid_list);
+    }
+
+    #[test]
+    fn join_scan() {
+        let mut sched = create_sched();
+        let (discarded_token, req) = sched.enqueue_scan_to_join(
+            JoinScan { ssid: b"foo".to_vec(), token: 10 });
+        assert!(discarded_token.is_none());
+        let txn_id = req.expect("expected a ScanRequest").txn_id;
+
+        // Matching BSS with poor signal quality
+        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
+            txn_id,
+            bss: fake_bss_rcpi(b"foo".to_vec(), [1, 1, 1, 1, 1, 1], -100),
+        });
+
+        // Great signal quality but mismatching transaction ID
+        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
+            txn_id: txn_id + 100,
+            bss: fake_bss_rcpi(b"foo".to_vec(), [2, 2, 2, 2, 2, 2], -10),
+        });
+
+        // Great signal quality but mismatching SSID
+        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
+            txn_id,
+            bss: fake_bss_rcpi(b"bar".to_vec(), [3, 3, 3, 3, 3, 3], -10),
+        });
+
+        // Matching BSS with good signal quality
+        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
+            txn_id,
+            bss: fake_bss_rcpi(b"foo".to_vec(), [4, 4, 4, 4, 4, 4], -30),
+        });
+
+        // Matching BSS with decent signal quality
+        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
+            txn_id,
+            bss: fake_bss_rcpi(b"foo".to_vec(), [5, 5, 5, 5, 5, 5], -50),
+        });
+
+        let (result, req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
+            txn_id,
+            code: fidl_mlme::ScanResultCodes::Success,
+        });
+        assert!(req.is_none());
+        let best_bss = match result {
+            ScanResult::ReadyToJoin { token, best_bss } => {
+                assert_eq!(10, token);
+                best_bss
+            },
+            _ => panic!("expected ScanResult::ReadyToJoin")
+        };
+
+        // Expect the matching bss with best signal quality to be picked
+        assert_eq!(fake_bss_rcpi(b"foo".to_vec(), [4, 4, 4, 4, 4, 4], -30), best_bss);
+    }
 
     #[test]
     fn get_join_scan() {
@@ -314,8 +461,11 @@ mod tests {
         sched.enqueue_scan_to_join(JoinScan { ssid: b"foo".to_vec(), token: 10 });
         // Make sure the scanner is in the state we expect it to be: the request is
         // 'current', not 'pending'
-        assert_eq!(ScanState::ScanningToJoin(JoinScan{ ssid: b"foo".to_vec(), token: 10 }),
-                   sched.current);
+        assert_eq!(ScanState::ScanningToJoin{
+            cmd: JoinScan{ ssid: b"foo".to_vec(), token: 10 },
+            mlme_txn_id: 1,
+            best_bss: None,
+        }, sched.current);
         assert_eq!(None, sched.pending_join);
 
         assert_eq!(Some(&JoinScan{ ssid: b"foo".to_vec(), token: 10 }),
@@ -324,8 +474,11 @@ mod tests {
         sched.enqueue_scan_to_join(JoinScan { ssid: b"bar".to_vec(), token: 20 });
         // Again, make sure the state is what we expect. "Foo" should still be the current request,
         // while "bar" should be pending
-        assert_eq!(ScanState::ScanningToJoin(JoinScan{ ssid: b"foo".to_vec(), token: 10 }),
-                   sched.current);
+        assert_eq!(ScanState::ScanningToJoin{
+            cmd: JoinScan{ ssid: b"foo".to_vec(), token: 10 },
+            mlme_txn_id: 1,
+            best_bss: None,
+        }, sched.current);
         assert_eq!(Some(JoinScan{ ssid: b"bar".to_vec(), token: 20 }),
                    sched.pending_join);
 
@@ -333,6 +486,14 @@ mod tests {
         // once the scan finishes
         assert_eq!(Some(&JoinScan{ ssid: b"bar".to_vec(), token: 20 }),
                    sched.get_join_scan());
+    }
+
+    fn fake_bss_rcpi(ssid: Ssid, bssid: [u8; 6], rcpi_dbmh: i16) -> BssDescription {
+        BssDescription {
+            bssid,
+            rcpi_dbmh,
+            .. fake_bss_description(ssid)
+        }
     }
 
     fn create_sched() -> ScanScheduler<i32, i32> {

@@ -19,6 +19,7 @@ struct EssInfo {
 
 enum ScanErrorCode {
     NOT_SUPPORTED = 1;
+    INTERNAL_ERROR = 2;
 };
 
 struct ScanError {

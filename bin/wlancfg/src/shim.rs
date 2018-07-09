@@ -159,8 +159,8 @@ fn start_scan_txn(client: &Client, legacy_req: legacy::ScanRequest)
 fn convert_scan_err(error: fidl_sme::ScanError) -> legacy::Error {
     legacy::Error {
         code: match error.code {
-            fidl_sme::ScanErrorCode::NotSupported
-            => legacy::ErrCode::NotSupported
+            fidl_sme::ScanErrorCode::NotSupported => legacy::ErrCode::NotSupported,
+            fidl_sme::ScanErrorCode::InternalError => legacy::ErrCode::Internal,
         },
         description: error.message
     }
