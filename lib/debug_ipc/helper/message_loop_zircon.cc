@@ -193,6 +193,11 @@ MessageLoop::WatchHandle MessageLoopZircon::WatchProcessExceptions(
   return WatchHandle(this, watch_id);
 }
 
+zx_status_t MessageLoopZircon::ResumeFromException(zx_handle_t thread_handle,
+                                                   uint32_t options) {
+  return zx_task_resume_from_exception(thread_handle, port_.get(), options);
+}
+
 void MessageLoopZircon::RunImpl() {
   // Init should have been called.
   FXL_DCHECK(Current() == this);

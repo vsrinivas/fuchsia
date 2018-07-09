@@ -43,6 +43,11 @@ class MessageLoopZircon : public MessageLoop {
                                      zx_koid_t process_koid,
                                      ZirconExceptionWatcher* watcher);
 
+  // When this class issues an exception notification, the code should call
+  // this function to resume the thread from the exception. This is a wrapper
+  // for zx_task_resume_from_exception.
+  zx_status_t ResumeFromException(zx_handle_t thread_handle, uint32_t options);
+
  private:
   enum class WatchType { kFdio, kProcessExceptions, kSocket };
   struct WatchInfo;

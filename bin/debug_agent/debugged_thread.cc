@@ -16,6 +16,7 @@
 #include "garnet/bin/debug_agent/process_info.h"
 #include "garnet/bin/debug_agent/unwind.h"
 #include "garnet/lib/debug_ipc/agent_protocol.h"
+#include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/message_writer.h"
@@ -123,7 +124,7 @@ void DebuggedThread::OnException(uint32_t type) {
 
 void DebuggedThread::Pause() {
   if (suspend_reason_ == SuspendReason::kNone) {
-    if (thread_.suspend() == ZX_OK)
+    if (thread_.suspend(&suspend_token_) == ZX_OK)
       suspend_reason_ = SuspendReason::kOther;
   }
 }
@@ -262,7 +263,9 @@ void DebuggedThread::ResumeForRunMode() {
       SetSingleStep(run_mode_ != debug_ipc::ResumeRequest::How::kContinue);
     }
     suspend_reason_ = SuspendReason::kNone;
-    thread_.resume(ZX_RESUME_EXCEPTION);
+    FXL_DCHECK(!suspend_token_.is_valid());  // Should not exist.
+    debug_ipc::MessageLoopZircon::Current()->ResumeFromException(thread_.get(),
+                                                                 0);
   } else if (suspend_reason_ == SuspendReason::kOther) {
     // A breakpoint should only be current when it was hit which will be
     // caused by an exception.
@@ -270,8 +273,12 @@ void DebuggedThread::ResumeForRunMode() {
 
     // All non-continue resumptions require single stepping.
     SetSingleStep(run_mode_ != debug_ipc::ResumeRequest::How::kContinue);
+
+    // The suspend token is holding the thread suspended, releasing it will
+    // resume (if nobody else has the thread suspended).
     suspend_reason_ = SuspendReason::kNone;
-    thread_.resume(0);
+    FXL_DCHECK(suspend_token_.is_valid());
+    suspend_token_.reset();
   }
 }
 
