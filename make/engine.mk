@@ -190,9 +190,9 @@ KERNEL_ASMFLAGS :=
 KERNEL_LDFLAGS :=
 
 # Build flags for modules that want frame pointers.
-# crashlogger, ngunwind, backtrace use this so that the simplisitic unwinder
-# will work with them. These are recorded here so that modules don't need
-# knowledge of the details. They just need to do:
+# ngunwind, backtrace use this so that the simplisitic unwinder will work with
+# them. These are recorded here so that modules don't need knowledge of the
+# details. They just need to do:
 # MODULE_COMPILEFLAGS += $(KEEP_FRAME_POINTER_COMPILEFLAGS)
 KEEP_FRAME_POINTER_COMPILEFLAGS := -fno-omit-frame-pointer
 

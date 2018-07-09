@@ -31,9 +31,6 @@
 #include "devmgr.h"
 #include "memfs-private.h"
 
-// Set this to switch back to the old crashlogger exception behavior
-// #define ENABLE_CRASHLOGGER 1
-
 // Global flag tracking if devmgr believes this is a full Fuchsia build
 // (requiring /system, etc) or not.
 bool require_system;
@@ -270,43 +267,6 @@ int service_starter(void* arg) {
         // It has its own check.
     }
 
-#ifdef ENABLE_CRASHLOGGER
-    // Start crashlogger.
-    if (!getenv_bool("crashlogger.disable", false)) {
-        static const char* argv_crashlogger[] = {
-            "/boot/bin/crashlogger",
-            NULL, // room for -pton
-        };
-        const char* crashlogger_pt = getenv("crashlogger.pt");
-        int argc_crashlogger = 1;
-        if (crashlogger_pt && strcmp(crashlogger_pt, "true") == 0) {
-            // /dev/misc/intel-pt may not be available yet, so we can't
-            // actually turn on PT here. Just tell crashlogger to dump the
-            // trace buffers if they're available.
-            argv_crashlogger[argc_crashlogger++] = "-pton";
-        }
-
-        // Bind the exception port now, to avoid missing any crashes that
-        // might occur early on before the crashlogger process has finished
-        // initializing.
-        zx_handle_t exception_port;
-        // This should match the value used by crashlogger.
-        const uint64_t kSysExceptionKey = 1166444u;
-        if (zx_port_create(0, &exception_port) == ZX_OK &&
-            zx_task_bind_exception_port(root_job_handle, exception_port,
-                                        kSysExceptionKey, 0) == ZX_OK) {
-            zx_handle_t handles[] = {ZX_HANDLE_INVALID, exception_port};
-            zx_handle_duplicate(root_job_handle, ZX_RIGHT_SAME_RIGHTS, &handles[0]);
-            uint32_t handle_types[] = {PA_HND(PA_USER0, 0), PA_HND(PA_USER0, 1)};
-
-            devmgr_launch(svcs_job_handle, "crashlogger",
-                          &devmgr_launch_load, NULL,
-                          argc_crashlogger, argv_crashlogger,
-                          NULL, -1, handles, handle_types,
-                          countof(handles), NULL, 0);
-        }
-    }
-#else
     // Start crashsvc. Bind the exception port now, to avoid missing any crashes
     // that might occur early on before crashsvc has finished initializing.
     // crashsvc writes messages to the passed channel when an analyzer for an
@@ -329,7 +289,6 @@ int service_starter(void* arg) {
                       countof(argv_crashsvc), argv_crashsvc, NULL, -1,
                       handles, handle_types, countof(handles), NULL, 0);
     }
-#endif
 
     char vcmd[64];
     __UNUSED bool netboot = false;
