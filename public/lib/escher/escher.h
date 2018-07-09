@@ -52,6 +52,9 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   // FXL_LOG().
   FramePtr NewFrame(const char* trace_literal, uint64_t frame_number,
                     bool enable_gpu_logging = false);
+  // Return the number of frames that have been returned by NewFrame() and which
+  // have not finished rendering (after having EndFrame() invoked upon them).
+  uint32_t GetNumOutstandingFrames() const;
 
   // Construct a new Texture, which encapsulates a newly-created VkImageView and
   // VkSampler.  |aspect_mask| is used to create the VkImageView, and |filter|
@@ -177,6 +180,7 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
 
   std::unique_ptr<impl::RenderPassCache> render_pass_cache_;
   std::unique_ptr<impl::FramebufferAllocator> framebuffer_allocator_;
+  std::unique_ptr<impl::FrameManager> frame_manager_;
 
   HashMap<Hash, std::unique_ptr<impl::DescriptorSetAllocator>>
       descriptor_set_allocators_;

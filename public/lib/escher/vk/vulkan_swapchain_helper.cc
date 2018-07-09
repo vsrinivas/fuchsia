@@ -5,9 +5,6 @@
 #include "lib/escher/vk/vulkan_swapchain_helper.h"
 
 #include "lib/escher/impl/vulkan_utils.h"
-#include "lib/escher/renderer/paper_renderer.h"
-#include "lib/escher/scene/camera.h"
-#include "lib/escher/scene/stage.h"
 #include "lib/escher/util/trace_macros.h"
 #include "lib/escher/vk/framebuffer.h"
 
@@ -23,21 +20,6 @@ VulkanSwapchainHelper::VulkanSwapchainHelper(VulkanSwapchain swapchain,
 }
 
 VulkanSwapchainHelper::~VulkanSwapchainHelper() {}
-
-void VulkanSwapchainHelper::DrawFrame(const FramePtr& frame,
-                                      PaperRenderer* renderer,
-                                      const Stage& stage, const Model& model,
-                                      const Camera& camera,
-                                      const ShadowMapPtr& shadow_map,
-                                      const Model* overlay_model) {
-  FXL_DCHECK(renderer);
-  DrawFrame([&](const ImagePtr& color_image_out,
-                const SemaphorePtr& render_finished_semaphore) {
-    renderer->DrawFrame(frame, stage, model, camera, color_image_out,
-                        shadow_map, overlay_model);
-    frame->EndFrame(render_finished_semaphore, nullptr);
-  });
-}
 
 void VulkanSwapchainHelper::DrawFrame(DrawFrameCallback draw_callback) {
   auto& image_available_semaphore =

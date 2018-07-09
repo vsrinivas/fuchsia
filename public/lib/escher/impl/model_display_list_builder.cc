@@ -399,6 +399,11 @@ ModelDisplayListPtr ModelDisplayListBuilder::Build(
 
     // The display list still needs to retain the buffer, and since it no
     // longer needs special treatment, add it in with the other resources.
+    //
+    // NOTE: see comment in ModelData constructor... at some point there will
+    // probably be an Escher-wide UniformBufferPool that will use a per-Frame
+    // resource management strategy.  ModelDisplayListBuilder will not be around
+    // for long enough to make updating it worthwhile.
     resources_.push_back(std::move(uniform_buffer));
   }
   uniform_buffers_.clear();

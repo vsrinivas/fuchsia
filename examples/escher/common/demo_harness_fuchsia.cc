@@ -72,10 +72,7 @@ void DemoHarnessFuchsia::RenderFrameOrQuit() {
     loop_->Quit();
     device().waitIdle();
   } else {
-    {
-      TRACE_DURATION("gfx", "escher::DemoHarness::DrawFrame");
-      demo_->DrawFrame();
-    }
+    demo_->MaybeDrawFrame();
     async::PostDelayedTask(loop_->async(),
                            [this] { this->RenderFrameOrQuit(); }, zx::msec(1));
   }

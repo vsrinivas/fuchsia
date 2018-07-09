@@ -18,7 +18,6 @@
 #include "lib/escher/fs/hack_filesystem.h"
 #include "lib/escher/scene/stage.h"
 #include "lib/escher/util/stopwatch.h"
-#include "lib/escher/vk/vulkan_swapchain_helper.h"
 #include "lib/fxl/logging.h"
 
 class WaterfallDemo : public Demo {
@@ -38,7 +37,8 @@ class WaterfallDemo : public Demo {
 
   bool HandleKeyPress(std::string key) override;
 
-  void DrawFrame() override;
+  void DrawFrame(const escher::FramePtr& frame,
+                 const escher::ImagePtr& output_image) override;
 
  private:
   void ProcessCommandLineArgs(int argc, char** argv);
@@ -47,7 +47,6 @@ class WaterfallDemo : public Demo {
   void InitializeDemoScene();
 
   WaterfallRendererPtr renderer_;
-  escher::VulkanSwapchainHelper swapchain_helper_;
 
   escher::Stage stage_;
 
@@ -58,10 +57,6 @@ class WaterfallDemo : public Demo {
   escher::Stopwatch stopwatch_;
   uint64_t frame_count_ = 0;
   uint64_t first_frame_microseconds_;
-
-  // Profile a single frame; print out timestamps about how long each part of
-  // the frame took.
-  bool profile_one_frame_ = false;
 
   // Toggle debug overlays.
   bool show_debug_info_ = false;

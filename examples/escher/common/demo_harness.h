@@ -59,6 +59,10 @@ class DemoHarness {
   // Create via DemoHarness::New().
   DemoHarness(WindowParams window_params);
 
+  // Draw a frame, unless too many unfinished frames are in flight.  Return
+  // true if a frame was drawn and false otherwise.
+  bool DrawFrame();
+
   // Subclasses are responsible for setting this when they start running a Demo,
   // and setting it back to nullptr when they finish running the Demo.
   Demo* demo_ = nullptr;

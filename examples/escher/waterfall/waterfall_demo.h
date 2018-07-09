@@ -43,7 +43,8 @@ class WaterfallDemo : public Demo {
 
   bool HandleKeyPress(std::string key) override;
 
-  void DrawFrame() override;
+  void DrawFrame(const escher::FramePtr& frame,
+                 const escher::ImagePtr& output_image) override;
 
  private:
   void ProcessCommandLineArgs(int argc, char** argv);
@@ -61,11 +62,6 @@ class WaterfallDemo : public Demo {
   // True if SSDO should be accelerated by generating a lookup table each frame.
   bool enable_ssdo_acceleration_ = true;
   bool stop_time_ = false;
-  // Profile a single frame; print out timestamps about how long each part of
-  // the frame took.
-  bool profile_one_frame_ = false;
-  // Run an offscreen benchmark.
-  bool run_offscreen_benchmark_ = false;
   // True if the direction of the light source is animating.
   bool animate_light_ = true;
 
@@ -79,12 +75,10 @@ class WaterfallDemo : public Demo {
   escher::PaperRendererPtr renderer_;
   escher::ShadowMapRendererPtr shadow_renderer_;
   escher::ShadowMapRendererPtr moment_shadow_renderer_;
-  escher::VulkanSwapchainHelper swapchain_helper_;
   escher::Stage stage_;
   double light_azimuth_radians_ = 0.f;
 
   escher::Stopwatch stopwatch_;
-  uint64_t frame_count_ = 0;
   uint64_t first_frame_microseconds_;
 };
 

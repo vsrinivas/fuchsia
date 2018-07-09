@@ -84,6 +84,7 @@ class CommandBuffer;
 class CommandBufferPool;
 class CommandBufferSequencer;
 class ComputeShader;
+class FrameManager;
 class GlslToSpirvCompiler;
 class GpuUploader;
 class ImageCache;

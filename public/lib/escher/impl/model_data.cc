@@ -20,7 +20,18 @@ constexpr uint32_t kInitialPerObjectDescriptorSetCount = 200;
 
 ModelData::ModelData(EscherWeakPtr escher, GpuAllocator* allocator)
     : device_(escher->vulkan_context().device),
-      uniform_buffer_pool_(escher, allocator),
+      // This is a 1-deep pool because it was this way before UniformBufferPool
+      // started to defer making buffers available for a number of frames.  The
+      // reason why this works (i.e. why the data in the buffer doesn't get
+      // stomped by the next frame while it is still being rendered) is because
+      // ModelDisplayListBuilder adds all resources to the ModelDisplayList,
+      // so they aren't returned to the pool until the frame is finished
+      // rendering.
+      //
+      // Furthermore, if this is deeper that 1, the buffers would never be
+      // recycled because nobody calls BeginFrame() on this pool.  In the future
+      // we'll likely move to an Escher-wide UniformBufferPool.
+      uniform_buffer_pool_(escher, 1, allocator),
       per_model_descriptor_set_pool_(escher,
                                      GetPerModelDescriptorSetLayoutCreateInfo(),
                                      kInitialPerModelDescriptorSetCount),

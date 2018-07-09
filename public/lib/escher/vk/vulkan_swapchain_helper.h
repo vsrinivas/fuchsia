@@ -10,8 +10,6 @@
 
 namespace escher {
 
-class PaperRenderer;
-
 class VulkanSwapchainHelper {
  public:
   using DrawFrameCallback = std::function<void(
@@ -22,18 +20,7 @@ class VulkanSwapchainHelper {
   ~VulkanSwapchainHelper();
 
   // Obtains an output image from the swapchain, draws a frame by invoking
-  // PaperRenderer::DrawFrame(), calls EndFrame(), then finally presents the
-  // image.
-  //
-  // TODO(ES-27): Callers should use the generic variant of DrawFrame() instead
-  // of this PaperRenderer-specific one.
-  void DrawFrame(const FramePtr& frame, PaperRenderer* renderer,
-                 const Stage& stage, const Model& model, const Camera& camera,
-                 const ShadowMapPtr& shadow_map,
-                 const Model* overlay_model = nullptr);
-
-  // Obtains an output image from the swapchain, draws a frame by invoking
-  // |callback|, then finally presents the image.
+  // |callback|, and presents the image.
   void DrawFrame(DrawFrameCallback callback);
 
   const VulkanSwapchain& swapchain() const { return swapchain_; }

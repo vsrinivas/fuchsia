@@ -16,11 +16,6 @@ namespace escher {
 
 class Renderer : public fxl::RefCountedThreadSafe<Renderer> {
  public:
-  void RunOffscreenBenchmark(
-      uint32_t framebuffer_width, uint32_t framebuffer_height,
-      vk::Format framebuffer_format, size_t frame_count,
-      std::function<void(const FramePtr&, const ImagePtr&)> draw_func);
-
   const VulkanContext& vulkan_context() { return context_; }
 
   Escher* escher() const { return escher_.get(); }

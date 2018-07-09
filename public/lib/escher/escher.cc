@@ -5,6 +5,7 @@
 #include "lib/escher/escher.h"
 #include "lib/escher/defaults/default_shader_program_factory.h"
 #include "lib/escher/impl/command_buffer_pool.h"
+#include "lib/escher/impl/frame_manager.h"
 #include "lib/escher/impl/glsl_compiler.h"
 #include "lib/escher/impl/image_cache.h"
 #include "lib/escher/impl/mesh_manager.h"
@@ -112,6 +113,8 @@ Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
       resource_recycler(), render_pass_cache_.get());
   shader_program_factory_ = std::make_unique<DefaultShaderProgramFactory>(
       GetWeakPtr(), std::move(filesystem));
+
+  frame_manager_ = std::make_unique<impl::FrameManager>(GetWeakPtr());
 
   // Query relevant Vulkan properties.
   auto device_properties = vk_physical_device().getProperties();
@@ -240,14 +243,16 @@ FramePtr Escher::NewFrame(const char* trace_literal, uint64_t frame_number,
   }
   framebuffer_allocator_->BeginFrame();
 
-  auto frame = fxl::AdoptRef<Frame>(
-      new Frame(this, frame_number, trace_literal, enable_gpu_logging));
-  frame->BeginFrame();
-  return frame;
+  return frame_manager_->NewFrame(trace_literal, frame_number,
+                                  enable_gpu_logging);
 }
 
 uint64_t Escher::GetNumGpuBytesAllocated() {
   return gpu_allocator()->total_slab_bytes();
+}
+
+uint32_t Escher::GetNumOutstandingFrames() const {
+  return frame_manager_->num_outstanding_frames();
 }
 
 impl::DescriptorSetAllocator* Escher::GetDescriptorSetAllocator(

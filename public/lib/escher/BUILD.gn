@@ -129,6 +129,8 @@ source_set("escher") {
     "impl/debug_print.cc",
     "impl/descriptor_set_pool.cc",
     "impl/descriptor_set_pool.h",
+    "impl/frame_manager.cc",
+    "impl/frame_manager.h",
     "impl/gaussian_3x3f16.cc",
     "impl/gaussian_3x3f16.h",
     "impl/glsl_compiler.cc",

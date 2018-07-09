@@ -25,6 +25,7 @@ enum class ResourceType {
   kRenderPass = 1 << 8,
   kPipelineLayout = 1 << 9,
   kShaderProgram = 1 << 10,
+  kFrame = 1 << 11,
 
   // Resources defined in escher::impl namespace.
   kImplModelPipelineCache = 1 << 27,

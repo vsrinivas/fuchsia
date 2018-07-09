@@ -36,12 +36,9 @@ ShaderProgramPtr CreateShaderProgram(Escher* escher) {
 }
 
 WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
-    : Demo(harness),
+    : Demo(harness, "Waterfall Demo"),
       renderer_(WaterfallRenderer::New(GetEscherWeakPtr(),
-                                       CreateShaderProgram(escher()))),
-      swapchain_helper_(harness->GetVulkanSwapchain(),
-                        escher()->vulkan_context().device,
-                        escher()->vulkan_context().queue) {
+                                       CreateShaderProgram(escher()))) {
   ProcessCommandLineArgs(argc, argv);
 
   InitializeEscherStage(harness->GetWindowParams());
@@ -111,7 +108,8 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
   }
 }
 
-void WaterfallDemo::DrawFrame() {
+void WaterfallDemo::DrawFrame(const FramePtr& frame,
+                              const ImagePtr& output_image) {
   TRACE_DURATION("gfx", "WaterfallDemo::DrawFrame");
 
   Camera camera = Camera::NewOrtho(stage_.viewing_volume());
@@ -120,20 +118,13 @@ void WaterfallDemo::DrawFrame() {
   const float y = 700.f + sin(static_cast<float>(frame_count_) / 80.f) * 400.f;
   Model model({Object(Transform(vec3(x, y, 20)), ring_, material_)});
 
-  auto frame =
-      escher()->NewFrame("Waterfall Demo", frame_count_, profile_one_frame_);
-
-  swapchain_helper_.DrawFrame(
-      [&](const ImagePtr& output_image, const SemaphorePtr& render_finished) {
-        renderer_->DrawFrame(frame, stage_, model, camera, output_image);
-        frame->EndFrame(render_finished, nullptr);
-      });
+  renderer_->DrawFrame(frame, stage_, model, camera, output_image);
 
   if (++frame_count_ == 1) {
     first_frame_microseconds_ = stopwatch_.GetElapsedMicroseconds();
     stopwatch_.Reset();
   } else if (frame_count_ % 200 == 0) {
-    profile_one_frame_ = true;
+    set_enable_gpu_logging(true);
 
     // Print out FPS stats.  Omit the first frame when computing the
     // average, because it is generating pipelines.
@@ -144,6 +135,6 @@ void WaterfallDemo::DrawFrame() {
     FXL_LOG(INFO) << "---- Total GPU memory: "
                   << (escher()->GetNumGpuBytesAllocated() / 1024) << "kB";
   } else {
-    profile_one_frame_ = false;
+    set_enable_gpu_logging(false);
   }
 }

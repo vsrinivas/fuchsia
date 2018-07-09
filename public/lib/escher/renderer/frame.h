@@ -13,6 +13,7 @@
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/impl/command_buffer.h"
 #include "lib/escher/profiling/timestamp_profiler.h"
+#include "lib/escher/util/block_allocator.h"
 
 namespace escher {
 
@@ -23,8 +24,11 @@ using FramePtr = fxl::RefPtr<Frame>;
 
 // Represents a single rendered frame.  Passed into a Renderer, which uses it to
 // obtain command buffers, submit partial frames, do profiling, etc.
-class Frame : public Reffable {
+class Frame : public Resource {
  public:
+  static const ResourceTypeInfo kTypeInfo;
+  const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
+
   ~Frame();
 
   // Obtain a CommandBuffer, to record commands for the current frame.
@@ -40,7 +44,6 @@ class Frame : public Reffable {
                     vk::PipelineStageFlagBits stages =
                         vk::PipelineStageFlagBits::eBottomOfPipe);
 
-  Escher* escher() const { return escher_; }
   uint64_t frame_number() const { return frame_number_; }
 
   CommandBuffer* cmds() const { return new_command_buffer_.get(); }
@@ -48,11 +51,21 @@ class Frame : public Reffable {
   vk::CommandBuffer vk_command_buffer() const { return vk_command_buffer_; }
   GpuAllocator* gpu_allocator();
 
+  template <typename T>
+  T* Allocate() {
+    return block_allocator_.Allocate<T>();
+  }
+
+  template <typename T>
+  T* AllocateMany(size_t count) {
+    return block_allocator_.AllocateMany<T>(count);
+  }
+
  private:
   // Constructor called by Escher::NewFrame().
-  friend class Escher;
-  Frame(Escher* escher, uint64_t frame_number, const char* trace_literal,
-        bool enable_gpu_logging);
+  friend class impl::FrameManager;
+  Frame(impl::FrameManager* manager, uint64_t frame_number,
+        const char* trace_literal, bool enable_gpu_logging);
   void BeginFrame();
 
   static void LogGpuQueryResults(
@@ -64,12 +77,11 @@ class Frame : public Reffable {
       const std::vector<TimestampProfiler::Result>& timestamps,
       const char* trace_literal);
 
-  Escher* const escher_;
   // The frame number associated with this frame. Used to correlate work across
   // threads for tracing events.
   const uint64_t frame_number_;
   // A unique number to identify this escher frame. It can diverge from
-  // frame_number_ as frame_number_ is used by the client for its own tracking.
+  // frame_number_, as frame_number_ is used by the client for its own tracking.
   const uint64_t escher_frame_number_;
   const char* trace_literal_;
   bool enable_gpu_logging_;
@@ -78,6 +90,11 @@ class Frame : public Reffable {
   CommandBufferPtr new_command_buffer_;
   impl::CommandBuffer* command_buffer_ = nullptr;
   vk::CommandBuffer vk_command_buffer_;
+
+  // TODO(ES-97): Escher::NewFrame() constructs a new Frame every time, so we
+  // don't get the benefits of reusing previously-allocated blocks from frame to
+  // frame.
+  BlockAllocator block_allocator_;
 
   TimestampProfilerPtr profiler_;
   uint32_t submission_count_ = 0;

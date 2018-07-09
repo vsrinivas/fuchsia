@@ -27,20 +27,15 @@ static constexpr float kLightIntensity = 0.5f;
 static constexpr float kLightDispersion = M_PI * 0.15f;
 static constexpr float kLightElevationRadians = M_PI / 3.f;
 
-static constexpr size_t kOffscreenBenchmarkFrameCount = 1000;
-
 WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
-    : Demo(harness),
+    : Demo(harness, "Waterfall Demo"),
       renderer_(escher::PaperRenderer::New(GetEscherWeakPtr())),
       shadow_renderer_(escher::ShadowMapRenderer::New(
           GetEscherWeakPtr(), renderer_->model_data(),
           renderer_->model_renderer())),
       moment_shadow_renderer_(escher::MomentShadowMapRenderer::New(
           GetEscherWeakPtr(), renderer_->model_data(),
-          renderer_->model_renderer())),
-      swapchain_helper_(harness->GetVulkanSwapchain(),
-                        escher()->vulkan_context().device,
-                        escher()->vulkan_context().queue) {
+          renderer_->model_renderer())) {
   ProcessCommandLineArgs(argc, argv);
   InitializeEscherStage(harness->GetWindowParams());
   InitializeDemoScenes();
@@ -50,7 +45,7 @@ WaterfallDemo::~WaterfallDemo() {
   // Print out FPS stats.  Omit the first frame when computing the average,
   // because it is generating pipelines.
   auto microseconds = stopwatch_.GetElapsedMicroseconds();
-  double fps = (frame_count_ - 2) * 1000000.0 /
+  double fps = (frame_count() - 1) * 1000000.0 /
                (microseconds - first_frame_microseconds_);
   FXL_LOG(INFO) << "Average frame rate: " << fps;
   FXL_LOG(INFO) << "First frame took: " << first_frame_microseconds_ / 1000.0
@@ -145,7 +140,7 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
                       << (enable_ssdo_acceleration_ ? "true" : "false");
         return true;
       case 'B':
-        run_offscreen_benchmark_ = true;
+        set_run_offscreen_benchmark();
         return true;
       case 'C':
         camera_projection_mode_ = (camera_projection_mode_ + 1) % 3;
@@ -158,7 +153,7 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
         stop_time_ = !stop_time_;
         return true;
       case 'P':
-        profile_one_frame_ = true;
+        set_enable_gpu_logging(true);
         return true;
       case 'S':
         sort_by_pipeline_ = !sort_by_pipeline_;
@@ -227,13 +222,13 @@ static escher::Camera GenerateCamera(int camera_projection_mode,
   }
 }
 
-void WaterfallDemo::DrawFrame() {
+void WaterfallDemo::DrawFrame(const escher::FramePtr& frame,
+                              const escher::ImagePtr& output_image) {
   current_scene_ = current_scene_ % scenes_.size();
   auto& scene = scenes_.at(current_scene_);
-  escher::Model* model = scene->Update(stopwatch_, frame_count_, &stage_);
+  escher::Model* model = scene->Update(stopwatch_, frame_count(), &stage_);
   escher::Model* overlay_model = scene->UpdateOverlay(
-      stopwatch_, frame_count_, swapchain_helper_.swapchain().width,
-      swapchain_helper_.swapchain().height);
+      stopwatch_, frame_count(), output_image->width(), output_image->height());
 
   renderer_->set_show_debug_info(show_debug_info_);
   renderer_->set_sort_by_pipeline(sort_by_pipeline_);
@@ -261,26 +256,6 @@ void WaterfallDemo::DrawFrame() {
   escher::Camera camera =
       GenerateCamera(camera_projection_mode_, stage_.viewing_volume());
 
-  if (run_offscreen_benchmark_) {
-    run_offscreen_benchmark_ = false;
-    stopwatch_.Stop();
-    renderer_->set_show_debug_info(false);
-
-    renderer_->RunOffscreenBenchmark(
-        kDemoWidth, kDemoHeight, swapchain_helper_.swapchain().format,
-        kOffscreenBenchmarkFrameCount,
-        [this, model, &camera, overlay_model](
-            const escher::FramePtr& frame,
-            const escher::ImagePtr& color_image_out) {
-          renderer_->DrawFrame(frame, stage_, *model, camera, color_image_out,
-                               escher::ShadowMapPtr(), overlay_model);
-        });
-    renderer_->set_show_debug_info(show_debug_info_);
-    if (!stop_time_) {
-      stopwatch_.Start();
-    }
-  }
-
   if (stop_time_) {
     stopwatch_.Stop();
   } else {
@@ -298,9 +273,6 @@ void WaterfallDemo::DrawFrame() {
       escher::vec2(light_azimuth_radians_, kLightElevationRadians),
       kLightDispersion, vec3(kLightIntensity)));
 
-  auto frame =
-      escher()->NewFrame("Waterfall Demo", ++frame_count_, profile_one_frame_);
-
   escher::ShadowMapPtr shadow_map;
   if (shadow_mode_ == kShadowMap || shadow_mode_ == kMomentShadowMap) {
     const vec3 directional_light_color(kLightIntensity);
@@ -311,24 +283,24 @@ void WaterfallDemo::DrawFrame() {
         frame, stage_, *model, light_direction, directional_light_color);
   }
 
-  swapchain_helper_.DrawFrame(frame, renderer_.get(), stage_, *model, camera,
-                              shadow_map, overlay_model);
+  renderer_->DrawFrame(frame, stage_, *model, camera, output_image, shadow_map,
+                       overlay_model);
 
-  if (frame_count_ == 1) {
+  if (frame_count() == 1) {
     first_frame_microseconds_ = stopwatch_.GetElapsedMicroseconds();
     stopwatch_.Reset();
-  } else if (frame_count_ % 200 == 0) {
-    profile_one_frame_ = true;
+  } else if (frame_count() % 200 == 0) {
+    set_enable_gpu_logging(true);
 
     // Print out FPS stats.  Omit the first frame when computing the
     // average, because it is generating pipelines.
     auto microseconds = stopwatch_.GetElapsedMicroseconds();
-    double fps = (frame_count_ - 2) * 1000000.0 /
+    double fps = (frame_count() - 2) * 1000000.0 /
                  (microseconds - first_frame_microseconds_);
     FXL_LOG(INFO) << "---- Average frame rate: " << fps;
     FXL_LOG(INFO) << "---- Total GPU memory: "
                   << (escher()->GetNumGpuBytesAllocated() / 1024) << "kB";
   } else {
-    profile_one_frame_ = false;
+    set_enable_gpu_logging(false);
   }
 }

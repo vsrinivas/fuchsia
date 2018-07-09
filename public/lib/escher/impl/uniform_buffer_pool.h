@@ -23,13 +23,17 @@ namespace impl {
 class UniformBufferPool : public ResourceManager {
  public:
   UniformBufferPool(
-      EscherWeakPtr escher,
+      EscherWeakPtr escher, size_t ring_size,
       // If no allocator is provided, Escher's default allocator will be used.
       GpuAllocator* allocator = nullptr,
       vk::MemoryPropertyFlags additional_flags = vk::MemoryPropertyFlags());
   ~UniformBufferPool();
 
   BufferPtr Allocate();
+
+  // Rotate the ring buffer so that buffers freed in previous frames are moved
+  // toward the front.
+  void BeginFrame();
 
  private:
   // Implement ResourceManager::OnReceiveOwnable().
@@ -48,8 +52,17 @@ class UniformBufferPool : public ResourceManager {
   // The size of each allocated buffer.
   const vk::DeviceSize buffer_size_;
 
-  // List of free buffers that are available for allocation.
-  std::vector<std::unique_ptr<Buffer>> free_buffers_;
+  using FreeBuffers = std::vector<std::unique_ptr<Buffer>>;
+
+  // Queue of FreeBuffers that will become available for allocation once they
+  // reach the front.  This allows reuse to be deferred for a number of frames,
+  // so that the memory isn't stomped while it is still in use.
+  static constexpr size_t kMaxRingSize = 25;
+  FreeBuffers ring_[kMaxRingSize];
+  size_t ring_size_;
+
+  // See comment in InternalAllocate().
+  bool is_allocating_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UniformBufferPool);
 };

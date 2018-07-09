@@ -9,6 +9,7 @@
 #endif
 
 #include "lib/escher/escher.h"
+#include "lib/escher/impl/frame_manager.h"
 #include "lib/escher/util/trace_macros.h"
 #include "lib/escher/vk/command_buffer.h"
 #include "lib/fxl/macros.h"
@@ -25,27 +26,34 @@ static uint64_t NextFrameNumber() {
 
 }  // anonymous namespace
 
-Frame::Frame(Escher* escher, uint64_t frame_number, const char* trace_literal,
-             bool enable_gpu_logging)
-    : escher_(escher),
+const ResourceTypeInfo Frame::kTypeInfo("Frame", ResourceType::kResource,
+                                        ResourceType::kFrame);
+
+Frame::Frame(impl::FrameManager* manager, uint64_t frame_number,
+             const char* trace_literal, bool enable_gpu_logging)
+    : Resource(manager),
       frame_number_(frame_number),
       escher_frame_number_(NextFrameNumber()),
       trace_literal_(trace_literal),
       enable_gpu_logging_(enable_gpu_logging),
-      queue_(escher->device()->vk_main_queue()),
-      profiler_(escher->supports_timer_queries()
+      queue_(escher()->device()->vk_main_queue()),
+      profiler_(escher()->supports_timer_queries()
                     ? fxl::MakeRefCounted<TimestampProfiler>(
-                          escher->vk_device(), escher->timestamp_period())
+                          escher()->vk_device(), escher()->timestamp_period())
                     : TimestampProfilerPtr()) {
   FXL_DCHECK(queue_);
 }
 
-Frame::~Frame() = default;
+Frame::~Frame() {
+  FXL_DCHECK(!command_buffer_) << "EndFrame() was not called.";
+}
 
 void Frame::BeginFrame() {
   TRACE_DURATION("gfx", "escher::Frame::BeginFrame", "frame_number",
                  frame_number_, "escher_frame_number", escher_frame_number_);
   FXL_DCHECK(!command_buffer_);
+
+  static_cast<impl::FrameManager*>(owner())->IncrementNumOutstandingFrames();
   new_command_buffer_ = CommandBuffer::NewForGraphics(escher());
   command_buffer_ = new_command_buffer_->impl();
   vk_command_buffer_ = command_buffer_->vk();
@@ -72,25 +80,29 @@ void Frame::EndFrame(const SemaphorePtr& frame_done,
 
   FXL_DCHECK(command_buffer_);
   AddTimestamp("end of frame");
-  command_buffer_->AddSignalSemaphore(frame_done);
-  if (!profiler_) {
-    command_buffer_->Submit(queue_, std::move(frame_retired_callback));
-  } else {
-    command_buffer_->Submit(
-        queue_, [frame_retired_callback, profiler{std::move(profiler_)},
-                 frame_number = frame_number_, trace_literal = trace_literal_,
-                 enable_gpu_logging = enable_gpu_logging_]() {
-          if (frame_retired_callback) {
-            frame_retired_callback();
-          }
 
-          auto timestamps = profiler->GetQueryResults();
-          TraceGpuQueryResults(frame_number, timestamps, trace_literal);
-          if (enable_gpu_logging) {
-            LogGpuQueryResults(frame_number, timestamps);
-          }
-        });
-  }
+  command_buffer_->AddSignalSemaphore(frame_done);
+  command_buffer_->Submit(queue_, [
+    frame_retired_callback, profiler{std::move(profiler_)},
+    frame_number = frame_number_, trace_literal = trace_literal_,
+    enable_gpu_logging = enable_gpu_logging_, this_frame = FramePtr(this)
+  ]() {
+    if (frame_retired_callback) {
+      frame_retired_callback();
+    }
+
+    if (profiler) {
+      auto timestamps = profiler->GetQueryResults();
+      TraceGpuQueryResults(frame_number, timestamps, trace_literal);
+      if (enable_gpu_logging) {
+        LogGpuQueryResults(frame_number, timestamps);
+      }
+    }
+
+    static_cast<impl::FrameManager*>(this_frame->owner())
+        ->DecrementNumOutstandingFrames();
+  });
+
   new_command_buffer_ = nullptr;
   command_buffer_ = nullptr;
   vk_command_buffer_ = vk::CommandBuffer();
@@ -208,6 +220,6 @@ void Frame::TraceGpuQueryResults(
 }
 #endif
 
-GpuAllocator* Frame::gpu_allocator() { return escher_->gpu_allocator(); }
+GpuAllocator* Frame::gpu_allocator() { return escher()->gpu_allocator(); }
 
 }  // namespace escher
