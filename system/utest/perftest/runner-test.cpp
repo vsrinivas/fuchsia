@@ -73,6 +73,7 @@ static bool test_results() {
     EXPECT_EQ(test_case->values.size(), kRunCount);
     EXPECT_STR_EQ(test_case->label.c_str(), "no_op_example_test");
     EXPECT_TRUE(check_times(test_case));
+    EXPECT_EQ(test_case->bytes_processed_per_run, 0);
 
     END_TEST;
 }
@@ -236,6 +237,70 @@ static bool test_bad_next_step_calls() {
     END_TEST;
 }
 
+// Check that the bytes_processed_per_run parameter is propagated through.
+static bool test_bytes_processed_parameter() {
+    BEGIN_TEST;
+
+    auto test_func = [&](perftest::RepeatState* state) {
+        state->SetBytesProcessedPerRun(1234);
+        while (state->KeepRunning()) {}
+        return true;
+    };
+    perftest::internal::TestList test_list;
+    perftest::internal::NamedTest test{"throughput_test", test_func};
+    test_list.push_back(fbl::move(test));
+
+    const uint32_t kRunCount = 5;
+    perftest::ResultsSet results;
+    DummyOutputStream out;
+    EXPECT_TRUE(perftest::internal::RunTests(
+                    "test-suite", &test_list, kRunCount, "", out.fp(),
+                    &results));
+    auto* test_cases = results.results();
+    ASSERT_EQ(test_cases->size(), 1);
+    EXPECT_EQ((*test_cases)[0].bytes_processed_per_run, 1234);
+
+    END_TEST;
+}
+
+// If we have a multi-step test that specifies a bytes_processed_per_run
+// parameter, we should get a result reported for the overall times with a
+// bytes_processed_per_run value.  The results for the individual steps
+// should not report bytes_processed_per_run.
+static bool test_bytes_processed_parameter_multistep() {
+    BEGIN_TEST;
+
+    auto test_func = [&](perftest::RepeatState* state) {
+        state->SetBytesProcessedPerRun(1234);
+        state->DeclareStep("step1");
+        state->DeclareStep("step2");
+        while (state->KeepRunning()) {
+            state->NextStep();
+        }
+        return true;
+    };
+    perftest::internal::TestList test_list;
+    perftest::internal::NamedTest test{"throughput_test", test_func};
+    test_list.push_back(fbl::move(test));
+
+    const uint32_t kRunCount = 5;
+    perftest::ResultsSet results;
+    DummyOutputStream out;
+    EXPECT_TRUE(perftest::internal::RunTests(
+                    "test-suite", &test_list, kRunCount, "", out.fp(),
+                    &results));
+    auto* test_cases = results.results();
+    ASSERT_EQ(test_cases->size(), 3);
+    EXPECT_STR_EQ((*test_cases)[0].label.c_str(), "throughput_test");
+    EXPECT_STR_EQ((*test_cases)[1].label.c_str(), "throughput_test.step1");
+    EXPECT_STR_EQ((*test_cases)[2].label.c_str(), "throughput_test.step2");
+    EXPECT_EQ((*test_cases)[0].bytes_processed_per_run, 1234);
+    EXPECT_EQ((*test_cases)[1].bytes_processed_per_run, 0);
+    EXPECT_EQ((*test_cases)[2].bytes_processed_per_run, 0);
+
+    END_TEST;
+}
+
 static bool test_parsing_command_args() {
     BEGIN_TEST;
 
@@ -261,6 +326,8 @@ RUN_TEST(test_bad_keep_running_calls)
 RUN_TEST(test_multistep_test)
 RUN_TEST(test_next_step_called_before_keep_running)
 RUN_TEST(test_bad_next_step_calls)
+RUN_TEST(test_bytes_processed_parameter)
+RUN_TEST(test_bytes_processed_parameter_multistep)
 RUN_TEST(test_parsing_command_args)
 END_TEST_CASE(perftest_runner_test)
 

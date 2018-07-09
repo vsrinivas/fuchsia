@@ -4,6 +4,7 @@
 
 #include <perftest/results.h>
 
+#include <inttypes.h>
 #include <math.h>
 
 #include <fbl/algorithm.h>
@@ -118,6 +119,10 @@ void TestCaseResults::WriteJSON(FILE* out_file) const {
     WriteJSONString(out_file, test_suite.c_str());
     fprintf(out_file, ",\"unit\":");
     WriteJSONString(out_file, unit.c_str());
+    if (bytes_processed_per_run) {
+        fprintf(out_file, ",\"bytes_processed_per_run\":%" PRIu64 "u",
+                bytes_processed_per_run);
+    }
     fprintf(out_file, ",\"samples\":[");
 
     fprintf(out_file, "{\"values\":[");
@@ -157,16 +162,28 @@ void ResultsSet::WriteJSON(FILE* out_file) const {
 
 void ResultsSet::PrintSummaryStatistics(FILE* out_file) const {
     // Print table headings row.
-    fprintf(out_file, "%10s %10s %10s %10s %10s %-12s %s\n",
-            "Mean", "Std dev", "Min", "Max", "Median", "Unit", "Test case");
+    fprintf(out_file, "%10s %10s %10s %10s %10s %-12s %15s %s\n",
+            "Mean", "Std dev", "Min", "Max", "Median", "Unit",
+            "Mean Mbytes/sec", "Test case");
     if (results_.size() == 0) {
         fprintf(out_file, "(No test results)\n");
     }
     for (const auto& test : results_) {
         SummaryStatistics stats = test.GetSummaryStatistics();
-        fprintf(out_file, "%10.0f %10.0f %10.0f %10.0f %10.0f %-12s %s\n",
+        fprintf(out_file, "%10.0f %10.0f %10.0f %10.0f %10.0f %-12s",
                 stats.mean, stats.std_dev, stats.min, stats.max, stats.median,
-                test.unit.c_str(), test.label.c_str());
+                test.unit.c_str());
+        // Output the throughput column.
+        if (test.bytes_processed_per_run != 0 && test.unit == "nanoseconds") {
+            double bytes_per_second =
+                static_cast<double>(test.bytes_processed_per_run)
+                / stats.mean * 1e9;
+            double mbytes_per_second = bytes_per_second / (1024 * 1024);
+            fprintf(out_file, " %15.3f", mbytes_per_second);
+        } else {
+            fprintf(out_file, " %15s", "N/A");
+        }
+        fprintf(out_file, " %s\n", test.label.c_str());
     }
 }
 

@@ -56,6 +56,7 @@ struct TestCaseResults {
     fbl::String label;
     fbl::String unit;
     fbl::Vector<double> values;
+    uint64_t bytes_processed_per_run = 0;
 };
 
 // This represents the results for a set of test cases.

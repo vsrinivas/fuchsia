@@ -129,6 +129,12 @@ public:
     // whether the caller should do another test run.
     virtual bool KeepRunning() = 0;
 
+    // If the test processes some number of bytes per run, this amount can
+    // be declared by calling this method.  This allows the perftest
+    // library to calculate the throughput of the test, in bytes per unit
+    // time.
+    virtual void SetBytesProcessedPerRun(uint64_t bytes) = 0;
+
     // Calls to DeclareStep() specify the names of the steps that a test
     // consists of.  This is used for multi-step tests.  If DeclareStep()
     // is not called, the test will just have a single step.  DeclareStep()

@@ -34,6 +34,22 @@ class RepeatStateImpl : public RepeatState {
 public:
     RepeatStateImpl(uint32_t run_count) : run_count_(run_count) {}
 
+    void SetBytesProcessedPerRun(uint64_t bytes) override {
+        if (started_) {
+            SetError("SetBytesProcessedPerRun() was called after KeepRunning()");
+            return;
+        }
+        if (bytes == 0) {
+            SetError("Zero argument to SetBytesProcessedPerRun()");
+            return;
+        }
+        if (bytes_processed_per_run_ != 0) {
+            SetError("Multiple calls to SetBytesProcessedPerRun()");
+            return;
+        }
+        bytes_processed_per_run_ = bytes;
+    }
+
     void DeclareStep(const char* name) override {
         if (started_) {
             SetError("DeclareStep() was called after KeepRunning()");
@@ -122,26 +138,27 @@ public:
 
     void CopyTimeResults(const char* test_suite, const char* test_name,
                          ResultsSet* dest) const {
-        // Copy the timing results, converting timestamps to elapsed times.
-        double nanoseconds_per_tick =
-            1e9 / static_cast<double>(zx_ticks_per_second());
-        for (uint32_t step = 0; step < step_count_; ++step) {
-            fbl::String name;
-            if (step_names_.size()) {
-                name = fbl::StringPrintf(
-                    "%s.%s", test_name, step_names_[step].c_str());
-            } else {
-                name = test_name;
-            }
+        // bytes_processed_per_run is used for calculating throughput, but
+        // throughput is only really meaningful to calculate for the test
+        // overall, not for individual steps.  Therefore we only report
+        // bytes_processed_per_run on the overall times.
 
+        // Report the times for each test run.
+        if (step_count_ == 1 || bytes_processed_per_run_ != 0) {
             TestCaseResults* results = dest->AddTestCase(
-                test_suite, name, "nanoseconds");
-            results->values.reserve(run_count_);
-            for (uint32_t run = 0; run < run_count_; ++run) {
-                uint64_t time_taken = (GetTimestamp(run, step + 1) -
-                                       GetTimestamp(run, step));
-                results->AppendValue(
-                    static_cast<double>(time_taken) * nanoseconds_per_tick);
+                test_suite, test_name, "nanoseconds");
+            results->bytes_processed_per_run = bytes_processed_per_run_;
+            CopyStepTimes(0, step_count_, results);
+        }
+
+        if (step_count_ > 1) {
+            // Report times for individual steps.
+            for (uint32_t step = 0; step < step_count_; ++step) {
+                fbl::String name = fbl::StringPrintf(
+                    "%s.%s", test_name, step_names_[step].c_str());
+                TestCaseResults* results = dest->AddTestCase(
+                    test_suite, name, "nanoseconds");
+                CopyStepTimes(step, step + 1, results);
             }
         }
     }
@@ -218,6 +235,21 @@ private:
         return timestamps_[index];
     }
 
+    void CopyStepTimes(uint32_t start_step_index, uint32_t end_step_index,
+                       TestCaseResults* results) const {
+        double nanoseconds_per_tick =
+            1e9 / static_cast<double>(zx_ticks_per_second());
+
+        // Copy the timing results, converting timestamps to elapsed times.
+        results->values.reserve(run_count_);
+        for (uint32_t run = 0; run < run_count_; ++run) {
+            uint64_t time_taken = (GetTimestamp(run, end_step_index) -
+                                   GetTimestamp(run, start_step_index));
+            results->AppendValue(
+                static_cast<double>(time_taken) * nanoseconds_per_tick);
+        }
+    }
+
     // Number of test runs that we intend to do.
     uint32_t run_count_;
     // Number of steps per test run.  Once initialized, this is >= 1.
@@ -244,6 +276,8 @@ private:
     uint64_t overall_start_time_;
     // End time, after the test's teardown phase.
     uint64_t overall_end_time_;
+    // Used for calculating throughput in bytes per unit time.
+    uint64_t bytes_processed_per_run_ = 0;
 };
 
 }  // namespace
