@@ -33,8 +33,8 @@ class RamNandDevice : public DeviceType, public ddk::NandProtocol<RamNandDevice>
     // NAND protocol implementation.
     void Query(nand_info_t* info_out, size_t* nand_op_size_out);
     void Queue(nand_op_t* operation);
-    void GetBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
-                         uint32_t* num_bad_blocks);
+    zx_status_t GetFactoryBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
+                                       uint32_t* num_bad_blocks);
 
   private:
     NandDevice ram_nand_;

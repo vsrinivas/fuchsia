@@ -144,9 +144,8 @@ typedef struct nand_protocol_ops {
     // This should only be called before writing any data to the nand, and the
     // returned data should be saved somewhere else, along blocks that become
     // bad after they've been in use.
-    void (*get_bad_block_list)(void* ctx, uint32_t* bad_blocks,
-                               uint32_t bad_block_len,
-                               uint32_t* num_bad_blocks);
+    zx_status_t (*get_factory_bad_block_list)(void* ctx, uint32_t* bad_blocks,
+                                              uint32_t bad_block_len, uint32_t* num_bad_blocks);
 } nand_protocol_ops_t;
 
 typedef struct nand_protocol {

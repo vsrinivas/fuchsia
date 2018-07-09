@@ -40,7 +40,8 @@ public:
     // nand protocol implementation.
     void Query(nand_info_t* info_out, size_t* nand_op_size_out);
     void Queue(nand_op_t* op);
-    void GetBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len, uint32_t* num_bad_blocks);
+    zx_status_t GetFactoryBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
+                                       uint32_t* num_bad_blocks);
 
 private:
     explicit NandPartDevice(zx_device_t* parent, const nand_protocol_t& nand_proto,

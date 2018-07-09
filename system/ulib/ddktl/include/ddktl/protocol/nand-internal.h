@@ -15,8 +15,8 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_query, Query,
 
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_queue, Queue, void (C::*)(nand_op_t*));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_get_bad_block_list, GetBadBlockList,
-                                     void (C::*)(uint32_t* , uint32_t , uint32_t*));
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_get_factory_bad_block_list, GetFactoryBadBlockList,
+                                     zx_status_t (C::*)(uint32_t* , uint32_t , uint32_t*));
 
 template <typename D>
 constexpr void CheckNandProtocolSubclass() {
@@ -26,9 +26,9 @@ constexpr void CheckNandProtocolSubclass() {
     static_assert(internal::has_queue<D>::value,
                   "NandProtocol subclasses must implement "
                   "Queue(nand_op_t* operation)");
-    static_assert(internal::has_get_bad_block_list<D>::value,
+    static_assert(internal::has_get_factory_bad_block_list<D>::value,
                   "NandProtocol subclasses must implement "
-                  "GetBadBlockList(uint32_t* bad_blocks, "
+                  "GetFactoryBadBlockList(uint32_t* bad_blocks, "
                   "uint32_t bad_block_len, uint32_t* num_bad_blocks)");
 }
 

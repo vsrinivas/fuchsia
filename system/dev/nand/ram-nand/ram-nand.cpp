@@ -142,9 +142,10 @@ void NandDevice::Queue(nand_op_t* operation) {
     }
 }
 
-void NandDevice::GetBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
-                                 uint32_t* num_bad_blocks) {
+zx_status_t NandDevice::GetFactoryBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
+                                               uint32_t* num_bad_blocks) {
     *num_bad_blocks = 0;
+    return ZX_OK;
 }
 
 void NandDevice::Kill() {

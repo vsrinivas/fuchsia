@@ -43,7 +43,7 @@ void RamNandDevice::Queue(nand_op_t* operation) {
     ram_nand_.Queue(operation);
 }
 
-void RamNandDevice::GetBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
-                                    uint32_t* num_bad_blocks) {
-    ram_nand_.GetBadBlockList(bad_blocks, bad_block_len, num_bad_blocks);
+zx_status_t RamNandDevice::GetFactoryBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
+                                           uint32_t* num_bad_blocks) {
+    return ram_nand_.GetFactoryBadBlockList(bad_blocks, bad_block_len, num_bad_blocks);
 }

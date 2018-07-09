@@ -374,16 +374,18 @@ static void nand_queue(void* ctx, nand_op_t* op) {
     mtx_unlock(&dev->lock);
 }
 
-static void nand_get_bad_block_list(void* ctx, uint32_t* bad_blocks, uint32_t bad_block_len,
-                                    uint32_t* num_bad_blocks) {
+static zx_status_t nand_get_factory_bad_block_list(void* ctx, uint32_t* bad_blocks,
+                                                   uint32_t bad_block_len,
+                                                   uint32_t* num_bad_blocks) {
     *num_bad_blocks = 0;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 // Nand protocol.
 static nand_protocol_ops_t nand_proto = {
     .query = nand_query,
     .queue = nand_queue,
-    .get_bad_block_list = nand_get_bad_block_list,
+    .get_factory_bad_block_list = nand_get_factory_bad_block_list,
 };
 
 static void nand_unbind(void* ctx) {

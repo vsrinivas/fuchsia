@@ -236,10 +236,11 @@ void NandPartDevice::Queue(nand_op_t* op) {
     nand_.Queue(translated_op);
 }
 
-void NandPartDevice::GetBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
-                                     uint32_t* num_bad_blocks) {
-    // TODO implement this
+zx_status_t NandPartDevice::GetFactoryBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
+                                                   uint32_t* num_bad_blocks) {
+    // TODO implement this.
     *num_bad_blocks = 0;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 } // namespace nand

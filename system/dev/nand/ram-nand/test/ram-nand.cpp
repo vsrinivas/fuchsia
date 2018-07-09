@@ -104,7 +104,7 @@ bool QueryTest() {
 }
 
 // Tests setting and getting bad blocks.
-bool BadBlockListTest() {
+bool FactoryBadBlockListTest() {
     BEGIN_TEST;
     fbl::unique_ptr<NandDevice> device = CreateDevice(nullptr);
     ASSERT_TRUE(device);
@@ -116,7 +116,7 @@ bool BadBlockListTest() {
 
     uint32_t result[4];
     uint32_t num_bad_blocks;
-    device->GetBadBlockList(result, sizeof(result), &num_bad_blocks);
+    device->GetFactoryBadBlockList(result, sizeof(result), &num_bad_blocks);
     ASSERT_EQ(0, num_bad_blocks);
     END_TEST;
 }
@@ -676,7 +676,7 @@ RUN_TEST_SMALL(TrivialLifetimeTest)
 RUN_TEST_SMALL(BasicDeviceProtocolTest)
 RUN_TEST_SMALL(UnlinkTest)
 RUN_TEST_SMALL(QueryTest)
-RUN_TEST_SMALL(BadBlockListTest)
+RUN_TEST_SMALL(FactoryBadBlockListTest)
 RUN_TEST_SMALL(QueueOneTest)
 RUN_TEST_SMALL(ReadWriteTest)
 RUN_TEST_SMALL(QueueMultipleTest)

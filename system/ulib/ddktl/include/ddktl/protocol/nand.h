@@ -36,8 +36,8 @@
 //
 //     void Query(nand_info_t* info_out, size_t* nand_op_size_out);
 //     void Queue(nand_op_t* operation);
-//     void GetBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
-//                          uint32_t* num_bad_blocks);
+//     zx_status_t GetFactoryBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
+//                                        uint32_t* num_bad_blocks);
 //     ...
 // };
 
@@ -50,7 +50,7 @@ public:
         internal::CheckNandProtocolSubclass<D>();
         nand_proto_ops_.query = Query;
         nand_proto_ops_.queue = Queue;
-        nand_proto_ops_.get_bad_block_list = GetBadBlockList;
+        nand_proto_ops_.get_factory_bad_block_list = GetFactoryBadBlockList;
 
         // Can only inherit from one base_protocol implementation.
         ZX_ASSERT(ddk_proto_id_ == 0);
@@ -70,9 +70,10 @@ private:
         static_cast<D*>(ctx)->Queue(operation);
     }
 
-    static void GetBadBlockList(void* ctx, uint32_t* bad_blocks, uint32_t bad_block_len,
-                                uint32_t* num_bad_blocks) {
-        static_cast<D*>(ctx)->GetBadBlockList(bad_blocks, bad_block_len, num_bad_blocks);
+    static zx_status_t GetFactoryBadBlockList(void* ctx, uint32_t* bad_blocks,
+                                              uint32_t bad_block_len, uint32_t* num_bad_blocks) {
+        return static_cast<D*>(ctx)->GetFactoryBadBlockList(bad_blocks, bad_block_len,
+                                                            num_bad_blocks);
     }
 };
 
@@ -89,9 +90,9 @@ public:
         ops_->queue(ctx_, operation);
     }
 
-    void GetBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
-                         uint32_t* num_bad_blocks) {
-        ops_->get_bad_block_list(ctx_, bad_blocks, bad_block_len, num_bad_blocks);
+    zx_status_t GetFactoryBadBlockList(uint32_t* bad_blocks, uint32_t bad_block_len,
+                                uint32_t* num_bad_blocks) {
+        return ops_->get_factory_bad_block_list(ctx_, bad_blocks, bad_block_len, num_bad_blocks);
     }
 
 private:
