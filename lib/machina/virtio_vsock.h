@@ -97,7 +97,7 @@ class VirtioVsock
                                   fbl::unique_ptr<Connection> conn)
       __TA_REQUIRES(mutex_);
   Connection* GetConnectionLocked(ConnectionKey key) __TA_REQUIRES(mutex_);
-  bool MaybeEraseLocked(ConnectionKey key, zx_status_t status)
+  bool EraseOnErrorLocked(ConnectionKey key, zx_status_t status)
       __TA_REQUIRES(mutex_);
   void WaitOnQueueLocked(ConnectionKey key) __TA_REQUIRES(mutex_);
 
@@ -131,18 +131,24 @@ class VirtioVsock::Connection {
   void UpdateOp(uint16_t op);
 
   uint32_t PeerFree() const;
+  // Read credit from the header.
   void ReadCredit(virtio_vsock_hdr_t* header);
+  // Write credit to the header. If this function returns:
+  // - ZX_OK, it indicates to the device that it was successful.
+  // - ZX_ERR_UNAVAILABLE, it indicates to the device that there is no buffer
+  //   available, and should wait for the connection to transmit data.
+  // - Anything else, it indicates to the device the connection should be reset.
   virtual zx_status_t WriteCredit(virtio_vsock_hdr_t* header) = 0;
 
-  virtual zx_status_t Accept(async_t* async) = 0;
+  virtual zx_status_t Accept() = 0;
   virtual zx_status_t Shutdown(uint32_t flags) = 0;
   virtual zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
                            virtio_desc_t* desc, uint32_t* used) = 0;
   virtual zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
                             virtio_desc_t* desc) = 0;
 
-  zx_status_t WaitOnTransmit(async_t* async, zx_status_t status);
-  zx_status_t WaitOnReceive(async_t* async, zx_status_t status);
+  zx_status_t WaitOnTransmit(zx_status_t status);
+  zx_status_t WaitOnReceive(zx_status_t status);
 
  protected:
   // The number of bytes the guest expects us to have in our socket buffer.
@@ -160,6 +166,7 @@ class VirtioVsock::Connection {
   uint32_t peer_fwd_cnt_ = 0;
   uint16_t op_ = VIRTIO_VSOCK_OP_REQUEST;
 
+  async_t* async_ = nullptr;
   async::Wait rx_wait_;
   async::Wait tx_wait_;
 };
@@ -167,15 +174,15 @@ class VirtioVsock::Connection {
 class VirtioVsock::NullConnection final : public VirtioVsock::Connection {
   zx_status_t WriteCredit(virtio_vsock_hdr_t* header) override { return ZX_OK; }
 
-  zx_status_t Accept(async_t* async) override { return ZX_OK; }
-  zx_status_t Shutdown(uint32_t flags) override { return ZX_OK; }
+  zx_status_t Accept() override { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t Shutdown(uint32_t flags) override { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
                    virtio_desc_t* desc, uint32_t* used) override {
-    return ZX_OK;
+    return ZX_ERR_NOT_SUPPORTED;
   }
   zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
                     virtio_desc_t* desc) override {
-    return ZX_OK;
+    return ZX_ERR_NOT_SUPPORTED;
   }
 };
 
@@ -188,7 +195,7 @@ class VirtioVsock::SocketConnection final : public VirtioVsock::Connection {
   zx_status_t Init(async_t* async, fit::closure queue_callback);
   zx_status_t WriteCredit(virtio_vsock_hdr_t* header) override;
 
-  zx_status_t Accept(async_t* async) override;
+  zx_status_t Accept() override;
   zx_status_t Shutdown(uint32_t flags) override;
   zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
                    virtio_desc_t* desc, uint32_t* used) override;

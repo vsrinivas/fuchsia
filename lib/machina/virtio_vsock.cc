@@ -113,14 +113,12 @@ static zx_status_t wait(async_t* async, async::Wait* wait, zx_status_t status) {
   return status;
 }
 
-zx_status_t VirtioVsock::Connection::WaitOnTransmit(async_t* async,
-                                                    zx_status_t status) {
-  return wait(async, &tx_wait_, status);
+zx_status_t VirtioVsock::Connection::WaitOnTransmit(zx_status_t status) {
+  return wait(async_, &tx_wait_, status);
 }
 
-zx_status_t VirtioVsock::Connection::WaitOnReceive(async_t* async,
-                                                   zx_status_t status) {
-  return wait(async, &rx_wait_, status);
+zx_status_t VirtioVsock::Connection::WaitOnReceive(zx_status_t status) {
+  return wait(async_, &rx_wait_, status);
 }
 
 VirtioVsock::SocketConnection::SocketConnection(
@@ -138,9 +136,14 @@ VirtioVsock::SocketConnection::~SocketConnection() {
   }
 }
 
+// We take a |queue_callback| to decouple the connection from the device. This
+// allows a connection to wait on a Virtio queue and update the device state,
+// without having direct access to the device.
 zx_status_t VirtioVsock::SocketConnection::Init(async_t* async,
                                                 fit::closure queue_callback) {
+  async_ = async;
   queue_callback_ = std::move(queue_callback);
+
   rx_wait_.set_object(socket_.get());
   rx_wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_READ_DISABLED |
                        ZX_SOCKET_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED);
@@ -159,7 +162,8 @@ zx_status_t VirtioVsock::SocketConnection::Init(async_t* async,
   tx_wait_.set_handler(
       [this](async_t* async, async::Wait* wait, zx_status_t status,
              const zx_packet_signal_t* signal) { OnReady(status, signal); });
-  return WaitOnReceive(async, ZX_OK);
+
+  return WaitOnReceive(ZX_OK);
 }
 
 void VirtioVsock::SocketConnection::OnReady(zx_status_t status,
@@ -220,10 +224,6 @@ void VirtioVsock::SocketConnection::OnReady(zx_status_t status,
 
 zx_status_t VirtioVsock::SocketConnection::WriteCredit(
     virtio_vsock_hdr_t* header) {
-  if (!socket_) {
-    return ZX_OK;
-  }
-
   size_t max = 0;
   zx_status_t status =
       socket_.get_property(ZX_PROP_SOCKET_TX_BUF_MAX, &max, sizeof(max));
@@ -243,7 +243,7 @@ zx_status_t VirtioVsock::SocketConnection::WriteCredit(
   return reported_buf_avail_ != 0 ? ZX_OK : ZX_ERR_UNAVAILABLE;
 }
 
-zx_status_t VirtioVsock::SocketConnection::Accept(async_t* async) {
+zx_status_t VirtioVsock::SocketConnection::Accept() {
   // The guest has accepted the connection request. Move the connection
   // into the RW state and let the connector know that the socket is
   // ready.
@@ -254,7 +254,7 @@ zx_status_t VirtioVsock::SocketConnection::Accept(async_t* async) {
     UpdateOp(VIRTIO_VSOCK_OP_RW);
     accept_callback_(ZX_OK, std::move(remote_socket_));
     accept_callback_ = nullptr;
-    return WaitOnReceive(async, ZX_OK);
+    return WaitOnReceive(ZX_OK);
   } else {
     UpdateOp(VIRTIO_VSOCK_OP_RST);
     return ZX_OK;
@@ -439,7 +439,7 @@ VirtioVsock::Connection* VirtioVsock::GetConnectionLocked(ConnectionKey key) {
   return it == connections_.end() ? nullptr : it->second.get();
 }
 
-bool VirtioVsock::MaybeEraseLocked(ConnectionKey key, zx_status_t status) {
+bool VirtioVsock::EraseOnErrorLocked(ConnectionKey key, zx_status_t status) {
   if (status != ZX_OK) {
     connections_.erase(key);
   }
@@ -448,7 +448,7 @@ bool VirtioVsock::MaybeEraseLocked(ConnectionKey key, zx_status_t status) {
 
 void VirtioVsock::WaitOnQueueLocked(ConnectionKey key) {
   zx_status_t status = rx_stream_.WaitOnQueue();
-  if (MaybeEraseLocked(key, status)) {
+  if (EraseOnErrorLocked(key, status)) {
     FXL_LOG(ERROR) << "Failed to wait on queue " << status;
     return;
   }
@@ -560,8 +560,8 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
       case ZX_OK:
         break;
       case ZX_ERR_UNAVAILABLE:
-        status = conn->WaitOnTransmit(async_, ZX_OK);
-        if (MaybeEraseLocked(*i, status)) {
+        status = conn->WaitOnTransmit(ZX_OK);
+        if (EraseOnErrorLocked(*i, status)) {
           continue;
         }
         break;
@@ -574,8 +574,8 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
     status = transmit(conn, rx_queue(), header, &desc, &used);
     rx_queue()->Return(index, used);
     index_valid = false;
-    status = conn->WaitOnReceive(async_, status);
-    MaybeEraseLocked(*i, status);
+    status = conn->WaitOnReceive(status);
+    EraseOnErrorLocked(*i, status);
   }
 
   // Release buffer if we did not have any readable connections to avoid a
@@ -597,12 +597,11 @@ static uint32_t shutdown_flags(uint32_t f) {
          (f & VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND ? ZX_SOCKET_SHUTDOWN_WRITE : 0);
 }
 
-static zx_status_t receive(VirtioVsock::Connection* conn, async_t* async,
-                           VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                           virtio_desc_t* desc) {
+static zx_status_t receive(VirtioVsock::Connection* conn, VirtioQueue* queue,
+                           virtio_vsock_hdr_t* header, virtio_desc_t* desc) {
   switch (header->op) {
     case VIRTIO_VSOCK_OP_RESPONSE:
-      return conn->Accept(async);
+      return conn->Accept();
     case VIRTIO_VSOCK_OP_RW:
       // We are writing to the socket.
       return conn->Write(queue, header, desc);
@@ -694,15 +693,15 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
     }
 
     conn->ReadCredit(header);
-    status = receive(conn, async_, tx_queue(), header, &desc);
+    status = receive(conn, tx_queue(), header, &desc);
     switch (conn->op()) {
       case VIRTIO_VSOCK_OP_RST:
       case VIRTIO_VSOCK_OP_CREDIT_UPDATE:
         WaitOnQueueLocked(key);
         break;
       default:
-        status = conn->WaitOnTransmit(async_, status);
-        MaybeEraseLocked(key, status);
+        status = conn->WaitOnTransmit(status);
+        EraseOnErrorLocked(key, status);
         break;
     }
   } while (tx_queue()->NextAvail(&index) == ZX_OK);
