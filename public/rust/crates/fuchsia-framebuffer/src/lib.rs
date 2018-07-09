@@ -151,7 +151,7 @@ impl Frame {
         let mut image_config = ImageConfig {
             width: framebuffer.config.width,
             height: framebuffer.config.height,
-            pixel_format: pixel_format as i32,
+            pixel_format: pixel_format as u32,
             type_: 0,
         };
 
