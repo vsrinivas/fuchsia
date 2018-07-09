@@ -84,7 +84,7 @@ void SuggestionEngineImpl::AddProposalWithRichSuggestion(
         proposal.display.Clone(&cloned_display);
         ExecuteActions(std::move(proposal.on_selected),
                        nullptr /* proposal_listener */, proposal.id,
-                       std::move(cloned_display), story_id);
+                       std::move(cloned_display), preloaded_story_id);
         next_processor_.AddProposal(source_url, story_id, preloaded_story_id,
                                     std::move(proposal));
       }));
@@ -485,7 +485,8 @@ void SuggestionEngineImpl::PerformAddModuleAction(
 
   if (!override_story_id.empty()) {
     story_id = override_story_id;
-    if (override_story_id != add_module.story_id) {
+    if (!add_module.story_id->empty() &&
+        override_story_id != add_module.story_id) {
       FXL_LOG(WARNING)
           << "story_id provided on fuchsia::modular::Proposal ("
           << override_story_id
