@@ -14,6 +14,7 @@ function HELP {
     echo "-l                   : use ThinLTO build"
     echo "-L                   : use LTO build"
     echo "-q                   : build quietly"
+    echo "-v                   : build verbosely"
     echo "-r                   : build release build"
     echo "-d                   : build unoptimized, with full debug symbols"
     echo "-h for help"
@@ -27,7 +28,7 @@ ARGS=
 ARCH=
 QUIET=0
 
-while getopts a:ACdhlLqr FLAG; do
+while getopts a:ACdhlLqrv FLAG; do
     case $FLAG in
         a) ARCH=${OPTARG};;
         A) ARGS+=" USE_ASAN=true USE_CLANG=true";;
@@ -37,6 +38,7 @@ while getopts a:ACdhlLqr FLAG; do
         L) ARGS+=" USE_LTO=true";;
         q) ARGS+=" QUIET=1";;
         r) ARGS+=" DEBUG=0";;
+        v) ARGS+=" NOECHO=";;
         h) HELP ;;
         \?)
             echo unrecognized option
