@@ -88,6 +88,12 @@ static const pbus_dev_t display_dev = {
 
 zx_status_t vim_display_init(vim_bus_t* bus) {
     zx_status_t status;
+
+    // enable this #if 0 in order to enable the SPDIF out pin for VIM2 (GPIO H4, pad M22)
+#if 0
+    gpio_set_alt_function(&bus->gpio, S912_SPDIF_H4, S912_SPDIF_H4_OUT_FN);
+#endif
+
     if ((status = pbus_device_add(&bus->pbus, &display_dev, 0)) != ZX_OK) {
         zxlogf(ERROR, "vim_display_init: pbus_device_add() failed for display: %d\n", status);
         return status;
