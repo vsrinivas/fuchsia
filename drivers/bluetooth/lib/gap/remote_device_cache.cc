@@ -40,29 +40,6 @@ RemoteDevice* RemoteDeviceCache::NewDevice(const common::DeviceAddress& address,
   return device;
 }
 
-void RemoteDeviceCache::UpdateExpiry(const RemoteDevice& device) {
-  auto device_record_iter = devices_.find(device.identifier());
-  FXL_DCHECK(device_record_iter != devices_.end());
-
-  auto& device_record = device_record_iter->second;
-  FXL_DCHECK(device_record.device() == &device);
-
-  const auto cancel_res = device_record.removal_task()->Cancel();
-  FXL_DCHECK(cancel_res == ZX_OK || cancel_res == ZX_ERR_NOT_FOUND);
-
-  if (!device.temporary() ||
-      device.le_connection_state() ==
-          RemoteDevice::ConnectionState::kConnected ||
-      device.bredr_connection_state() ==
-          RemoteDevice::ConnectionState::kConnected) {
-    return;
-  }
-
-  const auto schedule_res = device_record.removal_task()->PostDelayed(
-      async_get_default_dispatcher(), kCacheTimeout);
-  FXL_DCHECK(schedule_res == ZX_OK || schedule_res == ZX_ERR_BAD_STATE);
-}
-
 RemoteDevice* RemoteDeviceCache::FindDeviceById(
     const std::string& identifier) const {
   auto iter = devices_.find(identifier);
@@ -88,6 +65,29 @@ void RemoteDeviceCache::NotifyDeviceUpdated(const RemoteDevice& device) {
   FXL_DCHECK(devices_.at(device.identifier()).device() == &device);
   if (device_updated_callback_)
     device_updated_callback_(device);
+}
+
+void RemoteDeviceCache::UpdateExpiry(const RemoteDevice& device) {
+  auto device_record_iter = devices_.find(device.identifier());
+  FXL_DCHECK(device_record_iter != devices_.end());
+
+  auto& device_record = device_record_iter->second;
+  FXL_DCHECK(device_record.device() == &device);
+
+  const auto cancel_res = device_record.removal_task()->Cancel();
+  FXL_DCHECK(cancel_res == ZX_OK || cancel_res == ZX_ERR_NOT_FOUND);
+
+  if (!device.temporary() ||
+      device.le_connection_state() ==
+          RemoteDevice::ConnectionState::kConnected ||
+      device.bredr_connection_state() ==
+          RemoteDevice::ConnectionState::kConnected) {
+    return;
+  }
+
+  const auto schedule_res = device_record.removal_task()->PostDelayed(
+      async_get_default_dispatcher(), kCacheTimeout);
+  FXL_DCHECK(schedule_res == ZX_OK || schedule_res == ZX_ERR_BAD_STATE);
 }
 
 void RemoteDeviceCache::RemoveDevice(RemoteDevice* device) {

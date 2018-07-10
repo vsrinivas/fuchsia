@@ -339,7 +339,7 @@ TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
   ASSERT_EQ(device_ptr(), cache()->FindDeviceById(device_id()));
 
   // Tickle device, and verify it sticks around for another cache timeout.
-  cache()->UpdateExpiry(*device_ptr());
+  device_ptr()->SetName("nombre");
   AdvanceTimeBy(zx::sec(60) - zx::msec(1));
   RunLoopUntilIdle();
   EXPECT_TRUE(cache()->FindDeviceById(device_id()));
@@ -352,7 +352,7 @@ TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
   ASSERT_EQ(device_ptr(), cache()->FindDeviceById(device_id()));
 
   // Tickle device, and verify it expires after cache timeout.
-  cache()->UpdateExpiry(*device_ptr());
+  device_ptr()->SetName("nombre");
   AdvanceTimeBy(zx::sec(60));
   RunLoopUntilIdle();
   EXPECT_FALSE(cache()->FindDeviceById(device_id()));

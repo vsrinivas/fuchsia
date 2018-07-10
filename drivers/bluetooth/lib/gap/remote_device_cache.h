@@ -42,12 +42,6 @@ class RemoteDeviceCache final {
   RemoteDevice* NewDevice(const common::DeviceAddress& address,
                           bool connectable);
 
-  // Updates the expiration time for |device|, if a temporary. Cancels expiry,
-  // if a non-temporary. Pre-conditions:
-  // - |device| must already exist in the cache
-  // - can only be called from the thread that created |device|
-  void UpdateExpiry(const RemoteDevice& device);
-
   // Returns the remote device with identifier |identifier|. Returns nullptr if
   // |identifier| is not recognized.
   RemoteDevice* FindDeviceById(const std::string& identifier) const;
@@ -91,6 +85,12 @@ class RemoteDeviceCache final {
   // Notifies interested parties that |device| has seen a significant change.
   // |device| must already exist in the cache.
   void NotifyDeviceUpdated(const RemoteDevice& device);
+
+  // Updates the expiration time for |device|, if a temporary. Cancels expiry,
+  // if a non-temporary. Pre-conditions:
+  // - |device| must already exist in the cache
+  // - can only be called from the thread that created |device|
+  void UpdateExpiry(const RemoteDevice& device);
 
   // Removes |device| from this cache, and notifies listeners of the
   // removal.
