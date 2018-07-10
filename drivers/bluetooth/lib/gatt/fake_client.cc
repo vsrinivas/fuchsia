@@ -21,6 +21,11 @@ fxl::WeakPtr<Client> FakeClient::AsWeakPtr() {
   return weak_ptr_factory_.GetWeakPtr();
 }
 
+uint16_t FakeClient::mtu() const {
+  // TODO(armansito): Return a configurable value.
+  return att::kLEMinMTU;
+}
+
 void FakeClient::ExchangeMTU(MTUCallback callback) {
   auto task = [status = exchange_mtu_status_, mtu = server_mtu_,
                callback = std::move(callback)] { callback(status, mtu); };
@@ -87,6 +92,13 @@ void FakeClient::DiscoverDescriptors(att::Handle range_start,
 void FakeClient::ReadRequest(att::Handle handle, ReadCallback callback) {
   if (read_request_callback_) {
     read_request_callback_(handle, std::move(callback));
+  }
+}
+
+void FakeClient::ReadBlobRequest(att::Handle handle, uint16_t offset,
+                                 ReadCallback callback) {
+  if (read_blob_request_callback_) {
+    read_blob_request_callback_(handle, offset, std::move(callback));
   }
 }
 

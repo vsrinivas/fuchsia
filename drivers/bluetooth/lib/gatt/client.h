@@ -38,6 +38,9 @@ class Client {
   // thread.
   virtual fxl::WeakPtr<Client> AsWeakPtr() = 0;
 
+  // Returns the current ATT MTU.
+  virtual uint16_t mtu() const = 0;
+
   // Initiates an MTU exchange and adjusts the MTU of the bearer according to
   // what the peer is capable of. The request will be initiated using the
   // bearer's preferred MTU.
@@ -90,6 +93,13 @@ class Client {
   using ReadCallback =
       fit::function<void(att::Status, const common::ByteBuffer&)>;
   virtual void ReadRequest(att::Handle handle, ReadCallback callback) = 0;
+
+  // Sends an ATT Read Blob request with the requested attribute |handle| and
+  // returns the result value in |callback|. This can be called multiple times
+  // to read the value of a characteristic that is larger than the ATT_MTU.
+  // (Vol 3, Part G, 4.8.3)
+  virtual void ReadBlobRequest(att::Handle handle, uint16_t offset,
+                               ReadCallback callback) = 0;
 
   // Sends an ATT Write Request with the requested attribute |handle| and
   // |value|. This can be used to send a write request to any attribute.

@@ -83,7 +83,6 @@ void GattRemoteServiceServer::DiscoverCharacteristics(
 
 void GattRemoteServiceServer::ReadCharacteristic(
     uint64_t id,
-    uint16_t offset,
     ReadCharacteristicCallback callback) {
   auto cb = [callback = std::move(callback)](
                 btlib::att::Status status,
@@ -102,9 +101,30 @@ void GattRemoteServiceServer::ReadCharacteristic(
              fidl::VectorPtr<uint8_t>(std::move(vec)));
   };
 
-  // TODO(armansito): Use |offset| when gatt::RemoteService supports the long
-  // read procedure.
   service_->ReadCharacteristic(id, std::move(cb));
+}
+
+void GattRemoteServiceServer::ReadLongCharacteristic(
+    uint64_t id, uint16_t offset, uint16_t max_bytes,
+    ReadLongCharacteristicCallback callback) {
+  auto cb = [callback = std::move(callback)](
+                btlib::att::Status status,
+                const btlib::common::ByteBuffer& value) {
+    // We always reply with a non-null value.
+    std::vector<uint8_t> vec;
+
+    if (status && value.size()) {
+      vec.resize(value.size());
+
+      MutableBufferView vec_view(vec.data(), vec.size());
+      value.Copy(&vec_view);
+    }
+
+    callback(fidl_helpers::StatusToFidl(status),
+             fidl::VectorPtr<uint8_t>(std::move(vec)));
+  };
+
+  service_->ReadLongCharacteristic(id, offset, max_bytes, std::move(cb));
 }
 
 void GattRemoteServiceServer::WriteCharacteristic(

@@ -139,6 +139,8 @@ class Impl final : public Client {
     return weak_ptr_factory_.GetWeakPtr();
   }
 
+  uint16_t mtu() const override { return att_->mtu(); }
+
   void ExchangeMTU(MTUCallback mtu_cb) override {
     auto pdu = NewPDU(sizeof(att::ExchangeMTURequestParams));
     if (!pdu) {
@@ -565,10 +567,11 @@ class Impl final : public Client {
     auto params = writer.mutable_payload<att::ReadRequestParams>();
     params->handle = htole16(handle);
 
-    auto rsp_cb = BindCallback([this, callback = callback.share()](const att::PacketReader& rsp) {
-      FXL_DCHECK(rsp.opcode() == att::kReadResponse);
-      callback(att::Status(), rsp.payload_data());
-    });
+    auto rsp_cb = BindCallback(
+        [this, callback = callback.share()](const att::PacketReader& rsp) {
+          FXL_DCHECK(rsp.opcode() == att::kReadResponse);
+          callback(att::Status(), rsp.payload_data());
+        });
 
     auto error_cb = BindErrorCallback(
         [this, callback = callback.share()](att::Status status, att::Handle handle) {
@@ -577,7 +580,41 @@ class Impl final : public Client {
           callback(status, BufferView());
         });
 
-    if (!att_->StartTransaction(std::move(pdu), std::move(rsp_cb), std::move(error_cb))) {
+    if (!att_->StartTransaction(std::move(pdu), std::move(rsp_cb),
+                                std::move(error_cb))) {
+      callback(att::Status(HostError::kPacketMalformed), BufferView());
+    }
+  }
+
+  void ReadBlobRequest(att::Handle handle, uint16_t offset,
+                       ReadCallback callback) override {
+    auto pdu = NewPDU(sizeof(att::ReadBlobRequestParams));
+    if (!pdu) {
+      callback(att::Status(HostError::kOutOfMemory), BufferView());
+      return;
+    }
+
+    att::PacketWriter writer(att::kReadBlobRequest, pdu.get());
+    auto params = writer.mutable_payload<att::ReadBlobRequestParams>();
+    params->handle = htole16(handle);
+    params->offset = htole16(offset);
+
+    auto rsp_cb = BindCallback(
+        [this, callback = callback.share()](const att::PacketReader& rsp) {
+          FXL_DCHECK(rsp.opcode() == att::kReadBlobResponse);
+          callback(att::Status(), rsp.payload_data());
+        });
+
+    auto error_cb =
+        BindErrorCallback([this, callback = callback.share()](
+                              att::Status status, att::Handle handle) {
+          FXL_VLOG(1) << "gatt: Read blob request failed: " << status.ToString()
+                      << ", handle: " << handle;
+          callback(status, BufferView());
+        });
+
+    if (!att_->StartTransaction(std::move(pdu), std::move(rsp_cb),
+                                std::move(error_cb))) {
       callback(att::Status(HostError::kPacketMalformed), BufferView());
     }
   }

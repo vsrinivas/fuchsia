@@ -86,6 +86,16 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
                           ReadValueCallback callback,
                           async_dispatcher_t* dispatcher = nullptr);
 
+  // Performs the "Read Long Characteristic Values" procedure which allows
+  // characteristic values larger than the ATT_MTU to be read over multiple
+  // requests.
+  //
+  // The read will start at |offset| and will return at most |max_bytes| octets.
+  // The resulting value will be returned via |callback|.
+  void ReadLongCharacteristic(IdType id, uint16_t offset, size_t max_bytes,
+                              ReadValueCallback callback,
+                              async_t* dispatcher = nullptr);
+
   // Sends a write request to the characteristic with the given identifier.
   // Fails if characteristics have not been discovered.
   //
@@ -181,6 +191,12 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
 
   // Completes all pending characteristic discovery requests.
   void CompleteCharacteristicDiscovery(att::Status status) __TA_EXCLUDES(mtx_);
+
+  // Helper function that drives the recursive "Read Long Characteristic Values"
+  // procedure. Called by ReadLongCharacteristic().
+  void ReadLongHelper(att::Handle value_handle, uint16_t offset,
+                      common::MutableByteBufferPtr buffer, size_t bytes_read,
+                      ReadValueCallback callback, async_t* dispatcher);
 
   // Returns true if characteristic discovery has completed. This must be
   // accessed only through |gatt_dispatcher_|.

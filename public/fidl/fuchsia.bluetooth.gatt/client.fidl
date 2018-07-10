@@ -11,9 +11,28 @@ interface RemoteService {
   // this service.
   1: DiscoverCharacteristics() -> (fuchsia.bluetooth.Status @status, vector<Characteristic> characteristics);
 
-  // Reads the value of the characteristic with |id| and return it in the reply.
-  // If |status| indicates an error |value| will be empty.
-  2: ReadCharacteristic(uint64 id, uint16 offset) -> (fuchsia.bluetooth.Status @status, vector<uint8> value);
+  // Reads the value of the characteristic with |id| and returns it in the
+  // reply. If |status| indicates an error |value| will be empty.
+  //
+  // If the characteristic has a long value (i.e. larger than the current MTU)
+  // this method will return only the first (MTU - 1) bytes of the value. Use
+  // ReadLongCharacteristic() to read larger values or starting at a non-zero
+  // offset.
+  2: ReadCharacteristic(uint64 id) -> (fuchsia.bluetooth.Status @status, vector<uint8> value);
+
+  // Reads the complete value of a characteristic with the given |id|. This
+  // procedure should be used if the characteristic is known to have a value
+  // that can not be read in a single request.
+  //
+  // Returns up to |max_bytes| octets of the characteristic value starting at
+  // the given |offset|.
+  //
+  // This may return an error if:
+  //   a. |max_bytes| is 0;
+  //   b. The |offset| is invalid;
+  //   c. The characteristic does not have a long value;
+  //   d. The server does not support the long read procedure.
+  3: ReadLongCharacteristic(uint64 id, uint16 offset, uint16 max_bytes) -> (fuchsia.bluetooth.Status @status, vector<uint8> value);
 
   // Writes |value| to the characteristic with |id|. The ATT protocol method is
   // selected based on the input parameters and properties of the
@@ -27,12 +46,12 @@ interface RemoteService {
   //      procedure will be used.
   //   c. If the characteristic does not claim to support the selected
   //      procedure, the request will fail with ErrorCode.NotSupported.
-  3: WriteCharacteristic(uint64 id, uint16 offset, vector<uint8> value) -> (fuchsia.bluetooth.Status @status);
+  4: WriteCharacteristic(uint64 id, uint16 offset, vector<uint8> value) -> (fuchsia.bluetooth.Status @status);
 
   // Writes |value| to the characteristic with |id| without soliciting an
   // acknowledgement from the peer. This method has no response and its delivery
   // cannot be confirmed.
-  4: WriteCharacteristicWithoutResponse(uint64 id, vector<uint8> value);
+  5: WriteCharacteristicWithoutResponse(uint64 id, vector<uint8> value);
 
   // Subscribe or unsubscribe to notifications/indications from the characteristic with
   // the given |id|. Notifications or indications will be enabled if |enable| is
@@ -50,7 +69,7 @@ interface RemoteService {
   // On success, the OnCharacteristicValueUpdated event will be sent whenever
   // the peer sends a notification or indication. The local host will
   // automically confirm indications.
-  5: NotifyCharacteristic(uint64 id, bool enable) -> (fuchsia.bluetooth.Status @status);
+  6: NotifyCharacteristic(uint64 id, bool enable) -> (fuchsia.bluetooth.Status @status);
 
   // Events:
   // Called when a characteristic value notification or indication is received.

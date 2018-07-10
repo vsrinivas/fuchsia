@@ -32,8 +32,9 @@ class GattRemoteServiceServer
   void DiscoverCharacteristics(
       DiscoverCharacteristicsCallback callback) override;
   void ReadCharacteristic(uint64_t id,
-                          uint16_t offset,
                           ReadCharacteristicCallback callback) override;
+  void ReadLongCharacteristic(uint64_t id, uint16_t offset, uint16_t max_bytes,
+                              ReadLongCharacteristicCallback callback) override;
   void WriteCharacteristic(uint64_t characteristic_id,
                            uint16_t offset,
                            ::fidl::VectorPtr<uint8_t> value,

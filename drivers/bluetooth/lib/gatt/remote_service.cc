@@ -15,7 +15,10 @@ namespace gatt {
 using att::Status;
 using att::StatusCallback;
 using common::BufferView;
+using common::ByteBuffer;
 using common::HostError;
+using common::MutableByteBufferPtr;
+using common::NewSlabBuffer;
 using common::RunOrPost;
 
 namespace {
@@ -184,7 +187,6 @@ void RemoteService::ReadCharacteristic(IdType id,
       return;
     }
 
-    // TODO(armansito): Use the "long read" procedure when supported.
     if (!(chrc->info().properties & Property::kRead)) {
       FXL_VLOG(1) << "gatt: Characteristic does not support \"read\"";
       ReportValue(att::Status(HostError::kNotSupported), BufferView(), std::move(cb), dispatcher);
@@ -200,6 +202,49 @@ void RemoteService::ReadCharacteristic(IdType id,
 
     client_->ReadRequest(chrc->info().value_handle, std::move(res_cb));
   });
+}
+
+void RemoteService::ReadLongCharacteristic(IdType id, uint16_t offset,
+                                           size_t max_bytes,
+                                           ReadValueCallback cb,
+                                           async_t* dispatcher) {
+  RunGattTask(
+      [this, id, offset, max_bytes, cb = std::move(cb), dispatcher]() mutable {
+        RemoteCharacteristic* chrc;
+        att::Status status = att::Status(GetCharacteristic(id, &chrc));
+        if (!status) {
+          ReportValue(status, BufferView(), std::move(cb), dispatcher);
+          return;
+        }
+
+        if (!(chrc->info().properties & Property::kRead)) {
+          FXL_VLOG(1) << "gatt: Characteristic does not support \"read\"";
+          ReportValue(att::Status(HostError::kNotSupported), BufferView(),
+                      std::move(cb), dispatcher);
+          return;
+        }
+
+        FXL_DCHECK(chrc);
+
+        if (max_bytes == 0) {
+          FXL_VLOG(2) << "gatt: Invalid value for |max_bytes|: 0";
+          ReportValue(att::Status(HostError::kInvalidParameters), BufferView(),
+                      std::move(cb), dispatcher);
+          return;
+        }
+
+        // Set up the buffer in which we'll accumulate the blobs.
+        auto buffer =
+            NewSlabBuffer(std::min(max_bytes, att::kMaxAttributeValueLength));
+        if (!buffer) {
+          ReportValue(att::Status(HostError::kOutOfMemory), BufferView(),
+                      std::move(cb), dispatcher);
+          return;
+        }
+
+        ReadLongHelper(chrc->info().value_handle, offset, std::move(buffer),
+                       0u /* bytes_read */, std::move(cb), dispatcher);
+      });
 }
 
 void RemoteService::WriteCharacteristic(IdType id,
@@ -406,6 +451,58 @@ void RemoteService::CompleteCharacteristicDiscovery(att::Status status) {
   for (auto& req : pending) {
     ReportCharacteristics(status, std::move(req.callback), req.dispatcher);
   }
+}
+
+void RemoteService::ReadLongHelper(att::Handle value_handle, uint16_t offset,
+                                   MutableByteBufferPtr buffer,
+                                   size_t bytes_read,
+                                   ReadValueCallback callback,
+                                   async_t* dispatcher) {
+  FXL_DCHECK(IsOnGattThread());
+  FXL_DCHECK(callback);
+  FXL_DCHECK(buffer);
+  FXL_DCHECK(!shut_down_);
+
+  // Capture a reference so that this object is alive when the callback runs.
+  auto self = fbl::WrapRefPtr(this);
+  auto read_blob_cb = [self, value_handle, offset, buffer = std::move(buffer),
+                       bytes_read, cb = std::move(callback), dispatcher](
+                          att::Status status, const ByteBuffer& blob) mutable {
+    if (self->shut_down_) {
+      // The service was removed. Report an error.
+      ReportValue(att::Status(HostError::kCanceled), BufferView(),
+                  std::move(cb), dispatcher);
+      return;
+    }
+
+    if (!status) {
+      ReportValue(status, BufferView(), std::move(cb), dispatcher);
+      return;
+    }
+
+    // Copy the blob into our |buffer|. |blob| may be truncated depending on the
+    // size of |buffer|.
+    FXL_DCHECK(bytes_read < buffer->size());
+    size_t copy_size = std::min(blob.size(), buffer->size() - bytes_read);
+    buffer->Write(blob.view(0, copy_size), bytes_read);
+    bytes_read += copy_size;
+
+    // We are done if the blob is smaller than (ATT_MTU - 1) or we have read the
+    // maximum number of bytes requested.
+    FXL_DCHECK(bytes_read <= buffer->size());
+    if (blob.size() < (self->client_->mtu() - 1) ||
+        bytes_read == buffer->size()) {
+      ReportValue(att::Status(), buffer->view(0, bytes_read), std::move(cb),
+                  dispatcher);
+      return;
+    }
+
+    // We have more bytes to read. Read the next blob.
+    self->ReadLongHelper(value_handle, offset + blob.size(), std::move(buffer),
+                         bytes_read, std::move(cb), dispatcher);
+  };
+
+  client_->ReadBlobRequest(value_handle, offset, std::move(read_blob_cb));
 }
 
 void RemoteService::HandleNotification(att::Handle value_handle,

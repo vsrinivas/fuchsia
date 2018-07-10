@@ -13,10 +13,11 @@ namespace gatt {
 namespace {
 
 using common::ByteBuffer;
+using common::ContainersEqual;
+using common::CreateStaticByteBuffer;
 using common::HostError;
-
-using common::UpperBits;
 using common::LowerBits;
+using common::UpperBits;
 
 constexpr common::UUID kTestUuid1((uint16_t)0xDEAD);
 constexpr common::UUID kTestUuid2((uint16_t)0xBEEF);
@@ -1789,11 +1790,6 @@ TEST_F(GATT_ClientTest, ReadRequestError) {
       0x01, 0x00  // handle: 0x0001
   );
 
-  const auto kExpectedResponse = common::CreateStaticByteBuffer(
-      0x0B,               // opcode: read response
-      't', 'e', 's', 't'  // value: "test"
-  );
-
   att::Status status;
   auto cb = [&](att::Status cb_status, const ByteBuffer& value) {
     status = cb_status;
@@ -1819,6 +1815,111 @@ TEST_F(GATT_ClientTest, ReadRequestError) {
 
   EXPECT_TRUE(status.is_protocol_error());
   EXPECT_EQ(att::ErrorCode::kRequestNotSupported, status.protocol_error());
+  EXPECT_FALSE(fake_chan()->link_error());
+}
+
+TEST_F(GATT_ClientTest, ReadBlobRequestEmptyResponse) {
+  constexpr att::Handle kHandle = 1;
+  constexpr uint16_t kOffset = 5;
+  const auto kExpectedRequest =
+      CreateStaticByteBuffer(0x0C,        // opcode: read blob request
+                             0x01, 0x00,  // handle: 1
+                             0x05, 0x00   // offset: 5
+      );
+
+  att::Status status(HostError::kFailed);
+  auto cb = [&](att::Status cb_status, const ByteBuffer& value) {
+    status = cb_status;
+
+    // We expect an empty value
+    EXPECT_EQ(0u, value.size());
+  };
+
+  // Initiate the request in a loop task, as Expect() below blocks
+  async::PostTask(dispatcher(), [&, this] {
+    client()->ReadBlobRequest(kHandle, kOffset, cb);
+  });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+
+  // ATT Read Blob Response with no payload.
+  fake_chan()->Receive(common::CreateStaticByteBuffer(0x0D));
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(status);
+  EXPECT_FALSE(fake_chan()->link_error());
+}
+
+TEST_F(GATT_ClientTest, ReadBlobRequestSuccess) {
+  constexpr att::Handle kHandle = 1;
+  constexpr uint16_t kOffset = 5;
+  const auto kExpectedRequest =
+      CreateStaticByteBuffer(0x0C,        // opcode: read blob request
+                             0x01, 0x00,  // handle: 1
+                             0x05, 0x00   // offset: 5
+      );
+  const auto kExpectedResponse =
+      CreateStaticByteBuffer(0x0D,               // opcode: read blob response
+                             't', 'e', 's', 't'  // value: "test"
+      );
+
+  att::Status status(HostError::kFailed);
+  auto cb = [&](att::Status cb_status, const ByteBuffer& value) {
+    status = cb_status;
+
+    // We expect an empty value
+    EXPECT_TRUE(ContainersEqual(kExpectedResponse.view(1), value));
+  };
+
+  // Initiate the request in a loop task, as Expect() below blocks
+  async::PostTask(dispatcher(), [&, this] {
+    client()->ReadBlobRequest(kHandle, kOffset, cb);
+  });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+  fake_chan()->Receive(kExpectedResponse);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(status);
+  EXPECT_FALSE(fake_chan()->link_error());
+}
+
+TEST_F(GATT_ClientTest, ReadBlobRequestError) {
+  constexpr att::Handle kHandle = 1;
+  constexpr uint16_t kOffset = 5;
+  const auto kExpectedRequest =
+      CreateStaticByteBuffer(0x0C,        // opcode: read blob request
+                             0x01, 0x00,  // handle: 1
+                             0x05, 0x00   // offset: 5
+      );
+
+  att::Status status(HostError::kFailed);
+  auto cb = [&](att::Status cb_status, const ByteBuffer& value) {
+    status = cb_status;
+
+    // We expect an empty value
+    EXPECT_EQ(0u, value.size());
+  };
+
+  // Initiate the request in a loop task, as Expect() below blocks
+  async::PostTask(dispatcher(), [&, this] {
+    client()->ReadBlobRequest(kHandle, kOffset, cb);
+  });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x0C,        // request: read blob request
+      0x01, 0x00,  // handle: 0x0001
+      0x07         // error: Invalid Offset
+      ));
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(status.is_protocol_error());
+  EXPECT_EQ(att::ErrorCode::kInvalidOffset, status.protocol_error());
   EXPECT_FALSE(fake_chan()->link_error());
 }
 

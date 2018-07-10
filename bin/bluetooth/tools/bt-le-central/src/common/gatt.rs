@@ -184,14 +184,13 @@ fn discover_characteristics(client: GattClientPtr) -> impl Future<Item = (), Err
         })
 }
 
-// Read from a characteristic
 fn read_characteristic(client: GattClientPtr, id: u64) -> impl Future<Item = (), Error = Error> {
     client
         .read()
         .active_proxy
         .as_ref()
         .unwrap()
-        .read_characteristic(id, 0)
+        .read_characteristic(id)
         .map_err(|_| BTError::new("Failed to send message").into())
         .and_then(move |(status, value)| match status.error {
             Some(e) => {
@@ -205,7 +204,26 @@ fn read_characteristic(client: GattClientPtr, id: u64) -> impl Future<Item = (),
         })
 }
 
-// Write to a characteristic.
+fn read_long_characteristic(client: GattClientPtr, id: u64, offset: u16, max_bytes: u16) -> impl Future<Item = (), Error = Error> {
+    client
+        .read()
+        .active_proxy
+        .as_ref()
+        .unwrap()
+        .read_long_characteristic(id, offset, max_bytes)
+        .map_err(|_| BTError::new("Failed to send message").into())
+        .and_then(move |(status, value)| match status.error {
+            Some(e) => {
+                println!("Failed to read characteristic: {}", BTError::from(*e));
+                Ok(())
+            }
+            None => {
+                println!("(id = {}, offset = {}) value: {:X?}", id, offset, value);
+                Ok(())
+            }
+        })
+}
+
 fn write_characteristic(
     client: GattClientPtr, id: u64, value: Vec<u8>,
 ) -> impl Future<Item = (), Error = Error> {
@@ -245,14 +263,15 @@ fn write_without_response(client: GattClientPtr, id: u64, value: Vec<u8>)
 
 fn do_help() -> FutureResult<(), Error> {
     println!("Commands:");
-    println!("    help                       Print this help message");
-    println!("    list                       List discovered services");
-    println!("    connect <index>            Connect to a service");
-    println!("    read-chr <id>              Read a characteristic");
-    println!("    write-chr <id> <value>     Write to a characteristic");
-    println!("    enable-notify <id>         Enable characteristic notifications");
-    println!("    disable-notify <id>        Disable characteristic notifications");
-    println!("    exit                       Quit and disconnect the peripheral");
+    println!("    help                             Print this help message");
+    println!("    list                             List discovered services");
+    println!("    connect <index>                  Connect to a service");
+    println!("    read-chr <id>                    Read a characteristic");
+    println!("    read-long <id> <offset> <max>    Read a long characteristic");
+    println!("    write-chr <id> <value>           Write to a characteristic");
+    println!("    enable-notify <id>               Enable characteristic notifications");
+    println!("    disable-notify <id>              Disable characteristic notifications");
+    println!("    exit                             Quit and disconnect the peripheral");
 
     future::ok(())
 }
@@ -328,6 +347,44 @@ fn do_read_chr(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = (),
     };
 
     Right(read_characteristic(client, id))
+}
+
+fn do_read_long(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = (), Error = Error> {
+    if args.len() != 3 {
+        println!("usage: read-long <id> <offset> <max bytes>");
+        return left_ok!();
+    }
+
+    if client.read().active_proxy.is_none() {
+        println!("no service connected");
+        return left_ok!();
+    }
+
+    let id: u64 = match args[0].parse() {
+        Err(_) => {
+            println!("invalid id: {}", args[0]);
+            return left_ok!();
+        }
+        Ok(i) => i,
+    };
+
+    let offset: u16 = match args[1].parse() {
+        Err(_) => {
+            println!("invalid offset: {}", args[1]);
+            return left_ok!();
+        }
+        Ok(i) => i,
+    };
+
+    let max_bytes: u16 = match args[2].parse() {
+        Err(_) => {
+            println!("invalid max bytes: {}", args[2]);
+            return left_ok!();
+        }
+        Ok(i) => i,
+    };
+
+    Right(read_long_characteristic(client, id, offset, max_bytes))
 }
 
 fn do_write_chr(mut args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = (), Error = Error> {
@@ -476,6 +533,7 @@ fn handle_cmd(line: String, client: GattClientPtr) -> impl Future<Item = (), Err
         Some("list") => Left(do_list(args, client)),
         Some("connect") => right_cmd!(do_connect(args, client)),
         Some("read-chr") => right_cmd!(do_read_chr(args, client)),
+        Some("read-long") => right_cmd!(do_read_long(args, client)),
         Some("write-chr") => right_cmd!(do_write_chr(args, client)),
         Some("enable-notify") => right_cmd!(do_enable_notify(args, client)),
         Some("disable-notify") => right_cmd!(do_disable_notify(args, client)),

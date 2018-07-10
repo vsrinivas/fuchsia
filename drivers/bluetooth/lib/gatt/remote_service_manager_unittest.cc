@@ -31,9 +31,11 @@ static bool operator==(const DescriptorData& desc1,
 namespace internal {
 namespace {
 
+using common::BufferView;
 using common::ByteBuffer;
 using common::CreateStaticByteBuffer;
 using common::HostError;
+using common::StaticByteBuffer;
 
 constexpr common::UUID kTestServiceUuid1((uint16_t)0xbeef);
 constexpr common::UUID kTestServiceUuid2((uint16_t)0xcafe);
@@ -758,6 +760,432 @@ TEST_F(GATT_RemoteServiceManagerTest, ReadCharSendsReadRequestWithDispatcher) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(status);
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, ReadLongAfterShutDown) {
+  ServiceData data(1, 2, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  service->ShutDown();
+
+  att::Status status;
+  service->ReadLongCharacteristic(
+      0, 0, 512,
+      [&](att::Status cb_status, const auto&) { status = cb_status; });
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(HostError::kFailed, status.error());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, ReadLongWhileNotReady) {
+  ServiceData data(1, 2, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  att::Status status;
+  service->ReadLongCharacteristic(
+      0, 0, 512,
+      [&](att::Status cb_status, const auto&) { status = cb_status; });
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(HostError::kNotReady, status.error());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, ReadLongNotFound) {
+  ServiceData data(1, 2, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+  SetupCharacteristics(service, std::vector<CharacteristicData>());
+
+  att::Status status;
+  service->ReadLongCharacteristic(
+      0, 0, 512,
+      [&](att::Status cb_status, const auto&) { status = cb_status; });
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(HostError::kNotFound, status.error());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, ReadLongNotSupported) {
+  ServiceData data(1, 3, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  // No "read" property set.
+  CharacteristicData chr(0, 2, 3, kTestUuid3);
+  SetupCharacteristics(service, {{chr}});
+
+  att::Status status;
+  service->ReadLongCharacteristic(
+      0, 0, 512,
+      [&](att::Status cb_status, const auto&) { status = cb_status; });
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(HostError::kNotSupported, status.error());
+}
+
+// 0 is not a valid parameter for the |max_size| field of ReadLongCharacteristic
+TEST_F(GATT_RemoteServiceManagerTest, ReadLongMaxSizeZero) {
+  ServiceData data(1, 3, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  CharacteristicData chr(Property::kRead, 2, 3, kTestUuid3);
+  SetupCharacteristics(service, {{chr}});
+
+  att::Status status;
+  service->ReadLongCharacteristic(
+      0, 0, 0, [&](att::Status cb_status, const auto&) { status = cb_status; });
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(HostError::kInvalidParameters, status.error());
+}
+
+// The complete attribute value is read in a single request.
+TEST_F(GATT_RemoteServiceManagerTest, ReadLongSingleBlob) {
+  constexpr att::Handle kValueHandle = 3;
+  constexpr uint16_t kOffset = 0;
+  constexpr size_t kMaxBytes = 1000;
+
+  ServiceData data(1, kValueHandle, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  CharacteristicData chr(Property::kRead, 2, kValueHandle, kTestUuid3);
+  SetupCharacteristics(service, {{chr}});
+
+  const auto kValue = CreateStaticByteBuffer('t', 'e', 's', 't');
+
+  fake_client()->set_read_blob_request_callback(
+      [&](att::Handle handle, uint16_t offset, auto callback) {
+        EXPECT_EQ(kValueHandle, handle);
+        EXPECT_EQ(kOffset, offset);
+        callback(att::Status(), kValue);
+      });
+
+  att::Status status(HostError::kFailed);
+  service->ReadLongCharacteristic(
+      0, kOffset, kMaxBytes, [&](att::Status cb_status, const auto& value) {
+        status = cb_status;
+        EXPECT_TRUE(ContainersEqual(kValue, value));
+      });
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(status);
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, ReadLongMultipleBlobs) {
+  constexpr att::Handle kValueHandle = 3;
+  constexpr uint16_t kOffset = 0;
+  constexpr size_t kMaxBytes = 1000;
+  constexpr int kExpectedBlobCount = 4;
+
+  ServiceData data(1, kValueHandle, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  CharacteristicData chr(Property::kRead, 2, kValueHandle, kTestUuid3);
+  SetupCharacteristics(service, {{chr}});
+
+  // Create a buffer that will take 4 requests to read. Since the default MTU is
+  // 23:
+  //   a. The size of |expected_value| is 69.
+  //   b. We should read 22 + 22 + 22 + 3 bytes across 4 requests.
+  StaticByteBuffer<att::kLEMinMTU * 3> expected_value;
+
+  // Initialize the contents.
+  for (size_t i = 0; i < expected_value.size(); ++i) {
+    expected_value[i] = i;
+  }
+
+  int read_blob_count = 0;
+  fake_client()->set_read_blob_request_callback(
+      [&](att::Handle handle, uint16_t offset, auto callback) {
+        EXPECT_EQ(kValueHandle, handle);
+        read_blob_count++;
+
+        // Return a blob at the given offset with at most MTU - 1 bytes.
+        auto blob = expected_value.view(offset, att::kLEMinMTU - 1);
+        if (read_blob_count == kExpectedBlobCount) {
+          // The final blob should contain 3 bytes.
+          EXPECT_EQ(3u, blob.size());
+        }
+
+        callback(att::Status(), blob);
+      });
+
+  att::Status status(HostError::kFailed);
+  service->ReadLongCharacteristic(
+      0, kOffset, kMaxBytes, [&](att::Status cb_status, const auto& value) {
+        status = cb_status;
+        EXPECT_TRUE(ContainersEqual(expected_value, value));
+      });
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(status);
+  EXPECT_EQ(kExpectedBlobCount, read_blob_count);
+}
+
+// Same as ReadLongMultipleBlobs except the characteristic value has a size that
+// is a multiple of (ATT_MTU - 1), so that the last read blob request returns 0
+// bytes.
+TEST_F(GATT_RemoteServiceManagerTest, ReadLongValueExactMultipleOfMTU) {
+  constexpr att::Handle kValueHandle = 3;
+  constexpr uint16_t kOffset = 0;
+  constexpr size_t kMaxBytes = 1000;
+  constexpr int kExpectedBlobCount = 4;
+
+  ServiceData data(1, kValueHandle, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  CharacteristicData chr(Property::kRead, 2, kValueHandle, kTestUuid3);
+  SetupCharacteristics(service, {{chr}});
+
+  // Create a buffer that will take 4 requests to read. Since the default MTU is
+  // 23:
+  //   a. The size of |expected_value| is 66.
+  //   b. We should read 22 + 22 + 22 + 0 bytes across 4 requests.
+  StaticByteBuffer<(att::kLEMinMTU - 1) * 3> expected_value;
+
+  // Initialize the contents.
+  for (size_t i = 0; i < expected_value.size(); ++i) {
+    expected_value[i] = i;
+  }
+
+  int read_blob_count = 0;
+  fake_client()->set_read_blob_request_callback(
+      [&](att::Handle handle, uint16_t offset, auto callback) {
+        EXPECT_EQ(kValueHandle, handle);
+        read_blob_count++;
+
+        // Return a blob at the given offset with at most MTU - 1 bytes.
+        auto blob = expected_value.view(offset, att::kLEMinMTU - 1);
+        if (read_blob_count == kExpectedBlobCount) {
+          // The final blob should be empty.
+          EXPECT_EQ(0u, blob.size());
+        }
+
+        callback(att::Status(), blob);
+      });
+
+  att::Status status(HostError::kFailed);
+  service->ReadLongCharacteristic(
+      0, kOffset, kMaxBytes, [&](att::Status cb_status, const auto& value) {
+        status = cb_status;
+        EXPECT_TRUE(ContainersEqual(expected_value, value));
+      });
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(status);
+  EXPECT_EQ(kExpectedBlobCount, read_blob_count);
+}
+
+// Same as ReadLongMultipleBlobs but a maximum size is given that is smaller
+// than the size of the attribute value.
+TEST_F(GATT_RemoteServiceManagerTest, ReadLongMultipleBlobsWithMaxSize) {
+  constexpr att::Handle kValueHandle = 3;
+  constexpr uint16_t kOffset = 0;
+  constexpr size_t kMaxBytes = 40;
+  constexpr int kExpectedBlobCount = 2;
+
+  ServiceData data(1, kValueHandle, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  CharacteristicData chr(Property::kRead, 2, kValueHandle, kTestUuid3);
+  SetupCharacteristics(service, {{chr}});
+
+  StaticByteBuffer<att::kLEMinMTU * 3> expected_value;
+
+  // Initialize the contents.
+  for (size_t i = 0; i < expected_value.size(); ++i) {
+    expected_value[i] = i;
+  }
+
+  int read_blob_count = 0;
+  fake_client()->set_read_blob_request_callback(
+      [&](att::Handle handle, uint16_t offset, auto callback) {
+        EXPECT_EQ(kValueHandle, handle);
+        read_blob_count++;
+        callback(att::Status(),
+                 expected_value.view(offset, att::kLEMinMTU - 1));
+      });
+
+  att::Status status(HostError::kFailed);
+  service->ReadLongCharacteristic(
+      0, kOffset, kMaxBytes, [&](att::Status cb_status, const auto& value) {
+        status = cb_status;
+        EXPECT_TRUE(ContainersEqual(expected_value.view(0, kMaxBytes), value));
+      });
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(status);
+  EXPECT_EQ(kExpectedBlobCount, read_blob_count);
+}
+
+// Same as ReadLongMultipleBlobs but a non-zero offset is given.
+TEST_F(GATT_RemoteServiceManagerTest, ReadLongAtOffset) {
+  constexpr att::Handle kValueHandle = 3;
+  constexpr uint16_t kOffset = 30;
+  constexpr size_t kMaxBytes = 1000;
+  constexpr int kExpectedBlobCount = 2;
+
+  ServiceData data(1, kValueHandle, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  CharacteristicData chr(Property::kRead, 2, kValueHandle, kTestUuid3);
+  SetupCharacteristics(service, {{chr}});
+
+  // Size: 69.
+  // Reads starting at offset 30 will return 22 + 17 bytes across 2 requests.
+  StaticByteBuffer<att::kLEMinMTU * 3> expected_value;
+
+  // Initialize the contents.
+  for (size_t i = 0; i < expected_value.size(); ++i) {
+    expected_value[i] = i;
+  }
+
+  int read_blob_count = 0;
+  fake_client()->set_read_blob_request_callback(
+      [&](att::Handle handle, uint16_t offset, auto callback) {
+        EXPECT_EQ(kValueHandle, handle);
+        read_blob_count++;
+        callback(att::Status(),
+                 expected_value.view(offset, att::kLEMinMTU - 1));
+      });
+
+  att::Status status(HostError::kFailed);
+  service->ReadLongCharacteristic(
+      0, kOffset, kMaxBytes, [&](att::Status cb_status, const auto& value) {
+        status = cb_status;
+        EXPECT_TRUE(
+            ContainersEqual(expected_value.view(kOffset, kMaxBytes), value));
+      });
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(status);
+  EXPECT_EQ(kExpectedBlobCount, read_blob_count);
+}
+
+// Same as ReadLongAtOffset but a very small max size is given.
+TEST_F(GATT_RemoteServiceManagerTest, ReadLongAtOffsetWithMaxBytes) {
+  constexpr att::Handle kValueHandle = 3;
+  constexpr uint16_t kOffset = 10;
+  constexpr size_t kMaxBytes = 34;
+  constexpr int kExpectedBlobCount = 2;
+
+  ServiceData data(1, kValueHandle, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  CharacteristicData chr(Property::kRead, 2, kValueHandle, kTestUuid3);
+  SetupCharacteristics(service, {{chr}});
+
+  // Size: 69. 4 bytes will be read in a single request starting at index 30.
+  // Reads starting at offset 10 will return 12 + 22 bytes across 2 requests. A
+  // third read blob should not be sent since this should satisfy |kMaxBytes|.
+  StaticByteBuffer<att::kLEMinMTU * 3> expected_value;
+
+  // Initialize the contents.
+  for (size_t i = 0; i < expected_value.size(); ++i) {
+    expected_value[i] = i;
+  }
+
+  int read_blob_count = 0;
+  fake_client()->set_read_blob_request_callback(
+      [&](att::Handle handle, uint16_t offset, auto callback) {
+        EXPECT_EQ(kValueHandle, handle);
+        read_blob_count++;
+        callback(att::Status(),
+                 expected_value.view(offset, att::kLEMinMTU - 1));
+      });
+
+  att::Status status(HostError::kFailed);
+  service->ReadLongCharacteristic(
+      0, kOffset, kMaxBytes, [&](att::Status cb_status, const auto& value) {
+        status = cb_status;
+        EXPECT_TRUE(
+            ContainersEqual(expected_value.view(kOffset, kMaxBytes), value));
+      });
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(status);
+  EXPECT_EQ(kExpectedBlobCount, read_blob_count);
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, ReadLongError) {
+  constexpr att::Handle kValueHandle = 3;
+  constexpr uint16_t kOffset = 0;
+  constexpr size_t kMaxBytes = 1000;
+  constexpr int kExpectedBlobCount = 2;  // The second request will fail.
+
+  ServiceData data(1, kValueHandle, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  CharacteristicData chr(Property::kRead, 2, kValueHandle, kTestUuid3);
+  SetupCharacteristics(service, {{chr}});
+
+  // Make the first blob large enough that it will cause a second read blob
+  // request.
+  StaticByteBuffer<att::kLEMinMTU - 1> first_blob;
+
+  int read_blob_count = 0;
+  fake_client()->set_read_blob_request_callback(
+      [&](att::Handle handle, uint16_t offset, auto callback) {
+        EXPECT_EQ(kValueHandle, handle);
+        read_blob_count++;
+        if (read_blob_count == kExpectedBlobCount) {
+          callback(att::Status(att::ErrorCode::kInvalidOffset), BufferView());
+        } else {
+          callback(att::Status(), first_blob);
+        }
+      });
+
+  att::Status status;
+  service->ReadLongCharacteristic(
+      0, kOffset, kMaxBytes, [&](att::Status cb_status, const auto& value) {
+        status = cb_status;
+        EXPECT_EQ(0u, value.size());  // No value should be returned on error.
+      });
+
+  RunLoopUntilIdle();
+  EXPECT_EQ(att::ErrorCode::kInvalidOffset, status.protocol_error());
+  EXPECT_EQ(kExpectedBlobCount, read_blob_count);
+}
+
+// The service is shut down while before the first read blob response. The
+// operation should get canceled.
+TEST_F(GATT_RemoteServiceManagerTest, ReadLongShutDownWhileInProgress) {
+  constexpr att::Handle kValueHandle = 3;
+  constexpr uint16_t kOffset = 0;
+  constexpr size_t kMaxBytes = 1000;
+  constexpr int kExpectedBlobCount = 1;
+
+  ServiceData data(1, kValueHandle, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  CharacteristicData chr(Property::kRead, 2, kValueHandle, kTestUuid3);
+  SetupCharacteristics(service, {{chr}});
+
+  StaticByteBuffer<att::kLEMinMTU - 1> first_blob;
+
+  int read_blob_count = 0;
+  fake_client()->set_read_blob_request_callback(
+      [&](att::Handle handle, uint16_t offset, auto callback) {
+        EXPECT_EQ(kValueHandle, handle);
+        read_blob_count++;
+
+        service->ShutDown();
+        callback(att::Status(), first_blob);
+      });
+
+  att::Status status;
+  service->ReadLongCharacteristic(
+      0, kOffset, kMaxBytes, [&](att::Status cb_status, const auto& value) {
+        status = cb_status;
+        EXPECT_EQ(0u, value.size());  // No value should be returned on error.
+      });
+
+  RunLoopUntilIdle();
+  EXPECT_EQ(HostError::kCanceled, status.error());
+  EXPECT_EQ(kExpectedBlobCount, read_blob_count);
 }
 
 TEST_F(GATT_RemoteServiceManagerTest, WriteCharAfterShutDown) {
