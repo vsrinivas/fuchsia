@@ -9,6 +9,7 @@ source_set("buffer") {
 
   sources = [
     "zircon_platform_buffer.cc",
+    "zircon_platform_buffer.h",
   ]
 
   deps = [
@@ -23,6 +24,11 @@ source_set("bus_mapper") {
 
   sources = [
     "zircon_platform_bus_mapper.cc",
+    "zircon_platform_bus_mapper.h",
+  ]
+
+  public_deps = [
+    ":buffer"
   ]
 
   deps = [
@@ -56,10 +62,6 @@ source_set("mmio") {
     "$zircon_build_root/public/lib/zx",
     "..:mmio",
   ]
-
-  deps = [
-    "$zircon_build_root/public/lib/ddk",
-  ]
 }
 
 source_set("device") {
@@ -74,6 +76,7 @@ source_set("device") {
   ]
 
   deps = [
+    ":bus_mapper",
     ":interrupt",
     ":mmio",
     "$magma_build_root/src/magma_util",

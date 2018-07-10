@@ -6,7 +6,7 @@
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 
-#include <ddk/device.h>
+#include <zircon/syscalls.h>
 #include <zircon/process.h> // for zx_vmar_root_self
 
 namespace magma {
