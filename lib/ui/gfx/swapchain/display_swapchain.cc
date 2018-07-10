@@ -212,6 +212,19 @@ bool DisplaySwapchain::InitializeFramebuffers(
 }
 
 DisplaySwapchain::~DisplaySwapchain() {
+  // Turn off operations.
+  display_manager_->EnableVsync(nullptr);
+
+  // A FrameRecord is now stale and will no longer receive the OnFramePresented
+  // callback; OnFrameDropped will clean up and make the state consistent.
+  for (size_t i = 0; i < frames_.size(); ++i) {
+    const size_t idx = (i + next_frame_index_) % frames_.size();
+    FrameRecord* record = frames_[idx].get();
+    if (record && !record->frame_timings->finalized()) {
+      record->frame_timings->OnFrameDropped(record->swapchain_index);
+    }
+  }
+
   display_->Unclaim();
   for (auto& buffer : swapchain_buffers_) {
     display_manager_->ReleaseImage(buffer.fb_id);

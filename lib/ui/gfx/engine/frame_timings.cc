@@ -70,6 +70,29 @@ void FrameTimings::OnFramePresented(size_t swapchain_index, zx_time_t time) {
   }
 }
 
+void FrameTimings::OnFrameDropped(size_t swapchain_index) {
+  // Indicates that "frame was dropped".
+  actual_presentation_time_ = ZX_TIME_INFINITE;
+
+  // The record should also reflect that "frame was dropped". Additionally,
+  // update counts to simulate calls to OnFrameRendered/OnFramePresented; this
+  // maintains count-related invariants.
+  Record& record = swapchain_records_[swapchain_index];
+  if (record.frame_presented_time == 0) {
+    record.frame_presented_time = ZX_TIME_INFINITE;
+    ++frame_presented_count_;
+  }
+  if (record.frame_rendered_time == 0) {
+    record.frame_rendered_time = ZX_TIME_INFINITE;
+    ++frame_rendered_count_;
+  }
+
+  FXL_DCHECK(received_all_callbacks())
+      << "Callback counts for render/present are incorrect.";
+  // Do scheduler-related cleanup.
+  Finalize();
+}
+
 void FrameTimings::Finalize() {
   FXL_DCHECK(!finalized());
   finalized_ = true;

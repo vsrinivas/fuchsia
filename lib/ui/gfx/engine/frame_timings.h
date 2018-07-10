@@ -35,9 +35,7 @@ class FrameTimings : public escher::Reffable {
 
   void OnFrameRendered(size_t swapchain_index, zx_time_t time);
   void OnFramePresented(size_t swapchain_index, zx_time_t time);
-  void OnFrameDropped(size_t swapchain_index) {
-    OnFramePresented(swapchain_index, ZX_TIME_INFINITE);
-  }
+  void OnFrameDropped(size_t swapchain_index);
 
   // Returns true when the frame timing has been passed to the scheduler
   // and can be discarded.
