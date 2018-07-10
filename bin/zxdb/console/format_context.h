@@ -39,18 +39,32 @@ struct FormatSourceOpts {
   int first_line = 0;
   int last_line = 0;
 
-  // 1-based line to show as the active one. This line will be shown in bold
-  // with an arrow indicator in the left column. When 0, no active line will be
+  // 1-based line to show as the active one. This line will be shown with an
+  // arrow indicator in the left column. When 0, no active line will be
   // highlighted.
+  //
+  // By convention the active line indicator should be used to show the current
+  // execution position only. To highlight for another purpose, use
+  // highlight_line.
   int active_line = 0;
 
-  // 1-based column number of the active line to start highlighting from. When
-  // 0 or 1, the entire line will be highlighted.
-  int active_column = 0;
+  // 1-based line to highlight in bold.
+  int highlight_line = 0;
 
-  // When true, all nonactive lines will be dimmed in source listings.
+  // 1-based column number of the highlighted line to start highlighting from.
+  // When 0 or 1, the entire line will be highlighted.
+  int highlight_column = 0;
+
+  // When true, all nonhighlighted lines will be dimmed in source listings.
   // Otherwise they will be shown in the normal color.
-  bool dim_nonactive = false;
+  bool dim_others = false;
+
+  // Set to true to issue an error if the active line is not present in the
+  // file. This would be set if we're showing the current execution location
+  // and it would be confusing to show something incorrect. In other cases,
+  // the active line is secondary information and it doesn't matter if it's
+  // not visible.
+  bool require_active_line = false;
 
   // Contains the lines with breakpoints (1-based key) mapped to whether that
   // breakpoint is enabled or not.

@@ -11,6 +11,8 @@
 
 namespace zxdb {
 
+class FileLine;
+
 // Symbol interface for a Target. A target may or may not have a process, so
 // this interface does not deal with anything related to addresses. See
 // ProcessSymbols for that (which is most of the stuff).
@@ -26,6 +28,10 @@ class TargetSymbols {
   // Gets file matches across all known modules. See
   // ModuleSymbols::FindFileMatches().
   virtual std::vector<std::string> FindFileMatches(
+      const std::string& name) const = 0;
+
+  // Returns the source location location(s) for the given symbol.
+  virtual std::vector<FileLine> FindLinesForSymbol(
       const std::string& name) const = 0;
 
  private:

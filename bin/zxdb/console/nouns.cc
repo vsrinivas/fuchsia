@@ -10,14 +10,17 @@
 
 #include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/err.h"
+#include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/session.h"
+#include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/console_context.h"
+#include "garnet/bin/zxdb/console/format_frame.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_util.h"
@@ -28,37 +31,53 @@ namespace zxdb {
 
 namespace {
 
-void ListFrames(ConsoleContext* context, Thread* thread) {
-  int active_frame_id = context->GetActiveFrameIdForThread(thread);
+constexpr int kVerboseSwitch = 1;
 
-  OutputBuffer out;
+// Frames ----------------------------------------------------------------------
 
-  // This doesn't use table output since the format of the stack frames is
-  // usually so unpredictable.
-  const auto& frames = thread->GetFrames();
-  if (frames.empty()) {
-    out.Append("No stack frames.\n");
-  } else {
-    for (int i = 0; i < static_cast<int>(frames.size()); i++) {
-      if (i == active_frame_id)
-        out.Append(GetRightArrow() + " ");
-      else
-        out.Append("  ");
-      out.Append(DescribeFrame(frames[i], i));
-      out.Append("\n");
-    }
-  }
-  Console::get()->Output(std::move(out));
-}
+const char kFrameShortHelp[] = "frame / f: Select or list stack frames.";
+const char kFrameHelp[] =
+    R"(frame [ -v ] [ <id> [ <command> ... ] ]
 
-void ScheduleListFrames(Thread* thread) {
-  thread->SyncFrames(
-      [thread]() { ListFrames(&Console::get()->context(), thread); });
-}
+  Selects or lists stack frames. Stack frames are only available for threads
+  that are stopped. Selecting or listing frames for running threads will
+  fail.
+
+  By itself, "frame" will list the stack frames in the current thread.
+
+  With an ID following it ("frame 3"), selects that frame as the current
+  active frame. This frame will apply by default for subsequent commands.
+
+  With an ID and another command following it ("frame 3 print"), modifies the
+  frame for that command only. This allows interrogating stack frames
+  regardless of which is the active one.
+
+Options
+
+  --verbose | -v
+      Show more information in the frame list. This is valid when listing
+      frames only.
+
+Examples
+
+  f
+  frame
+  f -v
+  frame -v
+    Lists all stack frames in the current thread.
+
+  f 1
+  frame 1
+    Selects frame 1 to be the active frame in the current thread.
+
+  process 2 thread 1 frame 3
+    Selects the specified process, thread, and frame.
+)";
 
 // Returns true if processing should stop (either a frame command or an error),
 // false to continue processing to the nex noun type.
-bool HandleFrame(ConsoleContext* context, const Command& cmd, Err* err) {
+bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
+  Console* console = Console::get();
   if (!cmd.HasNoun(Noun::kFrame))
     return false;
 
@@ -69,10 +88,7 @@ bool HandleFrame(ConsoleContext* context, const Command& cmd, Err* err) {
 
   if (cmd.GetNounIndex(Noun::kFrame) == Command::kNoIndex) {
     // Just "frame", this lists available frames.
-    if (cmd.thread()->HasAllFrames())
-      ListFrames(context, cmd.thread());
-    else
-      ScheduleListFrames(cmd.thread());
+    OutputFrameList(cmd.thread(), cmd.HasSwitch(kVerboseSwitch));
     return true;
   }
 
@@ -84,10 +100,54 @@ bool HandleFrame(ConsoleContext* context, const Command& cmd, Err* err) {
   // Setting the active thread also sets the active thread and target.
   context->SetActiveThreadForTarget(cmd.thread());
   context->SetActiveTarget(cmd.target());
-  Console::get()->Output(DescribeFrame(
-      cmd.frame(), context->GetActiveFrameIdForThread(cmd.thread())));
+
+  OutputBuffer out;
+  FormatFrame(cmd.frame(), &out, true, context->GetActiveFrameIdForThread(cmd.thread()));
+  console->Output(out);
   return true;
 }
+
+// Threads ---------------------------------------------------------------------
+
+const char kThreadShortHelp[] = "thread / t: Select or list threads.";
+const char kThreadHelp[] =
+    R"(thread [ <id> [ <command> ... ] ]
+
+  Selects or lists threads.
+
+  By itself, "thread" will list the threads in the current process.
+
+  With an ID following it ("thread 3"), selects that thread as the current
+  active thread. This thread will apply by default for subsequent commands
+  (like "step").
+
+  With an ID and another command following it ("thread 3 step"), modifies the
+  thread for that command only. This allows stepping or interrogating threads
+  regardless of which is the active one.
+
+Examples
+
+  t
+  thread
+      Lists all threads in the current process.
+
+  t 1
+  thread 1
+      Selects thread 1 to be the active thread in the current process.
+
+  process 2 thread 1
+      Selects process 2 as the active process and thread 1 within it as the
+      active thread.
+
+  process 2 thread
+      Lists all threads in process 2.
+
+  thread 1 step
+      Steps thread 1 in the current process, regardless of the active thread.
+
+  process 2 thread 1 step
+      Steps thread 1 in process 2, regardless of the active process or thread.
+)";
 
 // Prints the thread list for the given process to the console.
 void ListThreads(ConsoleContext* context, Process* process) {
@@ -140,7 +200,7 @@ void ScheduleListThreads(Process* process) {
 
 // Returns true if processing should stop (either a thread command or an error),
 // false to continue processing to the nex noun type.
-bool HandleThread(ConsoleContext* context, const Command& cmd, Err* err) {
+bool HandleThreadNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   if (!cmd.HasNoun(Noun::kThread))
     return false;
 
@@ -167,6 +227,46 @@ bool HandleThread(ConsoleContext* context, const Command& cmd, Err* err) {
   Console::get()->Output(DescribeThread(context, cmd.thread()));
   return true;
 }
+
+// Processes -------------------------------------------------------------------
+
+const char kProcessShortHelp[] =
+    "process / pr: Select or list process contexts.";
+const char kProcessHelp[] =
+    R"(process [ <id> [ <command> ... ] ]
+
+  Alias: "pr"
+
+  Selects or lists process contexts.
+
+  By itself, "process" will list available process contexts with their IDs. New
+  process contexts can be created with the "new" command. This list of debugger
+  contexts is different than the list of processes on the target system (use
+  "ps" to list all running processes, and "attach" to attach a context to a
+  running process).
+
+  With an ID following it ("process 3"), selects that process context as the
+  current active context. This context will apply by default for subsequent
+  commands (like "run").
+
+  With an ID and another command following it ("process 3 run"), modifies the
+  process context for that command only. This allows running, pausing, etc.
+  processes regardless of which is the active one.
+
+Examples
+
+  pr
+  process
+      Lists all process contexts.
+
+  pr 2
+  process 2
+      Sets process context 2 as the active one.
+
+  pr 2 r
+  process 2 run
+      Runs process context 2, regardless of the active one.
+)";
 
 void ListProcesses(ConsoleContext* context) {
   auto targets = context->session()->system().GetTargets();
@@ -216,7 +316,7 @@ void ListProcesses(ConsoleContext* context) {
 
 // Returns true if processing should stop (either a thread command or an error),
 // false to continue processing to the nex noun type.
-bool HandleProcess(ConsoleContext* context, const Command& cmd, Err* err) {
+bool HandleProcessNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   if (!cmd.HasNoun(Noun::kProcess))
     return false;
 
@@ -234,6 +334,43 @@ bool HandleProcess(ConsoleContext* context, const Command& cmd, Err* err) {
   Console::get()->Output(DescribeTarget(context, cmd.target()));
   return true;
 }
+
+// Breakpoints -----------------------------------------------------------------
+
+const char kBreakpointShortHelp[] =
+    "breakpoint / bp: Select or list breakpoints.";
+const char kBreakpointHelp[] =
+    R"(breakpoint [ <id> [ <command> ... ] ]
+
+  Alias: "bp"
+
+  Selects or lists breakpoints. Not to be confused with the "break" / "b"
+  command which creates new breakpoints. See "help break" for more.
+
+  By itself, "breakpoint" or "bp" will list all breakpoints with their IDs.
+
+  With an ID following it ("breakpoint 3"), selects that breakpoint as the
+  current active breakpoint. This breakpoint will apply by default for
+  subsequent breakpoint commands (like "clear" or "edit").
+
+  With an ID and another command following it ("breakpoint 2 clear"), modifies
+  the breakpoint context for that command only. This allows modifying
+  breakpoints regardless of the active one.
+
+Examples
+
+  bp
+  breakpoint
+      Lists all breakpoints.
+
+  bp 2
+  breakpoint 2
+      Sets breakpoint 2 as the active one.
+
+  bp 2 cl
+  breakpoint 2 clear
+      Clears breakpoint 2.
+)";
 
 void ListBreakpoints(ConsoleContext* context) {
   auto breakpoints = context->session()->system().GetBreakpoints();
@@ -283,7 +420,7 @@ void ListBreakpoints(ConsoleContext* context) {
 // Returns true if breakpoint was specified (and therefore nothing else
 // should be called. If breakpoint is specified but there was an error, *err
 // will be set.
-bool HandleBreakpoint(ConsoleContext* context, const Command& cmd, Err* err) {
+bool HandleBreakpointNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   if (!cmd.HasNoun(Noun::kBreakpoint))
     return false;
 
@@ -313,18 +450,40 @@ bool HandleBreakpoint(ConsoleContext* context, const Command& cmd, Err* err) {
 Err ExecuteNoun(ConsoleContext* context, const Command& cmd) {
   Err result;
 
-  if (HandleBreakpoint(context, cmd, &result))
+  if (HandleBreakpointNoun(context, cmd, &result))
     return result;
 
   // Work backwards in specificity (frame -> thread -> process).
-  if (HandleFrame(context, cmd, &result))
+  if (HandleFrameNoun(context, cmd, &result))
     return result;
-  if (HandleThread(context, cmd, &result))
+  if (HandleThreadNoun(context, cmd, &result))
     return result;
-  if (HandleProcess(context, cmd, &result))
+  if (HandleProcessNoun(context, cmd, &result))
     return result;
 
   return result;
+}
+
+void AppendNouns(std::map<Noun, NounRecord>* nouns) {
+  (*nouns)[Noun::kBreakpoint] =
+      NounRecord({"breakpoint", "bp"}, kBreakpointShortHelp, kBreakpointHelp,
+                 CommandGroup::kBreakpoint);
+
+  (*nouns)[Noun::kFrame] = NounRecord({"frame", "f"}, kFrameShortHelp,
+                                      kFrameHelp, CommandGroup::kQuery);
+
+  (*nouns)[Noun::kThread] = NounRecord({"thread", "t"}, kThreadShortHelp,
+                                       kThreadHelp, CommandGroup::kProcess);
+  (*nouns)[Noun::kProcess] = NounRecord({"process", "pr"}, kProcessShortHelp,
+                                        kProcessHelp, CommandGroup::kProcess);
+}
+
+const std::vector<SwitchRecord>& GetNounSwitches() {
+  static std::vector<SwitchRecord> switches;
+  if (switches.empty()) {
+    switches.emplace_back(kVerboseSwitch, false, "verbose", 'v');
+  }
+  return switches;
 }
 
 }  // namespace zxdb

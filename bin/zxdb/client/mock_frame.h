@@ -13,7 +13,8 @@ namespace zxdb {
 // they need.
 class MockFrame : public Frame {
  public:
-  // Session and can be null as long as no code that uses this object needs it.
+  // Session and Thread can be null as long as no code that uses this object
+  // needs it.
   MockFrame(Session* session, Thread* thread,
             const debug_ipc::StackFrame& stack_frame, const Location& location);
 

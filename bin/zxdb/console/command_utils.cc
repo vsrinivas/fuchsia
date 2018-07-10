@@ -324,14 +324,6 @@ std::string DescribeThread(const ConsoleContext* context,
                            thread->GetKoid(), thread->GetName().c_str());
 }
 
-// Unlike the other describe command, this takes an ID because normally
-// you know the index when calling into here, and it's inefficient to look up.
-std::string DescribeFrame(const Frame* frame, int id) {
-  // This will need symbols hooked up.
-  return fxl::StringPrintf("Frame %d ", id) +
-         DescribeLocation(frame->GetLocation(), false);
-}
-
 std::string DescribeBreakpoint(const ConsoleContext* context,
                                const Breakpoint* breakpoint) {
   BreakpointSettings settings = breakpoint->GetSettings();

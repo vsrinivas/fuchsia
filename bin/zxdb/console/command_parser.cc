@@ -10,6 +10,7 @@
 
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/console/command.h"
+#include "garnet/bin/zxdb/console/nouns.h"
 #include "garnet/public/lib/fxl/logging.h"
 
 namespace zxdb {
@@ -58,7 +59,7 @@ bool IsTokenSeparator(char c) { return c == ' '; }
 // std::string::npos. This is to handle the fact that long switches can be
 // expressed as either "--foo=bar" and "--foo bar".
 const SwitchRecord* FindLongSwitch(const std::string& str,
-                                   const VerbRecord& record,
+                                   const std::vector<SwitchRecord>& switches,
                                    size_t* equals_index) {
   // Should have two leading dashes.
   FXL_DCHECK(str.size() >= 2 && str.substr(0, 2) == "--");
@@ -73,15 +74,16 @@ const SwitchRecord* FindLongSwitch(const std::string& str,
     switch_str = str.substr(2, *equals_index - 2);
   }
 
-  for (const auto& sr : record.switches) {
+  for (const auto& sr : switches) {
     if (sr.name == switch_str)
       return &sr;
   }
   return nullptr;
 }
 
-const SwitchRecord* FindSwitch(char ch, const VerbRecord& record) {
-  for (const auto& sr : record.switches) {
+const SwitchRecord* FindSwitch(char ch,
+                               const std::vector<SwitchRecord>& switches) {
+  for (const auto& sr : switches) {
     if (sr.ch == ch)
       return &sr;
   }
@@ -152,8 +154,8 @@ Err ConsumeNoun(const std::vector<std::string>& tokens, size_t* token_index,
 // If successful, it will add the nouns to the command and will update the
 // token_index to the next token to be evaluated.
 Err ConsumeNouns(const std::vector<std::string>& tokens, size_t* token_index,
-                 Command *output) {
-  bool found_noun = false;      // Whether the next token(s) were nouns
+                 Command* output) {
+  bool found_noun = false;  // Whether the next token(s) were nouns
   do {
     Err err = ConsumeNoun(tokens, token_index, output, &found_noun);
     if (err.has_error())
@@ -164,14 +166,18 @@ Err ConsumeNouns(const std::vector<std::string>& tokens, size_t* token_index,
 }
 
 // Consumes the next token expecting to find a verb. If valid it will register
-// the noun into the command and will advance the token_index variable.
+// the verb into the command and will advance the token_index variable.
+//
+// It's possible there's no verb in which case this will put null into
+// *verb_record and return success.
 //
 // Will update a given pointer to the respective VerbRecord. We return by
 // pointer because VerbRecords are unique and non-copyable/movable.
 Err ConsumeVerb(const std::vector<std::string>& tokens, size_t* token_index_ptr,
-                Command* output, const VerbRecord **verb_record) {
+                Command* output, const VerbRecord** verb_record) {
   // Reference makes the code easier to understand
   size_t& token_index = *token_index_ptr;
+  const std::string& token = tokens[token_index];
 
   // Consume the verb.
   const auto& verb_strings = GetStringVerbMap();
@@ -198,8 +204,9 @@ Err ConsumeVerb(const std::vector<std::string>& tokens, size_t* token_index_ptr,
 //
 // If successful, it will set the switches to the command and will update the
 // token_index to the next token to be evaluated.
-Err ConsumeSwitches(const std::vector<std::string>& tokens, size_t* token_index_ptr,
-                    Command* output, const VerbRecord& verb_record) {
+Err ConsumeSwitches(const std::vector<std::string>& tokens,
+                    size_t* token_index_ptr, Command* output,
+                    const std::vector<SwitchRecord>& switches) {
   // Reference makes the code easier to understand
   size_t& token_index = *token_index_ptr;
 
@@ -227,7 +234,7 @@ Err ConsumeSwitches(const std::vector<std::string>& tokens, size_t* token_index_
     if (token[1] == '-') {
       // Two-hyphen (--) switch.
       size_t equals_index = std::string::npos;
-      sw_record = FindLongSwitch(token, verb_record, &equals_index);
+      sw_record = FindLongSwitch(token, switches, &equals_index);
       if (!sw_record)
         return Err("Unknown switch \"" + token + "\".");
 
@@ -247,7 +254,7 @@ Err ConsumeSwitches(const std::vector<std::string>& tokens, size_t* token_index_
     } else {
       // Single-dash token means one character.
       char switch_char = token[1];
-      sw_record = FindSwitch(switch_char, verb_record);
+      sw_record = FindSwitch(switch_char, switches);
       if (!sw_record)
         return Err(std::string("Unknown switch \"-") + switch_char + "\".");
 
@@ -342,14 +349,19 @@ Err ParseCommand(const std::vector<std::string>& tokens, Command* output) {
   if (token_index == tokens.size())
     return Err();
 
-  // We look for a verb after the nouns and get a reference to the global
-  // associated VerbRecord associated with it.
-  const VerbRecord *verb_record;
-  Err verb_err = ConsumeVerb(tokens, &token_index, output, &verb_record);
-  if (verb_err.has_error())
-    return verb_err;
+  // Check for verb and get a reference to its record if there is one.
+  const VerbRecord* verb_record = nullptr;
+  if (tokens[token_index].size() >= 1 && tokens[token_index][0] != '-') {
+    // Not a switch, read verb.
+    Err verb_err = ConsumeVerb(tokens, &token_index, output, &verb_record);
+    if (verb_err.has_error())
+      return verb_err;
+  }
 
-  Err switch_err = ConsumeSwitches(tokens, &token_index, output, *verb_record);
+  // Switches.
+  const std::vector<SwitchRecord>& switches =
+      verb_record ? verb_record->switches : GetNounSwitches();
+  Err switch_err = ConsumeSwitches(tokens, &token_index, output, switches);
   if (switch_err.has_error())
     return switch_err;
 

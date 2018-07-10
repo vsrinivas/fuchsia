@@ -106,10 +106,11 @@ Err OutputSourceContext(Process* process, const Location& location,
     // Synchronous source output.
     FormatSourceOpts source_opts;
     source_opts.active_line = location.file_line().line();
-    source_opts.active_column = location.column();
+    source_opts.highlight_line = source_opts.active_line;
+    source_opts.highlight_column = location.column();
     source_opts.first_line = source_opts.active_line - 2;
     source_opts.last_line = source_opts.active_line + 2;
-    source_opts.dim_nonactive = true;
+    source_opts.dim_others = true;
 
     OutputBuffer out;
     Err err = FormatSourceFileContext(
@@ -198,12 +199,13 @@ Err FormatSourceFileContext(const std::string& file_name,
 Err FormatSourceContext(const std::string& file_name_for_errors,
                         const std::string& file_contents,
                         const FormatSourceOpts& opts, OutputBuffer* out) {
-  FXL_DCHECK(opts.active_line == 0 || (opts.active_line >= opts.first_line &&
-                                       opts.active_line <= opts.last_line));
+  FXL_DCHECK(opts.active_line == 0 || !opts.require_active_line ||
+             (opts.active_line >= opts.first_line &&
+              opts.active_line <= opts.last_line));
 
   LineVector context = ExtractSourceContext(file_contents, opts);
-  if (context.empty() ||
-      (opts.active_line != 0 && context.back().first < opts.active_line)) {
+  if (context.empty() || (opts.active_line != 0 && opts.require_active_line &&
+                          context.back().first < opts.active_line)) {
     return Err(fxl::StringPrintf("There is no line %d in the file %s",
                                  opts.active_line,
                                  file_name_for_errors.c_str()));
@@ -242,14 +244,15 @@ Err FormatSourceContext(const std::string& file_name_for_errors,
     row.push_back(std::move(margin));
 
     std::string number = fxl::StringPrintf("%d", info.first);
-    if (info.first == opts.active_line) {
+    if (info.first == opts.highlight_line) {
       // This is the line to mark.
       row.push_back(
           OutputBuffer::WithContents(Syntax::kHeading, std::move(number)));
-      row.push_back(HighlightLine(std::move(info.second), opts.active_column));
+      row.push_back(
+          HighlightLine(std::move(info.second), opts.highlight_column));
     } else {
       // Normal context line.
-      Syntax syntax = opts.dim_nonactive ? Syntax::kComment : Syntax::kNormal;
+      Syntax syntax = opts.dim_others ? Syntax::kComment : Syntax::kNormal;
       row.push_back(OutputBuffer::WithContents(syntax, std::move(number)));
       row.push_back(OutputBuffer::WithContents(syntax, std::move(info.second)));
     }
@@ -370,6 +373,7 @@ Err FormatBreakpointContext(const Location& location,
   FormatSourceOpts opts;
   opts.first_line = line - kBreakpointContext;
   opts.last_line = line + kBreakpointContext;
+  opts.highlight_line = line;
   opts.bp_lines[line] = enabled;
   return FormatSourceFileContext(location.file_line().file(), build_dir, opts,
                                  out);

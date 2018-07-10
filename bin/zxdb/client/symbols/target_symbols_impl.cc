@@ -62,4 +62,29 @@ std::vector<std::string> TargetSymbolsImpl::FindFileMatches(
   return result;
 }
 
+std::vector<FileLine> TargetSymbolsImpl::FindLinesForSymbol(
+    const std::string& name) const {
+  // Inline functions will have multiple locations but the same FileLine, which
+  // we only want to return once.
+  std::set<FileLine> result_set;
+
+  std::vector<uint64_t> addrs;
+  for (const auto& module : modules_) {
+    addrs = module->module_symbols()->RelativeAddressesForFunction(name);
+
+    // Convert each address back into a location to get its file/line.
+    for (uint64_t addr : addrs) {
+      Location loc =
+          module->module_symbols()->RelativeLocationForRelativeAddress(addr);
+      if (loc.has_symbols())
+        result_set.insert(loc.file_line());
+    }
+  }
+
+  std::vector<FileLine> result;
+  for (auto& cur : result_set)
+    result.push_back(std::move(cur));
+  return result;
+}
+
 }  // namespace zxdb

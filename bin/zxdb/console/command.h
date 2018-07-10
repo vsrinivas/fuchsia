@@ -45,6 +45,7 @@ enum class Verb {
 
   kAspace,
   kAttach,
+  kBacktrace,
   kBreak,
   kClear,
   kConnect,
@@ -57,6 +58,7 @@ enum class Verb {
   kHelp,
   kKill,
   kLibs,
+  kList,
   kListProcesses,
   kMemAnalyze,
   kMemRead,

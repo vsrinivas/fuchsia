@@ -24,7 +24,8 @@ TEST(FormatContext, FormatSourceContext) {
   opts.first_line = 2;
   opts.last_line = 6;
   opts.active_line = 4;
-  opts.active_column = 11;
+  opts.highlight_line = 4;
+  opts.highlight_column = 11;
 
   OutputBuffer out;
   ASSERT_FALSE(
@@ -43,7 +44,8 @@ TEST(FormatContext, FormatSourceContext_OffBeginning) {
   opts.first_line = 0;
   opts.last_line = 4;
   opts.active_line = 2;
-  opts.active_column = 11;
+  opts.highlight_line = 2;
+  opts.highlight_column = 11;
 
   OutputBuffer out;
   // This column is off the end of line two, and the context has one less line
@@ -63,7 +65,8 @@ TEST(FormatContext, FormatSourceContext_OffEnd) {
   opts.first_line = 4;
   opts.last_line = 8;
   opts.active_line = 6;
-  opts.active_column = 6;
+  opts.highlight_line = 6;
+  opts.highlight_column = 6;
 
   OutputBuffer out;
   // This column is off the end of line two, and the context has one less line
@@ -82,6 +85,7 @@ TEST(FormatContext, FormatSourceContext_LineOffEnd) {
   opts.first_line = 0;
   opts.last_line = 100;
   opts.active_line = 10;  // This line is off the end of the input.
+  opts.highlight_line = 10;
 
   OutputBuffer out;
   Err err = FormatSourceContext("file.cc", kSimpleProgram, opts, &out);

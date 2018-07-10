@@ -78,7 +78,7 @@ std::string DescribeTarget(const ConsoleContext* context, const Target* target);
 std::string DescribeTargetName(const Target* target);
 
 std::string DescribeThread(const ConsoleContext* context, const Thread* thread);
-std::string DescribeFrame(const Frame* frame, int id);
+
 std::string DescribeBreakpoint(const ConsoleContext* context,
                                const Breakpoint* breakpoint);
 

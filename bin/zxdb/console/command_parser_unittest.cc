@@ -6,6 +6,7 @@
 
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/console/command.h"
+#include "garnet/bin/zxdb/console/nouns.h"
 #include "gtest/gtest.h"
 
 namespace zxdb {
@@ -112,10 +113,40 @@ TEST(CommandParser, ParserBasicErrors) {
   EXPECT_EQ("Noun \"process\" specified twice.", err.msg());
 }
 
-TEST(CommandParser, Switches) {
+TEST(CommandParser, NounSwitches) {
   Command output;
 
-  // Look up the command ID for the size switch to "memory read". This allows
+  // Look up the switch ID for the "-v" noun switch.
+  const SwitchRecord* verbose_switch = nullptr;
+  for (const auto& sr : GetNounSwitches()) {
+    if (sr.ch == 'v') {
+      verbose_switch = &sr;
+      break;
+    }
+  }
+  ASSERT_TRUE(verbose_switch);
+
+  Err err = ParseCommand("frame -", &output);
+  EXPECT_TRUE(err.has_error());
+  EXPECT_EQ("Invalid switch \"-\".", err.msg());
+
+  // Valid short switch.
+  err = ParseCommand("frame -v", &output);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+  EXPECT_EQ(1u, output.switches().size());
+  EXPECT_TRUE(output.HasSwitch(verbose_switch->id));
+
+  // Valid long switch.
+  err = ParseCommand("frame --verbose", &output);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+  EXPECT_EQ(1u, output.switches().size());
+  EXPECT_TRUE(output.HasSwitch(verbose_switch->id));
+}
+
+TEST(CommandParser, VerbSwitches) {
+  Command output;
+
+  // Look up the switch ID for the size switch to "memory read". This allows
   // the checks below to stay in sync without knowing much about how the memory
   // command is implemented.
   const auto& verbs = GetVerbs();

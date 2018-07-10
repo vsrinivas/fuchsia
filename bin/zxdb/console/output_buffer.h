@@ -13,7 +13,15 @@ namespace zxdb {
 class Err;
 
 // "Special" is used to note something unusual or weird.
-enum class Syntax { kNormal, kComment, kHeading, kError, kWarning, kSpecial };
+enum class Syntax {
+  kNormal,
+  kComment,
+  kHeading,
+  kError,
+  kWarning,
+  kSpecial,
+  kReversed
+};
 
 // This class collects output from commands so it can be put on the screen in
 // one chunk. It's not just a string because we want to add helper functions

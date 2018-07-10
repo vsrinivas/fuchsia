@@ -47,6 +47,8 @@ class TargetSymbolsImpl : public TargetSymbols {
   // TargetSymbols implementation.
   std::vector<std::string> FindFileMatches(
       const std::string& name) const override;
+  std::vector<FileLine> FindLinesForSymbol(
+      const std::string& name) const override;
 
  private:
   // Comparison functor for ModuleRefs. Does a pointer-identity comparison.

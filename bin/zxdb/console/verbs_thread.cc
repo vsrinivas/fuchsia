@@ -14,6 +14,7 @@
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
+#include "garnet/bin/zxdb/console/format_frame.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/input_location_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
@@ -36,6 +37,34 @@ bool VerifySystemHasRunningProcess(System* system, Err* err) {
   }
   *err = Err("No processes are running.");
   return false;
+}
+
+// backtrace -------------------------------------------------------------------
+
+const char kBacktraceShortHelp[] =
+    "backtrace / bt: Print a backtrace.";
+const char kBacktraceHelp[] =
+    R"(backtrace / bt
+
+  Prints a backtrace of the selected thread. This is an alias for "frame -v".
+
+  To see less information, use "frame" or just "f".
+
+Examples
+
+  t 2 bt
+  thread 2 backtrace
+)";
+Err DoBacktrace(ConsoleContext* context, const Command& cmd) {
+  Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread});
+  if (err.has_error())
+    return err;
+
+  if (!cmd.thread())
+    return Err("There is no thread to have frames.");
+
+  OutputFrameList(cmd.thread(), true);
+  return Err();
 }
 
 // continue --------------------------------------------------------------------
@@ -527,6 +556,9 @@ Err DoUntil(ConsoleContext* context, const Command& cmd) {
 }  // namespace
 
 void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
+  (*verbs)[Verb::kBacktrace] =
+      VerbRecord(&DoBacktrace, {"backtrace", "bt"}, kBacktraceShortHelp,
+      kBacktraceHelp, CommandGroup::kQuery);
   (*verbs)[Verb::kContinue] =
       VerbRecord(&DoContinue, {"continue", "c"}, kContinueShortHelp,
                  kContinueHelp, CommandGroup::kStep, SourceAffinity::kSource);

@@ -28,4 +28,7 @@ class FileLine {
   int line_ = 0;
 };
 
+// Comparison function for use in set and map.
+bool operator<(const FileLine& a, const FileLine& b);
+
 }  // namespace zxdb

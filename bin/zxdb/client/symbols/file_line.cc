@@ -17,4 +17,10 @@ std::string FileLine::GetFileNamePart() const {
   return ExtractLastFileComponent(file_).ToString();
 }
 
+bool operator<(const FileLine& a, const FileLine& b) {
+  if (a.line() != b.line())
+    return a.line() < b.line();
+  return a.file() < b.file();
+}
+
 }  // namespace zxdb
