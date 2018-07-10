@@ -32,7 +32,6 @@ class Gain {
   //
   // Examples: Renderer gain + Output gain = combined gain for a playback path.
   // Input device gain + Capturer gain = combined gain for an audio input path.
-  static constexpr unsigned int kFractionalScaleBits = 24;
   static constexpr float kMinGainDb = fuchsia::media::kMutedGain;
   static constexpr float kMaxGainDb = fuchsia::media::kMaxGain;
 

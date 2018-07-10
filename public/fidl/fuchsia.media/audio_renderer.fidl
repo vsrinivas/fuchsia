@@ -4,11 +4,12 @@
 
 library fuchsia.media;
 
-// A special value which will always cause an audio renderer to become
-// explicitly muted.
+// A special value (expressed in decibels) which expressly silences an outgoing
+// audio stream, regardless of other stream|device|environment characteristics.
+// Note: this gain value is entirely separate from the stream's mute state.
 const float32 kMutedGain = -160.0;
 
-// The maximum permitted above-unity gain.
+// An outgoing audio stream's maximum permitted above-unity gain, in decibels.
 const float32 kMaxGain = 24.0;
 
 interface AudioRenderer {
@@ -20,7 +21,7 @@ interface AudioRenderer {
 
   // Query the minimum possible presentation delay for this renderer, expressed
   // in nanoseconds.
-
+  //
   // This value depends on the media type and configuration of the renderer and
   // what it is bound to, so in theory this should be queried again when either
   // of these change. In practice, it's currently static.
@@ -44,23 +45,25 @@ struct AudioPacket {
 };
 
 interface AudioRendererGainControl {
+  //////////////////////////////////////////////////////////////////////////////
+  //
+  // Methods and constants related to gain control.
+  //
+  // Audio renderers permit the application control of gain (expressed in
+  // decibels) along with an independent, stateful, mute control.  The initial
+  // default settings are 0.0dB and mute=false.
+  //
+  //////////////////////////////////////////////////////////////////////////////
+
   2: SetGainMute(float32 gain,
-                bool mute, // false
-                uint32 flags) // kGainFlagGainValid
+                 bool mute,             // false
+                 uint32 flags)          // kGainFlagGainValid
     -> (float32 gain, bool mute);
   3: SetGainMuteNoReply(float32 gain,
-                       bool mute, // false
-                       uint32 flags); // kGainFlagGainValid
+                        bool mute,      // false
+                        uint32 flags);  // kGainFlagGainValid
 };
 
-//////////////////////////////////////////////////////////////////////////////
-//
-// Methods and constants related to gain control.
-//
-// Audio renderer's permit the application control of gain expressed in
-// decibels along with an independent, stateful, mute control.  The initial
-// default settings are 0.0dB and mute=false.
-//
 const uint32 kGainFlagGainValid = 0x01;
 const uint32 kGainFlagMuteValid = 0x02;
 
@@ -97,7 +100,7 @@ interface AudioRenderer2 {
   // nanoseconds (1e9/1).  If you are using timestamps from an MPEG-PS
   // container, you would change this to 90000/1 (90 KHz).
   103: SetPtsUnits(uint32 tick_per_second_numerator,
-                  uint32 tick_per_second_denominator);
+                   uint32 tick_per_second_denominator);
 
   // Sets the maximum distance (in frames) between an explicit PTS (provided by
   // the user) and the expected PTS (determined using interpolation) which may
@@ -283,11 +286,11 @@ interface AudioRenderer2 {
   // discontinuity.
   //
   // TODO(johngro): Collapse these if we ever have optional retvals in FIDL
-  301: Play(int64 reference_time, // kNoTimestamp
-            int64 media_time) -> // kNoTimestamp
-    (int64 reference_time, int64 media_time);
-  302: PlayNoReply(int64 reference_time, // kNoTimestamp
-                   int64 media_time); // kNoTimestamp
+  301: Play(int64 reference_time,         // kNoTimestamp
+            int64 media_time)             // kNoTimestamp
+    -> (int64 reference_time, int64 media_time);
+  302: PlayNoReply(int64 reference_time,  // kNoTimestamp
+                   int64 media_time);     // kNoTimestamp
 
   // Immediately put the renderer into the paused state and then report the
   // relationship between the media and reference timelines which was
@@ -322,12 +325,12 @@ interface AudioRenderer2 {
   //
   // TODO(johngro): Collapse these if we ever have optional retvals in FIDL
   401: SetGainMute(float32 gain,
-                   bool mute, // false
-                   uint32 flags) // kGainFlagGainValid
+                   bool mute,             // false
+                   uint32 flags)          // kGainFlagGainValid
     -> (float32 gain, bool mute);
   402: SetGainMuteNoReply(float32 gain,
-                          bool mute, // false
-                          uint32 flags); // kGainFlagGainValid
+                          bool mute,      // false
+                          uint32 flags);  // kGainFlagGainValid
 
   // Create a new interface (bound to this renderer) which is restricted to gain
   // control functions only.
@@ -371,7 +374,7 @@ interface AudioRenderer2 {
   602: -> OnMinLeadTimeChanged(int64 min_lead_time_nsec);
 
   // TODO(johngro): Get rid of this method when possible.  Right now, it is used
-  // by code which demands to use a synchornous FIDL interface to talk to
+  // by code which demands to use a synchronous FIDL interface to talk to
   // renderers.
   699: GetMinLeadTime() -> (int64 min_lead_time_nsec);
 

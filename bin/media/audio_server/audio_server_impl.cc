@@ -116,16 +116,6 @@ void AudioServerImpl::SetSystemGain(float db_gain) {
     return;
   }
 
-  if (db_gain == fuchsia::media::kMutedGain) {
-    // System audio gain is being set to |kMutedGain|. This implicitly mutes
-    // system audio.
-    system_muted_ = true;
-  } else if (system_gain_db_ == fuchsia::media::kMutedGain) {
-    // System audio was muted, because gain was set to |kMutedGain|. We're
-    // raising the gain now, so we unmute.
-    system_muted_ = false;
-  }
-
   system_gain_db_ = db_gain;
 
   device_manager_.OnSystemGainChanged();
@@ -133,11 +123,6 @@ void AudioServerImpl::SetSystemGain(float db_gain) {
 }
 
 void AudioServerImpl::SetSystemMute(bool muted) {
-  if (system_gain_db_ == fuchsia::media::kMutedGain) {
-    // Keep audio muted if system audio gain is set to |kMutedGain|.
-    muted = true;
-  }
-
   if (system_muted_ == muted) {
     return;
   }

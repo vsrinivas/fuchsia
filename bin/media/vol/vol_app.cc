@@ -333,7 +333,8 @@ class VolApp {
 
     if (iter == devices_.end()) {
       if (!interactive()) {
-        std::cout << "No appropriate device found for setting gain";
+        std::cout << "No appropriate device found for setting gain"
+                  << std::endl;
       }
       return;
     }

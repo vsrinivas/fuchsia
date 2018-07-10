@@ -12,7 +12,6 @@
 namespace media {
 namespace audio {
 
-constexpr unsigned int Gain::kFractionalScaleBits;
 constexpr Gain::AScale Gain::kUnityScale;
 constexpr Gain::AScale Gain::kMaxScale;
 constexpr float Gain::kMinGainDb;

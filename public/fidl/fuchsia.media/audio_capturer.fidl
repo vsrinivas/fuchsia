@@ -250,9 +250,9 @@ library fuchsia.media;
 //
 interface AudioCapturer {
   // Gets the currently configured media type.  Note: for a capturer which was
-  // just created and has not had it's media type explicitly set yet, this will
-  // give the currently configured media type of the input or the output that
-  // the capturer was bound to at creation time.
+  // just created and has not yet had its media type explicitly set, this will
+  // retrieve the media type -- at the time the capturer was created -- of the
+  // source (input or looped-back output) to which the capturer is bound.
   //
   // TODO(johngro) : Get rid of this.  Eventually, capturers will be bindable to
   // a set of inputs/outputs/renderers, so the concept of a "native" media type
@@ -268,9 +268,11 @@ interface AudioCapturer {
   // the payload buffer has been established.
   2: SetMediaType(MediaType media_type);
 
-  // Set the gain (in dB) applied to the fuchsia.ui.input.  Gain may be adjusted at any
-  // time, but must be on the range...
-  // [kMutedGain, kMaxGain]
+  // Set the gain (in dB) applied to the fuchsia.ui.input.  Gain may be adjusted
+  // at any time, but must be within the range [kMutedGain, kMaxGain].
+  //
+  // TODO(mpuryear): Genericize AudioRendererGainControl to also cover capture.
+  // This would add a stateful, independent Mute to each capture stream.
   3: SetGain(float32 gain);
 
   // Set the shared buffer used to transport captured data.

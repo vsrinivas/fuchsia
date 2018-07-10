@@ -106,9 +106,9 @@ class AudioServerImpl : public fuchsia::media::Audio {
   bool cleanup_scheduled_ FXL_GUARDED_BY(cleanup_queue_mutex_) = false;
   bool shutting_down_ = false;
 
-  // TODO(johngro): remove this state.  Move users over to using the
-  // AudioDeviceEnumerator interface to control gain on a per input/output
-  // basis.
+  // TODO(johngro): remove this state.  Migrate users to AudioDeviceEnumerator,
+  // to control gain on a per-input/output basis.
+  // Either way, Gain and Mute should remain fully independent.
   float system_gain_db_ = kDefaultSystemGainDb;
   bool system_muted_ = kDefaultSystemMuted;
 
