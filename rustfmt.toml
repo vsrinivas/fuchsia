@@ -1,5 +1,5 @@
 # This file was originally created by running the command
-# rustfmt --dump-default-config rustfmt.toml && sort -u rustfmt.toml -o rustfmt.toml.
+# rustfmt --print-config default rustfmt.toml && sort -u rustfmt.toml -o rustfmt.toml.
 # Changes from the defaults are marked with comments.
 binop_separator = "Front"
 blank_lines_lower_bound = 0
@@ -11,6 +11,7 @@ comment_width = 100 # Fuchsia uses 100
 condense_wildcard_suffixes = false
 control_brace_style = "AlwaysSameLine"
 disable_all_formatting = false
+emit_mode = "Files"
 empty_item_single_line = true
 error_on_line_overflow = false
 error_on_unformatted = false
@@ -31,7 +32,7 @@ merge_derives = true
 merge_imports = false
 newline_style = "Unix"
 normalize_comments = false
-remove_blank_lines_at_start_or_end_of_block = true
+remove_nested_parens = true
 reorder_impl_items = false
 reorder_imports = true
 reorder_modules = true
@@ -41,7 +42,6 @@ skip_children = false
 space_after_colon = true
 space_before_colon = false
 spaces_around_ranges = false
-spaces_within_parens_and_brackets = false
 struct_field_align_threshold = 0
 struct_lit_single_line = true
 tab_spaces = 4
@@ -50,7 +50,7 @@ trailing_semicolon = true
 type_punctuation_density = "Wide"
 unstable_features = false
 use_field_init_shorthand = false
-use_small_heuristics = true
+use_small_heuristics = "Default"
 use_try_shorthand = true # Fuchsia prefers the shortcut
 where_single_line = false
 wrap_comments = true # otherwise comments will violate max_width
