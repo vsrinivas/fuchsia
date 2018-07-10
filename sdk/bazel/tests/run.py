@@ -4,19 +4,24 @@
 # found in the LICENSE file.
 
 import argparse
-from subprocess import check_output, Popen, PIPE
+import os
+from subprocess import check_output, Popen
 import sys
 
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
 def build(targets):
-    job = Popen(['bazel', 'build', '--config=fuchsia', '--keep_going']
-                + targets)
+    command = ['bazel', 'build', '--config=fuchsia', '--keep_going'] + targets
+    job = Popen(command, cwd=SCRIPT_DIR)
     job.communicate()
     return job.returncode
 
 
 def query(query):
-    return set(check_output(['bazel', 'query', query]).splitlines())
+    command = ['bazel', 'query', query]
+    return set(check_output(command, cwd=SCRIPT_DIR).splitlines())
 
 
 def main():
