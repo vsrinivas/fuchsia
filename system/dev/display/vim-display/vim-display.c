@@ -247,14 +247,28 @@ static void display_release(void* ctx) {
     vim2_display_t* display = ctx;
 
     if (display) {
-        zx_interrupt_trigger(display->vsync_interrupt, 0, 0);
-        zx_interrupt_trigger(display->inth, 0, 0);
+        bool wait_for_vsync_shutdown = false;
+        if (display->vsync_interrupt != ZX_HANDLE_INVALID) {
+            zx_interrupt_trigger(display->vsync_interrupt, 0, 0);
+            wait_for_vsync_shutdown = true;
+        }
+
+        bool wait_for_main_shutdown = false;
+        if (display->inth != ZX_HANDLE_INVALID) {
+            zx_interrupt_trigger(display->inth, 0, 0);
+            wait_for_main_shutdown = true;
+        }
+
         int res;
-        thrd_join(display->vsync_thread, &res);
-        thrd_join(display->main_thread, &res);
+        if (wait_for_vsync_shutdown) {
+            thrd_join(display->vsync_thread, &res);
+        }
+
+        if (wait_for_main_shutdown) {
+            thrd_join(display->main_thread, &res);
+        }
 
         gpio_release_interrupt(&display->gpio, 0);
-
         io_buffer_release(&display->mmio_preset);
         io_buffer_release(&display->mmio_hdmitx);
         io_buffer_release(&display->mmio_hiu);
