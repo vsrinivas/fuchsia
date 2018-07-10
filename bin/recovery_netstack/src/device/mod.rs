@@ -48,9 +48,16 @@ pub struct DeviceLayerState {
 
 impl DeviceLayerState {
     /// Add a new ethernet device to the device layer.
-    pub fn add_ethernet_device(&mut self, id: u64, state: EthernetDeviceState) -> DeviceId{
+    pub fn add_ethernet_device(&mut self, state: EthernetDeviceState) -> DeviceId {
+        let id = self.allocate_id();
         self.ethernet.insert(id, state);
         DeviceId::new_ethernet(id)
+    }
+
+    fn allocate_id(&mut self) -> u64 {
+        let id = self.next_id;
+        self.next_id += 1;
+        id
     }
 }
 
