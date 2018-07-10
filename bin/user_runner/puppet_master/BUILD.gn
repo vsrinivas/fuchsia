@@ -97,7 +97,10 @@ source_set("make_production_impl") {
   deps = [
     ":dispatch_story_command_executor",
     ":puppet_master_impl",
+    "//peridot/bin/user_runner/puppet_master/command_runners:set_focus_state_command_runner",
     "//peridot/bin/user_runner/puppet_master/command_runners:set_link_value_command_runner",
+    "//peridot/bin/user_runner/puppet_master/command_runners:add_mod_command_runner",
     "//peridot/bin/user_runner/puppet_master/command_runners:update_mod_command_runner",
+    "//peridot/bin/user_runner/puppet_master/command_runners:remove_mod_command_runner",
   ]
 }

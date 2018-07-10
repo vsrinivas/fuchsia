@@ -64,3 +64,81 @@ executable("update_mod_command_runner_unittest") {
     "//third_party/googletest:gtest_main",
   ]
 }
+
+source_set("add_mod_command_runner") {
+  sources = [
+    "add_mod_command_runner.cc",
+    "add_mod_command_runner.h",
+  ]
+
+  deps = [
+    ":command_runner",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+executable("add_mod_command_runner_unittest") {
+  testonly = true
+
+  sources = [
+    "add_mod_command_runner_unittest.cc",
+  ]
+
+  deps = [
+    ":add_mod_command_runner",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+source_set("remove_mod_command_runner") {
+  sources = [
+    "remove_mod_command_runner.cc",
+    "remove_mod_command_runner.h",
+  ]
+
+  deps = [
+    ":command_runner",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+executable("remove_mod_command_runner_unittest") {
+  testonly = true
+
+  sources = [
+    "remove_mod_command_runner_unittest.cc",
+  ]
+
+  deps = [
+    ":remove_mod_command_runner",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+source_set("set_focus_state_command_runner") {
+  sources = [
+    "set_focus_state_command_runner.cc",
+    "set_focus_state_command_runner.h",
+  ]
+
+  deps = [
+    ":command_runner",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+executable("set_focus_state_command_runner_unittest") {
+  testonly = true
+
+  sources = [
+    "set_focus_state_command_runner_unittest.cc",
+  ]
+
+  deps = [
+    ":set_focus_state_command_runner",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}
