@@ -35,8 +35,7 @@ shift $((OPTIND - 1))
 
 readonly "${FORCE}"
 case "${1}" in
-arm64) ;&
-x64)
+arm64|x64)
   ARCH="$1";;
 *)
   usage;;
