@@ -15,23 +15,13 @@
 namespace a11y_manager {
 
 // Manager interface implementation.
-class ManagerImpl : public fuchsia::accessibility::Manager {
+class ManagerImpl {
  public:
   explicit ManagerImpl() = default;
   ~ManagerImpl() = default;
 
  private:
   // |Manager|:
-  void ConnectSemanticsProvider(
-      uint32_t id,
-      fidl::InterfaceHandle<fuchsia::accessibility::SemanticsProvider>
-          semantics_provider) override;
-
-  void NotifyEvent(uint32_t id,
-                   fuchsia::ui::input::InputEvent event) override;
-
-  std::unordered_map<uint32_t, fuchsia::accessibility::SemanticsProviderPtr>
-      semantic_provider_by_id_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ManagerImpl);
 };

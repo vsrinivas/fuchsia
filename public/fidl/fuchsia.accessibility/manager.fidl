@@ -4,21 +4,33 @@
 
 library fuchsia.accessibility;
 
-// The accessibility manager acts as an aggregator of accessibility information provided by
-// the compositor, Scenic, and front-ends like Flutter. It is also the main contact for
-// accessibility services to read accessibility information.
+// The accessibility manager as a whole acts as an aggregator of accessibility information
+// provided by the compositor, Scenic, and front-ends like Flutter. It is also the main contact
+// for accessibility services to read accessibility information.
+//
+// The Manager interface itself defines the API surface for accessibility services to
+// access semantics information and apply accessibility actions.
 //
 // TODO(SCN-812) This is a stub implementation and is currently a work in progress.
+// Currently, there are three levels of identification used in the system (All prone to change):
+//  1. ViewTreeToken: Owned by Scenic. Maps to ViewTree to do hit test on.
+//  2. View id: Owned by Scenic. Maps to view corresponding to a front-end.
+//  3. Node id: Owned by front-end. Maps to semantic node local to a front-end.
 [Discoverable]
 interface Manager {
+  // Returns the deepest node that the input touches. We currently need to pass the view tree token
+  // for the current view manager implementation to know which view tree to search.
+  1: GetHitNode(fuchsia.ui.views_v1.ViewTreeToken tree_token, fuchsia.ui.input.PointerEvent input)
+    -> (int32 view_id, Node? node);
 
-  // Connects a semantics provider to the manager referenced by the provided id.
-  //
-  // A front-end that is able to provide semantic information will create a |SemanticsProvider|
-  // and provide the manager a handle to it along with an id to use for future references.
-  1: ConnectSemanticsProvider(uint32 id, SemanticsProvider semantics_provider);
+  // Sets accessibility focus to the specified node in the frontend with the specified id.
+  // Previously set accessibility focus is removed.
+  2: SetAccessibilityFocus(int32 view_id, int32 node_id);
 
-  // Tells the manager that an event has happened to the view with the associated id.
-  // TODO(SCN-816): Remove this once scenic event listeners are added.
-  2: NotifyEvent(uint32 id, fuchsia.ui.input.InputEvent event);
+  // Performs an accessibility action on the current accessibility focused element.
+  // If no element has accessibility focus, does nothing.
+  3: PerformAction(Action action);
+
+  // Event to notify that a node in a front-end referenced by id had an action applied on it.
+  4: -> OnNodeAction(int32 view_id, Node node, Action action);
 };

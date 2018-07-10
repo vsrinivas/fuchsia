@@ -11,13 +11,6 @@ App::App()
   FXL_DCHECK(startup_context_);
   FXL_LOG(INFO) << "Publishing a11y manager service";
   a11y_manager_.reset(new ManagerImpl());
-  startup_context_->outgoing()
-      .AddPublicService<fuchsia::accessibility::Manager>(
-          [this](
-              fidl::InterfaceRequest<fuchsia::accessibility::Manager> request) {
-            this->binding_set_.AddBinding(this->a11y_manager_.get(),
-                                          std::move(request));
-          });
 }
 
 App::~App() {}

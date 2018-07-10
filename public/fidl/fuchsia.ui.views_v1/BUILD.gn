@@ -8,6 +8,7 @@ fidl("fuchsia.ui.views_v1") {
   sdk_category = "partner"
 
   sources = [
+    "accessibility_view_inspector.fidl",
     "view_containers.fidl",
     "view_manager.fidl",
     "view_properties.fidl",
@@ -18,11 +19,11 @@ fidl("fuchsia.ui.views_v1") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.ui.views_v1_token",
-    "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/fidl/fuchsia.math",
+    "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/fidl/fuchsia.ui.gfx",
     "//garnet/public/fidl/fuchsia.ui.input",
     "//garnet/public/fidl/fuchsia.ui.scenic",
+    "//garnet/public/fidl/fuchsia.ui.views_v1_token",
   ]
 }

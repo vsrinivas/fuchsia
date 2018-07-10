@@ -10,12 +10,14 @@ fidl("fuchsia.accessibility") {
   sources = [
     "data.fidl",
     "manager.fidl",
-    "semantics_provider.fidl",
+    "semantics_root.fidl",
     "test_client.fidl",
   ]
 
   public_deps = [
     "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/fidl/fuchsia.ui.gfx",
     "//garnet/public/fidl/fuchsia.ui.input",
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
   ]
 }
