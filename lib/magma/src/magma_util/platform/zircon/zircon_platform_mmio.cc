@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 #include "zircon_platform_mmio.h"
-
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
+
+#include <ddk/device.h>
+#include <zircon/process.h> // for zx_vmar_root_self
 
 namespace magma {
 

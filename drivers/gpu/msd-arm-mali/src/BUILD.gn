@@ -60,6 +60,7 @@ source_set("src") {
     "//garnet/lib/magma/src/magma_util:command_buffer",
     "//garnet/lib/magma/src/magma_util:registers",
     "//garnet/lib/magma/src/magma_util:thread",
+    "//garnet/lib/magma/src/magma_util/platform:bus_mapper",
     "//garnet/lib/magma/src/magma_util/platform:device",
     "//garnet/lib/magma/src/magma_util/platform:event",
     "//garnet/lib/magma/src/magma_util/platform:port",

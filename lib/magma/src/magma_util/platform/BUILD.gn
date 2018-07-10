@@ -24,7 +24,6 @@ source_set("buffer") {
 
   sources = [
     "platform_buffer.h",
-    "platform_bus_mapper.h",
   ]
 
   deps = [
@@ -32,6 +31,26 @@ source_set("buffer") {
   ]
 
   allow_circular_includes_from = [ "zircon:buffer" ]
+}
+
+source_set("bus_mapper") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    ":buffer",
+    ":handle",
+    "$magma_build_root/src/magma_util",
+  ]
+
+  sources = [
+    "platform_bus_mapper.h",
+  ]
+
+  deps = [
+    "zircon:bus_mapper",
+  ]
+
+  allow_circular_includes_from = [ "zircon:bus_mapper" ]
 }
 
 source_set("handle") {

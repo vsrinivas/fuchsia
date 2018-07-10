@@ -8,6 +8,7 @@
 #include "platform_pci_device.h"
 
 #include <ddk/device.h>
+#include <ddk/protocol/pci.h>
 
 namespace magma {
 

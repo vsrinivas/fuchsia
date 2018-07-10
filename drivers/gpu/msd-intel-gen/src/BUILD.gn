@@ -65,11 +65,13 @@ source_set("src") {
     "$magma_build_root/src/magma_util:semaphore_port",
     "$magma_build_root/src/magma_util:thread",
     "$magma_build_root/src/magma_util/platform:buffer",
+    "$magma_build_root/src/magma_util/platform:bus_mapper",
     "$magma_build_root/src/magma_util/platform:device",
     "$magma_build_root/src/magma_util/platform:event",
     "$magma_build_root/src/magma_util/platform:semaphore",
     "$magma_build_root/src/magma_util/platform:thread",
     "$magma_build_root/src/magma_util/platform:trace",
+    "$zircon_build_root/public/lib/ddk",
     "../include",
   ]
 

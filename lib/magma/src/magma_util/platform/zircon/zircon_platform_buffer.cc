@@ -6,7 +6,6 @@
 
 #include "platform_trace.h"
 #include "zircon_platform_handle.h"
-#include <ddk/driver.h>
 #include <lib/fdio/io.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>

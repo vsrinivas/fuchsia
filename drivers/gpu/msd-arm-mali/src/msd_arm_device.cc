@@ -17,7 +17,6 @@
 #include "magma_vendor_queries.h"
 #include "platform_port.h"
 #include "platform_trace.h"
-#include <ddk/debug.h>
 
 #include "registers.h"
 

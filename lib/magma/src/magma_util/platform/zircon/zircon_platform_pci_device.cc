@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/device.h>
-#include <ddk/protocol/pci.h>
-#include <zircon/process.h>
+#include "zircon_platform_pci_device.h"
 
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
@@ -12,7 +10,9 @@
 #include "zircon_platform_bus_mapper.h"
 #include "zircon_platform_interrupt.h"
 #include "zircon_platform_mmio.h"
-#include "zircon_platform_pci_device.h"
+
+#include <ddk/device.h>
+#include <ddk/driver.h>
 
 namespace magma {
 
