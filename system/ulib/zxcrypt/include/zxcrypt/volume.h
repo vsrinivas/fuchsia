@@ -45,7 +45,6 @@ public:
     enum Version : uint32_t {
         kUninitialized = 0,
         kAES256_XTS_SHA256,
-        kAES128_CTR_SHA256,
     };
 
     // The default version, used when sealing a new volume.

@@ -47,7 +47,7 @@ namespace zxcrypt {
 // derived from the caller-provided root key and specific slot.
 
 // Determines what algorithms are in use when creating new zxcrypt devices.
-const Volume::Version Volume::kDefaultVersion = Volume::kAES128_CTR_SHA256;
+const Volume::Version Volume::kDefaultVersion = Volume::kAES256_XTS_SHA256;
 
 // The amount of data that can "in-flight" to the underlying block device before the zxcrypt
 // driver begins queuing transactions
@@ -441,11 +441,6 @@ zx_status_t Volume::Configure(Volume::Version version) {
     case Volume::kAES256_XTS_SHA256:
         aead_ = crypto::AEAD::kAES128_GCM_SIV;
         cipher_ = crypto::Cipher::kAES256_XTS;
-        digest_ = crypto::digest::kSHA256;
-        break;
-    case Volume::kAES128_CTR_SHA256:
-        aead_ = crypto::AEAD::kAES128_GCM_SIV;
-        cipher_ = crypto::Cipher::kAES128_CTR;
         digest_ = crypto::digest::kSHA256;
         break;
 
