@@ -47,7 +47,11 @@ CARGO_CONFIG = '''
 [target.{target}-unknown-fuchsia]
 linker = "{linker}"
 ar = "{ar}"
-rustflags = ["-C", "link-arg=--target={target}-unknown-fuchsia", "-C", "link-arg=--sysroot={sysroot}"]
+rustflags = [
+    "-C", "link-arg=--target={target}-unknown-fuchsia",
+    "-C", "link-arg=--sysroot={sysroot}",
+    "-C", "link-arg=-L{shared_libs_root}",
+]
 '''
 
 def ensure_dir(dir):
@@ -63,7 +67,11 @@ def main():
             required=True)
     parser.add_argument(
             '--sysroot',
-            help='zircon sysroot (possibly //out/build_zircon/build-user-x64/sysroot?)',
+            help='zircon sysroot (possibly //out/release-x64/sdks/zircon_sysroot/sysroot)',
+            required=True)
+    parser.add_argument(
+            '--shared-libs-root',
+            help='shared libs root (possibly //out/release-x64/x64-shared)',
             required=True)
     parser.add_argument(
             '--host-os',
@@ -87,6 +95,7 @@ def main():
 
     rust_root = os.path.abspath(args.rust_root)
     sysroot = os.path.abspath(args.sysroot)
+    shared_libs_root = os.path.abspath(args.shared_libs_root)
     host_os = args.host_os
     target = args.target
     staging_dir = os.path.abspath(args.staging_dir)
@@ -114,6 +123,7 @@ def main():
             linker=os.path.join(clang_dir, 'bin', 'clang'),
             ar=os.path.join(clang_dir, 'bin', 'llvm-ar'),
             sysroot=sysroot,
+            shared_libs_root=shared_libs_root,
         ))
 
     cflags_key = 'CFLAGS_%s-unknown-fuchsia' % target
