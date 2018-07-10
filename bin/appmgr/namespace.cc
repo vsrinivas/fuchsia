@@ -10,6 +10,7 @@
 
 #include <utility>
 
+#include "garnet/bin/appmgr/job_provider_impl.h"
 #include "garnet/bin/appmgr/realm.h"
 #include "garnet/bin/appmgr/util.h"
 #include "lib/app/cpp/environment_services.h"
@@ -20,6 +21,7 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
                      fuchsia::sys::ServiceListPtr service_list)
     : vfs_(async_get_default_dispatcher()),
       services_(fbl::AdoptRef(new ServiceProviderDirImpl())),
+      job_provider_(fbl::AdoptRef(new JobProviderImpl(realm))),
       parent_(parent),
       realm_(realm) {
   if (parent_) {

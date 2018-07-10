@@ -192,6 +192,13 @@ Realm::Realm(RealmArgs args)
   hub_.SetName(label_);
   hub_.SetJobId(koid_);
   hub_.AddServices(default_namespace_->services());
+  hub_.AddJobProvider(fbl::AdoptRef(new fs::Service(
+      [this] (zx::channel channel) {
+        default_namespace_->job_provider()->AddBinding(
+            fidl::InterfaceRequest<fuchsia::sys::JobProvider>(
+                std::move(channel)));
+        return ZX_OK;
+      })));
 
   default_namespace_->services()->set_backing_dir(
       std::move(args.host_directory));
@@ -210,6 +217,16 @@ zx::channel Realm::OpenInfoDir() {
 
 HubInfo Realm::HubInfo() {
   return component::HubInfo(label_, koid_, hub_.dir());
+}
+
+zx::job Realm::DuplicateJob() const {
+  zx::job duplicate_job;
+  zx_status_t status = job_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE,
+                                      &duplicate_job);
+  if (status != ZX_OK) {
+    return zx::job();
+  }
+  return duplicate_job;
 }
 
 void Realm::CreateNestedJob(

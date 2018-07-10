@@ -10,14 +10,19 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
+#include <lib/fdio/util.h>
+#include <lib/zx/job.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/strings/concatenate.h"
 
@@ -42,8 +47,17 @@ zx_status_t RunBinaryInRealm(const std::string& realm_path,
     return status;
   }
 
-  // Open the services dir in the provided path, which points to a realm's
-  // /hub directory.
+  // Open the provided path, which is the realm's hub directory.
+  zx_handle_t realm_hub_dir = ZX_HANDLE_INVALID;
+  status = fdio_ns_open(ns, realm_path.c_str(), ZX_FS_RIGHT_READABLE,
+                        &realm_hub_dir);
+  if (status != ZX_OK) {
+    fprintf(stderr, "error: could not open hub in realm: %s\n",
+            realm_path.c_str());
+    return status;
+  }
+
+  // Open the services dir in the realm's hub directory.
   zx_handle_t realm_svc_dir = ZX_HANDLE_INVALID;
   const std::string svc_path = fxl::Concatenate({realm_path, "/svc"});
   status = fdio_ns_open(ns, svc_path.c_str(), ZX_FS_RIGHT_READABLE,
@@ -54,10 +68,26 @@ zx_status_t RunBinaryInRealm(const std::string& realm_path,
     return status;
   }
 
-  // TODO(geb): Consider if we should replace /hub as well.
-  // TODO(geb): Spawn the process under the realm's job.
+  // Open the realm's job.
+  fuchsia::sys::JobProviderSync2Ptr job_provider;
+  status = fdio_service_connect_at(
+      realm_hub_dir, "job", job_provider.NewRequest().TakeChannel().release());
+  if (status != ZX_OK) {
+    fprintf(stderr, "error: could not connect to job provider: %s\n",
+            svc_path.c_str());
+    return status;
+  }
+  zx::job realm_job;
+  status = job_provider->GetJob(&realm_job).statvs;
+  if (status == ZX_OK && !realm_job) {
+    status = ZX_ERR_INTERNAL;
+  }
+  if (status != ZX_OK) {
+    fprintf(stderr, "error: could not get realm job\n");
+    return status;
+  }
 
-  // Convert 'ns' to a flat namespace and replace /svc with 'realm_svc_dir'.
+  // Convert 'ns' to a flat namespace and replace /svc and /hub.
   status = fdio_ns_export(ns, &flat_ns);
   if (status != ZX_OK) {
     fprintf(stderr, "error: could not flatten namespace\n");
@@ -68,6 +98,8 @@ zx_status_t RunBinaryInRealm(const std::string& realm_path,
     zx_handle_t handle;
     if (std::string(flat_ns->path[i]) == "/svc") {
       handle = realm_svc_dir;
+    } else if (std::string(flat_ns->path[i]) == "/hub") {
+      handle = realm_hub_dir;
     } else {
       handle = flat_ns->handle[i];
     }
@@ -87,7 +119,7 @@ zx_status_t RunBinaryInRealm(const std::string& realm_path,
 
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   zx_handle_t proc = ZX_HANDLE_INVALID;
-  status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, binary_path, argv,
+  status = fdio_spawn_etc(realm_job.release(), flags, binary_path, argv,
                           nullptr, countof(actions), actions, &proc, err_msg);
   if (status != ZX_OK) {
     fprintf(stderr, "error: failed to launch command: %s\n", err_msg);

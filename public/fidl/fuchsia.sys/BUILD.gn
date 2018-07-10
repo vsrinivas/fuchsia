@@ -14,6 +14,7 @@ fidl("fuchsia.sys") {
     "environment.fidl",
     "environment_controller.fidl",
     "flat_namespace.fidl",
+    "job_provider.fidl",
     "launcher.fidl",
     "loader.fidl",
     "runner.fidl",

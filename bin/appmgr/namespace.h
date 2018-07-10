@@ -11,6 +11,7 @@
 
 #include <fs/synchronous-vfs.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include "garnet/bin/appmgr/job_provider_impl.h"
 #include "garnet/bin/appmgr/service_provider_dir_impl.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
@@ -25,6 +26,9 @@ class Namespace : public fuchsia::sys::Environment,
                   public fxl::RefCountedThreadSafe<Namespace> {
  public:
   const fbl::RefPtr<ServiceProviderDirImpl>& services() { return services_; }
+  const fbl::RefPtr<JobProviderImpl>& job_provider() {
+    return job_provider_;
+  }
 
   void AddBinding(
       fidl::InterfaceRequest<fuchsia::sys::Environment> environment);
@@ -70,7 +74,7 @@ class Namespace : public fuchsia::sys::Environment,
 
   fs::SynchronousVfs vfs_;
   fbl::RefPtr<ServiceProviderDirImpl> services_;
-
+  fbl::RefPtr<JobProviderImpl> job_provider_;
   fxl::RefPtr<Namespace> parent_;
   Realm* realm_;
   fuchsia::sys::ServiceProviderPtr additional_services_;

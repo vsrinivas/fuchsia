@@ -6,6 +6,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/testing/chrealm/cpp/fidl.h>
+#include <zircon/status.h>
 #include <zircon/types.h>
 #include <zx/channel.h>
 
@@ -22,16 +23,27 @@ int main(int argc, const char** argv) {
   zx::channel remote;
   zx_status_t status = zx::channel::create(0u, &local, &remote);
   if (status != ZX_OK) {
-    fprintf(stderr, "Creating channel failed");
-    return status;
+    fprintf(stderr, "Creating channel failed: %s\n",
+            zx_status_get_string(status));
+    return 1;
   }
 
-  fuchsia::sys::EnvironmentSyncPtr env;
-  fuchsia::sys::ServiceProviderSyncPtr svc;
+  fuchsia::sys::EnvironmentSync2Ptr env;
+  fuchsia::sys::ServiceProviderSync2Ptr svc;
   fuchsia::sys::ConnectToEnvironmentService(env.NewRequest());
-  env->GetServices(svc.NewRequest());
-  svc->ConnectToService(fuchsia::testing::chrealm::TestService::Name_,
-                        std::move(remote));
+  status = env->GetServices(svc.NewRequest()).statvs;
+  if (status != ZX_OK) {
+    fprintf(stderr, "Getting services failed: %s\n",
+            zx_status_get_string(status));
+    return 1;
+  }
+  status = svc->ConnectToService(fuchsia::testing::chrealm::TestService::Name_,
+                                 std::move(remote)).statvs;
+  if (status != ZX_OK) {
+    fprintf(stderr, "Connecting to service failed: %s\n",
+            zx_status_get_string(status));
+    return 1;
+  }
 
   fuchsia::testing::chrealm::TestServiceSyncPtr test_svc;
   test_svc.Bind(std::move(local));

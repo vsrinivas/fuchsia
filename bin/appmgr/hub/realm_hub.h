@@ -12,6 +12,8 @@
 
 #include <fbl/ref_ptr.h>
 #include <fs/pseudo-dir.h>
+#include <fs/service.h>
+#include <fs/vnode.h>
 #include <zircon/types.h>
 
 namespace component {
@@ -29,6 +31,10 @@ class RealmHub : public Hub {
 
   zx_status_t AddServices(fbl::RefPtr<fs::Vnode> svc) {
     return AddEntry("svc", fbl::move(svc));
+  }
+
+  zx_status_t AddJobProvider(fbl::RefPtr<fs::Service> job_provider) {
+    return AddEntry("job", fbl::move(job_provider));
   }
 
   ~RealmHub();

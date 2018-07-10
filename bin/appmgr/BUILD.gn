@@ -22,6 +22,8 @@ source_set("lib") {
     "hub/hub_info.h",
     "hub/realm_hub.cc",
     "hub/realm_hub.h",
+    "job_provider_impl.cc",
+    "job_provider_impl.h",
     "namespace.cc",
     "namespace.h",
     "namespace_builder.cc",

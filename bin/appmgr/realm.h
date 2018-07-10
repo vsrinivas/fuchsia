@@ -50,6 +50,8 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   HubInfo HubInfo();
 
+  zx::job DuplicateJob() const;
+
   void CreateNestedJob(
       zx::channel host_directory,
       fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
