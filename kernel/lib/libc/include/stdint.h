@@ -21,7 +21,11 @@
 
 #define __INT8_FMT_MODIFIER__        "hh"
 #define __INT16_FMT_MODIFIER__       "h"
+#ifdef _LP64
 #define __INT32_FMT_MODIFIER__       ""
+#else
+#define __INT32_FMT_MODIFIER__       "l"
+#endif
 
 #define __INT_LEAST8_FMT_MODIFIER__  __INT8_FMT_MODIFIER__
 #define __INT_LEAST16_FMT_MODIFIER__ __INT16_FMT_MODIFIER__

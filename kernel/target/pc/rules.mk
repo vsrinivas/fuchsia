@@ -17,3 +17,5 @@ MODULE_DEPS := \
     kernel/dev/intel_rng
 
 include make/module.mk
+
+include $(LOCAL_DIR)/multiboot/rules.mk

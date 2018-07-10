@@ -159,8 +159,10 @@ typedef struct {
 // memory.  It then constructs a partial ZBI elsewhere in memory, which has
 // a ZBI_TYPE_CONTAINER header of its own followed by all the other items
 // that were in the booted ZBI plus other items synthesized by the boot
-// loader to describe the machine.  The precise protocol for transferring
-// control to the kernel's entry point varies by machine.
+// loader to describe the machine.  This partial ZBI must be placed at an
+// address (where the container header is found) that is aligned to the
+// machine's page size.  The precise protocol for transferring control to
+// the kernel's entry point varies by machine.
 //
 // On all machines, the kernel requires some amount of scratch memory to be
 // available immediately after the kernel image at boot.  It needs this
@@ -180,7 +182,7 @@ typedef struct {
 //     The processor is in 64-bit mode with direct virtual to physical
 //     mapping covering the physical memory where the kernel and
 //     bootloader-constructed ZBI were loaded, which must be below 4GB.
-//     The %rbx register (or %ebx, since the high 32 bits must be zero)
+//     The %rsi register (or %esi, since the high 32 bits must be zero)
 //     holds the physical address of the bootloader-constructed ZBI.
 //     All other registers are unspecified.
 //

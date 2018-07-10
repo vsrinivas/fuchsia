@@ -66,6 +66,11 @@ typedef struct multiboot_info {
     } u;
     uint32_t mmap_length;
     uint32_t mmap_addr;
+    uint32_t drives_length;
+    uint32_t drives_addr;
+    uint32_t config_table;
+    uint32_t boot_loader_name;
+    uint32_t apm_table;
 } multiboot_info_t;
 
 enum {
