@@ -12,6 +12,7 @@
 
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
+#include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
 #include "peridot/bin/ledger/storage/public/ledger_storage.h"
 
@@ -19,8 +20,7 @@ namespace storage {
 
 class LedgerStorageImpl : public LedgerStorage {
  public:
-  LedgerStorageImpl(async_t* async,
-                    coroutine::CoroutineService* coroutine_service,
+  LedgerStorageImpl(ledger::Environment* environment,
                     encryption::EncryptionService* encryption_service,
                     ledger::DetachedPath content_dir,
                     const std::string& ledger_name);
@@ -35,7 +35,8 @@ class LedgerStorageImpl : public LedgerStorage {
                       fit::function<void(Status, std::unique_ptr<PageStorage>)>
                           callback) override;
 
-  Status DeletePageStorage(PageIdView page_id) override;
+  void DeletePageStorage(PageIdView page_id,
+                         fit::function<void(Status)> callback) override;
 
   // For debugging only.
   std::vector<PageId> ListLocalPages();
@@ -46,10 +47,11 @@ class LedgerStorageImpl : public LedgerStorage {
   // Returns the staging path for the given |page_id|.
   ledger::DetachedPath GetStagingPathFor(PageIdView page_id);
 
-  async_t* const async_;
-  coroutine::CoroutineService* const coroutine_service_;
+  ledger::Environment* const environment_;
   encryption::EncryptionService* const encryption_service_;
   ledger::DetachedPath storage_dir_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerStorageImpl);
 };
 
 }  // namespace storage

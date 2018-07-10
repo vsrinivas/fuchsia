@@ -37,7 +37,8 @@ class LedgerStorage {
   // local copy of the page storage with all commits, tree nodes and values.
   // This method can fail with a |NOT_FOUND| error if the page is not present in
   // the local storage, or with an |IO_ERROR| if deletion fails.
-  virtual Status DeletePageStorage(PageIdView page_id) = 0;
+  virtual void DeletePageStorage(PageIdView page_id,
+                                 fit::function<void(Status)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerStorage);

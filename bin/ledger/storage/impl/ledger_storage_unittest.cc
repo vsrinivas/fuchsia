@@ -21,15 +21,19 @@ namespace {
 class LedgerStorageTest : public gtest::TestLoopFixture {
  public:
   LedgerStorageTest()
-      : encryption_service_(dispatcher()),
-        storage_(dispatcher(), &coroutine_service_, &encryption_service_,
+      : environment_(ledger::EnvironmentBuilder()
+                         .SetAsync(dispatcher())
+                         .SetIOAsync(dispatcher())
+                         .Build()),
+        encryption_service_(dispatcher()),
+        storage_(&environment_, &encryption_service_,
                  ledger::DetachedPath(tmpfs_.root_fd()), "test_app") {}
 
   ~LedgerStorageTest() override {}
 
  private:
+  ledger::Environment environment_;
   scoped_tmpfs::ScopedTmpFS tmpfs_;
-  coroutine::CoroutineServiceImpl coroutine_service_;
   encryption::FakeEncryptionService encryption_service_;
 
  protected:
@@ -93,7 +97,12 @@ TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
   EXPECT_EQ(Status::OK, status);
   EXPECT_NE(nullptr, page_storage);
 
-  EXPECT_EQ(Status::OK, storage_.DeletePageStorage(page_id));
+  storage_.DeletePageStorage(
+      page_id, callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+
   storage_.GetPageStorage(
       page_id, callback::Capture(callback::SetWhenCalled(&called), &status,
                                  &page_storage));
@@ -105,8 +114,14 @@ TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
 
 TEST_F(LedgerStorageTest, DeletePageStorageNotFound) {
   PageId page_id = "1234";
+  Status status;
+  bool called;
 
-  EXPECT_EQ(Status::NOT_FOUND, storage_.DeletePageStorage(page_id));
+  storage_.DeletePageStorage(
+      page_id, callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::NOT_FOUND, status);
 }
 
 }  // namespace

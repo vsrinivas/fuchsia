@@ -13,11 +13,12 @@
 
 namespace ledger {
 
-// Environment for the ledger application.
+// Environment for the ledger application. |io_async| is optional, but if
+// provided in the constructor, |async| must outlive |io_async|.
 class Environment {
  public:
   using BackoffFactory = fit::function<std::unique_ptr<backoff::Backoff>()>;
-  Environment(async_t* async,
+  Environment(async_t* async, async_t* io_async,
               std::unique_ptr<coroutine::CoroutineService> coroutine_service,
               BackoffFactory backoff_factory);
   Environment(Environment&& other) noexcept;
@@ -27,6 +28,9 @@ class Environment {
 
   async_t* async() { return async_; }
 
+  // Returns the async_t to be used for I/O operations.
+  async_t* io_async() { return io_async_; }
+
   coroutine::CoroutineService* coroutine_service() {
     return coroutine_service_.get();
   }
@@ -34,7 +38,11 @@ class Environment {
   std::unique_ptr<backoff::Backoff> MakeBackoff();
 
  private:
-  async_t* async_;
+  async_t* async_ = nullptr;
+
+  // The async_t to be used for I/O operations.
+  async_t* io_async_ = nullptr;
+
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
   BackoffFactory backoff_factory_;
 };
@@ -53,6 +61,7 @@ class EnvironmentBuilder {
   EnvironmentBuilder& operator=(EnvironmentBuilder&& other) = delete;
 
   EnvironmentBuilder& SetAsync(async_t* async);
+  EnvironmentBuilder& SetIOAsync(async_t* io_async);
   EnvironmentBuilder& SetCoroutineService(
       std::unique_ptr<coroutine::CoroutineService> coroutine_service);
   EnvironmentBuilder& SetBackoffFactory(
@@ -61,7 +70,8 @@ class EnvironmentBuilder {
   Environment Build();
 
  private:
-  async_t* async_;
+  async_t* async_ = nullptr;
+  async_t* io_async_ = nullptr;
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
   Environment::BackoffFactory backoff_factory_;
 };

@@ -10,6 +10,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/callback/scoped_callback.h>
 #include <lib/callback/trace_callback.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/files/directory.h>
@@ -46,11 +47,10 @@ std::string GetId(fxl::StringView bytes) {
 }  // namespace
 
 LedgerStorageImpl::LedgerStorageImpl(
-    async_t* async, coroutine::CoroutineService* coroutine_service,
+    ledger::Environment* environment,
     encryption::EncryptionService* encryption_service,
     ledger::DetachedPath content_dir, const std::string& ledger_name)
-    : async_(async),
-      coroutine_service_(coroutine_service),
+    : environment_(environment),
       encryption_service_(encryption_service),
       storage_dir_(content_dir.SubPath(
           {kSerializationVersion, GetDirectoryName(ledger_name)})) {}
@@ -70,8 +70,8 @@ void LedgerStorageImpl::CreatePageStorage(
     return;
   }
   auto result = std::make_unique<PageStorageImpl>(
-      async_, coroutine_service_, encryption_service_, std::move(path),
-      std::move(page_id));
+      environment_->async(), environment_->coroutine_service(),
+      encryption_service_, std::move(path), std::move(page_id));
   result->Init([callback = std::move(timed_callback),
                 result = std::move(result)](Status status) mutable {
     if (status != Status::OK) {
@@ -95,8 +95,8 @@ void LedgerStorageImpl::GetPageStorage(
   }
 
   auto result = std::make_unique<PageStorageImpl>(
-      async_, coroutine_service_, encryption_service_, std::move(path),
-      std::move(page_id));
+      environment_->async(), environment_->coroutine_service(),
+      encryption_service_, std::move(path), std::move(page_id));
   result->Init([callback = std::move(timed_callback),
                 result = std::move(result)](Status status) mutable {
     if (status != Status::OK) {
@@ -107,29 +107,49 @@ void LedgerStorageImpl::GetPageStorage(
   });
 }
 
-Status LedgerStorageImpl::DeletePageStorage(PageIdView page_id) {
+void LedgerStorageImpl::DeletePageStorage(
+    PageIdView page_id, fit::function<void(Status)> callback) {
   ledger::DetachedPath path = GetPathFor(page_id);
   ledger::DetachedPath staging_path = GetStagingPathFor(page_id);
-  if (!files::IsDirectoryAt(path.root_fd(), path.path())) {
-    return Status::NOT_FOUND;
-  }
-  files::ScopedTempDirAt tmp_directory(staging_path.root_fd(),
-                                       staging_path.path());
-  std::string destination = tmp_directory.path() + "/content";
+  // |final_callback| will be called from the I/O loop and call the original
+  // |callback| in the main one. The main loop outlives the I/O one, so it's
+  // safe to capture environment_->async() here.
+  auto final_callback = [async = environment_->async(),
+                         callback =
+                             std::move(callback)](Status status) mutable {
+    // Call the callback in the main thread.
+    async::PostTask(
+        async, [status, callback = std::move(callback)] { callback(status); });
+  };
 
-  if (renameat(path.root_fd(), path.path().c_str(), tmp_directory.root_fd(),
-               destination.c_str()) != 0) {
-    FXL_LOG(ERROR) << "Unable to move local page storage to " << destination
-                   << ". Error: " << strerror(errno);
-    return Status::IO_ERROR;
-  }
+  async::PostTask(
+      environment_->io_async(),
+      [path = std::move(path), staging_path = std::move(staging_path),
+       callback = std::move(final_callback)]() mutable {
+        if (!files::IsDirectoryAt(path.root_fd(), path.path())) {
+          callback(Status::NOT_FOUND);
+          return;
+        }
+        files::ScopedTempDirAt tmp_directory(staging_path.root_fd(),
+                                             staging_path.path());
+        std::string destination = tmp_directory.path() + "/content";
 
-  if (!files::DeletePathAt(tmp_directory.root_fd(), destination, true)) {
-    FXL_LOG(ERROR) << "Unable to delete local staging storage at: "
-                   << destination;
-    return Status::IO_ERROR;
-  }
-  return Status::OK;
+        if (renameat(path.root_fd(), path.path().c_str(),
+                     tmp_directory.root_fd(), destination.c_str()) != 0) {
+          FXL_LOG(ERROR) << "Unable to move local page storage to "
+                         << destination << ". Error: " << strerror(errno);
+          callback(Status::IO_ERROR);
+          return;
+        }
+
+        if (!files::DeletePathAt(tmp_directory.root_fd(), destination, true)) {
+          FXL_LOG(ERROR) << "Unable to delete local staging storage at: "
+                         << destination;
+          callback(Status::IO_ERROR);
+          return;
+        }
+        callback(Status::OK);
+      });
 }
 
 std::vector<PageId> LedgerStorageImpl::ListLocalPages() {

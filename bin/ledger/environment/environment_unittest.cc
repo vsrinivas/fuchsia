@@ -15,6 +15,17 @@ TEST_F(EnvironmentTest, InitializationOfAsync) {
   Environment env = EnvironmentBuilder().SetAsync(dispatcher()).Build();
 
   EXPECT_EQ(dispatcher(), env.async());
+  EXPECT_EQ(nullptr, env.io_async());
+}
+
+TEST_F(EnvironmentTest, InitializationOfAsyncAndIOAsync) {
+  Environment env = EnvironmentBuilder()
+                        .SetAsync(dispatcher())
+                        .SetIOAsync(dispatcher())
+                        .Build();
+
+  EXPECT_EQ(dispatcher(), env.async());
+  EXPECT_EQ(dispatcher(), env.io_async());
 }
 
 }  // namespace

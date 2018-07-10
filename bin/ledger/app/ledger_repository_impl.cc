@@ -79,8 +79,7 @@ LedgerManager* LedgerRepositoryImpl::GetLedgerManager(
   std::unique_ptr<encryption::EncryptionService> encryption_service =
       encryption_service_factory_.MakeEncryptionService(name_as_string);
   auto ledger_storage = std::make_unique<storage::LedgerStorageImpl>(
-      environment_->async(), environment_->coroutine_service(),
-      encryption_service.get(), content_path_, name_as_string);
+      environment_, encryption_service.get(), content_path_, name_as_string);
   std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync;
   if (user_sync_) {
     ledger_sync =

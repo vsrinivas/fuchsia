@@ -23,7 +23,10 @@ namespace {
 class NetConnectorFactoryTest : public gtest::TestLoopFixture {
  public:
   NetConnectorFactoryTest()
-      : environment_(EnvironmentBuilder().SetAsync(dispatcher()).Build()) {}
+      : environment_(EnvironmentBuilder()
+                         .SetAsync(dispatcher())
+                         .SetIOAsync(dispatcher())
+                         .Build()) {}
   ~NetConnectorFactoryTest() override {}
 
  protected:

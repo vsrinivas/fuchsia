@@ -12,10 +12,11 @@
 namespace ledger {
 
 Environment::Environment(
-    async_t* async,
+    async_t* async, async_t* io_async,
     std::unique_ptr<coroutine::CoroutineService> coroutine_service,
     BackoffFactory backoff_factory)
     : async_(async),
+      io_async_(io_async),
       coroutine_service_(std::move(coroutine_service)),
       backoff_factory_(std::move(backoff_factory)) {
   FXL_DCHECK(async_);
@@ -24,11 +25,13 @@ Environment::Environment(
 }
 
 Environment::Environment(Environment&& other)
-    : Environment(other.async_, std::move(other.coroutine_service_),
+    : Environment(other.async_, other.io_async_,
+                  std::move(other.coroutine_service_),
                   std::move(other.backoff_factory_)) {}
 
 Environment& Environment::operator=(Environment&& other) {
   async_ = other.async_;
+  io_async_ = other.io_async_;
   coroutine_service_ = std::move(other.coroutine_service_);
   backoff_factory_ = std::move(other.backoff_factory_);
   FXL_DCHECK(async_);
@@ -49,6 +52,11 @@ EnvironmentBuilder::~EnvironmentBuilder() {}
 
 EnvironmentBuilder& EnvironmentBuilder::SetAsync(async_t* async) {
   async_ = async;
+  return *this;
+}
+
+EnvironmentBuilder& EnvironmentBuilder::SetIOAsync(async_t* io_async) {
+  io_async_ = io_async;
   return *this;
 }
 
@@ -74,7 +82,7 @@ Environment EnvironmentBuilder::Build() {
       return std::make_unique<backoff::ExponentialBackoff>();
     };
   }
-  return Environment(async_, std::move(coroutine_service_),
+  return Environment(async_, io_async_, std::move(coroutine_service_),
                      std::move(backoff_factory_));
 }
 

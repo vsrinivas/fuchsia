@@ -67,8 +67,12 @@ class App : public ledger_internal::LedgerController {
   ~App() override {}
 
   bool Start() {
-    environment_ = std::make_unique<Environment>(
-        EnvironmentBuilder().SetAsync(loop_.async()).Build());
+    io_loop_.StartThread("io thread");
+    environment_ =
+        std::make_unique<Environment>(EnvironmentBuilder()
+                                          .SetAsync(loop_.async())
+                                          .SetIOAsync(io_loop_.async())
+                                          .Build());
     auto user_communicator_factory =
         std::make_unique<p2p_sync::UserCommunicatorFactoryImpl>(
             environment_.get(), startup_context_.get(),
@@ -101,6 +105,7 @@ class App : public ledger_internal::LedgerController {
 
   const AppParams app_params_;
   async::Loop loop_;
+  async::Loop io_loop_;
   trace::TraceProvider trace_provider_;
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   fxl::AutoCall<fit::closure> cobalt_cleaner_;
