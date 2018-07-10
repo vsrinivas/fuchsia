@@ -31,7 +31,7 @@ class RamNandCtl : public RamNandCtlDeviceType {
     zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
                          void* out_buf, size_t out_len, size_t* out_actual);
   private:
-    zx_status_t CreateDevice(const NandParams& params, void* out_buf, size_t* out_actual);
+    zx_status_t CreateDevice(const ram_nand_info_t& in, void* out_buf, size_t* out_actual);
     DISALLOW_COPY_ASSIGN_AND_MOVE(RamNandCtl);
 };
 
@@ -43,26 +43,26 @@ zx_status_t RamNandCtl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
 
     switch (op) {
     case IOCTL_RAM_NAND_CREATE: {
-        if (in_len != sizeof(nand_info_t)) {
+        if (in_len < sizeof(ram_nand_info_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        const NandParams* params = static_cast<const NandParams*>(in_buf);
-        return CreateDevice(*params, out_buf, out_actual);
+        const auto* in = static_cast<const ram_nand_info_t*>(in_buf);
+        return CreateDevice(*in, out_buf, out_actual);
     }
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
-zx_status_t RamNandCtl::CreateDevice(const NandParams& params, void* out_buf,
-                                     size_t* out_actual) {
+zx_status_t RamNandCtl::CreateDevice(const ram_nand_info_t& in, void* out_buf, size_t* out_actual) {
+    const auto& params = static_cast<const NandParams>(in.nand_info);
     fbl::AllocChecker checker;
     fbl::unique_ptr<NandDevice> device(new (&checker) NandDevice(params, zxdev()));
     if (!checker.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_status_t status = device->Bind();
+    zx_status_t status = device->Bind(in);
     if (status != ZX_OK) {
         return status;
     }

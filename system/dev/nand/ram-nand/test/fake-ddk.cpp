@@ -40,6 +40,23 @@ zx_status_t Bind::DeviceRemove(zx_device_t* device) {
     return ZX_OK;
 }
 
+zx_status_t Bind::DeviceAddMetadata(zx_device_t* device, uint32_t type, const void* data,
+                                    size_t length) {
+    if (device != kFakeDevice) {
+        bad_device_ = true;
+    }
+    add_metadata_called_ = true;
+    return ZX_OK;
+}
+
+void Bind::DeviceMakeVisible(zx_device_t* device) {
+    if (device != kFakeDevice) {
+        bad_device_ = true;
+    }
+    make_visible_called_ = true;
+    return;
+}
+
 bool Bind::Ok() {
     BEGIN_HELPER;
     EXPECT_TRUE(add_called_);
@@ -65,5 +82,21 @@ zx_status_t device_remove(zx_device_t* device) {
     }
     return fake_ddk::Bind::Instance()->DeviceRemove(device);
 }
+
+zx_status_t device_add_metadata(zx_device_t* device, uint32_t type, const void* data,
+                                size_t length) {
+    if (!fake_ddk::Bind::Instance()) {
+        return ZX_OK;
+    }
+    return fake_ddk::Bind::Instance()->DeviceAddMetadata(device, type, data, length);
+}
+
+void device_make_visible(zx_device_t* device) {
+    if (fake_ddk::Bind::Instance()) {
+        fake_ddk::Bind::Instance()->DeviceMakeVisible(device);
+    }
+    return;
+}
+
 
 zx_driver_rec __zircon_driver_rec__ = {};

@@ -19,7 +19,7 @@ constexpr char base_path[] = "/dev/misc/nand-ctl";
 
 }  // namespace
 
-int create_ram_nand(const nand_info_t* config, char* out_path) {
+int create_ram_nand(const ram_nand_info_t* config, char* out_path) {
     fbl::unique_fd control(open(base_path, O_RDWR));
     if (!control) {
         fprintf(stderr, "Could not open nand-ctl\n");

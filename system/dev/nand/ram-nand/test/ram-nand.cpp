@@ -16,11 +16,23 @@
 
 namespace {
 
-const int kPageSize = 4096;
-const int kOobSize = 4;
-const int kBlockSize = 4;
-const int kNumBlocks = 5;
-const int kNumPages = kBlockSize * kNumBlocks;
+constexpr int kPageSize = 4096;
+constexpr int kOobSize = 4;
+constexpr int kBlockSize = 4;
+constexpr int kNumBlocks = 5;
+constexpr int kNumPages = kBlockSize * kNumBlocks;
+
+ram_nand_info_t BuildConfig() {
+    return ram_nand_info_t{
+        .nand_info = {4096, 4, 5, 6, 0, NAND_CLASS_FTL, {}},
+        .export_nand_config = false,
+        .export_partition_map = false,
+        .bad_block_config = {},
+        .extra_partition_config_count = 0,
+        .extra_partition_config = {},
+        .partition_map = {},
+    };
+}
 
 bool TrivialLifetimeTest() {
     BEGIN_TEST;
@@ -47,7 +59,7 @@ bool DdkLifetimeTest() {
     NandDevice* device(new NandDevice(params, fake_ddk::kFakeParent));
 
     fake_ddk::Bind ddk;
-    ASSERT_EQ(ZX_OK, device->Bind());
+    ASSERT_EQ(ZX_OK, device->Bind(BuildConfig()));
     device->DdkUnbind();
     EXPECT_TRUE(ddk.Ok());
 

@@ -13,10 +13,22 @@
 
 namespace {
 
+ram_nand_info_t BuildConfig() {
+    return ram_nand_info_t{
+        .nand_info = {4096, 4, 5, 6, 0, NAND_CLASS_FTL, {}},
+        .export_nand_config = false,
+        .export_partition_map = false,
+        .bad_block_config = {},
+        .extra_partition_config_count = 0,
+        .extra_partition_config = {},
+        .partition_map = {},
+    };
+}
+
 class NandDevice {
   public:
     NandDevice() {
-        nand_info_t config = {4096, 4, 5, 6, 0, NAND_CLASS_FTL, {}};
+        const ram_nand_info_t config = BuildConfig();
         if (!create_ram_nand(&config, path_)) {
             device_.reset(open(path_, O_RDWR));
         }

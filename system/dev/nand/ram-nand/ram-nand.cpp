@@ -8,10 +8,14 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <ddk/metadata.h>
+#include <ddk/metadata/bad-block.h>
+#include <ddk/metadata/nand.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <zircon/assert.h>
 #include <zircon/device/ram-nand.h>
+#include <zircon/driver/binding.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
@@ -48,15 +52,61 @@ NandDevice::~NandDevice() {
     if (mapped_addr_) {
         zx_vmar_unmap(zx_vmar_root_self(), mapped_addr_, DdkGetSize());
     }
+    DdkRemove();
 }
 
-zx_status_t NandDevice::Bind() {
+zx_status_t NandDevice::Bind(const ram_nand_info_t& info) {
     char name[NAME_MAX];
     zx_status_t status = Init(name);
     if (status != ZX_OK) {
         return status;
     }
-    return DdkAdd(name);
+
+    zx_device_prop_t props[] = {
+        {BIND_PROTOCOL, 0, ZX_PROTOCOL_NAND},
+        {BIND_NAND_CLASS, 0, params_.nand_class},
+    };
+
+    status = DdkAdd(name, DEVICE_ADD_INVISIBLE, props, countof(props));
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    if (info.export_nand_config) {
+        nand_config_t config = {
+            .bad_block_config = {
+                .type = kAmlogicUboot,
+                .aml = {
+                    .table_start_block = info.bad_block_config.table_start_block,
+                    .table_end_block = info.bad_block_config.table_end_block,
+                },
+            },
+            .extra_partition_config_count = info.extra_partition_config_count,
+            .extra_partition_config = {},
+        };
+        for (size_t i = 0; i < info.extra_partition_config_count; i++) {
+            memcpy(config.extra_partition_config[i].type_guid,
+                   info.extra_partition_config[i].type_guid, ZBI_PARTITION_GUID_LEN);
+            config.extra_partition_config[i].copy_count =
+                    info.extra_partition_config[i].copy_count;
+            config.extra_partition_config[i].copy_byte_offset = 
+                    info.extra_partition_config[i].copy_byte_offset;
+        }
+        status = DdkAddMetadata(DEVICE_METADATA_PRIVATE, &config, sizeof(config));
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+    if (info.export_partition_map) {
+        status = DdkAddMetadata(DEVICE_METADATA_PARTITION_MAP, &info.partition_map,
+                                sizeof(info.partition_map));
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+
+    DdkMakeVisible();
+    return ZX_OK;
 }
 
 zx_status_t NandDevice::Init(char name[NAME_MAX]) {

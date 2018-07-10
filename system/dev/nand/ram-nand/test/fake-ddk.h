@@ -36,6 +36,12 @@ class Bind {
     // Internal fake implementation of ddk functionality.
     zx_status_t DeviceRemove(zx_device_t* device);
 
+    // Internal fake implementation of ddk functionality.
+    zx_status_t DeviceAddMetadata(zx_device_t* dev, uint32_t type, const void* data, size_t length);
+
+    // Internal fake implementation of ddk functionality.
+    void DeviceMakeVisible(zx_device_t* dev);
+
     // Verifies that the whole process of bind and unbind went as expected.
     bool Ok();
 
@@ -46,6 +52,8 @@ class Bind {
     bool bad_device_ = false;
     bool add_called_ = false;
     bool remove_called_ = false;
+    bool add_metadata_called_ = false;
+    bool make_visible_called_ = false;
 };
 
 }  // namespace fake_ddk

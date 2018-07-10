@@ -15,7 +15,7 @@ __BEGIN_CDECLS
 // buffer for the path should be at least PATH_MAX characters long.
 //
 // Returns 0 on success.
-int create_ram_nand(const nand_info_t* config, char* out_path);
+int create_ram_nand(const ram_nand_info_t* config, char* out_path);
 
 // Destroys a ram_nand, given the name returned from create_ram_nand().
 //

@@ -15,6 +15,7 @@
 #include <fbl/mutex.h>
 #include <lib/zx/vmo.h>
 #include <lib/sync/completion.h>
+#include <zircon/device/ram-nand.h>
 #include <zircon/listnode.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
@@ -51,7 +52,7 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice> {
     explicit NandDevice(const NandParams& params, zx_device_t* parent = nullptr);
     ~NandDevice();
 
-    zx_status_t Bind();
+    zx_status_t Bind(const ram_nand_info_t& info);
     void DdkRelease() { delete this; }
 
     // Performs the object initialization, returning the required data to create
