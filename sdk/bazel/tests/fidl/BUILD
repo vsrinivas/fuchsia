@@ -32,6 +32,6 @@ fidl_library(
         "fuchsia_deps.fidl",
     ],
     deps = [
-        "@fuchsia_sdk//fidl/fuchsia.sys",
+        "@fuchsia_sdk//fidl/fuchsia_sys",
     ],
 )
