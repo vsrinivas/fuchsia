@@ -19,34 +19,24 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  zx::channel local;
-  zx::channel remote;
-  zx_status_t status = zx::channel::create(0u, &local, &remote);
-  if (status != ZX_OK) {
-    fprintf(stderr, "Creating channel failed: %s\n",
-            zx_status_get_string(status));
-    return 1;
-  }
-
   fuchsia::sys::EnvironmentSyncPtr env;
   fuchsia::sys::ServiceProviderSyncPtr svc;
   component::ConnectToEnvironmentService(env.NewRequest());
-  status = env->GetServices(svc.NewRequest());
+  zx_status_t status = env->GetServices(svc.NewRequest());
   if (status != ZX_OK) {
     fprintf(stderr, "Getting services failed: %s\n",
             zx_status_get_string(status));
     return 1;
   }
+  fuchsia::testing::chrealm::TestServiceSyncPtr test_svc;
   status = svc->ConnectToService(fuchsia::testing::chrealm::TestService::Name_,
-                                 std::move(remote));
+                                 test_svc.NewRequest().TakeChannel());
   if (status != ZX_OK) {
     fprintf(stderr, "Connecting to service failed: %s\n",
             zx_status_get_string(status));
     return 1;
   }
 
-  fuchsia::testing::chrealm::TestServiceSyncPtr test_svc;
-  test_svc.Bind(std::move(local));
   fidl::StringPtr msg;
   test_svc->GetMessage(&msg);
   printf("%s", msg->c_str());

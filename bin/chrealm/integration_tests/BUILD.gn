@@ -18,6 +18,7 @@ executable("tests") {
     "//garnet/bin/appmgr:lib",
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//zircon/public/lib/fs",

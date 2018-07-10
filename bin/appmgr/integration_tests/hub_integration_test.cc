@@ -5,15 +5,14 @@
 #include <glob.h>
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
-#include <lib/fdio/limits.h>
-#include <lib/fdio/util.h>
 
 #include "garnet/bin/appmgr/service_provider_dir_impl.h"
 #include "garnet/bin/appmgr/util.h"
-#include "gtest/gtest.h"
 #include "lib/component/cpp/environment_services.h"
+#include "lib/component/cpp/testing/test_util.h"
+#include "lib/component/cpp/testing/test_with_environment.h"
+#include "lib/fxl/files/file.h"
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/svc/cpp/services.h"
@@ -21,65 +20,39 @@
 namespace component {
 namespace {
 
-fuchsia::sys::FileDescriptorPtr CloneFileDescriptor(int fd) {
-  zx_handle_t handles[FDIO_MAX_HANDLES] = {0, 0, 0};
-  uint32_t types[FDIO_MAX_HANDLES] = {
-      ZX_HANDLE_INVALID,
-      ZX_HANDLE_INVALID,
-      ZX_HANDLE_INVALID,
-  };
-  zx_status_t status = fdio_clone_fd(fd, 0, handles, types);
-  if (status <= 0)
-    return nullptr;
-  fuchsia::sys::FileDescriptorPtr result = fuchsia::sys::FileDescriptor::New();
-  result->type0 = types[0];
-  result->handle0 = zx::handle(handles[0]);
-  result->type1 = types[1];
-  result->handle1 = zx::handle(handles[1]);
-  result->type2 = types[2];
-  result->handle2 = zx::handle(handles[2]);
-  return result;
-}
-
-// This test fixture will provide a way to create nested environment. On setup
-// it will setup the the services required to create a nested environment and
-// then provides a API to environment.
-class HubTest : public ::testing::Test {
+// This test fixture will provide a way to run components in provided launchers
+// and check for errors.
+class HubTest : public component::testing::TestWithEnvironment {
  protected:
-  HubTest()
-      : loop_(&kAsyncLoopConfigAttachToThread),
-        vfs_(async_get_default_dispatcher()),
-        services_(fbl::AdoptRef(new ServiceProviderDirImpl())) {
-    // we are currently have access to sys environment and not root environment.
-    component::ConnectToEnvironmentService(sys_env_.NewRequest());
-    sys_env_->GetServices(svc_.NewRequest());
-    services_->AddService(
-        fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-          svc_->ConnectToService(fuchsia::sys::Loader::Name_,
-                                 std::move(channel));
-          return ZX_OK;
-        })),
-        fuchsia::sys::Loader::Name_);
-    loop_.StartThread();
+  // This would launch component and check that it returns correct
+  // |expected_return_code|.
+  void RunComponent(const fuchsia::sys::LauncherPtr& launcher,
+                    const std::string& component_url,
+                    const std::vector<std::string>& args,
+                    int64_t expected_return_code) {
+    std::FILE* outf = std::tmpfile();
+    int out_fd = fileno(outf);
+    fuchsia::sys::LaunchInfo launch_info;
+    launch_info.url = component_url;
+    for (auto arg : args) {
+      launch_info.arguments.push_back(arg);
+    }
+
+    launch_info.out = component::testing::CloneFileDescriptor(out_fd);
+
+    fuchsia::sys::ComponentControllerPtr controller;
+    launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
+
+    int64_t return_code = INT64_MIN;
+    controller->Wait([&return_code](int64_t code) { return_code = code; });
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+        [&return_code] { return return_code != INT64_MIN; }, zx::sec(10)));
+    std::string output;
+    ASSERT_TRUE(files::ReadFileDescriptorToString(out_fd, &output));
+    EXPECT_EQ(expected_return_code, return_code)
+        << "failed for: " << fxl::JoinStrings(args, ", ")
+        << "\noutput: " << output;
   }
-
-  void CreateNestedEnvironment(
-      std::string label, fuchsia::sys::EnvironmentSyncPtr* nested_env_out) {
-    fuchsia::sys::EnvironmentControllerSyncPtr controller;
-    sys_env_->CreateNestedEnvironment(Util::OpenAsDirectory(&vfs_, services_),
-                                      nested_env_out->NewRequest(),
-                                      controller.NewRequest(), label);
-
-    env_controllers_.push_back(std::move(controller));
-  }
-
- private:
-  async::Loop loop_;
-  fs::SynchronousVfs vfs_;
-  fbl::RefPtr<ServiceProviderDirImpl> services_;
-  fuchsia::sys::EnvironmentSyncPtr sys_env_;
-  fuchsia::sys::ServiceProviderSyncPtr svc_;
-  std::vector<fuchsia::sys::EnvironmentControllerSyncPtr> env_controllers_;
 };
 
 TEST(ProbeHub, Component) {
@@ -109,65 +82,26 @@ TEST(ProbeHub, RealmSvc) {
   globfree(&globbuf);
 }
 
-// This would launch component and check that it returns correct
-// |expected_return_code|.
-void RunComponent(fuchsia::sys::LauncherSyncPtr& launcher,
-                  std::string component_url, std::vector<std::string> args,
-                  int64_t expected_return_code) {
-  std::FILE* tmpf = std::tmpfile();
-  int tmp_fd = fileno(tmpf);
-  fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = component_url;
-  for (auto arg : args) {
-    launch_info.arguments.push_back(arg);
-  }
-
-  launch_info.out = CloneFileDescriptor(tmp_fd);
-  launch_info.err = CloneFileDescriptor(STDERR_FILENO);
-
-  fuchsia::sys::ComponentControllerSyncPtr controller;
-  launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
-
-  int64_t return_code;
-  controller->Wait(&return_code);
-  std::string output;
-  int nread;
-  char buf[1024];
-  while ((nread = read(tmp_fd, buf, sizeof(buf))) > 0) {
-    output += std::string(buf, nread);
-  }
-  ASSERT_NE(-1, nread) << strerror(errno);
-  EXPECT_EQ(expected_return_code, return_code)
-      << "failed for: " << fxl::JoinStrings(args, ", ")
-      << "\noutput: " << output;
-}
-
 TEST_F(HubTest, ScopePolicy) {
-  // Connect to the Launcher service through our static environment.
-  // This launcher is from sys realm so our hub would be scoped to it
-  fuchsia::sys::LauncherSyncPtr launcher;
-  component::ConnectToEnvironmentService(launcher.NewRequest());
-
   std::string glob_url = "glob";
   // test that we can find logger
-  RunComponent(launcher, glob_url, {"/hub/c/logger"}, 0);
+  RunComponent(launcher_ptr(), glob_url, {"/hub/c/logger"}, 0);
 
   // test that we cannot find /hub/r/sys as we are scopped into /hub/r/sys.
-  RunComponent(launcher, glob_url, {"/hub/r/sys"}, 1);
+  RunComponent(launcher_ptr(), glob_url, {"/hub/r/sys"}, 1);
 
   // create nested environment
   // test that we can see nested env
-  fuchsia::sys::EnvironmentSyncPtr nested_env;
-  CreateNestedEnvironment("hubscopepolicytest", &nested_env);
-  RunComponent(launcher, glob_url, {"/hub/r/hubscopepolicytest/"}, 0);
+  auto nested_env = CreateNewEnclosingEnvironment("hubscopepolicytest");
+  ASSERT_TRUE(WaitForEnclosingEnvToStart(nested_env.get()));
+  RunComponent(launcher_ptr(), glob_url, {"/hub/r/hubscopepolicytest/"}, 0);
 
   // test that we cannot see nested env using its own launcher
-  fuchsia::sys::LauncherSyncPtr nested_launcher;
-  nested_env->GetLauncher(nested_launcher.NewRequest());
-  RunComponent(nested_launcher, glob_url, {"/hub/r/hubscopepolicytest"}, 1);
+  RunComponent(nested_env->launcher_ptr(), glob_url,
+               {"/hub/r/hubscopepolicytest"}, 1);
 
   // test that we can see check_hub_path
-  RunComponent(nested_launcher, glob_url, {"/hub/c/glob"}, 0);
+  RunComponent(nested_env->launcher_ptr(), glob_url, {"/hub/c/glob"}, 0);
 }
 
 }  // namespace
