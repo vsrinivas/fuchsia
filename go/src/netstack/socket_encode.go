@@ -88,6 +88,15 @@ func (v *c_ip_mreq) Decode(data []byte) error {
 	return nil
 }
 
+func (v *c_ip_mreqn) Decode(data []byte) error {
+	if uintptr(len(data)) < unsafe.Sizeof(c_ip_mreqn{}) {
+		return fmt.Errorf("netstack: short c_ip_mreqn: %d", len(data))
+	}
+	req := (*c_ip_mreqn)(unsafe.Pointer(&data[0]))
+	*v = *req
+	return nil
+}
+
 func (v *c_netc_get_if_info) Encode(msg *zxsocket.Msg) {
 	r := (*c_netc_get_if_info)(unsafe.Pointer(&msg.Data[0]))
 	*r = *v

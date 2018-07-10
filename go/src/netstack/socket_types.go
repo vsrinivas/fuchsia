@@ -318,6 +318,12 @@ type c_ip_mreq struct {
 	imr_interface c_in_addr
 }
 
+type c_ip_mreqn struct {
+	imr_multiaddr c_in_addr
+	imr_address   c_in_addr
+	imr_ifindex   int32
+}
+
 type c_netc_if_info struct {
 	name       [16]byte
 	addr       c_sockaddr_storage

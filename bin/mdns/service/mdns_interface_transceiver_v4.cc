@@ -21,10 +21,11 @@ MdnsInterfaceTransceiverV4::MdnsInterfaceTransceiverV4(IpAddress address,
 MdnsInterfaceTransceiverV4::~MdnsInterfaceTransceiverV4() {}
 
 int MdnsInterfaceTransceiverV4::SetOptionJoinMulticastGroup() {
-  ip_mreq param;
+  ip_mreqn param;
   param.imr_multiaddr.s_addr =
       MdnsAddresses::kV4Multicast.as_sockaddr_in().sin_addr.s_addr;
-  param.imr_interface = address().as_in_addr();
+  param.imr_address = address().as_in_addr();
+  param.imr_ifindex = 0;
   int result = setsockopt(socket_fd().get(), IPPROTO_IP, IP_ADD_MEMBERSHIP,
                           &param, sizeof(param));
   if (result < 0) {

@@ -66,7 +66,8 @@ int client(const char* if_address, const char* mc_address,
   char message[1024];
   memset(message, 0, sizeof(message));
   while (fgets(message, sizeof(message), stdin)) {
-    if (message[0] == '\n') break;
+    if (message[0] == '\n')
+      break;
 
     int nsendto;
     nsendto = sendto(s, message, strlen(message), 0, (struct sockaddr*)&addr,
@@ -111,18 +112,19 @@ int server(const char* if_address, const char* mc_address,
     return -1;
   }
 
-  struct ip_mreq mc_req;
-  mc_req.imr_multiaddr.s_addr = inet_addr(mc_address);
-  mc_req.imr_interface.s_addr = inet_addr(if_address);
+  struct ip_mreqn mc_reqn;
+  mc_reqn.imr_multiaddr.s_addr = inet_addr(mc_address);
+  mc_reqn.imr_address.s_addr = inet_addr(if_address);
+  mc_reqn.imr_ifindex = 0;
 
-  if (setsockopt(s, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mc_req, sizeof(mc_req)) <
+  if (setsockopt(s, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mc_reqn, sizeof(mc_reqn)) <
       0) {
     printf("setsockopt: IP_ADD_MEMBERSHIP failed (errno = %d)\n", errno);
     close(s);
     return -1;
   }
 
-  if (setsockopt(s, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mc_req, sizeof(mc_req)) ==
+  if (setsockopt(s, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mc_reqn, sizeof(mc_reqn)) ==
       0) {
     printf(
         "setsockopt: duplicate IP_ADD_MEMBERSHIP succeeded when it should have "
@@ -148,15 +150,15 @@ int server(const char* if_address, const char* mc_address,
            sa_to_str((struct sockaddr*)&addr, str, sizeof(str)));
   }
 
-  if (setsockopt(s, IPPROTO_IP, IP_DROP_MEMBERSHIP, &mc_req, sizeof(mc_req)) <
+  if (setsockopt(s, IPPROTO_IP, IP_DROP_MEMBERSHIP, &mc_reqn, sizeof(mc_reqn)) <
       0) {
     printf("setsockopt: IP_DROP_MEMBERSHIP failed (errno = %d)\n", errno);
     close(s);
     return -1;
   }
 
-  if (setsockopt(s, IPPROTO_IP, IP_DROP_MEMBERSHIP, &mc_req, sizeof(mc_req)) ==
-      0) {
+  if (setsockopt(s, IPPROTO_IP, IP_DROP_MEMBERSHIP, &mc_reqn,
+                 sizeof(mc_reqn)) == 0) {
     printf(
         "setsockopt: duplicate IP_DROP_MEMBERSHIP succeeded when it should "
         "have failed\n");

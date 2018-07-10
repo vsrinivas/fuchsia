@@ -85,14 +85,22 @@ func (v *c_mxrio_sockopt_req_reply) Unpack() interface{} {
 			return tcpip.MulticastTTLOption(v.optval[0])
 		case IP_MULTICAST_LOOP:
 		case IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP:
-			mreq := c_ip_mreq{}
-			if err := mreq.Decode(v.optval[:]); err != nil {
-				log.Printf("sockopt: bad argument to %d", v.optname)
-				return nil
+			mreqn := c_ip_mreqn{}
+			if err := mreqn.Decode(v.optval[:]); err != nil {
+				// If we fail to decode a c_ip_mreqn, try to decode a c_ip_mreq.
+				mreq := c_ip_mreq{}
+				if err := mreq.Decode(v.optval[:]); err != nil {
+					log.Printf("sockopt: bad argument to %d", v.optname)
+					return nil
+				}
+				mreqn.imr_multiaddr = mreq.imr_multiaddr
+				mreqn.imr_address = mreq.imr_interface
+				mreqn.imr_ifindex = 0
 			}
 			option := tcpip.MembershipOption{
-				InterfaceAddr: tcpip.Address(mreq.imr_interface[:]),
-				MulticastAddr: tcpip.Address(mreq.imr_multiaddr[:]),
+				NIC:           tcpip.NICID(mreqn.imr_ifindex),
+				InterfaceAddr: tcpip.Address(mreqn.imr_address[:]),
+				MulticastAddr: tcpip.Address(mreqn.imr_multiaddr[:]),
 			}
 			if v.optname == IP_ADD_MEMBERSHIP {
 				return tcpip.AddMembershipOption(option)
