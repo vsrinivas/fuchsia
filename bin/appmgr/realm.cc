@@ -481,25 +481,29 @@ void Realm::CreateComponentFromPackage(
   builder.AddPackage(std::move(pkg));
   builder.AddServices(std::move(svc));
 
-  // If meta/*.cmx exists, read sandbox data from it.
+  // If meta/*.cmx exists, attempt to read sandbox data from it.
   if (!cmx_data.empty()) {
     SandboxMetadata sandbox;
     CmxMetadata cmx;
     rapidjson::Value sandbox_meta;
-    if (!cmx.ParseSandboxMetadata(cmx_data, &sandbox_meta)) {
-      FXL_LOG(ERROR) << "Failed to parse sandbox metadata for "
-                     << launch_info.url;
-      return;
+
+    if (cmx.ParseSandboxMetadata(cmx_data, &sandbox_meta)) {
+      // If the cmx has a sandbox attribute, but it doesn't properly parse,
+      // return early. Otherwise, proceed normally as it just means there is
+      // no sandbox data for this component.
+      if (!sandbox.Parse(sandbox_meta)) {
+        FXL_LOG(ERROR) << "Failed to parse sandbox metadata for "
+                       << launch_info.url;
+        return;
+      }
+      // If an app has the "shell" feature, then we use the libraries from the
+      // system rather than from the package because programs spawned from the
+      // shell will need the system-provided libraries to run.
+      if (sandbox.HasFeature("shell"))
+        loader_service.reset();
+
+      builder.AddSandbox(sandbox, [this] { return OpenInfoDir(); });
     }
-    sandbox.Parse(sandbox_meta);
-
-    // If an app has the "shell" feature, then we use the libraries from the
-    // system rather than from the package because programs spawned from the
-    // shell will need the system-provided libraries to run.
-    if (sandbox.HasFeature("shell"))
-      loader_service.reset();
-
-    builder.AddSandbox(sandbox, [this] { return OpenInfoDir(); });
   }
 
   // Add the custom namespace.
