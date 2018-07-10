@@ -46,8 +46,7 @@ int InitThread(void* arg) {
 
 // Public methods
 
-Device::Device(zx_device_t* parent)
-    : DeviceType(parent), state_(0), info_(nullptr), hint_(0) {
+Device::Device(zx_device_t* parent) : DeviceType(parent), state_(0), info_(nullptr), hint_(0) {
     list_initialize(&queue_);
 }
 
@@ -339,25 +338,23 @@ void Device::BlockQueue(block_op_t* block) {
         desired = expected + 1;
     }
 
-    // Initialize our extra space
+    // Initialize our extra space and save original values
     extra_op_t* extra = BlockToExtra(block, info_->op_size);
-    extra->Init();
-
-    // Skip the reserved blocks
-    uint32_t command = block->command & BLOCK_OP_MASK;
-    if ((command == BLOCK_OP_READ || command == BLOCK_OP_WRITE) &&
-        add_overflow(block->rw.offset_dev, info_->reserved_blocks, &block->rw.offset_dev)) {
-        zxlogf(ERROR, "adjusted offset overflow: block->rw.offset_dev=%" PRIu64 "\n",
-               block->rw.offset_dev);
-        BlockComplete(block, ZX_ERR_OUT_OF_RANGE);
+    zx_status_t rc = extra->Init(block, info_->reserved_blocks);
+    if (rc != ZX_OK) {
+        zxlogf(ERROR, "failed to initialize extra info: %s\n", zx_status_get_string(rc));
+        BlockComplete(block, rc);
         return;
     }
 
-    // Queue write requests to get a portion of the write buffer, send all others to the device
-    if (command == BLOCK_OP_WRITE) {
+    switch (block->command & BLOCK_OP_MASK) {
+    case BLOCK_OP_WRITE:
         EnqueueWrite(block);
-    } else {
+        break;
+    case BLOCK_OP_READ:
+    default:
         BlockForward(block, ZX_OK);
+        break;
     }
 }
 
@@ -378,13 +375,6 @@ void Device::BlockForward(block_op_t* block, zx_status_t status) {
         BlockComplete(block, ZX_ERR_BAD_STATE);
         return;
     }
-    // Save info that may change
-    extra_op_t* extra = BlockToExtra(block, info_->op_size);
-    extra->length = block->rw.length;
-    extra->offset_dev = block->rw.offset_dev;
-    extra->completion_cb = block->completion_cb;
-    extra->cookie = block->cookie;
-
     // Register ourselves as the callback
     block->completion_cb = BlockCallback;
     block->cookie = this;
@@ -475,9 +465,6 @@ void Device::EnqueueWrite(block_op_t* block) {
 
         // Modify request to use write buffer
         extra->data = info_->base + (off * info_->block_size);
-        extra->vmo = block->rw.vmo;
-        extra->offset_vmo = block->rw.offset_vmo;
-
         block->rw.vmo = info_->vmo.get();
         block->rw.offset_vmo = (extra->data - info_->base) / info_->block_size;
 
@@ -515,8 +502,10 @@ void Device::BlockCallback(block_op_t* block, zx_status_t status) {
 
     // Restore data that may have changed
     extra_op_t* extra = BlockToExtra(block, device->op_size());
+    block->rw.vmo = extra->vmo;
     block->rw.length = extra->length;
     block->rw.offset_dev = extra->offset_dev;
+    block->rw.offset_vmo = extra->offset_vmo;
     block->completion_cb = extra->completion_cb;
     block->cookie = extra->cookie;
 

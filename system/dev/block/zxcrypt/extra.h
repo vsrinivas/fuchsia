@@ -15,6 +15,11 @@ namespace zxcrypt {
 
 // |extra_op_t| is the extra information placed in the tail end of |block_op_t|s queued against a
 // |zxcrypt::Device|.
+//
+// TODO(aarongreen): This struct should be promoted into a class, with:
+//  * methods to access the relevant fields
+//  * DLL node state for a fbl::DoublyLinkedList
+//  * Methods to encapsulate the setting/clearing/reading into the data field.
 static_assert(sizeof(uintptr_t) <= sizeof(uint64_t), "uintptr_t > uint64_t");
 struct extra_op_t {
     // Used to link deferred block requests
@@ -32,7 +37,7 @@ struct extra_op_t {
     void* cookie;
 
     // Resets this structure to an initial state.
-    void Init();
+    zx_status_t Init(block_op_t* block, size_t reserved_blocks);
 };
 
 // Translates |block_op_t|s to |extra_op_t|s and vice versa.

@@ -24,14 +24,13 @@
 namespace zxcrypt {
 namespace {
 
-int Thread(void* arg) {
+int WorkerRun(void* arg) {
     return static_cast<Worker*>(arg)->Loop();
 }
 
 } // namespace
 
-Worker::Worker()
-    : device_(nullptr) {}
+Worker::Worker() : device_(nullptr) {}
 
 Worker::~Worker() {}
 
@@ -52,7 +51,7 @@ zx_status_t Worker::Start(Device* device, const Volume& volume, zx::port&& port)
 
     port_ = fbl::move(port);
 
-    if (thrd_create(&thrd_, Thread, this) != thrd_success) {
+    if (thrd_create(&thrd_, WorkerRun, this) != thrd_success) {
         zxlogf(ERROR, "failed to start thread\n");
         return ZX_ERR_INTERNAL;
     }

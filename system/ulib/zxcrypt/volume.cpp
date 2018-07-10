@@ -21,11 +21,12 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
+#include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <lib/fdio/debug.h>
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
+#include <lib/fdio/debug.h>
 #include <lib/zx/vmo.h>
 #include <sync/completion.h>
 #include <zircon/compiler.h>
@@ -209,17 +210,18 @@ zx_status_t Volume::Open(const zx::duration& timeout, fbl::unique_fd* out) {
     ssize_t res;
 
     // Get the full device path
-    char base[PATH_MAX/2];
-    char path[PATH_MAX/2];
-    if ((res = ioctl_device_get_topo_path(fd_.get(), base, sizeof(base))) < 0) {
+    fbl::StringBuffer<PATH_MAX> path;
+    path.Resize(path.capacity());
+    if ((res = ioctl_device_get_topo_path(fd_.get(), path.data(), path.capacity())) < 0) {
         rc = static_cast<zx_status_t>(res);
         xprintf("could not find parent device: %s\n", zx_status_get_string(rc));
         return rc;
     }
-    snprintf(path, sizeof(path), "%s/zxcrypt/block", base);
+    path.Resize(strlen(path.c_str()));
+    path.Append("/zxcrypt/block");
 
     // Early return if already bound
-    fbl::unique_fd fd(open(path, O_RDWR));
+    fbl::unique_fd fd(open(path.c_str(), O_RDWR));
     if (fd) {
         out->reset(fd.release());
         return ZX_OK;
@@ -231,11 +233,11 @@ zx_status_t Volume::Open(const zx::duration& timeout, fbl::unique_fd* out) {
         xprintf("could not bind zxcrypt driver: %s\n", zx_status_get_string(rc));
         return rc;
     }
-    if ((rc = wait_for_device(path, timeout.get())) != ZX_OK) {
+    if ((rc = wait_for_device(path.c_str(), timeout.get())) != ZX_OK) {
         xprintf("zxcrypt driver failed to bind: %s\n", zx_status_get_string(rc));
         return rc;
     }
-    fd.reset(open(path, O_RDWR));
+    fd.reset(open(path.c_str(), O_RDWR));
     if (!fd) {
         xprintf("failed to open zxcrypt volume\n");
         return ZX_ERR_NOT_FOUND;
@@ -278,8 +280,8 @@ zx_status_t Volume::Revoke(key_slot_t slot) {
     }
     zx_off_t off = kHeaderLen + (slot_len_ * slot);
     crypto::Bytes invalid;
-    if ((rc = invalid.Randomize(slot_len_)) != ZX_OK ||
-        (rc = block_.Copy(invalid, off)) != ZX_OK || (rc = CommitBlock()) != ZX_OK) {
+    if ((rc = invalid.Randomize(slot_len_)) != ZX_OK || (rc = block_.Copy(invalid, off)) != ZX_OK ||
+        (rc = CommitBlock()) != ZX_OK) {
         return rc;
     }
 
@@ -553,8 +555,7 @@ zx_status_t Volume::CreateBlock() {
     size_t key_len, iv_len;
     if ((rc = crypto::Cipher::GetKeyLen(cipher_, &key_len)) != ZX_OK ||
         (rc = crypto::Cipher::GetIVLen(cipher_, &iv_len)) != ZX_OK ||
-        (rc = data_key_.Generate(key_len)) != ZX_OK ||
-        (rc = data_iv_.Resize(iv_len)) != ZX_OK ||
+        (rc = data_key_.Generate(key_len)) != ZX_OK || (rc = data_iv_.Resize(iv_len)) != ZX_OK ||
         (rc = data_iv_.Randomize()) != ZX_OK ||
         (rc = header_.Copy(block_.get(), kHeaderLen)) != ZX_OK) {
         return rc;
@@ -674,7 +675,7 @@ zx_status_t Volume::UnsealBlock(const crypto::Secret& key, key_slot_t slot) {
     zx_off_t off = kHeaderLen + (slot_len_ * slot);
 
     size_t key_off, key_len, iv_off, iv_len;
-    uint8_t *key_buf;
+    uint8_t* key_buf;
     if ((rc = crypto::Cipher::GetKeyLen(cipher_, &key_len)) != ZX_OK ||
         (rc = crypto::Cipher::GetIVLen(cipher_, &iv_len)) != ZX_OK ||
         (rc = data_key_.Allocate(key_len, &key_buf)) != ZX_OK) {
