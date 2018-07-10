@@ -31,6 +31,7 @@ type LogLevel int
 
 const (
 	NoLogLevel LogLevel = iota
+	FatalLevel
 	ErrorLevel
 	WarningLevel
 	InfoLevel
@@ -70,6 +71,8 @@ func (l *Logger) Logf(loglevel LogLevel, format string, a ...interface{}) {
 		l.Warningf(format, a...)
 	case ErrorLevel:
 		l.Errorf(format, a...)
+	case FatalLevel:
+		l.Fatalf(format, a...)
 	default:
 		panic(fmt.Sprintf("Undefined loglevel: %v, log message: %s", loglevel, fmt.Sprintf(format, a...)))
 	}
@@ -131,4 +134,14 @@ func (l *Logger) Errorf(format string, a ...interface{}) {
 
 func Errorf(ctx context.Context, format string, a ...interface{}) {
 	Logf(ctx, ErrorLevel, format, a...)
+}
+
+func (l *Logger) Fatalf(format string, a ...interface{}) {
+	if l.LoggerLevel >= FatalLevel {
+		l.goErrorLogger.Fatalf("%s%s", l.color.Red("FATAL: "), fmt.Sprintf(format, a...))
+	}
+}
+
+func Fatalf(ctx context.Context, format string, a ...interface{}) {
+	Logf(ctx, FatalLevel, format, a...)
 }
