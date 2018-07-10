@@ -13,7 +13,7 @@ import (
 )
 
 func TestSyslog(t *testing.T) {
-	msg := "[123.456][1234][5678][klog] Blarg\n"
+	msg := "[123.456][1234][05678][klog] Blarg\n"
 	symbo := newMockSymbolizer([]mockModule{})
 	repo := NewRepo()
 	demuxer := NewDemuxer(repo, symbo)
@@ -32,10 +32,10 @@ func TestSyslog(t *testing.T) {
 
 func TestColor(t *testing.T) {
 	// TODO(jakehehrlich): Change presenter so that redundent resets are not used when user input already contains them.
-	msg := "[0.0] 1234.5678> \033[1mThis is bold \033[31mThis is red and bold \033[37mThis is bold white\n" +
-		"[0.0] 1234.5678> This is just normal and has no trailing ANSI code\n" +
+	msg := "[0.0] 01234.5678> \033[1mThis is bold \033[31mThis is red and bold \033[37mThis is bold white\n" +
+		"[0.0] 1234.05678> This is just normal and has no trailing ANSI code\n" +
 		"[0.0] 1234.5678> \033[1m\033[31m this line tests adjacent state changes\n" +
-		"[0.0] 1234.5678> \033[1m\033[31m this line will eventully test non-redundent reset \033[1m\033\n"
+		"[0.0] 01234.5678> \033[1m\033[31m this line will eventully test non-redundent reset \033[1m\033\n"
 	symbo := newMockSymbolizer([]mockModule{})
 	repo := NewRepo()
 	demuxer := NewDemuxer(repo, symbo)

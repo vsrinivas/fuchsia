@@ -111,8 +111,8 @@ func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 		var hdr logHeader
 		var line InputLine
 		hdr.time = str2float(args[1])
-		hdr.process = str2int(args[2])
-		hdr.thread = str2int(args[3])
+		hdr.process = str2dec(args[2])
+		hdr.thread = str2dec(args[3])
 		line.header = hdr
 		line.source = process(hdr.process)
 		line.lineno = lineno
@@ -123,8 +123,8 @@ func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 		var hdr sysLogHeader
 		var line InputLine
 		hdr.time = str2float(args[1])
-		hdr.process = str2int(args[2])
-		hdr.thread = str2int(args[3])
+		hdr.process = str2dec(args[2])
+		hdr.thread = str2dec(args[3])
 		hdr.tags = args[4]
 		line.header = hdr
 		line.source = process(hdr.process)
