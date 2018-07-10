@@ -338,7 +338,7 @@ void TokenManagerImpl::DeleteAllTokens(AppConfig app_config,
             GetCacheKey(app_config.auth_provider_type, user_profile_id));
         if (cache_status != cache::Status::kOK &&
             cache_status != cache::Status::kKeyNotFound) {
-          callback(Status::INTERNAL_CACHE_ERROR);
+          callback(Status::INTERNAL_ERROR);
           return;
         }
 

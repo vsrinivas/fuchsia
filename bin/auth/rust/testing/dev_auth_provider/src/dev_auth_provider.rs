@@ -240,8 +240,9 @@ mod tests {
         async_test(|dev_auth_provider| {
             let credential = "rt_".to_string() + &generate_random_string();
             let client_id = generate_random_string();
+            let mut scopes = vec![].into_iter();
             dev_auth_provider
-                .get_app_access_token(&credential, Some(&client_id), None)
+                .get_app_access_token(&credential, Some(&client_id), &mut scopes)
                 .and_then(move |response| match response {
                     (AuthProviderStatus::Ok, Some(access_token)) => {
                         assert_eq!(

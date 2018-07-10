@@ -4,17 +4,43 @@
 
 library fuchsia.auth;
 
-// Specifies the success/failure status.
+// Specifies the success/failure status of TokenManager calls.
 enum Status {
+  // The command completed successfully
   OK = 0;
+  // The command referred to a missing, misconfigured, or failed auth provider.
+  // Retrying is not recommended.
   AUTH_PROVIDER_SERVICE_UNAVAILABLE = 1;
+  // The auth server was reachable but responded with an error. These errors
+  // are typically caused by a configuration problem or a revoked token and so
+  // should not be retried.
   AUTH_PROVIDER_SERVER_ERROR = 2;
+  // An internal error occurred. This usually indicates a bug within the Token
+  // Manager itself. Retry is optional.
   INTERNAL_ERROR = 3;
+  // An invalid or non-functional AuthContextProvider was provided. Retrying is
+  // unlikely to correct this error.
   INVALID_AUTH_CONTEXT = 4;
-  INVALID_USER_ID = 5;
+  // The request was malformed in some way, such as using an empty string for
+  // the user_profile_id. The request should not be retried.
+  INVALID_REQUEST = 5;
+  // The requested user profile could not be found in the database. The request
+  // should not be retried.
   USER_NOT_FOUND = 6;
-  INTERNAL_CACHE_ERROR = 7;
+  // A local error occured such as disk I/O or memory allocation. Retry, after
+  // a delay, is recommended.
+  IO_ERROR = 7;
+  // Some other problem occured that cannot be classified using one of the more
+  // specic statuses. Retry is optional.
   UNKNOWN_ERROR = 8;
+  // The auth server requires that the user reauthenticate. The client should
+  // call the Authorize method.
+  REAUTH_REQUIRED = 9;
+  // The user cancelled the flow. User consent is required before any retry.
+  USER_CANCELLED = 10;
+  // A network error occured while communicating with the auth server. Retry,
+  // after a delay, is recommended.
+  NETWORK_ERROR = 11;
 };
 
 // Stores configuration parameters required to connect to available
@@ -33,8 +59,8 @@ struct AuthProviderConfig {
   //     Spotify: Uses Spotify as an identity provider.
   string auth_provider_type;
 
-  // Url of AuthProvider
-  string? url;
+  // Url of the Fuchsia component implementing the AuthProvider
+  string url;
 
   // Optional parameters specified during AuthProvider startup
   vector<string>? params;
@@ -43,7 +69,8 @@ struct AuthProviderConfig {
 // Stores OAuth configuration details for a given client application. These
 // details are used in the OAuth authorization step.
 struct AppConfig {
-  // OAuth identity provider
+  // An OAuth identity provider matching a configuration set in
+  // AuthProviderConfig.auth_provider_type
   string auth_provider_type;
 
   // OAuth client id
@@ -60,33 +87,32 @@ struct AppConfig {
 // to the end user.
 //
 // This is provided during the initialization of TokenManager service and is
-// used for any subsequent authorize calls. The UI context provided here is used
-// to display OAuth login and permission screens to the end user. If user
-// successfully consents, the grant is recorded by the auth provider backend and
-// a long-lived credential is returned to TokenManager.
+// used for any subsequent authorize calls. The UI contexts created by this
+// interface are used to display OAuth login and permission screens to the end
+// user.
 interface AuthenticationContextProvider {
   1: GetAuthenticationUIContext(request<AuthenticationUIContext> @request);
 };
 
-// TokenManagerFactory creates an OAuth Token Manager for a particular user and
+// TokenManagerFactory creates an OAuth TokenManager for a particular user and
 // the specified auth providers as defined by |auth_provider.fidl|.
 [Discoverable]
 interface TokenManagerFactory {
   // Creates an OAuth Token Manager instance scoped for the component specified
   // by |application_url| and for the given Fuchsia user |user_id|. It connects
-  // to a list of auth providers at startup using the configuration passed in
+  // to a list of auth providers using the configuration passed in
   // |auth_provider_configs|.
   //
-  // This instance is also initialized with a provider for fetching secure
+  // This instance is also initialized with a provider for creating instances of
   // AuthenticationUIContext to display OAuth permissions during first-time
-  // user authorization or for subsequent re-auth operations.
+  // user authentication and authorization and subsequent re-auth operations.
   1: GetTokenManager(string user_id, string application_url,
       vector<AuthProviderConfig> auth_provider_configs,
       AuthenticationContextProvider auth_context_provider,
       request<TokenManager> token_manager);
 };
 
-// This interface manages oauth tokens at Fuchsia system level for different
+// This interface manages OAuth tokens at the Fuchsia system level for different
 // auth identity providers.
 //
 // If user authorization is required for minting tokens, TokenManager uses the
@@ -101,20 +127,20 @@ interface TokenManager {
   // components, this is accomplished by displaying OAuth permissions in a view
   // provided by the caller's AuthenticationUIContext. The component's OAuth
   // configuration is provided in |app_config| and |app_scopes|. An optional
-  // |user_profile_id| that uniquely identifies users for a given auth provider
-  // is provided for simplifying re-auth flow.
+  // |user_profile_id| that uniquely identifies a user for a given auth provider
+  // is provided for simplifying the re-auth flow.
   //
-  // After user has successfully authorized, Auth Provider returns a
+  // After the user has successfully authorized, Auth Provider returns a
   // persistent credential like an OAuth refresh token for the intended scopes
   // back to Fuchsia Token Manager. TokenManager service stores this credential
-  // in its secure data store and is later used for minting short lived tokens.
+  // in its secure data store and later uses it for minting short lived tokens.
   // The long lived persistent credential is stored on disk and persists across
   // reboots.
   //
   // If the operation is successful, an OK status is returned along with user
-  // profile information in |user_profile_info| such as user's email,
+  // profile information in |user_profile_info| such as the user's email,
   // image_url, profile_url, first and last names as configured on the auth
-  // provider backend systems.
+  // provider backend system.
   1: Authorize(AppConfig app_config, vector<string> app_scopes,
       string? user_profile_id)
       -> (Status @status, UserProfileInfo? user_profile_info);
@@ -122,14 +148,18 @@ interface TokenManager {
   // Returns a downscoped access token from an auth provider for the given user
   // |user_profile_id| and |scopes| to a Fuchsia component. The component's
   // OAuth configuration is provided in |app_config| and the |user_profile_id|
-  // is the unique user identifier returned by the auth_provider after user
-  // successfully completes the Authorize() flow.
+  // is the unique user identifier returned by the Authorize() call.
   //
-  // Access token is returned from cache if not expired, otherwise user's
-  // persistent credential is exchanged for an access token from the auth
-  // provider backend server.
+  // In the interests of performance Token Manager does not place the supplied
+  // scopes in a canonical order during caching. To benefit from caching of
+  // tokens, clients must request the same scopes in the same order across
+  // calls.
+  //
+  // The access token is returned from cache if possible, otherwise the auth
+  // provider is used to exchange the user's persistent credential for a new
+  // access token.
   2: GetAccessToken(AppConfig app_config, string user_profile_id,
-      vector<string>? app_scopes) -> (Status @status, string? access_token);
+      vector<string> app_scopes) -> (Status @status, string? access_token);
 
   // Returns a JWT Identity token from an auth provider to a Fuchsia component
   // intended for the given |audience| and the given user |user_profile_id|. The
@@ -137,10 +167,11 @@ interface TokenManager {
   // |audience| is the intended recipient of the id_token.
   //
   // |user_profile_id| is the unique user identifier returned by the
-  // auth_provider after user successfully completes the Authorize() flow.
+  // Authorize() call.
   //
-  // Identity token is returned from cache if not expired, otherwise refreshed
-  // from the auth provider backend server.
+  // The Identity token is returned from cache if possible, otherwise the auth
+  // provider is used to exchange the user's persistant credential for a new
+  // identity token.
   3: GetIdToken(AppConfig app_config, string user_profile_id, string? audience)
       -> (Status @status, string? id_token);
 
@@ -148,29 +179,27 @@ interface TokenManager {
   // the existing user |user_profile_id| and for the Firebase client identified
   // by |firebase_api_key|. The component's OAuth configuration is provided in
   // |app_config| and the |user_profile_id| is the unique user identifier
-  // returned by the auth_provider after user successfully completes the
-  // Authorize() flow.
+  // returned by the Authorize() call.
   //
   // This api invokes firebase auth's VerifyAssertion endpoint that takes an
-  // OAuth IdToken as the fuchsia.ui.input. Audience is the intended recipient of the
-  // firebase id token.
+  // OAuth IdToken as the fuchsia.ui.input. Audience is the intended recipient
+  // of the firebase id token.
   //
-  // Firebase auth token is returned from cache if not expired, otherwise
-  // refreshed from the auth provider backend server.
+  // The Firebase auth token is returned from cache if possible, otherwise it is
+  // refreshed from the auth provider.
   4: GetFirebaseToken(AppConfig app_config, string user_profile_id,
       string audience, string firebase_api_key)
       -> (Status @status, FirebaseToken? firebase_token);
 
-  // Deletes all long lived and short lived tokens generated for user
-  // |user_profile_id| and the given Fuchsia component. The component's OAuth
-  // configuration is provided in |app_config| and the |user_profile_id| is
-  // the unique user identifier returned by the auth_provider after user
-  // successfully completes the Authorize() flow.
+  // Deletes and revokes all long lived and short lived tokens generated for
+  // user |user_profile_id| and the given Fuchsia component. The component's
+  // OAuth configuration is provided in |app_config| and the |user_profile_id|
+  // is the unique user identifier returned by the Authorize() call.
   //
   // Deletion of tokens involves three steps:
-  //     - deleting persistent credentials stored locally on disk.
   //     - revoking credentials remotely at the auth provider.
   //     - deleting short lived tokens from the in-memory cache.
+  //     - deleting persistent credentials stored locally on disk.
   5: DeleteAllTokens(AppConfig app_config, string user_profile_id)
       -> (Status @status);
 };
