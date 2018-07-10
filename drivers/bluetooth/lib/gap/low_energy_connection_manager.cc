@@ -414,7 +414,7 @@ bool LowEnergyConnectionManager::Connect(const std::string& device_identifier,
     return true;
   }
 
-  peer->set_le_connection_state(RemoteDevice::ConnectionState::kInitializing);
+  peer->SetLEConnectionState(RemoteDevice::ConnectionState::kInitializing);
   pending_requests_[device_identifier] =
       PendingRequestData(peer->address(), std::move(callback));
 
@@ -641,7 +641,7 @@ void LowEnergyConnectionManager::CleanUpConnection(
   // Mark the peer device as no longer connected.
   RemoteDevice* peer = device_cache_->FindDeviceById(conn->id());
   FXL_DCHECK(peer);
-  peer->set_le_connection_state(RemoteDevice::ConnectionState::kNotConnected);
+  peer->SetLEConnectionState(RemoteDevice::ConnectionState::kNotConnected);
 
   // Clean up GATT profile.
   gatt_->RemoveConnection(conn->id());
@@ -684,7 +684,7 @@ void LowEnergyConnectionManager::RegisterLocalInitiatedLink(
   FXL_DCHECK(conn_iter != connections_.end());
 
   // For now, jump to the initialized state.
-  peer->set_le_connection_state(RemoteDevice::ConnectionState::kConnected);
+  peer->SetLEConnectionState(RemoteDevice::ConnectionState::kConnected);
 
   auto iter = pending_requests_.find(peer->identifier());
   if (iter != pending_requests_.end()) {
@@ -736,7 +736,7 @@ void LowEnergyConnectionManager::OnConnectResult(
 
   RemoteDevice* dev = device_cache_->FindDeviceById(device_identifier);
   FXL_CHECK(dev);
-  dev->set_le_connection_state(RemoteDevice::ConnectionState::kNotConnected);
+  dev->SetLEConnectionState(RemoteDevice::ConnectionState::kNotConnected);
 
   // Notify the matching pending callbacks about the failure.
   auto iter = pending_requests_.find(device_identifier);

@@ -37,11 +37,13 @@ constexpr uint16_t kClockOffsetValidBitMask = 0x8000;
 
 }  // namespace
 
-RemoteDevice::RemoteDevice(UpdatedCallback callback,
+RemoteDevice::RemoteDevice(DeviceCallback notify_listeners_callback,
+                           DeviceCallback update_expiry_callback,
                            const std::string& identifier,
                            const common::DeviceAddress& address,
                            bool connectable)
-    : updated_callback_(std::move(callback)),
+    : notify_listeners_callback_(std::move(notify_listeners_callback)),
+      update_expiry_callback_(std::move(update_expiry_callback)),
       identifier_(identifier),
       address_(address),
       technology_((address.type() == common::DeviceAddress::Type::kBREDR)
@@ -53,35 +55,39 @@ RemoteDevice::RemoteDevice(UpdatedCallback callback,
       temporary_(true),
       rssi_(hci::kRSSIInvalid),
       advertising_data_length_(0u) {
-  FXL_DCHECK(updated_callback_);
+  FXL_DCHECK(notify_listeners_callback_);
+  FXL_DCHECK(update_expiry_callback_);
   FXL_DCHECK(!identifier_.empty());
   // TODO(armansito): Add a mechanism for assigning "dual-mode" for technology.
 }
 
-void RemoteDevice::set_le_connection_state(ConnectionState state) {
+void RemoteDevice::SetLEConnectionState(ConnectionState state) {
   FXL_DCHECK(connectable() || state == ConnectionState::kNotConnected);
   FXL_VLOG(1) << "gap: RemoteDevice le_connection_state changed from \""
               << ConnectionStateToString(le_connection_state_) << "\" to \""
               << ConnectionStateToString(state) << "\"";
 
   le_connection_state_ = state;
-  updated_callback_(*this);
+  update_expiry_callback_(*this);
+  notify_listeners_callback_(*this);
 }
 
-void RemoteDevice::set_bredr_connection_state(ConnectionState state) {
+void RemoteDevice::SetBREDRConnectionState(ConnectionState state) {
   FXL_DCHECK(connectable() || state == ConnectionState::kNotConnected);
   FXL_VLOG(1) << "gap: RemoteDevice bredr_connection_state changed from \""
               << ConnectionStateToString(bredr_connection_state_) << "\" to \""
               << ConnectionStateToString(state) << "\"";
 
   bredr_connection_state_ = state;
-  updated_callback_(*this);
+  update_expiry_callback_(*this);
+  notify_listeners_callback_(*this);
 }
 
 void RemoteDevice::SetLEAdvertisingData(
     int8_t rssi, const common::ByteBuffer& advertising_data) {
   FXL_DCHECK(technology() == TechnologyType::kLowEnergy);
   FXL_DCHECK(address_.type() != common::DeviceAddress::Type::kBREDR);
+  update_expiry_callback_(*this);
 
   // Reallocate the advertising data buffer only if we need more space.
   // TODO(armansito): Revisit this strategy while addressing NET-209
@@ -105,12 +111,14 @@ void RemoteDevice::SetLEAdvertisingData(
   advertising_data.Copy(&advertising_data_buffer_);
 
   if (old_parsed_ad.local_name() != new_parsed_ad.local_name()) {
-    updated_callback_(*this);
+    notify_listeners_callback_(*this);
   }
 }
 
 void RemoteDevice::SetExtendedInquiryResponse(const common::ByteBuffer& bytes) {
   FXL_DCHECK(bytes.size() <= hci::kExtendedInquiryResponseBytes);
+  update_expiry_callback_(*this);
+
   if (extended_inquiry_response_.size() < bytes.size()) {
     extended_inquiry_response_ = common::DynamicByteBuffer(bytes.size());
   }
@@ -130,6 +138,7 @@ void RemoteDevice::SetExtendedInquiryResponse(const common::ByteBuffer& bytes) {
 
 void RemoteDevice::SetInquiryData(const hci::InquiryResult& result) {
   FXL_DCHECK(address_.value() == result.bd_addr);
+  update_expiry_callback_(*this);
 
   bool significant_change =
       !device_class_ ||
@@ -138,12 +147,13 @@ void RemoteDevice::SetInquiryData(const hci::InquiryResult& result) {
   page_scan_repetition_mode_ = result.page_scan_repetition_mode;
   device_class_ = result.class_of_device;
   if (significant_change) {
-    updated_callback_(*this);
+    notify_listeners_callback_(*this);
   }
 }
 
 void RemoteDevice::SetInquiryData(const hci::InquiryResultRSSI& result) {
   FXL_DCHECK(address_.value() == result.bd_addr);
+  update_expiry_callback_(*this);
 
   clock_offset_ = le16toh(kClockOffsetValidBitMask | result.clock_offset);
   page_scan_repetition_mode_ = result.page_scan_repetition_mode;
@@ -165,8 +175,9 @@ void RemoteDevice::SetInquiryData(
 }
 
 void RemoteDevice::SetName(const std::string& name) {
+  update_expiry_callback_(*this);
   name_ = name;
-  updated_callback_(*this);
+  notify_listeners_callback_(*this);
 }
 
 bool RemoteDevice::TryMakeNonTemporary() {
@@ -181,7 +192,8 @@ bool RemoteDevice::TryMakeNonTemporary() {
 
   if (temporary_) {
     temporary_ = false;
-    updated_callback_(*this);
+    update_expiry_callback_(*this);
+    notify_listeners_callback_(*this);
   }
 
   return true;

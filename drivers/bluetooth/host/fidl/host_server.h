@@ -81,6 +81,10 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host>,
   // updated.
   void OnRemoteDeviceUpdated(const ::btlib::gap::RemoteDevice& remote_device);
 
+  // Called by |adapter()->remote_device_cache()| when a remote device is
+  // removed.
+  void OnRemoteDeviceRemoved(const std::string& identifier);
+
   // Called when |server| receives a channel connection error.
   void OnConnectionError(Server* server);
 

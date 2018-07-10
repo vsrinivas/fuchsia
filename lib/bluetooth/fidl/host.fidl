@@ -69,5 +69,6 @@ interface Host {
   // Events
   101: -> OnAdapterStateChanged(fuchsia.bluetooth.control.AdapterState state);
   102: -> OnDeviceUpdated(fuchsia.bluetooth.control.RemoteDevice device);
-  103: -> OnNewBondingData(fuchsia.bluetooth.control.BondingData data);
+  103: -> OnDeviceRemoved(string identifier);
+  104: -> OnNewBondingData(fuchsia.bluetooth.control.BondingData data);
 };

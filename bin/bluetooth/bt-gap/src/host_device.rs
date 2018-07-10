@@ -81,6 +81,14 @@ pub fn run(
                             .map_err(|e| error!("Failed to send device updated event: {:?}", e));
                     }
                 }
+                // TODO(NET-1038): Add integration test for this.
+                HostEvent::OnDeviceRemoved { identifier } => {
+                    for listener in hd.read().event_listeners.iter() {
+                        let _res = listener
+                            .send_on_device_removed(&identifier)
+                            .map_err(|e| error!("Failed to send device removed event: {:?}", e));
+                    }
+                }
                 HostEvent::OnNewBondingData { .. } => {
                     unimplemented!("not yet");
                 }

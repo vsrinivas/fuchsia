@@ -129,6 +129,9 @@ fn main() -> Result<(), Error> {
                     ControlEvent::OnDeviceUpdated { device } => {
                         eprintln!("Device: {:#?}", device);
                     }
+                    ControlEvent::OnDeviceRemoved { identifier } => {
+                        eprintln!("Device {} removed", identifier);
+                    }
                     _ => eprintln!("Unknown Event: {:#?}", evt),
                 }
                 fok(())

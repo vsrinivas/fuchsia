@@ -15,10 +15,10 @@
 #include "garnet/drivers/bluetooth/lib/hci/lmp_feature_set.h"
 #include "lib/fxl/macros.h"
 
-#include "remote_device_cache.h"
-
 namespace btlib {
 namespace gap {
+
+class RemoteDeviceCache;
 
 // Represents a remote Bluetooth device that is known to the current system due
 // to discovery and/or connection and bonding procedures. These devices can be
@@ -123,13 +123,13 @@ class RemoteDevice final {
 
   // The current LE connection state of this RemoteDevice.
   ConnectionState le_connection_state() const { return le_connection_state_; }
-  void set_le_connection_state(ConnectionState state);
+  void SetLEConnectionState(ConnectionState state);
 
   // The current BR/EDR connection state of this RemoteDevice.
   ConnectionState bredr_connection_state() const {
     return bredr_connection_state_;
   }
-  void set_bredr_connection_state(ConnectionState state);
+  void SetBREDRConnectionState(ConnectionState state);
 
   // A temporary device is one that is never persisted, such as
   //
@@ -190,18 +190,22 @@ class RemoteDevice final {
 
  private:
   friend class RemoteDeviceCache;
-  using UpdatedCallback = fit::function<void(const RemoteDevice&)>;
+  using DeviceCallback = fit::function<void(const RemoteDevice&)>;
 
   // TODO(armansito): Add constructor from persistent storage format.
 
-  // Constructor: only intended for use by RemoteDeviceCache.
+  // Caller must ensure that both callbacks are non-empty.
+  // Note that the ctor is only intended for use by RemoteDeviceCache.
   // Expanding access would a) violate the constraint that all RemoteDevices
   // are created through a RemoteDeviceCache, and b) introduce lifetime issues
-  // (does |callback| outlive |this|?).
-  RemoteDevice(UpdatedCallback callback, const std::string& identifier,
+  // (do the callbacks outlive |this|?).
+  RemoteDevice(DeviceCallback notify_listeners_callback,
+               DeviceCallback update_expiry_callback,
+               const std::string& identifier,
                const common::DeviceAddress& address, bool connectable);
 
-  UpdatedCallback updated_callback_;
+  DeviceCallback notify_listeners_callback_;
+  DeviceCallback update_expiry_callback_;
   const std::string identifier_;
   const common::DeviceAddress address_;
   const TechnologyType technology_;

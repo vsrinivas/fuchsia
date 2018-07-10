@@ -41,6 +41,13 @@ HostServer::HostServer(zx::channel channel,
         }
       });
 
+  adapter->remote_device_cache()->set_device_removed_callback(
+      [self = weak_ptr_factory_.GetWeakPtr()](const auto& identifier) {
+        if (self) {
+          self->OnRemoteDeviceRemoved(identifier);
+        }
+      });
+
   // TODO(armansito): Do this in response to Host::SetPairingDelegate().
   adapter->SetPairingDelegate(self);
 }
@@ -313,6 +320,10 @@ void HostServer::OnRemoteDeviceUpdated(
   }
 
   this->binding()->events().OnDeviceUpdated(std::move(*fidl_device));
+}
+
+void HostServer::OnRemoteDeviceRemoved(const std::string& identifier) {
+  this->binding()->events().OnDeviceRemoved(identifier);
 }
 
 }  // namespace bthost
