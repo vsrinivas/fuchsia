@@ -1,6 +1,7 @@
 {
     "packages": [
         "//garnet/bin/a11y:a11y_manager",
-        "//garnet/bin/a11y:a11y_touch_dispatcher"
+        "//garnet/bin/a11y:a11y_touch_dispatcher",
+        "//garnet/bin/a11y:talkback"
     ]
 }

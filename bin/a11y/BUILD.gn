@@ -19,3 +19,11 @@ package("a11y_touch_dispatcher") {
 
   binary = "a11y_touch_dispatcher"
 }
+
+package("talkback") {
+  deps = [
+    "talkback",
+  ]
+
+  binary = "talkback"
+}
