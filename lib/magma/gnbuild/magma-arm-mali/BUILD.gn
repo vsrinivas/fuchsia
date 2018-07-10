@@ -125,7 +125,7 @@ if (build_libvulkan != []) {
 
 package("nonhardware-tests") {
   testonly = true
-  deprecated_system_image = true
+  package_name = "magma_arm_mali_nonhardware_tests"
 
   if (build_msd_arm_mali) {
     deps = [
