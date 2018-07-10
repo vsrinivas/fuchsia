@@ -5,14 +5,14 @@ while [ ! -e /dev/class/gpu/000 ]; do
   sleep 1
 done
 echo [UNIT TEST START=]
-/system/test/magma_unit_tests
-/system/test/msd_intel_gen_nonhardware_tests
+/pkgfs/packages/magma_nonhardware_tests/0/test/magma_unit_tests
+/pkgfs/packages/magma_intel_gen_nonhardware_tests/0/test/msd_intel_gen_nonhardware_tests
 ### Mesa tests
-/system/test/mesa_unit_tests
+/pkgfs/packages/magma_intel_gen_nonhardware_tests/0/test/mesa_unit_tests
+/pkgfs/packages/magma_intel_gen_nonhardware_tests/0/test/state_pool
+/pkgfs/packages/magma_intel_gen_nonhardware_tests/0/test/state_pool_free_list_only
+/pkgfs/packages/magma_intel_gen_nonhardware_tests/0/test/state_pool_no_free
 /system/test/test_wsi_magma
-/system/test/state_pool
-/system/test/state_pool_free_list_only
-/system/test/state_pool_no_free
 echo [UNIT TEST END===]
 echo [INTEGRATION TEST START=]
 /system/test/magma_abi_conformance_tests
