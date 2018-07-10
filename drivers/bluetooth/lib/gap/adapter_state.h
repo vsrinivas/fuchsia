@@ -63,6 +63,9 @@ class AdapterState final {
     return bredr_data_buffer_info_;
   }
 
+  // Returns the BR/EDR local name
+  const std::string local_name() const { return local_name_; }
+
  private:
   // Let Adapter directly write to the private members.
   friend class Adapter;
@@ -91,6 +94,9 @@ class AdapterState final {
 
   // BLE-specific state.
   LowEnergyState le_state_;
+
+  // Local name
+  std::string local_name_;
 
   // TODO(armansito): Add BREDRState class.
 };

@@ -5,6 +5,7 @@
 #include "adapter.h"
 
 #include <endian.h>
+#include <unistd.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/legacy_low_energy_advertiser.h"
@@ -24,6 +25,24 @@
 
 namespace btlib {
 namespace gap {
+
+namespace {
+
+std::string GetHostname() {
+  char host_name_buffer[HOST_NAME_MAX + 1];
+  int result = gethostname(host_name_buffer, sizeof(host_name_buffer));
+
+  if (result < 0) {
+    FXL_VLOG(1) << "gap: gethostname failed";
+    return std::string("");
+  }
+
+  host_name_buffer[sizeof(host_name_buffer) - 1] = '\0';
+
+  return std::string(host_name_buffer);
+}
+
+}  // namespace
 
 Adapter::Adapter(fxl::RefPtr<hci::Transport> hci,
                  fbl::RefPtr<l2cap::L2CAP> l2cap, fbl::RefPtr<gatt::GATT> gatt)
@@ -194,8 +213,11 @@ void Adapter::SetLocalName(std::string name, hci::StatusCallback callback) {
   }
   hci_->command_channel()->SendCommand(
       std::move(write_name), dispatcher_,
-      [cb = std::move(callback)](auto, const hci::EventPacket& event) mutable {
-        BTEV_TEST_WARN(event, "gap: set local name failed");
+      [this, name = std::move(name), cb = std::move(callback)](
+          auto, const hci::EventPacket& event) mutable {
+        if (!BTEV_TEST_WARN(event, "gap: set local name failed")) {
+          state_.local_name_ = std::move(name);
+        }
         cb(event.ToStatus());
       });
 }
@@ -506,6 +528,15 @@ void Adapter::InitializeStep4(InitializeCallback callback) {
                  0, hci::LMPFeature::kRSSIwithInquiryResults)) {
     mode = hci::InquiryMode::kRSSI;
   }
+
+  // Set the local name default.
+  // TODO(jamuraa): set this by default in bt-gap or HostServer instead
+  std::string local_name("fuchsia");
+  auto nodename = GetHostname();
+  if (!nodename.empty()) {
+    local_name += " " + nodename;
+  }
+  SetLocalName(local_name, [](const auto&) {});
 
   bredr_discovery_manager_ =
       std::make_unique<BrEdrDiscoveryManager>(hci_, mode, &device_cache_);

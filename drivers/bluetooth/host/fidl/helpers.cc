@@ -81,6 +81,8 @@ ctrl::AdapterInfo NewAdapterInfo(const ::btlib::gap::Adapter& adapter) {
   ctrl::AdapterInfo adapter_info;
   adapter_info.state = ctrl::AdapterState::New();
 
+  adapter_info.state->local_name = adapter.state().local_name();
+
   adapter_info.state->discoverable = Bool::New();
   adapter_info.state->discoverable->value = false;
   adapter_info.state->discovering = Bool::New();
