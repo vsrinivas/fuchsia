@@ -1,0 +1,108 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Run Fuchsia on QEMU in background and runs SSH command after netstack runs.
+
+## Run Fuchsia on QEMU (using standard fx setup) in background and pings the
+## target until netstack is up running. If successful, issues the given SSH
+## command.
+##
+## usage: fx net-run [--run RUN_OPTIONS]
+##                   [--target TARGET]
+##                   [--klog PATH]
+##                   [--] SSH_COMMAND
+##
+##    --run         The options to be passed to "fx run". If not set, it will
+##                  attempt to load ${FX_NET_RUN_OPTIONS}. Finally, defaults to
+##                  "-N -u ${FUCHSIA_DIR}/scripts/start-dhcp-server.sh".
+##    --target      IP or hostname to connect to. If not supplied, it will
+##                  attempt to guess it from ${FX_NET_RUN_TARGET}.
+##    --klog        Path where to pipe kernel log. Defaults to stdout.
+##                  stderr will still be visible.
+##    SSH_COMMAND   Any other argument will be passed directly to "fx ssh".
+##                  If not specified, it will open an interactive SSH session.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+
+# Defaults
+# If --run is set, it will overwrite this value
+run_options="${FX_NET_RUN_OPTIONS}"
+if [[ -z "${run_options}" ]]; then
+  run_options="-N -u "${FUCHSIA_DIR}"/scripts/start-dhcp-server.sh"
+fi
+target="${FX_NET_RUN_TARGET}"
+
+# Flag parsing
+while [[ "$1" =~ ^- ]]; do
+  case "$1" in
+    -h|--help)
+      fx-command-help
+      exit 0
+      ;;
+    --run)
+      shift
+      run_options="$1"
+      ;;
+    --target)
+      shift
+      target="$1"
+      ;;
+    --klog)
+      shift
+      klog="$1"
+      ;;
+    --)
+      break
+      ;;
+    *)
+      break
+  esac
+  shift
+done
+
+# Error check
+if [[ -z "${target}" ]]; then
+  echo -e "No target found. Use --target or export \$FX_NET_RUN_TARGET."
+  exit 1
+fi
+
+# Run fx run in background. If successful, it will be sent to background.
+echo "Using \"${run_options}\" to boot Fuchsia."
+echo "You might need to run sudo beforehand."
+run_cmd="fx run ${run_options}"
+if [[ -z "$klog" ]]; then
+  ${run_cmd} &
+else
+  ${run_cmd} > "${klog}" &
+  echo "Piping Fuchsia output to \"${klog}\"."
+fi
+fx_pid="$!"
+
+# Wait until netstack is on
+ping_count=1
+ping_max=120  # 2 Minute
+echo "Waiting for device on ${target}."
+while true; do
+  echo "Ping ${ping_count}/${ping_max}"
+  ping -c1 -W1 "${target}" > /dev/null &
+  # We wait so we can ctrl-c kill it
+  wait "$!"
+
+  # If the ping is successful, we break
+  if [[ "$?" -eq 0 ]]; then
+    break
+  fi
+
+  # Check for exit condition
+  ping_count=$(expr "${ping_count}" + 1)
+  if [[ "${ping_count}" -gt "${ping_max}" ]]; then
+    echo -e "Timed out waiting for Fuchsia. Exiting."
+    kill "${fx_pid}"
+    exit 1
+  fi
+done
+
+# Finally, run the SSH command
+fx-command-run "ssh" "${target}" "$@"
