@@ -137,7 +137,7 @@
              path="third_party/golibs/github.com/rjw57/oauth2device"
              remote="https://fuchsia.googlesource.com/third_party/github.com/rjw57/oauth2device"
              gerrithost="https://fuchsia-review.googlesource.com"
-             revision="b258d5df36ce010053017146a79f287d8a31e874"/>
+             revision="bdda779088fb7d541bfc2b682a7949061817eb46"/>
     <project name="third_party/golibs/github.com/google/subcommands"
              path="third_party/golibs/github.com/google/subcommands"
              remote="https://fuchsia.googlesource.com/third_party/github.com/google/subcommands"
