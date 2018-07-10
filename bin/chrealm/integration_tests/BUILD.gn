@@ -50,8 +50,8 @@ package("chrealm_test_get_message") {
 
   meta = [
     {
-      path = rebase_path("get_message_client.cmx")
-      dest = "get_message_client.cmx"
+      path = rebase_path("chrealm_test_get_message.cmx")
+      dest = "chrealm_test_get_message.cmx"
     },
   ]
 }
