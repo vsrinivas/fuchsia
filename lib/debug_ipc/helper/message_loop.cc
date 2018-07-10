@@ -84,8 +84,9 @@ MessageLoop::WatchHandle::~WatchHandle() {
 MessageLoop::WatchHandle& MessageLoop::WatchHandle::operator=(
     WatchHandle&& other) {
   // Should never get into a self-assignment situation since this is not
-  // copyable and every ID should be unique.
-  FXL_DCHECK(msg_loop_ != other.msg_loop_ || id_ != other.id_);
+  // copyable and every ID should be unique. Do allow self-assignment of
+  // null ones though.
+  FXL_DCHECK(!watching() || (msg_loop_ != other.msg_loop_ || id_ != other.id_));
   if (watching())
     msg_loop_->StopWatching(id_);
   msg_loop_ = other.msg_loop_;

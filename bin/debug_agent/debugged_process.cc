@@ -218,6 +218,7 @@ void DebuggedProcess::OnAddressSpace(
   }
 
   size_t ix = 0;
+  reply->map.resize(map.size());
   for (const auto& entry : map) {
     reply->map[ix].name = entry.name;
     reply->map[ix].base = entry.base;
