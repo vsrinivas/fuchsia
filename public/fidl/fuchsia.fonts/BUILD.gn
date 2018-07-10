@@ -12,6 +12,6 @@ fidl("fuchsia.fonts") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.mem",
+    "//zircon/public/fidl/fuchsia-mem",
   ]
 }

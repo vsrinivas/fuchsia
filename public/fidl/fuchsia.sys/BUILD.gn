@@ -21,6 +21,6 @@ fidl("fuchsia.sys") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.mem",
+    "//zircon/public/fidl/fuchsia-mem",
   ]
 }
