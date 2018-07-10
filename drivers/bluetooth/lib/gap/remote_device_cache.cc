@@ -63,13 +63,6 @@ void RemoteDeviceCache::UpdateExpiry(const RemoteDevice& device) {
   FXL_DCHECK(schedule_res == ZX_OK || schedule_res == ZX_ERR_BAD_STATE);
 }
 
-void RemoteDeviceCache::NotifyDeviceUpdated(const RemoteDevice& device) {
-  FXL_DCHECK(devices_.find(device.identifier()) != devices_.end());
-  FXL_DCHECK(devices_.at(device.identifier()).device() == &device);
-  if (device_updated_callback_)
-    device_updated_callback_(device);
-}
-
 RemoteDevice* RemoteDeviceCache::FindDeviceById(
     const std::string& identifier) const {
   auto iter = devices_.find(identifier);
@@ -86,6 +79,15 @@ RemoteDevice* RemoteDeviceCache::FindDeviceByAddress(
   FXL_DCHECK(dev);
 
   return dev;
+}
+
+// Private methods below.
+
+void RemoteDeviceCache::NotifyDeviceUpdated(const RemoteDevice& device) {
+  FXL_DCHECK(devices_.find(device.identifier()) != devices_.end());
+  FXL_DCHECK(devices_.at(device.identifier()).device() == &device);
+  if (device_updated_callback_)
+    device_updated_callback_(device);
 }
 
 void RemoteDeviceCache::RemoveDevice(RemoteDevice* device) {
