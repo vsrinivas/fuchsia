@@ -37,12 +37,14 @@ typedef struct image_info {
 
 // MMIO indices (based on vim2_display_mmios)
 enum {
-    MMIO_PRESET,
+    MMIO_PRESET = 0,
     MMIO_HDMITX,
     MMIO_HIU,
     MMIO_VPU,
     MMIO_HDMTX_SEC,
+    MMIO_DMC,
     MMIO_CBUS,
+    MMIO_COUNT  // Must be the final entry
 };
 
 static uint32_t vim_compute_linear_stride(void* ctx, uint32_t width, zx_pixel_format_t format) {
@@ -486,6 +488,19 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     }
 
     // Map all the various MMIOs
+    pdev_device_info_t dev_info;
+    status = pdev_get_device_info(&display->pdev, &dev_info);
+    if (status != ZX_OK) {
+        DISP_ERROR("Failed to fetch device info (status %d)\n", status);
+        goto fail;
+    }
+
+    if (dev_info.mmio_count != MMIO_COUNT) {
+        DISP_ERROR("MMIO region count mismatch!  Expected %u regions to be supplied by board "
+                   "driver, but only %u were passed\n", MMIO_COUNT, dev_info.mmio_count);
+        goto fail;
+    }
+
     status = pdev_map_mmio_buffer(&display->pdev, MMIO_PRESET, ZX_CACHE_POLICY_UNCACHED_DEVICE,
         &display->mmio_preset);
     if (status != ZX_OK) {
