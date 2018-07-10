@@ -19,6 +19,7 @@ enum {
     BTI_MALI,
     BTI_DISPLAY,
     BTI_VIDEO,
+    BTI_AUDIO,
     BTI_EMMC,
     BTI_SDIO,
     BTI_CANVAS,

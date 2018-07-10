@@ -40,6 +40,10 @@ static pbus_mmio_t vim_display_mmios[] = {
         .base =     S912_CBUS_REG_BASE,
         .length =   S912_CBUS_REG_LENGTH,
     },
+    {
+        .base =     S912_AUDOUT_BASE,
+        .length =   S912_AUDOUT_LEN,
+    },
 };
 
 const pbus_gpio_t vim_display_gpios[] = {
@@ -60,6 +64,10 @@ static const pbus_bti_t vim_display_btis[] = {
     {
         .iommu_index = 0,
         .bti_id = BTI_DISPLAY,
+    },
+    {
+        .iommu_index = 0,
+        .bti_id = BTI_AUDIO,
     },
 };
 

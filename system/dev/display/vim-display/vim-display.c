@@ -44,6 +44,7 @@ enum {
     MMIO_HDMTX_SEC,
     MMIO_DMC,
     MMIO_CBUS,
+    MMIO_AUD_OUT,
     MMIO_COUNT  // Must be the final entry
 };
 
