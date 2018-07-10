@@ -455,7 +455,7 @@ func (c *compiler) compileType(val types.Type) Type {
 	case types.RequestType:
 		t := c.compileCompoundIdentifier(val.RequestSubtype, "")
 		r.Decl = fmt.Sprintf("::fidl::InterfaceRequest<%s>", t)
-		r.Dtor = fmt.Sprintf("~InterfaceRequest", r.Decl)
+		r.Dtor = "~InterfaceRequest"
 	case types.PrimitiveType:
 		r.Decl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 	case types.IdentifierType:
