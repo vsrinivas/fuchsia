@@ -689,9 +689,10 @@ Vcpu::Vcpu(Guest* guest, uint16_t vpid, const thread_t* thread)
     : guest_(guest), vpid_(vpid), thread_(thread), running_(false), vmx_state_(/* zero-init */) {}
 
 Vcpu::~Vcpu() {
-    if (!vmcs_page_.IsAllocated())
+    if (!vmcs_page_.IsAllocated()) {
         return;
-
+    }
+    timer_cancel(&local_apic_state_.timer);
     // The destructor may be called from a different thread, therefore we must
     // pin the current thread to the same CPU as the VCPU.
     AutoPin pin(vpid_);
