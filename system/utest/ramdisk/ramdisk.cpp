@@ -33,8 +33,6 @@
 #include <unittest/unittest.h>
 #include <lib/zx/time.h>
 
-#define RAMCTL_PATH "/dev/misc/ramctl"
-
 namespace tests {
 
 static int get_ramdisk(uint64_t blk_size, uint64_t blk_count) {
