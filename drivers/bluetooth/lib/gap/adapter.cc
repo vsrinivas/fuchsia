@@ -569,6 +569,10 @@ uint64_t Adapter::BuildEventMask() {
   ENABLE_EVT(kUserConfirmationRequestEvent);
   ENABLE_EVT(kUserPasskeyRequestEvent);
   ENABLE_EVT(kRemoteOOBDataRequestEvent);
+  ENABLE_EVT(kRemoteNameRequestCompleteEvent);
+  ENABLE_EVT(kReadRemoteSupportedFeaturesCompleteEvent);
+  ENABLE_EVT(kReadRemoteVersionInformationCompleteEvent);
+  ENABLE_EVT(kReadRemoteExtendedFeaturesCompleteEvent);
 
 #undef ENABLE_EVT
 
