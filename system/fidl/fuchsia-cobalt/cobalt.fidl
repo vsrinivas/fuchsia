@@ -98,6 +98,11 @@ interface CobaltEncoderFactory {
   // Creates a CobaltEncoder for the specified project.
   // |project_id| Should be a project ID registered with the Cobalt system.
   1: GetEncoder(int32 project_id, request<CobaltEncoder> encoder);
+  // Creates a CobaltEncoder with the given configuration for the specific
+  // project.
+  // |config| Should be a string representation of a CobaltConfig proto that
+  //          contains only a single project_id.
+  2: GetEncoderForConfig(string config, request<CobaltEncoder> encoder);
 };
 
 // CobaltEncoder accumulates Observations in a local cache and periodically
