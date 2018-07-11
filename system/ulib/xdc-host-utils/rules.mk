@@ -10,6 +10,9 @@ MODULE := $(LOCAL_DIR).hostlib
 
 MODULE_TYPE := hostlib
 
+MODULE_SRCS += \
+    $(LOCAL_DIR)/client.cpp \
+
 MODULE_COMPILEFLAGS := \
     -Isystem/ulib/fbl/include \
 
