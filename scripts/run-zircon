@@ -33,7 +33,7 @@ function HELP {
     echo "-t <binary>          : use <binary> as the QEMU->ZBI trampoline"
     echo "-u <path>            : execute qemu startUp script, default is no script"
     echo "-V                   : try to use virtio devices"
-    echo "-x <bootdata>        : use specified bootdata"
+    echo "-x <bootdata>        : DEPRECATED: use specified bootdata"
     echo "-z <zbi>             : boot specified complete ZBI via trampoline"
     echo "--audio[=<host_drv>] : use Intel HD Audio"
     echo "                     : <host_drv> should be one of (alsa, pa, wav, none)"
@@ -79,7 +79,7 @@ VNC=
 VIRTIO=0
 SERIAL=1
 SMP=4
-INITRD=
+DEPRECATED_INITRD=
 CMDLINE=""
 QEMU_KERNEL=
 QEMU_INITRD=
@@ -115,7 +115,7 @@ while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:q:rst::u:Vx:z:h-:" FLAG; do
         t) QEMU_KERNEL=$OPTARG;;
         u) UPSCRIPT=$OPTARG;;
         V) VIRTIO=1;;
-        x) INITRD=$OPTARG;;
+        x) DEPRECATED_INITRD=$OPTARG;;
         z) QEMU_INITRD=$OPTARG;;
         h) HELP;;
         \?)
@@ -205,9 +205,13 @@ if [[ -z $BUILDDIR ]]; then
   BUILDDIR="$(dirname "$DIR")/build-$PROJECT$BUILDDIR_SUFFIX"
 fi
 
-if [[ -n "$QEMU_INITRD" && -n "$INITRD" ]]; then
-    echo >&2 "ZBI booting with -z is incompatible with deprecated -x"
-    exit 2
+if [[ -n "$QEMU_INITRD" ]]; then
+    if [[ -n "$DEPRECATED_INITRD" ]]; then
+        echo >&2 "ZBI booting with -z is incompatible with deprecated -x"
+        exit 2
+    fi
+elif [[ -z "$DEPRECATED_INITRD" ]]; then
+    QEMU_INITRD="$BUILDDIR/zircon.zbi"
 fi
 
 if [[ -n "$QEMU_INITRD" && -z "$QEMU_KERNEL" ]]; then
@@ -374,7 +378,7 @@ fi
 case $ARCH in
     arm64)
         QEMU=${QEMUDIR}qemu-system-aarch64
-        KERNEL="$BUILDDIR/qemu-zircon.bin"
+        DEPRECATED_KERNEL="$BUILDDIR/qemu-zircon.bin"
         if (( $DO_KVM )); then
           ARGS+=" -enable-kvm -cpu host"
           GIC=host
@@ -390,11 +394,10 @@ case $ARCH in
         if (( !$SERIAL )); then
           CMDLINE+="kernel.serial=none "
         fi
-        BOOTDATA="$BUILDDIR/bootdata.bin"
         ;;
     x64)
         QEMU=${QEMUDIR}qemu-system-x86_64
-        KERNEL="$BUILDDIR/zircon.bin"
+        DEPRECATED_KERNEL="$BUILDDIR/zircon.bin"
         ARGS+=" -machine q35"
         ARGS+=" -device isa-debug-exit,iobase=0xf4,iosize=0x04"
         if (( $DO_KVM )); then
@@ -408,7 +411,6 @@ case $ARCH in
         else
           CMDLINE+="kernel.serial=none "
         fi
-        BOOTDATA="$BUILDDIR/bootdata.bin"
         ;;
     *)
         echo unsupported arch
@@ -416,15 +418,9 @@ case $ARCH in
         ;;
 esac
 
-if [[ -n "$QEMU_INITRD" ]]; then
-    ARGS+=" -kernel $QEMU_KERNEL -initrd $QEMU_INITRD"
-else
-    ARGS+=" -kernel $KERNEL"
-    if [[ -n $INITRD ]]; then
-        ARGS+=" -initrd $INITRD"
-    elif [[ -f "$BOOTDATA" ]]; then
-        ARGS+=" -initrd $BOOTDATA"
-    fi
+if [[ -n "$DEPRECATED_INITRD" ]]; then
+    QEMU_KERNEL="$DEPRECATED_KERNEL"
+    QEMU_INITRD="$DEPRECATED_INITRD"
 fi
 
 # Propagate our TERM environment variable as a kernel command line
@@ -444,6 +440,7 @@ CMDLINE+="kernel.halt-on-panic=true "
 CMDLINE="`echo "$CMDLINE" | sed 's/,/,,/g'`"
 
 # run qemu
-set -x
 echo CMDLINE: $CMDLINE
-exec $QEMU $ARGS -append "$CMDLINE" "$@"
+set -x
+exec $QEMU -kernel "$QEMU_KERNEL" -initrd "$QEMU_INITRD" \
+     	   $ARGS -append "$CMDLINE" "$@"

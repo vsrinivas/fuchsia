@@ -16,9 +16,8 @@ do-nothing=1
 
 .PHONY: help
 help:
-	@echo "$(LKNAME) build system quick help"
+	@echo "Zircon build system quick help"
 	@echo "Individual projects are built into a build-<project> directory"
-	@echo "Output binary is located at build-<project>/$(LKNAME).bin"
 	@echo "Environment or command line variables controlling build:"
 	@echo "PROJECT = <project name>"
 	@echo "TOOLCHAIN_PREFIX = <absolute path to toolchain or relative path with prefix>"

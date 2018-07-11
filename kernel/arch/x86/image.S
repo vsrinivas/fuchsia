@@ -130,7 +130,7 @@ FUNCTION(apply_fixups)
 .endif
 .endm
 
-#include "zircon-fixups.inc"
+#include "kernel-fixups.inc"
 
     ret
 

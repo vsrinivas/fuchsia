@@ -34,5 +34,3 @@ MODULES += $(patsubst %/rules.mk,%,$(wildcard third_party/ulib/*/rules.mk))
 ifeq ($(call TOBOOL,$(DISABLE_UTEST)),false)
 MODULES += $(patsubst %/rules.mk,%,$(wildcard third_party/utest/*/rules.mk))
 endif
-
-EXTRA_BUILDDEPS += $(USER_BOOTDATA)

@@ -27,7 +27,8 @@ $(DEFSYM_SCRIPT): FORCE
 	@$(call TESTANDREPLACEFILE,$@.tmp,$@)
 GENERATED += $(DEFSYM_SCRIPT)
 
-$(OUTLKELF): kernel/kernel.ld $(DEFSYM_SCRIPT) $(ALLMODULE_OBJS) $(EXTRA_OBJS)
+$(KERNEL_ELF): kernel/kernel.ld $(DEFSYM_SCRIPT) \
+	       $(ALLMODULE_OBJS) $(EXTRA_OBJS)
 	$(call BUILDECHO,linking $@)
 	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) $(KERNEL_LDFLAGS) -T $^ -o $@
 # enable/disable the size output based on a combination of ENABLE_BUILD_LISTFILES
@@ -43,11 +44,11 @@ KERNEL_LDFLAGS += --emit-relocs
 
 # Use the --emit-relocs records to extract the fixups needed to relocate
 # the kernel at boot.
-OUTLKELF_FIXUPS := $(BUILDDIR)/$(LKNAME)-fixups.inc
-$(OUTLKELF_FIXUPS): scripts/gen-kaslr-fixups.sh $(OUTLKELF)
+KERNEL_FIXUPS := $(BUILDDIR)/kernel-fixups.inc
+$(KERNEL_FIXUPS): scripts/gen-kaslr-fixups.sh $(KERNEL_ELF)
 	$(call BUILDECHO,extracting relocations into $@)
 	$(NOECHO)$(SHELLEXEC) $^ '$(READELF)' '$(OBJDUMP)' $@
-GENERATED += $(OUTLKELF_FIXUPS)
+GENERATED += $(KERNEL_FIXUPS)
 
 # Canned sequence to convert an ELF file to a raw binary.
 define elf2bin-commands
@@ -56,19 +57,19 @@ define elf2bin-commands
 endef
 
 # Extract the raw binary image of the kernel proper.
-OUTLKELF_RAW := $(OUTLKELF).bin
-$(OUTLKELF_RAW): $(OUTLKELF); $(elf2bin-commands)
+KERNEL_RAW := $(KERNEL_ELF).bin
+$(KERNEL_RAW): $(KERNEL_ELF); $(elf2bin-commands)
 
-OUTLKELF_IMAGE_ASM := kernel/arch/$(ARCH)/image.S
-OUTLKELF_IMAGE_OBJ := $(BUILDDIR)/$(LKNAME).image.o
-ALLOBJS += $(OUTLKELF_IMAGE_OBJ)
+KERNEL_IMAGE_ASM := kernel/arch/$(ARCH)/image.S
+KERNEL_IMAGE_OBJ := $(BUILDDIR)/kernel.image.o
+ALLOBJS += $(KERNEL_IMAGE_OBJ)
 KERNEL_DEFINES += \
     BOOT_HEADER_SIZE=$(BOOT_HEADER_SIZE) \
-    KERNEL_IMAGE='"$(OUTLKELF_RAW)"' \
+    KERNEL_IMAGE='"$(KERNEL_RAW)"' \
 
 # Assemble the kernel image along with boot headers and relocation fixup code.
 # TODO(mcgrathr): Reuse compile.mk $(MODULE_ASMOBJS) commands here somehow.
-$(OUTLKELF_IMAGE_OBJ): $(OUTLKELF_IMAGE_ASM) $(OUTLKELF_FIXUPS) $(OUTLKELF_RAW)
+$(KERNEL_IMAGE_OBJ): $(KERNEL_IMAGE_ASM) $(KERNEL_FIXUPS) $(KERNEL_RAW)
 	@$(MKDIR)
 	$(call BUILDECHO, assembling $<)
 	$(NOECHO)$(CC) $(GLOBAL_OPTFLAGS)  \
@@ -79,22 +80,22 @@ $(OUTLKELF_IMAGE_OBJ): $(OUTLKELF_IMAGE_ASM) $(OUTLKELF_FIXUPS) $(OUTLKELF_RAW)
 
 # Now link the final load image, using --just-symbols to let image.S refer
 # to symbols defined in the kernel proper.
-$(OUTLKELF_IMAGE): $(OUTLKELF_IMAGE_OBJ) $(OUTLKELF) $(DEFSYM_SCRIPT) \
+$(KERNEL_IMAGE): $(KERNEL_IMAGE_OBJ) $(KERNEL_ELF) $(DEFSYM_SCRIPT) \
 		   kernel/image.ld
 	$(call BUILDECHO,linking $@)
 	@$(MKDIR)
 	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) --build-id=none \
-		       -o $@ -T kernel/image.ld --just-symbols $(OUTLKELF) \
-		       $(DEFSYM_SCRIPT) $(OUTLKELF_IMAGE_OBJ)
+		       -o $@ -T kernel/image.ld --just-symbols $(KERNEL_ELF) \
+		       $(DEFSYM_SCRIPT) $(KERNEL_IMAGE_OBJ)
 
 # Finally, extract the raw binary of the kernel load image.
-$(OUTLKBIN): $(OUTLKELF_IMAGE); $(elf2bin-commands)
+$(KERNEL_ZBI): $(KERNEL_IMAGE); $(elf2bin-commands)
 
-$(OUTLKELF)-gdb.py: scripts/$(LKNAME).elf-gdb.py
+$(KERNEL_ELF)-gdb.py: scripts/zircon.elf-gdb.py
 	$(call BUILDECHO, generating $@)
 	@$(MKDIR)
 	$(NOECHO)cp -f $< $@
-EXTRA_BUILDDEPS += $(OUTLKELF)-gdb.py
+EXTRA_BUILDDEPS += $(KERNEL_ELF)-gdb.py
 
 # print some information about the build
 #$(BUILDDIR)/srcfiles.txt:
@@ -182,27 +183,29 @@ USER_MANIFEST_DEPS := $(foreach x,$(USER_MANIFEST_LINES),$(lastword $(subst =,$(
 user-manifest: $(USER_MANIFEST) $(USER_MANIFEST_DEPS)
 additional-bootdata: $(ADDITIONAL_BOOTDATA_ITEMS)
 
-.PHONY: user-only
-user-only: user-manifest
-ifeq ($(call TOBOOL,$(ENABLE_BUILD_SYSROOT)),true)
-user-only: sysroot
-endif
-
-.PHONY: kernel-only
-kernel-only: kernel
-
-$(USER_BOOTDATA): $(ZBI) $(USER_MANIFEST) $(USER_MANIFEST_DEPS) $(ADDITIONAL_BOOTDATA_ITEMS)
+$(ZIRCON_BOOTIMAGE): \
+    $(ZBI) $(KERNEL_ZBI) \
+    $(USER_MANIFEST) $(USER_MANIFEST_DEPS) \
+    $(ADDITIONAL_BOOTDATA_ITEMS)
 	$(call BUILDECHO,generating $@)
 	@$(MKDIR)
-	$(NOECHO)$(ZBI) -c -o $(USER_BOOTDATA) $(USER_MANIFEST) $(ADDITIONAL_BOOTDATA_ITEMS)
+	$(NOECHO)$< -o $@ --complete=$(PROJECT) $(KERNEL_ZBI) \
+		    $(USER_MANIFEST) $(ADDITIONAL_BOOTDATA_ITEMS)
+GENERATED += $(ZIRCON_BOOTIMAGE)
 
-GENERATED += $(USER_BOOTDATA)
+.PHONY: image
+image: $(ZIRCON_BOOTIMAGE)
+kernel: image
 
-# build userspace filesystem image
-$(USER_FS): $(USER_BOOTDATA)
-	$(call BUILDECHO,generating $@)
-	$(NOECHO)dd if=/dev/zero of=$@ bs=1048576 count=16
-	$(NOECHO)dd if=$(USER_BOOTDATA) of=$@ conv=notrunc
-
-# add the fs image to the clean list
-GENERATED += $(USER_FS)
+# TODO(mcgrathr): Remove these when all consumers of the build
+# only expect the new kernel.zbi and/or zircon.zbi names.
+.PHONY: legacy
+kernel: legacy
+legacy: $(BUILDDIR)/zircon.bin $(BUILDDIR)/bootdata.bin
+$(BUILDDIR)/zircon.bin: $(KERNEL_ZBI)
+	$(call BUILDECHO,compat kernel name $@)
+	$(NOECHO)ln -f $< $@
+# This has an extra copy of the kernel that won't be used at runtime.
+$(BUILDDIR)/bootdata.bin: $(ZIRCON_BOOTIMAGE)
+	$(call BUILDECHO,compat initrd name $@)
+	$(NOECHO)ln -f $< $@

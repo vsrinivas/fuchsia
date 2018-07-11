@@ -119,7 +119,7 @@ FUNCTION(apply_fixups)
     str x10, [x9], #\stride
 .endm
 
-#include "zircon-fixups.inc"
+#include "kernel-fixups.inc"
 
     ret
 

@@ -141,12 +141,12 @@ fi
 
 
 ZBI="${BUILD_DIR}/tools/zbi"
-BOOTDATA_BIN="${BUILD_DIR}/zircon-bootimage.bin"
+BOOTIMAGE="${BUILD_DIR}/zircon.zbi"
 CMDLINE_FILE="${BUILD_DIR}/${BOARD}-cmdline.txt"
 OUT_IMAGE="${BUILD_DIR}/${BOARD}-boot.img"
 
 echo ${CMDLINE} > ${CMDLINE_FILE}
-${ZBI} -o ${OUT_IMAGE} ${BOOTDATA_BIN} -T cmdline ${CMDLINE_FILE}
+${ZBI} -o ${OUT_IMAGE} ${BOOTIMAGE} -T cmdline ${CMDLINE_FILE}
 
 # At this point we either flash all or flash one
 
@@ -157,7 +157,7 @@ if [[ ! -z "${FLASH_PART}" ]]; then
         # Add netboot option to recovery
         CMDLINE+=" netsvc.netboot=true"
         echo ${CMDLINE} > ${CMDLINE_FILE}
-        ${ZBI} -o ${OUT_IMAGE} ${BOOTDATA_BIN} -T cmdline ${CMDLINE_FILE}
+        ${ZBI} -o ${OUT_IMAGE} ${BOOTIMAGE} -T cmdline ${CMDLINE_FILE}
         fastboot flash "${PARTITION_R}" "${OUT_IMAGE}"
     else
         fastboot flash "${FLASH_PART}" "${OUT_IMAGE}"
