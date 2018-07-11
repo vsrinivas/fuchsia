@@ -423,7 +423,7 @@ static zx_status_t init(void** out_ctx) {
 
 static zx_status_t connect(void* ctx, async_dispatcher_t* dispatcher, const char* service_name,
                            zx_handle_t request) {
-    if (!strcmp(service_name, "fuchsia.crash.Analyzer")) {
+    if (!strcmp(service_name, fuchsia_crash_Analyzer_Name)) {
         auto wait = new async::Wait(request,
                                     ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                     handle_ready);
@@ -443,7 +443,7 @@ static zx_status_t connect(void* ctx, async_dispatcher_t* dispatcher, const char
 }
 
 static constexpr const char* crashanalyzer_services[] = {
-    "fuchsia.crash.Analyzer",
+    fuchsia_crash_Analyzer_Name,
     nullptr,
 };
 

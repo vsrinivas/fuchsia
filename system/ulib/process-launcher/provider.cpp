@@ -5,12 +5,13 @@
 #include <lib/process-launcher/launcher.h>
 
 #include "launcher.h"
+#include <fuchsia/process/c/fidl.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 static zx_status_t connect(void* ctx, async_dispatcher_t* dispatcher, const char* service_name,
                            zx_handle_t request) {
-    if (!strcmp(service_name, "fuchsia.process.Launcher")) {
+    if (!strcmp(service_name, fuchsia_process_Launcher_Name)) {
         auto launcher = new launcher::LauncherImpl(zx::channel(request));
 
         zx_status_t status = launcher->Begin(dispatcher);
@@ -32,7 +33,7 @@ static zx_status_t connect(void* ctx, async_dispatcher_t* dispatcher, const char
 }
 
 static constexpr const char* launcher_services[] = {
-    "fuchsia.process.Launcher",
+    fuchsia_process_Launcher_Name,
     nullptr,
 };
 

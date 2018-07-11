@@ -69,6 +69,7 @@ private:
 
     struct NamedInterface {
         std::string c_name;
+        std::string discoverable_name;
         std::vector<NamedMethod> methods;
     };
 

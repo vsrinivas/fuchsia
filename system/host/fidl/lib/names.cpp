@@ -377,6 +377,10 @@ std::string NameInterface(const flat::Interface& interface) {
     return NameName(interface.name, "_", "_");
 }
 
+std::string NameDiscoverable(const flat::Interface& interface) {
+    return NameName(interface.name, ".", ".");
+}
+
 std::string NameMethod(StringView interface_name, const flat::Interface::Method& method) {
     return std::string(interface_name) + NameIdentifier(method.name);
 }

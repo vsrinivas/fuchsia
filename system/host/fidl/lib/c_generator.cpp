@@ -352,6 +352,9 @@ CGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& 
     for (const auto& interface_info : interface_infos) {
         NamedInterface named_interface;
         named_interface.c_name = NameInterface(*interface_info);
+        if (interface_info->HasAttribute("Discoverable")) {
+          named_interface.discoverable_name = NameDiscoverable(*interface_info);
+        }
         for (const auto& method : interface_info->methods) {
             NamedMethod named_method;
             std::string method_name = NameMethod(named_interface.c_name, method);
@@ -428,6 +431,9 @@ void CGenerator::ProduceEnumForwardDeclaration(const NamedEnum& named_enum) {
 }
 
 void CGenerator::ProduceInterfaceForwardDeclaration(const NamedInterface& named_interface) {
+    if (!named_interface.discoverable_name.empty()) {
+      file_ << "#define " << named_interface.c_name << "_Name \"" << named_interface.discoverable_name << "\"\n";
+    }
     for (const auto& method_info : named_interface.methods) {
         file_ << "#define " << method_info.ordinal_name << " ((uint32_t)"
               << method_info.ordinal << ")\n";

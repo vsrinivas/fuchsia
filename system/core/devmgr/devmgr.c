@@ -224,9 +224,9 @@ int analyzer_starter(void* arg) {
             if (status != ZX_OK)
                 goto cleanup;
             appmgr_svc_request = ZX_HANDLE_INVALID;
-            status = fdio_service_connect_at(appmgr_svc, "fuchsia.crash.Analyzer", analyzer_request);
+            status = fdio_service_connect_at(appmgr_svc, fuchsia_crash_Analyzer_Name, analyzer_request);
         } else {
-            status = fdio_service_connect_at(svchost_outgoing, "public/fuchsia.crash.Analyzer", analyzer_request);
+            status = fdio_service_connect_at(svchost_outgoing, "public/" fuchsia_crash_Analyzer_Name, analyzer_request);
         }
         analyzer_request = ZX_HANDLE_INVALID;
         if (status != ZX_OK)
