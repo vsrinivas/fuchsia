@@ -1,0 +1,42 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+
+driver_module("wlanphy_driver") {
+  output_name = "wlanphy"
+  sources = [
+    "binding.c",
+    "device.cpp",
+    "device.h",
+    "driver.cpp",
+    "driver.h",
+  ]
+
+  deps = [
+    "//garnet/drivers/wlan/lib",
+    "//garnet/lib/wlan/common",
+    "//garnet/lib/wlan/fidl",
+    "//garnet/lib/wlan/protocol",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
+  ]
+
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+}
+
+package("wlanphy") {
+  deprecated_system_image = true
+
+  deps = [
+    ":wlanphy_driver",
+  ]
+
+  drivers = [ {
+        name = "wlanphy.so"
+      } ]
+}
