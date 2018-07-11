@@ -33,7 +33,7 @@ GO_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, host_platform, "go", "bin", "gofmt
 CHECK_HEADER_GUARDS_TOOL = os.path.join(paths.FUCHSIA_ROOT, "scripts", "style",
                                         "check-header-guards.py")
 
-C_CMD = [
+CLANG_CMD = [
     CLANG_TOOL, "-style=file", "-fallback-style=Google", "-sort-includes",
     "-i"
 ]
@@ -43,15 +43,16 @@ GO_CMD = [GO_TOOL, "-w"]
 FIX_HEADER_GUARDS_COMMAND = [CHECK_HEADER_GUARDS_TOOL, "--fix"]
 
 EXT_TO_COMMANDS = {
-    ".cc": [C_CMD],
-    ".cpp": [C_CMD],
+    ".cc": [CLANG_CMD],
+    ".cpp": [CLANG_CMD],
     ".dart": [DART_CMD],
     ".gn": [GN_CMD],
     ".gni": [GN_CMD],
     ".go": [GO_CMD],
-    ".h": [FIX_HEADER_GUARDS_COMMAND, C_CMD],
-    ".hh": [C_CMD],
-    ".hpp": [C_CMD],
+    ".h": [FIX_HEADER_GUARDS_COMMAND, CLANG_CMD],
+    ".hh": [CLANG_CMD],
+    ".hpp": [CLANG_CMD],
+    ".ts": [CLANG_CMD],
 }
 
 
