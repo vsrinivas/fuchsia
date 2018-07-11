@@ -6,6 +6,7 @@
 // on a regular basis.
 
 #include <fcntl.h>
+#include <fstream>
 #include <chrono>
 #include <memory>
 #include <thread>
@@ -19,7 +20,7 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/logging.h"
 
-const uint32_t kSystemMetricsProjectId = 102;
+constexpr char kConfigBinProtoPath[] = "/pkg/data/cobalt_config.binproto";
 const uint32_t kUptimeMetricId = 1;
 const uint32_t kMemoryUsageMetricId = 2;
 const uint32_t kRawEncodingId = 1;
@@ -203,7 +204,20 @@ void SystemMetricsApp::ConnectToEnvironmentService() {
   // connect to the cobalt fidl service provided by the environment.
   fuchsia::cobalt::CobaltEncoderFactorySyncPtr factory;
   context_->ConnectToEnvironmentService(factory.NewRequest());
-  factory->GetEncoder(kSystemMetricsProjectId, encoder_.NewRequest());
+
+  // Open the cobalt config file.
+  std::ifstream config_file_stream;
+  config_file_stream.open(kConfigBinProtoPath);
+  FXL_CHECK(config_file_stream && config_file_stream.good())
+      << "Could not open the Cobalt config file: " << kConfigBinProtoPath;
+  std::string cobalt_config_bytes;
+  cobalt_config_bytes.assign(
+      (std::istreambuf_iterator<char>(config_file_stream)),
+      std::istreambuf_iterator<char>());
+  FXL_CHECK(!cobalt_config_bytes.empty())
+      << "Could not read the Cobalt config file: " << kConfigBinProtoPath;
+
+  factory->GetEncoderForConfig(cobalt_config_bytes, encoder_.NewRequest());
 }
 
 int main(int argc, const char** argv) {
