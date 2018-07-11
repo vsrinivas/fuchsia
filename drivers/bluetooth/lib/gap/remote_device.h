@@ -5,6 +5,7 @@
 #pragma once
 
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
@@ -82,11 +83,14 @@ class RemoteDevice final {
   void SetLEAdvertisingData(int8_t rssi,
                             const common::ByteBuffer& advertising_data);
 
-  // Updates the device based on inquiry result data obtained through a
-  // BR/EDR discovery procedure.
-  void SetInquiryData(const hci::InquiryResult& result);
-  void SetInquiryData(const hci::InquiryResultRSSI& result);
-  void SetInquiryData(const hci::ExtendedInquiryResultEventParams& result);
+  // Updates the device based on |inquiry_result|. Notifies listeners if |this|
+  // has changed in a significant way.
+  template <typename T>
+  typename std::enable_if<
+      std::is_same<T, hci::InquiryResult>::value ||
+      std::is_same<T, hci::InquiryResultRSSI>::value ||
+      std::is_same<T, hci::ExtendedInquiryResultEventParams>::value>::type
+  SetInquiryData(const T& inquiry_result);
 
   // Updates the name of this device.
   // If Advertising Data has been set, this must match any local name advertised
@@ -207,7 +211,16 @@ class RemoteDevice final {
 
   // Updates the device based on extended inquiry response data.
   // |bytes| contains the data from an ExtendedInquiryResponse event.
-  void SetExtendedInquiryResponse(const common::ByteBuffer& bytes);
+  // Returns true if |this| was modified in a way that warrants notification to
+  // listeners.
+  bool SetExtendedInquiryResponse(const common::ByteBuffer& bytes);
+
+  // Updates the device based on type-specific inquiry data. Returns true if
+  // |this| was modified in a way that warrants notification to listeners.
+  bool SetSpecificInquiryData(const hci::InquiryResult& result);
+  bool SetSpecificInquiryData(const hci::InquiryResultRSSI& result);
+  bool SetSpecificInquiryData(
+      const hci::ExtendedInquiryResultEventParams& result);
 
   DeviceCallback notify_listeners_callback_;
   DeviceCallback update_expiry_callback_;

@@ -115,48 +115,40 @@ void RemoteDevice::SetLEAdvertisingData(
   }
 }
 
-void RemoteDevice::SetInquiryData(const hci::InquiryResult& result) {
-  FXL_DCHECK(address_.value() == result.bd_addr);
+template <typename T>
+typename std::enable_if<
+    std::is_same<T, hci::InquiryResult>::value ||
+    std::is_same<T, hci::InquiryResultRSSI>::value ||
+    std::is_same<T, hci::ExtendedInquiryResultEventParams>::value>::type
+RemoteDevice::SetInquiryData(const T& inquiry_result) {
+  FXL_DCHECK(address_.value() == inquiry_result.bd_addr);
   update_expiry_callback_(*this);
 
-  bool significant_change =
-      !device_class_ ||
-      (device_class_->major_class() != result.class_of_device.major_class());
-  clock_offset_ = le16toh(kClockOffsetValidBitMask | result.clock_offset);
-  page_scan_repetition_mode_ = result.page_scan_repetition_mode;
-  device_class_ = result.class_of_device;
-  if (significant_change) {
+  bool significant_change_common =
+      !device_class_ || (device_class_->major_class() !=
+                         inquiry_result.class_of_device.major_class());
+  clock_offset_ =
+      le16toh(kClockOffsetValidBitMask | inquiry_result.clock_offset);
+  page_scan_repetition_mode_ = inquiry_result.page_scan_repetition_mode;
+  device_class_ = inquiry_result.class_of_device;
+
+  bool significant_change_specific = SetSpecificInquiryData(inquiry_result);
+  if (significant_change_common || significant_change_specific) {
     notify_listeners_callback_(*this);
   }
 }
 
-void RemoteDevice::SetInquiryData(const hci::InquiryResultRSSI& result) {
-  FXL_DCHECK(address_.value() == result.bd_addr);
-  update_expiry_callback_(*this);
-
-  clock_offset_ = le16toh(kClockOffsetValidBitMask | result.clock_offset);
-  page_scan_repetition_mode_ = result.page_scan_repetition_mode;
-  device_class_ = result.class_of_device;
-  rssi_ = result.rssi;
-}
-
-void RemoteDevice::SetInquiryData(
-    const hci::ExtendedInquiryResultEventParams& result) {
-  FXL_DCHECK(address_.value() == result.bd_addr);
-
-  clock_offset_ = le16toh(kClockOffsetValidBitMask | result.clock_offset);
-  page_scan_repetition_mode_ = result.page_scan_repetition_mode;
-  device_class_ = result.class_of_device;
-  rssi_ = result.rssi;
-
-  SetExtendedInquiryResponse(common::BufferView(
-      result.extended_inquiry_response, hci::kExtendedInquiryResponseBytes));
-}
+template void RemoteDevice::SetInquiryData<>(const hci::InquiryResult&);
+template void RemoteDevice::SetInquiryData<>(const hci::InquiryResultRSSI&);
+template void RemoteDevice::SetInquiryData<>(
+    const hci::ExtendedInquiryResultEventParams&);
 
 void RemoteDevice::SetName(const std::string& name) {
   update_expiry_callback_(*this);
-  name_ = name;
-  notify_listeners_callback_(*this);
+  if (!name_ || *name_ != name) {
+    name_ = name;
+    notify_listeners_callback_(*this);
+  }
 }
 
 bool RemoteDevice::TryMakeNonTemporary() {
@@ -185,7 +177,7 @@ std::string RemoteDevice::ToString() const {
 
 // Private methods below.
 
-void RemoteDevice::SetExtendedInquiryResponse(const common::ByteBuffer& bytes) {
+bool RemoteDevice::SetExtendedInquiryResponse(const common::ByteBuffer& bytes) {
   FXL_DCHECK(bytes.size() <= hci::kExtendedInquiryResponseBytes);
   update_expiry_callback_(*this);
 
@@ -199,11 +191,36 @@ void RemoteDevice::SetExtendedInquiryResponse(const common::ByteBuffer& bytes) {
 
   gap::DataType type;
   common::BufferView data;
+  bool significant_change = false;
   while (reader.GetNextField(&type, &data)) {
     if (type == gap::DataType::kCompleteLocalName) {
-      SetName(std::string(data.ToString()));
+      auto new_name = data.ToString();
+      if (!name_ || *name_ != new_name) {
+        name_ = new_name;
+        significant_change = true;
+      }
     }
   }
+
+  return significant_change;
+}
+
+bool RemoteDevice::SetSpecificInquiryData(const hci::InquiryResult& result) {
+  // All InquiryResult data is handled in the common case. Nothing left to do.
+  return false;
+}
+
+bool RemoteDevice::SetSpecificInquiryData(
+    const hci::InquiryResultRSSI& result) {
+  rssi_ = result.rssi;
+  return false;
+}
+
+bool RemoteDevice::SetSpecificInquiryData(
+    const hci::ExtendedInquiryResultEventParams& result) {
+  rssi_ = result.rssi;
+  return SetExtendedInquiryResponse(common::BufferView(
+      result.extended_inquiry_response, hci::kExtendedInquiryResponseBytes));
 }
 
 }  // namespace gap

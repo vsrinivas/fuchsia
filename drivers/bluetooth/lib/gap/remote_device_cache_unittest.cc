@@ -166,18 +166,31 @@ class GAP_RemoteDeviceCacheTest_UpdateCallbackTest
     device_ = cache_.NewDevice(kAddrPublic, true);
     cache_.set_device_updated_callback(
         [this](const auto&) { was_called_ = true; });
+    ir_.bd_addr = device_->address().value();
+    irr_.bd_addr = device_->address().value();
+    eirep_.bd_addr = device_->address().value();
+    common::MutableBufferView(&eirep_.extended_inquiry_response,
+                              sizeof(eirep_.extended_inquiry_response))
+        .SetToZeros();
     EXPECT_FALSE(was_called_);
   }
 
  protected:
   RemoteDeviceCache* cache() { return &cache_; }
   RemoteDevice* device() { return device_; }
+  hci::InquiryResult& ir() { return ir_; }
+  hci::InquiryResultRSSI& irr() { return irr_; }
+  hci::ExtendedInquiryResultEventParams& eirep() { return eirep_; }
   bool was_called() const { return was_called_; }
+  void ClearWasCalled() { was_called_ = false; }
 
  private:
   RemoteDeviceCache cache_;
   RemoteDevice* device_;
   bool was_called_;
+  hci::InquiryResult ir_;
+  hci::InquiryResultRSSI irr_;
+  hci::ExtendedInquiryResultEventParams eirep_;
 };
 
 TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
@@ -235,59 +248,226 @@ TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
                                      'T', 'e', 's', 't'));
   ASSERT_TRUE(was_called());
 
-  bool was_called_again = false;
-  cache()->set_device_updated_callback(
-      [&](const auto&) { was_called_again = true; });
+  ClearWasCalled();
   device()->SetLEAdvertisingData(
       kTestRSSI,
       common::CreateStaticByteBuffer(0x05,  // Length
                                      0x09,  // AD Type: Complete Local Name
                                      'T', 'e', 's', 't'));
-  EXPECT_FALSE(was_called_again);
+  EXPECT_FALSE(was_called());
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
-       SetInquiryDataTriggersUpdateCallbackOnDeviceClassSet) {
-  hci::InquiryResult ir;
-  ir.bd_addr = device()->address().value();
-  ir.class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
-  device()->SetInquiryData(ir);
+       SetInquiryDataFromInquiryResultTriggersUpdateCallbackOnDeviceClassSet) {
+  ir().class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
+  device()->SetInquiryData(ir());
   EXPECT_TRUE(was_called());
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
-       SetInquiryDataUpdateCallbackProvidesUpdatedDevice) {
-  hci::InquiryResult ir;
-  ir.bd_addr = device()->address().value();
-  ir.class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
+       SetInquiryDataFromInquiryResultUpdateCallbackProvidesUpdatedDevice) {
+  ir().class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
   ASSERT_FALSE(device()->device_class().HasValue());
   cache()->set_device_updated_callback([](const auto& updated_dev) {
     ASSERT_TRUE(updated_dev.device_class().HasValue());
     EXPECT_EQ(updated_dev.device_class()->major_class(),
               common::DeviceClass::MajorClass(0x02));
   });
-  device()->SetInquiryData(ir);
+  device()->SetInquiryData(ir());
+}
+
+TEST_F(
+    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    SetInquiryDataFromInquiryResultDoesNotTriggerUpdateCallbackOnSameDeviceClass) {
+  ir().class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
+  device()->SetInquiryData(ir());
+  ASSERT_TRUE(was_called());
+
+  ClearWasCalled();
+  device()->SetInquiryData(ir());
+  EXPECT_FALSE(was_called());
+}
+
+TEST_F(
+    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    SetInquiryDataFromInquiryResultRSSITriggersUpdateCallbackOnDeviceClassSet) {
+  irr().class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
+  device()->SetInquiryData(irr());
+  EXPECT_TRUE(was_called());
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
-       SetInquiryDataDoesNotTriggerUpdateCallbackOnSameDeviceClass) {
-  hci::InquiryResult ir;
-  ir.bd_addr = device()->address().value();
-  ir.class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
-  device()->SetInquiryData(ir);
+       SetInquiryDataFromInquiryResultRSSIUpdateCallbackProvidesUpdatedDevice) {
+  irr().class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
+  ASSERT_FALSE(device()->device_class().HasValue());
+  cache()->set_device_updated_callback([](const auto& updated_dev) {
+    ASSERT_TRUE(updated_dev.device_class().HasValue());
+    EXPECT_EQ(updated_dev.device_class()->major_class(),
+              common::DeviceClass::MajorClass(0x02));
+  });
+  device()->SetInquiryData(irr());
+}
+
+TEST_F(
+    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    SetInquiryDataFromInquiryResultRSSIDoesNotTriggerUpdateCallbackOnSameDeviceClass) {
+  irr().class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
+  device()->SetInquiryData(irr());
   ASSERT_TRUE(was_called());
 
-  bool was_called_again = false;
-  cache()->set_device_updated_callback(
-      [&](const auto&) { was_called_again = true; });
-  device()->SetInquiryData(ir);
-  EXPECT_FALSE(was_called_again);
+  ClearWasCalled();
+  device()->SetInquiryData(irr());
+  EXPECT_FALSE(was_called());
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+       SetInquiryDataFromInquiryResultRSSIDoesNotTriggerUpdateCallbackOnRSSI) {
+  irr().rssi = 1;
+  device()->SetInquiryData(irr());
+  ASSERT_TRUE(was_called());  // Callback due to |class_of_device|.
+
+  ClearWasCalled();
+  irr().rssi = 20;
+  device()->SetInquiryData(irr());
+  EXPECT_FALSE(was_called());
+}
+
+TEST_F(
+    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    SetInquiryDataFromExtendedInquiryResultEventParamsTriggersUpdateCallbackOnDeviceClassSet) {
+  eirep().class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
+  device()->SetInquiryData(eirep());
+  EXPECT_TRUE(was_called());
+}
+
+TEST_F(
+    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    SetInquiryDataFromExtendedInquiryResultEventParamsTriggersUpdateCallbackOnNameSet) {
+  device()->SetInquiryData(eirep());
+  ASSERT_TRUE(was_called());  // Callback due to |class_of_device|.
+
+  ClearWasCalled();
+  common::MutableBufferView(&eirep().extended_inquiry_response,
+                            sizeof(eirep().extended_inquiry_response))
+      .Write(common::CreateStaticByteBuffer(
+          0x05,  // Payload length.
+          0x09,  // Complete Local Name Data Type.
+          'N', 'a', 'm', 'e'));
+  device()->SetInquiryData(eirep());
+  EXPECT_TRUE(was_called());
+}
+
+TEST_F(
+    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    SetInquiryDataFromExtendedInquiryResultEventParamsUpdateCallbackProvidesUpdatedDevice) {
+  eirep().clock_offset = htole16(1);
+  eirep().page_scan_repetition_mode = hci::PageScanRepetitionMode::kR1;
+  eirep().rssi = kTestRSSI;
+  eirep().class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
+  common::MutableBufferView(&eirep().extended_inquiry_response,
+                            sizeof(eirep().extended_inquiry_response))
+      .Write(common::CreateStaticByteBuffer(
+          0x05,  // Payload length.
+          0x09,  // Complete Local Name Data Type.
+          'N', 'a', 'm', 'e'));
+  ASSERT_FALSE(device()->clock_offset().HasValue());
+  ASSERT_FALSE(device()->page_scan_repetition_mode().HasValue());
+  ASSERT_FALSE(device()->device_class().HasValue());
+  ASSERT_FALSE(device()->name().HasValue());
+  cache()->set_device_updated_callback([](const auto& updated_dev) {
+    ASSERT_TRUE(updated_dev.clock_offset().HasValue());
+    ASSERT_TRUE(updated_dev.page_scan_repetition_mode().HasValue());
+    ASSERT_TRUE(updated_dev.device_class().HasValue());
+    ASSERT_TRUE(updated_dev.name().HasValue());
+    EXPECT_EQ(*updated_dev.clock_offset(), 0x8001);
+    EXPECT_EQ(*updated_dev.page_scan_repetition_mode(),
+              hci::PageScanRepetitionMode::kR1);
+    EXPECT_EQ(updated_dev.rssi(), kTestRSSI);
+    EXPECT_EQ(updated_dev.device_class()->major_class(),
+              common::DeviceClass::MajorClass(0x02));
+    EXPECT_EQ(*updated_dev.name(), "Name");
+  });
+  device()->SetInquiryData(eirep());
+}
+
+TEST_F(
+    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    SetInquiryDataFromExtendedInquiryResultEventParamsGeneratesExactlyOneUpdateCallbackRegardlessOfNumberOfFieldsChanged) {
+  eirep().clock_offset = htole16(1);
+  eirep().page_scan_repetition_mode = hci::PageScanRepetitionMode::kR1;
+  eirep().rssi = kTestRSSI;
+  eirep().class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
+  common::MutableBufferView(&eirep().extended_inquiry_response,
+                            sizeof(eirep().extended_inquiry_response))
+      .Write(common::CreateStaticByteBuffer(
+          0x05,  // Payload length.
+          0x09,  // Complete Local Name Data Type.
+          'N', 'a', 'm', 'e'));
+
+  size_t call_count = 0;
+  cache()->set_device_updated_callback([&](const auto&) { ++call_count; });
+  device()->SetInquiryData(eirep());
+  EXPECT_EQ(call_count, 1U);
+}
+
+TEST_F(
+    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    SetInquiryDataFromExtendedInquiryResultEventParamsDoesNotTriggerUpdateCallbackOnSameDeviceClass) {
+  eirep().class_of_device = common::DeviceClass({0x06, 0x02, 0x02});  // Phone.
+  device()->SetInquiryData(eirep());
+  ASSERT_TRUE(was_called());
+
+  ClearWasCalled();
+  device()->SetInquiryData(eirep());
+  EXPECT_FALSE(was_called());
+}
+
+TEST_F(
+    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    SetInquiryDataFromExtendedInquiryResultEventParamsDoesNotTriggerUpdateCallbackOnSameName) {
+  common::MutableBufferView(&eirep().extended_inquiry_response,
+                            sizeof(eirep().extended_inquiry_response))
+      .Write(common::CreateStaticByteBuffer(
+          0x05,  // Payload length.
+          0x09,  // Complete Local Name data type.
+          'N', 'a', 'm', 'e'));
+  device()->SetInquiryData(eirep());
+  ASSERT_TRUE(was_called());
+
+  ClearWasCalled();
+  device()->SetInquiryData(eirep());
+  EXPECT_FALSE(was_called());
+}
+
+TEST_F(
+    GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+    SetInquiryDataFromExtendedInquiryResultEventParamsDoesNotTriggerUpdateCallbackOnRSSI) {
+  eirep().rssi = 1;
+  device()->SetInquiryData(eirep());
+  ASSERT_TRUE(was_called());  // Callback due to |class_of_device|.
+
+  ClearWasCalled();
+  eirep().rssi = 20;
+  device()->SetInquiryData(eirep());
+  EXPECT_FALSE(was_called());
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
        SetNameTriggersUpdateCallback) {
   device()->SetName("nombre");
   EXPECT_TRUE(was_called());
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+       SetNameDoesNotTriggerUpdateCallbackOnSameName) {
+  device()->SetName("nombre");
+  ASSERT_TRUE(was_called());
+
+  bool was_called_again = false;
+  cache()->set_device_updated_callback(
+      [&](const auto&) { was_called_again = true; });
+  device()->SetName("nombre");
+  EXPECT_FALSE(was_called_again);
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
