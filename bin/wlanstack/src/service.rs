@@ -90,12 +90,12 @@ fn serve_channel(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
             }),
             DeviceServiceRequest::WatchDevices{ watcher, control_handle: _ } => ServiceFut::WatchDevices({
                 watcher_service.add_watcher(watcher)
-                    .unwrap_or_else(|e| eprintln!("error registering a device watcher: {}", e));
+                    .unwrap_or_else(|e| error!("error registering a device watcher: {}", e));
                 future::ok(())
             })
         })
         .map(|_| ())
-        .recover(|e| eprintln!("error serving a DeviceService client: {}", e))
+        .recover(|e| error!("error serving a DeviceService client: {}", e))
 }
 
 fn list_phys(phys: &Arc<PhyMap>) -> wlan_service::ListPhysResponse {
@@ -122,7 +122,7 @@ fn query_phy(phys: &Arc<PhyMap>, id: u16)
         .and_then(move |(path, proxy)| {
             proxy.query()
                 .map_err(move |e| {
-                    eprintln!("Error sending 'Query' request to phy #{}: {}", id, e);
+                    error!("Error sending 'Query' request to phy #{}: {}", id, e);
                     zx::Status::INTERNAL
                 })
                 .and_then(move |query_result| {
@@ -170,7 +170,7 @@ fn create_iface(phys: &Arc<PhyMap>, req: wlan_service::CreateIfaceRequest)
             let mut phy_req = wlan::CreateIfaceRequest { role: req.role };
             proxy.create_iface(&mut phy_req)
                 .map_err(move |e| {
-                    eprintln!("Error sending 'CreateIface' request to phy #{}: {}", req.phy_id, e);
+                    error!("Error sending 'CreateIface' request to phy #{}: {}", req.phy_id, e);
                     zx::Status::INTERNAL
                 })
                 .and_then(|r| zx::Status::ok(r.status).map(move |()| r.iface_id))
@@ -200,7 +200,7 @@ fn get_client_sme(ifaces: &Arc<IfaceMap>, iface_id: u16,
     match server.unbounded_send(endpoint) {
         Ok(()) => zx::Status::OK,
         Err(e) => {
-            eprintln!("error sending an endpoint to the SME server future: {}", e);
+            error!("error sending an endpoint to the SME server future: {}", e);
             zx::Status::INTERNAL
         }
     }

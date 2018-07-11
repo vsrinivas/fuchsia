@@ -64,7 +64,7 @@ fn serve_client_sme_fidl(client_arc: Arc<Mutex<Client>>,
         .chain(stream::once(Err(format_err!("new FIDL client stream unexpectedly ended"))))
         .for_each_concurrent(move |channel| {
             new_client_service(client_arc.clone(), channel).recover(
-                |e| eprintln!("Error handling a FIDL request from user: {:?}", e)
+                |e| error!("Error handling a FIDL request from user: {:?}", e)
             )
         })
         .and_then(|_| Err(format_err!("FIDL->SME future unexpectedly finished")));
@@ -131,7 +131,7 @@ fn handle_stats_resp(stats_sender: &mut mpsc::Sender<IfaceStats>,
         if e.is_full() {
             // We only expect one response from MLME per each request, so the bounded
             // queue of size 1 should always suffice.
-            eprintln!("Received an extra GetStatsResp from MLME, discarding");
+            warn!("Received an extra GetStatsResp from MLME, discarding");
             Ok(())
         } else {
             Err(format_err!("Failed to send a message to stats future"))
@@ -167,11 +167,11 @@ fn new_client_service(client: Arc<Mutex<Client>>, endpoint: ClientSmeEndpoint)
             s.for_each_concurrent(move |request| match request {
                 ClientSmeRequest::Scan { req, txn, control_handle } => {
                     Ok(scan(&client, txn)
-                        .unwrap_or_else(|e| eprintln!("Error starting a scan transaction: {:?}", e)))
+                        .unwrap_or_else(|e| error!("Error starting a scan transaction: {:?}", e)))
                 },
                 ClientSmeRequest::Connect { req, txn, control_handle } => {
                     Ok(connect(&client, req.ssid, txn)
-                        .unwrap_or_else(|e| eprintln!("Error starting a connect transaction: {:?}", e)))
+                        .unwrap_or_else(|e| error!("Error starting a connect transaction: {:?}", e)))
                 },
                 ClientSmeRequest::Status { responder } => responder.send(&mut status(&client)),
             })
@@ -218,12 +218,12 @@ fn serve_user_stream(stream: client::UserStream<ClientTokens>)
             Ok(match e {
                 client::UserEvent::ScanFinished{ token, result } => {
                     send_scan_results(token, result).unwrap_or_else(|e| {
-                        eprintln!("Error sending scan results to user: {}", e);
+                        error!("Error sending scan results to user: {}", e);
                     })
                 },
                 client::UserEvent::ConnectFinished { token, result } => {
                     send_connect_result(token, result).unwrap_or_else(|e| {
-                        eprintln!("Error sending connect result to user: {}", e);
+                        error!("Error sending connect result to user: {}", e);
                     })
                 }
             })

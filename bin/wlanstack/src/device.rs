@@ -54,7 +54,7 @@ fn serve_phy(phys: Arc<PhyMap>,
              new_phy: device_watch::NewPhyDevice)
     -> impl Future<Item = (), Error = Error>
 {
-    println!("new phy #{}: {}", new_phy.id, new_phy.device.path().to_string_lossy());
+    info!("new phy #{}: {}", new_phy.id, new_phy.device.path().to_string_lossy());
     let id = new_phy.id;
     let event_stream = new_phy.proxy.take_event_stream();
     phys.insert(id, PhyDevice {
@@ -64,7 +64,7 @@ fn serve_phy(phys: Arc<PhyMap>,
     event_stream
         .for_each(|_| Ok(()))
         .then(move |r| {
-            println!("phy removed: {}", id);
+            info!("phy removed: {}", id);
             phys.remove(&id);
             r.map(|_| ()).map_err(|e| e.into())
         })
@@ -81,7 +81,7 @@ pub fn serve_ifaces(ifaces: Arc<IfaceMap>)
             query_iface(new_iface)
                 .and_then(move |(new_iface, event_stream, query_resp)|
                     serve_iface(ifaces, new_iface, event_stream, query_resp))
-                .recover(|e| eprintln!("{}", e))
+                .recover(|e| error!("{}", e))
         })
         .map(|_| ()))
 }
@@ -102,8 +102,8 @@ fn query_iface(new_iface: NewIfaceDevice)
                 .filter_map(|event| Ok(match event {
                     fidl_mlme::MlmeEvent::DeviceQueryConf{ resp } => Some(resp),
                     other => {
-                        eprintln!("Unexpected message from MLME while waiting for \
-                                  device query response: {:?}", other);
+                        warn!("Unexpected message from MLME while waiting for \
+                               device query response: {:?}", other);
                         None
                     }
                 }))
@@ -138,7 +138,7 @@ fn serve_iface(ifaces: Arc<IfaceMap>,
     serve_sme(proxy, event_stream, query_resp, stats_requests)
         .into_future()
         .and_then(move |(sme_server, fut)| {
-            println!("new iface #{}: {}", id, device.path().to_string_lossy());
+            info!("new iface #{}: {}", id, device.path().to_string_lossy());
             ifaces.insert(id, IfaceDevice {
                 sme_server,
                 stats_sched,
@@ -148,7 +148,7 @@ fn serve_iface(ifaces: Arc<IfaceMap>,
         })
         .map_err(move |e| e.context(format!("Error serving station for iface #{}", id)).into())
         .then(move |r| {
-            println!("iface removed: {}", id);
+            info!("iface removed: {}", id);
             ifaces_two.remove(&id);
             r
         })

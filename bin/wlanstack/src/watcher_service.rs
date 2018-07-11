@@ -135,7 +135,7 @@ impl<P, I> Inner<P, I> {
 
 fn handle_send_result(handle: &DeviceWatcherControlHandle, r: Result<(), fidl::Error>) -> bool {
     if let Err(e) = r.as_ref() {
-        eprintln!("Error sending event to watcher: {}", e);
+        error!("Error sending event to watcher: {}", e);
         handle.shutdown();
     }
     r.is_ok()
