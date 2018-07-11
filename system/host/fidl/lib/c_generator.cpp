@@ -588,7 +588,7 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
 
             for (const auto& member : response) {
                 const auto& name = member.name;
-                file_ << kIndent << "memcpy(out_" << name << ", &_response." << name << ", sizeof(*out_" << name << ");\n";
+                file_ << kIndent << "memcpy(out_" << name << ", &_response." << name << ", sizeof(*out_" << name << "));\n";
                 // TODO(FIDL-162): Copy string data out of the response.
             }
 
