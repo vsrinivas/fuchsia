@@ -9,10 +9,14 @@
 
 #include <inttypes.h>
 
+#include <fbl/intrusive_hash_table.h>
+#include <fbl/intrusive_single_list.h>
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#include <lib/zircon-internal/fnv1hash.h>
+#include <zircon/types.h>
 
 namespace runtests {
 
@@ -24,7 +28,27 @@ enum LaunchStatus {
     FAILED_DURING_IO,
     FAILED_TO_RETURN_CODE,
     FAILED_NONZERO_RETURN_CODE,
+    FAILED_COLLECTING_SINK_DATA,
     FAILED_UNKNOWN,
+};
+
+// Represents a single dumpfile element.
+struct DumpFile {
+    fbl::String name; // Name of the dumpfile.
+    fbl::String file; // File name for the content.
+};
+
+// Represents data published through data sink.
+struct DataSink : public fbl::SinglyLinkedListable<fbl::unique_ptr<DataSink>> {
+    fbl::String name; // Name of the data sink.
+    fbl::Vector<DumpFile> files; // All the sink dumpfiles.
+
+    explicit DataSink(fbl::String name) : name(name) {}
+
+    // Runtimes may publish more than one file with the same data sink name. We use hash table
+    // that's mapping data sink name to the list of file names to store these efficiently.
+    fbl::String GetKey() const { return name; }
+    static size_t GetHash(fbl::String key) { return fnv1a64str(key.c_str()); }
 };
 
 // Represents the result of a single test run.
@@ -32,6 +56,8 @@ struct Result {
     fbl::String name; // argv[0].
     LaunchStatus launch_status;
     int64_t return_code; // Only valid if launch_status == SUCCESS or FAILED_NONZERO_RETURN_CODE.
+    using HashTable = fbl::HashTable<fbl::String, fbl::unique_ptr<DataSink>>;
+    HashTable data_sinks; // Mapping from data sink name to list of files.
     // TODO(ZX-2050): Track duration of test binary.
 
     // Constructor really only needed until we have C++14, which will allow call-sites to use
@@ -44,10 +70,13 @@ struct Result {
 //
 // |argv| is the commandline to use to run the test program; must be
 //   null-terminated.
+// |output_dir| is the output directory for test's data sinks. May be nullptr, in which case
+//   no data sinks will be saved.
 // |output_filename| is the name of the file to which the test binary's output
 //   will be written. May be nullptr, in which case the output will not be
 //   redirected.
 typedef fbl::unique_ptr<Result> (*RunTestFn)(const char* argv[],
+                                             const char* output_dir,
                                              const char* output_filename);
 
 // A means of measuring how long it takes to run tests.

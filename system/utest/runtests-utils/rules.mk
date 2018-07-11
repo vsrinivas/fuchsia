@@ -13,15 +13,20 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/fuchsia-run-test.cpp \
     $(LOCAL_DIR)/fuchsia-test-main.cpp \
     $(LOCAL_DIR)/fuchsia-run-test.cpp \
     $(LOCAL_DIR)/runtests-utils-test.cpp \
+    $(LOCAL_DIR)/runtests-utils-test-utils.cpp \
     $(LOCAL_DIR)/log-exporter-test.cpp \
 
 # We have to include this from runtests-utils because transitive dependencies don't
 # get linked in automatically.
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-logger
+
+MODULE_HEADER_DEPS := \
+    system/ulib/zircon-internal \
 
 MODULE_STATIC_LIBS := \
     system/ulib/async \
@@ -30,6 +35,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/async.cpp \
     system/ulib/fbl \
     system/ulib/fidl \
+    system/ulib/loader-service \
     system/ulib/runtests-utils \
     system/ulib/sync \
     system/ulib/zx \
@@ -63,11 +69,15 @@ MODULE_NAME := runtests-utils-test
 MODULE_SRCS := \
     $(LOCAL_DIR)/posix-test-main.cpp \
     $(LOCAL_DIR)/runtests-utils-test.cpp \
+    $(LOCAL_DIR)/runtests-utils-test-utils.cpp \
 
 MODULE_COMPILEFLAGS := \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/runtests-utils/include \
     -Isystem/ulib/unittest/include \
+
+MODULE_HEADER_DEPS := \
+    system/ulib/zircon-internal \
 
 MODULE_HOST_LIBS := \
     system/ulib/fbl.hostlib \
@@ -76,3 +86,5 @@ MODULE_HOST_LIBS := \
     system/ulib/unittest.hostlib \
 
 include make/module.mk
+
+include $(LOCAL_DIR)/helper/rules.mk

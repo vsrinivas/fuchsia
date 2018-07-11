@@ -23,6 +23,9 @@ MODULE_SRCS += \
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-logger
 
+MODULE_HEADER_DEPS := \
+    system/ulib/zircon-internal \
+
 # zxcpp required for fbl to work.
 MODULE_STATIC_LIBS := \
     system/ulib/async \
@@ -31,10 +34,12 @@ MODULE_STATIC_LIBS := \
     system/ulib/async.cpp \
     system/ulib/fbl \
     system/ulib/fidl \
+    system/ulib/loader-service \
     system/ulib/zx \
     system/ulib/zxcpp \
 
 MODULE_LIBS := \
+    system/ulib/async.default \
     system/ulib/c \
     system/ulib/fdio \
     system/ulib/unittest \
@@ -58,6 +63,9 @@ MODULE_SRCS += \
 MODULE_COMPILEFLAGS := \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/unittest/include \
+
+MODULE_HEADER_DEPS := \
+    system/ulib/zircon-internal \
 
 MODULE_HOST_LIBS := \
     system/ulib/fbl.hostlib \

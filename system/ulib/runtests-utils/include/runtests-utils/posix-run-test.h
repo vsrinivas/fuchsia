@@ -18,6 +18,7 @@ namespace runtests {
 //   will be written. May be nullptr, in which case the output will not be
 //   redirected.
 fbl::unique_ptr<Result> PosixRunTest(const char* argv[],
+                                     const char* output_dir,
                                      const char* output_filename);
 
 } // namespace runtests

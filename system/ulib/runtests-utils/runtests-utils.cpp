@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <glob.h>
 #include <inttypes.h>
+#include <fcntl.h>
 #include <libgen.h>
 #include <limits.h>
 #include <stdio.h>
@@ -117,9 +118,7 @@ int WriteSummaryJSON(const fbl::Vector<fbl::unique_ptr<Result>>& results,
         // the test binary on the target, so to make this a relative path, we
         // only have to skip leading '/' characters in the test name.
         fbl::String output_file = runtests::JoinPath(result->name, output_file_basename);
-        size_t i;
-        for (i = 0; i < output_file.size() && output_file[i] == '/'; i++) {
-        }
+        size_t i = strspn(output_file.c_str(), "/");
         if (i == output_file.size()) {
             fprintf(stderr, "Error: output_file was empty or all slashes: %s\n",
                     output_file.c_str());
@@ -131,6 +130,30 @@ int WriteSummaryJSON(const fbl::Vector<fbl::unique_ptr<Result>>& results,
         // have one PASS condition in TestResult, which is SUCCESS.
         fprintf(summary_json, ",\"result\":\"%s\"",
                 result->launch_status == runtests::SUCCESS ? "PASS" : "FAIL");
+
+        // Write all data sinks.
+        if (result->data_sinks.size()) {
+            fprintf(summary_json, ",\"data_sinks\":{");
+            int sink_count = 0;
+            for (const auto& sink : result->data_sinks) {
+                if (sink_count != 0) {
+                    fprintf(summary_json, ",\n");
+                }
+                fprintf(summary_json, "\"%s\":[", sink.name.c_str());
+                int file_count = 0;
+                for (const auto& file : sink.files) {
+                    if (file_count != 0) {
+                        fprintf(summary_json, ",\n");
+                    }
+                    fprintf(summary_json, "{\"name\":\"%s\",\"file\":\"%s\"}",
+                            file.name.c_str(), file.file.c_str());
+                    file_count++;
+                }
+                fprintf(summary_json, "]");
+                sink_count++;
+            }
+            fprintf(summary_json, "}");
+        }
 
         fprintf(summary_json, "}");
         test_count++;
@@ -265,19 +288,20 @@ bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_pat
               const fbl::StringPiece output_file_basename, signed char verbosity, int* failed_count,
               fbl::Vector<fbl::unique_ptr<Result>>* results) {
     for (const fbl::String& test_path : test_paths) {
+        fbl::String output_dir_for_test_str;
         fbl::String output_filename_str;
         // Ensure the output directory for this test binary's output exists.
         if (output_dir != nullptr) {
             // If output_dir was specified, ask |RunTest| to redirect stdout/stderr
             // to a file whose name is based on the test name.
-            const fbl::String output_dir_for_test = JoinPath(output_dir, test_path);
-            const int error = MkDirAll(output_dir_for_test);
+            output_dir_for_test_str = runtests::JoinPath(output_dir, test_path);
+            const int error = runtests::MkDirAll(output_dir_for_test_str);
             if (error) {
                 fprintf(stderr, "Error: Could not create output directory %s: %s\n",
-                        output_dir_for_test.c_str(), strerror(error));
+                        output_dir_for_test_str.c_str(), strerror(error));
                 return false;
             }
-            output_filename_str = JoinPath(output_dir_for_test, output_file_basename);
+            output_filename_str = JoinPath(output_dir_for_test_str, output_file_basename);
         }
 
         // Assemble test binary args.
@@ -291,6 +315,8 @@ bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_pat
             argv.push_back(verbosity_arg.c_str());
         }
         argv.push_back(nullptr); // Important, since there's no argc.
+        const char* output_dir_for_test =
+            output_dir_for_test_str.empty() ? nullptr : output_dir_for_test_str.c_str();
         const char* output_filename =
             output_filename_str.empty() ? nullptr : output_filename_str.c_str();
 
@@ -298,7 +324,8 @@ bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_pat
         printf("\n------------------------------------------------\n"
                "RUNNING TEST: %s\n\n",
                test_path.c_str());
-        fbl::unique_ptr<Result> result = RunTest(argv.get(), output_filename);
+        fbl::unique_ptr<Result> result = RunTest(argv.get(), output_dir_for_test,
+                                                 output_filename);
         if (result->launch_status != SUCCESS) {
             *failed_count += 1;
         }

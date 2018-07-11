@@ -17,6 +17,9 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/runtests-utils/include \
 
+MODULE_HEADER_DEPS := \
+    system/ulib/zircon-internal \
+
 MODULE_HOST_LIBS := \
     system/ulib/fbl.hostlib \
     system/ulib/runtests-utils.hostlib \

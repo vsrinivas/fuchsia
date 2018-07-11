@@ -36,6 +36,7 @@ constexpr const char* const kEnvironmentWhitelist[] = {
 } // namespace
 
 fbl::unique_ptr<Result> PosixRunTest(const char* argv[],
+                                     const char*, // output_dir
                                      const char* output_filename) {
     int status;
     const char* path = argv[0];
