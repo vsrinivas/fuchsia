@@ -37,7 +37,18 @@ void CobaltEncoderFactoryImpl::GetEncoder(
 
 void CobaltEncoderFactoryImpl::GetEncoderForConfig(
     fidl::StringPtr config, fidl::InterfaceRequest<CobaltEncoder> request) {
-  // Implementation is on the way
+  std::shared_ptr<config::ClientConfig> project_config;
+  auto config_id_pair =
+      ClientConfig::CreateFromCobaltProjectConfigBytes(config);
+  project_config.reset(config_id_pair.first.release());
+  std::unique_ptr<ProjectContext> project_context(new ProjectContext(
+      kFuchsiaCustomerId, config_id_pair.second, project_config));
+
+  std::unique_ptr<CobaltEncoderImpl> cobalt_encoder_impl(new CobaltEncoderImpl(
+      std::move(project_context), client_secret_, shipping_dispatcher_,
+      system_data_, timer_manager_));
+  cobalt_encoder_bindings_.AddBinding(std::move(cobalt_encoder_impl),
+                                      std::move(request));
 }
 
 }  // namespace encoder
