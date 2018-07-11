@@ -30,7 +30,8 @@ struct LineMatch {
   const llvm::DWARFCompileUnit* unit = 0;
   int line = 0;
 
-  // Absolute offset of the DIE containing the function for this address.
+  // Absolute offset of the DIE containing the function for this address or 0
+  // if there is no function for it.
   uint32_t function_die_offset = 0;
 };
 
@@ -103,8 +104,10 @@ std::vector<LineMatch> GetBestLineTableMatchesInUnit(
         match.address = row.Address;
         match.unit = unit;
         match.line = row_line;
-        match.function_die_offset =
-            unit->getSubroutineForAddress(row.Address).getOffset();
+
+        auto subroutine = unit->getSubroutineForAddress(row.Address);
+        if (subroutine.isValid())
+          match.function_die_offset = subroutine.getOffset();
         result.push_back(match);
       }
       prev_line_matching_file = row.Line;
@@ -128,6 +131,9 @@ std::vector<LineMatch> GetFirstEntryForEachInline(
   for (size_t i = 0; i < matches.size(); i++) {
     const LineMatch& match = matches[i];
 
+    // Although function_die_offset may be 0 to indicate no function, looking
+    // up 0 here is still valid because that will mean "code in this file with
+    // no associated function".
     auto found = die_to_match_index.find(match.function_die_offset);
     if (found == die_to_match_index.end()) {
       // First one for this DIE.

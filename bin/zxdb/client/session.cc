@@ -146,8 +146,9 @@ void Session::PendingConnection::Initiate(
 
   // Create the background thread, and run the background function. The
   // context will keep a ref to this class.
-  thread_ = std::make_unique<std::thread>(
-      [owner = fxl::RefPtr<PendingConnection>(this)]() {
+  thread_ =
+      std::make_unique<std::thread>([owner = fxl::RefPtr<PendingConnection>(
+                                         this)]() {
         owner->ConnectBackgroundThread(owner);
       });
 }
@@ -155,7 +156,7 @@ void Session::PendingConnection::Initiate(
 void Session::PendingConnection::ConnectBackgroundThread(
     fxl::RefPtr<PendingConnection> owner) {
   Err err = DoConnectBackgroundThread();
-  main_loop_->PostTask([owner = std::move(owner), err]() {
+  main_loop_->PostTask([ owner = std::move(owner), err ]() {
     owner->ConnectCompleteMainThread(owner, err);
   });
 }
@@ -172,7 +173,7 @@ void Session::PendingConnection::ConnectCompleteMainThread(
 
   if (!session_ || err.has_error()) {
     // Error or session destroyed, skip sending hello and forward the error.
-    HelloCompleteMainThread(std::move(owner), err, debug_ipc::HelloReply());
+    HelloCompleteMainThread(owner, err, debug_ipc::HelloReply());
     return;
   }
 
@@ -188,8 +189,8 @@ void Session::PendingConnection::ConnectCompleteMainThread(
   buffer_->stream().Write(std::move(serialized));
 
   buffer_->set_data_available_callback(
-      [owner = std::move(owner)]() { owner->DataAvailableMainThread(owner); });
-  buffer_->set_error_callback([owner = std::move(owner)]() {
+      [owner]() { owner->DataAvailableMainThread(owner); });
+  buffer_->set_error_callback([owner]() {
     owner->HelloCompleteMainThread(owner, Err("Connection error."),
                                    debug_ipc::HelloReply());
   });
@@ -620,8 +621,7 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending,
   stream_ = &connection_storage_->stream();
   connection_storage_->set_data_available_callback(
       [this]() { OnStreamReadable(); });
-  connection_storage_->set_error_callback(
-      [this]() { OnStreamError(); });
+  connection_storage_->set_error_callback([this]() { OnStreamError(); });
 
   // Issue success callbacks.
   system_.DidConnect();
