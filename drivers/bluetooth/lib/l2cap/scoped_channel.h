@@ -29,6 +29,11 @@ class ScopedChannel final {
   inline Channel* get() const { return chan_.get(); }
   inline Channel* operator->() const { return get(); }
 
+  // Returns a copy of the underlying Channel reference without releasing
+  // ownership.  The channel will still be deactivated when this goes out
+  // of scope.
+  inline fbl::RefPtr<Channel> share() const { return chan_; }
+
  private:
   void Close();
 

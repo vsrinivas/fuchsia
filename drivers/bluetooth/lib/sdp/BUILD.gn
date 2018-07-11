@@ -24,6 +24,8 @@ static_library("sdp") {
   sources = [
     "pdu.cc",
     "pdu.h",
+    "server.cc",
+    "server.h",
   ]
 
   public_deps = [
@@ -43,12 +45,14 @@ source_set("tests") {
   sources = [
     "data_element_unittest.cc",
     "pdu_unittest.cc",
+    "server_unittest.cc",
     "service_record_unittest.cc",
   ]
 
   deps = [
     ":sdp",
     "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/drivers/bluetooth/lib/l2cap:testing",
     "//garnet/drivers/bluetooth/lib/testing",
     "//garnet/public/lib/fsl",
     "//third_party/googletest:gtest",
