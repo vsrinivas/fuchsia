@@ -23,9 +23,12 @@ rustc_binary("bin") {
     "//garnet/public/rust/crates/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures",
+    "//third_party/rust-crates/rustc_deps:log",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
     "//third_party/rust-crates/rustc_deps:serde",
     "//third_party/rust-crates/rustc_deps:serde_derive",
     "//third_party/rust-crates/rustc_deps:serde_json",
+    "//third_party/rust-crates/rustc_deps:tempdir",
   ]
 }
 
@@ -48,6 +51,19 @@ package("wlancfg") {
       path = rebase_path("config/default.json")
       dest = "default.json"
     },
+  ]
+}
+
+package("wlancfg-tests") {
+  testonly = true
+  deps = [
+    ":bin",
+  ]
+  tests = [
+    {
+      name = "wlancfg_bin_test_rustc"
+      dest =  "wlancfg_bin_test_rustc"
+    }
   ]
 }
 

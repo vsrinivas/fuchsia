@@ -18,13 +18,20 @@ extern crate fuchsia_app as app;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 extern crate futures;
+#[macro_use]
+extern crate log;
+extern crate parking_lot;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
 
+#[cfg(test)]
+extern crate tempdir;
+
 mod config;
 mod device;
+mod ess_store;
 mod shim;
 
 use config::Config;
