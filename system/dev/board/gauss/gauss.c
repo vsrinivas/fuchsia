@@ -19,6 +19,7 @@
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
+#include <zircon/threads.h>
 
 #include "gauss.h"
 #include "gauss-hw.h"
@@ -230,6 +231,7 @@ static zx_status_t gauss_bus_bind(void* ctx, zx_device_t* parent) {
     thrd_t t;
     int thrd_rc = thrd_create_with_name(&t, gauss_start_thread, bus, "gauss_start_thread");
     if (thrd_rc != thrd_success) {
+        status = thrd_status_to_zx_status(thrd_rc);
         goto fail;
     }
     return ZX_OK;
