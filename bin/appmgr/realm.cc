@@ -46,6 +46,8 @@ constexpr char kAppPath[] = "bin/app";
 constexpr char kAppArv0[] = "/pkg/bin/app";
 constexpr char kLegacyFlatExportedDirPath[] = "meta/legacy_flat_exported_dir";
 constexpr char kRuntimePath[] = "meta/runtime";
+// Runtime files are deprecated. Use component manifests instead.
+constexpr char kDeprecatedRuntimePath[] = "meta/deprecated_runtime";
 
 std::vector<const char*> GetArgv(const std::string& argv0,
                                  const fuchsia::sys::LaunchInfo& launch_info) {
@@ -468,7 +470,8 @@ void Realm::CreateComponentFromPackage(
   std::string runtime_data;
   fsl::SizedVmo app_data;
   if (!files::ReadFileToStringAt(fd.get(), kRuntimePath, &runtime_data))
-    VmoFromFilenameAt(fd.get(), kAppPath, &app_data);
+    if (!files::ReadFileToStringAt(fd.get(), kDeprecatedRuntimePath, &runtime_data))
+      VmoFromFilenameAt(fd.get(), kAppPath, &app_data);
 
   ExportedDirType exported_dir_layout =
       files::IsFileAt(fd.get(), kLegacyFlatExportedDirPath)
