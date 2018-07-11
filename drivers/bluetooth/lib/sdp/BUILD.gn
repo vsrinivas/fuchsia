@@ -1,0 +1,53 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Basic target with protocol definitions and no logic, suitable for test
+# emulation.
+source_set("definitions") {
+  sources = [
+    "data_element.cc",
+    "data_element.h",
+    "sdp.h",
+    "status.cc",
+    "status.h",
+  ]
+
+  public_deps = [
+    "//garnet/drivers/bluetooth/lib/common",
+  ]
+}
+
+static_library("sdp") {
+  sources = [
+    "pdu.cc",
+    "pdu.h",
+  ]
+
+  public_deps = [
+    ":definitions",
+    "//garnet/drivers/bluetooth/lib/l2cap",
+    "//garnet/public/lib/fxl",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+
+  sources = [
+    "data_element_unittest.cc",
+    "pdu_unittest.cc",
+  ]
+
+  deps = [
+    ":sdp",
+    "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/drivers/bluetooth/lib/testing",
+    "//garnet/public/lib/fsl",
+    "//third_party/googletest:gtest",
+  ]
+}
