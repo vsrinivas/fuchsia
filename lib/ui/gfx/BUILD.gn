@@ -176,7 +176,6 @@ source_set("gfx") {
   ]
 
   deps = [
-    "//garnet/lib/magma/src/libmagma",
     "//garnet/public/lib/escher/util:check_vulkan_support",
     "//garnet/public/lib/ui/scenic/cpp:fidl_helpers",
     "//zircon/public/fidl/fuchsia-display",
