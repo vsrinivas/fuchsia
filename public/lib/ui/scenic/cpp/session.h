@@ -109,12 +109,21 @@ class Session : private fuchsia::ui::scenic::SessionListener {
       const float ray_origin[3], const float ray_direction[3],
       fuchsia::ui::scenic::Session::HitTestDeviceRayCallback callback);
 
+  // Unbinds the internal SessionPtr; this allows moving this across threads.
+  void Unbind();
+
+  // Rebinds the Session interface internally; this must be called after a call
+  // to Unbind().
+  void Rebind();
+
  private:
   // |fuchsia::ui::scenic::SessionListener|
   void OnError(fidl::StringPtr error) override;
   void OnEvent(fidl::VectorPtr<fuchsia::ui::scenic::Event> events) override;
 
   fuchsia::ui::scenic::SessionPtr session_;
+  // |session_handle_| is stored only when |session_| is unbound/invalid.
+  fidl::InterfaceHandle<fuchsia::ui::scenic::Session> session_handle_;
   uint32_t next_resource_id_ = 1u;
   uint32_t resource_count_ = 0u;
 

@@ -80,6 +80,7 @@ void Session::EnqueueReleaseFence(zx::event fence) {
 }
 
 void Session::Flush() {
+  FXL_DCHECK(session_);
   if (!commands_->empty()) {
     FXL_DCHECK(static_cast<bool>(commands_));
     session_->Enqueue(std::move(commands_));
@@ -92,6 +93,7 @@ void Session::Flush() {
 }
 
 void Session::Present(uint64_t presentation_time, PresentCallback callback) {
+  FXL_DCHECK(session_);
   Flush();
 
   if (acquire_fences_.is_null())
@@ -104,6 +106,7 @@ void Session::Present(uint64_t presentation_time, PresentCallback callback) {
 
 void Session::HitTest(uint32_t node_id, const float ray_origin[3],
                       const float ray_direction[3], HitTestCallback callback) {
+  FXL_DCHECK(session_);
   fuchsia::ui::gfx::vec3 ray_origin_vec;
   ray_origin_vec.x = ray_origin[0];
   ray_origin_vec.y = ray_origin[1];
@@ -121,6 +124,7 @@ void Session::HitTest(uint32_t node_id, const float ray_origin[3],
 void Session::HitTestDeviceRay(
     const float ray_origin[3], const float ray_direction[3],
     fuchsia::ui::scenic::Session::HitTestDeviceRayCallback callback) {
+  FXL_DCHECK(session_);
   fuchsia::ui::gfx::vec3 ray_origin_vec;
   ray_origin_vec.x = ray_origin[0];
   ray_origin_vec.y = ray_origin[1];
@@ -133,6 +137,20 @@ void Session::HitTestDeviceRay(
 
   session_->HitTestDeviceRay(std::move(ray_origin_vec),
                              std::move(ray_direction_vec), std::move(callback));
+}
+
+void Session::Unbind() {
+  FXL_DCHECK(session_);
+  FXL_DCHECK(!session_handle_);
+  session_handle_ = session_.Unbind();
+  session_ = nullptr;
+}
+
+void Session::Rebind() {
+  FXL_DCHECK(!session_);
+  FXL_DCHECK(session_handle_);
+  session_ = fuchsia::ui::scenic::SessionPtr(session_handle_.Bind());
+  session_handle_ = nullptr;
 }
 
 void Session::OnError(fidl::StringPtr error) {
