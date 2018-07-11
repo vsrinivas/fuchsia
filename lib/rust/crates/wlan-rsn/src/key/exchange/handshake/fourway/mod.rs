@@ -220,12 +220,6 @@ impl Fourway {
             }
         }
 
-        // IEEE Std 802.11-2016, 12.7.2, f)
-        // IV is not used.
-        if !is_zero(&frame.key_iv[..]) {
-            return Err(Error::InvalidIv.into());
-        }
-
         // IEEE Std 802.11-2016, 12.7.2, g)
         // Key RSC validated based on the frame's message number.
         // Optional in the 3rd message. Must be zero in others.
@@ -318,6 +312,9 @@ fn validate_message_1(frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
     // IEEE Std 802.11-2016, 12.7.2 e)
     } else if is_zero(&frame.key_nonce[..]) {
         Err(Error::InvalidNonce.into())
+    // IEEE Std 802.11-2016, 12.7.6.2
+    } else if !is_zero(&frame.key_iv[..]) {
+        Err(Error::InvalidIv.into())
     // IEEE Std 802.11-2016, 12.7.2 g)
     } else if frame.key_rsc != 0 {
         Err(Error::InvalidRsc.into())
@@ -361,6 +358,9 @@ fn validate_message_2(frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
     // IEEE Std 802.11-2016, 12.7.2 e)
     } else if is_zero(&frame.key_nonce[..]) {
         Err(Error::InvalidNonce.into())
+    // IEEE Std 802.11-2016, 12.7.6.3
+    } else if !is_zero(&frame.key_iv[..]) {
+        Err(Error::InvalidIv.into())
     // IEEE Std 802.11-2016, 12.7.2 g)
     } else if frame.key_rsc != 0 {
         Err(Error::InvalidRsc.into())
@@ -395,6 +395,10 @@ fn validate_message_3(frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
     // IEEE Std 802.11-2016, 12.7.2 e)
     } else if is_zero(&frame.key_nonce[..]) {
         Err(Error::InvalidNonce.into())
+    // IEEE Std 802.11-2016, 12.7.6.4
+    } else if frame.version >= eapol::ProtocolVersion::Ieee802dot1x2004 as u8 &&
+        !is_zero(&frame.key_iv[..]) {
+        Err(Error::InvalidIv.into())
     // IEEE Std 802.11-2016, 12.7.2 i) & j)
     // Key Data must not be empty.
     } else if frame.key_data_len == 0 {
@@ -428,6 +432,9 @@ fn validate_message_4(frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
     // IEEE Std 802.11-2016, 12.7.2 b.10)
     } else if frame.key_info.encrypted_key_data() {
         Err(Error::InvalidEncryptedKeyDataBitValue.into())
+    // IEEE Std 802.11-2016, 12.7.6.5
+    } else if !is_zero(&frame.key_iv[..]) {
+        Err(Error::InvalidIv.into())
     // IEEE Std 802.11-2016, 12.7.2 g)
     } else if frame.key_rsc != 0 {
         Err(Error::InvalidRsc.into())
@@ -509,7 +516,7 @@ fn is_zero(slice: &[u8]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rsna::test_util;
+    use rsna::test_util::{self, MessageOverride};
     use bytes::Bytes;
 
     fn make_handshake() -> Fourway {
@@ -525,6 +532,20 @@ mod tests {
         Fourway::new(cfg, pmk).expect("error while creating 4-Way Handshake")
     }
 
+    fn compute_ptk(a_nonce: &[u8], supplicant_result: SecAssocResult) -> Option<Ptk> {
+        match supplicant_result.expect("expected successful processing of first message")
+            .get(0)
+            .expect("expected at least one response from Supplicant")
+            {
+                SecAssocUpdate::TxEapolKeyFrame(msg2) => {
+                    let snonce = msg2.key_nonce;
+                    let derived_ptk = test_util::get_ptk(a_nonce, &snonce[..]);
+                    Some(derived_ptk)
+                }
+                _ => None,
+            }
+    }
+
     #[test]
     fn test_nonzero_mic_in_first_msg() {
         let mut handshake = make_handshake();
@@ -533,13 +554,103 @@ mod tests {
         let a_nonce = test_util::get_nonce();
         let mut msg1 = test_util::get_4whs_msg1(&a_nonce[..], 1);
         msg1.key_mic = Bytes::from(vec![0xAA; 16]);
-        let updates = handshake.on_eapol_key_frame(&msg1)
-            .expect("error processing first message");
-        let update = updates.get(0).expect("expected at least one update");
-        match update {
-            SecAssocUpdate::TxEapolKeyFrame(_) => {},
-            _ => assert!(false),
-        }
+        let result = handshake.on_eapol_key_frame(&msg1);
+        assert!(result.is_ok(), "error, expected success for processing first msg but result is: {:?}", result);
+    }
+
+    // First messages of 4-Way Handshake must carry a zeroed IV in all protocol versions.
+
+    #[test]
+    fn test_random_iv_msg1_v1() {
+        let mut handshake = make_handshake();
+
+        // Send first message of Handshake to Supplicant and verify result.
+        let a_nonce = test_util::get_nonce();
+        let mut msg1 = test_util::get_4whs_msg1(&a_nonce[..], 1);
+        msg1.version = 1;
+        msg1.key_iv[0] = 0xFF;
+        let result = handshake.on_eapol_key_frame(&msg1);
+        assert!(result.is_err(), "error, expected failure for first msg but result is: {:?}", result);
+    }
+
+    #[test]
+    fn test_random_iv_msg1_v2() {
+        let mut handshake = make_handshake();
+
+        // Send first message of Handshake to Supplicant and verify result.
+        let a_nonce = test_util::get_nonce();
+        let mut msg1 = test_util::get_4whs_msg1(&a_nonce[..], 1);
+        msg1.version = 2;
+        msg1.key_iv[0] = 0xFF;
+        let result = handshake.on_eapol_key_frame(&msg1);
+        assert!(result.is_err(), "error, expected failure for first msg but result is: {:?}", result);
+    }
+
+    // EAPOL Key frames can carry a random IV in the third message of the 4-Way Handshake if
+    // protocol version 1, 802.1X-2001, is used. All other protocol versions require a zeroed IV
+    // for the third message of the handshake.
+
+    #[test]
+    fn test_random_iv_msg3_v1() {
+        let mut handshake = make_handshake();
+
+        // Send first message of Handshake to Supplicant and derive PTK.
+        let a_nonce = test_util::get_nonce();
+        let msg1 = test_util::get_4whs_msg1(&a_nonce[..], 1);
+        let result = handshake.on_eapol_key_frame(&msg1);
+        let ptk = compute_ptk(&a_nonce[..], result).expect("could not derive PTK");
+
+        // Send third message of 4-Way Handshake to Supplicant.
+        let gtk = vec![42u8; 16];
+        let mut msg3 = test_util::get_4whs_msg3(&ptk, &a_nonce[..], &gtk[..], Some(MessageOverride{
+            version: 1,
+            replay_counter: 2,
+            iv: [0xFFu8; 16],
+        }));
+        let result = handshake.on_eapol_key_frame(&msg3);
+        assert!(result.is_ok(), "error, expected success for processing third msg but result is: {:?}", result);
+    }
+
+    #[test]
+    fn test_random_iv_msg3_v2() {
+        let mut handshake = make_handshake();
+
+        // Send first message of Handshake to Supplicant and derive PTK.
+        let a_nonce = test_util::get_nonce();
+        let msg1 = test_util::get_4whs_msg1(&a_nonce[..], 1);
+        let result = handshake.on_eapol_key_frame(&msg1);
+        let ptk = compute_ptk(&a_nonce[..], result).expect("could not derive PTK");
+
+        // Send third message of 4-Way Handshake to Supplicant.
+        let gtk = vec![42u8; 16];
+        let mut msg3 = test_util::get_4whs_msg3(&ptk, &a_nonce[..], &gtk[..], Some(MessageOverride{
+            version: 2,
+            replay_counter: 2,
+            iv: [0xFFu8; 16],
+        }));
+        let result = handshake.on_eapol_key_frame(&msg3);
+        assert!(result.is_err(), "error, expected failure for third msg but result is: {:?}", result);
+    }
+
+    #[test]
+    fn test_zeroed_iv_msg3_v2() {
+        let mut handshake = make_handshake();
+
+        // Send first message of Handshake to Supplicant and derive PTK.
+        let a_nonce = test_util::get_nonce();
+        let msg1 = test_util::get_4whs_msg1(&a_nonce[..], 1);
+        let result = handshake.on_eapol_key_frame(&msg1);
+        let ptk = compute_ptk(&a_nonce[..], result).expect("could not derive PTK");
+
+        // Send third message of 4-Way Handshake to Supplicant.
+        let gtk = vec![42u8; 16];
+        let mut msg3 = test_util::get_4whs_msg3(&ptk, &a_nonce[..], &gtk[..], Some(MessageOverride{
+            version: 2,
+            replay_counter: 2,
+            iv: [0u8; 16],
+        }));
+        let result = handshake.on_eapol_key_frame(&msg3);
+        assert!(result.is_ok(), "error, expected success for processing third msg but result is: {:?}", result);
     }
 
     // TODO(hahnr): Add additional tests.

@@ -160,7 +160,13 @@ pub fn get_4whs_msg1(anonce: &[u8], replay_counter: u64) -> eapol::KeyFrame {
     msg
 }
 
-pub fn get_4whs_msg3(ptk: &Ptk, anonce: &[u8], replay_counter: u64, gtk: &[u8]) -> eapol::KeyFrame {
+pub struct MessageOverride {
+    pub version: u8,
+    pub iv: [u8; 16],
+    pub replay_counter: u64,
+}
+
+pub fn get_4whs_msg3(ptk: &Ptk, anonce: &[u8], gtk: &[u8], msg_override: Option<MessageOverride>) -> eapol::KeyFrame {
     let mut buf = Vec::with_capacity(256);
 
     // Write GTK KDE
@@ -181,16 +187,16 @@ pub fn get_4whs_msg3(ptk: &Ptk, anonce: &[u8], replay_counter: u64, gtk: &[u8]) 
     let encrypted_key_data = encrypt_key_data(ptk.kek(), &buf[..]);
 
     let mut msg = eapol::KeyFrame {
-        version: 1,
+        version: msg_override.as_ref().map_or(1, |c| c.version),
         packet_type: 3,
         packet_body_len: 0, // Updated afterwards
         descriptor_type: 2,
         key_info: eapol::KeyInformation(0x13ca),
         key_len: 16,
-        key_replay_counter: replay_counter,
+        key_replay_counter: msg_override.as_ref().map_or(2, |c| c.replay_counter),
         key_mic: Bytes::from(vec![0u8; mic_len()]),
         key_rsc: 0,
-        key_iv: [0u8; 16],
+        key_iv: msg_override.as_ref().map_or([0u8; 16], |c| c.iv),
         key_nonce: eapol::to_array(anonce),
         key_data_len: encrypted_key_data.len() as u16,
         key_data: Bytes::from(encrypted_key_data),

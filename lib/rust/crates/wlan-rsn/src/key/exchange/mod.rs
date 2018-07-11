@@ -13,7 +13,7 @@ use key::ptk::Ptk;
 use rsna::{Role, SecAssocResult};
 use rsne::Rsne;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum Key {
     Pmk(Vec<u8>),
     Ptk(Ptk),

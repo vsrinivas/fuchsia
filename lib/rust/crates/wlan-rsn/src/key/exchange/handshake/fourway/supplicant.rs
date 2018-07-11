@@ -68,7 +68,7 @@ impl PtkInitState {
         key_info.set_key_mic(true);
 
         let mut key_data = vec![];
-        shared.cfg.a_rsne.as_bytes(&mut key_data);
+        shared.cfg.s_rsne.as_bytes(&mut key_data);
 
         let mut msg2 = eapol::KeyFrame {
             version: msg1.version,

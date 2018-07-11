@@ -197,8 +197,8 @@ mod tests {
             SecAssocUpdate::TxEapolKeyFrame(msg2) => {
                 // Verify second message.
                 let snonce = msg2.key_nonce;
-                let a_rsne = test_util::get_a_rsne();
-                let a_rsne_data = test_util::get_rsne_bytes(&a_rsne);
+                let s_rsne = test_util::get_s_rsne();
+                let s_rsne_data = test_util::get_rsne_bytes(&s_rsne);
 
                 assert_eq!(msg2.version, 1);
                 assert_eq!(msg2.packet_type, 3);
@@ -213,8 +213,8 @@ mod tests {
                 assert!(!test_util::is_zero(&msg2.key_mic[..]));
                 assert_eq!(msg2.key_mic.len(), test_util::mic_len());
                 assert_eq!(msg2.key_data.len(), msg2.key_data_len as usize);
-                assert_eq!(msg2.key_data.len(), a_rsne_data.len());
-                assert_eq!(&msg2.key_data[..], &a_rsne_data[..]);
+                assert_eq!(msg2.key_data.len(), s_rsne_data.len());
+                assert_eq!(&msg2.key_data[..], &s_rsne_data[..]);
 
                 // Verify the message's MIC.
                 let derived_ptk = test_util::get_ptk(&anonce[..], &snonce[..]);
@@ -232,9 +232,8 @@ mod tests {
         let ptk = ptk.expect("expected PTK to be derived");
 
         // Send third message of 4-Way Handshake to Supplicant.
-        let key_replay_counter = 2u64;
         let gtk = vec![42u8; 16];
-        let key_frame = test_util::get_4whs_msg3(&ptk, &anonce[..], key_replay_counter, &gtk[..]);
+        let key_frame = test_util::get_4whs_msg3(&ptk, &anonce[..], &gtk[..], None);
         let msg3 = eapol::Frame::Key(key_frame);
         let updates = esssa
             .on_eapol_frame(&msg3)
@@ -258,7 +257,7 @@ mod tests {
                     assert_eq!(msg4.descriptor_type, 2);
                     assert_eq!(msg4.key_info.value(), 0x030A);
                     assert_eq!(msg4.key_len, 0);
-                    assert_eq!(msg4.key_replay_counter, key_replay_counter);
+                    assert_eq!(msg4.key_replay_counter, 2);
                     assert!(test_util::is_zero(&msg4.key_nonce[..]));
                     assert!(test_util::is_zero(&msg4.key_iv[..]));
                     assert_eq!(msg4.key_rsc, 0);

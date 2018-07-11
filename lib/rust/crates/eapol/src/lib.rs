@@ -54,6 +54,8 @@ pub const KEY_TYPE_PAIRWISE: u16 = 1;
 // IEEE Std 802.1X-2010, 11.3.1
 #[derive(Debug)]
 pub enum ProtocolVersion {
+    Ieee802dot1x2001 = 1,
+    Ieee802dot1x2004 = 2,
     Ieee802dot1x2010 = 3,
 }
 

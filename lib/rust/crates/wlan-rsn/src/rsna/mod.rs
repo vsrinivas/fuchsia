@@ -16,10 +16,12 @@ pub enum Role {
     Supplicant,
 }
 
+#[derive(Debug)]
 pub enum SecAssocStatus {
     InvalidPassword,
 }
 
+#[derive(Debug)]
 pub enum SecAssocUpdate {
     TxEapolKeyFrame(eapol::KeyFrame),
     Key(Key),

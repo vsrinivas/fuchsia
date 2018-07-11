@@ -51,6 +51,10 @@ impl Gtk {
     pub fn gtk(&self) -> &[u8] {
         &self.gtk[..]
     }
+
+    pub fn key_id(&self) -> u8 {
+        self.key_id
+    }
 }
 
 // TODO(hahnr): Add tests.
