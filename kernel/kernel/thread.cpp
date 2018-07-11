@@ -920,7 +920,7 @@ zx_status_t thread_sleep_etc(zx_time_t deadline, bool interruptable) {
 
     // set a one shot timer to wake us up and reschedule
     timer_set(&timer, deadline,
-        TIMER_SLACK_LATE, sleep_slack(deadline, now), thread_sleep_handler, current_thread);
+              TIMER_SLACK_LATE, sleep_slack(deadline, now), thread_sleep_handler, current_thread);
 
     current_thread->state = THREAD_SLEEPING;
     current_thread->blocked_status = ZX_OK;
@@ -1285,10 +1285,10 @@ void ktrace_report_live_threads(void) {
         DEBUG_ASSERT(t->magic == THREAD_MAGIC);
         if (t->user_tid) {
             ktrace_name(TAG_THREAD_NAME,
-                static_cast<uint32_t>(t->user_tid), static_cast<uint32_t>(t->user_pid), t->name);
+                        static_cast<uint32_t>(t->user_tid), static_cast<uint32_t>(t->user_pid), t->name);
         } else {
             ktrace_name(TAG_KTHREAD_NAME,
-                static_cast<uint32_t>(reinterpret_cast<uintptr_t>(t)), 0, t->name);
+                        static_cast<uint32_t>(reinterpret_cast<uintptr_t>(t)), 0, t->name);
         }
     }
     THREAD_UNLOCK(state);
@@ -1333,7 +1333,7 @@ static size_t thread_get_backtrace(thread_t* t, void* fp, thread_backtrace_t* tb
     return n;
 }
 
-static zx_status_t _thread_print_backtrace(thread_t* t, void *fp) {
+static zx_status_t _thread_print_backtrace(thread_t* t, void* fp) {
     if (!t || !fp) {
         return ZX_ERR_BAD_STATE;
     }
@@ -1360,17 +1360,17 @@ void thread_print_current_backtrace(void) {
 // print the backtrace of a passed in thread, if possible
 zx_status_t thread_print_backtrace(thread_t* t) {
     // get the starting point if it's in a usable state
-    void *fp = NULL;
+    void* fp = NULL;
     switch (t->state) {
-        case THREAD_BLOCKED:
-        case THREAD_SLEEPING:
-        case THREAD_SUSPENDED:
-            // thread is blocked, so ask the arch code to get us a starting point
-            fp = arch_thread_get_blocked_fp(t);
-            break;
-        // we can't deal with every other state
-        default:
-            return ZX_ERR_BAD_STATE;
+    case THREAD_BLOCKED:
+    case THREAD_SLEEPING:
+    case THREAD_SUSPENDED:
+        // thread is blocked, so ask the arch code to get us a starting point
+        fp = arch_thread_get_blocked_fp(t);
+        break;
+    // we can't deal with every other state
+    default:
+        return ZX_ERR_BAD_STATE;
     }
 
     return _thread_print_backtrace(t, fp);

@@ -6,8 +6,8 @@
 
 #include <lib/debuglog.h>
 
-#include <err.h>
 #include <dev/udisplay.h>
+#include <err.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
 #include <lib/io.h>
@@ -64,7 +64,6 @@ static dlog_t DLOG = {
 //  [....XXXX....]  [XX........XX]
 //           H         H
 
-
 #define ALIGN4(n) (((n) + 3) & (~3))
 
 zx_status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
@@ -89,7 +88,7 @@ zx_status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
     hdr.datalen = len;
     hdr.flags = flags;
     hdr.timestamp = current_time();
-    thread_t *t = get_current_thread();
+    thread_t* t = get_current_thread();
     if (t) {
         hdr.pid = t->user_pid;
         hdr.tid = t->user_tid;
@@ -104,7 +103,7 @@ zx_status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
     // Discard records at tail until there is enough
     // space for the new record.
     while ((log->head - log->tail) > (DLOG_SIZE - wiresize)) {
-        uint32_t header = *((uint32_t*) (log->data + (log->tail & DLOG_MASK)));
+        uint32_t header = *((uint32_t*)(log->data + (log->tail & DLOG_MASK)));
         log->tail += DLOG_HDR_GET_FIFOLEN(header);
     }
 
@@ -119,7 +118,7 @@ zx_status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
     } else if (fifospace < sizeof(hdr)) {
         // the wrap happens in the header
         memcpy(log->data + offset, &hdr, fifospace);
-        memcpy(log->data, ((void*) &hdr) + fifospace, sizeof(hdr) - fifospace);
+        memcpy(log->data, ((void*)&hdr) + fifospace, sizeof(hdr) - fifospace);
         memcpy(log->data + (sizeof(hdr) - fifospace), ptr, len);
     } else {
         // the wrap happens in the data
@@ -182,7 +181,7 @@ zx_status_t dlog_read(dlog_reader_t* rdr, uint32_t flags, void* ptr, size_t len,
 
     if (rtail != log->head) {
         size_t offset = (rtail & DLOG_MASK);
-        uint32_t header = *((uint32_t*) (log->data + offset));
+        uint32_t header = *((uint32_t*)(log->data + offset));
 
         size_t actual = DLOG_HDR_GET_READLEN(header);
         size_t fifospace = DLOG_SIZE - offset;
@@ -227,7 +226,7 @@ void dlog_reader_init(dlog_reader_t* rdr, void (*notify)(void*), void* cookie) {
 
     // simulate notify callback for events that arrived
     // before we were initialized
-    if(do_notify && notify) {
+    if (do_notify && notify) {
         notify(cookie);
     }
 
@@ -241,7 +240,6 @@ void dlog_reader_destroy(dlog_reader_t* rdr) {
     list_delete(&rdr->node);
     mutex_release(&log->readers_lock);
 }
-
 
 // The debuglog notifier thread observes when the debuglog is
 // written and calls the notify callback on any readers that
@@ -291,7 +289,7 @@ static void debuglog_dumper_notify(void* cookie) {
     event_signal(event, false);
 }
 
-static int debuglog_dumper(void *arg) {
+static int debuglog_dumper(void* arg) {
     // assembly buffer with room for log text plus header text
     char tmp[DLOG_MAX_DATA + 128];
 
@@ -318,8 +316,8 @@ static int debuglog_dumper(void *arg) {
             }
             int n;
             n = snprintf(tmp, sizeof(tmp), "[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
-                         (int) (rec.hdr.timestamp / ZX_SEC(1)),
-                         (int) ((rec.hdr.timestamp / ZX_MSEC(1)) % 1000ULL),
+                         (int)(rec.hdr.timestamp / ZX_SEC(1)),
+                         (int)((rec.hdr.timestamp / ZX_MSEC(1)) % 1000ULL),
                          rec.hdr.pid, rec.hdr.tid, rec.data);
             if (n > (int)sizeof(tmp)) {
                 n = sizeof(tmp);
