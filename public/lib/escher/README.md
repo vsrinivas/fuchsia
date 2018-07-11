@@ -49,11 +49,11 @@ Escher can also build on Linux.  In order to do so, you need to:
     fx set x64  --packages garnet/packages/experimental/dev_escher_linux
     ```
     * See `$FUCHSIA_DIR/docs/getting_source.md` for how to set up the `fx` tool.
-  * Do this once only:
+  * Do this once only (then you can skip to the next step for iterative development):
     ```
     fx full-build
     ```
   * BUILD!! AND RUN!!!
     ```
-    buildtools/ninja -C out/release-x64/ && out/release-x64/host_x64/waterfall
+    buildtools/ninja -C out/x64/ && out/x64/host_x64/waterfall
     ```
