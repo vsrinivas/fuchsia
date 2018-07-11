@@ -1,0 +1,25 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/bin/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
+
+sandbox_test_package("has_shell") {
+  sources = [
+    "has_shell.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl/test:gtest_main",
+  ]
+}
+
+sandbox_test_package("no_shell") {
+  sources = [
+    "no_shell.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl/test:gtest_main",
+  ]
+}

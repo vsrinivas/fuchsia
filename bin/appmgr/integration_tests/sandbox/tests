@@ -1,6 +1,8 @@
 {
     "packages": [
         "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:has_persistent_storage",
-        "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:no_persistent_storage"
+        "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:no_persistent_storage",
+        "//garnet/bin/appmgr/integration_tests/sandbox/features/shell:has_shell",
+        "//garnet/bin/appmgr/integration_tests/sandbox/features/shell:no_shell"
     ]
 }

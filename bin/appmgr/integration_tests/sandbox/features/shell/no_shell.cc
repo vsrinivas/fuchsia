@@ -4,16 +4,21 @@
 
 #include <errno.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "gtest/gtest.h"
 
-TEST(FeaturesTest, NoPersistentStorage) {
+TEST(FeaturesTest, NoShell) {
   struct stat stat_;
-  // /data is missing
-  int retval = stat("/data", &stat_);
-  ASSERT_EQ(retval, -1) << "Unexpectedly found /data";
+  // Can't access directories that only shell can access
+  for (auto dir : {"/boot", "/system", "/hub", "/pkgfs"}) {
+    int retval = stat(dir, &stat_);
+    ASSERT_EQ(retval, -1) << "Unexpectedly found " << dir;
+  }
+
   // While /svc is present
-  retval = stat("/svc", &stat_);
+  int retval = stat("/svc", &stat_);
   ASSERT_EQ(retval, 0) << "Can't find /svc: " << strerror(errno);
 }
