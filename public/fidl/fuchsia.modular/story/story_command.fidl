@@ -4,6 +4,8 @@
 
 library fuchsia.modular;
 
+using fuchsia.mem;
+
 // StoryCommands are POD structures that describe the set of operations that
 // can be performed on a story by components outside the modular framework. All commands are:
 //
@@ -68,5 +70,5 @@ struct RemoveMod {
 // Sets the value of link at |path| to |value|.
 struct SetLinkValue {
   LinkPath path;
-  vector<uint8>? value;
+  fuchsia.mem.Buffer? value;
 };

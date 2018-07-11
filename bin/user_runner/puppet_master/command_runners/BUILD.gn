@@ -22,7 +22,11 @@ source_set("set_link_value_command_runner") {
 
   deps = [
     ":command_runner",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//peridot/bin/user_runner/storage:story_storage",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.internal",
   ]
 }
 
@@ -35,7 +39,9 @@ executable("set_link_value_command_runner_unittest") {
 
   deps = [
     ":set_link_value_command_runner",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
+    "//peridot/lib/testing:test_with_ledger",
     "//third_party/googletest:gtest_main",
   ]
 }
