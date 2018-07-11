@@ -107,7 +107,7 @@ Vp9Decoder::~Vp9Decoder() {
 }
 
 void Vp9Decoder::UpdateLoopFilterThresholds() {
-  for (uint32_t i = 0; i < MAX_LOOP_FILTER / 2; i++) {
+  for (uint32_t i = 0; i <= MAX_LOOP_FILTER / 2; i++) {
     uint32_t threshold = 0;
     for (uint32_t j = 0; j < 2; j++) {
       uint32_t new_threshold =
@@ -122,6 +122,10 @@ void Vp9Decoder::UpdateLoopFilterThresholds() {
 }
 
 void Vp9Decoder::InitLoopFilter() {
+  loop_filter_info_ = std::make_unique<loop_filter_info_n>();
+  loop_filter_ = std::make_unique<loopfilter>();
+  segmentation_ = std::make_unique<segmentation>();
+
   vp9_loop_filter_init(loop_filter_info_.get(), loop_filter_.get());
 
   UpdateLoopFilterThresholds();
@@ -197,10 +201,6 @@ zx_status_t Vp9Decoder::Initialize() {
   status = working_buffers_.AllocateBuffers(owner_);
   if (status != ZX_OK)
     return status;
-
-  loop_filter_info_ = std::make_unique<loop_filter_info_n>();
-  loop_filter_ = std::make_unique<loopfilter>();
-  segmentation_ = std::make_unique<segmentation>();
 
   HevcRpmBuffer::Get()
       .FromValue(working_buffers_.rpm.addr32())

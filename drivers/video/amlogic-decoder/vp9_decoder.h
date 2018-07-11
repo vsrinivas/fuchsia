@@ -28,6 +28,7 @@ class Vp9Decoder : public VideoDecoder {
   void ReturnFrame(std::shared_ptr<VideoFrame> frame) override;
 
  private:
+  friend class Vp9UnitTest;
   class WorkingBuffer;
 
   class BufferAllocator {

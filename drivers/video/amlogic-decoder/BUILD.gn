@@ -112,6 +112,7 @@ source_set("tests") {
     "tests/integration/test_vp9.cc",
     "tests/test_support.cc",
     "tests/unit_tests/test_binding.cc",
+    "tests/unit_tests/test_vp9.cc",
   ]
 }
 
