@@ -16,6 +16,7 @@
 #include <ddk/protocol/platform-device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
+#include <hw/arch_ops.h>
 #include <hw/reg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -38,19 +39,6 @@ typedef struct image_info {
 
     list_node_t node;
 } image_info_t;
-
-// MMIO indices (based on vim2_display_mmios)
-enum {
-    MMIO_PRESET = 0,
-    MMIO_HDMITX,
-    MMIO_HIU,
-    MMIO_VPU,
-    MMIO_HDMTX_SEC,
-    MMIO_DMC,
-    MMIO_CBUS,
-    MMIO_AUD_OUT,
-    MMIO_COUNT  // Must be the final entry
-};
 
 void populate_added_display_args(vim2_display_t* display, added_display_args_t* args) {
     args->display_id = display->display_id;
@@ -362,6 +350,7 @@ static void display_release(void* ctx) {
 
 static void display_unbind(void* ctx) {
     vim2_display_t* display = static_cast<vim2_display_t*>(ctx);
+    vim2_audio_shutdown(&display->audio);
     device_remove(display->mydevice);
 }
 
@@ -472,6 +461,12 @@ static int hdmi_irq_handler(void *arg) {
         }
 
         mtx_unlock(&display->display_lock);
+
+        if (display_removed != INVALID_DISPLAY_ID) {
+            vim2_audio_on_display_removed(display, display_removed);
+        } else if (display_added != INVALID_DISPLAY_ID) {
+            vim2_audio_on_display_added(display, display_added);
+        }
     }
 }
 
@@ -538,6 +533,32 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     assert(!strcmp(board_info.board_name, "vim2"));
     assert(board_info.board_revision == 1234);
 
+    // Fetch the device info and sanity check our resource counts.
+    pdev_device_info_t dev_info;
+    status = pdev_get_device_info(&display->pdev, &dev_info);
+    if (status != ZX_OK) {
+        DISP_ERROR("Failed to fetch device info (status %d)\n", status);
+        DISP_ERROR("bind failed! %d\n", status);
+        display_release(display);
+        return status;
+    }
+
+    if (dev_info.mmio_count != MMIO_COUNT) {
+        DISP_ERROR("MMIO region count mismatch!  Expected %u regions to be supplied by board "
+                   "driver, but only %u were passed\n", MMIO_COUNT, dev_info.mmio_count);
+        DISP_ERROR("bind failed! %d\n", status);
+        display_release(display);
+        return status;
+    }
+
+    if (dev_info.bti_count != BTI_COUNT) {
+        DISP_ERROR("BTI count mismatch!  Expected %u BTIs to be supplied by board "
+                   "driver, but only %u were passed\n", BTI_COUNT, dev_info.bti_count);
+        DISP_ERROR("bind failed! %d\n", status);
+        display_release(display);
+        return status;
+    }
+
     status = pdev_get_bti(&display->pdev, 0, &display->bti);
     if (status != ZX_OK) {
         DISP_ERROR("Could not get BTI handle\n");
@@ -563,23 +584,6 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     }
 
     // Map all the various MMIOs
-    pdev_device_info_t dev_info;
-    status = pdev_get_device_info(&display->pdev, &dev_info);
-    if (status != ZX_OK) {
-        DISP_ERROR("Failed to fetch device info (status %d)\n", status);
-        DISP_ERROR("bind failed! %d\n", status);
-        display_release(display);
-        return status;
-    }
-
-    if (dev_info.mmio_count != MMIO_COUNT) {
-        DISP_ERROR("MMIO region count mismatch!  Expected %u regions to be supplied by board "
-                   "driver, but only %u were passed\n", MMIO_COUNT, dev_info.mmio_count);
-        DISP_ERROR("bind failed! %d\n", status);
-        display_release(display);
-        return status;
-    }
-
     status = pdev_map_mmio_buffer(&display->pdev, MMIO_PRESET, ZX_CACHE_POLICY_UNCACHED_DEVICE,
         &display->mmio_preset);
     if (status != ZX_OK) {
@@ -657,6 +661,15 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         display_release(display);
         return status;
     }
+
+    status = vim2_audio_create(&display->pdev, &display->audio);
+    if (status != ZX_OK) {
+        DISP_ERROR("Failed to create DAI controller (status %d)\n", status);
+        DISP_ERROR("bind failed! %d\n", status);
+        display_release(display);
+        return status;
+    }
+
     // For some reason the vsync interrupt enable bit needs to be cleared for
     // vsync interrupts to occur at the correct rate.
     *((uint32_t*)(static_cast<uint8_t*>(display->mmio_vpu.virt) + VPU_VIU_MISC_CTRL0)) &= ~(1 << 8);
@@ -710,6 +723,122 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     thrd_create_with_name(&display->vsync_thread, vsync_thread, display, "vsync_thread");
 
     return ZX_OK;
+}
+
+zx_status_t vim2_display_configure_audio_mode(const vim2_display_t* display,
+                                              uint32_t N,
+                                              uint32_t CTS,
+                                              uint32_t frame_rate,
+                                              uint32_t bits_per_sample) {
+    ZX_DEBUG_ASSERT(display != NULL);
+
+    if ((N > 0xFFFFF) || (CTS > 0xFFFFF) || (bits_per_sample < 16) || (bits_per_sample > 24)) {
+        vim2_display_disable_audio(display);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    ZX_DEBUG_ASSERT(display != NULL);
+    hdmitx_writereg(display, HDMITX_DWC_AUD_CONF0,  0u);  // Make sure that I2S is deselected
+    hdmitx_writereg(display, HDMITX_DWC_AUD_SPDIF2, 0u);  // Deselect SPDIF
+
+    // Select non-HBR linear PCM, as well as the proper number of bits per sample.
+    hdmitx_writereg(display, HDMITX_DWC_AUD_SPDIF1, bits_per_sample);
+
+    // Set the N/CTS parameters using DesignWare's atomic update sequence
+    //
+    // For details, refer to...
+    // DesignWare Cores HDMI Transmitter Controler Databook v2.12a Sections 6.8.3 Table 6-282
+    hdmitx_writereg(display, HDMITX_DWC_AUD_N3,
+                   ((N >> AUD_N3_N_START_BIT) & AUD_N3_N_MASK) | AUD_N3_ATOMIC_WRITE);
+    hw_wmb();
+    hdmitx_writereg(display, HDMITX_DWC_AUD_CTS3,
+                   ((CTS >> AUD_CTS3_CTS_START_BIT) & AUD_CTS3_CTS_MASK));
+    hdmitx_writereg(display, HDMITX_DWC_AUD_CTS2,
+                   ((CTS >> AUD_CTS2_CTS_START_BIT) & AUD_CTS2_CTS_MASK));
+    hdmitx_writereg(display, HDMITX_DWC_AUD_CTS1,
+                   ((CTS >> AUD_CTS1_CTS_START_BIT) & AUD_CTS1_CTS_MASK));
+    hdmitx_writereg(display, HDMITX_DWC_AUD_N3,
+                   ((N >> AUD_N3_N_START_BIT) & AUD_N3_N_MASK) | AUD_N3_ATOMIC_WRITE);
+    hdmitx_writereg(display, HDMITX_DWC_AUD_N2, ((N >> AUD_N2_N_START_BIT) & AUD_N2_N_MASK));
+    hw_wmb();
+    hdmitx_writereg(display, HDMITX_DWC_AUD_N1, ((N >> AUD_N1_N_START_BIT) & AUD_N1_N_MASK));
+
+    // Select SPDIF data stream 0 (coming from the AmLogic section of the S912)
+    hdmitx_writereg(display, HDMITX_DWC_AUD_SPDIF2, AUD_SPDIF2_ENB_ISPDIFDATA0);
+
+    // Reset the SPDIF FIFO
+    hdmitx_writereg(display, HDMITX_DWC_AUD_SPDIF0, AUD_SPDIF0_SW_FIFO_RESET);
+    hw_wmb();
+
+    // Now, as required, reset the SPDIF sampler.
+    // See Section 6.9.1 of the DW HDMT TX controller databook
+    hdmitx_writereg(display, HDMITX_DWC_MC_SWRSTZREQ, 0xEF);
+    hw_wmb();
+
+    // Set up the audio infoframe.  Refer to the follow specifications for
+    // details about how to do this.
+    //
+    // DesignWare Cores HDMI Transmitter Controler Databook v2.12a Sections 6.5.35 - 6.5.37
+    // CTA-861-G Section 6.6
+
+    uint32_t CT = 0x01;   // Coding type == LPCM
+    uint32_t CC = 0x01;   // Channel count = 2
+    uint32_t CA = 0x00;   // Channel allocation; currently we hardcode FL/FR
+
+    // Sample size
+    uint32_t SS;
+    switch (bits_per_sample) {
+    case 16: SS = 0x01; break;
+    case 20: SS = 0x02; break;
+    case 24: SS = 0x03; break;
+    default: SS = 0x00; break; // "refer to stream"
+    }
+
+    // Sample frequency
+    uint32_t SF;
+    switch (frame_rate) {
+    case 32000:  SF = 0x01; break;
+    case 44100:  SF = 0x02; break;
+    case 48000:  SF = 0x03; break;
+    case 88200:  SF = 0x04; break;
+    case 96000:  SF = 0x05; break;
+    case 176400: SF = 0x06; break;
+    case 192000: SF = 0x07; break;
+    default:     SF = 0x00; break; // "refer to stream"
+    }
+
+    hdmitx_writereg(display, HDMITX_DWC_FC_AUDICONF0, (CT & 0xF) | ((CC & 0x7) << 4));
+    hdmitx_writereg(display, HDMITX_DWC_FC_AUDICONF1, (SF & 0x7) | ((SS & 0x3) << 4));
+    hdmitx_writereg(display, HDMITX_DWC_FC_AUDICONF2, CA);
+    // Right now, we just hardcode the following...
+    // LSV    : Level shift value == 0dB
+    // DM_INH : Downmix inhibit == down-mixing permitted.
+    // LFEPBL : LFE playback level unknown.
+    hdmitx_writereg(display, HDMITX_DWC_FC_AUDICONF3, 0u);
+
+    return ZX_OK;
+}
+
+void vim2_display_disable_audio(const vim2_display_t* display) {
+    ZX_DEBUG_ASSERT(display != NULL);
+    hdmitx_writereg(display, HDMITX_DWC_AUD_CONF0,  0u);  // Deselect I2S
+    hdmitx_writereg(display, HDMITX_DWC_AUD_SPDIF2, 0u);  // Deselect SPDIF
+
+    // Set the N/CTS parameters to 0 using DesignWare's atomic update sequence
+    hdmitx_writereg(display, HDMITX_DWC_AUD_N3, 0x80);
+    hdmitx_writereg(display, HDMITX_DWC_AUD_CTS3, 0u);
+    hdmitx_writereg(display, HDMITX_DWC_AUD_CTS2, 0u);
+    hdmitx_writereg(display, HDMITX_DWC_AUD_CTS1, 0u);
+    hdmitx_writereg(display, HDMITX_DWC_AUD_N3, 0x80);
+    hdmitx_writereg(display, HDMITX_DWC_AUD_N2, 0u);
+    hw_wmb();
+    hdmitx_writereg(display, HDMITX_DWC_AUD_N1, 0u);
+
+    // Reset the audio info frame to defaults.
+    hdmitx_writereg(display, HDMITX_DWC_FC_AUDICONF0, 0u);
+    hdmitx_writereg(display, HDMITX_DWC_FC_AUDICONF1, 0u);
+    hdmitx_writereg(display, HDMITX_DWC_FC_AUDICONF2, 0u);
+    hdmitx_writereg(display, HDMITX_DWC_FC_AUDICONF3, 0u);
 }
 
 static zx_driver_ops_t vim2_display_driver_ops = {

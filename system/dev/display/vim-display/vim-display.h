@@ -6,6 +6,7 @@
 
 #include "edid.h"
 #include <assert.h>
+#include <ddk/debug.h>
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/amlogic-canvas.h>
 #include <ddk/protocol/gpio.h>
@@ -17,6 +18,10 @@
 #include <zircon/listnode.h>
 #include <zircon/pixelformat.h>
 
+#include "vim-audio.h"
+
+__BEGIN_CDECLS
+
 #define DISP_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define DISP_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define DISP_TRACE  zxlogf(INFO, "[%s %d]\n", __func__, __LINE__)
@@ -27,6 +32,26 @@
 // From uBoot source
 #define VFIFO2VD_TO_HDMI_LATENCY 2
 #define EDID_BUF_SIZE       256
+
+// MMIO indices (based on vim2_display_mmios)
+enum {
+    MMIO_PRESET = 0,
+    MMIO_HDMITX,
+    MMIO_HIU,
+    MMIO_VPU,
+    MMIO_HDMTX_SEC,
+    MMIO_DMC,
+    MMIO_CBUS,
+    MMIO_AUD_OUT,
+    MMIO_COUNT  // Must be the final entry
+};
+
+// BTI indices (based on vim2_display_btis)
+enum {
+    BTI_DISPLAY = 0,
+    BTI_AUDIO,
+    BTI_COUNT  // Must be the final entry
+};
 
 typedef struct vim2_display {
     zx_device_t*                        zxdev;
@@ -85,6 +110,10 @@ typedef struct vim2_display {
     display_controller_cb_t*            dc_cb;
     void*                               dc_cb_ctx;
     list_node_t                         imported_images;
+
+    // A reference to the object which controls the VIM2 DAIs used to feed audio
+    // into the HDMI stream.
+    vim2_audio_t*                       audio;
 } vim2_display_t;
 
 void disable_vd(vim2_display_t* display, uint32_t vd_index);
@@ -98,3 +127,17 @@ void osd_debug_dump_register_all(vim2_display_t* display);
 void osd_dump(vim2_display_t* display);
 zx_status_t get_preferred_res(vim2_display_t* display, uint16_t edid_buf_size);
 struct hdmi_param** get_supported_formats(void);
+
+// TODO(johngro) : eliminate the need for these hooks if/when we start to
+// support composite device drivers and can separate the DAI driver from the
+// HDMI driver (which is currently playing the role of codec driver)
+//
+// TODO(johngro) : add any info needed to properly set up the audio info-frame.
+zx_status_t vim2_display_configure_audio_mode(const vim2_display_t* display,
+                                              uint32_t N,
+                                              uint32_t CTS,
+                                              uint32_t frame_rate,
+                                              uint32_t bits_per_sample);
+void vim2_display_disable_audio(const vim2_display_t* display);
+
+__END_CDECLS

@@ -11,6 +11,22 @@
 #include <zircon/types.h>
 #include <threads.h>
 
+#ifdef __cplusplus
+// LPCM Short Audio Descriptor frame rate flag definitions
+constexpr uint8_t SAD_RATE_32000  = (1 << 0);
+constexpr uint8_t SAD_RATE_44100  = (1 << 1);
+constexpr uint8_t SAD_RATE_48000  = (1 << 2);
+constexpr uint8_t SAD_RATE_88200  = (1 << 3);
+constexpr uint8_t SAD_RATE_96000  = (1 << 4);
+constexpr uint8_t SAD_RATE_176400 = (1 << 5);
+constexpr uint8_t SAD_RATE_192000 = (1 << 6);
+
+// LPCM Short Audio Descriptor bits-per-sample flag definitions
+constexpr uint8_t SAD_BPS_16 = (1 << 0);
+constexpr uint8_t SAD_BPS_20 = (1 << 1);
+constexpr uint8_t SAD_BPS_24 = (1 << 2);
+#endif
+
 typedef struct {
     uint16_t pixel_clk;
     uint16_t HActive;

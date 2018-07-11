@@ -25,14 +25,19 @@
 // Uncomment to print all HDMI REG writes
 // #define LOG_HDMITX
 
+static mtx_t hdmi_register_lock = MTX_INIT;
 
 void hdmitx_writereg(const vim2_display_t* display, uint32_t addr, uint32_t data) {
     // determine if we are writing to HDMI TOP (AMLOGIC Wrapper) or HDMI IP
     uint32_t offset = (addr & DWC_OFFSET_MASK) >> 24;
     addr = addr & 0xffff;
+
+    mtx_lock(&hdmi_register_lock);
     WRITE32_HDMITX_REG(HDMITX_ADDR_PORT + offset, addr);
     WRITE32_HDMITX_REG(HDMITX_ADDR_PORT + offset, addr); // FIXME: Need to write twice!
     WRITE32_HDMITX_REG(HDMITX_DATA_PORT + offset, data);
+    mtx_unlock(&hdmi_register_lock);
+
 #ifdef LOG_HDMITX
     DISP_INFO("%s wr[0x%x] 0x%x\n", offset ? "DWC" : "TOP",
             addr, data);
@@ -41,11 +46,17 @@ void hdmitx_writereg(const vim2_display_t* display, uint32_t addr, uint32_t data
 
 uint32_t hdmitx_readreg(const vim2_display_t* display, uint32_t addr) {
     // determine if we are writing to HDMI TOP (AMLOGIC Wrapper) or HDMI IP
+    uint32_t ret;
     uint32_t offset = (addr & DWC_OFFSET_MASK) >> 24;
     addr = addr & 0xffff;
+
+    mtx_lock(&hdmi_register_lock);
     WRITE32_HDMITX_REG(HDMITX_ADDR_PORT + offset, addr);
     WRITE32_HDMITX_REG(HDMITX_ADDR_PORT + offset, addr); // FIXME: Need to write twice!
-    return (READ32_HDMITX_REG(HDMITX_DATA_PORT + offset));
+    ret = (READ32_HDMITX_REG(HDMITX_DATA_PORT + offset));
+    mtx_unlock(&hdmi_register_lock);
+
+    return ret;
 }
 
 void hdmi_scdc_read(vim2_display_t* display, uint8_t addr, uint8_t* val) {
