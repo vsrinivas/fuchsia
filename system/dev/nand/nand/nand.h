@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/device.h>
+#include <ddk/protocol/nand.h>
 #include <ddk/protocol/rawnand.h>
 #include <limits.h>
 #include <zircon/device/ioctl-wrapper.h>
@@ -84,4 +85,4 @@ IOCTL_WRAPPER_INOUT(ioctl_nand_write_page_data_oob, IOCTL_NAND_WRITE_PAGE_DATA_O
                     nandtest_rw_page_data_oob_t, nandtest_resp_t);
 IOCTL_WRAPPER_IN_VAROUT(ioctl_nand_read_page_data_oob, IOCTL_NAND_READ_PAGE_DATA_OOB,
                         nandtest_rw_page_data_oob_t, void);
-IOCTL_WRAPPER_OUT(ioctl_nand_get_nand_info, IOCTL_NAND_GET_NAND_INFO, void);
+IOCTL_WRAPPER_OUT(ioctl_nand_get_nand_info, IOCTL_NAND_GET_NAND_INFO, nand_info_t);
