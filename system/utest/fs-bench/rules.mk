@@ -14,7 +14,7 @@ MODULE_NAME := fs-bench-test
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/main.cpp \
-    $(LOCAL_DIR)/bench-basic.cpp \
+    $(LOCAL_DIR)/fs-bench.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/zxcpp \
