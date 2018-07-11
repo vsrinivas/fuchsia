@@ -11,6 +11,7 @@ rustc_library("wlan-sme") {
   with_unit_tests = true
 
   deps = [
+    "//garnet/lib/rust/crates/eapol",
     "//garnet/lib/rust/crates/wlan-rsn",
     "//garnet/public/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//garnet/public/rust/crates/fuchsia-zircon",

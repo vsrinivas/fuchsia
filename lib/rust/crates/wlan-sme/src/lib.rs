@@ -5,6 +5,7 @@
 #![deny(warnings)]
 
 extern crate bytes;
+extern crate eapol;
 extern crate fidl_fuchsia_wlan_mlme as fidl_mlme;
 extern crate fuchsia_zircon as zx;
 #[macro_use] extern crate failure;

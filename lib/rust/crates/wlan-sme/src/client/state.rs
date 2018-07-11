@@ -9,7 +9,10 @@ use client::{ConnectResult, Status, Tokens};
 use client::internal::{MlmeSink, UserSink};
 use MlmeRequest;
 use super::DeviceInfo;
-use wlan_rsn::{akm, cipher, rsna::esssa::EssSa, rsne, rsne::Rsne, suite_selector::OUI};
+use wlan_rsn::{akm, cipher, rsne::{self, Rsne}, suite_selector::OUI};
+use wlan_rsn::key::exchange::Key;
+use wlan_rsn::rsna::{esssa::EssSa, SecAssocUpdate};
+use eapol;
 
 const DEFAULT_JOIN_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
 const DEFAULT_AUTH_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
@@ -25,17 +28,17 @@ pub struct ConnectCommand<T> {
 }
 
 pub struct Rsna {
-    _s_rsne: Rsne,
-    _esssa: EssSa,
+    s_rsne: Rsne,
+    esssa: EssSa,
 }
 
 impl Rsna {
-    fn _new(s_rsne: Rsne, esssa: EssSa) -> Rsna {
+    fn new(s_rsne: Rsne, esssa: EssSa) -> Rsna {
         assert_eq!(s_rsne.pairwise_cipher_suites.len(), 1);
         assert_eq!(s_rsne.akm_suites.len(), 1);
         assert!(s_rsne.group_data_cipher_suite.is_none());
 
-        Rsna {_s_rsne: s_rsne, _esssa: esssa}
+        Rsna {s_rsne, esssa}
     }
 }
 
@@ -142,6 +145,41 @@ impl<T: Tokens> State<T> {
                         rsna
                     }
                 },
+                MlmeEvent::EapolInd{ ref ind } if rsna.is_some() => {
+                    let Rsna { s_rsne, mut esssa } = rsna.unwrap();
+                    let mic_len = get_mic_size(&s_rsne);
+                    let eapol_pdu = &ind.data[..];
+                    let eapol_frame = match eapol::key_frame_from_bytes(eapol_pdu, mic_len)
+                        .to_full_result() {
+                        Ok(key_frame) => eapol::Frame::Key(key_frame),
+                        Err(e) => {
+                            eprintln!("received invalid EAPOL Key frame: {:?}", e);
+
+                            let rsna = Some(Rsna::new(s_rsne, esssa));
+                            return State::Associated { bss, last_rssi, link_state, rsna, };
+                        }
+                    };
+                    let bssid = ind.src_addr;
+                    let sta_addr = ind.dst_addr;
+                    match esssa.on_eapol_frame(&eapol_frame) {
+                        Ok(updates) => updates.into_iter().for_each(|update| match update {
+                            // ESS Security Association requests to send an EAPOL frame.
+                            // Forward EAPOL frame to MLME.
+                            SecAssocUpdate::TxEapolKeyFrame(frame) =>
+                                send_eapol_frame(mlme_sink, bssid, sta_addr, frame),
+                            // ESS Security Association derived a new key.
+                            // Configure key in MLME.
+                            SecAssocUpdate::Key(key) => send_keys(mlme_sink, bssid, &s_rsne, key),
+                            // TODO(hahnr): Process status updates and open blocked port
+                            // once ESS-SA was established.
+                            _ => eprintln!("Supplicant sent unsupported response"),
+                        }),
+                        Err(e) => eprintln!("error processing EAPOL key frame: {:?}", e),
+                    };
+
+                    let rsna = Some(Rsna::new(s_rsne, esssa));
+                    State::Associated { bss, last_rssi, link_state, rsna }
+                }
                 _ => State::Associated{ bss, last_rssi, link_state, rsna }
             },
             State::Deauthenticating{ next_cmd } => match event {
@@ -207,6 +245,70 @@ impl<T: Tokens> State<T> {
             },
         }
     }
+}
+
+fn get_mic_size(s_rsne: &Rsne) -> u16
+{
+    // TODO(hahnr): The client should never authenticates with a BSS which uses an AKM with an
+    // unknown MIC size. For now simply fail.
+    s_rsne.akm_suites.iter().next().expect("expected RSNE to carry exactly one AKM suite")
+        .mic_bytes().expect("expected AKM to have a known MIC size")
+}
+
+fn send_eapol_frame(mlme_sink: &MlmeSink, bssid: [u8; 6], sta_addr: [u8; 6], frame: eapol::KeyFrame)
+{
+    let mut buf = Vec::with_capacity(frame.len());
+    frame.as_bytes(false, &mut buf);
+    mlme_sink.send(MlmeRequest::Eapol(
+        fidl_mlme::EapolRequest {
+            src_addr: sta_addr,
+            dst_addr: bssid,
+            data: buf,
+        }
+    ));
+}
+
+fn send_keys(mlme_sink: &MlmeSink, bssid: [u8; 6], s_rsne: &Rsne, key: Key)
+{
+    match key {
+        Key::Ptk(ptk) => {
+            let pairwise = s_rsne.pairwise_cipher_suites.iter().next()
+                .expect("expected RSNE to carry exactly one pairwise cipher suite");
+            mlme_sink.send(MlmeRequest::SetKeys(
+                fidl_mlme::SetKeysRequest {
+                    keylist: vec![fidl_mlme::SetKeyDescriptor{
+                        key_type: fidl_mlme::KeyType::Pairwise,
+                        key: ptk.tk().to_vec(),
+                        key_id: 0,
+                        length: ptk.tk().len() as u16,
+                        address: bssid,
+                        cipher_suite_oui: eapol::to_array(&pairwise.oui[..]),
+                        cipher_suite_type: pairwise.suite_type,
+                        rsc: [0u8; 8],
+                    }]
+                }
+            ));
+        },
+        Key::Gtk(gtk) => {
+            let group_data = s_rsne.group_data_cipher_suite.as_ref()
+                .expect("expected RSNE to carry a group data cipher suite");
+            mlme_sink.send(MlmeRequest::SetKeys(
+                fidl_mlme::SetKeysRequest {
+                    keylist: vec![fidl_mlme::SetKeyDescriptor{
+                        key_type: fidl_mlme::KeyType::Group,
+                        key: gtk.tk().to_vec(),
+                        key_id: gtk.key_id() as u16,
+                        length: gtk.tk().len() as u16,
+                        address: [0xFFu8; 6],
+                        cipher_suite_oui: eapol::to_array(&group_data.oui[..]),
+                        cipher_suite_type: group_data.suite_type,
+                        rsc: [0u8; 8],
+                    }]
+                }
+            ));
+        },
+        _ => eprintln!("error, derived unexpected key")
+    };
 }
 
 fn to_deauthenticating_state<T>(current_bss: Box<BssDescription>,

@@ -163,6 +163,8 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                 match result {
                     ScanResult::None => state,
                     ScanResult::ReadyToJoin { token, best_bss } => {
+                        // TODO(hahnr): Evaluate BSS' RSNE and never attempt to connect if the
+                        // BSS is not supported.
                         let cmd = ConnectCommand { bss: Box::new(best_bss), token: Some(token) };
                         state.disconnect(Some(cmd), &self.mlme_sink, &self.user_sink)
                     },
