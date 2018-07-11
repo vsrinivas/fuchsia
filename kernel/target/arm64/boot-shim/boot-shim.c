@@ -7,17 +7,26 @@
 #include "devicetree.h"
 #include "util.h"
 
+#include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <ddk/protocol/platform-defs.h>
 #include <zircon/boot/driver-config.h>
+#include <zbi/zbi.h>
 
 // uncomment to dump device tree at boot
 // #define PRINT_DEVICE_TREE
 
 // used in boot-shim-config.h and in this file below
-static void append_boot_item(zbi_header_t* container, uint32_t type, uint32_t extra,
-                            const void* payload, uint32_t length);
+static void append_boot_item(zbi_header_t* container,
+                             uint32_t type, uint32_t extra,
+                             const void* payload, uint32_t length) {
+    zbi_result_t result = zbi_append_section(
+        container, SIZE_MAX, length, type, extra, 0, payload);
+    if (result != ZBI_RESULT_OK) {
+        fail("zbi_append_section failed\n");
+    }
+}
 
 // defined in boot-shim-config.h
 static void append_board_boot_item(zbi_header_t* container);
@@ -124,27 +133,6 @@ static void read_device_tree(void* device_tree, device_tree_context_t* ctx) {
     dt_walk(&dt, node_callback, prop_callback, ctx);
 }
 #endif // HAS_DEVICE_TREE
-
-static void append_boot_item(zbi_header_t* container, uint32_t type, uint32_t extra,
-                             const void* payload, uint32_t length) {
-    zbi_header_t* dest = (zbi_header_t*)((uintptr_t)container + container->length +
-                                         sizeof(zbi_header_t));
-
-    dest->type = type;
-    dest->length = length;
-    dest->extra = extra;
-    dest->flags = ZBI_FLAG_VERSION;
-    dest->reserved0 = 0;
-    dest->reserved1 = 0;
-    dest->magic = ZBI_ITEM_MAGIC;
-    dest->crc32 = ZBI_ITEM_NO_CRC32;
-
-    if (length) {
-        memcpy(dest + 1, payload, length);
-    }
-    length = ZBI_ALIGN(length + sizeof(zbi_header_t));
-    container->length += length;
-}
 
 boot_shim_return_t boot_shim(void* device_tree) {
     uart_puts("boot_shim: hi there!\n");
