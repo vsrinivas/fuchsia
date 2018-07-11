@@ -17,18 +17,6 @@ namespace zxdb {
 SystemImpl::SystemImpl(Session* session)
     : System(session), weak_factory_(this) {
   AddNewTarget(std::make_unique<TargetImpl>(this));
-
-  // Load the build ID file but asynchronously notify. This allows the system
-  // to be loaded enough so that the observers are initialized.
-  std::string symbol_msg;
-  bool ids_loaded = symbols_.LoadBuildIDFile(&symbol_msg);
-  debug_ipc::MessageLoop::Current()->PostTask(
-      [ weak_system = weak_factory_.GetWeakPtr(), ids_loaded, symbol_msg ]() {
-        if (weak_system) {
-          for (auto& observer : weak_system->observers())
-            observer.DidTryToLoadSymbolMapping(ids_loaded, symbol_msg);
-        }
-      });
 }
 
 SystemImpl::~SystemImpl() {
@@ -160,6 +148,16 @@ void SystemImpl::Continue() {
   request.how = debug_ipc::ResumeRequest::How::kContinue;
   session()->remote_api()->Resume(
       request, std::function<void(const Err&, debug_ipc::ResumeReply)>());
+}
+
+void SystemImpl::DidConnect() {
+  // (Re)load the build ID file after connection. This needs to be done for
+  // every connection since a new image could have been compiled and launched
+  // which will have a different build ID file.
+  std::string symbol_msg;
+  bool ids_loaded = symbols_.LoadBuildIDFile(&symbol_msg);
+  for (auto& observer : observers())
+    observer.DidTryToLoadSymbolMapping(ids_loaded, symbol_msg);
 }
 
 BreakpointImpl* SystemImpl::BreakpointImplForId(uint32_t id) {

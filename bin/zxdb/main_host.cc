@@ -7,6 +7,7 @@
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/flags.h"
+#include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/lib/debug_ipc/helper/buffered_fd.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_poll.h"
 #include "garnet/public/lib/fxl/command_line.h"
@@ -51,6 +52,15 @@ int main(int argc, char* argv[]) {
     } else {
       // Interactive mode is the default mode.
       console.Init();
+
+      // Tip for connecting when run interactively.
+      zxdb::OutputBuffer help;
+      help.Append(zxdb::Syntax::kWarning, "👉 ");
+      help.Append(
+          zxdb::Syntax::kComment,
+          "Please \"connect <ip>:<port>\" matching what you passed to\n   "
+          "\"debug_agent --port=<port>\" on the target system. Or try \"help\".");
+      console.Output(std::move(help));
     }
 
     loop.Run();

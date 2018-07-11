@@ -212,10 +212,16 @@ Err DoConnect(ConsoleContext* context, const Command& cmd,
         Console::get()->Output(err);
     } else {
       OutputBuffer msg;
-      msg.Append("Connected successfully.\n👉 ");
-      msg.Append(Syntax::kComment,
-                 "Normally you will \"run <program path>\" or \"attach "
-                 "<process koid>\".");
+      msg.Append("Connected successfully.\n");
+
+      // Assume if there's a callback this is not being run interactively.
+      // Otherwise, show the usage tip.
+      if (!callback) {
+        msg.Append(Syntax::kWarning, "👉 ");
+        msg.Append(Syntax::kComment,
+                   "Normally you will \"run <program path>\" or \"attach "
+                   "<process koid>\".");
+      }
       Console::get()->Output(std::move(msg));
     }
 
@@ -234,7 +240,10 @@ const char kDisconnectShortHelp[] =
 const char kDisconnectHelp[] =
     R"(disconnect
 
-  Disconnects from the remote system. There are no arguments.
+  Disconnects from the remote system, or cancels an in-progress connection if
+  there is one.
+
+  There are no arguments.
 )";
 
 Err DoDisconnect(ConsoleContext* context, const Command& cmd,

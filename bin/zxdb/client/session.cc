@@ -623,6 +623,8 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending,
   connection_storage_->set_error_callback(
       [this]() { OnStreamError(); });
 
+  // Issue success callbacks.
+  system_.DidConnect();
   if (callback)
     callback(Err());
 }

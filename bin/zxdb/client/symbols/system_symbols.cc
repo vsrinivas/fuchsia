@@ -94,7 +94,7 @@ bool SystemSymbols::LoadBuildIDFile(std::string* msg) {
   fclose(id_file);
   build_id_to_file_ = ParseIds(contents);
 
-  *msg = fxl::StringPrintf("Loaded %zu system symbol mappings from \"%s\".",
+  *msg = fxl::StringPrintf("Loaded %zu system symbol mappings from:\n  %s",
                            build_id_to_file_.size(), file_name.c_str());
   return true;
 }

@@ -56,9 +56,10 @@ class SystemSymbols {
   // Returns the directory to which paths are relative.
   const std::string& build_dir() const { return build_dir_; }
 
-  // Loads the build ID file, clearing existing state. Returns true if the
-  // load succeeded. In both success and failure case, *msg will be filled with
-  // an informational message. See also AddBuildIDToFileMapping().
+  // Loads the build ID file, clearing existing state (it can be called more
+  // than once to reload). Returns true if the load succeeded. In both success
+  // and failure case, *msg will be filled with an informational message. See
+  // also AddBuildIDToFileMapping().
   bool LoadBuildIDFile(std::string* msg);
 
   // Explicitly inserts an ID mapping. Used for unit tests.
