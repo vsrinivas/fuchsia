@@ -46,5 +46,5 @@ def _configure_crosstool_impl(repository_ctx):
 
 
 install_fuchsia_crosstool = repository_rule(
-    implementation = _configure_crosstool_impl
+    implementation = _configure_crosstool_impl,
 )

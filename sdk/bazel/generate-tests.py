@@ -43,6 +43,9 @@ load("@fuchsia_sdk//build_defs:crosstool.bzl", "install_fuchsia_crosstool")
 install_fuchsia_crosstool(
     name = "fuchsia_crosstool",
 )
+
+load("@fuchsia_sdk//build_defs:setup_dart.bzl", "setup_dart")
+setup_dart()
 ''' % os.path.relpath(args.sdk, args.output))
 
 

@@ -41,6 +41,7 @@ class BazelBuilder(Builder):
             domains=['cpp', 'dart', 'exe', 'fidl'], ignored_domains=['image'])
         self.output = output
         self.is_overlay = overlay
+        self.dart_vendor_packages = {}
 
 
     def source(self, *args):
@@ -62,6 +63,18 @@ class BazelBuilder(Builder):
             file.write(template.render(data=data))
 
 
+    def add_dart_vendor_package(self, name, version):
+        '''Adds a reference to a new Dart third-party package.'''
+        if name in self.dart_vendor_packages:
+            existing_version = self.dart_vendor_packages[name]
+            if existing_version != version:
+                raise Exception('Dart package %s can only have one version; '
+                                '%s and %s requested.' % (name, version,
+                                                          existing_version))
+        else:
+            self.dart_vendor_packages[name] = version
+
+
     def prepare(self):
         if self.is_overlay:
             return
@@ -78,6 +91,11 @@ class BazelBuilder(Builder):
         tools_root = os.path.join(self.output, 'tools')
         for directory, _, _ in os.walk(tools_root, topdown=True):
             self.write_file(os.path.join(directory, 'BUILD'), 'tools', {})
+        # Write the rule for setting up Dart packages.
+        # TODO(pylaligand): this process currently does not capture dependencies
+        # between vendor packages.
+        self.write_file(self.dest('build_defs', 'setup_dart.bzl'),
+                       'setup_dart_bzl', self.dart_vendor_packages)
 
 
     def install_crosstool(self):
@@ -124,6 +142,13 @@ class BazelBuilder(Builder):
 
         for dep in atom.deps:
             library.deps.append('//dart/' + sanitize(dep.name))
+
+        for tag, value in atom.tags.iteritems():
+            if not tag.startswith('3p:'):
+                continue
+            name = tag.split(':', 1)[1]
+            library.deps.append('@vendor_%s//:%s' % (name, name))
+            self.add_dart_vendor_package(name, value)
 
         self.write_file(os.path.join(base, 'BUILD'), 'dart_library', library)
 
