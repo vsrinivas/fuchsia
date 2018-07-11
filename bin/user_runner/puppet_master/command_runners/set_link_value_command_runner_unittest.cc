@@ -13,7 +13,8 @@ namespace {
 
 class SetLinkValueCommandRunnerTest : public gtest::TestLoopFixture {
  protected:
-  std::unique_ptr<SetLinkValueCommandRunner> runner_;
+  std::unique_ptr<SetLinkValueCommandRunner> runner_{
+      nullptr /* session_storage */};
 };
 
 TEST_F(SetLinkValueCommandRunnerTest, EmptyTest) {}

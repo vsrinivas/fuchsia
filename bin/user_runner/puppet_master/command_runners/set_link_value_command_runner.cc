@@ -8,7 +8,9 @@
 
 namespace modular {
 
-SetLinkValueCommandRunner::SetLinkValueCommandRunner() {}
+SetLinkValueCommandRunner::SetLinkValueCommandRunner(
+    SessionStorage* const session_storage)
+    : CommandRunner(session_storage) {}
 
 SetLinkValueCommandRunner::~SetLinkValueCommandRunner() = default;
 
@@ -16,7 +18,6 @@ void SetLinkValueCommandRunner::Execute(
     fidl::StringPtr story_id, fuchsia::modular::StoryCommand command,
     std::function<void(fuchsia::modular::ExecuteResult)> done) {
   FXL_CHECK(command.is_set_link_value());
-  // TODO(miguelfrde): implement
 }
 
 }  // namespace modular

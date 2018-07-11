@@ -8,7 +8,9 @@
 
 namespace modular {
 
-RemoveModCommandRunner::RemoveModCommandRunner() {}
+RemoveModCommandRunner::RemoveModCommandRunner(
+    SessionStorage* const session_storage)
+    : CommandRunner(session_storage) {}
 
 RemoveModCommandRunner::~RemoveModCommandRunner() = default;
 

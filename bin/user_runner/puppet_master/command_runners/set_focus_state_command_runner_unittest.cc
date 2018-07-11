@@ -13,7 +13,8 @@ namespace {
 
 class SetFocusStateCommandRunnerTest : public gtest::TestLoopFixture {
  protected:
-  std::unique_ptr<SetFocusStateCommandRunner> runner_;
+  std::unique_ptr<SetFocusStateCommandRunner> runner_{
+      nullptr /* session_storage */};
 };
 
 TEST_F(SetFocusStateCommandRunnerTest, EmptyTest) {}

@@ -5,6 +5,9 @@
 
 namespace modular {
 
+CommandRunner::CommandRunner(SessionStorage* const session_storage)
+    : session_storage_(session_storage) {}
+
 CommandRunner::~CommandRunner() = default;
 
 }  // namespace modular

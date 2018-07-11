@@ -13,7 +13,7 @@ namespace {
 
 class AddModCommandRunnerTest : public gtest::TestLoopFixture {
  protected:
-  std::unique_ptr<AddModCommandRunner> runner_;
+  std::unique_ptr<AddModCommandRunner> runner_{nullptr /* session_storage */};
 };
 
 TEST_F(AddModCommandRunnerTest, EmptyTest) {}

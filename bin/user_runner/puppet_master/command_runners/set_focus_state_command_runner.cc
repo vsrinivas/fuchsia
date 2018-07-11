@@ -8,7 +8,9 @@
 
 namespace modular {
 
-SetFocusStateCommandRunner::SetFocusStateCommandRunner() {}
+SetFocusStateCommandRunner::SetFocusStateCommandRunner(
+    SessionStorage* const session_storage)
+    : CommandRunner(session_storage) {}
 
 SetFocusStateCommandRunner::~SetFocusStateCommandRunner() = default;
 

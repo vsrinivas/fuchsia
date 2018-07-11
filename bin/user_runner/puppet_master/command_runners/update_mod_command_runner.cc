@@ -8,7 +8,9 @@
 
 namespace modular {
 
-UpdateModCommandRunner::UpdateModCommandRunner() {}
+UpdateModCommandRunner::UpdateModCommandRunner(
+    SessionStorage* const session_storage)
+    : CommandRunner(session_storage) {}
 
 UpdateModCommandRunner::~UpdateModCommandRunner() = default;
 
@@ -16,7 +18,6 @@ void UpdateModCommandRunner::Execute(
     fidl::StringPtr story_id, fuchsia::modular::StoryCommand command,
     std::function<void(fuchsia::modular::ExecuteResult)> done) {
   FXL_CHECK(command.is_update_mod());
-  // TODO(miguelfrde): implement.
 }
 
 }  // namespace modular

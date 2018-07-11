@@ -9,6 +9,7 @@ source_set("command_runner") {
   ]
 
   public_deps = [
+    "//peridot/bin/user_runner/storage",
     "//peridot/public/fidl/fuchsia.modular",
   ]
 }

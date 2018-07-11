@@ -13,7 +13,7 @@ namespace modular {
 
 class SetFocusStateCommandRunner : public CommandRunner {
  public:
-  SetFocusStateCommandRunner();
+  SetFocusStateCommandRunner(SessionStorage* const session_storage);
   ~SetFocusStateCommandRunner();
 
   void Execute(

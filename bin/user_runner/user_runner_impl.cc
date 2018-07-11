@@ -603,7 +603,8 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
                  &story_provider_impl_));
 
   // Initialize the fuchsia::modular::PuppetMaster.
-  story_command_executor_ = MakeProductionStoryCommandExecutor(nullptr);
+  story_command_executor_ =
+      MakeProductionStoryCommandExecutor(nullptr, session_storage_.get());
   puppet_master_impl_.reset(
       new PuppetMasterImpl(story_command_executor_.get()));
 

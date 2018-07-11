@@ -24,7 +24,9 @@ class TestCommandRunner : public CommandRunner {
   using ExecuteFunc = std::function<fuchsia::modular::ExecuteStatus(
       fidl::StringPtr, fuchsia::modular::StoryCommand)>;
   TestCommandRunner(ExecuteFunc func, bool delay_done = false)
-      : func_(func), delay_done_(delay_done) {}
+      : CommandRunner(nullptr /*session_storage*/),
+        func_(func),
+        delay_done_(delay_done) {}
   ~TestCommandRunner() override = default;
 
   void Execute(

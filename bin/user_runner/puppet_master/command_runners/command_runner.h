@@ -7,15 +7,23 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 
+#include "peridot/bin/user_runner/storage/session_storage.h"
+
 namespace modular {
 
 class CommandRunner {
  public:
+  CommandRunner(SessionStorage* const session_storage);
   virtual ~CommandRunner();
 
   virtual void Execute(
       fidl::StringPtr story_id, fuchsia::modular::StoryCommand command,
       std::function<void(fuchsia::modular::ExecuteResult)> done) = 0;
+
+ protected:
+  // The storage used to execute commands.
+  // Not owned.
+  SessionStorage* const session_storage_;
 };
 
 }  // namespace modular

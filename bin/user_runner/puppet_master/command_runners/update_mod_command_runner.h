@@ -13,7 +13,7 @@ namespace modular {
 
 class UpdateModCommandRunner : public CommandRunner {
  public:
-  UpdateModCommandRunner();
+  UpdateModCommandRunner(SessionStorage* const session_storage);
   ~UpdateModCommandRunner();
 
   void Execute(

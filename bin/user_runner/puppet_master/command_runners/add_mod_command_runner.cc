@@ -8,7 +8,8 @@
 
 namespace modular {
 
-AddModCommandRunner::AddModCommandRunner() {}
+AddModCommandRunner::AddModCommandRunner(SessionStorage* const session_storage)
+    : CommandRunner(session_storage) {}
 
 AddModCommandRunner::~AddModCommandRunner() = default;
 

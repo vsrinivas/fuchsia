@@ -13,7 +13,7 @@ namespace modular {
 
 class SetLinkValueCommandRunner : public CommandRunner {
  public:
-  SetLinkValueCommandRunner();
+  SetLinkValueCommandRunner(SessionStorage* const session_storage);
   ~SetLinkValueCommandRunner();
 
   void Execute(

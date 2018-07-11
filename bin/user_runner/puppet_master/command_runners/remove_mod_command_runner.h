@@ -13,7 +13,7 @@ namespace modular {
 
 class RemoveModCommandRunner : public CommandRunner {
  public:
-  RemoveModCommandRunner();
+  RemoveModCommandRunner(SessionStorage* const session_storage);
   ~RemoveModCommandRunner();
 
   void Execute(
