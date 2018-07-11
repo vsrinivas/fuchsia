@@ -154,12 +154,25 @@ impl SharedBufferInner {
         }
     }
 
-    fn slice<'a, R: RangeBounds<usize>>(&self, range: R) -> SharedBufferInner {
+    fn slice<R: RangeBounds<usize>>(&self, range: R) -> SharedBufferInner {
         let range = canonicalize_range_infallible(self.len, range);
         SharedBufferInner {
             buf: offset_from(self.buf, range.start),
             len: range.end - range.start,
         }
+    }
+
+    fn split_at(&self, idx: usize) -> (SharedBufferInner, SharedBufferInner) {
+        assert!(idx <= self.len, "split index out of bounds");
+        let a = SharedBufferInner {
+            buf: self.buf,
+            len: idx,
+        };
+        let b = SharedBufferInner {
+            buf: offset_from(self.buf, idx),
+            len: self.len - idx,
+        };
+        (a, b)
     }
 }
 
@@ -223,7 +236,8 @@ fn canonicalize_upper_bound(len: usize, bound: Bound<&usize>) -> Option<usize> {
 // in range of len, and panicking if it is not or if the range is nonsensical.
 fn canonicalize_range_infallible<R: RangeBounds<usize>>(len: usize, range: R) -> Range<usize> {
     let lower = canonicalize_lower_bound(range.start_bound());
-    let upper = canonicalize_upper_bound(len, range.end_bound()).expect("range out of bounds");
+    let upper =
+        canonicalize_upper_bound(len, range.end_bound()).expect("slice range out of bounds");
     assert!(lower <= upper, "invalid range");
     lower..upper
 }
@@ -435,8 +449,8 @@ impl SharedBuffer {
     ///
     /// # Panics
     ///
-    /// `slice` panics if `to` is larger than the size of the `SharedBuffer` or
-    /// if `from > to`.
+    /// `slice` panics if `range` is out of bounds of `self` or if `range` is
+    /// nonsensical (its lower bound is larger than its upper bound).
     #[inline]
     pub fn slice<'a, R: RangeBounds<usize>>(&'a self, range: R) -> SharedBufferSlice<'a> {
         SharedBufferSlice {
@@ -454,8 +468,8 @@ impl SharedBuffer {
     ///
     /// # Panics
     ///
-    /// `slice_mut` panics if `to` is larger than the size of the `SharedBuffer`
-    /// or if `from > to`.
+    /// `slice_mut` panics if `range` is out of bounds of `self` or if `range`
+    /// is nonsensical (its lower bound is larger than its upper bound).
     #[inline]
     pub fn slice_mut<'a, R: RangeBounds<usize>>(
         &'a mut self, range: R,
@@ -466,20 +480,70 @@ impl SharedBuffer {
         }
     }
 
+    /// Create two non-overlapping slices of the original `SharedBuffer`.
+    ///
+    /// Just like the `split_at` method on array and slice references,
+    /// `split_at` constructs one `SharedBufferSlice` which represents bytes
+    /// `[0, idx)`, and one which represents bytes `[idx, len)`, where `len` is
+    /// the length of the buffer.
+    ///
+    /// # Panics
+    ///
+    /// `split_at` panics if `idx > self.len()`.
+    #[inline]
+    pub fn split_at<'a>(&'a self, idx: usize) -> (SharedBufferSlice<'a>, SharedBufferSlice<'a>) {
+        let (a, b) = self.inner.split_at(idx);
+        let a = SharedBufferSlice {
+            inner: a,
+            _marker: PhantomData,
+        };
+        let b = SharedBufferSlice {
+            inner: b,
+            _marker: PhantomData,
+        };
+        (a, b)
+    }
+
+    /// Create two non-overlapping mutable slices of the original `SharedBuffer`.
+    ///
+    /// Just like the `split_at_mut` method on array and slice references,
+    /// `split_at_miut` constructs one `SharedBufferSliceMut` which represents
+    /// bytes `[0, idx)`, and one which represents bytes `[idx, len)`, where
+    /// `len` is the length of the buffer.
+    ///
+    /// # Panics
+    ///
+    /// `split_at_mut` panics if `idx > self.len()`.
+    #[inline]
+    pub fn split_at_mut<'a>(
+        &'a mut self, idx: usize,
+    ) -> (SharedBufferSliceMut<'a>, SharedBufferSliceMut<'a>) {
+        let (a, b) = self.inner.split_at(idx);
+        let a = SharedBufferSliceMut {
+            inner: a,
+            _marker: PhantomData,
+        };
+        let b = SharedBufferSliceMut {
+            inner: b,
+            _marker: PhantomData,
+        };
+        (a, b)
+    }
+
     /// Get the buffer pointer and length so that the memory can be freed.
-    /// 
+    ///
     /// This method is an alternative to calling `consume` if relinquishing
     /// ownership of the object is infeasible (for example, when the object is a
     /// struct field and thus can't be moved out of the struct). Since it allows
     /// the object to continue existing, it must be used with care (see the
     /// "Safety" section below).
-    /// 
+    ///
     /// # Safety
-    /// 
+    ///
     /// The returned pointer must *only* be used to free the memory. Since the
     /// memory is shared by another process, using it as a normal raw pointer to
     /// normal memory owned by this process is unsound.
-    /// 
+    ///
     /// If the pointer is used for this purpose, then the caller must ensure
     /// that no methods will be called on the object after the call to
     /// `as_ptr_len`. The only scenario in which the object may be used again is
@@ -582,23 +646,47 @@ impl<'a> SharedBufferSlice<'a> {
         fence(Ordering::Acquire);
     }
 
-    /// Create a slice of the original `SharedBuffer`.
+    /// Create a sub-slice of this `SharedBufferSlice`.
     ///
     /// Just like the slicing operation on array and slice references, `slice`
-    /// constructs a new `SharedBuffer` which points to the same memory as the
-    /// original, but starting and index `from` (inclusive) and ending at index
-    /// `to` (exclusive).
+    /// constructs a new `SharedBufferSlice` which points to the same memory as
+    /// the original, but starting and index `from` (inclusive) and ending at
+    /// index `to` (exclusive).
     ///
     /// # Panics
     ///
-    /// `slice` panics if `to` is larger than the size of the `SharedBuffer` or
-    /// if `from > to`.
+    /// `slice` panics if `range` is out of bounds of `self` or if `range` is
+    /// nonsensical (its lower bound is larger than its upper bound).
     #[inline]
-    pub fn slice<R: RangeBounds<usize>>(&'a self, range: R) -> SharedBufferSlice<'a> {
+    pub fn slice<R: RangeBounds<usize>>(&self, range: R) -> SharedBufferSlice<'a> {
         SharedBufferSlice {
             inner: self.inner.slice(range),
             _marker: PhantomData,
         }
+    }
+
+    /// Split this `SharedBufferSlice` in two.
+    ///
+    /// Just like the `split_at` method on array and slice references,
+    /// `split_at` constructs one `SharedBufferSlice` which represents bytes
+    /// `[0, idx)`, and one which represents bytes `[idx, len)`, where `len` is
+    /// the length of the buffer slice.
+    ///
+    /// # Panics
+    ///
+    /// `split_at` panics if `idx > self.len()`.
+    #[inline]
+    pub fn split_at(&self, idx: usize) -> (SharedBufferSlice<'a>, SharedBufferSlice<'a>) {
+        let (a, b) = self.inner.split_at(idx);
+        let a = SharedBufferSlice {
+            inner: a,
+            _marker: PhantomData,
+        };
+        let b = SharedBufferSlice {
+            inner: b,
+            _marker: PhantomData,
+        };
+        (a, b)
     }
 
     /// The number of bytes in this `SharedBufferSlice`.
@@ -760,7 +848,7 @@ impl<'a> SharedBufferSliceMut<'a> {
         fence(Ordering::Release);
     }
 
-    /// Create a slice of the original `SharedBufferSliceMut`.
+    /// Create a sub-slice of this `SharedBufferSliceMut`.
     ///
     /// Just like the slicing operation on array and slice references, `slice`
     /// constructs a new `SharedBufferSlice` which points to the same memory as
@@ -769,10 +857,10 @@ impl<'a> SharedBufferSliceMut<'a> {
     ///
     /// # Panics
     ///
-    /// `slice` panics if `to` is larger than the size of the
-    /// `SharedBufferSliceMut` or if `from > to`.
+    /// `slice` panics if `range` is out of bounds of `self` or if `range` is
+    /// nonsensical (its lower bound is larger than its upper bound).
     #[inline]
-    pub fn slice<R: RangeBounds<usize>>(&'a self, range: R) -> SharedBufferSlice<'a> {
+    pub fn slice<R: RangeBounds<usize>>(&self, range: R) -> SharedBufferSlice<'a> {
         SharedBufferSlice {
             inner: self.inner.slice(range),
             _marker: PhantomData,
@@ -788,14 +876,64 @@ impl<'a> SharedBufferSliceMut<'a> {
     ///
     /// # Panics
     ///
-    /// `slice_mut` panics if `to` is larger than the size of the
-    /// `SharedBufferSliceMut` or if `from > to`.
+    /// `slice_mut` panics if `range` is out of bounds of `self` or if `range`
+    /// is nonsensical (its lower bound is larger than its upper bound).
     #[inline]
-    pub fn slice_mut<R: RangeBounds<usize>>(&'a mut self, range: R) -> SharedBufferSliceMut<'a> {
+    pub fn slice_mut<R: RangeBounds<usize>>(&mut self, range: R) -> SharedBufferSliceMut<'a> {
         SharedBufferSliceMut {
             inner: self.inner.slice(range),
             _marker: PhantomData,
         }
+    }
+
+    /// Split this `SharedBufferSliceMut` into two immutable slices.
+    ///
+    /// Just like the `split_at` method on array and slice references,
+    /// `split_at` constructs one `SharedBufferSlice` which represents bytes
+    /// `[0, idx)`, and one which represents bytes `[idx, len)`, where `len` is
+    /// the length of the buffer slice.
+    ///
+    /// # Panics
+    ///
+    /// `split_at` panics if `idx > self.len()`.
+    #[inline]
+    pub fn split_at(&self, idx: usize) -> (SharedBufferSlice<'a>, SharedBufferSlice<'a>) {
+        let (a, b) = self.inner.split_at(idx);
+        let a = SharedBufferSlice {
+            inner: a,
+            _marker: PhantomData,
+        };
+        let b = SharedBufferSlice {
+            inner: b,
+            _marker: PhantomData,
+        };
+        (a, b)
+    }
+
+    /// Split this `SharedBufferSliceMut` in two.
+    ///
+    /// Just like the `split_at_mut` method on array and slice references,
+    /// `split_at` constructs one `SharedBufferSliceMut` which represents bytes
+    /// `[0, idx)`, and one which represents bytes `[idx, len)`, where `len` is
+    /// the length of the buffer slice.
+    ///
+    /// # Panics
+    ///
+    /// `split_at_mut` panics if `idx > self.len()`.
+    #[inline]
+    pub fn split_at_mut(
+        &mut self, idx: usize,
+    ) -> (SharedBufferSliceMut<'a>, SharedBufferSliceMut<'a>) {
+        let (a, b) = self.inner.split_at(idx);
+        let a = SharedBufferSliceMut {
+            inner: a,
+            _marker: PhantomData,
+        };
+        let b = SharedBufferSliceMut {
+            inner: b,
+            _marker: PhantomData,
+        };
+        (a, b)
     }
 
     /// The number of bytes in this `SharedBufferSlice`.
@@ -876,6 +1014,55 @@ mod tests {
         bytes = [0; 8];
         assert_eq!(buf2.read(&mut bytes[..]), 4);
         assert_eq!(bytes, [4, 5, 6, 7, 0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn test_split() {
+        // various splits give us the lengths we expect
+        let buf = unsafe { SharedBuffer::new(ptr::null_mut(), 10) };
+        let (tmp1, tmp2) = buf.split_at(10);
+        assert_eq!(tmp1.len(), 10);
+        assert_eq!(tmp2.len(), 0);
+        let (tmp1, tmp2) = buf.split_at(5);
+        assert_eq!(tmp1.len(), 5);
+        assert_eq!(tmp2.len(), 5);
+        let (tmp1, tmp2) = buf.split_at(0);
+        assert_eq!(tmp1.len(), 0);
+        assert_eq!(tmp2.len(), 10);
+
+        // initialize some memory and turn it into a SharedBuffer
+        const INIT: [u8; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
+        let mut buf_memory = INIT;
+        let mut buf = unsafe { buf_from_ref(&mut buf_memory) };
+
+        // we read the same initial contents back
+        let mut bytes = [0u8; 8];
+        assert_eq!(buf.read_at(0, &mut bytes[..]), 8);
+        assert_eq!(bytes, INIT);
+
+        // split in two equal-sized halves
+        let (mut buf1, mut buf2) = buf.split_at_mut(4);
+
+        // now we read back the halves separately
+        bytes = [0; 8];
+        assert_eq!(buf1.read(&mut bytes[..4]), 4);
+        assert_eq!(buf2.read(&mut bytes[4..]), 4);
+        assert_eq!(bytes, [0, 1, 2, 3, 4, 5, 6, 7]);
+
+        // use the mutable slices to write to the buffer
+        assert_eq!(buf1.write(&[7, 6, 5, 4]), 4);
+        assert_eq!(buf2.write(&[3, 2, 1, 0]), 4);
+
+        // split again into equal-sized quarters
+        let ((buf1, buf2), (buf3, buf4)) = (buf1.split_at(2), buf2.split_at(2));
+
+        // now we read back the quarters separately
+        bytes = [0; 8];
+        assert_eq!(buf1.read(&mut bytes[..2]), 2);
+        assert_eq!(buf2.read(&mut bytes[2..4]), 2);
+        assert_eq!(buf3.read(&mut bytes[4..6]), 2);
+        assert_eq!(buf4.read(&mut bytes[6..]), 2);
+        assert_eq!(bytes, [7, 6, 5, 4, 3, 2, 1, 0]);
     }
 
     #[test]
