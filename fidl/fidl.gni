@@ -84,6 +84,10 @@ template("fidl") {
     fidl_c_client(target_name) {
       forward_variables_from(invoker, "*")
     }
+
+    fidl_c_server(target_name) {
+      forward_variables_from(invoker, "*")
+    }
   } else {
     assert(false,
            "Unable to process FIDL target in toolchain $current_toolchain.")
