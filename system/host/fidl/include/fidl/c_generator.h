@@ -36,6 +36,7 @@ public:
     std::ostringstream ProduceServer();
 
     struct Member {
+        flat::Type::Kind kind;
         std::string type;
         std::string name;
         std::vector<uint32_t> array_counts;

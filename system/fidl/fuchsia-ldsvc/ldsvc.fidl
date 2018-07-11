@@ -12,23 +12,24 @@ library fuchsia.ldsvc;
 // WARNING: This interface is manually implemented in libldmsg.a. Please
 // update that implmentation if you change this protocol.
 
+[Layout="Simple"]
 interface Loader {
     // Cleanly shutdown the connection to the Loader service.
     1: Done();
 
     // The dynamic linker sends |object_name| and gets back a VMO
     // handle containing the file.
-    2: LoadObject(string object_name) -> (status rv, handle<vmo>? object);
+    2: LoadObject(string:1024 object_name) -> (status rv, handle<vmo>? object);
 
     // The program loader sends the script |interperter_name| from
     // hashbang and gets back a VMO to execute in place of the script.
-    3: LoadScriptInterpreter(string interpreter_name) -> (status rv, handle<vmo>? object);
+    3: LoadScriptInterpreter(string:1024 interpreter_name) -> (status rv, handle<vmo>? object);
 
     // The dynamic linker sends a |config| identifying its load
     // configuration.  This is intended to affect how later
     // |LoadObject| requests decide what particular implementation
     // file to supply for a given name.
-    4: Config(string config) -> (status rv);
+    4: Config(string:1024 config) -> (status rv);
 
     // Obtain a new loader service connection.
     5: Clone(request<Loader> loader) -> (status rv);
@@ -46,7 +47,7 @@ interface Loader {
     //
     // This is intended to be a developer-oriented feature and might
     // not ordinarily be available in production runs.
-    7: DebugPublishDataSink(string data_sink, handle<vmo> data) -> (status rv);
+    7: DebugPublishDataSink(string:1024 data_sink, handle<vmo> data) -> (status rv);
 
     // The program runtime names a |config_name| referring to a debug
     // configuration of some kind and gets back a VMO to read
@@ -56,5 +57,5 @@ interface Loader {
     //
     // This is intended to be a developer-oriented feature and might
     // not ordinarily be available in production runs.
-    8: DebugLoadConfig(string config_name) -> (status rv, handle<vmo>? config);
+    8: DebugLoadConfig(string:1024 config_name) -> (status rv, handle<vmo>? config);
 };

@@ -10,13 +10,15 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/client_tests.c \
+    $(LOCAL_DIR)/ldsvc_tests.c \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/server_tests.c \
 
 MODULE_NAME := fidl-simple-test
 
 MODULE_FIDL_LIBS := \
-    system/fidl/fuchsia-crash
+    system/fidl/fuchsia-crash \
+    system/fidl/fuchsia-ldsvc \
 
 MODULE_STATIC_LIBS := \
     system/ulib/fidl \

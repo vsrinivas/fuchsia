@@ -301,58 +301,6 @@ std::string NameFlatCType(const flat::Library* library, const flat::Type* type) 
     }
 }
 
-std::string NameFlatCOutType(const flat::Library* library, const flat::Type* type) {
-    for (;;) {
-        switch (type->kind) {
-        case flat::Type::Kind::kHandle:
-        case flat::Type::Kind::kRequestHandle:
-            return "zx_handle_t*";
-
-        case flat::Type::Kind::kVector:
-            return "fidl_vector_t*";
-        case flat::Type::Kind::kString:
-            return "fidl_string_t*";
-
-        case flat::Type::Kind::kPrimitive: {
-            auto primitive_type = static_cast<const flat::PrimitiveType*>(type);
-            return NamePrimitiveCType(primitive_type->subtype) + "*";
-        }
-
-        case flat::Type::Kind::kArray: {
-            auto array_type = static_cast<const flat::ArrayType*>(type);
-            type = array_type->element_type.get();
-            continue;
-        }
-
-        case flat::Type::Kind::kIdentifier: {
-            auto identifier_type = static_cast<const flat::IdentifierType*>(type);
-            auto named_decl = library->LookupType(identifier_type->name);
-            if (!named_decl)
-                abort();
-            switch (named_decl->kind) {
-                case flat::Decl::Kind::kConst: {
-                    abort();
-                }
-                case flat::Decl::Kind::kEnum:
-                case flat::Decl::Kind::kStruct:
-                case flat::Decl::Kind::kUnion: {
-                    std::string name = NameName(identifier_type->name, "_", "_") + "*";
-                    if (identifier_type->nullability == types::Nullability::kNullable) {
-                        // Cannot make an out type for nullable types.
-                        abort();
-                    }
-                    return name;
-                }
-                case flat::Decl::Kind::kInterface: {
-                    return "zx_handle_t*";
-                }
-                default: { abort(); }
-            }
-        }
-        }
-    }
-}
-
 std::string NameIdentifier(SourceLocation name) {
     // TODO(TO-704) C name escaping and ergonomics.
     return name.data();
