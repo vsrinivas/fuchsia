@@ -4538,17 +4538,21 @@ static zx_status_t ath10k_wmi_alloc_host_mem(struct ath10k* ar, uint32_t req_id,
     if (ret != ZX_OK) {
         return ret;
     }
-    pool_size = num_units * ROUNDUP(unit_len, 4);
-    ret = io_buffer_init(&ar->wmi.mem_chunks[idx].handle, bti_handle, pool_size,
-                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
 
+    struct ath10k_mem_chunk* chunk = &ar->wmi.mem_chunks[idx];
+    pool_size = num_units * ROUNDUP(unit_len, 4);
+    ret = io_buffer_init(&chunk->handle, bti_handle, pool_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (ret != ZX_OK) {
         return ret;
     }
 
-    struct ath10k_mem_chunk* chunk = &ar->wmi.mem_chunks[idx];
-    chunk->vaddr = io_buffer_virt(&chunk->handle);
     chunk->paddr = io_buffer_phys(&chunk->handle);
+    if (chunk->paddr + pool_size > 0x100000000ULL) {
+        ath10k_err("io buffer allocated with address above 32b range (see ZX-1073)\n");
+        io_buffer_release(&chunk->handle);
+        return ZX_ERR_NO_MEMORY;
+    }
+    chunk->vaddr = io_buffer_virt(&chunk->handle);
     chunk->len = pool_size;
     chunk->req_id = req_id;
 

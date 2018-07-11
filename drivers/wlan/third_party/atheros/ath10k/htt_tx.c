@@ -271,6 +271,11 @@ static zx_status_t ath10k_htt_tx_alloc_cont_txbuf(struct ath10k_htt* htt) {
     }
     htt->txbuf.vaddr = io_buffer_virt(&htt->txbuf.handle);
     htt->txbuf.paddr = io_buffer_phys(&htt->txbuf.handle);
+    if (htt->txbuf.paddr + size > 0x100000000ULL) {
+        ath10k_err("io buffer allocated with address above 32b range (see ZX-1073)\n");
+        io_buffer_release(&htt->txbuf.handle);
+        return ZX_ERR_NO_MEMORY;
+    }
 
     return ZX_OK;
 }
@@ -307,6 +312,11 @@ static zx_status_t ath10k_htt_tx_alloc_cont_frag_desc(struct ath10k_htt* htt) {
     }
     htt->frag_desc.vaddr = io_buffer_virt(&htt->frag_desc.handle);
     htt->frag_desc.paddr = io_buffer_phys(&htt->frag_desc.handle);
+    if (htt->frag_desc.paddr + size > 0x100000000ULL) {
+        ath10k_err("io buffer allocated with address above 32b range (see ZX-1073)\n");
+        io_buffer_release(&htt->frag_desc.handle);
+        return ZX_ERR_NO_MEMORY;
+    }
 
     return ZX_OK;
 }
@@ -348,6 +358,11 @@ static zx_status_t ath10k_htt_tx_alloc_txq(struct ath10k_htt* htt) {
     }
     htt->tx_q_state.vaddr = io_buffer_virt(&htt->tx_q_state.handle);
     htt->tx_q_state.paddr = io_buffer_phys(&htt->tx_q_state.handle);
+    if (htt->tx_q_state.paddr + size > 0x100000000ULL) {
+        ath10k_err("io buffer allocated with address above 32b range (see ZX-1073)\n");
+        io_buffer_release(&htt->tx_q_state.handle);
+        return ZX_ERR_NO_MEMORY;
+    }
 
     return ZX_OK;
 }

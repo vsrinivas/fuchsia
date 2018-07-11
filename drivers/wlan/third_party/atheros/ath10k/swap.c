@@ -135,6 +135,10 @@ ath10k_swap_code_seg_alloc(struct ath10k* ar, size_t swap_bin_len) {
 
     paddr = io_buffer_phys(&seg_info->handles[0]);
     virt_addr = io_buffer_virt(&seg_info->handles[0]);
+    if (paddr + swap_bin_len > 0x100000000ULL) {
+        ath10k_err("io buffer allocated with address above 32b range (see ZX-1073)\n");
+        goto err_free_io_buf;
+    }
 
     seg_info->seg_hw_info.bus_addr[0] = paddr;
     seg_info->seg_hw_info.size = swap_bin_len;
@@ -146,6 +150,8 @@ ath10k_swap_code_seg_alloc(struct ath10k* ar, size_t swap_bin_len) {
 
     return seg_info;
 
+err_free_io_buf:
+    io_buffer_release(&seg_info->handles[0]);
 err_free_seg_info:
     free(seg_info);
     return NULL;

@@ -411,7 +411,6 @@ static zx_status_t ath10k_htt_rx_pop_paddr_list(struct ath10k_htt* htt,
 
 zx_status_t ath10k_htt_rx_alloc(struct ath10k_htt* htt) {
     struct ath10k* ar = htt->ar;
-    size_t size;
     zx_status_t ret;
 
     htt->rx_confused = false;
@@ -433,7 +432,7 @@ zx_status_t ath10k_htt_rx_alloc(struct ath10k_htt* htt) {
         goto err_netbuf;
     }
 
-    size = htt->rx_ring.size * sizeof(htt->rx_ring.paddrs_ring);
+    size_t ring_size = htt->rx_ring.size * sizeof(htt->rx_ring.paddrs_ring);
 
     zx_handle_t bti_handle;
     ret = ath10k_hif_get_bti_handle(ar, &bti_handle);
@@ -442,20 +441,30 @@ zx_status_t ath10k_htt_rx_alloc(struct ath10k_htt* htt) {
     }
 
     // Can this be a IO_BUFFER_RO?
-    ret = io_buffer_init(&htt->rx_ring.io_buf, bti_handle, size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    ret = io_buffer_init(&htt->rx_ring.io_buf, bti_handle, ring_size,
+                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (ret != ZX_OK) {
         goto err_dma_ring;
     }
     htt->rx_ring.paddrs_ring = io_buffer_virt(&htt->rx_ring.io_buf);
     htt->rx_ring.base_paddr = io_buffer_phys(&htt->rx_ring.io_buf);
+    if (htt->rx_ring.base_paddr + ring_size > 0x100000000ULL) {
+        ath10k_err("io buffer allocated with address above 32b range (see ZX-1073)\n");
+        goto err_dma_idx;
+    }
 
-    ret = io_buffer_init(&htt->rx_ring.alloc_idx.io_buf, bti_handle,
-                         sizeof(*htt->rx_ring.alloc_idx.vaddr), IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    size_t idx_size = sizeof(*htt->rx_ring.alloc_idx.vaddr);
+    ret = io_buffer_init(&htt->rx_ring.alloc_idx.io_buf, bti_handle, idx_size,
+                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (ret != ZX_OK) {
         goto err_dma_idx;
     }
     htt->rx_ring.alloc_idx.vaddr = io_buffer_virt(&htt->rx_ring.alloc_idx.io_buf);
     htt->rx_ring.alloc_idx.paddr = io_buffer_phys(&htt->rx_ring.alloc_idx.io_buf);
+    if (htt->rx_ring.alloc_idx.paddr + idx_size > 0x100000000ULL) {
+        ath10k_err("io buffer allocated with address above 32b range (see ZX-1073)\n");
+        goto err_dma_idx_map;
+    }
 
     htt->rx_ring.sw_rd_idx.msdu_payld = htt->rx_ring.size_mask;
     *htt->rx_ring.alloc_idx.vaddr = 0;
@@ -475,6 +484,8 @@ zx_status_t ath10k_htt_rx_alloc(struct ath10k_htt* htt) {
                htt->rx_ring.size, htt->rx_ring.fill_level);
     return ZX_OK;
 
+err_dma_idx_map:
+    io_buffer_release(&htt->rx_ring.alloc_idx.io_buf);
 err_dma_idx:
     io_buffer_release(&htt->rx_ring.io_buf);
 err_dma_ring:
