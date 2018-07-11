@@ -23,6 +23,14 @@ declare_args() {
   # [`zircon_use_asan`](#zircon_use_asan).
   zircon_build_dir = ""
 
+  # Zircon `USE_ASAN=true` build directory for `target_cpu` containing
+  # `bootfs.manifest` with libraries and `devhost.asan`.
+  #
+  # If left `""` (the default), then this is computed from
+  # [`zircon_build_dir`](#zircon_build_dir) and
+  # [`zircon_use_asan`](#zircon_use_asan).
+  zircon_asan_build_dir = ""
+
   # Set this if [`zircon_build_dir`](#zircon_build_dir) was built with
   # `USE_ASAN=true`, e.g. `//scripts/build-zircon.sh -A`.  This mainly
   # affects the defaults for [`zircon_build_dir`](#zircon_build_dir) and
@@ -37,6 +45,12 @@ if (zircon_build_dir == "") {
   if (zircon_use_asan) {
     zircon_build_dir += "-asan"
   }
+}
+
+# If zircon_use_asan is true, then zircon_build_dir has the ASan bits.
+# Otherwise, they need to be found elsewhere.
+if (zircon_asan_build_dir == "" && !zircon_use_asan) {
+  zircon_asan_build_dir = "${zircon_build_dir}-asan"
 }
 
 # Template for running a Zircon host tool as part of the build.
