@@ -82,10 +82,6 @@ class RemoteDevice final {
   void SetLEAdvertisingData(int8_t rssi,
                             const common::ByteBuffer& advertising_data);
 
-  // Updates the device based on extended inquiry response data.
-  // |bytes| contains the data from an ExtendedInquiryResponse event.
-  void SetExtendedInquiryResponse(const common::ByteBuffer& bytes);
-
   // Updates the device based on inquiry result data obtained through a
   // BR/EDR discovery procedure.
   void SetInquiryData(const hci::InquiryResult& result);
@@ -208,6 +204,10 @@ class RemoteDevice final {
                DeviceCallback update_expiry_callback,
                const std::string& identifier,
                const common::DeviceAddress& address, bool connectable);
+
+  // Updates the device based on extended inquiry response data.
+  // |bytes| contains the data from an ExtendedInquiryResponse event.
+  void SetExtendedInquiryResponse(const common::ByteBuffer& bytes);
 
   DeviceCallback notify_listeners_callback_;
   DeviceCallback update_expiry_callback_;

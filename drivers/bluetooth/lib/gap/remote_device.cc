@@ -115,27 +115,6 @@ void RemoteDevice::SetLEAdvertisingData(
   }
 }
 
-void RemoteDevice::SetExtendedInquiryResponse(const common::ByteBuffer& bytes) {
-  FXL_DCHECK(bytes.size() <= hci::kExtendedInquiryResponseBytes);
-  update_expiry_callback_(*this);
-
-  if (extended_inquiry_response_.size() < bytes.size()) {
-    extended_inquiry_response_ = common::DynamicByteBuffer(bytes.size());
-  }
-  bytes.Copy(&extended_inquiry_response_);
-
-  // TODO(jamuraa): maybe rename this class?
-  AdvertisingDataReader reader(extended_inquiry_response_);
-
-  gap::DataType type;
-  common::BufferView data;
-  while (reader.GetNextField(&type, &data)) {
-    if (type == gap::DataType::kCompleteLocalName) {
-      SetName(std::string(data.ToString()));
-    }
-  }
-}
-
 void RemoteDevice::SetInquiryData(const hci::InquiryResult& result) {
   FXL_DCHECK(address_.value() == result.bd_addr);
   update_expiry_callback_(*this);
@@ -202,6 +181,29 @@ bool RemoteDevice::TryMakeNonTemporary() {
 std::string RemoteDevice::ToString() const {
   return fxl::StringPrintf("{remote-device id: %s, address: %s}",
                            identifier_.c_str(), address_.ToString().c_str());
+}
+
+// Private methods below.
+
+void RemoteDevice::SetExtendedInquiryResponse(const common::ByteBuffer& bytes) {
+  FXL_DCHECK(bytes.size() <= hci::kExtendedInquiryResponseBytes);
+  update_expiry_callback_(*this);
+
+  if (extended_inquiry_response_.size() < bytes.size()) {
+    extended_inquiry_response_ = common::DynamicByteBuffer(bytes.size());
+  }
+  bytes.Copy(&extended_inquiry_response_);
+
+  // TODO(jamuraa): maybe rename this class?
+  AdvertisingDataReader reader(extended_inquiry_response_);
+
+  gap::DataType type;
+  common::BufferView data;
+  while (reader.GetNextField(&type, &data)) {
+    if (type == gap::DataType::kCompleteLocalName) {
+      SetName(std::string(data.ToString()));
+    }
+  }
 }
 
 }  // namespace gap

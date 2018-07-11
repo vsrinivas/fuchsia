@@ -479,15 +479,6 @@ TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
-       SetExtendedInquiryResponseUpdatesExpiration) {
-  AdvanceTimeBy(zx::sec(60) - zx::msec(1));
-  device_ptr()->SetExtendedInquiryResponse(common::StaticByteBuffer<1>{});
-  AdvanceTimeBy(zx::msec(1));
-  RunLoopUntilIdle();
-  EXPECT_TRUE(cache()->FindDeviceById(device_id()));
-}
-
-TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        SetInquiryDataFromInquiryResultUpdatesExpiration) {
   hci::InquiryResult ir;
   ir.bd_addr = device_addr().value();
