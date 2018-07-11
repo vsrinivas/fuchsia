@@ -124,10 +124,15 @@ void osd_debug_dump_register_all(astro_display_t* display)
 enum {
     VPU_VIU_OSD1_BLK_CFG_TBL_ADDR_SHIFT = 16,
     VPU_VIU_OSD1_BLK_CFG_LITTLE_ENDIAN = (1 << 15),
+    VPU_VIU_OSD1_BLK_CFG_OSD_BLK_MODE_32_BIT = 5,
     VPU_VIU_OSD1_BLK_CFG_OSD_BLK_MODE_16_BIT = 4,
     VPU_VIU_OSD1_BLK_CFG_OSD_BLK_MODE_SHIFT = 8,
     VPU_VIU_OSD1_BLK_CFG_COLOR_MATRIX_565 = 4,
+    VPU_VIU_OSD1_BLK_CFG_COLOR_MATRIX_ARGB = 1,
     VPU_VIU_OSD1_BLK_CFG_COLOR_MATRIX_SHIFT = 2,
+
+    VPU_VIU_OSD1_CTRL_STAT2_REPLACED_ALPHA_EN = (1 << 14),
+    VPU_VIU_OSD1_CTRL_STAT2_REPLACED_ALPHA_SHIFT = 6u,
 };
 
 zx_status_t configure_osd(astro_display_t* display, uint8_t default_idx)
@@ -135,8 +140,14 @@ zx_status_t configure_osd(astro_display_t* display, uint8_t default_idx)
     // TODO: OSD for g12a is slightly different from gxl. Currently, uBoot enables
     // scaling and 16bit mode (565) and configures various layers based on that assumption.
     // Since we don't have a full end-to-end driver at this moment, we cannot simply turn off
-    // scaling and set it as 32bit ARGB.
-    // For now, we will only configure the OSD layer to use the new Canvas index.
+    // scaling.
+    // For now, we will only configure the OSD layer to use the new Canvas index, and use 32-bit color.
+    uint32_t ctrl_stat2 = READ32_VPU_REG(VPU_VIU_OSD1_CTRL_STAT2);
+    ctrl_stat2 |= VPU_VIU_OSD1_CTRL_STAT2_REPLACED_ALPHA_EN |
+                  (0xff << VPU_VIU_OSD1_CTRL_STAT2_REPLACED_ALPHA_SHIFT);
+    // Set to use BGRX instead of BGRA.
+    WRITE32_VPU_REG(VPU_VIU_OSD1_CTRL_STAT2, ctrl_stat2);
+
     flip_osd(display, default_idx);
     return ZX_OK;
 }
@@ -146,8 +157,8 @@ void flip_osd(astro_display_t* display, uint8_t idx) {
     display->current_image = idx;
     uint32_t cfg_w0 = (idx << VPU_VIU_OSD1_BLK_CFG_TBL_ADDR_SHIFT) |
         VPU_VIU_OSD1_BLK_CFG_LITTLE_ENDIAN |
-        (VPU_VIU_OSD1_BLK_CFG_OSD_BLK_MODE_16_BIT << VPU_VIU_OSD1_BLK_CFG_OSD_BLK_MODE_SHIFT) |
-        (VPU_VIU_OSD1_BLK_CFG_COLOR_MATRIX_565 << VPU_VIU_OSD1_BLK_CFG_COLOR_MATRIX_SHIFT);
+        (VPU_VIU_OSD1_BLK_CFG_OSD_BLK_MODE_32_BIT << VPU_VIU_OSD1_BLK_CFG_OSD_BLK_MODE_SHIFT) |
+        (VPU_VIU_OSD1_BLK_CFG_COLOR_MATRIX_ARGB << VPU_VIU_OSD1_BLK_CFG_COLOR_MATRIX_SHIFT);
 
     WRITE32_VPU_REG(VPU_VIU_OSD1_BLK0_CFG_W0, cfg_w0);
 }

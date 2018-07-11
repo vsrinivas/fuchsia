@@ -22,7 +22,7 @@
 #include <zircon/device/display.h>
 #include <zircon/syscalls.h>
 
-static const zx_pixel_format_t _gsupported_pixel_formats = { ZX_PIXEL_FORMAT_RGB_565 };
+static const zx_pixel_format_t _gsupported_pixel_formats = { ZX_PIXEL_FORMAT_RGB_x888 };
 
 typedef struct image_info {
     zx_handle_t pmt;
@@ -283,7 +283,7 @@ static zx_status_t setup_display_if(astro_display_t* display) {
     mtx_lock(&display->display_lock);
 
     // allocate frame buffer
-    display->format = ZX_PIXEL_FORMAT_RGB_565;
+    display->format = ZX_PIXEL_FORMAT_RGB_x888;
     display->width  = 608;
     display->height = 1024;
     display->stride = astro_compute_linear_stride(
