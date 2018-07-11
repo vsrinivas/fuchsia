@@ -49,7 +49,7 @@ void FakeWavReader::Bind(
 }
 
 void FakeWavReader::Describe(DescribeCallback callback) {
-  callback(fuchsia::media::MediaResult::OK, size_, true);
+  callback(fuchsia::mediaplayer::MediaResult::OK, size_, true);
 }
 
 void FakeWavReader::ReadAt(uint64_t position, ReadAtCallback callback) {
@@ -60,7 +60,7 @@ void FakeWavReader::ReadAt(uint64_t position, ReadAtCallback callback) {
   zx::socket other_socket;
   zx_status_t status = zx::socket::create(0u, &socket_, &other_socket);
   FXL_DCHECK(status == ZX_OK);
-  callback(fuchsia::media::MediaResult::OK, std::move(other_socket));
+  callback(fuchsia::mediaplayer::MediaResult::OK, std::move(other_socket));
 
   position_ = position;
 
@@ -83,8 +83,8 @@ void FakeWavReader::WriteToSocket() {
       waiter_ = std::make_unique<async::Wait>(
           socket_.get(), ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED);
 
-      waiter_->set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
-                                  zx_status_t status,
+      waiter_->set_handler([this](async_dispatcher_t* dispatcher,
+                                  async::Wait* wait, zx_status_t status,
                                   const zx_packet_signal_t* signal) {
         if (status == ZX_ERR_CANCELED) {
           // Run loop has aborted...the app is shutting down.

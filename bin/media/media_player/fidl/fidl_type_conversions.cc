@@ -55,31 +55,31 @@ bool KnownEncodingsMatch() {
 }  // namespace
 
 media_player::Result
-TypeConverter<media_player::Result, fuchsia::media::MediaResult>::Convert(
-    fuchsia::media::MediaResult media_result) {
+TypeConverter<media_player::Result, fuchsia::mediaplayer::MediaResult>::Convert(
+    fuchsia::mediaplayer::MediaResult media_result) {
   switch (media_result) {
-    case fuchsia::media::MediaResult::OK:
+    case fuchsia::mediaplayer::MediaResult::OK:
       return media_player::Result::kOk;
-    case fuchsia::media::MediaResult::INTERNAL_ERROR:
+    case fuchsia::mediaplayer::MediaResult::INTERNAL_ERROR:
       return media_player::Result::kInternalError;
-    case fuchsia::media::MediaResult::UNSUPPORTED_OPERATION:
-    case fuchsia::media::MediaResult::NOT_IMPLEMENTED:
+    case fuchsia::mediaplayer::MediaResult::UNSUPPORTED_OPERATION:
+    case fuchsia::mediaplayer::MediaResult::NOT_IMPLEMENTED:
       return media_player::Result::kUnsupportedOperation;
-    case fuchsia::media::MediaResult::INVALID_ARGUMENT:
+    case fuchsia::mediaplayer::MediaResult::INVALID_ARGUMENT:
       return media_player::Result::kInvalidArgument;
-    case fuchsia::media::MediaResult::NOT_FOUND:
+    case fuchsia::mediaplayer::MediaResult::NOT_FOUND:
       return media_player::Result::kNotFound;
-    case fuchsia::media::MediaResult::UNKNOWN_ERROR:
-    case fuchsia::media::MediaResult::UNSUPPORTED_CONFIG:
-    case fuchsia::media::MediaResult::INSUFFICIENT_RESOURCES:
-    case fuchsia::media::MediaResult::BAD_STATE:
-    case fuchsia::media::MediaResult::BUF_OVERFLOW:
-    case fuchsia::media::MediaResult::FLUSHED:
-    case fuchsia::media::MediaResult::BUSY:
-    case fuchsia::media::MediaResult::PROTOCOL_ERROR:
-    case fuchsia::media::MediaResult::ALREADY_EXISTS:
-    case fuchsia::media::MediaResult::SHUTTING_DOWN:
-    case fuchsia::media::MediaResult::CONNECTION_LOST:
+    case fuchsia::mediaplayer::MediaResult::UNKNOWN_ERROR:
+    case fuchsia::mediaplayer::MediaResult::UNSUPPORTED_CONFIG:
+    case fuchsia::mediaplayer::MediaResult::INSUFFICIENT_RESOURCES:
+    case fuchsia::mediaplayer::MediaResult::BAD_STATE:
+    case fuchsia::mediaplayer::MediaResult::BUF_OVERFLOW:
+    case fuchsia::mediaplayer::MediaResult::FLUSHED:
+    case fuchsia::mediaplayer::MediaResult::BUSY:
+    case fuchsia::mediaplayer::MediaResult::PROTOCOL_ERROR:
+    case fuchsia::mediaplayer::MediaResult::ALREADY_EXISTS:
+    case fuchsia::mediaplayer::MediaResult::SHUTTING_DOWN:
+    case fuchsia::mediaplayer::MediaResult::CONNECTION_LOST:
       break;
   }
 
@@ -487,112 +487,6 @@ std::unique_ptr<media_player::StreamType> TypeConverter<
       return media_player::SubpictureStreamType::Create(
           input.encoding,
           To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters));
-  }
-
-  return nullptr;
-}
-
-fuchsia::media::MediaTypeSet
-TypeConverter<fuchsia::media::MediaTypeSet,
-              std::unique_ptr<media_player::StreamTypeSet>>::
-    Convert(const std::unique_ptr<media_player::StreamTypeSet>& input) {
-  FXL_DCHECK(KnownEncodingsMatch());
-
-  if (input == nullptr) {
-    return fuchsia::media::MediaTypeSet();
-  }
-
-  switch (input->medium()) {
-    case media_player::StreamType::Medium::kAudio: {
-      fuchsia::media::AudioMediaTypeSetDetails audio_details;
-      audio_details.sample_format = To<fuchsia::media::AudioSampleFormat>(
-          input->audio()->sample_format());
-      audio_details.min_channels = input->audio()->channels().min;
-      audio_details.max_channels = input->audio()->channels().max;
-      audio_details.min_frames_per_second =
-          input->audio()->frames_per_second().min;
-      audio_details.max_frames_per_second =
-          input->audio()->frames_per_second().max;
-      fuchsia::media::MediaTypeSetDetails details;
-      details.set_audio(std::move(audio_details));
-      fuchsia::media::MediaTypeSet media_type_set;
-      media_type_set.medium = fuchsia::media::MediaTypeMedium::AUDIO;
-      media_type_set.details = std::move(details);
-      media_type_set.encodings =
-          To<fidl::VectorPtr<fidl::StringPtr>>(input->encodings());
-      return media_type_set;
-    }
-    case media_player::StreamType::Medium::kVideo: {
-      fuchsia::media::VideoMediaTypeSetDetails video_details;
-      video_details.min_width = input->video()->width().min;
-      video_details.max_width = input->video()->width().max;
-      video_details.min_height = input->video()->height().min;
-      video_details.max_height = input->video()->height().max;
-      fuchsia::media::MediaTypeSetDetails details;
-      details.set_video(std::move(video_details));
-      fuchsia::media::MediaTypeSet media_type_set;
-      media_type_set.medium = fuchsia::media::MediaTypeMedium::VIDEO;
-      media_type_set.details = std::move(details);
-      media_type_set.encodings =
-          To<fidl::VectorPtr<fidl::StringPtr>>(input->encodings());
-      return media_type_set;
-    }
-    case media_player::StreamType::Medium::kText: {
-      fuchsia::media::MediaTypeSetDetails details;
-      details.set_text(fuchsia::media::TextMediaTypeSetDetails());
-      fuchsia::media::MediaTypeSet media_type_set;
-      media_type_set.medium = fuchsia::media::MediaTypeMedium::TEXT;
-      media_type_set.details = std::move(details);
-      media_type_set.encodings =
-          To<fidl::VectorPtr<fidl::StringPtr>>(input->encodings());
-      return media_type_set;
-    }
-    case media_player::StreamType::Medium::kSubpicture: {
-      fuchsia::media::MediaTypeSetDetails details;
-      details.set_subpicture(fuchsia::media::SubpictureMediaTypeSetDetails());
-      fuchsia::media::MediaTypeSet media_type_set;
-      media_type_set.medium = fuchsia::media::MediaTypeMedium::SUBPICTURE;
-      media_type_set.details = std::move(details);
-      media_type_set.encodings =
-          To<fidl::VectorPtr<fidl::StringPtr>>(input->encodings());
-      return media_type_set;
-    }
-  }
-
-  FXL_LOG(ERROR) << "unrecognized medium";
-  abort();
-}
-
-std::unique_ptr<media_player::StreamTypeSet> TypeConverter<
-    std::unique_ptr<media_player::StreamTypeSet>,
-    fuchsia::media::MediaTypeSet>::Convert(const fuchsia::media::MediaTypeSet&
-                                               input) {
-  FXL_DCHECK(KnownEncodingsMatch());
-
-  switch (input.medium) {
-    case fuchsia::media::MediaTypeMedium::AUDIO:
-      return media_player::AudioStreamTypeSet::Create(
-          To<std::vector<std::string>>(input.encodings),
-          To<media_player::AudioStreamType::SampleFormat>(
-              input.details.audio().sample_format),
-          media_player::Range<uint32_t>(input.details.audio().min_channels,
-                                        input.details.audio().max_channels),
-          media_player::Range<uint32_t>(
-              input.details.audio().min_frames_per_second,
-              input.details.audio().max_frames_per_second));
-    case fuchsia::media::MediaTypeMedium::VIDEO:
-      return media_player::VideoStreamTypeSet::Create(
-          To<std::vector<std::string>>(input.encodings),
-          media_player::Range<uint32_t>(input.details.video().min_width,
-                                        input.details.video().max_width),
-          media_player::Range<uint32_t>(input.details.video().min_height,
-                                        input.details.video().max_height));
-    case fuchsia::media::MediaTypeMedium::TEXT:
-      return media_player::TextStreamTypeSet::Create(
-          To<std::vector<std::string>>(input.encodings));
-    case fuchsia::media::MediaTypeMedium::SUBPICTURE:
-      return media_player::SubpictureStreamTypeSet::Create(
-          To<std::vector<std::string>>(input.encodings));
   }
 
   return nullptr;

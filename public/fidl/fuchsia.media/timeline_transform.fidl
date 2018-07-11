@@ -51,33 +51,3 @@ struct TimelineTransform {
   // Cannot be zero.
   uint32 reference_delta = 1;
 };
-
-// A push-mode consumer of timeline updates.
-interface TimelineConsumer {
-  // Sets a timeline transform. Note that in this usage, the reference_time and
-  // subject_time fields of TimelineTransform have semantics beyond being a
-  // correlated pair of time values, and either or both may be unspecified
-  // (kUnspecifiedTime).
-  //
-  // The reference_time is the effective time (in the reference timeline) at
-  // which the new transform is to be applied. If not specified, the transition
-  // is to occur as soon as possible, and the consumer must choose the earliest
-  // reference time at which the transition can reliably occur.
-  //
-  // The subject_time is the new subject time that will correlate to the
-  // specified or consumer-chosen reference time. If not specified, the
-  // consumer uses the previous timeline transform to calculate a subject time
-  // that will achieve a first-order continuous transition. If specified, the
-  // timeline will effectively jump to that value at the chosen reference time,
-  // a transition that's unlikely to be first-order continuous.
-  //
-  // The callback is called at the effective time or when a pending operation is
-  // cancelled due to a subsequent call, in which case the 'completed' value is
-  // false.
-  1: SetTimelineTransform(TimelineTransform timeline_transform) ->
-      (bool completed);
-
-  // Same as above, but without the completion callback. This version is useful
-  // for clients that use a synchronous proxy or if the reply isn't needed.
-  2: SetTimelineTransformNoReply(TimelineTransform timeline_transform);
-};

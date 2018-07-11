@@ -25,15 +25,15 @@ FidlReader::FidlReader(
 
   read_in_progress_ = false;
 
-  seeking_reader_->Describe(
-      [this](fuchsia::media::MediaResult result, uint64_t size, bool can_seek) {
-        result_ = fxl::To<Result>(result);
-        if (result_ == Result::kOk) {
-          size_ = size;
-          can_seek_ = can_seek;
-        }
-        ready_.Occur();
-      });
+  seeking_reader_->Describe([this](fuchsia::mediaplayer::MediaResult result,
+                                   uint64_t size, bool can_seek) {
+    result_ = fxl::To<Result>(result);
+    if (result_ == Result::kOk) {
+      size_ = size;
+      can_seek_ = can_seek;
+    }
+    ready_.Occur();
+  });
 }
 
 FidlReader::~FidlReader() {}
@@ -59,7 +59,8 @@ void FidlReader::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
 
   // ReadAt may be called on non-fidl threads, so we use the runner.
   async::PostTask(
-      dispatcher_, [weak_this = std::weak_ptr<FidlReader>(shared_from_this())]() {
+      dispatcher_,
+      [weak_this = std::weak_ptr<FidlReader>(shared_from_this())]() {
         auto shared_this = weak_this.lock();
         if (shared_this) {
           shared_this->ContinueReadAt();
@@ -98,7 +99,7 @@ void FidlReader::ContinueReadAt() {
 
     seeking_reader_->ReadAt(
         read_at_position_,
-        [this](fuchsia::media::MediaResult result, zx::socket socket) {
+        [this](fuchsia::mediaplayer::MediaResult result, zx::socket socket) {
           result_ = fxl::To<Result>(result);
           if (result_ != Result::kOk) {
             CompleteReadAt(result_);
@@ -123,8 +124,8 @@ void FidlReader::ReadFromSocket() {
       waiter_ = std::make_unique<async::Wait>(
           socket_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
 
-      waiter_->set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
-                                  zx_status_t status,
+      waiter_->set_handler([this](async_dispatcher_t* dispatcher,
+                                  async::Wait* wait, zx_status_t status,
                                   const zx_packet_signal_t* signal) {
         if (status != ZX_OK) {
           if (status != ZX_ERR_CANCELED) {

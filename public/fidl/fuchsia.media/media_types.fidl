@@ -45,18 +45,6 @@ struct MediaType {
   vector<uint8>? encoding_parameters;
 };
 
-// Describes a set of types of media.
-struct MediaTypeSet {
-  // Identifies the types’ medium.
-  MediaTypeMedium medium;
-
-  // Medium-dependent details.
-  MediaTypeSetDetails details;
-
-  // Included encodings.
-  vector<string> encodings;
-};
-
 // Medium values for MediaType
 enum MediaTypeMedium {
   AUDIO = 0;
@@ -71,14 +59,6 @@ union MediaTypeDetails {
   VideoMediaTypeDetails video;
   TextMediaTypeDetails text;
   SubpictureMediaTypeDetails subpicture;
-};
-
-// A union of all media type set details.
-union MediaTypeSetDetails {
-  AudioMediaTypeSetDetails audio;
-  VideoMediaTypeSetDetails video;
-  TextMediaTypeSetDetails text;
-  SubpictureMediaTypeSetDetails subpicture;
 };
 
 // Media type details for the AUDIO medium.
@@ -105,15 +85,6 @@ struct AudioPcmFormat {
   uint32 frames_per_second;
   // TODO(johngro): Channel/Speaker designations.
   // TODO(johngro): Weighting (Linear, A-law, Mu-law, etc...)
-};
-
-// Media type set details for the AUDIO medium.
-struct AudioMediaTypeSetDetails {
-  AudioSampleFormat sample_format;
-  uint32 min_channels;
-  uint32 max_channels;
-  uint32 min_frames_per_second;
-  uint32 max_frames_per_second;
 };
 
 enum AudioSampleFormat {
@@ -151,15 +122,6 @@ struct VideoMediaTypeDetails {
   uint32 pixel_aspect_ratio_height;
   vector<uint32> line_stride;
   vector<uint32> plane_offset;
-};
-
-// Media type set details for the VIDEO medium.
-// TODO(dalesat): Expand and document.
-struct VideoMediaTypeSetDetails {
-  uint32 min_width;
-  uint32 max_width;
-  uint32 min_height;
-  uint32 max_height;
 };
 
 // Video profiles.
@@ -217,20 +179,8 @@ struct TextMediaTypeDetails {
   uint8 dummy;
 };
 
-// Media type set details for the TEXT medium.
-// TODO(dalesat): Define.
-struct TextMediaTypeSetDetails {
-  uint8 dummy;
-};
-
 // Media type details for the SUBPICTURE medium.
 // TODO(dalesat): Define.
 struct SubpictureMediaTypeDetails {
-  uint8 dummy;
-};
-
-// Media type set details for the SUBPICTURE medium.
-// TODO(dalesat): Define.
-struct SubpictureMediaTypeSetDetails {
   uint8 dummy;
 };

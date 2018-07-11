@@ -20,8 +20,9 @@
 namespace fxl {
 
 template <>
-struct TypeConverter<media_player::Result, fuchsia::media::MediaResult> {
-  static media_player::Result Convert(fuchsia::media::MediaResult media_result);
+struct TypeConverter<media_player::Result, fuchsia::mediaplayer::MediaResult> {
+  static media_player::Result Convert(
+      fuchsia::mediaplayer::MediaResult media_result);
 };
 
 template <>
@@ -137,20 +138,6 @@ struct TypeConverter<std::unique_ptr<media_player::StreamType>,
       return nullptr;
     return To<std::unique_ptr<media_player::StreamType>>(*input);
   }
-};
-
-template <>
-struct TypeConverter<fuchsia::media::MediaTypeSet,
-                     std::unique_ptr<media_player::StreamTypeSet>> {
-  static fuchsia::media::MediaTypeSet Convert(
-      const std::unique_ptr<media_player::StreamTypeSet>& input);
-};
-
-template <>
-struct TypeConverter<std::unique_ptr<media_player::StreamTypeSet>,
-                     fuchsia::media::MediaTypeSet> {
-  static std::unique_ptr<media_player::StreamTypeSet> Convert(
-      const fuchsia::media::MediaTypeSet& input);
 };
 
 template <>

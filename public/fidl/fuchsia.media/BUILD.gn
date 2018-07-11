@@ -12,10 +12,8 @@ fidl("fuchsia.media") {
     "audio_capturer.fidl",
     "audio_device_enumerator.fidl",
     "audio_renderer.fidl",
-    "media_result.fidl",
     "media_transport.fidl",
     "media_types.fidl",
-    "timeline_controller.fidl",
-    "timelines.fidl",
+    "timeline_transform.fidl",
   ]
 }
