@@ -190,8 +190,9 @@ class BazelBuilder(Builder):
             destination = file.destination
             extension = os.path.splitext(destination)[1][1:]
             if extension == 'so' or extension == 'a' or extension == 'o':
-                dest = os.path.join(base, 'arch',
-                                    self.metadata.target_arch, destination)
+                relative_dest = os.path.join('arch', self.metadata.target_arch,
+                                             destination)
+                dest = os.path.join(base, relative_dest)
                 if os.path.isfile(dest):
                     raise Exception('File already exists: %s.' % dest)
                 self.make_dir(dest)
@@ -200,10 +201,11 @@ class BazelBuilder(Builder):
                         destination.startswith('lib')):
                     if library.prebuilt:
                         raise Exception('Multiple prebuilts for %s.' % dest)
-                    src = os.path.join('arch', self.metadata.target_arch,
-                                       destination)
-                    library.prebuilt = src
+                    library.prebuilt = relative_dest
                     library.is_static = extension == 'a'
+                if file.is_packaged:
+                    package_path = 'lib/%s' % os.path.basename(relative_dest)
+                    library.packaged_files[package_path] = relative_dest
             elif self.is_overlay:
                 # Only binaries get installed in overlay mode.
                 continue

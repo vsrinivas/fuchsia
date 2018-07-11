@@ -28,6 +28,7 @@ class CppPrebuiltLibrary(_CppLibrary):
         self.prebuilt = ""
         self.is_static = False
         self.target_arch = target_arch
+        self.packaged_files = {}
 
 
 class FidlLibrary(object):

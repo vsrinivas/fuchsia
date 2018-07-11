@@ -13,6 +13,29 @@ cc_binary(
     ],
 )
 
+# Local shared library for packaging.
+cc_binary(
+    name = "libshared.so",
+    srcs = [
+        "library.cc",
+        "library.h",
+    ],
+    linkshared = True,
+)
+
+cc_library(
+    name = "shared_library",
+    hdrs = [
+        "library.h",
+    ],
+    srcs = [
+        ":libshared.so",
+    ],
+    includes = [
+        ".",
+    ],
+)
+
 # C++ program with dependency on a Fuchsia library.
 cc_binary(
     name = "pkg_dep",
@@ -20,14 +43,15 @@ cc_binary(
         "pkg_dep.cc",
     ],
     deps = [
-        "@fuchsia_sdk//pkg/fdio",
+        ":shared_library",
+        "@fuchsia_sdk//pkg/svc",
     ],
 )
 
 # Prepare the binary for inclusion in a package.
 packageable_cc_binary(
     name = "packageable",
-    binary = ":pkg_dep",
+    target = ":pkg_dep",
 )
 
 # C++ program in a Fuchsia package.

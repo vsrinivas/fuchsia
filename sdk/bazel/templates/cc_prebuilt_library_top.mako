@@ -2,6 +2,8 @@
 
 package(default_visibility = ["//visibility:public"])
 
+load("//build_defs:package_files.bzl", "package_files")
+
 # Note: the cc_library / cc_import combo serves two purposes:
 #  - it allows the use of a select clause to target the proper architecture;
 #  - it works around an issue with cc_import which does not have an "includes"
@@ -26,6 +28,10 @@ cc_library(
         "${include}",
         % endfor
     ],
+    data = select({
+        "//build_defs/target_cpu:arm64": [":arm64_dist"],
+        "//build_defs/target_cpu:x64": [":x64_dist"],
+    }),
 )
 
 # Architecture-specific targets

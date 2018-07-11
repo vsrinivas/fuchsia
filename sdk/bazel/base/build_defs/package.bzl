@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-load(":package_info.bzl", "get_aggregate_info", "PackageAggregateInfo", "PackageLocalInfo")
+load(":package_info.bzl", "get_aggregate_info", "PackageAggregateInfo", "PackageGeneratedInfo", "PackageLocalInfo")
 
 """
 Defines a Fuchsia package
@@ -18,22 +18,46 @@ Parameters
         The list of targets to be built into this package
 """
 
+# The attributes along which the aspect propagates.
+# The value denotes whether the attribute represents a list of target or a
+# single target.
+_ASPECT_ATTRIBUTES = {
+    "data": True,
+    "target": False,
+    "deps": True,
+    "srcs": True,
+}
+
 def _info_impl(target, context):
     mappings = []
     if PackageLocalInfo in target:
         mappings = target[PackageLocalInfo].mappings
-    deps = context.attr.deps if hasattr(context.attr, "deps") else []
-    return [get_aggregate_info(mappings, deps)]
+    elif PackageGeneratedInfo in target:
+        mappings = target[PackageGeneratedInfo].mappings
+    deps = []
+    for attribute, is_list in _ASPECT_ATTRIBUTES.items():
+        if hasattr(context.rule.attr, attribute):
+            value = getattr(context.rule.attr, attribute)
+            if is_list:
+                deps += value
+            else:
+                deps.append(value)
+    return [
+        get_aggregate_info(mappings, deps),
+    ]
 
 # An aspect which turns PackageLocalInfo providers into a PackageAggregateInfo
 # provider to identify all elements which need to be included in the package.
 _info_aspect = aspect(
     implementation = _info_impl,
-    attr_aspects = [
-        "deps",
-    ],
+    attr_aspects = _ASPECT_ATTRIBUTES.keys(),
     provides = [
         PackageAggregateInfo,
+    ],
+    # If any other aspect is applied to produce package mappings, let the result
+    # of that process be visible to the present aspect.
+    required_aspect_providers = [
+        PackageGeneratedInfo,
     ],
 )
 
