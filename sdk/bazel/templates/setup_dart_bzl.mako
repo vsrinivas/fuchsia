@@ -5,7 +5,8 @@
 load(":pub_repository.bzl", "pub_repository")
 
 def setup_dart():
-    % for name, version in data.iteritems():
+    % if data:
+      % for name, version in data.iteritems():
     pub_repository(
         name = "vendor_${name}",
         output = ".",
@@ -13,4 +14,7 @@ def setup_dart():
         version = "${version}",
         pub_deps = [],
     )
-    % endfor
+      % endfor
+    % else:
+    pass
+    % endif
