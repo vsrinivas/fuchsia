@@ -329,7 +329,7 @@
              path="third_party/vulkan-cts"
              remote="https://fuchsia.googlesource.com/third_party/vulkan-cts"
              gerrithost="https://fuchsia-review.googlesource.com"
-             revision="ffe9d5e815f7d87709062726cd14317054aa8ad0"/>
+             revision="ce114800096bfa130203a24aafc62758bcb7b27a"/>
     <project name="third_party/vulkan_loader_and_validation_layers"
              path="third_party/vulkan_loader_and_validation_layers"
              remote="https://fuchsia.googlesource.com/third_party/vulkan_loader_and_validation_layers"
