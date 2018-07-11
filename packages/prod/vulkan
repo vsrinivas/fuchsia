@@ -3,6 +3,7 @@
         "garnet/packages/prod/magma"
     ],
     "packages": [
+        "//garnet/bin/vulkan_loader",
         "//third_party/vulkan_loader_and_validation_layers/loader:vulkan_loader"
     ]
 }
