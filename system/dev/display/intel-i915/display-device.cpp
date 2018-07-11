@@ -235,6 +235,8 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config,
                                        registers::pipe_arming_regs_t* regs) {
     ZX_ASSERT(config);
 
+    registers::PipeRegs pipe_regs(pipe());
+
     if (memcmp(&config->mode, &info_, sizeof(display_mode_t)) != 0) {
         ResetPipe();
         ResetTrans();
@@ -243,9 +245,12 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config,
         info_ = config->mode;
 
         ConfigureDdi();
-    }
 
-    registers::PipeRegs pipe_regs(pipe());
+        auto pipe_size = pipe_regs.PipeSourceSize().FromValue(0);
+        pipe_size.set_horizontal_source_size(info_.h_addressable - 1);
+        pipe_size.set_vertical_source_size(info_.v_addressable - 1);
+        pipe_size.WriteTo(mmio_space());
+    }
 
     if (config->cc_flags) {
         float zero_offset[3] = {};

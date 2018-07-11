@@ -671,14 +671,6 @@ bool HdmiDisplay::ConfigureDdi() {
     ddi_buf_ctl.set_ddi_buffer_enable(1);
     ddi_buf_ctl.WriteTo(mmio_space());
 
-    // Configure the pipe
-    registers::PipeRegs pipe_regs(pipe());
-
-    auto pipe_size = pipe_regs.PipeSourceSize().FromValue(0);
-    pipe_size.set_horizontal_source_size(h_active);
-    pipe_size.set_vertical_source_size(v_active);
-    pipe_size.WriteTo(mmio_space());
-
     return true;
 }
 
