@@ -2,14 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/termination_reason.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/util.h>
+#include <lib/fxl/strings/string_printf.h>
 #include <stdio.h>
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <zircon/syscalls.h>
 
 #include "lib/component/cpp/environment_services.h"
+
+using fuchsia::sys::TerminationReason;
+using fxl::StringPrintf;
 
 static fuchsia::sys::FileDescriptorPtr CloneFileDescriptor(int fd) {
   zx_handle_t handles[FDIO_MAX_HANDLES] = {0, 0, 0};
@@ -67,16 +73,25 @@ int main(int argc, const char** argv) {
     return 0;
   }
 
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+
   launch_info.out = CloneFileDescriptor(STDOUT_FILENO);
   launch_info.err = CloneFileDescriptor(STDERR_FILENO);
-  fuchsia::sys::ComponentControllerSyncPtr controller;
+
+  fuchsia::sys::ComponentControllerPtr controller;
   launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
 
-  int64_t return_code;
-  if (controller->Wait(&return_code) != ZX_OK) {
-    fprintf(stderr, "%s exited without a return code\n", program_name.c_str());
-    return 1;
-  }
-  zx_process_exit(return_code);
+  controller.events().OnTerminated = [&program_name](
+                                         int64_t return_code,
+                                         TerminationReason termination_reason) {
+    if (termination_reason != TerminationReason::EXITED) {
+      fprintf(stderr, "%s: %s\n", program_name.c_str(),
+              component::HumanReadableTerminationReason(termination_reason)
+                  .c_str());
+    }
+    zx_process_exit(return_code);
+  };
+
+  loop.Run();
   return 0;
 }

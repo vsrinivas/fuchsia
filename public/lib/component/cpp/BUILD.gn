@@ -13,6 +13,8 @@ source_set("cpp") {
     "service_provider_impl.h",
     "startup_context.cc",
     "startup_context.h",
+    "termination_reason.cc",
+    "termination_reason.h",
   ]
 
   public_deps = [

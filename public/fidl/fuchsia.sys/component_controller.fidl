@@ -54,6 +54,8 @@ interface ComponentController {
   // Event that is triggered when the component is terminated.
   //
   // This event provides the return code of the process and reason for
-  // its termination.
+  // its termination. The return_code is only valid if the termination
+  // reason is EXITED. If the termination reason is not EXITED, the
+  // return code is guaranteed not to be 0.
   4: -> OnTerminated(int64 return_code, TerminationReason termination_reason);
 };
