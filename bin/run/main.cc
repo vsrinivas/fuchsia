@@ -51,6 +51,7 @@ int main(int argc, const char** argv) {
   }
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = argv[0];
+  std::string program_name = argv[0];
   consume_arg(&argc, &argv);
   while (argc) {
     launch_info.arguments.push_back(*argv);
@@ -73,7 +74,7 @@ int main(int argc, const char** argv) {
 
   int64_t return_code;
   if (controller->Wait(&return_code).statvs != ZX_OK) {
-    fprintf(stderr, "%s exited without a return code\n", argv[1]);
+    fprintf(stderr, "%s exited without a return code\n", program_name.c_str());
     return 1;
   }
   zx_process_exit(return_code);
