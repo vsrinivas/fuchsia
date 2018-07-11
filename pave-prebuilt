@@ -87,10 +87,29 @@ function main {
     return 1
   fi
 
-  echo "Starting bootserver"
+  local bootserver="${dir_src}/tools/bootserver"
+  local kernel="${dir_src}/zircon.bin"
+  local bootdata="${dir_src}/bootdata-blob-pc.bin"
+  local -a bootserver_args=()
 
-  $(FUCHSIA_DIR="${top_level_dir}" "${top_level_dir}/scripts/fx" use "${dir_src}")
-  $(FUCHSIA_DIR="${top_level_dir}" "${top_level_dir}/scripts/fx" boot --artifacts "${dir_src}")
+  local esp_raw="${dir_src}/images/local-pc.esp.blk"
+  if [[ -r "$esp_raw" ]]; then
+    bootserver_args+=(--efi "$esp_raw")
+  fi
+  local vboot="${dir_src}images/zircon-pc.vboot"
+  if [[ -r "$vboot" ]]; then
+    bootserver_args+=(--kernc "$vboot")
+  fi
+
+  bootserver_args+=(--zircona "$bootdata" --zirconr "$bootdata")
+
+  bootserver_args+=(--fvm "${dir_src}/images/fvm.sparse.blk")
+  bootserver_args+=(--fvm "${dir_src}/images/fvm.data.sparse.blk")
+
+  bootserver_args+=("$kernel" "$bootdata")
+
+  echo "Starting bootserver"
+  "$bootserver" "${bootserver_args[@]}"
 }
 
 main "$@"
