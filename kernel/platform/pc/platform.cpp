@@ -8,6 +8,7 @@
 // https://opensource.org/licenses/MIT
 
 #include "platform_p.h"
+
 #include <arch/mmu.h>
 #include <arch/mp.h>
 #include <arch/ops.h>
@@ -21,6 +22,7 @@
 #include <err.h>
 #include <fbl/alloc_checker.h>
 #include <kernel/cmdline.h>
+#include <libzbi/zbi-cpp.h>
 #include <lk/init.h>
 #include <mexec.h>
 #include <platform.h>
@@ -38,7 +40,6 @@
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
-#include <zbi/zbi-cpp.h>
 #include <zircon/boot/image.h>
 #include <zircon/boot/multiboot.h>
 #include <zircon/pixelformat.h>
@@ -586,7 +587,7 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
                                      kNoZbiFlags, (uint8_t*)&bootloader.uart);
         if (result != ZBI_RESULT_OK) {
             printf("mexec: Failed to append uart data to bootdata. len = %lu, "
-                   "section length = %lu, retcode = %d\n", len, 
+                   "section length = %lu, retcode = %d\n", len,
                    sizeof(bootloader.uart), result);
             return ZX_ERR_INTERNAL;
         }

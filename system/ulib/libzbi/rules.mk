@@ -12,6 +12,8 @@ LOCAL_SRCS := $(LOCAL_DIR)/zbi.c
 
 MODULE_SRCS += $(LOCAL_SRCS)
 
+MODULE_PACKAGE = static
+
 include make/module.mk
 
 # Host version of the library.

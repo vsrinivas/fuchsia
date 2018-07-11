@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zbi/zbi.h>
+#include <libzbi/zbi.h>
 #include <string.h>
 
 static zbi_result_t for_each_check_entry(zbi_header_t* hdr, void* payload,

@@ -5,9 +5,9 @@
 #include "trampoline.h"
 
 #include <inttypes.h>
+#include <libzbi/zbi.h>
 #include <platform/pc/memory.h>
 #include <string.h>
-#include <zbi/zbi.h>
 
 #define BOOT_LOADER_NAME_ENV "multiboot.boot_loader_name="
 

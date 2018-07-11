@@ -13,7 +13,7 @@
 
 #include <unittest/unittest.h>
 
-#include <zbi/zbi-cpp.h>
+#include <libzbi/zbi-cpp.h>
 
 const char kTestCmdline[] = "0123";
 constexpr size_t kCmdlinePayloadLen = ZBI_ALIGN(sizeof(kTestCmdline));

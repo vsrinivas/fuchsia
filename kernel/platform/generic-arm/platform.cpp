@@ -49,8 +49,8 @@
 #include <kernel/thread.h>
 #endif
 
+#include <libzbi/zbi-cpp.h>
 #include <pdev/pdev.h>
-#include <zbi/zbi-cpp.h>
 #include <zircon/boot/image.h>
 #include <zircon/types.h>
 

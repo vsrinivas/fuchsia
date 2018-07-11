@@ -11,23 +11,23 @@
 #include <kernel/cmdline.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
-#include <vm/vm.h>
+#include <libzbi/zbi-cpp.h>
+#include <mexec.h>
+#include <object/process_dispatcher.h>
+#include <object/resources.h>
+#include <object/vm_object_dispatcher.h>
+#include <platform.h>
+#include <string.h>
+#include <trace.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
+#include <vm/vm.h>
 #include <vm/vm_aspace.h>
-#include <zbi/zbi-cpp.h>
 #include <zircon/boot/image.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/syscalls/system.h>
 #include <zircon/types.h>
-#include <mexec.h>
-#include <object/resources.h>
-#include <object/process_dispatcher.h>
-#include <object/vm_object_dispatcher.h>
-#include <platform.h>
-#include <string.h>
-#include <trace.h>
 
 #include "system_priv.h"
 

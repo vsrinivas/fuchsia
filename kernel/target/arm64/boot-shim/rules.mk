@@ -15,7 +15,7 @@ BOOT_SHIM_SRCS := \
     $(BOOT_SHIM_DIR)/devicetree.c \
     $(BOOT_SHIM_DIR)/util.c \
     kernel/lib/libc/string/memset.c \
-    system/ulib/zbi/zbi.c \
+    system/ulib/libzbi/zbi.c \
 
 BOOT_SHIM_OBJS := $(BOOT_SHIM_SRCS:%=$(BOOT_SHIM_BUILDDIR)/%.o)
 
@@ -31,7 +31,7 @@ SHIM_DEFINES := -DKERNEL_ALIGN=$(KERNEL_ALIGN)
 SHIM_INCLUDES := -Ikernel/include -Ikernel/lib/libc/include -Isystem/public
 SHIM_INCLUDES += -Ikernel/arch/arm64/include
 SHIM_INCLUDES += -Isystem/ulib/ddk/include  # for ddk/protocol/platform-defs.h
-SHIM_INCLUDES += -Isystem/ulib/zbi/include
+SHIM_INCLUDES += -Isystem/ulib/libzbi/include
 SHIM_CFLAGS := $(NO_SAFESTACK) $(NO_SANITIZERS)
 
 # The shim code runs with alignment checking enabled, so make sure the

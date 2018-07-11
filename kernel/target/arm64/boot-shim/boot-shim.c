@@ -7,12 +7,12 @@
 #include "devicetree.h"
 #include "util.h"
 
+#include <ddk/protocol/platform-defs.h>
+#include <libzbi/zbi.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <ddk/protocol/platform-defs.h>
 #include <zircon/boot/driver-config.h>
-#include <zbi/zbi.h>
 
 // uncomment to dump device tree at boot
 // #define PRINT_DEVICE_TREE

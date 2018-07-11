@@ -4,7 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-SRC_DIR := system/ulib/zbi
+SRC_DIR := system/ulib/libzbi
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
@@ -15,4 +15,3 @@ MODULE_SRCS := \
     $(SRC_DIR)/zbi.c
 
 include make/module.mk
-

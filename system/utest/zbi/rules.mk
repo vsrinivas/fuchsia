@@ -17,7 +17,7 @@ MODULE_NAME := zbi-test
 
 MODULE_LIBS := system/ulib/unittest system/ulib/fdio system/ulib/c
 
-MODULE_STATIC_LIBS += system/ulib/zbi system/ulib/fbl
+MODULE_STATIC_LIBS += system/ulib/libzbi system/ulib/fbl
 
 include make/module.mk
 
@@ -34,14 +34,14 @@ MODULE_SRCS += $(LOCAL_SRCS)
 MODULE_COMPILEFLAGS += -Wno-address-of-packed-member
 
 MODULE_COMPILEFLAGS += \
-    -Isystem/ulib/zbi/include \
     -Isystem/ulib/fbl/include \
+    -Isystem/ulib/libzbi/include \
     -Isystem/ulib/unittest/include \
 
 MODULE_HOST_LIBS += \
-    system/ulib/zbi.hostlib \
     system/ulib/fbl.hostlib \
-    system/ulib/unittest.hostlib \
+    system/ulib/libzbi.hostlib \
     system/ulib/pretty.hostlib \
+    system/ulib/unittest.hostlib \
 
 include make/module.mk

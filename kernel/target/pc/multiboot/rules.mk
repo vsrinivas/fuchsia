@@ -25,7 +25,7 @@ MULTIBOOT_SRCS := \
     $(LOCAL_DIR)/paging.c \
     $(LOCAL_DIR)/trampoline.c \
     $(LOCAL_DIR)/util.c \
-    system/ulib/zbi/zbi.c
+    system/ulib/libzbi/zbi.c
 
 MULTIBOOT_OBJS := $(MULTIBOOT_SRCS:%=$(BUILDDIR)/$(LOCAL_DIR)/%.o)
 

@@ -9,9 +9,9 @@
 
 #pragma once
 
+#include <libzbi/zbi.h>
 #include <stddef.h>
 #include <zircon/boot/image.h>
-#include <zbi/zbi.h>
 
 namespace zbi {
 
