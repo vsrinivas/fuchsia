@@ -372,9 +372,10 @@ void PageStorageImpl::AddObjectFromLocal(
       TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_add_object");
 
   auto managed_data_source = managed_container_.Manage(std::move(data_source));
+  auto managed_data_source_ptr = managed_data_source->get();
   auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
   SplitDataSource(
-      managed_data_source->get(),
+      managed_data_source_ptr,
       [this, waiter, managed_data_source = std::move(managed_data_source),
        callback = std::move(traced_callback)](
           IterationStatus status, ObjectDigest object_digest,

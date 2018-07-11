@@ -338,7 +338,8 @@ void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
       std::move(params.view_owner), std::move(params.services),
       std::move(params.user_controller),
       [this](UserControllerImpl* c) { user_controllers_.erase(c); });
-  user_controllers_[controller.get()] = std::move(controller);
+  auto controller_ptr = controller.get();
+  user_controllers_[controller_ptr] = std::move(controller);
 }
 
 }  // namespace modular
