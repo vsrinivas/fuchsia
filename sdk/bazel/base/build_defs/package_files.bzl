@@ -13,7 +13,7 @@ Parameters
         The name of the targets
 
     contents(dict, required)
-        The mappings of package path to source file
+        The mappings of source file to path in package
 """
 
 def _package_files_impl(context):
