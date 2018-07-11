@@ -7,15 +7,9 @@ library fuchsia.modular;
 // This interface is used by the caller of ModuleContext.StartModule() to
 // control the started Module instance.
 //
-// Closing this connection affects neither its ModuleWatchers nor its Module
-// instance; it just relinquishes the ability of the caller to control the
-// Module instance.
+// Closing this connection doesn't affect its Module instance; it just
+// relinquishes the ability of the caller to control the Module instance.
 interface ModuleController {
-  // Registers a watcher that is notified when the module is done or otherwise
-  // stops.
-  // DEPRECATED: transitioning to use FIDL events such as OnStateChanged.
-  1: Watch(ModuleWatcher watcher);
-
   // Requests that this module become the focused module in the story.
   2: Focus();
 
@@ -31,11 +25,4 @@ interface ModuleController {
 
   // Called with the current state when it changes.
   5: -> OnStateChange(ModuleState new_state);
-};
-
-// This interface is implemented by the client calling ModuleController.Watch().
-interface ModuleWatcher {
-  // Called with the current state right after registration, and subsequently
-  // when the state changes.
-  1: OnStateChange(ModuleState new_state);
 };

@@ -49,8 +49,7 @@ interface StoryController {
   // controller.
   //
   // Notifications for state changes on the module can be obtained through
-  // GetModuleController() and by registration of a ModuleWatcher on the
-  // ModuleController.
+  // the ModuleController's OnStateChanged() event.
   //
   // Notifications for changes to this list are provided through
   // StoryModulesWatcher.OnNewModule(), if a watcher is supplied in the call.
@@ -60,8 +59,8 @@ interface StoryController {
   8: GetModules() -> (vector<ModuleData> module_data);
 
   // Obtains a ModuleController for the module at the given path. If no module
-  // exists at that path, the request is dropped. This is mostly to allow to
-  // register a ModuleWatcher.
+  // exists at that path, the request is dropped. This is mostly to receive
+  // state update events.
   //
   // TODO(mesch): This is EXPERIMENTAL. We want something like this for story
   // crafting, but giving the same module controller to the story crafting

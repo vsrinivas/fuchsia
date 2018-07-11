@@ -151,8 +151,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
   void Active();
 
  private:
-  class ModuleWatcherImpl;
-
   // |StoryController|
   void GetInfo(GetInfoCallback callback) override;
   void Start(fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
@@ -191,8 +189,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
 
   // Misc internal helpers.
   void SetState(fuchsia::modular::StoryState new_state);
-  void AddModuleWatcher(fuchsia::modular::ModuleControllerPtr module_controller,
-                        const fidl::VectorPtr<fidl::StringPtr>& module_path);
   void UpdateStoryState(fuchsia::modular::ModuleState state);
   void ProcessPendingViews();
   std::set<fuchsia::modular::LinkPath> GetActiveLinksInternal();

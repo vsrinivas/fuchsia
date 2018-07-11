@@ -59,6 +59,8 @@ ModuleControllerImpl::~ModuleControllerImpl() {}
 void ModuleControllerImpl::Connect(
     fidl::InterfaceRequest<fuchsia::modular::ModuleController> request) {
   module_controller_bindings_.AddBinding(this, std::move(request));
+  // Notify of initial state on connection.
+  NotifyStateChange();
 }
 
 // If the ComponentController connection closes, it means the module cannot be
@@ -123,13 +125,6 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
   app_client_.Teardown(kBasicTimeout, cont);
 }
 
-void ModuleControllerImpl::Watch(
-    fidl::InterfaceHandle<fuchsia::modular::ModuleWatcher> watcher) {
-  auto ptr = watcher.Bind();
-  ptr->OnStateChange(state_);
-  watchers_.AddInterfacePtr(std::move(ptr));
-}
-
 void ModuleControllerImpl::Focus() {
   story_controller_impl_->FocusModule(module_data_->module_path);
 }
@@ -145,10 +140,6 @@ void ModuleControllerImpl::Stop(StopCallback done) {
 void ModuleControllerImpl::NotifyStateChange() {
   for (auto& binding : module_controller_bindings_.bindings()) {
     binding->events().OnStateChange(state_);
-  }
-  // TODO(miguelfrde): remove.
-  for (const auto& i : watchers_.ptrs()) {
-    (*i)->OnStateChange(state_);
   }
 }
 

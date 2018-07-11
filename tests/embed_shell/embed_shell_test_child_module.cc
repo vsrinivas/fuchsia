@@ -17,7 +17,7 @@ using modular::testing::TestPoint;
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : fuchsia::modular::ModuleWatcher {
+class TestApp {
  public:
   TestApp(modular::ModuleHost* const module_host,
           fidl::InterfaceRequest<
@@ -36,16 +36,19 @@ class TestApp : fuchsia::modular::ModuleWatcher {
   void StartChildModule() {
     fuchsia::modular::Intent intent;
     intent.handler = kCommonNullModule;
+
+    child_module_.events().OnStateChange =
+        [this](fuchsia::modular::ModuleState new_state) {
+          OnStateChange(std::move(new_state));
+        };
+
     module_host_->module_context()->StartModule(
         kChildModuleName, std::move(intent), child_module_.NewRequest(),
         nullptr /* surface_relation */,
         [](const fuchsia::modular::StartModuleStatus) {});
-
-    child_module_->Watch(module_watcher_.AddBinding(this));
   }
 
-  // |fuchsia::modular::ModuleWatcher|
-  void OnStateChange(fuchsia::modular::ModuleState state) override {
+  void OnStateChange(fuchsia::modular::ModuleState state) {
     if (state == fuchsia::modular::ModuleState::RUNNING) {
       modular::testing::GetStore()->Put("child_module_done", "1", [] {});
     }
@@ -53,7 +56,6 @@ class TestApp : fuchsia::modular::ModuleWatcher {
 
   modular::ModuleHost* const module_host_;
   fuchsia::modular::ModuleControllerPtr child_module_;
-  fidl::BindingSet<fuchsia::modular::ModuleWatcher> module_watcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };

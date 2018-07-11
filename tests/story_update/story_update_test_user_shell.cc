@@ -23,37 +23,6 @@ using modular::testing::TestPoint;
 
 namespace {
 
-// A simple module watcher implementation allows to specify the actual
-// notification callback as a lambda and update it dynamically.
-class ModuleWatcherImpl : fuchsia::modular::ModuleWatcher {
- public:
-  ModuleWatcherImpl() : binding_(this) {}
-  ~ModuleWatcherImpl() override = default;
-
-  // Registers itself as watcher on the given link. Only one link at a time can
-  // be watched.
-  void Watch(fuchsia::modular::ModuleControllerPtr* const module) {
-    (*module)->Watch(binding_.NewBinding());
-  }
-
-  // Sets the function that's called for a notification.
-  void Continue(std::function<void(fuchsia::modular::ModuleState)> at) {
-    continue_ = at;
-  }
-
- private:
-  // |fuchsia::modular::ModuleWatcher|
-  void OnStateChange(fuchsia::modular::ModuleState module_state) override {
-    FXL_LOG(INFO) << "fuchsia::modular::ModuleWatcher: " << module_state;
-    continue_(std::move(module_state));
-  }
-
-  std::function<void(fuchsia::modular::ModuleState)> continue_;
-  fidl::Binding<fuchsia::modular::ModuleWatcher> binding_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ModuleWatcherImpl);
-};
-
 // Tests how modules are updated in a story.
 class TestApp
     : public modular::testing::ComponentBase<fuchsia::modular::UserShell> {
@@ -94,17 +63,17 @@ class TestApp
 
     fidl::VectorPtr<fidl::StringPtr> module_path;
     module_path.push_back("root");
-    story_controller_->GetModuleController(std::move(module_path),
-                                           module0_controller_.NewRequest());
 
-    module0_watcher_.Watch(&module0_controller_);
-    module0_watcher_.Continue(
+    module0_controller_.events().OnStateChange =
         [this](fuchsia::modular::ModuleState module_state) {
           if (module_state == fuchsia::modular::ModuleState::RUNNING) {
             root_running_.Pass();
             PipelinedAddGetStop();
           }
-        });
+        };
+
+    story_controller_->GetModuleController(std::move(module_path),
+                                           module0_controller_.NewRequest());
   }
 
   TestPoint module1_stopped_{"Module1 STOPPED"};
@@ -138,8 +107,6 @@ class TestApp
 
     fidl::VectorPtr<fidl::StringPtr> module_path;
     module_path.push_back("module1");
-    story_controller_->GetModuleController(std::move(module_path),
-                                           module1_controller_.NewRequest());
 
     module1_controller_.events().OnStateChange =
         [this](fuchsia::modular::ModuleState new_state) {
@@ -147,6 +114,9 @@ class TestApp
             module1_stopped_.Pass();
           }
         };
+
+    story_controller_->GetModuleController(std::move(module_path),
+                                           module1_controller_.NewRequest());
 
     module1_controller_->Stop([this] { GetActiveModules1(); });
   }
@@ -199,11 +169,8 @@ class TestApp
 
     fidl::VectorPtr<fidl::StringPtr> module_path;
     module_path.push_back("module2");
-    story_controller_->GetModuleController(std::move(module_path),
-                                           module2_controller_.NewRequest());
 
-    module2_watcher_.Watch(&module2_controller_);
-    module2_watcher_.Continue(
+    module2_controller_.events().OnStateChange =
         [this](fuchsia::modular::ModuleState module_state) {
           if (module_state == fuchsia::modular::ModuleState::RUNNING) {
             module2_running_.Pass();
@@ -212,7 +179,10 @@ class TestApp
           } else if (module_state == fuchsia::modular::ModuleState::STOPPED) {
             module2_stopped_.Pass();
           }
-        });
+        };
+
+    story_controller_->GetModuleController(std::move(module_path),
+                                           module2_controller_.NewRequest());
   }
 
   void GetActiveModules2() {
@@ -234,11 +204,8 @@ class TestApp
   fuchsia::modular::StoryInfoPtr story_info_;
 
   fuchsia::modular::ModuleControllerPtr module0_controller_;
-  ModuleWatcherImpl module0_watcher_;
   fuchsia::modular::ModuleControllerPtr module1_controller_;
-  ModuleWatcherImpl module1_watcher_;
   fuchsia::modular::ModuleControllerPtr module2_controller_;
-  ModuleWatcherImpl module2_watcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };

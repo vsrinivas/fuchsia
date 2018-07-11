@@ -4,7 +4,7 @@
 
 library fuchsia.modular;
 
-// State used to notify ModuleWatcher about state transitions of a Module
+// State used to notify about state transitions of a Module
 // instance. This is very similar to the StoryState, however it's not entirely
 // the same and hence a separate type. A module cannot have an INITIAL state,
 // because it's started as soon as it is created, and it gets deleted as soon as

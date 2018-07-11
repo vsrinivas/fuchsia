@@ -44,23 +44,18 @@ class ModuleControllerImpl : fuchsia::modular::ModuleController {
   void Connect(
       fidl::InterfaceRequest<fuchsia::modular::ModuleController> request);
 
-  // Notifies all watchers of a state change of the module. Also
-  // remembers the state to initialize future added watchers.
+  // Notifies of a state change of the module.
   void SetState(fuchsia::modular::ModuleState new_state);
 
   // Calls Teardown() on the AppClient of the module component instance,
-  // notifies watchers, then ReleaseModule()s the connection and finally calls
-  // |done|.
+  // notifies state change, then ReleaseModule()s the connection and finally
+  // calls |done|.
   //
   // Multiple calls to Teardown() are allowed, and all |done| callbacks are run
   // in order when teardown is complete.
   void Teardown(std::function<void()> done);
 
  private:
-  // |fuchsia::modular::ModuleController|
-  void Watch(
-      fidl::InterfaceHandle<fuchsia::modular::ModuleWatcher> watcher) override;
-
   // |fuchsia::modular::ModuleController|
   void Focus() override;
 
@@ -88,11 +83,8 @@ class ModuleControllerImpl : fuchsia::modular::ModuleController {
   fidl::BindingSet<fuchsia::modular::ModuleController>
       module_controller_bindings_;
 
-  // Watchers of this Module instance.
-  fidl::InterfacePtrSet<fuchsia::modular::ModuleWatcher> watchers_;
-
-  // The state of this Module instance, stored here to initialize watchers
-  // registered in the future to the current state.
+  // The state of this Module instance. Stored here to notify through events
+  // when it changes.
   fuchsia::modular::ModuleState state_{fuchsia::modular::ModuleState::RUNNING};
 
   // Callbacks passed to Teardown() calls. If there is one Stop() request
