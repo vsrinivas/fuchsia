@@ -32,10 +32,6 @@ class AudioServerImpl : public fuchsia::media::Audio {
   // Audio implementation.
   // TODO(mpuryear): through the codebase, particularly in examples and headers,
   // change 'audio_renderer' variables to 'audio_renderer_request' (media, etc).
-  void CreateRenderer(
-      fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer,
-      fidl::InterfaceRequest<fuchsia::media::MediaRenderer> media_renderer)
-      final;
   void CreateCapturer(fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
                           audio_capturer_request,
                       bool loopback) final;

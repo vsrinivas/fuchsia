@@ -20,7 +20,6 @@
 
 #include "garnet/bin/media/audio_server/audio_device_settings.h"
 #include "garnet/bin/media/audio_server/audio_object.h"
-#include "garnet/bin/media/audio_server/audio_pipe.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
 #include "lib/fxl/synchronization/thread_annotations.h"

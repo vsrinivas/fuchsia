@@ -20,7 +20,7 @@
 namespace media_player {
 namespace test {
 
-// Implements AudioRenderer2 for testing.
+// Implements AudioRenderer for testing.
 class FakeAudioRenderer : public fuchsia::media::AudioRenderer2 {
  public:
   FakeAudioRenderer();
@@ -43,7 +43,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer2 {
   // Returns true if everything has gone as expected so far.
   bool expected() { return expected_; }
 
-  // AudioRenderer2 implementation.
+  // AudioRenderer implementation.
   void SetPcmFormat(fuchsia::media::AudioPcmFormat format) override;
 
   void SetPayloadBuffer(::zx::vmo payload_buffer) override;

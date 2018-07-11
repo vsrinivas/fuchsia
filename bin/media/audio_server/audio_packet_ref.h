@@ -9,7 +9,11 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/media/cpp/fidl.h>
+#include <lib/vmo-utils/vmo_mapper.h>
 #include <stdint.h>
+
+#include "lib/fxl/logging.h"
 
 namespace media {
 namespace audio {
@@ -25,6 +29,11 @@ class AudioPacketRef
       public fbl::Recyclable<AudioPacketRef>,
       public fbl::DoublyLinkedListable<fbl::unique_ptr<AudioPacketRef>> {
  public:
+  AudioPacketRef(fbl::RefPtr<vmo_utils::RefCountedVmoMapper> vmo_ref,
+                 fuchsia::media::AudioRenderer2::SendPacketCallback callback,
+                 fuchsia::media::AudioPacket packet, AudioServerImpl* server,
+                 uint32_t frac_frame_len, int64_t start_pts);
+
   // Accessors for starting and ending presentation time stamps expressed in
   // units of audio frames (note, not media time), as signed 50.13 fixed point
   // integers (see kPtsFractionalBits).  At 192KHz, this allows for ~186.3
@@ -48,27 +57,32 @@ class AudioPacketRef
   int64_t end_pts() const { return end_pts_; }
   uint32_t frac_frame_len() const { return frac_frame_len_; }
 
-  // TODO(johngro): Remove all of the virtual functions from this class when we
-  // have deprecated the v1 renderer interface and no longer need to maintain v1
-  // and v2 versions of packet references.
-  virtual void Cleanup() = 0;
-  virtual void* payload() = 0;
-  virtual uint32_t flags() = 0;
+  void Cleanup() {
+    FXL_DCHECK(callback_ != nullptr);
+    callback_();
+  }
+  void* payload() {
+    auto start = reinterpret_cast<uint8_t*>(vmo_ref_->start());
+    return (start + packet_.payload_offset);
+  }
+  uint32_t flags() { return packet_.flags; }
 
  protected:
   friend class fbl::RefPtr<AudioPacketRef>;
   friend class fbl::Recyclable<AudioPacketRef>;
   friend class fbl::unique_ptr<AudioPacketRef>;
 
-  AudioPacketRef(AudioServerImpl* server, uint32_t frac_frame_len,
-                 int64_t start_pts);
-  virtual ~AudioPacketRef() = default;
+  ~AudioPacketRef() = default;
 
   // Check to see if this packet has a valid callback.  If so, when it gets
   // recycled for the first time, it needs to be kept alive and posted to the
   // server's cleanup queue so that the user's callback gets called on the main
   // server dispatcher thread.
-  virtual bool NeedsCleanup() { return true; }
+  bool NeedsCleanup() { return callback_ != nullptr; }
+
+  fbl::RefPtr<vmo_utils::RefCountedVmoMapper> vmo_ref_;
+  fuchsia::media::AudioRenderer2::SendPacketCallback callback_;
+  fuchsia::media::AudioPacket packet_;
 
   AudioServerImpl* const server_;
   uint32_t frac_frame_len_;

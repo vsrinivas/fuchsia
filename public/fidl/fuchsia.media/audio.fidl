@@ -67,10 +67,6 @@ interface Audio {
 
   6: SetRoutingPolicy(AudioOutputRoutingPolicy policy);
 
-  // DEPRECATED
-  9: CreateRenderer(request<AudioRenderer> audio_renderer,
-                    request<MediaRenderer> media_renderer);
-
 };
 
 // A placeholder for various types of simple routing policies.  This should be

@@ -267,8 +267,8 @@ void FidlAudioRenderer::Prime(fit::closure callback) {
 void FidlAudioRenderer::SetTimelineFunction(
     media::TimelineFunction timeline_function, fit::closure callback) {
   FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
-  // AudioRenderer2 only supports 0/1 (paused) or 1/1 (normal playback rate).
-  // TODO(dalesat): Remove this DCHECK when AudioRenderer2 supports other rates,
+  // AudioRenderer only supports 0/1 (paused) or 1/1 (normal playback rate).
+  // TODO(dalesat): Remove this DCHECK when AudioRenderer supports other rates,
   // build an SRC into this class, or prohibit other rates entirely.
   FXL_DCHECK(timeline_function.subject_delta() == 0 ||
              (timeline_function.subject_delta() == 1 &&

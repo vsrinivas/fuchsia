@@ -13,7 +13,6 @@
 
 #include "garnet/bin/media/audio_server/audio_link.h"
 #include "garnet/bin/media/audio_server/audio_packet_ref.h"
-#include "garnet/bin/media/audio_server/audio_pipe.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
 #include "garnet/bin/media/audio_server/pending_flush_token.h"
 #include "lib/fxl/synchronization/thread_annotations.h"

@@ -20,7 +20,7 @@
 
 namespace media_player {
 
-// AudioRenderer that renders video via FIDL services.
+// VideoRenderer that renders video via FIDL services.
 class FidlVideoRenderer
     : public VideoRendererInProc,
       public std::enable_shared_from_this<FidlVideoRenderer> {

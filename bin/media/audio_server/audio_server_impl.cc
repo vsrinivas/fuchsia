@@ -10,8 +10,7 @@
 
 #include "garnet/bin/media/audio_server/audio_capturer_impl.h"
 #include "garnet/bin/media/audio_server/audio_device_manager.h"
-#include "garnet/bin/media/audio_server/audio_renderer1_impl.h"
-#include "garnet/bin/media/audio_server/audio_renderer2_impl.h"
+#include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 
 namespace media {
 namespace audio {
@@ -87,17 +86,10 @@ void AudioServerImpl::Shutdown() {
   DoPacketCleanup();
 }
 
-void AudioServerImpl::CreateRenderer(
-    fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer,
-    fidl::InterfaceRequest<fuchsia::media::MediaRenderer> media_renderer) {
-  device_manager_.AddRenderer(AudioRenderer1Impl::Create(
-      std::move(audio_renderer), std::move(media_renderer), this));
-}
-
 void AudioServerImpl::CreateRendererV2(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer2> audio_renderer) {
   device_manager_.AddRenderer(
-      AudioRenderer2Impl::Create(std::move(audio_renderer), this));
+      AudioRendererImpl::Create(std::move(audio_renderer), this));
 }
 
 void AudioServerImpl::CreateCapturer(

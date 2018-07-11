@@ -1,7 +1,7 @@
  # Signal Generator tool
 
 This directory contains a developer tool that generates and renders audio
-signals, via the Audio and AudioRenderer2 FIDL interfaces.
+signals, via the Audio and AudioRenderer FIDL interfaces.
 
 ### USAGE
 

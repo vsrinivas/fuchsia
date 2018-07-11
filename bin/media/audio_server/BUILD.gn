@@ -73,14 +73,8 @@ executable("audio_server") {
     "audio_output.h",
     "audio_packet_ref.cc",
     "audio_packet_ref.h",
-    "audio_pipe.cc",
-    "audio_pipe.h",
     "audio_plug_detector.cc",
     "audio_plug_detector.h",
-    "audio_renderer1_impl.cc",
-    "audio_renderer1_impl.h",
-    "audio_renderer2_impl.cc",
-    "audio_renderer2_impl.h",
     "audio_renderer_format_info.cc",
     "audio_renderer_format_info.h",
     "audio_renderer_impl.cc",
@@ -101,8 +95,6 @@ executable("audio_server") {
     "standard_output_base.h",
     "throttle_output.cc",
     "throttle_output.h",
-    "timeline_control_point.cc",
-    "timeline_control_point.h",
     "utils.cc",
     "utils.h",
   ]
@@ -118,7 +110,6 @@ executable("audio_server") {
     "//garnet/public/lib/media/audio",
     "//garnet/public/fidl/fuchsia.media",
     "//garnet/public/lib/media/timeline",
-    "//garnet/public/lib/media/transport",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/audio-proto-utils",
@@ -138,7 +129,7 @@ test("tests") {
   output_name = "audio_server_tests"
 
   sources = [
-    "test/audio_renderer2_tests.cc",
+    "test/audio_renderer_tests.cc",
     "test/audio_server_tests.cc",
   ]
 

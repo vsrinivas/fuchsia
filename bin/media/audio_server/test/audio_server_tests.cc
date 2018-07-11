@@ -91,12 +91,12 @@ class AudioServerTest : public gtest::RealLoopFixture {
   // This is split into a separate method, rather than included in TearDown(),
   // because it is not needed for tests that do not change Gain|Mute or routing.
   void RestoreState() {
-    // Don't waste time, if system Gain is already what we want it to be.
+    // Don't waste time restoring values, if they are already what we want.
     if (received_gain_db_ != prev_system_gain_db_) {
       audio_->SetSystemGain(prev_system_gain_db_);
       RunLoopWithTimeout(kDurationResponseExpected);
     }
-    // Don't waste time, if system Mute is already what we want it to be.
+
     if (received_mute_ != prev_system_mute_) {
       audio_->SetSystemMute(prev_system_mute_);
       RunLoopWithTimeout(kDurationResponseExpected);
@@ -111,19 +111,15 @@ class AudioServerTest : public gtest::RealLoopFixture {
   }
 
   void TearDown() override {
-    audio_renderer2_.Unbind();
     audio_capturer_.Unbind();
     audio_renderer_.Unbind();
-    media_renderer_.Unbind();
     audio_.Unbind();
 
     EXPECT_FALSE(error_occurred_);
   }
 
   fuchsia::media::AudioPtr audio_;
-  fuchsia::media::AudioRendererPtr audio_renderer_;
-  fuchsia::media::MediaRendererPtr media_renderer_;
-  fuchsia::media::AudioRenderer2Ptr audio_renderer2_;
+  fuchsia::media::AudioRenderer2Ptr audio_renderer_;
   fuchsia::media::AudioCapturerPtr audio_capturer_;
 
   float prev_system_gain_db_;
@@ -139,50 +135,22 @@ constexpr float AudioServerTest::kUnityGain;
 constexpr zx::duration AudioServerTest::kDurationTimeoutExpected;
 constexpr zx::duration AudioServerTest::kDurationResponseExpected;
 
-// Test creation and interface independence of AudioRenderer and MediaRenderer.
+// Test creation and interface independence of AudioRenderer.
 TEST_F(AudioServerTest, CreateRenderer) {
-  // Validate Audio can create AudioRenderer and MediaRenderer interfaces.
-  audio_->CreateRenderer(audio_renderer_.NewRequest(),
-                         media_renderer_.NewRequest());
+  // Validate Audio can create AudioRenderer interface.
+  audio_->CreateRendererV2(audio_renderer_.NewRequest());
   EXPECT_TRUE(audio_renderer_);
-  EXPECT_TRUE(media_renderer_);
 
-  // Validate that MediaRenderer persists without AudioRenderer.
+  // Validate that Audio persists without AudioRenderer.
   audio_renderer_.Unbind();
   EXPECT_FALSE(audio_renderer_);
-  EXPECT_TRUE(media_renderer_);
   EXPECT_TRUE(audio_);
 
-  // Validate that Audio persists without AudioRenderer or MediaRenderer.
-  media_renderer_.Unbind();
-  EXPECT_FALSE(media_renderer_);
-  EXPECT_TRUE(audio_);
-
-  // Validate that these interfaces persist after Audio is unbound.
-  audio_->CreateRenderer(audio_renderer_.NewRequest(),
-                         media_renderer_.NewRequest());
+  // Validate AudioRenderer persists after Audio is unbound.
+  audio_->CreateRendererV2(audio_renderer_.NewRequest());
   audio_.Unbind();
   EXPECT_FALSE(audio_);
   EXPECT_TRUE(audio_renderer_);
-  EXPECT_TRUE(media_renderer_);
-}
-
-// Test creation and interface independence of AudioRenderer2.
-TEST_F(AudioServerTest, CreateRenderer2) {
-  // Validate Audio can create AudioRenderer2 interface.
-  audio_->CreateRendererV2(audio_renderer2_.NewRequest());
-  EXPECT_TRUE(audio_renderer2_);
-
-  // Validate that Audio persists without AudioRenderer2.
-  audio_renderer2_.Unbind();
-  EXPECT_FALSE(audio_renderer2_);
-  EXPECT_TRUE(audio_);
-
-  // Validate AudioRenderer2 persists after Audio is unbound.
-  audio_->CreateRendererV2(audio_renderer2_.NewRequest());
-  audio_.Unbind();
-  EXPECT_FALSE(audio_);
-  EXPECT_TRUE(audio_renderer2_);
 }
 
 // Test creation and interface independence of AudioCapturer.
@@ -382,56 +350,26 @@ class AudioServerSyncTest : public gtest::RealLoopFixture {
   }
 
   fuchsia::media::AudioSync2Ptr audio_;
-  fuchsia::media::AudioRendererSync2Ptr audio_renderer_;
-  fuchsia::media::MediaRendererSync2Ptr media_renderer_;
-  fuchsia::media::AudioRenderer2Sync2Ptr audio_renderer2_;
+  fuchsia::media::AudioRenderer2Sync2Ptr audio_renderer_;
   fuchsia::media::AudioCapturerSync2Ptr audio_capturer_;
 };
 
-// Test creation and survival of synchronous AudioRenderer and MediaRenderer.
+// Test creation and interface independence of AudioRenderer.
 TEST_F(AudioServerSyncTest, CreateRenderer) {
-  // Validate Audio can create AudioRenderer and MediaRenderer interfaces.
-  EXPECT_EQ(ZX_OK, audio_
-                       ->CreateRenderer(audio_renderer_.NewRequest(),
-                                        media_renderer_.NewRequest())
-                       .statvs);
-  EXPECT_TRUE(audio_renderer_);
-  EXPECT_TRUE(media_renderer_);
-
-  // Validate that AudioRenderer persists without MediaRenderer.
-  media_renderer_ = nullptr;
+  // Validate Audio can create AudioRenderer interface.
+  EXPECT_EQ(ZX_OK,
+            audio_->CreateRendererV2(audio_renderer_.NewRequest()).statvs);
   EXPECT_TRUE(audio_renderer_);
 
-  // Validate that Audio persists without AudioRenderer or MediaRenderer.
+  // Validate that Audio persists without AudioRenderer.
   audio_renderer_ = nullptr;
   ASSERT_TRUE(audio_);
 
-  // Validate that these interfaces persist after Audio is unbound.
-  EXPECT_EQ(ZX_OK, audio_
-                       ->CreateRenderer(audio_renderer_.NewRequest(),
-                                        media_renderer_.NewRequest())
-                       .statvs);
+  // Validate AudioRenderer persists after Audio is unbound.
+  EXPECT_EQ(ZX_OK,
+            audio_->CreateRendererV2(audio_renderer_.NewRequest()).statvs);
   audio_ = nullptr;
   EXPECT_TRUE(audio_renderer_);
-  EXPECT_TRUE(media_renderer_);
-}
-
-// Test creation and interface independence of AudioRenderer2.
-TEST_F(AudioServerSyncTest, CreateRenderer2) {
-  // Validate Audio can create AudioRenderer2 interface.
-  EXPECT_EQ(ZX_OK,
-            audio_->CreateRendererV2(audio_renderer2_.NewRequest()).statvs);
-  EXPECT_TRUE(audio_renderer2_);
-
-  // Validate that Audio persists without AudioRenderer2.
-  audio_renderer2_ = nullptr;
-  ASSERT_TRUE(audio_);
-
-  // Validate AudioRenderer2 persists after Audio is unbound.
-  EXPECT_EQ(ZX_OK,
-            audio_->CreateRendererV2(audio_renderer2_.NewRequest()).statvs);
-  audio_ = nullptr;
-  EXPECT_TRUE(audio_renderer2_);
 }
 
 // Test creation and interface independence of AudioCapturer.

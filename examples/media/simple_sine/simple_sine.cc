@@ -46,7 +46,7 @@ void MediaApp::Run(fuchsia::sys::StartupContext* app_context) {
 }
 
 // Use StartupContext to acquire AudioPtr, which we only need in order to get
-// an AudioRenderer2Ptr. Set an error handler, in case of channel closure.
+// an AudioRendererPtr. Set an error handler, in case of channel closure.
 void MediaApp::AcquireRenderer(fuchsia::sys::StartupContext* app_context) {
   fuchsia::media::AudioPtr audio =
       app_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
@@ -74,7 +74,7 @@ void MediaApp::SetMediaType() {
 }
 
 // Create a Virtual Memory Object, and map enough memory for audio buffers.
-// Send a reduced-rights handle to AudioRenderer2 to act as a shared buffer.
+// Send a reduced-rights handle to AudioRenderer to act as a shared buffer.
 zx_status_t MediaApp::CreateMemoryMapping() {
   zx::vmo payload_vmo;
 

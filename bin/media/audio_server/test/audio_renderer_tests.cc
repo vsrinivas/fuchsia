@@ -15,8 +15,8 @@ namespace media {
 namespace audio {
 namespace test {
 
-// Base class for tests of the asynchronous AudioRenderer2 interface.
-class AudioRenderer2Test : public gtest::RealLoopFixture {
+// Base class for tests of the asynchronous AudioRenderer interface.
+class AudioRendererTest : public gtest::RealLoopFixture {
  protected:
   void SetUp() override {
     fuchsia::sys::ConnectToEnvironmentService(audio_.NewRequest());
@@ -32,7 +32,7 @@ class AudioRenderer2Test : public gtest::RealLoopFixture {
     ASSERT_TRUE(audio_renderer_);
 
     audio_renderer_.set_error_handler([this]() {
-      FXL_LOG(ERROR) << "AudioRenderer2 connection lost. Quitting.";
+      FXL_LOG(ERROR) << "AudioRenderer connection lost. Quitting.";
       error_occurred_ = true;
       QuitLoop();
     });
@@ -44,8 +44,8 @@ class AudioRenderer2Test : public gtest::RealLoopFixture {
   bool error_occurred_ = false;
 };
 
-// Basic validation of SetPcmFormat() for the asynchronous AudioRenderer2.
-TEST_F(AudioRenderer2Test, SetPcmFormat) {
+// Basic validation of SetPcmFormat() for the asynchronous AudioRenderer.
+TEST_F(AudioRendererTest, SetPcmFormat) {
   fuchsia::media::AudioPcmFormat format;
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 2;
@@ -63,7 +63,7 @@ TEST_F(AudioRenderer2Test, SetPcmFormat) {
 }
 
 // If renderer is not in operational mode, a second SetPcmFormat should succeed.
-TEST_F(AudioRenderer2Test, SetPcmFormat_Double) {
+TEST_F(AudioRendererTest, SetPcmFormat_Double) {
   fuchsia::media::AudioPcmFormat format;
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 2;
@@ -86,14 +86,14 @@ TEST_F(AudioRenderer2Test, SetPcmFormat_Double) {
   EXPECT_GE(lead_time, 0);
 }
 
-// Base class for tests of the synchronous AudioRenderer2Sync interface.
+// Base class for tests of the synchronous AudioRendererSync interface.
 // We expect the async and sync interfaces to track each other exactly -- any
 // behavior otherwise is a bug in core FIDL. These tests were only created to
 // better understand how errors manifest themselves when using sync interfaces.
 //
 // In short, further testing of the sync interfaces (over and above any testing
 // done on the async interfaces) should not be needed.
-class AudioRenderer2SyncTest : public gtest::RealLoopFixture {
+class AudioRendererSyncTest : public gtest::RealLoopFixture {
  protected:
   void SetUp() override {
     fuchsia::sys::ConnectToEnvironmentService(audio_.NewRequest());
@@ -108,8 +108,8 @@ class AudioRenderer2SyncTest : public gtest::RealLoopFixture {
   fuchsia::media::AudioRenderer2Sync2Ptr audio_renderer_;
 };
 
-// Basic validation of SetPcmFormat() for the synchronous AudioRenderer2.
-TEST_F(AudioRenderer2SyncTest, SetPcmFormat) {
+// Basic validation of SetPcmFormat() for the synchronous AudioRenderer.
+TEST_F(AudioRendererSyncTest, SetPcmFormat) {
   fuchsia::media::AudioPcmFormat format;
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 2;
@@ -122,7 +122,7 @@ TEST_F(AudioRenderer2SyncTest, SetPcmFormat) {
 }
 
 // If renderer is not in operational mode, a second SetPcmFormat should succeed.
-TEST_F(AudioRenderer2SyncTest, SetPcmFormat_Double) {
+TEST_F(AudioRendererSyncTest, SetPcmFormat_Double) {
   fuchsia::media::AudioPcmFormat format;
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 2;

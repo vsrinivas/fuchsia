@@ -10,13 +10,20 @@
 namespace media {
 namespace audio {
 
-AudioPacketRef::AudioPacketRef(AudioServerImpl* server, uint32_t frac_frame_len,
-                               int64_t start_pts)
-    : server_(server),
+AudioPacketRef::AudioPacketRef(
+    fbl::RefPtr<vmo_utils::RefCountedVmoMapper> vmo_ref,
+    fuchsia::media::AudioRenderer2::SendPacketCallback callback,
+    fuchsia::media::AudioPacket packet, AudioServerImpl* server,
+    uint32_t frac_frame_len, int64_t start_pts)
+    : vmo_ref_(std::move(vmo_ref)),
+      callback_(std::move(callback)),
+      packet_(std::move(packet)),
+      server_(server),
       frac_frame_len_(frac_frame_len),
       start_pts_(start_pts),
       end_pts_(start_pts + frac_frame_len) {
   FXL_DCHECK(server_);
+  FXL_DCHECK(vmo_ref_ != nullptr);
 }
 
 void AudioPacketRef::fbl_recycle() {

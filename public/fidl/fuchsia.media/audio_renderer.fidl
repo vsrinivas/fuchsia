@@ -12,22 +12,6 @@ const float32 kMutedGain = -160.0;
 // An outgoing audio stream's maximum permitted above-unity gain, in decibels.
 const float32 kMaxGain = 24.0;
 
-interface AudioRenderer {
-  // Sets the current gain/attenuation of the renderer, expressed in dB.  Legal
-  // values are in the range [-inf, 24.0].  Any value less than or equal to the
-  // constant kMutedGain will result in the renderer becoming explicitly muted
-  // (regardless of its underlying resolution or intensity).
-  1: SetGain(float32 db_gain);
-
-  // Query the minimum possible presentation delay for this renderer, expressed
-  // in nanoseconds.
-  //
-  // This value depends on the media type and configuration of the renderer and
-  // what it is bound to, so in theory this should be queried again when either
-  // of these change. In practice, it's currently static.
-  2: GetMinDelay() -> (int64 delay);
-};
-
 struct AudioPacket {
   // Time at which the audio is to be presented, or was captured, as measured on
   // the reference clock.
