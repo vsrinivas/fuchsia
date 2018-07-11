@@ -396,5 +396,33 @@ TEST_F(SessionStorageTest, ObserveCreatePromoteDeleteKindOfProtoStory) {
   EXPECT_EQ(1u, all_data->size());
 }
 
+TEST_F(SessionStorageTest, GetStoryStorage) {
+  auto storage = CreateStorage("page");
+  auto story_id = CreateStory(storage.get());
+
+  bool done{};
+  auto get_story_future = storage->GetStoryStorage(story_id);
+  get_story_future->Then([&](std::unique_ptr<StoryStorage> result) {
+    EXPECT_NE(nullptr, result);
+    done = true;
+  });
+
+  RunLoopUntil([&] { return done; });
+}
+
+TEST_F(SessionStorageTest, GetStoryStorageNoStory) {
+  auto storage = CreateStorage("page");
+  CreateStory(storage.get());
+
+  bool done{};
+  auto get_story_future = storage->GetStoryStorage("fake");
+  get_story_future->Then([&](std::unique_ptr<StoryStorage> result) {
+    EXPECT_EQ(nullptr, result);
+    done = true;
+  });
+
+  RunLoopUntil([&] { return done; });
+}
+
 }  // namespace
 }  // namespace modular

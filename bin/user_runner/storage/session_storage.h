@@ -9,6 +9,7 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
 
+#include "peridot/bin/user_runner/storage/story_storage.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/page_id.h"
@@ -103,6 +104,11 @@ class SessionStorage : public PageClient {
   // Deletes the story with |story_id| provided that it has not been promoted to
   // a regular story.
   FuturePtr<> DeleteKindOfProtoStory(fidl::StringPtr story_id);
+
+  // Gets the StoryStorage for the story with the given |story_id| to perform
+  // operations on the story such as adding modules, updating links, etc.
+  FuturePtr<std::unique_ptr<StoryStorage>> GetStoryStorage(
+      fidl::StringPtr story_id);
 
   // TODO(thatguy): Eliminate all users of this, and remove it. We want all
   // interfaces with the Ledger to be contained within *Storage classes.

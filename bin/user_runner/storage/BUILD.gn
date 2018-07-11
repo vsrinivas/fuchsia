@@ -61,6 +61,7 @@ source_set("session_storage") {
 
   deps = [
     ":session_storage_xdr",
+    ":story_storage",
     "//peridot/bin/user_runner/storage:constants_and_utils",
     "//peridot/lib/fidl:clone",
     "//peridot/lib/ledger_client:operations",

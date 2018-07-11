@@ -281,6 +281,27 @@ FuturePtr<> SessionStorage::DeleteKindOfProtoStory(fidl::StringPtr story_id) {
   return returned_future;
 }
 
+FuturePtr<std::unique_ptr<StoryStorage>> SessionStorage::GetStoryStorage(
+    fidl::StringPtr story_id) {
+  auto returned_future = Future<std::unique_ptr<StoryStorage>>::Create(
+      "SessionStorage.GetStoryStorage.returned_future");
+
+  operation_queue_.Add(MakeGetStoryDataCall(
+      page(), story_id,
+      [this, returned_future,
+       story_id](fuchsia::modular::internal::StoryDataPtr story_data) {
+        if (story_data) {
+          auto story_storage = std::make_unique<StoryStorage>(
+              ledger_client(), *story_data->story_page_id);
+          returned_future->Complete(std::move(story_storage));
+        } else {
+          returned_future->Complete(nullptr);
+        }
+      }));
+
+  return returned_future;
+}
+
 void SessionStorage::OnPageChange(const std::string& key,
                                   const std::string& value) {
   auto story_data = fuchsia::modular::internal::StoryData::New();
