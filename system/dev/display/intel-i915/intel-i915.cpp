@@ -418,11 +418,16 @@ bool Controller::BringUpDisplayEngine(bool resume) {
 void Controller::ResetPipe(registers::Pipe pipe) {
     registers::PipeRegs pipe_regs(pipe);
 
-    // Disable planes
+    // Disable planes, bottom color, and cursor
     for (int i = 0; i < 3; i++ ) {
         pipe_regs.PlaneControl(i).FromValue(0).WriteTo(mmio_space());
         pipe_regs.PlaneSurface(i).FromValue(0).WriteTo(mmio_space());
     }
+    auto cursor_ctrl = pipe_regs.CursorCtrl().ReadFrom(mmio_space());
+    cursor_ctrl.set_mode_select(cursor_ctrl.kDisabled);
+    cursor_ctrl.WriteTo(mmio_space());
+    pipe_regs.CursorBase().FromValue(0).WriteTo(mmio_space());
+    pipe_regs.PipeBottomColor().FromValue(0).WriteTo(mmio_space());
 
     ZX_DEBUG_ASSERT(mtx_trylock(&display_lock_) == thrd_busy);
     for (unsigned plane_num = 0; plane_num < registers::kImagePlaneCount; plane_num++) {
