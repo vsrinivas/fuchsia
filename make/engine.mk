@@ -531,7 +531,7 @@ FUZZ_ALIB := $(shell $(CLANG_TOOLCHAIN_PREFIX)clang \
 				 $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS)\
 				 -print-file-name=$(FUZZ_ANAME))
 
-FUZZ_RUNTIME_SONAMES := libc++.so.2 libc++abi.so.1
+FUZZ_RUNTIME_SONAMES := libc++abi.so.1
 FUZZ_RUNTIME_SOLIBS := $(foreach soname,$(FUZZ_RUNTIME_SONAMES),\
 				 $(word 2,$(subst =, ,$(call find-clang-asan-solib,$(soname)))))
 
