@@ -46,14 +46,14 @@ typedef struct {
 } platform_device_protocol_t;
 
 // Maps an MMIO region. "index" is relative to the list of MMIOs for the device.
-static inline zx_status_t pdev_map_mmio(platform_device_protocol_t* pdev, uint32_t index,
+static inline zx_status_t pdev_map_mmio(const platform_device_protocol_t* pdev, uint32_t index,
                                         uint32_t cache_policy, void** out_vaddr, size_t* out_size,
                                         zx_handle_t* out_handle) {
     return pdev->ops->map_mmio(pdev->ctx, index, cache_policy, out_vaddr, out_size, NULL,
                                out_handle);
 }
 
-static inline zx_status_t pdev_map_mmio2(platform_device_protocol_t* pdev, uint32_t index,
+static inline zx_status_t pdev_map_mmio2(const platform_device_protocol_t* pdev, uint32_t index,
                                         uint32_t cache_policy, void** out_vaddr, size_t* out_size,
                                         zx_paddr_t* out_paddr, zx_handle_t* out_handle) {
     return pdev->ops->map_mmio(pdev->ctx, index, cache_policy, out_vaddr, out_size, out_paddr,
@@ -61,34 +61,35 @@ static inline zx_status_t pdev_map_mmio2(platform_device_protocol_t* pdev, uint3
 }
 
 // Returns an interrupt handle. "index" is relative to the list of IRQs for the device.
-static inline zx_status_t pdev_map_interrupt(platform_device_protocol_t* pdev, uint32_t index,
+static inline zx_status_t pdev_map_interrupt(const platform_device_protocol_t* pdev, uint32_t index,
                                              zx_handle_t* out_handle) {
     return pdev->ops->map_interrupt(pdev->ctx, index, 0, out_handle);
 }
 
 // Returns an interrupt handle. "index" is relative to the list of IRQs for the device.
 // This API allows user to specify the mode
-static inline zx_status_t pdev_get_interrupt(platform_device_protocol_t* pdev, uint32_t index,
+static inline zx_status_t pdev_get_interrupt(const platform_device_protocol_t* pdev, uint32_t index,
                                              uint32_t flags, zx_handle_t* out_handle) {
     return pdev->ops->map_interrupt(pdev->ctx, index, flags, out_handle);
 }
 
 // Returns an IOMMU bus transaction initiator handle.
 // "index" is relative to the list of BTIs for the device.
-static inline zx_status_t pdev_get_bti(platform_device_protocol_t* pdev, uint32_t index,
+static inline zx_status_t pdev_get_bti(const platform_device_protocol_t* pdev, uint32_t index,
                                        zx_handle_t* out_handle) {
     return pdev->ops->get_bti(pdev->ctx, index, out_handle);
 }
 
-static inline zx_status_t pdev_get_device_info(platform_device_protocol_t* pdev,
+static inline zx_status_t pdev_get_device_info(const platform_device_protocol_t* pdev,
                                                pdev_device_info_t* out_info) {
     return pdev->ops->get_device_info(pdev->ctx, out_info);
 }
 
 // MMIO mapping helpers
 
-static inline zx_status_t pdev_map_mmio_buffer(platform_device_protocol_t* pdev, uint32_t index,
-                                               uint32_t cache_policy, io_buffer_t* buffer) {
+static inline zx_status_t pdev_map_mmio_buffer(const platform_device_protocol_t* pdev,
+                                               uint32_t index, uint32_t cache_policy,
+                                               io_buffer_t* buffer) {
     void* vaddr;
     size_t size;
     zx_paddr_t paddr;
