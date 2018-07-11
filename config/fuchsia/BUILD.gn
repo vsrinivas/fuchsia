@@ -54,7 +54,10 @@ config("compiler") {
   cflags = []
   cflags_c = [ "-std=c11" ]
   cflags_cc = [ "-std=c++14" ]
-  ldflags = [ "-Wl,--threads" ]
+  ldflags = [
+    "-Wl,--threads",
+    "-Wl,--pack-dyn-relocs=relr",
+  ]
   configs = [
     ":compiler_sysroot",
     ":compiler_target",
