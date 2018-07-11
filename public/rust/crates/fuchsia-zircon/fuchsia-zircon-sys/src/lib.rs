@@ -84,16 +84,17 @@ multiconst!(u32, [
 
 // TODO: add an alias for this type in the C headers.
 multiconst!(u32, [
-    ZX_VM_FLAG_PERM_READ          = 1  << 0;
-    ZX_VM_FLAG_PERM_WRITE         = 1  << 1;
-    ZX_VM_FLAG_PERM_EXECUTE       = 1  << 2;
-    ZX_VM_FLAG_COMPACT            = 1  << 3;
-    ZX_VM_FLAG_SPECIFIC           = 1  << 4;
-    ZX_VM_FLAG_SPECIFIC_OVERWRITE = 1  << 5;
-    ZX_VM_FLAG_CAN_MAP_SPECIFIC   = 1  << 6;
-    ZX_VM_FLAG_CAN_MAP_READ       = 1  << 7;
-    ZX_VM_FLAG_CAN_MAP_WRITE      = 1  << 8;
-    ZX_VM_FLAG_CAN_MAP_EXECUTE    = 1  << 9;
+    ZX_VM_FLAG_PERM_READ             = 1 << 0;
+    ZX_VM_FLAG_PERM_WRITE            = 1 << 1;
+    ZX_VM_FLAG_PERM_EXECUTE          = 1 << 2;
+    ZX_VM_FLAG_COMPACT               = 1 << 3;
+    ZX_VM_FLAG_SPECIFIC              = 1 << 4;
+    ZX_VM_FLAG_SPECIFIC_OVERWRITE    = 1 << 5;
+    ZX_VM_FLAG_CAN_MAP_SPECIFIC      = 1 << 6;
+    ZX_VM_FLAG_CAN_MAP_READ          = 1 << 7;
+    ZX_VM_FLAG_CAN_MAP_WRITE         = 1 << 8;
+    ZX_VM_FLAG_CAN_MAP_EXECUTE       = 1 << 9;
+    ZX_VM_FLAG_REQUIRE_NON_RESIZABLE = 1 << 11;
 ]);
 
 multiconst!(zx_status_t, [
