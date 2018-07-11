@@ -46,6 +46,9 @@ constexpr char kAppArv0[] = "/pkg/bin/app";
 constexpr char kLegacyFlatExportedDirPath[] = "meta/legacy_flat_exported_dir";
 // Runtime files are deprecated. Use component manifests instead.
 constexpr char kDeprecatedRuntimePath[] = "meta/deprecated_runtime";
+constexpr zx_status_t kComponentCreationFailed = -1;
+
+using fuchsia::sys::TerminationReason;
 
 std::vector<const char*> GetArgv(const std::string& argv0,
                                  const fuchsia::sys::LaunchInfo& launch_info) {
@@ -264,15 +267,21 @@ void Realm::CreateComponent(
     fuchsia::sys::LaunchInfo launch_info,
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
     ComponentObjectCreatedCallback callback) {
+  ComponentRequestWrapper component_request(
+      std::move(controller), MakeForwardingTerminationCallback());
   if (launch_info.url.get().empty()) {
     FXL_LOG(ERROR) << "Cannot create application because launch_info contains"
                       " an empty url";
+    component_request.SetReturnValues(kComponentCreationFailed,
+                                      TerminationReason::URL_INVALID);
     return;
   }
   std::string canon_url = CanonicalizeURL(launch_info.url);
   if (canon_url.empty()) {
     FXL_LOG(ERROR) << "Cannot run " << launch_info.url
                    << " because the url could not be canonicalized";
+    component_request.SetReturnValues(kComponentCreationFailed,
+                                      TerminationReason::URL_INVALID);
     return;
   }
   launch_info.url = canon_url;
@@ -287,8 +296,9 @@ void Realm::CreateComponent(
 
   // TODO(CP-69): Provision this map as a config file rather than hard-coding.
   if (scheme == "http" || scheme == "https") {
-    CreateComponentFromNetwork(std::move(launch_info), std::move(controller),
-                               std::move(ns), std::move(callback));
+    CreateComponentFromNetwork(std::move(launch_info),
+                               std::move(component_request), std::move(ns),
+                               std::move(callback));
     return;
   }
 
@@ -296,19 +306,24 @@ void Realm::CreateComponent(
   fidl::StringPtr url = launch_info.url;
   loader_->LoadComponent(
       url, fxl::MakeCopyable([this, launch_info = std::move(launch_info),
-                              controller = std::move(controller), ns,
-                              callback = fbl::move(callback)](
+                              component_request = std::move(component_request),
+                              ns, callback = fbl::move(callback)](
                                  fuchsia::sys::PackagePtr package) mutable {
         if (package) {
           if (package->data) {
-            CreateComponentWithProcess(
-                std::move(package), std::move(launch_info),
-                std::move(controller), std::move(ns), fbl::move(callback));
+            CreateComponentWithProcess(std::move(package),
+                                       std::move(launch_info),
+                                       std::move(component_request),
+                                       std::move(ns), fbl::move(callback));
           } else if (package->directory) {
-            CreateComponentFromPackage(
-                std::move(package), std::move(launch_info),
-                std::move(controller), std::move(ns), fbl::move(callback));
+            CreateComponentFromPackage(std::move(package),
+                                       std::move(launch_info),
+                                       std::move(component_request),
+                                       std::move(ns), fbl::move(callback));
           }
+        } else {
+          component_request.SetReturnValues(
+              kComponentCreationFailed, TerminationReason::PACKAGE_NOT_FOUND);
         }
       }));
 }
@@ -376,11 +391,14 @@ void Realm::AddBinding(
 
 void Realm::CreateComponentWithProcess(
     fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
-    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
-    fxl::RefPtr<Namespace> ns, ComponentObjectCreatedCallback callback) {
+    ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns,
+    ComponentObjectCreatedCallback callback) {
   zx::channel svc = ns->OpenServicesAsDirectory();
-  if (!svc)
+  if (!svc) {
+    component_request.SetReturnValues(kComponentCreationFailed,
+                                      TerminationReason::INTERNAL_ERROR);
     return;
+  }
 
   NamespaceBuilder builder;
   builder.AddServices(std::move(svc));
@@ -396,8 +414,11 @@ void Realm::CreateComponentWithProcess(
   builder.AddDeprecatedDefaultDirectories();
 
   fsl::SizedVmo executable;
-  if (!fsl::SizedVmo::FromTransport(std::move(*package->data), &executable))
+  if (!fsl::SizedVmo::FromTransport(std::move(*package->data), &executable)) {
+    component_request.SetReturnValues(kComponentCreationFailed,
+                                      TerminationReason::INTERNAL_ERROR);
     return;
+  }
 
   zx::job child_job;
   zx_status_t status = zx::job::create(job_, 0u, &child_job);
@@ -412,28 +433,35 @@ void Realm::CreateComponentWithProcess(
                     std::move(launch_info), zx::channel(), builder.Build());
 
   if (process) {
+    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
+    TerminationCallback termination_callback;
+    component_request.Extract(&controller, &termination_callback);
     auto application = std::make_unique<ComponentControllerImpl>(
         std::move(controller), this, std::move(child_job), std::move(process),
         url, std::move(args), Util::GetLabelFromURL(url), std::move(ns),
         ExportedDirType::kPublicDebugCtrlLayout,
-        std::move(channels.exported_dir), std::move(channels.client_request));
+        std::move(channels.exported_dir), std::move(channels.client_request),
+        std::move(termination_callback));
     // update hub
     hub_.AddComponent(application->HubInfo());
     ComponentControllerImpl* key = application.get();
-    if (callback != nullptr) {
-      callback(key);
-    }
     applications_.emplace(key, std::move(application));
+  } else {
+    component_request.SetReturnValues(
+        kComponentCreationFailed, TerminationReason::PROCESS_CREATION_ERROR);
   }
 }
 
 void Realm::CreateComponentFromNetwork(
     fuchsia::sys::LaunchInfo launch_info,
-    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
-    fxl::RefPtr<Namespace> ns, ComponentObjectCreatedCallback callback) {
+    ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns,
+    ComponentObjectCreatedCallback callback) {
   zx::channel svc = ns->OpenServicesAsDirectory();
-  if (!svc)
+  if (!svc) {
+    component_request.SetReturnValues(kComponentCreationFailed,
+                                      TerminationReason::INTERNAL_ERROR);
     return;
+  }
 
   NamespaceBuilder builder;
   builder.AddServices(std::move(svc));
@@ -455,20 +483,29 @@ void Realm::CreateComponentFromNetwork(
   if (runner == nullptr) {
     FXL_LOG(ERROR) << "Cannot create " << runner_url << " to run "
                    << launch_info.url;
+    component_request.SetReturnValues(kComponentCreationFailed,
+                                      TerminationReason::RUNNER_FAILED);
     return;
   }
 
+  fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
+  TerminationCallback termination_callback;
+  component_request.Extract(&controller, &termination_callback);
   runner->StartComponent(std::move(package), std::move(startup_info),
-                         std::move(ns), std::move(controller));
+                         std::move(ns), std::move(controller),
+                         std::move(termination_callback));
 }
 
 void Realm::CreateComponentFromPackage(
     fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
-    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
-    fxl::RefPtr<Namespace> ns, ComponentObjectCreatedCallback callback) {
+    ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns,
+    ComponentObjectCreatedCallback callback) {
   zx::channel svc = ns->OpenServicesAsDirectory();
-  if (!svc)
+  if (!svc) {
+    component_request.SetReturnValues(kComponentCreationFailed,
+                                      TerminationReason::INTERNAL_ERROR);
     return;
+  }
 
   fxl::UniqueFD fd =
       fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
@@ -493,8 +530,11 @@ void Realm::CreateComponentFromPackage(
   // the channel back.
   zx::channel pkg = fsl::CloneChannelFromFileDescriptor(fd.get());
   zx::channel loader_service;
-  if (DynamicLibraryLoader::Start(std::move(fd), &loader_service) != ZX_OK)
+  if (DynamicLibraryLoader::Start(std::move(fd), &loader_service) != ZX_OK) {
+    component_request.SetReturnValues(kComponentCreationFailed,
+                                      TerminationReason::INTERNAL_ERROR);
     return;
+  }
 
   // Note that |builder| is only used in the else block below. It is left here
   // because we would like to use it everywhere once US-313 is fixed.
@@ -515,6 +555,8 @@ void Realm::CreateComponentFromPackage(
       if (!sandbox.Parse(sandbox_meta)) {
         FXL_LOG(ERROR) << "Failed to parse sandbox metadata for "
                        << launch_info.url;
+        component_request.SetReturnValues(kComponentCreationFailed,
+                                          TerminationReason::INTERNAL_ERROR);
         return;
       }
       // If an app has the "shell" feature, then we use the libraries from the
@@ -547,17 +589,17 @@ void Realm::CreateComponentFromPackage(
         std::move(loader_service), builder.Build());
 
     if (process) {
+      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
+      TerminationCallback termination_callback;
+      component_request.Extract(&controller, &termination_callback);
       auto application = std::make_unique<ComponentControllerImpl>(
           std::move(controller), this, std::move(child_job), std::move(process),
           url, std::move(args), Util::GetLabelFromURL(url), std::move(ns),
           exported_dir_layout, std::move(channels.exported_dir),
-          std::move(channels.client_request));
+          std::move(channels.client_request), std::move(termination_callback));
       // update hub
       hub_.AddComponent(application->HubInfo());
       ComponentControllerImpl* key = application.get();
-      if (callback != nullptr) {
-        callback(key);
-      }
       applications_.emplace(key, std::move(application));
     }
   } else {
@@ -571,6 +613,8 @@ void Realm::CreateComponentFromPackage(
           // meta/runtime.
           FXL_LOG(ERROR) << "Failed to parse runtime metadata for "
                          << launch_info.url;
+          component_request.SetReturnValues(kComponentCreationFailed,
+                                            TerminationReason::INTERNAL_ERROR);
           return;
         }
       }
@@ -579,6 +623,8 @@ void Realm::CreateComponentFromPackage(
       // meta/runtime.
       FXL_LOG(ERROR) << "Failed to parse runtime metadata for "
                      << launch_info.url;
+      component_request.SetReturnValues(kComponentCreationFailed,
+                                        TerminationReason::INTERNAL_ERROR);
       return;
     }
 
@@ -593,10 +639,17 @@ void Realm::CreateComponentFromPackage(
     if (runner == nullptr) {
       FXL_LOG(ERROR) << "Cannot create " << runner << " to run "
                      << launch_info.url;
+      component_request.SetReturnValues(kComponentCreationFailed,
+                                        TerminationReason::INTERNAL_ERROR);
       return;
     }
+
+    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
+    TerminationCallback termination_callback;
+    component_request.Extract(&controller, &termination_callback);
     runner->StartComponent(std::move(inner_package), std::move(startup_info),
-                           std::move(ns), std::move(controller));
+                           std::move(ns), std::move(controller),
+                           std::move(termination_callback));
   }
 }
 

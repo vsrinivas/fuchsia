@@ -15,6 +15,8 @@
 #include "garnet/bin/appmgr/util.h"
 #include "lib/fsl/vmo/file.h"
 
+using fuchsia::sys::TerminationReason;
+
 namespace component {
 
 RunnerHolder::RunnerHolder(fuchsia::sys::Services services,
@@ -31,13 +33,17 @@ RunnerHolder::RunnerHolder(fuchsia::sys::Services services,
                            CreateComponentCallback(component);
                          });
 
-  controller_.set_error_handler([this] {
-    Cleanup();
+  controller_.events().OnTerminated =
+      [this](int64_t return_code, TerminationReason termination_reason) {
+        if (termination_reason != TerminationReason::EXITED) {
+          FXL_LOG(ERROR) << "Runner terminating, status " << termination_reason;
+        }
+        Cleanup();
 
-    if (error_handler_) {
-      error_handler_();
-    }
-  });
+        if (error_handler_) {
+          error_handler_();
+        }
+      };
 
   services_.ConnectToService(runner_.NewRequest());
 }
@@ -46,6 +52,11 @@ RunnerHolder::~RunnerHolder() = default;
 
 void RunnerHolder::Cleanup() {
   impl_object_ = nullptr;
+  // Terminate all bridges currently owned by this runner.
+  for (auto& component : components_) {
+    component.second->SetTerminationReason(
+        TerminationReason::RUNNER_TERMINATED);
+  }
   components_.clear();
 }
 
@@ -66,7 +77,8 @@ void RunnerHolder::CreateComponentCallback(ComponentControllerImpl* component) {
 void RunnerHolder::StartComponent(
     fuchsia::sys::Package package, fuchsia::sys::StartupInfo startup_info,
     fxl::RefPtr<Namespace> ns,
-    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
+    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
+    TerminationCallback termination_callback) {
   auto url = startup_info.launch_info.url;
   const std::string args =
       Util::GetArgsString(startup_info.launch_info.arguments);
@@ -81,7 +93,7 @@ void RunnerHolder::StartComponent(
       std::move(args), Util::GetLabelFromURL(url),
       std::to_string(++component_id_counter_), std::move(ns),
       ExportedDirType::kLegacyFlatLayout, std::move(channels.exported_dir),
-      std::move(channels.client_request));
+      std::move(channels.client_request), std::move(termination_callback));
 
   // update hub
   if (impl_object_) {

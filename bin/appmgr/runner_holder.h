@@ -31,7 +31,8 @@ class RunnerHolder : public ComponentContainer<ComponentBridge> {
   void StartComponent(
       fuchsia::sys::Package package, fuchsia::sys::StartupInfo startup_info,
       fxl::RefPtr<Namespace> ns,
-      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller);
+      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
+      TerminationCallback termination_callback);
 
   std::unique_ptr<ComponentBridge> ExtractComponent(
       ComponentBridge* controller) override;

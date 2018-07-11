@@ -90,20 +90,22 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   RunnerHolder* GetOrCreateRunner(const std::string& runner);
 
-  void CreateComponentFromNetwork(
-      fuchsia::sys::LaunchInfo launch_info,
-      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
-      fxl::RefPtr<Namespace> ns, ComponentObjectCreatedCallback callback);
+  void CreateComponentFromNetwork(fuchsia::sys::LaunchInfo launch_info,
+                                  ComponentRequestWrapper component_request,
+                                  fxl::RefPtr<Namespace> ns,
+                                  ComponentObjectCreatedCallback callback);
 
-  void CreateComponentWithProcess(
-      fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
-      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
-      fxl::RefPtr<Namespace> ns, ComponentObjectCreatedCallback callback);
+  void CreateComponentWithProcess(fuchsia::sys::PackagePtr package,
+                                  fuchsia::sys::LaunchInfo launch_info,
+                                  ComponentRequestWrapper component_request,
+                                  fxl::RefPtr<Namespace> ns,
+                                  ComponentObjectCreatedCallback callback);
 
-  void CreateComponentFromPackage(
-      fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
-      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
-      fxl::RefPtr<Namespace> ns, ComponentObjectCreatedCallback callback);
+  void CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
+                                  fuchsia::sys::LaunchInfo launch_info,
+                                  ComponentRequestWrapper component_request,
+                                  fxl::RefPtr<Namespace> ns,
+                                  ComponentObjectCreatedCallback callback);
 
   zx::channel OpenInfoDir();
 

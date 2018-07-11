@@ -35,6 +35,78 @@ enum class ExportedDirType {
   kPublicDebugCtrlLayout,
 };
 
+typedef fit::function<void(int64_t, fuchsia::sys::TerminationReason,
+                           fuchsia::sys::ComponentController_EventSender*)>
+    TerminationCallback;
+
+// ComponentRequestWrapper wraps failure behavior in the event a Component fails
+// to start. It wraps the behavior of binding to an incoming interface request
+// and sending error events to clients before closing the channel.
+// If there is no error, the wrapped request and callback may be Extract()ed
+// and bound to a concrete interface.
+// TODO(CP-84): Solve the general problem this solves.
+class ComponentRequestWrapper {
+ public:
+  explicit ComponentRequestWrapper(
+      fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
+      TerminationCallback callback, int64_t default_return = -1,
+      fuchsia::sys::TerminationReason default_reason =
+          fuchsia::sys::TerminationReason::UNKNOWN);
+  ~ComponentRequestWrapper();
+  ComponentRequestWrapper(ComponentRequestWrapper&& other);
+  void operator=(ComponentRequestWrapper&& other);
+
+  void SetReturnValues(int64_t return_code,
+                       fuchsia::sys::TerminationReason reason);
+
+  bool Extract(
+      fidl::InterfaceRequest<fuchsia::sys::ComponentController>* out_request,
+      TerminationCallback* out_callback) {
+    if (!active_) {
+      return false;
+    }
+    *out_request = std::move(request_);
+    *out_callback = std::move(callback_);
+    active_ = false;
+    return true;
+  }
+
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ComponentRequestWrapper);
+
+ private:
+  fidl::InterfaceRequest<fuchsia::sys::ComponentController> request_;
+  TerminationCallback callback_;
+  int64_t return_code_;
+  fuchsia::sys::TerminationReason reason_;
+  bool active_ = true;
+};
+
+// Construct a callback that forwards termination information back over an
+// incoming ComponentController_EventSender , if it exists.
+TerminationCallback MakeForwardingTerminationCallback();
+
+// FailedComponentController implements the component controller interface for
+// components that failed to start. This class serves the purpose of actually
+// binding to a ComponentController channel and passing back a termination
+// event.
+class FailedComponentController : public fuchsia::sys::ComponentController {
+ public:
+  FailedComponentController(
+      int64_t return_code, fuchsia::sys::TerminationReason termination_reason,
+      TerminationCallback termination_callback,
+      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller);
+  virtual ~FailedComponentController();
+  void Wait(WaitCallback callback) override;
+  void Kill() override;
+  void Detach() override;
+
+ private:
+  fidl::Binding<fuchsia::sys::ComponentController> binding_;
+  int64_t return_code_;
+  fuchsia::sys::TerminationReason termination_reason_;
+  TerminationCallback termination_callback_;
+};
+
 class ComponentControllerBase : public fuchsia::sys::ComponentController {
  public:
   ComponentControllerBase(
@@ -43,7 +115,7 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
       std::string hub_instance_id, fxl::RefPtr<Namespace> ns,
       ExportedDirType export_dir_type, zx::channel exported_dir,
       zx::channel client_request);
-  ~ComponentControllerBase() override;
+  virtual ~ComponentControllerBase() override;
 
  public:
   HubInfo HubInfo();
@@ -55,9 +127,9 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
 
  protected:
   ComponentHub* hub() { return &hub_; }
+  fidl::Binding<fuchsia::sys::ComponentController> binding_;
 
  private:
-  fidl::Binding<fuchsia::sys::ComponentController> binding_;
   std::string label_;
   std::string hub_instance_id_;
 
@@ -72,10 +144,11 @@ class ComponentControllerImpl : public ComponentControllerBase {
  public:
   ComponentControllerImpl(
       fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
-      ComponentContainer<ComponentControllerImpl>* container,
-      zx::job job, zx::process process, std::string url, std::string args,
-      std::string label, fxl::RefPtr<Namespace> ns, ExportedDirType
-      export_dir_type, zx::channel exported_dir, zx::channel client_request);
+      ComponentContainer<ComponentControllerImpl>* container, zx::job job,
+      zx::process process, std::string url, std::string args, std::string label,
+      fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
+      zx::channel exported_dir, zx::channel client_request,
+      TerminationCallback termination_callback);
   ~ComponentControllerImpl() override;
 
   const std::string& koid() const { return koid_; }
@@ -88,8 +161,8 @@ class ComponentControllerImpl : public ComponentControllerBase {
   void Wait(WaitCallback callback) override;
 
  private:
-  void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-               const zx_packet_signal* signal);
+  void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+               zx_status_t status, const zx_packet_signal* signal);
 
   bool SendReturnCodeIfTerminated();
 
@@ -101,6 +174,8 @@ class ComponentControllerImpl : public ComponentControllerBase {
 
   async::WaitMethod<ComponentControllerImpl, &ComponentControllerImpl::Handler>
       wait_;
+
+  TerminationCallback termination_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentControllerImpl);
 };
@@ -115,11 +190,17 @@ class ComponentBridge : public ComponentControllerBase {
       ComponentContainer<ComponentBridge>* container, std::string url,
       std::string args, std::string label, std::string hub_instance_id,
       fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
-      zx::channel exported_dir, zx::channel client_request);
+      zx::channel exported_dir, zx::channel client_request,
+      TerminationCallback termination_callback);
 
   ~ComponentBridge() override;
 
   void SetParentJobId(const std::string& id);
+
+  // Set the termination reason for this bridge.
+  // This should be used when a runner itself terminates and needs to report
+  // back a failure over the bridge when it is closed.
+  void SetTerminationReason(fuchsia::sys::TerminationReason termination_reason);
 
   // |fuchsia::sys::ComponentController| implementation:
   void Kill() override;
@@ -128,6 +209,8 @@ class ComponentBridge : public ComponentControllerBase {
  private:
   fuchsia::sys::ComponentControllerPtr remote_controller_;
   ComponentContainer<ComponentBridge>* container_;
+  TerminationCallback termination_callback_;
+  fuchsia::sys::TerminationReason termination_reason_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentBridge);
 };
