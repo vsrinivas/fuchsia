@@ -67,6 +67,7 @@
         "garnet/packages/prod/timezone",
         "garnet/packages/prod/tracing",
         "garnet/packages/prod/tz-util",
+        "garnet/packages/prod/usb_video",
         "garnet/packages/prod/vboot_reference",
         "garnet/packages/prod/vim",
         "garnet/packages/prod/vulkan",

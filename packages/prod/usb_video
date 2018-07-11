@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/drivers/usb_video"
+    ]
+}
