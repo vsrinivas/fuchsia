@@ -117,20 +117,34 @@ See [QEMU](qemu.md) for information on building and using QEMU with zircon.
 If the prebuilt toolchain binaries do not work for you, you can build your
 own from vanilla upstream sources.
 
+ * The GCC toolchain is used to build Zircon by default.
+ * The Clang toolchain is used to build Zircon if you build with
+   `USE_CLANG=true` or `USE_ASAN=true`.
+ * The Clang toolchain is also used by default to build host-side code, but
+   any C++14-capable toolchain for your build host should work fine.
+
+Build one or the other or both, as needed for how you want build Zircon.
+
 ### GCC Toolchain
 
 We use GNU `binutils` 2.30(`*`) and GCC 8.2(`**`), configured with
-`--target=x86_64-elf` or `--target=aarch64-elf` and `--enable-initfini-array`.
+`--enable-initfini-array --enable-gold`, and with `--target=x86_64-elf
+--enable-targets=x86_64-pep` for x86-64 or `--target=aarch64-elf` for ARM64.
 
 For `binutils`, we recommend `--enable-deterministic-archives` but that switch
 is not necessary to get a working build.
 
 For GCC, it's necessary to pass `MAKEOVERRIDES=USE_GCC_STDINT=provide` on the
-`make` command line.  Only the C and C++ language support is required and no
-target libraries other than `libgcc` are required, so you can use various
-`configure` switches to disable other things and make your build of GCC itself
-go more quickly and use less storage.  See the GCC installation documentation
-for details.
+`make` command line.  This should ensure that the `stdint.h` GCC installs is
+one that works standalone (`stdint-gcc.h` in the source) rather than one that
+uses `#include_next` and expects another `stdint.h` file installed elsewhere.
+
+Only the C and C++ language support is required and no target libraries other
+than `libgcc` are required, so you can use various `configure` switches to
+disable other things and make your build of GCC itself go more quickly and use
+less storage, e.g. `--enable-languages=c,c++ --disable-libstdcxx
+--disable-libssp --disable-libquadmath`.  See the GCC installation
+documentation for more details.
 
 You may need various other `configure` switches or other prerequisites to
 build on your particular host system.  See the GNU documentation.
