@@ -111,9 +111,10 @@ TEST_F(AnalyzeMemoryTest, Basic) {
 
   // The pointer to "inner" aspace entry should be annotated. The "outer"
   // aspace entry is too large and so will be omitted.
-  EXPECT_EQ(R"(0x1000 0x0000000000001000 ◁ ESP. ▷ inside map "inner"
-0x1008 0x0000000010000000 ◁ frame 1 SP
-0x1010 0x0000000000000000 
+  EXPECT_EQ(R"(Address               Data 
+ 0x1000 0x0000000000001000 ◁ ESP. ▷ inside map "inner"
+ 0x1008 0x0000000010000000 ◁ frame 1 SP
+ 0x1010 0x0000000000000000 
 )",
             output.AsString());
 }
