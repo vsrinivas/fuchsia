@@ -48,6 +48,10 @@ class BrEdrConnectionManager {
                              bool interlaced,
                              hci::StatusCallback cb);
 
+  // Helper to register an event handler to run.
+  hci::CommandChannel::EventHandlerId AddEventHandler(
+      const hci::EventCode& code, hci::CommandChannel::EventCallback cb);
+
   // Called when a ConnectionRequest event is received.
   void OnConnectionRequest(const hci::EventPacket& event);
 
@@ -59,6 +63,9 @@ class BrEdrConnectionManager {
 
   // Called when an IO Capabilies Reqeust event is received.
   void OnIOCapabilitiesRequest(const hci::EventPacket& event);
+
+  // Called when an User Confirmation Reqeust event is received.
+  void OnUserConfirmationRequest(const hci::EventPacket& event);
 
   fxl::RefPtr<hci::Transport> hci_;
   std::unique_ptr<hci::SequentialCommandRunner> hci_cmd_runner_;
@@ -83,6 +90,7 @@ class BrEdrConnectionManager {
 
   // Handler IDs for pairing events
   hci::CommandChannel::EventHandlerId io_cap_req_handler_id_;
+  hci::CommandChannel::EventHandlerId user_conf_handler_id_;
 
   // The current page scan parameters of the controller.
   // Set to 0 when non-connectable.

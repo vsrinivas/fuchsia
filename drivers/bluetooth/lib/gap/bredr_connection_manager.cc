@@ -49,6 +49,21 @@ void SetPageScanEnabled(bool enabled, fxl::RefPtr<hci::Transport> hci,
 
 }  // namespace
 
+hci::CommandChannel::EventHandlerId BrEdrConnectionManager::AddEventHandler(
+    const hci::EventCode& code, hci::CommandChannel::EventCallback cb) {
+  auto self = weak_ptr_factory_.GetWeakPtr();
+  auto event_id = hci_->command_channel()->AddEventHandler(
+      code,
+      [self, callback = std::move(cb)](const auto& event) {
+        if (self) {
+          callback(event);
+        }
+      },
+      dispatcher_);
+  FXL_DCHECK(event_id);
+  return event_id;
+}
+
 BrEdrConnectionManager::BrEdrConnectionManager(fxl::RefPtr<hci::Transport> hci,
                                                RemoteDeviceCache* device_cache,
                                                bool use_interlaced_scan)
@@ -67,40 +82,23 @@ BrEdrConnectionManager::BrEdrConnectionManager(fxl::RefPtr<hci::Transport> hci,
   hci_cmd_runner_ =
       std::make_unique<hci::SequentialCommandRunner>(dispatcher_, hci_);
 
-  auto self = weak_ptr_factory_.GetWeakPtr();
-
-  conn_complete_handler_id_ = hci_->command_channel()->AddEventHandler(
+  // Register event handlers
+  conn_complete_handler_id_ = AddEventHandler(
       hci::kConnectionCompleteEventCode,
-      [self](const auto& event) {
-        if (self)
-          self->OnConnectionComplete(event);
-      },
-      dispatcher_);
-  FXL_DCHECK(conn_complete_handler_id_);
-  conn_request_handler_id_ = hci_->command_channel()->AddEventHandler(
+      fbl::BindMember(this, &BrEdrConnectionManager::OnConnectionComplete));
+  conn_request_handler_id_ = AddEventHandler(
       hci::kConnectionRequestEventCode,
-      [self](const auto& event) {
-        if (self)
-          self->OnConnectionRequest(event);
-      },
-      dispatcher_);
-  disconn_cmpl_handler_id_ = hci->command_channel()->AddEventHandler(
+      fbl::BindMember(this, &BrEdrConnectionManager::OnConnectionRequest));
+  disconn_cmpl_handler_id_ = AddEventHandler(
       hci::kDisconnectionCompleteEventCode,
-      [self](const auto& event) {
-        if (self)
-          self->OnDisconnectionComplete(event);
-      },
-      dispatcher_);
-
-  io_cap_req_handler_id_ = hci->command_channel()->AddEventHandler(
+      fbl::BindMember(this, &BrEdrConnectionManager::OnDisconnectionComplete));
+  io_cap_req_handler_id_ = AddEventHandler(
       hci::kIOCapabilityRequestEventCode,
-      [self](const auto& event) {
-        if (self)
-          self->OnIOCapabilitiesRequest(event);
-      },
-      dispatcher_);
-
-  FXL_DCHECK(conn_request_handler_id_);
+      fbl::BindMember(this, &BrEdrConnectionManager::OnIOCapabilitiesRequest));
+  user_conf_handler_id_ = AddEventHandler(
+      hci::kUserConfirmationRequestEventCode,
+      fbl::BindMember(this,
+                      &BrEdrConnectionManager::OnUserConfirmationRequest));
 };
 
 BrEdrConnectionManager::~BrEdrConnectionManager() {
@@ -108,9 +106,10 @@ BrEdrConnectionManager::~BrEdrConnectionManager() {
   connections_.clear();
   SetPageScanEnabled(false, hci_, dispatcher_, [](const auto) {});
   hci_->command_channel()->RemoveEventHandler(conn_request_handler_id_);
-  conn_request_handler_id_ = 0;
   hci_->command_channel()->RemoveEventHandler(conn_complete_handler_id_);
-  conn_complete_handler_id_ = 0;
+  hci_->command_channel()->RemoveEventHandler(disconn_cmpl_handler_id_);
+  hci_->command_channel()->RemoveEventHandler(io_cap_req_handler_id_);
+  hci_->command_channel()->RemoveEventHandler(user_conf_handler_id_);
 }
 
 void BrEdrConnectionManager::SetConnectable(bool connectable,
@@ -361,6 +360,30 @@ void BrEdrConnectionManager::OnIOCapabilitiesRequest(
   reply_params->oob_data_present = 0x00;  // None present.
   // TODO(jamuraa): Determine this based on the service requirements.
   reply_params->auth_requirements = hci::AuthRequirements::kNoBonding;
+
+  hci_->command_channel()->SendCommand(std::move(reply), dispatcher_, nullptr);
+}
+
+void BrEdrConnectionManager::OnUserConfirmationRequest(
+    const hci::EventPacket& event) {
+  FXL_DCHECK(event.event_code() == hci::kUserConfirmationRequestEventCode);
+  const auto& params =
+      event.view().payload<hci::UserConfirmationRequestEventParams>();
+
+  FXL_LOG(INFO) << "gap (BR/EDR): auto-confirming to " << params.bd_addr << " ("
+                << params.numeric_value << ")";
+
+  // TODO(jamuraa, NET-882): if we are not NoInput/NoOutput then we need to ask
+  // the pairing delegate.  This currently will auto accept any pairing
+  // (JustWorks)
+  auto reply = hci::CommandPacket::New(
+      hci::kUserConfirmationRequestReply,
+      sizeof(hci::UserConfirmationRequestReplyCommandParams));
+  auto reply_params =
+      reply->mutable_view()
+          ->mutable_payload<hci::UserConfirmationRequestReplyCommandParams>();
+
+  reply_params->bd_addr = params.bd_addr;
 
   hci_->command_channel()->SendCommand(std::move(reply), dispatcher_, nullptr);
 }

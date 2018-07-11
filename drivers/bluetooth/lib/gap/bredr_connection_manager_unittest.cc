@@ -81,7 +81,6 @@ const auto kWritePageScanType = common::CreateStaticByteBuffer(
 const auto kWritePageScanTypeRsp =
     COMMAND_COMPLETE_RSP(hci::kWritePageScanType);
 
-#undef COMMAND_COMPLETE_RSP
 
 #define COMMAND_STATUS_RSP(opcode, statuscode)                       \
   common::CreateStaticByteBuffer(hci::kCommandStatusEventCode, 0x04, \
@@ -487,6 +486,41 @@ TEST_F(GAP_BrEdrConnectionManagerTest, CapabilityRequest) {
   EXPECT_EQ(1u, transactions);
 }
 
+const auto kUserConfirmationRequest = common::CreateStaticByteBuffer(
+    hci::kUserConfirmationRequestEventCode,
+    0x0A,  // parameter_total_size (10 byte payload)
+    0x01, 0x00, 0x00, 0x00, 0x00, 0x00,  // BD_ADDR (00:00:00:00:00:01)
+    0x00, 0x00, 0x00, 0x00               // numeric value 000000
+);
+
+const auto kConfirmationRequestReply = common::CreateStaticByteBuffer(
+    LowerBits(hci::kUserConfirmationRequestReply),
+    UpperBits(hci::kUserConfirmationRequestReply),
+    0x06,                               // parameter_total_size (9 bytes)
+    0x01, 0x00, 0x00, 0x00, 0x00, 0x00  // bd_addr (match request)
+);
+
+const auto kConfirmationRequestReplyRsp =
+    COMMAND_COMPLETE_RSP(hci::kUserConfirmationRequestReply);
+
+// Test: sends replies to Confirmation Requests
+TEST_F(GAP_BrEdrConnectionManagerTest, ConfirmationRequest) {
+  size_t transactions = 0;
+
+  test_device()->SetTransactionCallback([&transactions]() { transactions++; },
+                                        async_get_default());
+
+  test_device()->QueueCommandTransaction(kConfirmationRequestReply,
+                                         {&kConfirmationRequestReplyRsp});
+
+  test_device()->SendCommandChannelPacket(kUserConfirmationRequest);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(1u, transactions);
+}
+
+#undef COMMAND_COMPLETE_RSP
 #undef COMMAND_STATUS_RSP
 
 }  // namespace

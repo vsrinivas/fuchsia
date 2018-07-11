@@ -368,6 +368,25 @@ constexpr OpCode ControllerAndBasebandOpCode(const uint16_t ocf) {
   return DefineOpCode(kControllerAndBasebandOGF, ocf);
 }
 
+// =============================================================
+// User Confirmation Request Reply Command (v2.1 + EDR) (BR/EDR)
+constexpr OpCode kUserConfirmationRequestReply = LinkControlOpCode(0x002C);
+
+struct UserConfirmationRequestReplyCommandParams {
+  // The BD_ADDR of the remote device involved in the simple pairing process.
+  common::DeviceAddressBytes bd_addr;
+} __PACKED;
+
+// ======================================================================
+// User Confirmation Request Negative Reply Command (v2.1 + EDR) (BR/EDR)
+constexpr OpCode kUserConfirmationRequestNegativeReply =
+    LinkControlOpCode(0x002D);
+
+struct UserConfirmationRequestNegativeReplyCommandParams {
+  // The BD_ADDR of the remote device involved in the simple pairing process.
+  common::DeviceAddressBytes bd_addr;
+} __PACKED;
+
 // =============================
 // Set Event Mask Command (v1.1)
 constexpr OpCode kSetEventMask = ControllerAndBasebandOpCode(0x0001);
@@ -1188,6 +1207,18 @@ struct IOCapabilityResponseEventParams {
   // Authentication Requirements.
   // See AuthenticationRequirements in hci_constants.h
   AuthRequirements auth_requirements;
+} __PACKED;
+
+// =====================================================
+// User Confirmation Request Event (v2.1 + EDR) (BR/EDR)
+constexpr EventCode kUserConfirmationRequestEventCode = 0x33;
+
+struct UserConfirmationRequestEventParams {
+  // Address of the device involved in simple pairing process
+  common::DeviceAddressBytes bd_addr;
+
+  // Numeric valud to be displayed.  Valid values are 0 - 999999
+  uint32_t numeric_value;
 } __PACKED;
 
 // =========================
