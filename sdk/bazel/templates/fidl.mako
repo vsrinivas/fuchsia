@@ -1,6 +1,6 @@
 <%include file="header.mako" />
 
-load("@fuchsia_sdk//build_defs:fidl.bzl", "fidl_library")
+load("//build_defs:fidl_library.bzl", "fidl_library")
 
 package(default_visibility = ["//visibility:public"])
 

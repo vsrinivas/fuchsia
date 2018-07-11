@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 load(":dart.bzl", "produce_package_info", "generate_dot_packages_action", "DartLibraryInfo")
-load(":fidl.bzl", "FidlLibraryInfo")
+load(":fidl_library.bzl", "FidlLibraryInfo")
 
 # A Dart library backed by a FIDL library.
 #

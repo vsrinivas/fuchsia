@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-load("@fuchsia_sdk//build_defs:fidl_cc.bzl", "cc_fidl_library")
+load("@fuchsia_sdk//build_defs:cc_fidl_library.bzl", "cc_fidl_library")
 
 cc_fidl_library(
     name = "simple",

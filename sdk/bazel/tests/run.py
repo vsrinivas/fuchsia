@@ -28,7 +28,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='Runs the SDK tests')
     parser.add_argument('--no-sdk',
-                        help='If set, SDK targes are not build.',
+                        help='If set, SDK targets are not built.',
                         action='store_true')
     parser.add_argument('--ignored',
                         help='If set, ignored tests are run too.',
