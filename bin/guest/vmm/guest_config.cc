@@ -356,6 +356,7 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg) : cfg_(cfg), opts_ {
       {"balloon-interval", parse_number(&cfg_->balloon_interval_seconds_)},
       {"balloon-threshold", parse_number(&cfg_->balloon_pages_threshold_)},
       {"display", parse_display(&cfg_->display_)},
+      {"network", set_flag(&cfg_->network_, true)},
       {"block-wait", set_flag(&cfg_->block_wait_, true)},
 #if __aarch64__
       {"gic", parse_gic(&cfg_->gic_version_)},

@@ -58,6 +58,7 @@ class GuestConfig {
   uint32_t balloon_pages_threshold() const { return balloon_pages_threshold_; }
   bool balloon_demand_page() const { return balloon_demand_page_; }
   GuestDisplay display() const { return display_; }
+  bool network() const { return network_; }
 #if __aarch64__
   machina::GicVersion gic_version() const { return gic_version_; }
 #endif
@@ -77,6 +78,7 @@ class GuestConfig {
   uint32_t balloon_pages_threshold_ = 0;
   bool balloon_demand_page_ = false;
   GuestDisplay display_ = GuestDisplay::SCENIC;
+  bool network_ = true;
 #if __aarch64__
   machina::GicVersion gic_version_ = machina::GicVersion::V2;
 #endif

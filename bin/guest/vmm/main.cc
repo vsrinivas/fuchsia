@@ -478,15 +478,17 @@ int main(int argc, char** argv) {
 
   // Setup net device.
   machina::VirtioNet net(guest.phys_mem(), guest.device_async());
-  status = net.Start("/dev/class/ethernet/000");
-  if (status == ZX_OK) {
-    // If we started the net device, then connect to the PCI bus.
-    status = bus.Connect(net.pci_device());
-    if (status != ZX_OK) {
-      return status;
+  if (cfg.network()) {
+    status = net.Start("/dev/class/ethernet/000");
+    if (status == ZX_OK) {
+      // If we started the net device, then connect to the PCI bus.
+      status = bus.Connect(net.pci_device());
+      if (status != ZX_OK) {
+        return status;
+      }
+    } else {
+      FXL_LOG(INFO) << "Could not open Ethernet device";
     }
-  } else {
-    FXL_LOG(INFO) << "Could not open Ethernet device";
   }
 
   // Setup vsock device.
