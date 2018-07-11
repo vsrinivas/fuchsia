@@ -16,8 +16,8 @@ namespace {
 
 using ::btlib::testing::CommandTransaction;
 
-using common::UpperBits;
 using common::LowerBits;
+using common::UpperBits;
 
 using TestingBase =
     ::btlib::testing::FakeControllerTest<::btlib::testing::TestController>;
@@ -685,7 +685,7 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, ExtendedInquiry) {
           common::DeviceAddress::Type::kBREDR, "00:00:00:00:00:03"));
 
   EXPECT_TRUE(device2);
-  EXPECT_TRUE(device2->name());
+  ASSERT_TRUE(device2->name());
   EXPECT_EQ("Fuchsia💖", *device2->name());
 
   test_device()->SendCommandChannelPacket(kInquiryComplete);

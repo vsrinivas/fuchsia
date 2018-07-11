@@ -296,6 +296,7 @@ void BrEdrDiscoveryManager::RequestRemoteDeviceName(const std::string& id) {
   packet->mutable_view()->mutable_payload_data().SetToZeros();
   auto params = packet->mutable_view()
                     ->mutable_payload<hci::RemoteNameRequestCommandParams>();
+  FXL_DCHECK(device->page_scan_repetition_mode().HasValue());
   params->bd_addr = device->address().value();
   params->page_scan_repetition_mode = *(device->page_scan_repetition_mode());
   if (device->clock_offset()) {
