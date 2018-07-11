@@ -90,6 +90,48 @@ Err PrintHelp(const std::string& cmd_name) {
   return Err();
 }
 
+// connect ---------------------------------------------------------------------
+
+const char* kConnectName = "Connect";
+const char* kConnectLongForm = "connect";
+const char* kConnectShortForm = "c";
+const char* kConnectLongHelp =
+    R"(Attemps to connect to the given host's Debug Agent.
+The input format should be \"<HOST> <PORT>\" (one complete string).)";
+const char* kConnectShortHelp = R"(Connects to a Debug Agent.)";
+const char* kConnectArgumentName = "\"<HOST> <PORT>\"";
+const char* kConnectDefaultValue = nullptr;
+
+Err ProcessConnect(const std::string& host, std::vector<Action>* actions) {
+  std::string cmd = fxl::StringPrintf("connect %s", host.c_str());
+  actions->push_back(Action("Connect",
+    [cmd = cmd](const Action&, const Session&, Console* console) {
+      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
+    }));
+  return Err();
+}
+
+// run -------------------------------------------------------------------------
+
+const char* kRunName = "Run";
+const char* kRunLongForm = "run";
+const char* kRunShortForm = "r";
+const char* kRunLongHelp =
+    R"(Attemps to run a binary in the target system.
+The debugger must be already connected to the Debug Agent.)";
+const char* kRunShortHelp = R"(Runs a binary in the target system.)";
+const char* kRunArgumentName = "PATH";
+const char* kRunDefaultValue = nullptr;
+
+Err ProcessRun(const std::string& path, std::vector<Action>* actions) {
+  std::string cmd = fxl::StringPrintf("run %s", path.c_str());
+  actions->push_back(Action("Run",
+    [cmd = cmd](const Action&, const Session&, Console* console) {
+      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
+    }));
+  return Err();
+}
+
 // script-file -----------------------------------------------------------------
 
 const char* kScriptFileName = "Script File"; const char* kScriptFileLongForm = "script-file";
@@ -101,9 +143,6 @@ const char* kScriptFileLongHelp =
 const char* kScriptFileShortHelp = R"(Loads and run script file.)";
 const char* kScriptFileArgumentName = "SCRIPT-FILE";
 const char* kScriptFileDefaultValue = nullptr;
-
-// Define mock variable
-std::string kScriptFileMockContents = "";
 
 // The callback and mock contents are for ease of testing
 Err ProcessScriptFile(const std::string& path, std::vector<Action>* actions,
@@ -136,9 +175,11 @@ Err ProcessScriptFile(const std::string& path, std::vector<Action>* actions,
 std::vector<FlagRecord> InitializeFlags() {
   std::vector<FlagRecord> flags;
   INSTALL_FLAG(Help);
+  INSTALL_FLAG(Connect);
+  INSTALL_FLAG(Run);
   INSTALL_FLAG(ScriptFile);
 
-  // We sort the flags
+  // We sort the flags alphabetically
   std::sort(flags.begin(), flags.end(), [](const auto& lhs, const auto& rhs) {
     return lhs.name < rhs.name;
   });

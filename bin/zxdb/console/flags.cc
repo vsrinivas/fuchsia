@@ -13,6 +13,16 @@ namespace zxdb {
 
 using Option = fxl::CommandLine::Option;
 
+namespace {
+
+// This is to make sure we don't overwrite some results because we didn't check
+// the previous result. Higher priority always wins.
+FlagProcessResult UpdateResult(FlagProcessResult prev, FlagProcessResult cur) {
+  return std::max(prev, cur);
+}
+
+}   // namespace
+
 // Flag Processing -------------------------------------------------------------
 
 namespace {
@@ -49,6 +59,13 @@ Err VerifyFlags(const fxl::CommandLine& cmd_line) {
       return flag_err;
     }
   }
+
+  // Remove this when positional arguments are used
+  if (!cmd_line.positional_args().empty()) {
+    const std::string& pos_arg = cmd_line.positional_args().front();
+    return Err(fxl::StringPrintf("Unrecognized flag \"%s\"", pos_arg.c_str()));
+  }
+
   return Err();
 }
 
@@ -65,7 +82,7 @@ FlagProcessResult ProcessCommandLine(const fxl::CommandLine& cmd_line,
     return FlagProcessResult::kError;
   }
 
-  // Flags should be processed by priority.
+  // NOTE: Flags should be processed by priority.
   size_t flag_index;
   if (cmd_line.HasOption("version", &flag_index)) {
     PrintVersion();
@@ -82,6 +99,28 @@ FlagProcessResult ProcessCommandLine(const fxl::CommandLine& cmd_line,
     return FlagProcessResult::kQuit;
   }
 
+  // These flags append results, so they should not trump a previous result.
+  FlagProcessResult res = FlagProcessResult::kContinue;
+  if (cmd_line.HasOption("connect", &flag_index)) {
+    const Option& option = cmd_line.options()[flag_index];
+    Err err = ProcessConnect(option.value, actions);
+    if (err.has_error()) {
+      *out_err = err;
+      return FlagProcessResult::kError;
+    }
+    res = UpdateResult(res, FlagProcessResult::kActions);
+  }
+
+  if (cmd_line.HasOption("run", &flag_index)) {
+    const Option& option = cmd_line.options()[flag_index];
+    Err err = ProcessRun(option.value, actions);
+    if (err.has_error()) {
+      *out_err = err;
+      return FlagProcessResult::kError;
+    }
+    res = UpdateResult(res, FlagProcessResult::kActions);
+  }
+
   if (cmd_line.HasOption("script-file", &flag_index)) {
     const Option& option = cmd_line.options()[flag_index];
     // We pass the global action callback for the action linking.
@@ -90,11 +129,11 @@ FlagProcessResult ProcessCommandLine(const fxl::CommandLine& cmd_line,
       *out_err = err;
       return FlagProcessResult::kError;
     }
-    return FlagProcessResult::kActions;
+    res = UpdateResult(res, FlagProcessResult::kActions);
   }
 
   *out_err = Err();
-  return FlagProcessResult::kContinue;
+  return res = UpdateResult(res, FlagProcessResult::kContinue);
 }
 
 // FlagRecord ------------------------------------------------------------------
