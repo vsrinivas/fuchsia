@@ -113,10 +113,6 @@ template("guest_package") {
 
     meta = [
       {
-        path = rebase_path("//garnet/bin/guest/pkg/meta/runtime")
-        dest = "runtime"
-      },
-      {
         path = rebase_path("//garnet/bin/guest/pkg/meta/guest_package.cmx")
         dest = "${target_name}.cmx"
       },
