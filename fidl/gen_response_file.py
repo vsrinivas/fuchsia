@@ -31,7 +31,8 @@ def main():
     parser.add_argument("--out-libraries", help="The path for for the libraries file to generate", required=True)
     parser.add_argument("--json", help="The path for the JSON file to generate, if any")
     parser.add_argument("--tables", help="The path for the tables file to generate, if any")
-    parser.add_argument("--c-header", help="The path for the C headers file to generate, if any")
+    parser.add_argument("--c-client", help="The path for the C simple client header file to generate, if any")
+    parser.add_argument("--c-header", help="The path for the C header file to generate, if any")
     parser.add_argument("--name", help="The name for the generated FIDL library, if any")
     parser.add_argument("--sources", help="List of FIDL source files", nargs="*")
     parser.add_argument("--dep-libraries", help="List of dependent libraries", nargs="*")
@@ -56,6 +57,9 @@ def main():
 
     if args.tables:
         response_file.append("--tables %s" % args.tables)
+
+    if args.c_client:
+        response_file.append("--c-client %s" % args.c_client)
 
     if args.c_header:
         response_file.append("--c-header %s" % args.c_header)

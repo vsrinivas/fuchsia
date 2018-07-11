@@ -70,6 +70,7 @@ template("fidl") {
   } else if (is_fuchsia) {
     import("//build/rust/fidl_rust_library.gni")
     import("//build/cpp/fidl_cpp.gni")
+    import("//build/c/fidl_c.gni")
 
     # TODO(cramertj): remove pending TC-81.
     fidl_rust_library(target_name) {
@@ -77,6 +78,10 @@ template("fidl") {
     }
 
     fidl_cpp(target_name) {
+      forward_variables_from(invoker, "*")
+    }
+
+    fidl_c_client(target_name) {
       forward_variables_from(invoker, "*")
     }
   } else {

@@ -16,7 +16,8 @@ import("//build/sdk/sdk_atom.gni")
 #   - sources.
 
 template("fidl_library") {
-  assert(current_toolchain == fidl_toolchain,
+  assert(
+      current_toolchain == fidl_toolchain,
       "This template can only be used in the FIDL toolchain $fidl_toolchain.")
 
   if (!defined(invoker.sources)) {
@@ -32,11 +33,12 @@ template("fidl_library") {
   fidl_stem = "$target_gen_dir/$target_name.fidl"
   json_representation = "$fidl_stem.json"
   c_stem = exec_script("//build/fidl/c_stem_from_library.py",
-      [
-        "--name",
-        library_name,
-      ],
-      "trim string")
+                       [
+                         "--name",
+                         library_name,
+                       ],
+                       "trim string")
+  c_client = "$root_gen_dir/$c_stem.client.c"
   c_header = "$root_gen_dir/$c_stem.h"
   coding_tables = "$fidl_stem.tables.cc"
 
@@ -57,9 +59,7 @@ template("fidl_library") {
   }
 
   action(response_file_target_name) {
-    visibility = [
-      ":*",
-    ]
+    visibility = [ ":*" ]
 
     script = "//build/fidl/gen_response_file.py"
 
@@ -79,20 +79,22 @@ template("fidl_library") {
     ]
 
     args = [
-      "--out-response-file",
-      rebase_path(response_file, root_build_dir),
-      "--out-libraries",
-      rebase_path(libraries, root_build_dir),
-      "--json",
-      rebase_path(json_representation, root_build_dir),
-      "--c-header",
-      rebase_path(c_header, root_build_dir),
-      "--tables",
-      rebase_path(coding_tables, root_build_dir),
-      "--name",
-      library_name,
-      "--sources",
-    ] + rebase_path(sources, root_build_dir)
+             "--out-response-file",
+             rebase_path(response_file, root_build_dir),
+             "--out-libraries",
+             rebase_path(libraries, root_build_dir),
+             "--json",
+             rebase_path(json_representation, root_build_dir),
+             "--c-client",
+             rebase_path(c_client, root_build_dir),
+             "--c-header",
+             rebase_path(c_header, root_build_dir),
+             "--tables",
+             rebase_path(coding_tables, root_build_dir),
+             "--name",
+             library_name,
+             "--sources",
+           ] + rebase_path(sources, root_build_dir)
 
     if (all_deps != []) {
       dep_libraries = []
@@ -105,21 +107,14 @@ template("fidl_library") {
 
       inputs = dep_libraries
 
-      args += [
-        "--dep-libraries",
-      ] + rebase_path(dep_libraries, root_build_dir)
+      args += [ "--dep-libraries" ] + rebase_path(dep_libraries, root_build_dir)
     }
   }
 
   compiled_action(compilation_target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                           ])
+    forward_variables_from(invoker, [ "testonly" ])
 
-    visibility = [
-      ":*",
-    ]
+    visibility = [ ":*" ]
 
     tool = "//zircon/public/tool/fidlc"
 
@@ -128,16 +123,15 @@ template("fidl_library") {
     ]
 
     outputs = [
+      c_client,
+      c_header,
       coding_tables,
       json_representation,
-      c_header,
     ]
 
     rebased_response_file = rebase_path(response_file, root_build_dir)
 
-    args = [
-      "@$rebased_response_file",
-    ]
+    args = [ "@$rebased_response_file" ]
 
     deps = [
       ":$response_file_target_name",
@@ -145,14 +139,9 @@ template("fidl_library") {
   }
 
   compiled_action(verification_target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                           ])
+    forward_variables_from(invoker, [ "testonly" ])
 
-    visibility = [
-      ":*",
-    ]
+    visibility = [ ":*" ]
 
     tool = "//build/tools/json_validator"
 
@@ -166,7 +155,7 @@ template("fidl_library") {
     ]
 
     args = rebase_path(inputs, root_build_dir) +
-        rebase_path(outputs, root_build_dir)
+           rebase_path(outputs, root_build_dir)
 
     deps = [
       ":$compilation_target_name",
@@ -202,24 +191,24 @@ template("fidl_library") {
 
       category = invoker.sdk_category
 
-      tags = [
-        "name:$library_name",
-      ]
+      tags = [ "name:$library_name" ]
 
       files = []
       foreach(source, invoker.sources) {
         # TODO(pylaligand): remove this temporary workaround.
         destination = get_path_info(source, "file")
-        files += [{
-          source = rebase_path(source)
-          dest = destination
-        }]
+        files += [
+          {
+            source = rebase_path(source)
+            dest = destination
+          },
+        ]
       }
 
       deps = []
       foreach(dep, all_deps) {
         label = get_label_info(dep, "label_no_toolchain")
-        deps += ["${label}_sdk"]
+        deps += [ "${label}_sdk" ]
       }
     }
   }
