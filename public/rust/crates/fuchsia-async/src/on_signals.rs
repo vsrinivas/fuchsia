@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::fmt;
 use std::mem;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -77,5 +78,11 @@ impl Future for OnSignals {
         self.0.as_mut()
             .map(|receiver| receiver.receiver().get_signals(cx))
             .map_err(|e| mem::replace(e, zx::Status::OK))
+    }
+}
+
+impl fmt::Debug for OnSignals {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "OnSignals")
     }
 }
