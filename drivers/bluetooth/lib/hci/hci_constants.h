@@ -1296,6 +1296,28 @@ enum class InquiryMode : uint8_t {
 // Length of the Extended Inquiry Response data. (Vol 3, Part C, Section 8)
 constexpr size_t kExtendedInquiryResponseBytes = 240;
 
+// Values for the IO Capabilities
+enum class IOCapability : uint8_t {
+  kDisplayOnly = 0x00,
+  kDisplayYesNo = 0x01,
+  kKeyboardOnly = 0x02,
+  kNoInputNoOutput = 0x03,
+};
+
+// Authentication requirements
+// All options without MITM do not require MITM protection, and a numeric
+// comparison with automatic accept is allowed.
+// All options with MITM do require MITM protection, and IO capabilities should
+// be used to determine the authentication procedure.
+enum class AuthRequirements : uint8_t {
+  kNoBonding = 0x00,
+  kMITMNoBonding = 0x01,
+  kDedicatedBonding = 0x02,
+  kMITMDedicatedBonding = 0x03,
+  kGeneralBonding = 0x04,
+  kMITMGeneralBonding = 0x05,
+};
+
 // Bitmask values for supported Packet Types
 // Used for HCI_Create_Connection and HCI_Change_Connection_Packet_Type
 enum class PacketTypeBits : uint16_t {

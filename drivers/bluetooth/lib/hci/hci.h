@@ -330,6 +330,37 @@ struct ReadRemoteVersionInfoCommandParams {
 // Read Remote Version Information Complete event will indicate that this
 // command has been completed.
 
+// =========================================================
+// IO Capability Request Reply Command (v2.1 + EDR) (BR/EDR)
+constexpr OpCode kIOCapabilityRequestReply = LinkControlOpCode(0x002B);
+
+struct IOCapabilityRequestReplyCommandParams {
+  // The BD_ADDR of the remote device involved in simple pairing process
+  common::DeviceAddressBytes bd_addr;
+
+  // The IOCapablities of this device
+  IOCapability io_capability;
+
+  // Whether there is OOB Data Present, and what type. Valid values:
+  // 0x00 - OOB authentication data not present
+  // 0x01 - P-192 OOB authentication data from remote device present
+  // 0x02 - P-256 OOB authentication data from remote device present
+  // 0x03 - P-192 and P-256 OOB authentication data from remote device present
+  uint8_t oob_data_present;
+
+  // Authenication Requirements.
+  // See enum class AuthRequirements in hci_constants.h
+  AuthRequirements auth_requirements;
+} __PACKED;
+
+struct IOCapabilityRequestReplyReturnParams {
+  // See enum StatusCode in hci_constants.h.
+  StatusCode status;
+
+  // BD_ADDR of the remote device involved in simple pairing process
+  common::DeviceAddressBytes bd_addr;
+} __PACKED;
+
 // ======= Controller & Baseband Commands =======
 // Core Spec v5.0 Vol 2, Part E, Section 7.3
 constexpr uint8_t kControllerAndBasebandOGF = 0x03;
@@ -1092,7 +1123,7 @@ struct ExtendedInquiryResultEventParams {
   // BD_ADDR of the device that responded.
   common::DeviceAddressBytes bd_addr;
 
-  // The Page Scna Repetition Mode being used by the remote device.
+  // The Page Scan Repetition Mode being used by the remote device.
   PageScanRepetitionMode page_scan_repetition_mode;
 
   // Reserved for future use
@@ -1126,6 +1157,37 @@ struct EncryptionKeyRefreshCompleteEventParams {
   //
   //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
   ConnectionHandle connection_handle;
+} __PACKED;
+
+// =============================================
+// IO Capability Request Event (xxx) (BR/EDR)
+constexpr EventCode kIOCapabilityRequestEventCode = 0x31;
+
+struct IOCapabilityRequestEventParams {
+  // The address of the remote device involved in the simple pairing process
+  common::DeviceAddressBytes bd_addr;
+} __PACKED;
+
+// =============================================
+// IO Capability Response Event (xxx) (BR/EDR)
+constexpr EventCode kIOCapabilityResponseEventCode = 0x32;
+
+struct IOCapabilityResponseEventParams {
+  // The address of the remote device which the IO capabilities apply
+  common::DeviceAddressBytes bd_addr;
+
+  // IO Capabilities of the device
+  IOCapability io_capability;
+
+  // Whether OOB Data is present.
+  // Allowed values:
+  //  0x00 - OOB authentication data not present
+  //  0x01 - OOB authentication data from remote device present
+  uint8_t oob_data_present;
+
+  // Authentication Requirements.
+  // See AuthenticationRequirements in hci_constants.h
+  AuthRequirements auth_requirements;
 } __PACKED;
 
 // =========================

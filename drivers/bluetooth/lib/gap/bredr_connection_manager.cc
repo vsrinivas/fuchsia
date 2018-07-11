@@ -92,6 +92,14 @@ BrEdrConnectionManager::BrEdrConnectionManager(fxl::RefPtr<hci::Transport> hci,
       },
       dispatcher_);
 
+  io_cap_req_handler_id_ = hci->command_channel()->AddEventHandler(
+      hci::kIOCapabilityRequestEventCode,
+      [self](const auto& event) {
+        if (self)
+          self->OnIOCapabilitiesRequest(event);
+      },
+      dispatcher_);
+
   FXL_DCHECK(conn_request_handler_id_);
 };
 
@@ -330,6 +338,31 @@ void BrEdrConnectionManager::OnDisconnectionComplete(
 
   // Connection is already closed, so we don't need to send a disconnect.
   conn->set_closed();
+}
+
+void BrEdrConnectionManager::OnIOCapabilitiesRequest(
+    const hci::EventPacket& event) {
+  FXL_DCHECK(event.event_code() == hci::kIOCapabilityRequestEventCode);
+  const auto& params =
+      event.view().payload<hci::IOCapabilityRequestEventParams>();
+
+  auto reply = hci::CommandPacket::New(
+      hci::kIOCapabilityRequestReply,
+      sizeof(hci::IOCapabilityRequestReplyCommandParams));
+  auto reply_params =
+      reply->mutable_view()
+          ->mutable_payload<hci::IOCapabilityRequestReplyCommandParams>();
+
+  reply_params->bd_addr = params.bd_addr;
+  // TODO(jamuraa, NET-882): ask the PairingDelegate if it's set what the IO
+  // capabilities it has.
+  reply_params->io_capability = hci::IOCapability::kNoInputNoOutput;
+  // TODO(NET-1155): Add OOB status from RemoteDeviceCache.
+  reply_params->oob_data_present = 0x00;  // None present.
+  // TODO(jamuraa): Determine this based on the service requirements.
+  reply_params->auth_requirements = hci::AuthRequirements::kNoBonding;
+
+  hci_->command_channel()->SendCommand(std::move(reply), dispatcher_, nullptr);
 }
 
 }  // namespace gap
