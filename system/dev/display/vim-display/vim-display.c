@@ -164,6 +164,7 @@ static void vim_check_configuration(void* ctx,
                                     uint32_t* display_cfg_result,
                                     uint32_t** layer_cfg_results,
                                     uint32_t display_count) {
+    *display_cfg_result = CONFIG_DISPLAY_OK;
     if (display_count != 1) {
         if (display_count > 1) {
             // The core display driver should never see a configuration with more

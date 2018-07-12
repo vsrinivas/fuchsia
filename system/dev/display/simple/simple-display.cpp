@@ -75,6 +75,7 @@ void SimpleDisplay::CheckConfiguration(const display_config_t** display_configs,
                                        uint32_t* display_cfg_result,
                                        uint32_t** layer_cfg_results,
                                        uint32_t display_count) {
+    *display_cfg_result = CONFIG_DISPLAY_OK;
     if (display_count != 1) {
         ZX_DEBUG_ASSERT(display_count == 0);
         return;
