@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 #include <fidl/test/spaceship/c/fidl.h>
+#include <lib/async-loop/loop.h>
+#include <lib/fidl/bind.h>
 #include <string.h>
-#include <threads.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
 
@@ -28,63 +29,6 @@ static const fidl_test_spaceship_SpaceShip_ops_t kOps = {
     .ScanForLifeforms = SpaceShip_ScanForLifeforms,
 };
 
-typedef struct spaceship_connection {
-    fidl_txn_t txn;
-    zx_handle_t channel;
-    zx_txid_t txid;
-} spaceship_connection_t;
-
-static zx_status_t spaceship_reply(fidl_txn_t* txn, const fidl_msg_t* msg) {
-    spaceship_connection_t* conn = (spaceship_connection_t*)txn;
-    if (msg->num_bytes < sizeof(fidl_message_header_t))
-        return ZX_ERR_INVALID_ARGS;
-    fidl_message_header_t* hdr = (fidl_message_header_t*)msg->bytes;
-    hdr->txid = conn->txid;
-    conn->txid = 0;
-    return zx_channel_write(conn->channel, 0, msg->bytes, msg->num_bytes,
-                            msg->handles, msg->num_handles);
-}
-
-static int spaceship_server(void* ctx) {
-    spaceship_connection_t conn = {
-        .txn.reply = spaceship_reply,
-        .channel = *(zx_handle_t*)ctx,
-    };
-    zx_status_t status = ZX_OK;
-    while (status == ZX_OK) {
-        zx_signals_t observed;
-        status = zx_object_wait_one(
-            conn.channel, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-            ZX_TIME_INFINITE, &observed);
-        if ((observed & ZX_CHANNEL_READABLE) != 0) {
-            ASSERT_EQ(ZX_OK, status, "");
-            char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-            zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-            fidl_msg_t msg = {
-                .bytes = bytes,
-                .handles = handles,
-                .num_bytes = 0u,
-                .num_handles = 0u,
-            };
-            status = zx_channel_read(conn.channel, 0, bytes, handles,
-                                     ZX_CHANNEL_MAX_MSG_BYTES,
-                                     ZX_CHANNEL_MAX_MSG_HANDLES,
-                                     &msg.num_bytes, &msg.num_handles);
-            ASSERT_EQ(ZX_OK, status, "");
-            ASSERT_GE(msg.num_bytes, sizeof(fidl_message_header_t), "");
-            fidl_message_header_t* hdr = (fidl_message_header_t*)msg.bytes;
-            conn.txid = hdr->txid;
-            status = fidl_test_spaceship_SpaceShip_dispatch(NULL, &conn.txn, &msg, &kOps);
-            ASSERT_EQ(ZX_OK, status, "");
-        } else {
-            break;
-        }
-    }
-
-    zx_handle_close(conn.channel);
-    return 0;
-}
-
 static bool spaceship_test(void) {
     BEGIN_TEST;
 
@@ -92,9 +36,12 @@ static bool spaceship_test(void) {
     zx_status_t status = zx_channel_create(0, &client, &server);
     ASSERT_EQ(ZX_OK, status, "");
 
-    thrd_t thread;
-    int rv = thrd_create(&thread, spaceship_server, &server);
-    ASSERT_EQ(thrd_success, rv, "");
+    async_loop_t* loop = NULL;
+    ASSERT_EQ(ZX_OK, async_loop_create(NULL, &loop), "");
+    ASSERT_EQ(ZX_OK, async_loop_start_thread(loop, "spaceship-dispatcher", NULL), "");
+
+    async_dispatcher_t* dispacher = async_loop_get_dispatcher(loop);
+    fidl_bind(dispacher, server, (fidl_dispatch_t*)fidl_test_spaceship_SpaceShip_dispatch, NULL, &kOps);
 
     {
         const uint32_t stars[3] = { 11u, 0u, UINT32_MAX };
@@ -117,9 +64,7 @@ static bool spaceship_test(void) {
 
     ASSERT_EQ(ZX_OK, zx_handle_close(client), "");
 
-    int result = 0;
-    rv = thrd_join(thread, &result);
-    ASSERT_EQ(thrd_success, rv, "");
+    async_loop_destroy(loop);
 
     END_TEST;
 }

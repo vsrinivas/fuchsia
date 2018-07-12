@@ -41,11 +41,14 @@ MODULE_FIDL_LIBS := \
     system/utest/fidl-simple.spaceship \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/async \
+    system/ulib/async-loop \
     system/ulib/fidl \
     system/ulib/zx \
     system/ulib/zxcpp \
 
 MODULE_LIBS := \
+    system/ulib/async.default \
     system/ulib/c \
     system/ulib/fdio \
     system/ulib/unittest \
