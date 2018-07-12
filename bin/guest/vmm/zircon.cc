@@ -69,7 +69,7 @@ static constexpr dcfg_arm_gicv2_driver_t kGicV2Driver = {
     .gicc_offset = 0x2000,
     .gich_offset = 0x4000,
     .gicv_offset = 0x6000,
-    .ipi_base = 13,
+    .ipi_base = 12,
     .optional = true,
     .use_msi = true,
 };
@@ -79,7 +79,7 @@ static constexpr dcfg_arm_gicv3_driver_t kGicV3Driver = {
     .gicd_offset = 0x00000,
     .gicr_offset = 0xa0000,
     .gicr_stride = 0x20000,
-    .ipi_base = 13,
+    .ipi_base = 12,
     .optional = true,
 };
 
