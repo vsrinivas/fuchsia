@@ -4,16 +4,6 @@
 
 library fuchsia.sysmem;
 
-// An interface for accessing a collection of buffers which were allocated
-// together as a group by an |Allocator| on behalf of one of its clients.
-//
-// Individual buffers within the collection are identified by their zero-based
-// index.  All of the buffers have the same characteristics.
-interface BufferCollection {
-    // Gets information about the buffer collection, including its handles.
-    1: GetInfo() -> (BufferCollectionInfo info);
-};
-
 // Information about a buffer collection and its buffers.
 // TODO(ZX-2260): change struct to table
 struct BufferCollectionInfo {
@@ -33,7 +23,7 @@ struct BufferCollectionInfo {
     // client specified when allocating the buffer collection.  For example,
     // a client which expressed a read-only usage will receive VMOs without
     // write rights.
-    vector<handle<vmo>>:64 vmos;
+    array<handle<vmo>?>:64 vmos;
 
     // The size of each VMO provided.
     // This property is only present when the buffers are backed by VMOs.
