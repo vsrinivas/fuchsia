@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use async;
 use config::{self, Config};
+use client;
+use ess_store::EssStore;
 use fidl::{self, endpoints2::create_endpoints};
 use futures::prelude::*;
 use futures::{future, stream};
@@ -18,7 +21,7 @@ pub struct Listener {
     legacy_client: shim::ClientRef,
 }
 
-pub fn handle_event(listener: &Arc<Listener>, evt: DeviceWatcherEvent)
+pub fn handle_event(listener: &Arc<Listener>, evt: DeviceWatcherEvent, ess_store: &Arc<EssStore>)
     -> impl Future<Item = (), Error = fidl::Error>
 {
     println!("wlancfg got event: {:?}", evt);
@@ -34,7 +37,7 @@ pub fn handle_event(listener: &Arc<Listener>, evt: DeviceWatcherEvent)
             .right_future()
             .left_future(),
         DeviceWatcherEvent::OnIfaceAdded { iface_id } => on_iface_added(
-            listener, iface_id,
+            listener, iface_id, Arc::clone(ess_store),
             ).map_err(|e| e.never_into())
             .left_future()
             .right_future(),
@@ -108,7 +111,7 @@ fn on_phy_removed(_listener: &Arc<Listener>, id: u16)
     future::ok(())
 }
 
-fn on_iface_added(listener: &Arc<Listener>, iface_id: u16)
+fn on_iface_added(listener: &Arc<Listener>, iface_id: u16, ess_store: Arc<EssStore>)
     -> impl Future<Item = (), Error = Never>
 {
     let service = listener.proxy.clone();
@@ -119,8 +122,10 @@ fn on_iface_added(listener: &Arc<Listener>, iface_id: u16)
             service.get_client_sme(iface_id, remote)
                 .map(move |status| {
                     if status == zx::sys::ZX_OK {
-                        let c = shim::Client { service, sme, iface_id };
-                        legacy_client.set_if_empty(c);
+                        let (c, fut) = client::new_client(iface_id, sme.clone(), ess_store);
+                        async::spawn(fut);
+                        let lc = shim::Client { service, client: c, sme, iface_id };
+                        legacy_client.set_if_empty(lc);
                     } else {
                         eprintln!("GetClientSme returned {}", zx::Status::from_raw(status));
                     }

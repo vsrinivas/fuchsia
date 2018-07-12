@@ -136,7 +136,9 @@ fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> impl Future<Item = (), 
             .and_then(move |sme| {
                 let (local, remote) = endpoints2::create_endpoints()?;
                 let mut req = fidl_sme::ConnectRequest {
-                    ssid: ssid.as_bytes().to_vec()
+                    ssid: ssid.as_bytes().to_vec(),
+                    // TODO(gbonik): take password as an optional argument
+                    password: Vec::new(),
                 };
                 sme.connect(&mut req, Some(remote))
                     .map_err(|e| e.context("error sending connect request"))?;

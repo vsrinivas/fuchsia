@@ -4,8 +4,9 @@
 
 #![allow(dead_code)]
 
+use client;
 use fidl::{self, endpoints2::create_endpoints};
-use futures::prelude::*;
+use futures::{prelude::*, channel::oneshot};
 use legacy;
 use fidl_wlan_stats;
 use fidl_mlme;
@@ -17,6 +18,7 @@ use zx;
 #[derive(Clone)]
 pub struct Client {
     pub service: wlan_service::DeviceServiceProxy,
+    pub client: client::Client,
     pub sme: fidl_sme::ClientSmeProxy,
     pub iface_id: u16
 }
@@ -186,47 +188,38 @@ fn connect(client: &ClientRef, legacy_req: legacy::ConnectConfig)
 {
     client.get()
         .into_future()
-        .and_then(|client| {
-            start_connect_txn(&client, legacy_req)
+        .and_then(move |client| {
+            let (responder, receiver) = oneshot::channel();
+            let req = client::ConnectRequest {
+                ssid: legacy_req.ssid.as_bytes().to_vec(),
+                password: legacy_req.pass_phrase.as_bytes().to_vec(),
+                responder
+            };
+            client.client.connect(req)
                 .map_err(|e| {
                     eprintln!("Failed to start a connect transaction: {}", e);
                     internal_error()
                 })
+                .into_future()
+                .and_then(move |()| {
+                    receiver.map_err(|_e| {
+                        eprintln!("Did not receive a connect result");
+                        internal_error()
+                    })
+                })
         })
-        .and_then(|txn| txn.take_event_stream()
-            .map_err(|e| {
-                eprintln!("Error reading from connect transaction stream: {}", e);
-                internal_error()
-            })
-            .filter_map(|event| match event {
-                fidl_sme::ConnectTransactionEvent::OnFinished { code } => Ok(Some(code)),
-            })
-            .next()
-            .map_err(|(e, _stream)| e)
-        )
-        .and_then(|(code, _stream)| match code {
-            None => {
-                eprintln!("Connect transaction ended abruptly");
-                Ok(internal_error())
-            },
-            Some(fidl_sme::ConnectResultCode::Success) => Ok(success()),
-            Some(fidl_sme::ConnectResultCode::Canceled)
-                => Ok(error_message("Request was canceled")),
-            Some(fidl_sme::ConnectResultCode::Failed)
-                => Ok(error_message("Failed to join"))
-        })
+        .map(convert_connect_result)
         .recover(|e| e)
 }
 
-fn start_connect_txn(client: &Client, legacy_req: legacy::ConnectConfig)
-    -> Result<fidl_sme::ConnectTransactionProxy, fidl::Error>
-{
-    let (connect_txn, remote) = create_endpoints()?;
-    let mut req = fidl_sme::ConnectRequest {
-        ssid: legacy_req.ssid.as_bytes().to_vec(),
-    };
-    client.sme.connect(&mut req, Some(remote))?;
-    Ok(connect_txn)
+fn convert_connect_result(code: fidl_sme::ConnectResultCode) -> legacy::Error {
+    match code {
+        fidl_sme::ConnectResultCode::Success => success(),
+        fidl_sme::ConnectResultCode::Canceled
+            => error_message("Request was canceled"),
+        fidl_sme::ConnectResultCode::Failed
+            => error_message("Failed to join")
+    }
 }
 
 fn status(client: &ClientRef)

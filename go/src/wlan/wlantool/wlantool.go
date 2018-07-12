@@ -58,7 +58,7 @@ func ChanToStr(ch mlme.WlanChan) string {
 // LINT.ThenChange(//garnet/lib/wlan/common/channel.cpp)
 
 func (a *ToolApp) Scan(seconds uint8) {
-	expiry := 15 * time.Second
+	expiry := 25 * time.Second
 	if seconds > 0 {
 		expiry = time.Duration(seconds) * time.Second
 	}

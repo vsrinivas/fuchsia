@@ -30,15 +30,19 @@ extern crate serde_json;
 extern crate tempdir;
 
 mod config;
+mod client;
 mod device;
 mod ess_store;
+mod future_util;
 mod shim;
 mod state_machine;
 
-use config::Config;
 use app::server::ServicesServer;
+use config::Config;
+use ess_store::EssStore;
 use failure::{Error, ResultExt};
 use futures::prelude::*;
+use std::sync::Arc;
 use wlan_service::DeviceServiceMarker;
 
 fn serve_fidl(_client_ref: shim::ClientRef)
@@ -49,7 +53,15 @@ fn serve_fidl(_client_ref: shim::ClientRef)
         //     "fuchsia.wlan.service.Wlan": "wlanstack"
         // to
         //     "fuchsia.wlan.service.Wlan": "wlancfg"
-        // in 'bin/sysmgr/config/services.config' and uncomment the following code:
+        // in 'bin/sysmgr/config/services.config'
+        //
+        // Also, comment out the following lines in 'bin/wlancfg/BUILD.gn':
+        //    {
+        //      dest = "sysmgr/wlancfg.config"
+        //      path = rebase_path("wlancfg.config")
+        //    },
+        //
+        // Then, uncomment the following code:
         /*
         .add_service((<legacy::WlanMarker as ::fidl::endpoints2::ServiceMarker>::NAME, move |channel| {
             let stream = <legacy::WlanRequestStream as ::fidl::endpoints2::RequestStream>::from_channel(channel);
@@ -77,8 +89,9 @@ fn main() -> Result<(), Error> {
     let (watcher_proxy, watcher_server_end) = fidl::endpoints2::create_endpoints()?;
     wlan_svc.watch_devices(watcher_server_end)?;
     let listener = device::Listener::new(wlan_svc, cfg, legacy_client);
+    let ess_store = Arc::new(EssStore::new()?);
     let fut = watcher_proxy.take_event_stream()
-        .for_each(move |evt| device::handle_event(&listener, evt))
+        .for_each(move |evt| device::handle_event(&listener, evt, &ess_store))
         .err_into()
         .and_then(|_| Err(format_err!("Device watcher future exited unexpectedly")));
 
