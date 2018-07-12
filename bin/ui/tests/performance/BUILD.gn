@@ -11,17 +11,21 @@ package("scenic_benchmarks") {
 
   deps = [
     ":process_scenic_trace",
+    "vulkan_is_supported",
   ]
   binaries = [
     {
       name = "process_scenic_trace"
+    },
+    {
+      name = "vulkan_is_supported"
     },
   ]
 
   resources = [
     {
       path = rebase_path("hello_scenic_benchmark.sh")
-      dest = "scenic_benchmarks/hello_scenic_benchmark.sh"
+      dest = "hello_scenic_benchmark.sh"
     },
   ]
 }
