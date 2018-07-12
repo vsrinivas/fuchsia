@@ -228,20 +228,12 @@ int boot_zircon(efi_handle img, efi_system_table* sys,
 
     // osboot ensures we have FRONT_BYTES ahead of the
     // ramdisk to prepend our own bootdata items.
-    zbi_header_t hdr;
     void* bptr = ramdisk - FRONT_BYTES;
     size_t blen = FRONT_BYTES;
 
     // We create a new container header of the same size
     // as the one at the start of the ramdisk
-    hdr.type = ZBI_TYPE_CONTAINER;
-    hdr.length = hdr0->length + FRONT_BYTES;
-    hdr.extra = ZBI_CONTAINER_MAGIC;
-    hdr.flags = ZBI_FLAG_VERSION;
-    hdr.reserved0 = 0;
-    hdr.reserved1 = 0;
-    hdr.magic = ZBI_ITEM_MAGIC;
-    hdr.crc32 = ZBI_ITEM_NO_CRC32;
+    zbi_header_t hdr = ZBI_CONTAINER_HEADER(hdr0->length + FRONT_BYTES);
     memcpy(bptr, &hdr, sizeof(hdr));
     bptr += sizeof(hdr);
 
@@ -249,7 +241,7 @@ int boot_zircon(efi_handle img, efi_system_table* sys,
     hdr.type = ZBI_TYPE_CMDLINE;
     hdr.length = csz;
     hdr.extra = 0;
-    hdr.flags = 0;
+    hdr.flags = ZBI_FLAG_VERSION;
     if (add_bootdata(&bptr, &blen, &hdr, cmdline)) {
         return -1;
     }
@@ -397,15 +389,7 @@ int zedboot(efi_handle img, efi_system_table* sys,
     }
 
     ramdisk += FRONT_BYTES;
-    zbi_header_t* hdr = ramdisk;
-    hdr->type = ZBI_TYPE_CONTAINER;
-    hdr->length = rlen;
-    hdr->extra = ZBI_CONTAINER_MAGIC;
-    hdr->flags = ZBI_FLAG_VERSION;
-    hdr->reserved0 = 0;
-    hdr->reserved1 = 0;
-    hdr->magic = ZBI_ITEM_MAGIC;
-    hdr->crc32 = ZBI_ITEM_NO_CRC32;
+    *(zbi_header_t*)ramdisk = (zbi_header_t)ZBI_CONTAINER_HEADER(rlen);
     memcpy(ramdisk + sizeof(zbi_header_t), image + roff, rlen);
     rlen += sizeof(zbi_header_t);
 

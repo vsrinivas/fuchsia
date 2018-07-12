@@ -187,16 +187,10 @@ noreturn void multiboot_main(uint32_t magic, multiboot_info_t* info) {
 
     // Separate the kernel from the data ZBI and move it into temporary
     // space that the trampoline code will copy it from.
-    const zbi_header_t data_zbi_hdr = {
-        .length = (zbi->hdr_file.length -
-                   sizeof(zbi->hdr_kernel) -
-                   zbi->hdr_kernel.length),
-        .type = ZBI_TYPE_CONTAINER,
-        .extra = ZBI_CONTAINER_MAGIC,
-        .flags = ZBI_FLAG_VERSION,
-        .magic = ZBI_ITEM_MAGIC,
-        .crc32 = ZBI_ITEM_NO_CRC32,
-    };
+    const zbi_header_t data_zbi_hdr = ZBI_CONTAINER_HEADER(
+        zbi->hdr_file.length -
+        sizeof(zbi->hdr_kernel) -
+        zbi->hdr_kernel.length);
     uint8_t* const zbi_end = (uint8_t*)zbi + zbi_size(&zbi->hdr_file);
     zircon_kernel_t* kernel;
     zbi_header_t* data;

@@ -1357,16 +1357,8 @@ Extracted items use the file names shown below:\n\
             item->Stream(&out);
         }
 
-        const zbi_header_t header = {
-            ZBI_TYPE_CONTAINER,                  // type
-            out.WritePosition() - payload_start, // length
-            ZBI_CONTAINER_MAGIC,                 // extra
-            ZBI_FLAG_VERSION,                    // flags
-            0,                                   // reserved0
-            0,                                   // reserved1
-            ZBI_ITEM_MAGIC,                      // magic
-            ZBI_ITEM_NO_CRC32,                   // crc32
-        };
+        const zbi_header_t header =
+            ZBI_CONTAINER_HEADER(out.WritePosition() - payload_start);
         assert(Aligned(header.length));
         out.PatchHeader(header, header_start);
     }

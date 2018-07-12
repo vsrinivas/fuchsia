@@ -146,6 +146,17 @@ typedef struct {
         .int ZBI_ITEM_NO_CRC32;                 \
     .size symbol, . - symbol;                   \
     .type symbol, %object
+#else
+#define ZBI_CONTAINER_HEADER(length) {          \
+    ZBI_TYPE_CONTAINER,                         \
+    (length),                                   \
+    ZBI_CONTAINER_MAGIC,                        \
+    ZBI_FLAG_VERSION,                           \
+    0,                                          \
+    0,                                          \
+    ZBI_ITEM_MAGIC,                             \
+    ZBI_ITEM_NO_CRC32,                          \
+}
 #endif
 
 
