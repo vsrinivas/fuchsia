@@ -33,7 +33,7 @@ void SplitDataSource(
                                    std::unique_ptr<DataSource::DataChunk>)>
         callback);
 
-// Recurse over all pieces of an index object.
+// Iterates over the pieces of an index object.
 Status ForEachPiece(fxl::StringView index_content,
                     fit::function<Status(ObjectIdentifier)> callback);
 
