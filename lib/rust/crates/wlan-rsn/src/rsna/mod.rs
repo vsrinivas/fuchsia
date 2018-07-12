@@ -18,7 +18,8 @@ pub enum Role {
 
 #[derive(Debug)]
 pub enum SecAssocStatus {
-    InvalidPassword,
+    WrongPassword,
+    EssSaEstablished,
 }
 
 #[derive(Debug)]

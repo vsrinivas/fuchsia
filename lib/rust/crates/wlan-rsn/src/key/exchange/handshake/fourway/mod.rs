@@ -16,7 +16,7 @@ use failure;
 use key::exchange::Key;
 use key::gtk::Gtk;
 use key::ptk::Ptk;
-use rsna::{Role, SecAssocResult, SecAssocUpdate};
+use rsna::{Role, SecAssocResult, SecAssocStatus, SecAssocUpdate};
 use rsne::Rsne;
 use std::rc::Rc;
 
@@ -102,7 +102,7 @@ impl Fourway {
         if frame.key_info.encrypted_key_data() {
             let rsne = &self.cfg.s_rsne;
             let akm = &rsne.akm_suites[0];
-            plaintext = match self.ptk.as_ref() {
+            let unwrap_result = match self.ptk.as_ref() {
                 // Return error if key data is encrypted but the PTK was not yet derived.
                 None => Err(Error::UnexpectedEncryptedKeyData.into()),
                 // Else attempt to decrypt key data.
@@ -110,7 +110,14 @@ impl Fourway {
                     .ok_or(Error::UnsupportedAkmSuite)?
                     .unwrap(ptk.kek(), &frame.key_data[..])
                     .map(|p| Some(p)),
-            }.map_err(|e| failure::Error::from(e))?;
+            };
+            plaintext = match unwrap_result {
+                Ok(plaintext) => plaintext,
+                Err(Error::WrongAesKeywrapKey) => {
+                    return Ok(vec![SecAssocUpdate::Status(SecAssocStatus::WrongPassword)])
+                },
+                Err(e) => return Err(e.into())
+            }
         }
         let key_data = match plaintext.as_ref() {
             Some(data) => &data[..],

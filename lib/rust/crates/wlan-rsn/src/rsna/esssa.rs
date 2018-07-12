@@ -6,12 +6,9 @@ use Error;
 use auth;
 use eapol;
 use failure;
-use key::exchange;
-use key::exchange::Key;
-use key::gtk::Gtk;
-use key::ptk::Ptk;
-use rsna::SecAssocUpdate;
-use rsna::{Role, SecAssocResult};
+use key::exchange::{self, Key};
+use key::{gtk::Gtk, ptk::Ptk};
+use rsna::{Role, SecAssocResult, SecAssocStatus, SecAssocUpdate};
 use rsne::Rsne;
 use std::mem;
 
@@ -41,6 +38,13 @@ impl Ptksa {
             _ => (),
         }
         Ok(())
+    }
+
+    fn is_established(&self) -> bool {
+        match self {
+            Ptksa::Initialized(PtksaCfg{ ptk: Some(_) , ..}) => true,
+            _ => false,
+        }
     }
 
     pub fn by_mut_ref(&mut self) -> &mut Self {
@@ -131,16 +135,24 @@ impl EssSa {
 
     pub fn on_eapol_frame(&mut self, frame: &eapol::Frame) -> SecAssocResult {
         // Only processes EAPOL Key frames. Drop all other frames silently.
-        let updates = match frame {
+        let mut updates = match frame {
             &eapol::Frame::Key(ref key_frame) => self.on_eapol_key_frame(&key_frame),
             _ => Ok(vec![]),
         }?;
 
         // Track keys to correctly update corresponding security associations.
+        let was_ptksa_established = self.ptksa.is_established();
         for update in &updates {
             if let SecAssocUpdate::Key(key) = update {
                 self.on_key_confirmed(key.clone())?;
             }
+        }
+
+        // Report if ESSSA was established successfully.
+        // TODO(hahnr): Once GTKSA is supported, the ESSSA should only be reported once GTKSA was
+        // established as well.
+        if !was_ptksa_established && self.ptksa.is_established() {
+            updates.push(SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished));
         }
 
         Ok(updates)
@@ -240,7 +252,7 @@ mod tests {
             .expect("error processing third 4-Way Handshake method");
 
         // Expecting three updates: PTK, GTK and 4th message of the Handshake.
-        assert_eq!(updates.len(), 3);
+        assert_eq!(updates.len(), 4);
 
         // Verify updates.
         let mut rxed_msg4 = false;
@@ -280,6 +292,7 @@ mod tests {
                     rxed_gtk = true;
                     assert_eq!(&gtk[..], reported_gtk.gtk());
                 }
+                SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished) => {}
                 _ => assert!(false),
             }
         }
