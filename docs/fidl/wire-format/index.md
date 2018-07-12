@@ -850,7 +850,8 @@ this by keeping track of the current nesting level during message validation.
 Complex objects are arrays, vectors, structures, or unions which contain
 pointers or handles which require fix-up. These are precisely the kinds of
 objects for which **encoding tables** must be generated. See [FIDL: C
-Language Bindings](../c-language-bindings.md) for information about encoding
+Language Bindings](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/c.md)
+for information about encoding
 tables. Therefore limiting the nesting depth of complex objects has the effect
 of limiting the recursion depth for traversal of encoding tables.
 

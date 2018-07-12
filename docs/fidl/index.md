@@ -18,8 +18,8 @@ This document is a description of the Fuchsia Interface Definition Language
 [FIDL: Wire Format Specification]: wire-format/index.md
 [FIDL: Language Specification]: language.md
 [FIDL: Compiler Specification]: compiler.md
-[FIDL: C Language Bindings]: c-language-bindings.md
-[FIDL: C++ Language Bindings]: c++-language-bindings.md
+[FIDL: C Language Bindings]: https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/c.md
+[FIDL: C++ Language Bindings]: https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/cpp.md
 [FIDL Examples]: ../../system/host/fidl/examples
 [FIDL Tutorial]: https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/tutorial.md
 
