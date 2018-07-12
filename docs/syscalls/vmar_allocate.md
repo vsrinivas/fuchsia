@@ -42,8 +42,8 @@ Creates a new VMAR within the one specified by *parent_vmar*.
 
 **vmar_allocate**() returns **ZX_OK**, the absolute base address of the
 subregion (via *child_addr*), and a handle to the new subregion (via
-*child_vmar*) on success.  In the event of failure, a negative error value is
-returned.
+*child_vmar*) on success.  The base address will be page-aligned and non-zero.
+In the event of failure, a negative error value is returned.
 
 ## ERRORS
 
