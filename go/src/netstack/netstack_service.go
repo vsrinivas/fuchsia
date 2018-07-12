@@ -207,7 +207,7 @@ func (ni *netstackImpl) SetRouteTable(rt []nsfidl.RouteTableEntry) error {
 	return nil
 }
 
-func toSubnet(address nsfidl.NetAddress, prefixLen uint64) (tcpip.Subnet, error) {
+func toSubnet(address nsfidl.NetAddress, prefixLen uint8) (tcpip.Subnet, error) {
 	// TODO: use tcpip.Address#mask after fuchsia/third_party/netstack and github/third_party/netstack are unified and #mask can be made public.
 	a := []byte(toTCPIPAddress(address))
 	m := tcpip.CIDRMask(int(prefixLen), int(len(a)*8))
@@ -218,7 +218,7 @@ func toSubnet(address nsfidl.NetAddress, prefixLen uint64) (tcpip.Subnet, error)
 }
 
 // Add address to the given network interface.
-func (ni *netstackImpl) SetInterfaceAddress(nicid uint32, address nsfidl.NetAddress, prefixLen uint64) (result nsfidl.NetErr, endService error) {
+func (ni *netstackImpl) SetInterfaceAddress(nicid uint32, address nsfidl.NetAddress, prefixLen uint8) (result nsfidl.NetErr, endService error) {
 	log.Printf("net address %+v", address)
 	var protocol tcpip.NetworkProtocolNumber
 	switch address.Family {

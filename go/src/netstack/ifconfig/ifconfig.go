@@ -88,7 +88,7 @@ func (a *netstackClientApp) addIfaceAddress(iface netstack.NetInterface, cidr st
 		usage()
 	}
 	prefixLen, _ := netSubnet.Mask.Size()
-	result, _ := a.netstack.SetInterfaceAddress(iface.Id, toNetAddress(netAddr), uint64(prefixLen))
+	result, _ := a.netstack.SetInterfaceAddress(iface.Id, toNetAddress(netAddr), uint8(prefixLen))
 	if result.Status != netstack.StatusOk {
 		fmt.Printf("Error setting interface address: %s\n", result.Message)
 	}

@@ -161,9 +161,7 @@ interface Netstack {
 
   // Sets the address for the interface with the given nicid.
   // Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
-  // TODO: prefix length is 64-bit to work around TO-830.
-  // Change the argument type once FIDL2 migration is complete.
-  10: SetInterfaceAddress(uint32 nicid, NetAddress addr, uint64 prefixLen) -> (NetErr result);
+  10: SetInterfaceAddress(uint32 nicid, NetAddress addr, uint8 prefixLen) -> (NetErr result);
 
   11: SetDhcpClientStatus(uint32 nicid, bool enabled) -> (NetErr result);
 
