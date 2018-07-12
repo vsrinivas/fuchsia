@@ -21,7 +21,7 @@ type regexInfo struct {
 
 // RegexpTokenizer allows for the splitting of input into tokens based on a list
 // of regexs a la (f)lex.
-type RegexpTokenizer struct {
+type regexpTokenizer struct {
 	regexs        []regexInfo
 	master        *regexp.Regexp
 	defaultAction func(string)
@@ -33,20 +33,20 @@ type rule struct {
 }
 
 // RegexpTokenizerBuilder is the means by which a RegexpTokenizer can be constructed.
-type RegexpTokenizerBuilder struct {
+type regexpTokenizerBuilder struct {
 	rules []rule
 }
 
 // TODO: Add a way to infer the automatic conversions that need to happen from
 // a user supplied function's type via reflection.
 // Rule adds a new regex to the builder
-func (r *RegexpTokenizerBuilder) AddRule(regex string, action actionFunc) {
+func (r *regexpTokenizerBuilder) addRule(regex string, action actionFunc) {
 	r.rules = append(r.rules, rule{regex, action})
 }
 
 // End compiles the list of regular expressions and actions into a RegexpTokenizer
-func (r *RegexpTokenizerBuilder) Compile(defaultAction func(string)) (*RegexpTokenizer, error) {
-	out := RegexpTokenizer{defaultAction: defaultAction}
+func (r *regexpTokenizerBuilder) compile(defaultAction func(string)) (*regexpTokenizer, error) {
+	out := regexpTokenizer{defaultAction: defaultAction}
 	// Start groupIndex at 1 to account for the master regexp
 	groupIndex := 1
 	regexStrs := []string{}
@@ -72,7 +72,7 @@ func (r *RegexpTokenizerBuilder) Compile(defaultAction func(string)) (*RegexpTok
 }
 
 // Run tokenizes 'input'
-func (r *RegexpTokenizer) Run(input string) {
+func (r *regexpTokenizer) run(input string) {
 	for len(input) > 0 {
 		locs := r.master.FindStringSubmatchIndex(input)
 		if locs == nil {

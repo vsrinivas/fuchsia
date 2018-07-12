@@ -11,24 +11,24 @@ import (
 )
 
 func TestRegexTokenize(t *testing.T) {
-	var builder RegexpTokenizerBuilder
+	var builder regexpTokenizerBuilder
 	var out bytes.Buffer
-	builder.AddRule("{a+}", func(args ...string) {
+	builder.addRule("{a+}", func(args ...string) {
 		fmt.Fprintf(&out, "a+ case: %v\n", args)
 	})
-	builder.AddRule("{b+}", func(args ...string) {
+	builder.addRule("{b+}", func(args ...string) {
 		fmt.Fprintf(&out, "b+ case: %v\n", args)
 	})
-	builder.AddRule("{(x)(y)(z)}", func(args ...string) {
+	builder.addRule("{(x)(y)(z)}", func(args ...string) {
 		fmt.Fprintf(&out, "xyz case: %v\n", args)
 	})
-	tokenizer, err := builder.Compile(func(str string) {
+	tokenizer, err := builder.compile(func(str string) {
 		fmt.Fprintf(&out, "default case: %s\n", str)
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	tokenizer.Run("blarg{a}foo{bbbbb}{xyz}{aa}{aa}baz[test]rest")
+	tokenizer.run("blarg{a}foo{bbbbb}{xyz}{aa}{aa}baz[test]rest")
 	expected := `default case: blarg
 a+ case: [{a}]
 default case: foo

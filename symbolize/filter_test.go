@@ -67,26 +67,26 @@ func TestBasic(t *testing.T) {
 
 	// mock ids.txt
 	repo := NewRepo()
-	repo.AddSource(NewMockSource("mock_source.txt", testBinaries))
+	repo.AddSource(testBinaries)
 
 	// make an actual filter using those two mock objects
 	filter := NewFilter(repo, symbo)
 
 	// parse some example lines
-	err := filter.AddModule(Module{"libc.elf", "4fcb712aa6387724a9f465a32cd8c14b", 1})
+	err := filter.addModule(Module{"libc.elf", "4fcb712aa6387724a9f465a32cd8c14b", 1})
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = filter.AddModule(Module{"libcrypto.elf", "12ef5c50b3ed3599c07c02d4509311be", 2})
+	err = filter.addModule(Module{"libcrypto.elf", "12ef5c50b3ed3599c07c02d4509311be", 2})
 	if err != nil {
 		t.Fatal(err)
 	}
-	filter.AddSegment(Segment{1, 0x12345000, 849596, "rx", 0x0})
-	filter.AddSegment(Segment{2, 0x23456000, 539776, "rx", 0x80000})
+	filter.addSegment(Segment{1, 0x12345000, 849596, "rx", 0x0})
+	filter.addSegment(Segment{2, 0x23456000, 539776, "rx", 0x80000})
 	line := parseLine("\033[1m Error at {{{pc:0x123879c0}}}")
 	// print out a more precise form
 	for _, token := range line {
-		token.Accept(&FilterVisitor{filter, 1, context.Background()})
+		token.Accept(&filterVisitor{filter, 1, context.Background()})
 	}
 	json, err := GetLineJson(line)
 	if err != nil {
@@ -145,7 +145,7 @@ func TestBacktrace(t *testing.T) {
 	})
 	// mock ids.txt
 	repo := NewRepo()
-	err := repo.AddSource(NewMockSource("mock_source.txt", testBinaries))
+	err := repo.AddSource(testBinaries)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,13 +154,13 @@ func TestBacktrace(t *testing.T) {
 	filter := NewFilter(repo, symbo)
 
 	// add some context
-	err = filter.AddModule(Module{"libc.so", "4fcb712aa6387724a9f465a32cd8c14b", 1})
+	err = filter.addModule(Module{"libc.so", "4fcb712aa6387724a9f465a32cd8c14b", 1})
 	if err != nil {
 		t.Fatal(err)
 	}
-	filter.AddSegment(Segment{1, 0x12345000, 849596, "rx", 0x0})
+	filter.addSegment(Segment{1, 0x12345000, 849596, "rx", 0x0})
 	for _, token := range line {
-		token.Accept(&FilterVisitor{filter, 1, context.Background()})
+		token.Accept(&filterVisitor{filter, 1, context.Background()})
 	}
 
 	json, err := GetLineJson(line)
@@ -203,7 +203,7 @@ func TestReset(t *testing.T) {
 	})
 	// mock ids.txt
 	repo := NewRepo()
-	err = repo.AddSource(NewMockSource("mock_source.txt", testBinaries))
+	err = repo.AddSource(testBinaries)
 
 	if err != nil {
 		t.Fatal(err)
@@ -214,16 +214,16 @@ func TestReset(t *testing.T) {
 
 	// add some context
 	mod := Module{"libc.so", "4fcb712aa6387724a9f465a32cd8c14b", 1}
-	err = filter.AddModule(mod)
+	err = filter.addModule(mod)
 	if err != nil {
 		t.Fatal(err)
 	}
 	seg := Segment{1, 0x12345000, 849596, "rx", 0x0}
-	filter.AddSegment(seg)
+	filter.addSegment(seg)
 
 	addr := uint64(0x12389987)
 
-	if info, err := filter.FindInfoForAddress(addr); err != nil {
+	if info, err := filter.findInfoForAddress(addr); err != nil {
 		t.Error("expected", nil, "got", err)
 		if len(info.locs) != 1 {
 			t.Error("expected", 1, "source location but got", len(info.locs))
@@ -246,10 +246,10 @@ func TestReset(t *testing.T) {
 
 	// now forget the context
 	for _, token := range line {
-		token.Accept(&FilterVisitor{filter, 1, context.Background()})
+		token.Accept(&filterVisitor{filter, 1, context.Background()})
 	}
 
-	if _, err := filter.FindInfoForAddress(addr); err == nil {
+	if _, err := filter.findInfoForAddress(addr); err == nil {
 		t.Error("expected non-nil error but got", err)
 	}
 }

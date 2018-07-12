@@ -65,7 +65,7 @@ func ExampleDummyProcess() {
 
 	// mock ids.txt
 	repo := NewRepo()
-	repo.AddSource(NewMockSource("mock_source.txt", testBinaries))
+	repo.AddSource(testBinaries)
 
 	// make a demuxer
 	demuxer := NewDemuxer(repo, symbo)
@@ -110,7 +110,7 @@ func ExampleDemux() {
 
 	// mock ids.txt:q
 	repo := NewRepo()
-	repo.AddSource(NewMockSource("mock_source.txt", testBinaries))
+	repo.AddSource(testBinaries)
 
 	// make a demuxer
 	demuxer := NewDemuxer(repo, symbo)
@@ -151,7 +151,7 @@ func ExampleBadAddr() {
 
 	// mock ids.txt
 	repo := NewRepo()
-	repo.AddSource(NewMockSource("mock_source.txt", testBinaries))
+	repo.AddSource(testBinaries)
 
 	// make a demuxer
 	demuxer := NewDemuxer(repo, symbo)

@@ -8,23 +8,23 @@ import (
 	"encoding/json"
 )
 
-type JsonVisitor struct {
+type jsonVisitor struct {
 	stack []json.RawMessage
 }
 
 func GetLineJson(line []Node) ([]byte, error) {
-	var j JsonVisitor
+	var j jsonVisitor
 	for _, token := range line {
 		token.Accept(&j)
 	}
 	return j.getJson()
 }
 
-func (j *JsonVisitor) getJson() ([]byte, error) {
+func (j *jsonVisitor) getJson() ([]byte, error) {
 	return json.MarshalIndent(j.stack, "", "\t")
 }
 
-func (j *JsonVisitor) VisitBt(elem *BacktraceElement) {
+func (j *jsonVisitor) VisitBt(elem *BacktraceElement) {
 	type loc struct {
 		File     OptStr `json:"file"`
 		Line     int    `json:"line"`
@@ -52,7 +52,7 @@ func (j *JsonVisitor) VisitBt(elem *BacktraceElement) {
 	j.stack = append(j.stack, msg)
 }
 
-func (j *JsonVisitor) VisitPc(elem *PCElement) {
+func (j *jsonVisitor) VisitPc(elem *PCElement) {
 	loc := elem.info.locs[0]
 	msg, _ := json.Marshal(struct {
 		Tipe     string `json:"type"`
@@ -70,7 +70,7 @@ func (j *JsonVisitor) VisitPc(elem *PCElement) {
 	j.stack = append(j.stack, msg)
 }
 
-func (j *JsonVisitor) VisitColor(elem *ColorCode) {
+func (j *jsonVisitor) VisitColor(elem *ColorCode) {
 	out := j.stack
 	msg, _ := json.Marshal(struct {
 		Tipe  string `json:"type"`
@@ -82,7 +82,7 @@ func (j *JsonVisitor) VisitColor(elem *ColorCode) {
 	j.stack = append(out, msg)
 }
 
-func (j *JsonVisitor) VisitText(elem *Text) {
+func (j *jsonVisitor) VisitText(elem *Text) {
 	msg, _ := json.Marshal(struct {
 		Tipe string `json:"type"`
 		Text string `json:"text"`
@@ -94,7 +94,7 @@ func (j *JsonVisitor) VisitText(elem *Text) {
 }
 
 // TODO: update this for generalized modules
-func (j *JsonVisitor) VisitModule(elem *ModuleElement) {
+func (j *jsonVisitor) VisitModule(elem *ModuleElement) {
 	msg, _ := json.Marshal(struct {
 		Tipe  string `json:"type"`
 		Name  string `json:"name"`
@@ -109,7 +109,7 @@ func (j *JsonVisitor) VisitModule(elem *ModuleElement) {
 	j.stack = append(j.stack, msg)
 }
 
-func (j *JsonVisitor) VisitReset(elem *ResetElement) {
+func (j *jsonVisitor) VisitReset(elem *ResetElement) {
 	msg, _ := json.Marshal(map[string]string{
 		"type": "reset",
 	})
@@ -117,7 +117,7 @@ func (j *JsonVisitor) VisitReset(elem *ResetElement) {
 }
 
 // TODO: update this for generalized loads
-func (j *JsonVisitor) VisitMapping(elem *MappingElement) {
+func (j *jsonVisitor) VisitMapping(elem *MappingElement) {
 	msg, _ := json.Marshal(struct {
 		Tipe       string `json:"type"`
 		Mod        uint64 `json:"mod"`

@@ -48,32 +48,32 @@ const (
 type ParseLineFunc func(msg string) []Node
 
 func GetLineParser() ParseLineFunc {
-	var b RegexpTokenizerBuilder
+	var b regexpTokenizerBuilder
 	out := []Node{}
 	dec := decRegexp
 	ptr := ptrRegexp
 	str := strRegexp
 	num := fmt.Sprintf("(?:%s|%s)", dec, ptr)
-	b.AddRule(fmt.Sprintf("{{{bt:(%s):(%s)}}}", dec, ptr), func(args ...string) {
+	b.addRule(fmt.Sprintf("{{{bt:(%s):(%s)}}}", dec, ptr), func(args ...string) {
 		out = append(out, &BacktraceElement{
 			num:   str2dec(args[1]),
 			vaddr: str2int(args[2]),
 		})
 	})
-	b.AddRule(fmt.Sprintf("{{{pc:(%s)}}}", ptr), func(args ...string) {
+	b.addRule(fmt.Sprintf("{{{pc:(%s)}}}", ptr), func(args ...string) {
 		out = append(out, &PCElement{vaddr: str2int(args[1])})
 	})
-	b.AddRule(fmt.Sprintf("\033\\[(%s)m", dec), func(args ...string) {
+	b.addRule(fmt.Sprintf("\033\\[(%s)m", dec), func(args ...string) {
 		out = append(out, &ColorCode{color: str2dec(args[1])})
 	})
-	b.AddRule(fmt.Sprintf(`{{{module:(%s):(%s):elf:(%s)}}}`, num, str, str), func(args ...string) {
+	b.addRule(fmt.Sprintf(`{{{module:(%s):(%s):elf:(%s)}}}`, num, str, str), func(args ...string) {
 		out = append(out, &ModuleElement{mod: Module{
 			id:    str2int(args[1]),
 			name:  args[2],
 			build: args[3],
 		}})
 	})
-	b.AddRule(fmt.Sprintf(`{{{mmap:(%s):(%s):load:(%s):(%s):(%s)}}}`, ptr, num, num, str, ptr), func(args ...string) {
+	b.addRule(fmt.Sprintf(`{{{mmap:(%s):(%s):load:(%s):(%s):(%s)}}}`, ptr, num, num, str, ptr), func(args ...string) {
 		out = append(out, &MappingElement{seg: Segment{
 			vaddr:      str2int(args[1]),
 			size:       str2int(args[2]),
@@ -82,10 +82,10 @@ func GetLineParser() ParseLineFunc {
 			modRelAddr: str2int(args[5]),
 		}})
 	})
-	b.AddRule(`{{{reset}}}`, func(args ...string) {
+	b.addRule(`{{{reset}}}`, func(args ...string) {
 		out = append(out, &ResetElement{})
 	})
-	tokenizer, err := b.Compile(func(text string) {
+	tokenizer, err := b.compile(func(text string) {
 		out = append(out, &Text{text: text})
 	})
 	if err != nil {
@@ -93,7 +93,7 @@ func GetLineParser() ParseLineFunc {
 	}
 	return func(msg string) []Node {
 		out = nil
-		tokenizer.Run(msg)
+		tokenizer.run(msg)
 		return out
 	}
 }
@@ -102,12 +102,12 @@ func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 	out := make(chan InputLine)
 	// This is not used for demuxing. It is a human readable line number.
 	var lineno uint64 = 1
-	var b RegexpTokenizerBuilder
+	var b regexpTokenizerBuilder
 	space := spaceRegexp
 	float := floatRegexp
 	dec := decRegexp
 	tags := `[^\[\]]*`
-	b.AddRule(fmt.Sprintf(`\[(%s)\]%s(%s)\.(%s)>%s(.*)$`, float, space, dec, dec, space), func(args ...string) {
+	b.addRule(fmt.Sprintf(`\[(%s)\]%s(%s)\.(%s)>%s(.*)$`, float, space, dec, dec, space), func(args ...string) {
 		var hdr logHeader
 		var line InputLine
 		hdr.time = str2float(args[1])
@@ -119,7 +119,7 @@ func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 		line.msg = args[4]
 		out <- line
 	})
-	b.AddRule(fmt.Sprintf(`\[(%s)\]\[(%s)\]\[(%s)\]\[(%s)\]%s(.*)$`, float, dec, dec, tags, space), func(args ...string) {
+	b.addRule(fmt.Sprintf(`\[(%s)\]\[(%s)\]\[(%s)\]\[(%s)\]%s(.*)$`, float, dec, dec, tags, space), func(args ...string) {
 		var hdr sysLogHeader
 		var line InputLine
 		hdr.time = str2float(args[1])
@@ -132,7 +132,7 @@ func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 		line.msg = args[5]
 		out <- line
 	})
-	tokenizer, err := b.Compile(func(text string) {
+	tokenizer, err := b.compile(func(text string) {
 		var line InputLine
 		line.source = dummySource{}
 		line.msg = text
@@ -150,7 +150,7 @@ func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 			case <-ctx.Done():
 				return
 			default:
-				tokenizer.Run(scanner.Text())
+				tokenizer.run(scanner.Text())
 			}
 		}
 	}()

@@ -50,7 +50,7 @@ func (b *BasicPresenter) Start(input <-chan OutputLine) {
 	}
 }
 
-func printSrcLoc(out io.Writer, loc SourceLocation, info AddressInfo) {
+func printSrcLoc(out io.Writer, loc SourceLocation, info addressInfo) {
 	modRelAddr := info.addr - info.seg.vaddr + info.seg.modRelAddr
 	if !loc.function.IsEmpty() {
 		fmt.Fprintf(out, "%s at ", loc.function)

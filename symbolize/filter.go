@@ -52,7 +52,7 @@ type Segment struct {
 	modRelAddr uint64
 }
 
-type AddressInfo struct {
+type addressInfo struct {
 	locs []SourceLocation
 	mod  Module
 	seg  Segment
@@ -85,7 +85,7 @@ type Filter struct {
 	// handles for llvm-symbolizer
 	symbolizer Symbolizer
 	// Symbolizer context
-	symContext        MappingStore
+	symContext        mappingStore
 	modules           map[uint64]Module
 	modNamesByBuildID map[string]string
 	// Symbolizer repository
@@ -93,9 +93,9 @@ type Filter struct {
 }
 
 // FindInfoForAddress takes a process an in memory address and converts it to a source location.
-func (s *Filter) FindInfoForAddress(vaddr uint64) (AddressInfo, error) {
-	info := AddressInfo{addr: vaddr}
-	seg := s.symContext.Find(vaddr)
+func (s *Filter) findInfoForAddress(vaddr uint64) (addressInfo, error) {
+	info := addressInfo{addr: vaddr}
+	seg := s.symContext.find(vaddr)
 	if seg == nil {
 		return info, fmt.Errorf("could not find segment that covers 0x%x", vaddr)
 	}
@@ -134,13 +134,13 @@ func NewFilter(repo *SymbolizerRepo, symbo Symbolizer) *Filter {
 }
 
 // Reset resets the filter so that it can work for a new process
-func (s *Filter) Reset() {
+func (s *Filter) reset() {
 	s.modules = make(map[uint64]Module)
-	s.symContext.Clear()
+	s.symContext.clear()
 }
 
 // AddModule updates the filter state to inform it of a new module
-func (s *Filter) AddModule(m Module) error {
+func (s *Filter) addModule(m Module) error {
 	var err error
 	// Flag odd build IDs.
 	if modName, ok := s.modNamesByBuildID[m.build]; ok {
@@ -156,8 +156,8 @@ func (s *Filter) AddModule(m Module) error {
 }
 
 // AddSegment updates the filter state to inform it of a new memory mapped location.
-func (s *Filter) AddSegment(seg Segment) {
-	s.symContext.Add(seg)
+func (s *Filter) addSegment(seg Segment) {
+	s.symContext.add(seg)
 }
 
 // Start tells the filter to start consuming input and produce output.
@@ -179,7 +179,7 @@ func (f *Filter) Start(ctx context.Context, input <-chan InputLine) <-chan Outpu
 				}
 				// Update AST with source locations.
 				for _, token := range res.line {
-					token.Accept(&FilterVisitor{filter: f, lineno: elem.lineno, ctx: ctx})
+					token.Accept(&filterVisitor{filter: f, lineno: elem.lineno, ctx: ctx})
 				}
 				res.LogLine = elem.LogLine
 				out <- res
@@ -189,18 +189,18 @@ func (f *Filter) Start(ctx context.Context, input <-chan InputLine) <-chan Outpu
 	return out
 }
 
-type FilterVisitor struct {
+type filterVisitor struct {
 	filter *Filter
 	lineno uint64
 	ctx    context.Context
 }
 
-func (f *FilterVisitor) warn(err error) {
+func (f *filterVisitor) warn(err error) {
 	logger.Warningf(f.ctx, "on line %d: %v", f.lineno, err)
 }
 
-func (f *FilterVisitor) VisitBt(elem *BacktraceElement) {
-	info, err := f.filter.FindInfoForAddress(elem.vaddr)
+func (f *filterVisitor) VisitBt(elem *BacktraceElement) {
+	info, err := f.filter.findInfoForAddress(elem.vaddr)
 	if err != nil {
 		// Don't be noisy about missing objects.
 		if _, ok := err.(*missingObjError); !ok {
@@ -210,8 +210,8 @@ func (f *FilterVisitor) VisitBt(elem *BacktraceElement) {
 	elem.info = info
 }
 
-func (f *FilterVisitor) VisitPc(elem *PCElement) {
-	info, err := f.filter.FindInfoForAddress(elem.vaddr)
+func (f *filterVisitor) VisitPc(elem *PCElement) {
+	info, err := f.filter.findInfoForAddress(elem.vaddr)
 	if err != nil {
 		// Don't be noisy about missing objects.
 		if _, ok := err.(*missingObjError); !ok {
@@ -221,28 +221,28 @@ func (f *FilterVisitor) VisitPc(elem *PCElement) {
 	elem.info = info
 }
 
-func (f *FilterVisitor) VisitColor(group *ColorCode) {
+func (f *filterVisitor) VisitColor(group *ColorCode) {
 
 }
 
-func (f *FilterVisitor) VisitText(_ *Text) {
+func (f *filterVisitor) VisitText(_ *Text) {
 	// This must be implemented in order to meet the interface but it has no effect.
 	// This visitor is supposed to do all of the non-parsing parts of constructing the AST.
 	// There is nothing to do for Text however.
 }
 
-func (f *FilterVisitor) VisitReset(elem *ResetElement) {
+func (f *filterVisitor) VisitReset(elem *ResetElement) {
 	// TODO: Check if Reset had an effect and output that a pid reuse occured.
-	f.filter.Reset()
+	f.filter.reset()
 }
 
-func (f *FilterVisitor) VisitModule(elem *ModuleElement) {
-	err := f.filter.AddModule(elem.mod)
+func (f *filterVisitor) VisitModule(elem *ModuleElement) {
+	err := f.filter.addModule(elem.mod)
 	if err != nil {
 		f.warn(err)
 	}
 }
 
-func (f *FilterVisitor) VisitMapping(elem *MappingElement) {
-	f.filter.AddSegment(elem.seg)
+func (f *filterVisitor) VisitMapping(elem *MappingElement) {
+	f.filter.addSegment(elem.seg)
 }

@@ -18,13 +18,11 @@ import (
 // assumes that all binaries from a source will be files on the same system.
 // Eventully we might relax this assumption.
 type BinaryFileSource interface {
-	// Name is deprecated. Do not use.
-	Name() string
 	// Extracts the set of binaries from this source.
-	GetBinaries() ([]elflib.BinaryFileRef, error)
+	getBinaries() ([]elflib.BinaryFileRef, error)
 }
 
-// IDsSource is a BinaryFileSource parsed from ids.txt
+// idsSource is a BinaryFileSource parsed from ids.txt
 type idsSource struct {
 	pathToIDs string
 }
@@ -33,11 +31,11 @@ func NewIDsSource(pathToIDs string) BinaryFileSource {
 	return &idsSource{pathToIDs}
 }
 
-func (i *idsSource) Name() string {
+func (i *idsSource) name() string {
 	return i.pathToIDs
 }
 
-func (i *idsSource) GetBinaries() ([]elflib.BinaryFileRef, error) {
+func (i *idsSource) getBinaries() ([]elflib.BinaryFileRef, error) {
 	file, err := os.Open(i.pathToIDs)
 	if err != nil {
 		return nil, err
@@ -74,7 +72,7 @@ func NewRepo() *SymbolizerRepo {
 }
 
 func (s *SymbolizerRepo) loadSource(source BinaryFileSource) error {
-	bins, err := source.GetBinaries()
+	bins, err := source.getBinaries()
 	if err != nil {
 		return err
 	}

@@ -69,7 +69,7 @@ type SourceLocation struct {
 type BacktraceElement struct {
 	vaddr uint64
 	num   uint64
-	info  AddressInfo
+	info  addressInfo
 }
 
 func (b *BacktraceElement) Accept(visitor NodeVisitor) {
@@ -79,7 +79,7 @@ func (b *BacktraceElement) Accept(visitor NodeVisitor) {
 // PcElement is an AST node representing a pc element in the markup
 type PCElement struct {
 	vaddr uint64
-	info  AddressInfo
+	info  addressInfo
 }
 
 func (p *PCElement) Accept(visitor NodeVisitor) {

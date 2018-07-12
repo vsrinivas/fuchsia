@@ -27,7 +27,7 @@ func (b byVAddr) Less(i, j int) bool {
 // allows them to be efficentily looked up by an address within them.
 
 // MappingStore quasi-efficently indexes segments by their start address.
-type MappingStore struct {
+type mappingStore struct {
 	segments []Segment
 	sorted   int
 }
@@ -54,7 +54,7 @@ func merge(a []Segment, b []Segment) []Segment {
 // sortAndFind sorts the unsorted range of segments, finds the missing element
 // and then merges the two sorted ranges so that sortAndFind won't have to be
 // called again for the same element.
-func (m *MappingStore) sortAndFind(vaddr uint64) *Segment {
+func (m *mappingStore) sortAndFind(vaddr uint64) *Segment {
 	sort.Sort(byVAddr(m.segments[m.sorted:]))
 	seg := findSegment(m.segments[m.sorted:], vaddr)
 	newMods := merge(m.segments[m.sorted:], m.segments[:m.sorted])
@@ -77,7 +77,7 @@ func findSegment(sorted []Segment, vaddr uint64) *Segment {
 
 // Find first trys to find the desired segment in the sorted segment. If the segment
 // can't be found we consult the unsorted part and update the structure.
-func (m *MappingStore) Find(vaddr uint64) *Segment {
+func (m *mappingStore) find(vaddr uint64) *Segment {
 	out := findSegment(m.segments[:m.sorted], vaddr)
 	if out == nil {
 		out = m.sortAndFind(vaddr)
@@ -86,12 +86,12 @@ func (m *MappingStore) Find(vaddr uint64) *Segment {
 }
 
 // Add adds a segment to the segment.
-func (m *MappingStore) Add(seg Segment) {
+func (m *mappingStore) add(seg Segment) {
 	m.segments = append(m.segments, seg)
 }
 
 // Clear clears the mapping store of all previous information
-func (m *MappingStore) Clear() {
+func (m *mappingStore) clear() {
 	m.segments = nil
 	m.sorted = 0
 }
