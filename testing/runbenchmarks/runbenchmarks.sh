@@ -50,6 +50,11 @@ runbench_exec() {
     # Ensure the results file doesn't already exist.
     rm -f "${results_file}"
 
+    # Create the results file so that it's always present, even if the test
+    # crashes. Infra expects this file to always be present because it is
+    # listed in summary.json.
+    touch "${results_file}"
+
     # Run the benchmark.
     _runbench_log "running $@"
     if ! "$@"; then
