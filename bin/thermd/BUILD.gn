@@ -27,6 +27,7 @@ import("//build/package.gni")
     "//zircon/public/lib/trace-engine",
     "//zircon/public/lib/trace-provider",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/ddk",
   ]
 }
 
