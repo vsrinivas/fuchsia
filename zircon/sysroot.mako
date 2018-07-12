@@ -41,6 +41,9 @@ sdk_atom("sysroot_sdk") {
     {
       source = "${file}"
       dest = "${path}"
+      % if path.startswith("dist/"):
+      packaged = true
+      % endif
     },
     % endfor
   ]
