@@ -813,17 +813,26 @@ void Blobfs::FreeBlocks(WritebackWork* wb, size_t num_blocks, size_t block_index
     ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
-zx_status_t Blobfs::FindNode(size_t start, size_t end, size_t* node_index_out) {
-    for (size_t i = start; i < end; ++i) {
+zx_status_t Blobfs::FindNode(size_t* node_index_out) {
+    for (size_t i = free_node_lower_bound_; i < info_.inode_count; ++i) {
         if (GetNode(i)->start_block == kStartBlockFree) {
             // Found a free node. Mark it as reserved so no one else can allocate it.
             if (!reserved_nodes_.Get(i, i + 1, nullptr)) {
                 reserved_nodes_.Set(i, i + 1);
                 *node_index_out = i;
+
+                // We don't know where the next free node is but we know that there
+                // are no free nodes until index i.
+                free_node_lower_bound_ = i + 1;
                 return ZX_OK;
             }
         }
     }
+
+    // There are no free nodes available. Setting free_node_lower_bound_ to
+    // inodes_count will help to fail fast for next allocation. This will
+    // also help to find nodes if nodes are added.
+    free_node_lower_bound_ = info_.inode_count;
 
     return ZX_ERR_OUT_OF_RANGE;
 }
@@ -832,17 +841,16 @@ zx_status_t Blobfs::FindNode(size_t start, size_t end, size_t* node_index_out) {
 zx_status_t Blobfs::ReserveNode(size_t* node_index_out) {
     TRACE_DURATION("blobfs", "Blobfs::ReserveNode");
     zx_status_t status;
-    if ((status = FindNode(0, info_.inode_count, node_index_out)) == ZX_OK) {
+    if ((status = FindNode(node_index_out)) == ZX_OK) {
         return ZX_OK;
     }
 
     // If we didn't find any free inodes, try adding more via FVM.
-    size_t old_inode_count = info_.inode_count;
     if (AddInodes() != ZX_OK) {
         return ZX_ERR_NO_SPACE;
     }
 
-    if ((status = FindNode(old_inode_count, info_.inode_count, node_index_out)) == ZX_OK) {
+    if ((status = FindNode(node_index_out)) == ZX_OK) {
         return ZX_OK;
     }
 
@@ -882,6 +890,10 @@ void Blobfs::FreeNode(WritebackWork* wb, size_t node_index) {
         WriteInfo(wb);
     }
 
+    // We update lower bound if the freed node is the smallest free node.
+    if (free_node_lower_bound_ > node_index) {
+        free_node_lower_bound_ = node_index;
+    }
     zx_status_t status = reserved_nodes_.Clear(node_index, node_index + 1);
     ZX_DEBUG_ASSERT(status == ZX_OK);
 }

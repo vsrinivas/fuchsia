@@ -148,6 +148,7 @@ public:
 
     // Constructs a blob, reads in data, verifies the contents, then destroys the in-memory copy.
     static zx_status_t VerifyBlob(Blobfs* bs, size_t node_index);
+
 private:
     friend struct TypeWavlTraits;
 
@@ -498,9 +499,9 @@ private:
     // Frees blocks from the reserved/allocated maps and updates disk if necessary.
     void FreeBlocks(WritebackWork* wb, size_t nblocks, size_t blkno);
 
-    // Finds an unallocated node between indices start (inclusive) and end (exclusive).
-    // If it exists, sets |*node_index_out| to the first available value.
-    zx_status_t FindNode(size_t start, size_t end, size_t *node_index_out);
+    // Finds an unallocated node. If it exists, sets |*node_index_out| to the
+    // first available value.
+    zx_status_t FindNode(size_t* node_index_out);
 
     // Finds and reserves space for a blob node in memory. Does not update disk.
     zx_status_t ReserveNode(size_t* node_index_out);
@@ -545,7 +546,7 @@ private:
                                            MerkleRootTraits,
                                            VnodeBlob::TypeWavlTraits>;
     fbl::Mutex hash_lock_;
-    WAVLTreeByMerkle open_hash_ __TA_GUARDED(hash_lock_){}; // All 'in use' blobs.
+    WAVLTreeByMerkle open_hash_ __TA_GUARDED(hash_lock_){};   // All 'in use' blobs.
     WAVLTreeByMerkle closed_hash_ __TA_GUARDED(hash_lock_){}; // All 'closed' blobs.
 
     fbl::unique_fd blockfd_;
@@ -557,14 +558,20 @@ private:
     vmoid_t block_map_vmoid_ = {};
     fbl::unique_ptr<fzl::MappedVmo> node_map_ = {};
     vmoid_t node_map_vmoid_ = {};
-    fbl::unique_ptr<fzl::MappedVmo> info_vmo_= {};
-    vmoid_t info_vmoid_= {};
+    fbl::unique_ptr<fzl::MappedVmo> info_vmo_ = {};
+    vmoid_t info_vmoid_ = {};
 
     // The reserved_blocks_ and reserved_nodes_ bitmaps only hold in-flight reservations.
     // At a steady state they will be empty.
     bitmap::RleBitmap reserved_blocks_ = {};
     bitmap::RleBitmap reserved_nodes_ = {};
     uint64_t fs_id_ = {};
+
+    // free_node_lower_bound_ is lower bound on free nodes, meaning we are sure that
+    // there are no free nodes with indices less than free_node_lower_bound_. This
+    // doesn't mean that free_node_lower_bound_ is a free node; it just means that one
+    // can start looking for a free node from free_node_lower_bound_
+    size_t free_node_lower_bound_ = 0;
 
     bool collecting_metrics_ = false;
     BlobfsMetrics metrics_ = {};
