@@ -49,9 +49,8 @@ TEST_F(PacketTest, BufferAlloc) {
     ASSERT_TRUE(buffer != nullptr);
     EXPECT_EQ(buffer->capacity(), kHugeBufferSize);
 
-    // TODO(NET-1115)
-    // buffer = GetBuffer(kHugeBufferSize + 1);
-    // ASSERT_TRUE(buffer == nullptr);
+    buffer = GetBuffer(kHugeBufferSize + 1);
+    ASSERT_TRUE(buffer == nullptr);
 }
 
 TEST_F(PacketTest, BufferMaxOut) {
