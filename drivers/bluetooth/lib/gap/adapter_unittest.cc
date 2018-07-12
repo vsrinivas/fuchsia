@@ -107,6 +107,35 @@ TEST_F(GAP_AdapterTest, InitializeFailureNoBufferInfo) {
   EXPECT_FALSE(transport_closed_called());
 }
 
+TEST_F(GAP_AdapterTest, InitializeNoBREDR) {
+  bool success;
+  int init_cb_count = 0;
+  auto init_cb = [&, this](bool cb_success) {
+    success = cb_success;
+    init_cb_count++;
+  };
+
+  // Enable LE support, disable BR/EDR
+  FakeController::Settings settings;
+  settings.lmp_features_page0 |=
+      static_cast<uint64_t>(hci::LMPFeature::kLESupported);
+  settings.lmp_features_page0 |=
+      static_cast<uint64_t>(hci::LMPFeature::kBREDRNotSupported);
+  settings.le_acl_data_packet_length = 5;
+  settings.le_total_num_acl_data_packets = 1;
+  test_device()->set_settings(settings);
+
+  InitializeAdapter(std::move(init_cb));
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(success);
+  EXPECT_EQ(1, init_cb_count);
+  EXPECT_TRUE(adapter()->state().IsLowEnergySupported());
+  EXPECT_FALSE(adapter()->state().IsBREDRSupported());
+  EXPECT_EQ(TechnologyType::kLowEnergy, adapter()->state().type());
+  EXPECT_FALSE(transport_closed_called());
+}
+
 TEST_F(GAP_AdapterTest, InitializeSuccess) {
   bool success;
   int init_cb_count = 0;
@@ -130,6 +159,8 @@ TEST_F(GAP_AdapterTest, InitializeSuccess) {
   EXPECT_TRUE(success);
   EXPECT_EQ(1, init_cb_count);
   EXPECT_TRUE(adapter()->state().IsLowEnergySupported());
+  EXPECT_TRUE(adapter()->state().IsBREDRSupported());
+  EXPECT_EQ(TechnologyType::kDualMode, adapter()->state().type());
   EXPECT_FALSE(transport_closed_called());
 }
 

@@ -430,7 +430,7 @@ void Adapter::InitializeStep3(InitializeCallback callback) {
     auto params = cmd_packet->mutable_view()
                       ->mutable_payload<hci::WriteLEHostSupportCommandParams>();
     params->le_supported_host = hci::GenericEnableParam::kEnable;
-    params->simultaneous_le_host = 0x00;
+    params->simultaneous_le_host = 0x00;  // note: ignored
     init_seq_runner_->QueueCommand(
         std::move(cmd_packet), [](const auto& event) {
           BTEV_TEST_WARN(event, "gap: write LE host support failed");
@@ -517,16 +517,22 @@ void Adapter::InitializeStep4(InitializeCallback callback) {
   le_advertising_manager_ =
       std::make_unique<LowEnergyAdvertisingManager>(hci_le_advertiser_.get());
 
-  bredr_connection_manager_ = std::make_unique<BrEdrConnectionManager>(
-      hci_, &device_cache_,
-      state_.features().HasBit(0, hci::LMPFeature::kInterlacedPageScan));
+  if (state_.IsBREDRSupported()) {
+    bredr_connection_manager_ = std::make_unique<BrEdrConnectionManager>(
+        hci_, &device_cache_,
+        state_.features().HasBit(0, hci::LMPFeature::kInterlacedPageScan));
 
-  hci::InquiryMode mode = hci::InquiryMode::kStandard;
-  if (state_.features().HasBit(0, hci::LMPFeature::kExtendedInquiryResponse)) {
-    mode = hci::InquiryMode::kExtended;
-  } else if (state_.features().HasBit(
-                 0, hci::LMPFeature::kRSSIwithInquiryResults)) {
-    mode = hci::InquiryMode::kRSSI;
+    hci::InquiryMode mode = hci::InquiryMode::kStandard;
+    if (state_.features().HasBit(0,
+                                 hci::LMPFeature::kExtendedInquiryResponse)) {
+      mode = hci::InquiryMode::kExtended;
+    } else if (state_.features().HasBit(
+                   0, hci::LMPFeature::kRSSIwithInquiryResults)) {
+      mode = hci::InquiryMode::kRSSI;
+    }
+
+    bredr_discovery_manager_ =
+        std::make_unique<BrEdrDiscoveryManager>(hci_, mode, &device_cache_);
   }
 
   // Set the local name default.
@@ -537,9 +543,6 @@ void Adapter::InitializeStep4(InitializeCallback callback) {
     local_name += " " + nodename;
   }
   SetLocalName(local_name, [](const auto&) {});
-
-  bredr_discovery_manager_ =
-      std::make_unique<BrEdrDiscoveryManager>(hci_, mode, &device_cache_);
 
   // This completes the initialization sequence.
   self->init_state_ = State::kInitialized;

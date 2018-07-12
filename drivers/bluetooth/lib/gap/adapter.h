@@ -101,13 +101,11 @@ class Adapter final {
 
   // Returns this Adapter's BR/EDR connection manager.
   BrEdrConnectionManager* bredr_connection_manager() const {
-    FXL_DCHECK(bredr_connection_manager_);
     return bredr_connection_manager_.get();
   }
 
   // Returns this Adapter's BR/EDR discovery manager.
   BrEdrDiscoveryManager* bredr_discovery_manager() const {
-    FXL_DCHECK(bredr_discovery_manager_);
     return bredr_discovery_manager_.get();
   }
 

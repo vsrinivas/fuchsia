@@ -91,6 +91,8 @@ ctrl::AdapterInfo NewAdapterInfo(const ::btlib::gap::Adapter& adapter) {
   adapter_info.identifier = adapter.identifier();
   adapter_info.address = adapter.state().controller_address().ToString();
 
+  adapter_info.technology = TechnologyTypeToFidl(adapter.state().type());
+
   return adapter_info;
 }
 

@@ -52,6 +52,49 @@ void HostServer::SetLocalName(::fidl::StringPtr local_name,
       });
 }
 
+void HostServer::StartLEDiscovery(StartDiscoveryCallback callback) {
+  auto le_manager = adapter()->le_discovery_manager();
+  if (!le_manager) {
+    callback(fidl_helpers::NewFidlError(ErrorCode::BAD_STATE,
+                                        "Adapter is not initialized yet."));
+    return;
+  }
+  le_manager->StartDiscovery([self = weak_ptr_factory_.GetWeakPtr(),
+                              callback = std::move(callback)](auto session) {
+    // End the new session if this AdapterServer got destroyed in the
+    // mean time (e.g. because the client disconnected).
+    if (!self) {
+      callback(
+          fidl_helpers::NewFidlError(ErrorCode::FAILED, "Adapter Shutdown"));
+      return;
+    }
+
+    if (!session) {
+      FXL_VLOG(1) << "Failed to start LE discovery session";
+      callback(fidl_helpers::NewFidlError(
+          ErrorCode::FAILED, "Failed to start LE discovery session"));
+      self->bredr_discovery_session_ = nullptr;
+      self->requesting_discovery_ = false;
+      return;
+    }
+
+    // Set up a general-discovery filter for connectable devices.
+    session->filter()->set_connectable(true);
+    session->filter()->SetGeneralDiscoveryFlags();
+
+    self->le_discovery_session_ = std::move(session);
+    self->requesting_discovery_ = false;
+
+    // Send the adapter state update.
+    AdapterState state;
+    state.discovering = Bool::New();
+    state.discovering->value = true;
+    self->binding()->events().OnHostStateChanged(std::move(state));
+
+    callback(Status());
+  });
+}
+
 void HostServer::StartDiscovery(StartDiscoveryCallback callback) {
   FXL_VLOG(1) << "Adapter StartDiscovery()";
   FXL_DCHECK(adapter());
@@ -65,11 +108,14 @@ void HostServer::StartDiscovery(StartDiscoveryCallback callback) {
 
   requesting_discovery_ = true;
   auto bredr_manager = adapter()->bredr_discovery_manager();
+  if (!bredr_manager) {
+    StartLEDiscovery(std::move(callback));
+    return;
+  }
   // TODO(jamuraa): start these in parallel instead of sequence
   bredr_manager->RequestDiscovery(
-      [self = weak_ptr_factory_.GetWeakPtr(), bredr_manager,
-       callback = std::move(callback)](btlib::hci::Status status,
-                                       auto session) mutable {
+      [self = weak_ptr_factory_.GetWeakPtr(), callback = std::move(callback)](
+          btlib::hci::Status status, auto session) mutable {
         if (!self) {
           callback(fidl_helpers::NewFidlError(ErrorCode::FAILED,
                                               "Adapter Shutdown"));
@@ -85,42 +131,7 @@ void HostServer::StartDiscovery(StartDiscoveryCallback callback) {
         }
 
         self->bredr_discovery_session_ = std::move(session);
-
-        auto le_manager = self->adapter()->le_discovery_manager();
-        le_manager->StartDiscovery(
-            [self, callback = std::move(callback)](auto session) {
-              // End the new session if this AdapterServer got destroyed in the
-              // mean time (e.g. because the client disconnected).
-              if (!self) {
-                callback(fidl_helpers::NewFidlError(ErrorCode::FAILED,
-                                                    "Adapter Shutdown"));
-                return;
-              }
-
-              if (!session) {
-                FXL_VLOG(1) << "Failed to start LE discovery session";
-                callback(fidl_helpers::NewFidlError(
-                    ErrorCode::FAILED, "Failed to start LE discovery session"));
-                self->bredr_discovery_session_ = nullptr;
-                self->requesting_discovery_ = false;
-                return;
-              }
-
-              // Set up a general-discovery filter for connectable devices.
-              session->filter()->set_connectable(true);
-              session->filter()->SetGeneralDiscoveryFlags();
-
-              self->le_discovery_session_ = std::move(session);
-              self->requesting_discovery_ = false;
-
-              // Send the adapter state update.
-              AdapterState state;
-              state.discovering = Bool::New();
-              state.discovering->value = true;
-              self->binding()->events().OnHostStateChanged(std::move(state));
-
-              callback(Status());
-            });
+        self->StartLEDiscovery(std::move(callback));
       });
 }
 
@@ -148,7 +159,13 @@ void HostServer::SetConnectable(bool connectable,
                                 SetConnectableCallback callback) {
   FXL_VLOG(1) << "Adapter SetConnectable(" << connectable << ")";
 
-  adapter()->bredr_connection_manager()->SetConnectable(
+  auto bredr_conn_manager = adapter()->bredr_connection_manager();
+  if (!bredr_conn_manager) {
+    callback(fidl_helpers::NewFidlError(ErrorCode::NOT_SUPPORTED,
+                                        "Connectable mode not available"));
+    return;
+  }
+  bredr_conn_manager->SetConnectable(
       connectable, [callback = std::move(callback)](const auto& status) {
         callback(fidl_helpers::StatusToFidl(status));
       });
@@ -177,6 +194,11 @@ void HostServer::SetDiscoverable(bool discoverable,
   }
   requesting_discoverable_ = true;
   auto bredr_manager = adapter()->bredr_discovery_manager();
+  if (!bredr_manager) {
+    callback(fidl_helpers::NewFidlError(ErrorCode::FAILED,
+                                        "Discoverable mode not available"));
+    return;
+  }
   bredr_manager->RequestDiscoverable(
       [self = weak_ptr_factory_.GetWeakPtr(), callback = std::move(callback)](
           btlib::hci::Status status, auto session) {
@@ -186,7 +208,7 @@ void HostServer::SetDiscoverable(bool discoverable,
           return;
         }
         if (!status || !session) {
-          FXL_VLOG(1) << "Failed to set discoverable!";
+          FXL_VLOG(1) << "Failed to set discoverable";
           callback(
               fidl_helpers::StatusToFidl(status, "Failed to set discoverable"));
           self->requesting_discoverable_ = false;

@@ -64,6 +64,9 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host> {
   // Called when |server| receives a channel connection error.
   void OnConnectionError(Server* server);
 
+  // Helper to start LE Discovery (called by StartDiscovery)
+  void StartLEDiscovery(StartDiscoveryCallback callback);
+
   // Helper for binding a fidl::InterfaceRequest to a FIDL server of type
   // ServerType.
   template <typename ServerType, typename... Args>

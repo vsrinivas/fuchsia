@@ -7,6 +7,7 @@
 #include <cstdint>
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
+#include "garnet/drivers/bluetooth/lib/gap/gap.h"
 #include "garnet/drivers/bluetooth/lib/gap/low_energy_state.h"
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_channel.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
@@ -33,6 +34,14 @@ class AdapterState final {
   //   - On BR/EDR/LE this is the LE Public Device Address AND the BD_ADDR.
   const common::DeviceAddressBytes& controller_address() const {
     return controller_address_;
+  }
+
+  TechnologyType type() const {
+    // Note: we don't support BR/EDR only controllers.
+    if (IsBREDRSupported()) {
+      return TechnologyType::kDualMode;
+    }
+    return TechnologyType::kLowEnergy;
   }
 
   // The features that are supported by this controller.

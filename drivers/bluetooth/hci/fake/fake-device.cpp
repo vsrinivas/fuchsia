@@ -70,7 +70,7 @@ zx_status_t Device::Bind() {
   }
 
   FakeController::Settings settings;
-  settings.ApplyLEOnlyDefaults();
+  settings.ApplyDualModeDefaults();
   std::lock_guard<std::mutex> lock(device_lock_);
   fake_device_ = fbl::AdoptRef(new FakeController());
   fake_device_->set_settings(settings);
