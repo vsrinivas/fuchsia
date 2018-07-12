@@ -165,11 +165,11 @@ static void ConvertPhyHTCapabilities(
                 const wlan_ht_caps_t* phy_ht_caps) {
     HTCaps->ht_capability_info = phy_ht_caps->ht_capability_info;
     HTCaps->ampdu_params = phy_ht_caps->ampdu_params;
-    size_t phy_mcs_set_size = sizeof(phy_ht_caps->supported_mcs_set);
-    ZX_DEBUG_ASSERT(sizeof(HTCaps->supported_mcs_set.mutable_data()) >= phy_mcs_set_size);
-    std::memcpy(HTCaps->supported_mcs_set.mutable_data(),
-                phy_ht_caps->supported_mcs_set,
-                phy_mcs_set_size);
+    size_t phy_mcs_set_size = countof(phy_ht_caps->supported_mcs_set);
+    ZX_DEBUG_ASSERT(HTCaps->supported_mcs_set.count() >= phy_mcs_set_size);
+    for (size_t index = 0; index < phy_mcs_set_size; index++) {
+        HTCaps->supported_mcs_set[index] = phy_ht_caps->supported_mcs_set[index];
+    }
     HTCaps->ht_ext_capabilities = phy_ht_caps->ht_ext_capabilities;
     HTCaps->tx_beamforming_capabilities = phy_ht_caps->tx_beamforming_capabilities;
     HTCaps->asel_capabilities = phy_ht_caps->asel_capabilities;
