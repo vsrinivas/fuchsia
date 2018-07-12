@@ -14,38 +14,41 @@ SECTIONS
     PHYS_LOAD_ADDRESS = 0x100000;
     . = PHYS_LOAD_ADDRESS + SIZEOF_HEADERS;
 
-    /*
-     * The boot loader only loads a single contiguous segment.
-     */
-    .multiboot : {
+    .multiboot.header : {
         /*
-         * The Multiboot header goes first.  The Multiboot format
+         * The Multiboot header goes next.  The Multiboot format
          * requires that it be somewhere in the first 8192 bytes.
          */
         KEEP(*(.multiboot.header))
         ASSERT(ABSOLUTE(.) <= PHYS_LOAD_ADDRESS + 8192, "headers too big");
+    } :load
 
-        /*
-         * Next come the code, the RODATA, and the writable data.
-         * They're all actually intermingled in one big segment
-         * that is both writable and executable.  But we segregate
-         * them slightly just for cache optimization.
-         */
+    .note.gnu.build-id : {
+        *(.note.gnu.build-id)
+    } :load :note
+
+    .rodata : {
+        *(.rodata*)
+    } :load
+
+    .text : {
         *(.text*)
-        *(.note.gnu.build-id* .rodata*)
+    } :load
+
+    .data : {
         *(.data*)
-
-        . = ALIGN(8);
         PROVIDE_HIDDEN(edata = .);
-    }
+    } :load
 
-    /*
-     * Finally, the bss.
-     */
     .bss : {
         *(.bss*) *(.sbss*) *(COMMON)
-        . = ALIGN(8);
-    }
+    } :load
 
     PROVIDE_HIDDEN(end = .);
+}
+
+PHDRS
+{
+    load PT_LOAD FLAGS(7); /* PF_R|PF_W|PF_X */
+    note PT_NOTE FLAGS(4); /* PF_R */
 }
