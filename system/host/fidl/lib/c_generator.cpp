@@ -18,7 +18,7 @@ namespace {
 constexpr const char* kIndent = "    ";
 
 CGenerator::Member MessageHeader() {
-    return {flat::Type::Kind::kIdentifier, "fidl_message_header_t", "hdr", {}};
+    return {flat::Type::Kind::kIdentifier, "fidl_message_header_t", "hdr", {}, {}};
 }
 
 // Functions named "Emit..." are called to actually emit to an std::ostream
@@ -69,6 +69,10 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
             *file << "[" << array_count << "]";
         }
         break;
+    case flat::Type::Kind::kVector:
+        *file << "const " << member.element_type << "* " << member.name << "_data, "
+              << "size_t " << member.name << "_count";
+        break;
     case flat::Type::Kind::kString:
         *file << "const char* " << member.name << "_data, "
               << "size_t " << member.name << "_size";
@@ -81,9 +85,6 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
     case flat::Type::Kind::kIdentifier:
         *file << "const " << member.type << "* " << member.name;
         break;
-    default:
-        assert(false && "bad type simple interface");
-        break;
     }
 }
 
@@ -94,6 +95,11 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
         for (uint32_t array_count : member.array_counts) {
             *file << "[" << array_count << "]";
         }
+    case flat::Type::Kind::kVector:
+        *file << member.element_type << "* " << member.name << "_data, "
+              << "size_t " << member.name << "_capacity, "
+              << "size_t* out_" << member.name << "_count";
+        break;
     case flat::Type::Kind::kString:
         *file << "char* " << member.name << "_data, "
               << "size_t " << member.name << "_capacity, "
@@ -104,9 +110,6 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
     case flat::Type::Kind::kPrimitive:
     case flat::Type::Kind::kIdentifier:
         *file << member.type << "* " << member.name;
-        break;
-    default:
-        assert(false && "bad type simple interface");
         break;
     }
 }
@@ -158,28 +161,35 @@ void EmitServerReplyDecl(std::ostream* file, StringView method_name,
 
 void EmitMeasureParams(std::ostream* file,
                        const std::vector<CGenerator::Member>& params,
-                       StringView suffix) {
+                       StringView vector_suffix,
+                       StringView string_suffix) {
     for (const auto& member : params) {
-        if (member.kind != flat::Type::Kind::kString)
-            continue;
-        *file << " + FIDL_ALIGN(" << member.name << suffix << ")";
+        if (member.kind == flat::Type::Kind::kVector)
+            *file << " + FIDL_ALIGN(sizeof(*" << member.name << "_data) * " << member.name << vector_suffix << ")";
+        else if (member.kind == flat::Type::Kind::kString)
+            *file << " + FIDL_ALIGN(" << member.name << string_suffix << ")";
     }
 }
 
-bool HasSecondaryObjects(const std::vector<CGenerator::Member>& params) {
+// This function assumes the |params| are part of a [Layout="Simple"] interface.
+// In particular, simple interfaces don't have nullable structs or nested
+// vectors. The only secondary objects they contain are top-level vectors and
+// strings.
+size_t CountSecondaryObjects(const std::vector<CGenerator::Member>& params) {
+    size_t count = 0u;
     for (const auto& member : params) {
-        if (member.kind == flat::Type::Kind::kString ||
-            member.kind == flat::Type::Kind::kVector)
-            return true;
+        if (member.kind == flat::Type::Kind::kVector ||
+            member.kind == flat::Type::Kind::kString)
+            ++count;
     }
-    return false;
+    return count;
 }
 
 void EmitLinearizeMessage(std::ostream* file,
                           StringView receiver,
                           StringView bytes,
                           const std::vector<CGenerator::Member>& request) {
-    if (HasSecondaryObjects(request))
+    if (CountSecondaryObjects(request) > 0)
         *file << kIndent << "uint32_t _next = sizeof(*" << receiver << ");\n";
     for (const auto& member : request) {
         const auto& name = member.name;
@@ -187,6 +197,12 @@ void EmitLinearizeMessage(std::ostream* file,
         case flat::Type::Kind::kArray:
             *file << kIndent << "memcpy(" << receiver << "->" << name << ", "
                   << name << ", sizeof(" << receiver << "->" << name << "));\n";
+            break;
+        case flat::Type::Kind::kVector:
+            *file << kIndent << receiver << "->" << name << ".data = &" << bytes << "[_next];\n";
+            *file << kIndent << receiver << "->" << name << ".count = " << name << "_count;\n";
+            *file << kIndent << "memcpy(" << receiver << "->" << name << ".data, " << name << "_data, sizeof(*" << name << "_data) * " << name << "_count);\n";
+            *file << kIndent << "_next += FIDL_ALIGN(sizeof(*" << name << "_data) * " << name << "_count);\n";
             break;
         case flat::Type::Kind::kString:
             *file << kIndent << receiver << "->" << name << ".data = &" << bytes << "[_next];\n";
@@ -201,9 +217,6 @@ void EmitLinearizeMessage(std::ostream* file,
             break;
         case flat::Type::Kind::kIdentifier:
             *file << kIndent << receiver << "->" << name << " = *" << name << ";\n";
-            break;
-        default:
-            assert(false && "bad type simple interface");
             break;
         }
     }
@@ -327,7 +340,18 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl) {
     const flat::Type* type = decl.type.get();
     auto type_name = NameFlatCType(library, type);
     std::vector<uint32_t> array_counts = ArrayCounts(library, type);
-    return CGenerator::Member{type->kind, type_name, name, std::move(array_counts)};
+    std::string element_type;
+    if (type->kind == flat::Type::Kind::kVector) {
+        auto vector_type = static_cast<const flat::VectorType*>(type);
+        element_type = NameFlatCType(library, vector_type->element_type.get());
+    }
+    return CGenerator::Member{
+        type->kind,
+        std::move(type_name),
+        std::move(name),
+        std::move(element_type),
+        std::move(array_counts),
+    };
 }
 
 std::vector<CGenerator::Member>
@@ -455,7 +479,7 @@ CGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& 
         NamedInterface named_interface;
         named_interface.c_name = NameInterface(*interface_info);
         if (interface_info->HasAttribute("Discoverable")) {
-          named_interface.discoverable_name = NameDiscoverable(*interface_info);
+            named_interface.discoverable_name = NameDiscoverable(*interface_info);
         }
         for (const auto& method : interface_info->methods) {
             NamedMethod named_method;
@@ -534,7 +558,7 @@ void CGenerator::ProduceEnumForwardDeclaration(const NamedEnum& named_enum) {
 
 void CGenerator::ProduceInterfaceForwardDeclaration(const NamedInterface& named_interface) {
     if (!named_interface.discoverable_name.empty()) {
-      file_ << "#define " << named_interface.c_name << "_Name \"" << named_interface.discoverable_name << "\"\n";
+        file_ << "#define " << named_interface.c_name << "_Name \"" << named_interface.discoverable_name << "\"\n";
     }
     for (const auto& method_info : named_interface.methods) {
         file_ << "#define " << method_info.ordinal_name << " ((uint32_t)"
@@ -647,7 +671,7 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
         EmitClientMethodDecl(&file_, method_info.c_name, request, response);
         file_ << " {\n";
         file_ << kIndent << "uint32_t _wr_num_bytes = sizeof(" << method_info.request->c_name << ")";
-        EmitMeasureParams(&file_, request, "_size");
+        EmitMeasureParams(&file_, request, "_count", "_size");
         file_ << ";\n";
         file_ << kIndent << "FIDL_ALIGNDECL char _wr_bytes[_wr_num_bytes];\n";
         file_ << kIndent << method_info.request->c_name << "* _request = (" << method_info.request->c_name << "*)_wr_bytes;\n";
@@ -665,7 +689,7 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
             file_ << kIndent << "return zx_channel_write(_channel, 0u, _wr_bytes, _wr_num_bytes, _handles, _wr_num_handles);\n";
         } else {
             file_ << kIndent << "uint32_t _rd_num_bytes = sizeof(" << method_info.response->c_name << ")";
-            EmitMeasureParams(&file_, response, "_capacity");
+            EmitMeasureParams(&file_, response, "_capacity", "_capacity");
             file_ << ";\n";
             file_ << kIndent << "FIDL_ALIGNDECL char _rd_bytes[_rd_num_bytes];\n";
             if (!response.empty())
@@ -691,10 +715,26 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
             // before decoding the message so that we can close the handles
             // using |_handles| rather than trying to find them in the decoded
             // message.
-            for (const auto& member : response) {
-                if (member.kind != flat::Type::Kind::kString)
-                    continue;
-                file_ << kIndent << "if (_response->" << member.name << ".size > " << member.name << "_capacity) {\n";
+            size_t count = CountSecondaryObjects(response);
+            if (count > 0u) {
+                file_ << kIndent << "if ";
+                if (count > 1u)
+                    file_ << "(";
+                size_t i = 0;
+                for (const auto& member : response) {
+                    if (member.kind == flat::Type::Kind::kVector) {
+                        if (i++ > 0u)
+                            file_ << " || ";
+                        file_ << "(_response->" << member.name << ".count > " << member.name << "_capacity)";
+                    } else if (member.kind == flat::Type::Kind::kString) {
+                        if (i++ > 0u)
+                            file_ << " || ";
+                        file_ << "(_response->" << member.name << ".size > " << member.name << "_capacity)";
+                    }
+                }
+                if (count > 1u)
+                    file_ << ")";
+                file_ << " {\n";
                 file_ << kIndent << kIndent << "zx_handle_close_many(_handles, _actual_num_handles);\n";
                 file_ << kIndent << kIndent << "return ZX_ERR_BUFFER_TOO_SMALL;\n";
                 file_ << kIndent << "}\n";
@@ -712,6 +752,10 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
                 case flat::Type::Kind::kArray:
                     file_ << kIndent << "memcpy(out_" << name << ", _response->" << name << ", sizeof(out_" << name << "));\n";
                     break;
+                case flat::Type::Kind::kVector:
+                    file_ << kIndent << "memcpy(" << name << "_data, _response->" << name << ".data, sizeof(*" << name << "_data) * _response->" << name << ".count);\n";
+                    file_ << kIndent << "*out_" << name << "_count = _response->" << name << ".count;\n";
+                    break;
                 case flat::Type::Kind::kString:
                     file_ << kIndent << "memcpy(" << name << "_data, _response->" << name << ".data, _response->" << name << ".size);\n";
                     file_ << kIndent << "*out_" << name << "_size = _response->" << name << ".size;\n";
@@ -721,9 +765,6 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
                 case flat::Type::Kind::kPrimitive:
                 case flat::Type::Kind::kIdentifier:
                     file_ << kIndent << "*" << name << " = _response->" << name << ";\n";
-                    break;
-                default:
-                    assert(false && "bad type simple interface");
                     break;
                 }
             }
@@ -792,15 +833,16 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
             case flat::Type::Kind::kPrimitive:
                 file_ << ", request->" << member.name;
                 break;
+            case flat::Type::Kind::kVector:
+                file_ << ", (" << member.element_type << "*)request->" << member.name << ".data"
+                      << ", request->" << member.name << ".count";
+                break;
             case flat::Type::Kind::kString:
                 file_ << ", request->" << member.name << ".data"
                       << ", request->" << member.name << ".size";
                 break;
             case flat::Type::Kind::kIdentifier:
                 file_ << ", &(request->" << member.name << ")";
-                break;
-            default:
-                assert(false && "bad type simple interface");
                 break;
             }
         }
@@ -827,7 +869,7 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
         EmitServerReplyDecl(&file_, method_info.c_name, response);
         file_ << " {\n";
         file_ << kIndent << "uint32_t _wr_num_bytes = sizeof(" << method_info.response->c_name << ")";
-        EmitMeasureParams(&file_, response, "_size");
+        EmitMeasureParams(&file_, response, "_count", "_size");
         file_ << ";\n";
         file_ << kIndent << "char _wr_bytes[_wr_num_bytes];\n";
         file_ << kIndent << method_info.response->c_name << "* _response = (" << method_info.response->c_name << "*)_wr_bytes;\n";

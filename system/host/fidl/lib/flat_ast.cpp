@@ -188,6 +188,21 @@ bool Interface::Method::Parameter::IsSimple() const {
     if (type->kind == Type::Kind::kString) {
         auto string_type = static_cast<StringType*>(type.get());
         return string_type->max_size.Value() < Size::Max().Value();
+    } else if (type->kind == Type::Kind::kVector) {
+        auto vector_type = static_cast<VectorType*>(type.get());
+        if (vector_type->element_count.Value() == Size::Max().Value())
+            return false;
+        switch (vector_type->element_type->kind) {
+        case Type::Kind::kHandle:
+        case Type::Kind::kRequestHandle:
+        case Type::Kind::kPrimitive:
+            return true;
+        case Type::Kind::kArray:
+        case Type::Kind::kVector:
+        case Type::Kind::kString:
+        case Type::Kind::kIdentifier:
+            return false;
+        }
     }
     return fieldshape.Depth() == 0u;
 }

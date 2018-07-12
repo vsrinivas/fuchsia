@@ -206,6 +206,7 @@ static bool loader_test(void) {
     }
 
     ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderDone(client), "");
+    ASSERT_EQ(ZX_OK, zx_handle_close(client), "");
 
     int result = 0;
     rv = thrd_join(thread, &result);

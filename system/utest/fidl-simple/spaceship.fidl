@@ -1,0 +1,11 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.test.spaceship;
+
+[Layout="Simple"]
+interface SpaceShip {
+    1: AdjustHeading(vector<uint32>:64 stars) -> (int8 result);
+    2: ScanForLifeforms() -> (vector<uint32>:64 lifesigns);
+};

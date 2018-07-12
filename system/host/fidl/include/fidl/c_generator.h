@@ -39,6 +39,7 @@ public:
         flat::Type::Kind kind;
         std::string type;
         std::string name;
+        std::string element_type;
         std::vector<uint32_t> array_counts;
     };
 
