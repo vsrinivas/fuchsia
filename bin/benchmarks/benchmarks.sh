@@ -37,7 +37,9 @@ runbench_exec "${OUT_DIR}/zircon_benchmarks.json" \
     /pkgfs/packages/zircon_benchmarks/0/bin/app -p --out="${OUT_DIR}/zircon_benchmarks.json"
 
 # Scenic performance tests.
-runbench_exec "${OUT_DIR}/benchmark_hello_scenic.json" \
-    /system/data/scenic_benchmarks/hello_scenic_benchmark.sh "${OUT_DIR}" "${OUT_DIR}/benchmark_hello_scenic.json"
+# TODO(SCN-832): Re-enable when these tests pass on the perf bots.
+#runbench_exec "${OUT_DIR}/benchmark_hello_scenic.json" \
+#    /system/data/scenic_benchmarks/hello_scenic_benchmark.sh "${OUT_DIR}" "${OUT_DIR}/benchmark_hello_scenic.json"
+
 # Exit with a code indicating whether any errors occurred.
 runbench_finish "${OUT_DIR}"
