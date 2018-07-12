@@ -36,7 +36,7 @@ fuchsia::ui::scenic::SessionPtr GetSession(
 
 Tiles::Tiles(::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
              fidl::InterfaceRequest<ViewOwner> view_owner_request,
-             fuchsia::sys::StartupContext* startup_context)
+             fuchsia::sys::StartupContext* startup_context, int border)
     : startup_context_(startup_context),
       view_manager_(std::move(view_manager)),
       view_listener_binding_(this),
@@ -45,7 +45,8 @@ Tiles::Tiles(::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
       root_node_(&session_),
       background_node_(&session_),
       container_node_(&session_),
-      present_scene_task_([this]() { PresentScene(); }) {
+      present_scene_task_([this]() { PresentScene(); }),
+      border_(border) {
   zx::eventpair root_export_token;
   root_node_.BindAsRequest(&root_export_token);
 
@@ -208,8 +209,9 @@ void Tiles::InvalidateScene() {
   present_scene_task_.Post(async_get_default());
 }
 
-static void Inset(fuchsia::math::RectF* rect) {
-  float inset = std::min({10.f, rect->width / 3.f, rect->height / 3.f});
+static void Inset(fuchsia::math::RectF* rect, int border) {
+  float inset = std::min(
+      {static_cast<float>(border), rect->width / 3.f, rect->height / 3.f});
   rect->x += inset;
   rect->y += inset;
   rect->width -= 2 * inset;
@@ -243,7 +245,7 @@ void Tiles::Layout() {
       tile_bounds.width = tile_width;
       tile_bounds.height = tile_height;
 
-      Inset(&tile_bounds);
+      Inset(&tile_bounds, border_);
 
       ViewData* tile = view_it->second.get();
 

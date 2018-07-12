@@ -51,8 +51,9 @@ class TilesTest : public gtest::TestLoopFixture {
     view_manager_.Bind(view_manager_ptr.NewRequest());
     fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner;
 
-    tiles_impl_ = std::make_unique<tiles::Tiles>(
-        std::move(view_manager_ptr), view_owner.NewRequest(), context_.get());
+    tiles_impl_ = std::make_unique<tiles::Tiles>(std::move(view_manager_ptr),
+                                                 view_owner.NewRequest(),
+                                                 context_.get(), 10);
     tiles_ = tiles_impl_.get();
   }
 

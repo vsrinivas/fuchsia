@@ -24,7 +24,7 @@ class Tiles : public fuchsia::ui::views_v1::ViewListener,
   Tiles(::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
         fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
             view_owner_request,
-        fuchsia::sys::StartupContext* startup_context);
+        fuchsia::sys::StartupContext* startup_context, int border);
 
   ~Tiles() final;
 
@@ -115,6 +115,9 @@ class Tiles : public fuchsia::ui::views_v1::ViewListener,
 
   // Map from keys to |ViewData|
   std::map<uint32_t, std::unique_ptr<ViewData>> views_;
+
+  // Border in logical pixels for each tile.
+  int border_;
 };
 
 }  // namespace tiles
