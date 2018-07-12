@@ -22,7 +22,13 @@ import (
 	"github.com/google/netstack/tcpip/stack"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
+
+	"net/http"
+	_ "net/http/pprof"
 )
+
+// TODO(tkilbourn): disable this after tracking down NET-1077
+const pprofServer = true
 
 var ns *netstack
 
@@ -86,6 +92,13 @@ func main() {
 	ctx.Serve()
 	go bindings.Serve()
 	go bindings.Serve()
+
+	if pprofServer {
+		go func() {
+			log.Println("starting http pprof server on 0.0.0.0:6060")
+			log.Println(http.ListenAndServe("0.0.0.0:6060", nil))
+		}()
+	}
 
 	const ethdir = "/dev/class/ethernet"
 	w, err := watcher.NewWatcher(ethdir)
