@@ -176,19 +176,23 @@ class TestVP9 {
 
     uint32_t frame_count = 0;
     std::promise<void> wait_valid;
+    bool frames_returned = false;  // Protected by video->video_decoder_lock_
     std::vector<std::shared_ptr<VideoFrame>> frames_to_return;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->video_decoder_->SetFrameReadyNotifier(
-          [&frames_to_return, &frame_count,
-           &wait_valid](std::shared_ptr<VideoFrame> frame) {
+          [&video, &frames_to_return, &frame_count, &wait_valid,
+           &frames_returned](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
             DLOG("Got frame %d\n", frame_count);
 #if DUMP_VIDEO_TO_FILE
             DumpVideoFrameToFile(frame, filename);
 #endif
-            frames_to_return.push_back(frame);
-            if (frame_count == 26)
+            if (frames_returned)
+              ReturnFrame(video.get(), frame);
+            else
+              frames_to_return.push_back(frame);
+            if (frame_count == 80)
               wait_valid.set_value();
           });
     }
@@ -202,12 +206,21 @@ class TestVP9 {
       for (auto frame : frames_to_return) {
         video->video_decoder_->ReturnFrame(frame);
       }
+      frames_returned = true;
     }
 
     EXPECT_EQ(std::future_status::ready,
-              wait_valid.get_future().wait_for(std::chrono::seconds(1)));
+              wait_valid.get_future().wait_for(std::chrono::seconds(2)));
 
     video.reset();
+  }
+
+ private:
+  // This is called from the interrupt handler, which already holds the lock.
+  static void ReturnFrame(AmlogicVideo* video,
+                          std::shared_ptr<VideoFrame> frame)
+      FXL_NO_THREAD_SAFETY_ANALYSIS {
+    video->video_decoder_->ReturnFrame(frame);
   }
 };
 TEST(VP9, Decode) { TestVP9::Decode(); }
