@@ -173,6 +173,29 @@ should only check conditions and be side-effect free.
 
 This minimizes the mutability for each member or local variable.
 
+### PREFER return `Widget` instead of a specific type of Flutter widget.
+
+As your project evolves, you may change the widget type that is returned in your
+function. For example, you might wrap your widget with a Center. Returning
+`Widget` simplifies the refactoring, as the method signature wouldn't have to
+change.
+
+#### Good:
+
+``` dart
+Widget returnContainerWidget() {
+  return Container();
+}
+```
+
+#### Bad:
+
+``` dart
+Container returnContainerWidget() {
+  return Container();
+}
+```
+
 # Additional Design Rules
 
 ### PREFER storing state in Models instead of state
