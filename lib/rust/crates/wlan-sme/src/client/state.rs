@@ -183,25 +183,25 @@ impl<T: Tokens> State<T> {
 
     pub fn status(&self) -> Status {
         match self {
-            &State::Idle | &State::Deauthenticating { next_cmd: None } => Status {
+            State::Idle | State::Deauthenticating { next_cmd: None } => Status {
                 connected_to: None,
                 connecting_to: None,
             },
-            &State::Joining { ref cmd }
-                | &State::Authenticating { ref cmd }
-                | &State::Associating { ref cmd, .. }
-                | &State::Deauthenticating { next_cmd: Some(ref cmd) }  =>
+            State::Joining { cmd }
+                | State::Authenticating { cmd }
+                | State::Associating { cmd, .. }
+                | State::Deauthenticating { next_cmd: Some(cmd) }  =>
             {
                 Status {
                     connected_to: None,
                     connecting_to: Some(cmd.bss.ssid.as_bytes().to_vec()),
                 }
             },
-            &State::Associated { ref bss, link_state: LinkState::_EstablishingRsna, .. } => Status {
+            State::Associated { bss, link_state: LinkState::_EstablishingRsna, .. } => Status {
                 connected_to: None,
                 connecting_to: Some(bss.ssid.as_bytes().to_vec()),
             },
-            &State::Associated { ref bss, link_state: LinkState::LinkUp, .. } => Status {
+            State::Associated { bss, link_state: LinkState::LinkUp, .. } => Status {
                 connected_to: Some(convert_bss_description(bss)),
                 connecting_to: None,
             },

@@ -214,9 +214,9 @@ impl<D, J> ScanScheduler<D, J> {
 
     // Returns the most recent join scan request, if there is one.
     pub fn get_join_scan(&self) -> Option<&JoinScan<J>> {
-        if let &Some(ref s) = &self.pending_join {
+        if let Some(s) = &self.pending_join {
             Some(s)
-        } else if let &ScanState::ScanningToJoin{ ref cmd, .. } = &self.current {
+        } else if let ScanState::ScanningToJoin{ cmd, .. } = &self.current {
             Some(cmd)
         } else {
             None
@@ -234,7 +234,7 @@ impl<D, J> ScanScheduler<D, J> {
 
     fn start_next_scan(&mut self) -> Option<ScanRequest> {
         match &self.current {
-            &ScanState::NotScanning => {
+            ScanState::NotScanning => {
                 if let Some(join_scan) = self.pending_join.take() {
                     self.last_mlme_txn_id += 1;
                     let request = new_join_scan_request(
