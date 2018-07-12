@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
 
 package("scenic_tests") {
   testonly = true
@@ -97,12 +98,17 @@ package("scenic") {
     },
   ]
 
-  resources = [
-    {
-      path = "//garnet/public/lib/escher/shaders/model_renderer/main.vert"
-      dest = "shaders/model_renderer/main.vert"
-    },
-  ]
+  loadable_modules = vulkan_validation_layers.loadable_modules
+
+  resources =
+      [
+        {
+          path = "//garnet/public/lib/escher/shaders/model_renderer/main.vert"
+          dest = "shaders/model_renderer/main.vert"
+        },
+      ] + vulkan_validation_layers.resources
+
+  public_deps = vulkan_validation_layers.public_deps
 }
 
 package("screencap") {

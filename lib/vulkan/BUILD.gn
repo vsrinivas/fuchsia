@@ -4,31 +4,34 @@
 
 import("//build/package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
+import("//garnet/lib/vulkan/image_pipe_swapchain.gni")
+import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
 
-package("image-pipe-swapchain") {
-  deprecated_system_image = true
-
-  deps = [
+group("image_pipe_swapchain") {
+  public_deps = [
     "src/swapchain",
   ]
-  libraries = [ {
-        name = "libVkLayer_image_pipe_swapchain.so"
-      } ]
-  resources = [ {
-        path = rebase_path("src/swapchain/VkLayer_image_pipe_swapchain.json")
-        dest = "vulkan/explicit_layer.d/VkLayer_image_pipe_swapchain.json"
-      } ]
 }
 
 package("image-pipe-swapchain-tests") {
   testonly = true
 
   deps = [
+    ":image_pipe_swapchain",
     "tests/unit:test_image_pipe_swapchain",
+    "//third_party/vulkan_loader_and_validation_layers/layers",
   ]
-  binaries = [ {
-        name = "test_image_pipe_swapchain"
-      } ]
+  binaries = [
+    {
+      name = "test_image_pipe_swapchain"
+    },
+  ]
+  public_deps =
+      vulkan_validation_layers.public_deps + image_pipe_swapchain.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules +
+                     image_pipe_swapchain.loadable_modules
+  resources =
+      vulkan_validation_layers.resources + image_pipe_swapchain.resources
 }
 
 package("vkcube_image_pipe_swapchain") {
@@ -36,16 +39,26 @@ package("vkcube_image_pipe_swapchain") {
 
   deps = [
     "tests/vkcube:vkcube_image_pipe_swapchain",
+    "//third_party/vulkan_loader_and_validation_layers/layers",
   ]
   binary = "vkcube_image_pipe_swapchain"
 
-  resources = [
-      {
-        path = rebase_path("tests/vkcube/bbb_frame.yuv")
-        dest = "bbb_frame.yuv"
-    } ]
-  meta = [ {
-        path = rebase_path("meta/vkcube_image_pipe_swapchain.cmx")
-        dest = "vkcube_image_pipe_swapchain.cmx"
-      } ]
+  meta = [
+    {
+      path = rebase_path("meta/vkcube_image_pipe_swapchain.cmx")
+      dest = "vkcube_image_pipe_swapchain.cmx"
+    },
+  ]
+
+  public_deps =
+      vulkan_validation_layers.public_deps + image_pipe_swapchain.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules +
+                     image_pipe_swapchain.loadable_modules
+  resources =
+      [
+        {
+          path = rebase_path("tests/vkcube/bbb_frame.yuv")
+          dest = "bbb_frame.yuv"
+        },
+      ] + vulkan_validation_layers.resources + image_pipe_swapchain.resources
 }

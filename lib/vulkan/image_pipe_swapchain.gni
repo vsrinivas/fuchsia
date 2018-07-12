@@ -1,0 +1,43 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# To use the image pipe swapchain layer in a package, add a dependency on
+# //garnet/lib/vulkan:image_pipe_swapchain
+# in the package, import this .gni file, and append the loadable_module and
+# resources entries from this scope to the package's scope.
+#
+# Example BUILD.gn file:
+#
+# import("//garnet/lib/vulkan/image_pipe_swapchain.gni")
+#
+# package("funky_swap_chain_example") {
+#   loadable_modules = [
+#     ...
+#     ] + image_pipe_swapchain.loadable_modules
+#
+#   resources = [
+#     ...
+#     ] + image_pipe_swapchain.resources
+#
+#   public_deps = [
+#     ...
+#     ] + image_pipe_swapchain.public_deps
+# }
+image_pipe_swapchain = {
+  loadable_modules = [
+    {
+      name = "libVkLayer_image_pipe_swapchain.so"
+    },
+  ]
+  resources = [
+    {
+      path = rebase_path("src/swapchain/VkLayer_image_pipe_swapchain.json")
+      dest = "vulkan/explicit_layer.d/VkLayer_image_pipe_swapchain.json"
+    },
+  ]
+
+  public_deps = [
+    "//garnet/lib/vulkan:image_pipe_swapchain",
+  ]
+}

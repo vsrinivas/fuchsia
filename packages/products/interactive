@@ -10,7 +10,6 @@
         "garnet/packages/prod/device_settings",
         "garnet/packages/prod/display_manager",
         "garnet/packages/prod/fonts",
-        "garnet/packages/prod/image_pipe_swapchain",
         "garnet/packages/prod/logger",
         "garnet/packages/prod/log_listener",
         "garnet/packages/prod/mdns_service",

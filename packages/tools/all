@@ -8,7 +8,6 @@
         "garnet/packages/tools/runmany",
         "garnet/packages/tools/sl4f",
         "garnet/packages/tools/tiles",
-        "garnet/packages/tools/vulkan_validation_layers",
         "garnet/packages/tools/zxdb"
     ]
 }

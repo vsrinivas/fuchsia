@@ -1,7 +1,4 @@
 {
-    "imports": [
-        "garnet/packages/prod/image_pipe_swapchain"
-    ],
     "packages": [
         "//garnet/lib/vulkan:vkcube_image_pipe_swapchain"
     ]
