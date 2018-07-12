@@ -120,7 +120,7 @@ void TestCaseResults::WriteJSON(FILE* out_file) const {
     fprintf(out_file, ",\"unit\":");
     WriteJSONString(out_file, unit.c_str());
     if (bytes_processed_per_run) {
-        fprintf(out_file, ",\"bytes_processed_per_run\":%" PRIu64 "u",
+        fprintf(out_file, ",\"bytes_processed_per_run\":%" PRIu64,
                 bytes_processed_per_run);
     }
     fprintf(out_file, ",\"samples\":[");
