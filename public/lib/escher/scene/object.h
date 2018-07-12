@@ -17,8 +17,6 @@ namespace escher {
 // Does not retain ownership of the material.
 class Object {
  public:
-  ~Object();
-
   // Constructors.
   Object(const Transform& transform, MeshPtr mesh, MaterialPtr material);
   Object(const mat4& transform, MeshPtr mesh, MaterialPtr material);

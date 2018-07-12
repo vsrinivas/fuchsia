@@ -20,7 +20,7 @@ layout(set = 0, binding = 2) uniform ViewProjection {
 // Attribute locations must match constants in model_data.h
 layout(location = 0) in vec3 inPosition;
 #ifdef USE_POSITION_OFFSET_ATTRIBUTE
-layout(location = 1) in vec2 inPositionOffset;
+layout(location = 1) in vec3 inPositionOffset;
 #endif
 #ifdef USE_UV_ATTRIBUTE
 layout(location = 2) in vec2 inUV;

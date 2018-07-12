@@ -73,9 +73,8 @@ class CommandBufferPipelineState {
 
   // Called by CommandBuffer::BindVertices().  Return true if pipeline change is
   // required.
-  bool BindVertices(uint32_t binding, const BufferPtr& buffer,
-                    vk::DeviceSize offset, vk::DeviceSize stride,
-                    vk::VertexInputRate step_rate);
+  bool BindVertices(uint32_t binding, vk::Buffer buffer, vk::DeviceSize offset,
+                    vk::DeviceSize stride, vk::VertexInputRate step_rate);
 
   // Called by CommandBuffer::FlushRenderState().  Binds any vertex buffers that
   // are both dirty and active in the current pipeline layout.

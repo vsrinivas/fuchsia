@@ -13,6 +13,7 @@
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/impl/command_buffer.h"
 #include "lib/escher/profiling/timestamp_profiler.h"
+#include "lib/escher/renderer/uniform_block_allocator.h"
 #include "lib/escher/util/block_allocator.h"
 
 namespace escher {
@@ -51,22 +52,35 @@ class Frame : public Resource {
   vk::CommandBuffer vk_command_buffer() const { return vk_command_buffer_; }
   GpuAllocator* gpu_allocator();
 
+  // Allocate temporary CPU memory that is valid until EndFrame() is called.
   template <typename T>
   T* Allocate() {
     return block_allocator_.Allocate<T>();
   }
 
+  // Allocate temporary CPU memory that is valid until EndFrame() is called.
   template <typename T>
   T* AllocateMany(size_t count) {
     return block_allocator_.AllocateMany<T>(count);
   }
 
+  // Allocate temporary GPU uniform buffer memory that is value until the frame
+  // is finished rendering (after EndFrame() is called).
+  UniformAllocation AllocateUniform(size_t size, size_t alignment) {
+    return uniform_block_allocator_.Allocate(size, alignment);
+  }
+
  private:
+  // These resources will be retained until the current frame is finished
+  // running on the GPU.
+  void KeepAlive(ResourcePtr resource);
+
   // Constructor called by Escher::NewFrame().
   // NOTE: moving the BlockAllocator into the Frame (instead of e.g. passing a
   // unique_ptr) avoids an extra pointer indirection on each allocation.
   friend class impl::FrameManager;
   Frame(impl::FrameManager* manager, BlockAllocator allocator,
+        impl::UniformBufferPoolWeakPtr uniform_buffer_pool,
         uint64_t frame_number, const char* trace_literal,
         bool enable_gpu_logging);
   void BeginFrame();
@@ -84,6 +98,14 @@ class Frame : public Resource {
       const std::vector<TimestampProfiler::Result>& timestamps,
       const char* trace_literal);
 
+  enum class State {
+    kReadyToBegin,
+    kInProgress,
+    kFinishing,
+  };
+
+  State state_ = State::kReadyToBegin;
+
   // The frame number associated with this frame. Used to correlate work across
   // threads for tracing events.
   const uint64_t frame_number_;
@@ -100,8 +122,15 @@ class Frame : public Resource {
 
   BlockAllocator block_allocator_;
 
+  UniformBlockAllocator uniform_block_allocator_;
+
   TimestampProfilerPtr profiler_;
   uint32_t submission_count_ = 0;
+
+  // TODO(ES-103): ideally we can move away from explicitly retaining used
+  // resources in the Frame.  For now, this approach is easy and relatively
+  // fool-proof.
+  std::vector<ResourcePtr> keep_alive_;
 };
 
 }  // namespace escher

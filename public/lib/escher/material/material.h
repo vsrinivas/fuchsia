@@ -27,7 +27,7 @@ class Material : public fxl::RefCountedThreadSafe<Material> {
   const TexturePtr& texture() const { return texture_; }
   vk::ImageView vk_image_view() const { return image_view_; }
   vk::Sampler vk_sampler() const { return sampler_; }
-  vec4 color() const { return color_; }
+  const vec4& color() const { return color_; }
 
   void set_color(vec4 color) { color_ = color; }
   void set_color(vec3 color) { color_ = vec4(color, 1); }

@@ -82,4 +82,37 @@ TEST(MeshSpec, MultiAttributeOffsetAndStride) {
   }
 }
 
+TEST(MeshSpec, NumAttributes) {
+  EXPECT_EQ(
+      4U, MeshSpec{MeshAttribute::kPosition2D | MeshAttribute::kPositionOffset |
+                   MeshAttribute::kUV | MeshAttribute::kPerimeterPos}
+              .GetNumAttributes());
+
+  EXPECT_EQ(
+      4U, MeshSpec{MeshAttribute::kPosition3D | MeshAttribute::kPositionOffset |
+                   MeshAttribute::kUV | MeshAttribute::kPerimeterPos}
+              .GetNumAttributes());
+
+  EXPECT_EQ(2U, MeshSpec{MeshAttribute::kPosition2D | MeshAttribute::kUV}
+                    .GetNumAttributes());
+
+  EXPECT_EQ(2U, MeshSpec{MeshAttribute::kPosition3D | MeshAttribute::kUV}
+                    .GetNumAttributes());
+
+  EXPECT_EQ(1U, MeshSpec{MeshAttribute::kPosition2D}.GetNumAttributes());
+
+  EXPECT_EQ(1U, MeshSpec{MeshAttribute::kPosition3D}.GetNumAttributes());
+
+  EXPECT_EQ(0U, MeshSpec{MeshAttributes()}.GetNumAttributes());
+}
+
+TEST(MeshSpec, Validity) {
+  // Meshs must have either 2D positions or 3D positions, not both.
+  EXPECT_TRUE(MeshSpec{MeshAttribute::kPosition2D}.IsValid());
+  EXPECT_TRUE(MeshSpec{MeshAttribute::kPosition3D}.IsValid());
+  EXPECT_FALSE(MeshSpec{MeshAttributes()}.IsValid());
+  EXPECT_FALSE(MeshSpec{MeshAttribute::kPosition2D | MeshAttribute::kPosition3D}
+                   .IsValid());
+}
+
 }  // namespace

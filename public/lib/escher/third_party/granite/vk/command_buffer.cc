@@ -158,9 +158,10 @@ void CommandBuffer::BeginRenderPass(const RenderPassInfo& info) {
   // in the same command buffer.
   vk_.beginRenderPass(begin_info, vk::SubpassContents::eInline);
 
+  // BeginGraphics() will dirty everything; no need to dirty anything here.
+  scissor_ = rect;
   viewport_ = vk::Viewport(0.0f, 0.0f, framebuffer_->width(),
                            framebuffer_->height(), 0.0f, 1.0f);
-  scissor_ = rect;
 
   BeginGraphics();
 }
@@ -212,17 +213,23 @@ void CommandBuffer::ImageBarrier(const ImagePtr& image,
 
 void CommandBuffer::BindUniformBuffer(uint32_t set, uint32_t binding,
                                       const BufferPtr& buffer) {
-  BindUniformBuffer(set, binding, buffer, 0, buffer->size());
+  BindUniformBuffer(set, binding, buffer.get(), 0, buffer->size());
+}
+
+void CommandBuffer::BindUniformBuffer(uint32_t set, uint32_t binding,
+                                      const BufferPtr& buffer,
+                                      vk::DeviceSize offset,
+                                      vk::DeviceSize range) {
+  BindUniformBuffer(set, binding, buffer.get(), offset, range);
 }
 
 void CommandBuffer::BindUniformBuffer(uint32_t set_index, uint32_t binding,
-                                      const BufferPtr& buffer,
-                                      vk::DeviceSize offset,
+                                      Buffer* buffer, vk::DeviceSize offset,
                                       vk::DeviceSize range) {
   auto set = GetDescriptorSetBindings(set_index);
   auto b = GetDescriptorBindingInfo(set, binding);
 
-  impl_->KeepAlive(buffer.get());
+  impl_->KeepAlive(buffer);
 
   if (buffer->uid() == set->uids[binding] && b->buffer.offset == offset &&
       b->buffer.range == range) {
@@ -235,14 +242,14 @@ void CommandBuffer::BindUniformBuffer(uint32_t set_index, uint32_t binding,
 }
 
 void CommandBuffer::BindTexture(unsigned set_index, unsigned binding,
-                                const TexturePtr& texture) {
+                                Texture* texture) {
   auto set = GetDescriptorSetBindings(set_index);
   auto b = GetDescriptorBindingInfo(set, binding);
 
   auto& image = texture->image();
   FXL_DCHECK(image->info().usage & vk::ImageUsageFlagBits::eSampled);
 
-  impl_->KeepAlive(texture.get());
+  impl_->KeepAlive(texture);
 
   vk::ImageLayout vk_layout = image->layout();
   if (texture->uid() == set->uids[binding] &&
@@ -268,37 +275,39 @@ void CommandBuffer::BindTexture(unsigned set_index, unsigned binding,
   dirty_descriptor_sets_ |= 1u << set_index;
 }
 
-void CommandBuffer::BindVertices(uint32_t binding, const BufferPtr& buffer,
+void CommandBuffer::BindVertices(uint32_t binding, Buffer* buffer,
                                  vk::DeviceSize offset, vk::DeviceSize stride,
                                  vk::VertexInputRate step_rate) {
   FXL_DCHECK(IsInRenderPass());
 
-  impl_->KeepAlive(buffer.get());
-  if (pipeline_state_.BindVertices(binding, buffer, offset, stride,
+  impl_->KeepAlive(buffer);
+  if (pipeline_state_.BindVertices(binding, buffer->vk(), offset, stride,
                                    step_rate)) {
     // Pipeline change is required.
     SetDirty(kDirtyStaticVertexBit);
   }
 }
 
-void CommandBuffer::BindIndices(const BufferPtr& buffer, vk::DeviceSize offset,
+void CommandBuffer::BindIndices(vk::Buffer buffer, vk::DeviceSize offset,
                                 vk::IndexType index_type) {
-  vk::Buffer vk_buffer = buffer->vk();
-
-  if (index_binding_.buffer == vk_buffer && index_binding_.offset == offset &&
+  if (index_binding_.buffer == buffer && index_binding_.offset == offset &&
       index_binding_.index_type == index_type) {
     // Bindings are unchanged.
     return;
   }
 
-  impl_->KeepAlive(buffer.get());
-
   // Index buffer changes never require a new pipeline to be generated, so it is
   // OK to make this change immediately.
-  index_binding_.buffer = vk_buffer;
+  index_binding_.buffer = buffer;
   index_binding_.offset = offset;
   index_binding_.index_type = index_type;
-  vk().bindIndexBuffer(vk_buffer, offset, index_type);
+  vk().bindIndexBuffer(buffer, offset, index_type);
+}
+
+void CommandBuffer::BindIndices(const BufferPtr& buffer, vk::DeviceSize offset,
+                                vk::IndexType index_type) {
+  BindIndices(buffer->vk(), offset, index_type);
+  impl_->KeepAlive(buffer.get());
 }
 
 void CommandBuffer::DrawIndexed(uint32_t index_count, uint32_t instance_count,
@@ -589,6 +598,98 @@ void CommandBuffer::SetToDefaultState(DefaultState default_state) {
   }
 }
 
+void CommandBuffer::SaveState(CommandBuffer::SavedStateFlags flags,
+                              CommandBuffer::SavedState* state) const {
+  TRACE_DURATION("gfx", "escher::CommandBuffer::SaveState");
+
+  for (unsigned i = 0; i < VulkanLimits::kNumDescriptorSets; i++) {
+    if (flags & (kSavedBindingsBit0 << i)) {
+      memcpy(&state->bindings.descriptor_sets[i], &bindings_.descriptor_sets[i],
+             sizeof(bindings_.descriptor_sets[i]));
+    }
+  }
+  if (flags & kSavedViewportBit) {
+    state->viewport = viewport_;
+  }
+  if (flags & kSavedScissorBit) {
+    state->scissor = scissor_;
+  }
+  if (flags & kSavedRenderStateBit) {
+    memcpy(&state->static_state, pipeline_state_.static_state(),
+           sizeof(PipelineStaticState));
+    state->potential_static_state = *pipeline_state_.potential_static_state();
+    state->dynamic_state = dynamic_state_;
+  }
+
+  if (flags & kSavedPushConstantBit) {
+    memcpy(state->bindings.push_constant_data, bindings_.push_constant_data,
+           sizeof(bindings_.push_constant_data));
+  }
+
+  state->flags = flags;
+}
+
+void CommandBuffer::RestoreState(const CommandBuffer::SavedState& state) {
+  TRACE_DURATION("gfx", "escher::CommandBuffer::RestoreState");
+
+  for (unsigned i = 0; i < VulkanLimits::kNumDescriptorSets; i++) {
+    if (state.flags & (kSavedBindingsBit0 << i)) {
+      if (memcmp(&state.bindings.descriptor_sets[i],
+                 &bindings_.descriptor_sets[i],
+                 sizeof(bindings_.descriptor_sets[i]))) {
+        memcpy(&bindings_.descriptor_sets[i],
+               &state.bindings.descriptor_sets[i],
+               sizeof(bindings_.descriptor_sets[i]));
+        dirty_descriptor_sets_ |= 1u << i;
+      }
+    }
+  }
+
+  if (state.flags & kSavedPushConstantBit) {
+    if (memcmp(state.bindings.push_constant_data, bindings_.push_constant_data,
+               sizeof(bindings_.push_constant_data))) {
+      memcpy(bindings_.push_constant_data, state.bindings.push_constant_data,
+             sizeof(bindings_.push_constant_data));
+      SetDirty(kDirtyPushConstantsBit);
+    }
+  }
+
+  if ((state.flags & kSavedViewportBit) &&
+      memcmp(&state.viewport, &viewport_, sizeof(viewport_))) {
+    viewport_ = state.viewport;
+    SetDirty(kDirtyViewportBit);
+  }
+
+  if ((state.flags & kSavedScissorBit) &&
+      memcmp(&state.scissor, &scissor_, sizeof(scissor_))) {
+    scissor_ = state.scissor;
+    SetDirty(kDirtyScissorBit);
+  }
+
+  if (state.flags & kSavedRenderStateBit) {
+    if (memcmp(&state.static_state, pipeline_state_.static_state(),
+               sizeof(state.static_state))) {
+      memcpy(pipeline_state_.static_state(), &state.static_state,
+             sizeof(state.static_state));
+      SetDirty(kDirtyStaticStateBit);
+    }
+
+    if (memcmp(&state.potential_static_state,
+               pipeline_state_.potential_static_state(),
+               sizeof(state.potential_static_state))) {
+      memcpy(pipeline_state_.potential_static_state(),
+             &state.potential_static_state,
+             sizeof(state.potential_static_state));
+      SetDirty(kDirtyStaticStateBit);
+    }
+
+    if (memcmp(&state.dynamic_state, &dynamic_state_, sizeof(dynamic_state_))) {
+      memcpy(&dynamic_state_, &state.dynamic_state, sizeof(dynamic_state_));
+      SetDirty(kDirtyStencilMasksAndReferenceBit | kDirtyDepthBiasBit);
+    }
+  }
+}
+
 void CommandBuffer::ClearQuad(uint32_t attachment, const vk::ClearRect& rect,
                               const vk::ClearValue& value,
                               vk::ImageAspectFlags aspect) {
@@ -600,7 +701,7 @@ void CommandBuffer::ClearQuad(uint32_t attachment, const vk::ClearRect& rect,
   vk().clearAttachments(1, &att, 1, &rect);
 }
 
-void CommandBuffer::SetShaderProgram(const ShaderProgramPtr& program) {
+void CommandBuffer::SetShaderProgram(ShaderProgram* program) {
   // TODO(ES-83): checking the uid() isn't really necessary since we're using
   // ref-counted pointers... a pointer comparison would be enough.  This is a
   // general difference between Escher and the original Granite code; we should
@@ -610,7 +711,7 @@ void CommandBuffer::SetShaderProgram(const ShaderProgramPtr& program) {
   }
 
   current_vk_pipeline_ = vk::Pipeline();
-  current_program_ = program.get();
+  current_program_ = program;
   impl_->KeepAlive(current_program_);
 
   // If we're in a render pass, the program must have a vertex stage.  If we're

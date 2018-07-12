@@ -12,7 +12,17 @@ namespace escher {
 namespace impl {
 
 FrameManager::FrameManager(EscherWeakPtr escher)
-    : ResourceManager(std::move(escher)) {
+
+    : ResourceManager(escher),
+      // TODO(ES-103): the intention here was to use UniformBufferPool's
+      // recently-added ring-based recycling to manage resource reclamation.
+      // However, this would conflict with upcoming GpuUploader changes.
+      // For now, clients must use an approach like ModelDisplayListBuilder's,
+      // which takes additional steps to retain uniform buffers to prevent them
+      // from being returned to the pool too early, resulting in the current
+      // frame's data being stomped by the next frame's while it is still in
+      // use.
+      uniform_buffer_pool_(std::move(escher), 1) {
   // Escher apps will at least double-buffer, so avoid expensive allocations in
   // the initial few frames.
   constexpr int kInitialBlockAllocatorCount = 2;
@@ -27,9 +37,11 @@ FramePtr FrameManager::NewFrame(const char* trace_literal,
                                 uint64_t frame_number,
                                 bool enable_gpu_logging) {
   TRACE_DURATION("gfx", "escher::FrameManager::NewFrame");
+  uniform_buffer_pool_.BeginFrame();
   FramePtr frame = fxl::AdoptRef<Frame>(
-      new Frame(this, std::move(*GetBlockAllocator().get()), frame_number,
-                trace_literal, enable_gpu_logging));
+      new Frame(this, std::move(*GetBlockAllocator().get()),
+                uniform_buffer_pool_.GetWeakPtr(), frame_number, trace_literal,
+                enable_gpu_logging));
   frame->BeginFrame();
   return frame;
 }

@@ -5,6 +5,7 @@
 #include "lib/escher/shape/mesh_spec.h"
 
 #include "lib/escher/geometry/types.h"
+#include "lib/escher/util/bit_ops.h"
 #include "lib/fxl/logging.h"
 
 namespace escher {
@@ -25,6 +26,10 @@ size_t GetMeshAttributeSize(MeshAttribute attr) {
       FXL_CHECK(false);
       return 0;
   }
+}
+
+size_t MeshSpec::GetNumAttributes() const {
+  return CountOnes(static_cast<VkFlags>(flags));
 }
 
 size_t MeshSpec::GetAttributeOffset(MeshAttribute flag) const {

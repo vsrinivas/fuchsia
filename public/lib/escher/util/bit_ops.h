@@ -17,6 +17,9 @@ inline int32_t CountLeadingZeros(uint32_t value) {
 inline int32_t CountTrailingZeros(uint32_t value) {
   return value == 0 ? 32 : __builtin_ctz(value);
 }
+inline uint32_t CountOnes(uint32_t value) {
+  return uint32_t(__builtin_popcount(value));
+}
 #else
 inline int32_t CountLeadingZeros(uint32_t value) {
   constexpr uint32_t mask = 1 << 31;
@@ -40,6 +43,14 @@ inline int32_t CountTrailingZeros(uint32_t value) {
     value = value >> 1;
   }
   return 32;
+}
+inline uint32_t CountOnes(uint32_t value) {
+  uint32_t count = 0;
+  while (value != 0) {
+    count += value & 1;
+    value = value >> 1;
+  }
+  return count;
 }
 #endif  // #if defined(__clang__) || defined(__GCC__)
 

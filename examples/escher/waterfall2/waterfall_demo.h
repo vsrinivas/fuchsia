@@ -53,6 +53,7 @@ class WaterfallDemo : public Demo {
   escher::MeshPtr ring_;
   escher::TexturePtr texture_;
   escher::MaterialPtr material_;
+  escher::MaterialPtr material2_;
 
   escher::Stopwatch stopwatch_;
   uint64_t frame_count_ = 0;

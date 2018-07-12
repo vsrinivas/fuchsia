@@ -27,6 +27,8 @@ size_t BytesPerPixel(vk::Format format) {
   switch (format) {
     case vk::Format::eR8G8B8A8Unorm:
     case vk::Format::eB8G8R8A8Unorm:
+    case vk::Format::eR8G8B8A8Srgb:
+    case vk::Format::eB8G8R8A8Srgb:
       return 4;
     case vk::Format::eR8Unorm:
       return 1;
@@ -228,8 +230,9 @@ ImagePtr NewGradientImage(ImageFactory* image_factory,
   FXL_DCHECK(gpu_uploader);
 
   auto pixels = NewGradientPixels(width, height);
+  // TODO(SCN-839): are SRGB formats slow on Mali?
   auto image =
-      NewImage(image_factory, vk::Format::eR8G8B8A8Unorm, width, height);
+      NewImage(image_factory, vk::Format::eR8G8B8A8Srgb, width, height);
 
   WritePixelsToImage(gpu_uploader, pixels.get(), image);
   return image;
@@ -286,8 +289,9 @@ std::unique_ptr<uint8_t[]> NewGradientPixels(uint32_t width, uint32_t height,
   }
   RGBA* pixels = reinterpret_cast<RGBA*>(ptr.get());
 
+  float intensity_step = 255.0001f / (height - 1);
   for (uint32_t j = 0; j < height; ++j) {
-    uint32_t intensity = (height - j) * 255 / height;
+    uint32_t intensity = 255.f - j * intensity_step;
     for (uint32_t i = 0; i < width; ++i) {
       uint32_t index = j * width + i;
       auto& p = pixels[index];

@@ -11,14 +11,17 @@ layout(set = 0, binding = 0) uniform ViewProjection {
 
 layout(set = 1, binding = 0) uniform ObjectProperties {
   mat4 model_transform;
+  vec4 color;
 };
 
-layout(location = 0) in vec2 inPosition;
-layout(location = 1) in vec2 inUV;
+layout(location = 0) in vec3 inPosition;
+layout(location = 2) in vec2 inUV;
 
 layout(location = 0) out vec2 fragUV;
+layout(location = 1) out vec4 colorOut;
 
 void main() {
-  gl_Position = vp_matrix * model_transform * vec4(inPosition, 0, 1);
+  gl_Position = vp_matrix * model_transform * vec4(inPosition, 1);
   fragUV = inUV;
+  colorOut = color;
 }

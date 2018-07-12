@@ -40,6 +40,7 @@ class ResourceRecycler;
 class Renderer;
 class RenderPass;
 struct RenderPassInfo;
+struct RenderQueueItem;
 class Semaphore;
 class ShaderProgram;
 class ShadowMap;
@@ -49,6 +50,7 @@ class Stage;
 class Texture;
 class Timestamper;
 class TimestampProfiler;
+struct UniformAllocation;
 class ViewingVolume;
 struct VulkanContext;
 struct VulkanSwapchain;
@@ -101,6 +103,7 @@ class Pipeline;
 class PipelineCache;
 class SsdoAccelerator;
 class SsdoSampler;
+class UniformBufferPool;
 
 typedef fxl::RefPtr<ModelData> ModelDataPtr;
 typedef fxl::RefPtr<ModelDisplayList> ModelDisplayListPtr;
@@ -108,6 +111,7 @@ typedef fxl::RefPtr<ModelPipelineCache> ModelPipelineCachePtr;
 typedef fxl::RefPtr<ModelRenderer> ModelRendererPtr;
 typedef fxl::RefPtr<ModelRenderPass> ModelRenderPassPtr;
 typedef fxl::RefPtr<Pipeline> PipelinePtr;
+typedef fxl::WeakPtr<UniformBufferPool> UniformBufferPoolWeakPtr;
 
 // From escher/vk/impl
 class DescriptorSetAllocator;

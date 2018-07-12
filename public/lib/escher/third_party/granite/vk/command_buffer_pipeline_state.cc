@@ -357,19 +357,18 @@ void CommandBufferPipelineState::SetVertexAttributes(uint32_t binding,
 }
 
 bool CommandBufferPipelineState::BindVertices(uint32_t binding,
-                                              const BufferPtr& buffer,
+                                              vk::Buffer buffer,
                                               vk::DeviceSize offset,
                                               vk::DeviceSize stride,
                                               vk::VertexInputRate step_rate) {
   FXL_DCHECK(binding < VulkanLimits::kNumVertexBuffers);
 
-  auto vk_buffer = buffer->vk();
-  if (vertex_bindings_.buffers[binding] != vk_buffer ||
+  if (vertex_bindings_.buffers[binding] != buffer ||
       vertex_bindings_.offsets[binding] != offset) {
     dirty_vertex_bindings_ |= 1u << binding;
   }
 
-  vertex_bindings_.buffers[binding] = vk_buffer;
+  vertex_bindings_.buffers[binding] = buffer;
   vertex_bindings_.offsets[binding] = offset;
   vertex_bindings_.strides[binding] = stride;
   vertex_bindings_.input_rates[binding] = step_rate;

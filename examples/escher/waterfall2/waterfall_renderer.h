@@ -7,6 +7,7 @@
 
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/geometry/types.h"
+#include "lib/escher/paper/paper_render_queue.h"
 #include "lib/escher/renderer/renderer.h"
 
 class WaterfallRenderer;
@@ -31,7 +32,12 @@ class WaterfallRenderer final : public escher::Renderer {
   explicit WaterfallRenderer(escher::EscherWeakPtr,
                              escher::ShaderProgramPtr program);
 
+  void BeginRenderPass(const escher::FramePtr& frame,
+                       const escher::ImagePtr& output_image);
+  void EndRenderPass(const escher::FramePtr& frame);
+
   escher::ShaderProgramPtr program_;
+  escher::PaperRenderQueue render_queue_;
   escher::BufferPtr uniforms_;
   std::vector<escher::TexturePtr> depth_buffers_;
 };

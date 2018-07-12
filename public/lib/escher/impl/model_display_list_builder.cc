@@ -19,7 +19,8 @@ namespace escher {
 namespace impl {
 
 namespace {
-// TODO: should be queried from device.
+
+// TODO(ES-102): should be queried from device.
 constexpr vk::DeviceSize kMinUniformBufferOffsetAlignment = 256;
 
 }  // namespace

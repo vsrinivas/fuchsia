@@ -61,5 +61,5 @@ vec4 ComputeVertexPosition() {
   //               EvalSineParams(sine_params_1) +
   //               EvalSineParams(sine_params_2);
   float offset_scale = EvalSineParams_0() + EvalSineParams_1() + EvalSineParams_2();
-  return vec4(inPosition + offset_scale * vec3(inPositionOffset, 0), 1);
+  return vec4(inPosition + offset_scale * inPositionOffset, 1);
 }

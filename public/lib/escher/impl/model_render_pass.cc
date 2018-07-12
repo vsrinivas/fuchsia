@@ -193,7 +193,7 @@ vec4 ComputeVertexPosition() {
   //               EvalSineParams(sine_params_1) +
   //               EvalSineParams(sine_params_2);
   float offset_scale = EvalSineParams_0() + EvalSineParams_1() + EvalSineParams_2();
-  return vec4(inPosition + offset_scale * vec3(inPositionOffset, 0), 1);
+  return vec4(inPosition + offset_scale * inPositionOffset, 1);
 }
 )GLSL";
 
@@ -210,7 +210,7 @@ std::string ModelRenderPass::GetVertexShaderSourceCode(
   }
 
   if (spec.mesh_spec.flags & MeshAttribute::kPositionOffset) {
-    src << "layout(location = 1) in vec2 inPositionOffset;\n";
+    src << "layout(location = 1) in vec3 inPositionOffset;\n";
   }
   if (spec.mesh_spec.flags & MeshAttribute::kUV) {
     src << "layout(location = 2) in vec2 inUV;\n";

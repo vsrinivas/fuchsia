@@ -23,8 +23,6 @@ Object::Object(std::vector<Object> clippers, std::vector<Object> clippees)
       clippers_(std::move(clippers)),
       clippees_(std::move(clippees)) {}
 
-Object::~Object() {}
-
 Object Object::NewRect(const vec2& top_left_position, const vec2& size, float z,
                        MaterialPtr material) {
   return NewRect(vec3(top_left_position, z), size, std::move(material));

@@ -21,7 +21,8 @@ UniformBufferPool::UniformBufferPool(EscherWeakPtr escher, size_t ring_size,
       allocator_(allocator ? allocator : escher->gpu_allocator()),
       flags_(additional_flags | vk::MemoryPropertyFlagBits::eHostVisible),
       buffer_size_(kBufferSize),
-      ring_size_(ring_size) {
+      ring_size_(ring_size),
+      weak_factory_(this) {
   FXL_DCHECK(ring_size >= 1 && ring_size <= kMaxRingSize);
 }
 

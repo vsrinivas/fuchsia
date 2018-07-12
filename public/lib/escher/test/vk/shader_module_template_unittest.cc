@@ -95,7 +95,7 @@ static constexpr char kVertexAttributes[] = R"GLSL(
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec2 inUV;
 #ifdef ATTR_POSITION_OFFSET
-layout(location = 2) in vec2 inPositionOffset;
+layout(location = 2) in vec3 inPositionOffset;
 #endif
 #ifdef ATTR_PERIMETER
 layout(location = 3) in float inPerimeter;

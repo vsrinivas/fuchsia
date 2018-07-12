@@ -16,6 +16,7 @@
 #include "lib/escher/vk/vulkan_context.h"
 #include "lib/escher/vk/vulkan_device_queues.h"
 #include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace escher {
 

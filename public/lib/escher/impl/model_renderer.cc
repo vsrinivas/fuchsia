@@ -139,10 +139,10 @@ void ModelRenderer::Draw(const Stage& stage,
   vk::CommandBuffer vk_command_buffer = command_buffer->vk();
 
   for (const TexturePtr& texture : display_list->textures()) {
-    // TODO: it would be nice if Resource::TakeWaitSemaphore() were virtual
-    // so that we could say texture->TakeWaitSemaphore(), instead of needing
-    // to know that the image is really the thing that we might need to wait
-    // for.  Another approach would be for the Texture constructor to say
+    // TODO(ES-104): it would be nice if Resource::TakeWaitSemaphore() were
+    // virtual so that we could say texture->TakeWaitSemaphore(), instead of
+    // needing to know that the image is really the thing that we might need to
+    // wait for.  Another approach would be for the Texture constructor to say
     // SetWaitSemaphore(image->TakeWaitSemaphore()), but this isn't a
     // bulletproof solution... what if someone else made a Texture with the
     // same image, and used that one first.  Of course, in general we want

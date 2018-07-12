@@ -51,6 +51,7 @@ struct MeshSpec {
     }
   };
 
+  size_t GetNumAttributes() const;
   size_t GetAttributeOffset(MeshAttribute flag) const;
   size_t GetStride() const {
     return GetAttributeOffset(MeshAttribute::kStride);

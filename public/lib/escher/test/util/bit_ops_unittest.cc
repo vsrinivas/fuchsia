@@ -39,6 +39,15 @@ TEST(BitOps, CountLeadingZeros) {
   }
 }
 
+TEST(BitOps, CountOnes) {
+  EXPECT_EQ(0u, CountOnes(0u));
+  EXPECT_EQ(1u, CountOnes(1u));
+  EXPECT_EQ(4u, CountOnes(0xF0000000u));
+  EXPECT_EQ(8u, CountOnes(0xF000F000u));
+  EXPECT_EQ(8u, CountOnes(0x000F000Fu));
+  EXPECT_EQ(24u, CountOnes(0xEEEEEEEEu));
+}
+
 template <typename T>
 void TestSetBitsAtAndAboveIndex() {
   size_t kNumBits = sizeof(T) * 8;
