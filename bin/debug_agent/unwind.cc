@@ -23,7 +23,8 @@ int LookupDso(void* context, unw_word_t pc, unw_word_t* base,
   // Context is a ModuleVector sorted by load address.
   // TODO(brettw) could use lower_bound for better perf with lots of modules.
   const ModuleVector* modules = static_cast<const ModuleVector*>(context);
-  for (const auto& module : *modules) {
+  for (int i = static_cast<int>(modules->size()) - 1; i >= 0; i--) {
+    const debug_ipc::Module& module = (*modules)[i];
     if (pc >= module.base) {
       *base = module.base;
       *name = module.name.c_str();
