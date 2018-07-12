@@ -27,6 +27,7 @@ import (
 
 	"app/context"
 	"syscall/zx"
+	"syslog/logger"
 )
 
 const (
@@ -49,8 +50,8 @@ func main() {
 		flag.CommandLine.PrintDefaults()
 	}
 
-	log.SetPrefix("amber: ")
-	log.SetFlags(log.Ltime)
+	ctx := context.CreateFromStartupInfo()
+	registerLogger(ctx)
 
 	readExtraFlags()
 
@@ -92,10 +93,33 @@ func main() {
 		log.Println("system update monitor exited")
 	}(supMon)
 
-	startFIDLSvr(d, supMon)
+	startFIDLSvr(ctx, d, supMon)
 
 	//block forever
 	select {}
+}
+
+type logWriter struct{}
+
+func (l *logWriter) Write(data []byte) (n int, err error) {
+	// Strip out the trailing newline the `log` library adds because the
+	// logging service also adds a trailing newline.
+	if len(data) > 0 && data[len(data)-1] == '\n' {
+		data = data[:len(data)-1]
+	}
+
+	if err := logger.Infof("%s", data); err != nil {
+		return 0, err
+	}
+
+	return len(data), nil
+}
+
+func registerLogger(ctx *context.Context) {
+	if err := logger.InitDefaultLoggerWithTags(ctx.GetConnector(), "amber"); err != nil {
+		log.Printf("error initializing syslog interface: %s", err)
+	}
+	log.SetOutput(&logWriter{})
 }
 
 // LoadSourceConfigs install source configs from a directory.  The directory
@@ -142,13 +166,12 @@ func loadSourceConfig(path string) (*amber_fidl.SourceConfig, error) {
 	return &cfg, nil
 }
 
-func startFIDLSvr(d *daemon.Daemon, s *daemon.SystemUpdateMonitor) {
-	cxt := context.CreateFromStartupInfo()
+func startFIDLSvr(ctx *context.Context, d *daemon.Daemon, s *daemon.SystemUpdateMonitor) {
 	apiSrvr := ipcserver.NewControlSrvr(d, s)
-	cxt.OutgoingService.AddService(amber_fidl.ControlName, func(c zx.Channel) error {
+	ctx.OutgoingService.AddService(amber_fidl.ControlName, func(c zx.Channel) error {
 		return apiSrvr.Bind(c)
 	})
-	cxt.Serve()
+	ctx.Serve()
 }
 
 func startupDaemon(store string) (*daemon.Daemon, error) {
