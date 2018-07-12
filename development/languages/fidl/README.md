@@ -14,10 +14,12 @@ Fuchsia has adopted a [style guide](style.md) for its Fidl files.
 
 ### C
 
+- [Documentation](c.md)
 - [Echo server example](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/echo2_server_c/)
 
 ### C++
 
+- [Documentation](cpp.md)
 - [Echo server example](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/echo2_server_cpp/)
 - [Echo client example](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/echo2_client_cpp/)
 
