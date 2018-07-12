@@ -8,8 +8,6 @@ import("//build/host.gni")
 go_binary("fidlmerge") {
   gopackage = "fidlmerge"
 
-  sdk_category = "internal"
-
   go_dependencies = [
     {
       package = "fidlmerge"
