@@ -73,6 +73,12 @@ bool Deserialize(MessageReader* reader, Register* reg) {
   return true;
 }
 
+bool Deserialize(MessageReader* reader, RegisterCategory* reg_cat) {
+  if (!reader->ReadUint32(reinterpret_cast<uint32_t*>(&reg_cat->type)))
+    return false;
+  return Deserialize(reader, &reg_cat->registers);
+}
+
 bool Deserialize(MessageReader* reader, StackFrame* frame) {
   return reader->ReadBytes(sizeof(StackFrame), frame);
 }
@@ -322,7 +328,7 @@ bool ReadReply(MessageReader* reader, RegistersReply* reply,
     return false;
 
   *transaction_id = header.transaction_id;
-  return Deserialize(reader, &reply->registers);
+  return Deserialize(reader, &reply->categories);
 }
 
 // AddOrChangeBreakpoint -------------------------------------------------------

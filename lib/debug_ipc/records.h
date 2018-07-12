@@ -131,10 +131,23 @@ struct AddressRegion {
   uint64_t depth;
 };
 
-// Value representing a particular register
+// Value representing a particular register.
 struct Register {
   std::string name;
   uint64_t value;
+};
+
+// Division of RegisterSections, according to their usage.
+struct RegisterCategory {
+  // Categories will always be sorted from lower to upper
+  enum class Type : uint32_t {
+    kGeneral,
+    kFloatingPoint,
+    kVector,
+    kMisc,            // Grabbing bag for other vectors
+  };
+  Type type = Type::kMisc;
+  std::vector<Register> registers;
 };
 
 #pragma pack(pop)

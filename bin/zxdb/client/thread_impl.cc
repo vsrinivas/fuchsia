@@ -143,7 +143,7 @@ void ThreadImpl::SyncFrames(std::function<void()> callback) {
 }
 
 void ThreadImpl::GetRegisters(
-    std::function<void(const Err&, std::vector<debug_ipc::Register>)>
+    std::function<void(const Err&, std::vector<debug_ipc::RegisterCategory>)>
         callback) {
   debug_ipc::RegistersRequest request;
   request.process_koid = process_->GetKoid();
@@ -153,7 +153,7 @@ void ThreadImpl::GetRegisters(
       request, [ process = weak_factory_.GetWeakPtr(), callback ](
                    const Err& err, debug_ipc::RegistersReply reply) {
         if (callback)
-          callback(err, std::move(reply.registers));
+          callback(err, std::move(reply.categories));
       });
 }
 

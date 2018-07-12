@@ -68,6 +68,11 @@ void Serialize(const Register& reg, MessageWriter* writer) {
   writer->WriteUint64(reg.value);
 }
 
+void Serialize(const RegisterCategory& reg_cat, MessageWriter* writer) {
+  writer->WriteUint32(*reinterpret_cast<const uint32_t*>(&reg_cat.type));
+  Serialize(reg_cat.registers, writer);
+}
+
 void Serialize(const StackFrame& frame, MessageWriter* writer) {
   writer->WriteBytes(&frame, sizeof(StackFrame));
 }
@@ -359,7 +364,7 @@ bool ReadRequest(MessageReader* reader, RegistersRequest* request,
 void WriteReply(const RegistersReply& reply, uint32_t transaction_id,
                 MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kRegisters, transaction_id);
-  Serialize(reply.registers, writer);
+  Serialize(reply.categories, writer);
 }
 
 // Address space ---------------------------------------------------------------

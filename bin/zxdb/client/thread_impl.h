@@ -36,7 +36,7 @@ class ThreadImpl : public Thread {
   bool HasAllFrames() const override;
   void SyncFrames(std::function<void()> callback) override;
   void GetRegisters(
-      std::function<void(const Err&, std::vector<debug_ipc::Register>)>)
+      std::function<void(const Err&, std::vector<debug_ipc::RegisterCategory>)>)
       override;
 
   // Updates the thread metadata with new state from the agent. Neither

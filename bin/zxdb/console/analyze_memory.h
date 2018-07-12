@@ -74,7 +74,7 @@ class MemoryAnalysis : public fxl::RefCountedThreadSafe<MemoryAnalysis> {
   void SetAspace(std::vector<debug_ipc::AddressRegion> aspace);
   void SetFrames(const std::vector<Frame*>& frames);
   void SetMemory(MemoryDump dump);
-  void SetRegisters(const std::vector<debug_ipc::Register>& regs);
+  void SetRegisters(const std::vector<debug_ipc::RegisterCategory>&);
 
  private:
   void DoAnalysis();
@@ -82,7 +82,7 @@ class MemoryAnalysis : public fxl::RefCountedThreadSafe<MemoryAnalysis> {
   // Request callbacks.
   void OnAspace(const Err& err, std::vector<debug_ipc::AddressRegion> aspace);
   void OnRegisters(const Err& err,
-                   const std::vector<debug_ipc::Register>& regs);
+                   const std::vector<debug_ipc::RegisterCategory>&);
   void OnMemory(const Err& err, MemoryDump dump);
   void OnFrames(fxl::WeakPtr<Thread> thread);
 

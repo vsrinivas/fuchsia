@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/console/verbs.h"
 
 #include <inttypes.h>
 
@@ -18,6 +17,8 @@
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/input_location_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/bin/zxdb/console/register_util.h"
+#include "garnet/bin/zxdb/console/verbs.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -351,62 +352,24 @@ Examples
   process 2 thread 1 regs
 )";
 
-namespace {
-
-void OnRegsComplete(const Err& err,
-                    const std::vector<debug_ipc::Register>& registers,
+void OnRegsComplete(const Err& cmd_err,
+                    const std::vector<debug_ipc::RegisterCategory>& categories,
                     const std::string& reg_name) {
   Console* console = Console::get();
+  if (cmd_err.has_error()) {
+    console->Output(cmd_err);
+    return;
+  }
+
+  OutputBuffer out;
+  Err err = FormatRegisters(categories, reg_name, &out);
   if (err.has_error()) {
     console->Output(err);
     return;
   }
 
-  // We see how many registers we have to output
-  auto from = registers.begin();
-  auto to = registers.end();
-  if (!reg_name.empty()) {
-    // We search for the register.
-    auto found_it = registers.end();
-    for (auto it = registers.begin(); it != registers.end(); it++) {
-      if (it->name == reg_name) {
-        found_it = it;
-        break;
-      }
-    }
-
-    if (found_it == registers.end()) {
-      console->Output(Err(
-          fxl::StringPrintf("Cannot find register \"%s\"", reg_name.c_str())));
-      return;
-    }
-
-    // We only print this one
-    from = found_it;
-    to = found_it + 1;    // At most will be end()
-  }
-
-  std::vector<std::vector<OutputBuffer>> rows;
-  rows.reserve(to - from);
-  for (auto it = from; it != to; it++) {
-    rows.emplace_back();
-    auto& row = rows.back();
-
-    // Name
-    row.push_back(OutputBuffer::WithContents(it->name));
-    // Value
-    auto val = fxl::StringPrintf("0x%016" PRIx64, it->value);
-    row.push_back(OutputBuffer::WithContents(val));
-  }
-
-  OutputBuffer out;
-  FormatTable({ColSpec(Align::kRight, 0, "Name"),
-               ColSpec(Align::kLeft, 0, "Value", 2)},
-              rows, &out);
-  console->Output(std::move(out));
+  console->Output(out);
 }
-
-}   // namespace
 
 Err DoRegs(ConsoleContext* context, const Command& cmd) {
   Err err = AssertStoppedThreadCommand(context, cmd, true, "regs");
@@ -416,7 +379,7 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
   // When empty, we print all the registers.
   std::string reg_name;
   if (!cmd.args().empty()) {
-    // We expect only one name
+    // We expect only one name.
     if (cmd.args().size() > 1u) {
       return Err("Only one register name expected.");
     }
@@ -424,10 +387,10 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
   }
 
   // We pass the given register name to the callback
-  auto regs_cb = [reg_name = reg_name](
+  auto regs_cb = [reg_name](
                      const Err& err,
-                     std::vector<debug_ipc::Register> registers) {
-    OnRegsComplete(err, registers, reg_name);
+                     std::vector<debug_ipc::RegisterCategory> categories) {
+    OnRegsComplete(err, categories, reg_name);
   };
 
   cmd.thread()->GetRegisters(regs_cb);

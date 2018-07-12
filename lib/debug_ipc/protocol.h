@@ -224,7 +224,7 @@ struct RegistersRequest {
   uint32_t thread_koid = 0;
 };
 struct RegistersReply {
-  std::vector<Register> registers;
+  std::vector<RegisterCategory> categories;
 };
 
 // Notifications ---------------------------------------------------------------

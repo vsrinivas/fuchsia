@@ -39,7 +39,7 @@ bool IsBreakpointInstruction(zx::process& process, uint64_t address);
 // TODO(donosoc): Do we want something like Err here, to communicate what kind
 //                of problems we stumped while doing this?
 bool GetRegisterStateFromCPU(const zx::thread&,
-                             std::vector<debug_ipc::Register>* registers);
+                             std::vector<debug_ipc::RegisterCategory>*);
 
 // Returns the address of the instruction pointer/stack pointer in the given
 // reg structure.

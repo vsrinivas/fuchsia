@@ -483,23 +483,50 @@ TEST(Protocol, RegistersRequest) {
 
 TEST(Protocol, RegistersReply) {
   RegistersReply initial;
-  initial.registers.push_back({"W0", 0xF000});
-  initial.registers.push_back({"W1", 0xF001});
-  initial.registers.push_back({"W2", 0xF002});
-  initial.registers.push_back({"W3", 0xF003});
+
+  RegisterCategory cat1;
+  cat1.type = RegisterCategory::Type::kGeneral;
+  cat1.registers.push_back({"EAX", 0xF000});
+  cat1.registers.push_back({"EBX", 0xF001});
+  cat1.registers.push_back({"ECX", 0xF002});
+  initial.categories.push_back(cat1);
+
+  RegisterCategory cat2;
+  cat2.type = RegisterCategory::Type::kVector;
+  cat2.registers.push_back({"XMM0", 0xF003});
+  cat2.registers.push_back({"XMM1", 0xF004});
+  cat2.registers.push_back({"YMM1", 0xF007});
+  cat2.registers.push_back({"YMM2", 0xF008});
+  initial.categories.push_back(cat2);
 
   RegistersReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
 
-  ASSERT_EQ(4u, second.registers.size());
-  EXPECT_EQ(initial.registers[0].name, second.registers[0].name);
-  EXPECT_EQ(initial.registers[0].value, second.registers[0].value);
-  EXPECT_EQ(initial.registers[1].name, second.registers[1].name);
-  EXPECT_EQ(initial.registers[1].value, second.registers[1].value);
-  EXPECT_EQ(initial.registers[2].name, second.registers[2].name);
-  EXPECT_EQ(initial.registers[2].value, second.registers[2].value);
-  EXPECT_EQ(initial.registers[3].name, second.registers[3].name);
-  EXPECT_EQ(initial.registers[3].value, second.registers[3].value);
+  ASSERT_EQ(second.categories.size(), 2u);
+
+  // Check cat1
+  auto& out_cat1= second.categories[0];
+  EXPECT_EQ(out_cat1.type, cat1.type);
+  ASSERT_EQ(out_cat1.registers.size(), 3u);
+  EXPECT_EQ(out_cat1.registers[0].name,   cat1.registers[0].name);
+  EXPECT_EQ(out_cat1.registers[0].value,  cat1.registers[0].value);
+  EXPECT_EQ(out_cat1.registers[1].name,   cat1.registers[1].name);
+  EXPECT_EQ(out_cat1.registers[1].value,  cat1.registers[1].value);
+  EXPECT_EQ(out_cat1.registers[2].name,   cat1.registers[2].name);
+  EXPECT_EQ(out_cat1.registers[2].value,  cat1.registers[2].value);
+
+  // Check cat2
+  auto& out_cat2= second.categories[1];
+  EXPECT_EQ(out_cat2.type, cat2.type);
+  ASSERT_EQ(out_cat2.registers.size(), 4u);
+  EXPECT_EQ(out_cat2.registers[0].name,   cat2.registers[0].name);
+  EXPECT_EQ(out_cat2.registers[0].value,  cat2.registers[0].value);
+  EXPECT_EQ(out_cat2.registers[1].name,   cat2.registers[1].name);
+  EXPECT_EQ(out_cat2.registers[1].value,  cat2.registers[1].value);
+  EXPECT_EQ(out_cat2.registers[2].name,   cat2.registers[2].name);
+  EXPECT_EQ(out_cat2.registers[2].value,  cat2.registers[2].value);
+  EXPECT_EQ(out_cat2.registers[3].name,   cat2.registers[3].name);
+  EXPECT_EQ(out_cat2.registers[3].value,  cat2.registers[3].value);
 }
 
 // Notifications ---------------------------------------------------------------

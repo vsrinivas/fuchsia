@@ -30,14 +30,13 @@ TEST(FormatContext, FormatSourceContext) {
   OutputBuffer out;
   ASSERT_FALSE(
       FormatSourceContext("file", kSimpleProgram, opts, &out).has_error());
-  EXPECT_EQ(R"(   2 
-   3 int main(int argc, char** argv) {
- ▶ 4   printf("Hello, world");
-   5   return 1;
-   6 }
-)",
-            out.AsString());
+EXPECT_EQ("   2 \n   3 int main(int argc, char** argv) {\n"
+          " ▶ 4   printf(\"Hello, world\");\n"
+          "   5   return 1;\n"
+          "   6 }\n",
+          out.AsString());
 }
+
 
 TEST(FormatContext, FormatSourceContext_OffBeginning) {
   FormatSourceOpts opts;
@@ -52,11 +51,10 @@ TEST(FormatContext, FormatSourceContext_OffBeginning) {
   // at the beginning because it hit the top of the file.
   ASSERT_FALSE(
       FormatSourceContext("file", kSimpleProgram, opts, &out).has_error());
-  EXPECT_EQ(R"(   1 #include "foo.h"
- ▶ 2 
-   3 int main(int argc, char** argv) {
-   4   printf("Hello, world");
-)",
+  EXPECT_EQ("   1 #include \"foo.h\"\n"
+            " ▶ 2 \n"
+            "   3 int main(int argc, char** argv) {\n"
+            "   4   printf(\"Hello, world\");\n",
             out.AsString());
 }
 
@@ -73,10 +71,9 @@ TEST(FormatContext, FormatSourceContext_OffEnd) {
   // at the beginning because it hit the top of the file.
   ASSERT_FALSE(
       FormatSourceContext("file", kSimpleProgram, opts, &out).has_error());
-  EXPECT_EQ(R"(   4   printf("Hello, world");
-   5   return 1;
- ▶ 6 }
-)",
+  EXPECT_EQ("   4   printf(\"Hello, world\");\n"
+            "   5   return 1;\n"
+            " ▶ 6 }\n",
             out.AsString());
 }
 
@@ -89,7 +86,6 @@ TEST(FormatContext, FormatSourceContext_LineOffEnd) {
 
   OutputBuffer out;
   Err err = FormatSourceContext("file.cc", kSimpleProgram, opts, &out);
-  ASSERT_TRUE(err.has_error());
   EXPECT_EQ("There is no line 10 in the file file.cc", err.msg());
 }
 
@@ -122,10 +118,9 @@ TEST(FormatContext, FormatAsmContext) {
   err = FormatAsmContext(&arch, dump, opts, &out);
   ASSERT_FALSE(err.has_error());
 
-  EXPECT_EQ(R"( ◉ 0x123456780  mov  edi, 0x28e5e0 
- ▶ 0x123456785  mov  rsi, rbx 
-   0x123456788  lea  rdi, [rsp + 0xc] 
-)",
+  EXPECT_EQ(" ◉ 0x123456780  mov  edi, 0x28e5e0 \n"
+            " ▶ 0x123456785  mov  rsi, rbx \n"
+            "   0x123456788  lea  rdi, [rsp + 0xc] \n",
             out.AsString());
 
   // Try again with source bytes and a disabled breakpoint on the same line as
@@ -137,10 +132,9 @@ TEST(FormatContext, FormatAsmContext) {
   err = FormatAsmContext(&arch, dump, opts, &out);
   ASSERT_FALSE(err.has_error());
 
-  EXPECT_EQ(R"(   0x123456780  bf e0 e5 28 00  mov  edi, 0x28e5e0 
-◯▶ 0x123456785  48 89 de        mov  rsi, rbx 
-   0x123456788  48 8d 7c 24 0c  lea  rdi, [rsp + 0xc] 
-)",
+  EXPECT_EQ("   0x123456780  bf e0 e5 28 00  mov  edi, 0x28e5e0 \n"
+            "◯▶ 0x123456785  48 89 de        mov  rsi, rbx \n"
+            "   0x123456788  48 8d 7c 24 0c  lea  rdi, [rsp + 0xc] \n",
             out.AsString());
 }
 

@@ -158,8 +158,8 @@ void DebuggedThread::GetBacktrace(
 }
 
 void DebuggedThread::GetRegisters(
-    std::vector<debug_ipc::Register>* registers) const {
-  arch::GetRegisterStateFromCPU(thread_, registers);
+    std::vector<debug_ipc::RegisterCategory>* categories) const {
+  arch::GetRegisterStateFromCPU(thread_, categories);
 }
 
 void DebuggedThread::SendThreadNotification() const {

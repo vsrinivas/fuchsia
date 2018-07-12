@@ -101,7 +101,8 @@ class Thread : public ClientObject {
   // The returned structures are architecture independent, but the contents
   // will be dependent on the architecture the target is running on.
   virtual void GetRegisters(
-      std::function<void(const Err&, std::vector<debug_ipc::Register>)>) = 0;
+      std::function<void(const Err&,
+                         std::vector<debug_ipc::RegisterCategory>)>) = 0;
 
  protected:
   fxl::ObserverList<ThreadObserver>& observers() { return observers_; }

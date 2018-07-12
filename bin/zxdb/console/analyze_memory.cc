@@ -62,8 +62,9 @@ void MemoryAnalysis::Schedule(const AnalyzeMemoryOptions& opts) {
     // Request registers.
     if (!have_registers_) {
       opts.thread->GetRegisters(
-          [this_ref](const Err& err, std::vector<debug_ipc::Register> regs) {
-            this_ref->OnRegisters(err, regs);
+          [this_ref](const Err& err,
+                     std::vector<debug_ipc::RegisterCategory> reg_cats) {
+            this_ref->OnRegisters(err, reg_cats);
           });
     }
 
@@ -136,11 +137,14 @@ void MemoryAnalysis::SetMemory(MemoryDump dump) {
 }
 
 void MemoryAnalysis::SetRegisters(
-    const std::vector<debug_ipc::Register>& regs) {
+    const std::vector<debug_ipc::RegisterCategory>& categories) {
   FXL_DCHECK(!have_registers_);
   have_registers_ = true;
-  for (const auto& reg : regs)
-    AddAnnotation(reg.value, reg.name);
+  for (const auto& category : categories)
+    // We look for the general section registers
+    if (category.type == debug_ipc::RegisterCategory::Type::kGeneral)
+      for (const auto& reg : category.registers)
+        AddAnnotation(reg.value, reg.name);
 }
 
 void MemoryAnalysis::DoAnalysis() {
@@ -204,14 +208,14 @@ void MemoryAnalysis::OnAspace(const Err& err,
     DoAnalysis();
 }
 
-void MemoryAnalysis::OnRegisters(const Err& err,
-                                 const std::vector<debug_ipc::Register>& regs) {
+void MemoryAnalysis::OnRegisters(
+    const Err& err, const std::vector<debug_ipc::RegisterCategory>& reg_cats) {
   if (aborted_)
     return;
 
   // This function can continue without registers (say, if the thread has been
   // resumed by the time the request got executed). So just ignore failures.
-  SetRegisters(regs);
+  SetRegisters(reg_cats);
 
   if (HasEverything())
     DoAnalysis();

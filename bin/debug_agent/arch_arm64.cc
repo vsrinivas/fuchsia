@@ -51,10 +51,10 @@ uint64_t* SPInRegs(zx_thread_state_general_regs* regs) { return &regs->sp; }
 
 ::debug_ipc::Arch GetArch() { return ::debug_ipc::Arch::kArm64; }
 
-bool GetRegisterStateFromCPU(const zx::thread& thread,
-                             std::vector<debug_ipc::Register>* registers) {
-  registers->clear();
+namespace {
 
+inline zx_status_t ReadGeneralRegs(
+    const zx::thread& thread, std::vector<debug_ipc::Register>* registers) {
   // We get the general state registers
   zx_thread_state_general_regs general_registers;
   zx_status_t status =
@@ -74,6 +74,22 @@ bool GetRegisterStateFromCPU(const zx::thread& thread,
   registers->push_back({"PC", general_registers.pc});
   registers->push_back({"CPSR", general_registers.cpsr});
 
+  return ZX_OK;
+}
+
+}  // namespace
+
+bool GetRegisterStateFromCPU(
+    const zx::thread& thread,
+    std::vector<debug_ipc::RegisterCategory>* categories) {
+  categories->clear();
+
+  categories->push_back({debug_ipc::RegisterCategory::Type::kGeneral, {}});
+  auto& general_category = categories->back();
+  if (ReadGeneralRegs(thread, &general_category.registers) != ZX_OK) {
+    categories->clear();
+    return false;
+  }
   return true;
 }
 

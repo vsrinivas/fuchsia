@@ -102,20 +102,25 @@ TEST_F(AnalyzeMemoryTest, Basic) {
   analysis->SetMemory(MemoryDump(std::move(blocks)));
 
   // Setup registers (ESP points to beginning of block).
-  std::vector<debug_ipc::Register> regs;
-  regs.push_back({"ESP", kBegin});
-  analysis->SetRegisters(regs);
+  constexpr uint64_t kAway = 0xFF00000000000;
+  std::vector<debug_ipc::Register> registers = {{"ESP", kBegin},
+                                                {"RAX", kAway}};
+  std::vector<debug_ipc::RegisterCategory> cats = {{
+    debug_ipc::RegisterCategory::Type::kGeneral,
+    std::move(registers)
+  }};
+
+  analysis->SetRegisters(cats);
 
   analysis->Schedule(opts);
   debug_ipc::MessageLoop::Current()->Run();
 
   // The pointer to "inner" aspace entry should be annotated. The "outer"
   // aspace entry is too large and so will be omitted.
-  EXPECT_EQ(R"(Address               Data 
- 0x1000 0x0000000000001000 ◁ ESP. ▷ inside map "inner"
- 0x1008 0x0000000010000000 ◁ frame 1 SP
- 0x1010 0x0000000000000000 
-)",
+  EXPECT_EQ("Address               Data \n"
+            " 0x1000 0x0000000000001000 ◁ ESP. ▷ inside map \"inner\"\n"
+            " 0x1008 0x0000000010000000 ◁ frame 1 SP\n"
+            " 0x1010 0x0000000000000000 \n",
             output.AsString());
 }
 

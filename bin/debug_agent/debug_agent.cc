@@ -199,7 +199,7 @@ void DebugAgent::OnRegisters(const debug_ipc::RegistersRequest& request,
   DebuggedThread* thread =
       GetDebuggedThread(request.process_koid, request.thread_koid);
   if (thread)
-    thread->GetRegisters(&reply->registers);
+    thread->GetRegisters(&reply->categories);
 }
 
 void DebugAgent::OnAddOrChangeBreakpoint(

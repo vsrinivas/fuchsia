@@ -177,7 +177,6 @@ Err ConsumeVerb(const std::vector<std::string>& tokens, size_t* token_index_ptr,
                 Command* output, const VerbRecord** verb_record) {
   // Reference makes the code easier to understand
   size_t& token_index = *token_index_ptr;
-  const std::string& token = tokens[token_index];
 
   // Consume the verb.
   const auto& verb_strings = GetStringVerbMap();
