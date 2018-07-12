@@ -13,8 +13,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/time.cpp \
 
 MODULE_LIBS := \
-	system/ulib/fbl \
-	system/ulib/zx \
+    system/ulib/fbl \
+    system/ulib/zx \
 
 MODULE_PACKAGE := src
 
