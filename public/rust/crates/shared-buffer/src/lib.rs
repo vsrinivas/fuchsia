@@ -287,6 +287,11 @@ impl SharedBuffer {
         // to it are observable. See the NOTE above for more details.
         let mut scratch = (ptr::null_mut(), 0);
         ptr::write_volatile(&mut scratch, (buf, len));
+
+        // Acquire any writes to the buffer that happened in a different thread
+        // or process already so they are visible without having to call the
+        // acquire_writes method.
+        fence(Ordering::Acquire);
         SharedBuffer {
             inner: SharedBufferInner { buf, len },
         }
@@ -562,6 +567,14 @@ impl SharedBuffer {
     #[inline]
     pub fn consume(self) -> (*mut u8, usize) {
         (self.inner.buf, self.inner.len)
+    }
+}
+
+impl Drop for SharedBuffer {
+    fn drop(&mut self) {
+        // Release any writes performed after the last call to
+        // self.release_writes().
+        fence(Ordering::Release);
     }
 }
 
