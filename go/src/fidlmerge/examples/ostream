@@ -39,6 +39,15 @@ this automatically.
     {{- range .Name.Parts }}
 namespace {{ . }} {
     {{- end }}
+
+// Because the FIDL compiler back end generates simple ostream formatters for
+// enums, WrapEnum is used to allow for alternative formatters.
+// e.g. os << WrapEnum(enum_value);
+template <typename T>
+struct WrapEnum {
+  WrapEnum(T actual) : actual_(actual) {}
+  T actual_;
+};
 {{ end }}
 
 
@@ -50,9 +59,20 @@ namespace {{ . }} {
 {{- end }}
 
 
+{{/* Produces a C++ expression for a types.EncodedCompoundIdentifier. */}}
+{{/* The expression is qualified for use in the subject namespace. */}}
+{{- define "Id" }}
+    {{- if isLocal . }}
+        {{- .Parts.Name }}
+    {{- else }}
+        {{- template "QualifiedId" . }}
+    {{- end }}
+{{- end }}
+
+
 {{- define "EnumWriterDecls" }}
     {{- range .Enums }}
-std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value);
+std::ostream& operator<<(std::ostream& os, const WrapEnum<{{ .Name.Parts.Name }}>& value);
     {{- end }}
 {{- end }}
 
@@ -73,10 +93,24 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value);
 
 {{- define "ImplementationHeader" }}
     {{- template "FileHeader" }}
+
+// TODO: Fix this include to reference the generated include file.
+#include "..."
+
+#include "lib/fostr/fidl_types.h"
 {{/* keep the newline */}}
     {{- range .Name.Parts }}
 namespace {{ . }} {
     {{- end }}
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const std::unique_ptr<T>& value) {
+  if (!value) {
+    return os << "<null>";
+  }
+
+  return os << *value;
+}
 {{/* keep the newline */}}
 {{- end }}
 
@@ -84,16 +118,17 @@ namespace {{ . }} {
 {{- define "EnumWriterDefs" }}
     {{- range .Enums }}
         {{- $type_name := .Name.Parts.Name }}
-std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
-  switch (value) {
+std::ostream& operator<<(std::ostream& os, const WrapEnum<{{ .Name.Parts.Name }}>& value) {
+  switch (value.actual_) {
         {{- range .Members }}
-    case {{ $type_name }}::k{{ toUpperCamelCase (removeLeadingK .Name) }}:
-      return os << "{{ toFriendlyCase (removeLeadingK .Name) }}";
+    case {{ $type_name }}::{{ .Name }}:
+      return os << "{{ toFriendlyCase .Name }}";
         {{- end }}
   }
 
   return os;
 }
+{{/* keep the newline */}}
     {{- end }}
 {{- end }}
 
@@ -102,11 +137,19 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
     {{- range .Structs }}
 
 std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
-  os << indent;
+  os << fostr::Indent;
         {{- range .Members }}
-  os << newl << "{{ .Name }}: " << value.{{ .Name }};
+            {{- if eq .Type.Kind "identifier" }}
+                {{- if eq (declType .Type.Identifier) "enum" }}
+  os << fostr::NewLine << "{{ .Name }}: " << WrapEnum<{{ template "Id" .Type.Identifier }}>(value.{{ .Name }});
+                {{- else }}
+  os << fostr::NewLine << "{{ .Name }}: " << value.{{ .Name }};
+                {{- end }}
+            {{- else }}
+  os << fostr::NewLine << "{{ .Name }}: " << value.{{ .Name }};
+            {{- end }}
         {{- end }}
-  return os << outdent;
+  return os << fostr::Outdent;
 }
     {{- end }}
 {{- end }}
@@ -120,7 +163,15 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
         {{- $type_name := .Name.Parts.Name }}
         {{- range .Members }}
     case {{ $type_name }}::Tag::k{{ toUpperCamelCase .Name }}:
+            {{- if eq .Type.Kind "identifier" }}
+                {{- if eq (declType .Type.Identifier) "enum" }}
+      return os << "{{ toSnakeCase .Name }} " << WrapEnum<{{ template "Id" .Type.Identifier }}>(value.{{ toSnakeCase .Name }}());
+                {{- else }}
       return os << "{{ toSnakeCase .Name }} " << value.{{ toSnakeCase .Name }}();
+                {{- end }}
+            {{- else }}
+      return os << "{{ toSnakeCase .Name }} " << value.{{ toSnakeCase .Name }}();
+            {{- end }}
         {{- end }}
     case {{ $type_name }}::Tag::Invalid:
       return os << "<invalid union>";
