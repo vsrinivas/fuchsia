@@ -251,8 +251,6 @@ void Controller::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
             vc_client_->OnDisplayVsync(display_id, timestamp, images, handle_count);
         } else if (!vc_applied_ && primary_client_) {
             primary_client_->OnDisplayVsync(display_id, timestamp, images, handle_count);
-        } else {
-            zxlogf(INFO, "Vsync with no client\n");
         }
     } else {
         zxlogf(TRACE, "Dropping vsync\n");
