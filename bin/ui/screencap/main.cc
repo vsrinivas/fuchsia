@@ -8,7 +8,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 
-#include "garnet/lib/ui/gfx/gfx_system.h"
 #include "garnet/lib/ui/scenic/scenic.h"
 #include "garnet/lib/ui/scenic/system.h"
 #include "lib/app/cpp/startup_context.h"
@@ -30,7 +29,8 @@ int main(int argc, const char** argv) {
   int return_code = 0;
   bool output_screen = true;
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  if (!fxl::SetLogSettingsFromCommandLine(command_line)) return 1;
+  if (!fxl::SetLogSettingsFromCommandLine(command_line))
+    return 1;
 
   const auto& positional_args = command_line.positional_args();
   if (!positional_args.empty()) {

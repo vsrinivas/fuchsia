@@ -10,12 +10,11 @@ executable("screencap") {
   ]
 
   deps = [
-    "//garnet/bin/ui/scenic",
-    "//garnet/lib/ui/gfx",
     "//garnet/lib/ui/scenic",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
 }
