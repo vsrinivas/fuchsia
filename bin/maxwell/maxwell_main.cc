@@ -76,7 +76,8 @@ bool LoadAndValidateConfig(const std::string& path, Config* out) {
 
   // Initialize our schema.
   rapidjson::Document schema;
-  FXL_DCHECK(!schema.Parse(kConfigSchema).HasParseError());
+  bool parseError = schema.Parse(kConfigSchema).HasParseError();
+  FXL_DCHECK(!parseError);
   rapidjson::SchemaDocument schema_doc(schema);
 
   // Validate the config against the schema.
