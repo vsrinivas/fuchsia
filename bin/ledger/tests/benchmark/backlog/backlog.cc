@@ -93,11 +93,13 @@ void BacklogBenchmark::ConnectWriter() {
   // Name of the storage directory currently identifies the user. Ensure the
   // most nested directory has the same name to make the ledgers sync.
   std::string writer_path = writer_tmp_dir_.path() + kUserDirectory;
-  FXL_DCHECK(files::CreateDirectory(writer_path));
+  bool ret = files::CreateDirectory(writer_path);
+  FXL_DCHECK(ret);
 
   test::GetLedger(
       startup_context_.get(), writer_controller_.NewRequest(), nullptr,
-      "backlog", writer_path, []() { FXL_LOG(INFO) << "Writer closed."; },
+      "backlog", std::move(writer_path),
+      []() { FXL_LOG(INFO) << "Writer closed."; },
       [this](ledger::Status status, ledger::LedgerPtr writer) {
         if (QuitOnError(QuitLoopClosure(), status, "Get writer ledger")) {
           return;
@@ -161,7 +163,7 @@ void BacklogBenchmark::ConnectUploader() {
       server_id_, "backlog", cloud_provider_uploader.NewRequest());
   test::GetLedger(
       startup_context_.get(), uploader_controller_.NewRequest(),
-      std::move(cloud_provider_uploader), "backlog", uploader_path,
+      std::move(cloud_provider_uploader), "backlog", std::move(uploader_path),
       QuitLoopClosure(),
       [this](ledger::Status status, ledger::LedgerPtr uploader) {
         if (QuitOnError(QuitLoopClosure(), status, "Get uploader ledger")) {
@@ -202,14 +204,15 @@ void BacklogBenchmark::WaitForUploaderUpload() {
 
 void BacklogBenchmark::ConnectReader() {
   std::string reader_path = reader_tmp_dir_.path() + kUserDirectory;
-  FXL_DCHECK(files::CreateDirectory(reader_path));
+  bool ret = files::CreateDirectory(reader_path);
+  FXL_DCHECK(ret);
 
   cloud_provider::CloudProviderPtr cloud_provider_reader;
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "backlog", cloud_provider_reader.NewRequest());
   test::GetLedger(
       startup_context_.get(), reader_controller_.NewRequest(),
-      std::move(cloud_provider_reader), "backlog", reader_path,
+      std::move(cloud_provider_reader), "backlog", std::move(reader_path),
       QuitLoopClosure(),
       [this](ledger::Status status, ledger::LedgerPtr reader) {
         if (QuitOnError(QuitLoopClosure(), status, "ConnectReader")) {

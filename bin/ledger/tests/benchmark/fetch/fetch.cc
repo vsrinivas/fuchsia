@@ -81,14 +81,16 @@ void FetchBenchmark::Run() {
   // Name of the storage directory currently identifies the user. Ensure the
   // most nested directory has the same name to make the ledgers sync.
   std::string writer_path = writer_tmp_dir_.path() + kUserDirectory;
-  FXL_DCHECK(files::CreateDirectory(writer_path));
+  bool ret = files::CreateDirectory(writer_path);
+  FXL_DCHECK(ret);
 
   cloud_provider::CloudProviderPtr cloud_provider_writer;
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "", cloud_provider_writer.NewRequest());
   test::GetLedger(
       startup_context_.get(), writer_controller_.NewRequest(),
-      std::move(cloud_provider_writer), "fetch", writer_path, QuitLoopClosure(),
+      std::move(cloud_provider_writer), "fetch", std::move(writer_path),
+      QuitLoopClosure(),
       [this](ledger::Status status, ledger::LedgerPtr ledger) {
         if (QuitOnError(QuitLoopClosure(), status, "Get writer ledger")) {
           return;
@@ -147,14 +149,16 @@ void FetchBenchmark::WaitForWriterUpload() {
 
 void FetchBenchmark::ConnectReader() {
   std::string reader_path = reader_tmp_dir_.path() + kUserDirectory;
-  FXL_DCHECK(files::CreateDirectory(reader_path));
+  bool ret = files::CreateDirectory(reader_path);
+  FXL_DCHECK(ret);
 
   cloud_provider::CloudProviderPtr cloud_provider_reader;
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "", cloud_provider_reader.NewRequest());
   test::GetLedger(
       startup_context_.get(), reader_controller_.NewRequest(),
-      std::move(cloud_provider_reader), "fetch", reader_path, QuitLoopClosure(),
+      std::move(cloud_provider_reader), "fetch", std::move(reader_path),
+      QuitLoopClosure(),
       [this](ledger::Status status, ledger::LedgerPtr ledger) {
         if (QuitOnError(QuitLoopClosure(), status, "ConnectReader")) {
           return;
