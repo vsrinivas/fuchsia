@@ -4,8 +4,7 @@
 
 #include "lib/svc/dir.h"
 
-#include <string>
-
+#include <fbl/string.h>
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
@@ -47,7 +46,7 @@ zx_status_t svc_dir_add_service(svc_dir_t* dir, const char* type,
   fs::PseudoDir* node_dir = static_cast<fs::PseudoDir*>(node.get());
   return node_dir->AddEntry(
       service_name,
-      fbl::AdoptRef(new fs::Service([service_name = std::string(service_name),
+      fbl::AdoptRef(new fs::Service([service_name = fbl::String(service_name),
                                      context, handler](zx::channel channel) {
         handler(context, service_name.c_str(), channel.release());
         return ZX_OK;

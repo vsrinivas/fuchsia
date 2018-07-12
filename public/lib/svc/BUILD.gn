@@ -32,6 +32,10 @@ prebuilt_shared_library("svc") {
     "//zircon/public/lib/fdio:fdio_sdk",
     "//zircon/public/lib/trace-engine:trace-engine_sdk",
   ]
+
+  # Although this library uses C++, we do not have a dependency on the C++
+  # standard library.
+  ldflags = [ "-nostdlib++" ]
 }
 
 test("svc_unittests") {
