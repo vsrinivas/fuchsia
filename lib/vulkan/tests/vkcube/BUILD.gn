@@ -36,14 +36,16 @@ source_set("vkcube_common") {
   deps = [
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:trace",
+    "$zircon_build_root/public/lib/async-loop-cpp",
+    "$zircon_build_root/public/lib/trace-provider",
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/ui/view_framework:view_provider",
-    "//garnet/public/fidl/fuchsia.ui.views_v1",
-    "//garnet/public/lib/vulkan",
     "//garnet/public/lib/ui/scenic",
     "//garnet/public/lib/ui/scenic/cpp",
+    "//garnet/public/lib/ui/view_framework:view_provider",
+    "//garnet/public/lib/vulkan",
   ]
 
   public_deps = [

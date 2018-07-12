@@ -58,6 +58,8 @@ source_set("magma_util_tests") {
     "$magma_build_root/src/magma_util:registers",
     "$magma_build_root/src/magma_util:semaphore_port",
     "$magma_build_root/src/magma_util:system",
+    "$zircon_build_root/public/lib/fdio",
+    "$zircon_build_root/public/lib/zx",
     "//third_party/googletest:gtest",
   ]
 }
