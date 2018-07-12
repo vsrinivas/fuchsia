@@ -20,8 +20,11 @@ using ModuleVector = std::vector<debug_ipc::Module>;
 // Callback for libunwind.
 int LookupDso(void* context, unw_word_t pc, unw_word_t* base,
               const char** name) {
-  // Context is a ModuleVector sorted by load address.
-  // TODO(brettw) could use lower_bound for better perf with lots of modules.
+  // Context is a ModuleVector sorted by load address, need to find the
+  // largest one smaller than or equal to the pc.
+  //
+  // We could use lower_bound for better perf with lots of modules but we
+  // expect O(10) modules.
   const ModuleVector* modules = static_cast<const ModuleVector*>(context);
   for (int i = static_cast<int>(modules->size()) - 1; i >= 0; i--) {
     const debug_ipc::Module& module = (*modules)[i];
