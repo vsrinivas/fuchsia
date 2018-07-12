@@ -173,8 +173,6 @@ static zx_status_t aml_thermal_ioctl(void* ctx, uint32_t op,
                                      void* out_buf, size_t out_len,
                                      size_t* out_actual) {
     aml_thermal_t* dev = ctx;
-    zx_status_t status = ZX_OK;
-
     switch(op) {
         case IOCTL_THERMAL_GET_DEVICE_INFO: {
             if (out_len != sizeof(thermal_device_info_t)) {
@@ -193,7 +191,7 @@ static zx_status_t aml_thermal_ioctl(void* ctx, uint32_t op,
                 return ZX_ERR_INVALID_ARGS;
             }
 
-            status = aml_thermal_get_state_change_port(dev, out_buf);
+            zx_status_t status = aml_thermal_get_state_change_port(dev, out_buf);
             if (status != ZX_OK) {
                 return status;
             }
@@ -217,36 +215,6 @@ static zx_status_t aml_thermal_ioctl(void* ctx, uint32_t op,
             dvfs_info_t *dvfs_info = (dvfs_info_t*)in_buf;
             return aml_thermal_set_dvfs_opp(dev, dvfs_info);
         }
-
-        case IOCTL_THERMAL_GET_TEMPERATURE: {
-            if (out_len != sizeof(uint32_t)) {
-                return ZX_ERR_INVALID_ARGS;
-            }
-
-            status = scpi_get_sensor_value(&dev->scpi,
-                                           dev->device->temp_sensor_id,
-                                           out_buf);
-            if (status != ZX_OK) {
-                return status;
-            }
-            *out_actual = sizeof(uint32_t);
-            return status;
-        }
-
-        case IOCTL_THERMAL_GET_DVFS_INFO: {
-            if (in_len != sizeof(uint32_t) || out_len != sizeof(scpi_opp_t)) {
-                return ZX_ERR_INVALID_ARGS;
-            }
-            uint32_t *power_domain = (uint32_t*)in_buf;
-            if (*power_domain >= MAX_DVFS_DOMAINS) {
-                return ZX_ERR_INVALID_ARGS;
-            }
-            memcpy(out_buf, &dev->device->opps[*power_domain],
-                   sizeof(scpi_opp_t));
-            *out_actual = sizeof(scpi_opp_t);
-            return ZX_OK;
-        }
-
         default:
             return ZX_ERR_NOT_SUPPORTED;
     }
