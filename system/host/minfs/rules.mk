@@ -24,6 +24,7 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/fdio/include \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/fs/include \
+    -Isystem/ulib/fzl/include \
     -Isystem/ulib/minfs/include \
     -Isystem/ulib/fs-host/include \
 

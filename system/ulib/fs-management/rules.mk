@@ -25,6 +25,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/gpt \
     system/ulib/fs \
+    system/ulib/fzl \
     system/ulib/zx \
     system/ulib/zxcpp \
     third_party/ulib/uboringssl \

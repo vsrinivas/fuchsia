@@ -16,7 +16,6 @@
 #include <unistd.h>
 
 #include <block-client/client.h>
-#include <fs/mapped-vmo.h>
 #include <fs-management/ramdisk.h>
 #include <zircon/device/block.h>
 #include <zircon/device/ramdisk.h>
@@ -29,6 +28,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fzl/mapped-vmo.h>
 #include <sync/completion.h>
 #include <unittest/unittest.h>
 #include <lib/zx/time.h>
@@ -1329,8 +1329,8 @@ bool ramdisk_test_fifo_sleep_deferred(void) {
 
     // Create an arbitrary VMO, fill it with some stuff
     uint64_t vmo_size = PAGE_SIZE * 16;
-    fbl::unique_ptr<fs::MappedVmo> vmo;
-    ASSERT_EQ(fs::MappedVmo::Create(vmo_size, "ramdisk-test", &vmo), ZX_OK);
+    fbl::unique_ptr<fzl::MappedVmo> vmo;
+    ASSERT_EQ(fzl::MappedVmo::Create(vmo_size, "ramdisk-test", &vmo), ZX_OK);
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[vmo_size]);

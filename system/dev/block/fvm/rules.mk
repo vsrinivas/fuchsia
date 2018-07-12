@@ -16,6 +16,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fs \
+    system/ulib/fzl \
     system/ulib/fvm \
     system/ulib/gpt \
     system/ulib/digest \

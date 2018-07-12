@@ -22,10 +22,10 @@
 #include <fbl/unique_ptr.h>
 #include <fbl/unique_fd.h>
 #include <fs/block-txn.h>
-#include <fs/mapped-vmo.h>
 #include <fs/trace.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
+#include <lib/fzl/mapped-vmo.h>
 #include <minfs/format.h>
 
 namespace minfs {

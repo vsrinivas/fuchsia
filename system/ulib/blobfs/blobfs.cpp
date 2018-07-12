@@ -192,7 +192,7 @@ zx_status_t VnodeBlob::InitVmos() {
         FS_TRACE_ERROR("Multiplication overflow");
         return ZX_ERR_OUT_OF_RANGE;
     }
-    if ((status = fs::MappedVmo::Create(vmo_size, "blob", &blob_)) != ZX_OK) {
+    if ((status = fzl::MappedVmo::Create(vmo_size, "blob", &blob_)) != ZX_OK) {
         FS_TRACE_ERROR("Failed to initialize vmo; error: %d\n", status);
         return status;
     }
@@ -226,14 +226,14 @@ zx_status_t VnodeBlob::InitCompressed() {
     uint64_t start = inode_.start_block + DataStartBlock(blobfs_->info_);
     uint64_t merkle_blocks = MerkleTreeBlocks(inode_);
 
-    fbl::unique_ptr<fs::MappedVmo> compressed_blob;
+    fbl::unique_ptr<fzl::MappedVmo> compressed_blob;
     size_t compressed_blocks = (inode_.num_blocks - merkle_blocks);
     size_t compressed_size;
     if (mul_overflow(compressed_blocks, kBlobfsBlockSize, &compressed_size)) {
         FS_TRACE_ERROR("Multiplication overflow\n");
         return ZX_ERR_OUT_OF_RANGE;
     }
-    zx_status_t status = fs::MappedVmo::Create(compressed_size, "compressed-blob",
+    zx_status_t status = fzl::MappedVmo::Create(compressed_size, "compressed-blob",
                                                &compressed_blob);
     if (status != ZX_OK) {
         FS_TRACE_ERROR("Failed to initialized compressed vmo; error: %d\n", status);
@@ -368,7 +368,7 @@ zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
     }
 
     // Open VMOs, so we can begin writing after allocate succeeds.
-    if ((status = fs::MappedVmo::Create(inode_.num_blocks * kBlobfsBlockSize, "blob", &blob_))
+    if ((status = fzl::MappedVmo::Create(inode_.num_blocks * kBlobfsBlockSize, "blob", &blob_))
         != ZX_OK) {
         goto fail;
     }
@@ -384,7 +384,7 @@ zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
     write_info_ = fbl::make_unique<WritebackInfo>();
     if (inode_.blob_size >= kCompressionMinBytesSaved) {
         size_t max = write_info_->compressor.BufferMax(inode_.blob_size);
-        status = fs::MappedVmo::Create(max, "compressed-blob", &write_info_->compressed_blob);
+        status = fzl::MappedVmo::Create(max, "compressed-blob", &write_info_->compressed_blob);
         if (status != ZX_OK) {
             return status;
         }
@@ -888,11 +888,11 @@ void Blobfs::FreeNode(WritebackWork* wb, size_t node_index) {
 
 zx_status_t Blobfs::InitializeWriteback() {
     zx_status_t status;
-    fbl::unique_ptr<fs::MappedVmo> buffer;
+    fbl::unique_ptr<fzl::MappedVmo> buffer;
     constexpr size_t kWriteBufferSize = 64 * (1LU << 20);
     static_assert(kWriteBufferSize % kBlobfsBlockSize == 0,
                   "Buffer Size must be a multiple of the Blobfs Block Size");
-    if ((status = fs::MappedVmo::Create(kWriteBufferSize, "blobfs-writeback",
+    if ((status = fzl::MappedVmo::Create(kWriteBufferSize, "blobfs-writeback",
                                         &buffer)) != ZX_OK) {
         return status;
     }
@@ -1405,7 +1405,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const blobfs_info_t* info,
     size_t nodemap_size = kBlobfsInodeSize * fs->info_.inode_count;
     ZX_DEBUG_ASSERT(fbl::round_up(nodemap_size, kBlobfsBlockSize) == nodemap_size);
     ZX_DEBUG_ASSERT(nodemap_size / kBlobfsBlockSize == NodeMapBlocks(fs->info_));
-    if ((status = fs::MappedVmo::Create(nodemap_size, "nodemap", &fs->node_map_)) != ZX_OK) {
+    if ((status = fzl::MappedVmo::Create(nodemap_size, "nodemap", &fs->node_map_)) != ZX_OK) {
         return status;
     } else if ((status = fs->AttachVmo(fs->block_map_.StorageUnsafe()->GetVmo(),
                                        &fs->block_map_vmoid_)) != ZX_OK) {
@@ -1416,7 +1416,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const blobfs_info_t* info,
     } else if ((status = fs->LoadBitmaps()) < 0) {
         fprintf(stderr, "blobfs: Failed to load bitmaps: %d\n", status);
         return status;
-    } else if ((status = fs::MappedVmo::Create(kBlobfsBlockSize, "blobfs-superblock",
+    } else if ((status = fzl::MappedVmo::Create(kBlobfsBlockSize, "blobfs-superblock",
                                                &fs->info_vmo_)) != ZX_OK) {
         fprintf(stderr, "blobfs: Failed to create info vmo: %d\n", status);
         return status;

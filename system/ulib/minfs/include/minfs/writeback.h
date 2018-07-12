@@ -17,9 +17,9 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 
-#include <fs/mapped-vmo.h>
 #include <fs/queue.h>
 #include <fs/vfs.h>
+#include <lib/fzl/mapped-vmo.h>
 
 #include <minfs/bcache.h>
 #include <minfs/block-txn.h>
@@ -86,7 +86,7 @@ private:
 class WritebackBuffer {
 public:
     // Calls constructor, return an error if anything goes wrong.
-    static zx_status_t Create(Bcache* bc, fbl::unique_ptr<fs::MappedVmo> buffer,
+    static zx_status_t Create(Bcache* bc, fbl::unique_ptr<fzl::MappedVmo> buffer,
                               fbl::unique_ptr<WritebackBuffer>* out);
     ~WritebackBuffer();
 
@@ -101,7 +101,7 @@ public:
     void Enqueue(fbl::unique_ptr<WritebackWork> work) __TA_EXCLUDES(writeback_lock_);
 
 private:
-    WritebackBuffer(Bcache* bc, fbl::unique_ptr<fs::MappedVmo> buffer);
+    WritebackBuffer(Bcache* bc, fbl::unique_ptr<fzl::MappedVmo> buffer);
 
     // Blocks until |blocks| blocks of data are free for the caller.
     // Returns |ZX_OK| with the lock still held in this case.
@@ -149,7 +149,7 @@ private:
     // writeback buffer and are ready to be sent to disk.
     WorkQueue work_queue_ __TA_GUARDED(writeback_lock_){};
     bool unmounting_ __TA_GUARDED(writeback_lock_){false};
-    fbl::unique_ptr<fs::MappedVmo> buffer_{};
+    fbl::unique_ptr<fzl::MappedVmo> buffer_{};
     vmoid_t buffer_vmoid_ = VMOID_INVALID;
     // The units of all the following are "MinFS blocks".
     size_t start_ __TA_GUARDED(writeback_lock_){};

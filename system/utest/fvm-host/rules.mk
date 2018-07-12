@@ -36,6 +36,7 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/minfs/include \
     -Isystem/ulib/unittest/include \
     -Isystem/ulib/fs/include \
+    -Isystem/ulib/fzl/include \
     -Isystem/ulib/fdio/include \
 
 MODULE_HOST_LIBS := \

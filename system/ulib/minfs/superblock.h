@@ -7,7 +7,7 @@
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
 #include <fs/block-txn.h>
-#include <fs/mapped-vmo.h>
+#include <lib/fzl/mapped-vmo.h>
 
 #include <minfs/format.h>
 #include <minfs/fsck.h>
@@ -57,13 +57,13 @@ public:
 
 private:
 #ifdef __Fuchsia__
-    Superblock(const minfs_info_t* info, fbl::unique_ptr<fs::MappedVmo> info_vmo_);
+    Superblock(const minfs_info_t* info, fbl::unique_ptr<fzl::MappedVmo> info_vmo_);
 #else
     Superblock(const minfs_info_t* info);
 #endif
 
 #ifdef __Fuchsia__
-    fbl::unique_ptr<fs::MappedVmo> info_vmo_;
+    fbl::unique_ptr<fzl::MappedVmo> info_vmo_;
 #else
     uint8_t info_blk_[kMinfsBlockSize];
 #endif

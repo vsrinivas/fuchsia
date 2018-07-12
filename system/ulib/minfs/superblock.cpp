@@ -6,7 +6,7 @@
 #include <string.h>
 
 #include <bitmap/raw-bitmap.h>
-#include <fs/mapped-vmo.h>
+#include <lib/fzl/mapped-vmo.h>
 #include <minfs/block-txn.h>
 
 #include "superblock.h"
@@ -16,7 +16,7 @@ namespace minfs {
 #ifdef __Fuchsia__
 
 Superblock::Superblock(const minfs_info_t* info,
-                       fbl::unique_ptr<fs::MappedVmo> info_vmo) :
+                       fbl::unique_ptr<fzl::MappedVmo> info_vmo) :
     info_vmo_(fbl::move(info_vmo)) {
 }
 
@@ -39,10 +39,10 @@ zx_status_t Superblock::Create(Bcache* bc, const minfs_info_t* info,
     }
 
 #ifdef __Fuchsia__
-    fbl::unique_ptr<fs::MappedVmo> info_vmo;
+    fbl::unique_ptr<fzl::MappedVmo> info_vmo;
     // Create the info vmo
     vmoid_t info_vmoid;
-    if ((status = fs::MappedVmo::Create(kMinfsBlockSize, "minfs-superblock",
+    if ((status = fzl::MappedVmo::Create(kMinfsBlockSize, "minfs-superblock",
                                         &info_vmo)) != ZX_OK) {
         return status;
     }

@@ -62,6 +62,7 @@ MODULE_HOST_COMPILEFLAGS := \
     -Isystem/ulib/fdio/include \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/fs/include \
+    -Isystem/ulib/fzl/include \
 
 # host minfs lib
 

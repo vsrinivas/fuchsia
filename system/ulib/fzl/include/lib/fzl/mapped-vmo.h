@@ -16,7 +16,7 @@
 
 #ifdef __Fuchsia__
 
-namespace fs {
+namespace fzl {
 
 class MappedVmo {
 public:
@@ -57,6 +57,6 @@ private:
     size_t len_;
 };
 
-} // namespace fs
+} // namespace fzl
 
 #endif  // __Fuchsia__

@@ -18,10 +18,10 @@
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
-#include <fs/mapped-vmo.h>
 #include <fvm/fvm-lz4.h>
 #include <fvm/fvm-sparse.h>
 #include <lib/cksum.h>
+#include <lib/fzl/mapped-vmo.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
 #include <zircon/boot/image.h>
@@ -96,7 +96,7 @@ zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, zx_handle_t vmo,
 
 // Stream an FVM partition to disk.
 zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
-                               fs::MappedVmo* mvmo, fifo_client_t* client, size_t block_size,
+                               fzl::MappedVmo* mvmo, fifo_client_t* client, size_t block_size,
                                block_fifo_request_t* request) {
     size_t slice_size = reader->Image()->slice_size;
     const size_t vmo_cap = mvmo->GetSize();
@@ -176,7 +176,7 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
 }
 
 // Stream a raw (non-FVM) partition to a vmo.
-zx_status_t StreamPayloadToVmo(fs::MappedVmo* mvmo, const fbl::unique_fd& src_fd,
+zx_status_t StreamPayloadToVmo(fzl::MappedVmo* mvmo, const fbl::unique_fd& src_fd,
                                const block_info_t& info, size_t* payload_size) {
     zx_status_t status;
     ssize_t r;
@@ -211,7 +211,7 @@ zx_status_t StreamPayloadToVmo(fs::MappedVmo* mvmo, const fbl::unique_fd& src_fd
 }
 
 // Writes a raw (non-FVM) partition to a block device from a VMO.
-zx_status_t WriteVmoToBlock(fs::MappedVmo* mvmo, size_t vmo_size,
+zx_status_t WriteVmoToBlock(fzl::MappedVmo* mvmo, size_t vmo_size,
                             const fbl::unique_fd& partition_fd, const block_info_t& info) {
     ZX_ASSERT(vmo_size % info.block_size == 0);
 
@@ -276,7 +276,7 @@ bool ValidateKernelZbi(const uint8_t* buffer, size_t size, Arch arch) {
 }
 
 // Parses a partition and validates that it matches the expected format.
-zx_status_t ValidateKernelPayload(fs::MappedVmo* mvmo, size_t vmo_size, Partition partition_type,
+zx_status_t ValidateKernelPayload(fzl::MappedVmo* mvmo, size_t vmo_size, Partition partition_type,
                                   Arch arch) {
     const auto* buffer = reinterpret_cast<uint8_t*>(mvmo->GetData());
     switch (partition_type) {
@@ -602,8 +602,8 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
 
     constexpr size_t vmo_size = 1 << 20;
 
-    fbl::unique_ptr<fs::MappedVmo> mvmo;
-    if ((status = fs::MappedVmo::Create(vmo_size, "fvm-stream", &mvmo)) != ZX_OK) {
+    fbl::unique_ptr<fzl::MappedVmo> mvmo;
+    if ((status = fzl::MappedVmo::Create(vmo_size, "fvm-stream", &mvmo)) != ZX_OK) {
         ERROR("Failed to create stream VMO\n");
         return ZX_ERR_NO_MEMORY;
     }
@@ -730,8 +730,8 @@ zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
     }
 
     const size_t vmo_sz = fbl::round_up(1LU << 20, info.block_size);
-    fbl::unique_ptr<fs::MappedVmo> mvmo;
-    if ((status = fs::MappedVmo::Create(vmo_sz, "partition-pave", &mvmo)) != ZX_OK) {
+    fbl::unique_ptr<fzl::MappedVmo> mvmo;
+    if ((status = fzl::MappedVmo::Create(vmo_sz, "partition-pave", &mvmo)) != ZX_OK) {
         ERROR("Failed to create stream VMO\n");
         return status;
     }

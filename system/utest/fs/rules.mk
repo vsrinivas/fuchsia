@@ -59,6 +59,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/fvm \
     system/ulib/fs \
+    system/ulib/fzl \
     system/ulib/sync \
     system/ulib/trace \
     system/ulib/zx \

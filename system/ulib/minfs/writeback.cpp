@@ -18,8 +18,8 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fs/block-txn.h>
-#include <fs/mapped-vmo.h>
 #include <fs/vfs.h>
+#include <lib/fzl/mapped-vmo.h>
 
 #include "minfs-private.h"
 #include <minfs/writeback.h>
@@ -152,7 +152,7 @@ void WritebackWork::PinVnode(fbl::RefPtr<VnodeMinfs> vn) {
 
 #ifdef __Fuchsia__
 
-zx_status_t WritebackBuffer::Create(Bcache* bc, fbl::unique_ptr<fs::MappedVmo> buffer,
+zx_status_t WritebackBuffer::Create(Bcache* bc, fbl::unique_ptr<fzl::MappedVmo> buffer,
                                     fbl::unique_ptr<WritebackBuffer>* out) {
     fbl::unique_ptr<WritebackBuffer> wb(new WritebackBuffer(bc, fbl::move(buffer)));
     if (wb->buffer_->GetSize() % kMinfsBlockSize != 0) {
@@ -175,7 +175,7 @@ zx_status_t WritebackBuffer::Create(Bcache* bc, fbl::unique_ptr<fs::MappedVmo> b
     return ZX_OK;
 }
 
-WritebackBuffer::WritebackBuffer(Bcache* bc, fbl::unique_ptr<fs::MappedVmo> buffer) :
+WritebackBuffer::WritebackBuffer(Bcache* bc, fbl::unique_ptr<fzl::MappedVmo> buffer) :
     bc_(bc), unmounting_(false), buffer_(fbl::move(buffer)),
     cap_(buffer_->GetSize() / kMinfsBlockSize) {}
 

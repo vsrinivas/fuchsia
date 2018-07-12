@@ -27,7 +27,7 @@
 #include <fbl/unique_ptr.h>
 
 #include <fs/block-txn.h>
-#include <fs/mapped-vmo.h>
+#include <lib/fzl/mapped-vmo.h>
 #include <fs/ticker.h>
 #include <fs/trace.h>
 #include <fs/vfs.h>
@@ -644,7 +644,7 @@ private:
     // Next kMinfsDoublyIndirect blocks                           - doubly indirect blocks
     // Next kMinfsDoublyIndirect * kMinfsDirectPerIndirect blocks - indirect blocks pointed to
     //                                                              by doubly indirect blocks
-    fbl::unique_ptr<fs::MappedVmo> vmo_indirect_{};
+    fbl::unique_ptr<fzl::MappedVmo> vmo_indirect_{};
 
     vmoid_t vmoid_{};
     vmoid_t vmoid_indirect_{};

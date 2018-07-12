@@ -122,7 +122,7 @@ void WritebackWork::SetClosure(SyncCallback closure) {
     closure_ = fbl::move(closure);
 }
 
-zx_status_t WritebackBuffer::Create(Blobfs* bs, fbl::unique_ptr<fs::MappedVmo> buffer,
+zx_status_t WritebackBuffer::Create(Blobfs* bs, fbl::unique_ptr<fzl::MappedVmo> buffer,
                                     fbl::unique_ptr<WritebackBuffer>* out) {
     fbl::unique_ptr<WritebackBuffer> wb(new WritebackBuffer(bs, fbl::move(buffer)));
     if (wb->buffer_->GetSize() % kBlobfsBlockSize != 0) {
@@ -157,7 +157,7 @@ zx_status_t WritebackBuffer::GenerateWork(fbl::unique_ptr<WritebackWork>* out,
     return ZX_OK;
 }
 
-WritebackBuffer::WritebackBuffer(Blobfs* bs, fbl::unique_ptr<fs::MappedVmo> buffer) :
+WritebackBuffer::WritebackBuffer(Blobfs* bs, fbl::unique_ptr<fzl::MappedVmo> buffer) :
     bs_(bs), unmounting_(false), buffer_(fbl::move(buffer)),
     cap_(buffer_->GetSize() / kBlobfsBlockSize) {}
 

@@ -150,7 +150,7 @@ zx_status_t VnodeMinfs::InitIndirectVmo() {
     }
 
     zx_status_t status;
-    if ((status = fs::MappedVmo::Create(kMinfsBlockSize * (kMinfsIndirect + kMinfsDoublyIndirect),
+    if ((status = fzl::MappedVmo::Create(kMinfsBlockSize * (kMinfsIndirect + kMinfsDoublyIndirect),
                                         "minfs-indirect", &vmo_indirect_)) != ZX_OK) {
         return status;
     }

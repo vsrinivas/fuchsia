@@ -28,6 +28,7 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/gpt/include \
     -Isystem/ulib/blobfs/include \
     -Isystem/ulib/fs/include \
+    -Isystem/ulib/fzl/include \
     -Isystem/ulib/bitmap/include \
     -Isystem/ulib/fdio/include \
     -Isystem/ulib/fs-management/include \

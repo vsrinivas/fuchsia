@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/mapped-vmo.h>
+#include <lib/fzl/mapped-vmo.h>
 
 #include <zircon/syscalls.h>
 
@@ -26,8 +26,8 @@ bool test_mapped_vmo() {
     }
 
     // Create MappedVmo
-    fbl::unique_ptr<fs::MappedVmo> mvmo;
-    ASSERT_EQ(fs::MappedVmo::Create(init_size, "test-vmo", &mvmo), ZX_OK);
+    fbl::unique_ptr<fzl::MappedVmo> mvmo;
+    ASSERT_EQ(fzl::MappedVmo::Create(init_size, "test-vmo", &mvmo), ZX_OK);
 
     // Verify size & data
     ASSERT_EQ(mvmo->GetSize(), init_size);

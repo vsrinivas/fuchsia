@@ -26,13 +26,13 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fs/block-txn.h>
-#include <fs/mapped-vmo.h>
 #include <fs/managed-vfs.h>
 #include <fs/ticker.h>
 #include <fs/trace.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/fzl/mapped-vmo.h>
 #include <lib/zx/event.h>
 #include <lib/zx/vmo.h>
 #include <trace/event.h>
@@ -259,7 +259,7 @@ private:
     // The blob_ here consists of:
     // 1) The Merkle Tree
     // 2) The Blob itself, aligned to the nearest kBlobfsBlockSize
-    fbl::unique_ptr<fs::MappedVmo> blob_ = {};
+    fbl::unique_ptr<fzl::MappedVmo> blob_ = {};
     vmoid_t vmoid_ = {};
 
     // Watches any clones of "blob_" provided to clients.
@@ -283,7 +283,7 @@ private:
     struct WritebackInfo {
         uint64_t bytes_written = {};
         Compressor compressor;
-        fbl::unique_ptr<fs::MappedVmo> compressed_blob = {};
+        fbl::unique_ptr<fzl::MappedVmo> compressed_blob = {};
     };
 
     fbl::unique_ptr<WritebackInfo> write_info_ = {};
@@ -553,9 +553,9 @@ private:
 
     RawBitmap block_map_ = {};
     vmoid_t block_map_vmoid_ = {};
-    fbl::unique_ptr<fs::MappedVmo> node_map_ = {};
+    fbl::unique_ptr<fzl::MappedVmo> node_map_ = {};
     vmoid_t node_map_vmoid_ = {};
-    fbl::unique_ptr<fs::MappedVmo> info_vmo_= {};
+    fbl::unique_ptr<fzl::MappedVmo> info_vmo_= {};
     vmoid_t info_vmoid_= {};
 
     // The reserved_blocks_ and reserved_nodes_ bitmaps only hold in-flight reservations.

@@ -10,7 +10,7 @@
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
 #include <fs/block-txn.h>
-#include <fs/mapped-vmo.h>
+#include <lib/fzl/mapped-vmo.h>
 
 #include <minfs/format.h>
 #include <minfs/block-txn.h>
@@ -65,7 +65,7 @@ private:
     blk_t start_block_;
     fbl::unique_ptr<Allocator> inode_allocator_;
 #ifdef __Fuchsia__
-    fbl::unique_ptr<fs::MappedVmo> inode_table_{};
+    fbl::unique_ptr<fzl::MappedVmo> inode_table_{};
 #endif
 };
 

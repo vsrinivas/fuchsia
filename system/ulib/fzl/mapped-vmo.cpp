@@ -1,20 +1,20 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#include <lib/fzl/mapped-vmo.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#include <fs/mapped-vmo.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
-namespace fs {
+namespace fzl {
 
 MappedVmo::MappedVmo(zx_handle_t vmo, uintptr_t addr, size_t len)
     : vmo_(vmo), addr_(addr), len_(len) {}
@@ -126,4 +126,4 @@ size_t MappedVmo::GetSize(void) const {
     return len_;
 }
 
-} // namespace fs
+} // namespace fzl

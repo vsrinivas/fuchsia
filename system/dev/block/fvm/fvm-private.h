@@ -18,7 +18,7 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
-#include <fs/mapped-vmo.h>
+#include <lib/fzl/mapped-vmo.h>
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
@@ -191,7 +191,7 @@ private:
     zx_status_t DoIoLocked(zx_handle_t vmo, size_t off, size_t len, uint32_t command);
 
     fbl::Mutex lock_;
-    fbl::unique_ptr<fs::MappedVmo> metadata_ TA_GUARDED(lock_);
+    fbl::unique_ptr<fzl::MappedVmo> metadata_ TA_GUARDED(lock_);
     bool first_metadata_is_primary_ TA_GUARDED(lock_);
     size_t metadata_size_;
     size_t slice_size_;

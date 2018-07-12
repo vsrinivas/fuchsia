@@ -13,7 +13,7 @@
 #include <fbl/array.h>
 #include <fbl/limits.h>
 #include <fbl/new.h>
-#include <fs/mapped-vmo.h>
+#include <lib/fzl/mapped-vmo.h>
 #include <sync/completion.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
@@ -226,9 +226,9 @@ zx_status_t VPartitionManager::Load() {
 
     metadata_size_ = fvm::MetadataSize(DiskSize(), SliceSize());
     // Now that the slice size is known, read the rest of the metadata
-    auto make_metadata_vmo = [&](size_t offset, fbl::unique_ptr<fs::MappedVmo>* out) {
-        fbl::unique_ptr<fs::MappedVmo> mvmo;
-        zx_status_t status = fs::MappedVmo::Create(MetadataSize(), "fvm-meta", &mvmo);
+    auto make_metadata_vmo = [&](size_t offset, fbl::unique_ptr<fzl::MappedVmo>* out) {
+        fbl::unique_ptr<fzl::MappedVmo> mvmo;
+        zx_status_t status = fzl::MappedVmo::Create(MetadataSize(), "fvm-meta", &mvmo);
         if (status != ZX_OK) {
             return status;
         }
@@ -243,12 +243,12 @@ zx_status_t VPartitionManager::Load() {
         return ZX_OK;
     };
 
-    fbl::unique_ptr<fs::MappedVmo> mvmo;
+    fbl::unique_ptr<fzl::MappedVmo> mvmo;
     if ((status = make_metadata_vmo(0, &mvmo)) != ZX_OK) {
         fprintf(stderr, "fvm: Failed to load metadata vmo: %d\n", status);
         return status;
     }
-    fbl::unique_ptr<fs::MappedVmo> mvmo_backup;
+    fbl::unique_ptr<fzl::MappedVmo> mvmo_backup;
     if ((status = make_metadata_vmo(MetadataSize(), &mvmo_backup)) != ZX_OK) {
         fprintf(stderr, "fvm: Failed to load backup metadata vmo: %d\n", status);
         return status;
