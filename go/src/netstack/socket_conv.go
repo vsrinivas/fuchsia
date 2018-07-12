@@ -86,10 +86,10 @@ func (v *c_mxrio_sockopt_req_reply) Unpack() interface{} {
 		case IP_MULTICAST_LOOP:
 		case IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP:
 			mreqn := c_ip_mreqn{}
-			if err := mreqn.Decode(v.optval[:]); err != nil {
+			if err := mreqn.Decode(v.optval[:v.optlen]); err != nil {
 				// If we fail to decode a c_ip_mreqn, try to decode a c_ip_mreq.
 				mreq := c_ip_mreq{}
-				if err := mreq.Decode(v.optval[:]); err != nil {
+				if err := mreq.Decode(v.optval[:v.optlen]); err != nil {
 					log.Printf("sockopt: bad argument to %d", v.optname)
 					return nil
 				}
