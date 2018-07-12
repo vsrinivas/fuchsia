@@ -31,7 +31,6 @@
 #include <platform/pc.h>
 #include <platform/pc/acpi.h>
 #include <platform/pc/bootloader.h>
-#include <platform/pc/memory.h>
 #include <platform/pc/smbios.h>
 #include <string.h>
 #include <trace.h>
@@ -41,6 +40,7 @@
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
 #include <zircon/boot/image.h>
+#include <zircon/boot/e820.h>
 #include <zircon/boot/multiboot.h>
 #include <zircon/pixelformat.h>
 #include <zircon/types.h>

@@ -14,10 +14,10 @@
 #include <lib/memory_limit.h>
 #include <platform.h>
 #include <platform/pc/bootloader.h>
-#include <platform/pc/memory.h>
 #include <string.h>
 #include <trace.h>
 #include <vm/vm.h>
+#include <zircon/boot/e820.h>
 #include <zircon/boot/multiboot.h>
 #include <zircon/types.h>
 
