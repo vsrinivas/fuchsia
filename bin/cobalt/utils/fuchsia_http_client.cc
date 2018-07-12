@@ -47,14 +47,14 @@ http::URLRequest MakeRequest(fxl::RefPtr<NetworkRequest> network_request) {
 
 }  // namespace
 
-void NetworkRequest::ReadResponse(async_t* async,
+void NetworkRequest::ReadResponse(async_dispatcher_t* dispatcher,
                                   fxl::RefPtr<NetworkRequest> self,
                                   uint32_t http_code, zx::socket source) {
   // Store a reference to myself, so that I don't get deleted while reading from
   // the socket.
   self_ = self;
   http_code_ = http_code;
-  socket_drainer_ = std::make_unique<fsl::SocketDrainer>(this, async);
+  socket_drainer_ = std::make_unique<fsl::SocketDrainer>(this, dispatcher);
   socket_drainer_->Start(std::move(source));
 }
 
@@ -70,8 +70,8 @@ void NetworkRequest::OnDataComplete() {
 }
 
 FuchsiaHTTPClient::FuchsiaHTTPClient(
-    network_wrapper::NetworkWrapper* network_wrapper, async_t* async)
-    : network_wrapper_(network_wrapper), async_(async) {}
+    network_wrapper::NetworkWrapper* network_wrapper, async_dispatcher_t* dispatcher)
+    : network_wrapper_(network_wrapper), dispatcher_(dispatcher) {}
 
 void FuchsiaHTTPClient::HandleResponse(fxl::RefPtr<NetworkRequest> req,
                                        http::URLResponse fx_response) {
@@ -84,7 +84,7 @@ void FuchsiaHTTPClient::HandleResponse(fxl::RefPtr<NetworkRequest> req,
   }
   if (fx_response.body) {
     FXL_DCHECK(fx_response.body->is_stream());
-    req->ReadResponse(async_, req, fx_response.status_code,
+    req->ReadResponse(dispatcher_, req, fx_response.status_code,
                       std::move(fx_response.body->stream()));
   } else {
     HTTPResponse response;
@@ -137,21 +137,21 @@ void NetworkRequest::SetValueAndCleanUp(StatusOr<HTTPResponse> value) {
 
 std::future<StatusOr<HTTPResponse>> FuchsiaHTTPClient::Post(
     HTTPRequest request, std::chrono::steady_clock::time_point deadline) {
-  ZX_ASSERT_MSG(async_get_default() != async_,
-                "Post should not be called from the same thread as async_, as "
+  ZX_ASSERT_MSG(async_get_default_dispatcher() != dispatcher_,
+                "Post should not be called from the same thread as dispatcher_, as "
                 "this may cause deadlocks");
   auto network_request =
       fxl::MakeRefCounted<NetworkRequest>(std::move(request));
   network_request->SetDeadlineTask(std::make_unique<async::TaskClosure>(
       [this, network_request] { HandleDeadline(network_request); }));
 
-  async::PostTask(async_,
+  async::PostTask(dispatcher_,
                   [this, network_request]() { SendRequest(network_request); });
 
   auto duration = zx::nsec(std::chrono::duration_cast<std::chrono::nanoseconds>(
                                deadline - std::chrono::steady_clock::now())
                                .count());
-  network_request->ScheduleDeadline(async_, duration);
+  network_request->ScheduleDeadline(dispatcher_, duration);
 
   return network_request->get_future();
 }

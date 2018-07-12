@@ -62,12 +62,12 @@ void DisplayManager::WaitForDefaultDisplay(fit::closure callback) {
 
         wait_.set_object(dc_channel_);
         wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-        wait_.Begin(async_get_default());
+        wait_.Begin(async_get_default_dispatcher());
 #endif
       });
 }
 
-void DisplayManager::OnAsync(async_t* async, async::WaitBase* self,
+void DisplayManager::OnAsync(async_dispatcher_t* dispatcher, async::WaitBase* self,
                              zx_status_t status,
                              const zx_packet_signal_t* signal) {
   if (status & ZX_CHANNEL_PEER_CLOSED) {
@@ -85,7 +85,7 @@ void DisplayManager::OnAsync(async_t* async, async::WaitBase* self,
     return;
   }
   // Re-arm the wait.
-  wait_.Begin(async_get_default());
+  wait_.Begin(async_get_default_dispatcher());
 
   // TODO(FIDL-183): Resolve this hack when synchronous interfaces
   // support events.

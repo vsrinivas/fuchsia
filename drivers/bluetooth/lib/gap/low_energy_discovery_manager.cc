@@ -64,7 +64,7 @@ void LowEnergyDiscoverySession::NotifyError() {
 
 LowEnergyDiscoveryManager::LowEnergyDiscoveryManager(
     Mode mode, fxl::RefPtr<hci::Transport> hci, RemoteDeviceCache* device_cache)
-    : dispatcher_(async_get_default()),
+    : dispatcher_(async_get_default_dispatcher()),
       device_cache_(device_cache),
       weak_ptr_factory_(this) {
   FXL_DCHECK(hci);

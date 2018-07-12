@@ -17,7 +17,7 @@ StartupContextForTest::StartupContextForTest(
     : StartupContext(std::move(service_root_client),
                      std::move(directory_request_server)),
       controller_(this),
-      service_root_vfs_(async_get_default()),
+      service_root_vfs_(async_get_default_dispatcher()),
       service_root_dir_(fbl::AdoptRef(new fs::PseudoDir())) {
   outgoing_public_services_.Bind(
       ChannelConnectAt(directory_request_client.get(), "public"));

@@ -15,7 +15,7 @@ namespace cobalt {
 class CobaltControllerImpl : public fuchsia::cobalt::CobaltController {
  public:
   // Does not take ownerhsip of |shipping_dispatcher|.
-  CobaltControllerImpl(async_t* async,
+  CobaltControllerImpl(async_dispatcher_t* dispatcher,
                        encoder::ShippingDispatcher* shipping_dispatcher);
 
  private:
@@ -28,7 +28,7 @@ class CobaltControllerImpl : public fuchsia::cobalt::CobaltController {
 
   void FailedSendAttempts(FailedSendAttemptsCallback callback) override;
 
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
   encoder::ShippingDispatcher* shipping_dispatcher_;  // not owned
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltControllerImpl);

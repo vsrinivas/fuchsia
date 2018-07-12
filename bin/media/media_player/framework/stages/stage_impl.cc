@@ -84,15 +84,15 @@ void StageImpl::Release() {
     }
   }
 
-  FXL_DCHECK(async_);
-  async::PostTask(async_, [shared_this = shared_from_this()]() {
+  FXL_DCHECK(dispatcher_);
+  async::PostTask(dispatcher_, [shared_this = shared_from_this()]() {
     shared_this->RunTasks();
   });
 }
 
-void StageImpl::SetAsync(async_t* async) {
-  FXL_DCHECK(async);
-  async_ = async;
+void StageImpl::SetDispatcher(async_dispatcher_t* dispatcher) {
+  FXL_DCHECK(dispatcher);
+  dispatcher_ = dispatcher;
 }
 
 void StageImpl::PostTask(fit::closure task) {
@@ -108,15 +108,15 @@ void StageImpl::PostTask(fit::closure task) {
     }
   }
 
-  FXL_DCHECK(async_);
-  async::PostTask(async_, [shared_this = shared_from_this()]() {
+  FXL_DCHECK(dispatcher_);
+  async::PostTask(dispatcher_, [shared_this = shared_from_this()]() {
     shared_this->RunTasks();
   });
 }
 
 void StageImpl::PostShutdownTask(fit::closure task) {
-  FXL_DCHECK(async_);
-  async::PostTask(async_, [shared_this = shared_from_this(),
+  FXL_DCHECK(dispatcher_);
+  async::PostTask(dispatcher_, [shared_this = shared_from_this(),
                            task = std::move(task)]() { task(); });
 }
 

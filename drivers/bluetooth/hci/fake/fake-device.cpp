@@ -105,7 +105,7 @@ void Device::Release() { delete this; }
 
 void Device::Unbind() {
   std::lock_guard<std::mutex> lock(device_lock_);
-  async::PostTask(loop_.async(), [loop = &loop_, fake_dev = fake_device_] {
+  async::PostTask(loop_.dispatcher(), [loop = &loop_, fake_dev = fake_device_] {
     fake_dev->Stop();
     loop->Quit();
   });
@@ -144,12 +144,12 @@ zx_status_t Device::OpenChan(Channel chan_type, zx_handle_t* out_channel) {
   std::lock_guard<std::mutex> lock(device_lock_);
 
   if (chan_type == Channel::COMMAND) {
-    async::PostTask(loop_.async(),
+    async::PostTask(loop_.dispatcher(),
                     [device = fake_device_, in = std::move(in)]() mutable {
                       device->StartCmdChannel(std::move(in));
                     });
   } else if (chan_type == Channel::ACL) {
-    async::PostTask(loop_.async(),
+    async::PostTask(loop_.dispatcher(),
                     [device = fake_device_, in = std::move(in)]() mutable {
                       device->StartAclChannel(std::move(in));
                     });

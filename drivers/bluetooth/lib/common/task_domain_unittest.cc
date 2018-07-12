@@ -16,7 +16,7 @@ class TestObject : public fbl::RefCounted<TestObject>,
                    public TaskDomain<TestObject> {
  public:
   // TestObject gets handed a an async dispatcher and does not own the thread.
-  explicit TestObject(async_t* dispatcher)
+  explicit TestObject(async_dispatcher_t* dispatcher)
       : TaskDomain<TestObject>(this, dispatcher) {}
 
   void ScheduleTask() {

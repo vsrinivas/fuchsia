@@ -19,7 +19,7 @@ RspIOLoop::RspIOLoop(int in_fd, Delegate* delegate, async::Loop* loop)
 }
 
 void RspIOLoop::OnReadTask() {
-  FXL_DCHECK(async_get_default() == read_dispatcher());
+  FXL_DCHECK(async_get_default_dispatcher() == read_dispatcher());
 
   ssize_t read_size = read(fd(), in_buffer_.data(), kMaxBufferSize);
 

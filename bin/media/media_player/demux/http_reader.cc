@@ -36,7 +36,7 @@ std::shared_ptr<HttpReader> HttpReader::Create(
 
 HttpReader::HttpReader(fuchsia::sys::StartupContext* startup_context,
                        const std::string& url)
-    : url_(url), ready_(async_get_default()) {
+    : url_(url), ready_(async_get_default_dispatcher()) {
   http::HttpServicePtr network_service =
       startup_context->ConnectToEnvironmentService<http::HttpService>();
 
@@ -137,7 +137,7 @@ void HttpReader::ReadFromSocket() {
       waiter_ = std::make_unique<async::Wait>(
           socket_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
 
-      waiter_->set_handler([this](async_t* async, async::Wait* wait,
+      waiter_->set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
                                   zx_status_t status,
                                   const zx_packet_signal_t* signal) {
         if (status != ZX_OK) {
@@ -152,7 +152,7 @@ void HttpReader::ReadFromSocket() {
         ReadFromSocket();
       });
 
-      waiter_->Begin(async_get_default());
+      waiter_->Begin(async_get_default_dispatcher());
 
       break;
     }

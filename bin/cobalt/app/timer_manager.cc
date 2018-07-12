@@ -29,8 +29,8 @@ void TimerVal::AddEnd(
   this->observation = std::move(observation);
 }
 
-TimerManager::TimerManager(async_t* async)
-    : clock_(new SystemClock()), async_(async) {}
+TimerManager::TimerManager(async_dispatcher_t* dispatcher)
+    : clock_(new SystemClock()), dispatcher_(dispatcher) {}
 
 TimerManager::~TimerManager() {}
 
@@ -213,7 +213,7 @@ void TimerManager::ScheduleExpiryTask(
           });
 
   zx_status_t status =
-      (*timer_val_ptr)->expiry_task.PostDelayed(async_, zx::sec(timeout_s));
+      (*timer_val_ptr)->expiry_task.PostDelayed(dispatcher_, zx::sec(timeout_s));
   if (status != ZX_OK & status != ZX_ERR_BAD_STATE) {
     FXL_DLOG(ERROR) << "Failed to post task: status = " << status;
   }

@@ -32,14 +32,14 @@ namespace gatt {
 //   * All client and server data bearers
 //   * L2CAP ATT fixed channels
 //
-// GATT requires an async dispatcher on initialization which will be used to
+// GATT requires an dispatcher on initialization which will be used to
 // serialize all internal GATT tasks.
 //
 // All public functions are asynchronous and thread-safe.
 class GATT : public fbl::RefCounted<GATT> {
  public:
   // Constructs a GATT object.
-  static fbl::RefPtr<GATT> Create(async_t* gatt_dispatcher);
+  static fbl::RefPtr<GATT> Create(async_dispatcher_t* gatt_dispatcher);
 
   // Initialize/ShutDown the GATT profile. It is safe for the caller to drop its
   // reference after ShutDown.
@@ -130,14 +130,14 @@ class GATT : public fbl::RefCounted<GATT> {
   // Register a handler that will be notified when a remote service gets
   // discovered on a connected peer.
   //
-  // |watcher| will be posted on an async dispatcher if one is provided.
+  // |watcher| will be posted on an dispatcher if one is provided.
   // Otherwise, it will run on an internal thread and the client is responsible
   // for synchronization.
   using RemoteServiceWatcher =
       fit::function<void(const std::string& peer_id,
                          fbl::RefPtr<RemoteService> service)>;
   virtual void RegisterRemoteServiceWatcher(RemoteServiceWatcher watcher,
-                                            async_t* dispatcher = nullptr) = 0;
+                                            async_dispatcher_t* dispatcher = nullptr) = 0;
 
   // Returns the list of remote services that were found on the device with
   // |peer_id|. |callback| will run on the GATT loop.

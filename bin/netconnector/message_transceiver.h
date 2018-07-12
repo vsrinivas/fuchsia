@@ -169,7 +169,7 @@ class MessageTransceiver {
   std::string ParsePayloadString();
 
   fxl::UniqueFD socket_fd_;
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
   zx::channel channel_;
   MessageRelay message_relay_;
 

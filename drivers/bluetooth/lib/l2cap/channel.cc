@@ -29,7 +29,7 @@ Channel::Channel(ChannelId id, hci::Connection::LinkType link_type,
 
 namespace internal {
 
-void RunTask(async_t* dispatcher, fit::closure task) {
+void RunTask(async_dispatcher_t* dispatcher, fit::closure task) {
   if (dispatcher) {
     async::PostTask(dispatcher, std::move(task));
     return;
@@ -49,7 +49,7 @@ ChannelImpl::ChannelImpl(ChannelId id, fxl::WeakPtr<internal::LogicalLink> link,
 
 bool ChannelImpl::Activate(RxCallback rx_callback,
                            ClosedCallback closed_callback,
-                           async_t* dispatcher) {
+                           async_dispatcher_t* dispatcher) {
   FXL_DCHECK(rx_callback);
   FXL_DCHECK(closed_callback);
 
@@ -159,7 +159,7 @@ bool ChannelImpl::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
 }
 
 void ChannelImpl::OnLinkClosed() {
-  async_t* dispatcher;
+  async_dispatcher_t* dispatcher;
   fit::closure task;
 
   {
@@ -181,7 +181,7 @@ void ChannelImpl::OnLinkClosed() {
 }
 
 void ChannelImpl::HandleRxPdu(PDU&& pdu) {
-  async_t* dispatcher;
+  async_dispatcher_t* dispatcher;
   fit::closure task;
 
   {

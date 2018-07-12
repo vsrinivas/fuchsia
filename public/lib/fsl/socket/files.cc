@@ -23,14 +23,14 @@ namespace {
 class CopyToFileHandler {
  public:
   CopyToFileHandler(zx::socket source, fxl::UniqueFD destination,
-                    async_t* async,
+                    async_dispatcher_t* dispatcher,
                     const std::function<void(bool, fxl::UniqueFD)>& callback);
 
  private:
   ~CopyToFileHandler();
 
   void SendCallback(bool value);
-  void OnHandleReady(async_t* async, async::WaitBase* wait, zx_status_t status,
+  void OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                      const zx_packet_signal_t* signal);
 
   zx::socket source_;
@@ -42,13 +42,13 @@ class CopyToFileHandler {
 };
 
 CopyToFileHandler::CopyToFileHandler(
-    zx::socket source, fxl::UniqueFD destination, async_t* async,
+    zx::socket source, fxl::UniqueFD destination, async_dispatcher_t* dispatcher,
     const std::function<void(bool, fxl::UniqueFD)>& callback)
     : source_(std::move(source)),
       destination_(std::move(destination)),
       callback_(callback),
       wait_(this, source_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED) {
-  zx_status_t status = wait_.Begin(async);
+  zx_status_t status = wait_.Begin(dispatcher);
   FXL_CHECK(status == ZX_OK);
 }
 
@@ -61,7 +61,7 @@ void CopyToFileHandler::SendCallback(bool value) {
   callback(value, std::move(destination));
 }
 
-void CopyToFileHandler::OnHandleReady(async_t* async, async::WaitBase* wait,
+void CopyToFileHandler::OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                       zx_status_t status,
                                       const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
@@ -91,7 +91,7 @@ void CopyToFileHandler::OnHandleReady(async_t* async, async::WaitBase* wait,
     }
   }
 
-  status = wait->Begin(async);
+  status = wait->Begin(dispatcher);
   if (status != ZX_OK) {
     SendCallback(false);
   }
@@ -102,14 +102,14 @@ void CopyToFileHandler::OnHandleReady(async_t* async, async::WaitBase* wait,
 class CopyFromFileHandler {
  public:
   CopyFromFileHandler(fxl::UniqueFD source, zx::socket destination,
-                      async_t* async,
+                      async_dispatcher_t* dispatcher,
                       const std::function<void(bool, fxl::UniqueFD)>& callback);
 
  private:
   ~CopyFromFileHandler();
 
   void SendCallback(bool value);
-  void OnHandleReady(async_t* async, async::WaitBase* wait, zx_status_t status,
+  void OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                      const zx_packet_signal_t* signal);
 
   fxl::UniqueFD source_;
@@ -125,7 +125,7 @@ class CopyFromFileHandler {
 };
 
 CopyFromFileHandler::CopyFromFileHandler(
-    fxl::UniqueFD source, zx::socket destination, async_t* async,
+    fxl::UniqueFD source, zx::socket destination, async_dispatcher_t* dispatcher,
     const std::function<void(bool, fxl::UniqueFD)>& callback)
     : source_(std::move(source)),
       destination_(std::move(destination)),
@@ -133,7 +133,7 @@ CopyFromFileHandler::CopyFromFileHandler(
             ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED),
       callback_(callback),
       buffer_(64 * 1024) {
-  zx_status_t status = wait_.Begin(async);
+  zx_status_t status = wait_.Begin(dispatcher);
   FXL_CHECK(status == ZX_OK);
 }
 
@@ -146,7 +146,7 @@ void CopyFromFileHandler::SendCallback(bool value) {
   callback(value, std::move(source));
 }
 
-void CopyFromFileHandler::OnHandleReady(async_t* async, async::WaitBase* wait,
+void CopyFromFileHandler::OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                         zx_status_t status,
                                         const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
@@ -182,7 +182,7 @@ void CopyFromFileHandler::OnHandleReady(async_t* async, async::WaitBase* wait,
     buffer_offset_ += bytes_written;
   }
 
-  status = wait->Begin(async);
+  status = wait->Begin(dispatcher);
   if (status != ZX_OK) {
     SendCallback(false);
   }
@@ -191,16 +191,16 @@ void CopyFromFileHandler::OnHandleReady(async_t* async, async::WaitBase* wait,
 }  // namespace
 
 void CopyToFileDescriptor(
-    zx::socket source, fxl::UniqueFD destination, async_t* async,
+    zx::socket source, fxl::UniqueFD destination, async_dispatcher_t* dispatcher,
     const std::function<void(bool, fxl::UniqueFD)>& callback) {
-  new CopyToFileHandler(std::move(source), std::move(destination), async,
+  new CopyToFileHandler(std::move(source), std::move(destination), dispatcher,
                         callback);
 }
 
 void CopyFromFileDescriptor(
-    fxl::UniqueFD source, zx::socket destination, async_t* async,
+    fxl::UniqueFD source, zx::socket destination, async_dispatcher_t* dispatcher,
     const std::function<void(bool, fxl::UniqueFD)>& callback) {
-  new CopyFromFileHandler(std::move(source), std::move(destination), async,
+  new CopyFromFileHandler(std::move(source), std::move(destination), dispatcher,
                           callback);
 }
 

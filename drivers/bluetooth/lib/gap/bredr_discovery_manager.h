@@ -173,7 +173,7 @@ class BrEdrDiscoveryManager final {
   fxl::RefPtr<hci::Transport> hci_;
 
   // The dispatcher that we use for invoking callbacks asynchronously.
-  async_t* dispatcher_;
+  async_dispatcher_t* dispatcher_;
 
   // Device cache to use.
   // We hold a raw pointer is because it must out-live us.

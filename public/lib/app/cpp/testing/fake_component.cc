@@ -9,7 +9,7 @@ namespace sys {
 namespace testing {
 
 FakeComponent::FakeComponent()
-    : directory_vfs_(async_get_default()),
+    : directory_vfs_(async_get_default_dispatcher()),
       directory_(fbl::AdoptRef(new fs::PseudoDir())) {}
 
 FakeComponent::~FakeComponent() = default;

@@ -30,7 +30,7 @@ class LESignalingChannel final : public SignalingChannel {
   //
   // This task will be posted onto the given |dispatcher|.
   void set_conn_param_update_callback(
-      ConnectionParameterUpdateCallback callback, async_t* dispatcher) {
+      ConnectionParameterUpdateCallback callback, async_dispatcher_t* dispatcher) {
     FXL_DCHECK(IsCreationThreadCurrent());
     FXL_DCHECK(static_cast<bool>(callback) == static_cast<bool>(dispatcher));
     conn_param_update_cb_ = std::move(callback);
@@ -46,7 +46,7 @@ class LESignalingChannel final : public SignalingChannel {
   bool HandlePacket(const SignalingPacket& packet) override;
 
   ConnectionParameterUpdateCallback conn_param_update_cb_;
-  async_t* dispatcher_;
+  async_dispatcher_t* dispatcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LESignalingChannel);
 };

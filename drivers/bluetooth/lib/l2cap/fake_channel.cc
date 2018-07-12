@@ -33,7 +33,7 @@ void FakeChannel::Receive(const common::ByteBuffer& data) {
 }
 
 void FakeChannel::SetSendCallback(SendCallback callback,
-                                  async_t* dispatcher) {
+                                  async_dispatcher_t* dispatcher) {
   FXL_DCHECK(static_cast<bool>(callback) == static_cast<bool>(dispatcher));
 
   send_cb_ = std::move(callback);
@@ -41,7 +41,7 @@ void FakeChannel::SetSendCallback(SendCallback callback,
 }
 
 void FakeChannel::SetLinkErrorCallback(L2CAP::LinkErrorCallback callback,
-                                       async_t* dispatcher) {
+                                       async_dispatcher_t* dispatcher) {
   FXL_DCHECK(static_cast<bool>(callback) == static_cast<bool>(dispatcher));
 
   link_err_cb_ = std::move(callback);
@@ -55,7 +55,7 @@ void FakeChannel::Close() {
 
 bool FakeChannel::Activate(RxCallback rx_callback,
                            ClosedCallback closed_callback,
-                           async_t* dispatcher) {
+                           async_dispatcher_t* dispatcher) {
   FXL_DCHECK(rx_callback);
   FXL_DCHECK(closed_callback);
   FXL_DCHECK(dispatcher);

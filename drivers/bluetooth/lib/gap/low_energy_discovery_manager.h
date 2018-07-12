@@ -219,7 +219,7 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
   void StartScan();
 
   // The dispatcher that we use for invoking callbacks asynchronously.
-  async_t* dispatcher_;
+  async_dispatcher_t* dispatcher_;
 
   // The device cache that we use for storing and looking up scan results. We
   // hold a raw pointer as we expect this to out-live us.

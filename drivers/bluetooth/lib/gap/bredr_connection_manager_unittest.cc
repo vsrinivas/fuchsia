@@ -358,7 +358,7 @@ const auto kDisconnectionComplete = common::CreateStaticByteBuffer(
 TEST_F(GAP_BrEdrConnectionManagerTest, IncommingConnection) {
   size_t transactions = 0;
   test_device()->SetTransactionCallback([&transactions]() { transactions++; },
-                                        async_get_default());
+                                        async_get_default_dispatcher());
 
   test_device()->QueueCommandTransaction(
       CommandTransaction(kAcceptConnectionRequest,
@@ -418,7 +418,7 @@ const auto kReadRemoteSupportedFeaturesCompleteFailed =
 TEST_F(GAP_BrEdrConnectionManagerTest, IncommingConnectionFailedInterrogation) {
   size_t transactions = 0;
   test_device()->SetTransactionCallback([&transactions]() { transactions++; },
-                                        async_get_default());
+                                        async_get_default_dispatcher());
 
   test_device()->QueueCommandTransaction(
       CommandTransaction(kAcceptConnectionRequest,

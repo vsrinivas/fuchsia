@@ -28,7 +28,7 @@ LowEnergyConnector::PendingRequest::PendingRequest(
 
 LowEnergyConnector::LowEnergyConnector(fxl::RefPtr<Transport> hci,
                                        const DeviceAddress& local_address,
-                                       async_t* dispatcher,
+                                       async_dispatcher_t* dispatcher,
                                        IncomingConnectionDelegate delegate)
     : dispatcher_(dispatcher),
       hci_(hci),
@@ -117,7 +117,7 @@ bool LowEnergyConnector::CreateConnection(
     // timeout period. NOTE: The request will complete when the controller
     // asynchronously notifies us of with a LE Connection Complete event.
     self->request_timeout_task_.Cancel();
-    self->request_timeout_task_.PostDelayed(async_get_default(),
+    self->request_timeout_task_.PostDelayed(async_get_default_dispatcher(),
                                             zx::msec(timeout_ms));
   };
 

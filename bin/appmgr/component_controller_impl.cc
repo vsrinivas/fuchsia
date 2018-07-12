@@ -88,7 +88,7 @@ ComponentControllerImpl::ComponentControllerImpl(
       process_(std::move(process)),
       koid_(std::to_string(fsl::GetKoid(process_.get()))),
       wait_(this, process_.get(), ZX_TASK_TERMINATED) {
-  zx_status_t status = wait_.Begin(async_get_default());
+  zx_status_t status = wait_.Begin(async_get_default_dispatcher());
   FXL_DCHECK(status == ZX_OK);
 
   hub()->SetJobId(std::to_string(fsl::GetKoid(job_.get())));
@@ -146,7 +146,7 @@ zx_status_t ComponentControllerImpl::RemoveSubComponentHub(
 }
 
 // Called when process terminates, regardless of if Kill() was invoked.
-void ComponentControllerImpl::Handler(async_t* async, async::WaitBase* wait,
+void ComponentControllerImpl::Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                       zx_status_t status,
                                       const zx_packet_signal* signal) {
   FXL_DCHECK(status == ZX_OK);

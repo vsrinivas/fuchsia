@@ -104,7 +104,7 @@ class FrameScheduler {
   friend class FrameTimings;
   void OnFramePresented(FrameTimings* timings);
 
-  async_t* const dispatcher_;
+  async_dispatcher_t* const dispatcher_;
   FrameSchedulerDelegate* delegate_;
   Display* const display_;
 

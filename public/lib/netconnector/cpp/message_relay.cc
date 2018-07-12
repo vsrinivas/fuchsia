@@ -30,10 +30,10 @@ void MessageRelayBase::SetChannel(zx::channel channel) {
   // We defer handling channel messages so that the caller doesn't get callbacks
   // during SetChannel.
 
-  read_wait_.Begin(async_get_default());
+  read_wait_.Begin(async_get_default_dispatcher());
 
   if (!messages_to_write_.empty()) {
-    write_wait_.Begin(async_get_default());
+    write_wait_.Begin(async_get_default_dispatcher());
   }
 }
 
@@ -41,7 +41,7 @@ void MessageRelayBase::SendMessage(std::vector<uint8_t> message) {
   messages_to_write_.push(std::move(message));
 
   if (channel_ && !write_wait_.is_pending()) {
-    WriteChannelMessages(async_get_default(), &write_wait_, ZX_OK, nullptr);
+    WriteChannelMessages(async_get_default_dispatcher(), &write_wait_, ZX_OK, nullptr);
   }
 }
 
@@ -52,7 +52,7 @@ void MessageRelayBase::CloseChannel() {
   OnChannelClosed();
 }
 
-void MessageRelayBase::ReadChannelMessages(async_t* async,
+void MessageRelayBase::ReadChannelMessages(async_dispatcher_t* dispatcher,
                                            async::WaitBase* wait,
                                            zx_status_t status,
                                            const zx_packet_signal_t* signal) {
@@ -63,7 +63,7 @@ void MessageRelayBase::ReadChannelMessages(async_t* async,
                                        nullptr, 0, &actual_handle_count);
 
     if (status == ZX_ERR_SHOULD_WAIT) {
-      status = wait->Begin(async);
+      status = wait->Begin(dispatcher);
       if (status != ZX_OK) {
         FXL_LOG(ERROR) << "Failed to wait on read channel, status " << status;
         CloseChannel();
@@ -110,7 +110,7 @@ void MessageRelayBase::ReadChannelMessages(async_t* async,
   }
 }
 
-void MessageRelayBase::WriteChannelMessages(async_t* async,
+void MessageRelayBase::WriteChannelMessages(async_dispatcher_t* dispatcher,
                                             async::WaitBase* wait,
                                             zx_status_t status,
                                             const zx_packet_signal_t* signal) {
@@ -125,7 +125,7 @@ void MessageRelayBase::WriteChannelMessages(async_t* async,
         channel_.write(0, message.data(), message.size(), nullptr, 0);
 
     if (status == ZX_ERR_SHOULD_WAIT) {
-      status = wait->Begin(async);
+      status = wait->Begin(dispatcher);
       if (status != ZX_OK) {
         FXL_LOG(ERROR) << "Failed to wait on write channel, status " << status;
         CloseChannel();

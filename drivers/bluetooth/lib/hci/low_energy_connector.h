@@ -55,7 +55,7 @@ class LowEnergyConnector {
       fit::function<void(ConnectionPtr connection)>;
   LowEnergyConnector(fxl::RefPtr<Transport> hci,
                      const common::DeviceAddress& local_address,
-                     async_t* dispatcher, IncomingConnectionDelegate delegate);
+                     async_dispatcher_t* dispatcher, IncomingConnectionDelegate delegate);
 
   // Deleting an instance cancels any pending connection request.
   ~LowEnergyConnector();
@@ -123,7 +123,7 @@ class LowEnergyConnector {
   void OnCreateConnectionTimeout();
 
   // Task runner for all asynchronous tasks.
-  async_t* dispatcher_;
+  async_dispatcher_t* dispatcher_;
 
   // The HCI transport.
   fxl::RefPtr<Transport> hci_;

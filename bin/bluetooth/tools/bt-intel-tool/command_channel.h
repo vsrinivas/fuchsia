@@ -46,16 +46,16 @@ class CommandChannel {
 
  private:
   // Common read handler implemntation
-  void HandleChannelReady(const zx::channel& channel, async_t* async,
+  void HandleChannelReady(const zx::channel& channel, async_dispatcher_t* dispatcher,
                           async::WaitBase* wait, zx_status_t status,
                           const zx_packet_signal_t* signal);
 
   // Read ready handler for |cmd_channel_|
-  void OnCmdChannelReady(async_t* async, async::WaitBase* wait,
+  void OnCmdChannelReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                          zx_status_t status, const zx_packet_signal_t* signal);
 
   // Read ready handler for |acl_channel_|
-  void OnAclChannelReady(async_t* async, async::WaitBase* wait,
+  void OnAclChannelReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                          zx_status_t status, const zx_packet_signal_t* signal);
 
   bool valid_;

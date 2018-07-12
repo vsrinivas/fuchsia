@@ -22,7 +22,7 @@ namespace wlantap = ::fuchsia::wlan::tap;
 
 class WlantapDriver {
 public:
-    zx_status_t GetOrStartLoop(async_t** out) {
+    zx_status_t GetOrStartLoop(async_dispatcher_t** out) {
         std::lock_guard<std::mutex> guard(mutex_);
         if (!loop_) {
             auto l = std::make_unique<async::Loop>();
@@ -32,7 +32,7 @@ public:
             }
             loop_ = std::move(l);
         }
-        *out = loop_->async();
+        *out = loop_->dispatcher();
         return ZX_OK;
     }
 
@@ -90,7 +90,7 @@ struct WlantapCtl {
             return status;
         }
 
-        async_t* loop;
+        async_dispatcher_t* loop;
         status = driver_->GetOrStartLoop(&loop);
         if (status != ZX_OK) {
             zxlogf(ERROR, "could not start wlantap event loop: %d", status);

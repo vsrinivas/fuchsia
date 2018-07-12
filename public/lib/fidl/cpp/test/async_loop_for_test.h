@@ -10,7 +10,7 @@
 #include <memory>
 
 // Implement this class in order to run the fidl bindings unit tests on top of
-// your choice of async dispatcher.
+// your choice of dispatcher.
 namespace fidl {
 namespace test {
 
@@ -18,7 +18,7 @@ class AsyncLoopForTestImpl;
 
 class AsyncLoopForTest {
  public:
-  // The AsyncLoopForTest constructor should also call async_set_default() with
+  // The AsyncLoopForTest constructor should also call async_set_default_dispatcher() with
   // the chosen dispatcher implementation.
   AsyncLoopForTest();
   ~AsyncLoopForTest();
@@ -30,7 +30,7 @@ class AsyncLoopForTest {
   zx_status_t Run();
 
   // Returns the underlying async_t.
-  async_t* async();
+  async_dispatcher_t* dispatcher();
 
  private:
   std::unique_ptr<AsyncLoopForTestImpl> impl_;

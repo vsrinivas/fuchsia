@@ -140,7 +140,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
   std::vector<std::unique_ptr<DemuxStream>> streams_;
   Incident init_complete_;
   Result result_;
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
 
   // After Init, only the ffmpeg thread accesses these.
   AvFormatContextPtr format_context_;
@@ -157,8 +157,8 @@ std::shared_ptr<Demux> FfmpegDemux::Create(std::shared_ptr<Reader> reader) {
 }
 
 FfmpegDemuxImpl::FfmpegDemuxImpl(std::shared_ptr<Reader> reader)
-    : reader_(reader), async_(async_get_default()) {
-  FXL_DCHECK(async_);
+    : reader_(reader), dispatcher_(async_get_default_dispatcher()) {
+  FXL_DCHECK(dispatcher_);
   ffmpeg_thread_ = std::thread([this]() { Worker(); });
 }
 
@@ -288,7 +288,7 @@ void FfmpegDemuxImpl::Worker() {
   result_ = Result::kOk;
   init_complete_.Occur();
 
-  async::PostTask(async_, [this]() { SendStatus(); });
+  async::PostTask(dispatcher_, [this]() { SendStatus(); });
 
   while (true) {
     bool packet_requested;
@@ -312,7 +312,7 @@ void FfmpegDemuxImpl::Worker() {
       }
 
       next_stream_to_end_ = -1;
-      async::PostTask(async_, std::move(seek_callback));
+      async::PostTask(dispatcher_, std::move(seek_callback));
     }
 
     if (packet_requested) {
@@ -438,7 +438,7 @@ void FfmpegDemuxImpl::ReportProblem(const std::string& type,
     problem_details_ = details;
   }
 
-  async::PostTask(async_, [this]() { SendStatus(); });
+  async::PostTask(dispatcher_, [this]() { SendStatus(); });
 }
 
 FfmpegDemuxImpl::FfmpegDemuxStream::FfmpegDemuxStream(

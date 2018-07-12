@@ -45,7 +45,7 @@ LegacyLowEnergyScanner::PendingScanResult::PendingScanResult(
 LegacyLowEnergyScanner::LegacyLowEnergyScanner(
     Delegate* delegate,
     fxl::RefPtr<Transport> hci,
-    async_t* dispatcher)
+    async_dispatcher_t* dispatcher)
     : LowEnergyScanner(delegate, hci, dispatcher), active_scanning_(false) {
   event_handler_id_ = transport()->command_channel()->AddLEMetaEventHandler(
       kLEAdvertisingReportSubeventCode,

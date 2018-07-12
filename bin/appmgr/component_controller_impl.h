@@ -88,7 +88,7 @@ class ComponentControllerImpl : public ComponentControllerBase {
   void Wait(WaitCallback callback) override;
 
  private:
-  void Handler(async_t* async, async::WaitBase* wait, zx_status_t status,
+  void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                const zx_packet_signal* signal);
 
   bool SendReturnCodeIfTerminated();

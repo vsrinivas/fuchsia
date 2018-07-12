@@ -9,7 +9,7 @@ namespace btlib {
 namespace common {
 
 // Runs |task|. Posts it on |dispatcher| if dispatcher is not null.
-void RunOrPost(fit::closure task, async_t* dispatcher);
+void RunOrPost(fit::closure task, async_dispatcher_t* dispatcher);
 
 }  // namespace common
 }  // namespace btlib

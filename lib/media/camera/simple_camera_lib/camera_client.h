@@ -106,14 +106,14 @@ class CameraClient : public CameraInterfaceBase {
   zx_status_t OnFrameNotify(camera::camera_proto::VideoBufFrameNotify resp);
 
   // Called when a new message is received on the Command channel:
-  void OnNewCmdMessage(async_t* async,
+  void OnNewCmdMessage(async_dispatcher_t* dispatcher,
                        async::WaitBase* wait,
                        zx_status_t status,
                        const zx_packet_signal* signal);
   zx_status_t ProcessCmdChannel();
 
   // Called when a new message is received on the Streaming channel:
-  void OnNewBufferMessage(async_t* async,
+  void OnNewBufferMessage(async_dispatcher_t* dispatcher,
                           async::WaitBase* wait,
                           zx_status_t status,
                           const zx_packet_signal* signal);

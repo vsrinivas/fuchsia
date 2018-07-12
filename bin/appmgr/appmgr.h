@@ -26,7 +26,7 @@ struct AppmgrArgs {
 
 class Appmgr {
  public:
-  Appmgr(async_t* async, AppmgrArgs args);
+  Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args);
   ~Appmgr();
 
  private:

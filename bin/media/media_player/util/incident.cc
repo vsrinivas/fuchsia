@@ -6,7 +6,7 @@
 
 #include "garnet/bin/media/media_player/util/incident.h"
 
-Incident::Incident(async_t* async) : async_(async) {}
+Incident::Incident(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
 Incident::~Incident() {}
 
@@ -27,12 +27,12 @@ void Incident::Occur() {
 }
 
 void Incident::InvokeConsequence(fit::closure consequence) {
-  if (!async_) {
+  if (!dispatcher_) {
     consequence();
     return;
   }
 
-  async::PostTask(async_, std::move(consequence));
+  async::PostTask(dispatcher_, std::move(consequence));
 }
 
 ThreadsafeIncident::ThreadsafeIncident() {}

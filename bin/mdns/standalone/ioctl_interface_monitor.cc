@@ -30,7 +30,7 @@ std::unique_ptr<InterfaceMonitor> IoctlInterfaceMonitor::Create() {
 IoctlInterfaceMonitor::IoctlInterfaceMonitor()
     : poll_closure_([this]() { Poll(); }) {
   CheckInterfaces();
-  async::PostDelayedTask(async_get_default(), poll_closure_.callback(),
+  async::PostDelayedTask(async_get_default_dispatcher(), poll_closure_.callback(),
                          kPollInterval);
 }
 
@@ -50,7 +50,7 @@ void IoctlInterfaceMonitor::Poll() {
     link_change_callback_();
   }
 
-  async::PostDelayedTask(async_get_default(), poll_closure_.callback(),
+  async::PostDelayedTask(async_get_default_dispatcher(), poll_closure_.callback(),
                          kPollInterval);
 }
 

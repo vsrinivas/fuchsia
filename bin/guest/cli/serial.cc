@@ -22,7 +22,7 @@
 // virtio-console).
 class InputReader {
  public:
-  InputReader() : async_(async_get_default()) {}
+  InputReader() : dispatcher_(async_get_default_dispatcher()) {}
 
   void Start(zx_handle_t socket) {
     socket_ = socket;
@@ -54,16 +54,16 @@ class InputReader {
     SendKeyToGuest();
   }
 
-  void SendKeyToGuest() { OnSocketReady(async_, &wait_, ZX_OK, nullptr); }
+  void SendKeyToGuest() { OnSocketReady(dispatcher_, &wait_, ZX_OK, nullptr); }
 
-  void OnSocketReady(async_t* async, async::WaitBase* wait, zx_status_t status,
+  void OnSocketReady(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                      const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
       return;
     }
     status = zx_socket_write(socket_, 0, &pending_key_, 1, nullptr);
     if (status == ZX_ERR_SHOULD_WAIT) {
-      wait->Begin(async);  // ignore errors
+      wait->Begin(dispatcher);  // ignore errors
       return;
     }
     if (status != ZX_OK) {
@@ -77,7 +77,7 @@ class InputReader {
   zx_handle_t socket_ = ZX_HANDLE_INVALID;
   fsl::FDWaiter fd_waiter_;
   char pending_key_;
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
   async::WaitMethod<InputReader, &InputReader::OnSocketReady> wait_{this};
 };
 

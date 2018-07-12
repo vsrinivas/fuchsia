@@ -10,7 +10,7 @@ namespace scenic {
 namespace gfx {
 
 EventTimestamper::EventTimestamper()
-    : main_dispatcher_(async_get_default()),
+    : main_dispatcher_(async_get_default_dispatcher()),
       task_([] { zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */); }) {
   FXL_DCHECK(main_dispatcher_);
   background_loop_.StartThread();
@@ -26,7 +26,7 @@ EventTimestamper::~EventTimestamper() {
 }
 
 void EventTimestamper::IncreaseBackgroundThreadPriority() {
-  task_.Post(background_loop_.async());
+  task_.Post(background_loop_.dispatcher());
 }
 
 EventTimestamper::Watch::Watch() : waiter_(nullptr), timestamper_(nullptr) {}
@@ -92,7 +92,7 @@ void EventTimestamper::Watch::Start() {
   FXL_DCHECK(waiter_->state() == Waiter::State::STOPPED)
       << "illegal to call Start() again before callback has been received.";
   waiter_->set_state(Waiter::State::STARTED);
-  waiter_->wait().Begin(timestamper_->background_loop_.async());
+  waiter_->wait().Begin(timestamper_->background_loop_.dispatcher());
 }
 
 // Return the watched event (or a null handle, if this Watch was moved).
@@ -101,7 +101,7 @@ const zx::event& EventTimestamper::Watch::event() const {
   return waiter_ ? waiter_->event() : null_handle;
 }
 
-EventTimestamper::Waiter::Waiter(async_t* dispatcher, zx::event event,
+EventTimestamper::Waiter::Waiter(async_dispatcher_t* dispatcher, zx::event event,
                                  zx_status_t trigger, Callback callback)
     : dispatcher_(dispatcher),
       event_(std::move(event)),
@@ -112,7 +112,7 @@ EventTimestamper::Waiter::~Waiter() {
   FXL_DCHECK(state_ == State::STOPPED || state_ == State::ABANDONED);
 }
 
-void EventTimestamper::Waiter::Handle(async_t* async, async::WaitBase* wait,
+void EventTimestamper::Waiter::Handle(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                       zx_status_t status,
                                       const zx_packet_signal_t* signal) {
   zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);

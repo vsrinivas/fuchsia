@@ -18,7 +18,7 @@ namespace component {
 
 Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
                      fuchsia::sys::ServiceListPtr service_list)
-    : vfs_(async_get_default()),
+    : vfs_(async_get_default_dispatcher()),
       services_(fbl::AdoptRef(new ServiceProviderDirImpl())),
       parent_(parent),
       realm_(realm) {

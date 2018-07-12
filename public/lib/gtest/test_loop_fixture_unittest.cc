@@ -13,7 +13,7 @@ namespace {
 using TestLoopFixtureTest = TestLoopFixture;
 
 TEST_F(TestLoopFixtureTest, DefaultDispatcherIsSet) {
-  EXPECT_EQ(async_get_default(), dispatcher());
+  EXPECT_EQ(async_get_default_dispatcher(), dispatcher());
 }
 
 TEST_F(TestLoopFixtureTest, TimeIsAdvanced) {

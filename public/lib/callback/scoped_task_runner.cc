@@ -12,22 +12,22 @@
 
 namespace callback {
 
-ScopedTaskRunner::ScopedTaskRunner(async_t* async)
-    : async_(async), weak_factory_(this) {}
+ScopedTaskRunner::ScopedTaskRunner(async_dispatcher_t* dispatcher)
+    : dispatcher_(dispatcher), weak_factory_(this) {}
 
 ScopedTaskRunner::~ScopedTaskRunner() {}
 
 void ScopedTaskRunner::PostTask(fit::closure task) {
-  async::PostTask(async_, MakeScoped(std::move(task)));
+  async::PostTask(dispatcher_, MakeScoped(std::move(task)));
 }
 
 void ScopedTaskRunner::PostTaskForTime(fit::closure task,
                                        zx::time target_time) {
-  async::PostTaskForTime(async_, MakeScoped(std::move(task)), target_time);
+  async::PostTaskForTime(dispatcher_, MakeScoped(std::move(task)), target_time);
 }
 
 void ScopedTaskRunner::PostDelayedTask(fit::closure task, zx::duration delay) {
-  async::PostDelayedTask(async_, MakeScoped(std::move(task)), delay);
+  async::PostDelayedTask(dispatcher_, MakeScoped(std::move(task)), delay);
 }
 
 }  // namespace callback

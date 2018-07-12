@@ -28,7 +28,7 @@ namespace gap {
 Adapter::Adapter(fxl::RefPtr<hci::Transport> hci,
                  fbl::RefPtr<l2cap::L2CAP> l2cap, fbl::RefPtr<gatt::GATT> gatt)
     : identifier_(fxl::GenerateUUID()),
-      dispatcher_(async_get_default()),
+      dispatcher_(async_get_default_dispatcher()),
       hci_(hci),
       init_state_(State::kNotInitialized),
       max_lmp_feature_page_index_(0),

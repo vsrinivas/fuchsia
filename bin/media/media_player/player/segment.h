@@ -19,9 +19,9 @@ namespace media_player {
 // A graph segment.
 //
 // A graph segment is initially unprovisioned, meaning that the |graph| and
-// |async| methods may not be called, and |provisioned| returns false.
+// |dispatcher| methods may not be called, and |provisioned| returns false.
 // When it's provisioned, the |DidProvision| method is called, at which time
-// the |graph| and |async| methods are valid to call, and |provisioned|
+// the |graph| and |dispatcher| methods are valid to call, and |provisioned|
 // returns true. Before the segment is deprovisioned, the |WillDeprovision|
 // method is called.
 class Segment {
@@ -35,7 +35,7 @@ class Segment {
   // changes. The update callback is used to notify of changes to the value
   // returned by problem(). Subclasses of Segment may use this callback to
   // signal additional changes.
-  void Provision(Graph* graph, async_t* async, fit::closure update_callback);
+  void Provision(Graph* graph, async_dispatcher_t* dispatcher, fit::closure update_callback);
 
   // Revokes the graph, task runner and update callback provided in a previous
   // call to |Provision|.
@@ -53,9 +53,9 @@ class Segment {
     return *graph_;
   }
 
-  async_t* async() {
-    FXL_DCHECK(async_) << "async() called on unprovisioned segment.";
-    return async_;
+  async_dispatcher_t* dispatcher() {
+    FXL_DCHECK(dispatcher_) << "dispatcher() called on unprovisioned segment.";
+    return dispatcher_;
   }
 
   // Notifies the player of state updates (calls the update callback).
@@ -80,7 +80,7 @@ class Segment {
 
  private:
   Graph* graph_ = nullptr;
-  async_t* async_ = nullptr;
+  async_dispatcher_t* dispatcher_ = nullptr;
   fit::closure update_callback_;
   fuchsia::mediaplayer::ProblemPtr problem_;
 };

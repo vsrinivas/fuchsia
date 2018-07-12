@@ -45,7 +45,7 @@ void InputReader::SetOwnershipEvent(zx::event event) {
                          fuchsia::ui::scenic::displayNotOwnedSignal;
   display_ownership_waiter_.set_object(display_ownership_event_);
   display_ownership_waiter_.set_trigger(signals);
-  zx_status_t status = display_ownership_waiter_.Begin(async_get_default());
+  zx_status_t status = display_ownership_waiter_.Begin(async_get_default_dispatcher());
   FXL_CHECK(status == ZX_OK);
 }
 
@@ -66,14 +66,14 @@ void InputReader::DeviceAdded(std::unique_ptr<InputInterpreter> interpreter) {
       async::WaitMethod<InputReader, &InputReader::OnDeviceHandleReady>>(
       this, handle, ZX_USER_SIGNAL_0);
 
-  zx_status_t status = wait->Begin(async_get_default());
+  zx_status_t status = wait->Begin(async_get_default_dispatcher());
   FXL_CHECK(status == ZX_OK);
 
   devices_.emplace(handle,
                    new DeviceInfo{std::move(interpreter), std::move(wait)});
 }
 
-void InputReader::OnDeviceHandleReady(async_t* async, async::WaitBase* wait,
+void InputReader::OnDeviceHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                       zx_status_t status,
                                       const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
@@ -103,14 +103,14 @@ void InputReader::OnDeviceHandleReady(async_t* async, async::WaitBase* wait,
     return;
   }
 
-  status = wait->Begin(async);
+  status = wait->Begin(dispatcher);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "InputReader::OnDeviceHandleReady wait failed: "
                    << status;
   }
 }
 
-void InputReader::OnDisplayHandleReady(async_t* async, async::WaitBase* wait,
+void InputReader::OnDisplayHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                        zx_status_t status,
                                        const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
@@ -125,13 +125,13 @@ void InputReader::OnDisplayHandleReady(async_t* async, async::WaitBase* wait,
     display_owned_ = false;
     display_ownership_waiter_.set_trigger(
         fuchsia::ui::scenic::displayOwnedSignal);
-    auto waiter_status = display_ownership_waiter_.Begin(async);
+    auto waiter_status = display_ownership_waiter_.Begin(dispatcher);
     FXL_CHECK(waiter_status == ZX_OK);
   } else if (pending & fuchsia::ui::scenic::displayOwnedSignal) {
     display_owned_ = true;
     display_ownership_waiter_.set_trigger(
         fuchsia::ui::scenic::displayNotOwnedSignal);
-    auto waiter_status = display_ownership_waiter_.Begin(async);
+    auto waiter_status = display_ownership_waiter_.Begin(dispatcher);
     FXL_CHECK(waiter_status == ZX_OK);
   }
 }

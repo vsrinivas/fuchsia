@@ -18,7 +18,7 @@ namespace media_player {
 namespace test {
 
 FakeAudioRenderer::FakeAudioRenderer()
-    : async_(async_get_default()), binding_(this) {}
+    : dispatcher_(async_get_default_dispatcher()), binding_(this) {}
 
 FakeAudioRenderer::~FakeAudioRenderer() {}
 
@@ -183,7 +183,7 @@ void FakeAudioRenderer::MaybeScheduleRetirement() {
       to_ns(packet_queue_.front().first.timestamp));
 
   async::PostTaskForTime(
-      async_,
+      dispatcher_,
       [this]() {
         if (!progressing() || packet_queue_.empty()) {
           return;

@@ -75,7 +75,7 @@ class Channel : public fbl::RefCounted<Channel> {
   // underlying link can be removed at any time.
   virtual bool Activate(RxCallback rx_callback,
                         ClosedCallback closed_callback,
-                        async_t* dispatcher) = 0;
+                        async_dispatcher_t* dispatcher) = 0;
 
   // Deactivates this channel. No more packets can be sent or received after
   // this is called. |rx_callback| may still be called if it has been already
@@ -137,7 +137,7 @@ class ChannelImpl : public Channel {
   // Channel overrides:
   bool Activate(RxCallback rx_callback,
                 ClosedCallback closed_callback,
-                async_t* dispatcher) override;
+                async_dispatcher_t* dispatcher) override;
   void Deactivate() override;
   void SignalLinkError() override;
   bool Send(std::unique_ptr<const common::ByteBuffer> sdu) override;
@@ -165,7 +165,7 @@ class ChannelImpl : public Channel {
   std::mutex mtx_;
 
   bool active_  __TA_GUARDED(mtx_);
-  async_t* dispatcher_ __TA_GUARDED(mtx_);
+  async_dispatcher_t* dispatcher_ __TA_GUARDED(mtx_);
   RxCallback rx_cb_ __TA_GUARDED(mtx_);
   ClosedCallback closed_cb_ __TA_GUARDED(mtx_);
 

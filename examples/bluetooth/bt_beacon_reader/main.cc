@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
 
   bt_beacon_reader::App app(&loop, just_tilts);
 
-  async::PostTask(loop.async(), [&app] { app.StartScanning(); });
+  async::PostTask(loop.dispatcher(), [&app] { app.StartScanning(); });
 
   loop.Run();
 

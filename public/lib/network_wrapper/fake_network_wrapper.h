@@ -15,7 +15,7 @@ namespace network_wrapper {
 
 class FakeNetworkWrapper : public NetworkWrapper {
  public:
-  explicit FakeNetworkWrapper(async_t* async);
+  explicit FakeNetworkWrapper(async_dispatcher_t* dispatcher);
   ~FakeNetworkWrapper() override;
 
   ::fuchsia::net::oldhttp::URLRequest* GetRequest();
@@ -36,7 +36,7 @@ class FakeNetworkWrapper : public NetworkWrapper {
 
   std::unique_ptr<::fuchsia::net::oldhttp::URLRequest> request_received_;
   std::unique_ptr<::fuchsia::net::oldhttp::URLResponse> response_to_return_;
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeNetworkWrapper);
 };

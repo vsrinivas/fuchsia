@@ -40,12 +40,12 @@ class FakeLayer final : public L2CAP {
   void AddACLConnection(hci::ConnectionHandle handle,
                         hci::Connection::Role role,
                         LinkErrorCallback link_error_callback,
-                        async_t* dispatcher) override;
+                        async_dispatcher_t* dispatcher) override;
   void AddLEConnection(hci::ConnectionHandle handle, hci::Connection::Role role,
                        LEConnectionParameterUpdateCallback conn_param_callback,
                        LinkErrorCallback link_error_callback,
                        AddLEConnectionCallback channel_callback,
-                       async_t* dispatcher) override;
+                       async_dispatcher_t* dispatcher) override;
   void RemoveConnection(hci::ConnectionHandle handle) override;
 
  private:
@@ -58,7 +58,7 @@ class FakeLayer final : public L2CAP {
     hci::Connection::Role role;
     hci::Connection::LinkType type;
 
-    async_t* dispatcher;
+    async_dispatcher_t* dispatcher;
 
     // Dual-mode callbacks
     LinkErrorCallback link_error_cb;
@@ -71,7 +71,7 @@ class FakeLayer final : public L2CAP {
                              hci::Connection::Role role,
                              hci::Connection::LinkType link_type,
                              LinkErrorCallback link_error_callback,
-                             async_t* dispatcher);
+                             async_dispatcher_t* dispatcher);
   fbl::RefPtr<Channel> OpenFakeChannel(LinkData* link, ChannelId id);
 
   bool initialized_ = false;

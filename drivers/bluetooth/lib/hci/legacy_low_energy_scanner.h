@@ -31,7 +31,7 @@ class LegacyLowEnergyScanner : public LowEnergyScanner {
  public:
   LegacyLowEnergyScanner(Delegate* delegate,
                          fxl::RefPtr<Transport> hci,
-                         async_t* dispatcher);
+                         async_dispatcher_t* dispatcher);
   ~LegacyLowEnergyScanner() override;
 
   // LowEnergyScanner overrides:

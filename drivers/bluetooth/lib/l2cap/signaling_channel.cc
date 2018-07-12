@@ -39,7 +39,7 @@ SignalingChannel::SignalingChannel(fbl::RefPtr<Channel> chan,
         if (self)
           self->OnChannelClosed();
       },
-      async_get_default());
+      async_get_default_dispatcher());
 }
 
 SignalingChannel::~SignalingChannel() { FXL_DCHECK(IsCreationThreadCurrent()); }

@@ -43,7 +43,7 @@ DemuxSourceSegment::~DemuxSourceSegment() {}
 
 void DemuxSourceSegment::DidProvision() {
   demux_initialized_.When([this]() {
-    async::PostTask(async(), [this]() {
+    async::PostTask(dispatcher(), [this]() {
       if (provisioned()) {
         BuildGraph();
       }

@@ -259,7 +259,7 @@ class InputApp {
 
     zx::duration delta = zx::msec(duration_ms);
     async::PostDelayedTask(
-        async_get_default(),
+        async_get_default_dispatcher(),
         fxl::MakeCopyable([this, device = std::move(input_device)]() mutable {
           // UP
           fuchsia::ui::input::TouchscreenReportPtr touchscreen =
@@ -292,7 +292,7 @@ class InputApp {
 
     zx::duration delta = zx::msec(duration_ms);
     async::PostDelayedTask(
-        async_get_default(),
+        async_get_default_dispatcher(),
         fxl::MakeCopyable([this, device = std::move(input_device)]() mutable {
           // RELEASED
           fuchsia::ui::input::KeyboardReportPtr keyboard =
@@ -328,7 +328,7 @@ class InputApp {
 
     zx::duration delta = zx::msec(duration_ms);
     async::PostDelayedTask(
-        async_get_default(),
+        async_get_default_dispatcher(),
         fxl::MakeCopyable(
             [this, device = std::move(input_device), x1, y1]() mutable {
               // MOVE
@@ -374,7 +374,7 @@ int main(int argc, char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   input::InputApp app(&loop);
-  async::PostTask(loop.async(),
+  async::PostTask(loop.dispatcher(),
                   [&app, command_line] { app.Run(command_line); });
   loop.Run();
   return 0;

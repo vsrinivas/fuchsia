@@ -14,11 +14,11 @@ SourceSegment::SourceSegment() {}
 
 SourceSegment::~SourceSegment() {}
 
-void SourceSegment::Provision(Graph* graph, async_t* async,
+void SourceSegment::Provision(Graph* graph, async_dispatcher_t* dispatcher,
                               fit::closure updateCallback,
                               StreamUpdateCallback stream_update_callback) {
   stream_update_callback_ = std::move(stream_update_callback);
-  Segment::Provision(graph, async, std::move(updateCallback));
+  Segment::Provision(graph, dispatcher, std::move(updateCallback));
 }
 
 void SourceSegment::Deprovision() {

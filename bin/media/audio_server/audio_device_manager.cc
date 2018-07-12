@@ -749,7 +749,7 @@ void AudioDeviceManager::CommitDirtySettings() {
   // If we need to try to update in the future, schedule a our commit task to do
   // so.
   if (next != zx::time::infinite()) {
-    commit_settings_task_.PostForTime(server_->async(), next);
+    commit_settings_task_.PostForTime(server_->dispatcher(), next);
   }
 }
 

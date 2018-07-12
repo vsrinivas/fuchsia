@@ -14,10 +14,10 @@ Segment::Segment() {}
 
 Segment::~Segment() {}
 
-void Segment::Provision(Graph* graph, async_t* async,
+void Segment::Provision(Graph* graph, async_dispatcher_t* dispatcher,
                         fit::closure update_callback) {
   graph_ = graph;
-  async_ = async;
+  dispatcher_ = dispatcher;
   update_callback_ = std::move(update_callback);
   DidProvision();
 }
@@ -25,7 +25,7 @@ void Segment::Provision(Graph* graph, async_t* async,
 void Segment::Deprovision() {
   WillDeprovision();
   graph_ = nullptr;
-  async_ = nullptr;
+  dispatcher_ = nullptr;
   update_callback_ = nullptr;
 }
 

@@ -15,13 +15,13 @@
 namespace btlib {
 namespace common {
 
-void RunTaskSync(fit::closure callback, async_t* dispatcher) {
+void RunTaskSync(fit::closure callback, async_dispatcher_t* dispatcher) {
   FXL_DCHECK(callback);
 
-  // TODO(armansito) This check is risky. async_get_default() could return
+  // TODO(armansito) This check is risky. async_get_default_dispatcher() could return
   // a dispatcher that goes to another thread. We don't have any current
   // instances of a multi threaded dispatcher but we could.
-  if (dispatcher == async_get_default()) {
+  if (dispatcher == async_get_default_dispatcher()) {
     callback();
     return;
   }

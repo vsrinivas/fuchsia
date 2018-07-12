@@ -46,7 +46,7 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
   void AddACLConnection(hci::ConnectionHandle handle,
                         hci::Connection::Role role,
                         LinkErrorCallback link_error_callback,
-                        async_t* dispatcher) override {
+                        async_dispatcher_t* dispatcher) override {
     PostMessage([this, handle, role, lec = std::move(link_error_callback),
                  dispatcher]() mutable {
       if (chanmgr_) {
@@ -59,7 +59,7 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
                        LEConnectionParameterUpdateCallback conn_param_callback,
                        LinkErrorCallback link_error_callback,
                        AddLEConnectionCallback channel_callback,
-                       async_t* dispatcher) override {
+                       async_dispatcher_t* dispatcher) override {
     PostMessage([this, handle, role, cp_cb = std::move(conn_param_callback),
                  link_err_cb = std::move(link_error_callback),
                  chan_cb = std::move(channel_callback), dispatcher]() mutable {

@@ -17,7 +17,7 @@ Connection::Connection(const std::string& peer_id,
                        fxl::RefPtr<att::Bearer> att_bearer,
                        fxl::RefPtr<att::Database> local_db,
                        RemoteServiceWatcher svc_watcher,
-                       async_t* gatt_dispatcher) {
+                       async_dispatcher_t* gatt_dispatcher) {
   FXL_DCHECK(att_bearer);
   FXL_DCHECK(local_db);
   FXL_DCHECK(svc_watcher);

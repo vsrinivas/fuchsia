@@ -106,7 +106,7 @@ class ACLDataChannel final {
   // TODO(armansito): |dispatcher| will become mandatory. The Transport I/O
   // thread will be gone when bt-hci becomes a non-IPC protocol.
   void SetDataRxHandler(DataReceivedCallback rx_callback,
-                        async_t* rx_dispatcher);
+                        async_dispatcher_t* rx_dispatcher);
 
   // Queues the given ACL data packet to be sent to the controller. Returns
   // false if the packet cannot be queued up, e.g. if the size of |data_packet|
@@ -189,7 +189,7 @@ class ACLDataChannel final {
       __TA_REQUIRES(send_mutex_);
 
   // Read Ready Handler for |channel_|
-  void OnChannelReady(async_t* async,
+  void OnChannelReady(async_dispatcher_t* dispatcher,
                       async::WaitBase* wait,
                       zx_status_t status,
                       const zx_packet_signal_t* signal);
@@ -215,13 +215,13 @@ class ACLDataChannel final {
   CommandChannel::EventHandlerId event_handler_id_;
 
   // The dispatcher used for posting tasks on the HCI transport I/O thread.
-  async_t* io_dispatcher_;
+  async_dispatcher_t* io_dispatcher_;
 
   // The current handler for incoming data and the dispatcher on which to run
   // it.
   std::mutex rx_mutex_;
   DataReceivedCallback rx_callback_ __TA_GUARDED(rx_mutex_);
-  async_t* rx_dispatcher_ __TA_GUARDED(rx_mutex_);
+  async_dispatcher_t* rx_dispatcher_ __TA_GUARDED(rx_mutex_);
 
   // BR/EDR data buffer information. This buffer will not be available on
   // LE-only controllers.

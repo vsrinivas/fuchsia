@@ -45,7 +45,7 @@ constexpr bool IsValidBREDRFixedChannel(ChannelId id) {
 
 LogicalLink::LogicalLink(hci::ConnectionHandle handle,
                          hci::Connection::LinkType type,
-                         hci::Connection::Role role, async_t* dispatcher,
+                         hci::Connection::Role role, async_dispatcher_t* dispatcher,
                          fxl::RefPtr<hci::Transport> hci)
     : hci_(hci),
       dispatcher_(dispatcher),
@@ -186,7 +186,7 @@ void LogicalLink::SendBasicFrame(ChannelId id,
 }
 
 void LogicalLink::set_error_callback(fit::closure callback,
-                                     async_t* dispatcher) {
+                                     async_dispatcher_t* dispatcher) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(static_cast<bool>(callback) == static_cast<bool>(dispatcher));
 

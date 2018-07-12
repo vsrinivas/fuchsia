@@ -175,7 +175,7 @@ class Adapter final {
   // Uniquely identifies this adapter on the current system.
   std::string identifier_;
 
-  async_t* dispatcher_;
+  async_dispatcher_t* dispatcher_;
   fxl::RefPtr<hci::Transport> hci_;
 
   // Callback invoked to notify clients when the underlying transport is closed.

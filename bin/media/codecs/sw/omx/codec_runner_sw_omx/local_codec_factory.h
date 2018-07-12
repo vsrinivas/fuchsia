@@ -53,7 +53,7 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
   // any of the codecs supported by this isolate process, regardless of which
   // codec type.
   static void CreateSelfOwned(
-      async_t* fidl_async, thrd_t fidl_thread,
+      async_dispatcher_t* fidl_dispatcher, thrd_t fidl_thread,
       fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request);
 
   virtual void CreateDecoder(
@@ -70,7 +70,7 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
   // We let CreateSelfOwned() deal with setting up the binding_ directly, which
   // means the constructor doesn't need to stash the
   // InterfaceRequest<CodecFactory>
-  LocalCodecFactory(async_t* fidl_async, thrd_t fidl_thread);
+  LocalCodecFactory(async_dispatcher_t* fidl_dispatcher, thrd_t fidl_thread);
 
   void CreateCommon(
       ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request,
@@ -88,7 +88,7 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
     std::string_view mime_type;
     std::string_view lib_filename;
     std::function<std::unique_ptr<codec_runner::CodecRunner>(
-        async_t* async, thrd_t fidl_thread,
+        async_dispatcher_t* dispatcher, thrd_t fidl_thread,
         const CodecStrategy& codec_strategy)>
         create_runner;
   };
@@ -96,14 +96,14 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
   // Appropriate for use with any mime_type where the raw OMX codec doesn't have
   // any known open issues.
   static std::unique_ptr<codec_runner::CodecRunner> CreateRawOmxRunner(
-      async_t* fidl_async, thrd_t fidl_thread,
+      async_dispatcher_t* fidl_dispatcher, thrd_t fidl_thread,
       const CodecStrategy& codec_strategy);
 
   static std::unique_ptr<codec_runner::CodecRunner> CreateCodec(
-      async_t* fidl_async, thrd_t fidl_thread,
+      async_dispatcher_t* fidl_dispatcher, thrd_t fidl_thread,
       fuchsia::mediacodec::CodecType codec_type, std::string mime_type);
 
-  async_t* fidl_async_;
+  async_dispatcher_t* fidl_dispatcher_;
   thrd_t fidl_thread_ = 0;
 
   // The LocalCodecFactory instance is self-owned via binding_:

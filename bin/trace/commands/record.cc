@@ -444,7 +444,7 @@ void Record::LaunchTool() {
 }
 
 void Record::StartTimer() {
-  async::PostDelayedTask(async_get_default(),
+  async::PostDelayedTask(async_get_default_dispatcher(),
                          [weak = weak_ptr_factory_.GetWeakPtr()] {
                            if (weak)
                              weak->StopTrace(0);

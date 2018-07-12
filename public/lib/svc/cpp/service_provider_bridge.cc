@@ -16,7 +16,7 @@ namespace fuchsia {
 namespace sys {
 
 ServiceProviderBridge::ServiceProviderBridge()
-    : vfs_(async_get_default()), weak_factory_(this) {
+    : vfs_(async_get_default_dispatcher()), weak_factory_(this) {
   directory_ =
       fbl::AdoptRef(new ServiceProviderDir(weak_factory_.GetWeakPtr()));
 }

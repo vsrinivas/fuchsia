@@ -46,12 +46,12 @@ class MessageRelayBase {
 
  private:
   // Tries to read messages from channel_ and waits for more.
-  void ReadChannelMessages(async_t* async, async::WaitBase* wait,
+  void ReadChannelMessages(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                            zx_status_t status,
                            const zx_packet_signal_t* signal);
 
   // Writes all the messages in messages_to_write_.
-  void WriteChannelMessages(async_t* async, async::WaitBase* wait,
+  void WriteChannelMessages(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                             zx_status_t status,
                             const zx_packet_signal_t* signal);
 

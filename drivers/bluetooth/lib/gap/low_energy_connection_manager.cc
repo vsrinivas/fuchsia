@@ -28,7 +28,7 @@ class LowEnergyConnection {
  public:
   LowEnergyConnection(const std::string& id,
                       std::unique_ptr<hci::Connection> link,
-                      async_t* dispatcher,
+                      async_dispatcher_t* dispatcher,
                       fxl::WeakPtr<LowEnergyConnectionManager> conn_mgr)
       : id_(id),
         link_(std::move(link)),
@@ -119,7 +119,7 @@ class LowEnergyConnection {
 
   std::string id_;
   std::unique_ptr<hci::Connection> link_;
-  async_t* dispatcher_;
+  async_dispatcher_t* dispatcher_;
   fxl::WeakPtr<LowEnergyConnectionManager> conn_mgr_;
 
   // LowEnergyConnectionManager is responsible for making sure that these
@@ -189,7 +189,7 @@ LowEnergyConnectionManager::LowEnergyConnectionManager(
     fbl::RefPtr<gatt::GATT> gatt)
     : hci_(hci),
       request_timeout_ms_(kLECreateConnectionTimeoutMs),
-      dispatcher_(async_get_default()),
+      dispatcher_(async_get_default_dispatcher()),
       device_cache_(device_cache),
       l2cap_(l2cap),
       gatt_(gatt),

@@ -73,7 +73,7 @@ class FakeSinkSegment : public SinkSegment {
   // Protected calls exposed for testing.
   Graph& TEST_graph() { return graph(); }
 
-  async_t* TEST_async() { return async(); }
+  async_dispatcher_t* TEST_dispatcher() { return dispatcher(); }
 
   void TEST_NotifyUpdate() { NotifyUpdate(); }
 

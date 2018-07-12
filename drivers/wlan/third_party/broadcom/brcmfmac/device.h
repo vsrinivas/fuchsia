@@ -21,7 +21,7 @@
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/usb.h>
 #include <lib/async-loop/loop.h> // to start the worker thread
-#include <lib/async/default.h>  // for async_get_default()
+#include <lib/async/default.h>  // for async_get_default_dispatcher()
 #include <lib/async/task.h>     // for async_post_task()
 #include <lib/async/time.h>     // for async_now()
 #include <pthread.h>
@@ -64,7 +64,7 @@
 
 #define max(a, b) ((a)>(b)?(a):(b))
 
-extern async_t* default_async;
+extern async_dispatcher_t* default_dispatcher;
 
 // This is the function that timer users write to receive callbacks.
 typedef void (brcmf_timer_callback_t)(void* data);

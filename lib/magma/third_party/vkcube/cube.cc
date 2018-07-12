@@ -3002,7 +3002,7 @@ int test_vk_cube(int argc, char** argv)
 #if defined(MAGMA_ENABLE_TRACING)
     async::Loop loop;
     loop.StartThread();
-    trace::TraceProvider trace_provider(loop.async());
+    trace::TraceProvider trace_provider(loop.dispatcher());
 #endif
     return cube_main(argc, argv);
 }

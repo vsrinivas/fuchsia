@@ -190,7 +190,7 @@ float ViewImpl::UpdateTransition(zx_time_t presentation_time) {
 }
 
 void ViewImpl::QuitLoop() {
-  async_loop_quit(async_loop_from_dispatcher(async_get_default()));
+  async_loop_quit(async_loop_from_dispatcher(async_get_default_dispatcher()));
 }
 
 OldView::OldView(

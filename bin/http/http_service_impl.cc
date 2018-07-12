@@ -37,7 +37,7 @@ class HttpServiceImpl::UrlLoaderContainer
     : public URLLoaderImpl::Coordinator {
  public:
   UrlLoaderContainer(URLLoaderImpl::Coordinator* top_coordinator,
-                     async_t* main_dispatcher,
+                     async_dispatcher_t* main_dispatcher,
                      fidl::InterfaceRequest<oldhttp::URLLoader> request)
       : request_(std::move(request)),
         top_coordinator_(top_coordinator),
@@ -52,7 +52,7 @@ class HttpServiceImpl::UrlLoaderContainer
   void Start() {
     stopped_ = false;
     io_loop_.StartThread();
-    async::PostTask(io_loop_.async(), [this] { StartOnIOThread(); });
+    async::PostTask(io_loop_.dispatcher(), [this] { StartOnIOThread(); });
   }
 
   void set_on_done(fit::closure on_done) { on_done_ = std::move(on_done); }
@@ -76,7 +76,7 @@ class HttpServiceImpl::UrlLoaderContainer
               return;
             }
             weak_this->on_inactive_ = std::move(on_inactive);
-            async::PostTask(weak_this->io_loop_.async(), [
+            async::PostTask(weak_this->io_loop_.dispatcher(), [
               weak_this, main_dispatcher = weak_this->main_dispatcher_,
               slot_request = std::move(slot_request)
             ] {
@@ -112,7 +112,7 @@ class HttpServiceImpl::UrlLoaderContainer
     if (stopped_)
       return;
     stopped_ = true;
-    async::PostTask(io_loop_.async(), [this] { StopOnIOThread(); });
+    async::PostTask(io_loop_.dispatcher(), [this] { StopOnIOThread(); });
   }
 
   void StartOnIOThread() {
@@ -139,7 +139,7 @@ class HttpServiceImpl::UrlLoaderContainer
   bool stopped_ = true;
   bool joined_ = false;
 
-  async_t* const main_dispatcher_;
+  async_dispatcher_t* const main_dispatcher_;
   async::Loop io_loop_;
 
   // The binding and the implementation can only be accessed on the io thread.
@@ -155,7 +155,7 @@ class HttpServiceImpl::UrlLoaderContainer
   FXL_DISALLOW_COPY_AND_ASSIGN(UrlLoaderContainer);
 };
 
-HttpServiceImpl::HttpServiceImpl(async_t* dispatcher)
+HttpServiceImpl::HttpServiceImpl(async_dispatcher_t* dispatcher)
   : dispatcher_(dispatcher), available_slots_(kMaxSlots) {
   FXL_DCHECK(dispatcher_);
 }

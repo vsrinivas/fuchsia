@@ -65,7 +65,7 @@ MdnsStandalone::~MdnsStandalone() {}
 
 void MdnsStandalone::LogTrafficAfterDelay() {
   async::PostDelayedTask(
-      async_get_default(),
+      async_get_default_dispatcher(),
       [this]() {
         mdns_.LogTraffic();
         zx::duration run_time = fsl::GetCurrentThreadTotalRuntime();

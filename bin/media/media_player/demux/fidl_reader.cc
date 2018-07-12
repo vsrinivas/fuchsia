@@ -19,9 +19,9 @@ namespace media_player {
 FidlReader::FidlReader(
     fidl::InterfaceHandle<fuchsia::mediaplayer::SeekingReader> seeking_reader)
     : seeking_reader_(seeking_reader.Bind()),
-      async_(async_get_default()),
-      ready_(async_) {
-  FXL_DCHECK(async_);
+      dispatcher_(async_get_default_dispatcher()),
+      ready_(dispatcher_) {
+  FXL_DCHECK(dispatcher_);
 
   read_in_progress_ = false;
 
@@ -59,7 +59,7 @@ void FidlReader::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
 
   // ReadAt may be called on non-fidl threads, so we use the runner.
   async::PostTask(
-      async_, [weak_this = std::weak_ptr<FidlReader>(shared_from_this())]() {
+      dispatcher_, [weak_this = std::weak_ptr<FidlReader>(shared_from_this())]() {
         auto shared_this = weak_this.lock();
         if (shared_this) {
           shared_this->ContinueReadAt();
@@ -123,7 +123,7 @@ void FidlReader::ReadFromSocket() {
       waiter_ = std::make_unique<async::Wait>(
           socket_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
 
-      waiter_->set_handler([this](async_t* async, async::Wait* wait,
+      waiter_->set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
                                   zx_status_t status,
                                   const zx_packet_signal_t* signal) {
         if (status != ZX_OK) {
@@ -138,7 +138,7 @@ void FidlReader::ReadFromSocket() {
         ReadFromSocket();
       });
 
-      waiter_->Begin(async_get_default());
+      waiter_->Begin(async_get_default_dispatcher());
 
       break;
     }

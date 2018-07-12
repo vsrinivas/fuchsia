@@ -62,7 +62,7 @@ class Tracee {
 
  private:
   void TransitionToState(State new_state);
-  void OnHandleReady(async_t* async,
+  void OnHandleReady(async_dispatcher_t* dispatcher,
                      async::WaitBase* wait,
                      zx_status_t status,
                      const zx_packet_signal_t* signal);
@@ -79,7 +79,7 @@ class Tracee {
   zx::eventpair fence_;
   fit::closure started_callback_;
   fit::closure stopped_callback_;
-  async_t* async_ = nullptr;
+  async_dispatcher_t* dispatcher_ = nullptr;
   async::WaitMethod<Tracee, &Tracee::OnHandleReady> wait_;
   bool buffer_overflow_ = false;
 

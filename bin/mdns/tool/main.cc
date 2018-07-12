@@ -22,7 +22,7 @@ int main(int argc, const char** argv) {
       fuchsia::sys::StartupContext::CreateFromStartupInfo();
 
   mdns::MdnsImpl impl(startup_context.get(), &params, [&loop]() {
-    async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
+    async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
   });
 
   loop.Run();

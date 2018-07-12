@@ -220,19 +220,19 @@ zx_status_t VirtioQueue::Poll(QueuePollFn handler, std::string name) {
   return ZX_OK;
 }
 
-zx_status_t VirtioQueue::PollAsync(async_t* async, async::Wait* wait,
+zx_status_t VirtioQueue::PollAsync(async_dispatcher_t* dispatcher, async::Wait* wait,
                                    QueuePollFn handler) {
   wait->set_object(event_.get());
   wait->set_trigger(SIGNAL_QUEUE_AVAIL);
   wait->set_handler([this, handler = std::move(handler)](
-                        async_t* async, async::Wait* wait, zx_status_t status,
+                        async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
                         const zx_packet_signal_t* signal) {
-    InvokeAsyncHandler(async, wait, status, handler);
+    InvokeAsyncHandler(dispatcher, wait, status, handler);
   });
-  return wait->Begin(async);
+  return wait->Begin(dispatcher);
 }
 
-void VirtioQueue::InvokeAsyncHandler(async_t* async, async::Wait* wait,
+void VirtioQueue::InvokeAsyncHandler(async_dispatcher_t* dispatcher, async::Wait* wait,
                                      zx_status_t status,
                                      const QueuePollFn& handler) {
   if (status != ZX_OK) {
@@ -252,7 +252,7 @@ void VirtioQueue::InvokeAsyncHandler(async_t* async, async::Wait* wait,
     }
   }
   if (status == ZX_OK || status == ZX_ERR_SHOULD_WAIT) {
-    wait->Begin(async);  // ignore errors
+    wait->Begin(dispatcher);  // ignore errors
   }
 }
 

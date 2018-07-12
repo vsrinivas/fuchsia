@@ -206,7 +206,7 @@ void Tiles::AddChildView(uint32_t child_key,
 void Tiles::InvalidateScene() {
   if (present_scene_task_.is_pending())
     return;
-  present_scene_task_.Post(async_get_default());
+  present_scene_task_.Post(async_get_default_dispatcher());
 }
 
 static void Inset(fuchsia::math::RectF* rect, int border) {

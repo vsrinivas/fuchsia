@@ -19,14 +19,14 @@ namespace {
 
 void ReportNotifyStatus(att::Status status, IdType id,
                         RemoteCharacteristic::NotifyStatusCallback callback,
-                        async_t* dispatcher) {
+                        async_dispatcher_t* dispatcher) {
   RunOrPost([status, id, cb = std::move(callback)] { cb(status, id); },
             dispatcher);
 }
 
 void NotifyValue(const common::ByteBuffer& value,
                  RemoteCharacteristic::ValueCallback callback,
-                 async_t* dispatcher) {
+                 async_dispatcher_t* dispatcher) {
   if (!dispatcher) {
     callback(value);
     return;
@@ -45,7 +45,7 @@ void NotifyValue(const common::ByteBuffer& value,
 }  // namespace
 
 RemoteCharacteristic::PendingNotifyRequest::PendingNotifyRequest(
-    async_t* d, ValueCallback value_cb, NotifyStatusCallback status_cb)
+    async_dispatcher_t* d, ValueCallback value_cb, NotifyStatusCallback status_cb)
     : dispatcher(d),
       value_callback(std::move(value_cb)),
       status_callback(std::move(status_cb)) {
@@ -53,7 +53,7 @@ RemoteCharacteristic::PendingNotifyRequest::PendingNotifyRequest(
   FXL_DCHECK(status_callback);
 }
 
-RemoteCharacteristic::NotifyHandler::NotifyHandler(async_t* d, ValueCallback cb)
+RemoteCharacteristic::NotifyHandler::NotifyHandler(async_dispatcher_t* d, ValueCallback cb)
     : dispatcher(d), callback(std::move(cb)) {
   FXL_DCHECK(callback);
 }
@@ -175,7 +175,7 @@ void RemoteCharacteristic::DiscoverDescriptors(att::Handle range_end,
 
 void RemoteCharacteristic::EnableNotifications(
     ValueCallback value_callback, NotifyStatusCallback status_callback,
-    async_t* dispatcher) {
+    async_dispatcher_t* dispatcher) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(client_);
   FXL_DCHECK(value_callback);

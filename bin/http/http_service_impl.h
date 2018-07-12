@@ -22,7 +22,7 @@ namespace http {
 class HttpServiceImpl : public ::fuchsia::net::oldhttp::HttpService,
                         public URLLoaderImpl::Coordinator {
  public:
-  HttpServiceImpl(async_t* dispatcher);
+  HttpServiceImpl(async_dispatcher_t* dispatcher);
   ~HttpServiceImpl() override;
 
   void AddBinding(fidl::InterfaceRequest<::fuchsia::net::oldhttp::HttpService> request);
@@ -39,7 +39,7 @@ class HttpServiceImpl : public ::fuchsia::net::oldhttp::HttpService,
 
   void OnSlotReturned();
 
-  async_t* const dispatcher_;
+  async_dispatcher_t* const dispatcher_;
   size_t available_slots_;
   fidl::BindingSet<::fuchsia::net::oldhttp::HttpService> bindings_;
   std::list<UrlLoaderContainer> loaders_;

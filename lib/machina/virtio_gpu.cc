@@ -17,18 +17,18 @@
 
 namespace machina {
 
-VirtioGpu::VirtioGpu(const PhysMem& phys_mem, async_t* async)
-    : VirtioDeviceBase(phys_mem), async_(async) {}
+VirtioGpu::VirtioGpu(const PhysMem& phys_mem, async_dispatcher_t* dispatcher)
+    : VirtioDeviceBase(phys_mem), dispatcher_(dispatcher) {}
 
 VirtioGpu::~VirtioGpu() = default;
 
 zx_status_t VirtioGpu::Init() {
   zx_status_t status = control_queue()->PollAsync(
-      async_, &control_queue_wait_,
+      dispatcher_, &control_queue_wait_,
       fit::bind_member(this, &VirtioGpu::HandleGpuCommand));
   if (status == ZX_OK) {
     status = cursor_queue()->PollAsync(
-        async_, &cursor_queue_wait_,
+        dispatcher_, &cursor_queue_wait_,
         fit::bind_member(this, &VirtioGpu::HandleGpuCommand));
   }
   return status;

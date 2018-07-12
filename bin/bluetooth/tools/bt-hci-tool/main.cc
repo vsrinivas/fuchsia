@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   bluetooth_tools::CommandDispatcher dispatcher;
-  hcitool::CommandData cmd_data(hci->command_channel(), loop.async());
+  hcitool::CommandData cmd_data(hci->command_channel(), loop.dispatcher());
   RegisterCommands(&cmd_data, &dispatcher);
 
   if (cl.positional_args().empty() || cl.positional_args()[0] == "help") {

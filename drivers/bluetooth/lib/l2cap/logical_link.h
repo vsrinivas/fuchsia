@@ -44,7 +44,7 @@ class LogicalLink final {
   LogicalLink(hci::ConnectionHandle handle,
               hci::Connection::LinkType type,
               hci::Connection::Role role,
-              async_t* dispatcher,
+              async_dispatcher_t* dispatcher,
               fxl::RefPtr<hci::Transport> hci);
 
   // When a logical link is destroyed it notifies all of its channels to close
@@ -68,10 +68,10 @@ class LogicalLink final {
 
   // Assigns the link error callback to be invoked when a channel signals a link
   // error.
-  void set_error_callback(fit::closure callback, async_t* dispatcher);
+  void set_error_callback(fit::closure callback, async_dispatcher_t* dispatcher);
 
   // Returns the dispatcher that this LogicalLink operates on.
-  async_t* dispatcher() const { return dispatcher_; }
+  async_dispatcher_t* dispatcher() const { return dispatcher_; }
 
   hci::Connection::LinkType type() const { return type_; }
   hci::Connection::Role role() const { return role_; }
@@ -98,7 +98,7 @@ class LogicalLink final {
   void Close();
 
   fxl::RefPtr<hci::Transport> hci_;
-  async_t* dispatcher_;
+  async_dispatcher_t* dispatcher_;
 
   // Information about the underlying controller logical link.
   hci::ConnectionHandle handle_;
@@ -106,7 +106,7 @@ class LogicalLink final {
   hci::Connection::Role role_;
 
   fit::closure link_error_cb_;
-  async_t* link_error_dispatcher_;
+  async_dispatcher_t* link_error_dispatcher_;
 
   // Owns and manages the L2CAP signaling channel on this logical link.
   // Depending on |type_| this will either implement the LE or BR/EDR signaling

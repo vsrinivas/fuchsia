@@ -94,7 +94,7 @@ zx_status_t CameraClient::OpenChannel(fxl::UniqueFD dev_node,
   // Set up waiter to wait for messages on this channel:
   cmd_msg_waiter_.set_object(stream_ch_.get());
   cmd_msg_waiter_.set_trigger(ZX_CHANNEL_READABLE);
-  zx_status_t status = cmd_msg_waiter_.Begin(async_get_default());
+  zx_status_t status = cmd_msg_waiter_.Begin(async_get_default_dispatcher());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to start AutoWaiter";
     return status;
@@ -245,7 +245,7 @@ zx_status_t CameraClient::OnSetFormatResp(
   // channel:
   buff_msg_waiter_.set_object(vb_ch_.get());
   buff_msg_waiter_.set_trigger(ZX_CHANNEL_READABLE);
-  status = buff_msg_waiter_.Begin(async_get_default());
+  status = buff_msg_waiter_.Begin(async_get_default_dispatcher());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to start AutoWaiter";
     return status;
@@ -515,7 +515,7 @@ zx_status_t CameraClient::ProcessCmdChannel() {
 #undef CHECK_RESP
 
 void CameraClient::OnNewCmdMessage(
-    async_t* async,
+    async_dispatcher_t* dispatcher,
     async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal* signal) {
@@ -531,14 +531,14 @@ void CameraClient::OnNewCmdMessage(
     CloseAndNotify();
     return;
   }
-  status = wait->Begin(async);
+  status = wait->Begin(dispatcher);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Error: CameraClient wait failed.  Exiting.";
   }
 }
 
 void CameraClient::OnNewBufferMessage(
-    async_t* async,
+    async_dispatcher_t* dispatcher,
     async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal* signal) {
@@ -555,7 +555,7 @@ void CameraClient::OnNewBufferMessage(
     CloseAndNotify();
     return;
   }
-  status = wait->Begin(async);
+  status = wait->Begin(dispatcher);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Error: CameraClient wait failed.  Exiting.";
   }

@@ -542,7 +542,7 @@ void ViewRegistry::InvalidateViewTree(ViewTreeState* tree_state,
 void ViewRegistry::ScheduleTraversal() {
   if (!traversal_scheduled_) {
     traversal_scheduled_ = true;
-    async::PostTask(async_get_default(), [weak = weak_factory_.GetWeakPtr()] {
+    async::PostTask(async_get_default_dispatcher(), [weak = weak_factory_.GetWeakPtr()] {
       if (weak)
         weak->Traverse();
     });
@@ -675,7 +675,7 @@ void ViewRegistry::TraverseView(ViewState* view_state,
 void ViewRegistry::SchedulePresentSession() {
   if (!present_session_scheduled_) {
     present_session_scheduled_ = true;
-    async::PostTask(async_get_default(), [weak = weak_factory_.GetWeakPtr()] {
+    async::PostTask(async_get_default_dispatcher(), [weak = weak_factory_.GetWeakPtr()] {
       if (weak)
         weak->PresentSession();
     });

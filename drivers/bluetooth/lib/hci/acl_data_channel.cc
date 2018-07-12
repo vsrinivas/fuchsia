@@ -60,7 +60,7 @@ void ACLDataChannel::Initialize(const DataBufferInfo& bredr_buffer_info,
   le_buffer_info_ = le_buffer_info;
 
   auto setup_handler_task = [this] {
-    zx_status_t status = channel_wait_.Begin(async_get_default());
+    zx_status_t status = channel_wait_.Begin(async_get_default_dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "hci: ACLDataChannel: failed channel setup: "
                      << zx_status_get_string(status);
@@ -122,7 +122,7 @@ void ACLDataChannel::ShutDown() {
 }
 
 void ACLDataChannel::SetDataRxHandler(DataReceivedCallback rx_callback,
-                                      async_t* rx_dispatcher) {
+                                      async_dispatcher_t* rx_dispatcher) {
   std::lock_guard<std::mutex> lock(rx_mutex_);
   rx_callback_ = std::move(rx_callback);
   rx_dispatcher_ = rx_dispatcher;
@@ -200,7 +200,7 @@ size_t ACLDataChannel::GetBufferMTU(Connection::LinkType ll_type) const {
 
 void ACLDataChannel::NumberOfCompletedPacketsCallback(
     const EventPacket& event) {
-  FXL_DCHECK(async_get_default() == io_dispatcher_);
+  FXL_DCHECK(async_get_default_dispatcher() == io_dispatcher_);
   FXL_DCHECK(event.event_code() == kNumberOfCompletedPacketsEventCode);
 
   const auto& payload =
@@ -370,7 +370,7 @@ void ACLDataChannel::IncrementLETotalNumPacketsLocked(size_t count) {
 }
 
 void ACLDataChannel::OnChannelReady(
-    async_t* async,
+    async_dispatcher_t* dispatcher,
     async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal_t* signal) {
@@ -384,7 +384,7 @@ void ACLDataChannel::OnChannelReady(
     return;
   }
 
-  FXL_DCHECK(async_get_default() == io_dispatcher_);
+  FXL_DCHECK(async_get_default_dispatcher() == io_dispatcher_);
   FXL_DCHECK(signal->observed & ZX_CHANNEL_READABLE);
 
   std::lock_guard<std::mutex> lock(rx_mutex_);
@@ -444,7 +444,7 @@ void ACLDataChannel::OnChannelReady(
                     });
   }
 
-  status = wait->Begin(async);
+  status = wait->Begin(dispatcher);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "hci: ACLDataChannel: wait error: "
                    << zx_status_get_string(status);

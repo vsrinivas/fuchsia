@@ -27,7 +27,7 @@ LowEnergyScanResult::LowEnergyScanResult(const common::DeviceAddress& address,
 
 LowEnergyScanner::LowEnergyScanner(Delegate* delegate,
                                    fxl::RefPtr<Transport> hci,
-                                   async_t* dispatcher)
+                                   async_dispatcher_t* dispatcher)
     : state_(State::kIdle),
       delegate_(delegate),
       dispatcher_(dispatcher),

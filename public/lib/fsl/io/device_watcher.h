@@ -45,7 +45,7 @@ class FXL_EXPORT DeviceWatcher {
 
   static void ListDevices(fxl::WeakPtr<DeviceWatcher> weak, int dir_fd);
 
-  void Handler(async_t* async, async::WaitBase* wait, zx_status_t status,
+  void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                const zx_packet_signal* signal);
 
   fxl::UniqueFD dir_fd_;

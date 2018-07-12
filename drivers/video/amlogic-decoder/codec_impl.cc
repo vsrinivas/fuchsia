@@ -52,7 +52,7 @@ void CodecImpl::Bind() {
   // Go!  (immediately - if Bind() is called on IOCTL thread, this can result in
   // _immediate_ dispatching over on shared_fidl_thread()).
   binding_.Bind(std::move(tmp_interface_request_),
-                device_->driver()->shared_fidl_loop()->async());
+                device_->driver()->shared_fidl_loop()->dispatcher());
   FXL_DCHECK(!tmp_interface_request_);
 }
 

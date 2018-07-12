@@ -13,7 +13,7 @@ namespace fuchsia {
 namespace sys {
 
 Outgoing::Outgoing()
-    : vfs_(async_get_default()),
+    : vfs_(async_get_default_dispatcher()),
       root_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       public_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       debug_dir_(fbl::AdoptRef(new fs::PseudoDir())),

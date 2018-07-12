@@ -111,7 +111,7 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   void Release();
 
   // Sets an |async_t| for running tasks .
-  void SetAsync(async_t* async);
+  void SetDispatcher(async_dispatcher_t* dispatcher);
 
   void PostTask(fit::closure task);
 
@@ -124,7 +124,7 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
 
  private:
   // Runs tasks in the task queue. This method is always called from
-  // |async_|. A |StageImpl| funnels all task execution through
+  // |dispatcher_|. A |StageImpl| funnels all task execution through
   // |RunTasks|. The lambdas that call |RunTasks| capture a shared pointer to
   // the stage, so the stage can't be deleted from the time such a lambda is
   // created until it's done executing |RunTasks|. A stage that's no longer
@@ -133,7 +133,7 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   // tasks.
   void RunTasks();
 
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
 
   // Used for ensuring the stage is properly updated. This value is zero
   // initially, indicating that there's no need to update the stage. When the

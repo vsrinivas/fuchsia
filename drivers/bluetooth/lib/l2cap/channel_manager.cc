@@ -13,7 +13,7 @@ namespace btlib {
 namespace l2cap {
 
 ChannelManager::ChannelManager(fxl::RefPtr<hci::Transport> hci,
-                               async_t* l2cap_dispatcher)
+                               async_dispatcher_t* l2cap_dispatcher)
     : hci_(hci), l2cap_dispatcher_(l2cap_dispatcher), weak_ptr_factory_(this) {
   FXL_DCHECK(hci_);
   FXL_DCHECK(l2cap_dispatcher_);
@@ -39,7 +39,7 @@ void ChannelManager::RegisterACL(
     hci::ConnectionHandle handle,
     hci::Connection::Role role,
     LinkErrorCallback link_error_cb,
-    async_t* dispatcher) {
+    async_dispatcher_t* dispatcher) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_VLOG(1) << "l2cap: register ACL link (handle: " << handle << ")";
 
@@ -52,7 +52,7 @@ void ChannelManager::RegisterLE(
     hci::Connection::Role role,
     LEConnectionParameterUpdateCallback conn_param_cb,
     LinkErrorCallback link_error_cb,
-    async_t* dispatcher) {
+    async_dispatcher_t* dispatcher) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_VLOG(1) << "l2cap: register LE link (handle: " << handle << ")";
 

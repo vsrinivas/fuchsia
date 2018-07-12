@@ -287,7 +287,7 @@ MediaPacketConsumerBase::SuppliedPacket::SuppliedPacket(
 MediaPacketConsumerBase::SuppliedPacket::~SuppliedPacket() {
   if (callback_) {
     async::PostTask(
-        counter_->async(),
+        counter_->dispatcher(),
         [callback = callback_.share(), counter = std::move(counter_),
          label = label_]() { callback(counter->OnPacketDeparture(label)); });
   }
@@ -299,8 +299,8 @@ MediaPacketConsumerBase::SuppliedPacketCounter::SuppliedPacketCounter(
       buffer_set_(ZX_VM_FLAG_PERM_READ),
       packets_outstanding_(0) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  async_ = async_get_default();
-  FXL_DCHECK(async_);
+  dispatcher_ = async_get_default_dispatcher();
+  FXL_DCHECK(dispatcher_);
 }
 
 MediaPacketConsumerBase::SuppliedPacketCounter::~SuppliedPacketCounter() {}

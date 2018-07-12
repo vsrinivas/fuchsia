@@ -12,7 +12,7 @@ namespace testing {
 
 using att::StatusCallback;
 
-FakeClient::FakeClient(async_t* dispatcher)
+FakeClient::FakeClient(async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher), weak_ptr_factory_(this) {
   FXL_DCHECK(dispatcher_);
 }

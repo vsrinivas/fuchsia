@@ -65,11 +65,11 @@ class FakeControllerBase {
 
  private:
   // Read and handle packets received over the channels.
-  void HandleCommandPacket(async_t* async,
+  void HandleCommandPacket(async_dispatcher_t* dispatcher,
                            async::WaitBase* wait,
                            zx_status_t wait_status,
                            const zx_packet_signal_t* signal);
-  void HandleACLPacket(async_t* async,
+  void HandleACLPacket(async_dispatcher_t* dispatcher,
                        async::WaitBase* wait,
                        zx_status_t wait_status,
                        const zx_packet_signal_t* signal);

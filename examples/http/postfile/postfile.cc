@@ -119,8 +119,8 @@ class PostFileApp {
     request.body = http::URLBody::New();
     request.body->set_stream(std::move(consumer));
 
-    async_t* async = async_get_default();
-    fsl::CopyFromFileDescriptor(std::move(fd), std::move(producer), async,
+    async_dispatcher_t* dispatcher = async_get_default_dispatcher();
+    fsl::CopyFromFileDescriptor(std::move(fd), std::move(producer), dispatcher,
                                 [this](bool result, fxl::UniqueFD fd) {
                                   if (!result) {
                                     printf("file read error\n");

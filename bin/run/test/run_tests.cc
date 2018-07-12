@@ -41,7 +41,7 @@ TEST(Run, Daemonize) {
 
   fuchsia::sys::Outgoing outgoing_services;
 
-  fs::SynchronousVfs vfs(loop.async());
+  fs::SynchronousVfs vfs(loop.dispatcher());
 
   fidl::BindingSet<fuchsia::sys::Launcher> launcher_bindings;
   outgoing_services.AddPublicService(

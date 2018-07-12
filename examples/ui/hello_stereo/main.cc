@@ -17,7 +17,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   hello_stereo::App app(&loop);
   async::PostDelayedTask(
-      loop.async(),
+      loop.dispatcher(),
       [&loop] {
         FXL_LOG(INFO) << "Quitting.";
         loop.Quit();

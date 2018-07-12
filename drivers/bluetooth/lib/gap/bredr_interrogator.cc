@@ -41,7 +41,7 @@ void BrEdrInterrogator::Interrogation::Finish(hci::Status status) {
 
 BrEdrInterrogator::BrEdrInterrogator(RemoteDeviceCache* cache,
                                      fxl::RefPtr<hci::Transport> hci,
-                                     async_t* dispatcher)
+                                     async_dispatcher_t* dispatcher)
     : hci_(hci),
       dispatcher_(dispatcher),
       cache_(cache),

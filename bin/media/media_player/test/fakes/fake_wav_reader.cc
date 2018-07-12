@@ -83,7 +83,7 @@ void FakeWavReader::WriteToSocket() {
       waiter_ = std::make_unique<async::Wait>(
           socket_.get(), ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED);
 
-      waiter_->set_handler([this](async_t* async, async::Wait* wait,
+      waiter_->set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
                                   zx_status_t status,
                                   const zx_packet_signal_t* signal) {
         if (status == ZX_ERR_CANCELED) {
@@ -100,7 +100,7 @@ void FakeWavReader::WriteToSocket() {
         WriteToSocket();
       });
 
-      waiter_->Begin(async_get_default());
+      waiter_->Begin(async_get_default_dispatcher());
       return;
     }
 

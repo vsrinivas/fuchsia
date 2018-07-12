@@ -44,7 +44,7 @@ void TestController::QueueCommandTransaction(
 }
 
 void TestController::SetDataCallback(DataCallback callback,
-                                     async_t* dispatcher) {
+                                     async_dispatcher_t* dispatcher) {
   FXL_DCHECK(callback);
   FXL_DCHECK(dispatcher);
   FXL_DCHECK(!data_callback_);
@@ -56,7 +56,7 @@ void TestController::SetDataCallback(DataCallback callback,
 
 void TestController::SetTransactionCallback(
     fit::closure callback,
-    async_t* dispatcher) {
+    async_dispatcher_t* dispatcher) {
   FXL_DCHECK(callback);
   FXL_DCHECK(dispatcher);
   FXL_DCHECK(!transaction_callback_);

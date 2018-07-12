@@ -78,7 +78,7 @@ class CodecRunner : public fuchsia::mediacodec::Codec {
   void Exit(const char* format, ...);
 
  protected:
-  CodecRunner(async_t* fidl_async, thrd_t fidl_thread);
+  CodecRunner(async_dispatcher_t* fidl_dispatcher, thrd_t fidl_thread);
 
   // Lock that protects stuff.
   //
@@ -90,7 +90,7 @@ class CodecRunner : public fuchsia::mediacodec::Codec {
   // expressiveness is sufficient.
   std::mutex lock_;
 
-  async_t* const fidl_async_;
+  async_dispatcher_t* const fidl_dispatcher_;
   const thrd_t fidl_thread_;
   using BindingType =
       fidl::Binding<fuchsia::mediacodec::Codec, std::unique_ptr<CodecRunner>>;

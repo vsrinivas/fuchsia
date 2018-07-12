@@ -54,7 +54,7 @@ class Transport final : public fxl::RefCountedThreadSafe<Transport> {
   // This method is NOT thread-safe! Care must be taken such that the public
   // methods of this class and those of the individual channel classes are not
   // called in a manner that would race with the execution of Initialize().
-  bool Initialize(async_t* dispatcher = nullptr);
+  bool Initialize(async_dispatcher_t* dispatcher = nullptr);
 
   // Initializes the ACL data channel with the given parameters. Returns false
   // if an error occurs during initialization. Initialize() must have been
@@ -83,7 +83,7 @@ class Transport final : public fxl::RefCountedThreadSafe<Transport> {
 
   // Returns the I/O thread dispatcher. If this is called when this Transport
   // instance is not initialized, the return value will be nullptr.
-  async_t*  io_dispatcher() const {
+  async_dispatcher_t*  io_dispatcher() const {
     return io_dispatcher_;
   }
 
@@ -96,7 +96,7 @@ class Transport final : public fxl::RefCountedThreadSafe<Transport> {
   // of the callback implementation to clean up this Transport instance by
   // calling ShutDown() and/or deleting it.
   void SetTransportClosedCallback(fit::closure callback,
-                                  async_t* dispatcher);
+                                  async_dispatcher_t* dispatcher);
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(Transport);
@@ -105,7 +105,7 @@ class Transport final : public fxl::RefCountedThreadSafe<Transport> {
   ~Transport();
 
   // Channel closed callback.
-  void OnChannelClosed(async_t* dispatcher,
+  void OnChannelClosed(async_dispatcher_t* dispatcher,
                        async::WaitBase* wait,
                        zx_status_t status,
                        const zx_packet_signal_t* signal);
@@ -136,7 +136,7 @@ class Transport final : public fxl::RefCountedThreadSafe<Transport> {
   Waiter acl_channel_wait_{this};
 
   // The dispatcher used for posting tasks on the HCI transport I/O thread.
-  async_t* io_dispatcher_;
+  async_dispatcher_t* io_dispatcher_;
 
   // The ACL data flow control handler.
   std::unique_ptr<ACLDataChannel> acl_data_channel_;
@@ -147,7 +147,7 @@ class Transport final : public fxl::RefCountedThreadSafe<Transport> {
   // Callback invoked when the transport is closed (due to a channel error) and
   // its dispatcher.
   fit::closure closed_cb_;
-  async_t* closed_cb_dispatcher_;
+  async_dispatcher_t* closed_cb_dispatcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Transport);
 };

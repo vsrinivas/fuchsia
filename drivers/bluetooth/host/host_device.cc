@@ -80,7 +80,7 @@ zx_status_t HostDevice::Bind() {
 
   // Send the bootstrap message to Host. The Host object can only be accessed on
   // the Host thread.
-  async::PostTask(loop_.async(), [hci_proto, this] {
+  async::PostTask(loop_.dispatcher(), [hci_proto, this] {
     FXL_VLOG(2) << "bt-host: host thread start";
 
     std::lock_guard<std::mutex> lock(mtx_);
@@ -124,7 +124,7 @@ void HostDevice::Unbind() {
   // Do this immediately to stop receiving new service callbacks.
   host_->gatt_host()->SetRemoteServiceWatcher({});
 
-  async::PostTask(loop_.async(), [this, host = host_] {
+  async::PostTask(loop_.dispatcher(), [this, host = host_] {
     host->ShutDown();
     loop_.Quit();
   });
@@ -169,7 +169,7 @@ zx_status_t HostDevice::Ioctl(uint32_t op,
 
   // Tell Host to start processing messages on this handle.
   FXL_DCHECK(host_);
-  async::PostTask(loop_.async(),
+  async::PostTask(loop_.dispatcher(),
                   [host = host_, chan = std::move(local)]() mutable {
                     host->BindHostInterface(std::move(chan));
                   });

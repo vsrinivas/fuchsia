@@ -10,8 +10,8 @@
 
 namespace fsl {
 
-FDWaiter::FDWaiter(async_t* async) : async_(async), io_(nullptr) {
-  FXL_DCHECK(async_);
+FDWaiter::FDWaiter(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher), io_(nullptr) {
+  FXL_DCHECK(dispatcher_);
 }
 
 FDWaiter::~FDWaiter() {
@@ -41,7 +41,7 @@ bool FDWaiter::Wait(Callback callback, int fd, uint32_t events) {
 
   wait_.set_object(handle);
   wait_.set_trigger(signals);
-  zx_status_t status = wait_.Begin(async_);
+  zx_status_t status = wait_.Begin(dispatcher_);
 
   if (status != ZX_OK) {
     Release();
@@ -69,7 +69,7 @@ void FDWaiter::Cancel() {
   }
 }
 
-void FDWaiter::Handler(async_t* async, async::WaitBase* wait,
+void FDWaiter::Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                        zx_status_t status, const zx_packet_signal_t* signal) {
   FXL_DCHECK(io_);
 

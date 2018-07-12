@@ -21,8 +21,8 @@ std::shared_ptr<FileReader> FileReader::Create(zx::channel file_channel) {
 }
 
 FileReader::FileReader(fxl::UniqueFD fd)
-    : async_(async_get_default()), fd_(std::move(fd)) {
-  FXL_DCHECK(async_);
+    : dispatcher_(async_get_default_dispatcher()), fd_(std::move(fd)) {
+  FXL_DCHECK(dispatcher_);
 
   result_ = fd_.is_valid() ? Result::kOk : Result::kNotFound;
 
@@ -41,7 +41,7 @@ FileReader::FileReader(fxl::UniqueFD fd)
 FileReader::~FileReader() {}
 
 void FileReader::Describe(DescribeCallback callback) {
-  async::PostTask(async_, [this, callback = std::move(callback)]() {
+  async::PostTask(dispatcher_, [this, callback = std::move(callback)]() {
     callback(result_, size_, true);
   });
 }
@@ -74,7 +74,7 @@ void FileReader::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
     return;
   }
 
-  async::PostTask(async_, [callback = std::move(callback), result]() {
+  async::PostTask(dispatcher_, [callback = std::move(callback), result]() {
     callback(Result::kOk, result);
   });
 }

@@ -258,7 +258,7 @@ void Engine::CleanupEscher() {
     // Wait long enough to give GPU work a chance to finish.
     const zx::duration kCleanupDelay = zx::msec(1);
     escher_cleanup_scheduled_ = true;
-    async::PostDelayedTask(async_get_default(),
+    async::PostDelayedTask(async_get_default_dispatcher(),
                            [weak = weak_factory_.GetWeakPtr()] {
                              if (weak) {
                                // Recursively reschedule if cleanup is

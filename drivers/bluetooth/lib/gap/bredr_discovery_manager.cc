@@ -80,7 +80,7 @@ BrEdrDiscoveryManager::BrEdrDiscoveryManager(fxl::RefPtr<hci::Transport> hci,
                                              hci::InquiryMode mode,
                                              RemoteDeviceCache* device_cache)
     : hci_(hci),
-      dispatcher_(async_get_default()),
+      dispatcher_(async_get_default_dispatcher()),
       cache_(device_cache),
       result_handler_id_(0u),
       desired_inquiry_mode_(mode),

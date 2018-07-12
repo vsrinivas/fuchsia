@@ -42,7 +42,7 @@ void IOLoop::Run() {
   // Posts an asynchronous task on to listen for an incoming packet. This
   // initiates a loop that always reads for incoming packets. Called from
   // Run().
-  async::PostTask(read_loop_.async(), fit::bind_member(this, &IOLoop::OnReadTask));
+  async::PostTask(read_loop_.dispatcher(), fit::bind_member(this, &IOLoop::OnReadTask));
 }
 
 void IOLoop::Quit() {
@@ -63,7 +63,7 @@ void IOLoop::Quit() {
 void IOLoop::PostWriteTask(const fxl::StringView& bytes) {
   // We copy the data into the closure.
   // TODO(armansito): Pass a refptr/weaktpr to |this|?
-  async::PostTask(write_loop_.async(), [this, bytes = bytes.ToString()] {
+  async::PostTask(write_loop_.dispatcher(), [this, bytes = bytes.ToString()] {
     ssize_t bytes_written = write(fd_, bytes.data(), bytes.size());
 
     // This cast isn't really safe, then again it should be virtually
@@ -81,12 +81,12 @@ void IOLoop::PostWriteTask(const fxl::StringView& bytes) {
 
 void IOLoop::ReportError() {
   // TODO(armansito): Pass a refptr/weaktpr to |this|?
-  async::PostTask(origin_loop_->async(), [this] { delegate_->OnIOError(); });
+  async::PostTask(origin_loop_->dispatcher(), [this] { delegate_->OnIOError(); });
 }
 
 void IOLoop::ReportDisconnected() {
   // TODO(armansito): Pass a refptr/weaktpr to |this|?
-  async::PostTask(origin_loop_->async(),
+  async::PostTask(origin_loop_->dispatcher(),
                   [this] { delegate_->OnDisconnected(); });
 }
 

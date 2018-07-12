@@ -321,7 +321,7 @@ bool IntelFirmwareLoader::RunCommandAndExpect(
   while (!failed && events.size() > 0) {
     size_t remaining_evt_count = events.size();
     // TODO(NET-680): Don't use the message loop modally.
-    async_loop_run(async_loop_from_dispatcher(async_get_default()),
+    async_loop_run(async_loop_from_dispatcher(async_get_default_dispatcher()),
                    zx_deadline_after(ZX_SEC(1)), true);
 
     if (events.size() < remaining_evt_count) {

@@ -99,7 +99,7 @@ NetConnectorImpl::~NetConnectorImpl() {}
 
 void NetConnectorImpl::StartListener() {
   if (!NetworkIsReady()) {
-    async::PostDelayedTask(async_get_default(), [this]() { StartListener(); },
+    async::PostDelayedTask(async_get_default_dispatcher(), [this]() { StartListener(); },
                            zx::sec(5));
     return;
   }

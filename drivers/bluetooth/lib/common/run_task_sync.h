@@ -17,7 +17,7 @@ namespace common {
 //
 // NOTE: This should generally be avoided. This is primarily intended for
 // synchronous setup/shutdown sequences and unit tests.
-void RunTaskSync(fit::closure callback, async_t* dispatcher);
+void RunTaskSync(fit::closure callback, async_dispatcher_t* dispatcher);
 
 }  // namespace common
 }  // namespace btlib

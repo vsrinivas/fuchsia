@@ -66,7 +66,7 @@ class FencedBuffer : public Buffer {
                                        uint32_t index);
 
   // This function is called when the release fence is signalled
-  void OnReleaseFenceSignalled(async_t* async,
+  void OnReleaseFenceSignalled(async_dispatcher_t* dispatcher,
                                async::WaitBase* wait,
                                zx_status_t status,
                                const zx_packet_signal* signal);

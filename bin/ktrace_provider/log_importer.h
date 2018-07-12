@@ -22,7 +22,7 @@ class LogImporter {
   void Stop();
 
  private:
-  void Handle(async_t* async,
+  void Handle(async_dispatcher_t* dispatcher,
               async::WaitBase* wait,
               zx_status_t status,
               const zx_packet_signal_t* signal);

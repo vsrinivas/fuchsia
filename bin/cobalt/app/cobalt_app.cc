@@ -39,7 +39,7 @@ constexpr char kAnalyzerPublicKeyPemPath[] =
 constexpr char kShufflerPublicKeyPemPath[] =
     "/pkg/data/certs/cobaltv0.1/shuffler_public.pem";
 
-CobaltApp::CobaltApp(async_t* async, std::chrono::seconds schedule_interval,
+CobaltApp::CobaltApp(async_dispatcher_t* dispatcher, std::chrono::seconds schedule_interval,
                      std::chrono::seconds min_interval,
                      const std::string& product_name)
     : system_data_(product_name),
@@ -47,12 +47,12 @@ CobaltApp::CobaltApp(async_t* async, std::chrono::seconds schedule_interval,
       shuffler_client_(kCloudShufflerUri, true),
       send_retryer_(&shuffler_client_),
       network_wrapper_(
-          async, std::make_unique<backoff::ExponentialBackoff>(),
+          dispatcher, std::make_unique<backoff::ExponentialBackoff>(),
           [this] {
             return context_->ConnectToEnvironmentService<http::HttpService>();
           }),
-      timer_manager_(async),
-      controller_impl_(new CobaltControllerImpl(async, &shipping_dispatcher_)) {
+      timer_manager_(dispatcher),
+      controller_impl_(new CobaltControllerImpl(dispatcher, &shipping_dispatcher_)) {
   auto size_params = ShippingManager::SizeParams(
       fuchsia::cobalt::kMaxBytesPerObservation, kMaxBytesPerEnvelope,
       kMaxBytesTotal, kMinEnvelopeSendSize);
@@ -76,7 +76,7 @@ CobaltApp::CobaltApp(async_t* async, std::chrono::seconds schedule_interval,
           size_params, schedule_params, envelope_maker_params,
           std::make_unique<ClearcutUploader>(
               kClearcutServerUri,
-              std::make_unique<FuchsiaHTTPClient>(&network_wrapper_, async))));
+              std::make_unique<FuchsiaHTTPClient>(&network_wrapper_, dispatcher))));
   shipping_dispatcher_.Start();
 
   // Open the cobalt config file.

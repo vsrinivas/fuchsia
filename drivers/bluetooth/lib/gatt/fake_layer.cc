@@ -46,7 +46,7 @@ void FakeLayer::SendNotification(IdType service_id,
 }
 
 void FakeLayer::RegisterRemoteServiceWatcher(RemoteServiceWatcher callback,
-                                             async_t* dispatcher) {
+                                             async_dispatcher_t* dispatcher) {
   // TODO: implement
 }
 

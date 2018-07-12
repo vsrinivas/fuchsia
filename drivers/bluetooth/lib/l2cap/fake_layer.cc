@@ -37,7 +37,7 @@ void FakeLayer::TriggerLEConnectionParameterUpdate(
 void FakeLayer::AddACLConnection(hci::ConnectionHandle handle,
                                  hci::Connection::Role role,
                                  LinkErrorCallback link_error_cb,
-                                 async_t* dispatcher) {
+                                 async_dispatcher_t* dispatcher) {
   if (!initialized_)
     return;
 
@@ -49,7 +49,7 @@ void FakeLayer::AddLEConnection(
     hci::ConnectionHandle handle, hci::Connection::Role role,
     LEConnectionParameterUpdateCallback conn_param_cb,
     LinkErrorCallback link_error_cb, AddLEConnectionCallback channel_callback,
-    async_t* dispatcher) {
+    async_dispatcher_t* dispatcher) {
   if (!initialized_)
     return;
 
@@ -87,7 +87,7 @@ FakeLayer::LinkData* FakeLayer::RegisterInternal(
     hci::Connection::Role role,
     hci::Connection::LinkType link_type,
     LinkErrorCallback link_error_cb,
-    async_t* dispatcher) {
+    async_dispatcher_t* dispatcher) {
   FXL_DCHECK(links_.find(handle) == links_.end())
       << "l2cap: Connection handle re-used!";
 

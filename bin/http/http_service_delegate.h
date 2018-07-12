@@ -14,7 +14,7 @@ namespace http {
 
 class HttpServiceDelegate {
  public:
-  HttpServiceDelegate(async_t* dispatcher);
+  HttpServiceDelegate(async_dispatcher_t* dispatcher);
   ~HttpServiceDelegate();
 
  private:

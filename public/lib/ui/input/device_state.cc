@@ -174,7 +174,7 @@ void KeyboardState::Repeat(uint64_t sequence) {
 }
 
 void KeyboardState::ScheduleRepeat(uint64_t sequence, zx::duration delta) {
-  async::PostDelayedTask(async_get_default(),
+  async::PostDelayedTask(async_get_default_dispatcher(),
                          [weak = weak_ptr_factory_.GetWeakPtr(), sequence] {
                            if (weak)
                              weak->Repeat(sequence);

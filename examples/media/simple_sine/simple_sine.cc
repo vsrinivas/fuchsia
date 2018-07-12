@@ -147,7 +147,7 @@ int main(int argc, const char** argv) {
   auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
 
   examples::MediaApp media_app(
-      [&loop]() { async::PostTask(loop.async(), [&loop]() { loop.Quit(); }); });
+      [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });
 
   media_app.Run(startup_context.get());
 

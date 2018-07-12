@@ -20,11 +20,11 @@ class Renderer : public AsyncNode {
 
   ~Renderer() override;
 
-  // Provides an async object and update callback to the renderer. The callback
+  // Provides an dispatcher object and update callback to the renderer. The callback
   // should be called to notify of changes in the value returned by
   // end_of_stream(). Subclasses of Renderer may use this callback to signal
   // additional changes.
-  void Provision(async_t* async, fit::closure update_callback);
+  void Provision(async_dispatcher_t* dispatcher, fit::closure update_callback);
 
   // Revokes the task runner and update callback provided in a previous call to
   // |Provision|.
@@ -58,9 +58,9 @@ class Renderer : public AsyncNode {
   bool end_of_stream() const;
 
  protected:
-  async_t* async() const {
-    FXL_DCHECK(async_) << "async() called on unprovisioned renderer.";
-    return async_;
+  async_dispatcher_t* dispatcher() const {
+    FXL_DCHECK(dispatcher_) << "dispatcher() called on unprovisioned renderer.";
+    return dispatcher_;
   }
 
   // Notifies of state updates (calls the update callback).
@@ -130,7 +130,7 @@ class Renderer : public AsyncNode {
            fuchsia::media::kUnspecifiedTime;
   }
 
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
   fit::closure update_callback_;
   media::TimelineFunction current_timeline_function_;
   media::TimelineFunction pending_timeline_function_;

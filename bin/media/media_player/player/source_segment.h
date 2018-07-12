@@ -32,7 +32,7 @@ class SourceSegment : public Segment {
   // Provides the graph, async and callbacks for this source segment.
   // The player expects stream updates shortly after this method is called,
   // the last of which should have a |more| value of false.
-  void Provision(Graph* graph, async_t* async, fit::closure updateCallback,
+  void Provision(Graph* graph, async_dispatcher_t* dispatcher, fit::closure updateCallback,
                  StreamUpdateCallback stream_update_callback);
 
   // Revokes the graph, task runner and callbacks provided in a previous call to

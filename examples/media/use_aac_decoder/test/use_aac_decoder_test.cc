@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
   sysmgr_args.push_back("--test");
   std::unique_ptr<component::Appmgr> appmgr =
       std::make_unique<component::Appmgr>(
-          main_loop.async(),
+          main_loop.dispatcher(),
           component::AppmgrArgs{
               .pa_directory_request = appmgr_pa_directory_server.release(),
               .sysmgr_url = "sysmgr",
@@ -109,7 +109,7 @@ int main(int argc, char* argv[]) {
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;
   zx_result = fdio_service_connect_at(
       appmgr_svc_dir_client.get(), ::fuchsia::mediacodec::CodecFactory::Name_,
-      codec_factory.NewRequest(main_loop.async()).TakeChannel().release());
+      codec_factory.NewRequest(main_loop.dispatcher()).TakeChannel().release());
   if (zx_result != ZX_OK) {
     printf("fdio_service_connect_at() failed (2)\n");
     exit(-1);

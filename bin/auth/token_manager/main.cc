@@ -48,7 +48,7 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  trace::TraceProvider trace_provider(loop.async());
+  trace::TraceProvider trace_provider(loop.dispatcher());
   TokenManagerApp app(fuchsia::sys::StartupContext::CreateFromStartupInfo());
   loop.Run();
   return 0;

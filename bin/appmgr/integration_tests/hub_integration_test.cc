@@ -48,7 +48,7 @@ class HubTest : public ::testing::Test {
  protected:
   HubTest()
       : loop_(&kAsyncLoopConfigMakeDefault),
-        vfs_(async_get_default()),
+        vfs_(async_get_default_dispatcher()),
         services_(fbl::AdoptRef(new ServiceProviderDirImpl())) {
     // we are currently have access to sys environment and not root environment.
     fuchsia::sys::ConnectToEnvironmentService(sys_env_.NewRequest());

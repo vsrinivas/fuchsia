@@ -9,9 +9,9 @@
 namespace machina {
 
 template <VirtioVsock::StreamFunc F>
-VirtioVsock::Stream<F>::Stream(async_t* async, VirtioQueue* queue,
+VirtioVsock::Stream<F>::Stream(async_dispatcher_t* dispatcher, VirtioQueue* queue,
                                VirtioVsock* vsock)
-    : waiter_(async, queue, fit::bind_member(vsock, F)) {}
+    : waiter_(dispatcher, queue, fit::bind_member(vsock, F)) {}
 
 template <VirtioVsock::StreamFunc F>
 zx_status_t VirtioVsock::Stream<F>::WaitOnQueue() {
@@ -93,13 +93,13 @@ void VirtioVsock::Connection::ReadCredit(virtio_vsock_hdr_t* header) {
   peer_fwd_cnt_ = header->fwd_cnt;
 }
 
-static zx_status_t wait(async_t* async, async::Wait* wait, zx_status_t status) {
+static zx_status_t wait(async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status) {
   if (status == ZX_ERR_SHOULD_WAIT) {
     status = ZX_OK;
   }
   if (status == ZX_OK) {
     if (wait->has_handler() && !wait->is_pending()) {
-      status = wait->Begin(async);
+      status = wait->Begin(dispatcher);
     }
   }
   if (status != ZX_OK) {
@@ -114,11 +114,11 @@ static zx_status_t wait(async_t* async, async::Wait* wait, zx_status_t status) {
 }
 
 zx_status_t VirtioVsock::Connection::WaitOnTransmit(zx_status_t status) {
-  return wait(async_, &tx_wait_, status);
+  return wait(dispatcher_, &tx_wait_, status);
 }
 
 zx_status_t VirtioVsock::Connection::WaitOnReceive(zx_status_t status) {
-  return wait(async_, &rx_wait_, status);
+  return wait(dispatcher_, &rx_wait_, status);
 }
 
 VirtioVsock::SocketConnection::SocketConnection(
@@ -139,16 +139,16 @@ VirtioVsock::SocketConnection::~SocketConnection() {
 // We take a |queue_callback| to decouple the connection from the device. This
 // allows a connection to wait on a Virtio queue and update the device state,
 // without having direct access to the device.
-zx_status_t VirtioVsock::SocketConnection::Init(async_t* async,
+zx_status_t VirtioVsock::SocketConnection::Init(async_dispatcher_t* dispatcher,
                                                 fit::closure queue_callback) {
-  async_ = async;
+  dispatcher_ = dispatcher;
   queue_callback_ = std::move(queue_callback);
 
   rx_wait_.set_object(socket_.get());
   rx_wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_READ_DISABLED |
                        ZX_SOCKET_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED);
   rx_wait_.set_handler(
-      [this](async_t* async, async::Wait* wait, zx_status_t status,
+      [this](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
              const zx_packet_signal_t* signal) { OnReady(status, signal); });
   // We require a separate waiter due to the way zx_object_wait_async works with
   // ZX_WAIT_ASYNC_ONCE. If the socket was just created, its transmit buffer
@@ -160,7 +160,7 @@ zx_status_t VirtioVsock::SocketConnection::Init(async_t* async,
   tx_wait_.set_object(socket_.get());
   tx_wait_.set_trigger(ZX_SOCKET_WRITABLE);
   tx_wait_.set_handler(
-      [this](async_t* async, async::Wait* wait, zx_status_t status,
+      [this](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
              const zx_packet_signal_t* signal) { OnReady(status, signal); });
 
   return WaitOnReceive(ZX_OK);
@@ -323,11 +323,11 @@ zx_status_t VirtioVsock::SocketConnection::Write(VirtioQueue* queue,
 }
 
 VirtioVsock::VirtioVsock(fuchsia::sys::StartupContext* context,
-                         const PhysMem& phys_mem, async_t* async)
+                         const PhysMem& phys_mem, async_dispatcher_t* dispatcher)
     : VirtioDeviceBase(phys_mem),
-      async_(async),
-      rx_stream_(async, rx_queue(), this),
-      tx_stream_(async, tx_queue(), this) {
+      dispatcher_(dispatcher),
+      rx_stream_(dispatcher, rx_queue(), this),
+      tx_stream_(dispatcher, tx_queue(), this) {
   config_.guest_cid = 0;
   if (context) {
     context->outgoing().AddPublicService(endpoint_bindings_.GetHandler(this));
@@ -380,7 +380,7 @@ void VirtioVsock::Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
   // deletion.
 
   ConnectionKey key{src_cid, src_port, port};
-  status = conn->Init(async_, [this, key] {
+  status = conn->Init(dispatcher_, [this, key] {
     fbl::AutoLock lock(&mutex_);
     WaitOnQueueLocked(key);
   });
@@ -413,7 +413,7 @@ void VirtioVsock::ConnectCallback(ConnectionKey key, zx_status_t status,
   }
 
   conn->UpdateOp(VIRTIO_VSOCK_OP_RESPONSE);
-  status = conn->Init(async_, [this, key] {
+  status = conn->Init(dispatcher_, [this, key] {
     fbl::AutoLock lock(&mutex_);
     WaitOnQueueLocked(key);
   });

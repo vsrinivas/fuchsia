@@ -14,7 +14,7 @@ int main(int argc, const char** argv) {
     return 1;
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  http::HttpServiceDelegate delegate2(loop.async());
+  http::HttpServiceDelegate delegate2(loop.dispatcher());
   loop.Run();
   return 0;
 }

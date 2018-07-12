@@ -99,7 +99,7 @@ class FakeSession : public ::fuchsia::ui::scenic::Session {
 
   void HandleSetTexture(uint32_t material_id, uint32_t texture_id);
 
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
   fidl::Binding<::fuchsia::ui::scenic::Session> binding_;
   ::fuchsia::ui::scenic::SessionListenerPtr listener_;
 

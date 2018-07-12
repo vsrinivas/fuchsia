@@ -140,7 +140,7 @@ class MediaPacketConsumerBase : public fuchsia::media::MediaPacketConsumer {
 
     ~SuppliedPacketCounter();
 
-    async_t* async() { return async_; }
+    async_dispatcher_t* dispatcher() { return dispatcher_; }
 
     // Prevents any subsequent calls to the owner.
     void Detach() {
@@ -171,7 +171,7 @@ class MediaPacketConsumerBase : public fuchsia::media::MediaPacketConsumer {
    private:
     MediaPacketConsumerBase* owner_;
     // We keep the buffer set here, because it needs to outlive SuppliedPackets.
-    async_t* async_;
+    async_dispatcher_t* dispatcher_;
     SharedBufferSet buffer_set_;
     std::atomic_uint32_t packets_outstanding_;
 

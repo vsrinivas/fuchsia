@@ -126,7 +126,7 @@ void ObjectLinkerBase::WaitForPeerDeath(
         }
       }));
   zx_status_t status =
-      pending_entry->second.peer_waiter->Begin(async_get_default());
+      pending_entry->second.peer_waiter->Begin(async_get_default_dispatcher());
   FXL_DCHECK(status == ZX_OK);
 }
 

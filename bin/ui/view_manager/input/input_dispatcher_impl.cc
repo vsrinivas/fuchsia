@@ -241,7 +241,7 @@ void InputDispatcherImpl::DeliverKeyEvent(
         if (!handled && propagation_index + 1 < focus_chain->chain.size()) {
           // Avoid re-entrance on DeliverKeyEvent
           async::PostTask(
-              async_get_default(),
+              async_get_default_dispatcher(),
               fxl::MakeCopyable([weak = weak_factory_.GetWeakPtr(),
                                  focus_chain = std::move(focus_chain),
                                  propagation_index,
@@ -267,7 +267,7 @@ void InputDispatcherImpl::PopAndScheduleNextEvent() {
         if (weak)
           weak->ProcessNextEvent();
       };
-      async::PostTask(async_get_default(), process_next_event);
+      async::PostTask(async_get_default_dispatcher(), process_next_event);
     }
   }
 }

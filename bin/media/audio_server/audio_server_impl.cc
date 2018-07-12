@@ -18,8 +18,8 @@ namespace audio {
 
 AudioServerImpl::AudioServerImpl() : device_manager_(this) {
   // Stash a pointer to our async object.
-  async_ = async_get_default();
-  FXL_DCHECK(async_);
+  dispatcher_ = async_get_default_dispatcher();
+  FXL_DCHECK(dispatcher_);
 
   // TODO(johngro) : See MG-940
   //
@@ -33,7 +33,7 @@ AudioServerImpl::AudioServerImpl() : device_manager_(this) {
   // restructuring.  We will cross that bridge when we have the TBD way to deal
   // with realtime requirements in place.
   async::PostTask(
-      async_, []() { zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */); });
+      dispatcher_, []() { zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */); });
 
   // Set up our output manager.
   zx_status_t res = device_manager_.Init();
@@ -48,7 +48,7 @@ AudioServerImpl::AudioServerImpl() : device_manager_(this) {
   // manager so that we wait until we are certain that we have discovered and
   // probed the capabilities of all of the pre-existing inputs and outputs
   // before proceeding.  See MTWN-118
-  async::PostDelayedTask(async_, [this]() { PublishServices(); }, zx::msec(50));
+  async::PostDelayedTask(dispatcher_, [this]() { PublishServices(); }, zx::msec(50));
 }
 
 AudioServerImpl::~AudioServerImpl() {
@@ -189,8 +189,8 @@ void AudioServerImpl::SchedulePacketCleanup(
   packet_cleanup_queue_.push_back(std::move(packet));
 
   if (!cleanup_scheduled_ && !shutting_down_) {
-    FXL_DCHECK(async_);
-    async::PostTask(async_, [this]() { DoPacketCleanup(); });
+    FXL_DCHECK(dispatcher_);
+    async::PostTask(dispatcher_, [this]() { DoPacketCleanup(); });
     cleanup_scheduled_ = true;
   }
 }
@@ -202,8 +202,8 @@ void AudioServerImpl::ScheduleFlushCleanup(
   flush_cleanup_queue_.push_back(std::move(token));
 
   if (!cleanup_scheduled_ && !shutting_down_) {
-    FXL_DCHECK(async_);
-    async::PostTask(async_, [this]() { DoPacketCleanup(); });
+    FXL_DCHECK(dispatcher_);
+    async::PostTask(dispatcher_, [this]() { DoPacketCleanup(); });
     cleanup_scheduled_ = true;
   }
 }

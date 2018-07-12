@@ -207,7 +207,7 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
 
   // Wait kSessionDuration seconds, and close the session.
   constexpr int kSessionDuration = 40;
-  async::PostDelayedTask(loop_->async(), [this] { ReleaseSessionResources(); },
+  async::PostDelayedTask(loop_->dispatcher(), [this] { ReleaseSessionResources(); },
                          zx::sec(kSessionDuration));
 
   // Set up initial scene.

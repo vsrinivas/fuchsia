@@ -82,7 +82,7 @@ int main(int argc, const char** argv) {
                 << " seconds.";
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  cobalt::CobaltApp app(loop.async(), schedule_interval, min_interval,
+  cobalt::CobaltApp app(loop.dispatcher(), schedule_interval, min_interval,
                         cobalt::hack::GetLayer());
   loop.Run();
   return 0;

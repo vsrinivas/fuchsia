@@ -36,7 +36,7 @@ class FakeLayer final : public GATT {
                         ::fidl::VectorPtr<uint8_t> value,
                         bool indicate) override;
   void RegisterRemoteServiceWatcher(RemoteServiceWatcher callback,
-                                    async_t* dispatcher) override;
+                                    async_dispatcher_t* dispatcher) override;
   void ListServices(std::string peer_id,
                     std::vector<common::UUID> uuids,
                     ServiceListCallback callback) override;

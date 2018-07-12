@@ -8,8 +8,8 @@
 
 namespace codec_runner {
 
-CodecRunner::CodecRunner(async_t* fidl_async, thrd_t fidl_thread)
-    : fidl_async_(fidl_async), fidl_thread_(fidl_thread) {
+CodecRunner::CodecRunner(async_dispatcher_t* fidl_dispatcher, thrd_t fidl_thread)
+    : fidl_dispatcher_(fidl_dispatcher), fidl_thread_(fidl_thread) {
   // nothing else to do here
 }
 
@@ -35,7 +35,7 @@ void CodecRunner::BindAndOwnSelf(
     // Since the channel failed, the client probably won't see this message.
     Exit("The Codec channel failed server-side.  Normal if client is done.");
   });
-  binding_->Bind(std::move(codec_request), fidl_async_);
+  binding_->Bind(std::move(codec_request), fidl_dispatcher_);
 
   // Some sub-classes already want to convey some output constraints as early
   // as possible - this is a place for those sub-classes to do so.  Sending
@@ -64,7 +64,7 @@ void CodecRunner::BindAndOwnSelf(
   // onInputConstraintsReady() above, so that the derived class has every chance
   // to send output constraints before input constraints to encourage client to
   // configure output before starting to deliver input data.
-  async::PostTask(fidl_async_, [this] {
+  async::PostTask(fidl_dispatcher_, [this] {
     binding_->events().OnInputConstraints(*input_constraints_);
   });
 

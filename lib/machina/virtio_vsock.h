@@ -29,7 +29,7 @@ class VirtioVsock
       public fuchsia::guest::SocketAcceptor {
  public:
   VirtioVsock(fuchsia::sys::StartupContext* context, const PhysMem&,
-              async_t* async);
+              async_dispatcher_t* dispatcher);
 
   uint32_t guest_cid() const;
 
@@ -74,7 +74,7 @@ class VirtioVsock
   template <StreamFunc F>
   class Stream {
    public:
-    Stream(async_t* async, VirtioQueue* queue, VirtioVsock* device);
+    Stream(async_dispatcher_t* dispatcher, VirtioQueue* queue, VirtioVsock* device);
 
     zx_status_t WaitOnQueue();
 
@@ -104,7 +104,7 @@ class VirtioVsock
   void Mux(zx_status_t status, uint16_t index);
   void Demux(zx_status_t status, uint16_t index);
 
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
   Stream<&VirtioVsock::Mux> rx_stream_;
   Stream<&VirtioVsock::Demux> tx_stream_;
 
@@ -166,7 +166,7 @@ class VirtioVsock::Connection {
   uint32_t peer_fwd_cnt_ = 0;
   uint16_t op_ = VIRTIO_VSOCK_OP_REQUEST;
 
-  async_t* async_ = nullptr;
+  async_dispatcher_t* dispatcher_ = nullptr;
   async::Wait rx_wait_;
   async::Wait tx_wait_;
 };
@@ -192,7 +192,7 @@ class VirtioVsock::SocketConnection final : public VirtioVsock::Connection {
                    fuchsia::guest::SocketAcceptor::AcceptCallback callback);
   ~SocketConnection() override;
 
-  zx_status_t Init(async_t* async, fit::closure queue_callback);
+  zx_status_t Init(async_dispatcher_t* dispatcher, fit::closure queue_callback);
   zx_status_t WriteCredit(virtio_vsock_hdr_t* header) override;
 
   zx_status_t Accept() override;

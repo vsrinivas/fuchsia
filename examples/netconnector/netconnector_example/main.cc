@@ -20,7 +20,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   examples::NetConnectorExampleImpl impl(&params, [&loop]() {
-    async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
+    async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
   });
 
   loop.Run();

@@ -47,7 +47,7 @@ void RemoteServiceManager::ServiceListRequest::Complete(
 }
 
 RemoteServiceManager::RemoteServiceManager(std::unique_ptr<Client> client,
-                                           async_t* gatt_dispatcher)
+                                           async_dispatcher_t* gatt_dispatcher)
     : gatt_dispatcher_(gatt_dispatcher),
       client_(std::move(client)),
       initialized_(false),

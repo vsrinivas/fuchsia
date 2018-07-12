@@ -17,7 +17,7 @@
 
 namespace netconnector {
 
-Listener::Listener() : async_(async_get_default()) {}
+Listener::Listener() : dispatcher_(async_get_default_dispatcher()) {}
 
 Listener::~Listener() { Stop(); }
 
@@ -87,7 +87,7 @@ void Listener::Worker() {
     }
 
     async::PostTask(
-        async_,
+        dispatcher_,
         fxl::MakeCopyable([this, fd = std::move(connection_fd)]() mutable {
           new_connection_callback_(std::move(fd));
         }));

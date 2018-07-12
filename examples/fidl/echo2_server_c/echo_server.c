@@ -31,10 +31,10 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  async_t* async = async_loop_get_dispatcher(loop);
+  async_dispatcher_t* dispatcher = async_loop_get_dispatcher(loop);
 
   svc_dir_t* dir = NULL;
-  status = svc_dir_create(async, directory_request, &dir);
+  status = svc_dir_create(dispatcher, directory_request, &dir);
   if (status != ZX_OK) {
     printf("error: svc_dir_create returned: %d (%s)\n", status, zx_status_get_string(status));
     return status;

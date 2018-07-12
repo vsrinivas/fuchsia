@@ -23,7 +23,7 @@ namespace callback {
 // member of a class.
 class ScopedTaskRunner {
  public:
-  explicit ScopedTaskRunner(async_t* async);
+  explicit ScopedTaskRunner(async_dispatcher_t* dispatcher);
 
   ~ScopedTaskRunner();
 
@@ -45,7 +45,7 @@ class ScopedTaskRunner {
   }
 
  private:
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
   fxl::WeakPtrFactory<ScopedTaskRunner> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ScopedTaskRunner);

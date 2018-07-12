@@ -174,7 +174,7 @@ void Bearer::TransactionQueue::TrySendNext(l2cap::Channel* chan,
   if (current()) {
     FXL_DCHECK(!timeout_task_.is_pending());
     timeout_task_.set_handler(std::move(timeout_cb));
-    timeout_task_.PostDelayed(async_get_default(), zx::msec(timeout_ms));
+    timeout_task_.PostDelayed(async_get_default_dispatcher(), zx::msec(timeout_ms));
     chan->Send(std::move(current()->pdu));
   }
 }
@@ -230,7 +230,7 @@ bool Bearer::Activate() {
   chan_closed_cb_.Reset(fit::bind_member(this, &Bearer::OnChannelClosed));
 
   return chan_->Activate(rx_task_.callback(), chan_closed_cb_.callback(),
-                         async_get_default());
+                         async_get_default_dispatcher());
 }
 
 void Bearer::ShutDown() {
@@ -448,7 +448,7 @@ void Bearer::TryStartNextTransaction(TransactionQueue* tq) {
   FXL_DCHECK(tq);
 
   tq->TrySendNext(chan_.get(),
-                  [this](async_t*, async::Task*, zx_status_t status) {
+                  [this](async_dispatcher_t*, async::Task*, zx_status_t status) {
                     if (status == ZX_OK)
                       ShutDownInternal(true /* due_to_timeout */);
                   },

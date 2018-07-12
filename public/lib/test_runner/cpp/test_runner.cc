@@ -117,7 +117,7 @@ void TestRunnerImpl::WillTerminate(const double withinSeconds) {
     return;
   }
   termination_task_.set_handler(
-      [this, withinSeconds](async_t*, async::Task*, zx_status_t status) {
+      [this, withinSeconds](async_dispatcher_t*, async::Task*, zx_status_t status) {
         FXL_LOG(ERROR) << program_name_ << " termination timed out after "
                        << withinSeconds << "s.";
         binding_.set_error_handler(nullptr);
@@ -127,7 +127,7 @@ void TestRunnerImpl::WillTerminate(const double withinSeconds) {
         }
         test_run_context_->StopTrackingClient(this, false);
       });
-  termination_task_.PostDelayed(async_get_default(), zx::sec(withinSeconds));
+  termination_task_.PostDelayed(async_get_default_dispatcher(), zx::sec(withinSeconds));
 }
 
 void TestRunnerImpl::SetTestPointCount(int64_t count) {

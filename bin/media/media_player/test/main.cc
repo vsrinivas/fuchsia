@@ -21,7 +21,7 @@ int main(int argc, const char** argv) {
   int result;
   auto quit_callback = [&loop, &result](int exit_code) {
     result = exit_code;
-    async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
+    async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
   };
 
   if (params.unattended()) {

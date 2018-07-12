@@ -74,32 +74,32 @@ MessageReader::MessageReader(MessageHandler* message_handler)
             &MessageReader::CallHandler,
             ZX_HANDLE_INVALID,
             kSignals},
-      async_(nullptr),
+      dispatcher_(nullptr),
       should_stop_(nullptr),
       message_handler_(message_handler) {}
 
 MessageReader::~MessageReader() {
   Stop();
-  if (async_)
-    async_cancel_wait(async_, &wait_);
+  if (dispatcher_)
+    async_cancel_wait(dispatcher_, &wait_);
 }
 
-zx_status_t MessageReader::Bind(zx::channel channel, async_t* async) {
+zx_status_t MessageReader::Bind(zx::channel channel, async_dispatcher_t* dispatcher) {
   if (is_bound())
     Unbind();
   if (!channel)
     return ZX_OK;
   channel_ = std::move(channel);
-  if (async) {
-    async_ = async;
+  if (dispatcher) {
+    dispatcher_ = dispatcher;
   } else {
-    async_ = async_get_default();
+    dispatcher_ = async_get_default_dispatcher();
   }
-  ZX_ASSERT_MSG(async_ != nullptr,
-                "either |async| must be non-null, or |async_get_default| must "
+  ZX_ASSERT_MSG(dispatcher_ != nullptr,
+                "either |dispatcher| must be non-null, or |async_get_default_dispatcher| must "
                 "be configured to return a non-null vaule");
   wait_.object = channel_.get();
-  zx_status_t status = async_begin_wait(async_, &wait_);
+  zx_status_t status = async_begin_wait(dispatcher_, &wait_);
   if (status != ZX_OK)
     Unbind();
   return status;
@@ -109,9 +109,9 @@ zx::channel MessageReader::Unbind() {
   if (!is_bound())
     return zx::channel();
   Stop();
-  async_cancel_wait(async_, &wait_);
+  async_cancel_wait(dispatcher_, &wait_);
   wait_.object = ZX_HANDLE_INVALID;
-  async_ = nullptr;
+  dispatcher_ = nullptr;
   zx::channel channel = std::move(channel_);
   if (message_handler_)
     message_handler_->OnChannelGone();
@@ -125,7 +125,7 @@ void MessageReader::Reset() {
 
 zx_status_t MessageReader::TakeChannelAndErrorHandlerFrom(
     MessageReader* other) {
-  zx_status_t status = Bind(other->Unbind(), other->async_);
+  zx_status_t status = Bind(other->Unbind(), other->dispatcher_);
   if (status != ZX_OK)
     return status;
   error_handler_ = std::move(other->error_handler_);
@@ -154,15 +154,15 @@ zx_status_t MessageReader::WaitAndDispatchOneMessageUntil(zx::time deadline) {
   return ZX_ERR_PEER_CLOSED;
 }
 
-void MessageReader::CallHandler(async_t* async, async_wait_t* wait,
+void MessageReader::CallHandler(async_dispatcher_t* dispatcher, async_wait_t* wait,
                                 zx_status_t status,
                                 const zx_packet_signal_t* signal) {
   static_assert(offsetof(MessageReader, wait_) == 0,
                 "The wait must be the first member for this cast to be valid.");
-  reinterpret_cast<MessageReader*>(wait)->OnHandleReady(async, status, signal);
+  reinterpret_cast<MessageReader*>(wait)->OnHandleReady(dispatcher, status, signal);
 }
 
-void MessageReader::OnHandleReady(async_t* async, zx_status_t status,
+void MessageReader::OnHandleReady(async_dispatcher_t* dispatcher, zx_status_t status,
                                   const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     NotifyError();
@@ -181,7 +181,7 @@ void MessageReader::OnHandleReady(async_t* async, zx_status_t status,
       if (status != ZX_OK)
         return;
     }
-    status = async_begin_wait(async, &wait_);
+    status = async_begin_wait(dispatcher, &wait_);
     if (status != ZX_OK) {
       NotifyError();
     }

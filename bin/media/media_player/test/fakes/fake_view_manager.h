@@ -47,7 +47,7 @@ class FakeViewManager : public ::fuchsia::ui::views_v1::ViewManager {
       fidl::StringPtr label) override;
 
  private:
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
   fidl::Binding<::fuchsia::ui::views_v1::ViewManager> binding_;
   FakeScenic* fake_scenic_;
   FakeView fake_view_;

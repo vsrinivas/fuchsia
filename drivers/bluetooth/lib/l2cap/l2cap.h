@@ -23,8 +23,8 @@ class Channel;
 //
 //   * Waiting on L2CAP sockets;
 //
-// A production L2CAP (obtained via L2CAP::Create()) spawns a thread with an
-// async dispatcher which is used to serially dispatch all internal L2CAP tasks.
+// A production L2CAP (obtained via L2CAP::Create()) spawns a thread with a
+// dispatcher which is used to serially dispatch all internal L2CAP tasks.
 //
 // L2CAP is defined as a pure-virtual interface, so that a fake can be injected
 // while testing layers that depend on it.
@@ -62,7 +62,7 @@ class L2CAP : public fbl::RefCounted<L2CAP> {
   virtual void AddACLConnection(hci::ConnectionHandle handle,
                                 hci::Connection::Role role,
                                 LinkErrorCallback link_error_callback,
-                                async_t* dispatcher) = 0;
+                                async_dispatcher_t* dispatcher) = 0;
 
   // Registers an LE connection with the L2CAP layer. L2CAP channels can be
   // opened on the logical link represented by |handle| after a call to this
@@ -84,7 +84,7 @@ class L2CAP : public fbl::RefCounted<L2CAP> {
       hci::ConnectionHandle handle, hci::Connection::Role role,
       LEConnectionParameterUpdateCallback conn_param_callback,
       LinkErrorCallback link_error_callback,
-      AddLEConnectionCallback channel_callback, async_t* dispatcher) = 0;
+      AddLEConnectionCallback channel_callback, async_dispatcher_t* dispatcher) = 0;
 
   // Removes a previously registered connection. All corresponding Channels will
   // be closed and all incoming data packets on this link will be dropped.

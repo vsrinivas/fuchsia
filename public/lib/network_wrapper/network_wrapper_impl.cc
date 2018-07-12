@@ -153,11 +153,11 @@ class NetworkWrapperImpl::RunningRequest {
 };
 
 NetworkWrapperImpl::NetworkWrapperImpl(
-    async_t* async, std::unique_ptr<backoff::Backoff> backoff,
+    async_dispatcher_t* dispatcher, std::unique_ptr<backoff::Backoff> backoff,
     fit::function<http::HttpServicePtr()> http_service_factory)
     : backoff_(std::move(backoff)),
       http_service_factory_(std::move(http_service_factory)),
-      task_runner_(async) {}
+      task_runner_(dispatcher) {}
 
 NetworkWrapperImpl::~NetworkWrapperImpl() {}
 

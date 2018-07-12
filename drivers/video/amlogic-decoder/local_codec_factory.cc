@@ -94,7 +94,7 @@ void LocalCodecFactory::Bind(zx::channel server_endpoint) {
   // Go!  (immediately - if Bind() is called on IOCTL thread, this can result in
   // _immediate_ dispatching over on shared_fidl_thread()).
   factory_binding_.Bind(std::move(server_endpoint),
-                        device_->driver()->shared_fidl_loop()->async());
+                        device_->driver()->shared_fidl_loop()->dispatcher());
 
   // All HW-accelerated local CodecFactory(s) must send OnCodecList()
   // immediately upon creation of the local CodecFactory.

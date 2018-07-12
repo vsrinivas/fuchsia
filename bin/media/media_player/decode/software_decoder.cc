@@ -12,7 +12,7 @@
 
 namespace media_player {
 
-SoftwareDecoder::SoftwareDecoder() : main_thread_async_(async_get_default()) {
+SoftwareDecoder::SoftwareDecoder() : main_thread_dispatcher_(async_get_default_dispatcher()) {
   output_state_ = OutputState::kIdle;
   worker_loop_.StartThread();
 }

@@ -15,13 +15,13 @@ Renderer::Renderer() { ClearPendingTimelineFunction(); }
 
 Renderer::~Renderer() {}
 
-void Renderer::Provision(async_t* async, fit::closure update_callback) {
-  async_ = async;
+void Renderer::Provision(async_dispatcher_t* dispatcher, fit::closure update_callback) {
+  dispatcher_ = dispatcher;
   update_callback_ = std::move(update_callback);
 }
 
 void Renderer::Deprovision() {
-  async_ = nullptr;
+  dispatcher_ = nullptr;
   update_callback_ = nullptr;
 }
 
@@ -112,7 +112,7 @@ void Renderer::UpdateTimeline(int64_t reference_time) {
 
 void Renderer::UpdateTimelineAt(int64_t reference_time) {
   async::PostTaskForTime(
-      async_, [this, reference_time]() { UpdateTimeline(reference_time); },
+      dispatcher_, [this, reference_time]() { UpdateTimeline(reference_time); },
       zx::time(reference_time));
 }
 

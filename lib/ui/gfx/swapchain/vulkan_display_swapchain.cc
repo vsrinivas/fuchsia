@@ -289,7 +289,7 @@ bool VulkanDisplaySwapchain::DrawAndPresentFrame(
   }
   // TODO: Wait for sema before triggering callbacks. This class is only used
   // for debugging, so the precise timestamps don't matter as much.
-  async::PostTask(async_get_default(), [frame_timings, timing_index] {
+  async::PostTask(async_get_default_dispatcher(), [frame_timings, timing_index] {
     frame_timings->OnFrameRendered(timing_index,
                                    zx_clock_get(ZX_CLOCK_MONOTONIC));
     frame_timings->OnFramePresented(timing_index,

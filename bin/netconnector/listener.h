@@ -40,7 +40,7 @@ class Listener {
 
   void Worker();
 
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
   fit::function<void(fxl::UniqueFD)> new_connection_callback_;
   fxl::UniqueFD socket_fd_;
   std::thread worker_thread_;

@@ -58,7 +58,7 @@ class Transport;
 // SequentialCommandRunner is being constructed.
 class SequentialCommandRunner final {
  public:
-  SequentialCommandRunner(async_t* dispatcher,
+  SequentialCommandRunner(async_dispatcher_t* dispatcher,
                           fxl::RefPtr<Transport> transport);
   ~SequentialCommandRunner();
 
@@ -122,7 +122,7 @@ class SequentialCommandRunner final {
   void Reset();
   void NotifyStatusAndReset(Status status);
 
-  async_t* dispatcher_;
+  async_dispatcher_t* dispatcher_;
   fxl::RefPtr<Transport> transport_;
 
   struct QueuedCommand {

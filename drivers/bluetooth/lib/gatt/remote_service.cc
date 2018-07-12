@@ -22,14 +22,14 @@ namespace {
 
 void ReportStatus(Status status,
                   StatusCallback callback,
-                  async_t* dispatcher) {
+                  async_dispatcher_t* dispatcher) {
   RunOrPost([status, cb = std::move(callback)] { cb(status); }, dispatcher);
 }
 
 void ReportValue(att::Status status,
                  const common::ByteBuffer& value,
                  RemoteService::ReadValueCallback callback,
-                 async_t* dispatcher) {
+                 async_dispatcher_t* dispatcher) {
   if (!dispatcher) {
     callback(status, value);
     return;
@@ -53,7 +53,7 @@ constexpr size_t RemoteService::kSentinel;
 
 RemoteService::RemoteService(const ServiceData& service_data,
                              fxl::WeakPtr<Client> client,
-                             async_t* gatt_dispatcher)
+                             async_dispatcher_t* gatt_dispatcher)
     : service_data_(service_data),
       gatt_dispatcher_(gatt_dispatcher),
       client_(client),
@@ -93,7 +93,7 @@ void RemoteService::ShutDown() {
 }
 
 bool RemoteService::AddRemovedHandler(fit::closure handler,
-                                      async_t* dispatcher) {
+                                      async_dispatcher_t* dispatcher) {
   std::lock_guard<std::mutex> lock(mtx_);
 
   if (!alive())
@@ -104,7 +104,7 @@ bool RemoteService::AddRemovedHandler(fit::closure handler,
 }
 
 void RemoteService::DiscoverCharacteristics(CharacteristicCallback callback,
-                                            async_t* dispatcher) {
+                                            async_dispatcher_t* dispatcher) {
   RunGattTask([this, cb = std::move(callback), dispatcher]() mutable {
     if (shut_down_) {
       ReportCharacteristics(Status(HostError::kFailed), std::move(cb),
@@ -175,7 +175,7 @@ bool RemoteService::IsDiscovered() const {
 
 void RemoteService::ReadCharacteristic(IdType id,
                                        ReadValueCallback cb,
-                                       async_t* dispatcher) {
+                                       async_dispatcher_t* dispatcher) {
   RunGattTask([this, id, cb = std::move(cb), dispatcher]() mutable {
     RemoteCharacteristic* chrc;
     att::Status status = att::Status(GetCharacteristic(id, &chrc));
@@ -205,7 +205,7 @@ void RemoteService::ReadCharacteristic(IdType id,
 void RemoteService::WriteCharacteristic(IdType id,
                                         std::vector<uint8_t> value,
                                         StatusCallback cb,
-                                        async_t* dispatcher) {
+                                        async_dispatcher_t* dispatcher) {
   RunGattTask([this, id, value = std::move(value), cb = std::move(cb),
                dispatcher]() mutable {
     RemoteCharacteristic* chrc;
@@ -258,7 +258,7 @@ void RemoteService::WriteCharacteristicWithoutResponse(
 
 void RemoteService::EnableNotifications(IdType id, ValueCallback callback,
                                         NotifyStatusCallback status_callback,
-                                        async_t* dispatcher) {
+                                        async_dispatcher_t* dispatcher) {
   RunGattTask([this, id, cb = std::move(callback),
                status_cb = std::move(status_callback), dispatcher]() mutable {
     RemoteCharacteristic* chrc;
@@ -277,7 +277,7 @@ void RemoteService::EnableNotifications(IdType id, ValueCallback callback,
 
 void RemoteService::DisableNotifications(IdType id, IdType handler_id,
                                          StatusCallback status_callback,
-                                         async_t* dispatcher) {
+                                         async_dispatcher_t* dispatcher) {
   RunGattTask([this, id, handler_id, cb = std::move(status_callback),
                dispatcher]() mutable {
     RemoteCharacteristic* chrc;
@@ -352,7 +352,7 @@ void RemoteService::StartDescriptorDiscovery() {
 }
 
 bool RemoteService::IsOnGattThread() const {
-  return async_get_default() == gatt_dispatcher_;
+  return async_get_default_dispatcher() == gatt_dispatcher_;
 }
 
 HostError RemoteService::GetCharacteristic(IdType id, RemoteCharacteristic** out_char) {
@@ -381,7 +381,7 @@ void RemoteService::RunGattTask(fit::closure task) {
 
 void RemoteService::ReportCharacteristics(Status status,
                                           CharacteristicCallback callback,
-                                          async_t* dispatcher) {
+                                          async_dispatcher_t* dispatcher) {
   FXL_DCHECK(IsOnGattThread());
   RunOrPost(
       [self = fbl::WrapRefPtr(this), status, cb = std::move(callback)] {

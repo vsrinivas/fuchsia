@@ -10,7 +10,7 @@
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  trace::TraceProvider trace_provider(loop.async());
+  trace::TraceProvider trace_provider(loop.dispatcher());
 
   mozart::ViewProviderApp app([](mozart::ViewContext view_context) {
     return std::make_unique<examples::SpinningSquareView>(

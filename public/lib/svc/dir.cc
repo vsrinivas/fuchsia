@@ -10,15 +10,15 @@
 #include <fs/synchronous-vfs.h>
 
 struct svc_dir {
-  explicit svc_dir(async_t* async) : vfs(async) {}
+  explicit svc_dir(async_dispatcher_t* dispatcher) : vfs(dispatcher) {}
 
   fs::SynchronousVfs vfs;
   fbl::RefPtr<fs::PseudoDir> root;
 };
 
-zx_status_t svc_dir_create(async_t* async, zx_handle_t dir_request,
+zx_status_t svc_dir_create(async_dispatcher_t* dispatcher, zx_handle_t dir_request,
                            svc_dir_t** result) {
-  svc_dir_t* dir = new svc_dir_t(async);
+  svc_dir_t* dir = new svc_dir_t(dispatcher);
   dir->root = fbl::AdoptRef(new fs::PseudoDir());
   zx_status_t status =
       dir->vfs.ServeDirectory(dir->root, zx::channel(dir_request));

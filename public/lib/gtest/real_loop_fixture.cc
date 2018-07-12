@@ -15,7 +15,7 @@ bool RunGivenLoopWithTimeout(async::Loop* loop, zx::duration timeout) {
   // after this function returns.
   auto canceled = std::make_shared<bool>(false);
   bool timed_out = false;
-  async::PostDelayedTask(loop->async(),
+  async::PostDelayedTask(loop->dispatcher(),
                          [loop, canceled, &timed_out] {
                            if (*canceled) {
                              return;
@@ -60,7 +60,7 @@ RealLoopFixture::RealLoopFixture() : loop_(&kAsyncLoopConfigMakeDefault) {}
 
 RealLoopFixture::~RealLoopFixture() = default;
 
-async_t* RealLoopFixture::dispatcher() { return loop_.async(); }
+async_dispatcher_t* RealLoopFixture::dispatcher() { return loop_.dispatcher(); }
 
 void RealLoopFixture::RunLoop() {
   loop_.Run();

@@ -8,7 +8,7 @@ namespace http {
 
 namespace oldhttp = ::fuchsia::net::oldhttp;
 
-HttpServiceDelegate::HttpServiceDelegate(async_t* dispatcher)
+HttpServiceDelegate::HttpServiceDelegate(async_dispatcher_t* dispatcher)
     : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       http_provider_(dispatcher) {
   FXL_DCHECK(dispatcher),

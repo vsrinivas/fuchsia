@@ -17,7 +17,7 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   hello_pose_buffer::App app(&loop);
-  async::PostDelayedTask(loop.async(),
+  async::PostDelayedTask(loop.dispatcher(),
                          [&loop] {
                            FXL_LOG(INFO) << "Quitting.";
                            loop.Quit();

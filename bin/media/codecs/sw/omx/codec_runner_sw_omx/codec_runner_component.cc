@@ -18,9 +18,9 @@ bool is_factory_created = false;
 namespace codec_runner {
 
 CodecRunnerComponent::CodecRunnerComponent(
-    async_t* fidl_async, thrd_t fidl_thread,
+    async_dispatcher_t* fidl_dispatcher, thrd_t fidl_thread,
     std::unique_ptr<fuchsia::sys::StartupContext> startup_context)
-    : fidl_async_(fidl_async),
+    : fidl_dispatcher_(fidl_dispatcher),
       fidl_thread_(fidl_thread),
       startup_context_(std::move(startup_context)) {
   startup_context_->outgoing_services()->AddServiceForName(
@@ -37,7 +37,7 @@ CodecRunnerComponent::CodecRunnerComponent(
         // later allow more than one, since the CodecFactory interface is
         // stateful by design.
         codec_factory::LocalCodecFactory::CreateSelfOwned(
-            fidl_async_, fidl_thread_,
+            fidl_dispatcher_, fidl_thread_,
             fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory>(
                 std::move(request)));
       },

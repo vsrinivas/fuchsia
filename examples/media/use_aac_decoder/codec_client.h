@@ -144,7 +144,7 @@ class CodecClient {
                            bool error_detected_before);
   std::mutex lock_;
   async::Loop* loop_ = nullptr;  // must override
-  async_t* async_ = nullptr;     // must override
+  async_dispatcher_t* dispatcher_ = nullptr;     // must override
   fuchsia::mediacodec::CodecPtr codec_;
   // This only temporarily holds the Codec request that was created during the
   // constructor.  If the caller asks for this more than once, the subsequent

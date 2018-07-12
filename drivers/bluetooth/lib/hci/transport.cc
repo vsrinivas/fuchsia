@@ -34,7 +34,7 @@ Transport::~Transport() {
   // from any thread and calling ShutDown() would be unsafe.
 }
 
-bool Transport::Initialize(async_t* dispatcher) {
+bool Transport::Initialize(async_dispatcher_t* dispatcher) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(hci_device_);
   FXL_DCHECK(!command_channel_);
@@ -53,7 +53,7 @@ bool Transport::Initialize(async_t* dispatcher) {
   } else {
     io_loop_ = std::make_unique<async::Loop>();
     io_loop_->StartThread("hci-transport-io");
-    io_dispatcher_ = io_loop_->async();
+    io_dispatcher_ = io_loop_->dispatcher();
   }
 
   // We watch for handle errors and closures to perform the necessary clean up.
@@ -92,7 +92,7 @@ bool Transport::InitializeACLDataChannel(
 
 void Transport::SetTransportClosedCallback(
     fit::closure callback,
-    async_t* dispatcher) {
+    async_dispatcher_t* dispatcher) {
   FXL_DCHECK(callback);
   FXL_DCHECK(dispatcher);
   FXL_DCHECK(!closed_cb_);
@@ -154,7 +154,7 @@ void Transport::WatchChannelClosed(const zx::channel& channel,
     [handle = channel.get(), &wait, this, ref = fxl::Ref(this)] {
     wait.set_object(handle);
     wait.set_trigger(ZX_CHANNEL_PEER_CLOSED);
-    zx_status_t status = wait.Begin(async_get_default());
+    zx_status_t status = wait.Begin(async_get_default_dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "hci: Transport: failed channel setup: "
                      << zx_status_get_string(status);
@@ -164,7 +164,7 @@ void Transport::WatchChannelClosed(const zx::channel& channel,
 }
 
 void Transport::OnChannelClosed(
-    async_t* dispatcher,
+    async_dispatcher_t* dispatcher,
     async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal_t* signal) {

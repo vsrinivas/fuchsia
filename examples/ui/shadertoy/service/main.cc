@@ -42,7 +42,7 @@ int main(int argc, const char** argv) {
     escher::Escher escher(vulkan_device);
 
     async::Loop loop(&kAsyncLoopConfigMakeDefault);
-    trace::TraceProvider trace_provider(loop.async());
+    trace::TraceProvider trace_provider(loop.dispatcher());
 
     std::unique_ptr<fuchsia::sys::StartupContext> app_context(
         fuchsia::sys::StartupContext::CreateFromStartupInfo());

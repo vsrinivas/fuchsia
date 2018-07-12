@@ -38,7 +38,7 @@ class TestLoopFixture : public ::testing::Test {
   TestLoopFixture();
   ~TestLoopFixture();
 
-  async_t* dispatcher() { return loop_.async(); }
+  async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
 
   // Returns the current fake clock time.
   zx::time Now() { return loop_.Now(); }

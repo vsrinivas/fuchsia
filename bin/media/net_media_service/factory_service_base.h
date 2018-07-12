@@ -149,7 +149,7 @@ class FactoryServiceBase {
   FactoryServiceBase(
       std::unique_ptr<fuchsia::sys::StartupContext> startup_context)
       : startup_context_(std::move(startup_context)),
-        async_(async_get_default()) {}
+        dispatcher_(async_get_default_dispatcher()) {}
 
   virtual ~FactoryServiceBase() {}
 
@@ -190,7 +190,7 @@ class FactoryServiceBase {
 
  private:
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
   mutable std::mutex mutex_;
   std::unordered_set<std::shared_ptr<ProductBase>> products_
       FXL_GUARDED_BY(mutex_);
@@ -209,7 +209,7 @@ class FactoryServiceBase {
   if (!(condition)) {                                                       \
     FXL_LOG(ERROR) << "request precondition failed: " #condition ".";       \
     Unbind();                                                               \
-    async::PostTask(async_get_default(), [this]() { ReleaseFromOwner(); }); \
+    async::PostTask(async_get_default_dispatcher(), [this]() { ReleaseFromOwner(); }); \
     return;                                                                 \
   }
 

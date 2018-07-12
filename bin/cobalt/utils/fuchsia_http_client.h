@@ -23,12 +23,12 @@ class NetworkRequest;
 class FuchsiaHTTPClient : public ::clearcut::HTTPClient {
  public:
   FuchsiaHTTPClient(network_wrapper::NetworkWrapper* network_wrapper,
-                    async_t* async);
+                    async_dispatcher_t* dispatcher);
 
   // Posts an HTTPRequest to fuchsia's network backend.
   //
-  // Note: Do not invoke this method from |async_|'s thread.
-  // Note: Do not wait on the returned future from |async_|'s thread.
+  // Note: Do not invoke this method from |dispatcher_|'s thread.
+  // Note: Do not wait on the returned future from |dispatcher_|'s thread.
   std::future<tensorflow_statusor::StatusOr<clearcut::HTTPResponse>> Post(
       clearcut::HTTPRequest request,
       std::chrono::steady_clock::time_point deadline);
@@ -44,9 +44,9 @@ class FuchsiaHTTPClient : public ::clearcut::HTTPClient {
   virtual void SendRequest(fxl::RefPtr<NetworkRequest> network_request);
 
   // |network_wrapper_| is thread averse, and should only be accessed on the
-  // main thread of |async_|.
+  // main thread of |dispatcher_|.
   network_wrapper::NetworkWrapper* network_wrapper_;
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
 };
 
 // NetworkRequest holds the state information for a single call to
@@ -56,7 +56,7 @@ class NetworkRequest : public fxl::RefCountedThreadSafe<NetworkRequest>,
  public:
   NetworkRequest(clearcut::HTTPRequest req) : request_(std::move(req)) {}
 
-  void ReadResponse(async_t* async, fxl::RefPtr<NetworkRequest> self,
+  void ReadResponse(async_dispatcher_t* dispatcher, fxl::RefPtr<NetworkRequest> self,
                     uint32_t http_code, zx::socket source);
   void OnDataAvailable(const void* data, size_t num_bytes);
   void OnDataComplete();
@@ -82,8 +82,8 @@ class NetworkRequest : public fxl::RefCountedThreadSafe<NetworkRequest>,
     deadline_task_ = std::move(deadline_task);
   }
 
-  void ScheduleDeadline(async_t* async, zx::duration duration) {
-    deadline_task_->PostDelayed(async, duration);
+  void ScheduleDeadline(async_dispatcher_t* dispatcher, zx::duration duration) {
+    deadline_task_->PostDelayed(dispatcher, duration);
   }
 
  private:

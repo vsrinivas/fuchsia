@@ -52,7 +52,7 @@ class RealLoopFixture : public ::testing::Test {
   ~RealLoopFixture() override;
 
   // Returns the loop's asynchronous dispatch interface.
-  async_t* dispatcher();
+  async_dispatcher_t* dispatcher();
 
   // Runs the loop until it is exited.
   void RunLoop();

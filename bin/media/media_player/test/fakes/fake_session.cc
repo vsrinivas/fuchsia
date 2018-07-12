@@ -25,7 +25,7 @@ constexpr uint32_t kRootNodeId = 1;
 
 }  // namespace
 
-FakeSession::FakeSession() : async_(async_get_default()), binding_(this) {
+FakeSession::FakeSession() : dispatcher_(async_get_default_dispatcher()), binding_(this) {
   fuchsia::ui::gfx::ResourceArgs root_resource;
   fuchsia::ui::gfx::ViewArgs view_args;
   root_resource.set_view(std::move(view_args));
@@ -222,7 +222,7 @@ void FakeSession::Present(uint64_t presentation_time,
       presentation_time - (presentation_time % kPresentationInterval);
 
   async::PostTaskForTime(
-      async_,
+      dispatcher_,
       [this, callback = std::move(callback), presentation_time]() {
         fuchsia::images::PresentationInfo presentation_info;
         presentation_info.presentation_time = presentation_time + ZX_MSEC(20);

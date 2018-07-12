@@ -36,7 +36,7 @@ class Guest {
 
   const PhysMem& phys_mem() const { return phys_mem_; }
   zx_handle_t handle() const { return guest_; }
-  async_t* device_async() const { return device_loop_.async(); }
+  async_dispatcher_t* device_dispatcher() const { return device_loop_.dispatcher(); }
 
   // Setup a trap to delegate accesses to an IO region to |handler|.
   zx_status_t CreateMapping(TrapType type, uint64_t addr, size_t size,

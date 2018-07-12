@@ -59,10 +59,10 @@ Tracee::Tracee(TraceProviderBundle* bundle)
     : bundle_(bundle), wait_(this), weak_ptr_factory_(this) {}
 
 Tracee::~Tracee() {
-  if (async_) {
+  if (dispatcher_) {
     wait_.Cancel();
     wait_.set_object(ZX_HANDLE_INVALID);
-    async_ = nullptr;
+    dispatcher_ = nullptr;
   }
 }
 
@@ -119,8 +119,8 @@ bool Tracee::Start(size_t buffer_size,
   wait_.set_trigger(TRACE_PROVIDER_SIGNAL_STARTED |
                     TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW |
                     ZX_EVENTPAIR_PEER_CLOSED);
-  async_ = async_get_default();
-  status = wait_.Begin(async_);
+  dispatcher_ = async_get_default_dispatcher();
+  status = wait_.Begin(dispatcher_);
   FXL_CHECK(status == ZX_OK) << "Failed to add handler: status=" << status;
   TransitionToState(State::kStartPending);
   return true;
@@ -139,7 +139,7 @@ void Tracee::TransitionToState(State new_state) {
   state_ = new_state;
 }
 
-void Tracee::OnHandleReady(async_t* async,
+void Tracee::OnHandleReady(async_dispatcher_t* dispatcher,
                            async::WaitBase* wait,
                            zx_status_t status,
                           const zx_packet_signal_t* signal) {
@@ -196,7 +196,7 @@ void Tracee::OnHandleReady(async_t* async,
 
   if (pending & ZX_EVENTPAIR_PEER_CLOSED) {
     wait_.set_object(ZX_HANDLE_INVALID);
-    async_ = nullptr;
+    dispatcher_ = nullptr;
     TransitionToState(State::kStopped);
     fit::closure stopped_callback = std::move(stopped_callback_);
     FXL_DCHECK(stopped_callback);
@@ -204,7 +204,7 @@ void Tracee::OnHandleReady(async_t* async,
     return;
   }
 
-  status = wait->Begin(async);
+  status = wait->Begin(dispatcher);
   if (status != ZX_OK)
     OnHandleError(status);
 }
@@ -215,7 +215,7 @@ void Tracee::OnHandleError(zx_status_t status) {
   FXL_DCHECK(state_ == State::kStartPending || state_ == State::kStarted ||
              state_ == State::kStopping);
   wait_.set_object(ZX_HANDLE_INVALID);
-  async_ = nullptr;
+  dispatcher_ = nullptr;
   TransitionToState(State::kStopped);
 }
 

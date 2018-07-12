@@ -50,7 +50,7 @@ void ScenicScanout::CreateView(
 }
 
 void ScenicScanout::InvalidateRegion(const machina::GpuRect& rect) {
-  async::PostTask(async_get_default(), [this] { view_->InvalidateScene(); });
+  async::PostTask(async_get_default_dispatcher(), [this] { view_->InvalidateScene(); });
 }
 
 GuestView::GuestView(

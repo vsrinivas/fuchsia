@@ -10,7 +10,7 @@
 
 namespace media_player {
 
-Graph::Graph(async_t* async) : async_(async) {}
+Graph::Graph(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
 Graph::~Graph() { Reset(); }
 
@@ -182,7 +182,7 @@ void Graph::Reset() {
     stage->Acquire(joiner->NewCallback());
   }
 
-  joiner->WhenJoined(async_, [stages = std::move(stages_)]() mutable {
+  joiner->WhenJoined(dispatcher_, [stages = std::move(stages_)]() mutable {
     while (!stages.empty()) {
       std::shared_ptr<StageImpl> stage = stages.front();
       stages.pop_front();
@@ -247,7 +247,7 @@ void Graph::PostTask(fit::closure task, std::initializer_list<NodeRef> nodes) {
     stages.push_back(node.stage_);
   }
 
-  joiner->WhenJoined(async_,
+  joiner->WhenJoined(dispatcher_,
                      [task = std::move(task), stages = std::move(stages)]() {
                        task();
                        for (auto stage : stages) {
@@ -258,9 +258,9 @@ void Graph::PostTask(fit::closure task, std::initializer_list<NodeRef> nodes) {
 
 NodeRef Graph::AddStage(std::shared_ptr<StageImpl> stage) {
   FXL_DCHECK(stage);
-  FXL_DCHECK(async_);
+  FXL_DCHECK(dispatcher_);
 
-  stage->SetAsync(async_);
+  stage->SetDispatcher(dispatcher_);
   stages_.push_back(stage);
 
   if (stage->input_count() == 0) {

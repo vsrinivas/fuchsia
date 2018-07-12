@@ -35,21 +35,21 @@ LocalCodecFactory::CodecStrategy LocalCodecFactory::codec_strategies[] = {
 };
 
 void LocalCodecFactory::CreateSelfOwned(
-    async_t* fidl_async, thrd_t fidl_thread,
+    async_dispatcher_t* fidl_dispatcher, thrd_t fidl_thread,
     fidl::InterfaceRequest<CodecFactory> codec_factory_request) {
   std::unique_ptr<LocalCodecFactory> codec_factory(
-      new LocalCodecFactory(fidl_async, fidl_thread));
+      new LocalCodecFactory(fidl_dispatcher, fidl_thread));
   // C++ evaluation order is mostly arbitrary within a statement, so stash this
   // result of unique_ptr::operator->() to avoid moving the same unique_ptr in a
   // single statement.  The actual pointed-at instance isn't moving, so it's
   // fine to have this ref for a moment here.
   std::unique_ptr<BindingType>& binding = codec_factory->binding_;
   binding = std::make_unique<BindingType>(
-      std::move(codec_factory), std::move(codec_factory_request), fidl_async);
+      std::move(codec_factory), std::move(codec_factory_request), fidl_dispatcher);
 }
 
-LocalCodecFactory::LocalCodecFactory(async_t* fidl_async, thrd_t fidl_thread)
-    : fidl_async_(fidl_async), fidl_thread_(fidl_thread) {
+LocalCodecFactory::LocalCodecFactory(async_dispatcher_t* fidl_dispatcher, thrd_t fidl_thread)
+    : fidl_dispatcher_(fidl_dispatcher), fidl_thread_(fidl_thread) {
   // nothing else to do here
 }
 
@@ -78,7 +78,7 @@ void LocalCodecFactory::CreateCommon(
     fit::function<void(codec_runner::CodecRunner* codec_runner)>
         set_type_specific_params) {
   std::unique_ptr<codec_runner::CodecRunner> codec_runner =
-      CreateCodec(fidl_async_, fidl_thread_, codec_type, mime_type);
+      CreateCodec(fidl_dispatcher_, fidl_thread_, codec_type, mime_type);
   if (!codec_runner) {
     // TODO(dustingreen): epitaph, log
     codec_request.TakeChannel();  // ~zx::channel
@@ -107,15 +107,15 @@ void LocalCodecFactory::CreateCommon(
 // targetted behavior override.  Either this method needs to know or another
 // method to create a different way needs to exist.
 std::unique_ptr<codec_runner::CodecRunner>
-LocalCodecFactory::CreateRawOmxRunner(async_t* fidl_async, thrd_t fidl_thread,
+LocalCodecFactory::CreateRawOmxRunner(async_dispatcher_t* fidl_dispatcher, thrd_t fidl_thread,
                                       const CodecStrategy& codec_strategy) {
   return std::make_unique<codec_runner::OmxCodecRunner>(
-      fidl_async, fidl_thread, codec_strategy.mime_type,
+      fidl_dispatcher, fidl_thread, codec_strategy.mime_type,
       codec_strategy.lib_filename);
 }
 
 std::unique_ptr<codec_runner::CodecRunner> LocalCodecFactory::CreateCodec(
-    async_t* fidl_async, thrd_t fidl_thread,
+    async_dispatcher_t* fidl_dispatcher, thrd_t fidl_thread,
     fuchsia::mediacodec::CodecType codec_type, std::string mime_type) {
   const CodecStrategy* strategy = nullptr;
   for (size_t i = 0; i < arraysize(codec_strategies); i++) {
@@ -129,7 +129,7 @@ std::unique_ptr<codec_runner::CodecRunner> LocalCodecFactory::CreateCodec(
     return nullptr;
   }
   std::unique_ptr<codec_runner::CodecRunner> codec_runner =
-      strategy->create_runner(fidl_async, fidl_thread, *strategy);
+      strategy->create_runner(fidl_dispatcher, fidl_thread, *strategy);
   if (!codec_runner) {
     return nullptr;
   }

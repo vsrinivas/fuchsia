@@ -25,7 +25,7 @@ namespace tts {
 
 class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
  public:
-  TtsSpeaker(async_t* master_async);
+  TtsSpeaker(async_dispatcher_t* master_dispatcher);
   ~TtsSpeaker() = default;
 
   zx_status_t Init(
@@ -68,7 +68,7 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
   bool clock_started_ = false;
 
   async::Loop engine_loop_;
-  async_t* master_async_;
+  async_dispatcher_t* master_dispatcher_;
 
   fuchsia::media::AudioRenderer2Ptr audio_renderer_;
   vmo_utils::VmoMapper shared_buf_;

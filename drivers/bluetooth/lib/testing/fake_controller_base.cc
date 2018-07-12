@@ -30,7 +30,7 @@ bool FakeControllerBase::StartCmdChannel(zx::channel chan) {
   cmd_channel_ = std::move(chan);
   cmd_channel_wait_.set_object(cmd_channel_.get());
   cmd_channel_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-  zx_status_t status = cmd_channel_wait_.Begin(async_get_default());
+  zx_status_t status = cmd_channel_wait_.Begin(async_get_default_dispatcher());
   if (status != ZX_OK) {
     cmd_channel_.reset();
     FXL_LOG(WARNING) << "FakeController: Failed to Start Command channel: "
@@ -48,7 +48,7 @@ bool FakeControllerBase::StartAclChannel(zx::channel chan) {
   acl_channel_ = std::move(chan);
   acl_channel_wait_.set_object(acl_channel_.get());
   acl_channel_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-  zx_status_t status = acl_channel_wait_.Begin(async_get_default());
+  zx_status_t status = acl_channel_wait_.Begin(async_get_default_dispatcher());
   if (status != ZX_OK) {
     acl_channel_.reset();
     FXL_LOG(WARNING) << "FakeController: Failed to Start ACL channel: "
@@ -102,7 +102,7 @@ void FakeControllerBase::CloseACLDataChannel() {
 }
 
 void FakeControllerBase::HandleCommandPacket(
-    async_t* async,
+    async_dispatcher_t* dispatcher,
     async::WaitBase* wait,
     zx_status_t wait_status,
     const zx_packet_signal_t* signal) {
@@ -132,7 +132,7 @@ void FakeControllerBase::HandleCommandPacket(
     OnCommandPacketReceived(packet);
   }
 
-  status = wait->Begin(async);
+  status = wait->Begin(dispatcher);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to wait on cmd channel: "
                    << zx_status_get_string(status);
@@ -141,7 +141,7 @@ void FakeControllerBase::HandleCommandPacket(
 }
 
 void FakeControllerBase::HandleACLPacket(
-    async_t* async,
+    async_dispatcher_t* dispatcher,
     async::WaitBase* wait,
     zx_status_t wait_status,
     const zx_packet_signal_t* signal) {
@@ -166,7 +166,7 @@ void FakeControllerBase::HandleACLPacket(
   common::BufferView view(buffer.data(), read_size);
   OnACLDataPacketReceived(view);
 
-  status = wait->Begin(async);
+  status = wait->Begin(dispatcher);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to wait on ACL channel: "
                    << zx_status_get_string(status);

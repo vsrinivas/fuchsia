@@ -11,14 +11,14 @@ namespace cobalt {
 using encoder::ShippingDispatcher;
 
 CobaltControllerImpl::CobaltControllerImpl(
-    async_t* async, ShippingDispatcher* shipping_dispatcher)
-    : async_(async), shipping_dispatcher_(shipping_dispatcher) {}
+    async_dispatcher_t* dispatcher, ShippingDispatcher* shipping_dispatcher)
+    : dispatcher_(dispatcher), shipping_dispatcher_(shipping_dispatcher) {}
 
 void CobaltControllerImpl::RequestSendSoon(RequestSendSoonCallback callback) {
   // invokes |callback| on the main thread
   shipping_dispatcher_->RequestSendSoon(fxl::MakeCopyable(
-      [ async = async_, callback = std::move(callback) ](bool success) mutable {
-        async::PostTask(async, [ callback = std::move(callback), success ] {
+      [ dispatcher = dispatcher_, callback = std::move(callback) ](bool success) mutable {
+        async::PostTask(dispatcher, [ callback = std::move(callback), success ] {
           callback(success);
         });
       }));

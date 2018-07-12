@@ -29,7 +29,7 @@ class FileReader : public Reader {
               ReadAtCallback callback) override;
 
  private:
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
   fxl::UniqueFD fd_;
   Result result_ = Result::kOk;
   uint64_t size_ = kUnknownSize;

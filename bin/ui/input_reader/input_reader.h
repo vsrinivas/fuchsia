@@ -42,10 +42,10 @@ class InputReader {
   void DeviceAdded(std::unique_ptr<InputInterpreter> interpreter);
   void DeviceRemoved(zx_handle_t handle);
 
-  void OnDeviceHandleReady(async_t* async, async::WaitBase* wait,
+  void OnDeviceHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                            zx_status_t status,
                            const zx_packet_signal_t* signal);
-  void OnDisplayHandleReady(async_t* async, async::WaitBase* wait,
+  void OnDisplayHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                             zx_status_t status,
                             const zx_packet_signal_t* signal);
 

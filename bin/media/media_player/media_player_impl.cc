@@ -47,10 +47,10 @@ std::unique_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
 MediaPlayerImpl::MediaPlayerImpl(
     fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer> request,
     fuchsia::sys::StartupContext* startup_context, fit::closure quit_callback)
-    : async_(async_get_default()),
+    : dispatcher_(async_get_default_dispatcher()),
       startup_context_(startup_context),
       quit_callback_(std::move(quit_callback)),
-      player_(async_) {
+      player_(dispatcher_) {
   FXL_DCHECK(request);
   FXL_DCHECK(startup_context_);
   FXL_DCHECK(quit_callback_);
@@ -418,7 +418,7 @@ void MediaPlayerImpl::BeginSetReader(std::shared_ptr<Reader> reader) {
   setting_reader_ = true;
   new_reader_ = reader;
   target_position_ = 0;
-  async::PostTask(async_, [this]() { Update(); });
+  async::PostTask(dispatcher_, [this]() { Update(); });
 }
 
 void MediaPlayerImpl::FinishSetReader() {

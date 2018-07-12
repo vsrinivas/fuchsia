@@ -93,7 +93,7 @@ class ChrealmTest : public ::testing::Test,
  protected:
   ChrealmTest()
       : loop_(&kAsyncLoopConfigMakeDefault),
-        vfs_(async_get_default()),
+        vfs_(async_get_default_dispatcher()),
         services_(fbl::AdoptRef(new fs::PseudoDir)) {
     fuchsia::sys::ConnectToEnvironmentService(sys_env_.NewRequest());
     sys_env_->GetServices(svc_.NewRequest());

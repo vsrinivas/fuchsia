@@ -106,7 +106,7 @@ class CommandChannel final {
       fit::function<void(TransactionId id, const EventPacket& event)>;
   TransactionId SendCommand(
       std::unique_ptr<CommandPacket> command_packet,
-      async_t* dispatcher,
+      async_dispatcher_t* dispatcher,
       CommandCallback callback,
       const EventCode complete_event_code = kCommandCompleteEventCode);
 
@@ -154,7 +154,7 @@ class CommandChannel final {
   //    - HCI_LE_Meta event code (use AddLEMetaEventHandler instead).
   EventHandlerId AddEventHandler(EventCode event_code,
                                  EventCallback event_callback,
-                                 async_t* dispatcher);
+                                 async_dispatcher_t* dispatcher);
 
   // Works just like AddEventHandler but the passed in event code is only valid
   // within the LE Meta Event sub-event code namespace. |event_callback| will
@@ -165,7 +165,7 @@ class CommandChannel final {
   EventHandlerId AddLEMetaEventHandler(
       EventCode subevent_code,
       EventCallback event_callback,
-      async_t* dispatcher);
+      async_dispatcher_t* dispatcher);
 
   // Removes a previously registered event handler. Does nothing if an event
   // handler with the given |id| could not be found.
@@ -182,7 +182,7 @@ class CommandChannel final {
                     OpCode opcode,
                     EventCode complete_event_code,
                     CommandCallback callback,
-                    async_t* dispatcher);
+                    async_dispatcher_t* dispatcher);
     ~TransactionData();
 
     // Starts the transaction timer, which will call timeout_cb if it's not
@@ -195,7 +195,7 @@ class CommandChannel final {
     // Makes an EventCallback that calls the callback correctly.
     EventCallback MakeCallback();
 
-    async_t* dispatcher() const { return dispatcher_; }
+    async_dispatcher_t* dispatcher() const { return dispatcher_; }
     EventCode complete_event_code() const { return complete_event_code_; }
     OpCode opcode() const { return opcode_; }
     TransactionId id() const { return id_; }
@@ -208,7 +208,7 @@ class CommandChannel final {
     OpCode opcode_;
     EventCode complete_event_code_;
     CommandCallback callback_;
-    async_t* dispatcher_;
+    async_dispatcher_t* dispatcher_;
     async::TaskClosure timeout_task_;
     EventHandlerId handler_id_;
 
@@ -240,7 +240,7 @@ class CommandChannel final {
     EventCode event_code;
     EventCallback event_callback;
     bool is_le_meta_subevent;
-    async_t* dispatcher;
+    async_dispatcher_t* dispatcher;
   };
 
   void ShutDownInternal()
@@ -264,7 +264,7 @@ class CommandChannel final {
   EventHandlerId NewEventHandler(EventCode event_code,
                                  bool is_le_meta,
                                  EventCallback event_callback,
-                                 async_t* dispatcher)
+                                 async_dispatcher_t* dispatcher)
       __TA_REQUIRES(event_handler_mutex_);
 
   // Notifies any matching event handler for |event|.
@@ -276,7 +276,7 @@ class CommandChannel final {
   void UpdateTransaction(std::unique_ptr<EventPacket> event);
 
   // Read ready handler for |channel_|
-  void OnChannelReady(async_t* async,
+  void OnChannelReady(async_dispatcher_t* dispatcher,
                       async::WaitBase* wait,
                       zx_status_t status,
                       const zx_packet_signal_t* signal);
@@ -312,7 +312,7 @@ class CommandChannel final {
   std::atomic_bool is_initialized_;
 
   // The dispatcher used for posting tasks on the HCI transport I/O thread.
-  async_t* io_dispatcher_;
+  async_dispatcher_t* io_dispatcher_;
 
   // Guards |send_queue_|. |send_queue_| can get accessed by threads that call
   // SendCommand() as well as from |io_thread_|.

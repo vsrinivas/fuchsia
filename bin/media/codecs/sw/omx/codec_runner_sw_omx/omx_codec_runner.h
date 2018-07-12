@@ -187,7 +187,7 @@ namespace codec_runner {
 // OMX_IndexParamPortDefinition.  If so, then action is required.
 class OmxCodecRunner : public CodecRunner {
  public:
-  OmxCodecRunner(async_t* fidl_async, thrd_t fidl_thread,
+  OmxCodecRunner(async_dispatcher_t* fidl_dispatcher, thrd_t fidl_thread,
                  std::string_view mime_type, std::string_view lib_filename);
 
   //
@@ -471,7 +471,7 @@ class OmxCodecRunner : public CodecRunner {
   // See codec.md "ordering domain" comments for why we have more than one
   // async_t.
 
-  // The FIDL thread's async_t is in CodecRunner::async_ (parent class).
+  // The FIDL thread's async_t is in CodecRunner::dispatcher_ (parent class).
 
   bool is_setup_done_ = false;
   std::condition_variable is_setup_done_condition_;
@@ -491,7 +491,7 @@ class OmxCodecRunner : public CodecRunner {
   // We also handle OMX_EventPortSettingsChanged on the stream_control_ thread
   // when buffer_constraints_action_required true.
   std::unique_ptr<async::Loop> stream_control_;
-  async_t* stream_control_async_ = nullptr;
+  async_dispatcher_t* stream_control_dispatcher_ = nullptr;
   thrd_t stream_control_thread_ = 0;
 
   //
@@ -937,9 +937,9 @@ class OmxCodecRunner : public CodecRunner {
   // Overall behavior.
   //
 
-  // Post to async in a way that's guaranteed to run the posted work in the same
+  // Post to dispatcher in a way that's guaranteed to run the posted work in the same
   // order as the posting order.
-  void PostSerial(async_t* async, fit::closure to_run);
+  void PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run);
 
   FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(OmxCodecRunner);
 };

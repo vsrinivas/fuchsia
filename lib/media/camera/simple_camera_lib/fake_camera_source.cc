@@ -156,7 +156,7 @@ void FakeCameraSource::PostNextCaptureTask() {
   FXL_DCHECK(next_frame_time > 0) << "TimelineFunction gave negative result!";
   FXL_DCHECK(next_frame_time != media::TimelineRate::kOverflow)
       << "TimelineFunction gave negative result!";
-  task_.PostForTime(async_get_default(), zx::time(next_frame_time));
+  task_.PostForTime(async_get_default_dispatcher(), zx::time(next_frame_time));
   FXL_VLOG(4) << "FakeCameraSource: setting next frame to: " << next_frame_time
               << "   "
               << next_frame_time - (int64_t)zx_clock_get(ZX_CLOCK_MONOTONIC)

@@ -76,7 +76,7 @@ namespace media_player {
 class Graph {
  public:
   // Constructs a graph.
-  Graph(async_t* async);
+  Graph(async_dispatcher_t* dispatcher);
 
   ~Graph();
 
@@ -185,7 +185,7 @@ class Graph {
   // |visitor| for each connected input.
   void VisitUpstream(Input* input, const Visitor& visitor);
 
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
 
   std::list<std::shared_ptr<StageImpl>> stages_;
   std::list<StageImpl*> sources_;

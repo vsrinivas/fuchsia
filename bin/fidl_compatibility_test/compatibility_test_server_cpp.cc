@@ -91,7 +91,7 @@ class EchoServerApp : public Echo {
 }  // namespace fidl
 
 int main(int argc, const char** argv) {
-  // The FIDL support lib requires async_get_default() to return non-null.
+  // The FIDL support lib requires async_get_default_dispatcher() to return non-null.
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   fidl::test::compatibility::EchoServerApp app(&loop);

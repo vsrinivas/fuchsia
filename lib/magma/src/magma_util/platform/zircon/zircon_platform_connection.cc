@@ -176,7 +176,7 @@ public:
         {
             this->state = ASYNC_STATE_INIT;
             this->handler = AsyncTaskHandlerStatic;
-            this->deadline = async_now(connection->async_loop()->async());
+            this->deadline = async_now(connection->async_loop()->dispatcher());
             this->connection = connection;
             // Copy the notification struct
             this->notification = *notification;
@@ -217,7 +217,7 @@ public:
 
     bool BeginChannelWait()
     {
-        zx_status_t status = async_begin_wait(async_loop()->async(), &async_wait_channel_);
+        zx_status_t status = async_begin_wait(async_loop()->dispatcher(), &async_wait_channel_);
         if (status != ZX_OK)
             return DRETF(false, "Couldn't begin wait on channel: %d", status);
         return true;
@@ -225,7 +225,7 @@ public:
 
     bool BeginShutdownWait()
     {
-        zx_status_t status = async_begin_wait(async_loop()->async(), &async_wait_shutdown_);
+        zx_status_t status = async_begin_wait(async_loop()->dispatcher(), &async_wait_shutdown_);
         if (status != ZX_OK)
             return DRETF(false, "Couldn't begin wait on shutdown: %d", status);
         return true;
@@ -328,14 +328,14 @@ public:
     async::Loop* async_loop() { return &async_loop_; }
 
 private:
-    static void AsyncWaitHandlerStatic(async_t* async, async_wait_t* async_wait, zx_status_t status,
+    static void AsyncWaitHandlerStatic(async_dispatcher_t* dispatcher, async_wait_t* async_wait, zx_status_t status,
                                        const zx_packet_signal_t* signal)
     {
         auto wait = static_cast<AsyncWait*>(async_wait);
-        wait->connection->AsyncWaitHandler(async, wait, status, signal);
+        wait->connection->AsyncWaitHandler(dispatcher, wait, status, signal);
     }
 
-    void AsyncWaitHandler(async_t* async, AsyncWait* wait, zx_status_t status,
+    void AsyncWaitHandler(async_dispatcher_t* dispatcher, AsyncWait* wait, zx_status_t status,
                           const zx_packet_signal_t* signal)
     {
         if (status != ZX_OK)
@@ -366,20 +366,20 @@ private:
     static void NotificationCallbackStatic(void* token, msd_notification_t* notification)
     {
         auto connection = static_cast<ZirconPlatformConnection*>(token);
-        zx_status_t status = async_post_task(connection->async_loop()->async(),
+        zx_status_t status = async_post_task(connection->async_loop()->dispatcher(),
                                              new AsyncTask(connection, notification));
         if (status != ZX_OK)
             DLOG("async_post_task failed, status %d", status);
     }
 
-    static void AsyncTaskHandlerStatic(async_t* async, async_task_t* async_task, zx_status_t status)
+    static void AsyncTaskHandlerStatic(async_dispatcher_t* dispatcher, async_task_t* async_task, zx_status_t status)
     {
         auto task = static_cast<AsyncTask*>(async_task);
-        task->connection->AsyncTaskHandler(async, task, status);
+        task->connection->AsyncTaskHandler(dispatcher, task, status);
         delete task;
     }
 
-    bool AsyncTaskHandler(async_t* async, AsyncTask* task, zx_status_t status)
+    bool AsyncTaskHandler(async_dispatcher_t* dispatcher, AsyncTask* task, zx_status_t status)
     {
         switch (static_cast<MSD_CONNECTION_NOTIFICATION_TYPE>(task->notification.type)) {
             case MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND: {
@@ -534,7 +534,7 @@ private:
     void SetError(magma_status_t error)
     {
         if (!error_)
-            error_ = DRET_MSG(error, "ZirconPlatformConnection encountered async error");
+            error_ = DRET_MSG(error, "ZirconPlatformConnection encountered dispatcher error");
     }
 
     bool WriteError(magma_status_t error)
@@ -769,7 +769,7 @@ public:
     void SetError(magma_status_t error)
     {
         if (!error_)
-            error_ = DRET_MSG(error, "ZirconPlatformIpcConnection encountered async error");
+            error_ = DRET_MSG(error, "ZirconPlatformIpcConnection encountered dispatcher error");
     }
 
     magma_status_t WaitError(magma_status_t* error_out)

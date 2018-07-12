@@ -306,7 +306,7 @@ class LowEnergyConnectionManager final {
   int64_t request_timeout_ms_;
 
   // The dispather for all asynchronous tasks.
-  async_t* dispatcher_;
+  async_dispatcher_t* dispatcher_;
 
   // The device cache is used to look up and persist remote device data that is
   // relevant during connection establishment (such as the address, preferred

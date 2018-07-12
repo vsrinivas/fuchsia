@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
                              .sysmgr_args = {},
                              .run_virtual_console = true,
                              .retry_sysmgr_crash = true};
-  component::Appmgr appmgr(loop.async(), std::move(args));
+  component::Appmgr appmgr(loop.dispatcher(), std::move(args));
 
   loop.Run();
   return 0;

@@ -35,8 +35,8 @@
 // state, the consequence is added to a list to be executed when the incident
 // occurs. In occurred state, When executes the consequence.
 //
-// If an async is provided in the constructor, all consequences are posted to
-// that async. If no async is provided, consequences queued prior to the Occur
+// If a dispatcher is provided in the constructor, all consequences are posted to
+// that dispatcher. If no dispatcher is provided, consequences queued prior to the Occur
 // call are called synchronously from the Occur call, and consequences for
 // When calls in the occurred state are called synchronously from the When
 // calls.
@@ -50,7 +50,7 @@
 // the list of consequences is cleared (without running the consequences).
 class Incident {
  public:
-  Incident(async_t* async = nullptr);
+  Incident(async_dispatcher_t* dispatcher = nullptr);
 
   ~Incident();
 
@@ -84,7 +84,7 @@ class Incident {
  private:
   void InvokeConsequence(fit::closure consequence);
 
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
   bool occurred_ = false;
   std::vector<fit::closure> consequences_;
 };

@@ -200,7 +200,7 @@ void FakeController::AddDevice(std::unique_ptr<FakeDevice> device) {
 
 void FakeController::SetScanStateCallback(
     ScanStateCallback callback,
-    async_t* dispatcher) {
+    async_dispatcher_t* dispatcher) {
   FXL_DCHECK(callback);
   FXL_DCHECK(dispatcher);
 
@@ -210,7 +210,7 @@ void FakeController::SetScanStateCallback(
 
 void FakeController::SetAdvertisingStateCallback(
     fit::closure callback,
-    async_t* dispatcher) {
+    async_dispatcher_t* dispatcher) {
   FXL_DCHECK(callback);
   FXL_DCHECK(dispatcher);
 
@@ -220,7 +220,7 @@ void FakeController::SetAdvertisingStateCallback(
 
 void FakeController::SetConnectionStateCallback(
     ConnectionStateCallback callback,
-    async_t* dispatcher) {
+    async_dispatcher_t* dispatcher) {
   FXL_DCHECK(callback);
   FXL_DCHECK(dispatcher);
 
@@ -230,7 +230,7 @@ void FakeController::SetConnectionStateCallback(
 
 void FakeController::SetLEConnectionParametersCallback(
     LEConnectionParametersCallback callback,
-    async_t* dispatcher) {
+    async_dispatcher_t* dispatcher) {
   FXL_DCHECK(callback);
   FXL_DCHECK(dispatcher);
 

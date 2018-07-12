@@ -32,7 +32,7 @@ using ScanoutId = uint32_t;
 class VirtioGpu : public VirtioDeviceBase<VIRTIO_ID_GPU, VIRTIO_GPU_Q_COUNT,
                                           virtio_gpu_config_t> {
  public:
-  VirtioGpu(const PhysMem& phys_mem, async_t* async);
+  VirtioGpu(const PhysMem& phys_mem, async_dispatcher_t* dispatcher);
   ~VirtioGpu() override;
 
   VirtioQueue* control_queue() { return queue(VIRTIO_GPU_Q_CONTROLQ); }
@@ -102,7 +102,7 @@ class VirtioGpu : public VirtioDeviceBase<VIRTIO_ID_GPU, VIRTIO_GPU_Q_COUNT,
                      size_t, kNumHashTableBuckets>;
 
   ResourceTable resources_;
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
   async::Wait control_queue_wait_;
   async::Wait cursor_queue_wait_;
 };

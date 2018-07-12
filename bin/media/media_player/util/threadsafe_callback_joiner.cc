@@ -28,7 +28,7 @@ void ThreadsafeCallbackJoiner::Spawn() {
 
 void ThreadsafeCallbackJoiner::Complete() {
   fit::closure callback;
-  async_t* async;
+  async_dispatcher_t* dispatcher;
 
   {
     std::lock_guard<std::mutex> locker(mutex_);
@@ -39,10 +39,10 @@ void ThreadsafeCallbackJoiner::Complete() {
     }
 
     std::swap(callback, join_callback_);
-    std::swap(async, join_callback_async_);
+    std::swap(dispatcher, join_callback_dispatcher_);
   }
 
-  async::PostTask(async, [shared_this = shared_from_this(),
+  async::PostTask(dispatcher, [shared_this = shared_from_this(),
                           callback = std::move(callback)]() { callback(); });
 }
 
@@ -56,9 +56,9 @@ fit::closure ThreadsafeCallbackJoiner::NewCallback() {
   };
 }
 
-void ThreadsafeCallbackJoiner::WhenJoined(async_t* async,
+void ThreadsafeCallbackJoiner::WhenJoined(async_dispatcher_t* dispatcher,
                                           fit::closure join_callback) {
-  FXL_DCHECK(async);
+  FXL_DCHECK(dispatcher);
   FXL_DCHECK(join_callback);
 
   {
@@ -66,13 +66,13 @@ void ThreadsafeCallbackJoiner::WhenJoined(async_t* async,
     FXL_DCHECK(!join_callback_);
     if (counter_ != 0) {
       join_callback_ = std::move(join_callback);
-      join_callback_async_ = async;
+      join_callback_dispatcher_ = dispatcher;
       return;
     }
   }
 
   async::PostTask(
-      async, [shared_this = shared_from_this(),
+      dispatcher, [shared_this = shared_from_this(),
               join_callback = std::move(join_callback)]() { join_callback(); });
 }
 
@@ -81,7 +81,7 @@ bool ThreadsafeCallbackJoiner::Cancel() {
 
   if (join_callback_) {
     join_callback_ = nullptr;
-    join_callback_async_ = nullptr;
+    join_callback_dispatcher_ = nullptr;
     return true;
   }
 

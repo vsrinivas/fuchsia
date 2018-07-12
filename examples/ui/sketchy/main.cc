@@ -16,7 +16,7 @@ int main(int argc, const char** argv) {
     return 1;
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  trace::TraceProvider trace_provider(loop.async());
+  trace::TraceProvider trace_provider(loop.dispatcher());
 
   mozart::ViewProviderApp app([&loop](mozart::ViewContext view_context) {
     return std::make_unique<sketchy_example::View>(

@@ -58,9 +58,9 @@ struct TimerVal {
 // as a TimerVal.
 class TimerManager {
  public:
-  // Constructs a TimerManager Object. Uses the given async dispatcher to
+  // Constructs a TimerManager Object. Uses the given dispatcher to
   // schedule tasks which delete timer data once it has expired.
-  TimerManager(async_t* async);
+  TimerManager(async_dispatcher_t* dispatcher);
 
   ~TimerManager();
 
@@ -136,7 +136,7 @@ class TimerManager {
   // The clock is abstracted so that friend tests can set a non-system clock.
   std::shared_ptr<wlan::Clock> clock_;
   // Async dispatcher used for deleting expired timer entries.
-  async_t* const async_;  // not owned.
+  async_dispatcher_t* const dispatcher_;  // not owned.
 };
 
 }  // namespace cobalt

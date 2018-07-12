@@ -63,12 +63,12 @@ class AudioServerImpl : public fuchsia::media::Audio {
 
   // Schedule a closure to run on the server's main message loop.
   void ScheduleMainThreadTask(fit::closure task) {
-    FXL_DCHECK(async_);
-    async::PostTask(async_, std::move(task));
+    FXL_DCHECK(dispatcher_);
+    async::PostTask(dispatcher_, std::move(task));
   }
 
   // Direct access to the server's async_t
-  async_t* async() const { return async_; }
+  async_dispatcher_t* dispatcher() const { return dispatcher_; }
 
   // Accessor for our encapsulated device manager.
   AudioDeviceManager& GetDeviceManager() { return device_manager_; }
@@ -89,10 +89,10 @@ class AudioServerImpl : public fuchsia::media::Audio {
   fuchsia::sys::Outgoing outgoing_;
   fidl::BindingSet<fuchsia::media::Audio> bindings_;
 
-  // A reference to our thread's async object.  Allows us to post events to
+  // A reference to our thread's dispatcher object.  Allows us to post events to
   // be handled by our main application thread from things like the output
   // manager's thread pool.
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
 
   // State for dealing with devices.
   AudioDeviceManager device_manager_;

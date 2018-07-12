@@ -160,18 +160,18 @@ ConnectionImpl::ConnectionImpl(ConnectionHandle handle, LinkType ll_type,
   enc_change_id_ = hci_->command_channel()->AddEventHandler(
       kEncryptionChangeEventCode,
       BindEventHandler<&ConnectionImpl::OnEncryptionChangeEvent>(self),
-      async_get_default());
+      async_get_default_dispatcher());
 
   enc_key_refresh_cmpl_id_ = hci_->command_channel()->AddEventHandler(
       kEncryptionKeyRefreshCompleteEventCode,
       BindEventHandler<&ConnectionImpl::OnEncryptionKeyRefreshCompleteEvent>(
           self),
-      async_get_default());
+      async_get_default_dispatcher());
 
   le_ltk_request_id_ = hci_->command_channel()->AddLEMetaEventHandler(
       kLELongTermKeyRequestSubeventCode,
       BindEventHandler<&ConnectionImpl::OnLELongTermKeyRequestEvent>(self),
-      async_get_default());
+      async_get_default_dispatcher());
 }
 
 ConnectionImpl::~ConnectionImpl() {
@@ -219,7 +219,7 @@ void ConnectionImpl::Close(StatusCode reason) {
   params->connection_handle = htole16(handle());
   params->reason = reason;
 
-  hci_->command_channel()->SendCommand(std::move(disconn), async_get_default(),
+  hci_->command_channel()->SendCommand(std::move(disconn), async_get_default_dispatcher(),
                                        std::move(status_cb),
                                        kCommandStatusEventCode);
 }
@@ -286,7 +286,7 @@ bool ConnectionImpl::LEStartEncryption(const LinkKey& ltk) {
   };
 
   return hci_->command_channel()->SendCommand(
-             std::move(cmd), async_get_default(), std::move(status_cb),
+             std::move(cmd), async_get_default_dispatcher(), std::move(status_cb),
              kCommandStatusEventCode) != 0u;
 }
 
@@ -436,7 +436,7 @@ void ConnectionImpl::OnLELongTermKeyRequestEvent(const EventPacket& event) {
     }
   };
 
-  hci_->command_channel()->SendCommand(std::move(cmd), async_get_default(),
+  hci_->command_channel()->SendCommand(std::move(cmd), async_get_default_dispatcher(),
                                        std::move(status_cb));
 }
 

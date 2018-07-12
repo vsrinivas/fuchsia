@@ -21,8 +21,8 @@ TtsServiceImpl::TtsServiceImpl(
       });
 
   // Stash a pointer to our async_t.
-  async_ = async_get_default();
-  FXL_DCHECK(async_);
+  dispatcher_ = async_get_default_dispatcher();
+  FXL_DCHECK(dispatcher_);
 }
 
 TtsServiceImpl::~TtsServiceImpl() { FXL_DCHECK(clients_.size() == 0); }
@@ -61,7 +61,7 @@ void TtsServiceImpl::Client::Shutdown() {
 void TtsServiceImpl::Client::Say(fidl::StringPtr words, uint64_t token,
                                  SayCallback cbk) {
   auto cleanup = fbl::MakeAutoCall([this] { Shutdown(); });
-  auto speaker = std::make_shared<TtsSpeaker>(owner_->async_);
+  auto speaker = std::make_shared<TtsSpeaker>(owner_->dispatcher_);
 
   if (speaker->Init(owner_->startup_context_) != ZX_OK) {
     return;

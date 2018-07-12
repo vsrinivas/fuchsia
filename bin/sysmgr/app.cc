@@ -21,7 +21,7 @@ constexpr char kDefaultLabel[] = "sys";
 
 App::App(Config config)
     : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
-      vfs_(async_get_default()),
+      vfs_(async_get_default_dispatcher()),
       svc_root_(fbl::AdoptRef(new fs::PseudoDir())) {
   FXL_DCHECK(startup_context_);
 

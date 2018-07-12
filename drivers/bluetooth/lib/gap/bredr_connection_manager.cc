@@ -16,7 +16,7 @@ namespace gap {
 namespace {
 
 void SetPageScanEnabled(bool enabled, fxl::RefPtr<hci::Transport> hci,
-                        async_t* dispatcher, hci::StatusCallback cb) {
+                        async_dispatcher_t* dispatcher, hci::StatusCallback cb) {
   FXL_DCHECK(cb);
   auto read_enable = hci::CommandPacket::New(hci::kReadScanEnable);
   auto finish_enable_cb = [enabled, dispatcher, hci, finish_cb = std::move(cb)](
@@ -54,11 +54,11 @@ BrEdrConnectionManager::BrEdrConnectionManager(fxl::RefPtr<hci::Transport> hci,
                                                bool use_interlaced_scan)
     : hci_(hci),
       cache_(device_cache),
-      interrogator_(cache_, hci_, async_get_default()),
+      interrogator_(cache_, hci_, async_get_default_dispatcher()),
       page_scan_interval_(0),
       page_scan_window_(0),
       use_interlaced_scan_(use_interlaced_scan),
-      dispatcher_(async_get_default()),
+      dispatcher_(async_get_default_dispatcher()),
       weak_ptr_factory_(this) {
   FXL_DCHECK(hci_);
   FXL_DCHECK(cache_);

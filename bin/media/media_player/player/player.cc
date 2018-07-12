@@ -16,7 +16,7 @@
 
 namespace media_player {
 
-Player::Player(async_t* async) : graph_(async), async_(async) {}
+Player::Player(async_dispatcher_t* dispatcher) : graph_(dispatcher), dispatcher_(dispatcher) {}
 
 Player::~Player() {}
 
@@ -42,7 +42,7 @@ void Player::SetSourceSegment(std::unique_ptr<SourceSegment> source_segment,
   set_source_segment_callback_ = std::move(callback);
   set_source_segment_countdown_ = 1;
 
-  source_segment_->Provision(&graph_, async_,
+  source_segment_->Provision(&graph_, dispatcher_,
                              [this]() {
                                // This callback notifies the player of changes
                                // to source_segment_'s problem() and/or
@@ -79,7 +79,7 @@ void Player::SetSinkSegment(std::unique_ptr<SinkSegment> sink_segment,
     return;
   }
 
-  sink_segment->Provision(&graph_, async_, [this]() {
+  sink_segment->Provision(&graph_, dispatcher_, [this]() {
     // This callback notifies the player of changes to
     // source_segment_'s problem() and/or
     // end_of_stream() values.
@@ -108,7 +108,7 @@ void Player::Prime(fit::closure callback) {
   }
 
   callback_joiner->WhenJoined([this, callback = std::move(callback)]() mutable {
-    async::PostTask(async_, std::move(callback));
+    async::PostTask(dispatcher_, std::move(callback));
   });
 }
 
@@ -116,10 +116,10 @@ void Player::Flush(bool hold_frame, fit::closure callback) {
   if (source_segment_) {
     source_segment_->Flush(hold_frame,
                            [this, callback = std::move(callback)]() mutable {
-                             async::PostTask(async_, std::move(callback));
+                             async::PostTask(dispatcher_, std::move(callback));
                            });
   } else {
-    async::PostTask(async_, std::move(callback));
+    async::PostTask(dispatcher_, std::move(callback));
   }
 }
 
@@ -150,7 +150,7 @@ void Player::SetTimelineFunction(media::TimelineFunction timeline_function,
   }
 
   callback_joiner->WhenJoined([this, callback = std::move(callback)]() mutable {
-    async::PostTask(async_, std::move(callback));
+    async::PostTask(dispatcher_, std::move(callback));
   });
 }
 
@@ -167,10 +167,10 @@ void Player::Seek(int64_t position, fit::closure callback) {
   if (source_segment_) {
     source_segment_->Seek(position,
                           [this, callback = std::move(callback)]() mutable {
-                            async::PostTask(async_, std::move(callback));
+                            async::PostTask(dispatcher_, std::move(callback));
                           });
   } else {
-    async::PostTask(async_, std::move(callback));
+    async::PostTask(dispatcher_, std::move(callback));
   }
 }
 

@@ -23,7 +23,7 @@ void FenceSetListener::WaitReadyAsync(fxl::Closure ready_callback) {
   FXL_DCHECK(!ready_callback_);
 
   if (ready()) {
-    async::PostTask(async_get_default(), std::move(ready_callback));
+    async::PostTask(async_get_default_dispatcher(), std::move(ready_callback));
     return;
   }
 
@@ -39,7 +39,7 @@ void FenceSetListener::WaitReadyAsync(fxl::Closure ready_callback) {
     wait->set_handler(std::bind(&FenceSetListener::OnFenceSignalled, this,
                                 waiter_index, std::placeholders::_3,
                                 std::placeholders::_4));
-    zx_status_t status = wait->Begin(async_get_default());
+    zx_status_t status = wait->Begin(async_get_default_dispatcher());
     FXL_CHECK(status == ZX_OK);
 
     waiters_.push_back(std::move(wait));

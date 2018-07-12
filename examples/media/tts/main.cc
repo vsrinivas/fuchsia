@@ -50,7 +50,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   TtsClient client(
-      [&loop]() { async::PostTask(loop.async(), [&loop]() { loop.Quit(); }); });
+      [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });
 
   std::string words(argv[1]);
   for (int i = 2; i < argc; ++i) {
@@ -58,7 +58,7 @@ int main(int argc, const char** argv) {
     words += argv[i];
   }
 
-  async::PostTask(loop.async(), [&]() { client.Say(std::move(words)); });
+  async::PostTask(loop.dispatcher(), [&]() { client.Say(std::move(words)); });
 
   loop.Run();
 

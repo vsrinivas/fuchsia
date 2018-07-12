@@ -11,7 +11,7 @@
 namespace btlib {
 namespace common {
 
-void RunOrPost(fit::closure task, async_t* dispatcher) {
+void RunOrPost(fit::closure task, async_dispatcher_t* dispatcher) {
   FXL_DCHECK(task);
 
   if (!dispatcher) {

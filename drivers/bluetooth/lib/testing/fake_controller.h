@@ -142,17 +142,17 @@ class FakeController : public FakeControllerBase,
   // Sets a callback to be invoked when the scan state changes.
   using ScanStateCallback = fit::function<void(bool enabled)>;
   void SetScanStateCallback(ScanStateCallback callback,
-                            async_t* dispatcher);
+                            async_dispatcher_t* dispatcher);
 
   // Sets a callback to be invoked when the LE Advertising state changes.
   void SetAdvertisingStateCallback(fit::closure callback,
-                                   async_t* dispatcher);
+                                   async_dispatcher_t* dispatcher);
 
   // Sets a callback to be invoked on connection events.
   using ConnectionStateCallback = fit::function<
       void(const common::DeviceAddress&, bool connected, bool canceled)>;
   void SetConnectionStateCallback(ConnectionStateCallback callback,
-                                  async_t* dispatcher);
+                                  async_dispatcher_t* dispatcher);
 
   // Sets a callback to be invoked when LE connection parameters are updated for
   // a fake device.
@@ -161,7 +161,7 @@ class FakeController : public FakeControllerBase,
                          const hci::LEConnectionParameters&)>;
   void SetLEConnectionParametersCallback(
       LEConnectionParametersCallback callback,
-      async_t* dispatcher);
+      async_dispatcher_t* dispatcher);
 
   // Sends a HCI event with the given parameters.
   void SendEvent(hci::EventCode event_code, const common::ByteBuffer& payload);
@@ -208,8 +208,8 @@ class FakeController : public FakeControllerBase,
 
  private:
   // Returns the current thread's task dispatcher.
-  async_t* dispatcher() const {
-    return async_get_default();
+  async_dispatcher_t* dispatcher() const {
+    return async_get_default_dispatcher();
   }
 
   // Finds and returns the FakeDevice with the given parameters or nullptr if no
@@ -315,16 +315,16 @@ class FakeController : public FakeControllerBase,
   std::vector<std::unique_ptr<FakeDevice>> devices_;
 
   ScanStateCallback scan_state_cb_;
-  async_t* scan_state_cb_dispatcher_;
+  async_dispatcher_t* scan_state_cb_dispatcher_;
 
   fit::closure advertising_state_cb_;
-  async_t* advertising_state_cb_dispatcher_;
+  async_dispatcher_t* advertising_state_cb_dispatcher_;
 
   ConnectionStateCallback conn_state_cb_;
-  async_t* conn_state_cb_dispatcher_;
+  async_dispatcher_t* conn_state_cb_dispatcher_;
 
   LEConnectionParametersCallback le_conn_params_cb_;
-  async_t* le_conn_params_cb_dispatcher_;
+  async_dispatcher_t* le_conn_params_cb_dispatcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeController);
 };

@@ -178,7 +178,7 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status,
   if (result < 0) {
     FXL_LOG(ERROR) << "Failed to recvfrom, errno " << errno;
     // Wait a bit before trying again to avoid spamming the log.
-    async::PostDelayedTask(async_get_default(), [this]() { WaitForInbound(); },
+    async::PostDelayedTask(async_get_default_dispatcher(), [this]() { WaitForInbound(); },
                            zx::sec(10));
     return;
   }

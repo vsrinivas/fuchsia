@@ -27,9 +27,9 @@ TEST(ThreadSafeBindingSet, Control) {
 
   for (size_t i = 0; i < kCount; ++i) {
     if (i % 2 == 0) {
-      binding_set.AddBinding(&impls[i], ptrs[i].NewRequest(), loop.async());
+      binding_set.AddBinding(&impls[i], ptrs[i].NewRequest(), loop.dispatcher());
     } else {
-      ptrs[i] = binding_set.AddBinding(&impls[i], loop.async()).Bind();
+      ptrs[i] = binding_set.AddBinding(&impls[i], loop.dispatcher()).Bind();
     }
   }
 

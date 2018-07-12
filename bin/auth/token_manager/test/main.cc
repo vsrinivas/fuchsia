@@ -29,7 +29,7 @@ class DevAuthProviderApp {
   DevAuthProviderApp()
       : loop_(&kAsyncLoopConfigMakeDefault),
         app_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
-        trace_provider_(loop_.async()) {
+        trace_provider_(loop_.dispatcher()) {
     FXL_CHECK(app_context_);
   }
 

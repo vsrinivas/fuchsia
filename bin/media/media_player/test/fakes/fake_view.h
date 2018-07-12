@@ -84,7 +84,7 @@ class FakeView : public ::fuchsia::ui::views_v1::View,
     fidl::Binding<::fuchsia::ui::views_v1_token::ViewOwner> binding_;
   };
 
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
   fidl::Binding<::fuchsia::ui::views_v1::View> binding_;
   ::fuchsia::ui::views_v1::ViewListenerPtr view_listener_;
   zx::eventpair parent_export_token_;

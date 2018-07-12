@@ -25,8 +25,8 @@ namespace media {
 TimelineControlPoint::TimelineControlPoint()
     : control_point_binding_(this),
       consumer_binding_(this),
-      async_(async_get_default()) {
-  FXL_DCHECK(async_);
+      dispatcher_(async_get_default_dispatcher()) {
+  FXL_DCHECK(dispatcher_);
 
   std::lock_guard<std::mutex> locker(mutex_);
   ClearPendingTimelineFunction(false);
@@ -98,7 +98,7 @@ void TimelineControlPoint::SnapshotCurrentFunction(int64_t reference_time,
 
   if (ReachedEndOfStream() && !end_of_stream_published_) {
     end_of_stream_published_ = true;
-    async::PostTask(async_, [this]() { status_publisher_.SendUpdates(); });
+    async::PostTask(dispatcher_, [this]() { status_publisher_.SendUpdates(); });
   }
 }
 
@@ -196,7 +196,7 @@ void TimelineControlPoint::SetTimelineTransformLocked(
       timeline_transform.reference_delta);
 
   if (progress_started_callback_ && !was_progressing && ProgressingInternal()) {
-    async::PostTask(async_, [this]() {
+    async::PostTask(dispatcher_, [this]() {
       if (progress_started_callback_) {
         progress_started_callback_();
       }
@@ -215,7 +215,7 @@ void TimelineControlPoint::ApplyPendingChanges(int64_t reference_time) {
 
   ++generation_;
 
-  async::PostTask(async_, [this]() { status_publisher_.SendUpdates(); });
+  async::PostTask(dispatcher_, [this]() { status_publisher_.SendUpdates(); });
 }
 
 void TimelineControlPoint::ClearPendingTimelineFunction(bool completed) {
@@ -224,13 +224,13 @@ void TimelineControlPoint::ClearPendingTimelineFunction(bool completed) {
   if (set_timeline_transform_callback_) {
     SetTimelineTransformCallback callback =
         std::move(set_timeline_transform_callback_);
-    async::PostTask(async_, [this, callback = std::move(callback),
+    async::PostTask(dispatcher_, [this, callback = std::move(callback),
                              completed]() { callback(completed); });
   }
 }
 
 void TimelineControlPoint::PostReset() {
-  async::PostTask(async_, [this]() { Reset(); });
+  async::PostTask(dispatcher_, [this]() { Reset(); });
 }
 
 bool TimelineControlPoint::ProgressingInternal() {

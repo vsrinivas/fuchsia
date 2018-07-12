@@ -53,6 +53,6 @@ extern "C" zx_status_t wlanphy_bind(void* ctx, zx_device_t* device) {
     return status;
 }
 
-async_t* wlanphy_async_t() {
-    return loop->async();
+async_dispatcher_t* wlanphy_async_t() {
+    return loop->dispatcher();
 }

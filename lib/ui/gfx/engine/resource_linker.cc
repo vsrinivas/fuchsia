@@ -56,7 +56,7 @@ bool ResourceLinker::ExportResource(Resource* resource,
   wait->set_handler(std::bind(&ResourceLinker::OnTokenPeerDeath, this,
                               import_koid, std::placeholders::_3,
                               std::placeholders::_4));
-  zx_status_t status = wait->Begin(async_get_default());
+  zx_status_t status = wait->Begin(async_get_default_dispatcher());
   FXL_CHECK(status == ZX_OK);
 
   // Add the resource and export token to our data structures.

@@ -22,7 +22,7 @@ int main(int argc, const char** argv) {
   FXL_VLOG(2) << argv[0] << ": starting";
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  trace::TraceProvider trace_provider(loop.async());
+  trace::TraceProvider trace_provider(loop.dispatcher());
 
   cpuperf_provider::App app(command_line);
   loop.Run();

@@ -40,7 +40,7 @@ FidlAudioRenderer::FidlAudioRenderer(
 
   audio_renderer_.events().OnMinLeadTimeChanged =
       [this](int64_t min_lead_time_nsec) {
-        FXL_DCHECK(async_get_default() == async());
+        FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
         // Pad this number just a bit so we are sure to have time to get the
         // payloads delivered to the mixer over our channel.
         min_lead_time_nsec += ZX_MSEC(10);
@@ -75,13 +75,13 @@ FidlAudioRenderer::FidlAudioRenderer(
 }
 
 FidlAudioRenderer::~FidlAudioRenderer() {
-  FXL_DCHECK(async_get_default() == async());
+  FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
 }
 
 const char* FidlAudioRenderer::label() const { return "audio_renderer"; }
 
 void FidlAudioRenderer::Dump(std::ostream& os) const {
-  FXL_DCHECK(async_get_default() == async());
+  FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
   Renderer::Dump(os);
 
   os << fostr::Indent;
@@ -112,7 +112,7 @@ void FidlAudioRenderer::Dump(std::ostream& os) const {
 
 void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,
                                    fit::closure callback) {
-  FXL_DCHECK(async_get_default() == async());
+  FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
   FXL_DCHECK(input_index == 0);
   FXL_DCHECK(callback);
 
@@ -128,7 +128,7 @@ void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,
 }
 
 void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
-  FXL_DCHECK(async_get_default() == async());
+  FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
   FXL_DCHECK(packet);
   FXL_DCHECK(input_index == 0);
   FXL_DCHECK(bytes_per_frame_ != 0);
@@ -183,7 +183,7 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
     }
 
     audio_renderer_->SendPacket(audioPacket, [this, packet]() {
-      FXL_DCHECK(async_get_default() == async());
+      FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
       int64_t now = media::Timeline::local_now();
 
       UpdateTimeline(now);
@@ -210,7 +210,7 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
 }
 
 void FidlAudioRenderer::SetStreamType(const StreamType& stream_type) {
-  FXL_DCHECK(async_get_default() == async());
+  FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
   FXL_DCHECK(stream_type.audio());
 
   fuchsia::media::AudioPcmFormat format;
@@ -245,7 +245,7 @@ void FidlAudioRenderer::SetStreamType(const StreamType& stream_type) {
 }
 
 void FidlAudioRenderer::Prime(fit::closure callback) {
-  FXL_DCHECK(async_get_default() == async());
+  FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
 
   if (prime_callback_) {
     FXL_LOG(WARNING) << "Prime requested when priming was already in progress.";
@@ -266,7 +266,7 @@ void FidlAudioRenderer::Prime(fit::closure callback) {
 
 void FidlAudioRenderer::SetTimelineFunction(
     media::TimelineFunction timeline_function, fit::closure callback) {
-  FXL_DCHECK(async_get_default() == async());
+  FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
   // AudioRenderer2 only supports 0/1 (paused) or 1/1 (normal playback rate).
   // TODO(dalesat): Remove this DCHECK when AudioRenderer2 supports other rates,
   // build an SRC into this class, or prohibit other rates entirely.
@@ -286,7 +286,7 @@ void FidlAudioRenderer::SetTimelineFunction(
 }
 
 void FidlAudioRenderer::SetGain(float gain) {
-  FXL_DCHECK(async_get_default() == async());
+  FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
   audio_renderer_->SetGainMuteNoReply(gain, false, 0);
 }
 
@@ -305,7 +305,7 @@ void FidlAudioRenderer::ReleasePayloadBuffer(void* buffer) {
 }
 
 void FidlAudioRenderer::OnTimelineTransition() {
-  FXL_DCHECK(async_get_default() == async());
+  FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
 
   if (end_of_stream_pending() && current_timeline_function().invertable()) {
     // Make sure we wake up to signal end-of-stream when the time comes.
@@ -315,7 +315,7 @@ void FidlAudioRenderer::OnTimelineTransition() {
 }
 
 bool FidlAudioRenderer::NeedMorePackets() {
-  FXL_DCHECK(async_get_default() == async());
+  FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
 
   demand_task_.Cancel();
 
@@ -352,7 +352,7 @@ bool FidlAudioRenderer::NeedMorePackets() {
 
   // We don't need packets now. Predict when we might need the next packet
   // and check then.
-  demand_task_.PostForTime(async(),
+  demand_task_.PostForTime(dispatcher(),
                            zx::time(current_timeline_function().ApplyInverse(
                                last_supplied_pts_ns_ - min_lead_time_ns_)));
 
@@ -360,7 +360,7 @@ bool FidlAudioRenderer::NeedMorePackets() {
 }
 
 bool FidlAudioRenderer::SignalCurrentDemand() {
-  FXL_DCHECK(async_get_default() == async());
+  FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
 
   if (!NeedMorePackets()) {
     return false;

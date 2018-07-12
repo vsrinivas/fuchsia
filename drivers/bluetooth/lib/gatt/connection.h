@@ -44,7 +44,7 @@ class Connection final {
              fxl::RefPtr<att::Bearer> att_bearer,
              fxl::RefPtr<att::Database> local_db,
              RemoteServiceWatcher svc_watcher,
-             async_t* gatt_dispatcher);
+             async_dispatcher_t* gatt_dispatcher);
   ~Connection();
 
   Connection() = default;

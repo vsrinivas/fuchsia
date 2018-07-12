@@ -16,7 +16,7 @@ namespace hci {
 using common::HostError;
 
 SequentialCommandRunner::SequentialCommandRunner(
-    async_t* dispatcher, fxl::RefPtr<Transport> transport)
+    async_dispatcher_t* dispatcher, fxl::RefPtr<Transport> transport)
     : dispatcher_(dispatcher),
       transport_(transport),
       sequence_number_(0u),

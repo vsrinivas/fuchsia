@@ -104,7 +104,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer2 {
   // packets and if we're playing.
   void MaybeScheduleRetirement();
 
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
   fidl::Binding<fuchsia::media::AudioRenderer2> binding_;
 
   fuchsia::media::AudioPcmFormat format_;

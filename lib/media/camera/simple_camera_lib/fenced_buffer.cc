@@ -60,7 +60,7 @@ FencedBuffer::FencedBuffer() = default;
 FencedBuffer::~FencedBuffer() = default;
 
 void FencedBuffer::OnReleaseFenceSignalled(
-    async_t* async,
+    async_dispatcher_t* dispatcher,
     async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal* signal) {
@@ -75,7 +75,7 @@ void FencedBuffer::OnReleaseFenceSignalled(
     release_fence_callback_(this);
   }
 
-  status = wait->Begin(async);
+  status = wait->Begin(dispatcher);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "AsyncWaiter failed to wait ("
                    << zx_status_get_string(status) << ").  Exiting.";
@@ -93,7 +93,7 @@ void FencedBuffer::SetReleaseFenceHandler(BufferCallback callback) {
   release_fence_waiter_.set_trigger(ZX_EVENT_SIGNALED);
   // Clear the release fence, so we don't just trigger ourselves
   release_fence_.signal(ZX_EVENT_SIGNALED, 0);
-  auto status = release_fence_waiter_.Begin(async_get_default());
+  auto status = release_fence_waiter_.Begin(async_get_default_dispatcher());
   FXL_DCHECK(status == ZX_OK);
 }
 

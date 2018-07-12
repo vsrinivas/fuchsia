@@ -155,11 +155,11 @@ class Service {
         std::make_unique<async::Wait>(process.get(), ZX_PROCESS_TERMINATED);
     waiter->set_handler(
         [this, process = std::move(process), job = std::move(child_job)](
-            async_t*, async::Wait*, zx_status_t status,
+            async_dispatcher_t*, async::Wait*, zx_status_t status,
             const zx_packet_signal_t* signal) mutable {
           ProcessTerminated(std::move(process), std::move(job));
         });
-    waiter->Begin(async_get_default());
+    waiter->Begin(async_get_default_dispatcher());
     process_waiters_.push_back(std::move(waiter));
   }
 
@@ -216,7 +216,7 @@ int main(int argc, const char** argv) {
   zx_handle_close(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
 
   async::Loop loop;
-  async_set_default(loop.async());
+  async_set_default_dispatcher(loop.dispatcher());
 
   if (argc < 3) {
     usage(argv[0]);
@@ -237,6 +237,6 @@ int main(int argc, const char** argv) {
   Service service(port, argv + 2);
 
   loop.Run();
-  async_set_default(NULL);
+  async_set_default_dispatcher(NULL);
   return 0;
 }

@@ -90,7 +90,7 @@ void HostVsockEndpoint::ConnectCallback(
   conn->wait.set_object(conn->socket.get());
   conn->wait.set_handler(
       [this, conn = conn.get()](...) { OnPeerClosed(conn); });
-  status = conn->wait.Begin(async_get_default());
+  status = conn->wait.Begin(async_get_default_dispatcher());
   if (status != ZX_OK) {
     callback(ZX_ERR_CONNECTION_REFUSED, zx::socket());
     return;

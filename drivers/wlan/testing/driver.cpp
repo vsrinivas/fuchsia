@@ -59,6 +59,6 @@ extern "C" void wlanphy_test_release(void* ctx) {
     loop = nullptr;
 }
 
-async_t* wlanphy_async_t() {
-    return loop->async();
+async_dispatcher_t* wlanphy_async_t() {
+    return loop->dispatcher();
 }

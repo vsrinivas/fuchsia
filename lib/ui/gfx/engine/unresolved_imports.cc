@@ -56,7 +56,7 @@ void UnresolvedImports::ListenForTokenPeerDeath(Import* import) {
     wait->set_handler(std::bind(&UnresolvedImports::OnTokenPeerDeath, this,
                                 import_koid, std::placeholders::_3,
                                 std::placeholders::_4));
-    zx_status_t status = wait->Begin(async_get_default());
+    zx_status_t status = wait->Begin(async_get_default_dispatcher());
     FXL_CHECK(status == ZX_OK);
 
     import_entry_iter->second.token_peer_death_waiter = std::move(wait);

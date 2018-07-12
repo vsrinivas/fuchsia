@@ -78,7 +78,7 @@ class RetryingLoader {
   }
 
   void Retry(const http::URLResponse& response) {
-    async::PostDelayedTask(async_get_default(),
+    async::PostDelayedTask(async_get_default_dispatcher(),
                            [weak_this = weak_ptr_factory_.GetWeakPtr()] {
                              if (weak_this) {
                                weak_this->Attempt();

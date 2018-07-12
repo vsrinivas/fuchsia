@@ -19,7 +19,7 @@ namespace fsl {
 
 class FXL_EXPORT FDWaiter {
  public:
-  FDWaiter(async_t* async = async_get_default());
+  FDWaiter(async_dispatcher_t* dispatcher = async_get_default_dispatcher());
   ~FDWaiter();
 
   // If the wait was successful, the first argument will be ZX_OK and the
@@ -55,10 +55,10 @@ class FXL_EXPORT FDWaiter {
   // Release the fdio_t*
   void Release();
 
-  void Handler(async_t* async, async::WaitBase* wait, zx_status_t status,
+  void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                const zx_packet_signal_t* signal);
 
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
   fdio_t* io_;
   async::WaitMethod<FDWaiter, &FDWaiter::Handler> wait_{this};
   Callback callback_;

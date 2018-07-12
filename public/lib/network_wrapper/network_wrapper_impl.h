@@ -16,7 +16,7 @@ namespace network_wrapper {
 
 class NetworkWrapperImpl : public NetworkWrapper {
  public:
-  NetworkWrapperImpl(async_t* async, std::unique_ptr<backoff::Backoff> backoff,
+  NetworkWrapperImpl(async_dispatcher_t* dispatcher, std::unique_ptr<backoff::Backoff> backoff,
                      fit::function<::fuchsia::net::oldhttp::HttpServicePtr()>
                          http_service_factory);
   ~NetworkWrapperImpl() override;

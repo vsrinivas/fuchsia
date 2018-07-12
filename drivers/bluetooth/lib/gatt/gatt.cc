@@ -24,7 +24,7 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
   using TaskDomainBase = common::TaskDomain<Impl, GATT>;
 
  public:
-  explicit Impl(async_t* gatt_dispatcher)
+  explicit Impl(async_dispatcher_t* gatt_dispatcher)
       : TaskDomainBase(this, gatt_dispatcher), initialized_(false) {}
 
   ~Impl() override {
@@ -186,7 +186,7 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
   }
 
   void RegisterRemoteServiceWatcher(RemoteServiceWatcher callback,
-                                    async_t* dispatcher) override {
+                                    async_dispatcher_t* dispatcher) override {
     FXL_DCHECK(callback);
     PostMessage(
         [this, callback = std::move(callback), runner = dispatcher]() mutable {
@@ -259,7 +259,7 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
 
   // All registered remote service handlers.
   struct RemoteServiceHandler {
-    RemoteServiceHandler(RemoteServiceWatcher watcher, async_t* dispatcher)
+    RemoteServiceHandler(RemoteServiceWatcher watcher, async_dispatcher_t* dispatcher)
         : watcher_(std::move(watcher)), dispatcher_(dispatcher) {}
 
     RemoteServiceHandler() = default;
@@ -280,7 +280,7 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
 
    private:
     RemoteServiceWatcher watcher_;
-    async_t* dispatcher_;
+    async_dispatcher_t* dispatcher_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(RemoteServiceHandler);
   };
@@ -293,7 +293,7 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
 }  // namespace
 
 // static
-fbl::RefPtr<GATT> GATT::Create(async_t* gatt_dispatcher) {
+fbl::RefPtr<GATT> GATT::Create(async_dispatcher_t* gatt_dispatcher) {
   return AdoptRef(new Impl(gatt_dispatcher));
 }
 

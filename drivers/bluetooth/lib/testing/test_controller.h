@@ -59,11 +59,11 @@ class TestController : public FakeControllerBase {
 
   // Callback to invoke when a packet is received over the data channel.
   using DataCallback = fit::function<void(const common::ByteBuffer& packet)>;
-  void SetDataCallback(DataCallback callback, async_t* dispatcher);
+  void SetDataCallback(DataCallback callback, async_dispatcher_t* dispatcher);
 
   // Callback invoked when a transaction completes.
   void SetTransactionCallback(fit::closure callback,
-                              async_t* dispatcher);
+                              async_dispatcher_t* dispatcher);
 
  private:
   // FakeControllerBase overrides:
@@ -74,9 +74,9 @@ class TestController : public FakeControllerBase {
 
   std::queue<CommandTransaction> cmd_transactions_;
   DataCallback data_callback_;
-  async_t* data_dispatcher_;
+  async_dispatcher_t* data_dispatcher_;
   fit::closure transaction_callback_;
-  async_t* transaction_dispatcher_;
+  async_dispatcher_t* transaction_dispatcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestController);
 };

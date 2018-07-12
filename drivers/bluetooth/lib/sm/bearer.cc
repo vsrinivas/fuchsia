@@ -49,7 +49,7 @@ Bearer::Bearer(fbl::RefPtr<l2cap::Channel> chan, hci::Connection::Role role,
   FXL_DCHECK(chan_);
   FXL_DCHECK(error_callback_);
   FXL_DCHECK(feature_exchange_callback_);
-  FXL_DCHECK(async_get_default()) << "sm: Default dispatcher required!";
+  FXL_DCHECK(async_get_default_dispatcher()) << "sm: Default dispatcher required!";
 
   if (chan_->link_type() == hci::Connection::LinkType::kLE) {
     FXL_DCHECK(chan_->id() == l2cap::kLESMPChannelId);
@@ -73,7 +73,7 @@ Bearer::Bearer(fbl::RefPtr<l2cap::Channel> chan, hci::Connection::Role role,
           self->OnChannelClosed();
         }
       },
-      async_get_default());
+      async_get_default_dispatcher());
 }
 
 bool Bearer::InitiateFeatureExchange() {
@@ -127,7 +127,7 @@ bool Bearer::InitiateFeatureExchange() {
 
   // Start pairing timer.
   FXL_DCHECK(!timeout_task_.is_pending());
-  timeout_task_.PostDelayed(async_get_default(), zx::sec(kPairingTimeout));
+  timeout_task_.PostDelayed(async_get_default_dispatcher(), zx::sec(kPairingTimeout));
 
   feature_exchange_pending_ = true;
   chan_->Send(std::move(pdu));
@@ -366,7 +366,7 @@ void Bearer::OnPairingRequest(const PacketReader& reader) {
 
   // Start pairing timer.
   FXL_DCHECK(!timeout_task_.is_pending());
-  timeout_task_.PostDelayed(async_get_default(), zx::sec(kPairingTimeout));
+  timeout_task_.PostDelayed(async_get_default_dispatcher(), zx::sec(kPairingTimeout));
 
   // Always request bonding.
   AuthReqField auth_req = AuthReq::kBondingFlag;

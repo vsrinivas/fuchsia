@@ -490,7 +490,7 @@ zx_status_t brcmfmac_module_init(zx_device_t* device) {
         async_loop_destroy(async_loop);
         return err;
     }
-    default_async = async_loop_get_dispatcher(async_loop);
+    default_dispatcher = async_loop_get_dispatcher(async_loop);
 
     /* Initialize global module paramaters */
     brcmf_mp_attach();
@@ -506,8 +506,8 @@ zx_status_t brcmfmac_module_init(zx_device_t* device) {
 
 static void brcmfmac_module_exit(void) {
     brcmf_core_exit();
-    if (default_async != NULL) {
-        async_loop_destroy(async_loop_from_dispatcher(default_async));
+    if (default_dispatcher != NULL) {
+        async_loop_destroy(async_loop_from_dispatcher(default_dispatcher));
     }
     brcmf_debugfs_exit();
 }

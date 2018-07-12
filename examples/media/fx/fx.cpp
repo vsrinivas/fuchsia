@@ -478,7 +478,7 @@ void FxProcessor::ProcessInput() {
   }
 
   // Schedule our next processing callback.
-  async::PostDelayedTask(async_get_default(), [this]() { ProcessInput(); },
+  async::PostDelayedTask(async_get_default_dispatcher(), [this]() { ProcessInput(); },
                          zx::nsec(PROCESS_CHUNK_TIME));
 }
 
@@ -737,7 +737,7 @@ int main(int argc, char** argv) {
       startup_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
   FxProcessor fx(fbl::move(input), [&loop]() {
-    async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
+    async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
   });
   fx.Startup(std::move(audio));
 

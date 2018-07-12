@@ -43,7 +43,7 @@ CommandChannel::TransactionData::TransactionData(
     OpCode opcode,
     EventCode complete_event_code,
     CommandCallback callback,
-    async_t* dispatcher)
+    async_dispatcher_t* dispatcher)
     : id_(id),
       opcode_(opcode),
       complete_event_code_(complete_event_code),
@@ -79,7 +79,7 @@ void CommandChannel::TransactionData::Start(fit::closure timeout_cb,
   FXL_DCHECK(!timeout_task_.is_pending());
 
   timeout_task_.set_handler(std::move(timeout_cb));
-  timeout_task_.PostDelayed(async_get_default(), timeout);
+  timeout_task_.PostDelayed(async_get_default_dispatcher(), timeout);
 }
 
 void CommandChannel::TransactionData::Complete(
@@ -125,7 +125,7 @@ void CommandChannel::Initialize() {
   FXL_DCHECK(!is_initialized_);
 
   auto setup_handler_task = [this] {
-    zx_status_t status = channel_wait_.Begin(async_get_default());
+    zx_status_t status = channel_wait_.Begin(async_get_default_dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "hci: CommandChannel: failed channel setup: "
                      << zx_status_get_string(status);
@@ -188,7 +188,7 @@ void CommandChannel::ShutDownInternal() {
 
 CommandChannel::TransactionId CommandChannel::SendCommand(
     std::unique_ptr<CommandPacket> command_packet,
-    async_t* dispatcher,
+    async_dispatcher_t* dispatcher,
     CommandCallback callback,
     const EventCode complete_event_code) {
   if (!is_initialized_) {
@@ -244,7 +244,7 @@ CommandChannel::TransactionId CommandChannel::SendCommand(
 CommandChannel::EventHandlerId CommandChannel::AddEventHandler(
     EventCode event_code,
     EventCallback event_callback,
-    async_t* dispatcher) {
+    async_dispatcher_t* dispatcher) {
   if (event_code == kCommandStatusEventCode ||
       event_code == kCommandCompleteEventCode ||
       event_code == kLEMetaEventCode) {
@@ -269,7 +269,7 @@ CommandChannel::EventHandlerId CommandChannel::AddEventHandler(
 CommandChannel::EventHandlerId CommandChannel::AddLEMetaEventHandler(
     EventCode subevent_code,
     EventCallback event_callback,
-    async_t* dispatcher) {
+    async_dispatcher_t* dispatcher) {
   std::lock_guard<std::mutex> lock(event_handler_mutex_);
 
   auto id = NewEventHandler(subevent_code, true /* is_le_meta */,
@@ -317,7 +317,7 @@ void CommandChannel::TrySendQueuedCommands() {
   if (!is_initialized_)
     return;
 
-  FXL_DCHECK(async_get_default() == io_dispatcher_);
+  FXL_DCHECK(async_get_default_dispatcher() == io_dispatcher_);
 
   if (allowed_command_packets_ == 0) {
     FXL_VLOG(2) << "hci: CommandChannel: controller queue full, waiting.";
@@ -410,7 +410,7 @@ CommandChannel::EventHandlerId CommandChannel::NewEventHandler(
     EventCode event_code,
     bool is_le_meta,
     EventCallback event_callback,
-    async_t* dispatcher) {
+    async_dispatcher_t* dispatcher) {
   FXL_DCHECK(event_code);
   FXL_DCHECK(event_callback);
   FXL_DCHECK(dispatcher);
@@ -495,7 +495,7 @@ void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
 void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
   EventCode event_code;
   const std::unordered_multimap<EventCode, EventHandlerId>* event_handlers;
-  std::vector<std::pair<EventCallback, async_t*>> pending_callbacks;
+  std::vector<std::pair<EventCallback, async_dispatcher_t*>> pending_callbacks;
 
   {
     std::lock_guard<std::mutex> lock(event_handler_mutex_);
@@ -519,7 +519,7 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
     auto iter = range.first;
     while (iter != range.second) {
       EventCallback callback;
-      async_t* dispatcher;
+      async_dispatcher_t* dispatcher;
       EventHandlerId event_id = iter->second;
       FXL_VLOG(5) << "hci: CommandChannel: notifying handler (id " << event_id
                   << ") for event code "
@@ -562,12 +562,12 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
 }
 
 void CommandChannel::OnChannelReady(
-    async_t* async,
+    async_dispatcher_t* dispatcher,
     async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal_t* signal) {
 
-  FXL_DCHECK(async_get_default() == io_dispatcher_);
+  FXL_DCHECK(async_get_default_dispatcher() == io_dispatcher_);
   FXL_DCHECK(signal->observed & ZX_CHANNEL_READABLE);
 
   if (status != ZX_OK) {
@@ -633,7 +633,7 @@ void CommandChannel::OnChannelReady(
     }
   }
 
-  status = wait->Begin(async);
+  status = wait->Begin(dispatcher);
   if (status != ZX_OK) {
     FXL_VLOG(1) << "hci: CommandChannel: wait error: "
                 << zx_status_get_string(status);

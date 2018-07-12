@@ -6,5 +6,5 @@
 
 #include <lib/async/dispatcher.h>
 
-// Retrieves the async_t* for this driver.
-async_t* wlanphy_async_t();
+// Retrieves the async_dispatcher_t* for this driver.
+async_dispatcher_t* wlanphy_async_t();

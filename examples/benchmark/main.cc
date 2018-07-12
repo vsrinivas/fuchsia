@@ -14,7 +14,7 @@
 
 int main(int argc, char** argv) {
   async::Loop loop;
-  trace::TraceProvider provider(loop.async());
+  trace::TraceProvider provider(loop.dispatcher());
 
   puts("Starting Benchmark...");
 
@@ -44,10 +44,10 @@ int main(int argc, char** argv) {
 
     // Schedule another benchmark.
     TRACE_INSTANT("benchmark", "task_end", TRACE_SCOPE_PROCESS);
-    task.PostDelayed(loop.async(), zx::usec(500));
+    task.PostDelayed(loop.dispatcher(), zx::usec(500));
   });
 
-  task.Post(loop.async());
+  task.Post(loop.dispatcher());
 
   loop.Run();
 

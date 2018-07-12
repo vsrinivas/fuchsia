@@ -17,7 +17,7 @@ namespace scenic {
 namespace gfx {
 
 FrameScheduler::FrameScheduler(Display* display)
-    : dispatcher_(async_get_default()), display_(display), weak_factory_(this) {
+    : dispatcher_(async_get_default_dispatcher()), display_(display), weak_factory_(this) {
   outstanding_frames_.reserve(kMaxOutstandingFrames);
 }
 

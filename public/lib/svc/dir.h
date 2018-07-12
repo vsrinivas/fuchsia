@@ -16,7 +16,7 @@ typedef void(svc_connector_t)(void* context, const char* service_name,
 
 typedef struct svc_dir svc_dir_t;
 
-__EXPORT zx_status_t svc_dir_create(async_t* async,
+__EXPORT zx_status_t svc_dir_create(async_dispatcher_t* dispatcher,
                                     zx_handle_t directory_request,
                                     svc_dir_t** result);
 

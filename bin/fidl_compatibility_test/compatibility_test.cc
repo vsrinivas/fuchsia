@@ -925,7 +925,7 @@ class CompatibilityTest
   void SetUp() override {
     proxy_url_ = ::testing::get<0>(GetParam());
     server_url_ = ::testing::get<1>(GetParam());
-    // The FIDL support lib requires async_get_default() to return non-null.
+    // The FIDL support lib requires async_get_default_dispatcher() to return non-null.
     loop_.reset(new async::Loop(&kAsyncLoopConfigMakeDefault));
   }
   std::string proxy_url_;

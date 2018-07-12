@@ -23,7 +23,7 @@ CodecFactoryApp::CodecFactoryApp(
     : startup_context_(std::move(startup_context)), loop_(loop) {
   // TODO(dustingreen): Determine if this is useful and if we're holding it
   // right.
-  trace::TraceProvider trace_provider(loop->async());
+  trace::TraceProvider trace_provider(loop->dispatcher());
 
   DiscoverMediaCodecDrivers();
 
@@ -78,7 +78,7 @@ void CodecFactoryApp::DiscoverMediaCodecDrivers() {
           fidl::VectorPtr<fuchsia::mediacodec::CodecDescription> codec_list) {
         driver_codec_list = std::move(codec_list);
       };
-  codec_factory->Bind(std::move(client_factory_channel), loop_->async());
+  codec_factory->Bind(std::move(client_factory_channel), loop_->dispatcher());
   // We _rely_ on the driver to either fail the channel or send OnCodecList().
   // We don't set a timeout here because under different conditions this could
   // take different duration.

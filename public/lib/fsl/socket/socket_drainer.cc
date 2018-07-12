@@ -14,8 +14,8 @@ namespace fsl {
 
 SocketDrainer::Client::~Client() = default;
 
-SocketDrainer::SocketDrainer(Client* client, async_t* async)
-    : client_(client), async_(async), destruction_sentinel_(nullptr) {
+SocketDrainer::SocketDrainer(Client* client, async_dispatcher_t* dispatcher)
+    : client_(client), dispatcher_(dispatcher), destruction_sentinel_(nullptr) {
   FXL_DCHECK(client_);
 }
 
@@ -30,10 +30,10 @@ void SocketDrainer::Start(zx::socket source) {
   wait_.set_object(source_.get());
   wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_READ_DISABLED |
                     ZX_SOCKET_PEER_CLOSED);
-  OnHandleReady(async_, &wait_, ZX_OK, nullptr);
+  OnHandleReady(dispatcher_, &wait_, ZX_OK, nullptr);
 }
 
-void SocketDrainer::OnHandleReady(async_t* async, async::WaitBase* wait,
+void SocketDrainer::OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                   zx_status_t status,
                                   const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
@@ -57,7 +57,7 @@ void SocketDrainer::OnHandleReady(async_t* async, async::WaitBase* wait,
   }
 
   if (status == ZX_ERR_SHOULD_WAIT) {
-    status = wait->Begin(async);
+    status = wait->Begin(dispatcher);
     if (status != ZX_OK) {
       client_->OnDataComplete();
     }

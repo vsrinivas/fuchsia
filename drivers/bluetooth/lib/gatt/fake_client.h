@@ -12,7 +12,7 @@ namespace testing {
 
 class FakeClient final : public Client {
  public:
-  explicit FakeClient(async_t* dispatcher);
+  explicit FakeClient(async_dispatcher_t* dispatcher);
   ~FakeClient() override = default;
 
   void set_server_mtu(uint16_t mtu) { server_mtu_ = mtu; }
@@ -115,7 +115,7 @@ class FakeClient final : public Client {
 
   // All callbacks will be posted on this dispatcher to emulate asynchronous
   // behavior.
-  async_t* dispatcher_;
+  async_dispatcher_t* dispatcher_;
 
   // Value to return for MTU exchange.
   uint16_t server_mtu_ = att::kLEMinMTU;

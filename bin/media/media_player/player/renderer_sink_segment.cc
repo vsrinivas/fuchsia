@@ -29,7 +29,7 @@ RendererSinkSegment::~RendererSinkSegment() {}
 void RendererSinkSegment::DidProvision() {
   renderer_node_ = graph().Add(renderer_);
 
-  renderer_->Provision(async(), [this]() { NotifyUpdate(); });
+  renderer_->Provision(dispatcher(), [this]() { NotifyUpdate(); });
 }
 
 void RendererSinkSegment::WillDeprovision() {

@@ -2970,7 +2970,7 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv) {
   demo->fuchsia_state->t0 = std::chrono::high_resolution_clock::now();
 
 #ifdef MAGMA_ENABLE_TRACING
-  trace::TraceProvider trace_provider(demo->fuchsia_state->loop.async());
+  trace::TraceProvider trace_provider(demo->fuchsia_state->loop.dispatcher());
 #endif
 
   auto startup_context_ = fuchsia::sys::StartupContext::CreateFromStartupInfo();
@@ -3058,7 +3058,7 @@ int test_vk_cube(int argc, char** argv) {
 #if defined(MAGMA_ENABLE_TRACING)
   async::Loop loop;
   loop.StartThread();
-  trace::TraceProvider trace_provider(loop.async());
+  trace::TraceProvider trace_provider(loop.dispatcher());
 #endif
   return cube_main(argc, argv);
 }

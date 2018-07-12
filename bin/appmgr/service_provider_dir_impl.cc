@@ -11,7 +11,7 @@
 namespace component {
 
 ServiceProviderDirImpl::ServiceProviderDirImpl()
-    : vfs_(async_get_default()),
+    : vfs_(async_get_default_dispatcher()),
       root_(fbl::AdoptRef(new fs::PseudoDir())),
       weak_factory_(this) {}
 

@@ -59,7 +59,7 @@ CommandChannel::CommandChannel(std::string hcidev_path)
   cmd_channel_ = GetCommandChannel(hci_fd_.get());
   cmd_channel_wait_.set_object(cmd_channel_.get());
   cmd_channel_wait_.set_trigger(ZX_CHANNEL_READABLE);
-  zx_status_t status = cmd_channel_wait_.Begin(async_get_default());
+  zx_status_t status = cmd_channel_wait_.Begin(async_get_default_dispatcher());
   if (status != ZX_OK) {
     std::cerr << "CommandChannel: problem setting up command channel: "
               << zx_status_get_string(status) << std::endl;
@@ -69,7 +69,7 @@ CommandChannel::CommandChannel(std::string hcidev_path)
   acl_channel_ = GetAclChannel(hci_fd_.get());
   acl_channel_wait_.set_object(acl_channel_.get());
   acl_channel_wait_.set_trigger(ZX_CHANNEL_READABLE);
-  status = acl_channel_wait_.Begin(async_get_default());
+  status = acl_channel_wait_.Begin(async_get_default_dispatcher());
   if (status != ZX_OK) {
     std::cerr << "CommandChannel: problem setting up ACL channel: "
               << zx_status_get_string(status) << std::endl;
@@ -129,7 +129,7 @@ void CommandChannel::SendCommandSync(
   timeout.set(zx::deadline_after(zx::msec(500)), zx::msec(50));
   for (;;) {
     // TODO(NET-680): Don't use the message loop modally.
-    async_loop_run(async_loop_from_dispatcher(async_get_default()),
+    async_loop_run(async_loop_from_dispatcher(async_get_default_dispatcher()),
                    zx_deadline_after(ZX_MSEC(10)), true);
     if (received) {
       status = ZX_OK;
@@ -152,7 +152,7 @@ void CommandChannel::SendCommandSync(
 }
 
 void CommandChannel::HandleChannelReady(const zx::channel& channel,
-                                        async_t* async, async::WaitBase* wait,
+                                        async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                         zx_status_t status,
                                         const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
@@ -216,22 +216,22 @@ void CommandChannel::HandleChannelReady(const zx::channel& channel,
     }
   }
 
-  status = wait->Begin(async);
+  status = wait->Begin(dispatcher);
   if (status != ZX_OK) {
     std::cerr << "CommandChannel: resume wait error: "
               << zx_status_get_string(status) << std::endl;
   }
 }
 
-void CommandChannel::OnCmdChannelReady(async_t* async, async::WaitBase* wait,
+void CommandChannel::OnCmdChannelReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                        zx_status_t status,
                                        const zx_packet_signal_t* signal) {
-  HandleChannelReady(cmd_channel_, async, wait, status, signal);
+  HandleChannelReady(cmd_channel_, dispatcher, wait, status, signal);
 }
 
-void CommandChannel::OnAclChannelReady(async_t* async, async::WaitBase* wait,
+void CommandChannel::OnAclChannelReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                        zx_status_t status,
                                        const zx_packet_signal_t* signal) {
   // A Command packet response from a Secure Send command.
-  HandleChannelReady(acl_channel_, async, wait, status, signal);
+  HandleChannelReady(acl_channel_, dispatcher, wait, status, signal);
 }

@@ -24,7 +24,7 @@ IoMapping::IoMapping(uint32_t kind, uint64_t base, size_t size, uint64_t offset,
 
 zx_status_t IoMapping::SetTrap(Guest* guest) {
   if (kind_ == ZX_GUEST_TRAP_BELL) {
-    return async_trap_.SetTrap(guest->device_async(),
+    return async_trap_.SetTrap(guest->device_dispatcher(),
                                zx::unowned_guest::wrap(guest->handle()), base_,
                                size_);
   } else {
@@ -34,7 +34,7 @@ zx_status_t IoMapping::SetTrap(Guest* guest) {
   }
 }
 
-void IoMapping::CallIoHandlerAsync(async_t* async,
+void IoMapping::CallIoHandlerAsync(async_dispatcher_t* dispatcher,
                                    async::GuestBellTrapBase* trap,
                                    zx_status_t status,
                                    const zx_packet_guest_bell_t* bell) {

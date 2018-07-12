@@ -48,8 +48,8 @@ class DriverCtx {
   // the shared FIDL thread.
   thrd_t shared_fidl_thread() { return shared_fidl_thread_; }
 
-  // Run to_run on given async, in order.
-  void PostSerial(async_t* async, fit::closure to_run);
+  // Run to_run on given dispatcher, in order.
+  void PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run);
 
   // Run to_run_on_shared_fidl_thread on shared_fidl_thread().
   void PostToSharedFidl(fit::closure to_run_on_shared_fidl_thread);

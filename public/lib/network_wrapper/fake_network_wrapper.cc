@@ -17,7 +17,7 @@ namespace network_wrapper {
 
 namespace http = ::fuchsia::net::oldhttp;
 
-FakeNetworkWrapper::FakeNetworkWrapper(async_t* async) : async_(async) {}
+FakeNetworkWrapper::FakeNetworkWrapper(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
 FakeNetworkWrapper::~FakeNetworkWrapper() {}
 
@@ -57,7 +57,7 @@ fxl::RefPtr<callback::Cancellable> FakeNetworkWrapper::Request(
     return cancellable;
   }
 
-  async::PostTask(async_,
+  async::PostTask(dispatcher_,
                   [this, cancelled_ptr,
                    callback = cancellable->WrapCallback(std::move(callback)),
                    request_factory = std::move(request_factory)] {

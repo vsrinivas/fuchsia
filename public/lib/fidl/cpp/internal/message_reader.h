@@ -30,14 +30,14 @@ class MessageReader {
   // Binds the given channel to this |MessageReader|.
   //
   // The |MessageReader| will wait asynchronously for messages on this channel
-  // and dispatch them to the message handler using |async|. After this method
+  // and dispatch them to the message handler using |dispatcher|. After this method
   // returns, the |MessageReader| will be waiting for incomming messages.
   //
   // If the |MessageReader| is already bound, the |MessageReader| will first
   // be unbound.
   //
-  // If |async| is null, the current thread must have a default async_t.
-  zx_status_t Bind(zx::channel channel, async_t* async = nullptr);
+  // If |dispatcher| is null, the current thread must have a default async_t.
+  zx_status_t Bind(zx::channel channel, async_dispatcher_t* dispatcher = nullptr);
 
   // Unbinds the channel from this |MessageReader|.
   //
@@ -106,9 +106,9 @@ class MessageReader {
   }
 
  private:
-  static void CallHandler(async_t* async, async_wait_t* wait,
+  static void CallHandler(async_dispatcher_t* dispatcher, async_wait_t* wait,
                           zx_status_t status, const zx_packet_signal_t* signal);
-  void OnHandleReady(async_t* async, zx_status_t status,
+  void OnHandleReady(async_dispatcher_t* dispatcher, zx_status_t status,
                      const zx_packet_signal_t* signal);
   zx_status_t ReadAndDispatchMessage(MessageBuffer* buffer);
   void NotifyError();
@@ -116,7 +116,7 @@ class MessageReader {
 
   async_wait_t wait_;  // Must be first.
   zx::channel channel_;
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
   bool* should_stop_;  // See |Canary| in message_reader.cc.
   MessageHandler* message_handler_;
   fit::closure error_handler_;

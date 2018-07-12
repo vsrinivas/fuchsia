@@ -23,7 +23,7 @@ constexpr size_t kReadBufferSize = trace::RecordFields::kMaxRecordSizeBytes * 4;
 }  // namespace
 
 Tracer::Tracer(fuchsia::tracing::TraceController* controller)
-    : controller_(controller), async_(nullptr), wait_(this) {
+    : controller_(controller), dispatcher_(nullptr), wait_(this) {
   FXL_DCHECK(controller_);
   wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
 }
@@ -58,9 +58,9 @@ void Tracer::Start(fuchsia::tracing::TraceOptions options,
   reader_.reset(new trace::TraceReader(fbl::move(record_consumer),
                                        fbl::move(error_handler)));
 
-  async_ = async_get_default();
+  dispatcher_ = async_get_default_dispatcher();
   wait_.set_object(socket_.get());
-  status = wait_.Begin(async_);
+  status = wait_.Begin(dispatcher_);
   FXL_CHECK(status == ZX_OK) << "Failed to add handler: status=" << status;
 }
 
@@ -72,7 +72,7 @@ void Tracer::Stop() {
   }
 }
 
-void Tracer::OnHandleReady(async_t* async,
+void Tracer::OnHandleReady(async_dispatcher_t* dispatcher,
                            async::WaitBase* wait,
                            zx_status_t status,
                            const zx_packet_signal_t* signal) {
@@ -84,7 +84,7 @@ void Tracer::OnHandleReady(async_t* async,
   }
 
   if (signal->observed & ZX_SOCKET_READABLE) {
-    DrainSocket(async);
+    DrainSocket(dispatcher);
   } else if (signal->observed & ZX_SOCKET_PEER_CLOSED) {
     Done();
   } else {
@@ -92,14 +92,14 @@ void Tracer::OnHandleReady(async_t* async,
   }
 }
 
-void Tracer::DrainSocket(async_t* async) {
+void Tracer::DrainSocket(async_dispatcher_t* dispatcher) {
   for (;;) {
     size_t actual;
     zx_status_t status =
         socket_.read(0u, buffer_.data() + buffer_end_,
                      buffer_.capacity() - buffer_end_, &actual);
     if (status == ZX_ERR_SHOULD_WAIT) {
-      status = wait_.Begin(async);
+      status = wait_.Begin(dispatcher);
       if (status != ZX_OK) {
         OnHandleError(status);
       }
@@ -143,7 +143,7 @@ void Tracer::CloseSocket() {
   if (socket_) {
     wait_.Cancel();
     wait_.set_object(ZX_HANDLE_INVALID);
-    async_ = nullptr;
+    dispatcher_ = nullptr;
     socket_.reset();
   }
 }
@@ -157,7 +157,7 @@ void Tracer::Done() {
   CloseSocket();
 
   if (done_callback_) {
-    async::PostTask(async_get_default(), std::move(done_callback_));
+    async::PostTask(async_get_default_dispatcher(), std::move(done_callback_));
   }
 }
 

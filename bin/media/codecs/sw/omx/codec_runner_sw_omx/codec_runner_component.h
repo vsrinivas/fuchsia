@@ -15,11 +15,11 @@ namespace codec_runner {
 class CodecRunnerComponent {
  public:
   CodecRunnerComponent(
-      async_t* fidl_async, thrd_t fidl_thread,
+      async_dispatcher_t* fidl_dispatcher, thrd_t fidl_thread,
       std::unique_ptr<fuchsia::sys::StartupContext> startup_context);
 
  private:
-  async_t* fidl_async_ = nullptr;
+  async_dispatcher_t* fidl_dispatcher_ = nullptr;
   thrd_t fidl_thread_ = 0;
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
 };

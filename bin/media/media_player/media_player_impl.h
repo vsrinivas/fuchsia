@@ -119,7 +119,7 @@ class MediaPlayerImpl : public fuchsia::mediaplayer::MediaPlayer {
   // Updates |status_|.
   void UpdateStatus();
 
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
   fuchsia::sys::StartupContext* startup_context_;
   fit::closure quit_callback_;
   fidl::BindingSet<fuchsia::mediaplayer::MediaPlayer> bindings_;

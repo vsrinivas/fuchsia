@@ -14,10 +14,10 @@ constexpr zx::duration kMaxSysmgrBackoff = zx::sec(15);
 constexpr zx::duration kSysmgrAliveReset = zx::sec(5);
 }  // namespace
 
-Appmgr::Appmgr(async_t* async, AppmgrArgs args)
-    : loader_vfs_(async),
+Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
+    : loader_vfs_(dispatcher),
       loader_dir_(fbl::AdoptRef(new fs::PseudoDir())),
-      publish_vfs_(async),
+      publish_vfs_(dispatcher),
       publish_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       sysmgr_url_(std::move(args.sysmgr_url)),
       sysmgr_args_(std::move(args.sysmgr_args)),
@@ -82,10 +82,10 @@ Appmgr::Appmgr(async_t* async, AppmgrArgs args)
     return;
   }
 
-  async::PostTask(async, [this, async, run_sysmgr] {
+  async::PostTask(dispatcher, [this, dispatcher, run_sysmgr] {
     run_sysmgr();
 
-    auto retry_handler = [this, async, run_sysmgr] {
+    auto retry_handler = [this, dispatcher, run_sysmgr] {
       if (sysmgr_permanently_failed_) {
         FXL_LOG(ERROR)
             << "sysmgr permanently failed. Check system configuration.";
@@ -95,7 +95,7 @@ Appmgr::Appmgr(async_t* async, AppmgrArgs args)
       auto delay_duration = sysmgr_backoff_.GetNext();
       FXL_LOG(ERROR) << fxl::StringPrintf("sysmgr failed, restarting in %.3fs",
                                           .001f * delay_duration.to_msecs());
-      async::PostDelayedTask(async, run_sysmgr, delay_duration);
+      async::PostDelayedTask(dispatcher, run_sysmgr, delay_duration);
     };
 
     sysmgr_.set_error_handler(retry_handler);

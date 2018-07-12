@@ -208,7 +208,7 @@ constexpr size_t kMaxMacDevices = 4;
 struct WlantapPhy : wlan_device::Phy, wlantap::WlantapPhy, WlantapMac::Listener {
     WlantapPhy(zx_device_t* device, zx::channel user_channel,
                std::unique_ptr<wlantap::WlantapPhyConfig> phy_config,
-               async_t* loop)
+               async_dispatcher_t* loop)
       : phy_config_(std::move(phy_config)),
         phy_dispatcher_(loop),
         user_channel_binding_(this, std::move(user_channel), loop),
@@ -378,7 +378,7 @@ struct WlantapPhy : wlan_device::Phy, wlantap::WlantapPhy, WlantapMac::Listener 
 } // namespace
 
 zx_status_t CreatePhy(zx_device_t* wlantapctl, zx::channel user_channel,
-                      std::unique_ptr<wlantap::WlantapPhyConfig> config, async_t* loop) {
+                      std::unique_ptr<wlantap::WlantapPhyConfig> config, async_dispatcher_t* loop) {
     auto phy = std::make_unique<WlantapPhy>(wlantapctl, std::move(user_channel), std::move(config),
                                             loop);
     static zx_protocol_device_t device_ops = {

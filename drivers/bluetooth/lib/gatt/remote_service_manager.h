@@ -37,7 +37,7 @@ namespace internal {
 class RemoteServiceManager final {
  public:
   RemoteServiceManager(std::unique_ptr<Client> client,
-                       async_t* gatt_dispatcher);
+                       async_dispatcher_t* gatt_dispatcher);
   ~RemoteServiceManager();
 
   // Adds a handler to be notified when a new service is added.
@@ -92,7 +92,7 @@ class RemoteServiceManager final {
   void OnNotification(bool ind, att::Handle value_handle,
                       const common::ByteBuffer& value);
 
-  async_t* gatt_dispatcher_;
+  async_dispatcher_t* gatt_dispatcher_;
   std::unique_ptr<Client> client_;
 
   bool initialized_;

@@ -15,7 +15,7 @@ namespace magma {
 
 static std::unique_ptr<ZirconPlatformTrace> g_platform_trace;
 
-ZirconPlatformTrace::ZirconPlatformTrace() : trace_provider_(loop_.async()) {}
+ZirconPlatformTrace::ZirconPlatformTrace() : trace_provider_(loop_.dispatcher()) {}
 
 bool ZirconPlatformTrace::Initialize()
 {
@@ -30,7 +30,7 @@ void ZirconPlatformTrace::SetObserver(std::function<void(bool)> callback)
     observer_.Stop();
     enabled_ = false;
 
-    observer_.Start(loop_.async(), [this, callback] {
+    observer_.Start(loop_.dispatcher(), [this, callback] {
         bool enabled = trace_state() == TRACE_STARTED;
         if (this->enabled_ != enabled) {
             this->enabled_ = enabled;

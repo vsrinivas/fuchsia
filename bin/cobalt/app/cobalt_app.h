@@ -29,7 +29,7 @@ namespace cobalt {
 
 class CobaltApp {
  public:
-  // |async| The async_t to be used for all asynchronous operations.
+  // |dispatcher| The async_t to be used for all asynchronous operations.
   //
   // |schedule_interval| The scheduling interval provided to
   //                     ShippingManager::ScheduleParams.
@@ -39,7 +39,7 @@ class CobaltApp {
   //
   // |product_name| A product name to override the one used in the
   //                ObservationMetadata.
-  CobaltApp(async_t* async, std::chrono::seconds schedule_interval,
+  CobaltApp(async_dispatcher_t* dispatcher, std::chrono::seconds schedule_interval,
             std::chrono::seconds min_interval, const std::string& product_name);
 
  private:

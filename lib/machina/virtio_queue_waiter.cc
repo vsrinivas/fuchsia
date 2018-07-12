@@ -8,10 +8,10 @@
 
 namespace machina {
 
-VirtioQueueWaiter::VirtioQueueWaiter(async_t* async, VirtioQueue* queue,
+VirtioQueueWaiter::VirtioQueueWaiter(async_dispatcher_t* dispatcher, VirtioQueue* queue,
                                      Handler handler)
     : wait_(this, queue->event(), VirtioQueue::SIGNAL_QUEUE_AVAIL),
-      async_(async),
+      dispatcher_(dispatcher),
       queue_(queue),
       handler_(fbl::move(handler)) {}
 
@@ -22,7 +22,7 @@ zx_status_t VirtioQueueWaiter::Begin() {
 
   fbl::AutoLock lock(&mutex_);
   if (!pending_) {
-    status = wait_.Begin(async_);
+    status = wait_.Begin(dispatcher_);
     if (status == ZX_OK) {
       pending_ = true;
     }
@@ -38,7 +38,7 @@ void VirtioQueueWaiter::Cancel() {
   }
 }
 
-void VirtioQueueWaiter::WaitHandler(async_t* async, async::WaitBase* wait,
+void VirtioQueueWaiter::WaitHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                     zx_status_t status,
                                     const zx_packet_signal_t* signal) {
   uint16_t index = 0;
@@ -52,7 +52,7 @@ void VirtioQueueWaiter::WaitHandler(async_t* async, async::WaitBase* wait,
     if (status == ZX_OK) {
       status = queue_->NextAvail(&index);
       if (status == ZX_ERR_SHOULD_WAIT) {
-        status = wait->Begin(async);
+        status = wait->Begin(dispatcher);
         if (status == ZX_OK) {
           return;
         }

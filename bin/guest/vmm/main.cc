@@ -184,7 +184,7 @@ static zx_status_t read_guest_cfg(const char* cfg_path, int argc, char** argv,
 
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  trace::TraceProvider trace_provider(loop.async());
+  trace::TraceProvider trace_provider(loop.dispatcher());
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context =
       fuchsia::sys::StartupContext::CreateFromStartupInfo();
 
@@ -385,7 +385,7 @@ int main(int argc, char** argv) {
   }
 
   // Setup console
-  machina::VirtioConsole console(guest.phys_mem(), guest.device_async(),
+  machina::VirtioConsole console(guest.phys_mem(), guest.device_dispatcher(),
                                  guest_controller.TakeSocket());
   status = console.Start();
   if (status != ZX_OK) {
@@ -407,7 +407,7 @@ int main(int argc, char** argv) {
   machina::VirtioAbsolutePointer touch(
       input_dispatcher.Touch(), guest.phys_mem(), "machina-touch",
       "serial-number", kGuestViewDisplayWidth, kGuestViewDisplayHeight);
-  machina::VirtioGpu gpu(guest.phys_mem(), guest.device_async());
+  machina::VirtioGpu gpu(guest.phys_mem(), guest.device_dispatcher());
   fbl::unique_ptr<machina::GpuScanout> gpu_scanout;
 
   if (cfg.display() != GuestDisplay::NONE) {
@@ -477,7 +477,7 @@ int main(int argc, char** argv) {
   }
 
   // Setup net device.
-  machina::VirtioNet net(guest.phys_mem(), guest.device_async());
+  machina::VirtioNet net(guest.phys_mem(), guest.device_dispatcher());
   if (cfg.network()) {
     status = net.Start("/dev/class/ethernet/000");
     if (status == ZX_OK) {
@@ -493,7 +493,7 @@ int main(int argc, char** argv) {
 
   // Setup vsock device.
   machina::VirtioVsock vsock(startup_context.get(), guest.phys_mem(),
-                             guest.device_async());
+                             guest.device_dispatcher());
   status = bus.Connect(vsock.pci_device());
   if (status != ZX_OK) {
     return status;
@@ -511,7 +511,7 @@ int main(int argc, char** argv) {
   };
   if (gpu_scanout) {
     gpu_scanout->WhenReady(
-        [&loop, &start_task] { async::PostTask(loop.async(), start_task); });
+        [&loop, &start_task] { async::PostTask(loop.dispatcher(), start_task); });
 
   } else {
     start_task();

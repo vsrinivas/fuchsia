@@ -135,7 +135,7 @@ class TimelineControlPoint : public fuchsia::media::MediaTimelineControlPoint,
   ProgressStartedCallback progress_started_callback_;
 
   std::mutex mutex_;
-  async_t* async_ FXL_GUARDED_BY(mutex_);
+  async_dispatcher_t* dispatcher_ FXL_GUARDED_BY(mutex_);
   TimelineFunction current_timeline_function_ FXL_GUARDED_BY(mutex_);
   TimelineFunction pending_timeline_function_ FXL_GUARDED_BY(mutex_);
   SetTimelineTransformCallback set_timeline_transform_callback_

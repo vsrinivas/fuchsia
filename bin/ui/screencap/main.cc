@@ -48,7 +48,7 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  trace::TraceProvider trace_provider(loop.async());
+  trace::TraceProvider trace_provider(loop.dispatcher());
   std::unique_ptr<fuchsia::sys::StartupContext> app_context(
       fuchsia::sys::StartupContext::CreateFromStartupInfo());
   // Connect to the SceneManager service.

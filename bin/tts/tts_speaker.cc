@@ -20,8 +20,8 @@ static constexpr uint32_t kFliteBytesPerFrame = 2;
 static constexpr uint32_t kLowWaterBytes =
     (kFliteFrameRate * kLowWaterMsec * kFliteBytesPerFrame) / 1000;
 
-TtsSpeaker::TtsSpeaker(async_t* async)
-    : master_async_(async), abort_playback_(false), synthesis_complete_(false) {
+TtsSpeaker::TtsSpeaker(async_dispatcher_t* dispatcher)
+    : master_dispatcher_(dispatcher), abort_playback_(false), synthesis_complete_(false) {
   engine_loop_.StartThread();
 }
 
@@ -30,7 +30,7 @@ zx_status_t TtsSpeaker::Speak(fidl::StringPtr words,
   words_ = std::move(words);
   speak_complete_cbk_ = std::move(speak_complete_cbk);
 
-  async::PostTask(engine_loop_.async(),
+  async::PostTask(engine_loop_.dispatcher(),
                   [thiz = shared_from_this()]() { thiz->DoSpeak(); });
 
   return ZX_OK;
@@ -229,7 +229,7 @@ int TtsSpeaker::ProduceAudioCbk(const cst_wave* wave, int start, int sz,
 
     // Looks like we need to wait for there to be some space.  Before we do so,
     // let the master thread know it needs to send the data we just produced.
-    async::PostTask(master_async_, [thiz = shared_from_this()]() {
+    async::PostTask(master_dispatcher_, [thiz = shared_from_this()]() {
       thiz->SendPendingAudio();
     });
 
@@ -247,7 +247,7 @@ int TtsSpeaker::ProduceAudioCbk(const cst_wave* wave, int start, int sz,
   // of our synthesized audio right now.
   if (last) {
     synthesis_complete_.store(true);
-    async::PostTask(master_async_, [thiz = shared_from_this()]() {
+    async::PostTask(master_dispatcher_, [thiz = shared_from_this()]() {
       thiz->SendPendingAudio();
     });
   }
@@ -268,7 +268,7 @@ void TtsSpeaker::DoSpeak() {
   delete_voice(vox);
 
   if (abort_playback_.load()) {
-    async::PostTask(master_async_,
+    async::PostTask(master_dispatcher_,
                     [speak_complete_cbk = std::move(speak_complete_cbk_)]() {
                       speak_complete_cbk();
                     });

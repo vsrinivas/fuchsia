@@ -23,7 +23,7 @@ namespace media_player {
 // A graph that delivers content one origin to many destinations.
 class Player {
  public:
-  Player(async_t* async);
+  Player(async_dispatcher_t* dispatcher);
 
   ~Player();
 
@@ -170,7 +170,7 @@ class Player {
   void ConnectAndPrepareStream(Stream* stream);
 
   Graph graph_;
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
   fit::closure update_callback_;
   fit::closure set_source_segment_callback_;
   size_t set_source_segment_countdown_;

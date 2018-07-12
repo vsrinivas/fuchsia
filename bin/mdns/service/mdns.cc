@@ -26,7 +26,7 @@
 
 namespace mdns {
 
-Mdns::Mdns() : async_(async_get_default()) {}
+Mdns::Mdns() : dispatcher_(async_get_default_dispatcher()) {}
 
 Mdns::~Mdns() {}
 
@@ -417,7 +417,7 @@ void Mdns::PostTask() {
   posted_task_time_ = task_queue_.top().time_;
 
   async::PostTaskForTime(
-      async_,
+      dispatcher_,
       [this]() {
         // Suppress recursive calls to this method.
         posted_task_time_ = fxl::TimePoint::Min();

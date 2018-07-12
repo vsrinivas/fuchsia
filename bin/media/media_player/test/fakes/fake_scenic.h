@@ -44,7 +44,7 @@ class FakeScenic : public ::fuchsia::ui::scenic::Scenic {
   void TakeScreenshot(TakeScreenshotCallback callback) override;
 
  private:
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
   fidl::Binding<::fuchsia::ui::scenic::Scenic> binding_;
   FakeSession fake_session_;
   FakeViewManager fake_view_manager_;

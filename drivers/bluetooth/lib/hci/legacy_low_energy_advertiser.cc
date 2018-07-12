@@ -119,7 +119,7 @@ uint16_t TimeslicesToMilliseconds(uint16_t timeslices) {
 LegacyLowEnergyAdvertiser::LegacyLowEnergyAdvertiser(fxl::RefPtr<Transport> hci)
     : hci_(hci), starting_(false), connect_callback_(nullptr) {
   hci_cmd_runner_ = std::make_unique<SequentialCommandRunner>(
-      async_get_default(), hci_);
+      async_get_default_dispatcher(), hci_);
 }
 
 LegacyLowEnergyAdvertiser::~LegacyLowEnergyAdvertiser() {

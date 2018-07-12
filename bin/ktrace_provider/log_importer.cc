@@ -34,7 +34,7 @@ void LogImporter::Start() {
 
   wait_.set_object(log_.get());
   wait_.set_trigger(ZX_LOG_READABLE);
-  status = wait_.Begin(async_get_default());
+  status = wait_.Begin(async_get_default_dispatcher());
   FXL_CHECK(status == ZX_OK) << "status=" << status;
 }
 
@@ -48,7 +48,7 @@ void LogImporter::Stop() {
   log_.reset();
 }
 
-void LogImporter::Handle(async_t* async,
+void LogImporter::Handle(async_dispatcher_t* dispatcher,
                          async::WaitBase* wait,
                          zx_status_t status,
                          const zx_packet_signal_t* signal) {
@@ -77,7 +77,7 @@ void LogImporter::Handle(async_t* async,
     }
   }
 
-  wait->Begin(async); // ignore errors
+  wait->Begin(dispatcher); // ignore errors
 }
 
 }  // namespace ktrace_provider

@@ -18,10 +18,10 @@ namespace netconnector {
 
 MessageTransceiver::MessageTransceiver(fxl::UniqueFD socket_fd)
     : socket_fd_(std::move(socket_fd)),
-      async_(async_get_default()),
+      dispatcher_(async_get_default_dispatcher()),
       receive_buffer_(kRecvBufferSize) {
   FXL_DCHECK(socket_fd_.is_valid());
-  FXL_DCHECK(async_);
+  FXL_DCHECK(dispatcher_);
 
   message_relay_.SetMessageReceivedCallback(
       [this](std::vector<uint8_t> message) {
@@ -81,7 +81,7 @@ void MessageTransceiver::CloseConnection() {
   if (socket_fd_.is_valid()) {
     CancelWaiters();
     socket_fd_.reset();
-    async::PostTask(async_, [this]() {
+    async::PostTask(dispatcher_, [this]() {
       channel_.reset();
       message_relay_.CloseChannel();
       OnConnectionClosed();
@@ -323,7 +323,7 @@ void MessageTransceiver::OnReceivedPacketComplete() {
         return;
       }
 
-      async::PostTask(async_, [this, version = version_]() {
+      async::PostTask(dispatcher_, [this, version = version_]() {
         OnVersionReceived(version);
         if (socket_fd_.is_valid() && channel_) {
           // We've postponed setting the channel on the relay until now, because
@@ -354,7 +354,7 @@ void MessageTransceiver::OnReceivedPacketComplete() {
         return;
       }
 
-      async::PostTask(async_, [this, service_name = ParsePayloadString()]() {
+      async::PostTask(dispatcher_, [this, service_name = ParsePayloadString()]() {
         OnServiceNameReceived(service_name);
       });
       break;
@@ -368,7 +368,7 @@ void MessageTransceiver::OnReceivedPacketComplete() {
       }
 
       async::PostTask(
-          async_,
+          dispatcher_,
           [this, payload = std::move(receive_packet_payload_)]() mutable {
             OnMessageReceived(std::move(payload));
           });

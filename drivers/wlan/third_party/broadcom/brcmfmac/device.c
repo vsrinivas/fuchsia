@@ -22,7 +22,7 @@
 
 pthread_mutex_t irq_callback_lock;
 
-async_t* default_async;
+async_dispatcher_t* default_dispatcher;
 
 struct brcmf_bus* dev_get_drvdata(struct brcmf_device* dev) {
     return dev->drvdata;
@@ -32,7 +32,7 @@ void dev_set_drvdata(struct brcmf_device* dev, struct brcmf_bus* drvdata) {
     dev->drvdata = drvdata;
 }
 
-static void brcmf_timer_handler(async_t* async, async_task_t* task, zx_status_t status) {
+static void brcmf_timer_handler(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t status) {
     if (status != ZX_OK) {
         return;
     }
@@ -55,11 +55,11 @@ void brcmf_timer_init(brcmf_timer_info_t* timer, brcmf_timer_callback_t* callbac
 
 void brcmf_timer_set(brcmf_timer_info_t* timer, zx_duration_t delay) {
     mtx_lock(&timer->lock);
-    async_cancel_task(default_async, &timer->task); // Make sure it's not scheduled
-    timer->task.deadline = delay + async_now(default_async);
+    async_cancel_task(default_dispatcher, &timer->task); // Make sure it's not scheduled
+    timer->task.deadline = delay + async_now(default_dispatcher);
     timer->scheduled = true;
     completion_reset(&timer->finished);
-    async_post_task(default_async, &timer->task);
+    async_post_task(default_dispatcher, &timer->task);
     mtx_unlock(&timer->lock);
 }
 
@@ -69,7 +69,7 @@ void brcmf_timer_stop(brcmf_timer_info_t* timer) {
         mtx_unlock(&timer->lock);
         return;
     }
-    zx_status_t result = async_cancel_task(default_async, &timer->task);
+    zx_status_t result = async_cancel_task(default_dispatcher, &timer->task);
     mtx_unlock(&timer->lock);
     if (result != ZX_OK) {
         completion_wait(&timer->finished, ZX_TIME_INFINITE);

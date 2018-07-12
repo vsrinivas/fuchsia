@@ -91,19 +91,19 @@ class SoftwareDecoder : public Decoder {
 
  protected:
   void PostTaskToMainThread(fit::closure task) const {
-    async::PostTask(main_thread_async_, std::move(task));
+    async::PostTask(main_thread_dispatcher_, std::move(task));
   }
 
   void PostTaskToWorkerThread(fit::closure task) const {
-    async::PostTask(worker_loop_.async(), std::move(task));
+    async::PostTask(worker_loop_.dispatcher(), std::move(task));
   }
 
   bool is_main_thread() const {
-    return async_get_default() == main_thread_async_;
+    return async_get_default_dispatcher() == main_thread_dispatcher_;
   }
 
   bool is_worker_thread() const {
-    return async_get_default() == worker_loop_.async();
+    return async_get_default_dispatcher() == worker_loop_.dispatcher();
   }
 
   const std::shared_ptr<PayloadAllocator>& allocator() const {
@@ -157,7 +157,7 @@ class SoftwareDecoder : public Decoder {
   // via |HandleInputPacketOnWorker|. Called on the main thread.
   void WorkerDoneWithInputPacket();
 
-  async_t* main_thread_async_;
+  async_dispatcher_t* main_thread_dispatcher_;
   async::Loop worker_loop_;
 
   // These fields are accessed on the main thread only.

@@ -69,7 +69,7 @@ class DisplayManager {
   bool EnableVsync(VsyncCallback vsync_cb);
 
  private:
-  void OnAsync(async_t* async, async::WaitBase* self, zx_status_t status,
+  void OnAsync(async_dispatcher_t* dispatcher, async::WaitBase* self, zx_status_t status,
                const zx_packet_signal_t* signal);
   async::WaitMethod<DisplayManager, &DisplayManager::OnAsync> wait_{this};
 

@@ -225,7 +225,7 @@ void RspServer::PostWriteTask(bool notify, const fxl::StringView& data) {
 
   // Copy the data into a std::string to capture it in the closure.
   async::PostTask(
-      message_loop_.async(), [this, data = data.ToString(), notify] {
+      message_loop_.dispatcher(), [this, data = data.ToString(), notify] {
         int index = 0;
         out_buffer_[index++] = notify ? '%' : '$';
         memcpy(out_buffer_.data() + index, data.data(), data.size());
@@ -274,7 +274,7 @@ void RspServer::PostNotificationTimeoutHandler() {
   // or until the notification is removed (say because the process exits).
   zx::duration delay =
       zx::nsec((pending_notification_->timeout).ToNanoseconds());
-  async::PostDelayedTask(message_loop_.async(),
+  async::PostDelayedTask(message_loop_.dispatcher(),
                          [this, pending = pending_notification_.get()] {
                            // If the notification that we set this timeout for
                            // has already been acknowledged by the remote, then

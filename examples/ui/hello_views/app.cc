@@ -136,7 +136,7 @@ App::App(async::Loop* loop, AppType type)
   }
 
   // Close the session and quit after several seconds.
-  async::PostDelayedTask(loop_->async(),
+  async::PostDelayedTask(loop_->dispatcher(),
                          [this] {
                            FXL_LOG(INFO)
                                << AppTypeString(type_) << "Closing session.";

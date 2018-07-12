@@ -267,10 +267,10 @@ class Mdns : public MdnsAgent::Host {
   void ReceiveResource(const DnsResource& resource,
                        MdnsResourceSection section);
 
-  // Runs tasks in |task_queue_| using |async_|.
+  // Runs tasks in |task_queue_| using |dispatcher_|.
   void PostTask();
 
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
   MdnsTransceiver transceiver_;
   std::string original_host_name_;
   uint32_t next_host_name_deduplicator_ = 2;

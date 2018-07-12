@@ -86,7 +86,7 @@ class BrEdrConnectionManager {
   bool use_interlaced_scan_;
 
   // The dispatcher that all commands are queued on.
-  async_t* dispatcher_;
+  async_dispatcher_t* dispatcher_;
 
   // Keep this as the last member to make sure that all weak pointers are
   // invalidated before other members get destroyed.

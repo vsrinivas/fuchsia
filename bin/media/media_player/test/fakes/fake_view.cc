@@ -18,7 +18,7 @@ constexpr uint32_t kViewTokenValue = 1;
 }  // namespace
 
 FakeView::FakeView()
-    : async_(async_get_default()),
+    : dispatcher_(async_get_default_dispatcher()),
       binding_(this),
       service_provider_binding_(this),
       input_connection_binding_(this) {}

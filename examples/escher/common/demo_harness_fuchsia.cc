@@ -62,7 +62,7 @@ void DemoHarnessFuchsia::ShutdownWindowSystem() {}
 void DemoHarnessFuchsia::Run(Demo* demo) {
   FXL_CHECK(!demo_);
   demo_ = demo;
-  async::PostTask(loop_->async(), [this] { this->RenderFrameOrQuit(); });
+  async::PostTask(loop_->dispatcher(), [this] { this->RenderFrameOrQuit(); });
   loop_->Run();
 }
 
@@ -73,7 +73,7 @@ void DemoHarnessFuchsia::RenderFrameOrQuit() {
     device().waitIdle();
   } else {
     demo_->MaybeDrawFrame();
-    async::PostDelayedTask(loop_->async(),
+    async::PostDelayedTask(loop_->dispatcher(),
                            [this] { this->RenderFrameOrQuit(); }, zx::msec(1));
   }
 }

@@ -33,13 +33,13 @@ void Exit(const char* format, ...);
 
 std::unique_ptr<uint8_t[]> read_whole_file(const char* filename, size_t* size);
 
-// Post to async in a way that's guaranteed to run the posted work in the same
+// Post to dispatcher in a way that's guaranteed to run the posted work in the same
 // order as the posting order (is the intent - if async::PostTask ever changes
 // to not guarantee order, we'll need to work around that here).
 //
 // TODO(dustingreen): Determine if async::PostTask() intends to strictly
 // guarantee order.
-void PostSerial(async_t* async, fit::closure to_run);
+void PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run);
 
 void SHA256_Update_AudioParameters(SHA256_CTX* sha256_ctx,
                                    const fuchsia::mediacodec::PcmFormat& pcm);

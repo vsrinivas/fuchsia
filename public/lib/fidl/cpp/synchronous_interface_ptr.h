@@ -33,7 +33,7 @@ namespace fidl {
 // such as |Bind| or |Unbind|.
 //
 // |SynchronousInterfacePtr| does not require a |async_t| implementation and
-// does not bind to the default |async_t*| for the current thread, unlike
+// does not bind to the default |async_dispatcher_t*| for the current thread, unlike
 // |InterfacePtr|.
 //
 // See also:
