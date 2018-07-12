@@ -186,7 +186,7 @@ void RegisterSimpleTest(const char* test_name) {
 // based on the command line arguments.  (See the "--help" output for more
 // details.)  |test_suite| is included in the test results JSON and is used to
 // categorize test results in the performance dashboard.
-int PerfTestMain(int argc, char** argv, const char* test_suite = "");
+int PerfTestMain(int argc, char** argv, const char* test_suite);
 
 // Run a single test for |test_suite| |run_count| times, and add the results to
 // |results_set| using the given name, |test_name|.  On error, this returns
