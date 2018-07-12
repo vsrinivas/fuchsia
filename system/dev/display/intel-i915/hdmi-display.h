@@ -10,12 +10,14 @@ namespace i915 {
 
 class HdmiDisplay : public DisplayDevice, private edid::EdidDdcSource {
 public:
-    HdmiDisplay(Controller* controller, uint64_t id, registers::Ddi ddi, registers::Pipe pipe);
+    HdmiDisplay(Controller* controller, uint64_t id, registers::Ddi ddi);
 
 private:
     bool QueryDevice(edid::Edid* edid) final;
     bool ConfigureDdi() final;
     bool DdcRead(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) final;
+    bool PipeConfigPreamble(registers::Pipe pipe, registers::Trans trans) final;
+    bool PipeConfigEpilogue(registers::Pipe pipe, registers::Trans trans) final;
 
     bool CheckDisplayLimits(const display_config_t* config) final;
 

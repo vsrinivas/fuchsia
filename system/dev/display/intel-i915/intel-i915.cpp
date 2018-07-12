@@ -59,16 +59,6 @@ static const cursor_info_t cursor_infos[3] = {
     { .width = 256, .height = 256, .format = ZX_PIXEL_FORMAT_ARGB_8888 },
 };
 
-bool pipe_in_use(const fbl::Vector<fbl::unique_ptr<i915::DisplayDevice>>& displays,
-                 registers::Pipe pipe) {
-    for (size_t i = 0; i < displays.size(); i++) {
-        if (displays[i]->pipe() == pipe) {
-            return true;
-        }
-    }
-    return false;
-}
-
 static zx_status_t read_pci_config_16(void* ctx, uint16_t addr, uint16_t* value_out) {
     return static_cast<i915::Controller*>(ctx)->ReadPciConfig16(addr, value_out);
 }
@@ -142,6 +132,18 @@ static int finish_init(void* arg) {
     return 0;
 }
 
+const display_config_t* find_config(uint64_t display_id,
+                                    const display_config_t** display_configs,
+                                    uint32_t display_count) {
+    for (unsigned i = 0; i < display_count; i++) {
+        if (display_configs[i]->display_id == display_id) {
+            return display_configs[i];
+        }
+    }
+    return nullptr;
+}
+
+
 } // namespace
 
 namespace i915 {
@@ -204,8 +206,6 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
                 }
             }
         }
-
-        ReallocatePipeBuffers(true);
     }
     if (dc_cb() && (display_added != INVALID_DISPLAY_ID || display_removed != INVALID_DISPLAY_ID)) {
         dc_cb()->on_displays_changed(dc_cb_ctx_,
@@ -224,32 +224,29 @@ void Controller::HandlePipeVsync(registers::Pipe pipe, zx_time_t timestamp) {
     }
 
     uint64_t id = INVALID_DISPLAY_ID;
+    // Plane 3 and the cursor are mutually exclusive, so this won't overflow.
     void* handles[3];
     int32_t handle_count = 0;
     {
         fbl::AutoLock lock(&display_lock_);
-        for (auto& display : display_devices_) {
-            if (display->pipe() == pipe) {
-                id = display->id();
+        if (pipes_[pipe].in_use()) {
+            id = pipes_[pipe].attached_display_id();
 
-                registers::PipeRegs regs(pipe);
-                for (int i = 0; i < 3; i++) {
-                    auto live_surface = regs.PlaneSurfaceLive(i).ReadFrom(mmio_space());
-                    void* handle = reinterpret_cast<void*>(
-                            live_surface.surface_base_addr() << live_surface.kPageShift);
-                    if (handle) {
-                        handles[handle_count++] = handle;
-                    }
-                }
-
-                auto live_surface = regs.CursorSurfaceLive().ReadFrom(mmio_space());
+            registers::PipeRegs regs(pipe);
+            for (int i = 0; i < 3; i++) {
+                auto live_surface = regs.PlaneSurfaceLive(i).ReadFrom(mmio_space());
                 void* handle = reinterpret_cast<void*>(
                         live_surface.surface_base_addr() << live_surface.kPageShift);
                 if (handle) {
                     handles[handle_count++] = handle;
                 }
+            }
 
-                break;
+            auto live_surface = regs.CursorSurfaceLive().ReadFrom(mmio_space());
+            void* handle = reinterpret_cast<void*>(
+                    live_surface.surface_base_addr() << live_surface.kPageShift);
+            if (handle) {
+                handles[handle_count++] = handle;
             }
         }
     }
@@ -440,7 +437,6 @@ void Controller::ResetPipe(registers::Pipe pipe) {
     ZX_DEBUG_ASSERT(mtx_trylock(&display_lock_) == thrd_busy);
     for (unsigned plane_num = 0; plane_num < registers::kImagePlaneCount; plane_num++) {
         plane_buffers_[pipe][plane_num].start = registers::PlaneBufCfg::kBufferCount;
-        plane_buffers_[pipe][plane_num].minimum = 0;
     }
 }
 
@@ -546,29 +542,17 @@ registers::Dpll Controller::SelectDpll(bool is_edp, bool is_hdmi, uint32_t rate)
 }
 
 fbl::unique_ptr<DisplayDevice> Controller::InitDisplay(registers::Ddi ddi) {
-    registers::Pipe pipe;
-    if (!pipe_in_use(display_devices_, registers::PIPE_A)) {
-        pipe = registers::PIPE_A;
-    } else if (!pipe_in_use(display_devices_, registers::PIPE_B)) {
-        pipe = registers::PIPE_B;
-    } else if (!pipe_in_use(display_devices_, registers::PIPE_C)) {
-        pipe = registers::PIPE_C;
-    } else {
-        LOG_WARN("Could not allocate pipe for ddi %d\n", ddi);
-        return nullptr;
-    }
-
     fbl::AllocChecker ac;
     if (igd_opregion_.SupportsDp(ddi)) {
         LOG_SPEW("Checking for displayport monitor\n");
-        auto dp_disp = fbl::make_unique_checked<DpDisplay>(&ac, this, next_id_, ddi, pipe);
+        auto dp_disp = fbl::make_unique_checked<DpDisplay>(&ac, this, next_id_, ddi);
         if (ac.check() && reinterpret_cast<DisplayDevice*>(dp_disp.get())->Init()) {
             return dp_disp;
         }
     }
     if (igd_opregion_.SupportsHdmi(ddi) || igd_opregion_.SupportsDvi(ddi)) {
         LOG_SPEW("Checking for hdmi monitor\n");
-        auto hdmi_disp = fbl::make_unique_checked<HdmiDisplay>(&ac, this, next_id_, ddi, pipe);
+        auto hdmi_disp = fbl::make_unique_checked<HdmiDisplay>(&ac, this, next_id_, ddi);
         if (ac.check() && reinterpret_cast<DisplayDevice*>(hdmi_disp.get())->Init()) {
             return hdmi_disp;
         }
@@ -591,8 +575,6 @@ void Controller::InitDisplays() {
     if (display_devices_.size() == 0) {
         LOG_INFO("No displays detected\n");
     }
-
-    ReallocatePipeBuffers(false);
 }
 
 zx_status_t Controller::AddDisplay(fbl::unique_ptr<DisplayDevice>&& display) {
@@ -734,20 +716,14 @@ const fbl::unique_ptr<GttRegion>& Controller::GetGttRegion(void* handle) {
 bool Controller::GetPlaneLayer(registers::Pipe pipe, uint32_t plane,
                                const display_config_t** configs, uint32_t display_count,
                                const layer_t** layer_out) {
-    DisplayDevice* disp = nullptr;
-    for (auto& d : display_devices_) {
-        if (d->pipe() == pipe) {
-            disp = d.get();
-            break;
-        }
-    }
-    if (disp == nullptr) {
+    if (!pipes_[pipe].in_use()) {
         return false;
     }
+    uint64_t disp_id = pipes_[pipe].attached_display_id();
 
     for (unsigned i = 0; i < display_count; i++) {
         const display_config_t* config = configs[i];
-        if (config->display_id != disp->id()) {
+        if (config->display_id != disp_id) {
             continue;
         }
         bool has_color_layer = config->layer_count && config->layers[0]->type == LAYER_COLOR;
@@ -775,14 +751,17 @@ bool Controller::GetPlaneLayer(registers::Pipe pipe, uint32_t plane,
     return false;
 }
 
+uint16_t Controller::CalculateBuffersPerPipe(uint32_t display_count) {
+    ZX_ASSERT(display_count < registers::kPipeCount);
+    return static_cast<uint16_t>(registers::PlaneBufCfg::kBufferCount / display_count);
+}
+
 bool Controller::CalculateMinimumAllocations(const display_config_t** display_configs,
                                              uint32_t display_count,
                                              uint16_t min_allocs[registers::kPipeCount]
                                                                 [registers::kImagePlaneCount]) {
-    ZX_ASSERT(display_count < registers::kPipeCount);
     // This fn ignores layers after kImagePlaneCount. Displays with too many layers already
     // failed in ::CheckConfiguration, so it doesn't matter if we incorrectly say they pass here.
-
     bool success = true;
     for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
         registers::Pipe pipe = registers::kPipes[pipe_num];
@@ -829,9 +808,7 @@ bool Controller::CalculateMinimumAllocations(const display_config_t** display_co
             total += min_allocs[pipe_num][plane_num];
         }
 
-        ZX_ASSERT(pipe_buffers_[pipe_num].end >= pipe_buffers_[pipe_num].start);
-        if (total > static_cast<uint16_t>(
-                pipe_buffers_[pipe_num].end - pipe_buffers_[pipe_num].start)) {
+        if (total && total > CalculateBuffersPerPipe(display_count)) {
             min_allocs[pipe_num][0] = UINT16_MAX;
             success = false;
         }
@@ -895,7 +872,6 @@ void Controller::UpdateAllocations(const uint16_t min_allocs[registers::kPipeCou
         uint16_t start = pipe_buffers_[pipe_num].start;
         for (unsigned plane_num = 0; plane_num < registers::kImagePlaneCount; plane_num++) {
             auto cur = &plane_buffers_[pipe_num][plane_num];
-            cur->minimum = min_allocs[pipe_num][plane_num];
 
             if (allocs[pipe_num][plane_num] == 0) {
                 cur->start = registers::PlaneBufCfg::kBufferCount;
@@ -939,11 +915,17 @@ void Controller::UpdateAllocations(const uint16_t min_allocs[registers::kPipeCou
     }
 }
 
-bool Controller::ReallocatePlaneBuffers(const display_config_t** display_configs,
-                                        uint32_t display_count) {
+void Controller::ReallocatePlaneBuffers(const display_config_t** display_configs,
+                                        uint32_t display_count, bool reallocate_pipes) {
+    if (display_count == 0) {
+        // Deal with reallocation later, when there are actually displays
+        return;
+    }
+
     uint16_t min_allocs[registers::kPipeCount][registers::kImagePlaneCount];
     if (!CalculateMinimumAllocations(display_configs, display_count, min_allocs)) {
-        return false;
+        // The allocation should have been checked, so this shouldn't fail
+        ZX_ASSERT(false);
     }
 
     // Calculate the data rates and store the minimum allocations
@@ -973,93 +955,39 @@ bool Controller::ReallocatePlaneBuffers(const display_config_t** display_configs
         }
     }
 
+    buffer_allocation_t active_allocation[registers::kPipeCount];
+    if (reallocate_pipes) {
+        // Allocate buffers to each pipe, but save the old allocation to use
+        // when progressively updating the allocation.
+        memcpy(active_allocation, pipe_buffers_, sizeof(active_allocation));
+
+        uint16_t buffers_per_pipe = CalculateBuffersPerPipe(display_count);
+        int active_pipes = 0;
+        for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
+            if (pipes_[pipe_num].in_use()) {
+                pipe_buffers_[pipe_num].start =
+                        static_cast<uint16_t>(buffers_per_pipe * active_pipes);
+                pipe_buffers_[pipe_num].end =
+                        static_cast<uint16_t>(pipe_buffers_[pipe_num].start + buffers_per_pipe);
+                active_pipes++;
+            } else {
+                pipe_buffers_[pipe_num].start = pipe_buffers_[pipe_num].end = 0;
+            }
+            LOG_SPEW("Pipe %d buffers: [%d, %d)\n", pipe_num,
+                     pipe_buffers_[pipe_num].start, pipe_buffers_[pipe_num].end);
+        }
+    }
+
     // It's not necessary to flush the buffer changes since the pipe allocs didn't change
     UpdateAllocations(min_allocs, data_rate);
-    return true;
+
+    if (reallocate_pipes) {
+        DoPipeBufferReallocation(active_allocation);
+    }
 }
 
-void Controller::ReallocatePipeBuffers(bool is_hotplug) {
-    if (display_devices_.size() == 0) {
-        // We'll reallocate things when there's actually a display
-        return;
-    }
-
-    // TODO(stevensd): Separate pipe allocation for displays being connected
-    bool realloc_fail = false;
-    uint16_t buffers_per_pipe = static_cast<uint16_t>(registers::PlaneBufCfg::kBufferCount /
-        fbl::min(display_devices_.size(), static_cast<size_t>(registers::kPipeCount)));
-
-    // Approximate the data rate based on how many buffers are allocated to each plane. This
-    // can be slightly off, but that'll be fixed on the next page flip.
-    uint16_t min_allocs[registers::kPipeCount][registers::kImagePlaneCount];
-    uint64_t data_rate[registers::kPipeCount][registers::kImagePlaneCount];
-    for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
-        uint16_t pipe_total = 0;
-        for (unsigned plane_num = 0; plane_num < registers::kImagePlaneCount; plane_num++) {
-            auto alloc = &plane_buffers_[pipe_num][plane_num];
-            data_rate[pipe_num][plane_num] = alloc->start == registers::PlaneBufCfg::kBufferCount ?
-                    0 : alloc->end - alloc->start;
-            min_allocs[pipe_num][plane_num] = alloc->minimum;
-            pipe_total = static_cast<uint16_t>(pipe_total + alloc->minimum);
-        }
-        if (pipe_total > buffers_per_pipe) {
-            realloc_fail = true;
-        }
-    }
-
-    // If we can't reallocate anything, disable all the planes and wait for a page flip due
-    // to the client handling the hotplug. This will cause the displays to flash, but bad
-    // hotplugs like this should be uncommon. This shouldn't happen with the virtcon, since
-    // its buffer requirements are really low, so waiting for a flip is okay.
-    if (realloc_fail) {
-        ZX_DEBUG_ASSERT(is_hotplug);
-
-        LOG_INFO("Cannot reallocate buffers for hot plug\n");
-        for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
-            registers::Pipe pipe = registers::kPipes[pipe_num];
-            registers::PipeRegs pipe_regs(pipe);
-            for (unsigned plane_num = 0; plane_num < registers::kImagePlaneCount; plane_num++) {
-                 pipe_regs.PlaneControl(plane_num).ReadFrom(mmio_space())
-                        .set_plane_enable(0).WriteTo(mmio_space());
-                 pipe_regs.PlaneSurface(plane_num).ReadFrom(mmio_space()).WriteTo(mmio_space());
-            }
-            pipe_regs.CursorBase().ReadFrom(mmio_space()).WriteTo(mmio_space());
-        }
-        return;
-    }
-
-    // Allocate buffers to each pipe, but save the old one for use later.
-    pipe_buffer_allocation_t active_allocation[registers::kPipeCount];
-    memcpy(active_allocation, pipe_buffers_, sizeof(active_allocation));
-    int active_pipes = 0;
-    for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
-        bool found = false;
-        for (auto& display : display_devices_) {
-            if (display->pipe() == pipe_num) {
-                found = true;
-                break;
-            }
-        }
-        if (found) {
-            pipe_buffers_[pipe_num].start = static_cast<uint16_t>(buffers_per_pipe * active_pipes);
-            pipe_buffers_[pipe_num].end = static_cast<uint16_t>(
-                    pipe_buffers_[pipe_num].start + buffers_per_pipe);
-            active_pipes++;
-        } else {
-            pipe_buffers_[pipe_num].start = pipe_buffers_[pipe_num].end = 0;
-        }
-        LOG_SPEW("Pipe %d buffers: [%d, %d)\n", pipe_num,
-                 pipe_buffers_[pipe_num].start, pipe_buffers_[pipe_num].end);
-    }
-
-    UpdateAllocations(min_allocs, data_rate);
-
-    // If it's not a hotplug, we weren't using anything before so we don't need to
-    // worry about allocations overlapping.
-    if (!is_hotplug) {
-        return;
-    }
-
+void Controller::DoPipeBufferReallocation(
+        buffer_allocation_t active_allocation[registers::kPipeCount]) {
     // Given that the order of the allocations is fixed, an allocation X_i is contained completely
     // within its old allocation if {new len of allocations preceding X_i} >= {start of old X_i} and
     // {new len of allocations preceding X_i + new len of X_i} <= {end of old X_i}. For any i,
@@ -1154,16 +1082,17 @@ bool Controller::CheckDisplayLimits(const display_config_t** display_configs,
 void Controller::CheckConfiguration(const display_config_t** display_config,
                                     uint32_t* display_cfg_result, uint32_t** layer_cfg_result,
                                     uint32_t display_count) {
-    if (display_count > registers::kPipeCount) {
-        *display_cfg_result = CONFIG_DISPLAY_TOO_MANY;
-        return;
-    }
-
     fbl::AutoLock lock(&display_lock_);
 
     if (display_count == 0) {
         // All displays off is supported
         *display_cfg_result = CONFIG_DISPLAY_OK;
+        return;
+    }
+
+    uint64_t pipe_alloc[registers::kPipeCount];
+    if (!CalculatePipeAllocation(display_config, display_count, pipe_alloc)) {
+        *display_cfg_result = CONFIG_DISPLAY_TOO_MANY;
         return;
     }
 
@@ -1190,7 +1119,7 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
             }
         }
         if (display == nullptr) {
-            LOG_INFO("Got config with no display - assuming hotplug and skipping");
+            LOG_INFO("Got config with no display - assuming hotplug and skipping\n");
             continue;
         }
 
@@ -1270,19 +1199,19 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
                             scalers_needed = 2;
                         }
                     }
-                    
+
                     // Verify that there are enough scaler resources
                     // Verify that the scaler input isn't too large or too small
                     // Verify that the required scaling ratio isn't too large
+                    bool using_c = pipe_alloc[registers::PIPE_C] == display->id();
                     if ((total_scalers_needed + scalers_needed) >
-                            (display->pipe() == registers::PIPE_C
-                                ? registers::PipeScalerCtrl::kPipeCScalersAvailable
+                            (using_c ? registers::PipeScalerCtrl::kPipeCScalersAvailable
                                 : registers::PipeScalerCtrl::kPipeABScalersAvailable)
                             || src_width > registers::PipeScalerCtrl::kMaxSrcWidthPx
                             || src_width < registers::PipeScalerCtrl::kMinSrcSizePx
                             || src_height < registers::PipeScalerCtrl::kMinSrcSizePx
                             || max_width < primary->dest_frame.width
-                            || max_height < primary->dest_frame.height) {   
+                            || max_height < primary->dest_frame.height) {
                         layer_cfg_result[i][j] |= CLIENT_FRAME_SCALE;
                     } else {
                         total_scalers_needed += scalers_needed;
@@ -1336,24 +1265,90 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
             if (arr[pipe_num][0] != UINT16_MAX) {
                 continue;
             }
-            for (auto& display : display_devices_) {
-                if (display->pipe() != pipe_num) {
+            ZX_ASSERT(pipes_[pipe_num].in_use()); // If the allocation failed, it should be in use
+            uint64_t display_id = pipes_[pipe_num].attached_display_id();
+            for (unsigned i = 0; i < display_count; i++) {
+                if (display_config[i]->display_id != display_id) {
                     continue;
                 }
+                layer_cfg_result[i][0] = CLIENT_MERGE_BASE;
+                for (unsigned j = 1; j < display_config[i]->layer_count; j++) {
+                    layer_cfg_result[i][j] = CLIENT_MERGE_SRC;
+                }
+                break;
+            }
+        }
+    }
+}
 
-                for (unsigned i = 0; i < display_count; i++) {
-                    if (display_config[i]->display_id != display->id()) {
-                        continue;
-                    }
-                    layer_cfg_result[i][0] = CLIENT_MERGE_BASE;
-                    for (unsigned j = 1; j < display_config[i]->layer_count; j++) {
-                        layer_cfg_result[i][j] = CLIENT_MERGE_SRC;
-                    }
+bool Controller::CalculatePipeAllocation(const display_config_t** display_config,
+                                         uint32_t display_count,
+                                         uint64_t alloc[registers::kPipeCount]) {
+    if (display_count > registers::kPipeCount) {
+        return false;
+    }
+    memset(alloc, 0, sizeof(uint64_t) * registers::kPipeCount);
+    // Keep any allocated pipes on the same display
+    for (unsigned i = 0; i < display_count; i++) {
+        DisplayDevice* display = FindDevice(display_config[i]->display_id);
+        if (display != nullptr && display->pipe() != nullptr) {
+            alloc[display->pipe()->pipe()] = display_config[i]->display_id;
+        }
+    }
+    // Give unallocated pipes to displays that need them
+    for (unsigned i = 0; i < display_count; i++) {
+        DisplayDevice* display = FindDevice(display_config[i]->display_id);
+        if (display != nullptr && display->pipe() == nullptr) {
+            for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
+                if (!alloc[pipe_num]) {
+                    alloc[pipe_num] = display_config[i]->display_id;
                     break;
                 }
             }
         }
     }
+    return true;
+}
+
+bool Controller::ReallocatePipes(const display_config_t** display_config, uint32_t display_count) {
+    if (display_count == 0) {
+        // If we were given an empty config, just wait until there's
+        // a real config before doing anything.
+        return false;
+    }
+
+    uint64_t pipe_alloc[registers::kPipeCount];
+    if (!CalculatePipeAllocation(display_config, display_count, pipe_alloc)) {
+        // Reallocations should only happen for validated configurations, so the
+        // pipe allocation should always succeed.
+        ZX_ASSERT(false);
+        return false;
+    }
+
+    bool pipe_change = false;
+    for (unsigned i = 0; i < display_devices_.size(); i++) {
+        auto& display = display_devices_[i];
+        const display_config_t* config = find_config(display->id(), display_config, display_count);
+
+        Pipe* pipe = nullptr;
+        if (config) {
+            pipe = display->pipe();
+            if (pipe == nullptr) {
+                for (unsigned i = 0; i < registers::kPipeCount; i++) {
+                    if (pipe_alloc[i] == display->id()) {
+                        pipe = pipes_ + i;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (display->AttachPipe(pipe)) {
+            pipe_change = true;
+        }
+    }
+
+    return pipe_change;
 }
 
 void Controller::ApplyConfiguration(const display_config_t** display_config,
@@ -1364,40 +1359,19 @@ void Controller::ApplyConfiguration(const display_config_t** display_config,
     {
         fbl::AutoLock lock(&display_lock_);
 
-        // If we reallocated the pipe allocations since things were validated, then this
-        // can fail. In that case, just wait for the client to respond to the hotplug event.
-        if (!ReallocatePlaneBuffers(display_config, display_count)) {
-            return;
-        }
+        bool pipe_change = ReallocatePipes(display_config, display_count);
+        ReallocatePlaneBuffers(display_config, display_count, pipe_change);
 
-        for (auto& display : display_devices_) {
-            const display_config_t* config = nullptr;
-            for (unsigned i = 0; i < display_count; i++) {
-                if (display_config[i]->display_id == display->id()) {
-                    config = display_config[i];
-                    break;
-                }
-            }
+        for (unsigned i = 0; i < display_devices_.size(); i++) {
+            auto& display = display_devices_[i];
+            const display_config_t* config =
+                    find_config(display->id(), display_config, display_count);
 
-            if (config == nullptr) {
-                display->ClearConfig();
+            if (config != nullptr) {
+                display->ApplyConfiguration(config);
             } else {
-                registers::pipe_arming_regs_t regs;
-
-                display->ApplyConfiguration(config, &regs);
-
-                registers::PipeRegs pipe_regs(display->pipe());
-                pipe_regs.CscMode().FromValue(regs.csc_mode).WriteTo(mmio_space());
-                pipe_regs.PipeBottomColor().FromValue(regs.pipe_bottom_color).WriteTo(mmio_space());
-                pipe_regs.CursorBase().FromValue(regs.cur_base).WriteTo(mmio_space());
-                pipe_regs.CursorPos().FromValue(regs.cur_pos).WriteTo(mmio_space());
-                for (unsigned i = 0; i < registers::kImagePlaneCount; i++) {
-                    pipe_regs.PlaneSurface(i).FromValue(regs.plane_surf[i]).WriteTo(mmio_space());
-                }
-                pipe_regs.PipeScalerWinSize(0).FromValue(regs.ps_win_sz[0]).WriteTo(mmio_space());
-                if (display->pipe() != registers::PIPE_C) {
-                    pipe_regs.PipeScalerWinSize(1)
-                            .FromValue(regs.ps_win_sz[1]).WriteTo(mmio_space());
+                if (display->pipe()) {
+                    ResetPipe(display->pipe()->pipe());
                 }
             }
 
@@ -1611,8 +1585,11 @@ zx_status_t Controller::DdkSuspend(uint32_t hint) {
         {
             fbl::AutoLock lock(&display_lock_);
             for (auto& display : display_devices_) {
+                if (display->pipe() == nullptr) {
+                    continue;
+                }
                 // TODO(ZX-1413): Reset/scale the display to ensure the buffer displays properly
-                registers::PipeRegs pipe_regs(display->pipe());
+                registers::PipeRegs pipe_regs(display->pipe()->pipe());
 
                 auto plane_stride = pipe_regs.PlaneSurfaceStride(0).ReadFrom(mmio_space_.get());
                 plane_stride.set_stride(width_in_tiles(IMAGE_TYPE_SIMPLE, width, format));
@@ -1651,8 +1628,6 @@ zx_status_t Controller::DdkResume(uint32_t hint) {
 
     interrupts_.Resume();
 
-    ReallocatePipeBuffers(false);
-
     return ZX_OK;
 }
 
@@ -1660,6 +1635,11 @@ zx_status_t Controller::DdkResume(uint32_t hint) {
 // break devmgr's suspend/mexec.
 void Controller::FinishInit() {
     LOG_TRACE("i915: initializing displays\n");
+
+    for (auto& pipe : pipes_) {
+        pipe.Init();
+    }
+
     InitDisplays();
 
     acquire_dc_cb_lock();

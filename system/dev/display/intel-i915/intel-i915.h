@@ -19,6 +19,7 @@
 #include "gtt.h"
 #include "igd.h"
 #include "interrupts.h"
+#include "pipe.h"
 #include "power.h"
 #include "registers.h"
 #include "registers-ddi.h"
@@ -28,10 +29,10 @@
 
 namespace i915 {
 
-typedef struct pipe_buffer_allocation {
+typedef struct buffer_allocation {
     uint16_t start;
     uint16_t end;
-} pipe_buffer_allocation_t;
+} buffer_allocation_t;
 
 class Controller;
 using DeviceType = ddk::Device<Controller, ddk::Unbindable, ddk::Suspendable, ddk::Resumable>;
@@ -108,6 +109,7 @@ private:
     bool GetPlaneLayer(registers::Pipe pipe, uint32_t plane,
                        const display_config_t** configs, uint32_t display_count,
                        const layer_t** layer_out) __TA_REQUIRES(display_lock_);
+    uint16_t CalculateBuffersPerPipe(uint32_t display_count);
     // Returns false if no allocation is possible. When that happens,
     // plane 0 of the failing displays will be set to UINT16_MAX.
     bool CalculateMinimumAllocations(const display_config_t** display_configs,
@@ -124,15 +126,23 @@ private:
     // Reallocates the pipe buffers when a pipe comes online/goes offline. This is a
     // long-running operation, as shifting allocations between pipes requires waiting
     // for vsync.
-    void ReallocatePipeBuffers(bool is_hotplug) __TA_REQUIRES(display_lock_);
+    void DoPipeBufferReallocation(buffer_allocation_t active_allocation[registers::kPipeCount])
+                                  __TA_REQUIRES(display_lock_);
     // Reallocates plane buffers based on the given layer config.
-    bool ReallocatePlaneBuffers(const display_config_t** display_configs,
-                                uint32_t display_count) __TA_REQUIRES(display_lock_);
+    void ReallocatePlaneBuffers(const display_config_t** display_configs,
+                                uint32_t display_count,
+                                bool reallocate_pipes) __TA_REQUIRES(display_lock_);
 
     // Validates that a basic layer configuration can be supported for the
     // given modes of the displays.
     bool CheckDisplayLimits(const display_config_t** display_configs,
                             uint32_t display_count) __TA_REQUIRES(display_lock_);
+
+    bool CalculatePipeAllocation(const display_config_t** display_config, uint32_t display_count,
+                                 uint64_t alloc[registers::kPipeCount])
+                                 __TA_REQUIRES(display_lock_);
+    bool ReallocatePipes(const display_config_t** display_config, uint32_t display_count)
+                         __TA_REQUIRES(display_lock_);
 
     zx_device_t* zx_gpu_dev_ = nullptr;
     bool gpu_released_ = false;
@@ -184,6 +194,10 @@ private:
     uint64_t next_id_ __TA_GUARDED(display_lock_) = 1; // id can't be INVALID_DISPLAY_ID == 0
     mtx_t display_lock_;
 
+    Pipe pipes_[registers::kPipeCount] __TA_GUARDED(display_lock_) = {
+        Pipe(this, registers::PIPE_A), Pipe(this, registers::PIPE_B), Pipe(this, registers::PIPE_C)
+    };
+
     Power power_;
     PowerWellRef cd_clk_power_well_;
     struct {
@@ -192,19 +206,11 @@ private:
         uint32_t rate;
     } dplls_[registers::kDpllCount] = {};
 
-    // Buffer allocations for individual planes
-    struct {
-        // Start of the allocation, or registers::PlaneBufCfg::kBufferCount if no allocation
-        uint16_t start;
-        // End of the allocation (exclusive), or registers::PlaneBufCfg::kBufferCount if no alloc
-        uint16_t end;
-        // The length of the minimum allocation required by the plane. 0 if no
-        // allocation is required.
-        uint16_t minimum;
-    } plane_buffers_[registers::kPipeCount][registers::kImagePlaneCount]
+    // Plane buffer allocation. If no alloc, start == end == registers::PlaneBufCfg::kBufferCount.
+    buffer_allocation_t plane_buffers_[registers::kPipeCount][registers::kImagePlaneCount]
             __TA_GUARDED(display_lock_) = {};
     // Buffer allocations for pipes
-    pipe_buffer_allocation_t pipe_buffers_[registers::kPipeCount] __TA_GUARDED(display_lock_) = {};
+    buffer_allocation_t pipe_buffers_[registers::kPipeCount] __TA_GUARDED(display_lock_) = {};
 
     uint16_t device_id_;
     uint32_t flags_;

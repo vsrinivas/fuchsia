@@ -12,6 +12,7 @@
 #include <lib/zx/vmo.h>
 
 #include "gtt.h"
+#include "pipe.h"
 #include "power.h"
 #include "registers-ddi.h"
 #include "registers-pipe.h"
@@ -33,12 +34,11 @@ typedef struct display_ref {
 
 class DisplayDevice {
 public:
-    DisplayDevice(Controller* device, uint64_t id,
-                  registers::Ddi ddi, registers::Trans trans, registers::Pipe pipe);
+    DisplayDevice(Controller* device, uint64_t id, registers::Ddi ddi);
     virtual ~DisplayDevice();
 
-    void ApplyConfiguration(const display_config_t* config, registers::pipe_arming_regs* regs);
-    void ClearConfig();
+    bool AttachPipe(Pipe* pipe);
+    void ApplyConfiguration(const display_config_t* config);
 
     bool Init();
     bool Resume();
@@ -49,10 +49,10 @@ public:
 
     uint64_t id() const { return id_; }
     registers::Ddi ddi() const { return ddi_; }
-    registers::Pipe pipe() const { return pipe_; }
-    registers::Trans trans() const { return trans_; }
     Controller* controller() { return controller_; }
     const edid::Edid& edid() { return edid_; }
+
+    Pipe* pipe() const { return pipe_; }
 
     uint32_t width() const { return info_.v_addressable; }
     uint32_t height() const { return info_.h_addressable; }
@@ -71,38 +71,32 @@ protected:
     // Configures the hardware to display a framebuffer at the preferred resolution.
     virtual bool ConfigureDdi() = 0;
 
+    // Attaching a pipe to a display or configuring a pipe after display mode change has
+    // 3 steps. The second step is generic pipe configuration, whereas PipeConfigPreamble
+    // and PipeConfigEpilogue are responsible for display-type-specific configuration that
+    // must be done before and after the generic configuration.
+    virtual bool PipeConfigPreamble(registers::Pipe pipe, registers::Trans trans) = 0;
+    virtual bool PipeConfigEpilogue(registers::Pipe pipe, registers::Trans trans) = 0;
+
     hwreg::RegisterIo* mmio_space() const;
     const display_mode_t& mode() const { return info_; }
 
 private:
-    void ResetPipe();
-    bool ResetTrans();
     bool ResetDdi();
-
-    void ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* primary,
-                               bool enable_csc, bool* scaler_1_claimed,
-                               registers::pipe_arming_regs* regs);
-    void ConfigureCursorPlane(const cursor_layer_t* cursor, bool enable_csc,
-                              registers::pipe_arming_regs* regs);
-    void SetColorConversionOffsets(bool preoffsets, const float vals[3]);
 
     // Borrowed reference to Controller instance
     Controller* controller_;
 
     uint64_t id_;
     registers::Ddi ddi_;
-    registers::Trans trans_;
-    registers::Pipe pipe_;
+
+    Pipe* pipe_= nullptr;
 
     PowerWellRef ddi_power_;
-    PowerWellRef pipe_power_;
 
     bool inited_ = false;
     display_mode_t info_ = {};
     edid::Edid edid_;
-
-    // For any scaled planes, this contains the (1-based) index of the active scaler
-    uint32_t scaled_planes_[registers::kPipeCount][registers::kImagePlaneCount] = {};
 
     zx_device_t* backlight_device_ = nullptr;
     display_ref_t* display_ref_ = nullptr;

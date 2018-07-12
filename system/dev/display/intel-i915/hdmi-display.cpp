@@ -163,9 +163,8 @@ bool i2c_send_byte(hwreg::RegisterIo* mmio_space, registers::Ddi ddi, uint8_t by
 
 namespace i915 {
 
-HdmiDisplay::HdmiDisplay(Controller* controller, uint64_t id,
-                         registers::Ddi ddi, registers::Pipe pipe)
-        : DisplayDevice(controller, id, ddi, static_cast<registers::Trans>(pipe), pipe) { }
+HdmiDisplay::HdmiDisplay(Controller* controller, uint64_t id, registers::Ddi ddi)
+        : DisplayDevice(controller, id, ddi) { }
 
 // Per the GMBUS Controller Programming Interface section of the Intel docs, GMBUS does not
 // directly support segment pointer addressing. Instead, the segment pointer needs to be
@@ -571,45 +570,22 @@ bool HdmiDisplay::ConfigureDdi() {
         return false;
     }
 
-    registers::TranscoderRegs trans_regs(trans());
+    return true;
+}
+
+bool HdmiDisplay::PipeConfigPreamble(registers::Pipe pipe, registers::Trans trans) {
+    registers::TranscoderRegs trans_regs(trans);
 
     // Configure Transcoder Clock Select
     auto trans_clk_sel = trans_regs.ClockSelect().ReadFrom(mmio_space());
     trans_clk_sel.set_trans_clock_select(ddi() + 1);
     trans_clk_sel.WriteTo(mmio_space());
 
-    // Configure the transcoder
-    uint32_t h_active = mode().h_addressable - 1;
-    uint32_t h_sync_start = h_active + mode().h_front_porch;
-    uint32_t h_sync_end = h_sync_start + mode().h_sync_pulse;
-    uint32_t h_total = h_active + mode().h_blanking;
+    return true;
+}
 
-    uint32_t v_active = mode().v_addressable - 1;
-    uint32_t v_sync_start = v_active + mode().v_front_porch;
-    uint32_t v_sync_end = v_sync_start + mode().v_sync_pulse;
-    uint32_t v_total = v_active + mode().v_blanking;
-
-    auto h_total_reg = trans_regs.HTotal().FromValue(0);
-    h_total_reg.set_count_total(h_total);
-    h_total_reg.set_count_active(h_active);
-    h_total_reg.WriteTo(mmio_space());
-    auto v_total_reg = trans_regs.VTotal().FromValue(0);
-    v_total_reg.set_count_total(v_total);
-    v_total_reg.set_count_active(v_active);
-    v_total_reg.WriteTo(mmio_space());
-
-    auto h_sync_reg = trans_regs.HSync().FromValue(0);
-    h_sync_reg.set_sync_start(h_sync_start);
-    h_sync_reg.set_sync_end(h_sync_end);
-    h_sync_reg.WriteTo(mmio_space());
-    auto v_sync_reg = trans_regs.VSync().FromValue(0);
-    v_sync_reg.set_sync_start(v_sync_start);
-    v_sync_reg.set_sync_end(v_sync_end);
-    v_sync_reg.WriteTo(mmio_space());
-
-    // The Intel docs say that H/VBlank should be programmed with the same H/VTotal
-    trans_regs.HBlank().FromValue(h_total_reg.reg_value()).WriteTo(mmio_space());
-    trans_regs.VBlank().FromValue(v_total_reg.reg_value()).WriteTo(mmio_space());
+bool HdmiDisplay::PipeConfigEpilogue(registers::Pipe pipe, registers::Trans trans) {
+    registers::TranscoderRegs trans_regs(trans);
 
     auto ddi_func = trans_regs.DdiFuncControl().ReadFrom(mmio_space());
     ddi_func.set_trans_ddi_function_enable(1);

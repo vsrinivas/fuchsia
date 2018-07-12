@@ -29,8 +29,9 @@
 #include "virtual-layer.h"
 
 static zx_handle_t dc_handle;
+static bool has_ownership;
 
-static bool wait_for_driver_event() {
+static bool wait_for_driver_event(zx_time_t deadline) {
     zx_handle_t observed;
     uint32_t signals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     if (zx_object_wait_one(dc_handle, signals, ZX_TIME_INFINITE, &observed) != ZX_OK) {
@@ -66,7 +67,7 @@ static bool bind_display(fbl::Vector<Display>* displays) {
     }
 
     printf("Wating for display\n");
-    if (!wait_for_driver_event()) {
+    if (!wait_for_driver_event(ZX_TIME_INFINITE)) {
         return false;
     }
 
@@ -202,10 +203,10 @@ bool apply_config() {
     return true;
 }
 
-zx_status_t wait_for_vsync(const fbl::Vector<VirtualLayer*>& layers, zx_time_t* timestamp) {
-    *timestamp = 0;
-
-    if (!wait_for_driver_event()) {
+zx_status_t wait_for_vsync(const fbl::Vector<VirtualLayer*>& layers) {
+    zx_time_t deadline = has_ownership
+            ? zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_MSEC(100) : ZX_TIME_INFINITE;
+    if (!wait_for_driver_event(deadline)) {
         return ZX_ERR_STOP;
     }
 
@@ -222,6 +223,8 @@ zx_status_t wait_for_vsync(const fbl::Vector<VirtualLayer*>& layers, zx_time_t* 
         return ZX_ERR_STOP;
     case fuchsia_display_ControllerClientOwnershipChangeOrdinal:
         printf("Ownership change\n");
+        has_ownership = ((fuchsia_display_ControllerClientOwnershipChangeEvent*) msg.bytes().data())
+                ->has_ownership;
         return ZX_ERR_NEXT;
     case fuchsia_display_ControllerVsyncOrdinal:
         break;
@@ -237,7 +240,6 @@ zx_status_t wait_for_vsync(const fbl::Vector<VirtualLayer*>& layers, zx_time_t* 
     }
 
     auto vsync = reinterpret_cast<fuchsia_display_ControllerVsyncEvent*>(msg.bytes().data());
-    *timestamp = vsync->timestamp;
     uint64_t* image_ids = reinterpret_cast<uint64_t*>(vsync->images.data);
 
     for (auto& layer : layers) {
@@ -385,7 +387,6 @@ int main(int argc, const char* argv[]) {
 
     printf("Starting rendering\n");
     for (int i = 0; i < num_frames; i++) {
-        zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
         for (auto& layer : layers) {
             // Step before waiting, since not every layer is used every frame
             // so we won't necessarily need to wait.
@@ -415,10 +416,7 @@ int main(int argc, const char* argv[]) {
         }
 
         zx_status_t status;
-        zx_time_t deadline = now + ZX_MSEC(100);
-        zx_time_t timestamp;
-        while (((status = wait_for_vsync(layers, &timestamp)) == ZX_ERR_NEXT)
-                && timestamp < deadline) {
+        while ((status = wait_for_vsync(layers)) == ZX_ERR_NEXT) {
             // wait again
         }
         ZX_ASSERT(status == ZX_OK);

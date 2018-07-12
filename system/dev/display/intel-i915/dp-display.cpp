@@ -853,8 +853,8 @@ static registers::Trans select_trans(registers::Ddi ddi, registers::Pipe pipe) {
 
 namespace i915 {
 
-DpDisplay::DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi, registers::Pipe pipe)
-        : DisplayDevice(controller, id, ddi, select_trans(ddi, pipe), pipe) { }
+DpDisplay::DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi)
+        : DisplayDevice(controller, id, ddi) { }
 
 bool DpDisplay::QueryDevice(edid::Edid* edid) {
     // For eDP displays, assume that the BIOS has enabled panel power, given
@@ -999,8 +999,6 @@ bool DpDisplay::ConfigureDdi() {
         }
     }
 
-    registers::TranscoderRegs trans_regs(trans());
-
     uint8_t dpll_link_rate;
     if (dp_link_rate_mhz_ == 1620) {
         dpll_link_rate = registers::DpllControl1::kLinkRate810Mhz;
@@ -1059,8 +1057,14 @@ bool DpDisplay::ConfigureDdi() {
         return false;
     }
 
+    return true;
+}
+
+bool DpDisplay::PipeConfigPreamble(registers::Pipe pipe, registers::Trans trans) {
+    registers::TranscoderRegs trans_regs(trans);
+
     // Configure Transcoder Clock Select
-    if (trans() != registers::TRANS_EDP) {
+    if (trans != registers::TRANS_EDP) {
         auto clock_select = trans_regs.ClockSelect().ReadFrom(mmio_space());
         clock_select.set_trans_clock_select(ddi() + 1);
         clock_select.WriteTo(mmio_space());
@@ -1113,39 +1117,11 @@ bool DpDisplay::ConfigureDdi() {
     link_n_reg.set_link_n_value(link_n);
     link_n_reg.WriteTo(mmio_space());
 
-    // Configure the rest of the transcoder
-    uint32_t h_active = mode().h_addressable - 1;
-    uint32_t h_sync_start = h_active + mode().h_front_porch;
-    uint32_t h_sync_end = h_sync_start + mode().h_sync_pulse;
-    uint32_t h_total = h_active + mode().h_blanking;
+    return true;
+}
 
-    uint32_t v_active = mode().v_addressable - 1;
-    uint32_t v_sync_start = v_active + mode().v_front_porch;
-    uint32_t v_sync_end = v_sync_start + mode().v_sync_pulse;
-    uint32_t v_total = v_active + mode().v_blanking;
-
-    auto h_total_reg = trans_regs.HTotal().FromValue(0);
-    h_total_reg.set_count_total(h_total);
-    h_total_reg.set_count_active(h_active);
-    h_total_reg.WriteTo(mmio_space());
-    auto v_total_reg = trans_regs.VTotal().FromValue(0);
-    v_total_reg.set_count_total(v_total);
-    v_total_reg.set_count_active(v_active);
-    v_total_reg.WriteTo(mmio_space());
-
-    auto h_sync_reg = trans_regs.HSync().FromValue(0);
-    h_sync_reg.set_sync_start(h_sync_start);
-    h_sync_reg.set_sync_end(h_sync_end);
-    h_sync_reg.WriteTo(mmio_space());
-    auto v_sync_reg = trans_regs.VSync().FromValue(0);
-    v_sync_reg.set_sync_start(v_sync_start);
-    v_sync_reg.set_sync_end(v_sync_end);
-    v_sync_reg.WriteTo(mmio_space());
-
-    // The Intel docs say that H/VBlank should be programmed with the same H/VTotal
-    trans_regs.HBlank().FromValue(h_total_reg.reg_value()).WriteTo(mmio_space());
-    trans_regs.VBlank().FromValue(v_total_reg.reg_value()).WriteTo(mmio_space());
-
+bool DpDisplay::PipeConfigEpilogue(registers::Pipe pipe, registers::Trans trans) {
+    registers::TranscoderRegs trans_regs(trans);
     auto msa_misc = trans_regs.MsaMisc().FromValue(0);
     msa_misc.set_sync_clock(1);
     msa_misc.set_bits_per_color(msa_misc.k8Bbc); // kPixelFormat
@@ -1160,12 +1136,9 @@ bool DpDisplay::ConfigureDdi() {
     ddi_func.set_sync_polarity((!!(mode().flags & MODE_FLAG_VSYNC_POSITIVE)) << 1
                                 | (!!(mode().flags & MODE_FLAG_HSYNC_POSITIVE)));
     ddi_func.set_port_sync_mode_enable(0);
-    ddi_func.set_edp_input_select(
-            pipe() == registers::PIPE_A ? ddi_func.kPipeA :
-                    (pipe() == registers::PIPE_B ? ddi_func.kPipeB : ddi_func.kPipeC));
     ddi_func.set_dp_vc_payload_allocate(0);
-    ddi_func.set_edp_input_select(pipe() == registers::PIPE_A ? ddi_func.kPipeA :
-            (pipe() == registers::PIPE_B ? ddi_func.kPipeB : ddi_func.kPipeC));
+    ddi_func.set_edp_input_select(pipe == registers::PIPE_A ? ddi_func.kPipeA :
+            (pipe == registers::PIPE_B ? ddi_func.kPipeB : ddi_func.kPipeC));
     ddi_func.set_dp_port_width_selection(dp_lane_count_ - 1);
     ddi_func.WriteTo(mmio_space());
 
