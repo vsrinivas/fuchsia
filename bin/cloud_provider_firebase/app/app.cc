@@ -30,15 +30,15 @@ class App : public fuchsia::modular::Lifecycle {
   explicit App(AppParams app_params)
       : loop_(&kAsyncLoopConfigMakeDefault),
         startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
-        trace_provider_(loop_.async()),
+        trace_provider_(loop_.dispatcher()),
         network_wrapper_(
-            loop_.async(), std::make_unique<backoff::ExponentialBackoff>(),
+            loop_.dispatcher(), std::make_unique<backoff::ExponentialBackoff>(),
             [this] {
               return startup_context_
                   ->ConnectToEnvironmentService<http::HttpService>();
             }),
         factory_impl_(
-            loop_.async(), startup_context_.get(), &network_wrapper_,
+            loop_.dispatcher(), startup_context_.get(), &network_wrapper_,
             app_params.disable_statistics ? "" : "cloud_provider_firebase") {
     FXL_DCHECK(startup_context_);
   }

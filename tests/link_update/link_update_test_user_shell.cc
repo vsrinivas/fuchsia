@@ -168,7 +168,7 @@ class TestApp
     root_peer_->Set(nullptr, "5");
     root_link_->Set(nullptr, "6");
 
-    async::PostDelayedTask(async_get_default(),
+    async::PostDelayedTask(async_get_default_dispatcher(),
                            [this, called] {
                              if (!*called) {
                                FXL_LOG(WARNING) << "Shutdown timed out";

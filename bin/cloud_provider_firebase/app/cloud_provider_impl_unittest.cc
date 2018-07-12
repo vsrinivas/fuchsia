@@ -26,8 +26,8 @@ Config GetFirebaseConfig() {
 }
 
 std::unique_ptr<firebase_auth::FirebaseAuth> InitFirebaseAuth(
-    async_t* async, firebase_auth::TestFirebaseAuth** ptr) {
-  auto firebase_auth = std::make_unique<firebase_auth::TestFirebaseAuth>(async);
+    async_dispatcher_t* dispatcher, firebase_auth::TestFirebaseAuth** ptr) {
+  auto firebase_auth = std::make_unique<firebase_auth::TestFirebaseAuth>(dispatcher);
   *ptr = firebase_auth.get();
   return firebase_auth;
 }

@@ -26,7 +26,7 @@ namespace cloud_sync {
 // Registers the commits marked as synced.
 class TestPageStorage : public storage::PageStorageEmptyImpl {
  public:
-  explicit TestPageStorage(async_t* async);
+  explicit TestPageStorage(async_dispatcher_t* dispatcher);
 
   std::unique_ptr<TestCommit> NewCommit(std::string id, std::string content,
                                         bool unsynced = true);
@@ -100,7 +100,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   std::map<std::string, std::string> sync_metadata;
 
  private:
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
 };
 
 }  // namespace cloud_sync

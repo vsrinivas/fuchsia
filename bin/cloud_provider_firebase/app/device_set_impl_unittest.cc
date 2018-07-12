@@ -18,8 +18,8 @@
 namespace cloud_provider_firebase {
 
 std::unique_ptr<TestCloudDeviceSet> InitCloudDeviceSet(TestCloudDeviceSet** ptr,
-                                                       async_t* async) {
-  auto ret = std::make_unique<TestCloudDeviceSet>(async);
+                                                       async_dispatcher_t* dispatcher) {
+  auto ret = std::make_unique<TestCloudDeviceSet>(dispatcher);
   *ptr = ret.get();
   return ret;
 }

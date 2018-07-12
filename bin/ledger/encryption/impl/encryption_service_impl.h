@@ -20,7 +20,7 @@ namespace encryption {
 
 class EncryptionServiceImpl : public EncryptionService {
  public:
-  EncryptionServiceImpl(async_t* async, std::string namespace_id);
+  EncryptionServiceImpl(async_dispatcher_t* dispatcher, std::string namespace_id);
   ~EncryptionServiceImpl() override;
 
   // EncryptionService:

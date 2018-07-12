@@ -28,11 +28,11 @@ namespace http = ::fuchsia::net::oldhttp;
 
 class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
  public:
-  Watcher(async_t* async, ModuleManifestSource::IdleFn idle_fn,
+  Watcher(async_dispatcher_t* dispatcher, ModuleManifestSource::IdleFn idle_fn,
           ModuleManifestSource::NewEntryFn new_fn,
           ModuleManifestSource::RemovedEntryFn removed_fn,
           fxl::WeakPtr<FirebaseModuleManifestSource> owner)
-      : async_(async),
+      : dispatcher_(dispatcher),
         idle_fn_(idle_fn),
         new_fn_(new_fn),
         removed_fn_(removed_fn),
@@ -101,7 +101,7 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
     // Try to reconnect.
     FXL_LOG(INFO) << "Reconnecting to Firebase in " << reconnect_wait_seconds_
                   << " seconds.";
-    async::PostDelayedTask(async_,
+    async::PostDelayedTask(dispatcher_,
                            [owner = owner_, this]() {
                              if (!owner)
                                return;
@@ -132,7 +132,7 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
     new_fn_(name, std::move(entry));
   }
 
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
 
   ModuleManifestSource::IdleFn idle_fn_;
   ModuleManifestSource::NewEntryFn new_fn_;
@@ -144,13 +144,13 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
 };
 
 FirebaseModuleManifestSource::FirebaseModuleManifestSource(
-    async_t* async,
+    async_dispatcher_t* dispatcher,
     std::function<http::HttpServicePtr()> network_service_factory,
     std::string db_id, std::string prefix)
     : db_id_(db_id),
       prefix_(prefix),
       network_wrapper_(new network_wrapper::NetworkWrapperImpl(
-          async, std::make_unique<backoff::ExponentialBackoff>(),
+          dispatcher, std::make_unique<backoff::ExponentialBackoff>(),
           std::move(network_service_factory))),
       client_(
           new firebase::FirebaseImpl(network_wrapper_.get(), db_id, prefix)),
@@ -162,11 +162,11 @@ FirebaseModuleManifestSource::~FirebaseModuleManifestSource() {
   }
 }
 
-void FirebaseModuleManifestSource::Watch(async_t* async, IdleFn idle_fn,
+void FirebaseModuleManifestSource::Watch(async_dispatcher_t* dispatcher, IdleFn idle_fn,
                                          NewEntryFn new_fn,
                                          RemovedEntryFn removed_fn) {
   auto watcher = std::make_unique<Watcher>(
-      async, std::move(idle_fn), std::move(new_fn), std::move(removed_fn),
+      dispatcher, std::move(idle_fn), std::move(new_fn), std::move(removed_fn),
       weak_factory_.GetWeakPtr());
 
   StartWatching(watcher.get());

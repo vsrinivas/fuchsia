@@ -37,7 +37,7 @@ class ActiveModule {
   }
 
   void ScheduleActive() {
-    async::PostDelayedTask(async_get_default(),
+    async::PostDelayedTask(async_get_default_dispatcher(),
                            [this, weak_this = weak_ptr_factory_.GetWeakPtr()] {
                              if (!weak_this) {
                                return;

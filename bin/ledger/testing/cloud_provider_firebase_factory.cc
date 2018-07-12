@@ -38,7 +38,7 @@ void CloudProviderFirebaseFactory::MakeCloudProvider(
     std::string server_id, std::string api_key,
     fidl::InterfaceRequest<cloud_provider::CloudProvider> request) {
   fuchsia::modular::auth::TokenProviderPtr token_provider;
-  async::PostTask(loop_.async(),
+  async::PostTask(loop_.dispatcher(),
                   [this, request = token_provider.NewRequest()]() mutable {
                     token_provider_.AddBinding(std::move(request));
                   });

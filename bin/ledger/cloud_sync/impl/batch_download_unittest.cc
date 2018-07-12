@@ -36,7 +36,7 @@ std::unique_ptr<cloud_provider::Token> MakeToken(
 // synced.
 class TestPageStorage : public storage::PageStorageEmptyImpl {
  public:
-  explicit TestPageStorage(async_t* async) : async_(async) {}
+  explicit TestPageStorage(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
   void AddCommitsFromSync(
       std::vector<storage::PageStorage::CommitIdAndBytes> ids_and_bytes,
@@ -44,12 +44,12 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
       fit::function<void(storage::Status status)> callback) override {
     ASSERT_EQ(storage::ChangeSource::CLOUD, source);
     if (should_fail_add_commit_from_sync) {
-      async::PostTask(async_, [callback = std::move(callback)]() {
+      async::PostTask(dispatcher_, [callback = std::move(callback)]() {
         callback(storage::Status::IO_ERROR);
       });
       return;
     }
-    async::PostTask(async_, [this, ids_and_bytes = std::move(ids_and_bytes),
+    async::PostTask(dispatcher_, [this, ids_and_bytes = std::move(ids_and_bytes),
                              callback = std::move(callback)]() mutable {
       for (auto& commit : ids_and_bytes) {
         received_commits[std::move(commit.id)] = std::move(commit.bytes);
@@ -61,7 +61,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
                        fit::function<void(storage::Status)> callback) override {
     sync_metadata[key.ToString()] = value.ToString();
-    async::PostTask(async_, [callback = std::move(callback)]() {
+    async::PostTask(dispatcher_, [callback = std::move(callback)]() {
       callback(storage::Status::OK);
     });
   }
@@ -71,7 +71,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   std::map<std::string, std::string> sync_metadata;
 
  private:
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
 };
 
 class BatchDownloadTest : public gtest::TestLoopFixture {

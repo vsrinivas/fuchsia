@@ -111,7 +111,7 @@ class AskProposinator : public Proposinator,
 
     if (waiting_for_query_) {
       waiting_for_query_ = false;
-      async::PostTask(loop_->async(), [this] { loop_->Quit(); });
+      async::PostTask(loop_->dispatcher(), [this] { loop_->Quit(); });
     }
   }
 

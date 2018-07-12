@@ -16,12 +16,12 @@
 #include "peridot/bin/user_runner/user_runner_impl.h"
 
 fxl::AutoCall<fit::closure> SetupCobalt(
-    const bool disable_statistics, async_t* async,
+    const bool disable_statistics, async_dispatcher_t* dispatcher,
     fuchsia::sys::StartupContext* const startup_context) {
   if (disable_statistics) {
     return fxl::MakeAutoCall<fit::closure>([] {});
   }
-  return modular::InitializeCobalt(async, startup_context);
+  return modular::InitializeCobalt(dispatcher, startup_context);
 }
 
 int main(int argc, const char** argv) {
@@ -29,12 +29,12 @@ int main(int argc, const char** argv) {
   const bool test = command_line.HasOption("test");
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  trace::TraceProvider trace_provider(loop.async());
+  trace::TraceProvider trace_provider(loop.dispatcher());
   std::unique_ptr<fuchsia::sys::StartupContext> context =
       fuchsia::sys::StartupContext::CreateFromStartupInfo();
 
   fxl::AutoCall<fit::closure> cobalt_cleanup =
-      SetupCobalt(test, std::move(loop.async()), context.get());
+      SetupCobalt(test, std::move(loop.dispatcher()), context.get());
 
   modular::AppDriver<modular::UserRunnerImpl> driver(
       context->outgoing().deprecated_services(),

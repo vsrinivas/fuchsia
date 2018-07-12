@@ -21,7 +21,7 @@ namespace cloud_provider_firestore {
 
 class FactoryImpl : public Factory {
  public:
-  explicit FactoryImpl(async_t* async,
+  explicit FactoryImpl(async_dispatcher_t* dispatcher,
                        fuchsia::sys::StartupContext* startup_context,
                        std::string cobalt_client_name);
 
@@ -43,7 +43,7 @@ class FactoryImpl : public Factory {
           cloud_provider_request,
       GetCloudProviderCallback callback) override;
 
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
   fuchsia::sys::StartupContext* const startup_context_;
   const std::string cobalt_client_name_;
   callback::CancellableContainer token_requests_;

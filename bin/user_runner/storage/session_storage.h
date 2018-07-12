@@ -92,7 +92,7 @@ class SessionStorage : public PageClient {
 
   // Returns a Future vector of StoryData for all stories in this session.
   //
-  // TODO(thatguy): If the return value grows large, an async stream would be
+  // TODO(thatguy): If the return value grows large, an dispatcher stream would be
   // a more appropriate return value.
   FuturePtr<fidl::VectorPtr<fuchsia::modular::internal::StoryData>>
   GetAllStoryData();

@@ -40,7 +40,7 @@ class PageUsageDb {
     zx::time timestamp;
   };
 
-  PageUsageDb(async_t* async, ledger::DetachedPath db_path);
+  PageUsageDb(async_dispatcher_t* dispatcher, ledger::DetachedPath db_path);
   ~PageUsageDb();
 
   // Initializes the underlying database. Init should be called before any other

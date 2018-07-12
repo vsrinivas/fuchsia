@@ -32,7 +32,7 @@ void IdleWaiter::SetLoop(async::Loop* loop) {
 }
 
 IdleWaiter::ActivityToken IdleWaiter::RegisterOngoingActivity() {
-  FXL_DCHECK(loop_->async() == async_get_default());
+  FXL_DCHECK(loop_->dispatcher() == async_get_default_dispatcher());
 
   if (activity_) {
     return ActivityToken(activity_);
@@ -50,7 +50,7 @@ void IdleWaiter::WaitUntilIdle(fxl::Closure callback) {
 
 void IdleWaiter::PostIdleCheck() {
   if (!(callbacks_.empty() || activity_ || idle_check_pending_)) {
-    FXL_DCHECK(loop_->async() == async_get_default());
+    FXL_DCHECK(loop_->dispatcher() == async_get_default_dispatcher());
     loop_->Quit();
     idle_check_pending_ = true;
   }
@@ -58,7 +58,7 @@ void IdleWaiter::PostIdleCheck() {
 
 bool IdleWaiter::FinishIdleCheck() {
   if (idle_check_pending_) {
-    FXL_DCHECK(loop_->async() == async_get_default());
+    FXL_DCHECK(loop_->dispatcher() == async_get_default_dispatcher());
     loop_->RunUntilIdle();
     loop_->ResetQuit();
     if (!activity_) {

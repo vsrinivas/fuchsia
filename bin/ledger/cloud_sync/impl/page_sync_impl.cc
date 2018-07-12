@@ -18,7 +18,7 @@
 
 namespace cloud_sync {
 
-PageSyncImpl::PageSyncImpl(async_t* async, storage::PageStorage* storage,
+PageSyncImpl::PageSyncImpl(async_dispatcher_t* dispatcher, storage::PageStorage* storage,
                            storage::PageSyncClient* sync_client,
                            encryption::EncryptionService* encryption_service,
                            cloud_provider::PageCloudPtr page_cloud,
@@ -33,7 +33,7 @@ PageSyncImpl::PageSyncImpl(async_t* async, storage::PageStorage* storage,
       on_error_(std::move(on_error)),
       log_prefix_("Page " + convert::ToHex(storage->GetId()) + " sync: "),
       ledger_watcher_(std::move(ledger_watcher)),
-      task_runner_(async) {
+      task_runner_(dispatcher) {
   FXL_DCHECK(storage_);
   FXL_DCHECK(page_cloud_);
   // We need to initialize page_download_ after task_runner_, but task_runner_

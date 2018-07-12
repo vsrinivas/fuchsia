@@ -47,7 +47,7 @@ ModulePackageSource::~ModulePackageSource() {}
 
 void ModulePackageSource::IndexManifest(fidl::StringPtr package_name,
                                         fidl::StringPtr module_manifest_path) {
-  FXL_DCHECK(async_);
+  FXL_DCHECK(dispatcher_);
   FXL_DCHECK(new_entry_fn_);
 
   std::string data;
@@ -65,7 +65,7 @@ void ModulePackageSource::IndexManifest(fidl::StringPtr package_name,
   }
 
   async::PostTask(
-      async_,
+      dispatcher_,
       fxl::MakeCopyable([weak_this = weak_factory_.GetWeakPtr(), package_name,
                          entry = std::move(entry)]() mutable {
         if (!weak_this) {
@@ -93,9 +93,9 @@ void IterateDirectory(fxl::StringView dirname,
   closedir(fd);
 }
 
-void ModulePackageSource::Watch(async_t* async, IdleFn idle_fn,
+void ModulePackageSource::Watch(async_dispatcher_t* dispatcher, IdleFn idle_fn,
                                 NewEntryFn new_fn, RemovedEntryFn removed_fn) {
-  async_ = async;
+  dispatcher_ = dispatcher;
   new_entry_fn_ = new_fn;
 
   IterateDirectory(

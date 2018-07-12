@@ -167,7 +167,7 @@ class TestApp {
     // time, so this test isn't reliable. We need to make a call to the agent
     // and wait for a response.
     async::PostDelayedTask(
-        async_get_default(),
+        async_get_default_dispatcher(),
         callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
                              [this, done_cb] {
                                unstoppable_agent_controller_.Unbind();

@@ -21,7 +21,7 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
     std::unique_ptr<PageEvictionManager> page_eviction_manager)
     : content_path_(std::move(content_path)),
       environment_(environment),
-      encryption_service_factory_(environment->async()),
+      encryption_service_factory_(environment->dispatcher()),
       watchers_(std::move(watchers)),
       user_sync_(std::move(user_sync)),
       page_eviction_manager_(std::move(page_eviction_manager)) {

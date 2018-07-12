@@ -665,8 +665,8 @@ TEST_F(BatchUploadTest, DoNotUploadSyncedCommitsOnRetry) {
 class FailingEncryptCommitEncryptionService
     : public encryption::FakeEncryptionService {
  public:
-  explicit FailingEncryptCommitEncryptionService(async_t* async)
-      : encryption::FakeEncryptionService(async) {}
+  explicit FailingEncryptCommitEncryptionService(async_dispatcher_t* dispatcher)
+      : encryption::FakeEncryptionService(dispatcher) {}
 
   void EncryptCommit(
       std::string /*commit_storage*/,
@@ -678,8 +678,8 @@ class FailingEncryptCommitEncryptionService
 class FailingGetNameEncryptionService
     : public encryption::FakeEncryptionService {
  public:
-  explicit FailingGetNameEncryptionService(async_t* async)
-      : encryption::FakeEncryptionService(async) {}
+  explicit FailingGetNameEncryptionService(async_dispatcher_t* dispatcher)
+      : encryption::FakeEncryptionService(dispatcher) {}
 
   void GetObjectName(
       storage::ObjectIdentifier /*object_identifier*/,
@@ -691,8 +691,8 @@ class FailingGetNameEncryptionService
 class FailingEncryptObjectEncryptionService
     : public encryption::FakeEncryptionService {
  public:
-  explicit FailingEncryptObjectEncryptionService(async_t* async)
-      : encryption::FakeEncryptionService(async) {}
+  explicit FailingEncryptObjectEncryptionService(async_dispatcher_t* dispatcher)
+      : encryption::FakeEncryptionService(dispatcher) {}
 
   void EncryptObject(
       storage::ObjectIdentifier /*object_identifier*/,

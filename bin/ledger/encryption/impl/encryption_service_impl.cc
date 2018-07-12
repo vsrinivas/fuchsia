@@ -64,12 +64,12 @@ bool CheckValidSerialization(fxl::StringView storage_bytes) {
 // real component.
 class EncryptionServiceImpl::KeyService {
  public:
-  explicit KeyService(async_t* async) : async_(async), weak_factory_(this) {}
+  explicit KeyService(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher), weak_factory_(this) {}
 
   // Retrieves the master key.
   void GetMasterKey(uint32_t key_index,
                     fit::function<void(std::string)> callback) {
-    async::PostTask(async_, callback::MakeScoped(
+    async::PostTask(dispatcher_, callback::MakeScoped(
                                 weak_factory_.GetWeakPtr(),
                                 [key_index, callback = std::move(callback)]() {
                                   std::string master_key(16u, 0);
@@ -88,7 +88,7 @@ class EncryptionServiceImpl::KeyService {
     std::string result =
         HMAC256KDF(fxl::Concatenate({namespace_id, reference_key_id}),
                    kRandomlyGeneratedKeySize);
-    async::PostTask(async_, callback::MakeScoped(
+    async::PostTask(dispatcher_, callback::MakeScoped(
                                 weak_factory_.GetWeakPtr(),
                                 [result = std::move(result),
                                  callback = std::move(callback)]() mutable {
@@ -97,14 +97,14 @@ class EncryptionServiceImpl::KeyService {
   }
 
  private:
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
   fxl::WeakPtrFactory<EncryptionServiceImpl::KeyService> weak_factory_;
 };
 
-EncryptionServiceImpl::EncryptionServiceImpl(async_t* async,
+EncryptionServiceImpl::EncryptionServiceImpl(async_dispatcher_t* dispatcher,
                                              std::string namespace_id)
     : namespace_id_(std::move(namespace_id)),
-      key_service_(std::make_unique<KeyService>(async)),
+      key_service_(std::make_unique<KeyService>(dispatcher)),
       master_keys_(kKeyIndexCacheSize, Status::OK,
                    [this](auto k, auto c) {
                      FetchMasterKey(std::move(k), std::move(c));

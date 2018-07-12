@@ -9,7 +9,7 @@
 
 namespace cloud_provider_firebase {
 
-TestCloudDeviceSet::TestCloudDeviceSet(async_t* async) : async_(async) {}
+TestCloudDeviceSet::TestCloudDeviceSet(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
 TestCloudDeviceSet::~TestCloudDeviceSet() {}
 
@@ -17,7 +17,7 @@ void TestCloudDeviceSet::CheckFingerprint(
     std::string /*auth_token*/, std::string fingerprint,
     fit::function<void(Status)> callback) {
   checked_fingerprint = fingerprint;
-  async::PostTask(async_,
+  async::PostTask(dispatcher_,
                   [status = status_to_return, callback = std::move(callback)] {
                     callback(status);
                   });
@@ -27,7 +27,7 @@ void TestCloudDeviceSet::SetFingerprint(std::string /*auth_token*/,
                                         std::string fingerprint,
                                         fit::function<void(Status)> callback) {
   set_fingerprint = fingerprint;
-  async::PostTask(async_,
+  async::PostTask(dispatcher_,
                   [status = status_to_return, callback = std::move(callback)] {
                     callback(status);
                   });
@@ -42,7 +42,7 @@ void TestCloudDeviceSet::WatchFingerprint(
 
 void TestCloudDeviceSet::EraseAllFingerprints(
     std::string auth_token, fit::function<void(Status)> callback) {
-  async::PostTask(async_,
+  async::PostTask(dispatcher_,
                   [status = status_to_return, callback = std::move(callback)] {
                     callback(status);
                   });

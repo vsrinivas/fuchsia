@@ -26,7 +26,7 @@ UserIdProviderImpl::UserIdProviderImpl(
       firebase_auth_(std::make_unique<firebase_auth::FirebaseAuthImpl>(
           firebase_auth::FirebaseAuthImpl::Config{modular::kFirebaseApiKey,
                                                   cobalt_client_name},
-          environment->async(), std::move(token_provider_ptr),
+          environment->dispatcher(), std::move(token_provider_ptr),
           startup_context)) {}
 
 void UserIdProviderImpl::GetUserId(

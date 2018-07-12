@@ -14,8 +14,8 @@ using EnvironmentTest = ::gtest::TestLoopFixture;
 TEST_F(EnvironmentTest, InitializationOfAsync) {
   Environment env = EnvironmentBuilder().SetAsync(dispatcher()).Build();
 
-  EXPECT_EQ(dispatcher(), env.async());
-  EXPECT_EQ(nullptr, env.io_async());
+  EXPECT_EQ(dispatcher(), env.dispatcher());
+  EXPECT_EQ(nullptr, env.io_dispatcher());
 }
 
 TEST_F(EnvironmentTest, InitializationOfAsyncAndIOAsync) {
@@ -24,8 +24,8 @@ TEST_F(EnvironmentTest, InitializationOfAsyncAndIOAsync) {
                         .SetIOAsync(dispatcher())
                         .Build();
 
-  EXPECT_EQ(dispatcher(), env.async());
-  EXPECT_EQ(dispatcher(), env.io_async());
+  EXPECT_EQ(dispatcher(), env.dispatcher());
+  EXPECT_EQ(dispatcher(), env.io_dispatcher());
 }
 
 }  // namespace

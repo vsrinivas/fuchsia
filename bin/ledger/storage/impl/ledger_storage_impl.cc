@@ -70,7 +70,7 @@ void LedgerStorageImpl::CreatePageStorage(
     return;
   }
   auto result = std::make_unique<PageStorageImpl>(
-      environment_->async(), environment_->coroutine_service(),
+      environment_->dispatcher(), environment_->coroutine_service(),
       encryption_service_, std::move(path), std::move(page_id));
   result->Init([callback = std::move(timed_callback),
                 result = std::move(result)](Status status) mutable {
@@ -95,7 +95,7 @@ void LedgerStorageImpl::GetPageStorage(
   }
 
   auto result = std::make_unique<PageStorageImpl>(
-      environment_->async(), environment_->coroutine_service(),
+      environment_->dispatcher(), environment_->coroutine_service(),
       encryption_service_, std::move(path), std::move(page_id));
   result->Init([callback = std::move(timed_callback),
                 result = std::move(result)](Status status) mutable {
@@ -113,17 +113,17 @@ void LedgerStorageImpl::DeletePageStorage(
   ledger::DetachedPath staging_path = GetStagingPathFor(page_id);
   // |final_callback| will be called from the I/O loop and call the original
   // |callback| in the main one. The main loop outlives the I/O one, so it's
-  // safe to capture environment_->async() here.
-  auto final_callback = [async = environment_->async(),
+  // safe to capture environment_->dispatcher() here.
+  auto final_callback = [dispatcher = environment_->dispatcher(),
                          callback =
                              std::move(callback)](Status status) mutable {
     // Call the callback in the main thread.
     async::PostTask(
-        async, [status, callback = std::move(callback)] { callback(status); });
+        dispatcher, [status, callback = std::move(callback)] { callback(status); });
   };
 
   async::PostTask(
-      environment_->io_async(),
+      environment_->io_dispatcher(),
       [path = std::move(path), staging_path = std::move(staging_path),
        callback = std::move(final_callback)]() mutable {
         if (!files::IsDirectoryAt(path.root_fd(), path.path())) {

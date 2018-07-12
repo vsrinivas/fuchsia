@@ -233,7 +233,7 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   container->BindRepository(std::move(repository_request), std::move(callback));
 
   auto page_eviction_manager = std::make_unique<PageEvictionManagerImpl>(
-      environment_->async(), environment_->coroutine_service(),
+      environment_->dispatcher(), environment_->coroutine_service(),
       repository_information.page_usage_db_path);
   PageEvictionManagerImpl* page_eviction_manager_ptr =
       page_eviction_manager.get();

@@ -18,7 +18,7 @@ namespace storage {
 
 class LevelDb : public Db {
  public:
-  explicit LevelDb(async_t* async, ledger::DetachedPath db_path);
+  explicit LevelDb(async_dispatcher_t* dispatcher, ledger::DetachedPath db_path);
 
   ~LevelDb() override;
 
@@ -48,7 +48,7 @@ class LevelDb : public Db {
           iterator) override;
 
  private:
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
   const ledger::DetachedPath db_path_;
   std::unique_ptr<leveldb::Env> env_;
   std::unique_ptr<leveldb::DB> db_;

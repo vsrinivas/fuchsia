@@ -31,7 +31,7 @@ constexpr zx::duration kFakePageStorageDelay = zx::msec(5);
 class FakePageStorage : public PageStorageEmptyImpl {
  public:
   explicit FakePageStorage(PageId page_id);
-  FakePageStorage(async_t* async, PageId page_id);
+  FakePageStorage(async_dispatcher_t* dispatcher, PageId page_id);
   ~FakePageStorage() override;
 
   // PageStorage:
@@ -96,7 +96,7 @@ class FakePageStorage : public PageStorageEmptyImpl {
   std::set<CommitId> heads_;
   std::set<CommitWatcher*> watchers_;
   std::vector<fit::closure> object_requests_;
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
   PageId page_id_;
   encryption::FakeEncryptionService encryption_service_;
 

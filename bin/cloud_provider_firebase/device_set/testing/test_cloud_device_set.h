@@ -17,7 +17,7 @@ namespace cloud_provider_firebase {
 
 class TestCloudDeviceSet : public cloud_provider_firebase::CloudDeviceSet {
  public:
-  explicit TestCloudDeviceSet(async_t* async);
+  explicit TestCloudDeviceSet(async_dispatcher_t* dispatcher);
 
   ~TestCloudDeviceSet() override;
 
@@ -45,7 +45,7 @@ class TestCloudDeviceSet : public cloud_provider_firebase::CloudDeviceSet {
   int timestamp_update_requests_ = 0;
 
  private:
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
 };
 
 }  // namespace cloud_provider_firebase

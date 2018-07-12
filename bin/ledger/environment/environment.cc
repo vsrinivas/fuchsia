@@ -12,29 +12,29 @@
 namespace ledger {
 
 Environment::Environment(
-    async_t* async, async_t* io_async,
+    async_dispatcher_t* dispatcher, async_dispatcher_t* io_dispatcher,
     std::unique_ptr<coroutine::CoroutineService> coroutine_service,
     BackoffFactory backoff_factory)
-    : async_(async),
-      io_async_(io_async),
+    : dispatcher_(dispatcher),
+      io_dispatcher_(io_dispatcher),
       coroutine_service_(std::move(coroutine_service)),
       backoff_factory_(std::move(backoff_factory)) {
-  FXL_DCHECK(async_);
+  FXL_DCHECK(dispatcher_);
   FXL_DCHECK(coroutine_service_);
   FXL_DCHECK(backoff_factory_);
 }
 
 Environment::Environment(Environment&& other)
-    : Environment(other.async_, other.io_async_,
+    : Environment(other.dispatcher_, other.io_dispatcher_,
                   std::move(other.coroutine_service_),
                   std::move(other.backoff_factory_)) {}
 
 Environment& Environment::operator=(Environment&& other) {
-  async_ = other.async_;
-  io_async_ = other.io_async_;
+  dispatcher_ = other.dispatcher_;
+  io_dispatcher_ = other.io_dispatcher_;
   coroutine_service_ = std::move(other.coroutine_service_);
   backoff_factory_ = std::move(other.backoff_factory_);
-  FXL_DCHECK(async_);
+  FXL_DCHECK(dispatcher_);
   FXL_DCHECK(coroutine_service_);
   FXL_DCHECK(backoff_factory_);
   return *this;
@@ -50,13 +50,13 @@ EnvironmentBuilder::EnvironmentBuilder() {}
 
 EnvironmentBuilder::~EnvironmentBuilder() {}
 
-EnvironmentBuilder& EnvironmentBuilder::SetAsync(async_t* async) {
-  async_ = async;
+EnvironmentBuilder& EnvironmentBuilder::SetAsync(async_dispatcher_t* dispatcher) {
+  dispatcher_ = dispatcher;
   return *this;
 }
 
-EnvironmentBuilder& EnvironmentBuilder::SetIOAsync(async_t* io_async) {
-  io_async_ = io_async;
+EnvironmentBuilder& EnvironmentBuilder::SetIOAsync(async_dispatcher_t* io_dispatcher) {
+  io_dispatcher_ = io_dispatcher;
   return *this;
 }
 
@@ -82,7 +82,7 @@ Environment EnvironmentBuilder::Build() {
       return std::make_unique<backoff::ExponentialBackoff>();
     };
   }
-  return Environment(async_, io_async_, std::move(coroutine_service_),
+  return Environment(dispatcher_, io_dispatcher_, std::move(coroutine_service_),
                      std::move(backoff_factory_));
 }
 

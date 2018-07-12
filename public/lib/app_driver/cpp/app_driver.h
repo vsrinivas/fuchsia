@@ -75,7 +75,7 @@ class AppDriver : LifecycleImpl::Delegate {
       // until the current stack rolls back up to the MessageLoop which
       // guarantees impl_::Terminate() and anything that asynchronously
       // invokes this callback are done running.
-      async::PostTask(async_get_default(), [this] {
+      async::PostTask(async_get_default_dispatcher(), [this] {
         impl_.reset();
         on_terminated_();
       });

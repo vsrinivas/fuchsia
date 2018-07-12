@@ -32,15 +32,15 @@ class TestCommandRunner : public CommandRunner {
   void Execute(
       fidl::StringPtr story_id, fuchsia::modular::StoryCommand command,
       std::function<void(fuchsia::modular::ExecuteResult)> done) override {
-    // Post the task on the async loop to simulate a long-running task.
-    async::PostTask(async_get_default(), [this, story_id,
+    // Post the task on the dispatcher loop to simulate a long-running task.
+    async::PostTask(async_get_default_dispatcher(), [this, story_id,
                                           command = std::move(command),
                                           done = std::move(done)]() mutable {
       auto status = func_(story_id, std::move(command));
       fuchsia::modular::ExecuteResult result;
       result.status = status;
       if (delay_done_) {
-        async::PostTask(async_get_default(),
+        async::PostTask(async_get_default_dispatcher(),
                         [result = std::move(result), done = std::move(done)]() {
                           done(std::move(result));
                         });

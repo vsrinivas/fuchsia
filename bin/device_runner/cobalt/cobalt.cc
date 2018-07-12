@@ -19,8 +19,8 @@ cobalt::CobaltContext* g_cobalt_context = nullptr;
 }  // namespace
 
 fxl::AutoCall<fit::closure> InitializeCobalt(
-    async_t* async, fuchsia::sys::StartupContext* context) {
-  return cobalt::InitializeCobalt(async, context, kCobaltProjectId,
+    async_dispatcher_t* dispatcher, fuchsia::sys::StartupContext* context) {
+  return cobalt::InitializeCobalt(dispatcher, context, kCobaltProjectId,
                                   &g_cobalt_context);
 }
 

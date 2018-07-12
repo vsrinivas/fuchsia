@@ -18,8 +18,8 @@ namespace {
 // Data source which returns the given content byte-by-byte in separate chunks.
 class SplittingDataSource : public DataSource {
  public:
-  SplittingDataSource(async_t* async, std::string content)
-      : content_(std::move(content)), index_(0), task_runner_(async) {}
+  SplittingDataSource(async_dispatcher_t* dispatcher, std::string content)
+      : content_(std::move(content)), index_(0), task_runner_(dispatcher) {}
 
   uint64_t GetSize() override { return content_.size(); };
 

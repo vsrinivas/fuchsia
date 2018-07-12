@@ -9,7 +9,7 @@
 
 namespace modular {
 
-// Standard timeout for async teardown.
+// Standard timeout for dispatcher teardown.
 constexpr auto kBasicTimeout = fxl::TimeDelta::FromSeconds(1);
 
 // Timeouts for teardown of composite objects need to be larger than the basic

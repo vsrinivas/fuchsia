@@ -92,8 +92,8 @@ class PageInfoIterator : public storage::Iterator<const PageUsageDb::PageInfo> {
 };
 }  // namespace
 
-PageUsageDb::PageUsageDb(async_t* async, ledger::DetachedPath db_path)
-    : db_(async, std::move(db_path)) {}
+PageUsageDb::PageUsageDb(async_dispatcher_t* dispatcher, ledger::DetachedPath db_path)
+    : db_(dispatcher, std::move(db_path)) {}
 
 PageUsageDb::~PageUsageDb() {}
 

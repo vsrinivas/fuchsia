@@ -73,18 +73,18 @@ std::vector<PageStorage::CommitIdAndBytes> CommitAndBytesFromCommit(
 // DataSource that returns an error on the callback to Get().
 class FakeErrorDataSource : public DataSource {
  public:
-  explicit FakeErrorDataSource(async_t* async) : async_(async) {}
+  explicit FakeErrorDataSource(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
   uint64_t GetSize() override { return 1; }
 
   void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback)
       override {
-    async::PostTask(async_, [callback = std::move(callback)] {
+    async::PostTask(dispatcher_, [callback = std::move(callback)] {
       callback(nullptr, DataSource::Status::ERROR);
     });
   }
 
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
 };
 
 class FakeCommitWatcher : public CommitWatcher {

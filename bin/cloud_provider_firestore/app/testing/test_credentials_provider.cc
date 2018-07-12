@@ -8,8 +8,8 @@
 
 namespace cloud_provider_firestore {
 
-TestCredentialsProvider::TestCredentialsProvider(async_t* async)
-    : task_runner_(async) {}
+TestCredentialsProvider::TestCredentialsProvider(async_dispatcher_t* dispatcher)
+    : task_runner_(dispatcher) {}
 
 TestCredentialsProvider::~TestCredentialsProvider() {}
 

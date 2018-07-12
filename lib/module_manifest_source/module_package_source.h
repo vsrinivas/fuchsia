@@ -29,7 +29,7 @@ class ModulePackageSource : public ModuleManifestSource,
   ~ModulePackageSource() override;
 
   // |ModuleManifestSource|
-  void Watch(async_t* async, IdleFn idle_fn, NewEntryFn new_fn,
+  void Watch(async_dispatcher_t* dispatcher, IdleFn idle_fn, NewEntryFn new_fn,
              RemovedEntryFn removed_fn) override;
 
  private:
@@ -41,7 +41,7 @@ class ModulePackageSource : public ModuleManifestSource,
   NewEntryFn new_entry_fn_;
   fidl::BindingSet<::fuchsia::maxwell::internal::ModulePackageIndexer>
       indexer_bindings_;
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
 
   fxl::WeakPtrFactory<ModulePackageSource> weak_factory_;
 

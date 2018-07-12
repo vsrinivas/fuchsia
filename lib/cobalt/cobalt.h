@@ -56,13 +56,13 @@ class CobaltContext {
 
 // Returns a CobaltContext initialized with the provided parameters.
 std::unique_ptr<CobaltContext> MakeCobaltContext(
-    async_t* async, fuchsia::sys::StartupContext* context, int32_t project_id);
+    async_dispatcher_t* dispatcher, fuchsia::sys::StartupContext* context, int32_t project_id);
 
 // Cobalt initialization. When cobalt is not needed anymore, the returned object
 // must be deleted. This method must not be called again until then.
 // DEPRECATED - prefer MakeCobaltContext().
 fxl::AutoCall<fit::closure> InitializeCobalt(
-    async_t* async, fuchsia::sys::StartupContext* startup_context,
+    async_dispatcher_t* dispatcher, fuchsia::sys::StartupContext* startup_context,
     int32_t project_id, CobaltContext** cobalt_context);
 
 // Reports an observation to Cobalt if |cobalt_context| is not nullptr.

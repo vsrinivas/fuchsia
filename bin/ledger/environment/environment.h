@@ -13,12 +13,12 @@
 
 namespace ledger {
 
-// Environment for the ledger application. |io_async| is optional, but if
-// provided in the constructor, |async| must outlive |io_async|.
+// Environment for the ledger application. |io_dispatcher| is optional, but if
+// provided in the constructor, |dispatcher| must outlive |io_dispatcher|.
 class Environment {
  public:
   using BackoffFactory = fit::function<std::unique_ptr<backoff::Backoff>()>;
-  Environment(async_t* async, async_t* io_async,
+  Environment(async_dispatcher_t* dispatcher, async_dispatcher_t* io_dispatcher,
               std::unique_ptr<coroutine::CoroutineService> coroutine_service,
               BackoffFactory backoff_factory);
   Environment(Environment&& other) noexcept;
@@ -26,10 +26,10 @@ class Environment {
 
   Environment& operator=(Environment&& other) noexcept;
 
-  async_t* async() { return async_; }
+  async_dispatcher_t* dispatcher() { return dispatcher_; }
 
-  // Returns the async_t to be used for I/O operations.
-  async_t* io_async() { return io_async_; }
+  // Returns the async_dispatcher_t to be used for I/O operations.
+  async_dispatcher_t* io_dispatcher() { return io_dispatcher_; }
 
   coroutine::CoroutineService* coroutine_service() {
     return coroutine_service_.get();
@@ -38,10 +38,10 @@ class Environment {
   std::unique_ptr<backoff::Backoff> MakeBackoff();
 
  private:
-  async_t* async_ = nullptr;
+  async_dispatcher_t* dispatcher_ = nullptr;
 
-  // The async_t to be used for I/O operations.
-  async_t* io_async_ = nullptr;
+  // The async_dispatcher_t to be used for I/O operations.
+  async_dispatcher_t* io_dispatcher_ = nullptr;
 
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
   BackoffFactory backoff_factory_;
@@ -60,8 +60,8 @@ class EnvironmentBuilder {
   EnvironmentBuilder& operator=(const EnvironmentBuilder& other) = delete;
   EnvironmentBuilder& operator=(EnvironmentBuilder&& other) = delete;
 
-  EnvironmentBuilder& SetAsync(async_t* async);
-  EnvironmentBuilder& SetIOAsync(async_t* io_async);
+  EnvironmentBuilder& SetAsync(async_dispatcher_t* dispatcher);
+  EnvironmentBuilder& SetIOAsync(async_dispatcher_t* io_dispatcher);
   EnvironmentBuilder& SetCoroutineService(
       std::unique_ptr<coroutine::CoroutineService> coroutine_service);
   EnvironmentBuilder& SetBackoffFactory(
@@ -70,8 +70,8 @@ class EnvironmentBuilder {
   Environment Build();
 
  private:
-  async_t* async_ = nullptr;
-  async_t* io_async_ = nullptr;
+  async_dispatcher_t* dispatcher_ = nullptr;
+  async_dispatcher_t* io_dispatcher_ = nullptr;
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
   Environment::BackoffFactory backoff_factory_;
 };

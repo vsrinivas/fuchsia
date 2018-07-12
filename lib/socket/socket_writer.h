@@ -32,7 +32,7 @@ class SocketWriter {
     virtual ~Client() {}
   };
 
-  explicit SocketWriter(Client* client, async_t* async = async_get_default());
+  explicit SocketWriter(Client* client, async_dispatcher_t* dispatcher = async_get_default_dispatcher());
   ~SocketWriter();
 
   void Start(zx::socket destination);
@@ -43,7 +43,7 @@ class SocketWriter {
   void Done();
 
   Client* const client_;
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
   // Position of the next byte to request.
   size_t offset_ = 0u;
   // Data left to send from last call to |GetNext|.
@@ -59,7 +59,7 @@ class SocketWriter {
 // Writes the content of a string to a socket. Deletes itself when done.
 class StringSocketWriter : public SocketWriter::Client {
  public:
-  explicit StringSocketWriter(async_t* async = async_get_default());
+  explicit StringSocketWriter(async_dispatcher_t* dispatcher = async_get_default_dispatcher());
 
   void Start(std::string data, zx::socket destination);
 

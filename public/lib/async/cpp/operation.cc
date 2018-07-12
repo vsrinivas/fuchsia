@@ -128,7 +128,7 @@ void OperationBase::SetOwner(OperationContainer* c) {
 void OperationBase::Schedule() {
   TraceAsyncBegin();
 
-  async::PostTask(async_get_default(),
+  async::PostTask(async_get_default_dispatcher(),
                   [this, weak = weak_ptr_factory_.GetWeakPtr()] {
                     if (weak) {
                       Run();

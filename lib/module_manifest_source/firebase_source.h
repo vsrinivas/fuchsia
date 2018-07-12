@@ -36,13 +36,13 @@ namespace modular {
 class FirebaseModuleManifestSource : public ModuleManifestSource {
  public:
   FirebaseModuleManifestSource(
-      async_t* async,
+      async_dispatcher_t* dispatcher,
       std::function<::fuchsia::net::oldhttp::HttpServicePtr()>
           network_service_factory,
       std::string db_id, std::string prefix);
   ~FirebaseModuleManifestSource() override;
 
-  void Watch(async_t* async, IdleFn idle_fn, NewEntryFn new_fn,
+  void Watch(async_dispatcher_t* dispatcher, IdleFn idle_fn, NewEntryFn new_fn,
              RemovedEntryFn removed_fn) override;
 
  private:

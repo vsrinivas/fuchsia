@@ -51,7 +51,7 @@ void BaseIntegrationTest::TearDown() {
 
 zx::socket BaseIntegrationTest::StreamDataToSocket(std::string data) {
   socket::SocketPair sockets;
-  async::PostTask(loop_.async(), [socket = std::move(sockets.socket1),
+  async::PostTask(loop_.dispatcher(), [socket = std::move(sockets.socket1),
                                   data = std::move(data)]() mutable {
     auto writer = new socket::StringSocketWriter();
     writer->Start(std::move(data), std::move(socket));

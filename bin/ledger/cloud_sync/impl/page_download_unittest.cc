@@ -396,8 +396,8 @@ TEST_F(PageDownloadTest, RetryGetObject) {
 class FailingDecryptCommitEncryptionService
     : public encryption::FakeEncryptionService {
  public:
-  explicit FailingDecryptCommitEncryptionService(async_t* async)
-      : encryption::FakeEncryptionService(async) {}
+  explicit FailingDecryptCommitEncryptionService(async_dispatcher_t* dispatcher)
+      : encryption::FakeEncryptionService(dispatcher) {}
 
   void DecryptCommit(
       convert::ExtendedStringView /*storage_bytes*/,
@@ -409,8 +409,8 @@ class FailingDecryptCommitEncryptionService
 class FailingGetNameEncryptionService
     : public encryption::FakeEncryptionService {
  public:
-  explicit FailingGetNameEncryptionService(async_t* async)
-      : encryption::FakeEncryptionService(async) {}
+  explicit FailingGetNameEncryptionService(async_dispatcher_t* dispatcher)
+      : encryption::FakeEncryptionService(dispatcher) {}
 
   void GetObjectName(
       storage::ObjectIdentifier /*object_identifier*/,
@@ -422,8 +422,8 @@ class FailingGetNameEncryptionService
 class FailingDecryptObjectEncryptionService
     : public encryption::FakeEncryptionService {
  public:
-  explicit FailingDecryptObjectEncryptionService(async_t* async)
-      : encryption::FakeEncryptionService(async) {}
+  explicit FailingDecryptObjectEncryptionService(async_dispatcher_t* dispatcher)
+      : encryption::FakeEncryptionService(dispatcher) {}
 
   void DecryptObject(
       storage::ObjectIdentifier /*object_identifier*/,

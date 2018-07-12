@@ -25,7 +25,7 @@ storage::ObjectIdentifier MakeDefaultObjectIdentifier(
 
 class FakeEncryptionService : public EncryptionService {
  public:
-  explicit FakeEncryptionService(async_t* async);
+  explicit FakeEncryptionService(async_dispatcher_t* dispatcher);
   ~FakeEncryptionService() override;
 
   // EncryptionService:
@@ -68,7 +68,7 @@ class FakeEncryptionService : public EncryptionService {
       convert::ExtendedStringView encrypted_data);
 
  private:
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
 };
 
 }  // namespace encryption

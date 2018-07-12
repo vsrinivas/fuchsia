@@ -37,12 +37,12 @@ struct AppParams {
 };
 
 fxl::AutoCall<fit::closure> SetupCobalt(
-    bool disable_statistics, async_t* async,
+    bool disable_statistics, async_dispatcher_t* dispatcher,
     fuchsia::sys::StartupContext* startup_context) {
   if (disable_statistics) {
     return fxl::MakeAutoCall<fit::closure>([] {});
   }
-  return InitializeCobalt(async, startup_context);
+  return InitializeCobalt(dispatcher, startup_context);
 };
 
 // App is the main entry point of the Ledger application.
@@ -56,10 +56,10 @@ class App : public ledger_internal::LedgerController {
   explicit App(AppParams app_params)
       : app_params_(app_params),
         loop_(&kAsyncLoopConfigMakeDefault),
-        trace_provider_(loop_.async()),
+        trace_provider_(loop_.dispatcher()),
         startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
         cobalt_cleaner_(SetupCobalt(app_params_.disable_statistics,
-                                    loop_.async(), startup_context_.get())) {
+                                    loop_.dispatcher(), startup_context_.get())) {
     FXL_DCHECK(startup_context_);
 
     ReportEvent(CobaltEvent::LEDGER_STARTED);
@@ -70,8 +70,8 @@ class App : public ledger_internal::LedgerController {
     io_loop_.StartThread("io thread");
     environment_ =
         std::make_unique<Environment>(EnvironmentBuilder()
-                                          .SetAsync(loop_.async())
-                                          .SetIOAsync(io_loop_.async())
+                                          .SetAsync(loop_.dispatcher())
+                                          .SetIOAsync(io_loop_.dispatcher())
                                           .Build());
     auto user_communicator_factory =
         std::make_unique<p2p_sync::UserCommunicatorFactoryImpl>(

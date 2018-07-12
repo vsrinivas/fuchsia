@@ -12,7 +12,7 @@
 namespace encryption {
 class EncryptionServiceFactoryImpl : public EncryptionServiceFactory {
  public:
-  explicit EncryptionServiceFactoryImpl(async_t* async);
+  explicit EncryptionServiceFactoryImpl(async_dispatcher_t* dispatcher);
   ~EncryptionServiceFactoryImpl() override;
 
   // EncryptionServiceFactory
@@ -20,7 +20,7 @@ class EncryptionServiceFactoryImpl : public EncryptionServiceFactory {
       std::string namespace_id) override;
 
  private:
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
 };
 }  // namespace encryption
 

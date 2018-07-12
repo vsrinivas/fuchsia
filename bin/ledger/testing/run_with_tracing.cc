@@ -15,7 +15,7 @@ namespace test {
 namespace benchmark {
 
 int RunWithTracing(async::Loop* loop, fit::function<void()> runnable) {
-  trace::TraceProvider trace_provider(loop->async());
+  trace::TraceProvider trace_provider(loop->dispatcher());
   trace::TraceObserver trace_observer;
 
   bool started = false;
@@ -29,7 +29,7 @@ int RunWithTracing(async::Loop* loop, fit::function<void()> runnable) {
   on_trace_state_changed();
 
   if (!started) {
-    trace_observer.Start(loop->async(), std::move(on_trace_state_changed));
+    trace_observer.Start(loop->dispatcher(), std::move(on_trace_state_changed));
   }
 
   int err = 0;
@@ -46,7 +46,7 @@ int RunWithTracing(async::Loop* loop, fit::function<void()> runnable) {
       loop->Quit();
     }
   });
-  quit_task.PostDelayed(loop->async(), zx::sec(5));
+  quit_task.PostDelayed(loop->dispatcher(), zx::sec(5));
 
   loop->Run();
   return err;

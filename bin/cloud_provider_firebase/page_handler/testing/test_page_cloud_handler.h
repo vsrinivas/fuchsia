@@ -24,7 +24,7 @@ namespace cloud_provider_firebase {
 // for individual methods allowing the test to verify error error handling.
 class TestPageCloudHandler : public PageCloudHandlerEmptyImpl {
  public:
-  explicit TestPageCloudHandler(async_t* async);
+  explicit TestPageCloudHandler(async_dispatcher_t* dispatcher);
 
   ~TestPageCloudHandler() override;
 
@@ -71,7 +71,7 @@ class TestPageCloudHandler : public PageCloudHandlerEmptyImpl {
   CommitWatcher* watcher = nullptr;
 
  private:
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestPageCloudHandler);
 };

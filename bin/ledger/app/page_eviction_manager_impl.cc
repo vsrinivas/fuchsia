@@ -20,9 +20,9 @@
 namespace ledger {
 
 PageEvictionManagerImpl::PageEvictionManagerImpl(
-    async_t* async, coroutine::CoroutineService* coroutine_service,
+    async_dispatcher_t* dispatcher, coroutine::CoroutineService* coroutine_service,
     ledger::DetachedPath db_path)
-    : db_(async, db_path.SubPath({storage::kSerializationVersion,
+    : db_(dispatcher, db_path.SubPath({storage::kSerializationVersion,
                                   kPageUsageDbSerializationVersion})),
       coroutine_manager_(coroutine_service) {}
 

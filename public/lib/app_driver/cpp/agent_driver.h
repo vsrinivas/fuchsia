@@ -95,7 +95,7 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
     if (impl_) {
       impl_->Terminate([this] {
         // Cf. AppDriver::Terminate().
-        async::PostTask(async_get_default(), [this] {
+        async::PostTask(async_get_default_dispatcher(), [this] {
           impl_.reset();
           on_terminated_();
         });

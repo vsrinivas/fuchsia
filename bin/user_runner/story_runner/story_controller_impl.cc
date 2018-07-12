@@ -1444,7 +1444,7 @@ fuchsia::modular::LinkPathPtr StoryControllerImpl::GetLinkPathForParameterName(
   auto mod_info = FindRunningModInfo(module_path);
   // NOTE: |mod_info| will only be valid if the module at |module_path| is
   // running. Strictly speaking, this is unsafe. The source of truth is the
-  // Ledger, accessible through StoryStorage, but the call would be async, which
+  // Ledger, accessible through StoryStorage, but the call would be dispatcher, which
   // would change the flow of all clients of this method. For now, we leave
   // as-is.
   FXL_DCHECK(mod_info) << PathString(module_path);

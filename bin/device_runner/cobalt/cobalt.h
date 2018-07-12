@@ -36,7 +36,7 @@ enum class ModularEvent : uint32_t {
 // Cobalt initialization. When cobalt is not needed, the returned object must be
 // deleted. This method must not be called again until then.
 fxl::AutoCall<fit::closure> InitializeCobalt(
-    async_t* async, fuchsia::sys::StartupContext* context);
+    async_dispatcher_t* dispatcher, fuchsia::sys::StartupContext* context);
 
 // Report a modular event to Cobalt.
 void ReportEvent(ModularEvent event);

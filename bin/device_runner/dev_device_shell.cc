@@ -61,7 +61,7 @@ class DevDeviceShellApp
 
       // Start a timer to quit in case a test component misbehaves and hangs.
       async::PostDelayedTask(
-          async_get_default(),
+          async_get_default_dispatcher(),
           callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
                                [this] {
                                  FXL_LOG(WARNING) << "DevDeviceShell timed out";

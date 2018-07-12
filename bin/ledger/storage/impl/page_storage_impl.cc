@@ -75,19 +75,19 @@ struct StringPointerComparator {
 }  // namespace
 
 PageStorageImpl::PageStorageImpl(
-    async_t* async, coroutine::CoroutineService* coroutine_service,
+    async_dispatcher_t* dispatcher, coroutine::CoroutineService* coroutine_service,
     encryption::EncryptionService* encryption_service,
     ledger::DetachedPath page_dir, PageId page_id)
     : PageStorageImpl(
-          async, coroutine_service, encryption_service,
-          std::make_unique<PageDbImpl>(async, page_dir.SubPath(kLevelDbDir)),
+          dispatcher, coroutine_service, encryption_service,
+          std::make_unique<PageDbImpl>(dispatcher, page_dir.SubPath(kLevelDbDir)),
           std::move(page_id)) {}
 
 PageStorageImpl::PageStorageImpl(
-    async_t* async, coroutine::CoroutineService* coroutine_service,
+    async_dispatcher_t* dispatcher, coroutine::CoroutineService* coroutine_service,
     encryption::EncryptionService* encryption_service,
     std::unique_ptr<PageDb> page_db, PageId page_id)
-    : async_(async),
+    : dispatcher_(dispatcher),
       coroutine_service_(coroutine_service),
       encryption_service_(encryption_service),
       page_id_(std::move(page_id)),

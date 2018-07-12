@@ -46,11 +46,11 @@ class FirebaseAuthImpl : public FirebaseAuth {
     int max_retries = 5;
   };
 
-  FirebaseAuthImpl(Config config, async_t* async,
+  FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher,
                    fuchsia::modular::auth::TokenProviderPtr token_provider,
                    fuchsia::sys::StartupContext* startup_context);
   // For tests.
-  FirebaseAuthImpl(Config config, async_t* async,
+  FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher,
                    fuchsia::modular::auth::TokenProviderPtr token_provider,
                    std::unique_ptr<backoff::Backoff> backoff,
                    std::unique_ptr<cobalt::CobaltContext> cobalt_context);

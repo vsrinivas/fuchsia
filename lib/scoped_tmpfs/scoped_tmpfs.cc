@@ -24,7 +24,7 @@ ScopedTmpFS::ScopedTmpFS() : config_(MakeConfig()), loop_(&config_) {
   zx_status_t status = loop_.StartThread("tmpfs_thread");
   FXL_CHECK(status == ZX_OK);
   zx_handle_t root_handle;
-  status = memfs_create_filesystem(loop_.async(), &memfs_, &root_handle);
+  status = memfs_create_filesystem(loop_.dispatcher(), &memfs_, &root_handle);
   FXL_CHECK(status == ZX_OK);
   root_fd_ = fsl::OpenChannelAsFileDescriptor(zx::channel(root_handle));
   FXL_CHECK(root_fd_.is_valid());

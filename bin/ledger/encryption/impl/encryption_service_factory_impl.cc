@@ -8,14 +8,14 @@
 
 namespace encryption {
 
-EncryptionServiceFactoryImpl::EncryptionServiceFactoryImpl(async_t* async)
-    : async_(async) {}
+EncryptionServiceFactoryImpl::EncryptionServiceFactoryImpl(async_dispatcher_t* dispatcher)
+    : dispatcher_(dispatcher) {}
 
 EncryptionServiceFactoryImpl::~EncryptionServiceFactoryImpl() {}
 
 std::unique_ptr<EncryptionService>
 EncryptionServiceFactoryImpl::MakeEncryptionService(std::string namespace_id) {
-  return std::make_unique<EncryptionServiceImpl>(async_,
+  return std::make_unique<EncryptionServiceImpl>(dispatcher_,
                                                  std::move(namespace_id));
 }
 

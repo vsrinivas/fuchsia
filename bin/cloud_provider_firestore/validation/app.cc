@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
       });
 
   int32_t return_code = -1;
-  async::PostTask(loop.async(), [&factory, &launcher, &return_code, &loop,
+  async::PostTask(loop.dispatcher(), [&factory, &launcher, &return_code, &loop,
                                  arguments = std::move(arguments)] {
     factory.Init();
 

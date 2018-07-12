@@ -120,7 +120,7 @@ TodoApp::TodoApp(async::Loop* loop)
                      HandleResponse([this] { loop_->Quit(); }, "Watch"));
   List(std::move(snapshot));
 
-  async::PostTask(loop_->async(), [this] { Act(); });
+  async::PostTask(loop_->dispatcher(), [this] { Act(); });
 }
 
 void TodoApp::Terminate() { loop_->Quit(); }
@@ -193,7 +193,7 @@ void TodoApp::Act() {
     }
   });
   zx::duration delay = zx::sec(delay_distribution_(rng_));
-  async::PostDelayedTask(loop_->async(), [this] { Act(); }, delay);
+  async::PostDelayedTask(loop_->dispatcher(), [this] { Act(); }, delay);
 }
 
 }  // namespace todo

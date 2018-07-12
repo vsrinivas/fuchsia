@@ -24,10 +24,10 @@ using coroutine::CoroutineHandler;
 
 namespace {
 
-Status MakeEmptySyncCallAndCheck(async_t* async,
+Status MakeEmptySyncCallAndCheck(async_dispatcher_t* dispatcher,
                                  coroutine::CoroutineHandler* handler) {
-  if (coroutine::SyncCall(handler, [&async](fit::closure on_done) {
-        async::PostTask(async, std::move(on_done));
+  if (coroutine::SyncCall(handler, [&dispatcher](fit::closure on_done) {
+        async::PostTask(dispatcher, std::move(on_done));
       }) == coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERRUPTED;
   }
@@ -52,10 +52,10 @@ class BatchImpl : public Db::Batch {
   // leveldb. If the destructor is called without a previous execution of the
   // batch, |callback| will be called with a |nullptr|.
   BatchImpl(
-      async_t* async, std::unique_ptr<leveldb::WriteBatch> batch,
+      async_dispatcher_t* dispatcher, std::unique_ptr<leveldb::WriteBatch> batch,
       leveldb::DB* db,
       fit::function<Status(std::unique_ptr<leveldb::WriteBatch>)> callback)
-      : async_(async),
+      : dispatcher_(dispatcher),
         batch_(std::move(batch)),
         db_(db),
         callback_(std::move(callback)) {}
@@ -68,7 +68,7 @@ class BatchImpl : public Db::Batch {
   Status Put(CoroutineHandler* handler, convert::ExtendedStringView key,
              fxl::StringView value) override {
     FXL_DCHECK(batch_);
-    if (MakeEmptySyncCallAndCheck(async_, handler) == Status::INTERRUPTED) {
+    if (MakeEmptySyncCallAndCheck(dispatcher_, handler) == Status::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
     batch_->Put(key, convert::ToSlice(value));
@@ -79,7 +79,7 @@ class BatchImpl : public Db::Batch {
                 convert::ExtendedStringView key) override {
     FXL_DCHECK(batch_);
     batch_->Delete(key);
-    return MakeEmptySyncCallAndCheck(async_, handler);
+    return MakeEmptySyncCallAndCheck(dispatcher_, handler);
   }
 
   Status DeleteByPrefix(CoroutineHandler* handler,
@@ -90,7 +90,7 @@ class BatchImpl : public Db::Batch {
          it->Next()) {
       batch_->Delete(it->key());
     }
-    if (MakeEmptySyncCallAndCheck(async_, handler) == Status::INTERRUPTED) {
+    if (MakeEmptySyncCallAndCheck(dispatcher_, handler) == Status::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
     return ConvertStatus(it->status());
@@ -98,14 +98,14 @@ class BatchImpl : public Db::Batch {
 
   Status Execute(CoroutineHandler* handler) override {
     FXL_DCHECK(batch_);
-    if (MakeEmptySyncCallAndCheck(async_, handler) == Status::INTERRUPTED) {
+    if (MakeEmptySyncCallAndCheck(dispatcher_, handler) == Status::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
     return callback_(std::move(batch_));
   }
 
  private:
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
   std::unique_ptr<leveldb::WriteBatch> batch_;
 
   const leveldb::ReadOptions read_options_;
@@ -172,8 +172,8 @@ class RowIterator
 
 }  // namespace
 
-LevelDb::LevelDb(async_t* async, ledger::DetachedPath db_path)
-    : async_(async), db_path_(std::move(db_path)) {}
+LevelDb::LevelDb(async_dispatcher_t* dispatcher, ledger::DetachedPath db_path)
+    : dispatcher_(dispatcher), db_path_(std::move(db_path)) {}
 
 LevelDb::~LevelDb() {
   FXL_DCHECK(!active_batches_count_)
@@ -225,7 +225,7 @@ Status LevelDb::StartBatch(CoroutineHandler* handler,
   auto db_batch = std::make_unique<leveldb::WriteBatch>();
   active_batches_count_++;
   *batch = std::make_unique<BatchImpl>(
-      async_, std::move(db_batch), db_.get(),
+      dispatcher_, std::move(db_batch), db_.get(),
       [this](std::unique_ptr<leveldb::WriteBatch> db_batch) {
         active_batches_count_--;
         if (db_batch) {
@@ -238,12 +238,12 @@ Status LevelDb::StartBatch(CoroutineHandler* handler,
         }
         return Status::OK;
       });
-  return MakeEmptySyncCallAndCheck(async_, handler);
+  return MakeEmptySyncCallAndCheck(dispatcher_, handler);
 }
 
 Status LevelDb::Get(CoroutineHandler* handler, convert::ExtendedStringView key,
                     std::string* value) {
-  if (MakeEmptySyncCallAndCheck(async_, handler) == Status::INTERRUPTED) {
+  if (MakeEmptySyncCallAndCheck(dispatcher_, handler) == Status::INTERRUPTED) {
     return Status::INTERRUPTED;
   }
   return ConvertStatus(db_->Get(read_options_, key, value));
@@ -255,7 +255,7 @@ Status LevelDb::HasKey(CoroutineHandler* handler,
   iterator->Seek(key);
 
   *has_key = iterator->Valid() && iterator->key() == key;
-  return MakeEmptySyncCallAndCheck(async_, handler);
+  return MakeEmptySyncCallAndCheck(dispatcher_, handler);
 }
 
 Status LevelDb::GetObject(CoroutineHandler* handler,
@@ -273,7 +273,7 @@ Status LevelDb::GetObject(CoroutineHandler* handler,
     *object = std::make_unique<LevelDBObject>(std::move(object_identifier),
                                               std::move(iterator));
   }
-  return MakeEmptySyncCallAndCheck(async_, handler);
+  return MakeEmptySyncCallAndCheck(dispatcher_, handler);
 }
 
 Status LevelDb::GetByPrefix(CoroutineHandler* handler,
@@ -291,7 +291,7 @@ Status LevelDb::GetByPrefix(CoroutineHandler* handler,
     return ConvertStatus(it->status());
   }
   key_suffixes->swap(result);
-  return MakeEmptySyncCallAndCheck(async_, handler);
+  return MakeEmptySyncCallAndCheck(dispatcher_, handler);
 }
 
 Status LevelDb::GetEntriesByPrefix(
@@ -309,7 +309,7 @@ Status LevelDb::GetEntriesByPrefix(
     return ConvertStatus(it->status());
   }
   entries->swap(result);
-  return MakeEmptySyncCallAndCheck(async_, handler);
+  return MakeEmptySyncCallAndCheck(dispatcher_, handler);
 }
 
 Status LevelDb::GetIteratorAtPrefix(
@@ -327,7 +327,7 @@ Status LevelDb::GetIteratorAtPrefix(
                                                      prefix.ToString());
     iterator->swap(row_iterator);
   }
-  return MakeEmptySyncCallAndCheck(async_, handler);
+  return MakeEmptySyncCallAndCheck(dispatcher_, handler);
 }
 
 }  // namespace storage

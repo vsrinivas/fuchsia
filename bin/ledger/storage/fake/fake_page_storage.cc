@@ -34,15 +34,15 @@ storage::ObjectDigest ComputeDigest(fxl::StringView value) {
 
 FakePageStorage::FakePageStorage(PageId page_id)
     : rng_(0),
-      async_(async_get_default()),
+      dispatcher_(async_get_default_dispatcher()),
       page_id_(std::move(page_id)),
-      encryption_service_(async_get_default()) {}
+      encryption_service_(async_get_default_dispatcher()) {}
 
-FakePageStorage::FakePageStorage(async_t* async, PageId page_id)
+FakePageStorage::FakePageStorage(async_dispatcher_t* dispatcher, PageId page_id)
     : rng_(0),
-      async_(async),
+      dispatcher_(dispatcher),
       page_id_(std::move(page_id)),
-      encryption_service_(async) {}
+      encryption_service_(dispatcher) {}
 
 FakePageStorage::~FakePageStorage() {}
 
@@ -67,7 +67,7 @@ void FakePageStorage::GetCommit(
   }
 
   async::PostDelayedTask(
-      async_,
+      dispatcher_,
       [this, commit_id = commit_id.ToString(), callback = std::move(callback)] {
         callback(Status::OK,
                  std::make_unique<FakeCommit>(journals_[commit_id].get()));
@@ -119,7 +119,7 @@ void FakePageStorage::CommitJournal(
         if (!drop_commit_notifications_) {
           for (CommitWatcher* watcher : watchers_) {
             async::PostTask(
-                async_, [watcher, commit = commit->Clone()]() mutable {
+                dispatcher_, [watcher, commit = commit->Clone()]() mutable {
                   std::vector<std::unique_ptr<const Commit>> commits;
                   commits.push_back(std::move(commit));
                   watcher->OnNewCommits(commits, ChangeSource::LOCAL);
@@ -198,7 +198,7 @@ void FakePageStorage::GetPiece(
         callback(Status::OK,
                  std::make_unique<FakeObject>(object_identifier, it->second));
       });
-  async::PostDelayedTask(async_, [this] { SendNextObject(); },
+  async::PostDelayedTask(dispatcher_, [this] { SendNextObject(); },
                          kFakePageStorageDelay);
 }
 

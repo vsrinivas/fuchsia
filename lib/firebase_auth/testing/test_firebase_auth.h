@@ -15,7 +15,7 @@ namespace firebase_auth {
 
 class TestFirebaseAuth : public FirebaseAuth {
  public:
-  explicit TestFirebaseAuth(async_t* async);
+  explicit TestFirebaseAuth(async_dispatcher_t* dispatcher);
 
   // FirebaseAuth:
   void set_error_handler(fit::closure on_error) override;
@@ -35,7 +35,7 @@ class TestFirebaseAuth : public FirebaseAuth {
   std::string user_id_to_return;
 
  private:
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
 
   fit::closure error_handler_;
 };

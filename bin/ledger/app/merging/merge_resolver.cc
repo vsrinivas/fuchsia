@@ -35,7 +35,7 @@ MergeResolver::MergeResolver(fit::closure on_destroyed,
       storage_(storage),
       backoff_(std::move(backoff)),
       on_destroyed_(std::move(on_destroyed)),
-      task_runner_(environment->async()) {
+      task_runner_(environment->dispatcher()) {
   storage_->AddCommitWatcher(this);
   PostCheckConflicts(DelayedStatus::DONT_DELAY);
 }

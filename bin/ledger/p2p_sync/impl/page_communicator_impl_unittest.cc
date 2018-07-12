@@ -25,8 +25,8 @@ namespace {
 
 class FakePageStorage : public storage::PageStorageEmptyImpl {
  public:
-  explicit FakePageStorage(async_t* async, std::string page_id)
-      : async_(async), page_id_(std::move(page_id)) {}
+  explicit FakePageStorage(async_dispatcher_t* dispatcher, std::string page_id)
+      : dispatcher_(dispatcher), page_id_(std::move(page_id)) {}
   ~FakePageStorage() override {}
 
   storage::PageId GetId() override { return page_id_; }
@@ -41,7 +41,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
                 fit::function<void(storage::Status,
                                    std::unique_ptr<const storage::Object>)>
                     callback) override {
-    async::PostTask(async_, [this, object_identifier,
+    async::PostTask(dispatcher_, [this, object_identifier,
                              callback = std::move(callback)]() {
       const auto& it = objects_.find(object_identifier);
       if (it == objects_.end()) {
@@ -64,7 +64,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
   void IsPieceSynced(
       storage::ObjectIdentifier object_identifier,
       fit::function<void(storage::Status, bool)> callback) override {
-    async::PostTask(async_, [this, object_identifier,
+    async::PostTask(dispatcher_, [this, object_identifier,
                              callback = std::move(callback)]() {
       const auto& it = objects_.find(object_identifier);
       if (it == objects_.end()) {
@@ -98,7 +98,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
       commits_from_sync_;
 
  private:
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
   const std::string page_id_;
   std::map<storage::ObjectIdentifier, std::string> objects_;
   std::set<storage::ObjectIdentifier> synced_objects_;

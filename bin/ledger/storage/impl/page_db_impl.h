@@ -25,7 +25,7 @@ class PageStorageImpl;
 // TRANSIENT objects.
 class PageDbImpl : public PageDb {
  public:
-  PageDbImpl(async_t* async, ledger::DetachedPath db_path);
+  PageDbImpl(async_dispatcher_t* dispatcher, ledger::DetachedPath db_path);
   ~PageDbImpl() override;
 
   Status Init() override;

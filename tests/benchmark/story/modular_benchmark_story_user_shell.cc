@@ -157,7 +157,7 @@ class TestApp : public modular::SingleServiceApp<fuchsia::modular::UserShell> {
     if (story_count_ < settings_.story_count) {
       FXL_LOG(INFO) << "Loop at " << story_count_ << " of "
                     << settings_.story_count;
-      async::PostTask(async_get_default(), [this] { StoryCreate(); });
+      async::PostTask(async_get_default_dispatcher(), [this] { StoryCreate(); });
 
     } else {
       TRACE_ASYNC_BEGIN("benchmark", "user/logout", 0);

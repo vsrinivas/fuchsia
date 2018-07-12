@@ -165,7 +165,7 @@ class StoryProviderImpl::DeleteStoryCall : public Operation<> {
     // functions that run as methods of other objects owned by |this| or
     // provided to |this|. To avoid such problems, the delete is invoked
     // through the run loop.
-    async::PostTask(async_get_default(), [this, flow] {
+    async::PostTask(async_get_default_dispatcher(), [this, flow] {
       story_controller_impls_->erase(story_id_);
       message_queue_manager_->DeleteNamespace(
           EncodeModuleComponentNamespace(story_id_), [flow] {});
@@ -492,7 +492,7 @@ StoryProviderImpl::StartStoryShell(
 void StoryProviderImpl::MaybeLoadStoryShellDelayed() {
 #if PREFETCH_MONDRIAN
   async::PostDelayedTask(
-      async_get_default(),
+      async_get_default_dispatcher(),
       [weak_this = weak_factory_.GetWeakPtr()] {
         if (weak_this) {
           weak_this->operation_queue_.Add(new SyncCall([weak_this] {

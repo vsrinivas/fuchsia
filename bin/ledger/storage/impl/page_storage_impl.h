@@ -29,11 +29,11 @@ namespace storage {
 
 class PageStorageImpl : public PageStorage {
  public:
-  PageStorageImpl(async_t* async,
+  PageStorageImpl(async_dispatcher_t* dispatcher,
                   coroutine::CoroutineService* coroutine_service,
                   encryption::EncryptionService* encryption_service,
                   ledger::DetachedPath page_dir, PageId page_id);
-  PageStorageImpl(async_t* async,
+  PageStorageImpl(async_dispatcher_t* dispatcher,
                   coroutine::CoroutineService* coroutine_service,
                   encryption::EncryptionService* encryption_service,
                   std::unique_ptr<PageDb> page_db, PageId page_id);
@@ -211,7 +211,7 @@ class PageStorageImpl : public PageStorage {
       coroutine::CoroutineHandler* handler, ObjectIdentifier object_identifier,
       std::unique_ptr<DataSource::DataChunk> data, ChangeSource source);
 
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
   coroutine::CoroutineService* const coroutine_service_;
   encryption::EncryptionService* const encryption_service_;
   const PageId page_id_;

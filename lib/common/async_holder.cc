@@ -46,7 +46,7 @@ void AsyncHolderBase::Teardown(fxl::TimeDelta timeout,
 
   auto cont_normal = [cont] { cont(false); };
 
-  async::PostDelayedTask(async_get_default(), cont_timeout,
+  async::PostDelayedTask(async_get_default_dispatcher(), cont_timeout,
                          zx::nsec(timeout.ToNanoseconds()));
   ImplTeardown(cont_normal);
 }

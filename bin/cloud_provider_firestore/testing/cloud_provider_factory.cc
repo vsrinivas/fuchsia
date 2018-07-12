@@ -25,12 +25,12 @@ constexpr char kAppUrl[] = "cloud_provider_firestore";
 class CloudProviderFactory::TokenProviderContainer {
  public:
   TokenProviderContainer(
-      fuchsia::sys::StartupContext* startup_context, async_t* async,
+      fuchsia::sys::StartupContext* startup_context, async_dispatcher_t* dispatcher,
       std::string credentials_path, std::string user_id,
       fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request)
       : startup_context_(startup_context),
         network_wrapper_(
-            async, std::make_unique<backoff::ExponentialBackoff>(),
+            dispatcher, std::make_unique<backoff::ExponentialBackoff>(),
             [this] {
               return startup_context_
                   ->ConnectToEnvironmentService<http::HttpService>();
@@ -90,10 +90,10 @@ void CloudProviderFactory::MakeCloudProviderWithGivenUserId(
   }
   fuchsia::modular::auth::TokenProviderPtr token_provider;
   async::PostTask(
-      services_loop_.async(),
+      services_loop_.dispatcher(),
       fxl::MakeCopyable([this, user_id = std::move(user_id),
                          request = token_provider.NewRequest()]() mutable {
-        token_providers_.emplace(startup_context_, services_loop_.async(),
+        token_providers_.emplace(startup_context_, services_loop_.dispatcher(),
                                  credentials_path_, user_id,
                                  std::move(request));
       }));

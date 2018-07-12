@@ -9,11 +9,11 @@
 
 namespace cloud_provider_firebase {
 
-FactoryImpl::FactoryImpl(async_t* async,
+FactoryImpl::FactoryImpl(async_dispatcher_t* dispatcher,
                          fuchsia::sys::StartupContext* startup_context,
                          network_wrapper::NetworkWrapper* network_wrapper,
                          std::string cobalt_client_name)
-    : async_(async),
+    : dispatcher_(dispatcher),
       startup_context_(startup_context),
       network_wrapper_(network_wrapper),
       cobalt_client_name_(cobalt_client_name) {}
@@ -29,7 +29,7 @@ void FactoryImpl::GetCloudProvider(
   auto firebase_auth = std::make_unique<firebase_auth::FirebaseAuthImpl>(
       firebase_auth::FirebaseAuthImpl::Config{config.api_key,
                                               cobalt_client_name_},
-      async_, std::move(token_provider_ptr), startup_context_);
+      dispatcher_, std::move(token_provider_ptr), startup_context_);
   firebase_auth::FirebaseAuthImpl* firebase_auth_ptr = firebase_auth.get();
   auto request =
       firebase_auth_ptr->GetFirebaseUserId(fxl::MakeCopyable(

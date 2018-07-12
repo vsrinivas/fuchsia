@@ -26,9 +26,9 @@ class App : public fuchsia::modular::Lifecycle {
   explicit App(AppParams app_params)
       : loop_(&kAsyncLoopConfigMakeDefault),
         startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
-        trace_provider_(loop_.async()),
+        trace_provider_(loop_.dispatcher()),
         factory_impl_(
-            loop_.async(), startup_context_.get(),
+            loop_.dispatcher(), startup_context_.get(),
             app_params.disable_statistics ? "" : "cloud_provider_firestore") {
     FXL_DCHECK(startup_context_);
   }

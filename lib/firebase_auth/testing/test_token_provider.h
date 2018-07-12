@@ -16,7 +16,7 @@ namespace firebase_auth {
 
 class TestTokenProvider : public fuchsia::modular::auth::TokenProvider {
  public:
-  explicit TestTokenProvider(async_t* async);
+  explicit TestTokenProvider(async_dispatcher_t* dispatcher);
 
   ~TestTokenProvider() override;
 
@@ -38,7 +38,7 @@ class TestTokenProvider : public fuchsia::modular::auth::TokenProvider {
   void SetError(fuchsia::modular::auth::Status error);
 
  private:
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
   fuchsia::modular::auth::FirebaseTokenPtr token_to_return_;
   fuchsia::modular::auth::AuthErr error_to_return_;
 

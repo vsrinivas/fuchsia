@@ -17,11 +17,11 @@ namespace socket {
 // available.
 constexpr size_t kDefaultSocketBufferSize = 256 * 1024u;
 
-SocketWriter::SocketWriter(Client* client, async_t* async)
-    : client_(client), async_(async) {
+SocketWriter::SocketWriter(Client* client, async_dispatcher_t* dispatcher)
+    : client_(client), dispatcher_(dispatcher) {
   wait_.set_trigger(ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED);
   wait_.set_handler(
-      [this](async_t* async, async::Wait* wait, zx_status_t status,
+      [this](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
              const zx_packet_signal_t* signal) { WriteData(data_view_); });
 }
 
@@ -81,7 +81,7 @@ void SocketWriter::WriteData(fxl::StringView data) {
       data_view_ = data;
     }
     if (!wait_.is_pending())
-      wait_.Begin(async_);
+      wait_.Begin(dispatcher_);
     return;
   }
   FXL_DCHECK(false) << "Unhandled zx_status_t: " << status;
@@ -93,8 +93,8 @@ void SocketWriter::Done() {
   client_->OnDataComplete();
 }
 
-StringSocketWriter::StringSocketWriter(async_t* async)
-    : socket_writer_(this, async) {}
+StringSocketWriter::StringSocketWriter(async_dispatcher_t* dispatcher)
+    : socket_writer_(this, dispatcher) {}
 
 void StringSocketWriter::Start(std::string data, zx::socket destination) {
   data_ = std::move(data);

@@ -192,7 +192,7 @@ class TestFlowTokenOperation : public Operation<int> {
 
     // Post the continuation of the operation to an async loop so that we
     // exercise the refcounting of FlowTokens.
-    async::PostTask(async_get_default(),
+    async::PostTask(async_get_default_dispatcher(),
                     [this, flow, result, call_before_flow_dies] {
                       result_ = result;
                       call_before_flow_dies();

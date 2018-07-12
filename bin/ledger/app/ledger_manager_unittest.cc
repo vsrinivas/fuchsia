@@ -68,7 +68,7 @@ class DelayIsSyncedCallbackFakePageStorage
 
 class FakeLedgerStorage : public storage::LedgerStorage {
  public:
-  explicit FakeLedgerStorage(async_t* async) : async_(async) {}
+  explicit FakeLedgerStorage(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
   ~FakeLedgerStorage() override {}
 
   void CreatePageStorage(
@@ -86,7 +86,7 @@ class FakeLedgerStorage : public storage::LedgerStorage {
                           callback) override {
     get_page_calls.push_back(page_id);
     async::PostTask(
-        async_, [this, callback = std::move(callback), page_id]() mutable {
+        dispatcher_, [this, callback = std::move(callback), page_id]() mutable {
           if (should_get_page_fail) {
             callback(storage::Status::NOT_FOUND, nullptr);
           } else {
@@ -157,7 +157,7 @@ class FakeLedgerStorage : public storage::LedgerStorage {
   std::vector<storage::PageId> get_page_calls;
 
  private:
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
   std::map<storage::PageId, DelayIsSyncedCallbackFakePageStorage*>
       page_storages_;
   std::set<storage::PageId> synced_pages_;

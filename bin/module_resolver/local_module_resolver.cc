@@ -42,7 +42,7 @@ void LocalModuleResolver::AddSource(
   sources_.emplace(name, std::move(repo));
 
   ptr->Watch(
-      async_get_default(), [this, name]() { OnSourceIdle(name); },
+      async_get_default_dispatcher(), [this, name]() { OnSourceIdle(name); },
       [this, name](std::string id, fuchsia::modular::ModuleManifest entry) {
         OnNewManifestEntry(name, std::move(id), std::move(entry));
       },
@@ -580,7 +580,7 @@ void LocalModuleResolver::PeriodicCheckIfSourcesAreReady() {
       return;
     already_checking_if_sources_are_ready_ = true;
     async::PostDelayedTask(
-        async_get_default(),
+        async_get_default_dispatcher(),
         [weak_this = weak_factory_.GetWeakPtr()]() {
           if (weak_this) {
             weak_this->already_checking_if_sources_are_ready_ = false;

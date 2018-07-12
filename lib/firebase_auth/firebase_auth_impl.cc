@@ -39,18 +39,18 @@ bool IsRetriableError(fuchsia::modular::auth::Status status) {
 }  // namespace
 
 FirebaseAuthImpl::FirebaseAuthImpl(
-    Config config, async_t* async,
+    Config config, async_dispatcher_t* dispatcher,
     fuchsia::modular::auth::TokenProviderPtr token_provider,
     fuchsia::sys::StartupContext* startup_context)
-    : FirebaseAuthImpl(std::move(config), async, std::move(token_provider),
+    : FirebaseAuthImpl(std::move(config), dispatcher, std::move(token_provider),
                        std::make_unique<backoff::ExponentialBackoff>(),
                        startup_context
-                           ? cobalt::MakeCobaltContext(async, startup_context,
+                           ? cobalt::MakeCobaltContext(dispatcher, startup_context,
                                                        kLedgerCobaltProjectId)
                            : nullptr) {}
 
 FirebaseAuthImpl::FirebaseAuthImpl(
-    Config config, async_t* async,
+    Config config, async_dispatcher_t* dispatcher,
     fuchsia::modular::auth::TokenProviderPtr token_provider,
     std::unique_ptr<backoff::Backoff> backoff,
     std::unique_ptr<cobalt::CobaltContext> cobalt_context)
@@ -60,7 +60,7 @@ FirebaseAuthImpl::FirebaseAuthImpl(
       max_retries_(config.max_retries),
       cobalt_client_name_(std::move(config.cobalt_client_name)),
       cobalt_context_(std::move(cobalt_context)),
-      task_runner_(async) {}
+      task_runner_(dispatcher) {}
 
 void FirebaseAuthImpl::set_error_handler(fit::closure on_error) {
   token_provider_.set_error_handler(std::move(on_error));

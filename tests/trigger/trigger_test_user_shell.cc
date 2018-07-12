@@ -53,7 +53,7 @@ class TestApp
       StartStory(story_id);
     });
     async::PostDelayedTask(
-        async_get_default(),
+        async_get_default_dispatcher(),
         callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
                              [this] { user_shell_context_->Logout(); }),
         zx::msec(kTimeoutMilliseconds));

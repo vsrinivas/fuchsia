@@ -188,7 +188,7 @@ CobaltObservation& CobaltObservation::operator=(CobaltObservation&& rhs) {
 namespace {
 class CobaltContextImpl : public CobaltContext {
  public:
-  CobaltContextImpl(async_t* async, fuchsia::sys::StartupContext* context,
+  CobaltContextImpl(async_dispatcher_t* dispatcher, fuchsia::sys::StartupContext* context,
                     int32_t project_id);
   ~CobaltContextImpl();
 
@@ -202,7 +202,7 @@ class CobaltContextImpl : public CobaltContext {
   void AddObservationCallback(CobaltObservation observation, Status status);
 
   backoff::ExponentialBackoff backoff_;
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
   fuchsia::sys::StartupContext* context_;
   fuchsia::cobalt::CobaltEncoderPtr encoder_;
   const int32_t project_id_;
@@ -213,10 +213,10 @@ class CobaltContextImpl : public CobaltContext {
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltContextImpl);
 };
 
-CobaltContextImpl::CobaltContextImpl(async_t* async,
+CobaltContextImpl::CobaltContextImpl(async_dispatcher_t* dispatcher,
                                      fuchsia::sys::StartupContext* context,
                                      int32_t project_id)
-    : async_(async), context_(context), project_id_(project_id) {
+    : dispatcher_(dispatcher), context_(context), project_id_(project_id) {
   ConnectToCobaltApplication();
 }
 
@@ -228,13 +228,13 @@ CobaltContextImpl::~CobaltContextImpl() {
 }
 
 void CobaltContextImpl::ReportObservation(CobaltObservation observation) {
-  if (async_ == async_get_default()) {
+  if (dispatcher_ == async_get_default_dispatcher()) {
     ReportObservationOnMainThread(std::move(observation));
     return;
   }
 
   // Hop to the main thread, and go back to the global object dispatcher.
-  async::PostTask(async_, [observation = std::move(observation), this]() {
+  async::PostTask(dispatcher_, [observation = std::move(observation), this]() {
     ::cobalt::ReportObservation(observation, this);
   });
 }
@@ -255,7 +255,7 @@ void CobaltContextImpl::OnConnectionError() {
                                observations_in_transit_.end());
   observations_in_transit_.clear();
   encoder_.Unbind();
-  async::PostDelayedTask(async_, [this] { ConnectToCobaltApplication(); },
+  async::PostDelayedTask(dispatcher_, [this] { ConnectToCobaltApplication(); },
                          backoff_.GetNext());
 }
 
@@ -302,7 +302,7 @@ void CobaltContextImpl::SendObservations() {
     // A transient error happened, retry after a delay.
     // TODO(miguelfrde): issue if we delete the context while a retry is in
     // flight.
-    async::PostDelayedTask(async_,
+    async::PostDelayedTask(dispatcher_,
                            [this]() {
                              observations_to_send_.insert(
                                  observations_in_transit_.begin(),
@@ -340,15 +340,15 @@ void CobaltContextImpl::AddObservationCallback(CobaltObservation observation,
 }  // namespace
 
 std::unique_ptr<CobaltContext> MakeCobaltContext(
-    async_t* async, fuchsia::sys::StartupContext* context, int32_t project_id) {
-  return std::make_unique<CobaltContextImpl>(async, context, project_id);
+    async_dispatcher_t* dispatcher, fuchsia::sys::StartupContext* context, int32_t project_id) {
+  return std::make_unique<CobaltContextImpl>(dispatcher, context, project_id);
 }
 
 fxl::AutoCall<fit::closure> InitializeCobalt(
-    async_t* async, fuchsia::sys::StartupContext* startup_context,
+    async_dispatcher_t* dispatcher, fuchsia::sys::StartupContext* startup_context,
     int32_t project_id, CobaltContext** cobalt_context) {
   FXL_DCHECK(!*cobalt_context);
-  auto context = MakeCobaltContext(async, startup_context, project_id);
+  auto context = MakeCobaltContext(dispatcher, startup_context, project_id);
   *cobalt_context = context.get();
   return fxl::MakeAutoCall<fit::closure>(fxl::MakeCopyable(
       [context = std::move(context), cobalt_context]() mutable {

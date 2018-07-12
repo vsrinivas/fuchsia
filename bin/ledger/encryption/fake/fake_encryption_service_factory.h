@@ -12,7 +12,7 @@
 namespace encryption {
 class FakeEncryptionServiceFactory : public EncryptionServiceFactory {
  public:
-  explicit FakeEncryptionServiceFactory(async_t* async);
+  explicit FakeEncryptionServiceFactory(async_dispatcher_t* dispatcher);
   ~FakeEncryptionServiceFactory() override;
 
   // EncryptionServiceFactory
@@ -20,7 +20,7 @@ class FakeEncryptionServiceFactory : public EncryptionServiceFactory {
       std::string namespace_id) override;
 
  private:
-  async_t* async_;
+  async_dispatcher_t* dispatcher_;
 };
 }  // namespace encryption
 

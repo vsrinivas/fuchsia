@@ -237,7 +237,7 @@ class CobaltTest : public gtest::TestLoopFixture {
 
 TEST_F(CobaltTest, InitializeCobalt) {
   CobaltContext* cobalt_context = nullptr;
-  auto ac = InitializeCobalt(async_get_default(), context(),
+  auto ac = InitializeCobalt(async_get_default_dispatcher(), context(),
                              kFakeCobaltProjectId, &cobalt_context);
   EXPECT_NE(cobalt_context, nullptr);
   ac.call();
@@ -250,7 +250,7 @@ TEST_F(CobaltTest, ReportIndexObservation) {
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
                                 fidl::Clone(value));
   CobaltContext* cobalt_context = nullptr;
-  auto ac = InitializeCobalt(async_get_default(), context(),
+  auto ac = InitializeCobalt(async_get_default_dispatcher(), context(),
                              kFakeCobaltProjectId, &cobalt_context);
   ReportObservation(observation, cobalt_context);
   RunLoopUntilIdle();
@@ -263,7 +263,7 @@ TEST_F(CobaltTest, ReportIntObservation) {
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
                                 fidl::Clone(value));
   CobaltContext* cobalt_context = nullptr;
-  auto ac = InitializeCobalt(async_get_default(), context(),
+  auto ac = InitializeCobalt(async_get_default_dispatcher(), context(),
                              kFakeCobaltProjectId, &cobalt_context);
   ReportObservation(observation, cobalt_context);
   RunLoopUntilIdle();
@@ -276,7 +276,7 @@ TEST_F(CobaltTest, ReportDoubleObservation) {
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
                                 fidl::Clone(value));
   CobaltContext* cobalt_context = nullptr;
-  auto ac = InitializeCobalt(async_get_default(), context(),
+  auto ac = InitializeCobalt(async_get_default_dispatcher(), context(),
                              kFakeCobaltProjectId, &cobalt_context);
   ReportObservation(observation, cobalt_context);
   RunLoopUntilIdle();
@@ -289,7 +289,7 @@ TEST_F(CobaltTest, ReportStringObservation) {
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
                                 fidl::Clone(value));
   CobaltContext* cobalt_context = nullptr;
-  auto ac = InitializeCobalt(async_get_default(), context(),
+  auto ac = InitializeCobalt(async_get_default_dispatcher(), context(),
                              kFakeCobaltProjectId, &cobalt_context);
   ReportObservation(observation, cobalt_context);
   RunLoopUntilIdle();
@@ -308,7 +308,7 @@ TEST_F(CobaltTest, ReportIntBucketObservation) {
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
                                 fidl::Clone(value));
   CobaltContext* cobalt_context = nullptr;
-  auto ac = InitializeCobalt(async_get_default(), context(),
+  auto ac = InitializeCobalt(async_get_default_dispatcher(), context(),
                              kFakeCobaltProjectId, &cobalt_context);
   ReportObservation(observation, cobalt_context);
   RunLoopUntilIdle();
@@ -328,7 +328,7 @@ TEST_F(CobaltTest, ReportMultipartObservation) {
   CobaltObservation observation(static_cast<uint32_t>(kFakeCobaltMetricId),
                                 fidl::Clone(parts));
   CobaltContext* cobalt_context = nullptr;
-  auto ac = InitializeCobalt(async_get_default(), context(),
+  auto ac = InitializeCobalt(async_get_default_dispatcher(), context(),
                              kFakeCobaltProjectId, &cobalt_context);
   ReportObservation(observation, cobalt_context);
   RunLoopUntilIdle();

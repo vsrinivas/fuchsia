@@ -21,7 +21,7 @@ namespace ledger {
 
 class PageEvictionManagerImpl : public PageEvictionManager {
  public:
-  PageEvictionManagerImpl(async_t* async,
+  PageEvictionManagerImpl(async_dispatcher_t* dispatcher,
                           coroutine::CoroutineService* coroutine_service,
                           ledger::DetachedPath db_path);
   ~PageEvictionManagerImpl();

@@ -27,7 +27,7 @@ enum class CobaltEvent : uint32_t {
 // Cobalt initialization. When cobalt is not need, the returned object must be
 // deleted. This method must not be called again until then.
 fxl::AutoCall<fit::closure> InitializeCobalt(
-    async_t* async, fuchsia::sys::StartupContext* context);
+    async_dispatcher_t* dispatcher, fuchsia::sys::StartupContext* context);
 
 // Report an event to Cobalt.
 void ReportEvent(CobaltEvent event);

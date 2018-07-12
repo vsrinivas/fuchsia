@@ -146,7 +146,7 @@ void ConvergenceBenchmark::Start(int step) {
   }
 
   TRACE_ASYNC_BEGIN("benchmark", "convergence", step);
-  // Persist the current step, so that we know which async event to end in
+  // Persist the current step, so that we know which dispatcher event to end in
   // OnChange().
   current_step_ = step;
 }

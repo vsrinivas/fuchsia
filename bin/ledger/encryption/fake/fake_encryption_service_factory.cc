@@ -8,15 +8,15 @@
 
 namespace encryption {
 
-FakeEncryptionServiceFactory::FakeEncryptionServiceFactory(async_t* async)
-    : async_(async) {}
+FakeEncryptionServiceFactory::FakeEncryptionServiceFactory(async_dispatcher_t* dispatcher)
+    : dispatcher_(dispatcher) {}
 
 FakeEncryptionServiceFactory::~FakeEncryptionServiceFactory() {}
 
 std::unique_ptr<EncryptionService>
 FakeEncryptionServiceFactory::MakeEncryptionService(
     std::string /*namespace_id*/) {
-  return std::make_unique<FakeEncryptionService>(async_);
+  return std::make_unique<FakeEncryptionService>(dispatcher_);
 }
 
 }  // namespace encryption

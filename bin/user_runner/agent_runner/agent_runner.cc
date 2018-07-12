@@ -90,7 +90,7 @@ void AgentRunner::Teardown(const std::function<void()>& callback) {
 
   auto cont_timeout = [cont] { cont(true); };
 
-  async::PostDelayedTask(async_get_default(), std::move(cont_timeout),
+  async::PostDelayedTask(async_get_default_dispatcher(), std::move(cont_timeout),
                          kTeardownTimeout);
 }
 
@@ -429,7 +429,7 @@ void AgentRunner::ScheduleAlarmTask(const std::string& agent_url,
   found_it->second[task_id] = alarm_in_seconds;
   auto terminating = terminating_;
   async::PostDelayedTask(
-      async_get_default(),
+      async_get_default_dispatcher(),
       [this, agent_url, task_id, terminating] {
         // If agent runner is terminating, do not run any new tasks.
         if (*terminating) {

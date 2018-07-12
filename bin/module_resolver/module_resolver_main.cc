@@ -47,7 +47,7 @@ class ModuleResolverApp : fuchsia::modular::ContextListener {
       resolver_impl_->AddSource(
           "firebase_mods",
           std::make_unique<FirebaseModuleManifestSource>(
-              async_get_default(),
+              async_get_default_dispatcher(),
               [context]() {
                 http::HttpServicePtr http_service;
                 context->ConnectToEnvironmentService(http_service.NewRequest());

@@ -22,7 +22,7 @@ class TestManifestSource : public ModuleManifestSource {
   RemovedEntryFn remove;
 
  private:
-  void Watch(async_t* async, IdleFn idle_fn, NewEntryFn new_fn,
+  void Watch(async_dispatcher_t* dispatcher, IdleFn idle_fn, NewEntryFn new_fn,
              RemovedEntryFn removed_fn) override {
     idle = std::move(idle_fn);
     add = std::move(new_fn);

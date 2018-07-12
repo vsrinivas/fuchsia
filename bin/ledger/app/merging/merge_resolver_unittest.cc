@@ -199,9 +199,9 @@ TEST_F(MergeResolverTest, Empty) {
 
 class VerifyingMergeStrategy : public MergeStrategy {
  public:
-  VerifyingMergeStrategy(async_t* async, storage::CommitId head1,
+  VerifyingMergeStrategy(async_dispatcher_t* dispatcher, storage::CommitId head1,
                          storage::CommitId head2, storage::CommitId ancestor)
-      : async_(async),
+      : dispatcher_(dispatcher),
         head1_(std::move(head1)),
         head2_(std::move(head2)),
         ancestor_(std::move(ancestor)) {}
@@ -226,13 +226,13 @@ class VerifyingMergeStrategy : public MergeStrategy {
       EXPECT_EQ(head2_, actual_head2_id);
     }
     async::PostTask(
-        async_, [callback = std::move(callback)]() { callback(Status::OK); });
+        dispatcher_, [callback = std::move(callback)]() { callback(Status::OK); });
   }
 
   void Cancel() override{};
 
  private:
-  async_t* const async_;
+  async_dispatcher_t* const dispatcher_;
   const storage::CommitId head1_;
   const storage::CommitId head2_;
   const storage::CommitId ancestor_;

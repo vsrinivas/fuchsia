@@ -83,7 +83,7 @@ class MyDummyAgent : fuchsia::modular::Agent,
  public:
   MyDummyAgent(zx::channel directory_request,
                fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl)
-      : vfs_(async_get_default()),
+      : vfs_(async_get_default_dispatcher()),
         outgoing_directory_(fbl::AdoptRef(new fs::PseudoDir())),
         controller_(this, std::move(ctrl)),
         agent_binding_(this) {

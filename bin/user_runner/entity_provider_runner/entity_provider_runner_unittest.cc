@@ -105,7 +105,7 @@ class MyEntityProvider : AgentImpl::Delegate,
   MyEntityProvider(
       fuchsia::sys::LaunchInfo launch_info,
       fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl)
-      : vfs_(async_get_default()),
+      : vfs_(async_get_default_dispatcher()),
         outgoing_directory_(fbl::AdoptRef(new fs::PseudoDir())),
         controller_(this, std::move(ctrl)),
         entity_provider_binding_(this),
