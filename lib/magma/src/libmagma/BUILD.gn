@@ -28,3 +28,23 @@ shared_library("libmagma") {
 
   configs -= [ "//build/config:symbol_visibility_hidden" ]
 }
+
+static_library("libmagma_static") {
+  public_deps = [
+    "$magma_build_root/include:magma_abi",
+  ]
+
+  sources = [
+    "magma.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util/platform:buffer",
+    "$magma_build_root/src/magma_util/platform:port",
+    "$magma_build_root/src/magma_util/platform:semaphore",
+    "$magma_build_root/src/magma_util/platform:thread",
+    "$magma_build_root/src/magma_util/platform:connection",
+    "$magma_build_root/src/magma_util/platform:trace",
+    "$magma_build_root/src/magma_util:command_buffer",
+  ]
+}
