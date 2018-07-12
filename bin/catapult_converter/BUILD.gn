@@ -43,16 +43,13 @@ executable("unittest") {
 
 package("catapult_converter") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":converter_bin",
     ":unittest",
   ]
 
-  binaries = [ {
-        name = "catapult_converter"
-      } ]
+  binary = "catapult_converter"
 
   tests = [ {
         name = "catapult_converter_test"
