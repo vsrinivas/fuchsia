@@ -361,7 +361,7 @@ TEST(Frame, RxInfo_PaddingAlignedBody) {
     // of 24. This will then cause additional padding for 4-byte alignment.
     hdr->fc.set_to_ds(1);
     hdr->fc.set_from_ds(1);
-    ASSERT_EQ(hdr->len(), 30);
+    ASSERT_EQ(hdr->len(), static_cast<size_t>(30));
     // Body should follow after an additional 2 byte padding.
     auto data = pkt->mut_field<uint8_t>(hdr->len() + 2);
     data[0] = 42;
@@ -383,7 +383,7 @@ TEST(Frame, RxInfo_NoPaddingAlignedBody) {
     // and thus directly follow the header.
     hdr->fc.set_to_ds(1);
     hdr->fc.set_from_ds(1);
-    ASSERT_EQ(hdr->len(), 30);
+    ASSERT_EQ(hdr->len(), static_cast<size_t>(30));
     // Body should follow after an additional 2 byte padding.
     auto data = pkt->mut_field<uint8_t>(hdr->len());
     data[0] = 42;

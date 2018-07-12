@@ -29,7 +29,7 @@ template <unsigned int N, typename T> T align(T t) {
 template <typename T> static constexpr bool CanCarryRxInfo() {
     constexpr bool is_data_frame = std::is_same<T, DataFrameHeader>::value;
     constexpr bool is_mgmt_frame = std::is_same<T, MgmtFrameHeader>::value;
-    constexpr bool is_ctrl_frame = std::is_base_of<CtrlFrameIdentifier, T>::value;
+    constexpr bool is_ctrl_frame = std::is_same<T, CtrlFrameHdr>::value;
     return is_data_frame || is_mgmt_frame || is_ctrl_frame;
 }
 
@@ -262,12 +262,12 @@ template <typename Header, typename Body = UnknownBody> class Frame {
 // Frame which contains a known header but unknown payload.
 using EthFrame = Frame<EthernetII>;
 template <typename T = UnknownBody> using MgmtFrame = Frame<MgmtFrameHeader, T>;
-template <typename T = UnknownBody> using CtrlFrame = Frame<T, NilHeader>;
+template <typename T = UnknownBody> using CtrlFrame = Frame<CtrlFrameHdr, T>;
 template <typename T = UnknownBody> using DataFrame = Frame<DataFrameHeader, T>;
 
 using EthFrameView = FrameView<EthernetII>;
 template <typename T = UnknownBody> using MgmtFrameView = FrameView<MgmtFrameHeader, T>;
-template <typename T = UnknownBody> using CtrlFrameView = FrameView<T, NilHeader>;
+template <typename T = UnknownBody> using CtrlFrameView = FrameView<CtrlFrameHdr, T>;
 template <typename T = UnknownBody> using DataFrameView = FrameView<DataFrameHeader, T>;
 
 // TODO(hahnr): This isn't a great location for these definitions.

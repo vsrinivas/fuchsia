@@ -926,7 +926,7 @@ zx_status_t Station::HandleEthFrame(const EthFrame& frame) {
         return status;
     }
 
-    finspect("Outbound data frame: len %zu, hdr_len:%u body_len:%zu frame_len:%zu\n",
+    finspect("Outbound data frame: len %zu, hdr_len:%zu body_len:%zu frame_len:%zu\n",
              wlan_packet->len(), hdr->len(), frame.body_len(), frame_len);
     finspect("  wlan hdr: %s\n", debug::Describe(*hdr).c_str());
     finspect("  llc  hdr: %s\n", debug::Describe(*llc).c_str());
@@ -1239,20 +1239,22 @@ zx_status_t Station::SendPsPoll() {
     }
 
     const common::MacAddr& mymac = device_->GetState()->address();
-    size_t len = sizeof(PsPollFrame);
+    size_t len = sizeof(CtrlFrameHdr) + sizeof(PsPollFrame);
     fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), len));
+    auto packet = fbl::make_unique<Packet>(std::move(buffer), len);
     packet->clear();
     packet->set_peer(Packet::Peer::kWlan);
-    auto frame = packet->mut_field<PsPollFrame>(0);
-    frame->fc.set_type(FrameType::kControl);
-    frame->fc.set_subtype(ControlSubtype::kPsPoll);
-    frame->aid = aid_;
-    frame->bssid = common::MacAddr(bss_->bssid.data());
-    frame->ta = mymac;
 
-    zx_status_t status = device_->SendWlan(std::move(packet));
+    CtrlFrame<PsPollFrame> frame(std::move(packet));
+    ZX_DEBUG_ASSERT(frame.HasValidLen());
+    frame.hdr()->fc.set_type(FrameType::kControl);
+    frame.hdr()->fc.set_subtype(ControlSubtype::kPsPoll);
+    frame.body()->aid = aid_;
+    frame.body()->bssid = common::MacAddr(bss_->bssid.data());
+    frame.body()->ta = mymac;
+
+    zx_status_t status = device_->SendWlan(frame.Take());
     if (status != ZX_OK) {
         errorf("could not send power management packet: %d\n", status);
         return status;

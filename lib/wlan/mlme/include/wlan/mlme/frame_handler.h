@@ -159,9 +159,7 @@ class FrameHandler {
     // Internal Control frame handlers.
     // Note: Null Data frames hold no body and thus also match this method. As a result, this case
     // is caught.
-    template <typename Header>
-    typename std::enable_if<!std::is_same<Header, DataFrameHeader>::value, zx_status_t>::type
-    HandleFrameInternal(const CtrlFrame<Header>& frame) {
+    template <typename Body> zx_status_t HandleFrameInternal(const CtrlFrame<Body>& frame) {
         auto status = HandleCtrlFrame(frame.hdr()->fc);
         if (status != ZX_OK) { return status; }
 

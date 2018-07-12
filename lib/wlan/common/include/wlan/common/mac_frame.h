@@ -395,6 +395,8 @@ class FrameControl : public common::BitField<uint16_t> {
 
 // IEEE Std 802.11-2016, 9.3.3.2
 struct MgmtFrameHeader {
+    static constexpr FrameType Type() { return FrameType::kManagement; }
+
     FrameControl fc;
     uint16_t duration;
     common::MacAddr addr1;
@@ -406,14 +408,14 @@ struct MgmtFrameHeader {
     // uint8_t ht_ctrl[4];
 
     uint16_t len() const {
-        uint16_t len = sizeof(MgmtFrameHeader);
+        size_t len = sizeof(MgmtFrameHeader);
         if (fc.HasHtCtrl()) { len += kHtCtrlLen; }
         return len;
     }
 
     const HtControl* ht_ctrl() const {
         if (!fc.HasHtCtrl()) return nullptr;
-        uint16_t offset = sizeof(MgmtFrameHeader);
+        size_t offset = sizeof(MgmtFrameHeader);
         return reinterpret_cast<const HtControl* const>(raw() + offset);
     }
 
@@ -559,6 +561,8 @@ struct Disassociation {
 
 // IEEE Std 802.11-2016, 9.3.2.1
 struct DataFrameHeader {
+    static constexpr FrameType Type() { return FrameType::kData; }
+
     FrameControl fc;
     uint16_t duration;
     common::MacAddr addr1;
@@ -577,8 +581,8 @@ struct DataFrameHeader {
         return (0 != (fc.subtype() & DataSubtypeBitmask::kBitmaskQos));
     }
 
-    uint16_t len() const {
-        uint16_t hdr_len = sizeof(DataFrameHeader);
+    size_t len() const {
+        size_t hdr_len = sizeof(DataFrameHeader);
         if (HasAddr4()) hdr_len += common::kMacAddrLen;
         if (HasQosCtrl()) hdr_len += kQosCtrlLen;
         if (fc.HasHtCtrl()) hdr_len += kHtCtrlLen;
@@ -588,7 +592,7 @@ struct DataFrameHeader {
 
     const common::MacAddr* addr4() const {
         if (!HasAddr4()) return nullptr;
-        uint16_t offset = sizeof(DataFrameHeader);
+        size_t offset = sizeof(DataFrameHeader);
         return reinterpret_cast<const common::MacAddr*>(raw() + offset);
     }
 
@@ -596,7 +600,7 @@ struct DataFrameHeader {
 
     const QosControl* qos_ctrl() const {
         if (!HasQosCtrl()) return nullptr;
-        uint16_t offset = sizeof(DataFrameHeader);
+        size_t offset = sizeof(DataFrameHeader);
         if (HasAddr4()) { offset += common::kMacAddrLen; }
         return reinterpret_cast<const QosControl*>(raw() + offset);
     }
@@ -605,7 +609,7 @@ struct DataFrameHeader {
 
     const HtControl* ht_ctrl() const {
         if (!fc.HasHtCtrl()) return nullptr;
-        uint16_t offset = sizeof(DataFrameHeader);
+        size_t offset = sizeof(DataFrameHeader);
         if (HasAddr4()) { offset += common::kMacAddrLen; }
         if (HasQosCtrl()) { offset += kQosCtrlLen; }
         return reinterpret_cast<const HtControl*>(raw() + offset);
@@ -619,18 +623,30 @@ struct DataFrameHeader {
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.1.1
-// Officially control frames share no common header .
-class CtrlFrameIdentifier {
+// Although the FrameControl is part of every control frame, IEEE does not name
+// the FrameControl to be a common header of all control frames.
+// To provide consistent code which requires no handling of special cases such
+// a common header is defined. This obviously also causes the FrameControl to
+// *not* be part of individually defined control frame types such as PsPoll.
+// In that sense, this implementation slightly, but knowingly diverges from IEEEs
+// definition.
+struct CtrlFrameHdr {
+    static constexpr FrameType Type() { return FrameType::kControl; }
+
+    FrameControl fc;
+
+    constexpr size_t len() const { return sizeof(CtrlFrameHdr); }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.1.5
-struct PsPollFrame : CtrlFrameIdentifier {
-    FrameControl fc;
+struct PsPollFrame {
+    static constexpr ControlSubtype Subtype() { return ControlSubtype::kPsPoll; }
+
     uint16_t aid;
     common::MacAddr bssid;
     common::MacAddr ta;
 
-    constexpr uint16_t len() const { return sizeof(FrameControl); }
+    constexpr size_t len() const { return sizeof(PsPollFrame); }
 } __PACKED;
 
 // IEEE Std 802.2, 1998 Edition, 3.2
@@ -685,6 +701,7 @@ constexpr size_t kDataFrameHdrLenMax =
     sizeof(DataFrameHeader) + common::kMacAddrLen + kQosCtrlLen + kHtCtrlLen;
 
 // IEEE Std 802.11-2016, 9.2.3
+// TODO(NET-500): Remove this header. It causes more problems than it solves.
 struct FrameHeader {
     // Common fields for Mgmt, Control, Data frames
     FrameControl fc;
@@ -732,7 +749,7 @@ struct EthernetII {
     uint16_t ether_type;
     uint8_t payload[];
 
-    constexpr uint16_t len() const { return sizeof(EthernetII); }
+    constexpr size_t len() const { return sizeof(EthernetII); }
 } __PACKED;
 
 // IEEE Std 802.1X-2010, 11.3, Figure 11-1

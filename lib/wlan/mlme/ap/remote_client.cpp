@@ -612,8 +612,8 @@ zx_status_t RemoteClient::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
 }
 
 zx_status_t RemoteClient::HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame) {
-    ZX_DEBUG_ASSERT(frame.hdr()->ta == addr_);
-    if (frame.hdr()->ta != addr_) { return ZX_ERR_STOP; }
+    ZX_DEBUG_ASSERT(frame.body()->ta == addr_);
+    if (frame.body()->ta != addr_) { return ZX_ERR_STOP; }
 
     ForwardCurrentFrameTo(state_.get());
     return ZX_OK;

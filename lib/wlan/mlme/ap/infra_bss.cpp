@@ -187,9 +187,9 @@ zx_status_t InfraBss::HandleAuthentication(const MgmtFrame<Authentication>& fram
 }
 
 zx_status_t InfraBss::HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame) {
-    auto& client_addr = frame.hdr()->ta;
-    if (frame.hdr()->bssid != bssid_) { return ZX_ERR_STOP; }
-    if (clients_.GetClientAid(client_addr) != frame.hdr()->aid) { return ZX_ERR_STOP; }
+    auto& client_addr = frame.body()->ta;
+    if (frame.body()->bssid != bssid_) { return ZX_ERR_STOP; }
+    if (clients_.GetClientAid(client_addr) != frame.body()->aid) { return ZX_ERR_STOP; }
 
     ForwardCurrentFrameTo(clients_.GetClient(client_addr));
     return ZX_OK;
@@ -392,7 +392,7 @@ zx_status_t InfraBss::EthToDataFrame(const EthFrame& frame, fbl::unique_ptr<Pack
         return status;
     }
 
-    finspect("Outbound data frame: len %zu, hdr_len:%u body_len:%zu frame_len:%zu\n",
+    finspect("Outbound data frame: len %zu, hdr_len:%zu body_len:%zu frame_len:%zu\n",
              (*out_packet)->len(), hdr->len(), frame.body_len(), frame_len);
     finspect("  wlan hdr: %s\n", debug::Describe(*hdr).c_str());
     finspect("  llc  hdr: %s\n", debug::Describe(*llc).c_str());
