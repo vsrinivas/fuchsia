@@ -6,6 +6,7 @@
 
 #include <zircon/device/ioctl.h>
 #include <zircon/device/ioctl-wrapper.h>
+#include <ddk/protocol/scpi.h>
 
 // temperature units are in 10th of a degree kelvin
 
@@ -97,6 +98,12 @@ typedef struct {
 #define IOCTL_THERMAL_SET_DVFS_OPP \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_THERMAL, 7)
 
+#define IOCTL_THERMAL_GET_TEMPERATURE \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_THERMAL, 8)
+
+#define IOCTL_THERMAL_GET_DVFS_INFO \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_THERMAL, 9)
+
 // ssize_t ioctl_thermal_get_info(int fd, thermal_info_t* out)
 IOCTL_WRAPPER_OUT(ioctl_thermal_get_info, IOCTL_THERMAL_GET_INFO, thermal_info_t);
 
@@ -123,3 +130,12 @@ IOCTL_WRAPPER_IN(ioctl_thermal_set_fan_level, IOCTL_THERMAL_SET_FAN_LEVEL, int32
 // ssize_t ioctl_thermal_set_dvfs_opp(int fd, dvfs_info_t* info)
 IOCTL_WRAPPER_IN(ioctl_thermal_set_dvfs_opp,
                  IOCTL_THERMAL_SET_DVFS_OPP, dvfs_info_t);
+
+// ssize_t ioctl_thermal_get_temperature(int fd, uint32_t* temp)
+IOCTL_WRAPPER_OUT(ioctl_thermal_get_temperature, IOCTL_THERMAL_GET_TEMPERATURE, uint32_t);
+
+// ssize_t ioctl_thermal_get_dvfs_info(int fd, uint32_t power_domain, scpi_opp_t* opp)
+IOCTL_WRAPPER_INOUT(ioctl_thermal_get_dvfs_info, IOCTL_THERMAL_GET_DVFS_INFO,
+                    uint32_t, scpi_opp_t);
+
+
