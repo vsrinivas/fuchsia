@@ -111,8 +111,11 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
   fbl::RefPtr<fs::PseudoDir> debug_dir(fbl::AdoptRef(new fs::PseudoDir()));
   context()->app_context()->outgoing().debug_dir()->AddEntry("gfx", debug_dir);
   auto shader_fs = escher::HackFilesystem::New(debug_dir);
-  FXL_DCHECK(shader_fs->InitializeWithRealFiles(
-      std::vector<escher::HackFilePath>{"shaders/model_renderer/main.vert"}));
+  {
+    bool success = shader_fs->InitializeWithRealFiles(
+        std::vector<escher::HackFilePath>{"shaders/model_renderer/main.vert"});
+    FXL_DCHECK(success);
+  }
 
   // Initialize Escher.
   escher::GlslangInitializeProcess();
