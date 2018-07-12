@@ -19,14 +19,22 @@ namespace cloud_provider_firestore {
 
 constexpr char kSeparator[] = "/";
 constexpr char kUsersCollection[] = "users";
+constexpr char kVersionsCollection[] = "versions";
 constexpr char kPageCollection[] = "pages";
 constexpr char kNamespaceCollection[] = "namespaces";
-constexpr char kDefaultDocument[] = "default_document";
 
 std::string GetUserPath(fxl::StringView root_path, fxl::StringView user_id) {
-  return fxl::Concatenate({root_path, kSeparator, kUsersCollection, kSeparator,
-                           user_id, kSeparator, storage::kSerializationVersion,
-                           kSeparator, kDefaultDocument});
+  return fxl::Concatenate({
+      root_path,
+      kSeparator,
+      kUsersCollection,
+      kSeparator,
+      user_id,
+      kSeparator,
+      kVersionsCollection,
+      kSeparator,
+      storage::kSerializationVersion,
+  });
 }
 
 std::string GetNamespacePath(fxl::StringView user_path,
