@@ -56,6 +56,29 @@ template("prebuilt_shared_library") {
       visibility += [ ":$manifest_target_name" ]
     }
 
+    # Prebuilt shared libraries are eligible for inclusion in the SDK. We do not
+    # want to dynamically link against libc++.so because we let clients bring
+    # their own toolchain, which might have a different C++ Standard Library or
+    # a different C++ ABI entirely.
+    #
+    # Adding this linker flag keeps us honest about not commiting to a specific
+    # C++ ABI. If this flag is causing your library to not to compile, consider
+    # whether your library really ought to be in the SDK. If so, consider
+    # including your library in the SDK as source rather than precompiled. If
+    # you do require precompilation, you probably need to find a way not to
+    # depend on dynamically linking C++ symbols because C++ does not have a
+    # sufficiently stable ABI for the purposes of our SDK.
+    #
+    # Once TC-46 is fixed, we'll be able to offer the option to statically link
+    # against libc++.
+    additional_ldflags = [ "-nostdlib++" ]
+
+    if (defined(ldflags)) {
+      ldflags += additional_ldflags
+    } else {
+      ldflags = additional_ldflags
+    }
+
     # Request that the runtime deps be written out to a file. This file will be
     # used later to verify that all runtime deps are available in the SDK.
     write_runtime_deps = "$target_out_dir/$target_name.runtime_deps"
