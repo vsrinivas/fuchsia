@@ -11,6 +11,8 @@
 
 #include <zircon/compiler.h>
 
+#include "lib/fxl/macros.h"
+
 namespace btlib {
 namespace l2cap {
 
@@ -164,11 +166,13 @@ struct CommandHeader {
 constexpr CommandCode kCommandRejectCode = 0x01;
 constexpr size_t kCommandRejectMaxDataLength = 4;
 struct CommandRejectPayload {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(CommandRejectPayload);
+
   // See RejectReason for possible values.
   uint16_t reason;
 
   // Up to 4 octets of optional data (see Vol 3, Part A, Section 4.1)
-  uint8_t data[kCommandRejectMaxDataLength];
+  uint8_t data[];
 } __PACKED;
 
 // ACL-U
@@ -193,26 +197,36 @@ constexpr size_t kConfigurationOptionMaxDataLength = 22;
 
 // Element of configuration payload data (see Vol 3, Part A, Section 5)
 struct ConfigurationOption {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(ConfigurationOption);
+
   uint8_t type;
   uint8_t length;
-  uint8_t data[kConfigurationOptionMaxDataLength];
+
+  // Up to 22 octets of data
+  uint8_t data[];
 } __PACKED;
 
 struct ConfigurationRequestPayload {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(ConfigurationRequestPayload);
+
   ChannelId dst_cid;
   uint16_t flags;
 
   // Followed by zero or more configuration options of varying length
+  uint8_t data[];
 } __PACKED;
 
 // ACL-U
 constexpr CommandCode kConfigurationResponse = 0x05;
 struct ConfigurationResponsePayload {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(ConfigurationResponsePayload);
+
   ChannelId src_cid;
   uint16_t flags;
   ConfigurationResult result;
 
   // Followed by zero or more configuration options of varying length
+  uint8_t data[];
 } __PACKED;
 
 // ACL-U & LE-U
@@ -245,11 +259,13 @@ struct InformationRequestPayload {
 constexpr CommandCode kInformationResponse = 0x0B;
 constexpr size_t kInformationResponseMaxDataLength = 8;
 struct InformationResponsePayload {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(InformationResponsePayload);
+
   InformationType type;
   InformationResult result;
 
   // Up to 8 octets of optional data (see Vol 3, Part A, Section 4.11)
-  uint8_t data[kInformationResponseMaxDataLength];
+  uint8_t data[];
 } __PACKED;
 
 // LE-U

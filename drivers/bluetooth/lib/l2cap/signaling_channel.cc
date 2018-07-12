@@ -90,20 +90,17 @@ std::unique_ptr<common::ByteBuffer> SignalingChannel::BuildPacket(
 bool SignalingChannel::SendCommandReject(uint8_t identifier,
                                          RejectReason reason,
                                          const common::ByteBuffer& data) {
-  size_t length = sizeof(reason) + data.size();
-  FXL_DCHECK(length <= sizeof(CommandRejectPayload));
+  FXL_DCHECK(data.size() <= kCommandRejectMaxDataLength);
 
-  CommandRejectPayload reject;
-  reject.reason = htole16(reason);
+  constexpr size_t kMaxPayloadLength =
+      sizeof(CommandRejectPayload) + kCommandRejectMaxDataLength;
+  common::StaticByteBuffer<kMaxPayloadLength> rej_buf;
 
-  if (data.size()) {
-    FXL_DCHECK(data.size() <= kCommandRejectMaxDataLength);
-    common::MutableBufferView rej_data(reject.data, data.size());
-    rej_data.Write(data);
-  }
+  common::MutablePacketView<CommandRejectPayload> reject(&rej_buf, data.size());
+  reject.mutable_header()->reason = htole16(reason);
+  reject.mutable_payload_data().Write(data);
 
-  return SendPacket(kCommandRejectCode, identifier,
-                    common::BufferView(&reject, length));
+  return SendPacket(kCommandRejectCode, identifier, reject.data());
 }
 
 CommandId SignalingChannel::GetNextCommandId() {
