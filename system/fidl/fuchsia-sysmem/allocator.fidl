@@ -23,7 +23,7 @@ interface Allocator {
     // Returns |ZX_ERR_INVALID_ARGS| if the request is malformed.
     // Returns |ZX_ERR_NOT_SUPPORTED| if request is valid but cannot be
     // satisfied, perhaps due to hardware limitations.
-    1: AllocateCollection(uint32 bufferCount,
+    1: AllocateCollection(uint32 buffer_count,
                           BufferSpec spec,
                           BufferUsage usage)
         -> (status @status, BufferCollectionInfo collection);
@@ -65,7 +65,7 @@ interface Allocator {
     // Returns |ZX_ERR_INVALID_ARGS| if the request is malformed.
     // Returns |ZX_ERR_NOT_SUPPORTED| if request is valid but cannot be
     // satisfied, perhaps due to hardware limitations.
-    2: AllocateSharedCollection(uint32 bufferCount,
+    2: AllocateSharedCollection(uint32 buffer_count,
                                 BufferSpec spec,
                                 handle<eventpair> token_peer)
         -> (status @status);

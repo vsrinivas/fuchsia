@@ -8,6 +8,7 @@
 #include <lib/fdio/util.h>
 #include <lib/process-launcher/launcher.h>
 #include <lib/svc/outgoing.h>
+#include <lib/sysmem/sysmem.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -152,8 +153,9 @@ int main(int argc, char** argv) {
     }
 
     zx_service_provider_instance_t service_providers[] = {
-        {.provider = launcher_get_service_provider(), .ctx = nullptr},
         {.provider = crashanalyzer_get_service_provider(), .ctx = nullptr},
+        {.provider = launcher_get_service_provider(), .ctx = nullptr},
+        {.provider = sysmem_get_service_provider(), .ctx = nullptr},
     };
 
     for (size_t i = 0; i < fbl::count_of(service_providers); ++i) {

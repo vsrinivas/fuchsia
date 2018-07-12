@@ -13,12 +13,14 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/svchost.cpp \
 
 MODULE_FIDL_LIBS := \
-    system/fidl/fuchsia-crash
+    system/fidl/fuchsia-crash \
+    system/fidl/fuchsia-sysmem \
 
 MODULE_STATIC_LIBS := \
     system/ulib/inspector \
     system/ulib/svc \
     system/ulib/process-launcher \
+    system/ulib/sysmem \
     system/ulib/fs \
     system/core/crashanalyzer \
     system/ulib/async \

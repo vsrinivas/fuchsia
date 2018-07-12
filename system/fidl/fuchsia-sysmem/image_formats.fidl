@@ -19,33 +19,33 @@ struct ImageFormat {
 
     // Stride in bytes per row.
     // Only meaningful for linear buffer formats.
-    uint64 bytesPerRow;
+    uint64 bytes_per_row;
 
     // Pixel format.
-    PixelFormat pixelFormat;
+    PixelFormat pixel_format;
 
     // Color space.
-    ColorSpace colorSpace;
+    ColorSpace color_space;
 };
 
 // Describes constraints for allocating images of some desired form.
 // TODO(ZX-2260): change struct to table
 struct ImageSpec {
     // Minimum width in pixels.
-    uint32 minWidth;
+    uint32 min_width;
 
     // Minimum height in pixels.
-    uint32 minHeight;
+    uint32 min_height;
 
     // Number of layers within a multi-layered image.
     // Defaults to 1 if not specified.
     uint32 layers = 1;
 
     // Pixel format.
-    PixelFormat pixelFormat;
+    PixelFormat pixel_format;
 
     // Color space.
-    ColorSpace colorSpace;
+    ColorSpace color_space;
 
     // TODO(ZX-2270): Add tiling formats.
 };
@@ -62,7 +62,7 @@ struct PixelFormat {
 // The ordering of the channels in the format name reflects how
 // the actual layout of the channel.
 enum PixelFormatType {
-    r8g8b8a8 = 1;
+    R8G8B8A8 = 1;
 };
 
 // Describes how the pixels within an image are meant to be presented.
@@ -74,13 +74,13 @@ struct ColorSpace {
 };
 
 enum ColorSpaceType {
-    srgb = 1;
-    rec601_ntsc = 2;
-    rec601_ntsc_full_range = 3;
-    rec601_pal = 4;
-    rec601_pal_full_range = 5;
-    rec709 = 6;
-    rec2020 = 7;
-    rec2100 = 8;
+    SRGB = 1;
+    REC601_NTSC = 2;
+    REC601_NTSC_FULL_RANGE = 3;
+    REC601_PAL = 4;
+    REC601_PAL_FULL_RANGE = 5;
+    REC709 = 6;
+    REC2020 = 7;
+    REC2100 = 8;
 };
 
