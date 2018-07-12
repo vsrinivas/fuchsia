@@ -1,0 +1,19 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+load("@fuchsia_sdk//build_defs:dart_library.bzl", "dart_library")
+
+package(default_visibility = ["//visibility:public"])
+
+dart_library(
+    name = "flutter",
+    package_name = "flutter",
+    source_dir = "flutter/packages/flutter/lib",
+    deps = [
+        "@vendor_collection//:collection",
+        "@vendor_meta//:meta",
+        "@vendor_typed_data//:typed_data",
+        "@vendor_vector_math//:vector_math",
+    ],
+)

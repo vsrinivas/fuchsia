@@ -5,7 +5,7 @@
 load(":dart.bzl", "dart_kernel_action", "DartLibraryInfo")
 load(":package_info.bzl", "PackageLocalInfo")
 
-# A Fuchsia Dart application
+# A Fuchsia Flutter application
 #
 # Parameters
 #
@@ -16,12 +16,12 @@ load(":package_info.bzl", "PackageLocalInfo")
 #     List of libraries to link to this application.
 
 
-_DART_JIT_RUNNER_CONTENT = """{
-    "runner": "dart_jit_runner"
+_FLUTTER_JIT_RUNNER_CONTENT = """{
+    "runner": "flutter_jit_runner"
 }
 """
 
-def _dart_app_impl(context):
+def _flutter_app_impl(context):
     kernel_snapshot_file = context.outputs.kernel_snapshot
     manifest_file = context.outputs.manifest
     mappings = compile_kernel_action(
@@ -36,18 +36,18 @@ def _dart_app_impl(context):
         main_dilp_file = context.outputs.main_dilp,
         dilp_list_file = context.outputs.dilp_list,
     )
-    dart_jit_runner = context.actions.declare_file("runtime")
+    flutter_jit_runner = context.actions.declare_file("runtime")
     context.actions.write(
-        output = dart_jit_runner,
-        content = _DART_JIT_RUNNER_CONTENT)
-    mappings["meta/runtime"] = dart_jit_runner
+        output = flutter_jit_runner,
+        content = _FLUTTER_JIT_RUNNER_CONTENT)
+    mappings["meta/runtime"] = flutter_jit_runner
     return [
         DefaultInfo(files = depset([kernel_snapshot_file, manifest_file])),
         PackageLocalInfo(mappings = mappings.items()),
     ]
 
-dart_app = rule(
-    implementation = _dart_app_impl,
+flutter_app = rule(
+    implementation = _flutter_app_impl,
     attrs = {
         "main": attr.label(
             doc = "The main script file",
@@ -72,7 +72,7 @@ dart_app = rule(
             cfg = "host",
         ),
         "_platform_lib": attr.label(
-            default = Label("//tools/dart_prebuilts/dart_runner:platform_strong.dill"),
+            default = Label("//tools/dart_prebuilts/flutter_runner:platform_strong.dill"),
             allow_single_file = True,
             cfg = "host",
         ),

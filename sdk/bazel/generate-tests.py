@@ -46,6 +46,9 @@ install_fuchsia_crosstool(
 
 load("@fuchsia_sdk//build_defs:setup_dart.bzl", "setup_dart")
 setup_dart()
+
+load("@fuchsia_sdk//build_defs:setup_flutter.bzl", "setup_flutter")
+setup_flutter()
 ''' % os.path.relpath(args.sdk, args.output))
 
 

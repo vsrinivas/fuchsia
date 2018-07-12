@@ -72,3 +72,71 @@ def generate_dot_packages_action(context, packages_file, package_info):
         output = packages_file,
         content = contents,
     )
+
+
+def compile_kernel_action(context, dart_exec, kernel_compiler, sdk_root, main,
+                          packages_file, kernel_snapshot_file, manifest_file,
+                          main_dilp_file, dilp_list_file):
+    """Creates an action that generates the Dart kernel and its dependencies.
+
+    Args:
+        context: The rule context.
+        dart_exec: The Dart executable `File`.
+        kernel_compiler: The kernel compiler snapshot `File`.
+        sdk_root: The Dart SDK root `File` (Dart or Flutter's platform libs).
+        main: The main `File`.
+        packages_file: The .packages `File` output.
+        kernel_snapshot_file: The kernel snapshot `File` output.
+        manifest_file: The Fuchsia manifest `File` output.
+        main_dilp_file: The compiled main dilp `File` output.
+        dilp_list_file: The dilplist `File` output.
+
+    Returns:
+        Mapping `dict` to be used for packaging.
+    """
+    # 1. Create the .packages file.
+    info = aggregate_packages(context.attr.deps)
+    generate_dot_packages_action(context, packages_file, info)
+    all_sources = [package.root for package in info.package_map.to_list()]
+
+    # 2. Declare *.dilp files for all dependencies.
+    mappings = {}
+    for package in info.package_map.to_list():
+        dilp_file = context.actions.declare_file(
+            context.label.name + "_kernel.dil-" + package.name + ".dilp")
+        mappings['data/' + package.name + ".dilp"] = dilp_file
+
+    # 3. Compile the kernel.
+    context.actions.run(
+        executable = dart_exec,
+        arguments = [
+            kernel_compiler.path,
+            "--target",
+            "dart_runner",
+            "--sdk-root",
+            sdk_root.dirname,
+            "--packages",
+            packages_file.path,
+            "--manifest",
+            manifest_file.path,
+            "--output",
+            kernel_snapshot_file.path,
+            main.path,
+        ],
+        inputs = all_sources + [
+            kernel_compiler,
+            sdk_root,
+            packages_file,
+            main,
+        ],
+        outputs = [
+            main_dilp_file,
+            dilp_list_file,
+            kernel_snapshot_file,
+            manifest_file,
+        ] + mappings.values(),
+        mnemonic = "DartKernelCompiler",
+    )
+    mappings["data/main.dilp"] = main_dilp_file
+    mappings["data/app.dilplist"] = dilp_list_file
+    return mappings
