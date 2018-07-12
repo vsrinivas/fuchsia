@@ -162,7 +162,7 @@ class TestVP9 {
     video->core_ = std::make_unique<HevcDec>(video.get());
     video->core_->PowerOn();
 
-    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(true));
+    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(true, PAGE_SIZE));
 
     video->InitializeInterrupts();
 
@@ -197,8 +197,12 @@ class TestVP9 {
           });
     }
 
-    auto aml_data = ConvertIvfToAmlV(bear_vp9_ivf, bear_vp9_ivf_len);
-    video->ParseVideo(aml_data.data(), aml_data.size());
+    // Put on a separate thread because it needs video decoding to progress in
+    // order to finish.
+    auto parser = std::async([&video]() {
+      auto aml_data = ConvertIvfToAmlV(bear_vp9_ivf, bear_vp9_ivf_len);
+      video->ParseVideo(aml_data.data(), aml_data.size());
+    });
 
     zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
     {
@@ -212,6 +216,8 @@ class TestVP9 {
     EXPECT_EQ(std::future_status::ready,
               wait_valid.get_future().wait_for(std::chrono::seconds(2)));
 
+    EXPECT_EQ(std::future_status::ready,
+              parser.wait_for(std::chrono::seconds(1)));
     video.reset();
   }
 

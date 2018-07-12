@@ -58,7 +58,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   friend class TestMpeg2;
   friend class TestVP9;
 
-  zx_status_t InitializeStreamBuffer(bool use_parser);
+  zx_status_t InitializeStreamBuffer(bool use_parser, uint32_t size);
   zx_status_t InitializeEsParser();
   zx_status_t ParseVideo(void* data, uint32_t len);
   zx_status_t ProcessVideoNoParser(void* data, uint32_t len);

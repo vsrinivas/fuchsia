@@ -23,7 +23,8 @@ class TestH264 {
 
     video->core_ = std::make_unique<Vdec1>(video.get());
     video->core_->PowerOn();
-    status = video->InitializeStreamBuffer(use_parser);
+    status = video->InitializeStreamBuffer(
+        use_parser, use_parser ? PAGE_SIZE : PAGE_SIZE * 1024);
     video->InitializeInterrupts();
     EXPECT_EQ(ZX_OK, status);
     std::promise<void> first_wait_valid;
@@ -86,7 +87,7 @@ class TestH264 {
 
     video->core_ = std::make_unique<Vdec1>(video.get());
     video->core_->PowerOn();
-    status = video->InitializeStreamBuffer(true);
+    status = video->InitializeStreamBuffer(true, PAGE_SIZE);
     video->InitializeInterrupts();
     EXPECT_EQ(ZX_OK, status);
     std::promise<void> wait_valid;

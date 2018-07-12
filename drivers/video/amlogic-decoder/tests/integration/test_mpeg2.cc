@@ -23,7 +23,7 @@ class TestMpeg2 {
     video->core_ = std::make_unique<Vdec1>(video.get());
     video->core_->PowerOn();
 
-    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(true));
+    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(true, PAGE_SIZE));
 
     video->InitializeInterrupts();
     std::promise<void> wait_valid;
@@ -64,7 +64,7 @@ class TestMpeg2 {
     video->core_ = std::make_unique<Vdec1>(video.get());
     video->core_->PowerOn();
 
-    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(false));
+    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(false, PAGE_SIZE * 1024));
 
     video->InitializeInterrupts();
     std::promise<void> wait_valid;

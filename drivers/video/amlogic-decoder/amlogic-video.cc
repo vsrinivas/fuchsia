@@ -35,11 +35,6 @@
 #include "tests/test_support.h"
 #endif
 
-constexpr uint64_t kStreamBufferSize = PAGE_SIZE * 1024;
-
-// Most buffers should be 64-kbyte aligned.
-const uint32_t kBufferAlignShift = 4 + 12;
-
 // These match the regions exported when the bus device was added.
 enum MmioRegion {
   kCbus,
@@ -117,20 +112,21 @@ void AmlogicVideo::GateClocks() {
       .WriteTo(hiubus_.get());
 }
 
-zx_status_t AmlogicVideo::InitializeStreamBuffer(bool use_parser) {
-  zx_status_t status = io_buffer_init_aligned(
-      &stream_buffer_, bti_.get(), kStreamBufferSize, kBufferAlignShift,
-      IO_BUFFER_RW | IO_BUFFER_CONTIG);
+zx_status_t AmlogicVideo::InitializeStreamBuffer(bool use_parser,
+                                                 uint32_t size) {
+  zx_status_t status = io_buffer_init(&stream_buffer_, bti_.get(), size,
+                                      IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to make video fifo");
     return ZX_ERR_NO_MEMORY;
   }
 
-  io_buffer_cache_flush(&stream_buffer_, 0, kStreamBufferSize);
+  io_buffer_cache_flush(&stream_buffer_, 0, io_buffer_size(&stream_buffer_, 0));
 
   uint32_t buffer_address =
       static_cast<uint32_t>(io_buffer_phys(&stream_buffer_));
-  core_->InitializeStreamInput(use_parser, buffer_address, kStreamBufferSize);
+  core_->InitializeStreamInput(use_parser, buffer_address,
+                               io_buffer_size(&stream_buffer_, 0));
 
   return ZX_OK;
 }
@@ -229,7 +225,7 @@ zx_status_t AmlogicVideo::InitializeEsParser() {
   uint32_t buffer_address = truncate_to_32(io_buffer_phys(&stream_buffer_));
   ParserVideoStartPtr::Get().FromValue(buffer_address).WriteTo(parser_.get());
   ParserVideoEndPtr::Get()
-      .FromValue(buffer_address + kStreamBufferSize - 8)
+      .FromValue(buffer_address + io_buffer_size(&stream_buffer_, 0) - 8)
       .WriteTo(parser_.get());
 
   ParserEsControl::Get()
@@ -253,8 +249,6 @@ zx_status_t AmlogicVideo::InitializeEsParser() {
       status.WriteTo(parser_.get());
       DLOG("Got Parser interrupt status %x\n", status.reg_value());
       if (status.fetch_complete()) {
-        PfifoRdPtr::Get().FromValue(0).WriteTo(parser_.get());
-        PfifoWrPtr::Get().FromValue(0).WriteTo(parser_.get());
         parser_finished_promise_.set_value();
       }
     }
@@ -275,8 +269,6 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
     DECODE_ERROR("Failed to create input file");
     return ZX_ERR_NO_MEMORY;
   }
-  PfifoRdPtr::Get().FromValue(0).WriteTo(parser_.get());
-  PfifoWrPtr::Get().FromValue(0).WriteTo(parser_.get());
 
   ParserControl::Get()
       .ReadFrom(parser_.get())
@@ -300,7 +292,7 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
       parser_.get());
 
   auto future_status =
-      parser_finished_promise_.get_future().wait_for(std::chrono::seconds(1));
+      parser_finished_promise_.get_future().wait_for(std::chrono::seconds(10));
   if (future_status != std::future_status::ready) {
     DECODE_ERROR("Parser timed out\n");
     ParserFetchCmd::Get().FromValue(0).WriteTo(parser_.get());
@@ -317,7 +309,7 @@ zx_status_t AmlogicVideo::ProcessVideoNoParser(void* data, uint32_t len) {
       VldMemVififoWP::Get().ReadFrom(dosbus_.get()).reg_value() -
       VldMemVififoStartPtr::Get().ReadFrom(dosbus_.get()).reg_value();
 
-  if (len + current_offset > kStreamBufferSize) {
+  if (len + current_offset > io_buffer_size(&stream_buffer_, 0)) {
     DECODE_ERROR("Video too large\n");
     return ZX_ERR_OUT_OF_RANGE;
   }
