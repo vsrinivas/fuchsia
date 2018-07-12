@@ -168,7 +168,7 @@ bool BrEdrSignalingChannel::IsSupportedResponse(CommandCode code) const {
     case kCommandRejectCode:
     case kConnectionResponse:
     case kConfigurationResponse:
-    case kDisconnectResponse:
+    case kDisconnectionResponse:
     case kEchoResponse:
     case kInformationResponse:
       return true;

@@ -68,7 +68,7 @@ TEST_F(L2CAP_BrEdrSignalingChannelTest, RegisterRequestResponder) {
   // Register the handler.
   bool cb_called = false;
   sig()->ServeRequest(
-      kDisconnectRequest,
+      kDisconnectionRequest,
       [&cb_called, &expected_payload](const common::ByteBuffer& req_payload,
                                       SignalingChannel::Responder* responder) {
         cb_called = true;

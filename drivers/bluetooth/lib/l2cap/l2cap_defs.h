@@ -16,12 +16,16 @@
 namespace btlib {
 namespace l2cap {
 
-// L2CAP channel identifier uniquely identifies fixed and connection-oriented channels over a
-// logical link.
+// L2CAP channel identifier uniquely identifies fixed and connection-oriented
+// channels over a logical link.
+// (see Core Spec v5.0, Vol 3, Part A, Section 2.1)
 using ChannelId = uint16_t;
 
-// Fixed channel identifiers used in BR/EDR & AMP (i.e. ACL-U, ASB-U, and AMP-U logical links)
-// (see Core Spec v5.0, Vol 3, Part A, Section 2.1)
+// Null ID, "never be used as a destination endpoint"
+constexpr ChannelId kInvalidChannelId = 0x0000;
+
+// Fixed channel identifiers used in BR/EDR & AMP (i.e. ACL-U, ASB-U, and AMP-U
+// logical links)
 constexpr ChannelId kSignalingChannelId = 0x0001;
 constexpr ChannelId kConnectionlessChannelId = 0x0002;
 constexpr ChannelId kAMPManagerChannelId = 0x0003;
@@ -29,7 +33,6 @@ constexpr ChannelId kSMPChannelId = 0x0007;
 constexpr ChannelId kAMPTestManagerChannelId = 0x003F;
 
 // Fixed channel identifiers used in LE
-// (see Core Spec v5.0, Vol 3, Part A, Section 2.1)
 constexpr ChannelId kATTChannelId = 0x0004;
 constexpr ChannelId kLESignalingChannelId = 0x0005;
 constexpr ChannelId kLESMPChannelId = 0x0006;
@@ -234,15 +237,15 @@ struct ConfigurationResponsePayload {
 } __PACKED;
 
 // ACL-U & LE-U
-constexpr CommandCode kDisconnectRequest = 0x06;
-struct DisconnectRequestPayload {
+constexpr CommandCode kDisconnectionRequest = 0x06;
+struct DisconnectionRequestPayload {
   ChannelId dst_cid;
   ChannelId src_cid;
 } __PACKED;
 
 // ACL-U & LE-U
-constexpr CommandCode kDisconnectResponse = 0x07;
-struct DisconnectResponsePayload {
+constexpr CommandCode kDisconnectionResponse = 0x07;
+struct DisconnectionResponsePayload {
   ChannelId dst_cid;
   ChannelId src_cid;
 } __PACKED;
