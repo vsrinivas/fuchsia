@@ -37,6 +37,7 @@ class File(object):
     def __init__(self, json):
         self.source = json['source']
         self.destination = json['destination']
+        self.is_packaged = json['packaged']
 
     def __str__(self):
         return '{%s <-- %s}' % (self.destination, self.source)
