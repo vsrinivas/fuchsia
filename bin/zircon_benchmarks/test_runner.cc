@@ -25,15 +25,17 @@ int BenchmarksMain(int argc, char** argv, bool run_gbenchmark) {
     return 0;
   }
 
+  static const char kTestSuiteName[] = "fuchsia.zircon_benchmarks";
+
   if (argc >= 2 && strcmp(argv[1], "-p") == 0) {
-    return perftest::PerfTestMain(argc, argv);
+    return perftest::PerfTestMain(argc, argv, kTestSuiteName);
   }
   if (run_gbenchmark) {
     benchmark::Initialize(&argc, argv);
     benchmark::RunSpecifiedBenchmarks();
     return 0;
   }
-  return perftest::PerfTestMain(argc, argv);
+  return perftest::PerfTestMain(argc, argv, kTestSuiteName);
 }
 
 }  // namespace fbenchmark
