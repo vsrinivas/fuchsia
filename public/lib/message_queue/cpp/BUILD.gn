@@ -1,0 +1,39 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("cpp") {
+  public_deps = [
+    ":message_queue_client",
+    ":message_sender_client",
+  ]
+}
+
+source_set("message_queue_client") {
+  sources = [
+    "message_queue_client.cc",
+    "message_queue_client.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/public/fidl/fuchsia.modular",
+  ]
+}
+
+source_set("message_sender_client") {
+  sources = [
+    "message_sender_client.cc",
+    "message_sender_client.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+    "//peridot/public/fidl/fuchsia.modular",
+  ]
+}

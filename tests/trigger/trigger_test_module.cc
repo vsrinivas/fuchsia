@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/message_queue/cpp/message_sender_client.h>
 #include <test/peridot/tests/trigger/cpp/fidl.h>
 
 #include "peridot/lib/testing/reporting.h"
@@ -56,7 +57,7 @@ class TestApp {
       agent_service_->ObserveMessageQueueDeletion(token);
       explicit_msg_queue_->GetToken([this](fidl::StringPtr token) {
         explicit_queue_token_ = token;
-        agent_service_->ObserveMessageQueueDeletion(token);
+        agent_service_->ObserveMessageQueueDeletion(std::move(token));
 
         TestMessageQueueMessageTrigger();
       });
@@ -83,7 +84,7 @@ class TestApp {
           // trigger it.
           component_context_->GetMessageSender(token,
                                                message_sender_.NewRequest());
-          message_sender_->Send("Time to wake up...");
+          message_sender_.Send("Time to wake up...");
 
           Await("message_queue_message", [this] {
             task_triggered_.Pass();
@@ -136,7 +137,7 @@ class TestApp {
   // The queue used for observing queue deletion when module's namespace is torn
   // down.
   fuchsia::modular::MessageQueuePtr implicit_msg_queue_;
-  fuchsia::modular::MessageSenderPtr message_sender_;
+  modular::MessageSenderClient message_sender_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };

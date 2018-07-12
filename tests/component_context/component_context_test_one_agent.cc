@@ -6,6 +6,7 @@
 #include <lib/app_driver/cpp/agent_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fxl/logging.h>
+#include <lib/message_queue/cpp/message_sender_client.h>
 #include <test/peridot/tests/componentcontext/cpp/fidl.h>
 
 #include "peridot/lib/testing/reporting.h"
@@ -67,11 +68,10 @@ class TestApp : ComponentContextTestService {
   // |Agent1Interface|
   void SendToMessageQueue(fidl::StringPtr message_queue_token,
                           fidl::StringPtr message_to_send) override {
-    fuchsia::modular::MessageSenderPtr message_sender;
+    modular::MessageSenderClient message_sender;
     component_context_->GetMessageSender(message_queue_token,
                                          message_sender.NewRequest());
-
-    message_sender->Send(message_to_send);
+    message_sender.Send(message_to_send.get());
   }
 
   fuchsia::modular::ComponentContextPtr component_context_;

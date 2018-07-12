@@ -9,8 +9,7 @@
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fxl/functional/make_copyable.h>
-
-#include "peridot/lib/fidl/message_receiver_client.h"
+#include <lib/message_queue/cpp/message_queue_client.h>
 
 using ::fuchsia::modular::examples::simple::SimplePtr;
 
@@ -42,21 +41,18 @@ class SimpleModule : fuchsia::ui::viewsv1::ViewProvider {
                                    agent_service.NewRequest());
 
     // Request a new message queue from the component context.
-    fuchsia::modular::MessageQueuePtr message_queue;
     component_context->ObtainMessageQueue("agent_queue",
-                                          message_queue.NewRequest());
+                                          message_queue_.NewRequest());
 
-    // Register a callback with a message receiver client that logs any
-    // messages that SimpleAgent sends.
-    message_receiver_ = std::make_unique<modular::MessageReceiverClient>(
-        message_queue.get(),
-        [](fidl::StringPtr msg, std::function<void()> ack) {
+    // Register a callback that receives new messages that SimpleAgent sends.
+    message_queue_.RegisterReceiver(
+        [](std::string msg, fit::function<void()> ack) {
           ack();
           FXL_LOG(INFO) << "new message: " << msg;
         });
 
     // Get the token for the message queue and send it to the agent.
-    message_queue->GetToken(fxl::MakeCopyable(
+    message_queue_.GetToken(fxl::MakeCopyable(
         [agent_service = std::move(agent_service)](fidl::StringPtr token) {
           agent_service->SetMessageQueue(token);
         }));
@@ -75,7 +71,7 @@ class SimpleModule : fuchsia::ui::viewsv1::ViewProvider {
 
   fidl::Binding<fuchsia::ui::viewsv1::ViewProvider> view_provider_binding_;
 
-  std::unique_ptr<modular::MessageReceiverClient> message_receiver_;
+  modular::MessageQueueClient message_queue_;
 };
 
 }  // namespace simple

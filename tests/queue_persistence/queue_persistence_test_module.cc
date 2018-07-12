@@ -10,6 +10,7 @@
 #include <lib/async/default.h>
 #include <lib/callback/scoped_callback.h>
 #include <lib/fxl/memory/weak_ptr.h>
+#include <lib/message_queue/cpp/message_sender_client.h>
 #include <test/peridot/tests/queuepersistence/cpp/fidl.h>
 
 #include "peridot/lib/testing/reporting.h"
@@ -85,10 +86,10 @@ class TestApp {
 
     // Send a message to the stopped agent which should be persisted to local
     // storage. No triggers are set so the agent won't be automatically started.
-    fuchsia::modular::MessageSenderPtr message_sender;
+    modular::MessageSenderClient message_sender;
     component_context_->GetMessageSender(queue_token_,
                                          message_sender.NewRequest());
-    message_sender->Send("Queued message...");
+    message_sender.Send("Queued message...");
 
     // Start the agent again.
     fuchsia::sys::ServiceProviderPtr agent_services;

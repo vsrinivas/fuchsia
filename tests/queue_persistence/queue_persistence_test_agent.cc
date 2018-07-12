@@ -6,9 +6,9 @@
 #include <lib/app_driver/cpp/agent_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fxl/logging.h>
+#include <lib/message_queue/cpp/message_queue_client.h>
 #include <test/peridot/tests/queuepersistence/cpp/fidl.h>
 
-#include "peridot/lib/fidl/message_receiver_client.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 #include "peridot/tests/common/defs.h"
@@ -31,9 +31,8 @@ class TestApp : QueuePersistenceTestService {
     // message on it.
     component_context_->ObtainMessageQueue("Test Queue",
                                            msg_queue_.NewRequest());
-    msg_receiver_ = std::make_unique<modular::MessageReceiverClient>(
-        msg_queue_.get(),
-        [this](const fidl::StringPtr& message, std::function<void()> ack) {
+    msg_queue_.RegisterReceiver(
+        [this](std::string message, fit::function<void()> ack) {
           ack();
           modular::testing::GetStore()->Put(
               "queue_persistence_test_agent_received_message", "", [] {});
@@ -62,7 +61,7 @@ class TestApp : QueuePersistenceTestService {
   void Terminate(const std::function<void()>& done) {
     // Stop processing messages, since we do async operations below and don't
     // want our receiver to fire.
-    msg_receiver_.reset();
+    msg_queue_.RegisterReceiver(nullptr);
 
     modular::testing::GetStore()->Put("queue_persistence_test_agent_stopped",
                                       "",
@@ -72,16 +71,14 @@ class TestApp : QueuePersistenceTestService {
  private:
   // |QueuePersistenceTestService|
   void GetMessageQueueToken(GetMessageQueueTokenCallback callback) override {
-    msg_queue_->GetToken(
+    msg_queue_.GetToken(
         [callback](const fidl::StringPtr& token) { callback(token); });
   }
 
   TestPoint initialized_{"Queue persistence test agent initialized"};
 
   fuchsia::modular::ComponentContextPtr component_context_;
-  fuchsia::modular::MessageQueuePtr msg_queue_;
-
-  std::unique_ptr<modular::MessageReceiverClient> msg_receiver_;
+  modular::MessageQueueClient msg_queue_;
 
   component::ServiceNamespace services_;
   fidl::BindingSet<QueuePersistenceTestService> services_bindings_;

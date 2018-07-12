@@ -2,7 +2,7 @@
 
 ## Overview
 
-A `Module` is a UI component that can participate in a [Story](link to story doc), 
+A `Module` is a UI component that can participate in a [Story](link to story doc),
 potentially composed of many different `Module`s. A `Module`'s lifecycle is tightly
 bound to the story to which it was added. In addition to the capabilities
 provided to all Peridot components via `fuchsia::modular::ComponentContext`, a `Module` is given
@@ -75,12 +75,12 @@ it over to `SimpleAgent` so it can write messages to it.
 
 ```c++
 // Request a new message queue from the component context.
-modular::fuchsia::modular::MessageQueuePtr message_queue;
+modular::MessageQueueClient message_queue;
 component_context->ObtainMessageQueue("agent_queue",
                                       message_queue.NewRequest());
 
 // Get the token for the message queue and send it to the agent.
-message_queue->GetToken(fxl::MakeCopyable(
+message_queue.GetToken(fxl::MakeCopyable(
     [agent_service = std::move(agent_service)](fidl::StringPtr token) {
       agent_service->SetMessageQueue(token);
     }));
@@ -88,18 +88,17 @@ message_queue->GetToken(fxl::MakeCopyable(
 
 ### Communicating with `SimpleAgent
 
-In order to observe messages on the newly created message queue, `SimpleModule`
-uses a `MessageReceiverClient`. The client takes a lambda that gets called with
-new messages.
+In order to receive messages on the newly created message queue, `SimpleModule`
+registers a receiver callback with `MessageQueueClient`. Here, the receiver is a
+lambda that gets called with new messages.
 
 ```c++
-// Register a callback with a message receiver client that logs any
-// messages that SimpleAgent sends.
-message_receiver_ = std::make_unique<modular::MessageReceiverClient>(
-    message_queue.get(),
-    [](fidl::StringPtr msg, std::function<void()> ack) {
-      ack();  
-      FXL_LOG(INFO) << "New message: " << msg;
+// Register a callback with a message queue client that logs any
+// messages that SimpleAgent sends
+message_queue.RegsiterReceiver(
+    [](std::string msg, fit::function<void()> ack) {
+        ack();
+        FXL_LOG(INFO) << "New message: " << msg;
     });
 ```
 

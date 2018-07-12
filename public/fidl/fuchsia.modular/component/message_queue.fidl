@@ -1,8 +1,10 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
 // found in the LICENSE file.
 
 library fuchsia.modular;
+
+using fuchsia.mem;
 
 // A message queue is a named, locally persistent FIFO data structure. Message
 // queues are created, read from, and deleted by component instances through
@@ -44,7 +46,7 @@ interface MessageQueue {
 // message queue and is then passed to the other component through services
 // specific to either component.
 interface MessageSender {
-  1: Send(string message);
+  1: Send(fuchsia.mem.Buffer message);
 };
 
 // A component instance may implement and register a MessageReader interface
@@ -58,5 +60,5 @@ interface MessageReader {
   // next one is sent when available. If a client's OnReceive() does not respond
   // before the MessageReader interface is closed, then a future MessageReader
   // for this message queue will receive the unacknowledged message again.
-  1: OnReceive(string message) -> ();
+  1: OnReceive(fuchsia.mem.Buffer message) -> ();
 };

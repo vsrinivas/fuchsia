@@ -19,7 +19,6 @@ source_set("message_queue") {
     "//peridot/bin/user_runner/storage:constants_and_utils",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:json_xdr",
-    "//peridot/lib/fidl:message_receiver_client",
     "//peridot/lib/ledger_client:operations",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:types",

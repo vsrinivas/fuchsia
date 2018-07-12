@@ -120,18 +120,6 @@ source_set("view_host") {
   ]
 }
 
-source_set("message_receiver_client") {
-  sources = [
-    "message_receiver_client.cc",
-    "message_receiver_client.h",
-  ]
-
-  deps = [
-    "//garnet/public/lib/fidl/cpp",
-    "//peridot/public/fidl/fuchsia.modular",
-  ]
-}
-
 fidl("app_client_unittest_fidl") {
   testonly = true
   cpp_legacy_callbacks = true

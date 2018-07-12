@@ -12,9 +12,9 @@
 #include <lib/async/default.h>
 #include <lib/callback/scoped_callback.h>
 #include <lib/fxl/memory/weak_ptr.h>
+#include <lib/message_queue/cpp/message_queue_client.h>
 #include <test/peridot/tests/componentcontext/cpp/fidl.h>
 
-#include "peridot/lib/fidl/message_receiver_client.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 #include "peridot/tests/common/defs.h"
@@ -121,13 +121,12 @@ class TestApp {
                                            msg_queue_.NewRequest());
 
     // MessageQueueManager shouldn't send us anything just yet.
-    msg_receiver_ = std::make_unique<modular::MessageReceiverClient>(
-        msg_queue_.get(),
-        [this, done_cb, kTestMessage](const fidl::StringPtr& msg,
-                                      std::function<void()> ack) {
+    msg_queue_.RegisterReceiver(
+        [this, done_cb, kTestMessage](const std::string& msg,
+                                      fit::function<void()> ack) {
           ack();
           // We only want one message.
-          msg_receiver_.reset();
+          msg_queue_.RegisterReceiver(nullptr);
 
           if (msg == kTestMessage) {
             msg_queue_communicated_.Pass();
@@ -135,7 +134,7 @@ class TestApp {
           done_cb();
         });
 
-    msg_queue_->GetToken([this, kTestMessage](const fidl::StringPtr& token) {
+    msg_queue_.GetToken([this, kTestMessage](const fidl::StringPtr& token) {
       one_agent_interface_->SendToMessageQueue(token, kTestMessage);
     });
   }
@@ -181,11 +180,9 @@ class TestApp {
   fuchsia::modular::AgentControllerPtr one_agent_controller;
   ComponentContextTestServicePtr one_agent_interface_;
   fuchsia::modular::ComponentContextPtr component_context_;
-  fuchsia::modular::MessageQueuePtr msg_queue_;
+  modular::MessageQueueClient msg_queue_;
 
   fuchsia::modular::AgentControllerPtr unstoppable_agent_controller_;
-
-  std::unique_ptr<modular::MessageReceiverClient> msg_receiver_;
 
   fxl::WeakPtrFactory<TestApp> weak_ptr_factory_;
 

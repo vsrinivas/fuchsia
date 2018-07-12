@@ -28,8 +28,8 @@ executable_package("simple_module") {
   deps = [
     ":interfaces",
     "//garnet/public/lib/component/cpp",
-    "//peridot/lib/fidl:message_receiver_client",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/public/lib/message_queue/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

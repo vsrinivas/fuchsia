@@ -160,16 +160,22 @@ class MessageQueueStorage : fuchsia::modular::MessageSender {
     }
 
     receive_ack_pending_ = true;
-    message_receiver_->OnReceive(queue_data_.Peek(), [this] {
-      receive_ack_pending_ = false;
-      queue_data_.Dequeue();
-      MaybeSendNextMessage();
-    });
+
+    fsl::SizedVmo queue_data_vmo;
+    FXL_CHECK(VmoFromString(queue_data_.Peek(), &queue_data_vmo));
+    message_receiver_->OnReceive(std::move(queue_data_vmo).ToTransport(),
+                                 [this] {
+                                   receive_ack_pending_ = false;
+                                   queue_data_.Dequeue();
+                                   MaybeSendNextMessage();
+                                 });
   }
 
   // |fuchsia::modular::MessageSender|
-  void Send(fidl::StringPtr message) override {
-    queue_data_.Enqueue(message);
+  void Send(fuchsia::mem::Buffer message) override {
+    std::string msg_str;
+    FXL_CHECK(fsl::StringFromVmo(message, &msg_str));
+    queue_data_.Enqueue(msg_str);
     MaybeSendNextMessage();
     if (watcher_) {
       watcher_();
