@@ -1,0 +1,86 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.control;
+
+struct SecurityProperties {
+  bool authenticated;
+  bool secure_connections;
+  uint8 encryption_key_size;
+};
+
+struct Key {
+  // The security properties of this link under which this key was exchanged.
+  SecurityProperties security_properties;
+
+  // 128 bit key
+  array<uint8>:16 value;
+};
+
+// Represents a LE Long-Term Key. The |ediv| and |rand| fields are zero if
+// distributed using LE Secure Connections pairing.
+struct LTK {
+  Key key;
+  uint8 key_size;
+  uint16 ediv;
+  uint64 rand;
+};
+
+// The preferred LE connection parameters of the peer.
+// TODO(bwb): to move LEConnectionParameters to BLE library.
+struct LEConnectionParameters {
+  uint16 connection_interval;
+  uint16 connection_latency;
+  uint16 supervision_timeout;
+};
+
+struct LEData {
+  // The identity address of the peer. If |resolvable| is true, then this is the
+  // resolved private address (and the |irk| is present).
+  string address;
+
+  // TODO add a type of address?
+
+  bool resolvable;
+
+  // True if the peer is the master of the connection.
+  bool master;
+
+  // The peer’s preferred connection parameters, if known.
+  LEConnectionParameters? connection_parameters;
+
+  // Known GATT service UUIDs.
+  vector<string> services;
+
+  // The LE long-term key. Present if the link was encrypted.
+  LTK? ltk;
+
+  // Identity Resolving Key used to generate and resolve random addresses.
+  Key? irk;
+
+  // Connection Signature Resolving Key used for data signing without encryption.
+  Key? csrk;
+};
+
+struct BondingData {
+  string identifier;
+  LEData? le;
+
+  // TODO Add BR/EDR data
+};
+
+interface Bonding {
+  // Initializes bonded devices for the local host identified by |local_id|. This is the same
+  // as the ID provided in OnDeviceBonded().
+  1: AddBondedDevices(string local_id, vector<BondingData> bonds) -> (fuchsia.bluetooth.Status @status);
+
+  // TODO(NET-1156) Make an interface to bootstrap bt-gap with the BondingData
+
+  // Called when the pairing procedure with a new peer has completed or when new data for an
+  // existing bond is available.
+  101: -> OnNewBondingData(string local_id, BondingData data);
+
+  // Called when the bonding data for an existing peer should be removed
+  102: -> OnDeleteBond(string local_id);
+};

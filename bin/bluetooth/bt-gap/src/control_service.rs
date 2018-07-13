@@ -36,10 +36,14 @@ pub fn make_control_service(
             hd.event_listeners.push(handle.clone());
             future::ok(())
         },
-        connect: |_, _, _, res| {
+        connect: |_, _, res| {
             res.send(&mut bt_fidl_status!(NotSupported))
                 .into_future()
                 .recover(|e| eprintln!("error sending response: {:?}", e))
+        },
+        set_io_capabilities: |_, _, _, _res| {
+            //TODO(bwb): Implement this method
+            future::ok(())
         },
         disconnect: |_, _, res| {
             res.send(&mut bt_fidl_status!(NotSupported))
@@ -123,12 +127,14 @@ pub fn make_control_service(
                 .into_future()
                 .recover(|e| eprintln!("error sending response: {:?}", e))
         },
-        set_pairing_delegate: |state, _, _, delegate, _res| {
+        set_pairing_delegate: |state, delegate, _res| {
+            let mut wstate = state.write();
             if let Some(delegate) = delegate {
                 if let Ok(proxy) = delegate.into_proxy() {
-                    let mut wstate = state.write();
                     wstate.host.write().pairing_delegate = Some(proxy);
                 }
+            } else {
+                wstate.host.write().pairing_delegate = None;
             }
             future::ok(())
         },

@@ -70,7 +70,7 @@ pub fn run(
     stream
         .for_each(move |evt| {
             match evt {
-                HostEvent::OnHostStateChanged { ref state } => {
+                HostEvent::OnAdapterStateChanged { ref state } => {
                     host.write().info.state = Some(Box::new(clone_host_state(&state)));
                 }
                 // TODO(NET-968): Add integration test for this.
@@ -80,6 +80,9 @@ pub fn run(
                             .send_on_device_updated(&mut device)
                             .map_err(|e| error!("Failed to send device updated event: {:?}", e));
                     }
+                }
+                HostEvent::OnNewBondingData { .. } => {
+                    unimplemented!("not yet");
                 }
             };
             fok(())

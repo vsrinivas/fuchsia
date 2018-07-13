@@ -95,7 +95,7 @@ void HostServer::StartLEDiscovery(StartDiscoveryCallback callback) {
     AdapterState state;
     state.discovering = Bool::New();
     state.discovering->value = true;
-    self->binding()->events().OnHostStateChanged(std::move(state));
+    self->binding()->events().OnAdapterStateChanged(std::move(state));
 
     callback(Status());
   });
@@ -156,7 +156,7 @@ void HostServer::StopDiscovery(StopDiscoveryCallback callback) {
   AdapterState state;
   state.discovering = Bool::New();
   state.discovering->value = false;
-  this->binding()->events().OnHostStateChanged(std::move(state));
+  this->binding()->events().OnAdapterStateChanged(std::move(state));
 
   callback(Status());
 }
@@ -187,7 +187,7 @@ void HostServer::SetDiscoverable(bool discoverable,
     AdapterState state;
     state.discoverable = Bool::New();
     state.discoverable->value = false;
-    this->binding()->events().OnHostStateChanged(std::move(state));
+    this->binding()->events().OnAdapterStateChanged(std::move(state));
 
     callback(Status());
     return;
@@ -223,9 +223,25 @@ void HostServer::SetDiscoverable(bool discoverable,
         AdapterState state;
         state.discoverable = Bool::New();
         state.discoverable->value = true;
-        self->binding()->events().OnHostStateChanged(std::move(state));
+        self->binding()->events().OnAdapterStateChanged(std::move(state));
         callback(Status());
       });
+}
+
+void HostServer::SetPairingDelegate(
+    ::fuchsia::bluetooth::control::InputCapabilityType input,
+    ::fuchsia::bluetooth::control::OutputCapabilityType output,
+    ::fidl::InterfaceHandle<::fuchsia::bluetooth::control::PairingDelegate>
+        delegate,
+    HostServer::SetPairingDelegateCallback callback) {
+  // TODO(bwb): implement
+  callback(false);
+}
+
+void HostServer::AddBondedDevices(
+    ::fidl::VectorPtr<fuchsia::bluetooth::control::BondingData> bonds,
+    AddBondedDevicesCallback callback) {
+  callback(Status());
 }
 
 void HostServer::RequestLowEnergyCentral(
@@ -263,7 +279,6 @@ void HostServer::StopPairing(std::string id, btlib::sm::Status status) {
 
 void HostServer::ConfirmPairing(std::string id, ConfirmCallback confirm) {
   FXL_LOG(INFO) << "bthost: Pairing request for device: " << id;
-
   // TODO(armansito): Call out to PairingDelegate FIDL interface
   confirm(true);
 }
@@ -274,6 +289,7 @@ void HostServer::DisplayPasskey(std::string id, uint32_t passkey,
 
   // TODO(armansito): Call out to PairingDelegate FIDL interface
   FXL_LOG(INFO) << fxl::StringPrintf("bthost: Enter passkey: %06u", passkey);
+
   confirm(true);
 }
 
