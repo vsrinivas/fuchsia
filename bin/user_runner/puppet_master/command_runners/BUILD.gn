@@ -54,7 +54,9 @@ source_set("update_mod_command_runner") {
 
   deps = [
     ":command_runner",
-    "//garnet/public/lib/fxl",
+    "//peridot/public/lib/async/cpp:future",
+    "//peridot/public/lib/async/cpp:operation",
+    "//peridot/public/lib/entity/cpp:json",
   ]
 }
 
@@ -68,6 +70,8 @@ executable("update_mod_command_runner_unittest") {
   deps = [
     ":update_mod_command_runner",
     "//garnet/public/lib/gtest",
+    "//peridot/lib/testing:test_with_ledger",
+    "//peridot/public/lib/entity/cpp:json",
     "//third_party/googletest:gtest_main",
   ]
 }
