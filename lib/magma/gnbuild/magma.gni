@@ -105,3 +105,19 @@ template("magma_pdev_entry") {
     }
   }
 }
+
+template("magma_vulkan_icd") {
+  shared_library(target_name) {
+    forward_variables_from(invoker, "*")
+    if (!is_debug) {
+      version_script = rebase_path("//garnet/lib/magma/scripts/libvulkan.version")
+      if (!defined(invoker.inputs)) {
+        inputs = []
+      }
+      inputs += [
+        version_script,
+      ]
+      ldflags += [ "-Wl,--version-script=$version_script" ]
+    }
+  }
+}
