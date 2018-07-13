@@ -176,7 +176,7 @@ might be in the encoded or decoded format. The ownership semantics for the
 memory referred to by `bytes` and `handles` is defined by the context in which
 the `fidl_msg_t` struct is used.
 
-### fidl_msg_t
+### fidl_txn_t
 
 ```
 typedef struct fidl_txn fidl_txn_t;
