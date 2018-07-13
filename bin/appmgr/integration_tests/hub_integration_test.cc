@@ -87,7 +87,7 @@ TEST(ProbeHub, Component) {
   glob_t globbuf;
   ASSERT_EQ(glob(glob_str.data(), 0, NULL, &globbuf), 0)
       << glob_str << " does not exist.";
-  ASSERT_EQ(globbuf.gl_pathc, 1u);
+  EXPECT_EQ(globbuf.gl_pathc, 1u);
   globfree(&globbuf);
 }
 
@@ -96,7 +96,7 @@ TEST(ProbeHub, Realm) {
   glob_t globbuf;
   ASSERT_EQ(glob(glob_str.data(), 0, NULL, &globbuf), 0)
       << glob_str << " does not exist.";
-  ASSERT_EQ(globbuf.gl_pathc, 1u);
+  EXPECT_EQ(globbuf.gl_pathc, 1u);
   globfree(&globbuf);
 }
 
@@ -105,7 +105,7 @@ TEST(ProbeHub, RealmSvc) {
   glob_t globbuf;
   ASSERT_EQ(glob(glob_str.data(), 0, NULL, &globbuf), 0)
       << glob_str << " does not exist.";
-  ASSERT_EQ(globbuf.gl_pathc, 1u);
+  EXPECT_EQ(globbuf.gl_pathc, 1u);
   globfree(&globbuf);
 }
 
