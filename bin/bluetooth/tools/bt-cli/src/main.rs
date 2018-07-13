@@ -50,6 +50,11 @@ async fn stop_discovery(control_svc: &ControlProxy) -> Result<String, Error> {
     Ok(Status::from(response).to_string())
 }
 
+async fn connect(device_id: String, control_svc: &ControlProxy) -> Result<String, Error> {
+    let response = await!(control_svc.connect(device_id.as_str()))?;
+    Ok(Status::from(response).to_string())
+}
+
 async fn set_discoverable(
     discoverable: bool, control_svc: &ControlProxy,
 ) -> Result<String, Error> {
@@ -101,9 +106,13 @@ fn main() -> Result<(), Error> {
         let readline = rl.readline(PROMPT);
         match readline {
             Ok(line) => {
-                let cmd = line.parse::<Cmd>();
+                let args: Vec<&str> = line.split(' ').collect();
+                let cmd = args[0].parse::<Cmd>();
                 let fut = async {
                     match cmd {
+                        Ok(Cmd::Connect) => {
+                            await!(connect(args[1].to_string(), &bt_svc))
+                        }
                         Ok(Cmd::StartDiscovery) => {
                             println!("Starting Discovery!");
                             await!(start_discovery(&bt_svc))

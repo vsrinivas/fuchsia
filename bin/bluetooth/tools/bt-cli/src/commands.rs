@@ -55,6 +55,7 @@ macro_rules! gen_completer {
 
 gen_completer! {
     Cmd {
+        Connect = ("connect", "connect to a remote device"),
         ActiveAdapter = ("adapter", "Show the Active Adapter"),
         Help = ("help", "This message"),
         GetAdapters = ("list-adapters", "Show all known bluetooth adapters"),
