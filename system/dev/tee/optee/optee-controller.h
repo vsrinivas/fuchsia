@@ -9,8 +9,11 @@
 #include <ddktl/protocol/tee.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
+#include <fbl/unique_ptr.h>
 #include <zircon/device/tee.h>
 #include <zircon/thread_annotations.h>
+
+#include "shared-memory.h"
 
 namespace optee {
 
@@ -47,6 +50,8 @@ private:
     zx_status_t ExchangeCapabilities();
     void AddClient(OpteeClient* client);
     void CloseClients();
+    zx_status_t InitializeSharedMemory();
+    zx_status_t DiscoverSharedMemoryConfig(zx_paddr_t* out_start_addr, size_t* out_size);
 
     platform_device_protocol_t pdev_proto_ = {};
     // TODO(rjascani): Eventually, the secure_monitor_ object should be an owned resource object
@@ -58,6 +63,8 @@ private:
     tee_revision_t os_revision_ = {};
     fbl::Mutex lock_;
     fbl::DoublyLinkedList<OpteeClient*> clients_ TA_GUARDED(lock_);
+
+    fbl::unique_ptr<SharedMemoryManager> shared_memory_manager_;
 };
 
 } // namespace optee

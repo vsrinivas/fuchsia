@@ -8,6 +8,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/io-buffer.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/limits.h>
@@ -109,6 +110,75 @@ zx_status_t OpteeController::ExchangeCapabilities() {
     return ZX_OK;
 }
 
+zx_status_t OpteeController::InitializeSharedMemory() {
+    zx_paddr_t shared_mem_start;
+    size_t shared_mem_size;
+    zx_status_t status = DiscoverSharedMemoryConfig(&shared_mem_start, &shared_mem_size);
+
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "optee: Unable to discover shared memory configuration\n");
+        return status;
+    }
+
+    fbl::AllocChecker ac;
+    auto secure_world_memory = fbl::make_unique_checked<io_buffer_t>(&ac);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    // The Secure World memory is located at a fixed physical address in RAM, so we have to request
+    // the platform device map the physical vmo for us.
+    // TODO(rjascani): This currently maps the entire range of the Secure OS memory because pdev
+    // doesn't currently have a way of only mapping a portion of it. OP-TEE tells us exactly the
+    // physical sub range to use.
+    static constexpr uint32_t kSecureWorldMemoryMmioIndex = 0;
+    status = pdev_map_mmio_buffer(&pdev_proto_, kSecureWorldMemoryMmioIndex, ZX_CACHE_POLICY_CACHED,
+                                  secure_world_memory.get());
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "optee: Unable to map secure world memory\n");
+        return status;
+    }
+
+    status = SharedMemoryManager::Create(shared_mem_start,
+                                         shared_mem_size,
+                                         fbl::move(secure_world_memory),
+                                         &shared_memory_manager_);
+
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "optee: Unable to initialaze SharedMemoryManager\n");
+        return status;
+    }
+
+    return status;
+}
+
+zx_status_t OpteeController::DiscoverSharedMemoryConfig(zx_paddr_t* out_start_addr,
+                                                        size_t* out_size) {
+
+    static const zx_smc_parameters_t func_call = tee::CreateSmcFunctionCall(
+        kGetSharedMemConfigFuncId);
+
+    union {
+        zx_smc_result_t raw;
+        GetSharedMemConfigResult response;
+    } result;
+
+    zx_status_t status = zx_smc_call(secure_monitor_, &func_call, &result.raw);
+
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    if (result.response.status != kReturnOk) {
+        return ZX_ERR_INTERNAL;
+    }
+
+    *out_start_addr = result.response.start;
+    *out_size = result.response.size;
+
+    return status;
+}
+
 zx_status_t OpteeController::Bind() {
     zx_status_t status = ZX_ERR_INTERNAL;
 
@@ -143,6 +213,12 @@ zx_status_t OpteeController::Bind() {
     status = ExchangeCapabilities();
     if (status != ZX_OK) {
         zxlogf(ERROR, "optee: Could not exchange capabilities\n");
+        return status;
+    }
+
+    status = InitializeSharedMemory();
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "optee: Could not initialize shared memory\n");
         return status;
     }
 

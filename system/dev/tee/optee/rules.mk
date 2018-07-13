@@ -12,11 +12,13 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/binding.c \
     $(LOCAL_DIR)/optee-client.cpp \
     $(LOCAL_DIR)/optee-controller.cpp \
+    $(LOCAL_DIR)/shared-memory.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
+    system/ulib/region-alloc \
     system/ulib/zx \
     system/ulib/zxcpp \
 
