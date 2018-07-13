@@ -117,8 +117,11 @@ typedef struct fidl_type fidl_type_t;
 // The bound on a string type is not present in the serialized format,
 // but is checked as part of validation.
 
-typedef struct {
+typedef struct fidl_string {
+    // Number of UTF-8 code units (bytes), must be 0 if |data| is null.
     uint64_t size;
+
+    // Pointer to UTF-8 code units (bytes) or null
     char* data;
 } fidl_string_t;
 
@@ -164,8 +167,11 @@ typedef struct {
 // The bound on a vector type is not present in the serialized format,
 // but is checked as part of validation.
 
-typedef struct {
+typedef struct fidl_vector {
+    // Number of elements, must be 0 if |data| is null.
     uint64_t count;
+
+    // Pointer to element data or null.
     void* data;
 } fidl_vector_t;
 
@@ -275,7 +281,7 @@ typedef uint32_t fidl_union_tag_t;
 
 // All fidl messages share a common 16 byte header.
 
-typedef struct {
+typedef struct fidl_message_header {
     zx_txid_t txid;
     uint32_t reserved0;
     uint32_t flags;
