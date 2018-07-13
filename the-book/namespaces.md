@@ -212,6 +212,7 @@ There are some typical objects which a component namespace might contain:
 - Services offered to the component by the system, the component framework,
   or by the client which started it.
 - Device nodes (for drivers and privileged components).
+- Configuration information.
 
 ### Typical Directory Structure
 
@@ -228,6 +229,7 @@ There are some typical objects which a component namespace might contain:
 - `dev/`: device tree (relevant portions visible to privileged components as needed)
   - `class/`, ...
 - `hub/`: introspect the system, see [hub.md] (privileged components only)
+- `config/`: configuration data for the component
 
 ## Namespace Participants
 
@@ -282,6 +284,14 @@ for _constructing_ the namespace which its components will receive.
 The environment decides what objects a component may access and how the
 component's request for services by name will be bound to specific
 implementations.
+
+### Configuration
+
+Components may have different kinds of configuration data exposed to them
+depending on the features listed in their [Component
+Manifest](package_metadata.md#Component-Manifest) which are exposed as files in
+the /config namespace entry. These are defined by the feature set of the
+component.
 
 ## FIDL Interfaces
 

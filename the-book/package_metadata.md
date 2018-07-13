@@ -155,7 +155,8 @@ The set of currently known features are as follows:
   process.)
 
 - `vulkan`, which requests access to the resources required to use the Vulkan
-  graphics interface.
+  graphics interface. This adds layer configuration data in the `/config/vulkan`
+  directory in the package's namespace.
 
 See [sandboxing.md](sandboxing.md) for more information about sandboxing.
 
