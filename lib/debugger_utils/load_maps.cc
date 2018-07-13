@@ -18,7 +18,7 @@
 
 #include "util.h"
 
-namespace debugserver {
+namespace debugger_utils {
 
 bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
   FXL_LOG(INFO) << "Loading load maps from " << file;
@@ -174,4 +174,4 @@ const LoadMap* LoadMapTable::LookupLoadMap(zx_koid_t pid, uint64_t addr) {
   return nullptr;
 }
 
-}  // namespace debugserver
+}  // namespace debugger_utils

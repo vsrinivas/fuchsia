@@ -24,7 +24,7 @@
 
 #include "control.h"
 
-namespace debugserver {
+namespace insntrace {
 
 constexpr char IptConfig::kDefaultOutputPathPrefix[];
 
@@ -94,11 +94,12 @@ uint64_t IptConfig::AddrEnd(unsigned i) const {
 }
 
 IptServer::IptServer(const IptConfig& config)
-    : Server(GetRootJob(), GetDefaultJob()), config_(config) {}
+    : Server(debugger_utils::GetRootJob(), debugger_utils::GetDefaultJob()),
+      config_(config) {}
 
 bool IptServer::StartInferior() {
-  Process* process = current_process();
-  const Argv& argv = process->argv();
+  inferior_control::Process* process = current_process();
+  const debugger_utils::Argv& argv = process->argv();
 
   FXL_LOG(INFO) << "Starting program: " << argv[0];
 
@@ -190,7 +191,8 @@ bool IptServer::Run() {
   return run_status_;
 }
 
-void IptServer::OnThreadStarting(Process* process, Thread* thread,
+void IptServer::OnThreadStarting(inferior_control::Process* process,
+                                 inferior_control::Thread* thread,
                                  const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
@@ -198,8 +200,8 @@ void IptServer::OnThreadStarting(Process* process, Thread* thread,
   PrintException(stdout, thread, ZX_EXCP_THREAD_STARTING, context);
 
   switch (process->state()) {
-    case Process::State::kStarting:
-    case Process::State::kRunning:
+    case inferior_control::Process::State::kStarting:
+    case inferior_control::Process::State::kRunning:
       break;
     default:
       FXL_DCHECK(false);
@@ -218,7 +220,8 @@ Fail:
   thread->Resume();
 }
 
-void IptServer::OnThreadExiting(Process* process, Thread* thread,
+void IptServer::OnThreadExiting(inferior_control::Process* process,
+                                inferior_control::Thread* thread,
                                 const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
@@ -239,7 +242,7 @@ void IptServer::OnThreadExiting(Process* process, Thread* thread,
   thread->ResumeForExit();
 }
 
-void IptServer::OnProcessExit(Process* process) {
+void IptServer::OnProcessExit(inferior_control::Process* process) {
   FXL_DCHECK(process);
 
   printf("Process %s is gone, rc %d\n", process->GetName().c_str(),
@@ -251,8 +254,8 @@ void IptServer::OnProcessExit(Process* process) {
 }
 
 void IptServer::OnArchitecturalException(
-    Process* process, Thread* thread, const zx_excp_type_t type,
-    const zx_exception_context_t& context) {
+    inferior_control::Process* process, inferior_control::Thread* thread,
+    const zx_excp_type_t type, const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
   // TODO(armansito): Fine-tune this check if we ever support multi-processing.
@@ -264,7 +267,8 @@ void IptServer::OnArchitecturalException(
   QuitMessageLoop(true);
 }
 
-void IptServer::OnSyntheticException(Process* process, Thread* thread,
+void IptServer::OnSyntheticException(inferior_control::Process* process,
+                                     inferior_control::Thread* thread,
                                      zx_excp_type_t type,
                                      const zx_exception_context_t& context) {
   FXL_DCHECK(process);
@@ -276,4 +280,4 @@ void IptServer::OnSyntheticException(Process* process, Thread* thread,
   QuitMessageLoop(true);
 }
 
-}  // namespace debugserver
+}  // namespace insntrace

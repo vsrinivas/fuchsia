@@ -6,13 +6,13 @@
 
 #include "garnet/lib/debugger_utils/byte_block.h"
 
-namespace debugserver {
+namespace inferior_control {
 
 class Process;
 
 // The API for accessing process memory.
 
-class ProcessMemory final : public ByteBlock {
+class ProcessMemory final : public debugger_utils::ByteBlock {
  public:
   explicit ProcessMemory(Process* process);
   bool Read(uintptr_t address, void* out_buffer, size_t length) const override;
@@ -25,4 +25,4 @@ class ProcessMemory final : public ByteBlock {
   FXL_DISALLOW_COPY_AND_ASSIGN(ProcessMemory);
 };
 
-}  // namespace debugserver
+}  // namespace inferior_control

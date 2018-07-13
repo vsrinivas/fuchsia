@@ -12,7 +12,7 @@
 
 #include <zircon/ktrace.h>
 
-namespace debugserver {
+namespace debugger_utils {
 
 union KtraceRecord {
   ktrace_header_t hdr;
@@ -35,4 +35,4 @@ int KtraceReadFile(int fd, KtraceRecordReader* reader, void* arg);
 
 const char* KtraceRecName(uint32_t tag);
 
-}  // namespace debugserver
+}  // namespace debugger_utils

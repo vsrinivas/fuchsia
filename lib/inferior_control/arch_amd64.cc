@@ -13,7 +13,7 @@
 #include "arch_x86.h"
 #include "thread.h"
 
-namespace debugserver {
+namespace inferior_control {
 
 GdbSignal ComputeGdbSignal(const zx_exception_context_t& context) {
   GdbSignal sigval;
@@ -94,6 +94,6 @@ bool IsSingleStepException(const zx_exception_context_t& context) {
   return arch_exception == X86_INT_DEBUG;
 }
 
-void DumpArch(FILE* out) { x86_feature_debug(out); }
+void DumpArch(FILE* out) { debugger_utils::x86_feature_debug(out); }
 
-}  // namespace debugserver
+}  // namespace inferior_control

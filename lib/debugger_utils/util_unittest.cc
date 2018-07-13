@@ -8,7 +8,7 @@
 
 #include "gtest/gtest.h"
 
-namespace debugserver {
+namespace debugger_utils {
 namespace {
 
 const char kInvalidInput1[] = "1G";
@@ -154,4 +154,4 @@ TEST(UtilTest, JoinStrings) {
 }
 
 }  // namespace
-}  // namespace debugserver
+}  // namespace debugger_utils

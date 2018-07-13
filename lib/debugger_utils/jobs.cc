@@ -20,7 +20,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
 
-namespace debugserver {
+namespace debugger_utils {
 
 struct WalkContext {
   JobTreeJobCallback* job_callback;
@@ -413,4 +413,4 @@ zx::job GetDefaultJob() {
   return zx::job(dupe);
 }
 
-}  // namespace debugserver
+}  // namespace debugger_utils

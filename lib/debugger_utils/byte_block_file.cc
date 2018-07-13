@@ -12,7 +12,7 @@
 
 #include "util.h"
 
-namespace debugserver {
+namespace debugger_utils {
 
 FileByteBlock::FileByteBlock(int fd) : fd_(fd) { FXL_DCHECK(fd >= 0); }
 
@@ -83,4 +83,4 @@ bool FileByteBlock::Write(uintptr_t address, const void* buffer,
   return true;
 }
 
-}  // namespace debugserver
+}  // namespace debugger_utils

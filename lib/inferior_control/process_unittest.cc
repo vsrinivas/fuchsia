@@ -10,7 +10,7 @@
 
 #include "gtest/gtest.h"
 
-namespace debugserver {
+namespace inferior_control {
 namespace {
 
 // TODO(dje): Obtain path more cleanly.
@@ -90,4 +90,4 @@ TEST_F(AttachTest, Attach) {
 }
 
 }  // namespace
-}  // namespace debugserver
+}  // namespace inferior_control

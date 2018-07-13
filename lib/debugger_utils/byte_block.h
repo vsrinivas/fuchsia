@@ -9,7 +9,7 @@
 
 #include "lib/fxl/macros.h"
 
-namespace debugserver {
+namespace debugger_utils {
 
 // An API for accessing memory, files, or anything else that is
 // fixed size, randomly accessible, block of contiguous bytes.
@@ -38,4 +38,4 @@ class ByteBlock {
   FXL_DISALLOW_COPY_AND_ASSIGN(ByteBlock);
 };
 
-}  // namespace debugserver
+}  // namespace debugger_utils

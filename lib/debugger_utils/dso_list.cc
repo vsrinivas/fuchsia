@@ -19,7 +19,7 @@
 #include "dso_list.h"
 #include "util.h"
 
-namespace debugserver {
+namespace debugger_utils {
 
 const char kDebugDirectory[] = "/boot/debug";
 const char kDebugSuffix[] = ".debug";
@@ -226,4 +226,4 @@ zx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
   return dso->debug_file_status;
 }
 
-}  // namespace debugserver
+}  // namespace debugger_utils

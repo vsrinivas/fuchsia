@@ -159,7 +159,8 @@ bool VerifyPacket(fxl::StringView packet, fxl::StringView* out_packet_data) {
   // TODO(armansito): Ignore the checksum if we're in no-acknowledgment mode.
 
   uint8_t received_checksum;
-  if (!DecodeByteString(packet.data() + pound + 1, &received_checksum)) {
+  if (!debugger_utils::DecodeByteString(packet.data() + pound + 1,
+                                        &received_checksum)) {
     FXL_LOG(ERROR) << "Malformed packet checksum received";
     return false;
   }

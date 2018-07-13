@@ -14,7 +14,7 @@
 
 #include "process.h"
 
-namespace debugserver {
+namespace inferior_control {
 
 ProcessMemory::ProcessMemory(Process* process) : process_(process) {}
 
@@ -32,7 +32,7 @@ bool ProcessMemory::Read(uintptr_t address, void* out_buffer,
     FXL_LOG(ERROR) << fxl::StringPrintf(
                           "Failed to read memory at addr: %" PRIxPTR ": ",
                           address)
-                   << ZxErrorString(status);
+                   << debugger_utils::ZxErrorString(status);
     return false;
   }
 
@@ -69,7 +69,7 @@ bool ProcessMemory::Write(uintptr_t address, const void* buffer,
     FXL_LOG(ERROR) << fxl::StringPrintf(
                           "Failed to write memory at addr: %" PRIxPTR ": ",
                           address)
-                   << ZxErrorString(status);
+                   << debugger_utils::ZxErrorString(status);
     return false;
   }
 
@@ -82,4 +82,4 @@ bool ProcessMemory::Write(uintptr_t address, const void* buffer,
   return true;
 }
 
-}  // namespace debugserver
+}  // namespace inferior_control

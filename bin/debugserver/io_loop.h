@@ -14,7 +14,7 @@ namespace debugserver {
 
 // This class implements IOLoop for Remote Serial Protocol support.
 
-class RspIOLoop final : public IOLoop {
+class RspIOLoop final : public inferior_control::IOLoop {
  public:
   RspIOLoop(int in_fd, Delegate* delegate, async::Loop* loop);
 

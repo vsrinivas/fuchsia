@@ -9,7 +9,7 @@
 
 // x86 architectural values
 
-namespace debugserver {
+namespace inferior_control {
 
 constexpr unsigned X86_EFLAGS_TF_MASK = 0x100;
 
@@ -51,4 +51,4 @@ enum X86InterruptVector {
   MAX_X86_INT = 0xff,
 };
 
-}  // namespace debugserver
+}  // namespace inferior_control

@@ -21,7 +21,7 @@
 #include "memory_process.h"
 #include "thread.h"
 
-namespace debugserver {
+namespace inferior_control {
 
 class Server;
 class Thread;
@@ -68,8 +68,8 @@ class Process final {
   std::string GetName() const;
 
   // Note: This includes the program in |argv[0]|.
-  const Argv& argv() { return argv_; }
-  void set_argv(const Argv& argv) { argv_ = argv; }
+  const debugger_utils::Argv& argv() { return argv_; }
+  void set_argv(const debugger_utils::Argv& argv) { argv_ = argv; }
 
   // Add extra handles to the process.
   //
@@ -198,16 +198,16 @@ class Process final {
   // Return list of loaded dsos.
   // Returns nullptr if none loaded yet or loading failed.
   // TODO(dje): constness wip
-  dsoinfo_t* GetDsos() const { return dsos_; }
+  debugger_utils::dsoinfo_t* GetDsos() const { return dsos_; }
 
   // Return the DSO for |pc| or nullptr if none.
   // TODO(dje): Result is not const for debug file lookup support.
-  dsoinfo_t* LookupDso(zx_vaddr_t pc) const;
+  debugger_utils::dsoinfo_t* LookupDso(zx_vaddr_t pc) const;
 
   // Return the entry for the main executable from the dsos list.
   // Returns nullptr if not present (could happen if inferior data structure
   // has been clobbered).
-  const dsoinfo_t* GetExecDso();
+  const debugger_utils::dsoinfo_t* GetExecDso();
 
  private:
   Process() = default;
@@ -239,7 +239,7 @@ class Process final {
   Delegate* delegate_;  // weak
 
   // The argv that this process was initialized with.
-  Argv argv_;
+  debugger_utils::Argv argv_;
 
   // Extra handles to pass to process during creation.
   std::vector<fuchsia::process::HandleInfo> extra_handles_;
@@ -270,7 +270,7 @@ class Process final {
   bool attached_running_ = false;
 
   // The API to access memory.
-  std::shared_ptr<ByteBlock> memory_;
+  std::shared_ptr<debugger_utils::ByteBlock> memory_;
 
   // The collection of breakpoints that belong to this process.
   ProcessBreakpointSet breakpoints_;
@@ -288,7 +288,7 @@ class Process final {
   // NULL if none have been loaded yet (including main executable).
   // TODO(dje): Code taking from crashlogger, to be rewritten.
   // TODO(dje): Doesn't include dsos loaded later.
-  dsoinfo_t* dsos_ = nullptr;
+  debugger_utils::dsoinfo_t* dsos_ = nullptr;
 
   // If true then building the dso list failed, don't try again.
   bool dsos_build_failed_ = false;
@@ -296,4 +296,4 @@ class Process final {
   FXL_DISALLOW_COPY_AND_ASSIGN(Process);
 };
 
-}  // namespace debugserver
+}  // namespace inferior_control

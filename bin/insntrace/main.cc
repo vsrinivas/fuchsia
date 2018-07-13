@@ -205,13 +205,13 @@ static bool ParseCr3Match(const char* name, const fxl::StringView& arg,
 }
 
 static bool ParseAddrConfig(const char* name, const fxl::StringView& arg,
-                            debugserver::IptConfig::AddrFilter* value) {
+                            insntrace::IptConfig::AddrFilter* value) {
   if (arg == "off")
-    *value = debugserver::IptConfig::AddrFilter::kOff;
+    *value = insntrace::IptConfig::AddrFilter::kOff;
   else if (arg == "enable")
-    *value = debugserver::IptConfig::AddrFilter::kEnable;
+    *value = insntrace::IptConfig::AddrFilter::kEnable;
   else if (arg == "stop")
-    *value = debugserver::IptConfig::AddrFilter::kStop;
+    *value = insntrace::IptConfig::AddrFilter::kStop;
   else {
     FXL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
     return false;
@@ -220,7 +220,7 @@ static bool ParseAddrConfig(const char* name, const fxl::StringView& arg,
 }
 
 static bool ParseAddrRange(const char* name, const fxl::StringView& arg,
-                           debugserver::IptConfig::AddrRange* value) {
+                           insntrace::IptConfig::AddrRange* value) {
   std::vector<fxl::StringView> range_strings = fxl::SplitString(
       fxl::StringView(arg), ",", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
   if (range_strings.size() != 2 && range_strings.size() != 3) {
@@ -248,7 +248,7 @@ static bool ParseFreqValue(const char* name, const fxl::StringView& arg,
   return true;
 }
 
-static bool ParseConfigOption(debugserver::IptConfig* config,
+static bool ParseConfigOption(insntrace::IptConfig* config,
                               const std::string& options_string) {
   std::vector<fxl::StringView> options =
       fxl::SplitString(fxl::StringView(options_string), ";",
@@ -326,8 +326,8 @@ static bool ParseConfigOption(debugserver::IptConfig* config,
   return true;
 }
 
-static debugserver::IptConfig GetIptConfig(const fxl::CommandLine& cl) {
-  debugserver::IptConfig config;
+static insntrace::IptConfig GetIptConfig(const fxl::CommandLine& cl) {
+  insntrace::IptConfig config;
   std::string arg;
 
   if (cl.GetOptionValue("chunk-order", &arg)) {
@@ -384,7 +384,7 @@ static debugserver::IptConfig GetIptConfig(const fxl::CommandLine& cl) {
   return config;
 }
 
-static bool ControlIpt(const debugserver::IptConfig& config,
+static bool ControlIpt(const insntrace::IptConfig& config,
                        const fxl::CommandLine& cl) {
   // We only support the cpu mode here.
   // This isn't a full test as we only actually set the mode for "init".
@@ -398,24 +398,24 @@ static bool ControlIpt(const debugserver::IptConfig& config,
     if (action == "init") {
       if (!AllocTrace(config))
         return false;
-      if (!debugserver::InitCpuPerf(config))
+      if (!insntrace::InitCpuPerf(config))
         return false;
-      if (!debugserver::InitPerfPreProcess(config))
+      if (!insntrace::InitPerfPreProcess(config))
         return false;
     } else if (action == "start") {
-      if (!debugserver::StartCpuPerf(config)) {
+      if (!insntrace::StartCpuPerf(config)) {
         FXL_LOG(WARNING) << "Start failed, but buffers not removed";
         return false;
       }
     } else if (action == "stop") {
-      debugserver::StopCpuPerf(config);
-      debugserver::StopPerf(config);
+      insntrace::StopCpuPerf(config);
+      insntrace::StopPerf(config);
     } else if (action == "dump") {
-      debugserver::DumpCpuPerf(config);
-      debugserver::DumpPerf(config);
+      insntrace::DumpCpuPerf(config);
+      insntrace::DumpPerf(config);
     } else if (action == "reset") {
-      debugserver::ResetCpuPerf(config);
-      debugserver::FreeTrace(config);
+      insntrace::ResetCpuPerf(config);
+      insntrace::FreeTrace(config);
     } else {
       FXL_LOG(ERROR) << "Unrecognized action: " << action;
       return false;
@@ -425,10 +425,10 @@ static bool ControlIpt(const debugserver::IptConfig& config,
   return true;
 }
 
-static bool RunProgram(const debugserver::IptConfig& config,
+static bool RunProgram(const insntrace::IptConfig& config,
                        const fxl::CommandLine& cl) {
-  debugserver::Argv inferior_argv(cl.positional_args().begin(),
-                                  cl.positional_args().end());
+  debugger_utils::Argv inferior_argv(cl.positional_args().begin(),
+                                     cl.positional_args().end());
 
   if (inferior_argv.size() == 0) {
     FXL_LOG(ERROR) << "Missing program";
@@ -441,9 +441,9 @@ static bool RunProgram(const debugserver::IptConfig& config,
   // can write to at the moment is the kernel debug log.
   setenv(ldso_trace_env_var, ldso_trace_value, 1);
 
-  debugserver::IptServer ipt(config);
+  insntrace::IptServer ipt(config);
 
-  auto inferior = new debugserver::Process(&ipt, &ipt);
+  auto inferior = new inferior_control::Process(&ipt, &ipt);
   inferior->set_argv(inferior_argv);
 
   ipt.set_current_process(inferior);
@@ -463,16 +463,16 @@ int main(int argc, char* argv[]) {
   }
 
   if (cl.HasOption("dump-arch", nullptr)) {
-    debugserver::DumpArch(stdout);
+    inferior_control::DumpArch(stdout);
     return EXIT_SUCCESS;
   }
 
-  if (!debugserver::X86HaveProcessorTrace()) {
+  if (!debugger_utils::X86HaveProcessorTrace()) {
     FXL_LOG(ERROR) << "PT not supported";
     return EXIT_FAILURE;
   }
 
-  debugserver::IptConfig config = GetIptConfig(cl);
+  insntrace::IptConfig config = GetIptConfig(cl);
 
   FXL_LOG(INFO) << "insntrace control program starting";
 

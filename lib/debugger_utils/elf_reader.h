@@ -18,7 +18,7 @@
 
 #include "byte_block.h"
 
-namespace debugserver {
+namespace debugger_utils {
 
 // 32+64 support, bi-endian, mmap support can come later when needed
 
@@ -186,4 +186,4 @@ class ElfReader {
   const ElfSectionHeader* section_headers_ = nullptr;
 };
 
-}  // namespace debugserver
+}  // namespace debugger_utils

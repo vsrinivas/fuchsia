@@ -12,7 +12,7 @@
 
 #include "x86_cpuid.h"
 
-namespace debugserver {
+namespace debugger_utils {
 
 /* Trick to get a 1 of the right size */
 #define ONE(x) (1 + ((x) - (x)))
@@ -86,4 +86,4 @@ const X86ProcessorTraceFeatures* X86GetProcessorTraceFeatures() {
   return pt;
 }
 
-}  // namespace debugserver
+}  // namespace debugger_utils

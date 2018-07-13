@@ -11,7 +11,7 @@
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 
-namespace debugserver {
+namespace debugger_utils {
 
 zx::job GetDefaultJob();
 
@@ -60,6 +60,6 @@ zx_status_t WalkJobTree(zx::job& job, JobTreeJobCallback* job_callback,
 zx::process FindProcess(zx::job& job, zx_koid_t pid);
 zx::process FindProcess(zx_handle_t job, zx_koid_t pid);
 
-}  // namespace debugserver
+}  // namespace debugger_utils
 
 #endif  // GARNET_LIB_DEBUGGER_UTILS_JOBS_H_

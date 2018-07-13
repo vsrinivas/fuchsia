@@ -20,7 +20,7 @@
 //#include "arch-arm64.h"
 //#include "thread.h"
 
-namespace debugserver {
+namespace inferior_control {
 
 int GetPCRegisterNumber() { return static_cast<int>(Arm64Register::PC); }
 
@@ -66,7 +66,7 @@ class RegistersArm64 final : public Registers {
     RspArm64GeneralRegs rsp_gregs;
     TranslateToRsp(&rsp_gregs);
     const uint8_t* greg_bytes = reinterpret_cast<const uint8_t*>(&rsp_gregs);
-    return EncodeByteArrayString(greg_bytes, sizeof(rsp_gregs));
+    return debugger_utils::EncodeByteArrayString(greg_bytes, sizeof(rsp_gregs));
   }
 
   bool SetRegsetFromString(int regset, const fxl::StringView& value) override {
@@ -92,7 +92,7 @@ class RegistersArm64 final : public Registers {
     if (regno == static_cast<int>(Arm64Register::CPSR))
       data_size = sizeof(uint32_t);
 
-    return EncodeByteArrayString(greg_bytes, data_size);
+    return debugger_utils::EncodeByteArrayString(greg_bytes, data_size);
   }
 
   bool GetRegister(int regno, void* buffer, size_t buf_size) override {
@@ -111,7 +111,7 @@ class RegistersArm64 final : public Registers {
     greg_bytes += regno * sizeof(uint64_t);
     std::memcpy(buffer, greg_bytes, buf_size);
     FXL_VLOG(1) << "Get register " << regno << " = "
-                << EncodeByteArrayString(greg_bytes, buf_size);
+                << debugger_utils::EncodeByteArrayString(greg_bytes, buf_size);
     return true;
   }
 
@@ -131,7 +131,8 @@ class RegistersArm64 final : public Registers {
     greg_bytes += regno * sizeof(uint64_t);
     std::memcpy(greg_bytes, value, value_size);
     FXL_VLOG(1) << "Set register " << regno << " = "
-                << EncodeByteArrayString(greg_bytes, value_size);
+                << debugger_utils::EncodeByteArrayString(greg_bytes,
+                                                         value_size);
     return true;
   }
 
@@ -183,4 +184,4 @@ std::string Registers::GetUninitializedGeneralRegistersAsString() {
 // static
 size_t Registers::GetRegisterSize() { return sizeof(uint64_t); }
 
-}  // namespace debugserver
+}  // namespace inferior_control

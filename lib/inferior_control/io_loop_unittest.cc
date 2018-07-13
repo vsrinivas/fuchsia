@@ -5,7 +5,7 @@
 #include "garnet/lib/inferior_control/io_loop.h"
 #include "gtest/gtest.h"
 
-namespace debugserver {
+namespace inferior_control {
 namespace {
 
 class TestDelegate : public IOLoop::Delegate {
@@ -41,4 +41,4 @@ TEST_F(IOLoopTest, Quit) {
 }
 
 }  // namespace
-}  // namespace debugserver
+}  // namespace inferior_control

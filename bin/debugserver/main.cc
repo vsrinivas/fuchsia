@@ -91,7 +91,7 @@ int main(int argc, char* argv[]) {
 
   std::vector<std::string> inferior_argv(cl.positional_args().begin() + 1,
                                          cl.positional_args().end());
-  auto inferior = new debugserver::Process(&server, &server);
+  auto inferior = new inferior_control::Process(&server, &server);
 
   // Are we passed a pid or a program?
   if (attach_pid != ZX_KOID_INVALID && !inferior_argv.empty()) {

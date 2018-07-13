@@ -16,7 +16,7 @@
 #include "byte_block.h"
 #include "elf_reader.h"
 
-namespace debugserver {
+namespace debugger_utils {
 
 typedef struct dsoinfo {
   struct dsoinfo* next;
@@ -51,4 +51,4 @@ extern void dso_vlog_list(const dsoinfo_t* dso_list);
 extern zx_status_t dso_find_debug_file(dsoinfo_t* dso,
                                        const char** out_debug_file);
 
-}  // namespace debugserver
+}  // namespace debugger_utils

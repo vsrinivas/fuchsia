@@ -17,7 +17,7 @@
 
 #include "garnet/lib/debugger_utils/util.h"
 
-namespace debugserver {
+namespace inferior_control {
 
 Server::Server(zx::job job_for_search, zx::job job_for_launch)
     : job_for_search_(std::move(job_for_search)),
@@ -56,4 +56,4 @@ ServerWithIO::~ServerWithIO() {
   io_loop_.reset();
 }
 
-}  // namespace debugserver
+}  // namespace inferior_control

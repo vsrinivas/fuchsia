@@ -9,7 +9,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace debugserver {
+namespace debugger_utils {
 
 struct X86ProcessorTraceFeatures {
   bool have_pt;
@@ -44,4 +44,4 @@ bool X86HaveProcessorTrace();
 // WARNING: Until the first call completes this is not thread safe.
 const X86ProcessorTraceFeatures* X86GetProcessorTraceFeatures();
 
-}  // namespace debugserver
+}  // namespace debugger_utils

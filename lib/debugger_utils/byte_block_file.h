@@ -6,7 +6,7 @@
 
 #include "byte_block.h"
 
-namespace debugserver {
+namespace debugger_utils {
 
 // The API for accessing a file via the "byte block" interface.
 // This is a fixed size block of contiguous bytes.
@@ -27,4 +27,4 @@ class FileByteBlock final : public ByteBlock {
   FXL_DISALLOW_COPY_AND_ASSIGN(FileByteBlock);
 };
 
-}  // namespace debugserver
+}  // namespace debugger_utils

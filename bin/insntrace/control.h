@@ -8,36 +8,36 @@
 
 #include "server.h"
 
-namespace debugserver {
+namespace insntrace {
 
 bool AllocTrace(const IptConfig& config);
 
 bool InitCpuPerf(const IptConfig& config);
 
-bool InitThreadPerf(Thread* thread, const IptConfig& config);
+bool InitThreadPerf(inferior_control::Thread* thread, const IptConfig& config);
 
 bool InitPerfPreProcess(const IptConfig& config);
 
 bool StartCpuPerf(const IptConfig& config);
 
-bool StartThreadPerf(Thread* thread, const IptConfig& config);
+bool StartThreadPerf(inferior_control::Thread* thread, const IptConfig& config);
 
 void StopCpuPerf(const IptConfig& config);
 
-void StopThreadPerf(Thread* thread, const IptConfig& config);
+void StopThreadPerf(inferior_control::Thread* thread, const IptConfig& config);
 
 void StopPerf(const IptConfig& config);
 
 void DumpCpuPerf(const IptConfig& config);
 
-void DumpThreadPerf(Thread* thread, const IptConfig& config);
+void DumpThreadPerf(inferior_control::Thread* thread, const IptConfig& config);
 
 void DumpPerf(const IptConfig& config);
 
 void ResetCpuPerf(const IptConfig& config);
 
-void ResetThreadPerf(Thread* thread, const IptConfig& config);
+void ResetThreadPerf(inferior_control::Thread* thread, const IptConfig& config);
 
 void FreeTrace(const IptConfig& config);
 
-}  // namespace debugserver
+}  // namespace insntrace

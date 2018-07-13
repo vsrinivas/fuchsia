@@ -6,7 +6,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace debugserver {
+namespace inferior_control {
 
 bool SoftwareBreakpoint::Insert() { return false; }
 
@@ -20,4 +20,4 @@ bool SingleStepBreakpoint::Remove() { return false; }
 
 bool SingleStepBreakpoint::IsInserted() const { return false; }
 
-}  // namespace debugserver
+}  // namespace inferior_control

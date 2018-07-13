@@ -9,7 +9,7 @@
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
 
-namespace debugserver {
+namespace inferior_control {
 
 // Signal values to pass over the remote serial protocol.
 // See include/gdb/signals.def in the gdb tree.
@@ -49,4 +49,4 @@ bool IsSingleStepException(const zx_exception_context_t& context);
 // TODO(dje): Switch to iostreams maybe later.
 void DumpArch(FILE* out);
 
-}  // namespace debugserver
+}  // namespace inferior_control

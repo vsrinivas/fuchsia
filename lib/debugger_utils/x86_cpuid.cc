@@ -16,7 +16,7 @@
 #include <cstring>
 #include <mutex>
 
-namespace debugserver {
+namespace debugger_utils {
 
 // Trick to get a 1 of the right size.
 #define ONE(x) (1 + ((x) - (x)))
@@ -269,4 +269,4 @@ void x86_feature_debug(FILE* out) {
     fprintf(out, "\n");
 }
 
-}  // namespace debugserver
+}  // namespace debugger_utils

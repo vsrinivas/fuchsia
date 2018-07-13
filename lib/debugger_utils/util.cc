@@ -12,7 +12,7 @@
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_printf.h"
 
-namespace debugserver {
+namespace debugger_utils {
 
 namespace {
 
@@ -243,4 +243,4 @@ void hexdump_ex(FILE* out, const void* ptr, size_t len, uint64_t disp_addr) {
   }
 }
 
-}  // namespace debugserver
+}  // namespace debugger_utils

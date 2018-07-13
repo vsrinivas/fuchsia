@@ -10,7 +10,7 @@
 #include "registers.h"
 #include "thread.h"
 
-namespace debugserver {
+namespace inferior_control {
 
 namespace {
 
@@ -126,4 +126,4 @@ bool SingleStepBreakpoint::Remove() {
 
 bool SingleStepBreakpoint::IsInserted() const { return inserted_; }
 
-}  // namespace debugserver
+}  // namespace inferior_control

@@ -18,7 +18,7 @@
 #include "arch.h"
 #include "process.h"
 
-namespace debugserver {
+namespace inferior_control {
 
 // static
 const char* Thread::StateName(Thread::State state) {
@@ -144,7 +144,8 @@ bool Thread::Resume() {
 
   zx_status_t status = zx_task_resume(handle_, ZX_RESUME_EXCEPTION);
   if (status < 0) {
-    FXL_LOG(ERROR) << "Failed to resume thread: " << ZxErrorString(status);
+    FXL_LOG(ERROR) << "Failed to resume thread: "
+                   << debugger_utils::ZxErrorString(status);
     return false;
   }
 
@@ -176,13 +177,13 @@ void Thread::ResumeForExit() {
                            sizeof(info), nullptr, nullptr);
     if (info_status != ZX_OK) {
       FXL_LOG(ERROR) << "error getting process info: "
-                     << ZxErrorString(info_status);
+                     << debugger_utils::ZxErrorString(info_status);
     }
     if (info_status == ZX_OK && info.exited) {
       FXL_VLOG(2) << "Process " << process()->GetName() << " exited too";
     } else {
       FXL_LOG(ERROR) << "Failed to resume thread for exit: "
-                     << ZxErrorString(status);
+                     << debugger_utils::ZxErrorString(status);
     }
   }
 
@@ -215,7 +216,7 @@ bool Thread::Step() {
   if (status < 0) {
     breakpoints_.RemoveSingleStepBreakpoint();
     FXL_LOG(ERROR) << "Failed to resume thread for step: "
-                   << ZxErrorString(status);
+                   << debugger_utils::ZxErrorString(status);
     return false;
   }
 
@@ -223,4 +224,4 @@ bool Thread::Step() {
   return true;
 }
 
-}  // namespace debugserver
+}  // namespace inferior_control

@@ -25,9 +25,10 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
-namespace debugserver {
+namespace inferior_control {
 
-TestServer::TestServer() : Server(GetRootJob(), GetDefaultJob()) {}
+TestServer::TestServer()
+    : Server(debugger_utils::GetRootJob(), debugger_utils::GetDefaultJob()) {}
 
 void TestServer::SetUp() {
   ASSERT_TRUE(exception_port_.Run());
@@ -55,7 +56,7 @@ bool TestServer::Run() {
 }
 
 bool TestServer::SetupInferior(const std::vector<std::string>& argv) {
-  auto inferior = new debugserver::Process(this, this);
+  auto inferior = new Process(this, this);
   inferior->set_argv(argv);
   // We take over ownership of |inferior| here.
   set_current_process(inferior);
@@ -64,7 +65,7 @@ bool TestServer::SetupInferior(const std::vector<std::string>& argv) {
 
 bool TestServer::RunHelperProgram(zx::channel channel) {
   Process* process = current_process();
-  const Argv& argv = process->argv();
+  const debugger_utils::Argv& argv = process->argv();
 
   FXL_LOG(INFO) << "Starting program: " << argv[0];
 
@@ -182,4 +183,4 @@ void TestServer::OnSyntheticException(Process* process, Thread* thread,
   QuitMessageLoop(true);
 }
 
-}  // namespace debugserver
+}  // namespace inferior_control

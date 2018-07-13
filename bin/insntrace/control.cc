@@ -36,7 +36,7 @@
 
 #include "server.h"
 
-namespace debugserver {
+namespace insntrace {
 
 static constexpr char ipt_device_path[] = "/dev/sys/cpu-trace/cpu-trace";
 static constexpr char ktrace_device_path[] = "/dev/misc/ktrace";
@@ -76,7 +76,7 @@ static bool OpenDevices(fxl::UniqueFD* out_ipt_fd, fxl::UniqueFD* out_ktrace_fd,
     ipt_fd = open(ipt_device_path, O_RDONLY);
     if (ipt_fd < 0) {
       FXL_LOG(ERROR) << "unable to open " << ipt_device_path << ": "
-                     << ErrnoString(errno);
+                     << debugger_utils::ErrnoString(errno);
       return false;
     }
   }
@@ -85,7 +85,7 @@ static bool OpenDevices(fxl::UniqueFD* out_ipt_fd, fxl::UniqueFD* out_ktrace_fd,
     ktrace_fd = open(ktrace_device_path, O_RDONLY);
     if (ktrace_fd < 0) {
       FXL_LOG(ERROR) << "open ktrace"
-                     << ", " << ErrnoString(errno);
+                     << ", " << debugger_utils::ErrnoString(errno);
       close(ipt_fd);
       return false;
     }
@@ -95,7 +95,7 @@ static bool OpenDevices(fxl::UniqueFD* out_ipt_fd, fxl::UniqueFD* out_ktrace_fd,
     ssize_t ssize = ioctl_ktrace_get_handle(ktrace_fd, &ktrace_handle);
     if (ssize != sizeof(ktrace_handle)) {
       FXL_LOG(ERROR) << "get ktrace handle"
-                     << ", " << ErrnoString(errno);
+                     << ", " << debugger_utils::ErrnoString(errno);
       close(ipt_fd);
       close(ktrace_fd);
       return false;
@@ -129,7 +129,7 @@ bool AllocTrace(const IptConfig& config) {
   trace_config.mode = config.mode;
   ssize_t ssize = ioctl_ipt_alloc_trace(ipt_fd.get(), &trace_config);
   if (ssize < 0) {
-    FXL_LOG(ERROR) << "set perf mode: " << ZxErrorString(ssize);
+    FXL_LOG(ERROR) << "set perf mode: " << debugger_utils::ZxErrorString(ssize);
     goto Fail;
   }
 
@@ -173,7 +173,8 @@ bool InitCpuPerf(const IptConfig& config) {
     uint32_t descriptor;
     auto ssize = ioctl_ipt_alloc_buffer(ipt_fd.get(), &ipt_config, &descriptor);
     if (ssize < 0) {
-      FXL_LOG(ERROR) << "init cpu perf: " << ZxErrorString(ssize);
+      FXL_LOG(ERROR) << "init cpu perf: "
+                     << debugger_utils::ZxErrorString(ssize);
       goto Fail;
     }
     // Buffers are automagically assigned to cpus, descriptor == cpu#,
@@ -186,7 +187,7 @@ Fail:
   return false;
 }
 
-bool InitThreadPerf(Thread* thread, const IptConfig& config) {
+bool InitThreadPerf(inferior_control::Thread* thread, const IptConfig& config) {
   FXL_LOG(INFO) << "InitThreadPerf called";
   FXL_DCHECK(config.mode == IPT_MODE_THREADS);
 
@@ -201,7 +202,8 @@ bool InitThreadPerf(Thread* thread, const IptConfig& config) {
   ssize_t ssize =
       ioctl_ipt_alloc_buffer(ipt_fd.get(), &ipt_config, &descriptor);
   if (ssize < 0) {
-    FXL_LOG(ERROR) << "init thread perf: " << ZxErrorString(ssize);
+    FXL_LOG(ERROR) << "init thread perf: "
+                   << debugger_utils::ZxErrorString(ssize);
     goto Fail;
   }
 
@@ -224,31 +226,31 @@ bool InitPerfPreProcess(const IptConfig& config) {
   if (!OpenDevices(nullptr, nullptr, &ktrace_handle))
     return false;
 
-   // If tracing cpus we may want all the records for processes that were
-   // started during boot, so don't reset ktrace here. If tracing threads it
-   // doesn't much matter other than hopefully the necessary records don't get
-   // over run, which is handled below by only enabling the collection groups
-   // we need. So for now leave existing records alone.
-   // We also need to make the distinction of ktrace records for processes
-   // started during boot (they can appear a fair bit in traces), and random
-   // processes that were started later that have nothing to do with what we
-   // want to collect. IWBN to capture the ktrace records from boot and save
-   // them away. Then it'd make more sense to rewind here, though even then
-   // the user may have started something important before we get run. Another
-   // thought is to provide an action to control ktrace specifically.
+    // If tracing cpus we may want all the records for processes that were
+    // started during boot, so don't reset ktrace here. If tracing threads it
+    // doesn't much matter other than hopefully the necessary records don't get
+    // over run, which is handled below by only enabling the collection groups
+    // we need. So for now leave existing records alone.
+    // We also need to make the distinction of ktrace records for processes
+    // started during boot (they can appear a fair bit in traces), and random
+    // processes that were started later that have nothing to do with what we
+    // want to collect. IWBN to capture the ktrace records from boot and save
+    // them away. Then it'd make more sense to rewind here, though even then
+    // the user may have started something important before we get run. Another
+    // thought is to provide an action to control ktrace specifically.
 #if 0  // TODO(dje)
   if (config.mode == IPT_MODE_THREADS) {
     status = zx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_STOP, 0,
                                nullptr);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "ktrace stop: " << ZxErrorString(status);
+      FXL_LOG(ERROR) << "ktrace stop: " << debugger_utils::ZxErrorString(status);
       goto Fail;
     }
     status = zx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_REWIND, 0,
                                nullptr);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "ktrace rewind: " << ZxErrorString(status);
-    goto Fail;
+      FXL_LOG(ERROR) << "ktrace rewind: " << debugger_utils::ZxErrorString(status);
+      goto Fail;
     }
   }
 #endif
@@ -267,7 +269,7 @@ bool InitPerfPreProcess(const IptConfig& config) {
   status = zx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_START,
                              kKtraceGroupMask, nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "ktrace start: " << ZxErrorString(status);
+    FXL_LOG(ERROR) << "ktrace start: " << debugger_utils::ZxErrorString(status);
     goto Fail;
   }
 
@@ -294,14 +296,16 @@ bool StartCpuPerf(const IptConfig& config) {
 
   ssize_t ssize = ioctl_ipt_start(ipt_fd.get());
   if (ssize < 0) {
-    FXL_LOG(ERROR) << "start cpu perf: " << ZxErrorString(ssize);
+    FXL_LOG(ERROR) << "start cpu perf: "
+                   << debugger_utils::ZxErrorString(ssize);
     return false;
   }
 
   return true;
 }
 
-bool StartThreadPerf(Thread* thread, const IptConfig& config) {
+bool StartThreadPerf(inferior_control::Thread* thread,
+                     const IptConfig& config) {
   FXL_LOG(INFO) << "StartThreadPerf called";
   FXL_DCHECK(config.mode == IPT_MODE_THREADS);
 
@@ -323,14 +327,15 @@ bool StartThreadPerf(Thread* thread, const IptConfig& config) {
   status = zx_handle_duplicate(thread->handle(), ZX_RIGHT_SAME_RIGHTS,
                                &assign.thread);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "duplicating thread handle: " << ZxErrorString(status);
+    FXL_LOG(ERROR) << "duplicating thread handle: "
+                   << debugger_utils::ZxErrorString(status);
     goto Fail;
   }
   assign.descriptor = thread->ipt_buffer();
   ssize = ioctl_ipt_assign_buffer_thread(ipt_fd.get(), &assign);
   if (ssize < 0) {
     FXL_LOG(ERROR) << "assigning ipt buffer to thread: "
-                   << ZxErrorString(ssize);
+                   << debugger_utils::ZxErrorString(ssize);
     goto Fail;
   }
 
@@ -351,11 +356,11 @@ void StopCpuPerf(const IptConfig& config) {
   ssize_t ssize = ioctl_ipt_stop(ipt_fd.get());
   if (ssize < 0) {
     // TODO(dje): This is really bad, this shouldn't fail.
-    FXL_LOG(ERROR) << "stop cpu perf: " << ZxErrorString(ssize);
+    FXL_LOG(ERROR) << "stop cpu perf: " << debugger_utils::ZxErrorString(ssize);
   }
 }
 
-void StopThreadPerf(Thread* thread, const IptConfig& config) {
+void StopThreadPerf(inferior_control::Thread* thread, const IptConfig& config) {
   FXL_LOG(INFO) << "StopThreadPerf called";
   FXL_DCHECK(config.mode == IPT_MODE_THREADS);
 
@@ -376,14 +381,15 @@ void StopThreadPerf(Thread* thread, const IptConfig& config) {
   status = zx_handle_duplicate(thread->handle(), ZX_RIGHT_SAME_RIGHTS,
                                &assign.thread);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "duplicating thread handle: " << ZxErrorString(status);
+    FXL_LOG(ERROR) << "duplicating thread handle: "
+                   << debugger_utils::ZxErrorString(status);
     goto Fail;
   }
   assign.descriptor = thread->ipt_buffer();
   ssize = ioctl_ipt_release_buffer_thread(ipt_fd.get(), &assign);
   if (ssize < 0) {
     FXL_LOG(ERROR) << "releasing ipt buffer from thread: "
-                   << ZxErrorString(ssize);
+                   << debugger_utils::ZxErrorString(ssize);
     goto Fail;
   }
 
@@ -403,7 +409,7 @@ void StopPerf(const IptConfig& config) {
       zx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_STOP, 0, nullptr);
   if (status != ZX_OK) {
     // TODO(dje): This shouldn't fail either, should it?
-    FXL_LOG(ERROR) << "stop ktrace: " << ZxErrorString(status);
+    FXL_LOG(ERROR) << "stop ktrace: " << debugger_utils::ZxErrorString(status);
   }
 }
 
@@ -446,7 +452,7 @@ static zx_status_t WriteBufferData(const IptConfig& config,
     FXL_LOG(ERROR) << fxl::StringPrintf(
                           "ioctl_ipt_get_buffer_config: buffer %u: ",
                           descriptor)
-                   << ZxErrorString(ssize);
+                   << debugger_utils::ZxErrorString(ssize);
     return ssize;
   }
 
@@ -455,14 +461,14 @@ static zx_status_t WriteBufferData(const IptConfig& config,
   if (ssize < 0) {
     FXL_LOG(ERROR) << fxl::StringPrintf(
                           "ioctl_ipt_get_buffer_info: buffer %u: ", descriptor)
-                   << ZxErrorString(ssize);
+                   << debugger_utils::ZxErrorString(ssize);
     return ssize;
   }
 
   fxl::UniqueFD fd(open(c_path, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR));
   if (!fd.is_valid()) {
     FXL_LOG(ERROR) << fxl::StringPrintf("unable to write file: %s", c_path)
-                   << ", " << ErrnoString(errno);
+                   << ", " << debugger_utils::ErrnoString(errno);
     return ZX_ERR_BAD_PATH;
   }
 
@@ -513,7 +519,7 @@ static zx_status_t WriteBufferData(const IptConfig& config,
           << fxl::StringPrintf(
                  "ioctl_ipt_get_buffer_handle: buffer %u, buffer %u: ",
                  descriptor, i)
-          << ZxErrorString(ssize);
+          << debugger_utils::ZxErrorString(ssize);
       goto Fail;
     }
     zx::vmo vmo(vmo_handle);
@@ -533,7 +539,7 @@ static zx_status_t WriteBufferData(const IptConfig& config,
         FXL_LOG(ERROR) << fxl::StringPrintf(
                               "zx_vmo_read: buffer %u, buffer %u, offset %zu: ",
                               descriptor, i, offset)
-                       << ZxErrorString(status);
+                       << debugger_utils::ZxErrorString(status);
         goto Fail;
       }
       if (write(fd.get(), buf, to_write) != (ssize_t)to_write) {
@@ -573,7 +579,7 @@ void DumpCpuPerf(const IptConfig& config) {
     auto status = WriteBufferData(config, ipt_fd, cpu, cpu);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << fxl::StringPrintf("dump perf of cpu %u: ", cpu)
-                     << ZxErrorString(status);
+                     << debugger_utils::ZxErrorString(status);
       // Keep trying to dump other cpu's data.
     }
   }
@@ -582,7 +588,7 @@ void DumpCpuPerf(const IptConfig& config) {
 // Write the buffer contents for |thread|.
 // This assumes the thread is stopped.
 
-void DumpThreadPerf(Thread* thread, const IptConfig& config) {
+void DumpThreadPerf(inferior_control::Thread* thread, const IptConfig& config) {
   FXL_LOG(INFO) << "DumpThreadPerf called";
   FXL_DCHECK(config.mode == IPT_MODE_THREADS);
 
@@ -601,7 +607,7 @@ void DumpThreadPerf(Thread* thread, const IptConfig& config) {
   auto status = WriteBufferData(config, ipt_fd, thread->ipt_buffer(), id);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << fxl::StringPrintf("dump perf of thread %" PRIu64 ": ", id)
-                   << ZxErrorString(status);
+                   << debugger_utils::ZxErrorString(status);
   }
 }
 
@@ -629,7 +635,7 @@ void DumpPerf(const IptConfig& config) {
       }
     } else {
       FXL_LOG(ERROR) << fxl::StringPrintf("unable to create %s", ktrace_c_path)
-                     << ", " << ErrnoString(errno);
+                     << ", " << debugger_utils::ErrnoString(errno);
     }
   }
 
@@ -641,7 +647,7 @@ void DumpPerf(const IptConfig& config) {
 
     FILE* f = fopen(cpuid_c_path, "w");
     if (f != nullptr) {
-      DumpArch(f);
+      inferior_control::DumpArch(f);
       // Also put the mtc_freq value in the cpuid file, it's as good a place
       // for it as any. See intel-pt.h:pt_config.
       // Alternatively this could be added to the ktrace record.
@@ -684,7 +690,8 @@ void ResetCpuPerf(const IptConfig& config) {
   // function around for a bit.
 }
 
-void ResetThreadPerf(Thread* thread, const IptConfig& config) {
+void ResetThreadPerf(inferior_control::Thread* thread,
+                     const IptConfig& config) {
   FXL_LOG(INFO) << "ResetThreadPerf called";
   FXL_DCHECK(config.mode == IPT_MODE_THREADS);
 
@@ -701,7 +708,8 @@ void ResetThreadPerf(Thread* thread, const IptConfig& config) {
   uint32_t descriptor = thread->ipt_buffer();
   ssize_t ssize = ioctl_ipt_free_buffer(ipt_fd.get(), &descriptor);
   if (ssize < 0) {
-    FXL_LOG(ERROR) << "freeing ipt buffer: " << ZxErrorString(ssize);
+    FXL_LOG(ERROR) << "freeing ipt buffer: "
+                   << debugger_utils::ZxErrorString(ssize);
     goto Fail;
   }
 
@@ -723,7 +731,8 @@ void FreeTrace(const IptConfig& config) {
 
   ssize_t ssize = ioctl_ipt_free_trace(ipt_fd.get());
   if (ssize < 0) {
-    FXL_LOG(ERROR) << "ioctl_ipt_free_trace failed: " << ZxErrorString(ssize);
+    FXL_LOG(ERROR) << "ioctl_ipt_free_trace failed: "
+                   << debugger_utils::ZxErrorString(ssize);
   }
 
   // TODO(dje): Resume original ktracing? Need ability to get old value.
@@ -737,4 +746,4 @@ void FreeTrace(const IptConfig& config) {
                     nullptr);
 }
 
-}  // namespace debugserver
+}  // namespace insntrace

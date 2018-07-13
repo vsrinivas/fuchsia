@@ -13,7 +13,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 
-namespace debugserver {
+namespace inferior_control {
 
 class Thread;
 
@@ -161,4 +161,4 @@ class Registers {
   FXL_DISALLOW_COPY_AND_ASSIGN(Registers);
 };
 
-}  // namespace debugserver
+}  // namespace inferior_control

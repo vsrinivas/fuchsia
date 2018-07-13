@@ -15,7 +15,7 @@
 
 #include "util.h"
 
-namespace debugserver {
+namespace debugger_utils {
 
 const char* ElfErrorName(ElfError err) {
   switch (err) {
@@ -246,4 +246,4 @@ const ElfRawSymbol& ElfSectionContents::GetSymbolEntry(size_t entry_number) {
   return *reinterpret_cast<const ElfRawSymbol*>(sym);
 }
 
-}  // namespace debugserver
+}  // namespace debugger_utils

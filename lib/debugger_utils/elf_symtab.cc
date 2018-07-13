@@ -6,7 +6,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace debugserver {
+namespace debugger_utils {
 
 ElfSymbolTable::ElfSymbolTable(const std::string& file_name,
                                const std::string& contents)
@@ -117,4 +117,4 @@ void ElfSymbolTable::Dump(FILE* f) const {
   }
 }
 
-}  // namespace debugserver
+}  // namespace debugger_utils

@@ -25,14 +25,12 @@
 
 namespace intel_processor_trace {
 
-using debugserver::ErrnoString;
-
 // For passing data from ReadKtraceFile to ProcessKtraceRecord.
 struct KtraceData {
   DecoderState* state;
 };
 
-int DecoderState::ProcessKtraceRecord(debugserver::KtraceRecord* rec,
+int DecoderState::ProcessKtraceRecord(debugger_utils::KtraceRecord* rec,
                                       void* arg) {
   KtraceData* data = reinterpret_cast<KtraceData*>(arg);
   DecoderState* state = data->state;
@@ -102,12 +100,12 @@ bool DecoderState::ReadKtraceFile(const std::string& file) {
   fxl::UniqueFD fd(open(file.c_str(), O_RDONLY));
   if (!fd.is_valid()) {
     FXL_LOG(ERROR) << "error opening ktrace file"
-                   << ", " << ErrnoString(errno);
+                   << ", " << debugger_utils::ErrnoString(errno);
     return false;
   }
 
   KtraceData data = {this};
-  int rc = debugserver::KtraceReadFile(fd.get(), ProcessKtraceRecord, &data);
+  int rc = debugger_utils::KtraceReadFile(fd.get(), ProcessKtraceRecord, &data);
   if (rc != 0) {
     FXL_LOG(ERROR) << fxl::StringPrintf("Error %d reading ktrace file", rc);
     return false;
@@ -132,7 +130,7 @@ bool DecoderState::ReadPtListFile(const std::string& file) {
   FILE* f = fopen(file.c_str(), "r");
   if (!f) {
     FXL_LOG(ERROR) << "error opening pt file list file"
-                   << ", " << ErrnoString(errno);
+                   << ", " << debugger_utils::ErrnoString(errno);
     return false;
   }
 

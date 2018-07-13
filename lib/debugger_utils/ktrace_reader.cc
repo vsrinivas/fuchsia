@@ -17,7 +17,7 @@
 
 #include "ktrace_reader.h"
 
-namespace debugserver {
+namespace debugger_utils {
 
 int KtraceReadFile(int fd, KtraceRecordReader* reader, void* arg) {
   KtraceRecord rec;
@@ -62,11 +62,9 @@ const char* KtraceRecName(uint32_t tag) {
   }
 }
 
-}  // namespace debugserver
+}  // namespace debugger_utils
 
 #ifdef TEST
-
-using debugserver::ktrace::KtraceRecord;
 
 struct TestData {
   size_t count;
@@ -87,8 +85,8 @@ static void Dump_NAME(const ktrace_rec_name_t* rec) {
   printf(" name %s", rec->name);
 }
 
-static void DumpRecord(const KtraceRecord* rec) {
-  printf("%s(%x):", debugserver::ktrace::RecName(rec->hdr.tag), rec->hdr.tag);
+static void DumpRecord(const debugger_utils::KtraceRecord* rec) {
+  printf("%s(%x):", debugger_utils::KtraceRecName(rec->hdr.tag), rec->hdr.tag);
 
   // TODO: Remove magic number
   switch (rec->hdr.tag & 0xffffff00u) {
@@ -105,7 +103,7 @@ static void DumpRecord(const KtraceRecord* rec) {
   printf("\n");
 }
 
-static int ProcessTest(KtraceRecord* rec, void* arg) {
+static int ProcessTest(debugger_utils::KtraceRecord* rec, void* arg) {
   auto data = reinterpret_cast<TestData*>(arg);
 
   ++data->count;
@@ -130,7 +128,7 @@ int main(int argc, char* argv[]) {
 
   TestData data = {};
 
-  int rc = debugserver::ktrace::ReadFile(fd, ProcessTest, &data);
+  int rc = debugger_utils::KtraceReadFile(fd, ProcessTest, &data);
 
   printf("process_test returned %d\n", rc);
   printf("%zu records\n", data.count);

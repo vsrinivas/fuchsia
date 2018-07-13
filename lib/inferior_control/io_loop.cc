@@ -13,7 +13,7 @@
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fxl/logging.h"
 
-namespace debugserver {
+namespace inferior_control {
 
 IOLoop::IOLoop(int fd, Delegate* delegate, async::Loop* origin_loop)
     : quit_called_(false),
@@ -70,11 +70,11 @@ void IOLoop::PostWriteTask(const fxl::StringView& bytes) {
     // least with the GDB Remote protocol).
     if (bytes_written != static_cast<ssize_t>(bytes.size())) {
       FXL_LOG(ERROR) << "Failed to send bytes"
-                     << ", " << ErrnoString(errno);
+                     << ", " << debugger_utils::ErrnoString(errno);
       ReportError();
       return;
     }
-    FXL_VLOG(2) << "<- " << EscapeNonPrintableString(bytes);
+    FXL_VLOG(2) << "<- " << debugger_utils::EscapeNonPrintableString(bytes);
   });
 }
 
@@ -90,4 +90,4 @@ void IOLoop::ReportDisconnected() {
                   [this] { delegate_->OnDisconnected(); });
 }
 
-}  // namespace debugserver
+}  // namespace inferior_control

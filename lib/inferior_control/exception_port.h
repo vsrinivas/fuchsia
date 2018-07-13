@@ -20,7 +20,7 @@
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 
-namespace debugserver {
+namespace inferior_control {
 
 class Thread;
 
@@ -123,4 +123,4 @@ void PrintException(FILE* out, const Thread* thread, zx_excp_type_t type,
 // This doesn't have a better place at the moment.
 void PrintSignal(FILE* out, const Thread* thread, zx_signals_t signals);
 
-}  // namespace debugserver
+}  // namespace inferior_control

@@ -19,7 +19,7 @@
 #include "arch_x86.h"
 #include "thread.h"
 
-namespace debugserver {
+namespace inferior_control {
 
 int GetPCRegisterNumber() { return static_cast<int>(Amd64Register::RIP); }
 
@@ -43,7 +43,7 @@ std::string GetRegisterAsStringHelper(const zx_thread_state_general_regs& gregs,
 
   greg_bytes += regno < 0 ? 0 : regno * sizeof(uint64_t);
 
-  return EncodeByteArrayString(greg_bytes, kDataSize);
+  return debugger_utils::EncodeByteArrayString(greg_bytes, kDataSize);
 }
 
 class RegistersAmd64 final : public Registers {
@@ -99,7 +99,7 @@ class RegistersAmd64 final : public Registers {
     greg_bytes += regno * sizeof(uint64_t);
     std::memcpy(buffer, greg_bytes, buf_size);
     FXL_VLOG(1) << "Get register " << regno << " = "
-                << EncodeByteArrayString(greg_bytes, buf_size);
+                << debugger_utils::EncodeByteArrayString(greg_bytes, buf_size);
     return true;
   }
 
@@ -118,7 +118,8 @@ class RegistersAmd64 final : public Registers {
     greg_bytes += regno * sizeof(uint64_t);
     std::memcpy(greg_bytes, value, value_size);
     FXL_VLOG(1) << "Set register " << regno << " = "
-                << EncodeByteArrayString(greg_bytes, value_size);
+                << debugger_utils::EncodeByteArrayString(greg_bytes,
+                                                         value_size);
     return true;
   }
 
@@ -179,4 +180,4 @@ std::string Registers::GetUninitializedGeneralRegistersAsString() {
 // static
 size_t Registers::GetRegisterSize() { return sizeof(uint64_t); }
 
-}  // namespace debugserver
+}  // namespace inferior_control

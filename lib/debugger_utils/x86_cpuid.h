@@ -13,7 +13,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace debugserver {
+namespace debugger_utils {
 
 // cpu vendors
 enum x86_vendor_list { X86_VENDOR_UNKNOWN, X86_VENDOR_INTEL, X86_VENDOR_AMD };
@@ -70,9 +70,9 @@ bool x86_feature_test(x86_cpuid_bit bit);
 // TODO(dje): Switch to iostreams later, maybe.
 void x86_feature_debug(FILE* out);
 
-#define X86_CPUID_BIT(leaf, word, bit)                       \
-  (::debugserver::x86_cpuid_bit) {                           \
-    (::debugserver::x86_cpuid_leaf_num)(leaf), (word), (bit) \
+#define X86_CPUID_BIT(leaf, word, bit)                          \
+  (::debugger_utils::x86_cpuid_bit) {                           \
+    (::debugger_utils::x86_cpuid_leaf_num)(leaf), (word), (bit) \
   }
 
 // add feature bits to test here
@@ -131,4 +131,4 @@ struct x86_topology_level {
  */
 bool x86_topology_enumerate(uint8_t level, x86_topology_level* info);
 
-}  // namespace debugserver
+}  // namespace debugger_utils

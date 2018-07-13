@@ -13,7 +13,7 @@
 
 #include "elf_reader.h"
 
-namespace debugserver {
+namespace debugger_utils {
 
 struct ElfSymbol {
   // weak pointer into the string section of the loaded ELF file
@@ -65,4 +65,4 @@ class ElfSymbolTable {
   FXL_DISALLOW_COPY_AND_ASSIGN(ElfSymbolTable);
 };
 
-}  // namespace debugserver
+}  // namespace debugger_utils

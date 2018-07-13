@@ -7,7 +7,7 @@
 
 #include "gtest/gtest.h"
 
-namespace debugserver {
+namespace debugger_utils {
 namespace {
 
 zx_koid_t GetKoid(zx_handle_t task) {
@@ -201,4 +201,4 @@ TEST(JobsTest, TakeChildJobOwnership) {
 }
 
 }  // namespace
-}  // namespace debugserver
+}  // namespace debugger_utils

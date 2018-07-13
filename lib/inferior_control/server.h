@@ -20,7 +20,7 @@
 #include "process.h"
 #include "thread.h"
 
-namespace debugserver {
+namespace inferior_control {
 
 // Server implements the main loop and handles commands.
 //
@@ -132,4 +132,4 @@ class ServerWithIO : public Server, public IOLoop::Delegate {
   fxl::UniqueFD client_sock_;
 };
 
-}  // namespace debugserver
+}  // namespace inferior_control

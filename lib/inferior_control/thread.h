@@ -16,7 +16,7 @@
 #include "breakpoint.h"
 #include "registers.h"
 
-namespace debugserver {
+namespace inferior_control {
 
 class Process;
 
@@ -138,4 +138,4 @@ class Thread final {
   FXL_DISALLOW_COPY_AND_ASSIGN(Thread);
 };
 
-}  // namespace debugserver
+}  // namespace inferior_control

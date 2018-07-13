@@ -18,7 +18,7 @@
 #include "garnet/lib/inferior_control/server.h"
 #include "garnet/lib/inferior_control/thread.h"
 
-namespace debugserver {
+namespace insntrace {
 
 // The parameters controlling data collection.
 
@@ -89,7 +89,7 @@ struct IptConfig {
 //
 // NOTE: This class is generally not thread safe. Care must be taken when
 // calling methods which modify the internal state of a IptServer instance.
-class IptServer final : public Server {
+class IptServer final : public inferior_control::Server {
  public:
   IptServer(const IptConfig& config);
 
@@ -100,15 +100,19 @@ class IptServer final : public Server {
   bool DumpResults();
 
   // Process::Delegate overrides.
-  void OnThreadStarting(Process* process, Thread* thread,
+  void OnThreadStarting(inferior_control::Process* process,
+                        inferior_control::Thread* thread,
                         const zx_exception_context_t& context) override;
-  void OnThreadExiting(Process* process, Thread* thread,
+  void OnThreadExiting(inferior_control::Process* process,
+                       inferior_control::Thread* thread,
                        const zx_exception_context_t& context) override;
-  void OnProcessExit(Process* process) override;
-  void OnArchitecturalException(Process* process, Thread* thread,
+  void OnProcessExit(inferior_control::Process* process) override;
+  void OnArchitecturalException(inferior_control::Process* process,
+                                inferior_control::Thread* thread,
                                 const zx_excp_type_t type,
                                 const zx_exception_context_t& context) override;
-  void OnSyntheticException(Process* process, Thread* thread,
+  void OnSyntheticException(inferior_control::Process* process,
+                            inferior_control::Thread* thread,
                             zx_excp_type_t type,
                             const zx_exception_context_t& context) override;
 
@@ -117,4 +121,4 @@ class IptServer final : public Server {
   FXL_DISALLOW_COPY_AND_ASSIGN(IptServer);
 };
 
-}  // namespace debugserver
+}  // namespace insntrace

@@ -24,7 +24,7 @@
 using std::lock_guard;
 using std::mutex;
 
-namespace debugserver {
+namespace inferior_control {
 
 namespace {
 
@@ -69,7 +69,7 @@ bool ExceptionPort::Run() {
   zx_status_t status = zx::port::create(0, &eport_handle_);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to create the exception port: "
-                   << ZxErrorString(status);
+                   << debugger_utils::ZxErrorString(status);
     return false;
   }
 
@@ -117,7 +117,8 @@ ExceptionPort::Key ExceptionPort::Bind(zx_handle_t process_handle,
       zx_object_get_info(process_handle, ZX_INFO_HANDLE_BASIC, &info,
                          sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_object_get_info_failed: " << ZxErrorString(status);
+    FXL_LOG(ERROR) << "zx_object_get_info_failed: "
+                   << debugger_utils::ZxErrorString(status);
     return 0;
   }
   FXL_DCHECK(info.type == ZX_OBJ_TYPE_PROCESS);
@@ -136,7 +137,7 @@ ExceptionPort::Key ExceptionPort::Bind(zx_handle_t process_handle,
                                        next_key, ZX_EXCEPTION_PORT_DEBUGGER);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to bind exception port: "
-                   << ZxErrorString(status);
+                   << debugger_utils::ZxErrorString(status);
     return 0;
   }
 
@@ -145,7 +146,7 @@ ExceptionPort::Key ExceptionPort::Bind(zx_handle_t process_handle,
                                 ZX_TASK_TERMINATED, ZX_WAIT_ASYNC_ONCE);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to async wait for process: "
-                   << ZxErrorString(status);
+                   << debugger_utils::ZxErrorString(status);
     return 0;
   }
 
@@ -196,7 +197,7 @@ void ExceptionPort::Worker() {
     zx_status_t status = zx_port_wait(eport, ZX_TIME_INFINITE, &packet);
     if (status < 0) {
       FXL_LOG(ERROR) << "zx_port_wait returned error: "
-                     << ZxErrorString(status);
+                     << debugger_utils::ZxErrorString(status);
     }
 
     FXL_VLOG(2) << "IO port packet received - key: " << packet.key
@@ -204,7 +205,7 @@ void ExceptionPort::Worker() {
 
     if (ZX_PKT_IS_EXCEPTION(packet.type)) {
       FXL_VLOG(1) << "Exception received: "
-                  << ExceptionName(
+                  << debugger_utils::ExceptionName(
                          static_cast<const zx_excp_type_t>(packet.type))
                   << " (" << packet.type << "), pid: " << packet.exception.pid
                   << ", tid: " << packet.exception.tid;
@@ -279,7 +280,7 @@ void PrintException(FILE* out, const Thread* thread, zx_excp_type_t type,
   if (ZX_EXCP_IS_ARCH(type)) {
     fprintf(out, "Thread %s received exception %s\n",
             thread->GetDebugName().c_str(),
-            ExceptionToString(type, context).c_str());
+            debugger_utils::ExceptionToString(type, context).c_str());
     zx_vaddr_t pc = thread->registers()->GetPC();
     fprintf(out, "PC 0x%" PRIxPTR "\n", pc);
   } else {
@@ -319,4 +320,4 @@ void PrintSignals(FILE* out, const Thread* thread, zx_signals_t signals) {
           description.c_str() + 2);
 }
 
-}  // namespace debugserver
+}  // namespace inferior_control

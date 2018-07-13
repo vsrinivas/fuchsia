@@ -37,11 +37,11 @@
 
 namespace simple_pt {
 
-using Symbol = debugserver::ElfSymbol;
+using Symbol = debugger_utils::ElfSymbol;
 
-class SymbolTable : public debugserver::ElfSymbolTable {
+class SymbolTable : public debugger_utils::ElfSymbolTable {
  public:
-  SymbolTable(debugserver::ElfReader* reader,
+  SymbolTable(debugger_utils::ElfReader* reader,
               const std::string& contents,
               uint64_t cr3,
               uint64_t base,

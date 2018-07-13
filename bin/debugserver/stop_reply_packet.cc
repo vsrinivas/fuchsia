@@ -53,7 +53,7 @@ void StopReplyPacket::AddRegisterValue(uint8_t register_number,
   result.resize(3 + value.size());
 
   char* ptr = result.data();
-  EncodeByteString(register_number, ptr);
+  debugger_utils::EncodeByteString(register_number, ptr);
   ptr += 2;
   *ptr++ = ':';
   std::memcpy(ptr, value.data(), value.size());
@@ -95,7 +95,7 @@ std::vector<char> StopReplyPacket::Build() const {
   // Sigval
   uint8_t signo = stop_reason_.empty() ? signo_ : 5;  // TODO(dje): 5->?
   char signo_str[2];
-  EncodeByteString(signo, signo_str);
+  debugger_utils::EncodeByteString(signo, signo_str);
   packet.insert(packet.end(), signo_str, signo_str + 2);
 
   // Registers

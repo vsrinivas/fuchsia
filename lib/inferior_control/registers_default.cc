@@ -6,7 +6,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace debugserver {
+namespace inferior_control {
 
 int GetPCRegisterNumber() { return -1; }
 
@@ -64,4 +64,4 @@ std::string Registers::GetUninitializedGeneralRegistersAsString() { return ""; }
 // static
 size_t Registers::GetRegisterSize() { return 0; }
 
-}  // namespace debugserver
+}  // namespace inferior_control

@@ -20,7 +20,7 @@
 #include "garnet/lib/inferior_control/server.h"
 #include "garnet/lib/inferior_control/thread.h"
 
-namespace debugserver {
+namespace inferior_control {
 
 // Server baseclass for tests. Tests may subclass this if they need.
 // NOTE: This class is generally not thread safe. Care must be taken when
@@ -70,4 +70,4 @@ class TestServer : public Server, public ::testing::Test {
   FXL_DISALLOW_COPY_AND_ASSIGN(TestServer);
 };
 
-}  // namespace debugserver
+}  // namespace inferior_control

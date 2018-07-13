@@ -15,7 +15,7 @@
 #include "lib/fxl/strings/string_view.h"
 #include "lib/fxl/tasks/task_runner.h"
 
-namespace debugserver {
+namespace inferior_control {
 
 // Maintains dedicated threads for reads and writes on a given socket file
 // descriptor and allows read and write tasks to be scheduled from a single
@@ -114,4 +114,4 @@ class IOLoop {
   FXL_DISALLOW_COPY_AND_ASSIGN(IOLoop);
 };
 
-}  // namespace debugserver
+}  // namespace inferior_control

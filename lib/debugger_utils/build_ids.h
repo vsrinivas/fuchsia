@@ -9,7 +9,7 @@
 
 #include "lib/fxl/macros.h"
 
-namespace debugserver {
+namespace debugger_utils {
 
 struct BuildId {
   std::string build_id;
@@ -33,4 +33,4 @@ class BuildIdTable {
   FXL_DISALLOW_COPY_AND_ASSIGN(BuildIdTable);
 };
 
-}  // namespace debugserver
+}  // namespace debugger_utils
