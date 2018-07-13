@@ -180,6 +180,7 @@ Vcpu::Vcpu(Guest* guest, uint8_t vpid, const thread_t* thread)
 }
 
 Vcpu::~Vcpu() {
+    timer_cancel(&gich_state_.timer);
     __UNUSED zx_status_t status = guest_->FreeVpid(vpid_);
     DEBUG_ASSERT(status == ZX_OK);
 }
