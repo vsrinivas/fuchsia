@@ -3,6 +3,8 @@
         "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:has_persistent_storage",
         "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:no_persistent_storage",
         "//garnet/bin/appmgr/integration_tests/sandbox/features/shell:has_shell",
-        "//garnet/bin/appmgr/integration_tests/sandbox/features/shell:no_shell"
+        "//garnet/bin/appmgr/integration_tests/sandbox/features/shell:no_shell",
+        "//garnet/bin/appmgr/integration_tests/sandbox/features/system-temp:has_system_temp",
+        "//garnet/bin/appmgr/integration_tests/sandbox/features/system-temp:no_system_temp"
     ]
 }

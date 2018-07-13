@@ -1,0 +1,16 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("namespace_test") {
+  testonly = true
+
+  sources = [
+    "namespace_test.cc",
+    "namespace_test.h",
+  ]
+
+  public_deps = [
+    "//third_party/googletest:gtest",
+  ]
+}

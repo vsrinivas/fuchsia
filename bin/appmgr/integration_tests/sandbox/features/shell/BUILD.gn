@@ -10,6 +10,7 @@ sandbox_test_package("has_shell") {
   ]
 
   deps = [
+    "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
     "//garnet/public/lib/fxl/test:gtest_main",
   ]
 }
@@ -20,6 +21,7 @@ sandbox_test_package("no_shell") {
   ]
 
   deps = [
+    "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
     "//garnet/public/lib/fxl/test:gtest_main",
   ]
 }

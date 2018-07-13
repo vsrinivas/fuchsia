@@ -4,9 +4,9 @@
 
 import("//garnet/bin/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 
-sandbox_test_package("has_persistent_storage") {
+sandbox_test_package("has_system_temp") {
   sources = [
-    "has_persistent_storage.cc",
+    "has_system_temp.cc",
   ]
 
   deps = [
@@ -15,9 +15,9 @@ sandbox_test_package("has_persistent_storage") {
   ]
 }
 
-sandbox_test_package("no_persistent_storage") {
+sandbox_test_package("no_system_temp") {
   sources = [
-    "no_persistent_storage.cc",
+    "no_system_temp.cc",
   ]
 
   deps = [

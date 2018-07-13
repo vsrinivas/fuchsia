@@ -4,4 +4,4 @@
 
 #include "garnet/bin/appmgr/integration_tests/sandbox/namespace_test.h"
 
-TEST_F(NamespaceTest, NoPersistentStorage) { ExpectDoesNotExist("/data/"); }
+TEST_F(NamespaceTest, HasSystemTemp) { ExpectExists("/tmp/"); }
