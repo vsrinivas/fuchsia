@@ -27,10 +27,12 @@ namespace memfs {
 constexpr size_t kMemfsMaxFileSize = 512 * 1024 * 1024;
 
 VnodeFile::VnodeFile(Vfs* vfs)
-    : VnodeMemfs(vfs), length_(0) {}
+    : VnodeMemfs(vfs), vmo_size_(0), length_(0) {}
 
 VnodeFile::VnodeFile(Vfs* vfs, zx_handle_t vmo, zx_off_t length)
-    : VnodeMemfs(vfs), vmo_(vmo), length_(length) {}
+    : VnodeMemfs(vfs), vmo_(vmo), length_(length) {
+    ZX_ASSERT(vmo_.get_size(&vmo_size_) == ZX_OK);
+}
 
 VnodeFile::~VnodeFile() = default;
 
@@ -68,11 +70,13 @@ zx_status_t VnodeFile::Write(const void* data, size_t len, size_t offset,
         if ((status = zx::vmo::create(alignedlen, 0, &vmo_)) != ZX_OK) {
             return status;
         }
+        vmo_size_ = alignedlen;
     } else if (alignedlen > fbl::round_up(length_, static_cast<size_t>(PAGE_SIZE))) {
         // Accessing beyond the end of the file? Extend it.
         if ((status = vmo_.set_size(alignedlen)) != ZX_OK) {
             return status;
         }
+        vmo_size_ = alignedlen;
     }
 
     size_t writelen = newlen - offset;
@@ -159,30 +163,47 @@ zx_status_t VnodeFile::Truncate(size_t len) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    size_t alignedLen = fbl::round_up(len, static_cast<size_t>(PAGE_SIZE));
-
+    constexpr size_t kPageSize = static_cast<size_t>(PAGE_SIZE);
     if (!vmo_.is_valid()) {
         // First access to the file? Allocate it.
+        size_t alignedLen = fbl::round_up(len, kPageSize);
         if ((status = zx::vmo::create(alignedLen, 0, &vmo_)) != ZX_OK) {
             return status;
         }
-    } else if ((len < length_) && (len % PAGE_SIZE != 0)) {
-        // Currently, if the file is truncated to a 'partial page', an later re-expanded, then the
-        // partial page is *not necessarily* filled with zeroes. As a consequence, we manually must
-        // fill the portion between "len" and the next highest page (or vn->length, whichever
-        // is smaller) with zeroes.
-        char buf[PAGE_SIZE];
-        size_t ppage_size = PAGE_SIZE - (len % PAGE_SIZE);
-        ppage_size = len + ppage_size < length_ ? ppage_size : length_ - len;
-        memset(buf, 0, ppage_size);
-        if (vmo_.write(buf, len, ppage_size) != ZX_OK) {
-            return ZX_ERR_IO;
+        vmo_size_ = alignedLen;
+    } else if (len < length_) {
+        // Shrink the logical file length.
+        if (len % kPageSize != 0) {
+            // Currently, if the file is truncated to a 'partial page', and later
+            // re-expanded, then the partial page is *not necessarily* filled with
+            // zeroes. As a consequence, we manually must fill the portion between
+            // "len" and the next highest page (or vn->length, whichever is smaller)
+            // with zeroes.
+            char buf[kPageSize];
+            size_t ppage_size = kPageSize - (len % kPageSize);
+            ppage_size = len + ppage_size < length_ ? ppage_size : length_ - len;
+            memset(buf, 0, ppage_size);
+            if ((status = vmo_.write(buf, len, ppage_size)) != ZX_OK) {
+                return status;
+            }
         }
+
+        uint64_t decommit_offset = fbl::round_up(len, kPageSize);
+        uint64_t decommit_length = fbl::round_up(length_, kPageSize) - decommit_offset;
+
+        if (decommit_length > 0) {
+            if ((status = vmo_.op_range(ZX_VMO_OP_DECOMMIT, decommit_offset,
+                                        decommit_length, nullptr, 0)) != ZX_OK) {
+                return status;
+            }
+        }
+    } else if (len > vmo_size_) {
+        // Extend the underlying VMO used to store the file.
+        size_t alignedLen = fbl::round_up(len, kPageSize);
         if ((status = vmo_.set_size(alignedLen)) != ZX_OK) {
             return status;
         }
-    } else if ((status = vmo_.set_size(alignedLen)) != ZX_OK) {
-        return status;
+        vmo_size_ = alignedLen;
     }
 
     length_ = len;

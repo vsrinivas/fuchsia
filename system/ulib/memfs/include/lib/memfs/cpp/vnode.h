@@ -86,6 +86,9 @@ private:
     zx_status_t GetVmo(int flags, zx_handle_t* out) final;
 
     zx::vmo vmo_;
+    // Cached length of the vmo.
+    uint64_t vmo_size_;
+    // Logical length of the underlying file.
     zx_off_t length_;
 };
 
