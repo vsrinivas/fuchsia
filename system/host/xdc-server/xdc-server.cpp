@@ -5,6 +5,7 @@
 #include <zircon/device/debug.h>
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <sys/file.h>
 #include <sys/socket.h>
@@ -137,13 +138,25 @@ void XdcServer::ClientConnect() {
     struct sockaddr_un addr;
     socklen_t len = sizeof(addr);
     // Most of the time we want non-blocking transfers, so we can handle other clients / libusb.
-    int client_fd = accept4(socket_fd_.get(), (struct sockaddr *)&addr, &len, SOCK_NONBLOCK);
+    int client_fd = accept(socket_fd_.get(), (struct sockaddr *)&addr, &len);
     if (client_fd < 0) {
         fprintf(stderr, "Socket accept failed, err: %s\n", strerror(errno));
         return;
     }
     if (clients_.count(client_fd) > 0) {
         fprintf(stderr, "Client already connected, socket fd: %d\n", client_fd);
+        return;
+    }
+    int flags = fcntl(client_fd, F_GETFL, 0);
+    if (flags < 0) {
+        fprintf(stderr, "Could not get socket flags, err: %s\n", strerror(errno));
+        close(client_fd);
+        return;
+    }
+    int res = fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);
+    if (res != 0) {
+        fprintf(stderr, "Could not set socket as nonblocking, err: %s\n", strerror(errno));
+        close(client_fd);
         return;
     }
     printf("Client connected, socket fd: %d\n", client_fd);
