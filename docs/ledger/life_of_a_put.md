@@ -72,7 +72,7 @@ TODO
 ### Cloud sync
 ### P2P sync
 
-[ledger.fidl]: ../../public/lib/ledger/fidl/ledger.fidl
+[ledger.fidl]: ../../public/fidl/fuchsia.ledger/ledger.fidl
 [VMO]: https://fuchsia.googlesource.com/zircon/+/master/docs/objects/vm_object.md
 [dynamic chunking]: https://github.com/YADL/yadl/wiki/Rabin-Karp-for-Variable-Chunking
 [splitting implementation]: ../../bin/ledger/storage/impl/split.cc
