@@ -42,6 +42,11 @@ _preprocessed_packages = exec_script("prepreprocess_build_packages.py",
                                      ],
                                      "json")
 
+# Tell GN that the files preprocess_build_packages.py ran are inputs to the
+# generation step, by declaring them as file inputs to a (silly) exec_script
+# invocation.
+exec_script("/bin/sh", ["-c", ":"], "", _preprocessed_packages.files_read)
+
 # Every GN package() target included in the build.  The image-building
 # steps iterate over this to aggregate all the internal targets defined by
 # the package() template.

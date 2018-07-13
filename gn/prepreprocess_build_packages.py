@@ -84,12 +84,14 @@ class PackageLabelObserver:
             'targets': [],
             'data_deps': [],
             'host_tests': [],
+            'files_read': [],
         }
 
     def import_resolved(self, config, config_path):
         self.json_result['targets'] += config.get('packages', [])
         self.json_result['data_deps'] += config.get('labels', [])
         self.json_result['host_tests'] += config.get('host_tests', [])
+        self.json_result['files_read'].append(config_path)
 
 
 def main():
