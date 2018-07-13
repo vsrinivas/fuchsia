@@ -16,6 +16,12 @@ int main(int argc, char** argv) {
   async::Loop loop;
   trace::TraceProvider provider(loop.dispatcher());
 
+  // Wait for tracing to get set up.  This works around a race condition in
+  // the tracing system (see TO-650).  Without this, the tracing system can
+  // miss some of the initial tracing events we generate later.
+  puts("Sleeping to allow tracing to start...");
+  loop.Run(zx::deadline_after(zx::sec(1)));
+
   puts("Starting Benchmark...");
 
   // Run the task for kIterationCount iterations.  We use a fixed number
