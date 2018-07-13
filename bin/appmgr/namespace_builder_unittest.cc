@@ -46,9 +46,9 @@ TEST(NamespaceBuilder, Control) {
                         "/dev/class/display-controller") != paths.end());
   EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/dev/class/gpu") !=
               paths.end());
-  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/data/vulkan") !=
-              paths.end());
   EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/lib") !=
+              paths.end());
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/config/vulkan") !=
               paths.end());
 
   for (size_t i = 0; i < flat->count; ++i)
