@@ -361,7 +361,8 @@ void SuggestionEngineImpl::ExecuteActions(
         break;
       }
       case fuchsia::modular::Action::Tag::kAddModule: {
-        PerformAddModuleAction(action, override_story_id);
+        PerformAddModuleAction(action, std::move(listener), proposal_id,
+                               override_story_id);
         break;
       }
       case fuchsia::modular::Action::Tag::kQueryAction: {
@@ -387,7 +388,7 @@ void SuggestionEngineImpl::ExecuteActions(
 
   if (listener) {
     auto proposal_listener = listener.Bind();
-    proposal_listener->OnProposalAccepted(proposal_id, nullptr /* story_id */);
+    proposal_listener->OnProposalAccepted(proposal_id, override_story_id);
   }
 }
 
@@ -474,6 +475,8 @@ void SuggestionEngineImpl::PerformFocusStoryAction(
 
 void SuggestionEngineImpl::PerformAddModuleAction(
     const fuchsia::modular::Action& action,
+    fidl::InterfaceHandle<fuchsia::modular::ProposalListener> listener,
+    const std::string& proposal_id,
     const std::string& override_story_id) {
   if (!story_provider_) {
     FXL_LOG(WARNING) << "Unable to add module; no story provider";
@@ -514,6 +517,15 @@ void SuggestionEngineImpl::PerformAddModuleAction(
   story_controller->GetModuleController(std::move(parent_module_path),
                                         mod_controller.NewRequest());
   mod_controller->Focus();
+
+  //  Notify with story id where the mod was added. This notifications will be
+  //  done in a central place once the refactor into puppet master is completed.
+  //  For now we notify here to be able to send the right story id in which the
+  //  mod was added: aadd_module.story_id or override_story_id.
+  if (listener) {
+    auto proposal_listener = listener.Bind();
+    proposal_listener->OnProposalAccepted(proposal_id, story_id);
+  }
 }
 
 void SuggestionEngineImpl::PerformUpdateModuleAction(
