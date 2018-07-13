@@ -28,6 +28,8 @@ class Tiles : public fuchsia::ui::views_v1::ViewListener,
 
   ~Tiles() final;
 
+  void AddTilesByURL(std::vector<std::string> urls);
+
  private:
   struct ViewData {
     explicit ViewData(const std::string& url, uint32_t key,
@@ -66,9 +68,6 @@ class Tiles : public fuchsia::ui::views_v1::ViewListener,
   void RemoveTile(uint32_t key) final;
   void ListTiles(ListTilesCallback callback) final;
 
-  // Set up environment for launched apps
-  void CreateNestedEnvironment();
-
   // Launches initial list of views, passed as command line parameters.
 
   void AddChildView(
@@ -98,13 +97,8 @@ class Tiles : public fuchsia::ui::views_v1::ViewListener,
 
   fuchsia::ui::views_v1::ViewContainerPtr view_container_;
 
+  fuchsia::sys::LauncherPtr launcher_;
   fidl::BindingSet<fuchsia::developer::tiles::Tiles> tiles_binding_;
-
-  // Nested environment within which the apps started by Tiles will run.
-  fuchsia::sys::EnvironmentPtr env_;
-  fuchsia::sys::EnvironmentControllerPtr env_controller_;
-  fuchsia::sys::ServiceProviderBridge service_provider_bridge_;
-  fuchsia::sys::LauncherPtr env_launcher_;
 
   fuchsia::math::SizeF size_;
 

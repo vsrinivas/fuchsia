@@ -65,22 +65,16 @@ Tiles::Tiles(::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
 
   startup_context_->outgoing().AddPublicService(
       tiles_binding_.GetHandler(this));
-  CreateNestedEnvironment();
+  launcher_ =
+      startup_context_->ConnectToEnvironmentService<fuchsia::sys::Launcher>();
 }
 
 Tiles::~Tiles() = default;
 
-void Tiles::CreateNestedEnvironment() {
-  startup_context_->environment()->CreateNestedEnvironment(
-      service_provider_bridge_.OpenAsDirectory(), env_.NewRequest(),
-      env_controller_.NewRequest(), "tile");
-  env_->GetLauncher(env_launcher_.NewRequest());
-
-  zx::channel h1, h2;
-  if (zx::channel::create(0, &h1, &h2) < 0)
-    return;
-  startup_context_->environment()->GetDirectory(std::move(h1));
-  service_provider_bridge_.set_backing_dir(std::move(h2));
+void Tiles::AddTilesByURL(std::vector<std::string> urls) {
+  for (const auto& url : urls) {
+    AddTileFromURL(fidl::StringPtr(url), {}, {});
+  }
 }
 
 // |Tiles|:
@@ -96,9 +90,7 @@ void Tiles::AddTileFromURL(fidl::StringPtr url,
   launch_info.arguments = std::move(args);
   launch_info.directory_request = services.NewRequest();
 
-  // |env_launcher_| launches the app with our nested environment.
-  env_launcher_->CreateComponent(std::move(launch_info),
-                                 controller.NewRequest());
+  launcher_->CreateComponent(std::move(launch_info), controller.NewRequest());
 
   // Get the view provider back from the launched app.
   auto view_provider = services.ConnectToService<ViewProvider>();
@@ -111,7 +103,8 @@ void Tiles::AddTileFromURL(fidl::StringPtr url,
   AddChildView(child_key, std::move(child_view_owner), url,
                std::move(controller));
 
-  callback(child_key);
+  if (callback)
+    callback(child_key);
 }
 
 void Tiles::AddTileFromViewProvider(

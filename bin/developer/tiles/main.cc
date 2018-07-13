@@ -48,6 +48,8 @@ int main(int argc, const char** argv) {
   tiles::Tiles tiles(std::move(view_manager), view_owner.NewRequest(),
                      startup_context.get(), border);
 
+  tiles.AddTilesByURL(command_line.positional_args());
+
   // Ask the presenter to display it.
   auto presenter =
       startup_context

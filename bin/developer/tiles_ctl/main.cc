@@ -52,15 +52,17 @@ std::string FirstNumericEntryInDir(const UniqueDIR& dir) {
 }
 
 TilesPtr FindTiles() {
+  std::string sys_realm_entry;
   UniqueDIR sys(opendir("/hub/r/sys/"));
-  if (!sys.is_valid()) {
-    fprintf(stderr, "Couldn't open /hub/r/sys/\n");
-    return {};
-  }
-  std::string sys_realm_entry = FirstNumericEntryInDir(sys);
-  if (sys_realm_entry == "") {
-    fprintf(stderr, "Couldn't find entry in system realm\n");
-    return {};
+  if (sys.is_valid()) {
+    sys_realm_entry = FirstNumericEntryInDir(sys);
+    if (sys_realm_entry == "") {
+      fprintf(stderr, "Couldn't find entry in system realm\n");
+      return {};
+    }
+  } else {
+    sys.reset(opendir("/"));
+    sys_realm_entry = "hub";
   }
   std::string tiles_name = sys_realm_entry + "/c/tiles/";
   fxl::UniqueFD tile_component(
