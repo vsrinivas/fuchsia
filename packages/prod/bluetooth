@@ -1,5 +1,6 @@
 {
     "packages": [
+        "//garnet/bin/bluetooth/bt-mgr",
         "//garnet/bin/bluetooth/bt-gap",
         "//garnet/bin/bluetooth/tools:bt-tools",
         "//garnet/drivers/bluetooth/hci/atheros:btatheros",

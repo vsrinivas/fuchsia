@@ -1,0 +1,6 @@
+{
+  "io-capability": {
+    "input": "Keyboard",
+    "output": "Display"
+  }
+}
