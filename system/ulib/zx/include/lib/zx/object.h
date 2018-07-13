@@ -292,6 +292,8 @@ public:
         static_cast<void>(h);
     }
 
+    const T* operator->() const { return this; }
+
 private:
     friend T;
     friend unowned<T>;
