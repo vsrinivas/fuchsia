@@ -115,7 +115,7 @@ static zx_status_t nand_read_op(nand_device_t* dev, nand_op_t* nand_op) {
 
     // Map oob.
     if (nand_op->rw.oob_vmo != ZX_HANDLE_INVALID) {
-        const size_t offset_bytes = nand_op->rw.offset_oob_vmo;
+        const size_t offset_bytes = nand_op->rw.offset_oob_vmo * dev->nand_info.page_size;
         page_offset_bytes_oob = offset_bytes & (PAGE_SIZE - 1);
         const size_t aligned_offset_bytes = offset_bytes - page_offset_bytes_oob;
         status = zx_vmar_map(zx_vmar_root_self(), 0, nand_op->rw.oob_vmo,
@@ -205,7 +205,7 @@ static zx_status_t nand_write_op(nand_device_t* dev, nand_op_t* nand_op) {
 
     // Map oob.
     if (nand_op->rw.oob_vmo != ZX_HANDLE_INVALID) {
-        const size_t offset_bytes = nand_op->rw.offset_oob_vmo;
+        const size_t offset_bytes = nand_op->rw.offset_oob_vmo * dev->nand_info.page_size;
         page_offset_bytes_oob = offset_bytes & (PAGE_SIZE - 1);
         const size_t aligned_offset_bytes = offset_bytes - page_offset_bytes_oob;
         status = zx_vmar_map(zx_vmar_root_self(), 0, nand_op->rw.oob_vmo,
