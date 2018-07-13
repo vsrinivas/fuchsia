@@ -114,8 +114,10 @@ impl<B: ByteSlice> UdpPacket<B> {
         // See for details: https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
 
         let bytes_len = bytes.len();
-        let (header, body) = LayoutVerified::<B, Header>::new_unaligned_from_prefix(bytes)
-            .ok_or(ParseError::Format)?;
+        let (header, body) =
+            LayoutVerified::<B, Header>::new_unaligned_from_prefix(bytes).ok_or_else(
+                debug_err_fn!(ParseError::Format, "too few bytes for header"),
+            )?;
         let packet = UdpPacket { header, body };
         let len = if packet.header.length() == 0 && A::Version::VERSION.is_v6() {
             // IPv6 supports jumbograms, so a UDP packet may be greater than
@@ -127,10 +129,13 @@ impl<B: ByteSlice> UdpPacket<B> {
             packet.header.length() as usize
         };
         if len != bytes_len {
-            return Err(ParseError::Format);
+            return debug_err!(
+                Err(ParseError::Format),
+                "length in header does not match packet length"
+            );
         }
         if packet.header.dst_port() == 0 {
-            return Err(ParseError::Format);
+            return debug_err!(Err(ParseError::Format), "zero destination port");
         }
 
         // A 0 checksum indicates that the checksum wasn't computed. In IPv4,
@@ -145,12 +150,13 @@ impl<B: ByteSlice> UdpPacket<B> {
             };
             if packet
                 .compute_checksum(src_ip, dst_ip)
-                .ok_or(ParseError::Format)? != target
+                .ok_or_else(debug_err_fn!(ParseError::Format, "segment too large"))?
+                != target
             {
-                return Err(ParseError::Checksum);
+                return debug_err!(Err(ParseError::Checksum), "invalid checksum");
             }
         } else if A::Version::VERSION.is_v6() {
-            return Err(ParseError::Checksum);
+            return debug_err!(Err(ParseError::Format), "missing checksum");
         }
 
         let hdr_len = packet.header.bytes().len();
@@ -494,13 +500,7 @@ mod tests {
         );
         // missing checksum is disallowed in IPv6; this won't succeed ahead of
         // time because the checksum bytes are already zero
-        test_zero(
-            TEST_SRC_IPV6,
-            TEST_DST_IPV6,
-            false,
-            &[],
-            ParseError::Checksum,
-        );
+        test_zero(TEST_SRC_IPV6, TEST_DST_IPV6, false, &[], ParseError::Format);
 
         // 2^32 overflows on 32-bit platforms
         #[cfg(target_pointer_width = "64")]

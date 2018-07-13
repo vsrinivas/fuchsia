@@ -22,6 +22,8 @@
 extern crate byteorder;
 #[macro_use]
 extern crate failure;
+#[macro_use]
+extern crate log;
 #[cfg(test)]
 extern crate rand;
 extern crate zerocopy;

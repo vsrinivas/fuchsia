@@ -103,12 +103,19 @@ impl<B: ByteSlice> TcpSegment<B> {
     ) -> Result<(TcpSegment<B>, Range<usize>), ParseError> {
         // See for details: https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_segment_structure
 
-        let (hdr_prefix, rest) =
-            LayoutVerified::<B, HeaderPrefix>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
+        let (hdr_prefix, rest) = LayoutVerified::<B, HeaderPrefix>::new_from_prefix(bytes)
+            .ok_or_else(debug_err_fn!(
+                ParseError::Format,
+                "too few bytes for header"
+            ))?;
         let hdr_bytes = (hdr_prefix.data_offset() * 4) as usize;
         if hdr_bytes > hdr_prefix.bytes().len() + rest.len() || hdr_bytes < hdr_prefix.bytes().len()
         {
-            return Err(ParseError::Format);
+            return debug_err!(
+                Err(ParseError::Format),
+                "invalid data offset: {}",
+                hdr_prefix.data_offset()
+            );
         }
         let (options, body) = rest.split_at(hdr_bytes - hdr_prefix.bytes().len());
         let options = Options::parse(options).map_err(|_| ParseError::Format)?;
@@ -119,15 +126,16 @@ impl<B: ByteSlice> TcpSegment<B> {
         };
 
         if segment.hdr_prefix.src_port() == 0 || segment.hdr_prefix.dst_port() == 0 {
-            return Err(ParseError::Format);
+            return debug_err!(Err(ParseError::Format), "zero source or destination port");
         }
 
         let checksum = NetworkEndian::read_u16(&segment.hdr_prefix.checksum);
         if segment
             .compute_checksum(src_ip, dst_ip)
-            .ok_or(ParseError::Format)? != checksum
+            .ok_or_else(debug_err_fn!(ParseError::Format, "segment too large"))?
+            != checksum
         {
-            return Err(ParseError::Checksum);
+            return debug_err!(Err(ParseError::Checksum), "invalid checksum");
         }
 
         let hdr_len = segment.hdr_prefix.bytes().len() + segment.options.bytes().len();

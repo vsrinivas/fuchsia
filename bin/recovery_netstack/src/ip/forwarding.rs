@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::fmt::{self, Debug, Formatter};
+
 use device::DeviceId;
 use ip::*;
 
@@ -29,6 +31,17 @@ pub struct Destination<I: Ip> {
     pub device: DeviceId,
 }
 
+impl<I: Ip> Debug for Destination<I> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        // This is the same format we'd get using #[derive(Debug)], but that
+        // would require that I: Debug, which doesn't hold for all I: Ip.
+        f.debug_struct("Destination")
+            .field("next_hop", &self.next_hop)
+            .field("device", &self.device)
+            .finish()
+    }
+}
+
 #[derive(Copy, Clone)]
 struct Entry<I: Ip> {
     subnet: Subnet<I::Addr>,
@@ -52,6 +65,7 @@ pub struct ForwardingTable<I: Ip> {
 
 impl<I: Ip> ForwardingTable<I> {
     pub fn add_route(&mut self, subnet: Subnet<I::Addr>, next_hop: I::Addr) {
+        debug!("adding route: {} -> {}", subnet, next_hop);
         self.entries.push(Entry {
             subnet,
             dest: EntryDest::Remote { next_hop },
@@ -59,6 +73,7 @@ impl<I: Ip> ForwardingTable<I> {
     }
 
     pub fn add_device_route(&mut self, subnet: Subnet<I::Addr>, device: DeviceId) {
+        debug!("adding device route: {} -> {}", subnet, device);
         self.entries.push(Entry {
             subnet,
             dest: EntryDest::Local { device },
@@ -92,6 +107,12 @@ impl<I: Ip> ForwardingTable<I> {
             "loopback addresses should be handled before consulting the forwarding table"
         );
 
+        let dst = self.lookup_helper(address);
+        trace!("lookup({}) -> {:?}", address, dst);
+        dst
+    }
+
+    fn lookup_helper(&self, address: I::Addr) -> Option<Destination<I>> {
         let best_match = self
             .entries
             .iter()
@@ -115,7 +136,7 @@ impl<I: Ip> ForwardingTable<I> {
             Some(Entry {
                 dest: EntryDest::Remote { next_hop },
                 ..
-            }) => self.lookup(*next_hop),
+            }) => self.lookup_helper(*next_hop),
             None => None,
         }
     }

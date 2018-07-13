@@ -4,7 +4,6 @@
 
 //! Parsing and serialization of IPv4 packets.
 
-#[cfg(test)]
 use std::fmt::{self, Debug, Formatter};
 use std::ops::Range;
 
@@ -60,6 +59,10 @@ struct HeaderPrefix {
 pub const MAX_HEADER_LEN: usize = 60;
 
 /// The minimum length of an IPv4 header in bytes.
+///
+/// When calculating the number of IPv4 body bytes required to meet a certain
+/// minimum body size requirement of an encapsulating packet format, the IPv4
+/// header is guaranteed to consume at least `MIN_HEADER_LEN` bytes.
 pub const MIN_HEADER_LEN: usize = 20;
 
 unsafe impl FromBytes for HeaderPrefix {}
@@ -110,11 +113,14 @@ impl<B: ByteSlice> Ipv4Packet<B> {
         // See for details: https://en.wikipedia.org/wiki/IPv4#Header
 
         let total_len = bytes.len();
-        let (hdr_prefix, rest) =
-            LayoutVerified::<B, HeaderPrefix>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
+        let (hdr_prefix, rest) = LayoutVerified::<B, HeaderPrefix>::new_from_prefix(bytes)
+            .ok_or_else(debug_err_fn!(
+                ParseError::Format,
+                "too few bytes for header"
+            ))?;
         let hdr_bytes = (hdr_prefix.ihl() * 4) as usize;
         if hdr_bytes > total_len || hdr_bytes < hdr_prefix.bytes().len() {
-            return Err(ParseError::Format);
+            return debug_err!(Err(ParseError::Format), "invalid IHL: {}", hdr_prefix.ihl());
         }
         let (options, body) = rest.split_at(hdr_bytes - HEADER_PREFIX_SIZE);
         let options = Options::parse(options).map_err(|_| ParseError::Format)?;
@@ -124,14 +130,18 @@ impl<B: ByteSlice> Ipv4Packet<B> {
             body,
         };
         if packet.hdr_prefix.version() != 4 {
-            return Err(ParseError::Format);
+            return debug_err!(
+                Err(ParseError::Format),
+                "unexpected IP version: {}",
+                packet.hdr_prefix.version()
+            );
         }
         if packet.compute_header_checksum() != packet.hdr_prefix.hdr_checksum() {
-            return Err(ParseError::Checksum);
+            return debug_err!(Err(ParseError::Checksum), "invalid checksum");
         }
         if packet.hdr_prefix.total_length() as usize != total_len {
             // we don't yet support IPv4 fragmentation
-            return Err(ParseError::NotSupported);
+            return debug_err!(Err(ParseError::NotSupported), "fragmentation not supported");
         }
 
         let hdr_len = packet.hdr_prefix.bytes().len() + packet.options.bytes().len();
@@ -243,6 +253,27 @@ where
         let checksum = Checksum::update(self.hdr_prefix.hdr_checksum(), &old_bytes, &new_bytes);
         NetworkEndian::write_u16(&mut self.hdr_prefix.hdr_checksum, checksum);
         self.hdr_prefix.ttl = ttl;
+    }
+}
+
+impl<B> Debug for Ipv4Packet<B>
+where
+    B: ByteSlice,
+{
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        f.debug_struct("Ipv4Packet")
+            .field("src_ip", &self.src_ip())
+            .field("dst_ip", &self.dst_ip())
+            .field("id", &self.id())
+            .field("ttl", &self.ttl())
+            .field("proto", &self.proto())
+            .field("frag_off", &self.fragment_offset())
+            .field("dscp", &self.dscp())
+            .field("ecn", &self.ecn())
+            .field("mf_flag", &self.mf_flag())
+            .field("df_flag", &self.df_flag())
+            .field("body", &format!("<{} bytes>", self.body.len()))
+            .finish()
     }
 }
 
@@ -449,14 +480,6 @@ mod options {
                 },
             }
         }
-    }
-}
-
-// needed by Result::unwrap_err in the tests below
-#[cfg(test)]
-impl<B> Debug for Ipv4Packet<B> {
-    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
-        write!(fmt, "Ipv4Packet")
     }
 }
 

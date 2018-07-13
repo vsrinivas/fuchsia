@@ -8,6 +8,7 @@ pub mod arp;
 pub mod ethernet;
 
 use std::collections::HashMap;
+use std::fmt::{self, Debug, Display, Formatter};
 
 use device::ethernet::EthernetDeviceState;
 use ip::{IpAddr, Subnet};
@@ -30,9 +31,33 @@ impl DeviceId {
     }
 }
 
+impl Display for DeviceId {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(f, "{}:{}", self.protocol, self.id)
+    }
+}
+
+impl Debug for DeviceId {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        Display::fmt(self, f)
+    }
+}
+
 #[derive(Copy, Clone)]
 enum DeviceProtocol {
     Ethernet,
+}
+
+impl Display for DeviceProtocol {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "{}",
+            match self {
+                DeviceProtocol::Ethernet => "Ethernet",
+            }
+        )
+    }
 }
 
 /// The state associated with the device layer.
@@ -51,6 +76,7 @@ impl DeviceLayerState {
     pub fn add_ethernet_device(&mut self, state: EthernetDeviceState) -> DeviceId {
         let id = self.allocate_id();
         self.ethernet.insert(id, state);
+        debug!("adding Ethernet device with ID {}", id);
         DeviceId::new_ethernet(id)
     }
 

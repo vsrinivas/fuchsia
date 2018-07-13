@@ -14,6 +14,32 @@
 //! caller does not need to worry about it. Any necessary conversions are
 //! performed under the hood.
 
+/// Emit a debug message and return an error.
+///
+/// Invoke the `debug!` macro on all but the first argument. A call to
+/// `debug_err!(err, ...)` is an expression whose value is the expression `err`.
+macro_rules! debug_err {
+    ($err:expr, $($arg:tt)*) => (
+        {
+            debug!($($arg)*);
+            $err
+        }
+    )
+}
+
+/// Create a closure which emits a debug message and returns an error.
+///
+/// Create a closure which, when called, invokes the `debug!` macro on all but
+/// the first argument, and returns the first argument.
+macro_rules! debug_err_fn {
+    ($err:expr, $($arg:tt)*) => (
+        || {
+            debug!($($arg)*);
+            $err
+        }
+    )
+}
+
 pub mod arp;
 pub mod ethernet;
 pub mod ipv4;

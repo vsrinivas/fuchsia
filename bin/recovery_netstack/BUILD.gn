@@ -13,6 +13,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/crates/zerocopy",
     "//third_party/rust-crates/rustc_deps:byteorder",
     "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:log",
     "//third_party/rust-crates/rustc_deps:rand"
   ]
 }

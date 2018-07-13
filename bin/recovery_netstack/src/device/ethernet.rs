@@ -4,6 +4,8 @@
 
 //! The Ethernet protocol.
 
+use std::fmt::{self, Display, Formatter};
+
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use device::DeviceId;
@@ -91,6 +93,20 @@ impl EtherType {
             Self::IPV6 => Some(EtherType::Ipv6),
             _ => None,
         }
+    }
+}
+
+impl Display for EtherType {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "{}",
+            match self {
+                EtherType::Ipv4 => "IPv4",
+                EtherType::Arp => "ARP",
+                EtherType::Ipv6 => "IPv6",
+            }
+        )
     }
 }
 

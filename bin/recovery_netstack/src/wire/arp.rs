@@ -105,19 +105,38 @@ impl Header {
 /// so `peek_arp_types` succeeding does not guarantee that a subsequent call to
 /// `parse` will also succeed.
 pub fn peek_arp_types<B: ByteSlice>(bytes: B) -> Result<(ArpHardwareType, EtherType), ParseError> {
-    let (header, _) =
-        LayoutVerified::<B, Header>::new_unaligned_from_prefix(bytes).ok_or(ParseError::Format)?;
-    let hw = ArpHardwareType::from_u16(header.hardware_protocol()).ok_or(ParseError::NotSupported)?;
-    let proto = EtherType::from_u16(header.network_protocol()).ok_or(ParseError::NotSupported)?;
+    let (header, _) = LayoutVerified::<B, Header>::new_unaligned_from_prefix(bytes).ok_or_else(
+        debug_err_fn!(ParseError::Format, "too few bytes for header"),
+    )?;
+    let hw = ArpHardwareType::from_u16(header.hardware_protocol()).ok_or_else(debug_err_fn!(
+        ParseError::NotSupported,
+        "unrecognized hardware protocol: {:x}",
+        header.hardware_protocol()
+    ))?;
+    let proto = EtherType::from_u16(header.network_protocol()).ok_or_else(debug_err_fn!(
+        ParseError::NotSupported,
+        "unrecognized network protocol: {:x}",
+        header.network_protocol()
+    ))?;
     let hlen = match hw {
         ArpHardwareType::Ethernet => <Mac as HType>::hlen(),
     };
     let plen = match proto {
         EtherType::Ipv4 => <Ipv4Addr as PType>::plen(),
-        _ => return Err(ParseError::NotSupported),
+        _ => {
+            return debug_err!(
+                Err(ParseError::NotSupported),
+                "unsupported network protocol: {}",
+                proto
+            )
+        }
     };
     if header.hardware_address_len() != hlen || header.protocol_address_len() != plen {
-        return Err(ParseError::Format);
+        return debug_err!(
+            Err(ParseError::Format),
+            "unexpected hardware or protocol address length for protocol {}",
+            proto
+        );
     }
     Ok((hw, proto))
 }
@@ -228,25 +247,37 @@ where
     /// length requirement (for example, for Ethernet frames). See the
     /// `DETAILS.md` file in the repository root for more details.
     pub fn parse(bytes: B) -> Result<ArpPacket<B, HwAddr, ProtoAddr>, ParseError> {
-        let (header, body) = LayoutVerified::<B, Header>::new_unaligned_from_prefix(bytes)
-            .ok_or(ParseError::Format)?;
+        let (header, body) =
+            LayoutVerified::<B, Header>::new_unaligned_from_prefix(bytes).ok_or_else(
+                debug_err_fn!(ParseError::Format, "too few bytes for header"),
+            )?;
         let (body, _) = LayoutVerified::<B, Body<HwAddr, ProtoAddr>>::new_unaligned_from_prefix(
             body,
-        ).ok_or(ParseError::Format)?;
+        ).ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for body"))?;
 
         if header.hardware_protocol() != <HwAddr as HType>::htype() as u16
             || header.network_protocol() != <ProtoAddr as PType>::ptype() as u16
         {
-            return Err(ParseError::NotExpected);
+            return debug_err!(
+                Err(ParseError::NotExpected),
+                "unexpected hardware or network protocols"
+            );
         }
         if header.hardware_address_len() != <HwAddr as HType>::hlen()
             || header.protocol_address_len() != <ProtoAddr as PType>::plen()
         {
-            return Err(ParseError::Format);
+            return debug_err!(
+                Err(ParseError::Format),
+                "unexpected hardware or protocol address length"
+            );
         }
 
         if ArpOp::from_u16(header.op_code()).is_none() {
-            return Err(ParseError::Format);
+            return debug_err!(
+                Err(ParseError::Format),
+                "unrecognized op code: {:x}",
+                header.op_code()
+            );
         }
 
         Ok(ArpPacket { header, body })

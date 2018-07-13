@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::fmt::{Debug, Display};
+use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::Hash;
 
 use byteorder::{ByteOrder, NetworkEndian};
@@ -192,13 +192,13 @@ impl IpAddr for Ipv4Addr {
 }
 
 impl Display for Ipv4Addr {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         write!(f, "{}.{}.{}.{}", self.0[0], self.0[1], self.0[2], self.0[3])
     }
 }
 
 impl Debug for Ipv4Addr {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         Display::fmt(self, f)
     }
 }
@@ -249,7 +249,7 @@ impl IpAddr for Ipv6Addr {
 }
 
 impl Display for Ipv6Addr {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         // TODO(joshlf): Replace longest run of zeros with ::.
         let to_u16 = |idx| NetworkEndian::read_u16(&self.0[idx..idx + 2]);
         write!(
@@ -268,7 +268,7 @@ impl Display for Ipv6Addr {
 }
 
 impl Debug for Ipv6Addr {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         Display::fmt(self, f)
     }
 }
@@ -339,13 +339,13 @@ impl Subnet<Ipv4Addr> {
 }
 
 impl<A: IpAddr> Display for Subnet<A> {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         write!(f, "{}/{}", self.network, self.prefix)
     }
 }
 
 impl<A: IpAddr> Debug for Subnet<A> {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         write!(f, "{}/{}", self.network, self.prefix)
     }
 }
@@ -355,7 +355,7 @@ impl<A: IpAddr> Debug for Subnet<A> {
 /// For IPv4, this is the protocol number. For IPv6, this is the next header
 /// number.
 #[allow(missing_docs)]
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq)]
 #[repr(u8)]
 pub enum IpProto {
     Tcp = IpProto::TCP,
@@ -376,6 +376,25 @@ impl IpProto {
             Self::UDP => Some(IpProto::Udp),
             _ => None,
         }
+    }
+}
+
+impl Display for IpProto {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "{}",
+            match self {
+                IpProto::Tcp => "TCP",
+                IpProto::Udp => "UDP",
+            }
+        )
+    }
+}
+
+impl Debug for IpProto {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        Display::fmt(self, f)
     }
 }
 

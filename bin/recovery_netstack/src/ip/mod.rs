@@ -9,6 +9,7 @@ mod types;
 
 pub use self::types::*;
 
+use std::fmt::Debug;
 use std::mem;
 use std::ops::Range;
 
@@ -39,6 +40,7 @@ struct IpLayerStateInner<I: Ip> {
 pub fn receive_ip_packet<I: Ip>(
     state: &mut StackState, device: DeviceId, mut buffer: BufferAndRange<&mut [u8]>,
 ) {
+    trace!("receive_ip_packet({})", device);
     let (mut packet, body_range) =
         if let Ok((packet, body_range)) = <I as IpExt>::Packet::parse(buffer.as_mut()) {
             (packet, body_range)
@@ -46,14 +48,22 @@ pub fn receive_ip_packet<I: Ip>(
             // TODO(joshlf): Do something with ICMP here?
             return;
         };
+    trace!("receive_ip_packet: parsed packet: {:?}", packet);
 
     if I::LOOPBACK_SUBNET.contains(packet.dst_ip()) {
         // A packet from outside this host was sent with the destination IP of
         // the loopback address, which is illegal. Loopback traffic is handled
         // explicitly in send_ip_packet. TODO(joshlf): Do something with ICMP
         // here?
+        debug!(
+            "got packet from remote host for loopback address {}",
+            packet.dst_ip()
+        );
     } else if deliver(state, device, packet.dst_ip()) {
-        // TODO(joshlf): Do something with ICMP if we don't have a handler for that protocol?
+        trace!("receive_ip_packet: delivering locally");
+        // TODO(joshlf):
+        // - Do something with ICMP if we don't have a handler for that protocol?
+        // - Check for already-expired TTL?
         let handled = if let Ok(proto) = packet.proto() {
             let src_ip = packet.src_ip();
             let dst_ip = packet.dst_ip();
@@ -63,11 +73,13 @@ pub fn receive_ip_packet<I: Ip>(
             buffer.slice(body_range);
             ::transport::receive_ip_packet(state, src_ip, dst_ip, proto, buffer)
         } else {
+            // TODO(joshlf): Log unrecognized protocol number
             false
         };
     } else if let Some(dest) = forward(state, packet.dst_ip()) {
         let ttl = packet.ttl();
         if ttl > 1 {
+            trace!("receive_ip_packet: forwarding");
             packet.set_ttl(ttl - 1);
             // drop packet so we can re-use the underlying buffer
             mem::drop(packet);
@@ -88,9 +100,14 @@ pub fn receive_ip_packet<I: Ip>(
             // TTL is 0 or would become 0 after decrement; see "TTL" section,
             // https://tools.ietf.org/html/rfc791#page-14
             // TODO(joshlf): Do something with ICMP here?
+            debug!("received IP packet dropped due to expired TTL");
         }
     } else {
         // TODO(joshlf): Do something with ICMP here?
+        debug!(
+            "received IP packet with no known route to destination {}",
+            packet.dst_ip()
+        );
     }
 }
 
@@ -171,6 +188,7 @@ where
     B: AsRef<[u8]> + AsMut<[u8]>,
     F: AddrSerializationCallback<A, B>,
 {
+    trace!("send_ip_packet({}, {})", dst_ip, proto);
     if A::Version::LOOPBACK_SUBNET.contains(dst_ip) {
         let buffer = get_buffer(A::Version::LOOPBACK_ADDRESS, 0, 0);
         // TODO(joshlf): Respond with some kind of error if we don't have a
@@ -315,7 +333,7 @@ impl<'a> IpExt<'a> for Ipv4 {
 // TODO: Implement IpExt for Ipv6
 
 // `Ipv4Packet` or `Ipv6Packet`
-trait IpPacket<'a, I: Ip>: Sized {
+trait IpPacket<'a, I: Ip>: Sized + Debug {
     fn parse(bytes: &'a mut [u8]) -> Result<(Self, Range<usize>), ParseError>;
     fn src_ip(&self) -> I::Addr;
     fn dst_ip(&self) -> I::Addr;
