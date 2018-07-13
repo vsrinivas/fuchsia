@@ -11,7 +11,7 @@ use MlmeRequest;
 use super::DeviceInfo;
 use wlan_rsn::{akm, cipher, rsne::{self, Rsne}, suite_selector::OUI};
 use wlan_rsn::key::exchange::Key;
-use wlan_rsn::rsna::{esssa::EssSa, SecAssocUpdate};
+use wlan_rsn::rsna::{esssa::EssSa, SecAssocUpdate, SecAssocStatus};
 use eapol;
 
 const DEFAULT_JOIN_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
@@ -33,7 +33,7 @@ pub struct Rsna {
 }
 
 impl Rsna {
-    fn new(s_rsne: Rsne, esssa: EssSa) -> Rsna {
+    fn _new(s_rsne: Rsne, esssa: EssSa) -> Rsna {
         assert_eq!(s_rsne.pairwise_cipher_suites.len(), 1);
         assert_eq!(s_rsne.akm_suites.len(), 1);
         assert!(s_rsne.group_data_cipher_suite.is_none());
@@ -111,6 +111,7 @@ impl<T: Tokens> State<T> {
             State::Associating{ cmd, s_rsne } => match event {
                 MlmeEvent::AssociateConf { resp } => match resp.result_code {
                     fidl_mlme::AssociateResultCodes::Success => {
+                        // Don't report connect finished in RSN case.
                         report_connect_finished(cmd.token, user_sink, ConnectResult::Success);
                         State::Associated {
                             bss: cmd.bss,
@@ -146,39 +147,15 @@ impl<T: Tokens> State<T> {
                     }
                 },
                 MlmeEvent::EapolInd{ ref ind } if rsna.is_some() => {
-                    let Rsna { s_rsne, mut esssa } = rsna.unwrap();
-                    let mic_len = get_mic_size(&s_rsne);
-                    let eapol_pdu = &ind.data[..];
-                    let eapol_frame = match eapol::key_frame_from_bytes(eapol_pdu, mic_len)
-                        .to_full_result() {
-                        Ok(key_frame) => eapol::Frame::Key(key_frame),
-                        Err(e) => {
-                            eprintln!("received invalid EAPOL Key frame: {:?}", e);
-
-                            let rsna = Some(Rsna::new(s_rsne, esssa));
-                            return State::Associated { bss, last_rssi, link_state, rsna, };
-                        }
-                    };
-                    let bssid = ind.src_addr;
-                    let sta_addr = ind.dst_addr;
-                    match esssa.on_eapol_frame(&eapol_frame) {
-                        Ok(updates) => updates.into_iter().for_each(|update| match update {
-                            // ESS Security Association requests to send an EAPOL frame.
-                            // Forward EAPOL frame to MLME.
-                            SecAssocUpdate::TxEapolKeyFrame(frame) =>
-                                send_eapol_frame(mlme_sink, bssid, sta_addr, frame),
-                            // ESS Security Association derived a new key.
-                            // Configure key in MLME.
-                            SecAssocUpdate::Key(key) => send_keys(mlme_sink, bssid, &s_rsne, key),
-                            // TODO(hahnr): Process status updates and open blocked port
-                            // once ESS-SA was established.
-                            _ => eprintln!("Supplicant sent unsupported response"),
-                        }),
-                        Err(e) => eprintln!("error processing EAPOL key frame: {:?}", e),
-                    };
-
-                    let rsna = Some(Rsna::new(s_rsne, esssa));
-                    State::Associated { bss, last_rssi, link_state, rsna }
+                    let mut rsna = rsna.unwrap();
+                    let next_link_state = process_eapol_ind(mlme_sink, &mut rsna, &ind)
+                        .unwrap_or(link_state);
+                    State::Associated {
+                        bss,
+                        last_rssi,
+                        link_state: next_link_state,
+                        rsna: Some(rsna)
+                    }
                 }
                 _ => State::Associated{ bss, last_rssi, link_state, rsna }
             },
@@ -245,6 +222,55 @@ impl<T: Tokens> State<T> {
             },
         }
     }
+}
+
+fn process_eapol_ind(mlme_sink: &MlmeSink, rsna: &mut Rsna, ind: &fidl_mlme::EapolIndication)
+    -> Option<LinkState>
+{
+    let mic_len = get_mic_size(&rsna.s_rsne);
+    let eapol_pdu = &ind.data[..];
+    let eapol_frame = match eapol::key_frame_from_bytes(eapol_pdu, mic_len).to_full_result() {
+        Ok(key_frame) => eapol::Frame::Key(key_frame),
+        Err(e) => {
+            eprintln!("received invalid EAPOL Key frame: {:?}", e);
+            return None;
+        }
+    };
+
+    let bssid = ind.src_addr;
+    let sta_addr = ind.dst_addr;
+    match rsna.esssa.on_eapol_frame(&eapol_frame) {
+        Ok(updates) => for update in updates {
+            match update {
+                // ESS Security Association requests to send an EAPOL frame.
+                // Forward EAPOL frame to MLME.
+                SecAssocUpdate::TxEapolKeyFrame(frame) => {
+                    send_eapol_frame(mlme_sink, bssid, sta_addr, frame)
+                },
+                // ESS Security Association derived a new key.
+                // Configure key in MLME.
+                SecAssocUpdate::Key(key) => {
+                    send_keys(mlme_sink, bssid, &rsna.s_rsne, key)
+                },
+                // Received a status update.
+                SecAssocUpdate::Status(status) => match status {
+                    // ESS Security Association was successfully established.
+                    // Link is now up.
+                    SecAssocStatus::EssSaEstablished => {
+                        // TODO(hahnr): Report connect finished.
+                        return Some(LinkState::LinkUp);
+                    },
+                    SecAssocStatus::WrongPassword => {
+                        // TODO(hahnr): Report wrong password further up the stack.
+                    }
+                },
+            }
+        }
+        Err(e) => eprintln!("error processing EAPOL key frame: {:?}", e),
+    };
+
+    // No link state change.
+    None
 }
 
 fn get_mic_size(s_rsne: &Rsne) -> u16
