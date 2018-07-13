@@ -75,7 +75,7 @@ bool test_serve_directory() {
     client.reset();
 
     // serve
-    async::Loop loop;
+     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     fs::SynchronousVfs vfs(loop.dispatcher());
 
     auto directory = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());

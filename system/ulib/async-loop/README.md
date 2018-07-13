@@ -32,7 +32,7 @@ See [async/loop.h](include/async/loop.h) for details.
 static async_loop_t* g_loop;
 
 int main(int argc, char** argv) {
-    async_loop_create(&kAsyncLoopConfigMakeDefault, &g_loop);
+    async_loop_create(&kAsyncLoopConfigAttachToCurrentThread, &g_loop);
 
     do_stuff();
 

@@ -26,7 +26,7 @@ const char* TestFsRoot() {
 } // namespace runtests
 
 int main(int argc, char** argv) {
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     if (loop.StartThread() != ZX_OK) {
         fprintf(stderr, "Error: Cannot initialize local memfs loop\n");
         return -1;

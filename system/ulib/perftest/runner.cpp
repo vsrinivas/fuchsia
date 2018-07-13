@@ -432,7 +432,7 @@ void ParseCommandArgs(int argc, char** argv, CommandArgs* dest) {
 } // namespace internal
 
 static void* TraceProviderThread(void* thread_arg) {
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     trace::TraceProvider provider(loop.dispatcher());
     loop.Run();
     return nullptr;

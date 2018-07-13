@@ -55,8 +55,14 @@ typedef struct thread_record {
     thrd_t thread;
 } thread_record_t;
 
+// TODO(davemoore): Remove once all code has been migrated to new constants.
 const async_loop_config_t kAsyncLoopConfigMakeDefault = {
     .make_default_for_current_thread = true};
+
+const async_loop_config_t kAsyncLoopConfigAttachToThread = {
+    .make_default_for_current_thread = true};
+const async_loop_config_t kAsyncLoopConfigNoAttachToThread = {
+    .make_default_for_current_thread = false};
 
 typedef struct async_loop {
     async_dispatcher_t dispatcher; // must be first (the loop inherits from async_dispatcher_t)
@@ -117,6 +123,7 @@ static inline async_task_t* node_to_task(list_node_t* node) {
 
 zx_status_t async_loop_create(const async_loop_config_t* config, async_loop_t** out_loop) {
     ZX_DEBUG_ASSERT(out_loop);
+    // TODO(davemoore): Add assert if NULL config is passed.
 
     async_loop_t* loop = calloc(1u, sizeof(async_loop_t));
     if (!loop)

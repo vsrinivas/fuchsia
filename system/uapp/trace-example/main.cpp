@@ -13,7 +13,7 @@
 #include <trace/event.h>
 
 int main(int argc, char** argv) {
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     trace::TraceProvider provider(loop.dispatcher());
 
     puts("Doing work for 30 seconds...");

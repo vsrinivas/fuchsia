@@ -39,7 +39,7 @@ int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc,
         return ZX_ERR_BAD_STATE;
     }
 
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     trace::TraceProvider trace_provider(loop.dispatcher());
 
     auto loop_quit = [&loop]() { loop.Quit(); };

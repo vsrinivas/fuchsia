@@ -251,7 +251,7 @@ bool c_api_basic_test() {
     BEGIN_TEST;
 
     async_loop_t* loop;
-    ASSERT_EQ(ZX_OK, async_loop_create(nullptr, &loop), "create");
+    ASSERT_EQ(ZX_OK, async_loop_create(&kAsyncLoopConfigNoAttachToThread, &loop), "create");
     ASSERT_NONNULL(loop, "loop");
 
     EXPECT_EQ(ASYNC_LOOP_RUNNABLE, async_loop_get_state(loop), "runnable");
@@ -279,7 +279,7 @@ bool make_default_false_test() {
     BEGIN_TEST;
 
     {
-        async::Loop loop;
+        async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
         EXPECT_NULL(async_get_default_dispatcher(), "not default");
     }
     EXPECT_NULL(async_get_default_dispatcher(), "still not default");
@@ -305,7 +305,7 @@ bool create_default_test() {
     BEGIN_TEST;
 
     {
-        async::Loop loop(&kAsyncLoopConfigMakeDefault);
+        async::Loop loop(&kAsyncLoopConfigAttachToThread);
         EXPECT_EQ(loop.dispatcher(), async_get_default_dispatcher(), "became default");
     }
     EXPECT_NULL(async_get_default_dispatcher(), "no longer default");
@@ -316,7 +316,7 @@ bool create_default_test() {
 bool quit_test() {
     BEGIN_TEST;
 
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop.GetState(), "initially not quitting");
 
     loop.Quit();
@@ -355,7 +355,7 @@ bool time_test() {
 
     // Verify that the dispatcher's time-telling is strictly monotonic,
     // which is constent with ZX_CLOCK_MONOTONIC.
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     zx::time t0 = zx::clock::get_monotonic();
     zx::time t1 = async::Now(loop.dispatcher());
     zx::time t2 = async::Now(loop.dispatcher());
@@ -371,7 +371,7 @@ bool time_test() {
 bool wait_test() {
     BEGIN_TEST;
 
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     zx::event event;
     EXPECT_EQ(ZX_OK, zx::event::create(0u, &event), "create event");
 
@@ -466,7 +466,7 @@ bool wait_test() {
 bool wait_unwaitable_handle_test() {
     BEGIN_TEST;
 
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     zx::event event;
     EXPECT_EQ(ZX_OK, zx::event::create(0u, &event), "create event");
     event.replace(ZX_RIGHT_NONE, &event);
@@ -483,7 +483,7 @@ bool wait_unwaitable_handle_test() {
 bool wait_shutdown_test() {
     BEGIN_TEST;
 
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     zx::event event;
     EXPECT_EQ(ZX_OK, zx::event::create(0u, &event), "create event");
 
@@ -561,7 +561,7 @@ bool wait_shutdown_test() {
 bool task_test() {
     BEGIN_TEST;
 
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
 
     zx::time start_time = async::Now(loop.dispatcher());
     TestTask task1;
@@ -617,7 +617,7 @@ bool task_test() {
 bool task_shutdown_test() {
     BEGIN_TEST;
 
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
 
     zx::time start_time = async::Now(loop.dispatcher());
     TestTask task1;
@@ -692,7 +692,7 @@ bool receiver_test() {
 
     BEGIN_TEST;
 
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
 
     TestReceiver receiver1;
     TestReceiver receiver2;
@@ -723,7 +723,7 @@ bool receiver_test() {
 bool receiver_shutdown_test() {
     BEGIN_TEST;
 
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     loop.Shutdown();
 
     // Try to add work after shutdown.
@@ -837,7 +837,7 @@ protected:
 bool threads_have_default_dispatcher() {
     BEGIN_TEST;
 
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     EXPECT_EQ(ZX_OK, loop.StartThread(), "start thread");
 
     GetDefaultDispatcherTask task;
@@ -857,7 +857,7 @@ bool threads_quit() {
 
     BEGIN_TEST;
 
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     for (size_t i = 0; i < num_threads; i++) {
         EXPECT_EQ(ZX_OK, loop.StartThread());
     }
@@ -874,7 +874,7 @@ bool threads_shutdown() {
 
     BEGIN_TEST;
 
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     for (size_t i = 0; i < num_threads; i++) {
         EXPECT_EQ(ZX_OK, loop.StartThread());
     }
@@ -896,7 +896,7 @@ bool threads_waits_run_concurrently_test() {
 
     BEGIN_TEST;
 
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     for (size_t i = 0; i < num_threads; i++) {
         EXPECT_EQ(ZX_OK, loop.StartThread(), "start thread");
     }
@@ -940,7 +940,7 @@ bool threads_tasks_run_sequentially_test() {
 
     BEGIN_TEST;
 
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     for (size_t i = 0; i < num_threads; i++) {
         EXPECT_EQ(ZX_OK, loop.StartThread(), "start thread");
     }
@@ -981,7 +981,7 @@ bool threads_receivers_run_concurrently_test() {
 
     BEGIN_TEST;
 
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     for (size_t i = 0; i < num_threads; i++) {
         EXPECT_EQ(ZX_OK, loop.StartThread(), "start thread");
     }

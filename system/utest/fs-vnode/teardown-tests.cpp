@@ -126,7 +126,7 @@ bool sync_start(completion_t* completions, async::Loop* loop,
 bool test_unposted_teardown() {
     BEGIN_TEST;
 
-    async::Loop loop;
+     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     completion_t completions[3];
     fbl::unique_ptr<fs::ManagedVfs> vfs;
 
@@ -155,7 +155,7 @@ bool test_unposted_teardown() {
 bool test_posted_teardown() {
     BEGIN_TEST;
 
-    async::Loop loop;
+     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     completion_t completions[3];
     fbl::unique_ptr<fs::ManagedVfs> vfs;
 
@@ -185,7 +185,7 @@ bool test_posted_teardown() {
 bool test_teardown_delete_this() {
     BEGIN_TEST;
 
-    async::Loop loop;
+     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     completion_t completions[3];
     fbl::unique_ptr<fs::ManagedVfs> vfs;
 
@@ -215,7 +215,7 @@ bool test_teardown_delete_this() {
 bool test_teardown_slow_async_callback() {
     BEGIN_TEST;
 
-    async::Loop loop;
+     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     completion_t completions[3];
     fbl::unique_ptr<fs::ManagedVfs> vfs;
 
@@ -249,7 +249,7 @@ bool test_teardown_slow_async_callback() {
 bool test_teardown_slow_clone() {
     BEGIN_TEST;
 
-    async::Loop loop;
+     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     completion_t completions[3];
     auto vfs = fbl::make_unique<fs::ManagedVfs>(loop.dispatcher());
     ASSERT_EQ(loop.StartThread(), ZX_OK);
@@ -303,7 +303,7 @@ bool test_teardown_slow_clone() {
 
 bool test_synchronous_teardown() {
     BEGIN_TEST;
-    async::Loop loop;
+     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     ASSERT_EQ(loop.StartThread(), ZX_OK);
     zx::channel client;
 

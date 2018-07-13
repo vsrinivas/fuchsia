@@ -568,7 +568,8 @@ void Controller::DdkRelease() {
     delete this;
 }
 
-Controller::Controller(zx_device_t* parent) : ControllerParent(parent) {
+Controller::Controller(zx_device_t* parent)
+    : ControllerParent(parent), loop_(&kAsyncLoopConfigNoAttachToThread) {
     mtx_init(&mtx_, mtx_plain);
 }
 

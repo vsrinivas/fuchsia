@@ -29,7 +29,7 @@ public:
     // |config| provides configuration for the message loop.  If null, the behavior
     // is the same as that of a zero-initialized instance of async_loop_config_t.
     //
-    // See also |kAsyncLoopConfigMakeDefault|.
+    // See also |kAsyncLoopConfigAttachToThread| and |kAsyncLoopConfigNoAttachToThread|.
     explicit Loop(const async_loop_config_t* config = nullptr);
 
     // Destroys the message loop.

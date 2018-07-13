@@ -363,7 +363,7 @@ zx_status_t Fixture::TearDownTestCase() {
 }
 
 int RunWithMemFs(const fbl::Function<int()>& main_fn) {
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     if (MountMemFs(&loop) != ZX_OK) {
         return -1;
     }

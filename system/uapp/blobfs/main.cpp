@@ -47,7 +47,7 @@ int do_blobfs_mount(fbl::unique_fd fd, blobfs::blob_options_t* options) {
         return -1;
     }
 
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     trace::TraceProvider provider(loop.dispatcher());
     auto loop_quit = [&loop]() { loop.Quit(); };
     if (blobfs::blobfs_mount(loop.dispatcher(), fbl::move(fd), options,

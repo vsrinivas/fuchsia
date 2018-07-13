@@ -29,7 +29,8 @@ static constexpr size_t kBufferSizeBytes = 1024 * 1024;
 class Fixture : private trace::TraceHandler {
 public:
     Fixture()
-        : buffer_(new uint8_t[kBufferSizeBytes], kBufferSizeBytes) {
+        : loop_(&kAsyncLoopConfigNoAttachToThread),
+          buffer_(new uint8_t[kBufferSizeBytes], kBufferSizeBytes) {
         zx_status_t status = zx::event::create(0u, &trace_stopped_);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     }

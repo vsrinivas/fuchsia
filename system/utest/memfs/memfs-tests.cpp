@@ -22,7 +22,7 @@ namespace {
 bool test_memfs_null() {
     BEGIN_TEST;
 
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     ASSERT_EQ(loop.StartThread(), ZX_OK);
     memfs_filesystem_t* vfs;
     zx_handle_t root;
@@ -39,7 +39,7 @@ bool test_memfs_null() {
 bool test_memfs_basic() {
     BEGIN_TEST;
 
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     ASSERT_EQ(loop.StartThread(), ZX_OK);
 
     // Create a memfs filesystem, acquire a file descriptor
@@ -84,7 +84,7 @@ bool test_memfs_basic() {
 bool test_memfs_install() {
     BEGIN_TEST;
 
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     ASSERT_EQ(loop.StartThread(), ZX_OK);
 
     ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/mytmp"), ZX_OK);
@@ -128,7 +128,7 @@ bool test_memfs_install() {
 bool test_memfs_close_during_access() {
     BEGIN_TEST;
 
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     ASSERT_EQ(loop.StartThread(), ZX_OK);
 
     // Create a memfs filesystem, acquire a file descriptor

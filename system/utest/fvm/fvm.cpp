@@ -2948,7 +2948,7 @@ int main(int argc, char** argv) {
     }
 
     // Initialize tmpfs.
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     if (loop.StartThread() != ZX_OK) {
         fprintf(stderr, "Error: Cannot initialize local tmpfs loop\n");
         return -1;

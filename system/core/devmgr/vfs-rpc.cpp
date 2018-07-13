@@ -187,7 +187,7 @@ VnodeDir* vfs_create_global_root() {
             ZX_ASSERT(r == ZX_OK);
         }
 
-        memfs::global_loop.reset(new async::Loop());
+        memfs::global_loop.reset(new async::Loop(&kAsyncLoopConfigNoAttachToThread));
         memfs::global_loop->StartThread("root-dispatcher");
         memfs::root_vfs.SetDispatcher(memfs::global_loop->dispatcher());
         memfs::system_vfs.SetDispatcher(memfs::global_loop->dispatcher());

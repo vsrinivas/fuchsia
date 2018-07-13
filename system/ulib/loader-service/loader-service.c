@@ -264,7 +264,7 @@ zx_status_t loader_service_create(async_dispatcher_t* dispatcher,
 
     if (!dispatcher) {
         async_loop_t* loop;
-        zx_status_t status = async_loop_create(NULL, &loop);
+        zx_status_t status = async_loop_create(&kAsyncLoopConfigNoAttachToThread, &loop);
         if (status != ZX_OK) {
             free(svc);
             return status;

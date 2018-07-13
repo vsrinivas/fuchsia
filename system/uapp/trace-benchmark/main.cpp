@@ -57,7 +57,7 @@ private:
 } // namespace
 
 int main(int argc, char** argv) {
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     BenchmarkHandler handler(&loop);
 
     RunTracingDisabledBenchmarks();

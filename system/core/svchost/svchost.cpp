@@ -142,7 +142,7 @@ void publish_deprecated_services(const fbl::RefPtr<fs::PseudoDir>& dir) {
 }
 
 int main(int argc, char** argv) {
-    async::Loop loop;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     async_dispatcher_t* dispatcher = loop.dispatcher();
     svc::Outgoing outgoing(dispatcher);
 
