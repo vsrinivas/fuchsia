@@ -7,17 +7,16 @@
 #include "lib/fxl/logging.h"
 
 namespace debugserver {
-namespace elf {
 
-SymbolTable::SymbolTable(const std::string& file_name,
-                         const std::string& contents)
+ElfSymbolTable::ElfSymbolTable(const std::string& file_name,
+                               const std::string& contents)
     : file_name_(file_name), contents_(contents) {}
 
-SymbolTable::~SymbolTable() {
+ElfSymbolTable::~ElfSymbolTable() {
   if (symbols_) delete[] symbols_;
 }
 
-bool SymbolTable::Populate(elf::Reader* elf, unsigned symtab_type) {
+bool ElfSymbolTable::Populate(ElfReader* elf, unsigned symtab_type) {
   FXL_DCHECK(symtab_type == SHT_SYMTAB || symtab_type == SHT_DYNSYM);
 
   // TODO(dje): Add support for loading both SHT_SYMTAB and SHT_DYNSYM.
@@ -26,13 +25,14 @@ bool SymbolTable::Populate(elf::Reader* elf, unsigned symtab_type) {
     return false;
   }
 
-  elf::Error rc = elf->ReadSectionHeaders();
-  if (rc != Error::OK) {
-    FXL_LOG(ERROR) << "Error reading ELF section headers: " << ErrorName(rc);
+  ElfError rc = elf->ReadSectionHeaders();
+  if (rc != ElfError::OK) {
+    FXL_LOG(ERROR) << "Error reading ELF section headers: "
+                   << ElfErrorName(rc);
     return false;
   }
 
-  const SectionHeader* shdr = elf->GetSectionHeaderByType(symtab_type);
+  const ElfSectionHeader* shdr = elf->GetSectionHeaderByType(symtab_type);
   if (!shdr) return true;  // empty symbol table
 
   size_t num_sections = elf->GetNumSections();
@@ -41,18 +41,18 @@ bool SymbolTable::Populate(elf::Reader* elf, unsigned symtab_type) {
     FXL_LOG(ERROR) << "Bad string section: " << string_section;
     return false;
   }
-  const SectionHeader& str_shdr = elf->GetSectionHeader(string_section);
+  const ElfSectionHeader& str_shdr = elf->GetSectionHeader(string_section);
 
-  std::unique_ptr<SectionContents> contents;
+  std::unique_ptr<ElfSectionContents> contents;
   rc = elf->GetSectionContents(*shdr, &contents);
-  if (rc != Error::OK) {
-    FXL_LOG(ERROR) << "Error reading ELF section: " << ErrorName(rc);
+  if (rc != ElfError::OK) {
+    FXL_LOG(ERROR) << "Error reading ELF section: " << ElfErrorName(rc);
     return false;
   }
 
   rc = elf->GetSectionContents(str_shdr, &string_section_);
-  if (rc != Error::OK) {
-    FXL_LOG(ERROR) << "Error reading ELF string section: " << ErrorName(rc);
+  if (rc != ElfError::OK) {
+    FXL_LOG(ERROR) << "Error reading ELF string section: " << ElfErrorName(rc);
     return false;
   }
 
@@ -60,16 +60,16 @@ bool SymbolTable::Populate(elf::Reader* elf, unsigned symtab_type) {
   size_t max_string_offset = string_section_->GetSize();
 
   size_t num_raw_symbols = contents->GetNumEntries();
-  symbols_ = new Symbol[num_raw_symbols];
+  symbols_ = new ElfSymbol[num_raw_symbols];
 
   size_t num_symbols = 0;
   for (size_t i = 0; i < num_raw_symbols; ++i) {
-    const RawSymbol& sym = contents->GetSymbolEntry(i);
+    const ElfRawSymbol& sym = contents->GetSymbolEntry(i);
     if (sym.st_name >= max_string_offset) {
       FXL_LOG(ERROR) << "Bad symbol string name offset: " << sym.st_name;
       continue;
     }
-    Symbol* s = &symbols_[num_symbols++];
+    ElfSymbol* s = &symbols_[num_symbols++];
     // TODO(dje): IWBN to have a convenience function for getting symbol
     // names, not sure what it will look like yet.
     s->name = strings + sym.st_name;
@@ -83,35 +83,35 @@ bool SymbolTable::Populate(elf::Reader* elf, unsigned symtab_type) {
 }
 
 static int CompareSymbol(const void* ap, const void* bp) {
-  auto a = reinterpret_cast<const Symbol*>(ap);
-  auto b = reinterpret_cast<const Symbol*>(bp);
+  auto a = reinterpret_cast<const ElfSymbol*>(ap);
+  auto b = reinterpret_cast<const ElfSymbol*>(bp);
   if (a->addr >= b->addr && a->addr < b->addr + b->size) return 0;
   if (b->addr >= a->addr && b->addr < a->addr + a->size) return 0;
   return a->addr - b->addr;
 }
 
-void SymbolTable::Finalize() {
-  qsort(symbols_, num_symbols_, sizeof(Symbol), CompareSymbol);
+void ElfSymbolTable::Finalize() {
+  qsort(symbols_, num_symbols_, sizeof(ElfSymbol), CompareSymbol);
 }
 
-const Symbol* SymbolTable::FindSymbol(uint64_t addr) const {
-  Symbol search = {.addr = addr};
+const ElfSymbol* ElfSymbolTable::FindSymbol(uint64_t addr) const {
+  ElfSymbol search = {.addr = addr};
 
   /* add last hit cache here */
 
-  auto s = reinterpret_cast<const Symbol*>(
-      bsearch(&search, symbols_, num_symbols_, sizeof(Symbol), CompareSymbol));
+  auto s = reinterpret_cast<const ElfSymbol*>(
+      bsearch(&search, symbols_, num_symbols_, sizeof(ElfSymbol),
+              CompareSymbol));
   return s;
 }
 
-void SymbolTable::Dump(FILE* f) const {
+void ElfSymbolTable::Dump(FILE* f) const {
   fprintf(f, "file: %s\n", file_name_.c_str());
   fprintf(f, "contents: %s\n", contents_.c_str());
   for (size_t i = 0; i < num_symbols_; i++) {
-    Symbol* s = &symbols_[i];
+    ElfSymbol* s = &symbols_[i];
     if (s->addr && s->name[0]) fprintf(f, "%p %s\n", (void*)s->addr, s->name);
   }
 }
 
-}  // namespace elf
 }  // namespace debugserver

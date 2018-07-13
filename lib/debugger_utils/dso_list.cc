@@ -20,7 +20,6 @@
 #include "util.h"
 
 namespace debugserver {
-namespace util {
 
 const char kDebugDirectory[] = "/boot/debug";
 const char kDebugSuffix[] = ".debug";
@@ -76,38 +75,38 @@ dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, zx_vaddr_t lmap_addr,
     const char* file_name = dsoname[0] ? dsoname : name;
     dsoinfo_t* dso = dsolist_add(&dsolist, file_name, lmap.l_addr);
 
-    std::unique_ptr<elf::Reader> elf_reader;
-    elf::Error rc =
-        elf::Reader::Create(file_name, bb, 0, dso->base, &elf_reader);
-    if (rc != elf::Error::OK) {
-      FXL_LOG(ERROR) << "Unable to read ELF file: " << elf::ErrorName(rc);
+    std::unique_ptr<ElfReader> elf_reader;
+    ElfError rc =
+        ElfReader::Create(file_name, bb, 0, dso->base, &elf_reader);
+    if (rc != ElfError::OK) {
+      FXL_LOG(ERROR) << "Unable to read ELF file: " << ElfErrorName(rc);
       break;
     }
 
     auto hdr = elf_reader->header();
     rc = elf_reader->ReadSegmentHeaders();
-    if (rc != elf::Error::OK) {
+    if (rc != ElfError::OK) {
       FXL_LOG(ERROR) << "Error reading ELF segment headers: "
-                     << elf::ErrorName(rc);
+                     << ElfErrorName(rc);
     } else {
       size_t num_segments = elf_reader->GetNumSegments();
       uint32_t num_loadable_phdrs = 0;
       for (size_t i = 0; i < num_segments; ++i) {
-        const elf::SegmentHeader& phdr = elf_reader->GetSegmentHeader(i);
+        const ElfSegmentHeader& phdr = elf_reader->GetSegmentHeader(i);
         if (phdr.p_type == PT_LOAD) ++num_loadable_phdrs;
       }
       // malloc may, or may not, return NULL for a zero byte request.
       // Remove the ambiguity for consumers and always use NULL if there no
       // loadable phdrs.
-      elf::SegmentHeader* loadable_phdrs = NULL;
+      ElfSegmentHeader* loadable_phdrs = NULL;
       if (num_loadable_phdrs > 0) {
-        loadable_phdrs = reinterpret_cast<elf::SegmentHeader*>(
+        loadable_phdrs = reinterpret_cast<ElfSegmentHeader*>(
             malloc(num_loadable_phdrs * hdr.e_phentsize));
       }
       if (loadable_phdrs || num_loadable_phdrs == 0) {
         size_t j = 0;
         for (size_t i = 0; i < num_segments; ++i) {
-          const elf::SegmentHeader& phdr = elf_reader->GetSegmentHeader(i);
+          const ElfSegmentHeader& phdr = elf_reader->GetSegmentHeader(i);
           if (phdr.p_type == PT_LOAD) loadable_phdrs[j++] = phdr;
         }
         FXL_DCHECK(j == num_loadable_phdrs);
@@ -119,9 +118,9 @@ dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, zx_vaddr_t lmap_addr,
     }
 
     rc = elf_reader->ReadBuildId(dso->buildid, sizeof(dso->buildid));
-    if (rc != elf::Error::OK) {
+    if (rc != ElfError::OK) {
       // This isn't fatal so don't flag as an error.
-      FXL_VLOG(1) << "Unable to read build id: " << elf::ErrorName(rc);
+      FXL_VLOG(1) << "Unable to read build id: " << ElfErrorName(rc);
     }
 
     dso->is_main_exec = is_main_exec;
@@ -223,5 +222,4 @@ zx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
   return dso->debug_file_status;
 }
 
-}  // namespace util
 }  // namespace debugserver

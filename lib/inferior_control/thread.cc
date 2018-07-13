@@ -50,7 +50,7 @@ Thread::Thread(Process* process, zx_handle_t handle, zx_koid_t id)
   FXL_DCHECK(handle_ != ZX_HANDLE_INVALID);
   FXL_DCHECK(id_ != ZX_KOID_INVALID);
 
-  registers_ = arch::Registers::Create(this);
+  registers_ = Registers::Create(this);
   FXL_DCHECK(registers_.get());
 }
 
@@ -96,13 +96,13 @@ fxl::WeakPtr<Thread> Thread::AsWeakPtr() {
   return weak_ptr_factory_.GetWeakPtr();
 }
 
-arch::GdbSignal Thread::GetGdbSignal() const {
+GdbSignal Thread::GetGdbSignal() const {
   if (!exception_context_) {
     // TODO(dje): kNone may be a better value to return here.
-    return arch::GdbSignal::kUnsupported;
+    return GdbSignal::kUnsupported;
   }
 
-  return arch::ComputeGdbSignal(*exception_context_);
+  return ComputeGdbSignal(*exception_context_);
 }
 
 void Thread::OnException(const zx_excp_type_t type,
@@ -144,7 +144,7 @@ bool Thread::Resume() {
   zx_status_t status = zx_task_resume(handle_, ZX_RESUME_EXCEPTION);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to resume thread: "
-                   << util::ZxErrorString(status);
+                   << ZxErrorString(status);
     return false;
   }
 
@@ -176,13 +176,13 @@ void Thread::ResumeForExit() {
                            sizeof(info), nullptr, nullptr);
     if (info_status != ZX_OK) {
       FXL_LOG(ERROR) << "error getting process info: "
-                     << util::ZxErrorString(info_status);
+                     << ZxErrorString(info_status);
     }
     if (info_status == ZX_OK && info.exited) {
       FXL_VLOG(2) << "Process " << process()->GetName() << " exited too";
     } else {
       FXL_LOG(ERROR) << "Failed to resume thread for exit: "
-                     << util::ZxErrorString(status);
+                     << ZxErrorString(status);
     }
   }
 
@@ -214,7 +214,7 @@ bool Thread::Step() {
   if (status < 0) {
     breakpoints_.RemoveSingleStepBreakpoint();
     FXL_LOG(ERROR) << "Failed to resume thread for step: "
-                   << util::ZxErrorString(status);
+                   << ZxErrorString(status);
     return false;
   }
 

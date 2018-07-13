@@ -18,9 +18,8 @@
 #include "ktrace_reader.h"
 
 namespace debugserver {
-namespace ktrace {
 
-int ReadFile(int fd, RecordReader* reader, void* arg) {
+int KtraceReadFile(int fd, KtraceRecordReader* reader, void* arg) {
   KtraceRecord rec;
   unsigned offset = 0;
 
@@ -50,7 +49,7 @@ int ReadFile(int fd, RecordReader* reader, void* arg) {
   return 0;
 }
 
-const char* RecName(uint32_t tag) {
+const char* KtraceRecName(uint32_t tag) {
   // TODO: Remove magic number
   switch (tag & 0xffffff00u) {
 #define KTRACE_DEF(num, type, name, group)     \
@@ -62,7 +61,6 @@ const char* RecName(uint32_t tag) {
   }
 }
 
-}  // namespace ktrace
 }  // namespace debugserver
 
 #ifdef TEST

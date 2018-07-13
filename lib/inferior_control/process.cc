@@ -25,7 +25,7 @@ namespace {
 constexpr zx_time_t kill_timeout = ZX_MSEC(10 * 1000);
 
 std::unique_ptr<process::ProcessBuilder> CreateProcessBuilder(
-    zx_handle_t job, const util::Argv& argv) {
+    zx_handle_t job, const Argv& argv) {
   FXL_DCHECK(argv.size() > 0);
   zx::job builder_job;
   zx_status_t status = zx_handle_duplicate(job, ZX_RIGHT_SAME_RIGHTS,
@@ -70,7 +70,7 @@ bool LoadBinary(process::ProcessBuilder* builder,
   zx_status_t status =
       LoadPath(binary_path.c_str(), vmo.reset_and_get_address());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Could not load binary: " << util::ZxErrorString(status);
+    FXL_LOG(ERROR) << "Could not load binary: " << ZxErrorString(status);
     return false;
   }
 
@@ -84,7 +84,7 @@ zx_koid_t GetProcessId(zx_handle_t process) {
                                           sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "zx_object_get_info_failed: "
-                   << util::ZxErrorString(status);
+                   << ZxErrorString(status);
     return ZX_KOID_INVALID;
   }
 
@@ -116,7 +116,7 @@ const char* Process::StateName(Process::State state) {
 Process::Process(Server* server, Delegate* delegate)
     : server_(server),
       delegate_(delegate),
-      memory_(std::shared_ptr<util::ByteBlock>(new ProcessMemory(this))),
+      memory_(std::shared_ptr<ByteBlock>(new ProcessMemory(this))),
       breakpoints_(this) {
   FXL_DCHECK(server_);
   FXL_DCHECK(delegate_);
@@ -185,7 +185,7 @@ bool Process::Initialize() {
   // There is no thread map yet.
   thread_map_stale_ = false;
 
-  FXL_LOG(INFO) << "argv: " << util::ArgvToString(argv_);
+  FXL_LOG(INFO) << "argv: " << ArgvToString(argv_);
 
   std::string error_message;
   builder_ = CreateProcessBuilder(job, argv_);
@@ -205,7 +205,7 @@ bool Process::Initialize() {
   status = builder_->Prepare(&error_message);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to start inferior process: "
-                   << util::ZxErrorString(status) << ": " << error_message;
+                   << ZxErrorString(status) << ": " << error_message;
     goto fail;
   }
 
@@ -307,7 +307,7 @@ bool Process::AllocDebugHandle(process::ProcessBuilder* builder) {
       zx_handle_duplicate(process, ZX_RIGHT_SAME_RIGHTS, &debug_process);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "zx_handle_duplicate failed: "
-                   << util::ZxErrorString(status);
+                   << ZxErrorString(status);
     return false;
   }
 
@@ -320,7 +320,7 @@ bool Process::AllocDebugHandle(zx_koid_t pid) {
   FXL_DCHECK(pid != ZX_KOID_INVALID);
   zx_handle_t job = server_->job_for_search();
   FXL_DCHECK(job != ZX_HANDLE_INVALID);
-  auto process = util::FindProcess(job, pid);
+  auto process = FindProcess(job, pid);
   if (!process.is_valid()) {
     FXL_LOG(ERROR) << "Cannot find process " << pid;
     return false;
@@ -400,7 +400,7 @@ bool Process::Start() {
 
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to start inferior process: "
-                   << util::ZxErrorString(status);
+                   << ZxErrorString(status);
     return false;
   }
 
@@ -433,7 +433,7 @@ bool Process::Kill() {
   FXL_DCHECK(handle_ != ZX_HANDLE_INVALID);
   auto status = zx_task_kill(handle_);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to kill process: " << util::ZxErrorString(status);
+    FXL_LOG(ERROR) << "Failed to kill process: " << ZxErrorString(status);
     return false;
   }
 
@@ -445,7 +445,7 @@ bool Process::Kill() {
                               zx_deadline_after(kill_timeout), &signals);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Error waiting for process to die, ignoring: "
-                   << util::ZxErrorString(status);
+                   << ZxErrorString(status);
   } else {
     FXL_DCHECK(signals & ZX_TASK_TERMINATED);
   }
@@ -546,7 +546,7 @@ Thread* Process::FindThreadById(zx_koid_t thread_id) {
     // If the process just exited then the thread will be gone. So this is
     // just a debug message, not a warning or error.
     FXL_VLOG(1) << "Could not obtain a debug handle to thread " << thread_id
-                << ": " << util::ZxErrorString(status);
+                << ": " << ZxErrorString(status);
     return nullptr;
   }
 
@@ -575,7 +575,7 @@ bool Process::RefreshAllThreads() {
                                           nullptr, 0, nullptr, &num_threads);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get process thread info (#threads): "
-                   << util::ZxErrorString(status);
+                   << ZxErrorString(status);
     return false;
   }
 
@@ -586,7 +586,7 @@ bool Process::RefreshAllThreads() {
                               buffer_size, &records_read, nullptr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get process thread info: "
-                   << util::ZxErrorString(status);
+                   << ZxErrorString(status);
     return false;
   }
 
@@ -600,7 +600,7 @@ bool Process::RefreshAllThreads() {
                                  &thread_handle);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Could not obtain a debug handle to thread: "
-                     << util::ZxErrorString(status);
+                     << ZxErrorString(status);
       continue;
     }
     new_threads[thread_id] =
@@ -652,7 +652,7 @@ void Process::TryBuildLoadedDsosList(Thread* thread, bool check_ldso_bkpt) {
   if (status != ZX_OK) {
     FXL_LOG(ERROR)
         << "zx_object_get_property failed, unable to fetch dso list: "
-        << util::ZxErrorString(status);
+        << ZxErrorString(status);
     return;
   }
 
@@ -687,7 +687,7 @@ void Process::TryBuildLoadedDsosList(Thread* thread, bool check_ldso_bkpt) {
   }
 
   auto lmap_vaddr = reinterpret_cast<zx_vaddr_t>(debug.r_map);
-  dsos_ = util::dso_fetch_list(memory_, lmap_vaddr, "app");
+  dsos_ = dso_fetch_list(memory_, lmap_vaddr, "app");
   // We should have fetched at least one since this is not called until the
   // dl_debug_state breakpoint is hit.
   if (dsos_ == nullptr) {
@@ -695,7 +695,7 @@ void Process::TryBuildLoadedDsosList(Thread* thread, bool check_ldso_bkpt) {
     FXL_VLOG(2) << "dso_fetch_list failed";
     dsos_build_failed_ = true;
   } else {
-    util::dso_vlog_list(dsos_);
+    dso_vlog_list(dsos_);
     // This may already be false, but set it any for documentation purposes.
     dsos_build_failed_ = false;
   }
@@ -791,17 +791,17 @@ int Process::ExitCode() {
     return info.return_code;
   } else {
     FXL_LOG(ERROR) << "Error getting process exit code: "
-                   << util::ZxErrorString(status);
+                   << ZxErrorString(status);
     return -1;
   }
 }
 
-const util::dsoinfo_t* Process::GetExecDso() {
+const dsoinfo_t* Process::GetExecDso() {
   return dso_get_main_exec(dsos_);
 }
 
-util::dsoinfo_t* Process::LookupDso(zx_vaddr_t pc) const {
-  return util::dso_lookup(dsos_, pc);
+dsoinfo_t* Process::LookupDso(zx_vaddr_t pc) const {
+  return dso_lookup(dsos_, pc);
 }
 
 }  // namespace debugserver

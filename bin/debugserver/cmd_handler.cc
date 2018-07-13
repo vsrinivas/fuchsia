@@ -67,9 +67,9 @@ bool ReplyOK(CommandHandler::ResponseCallback callback) {
 
 // This always returns true so that command handlers can simple call "return
 // ReplyWithError()" rather than "ReplyWithError(); return true;
-bool ReplyWithError(util::ErrorCode error_code,
+bool ReplyWithError(ErrorCode error_code,
                     CommandHandler::ResponseCallback callback) {
-  std::string error_rsp = util::BuildErrorPacket(error_code);
+  std::string error_rsp = BuildErrorPacket(error_code);
   callback(error_rsp);
   return true;
 }
@@ -91,7 +91,7 @@ std::vector<std::string> BuildArgvFor_vRun(const fxl::StringView& packet) {
       n = len - s;
     else
       n = semi - s;
-    std::vector<uint8_t> arg = util::DecodeByteArrayString(packet.substr(s, n));
+    std::vector<uint8_t> arg = DecodeByteArrayString(packet.substr(s, n));
     auto char_arg = reinterpret_cast<char*>(arg.data());
     argv.push_back(std::string(char_arg, arg.size()));
     if (semi == fxl::StringView::npos)
@@ -148,7 +148,7 @@ bool CommandHandler::HandleCommand(const fxl::StringView& packet,
     case 'Q':  // General set packet
     {
       fxl::StringView prefix, params;
-      util::ExtractParameters(packet.substr(1), &prefix, &params);
+      ExtractParameters(packet.substr(1), &prefix, &params);
 
       FXL_VLOG(1) << "\'" << packet[0] << "\' packet - prefix: " << prefix
                   << ", params: " << params;
@@ -192,7 +192,7 @@ bool CommandHandler::Handle_c(const fxl::StringView& packet,
   Process* current_process = server_->current_process();
   if (!current_process || !current_process->IsAttached()) {
     FXL_LOG(ERROR) << "c: No inferior";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   Thread* current_thread = server_->current_thread();
@@ -205,25 +205,25 @@ bool CommandHandler::Handle_c(const fxl::StringView& packet,
     if (!fxl::StringToNumberWithError<zx_vaddr_t>(packet, &addr,
                                                   fxl::Base::k16)) {
       FXL_LOG(ERROR) << "c: Malformed address given: " << packet;
-      return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+      return ReplyWithError(ErrorCode::INVAL, std::move(callback));
     }
 
     // If there is no current thread, then report error. This is a special case
     // that means that the process hasn't started yet.
     if (!current_thread) {
       FXL_DCHECK(!current_process->IsLive());
-      return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+      return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
 
     if (!current_thread->registers()->RefreshGeneralRegisters()) {
-      return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+      return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
-    if (!current_thread->registers()->SetRegister(arch::GetPCRegisterNumber(),
+    if (!current_thread->registers()->SetRegister(GetPCRegisterNumber(),
                                                   &addr, sizeof(addr))) {
-      return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+      return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
     if (!current_thread->registers()->WriteGeneralRegisters()) {
-      return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+      return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
 
     // TODO(armansito): Restore the PC register to its original state in case of
@@ -233,7 +233,7 @@ bool CommandHandler::Handle_c(const fxl::StringView& packet,
   // If there is a current thread, then tell it to continue.
   if (current_thread) {
     if (!current_thread->Resume())
-      return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+      return ReplyWithError(ErrorCode::PERM, std::move(callback));
 
     return ReplyOK(std::move(callback));
   }
@@ -246,7 +246,7 @@ bool CommandHandler::Handle_c(const fxl::StringView& packet,
   FXL_DCHECK(!current_process->IsLive());
   if (!current_process->Start()) {
     FXL_LOG(ERROR) << "c: Failed to start the current inferior";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   // Try to set the current thread.
@@ -265,13 +265,13 @@ bool CommandHandler::Handle_C(const fxl::StringView& packet,
   Process* current_process = server_->current_process();
   if (!current_process || !current_process->IsAttached()) {
     FXL_LOG(ERROR) << "C: No inferior";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   Thread* current_thread = server_->current_thread();
   if (!current_thread) {
     FXL_LOG(ERROR) << "C: No current thread";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   // Parse the parameters. The packet format is: sig[;addr]
@@ -283,21 +283,21 @@ bool CommandHandler::Handle_C(const fxl::StringView& packet,
   if (!fxl::StringToNumberWithError<int>(packet.substr(0, semicolon),
                                          &signo, fxl::Base::k16)) {
     FXL_LOG(ERROR) << "C: Malformed packet: " << packet;
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
 
-  arch::GdbSignal thread_signo = current_thread->GetGdbSignal();
+  GdbSignal thread_signo = current_thread->GetGdbSignal();
   // TODO(dje): kNone may be a better value to use here.
-  if (thread_signo == arch::GdbSignal::kUnsupported) {
+  if (thread_signo == GdbSignal::kUnsupported) {
     FXL_LOG(ERROR) << "C: Current thread has received no signal";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
   int int_thread_signo = static_cast<int>(thread_signo);
 
   if (int_thread_signo != signo) {
     FXL_LOG(ERROR) << "C: Signal numbers don't match - actual: "
                    << int_thread_signo << ", received: " << signo;
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   auto addr_param = packet.substr(semicolon);
@@ -312,18 +312,18 @@ bool CommandHandler::Handle_C(const fxl::StringView& packet,
     if (!fxl::StringToNumberWithError<zx_vaddr_t>(addr_param, &addr,
                                                   fxl::Base::k16)) {
       FXL_LOG(ERROR) << "C: Malformed address given: " << packet;
-      return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+      return ReplyWithError(ErrorCode::INVAL, std::move(callback));
     }
 
     if (!current_thread->registers()->RefreshGeneralRegisters()) {
-      return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+      return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
-    if (!current_thread->registers()->SetRegister(arch::GetPCRegisterNumber(),
+    if (!current_thread->registers()->SetRegister(GetPCRegisterNumber(),
                                                   &addr, sizeof(addr))) {
-      return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+      return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
     if (!current_thread->registers()->WriteGeneralRegisters()) {
-      return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+      return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
 
     // TODO(armansito): Restore the PC register to its original state in case of
@@ -332,7 +332,7 @@ bool CommandHandler::Handle_C(const fxl::StringView& packet,
 
   if (!current_thread->Resume()) {
     FXL_LOG(ERROR) << "Failed to resume thread";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   return ReplyOK(std::move(callback));
@@ -345,7 +345,7 @@ bool CommandHandler::Handle_D(const fxl::StringView& packet,
   Process* current_process = server_->current_process();
   if (!current_process) {
     FXL_LOG(ERROR) << "D: No inferior";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   // For now we only support detaching from the one process we have.
@@ -354,27 +354,27 @@ bool CommandHandler::Handle_D(const fxl::StringView& packet,
     if (!fxl::StringToNumberWithError<zx_koid_t>(packet.substr(1), &pid,
                                                  fxl::Base::k16)) {
       FXL_LOG(ERROR) << "D: bad pid: " << packet;
-      return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+      return ReplyWithError(ErrorCode::INVAL, std::move(callback));
     }
     if (pid != current_process->id()) {
       FXL_LOG(ERROR) << "D: unknown pid: " << pid;
-      return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+      return ReplyWithError(ErrorCode::INVAL, std::move(callback));
     }
   } else if (packet != "") {
     FXL_LOG(ERROR) << "D: Malformed packet: " << packet;
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
 
   if (!current_process->IsAttached()) {
     FXL_LOG(ERROR) << "D: Not attached to process " << current_process->id();
-    return ReplyWithError(util::ErrorCode::NOENT, std::move(callback));
+    return ReplyWithError(ErrorCode::NOENT, std::move(callback));
   }
 
   if (!current_process->Detach()) {
     // At the moment this shouldn't happen, but we don't want to kill the
     // debug session because of it. The details of the failure are already
     // logged by Detach().
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
   return ReplyOK(std::move(callback));
 }
@@ -385,7 +385,7 @@ bool CommandHandler::Handle_g(ResponseCallback callback) {
   Process* current_process = server_->current_process();
   if (!current_process || !current_process->IsAttached()) {
     FXL_LOG(ERROR) << "g: No inferior";
-    return ReplyWithError(util::ErrorCode::NOENT, std::move(callback));
+    return ReplyWithError(ErrorCode::NOENT, std::move(callback));
   }
 
   // If there is no current thread, then we reply with "0"s for all registers.
@@ -395,16 +395,16 @@ bool CommandHandler::Handle_g(ResponseCallback callback) {
   // registers.
   std::string result;
   if (!server_->current_thread()) {
-    result = arch::Registers::GetUninitializedGeneralRegistersAsString();
+    result = Registers::GetUninitializedGeneralRegistersAsString();
   } else {
-    arch::Registers* regs = server_->current_thread()->registers();
+    Registers* regs = server_->current_thread()->registers();
     FXL_DCHECK(regs);
     result = regs->GetGeneralRegistersAsString();
   }
 
   if (result.empty()) {
     FXL_LOG(ERROR) << "g: Failed to read register values";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   callback(result);
@@ -418,27 +418,27 @@ bool CommandHandler::Handle_G(const fxl::StringView& packet,
   Process* current_process = server_->current_process();
   if (!current_process || !current_process->IsAttached()) {
     FXL_LOG(ERROR) << "G: No inferior";
-    return ReplyWithError(util::ErrorCode::NOENT, std::move(callback));
+    return ReplyWithError(ErrorCode::NOENT, std::move(callback));
   }
 
   // If there is no current thread report an error.
   Thread* current_thread = server_->current_thread();
   if (!current_thread) {
     FXL_LOG(ERROR) << "G: No current thread";
-    return ReplyWithError(util::ErrorCode::NOENT, std::move(callback));
+    return ReplyWithError(ErrorCode::NOENT, std::move(callback));
   }
 
-  // We pass the packet here directly since arch::Registers handles the parsing.
+  // We pass the packet here directly since Registers handles the parsing.
   // TODO(armansito): gG packets are technically used to read/write "ALL"
   // registers, not just the general registers. We'll have to take this into
   // account in the future, though for now we're just supporting general
   // registers.
   if (!current_thread->registers()->SetGeneralRegistersFromString(packet)) {
     FXL_LOG(ERROR) << "G: Failed to write to general registers";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
   if (!current_thread->registers()->WriteGeneralRegisters()) {
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   return ReplyOK(std::move(callback));
@@ -454,15 +454,15 @@ bool CommandHandler::Handle_H(const fxl::StringView& packet,
   // Packet should at least contain 'c' or 'g' and some characters for the
   // thread id.
   if (packet.size() < 2)
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
 
   switch (packet[0]) {
     case 'c':  // fall through
     case 'g': {
       int64_t pid, tid;
       bool has_pid;
-      if (!util::ParseThreadId(packet.substr(1), &has_pid, &pid, &tid))
-        return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+      if (!ParseThreadId(packet.substr(1), &has_pid, &pid, &tid))
+        return ReplyWithError(ErrorCode::INVAL, std::move(callback));
 
       // We currently support debugging only one process.
       // TODO(armansito): What to do with a process ID? Replying with an empty
@@ -477,7 +477,7 @@ bool CommandHandler::Handle_H(const fxl::StringView& packet,
       // Setting the current thread to "all threads" doesn't make much sense.
       if (tid < 0) {
         FXL_LOG(ERROR) << "Cannot set the current thread to all threads";
-        return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+        return ReplyWithError(ErrorCode::INVAL, std::move(callback));
       }
 
       Process* current_process = server_->current_process();
@@ -492,7 +492,7 @@ bool CommandHandler::Handle_H(const fxl::StringView& packet,
         // inferior, then report error?
         if (!tid) {
           FXL_LOG(ERROR) << "Cannot set a current thread with no inferior";
-          return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+          return ReplyWithError(ErrorCode::PERM, std::move(callback));
         }
 
         FXL_LOG(WARNING) << "Setting current thread to NULL for tid=0";
@@ -524,7 +524,7 @@ bool CommandHandler::Handle_H(const fxl::StringView& packet,
 
       if (!thread) {
         FXL_LOG(ERROR) << "Failed to set the current thread";
-        return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+        return ReplyWithError(ErrorCode::PERM, std::move(callback));
       }
 
       server_->SetCurrentThread(thread);
@@ -544,7 +544,7 @@ bool CommandHandler::Handle_m(const fxl::StringView& packet,
   Process* current_process = server_->current_process();
   if (!current_process || !current_process->IsAttached()) {
     FXL_LOG(ERROR) << "m: No inferior";
-    return ReplyWithError(util::ErrorCode::NOENT, std::move(callback));
+    return ReplyWithError(ErrorCode::NOENT, std::move(callback));
   }
 
   // The "m" packet should have two arguments for addr and length, separated by
@@ -553,7 +553,7 @@ bool CommandHandler::Handle_m(const fxl::StringView& packet,
                                  fxl::kSplitWantNonEmpty);
   if (params.size() != 2) {
     FXL_LOG(ERROR) << "m: Malformed packet: " << packet;
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
 
   uintptr_t addr;
@@ -563,16 +563,16 @@ bool CommandHandler::Handle_m(const fxl::StringView& packet,
       !fxl::StringToNumberWithError<size_t>(params[1], &length,
                                             fxl::Base::k16)) {
     FXL_LOG(ERROR) << "m: Malformed params: " << packet;
-    return ReplyWithError(util::ErrorCode::NOENT, std::move(callback));
+    return ReplyWithError(ErrorCode::NOENT, std::move(callback));
   }
 
   std::unique_ptr<uint8_t[]> buffer(new uint8_t[length]);
   if (!current_process->ReadMemory(addr, buffer.get(), length)) {
     FXL_LOG(ERROR) << "m: Failed to read memory";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
-  std::string result = util::EncodeByteArrayString(buffer.get(), length);
+  std::string result = EncodeByteArrayString(buffer.get(), length);
   callback(result);
   return true;
 }
@@ -584,7 +584,7 @@ bool CommandHandler::Handle_M(const fxl::StringView& packet,
   Process* current_process = server_->current_process();
   if (!current_process || !current_process->IsAttached()) {
     FXL_LOG(ERROR) << "M: No inferior";
-    return ReplyWithError(util::ErrorCode::NOENT, std::move(callback));
+    return ReplyWithError(ErrorCode::NOENT, std::move(callback));
   }
 
   // The "M" packet parameters look like this: "addr,length:XX...".
@@ -595,7 +595,7 @@ bool CommandHandler::Handle_M(const fxl::StringView& packet,
       fxl::SplitString(packet, ":", fxl::kKeepWhitespace, fxl::kSplitWantAll);
   if (params.size() != 2) {
     FXL_LOG(ERROR) << "M: Malformed packet: " << packet;
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
 
   fxl::StringView data = params[1];
@@ -605,7 +605,7 @@ bool CommandHandler::Handle_M(const fxl::StringView& packet,
                             fxl::kSplitWantNonEmpty);
   if (params.size() != 2) {
     FXL_LOG(ERROR) << "M: Malformed packet: " << packet;
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
 
   uintptr_t addr;
@@ -615,18 +615,18 @@ bool CommandHandler::Handle_M(const fxl::StringView& packet,
       !fxl::StringToNumberWithError<size_t>(params[1], &length,
                                             fxl::Base::k16)) {
     FXL_LOG(ERROR) << "M: Malformed params: " << packet;
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
 
   FXL_VLOG(1) << fxl::StringPrintf("M: addr=0x%" PRIxPTR ", len=%lu", addr,
                                    length);
 
-  auto data_bytes = util::DecodeByteArrayString(data);
+  auto data_bytes = DecodeByteArrayString(data);
   if (data_bytes.size() != length) {
     FXL_LOG(ERROR) << "M: payload length doesn't match length argument - "
                    << "payload size: " << data_bytes.size()
                    << ", length requested: " << length;
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
 
   // Short-circuit if |length| is 0.
@@ -638,7 +638,7 @@ bool CommandHandler::Handle_M(const fxl::StringView& packet,
     // granular enough to aid debug various error conditions (e.g. we may want
     // to report why the memory write failed based on the zx_status_t returned
     // from Zircon). (See TODO in util.h).
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   return ReplyOK(std::move(callback));
@@ -693,24 +693,24 @@ bool CommandHandler::Handle_T(const fxl::StringView& packet,
   Process* current_process = server_->current_process();
   if (!current_process || !current_process->IsAttached()) {
     FXL_LOG(ERROR) << "T: No inferior";
-    return ReplyWithError(util::ErrorCode::NOENT, std::move(callback));
+    return ReplyWithError(ErrorCode::NOENT, std::move(callback));
   }
 
   zx_koid_t tid;
   if (!fxl::StringToNumberWithError<zx_koid_t>(packet, &tid,
                                                fxl::Base::k16)) {
     FXL_LOG(ERROR) << "T: Malformed thread id given: " << packet;
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
 
   Thread* thread = current_process->FindThreadById(tid);
   if (!thread) {
     FXL_LOG(ERROR) << "T: no such thread: " << packet;
-    return ReplyWithError(util::ErrorCode::NOENT, std::move(callback));
+    return ReplyWithError(ErrorCode::NOENT, std::move(callback));
   }
   if (!thread->IsLive()) {
     FXL_LOG(ERROR) << "T: thread found, but not live: " << packet;
-    return ReplyWithError(util::ErrorCode::NOENT, std::move(callback));
+    return ReplyWithError(ErrorCode::NOENT, std::move(callback));
   }
 
   return ReplyOK(std::move(callback));
@@ -751,7 +751,7 @@ bool CommandHandler::Handle_zZ(bool insert,
                                  fxl::kKeepWhitespace, fxl::kSplitWantNonEmpty);
   if (params.size() != 3) {
     FXL_LOG(ERROR) << "zZ: 3 required parameters missing";
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
 
   size_t type;
@@ -763,7 +763,7 @@ bool CommandHandler::Handle_zZ(bool insert,
                                                fxl::Base::k16) ||
       !fxl::StringToNumberWithError<size_t>(params[2], &kind, fxl::Base::k16)) {
     FXL_LOG(ERROR) << "zZ: Failed to parse |type|, |addr| and |kind|";
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
 
   auto optional_params = packet.substr(semicolon);
@@ -771,7 +771,7 @@ bool CommandHandler::Handle_zZ(bool insert,
   // "Remove breakpoint" packets don't contain any optional fields.
   if (!insert && !optional_params.empty()) {
     FXL_LOG(ERROR) << "zZ: Malformed packet";
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
 
   switch (type) {
@@ -794,7 +794,7 @@ bool CommandHandler::HandleQueryAttached(const fxl::StringView& params,
   // We don't support multiprocessing yet, so make sure we received the version
   // of qAttached that doesn't have a "pid" parameter.
   if (!params.empty())
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
 
   // The response is "1" if we attached to an existing process, or "0" if we
   // created a new one. We currently don't support the former, so always send
@@ -808,7 +808,7 @@ bool CommandHandler::HandleQueryCurrentThreadId(
     ResponseCallback callback) {
   // The "qC" packet has no parameters.
   if (!params.empty())
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
 
   Thread* current_thread = server_->current_thread();
   if (!current_thread) {
@@ -818,14 +818,14 @@ bool CommandHandler::HandleQueryCurrentThreadId(
     Process* current_process = server_->current_process();
     if (!current_process || !current_process->IsLive()) {
       FXL_LOG(ERROR) << "qC: Current thread has not been set";
-      return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+      return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
 
     FXL_VLOG(1) << "qC: Picking one arbitrary thread";
     current_thread = current_process->PickOneThread();
     if (!current_thread) {
       FXL_VLOG(1) << "qC: Failed to pick a thread";
-      return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+      return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
   }
 
@@ -839,7 +839,7 @@ bool CommandHandler::HandleQueryCurrentThreadId(
 
 bool CommandHandler::HandleQueryRcmd(const fxl::StringView& command,
                                      ResponseCallback callback) {
-  auto cmd_string = util::DecodeString(command);
+  auto cmd_string = DecodeString(command);
   std::vector<fxl::StringView> argv =
     fxl::SplitString(cmd_string, " ",
                      fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
@@ -867,7 +867,7 @@ bool CommandHandler::HandleQueryRcmd(const fxl::StringView& command,
       "\n"
       "Parameters:\n"
       "  verbosity - useful range is -2 to 3 (-2 is most verbose)\n";
-    callback(util::EncodeString(kHelpText));
+    callback(EncodeString(kHelpText));
   } else if (cmd == kSet) {
     if (argv.size() != 3)
       goto bad_command;
@@ -880,9 +880,9 @@ bool CommandHandler::HandleQueryRcmd(const fxl::StringView& command,
     std::string value;
     if (!server_->GetParameter(argv[1], &value))
       goto bad_command;
-    callback(util::EncodeString("Value is " + value + "\n"));
+    callback(EncodeString("Value is " + value + "\n"));
   } else {
-    callback(util::EncodeString("Invalid monitor command\n"));
+    callback(EncodeString("Invalid monitor command\n"));
   }
 
   return true;
@@ -891,7 +891,7 @@ bool CommandHandler::HandleQueryRcmd(const fxl::StringView& command,
   // Errors are not reported via the usual mechanism. For rCmd, the usual
   // mechanism is for things like protocol errors. Instead we just want to
   // return the desired error message.
-  callback(util::EncodeString("Invalid command\n"));
+  callback(EncodeString("Invalid command\n"));
   return true;
 }
 
@@ -907,7 +907,7 @@ bool CommandHandler::HandleSetNonStop(const fxl::StringView& params,
                                       ResponseCallback callback) {
   // The only values we accept are "1" and "0".
   if (params.size() != 1)
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
 
   // We currently only support non-stop mode.
   char value = params[0];
@@ -915,10 +915,10 @@ bool CommandHandler::HandleSetNonStop(const fxl::StringView& params,
     return ReplyOK(std::move(callback));
 
   if (value == '0')
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
 
   FXL_LOG(ERROR) << "QNonStop received with invalid value: " << (unsigned)value;
-  return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+  return ReplyWithError(ErrorCode::INVAL, std::move(callback));
 }
 
 bool CommandHandler::HandleQueryThreadInfo(bool is_first,
@@ -928,7 +928,7 @@ bool CommandHandler::HandleQueryThreadInfo(bool is_first,
   Process* current_process = server_->current_process();
   if (!current_process) {
     FXL_LOG(ERROR) << "Current process is not set";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   // For the "first" thread info query we reply with the complete list of
@@ -943,7 +943,7 @@ bool CommandHandler::HandleQueryThreadInfo(bool is_first,
     if (!in_thread_info_sequence_) {
       FXL_LOG(ERROR) << "qsThreadInfo received without first receiving "
                      << "qfThreadInfo";
-      return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+      return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
 
     in_thread_info_sequence_ = false;
@@ -955,7 +955,7 @@ bool CommandHandler::HandleQueryThreadInfo(bool is_first,
   if (in_thread_info_sequence_) {
     FXL_LOG(ERROR) << "qfThreadInfo received while already in an active "
                    << "sequence";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   current_process->EnsureThreadMapFresh();
@@ -982,7 +982,7 @@ bool CommandHandler::HandleQueryThreadInfo(bool is_first,
 
   std::unique_ptr<char[]> buffer(new char[buf_size]);
   buffer.get()[0] = 'm';
-  util::JoinStrings(thread_ids, ',', buffer.get() + 1, buf_size - 1);
+  JoinStrings(thread_ids, ',', buffer.get() + 1, buf_size - 1);
 
   callback(fxl::StringView(buffer.get(), buf_size));
 
@@ -1006,20 +1006,20 @@ bool CommandHandler::HandleQueryXfer(const fxl::StringView& params,
                                fxl::kKeepWhitespace, fxl::kSplitWantNonEmpty);
   if (args.size() != 2) {
     FXL_LOG(ERROR) << "qXfer:auxv:read:: Malformed params: " << params;
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
 
   size_t offset, length;
   if (!fxl::StringToNumberWithError<size_t>(args[0], &offset, fxl::Base::k16) ||
       !fxl::StringToNumberWithError<size_t>(args[1], &length, fxl::Base::k16)) {
     FXL_LOG(ERROR) << "qXfer:auxv:read:: Malformed params: " << params;
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
 
   Process* current_process = server_->current_process();
   if (!current_process) {
     FXL_LOG(ERROR) << "qXfer:auxv:read: No current process is not set";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   // Build the auxiliary vector. This definition is provided by the Linux manual
@@ -1048,7 +1048,7 @@ bool CommandHandler::HandleQueryXfer(const fxl::StringView& params,
   size_t n = 0;
   ADD_AUXV(AT_BASE, current_process->base_address());
   if (current_process->DsosLoaded()) {
-    const util::dsoinfo_t* exec = current_process->GetExecDso();
+    const dsoinfo_t* exec = current_process->GetExecDso();
     if (exec) {
       ADD_AUXV(AT_ENTRY, exec->entry);
       ADD_AUXV(AT_PHDR, exec->phdr);
@@ -1065,7 +1065,7 @@ bool CommandHandler::HandleQueryXfer(const fxl::StringView& params,
   // in reading 0 bytes.
   if (offset > sizeof(auxv)) {
     FXL_LOG(ERROR) << "qXfer:auxv:read: invalid offset";
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
 
   size_t end = n * sizeof(auxv[0]);
@@ -1087,13 +1087,13 @@ bool CommandHandler::Handle_vAttach(const fxl::StringView& packet,
   Process* current_process = server_->current_process();
   if (!current_process) {
     FXL_LOG(ERROR) << "vAttach: no inferior selected";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   zx_koid_t pid;
   if (!fxl::StringToNumberWithError<zx_koid_t>(packet, &pid, fxl::Base::k16)) {
     FXL_LOG(ERROR) << "vAttach:: Malformed pid: " << packet;
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
 
   switch (current_process->state()) {
@@ -1103,12 +1103,12 @@ bool CommandHandler::Handle_vAttach(const fxl::StringView& packet,
     default:
       FXL_LOG(ERROR)
           << "vAttach: need to kill the currently running process first";
-      return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+      return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   if (!current_process->Attach(pid)) {
     FXL_LOG(ERROR) << "vAttach: failed to attach to inferior " << pid;
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   // It's Attach()'s job to mark the process as live, since it knows we just
@@ -1123,13 +1123,13 @@ bool CommandHandler::Handle_vCont(const fxl::StringView& packet,
   Process* current_process = server_->current_process();
   if (!current_process) {
     FXL_LOG(ERROR) << "vCont: no current process to run!";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   ThreadActionList actions(packet, current_process->id());
   if (!actions.valid()) {
     FXL_LOG(ERROR) << "vCont: \"" << packet << "\": error / not supported.";
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
 
   FXL_DCHECK(current_process->IsLive());
@@ -1174,7 +1174,7 @@ bool CommandHandler::Handle_vCont(const fxl::StringView& packet,
         }
       });
   if (!action_list_ok)
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
 
   current_process->ForEachLiveThread([&actions](Thread* thread) {
     zx_koid_t pid = thread->process()->id();
@@ -1219,34 +1219,34 @@ bool CommandHandler::Handle_vKill(const fxl::StringView& packet,
   if (!current_process) {
     // This can't happen today, but it might eventually.
     FXL_LOG(ERROR) << "vRun: no current process to kill!";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   zx_koid_t pid;
   if (!fxl::StringToNumberWithError<zx_koid_t>(packet, &pid, fxl::Base::k16)) {
     FXL_LOG(ERROR) << "vAttach:: Malformed pid: " << packet;
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
 
   // Since we only support one process at the moment, only allow killing
   // that one.
   if (pid != current_process->id()) {
     FXL_LOG(ERROR) << "vAttach:: not our pid: " << pid;
-    return ReplyWithError(util::ErrorCode::INVAL, std::move(callback));
+    return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
 
   switch (current_process->state()) {
     case Process::State::kNew:
     case Process::State::kGone:
       FXL_LOG(ERROR) << "vKill: process not running";
-      return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+      return ReplyWithError(ErrorCode::PERM, std::move(callback));
     default:
       break;
   }
 
   if (!current_process->Kill()) {
     FXL_LOG(ERROR) << "Failed to kill inferior";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   return ReplyOK(std::move(callback));
@@ -1260,7 +1260,7 @@ bool CommandHandler::Handle_vRun(const fxl::StringView& packet,
   if (!current_process) {
     // This can't happen today, but it might eventually.
     FXL_LOG(ERROR) << "vRun: no current process to run!";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   if (!packet.empty()) {
@@ -1275,12 +1275,12 @@ bool CommandHandler::Handle_vRun(const fxl::StringView& packet,
     default:
       FXL_LOG(ERROR)
           << "vRun: need to kill the currently running process first";
-      return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+      return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   if (!current_process->Initialize()) {
     FXL_LOG(ERROR) << "Failed to set up inferior";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   // On Linux, the program is considered "live" after vRun, e.g. $pc is set. On
@@ -1290,7 +1290,7 @@ bool CommandHandler::Handle_vRun(const fxl::StringView& packet,
   // Thread::Resume() in gdbserver).
   if (!current_process->Start()) {
     FXL_LOG(ERROR) << "vRun: Failed to start process";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   FXL_DCHECK(current_process->IsLive());
@@ -1312,14 +1312,14 @@ bool CommandHandler::InsertSoftwareBreakpoint(
   Process* current_process = server_->current_process();
   if (!current_process) {
     FXL_LOG(ERROR) << "No current process exists";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   // TODO(armansito): Handle |optional_params|.
 
   if (!current_process->breakpoints()->InsertSoftwareBreakpoint(addr, kind)) {
     FXL_LOG(ERROR) << "Failed to insert software breakpoint";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   return ReplyOK(std::move(callback));
@@ -1335,12 +1335,12 @@ bool CommandHandler::RemoveSoftwareBreakpoint(
   Process* current_process = server_->current_process();
   if (!current_process) {
     FXL_LOG(ERROR) << "No current process exists";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   if (!current_process->breakpoints()->RemoveSoftwareBreakpoint(addr)) {
     FXL_LOG(ERROR) << "Failed to remove software breakpoint";
-    return ReplyWithError(util::ErrorCode::PERM, std::move(callback));
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   return ReplyOK(std::move(callback));

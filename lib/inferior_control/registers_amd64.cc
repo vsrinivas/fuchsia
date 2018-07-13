@@ -20,7 +20,6 @@
 #include "thread.h"
 
 namespace debugserver {
-namespace arch {
 
 int GetPCRegisterNumber() { return static_cast<int>(Amd64Register::RIP); }
 
@@ -44,7 +43,7 @@ std::string GetRegisterAsStringHelper(const zx_thread_state_general_regs& gregs,
 
   greg_bytes += regno < 0 ? 0 : regno * sizeof(uint64_t);
 
-  return util::EncodeByteArrayString(greg_bytes, kDataSize);
+  return EncodeByteArrayString(greg_bytes, kDataSize);
 }
 
 class RegistersAmd64 final : public Registers {
@@ -100,7 +99,7 @@ class RegistersAmd64 final : public Registers {
     greg_bytes += regno * sizeof(uint64_t);
     std::memcpy(buffer, greg_bytes, buf_size);
     FXL_VLOG(1) << "Get register " << regno << " = "
-                << util::EncodeByteArrayString(greg_bytes, buf_size);
+                << EncodeByteArrayString(greg_bytes, buf_size);
     return true;
   }
 
@@ -119,15 +118,15 @@ class RegistersAmd64 final : public Registers {
     greg_bytes += regno * sizeof(uint64_t);
     std::memcpy(greg_bytes, value, value_size);
     FXL_VLOG(1) << "Set register " << regno << " = "
-                << util::EncodeByteArrayString(greg_bytes, value_size);
+                << EncodeByteArrayString(greg_bytes, value_size);
     return true;
   }
 
   bool SetSingleStep(bool enable) override {
     if (enable)
-      gregs_.rflags |= x86::EFLAGS_TF_MASK;
+      gregs_.rflags |= X86_EFLAGS_TF_MASK;
     else
-      gregs_.rflags &= ~static_cast<uint64_t>(x86::EFLAGS_TF_MASK);
+      gregs_.rflags &= ~static_cast<uint64_t>(X86_EFLAGS_TF_MASK);
     FXL_VLOG(2) << "rflags.TF set to " << enable;
     return true;
   }
@@ -179,5 +178,4 @@ std::string Registers::GetUninitializedGeneralRegistersAsString() {
 // static
 size_t Registers::GetRegisterSize() { return sizeof(uint64_t); }
 
-}  // namespace arch
 }  // namespace debugserver

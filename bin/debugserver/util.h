@@ -16,7 +16,6 @@
 #include "lib/fxl/strings/string_view.h"
 
 namespace debugserver {
-namespace util {
 
 // The escape character used in the GDB Remote Protocol.
 constexpr char kEscapeChar = '}';
@@ -108,5 +107,4 @@ void ExtractParameters(const fxl::StringView& packet,
                        fxl::StringView* out_prefix,
                        fxl::StringView* out_params);
 
-}  // namespace util
 }  // namespace debugserver

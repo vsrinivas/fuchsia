@@ -11,7 +11,6 @@
 #include "thread.h"
 
 namespace debugserver {
-namespace arch {
 
 namespace {
 
@@ -77,7 +76,7 @@ namespace {
 // Set the TF bit in the RFLAGS register of |thread|.
 
 bool SetRflagsTF(Thread* thread, bool enable) {
-  arch::Registers* registers = thread->registers();
+  Registers* registers = thread->registers();
 
   if (!registers->RefreshGeneralRegisters()) {
     FXL_LOG(ERROR) << "Failed to refresh general regs";
@@ -125,5 +124,4 @@ bool SingleStepBreakpoint::Remove() {
 
 bool SingleStepBreakpoint::IsInserted() const { return inserted_; }
 
-}  // namespace arch
 }  // namespace debugserver

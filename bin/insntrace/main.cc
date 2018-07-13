@@ -435,7 +435,7 @@ static bool ControlIpt(const debugserver::IptConfig& config,
 
 static bool RunProgram(const debugserver::IptConfig& config,
                        const fxl::CommandLine& cl) {
-  debugserver::util::Argv inferior_argv(cl.positional_args().begin(),
+  debugserver::Argv inferior_argv(cl.positional_args().begin(),
                                         cl.positional_args().end());
 
   if (inferior_argv.size() == 0) {
@@ -471,11 +471,11 @@ int main(int argc, char* argv[]) {
   }
 
   if (cl.HasOption("dump-arch", nullptr)) {
-    debugserver::arch::DumpArch(stdout);
+    debugserver::DumpArch(stdout);
     return EXIT_SUCCESS;
   }
 
-  if (!debugserver::arch::x86::HaveProcessorTrace()) {
+  if (!debugserver::X86HaveProcessorTrace()) {
     FXL_LOG(ERROR) << "PT not supported";
     return EXIT_FAILURE;
   }

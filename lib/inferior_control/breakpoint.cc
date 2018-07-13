@@ -10,7 +10,6 @@
 #include "lib/fxl/strings/string_printf.h"
 
 namespace debugserver {
-namespace arch {
 
 Breakpoint::Breakpoint(uintptr_t address, size_t kind)
     : address_(address), kind_(kind) {}
@@ -122,5 +121,4 @@ bool ThreadBreakpointSet::SingleStepBreakpointInserted() {
   return !!single_step_breakpoint_;
 }
 
-}  // namespace arch
 }  // namespace debugserver

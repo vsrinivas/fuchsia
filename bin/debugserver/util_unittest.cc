@@ -11,7 +11,6 @@
 #include "gtest/gtest.h"
 
 namespace debugserver {
-namespace util {
 namespace {
 
 TEST(UtilTest, BuildErrorPacket) {
@@ -151,5 +150,4 @@ TEST(UtilTest, FindUnescapedChar) {
 }
 
 }  // namespace
-}  // namespace util
 }  // namespace debugserver

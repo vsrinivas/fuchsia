@@ -16,7 +16,6 @@
 #include "util.h"
 
 namespace debugserver {
-namespace util {
 
 bool BuildIdTable::ReadIdsFile(const std::string& file) {
   FXL_LOG(INFO) << "Loading ids data from " << file;
@@ -88,5 +87,4 @@ const BuildId* BuildIdTable::LookupBuildId(const std::string& bid) {
   return nullptr;
 }
 
-}  // namespace util
 }  // namespace debugserver

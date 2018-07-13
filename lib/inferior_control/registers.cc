@@ -15,7 +15,6 @@
 #include "thread.h"
 
 namespace debugserver {
-namespace arch {
 
 Registers::Registers(Thread* thread) : thread_(thread) {
   FXL_DCHECK(thread);
@@ -49,7 +48,7 @@ bool Registers::RefreshRegsetHelper(int regset, void* buf, size_t buf_size) {
       zx_thread_read_state(thread()->handle(), regset, buf, buf_size);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to read regset " << regset << ": "
-                   << util::ZxErrorString(status);
+                   << ZxErrorString(status);
     return false;
   }
 
@@ -63,7 +62,7 @@ bool Registers::WriteRegsetHelper(int regset, const void* buf,
       zx_thread_write_state(thread()->handle(), regset, buf, buf_size);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to write regset " << regset << ": "
-                   << util::ZxErrorString(status);
+                   << ZxErrorString(status);
     return false;
   }
 
@@ -74,7 +73,7 @@ bool Registers::WriteRegsetHelper(int regset, const void* buf,
 bool Registers::SetRegsetFromStringHelper(int regset, void* buffer,
                                           size_t buf_size,
                                           const fxl::StringView& value) {
-  auto bytes = util::DecodeByteArrayString(value);
+  auto bytes = DecodeByteArrayString(value);
   if (bytes.size() != buf_size) {
     FXL_LOG(ERROR) << "|value| doesn't match regset " << regset << " size of "
                    << buf_size << ": " << value;
@@ -99,5 +98,4 @@ zx_vaddr_t Registers::GetSP() { return GetIntRegister(GetSPRegisterNumber()); }
 
 zx_vaddr_t Registers::GetFP() { return GetIntRegister(GetFPRegisterNumber()); }
 
-}  // namespace arch
 }  // namespace debugserver

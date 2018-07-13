@@ -14,31 +14,30 @@
 #include "elf_reader.h"
 
 namespace debugserver {
-namespace elf {
 
-struct Symbol {
+struct ElfSymbol {
   // weak pointer into the string section of the loaded ELF file
   const char* name = nullptr;
   uint64_t addr = 0;
   uint64_t size = 0;
 };
 
-class SymbolTable {
+class ElfSymbolTable {
  public:
-  SymbolTable(const std::string& file_name, const std::string& contents);
-  ~SymbolTable();
+  ElfSymbolTable(const std::string& file_name, const std::string& contents);
+  ~ElfSymbolTable();
 
   const std::string& file_name() const { return file_name_; }
   const std::string& contents() const { return contents_; }
   size_t num_symbols() const { return num_symbols_; }
 
   // |symtab_type| is one of SHT_SYMTAB, SHT_DYNSYM.
-  bool Populate(Reader* elf, unsigned symtab_type);
+  bool Populate(ElfReader* elf, unsigned symtab_type);
 
   // |index| must be valid.
-  const Symbol& GetSymbol(size_t index) const { return symbols_[index]; }
+  const ElfSymbol& GetSymbol(size_t index) const { return symbols_[index]; }
 
-  const Symbol* FindSymbol(uint64_t addr) const;
+  const ElfSymbol* FindSymbol(uint64_t addr) const;
 
   void Dump(FILE*) const;
 
@@ -57,14 +56,13 @@ class SymbolTable {
 
   size_t num_symbols_ = 0;
   // Once Finalize() is called this is sorted by |Symbol.addr|.
-  Symbol* symbols_ = nullptr;
+  ElfSymbol* symbols_ = nullptr;
 
   // To separate our lifetime with that of the ELF reader, we store the
   // strings here.
-  std::unique_ptr<SectionContents> string_section_;
+  std::unique_ptr<ElfSectionContents> string_section_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(SymbolTable);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ElfSymbolTable);
 };
 
-}  // namespace elf
 }  // namespace debugserver

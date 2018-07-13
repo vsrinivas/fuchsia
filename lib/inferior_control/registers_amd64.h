@@ -5,7 +5,6 @@
 #pragma once
 
 namespace debugserver {
-namespace arch {
 
 // The x86-64 general register names.
 
@@ -31,5 +30,4 @@ enum class Amd64Register {
   NUM_REGISTERS
 };
 
-}  // namespace arch
 }  // namespace debugserver

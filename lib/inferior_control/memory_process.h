@@ -12,7 +12,7 @@ class Process;
 
 // The API for accessing process memory.
 
-class ProcessMemory final : public util::ByteBlock {
+class ProcessMemory final : public ByteBlock {
  public:
   explicit ProcessMemory(Process* process);
   bool Read(uintptr_t address, void* out_buffer, size_t length) const override;

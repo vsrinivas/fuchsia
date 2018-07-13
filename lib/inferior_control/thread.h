@@ -51,7 +51,7 @@ class Thread final {
   // Returns a pointer to the arch::Registers object associated with this
   // thread. The returned pointer is owned by this Thread instance and should
   // not be deleted by the caller.
-  arch::Registers* registers() const { return registers_.get(); }
+  Registers* registers() const { return registers_.get(); }
 
   // Returns the current state of this thread.
   State state() const { return state_; }
@@ -67,7 +67,7 @@ class Thread final {
   // context does not map to a meaningful GDB signal number, this method returns
   // GdbSignal::kUnsupported.
   // TODO(dje): kNone might be a better value if there is no exception.
-  arch::GdbSignal GetGdbSignal() const;
+  GdbSignal GetGdbSignal() const;
 
   // Called when the thread gets an exception.
   void OnException(const zx_excp_type_t type,
@@ -112,7 +112,7 @@ class Thread final {
   zx_koid_t id_;
 
   // The arch::Registers object associated with this thread.
-  std::unique_ptr<arch::Registers> registers_;
+  std::unique_ptr<Registers> registers_;
 
   // The current state of the this thread.
   State state_;
@@ -124,7 +124,7 @@ class Thread final {
 #endif
 
   // The collection of breakpoints that belong to this thread.
-  arch::ThreadBreakpointSet breakpoints_;
+  ThreadBreakpointSet breakpoints_;
 
   // Pointer to the most recent exception context that this Thread received via
   // an architectural exception. Contains nullptr if the thread never received

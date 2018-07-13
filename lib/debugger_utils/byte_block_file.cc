@@ -13,7 +13,6 @@
 #include "util.h"
 
 namespace debugserver {
-namespace util {
 
 FileByteBlock::FileByteBlock(int fd) : fd_(fd) { FXL_DCHECK(fd >= 0); }
 
@@ -26,7 +25,7 @@ bool FileByteBlock::Read(uintptr_t address, void* out_buffer,
   off_t where = lseek(fd_, address, SEEK_SET);
   if (where != static_cast<off_t>(address)) {
     FXL_LOG(ERROR) << fxl::StringPrintf("lseek to 0x%" PRIxPTR, address) << ", "
-                   << util::ErrnoString(errno);
+                   << ErrnoString(errno);
     return false;
   }
 
@@ -34,7 +33,7 @@ bool FileByteBlock::Read(uintptr_t address, void* out_buffer,
   if (bytes_read < 0) {
     FXL_LOG(ERROR) << fxl::StringPrintf(
                           "Failed to read memory at addr: 0x%" PRIxPTR, address)
-                   << ", " << util::ErrnoString(errno);
+                   << ", " << ErrnoString(errno);
     return false;
   }
 
@@ -61,7 +60,7 @@ bool FileByteBlock::Write(uintptr_t address, const void* buffer,
   off_t where = lseek(fd_, address, SEEK_SET);
   if (where != static_cast<off_t>(address)) {
     FXL_LOG(ERROR) << fxl::StringPrintf("lseek to 0x%" PRIxPTR, address) << ", "
-                   << util::ErrnoString(errno);
+                   << ErrnoString(errno);
     return false;
   }
 
@@ -69,7 +68,7 @@ bool FileByteBlock::Write(uintptr_t address, const void* buffer,
   if (bytes_written < 0) {
     FXL_LOG(ERROR) << fxl::StringPrintf(
                           "Failed to read memory at addr: 0x%" PRIxPTR, address)
-                   << ", " << util::ErrnoString(errno);
+                   << ", " << ErrnoString(errno);
     return false;
   }
 
@@ -84,5 +83,4 @@ bool FileByteBlock::Write(uintptr_t address, const void* buffer,
   return true;
 }
 
-}  // namespace util
 }  // namespace debugserver

@@ -17,8 +17,6 @@ namespace debugserver {
 
 class Thread;
 
-namespace arch {
-
 // Returns the register number for the "Program Counter Register" on the current
 // platform. Returns -1, if this operation is not supported.
 int GetPCRegisterNumber();
@@ -163,5 +161,4 @@ class Registers {
   FXL_DISALLOW_COPY_AND_ASSIGN(Registers);
 };
 
-}  // namespace arch
 }  // namespace debugserver

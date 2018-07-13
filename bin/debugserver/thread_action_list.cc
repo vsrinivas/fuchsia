@@ -112,8 +112,8 @@ ThreadActionList::ThreadActionList(const fxl::StringView& str,
       bool has_pid;
       // TODO(dje): koids are uint64_t
       int64_t pid, tid;
-      if (!util::ParseThreadId(str.substr(s + 2, n - 2), &has_pid, &pid,
-                               &tid)) {
+      if (!ParseThreadId(str.substr(s + 2, n - 2), &has_pid, &pid,
+                         &tid)) {
         FXL_LOG(ERROR) << "Bad thread id in action: " << str;
         return;
       }

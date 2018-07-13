@@ -71,11 +71,11 @@ void IOLoop::PostWriteTask(const fxl::StringView& bytes) {
     // least with the GDB Remote protocol).
     if (bytes_written != static_cast<ssize_t>(bytes.size())) {
       FXL_LOG(ERROR) << "Failed to send bytes"
-                     << ", " << util::ErrnoString(errno);
+                     << ", " << ErrnoString(errno);
       ReportError();
       return;
     }
-    FXL_VLOG(2) << "<- " << util::EscapeNonPrintableString(bytes);
+    FXL_VLOG(2) << "<- " << EscapeNonPrintableString(bytes);
   });
 }
 

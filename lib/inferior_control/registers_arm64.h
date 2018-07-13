@@ -5,7 +5,6 @@
 #pragma once
 
 namespace debugserver {
-namespace arch {
 
 // The arm64 general register names.
 
@@ -18,5 +17,4 @@ enum class Arm64Register {
   NUM_REGISTERS
 };
 
-}  // namespace arch
 }  // namespace debugserver

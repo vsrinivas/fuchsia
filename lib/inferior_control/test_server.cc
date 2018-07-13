@@ -27,7 +27,7 @@
 
 namespace debugserver {
 
-TestServer::TestServer() : Server(util::GetRootJob(), util::GetDefaultJob()) {}
+TestServer::TestServer() : Server(GetRootJob(), GetDefaultJob()) {}
 
 void TestServer::SetUp() {
   ASSERT_TRUE(exception_port_.Run());
@@ -64,7 +64,7 @@ bool TestServer::SetupInferior(const std::vector<std::string>& argv) {
 
 bool TestServer::RunHelperProgram(zx::channel channel) {
   Process* process = current_process();
-  const util::Argv& argv = process->argv();
+  const Argv& argv = process->argv();
 
   FXL_LOG(INFO) << "Starting program: " << argv[0];
 

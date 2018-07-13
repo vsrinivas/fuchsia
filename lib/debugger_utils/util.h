@@ -18,7 +18,6 @@
 #include "lib/fxl/strings/string_view.h"
 
 namespace debugserver {
-namespace util {
 
 class ByteBlock;
 
@@ -100,5 +99,4 @@ bool ReadString(const ByteBlock& m, zx_vaddr_t vaddr, char* ptr, size_t max);
 
 #endif  // __Fuchsia__
 
-}  // namespace util
 }  // namespace debugserver

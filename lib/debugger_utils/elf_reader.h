@@ -19,40 +19,39 @@
 #include "byte_block.h"
 
 namespace debugserver {
-namespace elf {
 
 // 32+64 support, bi-endian, mmap support can come later when needed
 
 #if UINT_MAX == ULONG_MAX
 
-using Header = Elf32_Ehdr;
-using SegmentHeader = Elf32_Phdr;
-using SectionHeader = Elf32_Shdr;
-using RawSymbol = Elf32_Sym;
+using ElfHeader = Elf32_Ehdr;
+using ElfSegmentHeader = Elf32_Phdr;
+using ElfSectionHeader = Elf32_Shdr;
+using ElfRawSymbol = Elf32_Sym;
 
 #else
 
-using Header = Elf64_Ehdr;
-using SegmentHeader = Elf64_Phdr;
-using SectionHeader = Elf64_Shdr;
-using RawSymbol = Elf64_Sym;
+using ElfHeader = Elf64_Ehdr;
+using ElfSegmentHeader = Elf64_Phdr;
+using ElfSectionHeader = Elf64_Shdr;
+using ElfRawSymbol = Elf64_Sym;
 
 #endif
 
-enum class Error {
+enum class ElfError {
   OK = 0,
   IO,
   BADELF,
   NOMEM,
 };
 
-const char* ErrorName(Error er);
+const char* ElfErrorName(ElfError er);
 
-class Reader;
+class ElfReader;
 
-class SectionContents {
+class ElfSectionContents {
  public:
-  ~SectionContents();
+  ~ElfSectionContents();
 
   // Return the size in bytes of the section.
   // TODO(dje): 32x64
@@ -69,46 +68,46 @@ class SectionContents {
   // [We don't byteswap today, but when we do that is how this will work.
   // Symbols are generally used to create internal symbol tables and thus
   // are generally discarded immediately after use.]
-  const RawSymbol& GetSymbolEntry(size_t entry_number);
+  const ElfRawSymbol& GetSymbolEntry(size_t entry_number);
 
-  const SectionHeader& header() const { return header_; }
+  const ElfSectionHeader& header() const { return header_; }
 
   const void* contents() const { return contents_; }
 
  private:
-  friend class Reader;
+  friend class ElfReader;
 
   // Takes ownership of |contents|.
   // TODO(dje): separate method for mmap
-  SectionContents(const SectionHeader& header, void* contents);
+  ElfSectionContents(const ElfSectionHeader& header, void* contents);
 
   // A copy is made of the header to separate the lifetime of the section's
   // contents from Reader. We could just save the pieces we use/need but
   // this is simple enough and saves us from having to continually add more.
-  // Note that while we don't byteswap today, SectionHeader contains the
+  // Note that while we don't byteswap today, ElfSectionHeader contains the
   // ready-to-use version.
-  const SectionHeader header_;
+  const ElfSectionHeader header_;
   void* contents_;
 };
 
-class Reader {
+class ElfReader {
  public:
-  static Error Create(const std::string& file_name,
-                      std::shared_ptr<util::ByteBlock> byte_block,
-                      uint32_t options, uint64_t base,
-                      std::unique_ptr<Reader>* out);
-  ~Reader();
+  static ElfError Create(const std::string& file_name,
+                         std::shared_ptr<ByteBlock> byte_block,
+                         uint32_t options, uint64_t base,
+                         std::unique_ptr<ElfReader>* out);
+  ~ElfReader();
 
   const std::string& file_name() const { return file_name_; }
 
   // Read the ELF header at offset |base| in |m|.
   // The header is written in to |hdr|.
-  static bool ReadHeader(const util::ByteBlock& m, uint64_t base, Header* hdr);
+  static bool ReadHeader(const ByteBlock& m, uint64_t base, ElfHeader* hdr);
 
   // Return true if |hdr| is a valid ELF header.
-  static bool VerifyHeader(const Header* hdr);
+  static bool VerifyHeader(const ElfHeader* hdr);
 
-  const Header& header() { return header_; }
+  const ElfHeader& header() { return header_; }
 
   // Return the number of program segments.
   size_t GetNumSegments() const { return header_.e_phnum; }
@@ -116,7 +115,7 @@ class Reader {
   // Read the program segment headers in.
   // This is a no-op if they are already read in.
   // This must be called before any call to GetSegment().
-  Error ReadSegmentHeaders();
+  ElfError ReadSegmentHeaders();
 
   // Free space allocated by ReadSegmentHeaders();
   void FreeSegmentHeaders();
@@ -124,7 +123,7 @@ class Reader {
   // Return the program segment header of |segment_number|.
   // |segment_number| must be valid, and ReadSegmentHeaders() must have
   // already been called.
-  const SegmentHeader& GetSegmentHeader(size_t segment_number);
+  const ElfSegmentHeader& GetSegmentHeader(size_t segment_number);
 
   // Return the number of sections.
   size_t GetNumSections() const { return header_.e_shnum; }
@@ -132,7 +131,7 @@ class Reader {
   // Read the section headers in.
   // This is a no-op if they are already read in.
   // This must be called before any call to GetSection().
-  Error ReadSectionHeaders();
+  ElfError ReadSectionHeaders();
 
   // Free space allocated by ReadSectionHeaders();
   void FreeSectionHeaders();
@@ -140,17 +139,18 @@ class Reader {
   // Return the section header of |section_number|.
   // |section_number| must be valid, and ReadSectionHeaders() must have
   // already been called.
-  const SectionHeader& GetSectionHeader(size_t section_number);
+  const ElfSectionHeader& GetSectionHeader(size_t section_number);
 
   // Return the section header with type |type|, an SHT_* value.
   // Returns nullptr if not found.
-  const SectionHeader* GetSectionHeaderByType(unsigned type);
+  const ElfSectionHeader* GetSectionHeaderByType(unsigned type);
 
   // Fetch the contents of |sh|.
   // This version malloc's space for the section, reads the contents into
   // the buffer, and assigns it to SectionContents.
-  Error GetSectionContents(const SectionHeader& sh,
-                           std::unique_ptr<SectionContents>* out_contents);
+  ElfError GetSectionContents(
+    const ElfSectionHeader& sh,
+    std::unique_ptr<ElfSectionContents>* out_contents);
 
   // Maximum length in bytes of a build id.
   static constexpr size_t kMaxBuildIdSize = 64;
@@ -160,31 +160,30 @@ class Reader {
   // If a build id is not found |buf| is "" and OK is returned.
   // TODO(dje): As with other changes deferred for later,
   // one might consider using std::string here. Later.
-  Error ReadBuildId(char* buf, size_t buf_size);
+  ElfError ReadBuildId(char* buf, size_t buf_size);
 
   // Read |length| bytes at |address| in the ELF object an store in |buffer|.
   // |address| is the offset from the beginning of the ELF object.
   bool Read(uint64_t address, void* buffer, size_t length) const;
 
  private:
-  Reader(const std::string& file_name,
-         std::shared_ptr<util::ByteBlock> byte_block, uint64_t base);
+  ElfReader(const std::string& file_name,
+            std::shared_ptr<ByteBlock> byte_block, uint64_t base);
 
   // For debugging/informational purposes only.
   const std::string file_name_;
 
   // This is the API to read/write from wherever the ELF object lives.
   // It could be in process memory, or in a file, or wherever.
-  const std::shared_ptr<util::ByteBlock> byte_block_;
+  const std::shared_ptr<ByteBlock> byte_block_;
 
   // The offset in |byte_block_| of the start of the ELF object.
   const uint64_t base_;
 
-  Header header_;
+  ElfHeader header_;
 
-  const SegmentHeader* segment_headers_ = nullptr;
-  const SectionHeader* section_headers_ = nullptr;
+  const ElfSegmentHeader* segment_headers_ = nullptr;
+  const ElfSectionHeader* section_headers_ = nullptr;
 };
 
-}  // namespace elf
 }  // namespace debugserver

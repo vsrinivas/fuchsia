@@ -13,7 +13,6 @@
 #include <zircon/ktrace.h>
 
 namespace debugserver {
-namespace ktrace {
 
 union KtraceRecord {
   ktrace_header_t hdr;
@@ -24,13 +23,16 @@ union KtraceRecord {
 };
 
 // The type of the function to pass to ReadFile.
-typedef int RecordReader(KtraceRecord* rec, void* arg);
+typedef int KtraceRecordReader(KtraceRecord* rec, void* arg);
 
 // Read all of |fd|, calling |reader| for each record found.
 // If |reader| returns zero reading continues. Otherwise the result of
 // |reader| is an error code, and is returned as the result of ReadFile().
 
-int ReadFile(int fd, RecordReader* reader, void* arg);
+int KtraceReadFile(int fd, KtraceRecordReader* reader, void* arg);
 
-}  // namespace ktrace
+// Return the name of |tag|.
+
+const char* KtraceRecName(uint32_t tag);
+
 }  // namespace debugserver

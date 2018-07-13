@@ -13,7 +13,6 @@
 #include "lib/fxl/strings/string_printf.h"
 
 namespace debugserver {
-namespace util {
 
 namespace {
 
@@ -71,7 +70,7 @@ std::string EncodeByteArrayString(const uint8_t* bytes, size_t num_bytes) {
   std::string result;
   result.resize(kResultSize);
   for (size_t i = 0; i < kResultSize; i += 2) {
-    util::EncodeByteString(*bytes, const_cast<char*>(result.data() + i));
+    EncodeByteString(*bytes, const_cast<char*>(result.data() + i));
     ++bytes;
   }
 
@@ -96,7 +95,7 @@ std::vector<uint8_t> DecodeByteArrayString(const fxl::StringView& string) {
   const size_t kResultSize = string.size() / 2;
   result.resize(kResultSize);
   for (size_t i = 0; i < kResultSize; ++i) {
-    if (!util::DecodeByteString(string.data() + (i * 2), result.data() + i))
+    if (!DecodeByteString(string.data() + (i * 2), result.data() + i))
       return std::vector<uint8_t>{};
   }
 
@@ -234,5 +233,4 @@ void hexdump_ex(FILE* out, const void* ptr, size_t len, uint64_t disp_addr) {
   }
 }
 
-}  // namespace util
 }  // namespace debugserver

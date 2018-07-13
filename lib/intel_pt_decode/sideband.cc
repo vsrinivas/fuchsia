@@ -25,14 +25,14 @@
 
 namespace intel_processor_trace {
 
-using debugserver::util::ErrnoString;
+using debugserver::ErrnoString;
 
 // For passing data from ReadKtraceFile to ProcessKtraceRecord.
 struct KtraceData {
   DecoderState* state;
 };
 
-int DecoderState::ProcessKtraceRecord(debugserver::ktrace::KtraceRecord* rec,
+int DecoderState::ProcessKtraceRecord(debugserver::KtraceRecord* rec,
                                       void* arg) {
   KtraceData* data = reinterpret_cast<KtraceData*>(arg);
   DecoderState* state = data->state;
@@ -107,7 +107,7 @@ bool DecoderState::ReadKtraceFile(const std::string& file) {
   }
 
   KtraceData data = {this};
-  int rc = debugserver::ktrace::ReadFile(fd.get(), ProcessKtraceRecord, &data);
+  int rc = debugserver::KtraceReadFile(fd.get(), ProcessKtraceRecord, &data);
   if (rc != 0) {
     FXL_LOG(ERROR) << fxl::StringPrintf("Error %d reading ktrace file", rc);
     return false;

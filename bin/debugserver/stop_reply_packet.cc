@@ -39,7 +39,7 @@ void StopReplyPacket::SetSignalNumber(uint8_t signal_number) {
 
 void StopReplyPacket::SetThreadId(zx_koid_t process_id, zx_koid_t thread_id) {
   FXL_DCHECK(type_ == Type::kReceivedSignal || type_ == Type::kThreadExited);
-  tid_string_ = util::EncodeThreadId(process_id, thread_id);
+  tid_string_ = EncodeThreadId(process_id, thread_id);
 }
 
 void StopReplyPacket::AddRegisterValue(uint8_t register_number,
@@ -53,7 +53,7 @@ void StopReplyPacket::AddRegisterValue(uint8_t register_number,
   result.resize(3 + value.size());
 
   char* ptr = result.data();
-  util::EncodeByteString(register_number, ptr);
+  EncodeByteString(register_number, ptr);
   ptr += 2;
   *ptr++ = ':';
   std::memcpy(ptr, value.data(), value.size());
@@ -95,7 +95,7 @@ std::vector<char> StopReplyPacket::Build() const {
   // Sigval
   uint8_t signo = stop_reason_.empty() ? signo_ : 5;  // TODO(dje): 5->?
   char signo_str[2];
-  util::EncodeByteString(signo, signo_str);
+  EncodeByteString(signo, signo_str);
   packet.insert(packet.end(), signo_str, signo_str + 2);
 
   // Registers

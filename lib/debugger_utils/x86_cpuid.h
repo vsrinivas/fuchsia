@@ -14,8 +14,6 @@
 #include "lib/fxl/logging.h"
 
 namespace debugserver {
-namespace arch {
-namespace x86 {
 
 // cpu vendors
 enum x86_vendor_list { X86_VENDOR_UNKNOWN, X86_VENDOR_INTEL, X86_VENDOR_AMD };
@@ -35,7 +33,7 @@ const x86_model_info* x86_get_model();
 #define MAX_SUPPORTED_CPUID (0x17)
 #define MAX_SUPPORTED_CPUID_EXT (0x80000008)
 
-struct cpuid_leaf {
+struct x86_cpuid_leaf {
   uint32_t a;
   uint32_t b;
   uint32_t c;
@@ -61,20 +59,20 @@ struct x86_cpuid_bit {
 
 void x86_feature_init();
 
-const cpuid_leaf* x86_get_cpuid_leaf(enum x86_cpuid_leaf_num leaf);
+const x86_cpuid_leaf* x86_get_cpuid_leaf(enum x86_cpuid_leaf_num leaf);
 
 // Retrieve the specified subleaf.  This function is not cached.
 // Returns false if leaf num is invalid.
-bool x86_get_cpuid_subleaf(enum x86_cpuid_leaf_num, uint32_t, cpuid_leaf*);
+bool x86_get_cpuid_subleaf(enum x86_cpuid_leaf_num, uint32_t, x86_cpuid_leaf*);
 
 bool x86_feature_test(x86_cpuid_bit bit);
 
 // TODO(dje): Switch to iostreams later, maybe.
 void x86_feature_debug(FILE* out);
 
-#define X86_CPUID_BIT(leaf, word, bit)                                  \
-  (::debugserver::arch::x86::x86_cpuid_bit) {                           \
-    (::debugserver::arch::x86::x86_cpuid_leaf_num)(leaf), (word), (bit) \
+#define X86_CPUID_BIT(leaf, word, bit)                       \
+  (::debugserver::x86_cpuid_bit) {                           \
+    (::debugserver::x86_cpuid_leaf_num)(leaf), (word), (bit) \
   }
 
 // add feature bits to test here
@@ -133,6 +131,4 @@ struct x86_topology_level {
  */
 bool x86_topology_enumerate(uint8_t level, x86_topology_level* info);
 
-}  // namespace x86
-}  // namespace arch
 }  // namespace debugserver

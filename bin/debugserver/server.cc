@@ -46,7 +46,7 @@ RspServer::PendingNotification::PendingNotification(
       timeout(timeout) {}
 
 RspServer::RspServer(uint16_t port, zx_koid_t initial_attach_pid)
-  : ServerWithIO(util::GetRootJob(), util::GetDefaultJob()),
+  : ServerWithIO(GetRootJob(), GetDefaultJob()),
     port_(port),
     initial_attach_pid_(initial_attach_pid),
     server_sock_(-1),
@@ -168,7 +168,7 @@ bool RspServer::Listen() {
   fxl::UniqueFD server_sock(socket(AF_INET, SOCK_STREAM, 0));
   if (!server_sock.is_valid()) {
     FXL_LOG(ERROR) << "Failed to open socket"
-                   << ", " << util::ErrnoString(errno);
+                   << ", " << ErrnoString(errno);
     return false;
   }
 
@@ -181,13 +181,13 @@ bool RspServer::Listen() {
 
   if (bind(server_sock.get(), (struct sockaddr*)&addr, sizeof(addr)) < 0) {
     FXL_LOG(ERROR) << "Failed to bind socket"
-                   << ", " << util::ErrnoString(errno);
+                   << ", " << ErrnoString(errno);
     return false;
   }
 
   if (listen(server_sock.get(), 1) < 0) {
     FXL_LOG(ERROR) << "Listen failed"
-                   << ", " << util::ErrnoString(errno);
+                   << ", " << ErrnoString(errno);
     return false;
   }
 
@@ -199,7 +199,7 @@ bool RspServer::Listen() {
       accept(server_sock.get(), (struct sockaddr*)&addr, &addrlen));
   if (!client_sock.is_valid()) {
     FXL_LOG(ERROR) << "Accept failed"
-                   << ", " << util::ErrnoString(errno);
+                   << ", " << ErrnoString(errno);
     return false;
   }
 
@@ -236,7 +236,7 @@ void RspServer::PostWriteTask(bool notify, const fxl::StringView& data) {
         for (uint8_t byte : data)
           checksum += byte;
 
-        util::EncodeByteString(checksum, out_buffer_.data() + index);
+        EncodeByteString(checksum, out_buffer_.data() + index);
         index += 2;
 
         io_loop_->PostWriteTask(fxl::StringView(out_buffer_.data(), index));
@@ -298,7 +298,7 @@ void RspServer::OnBytesRead(const fxl::StringView& bytes_read) {
     return;
 
   fxl::StringView packet_data;
-  bool verified = util::VerifyPacket(bytes_read, &packet_data);
+  bool verified = VerifyPacket(bytes_read, &packet_data);
 
   // Send acknowledgment back
   SendAck(verified);
@@ -451,17 +451,17 @@ void RspServer::ExceptionHelper(Process* process,
 
   if (ZX_EXCP_IS_ARCH(type)) {
     FXL_VLOG(1) << "Architectural Exception: "
-                << util::ExceptionToString(type, context);
+                << ExceptionToString(type, context);
   } else {
     FXL_VLOG(1) << "Synthetic Exception: "
-                << util::ExceptionToString(type, context);
+                << ExceptionToString(type, context);
   }
 
   // TODO(armansito): Fine-tune this check if we ever support multi-processing.
   FXL_DCHECK(process == current_process());
 
-  arch::GdbSignal sigval = thread->GetGdbSignal();
-  if (sigval == arch::GdbSignal::kUnsupported) {
+  GdbSignal sigval = thread->GetGdbSignal();
+  if (sigval == GdbSignal::kUnsupported) {
     FXL_LOG(ERROR) << "Exception reporting not supported on current "
                    << "architecture!";
     return;
@@ -476,9 +476,9 @@ void RspServer::ExceptionHelper(Process* process,
 
   // Registers.
   if (thread->registers()->RefreshGeneralRegisters()) {
-    std::array<int, 3> regnos{{arch::GetFPRegisterNumber(),
-                               arch::GetSPRegisterNumber(),
-                               arch::GetPCRegisterNumber()}};
+    std::array<int, 3> regnos{{GetFPRegisterNumber(),
+                               GetSPRegisterNumber(),
+                               GetPCRegisterNumber()}};
     for (int regno : regnos) {
       FXL_DCHECK(regno < std::numeric_limits<uint8_t>::max() && regno >= 0);
       std::string regval = thread->registers()->GetRegisterAsString(regno);

@@ -33,13 +33,13 @@ void RspIOLoop::OnReadTask() {
   // There was an error
   if (read_size < 0) {
     FXL_LOG(ERROR) << "Error occurred while waiting for a packet" << ", "
-                   << util::ErrnoString(errno);
+                   << ErrnoString(errno);
     ReportError();
     return;
   }
 
   fxl::StringView bytes_read(in_buffer_.data(), read_size);
-  FXL_VLOG(2) << "-> " << util::EscapeNonPrintableString(bytes_read);
+  FXL_VLOG(2) << "-> " << EscapeNonPrintableString(bytes_read);
 
   // Notify the delegate that we read some bytes. We copy the buffer data
   // into the closure as |in_buffer_| can get modified before the closure

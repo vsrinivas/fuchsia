@@ -16,149 +16,149 @@
 #include "util.h"
 
 namespace debugserver {
-namespace elf {
 
-const char* ErrorName(Error err) {
+const char* ElfErrorName(ElfError err) {
   switch (err) {
-    case Error::OK:
+    case ElfError::OK:
       return "OK";
-    case Error::IO:
+    case ElfError::IO:
       return "IO";
-    case Error::BADELF:
+    case ElfError::BADELF:
       return "BADELF";
-    case Error::NOMEM:
+    case ElfError::NOMEM:
       return "NOMEM";
     default:
       return "UNKNOWN";
   }
 }
 
-Error Reader::Create(const std::string& file_name,
-                     std::shared_ptr<util::ByteBlock> byte_block,
-                     uint32_t options, uint64_t base,
-                     std::unique_ptr<Reader>* out) {
+ElfError ElfReader::Create(const std::string& file_name,
+                           std::shared_ptr<ByteBlock> byte_block,
+                           uint32_t options, uint64_t base,
+                           std::unique_ptr<ElfReader>* out) {
   FXL_DCHECK(options == 0);
-  Reader* er = new Reader(file_name, byte_block, base);
+  ElfReader* er = new ElfReader(file_name, byte_block, base);
   if (!ReadHeader(*byte_block, base, &er->header_)) {
     delete er;
-    return Error::IO;
+    return ElfError::IO;
   }
   if (!VerifyHeader(&er->header_)) {
     delete er;
-    return Error::BADELF;
+    return ElfError::BADELF;
   }
-  *out = std::unique_ptr<Reader>(er);
-  return Error::OK;
+  *out = std::unique_ptr<ElfReader>(er);
+  return ElfError::OK;
 }
 
-Reader::Reader(const std::string& file_name,
-               std::shared_ptr<util::ByteBlock> byte_block, uint64_t base)
+ElfReader::ElfReader(const std::string& file_name,
+                     std::shared_ptr<ByteBlock> byte_block, uint64_t base)
     : file_name_(file_name), byte_block_(byte_block), base_(base) {}
 
-Reader::~Reader() {
+ElfReader::~ElfReader() {
   FreeSegmentHeaders();
   FreeSectionHeaders();
 }
 
 // static
-bool Reader::ReadHeader(const util::ByteBlock& m, uint64_t base, Header* hdr) {
+bool ElfReader::ReadHeader(const ByteBlock& m, uint64_t base, ElfHeader* hdr) {
   return m.Read(base, hdr, sizeof(*hdr));
 }
 
 // static
-bool Reader::VerifyHeader(const Header* hdr) {
+bool ElfReader::VerifyHeader(const ElfHeader* hdr) {
   if (memcmp(hdr->e_ident, ELFMAG, SELFMAG)) return false;
   // TODO(dje): Support larger entries.
-  if (hdr->e_ehsize != sizeof(Header)) return false;
-  if (hdr->e_phentsize != sizeof(SegmentHeader)) return false;
-  if (hdr->e_shentsize != sizeof(SectionHeader)) return false;
+  if (hdr->e_ehsize != sizeof(ElfHeader)) return false;
+  if (hdr->e_phentsize != sizeof(ElfSegmentHeader)) return false;
+  if (hdr->e_shentsize != sizeof(ElfSectionHeader)) return false;
   // TODO(dje): Could add more checks.
   return true;
 }
 
-Error Reader::ReadSegmentHeaders() {
-  if (segment_headers_) return Error::OK;
+ElfError ElfReader::ReadSegmentHeaders() {
+  if (segment_headers_) return ElfError::OK;
   size_t num_segments = GetNumSegments();
-  auto seg_hdrs = new SegmentHeader[num_segments];
+  auto seg_hdrs = new ElfSegmentHeader[num_segments];
   if (!byte_block_->Read(base_ + header_.e_phoff, seg_hdrs,
-                         num_segments * sizeof(SegmentHeader))) {
+                         num_segments * sizeof(ElfSegmentHeader))) {
     delete[] seg_hdrs;
-    return Error::IO;
+    return ElfError::IO;
   }
   segment_headers_ = seg_hdrs;
-  return Error::OK;
+  return ElfError::OK;
 }
 
-void Reader::FreeSegmentHeaders() {
+void ElfReader::FreeSegmentHeaders() {
   if (segment_headers_) delete[] segment_headers_;
   segment_headers_ = nullptr;
 }
 
-const SegmentHeader& Reader::GetSegmentHeader(size_t segment_number) {
+const ElfSegmentHeader& ElfReader::GetSegmentHeader(size_t segment_number) {
   FXL_DCHECK(segment_headers_);
   FXL_DCHECK(segment_number < GetNumSegments());
   return segment_headers_[segment_number];
 }
 
-Error Reader::ReadSectionHeaders() {
-  if (section_headers_) return Error::OK;
+ElfError ElfReader::ReadSectionHeaders() {
+  if (section_headers_) return ElfError::OK;
   size_t num_sections = GetNumSections();
-  auto scn_hdrs = new SectionHeader[num_sections];
+  auto scn_hdrs = new ElfSectionHeader[num_sections];
   if (!byte_block_->Read(base_ + header_.e_shoff, scn_hdrs,
-                         num_sections * sizeof(SectionHeader))) {
+                         num_sections * sizeof(ElfSectionHeader))) {
     delete[] scn_hdrs;
-    return Error::IO;
+    return ElfError::IO;
   }
   section_headers_ = scn_hdrs;
-  return Error::OK;
+  return ElfError::OK;
 }
 
-void Reader::FreeSectionHeaders() {
+void ElfReader::FreeSectionHeaders() {
   if (section_headers_) delete[] section_headers_;
   section_headers_ = nullptr;
 }
 
-const SectionHeader& Reader::GetSectionHeader(size_t section_number) {
+const ElfSectionHeader& ElfReader::GetSectionHeader(size_t section_number) {
   FXL_DCHECK(section_headers_);
   FXL_DCHECK(section_number < GetNumSections());
   return section_headers_[section_number];
 }
 
-const SectionHeader* Reader::GetSectionHeaderByType(unsigned type) {
+const ElfSectionHeader* ElfReader::GetSectionHeaderByType(unsigned type) {
   size_t num_sections = GetNumSections();
   for (size_t i = 0; i < num_sections; ++i) {
-    const SectionHeader& shdr = GetSectionHeader(i);
+    const ElfSectionHeader& shdr = GetSectionHeader(i);
     if (shdr.sh_type == type) return &shdr;
   }
   return nullptr;
 }
 
-Error Reader::GetSectionContents(
-    const SectionHeader& sh, std::unique_ptr<SectionContents>* out_contents) {
+ElfError ElfReader::GetSectionContents(
+    const ElfSectionHeader& sh,
+    std::unique_ptr<ElfSectionContents>* out_contents) {
   void* buffer = malloc(sh.sh_size);
   if (!buffer) {
     FXL_LOG(ERROR) << "OOM getting space for section contents";
-    return Error::NOMEM;
+    return ElfError::NOMEM;
   }
 
   if (!byte_block_->Read(base_ + sh.sh_offset, buffer, sh.sh_size)) {
     FXL_LOG(ERROR) << "Error reading section contents";
-    return Error::IO;
+    return ElfError::IO;
   }
 
   // TODO(dje): Handle malloc failures for new.
-  auto contents = new SectionContents(sh, buffer);
-  *out_contents = std::unique_ptr<SectionContents>(contents);
-  return Error::OK;
+  auto contents = new ElfSectionContents(sh, buffer);
+  *out_contents = std::unique_ptr<ElfSectionContents>(contents);
+  return ElfError::OK;
 }
 
-Error Reader::ReadBuildId(char* buf, size_t buf_size) {
+ElfError ElfReader::ReadBuildId(char* buf, size_t buf_size) {
   uint64_t vaddr = base_;
 
   FXL_DCHECK(buf_size >= kMaxBuildIdSize * 2 + 1);
 
-  Error rc = ReadSegmentHeaders();
-  if (rc != Error::OK) return rc;
+  ElfError rc = ReadSegmentHeaders();
+  if (rc != ElfError::OK) return rc;
 
   size_t num_segments = GetNumSegments();
 
@@ -174,7 +174,7 @@ Error Reader::ReadBuildId(char* buf, size_t buf_size) {
     uint64_t offset = phdr.p_offset;
     while (size > sizeof(note)) {
       if (!byte_block_->Read(vaddr + offset, &note, sizeof(note)))
-        return Error::IO;
+        return ElfError::IO;
       size_t header_size = sizeof(Elf32_Nhdr) + ((note.hdr.n_namesz + 3) & -4);
       size_t payload_size = (note.hdr.n_descsz + 3) & -4;
       offset += header_size;
@@ -193,27 +193,28 @@ Error Reader::ReadBuildId(char* buf, size_t buf_size) {
       } else {
         uint8_t buildid[kMaxBuildIdSize];
         if (!byte_block_->Read(payload_vaddr, buildid, note.hdr.n_descsz))
-          return Error::IO;
+          return ElfError::IO;
         for (uint32_t i = 0; i < note.hdr.n_descsz; ++i) {
           snprintf(&buf[i * 2], 3, "%02x", buildid[i]);
         }
       }
-      return Error::OK;
+      return ElfError::OK;
     }
   }
 
   *buf = '\0';
-  return Error::OK;
+  return ElfError::OK;
 }
 
-SectionContents::SectionContents(const SectionHeader& header, void* contents)
+ElfSectionContents::ElfSectionContents(const ElfSectionHeader& header,
+                                       void* contents)
     : header_(header), contents_(contents) {
   FXL_DCHECK(contents);
 }
 
-SectionContents::~SectionContents() { free(contents_); }
+ElfSectionContents::~ElfSectionContents() { free(contents_); }
 
-size_t SectionContents::GetNumEntries() const {
+size_t ElfSectionContents::GetNumEntries() const {
   switch (header_.sh_type) {
     case SHT_SYMTAB:
     case SHT_DYNSYM:
@@ -226,13 +227,12 @@ size_t SectionContents::GetNumEntries() const {
   return header_.sh_size / header_.sh_entsize;
 }
 
-const RawSymbol& SectionContents::GetSymbolEntry(size_t entry_number) {
+const ElfRawSymbol& ElfSectionContents::GetSymbolEntry(size_t entry_number) {
   FXL_DCHECK(header_.sh_type == SHT_SYMTAB || header_.sh_type == SHT_DYNSYM);
   FXL_DCHECK(entry_number < GetNumEntries());
   auto buf = reinterpret_cast<const char*>(contents_);
   auto sym = buf + entry_number * header_.sh_entsize;
-  return *reinterpret_cast<const RawSymbol*>(sym);
+  return *reinterpret_cast<const ElfRawSymbol*>(sym);
 }
 
-}  // namespace elf
 }  // namespace debugserver

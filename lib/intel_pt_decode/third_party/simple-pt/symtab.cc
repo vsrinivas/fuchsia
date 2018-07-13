@@ -45,13 +45,13 @@
 
 namespace simple_pt {
 
-SymbolTable::SymbolTable(debugserver::elf::Reader* reader,
+SymbolTable::SymbolTable(debugserver::ElfReader* reader,
                          const std::string& contents,
                          uint64_t cr3,
                          uint64_t base,
                          uint64_t offset,
                          bool is_kernel)
-    : debugserver::elf::SymbolTable(reader->file_name(), contents),
+    : debugserver::ElfSymbolTable(reader->file_name(), contents),
       cr3_(cr3),
       base_(base),
       end_(0),
@@ -61,7 +61,7 @@ SymbolTable::SymbolTable(debugserver::elf::Reader* reader,
 const Symbol* SymbolTable::FindSymbol(uint64_t addr) const {
   if (addr < base_ || addr >= end_)
     return nullptr;
-  return debugserver::elf::SymbolTable::FindSymbol(addr - offset_);
+  return debugserver::ElfSymbolTable::FindSymbol(addr - offset_);
 }
 
 static bool Cr3Matches(uint64_t cr3_1, uint64_t cr3_2) {

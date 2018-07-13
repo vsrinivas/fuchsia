@@ -16,7 +16,6 @@
 #include "byte_block.h"
 
 namespace debugserver {
-namespace util {
 
 std::string ZxErrorString(zx_status_t status) {
   return fxl::StringPrintf("%s(%d)", zx_status_get_string(status), status);
@@ -63,5 +62,4 @@ bool ReadString(const ByteBlock& m, zx_vaddr_t vaddr, char* ptr, size_t max) {
   return true;
 }
 
-}  // namespace util
 }  // namespace debugserver

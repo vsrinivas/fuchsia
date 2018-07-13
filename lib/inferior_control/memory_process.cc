@@ -32,7 +32,7 @@ bool ProcessMemory::Read(uintptr_t address, void* out_buffer,
     FXL_LOG(ERROR) << fxl::StringPrintf(
                           "Failed to read memory at addr: %" PRIxPTR ": ",
                           address)
-                   << util::ZxErrorString(status);
+                   << ZxErrorString(status);
     return false;
   }
 
@@ -69,7 +69,7 @@ bool ProcessMemory::Write(uintptr_t address, const void* buffer,
     FXL_LOG(ERROR) << fxl::StringPrintf(
                           "Failed to write memory at addr: %" PRIxPTR ": ",
                           address)
-                   << util::ZxErrorString(status);
+                   << ZxErrorString(status);
     return false;
   }
 

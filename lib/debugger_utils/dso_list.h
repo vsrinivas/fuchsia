@@ -17,7 +17,6 @@
 #include "elf_reader.h"
 
 namespace debugserver {
-namespace util {
 
 typedef struct dsoinfo {
   struct dsoinfo* next;
@@ -25,10 +24,10 @@ typedef struct dsoinfo {
   zx_vaddr_t entry;
   zx_vaddr_t phdr;
   // Note: This is NULL if num_loadable_phdrs == 0.
-  elf::SegmentHeader* loadable_phdrs;
+  ElfSegmentHeader* loadable_phdrs;
   uint32_t num_loadable_phdrs;
   uint32_t phentsize, phnum;
-  char buildid[elf::Reader::kMaxBuildIdSize * 2 + 1];
+  char buildid[ElfReader::kMaxBuildIdSize * 2 + 1];
   bool is_main_exec;
   bool debug_file_tried;
   zx_status_t debug_file_status;
@@ -52,5 +51,4 @@ extern void dso_vlog_list(const dsoinfo_t* dso_list);
 extern zx_status_t dso_find_debug_file(dsoinfo_t* dso,
                                        const char** out_debug_file);
 
-}  // namespace util
 }  // namespace debugserver

@@ -21,7 +21,6 @@
 #include "lib/fxl/strings/string_printf.h"
 
 namespace debugserver {
-namespace util {
 
 struct WalkContext {
   JobTreeJobCallback* job_callback;
@@ -383,7 +382,7 @@ zx::process FindProcess(zx::job& job, zx_koid_t pid) {
     return ZX_OK;
   };
   // There's no real need to check the result here.
-  util::WalkJobTree(job, nullptr, &find_process_callback, nullptr);
+  WalkJobTree(job, nullptr, &find_process_callback, nullptr);
   return process;
 }
 
@@ -414,5 +413,4 @@ zx::job GetDefaultJob() {
   return zx::job(dupe);
 }
 
-}  // namespace util
 }  // namespace debugserver

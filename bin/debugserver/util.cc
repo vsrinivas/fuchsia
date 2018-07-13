@@ -17,7 +17,6 @@
 #include "lib/fxl/strings/string_printf.h"
 
 namespace debugserver {
-namespace util {
 
 std::string BuildErrorPacket(ErrorCode error_code) {
   std::string errstr =
@@ -163,7 +162,7 @@ bool VerifyPacket(fxl::StringView packet, fxl::StringView* out_packet_data) {
   // TODO(armansito): Ignore the checksum if we're in no-acknowledgment mode.
 
   uint8_t received_checksum;
-  if (!util::DecodeByteString(packet.data() + pound + 1, &received_checksum)) {
+  if (!DecodeByteString(packet.data() + pound + 1, &received_checksum)) {
     FXL_LOG(ERROR) << "Malformed packet checksum received";
     return false;
   }
@@ -208,5 +207,4 @@ void ExtractParameters(const fxl::StringView& packet,
       colon + 1, packet.size() == colon ? 0 : packet.size() - colon - 1);
 }
 
-}  // namespace util
 }  // namespace debugserver

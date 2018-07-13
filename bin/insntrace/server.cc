@@ -94,13 +94,13 @@ uint64_t IptConfig::AddrEnd(unsigned i) const {
 }
 
 IptServer::IptServer(const IptConfig& config)
-  : Server(util::GetRootJob(), util::GetDefaultJob()),
+  : Server(GetRootJob(), GetDefaultJob()),
     config_(config) {
 }
 
 bool IptServer::StartInferior() {
   Process* process = current_process();
-  const util::Argv& argv = process->argv();
+  const Argv& argv = process->argv();
 
   FXL_LOG(INFO) << "Starting program: " << argv[0];
 

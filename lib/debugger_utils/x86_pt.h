@@ -10,10 +10,8 @@
 #include "lib/fxl/logging.h"
 
 namespace debugserver {
-namespace arch {
-namespace x86 {
 
-struct ProcessorTraceFeatures {
+struct X86ProcessorTraceFeatures {
   bool have_pt;
 
   bool cr3_filtering;
@@ -41,11 +39,9 @@ struct ProcessorTraceFeatures {
   uint32_t tsc_ratio_num, tsc_ratio_den;
 };
 
-bool HaveProcessorTrace();
+bool X86HaveProcessorTrace();
 
 // WARNING: Until the first call completes this is not thread safe.
-const ProcessorTraceFeatures* GetProcessorTraceFeatures();
+const X86ProcessorTraceFeatures* X86GetProcessorTraceFeatures();
 
-}  // namespace x86
-}  // namespace arch
 }  // namespace debugserver

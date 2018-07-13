@@ -13,8 +13,6 @@
 #include "x86_cpuid.h"
 
 namespace debugserver {
-namespace arch {
-namespace x86 {
 
 /* Trick to get a 1 of the right size */
 #define ONE(x) (1 + ((x) - (x)))
@@ -22,19 +20,19 @@ namespace x86 {
 #define BITS_SHIFT(x, high, low) \
   (((x) >> (low)) & ((ONE(x) << ((high) - (low) + 1)) - 1))
 
-static ProcessorTraceFeatures pt_features;  // TODO(dje): guard annotation
+static X86ProcessorTraceFeatures pt_features;  // TODO(dje): guard annotation
 static bool initialized = false;            // TODO(dje): guard annotation
 static std::mutex cpuid_mutex;
 
-bool HaveProcessorTrace() {
-  const ProcessorTraceFeatures* ptf = GetProcessorTraceFeatures();
+bool X86HaveProcessorTrace() {
+  const X86ProcessorTraceFeatures* ptf = X86GetProcessorTraceFeatures();
   return ptf->have_pt;
 }
 
-const ProcessorTraceFeatures* GetProcessorTraceFeatures() {
+const X86ProcessorTraceFeatures* X86GetProcessorTraceFeatures() {
   std::lock_guard<std::mutex> lock(cpuid_mutex);
 
-  ProcessorTraceFeatures* pt = &pt_features;
+  X86ProcessorTraceFeatures* pt = &pt_features;
 
   if (initialized) return pt;
 
@@ -85,6 +83,4 @@ const ProcessorTraceFeatures* GetProcessorTraceFeatures() {
   return pt;
 }
 
-}  // namespace x86
-}  // namespace arch
 }  // namespace debugserver

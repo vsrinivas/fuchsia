@@ -76,8 +76,8 @@ struct PtFile {
 
 using SymbolTable = simple_pt::SymbolTable;
 using Symbol = simple_pt::Symbol;
-using LoadMap = debugserver::util::LoadMap;
-using BuildId = debugserver::util::BuildId;
+using LoadMap = debugserver::LoadMap;
+using BuildId = debugserver::BuildId;
 
 class DecoderState {
  public:
@@ -143,7 +143,7 @@ class DecoderState {
                              const struct pt_asid* asid, uint64_t addr,
                              void* context);
 
-  static int ProcessKtraceRecord(debugserver::ktrace::KtraceRecord* rec,
+  static int ProcessKtraceRecord(debugserver::KtraceRecord* rec,
                                  void* arg);
 
   bool AddProcess(zx_koid_t pid, uint64_t cr3, uint64_t start_time);
@@ -159,8 +159,8 @@ class DecoderState {
   uint64_t kernel_cr3_;
 
   std::vector<Process> processes_;
-  debugserver::util::LoadMapTable load_maps_;
-  debugserver::util::BuildIdTable build_ids_;
+  debugserver::LoadMapTable load_maps_;
+  debugserver::BuildIdTable build_ids_;
   std::vector<PtFile> pt_files_;
 
   // List of cr3 values seen that we don't have processes for.

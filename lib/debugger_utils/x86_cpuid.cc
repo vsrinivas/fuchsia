@@ -17,8 +17,6 @@
 #include <mutex>
 
 namespace debugserver {
-namespace arch {
-namespace x86 {
 
 // Trick to get a 1 of the right size.
 #define ONE(x) (1 + ((x) - (x)))
@@ -27,8 +25,8 @@ namespace x86 {
 
 // Note: cpuid state is constant once computed, and thus isn't guarded.
 
-static struct cpuid_leaf cpuid[MAX_SUPPORTED_CPUID + 1];
-static struct cpuid_leaf
+static struct x86_cpuid_leaf cpuid[MAX_SUPPORTED_CPUID + 1];
+static struct x86_cpuid_leaf
     cpuid_ext[MAX_SUPPORTED_CPUID_EXT - X86_CPUID_EXT_BASE + 1];
 static uint32_t max_cpuid = 0;
 static uint32_t max_ext_cpuid = 0;
@@ -41,7 +39,7 @@ static std::mutex cpuid_mutex;
 
 static bool initialized = false;  // TODO(dje): add guard annotation
 
-static const cpuid_leaf* x86_get_cpuid_leaf_raw(enum x86_cpuid_leaf_num leaf);
+static const x86_cpuid_leaf* x86_get_cpuid_leaf_raw(enum x86_cpuid_leaf_num leaf);
 
 void x86_feature_init(void) {
   std::lock_guard<std::mutex> lock(cpuid_mutex);
@@ -92,7 +90,7 @@ void x86_feature_init(void) {
   }
 
   // populate the model info
-  const struct cpuid_leaf* leaf =
+  const struct x86_cpuid_leaf* leaf =
       x86_get_cpuid_leaf_raw(X86_CPUID_MODEL_FEATURES);
   if (leaf) {
     model_info.processor_type = BITS_SHIFT(leaf->a, 13, 12);
@@ -114,7 +112,7 @@ void x86_feature_init(void) {
 }
 
 bool x86_get_cpuid_subleaf(enum x86_cpuid_leaf_num num, uint32_t subleaf,
-                           struct cpuid_leaf* leaf) {
+                           struct x86_cpuid_leaf* leaf) {
   x86_feature_init();
 
   if (num < X86_CPUID_EXT_BASE) {
@@ -127,7 +125,7 @@ bool x86_get_cpuid_subleaf(enum x86_cpuid_leaf_num num, uint32_t subleaf,
   return true;
 }
 
-static const cpuid_leaf* x86_get_cpuid_leaf_raw(enum x86_cpuid_leaf_num leaf) {
+static const x86_cpuid_leaf* x86_get_cpuid_leaf_raw(enum x86_cpuid_leaf_num leaf) {
   if (leaf < X86_CPUID_EXT_BASE) {
     if (leaf > max_cpuid) return nullptr;
 
@@ -139,7 +137,7 @@ static const cpuid_leaf* x86_get_cpuid_leaf_raw(enum x86_cpuid_leaf_num leaf) {
   }
 }
 
-const cpuid_leaf* x86_get_cpuid_leaf(enum x86_cpuid_leaf_num leaf) {
+const x86_cpuid_leaf* x86_get_cpuid_leaf(enum x86_cpuid_leaf_num leaf) {
   x86_feature_init();
   return x86_get_cpuid_leaf_raw(leaf);
 }
@@ -149,7 +147,7 @@ bool x86_feature_test(struct x86_cpuid_bit bit) {
 
   if (bit.word > 3 || bit.bit > 31) return false;
 
-  const cpuid_leaf* leaf = x86_get_cpuid_leaf(bit.leaf_num);
+  const x86_cpuid_leaf* leaf = x86_get_cpuid_leaf(bit.leaf_num);
   if (!leaf) return false;
 
   switch (bit.word) {
@@ -259,6 +257,4 @@ void x86_feature_debug(FILE* out) {
   if (col > 0) fprintf(out, "\n");
 }
 
-}  // namespace x86
-}  // namespace arch
 }  // namespace debugserver
