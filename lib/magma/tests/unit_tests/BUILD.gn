@@ -54,10 +54,10 @@ source_set("magma_util_tests") {
   ]
 
   deps = [
-    "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util:inflight_list",
     "$magma_build_root/src/magma_util:registers",
     "$magma_build_root/src/magma_util:semaphore_port",
+    "$magma_build_root/src/magma_util:system",
     "//third_party/googletest:gtest",
   ]
 }
@@ -78,6 +78,7 @@ source_set("magma_platform_tests") {
     "$magma_build_root/src/magma_util/platform:connection",
     "$magma_build_root/src/magma_util/platform:event",
     "$magma_build_root/src/magma_util/platform:futex",
+    "$magma_build_root/src/magma_util/platform:handle",
     "$magma_build_root/src/magma_util/platform:port",
     "$magma_build_root/src/magma_util/platform:random",
     "$magma_build_root/src/magma_util/platform:semaphore",

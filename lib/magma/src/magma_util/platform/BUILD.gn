@@ -14,23 +14,25 @@ config("tracing") {
   }
 }
 
+source_set("buffer_header") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_buffer.h",
+  ]
+}
+
 source_set("buffer") {
   public_configs = [ ":platform_include_config" ]
 
   public_deps = [
-    ":handle",
-    "$magma_build_root/src/magma_util",
-  ]
-
-  sources = [
-    "platform_buffer.h",
+    "$magma_build_root/src/magma_util:common",
+    ":buffer_header",
   ]
 
   deps = [
     "zircon:buffer",
   ]
-
-  allow_circular_includes_from = [ "zircon:buffer" ]
 }
 
 source_set("bus_mapper") {
@@ -39,7 +41,7 @@ source_set("bus_mapper") {
   public_deps = [
     ":buffer",
     ":handle",
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:common",
   ]
 
   sources = [
@@ -57,7 +59,7 @@ source_set("handle") {
   public_configs = [ ":platform_include_config" ]
 
   public_deps = [
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:common",
   ]
 
   sources = [
@@ -76,7 +78,7 @@ source_set("device") {
 
   public_deps = [
     ":handle",
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:common",
   ]
 
   sources = [
@@ -93,7 +95,6 @@ source_set("device") {
 }
 
 source_set("random_header") {
-  visibility = [ "./*" ]
   public_configs = [ ":platform_include_config" ]
 
   sources = [
@@ -117,7 +118,7 @@ source_set("mmio") {
   public_configs = [ ":platform_include_config" ]
 
   public_deps = [
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:common",
   ]
 
   sources = [
@@ -151,7 +152,7 @@ source_set("connection") {
     ":event",
     ":object",
     ":semaphore",
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:common",
     "//garnet/lib/magma/include:magma_abi",
     "//garnet/lib/magma/include:msd_abi",
   ]
@@ -164,18 +165,22 @@ source_set("connection") {
   allow_circular_includes_from = [ "zircon:connection" ]
 }
 
-source_set("thread") {
+source_set("thread_header") {
   public_configs = [ ":platform_include_config" ]
 
   sources = [
     "platform_thread.h",
   ]
+}
+
+source_set("thread") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [ ":thread_header" ]
 
   deps = [
     "zircon:thread",
   ]
-
-  allow_circular_includes_from = [ "zircon:thread" ]
 }
 
 source_set("event") {

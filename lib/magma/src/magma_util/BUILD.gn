@@ -20,7 +20,6 @@ group("magma_util") {
 
   public_deps = [
     ":common",
-    ":system",
     "$magma_build_root/include:magma_abi_common",
   ]
 }
@@ -49,7 +48,7 @@ source_set("inflight_list") {
 
   public_deps = [
     ":common",
-    "$magma_build_root:libmagma",
+    "$magma_build_root/src/libmagma:libmagma_static",
   ]
 }
 

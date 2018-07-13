@@ -12,6 +12,8 @@ source_set("buffer") {
     "zircon_platform_buffer.h",
   ]
 
+  public_deps = [ "..:buffer_header" ]
+
   deps = [
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:trace",
@@ -126,6 +128,7 @@ source_set("thread") {
   ]
 
   deps = [
+    "..:thread_header",
     "..:object",
   ]
 }
@@ -165,7 +168,6 @@ source_set("object") {
 
   deps = [
     "$magma_build_root/src/magma_util",
-    "$zircon_build_root/public/lib/zx",
   ]
 }
 
