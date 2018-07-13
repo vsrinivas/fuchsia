@@ -33,7 +33,7 @@
 //                      public ddk::HidBusProtocol<HidBusDevice> {
 //   public:
 //     HidBusDevice(zx_device_t* parent)
-//       : HidBusDeviceType("my-hidbus-device", parent) {}
+//       : HidBusDeviceType(parent) {}
 //
 //     zx_status_t Bind() {
 //         DdkAdd();
@@ -43,19 +43,19 @@
 //         // Clean up
 //     }
 //
-//     zx_status_t HidbusStart(ddk::HidBusIfcProxy proxy) {
+//     zx_status_t HidBusStart(ddk::HidBusIfcProxy proxy) {
 //         // Start hidbus operation
 //         proxy_ = proxy;
 //         return ZX_OK;
 //     }
 //
-//     void HidBusQuery(uint32_t options, hid_info_t* info) {
+//     zx_status_t HidBusQuery(uint32_t options, hid_info_t* info) {
 //         ...
 //     }
 //
 //     ...
 //   private:
-//     ddk::HidbusIfcProxy proxy_;
+//     ddk::HidBusIfcProxy proxy_;
 //     ...
 // };
 

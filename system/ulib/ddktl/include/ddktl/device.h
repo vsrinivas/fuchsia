@@ -97,7 +97,7 @@
 //
 // extern "C" zx_status_t my_bind(zx_device_t* device,
 //                                void** cookie) {
-//     auto dev = unique_ptr<MyDevice>(new MyDevice(device));
+//     auto dev = make_unique<MyDevice>(device);
 //     auto status = dev->Bind();
 //     if (status == ZX_OK) {
 //         // devmgr is now in charge of the memory for dev
