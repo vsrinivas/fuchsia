@@ -224,9 +224,9 @@ TEST_F(ChrealmTest, CreatedUnderRealmJob) {
   ASSERT_EQ(0, pipe(pipefd));
   RunCommandAsync(args, pipefd[1], &proc);
   // Command should run, look for "y".
-  char buf[2];
-  ASSERT_EQ(2u, read(pipefd[0], buf, 2));
-  ASSERT_EQ("y\n", std::string(buf, 2));
+  char buf[1];
+  ASSERT_EQ(1u, read(pipefd[0], buf, 1));
+  ASSERT_EQ("y", std::string(buf, 1));
 
   // Now kill the realm. Wait should complete because the realm's job was
   // killed.
