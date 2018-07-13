@@ -24,7 +24,7 @@ enum SocketProtocol {
     icmpv6 = 58;
 };
 
-[Discoverable]
+[Discoverable, Layout="Simple"]
 interface LegacySocketProvider {
     1: OpenSocket(SocketDomain domain, SocketType type, SocketProtocol protocol)
         -> (handle<socket> s, int32 @status);

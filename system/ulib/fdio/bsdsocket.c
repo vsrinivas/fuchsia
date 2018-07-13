@@ -21,8 +21,8 @@
 #include <lib/fdio/debug.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/remoteio.h>
-#include <lib/fdio/util.h>
 #include <lib/fdio/socket.h>
+#include <lib/fdio/util.h>
 
 #include "private.h"
 #include "unistd.h"
@@ -104,7 +104,7 @@ int socket(int domain, int type, int protocol) {
     // remotely so do not include them in path.
     char path[1024];
     int n = snprintf(path, sizeof(path), "%s/%d/%d/%d", ZXRIO_SOCKET_DIR_SOCKET,
-                     domain, type & ~(SOCK_NONBLOCK|SOCK_CLOEXEC), protocol);
+                     domain, type & ~(SOCK_NONBLOCK | SOCK_CLOEXEC), protocol);
     if (n < 0 || n >= (int)sizeof(path)) {
         return ERRNO(EINVAL);
     }
@@ -117,43 +117,23 @@ int socket(int domain, int type, int protocol) {
         return ERROR(r);
     }
 
-#else  // FIDL_SOCKET_PROVIDER
-
+#else // FIDL_SOCKET_PROVIDER
     zx_handle_t sp;
     r = get_socket_provider(&sp);
     if (r != ZX_OK) {
         return ERRNO(EIO);
     }
 
-    fuchsia_net_LegacySocketProviderOpenSocketRequest req;
-    memset(&req, 0, sizeof(req));
-    req.hdr.ordinal = fuchsia_net_LegacySocketProviderOpenSocketOrdinal;
-    req.domain = domain;
-    req.type = type & ~(SOCK_NONBLOCK|SOCK_CLOEXEC);
-    req.protocol = protocol;
+    zx_handle_t s = ZX_HANDLE_INVALID;
+    int32_t unused = 0;
+    r = fuchsia_net_LegacySocketProviderOpenSocket(
+        sp, domain, type & ~(SOCK_NONBLOCK | SOCK_CLOEXEC), protocol, &s, &unused);
 
-    fuchsia_net_LegacySocketProviderOpenSocketResponse resp;
-    memset(&resp, 0, sizeof(resp));
-
-    zx_channel_call_args_t args;
-    args.wr_bytes = &req;
-    args.wr_handles = NULL;
-    args.rd_bytes = &resp;
-    args.rd_handles = &resp.s;
-    args.wr_num_bytes = sizeof(req);
-    args.wr_num_handles = 0;
-    args.rd_num_bytes = sizeof(resp);
-    args.rd_num_handles = 1;
-
-    uint32_t actual_bytes = 0;
-    uint32_t actual_handles = 0;
-
-    r = zx_channel_call(sp, 0, ZX_TIME_INFINITE, &args,
-                        &actual_bytes, &actual_handles);
     if (r != ZX_OK) {
         return ERRNO(EIO);
     }
-    io = fdio_socket_create(resp.s, 0);
+
+    io = fdio_socket_create(s, 0);
 #endif
 
     if (io == NULL) {
@@ -351,11 +331,11 @@ int getaddrinfo(const char* __restrict node,
     gai.req.hints_is_null = (hints == NULL) ? 1 : 0;
     if (node) {
         strncpy(gai.req.node, node, ZXRIO_GAI_REQ_NODE_MAXLEN);
-        gai.req.node[ZXRIO_GAI_REQ_NODE_MAXLEN-1] = '\0';
+        gai.req.node[ZXRIO_GAI_REQ_NODE_MAXLEN - 1] = '\0';
     }
     if (service) {
         strncpy(gai.req.service, service, ZXRIO_GAI_REQ_SERVICE_MAXLEN);
-        gai.req.service[ZXRIO_GAI_REQ_SERVICE_MAXLEN-1] = '\0';
+        gai.req.service[ZXRIO_GAI_REQ_SERVICE_MAXLEN - 1] = '\0';
     }
     if (hints) {
         if (hints->ai_addrlen != 0 || hints->ai_addr != NULL ||
@@ -382,7 +362,7 @@ int getaddrinfo(const char* __restrict node,
         memcpy(reply, &gai.reply, sizeof(*reply));
 
         // link all entries in the reply
-        struct addrinfo *next = NULL;
+        struct addrinfo* next = NULL;
         for (int i = reply->nres - 1; i >= 0; --i) {
             // adjust ai_addr to point the new address if not NULL
             if (reply->res[i].ai.ai_addr != NULL) {
@@ -430,18 +410,16 @@ static int getsockaddr(int fd, int op, struct sockaddr* restrict addr,
     return 0;
 }
 
-int getsockname(int fd, struct sockaddr* restrict addr, socklen_t* restrict len)
-{
+int getsockname(int fd, struct sockaddr* restrict addr, socklen_t* restrict len) {
     return getsockaddr(fd, ZXRIO_GETSOCKNAME, addr, len);
 }
 
-int getpeername(int fd, struct sockaddr* restrict addr, socklen_t* restrict len)
-{
+int getpeername(int fd, struct sockaddr* restrict addr, socklen_t* restrict len) {
     return getsockaddr(fd, ZXRIO_GETPEERNAME, addr, len);
 }
 
 static zx_status_t fdio_getsockopt(fdio_t* io, int level, int optname,
-                            void* restrict optval, socklen_t* restrict optlen) {
+                                   void* restrict optval, socklen_t* restrict optlen) {
     if (optval == NULL || optlen == NULL) {
         return ERRNO(EINVAL);
     }
