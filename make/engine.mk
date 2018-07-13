@@ -225,6 +225,13 @@ endif
 # can be done offline with, e.g., scripts/symbolize.
 USER_COMPILEFLAGS += -fasynchronous-unwind-tables
 
+# TODO(ZX-2361): Remove frame pointers when libunwind and our tooling agree on
+# unwind tables. Until then compile with frame pointers in debug builds to get
+# high-quality backtraces.
+ifeq ($(call TOBOOL,$(DEBUG)),true)
+USER_COMPILEFLAGS += $(KEEP_FRAME_POINTER_COMPILEFLAGS)
+endif
+
 # We want .debug_frame for the kernel. ZX-62
 # And we still want asynchronous unwind tables. Alas there's (currently) no way
 # to achieve this with our GCC. At the moment we compile with
