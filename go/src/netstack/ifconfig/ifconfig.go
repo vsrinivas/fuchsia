@@ -57,7 +57,7 @@ func (a *netstackClientApp) printIface(iface netstack.NetInterface) {
 		return
 	}
 
-	fmt.Printf("%s\tHWaddr %s\n", iface.Name, hwAddrToString(iface.Hwaddr))
+	fmt.Printf("%s\tHWaddr %s Id:%d\n", iface.Name, hwAddrToString(iface.Hwaddr), iface.Id)
 	fmt.Printf("\tinet addr:%s  Bcast:%s  Mask:%s\n", netAddrToString(iface.Addr), netAddrToString(iface.Broadaddr), netAddrToString(iface.Netmask))
 	for _, addr := range iface.Ipv6addrs {
 		// TODO: scopes
