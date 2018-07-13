@@ -30,6 +30,7 @@ source_set("testing_deps") {
     "//garnet/lib/ui/scenic/util",
     "//garnet/public/lib/escher",
     "//garnet/public/lib/escher/test:gtest_vulkan",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/ui/input/cpp",
     "//garnet/public/lib/ui/scenic/cpp:commands",

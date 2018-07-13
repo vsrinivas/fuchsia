@@ -6,6 +6,10 @@
 #include <string>
 #include <vector>
 
+#include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
+
 #include <lib/zx/eventpair.h>
 
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
@@ -19,10 +23,13 @@
 #include "garnet/lib/ui/scenic/util/print_event.h"
 #include "gtest/gtest.h"
 #include "lib/escher/forward_declarations.h"
+#include "lib/fostr/fidl/fuchsia/ui/scenic/formatting.h"
+#include "lib/fxl/logging.h"
 #include "lib/fxl/logging.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/scenic/cpp/commands.h"
+
 
 // The test setup here is sufficiently different from hittest_unittest.cc to
 // merit its own file.  We access the global hit test through the compositor,
@@ -49,17 +56,18 @@ class CustomSession : public EventReporter, public ErrorReporter {
   }
 
   // |EventReporter|
-  void EnqueueEvent(fuchsia::ui::scenic::Event event) override {
-    switch (event.Which()) {
-      case fuchsia::ui::scenic::Event::Tag::kGfx:
-        FXL_LOG(INFO) << event.gfx();
-        break;
-      case fuchsia::ui::scenic::Event::Tag::kInput:
-        FXL_LOG(INFO) << event.input();
-        break;
-      default:
-        FXL_LOG(INFO) << "Unknown event";
-    }
+  void EnqueueEvent(fuchsia::ui::gfx::Event event) override {
+    FXL_LOG(INFO) << event;
+  }
+
+  // |EventReporter|
+  void EnqueueEvent(fuchsia::ui::input::InputEvent event) override {
+    FXL_LOG(INFO) << event;
+  }
+
+  // |EventReporter|
+  void EnqueueEvent(fuchsia::ui::scenic::Command unhandled) override {
+    FXL_LOG(INFO) << unhandled;
   }
 
   // |ErrorReporter|

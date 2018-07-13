@@ -11,13 +11,15 @@
 
 #include "garnet/lib/ui/gfx/engine/hit.h"
 #include "garnet/lib/ui/gfx/engine/hit_tester.h"
+#include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"
 #include "garnet/lib/ui/gfx/resources/compositor/layer_stack.h"
-#include "garnet/lib/ui/gfx/resources/view.h"
 #include "garnet/lib/ui/gfx/util/unwrap.h"
 #include "garnet/lib/ui/input/focus.h"
+#include "garnet/lib/ui/scenic/event_reporter.h"
 #include "lib/escher/geometry/types.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/time/time_point.h"
 #include "lib/ui/geometry/cpp/formatting.h"
 #include "lib/ui/input/cpp/formatting.h"
 
@@ -30,8 +32,6 @@ InputSystem::InputSystem(SystemContext context, gfx::GfxSystem* gfx_system)
   FXL_LOG(INFO) << "Scenic input system started.";
 }
 
-InputSystem::~InputSystem() = default;
-
 std::unique_ptr<CommandDispatcher> InputSystem::CreateCommandDispatcher(
     CommandDispatcherContext context) {
   return std::make_unique<InputCommandDispatcher>(std::move(context),
@@ -40,19 +40,26 @@ std::unique_ptr<CommandDispatcher> InputSystem::CreateCommandDispatcher(
 
 InputCommandDispatcher::InputCommandDispatcher(
     CommandDispatcherContext context, scenic::gfx::GfxSystem* gfx_system)
-    : CommandDispatcher(std::move(context)), gfx_system_(gfx_system) {
+    : CommandDispatcher(std::move(context)),
+      gfx_system_(gfx_system),
+      focus_(std::make_unique<Focus>()) {
   FXL_DCHECK(gfx_system_);
 }
 
 InputCommandDispatcher::~InputCommandDispatcher() = default;
 
+// Helper for DispatchCommand.
+static int64_t NowInNs() {
+  return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
+}
+
 void InputCommandDispatcher::DispatchCommand(
     fuchsia::ui::scenic::Command command) {
   using ScenicCommand = fuchsia::ui::scenic::Command;
   using InputCommand = fuchsia::ui::input::Command;
+  using fuchsia::ui::input::KeyboardEvent;
   using fuchsia::ui::input::PointerEvent;
   using fuchsia::ui::input::PointerEventPhase;
-  using fuchsia::ui::input::KeyboardEvent;
 
   FXL_DCHECK(command.Which() == ScenicCommand::Tag::kInput);
 
@@ -93,26 +100,84 @@ void InputCommandDispatcher::DispatchCommand(
 
       FXL_VLOG(1) << "Hits acquired, count: " << hits.size();
 
-      // Set up focus chain, send out focus events
-      FocusChain focus;
+      // Construct focus chain.
+      std::unique_ptr<Focus> new_focus = std::make_unique<Focus>();
       for (gfx::Hit hit : hits) {
         ViewId view_id;
-
-        gfx::Session* session = gfx_system_->GetSession(hit.view_session);
-        if (session) {
-          gfx::ViewPtr owning_view =
-              session->resources()->FindResource<gfx::View>(hit.view_resource);
-          if (owning_view) {
-            view_id.session_id = hit.view_session;
-            view_id.resource_id = hit.view_resource;
-            focus.chain.push_back(view_id);
-          }
+        view_id.session_id = hit.view_session;
+        view_id.resource_id = hit.view_resource;
+        gfx::ViewPtr owning_view = FindView(view_id);
+        if (owning_view) {
+          new_focus->chain.push_back(view_id);
         }
       }
 
+      bool switch_focus =
+          focus_->chain.size() == 0 ||     // old focus empty, or
+          new_focus->chain.size() == 0 ||  // new focus empty, or
+          focus_->chain.front() != new_focus->chain.front();  // focus changed
+      if (switch_focus) {
+        const int64_t focus_time = NowInNs();
+        if (focus_ && !focus_->chain.empty()) {
+          FXL_VLOG(1) << "Input focus lost by " << focus_->chain.front();
+          gfx::ViewPtr view = FindView(focus_->chain.front());
+          if (view) {
+            fuchsia::ui::input::FocusEvent focus;
+            focus.event_time = focus_time;
+            focus.focused = false;
+            EnqueueEvent(view, focus);
+          }
+        }
+        if (!new_focus->chain.empty()) {
+          FXL_VLOG(1) << "Input focus gained by " << new_focus->chain.front();
+          gfx::ViewPtr view = FindView(new_focus->chain.front());
+          if (view) {
+            fuchsia::ui::input::FocusEvent focus;
+            focus.event_time = focus_time;
+            focus.focused = true;
+            EnqueueEvent(view, focus);
+          }
+        }
+        focus_ = std::move(new_focus);
+      }
     }
   } else if (input_command.is_send_keyboard_input()) {
     FXL_VLOG(1) << "Scenic dispatch: " << input_command.send_keyboard_input();
+  }
+}
+
+gfx::ViewPtr InputCommandDispatcher::FindView(ViewId view_id) {
+  if (view_id.session_id == 0u && view_id.resource_id == 0u) {
+    return nullptr;  // Don't bother with empty tokens.
+  }
+
+  gfx::Session* session = gfx_system_->GetSession(view_id.session_id);
+  if (session && session->is_valid()) {
+    return session->resources()->FindResource<gfx::View>(view_id.resource_id);
+  }
+
+  return nullptr;
+}
+
+void InputCommandDispatcher::EnqueueEvent(
+    gfx::ViewPtr view, fuchsia::ui::input::FocusEvent focus) {
+  FXL_DCHECK(view);
+  gfx::Session* session = view->session();
+  EventReporter* event_reporter = session->event_reporter();
+  if (session && session->is_valid() && event_reporter) {
+    fuchsia::ui::input::InputEvent input_event;
+    input_event.set_focus(std::move(focus));
+    fuchsia::ui::scenic::Event event;
+    event.set_input(std::move(input_event));
+    event_reporter->EnqueueEvent(std::move(event));
+    return;
+  }
+
+  if (!(session && session->is_valid())) {
+    FXL_DLOG(INFO) << "Scenic input dispatch: invalid session.";
+  }
+  if (!event_reporter) {
+    FXL_DLOG(INFO) << "Scnenic input dispatch: no event reporter";
   }
 }
 

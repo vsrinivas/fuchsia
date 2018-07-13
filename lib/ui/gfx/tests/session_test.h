@@ -13,6 +13,7 @@
 #include "garnet/lib/ui/gfx/engine/engine.h"
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/tests/mocks.h"
+#include "garnet/lib/ui/scenic/event_reporter.h"
 #include "lib/gtest/test_loop_fixture.h"
 
 namespace scenic {
@@ -26,7 +27,9 @@ class SessionTest : public ErrorReportingTest, public EventReporter {
   void TearDown() override;
 
   // |EventReporter|
-  void EnqueueEvent(fuchsia::ui::scenic::Event event) override;
+  void EnqueueEvent(fuchsia::ui::gfx::Event event) override;
+  void EnqueueEvent(fuchsia::ui::input::InputEvent event) override;
+  void EnqueueEvent(fuchsia::ui::scenic::Command unhandled) override;
 
   // Subclasses should override to provide their own Engine.
   virtual std::unique_ptr<Engine> CreateEngine();

@@ -6,6 +6,7 @@
 #define GARNET_LIB_UI_GFX_RESOURCES_VIEW_H_
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <unordered_set>
 

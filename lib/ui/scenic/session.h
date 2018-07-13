@@ -62,8 +62,13 @@ class Session final : public fuchsia::ui::scenic::Session,
                         HitTestCallback callback) override;
 
   // |EventReporter|
-  // Enqueues the event and manages scheduling of call to FlushEvents().
-  void EnqueueEvent(fuchsia::ui::scenic::Event event) override;
+  // Enqueues the gfx/cmd event and schedules call to FlushEvents().
+  void EnqueueEvent(fuchsia::ui::gfx::Event event) override;
+  void EnqueueEvent(fuchsia::ui::scenic::Command event) override;
+
+  // |EventReporter|
+  // Enqueues the input event and immediately calls FlushEvents().
+  void EnqueueEvent(fuchsia::ui::input::InputEvent event) override;
 
   // |ErrorReporter|
   // Customize behavior of ErrorReporter::ReportError().
@@ -86,6 +91,9 @@ class Session final : public fuchsia::ui::scenic::Session,
   }
 
  private:
+  // Post an asynchronous task to call FlushEvents.
+  void PostFlushTask();
+
   // Flush any/all events that were enqueued via EnqueueEvent(), sending them
   // to |listener_|.  If |listener_| is null but |event_callback_| isn't, then
   // invoke the callback for each event.

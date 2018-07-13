@@ -42,7 +42,8 @@ class SessionHandler;
 // guarantees that this is safe).
 class Session : public fxl::RefCountedThreadSafe<Session> {
  public:
-  Session(SessionId id, Engine* engine, EventReporter* event_reporter = nullptr,
+  Session(SessionId id, Engine* engine,
+          EventReporter* event_reporter = EventReporter::Default(),
           ErrorReporter* error_reporter = ErrorReporter::Default());
   virtual ~Session();
 
@@ -67,8 +68,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   // Session becomes invalid once TearDown is called.
   bool is_valid() const { return is_valid_; }
 
-  ErrorReporter* error_reporter() const;
-  EventReporter* event_reporter() const;
+  ErrorReporter* error_reporter() const;  // Never nullptr.
+  EventReporter* event_reporter() const;  // Never nullptr.
 
   ResourceMap* resources() { return &resources_; }
 
@@ -91,9 +92,9 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   bool ApplyScheduledUpdates(uint64_t presentation_time,
                              uint64_t presentation_interval);
 
-  // Convenience.  Wraps a ::fuchsia::ui::gfx::Event in a ui::Event, then
-  // forwards it to the EventReporter.
+  // Convenience.  Forwards an event to the EventReporter.
   void EnqueueEvent(::fuchsia::ui::gfx::Event event);
+  void EnqueueEvent(::fuchsia::ui::input::InputEvent event);
 
   // Called by SessionHandler::HitTest().
   void HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,

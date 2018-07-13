@@ -6,6 +6,7 @@ source_set("scenic") {
   sources = [
     "command_dispatcher.cc",
     "command_dispatcher.h",
+    "event_reporter.cc",
     "event_reporter.h",
     "forward_declarations.h",
     "scenic.cc",
@@ -26,7 +27,9 @@ source_set("scenic") {
   deps = [
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-  ]
+    "//garnet/public/lib/ui/input/cpp",
+]
 }

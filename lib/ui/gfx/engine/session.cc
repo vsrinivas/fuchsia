@@ -80,7 +80,6 @@ fidl::VectorPtr<::fuchsia::ui::gfx::Hit> WrapHits(
   }
   return wrapped_hits;
 }
-
 }  // anonymous namespace
 
 Session::Session(SessionId id, Engine* engine, EventReporter* event_reporter,
@@ -1355,6 +1354,10 @@ ErrorReporter* Session::error_reporter() const {
   return error_reporter_ ? error_reporter_ : ErrorReporter::Default();
 }
 
+EventReporter* Session::event_reporter() const {
+  return event_reporter_;
+}
+
 bool Session::AssertValueIsOfType(const ::fuchsia::ui::gfx::Value& value,
                                   const ::fuchsia::ui::gfx::Value::Tag* tags,
                                   size_t tag_count) {
@@ -1537,16 +1540,18 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
 }
 
 void Session::EnqueueEvent(::fuchsia::ui::gfx::Event event) {
-  if (!is_valid())
+  if (!is_valid()) {
     return;
-
-  if (event_reporter_) {
-    fuchsia::ui::scenic::Event scenic_event;
-    scenic_event.set_gfx(std::move(event));
-    event_reporter_->EnqueueEvent(std::move(scenic_event));
-  } else {
-    FXL_LOG(WARNING) << "Session::EnqueueEvent: no EventReporter is available";
   }
+  event_reporter_->EnqueueEvent(std::move(event));
+}
+
+
+void Session::EnqueueEvent(::fuchsia::ui::input::InputEvent event) {
+  if (!is_valid()) {
+    return;
+  }
+  event_reporter_->EnqueueEvent(std::move(event));
 }
 
 bool Session::ApplyUpdate(std::vector<::fuchsia::ui::gfx::Command> commands) {

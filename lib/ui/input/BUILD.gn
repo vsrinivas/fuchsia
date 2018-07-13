@@ -4,6 +4,7 @@
 
 source_set("input") {
   sources = [
+    "focus.cc",
     "focus.h",
     "input_system.cc",
     "input_system.h",

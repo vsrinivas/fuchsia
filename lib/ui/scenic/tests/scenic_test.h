@@ -40,7 +40,9 @@ class ScenicTest : public ::gtest::TestLoopFixture,
                    std::string error_string) override;
 
   // |EventReporter|
-  void EnqueueEvent(fuchsia::ui::scenic::Event event) override;
+  void EnqueueEvent(fuchsia::ui::gfx::Event event) override;
+  void EnqueueEvent(fuchsia::ui::input::InputEvent event) override;
+  void EnqueueEvent(fuchsia::ui::scenic::Command event) override;
 
   // Verify that the last reported error is as expected.  If no error is
   // expected, use nullptr as |expected_error_string|.

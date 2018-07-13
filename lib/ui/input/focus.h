@@ -5,6 +5,7 @@
 #ifndef GARNET_LIB_UI_INPUT_FOCUS_H_
 #define GARNET_LIB_UI_INPUT_FOCUS_H_
 
+#include <ostream>
 #include <vector>
 
 #include "garnet/lib/ui/gfx/id.h"
@@ -18,9 +19,15 @@ struct ViewId {
   scenic::ResourceId resource_id;
 };
 
-struct FocusChain {
+struct Focus {
   std::vector<ViewId> chain;
 };
+
+std::ostream& operator<<(std::ostream& os, const ViewId& value);
+std::ostream& operator<<(std::ostream& os, const Focus& value);
+
+bool operator==(const ViewId& lhs, const ViewId& rhs);
+bool operator!=(const ViewId& lhs, const ViewId& rhs);
 
 }  // namespace input
 }  // namespace scenic

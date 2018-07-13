@@ -8,6 +8,8 @@
 #include <memory>
 
 #include "garnet/lib/ui/gfx/gfx_system.h"
+#include "garnet/lib/ui/gfx/resources/view.h"
+#include "garnet/lib/ui/input/focus.h"
 #include "garnet/lib/ui/scenic/system.h"
 
 namespace scenic {
@@ -20,7 +22,7 @@ class InputSystem : public System {
   static constexpr TypeId kTypeId = kInput;
 
   explicit InputSystem(SystemContext context, gfx::GfxSystem* scenic);
-  virtual ~InputSystem();
+  virtual ~InputSystem() = default;
 
   virtual std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(
       CommandDispatcherContext context) override;
@@ -39,7 +41,16 @@ class InputCommandDispatcher : public CommandDispatcher {
   void DispatchCommand(const fuchsia::ui::scenic::Command command) override;
 
  private:
-  gfx::GfxSystem* const gfx_system_;
+  // Retrieve ViewPtr given its SessionId and ResourceId. If either is not
+  // available, return nullptr.
+  gfx::ViewPtr FindView(ViewId view_id);
+
+  // Enqueue the focus event into the view's SessionListener.
+  void EnqueueEvent(gfx::ViewPtr view, fuchsia::ui::input::FocusEvent focus);
+
+  gfx::GfxSystem* const gfx_system_ = nullptr;
+
+  std::unique_ptr<Focus> focus_;
 };
 
 }  // namespace input

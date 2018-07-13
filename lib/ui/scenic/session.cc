@@ -29,9 +29,7 @@ void Session::Enqueue(::fidl::VectorPtr<fuchsia::ui::scenic::Command> cmds) {
     if (dispatcher) {
       dispatcher->DispatchCommand(std::move(cmd));
     } else {
-      fuchsia::ui::scenic::Event event;
-      event.set_unhandled(std::move(cmd));
-      EnqueueEvent(std::move(event));
+      EnqueueEvent(std::move(cmd));
     }
   }
 }
@@ -79,7 +77,7 @@ void Session::HitTestDeviceRay(::fuchsia::ui::gfx::vec3 ray_origin,
                              std::move(callback));
 }
 
-void Session::EnqueueEvent(fuchsia::ui::scenic::Event event) {
+void Session::PostFlushTask() {
   // If this is the first EnqueueEvent() since the last FlushEvent(), post a
   // task to ensure that FlushEvents() is called.
   if (buffered_events_->empty()) {
@@ -90,7 +88,31 @@ void Session::EnqueueEvent(fuchsia::ui::scenic::Event event) {
                       }
                     });
   }
-  buffered_events_.push_back(std::move(event));
+}
+
+void Session::EnqueueEvent(fuchsia::ui::gfx::Event event) {
+  PostFlushTask();
+
+  fuchsia::ui::scenic::Event scenic_event;
+  scenic_event.set_gfx(std::move(event));
+  buffered_events_.push_back(std::move(scenic_event));
+}
+
+void Session::EnqueueEvent(fuchsia::ui::scenic::Command unhandled_command) {
+  PostFlushTask();
+
+  fuchsia::ui::scenic::Event scenic_event;
+  scenic_event.set_unhandled(std::move(unhandled_command));
+  buffered_events_.push_back(std::move(scenic_event));
+}
+
+void Session::EnqueueEvent(fuchsia::ui::input::InputEvent event) {
+  // Force an immediate flush, preserving event order.
+  fuchsia::ui::scenic::Event scenic_event;
+  scenic_event.set_input(std::move(event));
+  buffered_events_.push_back(std::move(scenic_event));
+
+  FlushEvents();
 }
 
 void Session::FlushEvents() {

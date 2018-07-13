@@ -5,6 +5,8 @@
 #ifndef GARNET_LIB_UI_SCENIC_EVENT_REPORTER_H_
 #define GARNET_LIB_UI_SCENIC_EVENT_REPORTER_H_
 
+#include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 
 namespace scenic {
@@ -12,9 +14,20 @@ namespace scenic {
 // Interface for a class that submits events to the SessionListener.
 class EventReporter {
  public:
-  // Add an event to our queue, which will be scheduled to be flushed and sent
-  // to the event reporter later.
-  virtual void EnqueueEvent(fuchsia::ui::scenic::Event event) = 0;
+  // Add a GFX event to our queue; schedule a flush by the event reporter.
+  virtual void EnqueueEvent(fuchsia::ui::gfx::Event event) = 0;
+
+  // Add an input event to our queue; immediate flush by the event reporter.
+  virtual void EnqueueEvent(fuchsia::ui::input::InputEvent event) = 0;
+
+  // Add an unhandled command event to our queue; schedule a flush.
+  virtual void EnqueueEvent(fuchsia::ui::scenic::Command event) = 0;
+
+  // Decode the event type and enqueue appropriately.
+  void EnqueueEvent(fuchsia::ui::scenic::Event event);
+
+  // A handy backup implementation. Logs an error and drops events.
+  static EventReporter* Default();
 };
 
 }  // namespace scenic

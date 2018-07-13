@@ -26,8 +26,22 @@ std::unique_ptr<Engine> SessionTest::CreateEngine() {
   return std::make_unique<EngineForTest>(&display_manager_, nullptr);
 }
 
-void SessionTest::EnqueueEvent(fuchsia::ui::scenic::Event event) {
-  events_.push_back(std::move(event));
+void SessionTest::EnqueueEvent(fuchsia::ui::gfx::Event event) {
+  fuchsia::ui::scenic::Event scenic_event;
+  scenic_event.set_gfx(std::move(event));
+  events_.push_back(std::move(scenic_event));
+}
+
+void SessionTest::EnqueueEvent(fuchsia::ui::input::InputEvent event) {
+  fuchsia::ui::scenic::Event scenic_event;
+  scenic_event.set_input(std::move(event));
+  events_.push_back(std::move(scenic_event));
+}
+
+void SessionTest::EnqueueEvent(fuchsia::ui::scenic::Command unhandled) {
+  fuchsia::ui::scenic::Event scenic_event;
+  scenic_event.set_unhandled(std::move(unhandled));
+  events_.push_back(std::move(scenic_event));
 }
 
 }  // namespace test
