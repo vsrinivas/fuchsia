@@ -64,8 +64,8 @@ class HubTest : public ::testing::Test {
   }
 
   void CreateNestedEnvironment(
-      std::string label, fuchsia::sys::EnvironmentSyncPtr* nested_env_out) {
-    fuchsia::sys::EnvironmentControllerSyncPtr controller;
+      std::string label, fuchsia::sys::EnvironmentSync2Ptr* nested_env_out) {
+    fuchsia::sys::EnvironmentControllerSync2Ptr controller;
     sys_env_->CreateNestedEnvironment(Util::OpenAsDirectory(&vfs_, services_),
                                       nested_env_out->NewRequest(),
                                       controller.NewRequest(), label);
@@ -77,9 +77,9 @@ class HubTest : public ::testing::Test {
   async::Loop loop_;
   fs::SynchronousVfs vfs_;
   fbl::RefPtr<ServiceProviderDirImpl> services_;
-  fuchsia::sys::EnvironmentSyncPtr sys_env_;
-  fuchsia::sys::ServiceProviderSyncPtr svc_;
-  std::vector<fuchsia::sys::EnvironmentControllerSyncPtr> env_controllers_;
+  fuchsia::sys::EnvironmentSync2Ptr sys_env_;
+  fuchsia::sys::ServiceProviderSync2Ptr svc_;
+  std::vector<fuchsia::sys::EnvironmentControllerSync2Ptr> env_controllers_;
 };
 
 TEST(ProbeHub, Component) {
@@ -111,7 +111,7 @@ TEST(ProbeHub, RealmSvc) {
 
 // This would launch component and check that it returns correct
 // |expected_return_code|.
-void RunComponent(fuchsia::sys::LauncherSyncPtr& launcher,
+void RunComponent(fuchsia::sys::LauncherSync2Ptr& launcher,
                   std::string component_url, std::vector<std::string> args,
                   int64_t expected_return_code) {
   std::FILE* tmpf = std::tmpfile();
@@ -125,7 +125,7 @@ void RunComponent(fuchsia::sys::LauncherSyncPtr& launcher,
   launch_info.out = CloneFileDescriptor(tmp_fd);
   launch_info.err = CloneFileDescriptor(STDERR_FILENO);
 
-  fuchsia::sys::ComponentControllerSyncPtr controller;
+  fuchsia::sys::ComponentControllerSync2Ptr controller;
   launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
 
   int64_t return_code;
@@ -145,7 +145,7 @@ void RunComponent(fuchsia::sys::LauncherSyncPtr& launcher,
 TEST_F(HubTest, ScopePolicy) {
   // Connect to the Launcher service through our static environment.
   // This launcher is from sys realm so our hub would be scoped to it
-  fuchsia::sys::LauncherSyncPtr launcher;
+  fuchsia::sys::LauncherSync2Ptr launcher;
   fuchsia::sys::ConnectToEnvironmentService(launcher.NewRequest());
 
   std::string glob_url = "glob";
@@ -157,12 +157,12 @@ TEST_F(HubTest, ScopePolicy) {
 
   // create nested environment
   // test that we can see nested env
-  fuchsia::sys::EnvironmentSyncPtr nested_env;
+  fuchsia::sys::EnvironmentSync2Ptr nested_env;
   CreateNestedEnvironment("hubscopepolicytest", &nested_env);
   RunComponent(launcher, glob_url, {"/hub/r/hubscopepolicytest/"}, 0);
 
   // test that we cannot see nested env using its own launcher
-  fuchsia::sys::LauncherSyncPtr nested_launcher;
+  fuchsia::sys::LauncherSync2Ptr nested_launcher;
   nested_env->GetLauncher(nested_launcher.NewRequest());
   RunComponent(nested_launcher, glob_url, {"/hub/r/hubscopepolicytest"}, 1);
 

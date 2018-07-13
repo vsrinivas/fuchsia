@@ -38,14 +38,15 @@ int main(int argc, const char** argv) {
     return 1;
   }
   status = svc->ConnectToService(fuchsia::testing::chrealm::TestService::Name_,
-                                 std::move(remote)).statvs;
+                                 std::move(remote))
+               .statvs;
   if (status != ZX_OK) {
     fprintf(stderr, "Connecting to service failed: %s\n",
             zx_status_get_string(status));
     return 1;
   }
 
-  fuchsia::testing::chrealm::TestServiceSyncPtr test_svc;
+  fuchsia::testing::chrealm::TestServiceSync2Ptr test_svc;
   test_svc.Bind(std::move(local));
   fidl::StringPtr msg;
   test_svc->GetMessage(&msg);

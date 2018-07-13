@@ -18,9 +18,8 @@ namespace {
 class RealmTest : public gtest::RealLoopFixture {};
 
 fuchsia::sys::ComponentControllerPtr RunComponent(
-                  fuchsia::sys::LauncherSyncPtr& launcher,
-                  std::string component_url,
-                  int64_t expected_return_code) {
+    fuchsia::sys::LauncherSync2Ptr& launcher, std::string component_url,
+    int64_t expected_return_code) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = component_url;
 
@@ -36,33 +35,30 @@ fuchsia::sys::ComponentControllerPtr RunComponent(
 TEST_F(RealmTest, CreateTwoKillOne) {
   // Connect to the Launcher service through our static environment.
   // This launcher is from sys realm so our hub would be scoped to it
-  fuchsia::sys::LauncherSyncPtr launcher;
+  fuchsia::sys::LauncherSync2Ptr launcher;
   fuchsia::sys::ConnectToEnvironmentService(launcher.NewRequest());
 
   // Launch two components
   fuchsia::sys::ComponentControllerPtr controller1 =
-              RunComponent(launcher, "/boot/bin/sh", 0);
+      RunComponent(launcher, "/boot/bin/sh", 0);
 
   fuchsia::sys::ComponentControllerPtr controller2 =
-              RunComponent(launcher, "/boot/bin/sh", 0);
+      RunComponent(launcher, "/boot/bin/sh", 0);
 
   bool controller2_had_error = false;
-  controller2.set_error_handler([&controller2_had_error]{
-      controller2_had_error = true;
-    });
+  controller2.set_error_handler(
+      [&controller2_had_error] { controller2_had_error = true; });
 
   // Kill one of the two components, make sure it's exited via Wait
 
   bool wait = false;
-  controller1->Wait([&wait](int64_t errcode) {
-    wait = true;
-  });
+  controller1->Wait([&wait](int64_t errcode) { wait = true; });
   controller1->Kill();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, zx::sec(5)));
 
   // Make sure the second controller didn't have any errors
-  EXPECT_FALSE(RunLoopWithTimeoutOrUntil([&controller2_had_error]
-                              { return controller2_had_error; }, zx::sec(2)));
+  EXPECT_FALSE(RunLoopWithTimeoutOrUntil(
+      [&controller2_had_error] { return controller2_had_error; }, zx::sec(2)));
 
   // Kill the other component
   controller2->Kill();
