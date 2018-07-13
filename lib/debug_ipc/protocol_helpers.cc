@@ -14,4 +14,12 @@ bool Deserialize(MessageReader* reader, std::string* s) {
   return reader->ReadString(s);
 }
 
+void Serialize(uint64_t data, MessageWriter* writer) {
+  writer->WriteUint64(data);
+}
+
+bool Deserialize(MessageReader* reader, uint64_t* data) {
+  return reader->ReadUint64(data);
+}
+
 }  // namespace debug_ipc

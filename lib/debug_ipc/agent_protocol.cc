@@ -204,7 +204,7 @@ bool ReadRequest(MessageReader* reader, ResumeRequest* request,
   *transaction_id = header.transaction_id;
   if (!reader->ReadUint64(&request->process_koid))
     return false;
-  if (!reader->ReadUint64(&request->thread_koid))
+  if (!Deserialize(reader, &request->thread_koids))
     return false;
 
   uint32_t how;
@@ -408,6 +408,7 @@ void WriteNotifyModules(const NotifyModules& notify, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kNotifyModules, 0);
   writer->WriteUint64(notify.process_koid);
   Serialize(notify.modules, writer);
+  Serialize(notify.stopped_thread_koids, writer);
 }
 
 }  // namespace debug_ipc

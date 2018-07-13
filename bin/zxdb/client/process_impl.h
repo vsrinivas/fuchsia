@@ -54,7 +54,8 @@ class ProcessImpl : public Process, public ProcessSymbolsImpl::Notifications {
   void OnThreadExiting(const debug_ipc::ThreadRecord& record);
 
   // Notification that the list of loaded modules may have been updated.
-  void OnModules(const std::vector<debug_ipc::Module>& modules);
+  void OnModules(const std::vector<debug_ipc::Module>& modules,
+                 const std::vector<uint64_t>& stopped_thread_koids);
 
  private:
   // Syncs the threads_ list to the new list of threads passed in .

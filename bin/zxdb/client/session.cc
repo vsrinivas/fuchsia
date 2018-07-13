@@ -436,45 +436,6 @@ void Session::ClearConnectionData() {
   arch_ = debug_ipc::Arch::kUnknown;
 }
 
-void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
-                                   std::vector<char> data) {
-  debug_ipc::MessageReader reader(std::move(data));
-
-  switch (header.type) {
-    case debug_ipc::MsgHeader::Type::kNotifyProcessExiting: {
-      debug_ipc::NotifyProcess notify;
-      if (!debug_ipc::ReadNotifyProcess(&reader, &notify))
-        return;
-
-      Process* process = system_.ProcessFromKoid(notify.process_koid);
-      if (process)
-        process->GetTarget()->OnProcessExiting(notify.return_code);
-      break;
-    }
-    case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:
-    case debug_ipc::MsgHeader::Type::kNotifyThreadExiting: {
-      debug_ipc::NotifyThread thread;
-      if (debug_ipc::ReadNotifyThread(&reader, &thread))
-        DispatchNotifyThread(header.type, thread);
-      break;
-    }
-    case debug_ipc::MsgHeader::Type::kNotifyException: {
-      debug_ipc::NotifyException notify;
-      if (debug_ipc::ReadNotifyException(&reader, &notify))
-        DispatchNotifyException(notify);
-      break;
-    }
-    case debug_ipc::MsgHeader::Type::kNotifyModules: {
-      debug_ipc::NotifyModules notify;
-      if (debug_ipc::ReadNotifyModules(&reader, &notify))
-        DispatchNotifyModules(notify);
-      break;
-    }
-    default:
-      FXL_NOTREACHED();  // Unexpected notification.
-  }
-}
-
 void Session::DispatchNotifyThread(debug_ipc::MsgHeader::Type type,
                                    const debug_ipc::NotifyThread& notify) {
   ProcessImpl* process = system_.ProcessImplFromKoid(notify.process_koid);
@@ -574,12 +535,51 @@ void Session::DispatchNotifyException(
 void Session::DispatchNotifyModules(const debug_ipc::NotifyModules& notify) {
   ProcessImpl* process = system_.ProcessImplFromKoid(notify.process_koid);
   if (process) {
-      process->OnModules(notify.modules);
+    process->OnModules(notify.modules, notify.stopped_thread_koids);
   } else {
     fprintf(stderr,
             "Warning: received modules notification for an "
             "unexpected process %" PRIu64 ".",
             notify.process_koid);
+  }
+}
+
+void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
+                                   std::vector<char> data) {
+  debug_ipc::MessageReader reader(std::move(data));
+
+  switch (header.type) {
+    case debug_ipc::MsgHeader::Type::kNotifyProcessExiting: {
+      debug_ipc::NotifyProcess notify;
+      if (!debug_ipc::ReadNotifyProcess(&reader, &notify))
+        return;
+
+      Process* process = system_.ProcessFromKoid(notify.process_koid);
+      if (process)
+        process->GetTarget()->OnProcessExiting(notify.return_code);
+      break;
+    }
+    case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:
+    case debug_ipc::MsgHeader::Type::kNotifyThreadExiting: {
+      debug_ipc::NotifyThread thread;
+      if (debug_ipc::ReadNotifyThread(&reader, &thread))
+        DispatchNotifyThread(header.type, thread);
+      break;
+    }
+    case debug_ipc::MsgHeader::Type::kNotifyException: {
+      debug_ipc::NotifyException notify;
+      if (debug_ipc::ReadNotifyException(&reader, &notify))
+        DispatchNotifyException(notify);
+      break;
+    }
+    case debug_ipc::MsgHeader::Type::kNotifyModules: {
+      debug_ipc::NotifyModules notify;
+      if (debug_ipc::ReadNotifyModules(&reader, &notify))
+        DispatchNotifyModules(notify);
+      break;
+    }
+    default:
+      FXL_NOTREACHED();  // Unexpected notification.
   }
 }
 

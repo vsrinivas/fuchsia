@@ -182,7 +182,7 @@ TEST(Protocol, PauseRequest) {
 TEST(Protocol, ResumeRequest) {
   ResumeRequest initial;
   initial.process_koid = 3746234;
-  initial.thread_koid = 123523;
+  initial.thread_koids.push_back(123523);
   initial.how = ResumeRequest::How::kStepInRange;
   initial.range_begin = 0x12345;
   initial.range_end = 0x123456;
@@ -190,7 +190,7 @@ TEST(Protocol, ResumeRequest) {
   ResumeRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
   EXPECT_EQ(initial.process_koid, second.process_koid);
-  EXPECT_EQ(initial.thread_koid, second.thread_koid);
+  EXPECT_EQ(initial.thread_koids, second.thread_koids);
   EXPECT_EQ(initial.how, second.how);
   EXPECT_EQ(initial.range_begin, second.range_begin);
   EXPECT_EQ(initial.range_end, second.range_end);
@@ -576,6 +576,8 @@ TEST(Protocol, NotifyModules) {
   initial.modules[0].base = 0x12345;
   initial.modules[1].name = "bar";
   initial.modules[1].base = 0x43567;
+  initial.stopped_thread_koids.push_back(34);
+  initial.stopped_thread_koids.push_back(96);
 
   NotifyModules second;
   ASSERT_TRUE(SerializeDeserializeNotification(
@@ -587,6 +589,7 @@ TEST(Protocol, NotifyModules) {
   EXPECT_EQ(initial.modules[0].base, second.modules[0].base);
   EXPECT_EQ(initial.modules[1].name, second.modules[1].name);
   EXPECT_EQ(initial.modules[1].base, second.modules[1].base);
+  EXPECT_EQ(initial.stopped_thread_koids, second.stopped_thread_koids);
 }
 
 }  // namespace debug_ipc

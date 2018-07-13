@@ -48,7 +48,7 @@ void ThreadImpl::Pause() {
 void ThreadImpl::Continue() {
   debug_ipc::ResumeRequest request;
   request.process_koid = process_->GetKoid();
-  request.thread_koid = koid_;
+  request.thread_koids.push_back(koid_);
   request.how = debug_ipc::ResumeRequest::How::kContinue;
   session()->remote_api()->Resume(
       request, [](const Err& err, debug_ipc::ResumeReply) {});
@@ -65,7 +65,7 @@ Err ThreadImpl::Step() {
 
   debug_ipc::ResumeRequest request;
   request.process_koid = process_->GetKoid();
-  request.thread_koid = koid_;
+  request.thread_koids.push_back(koid_);
   request.how = debug_ipc::ResumeRequest::How::kStepInRange;
 
   LineDetails line_details =
@@ -87,7 +87,7 @@ Err ThreadImpl::Step() {
 void ThreadImpl::StepInstruction() {
   debug_ipc::ResumeRequest request;
   request.process_koid = process_->GetKoid();
-  request.thread_koid = koid_;
+  request.thread_koids.push_back(koid_);
   request.how = debug_ipc::ResumeRequest::How::kStepInstruction;
   session()->remote_api()->Resume(
       request, [](const Err& err, debug_ipc::ResumeReply) {});

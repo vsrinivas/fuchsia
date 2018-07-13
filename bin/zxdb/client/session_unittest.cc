@@ -221,7 +221,8 @@ TEST_F(SessionTest, MultiBreakpointStop) {
   // resume request and not reported a thread stop.
   ASSERT_EQ(1, sink()->resume_count());
   EXPECT_EQ(kProcessKoid, sink()->resume_request().process_koid);
-  EXPECT_EQ(kThreadKoid, sink()->resume_request().thread_koid);
+  ASSERT_EQ(1u, sink()->resume_request().thread_koids.size());
+  EXPECT_EQ(kThreadKoid, sink()->resume_request().thread_koids[0]);
   EXPECT_EQ(0, thread_observer.stop_count());
 
   // Do a second request, this time where one requests a silent stop.

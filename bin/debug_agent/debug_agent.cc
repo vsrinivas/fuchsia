@@ -111,9 +111,20 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
   debug_ipc::WriteReply(reply, transaction_id, &writer);
   stream()->Write(writer.MessageComplete());
 
-  // For valid attaches, follow up with the current thread list.
-  if (new_process)
+  // For valid attaches, follow up with the current module and thread lists.
+  if (new_process) {
     new_process->PopulateCurrentThreads();
+
+    if (new_process->RegisterDebugState()) {
+      // Suspend all threads while the module list is being sent. The client
+      // will resume the threads once it's loaded symbols and processed
+      // breakpoints (this may take a while and we'd like to get any
+      // breakpoints as early as possible).
+      std::vector<uint64_t> paused_thread_koids;
+      new_process->PauseAll(&paused_thread_koids);
+      new_process->SendModuleNotification(std::move(paused_thread_koids));
+    }
+  }
 }
 
 void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request,

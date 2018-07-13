@@ -239,7 +239,7 @@ void WriteRequest(const ResumeRequest& request, uint32_t transaction_id,
                   MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kResume, transaction_id);
   writer->WriteUint64(request.process_koid);
-  writer->WriteUint64(request.thread_koid);
+  Serialize(request.thread_koids, writer);
   writer->WriteUint32(static_cast<uint32_t>(request.how));
   writer->WriteUint64(request.range_begin);
   writer->WriteUint64(request.range_end);
@@ -466,7 +466,9 @@ bool ReadNotifyModules(MessageReader* reader, NotifyModules* notify) {
   if (!reader->ReadUint64(&notify->process_koid))
     return false;
 
-  return Deserialize(reader, &notify->modules);
+  if (!Deserialize(reader, &notify->modules))
+    return false;
+  return Deserialize(reader, &notify->stopped_thread_koids);
 }
 
 }  // namespace debug_ipc

@@ -106,7 +106,6 @@ void ProcessImpl::SyncThreads(std::function<void()> callback) {
 void ProcessImpl::Pause() {
   debug_ipc::PauseRequest request;
   request.process_koid = koid_;
-  request.thread_koid = 0;  // 0 means all threads.
   session()->remote_api()->Pause(request,
                                  [](const Err& err, debug_ipc::PauseReply) {});
 }
@@ -114,7 +113,6 @@ void ProcessImpl::Pause() {
 void ProcessImpl::Continue() {
   debug_ipc::ResumeRequest request;
   request.process_koid = koid_;
-  request.thread_koid = 0;  // 0 means all threads.
   request.how = debug_ipc::ResumeRequest::How::kContinue;
   session()->remote_api()->Resume(
       request, [](const Err& err, debug_ipc::ResumeReply) {});
@@ -168,8 +166,21 @@ void ProcessImpl::OnThreadExiting(const debug_ipc::ThreadRecord& record) {
   threads_.erase(found);
 }
 
-void ProcessImpl::OnModules(const std::vector<debug_ipc::Module>& modules) {
+void ProcessImpl::OnModules(const std::vector<debug_ipc::Module>& modules,
+                            const std::vector<uint64_t>& stopped_thread_koids) {
   symbols_.SetModules(modules);
+
+  // The threads loading the library will be stopped so we have time to load
+  // symbols and enable any pending breakpoints. Now that the notification is
+  // complete, the thread(s) can continue.
+  if (!stopped_thread_koids.empty()) {
+    debug_ipc::ResumeRequest request;
+    request.process_koid = koid_;
+    request.how = debug_ipc::ResumeRequest::How::kContinue;
+    request.thread_koids = stopped_thread_koids;
+    session()->remote_api()->Resume(
+        request, [](const Err& err, debug_ipc::ResumeReply) {});
+  }
 }
 
 void ProcessImpl::UpdateThreads(

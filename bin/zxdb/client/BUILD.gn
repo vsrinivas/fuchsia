@@ -130,6 +130,7 @@ source_set("tests") {
     "disassembler_unittest.cc",
     "file_util_unittest.cc",
     "memory_dump_unittest.cc",
+    "process_impl_unittest.cc",
     "session_unittest.cc",
     "string_util_unittest.cc",
     "target_impl_unittest.cc",

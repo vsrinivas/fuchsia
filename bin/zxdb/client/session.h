@@ -93,6 +93,13 @@ class Session {
   // connected.
   const ArchInfo* arch_info() const { return arch_info_.get(); }
 
+  // Dispatches these particular notification types from the agent. These are
+  // public since tests will commonly want to synthesize these events.
+  void DispatchNotifyThread(debug_ipc::MsgHeader::Type type,
+                            const debug_ipc::NotifyThread& notify);
+  void DispatchNotifyException(const debug_ipc::NotifyException& notify);
+  void DispatchNotifyModules(const debug_ipc::NotifyModules& notify);
+
  private:
   class PendingConnection;
   friend PendingConnection;
@@ -108,10 +115,6 @@ class Session {
   // Dispatches unsolicited notifications sent from the agent.
   void DispatchNotification(const debug_ipc::MsgHeader& header,
                             std::vector<char> data);
-  void DispatchNotifyThread(debug_ipc::MsgHeader::Type type,
-                            const debug_ipc::NotifyThread& notify);
-  void DispatchNotifyException(const debug_ipc::NotifyException& notify);
-  void DispatchNotifyModules(const debug_ipc::NotifyModules& notify);
 
   // Returns the thread object from the given koids, or null.
   ThreadImpl* ThreadImplFromKoid(uint64_t process_koid, uint64_t thread_koid);

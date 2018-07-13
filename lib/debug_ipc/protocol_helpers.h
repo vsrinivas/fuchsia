@@ -17,10 +17,12 @@ namespace debug_ipc {
 // type is only used once, the corresponding reader/writer would go in the
 // [agent|client]_protocol.cc file that needs it.
 
-// Trivial std::string ones. These allow the vector serializer below to be
-// used to [de]serialize a vector of strings.
+// Trivial primitive type ones. These allow the vector serializer below to be
+// used to [de]serialize a vector of strings or ints.
 void Serialize(const std::string& s, MessageWriter* writer);
 bool Deserialize(MessageReader* reader, std::string* s);
+void Serialize(uint64_t data, MessageWriter* writer);
+bool Deserialize(MessageReader* reader, uint64_t* data);
 
 // Will call Serialize for each element in the vector.
 template <typename T>

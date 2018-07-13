@@ -71,7 +71,9 @@ void DebuggedThread::OnException(uint32_t type) {
   switch (type) {
     case ZX_EXCP_SW_BREAKPOINT:
       notify.type = debug_ipc::NotifyException::Type::kSoftware;
-      UpdateForSoftwareBreakpoint(&regs, &notify.hit_breakpoints);
+      if (UpdateForSoftwareBreakpoint(&regs, &notify.hit_breakpoints) ==
+          OnStop::kIgnore)
+        return;
       break;
     case ZX_EXCP_HW_BREAKPOINT:
       if (run_mode_ == debug_ipc::ResumeRequest::How::kContinue) {
@@ -122,11 +124,14 @@ void DebuggedThread::OnException(uint32_t type) {
   // processes as desired.
 }
 
-void DebuggedThread::Pause() {
+bool DebuggedThread::Pause() {
   if (suspend_reason_ == SuspendReason::kNone) {
-    if (thread_.suspend(&suspend_token_) == ZX_OK)
+    if (thread_.suspend(&suspend_token_) == ZX_OK) {
       suspend_reason_ = SuspendReason::kOther;
+      return true;
+    }
   }
+  return false;
 }
 
 void DebuggedThread::Resume(const debug_ipc::ResumeRequest& request) {
@@ -176,7 +181,7 @@ void DebuggedThread::WillDeleteProcessBreakpoint(ProcessBreakpoint* bp) {
     current_breakpoint_ = nullptr;
 }
 
-void DebuggedThread::UpdateForSoftwareBreakpoint(
+DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
     zx_thread_state_general_regs* regs,
     std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
   uint64_t breakpoint_address =
@@ -211,11 +216,15 @@ void DebuggedThread::UpdateForSoftwareBreakpoint(
 
       if (!process_->dl_debug_addr() && process_->RegisterDebugState()) {
         // This breakpoint was the explicit breakpoint ld.so executes to notify
-        // us that the loader is ready.
-        // TODO(brettw) Don't notify of an exception as we do now by falling
-        // through, but instead encode the "everything was suspended" state in
-        // the module load message. The client should unsuspend the process
-        // manually when it's ready (it may need to set breakpoints and stuff).
+        // us that the loader is ready. Send the current module list and
+        // silently keep this thread stopped. The client will explicitly
+        // resume this thread when it's ready to continue (it will need to load
+        // symbols for the moduless and may need to set breakpoints based on
+        // them).
+        std::vector<uint64_t> paused_threads;
+        paused_threads.push_back(koid());
+        process_->SendModuleNotification(std::move(paused_threads));
+        return OnStop::kIgnore;
       }
     } else {
       // Not a breakpoint instruction. Probably the breakpoint instruction used
@@ -229,6 +238,7 @@ void DebuggedThread::UpdateForSoftwareBreakpoint(
       // the exception.
     }
   }
+  return OnStop::kSendNotification;
 }
 
 void DebuggedThread::UpdateForHitProcessBreakpoint(

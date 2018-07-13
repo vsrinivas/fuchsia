@@ -132,9 +132,10 @@ struct ResumeRequest {
   // If 0, all threads of all debugged processes will be continued.
   uint64_t process_koid = 0;
 
-  // If 0, all threads in the given process will be continued. Not compatible
-  // with kStepInRange.
-  uint64_t thread_koid = 0;
+  // If empty, all threads in the given process will be continued. If nonempty,
+  // the threads with listed koids will be resumed. kStepInRange may only be
+  // used with a single thread.
+  std::vector<uint64_t> thread_koids;
 
   How how = How::kContinue;
 
@@ -279,6 +280,11 @@ struct NotifyException {
 struct NotifyModules {
   uint64_t process_koid = 0;
   std::vector<Module> modules;
+
+  // The list of threads in the process stopped automatically as a result of
+  // the module load. The client will want to resume these threads once it has
+  // processed the load.
+  std::vector<uint64_t> stopped_thread_koids;
 };
 
 #pragma pack(pop)

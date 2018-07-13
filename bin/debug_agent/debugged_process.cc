@@ -46,22 +46,23 @@ void DebuggedProcess::OnPause(const debug_ipc::PauseRequest& request) {
     // the client sending the request.
   } else {
     // 0 thread ID means resume all in process.
-    for (const auto& pair : threads_)
-      pair.second->Pause();
+    PauseAll();
   }
 }
 
 void DebuggedProcess::OnResume(const debug_ipc::ResumeRequest& request) {
-  if (request.thread_koid) {
-    DebuggedThread* thread = GetThread(request.thread_koid);
-    if (thread)
-      thread->Resume(request);
-    // Could be not found if there is a race between the thread exiting and
-    // the client sending the request.
-  } else {
-    // 0 thread ID means resume all in process.
+  if (request.thread_koids.empty()) {
+    // Empty thread ID list means resume all threads.
     for (const auto& pair : threads_)
       pair.second->Resume(request);
+  } else {
+    for (uint64_t thread_koid : request.thread_koids) {
+      DebuggedThread* thread = GetThread(thread_koid);
+      if (thread)
+        thread->Resume(request);
+      // Could be not found if there is a race between the thread exiting and
+      // the client sending the request.
+    }
   }
 }
 
@@ -115,15 +116,20 @@ bool DebuggedProcess::RegisterDebugState() {
 
   // TODO(brettw) register breakpoint for dynamic loads. This current code
   // only notifies for the inital set of binaries loaded by the process.
+  return true;
+}
 
+void DebuggedProcess::SendModuleNotification(
+    std::vector<uint64_t> paused_thread_koids) {
   // Notify the client of any libraries.
   debug_ipc::NotifyModules notify;
   notify.process_koid = koid_;
   GetModulesForProcess(process_, dl_debug_addr_, &notify.modules);
+  notify.stopped_thread_koids = std::move(paused_thread_koids);
+
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteNotifyModules(notify, &writer);
   debug_agent_->stream()->Write(writer.MessageComplete());
-  return true;
 }
 
 ProcessBreakpoint* DebuggedProcess::FindProcessBreakpointForAddr(
@@ -259,6 +265,13 @@ void DebuggedProcess::OnModules(debug_ipc::ModulesReply* reply) {
   // Modules can only be read after the debug state is set.
   if (dl_debug_addr_)
     GetModulesForProcess(process_, dl_debug_addr_, &reply->modules);
+}
+
+void DebuggedProcess::PauseAll(std::vector<uint64_t>* paused_koids) {
+  for (auto& pair : threads_) {
+    if (pair.second->Pause() && paused_koids)
+      paused_koids->push_back(pair.first);
+  }
 }
 
 zx_status_t DebuggedProcess::ReadProcessMemory(uintptr_t address, void* buffer,

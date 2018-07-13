@@ -144,7 +144,6 @@ void SystemImpl::Pause() {
 void SystemImpl::Continue() {
   debug_ipc::ResumeRequest request;
   request.process_koid = 0;  // 0 means all processes.
-  request.thread_koid = 0;   // 0 means all threads.
   request.how = debug_ipc::ResumeRequest::How::kContinue;
   session()->remote_api()->Resume(
       request, std::function<void(const Err&, debug_ipc::ResumeReply)>());

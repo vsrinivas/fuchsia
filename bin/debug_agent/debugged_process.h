@@ -53,6 +53,10 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
                       debug_ipc::AddressSpaceReply* reply);
   void OnModules(debug_ipc::ModulesReply* reply);
 
+  // Pauses all threads in the process. If non-null, the pused_koids vector
+  // will be populated with the koids of all threads paused by this operation.
+  void PauseAll(std::vector<uint64_t>* paused_koids = nullptr);
+
   // Returns the thread or null if there is no known thread for this koid.
   DebuggedThread* GetThread(zx_koid_t thread_koid);
 
@@ -63,8 +67,13 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
 
   // Attempts to load the debug_state_ value from the
   // ZX_PROP_PROCESS_DEBUG_ADDR of the debugged process. Returns true if it
-  // is now set. False means it remains unset.
+  // is now set. False means it remains unset. Normally the first time this
+  // returns true would need to be followed up with a SendModuleNotification.
   bool RegisterDebugState();
+
+  // Sends the currently loaded modules to the client with the given list
+  // of paused threads.
+  void SendModuleNotification(std::vector<uint64_t> paused_thread_koids);
 
   // Looks for breakpoints at the given address. Null if no breakpoints are
   // at that address.
