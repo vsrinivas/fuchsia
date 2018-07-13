@@ -173,12 +173,12 @@ public:
         return zx_object_set_property(get(), property, value, size);
     }
 
-    zx_status_t get_cookie(zx_handle_t scope, uint64_t *cookie) const {
-        return zx_object_get_cookie(get(), scope, cookie);
+    zx_status_t get_cookie(const object_base& scope, uint64_t *cookie) const {
+        return zx_object_get_cookie(get(), scope.get(), cookie);
     }
 
-    zx_status_t set_cookie(zx_handle_t scope, uint64_t cookie) const {
-        return zx_object_set_cookie(get(), scope, cookie);
+    zx_status_t set_cookie(const object_base& scope, uint64_t cookie) const {
+        return zx_object_set_cookie(get(), scope.get(), cookie);
     }
 
 private:

@@ -17,9 +17,8 @@
 #include <fs/remote.h>
 #include <threads.h>
 #include <zircon/assert.h>
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
 #include <lib/zx/event.h>
+#include <lib/zx/process.h>
 #endif
 
 #include <fs/trace.h>
@@ -258,7 +257,7 @@ void Vfs::TokenDiscard(zx::event ios_token) {
         //
         // By cleared the token cookie, any remaining handles to the event will
         // be ignored by the filesystem server.
-        ios_token.set_cookie(zx_process_self(), 0);
+        ios_token.set_cookie(*zx::process::self(), 0);
     }
 }
 
@@ -282,7 +281,7 @@ zx_status_t Vfs::VnodeToToken(fbl::RefPtr<Vnode> vn, zx::event* ios_token,
         return r;
     } else if ((r = new_ios_token.duplicate(TOKEN_RIGHTS, &new_token) != ZX_OK)) {
         return r;
-    } else if ((r = new_ios_token.set_cookie(zx_process_self(), vnode_cookie)) != ZX_OK) {
+    } else if ((r = new_ios_token.set_cookie(*zx::process::self(), vnode_cookie)) != ZX_OK) {
         return r;
     }
     *ios_token = fbl::move(new_ios_token);
@@ -293,7 +292,7 @@ zx_status_t Vfs::VnodeToToken(fbl::RefPtr<Vnode> vn, zx::event* ios_token,
 zx_status_t Vfs::TokenToVnode(zx::event token, fbl::RefPtr<Vnode>* out) {
     uint64_t vcookie;
     zx_status_t r;
-    if ((r = token.get_cookie(zx_process_self(), &vcookie)) < 0) {
+    if ((r = token.get_cookie(*zx::process::self(), &vcookie)) < 0) {
         // TODO(smklein): Return a more specific error code for "token not from this server"
         return ZX_ERR_INVALID_ARGS;
     }
