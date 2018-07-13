@@ -143,6 +143,7 @@ shlib_toolchain = "${toolchain_variant.base}${toolchain_variant.suffix}-shared"
 default_common_binary_configs = [
   "//build/config:compiler",
   "//build/config:relative_paths",
+  "//build/config:default_frame_pointers",
   "//build/config:default_include_dirs",
   "//build/config:default_symbols",
   "//build/config:default_warnings",

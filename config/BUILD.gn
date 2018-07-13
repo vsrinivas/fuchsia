@@ -11,6 +11,22 @@ declare_args() {
   # appear when using this level.
   #   0 means no symbols.
   symbol_level = 2
+
+  if (is_fuchsia) {
+    # Controls whether the compiler emits full stack frames for function calls.
+    # This reduces performance but increases the ability to generate good
+    # stack traces, especially when we have bugs around unwind table generation.
+    # It applies only for Fuchsia targets (see below where it is unset).
+    #
+    # TODO(ZX-2361): Theoretically unwind tables should be good enough so we can
+    # remove this option when the issues are addressed.
+    enable_frame_pointers = is_debug
+  }
+}
+
+# No frame pointers for host compiles.
+if (!is_fuchsia) {
+  enable_frame_pointers = false
 }
 
 config("compiler") {
@@ -154,6 +170,22 @@ config("default_symbols") {
   } else {
     assert(symbol_level >= 0 && symbol_level <= 2)
   }
+}
+
+config("default_frame_pointers") {
+  if (enable_frame_pointers) {
+    configs = [ ":frame_pointers" ]
+  } else {
+    configs = [ ":no_frame_pointers" ]
+  }
+}
+
+config("frame_pointers") {
+  cflags = [ "-fno-omit-frame-pointer" ]
+}
+
+config("no_frame_pointers") {
+  cflags = [ "-fomit-frame-pointer" ]
 }
 
 config("default_warnings") {
