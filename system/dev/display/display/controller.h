@@ -33,7 +33,7 @@ public:
     display_info_t info;
 
     edid::Edid edid;
-    fbl::Vector<uint32_t> skipped_edid_timings;
+    fbl::Vector<edid::timing_params_t> edid_timings;
 
     // A list of all images which have been sent to display driver. For multiple
     // images which are displayed at the same time, images with a lower z-order
@@ -83,8 +83,7 @@ public:
 
     // Calling GetPanelConfig requires holding |mtx()|, and it must be held
     // for as long as |edid| and |params| are retained.
-    bool GetPanelConfig(uint64_t display_id, const edid::Edid** edid,
-                        const fbl::Vector<uint32_t>** skipped_edid_timings,
+    bool GetPanelConfig(uint64_t display_id, const fbl::Vector<edid::timing_params_t>** timings,
                         const display_params_t** params) __TA_NO_THREAD_SAFETY_ANALYSIS;
     // Calling GetSupportedPixelFormats requires holding |mtx()|
     bool GetSupportedPixelFormats(uint64_t display_id, uint32_t* count_out,

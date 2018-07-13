@@ -10,6 +10,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include "lib/edid/timings.h"
 
 namespace edid {
 
@@ -97,7 +98,7 @@ struct StandardTimingDescriptor {
     uint32_t horizontal_resolution() const { return (byte1 + 31) * 8; }
     uint32_t vertical_resolution(uint8_t edid_version, uint8_t edid_revision) const {
         if (aspect_ratio() == 0) {
-            if (edid_version < 1 || (edid_version == 1 && edid_version < 3)) {
+            if (edid_version < 1 || (edid_version == 1 && edid_revision < 3)) {
                 return horizontal_resolution();
             } else {
                 return horizontal_resolution() * 10 / 16;
@@ -261,26 +262,10 @@ public:
     virtual bool DdcRead(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) = 0;
 };
 
-typedef struct timing_params {
-    uint32_t pixel_freq_10khz;
-
-    uint32_t horizontal_addressable;
-    uint32_t horizontal_front_porch;
-    uint32_t horizontal_sync_pulse;
-    uint32_t horizontal_blanking;
-
-    uint32_t vertical_addressable;
-    uint32_t vertical_front_porch;
-    uint32_t vertical_sync_pulse;
-    uint32_t vertical_blanking;
-
-    uint32_t vertical_sync_polarity;
-    uint32_t horizontal_sync_polarity;
-    uint32_t interlaced;
-} timing_params_t;
-
 class Edid {
 public:
+    // Iterator that returns all of the timing modes of the display. The iterator
+    // **does not** filter out duplicates.
     class timing_iterator {
     public:
         timing_iterator() { }

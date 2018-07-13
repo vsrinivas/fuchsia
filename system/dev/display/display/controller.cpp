@@ -44,8 +44,13 @@ void Controller::PopulateDisplayMode(const edid::timing_params_t& params, displa
     mode->v_front_porch = params.vertical_front_porch;
     mode->v_sync_pulse = params.vertical_sync_pulse;
     mode->v_blanking = params.vertical_blanking;
-    mode->mode_flags = (params.vertical_sync_polarity ? MODE_FLAG_VSYNC_POSITIVE : 0)
-            | (params.horizontal_sync_polarity ? MODE_FLAG_HSYNC_POSITIVE : 0);
+    mode->flags = params.flags;
+
+    static_assert(MODE_FLAG_VSYNC_POSITIVE == edid::timing_params::kPositiveVsync, "");
+    static_assert(MODE_FLAG_HSYNC_POSITIVE == edid::timing_params::kPositiveHsync, "");
+    static_assert(MODE_FLAG_INTERLACED == edid::timing_params::kInterlaced, "");
+    static_assert(MODE_FLAG_ALTERNATING_VBLANK == edid::timing_params::kAlternatingVblank, "");
+    static_assert(MODE_FLAG_DOUBLE_CLOCKED == edid::timing_params::kDoubleClocked, "");
 }
 
 void Controller::OnDisplaysChanged(uint64_t* displays_added, uint32_t added_count,
@@ -107,43 +112,44 @@ void Controller::OnDisplaysChanged(uint64_t* displays_added, uint32_t added_coun
             test_config.layer_count = 1;
             test_config.layers = test_layers;
 
-            auto timings = info->edid.begin();
-            uint32_t idx = 0;
-            bool found_timing = false;
-            while (timings != info->edid.end()) {
-                uint32_t width = timings->horizontal_addressable;
-                uint32_t height = timings->vertical_addressable;
-
-                test_layer.cfg.primary.image.width = width;
-                test_layer.cfg.primary.image.height = height;
-                test_layer.cfg.primary.src_frame.width = width;
-                test_layer.cfg.primary.src_frame.height = height;
-                test_layer.cfg.primary.dest_frame.width = width;
-                test_layer.cfg.primary.dest_frame.height = height;
-                PopulateDisplayMode(*timings, &test_config.mode);
-
-                uint32_t display_cfg_result;
-                uint32_t layer_result = 0;
-                uint32_t* display_layer_results[] = { &layer_result };
-                ops_.ops->check_configuration(ops_.ctx, test_configs, &display_cfg_result,
-                                              display_layer_results, 1);
-                if (display_cfg_result != CONFIG_DISPLAY_OK) {
-                    fbl::AllocChecker ac;
-                    info->skipped_edid_timings.push_back(idx, &ac);
-                    if (!ac.check()) {
-                        zxlogf(WARN, "Edid skip allocation failed\n");
-                        found_timing = false;
+            for (auto timing : info->edid) {
+                uint32_t width = timing.horizontal_addressable;
+                uint32_t height = timing.vertical_addressable;
+                bool duplicate = false;
+                for (auto& existing_timing : info->edid_timings) {
+                    if (existing_timing.vertical_refresh_e2 == timing.vertical_refresh_e2
+                            && existing_timing.horizontal_addressable == width
+                            && existing_timing.vertical_addressable == height) {
+                        duplicate = true;
                         break;
                     }
-                } else {
-                    found_timing = true;
                 }
+                if (!duplicate) {
+                    test_layer.cfg.primary.image.width = width;
+                    test_layer.cfg.primary.image.height = height;
+                    test_layer.cfg.primary.src_frame.width = width;
+                    test_layer.cfg.primary.src_frame.height = height;
+                    test_layer.cfg.primary.dest_frame.width = width;
+                    test_layer.cfg.primary.dest_frame.height = height;
+                    PopulateDisplayMode(timing, &test_config.mode);
 
-                idx++;
-                ++timings;
+                    uint32_t display_cfg_result;
+                    uint32_t layer_result = 0;
+                    uint32_t* display_layer_results[] = { &layer_result };
+                    ops_.ops->check_configuration(ops_.ctx, test_configs, &display_cfg_result,
+                                                  display_layer_results, 1);
+                    if (display_cfg_result == CONFIG_DISPLAY_OK) {
+                        fbl::AllocChecker ac;
+                        info->edid_timings.push_back(timing, &ac);
+                        if (!ac.check()) {
+                            zxlogf(WARN, "Edid skip allocation failed\n");
+                            break;
+                        }
+                    }
+                }
             }
 
-            if (!found_timing) {
+            if (info->edid_timings.is_empty()) {
                 zxlogf(INFO, "Display with no compatible edid timings\n");
                 continue;
             }
@@ -426,19 +432,18 @@ void Controller::OnClientDead(ClientProxy* client) {
     HandleClientOwnershipChanges();
 }
 
-bool Controller::GetPanelConfig(uint64_t display_id, const edid::Edid** edid,
-                                const fbl::Vector<uint32_t>** skipped_edid_timings,
+bool Controller::GetPanelConfig(uint64_t display_id,
+                                const fbl::Vector<edid::timing_params_t>** timings,
                                 const display_params_t** params) {
     ZX_DEBUG_ASSERT(mtx_trylock(&mtx_) == thrd_busy);
     for (auto& display : displays_) {
         if (display.id == display_id) {
             if (display.info.edid_present) {
-                *edid = &display.edid;
-                *skipped_edid_timings = &display.skipped_edid_timings;
+                *timings = &display.edid_timings;
                 *params = nullptr;
             } else {
                 *params = &display.info.panel.params;
-                *edid = nullptr;
+                *timings = nullptr;
             }
             return true;
         }

@@ -1171,6 +1171,13 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
         *display_cfg_result = CONFIG_DISPLAY_UNSUPPORTED_MODES;
         return;
     }
+    for (unsigned i = 0; i < display_count; i++) {
+        if (display_config[i]->mode.flags
+                & (MODE_FLAG_ALTERNATING_VBLANK | MODE_FLAG_DOUBLE_CLOCKED)) {
+            *display_cfg_result = CONFIG_DISPLAY_UNSUPPORTED_MODES;
+            return;
+        }
+    }
 
     *display_cfg_result = CONFIG_DISPLAY_OK;
     for (unsigned i = 0; i < display_count; i++) {

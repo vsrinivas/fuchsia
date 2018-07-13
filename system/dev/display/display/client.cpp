@@ -340,29 +340,20 @@ void Client::HandleSetDisplayMode(const fuchsia_display_ControllerSetDisplayMode
     }
 
     fbl::AutoLock lock(controller_->mtx());
-    const edid::Edid* edid;
-    const fbl::Vector<uint32_t>* skipped_edid_timings;
+    const fbl::Vector<edid::timing_params_t>* edid_timings;
     const display_params_t* params;
-    controller_->GetPanelConfig(req->display_id, &edid, &skipped_edid_timings, &params);
+    controller_->GetPanelConfig(req->display_id, &edid_timings, &params);
 
-    if (edid) {
-        uint32_t idx = 0;
-        auto skip_iter = skipped_edid_timings->begin();
-        auto timings = edid->begin();
-        while (timings != edid->end()) {
-            if (skip_iter != skipped_edid_timings->end() && idx == *skip_iter) {
-                skip_iter++;
-            } else if ((*timings).horizontal_addressable == req->mode.horizontal_resolution
-                    && (*timings).vertical_addressable == req->mode.vertical_resolution
-                    && calculate_refresh_rate_e2(*timings) == req->mode.refresh_rate_e2) {
-                Controller::PopulateDisplayMode(*timings, &config->pending_.mode);
+    if (edid_timings) {
+        for (auto timing : *edid_timings) {
+            if (timing.horizontal_addressable == req->mode.horizontal_resolution
+                    && timing.vertical_addressable == req->mode.vertical_resolution
+                    && timing.vertical_refresh_e2 == req->mode.refresh_rate_e2) {
+                Controller::PopulateDisplayMode(timing, &config->pending_.mode);
                 pending_config_valid_ = false;
                 config->display_config_change_ = true;
                 return;
             }
-
-            idx++;
-            ++timings;
         }
         zxlogf(ERROR, "Invalid display mode\n");
     } else {
@@ -1172,10 +1163,9 @@ void Client::OnDisplaysChanged(uint64_t* displays_added,
                 continue;
             }
 
-            const edid::Edid* edid;
-            const fbl::Vector<uint32_t>* skipped_edid_timings;
+            const fbl::Vector<edid::timing_params_t>* edid_timings;
             const display_params_t* params;
-            if (!controller_->GetPanelConfig(config->id, &edid, &skipped_edid_timings, &params)) {
+            if (!controller_->GetPanelConfig(config->id, &edid_timings, &params)) {
                 // This can only happen if the display was already disconnected.
                 zxlogf(WARN, "No config when adding display\n");
                 continue;
@@ -1186,16 +1176,8 @@ void Client::OnDisplaysChanged(uint64_t* displays_added,
             config->current_.layers = nullptr;
             config->current_.layer_count = 0;
 
-            if (edid) {
-                auto timings = edid->begin();
-                uint32_t idx = 0;
-                auto skip_iter = skipped_edid_timings->begin();
-                while (skip_iter != skipped_edid_timings->end() && idx == *skip_iter) {
-                    skip_iter++;
-                    idx++;
-                    ++timings;
-                }
-                Controller::PopulateDisplayMode(*timings, &config->current_.mode);
+            if (edid_timings) {
+                Controller::PopulateDisplayMode((*edid_timings)[0], &config->current_.mode);
             } else {
                 config->current_.mode = {};
                 config->current_.mode.h_addressable = params->width;
@@ -1223,36 +1205,23 @@ void Client::OnDisplaysChanged(uint64_t* displays_added,
                 continue;
             }
 
-            const edid::Edid* edid;
-            const fbl::Vector<uint32_t>* skipped_edid_timings;
+            const fbl::Vector<edid::timing_params>* edid_timings;
             const display_params_t* params;
-            controller_->GetPanelConfig(config->id, &edid, &skipped_edid_timings, &params);
+            controller_->GetPanelConfig(config->id, &edid_timings, &params);
 
             coded_configs[i].id = config->id;
             coded_configs[i].pixel_format.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
             coded_configs[i].modes.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
             coded_configs[i].cursor_configs.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
 
-            if (edid) {
-                auto timings = edid->begin();
-                uint32_t idx = 0;
-                auto skip_iter = skipped_edid_timings->begin();
+            if (edid_timings) {
+                coded_configs[i].modes.count = edid_timings->size();
+                for (auto timing : *edid_timings) {
+                    auto mode = builder.New<fuchsia_display_Mode>();
 
-                coded_configs[i].modes.count = 0;
-                while (timings != edid->end()) {
-                    if (skip_iter != skipped_edid_timings->end() && idx == *skip_iter) {
-                        skip_iter++;
-                    } else {
-                        coded_configs[i].modes.count++;
-                        auto mode = builder.New<fuchsia_display_Mode>();
-
-                        mode->horizontal_resolution = (*timings).horizontal_addressable;
-                        mode->vertical_resolution = (*timings).vertical_addressable;
-                        mode->refresh_rate_e2 = calculate_refresh_rate_e2(*timings);
-                    }
-
-                    idx++;
-                    ++timings;
+                    mode->horizontal_resolution = timing.horizontal_addressable;
+                    mode->vertical_resolution = timing.vertical_addressable;
+                    mode->refresh_rate_e2 = timing.vertical_refresh_e2;
                 }
             } else {
                 coded_configs[i].modes.count = 1;

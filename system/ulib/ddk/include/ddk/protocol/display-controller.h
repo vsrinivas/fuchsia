@@ -196,6 +196,8 @@ typedef struct layer {
 #define MODE_FLAG_VSYNC_POSITIVE (1 << 0)
 #define MODE_FLAG_HSYNC_POSITIVE (1 << 1)
 #define MODE_FLAG_INTERLACED (1 << 2)
+#define MODE_FLAG_ALTERNATING_VBLANK (1 << 3)
+#define MODE_FLAG_DOUBLE_CLOCKED (1 << 4)
 
 // The video parameters which specify the display mode.
 typedef struct display_mode {
@@ -208,7 +210,7 @@ typedef struct display_mode {
     uint32_t v_front_porch;
     uint32_t v_sync_pulse;
     uint32_t v_blanking;
-    uint32_t mode_flags; // A bitmask of MODE_FLAG_* values
+    uint32_t flags; // A bitmask of MODE_FLAG_* values
 } display_mode_t;
 
 // If set, use the 0 vector for the color conversion preoffset
