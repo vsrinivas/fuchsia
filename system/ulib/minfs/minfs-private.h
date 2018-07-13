@@ -638,6 +638,7 @@ private:
     // avoid reading the entire file up-front. Until then, read the contents of
     // a VMO into memory when it is read/written.
     zx::vmo vmo_{};
+    uint64_t vmo_size_ = 0;
 
     // vmo_indirect_ contains all indirect and doubly indirect blocks in the following order:
     // First kMinfsIndirect blocks                                - initial set of indirect blocks

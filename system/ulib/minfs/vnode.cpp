@@ -194,6 +194,7 @@ zx_status_t VnodeMinfs::InitVmo() {
         FS_TRACE_ERROR("Failed to initialize vmo; error: %d\n", status);
         return status;
     }
+    vmo_size_ = vmo_size;
 
     zx_object_set_property(vmo_.get(), ZX_PROP_NAME, "minfs-inode", 11);
 
@@ -1269,12 +1270,13 @@ zx_status_t VnodeMinfs::WriteInternal(WritebackWork* wb, const void* data,
 
 #ifdef __Fuchsia__
         size_t xfer_off = n * kMinfsBlockSize + adjust;
-        if ((xfer_off + xfer) > inode_.size) {
+        if ((xfer_off + xfer) > vmo_size_) {
             size_t new_size = fbl::round_up(xfer_off + xfer, kMinfsBlockSize);
             ZX_DEBUG_ASSERT(new_size >= inode_.size); // Overflow.
             if ((status = vmo_.set_size(new_size)) != ZX_OK) {
                 goto done;
             }
+            vmo_size_ = new_size;
         }
 
         // Update this block of the in-memory VMO
@@ -1492,10 +1494,9 @@ fail:
     return ZX_ERR_IO;
 }
 
-#ifdef __Fuchsia__
-VnodeMinfs::VnodeMinfs(Minfs* fs) :
-    fs_(fs), vmo_(ZX_HANDLE_INVALID), vmo_indirect_(nullptr) {}
+VnodeMinfs::VnodeMinfs(Minfs* fs) : fs_(fs) {}
 
+#ifdef __Fuchsia__
 void VnodeMinfs::Notify(fbl::StringPiece name, unsigned event) { watcher_.Notify(name, event); }
 zx_status_t VnodeMinfs::WatchDir(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) {
     return watcher_.WatchDir(vfs, this, cmd);
@@ -1506,8 +1507,6 @@ zx::channel VnodeMinfs::DetachRemote() { return remoter_.DetachRemote(); }
 zx_handle_t VnodeMinfs::GetRemote() const { return remoter_.GetRemote(); }
 void VnodeMinfs::SetRemote(zx::channel remote) { return remoter_.SetRemote(fbl::move(remote)); }
 
-#else
-VnodeMinfs::VnodeMinfs(Minfs* fs) : fs_(fs) {}
 #endif
 
 zx_status_t VnodeMinfs::Allocate(Minfs* fs, uint32_t type, fbl::RefPtr<VnodeMinfs>* out) {
@@ -1718,21 +1717,29 @@ zx_status_t VnodeMinfs::TruncateInternal(WritebackWork* wb, size_t len) {
 #endif
 
     if (len < inode_.size) {
-        // Truncate should make the file shorter
+        // Truncate should make the file shorter.
         blk_t bno = inode_.size / kMinfsBlockSize;
+
+        // Truncate to the nearest block.
         blk_t trunc_bno = static_cast<blk_t>(len / kMinfsBlockSize);
+        // [start_bno, EOF) blocks should be deleted entirely.
+        blk_t start_bno = static_cast<blk_t>((len % kMinfsBlockSize == 0) ?
+                                             trunc_bno : trunc_bno + 1);
+        if ((r = BlocksShrink(wb, start_bno)) < 0) {
+            return r;
+        }
 
-        // Truncate to the nearest block
-        if (trunc_bno <= bno) {
-            blk_t start_bno = static_cast<blk_t>((len % kMinfsBlockSize == 0) ?
-                                                 trunc_bno : trunc_bno + 1);
-            if ((r = BlocksShrink(wb, start_bno)) < 0) {
-                return r;
-            }
+#ifdef __Fuchsia__
+        uint64_t decommit_offset = fbl::round_up(len, kMinfsBlockSize);
+        uint64_t decommit_length = fbl::round_up(inode_.size, kMinfsBlockSize) - decommit_offset;
+        if (decommit_length > 0) {
+            ZX_ASSERT(vmo_.op_range(ZX_VMO_OP_DECOMMIT, decommit_offset,
+                                    decommit_length, nullptr, 0) == ZX_OK);
+        }
+#endif
 
-            if (start_bno * kMinfsBlockSize < inode_.size) {
-                inode_.size = start_bno * kMinfsBlockSize;
-            }
+        if (start_bno * kMinfsBlockSize < inode_.size) {
+            inode_.size = start_bno * kMinfsBlockSize;
         }
 
         // Write zeroes to the rest of the remaining block, if it exists
@@ -1740,7 +1747,8 @@ zx_status_t VnodeMinfs::TruncateInternal(WritebackWork* wb, size_t len) {
             char bdata[kMinfsBlockSize];
             blk_t rel_bno = static_cast<blk_t>(len / kMinfsBlockSize);
             if ((r = BlockGet(nullptr, rel_bno, &bno)) != ZX_OK) {
-                FS_TRACE_ERROR("minfs: Truncate failed to get block %u of file: %d\n", rel_bno, r);
+                FS_TRACE_ERROR("minfs: Truncate failed to get block %u of file: %d\n",
+                               rel_bno, r);
                 return ZX_ERR_IO;
             }
             if (bno != 0) {
@@ -1773,17 +1781,18 @@ zx_status_t VnodeMinfs::TruncateInternal(WritebackWork* wb, size_t len) {
         if (kMinfsMaxFileSize < len) {
             return ZX_ERR_INVALID_ARGS;
         }
+#ifdef __Fuchsia__
+        uint64_t new_size = fbl::round_up(len, kMinfsBlockSize);
+        if ((r = vmo_.set_size(new_size)) != ZX_OK) {
+            return r;
+        }
+        vmo_size_ = new_size;
+#endif
     } else {
         return ZX_OK;
     }
 
     inode_.size = static_cast<uint32_t>(len);
-#ifdef __Fuchsia__
-    if ((r = vmo_.set_size(fbl::round_up(len, kMinfsBlockSize))) != ZX_OK) {
-        return r;
-    }
-#endif
-
     ValidateVmoTail();
     return ZX_OK;
 }
