@@ -27,6 +27,11 @@ void CobaltEncoderImpl::AddEncodedObservation(Encoder::Result* result,
   switch (result->status) {
     case Encoder::kOK:
       break;
+    case Encoder::kInsufficientBuildLevel:
+      FXL_LOG(WARNING)
+          << "Cobalt metric reporting attempt with insufficient build level";
+      callback(Status::OK);
+      return;
     case Encoder::kInvalidArguments:
       callback(Status::INVALID_ARGUMENTS);
       return;
