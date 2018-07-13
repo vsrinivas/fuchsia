@@ -18,7 +18,14 @@ namespace {
 constexpr const char* kIndent = "    ";
 
 CGenerator::Member MessageHeader() {
-    return {flat::Type::Kind::kIdentifier, "fidl_message_header_t", "hdr", {}, {}};
+    return {
+        flat::Type::Kind::kIdentifier,
+        flat::Decl::Kind::kStruct,
+        "fidl_message_header_t",
+        "hdr",
+        {},
+        {},
+    };
 }
 
 // Functions named "Emit..." are called to actually emit to an std::ostream
@@ -83,7 +90,19 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
         *file << member.type << " " << member.name;
         break;
     case flat::Type::Kind::kIdentifier:
-        *file << "const " << member.type << "* " << member.name;
+        switch (member.decl_kind) {
+        case flat::Decl::Kind::kConst:
+            assert(false && "bad decl kind for member");
+            break;
+        case flat::Decl::Kind::kEnum:
+        case flat::Decl::Kind::kInterface:
+            *file << member.type << " " << member.name;
+            break;
+        case flat::Decl::Kind::kStruct:
+        case flat::Decl::Kind::kUnion:
+            *file << "const " << member.type << "* " << member.name;
+            break;
+        }
         break;
     }
 }
@@ -216,8 +235,19 @@ void EmitLinearizeMessage(std::ostream* file,
             *file << kIndent << receiver << "->" << name << " = " << name << ";\n";
             break;
         case flat::Type::Kind::kIdentifier:
-            *file << kIndent << receiver << "->" << name << " = *" << name << ";\n";
-            break;
+            switch (member.decl_kind) {
+            case flat::Decl::Kind::kConst:
+                assert(false && "bad decl kind for member");
+                break;
+            case flat::Decl::Kind::kEnum:
+            case flat::Decl::Kind::kInterface:
+                *file << kIndent << receiver << "->" << name << " = " << name << ";\n";
+                break;
+            case flat::Decl::Kind::kStruct:
+            case flat::Decl::Kind::kUnion:
+                *file << kIndent << receiver << "->" << name << " = *" << name << ";\n";
+                break;
+            }
         }
     }
 }
@@ -334,22 +364,34 @@ std::vector<uint32_t> ArrayCounts(const flat::Library* library, const flat::Type
     }
 }
 
+flat::Decl::Kind GetDeclKind(const flat::Library* library, const flat::Type* type) {
+    if (type->kind != flat::Type::Kind::kIdentifier)
+        return flat::Decl::Kind::kConst;
+    auto identifier_type = static_cast<const flat::IdentifierType*>(type);
+    auto named_decl = library->LookupType(identifier_type->name);
+    assert(named_decl && "library must contain declaration");
+    return named_decl->kind;
+}
+
 template <typename T>
 CGenerator::Member CreateMember(const flat::Library* library, const T& decl) {
     std::string name = NameIdentifier(decl.name);
     const flat::Type* type = decl.type.get();
-    auto type_name = NameFlatCType(library, type);
+    auto decl_kind = GetDeclKind(library, type);
+    auto type_name = NameFlatCType(type, decl_kind);
     std::vector<uint32_t> array_counts = ArrayCounts(library, type);
-    std::string element_type;
+    std::string element_type_name;
     if (type->kind == flat::Type::Kind::kVector) {
         auto vector_type = static_cast<const flat::VectorType*>(type);
-        element_type = NameFlatCType(library, vector_type->element_type.get());
+        const flat::Type* element_type = vector_type->element_type.get();
+        element_type_name = NameFlatCType(element_type, GetDeclKind(library, element_type));
     }
     return CGenerator::Member{
         type->kind,
+        decl_kind,
         std::move(type_name),
         std::move(name),
-        std::move(element_type),
+        std::move(element_type_name),
         std::move(array_counts),
     };
 }
@@ -842,8 +884,19 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
                       << ", request->" << member.name << ".size";
                 break;
             case flat::Type::Kind::kIdentifier:
-                file_ << ", &(request->" << member.name << ")";
-                break;
+                switch (member.decl_kind) {
+                case flat::Decl::Kind::kConst:
+                    assert(false && "bad decl kind for member");
+                    break;
+                case flat::Decl::Kind::kEnum:
+                case flat::Decl::Kind::kInterface:
+                    file_ << ", request->" << member.name;
+                    break;
+                case flat::Decl::Kind::kStruct:
+                case flat::Decl::Kind::kUnion:
+                    file_ << ", &(request->" << member.name << ")";
+                    break;
+                }
             }
         }
         if (method_info.response != nullptr)

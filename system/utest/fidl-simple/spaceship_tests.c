@@ -20,13 +20,26 @@ static zx_status_t SpaceShip_AdjustHeading(void* ctx, const uint32_t* stars_data
 }
 
 static zx_status_t SpaceShip_ScanForLifeforms(void* ctx, fidl_txn_t* txn) {
-    const uint32_t lifesigns[5] = { 42u, 43u, UINT32_MAX, 0u, 9u };
+    const uint32_t lifesigns[5] = {42u, 43u, UINT32_MAX, 0u, 9u};
     return fidl_test_spaceship_SpaceShipScanForLifeforms_reply(txn, lifesigns, 5);
+}
+
+static zx_status_t SpaceShip_SetAstrometricsListener(void* ctx, zx_handle_t listener) {
+    EXPECT_EQ(ZX_OK, fidl_test_spaceship_AstrometricsListenerOnNova(listener), "");
+    EXPECT_EQ(ZX_OK, zx_handle_close(listener), "");
+    return ZX_OK;
+}
+
+static zx_status_t SpaceShip_SetDefenseCondition(void* ctx, fidl_test_spaceship_Alert alert) {
+    EXPECT_EQ(fidl_test_spaceship_Alert_RED, alert, "");
+    return ZX_OK;
 }
 
 static const fidl_test_spaceship_SpaceShip_ops_t kOps = {
     .AdjustHeading = SpaceShip_AdjustHeading,
     .ScanForLifeforms = SpaceShip_ScanForLifeforms,
+    .SetAstrometricsListener = SpaceShip_SetAstrometricsListener,
+    .SetDefenseCondition = SpaceShip_SetDefenseCondition,
 };
 
 static bool spaceship_test(void) {
@@ -44,7 +57,7 @@ static bool spaceship_test(void) {
     fidl_bind(dispacher, server, (fidl_dispatch_t*)fidl_test_spaceship_SpaceShip_dispatch, NULL, &kOps);
 
     {
-        const uint32_t stars[3] = { 11u, 0u, UINT32_MAX };
+        const uint32_t stars[3] = {11u, 0u, UINT32_MAX};
         int8_t result = 0;
         ASSERT_EQ(ZX_OK, fidl_test_spaceship_SpaceShipAdjustHeading(client, stars, 3, &result), "");
         ASSERT_EQ(-12, result, "");
@@ -60,6 +73,19 @@ static bool spaceship_test(void) {
         ASSERT_EQ(UINT32_MAX, lifesigns[2], "");
         ASSERT_EQ(0u, lifesigns[3], "");
         ASSERT_EQ(9u, lifesigns[4], "");
+    }
+
+    {
+        zx_handle_t listener_client, listener_server;
+        status = zx_channel_create(0, &listener_client, &listener_server);
+        ASSERT_EQ(ZX_OK, status, "");
+        ASSERT_EQ(ZX_OK, fidl_test_spaceship_SpaceShipSetAstrometricsListener(client, listener_client), "");
+        ASSERT_EQ(ZX_OK, zx_object_wait_one(listener_server, ZX_CHANNEL_READABLE, ZX_TIME_INFINITE, NULL), "");
+        ASSERT_EQ(ZX_OK, zx_handle_close(listener_server), "");
+    }
+
+    {
+        ASSERT_EQ(ZX_OK, fidl_test_spaceship_SpaceShipSetDefenseCondition(client, fidl_test_spaceship_Alert_RED), "");
     }
 
     ASSERT_EQ(ZX_OK, zx_handle_close(client), "");

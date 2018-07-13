@@ -5,7 +5,20 @@
 library fidl.test.spaceship;
 
 [Layout="Simple"]
+interface AstrometricsListener {
+    1: OnNova();
+};
+
+enum Alert {
+    GREEN = 1;
+    YELLOW = 2;
+    RED = 3;
+};
+
+[Layout="Simple"]
 interface SpaceShip {
     1: AdjustHeading(vector<uint32>:64 stars) -> (int8 result);
     2: ScanForLifeforms() -> (vector<uint32>:64 lifesigns);
+    3: SetAstrometricsListener(AstrometricsListener listener);
+    4: SetDefenseCondition(Alert alert);
 };

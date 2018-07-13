@@ -37,6 +37,7 @@ public:
 
     struct Member {
         flat::Type::Kind kind;
+        flat::Decl::Kind decl_kind;
         std::string type;
         std::string name;
         std::string element_type;
