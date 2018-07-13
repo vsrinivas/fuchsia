@@ -2,6 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+declare_args() {
+  # How many symbols to include in the build. This affects the performance of
+  # the build since the symbols are large and dealing with them is slow.
+  #   2 means regular build with symbols.
+  #   1 means minimal symbols, usually enough for backtraces only. Symbols with
+  # internal linkage (static functions or those in anonymous namespaces) may not
+  # appear when using this level.
+  #   0 means no symbols.
+  symbol_level = 2
+}
+
 config("compiler") {
   asmflags = []
   cflags = []
@@ -12,10 +23,6 @@ config("compiler") {
   ldflags = []
   defines = []
   configs = []
-
-  if (is_debug) {
-    cflags += [ "-g" ]
-  }
 
   if (current_os == "fuchsia") {
     configs += [ "//build/config/fuchsia:compiler" ]
@@ -71,7 +78,6 @@ config("relative_paths") {
 
 config("debug") {
   cflags = [
-    "-g",
     "-Og",
   ]
   ldflags = cflags
@@ -117,6 +123,37 @@ config("default_include_dirs") {
     "//",
     root_gen_dir,
   ]
+}
+
+config("minimal_symbols") {
+  cflags = [ "-gline-tables-only" ]
+  asmflags = cflags
+  ldflags = cflags
+}
+
+config("symbols") {
+  cflags = [ "-g3" ]
+  asmflags = cflags
+  ldflags = cflags
+}
+
+config("no_symbols") {
+  cflags = [ "-g0" ]
+  asmflags = cflags
+  ldflags = cflags
+}
+
+# Default symbols.
+config("default_symbols") {
+  if (symbol_level == 0) {
+    configs = [ ":no_symbols" ]
+  } else if (symbol_level == 1) {
+    configs = [ ":minimal_symbols" ]
+  } else if (symbol_level == 2) {
+    configs = [ ":symbols" ]
+  } else {
+    assert(symbol_level >= 0 && symbol_level <= 2)
+  }
 }
 
 config("default_warnings") {
