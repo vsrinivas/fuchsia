@@ -15,7 +15,7 @@ namespace async {
 // After successfully beginning the wait, the client is responsible for retaining
 // the structure in memory (and unmodified) until the wait's handler runs, the wait
 // is successfully canceled, or the dispatcher shuts down.  Thereafter, the wait
-// may be started begun or destroyed.
+// may be begun again or destroyed.
 //
 // This class must only be used with single-threaded asynchronous dispatchers
 // and must only be accessed on the dispatch thread since it lacks internal
