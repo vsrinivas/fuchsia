@@ -101,7 +101,7 @@ class {{ .SyncName }} {
 
   {{- range .Methods }}
     {{- if .HasRequest }}
-  virtual bool {{ template "SyncRequestMethodSignature" . }} = 0;
+  virtual zx_status_t {{ template "SyncRequestMethodSignature" . }} = 0;
     {{- end }}
   {{- end }}
 };
@@ -169,7 +169,7 @@ class {{ .SyncProxyName }} : public {{ .SyncName }} {
 
   {{- range .Methods }}
     {{- if .HasRequest }}
-  bool {{ template "SyncRequestMethodSignature" . }} override;
+  zx_status_t {{ template "SyncRequestMethodSignature" . }} override;
     {{- end }}
   {{- end }}
 
@@ -431,7 +431,7 @@ void {{ $.StubName }}::{{ template "EventMethodSignature" . }} {
 
 {{- range .Methods }}
   {{- if .HasRequest }}
-bool {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }} {
+zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }} {
   ::fidl::Encoder _encoder({{ .OrdinalName }});
     {{- if .Request }}
   _encoder.Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t));
@@ -444,16 +444,16 @@ bool {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }} {
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(&{{ .RequestTypeName }}, &{{ .ResponseTypeName }}, _encoder.GetMessage(), &response_);
   if (status_ != ZX_OK)
-    return false;
+    return status_;
       {{- if .Response }}
   ::fidl::Decoder decoder_(std::move(response_));
         {{- range $index, $param := .Response }}
   *out_{{ .Name }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder_, {{ .Offset }});
         {{- end }}
       {{- end }}
-  return true;
+  return ZX_OK;
     {{- else }}
-  return proxy_.Send(&{{ .RequestTypeName }}, _encoder.GetMessage()) == ZX_OK;
+  return proxy_.Send(&{{ .RequestTypeName }}, _encoder.GetMessage());
     {{- end }}
 }
   {{- end }}
