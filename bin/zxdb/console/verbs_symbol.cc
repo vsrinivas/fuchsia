@@ -14,6 +14,7 @@
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/symbols/location.h"
+#include "garnet/bin/zxdb/client/symbols/module_symbol_status.h"
 #include "garnet/bin/zxdb/client/symbols/process_symbols.h"
 #include "garnet/bin/zxdb/client/symbols/target_symbols.h"
 #include "garnet/bin/zxdb/client/target.h"
@@ -260,7 +261,7 @@ Err DoSymStat(ConsoleContext* context, const Command& cmd) {
   std::string load_tip(
       "Tip: Use \"libs\" to refresh the module list from the process.\n");
 
-  std::vector<ProcessSymbols::ModuleStatus> modules =
+  std::vector<ModuleSymbolStatus> modules =
       cmd.target()->GetProcess()->GetSymbols()->GetStatus();
 
   Console* console = Console::get();
@@ -270,10 +271,10 @@ Err DoSymStat(ConsoleContext* context, const Command& cmd) {
   }
 
   // Sort by name.
-  std::sort(
-      modules.begin(), modules.end(),
-      [](const ProcessSymbols::ModuleStatus& a,
-         const ProcessSymbols::ModuleStatus& b) { return a.name < b.name; });
+  std::sort(modules.begin(), modules.end(),
+            [](const ModuleSymbolStatus& a, const ModuleSymbolStatus& b) {
+              return a.name < b.name;
+            });
 
   OutputBuffer out;
   for (const auto& module : modules) {
@@ -287,7 +288,10 @@ Err DoSymStat(ConsoleContext* context, const Command& cmd) {
     } else {
       out.Append(Syntax::kError, "No");
     }
-    out.Append("\n\n");
+
+    out.Append(fxl::StringPrintf(
+        "\n  Source files indexed: %zu\n  Symbols indexed: %zu\n\n",
+        module.files_indexed, module.functions_indexed));
   }
   out.Append(std::move(load_tip));
   console->Output(std::move(out));

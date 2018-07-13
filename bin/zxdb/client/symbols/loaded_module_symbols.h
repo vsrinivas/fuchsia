@@ -24,6 +24,11 @@ class ModuleSymbols;
 // It might be nice if this derived from ModuleSymbols (since all those
 // functions are still valid to be called), but that would cause undesirable
 // diamond inheritance in the implementation. So use composition instead.
+//
+// The duplication of functions in this code vs. ModuleSymbols is unfortunate.
+// If we add more functions, it may be worth making all ModuleSymbols functions
+// take a load address and avoid the trampoline. But that complicates the
+// callers.
 class LoadedModuleSymbols {
  public:
   LoadedModuleSymbols();

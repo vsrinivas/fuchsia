@@ -14,34 +14,18 @@
 namespace zxdb {
 
 class LineDetails;
+struct ModuleSymbolStatus;
 class TargetSymbols;
 
 class ProcessSymbols {
  public:
-  struct ModuleStatus {
-    // Name of the executable or shared library.
-    std::string name;
-
-    // Build ID extracted from file.
-    std::string build_id;
-
-    // Load address.
-    uint64_t base = 0;
-
-    // True if the symbols were successfully loaded.
-    bool symbols_loaded = false;
-
-    // Local file name with the symbols if the symbols were loaded.
-    std::string symbol_file;
-  };
-
   ProcessSymbols();
   virtual ~ProcessSymbols();
 
   virtual TargetSymbols* GetTargetSymbols() = 0;
 
   // Returns statistics on the currently-loaded modules.
-  virtual std::vector<ModuleStatus> GetStatus() const = 0;
+  virtual std::vector<ModuleSymbolStatus> GetStatus() const = 0;
 
   // Attempts to symbolize the given address. If not possible, the returned
   // location will be an address-only location.

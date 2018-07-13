@@ -18,8 +18,12 @@ void MockModuleSymbols::AddSymbol(const std::string& name,
   symbols_[name] = std::move(addrs);
 }
 
-const std::string& MockModuleSymbols::GetLocalFileName() const {
-  return local_file_name_;
+ModuleSymbolStatus MockModuleSymbols::GetStatus() const {
+  ModuleSymbolStatus status;
+  status.name = local_file_name_;
+  status.functions_indexed = symbols_.size();
+  status.symbols_loaded = true;
+  return status;
 }
 
 Location MockModuleSymbols::RelativeLocationForRelativeAddress(

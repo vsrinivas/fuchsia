@@ -35,6 +35,12 @@ class ModuleSymbolIndex {
 
   const ModuleSymbolIndexNode& root() const { return root_; }
 
+  size_t files_indexed() const { return file_name_index_.size(); }
+
+  // Returns how many symbols are indexed. This iterates through everything so
+  // can be slow.
+  size_t CountSymbolsIndexed() const;
+
   // Takes a fully-qualified name with namespaces and classes and template
   // parameters and returns the list of symbols which match exactly.
   const std::vector<ModuleSymbolIndexNode::DieRef>& FindFunctionExact(

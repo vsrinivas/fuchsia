@@ -15,6 +15,7 @@ static_library("symbols") {
     "line_details.h",
     "loaded_module_symbols.h",
     "location.h",
+    "module_symbol_status.h",
     "module_symbols.h",
     "process_symbols.h",
     "system_symbols.h",

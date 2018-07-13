@@ -132,7 +132,8 @@ Err SystemSymbols::GetModule(const std::string& name_for_msg,
         name_for_msg.c_str(), build_id.c_str()));
   }
 
-  auto module_symbols = std::make_unique<ModuleSymbolsImpl>(found_id->second);
+  auto module_symbols =
+      std::make_unique<ModuleSymbolsImpl>(found_id->second, build_id);
   Err err = module_symbols->Load();
   if (err.has_error())
     return err;

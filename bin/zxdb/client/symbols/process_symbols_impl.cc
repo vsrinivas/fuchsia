@@ -91,20 +91,23 @@ TargetSymbols* ProcessSymbolsImpl::GetTargetSymbols() {
   return target_symbols_;
 }
 
-std::vector<ProcessSymbols::ModuleStatus> ProcessSymbolsImpl::GetStatus()
-    const {
-  std::vector<ModuleStatus> result;
+std::vector<ModuleSymbolStatus> ProcessSymbolsImpl::GetStatus() const {
+  std::vector<ModuleSymbolStatus> result;
   for (const auto& pair : modules_) {
-    ModuleStatus status;
-    status.name = pair.second.name;
-    status.build_id = pair.second.build_id;
-    status.base = pair.second.base;
-    status.symbols_loaded = pair.second.symbols.get();
-    if (pair.second.symbols) {
-      status.symbol_file =
-          pair.second.symbols->GetModuleSymbols()->GetLocalFileName();
+    if (pair.second.symbols.get()) {
+      result.push_back(pair.second.symbols->GetModuleSymbols()->GetStatus());
+      // ModuleSymbols doesn't know the name or base address so fill in now.
+      result.back().name = pair.second.name;
+      result.back().base = pair.second.base;
+    } else {
+      // No symbols, make an empty record.
+      ModuleSymbolStatus status;
+      status.name = pair.second.name;
+      status.build_id = pair.second.build_id;
+      status.base = pair.second.base;
+      status.symbols_loaded = false;
+      result.push_back(std::move(status));
     }
-    result.push_back(std::move(status));
   }
   return result;
 }

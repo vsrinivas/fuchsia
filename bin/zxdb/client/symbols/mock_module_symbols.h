@@ -20,7 +20,7 @@ class MockModuleSymbols : public ModuleSymbols {
   void AddSymbol(const std::string& name, std::vector<uint64_t> addrs);
 
   // ModuleSymbols implementation.
-  const std::string& GetLocalFileName() const override;
+  ModuleSymbolStatus GetStatus() const override;
   Location RelativeLocationForRelativeAddress(uint64_t address) const override;
   LineDetails LineDetailsForRelativeAddress(uint64_t address) const override;
   std::vector<uint64_t> RelativeAddressesForFunction(

@@ -83,6 +83,13 @@ bool AbbrevHasCode(const llvm::DWARFAbbreviationDeclaration* abbrev) {
   return false;
 }
 
+size_t RecursiveCountFunctionDies(const ModuleSymbolIndexNode& node) {
+  size_t result = node.function_dies().size();
+  for (const auto& pair : node.sub())
+    result += RecursiveCountFunctionDies(pair.second);
+  return result;
+}
+
 // Step 1 of the algorithm above. Fills the function_impls array with the
 // information for all function implementations (ones with addresses). Fills
 // the parent_indices array with the index of the parent of each DIE in the
@@ -292,6 +299,10 @@ void ModuleSymbolIndex::CreateIndex(llvm::object::ObjectFile* object_file) {
   }
 
   IndexFileNames();
+}
+
+size_t ModuleSymbolIndex::CountSymbolsIndexed() const {
+  return RecursiveCountFunctionDies(root_);
 }
 
 const std::vector<ModuleSymbolIndexNode::DieRef>&

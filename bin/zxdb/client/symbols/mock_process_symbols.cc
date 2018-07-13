@@ -6,6 +6,7 @@
 
 #include "garnet/bin/zxdb/client/symbols/line_details.h"
 #include "garnet/bin/zxdb/client/symbols/location.h"
+#include "garnet/bin/zxdb/client/symbols/module_symbol_status.h"
 
 namespace zxdb {
 
@@ -15,9 +16,8 @@ MockProcessSymbols::~MockProcessSymbols() = default;
 // ProcessSymbols implementation.
 TargetSymbols* MockProcessSymbols::GetTargetSymbols() { return nullptr; }
 
-std::vector<ProcessSymbols::ModuleStatus> MockProcessSymbols::GetStatus()
-    const {
-  return std::vector<ModuleStatus>();
+std::vector<ModuleSymbolStatus> MockProcessSymbols::GetStatus() const {
+  return std::vector<ModuleSymbolStatus>();
 }
 
 Location MockProcessSymbols::LocationForAddress(uint64_t address) const {

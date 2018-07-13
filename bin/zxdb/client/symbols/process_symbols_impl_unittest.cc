@@ -39,7 +39,7 @@ class NotificationsImpl : public ProcessSymbolsImpl::Notifications {
     if (loaded_.size() != 1u)
       return false;
     return loaded_[0]->GetLoadAddress() == addr &&
-           loaded_[0]->GetModuleSymbols()->GetLocalFileName() == local_file;
+           loaded_[0]->GetModuleSymbols()->GetStatus().name == local_file;
   }
 
   // Notifications implementation.
@@ -94,7 +94,7 @@ TEST(ProcessSymbolsImpl, SetModules) {
   LoadedModuleSymbols* loaded_symbols = notifications.loaded()[0];
   EXPECT_EQ(base1, loaded_symbols->GetLoadAddress());
   EXPECT_EQ(test_file_name,
-            loaded_symbols->GetModuleSymbols()->GetLocalFileName());
+            loaded_symbols->GetModuleSymbols()->GetStatus().name);
   EXPECT_EQ(0, notifications.err_count());
 
   // Replace with a different one at the same address.

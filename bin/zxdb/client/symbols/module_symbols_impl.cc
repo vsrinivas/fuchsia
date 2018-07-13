@@ -154,10 +154,21 @@ std::vector<LineMatch> GetFirstEntryForEachInline(
 
 }  // namespace
 
-ModuleSymbolsImpl::ModuleSymbolsImpl(const std::string& name) : name_(name) {}
+ModuleSymbolsImpl::ModuleSymbolsImpl(const std::string& name,
+                                     const std::string& build_id)
+    : name_(name), build_id_(build_id) {}
 ModuleSymbolsImpl::~ModuleSymbolsImpl() = default;
 
-const std::string& ModuleSymbolsImpl::GetLocalFileName() const { return name_; }
+ModuleSymbolStatus ModuleSymbolsImpl::GetStatus() const {
+  ModuleSymbolStatus status;
+  status.build_id = build_id_;
+  status.base = 0;  // We don't know this, only ProcessSymbols does.
+  status.symbols_loaded = true;  // Since this instance exists at all.
+  status.functions_indexed = index_.CountSymbolsIndexed();
+  status.files_indexed = index_.files_indexed();
+  status.symbol_file = name_;
+  return status;
+}
 
 Err ModuleSymbolsImpl::Load() {
   llvm::Expected<llvm::object::OwningBinary<llvm::object::Binary>> bin_or_err =

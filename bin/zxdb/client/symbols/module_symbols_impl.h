@@ -35,13 +35,14 @@ namespace zxdb {
 class ModuleSymbolsImpl : public ModuleSymbols {
  public:
   // You must call Load before using this class.
-  explicit ModuleSymbolsImpl(const std::string& name);
+  explicit ModuleSymbolsImpl(const std::string& name,
+                             const std::string& build_id);
   ~ModuleSymbolsImpl();
 
   Err Load();
 
   // ModuleSymbols implementation.
-  const std::string& GetLocalFileName() const override;
+  ModuleSymbolStatus GetStatus() const override;
   Location RelativeLocationForRelativeAddress(uint64_t address) const override;
   LineDetails LineDetailsForRelativeAddress(uint64_t address) const override;
   std::vector<uint64_t> RelativeAddressesForFunction(
@@ -55,6 +56,7 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   llvm::DWARFCompileUnit* CompileUnitForAddress(uint64_t address) const;
 
   const std::string name_;
+  const std::string build_id_;
 
   std::unique_ptr<llvm::MemoryBuffer> binary_buffer_;  // Backing for binary_.
   std::unique_ptr<llvm::object::Binary> binary_;

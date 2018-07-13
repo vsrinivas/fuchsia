@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/client/symbols/location.h"
+#include "garnet/bin/zxdb/client/symbols/module_symbol_status.h"
 #include "garnet/public/lib/fxl/macros.h"
 
 namespace zxdb {
@@ -29,8 +30,14 @@ class ModuleSymbols {
   ModuleSymbols();
   virtual ~ModuleSymbols();
 
-  // Path name to the local symbol file.
-  virtual const std::string& GetLocalFileName() const = 0;
+  // Returns information about this module. This is relatively slow because it
+  // needs to count the index size.
+  //
+  // The name will be empty (local_file_name will be the symbol file) since
+  // the name is the external name in the system that this class doesn't know
+  // about. The base address will be 0 because this class doesn't know what the
+  // base address is.
+  virtual ModuleSymbolStatus GetStatus() const = 0;
 
   // Returns a symbolized Location object for the given module-relative
   // location. The address in the returned location object will also be
