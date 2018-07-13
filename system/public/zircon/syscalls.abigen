@@ -473,11 +473,6 @@ syscall cprng_draw vdsocall
     (buffer: any[buffer_size] OUT, buffer_size: size_t)
     returns ();
 
-# Remove cprng_draw_new once clients are migrated.
-syscall cprng_draw_new
-    (buffer: any[data_size] OUT, data_size: size_t)
-    returns (zx_status_t);
-
 syscall cprng_add_entropy
     (buffer: any[len] IN, len: size_t)
     returns (zx_status_t);
