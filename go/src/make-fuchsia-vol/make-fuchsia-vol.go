@@ -8,7 +8,6 @@
 package main
 
 import (
-	"encoding/binary"
 	"flag"
 	"fmt"
 	"io"
@@ -29,32 +28,24 @@ import (
 )
 
 var (
-	fuchsiaOutDir   = flag.String("fuchsia-out-dir", os.Getenv("FUCHSIA_OUT_DIR"), "fuchsia out dir")
 	fuchsiaBuildDir = flag.String("fuchsia-build-dir", os.Getenv("FUCHSIA_BUILD_DIR"), "fuchsia build dir")
 	zirconBuildDir  = flag.String("zircon-build-dir", os.Getenv("ZIRCON_BUILD_DIR"), "zircon build dir")
 	zirconToolsDir  = flag.String("zircon-tools-dir", os.Getenv("ZIRCON_TOOLS_DIR"), "zircon tools dir")
 
 	bootloader = flag.String("bootloader", "", "path to bootx64.efi")
-	kernel     = flag.String("kernel", "", "path to zircon.bin")
-	ramdisk    = flag.String("ramdisk", "", "path to ramdisk.bin")
+	zbi        = flag.String("zbi", "", "path to zbi (default: IMAGE_ZIRCON_ZBI from image manifests)")
 	cmdline    = flag.String("cmdline", "", "path to command line file (if exists)")
-	zedboot    = flag.String("zedboot", "", "path to zedboot.bin")
-
-	grub        = flag.Bool("grub", false, "install grub to the disk")
-	grubBootImg = flag.String("grub-mbr", "", "path to grub mbr image")
-	grubCoreImg = flag.String("grub-core", "", "path to grub standalone core.img")
+	zedboot    = flag.String("zedboot", "", "path to zedboot.zbi (default: IMAGE_ZEDBOOT_ZBI from image manifests)")
 
 	ramdiskOnly = flag.Bool("ramdisk-only", false, "ramdisk-only mode - only write an ESP partition")
 	blob        = flag.String("blob", "", "path to blob partition image (not used with ramdisk)")
 	data        = flag.String("data", "", "path to data partition image (not used with ramdisk)")
 
 	abr     = flag.Bool("abr", false, "add Zircon-{A,B,R} partitions")
-	zirconA = flag.String("zirconA", "", "path to partition image for Zircon-A")
-	zirconB = flag.String("zirconB", "", "path to partition image for Zircon-B")
-	zirconR = flag.String("zirconR", "", "path to partition image for Zircon-R")
+	zirconA = flag.String("zirconA", "", "path to partition image for Zircon-A (default: from -zbi)")
+	zirconB = flag.String("zirconB", "", "path to partition image for Zircon-B (default: from -zbi)")
+	zirconR = flag.String("zirconR", "", "path to partition image for Zircon-R (default: IMAGE_ZIRCONR_ZBI from image manifests)")
 	abrSize = flag.Int64("abr-size", 16*1024*1024, "Kernel partition size for A/B/R")
-
-	board = flag.String("board", "pc", "Zircon board name to use/build for")
 
 	blockSize           = flag.Int64("block-size", 0, "the block size of the target disk (0 means detect)")
 	physicalBlockSize   = flag.Int64("physical-block-size", 0, "the physical block size of the target disk (0 means detect)")
@@ -63,8 +54,6 @@ var (
 	efiSize = flag.Int64("efi-size", 63*1024*1024, "efi partition size in bytes")
 	fvmSize = flag.Int64("fvm-size", 0, "fvm partition size in bytes (0 means `fill`)")
 )
-
-const grubCoreOffset = 92
 
 // imageManifests contains a list of known manifests produced by the build that contains build-dir relative paths to images.
 var imageManifests = []string{"zedboot_image_paths.sh", "image_paths.sh"}
@@ -112,12 +101,6 @@ func tryLoadManifests() {
 	}
 }
 
-func needFuchsiaOutDir() {
-	if *fuchsiaOutDir == "" {
-		log.Fatalf("either pass -fuchsia-out-dir or set $FUCHSIA_OUT_DIR")
-	}
-}
-
 func needFuchsiaBuildDir() {
 	if *fuchsiaBuildDir == "" {
 		log.Fatalf("either pass -fuchsia-build-dir or set $FUCHSIA_BUILD_DIR")
@@ -144,57 +127,30 @@ func main() {
 		needZirconBuildDir()
 		*bootloader = filepath.Join(*zirconBuildDir, "bootloader/bootx64.efi")
 	}
-	if *kernel == "" {
+	if *zbi == "" {
 		needZirconBuildDir()
-		*kernel = filepath.Join(*zirconBuildDir, "zircon.bin")
+		*zbi = filepath.Join(*fuchsiaBuildDir, getImage("IMAGE_ZIRCONA_ZBI"))
 	}
-	if *ramdisk == "" {
+	if *zedboot == "" {
 		needFuchsiaBuildDir()
-		if *ramdiskOnly {
-			*ramdisk = filepath.Join(*fuchsiaBuildDir, getImage("IMAGE_NETBOOT_RAM"))
-		} else {
-			*ramdisk = filepath.Join(*fuchsiaBuildDir, getImage("IMAGE_BOOT_RAM"))
-		}
+		*zedboot = filepath.Join(*fuchsiaBuildDir, getImage("IMAGE_ZEDBOOT_ZBI"))
 	}
 	if *cmdline == "" {
 		needFuchsiaBuildDir()
 		*cmdline = filepath.Join(*fuchsiaBuildDir, "cmdline")
 	}
 
-	if *grub {
-		if *grubBootImg == "" {
-			needFuchsiaOutDir()
-
-			*grubBootImg = filepath.Join(*fuchsiaOutDir, "build-grub/lib/grub/i386-pc/boot.img")
-			if _, err := os.Stat(*grubBootImg); err != nil {
-				log.Fatalf("%q not found, you may need to run scripts/grubdisk/build-all.sh", *grubBootImg)
-			}
-		}
-		if *grubCoreImg == "" {
-			needFuchsiaOutDir()
-			*grubCoreImg = filepath.Join(*fuchsiaOutDir, "build-grub/core.img")
-			if _, err := os.Stat(*grubCoreImg); err != nil {
-				log.Fatalf("%q not found, you may need to run scripts/grubdisk/build-all.sh", *grubCoreImg)
-			}
-		}
-	}
-
 	if *abr {
 		if *zirconA == "" {
 			needFuchsiaBuildDir()
-			*zirconA = filepath.Join(*fuchsiaBuildDir, getImage("IMAGE_ZIRCONA_ZBI"))
+			*zirconA = *zbi
 		}
 		if *zirconB == "" {
-			*zirconB = *zirconA
+			*zirconB = *zbi
 		}
 		if *zirconR == "" {
 			*zirconR = filepath.Join(*fuchsiaBuildDir, getImage("IMAGE_ZIRCONR_ZBI"))
 		}
-	}
-
-	if *zedboot == "" {
-		needFuchsiaBuildDir()
-		*zedboot = filepath.Join(*fuchsiaBuildDir, getImage("IMAGE_ZEDBOOT_ZBI"))
 	}
 
 	if !*ramdiskOnly {
@@ -208,18 +164,10 @@ func main() {
 		}
 
 		if _, err := os.Stat(*blob); err != nil {
-			log.Fatalf("Blob image error: %s\nEither provide a blob image, or pass -ramdisk", err)
+			log.Fatalf("Blob image error: %s\nEither provide a blob image, or pass -ramdisk-only", err)
 		}
 		if _, err := os.Stat(*data); err != nil {
-			f, err := os.Create(*data)
-			if err != nil {
-				log.Fatal(err)
-			}
-			f.Truncate(10 * 1024 * 1024)
-			f.Close()
-			if err := exec.Command(zirconTool("minfs"), *data, "create").Run(); err != nil {
-				log.Fatalf("minfs %q create failed", *data)
-			}
+			log.Fatalf("Data image error: %s\nEither provide a data image, or pass -ramdisk-only", err)
 		}
 	}
 
@@ -233,7 +181,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	for _, path := range []string{*kernel, *ramdisk, disk} {
+	for _, path := range []string{*zbi, disk} {
 		if _, err := os.Stat(path); err != nil {
 			log.Fatalf("cannot read %q: %s\n", path, err)
 		}
@@ -306,64 +254,10 @@ func main() {
 
 	lbaSize := diskSize / logical
 	g.MBR = mbr.NewProtectiveMBR(lbaSize)
-	if *grub {
-		grubMBR, err := ioutil.ReadFile(*grubBootImg)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		copy(g.MBR.BootCode[:], grubMBR[0:len(g.MBR.BootCode)])
-		copy(g.MBR.Pad[:], grubMBR[len(g.MBR.BootCode):len(g.MBR.BootCode)+len(g.MBR.Pad)])
-	}
-
 	g.Primary.Partitions = []gpt.PartitionEntry{}
 
 	g.Update(logical, physical, optimal, diskSize) // for the firstusablelba
 	end := g.Primary.FirstUsableLBA
-
-	var biosStart uint64
-	var grubCore []byte
-	if *grub {
-		var err error
-		grubCore, err = ioutil.ReadFile(*grubCoreImg)
-		if err != nil {
-			log.Fatal(err)
-		}
-		biosStart, end = optimialBlockAlign(end, uint64(len(grubCore)), logical, physical, optimal)
-		binary.LittleEndian.PutUint64(g.MBR.BootCode[grubCoreOffset:], biosStart)
-		// nop, nop mr floppy.
-		g.MBR.BootCode[0x66] = 0x90
-		g.MBR.BootCode[0x67] = 0x90
-		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
-			PartitionTypeGUID:   gpt.GUIDBIOS,
-			UniquePartitionGUID: gpt.NewRandomGUID(),
-			PartitionName:       gpt.NewPartitionName("BIOS"),
-			StartingLBA:         biosStart,
-			EndingLBA:           end,
-		})
-		biosSize := int64((end - biosStart) * logical)
-
-		var startingCHS [3]byte
-		startingCHS[0] = byte(biosStart / (16 * 63))
-		startingCHS[1] = byte((biosStart / 63) % 16)
-		startingCHS[2] = byte((biosStart % 63) + 1)
-
-		var endingCHS [3]byte
-		endingCHS[0] = byte(end / (16 * 63))
-		endingCHS[1] = byte((end / 63) % 16)
-		endingCHS[2] = byte((end % 63) + 1)
-
-		// Install a "hybrid MBR" hack for the case of bios bootloaders that might
-		// need it (e.g. rpi's binary blob that's stuck in MBR land).
-		g.MBR.PartitionRecord[1] = mbr.PartitionRecord{
-			BootIndicator: 0x00,
-			StartingCHS:   startingCHS,
-			EndingCHS:     endingCHS,
-			OSType:        mbr.FAT32,
-			StartingLBA:   uint32(biosStart),
-			SizeInLBA:     uint32(uint64(biosSize) / logical),
-		}
-	}
 
 	var efiStart uint64
 	efiStart, end = optimialBlockAlign(end, uint64(*efiSize), logical, physical, optimal)
@@ -478,26 +372,6 @@ func main() {
 
 	f.Sync()
 
-	if *grub {
-		if _, err := f.Seek(int64(biosStart*logical), io.SeekStart); err != nil {
-			log.Fatal(err)
-		}
-
-		pad := (int(logical) - (len(grubCore) % int(logical)))
-		core := make([]byte, len(grubCore)+pad)
-		copy(core, grubCore)
-
-		binary.LittleEndian.PutUint64(core[0x1f4:], biosStart+1)
-		sectors := uint16(len(core) / int(logical))
-		binary.LittleEndian.PutUint16(core[0x1fc:], sectors)
-
-		if _, err := f.Write(core); err != nil {
-			log.Fatal(err)
-		}
-
-		f.Sync()
-	}
-
 	aStart = aStart * logical
 	bStart = bStart * logical
 	rStart = rStart * logical
@@ -546,8 +420,7 @@ func main() {
 	msCopyIn(root, tf.Name(), "EFI/Google/GSetup/Boot")
 	msCopyIn(root, *bootloader, "EFI/BOOT/bootx64.efi")
 	if !*abr {
-		msCopyIn(root, *kernel, "zircon.bin")
-		msCopyIn(root, *ramdisk, "bootdata.bin")
+		msCopyIn(root, *zbi, "zircon.bin")
 		msCopyIn(root, *zedboot, "zedboot.bin")
 	}
 	if _, err := os.Stat(*cmdline); err == nil {
