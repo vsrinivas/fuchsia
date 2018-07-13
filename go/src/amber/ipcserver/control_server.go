@@ -98,7 +98,9 @@ func (c *ControlSrvr) ListSrcs() ([]amber.SourceConfig, error) {
 	m := c.daemon.GetSources()
 	v := make([]amber.SourceConfig, 0, len(m))
 	for _, src := range m {
-		v = append(v, *src.GetConfig())
+		c := *src.GetConfig()
+		c.StatusConfig.Enabled = src.Enabled()
+		v = append(v, c)
 	}
 
 	return v, nil
@@ -137,6 +139,19 @@ func (c *ControlSrvr) PackagesActivated(merkle []string) error {
 		lg.Log.Printf("control_server: Got package activation for %s\n", m)
 	}
 	return nil
+}
+
+func (c *ControlSrvr) SetSrcEnabled(id string, enabled bool) (amber.Status, error) {
+	if enabled {
+		if err := c.daemon.EnableSource(id); err != nil {
+			return amber.StatusErr, nil
+		}
+	} else {
+		if err := c.daemon.DisableSource(id); err != nil {
+			return amber.StatusErr, nil
+		}
+	}
+	return amber.StatusOk, nil
 }
 
 func (c *ControlSrvr) downloadPkgMeta(name string, version, merkle *string) (*daemon.GetResult, error) {

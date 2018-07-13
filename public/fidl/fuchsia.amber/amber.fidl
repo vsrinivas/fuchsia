@@ -164,4 +164,6 @@ interface Control {
   // Log into the source specified by the source id. Returns the oauth2 device
   // flow code if the source is configured for authentication, or null if not.
   11: Login(string sourceId) -> (DeviceCode? device);
+
+  12: SetSrcEnabled(string id, bool enabled) -> (Status res);
 };

@@ -58,6 +58,12 @@ Commands
 
     list_srcs - list the set of sources we can use
 
+    enable_src
+		-n: name of the update source
+
+    disable_src
+		-n: name of the update source
+
     check     - query the list of sources for updates to any of the regularly
                 monitored packages
 `
@@ -281,7 +287,7 @@ func getUp(a *amber.ControlInterface) error {
 func listSources(a *amber.ControlInterface) error {
 	srcs, err := a.ListSrcs()
 	if err != nil {
-		fmt.Printf("failed to list sources: %s\n", err)
+		fmt.Printf("failed to list sources: %s", err)
 		return err
 	}
 
@@ -289,11 +295,22 @@ func listSources(a *amber.ControlInterface) error {
 		encoder := json.NewEncoder(os.Stdout)
 		encoder.SetIndent("", "    ")
 		if err := encoder.Encode(src); err != nil {
-			fmt.Printf("failed to encode source into json: %s\n", err)
+			fmt.Printf("failed to encode source into json: %s", err)
 			return err
 		}
 	}
 
+	return nil
+}
+
+func setSourceEnablement(a *amber.ControlInterface, id string, enabled bool) error {
+	status, err := a.SetSrcEnabled(id, enabled)
+	if err != nil {
+		return fmt.Errorf("call failure attempting to change source status: %s", err)
+	}
+	if status != amber.StatusOk {
+		return fmt.Errorf("failure changing source status")
+	}
 	return nil
 }
 
@@ -360,6 +377,20 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Printf("On your computer go to:\n\n\t%v\n\nand enter\n\n\t%v\n\n", device.VerificationUrl, device.UserCode)
+	case "enable_src":
+		err := setSourceEnablement(proxy, *name, true)
+		if err != nil {
+			fmt.Printf("Error enabling source: %s", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Source %q enabled", *name)
+	case "disable_src":
+		err := setSourceEnablement(proxy, *name, false)
+		if err != nil {
+			fmt.Printf("Error disabling source: %s", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Source %q disabled", *name)
 	default:
 		log.Printf("Error, %q is not a recognized command\n%s",
 			os.Args[1], usage)
