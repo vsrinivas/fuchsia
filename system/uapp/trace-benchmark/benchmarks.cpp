@@ -31,7 +31,7 @@ public:
 
             handler.Start();
 
-            async::PostTask(loop.async(), [spec=spec_, name,
+            async::PostTask(loop.dispatcher(), [spec=spec_, name,
                                            benchmark=fbl::move(benchmark)]() {
                 RunAndMeasure(name, spec->num_iterations, benchmark);
                 trace_stop_engine(ZX_OK);

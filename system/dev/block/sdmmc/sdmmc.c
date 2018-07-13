@@ -82,7 +82,7 @@ static void register_trace(sdmmc_device_t* dev) {
     }
 
     // Create the trace provider.
-    async_t* async = async_loop_get_dispatcher(dev->loop);
+    async_dispatcher_t* async = async_loop_get_dispatcher(dev->loop);
     dev->trace_provider = trace_provider_create(async);
     if (!dev->trace_provider) {
         zxlogf(ERROR, "Failed to create a trace provider.\n");
@@ -104,7 +104,7 @@ static void close_trace(void* ctx) {
 static void block_complete(block_op_t* bop, zx_status_t status, sdmmc_device_t* dev) {
     if (bop->completion_cb) {
         if (dev->trace_on) {
-            TRACE_ASYNC_END("sdmmc","sdmmc_do_txn", dev->async_id, 
+            TRACE_ASYNC_END("sdmmc","sdmmc_do_txn", dev->async_id,
             "command", TA_INT32(bop->rw.command),
             "extra", TA_INT32(bop->rw.extra),
             "length", TA_INT32(bop->rw.length),
@@ -112,7 +112,7 @@ static void block_complete(block_op_t* bop, zx_status_t status, sdmmc_device_t* 
             "offset_dev", TA_INT64(bop->rw.offset_dev),
             "pages", TA_POINTER(bop->rw.pages),
             "txn_status", TA_INT32(status));
-        }   
+        }
         bop->completion_cb(bop, status);
     } else {
         zxlogf(TRACE, "sdmmc: block op %p completion_cb unset!\n", bop);

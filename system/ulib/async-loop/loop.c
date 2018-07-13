@@ -276,7 +276,7 @@ static zx_status_t async_loop_run_once(async_loop_t* loop, zx_time_t deadline) {
 
 async_dispatcher_t* async_loop_get_dispatcher(async_loop_t* loop) {
     // Note: The loop's implementation inherits from async_t so we can upcast to it.
-    return (async_t*)loop;
+    return (async_dispatcher_t*)loop;
 }
 
 async_loop_t* async_loop_from_dispatcher(async_dispatcher_t* async) {

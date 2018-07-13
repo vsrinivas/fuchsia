@@ -15,13 +15,3 @@ async_dispatcher_t* async_get_default_dispatcher(void) {
 void async_set_default_dispatcher(async_dispatcher_t* dispatcher) {
     g_default = dispatcher;
 }
-
-// TODO(davemoore): ZX-2337 Remove after all external references have been changed
-// to async_dispatcher_t.
-async_t* async_get_default(void) {
-    return async_get_default_dispatcher();
-}
-
-void async_set_default(async_t* async) {
-    async_set_default_dispatcher(async);
-}

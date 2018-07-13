@@ -23,7 +23,7 @@ public:
     }
 
     void Start() {
-        zx_status_t status = trace_start_engine(loop_->async(), this,
+        zx_status_t status = trace_start_engine(loop_->dispatcher(), this,
                                                 buffer_.get(), buffer_.size());
         ZX_DEBUG_ASSERT(status == ZX_OK);
 
@@ -36,7 +36,7 @@ private:
         return category[0] == '+';
     }
 
-    void TraceStopped(async_t* async,
+    void TraceStopped(async_dispatcher_t* async,
                       zx_status_t disposition,
                       size_t buffer_bytes_written) override {
         puts("Trace stopped");

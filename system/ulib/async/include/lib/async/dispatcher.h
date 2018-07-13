@@ -15,10 +15,6 @@ __BEGIN_CDECLS
 // There may be multiple implementations of this interface.
 typedef struct async_dispatcher async_dispatcher_t;
 
-// TODO(davemoore): ZX-2337 Remove after all external references have been changed
-// to async_dispatcher_t.
-typedef async_dispatcher_t async_t;
-
 // Forward declarations for asynchronous operation structures.
 typedef struct async_guest_bell_trap async_guest_bell_trap_t;
 typedef struct async_wait async_wait_t;
