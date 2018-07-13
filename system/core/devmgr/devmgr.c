@@ -81,8 +81,8 @@ zx_handle_t get_sysinfo_job_root(void) {
     }
 }
 
-static const char* argv_sh[] = { "/boot/bin/sh" };
-static const char* argv_appmgr[] = { "/system/bin/appmgr" };
+static const char* argv_sh[] = {"/boot/bin/sh"};
+static const char* argv_appmgr[] = {"/system/bin/appmgr"};
 
 void do_autorun(const char* name, const char* env) {
     const char* cmd = getenv(env);
@@ -202,7 +202,6 @@ int analyzer_starter(void* arg) {
 
         printf("devmgr: analyzer_starter: analyzing exception type 0x%x\n", exception_type);
 
-
         zx_handle_t appmgr_svc_request = ZX_HANDLE_INVALID;
         zx_handle_t appmgr_svc = ZX_HANDLE_INVALID;
 
@@ -235,7 +234,7 @@ int analyzer_starter(void* arg) {
         // fuchsia_crash_AnalyzerAnalyze always consumes the handles.
         memset(handles, 0, sizeof(handles));
 
-cleanup:
+    cleanup:
         if (analyzer)
             zx_handle_close(analyzer);
         if (appmgr_svc)
@@ -246,11 +245,11 @@ cleanup:
             zx_handle_close(handles[1]);
         if (status != ZX_OK) {
             printf("devmgr: analyzer_starter: failed to analyze crash: %d (%s)\n",
-                    status, zx_status_get_string(status));
+                   status, zx_status_get_string(status));
             status = zx_task_resume(thread_handle, ZX_RESUME_EXCEPTION | ZX_RESUME_TRY_NEXT);
             if (status != ZX_OK) {
                 printf("devmgr: analyzer_starter: zx_task_resume: %d (%s)\n",
-                        status, zx_status_get_string(status));
+                       status, zx_status_get_string(status));
             }
         }
         zx_handle_close(thread_handle);
@@ -276,7 +275,7 @@ int service_starter(void* arg) {
     if (!getenv_bool("crashlogger.disable", false)) {
         static const char* argv_crashlogger[] = {
             "/boot/bin/crashlogger",
-            NULL,  // room for -pton
+            NULL, // room for -pton
         };
         const char* crashlogger_pt = getenv("crashlogger.pt");
         int argc_crashlogger = 1;
@@ -296,9 +295,9 @@ int service_starter(void* arg) {
         if (zx_port_create(0, &exception_port) == ZX_OK &&
             zx_task_bind_exception_port(root_job_handle, exception_port,
                                         kSysExceptionKey, 0) == ZX_OK) {
-            zx_handle_t handles[] = { ZX_HANDLE_INVALID, exception_port };
+            zx_handle_t handles[] = {ZX_HANDLE_INVALID, exception_port};
             zx_handle_duplicate(root_job_handle, ZX_RIGHT_SAME_RIGHTS, &handles[0]);
-            uint32_t handle_types[] = { PA_HND(PA_USER0, 0), PA_HND(PA_USER0, 1) };
+            uint32_t handle_types[] = {PA_HND(PA_USER0, 0), PA_HND(PA_USER0, 1)};
 
             devmgr_launch(svcs_job_handle, "crashlogger",
                           &devmgr_launch_load, NULL,
@@ -324,7 +323,7 @@ int service_starter(void* arg) {
         zx_handle_t handles[] = {ZX_HANDLE_INVALID, exception_port, exception_channel_passed};
         zx_handle_duplicate(root_job_handle, ZX_RIGHT_SAME_RIGHTS, &handles[0]);
         uint32_t handle_types[] = {PA_HND(PA_USER0, 0), PA_HND(PA_USER0, 1), PA_HND(PA_USER0, 2)};
-        static const char* argv_crashsvc[] = { "/boot/bin/crashsvc" };
+        static const char* argv_crashsvc[] = {"/boot/bin/crashsvc"};
         devmgr_launch(svcs_job_handle, "crashsvc",
                       &devmgr_launch_load, NULL,
                       countof(argv_crashsvc), argv_crashsvc, NULL, -1,
@@ -336,7 +335,7 @@ int service_starter(void* arg) {
     __UNUSED bool netboot = false;
     bool vruncmd = false;
     if (!getenv_bool("netsvc.disable", false)) {
-        const char* args[] = { "/boot/bin/netsvc", NULL, NULL, NULL, NULL, NULL };
+        const char* args[] = {"/boot/bin/netsvc", NULL, NULL, NULL, NULL, NULL};
         int argc = 1;
 
         if (getenv_bool("netsvc.netboot", false)) {
@@ -396,7 +395,7 @@ int service_starter(void* arg) {
         uint32_t type = PA_HND(PA_USER0, 0);
         zx_handle_t h = ZX_HANDLE_INVALID;
         zx_channel_create(0, &h, &virtcon_open);
-        const char* args[] = { "/boot/bin/virtual-console", "--shells", num_shells, "--run", vcmd };
+        const char* args[] = {"/boot/bin/virtual-console", "--shells", num_shells, "--run", vcmd};
         devmgr_launch(svcs_job_handle, "virtual-console",
                       &devmgr_launch_load, NULL,
                       vruncmd ? 5 : 3, args, envp, -1,
@@ -432,12 +431,13 @@ static int console_starter(void* arg) {
         term -= sizeof("TERM=") - 1;
     }
 
-
     const char* device = getenv("console.path");
     if (!device)
         device = "/dev/misc/console";
 
-    const char* envp[] = { term, NULL, };
+    const char* envp[] = {
+        term, NULL,
+    };
     for (unsigned n = 0; n < 30; n++) {
         int fd;
         if ((fd = open(device, O_RDWR)) >= 0) {
@@ -506,7 +506,7 @@ static void load_cmdline_from_bootfs(void) {
 
         // process line if not a comment and not a zero-length name
         if ((*x != '#') && (*x != '=')) {
-            for (char *y = x; *y != 0; y++) {
+            for (char* y = x; *y != 0; y++) {
                 // space in name is invalid, give up
                 if (isspace(*y)) {
                     break;
@@ -534,8 +534,7 @@ static zx_status_t fuchsia_create_job(void) {
     zx_object_set_property(fuchsia_job_handle, ZX_PROP_NAME, "fuchsia", 7);
 
     const zx_policy_basic_t fuchsia_job_policy[] = {
-        {.condition = ZX_POL_NEW_PROCESS, .policy = ZX_POL_ACTION_DENY}
-    };
+        {.condition = ZX_POL_NEW_PROCESS, .policy = ZX_POL_ACTION_DENY}};
 
     status = zx_job_set_policy(fuchsia_job_handle, ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC,
                                fuchsia_job_policy, countof(fuchsia_job_policy));
@@ -734,9 +733,11 @@ void fshost_start(void) {
         }
     }
 
-    const char* argv[] = { "/boot/bin/fshost", "--netboot" };
+    const char* argv[] = {"/boot/bin/fshost", "--netboot"};
     int argc = (getenv_bool("netsvc.netboot", false) ||
-                getenv_bool("zircon.system.disable-automount", false)) ? 2 : 1;
+                getenv_bool("zircon.system.disable-automount", false))
+                   ? 2
+                   : 1;
 
     // Pass zircon.system.* options to the fshost as environment variables
     const char* envp[16];
@@ -865,7 +866,7 @@ zx_status_t svchost_start(void) {
     }
 
     const char* name = "svchost";
-    const char* argv[] = { "/boot/bin/svchost" };
+    const char* argv[] = {"/boot/bin/svchost"};
 
     zx_handle_t svchost_vmo = devmgr_load_file(argv[0], NULL);
     if (svchost_vmo == ZX_HANDLE_INVALID) {
