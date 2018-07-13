@@ -31,6 +31,13 @@ class CppPrebuiltLibrary(_CppLibrary):
         self.packaged_files = {}
 
 
+class Sysroot(object):
+
+    def __init__(self, target_arch):
+        self.target_arch = target_arch
+        self.packaged_files = {}
+
+
 class FidlLibrary(object):
 
     def __init__(self, name, library):

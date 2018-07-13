@@ -264,11 +264,22 @@ class BazelBuilder(Builder):
 
     def install_cpp_sysroot_atom(self, atom):
         '''Installs a sysroot atom from the "cpp" domain.'''
+        data = model.Sysroot(self.metadata.target_arch)
+
         base = self.dest('arch', self.metadata.target_arch, 'sysroot')
         for file in atom.files:
             dest = self.make_dir(os.path.join(base, file.destination))
             shutil.copy2(file.source, dest)
-        self.write_file(os.path.join(base, 'BUILD'), 'sysroot', [])
+            if file.is_packaged:
+                package_path = 'lib/%s' % os.path.basename(file.destination)
+                data.packaged_files[package_path] = file.destination
+        self.write_file(os.path.join(base, 'BUILD'), 'sysroot_arch', data)
+
+        if not self.is_overlay:
+            self.write_file(self.dest('pkg', 'sysroot', 'BUILD'),
+                            'sysroot_pkg_top', data)
+        self.write_file(self.dest('pkg', 'sysroot', 'BUILD'),
+                        'sysroot_pkg_dist', data, append=True)
 
 
     def install_exe_atom(self, atom):

@@ -81,8 +81,7 @@ def packageable_cc_binary(name, target):
         name = name,
         srcs = [
             ":" + packaged_name,
-            # TODO(pylaligand): this label should be arch-independent.
-            Label("//arch/x64/sysroot:dist"),
             Label("//pkg/fdio"),
+            Label("//pkg/sysroot"),
         ]
     )
