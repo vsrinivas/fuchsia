@@ -32,9 +32,12 @@ class DecoderFactory {
 
   virtual ~DecoderFactory() {}
 
-  // Creates a |Decoder| object for a given stream type.
-  virtual Result CreateDecoder(const StreamType& stream_type,
-                               std::shared_ptr<Decoder>* decoder_out) = 0;
+  // Creates a |Decoder| object for a given stream type. Calls back with a
+  // decoder if the operation succeeds, with nullptr if not. This method may
+  // call back synchronously.
+  virtual void CreateDecoder(
+      const StreamType& stream_type,
+      fit::function<void(std::shared_ptr<Decoder>)> callback) = 0;
 
  protected:
   DecoderFactory() {}

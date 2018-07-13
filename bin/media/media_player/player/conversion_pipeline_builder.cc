@@ -104,6 +104,8 @@ class Builder {
 
   void AddTransformsForCompressedVideo(const VideoStreamType& video_type);
 
+  void AddDecoder();
+
   void AddTransformsForLpcm(const AudioStreamType& audio_type,
                             const AudioStreamTypeSet& out_type_set);
 
@@ -194,37 +196,31 @@ void Builder::AddTransformsForCompressedAudio(
   FXL_DCHECK((*best)->IncludesEncoding(StreamType::kAudioEncodingLpcm));
 
   // Need to decode. Create a decoder and go from there.
-  std::shared_ptr<Decoder> decoder;
-  Result result = decoder_factory_->CreateDecoder(audio_type, &decoder);
-  if (result != Result::kOk) {
-    // No decoder found.
-    Fail();
-    return;
-  }
-
-  output_ = graph_->ConnectOutputToNode(output_, graph_->Add(decoder)).output();
-  type_ = decoder->output_stream_type();
-
-  Build();
+  AddDecoder();
 }
 
 void Builder::AddTransformsForCompressedVideo(
     const VideoStreamType& video_type) {
   // TODO(dalesat): See if we already have a matching video type.
 
-  // Need to decode. Create a decoder and go from there.
-  std::shared_ptr<Decoder> decoder;
-  Result result = decoder_factory_->CreateDecoder(video_type, &decoder);
-  if (result != Result::kOk) {
-    // No decoder found.
-    Fail();
-    return;
-  }
+  AddDecoder();
+}
 
-  output_ = graph_->ConnectOutputToNode(output_, graph_->Add(decoder)).output();
-  type_ = decoder->output_stream_type();
+void Builder::AddDecoder() {
+  decoder_factory_->CreateDecoder(
+      *type_, [this](std::shared_ptr<Decoder> decoder) {
+        if (!decoder) {
+          // No decoder found.
+          Fail();
+          return;
+        }
 
-  Build();
+        output_ =
+            graph_->ConnectOutputToNode(output_, graph_->Add(decoder)).output();
+        type_ = decoder->output_stream_type();
+
+        Build();
+      });
 }
 
 void Builder::AddTransformsForLpcm(const AudioStreamType& audio_type,

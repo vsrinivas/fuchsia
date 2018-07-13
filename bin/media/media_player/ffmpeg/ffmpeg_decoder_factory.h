@@ -22,8 +22,9 @@ class FfmpegDecoderFactory : public DecoderFactory {
 
   ~FfmpegDecoderFactory() override;
 
-  Result CreateDecoder(const StreamType& stream_type,
-                       std::shared_ptr<Decoder>* decoder_out) override;
+  void CreateDecoder(
+      const StreamType& stream_type,
+      fit::function<void(std::shared_ptr<Decoder>)> callback) override;
 };
 
 }  // namespace media_player

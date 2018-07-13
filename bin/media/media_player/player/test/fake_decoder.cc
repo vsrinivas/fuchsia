@@ -44,12 +44,11 @@ FakeDecoderFactory::FakeDecoderFactory() {}
 
 FakeDecoderFactory::~FakeDecoderFactory() {}
 
-Result FakeDecoderFactory::CreateDecoder(
-    const StreamType& stream_type, std::shared_ptr<Decoder>* decoder_out) {
-  FXL_DCHECK(decoder_out);
-
-  *decoder_out = std::make_shared<test::FakeDecoder>(stream_type);
-  return Result::kOk;
+void FakeDecoderFactory::CreateDecoder(
+    const StreamType& stream_type,
+    fit::function<void(std::shared_ptr<Decoder>)> callback) {
+  FXL_DCHECK(callback);
+  callback(std::make_shared<test::FakeDecoder>(stream_type));
 }
 
 }  // namespace test
