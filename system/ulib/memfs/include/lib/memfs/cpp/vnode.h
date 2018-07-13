@@ -23,6 +23,7 @@
 #include <fbl/unique_ptr.h>
 #include <fs/remote.h>
 #include <fs/watcher.h>
+#include <lib/zx/vmo.h>
 
 namespace memfs {
 
@@ -84,7 +85,7 @@ private:
                            zxrio_object_info_t* extra) final;
     zx_status_t GetVmo(int flags, zx_handle_t* out) final;
 
-    zx_handle_t vmo_;
+    zx::vmo vmo_;
     zx_off_t length_;
 };
 

@@ -27,16 +27,12 @@ namespace memfs {
 constexpr size_t kMemfsMaxFileSize = 512 * 1024 * 1024;
 
 VnodeFile::VnodeFile(Vfs* vfs)
-    : VnodeMemfs(vfs), vmo_(ZX_HANDLE_INVALID), length_(0) {}
+    : VnodeMemfs(vfs), length_(0) {}
 
 VnodeFile::VnodeFile(Vfs* vfs, zx_handle_t vmo, zx_off_t length)
     : VnodeMemfs(vfs), vmo_(vmo), length_(length) {}
 
-VnodeFile::~VnodeFile() {
-    if (vmo_ != ZX_HANDLE_INVALID) {
-        zx_handle_close(vmo_);
-    }
-}
+VnodeFile::~VnodeFile() = default;
 
 zx_status_t VnodeFile::ValidateFlags(uint32_t flags) {
     if (flags & ZX_FS_FLAG_DIRECTORY) {
@@ -46,14 +42,14 @@ zx_status_t VnodeFile::ValidateFlags(uint32_t flags) {
 }
 
 zx_status_t VnodeFile::Read(void* data, size_t len, size_t off, size_t* out_actual) {
-    if ((off >= length_) || (vmo_ == ZX_HANDLE_INVALID)) {
+    if ((off >= length_) || (!vmo_.is_valid())) {
         *out_actual = 0;
         return ZX_OK;
     } else if (len > length_ - off) {
         len = length_ - off;
     }
 
-    zx_status_t status = zx_vmo_read(vmo_, data, off, len);
+    zx_status_t status = vmo_.read(data, off, len);
     if (status == ZX_OK) {
         *out_actual = len;
     }
@@ -67,20 +63,20 @@ zx_status_t VnodeFile::Write(const void* data, size_t len, size_t offset,
     newlen = newlen > kMemfsMaxFileSize ? kMemfsMaxFileSize : newlen;
     size_t alignedlen = fbl::round_up(newlen, static_cast<size_t>(PAGE_SIZE));
 
-    if (vmo_ == ZX_HANDLE_INVALID) {
+    if (!vmo_.is_valid()) {
         // First access to the file? Allocate it.
-        if ((status = zx_vmo_create(alignedlen, 0, &vmo_)) != ZX_OK) {
+        if ((status = zx::vmo::create(alignedlen, 0, &vmo_)) != ZX_OK) {
             return status;
         }
     } else if (alignedlen > fbl::round_up(length_, static_cast<size_t>(PAGE_SIZE))) {
         // Accessing beyond the end of the file? Extend it.
-        if ((status = zx_vmo_set_size(vmo_, alignedlen)) != ZX_OK) {
+        if ((status = vmo_.set_size(alignedlen)) != ZX_OK) {
             return status;
         }
     }
 
     size_t writelen = newlen - offset;
-    if ((status = zx_vmo_write(vmo_, data, offset, writelen)) != ZX_OK) {
+    if ((status = vmo_.write(data, offset, writelen)) != ZX_OK) {
         return status;
     }
     *out_actual = writelen;
@@ -105,9 +101,9 @@ zx_status_t VnodeFile::Append(const void* data, size_t len, size_t* out_end,
 
 zx_status_t VnodeFile::GetVmo(int flags, zx_handle_t* out) {
     zx_status_t status;
-    if (vmo_ == ZX_HANDLE_INVALID) {
+    if (!vmo_.is_valid()) {
         // First access to the file? Allocate it.
-        if ((status = zx_vmo_create(0, 0, &vmo_)) != ZX_OK) {
+        if ((status = zx::vmo::create(0, 0, &vmo_)) != ZX_OK) {
             return status;
         }
     }
@@ -117,15 +113,25 @@ zx_status_t VnodeFile::GetVmo(int flags, zx_handle_t* out) {
     rights |= (flags & FDIO_MMAP_FLAG_READ) ? ZX_RIGHT_READ : 0;
     rights |= (flags & FDIO_MMAP_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
     rights |= (flags & FDIO_MMAP_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
+    zx::vmo out_vmo;
     if (flags & FDIO_MMAP_FLAG_PRIVATE) {
-        if ((status = zx_vmo_clone(vmo_, ZX_VMO_CLONE_COPY_ON_WRITE, 0, length_, out)) != ZX_OK) {
+        if ((status = vmo_.clone(ZX_VMO_CLONE_COPY_ON_WRITE, 0, length_,
+                                 &out_vmo)) != ZX_OK) {
             return status;
         }
 
-        return zx_handle_replace(*out, rights, out);
+        if ((status = out_vmo.replace(rights, &out_vmo)) != ZX_OK) {
+            return status;
+        }
+        *out = out_vmo.release();
+        return ZX_OK;
     }
 
-    return zx_handle_duplicate(vmo_, rights, out);
+    if ((status = vmo_.duplicate(rights, &out_vmo)) != ZX_OK) {
+        return status;
+    }
+    *out = out_vmo.release();
+    return ZX_OK;
 }
 
 zx_status_t VnodeFile::Getattr(vnattr_t* attr) {
@@ -155,9 +161,9 @@ zx_status_t VnodeFile::Truncate(size_t len) {
 
     size_t alignedLen = fbl::round_up(len, static_cast<size_t>(PAGE_SIZE));
 
-    if (vmo_ == ZX_HANDLE_INVALID) {
+    if (!vmo_.is_valid()) {
         // First access to the file? Allocate it.
-        if ((status = zx_vmo_create(alignedLen, 0, &vmo_)) != ZX_OK) {
+        if ((status = zx::vmo::create(alignedLen, 0, &vmo_)) != ZX_OK) {
             return status;
         }
     } else if ((len < length_) && (len % PAGE_SIZE != 0)) {
@@ -169,13 +175,13 @@ zx_status_t VnodeFile::Truncate(size_t len) {
         size_t ppage_size = PAGE_SIZE - (len % PAGE_SIZE);
         ppage_size = len + ppage_size < length_ ? ppage_size : length_ - len;
         memset(buf, 0, ppage_size);
-        if (zx_vmo_write(vmo_, buf, len, ppage_size) != ZX_OK) {
+        if (vmo_.write(buf, len, ppage_size) != ZX_OK) {
             return ZX_ERR_IO;
         }
-        if ((status = zx_vmo_set_size(vmo_, alignedLen)) != ZX_OK) {
+        if ((status = vmo_.set_size(alignedLen)) != ZX_OK) {
             return status;
         }
-    } else if ((status = zx_vmo_set_size(vmo_, alignedLen)) != ZX_OK) {
+    } else if ((status = vmo_.set_size(alignedLen)) != ZX_OK) {
         return status;
     }
 
