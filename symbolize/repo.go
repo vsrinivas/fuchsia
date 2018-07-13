@@ -40,6 +40,7 @@ func (i *idsSource) getBinaries() ([]elflib.BinaryFileRef, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
 	return elflib.ReadIDsFile(file)
 }
 

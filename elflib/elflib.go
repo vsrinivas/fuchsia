@@ -49,6 +49,7 @@ func (b BinaryFileRef) Verify() error {
 	if err != nil {
 		return newBuildIDError(err, b.Filepath)
 	}
+	defer file.Close()
 	buildIDs, err := GetBuildIDs(b.Filepath, file)
 	if err != nil {
 		return newBuildIDError(err, b.Filepath)
