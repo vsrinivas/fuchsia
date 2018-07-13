@@ -552,6 +552,8 @@ func (f *TUFSource) FetchPkg(pkg *pkg.Package) (*os.File, error) {
 
 	err = f.tufClient.Download(pkg.Name, &delFile{tmp})
 	if err != nil {
+		tmp.Close()
+		os.Remove(tmp.Name())
 		return nil, ErrNoUpdateContent
 	}
 
