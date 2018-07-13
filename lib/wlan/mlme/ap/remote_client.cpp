@@ -326,17 +326,6 @@ zx_status_t AssociatedState::HandleDataFrame(const DataFrameHeader& hdr) {
 }
 
 zx_status_t AssociatedState::HandleDataFrame(const DataFrame<LlcHeader>& frame) {
-    // Filter unsupported Data frame types.
-    switch (frame.hdr()->fc.subtype()) {
-    case DataSubtype::kDataSubtype:
-    // Fall-through
-    case DataSubtype::kQosdata:  // For data frames within BlockAck session.
-        break;
-    default:
-        warnf("unsupported data subtype %02x\n", frame.hdr()->fc.subtype());
-        return ZX_OK;
-    }
-
     if (frame.hdr()->fc.to_ds() == 0 || frame.hdr()->fc.from_ds() == 1) {
         warnf(
             "received unsupported data frame from %s with to_ds/from_ds "

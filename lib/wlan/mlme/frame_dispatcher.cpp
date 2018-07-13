@@ -63,19 +63,18 @@ zx_status_t HandleDataPacket(fbl::unique_ptr<Packet> packet, FrameHandler* targe
     }
     case DataSubtype::kDataSubtype:
         // Fall-through
-    case DataSubtype::kQosdata:
-        break;
+    case DataSubtype::kQosdata: {
+        auto llc_frame = data_frame.Specialize<LlcHeader>();
+        if (!llc_frame.HasValidLen()) {
+            errorf("short data packet len=%zu\n", llc_frame.len());
+            return ZX_ERR_IO;
+        }
+        return target->HandleFrame(llc_frame);
+    }
     default:
-        warnf("unsupported data subtype %02x\n", hdr->fc.subtype());
+        // No support of PCF / HCCA
         return ZX_OK;
     }
-
-    auto llc_frame = data_frame.Specialize<LlcHeader>();
-    if (!llc_frame.HasValidLen()) {
-        errorf("short data packet len=%zu\n", llc_frame.len());
-        return ZX_ERR_IO;
-    }
-    return target->HandleFrame(llc_frame);
 }
 
 zx_status_t HandleActionPacket(MgmtFrame<ActionFrame> action_frame, FrameHandler* target) {

@@ -675,16 +675,10 @@ zx_status_t Station::HandleDataFrame(const DataFrame<LlcHeader>& frame) {
     ZX_DEBUG_ASSERT(bssid() != nullptr);
     ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
 
-    switch (frame.hdr()->fc.subtype()) {
-    case DataSubtype::kDataSubtype:
-        break;
-    case DataSubtype::kQosdata:  // For data frames within BlockAck session.
+    // For data frames within BlockAck session.
+    if (frame.hdr()->fc.subtype() == DataSubtype::kQosdata) {
         ZX_DEBUG_ASSERT(frame.hdr()->HasQosCtrl());
         ZX_DEBUG_ASSERT(frame.hdr()->qos_ctrl() != nullptr);
-        break;
-    default:
-        warnf("unsupported data subtype %02x\n", frame.hdr()->fc.subtype());
-        return ZX_OK;
     }
 
     // Take signal strength into account.
@@ -701,7 +695,7 @@ zx_status_t Station::HandleDataFrame(const DataFrame<LlcHeader>& frame) {
             return ZX_OK;
         }
         auto eapol = reinterpret_cast<const EapolFrame*>(llc->payload);
-        uint16_t actual_body_len = payload_len;
+        size_t actual_body_len = payload_len;
         uint16_t expected_body_len = be16toh(eapol->packet_body_length);
         if (actual_body_len >= expected_body_len) {
             return service::SendEapolIndication(device_, *eapol, hdr->addr3, hdr->addr1);
