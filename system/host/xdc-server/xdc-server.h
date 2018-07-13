@@ -7,6 +7,7 @@
 #include <fbl/unique_fd.h>
 #include <map>
 #include <poll.h>
+#include <set>
 #include <vector>
 
 #include "usb-handler.h"
@@ -18,16 +19,22 @@ public:
     explicit Client(int fd) : fd_(fd) {}
 
     void SetStreamId(uint32_t stream_id);
+    void SetConnected(bool connected);
 
     int fd()             const { return fd_.get(); }
     bool registered()    const { return registered_; }
     uint32_t stream_id() const { return stream_id_; }
+    bool connected()     const { return connected_; }
 
 private:
     fbl::unique_fd fd_;
 
+    // Whether the client has registered a stream id.
     bool     registered_ = false;
     uint32_t stream_id_  = 0;
+    // True if the client has registered a stream id,
+    // and that stream id is also registered on the xdc device side.
+    bool     connected_  = false;
 };
 
 class XdcServer {
@@ -57,6 +64,7 @@ private:
     std::shared_ptr<Client> GetClient(uint32_t stream_id);
 
     void UsbReadComplete(std::unique_ptr<UsbHandler::Transfer> transfer);
+    // Parses the control message from the given transfer buffer.
     void HandleCtrlMsg(unsigned char* transfer_buf, int transfer_len);
 
     std::unique_ptr<UsbHandler> usb_handler_;
@@ -71,6 +79,9 @@ private:
 
     // File descriptors we are currently polling on.
     std::vector<pollfd> poll_fds_;
+
+    // Stream ids registered on the xdc device side.
+    std::set<uint32_t> dev_stream_ids_;
 
     xdc_packet_state_t read_packet_state_;
 };

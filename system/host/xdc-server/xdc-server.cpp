@@ -31,6 +31,17 @@ void Client::SetStreamId(uint32_t stream_id) {
     stream_id_ = stream_id;
 }
 
+void Client::SetConnected(bool connected) {
+    if (connected == connected_) {
+        fprintf(stderr, "tried to set client with stream id %u as %s again.\n",
+                stream_id(), connected ? "connected" : "disconnected");
+        return;
+    }
+    printf("client with stream id %u is now %s to the xdc device stream.\n",
+           stream_id(), connected ?  "connected" : "disconnected");
+    connected_ = connected;
+}
+
 // static
 std::unique_ptr<XdcServer> XdcServer::Create() {
     auto conn = std::make_unique<XdcServer>(ConstructorTag{});
@@ -232,6 +243,9 @@ bool XdcServer::RegisterStream(std::shared_ptr<Client> client) {
     } else {
         client->SetStreamId(stream_id);
         printf("registered stream id %u\n", stream_id);
+        if (dev_stream_ids_.count(stream_id)) {
+            client->SetConnected(true);
+        }
         resp = true;
     }
 
@@ -281,10 +295,27 @@ void XdcServer::HandleCtrlMsg(unsigned char* transfer_buf, int transfer_len) {
     case XDC_NOTIFY_STREAM_STATE: {
         uint32_t stream_id = msg->notify_stream_state.stream_id;
         bool online = msg->notify_stream_state.online;
+
+        auto dev_stream = dev_stream_ids_.find(stream_id);
+        bool saved_online_state = dev_stream != dev_stream_ids_.end();
+        if (online == saved_online_state) {
+            fprintf(stderr, "tried to set stream %u to %s again\n",
+                    stream_id, online ? "online" : "offline");
+            return;
+        }
+        if (online) {
+            dev_stream_ids_.insert(stream_id);
+        } else {
+            dev_stream_ids_.erase(dev_stream);
+        }
         printf("xdc device stream id %u is now %s\n", stream_id, online ? "online" : "offline");
 
-        // TODO(jocelyndang): update any matching client as connected and ready to transfer.
-
+        // Update the host client's connected status.
+        auto client = GetClient(stream_id);
+        if (!client) {
+            break;
+        }
+        client->SetConnected(online);
         break;
     }
     default:
