@@ -10,7 +10,7 @@
 #include "macros.h"
 
 FirmwareBlob::~FirmwareBlob() {
-  if (ptr_)
+  if (vmo_)
     zx::vmar::root_self()->unmap(ptr_, fw_size_);
 }
 
@@ -99,27 +99,33 @@ zx_status_t FirmwareBlob::LoadFirmware(zx_device_t* device) {
   return ZX_OK;
 }
 
+namespace {
+std::string FirmwareTypeToName(FirmwareBlob::FirmwareType type) {
+  switch (type) {
+    case FirmwareBlob::FirmwareType::kMPEG12:
+      return "mpeg12";
+      break;
+    case FirmwareBlob::FirmwareType::kH264:
+      return "h264";
+      break;
+    case FirmwareBlob::FirmwareType::kVp9Mmu:
+      return "vp9_mmu";
+      break;
+    case FirmwareBlob::FirmwareType::kVp9MmuG12a:
+      return "vp9_g12a";
+      break;
+    default:
+      DECODE_ERROR("Invalid firmware type: %d\n", type);
+      return "";
+  }
+}
+}
 zx_status_t FirmwareBlob::GetFirmwareData(FirmwareType firmware_type,
                                           uint8_t** data_out,
                                           uint32_t* size_out) {
-  std::string format_name;
-  switch (firmware_type) {
-    case FirmwareType::kMPEG12:
-      format_name = "mpeg12";
-      break;
-    case FirmwareType::kH264:
-      format_name = "h264";
-      break;
-    case FirmwareType::kVp9Mmu:
-      format_name = "vp9_mmu";
-      break;
-    case FirmwareType::kVp9MmuG12a:
-      format_name = "vp9_g12a";
-      break;
-    default:
-      DECODE_ERROR("Invalid firmware type: %d\n", firmware_type);
-      return ZX_ERR_INVALID_ARGS;
-  }
+  std::string format_name = FirmwareTypeToName(firmware_type);
+  if (format_name == "")
+    return ZX_ERR_INVALID_ARGS;
   auto it = firmware_code_.find(format_name);
   if (it == firmware_code_.end()) {
     DECODE_ERROR("Couldn't find firmware type: %d\n", firmware_type);
@@ -128,4 +134,15 @@ zx_status_t FirmwareBlob::GetFirmwareData(FirmwareType firmware_type,
   *data_out = reinterpret_cast<uint8_t*>(ptr_) + it->second.offset;
   *size_out = it->second.size;
   return ZX_OK;
+}
+
+void FirmwareBlob::LoadFakeFirmwareForTesting(FirmwareType firmware_type,
+                                              uint8_t* data, uint32_t size) {
+  std::string format_name = FirmwareTypeToName(firmware_type);
+  assert(ptr_ == 0);
+
+  ptr_ = reinterpret_cast<uintptr_t>(data);
+
+  firmware_code_[format_name].size = size;
+  firmware_code_[format_name].offset = 0;
 }

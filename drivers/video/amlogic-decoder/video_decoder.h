@@ -60,6 +60,9 @@ class VideoDecoder {
         uint32_t height, uint32_t wrap, uint32_t blockmode) = 0;
     virtual void FreeCanvas(std::unique_ptr<CanvasEntry> canvas) = 0;
     virtual DecoderCore* core() = 0;
+    virtual zx_status_t AllocateIoBuffer(io_buffer_t* buffer, size_t size,
+                                         uint32_t alignement_log2,
+                                         uint32_t flags) = 0;
   };
 
   virtual zx_status_t Initialize() = 0;

@@ -75,9 +75,8 @@ void Vp9Decoder::BufferAllocator::Register(WorkingBuffer* buffer) {
 zx_status_t Vp9Decoder::BufferAllocator::AllocateBuffers(
     VideoDecoder::Owner* owner) {
   for (auto* buffer : buffers_) {
-    zx_status_t status =
-        io_buffer_init(&buffer->buffer(), owner->bti(), buffer->size(),
-                       IO_BUFFER_CONTIG | IO_BUFFER_RW);
+    zx_status_t status = owner->AllocateIoBuffer(
+        &buffer->buffer(), buffer->size(), 0, IO_BUFFER_CONTIG | IO_BUFFER_RW);
     if (status != ZX_OK) {
       DECODE_ERROR("VP9 working buffer allocation failed: %d\n", status);
       return status;
@@ -99,7 +98,9 @@ uint32_t Vp9Decoder::WorkingBuffer::addr32() {
   return truncate_to_32(io_buffer_phys(&buffer_));
 }
 
-Vp9Decoder::Vp9Decoder(Owner* owner) : owner_(owner) {}
+Vp9Decoder::Vp9Decoder(Owner* owner) : owner_(owner) {
+  InitializeLoopFilterData();
+}
 
 Vp9Decoder::~Vp9Decoder() {
   owner_->core()->StopDecoding();
@@ -121,13 +122,15 @@ void Vp9Decoder::UpdateLoopFilterThresholds() {
   }
 }
 
-void Vp9Decoder::InitLoopFilter() {
+void Vp9Decoder::InitializeLoopFilterData() {
   loop_filter_info_ = std::make_unique<loop_filter_info_n>();
   loop_filter_ = std::make_unique<loopfilter>();
   segmentation_ = std::make_unique<segmentation>();
 
   vp9_loop_filter_init(loop_filter_info_.get(), loop_filter_.get());
+}
 
+void Vp9Decoder::InitLoopFilter() {
   UpdateLoopFilterThresholds();
   if (owner_->device_type() == DeviceType::kG12A) {
     HevcDblkCfgB::Get()
@@ -182,6 +185,21 @@ void Vp9Decoder::UpdateLoopFilter(HardwareRenderParams* param) {
 }
 
 zx_status_t Vp9Decoder::Initialize() {
+  zx_status_t status = InitializeBuffers();
+  if (status != ZX_OK)
+    return status;
+  return InitializeHardware();
+}
+
+zx_status_t Vp9Decoder::InitializeBuffers() {
+  zx_status_t status = working_buffers_.AllocateBuffers(owner_);
+  if (status != ZX_OK)
+    return status;
+
+  return AllocateFrames();
+}
+
+zx_status_t Vp9Decoder::InitializeHardware() {
   uint8_t* firmware;
   uint32_t firmware_size;
   FirmwareBlob::FirmwareType firmware_type =
@@ -195,10 +213,6 @@ zx_status_t Vp9Decoder::Initialize() {
     return status;
 
   status = owner_->core()->LoadFirmware(firmware, firmware_size);
-  if (status != ZX_OK)
-    return status;
-
-  status = working_buffers_.AllocateBuffers(owner_);
   if (status != ZX_OK)
     return status;
 
@@ -279,9 +293,6 @@ zx_status_t Vp9Decoder::Initialize() {
         .WriteTo(owner_->dosbus());
   }
 
-  status = AllocateFrames();
-  if (status != ZX_OK)
-    return status;
 
   InitializeHardwarePictureList();
   InitializeParser();
@@ -821,8 +832,8 @@ zx_status_t Vp9Decoder::AllocateFrames() {
   for (uint32_t i = 0; i < 16; i++) {
     auto frame = std::make_unique<Frame>();
     constexpr uint32_t kCompressedHeaderSize = 0x48000;
-    zx_status_t status = io_buffer_init_aligned(
-        &frame->compressed_header, owner_->bti(), kCompressedHeaderSize, 16,
+    zx_status_t status = owner_->AllocateIoBuffer(
+        &frame->compressed_header, kCompressedHeaderSize, 16,
         IO_BUFFER_CONTIG | IO_BUFFER_RW);
     if (status != ZX_OK) {
       DECODE_ERROR("Alloc buffer error: %d\n", status);

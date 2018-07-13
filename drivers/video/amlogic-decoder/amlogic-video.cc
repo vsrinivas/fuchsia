@@ -173,6 +173,13 @@ void AmlogicVideo::FreeCanvas(std::unique_ptr<CanvasEntry> canvas) {
   canvas->invalidate();
 }
 
+zx_status_t AmlogicVideo::AllocateIoBuffer(io_buffer_t* buffer, size_t size,
+                                           uint32_t alignment_log2,
+                                           uint32_t flags) {
+  return io_buffer_init_aligned(buffer, bti_.get(), size, alignment_log2,
+                                flags);
+}
+
 // This parser handles MPEG elementary streams.
 zx_status_t AmlogicVideo::InitializeEsParser() {
   Reset1Register::Get().FromValue(0).set_parser(true).WriteTo(reset_.get());

@@ -47,6 +47,9 @@ class AmlogicVideo final : public VideoDecoder::Owner,
                                                uint32_t blockmode) override;
   void FreeCanvas(std::unique_ptr<CanvasEntry> canvas) override;
   DecoderCore* core() override { return core_.get(); }
+  zx_status_t AllocateIoBuffer(io_buffer_t* buffer, size_t size,
+                               uint32_t alignment_log2,
+                               uint32_t flags) override;
 
   // DecoderCore::Owner implementation.
   MmioRegisters* mmio() override { return registers_.get(); }
