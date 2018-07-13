@@ -16,8 +16,7 @@
 
 namespace debugserver {
 
-ThreadActionList::Entry::Entry(ThreadActionList::Action action,
-                               zx_koid_t pid,
+ThreadActionList::Entry::Entry(ThreadActionList::Action action, zx_koid_t pid,
                                zx_koid_t tid)
     : action_(action), pid_(pid), tid_(tid) {
   FXL_DCHECK(pid_ != 0);
@@ -45,7 +44,8 @@ bool ThreadActionList::Entry::Contains(zx_koid_t pid, zx_koid_t tid) const {
   return true;
 }
 
-bool ThreadActionList::DecodeAction(char c, ThreadActionList::Action* out_action) {
+bool ThreadActionList::DecodeAction(char c,
+                                    ThreadActionList::Action* out_action) {
   switch (c) {
     case 'c':
       *out_action = Action::kContinue;
@@ -112,8 +112,7 @@ ThreadActionList::ThreadActionList(const fxl::StringView& str,
       bool has_pid;
       // TODO(dje): koids are uint64_t
       int64_t pid, tid;
-      if (!ParseThreadId(str.substr(s + 2, n - 2), &has_pid, &pid,
-                         &tid)) {
+      if (!ParseThreadId(str.substr(s + 2, n - 2), &has_pid, &pid, &tid)) {
         FXL_LOG(ERROR) << "Bad thread id in action: " << str;
         return;
       }

@@ -70,8 +70,8 @@ bool TestServer::RunHelperProgram(zx::channel channel) {
 
   if (channel.is_valid()) {
     process->AddStartupHandle({
-      .id = PA_HND(PA_USER0, 0),
-      .handle = std::move(channel),
+        .id = PA_HND(PA_USER0, 0),
+        .handle = std::move(channel),
     });
   }
 

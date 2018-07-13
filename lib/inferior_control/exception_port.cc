@@ -52,12 +52,13 @@ std::string IOPortPacketTypeToString(const zx_port_packet_t& pkt) {
 ExceptionPort::Key ExceptionPort::g_key_counter = 0;
 
 ExceptionPort::ExceptionPort(async_dispatcher_t* dispatcher)
-  : keep_running_(false), origin_dispatcher_(dispatcher) {
+    : keep_running_(false), origin_dispatcher_(dispatcher) {
   FXL_DCHECK(origin_dispatcher_);
 }
 
 ExceptionPort::~ExceptionPort() {
-  if (eport_handle_) Quit();
+  if (eport_handle_)
+    Quit();
 }
 
 bool ExceptionPort::Run() {
@@ -116,8 +117,7 @@ ExceptionPort::Key ExceptionPort::Bind(zx_handle_t process_handle,
       zx_object_get_info(process_handle, ZX_INFO_HANDLE_BASIC, &info,
                          sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_object_get_info_failed: "
-                   << ZxErrorString(status);
+    FXL_LOG(ERROR) << "zx_object_get_info_failed: " << ZxErrorString(status);
     return 0;
   }
   FXL_DCHECK(info.type == ZX_OBJ_TYPE_PROCESS);
@@ -152,7 +152,8 @@ ExceptionPort::Key ExceptionPort::Bind(zx_handle_t process_handle,
   // |next_key| should not have been used before.
   FXL_DCHECK(callbacks_.find(next_key) == callbacks_.end());
 
-  callbacks_[next_key] = BindData(process_handle, process_koid, std::move(callback));
+  callbacks_[next_key] =
+      BindData(process_handle, process_koid, std::move(callback));
   ++g_key_counter;
 
   FXL_VLOG(1) << "Exception port bound to process handle " << process_handle
@@ -302,14 +303,18 @@ void PrintException(FILE* out, const Thread* thread, zx_excp_type_t type,
 
 void PrintSignals(FILE* out, const Thread* thread, zx_signals_t signals) {
   std::string description;
-  if (signals & ZX_THREAD_RUNNING) description += ", running";
-  if (signals & ZX_THREAD_SUSPENDED) description += ", suspended";
-  if (signals & ZX_THREAD_TERMINATED) description += ", terminated";
+  if (signals & ZX_THREAD_RUNNING)
+    description += ", running";
+  if (signals & ZX_THREAD_SUSPENDED)
+    description += ", suspended";
+  if (signals & ZX_THREAD_TERMINATED)
+    description += ", terminated";
   zx_signals_t mask =
       (ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED | ZX_THREAD_TERMINATED);
   if (signals & ~mask)
     description += fxl::StringPrintf(", unknown (0x%x)", signals & ~mask);
-  if (description.length() == 0) description = ", none";
+  if (description.length() == 0)
+    description = ", none";
   fprintf(out, "Thread %s got signals: %s\n", thread->GetDebugName().c_str(),
           description.c_str() + 2);
 }

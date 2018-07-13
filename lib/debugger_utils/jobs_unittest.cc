@@ -82,8 +82,8 @@ TEST(JobsTest, ThisThreadAndStop) {
 
 static zx_status_t GetHandleInfo(zx_handle_t handle,
                                  zx_info_handle_basic_t* info) {
-  return zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, info,
-                            sizeof(*info), nullptr, nullptr);
+  return zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, info, sizeof(*info),
+                            nullptr, nullptr);
 }
 
 static void TestKoids(zx_handle_t task, zx_koid_t koid, zx_koid_t parent_koid) {

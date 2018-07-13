@@ -66,17 +66,22 @@ bool ElfReader::ReadHeader(const ByteBlock& m, uint64_t base, ElfHeader* hdr) {
 
 // static
 bool ElfReader::VerifyHeader(const ElfHeader* hdr) {
-  if (memcmp(hdr->e_ident, ELFMAG, SELFMAG)) return false;
+  if (memcmp(hdr->e_ident, ELFMAG, SELFMAG))
+    return false;
   // TODO(dje): Support larger entries.
-  if (hdr->e_ehsize != sizeof(ElfHeader)) return false;
-  if (hdr->e_phentsize != sizeof(ElfSegmentHeader)) return false;
-  if (hdr->e_shentsize != sizeof(ElfSectionHeader)) return false;
+  if (hdr->e_ehsize != sizeof(ElfHeader))
+    return false;
+  if (hdr->e_phentsize != sizeof(ElfSegmentHeader))
+    return false;
+  if (hdr->e_shentsize != sizeof(ElfSectionHeader))
+    return false;
   // TODO(dje): Could add more checks.
   return true;
 }
 
 ElfError ElfReader::ReadSegmentHeaders() {
-  if (segment_headers_) return ElfError::OK;
+  if (segment_headers_)
+    return ElfError::OK;
   size_t num_segments = GetNumSegments();
   auto seg_hdrs = new ElfSegmentHeader[num_segments];
   if (!byte_block_->Read(base_ + header_.e_phoff, seg_hdrs,
@@ -89,7 +94,8 @@ ElfError ElfReader::ReadSegmentHeaders() {
 }
 
 void ElfReader::FreeSegmentHeaders() {
-  if (segment_headers_) delete[] segment_headers_;
+  if (segment_headers_)
+    delete[] segment_headers_;
   segment_headers_ = nullptr;
 }
 
@@ -100,7 +106,8 @@ const ElfSegmentHeader& ElfReader::GetSegmentHeader(size_t segment_number) {
 }
 
 ElfError ElfReader::ReadSectionHeaders() {
-  if (section_headers_) return ElfError::OK;
+  if (section_headers_)
+    return ElfError::OK;
   size_t num_sections = GetNumSections();
   auto scn_hdrs = new ElfSectionHeader[num_sections];
   if (!byte_block_->Read(base_ + header_.e_shoff, scn_hdrs,
@@ -113,7 +120,8 @@ ElfError ElfReader::ReadSectionHeaders() {
 }
 
 void ElfReader::FreeSectionHeaders() {
-  if (section_headers_) delete[] section_headers_;
+  if (section_headers_)
+    delete[] section_headers_;
   section_headers_ = nullptr;
 }
 
@@ -127,7 +135,8 @@ const ElfSectionHeader* ElfReader::GetSectionHeaderByType(unsigned type) {
   size_t num_sections = GetNumSections();
   for (size_t i = 0; i < num_sections; ++i) {
     const ElfSectionHeader& shdr = GetSectionHeader(i);
-    if (shdr.sh_type == type) return &shdr;
+    if (shdr.sh_type == type)
+      return &shdr;
   }
   return nullptr;
 }
@@ -158,13 +167,15 @@ ElfError ElfReader::ReadBuildId(char* buf, size_t buf_size) {
   FXL_DCHECK(buf_size >= kMaxBuildIdSize * 2 + 1);
 
   ElfError rc = ReadSegmentHeaders();
-  if (rc != ElfError::OK) return rc;
+  if (rc != ElfError::OK)
+    return rc;
 
   size_t num_segments = GetNumSegments();
 
   for (size_t i = 0; i < num_segments; ++i) {
     const auto& phdr = GetSegmentHeader(i);
-    if (phdr.p_type != PT_NOTE) continue;
+    if (phdr.p_type != PT_NOTE)
+      continue;
 
     struct {
       Elf32_Nhdr hdr;

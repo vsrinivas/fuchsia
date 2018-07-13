@@ -10,11 +10,11 @@
 
 #include "garnet/lib/inferior_control/process.h"
 
+#include "lib/fsl/handles/object_info.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/fsl/handles/object_info.h"
 
 #include "server.h"
 
@@ -48,9 +48,7 @@ constexpr char kUsageString[] =
     " 3 - FATAL\n"
     "Note that negative log levels mean more verbosity.\n";
 
-void PrintUsageString() {
-  std::cout << kUsageString << std::endl;
-}
+void PrintUsageString() { std::cout << kUsageString << std::endl; }
 
 }  // namespace
 
@@ -72,8 +70,7 @@ int main(int argc, char* argv[]) {
   std::string attach_pid_str;
   zx_koid_t attach_pid = ZX_KOID_INVALID;
   if (cl.GetOptionValue("attach", &attach_pid_str)) {
-    if (!fxl::StringToNumberWithError<zx_koid_t>(attach_pid_str,
-                                                 &attach_pid)) {
+    if (!fxl::StringToNumberWithError<zx_koid_t>(attach_pid_str, &attach_pid)) {
       FXL_LOG(ERROR) << "Not a valid process id: " << attach_pid_str;
       return EXIT_FAILURE;
     }

@@ -28,9 +28,7 @@ IOLoop::IOLoop(int fd, Delegate* delegate, async::Loop* origin_loop)
   FXL_DCHECK(origin_loop_);
 }
 
-IOLoop::~IOLoop() {
-  Quit();
-}
+IOLoop::~IOLoop() { Quit(); }
 
 void IOLoop::Run() {
   FXL_DCHECK(!is_running_);
@@ -42,7 +40,8 @@ void IOLoop::Run() {
   // Posts an asynchronous task on to listen for an incoming packet. This
   // initiates a loop that always reads for incoming packets. Called from
   // Run().
-  async::PostTask(read_loop_.dispatcher(), fit::bind_member(this, &IOLoop::OnReadTask));
+  async::PostTask(read_loop_.dispatcher(),
+                  fit::bind_member(this, &IOLoop::OnReadTask));
 }
 
 void IOLoop::Quit() {
@@ -81,7 +80,8 @@ void IOLoop::PostWriteTask(const fxl::StringView& bytes) {
 
 void IOLoop::ReportError() {
   // TODO(armansito): Pass a refptr/weaktpr to |this|?
-  async::PostTask(origin_loop_->dispatcher(), [this] { delegate_->OnIOError(); });
+  async::PostTask(origin_loop_->dispatcher(),
+                  [this] { delegate_->OnIOError(); });
 }
 
 void IOLoop::ReportDisconnected() {

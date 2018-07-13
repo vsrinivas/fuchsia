@@ -104,7 +104,8 @@ bool SingleStepBreakpoint::Insert() {
 
   // TODO: Manage things like the user having already set TF.
 
-  if (!SetRflagsTF(owner()->thread(), true)) return false;
+  if (!SetRflagsTF(owner()->thread(), true))
+    return false;
 
   inserted_ = true;
   return true;
@@ -116,7 +117,8 @@ bool SingleStepBreakpoint::Remove() {
     return false;
   }
 
-  if (!SetRflagsTF(owner()->thread(), false)) return false;
+  if (!SetRflagsTF(owner()->thread(), false))
+    return false;
 
   inserted_ = false;
   return true;

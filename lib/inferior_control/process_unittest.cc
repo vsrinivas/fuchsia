@@ -46,7 +46,8 @@ class AttachTest : public TestServer {
     if (!main_thread_started_) {
       // Must be the inferior's main thread.
       main_thread_started_ = true;
-      async::PostTask(message_loop().dispatcher(), [this] { DoDetachAttach(); });
+      async::PostTask(message_loop().dispatcher(),
+                      [this] { DoDetachAttach(); });
     }
     TestServer::OnThreadStarting(process, thread, context);
   }

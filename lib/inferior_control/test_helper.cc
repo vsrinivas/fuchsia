@@ -15,8 +15,8 @@ static int test_attach() {
   auto status = zx_object_wait_one(channel, ZX_CHANNEL_PEER_CLOSED,
                                    ZX_TIME_INFINITE, nullptr);
   if (status != ZX_OK) {
-    fprintf(stderr, "zx_object_wait_one failed: %d/%s\n",
-            status, zx_status_get_string(status));
+    fprintf(stderr, "zx_object_wait_one failed: %d/%s\n", status,
+            zx_status_get_string(status));
     return 1;
   }
   printf("test-attach complete, peer channel closed\n");

@@ -29,40 +29,27 @@ class CommandHandler final {
   // returns true, |callback| is guaranteed to be called exactly once.
   // |callback| can be called before HandleCommand returns.
   using ResponseCallback = fit::function<void(const fxl::StringView& rsp)>;
-  bool HandleCommand(const fxl::StringView& packet,
-                     ResponseCallback callback);
+  bool HandleCommand(const fxl::StringView& packet, ResponseCallback callback);
 
  private:
   // Command handlers for each "letter" packet. We use underscores in the method
   // names to clearly delineate lowercase letters.
   bool HandleQuestionMark(ResponseCallback callback);
-  bool Handle_c(const fxl::StringView& packet,
-                ResponseCallback callback);
-  bool Handle_C(const fxl::StringView& packet,
-                ResponseCallback callback);
-  bool Handle_D(const fxl::StringView& packet,
-                ResponseCallback callback);
+  bool Handle_c(const fxl::StringView& packet, ResponseCallback callback);
+  bool Handle_C(const fxl::StringView& packet, ResponseCallback callback);
+  bool Handle_D(const fxl::StringView& packet, ResponseCallback callback);
   bool Handle_g(ResponseCallback callback);
-  bool Handle_G(const fxl::StringView& packet,
+  bool Handle_G(const fxl::StringView& packet, ResponseCallback callback);
+  bool Handle_H(const fxl::StringView& packet, ResponseCallback callback);
+  bool Handle_m(const fxl::StringView& packet, ResponseCallback callback);
+  bool Handle_M(const fxl::StringView& packet, ResponseCallback callback);
+  bool Handle_q(const fxl::StringView& prefix, const fxl::StringView& params,
                 ResponseCallback callback);
-  bool Handle_H(const fxl::StringView& packet,
+  bool Handle_Q(const fxl::StringView& prefix, const fxl::StringView& params,
                 ResponseCallback callback);
-  bool Handle_m(const fxl::StringView& packet,
-                ResponseCallback callback);
-  bool Handle_M(const fxl::StringView& packet,
-                ResponseCallback callback);
-  bool Handle_q(const fxl::StringView& prefix,
-                const fxl::StringView& params,
-                ResponseCallback callback);
-  bool Handle_Q(const fxl::StringView& prefix,
-                const fxl::StringView& params,
-                ResponseCallback callback);
-  bool Handle_T(const fxl::StringView& packet,
-                ResponseCallback callback);
-  bool Handle_v(const fxl::StringView& packet,
-                ResponseCallback callback);
-  bool Handle_zZ(bool insert,
-                 const fxl::StringView& packet,
+  bool Handle_T(const fxl::StringView& packet, ResponseCallback callback);
+  bool Handle_v(const fxl::StringView& packet, ResponseCallback callback);
+  bool Handle_zZ(bool insert, const fxl::StringView& packet,
                  ResponseCallback callback);
 
   // q/Q packets:
@@ -88,22 +75,16 @@ class CommandHandler final {
                         ResponseCallback callback);
 
   // v packets:
-  bool Handle_vAttach(const fxl::StringView& packet,
-                      ResponseCallback callback);
-  bool Handle_vCont(const fxl::StringView& packet,
-                    ResponseCallback callback);
-  bool Handle_vKill(const fxl::StringView& packet,
-                    ResponseCallback callback);
-  bool Handle_vRun(const fxl::StringView& packet,
-                   ResponseCallback callback);
+  bool Handle_vAttach(const fxl::StringView& packet, ResponseCallback callback);
+  bool Handle_vCont(const fxl::StringView& packet, ResponseCallback callback);
+  bool Handle_vKill(const fxl::StringView& packet, ResponseCallback callback);
+  bool Handle_vRun(const fxl::StringView& packet, ResponseCallback callback);
 
   // Breakpoints
-  bool InsertSoftwareBreakpoint(uintptr_t addr,
-                                size_t kind,
+  bool InsertSoftwareBreakpoint(uintptr_t addr, size_t kind,
                                 const fxl::StringView& optional_params,
                                 ResponseCallback callback);
-  bool RemoveSoftwareBreakpoint(uintptr_t addr,
-                                size_t kind,
+  bool RemoveSoftwareBreakpoint(uintptr_t addr, size_t kind,
                                 ResponseCallback callback);
 
   // The root Server instance that owns us.

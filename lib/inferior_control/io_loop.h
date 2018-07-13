@@ -69,9 +69,15 @@ class IOLoop {
   bool quit_called() const { return quit_called_; }
   int fd() const { return fd_; }
   Delegate* delegate() const { return delegate_; }
-  async_dispatcher_t* origin_dispatcher() const { return origin_loop_->dispatcher(); }
-  async_dispatcher_t* read_dispatcher() const { return read_loop_.dispatcher(); }
-  async_dispatcher_t* write_dispatcher() const { return write_loop_.dispatcher(); }
+  async_dispatcher_t* origin_dispatcher() const {
+    return origin_loop_->dispatcher();
+  }
+  async_dispatcher_t* read_dispatcher() const {
+    return read_loop_.dispatcher();
+  }
+  async_dispatcher_t* write_dispatcher() const {
+    return write_loop_.dispatcher();
+  }
 
   // Helper method for StartReadTask, only called from the read thread.
   // Process one read request.

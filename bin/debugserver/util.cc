@@ -26,10 +26,8 @@ std::string BuildErrorPacket(ErrorCode error_code) {
   return "E" + errstr;
 }
 
-bool ParseThreadId(const fxl::StringView& bytes,
-                   bool* out_has_pid,
-                   int64_t* out_pid,
-                   int64_t* out_tid) {
+bool ParseThreadId(const fxl::StringView& bytes, bool* out_has_pid,
+                   int64_t* out_pid, int64_t* out_tid) {
   FXL_DCHECK(out_tid);
   FXL_DCHECK(out_has_pid);
   FXL_DCHECK(out_pid);
@@ -78,8 +76,7 @@ std::string EncodeThreadId(zx_koid_t pid, zx_koid_t tid) {
   return fxl::StringPrintf("p%s.%s", pid_string.c_str(), tid_string.c_str());
 }
 
-bool FindUnescapedChar(const char val,
-                       const fxl::StringView& packet,
+bool FindUnescapedChar(const char val, const fxl::StringView& packet,
                        size_t* out_index) {
   FXL_DCHECK(out_index);
 

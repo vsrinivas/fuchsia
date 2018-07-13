@@ -149,8 +149,8 @@ class ElfReader {
   // This version malloc's space for the section, reads the contents into
   // the buffer, and assigns it to SectionContents.
   ElfError GetSectionContents(
-    const ElfSectionHeader& sh,
-    std::unique_ptr<ElfSectionContents>* out_contents);
+      const ElfSectionHeader& sh,
+      std::unique_ptr<ElfSectionContents>* out_contents);
 
   // Maximum length in bytes of a build id.
   static constexpr size_t kMaxBuildIdSize = 64;
@@ -167,8 +167,8 @@ class ElfReader {
   bool Read(uint64_t address, void* buffer, size_t length) const;
 
  private:
-  ElfReader(const std::string& file_name,
-            std::shared_ptr<ByteBlock> byte_block, uint64_t base);
+  ElfReader(const std::string& file_name, std::shared_ptr<ByteBlock> byte_block,
+            uint64_t base);
 
   // For debugging/informational purposes only.
   const std::string file_name_;

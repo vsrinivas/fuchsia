@@ -218,8 +218,8 @@ bool CommandHandler::Handle_c(const fxl::StringView& packet,
     if (!current_thread->registers()->RefreshGeneralRegisters()) {
       return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
-    if (!current_thread->registers()->SetRegister(GetPCRegisterNumber(),
-                                                  &addr, sizeof(addr))) {
+    if (!current_thread->registers()->SetRegister(GetPCRegisterNumber(), &addr,
+                                                  sizeof(addr))) {
       return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
     if (!current_thread->registers()->WriteGeneralRegisters()) {
@@ -280,8 +280,8 @@ bool CommandHandler::Handle_C(const fxl::StringView& packet,
     semicolon = packet.size();
 
   int signo;
-  if (!fxl::StringToNumberWithError<int>(packet.substr(0, semicolon),
-                                         &signo, fxl::Base::k16)) {
+  if (!fxl::StringToNumberWithError<int>(packet.substr(0, semicolon), &signo,
+                                         fxl::Base::k16)) {
     FXL_LOG(ERROR) << "C: Malformed packet: " << packet;
     return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
@@ -318,8 +318,8 @@ bool CommandHandler::Handle_C(const fxl::StringView& packet,
     if (!current_thread->registers()->RefreshGeneralRegisters()) {
       return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
-    if (!current_thread->registers()->SetRegister(GetPCRegisterNumber(),
-                                                  &addr, sizeof(addr))) {
+    if (!current_thread->registers()->SetRegister(GetPCRegisterNumber(), &addr,
+                                                  sizeof(addr))) {
       return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
     if (!current_thread->registers()->WriteGeneralRegisters()) {
@@ -658,7 +658,8 @@ bool CommandHandler::Handle_q(const fxl::StringView& prefix,
 
   // The qRcmd packet is different than most. It uses , as a delimiter, not :.
   if (StartsWith(prefix, kRcmd))
-    return HandleQueryRcmd(prefix.substr(std::strlen(kRcmd)), std::move(callback));
+    return HandleQueryRcmd(prefix.substr(std::strlen(kRcmd)),
+                           std::move(callback));
 
   if (prefix == kSubsequentThreadInfo)
     return HandleQueryThreadInfo(false, std::move(callback));
@@ -697,8 +698,7 @@ bool CommandHandler::Handle_T(const fxl::StringView& packet,
   }
 
   zx_koid_t tid;
-  if (!fxl::StringToNumberWithError<zx_koid_t>(packet, &tid,
-                                               fxl::Base::k16)) {
+  if (!fxl::StringToNumberWithError<zx_koid_t>(packet, &tid, fxl::Base::k16)) {
     FXL_LOG(ERROR) << "T: Malformed thread id given: " << packet;
     return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
@@ -719,7 +719,8 @@ bool CommandHandler::Handle_T(const fxl::StringView& packet,
 bool CommandHandler::Handle_v(const fxl::StringView& packet,
                               ResponseCallback callback) {
   if (StartsWith(packet, kAttach))
-    return Handle_vAttach(packet.substr(std::strlen(kAttach)), std::move(callback));
+    return Handle_vAttach(packet.substr(std::strlen(kAttach)),
+                          std::move(callback));
   if (StartsWith(packet, kCont))
     return Handle_vCont(packet.substr(std::strlen(kCont)), std::move(callback));
   if (StartsWith(packet, kKill))
@@ -730,8 +731,7 @@ bool CommandHandler::Handle_v(const fxl::StringView& packet,
   return false;
 }
 
-bool CommandHandler::Handle_zZ(bool insert,
-                               const fxl::StringView& packet,
+bool CommandHandler::Handle_zZ(bool insert, const fxl::StringView& packet,
                                ResponseCallback callback) {
 // Z0 needs more work. Disabled until ready.
 // One issue is we need to support the swbreak feature.
@@ -803,9 +803,8 @@ bool CommandHandler::HandleQueryAttached(const fxl::StringView& params,
   return true;
 }
 
-bool CommandHandler::HandleQueryCurrentThreadId(
-    const fxl::StringView& params,
-    ResponseCallback callback) {
+bool CommandHandler::HandleQueryCurrentThreadId(const fxl::StringView& params,
+                                                ResponseCallback callback) {
   // The "qC" packet has no parameters.
   if (!params.empty())
     return ReplyWithError(ErrorCode::INVAL, std::move(callback));
@@ -840,9 +839,8 @@ bool CommandHandler::HandleQueryCurrentThreadId(
 bool CommandHandler::HandleQueryRcmd(const fxl::StringView& command,
                                      ResponseCallback callback) {
   auto cmd_string = DecodeString(command);
-  std::vector<fxl::StringView> argv =
-    fxl::SplitString(cmd_string, " ",
-                     fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+  std::vector<fxl::StringView> argv = fxl::SplitString(
+      cmd_string, " ", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
   if (argv.size() == 0) {
     // No command, just reply OK.
     return ReplyOK(std::move(callback));
@@ -859,14 +857,14 @@ bool CommandHandler::HandleQueryRcmd(const fxl::StringView& command,
     if (argv.size() != 1)
       goto bad_command;
     static constexpr char kHelpText[] =
-      "help - print this help text\n"
-      "exit - quit debugserver\n"
-      "quit - quit debugserver\n"
-      "set <parameter> <value>\n"
-      "show <parameter>\n"
-      "\n"
-      "Parameters:\n"
-      "  verbosity - useful range is -2 to 3 (-2 is most verbose)\n";
+        "help - print this help text\n"
+        "exit - quit debugserver\n"
+        "quit - quit debugserver\n"
+        "set <parameter> <value>\n"
+        "show <parameter>\n"
+        "\n"
+        "Parameters:\n"
+        "  verbosity - useful range is -2 to 3 (-2 is most verbose)\n";
     callback(EncodeString(kHelpText));
   } else if (cmd == kSet) {
     if (argv.size() != 3)
@@ -887,7 +885,7 @@ bool CommandHandler::HandleQueryRcmd(const fxl::StringView& command,
 
   return true;
 
- bad_command:
+bad_command:
   // Errors are not reported via the usual mechanism. For rCmd, the usual
   // mechanism is for things like protocol errors. Instead we just want to
   // return the desired error message.
@@ -1155,7 +1153,7 @@ bool CommandHandler::Handle_vCont(const fxl::StringView& packet,
 
   bool action_list_ok = true;
   current_process->ForEachLiveThread(
-      [&actions, ok_ptr = &action_list_ok](Thread * thread) {
+      [&actions, ok_ptr = &action_list_ok](Thread* thread) {
         zx_koid_t pid = thread->process()->id();
         zx_koid_t tid = thread->id();
         ThreadActionList::Action action = actions.GetAction(pid, tid);
@@ -1302,9 +1300,7 @@ bool CommandHandler::Handle_vRun(const fxl::StringView& packet,
 }
 
 bool CommandHandler::InsertSoftwareBreakpoint(
-    uintptr_t addr,
-    size_t kind,
-    const fxl::StringView& optional_params,
+    uintptr_t addr, size_t kind, const fxl::StringView& optional_params,
     ResponseCallback callback) {
   FXL_VLOG(1) << fxl::StringPrintf(
       "Insert software breakpoint at %" PRIxPTR ", kind: %lu", addr, kind);
@@ -1325,10 +1321,8 @@ bool CommandHandler::InsertSoftwareBreakpoint(
   return ReplyOK(std::move(callback));
 }
 
-bool CommandHandler::RemoveSoftwareBreakpoint(
-    uintptr_t addr,
-    size_t kind,
-    ResponseCallback callback) {
+bool CommandHandler::RemoveSoftwareBreakpoint(uintptr_t addr, size_t kind,
+                                              ResponseCallback callback) {
   FXL_VLOG(1) << fxl::StringPrintf("Remove software breakpoint at %" PRIxPTR,
                                    addr);
 

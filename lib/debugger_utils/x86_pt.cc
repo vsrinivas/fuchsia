@@ -21,7 +21,7 @@ namespace debugserver {
   (((x) >> (low)) & ((ONE(x) << ((high) - (low) + 1)) - 1))
 
 static X86ProcessorTraceFeatures pt_features;  // TODO(dje): guard annotation
-static bool initialized = false;            // TODO(dje): guard annotation
+static bool initialized = false;               // TODO(dje): guard annotation
 static std::mutex cpuid_mutex;
 
 bool X86HaveProcessorTrace() {
@@ -34,12 +34,14 @@ const X86ProcessorTraceFeatures* X86GetProcessorTraceFeatures() {
 
   X86ProcessorTraceFeatures* pt = &pt_features;
 
-  if (initialized) return pt;
+  if (initialized)
+    return pt;
 
   memset(pt, 0, sizeof(*pt));
   initialized = true;
 
-  if (!x86_feature_test(X86_FEATURE_PT)) return pt;
+  if (!x86_feature_test(X86_FEATURE_PT))
+    return pt;
 
   unsigned a, b, c, d;
   unsigned max_leaf = __get_cpuid_max(0, nullptr);
@@ -47,7 +49,8 @@ const X86ProcessorTraceFeatures* X86GetProcessorTraceFeatures() {
   pt->have_pt = true;
 
   __cpuid_count(0x14, 0, a, b, c, d);
-  if (BIT(b, 2)) pt->addr_cfg_max = 2;
+  if (BIT(b, 2))
+    pt->addr_cfg_max = 2;
   if (BIT(b, 1) && a >= 1) {
     unsigned a1, b1, c1, d1;
     __cpuid_count(0x14, 1, a1, b1, c1, d1);

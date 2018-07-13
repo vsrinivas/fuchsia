@@ -38,7 +38,8 @@ bool HexCharToByte(char hex_char, uint8_t* out_byte) {
 char HalfByteToHexChar(uint8_t byte) {
   FXL_DCHECK(byte < 0x10);
 
-  if (byte < 10) return '0' + byte;
+  if (byte < 10)
+    return '0' + byte;
 
   return 'a' + (byte % 10);
 }
@@ -65,7 +66,8 @@ void EncodeByteString(const uint8_t byte, char out_hex[2]) {
 
 std::string EncodeByteArrayString(const uint8_t* bytes, size_t num_bytes) {
   const size_t kResultSize = num_bytes * 2;
-  if (!kResultSize) return "";
+  if (!kResultSize)
+    return "";
 
   std::string result;
   result.resize(kResultSize);
@@ -90,7 +92,8 @@ std::vector<uint8_t> DecodeByteArrayString(const fxl::StringView& string) {
     return result;
   }
 
-  if (string.empty()) return result;
+  if (string.empty())
+    return result;
 
   const size_t kResultSize = string.size() / 2;
   result.resize(kResultSize);
@@ -138,7 +141,8 @@ size_t JoinStrings(const std::deque<std::string>& strings, const char delimiter,
     FXL_DCHECK(index + str.length() <= buffer_size);
     memcpy(buffer + index, str.data(), str.length());
     index += str.length();
-    if (++count == strings.size()) break;
+    if (++count == strings.size())
+      break;
     FXL_DCHECK(index < buffer_size);
     buffer[index++] = delimiter;
   }
@@ -155,11 +159,14 @@ Argv BuildArgv(const fxl::StringView& args) {
 
   size_t n = args.size();
   for (size_t i = 0; i < n; ++i) {
-    while (i < n && isspace(args[i])) ++i;
-    if (i == n) break;
+    while (i < n && isspace(args[i]))
+      ++i;
+    if (i == n)
+      break;
     size_t start = i;
     ++i;
-    while (i < n && !isspace(args[i])) ++i;
+    while (i < n && !isspace(args[i]))
+      ++i;
     result.push_back(args.substr(start, i - start).ToString());
   }
 
@@ -167,11 +174,13 @@ Argv BuildArgv(const fxl::StringView& args) {
 }
 
 std::string ArgvToString(const Argv& argv) {
-  if (argv.size() == 0) return "";
+  if (argv.size() == 0)
+    return "";
 
   std::string result(argv[0]);
 
-  for (auto a = argv.begin() + 1; a != argv.end(); ++a) result += " " + *a;
+  for (auto a = argv.begin() + 1; a != argv.end(); ++a)
+    result += " " + *a;
 
   return result;
 }
@@ -187,7 +196,8 @@ char* xstrdup(const char* s) {
 
 const char* basename(const char* path) {
   const char* base = strrchr(path, '/');
-  if (base == nullptr) return path;
+  if (base == nullptr)
+    return path;
   return base + 1;
 }
 

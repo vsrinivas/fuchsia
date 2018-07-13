@@ -88,7 +88,8 @@ bool Thread::IsLive() const {
 
 void Thread::Clear() {
   // We close the handle here so the o/s will release the thread.
-  if (handle_ != ZX_HANDLE_INVALID) zx_handle_close(handle_);
+  if (handle_ != ZX_HANDLE_INVALID)
+    zx_handle_close(handle_);
   handle_ = ZX_HANDLE_INVALID;
 }
 
@@ -143,8 +144,7 @@ bool Thread::Resume() {
 
   zx_status_t status = zx_task_resume(handle_, ZX_RESUME_EXCEPTION);
   if (status < 0) {
-    FXL_LOG(ERROR) << "Failed to resume thread: "
-                   << ZxErrorString(status);
+    FXL_LOG(ERROR) << "Failed to resume thread: " << ZxErrorString(status);
     return false;
   }
 
@@ -203,7 +203,8 @@ bool Thread::Step() {
   }
   zx_vaddr_t pc = registers_->GetPC();
 
-  if (!breakpoints_.InsertSingleStepBreakpoint(pc)) return false;
+  if (!breakpoints_.InsertSingleStepBreakpoint(pc))
+    return false;
 
   // This is printed here before resuming the task so that this is always
   // printed before any subsequent exception report (which is read by another

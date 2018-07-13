@@ -372,9 +372,9 @@ zx_status_t WalkJobTree(zx::job& job, JobTreeJobCallback* job_callback,
 
 zx::process FindProcess(zx::job& job, zx_koid_t pid) {
   zx::process process;
-  JobTreeProcessCallback find_process_callback = [&] (
-      zx::process& task, zx_koid_t koid,
-      zx_koid_t parent_koid, int depth) -> zx_status_t {
+  JobTreeProcessCallback find_process_callback =
+      [&](zx::process& task, zx_koid_t koid, zx_koid_t parent_koid,
+          int depth) -> zx_status_t {
     if (koid == pid) {
       process.reset(task.release());
       return ZX_ERR_STOP;

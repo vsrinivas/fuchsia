@@ -132,7 +132,8 @@ class RegistersAmd64 final : public Registers {
   }
 
   std::string GetFormattedRegset(int regset) override {
-    if (regset != 0) return fxl::StringPrintf("Invalid regset %d\n", regset);
+    if (regset != 0)
+      return fxl::StringPrintf("Invalid regset %d\n", regset);
 
     return FormatGeneralRegisters();
   }

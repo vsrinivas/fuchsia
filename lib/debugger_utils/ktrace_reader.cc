@@ -43,7 +43,8 @@ int KtraceReadFile(int fd, KtraceRecordReader* reader, void* arg) {
     }
 
     int rc = reader(&rec, arg);
-    if (rc) return rc;
+    if (rc)
+      return rc;
   }
 
   return 0;

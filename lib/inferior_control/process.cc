@@ -83,8 +83,7 @@ zx_koid_t GetProcessId(zx_handle_t process) {
   zx_status_t status = zx_object_get_info(process, ZX_INFO_HANDLE_BASIC, &info,
                                           sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_object_get_info_failed: "
-                   << ZxErrorString(status);
+    FXL_LOG(ERROR) << "zx_object_get_info_failed: " << ZxErrorString(status);
     return ZX_KOID_INVALID;
   }
 
@@ -306,8 +305,7 @@ bool Process::AllocDebugHandle(process::ProcessBuilder* builder) {
   auto status =
       zx_handle_duplicate(process, ZX_RIGHT_SAME_RIGHTS, &debug_process);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_handle_duplicate failed: "
-                   << ZxErrorString(status);
+    FXL_LOG(ERROR) << "zx_handle_duplicate failed: " << ZxErrorString(status);
     return false;
   }
 
@@ -796,9 +794,7 @@ int Process::ExitCode() {
   }
 }
 
-const dsoinfo_t* Process::GetExecDso() {
-  return dso_get_main_exec(dsos_);
-}
+const dsoinfo_t* Process::GetExecDso() { return dso_get_main_exec(dsos_); }
 
 dsoinfo_t* Process::LookupDso(zx_vaddr_t pc) const {
   return dso_lookup(dsos_, pc);

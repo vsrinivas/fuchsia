@@ -40,4 +40,4 @@ void ResetThreadPerf(Thread* thread, const IptConfig& config);
 
 void FreeTrace(const IptConfig& config);
 
-} // debugserver namespace
+}  // namespace debugserver

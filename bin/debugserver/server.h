@@ -53,8 +53,7 @@ class RspServer final : public ServerWithIO {
   // A notification will time out if the remote end does not acknowledge it
   // within |timeout|. If a notification times out, it will be sent again.
   void QueueNotification(
-      const fxl::StringView& name,
-      const fxl::StringView& event,
+      const fxl::StringView& name, const fxl::StringView& event,
       const fxl::TimeDelta& timeout =
           fxl::TimeDelta::FromSeconds(kDefaultTimeoutSeconds));
 
@@ -69,8 +68,7 @@ class RspServer final : public ServerWithIO {
                     const fxl::StringView& value);
 
   // Store the value of |parameter| in |*value|. Return true if success.
-  bool GetParameter(const fxl::StringView& parameter,
-                    std::string* value);
+  bool GetParameter(const fxl::StringView& parameter, std::string* value);
 
  private:
   // Maximum number of characters in the outbound buffer.
@@ -129,23 +127,19 @@ class RspServer final : public ServerWithIO {
   void OnIOError() override;
 
   // Process::Delegate overrides.
-  void OnThreadStarting(Process* process,
-                       Thread* thread,
-                       const zx_exception_context_t& context) override;
-  void OnThreadExiting(Process* process,
-                       Thread* thread,
+  void OnThreadStarting(Process* process, Thread* thread,
+                        const zx_exception_context_t& context) override;
+  void OnThreadExiting(Process* process, Thread* thread,
                        const zx_exception_context_t& context) override;
   void OnProcessExit(Process* process) override;
-  void OnArchitecturalException(Process* process,
-                                Thread* thread,
+  void OnArchitecturalException(Process* process, Thread* thread,
                                 const zx_excp_type_t type,
                                 const zx_exception_context_t& context) override;
   void OnSyntheticException(Process* process, Thread* thread,
                             zx_excp_type_t type,
                             const zx_exception_context_t& context) override;
-  void ExceptionHelper(
-      Process* process, Thread* thread, zx_excp_type_t type,
-      const zx_exception_context_t& context);
+  void ExceptionHelper(Process* process, Thread* thread, zx_excp_type_t type,
+                       const zx_exception_context_t& context);
 
   // TCP port number that we will listen on.
   uint16_t port_;

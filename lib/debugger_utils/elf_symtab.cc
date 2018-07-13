@@ -13,7 +13,8 @@ ElfSymbolTable::ElfSymbolTable(const std::string& file_name,
     : file_name_(file_name), contents_(contents) {}
 
 ElfSymbolTable::~ElfSymbolTable() {
-  if (symbols_) delete[] symbols_;
+  if (symbols_)
+    delete[] symbols_;
 }
 
 bool ElfSymbolTable::Populate(ElfReader* elf, unsigned symtab_type) {
@@ -27,13 +28,13 @@ bool ElfSymbolTable::Populate(ElfReader* elf, unsigned symtab_type) {
 
   ElfError rc = elf->ReadSectionHeaders();
   if (rc != ElfError::OK) {
-    FXL_LOG(ERROR) << "Error reading ELF section headers: "
-                   << ElfErrorName(rc);
+    FXL_LOG(ERROR) << "Error reading ELF section headers: " << ElfErrorName(rc);
     return false;
   }
 
   const ElfSectionHeader* shdr = elf->GetSectionHeaderByType(symtab_type);
-  if (!shdr) return true;  // empty symbol table
+  if (!shdr)
+    return true;  // empty symbol table
 
   size_t num_sections = elf->GetNumSections();
   size_t string_section = shdr->sh_link;
@@ -85,8 +86,10 @@ bool ElfSymbolTable::Populate(ElfReader* elf, unsigned symtab_type) {
 static int CompareSymbol(const void* ap, const void* bp) {
   auto a = reinterpret_cast<const ElfSymbol*>(ap);
   auto b = reinterpret_cast<const ElfSymbol*>(bp);
-  if (a->addr >= b->addr && a->addr < b->addr + b->size) return 0;
-  if (b->addr >= a->addr && b->addr < a->addr + a->size) return 0;
+  if (a->addr >= b->addr && a->addr < b->addr + b->size)
+    return 0;
+  if (b->addr >= a->addr && b->addr < a->addr + a->size)
+    return 0;
   return a->addr - b->addr;
 }
 
@@ -99,9 +102,8 @@ const ElfSymbol* ElfSymbolTable::FindSymbol(uint64_t addr) const {
 
   /* add last hit cache here */
 
-  auto s = reinterpret_cast<const ElfSymbol*>(
-      bsearch(&search, symbols_, num_symbols_, sizeof(ElfSymbol),
-              CompareSymbol));
+  auto s = reinterpret_cast<const ElfSymbol*>(bsearch(
+      &search, symbols_, num_symbols_, sizeof(ElfSymbol), CompareSymbol));
   return s;
 }
 
@@ -110,7 +112,8 @@ void ElfSymbolTable::Dump(FILE* f) const {
   fprintf(f, "contents: %s\n", contents_.c_str());
   for (size_t i = 0; i < num_symbols_; i++) {
     ElfSymbol* s = &symbols_[i];
-    if (s->addr && s->name[0]) fprintf(f, "%p %s\n", (void*)s->addr, s->name);
+    if (s->addr && s->name[0])
+      fprintf(f, "%p %s\n", (void*)s->addr, s->name);
   }
 }
 

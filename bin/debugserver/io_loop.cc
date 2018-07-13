@@ -15,8 +15,7 @@
 namespace debugserver {
 
 RspIOLoop::RspIOLoop(int in_fd, Delegate* delegate, async::Loop* loop)
-    : IOLoop(in_fd, delegate, loop) {
-}
+    : IOLoop(in_fd, delegate, loop) {}
 
 void RspIOLoop::OnReadTask() {
   FXL_DCHECK(async_get_default_dispatcher() == read_dispatcher());
@@ -32,8 +31,8 @@ void RspIOLoop::OnReadTask() {
 
   // There was an error
   if (read_size < 0) {
-    FXL_LOG(ERROR) << "Error occurred while waiting for a packet" << ", "
-                   << ErrnoString(errno);
+    FXL_LOG(ERROR) << "Error occurred while waiting for a packet"
+                   << ", " << ErrnoString(errno);
     ReportError();
     return;
   }
@@ -45,9 +44,10 @@ void RspIOLoop::OnReadTask() {
   // into the closure as |in_buffer_| can get modified before the closure
   // runs.
   // TODO(armansito): Pass a weakptr to |delegate_|?
-  async::PostTask(origin_dispatcher(), [ bytes_read = bytes_read.ToString(), this ] {
-    delegate()->OnBytesRead(bytes_read);
-  });
+  async::PostTask(origin_dispatcher(),
+                  [bytes_read = bytes_read.ToString(), this] {
+                    delegate()->OnBytesRead(bytes_read);
+                  });
 
   if (!quit_called()) {
     async::PostTask(read_dispatcher(), std::bind(&RspIOLoop::OnReadTask, this));

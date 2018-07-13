@@ -38,20 +38,18 @@ constexpr char kStopAck[] = "vStopped";
 }  // namespace
 
 RspServer::PendingNotification::PendingNotification(
-    const fxl::StringView& name,
-    const fxl::StringView& event,
+    const fxl::StringView& name, const fxl::StringView& event,
     const fxl::TimeDelta& timeout)
     : name(name.data(), name.size()),
       event(event.data(), event.size()),
       timeout(timeout) {}
 
 RspServer::RspServer(uint16_t port, zx_koid_t initial_attach_pid)
-  : ServerWithIO(GetRootJob(), GetDefaultJob()),
-    port_(port),
-    initial_attach_pid_(initial_attach_pid),
-    server_sock_(-1),
-    command_handler_(this) {
-}
+    : ServerWithIO(GetRootJob(), GetDefaultJob()),
+      port_(port),
+      initial_attach_pid_(initial_attach_pid),
+      server_sock_(-1),
+      command_handler_(this) {}
 
 bool RspServer::Run() {
   FXL_DCHECK(!io_loop_);
@@ -92,8 +90,8 @@ bool RspServer::Run() {
   // |client_sock_| should be ready to be consumed now.
   FXL_DCHECK(client_sock_.is_valid());
 
-  io_loop_ = std::make_unique<RspIOLoop>(client_sock_.get(), this,
-                                         &message_loop_);
+  io_loop_ =
+      std::make_unique<RspIOLoop>(client_sock_.get(), this, &message_loop_);
   io_loop_->Run();
 
   // Start the main loop.
@@ -365,8 +363,7 @@ void RspServer::OnIOError() {
   QuitMessageLoop(false);
 }
 
-void RspServer::OnThreadStarting(Process* process,
-                                 Thread* thread,
+void RspServer::OnThreadStarting(Process* process, Thread* thread,
                                  const zx_exception_context_t& context) {
   FXL_DCHECK(process);
 
@@ -395,8 +392,7 @@ void RspServer::OnThreadStarting(Process* process,
   }
 }
 
-void RspServer::OnThreadExiting(Process* process,
-                                Thread* thread,
+void RspServer::OnThreadExiting(Process* process, Thread* thread,
                                 const zx_exception_context_t& context) {
   std::vector<char> packet;
   FXL_LOG(INFO) << "Thread " << thread->GetName() << " exited";
@@ -426,15 +422,12 @@ void RspServer::OnProcessExit(Process* process) {
 }
 
 void RspServer::OnArchitecturalException(
-    Process* process,
-    Thread* thread,
-    const zx_excp_type_t type,
+    Process* process, Thread* thread, const zx_excp_type_t type,
     const zx_exception_context_t& context) {
   ExceptionHelper(process, thread, type, context);
 }
 
-void RspServer::OnSyntheticException(Process* process,
-                                     Thread* thread,
+void RspServer::OnSyntheticException(Process* process, Thread* thread,
                                      zx_excp_type_t type,
                                      const zx_exception_context_t& context) {
   // These are basically equivalent to architectural exceptions
@@ -442,8 +435,7 @@ void RspServer::OnSyntheticException(Process* process,
   ExceptionHelper(process, thread, type, context);
 }
 
-void RspServer::ExceptionHelper(Process* process,
-                                Thread* thread,
+void RspServer::ExceptionHelper(Process* process, Thread* thread,
                                 zx_excp_type_t type,
                                 const zx_exception_context_t& context) {
   FXL_DCHECK(process);
@@ -453,8 +445,7 @@ void RspServer::ExceptionHelper(Process* process,
     FXL_VLOG(1) << "Architectural Exception: "
                 << ExceptionToString(type, context);
   } else {
-    FXL_VLOG(1) << "Synthetic Exception: "
-                << ExceptionToString(type, context);
+    FXL_VLOG(1) << "Synthetic Exception: " << ExceptionToString(type, context);
   }
 
   // TODO(armansito): Fine-tune this check if we ever support multi-processing.
@@ -476,9 +467,8 @@ void RspServer::ExceptionHelper(Process* process,
 
   // Registers.
   if (thread->registers()->RefreshGeneralRegisters()) {
-    std::array<int, 3> regnos{{GetFPRegisterNumber(),
-                               GetSPRegisterNumber(),
-                               GetPCRegisterNumber()}};
+    std::array<int, 3> regnos{
+        {GetFPRegisterNumber(), GetSPRegisterNumber(), GetPCRegisterNumber()}};
     for (int regno : regnos) {
       FXL_DCHECK(regno < std::numeric_limits<uint8_t>::max() && regno >= 0);
       std::string regval = thread->registers()->GetRegisterAsString(regno);
