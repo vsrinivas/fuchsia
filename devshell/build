@@ -23,9 +23,7 @@ function locked {
   declare -r cmd="$@"
 
   if which flock >/dev/null; then
-    (
-      flock -n 9 || echo "Locked by ${LOCK_FILE}..."
-    ) 9>"${LOCK_FILE}"
+    flock -n "${LOCK_FILE}" -c true || echo "Locked by ${LOCK_FILE}..."
     flock "${LOCK_FILE}" -c "${cmd}"
   else
     # Some platforms don't have flock, fall back to shlock.
