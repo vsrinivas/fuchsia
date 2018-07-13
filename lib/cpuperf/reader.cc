@@ -19,7 +19,7 @@ Reader::Reader(int fd, uint32_t buffer_size)
     : fd_(fd), buffer_size_(buffer_size), num_cpus_(zx_system_get_num_cpus()) {
   FXL_DCHECK(fd_ >= 0);
   uintptr_t addr;
-  auto status = zx::vmar::root_self().allocate(
+  auto status = zx::vmar::root_self()->allocate(
       0u, buffer_size_, ZX_VM_FLAG_CAN_MAP_READ, &vmar_, &addr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Unable to obtain vmar for reading trace data: "

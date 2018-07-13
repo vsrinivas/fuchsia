@@ -22,7 +22,7 @@ static void dump(zx::vmo vmo, zx_vaddr_t addr, size_t len) {
   }
   uintptr_t guest_addr;
   status =
-      zx::vmar::root_self().map(0 /* vmar_offset */, vmo, 0 /* vmo_offset */,
+      zx::vmar::root_self()->map(0 /* vmar_offset */, vmo, 0 /* vmo_offset */,
                                 vmo_size, ZX_VM_FLAG_PERM_READ, &guest_addr);
   if (status != ZX_OK) {
     std::cerr << "Failed to map guest memory\n";

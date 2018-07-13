@@ -41,14 +41,14 @@ HostData::HostData(const zx::vmo& vmo, off_t offset, size_t size,
     : size_(size) {
   uintptr_t ptr;
   zx_status_t status =
-      zx::vmar::root_self().map(0, vmo, offset, size, flags, &ptr);
+      zx::vmar::root_self()->map(0, vmo, offset, size, flags, &ptr);
   FXL_CHECK(status == ZX_OK) << "map failed: status=" << status;
   ptr_ = reinterpret_cast<void*>(ptr);
 }
 
 HostData::~HostData() {
   zx_status_t status =
-      zx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(ptr_), size_);
+      zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(ptr_), size_);
   FXL_CHECK(status == ZX_OK) << "unmap failed: status=" << status;
 }
 

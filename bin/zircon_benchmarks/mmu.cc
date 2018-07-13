@@ -17,7 +17,7 @@ class Mmu : public benchmark::Fixture {
  private:
   void SetUp(benchmark::State& state) override {
     vmar_size_ = GB(1);
-    if (zx::vmar::root_self().allocate(
+    if (zx::vmar::root_self()->allocate(
             0, vmar_size_,
             ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_SPECIFIC, &vmar_,
             &vmar_base_) != ZX_OK) {

@@ -3334,7 +3334,7 @@ OmxCodecRunner::Buffer::Buffer(OmxCodecRunner* parent, Port port,
 
 OmxCodecRunner::Buffer::~Buffer() {
   if (buffer_base_) {
-    zx_status_t res = zx::vmar::root_self().unmap(
+    zx_status_t res = zx::vmar::root_self()->unmap(
         reinterpret_cast<uintptr_t>(buffer_base()), buffer_size());
     if (res != ZX_OK) {
       parent_->Exit(
@@ -3352,7 +3352,7 @@ bool OmxCodecRunner::Buffer::Init(bool input_require_write) {
   if (port_ == kOutput || input_require_write) {
     flags |= ZX_VM_FLAG_PERM_WRITE;
   }
-  zx_status_t res = zx::vmar::root_self().map(
+  zx_status_t res = zx::vmar::root_self()->map(
       0, buffer_.data.vmo().vmo_handle, buffer_.data.vmo().vmo_usable_start,
       buffer_.data.vmo().vmo_usable_size, flags, &tmp);
   if (res != ZX_OK) {

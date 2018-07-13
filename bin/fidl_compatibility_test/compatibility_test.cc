@@ -876,7 +876,7 @@ void Initialize(Struct* s) {
             zx::job::create(*zx::job::default_job(), 0u, &s->handles.job_handle));
 
   uintptr_t vmar_addr;
-  ASSERT_EQ(ZX_OK, zx::vmar::root_self().allocate(
+  ASSERT_EQ(ZX_OK, zx::vmar::root_self()->allocate(
                        0u, getpagesize(), ZX_VM_FLAG_CAN_MAP_READ,
                        &s->handles.vmar_handle, &vmar_addr));
 

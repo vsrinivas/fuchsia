@@ -29,7 +29,7 @@ zx_status_t VolatileWriteBlockDispatcher::Create(
   }
 
   uintptr_t vmar_addr;
-  status = zx::vmar::root_self().map(
+  status = zx::vmar::root_self()->map(
       0, vmo, 0, dispatcher->size(),
       ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &vmar_addr);
   if (status != ZX_OK) {
@@ -52,7 +52,7 @@ VolatileWriteBlockDispatcher::VolatileWriteBlockDispatcher(
 
 VolatileWriteBlockDispatcher::~VolatileWriteBlockDispatcher() {
   __UNUSED zx_status_t status =
-      zx::vmar::root_self().unmap(vmar_addr_, dispatcher_->size());
+      zx::vmar::root_self()->unmap(vmar_addr_, dispatcher_->size());
   FXL_DCHECK(status == ZX_OK);
 }
 

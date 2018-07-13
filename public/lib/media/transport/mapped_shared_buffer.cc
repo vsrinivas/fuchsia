@@ -67,7 +67,7 @@ zx_status_t MappedSharedBuffer::InitInternal(zx::vmo vmo, uint32_t map_flags) {
   // TODO(dalesat): Map only for required operations (read or write).
   uintptr_t mapped_buffer = 0u;
   status =
-      zx::vmar::root_self().map(0, vmo, 0u, size, map_flags, &mapped_buffer);
+      zx::vmar::root_self()->map(0, vmo, 0u, size, map_flags, &mapped_buffer);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "zx::vmar::map failed, status " << status;
     return status;
@@ -87,7 +87,7 @@ bool MappedSharedBuffer::initialized() const { return buffer_ptr_ != nullptr; }
 void MappedSharedBuffer::Reset() {
   if (buffer_ptr_ != nullptr) {
     FXL_DCHECK(size_ != 0);
-    zx_status_t status = zx::vmar::root_self().unmap(
+    zx_status_t status = zx::vmar::root_self()->unmap(
         reinterpret_cast<uintptr_t>(buffer_ptr_), size_);
     FXL_CHECK(status == ZX_OK);
     buffer_ptr_ = nullptr;

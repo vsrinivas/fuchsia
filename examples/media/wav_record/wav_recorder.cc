@@ -35,7 +35,7 @@ WavRecorder::~WavRecorder() {
   if (payload_buf_virt_ != nullptr) {
     FXL_DCHECK(payload_buf_size_ != 0);
     FXL_DCHECK(bytes_per_frame_ != 0);
-    zx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(payload_buf_virt_),
+    zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(payload_buf_virt_),
                                 payload_buf_size_);
   }
 }
@@ -134,7 +134,7 @@ bool WavRecorder::SetupPayloadBuffer() {
   }
 
   uintptr_t tmp;
-  res = zx::vmar::root_self().map(0, payload_buf_vmo_, 0, payload_buf_size_,
+  res = zx::vmar::root_self()->map(0, payload_buf_vmo_, 0, payload_buf_size_,
                                   ZX_VM_FLAG_PERM_READ, &tmp);
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to map " << payload_buf_size_

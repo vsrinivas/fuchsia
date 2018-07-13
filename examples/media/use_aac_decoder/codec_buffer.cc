@@ -28,7 +28,7 @@ bool CodecBuffer::Init() {
 
   // Map the VMO in the local address space.
   uintptr_t tmp;
-  res = zx::vmar::root_self().map(0, local_vmo, 0, size_bytes_,
+  res = zx::vmar::root_self()->map(0, local_vmo, 0, size_bytes_,
                                   ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                                   &tmp);
   if (res != ZX_OK) {
@@ -45,7 +45,7 @@ bool CodecBuffer::Init() {
 
 CodecBuffer::~CodecBuffer() {
   if (base_) {
-    zx_status_t res = zx::vmar::root_self().unmap(
+    zx_status_t res = zx::vmar::root_self()->unmap(
         reinterpret_cast<uintptr_t>(base_), size_bytes_);
     if (res != ZX_OK) {
       Exit("Failed to unmap %zu byte buffer vmo (res %d) - exiting\n",

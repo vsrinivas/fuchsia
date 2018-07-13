@@ -29,7 +29,7 @@ uintptr_t GetData(const fsl::SizedVmo& icu_data, size_t* size_out) {
 
   uintptr_t data = 0u;
   zx_status_t status =
-      zx::vmar::root_self().map(0, icu_data.vmo(), 0, static_cast<size_t>(data_size),
+      zx::vmar::root_self()->map(0, icu_data.vmo(), 0, static_cast<size_t>(data_size),
                                 ZX_VM_FLAG_PERM_READ, &data);
   if (status == ZX_OK) {
     *size_out = static_cast<size_t>(data_size);
@@ -89,7 +89,7 @@ bool Release() {
   if (g_icu_data_ptr) {
     // Unmap the ICU data.
     zx_status_t status =
-        zx::vmar::root_self().unmap(g_icu_data_ptr, g_icu_data_size);
+        zx::vmar::root_self()->unmap(g_icu_data_ptr, g_icu_data_size);
     g_icu_data_ptr = 0u;
     g_icu_data_size = 0;
     return status == ZX_OK;

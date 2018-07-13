@@ -94,7 +94,7 @@ void AudioCapturerImpl::Shutdown() {
   // driver specific).
   if (payload_buf_virt_ != nullptr) {
     FXL_DCHECK(payload_buf_size_ != 0);
-    zx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(payload_buf_virt_),
+    zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(payload_buf_virt_),
                                 payload_buf_size_);
     payload_buf_virt_ = nullptr;
     payload_buf_size_ = 0;
@@ -276,7 +276,7 @@ void AudioCapturerImpl::SetPayloadBuffer(zx::vmo payload_buf_vmo) {
 
   // Map the VMO into our process.
   uintptr_t tmp;
-  res = zx::vmar::root_self().map(0, payload_buf_vmo_, 0, payload_buf_size_,
+  res = zx::vmar::root_self()->map(0, payload_buf_vmo_, 0, payload_buf_size_,
                                   ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                                   &tmp);
   if (res != ZX_OK) {

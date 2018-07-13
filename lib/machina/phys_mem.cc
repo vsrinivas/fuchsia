@@ -18,7 +18,7 @@ zx_status_t PhysMem::Init(size_t size) {
     return status;
   }
 
-  status = zx::vmar::root_self().map(0, vmo_, 0, size, kMapFlags, &addr_);
+  status = zx::vmar::root_self()->map(0, vmo_, 0, size, kMapFlags, &addr_);
   if (status != ZX_OK) {
     vmo_.reset();
     return status;
@@ -30,7 +30,7 @@ zx_status_t PhysMem::Init(size_t size) {
 
 PhysMem::~PhysMem() {
   if (addr_ != 0) {
-    zx::vmar::root_self().unmap(addr_, vmo_size_);
+    zx::vmar::root_self()->unmap(addr_, vmo_size_);
   }
 }
 
