@@ -23,6 +23,7 @@
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 
+#include "peridot/lib/common/names.h"
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/fidl/view_host.h"
 
@@ -102,7 +103,7 @@ class DevUserShellApp
         std::move(view_owner_request_));
 
     if (settings_.story_id.empty()) {
-      story_provider_->CreateStory(settings_.root_module,
+      story_provider_->CreateStory(nullptr,
                                    [this](const fidl::StringPtr& story_id) {
                                      StartStoryById(story_id);
                                    });
@@ -117,6 +118,12 @@ class DevUserShellApp
       FXL_LOG(ERROR) << "Story controller for story " << story_id
                      << " died. Does this story exist?";
     });
+
+    fuchsia::modular::Intent intent;
+    intent.handler = settings_.root_module;
+    intent.parameters = nullptr;
+    story_controller_->AddModule(nullptr, modular::kRootModuleName,
+                                 std::move(intent), nullptr);
 
     story_controller_->Watch(story_watcher_binding_.NewBinding());
 

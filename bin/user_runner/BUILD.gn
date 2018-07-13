@@ -83,6 +83,7 @@ executable_package("dev_user_shell") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/view_framework",
+    "//peridot/lib/common:names",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",
