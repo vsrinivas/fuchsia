@@ -5,6 +5,8 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_PLAYER_CONVERSION_PIPELINE_BUILDER_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_PLAYER_CONVERSION_PIPELINE_BUILDER_H_
 
+#include <lib/fit/function.h>
+
 #include "garnet/bin/media/media_player/decode/decoder.h"
 #include "garnet/bin/media/media_player/framework/graph.h"
 #include "garnet/bin/media/media_player/framework/packet.h"
@@ -13,14 +15,15 @@
 namespace media_player {
 
 // Attempts to add transforms to the given pipeline to convert in_type to a
-// type compatible with out_type_sets. If it succeeds, returns true, updates
-// *output and delivers the resulting output type via *out_type. If it fails,
-// returns false, sets *out_type to nullptr and leaves *output unchanged.
-bool BuildConversionPipeline(
+// type compatible with out_type_sets. If it succeeds, the function calls back
+// with the OutputRef for the end of the pipeline and the new stream type. If it
+// fails, the function calls back with the original OutputRef and a null
+// stream type pointer.
+void BuildConversionPipeline(
     const StreamType& in_type,
     const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
-    Graph* graph, DecoderFactory* decoder_factory, OutputRef* output,
-    std::unique_ptr<StreamType>* out_type);
+    Graph* graph, DecoderFactory* decoder_factory, OutputRef output,
+    fit::function<void(OutputRef, std::unique_ptr<StreamType>)> callback);
 
 }  // namespace media_player
 

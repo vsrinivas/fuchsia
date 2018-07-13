@@ -47,25 +47,29 @@ void RendererSinkSegment::Connect(const StreamType& type, OutputRef output,
   FXL_DCHECK(renderer_);
   FXL_DCHECK(renderer_node_);
 
-  auto& supported_stream_types = renderer_->GetSupportedStreamTypes();
-
-  std::unique_ptr<StreamType> out_type;
-  OutputRef output_in_out = output;
-  if (!BuildConversionPipeline(type, supported_stream_types, &graph(),
-                               decoder_factory_, &output_in_out, &out_type)) {
-    ReportProblem(type.medium() == StreamType::Medium::kAudio
-                      ? fuchsia::mediaplayer::kProblemAudioEncodingNotSupported
-                      : fuchsia::mediaplayer::kProblemVideoEncodingNotSupported,
-                  "");
-    callback(Result::kUnsupportedOperation);
-    return;
-  }
-
   connected_output_ = output;
-  graph().ConnectOutputToNode(output_in_out, renderer_node_);
-  renderer_->SetStreamType(*out_type);
 
-  callback(Result::kOk);
+  BuildConversionPipeline(
+      type, renderer_->GetSupportedStreamTypes(), &graph(), decoder_factory_,
+      output,
+      [this, callback = std::move(callback),
+       is_audio = type.medium() == StreamType::Medium::kAudio](
+          OutputRef output, std::unique_ptr<StreamType> stream_type) {
+        if (!stream_type) {
+          ReportProblem(
+              is_audio
+                  ? fuchsia::mediaplayer::kProblemAudioEncodingNotSupported
+                  : fuchsia::mediaplayer::kProblemVideoEncodingNotSupported,
+              "");
+          connected_output_ = nullptr;
+          callback(Result::kUnsupportedOperation);
+          return;
+        }
+
+        graph().ConnectOutputToNode(output, renderer_node_);
+        renderer_->SetStreamType(*stream_type);
+        callback(Result::kOk);
+      });
 }
 
 void RendererSinkSegment::Disconnect() {

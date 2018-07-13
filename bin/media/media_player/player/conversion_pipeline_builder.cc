@@ -11,12 +11,6 @@ namespace media_player {
 
 namespace {
 
-enum class AddResult {
-  kFailed,      // Can't convert.
-  kProgressed,  // Added a conversion transform.
-  kFinished     // Done adding conversion transforms.
-};
-
 // Produces a score for in_type with respect to out_type_set. The score
 // is used to compare type sets to see which represents the best goal for
 // conversion. Higher scores are preferred. A score of zero indicates that
@@ -90,26 +84,97 @@ const std::unique_ptr<StreamTypeSet>* FindBestLpcm(
   return best;
 }
 
-// Attempts to add transforms to the pipeline given an input compressed audio
-// stream type with (in_type) and the set of output types we need to convert to
-// (out_type_sets). If the call succeeds, *out_type is set to the new output
-// type. Otherwise, *out_type is set to nullptr.
-AddResult AddTransformsForCompressedAudio(
-    const AudioStreamType& in_type,
-    const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
-    Graph* graph, DecoderFactory* decoder_factory, OutputRef* output,
-    std::unique_ptr<StreamType>* out_type) {
-  FXL_DCHECK(out_type);
-  FXL_DCHECK(graph);
-  FXL_DCHECK(decoder_factory);
+class Builder {
+ public:
+  Builder(const StreamType& in_type,
+          const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
+          Graph* graph, DecoderFactory* decoder_factory, OutputRef output,
+          fit::function<void(OutputRef, std::unique_ptr<StreamType>)> callback);
 
+  ~Builder() = default;
+
+  void Build();
+
+ private:
+  void Succeed();
+
+  void Fail();
+
+  void AddTransformsForCompressedAudio(const AudioStreamType& audio_type);
+
+  void AddTransformsForCompressedVideo(const VideoStreamType& video_type);
+
+  void AddTransformsForLpcm(const AudioStreamType& audio_type,
+                            const AudioStreamTypeSet& out_type_set);
+
+  void AddTransformsForLpcm(const AudioStreamType& audio_type);
+
+  std::unique_ptr<StreamType> type_;
+  const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets_;
+  Graph* graph_;
+  DecoderFactory* decoder_factory_;
+  OutputRef output_;
+  const OutputRef original_output_;
+  const fit::function<void(OutputRef, std::unique_ptr<StreamType>)> callback_;
+};
+
+Builder::Builder(
+    const StreamType& in_type,
+    const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
+    Graph* graph, DecoderFactory* decoder_factory, OutputRef output,
+    fit::function<void(OutputRef, std::unique_ptr<StreamType>)> callback)
+    : type_(in_type.Clone()),
+      out_type_sets_(out_type_sets),
+      graph_(graph),
+      decoder_factory_(decoder_factory),
+      output_(output),
+      original_output_(output),
+      callback_(std::move(callback)) {}
+
+void Builder::Build() {
+  switch (type_->medium()) {
+    case StreamType::Medium::kAudio:
+      if (type_->encoding() == StreamType::kAudioEncodingLpcm) {
+        AddTransformsForLpcm(*type_->audio());
+      } else {
+        AddTransformsForCompressedAudio(*type_->audio());
+      }
+      break;
+    case StreamType::Medium::kVideo:
+      if (type_->encoding() == StreamType::kVideoEncodingUncompressed) {
+        Succeed();
+      } else {
+        AddTransformsForCompressedVideo(*type_->video());
+      }
+      break;
+    default:
+      FXL_DCHECK(false) << "conversion not supported for medium"
+                        << type_->medium();
+      Fail();
+      break;
+  }
+}
+
+void Builder::Succeed() {
+  callback_(output_, type_->Clone());
+  delete this;
+}
+
+void Builder::Fail() {
+  graph_->RemoveNodesConnectedToOutput(original_output_);
+  callback_(original_output_, nullptr);
+  delete this;
+}
+
+void Builder::AddTransformsForCompressedAudio(
+    const AudioStreamType& audio_type) {
   // See if we have a matching audio type.
-  for (const std::unique_ptr<StreamTypeSet>& out_type_set : out_type_sets) {
+  for (const std::unique_ptr<StreamTypeSet>& out_type_set : out_type_sets_) {
     if (out_type_set->medium() == StreamType::Medium::kAudio) {
-      if (out_type_set->audio()->Includes(in_type)) {
+      if (out_type_set->audio()->Includes(audio_type)) {
         // No transform needed.
-        *out_type = in_type.Clone();
-        return AddResult::kFinished;
+        type_ = audio_type.Clone();
+        Succeed();
       }
       // TODO(dalesat): Support a different compressed output type by
       // transcoding.
@@ -118,11 +183,11 @@ AddResult AddTransformsForCompressedAudio(
 
   // Find the best LPCM output type.
   const std::unique_ptr<StreamTypeSet>* best =
-      FindBestLpcm(in_type, out_type_sets);
+      FindBestLpcm(audio_type, out_type_sets_);
   if (best == nullptr) {
     // No candidates found.
-    *out_type = nullptr;
-    return AddResult::kFailed;
+    Fail();
+    return;
   }
 
   FXL_DCHECK((*best)->medium() == StreamType::Medium::kAudio);
@@ -130,197 +195,105 @@ AddResult AddTransformsForCompressedAudio(
 
   // Need to decode. Create a decoder and go from there.
   std::shared_ptr<Decoder> decoder;
-  Result result = decoder_factory->CreateDecoder(in_type, &decoder);
+  Result result = decoder_factory_->CreateDecoder(audio_type, &decoder);
   if (result != Result::kOk) {
     // No decoder found.
-    *out_type = nullptr;
-    return AddResult::kFailed;
+    Fail();
+    return;
   }
 
-  *output = graph->ConnectOutputToNode(*output, graph->Add(decoder)).output();
-  *out_type = decoder->output_stream_type();
+  output_ = graph_->ConnectOutputToNode(output_, graph_->Add(decoder)).output();
+  type_ = decoder->output_stream_type();
 
-  return AddResult::kProgressed;
+  Build();
 }
 
-// Attempts to add transforms to the pipeline given an input compressed video
-// stream type with (in_type) and the set of output types we need to convert to
-// (out_type_sets). If the call succeeds, *out_type is set to the new output
-// type. Otherwise, *out_type is set to nullptr.
-AddResult AddTransformsForCompressedVideo(
-    const VideoStreamType& in_type,
-    const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
-    Graph* graph, DecoderFactory* decoder_factory, OutputRef* output,
-    std::unique_ptr<StreamType>* out_type) {
-  FXL_DCHECK(out_type);
-  FXL_DCHECK(graph);
-  FXL_DCHECK(decoder_factory);
-
+void Builder::AddTransformsForCompressedVideo(
+    const VideoStreamType& video_type) {
   // TODO(dalesat): See if we already have a matching video type.
 
   // Need to decode. Create a decoder and go from there.
   std::shared_ptr<Decoder> decoder;
-  Result result = decoder_factory->CreateDecoder(in_type, &decoder);
+  Result result = decoder_factory_->CreateDecoder(video_type, &decoder);
   if (result != Result::kOk) {
     // No decoder found.
-    *out_type = nullptr;
-    return AddResult::kFailed;
+    Fail();
+    return;
   }
 
-  *output = graph->ConnectOutputToNode(*output, graph->Add(decoder)).output();
-  *out_type = decoder->output_stream_type();
+  output_ = graph_->ConnectOutputToNode(output_, graph_->Add(decoder)).output();
+  type_ = decoder->output_stream_type();
 
-  return AddResult::kProgressed;
+  Build();
 }
 
-// Attempts to add transforms to the pipeline given an input LPCM stream type
-// (in_type) and the output lpcm stream type set for the type we need to
-// convert to (out_type_set). If the call succeeds, *out_type is set to the new
-// output type. Otherwise, *out_type is set to nullptr.
-AddResult AddTransformsForLpcm(const AudioStreamType& in_type,
-                               const AudioStreamTypeSet& out_type_set,
-                               Graph* graph, OutputRef* output,
-                               std::unique_ptr<StreamType>* out_type) {
-  FXL_DCHECK(graph);
-  FXL_DCHECK(out_type);
-
-  // TODO(dalesat): Room for more intelligence here wrt transform ordering and
-  // transforms that handle more than one conversion.
-  if (in_type.sample_format() != out_type_set.sample_format() &&
+void Builder::AddTransformsForLpcm(const AudioStreamType& audio_type,
+                                   const AudioStreamTypeSet& out_type_set) {
+  if (audio_type.sample_format() != out_type_set.sample_format() &&
       out_type_set.sample_format() != AudioStreamType::SampleFormat::kAny) {
+    // TODO(dalesat): Insert sample format converter.
     FXL_DCHECK(false)
-        << "conversion requires audio format change - not supported";
-    *out_type = nullptr;
-    return AddResult::kFailed;
+        << "conversion requires sample format change - not supported";
+    Fail();
+    return;
   }
 
-  if (!out_type_set.channels().contains(in_type.channels())) {
+  if (!out_type_set.channels().contains(audio_type.channels())) {
     // TODO(dalesat): Insert mixdown/up transform.
     FXL_DCHECK(false) << "conversion requires mixdown/up - not supported";
-    *out_type = nullptr;
-    return AddResult::kFailed;
+    Fail();
+    return;
   }
 
-  if (!out_type_set.frames_per_second().contains(in_type.frames_per_second())) {
+  if (!out_type_set.frames_per_second().contains(
+          audio_type.frames_per_second())) {
     // TODO(dalesat): Insert resampler.
     FXL_DCHECK(false) << "conversion requires resampling - not supported";
-    *out_type = nullptr;
-    return AddResult::kFailed;
+    Fail();
+    return;
   }
 
   // Build the resulting media type.
-  *out_type = AudioStreamType::Create(
+  type_ = AudioStreamType::Create(
       StreamType::kAudioEncodingLpcm, nullptr,
       out_type_set.sample_format() == AudioStreamType::SampleFormat::kAny
-          ? in_type.sample_format()
+          ? audio_type.sample_format()
           : out_type_set.sample_format(),
-      in_type.channels(), in_type.frames_per_second());
+      audio_type.channels(), audio_type.frames_per_second());
 
-  return AddResult::kFinished;
+  Succeed();
 }
 
-// Attempts to add transforms to the pipeline given an input audio stream type
-// witn lpcm encoding (in_type) and the set of output types we need to convert
-// to (out_type_sets). If the call succeeds, *out_type is set to the new
-// output type. Otherwise, *out_type is set to nullptr.
-AddResult AddTransformsForLpcm(
-    const AudioStreamType& in_type,
-    const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
-    Graph* graph, OutputRef* output, std::unique_ptr<StreamType>* out_type) {
-  FXL_DCHECK(graph);
-  FXL_DCHECK(out_type);
-
+void Builder::AddTransformsForLpcm(const AudioStreamType& audio_type) {
   const std::unique_ptr<StreamTypeSet>* best =
-      FindBestLpcm(in_type, out_type_sets);
+      FindBestLpcm(audio_type, out_type_sets_);
   if (best == nullptr) {
     // TODO(dalesat): Support a compressed output type by encoding.
     FXL_DCHECK(false) << "conversion using encoder not supported";
-    *out_type = nullptr;
-    return AddResult::kFailed;
+    Fail();
+    return;
   }
 
   FXL_DCHECK((*best)->medium() == StreamType::Medium::kAudio);
 
-  return AddTransformsForLpcm(in_type, *(*best)->audio(), graph, output,
-                              out_type);
-}
-
-// Attempts to add transforms to the pipeline given an input media type of any
-// medium and encoding (in_type) and the set of output types we need to
-// convert to (out_type_sets). If the call succeeds, *out_type is set to the new
-// output type. Otherwise, *out_type is set to nullptr.
-AddResult AddTransforms(
-    const StreamType& in_type,
-    const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
-    Graph* graph, DecoderFactory* decoder_factory, OutputRef* output,
-    std::unique_ptr<StreamType>* out_type) {
-  FXL_DCHECK(graph);
-  FXL_DCHECK(decoder_factory);
-  FXL_DCHECK(out_type);
-
-  switch (in_type.medium()) {
-    case StreamType::Medium::kAudio:
-      if (in_type.encoding() == StreamType::kAudioEncodingLpcm) {
-        return AddTransformsForLpcm(*in_type.audio(), out_type_sets, graph,
-                                    output, out_type);
-      } else {
-        return AddTransformsForCompressedAudio(*in_type.audio(), out_type_sets,
-                                               graph, decoder_factory, output,
-                                               out_type);
-      }
-    case StreamType::Medium::kVideo:
-      if (in_type.encoding() == StreamType::kVideoEncodingUncompressed) {
-        *out_type = in_type.Clone();
-        return AddResult::kFinished;
-      } else {
-        return AddTransformsForCompressedVideo(*in_type.video(), out_type_sets,
-                                               graph, decoder_factory, output,
-                                               out_type);
-      }
-    default:
-      FXL_DCHECK(false) << "conversion not supported for medium"
-                        << in_type.medium();
-      *out_type = nullptr;
-      return AddResult::kFailed;
-  }
+  AddTransformsForLpcm(audio_type, *(*best)->audio());
 }
 
 }  // namespace
 
-bool BuildConversionPipeline(
+void BuildConversionPipeline(
     const StreamType& in_type,
     const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
-    Graph* graph, DecoderFactory* decoder_factory, OutputRef* output,
-    std::unique_ptr<StreamType>* out_type) {
+    Graph* graph, DecoderFactory* decoder_factory, OutputRef output,
+    fit::function<void(OutputRef, std::unique_ptr<StreamType>)> callback) {
   FXL_DCHECK(graph);
   FXL_DCHECK(decoder_factory);
   FXL_DCHECK(output);
-  FXL_DCHECK(out_type);
+  FXL_DCHECK(callback);
 
-  OutputRef out = *output;
-  const StreamType* type_to_convert = &in_type;
-  std::unique_ptr<StreamType> converted_type;
-  while (true) {
-    switch (AddTransforms(*type_to_convert, out_type_sets, graph,
-                          decoder_factory, &out, &converted_type)) {
-      case AddResult::kFailed:
-        // Failed to find a suitable conversion. Return the pipeline to its
-        // original state.
-        graph->RemoveNodesConnectedToOutput(*output);
-        *out_type = nullptr;
-        return false;
-      case AddResult::kProgressed:
-        // Made progress. Continue.
-        break;
-      case AddResult::kFinished:
-        // No further conversion required.
-        *output = out;
-        *out_type = std::move(converted_type);
-        return true;
-    }
-
-    type_to_convert = converted_type.get();
-  }
+  auto builder = new Builder(in_type, out_type_sets, graph, decoder_factory,
+                             output, std::move(callback));
+  builder->Build();
 }
 
 }  // namespace media_player
