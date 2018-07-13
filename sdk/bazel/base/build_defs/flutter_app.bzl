@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-load(":dart.bzl", "dart_kernel_action", "DartLibraryInfo")
+load(":dart.bzl", "compile_kernel_action", "DartLibraryInfo")
 load(":package_info.bzl", "PackageLocalInfo")
 
 # A Fuchsia Flutter application
