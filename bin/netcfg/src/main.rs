@@ -29,7 +29,7 @@ const DEFAULT_CONFIG_FILE: &str = "/pkg/data/default.json";
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
-    pub device_name: String,
+    pub device_name: Option<String>,
 }
 
 fn parse_config(config: String) -> Result<Config, Error> {
@@ -59,8 +59,7 @@ static DEVICE_NAME_KEY: &str = "DeviceName";
 
 fn main() -> Result<(), Error> {
     println!("netcfg: started");
-    // Will be used to store DNS configuration.
-    let _default_config = parse_config(read_to_string(DEFAULT_CONFIG_FILE)?)?;
+    let default_config = parse_config(read_to_string(DEFAULT_CONFIG_FILE)?)?;
     let mut executor = async::Executor::new().context("error creating event loop")?;
     let netstack = app::client::connect_to_service::<NetstackMarker>().context("failed to connect to netstack")?;
     let device_settings_manager = app::client::connect_to_service::<DeviceSettingsManagerMarker>()
@@ -84,6 +83,10 @@ fn main() -> Result<(), Error> {
             }
         });
 
-    let _ = executor.run_singlethreaded(fs);
+    let _ = match default_config.device_name {
+        Some(configured_name) => executor.run_singlethreaded(device_settings_manager.set_string(DEVICE_NAME_KEY, &configured_name)),
+        None => executor.run_singlethreaded(fs),
+    };
+
     Ok(())
 }
