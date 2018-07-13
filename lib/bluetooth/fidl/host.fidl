@@ -55,7 +55,8 @@ interface Host {
 
   // Assigns the pairing delegate that will respond to authentication challenges using the given
   // I/O capabilities. Setting a pairing delegate cancels any on-going pairing procedure started
-  // using a previous delegate. If no PairingDelegate has ben set, reject.
+  // using a previous delegate. Pairing requests will be rejected if no PairingDelegate has been
+  // assigned.
   12: SetPairingDelegate(
           fuchsia.bluetooth.control.InputCapabilityType input,
           fuchsia.bluetooth.control.OutputCapabilityType output,

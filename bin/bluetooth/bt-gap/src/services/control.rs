@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use async;
+use async::temp::Either::{Left, Right};
+use failure::Error;
 use fidl::encoding2::OutOfLine;
 use fidl::endpoints2::RequestStream;
 use fidl_fuchsia_bluetooth;
 use fidl_fuchsia_bluetooth_control::{ControlRequest, ControlRequestStream};
-use async::temp::Either::{Left, Right};
 use futures::prelude::*;
-use failure::Error;
 use futures::{future, Future, FutureExt};
 use host_dispatcher::*;
 use parking_lot::RwLock;
@@ -23,9 +23,9 @@ struct ControlServiceState {
 
 /// Build the ControlImpl to interact with fidl messages
 /// State is stored in the HostDispatcher object
-pub fn make_control_service(
+pub fn start_control_service(
     hd: Arc<RwLock<HostDispatcher>>, chan: async::Channel,
-) -> impl Future< Output = Result<(), Error>> {
+) -> impl Future<Output = Result<(), Error>> {
     let state = Arc::new(RwLock::new(ControlServiceState {
         host: hd,
         discovery_token: None,
@@ -38,16 +38,20 @@ pub fn make_control_service(
 
     let stream = ControlRequestStream::from_channel(chan);
     hd.event_listeners.push(stream.control_handle());
-    unsafe_many_futures!(Output, [A, B, C, D, E, F, G, H, I, J, K, L, M]);
 
+    // TODO(bwb): Remove and replace with async/await. Used to prevent
+    // deeply nested match Either arms
+    unsafe_many_futures!(Output, [A, B, C, D, E, F, G, H, I, J, K, L, M]);
     stream
         .try_for_each(move |evt| match evt {
             ControlRequest::Connect {
-                device_id: _,
+                device_id,
                 responder,
             } => {
-                let _ = responder.send(&mut bt_fidl_status!(NotSupported));
-                Output::B(future::ready(Ok(())))
+                let host = state.write().host.clone();
+                let fut = HostDispatcher::connect(host, device_id)
+                    .and_then(move |mut status| future::ready(responder.send(&mut status)));
+                Output::A(fut)
             }
             ControlRequest::SetDiscoverable {
                 discoverable,
@@ -55,12 +59,13 @@ pub fn make_control_service(
             } => {
                 let fut = if discoverable {
                     let stateref = state.clone();
-                    Left(HostDispatcher::set_discoverable(state.read().host.clone()).and_then(
+                    Left(
+                        HostDispatcher::set_discoverable(state.read().host.clone()).and_then(
                             move |(mut resp, token)| {
                                 stateref.write().discoverable_token = token;
                                 future::ready(responder.send(&mut resp))
                             },
-                        )
+                        ),
                     )
                 } else {
                     state.write().discoverable_token = None;
@@ -68,15 +73,36 @@ pub fn make_control_service(
                 };
                 Output::C(fut)
             }
-            ControlRequest::SetIoCapabilities { .. } => Output::E(future::ready(Ok(()))),
-            ControlRequest::Forget { device_id: _, responder } => {
-                let _ = responder.send(&mut bt_fidl_status!(NotSupported));
-                Output::L(future::ready(Ok(())))
-            },
-            ControlRequest::Disconnect { device_id: _, responder } => {
-                let _ = responder.send(&mut bt_fidl_status!(NotSupported));
-                Output::M(future::ready(Ok(())))
-            },
+            ControlRequest::SetIoCapabilities {
+                input,
+                output,
+                control_handle: _,
+            } => {
+                let wstate = state.write();
+                let mut hd = wstate.host.write();
+                hd.input = input;
+                hd.output = output;
+                Output::E(future::ready(Ok(())))
+            }
+            ControlRequest::Forget {
+                device_id,
+                responder,
+            } => {
+                let host = state.write().host.clone();
+                let fut = HostDispatcher::forget(host, device_id)
+                    .and_then(move |mut status| future::ready(responder.send(&mut status)));
+                Output::L(fut)
+            }
+            ControlRequest::Disconnect {
+                device_id,
+                responder,
+            } => {
+                let host = state.write().host.clone();
+                // TODO work with classic as well
+                let fut = HostDispatcher::disconnect(host, device_id)
+                    .and_then(move |mut status| future::ready(responder.send(&mut status)));
+                Output::M(fut)
+            }
             ControlRequest::GetKnownRemoteDevices { .. } => Output::K(future::ready(Ok(()))),
             ControlRequest::IsBluetoothAvailable { responder } => {
                 let rstate = state.read();
@@ -87,23 +113,26 @@ pub fn make_control_service(
             }
             ControlRequest::SetPairingDelegate {
                 delegate,
-                responder: _,
+                responder,
             } => {
+                let mut status = false;
                 let mut wstate = state.write();
                 if let Some(delegate) = delegate {
                     if let Ok(proxy) = delegate.into_proxy() {
-                        wstate.host.write().pairing_delegate = Some(proxy);
+                        status = wstate.host.write().set_pairing_delegate(Some(proxy));
                     }
                 } else {
-                    wstate.host.write().pairing_delegate = None;
+                    status = wstate.host.write().set_pairing_delegate(None);
                 }
+                let _ = responder.send(status);
                 Output::D(future::ready(Ok(())))
             }
             ControlRequest::GetAdapters { responder } => {
                 let wstate = state.write();
                 let mut hd = wstate.host.clone();
                 let fut = HostDispatcher::get_adapters(&mut hd)
-                    .map_ok(move |mut resp| responder.send(Some(&mut resp.iter_mut()))).map(|_| Ok(()));
+                    .map_ok(move |mut resp| responder.send(Some(&mut resp.iter_mut())))
+                    .map(|_| Ok(()));
                 Output::H(fut)
             }
             ControlRequest::SetActiveAdapter {
@@ -130,24 +159,24 @@ pub fn make_control_service(
                 let fut = if discovery {
                     let stateref = state.clone();
                     Left(
-                        HostDispatcher::start_discovery(state.read().host.clone()).map_ok(
-                            move |(mut resp, token)| {
+                        HostDispatcher::start_discovery(state.read().host.clone())
+                            .map_ok(move |(mut resp, token)| {
                                 stateref.write().discovery_token = token;
                                 responder.send(&mut resp)
-                            },
-                        ).map(|_| Ok(()))
+                            }).map(|_| Ok(())),
                     )
                 } else {
                     state.write().discovery_token = None;
                     Right(future::ready(responder.send(&mut bt_fidl_status!())))
                 };
                 Output::G(fut)
-            },
+            }
             ControlRequest::SetName { name, responder } => {
                 let wstate = state.write();
-                Output::A(
+                Output::B(
                     HostDispatcher::set_name(wstate.host.clone(), name)
-                        .and_then(move |mut resp| future::ready(Ok(responder.send(&mut resp)))).map(|_| Ok(())),
+                        .and_then(move |mut resp| future::ready(Ok(responder.send(&mut resp))))
+                        .map(|_| Ok(())),
                 )
             }
         }).map(|_| Ok(()))
