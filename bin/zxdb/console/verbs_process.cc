@@ -124,7 +124,7 @@ Err DoNew(ConsoleContext* context, const Command& cmd) {
 
 const char kRunShortHelp[] = "run / r: Run the program.";
 const char kRunHelp[] =
-    R"(run [ <program name> ]
+    R"(run [ <program name> <program args>* ]
 
   Alias: "r"
 
@@ -143,8 +143,12 @@ Hints
 Examples
 
   run
-  run chrome
   process 2 run
+      Runs a process that's already been configured with a binary name.
+
+  run /boot/bin/ps
+  run chrome --no-sandbox http://www.google.com/
+      Runs the given process.
 )";
 
 Err DoRun(ConsoleContext* context, const Command& cmd,
@@ -158,10 +162,6 @@ Err DoRun(ConsoleContext* context, const Command& cmd,
   if (err.has_error())
     return err;
 
-  // TODO(brettw) figure out how argument passing should work. From a user
-  // perspective it would be nicest to pass everything after "run" to the
-  // app. But this means we can't have any switches to "run". LLDB requires
-  // using "--" for this case to mark the end of switches.
   if (cmd.args().empty()) {
     // Use the args already set on the target.
     if (cmd.target()->GetArgs().empty())

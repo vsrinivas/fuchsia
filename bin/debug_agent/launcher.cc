@@ -15,11 +15,7 @@ zx_status_t Launcher::Setup(const std::vector<std::string>& argv) {
   if (status != ZX_OK)
     return status;
 
-  if (argv.size() > 1) {
-    builder_.AddArgs(std::vector<std::string>(argv.begin() + 1, argv.end()));
-  } else {
-    builder_.SetName(argv[0]);
-  }
+  builder_.AddArgs(argv);
 
   /*
   Transfering STDIO handles is currently disabled. When doing local debugging

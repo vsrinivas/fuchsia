@@ -42,7 +42,7 @@ void PrintHello() {
   (void)c;  // Prevent unused variable warning.
 }
 
-int main(int arch, char* argv[]) {
+int main(int argc, char* argv[]) {
   // Print out the address of main to the system debug log.
   char buf[128];
   snprintf(buf, sizeof(buf), "zxdb_test_app, &PrintHello = 0x%llx\n",
