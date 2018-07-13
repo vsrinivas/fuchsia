@@ -93,7 +93,7 @@ zx_status_t TestLoopDispatcher::CancelWait(async_wait_t* wait) {
     if (!list_in_list(node)) {
         return ZX_ERR_NOT_FOUND;
     }
-    zx_status_t status = port_.cancel(wait->object,
+    zx_status_t status = port_.cancel(*zx::unowned_handle(wait->object),
                                       reinterpret_cast<uintptr_t>(wait));
     if (status == ZX_OK) {
         list_delete(node);
