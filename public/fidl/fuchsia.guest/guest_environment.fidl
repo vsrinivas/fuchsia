@@ -10,7 +10,7 @@ struct GuestLaunchInfo {
   // The URL of the package to launch.
   string url;
 
-  // Arguments that will be passed to the vmm binary when launching this guest.
+  // Arguments that will be passed to the VMM binary when launching this guest.
   //
   // See //garnet/bin/guest/vmm/guest_config.cc for valid options.
   vector<string>? vmm_args;
@@ -18,7 +18,7 @@ struct GuestLaunchInfo {
   // A diagnostic string to associate with this instance.
   string? label;
 
-  // A flat namespace to be appended to the default namespace for the vmm
+  // A flat namespace to be appended to the default namespace for the VMM
   // process.
   fuchsia.sys.FlatNamespace? flat_namespace;
 };
@@ -36,5 +36,5 @@ interface GuestEnvironment {
   3: ConnectToGuest(uint32 id, request<GuestController> controller);
 
   // Returns an interface that can be used to access the host vsock endpoint.
-  4: GetHostSocketEndpoint(request<ManagedSocketEndpoint> endpoint);
+  4: GetHostVsockEndpoint(request<ManagedVsockEndpoint> endpoint);
 };

@@ -12,7 +12,7 @@
 namespace guestmgr {
 
 // A |VsockEndpoint| that delegates most work to a remote endpoint using the
-// |fuchsia::guest::SocketAcceptor| and |fuchsia::guest::SocketConnector|
+// |fuchsia::guest::VsockAcceptor| and |fuchsia::guest::VsockConnector|
 // interfaces. Specifically the remote component is responsible for the
 // allocation of out-bound ports and accepting all in-bound connections.
 //
@@ -23,25 +23,25 @@ class RemoteVsockEndpoint : public VsockEndpoint {
   RemoteVsockEndpoint(uint32_t cid);
   ~RemoteVsockEndpoint() override;
 
-  // Called to bind both the |SocketConnector| and |SocketAcceptor| to a single
-  // |SocketEndpoint|.
-  void BindSocketEndpoint(fuchsia::guest::SocketEndpointPtr endpoint);
+  // Called to bind both the |VsockConnector| and |VsockAcceptor| to a single
+  // |VsockEndpoint|.
+  void BindVsockEndpoint(fuchsia::guest::VsockEndpointPtr endpoint);
 
-  // Binds |request| to a |SocketConnector| for this endpoint.
-  void GetSocketConnector(
-      fidl::InterfaceRequest<fuchsia::guest::SocketConnector> request);
+  // Binds |request| to a |VsockConnector| for this endpoint.
+  void GetVsockConnector(
+      fidl::InterfaceRequest<fuchsia::guest::VsockConnector> request);
 
-  // Sets the |SocketAcceptor| to use for requests to this endpoint's |CID|.
-  void SetSocketAcceptor(
-      fidl::InterfaceHandle<fuchsia::guest::SocketAcceptor> handle);
+  // Sets the |VsockAcceptor| to use for requests to this endpoint's |CID|.
+  void SetVsockAcceptor(
+      fidl::InterfaceHandle<fuchsia::guest::VsockAcceptor> handle);
 
-  // |fuchsia::guest::SocketAcceptor|
+  // |fuchsia::guest::VsockAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
               AcceptCallback callback) override;
 
  private:
-  fidl::BindingSet<fuchsia::guest::SocketConnector> connector_bindings_;
-  fuchsia::guest::SocketAcceptorPtr remote_acceptor_;
+  fidl::BindingSet<fuchsia::guest::VsockConnector> connector_bindings_;
+  fuchsia::guest::VsockAcceptorPtr remote_acceptor_;
 };
 
 }  // namespace guestmgr

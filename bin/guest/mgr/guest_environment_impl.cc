@@ -46,19 +46,19 @@ void GuestEnvironmentImpl::LaunchGuest(
   launcher_->CreateComponent(std::move(guest_launch_info),
                              guest_component_controller.NewRequest());
 
-  // Setup Socket Endpoint
+  // Setup vsock endpoint.
   uint32_t cid = next_guest_cid_++;
   auto vsock_endpoint = std::make_unique<RemoteVsockEndpoint>(cid);
   zx_status_t status = socket_server_.AddEndpoint(vsock_endpoint.get());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to allocate socked endpoint on CID " << cid
-                   << ": " << status;
+    FXL_LOG(ERROR) << "Failed to allocate vsock endpoint on CID " << cid << ": "
+                   << status;
     callback(fuchsia::guest::GuestInfo());
     return;
   }
-  fuchsia::guest::SocketEndpointPtr remote_endpoint;
+  fuchsia::guest::VsockEndpointPtr remote_endpoint;
   guest_services.ConnectToService(remote_endpoint.NewRequest());
-  vsock_endpoint->BindSocketEndpoint(std::move(remote_endpoint));
+  vsock_endpoint->BindVsockEndpoint(std::move(remote_endpoint));
 
   guest_component_controller.set_error_handler(
       [this, cid] { guests_.erase(cid); });
@@ -75,8 +75,8 @@ void GuestEnvironmentImpl::LaunchGuest(
   callback(std::move(info));
 }
 
-void GuestEnvironmentImpl::GetHostSocketEndpoint(
-    fidl::InterfaceRequest<fuchsia::guest::ManagedSocketEndpoint> request) {
+void GuestEnvironmentImpl::GetHostVsockEndpoint(
+    fidl::InterfaceRequest<fuchsia::guest::ManagedVsockEndpoint> request) {
   host_socket_endpoint_.AddBinding(std::move(request));
 }
 

@@ -19,17 +19,17 @@ class VsockServer;
 //
 // A vsock endpoint either terminates inside a guest's virtio-vsock device
 // implementation, or on the host. In the case of a guest, the virtio-vsock
-// device will provide an impelemetation of |SocketAcceptor| that will be
-// invoked whenever a request to connect to that CID is received.
+// device will provide an impelemetation of |VsockAcceptor| that will be invoked
+// whenever a request to connect to that CID is received.
 //
-// For the host, the |SocketAcceptor| implementation can be set via the
+// For the host, the |VsockAcceptor| implementation can be set via the
 // |GuestEnvironment| interface.
 //
-// For both cases, we provide an implementation of |SocketConnector| that can
-// be used for those components to establish out-bound socket connections. In
-// both cases the provided |SocketConnector| is bound to the endpoints CID.
-class VsockEndpoint : public fuchsia::guest::SocketConnector,
-                      public fuchsia::guest::SocketAcceptor {
+// For both cases, we provide an implementation of |VsockConnector| that can be
+// used for those components to establish out-bound socket connections. In both
+// cases the provided |VsockConnector| is bound to the endpoints CID.
+class VsockEndpoint : public fuchsia::guest::VsockConnector,
+                      public fuchsia::guest::VsockAcceptor {
  public:
   VsockEndpoint(uint32_t cid);
   ~VsockEndpoint() override;
@@ -38,7 +38,7 @@ class VsockEndpoint : public fuchsia::guest::SocketConnector,
 
   void set_vsock_server(VsockServer* server) { vsock_server_ = server; }
 
-  // |fuchsia::guest::SocketConnector|
+  // |fuchsia::guest::VsockConnector|
   void Connect(uint32_t port, uint32_t dest_cid, uint32_t dest_port,
                ConnectCallback callback) override;
 

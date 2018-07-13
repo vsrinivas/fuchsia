@@ -16,7 +16,7 @@ HostVsockEndpoint::HostVsockEndpoint(uint32_t cid) : VsockEndpoint(cid) {}
 HostVsockEndpoint::~HostVsockEndpoint() = default;
 
 void HostVsockEndpoint::AddBinding(
-    fidl::InterfaceRequest<fuchsia::guest::ManagedSocketEndpoint> request) {
+    fidl::InterfaceRequest<fuchsia::guest::ManagedVsockEndpoint> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
@@ -31,7 +31,7 @@ void HostVsockEndpoint::Accept(uint32_t src_cid, uint32_t src_port,
 }
 
 void HostVsockEndpoint::Listen(uint32_t port,
-                               fidl::InterfaceHandle<SocketAcceptor> acceptor,
+                               fidl::InterfaceHandle<VsockAcceptor> acceptor,
                                ListenCallback callback) {
   if (port_bitmap_.GetOne(port)) {
     callback(ZX_ERR_ALREADY_BOUND);
@@ -55,7 +55,7 @@ void HostVsockEndpoint::Listen(uint32_t port,
 
 void HostVsockEndpoint::Connect(
     uint32_t cid, uint32_t port,
-    fuchsia::guest::ManagedSocketEndpoint::ConnectCallback callback) {
+    fuchsia::guest::ManagedVsockEndpoint::ConnectCallback callback) {
   uint32_t src_port;
   zx_status_t status = FindEphemeralPort(&src_port);
   if (status != ZX_OK) {
@@ -63,8 +63,8 @@ void HostVsockEndpoint::Connect(
     return;
   }
   Connect(src_port, cid, port,
-          [this, src_port, callback = std::move(callback)](zx_status_t status,
-                                                           zx::socket socket) mutable {
+          [this, src_port, callback = std::move(callback)](
+              zx_status_t status, zx::socket socket) mutable {
             ConnectCallback(status, std::move(socket), src_port,
                             std::move(callback));
           });
@@ -72,7 +72,7 @@ void HostVsockEndpoint::Connect(
 
 void HostVsockEndpoint::ConnectCallback(
     zx_status_t status, zx::socket socket, uint32_t src_port,
-    fuchsia::guest::ManagedSocketEndpoint::ConnectCallback callback) {
+    fuchsia::guest::ManagedVsockEndpoint::ConnectCallback callback) {
   auto free_port =
       fbl::MakeAutoCall([this, src_port]() { FreePort(src_port); });
   if (status != ZX_OK) {

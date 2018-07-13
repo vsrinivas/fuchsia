@@ -25,7 +25,7 @@ struct TestConnection {
   zx::socket socket;
   zx_status_t status = ZX_ERR_BAD_STATE;
 
-  fuchsia::guest::SocketConnector::ConnectCallback callback() {
+  fuchsia::guest::VsockConnector::ConnectCallback callback() {
     return [this](zx_status_t status, zx::socket socket) {
       this->status = status;
       this->socket = std::move(socket);
@@ -35,9 +35,9 @@ struct TestConnection {
 
 static void NoOpConnectCallback(zx_status_t status, zx::socket socket) {}
 
-// A simple |fuchsia::guest::SocketAcceptor| that just retains a list of all
+// A simple |fuchsia::guest::VsockAcceptor| that just retains a list of all
 // connection requests.
-class TestSocketAcceptor : public fuchsia::guest::SocketAcceptor {
+class TestVsockAcceptor : public fuchsia::guest::VsockAcceptor {
  public:
   struct ConnectionRequest {
     uint32_t src_cid;
@@ -46,17 +46,17 @@ class TestSocketAcceptor : public fuchsia::guest::SocketAcceptor {
     AcceptCallback callback;
   };
 
-  ~TestSocketAcceptor() override = default;
+  ~TestVsockAcceptor() override = default;
 
   std::vector<ConnectionRequest> TakeRequests() {
     return std::move(connection_requests_);
   }
 
-  fidl::InterfaceHandle<fuchsia::guest::SocketAcceptor> NewBinding() {
+  fidl::InterfaceHandle<fuchsia::guest::VsockAcceptor> NewBinding() {
     return binding_.NewBinding();
   }
 
-  // |fuchsia::guest::SocketAcceptor|
+  // |fuchsia::guest::VsockAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
               AcceptCallback callback) override {
     connection_requests_.emplace_back(
@@ -65,17 +65,17 @@ class TestSocketAcceptor : public fuchsia::guest::SocketAcceptor {
 
  private:
   std::vector<ConnectionRequest> connection_requests_;
-  fidl::Binding<fuchsia::guest::SocketAcceptor> binding_{this};
+  fidl::Binding<fuchsia::guest::VsockAcceptor> binding_{this};
 };
 
-class TestVsockEndpoint : public VsockEndpoint, public TestSocketAcceptor {
+class TestVsockEndpoint : public VsockEndpoint, public TestVsockAcceptor {
  public:
   TestVsockEndpoint(uint32_t cid) : VsockEndpoint(cid) {}
 
-  // |fuchsia::guest::SocketAcceptor|
+  // |fuchsia::guest::VsockAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
               AcceptCallback callback) override {
-    TestSocketAcceptor::Accept(src_cid, src_port, port, std::move(callback));
+    TestVsockAcceptor::Accept(src_cid, src_port, port, std::move(callback));
   }
 };
 
@@ -99,7 +99,7 @@ TEST_F(VsockServerTest, CreateEndpointDuplicateCid) {
 }
 
 // Test that endpoint with CID 2 connecting to endpoint with CID 3 gets routed
-// through the SocketAcceptor for CID 3.
+// through the VsockAcceptor for CID 3.
 TEST_F(VsockServerTest, Connect) {
   RemoteVsockEndpoint cid2(2);
   RemoteVsockEndpoint cid3(3);
@@ -109,8 +109,8 @@ TEST_F(VsockServerTest, Connect) {
   // Setup acceptor to transfer |h2| to the caller.
   zx::socket h1, h2;
   ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2));
-  TestSocketAcceptor endpoint;
-  cid3.SetSocketAcceptor(endpoint.NewBinding());
+  TestVsockAcceptor endpoint;
+  cid3.SetVsockAcceptor(endpoint.NewBinding());
   RunLoopUntilIdle();
 
   // Request a connection on an arbitrary port.
@@ -258,7 +258,7 @@ TEST_F(VsockServerTest, HostListenOnConnectPort) {
 
   // We'll now try to listen on the port that is in use for the out-bound
   // connection to (3,1111). This should fail.
-  TestSocketAcceptor acceptor;
+  TestVsockAcceptor acceptor;
   zx_status_t status = ZX_ERR_BAD_STATE;
   host_endpoint.Listen(request.src_port, acceptor.NewBinding(),
                        [&](zx_status_t _status) { status = _status; });
@@ -274,14 +274,14 @@ TEST_F(VsockServerTest, HostListenTwice) {
   zx_status_t status = ZX_ERR_BAD_STATE;
 
   // Listen 1 -- OK
-  TestSocketAcceptor acceptor1;
+  TestVsockAcceptor acceptor1;
   host_endpoint.Listen(22, acceptor1.NewBinding(),
                        [&](zx_status_t _status) { status = _status; });
   RunLoopUntilIdle();
   ASSERT_EQ(ZX_OK, status);
 
   // Listen 2 -- Fail
-  TestSocketAcceptor acceptor2;
+  TestVsockAcceptor acceptor2;
   host_endpoint.Listen(22, acceptor2.NewBinding(),
                        [&](zx_status_t _status) { status = _status; });
   RunLoopUntilIdle();
@@ -296,7 +296,7 @@ TEST_F(VsockServerTest, HostListenClose) {
   zx_status_t status = ZX_ERR_BAD_STATE;
 
   // Setup listener on a port.
-  TestSocketAcceptor acceptor;
+  TestVsockAcceptor acceptor;
   host_endpoint.Listen(22, acceptor.NewBinding(),
                        [&](zx_status_t _status) { status = _status; });
   RunLoopUntilIdle();
@@ -319,7 +319,7 @@ TEST_F(VsockServerTest, HostListenClose) {
 
   // Verify the endpoint responded to the channel close message by freeing up
   // the port.
-  TestSocketAcceptor new_acceptor;
+  TestVsockAcceptor new_acceptor;
   status = ZX_ERR_BAD_STATE;
   host_endpoint.Listen(22, new_acceptor.NewBinding(),
                        [&](zx_status_t _status) { status = _status; });

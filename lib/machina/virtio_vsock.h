@@ -25,8 +25,8 @@ static constexpr uint16_t kVirtioVsockNumQueues = 3;
 class VirtioVsock
     : public VirtioDeviceBase<VIRTIO_ID_VSOCK, kVirtioVsockNumQueues,
                               virtio_vsock_config_t>,
-      public fuchsia::guest::SocketEndpoint,
-      public fuchsia::guest::SocketAcceptor {
+      public fuchsia::guest::VsockEndpoint,
+      public fuchsia::guest::VsockAcceptor {
  public:
   VirtioVsock(fuchsia::sys::StartupContext* context, const PhysMem&,
               async_dispatcher_t* dispatcher);
@@ -74,7 +74,8 @@ class VirtioVsock
   template <StreamFunc F>
   class Stream {
    public:
-    Stream(async_dispatcher_t* dispatcher, VirtioQueue* queue, VirtioVsock* device);
+    Stream(async_dispatcher_t* dispatcher, VirtioQueue* queue,
+           VirtioVsock* device);
 
     zx_status_t WaitOnQueue();
 
@@ -82,14 +83,14 @@ class VirtioVsock
     VirtioQueueWaiter waiter_;
   };
 
-  // |fuchsia::guest::SocketEndpoint|
+  // |fuchsia::guest::VsockEndpoint|
   void SetContextId(
       uint32_t cid,
-      fidl::InterfaceHandle<fuchsia::guest::SocketConnector> connector,
-      fidl::InterfaceRequest<fuchsia::guest::SocketAcceptor> acceptor) override;
-  // |fuchsia::guest::SocketAcceptor|
+      fidl::InterfaceHandle<fuchsia::guest::VsockConnector> connector,
+      fidl::InterfaceRequest<fuchsia::guest::VsockAcceptor> acceptor) override;
+  // |fuchsia::guest::VsockAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
-              SocketAcceptor::AcceptCallback callback) override;
+              fuchsia::guest::VsockAcceptor::AcceptCallback callback) override;
   void ConnectCallback(ConnectionKey key, zx_status_t status,
                        zx::socket socket);
 
@@ -114,9 +115,9 @@ class VirtioVsock
   ConnectionSet readable_ __TA_GUARDED(mutex_);
   // NOTE(abdulla): We ignore the event queue, as we don't support VM migration.
 
-  fidl::BindingSet<fuchsia::guest::SocketEndpoint> endpoint_bindings_;
-  fidl::BindingSet<fuchsia::guest::SocketAcceptor> acceptor_bindings_;
-  fuchsia::guest::SocketConnectorPtr connector_;
+  fidl::BindingSet<fuchsia::guest::VsockEndpoint> endpoint_bindings_;
+  fidl::BindingSet<fuchsia::guest::VsockAcceptor> acceptor_bindings_;
+  fuchsia::guest::VsockConnectorPtr connector_;
 
   class NullConnection;
   class SocketConnection;
@@ -189,7 +190,7 @@ class VirtioVsock::NullConnection final : public VirtioVsock::Connection {
 class VirtioVsock::SocketConnection final : public VirtioVsock::Connection {
  public:
   SocketConnection(zx::socket socket, zx::socket remote_socket,
-                   fuchsia::guest::SocketAcceptor::AcceptCallback callback);
+                   fuchsia::guest::VsockAcceptor::AcceptCallback callback);
   ~SocketConnection() override;
 
   zx_status_t Init(async_dispatcher_t* dispatcher, fit::closure queue_callback);
@@ -207,7 +208,7 @@ class VirtioVsock::SocketConnection final : public VirtioVsock::Connection {
 
   zx::socket socket_;
   zx::socket remote_socket_;
-  fuchsia::guest::SocketAcceptor::AcceptCallback accept_callback_;
+  fuchsia::guest::VsockAcceptor::AcceptCallback accept_callback_;
   fit::closure queue_callback_;
 };
 

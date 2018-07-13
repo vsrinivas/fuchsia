@@ -24,26 +24,26 @@ static constexpr uint32_t kLastEphemeralPort = 65535;
 // endpoint will handle out-bound port allocations to avoid port collisions and
 // exposes an interface for registering listeners on a per-port basis.
 class HostVsockEndpoint : public VsockEndpoint,
-                          public fuchsia::guest::ManagedSocketEndpoint {
+                          public fuchsia::guest::ManagedVsockEndpoint {
  public:
   HostVsockEndpoint(uint32_t cid);
   ~HostVsockEndpoint() override;
 
   void AddBinding(
-      fidl::InterfaceRequest<fuchsia::guest::ManagedSocketEndpoint> request);
+      fidl::InterfaceRequest<fuchsia::guest::ManagedVsockEndpoint> request);
 
-  // |fuchsia::guest::SocketAcceptor|
+  // |fuchsia::guest::VsockAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
               AcceptCallback callback) override;
 
-  // |fuchsia::guest::ManagedSocketEndpoint|
-  void Listen(uint32_t port, fidl::InterfaceHandle<SocketAcceptor> acceptor,
+  // |fuchsia::guest::ManagedVsockEndpoint|
+  void Listen(uint32_t port, fidl::InterfaceHandle<VsockAcceptor> acceptor,
               ListenCallback callback) override;
   void Connect(
       uint32_t cid, uint32_t port,
-      fuchsia::guest::ManagedSocketEndpoint::ConnectCallback callback) override;
+      fuchsia::guest::ManagedVsockEndpoint::ConnectCallback callback) override;
 
-  // This gets hidden by the ManagedSocketEndpoint::Connect overload so ensure
+  // This gets hidden by the ManagedVsockEndpoint::Connect overload so ensure
   // it's visible.
   using VsockEndpoint::Connect;
 
@@ -56,7 +56,7 @@ class HostVsockEndpoint : public VsockEndpoint,
 
   void ConnectCallback(
       zx_status_t status, zx::socket socket, uint32_t port,
-      fuchsia::guest::ManagedSocketEndpoint::ConnectCallback remote_callback);
+      fuchsia::guest::ManagedVsockEndpoint::ConnectCallback remote_callback);
 
   void OnPeerClosed(Connection* conn);
 
@@ -64,8 +64,8 @@ class HostVsockEndpoint : public VsockEndpoint,
   zx_status_t FreePort(uint32_t port);
 
   bitmap::RleBitmap port_bitmap_;
-  fidl::BindingSet<fuchsia::guest::ManagedSocketEndpoint> bindings_;
-  std::unordered_map<uint32_t, fuchsia::guest::SocketAcceptorPtr> listeners_;
+  fidl::BindingSet<fuchsia::guest::ManagedVsockEndpoint> bindings_;
+  std::unordered_map<uint32_t, fuchsia::guest::VsockAcceptorPtr> listeners_;
   std::unordered_map<uint32_t, std::unique_ptr<Connection>> connections_;
 };
 

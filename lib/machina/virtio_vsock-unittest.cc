@@ -43,7 +43,7 @@ struct ConnectionRequest {
   uint32_t src_port;
   uint32_t cid;
   uint32_t port;
-  fuchsia::guest::SocketConnector::ConnectCallback callback;
+  fuchsia::guest::VsockConnector::ConnectCallback callback;
 };
 
 struct TestConnection {
@@ -51,7 +51,7 @@ struct TestConnection {
   zx_status_t status = ZX_ERR_BAD_STATE;
   zx::socket socket;
 
-  fuchsia::guest::SocketAcceptor::AcceptCallback callback() {
+  fuchsia::guest::VsockAcceptor::AcceptCallback callback() {
     return [this](zx_status_t status, zx::socket socket) {
       count++;
       this->status = status;
@@ -61,7 +61,7 @@ struct TestConnection {
 };
 
 class VirtioVsockTest : public ::gtest::TestLoopFixture,
-                        public fuchsia::guest::SocketConnector {
+                        public fuchsia::guest::VsockConnector {
  public:
   VirtioVsockTest()
       : vsock_(nullptr, phys_mem_, dispatcher()),
@@ -84,10 +84,10 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
   VirtioVsock vsock_;
   VirtioQueueFake rx_queue_;
   VirtioQueueFake tx_queue_;
-  fidl::Binding<fuchsia::guest::SocketEndpoint> endpoint_binding_{&vsock_};
-  fuchsia::guest::SocketEndpointPtr endpoint_;
-  fuchsia::guest::SocketAcceptorPtr acceptor_;
-  fidl::Binding<fuchsia::guest::SocketConnector> connector_binding_{this};
+  fidl::Binding<fuchsia::guest::VsockEndpoint> endpoint_binding_{&vsock_};
+  fuchsia::guest::VsockEndpointPtr endpoint_;
+  fuchsia::guest::VsockAcceptorPtr acceptor_;
+  fidl::Binding<fuchsia::guest::VsockConnector> connector_binding_{this};
   std::vector<zx::socket> remote_sockets_;
   std::vector<ConnectionRequest> connection_requests_;
   std::vector<ConnectionRequest> connections_established_;
@@ -99,10 +99,10 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
   uint32_t buf_alloc = UINT32_MAX;
   uint32_t fwd_cnt = 0;
 
-  // |fuchsia::guest::SocketConnector|
+  // |fuchsia::guest::VsockConnector|
   void Connect(
       uint32_t src_port, uint32_t cid, uint32_t port,
-      fuchsia::guest::SocketConnector::ConnectCallback callback) override {
+      fuchsia::guest::VsockConnector::ConnectCallback callback) override {
     connection_requests_.emplace_back(
         ConnectionRequest{src_port, cid, port, std::move(callback)});
   }
@@ -151,7 +151,7 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
 
   void HostConnectOnPortRequest(
       uint32_t host_port,
-      fuchsia::guest::SocketAcceptor::AcceptCallback callback) {
+      fuchsia::guest::VsockAcceptor::AcceptCallback callback) {
     acceptor_->Accept(fuchsia::guest::kHostCid, host_port,
                       kVirtioVsockGuestPort, std::move(callback));
 

@@ -10,13 +10,13 @@ library fuchsia.guest;
 // corresponding |GuestInfo| structure.
 const uint32 kHostCid = 2;
 
-// Exposed by commponents capable of listening on vsockets. On a request to
+// Exposed by commponents capable of listening on vsocks. On a request to
 // establish a connection, the |Accept| method will be called. If the port is
 // open and accepting connections, the implementation should return |ZX_OK|,
 // create a new socket, and return the remote endpoint.
 //
-// Also see |SocketEndpoint|.
-interface SocketAcceptor {
+// Also see |VsockEndpoint|.
+interface VsockAcceptor {
   1: Accept(uint32 src_cid, uint32 src_port, uint32 port)
       -> (status s, handle<socket>? socket);
 };
@@ -24,22 +24,21 @@ interface SocketAcceptor {
 // Allow for out-bound connections to be established to the target (cid,port)
 // target. The caller must allocate a unique port number |src_port| to identify
 // this connection.
-interface SocketConnector {
+interface VsockConnector {
   1: Connect(uint32 src_port, uint32 cid, uint32 port)
       -> (status s, handle<socket>? socket);
 };
 
 // Exposed by components capable of handling vsock traffic. During
 // initialization the guestmgr will assign a unique context ID (CID) to this
-// endpoint and provide a |SocketConnector| that can be used to establish out-
+// endpoint and provide a |VsockConnector| that can be used to establish out-
 // bound connections on this CID. The implementation should provide a
-// |SocketAcceptor| implementation that can handle any in-bound connection
+// |VsockAcceptor| implementation that can handle any in-bound connection
 // requests.
 [Discoverable]
-interface SocketEndpoint {
-  1: SetContextId(uint32 cid,
-                  SocketConnector connector,
-                  request<SocketAcceptor> acceptor);
+interface VsockEndpoint {
+  1: SetContextId(uint32 cid, VsockConnector connector,
+                  request<VsockAcceptor> acceptor);
 };
 
 // An interface that provides access to a shared socked endpoint (ex: the host
@@ -47,13 +46,13 @@ interface SocketEndpoint {
 //
 // Allows listeners to be multiplexed by port and manages dynamic port
 // allocation for out-bound connections.
-interface ManagedSocketEndpoint {
+interface ManagedVsockEndpoint {
   // Register |acceptor| to be invoked for any connection requests to |port|.
-  1: Listen(uint32 port, SocketAcceptor acceptor)
+  1: Listen(uint32 port, VsockAcceptor acceptor)
       -> (status s);
 
-  // Similar to |SocketConnector.Connect| except the |src_port| will be
-  // generated automatically.
+  // Similar to |VsockConnector.Connect| except the |src_port| will be generated
+  // automatically.
   2: Connect(uint32 cid, uint32 port)
       -> (status s, handle<socket>? socket);
 };

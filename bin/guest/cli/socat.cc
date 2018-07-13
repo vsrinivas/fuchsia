@@ -13,9 +13,9 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
 
-class SocketAcceptor : public fuchsia::guest::SocketAcceptor {
+class VsockAcceptor : public fuchsia::guest::VsockAcceptor {
  public:
-  SocketAcceptor(uint32_t port, async::Loop* loop)
+  VsockAcceptor(uint32_t port, async::Loop* loop)
       : port_(port), console_(loop) {}
 
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
@@ -44,11 +44,11 @@ void handle_socat_listen(uint32_t env_id, uint32_t port) {
   fuchsia::guest::GuestEnvironmentSync2Ptr guest_env;
   guestmgr->ConnectToEnvironment(env_id, guest_env.NewRequest());
 
-  fuchsia::guest::ManagedSocketEndpointSync2Ptr vsock_endpoint;
-  guest_env->GetHostSocketEndpoint(vsock_endpoint.NewRequest());
+  fuchsia::guest::ManagedVsockEndpointSync2Ptr vsock_endpoint;
+  guest_env->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
 
-  SocketAcceptor acceptor(port, &loop);
-  fidl::Binding<fuchsia::guest::SocketAcceptor> binding(&acceptor);
+  VsockAcceptor acceptor(port, &loop);
+  fidl::Binding<fuchsia::guest::VsockAcceptor> binding(&acceptor);
   zx_status_t status;
   vsock_endpoint->Listen(port, binding.NewBinding(), &status);
   if (status != ZX_OK) {
@@ -69,8 +69,8 @@ void handle_socat_connect(uint32_t env_id, uint32_t cid, uint32_t port) {
 
   zx_status_t status;
   zx::socket socket;
-  fuchsia::guest::ManagedSocketEndpointSync2Ptr vsock_endpoint;
-  guest_env->GetHostSocketEndpoint(vsock_endpoint.NewRequest());
+  fuchsia::guest::ManagedVsockEndpointSync2Ptr vsock_endpoint;
+  guest_env->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
 
   vsock_endpoint->Connect(cid, port, &status, &socket);
   if (status != ZX_OK) {

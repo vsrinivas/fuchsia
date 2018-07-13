@@ -52,8 +52,8 @@ class GuestEnvironmentImpl : public fuchsia::guest::GuestEnvironment {
   void ConnectToGuest(uint32_t id,
                       fidl::InterfaceRequest<fuchsia::guest::GuestController>
                           controller) override;
-  void GetHostSocketEndpoint(
-      fidl::InterfaceRequest<fuchsia::guest::ManagedSocketEndpoint> endpoint)
+  void GetHostVsockEndpoint(
+      fidl::InterfaceRequest<fuchsia::guest::ManagedVsockEndpoint> endpoint)
       override;
 
   void CreateEnvironment(const std::string& label);
