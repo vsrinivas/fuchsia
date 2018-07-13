@@ -149,8 +149,7 @@ class LowEnergyConnection {
   // Called when a new LTK is received for this connection.
   void OnNewLTK(const sm::LTK& ltk) {
     FXL_VLOG(1) << "gap: Connection has new LTK";
-
-    // TODO(armansito): Store key with remote device cache.
+    conn_mgr_->device_cache()->StoreLTK(id_, ltk);
   }
 
   // Called when a TK is needed for pairing. This request should be resolved by

@@ -51,6 +51,24 @@ void Xor128(const UInt128& int1, const UInt128& int2, UInt128* out) {
 
 }  // namespace
 
+std::string IOCapabilityToString(IOCapability capability) {
+  switch (capability) {
+    case IOCapability::kDisplayOnly:
+      return "Display Only";
+    case IOCapability::kDisplayYesNo:
+      return "Display w/ Confirmation";
+    case IOCapability::kKeyboardOnly:
+      return "Keyboard";
+    case IOCapability::kNoInputNoOutput:
+      return "No I/O";
+    case IOCapability::kKeyboardDisplay:
+      return "Keyboard w/ Display";
+    default:
+      break;
+  }
+  return "(unknown)";
+};
+
 std::string PairingMethodToString(PairingMethod method) {
   switch (method) {
     case PairingMethod::kJustWorks:

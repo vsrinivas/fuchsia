@@ -35,17 +35,18 @@ struct LEConnectionParameters {
   uint16 supervision_timeout;
 };
 
+enum AddressType: uint8 {
+  LE_PUBLIC = 0;
+  LE_RANDOM = 1;
+  BREDR = 2;
+};
+
 struct LEData {
   // The identity address of the peer. If |resolvable| is true, then this is the
   // resolved private address (and the |irk| is present).
   string address;
 
-  // TODO add a type of address?
-
-  bool resolvable;
-
-  // True if the peer is the master of the connection.
-  bool master;
+  AddressType address_type;
 
   // The peer’s preferred connection parameters, if known.
   LEConnectionParameters? connection_parameters;
@@ -65,6 +66,7 @@ struct LEData {
 
 struct BondingData {
   string identifier;
+
   LEData? le;
 
   // TODO Add BR/EDR data

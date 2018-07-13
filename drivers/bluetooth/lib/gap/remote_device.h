@@ -13,6 +13,7 @@
 #include "garnet/drivers/bluetooth/lib/gap/gap.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/lmp_feature_set.h"
+#include "garnet/drivers/bluetooth/lib/sm/pairing_state.h"
 #include "lib/fxl/macros.h"
 
 namespace btlib {
@@ -108,6 +109,10 @@ class RemoteDevice final {
   void set_le_connection_params(const hci::LEConnectionParameters& params) {
     le_conn_params_ = params;
   }
+
+  void set_ltk(const sm::LTK& key) { ltk_ = key; }
+
+  const common::Optional<sm::LTK> ltk() const { return ltk_; }
 
   // Returns this device's preferred connection parameters, if known. LE
   // peripherals report their preferred connection parameters using one of the
@@ -211,6 +216,7 @@ class RemoteDevice final {
   const TechnologyType technology_;
   ConnectionState le_connection_state_;
   ConnectionState bredr_connection_state_;
+  common::Optional<sm::LTK> ltk_;
   common::Optional<std::string> name_;
   bool connectable_;
   bool temporary_;

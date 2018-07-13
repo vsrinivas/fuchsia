@@ -188,6 +188,13 @@ void Adapter::ShutDown() {
   CleanUp();
 }
 
+bool Adapter::AddBondedDevice(std::string identifier,
+                              const common::DeviceAddress& address,
+                              sm::LTK key) {
+  return remote_device_cache()->AddBondedDevice(identifier, address, key);
+  // TODO(bwb) auto-connect the device
+}
+
 void Adapter::SetPairingDelegate(fxl::WeakPtr<PairingDelegate> delegate) {
   le_connection_manager()->SetPairingDelegate(delegate);
   bredr_connection_manager()->SetPairingDelegate(delegate);

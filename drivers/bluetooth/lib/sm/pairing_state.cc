@@ -197,7 +197,6 @@ void PairingState::BeginLegacyPairingPhase2(const ByteBuffer& preq,
   FXL_DCHECK(!legacy_state_->has_peer_rand);
   FXL_DCHECK(!legacy_state_->sent_local_confirm);
   FXL_DCHECK(!legacy_state_->sent_local_rand);
-
   // Cache |preq| and |pres|. These are used for confirm value generation.
   FXL_DCHECK(preq.size() == legacy_state_->preq.size());
   FXL_DCHECK(pres.size() == legacy_state_->pres.size());

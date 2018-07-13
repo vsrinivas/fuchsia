@@ -10,6 +10,7 @@
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
+#include "garnet/drivers/bluetooth/lib/sm/pairing_state.h"
 #include "lib/fxl/macros.h"
 #include "remote_device.h"
 
@@ -42,6 +43,12 @@ class RemoteDeviceCache final {
   RemoteDevice* NewDevice(const common::DeviceAddress& address,
                           bool connectable);
 
+  bool StoreLTK(std::string device_id, const sm::LTK& key);
+
+  bool AddBondedDevice(std::string identifier,
+                       const common::DeviceAddress& address,
+                       const sm::LTK& key);
+
   // Returns the remote device with identifier |identifier|. Returns nullptr if
   // |identifier| is not recognized.
   RemoteDevice* FindDeviceById(const std::string& identifier) const;
@@ -63,6 +70,18 @@ class RemoteDeviceCache final {
   void set_device_removed_callback(DeviceRemovedCallback callback) {
     device_removed_callback_ = std::move(callback);
   }
+
+  // When this callback is set, |callback| will be invoked whenever a
+  // device is bonded. Caller must ensure that |callback| outlives
+  // |this|.
+  void set_device_bonded_callback(DeviceUpdatedCallback callback) {
+    device_bonded_callback_ = std::move(callback);
+  }
+
+ private:
+  // Maps unique device IDs to the corresponding RemoteDevice entry.
+  using RemoteDeviceMap =
+      std::unordered_map<std::string, std::unique_ptr<RemoteDevice>>;
 
  private:
   friend class RemoteDeviceRecord;
@@ -86,6 +105,7 @@ class RemoteDeviceCache final {
   // |device| must already exist in the cache.
   void NotifyDeviceUpdated(const RemoteDevice& device);
 
+
   // Updates the expiration time for |device|, if a temporary. Cancels expiry,
   // if a non-temporary. Pre-conditions:
   // - |device| must already exist in the cache
@@ -95,6 +115,10 @@ class RemoteDeviceCache final {
   // Removes |device| from this cache, and notifies listeners of the
   // removal.
   void RemoveDevice(RemoteDevice* device);
+
+  // Notifies interested parties that |device| has bonded
+  // |device| must already exist in the cache.
+  void NotifyDeviceBonded(const RemoteDevice& device);
 
   // Mapping from unique device IDs to RemoteDeviceRecords.
   // Owns the corresponding RemoteDevices.
@@ -109,7 +133,11 @@ class RemoteDeviceCache final {
   std::unordered_map<common::DeviceAddress, std::string> address_map_;
 
   DeviceUpdatedCallback device_updated_callback_;
+
   DeviceRemovedCallback device_removed_callback_;
+
+  DeviceUpdatedCallback device_bonded_callback_;
+
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RemoteDeviceCache);
 };

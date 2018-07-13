@@ -15,6 +15,9 @@ namespace util {
 // Returns a string representation of a given pairing method.
 std::string PairingMethodToString(PairingMethod method);
 
+// Returns a string representation of a given IOCapability.
+std::string IOCapabilityToString(IOCapability capability);
+
 // Used to select the key generation method as described in Vol 3, Part H,
 // 2.3.5.1 based on local and peer authentication parameters:
 //   - |secure_connections|: True if Secure Connections pairing is used. False

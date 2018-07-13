@@ -11,6 +11,7 @@
 #include "garnet/drivers/bluetooth/lib/gap/bredr_discovery_manager.h"
 #include "garnet/drivers/bluetooth/lib/gap/gap.h"
 #include "garnet/drivers/bluetooth/lib/gap/low_energy_discovery_manager.h"
+#include "garnet/drivers/bluetooth/lib/sm/util.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -24,12 +25,19 @@ using fuchsia::bluetooth::Bool;
 using fuchsia::bluetooth::ErrorCode;
 using fuchsia::bluetooth::Status;
 using fuchsia::bluetooth::control::AdapterState;
+using fuchsia::bluetooth::control::BondingData;
+using fuchsia::bluetooth::control::Key;
+using fuchsia::bluetooth::control::LEData;
+using fuchsia::bluetooth::control::LTK;
+using btlib::sm::IOCapability;
 
 HostServer::HostServer(zx::channel channel,
                        fxl::WeakPtr<::btlib::gap::Adapter> adapter,
                        fbl::RefPtr<GattHost> gatt_host)
     : AdapterServerBase(adapter, this, std::move(channel)),
+      pairing_delegate_(nullptr),
       gatt_host_(gatt_host),
+      io_capability_(IOCapability::kNoInputNoOutput),
       weak_ptr_factory_(this) {
   FXL_DCHECK(gatt_host_);
 
@@ -40,16 +48,18 @@ HostServer::HostServer(zx::channel channel,
           self->OnRemoteDeviceUpdated(device);
         }
       });
-
   adapter->remote_device_cache()->set_device_removed_callback(
       [self = weak_ptr_factory_.GetWeakPtr()](const auto& identifier) {
         if (self) {
           self->OnRemoteDeviceRemoved(identifier);
         }
       });
-
-  // TODO(armansito): Do this in response to Host::SetPairingDelegate().
-  adapter->SetPairingDelegate(self);
+  adapter->remote_device_cache()->set_device_bonded_callback(
+      [self = weak_ptr_factory_.GetWeakPtr()](const auto& device) {
+        if (self) {
+          self->OnRemoteDeviceBonded(device);
+        }
+      });
 }
 
 void HostServer::GetInfo(GetInfoCallback callback) {
@@ -184,6 +194,75 @@ void HostServer::SetConnectable(bool connectable,
       });
 }
 
+void HostServer::AddBondedDevices(
+    ::fidl::VectorPtr<fuchsia::bluetooth::control::BondingData> bonds,
+    AddBondedDevicesCallback callback) {
+  if (!bonds) {
+    callback(fidl_helpers::NewFidlError(ErrorCode::NOT_SUPPORTED,
+                                        "No bonds were added"));
+    return;
+  }
+
+  for (auto& bond : *bonds) {
+    // If LE Bond
+    if (bond.le) {
+      auto ltk = std::move(bond.le->ltk);
+      auto security =
+          fidl_helpers::NewSecurityLevel(ltk->key.security_properties);
+
+      // Setup LTK to store
+      btlib::common::UInt128 key_data;
+      std::copy(ltk->key.value.begin(), ltk->key.value.begin() + 16,
+                key_data.begin());
+      auto link_key = btlib::hci::LinkKey(key_data, ltk->rand, ltk->ediv);
+      auto store_ltk = btlib::sm::LTK(security, link_key);
+
+      // Store the built ltk with the address
+      auto addr = btlib::common::DeviceAddress(
+          fidl_helpers::NewAddrType(bond.le->address_type), bond.le->address);
+      auto resp = adapter()->AddBondedDevice(bond.identifier, addr, store_ltk);
+      if (!resp) {
+        callback(fidl_helpers::NewFidlError(
+            ErrorCode::FAILED, "Devices were already present in cache"));
+        return;
+      }
+    }
+  }
+  callback(Status());
+}
+
+void HostServer::OnRemoteDeviceBonded(
+    const ::btlib::gap::RemoteDevice& remote_device) {
+  FXL_VLOG(1) << "HostServer::OnRemoteDeviceBonded";
+  BondingData data;
+  data.identifier = remote_device.identifier().c_str();
+
+  // If the bond is LE
+  if (remote_device.technology() == btlib::gap::TechnologyType::kLowEnergy) {
+    data.le = LEData::New();
+    data.le->address = remote_device.address().value().ToString();
+
+    if (remote_device.ltk()) {
+      data.le->ltk = fuchsia::bluetooth::control::LTK::New();
+      // Set security properties
+      auto key_data = remote_device.ltk()->key().value().data();
+      std::copy(key_data, key_data + 16, data.le->ltk->key.value.begin());
+      data.le->ltk->key.security_properties.authenticated =
+          remote_device.ltk()->security().authenticated();
+      data.le->ltk->key.security_properties.secure_connections =
+          remote_device.ltk()->security().secure_connections();
+      data.le->ltk->key.security_properties.encryption_key_size =
+          remote_device.ltk()->security().enc_key_size();
+
+      data.le->ltk->key_size = remote_device.ltk()->security().enc_key_size();
+      data.le->ltk->rand = remote_device.ltk()->key().rand();
+      data.le->ltk->ediv = remote_device.ltk()->key().ediv();
+    }
+  }
+
+  this->binding()->events().OnNewBondingData(std::move(data));
+}
+
 void HostServer::SetDiscoverable(bool discoverable,
                                  SetDiscoverableCallback callback) {
   FXL_VLOG(1) << "Adapter SetDiscoverable(" << discoverable << ")";
@@ -235,22 +314,6 @@ void HostServer::SetDiscoverable(bool discoverable,
       });
 }
 
-void HostServer::SetPairingDelegate(
-    ::fuchsia::bluetooth::control::InputCapabilityType input,
-    ::fuchsia::bluetooth::control::OutputCapabilityType output,
-    ::fidl::InterfaceHandle<::fuchsia::bluetooth::control::PairingDelegate>
-        delegate,
-    HostServer::SetPairingDelegateCallback callback) {
-  // TODO(bwb): implement
-  callback(false);
-}
-
-void HostServer::AddBondedDevices(
-    ::fidl::VectorPtr<fuchsia::bluetooth::control::BondingData> bonds,
-    AddBondedDevicesCallback callback) {
-  callback(Status());
-}
-
 void HostServer::RequestLowEnergyCentral(
     fidl::InterfaceRequest<fuchsia::bluetooth::le::Central> request) {
   BindServer<LowEnergyCentralServer>(std::move(request), gatt_host_);
@@ -267,6 +330,31 @@ void HostServer::RequestGattServer(
   gatt_host_->BindGattServer(std::move(request));
 }
 
+void HostServer::SetPairingDelegate(
+    ::fuchsia::bluetooth::control::InputCapabilityType input,
+    ::fuchsia::bluetooth::control::OutputCapabilityType output,
+    ::fidl::InterfaceHandle<::fuchsia::bluetooth::control::PairingDelegate>
+        delegate) {
+  io_capability_ = fidl_helpers::NewIoCapability(input, output);
+
+  auto self = weak_ptr_factory_.GetWeakPtr();
+  pairing_delegate_.Bind(std::move(delegate));
+  if (delegate) {
+    adapter()->le_connection_manager()->SetPairingDelegate(self);
+  } else {
+    adapter()->le_connection_manager()->SetPairingDelegate(
+        fxl::WeakPtr<PairingDelegate>());
+  }
+  pairing_delegate_.set_error_handler([self] {
+    if (self) {
+      self->adapter()->le_connection_manager()->SetPairingDelegate(
+          fxl::WeakPtr<PairingDelegate>());
+      FXL_VLOG(1) << "bt-host: Pairing Delegate disconnected";
+    }
+  });
+
+}
+
 void HostServer::Close() {
   FXL_VLOG(1) << "bthost: Closing FIDL handles";
 
@@ -276,8 +364,9 @@ void HostServer::Close() {
 }
 
 btlib::sm::IOCapability HostServer::io_capability() const {
-  // TODO(armansito): implement
-  return btlib::sm::IOCapability::kDisplayOnly;
+  FXL_VLOG(1) << "bthost: io capability: "
+              << btlib::sm::util::IOCapabilityToString(io_capability_);
+  return io_capability_;
 }
 
 void HostServer::StopPairing(std::string id, btlib::sm::Status status) {

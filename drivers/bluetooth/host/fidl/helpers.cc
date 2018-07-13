@@ -12,6 +12,7 @@
 #include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
 #include "garnet/drivers/bluetooth/lib/gap/discovery_filter.h"
 
+using btlib::sm::SecurityLevel;
 using fuchsia::bluetooth::Bool;
 using fuchsia::bluetooth::Error;
 using fuchsia::bluetooth::ErrorCode;
@@ -75,6 +76,54 @@ Status NewFidlError(ErrorCode error_code, std::string description) {
   status.error->error_code = error_code;
   status.error->description = description;
   return status;
+}
+
+btlib::common::DeviceAddress::Type NewAddrType(
+    const fuchsia::bluetooth::control::AddressType& type) {
+  switch (type) {
+    case ctrl::AddressType::LE_RANDOM:
+      return btlib::common::DeviceAddress::Type::kLERandom;
+    case ctrl::AddressType::LE_PUBLIC:
+      return btlib::common::DeviceAddress::Type::kLEPublic;
+    case ctrl::AddressType::BREDR:
+      return btlib::common::DeviceAddress::Type::kBREDR;
+    default:
+      FXL_NOTREACHED();
+      break;
+  }
+  return btlib::common::DeviceAddress::Type::kBREDR;
+}
+
+btlib::sm::SecurityProperties NewSecurityLevel(
+    const fuchsia::bluetooth::control::SecurityProperties& sec_prop) {
+  auto level = btlib::sm::SecurityLevel::kEncrypted;
+  if (sec_prop.authenticated) {
+    level = btlib::sm::SecurityLevel::kAuthenticated;
+  }
+
+  return btlib::sm::SecurityProperties(level, sec_prop.encryption_key_size,
+                                       sec_prop.secure_connections);
+}
+
+btlib::sm::IOCapability NewIoCapability(ctrl::InputCapabilityType input,
+                                        ctrl::OutputCapabilityType output) {
+  if (input == ctrl::InputCapabilityType::NONE &&
+      output == ctrl::OutputCapabilityType::NONE) {
+    return btlib::sm::IOCapability::kNoInputNoOutput;
+  } else if (input == ctrl::InputCapabilityType::KEYBOARD &&
+             output == ctrl::OutputCapabilityType::DISPLAY) {
+    return btlib::sm::IOCapability::kKeyboardDisplay;
+  } else if (input == ctrl::InputCapabilityType::KEYBOARD &&
+             output == ctrl::OutputCapabilityType::NONE) {
+    return btlib::sm::IOCapability::kKeyboardOnly;
+  } else if (input == ctrl::InputCapabilityType::NONE &&
+             output == ctrl::OutputCapabilityType::DISPLAY) {
+    return btlib::sm::IOCapability::kDisplayOnly;
+  } else if (input == ctrl::InputCapabilityType::CONFIRMATION &&
+             output == ctrl::OutputCapabilityType::DISPLAY) {
+    return btlib::sm::IOCapability::kDisplayYesNo;
+  }
+  return btlib::sm::IOCapability::kNoInputNoOutput;
 }
 
 ctrl::AdapterInfo NewAdapterInfo(const ::btlib::gap::Adapter& adapter) {

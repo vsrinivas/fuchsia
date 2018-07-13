@@ -120,6 +120,8 @@ class LowEnergyConnectionManager final {
   bool Connect(const std::string& device_identifier,
                ConnectionResultCallback callback);
 
+  RemoteDeviceCache* device_cache() { return device_cache_; }
+
   // Disconnects any existing LE connection to |device_identifier|, invalidating
   // all active LowEnergyConnectionRefs. Returns false if |device_identifier| is
   // not recognized or the corresponding remote device is not connected.

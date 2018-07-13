@@ -51,12 +51,6 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host>,
                       SetConnectableCallback callback) override;
   void SetDiscoverable(bool discoverable,
                        SetDiscoverableCallback callback) override;
-  void SetPairingDelegate(
-      ::fuchsia::bluetooth::control::InputCapabilityType input,
-      ::fuchsia::bluetooth::control::OutputCapabilityType output,
-      ::fidl::InterfaceHandle<::fuchsia::bluetooth::control::PairingDelegate>
-          delegate,
-      SetPairingDelegateCallback callback) override;
 
   void RequestLowEnergyCentral(
       ::fidl::InterfaceRequest<fuchsia::bluetooth::le::Central> central)
@@ -67,6 +61,11 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host>,
   void RequestGattServer(
       ::fidl::InterfaceRequest<fuchsia::bluetooth::gatt::Server> server)
       override;
+  void SetPairingDelegate(
+      ::fuchsia::bluetooth::control::InputCapabilityType input,
+      ::fuchsia::bluetooth::control::OutputCapabilityType output,
+      ::fidl::InterfaceHandle<::fuchsia::bluetooth::control::PairingDelegate>
+          delegate) override;
   void Close() override;
 
   // ::btlib::gap::PairingDelegate overrides:
@@ -85,6 +84,10 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host>,
   // removed.
   void OnRemoteDeviceRemoved(const std::string& identifier);
 
+  // Called by |adapter()->remote_device_cache()| when a remote device is
+  // bonded.
+  void OnRemoteDeviceBonded(const ::btlib::gap::RemoteDevice& remote_device);
+
   // Called when |server| receives a channel connection error.
   void OnConnectionError(Server* server);
 
@@ -102,6 +105,8 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host>,
     servers_[server.get()] = std::move(server);
   }
 
+  fuchsia::bluetooth::control::PairingDelegatePtr pairing_delegate_;
+
   // We hold a reference to GattHost for dispatching GATT FIDL requests.
   fbl::RefPtr<GattHost> gatt_host_;
 
@@ -113,6 +118,8 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host>,
   bool requesting_discoverable_;
   std::unique_ptr<::btlib::gap::BrEdrDiscoverableSession>
       bredr_discoverable_session_;
+
+  btlib::sm::IOCapability io_capability_;
 
   // All active FIDL interface servers.
   // NOTE: Each key is a raw pointer that is owned by the corresponding value.

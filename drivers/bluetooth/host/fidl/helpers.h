@@ -58,6 +58,15 @@ fuchsia::bluetooth::Status StatusToFidl(
   return fidl_status;
 }
 
+// Functions that convert FIDL types to library objects
+btlib::sm::SecurityProperties NewSecurityLevel(
+    const fuchsia::bluetooth::control::SecurityProperties& sec_prop);
+btlib::common::DeviceAddress::Type NewAddrType(
+    const fuchsia::bluetooth::control::AddressType& type);
+btlib::sm::IOCapability NewIoCapability(
+    const fuchsia::bluetooth::control::InputCapabilityType,
+    const fuchsia::bluetooth::control::OutputCapabilityType);
+
 // Functions to convert host library objects into FIDL types.
 
 fuchsia::bluetooth::control::AdapterInfo NewAdapterInfo(

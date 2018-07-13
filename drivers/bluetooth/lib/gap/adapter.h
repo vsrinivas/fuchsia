@@ -132,9 +132,13 @@ class Adapter final {
     return &device_cache_;
   }
 
-  // Assigns a new PairingDelegate to this adapter. Replacing an existing
-  // pairing delegate cancels all ongoing pairing procedures. If a delegate is
-  // not set then all pairing requests will be rejected.
+  // Add a bonded device with its priorly generated LTK to the adapter.
+  bool AddBondedDevice(std::string identifier,
+                       const common::DeviceAddress& address, sm::LTK key);
+
+  // Assigns a pairing delegate to this adapter. This PairingDelegate and its
+  // I/O capabilities will be used for all future pairing procedures. Setting a
+  // new PairingDelegate cancels all ongoing pairing procedures.
   void SetPairingDelegate(fxl::WeakPtr<PairingDelegate> delegate);
 
   // Returns true if any discovery process (LE or BR/EDR) is running on this

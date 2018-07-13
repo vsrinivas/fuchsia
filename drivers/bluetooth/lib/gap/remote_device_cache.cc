@@ -40,6 +40,39 @@ RemoteDevice* RemoteDeviceCache::NewDevice(const common::DeviceAddress& address,
   return device;
 }
 
+bool RemoteDeviceCache::AddBondedDevice(std::string identifier,
+                                        const common::DeviceAddress& address,
+                                        const sm::LTK& key) {
+  if (FindDeviceById(identifier) || FindDeviceByAddress(address)) {
+    FXL_VLOG(1) << "RemoteDeviceCache: A device with the same identifier or "
+                   "address is already present in the device cache";
+    return false;
+  }
+  auto* device = new RemoteDevice(
+      fit::bind_member(this, &RemoteDeviceCache::NotifyDeviceUpdated),
+      fit::bind_member(this, &RemoteDeviceCache::UpdateExpiry),
+      identifier, address, true);
+  devices_.emplace(
+      std::piecewise_construct, std::forward_as_tuple(device->identifier()),
+      std::forward_as_tuple(std::unique_ptr<RemoteDevice>(device),
+                            [this, device] { RemoveDevice(device); }));
+  address_map_[device->address()] = device->identifier();
+  device->set_ltk(key);
+  NotifyDeviceUpdated(*device);
+  return true;
+}
+
+bool RemoteDeviceCache::StoreLTK(std::string device_id, const sm::LTK& key) {
+  FXL_VLOG(1) << "RemoteDeviceCache: StoreLTK";
+  auto device = FindDeviceById(device_id);
+  if (!device)
+    return false;
+
+  device->set_ltk(key);
+  NotifyDeviceBonded(*device);
+  return true;
+}
+
 RemoteDevice* RemoteDeviceCache::FindDeviceById(
     const std::string& identifier) const {
   auto iter = devices_.find(identifier);
@@ -59,6 +92,14 @@ RemoteDevice* RemoteDeviceCache::FindDeviceByAddress(
 }
 
 // Private methods below.
+
+void RemoteDeviceCache::NotifyDeviceBonded(const RemoteDevice& device) {
+  FXL_DCHECK(devices_.find(device.identifier()) != devices_.end());
+  FXL_DCHECK(devices_.at(device.identifier()).device() == &device);
+  FXL_VLOG(1) << "RemoteDeviceCache: Bonding a device";
+  if (device_bonded_callback_)
+    device_bonded_callback_(device);
+}
 
 void RemoteDeviceCache::NotifyDeviceUpdated(const RemoteDevice& device) {
   FXL_DCHECK(devices_.find(device.identifier()) != devices_.end());

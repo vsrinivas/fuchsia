@@ -53,11 +53,11 @@ interface Host {
 
   // Assigns the pairing delegate that will respond to authentication challenges using the given
   // I/O capabilities. Setting a pairing delegate cancels any on-going pairing procedure started
-  // using a previous delegate. If no PairingDelegate has ben set, reject.
+  // using a previous delegate. If no PairingDelegate has been set, reject.
   11: SetPairingDelegate(
           fuchsia.bluetooth.control.InputCapabilityType input,
           fuchsia.bluetooth.control.OutputCapabilityType output,
-          fuchsia.bluetooth.control.PairingDelegate? delegate) -> (bool success);
+          fuchsia.bluetooth.control.PairingDelegate? delegate);
 
   // TODO(NET-1148): add Forget() & -> OnDeleteBond
 

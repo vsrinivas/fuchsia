@@ -59,6 +59,7 @@ class SecurityProperties final {
   SecurityLevel level() const { return level_; }
   size_t enc_key_size() const { return enc_key_size_; }
   bool secure_connections() const { return sc_; }
+  bool authenticated() const { return level_ == SecurityLevel::kAuthenticated; }
 
   // Returns a string representation of these properties.
   std::string ToString() const;

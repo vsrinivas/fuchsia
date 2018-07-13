@@ -9,6 +9,8 @@
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/hci/low_energy_scanner.h"
 #include "lib/gtest/test_loop_fixture.h"
+#include "garnet/drivers/bluetooth/lib/sm/types.h"
+#include "gtest/gtest.h"
 
 namespace btlib {
 namespace gap {
@@ -27,6 +29,7 @@ const common::DeviceAddress kAddrRandom(common::DeviceAddress::Type::kLERandom,
                                         "06:05:04:03:02:01");
 const common::DeviceAddress kAddrAnon(common::DeviceAddress::Type::kLEAnonymous,
                                       "06:05:04:03:02:01");
+const btlib::sm::LTK kLTK;
 
 class GAP_RemoteDeviceCacheTest : public ::gtest::TestLoopFixture {
  public:
@@ -128,6 +131,33 @@ TEST_F(GAP_RemoteDeviceCacheTest,
   EXPECT_EQ(1, call_count);
 }
 
+class GAP_RemoteDeviceCacheTest_BondedCallbackTest : public GAP_RemoteDeviceCacheTest {
+ public:
+  void SetUp() {
+    was_called_ = false;
+    device_ = cache_.NewDevice(kAddrPublic, true);
+    cache_.set_device_bonded_callback(
+        [this](const auto&) { was_called_ = true; });
+    EXPECT_FALSE(was_called_);
+  }
+
+ protected:
+  RemoteDeviceCache* cache() { return &cache_; }
+  RemoteDevice* device() { return device_; }
+  bool was_called() const { return was_called_; }
+
+ private:
+  RemoteDeviceCache cache_;
+  RemoteDevice* device_;
+  bool was_called_;
+};
+
+TEST_F(GAP_RemoteDeviceCacheTest_BondedCallbackTest,
+       StoreLTKTriggersBondedCallback) {
+  cache()->StoreLTK(device()->identifier(), kLTK);
+  EXPECT_TRUE(was_called());
+}
+
 class GAP_RemoteDeviceCacheTest_UpdateCallbackTest
     : public GAP_RemoteDeviceCacheTest {
  public:
@@ -170,6 +200,13 @@ TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
                                      0x09,  // AD Type: Complete Local Name
                                      'T', 'e', 's', 't'));
   EXPECT_TRUE(was_called());
+}
+
+TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
+       AddExistingBondedDeviceFails) {
+  auto res = cache()->AddBondedDevice(device()->identifier(),
+                                      device()->address(), kLTK);
+  EXPECT_FALSE(res);
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_UpdateCallbackTest,
