@@ -1,6 +1,7 @@
 {
     "imports": [
+        "garnet/packages/prod/scenic",
         "garnet/packages/products/sshd",
-        "garnet/packages/prod/scenic"
+        "garnet/packages/tools/vulkan_validation_layers"
     ]
 }
