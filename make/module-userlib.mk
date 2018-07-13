@@ -193,7 +193,7 @@ MODULE_PKG_TAG := "[lib]"
 ifneq ($(filter shared,$(MODULE_PACKAGE)),)
 ifneq ($(MODULE_SO_NAME),)
 MODULE_PKG_SRCS += lib/lib$(MODULE_SO_NAME).so=BUILD/$(patsubst $(BUILDDIR)/%,%,$(MODULE_LIBNAME)).so.abi
-MODULE_PKG_SRCS += dist/lib$(MODULE_SO_NAME).so=BUILD/$(patsubst $(BUILDDIR)/%,%,$(MODULE_LIBNAME)).so.strip
+MODULE_PKG_SRCS += dist/$(MODULE_SO_INSTALL_NAME)=BUILD/$(patsubst $(BUILDDIR)/%,%,$(MODULE_LIBNAME)).so.strip
 MODULE_PKG_SRCS += debug/lib$(MODULE_SO_NAME).so=BUILD/$(patsubst $(BUILDDIR)/%,%,$(MODULE_LIBNAME)).so
 endif
 endif
