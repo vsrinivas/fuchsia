@@ -81,6 +81,7 @@ def packageable_cc_binary(name, target):
         name = name,
         srcs = [
             ":" + packaged_name,
+            Label("//build_defs/toolchain:dist"),
             Label("//pkg/fdio"),
             Label("//pkg/sysroot"),
         ]

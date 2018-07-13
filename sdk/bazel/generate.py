@@ -100,19 +100,22 @@ class BazelBuilder(Builder):
 
     def install_crosstool(self):
         sysroot_dir = self.dest('arch')
-        if os.path.isdir(sysroot_dir):
-            crosstool = model.Crosstool()
-            for arch in os.listdir(sysroot_dir):
-                if arch in ARCH_MAP:
-                    crosstool.arches.append(model.Arch(arch, ARCH_MAP[arch]))
-                else:
-                    print('Unknown target arch: %s' % arch)
-            self.write_file(self.dest('build_defs', 'crosstool.bzl'),
-                            'crosstool_bzl', crosstool)
-            self.write_file(self.dest('build_defs', 'BUILD.crosstool'),
-                            'crosstool', crosstool)
-            self.write_file(self.dest('build_defs', 'CROSSTOOL.in'),
-                            'crosstool_in', crosstool)
+        if not os.path.isdir(sysroot_dir):
+            return
+        crosstool = model.Crosstool()
+        for arch in os.listdir(sysroot_dir):
+            if arch in ARCH_MAP:
+                crosstool.arches.append(model.Arch(arch, ARCH_MAP[arch]))
+            else:
+                print('Unknown target arch: %s' % arch)
+        self.write_file(self.dest('build_defs', 'crosstool.bzl'),
+                        'crosstool_bzl', crosstool)
+        self.write_file(self.dest('build_defs', 'BUILD.crosstool'),
+                        'crosstool', crosstool)
+        self.write_file(self.dest('build_defs', 'CROSSTOOL.in'),
+                        'crosstool_in', crosstool)
+        self.write_file(self.dest('build_defs', 'toolchain', 'BUILD'),
+                        'toolchain_build', crosstool)
 
 
     def install_dart_atom(self, atom):

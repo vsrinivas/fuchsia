@@ -108,3 +108,15 @@ cc_library(
     srcs = glob(["src/**"]),
     visibility = ["//visibility:public"],
 )
+
+[
+    filegroup(
+        name = "dist-" + cpu,
+        srcs = [
+            "clang/lib/" + cpu + "-fuchsia/lib/libc++.so.2",
+            "clang/lib/" + cpu + "-fuchsia/lib/libc++abi.so.1",
+            "clang/lib/" + cpu + "-fuchsia/lib/libunwind.so.1",
+        ],
+    )
+    for cpu in TARGET_CPUS
+]
