@@ -202,7 +202,7 @@ void RunTestCase(const FixtureOptions& fixture_options,
             skip_tests = (fixture.SetUp() != ZX_OK);
             setUp = false;
         }
-        uint32_t actual_sample_count = test.sample_count;
+        uint32_t actual_sample_count = test_case.sample_count;
         if (actual_sample_count == 0 || performance_test_options.is_unittest) {
             actual_sample_count = performance_test_options.sample_count;
         }

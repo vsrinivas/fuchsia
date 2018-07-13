@@ -71,11 +71,6 @@ struct TestInfo {
     // always be executed (may lead to OOS or OOM(ramdisk) errors.
     // This is optional.
     size_t required_disk_space = 0;
-
-    // Number of times to run this test. Will overwrite |PerformanceTestOptions::sample_count|
-    // if set and wil be ignored if in unittest mode.
-    // This is optional.
-    uint32_t sample_count = 0;
 };
 
 struct TestCaseInfo {
@@ -88,6 +83,11 @@ struct TestCaseInfo {
     // Whether there should be teardown between each test. If your tests depend
     // on the leftover state in the underlying FS from previous state, set this to false.
     bool teardown;
+
+    // Number of times to run each test. Will overwrite |PerformanceTestOptions::sample_count|
+    // if set and will be ignored if in unittest mode.
+    // This is optional.
+    uint32_t sample_count = 0;
 };
 
 // Returns true if the parsed args should trigger a test run. The usage information is

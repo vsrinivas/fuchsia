@@ -215,11 +215,11 @@ bool RunTestCasesPreservesOrderWithMultipleSamples() {
     };
 
     TestCaseInfo info;
+    info.sample_count = 20;
     info.name = "MyTestCase";
     info.tests.push_back({fbl::move(test_1), "test_1", /*required_disk_space=*/0});
     info.tests.push_back({fbl::move(test_2), "test_2", 0});
-    info.tests.push_back({fbl::move(test_3), "test_3", 0,
-                          /*sample_count=*/20});
+    info.tests.push_back({fbl::move(test_3), "test_3", 0});
     info.teardown = false;
 
     fbl::Vector<TestCaseInfo> test_cases;
@@ -227,15 +227,11 @@ bool RunTestCasesPreservesOrderWithMultipleSamples() {
     ASSERT_TRUE(RunTestCases(f_options, p_options, test_cases, /*out=*/nullptr));
 
     // Verify order is preserved.
-    ASSERT_EQ(calls.size(), 40);
-    for (int i = 0; i < 10; ++i) {
+    ASSERT_EQ(calls.size(), 60);
+    for (int i = 0; i < 20; ++i) {
         ASSERT_EQ(calls[i], 1);
-        ASSERT_EQ(calls[(10 + i)], 2);
-        ASSERT_EQ(calls[(20 + i)], 3);
-    }
-
-    for (int i = 30; i < 40; ++i) {
-        ASSERT_EQ(calls[i], 3);
+        ASSERT_EQ(calls[(20 + i)], 2);
+        ASSERT_EQ(calls[(40 + i)], 3);
     }
 
     END_TEST;
