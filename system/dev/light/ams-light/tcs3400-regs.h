@@ -33,7 +33,7 @@
 #define TCS_I2C_CICLEAR                  0xE6    /* W Clear channel interrupt clear */
 #define TCS_I2C_AICLEAR                  0xE7    /* W Clear all interrupts */
 
-#define TCS_I2C_BIT(shift) (uint8_t)(1 << shift)
+#define TCS_I2C_BIT(shift) (uint8_t)(1u << shift)
 
 #define TCS_I2C_ENABLE_POWER_ON                     TCS_I2C_BIT(0)
 #define TCS_I2C_ENABLE_ADC_ENABLE                   TCS_I2C_BIT(1)
