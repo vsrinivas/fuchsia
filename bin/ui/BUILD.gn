@@ -9,7 +9,6 @@ package("scenic_tests") {
   testonly = true
 
   deps = [
-    "ime/tests",
     "input_reader/tests",
     "presentation_mode/tests",
     "view_manager/tests",
@@ -19,9 +18,6 @@ package("scenic_tests") {
   ]
 
   tests = [
-    {
-      name = "ime_unittests"
-    },
     {
       name = "gfx_apptests"
     },

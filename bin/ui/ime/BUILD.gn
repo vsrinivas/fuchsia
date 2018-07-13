@@ -1,37 +1,20 @@
-# Copyright 2015 The Fuchsia Authors. All rights reserved.
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("ime") {
-  output_name = "ime_service"
+import("//build/rust/rustc_binary.gni")
 
-  sources = [
-    "app.cc",
-    "app.h",
-    "ime_impl.cc",
-    "ime_impl.h",
-    "main.cc",
-  ]
+rustc_binary("ime") {
+  name = "ime_service"
+  with_unit_tests = true
 
   deps = [
-    ":common",
-    "//zircon/public/lib/hid",
-  ]
-}
-
-source_set("common") {
-  sources = [
-    "text_input_state_update_functions.cc",
-    "text_input_state_update_functions.h",
-  ]
-
-  public_deps = [
-    "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fidl/cpp",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/ui/input",
-    "//garnet/public/lib/ui/input/cpp",
-    "//garnet/public/fidl/fuchsia.ui.input",
-    "//zircon/public/lib/async-loop-cpp",
+    "//garnet/public/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/crates/fuchsia-app",
+    "//garnet/public/rust/crates/fuchsia-async",
+    "//garnet/public/rust/crates/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures",
   ]
 }
