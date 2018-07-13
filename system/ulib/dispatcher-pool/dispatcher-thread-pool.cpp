@@ -155,7 +155,7 @@ zx_status_t ThreadPool::CancelWaitOnPort(const zx::handle& handle, uint64_t key)
         return ZX_ERR_BAD_STATE;
     }
 
-    return port_.cancel(handle.get(), key);
+    return port_.cancel(handle, key);
 }
 
 void ThreadPool::PrintDebugPrefix() {

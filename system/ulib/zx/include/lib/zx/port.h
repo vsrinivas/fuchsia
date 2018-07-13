@@ -37,8 +37,13 @@ public:
         return zx_port_wait(get(), deadline.get(), packet);
     }
 
+    zx_status_t cancel(const object_base& source, uint64_t key) const {
+        return zx_port_cancel(get(), source.get(), key);
+    }
+
+    // TODO(ZX-2310): Remove once call-sites are updated to object_base version.
     zx_status_t cancel(zx_handle_t source, uint64_t key) const {
-        return zx_port_cancel(get(), source, key);
+        return cancel(*zx::unowned_handle(source), key);
     }
 };
 
