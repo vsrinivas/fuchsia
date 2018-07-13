@@ -76,7 +76,7 @@ static bool teardown(test_t* test) {
     BEGIN_HELPER;
     ASSERT_EQ(zx_handle_close(test->vcpu), ZX_OK);
     ASSERT_EQ(zx_handle_close(test->guest), ZX_OK);
-    ASSERT_EQ(zx::vmar::root_self().unmap(test->addr, VMO_SIZE), ZX_OK);
+    ASSERT_EQ(zx::vmar::root_self()->unmap(test->addr, VMO_SIZE), ZX_OK);
     return true;
     END_HELPER;
 }
@@ -93,7 +93,7 @@ static zx_status_t guest_get_resource(zx_handle_t* resource) {
 
 static bool setup(test_t* test, const char* start, const char* end) {
     ASSERT_EQ(zx::vmo::create(VMO_SIZE, 0, &test->vmo), ZX_OK);
-    ASSERT_EQ(zx::vmar::root_self().map(0, test->vmo, 0, VMO_SIZE, kMapFlags, &test->addr), ZX_OK);
+    ASSERT_EQ(zx::vmar::root_self()->map(0, test->vmo, 0, VMO_SIZE, kMapFlags, &test->addr), ZX_OK);
 
     zx_handle_t resource;
     ASSERT_EQ(guest_get_resource(&resource), ZX_OK);

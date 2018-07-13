@@ -572,7 +572,7 @@ zx_status_t AudioDeviceStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring
     uint32_t flags = input_
                    ? ZX_VM_FLAG_PERM_READ
                    : ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
-    res = zx::vmar::root_self().map(0u, rb_vmo_,
+    res = zx::vmar::root_self()->map(0u, rb_vmo_,
                                     0u, rb_sz_,
                                     flags, reinterpret_cast<uintptr_t*>(&rb_virt_));
 
@@ -626,7 +626,7 @@ zx_status_t AudioDeviceStream::StopRingBuffer() {
 void AudioDeviceStream::ResetRingBuffer() {
     if (rb_virt_ != nullptr) {
         ZX_DEBUG_ASSERT(rb_sz_ != 0);
-        zx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(rb_virt_), rb_sz_);
+        zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(rb_virt_), rb_sz_);
     }
     rb_ch_.reset();
     rb_vmo_.reset();

@@ -81,7 +81,7 @@ Image* Image::Create(zx_handle_t dc_handle,
 
     uintptr_t addr;
     uint32_t perms = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
-    if (zx::vmar::root_self().map(0, vmo, 0, alloc_msg.size, perms, &addr) != ZX_OK) {
+    if (zx::vmar::root_self()->map(0, vmo, 0, alloc_msg.size, perms, &addr) != ZX_OK) {
         printf("Failed to map vmar\n");
         return nullptr;
     }

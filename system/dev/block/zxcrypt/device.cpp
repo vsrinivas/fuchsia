@@ -131,7 +131,7 @@ zx_status_t Device::Init() {
     }
     constexpr uint32_t flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
     uintptr_t address;
-    if ((rc = zx::vmar::root_self().map(0, info->vmo, 0, Volume::kBufferSize, flags, &address)) !=
+    if ((rc = zx::vmar::root_self()->map(0, info->vmo, 0, Volume::kBufferSize, flags, &address)) !=
         ZX_OK) {
         zxlogf(ERROR, "zx::vmar::map failed: %s\n", zx_status_get_string(rc));
         return rc;
@@ -299,7 +299,7 @@ void Device::DdkRelease() {
 
     // Release write buffer
     const uintptr_t address = reinterpret_cast<uintptr_t>(info->base);
-    if (address != 0 && (rc = zx::vmar::root_self().unmap(address, Volume::kBufferSize)) != ZX_OK) {
+    if (address != 0 && (rc = zx::vmar::root_self()->unmap(address, Volume::kBufferSize)) != ZX_OK) {
         zxlogf(WARN, "failed to unmap %" PRIu32 " bytes at %" PRIuPTR ": %s\n", Volume::kBufferSize,
                address, zx_status_get_string(rc));
     }

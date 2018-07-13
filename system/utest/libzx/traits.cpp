@@ -121,7 +121,7 @@ bool traits_test() {
 
     {
         zx::thread thread;
-        ASSERT_EQ(zx::thread::create(zx::process::self(), "", 0u, 0u, &thread), ZX_OK);
+        ASSERT_EQ(zx::thread::create(*zx::process::self(), "", 0u, 0u, &thread), ZX_OK);
         duplicating(thread);
         user_signaling(thread);
         waiting(thread);
@@ -252,7 +252,7 @@ bool traits_test() {
     {
         zx::vmar vmar;
         uintptr_t addr;
-        ASSERT_EQ(zx::vmar::root_self().allocate(0u, 4096u, 0u, &vmar, &addr), ZX_OK);
+        ASSERT_EQ(zx::vmar::root_self()->allocate(0u, 4096u, 0u, &vmar, &addr), ZX_OK);
         duplicating(vmar);
         user_signaling(vmar);
         waiting(vmar);

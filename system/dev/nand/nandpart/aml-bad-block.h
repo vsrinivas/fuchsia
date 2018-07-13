@@ -64,8 +64,8 @@ private:
           bad_block_table_len_(table_len) {}
 
     ~AmlBadBlock() override {
-        zx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(oob_), sizeof(OobMetadata));
-        zx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(bad_block_table_),
+        zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(oob_), sizeof(OobMetadata));
+        zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(bad_block_table_),
                                     bad_block_table_len_);
     }
 

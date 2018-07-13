@@ -36,7 +36,7 @@ zx_koid_t GetKoid(zx_handle_t handle) {
 zx_koid_t GetCurrentProcessKoid() {
     zx_koid_t koid = g_process_koid.load(fbl::memory_order_relaxed);
     if (unlikely(koid == ZX_KOID_INVALID)) {
-        koid = GetKoid(zx::process::self().get());
+        koid = GetKoid(zx_process_self());
         g_process_koid.store(koid, fbl::memory_order_relaxed); // idempotent
     }
     return koid;
@@ -44,7 +44,7 @@ zx_koid_t GetCurrentProcessKoid() {
 
 zx_koid_t GetCurrentThreadKoid() {
     if (unlikely(tls_thread_koid == ZX_KOID_INVALID)) {
-        tls_thread_koid = GetKoid(zx::thread::self().get());
+        tls_thread_koid = GetKoid(zx_thread_self());
     }
     return tls_thread_koid;
 }
@@ -500,7 +500,7 @@ void trace_context_register_current_thread(
 
     trace_string_ref name_ref;
     char name_buf[ZX_MAX_NAME_LEN];
-    trace::GetObjectName(zx::thread::self().get(), name_buf, sizeof(name_buf), &name_ref);
+    trace::GetObjectName(zx_thread_self(), name_buf, sizeof(name_buf), &name_ref);
     zx_koid_t process_koid = trace::GetCurrentProcessKoid();
     zx_koid_t thread_koid = trace::GetCurrentThreadKoid();
     trace_context_write_thread_info_record(context, process_koid, thread_koid,

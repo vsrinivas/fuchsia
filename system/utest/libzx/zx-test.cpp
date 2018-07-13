@@ -213,7 +213,7 @@ static bool vmar_test() {
     zx::vmar vmar;
     const size_t size = getpagesize();
     uintptr_t addr;
-    ASSERT_EQ(zx::vmar::root_self().allocate(0u, size, ZX_VM_FLAG_CAN_MAP_READ, &vmar, &addr),
+    ASSERT_EQ(zx::vmar::root_self()->allocate(0u, size, ZX_VM_FLAG_CAN_MAP_READ, &vmar, &addr),
               ZX_OK);
     ASSERT_EQ(validate_handle(vmar.get()), ZX_OK);
     ASSERT_EQ(vmar.destroy(), ZX_OK);
@@ -338,7 +338,7 @@ static bool thread_self_test() {
     zx_handle_t raw = zx_thread_self();
     ASSERT_EQ(validate_handle(raw), ZX_OK);
 
-    EXPECT_TRUE(reference_thing<zx::thread>(zx::thread::self()));
+    EXPECT_TRUE(reference_thing<zx::thread>(*zx::thread::self()));
     EXPECT_EQ(validate_handle(raw), ZX_OK);
 
     // This does not compile:
@@ -356,7 +356,7 @@ static bool thread_suspend_test() {
     BEGIN_TEST;
 
     zx::thread thread;
-    ASSERT_EQ(zx::thread::create(zx::process::self(), "test", 4, 0, &thread), ZX_OK);
+    ASSERT_EQ(zx::thread::create(*zx::process::self(), "test", 4, 0, &thread), ZX_OK);
 
     // Make a little stack and start the thread. Note: stack grows down so pass the high address.
     alignas(16) static uint8_t stack_storage[64];
@@ -379,7 +379,7 @@ static bool process_self_test() {
     zx_handle_t raw = zx_process_self();
     ASSERT_EQ(validate_handle(raw), ZX_OK);
 
-    EXPECT_TRUE(reference_thing<zx::process>(zx::process::self()));
+    EXPECT_TRUE(reference_thing<zx::process>(*zx::process::self()));
     EXPECT_EQ(validate_handle(raw), ZX_OK);
 
     // This does not compile:
@@ -394,7 +394,7 @@ static bool vmar_root_self_test() {
     zx_handle_t raw = zx_vmar_root_self();
     ASSERT_EQ(validate_handle(raw), ZX_OK);
 
-    EXPECT_TRUE(reference_thing<zx::vmar>(zx::vmar::root_self()));
+    EXPECT_TRUE(reference_thing<zx::vmar>(*zx::vmar::root_self()));
     EXPECT_EQ(validate_handle(raw), ZX_OK);
 
     // This does not compile:
@@ -424,7 +424,7 @@ static bool takes_any_handle(const zx::handle& handle) {
 
 static bool handle_conversion_test() {
     BEGIN_TEST;
-    EXPECT_TRUE(takes_any_handle(zx::unowned_handle::wrap(zx_thread_self())));
+    EXPECT_TRUE(takes_any_handle(*zx::unowned_handle(zx_thread_self())));
     ASSERT_EQ(validate_handle(zx_thread_self()), ZX_OK);
     END_TEST;
 }
@@ -580,12 +580,12 @@ static bool get_child_test() {
                   ZX_OK);
 
         zx::handle as_handle;
-        ASSERT_EQ(zx::process::self().get_child(
+        ASSERT_EQ(zx::process::self()->get_child(
                       info.koid, ZX_RIGHT_SAME_RIGHTS, &as_handle), ZX_OK);
         ASSERT_EQ(validate_handle(as_handle.get()), ZX_OK);
 
         zx::thread as_thread;
-        ASSERT_EQ(zx::process::self().get_child(
+        ASSERT_EQ(zx::process::self()->get_child(
                       info.koid, ZX_RIGHT_SAME_RIGHTS, &as_thread), ZX_OK);
         ASSERT_EQ(validate_handle(as_thread.get()), ZX_OK);
     }

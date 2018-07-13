@@ -42,7 +42,7 @@ class DisplayControllerProtocol : public internal::base_protocol {
     }
 
     static zx_status_t ImportVmoImage(void* ctx, image_t* image, zx_handle_t vmo, size_t offset) {
-        return static_cast<D*>(ctx)->ImportVmoImage(image, zx::unowned_vmo::wrap(vmo), offset);
+        return static_cast<D*>(ctx)->ImportVmoImage(image, *zx::unowned_vmo(vmo), offset);
     }
 
     static void ReleaseImage(void* ctx, image_t* image) {

@@ -36,7 +36,7 @@ zx_status_t stub_queue_packet(async_dispatcher_t* dispatcher, async_receiver_t* 
 zx_status_t stub_set_guest_bell_trap(async_dispatcher_t* dispatcher, async_guest_bell_trap_t* trap,
                                      zx_handle_t guest, zx_vaddr_t addr, size_t length) {
     return static_cast<DispatcherStub*>(dispatcher)->SetGuestBellTrap(
-        trap, zx::unowned_guest::wrap(guest), addr, length);
+        trap, *zx::unowned_guest(guest), addr, length);
 }
 
 const async_ops_t g_stub_ops = {

@@ -49,8 +49,8 @@ public:
     zx_status_t allocate(size_t offset, size_t size, uint32_t flags,
                          vmar* child, uintptr_t* child_addr) const;
 
-    static inline const legacy_unowned<vmar> root_self() {
-        return legacy_unowned<vmar>(zx_vmar_root_self());
+    static inline unowned<vmar> root_self() {
+        return unowned<vmar>(zx_vmar_root_self());
     }
 };
 

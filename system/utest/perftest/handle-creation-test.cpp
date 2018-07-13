@@ -107,7 +107,7 @@ bool ThreadCreateTest(perftest::RepeatState* state) {
     while (state->KeepRunning()) {
         zx::thread handle;
         static const char kName[] = "perftest-process";
-        ZX_ASSERT(zx::thread::create(zx::process::self(), kName,
+        ZX_ASSERT(zx::thread::create(*zx::process::self(), kName,
                                      sizeof(kName) - 1, 0, &handle) == ZX_OK);
         state->NextStep();
     }

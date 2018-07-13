@@ -111,7 +111,7 @@ IgdOpRegion::IgdOpRegion() {}
 
 IgdOpRegion::~IgdOpRegion() {
     if (igd_opregion_pages_base_) {
-        zx::vmar::root_self().unmap(igd_opregion_pages_base_, igd_opregion_pages_len_);
+        zx::vmar::root_self()->unmap(igd_opregion_pages_base_, igd_opregion_pages_len_);
     }
 }
 
@@ -356,7 +356,7 @@ zx_status_t IgdOpRegion::Init(pci_protocol_t* pci) {
     }
     igd_opregion_pages_ = zx::vmo(vmo);
 
-    status = zx::vmar::root_self().map(0, igd_opregion_pages_, 0, igd_opregion_pages_len_,
+    status = zx::vmar::root_self()->map(0, igd_opregion_pages_, 0, igd_opregion_pages_len_,
                                        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                                        &igd_opregion_pages_base_);
     if (status != ZX_OK) {

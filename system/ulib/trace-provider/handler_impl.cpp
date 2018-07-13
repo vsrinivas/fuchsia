@@ -32,7 +32,7 @@ TraceHandlerImpl::TraceHandlerImpl(void* buffer, size_t buffer_num_bytes,
 }
 
 TraceHandlerImpl::~TraceHandlerImpl() {
-    zx_status_t status = zx::vmar::root_self().unmap(
+    zx_status_t status = zx::vmar::root_self()->unmap(
         reinterpret_cast<uintptr_t>(buffer_), buffer_num_bytes_);
     ZX_DEBUG_ASSERT(status == ZX_OK);
 }
@@ -49,7 +49,7 @@ zx_status_t TraceHandlerImpl::StartEngine(async_dispatcher_t* dispatcher,
         return status;
 
     uintptr_t buffer_ptr;
-    status = zx::vmar::root_self().map(
+    status = zx::vmar::root_self()->map(
         0u, buffer, 0u, buffer_num_bytes,
         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &buffer_ptr);
     if (status != ZX_OK)

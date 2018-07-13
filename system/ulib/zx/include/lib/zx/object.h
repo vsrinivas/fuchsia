@@ -278,29 +278,7 @@ template <typename T> bool operator>=(const object<T>& a, zx_handle_t b) {
 //
 // Convenience aliases are provided for all object types, for example:
 //
-// zx::unowned_event::wrap(handle)->signal(..)
-
-// TODO(ZX-2283): Remove this once callers have migrated to unowned<T>.
-template <typename T> class unowned;
-template <typename T>
-class legacy_unowned final : public T {
-public:
-    legacy_unowned(legacy_unowned&& other) : T(other.release()) {}
-
-    ~legacy_unowned() {
-        zx_handle_t h = this->release();
-        static_cast<void>(h);
-    }
-
-    const T* operator->() const { return this; }
-
-private:
-    friend T;
-    friend unowned<T>;
-
-    explicit legacy_unowned(zx_handle_t h) : T(h) {}
-};
-
+// zx::unowned_event(handle)->signal(..)
 template <typename T>
 class unowned final {
 public:
@@ -324,11 +302,6 @@ public:
 
     const T& operator*() const { return value_; }
     const T* operator->() const { return &value_; }
-
-    // TODO(ZX-2283): Remove this once callers are updated to unowned<T>.
-    static const legacy_unowned<T> wrap(zx_handle_t h) {
-        return legacy_unowned<T>(h);
-    }
 
 private:
     void release_value() {

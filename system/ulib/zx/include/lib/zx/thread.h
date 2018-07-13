@@ -59,8 +59,8 @@ public:
         return zx_thread_write_state(get(), kind, buffer, len);
     }
 
-    static inline const legacy_unowned<thread> self() {
-        return legacy_unowned<thread>(zx_thread_self());
+    static inline unowned<thread> self() {
+        return unowned<thread>(zx_thread_self());
     }
 };
 

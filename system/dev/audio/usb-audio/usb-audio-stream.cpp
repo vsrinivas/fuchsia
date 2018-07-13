@@ -230,8 +230,8 @@ void UsbAudioStream::ComputePersistentUniqueId() {
 void UsbAudioStream::ReleaseRingBufferLocked() {
     if (ring_buffer_virt_ != nullptr) {
         ZX_DEBUG_ASSERT(ring_buffer_size_ != 0);
-        zx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(ring_buffer_virt_),
-                                    ring_buffer_size_);
+        zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(ring_buffer_virt_),
+                                     ring_buffer_size_);
         ring_buffer_virt_ = nullptr;
         ring_buffer_size_ = 0;
     }
@@ -796,10 +796,10 @@ zx_status_t UsbAudioStream::OnGetBufferLocked(dispatcher::Channel* channel,
     if (is_input())
         map_flags |= ZX_VM_FLAG_PERM_WRITE;
 
-    resp.result = zx::vmar::root_self().map(0, ring_buffer_vmo_,
-                                            0, ring_buffer_size_,
-                                            map_flags,
-                                            reinterpret_cast<uintptr_t*>(&ring_buffer_virt_));
+    resp.result = zx::vmar::root_self()->map(0, ring_buffer_vmo_,
+                                             0, ring_buffer_size_,
+                                             map_flags,
+                                             reinterpret_cast<uintptr_t*>(&ring_buffer_virt_));
     if (resp.result != ZX_OK) {
         LOG(ERROR, "Failed to map ring buffer (size %u, res %d)\n",
             ring_buffer_size_, resp.result);

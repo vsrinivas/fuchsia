@@ -103,8 +103,8 @@ bool guest_bell_trap_test() {
     MockDispatcher dispatcher;
     Harness harness;
 
-    EXPECT_EQ(ZX_OK, harness.trap().SetTrap(&dispatcher, zx::unowned_guest::wrap(dummy_guest),
-                                            dummy_addr, dummy_length));
+    EXPECT_EQ(ZX_OK, harness.trap().SetTrap(
+                  &dispatcher, *zx::unowned_guest(dummy_guest), dummy_addr, dummy_length));
     EXPECT_EQ(dummy_guest, dispatcher.last_guest);
     EXPECT_EQ(dummy_addr, dispatcher.last_addr);
     EXPECT_EQ(dummy_length, dispatcher.last_length);

@@ -22,7 +22,7 @@ fbl::RefPtr<VmarManager> VmarManager::Create(size_t size,
     }
 
     zx_status_t res;
-    zx_handle_t p = parent ? parent->vmar().get() : zx::vmar::root_self().get();
+    zx_handle_t p = parent ? parent->vmar().get() : zx::vmar::root_self()->get();
     uintptr_t child_addr;
 
     res = zx_vmar_allocate(p, 0, size, flags, ret->vmar_.reset_and_get_address(), &child_addr);

@@ -162,7 +162,7 @@ zx_status_t GttRegion::PopulateRegion(zx_handle_t vmo, uint64_t page_offset,
 
         uint64_t actual_entries = ROUNDUP(cur_len, gtt_->min_contiguity_) / gtt_->min_contiguity_;
         zx::pmt pmt;
-        status = gtt_->bti_.pin(flags, zx::unowned_vmo::wrap(vmo_),
+        status = gtt_->bti_.pin(flags, *zx::unowned_vmo(vmo_),
                                 vmo_offset, cur_len, paddrs, actual_entries, &pmt);
         if (status != ZX_OK) {
             LOG_ERROR("Failed to get paddrs (%d)\n", status);

@@ -54,8 +54,8 @@ public:
     zx_status_t get_child(uint64_t koid, zx_rights_t rights,
                           thread* result) const;
 
-    static inline const legacy_unowned<process> self() {
-        return legacy_unowned<process>(zx_process_self());
+    static inline unowned<process> self() {
+        return unowned<process>(zx_process_self());
     }
 };
 

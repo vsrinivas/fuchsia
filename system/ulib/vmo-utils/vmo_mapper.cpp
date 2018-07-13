@@ -94,7 +94,7 @@ void VmoMapper::Unmap() {
     if (start_ != nullptr) {
         ZX_DEBUG_ASSERT(size_ != 0);
         zx_handle_t vmar_handle = (vmar_manager_ == nullptr)
-            ? zx::vmar::root_self().get()
+            ? zx::vmar::root_self()->get()
             : vmar_manager_->vmar().get();
 
         __UNUSED zx_status_t res;
@@ -131,7 +131,7 @@ zx_status_t VmoMapper::InternalMap(const zx::vmo& vmo,
 
     uintptr_t tmp;
     zx_handle_t vmar_handle = (vmar_manager == nullptr)
-        ? zx::vmar::root_self().get()
+        ? zx::vmar::root_self()->get()
         : vmar_manager->vmar().get();
 
     zx_status_t res = zx_vmar_map(vmar_handle, 0, vmo.get(), offset, size, map_flags, &tmp);

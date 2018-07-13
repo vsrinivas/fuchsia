@@ -36,7 +36,7 @@ bool do_probe(ProbeOperation op, const void* addr) {
     // This function starts a new thread to perform the read/write test, and catches any exceptions
     // in this thread to see if it failed or not.
     zx::thread thread;
-    zx_status_t status = zx::thread::create(zx::process::self(), "memory_probe", 12u, 0u, &thread);
+    zx_status_t status = zx::thread::create(*zx::process::self(), "memory_probe", 12u, 0u, &thread);
     if (status != ZX_OK)
         return false;
 

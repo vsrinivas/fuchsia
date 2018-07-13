@@ -93,7 +93,7 @@ bool test_instruction(Instruction isn) {
     BEGIN_HELPER;
 
     zx::thread thread;
-    ASSERT_EQ(zx::thread::create(zx::process::self(), "isn_probe", 9u, 0u, &thread), ZX_OK);
+    ASSERT_EQ(zx::thread::create(*zx::process::self(), "isn_probe", 9u, 0u, &thread), ZX_OK);
 
     alignas(16) static uint8_t thread_stack[128];
     void* stack_top = thread_stack + sizeof(thread_stack);

@@ -165,7 +165,7 @@ public:
 
     void Cleanup() {
         if (mapped_ > 0) {
-            zx::vmar::root_self().unmap(mapped_, vmo_size_);
+            zx::vmar::root_self()->unmap(mapped_, vmo_size_);
         }
         if (fd_ >= 0) {
             close(fd_);
@@ -203,7 +203,7 @@ public:
             return status;
         }
 
-        status = zx::vmar::root_self().map(0, buf_, 0, vmo_size_,
+        status = zx::vmar::root_self()->map(0, buf_, 0, vmo_size_,
                                            ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                                            &mapped_);
         if (status != ZX_OK) {

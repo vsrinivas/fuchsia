@@ -82,7 +82,7 @@ protected:
     void Handle(async_dispatcher_t* dispatcher, zx_status_t status,
                 const zx_packet_signal_t* signal) override {
         TestWait::Handle(dispatcher, status, signal);
-        zx::unowned_event::wrap(object).signal(signals_to_clear_, signals_to_set_);
+        zx_object_signal(object, signals_to_clear_, signals_to_set_);
         if (repeat_ && status == ZX_OK) {
             Begin(dispatcher);
         }

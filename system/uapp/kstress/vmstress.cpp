@@ -113,7 +113,7 @@ int VmStressTest::stress_thread() {
             if (ptr) {
                 // unmap the vmo if it already was
                 Printf("u");
-                status = zx::vmar::root_self().unmap(ptr, vmo_size);
+                status = zx::vmar::root_self()->unmap(ptr, vmo_size);
                 if (status != ZX_OK) {
                     fprintf(stderr, "failed to unmap range, error %d (%s)\n", status, zx_status_get_string(status));
                 }
@@ -121,7 +121,7 @@ int VmStressTest::stress_thread() {
             }
             // map it somewhere
             Printf("m");
-            status = zx::vmar::root_self().map(0, vmo_, 0, vmo_size,
+            status = zx::vmar::root_self()->map(0, vmo_, 0, vmo_size,
                                                ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &ptr);
             if (status != ZX_OK) {
                 fprintf(stderr, "failed to map range, error %d (%s)\n", status, zx_status_get_string(status));
@@ -167,7 +167,7 @@ int VmStressTest::stress_thread() {
     }
 
     if (ptr) {
-        status = zx::vmar::root_self().unmap(ptr, vmo_size);
+        status = zx::vmar::root_self()->unmap(ptr, vmo_size);
     }
 
     return 0;
