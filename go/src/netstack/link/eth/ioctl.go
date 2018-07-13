@@ -11,6 +11,23 @@ import (
 	"syscall/zx/fdio"
 )
 
+func IoctlGetTopoPath(m fdio.FDIO) (string, error) {
+	res := make([]byte, 1024)
+	if _, err := m.Ioctl(fdio.IoctlDeviceGetTopoPath, nil, res); err != nil {
+		return "", fmt.Errorf("IOCTL_DEVICE_GET_TOPO_PATH: %v", err)
+	}
+	// If a device manages per-instance state, the path will begin with an '@' to
+	// signify that opening the path will not give the same instance. This is not
+	// relevant for netstack, so drop the leading '@' if it exists.
+	// See https://fuchsia.googlesource.com/zircon/+/master/docs/ddk/device-ops.md#open
+	// for more information on opening devices.
+	start := 0
+	if res[0] == '@' {
+		start = 1
+	}
+	return string(res[start:]), nil
+}
+
 type EthInfo struct {
 	Features uint32
 	MTU      uint32

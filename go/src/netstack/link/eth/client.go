@@ -62,6 +62,7 @@ const ZXSIO_ETH_SIGNAL_STATUS = zx.SignalUser0
 type Client struct {
 	MTU int
 	MAC [6]byte
+	Path    string
 
 	f       *os.File
 	tx      zx.Handle
@@ -106,6 +107,11 @@ func NewClient(clientName, path string, arena *Arena, stateFunc func(State)) (*C
 
 	IoctlSetClientName(m, []byte(clientName))
 
+	topo, err := IoctlGetTopoPath(m)
+	if err != nil {
+		return nil, err
+	}
+
 	info, err := IoctlGetInfo(m)
 	if err != nil {
 		return nil, err
@@ -129,6 +135,7 @@ func NewClient(clientName, path string, arena *Arena, stateFunc func(State)) (*C
 	c := &Client{
 		MTU:       int(info.MTU),
 		f:         f,
+		Path:      topo,
 		tx:        fifos.tx,
 		rx:        fifos.rx,
 		txDepth:   txDepth,

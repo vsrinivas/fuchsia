@@ -63,9 +63,13 @@ func getInterfaceInfo(nicid tcpip.NICID, ifs *ifState) *stack.InterfaceInfo {
 		})
 	}
 
+	path := ""
+	if ifs.eth != nil {
+		path = ifs.eth.Path
+	}
 	return &stack.InterfaceInfo{
 		Id:        uint64(nicid),
-		Path:      "not-supported",
+		Path:      path,
 		Mac:       mac,
 		Mtu:       uint32(ifs.statsEP.MTU()),
 		Status:    status,
