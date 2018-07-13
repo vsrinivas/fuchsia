@@ -18,7 +18,7 @@ purpose, goals, and requirements, as well as links to related documents.
 *   Optimized for Zircon IPC only; portability is not a goal.
 *   Optimized for direct memory access; inter-machine transport is not a goal.
 *   Optimized for 64-bit only; no accommodation for 32-bit environments.
-*   Uses uncompressed native datatypes with host-endianness and correct
+*   Uses uncompressed native data types with host-endianness and correct
     alignment to support in-place access of message contents.
 *   Compatible with C structure in-memory layout (with suitable field ordering
     and packing annotations).
@@ -221,7 +221,7 @@ Arrays are denoted:
 
 *   Variable-length sequence of UTF-8 encoded characters representing text.
 *   Nullable; null strings and empty strings are distinct.
-*   Can specify a maximum size, eg. `string:40` for
+*   Can specify a maximum size, e.g. `string:40` for
     a maximum 40 byte string.
 *   String content does not have a null-terminator.[^1]
 
@@ -260,7 +260,7 @@ Strings are denoted as follows:
 
 *   Variable-length sequence of homogeneous elements.
 *   Nullable; null vectors and empty vectors are distinct.
-*   Can specify a maximum size, eg. `vector<T>:40`
+*   Can specify a maximum size, e.g. `vector<T>:40`
     for a maximum 40 element vector.
 *   Stored as a 16 byte record consisting of:
     *   `size` : 64-bit unsigned number of elements
@@ -344,13 +344,14 @@ job, process, port, resource, socket, thread, vmo`
 *   Structure is padded with zeroes so that its size is a multiple of its
     alignment factor.
 
-    *   eg 1. a struct with a **int32** and a **int8** field has an alignment of
-        4 bytes (due to **int32**) and a size of 8 bytes (3 bytes of padding)
-    *   eg 2. a struct with a **bool** and a **string** field has an alignment
+    *   e.g. 1. a struct with an **int32** and an **int8** field has an
+        alignment of 4 bytes (due to **int32**) and a size of 8 bytes (3 bytes
+        of padding)
+    *   e.g. 2. a struct with a **bool** and a **string** field has an alignment
         of 8 bytes (due to **string**) and a size of 24 bytes (7 bytes of
         padding)
-    *   eg 3. a struct with a **bool **and a **uint8[2]** field has an alignment
-        of 1 byte and a size of 3 bytes (no padding!)
+    *   e.g. 3. a struct with a **bool** and a **uint8[2]** field has an
+        alignment of 1 byte and a size of 3 bytes (no padding!)
 
 *   In general, changing the definition of a struct will break binary
     compatibility; instead prefer to extend interfaces by adding new methods
@@ -376,7 +377,7 @@ Storage of a structure depends on whether it is nullable at point of reference.
         *   `<valid pointer>` : reference is
             non-null, structure content is at indicated memory address
 
-Structs are denoted by their declared name (eg. <strong>Circle</strong>) and
+Structs are denoted by their declared name (e.g. <strong>Circle</strong>) and
 nullability:
 
 *   `Circle` : non-nullable Circle
@@ -410,10 +411,10 @@ boundary.
 *   Alignment factor of union is defined by the maximal alignment factor of the
     tag field and any of its options.
 *   Union is padded so that its size is a multiple of its alignment factor.
-    *   eg 1. a union with a **int32** and a **int8** option has an alignment of
-        4 bytes (due to **int32**) and a size of 8 bytes including the 4 byte
-        tag (0 to 3 bytes of padding).
-    *   eg 2. a union with a **bool** and a **string** option has an alignment
+    *   e.g. 1. a union with an **int32** and an **int8** option has an
+        alignment of 4 bytes (due to **int32**) and a size of 8 bytes including
+        the 4 byte tag (0 to 3 bytes of padding).
+    *   e.g. 2. a union with a **bool** and a **string** option has an alignment
         of 8 bytes (due to **string**) and a size of 24 bytes (4 to 19 bytes of
         padding).
 *   In general, changing the definition of a union will break binary
@@ -439,7 +440,7 @@ Storage of a union depends on whether it is nullable at point of reference.
         *   `<valid pointer>` : reference is
             non-null, union content is at indicated memory address
 
-Union are denoted by their declared name (eg. <strong>Pattern</strong>) and
+Union are denoted by their declared name (e.g. <strong>Pattern</strong>) and
 nullability:
 
 *   `Pattern` : non-nullable Shape
@@ -469,9 +470,9 @@ to the selected option.
 
 *   Transactions consist of sequences of correlated messages sent between the
     client and implementation of an interface over a Zircon channel.
-*   Each message is prefixed with a simple 16 byte header, body immediately
+*   Each message is prefixed with a simple 16 byte header, the body immediately
     follows header.
-    *   `zx_txid_t txid`, transaction id (currently 32 bits, padded to 64 bits)
+    *   `zx_txid_t txid`, transaction ID (currently 32 bits, padded to 64 bits)
         * txids with the high bit set are reserved for use by zx_channel_call
         * txids with the high bit unset are reserved for use by userspace
         * See the [channel call] manpage for more details on txid allocation
@@ -481,15 +482,15 @@ to the selected option.
         *   Ordinals with the most significant bit set are reserved.
             *   Ordinals 0x80001xxx are "control" messages
             *   Ordinals 0x80002xxx are "fileio" messages
-*   A non-zero transaction id is used to correlate sequences of messages which
-    involve a request and a response, eg. in a two-way method call. The
+*   A non-zero transaction ID is used to correlate sequences of messages which
+    involve a request and a response, e.g. in a two-way method call. The
     initiator of the request is responsible for assigning a unique transaction
-    id to the request. The handler of the request is responsible for echoing the
-    transaction id it received back into the response which it sends. The
-    initiator can reuse transaction ids once it receives their corresponding
+    ID to the request. The handler of the request is responsible for echoing the
+    transaction ID it received back into the response which it sends. The
+    initiator can reuse transaction IDs once it receives their corresponding
     responses.
-*   A zero transaction id is reserved for messages which do not require a
-    response from the other side, eg. one-way calls or system messages.
+*   A zero transaction ID is reserved for messages which do not require a
+    response from the other side, e.g. one-way calls or system messages.
 *   There are three kinds of messages: method calls, method results, and control
     messages.
 *   Ordinals indicate the purpose of the message.
