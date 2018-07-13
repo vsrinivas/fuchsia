@@ -325,6 +325,8 @@ public:
 
     // Initializes the WritebackBuffer.
     zx_status_t InitializeWriteback();
+    // Returns the capacity of the writeback buffer, in blocks.
+    size_t WritebackCapacity() const { return writeback_->Capacity(); }
 
     void Shutdown(fs::Vfs::ShutdownCallback closure) final;
     virtual ~Blobfs();

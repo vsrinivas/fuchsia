@@ -17,6 +17,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#ifdef __Fuchsia__
+#include <zircon/syscalls.h>
+#endif
+
 // clang-format off
 
 namespace blobfs {
@@ -41,8 +45,20 @@ constexpr size_t kFVMDataStart      = 0x30000;
 constexpr uint64_t kBlobfsDefaultInodeCount = 32768;
 
 constexpr size_t kMinimumDataBlocks = 2;
-constexpr size_t kWriteBufferBlocks = 8192;
-constexpr size_t kWriteBufferBytes = kWriteBufferBlocks * kBlobfsBlockSize;
+
+#ifdef __Fuchsia__
+// Use a heuristics-based approach based on physical RAM size to
+// determine the size of the writeback buffer.
+//
+// Currently, we set the writeback buffer size to 2% of physical
+// memory.
+//
+// Should be invoked with caution; the size of the system's total
+// memory may eventually change after boot.
+inline size_t WriteBufferSize(void) {
+    return fbl::round_up((zx_system_get_physmem() * 2) / 100, kBlobfsBlockSize);
+}
+#endif
 
 // Notes:
 // - block 0 is always allocated

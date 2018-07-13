@@ -119,7 +119,7 @@ zx_status_t CheckFvmConsistency(const blobfs_info_t* info, int block_fd) {
 zx_status_t EnqueuePaginated(fbl::unique_ptr<WritebackWork>* work, Blobfs* blobfs, VnodeBlob* vn,
                              zx_handle_t vmo, uint64_t relative_block, uint64_t absolute_block,
                              uint64_t nblocks) {
-    const size_t kMaxChunkBlocks = (3 * kWriteBufferBlocks) / 4;
+    const size_t kMaxChunkBlocks = (3 * blobfs->WritebackCapacity()) / 4;
     uint64_t delta_blocks = fbl::min(nblocks, kMaxChunkBlocks);
     while (nblocks > 0) {
         (*work)->Enqueue(vmo, relative_block, absolute_block, delta_blocks);
@@ -889,11 +889,8 @@ void Blobfs::FreeNode(WritebackWork* wb, size_t node_index) {
 zx_status_t Blobfs::InitializeWriteback() {
     zx_status_t status;
     fbl::unique_ptr<fzl::MappedVmo> buffer;
-    constexpr size_t kWriteBufferSize = 64 * (1LU << 20);
-    static_assert(kWriteBufferSize % kBlobfsBlockSize == 0,
-                  "Buffer Size must be a multiple of the Blobfs Block Size");
-    if ((status = fzl::MappedVmo::Create(kWriteBufferSize, "blobfs-writeback",
-                                        &buffer)) != ZX_OK) {
+    if ((status = fzl::MappedVmo::Create(WriteBufferSize(), "blobfs-writeback",
+                                         &buffer)) != ZX_OK) {
         return status;
     }
     if ((status = WritebackBuffer::Create(this, fbl::move(buffer), &writeback_)) != ZX_OK) {

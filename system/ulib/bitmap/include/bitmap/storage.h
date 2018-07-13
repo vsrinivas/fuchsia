@@ -83,6 +83,7 @@ public:
             vmo_.reset();
             return status;
         }
+        vmo_.set_property(ZX_PROP_NAME, "vmo-backed-bitmap", strlen("vmo-backed-bitmap"));
         return ZX_OK;
     }
 

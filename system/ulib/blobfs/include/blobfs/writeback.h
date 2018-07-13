@@ -155,6 +155,9 @@ public:
     // enqueued, preventing them from closing while the writeback is pending.
     void Enqueue(fbl::unique_ptr<WritebackWork> work) __TA_EXCLUDES(writeback_lock_);
 
+    // Return the capacity of the WritebackBuffer, in blocks.
+    size_t Capacity() const { return cap_; }
+
 private:
     WritebackBuffer(Blobfs* bs, fbl::unique_ptr<fzl::MappedVmo> buffer);
 

@@ -1761,7 +1761,7 @@ static bool TestHugeBlobRandom(void) {
 
     // This blob is extremely large, and will remain large
     // on disk. It is not easily compressible.
-    ASSERT_TRUE(GenerateRandomBlob(2 * blobfs::kWriteBufferBytes, &info));
+    ASSERT_TRUE(GenerateRandomBlob(2 * blobfs::WriteBufferSize(), &info));
 
     fbl::unique_fd fd;
     ASSERT_TRUE(MakeBlob(info.get(), &fd));
@@ -1807,7 +1807,7 @@ static bool TestHugeBlobCompressible(void) {
         RandomFill(data, length / 2);
         data = reinterpret_cast<char*>(reinterpret_cast<uintptr_t>(data) + length / 2);
         memset(data, 'a', length / 2);
-    }, 2 * blobfs::kWriteBufferBytes, &info));
+    }, 2 * blobfs::WriteBufferSize(), &info));
 
     fbl::unique_fd fd;
     ASSERT_TRUE(MakeBlob(info.get(), &fd));

@@ -70,13 +70,7 @@ zx_status_t Allocator::Create(Bcache* bc, Superblock* sb, ReadTxn* txn, size_t u
     auto allocator = fbl::unique_ptr<Allocator>(new Allocator(bc, sb, unit_size,
                                                               fbl::move(grow_cb),
                                                               fbl::move(metadata)));
-    blk_t pool_blocks;
-    if (allocator->metadata_.UsingFvm()) {
-        const uint32_t slices = allocator->metadata_.Fvm().MetadataSlices();
-        pool_blocks = allocator->metadata_.Fvm().UnitsPerSlices(slices, kMinfsBlockSize);
-    } else {
-        pool_blocks = BitmapBlocksForSize(allocator->metadata_.PoolTotal());
-    }
+    blk_t pool_blocks = BitmapBlocksForSize(allocator->metadata_.PoolTotal());
 
     zx_status_t status;
     if ((status = allocator->map_.Reset(pool_blocks * kMinfsBlockBits)) != ZX_OK) {

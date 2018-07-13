@@ -37,7 +37,7 @@ zx_status_t InodeManager::Create(Bcache* bc, Superblock* sb, ReadTxn* txn,
     uint32_t inoblks = (static_cast<uint32_t>(inodes) + kMinfsInodesPerBlock - 1) /
             kMinfsInodesPerBlock;
     if ((status = fzl::MappedVmo::Create(inoblks * kMinfsBlockSize, "minfs-inode-table",
-                                        &mgr->inode_table_)) != ZX_OK) {
+                                         &mgr->inode_table_)) != ZX_OK) {
         return status;
     }
 
