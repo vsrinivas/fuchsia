@@ -304,6 +304,26 @@ declare_args() {
   bootfs_extra = []
 }
 
+images += [
+  {
+    # This is the file to give QEMU's `-kernel` switch with a complete
+    # ZBI (some `IMAGE_*_ZBI` file) for its `-initrd` switch.
+    public = [
+      "IMAGE_QEMU_KERNEL_RAW",
+    ]
+    deps = []
+    if (current_cpu == "arm64") {
+      sources = [
+        "$zircon_build_dir/qemu-boot-shim.bin",
+      ]
+    } else if (current_cpu == "x64") {
+      sources = [
+        "$zircon_build_dir/multiboot.bin",
+      ]
+    }
+  },
+]
+
 # Generate the /boot/config/devmgr file.  This looks like a kernel command
 # line file, but is read by devmgr (in addition to kernel command line
 # arguments), not by the kernel or boot loader.
