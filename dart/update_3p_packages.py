@@ -21,6 +21,7 @@ ROOT_PUBSPECS = [
     'third_party/dart/pkg/front_end',
     'third_party/dart/pkg/kernel',
     'third_party/dart/pkg/telemetry',
+    'third_party/dart/pkg/testing',
     'third_party/dart-pkg/git/flutter/examples/flutter_gallery',
     'third_party/dart-pkg/git/flutter/packages/flutter',
     'third_party/dart-pkg/git/flutter/packages/flutter_test',

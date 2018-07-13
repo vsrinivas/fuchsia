@@ -31,6 +31,7 @@ LOCAL_PACKAGES = {
   'func': '//third_party/dart/third_party/pkg/func',
   'intl': '//third_party/dart/third_party/pkg/intl',
   'kernel': '//third_party/dart/pkg/kernel',
+  'testing': '//third_party/dart/pkg/testing',
   'linter': '//third_party/dart/third_party/pkg/linter',
   'telemetry': '//third_party/dart/pkg/telemetry',
   'typed_mock': '//third_party/dart/pkg/typed_mock',
