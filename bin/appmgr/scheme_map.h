@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_APPMGR_SCHEME_MAP_H
-#define GARNET_BIN_APPMGR_SCHEME_MAP_H
+#ifndef GARNET_BIN_APPMGR_SCHEME_MAP_H_
+#define GARNET_BIN_APPMGR_SCHEME_MAP_H_
 
 #include <string>
 #include <unordered_map>
@@ -22,6 +22,9 @@ class SchemeMap {
   // object.
   bool Parse(const std::string& data, std::string* error);
 
+  // Parses a schema map from a file.
+  bool ReadFrom(const std::string& file, std::string* error);
+
   // Returns the launcher type for a given scheme, or "" if none.
   std::string LookUp(const std::string& scheme) const;
 
@@ -37,4 +40,4 @@ class SchemeMap {
 
 }  // namespace component
 
-#endif  // GARNET_BIN_APPMGR_SCHEME_MAP_H
+#endif  // GARNET_BIN_APPMGR_SCHEME_MAP_H_

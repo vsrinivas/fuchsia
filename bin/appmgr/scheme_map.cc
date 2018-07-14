@@ -4,8 +4,10 @@
 
 #include "garnet/bin/appmgr/scheme_map.h"
 
-#include <lib/fxl/strings/concatenate.h>
-#include <lib/fxl/logging.h>
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/strings/concatenate.h"
+#include "lib/fxl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace component {
@@ -31,14 +33,14 @@ bool SchemeMap::Parse(const std::string& data, std::string* error) {
        it != launchers->value.MemberEnd(); ++it) {
     const std::string& launcher = it->name.GetString();
     if (!it->value.IsArray()) {
-      *error = fxl::Concatenate(
-          {"schemes for \"", launcher, "\" are not a list"});
+      *error = fxl::StringPrintf(
+          "schemes for \"%s\" are not a list", launcher.c_str());
       return false;
     }
     for (const auto& scheme : it->value.GetArray()) {
       if (!scheme.IsString()) {
-        *error = fxl::Concatenate(
-            {"scheme for \"", launcher, "\" is not a string"});
+        *error = fxl::StringPrintf(
+            "scheme for \"%s\" is not a string", launcher.c_str());
         return false;
       }
       internal_map_[scheme.GetString()] = launcher;
@@ -46,6 +48,15 @@ bool SchemeMap::Parse(const std::string& data, std::string* error) {
   }
   parsed_ = true;
   return true;
+}
+
+bool SchemeMap::ReadFrom(const std::string& file, std::string* error) {
+  std::string data;
+  if (!files::ReadFileToString(file, &data)) {
+    *error = fxl::StringPrintf("failed to read config file: %s", file.c_str());
+    return false;
+  }
+  return Parse(data, error);
 }
 
 std::string SchemeMap::LookUp(const std::string& scheme) const {

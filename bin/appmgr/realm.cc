@@ -23,6 +23,7 @@
 #include "garnet/bin/appmgr/namespace_builder.h"
 #include "garnet/bin/appmgr/runtime_metadata.h"
 #include "garnet/bin/appmgr/sandbox_metadata.h"
+#include "garnet/bin/appmgr/scheme_map.h"
 #include "garnet/bin/appmgr/url_resolver.h"
 #include "garnet/bin/appmgr/util.h"
 #include "lib/component/cpp/connect.h"
@@ -205,6 +206,12 @@ Realm::Realm(RealmArgs args)
   default_namespace_->services()->AddBinding(service_provider.NewRequest());
   loader_ = component::ConnectToService<fuchsia::sys::Loader>(
       service_provider.get());
+
+  const std::string scheme_map_path = SchemeMap::GetSchemeMapPath();
+  std::string error;
+  if (!scheme_map_.ReadFrom(scheme_map_path, &error)) {
+    FXL_LOG(FATAL) << "Could not parse scheme map config file: " << error;
+  }
 }
 
 Realm::~Realm() { job_.kill(); }
@@ -294,38 +301,43 @@ void Realm::CreateComponent(
         default_namespace_, this, std::move(launch_info.additional_services));
   }
 
-  // TODO(CP-69): Provision this map as a config file rather than hard-coding.
-  if (scheme == "http" || scheme == "https") {
-    CreateComponentFromNetwork(std::move(launch_info),
-                               std::move(component_request), std::move(ns),
-                               std::move(callback));
-    return;
-  }
+  const std::string launcher_type = scheme_map_.LookUp(scheme);
+  if (launcher_type == "") {
+    component_request.SetReturnValues(
+        kComponentCreationFailed, TerminationReason::URL_INVALID);
+  } else if (launcher_type == "package") {
+    // "package" type doesn't use a runner.
 
-  // launch_info is moved before LoadComponent() gets at its first argument.
-  fidl::StringPtr url = launch_info.url;
-  loader_->LoadComponent(
-      url, fxl::MakeCopyable([this, launch_info = std::move(launch_info),
-                              component_request = std::move(component_request),
-                              ns, callback = fbl::move(callback)](
-                                 fuchsia::sys::PackagePtr package) mutable {
-        if (package) {
-          if (package->data) {
-            CreateComponentWithProcess(std::move(package),
-                                       std::move(launch_info),
-                                       std::move(component_request),
-                                       std::move(ns), fbl::move(callback));
-          } else if (package->directory) {
-            CreateComponentFromPackage(std::move(package),
-                                       std::move(launch_info),
-                                       std::move(component_request),
-                                       std::move(ns), fbl::move(callback));
+    // launch_info is moved before LoadComponent() gets at its first argument.
+    fidl::StringPtr url = launch_info.url;
+    loader_->LoadComponent(
+        url, fxl::MakeCopyable([this, launch_info = std::move(launch_info),
+                                component_request = std::move(component_request),
+                                ns, callback = fbl::move(callback)](
+            fuchsia::sys::PackagePtr package) mutable {
+          if (package) {
+            if (package->data) {
+              CreateComponentWithProcess(
+                  std::move(package), std::move(launch_info),
+                  std::move(component_request), std::move(ns),
+                  fbl::move(callback));
+            } else if (package->directory) {
+              CreateComponentFromPackage(
+                  std::move(package), std::move(launch_info),
+                  std::move(component_request), std::move(ns),
+                  fbl::move(callback));
+            }
+          } else {
+            component_request.SetReturnValues(
+                kComponentCreationFailed, TerminationReason::PACKAGE_NOT_FOUND);
           }
-        } else {
-          component_request.SetReturnValues(
-              kComponentCreationFailed, TerminationReason::PACKAGE_NOT_FOUND);
-        }
-      }));
+        }));
+  } else {
+    // Component that uses a runner.
+    CreateComponentWithRunner(launcher_type, std::move(launch_info),
+                              std::move(component_request), std::move(ns),
+                              std::move(callback));
+  }
 }
 
 void Realm::CreateShell(const std::string& path, zx::channel svc) {
@@ -452,7 +464,8 @@ void Realm::CreateComponentWithProcess(
   }
 }
 
-void Realm::CreateComponentFromNetwork(
+void Realm::CreateComponentWithRunner(
+    std::string runner_url,
     fuchsia::sys::LaunchInfo launch_info,
     ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns,
     ComponentObjectCreatedCallback callback) {
@@ -461,6 +474,13 @@ void Realm::CreateComponentFromNetwork(
     component_request.SetReturnValues(kComponentCreationFailed,
                                       TerminationReason::INTERNAL_ERROR);
     return;
+  }
+
+  // TODO(CP-71): Remove web_runner_prototype scaffolding once there is a real
+  // web_runner.
+  if (runner_url == "web_runner" &&
+      files::IsDirectory("/pkgfs/packages/web_runner_prototype")) {
+    runner_url = "web_runner_prototype";
   }
 
   NamespaceBuilder builder;
@@ -472,12 +492,6 @@ void Realm::CreateComponentFromNetwork(
   fuchsia::sys::StartupInfo startup_info;
   startup_info.launch_info = std::move(launch_info);
   startup_info.flat_namespace = builder.BuildForRunner();
-
-  // TODO(CP-71): Remove web_runner_prototype scaffolding once there is a real
-  // web_runner.
-  const char* runner_url = "web_runner_prototype";
-  if (!files::IsDirectory("/pkgfs/packages/web_runner_prototype"))
-    runner_url = "web_runner";
 
   auto* runner = GetOrCreateRunner(runner_url);
   if (runner == nullptr) {

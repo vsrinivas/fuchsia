@@ -21,6 +21,7 @@
 #include "garnet/bin/appmgr/hub/realm_hub.h"
 #include "garnet/bin/appmgr/namespace.h"
 #include "garnet/bin/appmgr/runner_holder.h"
+#include "garnet/bin/appmgr/scheme_map.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fit/function.h"
 #include "lib/fxl/macros.h"
@@ -90,10 +91,11 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   RunnerHolder* GetOrCreateRunner(const std::string& runner);
 
-  void CreateComponentFromNetwork(fuchsia::sys::LaunchInfo launch_info,
-                                  ComponentRequestWrapper component_request,
-                                  fxl::RefPtr<Namespace> ns,
-                                  ComponentObjectCreatedCallback callback);
+  void CreateComponentWithRunner(std::string runner_url,
+                                 fuchsia::sys::LaunchInfo launch_info,
+                                 ComponentRequestWrapper component_request,
+                                 fxl::RefPtr<Namespace> ns,
+                                 ComponentObjectCreatedCallback callback);
 
   void CreateComponentWithProcess(fuchsia::sys::PackagePtr package,
                                   fuchsia::sys::LaunchInfo launch_info,
@@ -133,6 +135,8 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   zx::channel svc_channel_client_;
   zx::channel svc_channel_server_;
+
+  SchemeMap scheme_map_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Realm);
 };
