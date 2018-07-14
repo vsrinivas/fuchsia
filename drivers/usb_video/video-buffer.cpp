@@ -13,7 +13,7 @@ namespace usb {
 
 VideoBuffer::~VideoBuffer() {
     if (virt_ != nullptr) {
-        zx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(virt_), size_);
+        zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(virt_), size_);
     }
 }
 
@@ -34,9 +34,9 @@ zx_status_t VideoBuffer::Create(zx::vmo&& vmo,
 
     void* virt;
     uint32_t flags =  ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
-    status = zx::vmar::root_self().map(0u, vmo,
-                                       0u, size,
-                                       flags, reinterpret_cast<uintptr_t*>(&virt));
+    status = zx::vmar::root_self()->map(0u, vmo,
+                                        0u, size,
+                                        flags, reinterpret_cast<uintptr_t*>(&virt));
 
     if (status != ZX_OK) {
         zxlogf(ERROR, "failed to map VMO, got error: %d\n", status);
