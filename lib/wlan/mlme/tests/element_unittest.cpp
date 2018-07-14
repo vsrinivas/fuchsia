@@ -421,5 +421,34 @@ TEST_F(Elements, TsInfoScheduleSetting) {
     EXPECT_EQ(ts_info.GetScheduleSetting(), TsScheduleSetting::kScheduledApsd);
 }
 
+TEST_F(Elements, VhtCapabilities) {
+    // Consider endianness if test vector changes.
+    VhtCapabilitiesInfo vht_cap_info(0xffffffff);
+    VhtMcsNss vht_mcs_nss(0xaaaaaaaaaaaaaaaa);
+
+    EXPECT_TRUE(VhtCapabilities::Create(buf_, sizeof(buf_), &actual_, vht_cap_info, vht_mcs_nss));
+    EXPECT_EQ(sizeof(VhtCapabilities), actual_);
+
+    auto element = FromBytes<VhtCapabilities>(buf_, sizeof(buf_));
+    ASSERT_NE(nullptr, element);
+
+    EXPECT_EQ(element->vht_cap_info.max_mpdu_len(), 3);
+    EXPECT_EQ(element->vht_cap_info.supported_cbw_set(), 3);
+    EXPECT_EQ(element->vht_cap_info.rx_ldpc(), 1);
+    EXPECT_EQ(element->vht_cap_info.sgi_cbw80(), 1);
+    EXPECT_EQ(element->vht_cap_info.sgi_cbw160(), 1);
+    EXPECT_EQ(element->vht_cap_info.tx_stbc(), 1);
+
+    EXPECT_EQ(element->vht_cap_info.bfee_sts(), 7);
+    EXPECT_EQ(element->vht_cap_info.num_sounding(), 7);
+    EXPECT_EQ(element->vht_cap_info.link_adapt(), VhtCapabilitiesInfo::LINK_ADAPT_BOTH);
+
+    EXPECT_EQ(element->vht_mcs_nss.rx_max_mcs_ss1(), VhtMcsNss::VHT_MCS_0_TO_9);
+    EXPECT_EQ(element->vht_mcs_nss.rx_max_mcs_ss2(), VhtMcsNss::VHT_MCS_0_TO_9);
+    EXPECT_EQ(element->vht_mcs_nss.tx_max_mcs_ss4(), VhtMcsNss::VHT_MCS_0_TO_9);
+    EXPECT_EQ(element->vht_mcs_nss.max_nsts(), 5);
+    EXPECT_EQ(element->vht_mcs_nss.ext_nss_bw(), 1);
+}
+
 }  // namespace
 }  // namespace wlan

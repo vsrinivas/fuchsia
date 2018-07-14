@@ -253,4 +253,21 @@ bool GcrGroupAddressElement::Create(void* buf, size_t len, size_t* actual,
     return true;
 }
 
+bool VhtCapabilities::Create(void* buf, size_t len, size_t* actual,
+                             const VhtCapabilitiesInfo& vht_cap_info,
+                             const VhtMcsNss& vht_mcs_nss) {
+    constexpr size_t elem_size = sizeof(VhtCapabilities);
+    if (elem_size > len) { return false; }
+
+    auto elem = static_cast<VhtCapabilities*>(buf);
+    elem->hdr.id = element_id::kVhtCapabilities;
+    elem->hdr.len = elem_size - sizeof(ElementHeader);
+
+    elem->vht_cap_info = VhtCapabilitiesInfo(vht_cap_info.val());
+    elem->vht_mcs_nss = VhtMcsNss(vht_mcs_nss.val());
+
+    *actual = elem_size;
+    return true;
+}
+
 }  // namespace wlan

@@ -773,4 +773,110 @@ struct GcrGroupAddressElement {
     common::MacAddr gcr_group_addr;
 } __PACKED;
 
+// IEEE Std 802.11-2016, 9.4.2.158.2
+// Note this is a field of VhtCapabilities element
+struct VhtCapabilitiesInfo : public common::BitField<uint32_t> {
+   public:
+    constexpr explicit VhtCapabilitiesInfo(uint32_t vht_cap_info)
+        : common::BitField<uint32_t>(vht_cap_info) {}
+    constexpr VhtCapabilitiesInfo() = default;
+
+    WLAN_BIT_FIELD(max_mpdu_len, 0, 2);
+
+    // Supported channel width set. See IEEE Std 80.211-2016, Table 9-250.
+    WLAN_BIT_FIELD(supported_cbw_set, 2, 2);
+
+    WLAN_BIT_FIELD(rx_ldpc, 4, 1);
+    WLAN_BIT_FIELD(sgi_cbw80, 5, 1);   // CBW80 only
+    WLAN_BIT_FIELD(sgi_cbw160, 6, 1);  // CBW160 and CBW80P80
+    WLAN_BIT_FIELD(tx_stbc, 7, 1);
+    WLAN_BIT_FIELD(rx_stbc, 8, 3);
+    WLAN_BIT_FIELD(su_bfer, 11, 1);       // Single user beamformer capable
+    WLAN_BIT_FIELD(su_bfee, 12, 1);       // Single user beamformee capable
+    WLAN_BIT_FIELD(bfee_sts, 13, 3);      // Beamformee Space-time spreading
+    WLAN_BIT_FIELD(num_sounding, 16, 3);  // number of sounding dimensions
+    WLAN_BIT_FIELD(mu_bfer, 19, 1);       // Multi user beamformer capable
+    WLAN_BIT_FIELD(mu_bfee, 20, 1);       // Multi user beamformee capable
+    WLAN_BIT_FIELD(txop_ps, 21, 1);       // Txop power save mode
+    WLAN_BIT_FIELD(htc_vht, 22, 1);
+    WLAN_BIT_FIELD(max_ampdu_exp, 23, 3);
+    WLAN_BIT_FIELD(link_adapt, 26, 2);  // VHT link adaptation capable
+    WLAN_BIT_FIELD(rx_ant_pattern, 28, 1);
+    WLAN_BIT_FIELD(tx_ant_pattern, 29, 1);
+
+    // Extended number of spatial stream bandwidth supported
+    // See IEEE Std 80.211-2016, Table 9-250.
+    WLAN_BIT_FIELD(ext_nss_bw, 30, 2);
+
+    enum MaxMpduLen {
+        OCTETS_3895 = 0,
+        OCTETS_7991 = 1,
+        OCTETS_11454 = 2,
+        // 3 reserved
+    };
+
+    enum VhtLinkAdaptation {
+        LINK_ADAPT_NO_FEEDBACK = 0,
+        // 1 reserved
+        LINK_ADAPT_UNSOLICITED = 2,
+        LINK_ADAPT_BOTH = 3,
+    };
+
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.4.2.158.3
+struct VhtMcsNss : public common::BitField<uint64_t> {
+   public:
+    constexpr explicit VhtMcsNss(uint64_t vht_mcs_nss) : common::BitField<uint64_t>(vht_mcs_nss) {}
+    constexpr VhtMcsNss() = default;
+
+    // Rx VHT-MCS Map
+    WLAN_BIT_FIELD(rx_max_mcs_ss1, 0, 2);
+    WLAN_BIT_FIELD(rx_max_mcs_ss2, 2, 2);
+    WLAN_BIT_FIELD(rx_max_mcs_ss3, 4, 2);
+    WLAN_BIT_FIELD(rx_max_mcs_ss4, 6, 2);
+    WLAN_BIT_FIELD(rx_max_mcs_ss5, 8, 2);
+    WLAN_BIT_FIELD(rx_max_mcs_ss6, 10, 2);
+    WLAN_BIT_FIELD(rx_max_mcs_ss7, 12, 2);
+    WLAN_BIT_FIELD(rx_max_mcs_ss8, 14, 2);
+
+    WLAN_BIT_FIELD(rx_max_data_rate, 16, 13);
+    WLAN_BIT_FIELD(max_nsts, 29, 3);
+
+    // Tx VHT-MCS Map
+    WLAN_BIT_FIELD(tx_max_mcs_ss1, 32, 2);
+    WLAN_BIT_FIELD(tx_max_mcs_ss2, 34, 2);
+    WLAN_BIT_FIELD(tx_max_mcs_ss3, 36, 2);
+    WLAN_BIT_FIELD(tx_max_mcs_ss4, 38, 2);
+    WLAN_BIT_FIELD(tx_max_mcs_ss5, 40, 2);
+    WLAN_BIT_FIELD(tx_max_mcs_ss6, 42, 2);
+    WLAN_BIT_FIELD(tx_max_mcs_ss7, 44, 2);
+    WLAN_BIT_FIELD(tx_max_mcs_ss8, 46, 2);
+    WLAN_BIT_FIELD(tx_max_data_rate, 48, 13);
+
+    WLAN_BIT_FIELD(ext_nss_bw, 61, 1);
+    // bit 62, 63 reserved
+
+    enum VhtMcsSet {
+        VHT_MCS_0_TO_7 = 0,
+        VHT_MCS_0_TO_8 = 1,
+        VHT_MCS_0_TO_9 = 2,
+        VHT_MCS_NONE = 3,
+    };
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.4.2.158
+struct VhtCapabilities : public Element<VhtCapabilities, element_id::kVhtCapabilities> {
+    static bool Create(void* buf, size_t len, size_t* actual,
+                       const VhtCapabilitiesInfo& vht_cap_info, const VhtMcsNss& vht_mcs_nss);
+    static constexpr size_t kMinLen = 12;
+    static constexpr size_t kMaxLen = 12;
+
+    ElementHeader hdr;
+
+    VhtCapabilitiesInfo vht_cap_info;
+    VhtMcsNss vht_mcs_nss;
+
+} __PACKED;
+
 }  // namespace wlan
