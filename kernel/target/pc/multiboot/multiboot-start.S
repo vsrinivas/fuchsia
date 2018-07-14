@@ -31,7 +31,7 @@ END_DATA(multiboot_header)
 // %eax and %ebx.  The C regparm ABI takes them in %eax and %edx.  A
 // Multiboot-compliant boot loader provides a usable 32-bit segmentation
 // environment with flat segments, but does not provide a stack.
-.section .text._start,"a",%progbits
+.section .text._start,"ax",%progbits
 FUNCTION(_start)
     // Save the first argument from the boot loader.
     mov %eax, %edx
