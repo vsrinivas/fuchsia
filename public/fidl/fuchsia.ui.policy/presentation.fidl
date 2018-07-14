@@ -21,6 +21,7 @@ interface PointerCaptureListenerHACK {
 
 // Allows clients of Presenter.Present() to control a presentation.
 // Experimental.
+[Discoverable]
 interface Presentation {
   // Enable or disable clipping for the Scenic renderer associated with the
   // presentation.
