@@ -8,7 +8,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <lib/fit/function.h>
+#include <fuchsia/media/cpp/fidl.h>
 #include <stdint.h>
 
 namespace media {
@@ -21,8 +21,9 @@ class PendingFlushToken
       public fbl::Recyclable<PendingFlushToken>,
       public fbl::DoublyLinkedListable<fbl::unique_ptr<PendingFlushToken>> {
  public:
-  static fbl::RefPtr<PendingFlushToken> Create(AudioServerImpl* const server,
-                                               fit::closure callback) {
+  static fbl::RefPtr<PendingFlushToken> Create(
+      AudioServerImpl* const server,
+      fuchsia::media::AudioRenderer2::FlushCallback callback) {
     return fbl::AdoptRef(new PendingFlushToken(server, std::move(callback)));
   }
 
@@ -33,10 +34,8 @@ class PendingFlushToken
   friend class fbl::Recyclable<PendingFlushToken>;
   friend class fbl::unique_ptr<PendingFlushToken>;
 
-  // TODO(johngro): Change the fit::closure here to an
-  // AudioRenderer::FlushCallback once we have fully removed the V1 audio
-  // renderer.
-  PendingFlushToken(AudioServerImpl* const server, fit::closure callback)
+  PendingFlushToken(AudioServerImpl* const server,
+                    fuchsia::media::AudioRenderer2::FlushCallback callback)
       : server_(server), callback_(std::move(callback)) {}
 
   ~PendingFlushToken();
@@ -44,7 +43,7 @@ class PendingFlushToken
   void fbl_recycle();
 
   AudioServerImpl* const server_;
-  fit::closure callback_;
+  fuchsia::media::AudioRenderer2::FlushCallback callback_;
   bool was_recycled_ = false;
 };
 
