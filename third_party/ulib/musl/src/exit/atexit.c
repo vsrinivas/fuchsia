@@ -16,6 +16,10 @@ static struct fl {
 static int slot;
 static mtx_t lock = MTX_INIT;
 
+// Phantom unlock to satisfy analysis when actually we leave it locked forever.
+__TA_RELEASE(&lock) __TA_NO_THREAD_SAFETY_ANALYSIS
+static void synchronize_exit(void) {}
+
 void __funcs_on_exit(void) {
     void (*func)(void*), *arg;
     mtx_lock(&lock);
@@ -28,7 +32,19 @@ void __funcs_on_exit(void) {
             mtx_lock(&lock);
         }
     }
-    mtx_unlock(&lock);
+
+    // Leaving this lock held effectively synchronizes the rest of exit after
+    // we return to it.  It's technically undefined behavior for the program
+    // to enter exit twice no matter what, so worrying about it at all is just
+    // trying to give the most useful possible result for a buggy program.  Up
+    // to this point, we gracefully handle multiple threads calling exit by
+    // giving them a random interleaving of which thread runs the next atexit
+    // hook.  The rest of the teardown that exit does after this is presumed
+    // to happen once in a single thread.  So the most graceful way to
+    // maintain orderly shutdown in a buggy program is to err on the side of
+    // deadlock (if DSO destructors or stdio teardown try to synchronize with
+    // another thread that's illegally trying to enter exit again).
+    synchronize_exit();
 }
 
 void __cxa_finalize(void* dso) {}
