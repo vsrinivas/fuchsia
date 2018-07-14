@@ -85,6 +85,10 @@ private:
                            zxrio_object_info_t* extra) final;
     zx_status_t GetVmo(int flags, zx_handle_t* out) final;
 
+    // Ensure the underlying vmo is filled with zero from:
+    // [start, round_up(end, PAGE_SIZE)).
+    void ZeroTail(size_t start, size_t end);
+
     zx::vmo vmo_;
     // Cached length of the vmo.
     uint64_t vmo_size_;

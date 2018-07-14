@@ -71,12 +71,19 @@ zx_status_t VnodeFile::Write(const void* data, size_t len, size_t offset,
             return status;
         }
         vmo_size_ = alignedlen;
-    } else if (alignedlen > fbl::round_up(length_, static_cast<size_t>(PAGE_SIZE))) {
+    } else if (newlen > length_) {
         // Accessing beyond the end of the file? Extend it.
-        if ((status = vmo_.set_size(alignedlen)) != ZX_OK) {
-            return status;
+        if (offset > length_) {
+            // Zero-extending the tail of the file by writing to
+            // an offset beyond the end of the file.
+            ZeroTail(length_, offset);
         }
-        vmo_size_ = alignedlen;
+        if (alignedlen > vmo_size_) {
+            if ((status = vmo_.set_size(alignedlen)) != ZX_OK) {
+                return status;
+            }
+            vmo_size_ = alignedlen;
+        }
     }
 
     size_t writelen = newlen - offset;
@@ -173,42 +180,42 @@ zx_status_t VnodeFile::Truncate(size_t len) {
         vmo_size_ = alignedLen;
     } else if (len < length_) {
         // Shrink the logical file length.
-        if (len % kPageSize != 0) {
-            // Currently, if the file is truncated to a 'partial page', and later
-            // re-expanded, then the partial page is *not necessarily* filled with
-            // zeroes. As a consequence, we manually must fill the portion between
-            // "len" and the next highest page (or vn->length, whichever is smaller)
-            // with zeroes.
-            char buf[kPageSize];
-            size_t ppage_size = kPageSize - (len % kPageSize);
-            ppage_size = len + ppage_size < length_ ? ppage_size : length_ - len;
-            memset(buf, 0, ppage_size);
-            if ((status = vmo_.write(buf, len, ppage_size)) != ZX_OK) {
+        // Zeroing the tail here is optional, but it saves memory.
+        ZeroTail(len, length_);
+    } else if (len > length_) {
+        // Extend the logical file length.
+        ZeroTail(length_, len);
+        if (len > vmo_size_) {
+            // Extend the underlying VMO used to store the file.
+            size_t alignedLen = fbl::round_up(len, kPageSize);
+            if ((status = vmo_.set_size(alignedLen)) != ZX_OK) {
                 return status;
             }
+            vmo_size_ = alignedLen;
         }
-
-        uint64_t decommit_offset = fbl::round_up(len, kPageSize);
-        uint64_t decommit_length = fbl::round_up(length_, kPageSize) - decommit_offset;
-
-        if (decommit_length > 0) {
-            if ((status = vmo_.op_range(ZX_VMO_OP_DECOMMIT, decommit_offset,
-                                        decommit_length, nullptr, 0)) != ZX_OK) {
-                return status;
-            }
-        }
-    } else if (len > vmo_size_) {
-        // Extend the underlying VMO used to store the file.
-        size_t alignedLen = fbl::round_up(len, kPageSize);
-        if ((status = vmo_.set_size(alignedLen)) != ZX_OK) {
-            return status;
-        }
-        vmo_size_ = alignedLen;
     }
 
     length_ = len;
     UpdateModified();
     return ZX_OK;
+}
+
+void VnodeFile::ZeroTail(size_t start, size_t end) {
+    constexpr size_t kPageSize = static_cast<size_t>(PAGE_SIZE);
+    if (start % kPageSize != 0) {
+        char buf[kPageSize];
+        size_t ppage_size = kPageSize - (start % kPageSize);
+        memset(buf, 0, ppage_size);
+        ZX_ASSERT(vmo_.write(buf, start, ppage_size) == ZX_OK);
+    }
+    end = fbl::min(fbl::round_up(end, kPageSize), vmo_size_);
+    uint64_t decommit_offset = fbl::round_up(start, kPageSize);
+    uint64_t decommit_length = end - decommit_offset;
+
+    if (decommit_length > 0) {
+        ZX_ASSERT(vmo_.op_range(ZX_VMO_OP_DECOMMIT, decommit_offset,
+                                decommit_length, nullptr, 0) == ZX_OK);
+    }
 }
 
 } // namespace memfs

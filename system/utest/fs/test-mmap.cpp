@@ -12,11 +12,14 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <fbl/unique_fd.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 #include <unittest/unittest.h>
 
 #include "filesystems.h"
+
+namespace {
 
 // Certain filesystems delay creation of internal structures
 // until the file is initially accessed. Test that we can
@@ -364,6 +367,145 @@ bool test_mmap_evil(void) {
     END_TEST;
 }
 
+bool test_mmap_truncate_access(void) {
+    BEGIN_TEST;
+    if (!test_info->supports_mmap) {
+        return true;
+    }
+
+    fbl::unique_fd fd(open("::mmap_truncate", O_CREAT | O_RDWR));
+    ASSERT_TRUE(fd);
+
+    constexpr size_t kPageCount = 5;
+    char buf[PAGE_SIZE * kPageCount];
+    memset(buf, 'a', sizeof(buf));
+    ASSERT_EQ(write(fd.get(), buf, sizeof(buf)), sizeof(buf));
+
+    // Map all pages and validate their contents.
+    void* addr = mmap(NULL, sizeof(buf), PROT_READ | PROT_WRITE, MAP_SHARED, fd.get(), 0);
+    ASSERT_NE(addr, MAP_FAILED);
+    ASSERT_EQ(memcmp(addr, buf, sizeof(buf)), 0);
+
+    constexpr size_t kHalfPage = PAGE_SIZE / 2;
+    for (size_t i = (kPageCount * 2) - 1; i > 0; i--) {
+        // Shrink the underlying file.
+        size_t new_size = kHalfPage * i;
+        ASSERT_EQ(ftruncate(fd.get(), new_size), 0);
+        ASSERT_EQ(memcmp(addr, buf, new_size), 0);
+
+        // Accessing beyond the end of the file, but within the mapping, is
+        // undefined behavior on other platforms. However, on Fuchsia, this
+        // behavior is explicitly memory-safe.
+        char buf_beyond[PAGE_SIZE * kPageCount - new_size];
+        memset(buf_beyond, 'b', sizeof(buf_beyond));
+        void* beyond = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(addr) + new_size);
+        memset(beyond, 'b', sizeof(buf_beyond));
+        ASSERT_EQ(memcmp(buf_beyond, beyond, sizeof(buf_beyond)), 0);
+    }
+
+    ASSERT_EQ(munmap(addr, sizeof(buf)), 0);
+    ASSERT_EQ(unlink("::mmap_truncate"), 0);
+
+    END_TEST;
+}
+
+bool test_mmap_truncate_extend(void) {
+    BEGIN_TEST;
+    if (!test_info->supports_mmap) {
+        return true;
+    }
+
+    fbl::unique_fd fd(open("::mmap_truncate_extend", O_CREAT | O_RDWR));
+    ASSERT_TRUE(fd);
+
+    constexpr size_t kPageCount = 5;
+    char buf[PAGE_SIZE * kPageCount];
+    memset(buf, 'a', sizeof(buf));
+    ASSERT_EQ(write(fd.get(), buf, sizeof(buf)), sizeof(buf));
+
+    // Map all pages and validate their contents.
+    void* addr = mmap(NULL, sizeof(buf), PROT_READ | PROT_WRITE, MAP_SHARED, fd.get(), 0);
+    ASSERT_NE(addr, MAP_FAILED);
+    ASSERT_EQ(memcmp(addr, buf, sizeof(buf)), 0);
+
+    constexpr size_t kHalfPage = PAGE_SIZE / 2;
+
+    ASSERT_EQ(ftruncate(fd.get(), 0), 0);
+    memset(buf, 0, sizeof(buf));
+
+    // Even though we trample over the "out-of-bounds" part of the mapping,
+    // ensure it is filled with zeroes as we truncate-extend it.
+    for (size_t i = 1; i < kPageCount * 2; i++) {
+        size_t new_size = kHalfPage * i;
+
+        // Fill "out-of-bounds" with invalid data.
+        char buf_beyond[PAGE_SIZE * kPageCount - new_size];
+        memset(buf_beyond, 'b', sizeof(buf_beyond));
+        void* beyond = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(addr) + new_size);
+        memset(beyond, 'b', sizeof(buf_beyond));
+        ASSERT_EQ(memcmp(buf_beyond, beyond, sizeof(buf_beyond)), 0);
+
+        // Observe that the truncate extension fills the file with zeroes.
+        ASSERT_EQ(ftruncate(fd.get(), new_size), 0);
+        ASSERT_EQ(memcmp(buf, addr, new_size), 0);
+    }
+
+    ASSERT_EQ(munmap(addr, sizeof(buf)), 0);
+    ASSERT_EQ(unlink("::mmap_truncate_extend"), 0);
+
+    END_TEST;
+}
+
+bool test_mmap_truncate_write_extend(void) {
+    BEGIN_TEST;
+    if (!test_info->supports_mmap) {
+        return true;
+    }
+
+    fbl::unique_fd fd(open("::mmap_write_extend", O_CREAT | O_RDWR));
+    ASSERT_TRUE(fd);
+
+    constexpr size_t kPageCount = 5;
+    char buf[PAGE_SIZE * kPageCount];
+    memset(buf, 'a', sizeof(buf));
+    ASSERT_EQ(write(fd.get(), buf, sizeof(buf)), sizeof(buf));
+
+    // Map all pages and validate their contents.
+    void* addr = mmap(NULL, sizeof(buf), PROT_READ | PROT_WRITE, MAP_SHARED, fd.get(), 0);
+    ASSERT_NE(addr, MAP_FAILED);
+    ASSERT_EQ(memcmp(addr, buf, sizeof(buf)), 0);
+
+    constexpr size_t kHalfPage = PAGE_SIZE / 2;
+
+    ASSERT_EQ(ftruncate(fd.get(), 0), 0);
+    memset(buf, 0, sizeof(buf));
+
+    // Even though we trample over the "out-of-bounds" part of the mapping,
+    // ensure it is filled with zeroes as we truncate-extend it.
+    for (size_t i = 1; i < kPageCount * 2; i++) {
+        size_t new_size = kHalfPage * i;
+
+        // Fill "out-of-bounds" with invalid data.
+        char buf_beyond[PAGE_SIZE * kPageCount - new_size];
+        memset(buf_beyond, 'b', sizeof(buf_beyond));
+        void* beyond = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(addr) + new_size);
+        memset(beyond, 'b', sizeof(buf_beyond));
+        ASSERT_EQ(memcmp(buf_beyond, beyond, sizeof(buf_beyond)), 0);
+
+        // Observe that write extension fills the file with zeroes.
+        off_t offset = static_cast<off_t>(new_size - 1);
+        ASSERT_EQ(lseek(fd.get(), offset, SEEK_SET), offset);
+        char zero = 0;
+        ASSERT_EQ(write(fd.get(), &zero, 1), 1);
+        ASSERT_EQ(memcmp(buf, addr, new_size), 0);
+    }
+
+    ASSERT_EQ(munmap(addr, sizeof(buf)), 0);
+    ASSERT_EQ(unlink("::mmap_write_extend"), 0);
+
+    END_TEST;
+}
+
 enum RW {
     Read,
     Write,
@@ -439,6 +581,8 @@ bool test_mmap_death(void) {
     END_TEST;
 }
 
+}  // namespace
+
 RUN_FOR_ALL_FILESYSTEMS(fs_mmap_tests,
     RUN_TEST_MEDIUM(test_mmap_empty)
     RUN_TEST_MEDIUM(test_mmap_readable)
@@ -447,5 +591,8 @@ RUN_FOR_ALL_FILESYSTEMS(fs_mmap_tests,
     RUN_TEST_MEDIUM(test_mmap_shared)
     RUN_TEST_MEDIUM(test_mmap_private)
     RUN_TEST_MEDIUM(test_mmap_evil)
+    RUN_TEST_MEDIUM(test_mmap_truncate_access)
+    RUN_TEST_MEDIUM(test_mmap_truncate_extend)
+    RUN_TEST_MEDIUM(test_mmap_truncate_write_extend)
     RUN_TEST_ENABLE_CRASH_HANDLER(test_mmap_death)
 )
