@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef _ALL_SOURCE
+#define _ALL_SOURCE // Enables thrd_create_with_name in <threads.h>.
+#endif
 #include <lib/async-loop/loop.h>
 
 #include <assert.h>

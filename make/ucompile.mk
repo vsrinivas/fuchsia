@@ -26,6 +26,12 @@ MODULE_OBJS := $(MODULE_COBJS) $(MODULE_CPPOBJS) $(MODULE_ASMOBJS)
 #$(info MODULE_CPPOBJS = $(MODULE_CPPOBJS))
 #$(info MODULE_ASMOBJS = $(MODULE_ASMOBJS))
 
+ifneq (,$(filter src,$(MODULE_PACKAGE)))
+# Override the global -D from USER_COMPILEFLAGS so that we ensure this library
+# exported as source compiles in a default feature-test environment.
+MODULE_COMPILEFLAGS += -U_ALL_SOURCE
+endif
+
 $(MODULE_OBJS): MODULE_OPTFLAGS:=$(MODULE_OPTFLAGS)
 $(MODULE_OBJS): MODULE_COMPILEFLAGS:=$(MODULE_COMPILEFLAGS)
 $(MODULE_OBJS): MODULE_CFLAGS:=$(MODULE_CFLAGS)
@@ -58,4 +64,3 @@ MODULE_ASMOBJS :=
 
 # MODULE_OBJS is passed back
 #MODULE_OBJS :=
-
