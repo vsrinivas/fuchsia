@@ -305,6 +305,8 @@ bool ParseCommandLineArgs(int argc, const char* const* argv, FixtureOptions* fix
     };
     // Resets the internal state of getopt*, making this function idempotent.
     optind = 0;
+    bool ramdisk_set = false;
+    bool block_device_set = false;
 
     *performance_test_options = PerformanceTestOptions::UnitTest();
     // get_opt expects non const pointers.
@@ -321,9 +323,11 @@ bool ParseCommandLineArgs(int argc, const char* const* argv, FixtureOptions* fix
                 return false;
             case 1:
                 fixture_options->block_device_path = optarg;
+                block_device_set = true;
                 break;
             case 2:
                 fixture_options->use_ramdisk = true;
+                ramdisk_set = true;
                 break;
             case 3:
                 fixture_options->ramdisk_block_size = atoi(optarg);
@@ -373,6 +377,12 @@ bool ParseCommandLineArgs(int argc, const char* const* argv, FixtureOptions* fix
             return false;
         }
     }
+
+    // Unset ramdisk when not requested and block device is passed.
+    if (block_device_set && !ramdisk_set) {
+        fixture_options->use_ramdisk = false;
+    }
+
     bool ok = true;
     fbl::String error;
     if (!fixture_options->IsValid(&error)) {

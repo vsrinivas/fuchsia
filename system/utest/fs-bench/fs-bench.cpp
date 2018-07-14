@@ -168,14 +168,16 @@ private:
 } // namespace
 
 bool RunBenchmark(int argc, char** argv) {
-    BEGIN_HELPER;
     FixtureOptions f_opts = FixtureOptions::Default(DISK_FORMAT_MINFS);
     PerformanceTestOptions p_opts;
     const int rw_test_sample_counts[] = {
         1024, 2048, 4096, 8192, 16384,
     };
 
-    ASSERT_TRUE(fs_test_utils::ParseCommandLineArgs(argc, argv, &f_opts, &p_opts));
+    if (!fs_test_utils::ParseCommandLineArgs(argc, argv, &f_opts, &p_opts)) {
+        return true;
+    }
+
     fbl::Vector<TestCaseInfo> testcases;
     // Just do a single cycle for unittest mode.
     int cycles = (p_opts.is_unittest) ? 1 : kWriteReadCycles;
@@ -241,8 +243,7 @@ bool RunBenchmark(int argc, char** argv) {
         testcases.push_back(fbl::move(testcase));
     }
 
-    ASSERT_TRUE(fs_test_utils::RunTestCases(f_opts, p_opts, testcases));
-    END_HELPER;
+    return fs_test_utils::RunTestCases(f_opts, p_opts, testcases);
 }
 } // namespace fs_bench
 
