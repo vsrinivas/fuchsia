@@ -3817,7 +3817,7 @@ void Device::StopInterruptPolling() {
 
 zx_status_t Device::InterruptWorker() {
     const char kThreadName[] = "ralink-interrupt-worker";
-    zx::thread::self().set_property(ZX_PROP_NAME, kThreadName, sizeof(kThreadName));
+    zx::thread::self()->set_property(ZX_PROP_NAME, kThreadName, sizeof(kThreadName));
 
     zx_port_packet_t pkt;
     for (;;) {

@@ -853,13 +853,11 @@ void Initialize(Struct* s) {
   // handles
   s->handles.handle_handle = Handle();
 
-  zx_handle_t duplicate_process = ZX_HANDLE_INVALID;
-  zx_handle_duplicate(zx::process::self().get(), ZX_RIGHT_SAME_RIGHTS,
-                      &duplicate_process);
-  s->handles.process_handle = zx::process(duplicate_process);
-
-  ASSERT_EQ(ZX_OK, zx::thread::create(zx::process::self(), "dummy", 5u, 0u,
-                                      &s->handles.thread_handle));
+  ASSERT_EQ(ZX_OK, zx::process::self()->duplicate(ZX_RIGHT_SAME_RIGHTS,
+                                                  &s->handles.process_handle));
+  ASSERT_EQ(ZX_OK, zx::thread::create(
+      *zx::unowned_process(zx::process::self()), "dummy", 5u, 0u,
+      &s->handles.thread_handle));
   ASSERT_EQ(ZX_OK, zx::vmo::create(0u, 0u, &s->handles.vmo_handle));
   ASSERT_EQ(ZX_OK, zx::event::create(0u, &s->handles.event_handle));
   ASSERT_EQ(ZX_OK, zx::port::create(0u, &s->handles.port_handle));

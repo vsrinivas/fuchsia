@@ -80,7 +80,7 @@ zx_koid_t GetKoid(zx_handle_t handle) {
 }
 
 zx_koid_t GetCurrentProcessKoid() {
-  auto koid = GetKoid(zx::process::self().get());
+  auto koid = GetKoid(zx::process::self()->get());
   ZX_DEBUG_ASSERT(koid != ZX_KOID_INVALID);
   return koid;
 }

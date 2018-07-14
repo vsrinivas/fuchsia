@@ -494,7 +494,7 @@ const wlanmac_info_t& Device::GetWlanInfo() const {
 void Device::MainLoop() {
     infof("starting MainLoop\n");
     const char kThreadName[] = "wlan-mainloop";
-    zx::thread::self().set_property(ZX_PROP_NAME, kThreadName, sizeof(kThreadName));
+    zx::thread::self()->set_property(ZX_PROP_NAME, kThreadName, sizeof(kThreadName));
 
     zx_port_packet_t pkt;
     bool running = true;

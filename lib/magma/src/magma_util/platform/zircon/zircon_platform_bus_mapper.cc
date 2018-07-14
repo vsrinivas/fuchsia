@@ -45,8 +45,8 @@ ZirconPlatformBusMapper::MapPageRangeBus(magma::PlatformBuffer* buffer, uint32_t
         zx_object_get_info(get_root_resource(), ZX_INFO_KMEM_STATS, &kmem_stats, sizeof(kmem_stats),
                            nullptr, nullptr);
         zx_info_task_stats_t task_stats = {};
-        zx::process::self().get_info(ZX_INFO_TASK_STATS, &task_stats, sizeof(task_stats), nullptr,
-                                     nullptr);
+        zx::process::self()->get_info(ZX_INFO_TASK_STATS, &task_stats, sizeof(task_stats), nullptr,
+                                      nullptr);
         magma::log(magma::LOG_WARNING,
                    "Failed to pin 0x%x pages (0x%lx bytes) with status %d. Out of Memory?\n"
                    "mem_mapped_bytes: 0x%lx mem_private_bytes: 0x%lx mem_shared_bytes: 0x%lx\n"
