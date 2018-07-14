@@ -69,8 +69,8 @@ class DisplayManager {
   bool EnableVsync(VsyncCallback vsync_cb);
 
  private:
-  void OnAsync(async_dispatcher_t* dispatcher, async::WaitBase* self, zx_status_t status,
-               const zx_packet_signal_t* signal);
+  void OnAsync(async_dispatcher_t* dispatcher, async::WaitBase* self,
+               zx_status_t status, const zx_packet_signal_t* signal);
   async::WaitMethod<DisplayManager, &DisplayManager::OnAsync> wait_{this};
 
   void DisplaysChanged(::fidl::VectorPtr<fuchsia::display::Info> added,
@@ -78,8 +78,7 @@ class DisplayManager {
   void ClientOwnershipChange(bool has_ownership);
 
   fxl::UniqueFD dc_fd_;
-  fidl::SynchronousInterfacePtr<fuchsia::display::Controller>
-      display_controller_;
+  fuchsia::display::ControllerSync2Ptr display_controller_;
   fidl::InterfacePtr<fuchsia::display::Controller> event_dispatcher_;
   zx_handle_t dc_channel_;  // display_controller_ owns the zx::channel
 

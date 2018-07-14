@@ -67,8 +67,8 @@ void DisplayManager::WaitForDefaultDisplay(fit::closure callback) {
       });
 }
 
-void DisplayManager::OnAsync(async_dispatcher_t* dispatcher, async::WaitBase* self,
-                             zx_status_t status,
+void DisplayManager::OnAsync(async_dispatcher_t* dispatcher,
+                             async::WaitBase* self, zx_status_t status,
                              const zx_packet_signal_t* signal) {
   if (status & ZX_CHANNEL_PEER_CLOSED) {
     // TODO(SCN-244): handle this more robustly.
@@ -103,8 +103,9 @@ void DisplayManager::DisplaysChanged(
     auto& mode = display.modes.get()[0];
 
     zx_status_t status;
-    bool res = display_controller_->CreateLayer(&status, &layer_id_);
-    if (!res || status != ZX_OK) {
+    zx_status_t transport_status =
+        display_controller_->CreateLayer(&status, &layer_id_).statvs;
+    if (transport_status != ZX_OK || status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to create layer";
       return;
     }
@@ -112,8 +113,10 @@ void DisplayManager::DisplaysChanged(
     std::vector<uint64_t> layers;
     layers.push_back(layer_id_);
     ::fidl::VectorPtr<uint64_t> fidl_layers(std::move(layers));
-    if (!display_controller_->SetDisplayLayers(display.id,
-                                               std::move(fidl_layers))) {
+    status = display_controller_
+                 ->SetDisplayLayers(display.id, std::move(fidl_layers))
+                 .statvs;
+    if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to configure display layers";
       return;
     }
@@ -164,7 +167,8 @@ uint64_t DisplayManager::ImportEvent(const zx::event& event) {
   zx::event dup;
   uint64_t event_id = next_event_id_++;
   if (event.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup) == ZX_OK &&
-      display_controller_->ImportEvent(std::move(dup), event_id)) {
+      display_controller_->ImportEvent(std::move(dup), event_id).statvs ==
+          ZX_OK) {
     return event_id;
   }
   return fuchsia::display::invalidId;
@@ -202,8 +206,10 @@ uint64_t DisplayManager::ImportImage(const zx::vmo& vmo) {
   uint64_t id;
   zx_status_t status;
   if (vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup) == ZX_OK &&
-      display_controller_->ImportVmoImage(image_config_, std::move(vmo_dup), 0,
-                                          &status, &id) &&
+      display_controller_
+              ->ImportVmoImage(image_config_, std::move(vmo_dup), 0, &status,
+                               &id)
+              .statvs == ZX_OK &&
       status == ZX_OK) {
     return id;
   }
@@ -217,17 +223,22 @@ void DisplayManager::ReleaseImage(uint64_t id) {
 void DisplayManager::Flip(Display* display, uint64_t buffer,
                           uint64_t render_finished_event_id,
                           uint64_t signal_event_id) {
-  bool res = display_controller_->SetLayerImage(
-      layer_id_, buffer, render_finished_event_id, signal_event_id);
-  res |= display_controller_->ApplyConfig();
-
+  zx_status_t status =
+      display_controller_
+          ->SetLayerImage(layer_id_, buffer, render_finished_event_id,
+                          signal_event_id)
+          .statvs;
   // TODO(SCN-244): handle this more robustly.
-  FXL_DCHECK(res) << "DisplayManager::Flip failed";
+  FXL_DCHECK(status == ZX_OK) << "DisplayManager::Flip failed";
+
+  status = display_controller_->ApplyConfig().statvs;
+  // TODO(SCN-244): handle this more robustly.
+  FXL_DCHECK(status == ZX_OK) << "DisplayManager::Flip failed";
 }
 
 bool DisplayManager::EnableVsync(VsyncCallback vsync_cb) {
   vsync_cb_ = std::move(vsync_cb);
-  return display_controller_->EnableVsync(true);
+  return display_controller_->EnableVsync(true).statvs == ZX_OK;
 }
 
 }  // namespace gfx
