@@ -70,7 +70,7 @@ inline std::ostream& operator<<(std::ostream& os, const IndentBy& value) {
 inline std::ostream& BeginLine(std::ostream& os) {
   return os << std::setw(internal::IndentLevel::Value(os) *
                          internal::IndentBy::Value(os))
-            << "" << std::setw(0);
+            << std::setfill(' ') << "" << std::setw(0);
 }
 
 // Inserts a newline and a BeginLine.

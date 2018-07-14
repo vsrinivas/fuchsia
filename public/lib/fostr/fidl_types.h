@@ -6,8 +6,13 @@
 #define LIB_FOSTR_FIDL_TYPES_H_
 
 #include "lib/fidl/cpp/array.h"
+#include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/interface_handle.h"
+#include "lib/fidl/cpp/interface_ptr.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/vector.h"
 #include "lib/fostr/indent.h"
+#include "lib/fostr/zx_types.h"
 
 namespace fostr {
 namespace internal {
@@ -45,12 +50,41 @@ std::ostream& operator<<(std::ostream& os, const VectorPtr<T>& value) {
   return os;
 }
 
-// TODO(dalesat): zircon_types.h
-// TODO(dalesat): Binding
-// TODO(dalesat): BindingSet
-// TODO(dalesat): InterfaceHandle
-// TODO(dalesat): InterfacePtr
-// TODO(dalesat): InterfaceRequest
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const Binding<T>& value) {
+  if (!value.is_bound()) {
+    return os << "<not bound>";
+  }
+
+  return os << value.channel();
+}
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const InterfaceHandle<T>& value) {
+  if (!value.is_valid()) {
+    return os << "<not valid>";
+  }
+
+  return os << value.channel();
+}
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const InterfacePtr<T>& value) {
+  if (!value.is_bound()) {
+    return os << "<not bound>";
+  }
+
+  return os << value.channel();
+}
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const InterfaceRequest<T>& value) {
+  if (!value.is_valid()) {
+    return os << "<not valid>";
+  }
+
+  return os << value.channel();
+}
 
 }  // namespace fidl
 

@@ -11,6 +11,8 @@ source_set("fostr") {
     "hex_dump.cc",
     "hex_dump.h",
     "indent.h",
+    "zx_types.cc",
+    "zx_types.h",
   ]
 
   public_deps = [
@@ -38,12 +40,16 @@ test("tests") {
     "test/fidl_types_unittests.cc",
     "test/hex_dump_unittests.cc",
     "test/indent_unittests.cc",
+    "test/zx_types_unittests.cc",
   ]
 
   deps = [
     ":fostr",
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fidl/cpp",
     "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
