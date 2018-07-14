@@ -9,7 +9,6 @@
 #include "garnet/bin/developer/tiles/tiles.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/ui/view_framework/view_provider_app.h"
 
 void Usage() {
   printf(
