@@ -207,7 +207,7 @@ void RemoteService::ReadCharacteristic(IdType id,
 void RemoteService::ReadLongCharacteristic(IdType id, uint16_t offset,
                                            size_t max_bytes,
                                            ReadValueCallback cb,
-                                           async_t* dispatcher) {
+                                           async_dispatcher_t* dispatcher) {
   RunGattTask(
       [this, id, offset, max_bytes, cb = std::move(cb), dispatcher]() mutable {
         RemoteCharacteristic* chrc;
@@ -457,7 +457,7 @@ void RemoteService::ReadLongHelper(att::Handle value_handle, uint16_t offset,
                                    MutableByteBufferPtr buffer,
                                    size_t bytes_read,
                                    ReadValueCallback callback,
-                                   async_t* dispatcher) {
+                                   async_dispatcher_t* dispatcher) {
   FXL_DCHECK(IsOnGattThread());
   FXL_DCHECK(callback);
   FXL_DCHECK(buffer);

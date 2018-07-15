@@ -94,7 +94,7 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
   // The resulting value will be returned via |callback|.
   void ReadLongCharacteristic(IdType id, uint16_t offset, size_t max_bytes,
                               ReadValueCallback callback,
-                              async_t* dispatcher = nullptr);
+                              async_dispatcher_t* dispatcher = nullptr);
 
   // Sends a write request to the characteristic with the given identifier.
   // Fails if characteristics have not been discovered.
@@ -196,7 +196,7 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
   // procedure. Called by ReadLongCharacteristic().
   void ReadLongHelper(att::Handle value_handle, uint16_t offset,
                       common::MutableByteBufferPtr buffer, size_t bytes_read,
-                      ReadValueCallback callback, async_t* dispatcher);
+                      ReadValueCallback callback, async_dispatcher_t* dispatcher);
 
   // Returns true if characteristic discovery has completed. This must be
   // accessed only through |gatt_dispatcher_|.
