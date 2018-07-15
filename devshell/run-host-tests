@@ -27,7 +27,11 @@ function main {
     shift
   else
     host_test_dir="${FUCHSIA_BUILD_DIR}/host_tests"
-    fx-command-run build "${@/#/host_tests\/}"
+    # If test names are supplied, rebuild the associated tests; else rebuild
+    # everything under the GN 'host_tests' label.
+    [[ $# -gt 0 ]] && build_targets="${@/#/host_tests\/}" ||
+        build_targets="./build/gn:host_tests"
+    fx-command-run build "${build_targets}"
   fi
 
   runtests_cmd="${ZIRCON_TOOLS_DIR}/runtests -v"
