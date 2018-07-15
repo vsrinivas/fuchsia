@@ -22,7 +22,7 @@ bool ThreadCreateAndJoinTest() {
   zx_handle_t vmar = zx_vmar_root_self();
   zx_vaddr_t stack_base;
   uint32_t perm = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
-  FXL_CHECK(zx_vmar_map(vmar, 0, stack_vmo, 0, stack_size, perm, &stack_base)
+  FXL_CHECK(zx_vmar_map_old(vmar, 0, stack_vmo, 0, stack_size, perm, &stack_base)
             == ZX_OK);
 
   uintptr_t entry = reinterpret_cast<uintptr_t>(&zx_thread_exit);

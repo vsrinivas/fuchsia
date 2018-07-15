@@ -30,7 +30,7 @@ impl Vmar {
         let mut mapped = 0;
         let mut handle = 0;
         let status = unsafe {
-            sys::zx_vmar_allocate(
+            sys::zx_vmar_allocate_old(
                 self.raw_handle(),
                 offset,
                 size,
@@ -63,7 +63,7 @@ impl Vmar {
         flags: VmarFlagsExtended,
     ) -> Result<usize, Status> {
         let mut mapped = 0;
-        let status = sys::zx_vmar_map(
+        let status = sys::zx_vmar_map_old(
             self.0.raw_handle(),
             vmar_offset,
             vmo.raw_handle(),
@@ -80,7 +80,7 @@ impl Vmar {
     }
 
     pub unsafe fn protect(&self, addr: usize, len: usize, flags: VmarFlags) -> Result<(), Status> {
-        ok(sys::zx_vmar_protect(self.raw_handle(), addr, len, flags.bits()))
+        ok(sys::zx_vmar_protect_old(self.raw_handle(), addr, len, flags.bits()))
     }
 
     pub unsafe fn destroy(&self) -> Result<(), Status> {
