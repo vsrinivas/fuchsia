@@ -12,6 +12,7 @@ fx-config-read
 
 readonly LOCK_FILE="${FUCHSIA_DIR}"/.build_lock
 
+# Exit trap to clean up lock file
 function _rmlock () {
   [[ -n "${LOCK_FILE}" ]] && rm -f "${LOCK_FILE}"
 }
@@ -21,25 +22,18 @@ function _rmlock () {
 # and block until it is.
 function locked {
   declare -r cmd="$@"
-
-  if which flock >/dev/null; then
-    flock -n "${LOCK_FILE}" -c true || echo "Locked by ${LOCK_FILE}..."
-    flock "${LOCK_FILE}" -c "${cmd}"
+  # This will cause a deadlock if any subcommand calls back to fx build,
+  # because shlock isn't reentrant by forked processes.
+  if shlock -f "${LOCK_FILE}" -p $$; then
+    trap _rmlock EXIT
+    ${cmd}
+    _rmlock
   else
-    # Some platforms don't have flock, fall back to shlock.
-    # This will cause a deadlock if any subcommand calls back to fx,
-    # because shlock isn't reentrant by forked processes.
-    if shlock -f "${LOCK_FILE}" -p $$; then
-      trap _rmlock EXIT
-      ${cmd}
-      _rmlock
-    else
-      echo "Locked by ${LOCK_FILE}..."
-      while ! shlock -f "${LOCK_FILE}" -p $$; do sleep .1; done
-      trap _rmlock EXIT
-      ${cmd}
-      _rmlock
-    fi
+    echo "Locked by ${LOCK_FILE}..."
+    while ! shlock -f "${LOCK_FILE}" -p $$; do sleep .1; done
+    trap _rmlock EXIT
+    ${cmd}
+    _rmlock
   fi
 }
 
