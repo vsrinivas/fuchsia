@@ -62,6 +62,15 @@ zx_status_t fb_present_image(uint64_t image_id, uint64_t wait_event_id,
 zx_status_t fb_present_image2(uint64_t image_id,
                              uint64_t wait_event_id, uint64_t signal_event_id);
 
+// vsync functions
+
+// Enable vsync for page flip mode.
+zx_status_t fb_enable_vsync(bool enable);
+
+// Wait for vsync event. VSync time is returned in |timestamp| and scanned out
+// image in |image_id|.
+zx_status_t fb_wait_for_vsync(zx_time_t* timestamp, uint64_t* image_id);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif

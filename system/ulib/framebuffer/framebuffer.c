@@ -431,3 +431,65 @@ zx_status_t fb_alloc_image_buffer(zx_handle_t* vmo_out) {
     }
     return ZX_OK;
 }
+
+zx_status_t fb_enable_vsync(bool enable) {
+    fuchsia_display_ControllerEnableVsyncRequest enable_vsync;
+    enable_vsync.hdr.ordinal = fuchsia_display_ControllerEnableVsyncOrdinal;
+    enable_vsync.enable = enable;
+    zx_status_t status;
+    if ((status = zx_channel_write(dc_handle, 0, &enable_vsync, sizeof(enable_vsync),
+                                   NULL, 0)) != ZX_OK) {
+        return status;
+    }
+    return ZX_OK;
+}
+
+zx_status_t fb_wait_for_vsync(zx_time_t* timestamp, uint64_t* image_id) {
+    zx_status_t status;
+
+    zx_handle_t observed;
+    uint32_t signals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+    if ((status = zx_object_wait_one(dc_handle, signals, ZX_TIME_INFINITE,
+                                     &observed)) != ZX_OK) {
+        return status;
+    }
+    if (observed & ZX_CHANNEL_PEER_CLOSED) {
+        return ZX_ERR_PEER_CLOSED;
+    }
+
+    uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+    uint32_t actual_bytes, actual_handles;
+    if ((status = zx_channel_read(dc_handle, 0, bytes, NULL, ZX_CHANNEL_MAX_MSG_BYTES, 0,
+                                  &actual_bytes, &actual_handles)) != ZX_OK) {
+        return ZX_ERR_STOP;
+    }
+
+    if (actual_bytes < sizeof(fidl_message_header_t)) {
+        return ZX_ERR_INTERNAL;
+    }
+
+    fidl_message_header_t* header = (fidl_message_header_t*) bytes;
+
+    switch (header->ordinal) {
+    case fuchsia_display_ControllerDisplaysChangedOrdinal:
+        return ZX_ERR_STOP;
+    case fuchsia_display_ControllerClientOwnershipChangeOrdinal:
+        return ZX_ERR_NEXT;
+    case fuchsia_display_ControllerVsyncOrdinal:
+        break;
+    default:
+        return ZX_ERR_STOP;
+    }
+
+    const char* err_msg;
+    if ((status = fidl_decode(&fuchsia_display_ControllerVsyncEventTable,
+                              bytes, actual_bytes, NULL, 0, &err_msg)) != ZX_OK) {
+        return ZX_ERR_STOP;
+    }
+
+    fuchsia_display_ControllerVsyncEvent* vsync =
+        (fuchsia_display_ControllerVsyncEvent*) bytes;
+    *timestamp = vsync->timestamp;
+    *image_id = vsync->images.count ? *((uint64_t*)vsync->images.data) : FB_INVALID_ID;
+    return ZX_OK;
+}

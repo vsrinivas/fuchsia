@@ -13,11 +13,25 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/main.cpp
 
 MODULE_STATIC_LIBS := \
+    system/ulib/trace-provider \
+    system/ulib/trace \
+    system/ulib/async.cpp \
+    system/ulib/async \
+    system/ulib/async-loop.cpp \
+    system/ulib/async-loop \
+    system/ulib/fbl \
     system/ulib/gfx \
     system/ulib/hid \
     system/ulib/framebuffer \
+    system/ulib/zx \
+    system/ulib/zxcpp \
     system/fidl/fuchsia-display
 
-MODULE_LIBS := system/ulib/zircon system/ulib/fdio system/ulib/c
+MODULE_LIBS := \
+    system/ulib/async.default \
+    system/ulib/c \
+    system/ulib/fdio \
+    system/ulib/zircon \
+    system/ulib/trace-engine
 
 include make/module.mk
