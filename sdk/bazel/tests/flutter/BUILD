@@ -16,6 +16,6 @@ flutter_app(
 fuchsia_package(
     name = "package",
     deps = [
-        ":material",
+        ":app",
     ],
 )

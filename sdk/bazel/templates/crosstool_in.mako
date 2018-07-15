@@ -75,6 +75,7 @@ toolchain {
   compiler_flag: "-Werror"
 
   # Needed to define thrd_create_with_name() in //pkg/async_loop/loop.c
+  # TODO(pylaligand): remove this.
   compiler_flag: "-D_ALL_SOURCE"
 }
 

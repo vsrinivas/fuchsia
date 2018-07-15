@@ -21,10 +21,16 @@ def _configure_crosstool_impl(repository_ctx):
     """
     # Download the toolchain.
     repository_ctx.download_and_extract(
-        CLANG_DOWNLOAD_URL, "clang", CLANG_SHA256, "zip")
+        url = CLANG_DOWNLOAD_URL,
+        output = "clang",
+        sha256 = CLANG_SHA256,
+        type = "zip",
+    )
     # Set up the BUILD file from the Fuchsia SDK.
     repository_ctx.symlink(
-        Label("@fuchsia_sdk//build_defs:BUILD.crosstool"), "BUILD")
+        Label("@fuchsia_sdk//build_defs:BUILD.crosstool"),
+        "BUILD",
+    )
     # Hack to get the path to the sysroot directory, see
     # https://github.com/bazelbuild/bazel/issues/3901
     % for arch in data.arches:
@@ -35,12 +41,13 @@ def _configure_crosstool_impl(repository_ctx):
     repository_ctx.template(
         "CROSSTOOL",
         Label("@fuchsia_sdk//build_defs:CROSSTOOL.in"),
-        {
+        substitutions = {
             % for arch in data.arches:
             "%{SYSROOT_${arch.short_name.upper()}}": str(sysroot_${arch.short_name}),
             % endfor
             "%{CROSSTOOL_ROOT}": str(repository_ctx.path("."))
-        })
+        },
+    )
 
 
 install_fuchsia_crosstool = repository_rule(
