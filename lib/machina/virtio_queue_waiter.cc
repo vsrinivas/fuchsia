@@ -8,12 +8,12 @@
 
 namespace machina {
 
-VirtioQueueWaiter::VirtioQueueWaiter(async_dispatcher_t* dispatcher, VirtioQueue* queue,
-                                     Handler handler)
+VirtioQueueWaiter::VirtioQueueWaiter(async_dispatcher_t* dispatcher,
+                                     VirtioQueue* queue, Handler handler)
     : wait_(this, queue->event(), VirtioQueue::SIGNAL_QUEUE_AVAIL),
       dispatcher_(dispatcher),
       queue_(queue),
-      handler_(fbl::move(handler)) {}
+      handler_(std::move(handler)) {}
 
 VirtioQueueWaiter::~VirtioQueueWaiter() { Cancel(); }
 
@@ -38,8 +38,8 @@ void VirtioQueueWaiter::Cancel() {
   }
 }
 
-void VirtioQueueWaiter::WaitHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                    zx_status_t status,
+void VirtioQueueWaiter::WaitHandler(async_dispatcher_t* dispatcher,
+                                    async::WaitBase* wait, zx_status_t status,
                                     const zx_packet_signal_t* signal) {
   uint16_t index = 0;
   {

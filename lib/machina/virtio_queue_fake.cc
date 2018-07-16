@@ -53,9 +53,9 @@ zx_status_t VirtioQueueFake::Init(uint16_t queue_size) {
   }
 
   queue_size_ = queue_size;
-  desc_buf_ = fbl::move(desc);
-  avail_ring_buf_ = fbl::move(avail);
-  used_ring_buf_ = fbl::move(used);
+  desc_buf_ = std::move(desc);
+  avail_ring_buf_ = std::move(avail);
+  used_ring_buf_ = std::move(used);
 
   queue_->set_size(queue_size);
   queue_->set_desc_addr(reinterpret_cast<uintptr_t>(desc_buf_.get()));

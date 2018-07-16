@@ -33,19 +33,6 @@ static constexpr char kBlockDirPath[] = "/dev/class/block";
 // (ex: read/write to a file descriptor).
 class FdioBlockDispatcher : public BlockDispatcher {
  public:
-  static zx_status_t Create(int fd, size_t size, bool read_only,
-                            fbl::unique_ptr<BlockDispatcher>* out) {
-    fbl::AllocChecker ac;
-    auto dispatcher =
-        fbl::make_unique_checked<FdioBlockDispatcher>(&ac, size, read_only, fd);
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
-    }
-
-    *out = fbl::move(dispatcher);
-    return ZX_OK;
-  }
-
   FdioBlockDispatcher(size_t size, bool read_only, int fd)
       : BlockDispatcher(size, read_only), fd_(fd) {}
 
@@ -191,7 +178,9 @@ zx_status_t BlockDispatcher::CreateFromFd(
   bool read_only = mode == Mode::RO;
   switch (data_plane) {
     case DataPlane::FDIO:
-      return FdioBlockDispatcher::Create(fd, file_size, read_only, dispatcher);
+      *dispatcher =
+          fbl::make_unique<FdioBlockDispatcher>(file_size, read_only, fd);
+      return ZX_OK;
     case DataPlane::QCOW:
       return QcowDispatcher::Create(fd, read_only, dispatcher);
     default:
@@ -203,7 +192,7 @@ zx_status_t BlockDispatcher::CreateFromFd(
 zx_status_t BlockDispatcher::CreateVolatileWrapper(
     fbl::unique_ptr<BlockDispatcher> dispatcher,
     fbl::unique_ptr<BlockDispatcher>* out) {
-  return VolatileWriteBlockDispatcher::Create(fbl::move(dispatcher), out);
+  return VolatileWriteBlockDispatcher::Create(std::move(dispatcher), out);
 }
 
 }  // namespace machina

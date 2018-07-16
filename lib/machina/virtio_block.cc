@@ -38,7 +38,7 @@ zx_status_t VirtioBlock::SetDispatcher(
     return ZX_ERR_BAD_STATE;
   }
 
-  dispatcher_ = fbl::move(dispatcher);
+  dispatcher_ = std::move(dispatcher);
   {
     fbl::AutoLock lock(&config_mutex_);
     config_.capacity = dispatcher_->size() / kSectorSize;

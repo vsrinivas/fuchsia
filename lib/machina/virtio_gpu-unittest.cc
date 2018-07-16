@@ -36,8 +36,7 @@ struct BackingPages
 class VirtioGpuTest : public ::gtest::TestLoopFixture {
  public:
   VirtioGpuTest()
-      : gpu_(phys_mem_, dispatcher()),
-        control_queue_(gpu_.control_queue()) {}
+      : gpu_(phys_mem_, dispatcher()), control_queue_(gpu_.control_queue()) {}
 
   zx_status_t Init() {
     zx_status_t status = control_queue_.Init(kQueueSize);
@@ -72,7 +71,7 @@ class VirtioGpuTest : public ::gtest::TestLoopFixture {
     scanout_size_ = width * height * surface.pixelsize();
     scanout_buffer_ = surface.buffer();
 
-    scanout_.SetBitmap(fbl::move(surface));
+    scanout_.SetBitmap(std::move(surface));
     gpu_.AddScanout(&scanout_);
     return ZX_OK;
   }
@@ -134,7 +133,7 @@ class VirtioGpuTest : public ::gtest::TestLoopFixture {
     virtio_gpu_mem_entry_t entry = {};
     entry.addr = reinterpret_cast<uint64_t>(backing->buffer.get());
     entry.length = size;
-    backing_pages->push_front(fbl::move(backing));
+    backing_pages->push_front(std::move(backing));
 
     virtio_gpu_ctrl_hdr_t response = {};
     zx_status_t status = control_queue()
@@ -325,9 +324,8 @@ TEST_F(VirtioGpuTest, HandleTransfer2D) {
   // Verify backing/scanout are now in sync.
   size_t offset = 0;
   for (const auto& entry : root_backing_pages()) {
-    ASSERT_EQ(
-        memcmp(entry.buffer.get(), scanout_buffer() + offset, entry.len),
-        0);
+    ASSERT_EQ(memcmp(entry.buffer.get(), scanout_buffer() + offset, entry.len),
+              0);
     offset += entry.len;
   }
 }

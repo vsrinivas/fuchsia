@@ -36,8 +36,9 @@ zx_status_t FramebufferScanout::Create(fbl::unique_ptr<GpuScanout>* out) {
   // Map framebuffer VMO.
   uintptr_t fbo;
   size_t size = stride * ZX_PIXEL_FORMAT_BYTES(format) * height;
-  status = zx_vmar_map_old(zx_vmar_root_self(), 0, fb_get_single_buffer(), 0, size,
-                           ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &fbo);
+  status =
+      zx_vmar_map_old(zx_vmar_root_self(), 0, fb_get_single_buffer(), 0, size,
+                      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &fbo);
   if (status != ZX_OK) {
     return status;
   }
@@ -47,7 +48,7 @@ zx_status_t FramebufferScanout::Create(fbl::unique_ptr<GpuScanout>* out) {
   GpuBitmap bitmap(width, height, stride, format,
                    reinterpret_cast<uint8_t*>(fbo));
   fbl::unique_ptr<FramebufferScanout> scanout(new FramebufferScanout(
-      fbl::move(bitmap), reinterpret_cast<uint8_t*>(fbo)));
+      std::move(bitmap), reinterpret_cast<uint8_t*>(fbo)));
 
   GpuRect rect = {
       .x = 0,
@@ -57,12 +58,12 @@ zx_status_t FramebufferScanout::Create(fbl::unique_ptr<GpuScanout>* out) {
   };
   scanout->InvalidateRegion(rect);
 
-  *out = fbl::move(scanout);
+  *out = std::move(scanout);
   return ZX_OK;
 }
 
 FramebufferScanout::FramebufferScanout(GpuBitmap surface, uint8_t* buf)
-    : GpuScanout(fbl::move(surface)), buf_(buf) {}
+    : GpuScanout(std::move(surface)), buf_(buf) {}
 
 FramebufferScanout::~FramebufferScanout() { fb_release(); }
 

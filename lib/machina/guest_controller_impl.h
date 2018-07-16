@@ -28,7 +28,7 @@ class GuestControllerImpl : public fuchsia::guest::GuestController {
   // Extracts the socket handle to be used for the host end of serial
   // communication. The other end of this socket will be provided to clients
   // via |GetSerial|.
-  zx::socket TakeSocket() { return fbl::move(server_socket_); }
+  zx::socket TakeSocket() { return std::move(server_socket_); }
 
   // |fuchsia::guest::GuestController|
   void GetPhysicalMemory(GetPhysicalMemoryCallback callback) override;

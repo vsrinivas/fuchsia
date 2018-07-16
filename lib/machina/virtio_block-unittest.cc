@@ -44,7 +44,7 @@ class VirtioBlockTest {
     zx_status_t status = machina::BlockDispatcher::CreateFromPath(
         block_path, machina::BlockDispatcher::Mode::RW,
         machina::BlockDispatcher::DataPlane::FDIO, phys_mem_, &dispatcher);
-    status = block_.SetDispatcher(fbl::move(dispatcher));
+    status = block_.SetDispatcher(std::move(dispatcher));
     if (status != ZX_OK) {
       return status;
     }

@@ -37,7 +37,7 @@ zx_status_t VolatileWriteBlockDispatcher::Create(
   }
 
   *out = fbl::unique_ptr<VolatileWriteBlockDispatcher>(
-      new VolatileWriteBlockDispatcher(fbl::move(dispatcher), fbl::move(vmo),
+      new VolatileWriteBlockDispatcher(std::move(dispatcher), std::move(vmo),
                                        vmar_addr));
   return ZX_OK;
 }
@@ -46,8 +46,8 @@ VolatileWriteBlockDispatcher::VolatileWriteBlockDispatcher(
     fbl::unique_ptr<BlockDispatcher> dispatcher, zx::vmo vmo,
     uintptr_t vmar_addr)
     : BlockDispatcher(dispatcher->size(), false /* read-only */),
-      dispatcher_(fbl::move(dispatcher)),
-      vmo_(fbl::move(vmo)),
+      dispatcher_(std::move(dispatcher)),
+      vmo_(std::move(vmo)),
       vmar_addr_(vmar_addr) {}
 
 VolatileWriteBlockDispatcher::~VolatileWriteBlockDispatcher() {

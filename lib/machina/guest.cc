@@ -9,7 +9,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/string_buffer.h>
 #include <zircon/device/sysinfo.h>
@@ -92,24 +91,17 @@ Guest::~Guest() { zx_handle_close(guest_); }
 zx_status_t Guest::CreateMapping(TrapType type, uint64_t addr, size_t size,
                                  uint64_t offset, IoHandler* handler) {
   uint32_t kind = trap_kind(type);
-  fbl::AllocChecker ac;
-  auto mapping = fbl::make_unique_checked<IoMapping>(&ac, kind, addr, size,
-                                                     offset, handler);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
+  auto mapping = fbl::make_unique<IoMapping>(kind, addr, size, offset, handler);
   zx_status_t status = mapping->SetTrap(this);
   if (status != ZX_OK) {
     return status;
   }
-
-  mappings_.push_front(fbl::move(mapping));
+  mappings_.push_front(std::move(mapping));
   return ZX_OK;
 }
 
 void Guest::RegisterVcpuFactory(VcpuFactory factory) {
-  vcpu_factory_ = fbl::move(factory);
+  vcpu_factory_ = std::move(factory);
 }
 
 zx_status_t Guest::StartVcpu(uintptr_t entry, uint64_t id) {
@@ -132,7 +124,7 @@ zx_status_t Guest::StartVcpu(uintptr_t entry, uint64_t id) {
   if (status != ZX_OK) {
     return status;
   }
-  vcpus_[id] = fbl::move(vcpu);
+  vcpus_[id] = std::move(vcpu);
 
   return ZX_OK;
 }

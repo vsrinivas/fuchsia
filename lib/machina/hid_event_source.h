@@ -5,6 +5,8 @@
 #ifndef GARNET_LIB_MACHINA_HID_EVENT_SOURCE_H_
 #define GARNET_LIB_MACHINA_HID_EVENT_SOURCE_H_
 
+#include <utility>
+
 #include <fbl/intrusive_single_list.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
@@ -19,7 +21,7 @@ class HidInputDevice
     : public fbl::SinglyLinkedListable<fbl::unique_ptr<HidInputDevice>> {
  public:
   HidInputDevice(InputDispatcher* input_dispatcher, fbl::unique_fd fd)
-      : fd_(fbl::move(fd)), input_dispatcher_(input_dispatcher) {}
+      : fd_(std::move(fd)), input_dispatcher_(input_dispatcher) {}
 
   explicit HidInputDevice(InputDispatcher* input_dispatcher)
       : input_dispatcher_(input_dispatcher) {}

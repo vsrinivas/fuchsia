@@ -289,7 +289,7 @@ void VirtioGpu::ResourceCreate2D(const virtio_gpu_resource_create_2d_t* request,
     response->type = VIRTIO_GPU_RESP_ERR_UNSPEC;
     return;
   }
-  resources_.insert(fbl::move(res));
+  resources_.insert(std::move(res));
   response->type = VIRTIO_GPU_RESP_OK_NODATA;
 }
 

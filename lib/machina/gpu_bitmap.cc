@@ -112,7 +112,7 @@ GpuBitmap::GpuBitmap(GpuBitmap&& o)
       height_(o.height_),
       stride_(o.stride_),
       format_(o.format_),
-      buffer_(fbl::move(o.buffer_)),
+      buffer_(std::move(o.buffer_)),
       ptr_(o.ptr_) {
   o.ptr_ = nullptr;
 }
@@ -122,7 +122,7 @@ GpuBitmap& GpuBitmap::operator=(GpuBitmap&& o) {
   height_ = o.height_;
   stride_ = o.stride_;
   format_ = o.format_;
-  buffer_ = fbl::move(o.buffer_);
+  buffer_ = std::move(o.buffer_);
   ptr_ = o.ptr_;
   o.ptr_ = nullptr;
   return *this;

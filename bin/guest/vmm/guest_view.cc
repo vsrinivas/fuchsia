@@ -41,8 +41,8 @@ void ScenicScanout::CreateView(
       startup_context_
           ->ConnectToEnvironmentService<::fuchsia::ui::views_v1::ViewManager>();
   view_ = fbl::make_unique<GuestView>(this, input_dispatcher_,
-                                      fbl::move(view_manager),
-                                      fbl::move(view_owner_request));
+                                      std::move(view_manager),
+                                      std::move(view_owner_request));
   if (view_) {
     view_->SetReleaseHandler([this] { view_.reset(); });
   }
@@ -50,7 +50,8 @@ void ScenicScanout::CreateView(
 }
 
 void ScenicScanout::InvalidateRegion(const machina::GpuRect& rect) {
-  async::PostTask(async_get_default_dispatcher(), [this] { view_->InvalidateScene(); });
+  async::PostTask(async_get_default_dispatcher(),
+                  [this] { view_->InvalidateScene(); });
 }
 
 GuestView::GuestView(

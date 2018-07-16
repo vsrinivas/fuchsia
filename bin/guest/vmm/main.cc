@@ -359,7 +359,7 @@ int main(int argc, char** argv) {
     }
     if (block_spec.volatile_writes) {
       status = machina::BlockDispatcher::CreateVolatileWrapper(
-          fbl::move(dispatcher), &dispatcher);
+          std::move(dispatcher), &dispatcher);
       if (status != ZX_OK) {
         FXL_LOG(ERROR) << "Failed to create volatile block dispatcher";
         return status;
@@ -367,7 +367,7 @@ int main(int argc, char** argv) {
     }
 
     auto block = fbl::make_unique<machina::VirtioBlock>(guest.phys_mem());
-    status = block->SetDispatcher(fbl::move(dispatcher));
+    status = block->SetDispatcher(std::move(dispatcher));
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to set block dispatcher " << status;
       return status;
@@ -381,7 +381,7 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
       return status;
     }
-    block_devices.push_back(fbl::move(block));
+    block_devices.push_back(std::move(block));
   }
 
   // Setup console
@@ -510,8 +510,9 @@ int main(int argc, char** argv) {
     }
   };
   if (gpu_scanout) {
-    gpu_scanout->WhenReady(
-        [&loop, &start_task] { async::PostTask(loop.dispatcher(), start_task); });
+    gpu_scanout->WhenReady([&loop, &start_task] {
+      async::PostTask(loop.dispatcher(), start_task);
+    });
 
   } else {
     start_task();

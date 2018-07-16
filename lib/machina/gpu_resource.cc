@@ -31,11 +31,11 @@ fbl::unique_ptr<GpuResource> GpuResource::Create(
   }
   GpuBitmap bitmap(request->width, request->height, format);
   return fbl::make_unique<GpuResource>(gpu, request->resource_id,
-                                       fbl::move(bitmap));
+                                       std::move(bitmap));
 }
 
 GpuResource::GpuResource(VirtioGpu* gpu, ResourceId id, GpuBitmap bitmap)
-    : gpu_(gpu), res_id_(id), bitmap_(fbl::move(bitmap)) {}
+    : gpu_(gpu), res_id_(id), bitmap_(std::move(bitmap)) {}
 
 virtio_gpu_ctrl_type GpuResource::AttachBacking(
     const virtio_gpu_mem_entry_t* mem_entries, uint32_t num_entries) {

@@ -57,7 +57,7 @@ void GpuScanout::SetResource(GpuResource* res,
 }
 
 void GpuScanout::WhenReady(OnReadyCallback callback) {
-  ready_callback_ = fbl::move(callback);
+  ready_callback_ = std::move(callback);
   InvokeReadyCallback();
 }
 
