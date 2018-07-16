@@ -12,8 +12,8 @@ struct Intent {
   // This is nullable for backwards compatibility.
   // TODO(MI4-1100): Make action non-nullable.
   string? action;
-  
-  // An explicit handler for the Intent. Specified as the package name of the 
+
+  // An explicit handler for the Intent. Specified as the package name of the
   // module.
   string? handler;
 
