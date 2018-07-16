@@ -22,6 +22,45 @@ namespace {
 // File used to dump libs stdout. Allows verifying certain options.
 constexpr char kFakeStdout[] = "/data/fake_stdout.txt";
 
+bool ResultSetIsValid() {
+    BEGIN_TEST;
+    fbl::String err;
+    PerformanceTestOptions p_options = PerformanceTestOptions::PerformanceTest();
+    p_options.result_path = "some/path";
+    ASSERT_TRUE(p_options.IsValid(&err), err.c_str());
+    END_TEST;
+}
+
+bool SummaryPathSetIsValid() {
+    BEGIN_TEST;
+    fbl::String err;
+    PerformanceTestOptions p_options = PerformanceTestOptions::PerformanceTest();
+    p_options.summary_path = "some/path";
+    ASSERT_TRUE(p_options.IsValid(&err), err.c_str());
+    END_TEST;
+}
+
+bool PrintStatisticsSetIsValid() {
+    BEGIN_TEST;
+    fbl::String err;
+    PerformanceTestOptions p_options = PerformanceTestOptions::PerformanceTest();
+    p_options.print_statistics = true;
+    ASSERT_TRUE(p_options.IsValid(&err), err.c_str());
+    END_TEST;
+}
+
+bool NoOutputIsInvalid() {
+    BEGIN_TEST;
+    fbl::String err;
+    PerformanceTestOptions p_options = PerformanceTestOptions::PerformanceTest();
+    p_options.print_statistics = false;
+    p_options.result_path.clear();
+    p_options.summary_path.clear();
+
+    ASSERT_FALSE(p_options.IsValid(&err), err.c_str());
+    END_TEST;
+}
+
 bool InvalidOptionsReturnFalseAndPrintsUsage() {
     BEGIN_TEST;
     fbl::String err;
@@ -302,6 +341,13 @@ bool RunTestCasesWritesResultsAndStatistics() {
 
     END_TEST;
 }
+
+BEGIN_TEST_CASE(FsPerformanceTestOptions)
+RUN_TEST(ResultSetIsValid)
+RUN_TEST(SummaryPathSetIsValid)
+RUN_TEST(PrintStatisticsSetIsValid)
+RUN_TEST(NoOutputIsInvalid)
+END_TEST_CASE(FsPerformanceTestOptions)
 
 BEGIN_TEST_CASE(FsPerformanceTestLib)
 RUN_TEST(InvalidOptionsReturnFalseAndPrintsUsage)

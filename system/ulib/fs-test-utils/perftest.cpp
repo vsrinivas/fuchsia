@@ -228,13 +228,15 @@ bool PerformanceTestOptions::IsValid(fbl::String* error) const {
         return true;
     }
 
-    if (result_path.empty()) {
-        *error = "result_path must be set.\n";
+    // Something must be printed.
+    if (result_path.empty() && summary_path.empty() && !print_statistics) {
+        *error = "Performance test must produce output."
+                 " result_path(out), summary_path or prints_statistics must be set.\n";
         return false;
     }
 
-    if (result_path == summary_path) {
-        *error = "result_path and summary_path cannot point to the same file.\n";
+    if (result_path == summary_path && !result_path.empty()) {
+        *error = "result_path(out) and summary_path cannot point to the same file.\n";
         return false;
     }
 
