@@ -90,7 +90,8 @@ zx_status_t IntelDspCodeLoader::Initialize() {
     return ZX_OK;
 }
 
-zx_status_t IntelDspCodeLoader::TransferFirmware(const PinnedVmo& pinned_fw, size_t fw_size) {
+zx_status_t IntelDspCodeLoader::TransferFirmware(const fzl::PinnedVmo& pinned_fw,
+                                                 size_t fw_size) {
 
     uint32_t region_count = pinned_fw.region_count();
 

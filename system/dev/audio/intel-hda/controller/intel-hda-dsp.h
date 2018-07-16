@@ -18,6 +18,7 @@
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <intel-hda/utils/intel-hda-proto.h>
 #include <intel-hda/utils/intel-hda-registers.h>
+#include <intel-hda/utils/utils.h>
 
 #include "debug-logging.h"
 #include "intel-hda-stream.h"

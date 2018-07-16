@@ -525,7 +525,7 @@ zx_status_t IntelAudioDsp::LoadFirmware() {
     // Pin this VMO and grant the controller access to it.  The controller
     // should only need read access to the firmware.
     constexpr uint32_t DSP_MAP_FLAGS = ZX_BTI_PERM_READ;
-    PinnedVmo pinned_fw;
+    fzl::PinnedVmo pinned_fw;
     st = pinned_fw.Pin(stripped_vmo, hda_bti_->initiator(), DSP_MAP_FLAGS);
     if (st != ZX_OK) {
         LOG(ERROR, "Failed to pin pages for DSP firmware (res %d)\n", st);

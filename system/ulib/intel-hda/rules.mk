@@ -12,7 +12,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/codec-utils/codec-driver-base.cpp \
     $(LOCAL_DIR)/codec-utils/stream-base.cpp \
     $(LOCAL_DIR)/utils/codec-caps.cpp \
-    $(LOCAL_DIR)/utils/pinned-vmo.cpp \
     $(LOCAL_DIR)/utils/utils.cpp \
 
 MODULE_STATIC_LIBS := \

@@ -4,11 +4,9 @@
 
 #include <fbl/auto_call.h>
 #include <fbl/limits.h>
+#include <lib/fzl/pinned-vmo.h>
 
-#include <intel-hda/utils/pinned-vmo.h>
-
-namespace audio {
-namespace intel_hda {
+namespace fzl {
 
 zx_status_t PinnedVmo::Pin(const zx::vmo& vmo, const zx::bti& bti, uint32_t rights) {
     // If we are holding a pinned memory token, then we are already holding a
@@ -121,5 +119,4 @@ void PinnedVmo::UnpinInternal() {
     region_count_ = 0;
 }
 
-}  // namespace intel_hda
-}  // namespace audio
+}  // namespace fzl

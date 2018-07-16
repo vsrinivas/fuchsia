@@ -10,13 +10,14 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <zircon/thread_annotations.h>
 
 #include <audio-proto/audio-proto.h>
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <intel-hda/utils/intel-hda-registers.h>
-#include <intel-hda/utils/pinned-vmo.h>
+#include <intel-hda/utils/utils.h>
 
 #include "debug-logging.h"
 #include "utils.h"
@@ -131,13 +132,13 @@ private:
 
     // Storage allocated for this stream context's buffer descriptor list.
     fzl::VmoMapper bdl_cpu_mem_;
-    PinnedVmo      bdl_hda_mem_;
+    fzl::PinnedVmo bdl_hda_mem_;
 
     // The channel used by the application to talk to us once our format has
     // been set by the codec.
     fbl::Mutex channel_lock_;
     fbl::RefPtr<dispatcher::Channel> channel_ TA_GUARDED(channel_lock_);
-    PinnedVmo pinned_ring_buffer_ TA_GUARDED(channel_lock_);
+    fzl::PinnedVmo pinned_ring_buffer_ TA_GUARDED(channel_lock_);
 
     // Paramters determined after stream format configuration.
     uint16_t encoded_fmt_ = 0;

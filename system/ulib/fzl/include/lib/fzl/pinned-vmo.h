@@ -11,10 +11,7 @@
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 
-#include "utils.h"
-
-namespace audio {
-namespace intel_hda {
+namespace fzl {
 
 class PinnedVmo {
   public:
@@ -44,5 +41,4 @@ class PinnedVmo {
     uint32_t region_count_ = 0;
 };
 
-}  // namespace intel_hda
-}  // namespace audio
+}  // namespace fzl

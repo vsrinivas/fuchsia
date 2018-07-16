@@ -14,6 +14,7 @@
 #include <fbl/intrusive_single_list.h>
 #include <fbl/recycler.h>
 #include <fbl/unique_ptr.h>
+#include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <threads.h>
 #include <lib/zx/interrupt.h>
@@ -22,7 +23,7 @@
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/intel-hda-registers.h>
 #include <intel-hda/utils/intel-hda-proto.h>
-#include <intel-hda/utils/pinned-vmo.h>
+#include <intel-hda/utils/utils.h>
 
 #include "codec-cmd-job.h"
 #include "debug-logging.h"
@@ -164,7 +165,7 @@ private:
 
     // Physical memory allocated for the command buffer (CORB/RIRB)
     fzl::VmoMapper cmd_buf_cpu_mem_ TA_GUARDED(corb_lock_);
-    PinnedVmo      cmd_buf_hda_mem_ TA_GUARDED(corb_lock_);
+    fzl::PinnedVmo cmd_buf_hda_mem_ TA_GUARDED(corb_lock_);
 
     // Stream state
     fbl::Mutex           stream_pool_lock_;
