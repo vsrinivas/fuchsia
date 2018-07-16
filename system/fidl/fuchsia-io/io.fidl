@@ -84,13 +84,8 @@ interface Object {
   // Terminates connection with object.
   0x80000002: Close() -> (status s);
 
-  // Returns a representation of all the interfaces currently supported
-  // by the object. The Object may be bound to any of the represented
-  // interfaces.
-  0x80000004: ListInterfaces() -> (vector<string> interfaces);
-
   // Closes handle if the requested interface not supported.
-  0x80000005: Bind(string iface);
+  0x80000005: Bind(string:kMaxPath interface_name);
 
   // Returns extra information about the type of the object.
   // If the |Describe| operation fails, the connection is closed.
@@ -142,6 +137,7 @@ struct NodeAttributes {
 
 const uint64 kMaxIoctlHandles = 2;
 const uint64 kMaxBuf = 8192;
+const uint64 kMaxPath = 4096;
 
 // The fields of 'attributes' which are used to update the Node are indicated
 // by the 'flags' argument.
@@ -160,7 +156,8 @@ interface Node : Object {
   // Update information about the node.
   0x81000003: SetAttr(uint32 flags, NodeAttributes attributes) -> (status s);
 
-  0x81000004: Ioctl(uint32 opcode, uint64 max_out, vector<handle>:kMaxIoctlHandles handles, vector<uint8>:kMaxBuf in) -> (status s, vector<handle>:kMaxIoctlHandles handles, vector<uint8>:kMaxBuf out);
+  0x81000004: Ioctl(uint32 opcode, uint64 max_out, vector<handle>:kMaxIoctlHandles handles, vector<uint8>:kMaxBuf in)
+      -> (status s, vector<handle>:kMaxIoctlHandles handles, vector<uint8>:kMaxBuf out);
 };
 
 // Update the Seek offset.
@@ -229,10 +226,10 @@ const uint32 kDirentTypeService = 16;
 // Directory defines a node which is capable of containing other Objects.
 interface Directory : Node {
   // Open a new object relative to this directory object.
-  0x83000001: Open(uint32 flags, uint32 mode, string path, request<Object> object);
+  0x83000001: Open(uint32 flags, uint32 mode, string:kMaxPath path, request<Object> object);
 
   // Remove an object relative to this directory object.
-  0x83000002: Unlink(string path) -> (status s);
+  0x83000002: Unlink(string:kMaxPath path) -> (status s);
 
   // Reads a collection of variably sized dirents into a buffer.
   // The number of dirents in a directory may be very large: akin to
@@ -260,9 +257,9 @@ interface Directory : Node {
 
   // Within the directory, rename an object named src to the name dst, in
   // a directory represented by token.
-  0x83000006: Rename(string src, handle dst_parent_token, string dst) -> (status s);
+  0x83000006: Rename(string:kMaxPath src, handle dst_parent_token, string:kMaxPath dst) -> (status s);
 
   // Within the directory, create a link to an object named src by the name
   // dst, within a directory represented by token.
-  0x83000007: Link(string src, handle dst_parent_token, string dst) -> (status s);
+  0x83000007: Link(string:kMaxPath src, handle dst_parent_token, string:kMaxPath dst) -> (status s);
 };
