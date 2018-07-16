@@ -10,8 +10,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_DEPS += \
     kernel/lib/gfx \
-    kernel/lib/gfxconsole \
-    third_party/lib/qrcodegen
+    kernel/lib/gfxconsole
 
 MODULE_SRCS += \
 	$(LOCAL_DIR)/udisplay.cpp
