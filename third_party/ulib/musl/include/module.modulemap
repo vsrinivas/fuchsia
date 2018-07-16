@@ -115,10 +115,6 @@ module Libc [system] {
       header "string.h"
       export *
     }
-    module tgmath { // C99
-      header "tgmath.h"
-      export *
-    }
     module threads { // C11
       header "threads.h"
       export *
