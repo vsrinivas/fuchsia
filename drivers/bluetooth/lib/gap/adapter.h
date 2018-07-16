@@ -16,6 +16,7 @@
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
+#include "garnet/drivers/bluetooth/lib/sdp/server.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/synchronization/thread_checker.h"
@@ -109,6 +110,9 @@ class Adapter final {
   BrEdrDiscoveryManager* bredr_discovery_manager() const {
     return bredr_discovery_manager_.get();
   }
+
+  // Returns this Adapter's SDP server.
+  sdp::Server* sdp_server() const { return sdp_server_.get(); }
 
   // Returns this Adapter's LE discovery manager.
   LowEnergyDiscoveryManager* le_discovery_manager() const {
@@ -233,6 +237,8 @@ class Adapter final {
   // Objects that perform BR/EDR procedures.
   std::unique_ptr<BrEdrConnectionManager> bredr_connection_manager_;
   std::unique_ptr<BrEdrDiscoveryManager> bredr_discovery_manager_;
+  std::unique_ptr<sdp::Server> sdp_server_;
+
   fxl::ThreadChecker thread_checker_;
 
   // This must remain the last member to make sure that all weak pointers are

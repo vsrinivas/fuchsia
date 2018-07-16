@@ -12,6 +12,7 @@ use fuchsia_async as fasync;
 use fuchsia_app::{server::ServicesServer, client::Launcher};
 use failure::{Error, ResultExt};
 use fidl::endpoints2::ServiceMarker;
+use fidl_fuchsia_bluetooth_bredr::ProfileMarker;
 use fidl_fuchsia_bluetooth_control::BondingMarker;
 use fidl_fuchsia_bluetooth_control::ControlMarker;
 use fidl_fuchsia_bluetooth_gatt::Server_Marker;
@@ -40,7 +41,7 @@ fn main() -> Result<(), Error> {
             .unwrap(),
     ));
 
-    make_clones!(btgap => btgap_control, btgap_central, btgap_peripheral, btgap_server);
+    make_clones!(btgap => btgap_control, btgap_central, btgap_peripheral, btgap_profile, btgap_server);
 
     let app = btgap.lock().connect_to_service(BondingMarker).unwrap();
     let bond_store = Arc::new(RwLock::new(BondStore::load_store()?));
@@ -75,6 +76,12 @@ fn main() -> Result<(), Error> {
             let _ = btgap_peripheral
                 .lock()
                 .pass_to_service(PeripheralMarker, chan.into());
+        }))
+        .add_service((ProfileMarker::NAME, move |chan: fasync::Channel| {
+            fx_log_info!("Passing Profile Handle to bt-gap");
+            let _ = btgap_profile
+                .lock()
+                .pass_to_service(ProfileMarker, chan.into());
         }))
         .add_service((Server_Marker::NAME, move |chan: fasync::Channel| {
             fx_log_info!("Passing GATT Handle to bt-gap");

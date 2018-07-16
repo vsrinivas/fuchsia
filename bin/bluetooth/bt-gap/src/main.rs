@@ -7,6 +7,7 @@
 
 use failure::{Error, ResultExt};
 use fidl::endpoints2::{ServerEnd, ServiceMarker};
+use fidl_fuchsia_bluetooth_bredr::{ProfileMarker};
 use fidl_fuchsia_bluetooth_control::BondingMarker;
 use fidl_fuchsia_bluetooth_control::ControlMarker;
 use fidl_fuchsia_bluetooth_gatt::Server_Marker;
@@ -33,7 +34,7 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let hd = Arc::new(RwLock::new(HostDispatcher::new()));
 
-    make_clones!(hd => host_hd, control_hd, central_hd, peripheral_hd, gatt_hd, bonding_hd);
+    make_clones!(hd => host_hd, control_hd, central_hd, peripheral_hd, gatt_hd, bonding_hd, profile_hd);
 
     let host_watcher = watch_hosts(host_hd);
 
@@ -73,6 +74,21 @@ fn main() -> Result<(), Error> {
                                 .read()
                                 .get_host()
                                 .request_low_energy_peripheral(remote);
+                        }
+                        future::ready(Ok(()))
+                    }).unwrap_or_else(|e| eprintln!("Failed to spawn {:?}", e)),
+            )
+        })).add_service((ProfileMarker::NAME, move |chan: fasync::Channel| {
+            fx_log_info!("Connecting Profile Service to Adapter");
+            fasync::spawn(
+                HostDispatcher::get_active_adapter(profile_hd.clone())
+                    .and_then(move |adapter| {
+                        let remote = ServerEnd::<ProfileMarker>::new(chan.into());
+                        if let Some(adapter) = adapter {
+                            let _ = adapter
+                                .read()
+                                .get_host()
+                                .request_profile(remote);
                         }
                         future::ready(Ok(()))
                     }).unwrap_or_else(|e| eprintln!("Failed to spawn {:?}", e)),

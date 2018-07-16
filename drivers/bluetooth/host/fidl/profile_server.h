@@ -11,6 +11,7 @@
 #include "lib/fxl/memory/weak_ptr.h"
 
 #include "garnet/drivers/bluetooth/host/fidl/server_base.h"
+#include "garnet/drivers/bluetooth/lib/sdp/service_record.h"
 
 namespace bthost {
 
@@ -29,8 +30,11 @@ class ProfileServer
                   fuchsia::bluetooth::bredr::SecurityLevel sec_level,
                   bool devices, AddServiceCallback callback) override;
   void DisconnectClient(::fidl::StringPtr device_id,
-                        ::fidl::StringPtr service_id) override;
-  void RemoveService(::fidl::StringPtr service_id) override;
+                        uint64_t service_id) override;
+  void RemoveService(uint64_t service_id) override;
+
+  // Registered service IDs handed out, correlated with Service Handles.
+  std::map<uint64_t, btlib::sdp::ServiceHandle> registered_;
 
   // Keep this as the last member to make sure that all weak pointers are
   // invalidated before other members get destroyed.

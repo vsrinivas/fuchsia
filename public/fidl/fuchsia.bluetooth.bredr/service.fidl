@@ -23,7 +23,7 @@ union DataElementData {
   string? uuid;
   bool b;
   vector<uint8>? bytes;
-  //vector<DataElement>? sequence;
+  vector<DataElement?> sequence;
 };
 
 struct DataElement {
@@ -36,7 +36,7 @@ struct DataElement {
 // We intentionally omit deprecated profile identifiers
 // From Bluetooth Assigned Numbers:
 // https://www.bluetooth.com/specifications/assigned-numbers/service-discovery
-enum ProtocolIdentifier {
+enum ProtocolIdentifier : uint16 {
   SDP = 1;
   RFCOMM = 3;
   ATT = 7;
@@ -142,7 +142,7 @@ struct Information {
 // A generic attribute, used for protocol information;
 struct Attribute {
   uint16 id;
-  DataElement elements;
+  DataElement element;
 };
 
 struct ServiceDefinition {
