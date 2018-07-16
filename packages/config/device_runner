@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//peridot/bin/device_runner:config"
-    ]
-}

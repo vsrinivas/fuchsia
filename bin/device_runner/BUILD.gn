@@ -122,15 +122,3 @@ executable("user_controller_impl_unittest") {
     "//third_party/googletest:gtest_main",
   ]
 }
-
-package("config") {
-  testonly = true
-  deprecated_system_image = true
-  package_name = "device_runner_config"
-  resources = [
-    {
-      dest = "sysmgr/device_runner.config"
-      path = rebase_path("config/device_runner.config")
-    },
-  ]
-}
