@@ -49,7 +49,6 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/lib/far",
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/backoff",
