@@ -49,7 +49,7 @@ type netstack struct {
 
 	countNIC tcpip.NICID
 
-	filter   *filter.Filter
+	filter *filter.Filter
 }
 
 type dhcpState struct {
@@ -422,22 +422,22 @@ func (ns *netstack) addEth(path string) error {
 	ns.countNIC++
 	ns.mu.Unlock()
 
-	log.Printf("NIC %d added using ethernet device %q", nicid, path)
-	log.Printf("NIC %d: ipv6addr: %v", nicid, lladdr)
+	log.Printf("NIC %s added using ethernet device %q", ifs.nic.Name, path)
 
 	if err := ns.stack.CreateNIC(nicid, linkID); err != nil {
-		return fmt.Errorf("NIC %d: could not create NIC for %q: %v", nicid, path, err)
+		return fmt.Errorf("NIC %s: could not create NIC for %q: %v", ifs.nic.Name, path, err)
 	}
 	if err := ns.stack.AddAddress(nicid, arp.ProtocolNumber, arp.ProtocolAddress); err != nil {
-		return fmt.Errorf("NIC %d: adding arp address failed: %v", nicid, err)
+		return fmt.Errorf("NIC %s: adding arp address failed: %v", ifs.nic.Name, err)
 	}
 	if err := ns.stack.AddAddress(nicid, ipv6.ProtocolNumber, lladdr); err != nil {
-		return fmt.Errorf("NIC %d: adding link-local IPv6 failed: %v", nicid, err)
+		return fmt.Errorf("NIC %s: adding link-local IPv6 %v failed: %v", ifs.nic.Name, lladdr, err)
 	}
 	snaddr := ipv6.SolicitedNodeAddr(lladdr)
 	if err := ns.stack.AddAddress(nicid, ipv6.ProtocolNumber, snaddr); err != nil {
-		return fmt.Errorf("NIC %d: adding solicited-node IPv6 failed: %v", nicid, err)
+		return fmt.Errorf("NIC %s: adding solicited-node IPv6 %v (link-local IPv6 %v) failed: %v", ifs.nic.Name, snaddr, lladdr, err)
 	}
+	log.Printf("NIC %s: link-local IPv6: %v", ifs.nic.Name, lladdr)
 
 	ifs.dhcpState.client = dhcp.NewClient(ns.stack, nicid, ep.LinkAddr, ifs.dhcpAcquired)
 
