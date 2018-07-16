@@ -233,10 +233,10 @@ static zx_status_t DoProcesses(const WalkContext* ctx, zx_handle_t job,
     zx_handle_t child;
     zx_koid_t pid = koids.Get(i);
     status = GetChild(job, jid, pid, &child);
-    zx::process process(child);
     if (status != ZX_OK) {
       continue;
     }
+    zx::process process(child);
     if (ctx->process_callback) {
       status = (*ctx->process_callback)(process, pid, jid, depth);
       if (status != ZX_OK) {
