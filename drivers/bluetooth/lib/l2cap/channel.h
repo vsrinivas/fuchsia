@@ -73,8 +73,7 @@ class Channel : public fbl::RefCounted<Channel> {
   //
   // NOTE: Callers shouldn't assume that this method will succeed, as the
   // underlying link can be removed at any time.
-  virtual bool Activate(RxCallback rx_callback,
-                        ClosedCallback closed_callback,
+  virtual bool Activate(RxCallback rx_callback, ClosedCallback closed_callback,
                         async_dispatcher_t* dispatcher) = 0;
 
   // Deactivates this channel. No more packets can be sent or received after
@@ -135,8 +134,7 @@ class LogicalLink;
 class ChannelImpl : public Channel {
  public:
   // Channel overrides:
-  bool Activate(RxCallback rx_callback,
-                ClosedCallback closed_callback,
+  bool Activate(RxCallback rx_callback, ClosedCallback closed_callback,
                 async_dispatcher_t* dispatcher) override;
   void Deactivate() override;
   void SignalLinkError() override;
@@ -146,8 +144,7 @@ class ChannelImpl : public Channel {
   friend class fbl::RefPtr<ChannelImpl>;
   friend class internal::LogicalLink;
 
-  ChannelImpl(ChannelId id,
-              fxl::WeakPtr<internal::LogicalLink> link,
+  ChannelImpl(ChannelId id, fxl::WeakPtr<internal::LogicalLink> link,
               std::list<PDU> buffered_pdus);
   ~ChannelImpl() override = default;
 
@@ -164,7 +161,7 @@ class ChannelImpl : public Channel {
 
   std::mutex mtx_;
 
-  bool active_  __TA_GUARDED(mtx_);
+  bool active_ __TA_GUARDED(mtx_);
   async_dispatcher_t* dispatcher_ __TA_GUARDED(mtx_);
   RxCallback rx_cb_ __TA_GUARDED(mtx_);
   ClosedCallback closed_cb_ __TA_GUARDED(mtx_);

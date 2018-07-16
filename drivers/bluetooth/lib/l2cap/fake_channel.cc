@@ -99,9 +99,10 @@ bool FakeChannel::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
   }
 
   FXL_DCHECK(send_dispatcher_);
-  async::PostTask(
-      send_dispatcher_,
-      [cb = send_cb_.share(), sdu = std::move(sdu)]() mutable { cb(std::move(sdu)); });
+  async::PostTask(send_dispatcher_,
+                  [cb = send_cb_.share(), sdu = std::move(sdu)]() mutable {
+                    cb(std::move(sdu));
+                  });
 
   return true;
 }

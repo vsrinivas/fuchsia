@@ -75,7 +75,8 @@ bool ChannelImpl::Activate(RxCallback rx_callback,
     if (!pending_rx_sdus_.empty()) {
       run_task = true;
       dispatcher = dispatcher_;
-      task = [func = rx_cb_.share(), pending = std::move(pending_rx_sdus_)]() mutable {
+      task = [func = rx_cb_.share(),
+              pending = std::move(pending_rx_sdus_)]() mutable {
         while (!pending.empty()) {
           func(std::move(pending.front()));
           pending.pop();
