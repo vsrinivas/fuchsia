@@ -144,18 +144,18 @@ func (ifs *ifState) staticAddressAdded(newAddr tcpip.Address, subnet tcpip.Subne
 
 func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Config) {
 	if oldAddr != "" && oldAddr != newAddr {
-		log.Printf("NIC %d: DHCP IP %s expired", ifs.nic.ID, oldAddr)
+		log.Printf("NIC %s: DHCP IP %s expired", ifs.nic.Name, oldAddr)
 	}
 	if config.Error != nil {
 		log.Printf("%v", config.Error)
 		return
 	}
 	if newAddr == "" {
-		log.Printf("NIC %d: DHCP could not acquire address", ifs.nic.ID)
+		log.Printf("NIC %s: DHCP could not acquire address", ifs.nic.Name)
 		return
 	}
-	log.Printf("NIC %d: DHCP acquired IP %s for %s", ifs.nic.ID, newAddr, config.LeaseLength)
-	log.Printf("NIC %d: DNS servers: %v", ifs.nic.ID, config.DNS)
+	log.Printf("NIC %s: DHCP acquired IP %s for %s", ifs.nic.Name, newAddr, config.LeaseLength)
+	log.Printf("NIC %s: DNS servers: %v", ifs.nic.Name, config.DNS)
 
 	// Update default route with new gateway.
 	ifs.ns.mu.Lock()
@@ -209,7 +209,7 @@ func (ifs *ifState) stateChange(s eth.State) {
 }
 
 func (ifs *ifState) onEthRestart() {
-	log.Printf("NIC %d: restarting", ifs.nic.ID)
+	log.Printf("NIC %s: restarting", ifs.nic.Name)
 	ifs.ns.mu.Lock()
 	ifs.ctx, ifs.cancel = context.WithCancel(context.Background())
 	ifs.nic.Routes = defaultRouteTable(ifs.nic.ID, "")
@@ -222,7 +222,7 @@ func (ifs *ifState) onEthRestart() {
 }
 
 func (ifs *ifState) onEthStop() {
-	log.Printf("NIC %d: stopped", ifs.nic.ID)
+	log.Printf("NIC %s: stopped", ifs.nic.Name)
 	if ifs.cancel != nil {
 		ifs.cancel()
 	}
