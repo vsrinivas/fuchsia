@@ -57,7 +57,7 @@ class VmoDataChunk : public DataSource::DataChunk {
 
   zx_status_t Init() {
     uintptr_t allocate_address;
-    zx_status_t status = zx::vmar::root_self().allocate(
+    zx_status_t status = zx::vmar::root_self()->allocate(
         0, ToFullPages(vmo_.size()), ZX_VM_FLAG_CAN_MAP_READ, &vmar_,
         &allocate_address);
     if (status != ZX_OK) {

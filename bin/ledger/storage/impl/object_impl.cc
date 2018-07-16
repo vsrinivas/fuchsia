@@ -91,7 +91,7 @@ Status VmoObject::Initialize() const {
   }
 
   uintptr_t allocate_address;
-  zx_status_t zx_status = zx::vmar::root_self().allocate(
+  zx_status_t zx_status = zx::vmar::root_self()->allocate(
       0, ToFullPages(vmo_.size()),
       ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
           ZX_VM_FLAG_CAN_MAP_SPECIFIC,

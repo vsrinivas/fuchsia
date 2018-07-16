@@ -43,7 +43,7 @@ constexpr size_t kVmoSizeMultiplier = 1u;
 void AllocateStack(const zx::vmo& vmo, size_t vmo_offset, size_t stack_size,
                    zx::vmar* vmar, uintptr_t* addr) {
   uintptr_t allocate_address;
-  zx_status_t status = zx::vmar::root_self().allocate(
+  zx_status_t status = zx::vmar::root_self()->allocate(
       0, stack_size + 2 * kStackGuardSize,
       ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
           ZX_VM_FLAG_CAN_MAP_SPECIFIC,
