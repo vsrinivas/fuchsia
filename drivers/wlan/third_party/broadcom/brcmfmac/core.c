@@ -400,7 +400,7 @@ static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf*
 
 void brcmf_rx_frame(struct brcmf_device* dev, struct brcmf_netbuf* netbuf, bool handle_event) {
     struct brcmf_if* ifp;
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
 
     brcmf_dbg(DATA, "Enter: %s: rxp=%p\n", device_get_name(dev->zxdev), netbuf);
@@ -424,7 +424,7 @@ void brcmf_rx_frame(struct brcmf_device* dev, struct brcmf_netbuf* netbuf, bool 
 
 void brcmf_rx_event(struct brcmf_device* dev, struct brcmf_netbuf* netbuf) {
     struct brcmf_if* ifp;
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
 
     brcmf_dbg(EVENT, "Enter: %s: rxp=%p\n", device_get_name(dev->zxdev), netbuf);
@@ -978,7 +978,7 @@ zx_status_t brcmf_attach(struct brcmf_device* dev, struct brcmf_mp_device* setti
 
     /* Link to bus module */
     drvr->hdrlen = 0;
-    drvr->bus_if = dev_get_drvdata(dev);
+    drvr->bus_if = dev_to_bus(dev);
     drvr->bus_if->drvr = drvr;
     drvr->settings = settings;
 
@@ -1007,7 +1007,7 @@ fail:
 }
 
 static zx_status_t brcmf_revinfo_read(struct seq_file* s, void* data) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(s->private);
+    struct brcmf_bus* bus_if = dev_to_bus(s->private);
     struct brcmf_rev_info* ri = &bus_if->drvr->revinfo;
     char drev[BRCMU_DOTREV_LEN];
     char brev[BRCMU_BOARDREV_LEN];
@@ -1037,7 +1037,7 @@ static zx_status_t brcmf_revinfo_read(struct seq_file* s, void* data) {
 
 zx_status_t brcmf_bus_started(struct brcmf_device* dev) {
     zx_status_t ret = ZX_ERR_IO;
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
     struct brcmf_if* ifp;
     struct brcmf_if* p2p_ifp;
@@ -1137,7 +1137,7 @@ fail:
 }
 
 void brcmf_bus_add_txhdrlen(struct brcmf_device* dev, uint len) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
 
     if (drvr) {
@@ -1146,7 +1146,7 @@ void brcmf_bus_add_txhdrlen(struct brcmf_device* dev, uint len) {
 }
 
 void brcmf_dev_reset(struct brcmf_device* dev) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
 
     if (drvr == NULL) {
@@ -1160,7 +1160,7 @@ void brcmf_dev_reset(struct brcmf_device* dev) {
 
 void brcmf_detach(struct brcmf_device* dev) {
     int32_t i;
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
 
     brcmf_dbg(TRACE, "Enter\n");
@@ -1202,7 +1202,7 @@ void brcmf_detach(struct brcmf_device* dev) {
 }
 
 zx_status_t brcmf_iovar_data_set(struct brcmf_device* dev, char* name, void* data, uint32_t len) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_if* ifp = bus_if->drvr->iflist[0];
 
     return brcmf_fil_iovar_data_set(ifp, name, data, len);

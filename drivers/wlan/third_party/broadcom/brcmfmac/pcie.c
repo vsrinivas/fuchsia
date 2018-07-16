@@ -1162,7 +1162,7 @@ static zx_status_t brcmf_pcie_rx_ctlpkt(struct brcmf_device* dev, unsigned char*
 }
 
 static void brcmf_pcie_wowl_config(struct brcmf_device* dev, bool enabled) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_pciedev* buspub = bus_if->bus_priv.pcie;
     struct brcmf_pciedev_info* devinfo = buspub->devinfo;
 
@@ -1171,7 +1171,7 @@ static void brcmf_pcie_wowl_config(struct brcmf_device* dev, bool enabled) {
 }
 
 static size_t brcmf_pcie_get_ramsize(struct brcmf_device* dev) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_pciedev* buspub = bus_if->bus_priv.pcie;
     struct brcmf_pciedev_info* devinfo = buspub->devinfo;
 
@@ -1179,7 +1179,7 @@ static size_t brcmf_pcie_get_ramsize(struct brcmf_device* dev) {
 }
 
 static zx_status_t brcmf_pcie_get_memdump(struct brcmf_device* dev, void* data, size_t len) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_pciedev* buspub = bus_if->bus_priv.pcie;
     struct brcmf_pciedev_info* devinfo = buspub->devinfo;
 
@@ -1190,7 +1190,7 @@ static zx_status_t brcmf_pcie_get_memdump(struct brcmf_device* dev, void* data, 
 
 static zx_status_t brcmf_pcie_get_fwname(struct brcmf_device* dev, uint32_t chip, uint32_t chiprev,
                                          uint8_t* fw_name) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_pciedev* buspub = bus_if->bus_priv.pcie;
     struct brcmf_pciedev_info* devinfo = buspub->devinfo;
     zx_status_t ret = ZX_OK;
@@ -1507,7 +1507,7 @@ static void brcmf_pcie_setup(struct brcmf_device* dev, zx_status_t ret,
         goto fail;
     }
 
-    bus = dev_get_drvdata(dev);
+    bus = dev_to_bus(dev);
     pcie_bus_dev = bus->bus_priv.pcie;
     devinfo = pcie_bus_dev->devinfo;
     brcmf_pcie_attach(devinfo);
@@ -1641,7 +1641,7 @@ static zx_status_t brcmf_pcie_probe(struct brcmf_pci_device* pdev) {
     bus->proto_type = BRCMF_PROTO_MSGBUF;
     bus->chip = devinfo->coreid;
     bus->wowl_supported = pci_is_pme_capable(pdev, PCI_D3hot);
-    dev_set_drvdata(&pdev->dev, bus);
+    pdev->dev.bus = bus;
 
     ret = brcmf_fw_map_chip_to_name(devinfo->ci->chip, devinfo->ci->chiprev, brcmf_pcie_fwnames,
                                     ARRAY_SIZE(brcmf_pcie_fwnames), devinfo->fw_name,
@@ -1679,7 +1679,7 @@ static void brcmf_pcie_remove(struct brcmf_pci_device* pdev) {
 
     brcmf_dbg(PCIE, "Enter\n");
 
-    bus = dev_get_drvdata(&pdev->dev);
+    bus = dev_to_bus(&pdev->dev);
     if (bus == NULL) {
         return;
     }
@@ -1712,7 +1712,7 @@ static void brcmf_pcie_remove(struct brcmf_pci_device* pdev) {
     }
 
     free(devinfo);
-    dev_set_drvdata(&pdev->dev, NULL);
+    pdev->dev.bus = NULL;
 }
 
 #ifdef CONFIG_PM
@@ -1724,7 +1724,7 @@ static zx_status_t brcmf_pcie_pm_enter_D3(struct brcmf_device* dev) {
 
     brcmf_dbg(PCIE, "Enter\n");
 
-    bus = dev_get_drvdata(dev);
+    bus = dev_to_bus(dev);
     devinfo = bus->bus_priv.pcie->devinfo;
 
     brcmf_bus_change_state(bus, BRCMF_BUS_DOWN);
@@ -1752,7 +1752,7 @@ static zx_status_t brcmf_pcie_pm_leave_D3(struct brcmf_device* dev) {
 
     brcmf_dbg(PCIE, "Enter\n");
 
-    bus = dev_get_drvdata(dev);
+    bus = dev_to_bus(dev);
     devinfo = bus->bus_priv.pcie->devinfo;
     brcmf_dbg(PCIE, "Enter, dev=%p, bus=%p\n", dev, bus);
 

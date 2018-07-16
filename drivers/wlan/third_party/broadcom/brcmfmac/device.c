@@ -24,15 +24,8 @@ pthread_mutex_t irq_callback_lock;
 
 async_dispatcher_t* default_dispatcher;
 
-struct brcmf_bus* dev_get_drvdata(struct brcmf_device* dev) {
-    return dev->drvdata;
-}
-// TODO(cphoenix): Get rid of dev_get_drvdata and drv_set_drvdata.
-void dev_set_drvdata(struct brcmf_device* dev, struct brcmf_bus* drvdata) {
-    dev->drvdata = drvdata;
-}
-
-static void brcmf_timer_handler(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t status) {
+static void brcmf_timer_handler(async_dispatcher_t* dispatcher, async_task_t* task,
+                                zx_status_t status) {
     if (status != ZX_OK) {
         return;
     }

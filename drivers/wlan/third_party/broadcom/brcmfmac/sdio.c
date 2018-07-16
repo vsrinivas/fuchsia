@@ -2292,7 +2292,7 @@ static zx_status_t brcmf_sdio_tx_ctrlframe(struct brcmf_sdio* bus, uint8_t* fram
 }
 
 static void brcmf_sdio_bus_stop(struct brcmf_device* dev) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
     struct brcmf_sdio* bus = sdiodev->bus;
     struct brcmf_core* core = bus->sdio_core;
@@ -2558,7 +2558,7 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
 }
 
 static struct pktq* brcmf_sdio_bus_gettxq(struct brcmf_device* dev) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
     struct brcmf_sdio* bus = sdiodev->bus;
 
@@ -2613,7 +2613,7 @@ static bool brcmf_sdio_prec_enq(struct pktq* q, struct brcmf_netbuf* pkt, int pr
 static zx_status_t brcmf_sdio_bus_txdata(struct brcmf_device* dev, struct brcmf_netbuf* pkt) {
     zx_status_t ret;
     uint prec;
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
     struct brcmf_sdio* bus = sdiodev->bus;
 
@@ -2753,7 +2753,7 @@ break2:
 #endif /* DEBUG */
 
 static zx_status_t brcmf_sdio_bus_txctl(struct brcmf_device* dev, unsigned char* msg, uint msglen) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
     struct brcmf_sdio* bus = sdiodev->bus;
     zx_status_t ret;
@@ -2969,14 +2969,14 @@ done:
 }
 
 static zx_status_t brcmf_sdio_forensic_read(struct seq_file* seq, void* data) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(seq->private);
+    struct brcmf_bus* bus_if = dev_to_bus(seq->private);
     struct brcmf_sdio* bus = bus_if->bus_priv.sdio->bus;
 
     return brcmf_sdio_died_dump(seq, bus);
 }
 
 static zx_status_t brcmf_debugfs_sdio_count_read(struct seq_file* seq, void* data) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(seq->private);
+    struct brcmf_bus* bus_if = dev_to_bus(seq->private);
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
     struct brcmf_sdio_count* sdcnt = &sdiodev->bus->sdcnt;
 
@@ -3034,7 +3034,7 @@ static zx_status_t brcmf_sdio_bus_rxctl(struct brcmf_device* dev, unsigned char*
     uint rxlen = 0;
     bool pending;
     uint8_t* buf;
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
     struct brcmf_sdio* bus = sdiodev->bus;
 
@@ -3277,7 +3277,7 @@ static zx_status_t brcmf_sdio_kso_init(struct brcmf_sdio* bus) {
 }
 
 static zx_status_t brcmf_sdio_bus_preinit(struct brcmf_device* dev) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
     struct brcmf_sdio* bus = sdiodev->bus;
     struct brcmf_core* core = bus->sdio_core;
@@ -3312,7 +3312,7 @@ done:
 }
 
 static size_t brcmf_sdio_bus_get_ramsize(struct brcmf_device* dev) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
     struct brcmf_sdio* bus = sdiodev->bus;
 
@@ -3321,7 +3321,7 @@ static size_t brcmf_sdio_bus_get_ramsize(struct brcmf_device* dev) {
 
 static zx_status_t brcmf_sdio_bus_get_memdump(struct brcmf_device* dev, void* data,
                                               size_t mem_size) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
     struct brcmf_sdio* bus = sdiodev->bus;
     zx_status_t err;
@@ -3824,7 +3824,7 @@ static void brcmf_sdio_watchdog(void* data) {
 
 static zx_status_t brcmf_sdio_get_fwname(struct brcmf_device* dev, uint32_t chip, uint32_t chiprev,
                                          uint8_t* fw_name) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
     int ret = ZX_OK;
 
@@ -3853,7 +3853,7 @@ static const struct brcmf_bus_ops brcmf_sdio_bus_ops = {
 static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t err,
                                          const struct brcmf_firmware* code,
                                          void* nvram, uint32_t nvram_len) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
     struct brcmf_sdio* bus = sdiodev->bus;
     struct brcmf_sdio_dev* sdiod = bus->sdiodev;

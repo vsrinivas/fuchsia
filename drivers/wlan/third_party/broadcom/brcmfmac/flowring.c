@@ -205,7 +205,7 @@ static void brcmf_flowring_block(struct brcmf_flowring* flow, uint16_t flowid, b
         return;
     }
 
-    bus_if = dev_get_drvdata(flow->dev);
+    bus_if = dev_to_bus(flow->dev);
     drvr = bus_if->drvr;
     ifp = brcmf_get_ifp(drvr, ifidx);
     brcmf_txflowblock_if(ifp, BRCMF_NETIF_STOP_REASON_FLOW, blocked);
@@ -215,7 +215,7 @@ static void brcmf_flowring_block(struct brcmf_flowring* flow, uint16_t flowid, b
 }
 
 void brcmf_flowring_delete(struct brcmf_flowring* flow, uint16_t flowid) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(flow->dev);
+    struct brcmf_bus* bus_if = dev_to_bus(flow->dev);
     struct brcmf_flowring_ring* ring;
     struct brcmf_if* ifp;
     uint16_t hash_idx;
@@ -360,7 +360,7 @@ struct brcmf_flowring* brcmf_flowring_attach(struct brcmf_device* dev, uint16_t 
 }
 
 void brcmf_flowring_detach(struct brcmf_flowring* flow) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(flow->dev);
+    struct brcmf_bus* bus_if = dev_to_bus(flow->dev);
     struct brcmf_pub* drvr = bus_if->drvr;
     struct brcmf_flowring_tdls_entry* search;
     struct brcmf_flowring_tdls_entry* remove;
@@ -384,7 +384,7 @@ void brcmf_flowring_detach(struct brcmf_flowring* flow) {
 
 void brcmf_flowring_configure_addr_mode(struct brcmf_flowring* flow, int ifidx,
                                         enum proto_addr_mode addr_mode) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(flow->dev);
+    struct brcmf_bus* bus_if = dev_to_bus(flow->dev);
     struct brcmf_pub* drvr = bus_if->drvr;
     uint32_t i;
     uint16_t flowid;
@@ -405,7 +405,7 @@ void brcmf_flowring_configure_addr_mode(struct brcmf_flowring* flow, int ifidx,
 }
 
 void brcmf_flowring_delete_peer(struct brcmf_flowring* flow, int ifidx, uint8_t peer[ETH_ALEN]) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(flow->dev);
+    struct brcmf_bus* bus_if = dev_to_bus(flow->dev);
     struct brcmf_pub* drvr = bus_if->drvr;
     struct brcmf_flowring_hash* hash;
     struct brcmf_flowring_tdls_entry* prev;

@@ -2203,7 +2203,7 @@ static void brcmf_fws_dequeue_worker(struct work_struct* worker) {
 
 #ifdef DEBUG
 static zx_status_t brcmf_debugfs_fws_stats_read(struct seq_file* seq, void* data) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(seq->private);
+    struct brcmf_bus* bus_if = dev_to_bus(seq->private);
     struct brcmf_fws_stats* fwstats = &(drvr_to_fws(bus_if->drvr)->stats);
 
     seq_printf(seq,

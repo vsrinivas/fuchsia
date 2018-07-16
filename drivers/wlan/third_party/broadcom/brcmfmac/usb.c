@@ -273,7 +273,7 @@ zx_status_t brcmf_usb_queue_urb(struct brcmf_urb* urb) {
 static void brcmf_usb_rx_refill(struct brcmf_usbdev_info* devinfo, struct brcmf_usbreq* req);
 
 static struct brcmf_usbdev* brcmf_usb_get_buspub(struct brcmf_device* dev) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     return bus_if->bus_priv.usb;
 }
 
@@ -1326,7 +1326,7 @@ static zx_status_t brcmf_usb_bus_setup(struct brcmf_usbdev_info* devinfo) {
     }
     brcmf_dbg(TEMP, "Starting scan prepare");
     PAUSE;
-    struct brcmf_bus* bus_if = dev_get_drvdata(devinfo->dev);
+    struct brcmf_bus* bus_if = dev_to_bus(devinfo->dev);
     struct wiphy* wiphy = bus_if->drvr->config->wiphy;
     struct cfg80211_scan_request request;
     memset(&request, 0, sizeof(request));
@@ -1406,7 +1406,7 @@ fail:
 
 static void brcmf_usb_probe_phase2(struct brcmf_device* dev, zx_status_t ret,
                                    const struct brcmf_firmware* fw, void* nvram, uint32_t nvlen) {
-    struct brcmf_bus* bus = dev_get_drvdata(dev);
+    struct brcmf_bus* bus = dev_to_bus(dev);
     struct brcmf_usbdev_info* devinfo = bus->bus_priv.usb->devinfo;
 
     if (ret != ZX_OK) {
@@ -1464,7 +1464,7 @@ static zx_status_t brcmf_usb_probe_cb(struct brcmf_usbdev_info* devinfo) {
     bus->dev = dev;
     bus_pub->bus = bus;
     bus->bus_priv.usb = bus_pub;
-    dev_set_drvdata(dev, bus);
+    dev->bus = bus;
     bus->ops = &brcmf_usb_bus_ops;
     bus->proto_type = BRCMF_PROTO_BCDC;
     bus->always_use_fws_queue = true;

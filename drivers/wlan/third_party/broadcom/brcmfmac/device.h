@@ -110,13 +110,19 @@ static inline void fill_with_zero_addr(uint8_t* address) {
 
 enum {ADDRESSED_TO_MULTICAST = 1, ADDRESSED_TO_BROADCAST, ADDRESSED_TO_OTHER_HOST};
 
+struct brcmf_bus;
+
 struct brcmf_device {
     void* of_node;
     void* parent;
-    void* drvdata;
+    struct brcmf_bus* bus;
     zx_device_t* zxdev;
     zx_device_t* child_zxdev;
 };
+
+static inline struct brcmf_bus* dev_to_bus(struct brcmf_device* dev) {
+    return dev->bus;
+}
 
 struct brcmf_usb_interface_descriptor {
     int bInterfaceClass;
@@ -185,10 +191,7 @@ struct net_device {
     int needs_free_net_device;
 };
 
-struct brcmf_bus* dev_get_drvdata(struct brcmf_device* dev);
-
-void dev_set_drvdata(struct brcmf_device* dev, struct brcmf_bus* bus);
-
+struct brcmf_bus* dev_to_bus(struct brcmf_device* dev);
 
 // TODO(cphoenix): Wrap around whatever completion functions exist in PCIE and SDIO.
 // TODO(cphoenix): To improve efficiency, analyze which spinlocks only need to protect small

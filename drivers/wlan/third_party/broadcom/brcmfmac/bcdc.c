@@ -359,7 +359,7 @@ static int brcmf_proto_bcdc_txdata(struct brcmf_pub* drvr, int ifidx, uint8_t of
 }
 
 void brcmf_proto_bcdc_txflowblock(struct brcmf_device* dev, bool state) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
 
     brcmf_dbg(TRACE, "Enter\n");
@@ -368,7 +368,7 @@ void brcmf_proto_bcdc_txflowblock(struct brcmf_device* dev, bool state) {
 }
 
 void brcmf_proto_bcdc_txcomplete(struct brcmf_device* dev, struct brcmf_netbuf* txp, bool success) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_bcdc* bcdc = bus_if->drvr->proto->pd;
     struct brcmf_if* ifp;
 

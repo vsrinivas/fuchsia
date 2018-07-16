@@ -61,7 +61,7 @@ static const char* const brcmf_quirk_names[] = {BRCMF_QUIRK_LIST};
  * @data: raw data pointer.
  */
 static zx_status_t brcmf_feat_debugfs_read(struct seq_file* seq, void* data) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(seq->private);
+    struct brcmf_bus* bus_if = dev_to_bus(seq->private);
     uint32_t feats = bus_if->drvr->feat_flags;
     uint32_t quirks = bus_if->drvr->chip_quirks;
     int id;

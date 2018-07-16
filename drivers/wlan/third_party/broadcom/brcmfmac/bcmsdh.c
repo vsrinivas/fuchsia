@@ -55,7 +55,7 @@ struct brcmf_sdiod_freezer {
 };
 
 static irqreturn_t brcmf_sdiod_oob_irqhandler(int irq, void* dev_id) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev_id);
+    struct brcmf_bus* bus_if = dev_to_bus(dev_id);
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
 
     brcmf_dbg(INTR, "OOB intr triggered\n");
@@ -776,7 +776,7 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, sdio_protocol_t* sdio_proto)
     sdiodev->bus_if = bus_if;
     bus_if->bus_priv.sdio = sdiodev;
     bus_if->proto_type = BRCMF_PROTO_BCDC;
-    dev_set_drvdata(dev, bus_if);
+    dev->bus = bus_if;
 
     sdiodev->manufacturer_id = devinfo.funcs_hw_info[SDIO_FN_1].manufacturer_id;
     sdiodev->product_id = devinfo.funcs_hw_info[SDIO_FN_1].product_id;
@@ -794,7 +794,7 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, sdio_protocol_t* sdio_proto)
     return ZX_OK;
 
 fail:
-    dev_set_drvdata(dev, NULL);
+    dev->bus = NULL;
     free(sdiodev);
     free(bus_if);
     return err;
@@ -810,7 +810,7 @@ static void brcmf_ops_sdio_remove(struct brcmf_sdio_dev* sdiodev) {
     brcmf_dbg(SDIO, "sdio vendor ID: 0x%04x\n", sdiodev->manufacturer_id);
     brcmf_dbg(SDIO, "sdio device ID: 0x%04x\n", sdiodev->product_id);
 
-    bus_if = dev_get_drvdata(&sdiodev->dev);
+    bus_if = dev_to_bus(&sdiodev->dev);
     if (bus_if) {
         /* start by unregistering irqs */
         brcmf_sdiod_intr_unregister(sdiodev);
@@ -825,7 +825,7 @@ static void brcmf_ops_sdio_remove(struct brcmf_sdio_dev* sdiodev) {
 }
 
 void brcmf_sdio_wowl_config(struct brcmf_device* dev, bool enabled) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
 
     brcmf_dbg(SDIO, "Configuring WOWL, enabled=%d\n", enabled);
@@ -843,7 +843,7 @@ static zx_status_t brcmf_ops_sdio_suspend(struct brcmf_sdio_dev* sdiodev, uint32
         return ZX_OK;
     }
 
-    bus_if = dev_get_drvdata(dev);
+    bus_if = dev_to_bus(dev);
     sdiodev = bus_if->bus_priv.sdio;
 
     brcmf_sdiod_freezer_on(sdiodev);
@@ -864,7 +864,7 @@ static zx_status_t brcmf_ops_sdio_suspend(struct brcmf_sdio_dev* sdiodev, uint32
 }
 
 static zx_status_t brcmf_ops_sdio_resume(struct brcmf_device* dev) {
-    struct brcmf_bus* bus_if = dev_get_drvdata(dev);
+    struct brcmf_bus* bus_if = dev_to_bus(dev);
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
 
     brcmf_dbg(SDIO, "Enter");
