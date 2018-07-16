@@ -10,6 +10,7 @@
 #include <string.h>
 #include <arch/arm64/periphmap.h>
 #include <lib/cbuf.h>
+#include <lib/debuglog.h>
 #include <kernel/thread.h>
 #include <dev/interrupt.h>
 #include <dev/uart.h>
@@ -144,12 +145,12 @@ static void s905_uart_init(const void* driver_data, uint32_t length)
     UARTREG(s905_uart_base,S905_UART_CONTROL) |= S905_UART_CONTROL_TXEN |
                                                  S905_UART_CONTROL_RXEN;
 
-    UARTREG(s905_uart_base,S905_UART_CONTROL) |= S905_UART_CONTROL_INVRTS |
-                                                 S905_UART_CONTROL_RXINTEN |
-#if !ENABLE_KERNEL_LL_DEBUG
-                                                 S905_UART_CONTROL_TXINTEN |
-#endif
-                                                 S905_UART_CONTROL_TWOWIRE;
+    uint32_t val;
+    val = S905_UART_CONTROL_INVRTS | S905_UART_CONTROL_RXINTEN |
+        S905_UART_CONTROL_TWOWIRE;
+    if (dlog_bypass() == false)
+        val |= S905_UART_CONTROL_TXINTEN;
+    UARTREG(s905_uart_base,S905_UART_CONTROL) |= val;
 
     // Set to interrupt every 1 rx byte
     uint32_t temp2 = UARTREG(s905_uart_base,S905_UART_IRQ_CONTROL);
@@ -162,13 +163,13 @@ static void s905_uart_init(const void* driver_data, uint32_t length)
 
     initialized = true;
 
-#if ENABLE_KERNEL_LL_DEBUG
-    uart_tx_irq_enabled = false;
-#else
-    /* start up tx driven output */
-    printf("UART: started IRQ driven TX\n");
-    uart_tx_irq_enabled = true;
-#endif
+    if (dlog_bypass() == true)
+        uart_tx_irq_enabled = false;
+    else {
+        /* start up tx driven output */
+        printf("UART: started IRQ driven TX\n");
+        uart_tx_irq_enabled = true;
+    }
 
     // enable interrupt
     unmask_interrupt(s905_uart_irq);

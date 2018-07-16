@@ -8,6 +8,7 @@
 #include <trace.h>
 #include <arch/arm64/periphmap.h>
 #include <lib/cbuf.h>
+#include <lib/debuglog.h>
 #include <kernel/thread.h>
 #include <dev/interrupt.h>
 #include <dev/uart.h>
@@ -217,10 +218,10 @@ static void imx_uart_init(const void* driver_data, uint32_t length)
     // enable rx interrupt
     regVal = UARTREG(MX8_UCR1);
     regVal |= UCR1_RRDYEN;
-#if !ENABLE_KERNEL_LL_DEBUG
-    // enable tx interrupt
-    regVal |= UCR1_TRDYEN;
-#endif
+    if (dlog_bypass() == false) {
+        // enable tx interrupt
+        regVal |= UCR1_TRDYEN;
+    }
     UARTREG(MX8_UCR1) = regVal;
 
     // enable rx and tx transmisster
@@ -228,13 +229,13 @@ static void imx_uart_init(const void* driver_data, uint32_t length)
     regVal |= UCR2_RXEN | UCR2_TXEN;
     UARTREG(MX8_UCR2) = regVal;
 
-#if ENABLE_KERNEL_LL_DEBUG
-    uart_tx_irq_enabled = false;
-#else
-    /* start up tx driven output */
-    printf("UART: started IRQ driven TX\n");
-    uart_tx_irq_enabled = true;
-#endif
+    if (dlog_bypass() == true)
+        uart_tx_irq_enabled = false;
+    else {
+        /* start up tx driven output */
+        printf("UART: started IRQ driven TX\n");
+        uart_tx_irq_enabled = true;
+    }
 
     initialized = true;
 

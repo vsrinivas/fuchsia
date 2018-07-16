@@ -22,6 +22,7 @@
 #include <err.h>
 #include <fbl/alloc_checker.h>
 #include <kernel/cmdline.h>
+#include <lib/debuglog.h>
 #include <libzbi/zbi-cpp.h>
 #include <lk/init.h>
 #include <mexec.h>
@@ -755,6 +756,9 @@ void platform_early_init(void) {
     /* extract bootloader data while still accessible */
     /* this includes debug uart config, etc. */
     platform_save_bootloader_data();
+
+    /* is the cmdline option to bypass dlog set ? */
+    dlog_bypass_init();
 
     /* get the debug output working */
     pc_init_debug_early();

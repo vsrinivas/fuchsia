@@ -12,6 +12,7 @@
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
 #include <lib/crashlog.h>
+#include <kernel/cmdline.h>
 #include <lib/io.h>
 #include <lib/version.h>
 #include <lk/init.h>
@@ -49,6 +50,32 @@ static thread_t* dumper_thread;
 static fbl::atomic_bool notifier_shutdown_requested;
 static fbl::atomic_bool dumper_shutdown_requested;
 
+// dlog_bypass_ will directly write to console. It also has the side effect of
+// disabling uart Tx interrupts. So all serial console writes are polling.
+static bool dlog_bypass_ = false;
+
+// We need to preserve the compile time switch (ENABLE_KERNEL_LL_DEBUG), even
+// though we add a kernel cmdline (kernel.bypass-debuglog), to bypass the debuglog.
+// This is to allow very early prints in the kernel to go to the serial console.
+
+// Called first thing in init, so very early printfs can go to serial console.
+void dlog_bypass_init_early(void) {
+#ifdef ENABLE_KERNEL_LL_DEBUG
+    dlog_bypass_ = true;
+#endif
+}
+
+// Called after kernel cmdline options are parsed (in platform_early_init()).
+// The compile switch (if enabled) overrides the kernel cmdline switch.
+void dlog_bypass_init(void) {
+    if (dlog_bypass_ == false)
+        dlog_bypass_ = cmdline_get_bool("kernel.bypass-debuglog", false);
+}
+
+bool dlog_bypass(void) {
+    return dlog_bypass_;
+}
+
 // The debug log maintains a circular buffer of debug log records,
 // consisting of a common header (dlog_header_t) followed by up
 // to 224 bytes of textual log message.  Records are aligned on
@@ -80,6 +107,10 @@ static fbl::atomic_bool dumper_shutdown_requested;
 zx_status_t dlog_write(uint32_t flags, const void* data_ptr, size_t len) {
     const uint8_t* ptr = static_cast<const uint8_t*>(data_ptr);
     dlog_t* log = &DLOG;
+
+    if (dlog_bypass_) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 
     if (len > DLOG_MAX_DATA) {
         return ZX_ERR_OUT_OF_RANGE;
@@ -287,18 +318,18 @@ static int debuglog_notifier(void* arg) {
 // to reduce interleaved messages between the serial console and the
 // debuglog drainer.
 void dlog_serial_write(const char* data, size_t len) {
-#if ENABLE_KERNEL_LL_DEBUG
-    // If LL DEBUG is enabled we take this path which uses a spinlock
-    // and prevents the direct writes from the kernel from interleaving
-    // with our output
-    __kernel_serial_write(data, len);
-#else
-    // Otherwise we can use a mutex and avoid time under spinlock
-    static mutex_t lock = MUTEX_INITIAL_VALUE(lock);
-    mutex_acquire(&lock);
-    platform_dputs_thread(data, len);
-    mutex_release(&lock);
-#endif
+    if (dlog_bypass_ == true) {
+        // If LL DEBUG is enabled we take this path which uses a spinlock
+        // and prevents the direct writes from the kernel from interleaving
+        // with our output
+        __kernel_serial_write(data, len);
+    } else {
+        // Otherwise we can use a mutex and avoid time under spinlock
+        static mutex_t lock = MUTEX_INITIAL_VALUE(lock);
+        mutex_acquire(&lock);
+        platform_dputs_thread(data, len);
+        mutex_release(&lock);
+    }
 }
 
 // The debuglog dumper thread creates a reader to observe
