@@ -187,6 +187,12 @@ class FakeCobaltEncoderFactoryImpl
                                         std::move(request));
   }
 
+  void GetEncoderForConfig(
+      fidl::StringPtr config,
+      fidl::InterfaceRequest<fuchsia::cobalt::CobaltEncoder> request) override {
+    // Implementation is on the way
+  }
+
   FakeCobaltEncoderImpl* cobalt_encoder() { return cobalt_encoder_.get(); }
 
  private:
