@@ -110,6 +110,7 @@ def compile_kernel_action(context, dart_exec, kernel_compiler, sdk_root, main,
     context.actions.run(
         executable = dart_exec,
         arguments = [
+            "--no-preview-dart-2",
             kernel_compiler.path,
             "--target",
             "dart_runner",
