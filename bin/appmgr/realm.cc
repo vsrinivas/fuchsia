@@ -102,10 +102,7 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
   std::string label = Util::GetLabelFromURL(launch_info.url);
   std::vector<const char*> argv = GetArgv(argv0, launch_info);
 
-  // TODO(abarth): We probably shouldn't pass environ, but currently this
-  // is very useful as a way to tell the loader in the child process to
-  // print out load addresses so we can understand crashes.
-  uint32_t flags = FDIO_SPAWN_CLONE_ENVIRON;
+  uint32_t flags = 0u;
 
   std::vector<fdio_spawn_action_t> actions;
 
@@ -192,13 +189,12 @@ Realm::Realm(RealmArgs args)
   hub_.SetName(label_);
   hub_.SetJobId(koid_);
   hub_.AddServices(default_namespace_->services());
-  hub_.AddJobProvider(fbl::AdoptRef(new fs::Service(
-      [this] (zx::channel channel) {
-        default_namespace_->job_provider()->AddBinding(
-            fidl::InterfaceRequest<fuchsia::sys::JobProvider>(
-                std::move(channel)));
-        return ZX_OK;
-      })));
+  hub_.AddJobProvider(fbl::AdoptRef(new fs::Service([this](
+                                                        zx::channel channel) {
+    default_namespace_->job_provider()->AddBinding(
+        fidl::InterfaceRequest<fuchsia::sys::JobProvider>(std::move(channel)));
+    return ZX_OK;
+  })));
 
   default_namespace_->services()->set_backing_dir(
       std::move(args.host_directory));
@@ -221,8 +217,8 @@ HubInfo Realm::HubInfo() {
 
 zx::job Realm::DuplicateJob() const {
   zx::job duplicate_job;
-  zx_status_t status = job_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE,
-                                      &duplicate_job);
+  zx_status_t status =
+      job_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE, &duplicate_job);
   if (status != ZX_OK) {
     return zx::job();
   }
@@ -418,8 +414,8 @@ void Realm::CreateComponentWithProcess(
 
   if (process) {
     auto application = std::make_unique<ComponentControllerImpl>(
-        std::move(controller), this, std::move(child_job), std::move(process), url,
-        std::move(args), Util::GetLabelFromURL(url), std::move(ns),
+        std::move(controller), this, std::move(child_job), std::move(process),
+        url, std::move(args), Util::GetLabelFromURL(url), std::move(ns),
         ExportedDirType::kPublicDebugCtrlLayout,
         std::move(channels.exported_dir), std::move(channels.client_request));
     // update hub
@@ -485,7 +481,8 @@ void Realm::CreateComponentFromPackage(
 
   std::string runtime_data;
   fsl::SizedVmo app_data;
-  if (!files::ReadFileToStringAt(fd.get(), kDeprecatedRuntimePath, &runtime_data))
+  if (!files::ReadFileToStringAt(fd.get(), kDeprecatedRuntimePath,
+                                 &runtime_data))
     VmoFromFilenameAt(fd.get(), kAppPath, &app_data);
 
   ExportedDirType exported_dir_layout =
@@ -538,7 +535,6 @@ void Realm::CreateComponentFromPackage(
   builder.AddFlatNamespace(std::move(launch_info.flat_namespace));
 
   if (app_data) {
-
     zx::job child_job;
     zx_status_t status = zx::job::create(job_, 0u, &child_job);
     if (status != ZX_OK)
@@ -553,8 +549,8 @@ void Realm::CreateComponentFromPackage(
 
     if (process) {
       auto application = std::make_unique<ComponentControllerImpl>(
-          std::move(controller), this, std::move(child_job), std::move(process), url,
-          std::move(args), Util::GetLabelFromURL(url), std::move(ns),
+          std::move(controller), this, std::move(child_job), std::move(process),
+          url, std::move(args), Util::GetLabelFromURL(url), std::move(ns),
           exported_dir_layout, std::move(channels.exported_dir),
           std::move(channels.client_request));
       // update hub
