@@ -9,9 +9,11 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 #include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
 
+#include "optee-client.h"
 #include "optee-controller.h"
 #include "optee-smc.h"
 
@@ -153,7 +155,43 @@ zx_status_t OpteeController::Bind() {
     return status;
 }
 
+zx_status_t OpteeController::DdkOpen(zx_device_t** out_dev, uint32_t flags) {
+    // Create a new OpteeClient device and hand off client communication to it.
+    fbl::AllocChecker ac;
+    auto client = fbl::make_unique_checked<OpteeClient>(&ac, this);
+
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    zx_status_t status = client->DdkAdd("optee-client", DEVICE_ADD_INSTANCE);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // devmgr is now in charge of the memory for the tee client
+    OpteeClient* client_ptr = client.release();
+    *out_dev = client_ptr->zxdev();
+
+    AddClient(client_ptr);
+
+    return ZX_OK;
+}
+
+void OpteeController::AddClient(OpteeClient* client) {
+    fbl::AutoLock lock(&lock_);
+    clients_.push_back(client);
+}
+
+void OpteeController::CloseClients() {
+    fbl::AutoLock lock(&lock_);
+    for (auto& client : clients_) {
+        client.MarkForClosing();
+    }
+}
+
 void OpteeController::DdkUnbind() {
+    CloseClients();
     // Unpublish our device node.
     DdkRemove();
 }
@@ -179,20 +217,12 @@ zx_status_t OpteeController::GetDescription(tee_ioctl_description_t* out_descrip
     return ZX_OK;
 }
 
-zx_status_t OpteeController::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                                      void* out_buf, size_t out_len, size_t* out_actual) {
-    switch (op) {
-    case IOCTL_TEE_GET_DESCRIPTION: {
-        if ((out_buf == nullptr) || (out_len != sizeof(tee_ioctl_description_t)) ||
-            (out_actual == nullptr)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        return GetDescription(reinterpret_cast<tee_ioctl_description_t*>(out_buf), out_actual);
+void OpteeController::RemoveClient(OpteeClient* client) {
+    fbl::AutoLock lock(&lock_);
+    ZX_DEBUG_ASSERT(client != nullptr);
+    if (client->InContainer()) {
+        clients_.erase(*client);
     }
-    }
-
-    return ZX_ERR_NOT_SUPPORTED;
 }
 
 } // namespace optee
