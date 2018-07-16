@@ -130,9 +130,9 @@ int MediaApp::Run() {
 
 // Connect to the Audio service and get an AudioRenderer.
 bool MediaApp::AcquireRenderer() {
-  fuchsia::media::AudioSync2Ptr audio;
+  fuchsia::media::AudioSyncPtr audio;
   fuchsia::sys::ConnectToEnvironmentService(audio.NewRequest());
-  return audio->CreateRendererV2(audio_renderer_.NewRequest()).statvs == ZX_OK;
+  return audio->CreateRendererV2(audio_renderer_.NewRequest()) == ZX_OK;
 }
 
 // Set the AudioRenderer's audio format to stereo 48kHz.
@@ -146,7 +146,7 @@ void MediaApp::SetMediaType() {
   format.channels = kNumChannels;
   format.frames_per_second = kRendererFrameRate;
 
-  if (audio_renderer_->SetPcmFormat(std::move(format)).statvs != ZX_OK)
+  if (audio_renderer_->SetPcmFormat(std::move(format)) != ZX_OK)
     FXL_LOG(ERROR) << "Could not set format";
 }
 
@@ -209,7 +209,7 @@ bool MediaApp::SendAudioPacket(fuchsia::media::AudioPacket packet) {
   ++num_packets_sent_;
 
   // Note: SupplyPacketNoReply returns immediately, before packet is consumed.
-  return audio_renderer_->SendPacketNoReply(std::move(packet)).statvs == ZX_OK;
+  return audio_renderer_->SendPacketNoReply(std::move(packet)) == ZX_OK;
 }
 
 // Stay ahead of the presentation timeline, by the amount high_water_mark_.

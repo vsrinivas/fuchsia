@@ -7,9 +7,9 @@
 #include <poll.h>
 #include <iostream>
 
-#include <lib/fdio/util.h>
 #include <fuchsia/guest/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/fdio/util.h>
 #include <lib/fit/function.h>
 
 #include "lib/app/cpp/environment_services.h"
@@ -56,8 +56,8 @@ class InputReader {
 
   void SendKeyToGuest() { OnSocketReady(dispatcher_, &wait_, ZX_OK, nullptr); }
 
-  void OnSocketReady(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                     const zx_packet_signal_t* signal) {
+  void OnSocketReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                     zx_status_t status, const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
       return;
     }
@@ -124,12 +124,12 @@ void handle_serial(uint32_t env_id, uint32_t cid) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   // Connect to environment.
-  fuchsia::guest::GuestManagerSync2Ptr guestmgr;
+  fuchsia::guest::GuestManagerSyncPtr guestmgr;
   fuchsia::sys::ConnectToEnvironmentService(guestmgr.NewRequest());
-  fuchsia::guest::GuestEnvironmentSync2Ptr env_ptr;
+  fuchsia::guest::GuestEnvironmentSyncPtr env_ptr;
   guestmgr->ConnectToEnvironment(env_id, env_ptr.NewRequest());
 
-  fuchsia::guest::GuestControllerSync2Ptr guest_controller;
+  fuchsia::guest::GuestControllerSyncPtr guest_controller;
   env_ptr->ConnectToGuest(cid, guest_controller.NewRequest());
 
   // Open the serial service of the guest and process IO.

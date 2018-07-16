@@ -25,7 +25,7 @@ class GuestRunner : public fuchsia::sys::Runner {
       ::fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller)
       override;
 
-  fuchsia::sys::LauncherSync2Ptr launcher_;
+  fuchsia::sys::LauncherSyncPtr launcher_;
   std::unique_ptr<fuchsia::sys::StartupContext> context_;
   fidl::BindingSet<fuchsia::sys::Runner> bindings_;
 

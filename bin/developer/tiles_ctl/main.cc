@@ -19,7 +19,7 @@
 #include "lib/fxl/memory/unique_object.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 
-using TilesPtr = fuchsia::developer::tiles::TilesSync2Ptr;
+using TilesPtr = fuchsia::developer::tiles::TilesSyncPtr;
 
 struct UniqueDIRTraits {
   static DIR* InvalidValue() { return nullptr; }
@@ -109,7 +109,7 @@ bool Add(std::string url, std::vector<std::string> args) {
   for (const auto& it : args) {
     arguments.push_back(it);
   }
-  if (tiles->AddTileFromURL(url, std::move(arguments), &key).statvs != ZX_OK)
+  if (tiles->AddTileFromURL(url, std::move(arguments), &key) != ZX_OK)
     return false;
   printf("Tile added with key %u\n", key);
   return true;
@@ -119,7 +119,7 @@ bool Remove(uint32_t key) {
   auto tiles = FindTiles();
   if (!tiles)
     return false;
-  return tiles->RemoveTile(key).statvs == ZX_OK;
+  return tiles->RemoveTile(key) == ZX_OK;
 }
 
 bool List() {
@@ -131,7 +131,7 @@ bool List() {
   fidl::VectorPtr<::fidl::StringPtr> urls;
   fidl::VectorPtr<::fuchsia::math::SizeF> sizes;
 
-  if (tiles->ListTiles(&keys, &urls, &sizes).statvs != ZX_OK)
+  if (tiles->ListTiles(&keys, &urls, &sizes) != ZX_OK)
     return false;
 
   printf("Found %lu tiles:\n", keys->size());

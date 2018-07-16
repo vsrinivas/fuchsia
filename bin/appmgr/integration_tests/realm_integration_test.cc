@@ -18,7 +18,7 @@ namespace {
 class RealmTest : public gtest::RealLoopFixture {};
 
 fuchsia::sys::ComponentControllerPtr RunComponent(
-    fuchsia::sys::LauncherSync2Ptr& launcher, std::string component_url,
+    fuchsia::sys::LauncherSyncPtr& launcher, std::string component_url,
     int64_t expected_return_code) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = component_url;
@@ -35,7 +35,7 @@ fuchsia::sys::ComponentControllerPtr RunComponent(
 TEST_F(RealmTest, CreateTwoKillOne) {
   // Connect to the Launcher service through our static environment.
   // This launcher is from sys realm so our hub would be scoped to it
-  fuchsia::sys::LauncherSync2Ptr launcher;
+  fuchsia::sys::LauncherSyncPtr launcher;
   fuchsia::sys::ConnectToEnvironmentService(launcher.NewRequest());
 
   // Launch two components

@@ -178,8 +178,7 @@ zx_status_t ProcessBuilder::Prepare(std::string* error_message) {
       return status;
   }
   fuchsia::process::CreateWithoutStartingResult result;
-  status =
-      launcher_->CreateWithoutStarting(std::move(launch_info_), &result).statvs;
+  status = launcher_->CreateWithoutStarting(std::move(launch_info_), &result);
   if (status != ZX_OK)
     return status;
   if (result.status != ZX_OK) {

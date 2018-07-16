@@ -131,7 +131,7 @@ class ProcessBuilder {
   const fuchsia::process::ProcessStartData& data() const { return data_; }
 
  private:
-  fuchsia::process::LauncherSync2Ptr launcher_;
+  fuchsia::process::LauncherSyncPtr launcher_;
   fuchsia::process::LaunchInfo launch_info_;
   fuchsia::process::ProcessStartData data_;
   fidl::VectorPtr<fuchsia::process::HandleInfo> handles_;

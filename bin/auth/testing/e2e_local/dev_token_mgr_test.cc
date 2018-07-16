@@ -80,7 +80,8 @@ class DevTokenManagerAppTest : public gtest::RealLoopFixture,
 
     fuchsia::auth::AuthProviderConfig dev_config;
     dev_config.auth_provider_type = kDevIdp;
-    dev_config.url = "/pkgfs/packages/token_manager_tests/0/bin/dev_auth_provider_rust";
+    dev_config.url =
+        "/pkgfs/packages/token_manager_tests/0/bin/dev_auth_provider_rust";
 
     fidl::VectorPtr<fuchsia::auth::AuthProviderConfig> auth_provider_configs;
     auth_provider_configs.push_back(std::move(dev_config));
@@ -113,8 +114,8 @@ class DevTokenManagerAppTest : public gtest::RealLoopFixture,
   fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
       auth_context_provider_binding_;
 
-  fuchsia::auth::TokenManagerSync2Ptr token_mgr_;
-  fuchsia::auth::TokenManagerFactorySync2Ptr token_mgr_factory_;
+  fuchsia::auth::TokenManagerSyncPtr token_mgr_;
+  fuchsia::auth::TokenManagerFactorySyncPtr token_mgr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DevTokenManagerAppTest);
 };

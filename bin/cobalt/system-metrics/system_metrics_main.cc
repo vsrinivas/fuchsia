@@ -94,7 +94,7 @@ class SystemMetricsApp {
 
  private:
   std::unique_ptr<fuchsia::sys::StartupContext> context_;
-  fuchsia::cobalt::CobaltEncoderSync2Ptr encoder_;
+  fuchsia::cobalt::CobaltEncoderSyncPtr encoder_;
   std::chrono::steady_clock::time_point start_time_;
   std::chrono::minutes tick_interval_;
   // We don't log every minute of uptime. We log in exponentially-growing
@@ -201,7 +201,7 @@ void SystemMetricsApp::Main() {
 
 void SystemMetricsApp::ConnectToEnvironmentService() {
   // connect to the cobalt fidl service provided by the environment.
-  fuchsia::cobalt::CobaltEncoderFactorySync2Ptr factory;
+  fuchsia::cobalt::CobaltEncoderFactorySyncPtr factory;
   context_->ConnectToEnvironmentService(factory.NewRequest());
   factory->GetEncoder(kSystemMetricsProjectId, encoder_.NewRequest());
 }

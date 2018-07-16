@@ -28,25 +28,24 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  fuchsia::sys::EnvironmentSync2Ptr env;
-  fuchsia::sys::ServiceProviderSync2Ptr svc;
+  fuchsia::sys::EnvironmentSyncPtr env;
+  fuchsia::sys::ServiceProviderSyncPtr svc;
   fuchsia::sys::ConnectToEnvironmentService(env.NewRequest());
-  status = env->GetServices(svc.NewRequest()).statvs;
+  status = env->GetServices(svc.NewRequest());
   if (status != ZX_OK) {
     fprintf(stderr, "Getting services failed: %s\n",
             zx_status_get_string(status));
     return 1;
   }
   status = svc->ConnectToService(fuchsia::testing::chrealm::TestService::Name_,
-                                 std::move(remote))
-               .statvs;
+                                 std::move(remote));
   if (status != ZX_OK) {
     fprintf(stderr, "Connecting to service failed: %s\n",
             zx_status_get_string(status));
     return 1;
   }
 
-  fuchsia::testing::chrealm::TestServiceSync2Ptr test_svc;
+  fuchsia::testing::chrealm::TestServiceSyncPtr test_svc;
   test_svc.Bind(std::move(local));
   fidl::StringPtr msg;
   test_svc->GetMessage(&msg);

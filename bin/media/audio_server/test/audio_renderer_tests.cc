@@ -99,13 +99,12 @@ class AudioRendererSyncTest : public gtest::RealLoopFixture {
     fuchsia::sys::ConnectToEnvironmentService(audio_.NewRequest());
     ASSERT_TRUE(audio_);
 
-    ASSERT_EQ(ZX_OK,
-              audio_->CreateRendererV2(audio_renderer_.NewRequest()).statvs);
+    ASSERT_EQ(ZX_OK, audio_->CreateRendererV2(audio_renderer_.NewRequest()));
     ASSERT_TRUE(audio_renderer_);
   }
 
-  fuchsia::media::AudioSync2Ptr audio_;
-  fuchsia::media::AudioRenderer2Sync2Ptr audio_renderer_;
+  fuchsia::media::AudioSyncPtr audio_;
+  fuchsia::media::AudioRenderer2SyncPtr audio_renderer_;
 };
 
 // Basic validation of SetPcmFormat() for the synchronous AudioRenderer.
@@ -114,10 +113,10 @@ TEST_F(AudioRendererSyncTest, SetPcmFormat) {
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 2;
   format.frames_per_second = 48000;
-  EXPECT_EQ(ZX_OK, audio_renderer_->SetPcmFormat(std::move(format)).statvs);
+  EXPECT_EQ(ZX_OK, audio_renderer_->SetPcmFormat(std::move(format)));
 
   int64_t min_lead_time = -1;
-  ASSERT_EQ(ZX_OK, audio_renderer_->GetMinLeadTime(&min_lead_time).statvs);
+  ASSERT_EQ(ZX_OK, audio_renderer_->GetMinLeadTime(&min_lead_time));
   EXPECT_GE(min_lead_time, 0);
 }
 
@@ -127,16 +126,16 @@ TEST_F(AudioRendererSyncTest, SetPcmFormat_Double) {
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 2;
   format.frames_per_second = 48000;
-  EXPECT_EQ(ZX_OK, audio_renderer_->SetPcmFormat(std::move(format)).statvs);
+  EXPECT_EQ(ZX_OK, audio_renderer_->SetPcmFormat(std::move(format)));
 
   fuchsia::media::AudioPcmFormat format2;
   format2.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   format2.channels = 1;
   format2.frames_per_second = 44100;
-  EXPECT_EQ(ZX_OK, audio_renderer_->SetPcmFormat(std::move(format2)).statvs);
+  EXPECT_EQ(ZX_OK, audio_renderer_->SetPcmFormat(std::move(format2)));
 
   int64_t min_lead_time = -1;
-  EXPECT_EQ(ZX_OK, audio_renderer_->GetMinLeadTime(&min_lead_time).statvs);
+  EXPECT_EQ(ZX_OK, audio_renderer_->GetMinLeadTime(&min_lead_time));
   EXPECT_GE(min_lead_time, 0);
 }
 

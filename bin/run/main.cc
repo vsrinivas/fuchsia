@@ -59,7 +59,7 @@ int main(int argc, const char** argv) {
   }
 
   // Connect to the Launcher service through our static environment.
-  fuchsia::sys::LauncherSync2Ptr launcher;
+  fuchsia::sys::LauncherSyncPtr launcher;
   fuchsia::sys::ConnectToEnvironmentService(launcher.NewRequest());
 
   if (daemonize) {
@@ -69,11 +69,11 @@ int main(int argc, const char** argv) {
 
   launch_info.out = CloneFileDescriptor(STDOUT_FILENO);
   launch_info.err = CloneFileDescriptor(STDERR_FILENO);
-  fuchsia::sys::ComponentControllerSync2Ptr controller;
+  fuchsia::sys::ComponentControllerSyncPtr controller;
   launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
 
   int64_t return_code;
-  if (controller->Wait(&return_code).statvs != ZX_OK) {
+  if (controller->Wait(&return_code) != ZX_OK) {
     fprintf(stderr, "%s exited without a return code\n", program_name.c_str());
     return 1;
   }

@@ -41,7 +41,7 @@ class MediaApp {
 
   void WaitForPackets(size_t num_packets);
 
-  fuchsia::media::AudioRenderer2Sync2Ptr audio_renderer_;
+  fuchsia::media::AudioRenderer2SyncPtr audio_renderer_;
 
   vmo_utils::VmoMapper payload_buffer_;
   size_t sample_size_;

@@ -221,7 +221,7 @@ void use_aac_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
   params.input_details.mime_type = "audio/aac-adts";
   params.input_details.codec_oob_bytes.reset(std::move(asc_vector));
 
-  // We're using CodecPtr here rather than CodecSync2Ptr partly to have this
+  // We're using CodecPtr here rather than CodecSyncPtr partly to have this
   // example program be slightly more realistic (with respect to client programs
   // that choose to use the async interface), and partly to avoid having to
   // separately check the error return code of every call, since the sync proxy

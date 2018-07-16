@@ -4,11 +4,11 @@
 
 #include "garnet/bin/chrealm/chrealm.h"
 
+#include <fcntl.h>
+#include <unistd.h>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
-#include <fcntl.h>
-#include <unistd.h>
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fdio/namespace.h>
@@ -28,8 +28,8 @@
 
 namespace chrealm {
 
-zx_status_t RunBinaryInRealm(const std::string& realm_path,
-                             const char** argv, int64_t* return_code) {
+zx_status_t RunBinaryInRealm(const std::string& realm_path, const char** argv,
+                             int64_t* return_code) {
   *return_code = -1;
   fdio_ns_t* ns = nullptr;
   fdio_flat_namespace_t* flat_ns = nullptr;
@@ -60,8 +60,8 @@ zx_status_t RunBinaryInRealm(const std::string& realm_path,
   // Open the services dir in the realm's hub directory.
   zx_handle_t realm_svc_dir = ZX_HANDLE_INVALID;
   const std::string svc_path = fxl::Concatenate({realm_path, "/svc"});
-  status = fdio_ns_open(ns, svc_path.c_str(), ZX_FS_RIGHT_READABLE,
-                        &realm_svc_dir);
+  status =
+      fdio_ns_open(ns, svc_path.c_str(), ZX_FS_RIGHT_READABLE, &realm_svc_dir);
   if (status != ZX_OK) {
     fprintf(stderr, "error: could not open svc in realm: %s\n",
             svc_path.c_str());
@@ -69,7 +69,7 @@ zx_status_t RunBinaryInRealm(const std::string& realm_path,
   }
 
   // Open the realm's job.
-  fuchsia::sys::JobProviderSync2Ptr job_provider;
+  fuchsia::sys::JobProviderSyncPtr job_provider;
   status = fdio_service_connect_at(
       realm_hub_dir, "job", job_provider.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
@@ -78,7 +78,7 @@ zx_status_t RunBinaryInRealm(const std::string& realm_path,
     return status;
   }
   zx::job realm_job;
-  status = job_provider->GetJob(&realm_job).statvs;
+  status = job_provider->GetJob(&realm_job);
   if (status == ZX_OK && !realm_job) {
     status = ZX_ERR_INTERNAL;
   }
@@ -105,10 +105,11 @@ zx_status_t RunBinaryInRealm(const std::string& realm_path,
     }
     fdio_spawn_action_t add_ns_entry = {
         .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-        .ns = {
-            .prefix = flat_ns->path[i],
-            .handle = handle,
-        },
+        .ns =
+            {
+                .prefix = flat_ns->path[i],
+                .handle = handle,
+            },
     };
     actions[i] = add_ns_entry;
   }

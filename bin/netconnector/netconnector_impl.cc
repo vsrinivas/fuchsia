@@ -41,7 +41,7 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params,
 
   if (!params->listen()) {
     // Start the listener.
-    fuchsia::netconnector::NetConnectorSync2Ptr net_connector;
+    fuchsia::netconnector::NetConnectorSyncPtr net_connector;
     startup_context_->ConnectToEnvironmentService(net_connector.NewRequest());
     fuchsia::mdns::MdnsServicePtr mdns_service =
         startup_context_
@@ -99,8 +99,8 @@ NetConnectorImpl::~NetConnectorImpl() {}
 
 void NetConnectorImpl::StartListener() {
   if (!NetworkIsReady()) {
-    async::PostDelayedTask(async_get_default_dispatcher(), [this]() { StartListener(); },
-                           zx::sec(5));
+    async::PostDelayedTask(async_get_default_dispatcher(),
+                           [this]() { StartListener(); }, zx::sec(5));
     return;
   }
 

@@ -119,10 +119,8 @@ class ThreadOrProcess {
     }
   }
 
-  void Launch(const char* func_name,
-              zx_handle_t* handles,
-              uint32_t handle_count,
-              MultiProc multiproc) {
+  void Launch(const char* func_name, zx_handle_t* handles,
+              uint32_t handle_count, MultiProc multiproc) {
     if (multiproc == MultiProcess) {
       const char* args[] = {HELPER_PATH, "--subprocess", func_name, nullptr};
       fdio_spawn_action_t actions[handle_count + 1];
@@ -225,8 +223,7 @@ class ChannelPortTest {
     zx_handle_close(client_port_);
   }
 
-  static bool ChannelPortRead(zx_handle_t channel,
-                              zx_handle_t port,
+  static bool ChannelPortRead(zx_handle_t channel, zx_handle_t port,
                               uint32_t* msg) {
     FXL_CHECK(zx_object_wait_async(channel, port, 0,
                                    ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
@@ -310,9 +307,8 @@ class ChannelCallTest {
   void Run() {
     uint32_t bytes_read;
     uint32_t handles_read;
-    zx_status_t status =
-        zx_channel_call(client_, 0, ZX_TIME_INFINITE, &args_, &bytes_read,
-                        &handles_read);
+    zx_status_t status = zx_channel_call(client_, 0, ZX_TIME_INFINITE, &args_,
+                                         &bytes_read, &handles_read);
     FXL_CHECK(status == ZX_OK);
   }
 
@@ -383,13 +379,9 @@ class PortTest {
 // uses a port for waiting on the event object.
 class EventPortSignaler {
  public:
-  EventPortSignaler() {
-    FXL_CHECK(zx::port::create(0, &port_) == ZX_OK);
-  }
+  EventPortSignaler() { FXL_CHECK(zx::port::create(0, &port_) == ZX_OK); }
 
-  void set_event(zx::eventpair&& event) {
-    event_ = std::move(event);
-  }
+  void set_event(zx::eventpair&& event) { event_ = std::move(event); }
 
   // Waits for the event to be signaled.  Returns true if it was signaled
   // by Signal() and false if the peer event object was closed.
@@ -428,8 +420,8 @@ class EventPortTest {
     signaler_.set_event(std::move(event1));
 
     zx_handle_t event_arg = event2.release();
-    thread_or_process_.Launch("EventPortTest::ThreadFunc", &event_arg,
-                              1, multiproc);
+    thread_or_process_.Launch("EventPortTest::ThreadFunc", &event_arg, 1,
+                              multiproc);
   }
 
   static void ThreadFunc(std::vector<zx_handle_t> handles) {
@@ -456,13 +448,9 @@ class EventPortTest {
 // uses a port for waiting on the socket object.
 class SocketPortSignaler {
  public:
-  SocketPortSignaler() {
-    FXL_CHECK(zx::port::create(0, &port_) == ZX_OK);
-  }
+  SocketPortSignaler() { FXL_CHECK(zx::port::create(0, &port_) == ZX_OK); }
 
-  void set_socket(zx::socket&& socket) {
-    socket_ = std::move(socket);
-  }
+  void set_socket(zx::socket&& socket) { socket_ = std::move(socket); }
 
   // Waits for the socket to be signaled: reads a byte from the socket.
   // Returns true if it was signaled by Signal() and false if it was
@@ -508,8 +496,8 @@ class SocketPortTest {
     signaler_.set_socket(std::move(socket1));
 
     zx_handle_t socket_arg = socket2.release();
-    thread_or_process_.Launch("SocketPortTest::ThreadFunc", &socket_arg,
-                              1, multiproc);
+    thread_or_process_.Launch("SocketPortTest::ThreadFunc", &socket_arg, 1,
+                              multiproc);
   }
 
   static void ThreadFunc(std::vector<zx_handle_t> handles) {
@@ -533,7 +521,8 @@ class SocketPortTest {
 };
 
 // Implementation of FIDL interface for testing round trip IPCs.
-class RoundTripServiceImpl : public fuchsia::zircon::benchmarks::RoundTripService {
+class RoundTripServiceImpl
+    : public fuchsia::zircon::benchmarks::RoundTripService {
  public:
   void RoundTripTest(uint32_t arg, RoundTripTestCallback callback) override {
     FXL_CHECK(arg == 123);
@@ -554,7 +543,7 @@ class FidlTest {
     FXL_CHECK(handles.size() == 1);
     zx::channel channel(handles[0]);
 
-    async::Loop loop (&kAsyncLoopConfigMakeDefault);
+    async::Loop loop(&kAsyncLoopConfigMakeDefault);
     RoundTripServiceImpl service_impl;
     fidl::Binding<fuchsia::zircon::benchmarks::RoundTripService> binding(
         &service_impl, std::move(channel));
@@ -564,13 +553,13 @@ class FidlTest {
 
   void Run() {
     uint32_t result;
-    FXL_CHECK(service_ptr_->RoundTripTest(123, &result).statvs == ZX_OK);
+    FXL_CHECK(service_ptr_->RoundTripTest(123, &result) == ZX_OK);
     FXL_CHECK(result == 456);
   }
 
  private:
   ThreadOrProcess thread_or_process_;
-  fuchsia::zircon::benchmarks::RoundTripServiceSync2Ptr service_ptr_;
+  fuchsia::zircon::benchmarks::RoundTripServiceSyncPtr service_ptr_;
 };
 
 // Test the round trip time for waking up threads using Zircon futexes.
