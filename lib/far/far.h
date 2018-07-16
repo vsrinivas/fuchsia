@@ -28,13 +28,6 @@ bool far_reader_destroy(far_reader_t reader);
 // The file descriptor will be closed during far_reader_destroy.
 bool far_reader_read_fd(far_reader_t reader, int fd);
 
-#ifdef __Fuchsia__
-// Takes ownership of the VMO.
-//
-// The VMO will be closed during far_reader_destroy.
-bool far_reader_read_vmo(far_reader_t reader, zx_handle_t vmo);
-#endif
-
 bool far_reader_get_count(far_reader_t reader, uint64_t* count);
 
 bool far_reader_get_index(far_reader_t reader, const char* path,

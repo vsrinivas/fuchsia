@@ -24,15 +24,3 @@ source_set("far") {
     "//garnet/public/lib/fxl",
   ]
 }
-
-source_set("far_vmo") {
-  sources = [
-    "far_vmo.cc",
-  ]
-
-  deps = [
-    ":far",
-    "//garnet/public/lib/fxl",
-    "//zircon/public/lib/fdio",
-  ]
-}
