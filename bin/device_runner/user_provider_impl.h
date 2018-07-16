@@ -23,42 +23,11 @@ namespace modular {
 
 class UserProviderImpl : fuchsia::modular::UserProvider {
  public:
-  // Users of UserProviderImpl must register Delegate object.
-  class Delegate {
-   public:
-    // Called after UserProviderImpl successfully logs in a user.
-    virtual void DidLogin() = 0;
-
-    // Called after UserProviderImpl successfully logs out a user.
-    virtual void DidLogout() = 0;
-
-    // Enables the delegate to intercept the user shell's view owner, so that
-    // e.g. the delegate can embed it in a parent view or present it.
-    // |default_view_owner| is the view owner request that's passed to
-    // UserProviderImpl from device shell: if you don't need to intercept the
-    // view owner, return it without modifying it.
-    virtual fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
-    GetUserShellViewOwner(
-        fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
-            default_view_owner) = 0;
-
-    // Enables the delegate to supply a different service provider to the user
-    // shell. |default_service_provider| is the service provider passed to the
-    // user shell by the device shell; if you don't need to replace it, return
-    // it without modifying it.
-    virtual fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
-    GetUserShellServiceProvider(
-        fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
-            default_service_provider) = 0;
-  };
-
-  // |delegate| must outlive UserProviderImpl.
   UserProviderImpl(std::shared_ptr<fuchsia::sys::StartupContext> context,
                    const fuchsia::modular::AppConfig& user_runner,
                    const fuchsia::modular::AppConfig& default_user_shell,
                    const fuchsia::modular::AppConfig& story_shell,
-                   fuchsia::modular::auth::AccountProvider* account_provider,
-                   Delegate* const delegate);
+                   fuchsia::modular::auth::AccountProvider* account_provider);
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::UserProvider> request);
 
@@ -99,8 +68,6 @@ class UserProviderImpl : fuchsia::modular::UserProvider {
 
   std::map<UserControllerImpl*, std::unique_ptr<UserControllerImpl>>
       user_controllers_;
-
-  Delegate* const delegate_;  // Unowned.
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UserProviderImpl);
 };

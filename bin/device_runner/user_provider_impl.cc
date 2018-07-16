@@ -63,16 +63,12 @@ UserProviderImpl::UserProviderImpl(
     const fuchsia::modular::AppConfig& user_runner,
     const fuchsia::modular::AppConfig& default_user_shell,
     const fuchsia::modular::AppConfig& story_shell,
-    fuchsia::modular::auth::AccountProvider* const account_provider,
-    Delegate* const delegate)
+    fuchsia::modular::auth::AccountProvider* const account_provider)
     : context_(std::move(context)),
       user_runner_(user_runner),
       default_user_shell_(default_user_shell),
       story_shell_(story_shell),
-      account_provider_(account_provider),
-      delegate_(delegate) {
-  FXL_DCHECK(delegate) << "Must pass a delegate to UserProviderImpl's ctor";
-
+      account_provider_(account_provider) {
   // There might not be a file of users persisted. If config file doesn't
   // exist, move forward with no previous users.
   // TODO(alhaad): Use JSON instead of flatbuffers for better inspectablity.
@@ -335,25 +331,15 @@ void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
   auto user_shell = params.user_shell_config
                         ? std::move(*params.user_shell_config)
                         : CloneStruct(default_user_shell_);
-
-  auto view_owner =
-      delegate_->GetUserShellViewOwner(std::move(params.view_owner));
-  auto service_provider =
-      delegate_->GetUserShellServiceProvider(std::move(params.services));
-
   auto controller = std::make_unique<UserControllerImpl>(
       context_->launcher().get(), CloneStruct(user_runner_),
       std::move(user_shell), CloneStruct(story_shell_),
       std::move(token_provider_factory), std::move(account),
-      std::move(view_owner), std::move(service_provider),
-      std::move(params.user_controller), [this](UserControllerImpl* c) {
-        user_controllers_.erase(c);
-        delegate_->DidLogout();
-      });
+      std::move(params.view_owner), std::move(params.services),
+      std::move(params.user_controller),
+      [this](UserControllerImpl* c) { user_controllers_.erase(c); });
   auto controller_ptr = controller.get();
   user_controllers_[controller_ptr] = std::move(controller);
-
-  delegate_->DidLogin();
 }
 
 }  // namespace modular

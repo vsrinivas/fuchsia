@@ -16,7 +16,6 @@ constexpr char kRootModuleName[] = "root";
 // DeviceShell and UserShell. The same service exchange between UserShell and
 // StoryShell uses the UserShellPresentationProvider service, which is
 // discoverable.
-// TODO(SCN-595): mozart.Presentation is being renamed to ui.Presenter.
 constexpr char kPresentationService[] = "mozart.Presentation";
 
 }  // namespace modular
