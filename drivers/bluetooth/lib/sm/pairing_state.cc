@@ -89,34 +89,20 @@ PairingState::PendingRequest::PendingRequest(SecurityLevel level,
                                              PairingCallback callback)
     : level(level), callback(std::move(callback)) {}
 
-PairingState::PairingState(IOCapability io_capability)
-    : next_pairing_id_(0), ioc_(io_capability), weak_ptr_factory_(this) {}
-
-PairingState::~PairingState() {
-  if (le_link_) {
-    le_link_->set_encryption_change_callback({});
-  }
-}
-
-void PairingState::RegisterLE(fxl::WeakPtr<hci::Connection> link,
-                              fbl::RefPtr<l2cap::Channel> smp) {
+PairingState::PairingState(fxl::WeakPtr<hci::Connection> link,
+                           fbl::RefPtr<l2cap::Channel> smp,
+                           IOCapability io_capability)
+    : next_pairing_id_(0), le_link_(link), weak_ptr_factory_(this) {
   FXL_DCHECK(link);
-  FXL_DCHECK(link->local_address().type() != DeviceAddress::Type::kBREDR);
-  FXL_DCHECK(link->local_address().type() != DeviceAddress::Type::kLEAnonymous);
-  FXL_DCHECK(link->peer_address().type() != DeviceAddress::Type::kBREDR);
-  FXL_DCHECK(link->peer_address().type() != DeviceAddress::Type::kLEAnonymous);
-  FXL_DCHECK(!legacy_state_);
-  FXL_DCHECK(!le_link_);
-  FXL_DCHECK(!le_smp_);
+  FXL_DCHECK(smp);
+  FXL_DCHECK(link->handle() == smp->link_handle());
+  FXL_DCHECK(link->ll_type() == hci::Connection::LinkType::kLE);
+  FXL_DCHECK(smp->id() == l2cap::kLESMPChannelId);
 
-  le_sec_ = SecurityProperties();
-  le_local_addr_ = link->local_address();
-  le_peer_addr_ = link->peer_address();
-  le_link_ = link;
-
+  // Set up SMP data bearer.
   // TODO(armansito): Enable SC when we support it.
   le_smp_ = std::make_unique<Bearer>(
-      std::move(smp), link->role(), false /* sc */, ioc_,
+      std::move(smp), link->role(), false /* sc */, io_capability,
       fit::bind_member(this, &PairingState::OnLEPairingFailed),
       fit::bind_member(this, &PairingState::OnLEPairingFeatures));
   le_smp_->set_confirm_value_callback(
@@ -128,21 +114,24 @@ void PairingState::RegisterLE(fxl::WeakPtr<hci::Connection> link,
   le_smp_->set_master_id_callback(
       fit::bind_member(this, &PairingState::OnLEMasterIdentification));
 
+  // Set up HCI encryption event.
   le_link_->set_encryption_change_callback(
       fit::bind_member(this, &PairingState::OnLEEncryptionChange));
 }
 
+PairingState::~PairingState() {
+  if (le_link_) {
+    le_link_->set_encryption_change_callback({});
+  }
+}
+
+void PairingState::Reset(IOCapability io_capability) {
+  Abort();
+  le_smp_->set_io_capability(io_capability);
+}
+
 void PairingState::UpdateSecurity(SecurityLevel level,
                                   PairingCallback callback) {
-  // TODO(armansito): Once we support SMP over BR/EDR and Secure Connections it
-  // should be possible to initiate pairing/security updates over both
-  // transports. We only support pairing over LE for now.
-  if (!le_smp_) {
-    FXL_VLOG(2) << "sm: LE SMP bearer required for pairing!";
-    callback(Status(HostError::kFailed), SecurityProperties());
-    return;
-  }
-
   // If pairing is in progress then we queue the request.
   if (legacy_state_) {
     FXL_VLOG(2) << "sm: LE legacy pairing in progress; request queued";
@@ -168,7 +157,6 @@ void PairingState::UpdateSecurity(SecurityLevel level,
 }
 
 void PairingState::AbortLegacyPairing(ErrorCode error_code) {
-  FXL_DCHECK(le_smp_);
   FXL_DCHECK(legacy_state_);
   FXL_DCHECK(le_smp_->pairing_started());
 
@@ -178,7 +166,6 @@ void PairingState::AbortLegacyPairing(ErrorCode error_code) {
 }
 
 void PairingState::BeginLegacyPairingPhase1(SecurityLevel level) {
-  FXL_DCHECK(le_smp_);
   FXL_DCHECK(le_smp_->role() == hci::Connection::Role::kMaster);
   FXL_DCHECK(!legacy_state_) << "Already pairing!";
 
@@ -188,6 +175,16 @@ void PairingState::BeginLegacyPairingPhase1(SecurityLevel level) {
 
   legacy_state_ = std::make_unique<LegacyState>(next_pairing_id_++);
   le_smp_->InitiateFeatureExchange();
+}
+
+void PairingState::Abort() {
+  if (!le_smp_->pairing_started())
+    return;
+
+  FXL_VLOG(1) << "sm: Abort pairing";
+  if (legacy_state_) {
+    AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
+  }
 }
 
 void PairingState::BeginLegacyPairingPhase2(const ByteBuffer& preq,
@@ -241,7 +238,7 @@ void PairingState::BeginLegacyPairingPhase2(const ByteBuffer& preq,
     FXL_DCHECK(state->InPhase2());
 
     // We have TK so we can generate the confirm value now.
-    DeviceAddress *ia, *ra;
+    const DeviceAddress *ia, *ra;
     self->LEPairingAddresses(&ia, &ra);
     fxl::RandBytes(state->local_rand.data(), state->local_rand.size());
     util::C1(state->tk, state->local_rand, state->preq, state->pres, *ia, *ra,
@@ -263,7 +260,6 @@ void PairingState::BeginLegacyPairingPhase2(const ByteBuffer& preq,
 }
 
 void PairingState::LegacySendConfirmValue() {
-  FXL_DCHECK(le_smp_);
   FXL_DCHECK(legacy_state_);
   FXL_DCHECK(legacy_state_->InPhase2());
   FXL_DCHECK(!legacy_state_->sent_local_confirm);
@@ -273,7 +269,6 @@ void PairingState::LegacySendConfirmValue() {
 }
 
 void PairingState::LegacySendRandomValue() {
-  FXL_DCHECK(le_smp_);
   FXL_DCHECK(legacy_state_);
   FXL_DCHECK(legacy_state_->InPhase2());
   FXL_DCHECK(!legacy_state_->sent_local_rand);
@@ -317,7 +312,6 @@ void PairingState::EndLegacyPairingPhase2() {
 void PairingState::CompleteLegacyPairing() {
   FXL_DCHECK(legacy_state_);
   FXL_DCHECK(legacy_state_->IsComplete());
-  FXL_DCHECK(le_smp_);
   FXL_DCHECK(le_smp_->pairing_started());
 
   le_smp_->StopTimer();
@@ -525,7 +519,7 @@ void PairingState::OnLEPairingRandom(const UInt128& random) {
 
   // We have both confirm and rand values from the peer. Generate it locally and
   // compare.
-  DeviceAddress *ia, *ra;
+  const DeviceAddress *ia, *ra;
   LEPairingAddresses(&ia, &ra);
   UInt128 peer_confirm;
   util::C1(legacy_state_->tk, legacy_state_->peer_rand, legacy_state_->preq,
@@ -695,17 +689,17 @@ void PairingState::OnLEEncryptionChange(hci::Status status, bool enabled) {
   }
 }
 
-void PairingState::LEPairingAddresses(DeviceAddress** out_initiator,
-                                      DeviceAddress** out_responder) {
+void PairingState::LEPairingAddresses(const DeviceAddress** out_initiator,
+                                      const DeviceAddress** out_responder) {
   FXL_DCHECK(legacy_state_);
   FXL_DCHECK(legacy_state_->features);
 
   if (legacy_state_->features->initiator) {
-    *out_initiator = &le_local_addr_;
-    *out_responder = &le_peer_addr_;
+    *out_initiator = &le_link_->local_address();
+    *out_responder = &le_link_->peer_address();
   } else {
-    *out_initiator = &le_peer_addr_;
-    *out_responder = &le_local_addr_;
+    *out_initiator = &le_link_->peer_address();
+    *out_responder = &le_link_->local_address();
   }
 }
 

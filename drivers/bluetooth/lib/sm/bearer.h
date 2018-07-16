@@ -77,6 +77,10 @@ class Bearer final {
          FeatureExchangeCallback feature_exchange_callback);
   ~Bearer() = default;
 
+  // Sets new I/O capabilities. These will be used in future pairing feature
+  // exchanges.
+  void set_io_capability(IOCapability ioc) { io_capability_ = ioc; }
+
   // Sets whether or not OOB authentication data is available. False by default.
   void set_oob_available(bool value) { oob_available_ = value; }
 

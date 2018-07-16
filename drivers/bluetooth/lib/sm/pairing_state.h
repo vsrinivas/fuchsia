@@ -22,7 +22,11 @@ namespace sm {
 // LE or a BR/EDR/LE device.
 class PairingState final {
  public:
-  explicit PairingState(IOCapability io_capability);
+  // |link|: The LE logical link over which pairing procedures occur.
+  // |smp|: The L2CAP LE SMP fixed channel that operates over |link|.
+  // |ioc|: The initial I/O capability.
+  PairingState(fxl::WeakPtr<hci::Connection> link,
+               fbl::RefPtr<l2cap::Channel> smp, IOCapability io_capability);
   ~PairingState();
 
   // Callback used to obtain a Temporary Key used during legacy pairing. The
@@ -58,13 +62,7 @@ class PairingState final {
     le_ltk_callback_ = std::move(callback);
   }
 
-  // TODO(armansito): Add events for received keys.
-  // TODO(armansito): Add PairingDelegate events.
-
-  // Register a LE link. This method cannot be called on the same PairingState
-  // instance more than once.
-  void RegisterLE(fxl::WeakPtr<hci::Connection> link,
-                  fbl::RefPtr<l2cap::Channel> smp);
+  // TODO(armansito): Add function to register a BR/EDR link and SMP channel.
 
   // Attempt to raise the security level of a the connection to the desired
   // |level| and notify the result in |callback|.
@@ -84,6 +82,16 @@ class PairingState final {
   using PairingCallback =
       fit::function<void(Status status, const SecurityProperties& sec_props)>;
   void UpdateSecurity(SecurityLevel level, PairingCallback callback);
+
+  // Assign I/O capabilities. This aborts any ongoing pairing procedure and sets
+  // up the I/O capabilities to use for future requests.
+  void Reset(IOCapability io_capability);
+
+  // Abort all ongoing pairing procedures and notify pairing callbacks with an
+  // error.
+  // TODO(armansito): Add a "pairing canceled" callback to notify the pairing
+  // delegate so that it can dismiss any user challenge.
+  void Abort();
 
  private:
   static constexpr size_t kPairingRequestSize =
@@ -223,8 +231,8 @@ class PairingState final {
 
   // Returns pointers to the initiator and responder addresses. This can be
   // called after pairing Phase 1.
-  void LEPairingAddresses(common::DeviceAddress** out_initiator,
-                          common::DeviceAddress** out_responder);
+  void LEPairingAddresses(const common::DeviceAddress** out_initiator,
+                          const common::DeviceAddress** out_responder);
 
   // The ID that will be assigned to the next pairing state.
   unsigned int next_pairing_id_;
@@ -235,15 +243,10 @@ class PairingState final {
   // Callbacks used to notify obtained keys during pairing.
   LELTKCallback le_ltk_callback_;
 
-  // TODO(armansito): Make it possible to change I/O capabilities.
-  IOCapability ioc_;
-
   // Data for the currently registered LE-U link, if any. This data is valid
   // only if |le_smp_| is not nullptr.
   fxl::WeakPtr<hci::Connection> le_link_;
   std::unique_ptr<Bearer> le_smp_;       // SMP data bearer for the LE-U link.
-  common::DeviceAddress le_local_addr_;  // Local address used while connecting.
-  common::DeviceAddress le_peer_addr_;   // Peer address used while connecting.
   SecurityProperties le_sec_;  // Current security properties of the LE-U link.
 
   // The state of the LE legacy pairing procedure, if any.

@@ -40,8 +40,20 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest {
     DestroyPairingState();
   }
 
-  void NewPairingState(IOCapability ioc) {
-    pairing_ = std::make_unique<PairingState>(ioc);
+  void NewPairingState(hci::Connection::Role role, IOCapability ioc) {
+    // Setup fake SMP channel.
+    ChannelOptions options(l2cap::kLESMPChannelId);
+    fake_chan_ = CreateFakeChannel(options);
+    fake_chan_->SetSendCallback(
+        fit::bind_member(this, &SMP_PairingStateTest::OnDataReceived),
+        dispatcher());
+
+    // Setup a fake logical link.
+    fake_link_ = std::make_unique<hci::testing::FakeConnection>(
+        1, hci::Connection::LinkType::kLE, role, kLocalAddr, kPeerAddr);
+
+    pairing_ =
+        std::make_unique<PairingState>(fake_link_->WeakPtr(), fake_chan_, ioc);
     pairing_->set_le_ltk_callback(
         fit::bind_member(this, &SMP_PairingStateTest::OnNewLTK));
     pairing_->set_legacy_tk_delegate(
@@ -49,20 +61,6 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest {
   }
 
   void DestroyPairingState() { pairing_ = nullptr; }
-
-  void RegisterLE(hci::Connection::Role role) {
-    FXL_DCHECK(pairing_);
-
-    ChannelOptions options(l2cap::kLESMPChannelId);
-    fake_chan_ = CreateFakeChannel(options);
-    fake_chan_->SetSendCallback(
-        fit::bind_member(this, &SMP_PairingStateTest::OnDataReceived),
-        dispatcher());
-
-    fake_link_ = std::make_unique<hci::testing::FakeConnection>(
-        1, hci::Connection::LinkType::kLE, role, kLocalAddr, kPeerAddr);
-    pairing_->RegisterLE(fake_link_->WeakPtr(), fake_chan_);
-  }
 
   // Called by |pairing_| when a new LTK is obtained.
   void OnNewLTK(const LTK& ltk) {
@@ -279,8 +277,7 @@ class SMP_MasterPairingTest : public SMP_PairingStateTest {
   void SetUp() override { SetUpPairingState(); }
 
   void SetUpPairingState(IOCapability ioc = IOCapability::kDisplayOnly) {
-    NewPairingState(ioc);
-    RegisterLE(hci::Connection::Role::kMaster);
+    NewPairingState(hci::Connection::Role::kMaster, ioc);
   }
 
   void GenerateMatchingConfirmAndRandom(UInt128* out_confirm,
@@ -342,8 +339,7 @@ class SMP_SlavePairingTest : public SMP_PairingStateTest {
   void SetUp() override { SetUpPairingState(); }
 
   void SetUpPairingState(IOCapability ioc = IOCapability::kDisplayOnly) {
-    NewPairingState(ioc);
-    RegisterLE(hci::Connection::Role::kSlave);
+    NewPairingState(hci::Connection::Role::kSlave, ioc);
   }
 
   void GenerateMatchingConfirmAndRandom(UInt128* out_confirm,
@@ -397,6 +393,52 @@ TEST_F(SMP_MasterPairingTest, PairingFailedInPhase1) {
   EXPECT_EQ(1, pairing_callback_count());
   EXPECT_EQ(1, pairing_request_count());
   EXPECT_EQ(ErrorCode::kPairingNotSupported, pairing_status().protocol_error());
+}
+
+// Local aborts during Phase 1.
+TEST_F(SMP_MasterPairingTest, PairingAbortedInPhase1) {
+  UpdateSecurity(SecurityLevel::kEncrypted);
+  RunLoopUntilIdle();
+
+  // Pairing not complete yet but we should be in Phase 1.
+  EXPECT_EQ(0, pairing_callback_count());
+  EXPECT_EQ(1, pairing_request_count());
+
+  pairing()->Abort();
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(1, pairing_callback_count());
+  EXPECT_EQ(1, pairing_request_count());
+  EXPECT_EQ(ErrorCode::kUnspecifiedReason, pairing_status().protocol_error());
+}
+
+// Local resets I/O capabilities while pairing. This should abort any ongoing
+// pairing and the new I/O capabilities should be used in following pairing
+// requests.
+TEST_F(SMP_MasterPairingTest, PairingStateResetDuringPairing) {
+  UpdateSecurity(SecurityLevel::kEncrypted);
+  RunLoopUntilIdle();
+
+  // Pairing not complete yet but we should be in Phase 1.
+  EXPECT_EQ(0, pairing_callback_count());
+  EXPECT_EQ(1, pairing_request_count());
+
+  pairing()->Reset(IOCapability::kNoInputNoOutput);
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(1, pairing_callback_count());
+  EXPECT_EQ(1, pairing_request_count());
+  EXPECT_EQ(ErrorCode::kUnspecifiedReason, pairing_status().protocol_error());
+
+  UpdateSecurity(SecurityLevel::kEncrypted);
+  RunLoopUntilIdle();
+
+  // Should have sent a new pairing request.
+  EXPECT_EQ(2, pairing_request_count());
+
+  // Make sure that the new request has the new I/O capabilities.
+  const auto& params = local_pairing_cmd().view(1).As<PairingRequestParams>();
+  EXPECT_EQ(IOCapability::kNoInputNoOutput, params.io_capability);
 }
 
 TEST_F(SMP_MasterPairingTest, ReceiveConfirmValueWhileNotPairing) {
