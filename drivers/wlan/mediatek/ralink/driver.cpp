@@ -29,8 +29,6 @@ extern "C" zx_status_t ralink_init(void** out_ctx) {
         zxlogf(ERROR, "ralink: could not create event loop: %d\n", status);
         delete loop;
         loop = nullptr;
-    } else {
-        zxlogf(INFO, "ralink: event loop started\n");
     }
     return status;
 }
