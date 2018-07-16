@@ -19,28 +19,79 @@
 
 namespace ledger {
 
+PageEvictionManagerImpl::Completer::Completer() {}
+
+PageEvictionManagerImpl::Completer::~Completer() {
+  CallCallbacks(Status::INTERNAL_ERROR);
+}
+
+void PageEvictionManagerImpl::Completer::Complete(Status status) {
+  FXL_DCHECK(!completed_);
+  CallCallbacks(status);
+}
+
+Status PageEvictionManagerImpl::Completer::WaitUntilDone(
+    coroutine::CoroutineHandler* handler) {
+  if (completed_) {
+    return status_;
+  }
+
+  auto sync_call_status =
+      coroutine::SyncCall(handler, [this](fit::closure callback) {
+        // SyncCall finishes its execution when the given |callback| is
+        // called. To block the termination of |SyncCall| (and of
+        // |WaitUntilDone|), here we push this |callback| in the vector of
+        // |callbacks_|. Once |Complete| is called, we will call all of these
+        // callbacks, which will eventually unblock all pending |WaitUntilDone|
+        // calls.
+        callbacks_.push_back(std::move(callback));
+      });
+  if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
+    return Status::INTERNAL_ERROR;
+  }
+  return status_;
+}
+
+void PageEvictionManagerImpl::Completer::CallCallbacks(Status status) {
+  if (completed_) {
+    return;
+  }
+  completed_ = true;
+  status_ = status;
+  // We need to move the callbacks in the stack since calling any of the
+  // them might lead to the deletion of this object, invalidating callbacks_.
+  std::vector<fit::closure> callbacks = std::move(callbacks_);
+  callbacks_.clear();
+  for (const auto& callback : callbacks) {
+    callback();
+  }
+}
+
 PageEvictionManagerImpl::PageEvictionManagerImpl(
-    async_dispatcher_t* dispatcher, coroutine::CoroutineService* coroutine_service,
+    async_dispatcher_t* dispatcher,
+    coroutine::CoroutineService* coroutine_service,
     ledger::DetachedPath db_path)
     : db_(dispatcher, db_path.SubPath({storage::kSerializationVersion,
-                                  kPageUsageDbSerializationVersion})),
+                                       kPageUsageDbSerializationVersion})),
       coroutine_manager_(coroutine_service) {}
 
 PageEvictionManagerImpl::~PageEvictionManagerImpl() {}
 
-void PageEvictionManagerImpl::Init(fit::function<void(Status)> callback) {
+Status PageEvictionManagerImpl::Init() {
   Status status = db_.Init();
   if (status != Status::OK) {
-    callback(status);
-    return;
+    return status;
   }
-  // TODO(nellyv): This is a slow operation: We shouldn't wait for it to
-  // terminate to call the callback. See LE-507.
+
+  // Marking pages as closed is a slow operation and we shouldn't wait for it to
+  // return from initialization: Start marking the open pages as closed and
+  // finalize the initialization completer when done.
   coroutine_manager_.StartCoroutine(
-      std::move(callback), [this](coroutine::CoroutineHandler* handler,
-                                  fit::function<void(Status)> callback) {
-        callback(db_.MarkAllPagesClosed(handler));
+      [this](coroutine::CoroutineHandler* handler) {
+        Status status = db_.MarkAllPagesClosed(handler);
+        initialization_completer_.Complete(status);
       });
+  return Status::OK;
 }
 
 void PageEvictionManagerImpl::SetDelegate(
@@ -55,10 +106,18 @@ void PageEvictionManagerImpl::TryCleanUp(fit::function<void(Status)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback), [this](coroutine::CoroutineHandler* handler,
                                   fit::function<void(Status)> callback) {
+        Status status = initialization_completer_.WaitUntilDone(handler);
+        if (status != Status::OK) {
+          FXL_LOG(ERROR)
+              << "TryCleanUp failed because of initialization error: "
+              << status;
+          callback(status);
+          return;
+        }
         // CanEvictPage is an expensive operation. Get the sorted list of all
         // pages first and call CanEvictPage exactly as many times as necessary.
         std::vector<PageUsageDb::PageInfo> pages;
-        Status status = GetPagesByTimestamp(handler, &pages);
+        status = GetPagesByTimestamp(handler, &pages);
         if (status != Status::OK) {
           callback(status);
           return;
@@ -93,7 +152,13 @@ void PageEvictionManagerImpl::OnPageOpened(fxl::StringView ledger_name,
   coroutine_manager_.StartCoroutine([this, ledger_name = ledger_name.ToString(),
                                      page_id = page_id.ToString()](
                                         coroutine::CoroutineHandler* handler) {
-    Status status = db_.MarkPageOpened(handler, ledger_name, page_id);
+    Status status = initialization_completer_.WaitUntilDone(handler);
+    if (status != Status::OK) {
+      FXL_LOG(ERROR) << "OnPageOpened failed because of initialization error: "
+                     << status;
+      return;
+    }
+    status = db_.MarkPageOpened(handler, ledger_name, page_id);
     if (status != Status::OK) {
       FXL_LOG(ERROR)
           << "Failed to mark the page as opened in PageUsage DB. Ledger name: "
@@ -104,13 +169,16 @@ void PageEvictionManagerImpl::OnPageOpened(fxl::StringView ledger_name,
 
 void PageEvictionManagerImpl::OnPageClosed(fxl::StringView ledger_name,
                                            storage::PageIdView page_id) {
-  fit::function<void(Status)> callback =
-      [ledger_name = ledger_name.ToString(),
-       page_id = page_id.ToString()](Status status) {};
   coroutine_manager_.StartCoroutine([this, ledger_name = ledger_name.ToString(),
                                      page_id = page_id.ToString()](
                                         coroutine::CoroutineHandler* handler) {
-    Status status = db_.MarkPageClosed(handler, ledger_name, page_id);
+    Status status = initialization_completer_.WaitUntilDone(handler);
+    if (status != Status::OK) {
+      FXL_LOG(ERROR) << "OnPageClosed failed because of initialization error: "
+                     << status;
+      return;
+    }
+    status = db_.MarkPageClosed(handler, ledger_name, page_id);
     if (status != Status::OK) {
       FXL_LOG(ERROR)
           << "Failed to mark the page as closed in PageUsage DB. Ledger name: "

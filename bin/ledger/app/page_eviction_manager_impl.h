@@ -27,7 +27,7 @@ class PageEvictionManagerImpl : public PageEvictionManager {
 
   // Initializes this PageEvictionManager. |IO_ERROR| will be returned in case
   // of an error while initializing the underlying database.
-  void Init(fit::function<void(Status)> callback);
+  Status Init();
 
   // Sets the delegate for this PageEvictionManagerImpl. The delegate should
   // outlive this object.
@@ -43,6 +43,35 @@ class PageEvictionManagerImpl : public PageEvictionManager {
                     storage::PageIdView page_id) override;
 
  private:
+  // A Completer allowing waiting until the target operation is completed.
+  class Completer {
+   public:
+    Completer();
+
+    ~Completer();
+
+    // Completes the operation with the given status and unblocks all pending
+    // |WaitUntilDone| calls. |Complete| can only be called once.
+    void Complete(Status status);
+
+    // Blocks execution until |Complete| is called, and then returns its status.
+    // If the operation is already completed, |WaitUntilDone| returns
+    // immediately with the result status.
+    Status WaitUntilDone(coroutine::CoroutineHandler* handler);
+
+   private:
+    // Marks the Completer as completed with the given status and calls the
+    // pending callbacks.
+    void CallCallbacks(Status status);
+
+    bool completed_ = false;
+    Status status_;
+    // Closures invoked upon completion to unblock the waiting coroutines.
+    std::vector<fit::closure> callbacks_;
+
+    FXL_DISALLOW_COPY_AND_ASSIGN(Completer);
+  };
+
   // Removes the page from the local storage.
   void EvictPage(fxl::StringView ledger_name, storage::PageIdView page_id,
                  fit::function<void(Status)> callback);
@@ -61,6 +90,11 @@ class PageEvictionManagerImpl : public PageEvictionManager {
   // Marks the given page as evicted in the page usage database.
   void MarkPageEvicted(std::string ledger_name, storage::PageId page_id);
 
+  // The initialization completer. |Init| method starts marking pages as closed,
+  // and returns before that operation is done. This completer makes sure that
+  // all methods accessing the page usage database wait until the initialization
+  // has finished, before reading or updating information.
+  Completer initialization_completer_;
   PageEvictionManager::Delegate* delegate_ = nullptr;
   PageUsageDb db_;
   coroutine::CoroutineManager coroutine_manager_;

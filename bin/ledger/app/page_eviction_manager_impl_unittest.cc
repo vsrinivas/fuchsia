@@ -49,15 +49,7 @@ class PageEvictionManagerTest : public gtest::TestLoopFixture {
 
   // gtest::TestLoopFixture:
   void SetUp() override {
-    bool called;
-    Status status;
-
-    page_eviction_manager_.Init(
-        callback::Capture(callback::SetWhenCalled(&called), &status));
-    RunLoopUntilIdle();
-    EXPECT_TRUE(called);
-    EXPECT_EQ(Status::OK, status);
-
+    EXPECT_EQ(Status::OK, page_eviction_manager_.Init());
     page_eviction_manager_.SetDelegate(&delegate_);
   }
 
