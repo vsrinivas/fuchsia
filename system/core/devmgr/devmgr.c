@@ -156,18 +156,18 @@ static int fuchsia_starter(void* arg) {
 }
 
 // Reads messages from crashsvc and launches analyzers for exceptions.
-int analyzer_starter(void* arg) {
+int crash_analyzer_listener(void* arg) {
     for (;;) {
         zx_signals_t observed;
         zx_status_t status =
             zx_object_wait_one(exception_channel, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                ZX_TIME_INFINITE, &observed);
         if (status != ZX_OK) {
-            printf("devmgr: analyzer_starter zx_object_wait_one failed: %d\n", status);
+            printf("devmgr: crash_analyzer_listener zx_object_wait_one failed: %d\n", status);
             return 1;
         }
         if ((observed & ZX_CHANNEL_READABLE) == 0) {
-            printf("devmgr: analyzer_starter: peer closed\n");
+            printf("devmgr: crash_analyzer_listener: peer closed\n");
             return 1;
         }
 
@@ -193,14 +193,14 @@ int analyzer_starter(void* arg) {
         zx_handle_t thread_handle;
         status = zx_handle_duplicate(handles[1], ZX_RIGHT_SAME_RIGHTS, &thread_handle);
         if (status != ZX_OK) {
-            printf("devmgr: analyzer_starter: thread handle duplicate failed: %d\n", status);
+            printf("devmgr: crash_analyzer_listener: thread handle duplicate failed: %d\n", status);
             zx_handle_close(handles[0]);
             zx_handle_close(handles[1]);
             // Shouldn't we resume handles[1] in this case?
             continue;
         }
 
-        printf("devmgr: analyzer_starter: analyzing exception type 0x%x\n", exception_type);
+        printf("devmgr: crash_analyzer_listener: analyzing exception type 0x%x\n", exception_type);
 
         zx_handle_t appmgr_svc_request = ZX_HANDLE_INVALID;
         zx_handle_t appmgr_svc = ZX_HANDLE_INVALID;
@@ -244,11 +244,11 @@ int analyzer_starter(void* arg) {
         if (handles[1])
             zx_handle_close(handles[1]);
         if (status != ZX_OK) {
-            printf("devmgr: analyzer_starter: failed to analyze crash: %d (%s)\n",
+            printf("devmgr: crash_analyzer_listener: failed to analyze crash: %d (%s)\n",
                    status, zx_status_get_string(status));
             status = zx_task_resume(thread_handle, ZX_RESUME_EXCEPTION | ZX_RESUME_TRY_NEXT);
             if (status != ZX_OK) {
-                printf("devmgr: analyzer_starter: zx_task_resume: %d (%s)\n",
+                printf("devmgr: crash_analyzer_listener: zx_task_resume: %d (%s)\n",
                        status, zx_status_get_string(status));
             }
         }
@@ -316,8 +316,8 @@ int service_starter(void* arg) {
         zx_channel_create(0, &exception_channel, &exception_channel_passed) == ZX_OK &&
         zx_task_bind_exception_port(root_job_handle, exception_port, 0, 0) == ZX_OK) {
         thrd_t t;
-        if ((thrd_create_with_name(&t, analyzer_starter, NULL,
-                                   "analyzer-starter")) == thrd_success) {
+        if ((thrd_create_with_name(&t, crash_analyzer_listener, NULL,
+                                   "crash-analyzer-listener")) == thrd_success) {
             thrd_detach(t);
         }
         zx_handle_t handles[] = {ZX_HANDLE_INVALID, exception_port, exception_channel_passed};
@@ -436,7 +436,8 @@ static int console_starter(void* arg) {
         device = "/dev/misc/console";
 
     const char* envp[] = {
-        term, NULL,
+        term,
+        NULL,
     };
     for (unsigned n = 0; n < 30; n++) {
         int fd;
