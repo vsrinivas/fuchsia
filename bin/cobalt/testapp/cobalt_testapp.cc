@@ -9,6 +9,7 @@
 //
 // It is also invoked by the cobalt_client CQ and CI.
 
+#include <fstream>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -46,7 +47,10 @@ constexpr fxl::StringView kSkipEnvironmentTest = "skip_environment_test";
 
 namespace {
 
-const uint32_t kTestAppProjectId = 2;
+// This app is not launched through appmgr as part of a package so we need the
+// full path
+constexpr char kConfigBinProtoPath[] =
+    "/pkgfs/packages/cobalt_tests/0/data/cobalt_config.binproto";
 
 // For the rare event with strings test
 const uint32_t kRareEventStringMetricId = 1;
@@ -133,6 +137,9 @@ class CobaltTestApp {
         do_environment_test_(do_environment_test),
         num_observations_per_batch_(num_observations_per_batch),
         context_(component::StartupContext::CreateFromStartupInfo()) {}
+
+  // Loads the CobaltConfig proto for this project and returns it in a string
+  std::string LoadCobaltConfig();
 
   // We have multiple testing strategies based on the method we use to
   // connect to the FIDL service and the method we use to determine whether
@@ -268,6 +275,22 @@ class CobaltTestApp {
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltTestApp);
 };
 
+std::string CobaltTestApp::LoadCobaltConfig() {
+  // Open the cobalt config file.
+  std::ifstream config_file_stream;
+  config_file_stream.open(kConfigBinProtoPath);
+  FXL_CHECK(config_file_stream && config_file_stream.good())
+      << "Could not open the Cobalt config file: " << kConfigBinProtoPath;
+  std::string cobalt_config_bytes;
+  cobalt_config_bytes.assign(
+      (std::istreambuf_iterator<char>(config_file_stream)),
+      std::istreambuf_iterator<char>());
+  FXL_CHECK(!cobalt_config_bytes.empty())
+      << "Could not read the Cobalt config file: " << kConfigBinProtoPath;
+
+  return cobalt_config_bytes;
+}
+
 bool CobaltTestApp::RunAllTestingStrategies() {
   if (!RunTestsWithRequestSendSoon()) {
     return false;
@@ -316,7 +339,7 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
 
   fuchsia::cobalt::CobaltEncoderFactorySyncPtr factory;
   services.ConnectToService(factory.NewRequest());
-  factory->GetEncoder(kTestAppProjectId, encoder_.NewRequest());
+  factory->GetEncoderForConfig(LoadCobaltConfig(), encoder_.NewRequest());
 
   services.ConnectToService(cobalt_controller_.NewRequest());
 }
@@ -360,7 +383,7 @@ bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
   fuchsia::cobalt::CobaltEncoderFactorySyncPtr factory;
   context_->ConnectToEnvironmentService(factory.NewRequest());
 
-  factory->GetEncoder(kTestAppProjectId, encoder_.NewRequest());
+  factory->GetEncoderForConfig(LoadCobaltConfig(), encoder_.NewRequest());
 
   // Invoke TestRareEventWithIndicesUsingServiceFromEnvironment() three times
   // and return true if it succeeds all three times.

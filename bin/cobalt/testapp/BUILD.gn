@@ -3,7 +3,12 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//third_party/cobalt_config/cobalt_config.gni")
 import("//third_party/protobuf/proto_library.gni")
+
+cobalt_config("generate_testapp_config") {
+  project_id = 2
+}
 
 executable("cobalt_testapp") {
   output_name = "cobalt_testapp"
