@@ -19,12 +19,12 @@ class DeviceSetTest : public ValidationTest, public DeviceSetWatcher {
   ~DeviceSetTest() override {}
 
  protected:
-  ::testing::AssertionResult GetDeviceSet(DeviceSetSync2Ptr* device_set) {
-    *device_set = DeviceSetSync2Ptr();
+  ::testing::AssertionResult GetDeviceSet(DeviceSetSyncPtr* device_set) {
+    *device_set = DeviceSetSyncPtr();
     Status status = Status::INTERNAL_ERROR;
 
-    if (cloud_provider_->GetDeviceSet(device_set->NewRequest(), &status)
-            .statvs != ZX_OK) {
+    if (cloud_provider_->GetDeviceSet(device_set->NewRequest(), &status) !=
+        ZX_OK) {
       return ::testing::AssertionFailure()
              << "Failed to retrieve the device set due to channel error.";
     }
@@ -52,87 +52,76 @@ class DeviceSetTest : public ValidationTest, public DeviceSetWatcher {
 };
 
 TEST_F(DeviceSetTest, GetDeviceSet) {
-  DeviceSetSync2Ptr device_set;
+  DeviceSetSyncPtr device_set;
   ASSERT_TRUE(GetDeviceSet(&device_set));
 }
 
 TEST_F(DeviceSetTest, CheckMissingFingerprint) {
-  DeviceSetSync2Ptr device_set;
+  DeviceSetSyncPtr device_set;
   ASSERT_TRUE(GetDeviceSet(&device_set));
 
   Status status = Status::INTERNAL_ERROR;
-  ASSERT_EQ(ZX_OK,
-            device_set->CheckFingerprint(ToArray("bazinga"), &status).statvs);
+  ASSERT_EQ(ZX_OK, device_set->CheckFingerprint(ToArray("bazinga"), &status));
   EXPECT_EQ(Status::NOT_FOUND, status);
 }
 
 TEST_F(DeviceSetTest, SetAndCheckFingerprint) {
-  DeviceSetSync2Ptr device_set;
+  DeviceSetSyncPtr device_set;
   ASSERT_TRUE(GetDeviceSet(&device_set));
 
   Status status = Status::INTERNAL_ERROR;
-  ASSERT_EQ(ZX_OK,
-            device_set->SetFingerprint(ToArray("bazinga"), &status).statvs);
+  ASSERT_EQ(ZX_OK, device_set->SetFingerprint(ToArray("bazinga"), &status));
   EXPECT_EQ(Status::OK, status);
 
-  ASSERT_EQ(ZX_OK,
-            device_set->CheckFingerprint(ToArray("bazinga"), &status).statvs);
+  ASSERT_EQ(ZX_OK, device_set->CheckFingerprint(ToArray("bazinga"), &status));
   EXPECT_EQ(Status::OK, status);
 }
 
 TEST_F(DeviceSetTest, WatchMisingFingerprint) {
-  DeviceSetSync2Ptr device_set;
+  DeviceSetSyncPtr device_set;
   ASSERT_TRUE(GetDeviceSet(&device_set));
   Status status = Status::INTERNAL_ERROR;
   fidl::Binding<DeviceSetWatcher> binding(this);
   DeviceSetWatcherPtr watcher;
   binding.Bind(watcher.NewRequest());
-  ASSERT_EQ(
-      ZX_OK,
-      device_set->SetWatcher(ToArray("bazinga"), std::move(watcher), &status)
-          .statvs);
+  ASSERT_EQ(ZX_OK, device_set->SetWatcher(ToArray("bazinga"),
+                                          std::move(watcher), &status));
   EXPECT_EQ(Status::NOT_FOUND, status);
 }
 
 TEST_F(DeviceSetTest, SetAndWatchFingerprint) {
-  DeviceSetSync2Ptr device_set;
+  DeviceSetSyncPtr device_set;
   ASSERT_TRUE(GetDeviceSet(&device_set));
 
   Status status = Status::INTERNAL_ERROR;
-  EXPECT_EQ(ZX_OK,
-            device_set->SetFingerprint(ToArray("bazinga"), &status).statvs);
+  EXPECT_EQ(ZX_OK, device_set->SetFingerprint(ToArray("bazinga"), &status));
   EXPECT_EQ(Status::OK, status);
 
   fidl::Binding<DeviceSetWatcher> binding(this);
   DeviceSetWatcherPtr watcher;
   binding.Bind(watcher.NewRequest());
-  ASSERT_EQ(
-      ZX_OK,
-      device_set->SetWatcher(ToArray("bazinga"), std::move(watcher), &status)
-          .statvs);
+  ASSERT_EQ(ZX_OK, device_set->SetWatcher(ToArray("bazinga"),
+                                          std::move(watcher), &status));
   EXPECT_EQ(Status::OK, status);
 }
 
 TEST_F(DeviceSetTest, EraseWhileWatching) {
-  DeviceSetSync2Ptr device_set;
+  DeviceSetSyncPtr device_set;
   ASSERT_TRUE(GetDeviceSet(&device_set));
 
   Status status = Status::INTERNAL_ERROR;
-  ASSERT_EQ(ZX_OK,
-            device_set->SetFingerprint(ToArray("bazinga"), &status).statvs);
+  ASSERT_EQ(ZX_OK, device_set->SetFingerprint(ToArray("bazinga"), &status));
   EXPECT_EQ(Status::OK, status);
 
   fidl::Binding<DeviceSetWatcher> binding(this);
   DeviceSetWatcherPtr watcher;
   binding.Bind(watcher.NewRequest());
-  ASSERT_EQ(
-      ZX_OK,
-      device_set->SetWatcher(ToArray("bazinga"), std::move(watcher), &status)
-          .statvs);
+  ASSERT_EQ(ZX_OK, device_set->SetWatcher(ToArray("bazinga"),
+                                          std::move(watcher), &status));
   EXPECT_EQ(Status::OK, status);
 
   EXPECT_EQ(0, on_cloud_erased_calls_);
-  ASSERT_EQ(ZX_OK, device_set->Erase(&status).statvs);
+  ASSERT_EQ(ZX_OK, device_set->Erase(&status));
   EXPECT_EQ(Status::OK, status);
 
   ASSERT_EQ(ZX_OK, binding.WaitForMessage());
