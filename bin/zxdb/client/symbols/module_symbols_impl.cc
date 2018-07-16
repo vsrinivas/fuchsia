@@ -156,8 +156,12 @@ std::vector<LineMatch> GetFirstEntryForEachInline(
 
 ModuleSymbolsImpl::ModuleSymbolsImpl(const std::string& name,
                                      const std::string& build_id)
-    : name_(name), build_id_(build_id) {}
+    : name_(name), build_id_(build_id), weak_factory_(this) {}
 ModuleSymbolsImpl::~ModuleSymbolsImpl() = default;
+
+fxl::WeakPtr<ModuleSymbolsImpl> ModuleSymbolsImpl::GetWeakPtr() {
+  return weak_factory_.GetWeakPtr();
+}
 
 ModuleSymbolStatus ModuleSymbolsImpl::GetStatus() const {
   ModuleSymbolStatus status;

@@ -11,7 +11,7 @@
 namespace zxdb {
 
 struct ModuleSymbolStatus {
-  // Name of the executable or shared library.
+  // Name of the executable or shared library on the system.
   std::string name;
 
   // Build ID extracted from file.

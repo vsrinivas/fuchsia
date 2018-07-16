@@ -11,26 +11,37 @@ static_library("symbols") {
   ]
 
   public = [
+    "base_type.h",
     "file_line.h",
+    "lazy_symbol.h",
     "line_details.h",
     "loaded_module_symbols.h",
     "location.h",
+    "modified_type.h",
     "module_symbol_status.h",
     "module_symbols.h",
     "process_symbols.h",
     "system_symbols.h",
     "target_symbols.h",
+    "symbol.h",
+    "symbol_factory.h",
+    "type.h",
   ]
 
   sources = [
+    "base_type.cc",
     "dwarf_die_decoder.cc",
     "dwarf_die_decoder.h",
+    "dwarf_symbol_factory.cc",
+    "dwarf_symbol_factory.h",
     "file_line.cc",
+    "lazy_symbol.cc",
     "line_details.cc",
     "loaded_module_symbols.cc",
     "loaded_module_symbols_impl.cc",
     "loaded_module_symbols_impl.h",
     "location.cc",
+    "modified_type.cc",
     "module_symbol_index.cc",
     "module_symbol_index.h",
     "module_symbol_index_node.cc",
@@ -45,6 +56,8 @@ static_library("symbols") {
     "target_symbols.cc",
     "target_symbols_impl.cc",
     "target_symbols_impl.h",
+    "symbol.cc",
+    "type.cc",
   ]
 
   # This library can not use any part of the debugger other than the "common"

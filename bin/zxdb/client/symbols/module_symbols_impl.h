@@ -8,7 +8,8 @@
 #include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/bin/zxdb/client/symbols/module_symbol_index.h"
 #include "garnet/bin/zxdb/client/symbols/module_symbols.h"
-#include "garnet/public/lib/fxl/macros.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 
 namespace llvm {
@@ -39,7 +40,11 @@ class ModuleSymbolsImpl : public ModuleSymbols {
                              const std::string& build_id);
   ~ModuleSymbolsImpl();
 
+  llvm::DWARFContext* context() { return context_.get(); }
+
   Err Load();
+
+  fxl::WeakPtr<ModuleSymbolsImpl> GetWeakPtr();
 
   // ModuleSymbols implementation.
   ModuleSymbolStatus GetStatus() const override;
@@ -65,6 +70,8 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   llvm::DWARFUnitSection<llvm::DWARFCompileUnit> compile_units_;
 
   ModuleSymbolIndex index_;
+
+  fxl::WeakPtrFactory<ModuleSymbolsImpl> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleSymbolsImpl);
 };
