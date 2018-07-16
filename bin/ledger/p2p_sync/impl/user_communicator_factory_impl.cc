@@ -15,7 +15,7 @@
 namespace p2p_sync {
 UserCommunicatorFactoryImpl::UserCommunicatorFactoryImpl(
     ledger::Environment* environment,
-    fuchsia::sys::StartupContext* startup_context,
+    component::StartupContext* startup_context,
     std::string cobalt_client_name)
     : environment_(environment),
       startup_context_(startup_context),

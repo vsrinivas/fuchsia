@@ -22,7 +22,7 @@
 
 namespace test {
 void GetLedger(
-    fuchsia::sys::StartupContext* context,
+    component::StartupContext* context,
     fidl::InterfaceRequest<fuchsia::sys::ComponentController>
         controller_request,
     cloud_provider::CloudProviderPtr cloud_provider, std::string ledger_name,
@@ -30,7 +30,7 @@ void GetLedger(
     fit::function<void(ledger::Status, ledger::LedgerPtr)> callback) {
   auto repository_factory =
       std::make_unique<ledger_internal::LedgerRepositoryFactoryPtr>();
-  fuchsia::sys::Services child_services;
+  component::Services child_services;
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = "ledger";
   launch_info.directory_request = child_services.NewRequest();

@@ -9,8 +9,8 @@
 #include <string>
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/app/cpp/service_provider_impl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/service_provider_impl.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/svc/cpp/service_provider_bridge.h>
@@ -40,7 +40,7 @@ class Scope {
   void InitScope(const fuchsia::sys::EnvironmentPtr& parent_env,
                  const std::string& label);
 
-  fuchsia::sys::ServiceProviderBridge service_provider_bridge_;
+  component::ServiceProviderBridge service_provider_bridge_;
   fuchsia::sys::EnvironmentPtr env_;
   fuchsia::sys::LauncherPtr env_launcher_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;

@@ -10,7 +10,7 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/memory/ref_ptr.h>
@@ -22,7 +22,7 @@ namespace test {
 
 // Creates a new Ledger application instance and returns a LedgerPtr connection
 // to it.
-void GetLedger(fuchsia::sys::StartupContext* context,
+void GetLedger(component::StartupContext* context,
                fidl::InterfaceRequest<fuchsia::sys::ComponentController>
                    controller_request,
                cloud_provider::CloudProviderPtr cloud_provider,

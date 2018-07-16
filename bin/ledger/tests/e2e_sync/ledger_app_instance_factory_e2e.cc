@@ -5,7 +5,7 @@
 #include <utility>
 
 #include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fxl/files/scoped_temp_dir.h>
@@ -65,7 +65,7 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
  public:
   LedgerAppInstanceFactoryImpl()
       : startup_context_(
-            fuchsia::sys::StartupContext::CreateFromStartupInfoNotChecked()),
+            component::StartupContext::CreateFromStartupInfoNotChecked()),
         cloud_provider_firebase_factory_(startup_context_.get()) {}
   ~LedgerAppInstanceFactoryImpl() override;
   void Init();
@@ -76,7 +76,7 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
       LoopController* loop_controller) override;
 
  private:
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   CloudProviderFirebaseFactory cloud_provider_firebase_factory_;
 
   std::string server_id_;
@@ -97,7 +97,7 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance(
     LedgerAppInstanceFactory::LoopController* loop_controller) {
   fuchsia::sys::ComponentControllerPtr controller;
   ledger_internal::LedgerRepositoryFactoryPtr repository_factory;
-  fuchsia::sys::Services child_services;
+  component::Services child_services;
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = "ledger";
   launch_info.directory_request = child_services.NewRequest();

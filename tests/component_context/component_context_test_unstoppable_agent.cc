@@ -55,7 +55,7 @@ class TestApp {
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   modular::AgentDriver<TestApp> driver(context.get(), [&loop] { loop.Quit(); });
   loop.Run();
   return 0;

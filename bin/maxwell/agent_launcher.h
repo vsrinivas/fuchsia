@@ -17,7 +17,7 @@ class AgentLauncher {
  public:
   AgentLauncher(fuchsia::sys::Environment* environment)
       : environment_(environment) {}
-  fuchsia::sys::Services StartAgent(
+  component::Services StartAgent(
       const std::string& url,
       std::unique_ptr<MaxwellServiceProviderBridge> bridge);
 

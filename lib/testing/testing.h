@@ -8,7 +8,7 @@
 #include <string>
 
 #include <fuchsia/testing/runner/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 
 using fuchsia::testing::runner::TestRunnerStore;
 
@@ -28,7 +28,7 @@ constexpr int kTestTimeoutMilliseconds = 15000;
 // test is expected to call either Done() or Teardown() before terminating
 // itself in order for the TestRunner service to know that a test process did
 // not crash, or that the test has completed and should be torn down.
-void Init(fuchsia::sys::StartupContext* context, const std::string& identity);
+void Init(component::StartupContext* context, const std::string& identity);
 
 // Marks the test a failure with the given |log_msg| message, but does not tear
 // it down; the test may continue running. Once the test signals teardown by

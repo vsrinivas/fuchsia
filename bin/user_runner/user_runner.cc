@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
@@ -17,7 +17,7 @@
 
 fxl::AutoCall<fit::closure> SetupCobalt(
     const bool disable_statistics, async_dispatcher_t* dispatcher,
-    fuchsia::sys::StartupContext* const startup_context) {
+    component::StartupContext* const startup_context) {
   if (disable_statistics) {
     return fxl::MakeAutoCall<fit::closure>([] {});
   }
@@ -30,8 +30,8 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   trace::TraceProvider trace_provider(loop.dispatcher());
-  std::unique_ptr<fuchsia::sys::StartupContext> context =
-      fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<component::StartupContext> context =
+      component::StartupContext::CreateFromStartupInfo();
 
   fxl::AutoCall<fit::closure> cobalt_cleanup =
       SetupCobalt(test, std::move(loop.dispatcher()), context.get());

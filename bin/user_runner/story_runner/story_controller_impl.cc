@@ -14,8 +14,8 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include <lib/app/cpp/connect.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/connect.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/async/cpp/future.h>
 #include <lib/entity/cpp/json.h>
 #include <lib/fidl/cpp/clone.h>

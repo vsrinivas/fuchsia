@@ -22,7 +22,7 @@ std::shared_ptr<grpc::Channel> MakeChannel() {
 }  // namespace
 
 FactoryImpl::FactoryImpl(async_dispatcher_t* dispatcher,
-                         fuchsia::sys::StartupContext* startup_context,
+                         component::StartupContext* startup_context,
                          std::string cobalt_client_name)
     : dispatcher_(dispatcher),
       startup_context_(startup_context),

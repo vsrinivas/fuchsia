@@ -58,7 +58,7 @@ class ClipboardAgent {
   std::unique_ptr<ClipboardImpl> clipboard_;
 
   // The service namespace that the fuchsia::modular::Clipboard is added to.
-  fuchsia::sys::ServiceNamespace services_;
+  component::ServiceNamespace services_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ClipboardAgent);
 };
@@ -67,7 +67,7 @@ class ClipboardAgent {
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   modular::AgentDriver<modular::ClipboardAgent> driver(
       context.get(), [&loop] { loop.Quit(); });
   loop.Run();

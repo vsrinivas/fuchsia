@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_COBALT_COBALT_H_
 #define PERIDOT_BIN_LEDGER_COBALT_COBALT_H_
 
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/functional/auto_call.h>
@@ -27,7 +27,7 @@ enum class CobaltEvent : uint32_t {
 // Cobalt initialization. When cobalt is not need, the returned object must be
 // deleted. This method must not be called again until then.
 fxl::AutoCall<fit::closure> InitializeCobalt(
-    async_dispatcher_t* dispatcher, fuchsia::sys::StartupContext* context);
+    async_dispatcher_t* dispatcher, component::StartupContext* context);
 
 // Report an event to Cobalt.
 void ReportEvent(CobaltEvent event);

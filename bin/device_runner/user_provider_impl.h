@@ -7,7 +7,7 @@
 
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 
@@ -23,7 +23,7 @@ namespace modular {
 
 class UserProviderImpl : fuchsia::modular::UserProvider {
  public:
-  UserProviderImpl(std::shared_ptr<fuchsia::sys::StartupContext> context,
+  UserProviderImpl(std::shared_ptr<component::StartupContext> context,
                    const fuchsia::modular::AppConfig& user_runner,
                    const fuchsia::modular::AppConfig& default_user_shell,
                    const fuchsia::modular::AppConfig& story_shell,
@@ -56,7 +56,7 @@ class UserProviderImpl : fuchsia::modular::UserProvider {
 
   fidl::BindingSet<fuchsia::modular::UserProvider> bindings_;
 
-  std::shared_ptr<fuchsia::sys::StartupContext> context_;
+  std::shared_ptr<component::StartupContext> context_;
   const fuchsia::modular::AppConfig& user_runner_;  // Neither owned nor copied.
   const fuchsia::modular::AppConfig&
       default_user_shell_;                          // Neither owned nor copied.

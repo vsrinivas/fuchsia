@@ -11,7 +11,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/callback/scoped_callback.h>
@@ -49,7 +49,7 @@ class DevDeviceShellApp
       fuchsia::modular::UserWatcher {
  public:
   explicit DevDeviceShellApp(
-      fuchsia::sys::StartupContext* const startup_context, Settings settings)
+      component::StartupContext* const startup_context, Settings settings)
       : SingleServiceApp(startup_context),
         settings_(std::move(settings)),
         user_watcher_binding_(this),
@@ -185,7 +185,7 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   modular::AppDriver<modular::DevDeviceShellApp> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<modular::DevDeviceShellApp>(context.get(), settings),

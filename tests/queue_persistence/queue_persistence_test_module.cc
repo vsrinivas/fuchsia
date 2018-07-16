@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/app/cpp/connect.h>
+#include <lib/component/cpp/connect.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
@@ -42,7 +42,7 @@ class TestApp {
     fuchsia::sys::ServiceProviderPtr agent_services;
     component_context_->ConnectToAgent(kTestAgent, agent_services.NewRequest(),
                                        agent_controller_.NewRequest());
-    ConnectToService(agent_services.get(), agent_service_.NewRequest());
+    component::ConnectToService(agent_services.get(), agent_service_.NewRequest());
 
     Await("queue_persistence_test_agent_connected",
           [this] { AgentConnected(); });
@@ -94,7 +94,7 @@ class TestApp {
     fuchsia::sys::ServiceProviderPtr agent_services;
     component_context_->ConnectToAgent(kTestAgent, agent_services.NewRequest(),
                                        agent_controller_.NewRequest());
-    ConnectToService(agent_services.get(), agent_service_.NewRequest());
+    component::ConnectToService(agent_services.get(), agent_service_.NewRequest());
 
     Await("queue_persistence_test_agent_connected",
           [this] { AgentConnectedAgain(); });
@@ -138,7 +138,7 @@ class TestApp {
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   modular::ModuleDriver<TestApp> driver(context.get(),
                                         [&loop] { loop.Quit(); });
   loop.Run();

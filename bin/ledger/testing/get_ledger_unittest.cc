@@ -17,7 +17,7 @@ TEST(GetLedgerTest, CreateAndDeleteLedger) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   files::ScopedTempDir temp_dir;
 
-  auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::sys::ComponentControllerPtr controller;
 
   ledger::Status status = ledger::Status::UNKNOWN_ERROR;
@@ -37,7 +37,7 @@ TEST(GetLedgerTest, GetPageEnsureInitialized) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   files::ScopedTempDir temp_dir;
 
-  auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::sys::ComponentControllerPtr controller;
 
   ledger::Status status = ledger::Status::UNKNOWN_ERROR;

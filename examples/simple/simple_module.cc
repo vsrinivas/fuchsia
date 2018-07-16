@@ -4,8 +4,8 @@
 
 #include <fuchsia/modular/examples/simple/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/app/cpp/connect.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/connect.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fxl/functional/make_copyable.h>
@@ -38,7 +38,7 @@ class SimpleModule : fuchsia::ui::views_v1::ViewProvider {
 
     // Connect to the SimpleService in the agent's services.
     SimplePtr agent_service;
-    fuchsia::sys::ConnectToService(agent_services.get(),
+    component::ConnectToService(agent_services.get(),
                                    agent_service.NewRequest());
 
     // Request a new message queue from the component context.
@@ -82,7 +82,7 @@ class SimpleModule : fuchsia::ui::views_v1::ViewProvider {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   modular::ModuleDriver<simple::SimpleModule> driver(context.get(),
                                                      [&loop] { loop.Quit(); });
   loop.Run();

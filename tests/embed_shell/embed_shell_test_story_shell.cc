@@ -9,7 +9,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/logging.h>
@@ -29,7 +29,7 @@ namespace {
 class TestApp
     : public modular::testing::ComponentBase<fuchsia::modular::StoryShell> {
  public:
-  TestApp(fuchsia::sys::StartupContext* const startup_context)
+  TestApp(component::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
     TestInit(__FILE__);
   }

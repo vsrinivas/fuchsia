@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/app/cpp/connect.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/connect.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fxl/logging.h>
@@ -27,7 +27,7 @@ class TestApp
     : fuchsia::modular::NextListener,
       public modular::testing::ComponentBase<fuchsia::modular::UserShell> {
  public:
-  TestApp(fuchsia::sys::StartupContext* const startup_context)
+  TestApp(component::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
     TestInit(__FILE__);
   }

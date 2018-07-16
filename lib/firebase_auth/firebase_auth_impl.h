@@ -10,7 +10,7 @@
 #include <string>
 
 #include <fuchsia/modular/auth/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/async/dispatcher.h>
 #include <lib/backoff/backoff.h>
 #include <lib/callback/cancellable.h>
@@ -48,7 +48,7 @@ class FirebaseAuthImpl : public FirebaseAuth {
 
   FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher,
                    fuchsia::modular::auth::TokenProviderPtr token_provider,
-                   fuchsia::sys::StartupContext* startup_context);
+                   component::StartupContext* startup_context);
   // For tests.
   FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher,
                    fuchsia::modular::auth::TokenProviderPtr token_provider,

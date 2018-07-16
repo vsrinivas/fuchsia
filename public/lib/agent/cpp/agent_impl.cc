@@ -8,7 +8,7 @@
 
 namespace modular {
 
-AgentImpl::AgentImpl(fuchsia::sys::ServiceNamespace* const service_namespace,
+AgentImpl::AgentImpl(component::ServiceNamespace* const service_namespace,
                      Delegate* const delegate)
     : delegate_(delegate), binding_(this) {
   service_namespace->AddService<fuchsia::modular::Agent>(

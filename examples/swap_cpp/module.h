@@ -36,7 +36,7 @@ class ModuleApp : public modular::ViewApp {
       fuchsia::ui::views_v1::ViewManagerPtr,
       fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>)>;
 
-  explicit ModuleApp(fuchsia::sys::StartupContext* const startup_context,
+  explicit ModuleApp(component::StartupContext* const startup_context,
                      CreateViewCallback create);
 
  private:

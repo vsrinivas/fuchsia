@@ -83,7 +83,7 @@ class TestApp : QueuePersistenceTestService {
 
   std::unique_ptr<modular::MessageReceiverClient> msg_receiver_;
 
-  fuchsia::sys::ServiceNamespace services_;
+  component::ServiceNamespace services_;
   fidl::BindingSet<QueuePersistenceTestService> services_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
@@ -93,7 +93,7 @@ class TestApp : QueuePersistenceTestService {
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   modular::AgentDriver<TestApp> driver(context.get(), [&loop] { loop.Quit(); });
   loop.Run();
   return 0;

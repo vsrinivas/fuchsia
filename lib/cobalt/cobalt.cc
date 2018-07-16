@@ -8,7 +8,7 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/app/cpp/connect.h>
+#include <lib/component/cpp/connect.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/backoff/exponential_backoff.h>
@@ -188,7 +188,7 @@ CobaltObservation& CobaltObservation::operator=(CobaltObservation&& rhs) {
 namespace {
 class CobaltContextImpl : public CobaltContext {
  public:
-  CobaltContextImpl(async_dispatcher_t* dispatcher, fuchsia::sys::StartupContext* context,
+  CobaltContextImpl(async_dispatcher_t* dispatcher, component::StartupContext* context,
                     int32_t project_id);
   ~CobaltContextImpl();
 
@@ -203,7 +203,7 @@ class CobaltContextImpl : public CobaltContext {
 
   backoff::ExponentialBackoff backoff_;
   async_dispatcher_t* const dispatcher_;
-  fuchsia::sys::StartupContext* context_;
+  component::StartupContext* context_;
   fuchsia::cobalt::CobaltEncoderPtr encoder_;
   const int32_t project_id_;
 
@@ -214,7 +214,7 @@ class CobaltContextImpl : public CobaltContext {
 };
 
 CobaltContextImpl::CobaltContextImpl(async_dispatcher_t* dispatcher,
-                                     fuchsia::sys::StartupContext* context,
+                                     component::StartupContext* context,
                                      int32_t project_id)
     : dispatcher_(dispatcher), context_(context), project_id_(project_id) {
   ConnectToCobaltApplication();
@@ -340,12 +340,12 @@ void CobaltContextImpl::AddObservationCallback(CobaltObservation observation,
 }  // namespace
 
 std::unique_ptr<CobaltContext> MakeCobaltContext(
-    async_dispatcher_t* dispatcher, fuchsia::sys::StartupContext* context, int32_t project_id) {
+    async_dispatcher_t* dispatcher, component::StartupContext* context, int32_t project_id) {
   return std::make_unique<CobaltContextImpl>(dispatcher, context, project_id);
 }
 
 fxl::AutoCall<fit::closure> InitializeCobalt(
-    async_dispatcher_t* dispatcher, fuchsia::sys::StartupContext* startup_context,
+    async_dispatcher_t* dispatcher, component::StartupContext* startup_context,
     int32_t project_id, CobaltContext** cobalt_context) {
   FXL_DCHECK(!*cobalt_context);
   auto context = MakeCobaltContext(dispatcher, startup_context, project_id);

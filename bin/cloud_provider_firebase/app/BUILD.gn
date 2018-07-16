@@ -13,7 +13,7 @@ executable("app") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/public/fidl/fuchsia.modular",

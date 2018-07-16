@@ -18,7 +18,7 @@ source_set("agent_driver") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/public/fidl/fuchsia.modular",
@@ -33,7 +33,7 @@ source_set("app_driver") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
   ]
 
   deps = [
@@ -49,7 +49,7 @@ source_set("module_driver") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/fidl/fuchsia.ui.views_v1",

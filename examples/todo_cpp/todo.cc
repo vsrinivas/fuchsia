@@ -11,7 +11,7 @@
 #include <iostream>
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <lib/app/cpp/connect.h>
+#include <lib/component/cpp/connect.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
@@ -103,7 +103,7 @@ TodoApp::TodoApp(async::Loop* loop)
       size_distribution_(kMeanListSize, kListSizeStdDev),
       delay_distribution_(kMinDelaySeconds, kMaxDelaySeconds),
       generator_(&rng_),
-      context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+      context_(component::StartupContext::CreateFromStartupInfo()),
       page_watcher_binding_(this) {
   context_->ConnectToEnvironmentService(module_context_.NewRequest());
   module_context_->GetComponentContext(component_context_.NewRequest());

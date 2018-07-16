@@ -10,7 +10,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/agent/cpp/agent_impl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/binding.h>
@@ -23,7 +23,7 @@ namespace modular {
 // This interface is passed to the Impl object that AgentDriver initializes.
 class AgentHost {
  public:
-  virtual fuchsia::sys::StartupContext* startup_context() = 0;
+  virtual component::StartupContext* startup_context() = 0;
   virtual fuchsia::modular::AgentContext* agent_context() = 0;
 };
 
@@ -47,7 +47,7 @@ class AgentHost {
 //
 // int main(int argc, const char** argv) {
 //   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-//   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+//   auto context = component::StartupContext::CreateFromStartupInfo();
 //   modular::AgentDriver<HelloAgent> driver(context.get(),
 //                                               [&loop] { loop.Quit(); });
 //   loop.Run();
@@ -56,7 +56,7 @@ class AgentHost {
 template <typename Impl>
 class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
  public:
-  AgentDriver(fuchsia::sys::StartupContext* const context,
+  AgentDriver(component::StartupContext* const context,
               std::function<void()> on_terminated)
       : context_(context),
         lifecycle_impl_(context->outgoing().deprecated_services(), this),
@@ -70,7 +70,7 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
 
  private:
   // |AgentHost|
-  fuchsia::sys::StartupContext* startup_context() override { return context_; }
+  component::StartupContext* startup_context() override { return context_; }
 
   // |AgentHost|
   fuchsia::modular::AgentContext* agent_context() override {
@@ -105,7 +105,7 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
     }
   }
 
-  fuchsia::sys::StartupContext* const context_;
+  component::StartupContext* const context_;
   LifecycleImpl lifecycle_impl_;
   std::unique_ptr<AgentImpl> agent_impl_;
   std::function<void()> on_terminated_;

@@ -47,7 +47,7 @@ class AppClientBase : public AsyncHolderBase {
   // Gives access to the services of the started application. Services
   // obtained from it are not involved in life cycle management provided by
   // AppClient, however. This is used for example to obtain the ViewProvider.
-  fuchsia::sys::Services& services() { return services_; }
+  component::Services& services() { return services_; }
 
   // Registers a handler to receive a notification when this application
   // connection encounters an error. This typically happens when this
@@ -65,7 +65,7 @@ class AppClientBase : public AsyncHolderBase {
   virtual void ServiceUnbind();
 
   fuchsia::sys::ComponentControllerPtr app_;
-  fuchsia::sys::Services services_;
+  component::Services services_;
   FXL_DISALLOW_COPY_AND_ASSIGN(AppClientBase);
 };
 

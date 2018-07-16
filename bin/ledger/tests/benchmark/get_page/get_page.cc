@@ -41,7 +41,7 @@ GetPageBenchmark::GetPageBenchmark(async::Loop* loop, size_t requests_count,
                                    bool reuse)
     : loop_(loop),
       tmp_dir_(kStoragePath),
-      startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+      startup_context_(component::StartupContext::CreateFromStartupInfo()),
       requests_count_(requests_count),
       reuse_(reuse) {
   FXL_DCHECK(loop_);

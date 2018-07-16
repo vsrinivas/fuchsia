@@ -5,7 +5,7 @@
 #include "peridot/lib/environment_host/maxwell_service_provider_bridge.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/app/cpp/connect.h>
+#include <lib/component/cpp/connect.h>
 
 namespace maxwell {
 namespace {
@@ -22,7 +22,7 @@ MaxwellServiceProviderBridge::MaxwellServiceProviderBridge(
       [parent_env](fidl::InterfaceRequest<fuchsia::sys::Loader> request) {
         fuchsia::sys::ServiceProviderPtr services;
         parent_env->GetServices(services.NewRequest());
-        fuchsia::sys::ConnectToService(services.get(), std::move(request));
+        component::ConnectToService(services.get(), std::move(request));
       });
   AddServiceForName(
       [parent_env](zx::channel request) {

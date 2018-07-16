@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/files/scoped_temp_dir.h>
@@ -59,7 +59,7 @@ class SyncBenchmark : public ledger::PageWatcher {
   async::Loop* const loop_;
   test::DataGenerator generator_;
   PageDataGenerator page_data_generator_;
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   test::CloudProviderFirebaseFactory cloud_provider_firebase_factory_;
   const size_t change_count_;
   const size_t value_size_;

@@ -6,7 +6,7 @@
 #define PERIDOT_BIN_LEDGER_TESTING_NETCONNECTOR_FAKE_NETCONNECTOR_H_
 
 #include <fuchsia/netconnector/cpp/fidl.h>
-#include <lib/app/cpp/service_provider_impl.h>
+#include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
 
@@ -53,7 +53,7 @@ class FakeNetConnector : public fuchsia::netconnector::NetConnector {
   void GetKnownDeviceNames(uint64_t version_last_seen,
                            GetKnownDeviceNamesCallback callback) override;
 
-  fuchsia::sys::ServiceProviderImpl service_provider_impl_;
+  component::ServiceProviderImpl service_provider_impl_;
   Delegate* const delegate_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeNetConnector);

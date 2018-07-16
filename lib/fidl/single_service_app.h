@@ -10,7 +10,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fxl/macros.h>
 
@@ -23,7 +23,7 @@ template <class Service>
 class SingleServiceApp : protected Service,
                          private fuchsia::ui::views_v1::ViewProvider {
  public:
-  SingleServiceApp(fuchsia::sys::StartupContext* const startup_context)
+  SingleServiceApp(component::StartupContext* const startup_context)
       : startup_context_(startup_context),
         service_binding_(new fidl::Binding<Service>(this)),
         view_provider_binding_(this) {
@@ -46,7 +46,7 @@ class SingleServiceApp : protected Service,
   virtual void Terminate(std::function<void()> done) { done(); }
 
  protected:
-  fuchsia::sys::StartupContext* startup_context() const {
+  component::StartupContext* startup_context() const {
     return startup_context_;
   }
 
@@ -58,7 +58,7 @@ class SingleServiceApp : protected Service,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
       override {}
 
-  fuchsia::sys::StartupContext* const startup_context_;
+  component::StartupContext* const startup_context_;
   std::unique_ptr<fidl::Binding<Service>> service_binding_;
   fidl::Binding<fuchsia::ui::views_v1::ViewProvider> view_provider_binding_;
 
@@ -70,7 +70,7 @@ class SingleServiceApp : protected Service,
 // used as an Impl class of AppDriver.
 class ViewApp : private fuchsia::ui::views_v1::ViewProvider {
  public:
-  ViewApp(fuchsia::sys::StartupContext* const startup_context)
+  ViewApp(component::StartupContext* const startup_context)
       : startup_context_(startup_context), view_provider_binding_(this) {
     startup_context_->outgoing()
         .AddPublicService<fuchsia::ui::views_v1::ViewProvider>(
@@ -86,7 +86,7 @@ class ViewApp : private fuchsia::ui::views_v1::ViewProvider {
   virtual void Terminate(std::function<void()> done) { done(); }
 
  protected:
-  fuchsia::sys::StartupContext* startup_context() const {
+  component::StartupContext* startup_context() const {
     return startup_context_;
   }
 
@@ -98,7 +98,7 @@ class ViewApp : private fuchsia::ui::views_v1::ViewProvider {
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
       override {}
 
-  fuchsia::sys::StartupContext* const startup_context_;
+  component::StartupContext* const startup_context_;
   fidl::Binding<fuchsia::ui::views_v1::ViewProvider> view_provider_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewApp);

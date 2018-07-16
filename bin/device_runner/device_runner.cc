@@ -13,7 +13,7 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/array.h>
 #include <lib/fidl/cpp/binding.h>
@@ -193,7 +193,7 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
  public:
   explicit DeviceRunnerApp(
       const Settings& settings,
-      std::shared_ptr<fuchsia::sys::StartupContext> const context,
+      std::shared_ptr<component::StartupContext> const context,
       std::function<void()> on_shutdown)
       : settings_(settings),
         user_provider_impl_("UserProviderImpl"),
@@ -349,7 +349,7 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
   const Settings& settings_;  // Not owned nor copied.
   AsyncHolder<UserProviderImpl> user_provider_impl_;
 
-  std::shared_ptr<fuchsia::sys::StartupContext> const context_;
+  std::shared_ptr<component::StartupContext> const context_;
   fuchsia::modular::DeviceRunnerMonitorPtr monitor_;
   std::function<void()> on_shutdown_;
 
@@ -367,7 +367,7 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
 };
 
 fxl::AutoCall<fit::closure> SetupCobalt(Settings& settings, async_dispatcher_t* dispatcher,
-                                        fuchsia::sys::StartupContext* context) {
+                                        component::StartupContext* context) {
   if (settings.disable_statistics) {
     return fxl::MakeAutoCall<fit::closure>([] {});
   }
@@ -386,8 +386,8 @@ int main(int argc, const char** argv) {
   modular::Settings settings(command_line);
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   trace::TraceProvider trace_provider(loop.dispatcher());
-  auto context = std::shared_ptr<fuchsia::sys::StartupContext>(
-      fuchsia::sys::StartupContext::CreateFromStartupInfo());
+  auto context = std::shared_ptr<component::StartupContext>(
+      component::StartupContext::CreateFromStartupInfo());
   fxl::AutoCall<fit::closure> cobalt_cleanup =
       modular::SetupCobalt(settings, std::move(loop.dispatcher()), context.get());
 

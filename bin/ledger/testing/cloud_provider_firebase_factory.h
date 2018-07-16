@@ -9,7 +9,7 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fxl/memory/ref_ptr.h>
 
@@ -26,7 +26,7 @@ namespace test {
 class CloudProviderFirebaseFactory {
  public:
   explicit CloudProviderFirebaseFactory(
-      fuchsia::sys::StartupContext* startup_context);
+      component::StartupContext* startup_context);
   ~CloudProviderFirebaseFactory();
 
   void Init();
@@ -36,7 +36,7 @@ class CloudProviderFirebaseFactory {
       fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
 
  private:
-  fuchsia::sys::StartupContext* startup_context_;
+  component::StartupContext* startup_context_;
 
   // Thread used to run the fake token manager on.
   async::Loop loop_;

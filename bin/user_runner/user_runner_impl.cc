@@ -13,7 +13,7 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include <lib/app/cpp/connect.h>
+#include <lib/component/cpp/connect.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/unique_fd.h>
@@ -176,7 +176,7 @@ class UserRunnerImpl::PresentationProviderImpl : public PresentationProvider {
 };
 
 UserRunnerImpl::UserRunnerImpl(
-    fuchsia::sys::StartupContext* const startup_context, const bool test)
+    component::StartupContext* const startup_context, const bool test)
     : startup_context_(startup_context),
       test_(test),
       user_shell_context_binding_(this),

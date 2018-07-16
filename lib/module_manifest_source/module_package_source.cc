@@ -31,7 +31,7 @@ constexpr char kInitialModulePackagesIndexDir[] =
 using ::fuchsia::maxwell::internal::ModulePackageIndexer;
 
 ModulePackageSource::ModulePackageSource(
-    fuchsia::sys::StartupContext* const context)
+    component::StartupContext* const context)
     : weak_factory_(this) {
   context->outgoing().debug_dir()->AddEntry(
       ModulePackageIndexer::Name_,

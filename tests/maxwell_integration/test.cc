@@ -7,7 +7,7 @@
 namespace maxwell {
 
 MaxwellTestBase::MaxwellTestBase() : loop_(&kAsyncLoopConfigMakeDefault) {
-  startup_context_ = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  startup_context_ = component::StartupContext::CreateFromStartupInfo();
   auto root_environment = startup_context_->environment().get();
   FXL_CHECK(root_environment != nullptr);
 
@@ -20,8 +20,8 @@ MaxwellTestBase::MaxwellTestBase() : loop_(&kAsyncLoopConfigMakeDefault) {
       });
 }
 
-fuchsia::sys::Services MaxwellTestBase::StartServices(const std::string& url) {
-  fuchsia::sys::Services services;
+component::Services MaxwellTestBase::StartServices(const std::string& url) {
+  component::Services services;
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = url;
   launch_info.directory_request = services.NewRequest();

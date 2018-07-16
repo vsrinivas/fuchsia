@@ -20,7 +20,7 @@ executable_package("suggestion_engine") {
   deps = [
     ":debug",
     ":suggestion_engine_impl",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",

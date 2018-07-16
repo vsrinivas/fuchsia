@@ -5,9 +5,9 @@
 #ifndef PERIDOT_TESTS_MAXWELL_INTEGRATION_TEST_H_
 #define PERIDOT_TESTS_MAXWELL_INTEGRATION_TEST_H_
 
-#include <lib/app/cpp/connect.h>
-#include <lib/app/cpp/service_provider_impl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/connect.h>
+#include <lib/component/cpp/service_provider_impl.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include "gtest/gtest.h"
@@ -27,7 +27,7 @@ class MaxwellTestBase : public testing::Test {
     agent_launcher_->StartAgent(url, std::move(bridge));
   }
 
-  fuchsia::sys::Services StartServices(const std::string& url);
+  component::Services StartServices(const std::string& url);
 
   template <typename Interface>
   fidl::InterfacePtr<Interface> ConnectToService(const std::string& url) {
@@ -44,10 +44,10 @@ class MaxwellTestBase : public testing::Test {
   async::Loop loop_;
 
  private:
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   std::unique_ptr<AgentLauncher> agent_launcher_;
 
-  fuchsia::sys::ServiceProviderImpl child_app_services_;
+  component::ServiceProviderImpl child_app_services_;
   modular::ComponentContextFake child_component_context_;
 };
 

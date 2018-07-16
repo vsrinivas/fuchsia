@@ -51,7 +51,7 @@ DeleteEntryBenchmark::DeleteEntryBenchmark(async::Loop* loop,
                                            size_t key_size, size_t value_size)
     : loop_(loop),
       tmp_dir_(kStoragePath),
-      startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+      startup_context_(component::StartupContext::CreateFromStartupInfo()),
       entry_count_(entry_count),
       transaction_size_(transaction_size),
       key_size_(key_size),

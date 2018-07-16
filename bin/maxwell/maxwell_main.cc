@@ -5,7 +5,7 @@
 #include <iostream>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/files/file.h>
@@ -23,7 +23,7 @@ namespace {
 
 class App {
  public:
-  App(fuchsia::sys::StartupContext* context, const Config& config)
+  App(component::StartupContext* context, const Config& config)
       : factory_impl_(context, config) {
     context->outgoing()
         .AddPublicService<fuchsia::modular::UserIntelligenceProviderFactory>(
@@ -166,7 +166,7 @@ int main(int argc, const char** argv) {
   FXL_LOG(INFO) << "Starting Maxwell with config: \n" << config;
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   maxwell::App app(context.get(), config);
   loop.Run();
   return 0;

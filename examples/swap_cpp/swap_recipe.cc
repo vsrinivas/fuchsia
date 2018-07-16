@@ -6,7 +6,7 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
@@ -68,7 +68,7 @@ class RecipeView : public mozart::BaseView {
 
 class RecipeApp : public modular::ViewApp {
  public:
-  RecipeApp(fuchsia::sys::StartupContext* const startup_context)
+  RecipeApp(component::StartupContext* const startup_context)
       : ViewApp(startup_context) {
     startup_context->ConnectToEnvironmentService(module_context_.NewRequest());
     SwapModule();
@@ -136,7 +136,7 @@ class RecipeApp : public modular::ViewApp {
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   modular::AppDriver<RecipeApp> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<RecipeApp>(context.get()), [&loop] { loop.Quit(); });

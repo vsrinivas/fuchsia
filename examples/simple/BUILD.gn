@@ -14,7 +14,7 @@ executable_package("simple_agent") {
 
   deps = [
     ":interfaces",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//peridot/public/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -27,7 +27,7 @@ executable_package("simple_module") {
 
   deps = [
     ":interfaces",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//peridot/lib/fidl:message_receiver_client",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//zircon/public/lib/async-loop-cpp",

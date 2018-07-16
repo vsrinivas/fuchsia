@@ -10,7 +10,7 @@ executable_package("dev_token_manager") {
   ]
 
   deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

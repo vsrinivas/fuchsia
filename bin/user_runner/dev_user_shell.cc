@@ -13,8 +13,8 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include <lib/app/cpp/connect.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/connect.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding.h>
@@ -48,7 +48,7 @@ class DevUserShellApp
       fuchsia::modular::NextListener,
       public modular::SingleServiceApp<fuchsia::modular::UserShell> {
  public:
-  explicit DevUserShellApp(fuchsia::sys::StartupContext* const startup_context,
+  explicit DevUserShellApp(component::StartupContext* const startup_context,
                            Settings settings)
       : SingleServiceApp(startup_context),
         settings_(std::move(settings)),
@@ -205,7 +205,7 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   modular::AppDriver<DevUserShellApp> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<DevUserShellApp>(context.get(), std::move(settings)),

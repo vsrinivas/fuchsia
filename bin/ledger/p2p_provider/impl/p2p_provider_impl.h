@@ -10,7 +10,7 @@
 #include <string>
 
 #include <fuchsia/netconnector/cpp/fidl.h>
-#include <lib/app/cpp/service_provider_impl.h>
+#include <lib/component/cpp/service_provider_impl.h>
 #include <lib/callback/auto_cleanable.h>
 #include <lib/netconnector/cpp/message_relay.h>
 
@@ -88,7 +88,7 @@ class P2PProviderImpl : public P2PProvider {
   // down, ...), we remove it from this set.
   std::set<std::string, convert::StringViewComparator> contacted_hosts_;
 
-  fuchsia::sys::ServiceProviderImpl network_service_provider_;
+  component::ServiceProviderImpl network_service_provider_;
   std::string const host_name_;
   fuchsia::netconnector::NetConnectorPtr const net_connector_;
   std::unique_ptr<p2p_provider::UserIdProvider> const user_id_provider_;

@@ -18,7 +18,7 @@
 #include <fuchsia/speech/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include <lib/app/cpp/service_provider_impl.h>
+#include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fxl/macros.h>
@@ -53,7 +53,7 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
                        fuchsia::modular::UserShellContext,
                        EntityProviderLauncher {
  public:
-  UserRunnerImpl(fuchsia::sys::StartupContext* startup_context, bool test);
+  UserRunnerImpl(component::StartupContext* startup_context, bool test);
 
   ~UserRunnerImpl() override;
 
@@ -170,7 +170,7 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
   // execution steps are stored in at_end_.
   void TerminateRecurse(int i);
 
-  fuchsia::sys::StartupContext* const startup_context_;
+  component::StartupContext* const startup_context_;
   const bool test_;
 
   fidl::BindingSet<fuchsia::modular::internal::UserRunner> bindings_;
@@ -187,7 +187,7 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
   fuchsia::ledger::internal::LedgerRepositoryPtr ledger_repository_;
   std::unique_ptr<LedgerClient> ledger_client_;
   // Provides services to the Ledger
-  fuchsia::sys::ServiceProviderImpl ledger_service_provider_;
+  component::ServiceProviderImpl ledger_service_provider_;
 
   std::unique_ptr<Scope> user_scope_;
 
@@ -215,7 +215,7 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
   std::unique_ptr<PuppetMasterImpl> puppet_master_impl_;
 
   // Services we provide to |context_engine_app_|.
-  fuchsia::sys::ServiceProviderImpl context_engine_ns_services_;
+  component::ServiceProviderImpl context_engine_ns_services_;
 
   // These component contexts are supplied to:
   // - the user intelligence provider (from |maxwell_app_|) so it can run agents
@@ -234,7 +234,7 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
       intelligence_services_;
 
   // Services we provide to the module resolver's namespace.
-  fuchsia::sys::ServiceProviderImpl module_resolver_ns_services_;
+  component::ServiceProviderImpl module_resolver_ns_services_;
   fuchsia::modular::ModuleResolverPtr module_resolver_service_;
 
   class PresentationProviderImpl;

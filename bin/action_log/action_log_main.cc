@@ -5,7 +5,7 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fxl/logging.h>
@@ -45,7 +45,7 @@ class UserActionLogFactoryImpl : public fuchsia::modular::UserActionLogFactory {
 class UserActionLogFactoryApp {
  public:
   UserActionLogFactoryApp()
-      : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
+      : context_(component::StartupContext::CreateFromStartupInfo()) {
     std::unique_ptr<UserActionLogFactoryImpl> factory_impl(
         new UserActionLogFactoryImpl());
     factory_impl_.swap(factory_impl);
@@ -62,7 +62,7 @@ class UserActionLogFactoryApp {
   }
 
  private:
-  std::unique_ptr<fuchsia::sys::StartupContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   std::unique_ptr<UserActionLogFactoryImpl> factory_impl_;
   fidl::BindingSet<fuchsia::modular::UserActionLogFactory> factory_bindings_;
 

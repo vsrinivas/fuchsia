@@ -7,7 +7,7 @@
 
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/binding.h>
@@ -33,7 +33,7 @@ namespace {
 class TestApp
     : public modular::testing::ComponentBase<fuchsia::modular::UserShell> {
  public:
-  explicit TestApp(fuchsia::sys::StartupContext* const startup_context)
+  explicit TestApp(component::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
     TestInit(__FILE__);
   }

@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/files/scoped_temp_dir.h>
@@ -46,7 +46,7 @@ class DeleteEntryBenchmark {
   files::ScopedTempDir tmp_dir_;
   test::DataGenerator generator_;
   PageDataGenerator page_data_generator_;
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   const size_t entry_count_;
   const size_t transaction_size_;
   const size_t key_size_;

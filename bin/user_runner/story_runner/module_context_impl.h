@@ -9,7 +9,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include <lib/app/cpp/service_provider_impl.h>
+#include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
@@ -101,7 +101,7 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
 
   // A service provider that represents the services to be added into an
   // application's namespace.
-  fuchsia::sys::ServiceProviderImpl service_provider_impl_;
+  component::ServiceProviderImpl service_provider_impl_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleContextImpl);
 };

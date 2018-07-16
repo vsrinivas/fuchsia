@@ -12,9 +12,9 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/agent/cpp/agent_impl.h>
-#include <lib/app/cpp/connect.h>
-#include <lib/app/cpp/service_provider_impl.h>
-#include <lib/app/cpp/testing/fake_launcher.h>
+#include <lib/component/cpp/connect.h>
+#include <lib/component/cpp/service_provider_impl.h>
+#include <lib/component/cpp/testing/fake_launcher.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/macros.h>
@@ -33,7 +33,7 @@ namespace modular {
 namespace testing {
 namespace {
 
-using ::fuchsia::sys::testing::FakeLauncher;
+using ::component::testing::FakeLauncher;
 
 class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
  public:
@@ -126,7 +126,7 @@ class MyEntityProvider : AgentImpl::Delegate,
     FXL_CHECK(launch_info_.additional_services->provider.is_valid());
     auto additional_services =
         launch_info_.additional_services->provider.Bind();
-    fuchsia::sys::ConnectToService(additional_services.get(),
+    component::ConnectToService(additional_services.get(),
                                    agent_context_.NewRequest());
     fuchsia::modular::ComponentContextPtr component_context;
     agent_context_->GetComponentContext(component_context.NewRequest());

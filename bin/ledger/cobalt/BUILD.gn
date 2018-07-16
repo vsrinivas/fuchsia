@@ -11,7 +11,7 @@ source_set("cobalt") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
   ]
 

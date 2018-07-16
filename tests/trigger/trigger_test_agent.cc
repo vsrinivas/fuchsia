@@ -83,7 +83,7 @@ class TestApp : TriggerTestService {
                                       [] {});
   }
 
-  fuchsia::sys::ServiceNamespace agent_services_;
+  component::ServiceNamespace agent_services_;
 
   fuchsia::modular::ComponentContextPtr component_context_;
   fuchsia::modular::AgentContext* const agent_context_;
@@ -98,7 +98,7 @@ class TestApp : TriggerTestService {
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   modular::AgentDriver<TestApp> driver(context.get(), [&loop] { loop.Quit(); });
   loop.Run();
   return 0;

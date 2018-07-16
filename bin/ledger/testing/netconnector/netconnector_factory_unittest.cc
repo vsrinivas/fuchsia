@@ -246,7 +246,7 @@ TEST_F(NetConnectorFactoryTest, ServiceProvider) {
   factory_.AddBinding("host1", netconnector1.NewRequest());
 
   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> handle;
-  fuchsia::sys::ServiceProviderImpl service_provider1;
+  component::ServiceProviderImpl service_provider1;
   std::vector<std::unique_ptr<netconnector::MessageRelay>> relays_host1;
   service_provider1.AddBinding(handle.NewRequest());
   service_provider1.AddServiceForName(

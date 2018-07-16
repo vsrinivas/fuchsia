@@ -10,7 +10,7 @@
 #include <string>
 
 #include <fuchsia/netconnector/cpp/fidl.h>
-#include <lib/app/cpp/service_provider_impl.h>
+#include <lib/component/cpp/service_provider_impl.h>
 #include <lib/callback/auto_cleanable.h>
 #include <lib/netconnector/cpp/message_relay.h>
 
@@ -56,7 +56,7 @@ class UserCommunicatorImpl : public UserCommunicator,
 
   bool started_ = false;
   std::string user_token_;
-  std::unique_ptr<fuchsia::sys::ServiceProviderImpl> network_service_provider_;
+  std::unique_ptr<component::ServiceProviderImpl> network_service_provider_;
 
   std::unique_ptr<p2p_provider::P2PProvider> p2p_provider_;
   coroutine::CoroutineService* const coroutine_service_;

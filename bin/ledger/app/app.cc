@@ -8,7 +8,7 @@
 #include <utility>
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -38,7 +38,7 @@ struct AppParams {
 
 fxl::AutoCall<fit::closure> SetupCobalt(
     bool disable_statistics, async_dispatcher_t* dispatcher,
-    fuchsia::sys::StartupContext* startup_context) {
+    component::StartupContext* startup_context) {
   if (disable_statistics) {
     return fxl::MakeAutoCall<fit::closure>([] {});
   }
@@ -57,7 +57,7 @@ class App : public ledger_internal::LedgerController {
       : app_params_(app_params),
         loop_(&kAsyncLoopConfigMakeDefault),
         trace_provider_(loop_.dispatcher()),
-        startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+        startup_context_(component::StartupContext::CreateFromStartupInfo()),
         cobalt_cleaner_(SetupCobalt(app_params_.disable_statistics,
                                     loop_.dispatcher(), startup_context_.get())) {
     FXL_DCHECK(startup_context_);
@@ -107,7 +107,7 @@ class App : public ledger_internal::LedgerController {
   async::Loop loop_;
   async::Loop io_loop_;
   trace::TraceProvider trace_provider_;
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   fxl::AutoCall<fit::closure> cobalt_cleaner_;
   std::unique_ptr<Environment> environment_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;

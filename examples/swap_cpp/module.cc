@@ -32,7 +32,7 @@ void ModuleView::OnPropertiesChanged(fuchsia::ui::views_v1::ViewProperties) {
   InvalidateScene();
 }
 
-ModuleApp::ModuleApp(fuchsia::sys::StartupContext* const startup_context,
+ModuleApp::ModuleApp(component::StartupContext* const startup_context,
                      CreateViewCallback create)
     : ViewApp(startup_context), create_(std::move(create)) {}
 

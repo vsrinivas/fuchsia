@@ -18,7 +18,7 @@ namespace modular {
 namespace testing {
 
 LedgerRepositoryForTesting::LedgerRepositoryForTesting()
-    : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()) {
   fuchsia::modular::AppConfig ledger_config;
   ledger_config.url = kLedgerAppUrl;
 

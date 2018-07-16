@@ -9,7 +9,7 @@
 
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fxl/macros.h>
 
@@ -32,7 +32,7 @@ class LedgerRepositoryForTesting {
   void Terminate(std::function<void()> done);
 
  private:
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   scoped_tmpfs::ScopedTmpFS tmp_fs_;
   std::unique_ptr<AppClient<fuchsia::ledger::internal::LedgerController>>
       ledger_app_client_;

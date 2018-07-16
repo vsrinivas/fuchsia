@@ -5,7 +5,7 @@
 #include <utility>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/app/cpp/connect.h>
+#include <lib/component/cpp/connect.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
@@ -89,7 +89,7 @@ class TestApp {
     component_context_->ConnectToAgent(kOneAgentUrl,
                                        one_agent_services.NewRequest(),
                                        one_agent_controller.NewRequest());
-    ConnectToService(one_agent_services.get(),
+    component::ConnectToService(one_agent_services.get(),
                      one_agent_interface_.NewRequest());
 
     Await("one_agent_connected", [this] {
@@ -196,7 +196,7 @@ class TestApp {
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   modular::ModuleDriver<TestApp> driver(context.get(),
                                         [&loop] { loop.Quit(); });
   loop.Run();

@@ -69,8 +69,8 @@ int main(int argc, char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context =
-      fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<component::StartupContext> startup_context =
+      component::StartupContext::CreateFromStartupInfo();
   cloud_provider_firestore::CloudProviderFactory factory(startup_context.get(),
                                                          credentials_path);
 

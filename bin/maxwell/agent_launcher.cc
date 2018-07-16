@@ -13,7 +13,7 @@ constexpr char kEnvironmentLabel[] = "agent";
 
 }  // namespace
 
-fuchsia::sys::Services AgentLauncher::StartAgent(
+component::Services AgentLauncher::StartAgent(
     const std::string& url,
     std::unique_ptr<MaxwellServiceProviderBridge> bridge) {
   bridge_ = std::move(bridge);
@@ -27,7 +27,7 @@ fuchsia::sys::Services AgentLauncher::StartAgent(
 
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = url;
-  fuchsia::sys::Services services;
+  component::Services services;
   launch_info.directory_request = services.NewRequest();
   FXL_LOG(INFO) << "Starting Maxwell agent " << url;
   agent_launcher->CreateComponent(std::move(launch_info), NULL);

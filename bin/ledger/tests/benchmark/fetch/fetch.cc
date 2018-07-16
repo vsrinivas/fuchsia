@@ -52,7 +52,7 @@ FetchBenchmark::FetchBenchmark(async::Loop* loop, size_t entry_count,
                                size_t value_size, size_t part_size,
                                std::string server_id)
     : loop_(loop),
-      startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+      startup_context_(component::StartupContext::CreateFromStartupInfo()),
       cloud_provider_firebase_factory_(startup_context_.get()),
       sync_watcher_binding_(this),
       entry_count_(entry_count),

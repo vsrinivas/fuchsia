@@ -38,7 +38,7 @@ class SimpleAgent {
 
  private:
   // The services namespace that the `Simple` service is added to.
-  fuchsia::sys::ServiceNamespace services_;
+  component::ServiceNamespace services_;
 
   // The implementation of the Simple service.
   std::unique_ptr<SimpleImpl> simple_impl_;
@@ -48,7 +48,7 @@ class SimpleAgent {
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   modular::AgentDriver<simple::SimpleAgent> driver(context.get(),
                                                    [&loop] { loop.Quit(); });
   loop.Run();

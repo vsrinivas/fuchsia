@@ -10,7 +10,7 @@
 namespace cloud_provider_firebase {
 
 FactoryImpl::FactoryImpl(async_dispatcher_t* dispatcher,
-                         fuchsia::sys::StartupContext* startup_context,
+                         component::StartupContext* startup_context,
                          network_wrapper::NetworkWrapper* network_wrapper,
                          std::string cobalt_client_name)
     : dispatcher_(dispatcher),

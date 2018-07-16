@@ -30,7 +30,7 @@ PutBenchmark::PutBenchmark(
     : loop_(loop),
       generator_(seed),
       tmp_dir_(kStoragePath),
-      startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+      startup_context_(component::StartupContext::CreateFromStartupInfo()),
       entry_count_(entry_count),
       transaction_size_(transaction_size),
       key_size_(key_size),

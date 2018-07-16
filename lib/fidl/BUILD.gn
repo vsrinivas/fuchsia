@@ -11,7 +11,7 @@ source_set("app_client") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
   ]
 
   deps = [
@@ -78,7 +78,7 @@ source_set("scope") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
   ]
 
   deps = [
@@ -95,7 +95,7 @@ source_set("single_service_app") {
   public_deps = [
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/fidl/fuchsia.ui.views_v1",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/public/fidl/fuchsia.modular",
@@ -109,7 +109,7 @@ source_set("view_host") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
   ]
 
   deps = [
@@ -162,8 +162,8 @@ source_set("app_client_unittest") {
   deps = [
     ":app_client",
     ":app_client_unittest_fidl",
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/app/cpp/testing:fake_launcher",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing:fake_launcher",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",

@@ -18,7 +18,7 @@ constexpr fxl::StringView user_id_filename = "p2p_user_id";
 
 UserIdProviderImpl::UserIdProviderImpl(
     ledger::Environment* environment,
-    fuchsia::sys::StartupContext* startup_context,
+    component::StartupContext* startup_context,
     ledger::DetachedPath user_directory,
     fuchsia::modular::auth::TokenProviderPtr token_provider_ptr,
     std::string cobalt_client_name)

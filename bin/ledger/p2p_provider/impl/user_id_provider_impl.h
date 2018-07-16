@@ -8,7 +8,7 @@
 #include <string>
 
 #include <fuchsia/modular/auth/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
 
 #include "peridot/bin/ledger/environment/environment.h"
@@ -22,7 +22,7 @@ class UserIdProviderImpl : public UserIdProvider {
  public:
   UserIdProviderImpl(
       ledger::Environment* environment,
-      fuchsia::sys::StartupContext* startup_context,
+      component::StartupContext* startup_context,
       ledger::DetachedPath user_directory,
       fuchsia::modular::auth::TokenProviderPtr token_provider_ptr,
       std::string cobalt_client_name);

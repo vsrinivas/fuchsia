@@ -16,7 +16,7 @@ constexpr char kValidationTestsUrl[] =
 }  // namespace
 
 ValidationTestsLauncher::ValidationTestsLauncher(
-    fuchsia::sys::StartupContext* startup_context,
+    component::StartupContext* startup_context,
     std::function<
         void(fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider>)>
         factory)

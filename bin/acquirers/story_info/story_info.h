@@ -93,7 +93,7 @@ class StoryInfoAcquirer
   // the fuchsia::modular::StoryWatcher instances.
   std::map<std::string, std::unique_ptr<StoryWatcherImpl>> stories_;
 
-  fuchsia::sys::ServiceNamespace agent_services_;
+  component::ServiceNamespace agent_services_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryInfoAcquirer);
 };

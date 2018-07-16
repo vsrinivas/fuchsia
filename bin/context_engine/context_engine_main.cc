@@ -5,7 +5,7 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -16,7 +16,7 @@ namespace modular {
 
 class ContextEngineApp {
  public:
-  ContextEngineApp(fuchsia::sys::StartupContext* context) {
+  ContextEngineApp(component::StartupContext* context) {
     auto component_context =
         context
             ->ConnectToEnvironmentService<fuchsia::modular::ComponentContext>();
@@ -47,7 +47,7 @@ class ContextEngineApp {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   auto context_engine_app =
       std::make_unique<modular::ContextEngineApp>(context.get());
   fxl::WeakPtr<modular::ContextDebugImpl> debug = context_engine_app->debug();

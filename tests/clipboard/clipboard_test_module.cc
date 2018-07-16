@@ -4,7 +4,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include <lib/app/cpp/connect.h>
+#include <lib/component/cpp/connect.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 
@@ -60,7 +60,7 @@ class TestApp {
     component_context_->ConnectToAgent(kClipboardAgentUrl,
                                        agent_services.NewRequest(),
                                        agent_controller_.NewRequest());
-    ConnectToService(agent_services.get(), clipboard_.NewRequest());
+    component::ConnectToService(agent_services.get(), clipboard_.NewRequest());
   }
 
   modular::ModuleHost* const module_host_;
@@ -75,7 +75,7 @@ class TestApp {
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   modular::ModuleDriver<TestApp> driver(context.get(),
                                         [&loop] { loop.Quit(); });
   loop.Run();

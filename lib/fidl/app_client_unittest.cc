@@ -5,7 +5,7 @@
 #include "peridot/lib/fidl/app_client.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/app/cpp/testing/fake_launcher.h>
+#include <lib/component/cpp/testing/fake_launcher.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <test/peridot/lib/fidl/appclient/cpp/fidl.h>
 
@@ -15,7 +15,7 @@ namespace modular {
 namespace testing {
 namespace {
 
-using ::fuchsia::sys::testing::FakeLauncher;
+using ::component::testing::FakeLauncher;
 using ::test::peridot::lib::fidl::appclient::TerminateService;
 
 constexpr char kServiceName[] = "service1";

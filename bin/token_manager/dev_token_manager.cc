@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/auth/cpp/fidl.h>
-#include <lib/app/cpp/connect.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/connect.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/string.h>
@@ -40,7 +40,7 @@ class AccountProviderImpl : AccountProvider {
   std::string GenerateAccountId();
 
   async::Loop* const loop_;
-  std::shared_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::shared_ptr<component::StartupContext> startup_context_;
   fuchsia::modular::auth::AccountProviderContextPtr account_provider_context_;
   fidl::Binding<AccountProvider> binding_;
 
@@ -49,7 +49,7 @@ class AccountProviderImpl : AccountProvider {
 
 AccountProviderImpl::AccountProviderImpl(async::Loop* loop)
     : loop_(loop),
-      startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+      startup_context_(component::StartupContext::CreateFromStartupInfo()),
       binding_(this) {
   FXL_DCHECK(loop);
   startup_context_->outgoing().AddPublicService<AccountProvider>(

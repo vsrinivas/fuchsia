@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fxl/memory/weak_ptr.h>
@@ -15,7 +15,7 @@ namespace modular {
 
 class SuggestionEngineApp {
  public:
-  SuggestionEngineApp(fuchsia::sys::StartupContext* const context) {
+  SuggestionEngineApp(component::StartupContext* const context) {
     context->ConnectToEnvironmentService(intelligence_services_.NewRequest());
 
     fuchsia::media::AudioPtr audio;
@@ -52,7 +52,7 @@ class SuggestionEngineApp {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   auto suggestion_engine =
       std::make_unique<modular::SuggestionEngineApp>(context.get());
 

@@ -4,8 +4,8 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
-#include <lib/app/cpp/connect.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/connect.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
@@ -30,7 +30,7 @@ constexpr char kContextListenerEntitiesKey[] = "entities";
 
 class ModuleResolverApp : fuchsia::modular::ContextListener {
  public:
-  ModuleResolverApp(fuchsia::sys::StartupContext* const context, bool is_test)
+  ModuleResolverApp(component::StartupContext* const context, bool is_test)
       : context_(context), context_listener_binding_(this) {
     fuchsia::modular::ComponentContextPtr component_context;
     context_->ConnectToEnvironmentService<fuchsia::modular::ComponentContext>(
@@ -259,7 +259,7 @@ class ModuleResolverApp : fuchsia::modular::ContextListener {
 
   fuchsia::modular::IntelligenceServicesPtr intelligence_services_;
 
-  fuchsia::sys::StartupContext* const context_;
+  component::StartupContext* const context_;
 
   fuchsia::modular::ContextReaderPtr context_reader_;
   fidl::Binding<fuchsia::modular::ContextListener> context_listener_binding_;
@@ -280,7 +280,7 @@ int main(int argc, const char** argv) {
     return 0;
   }
   auto is_test = command_line.HasOption("test");
-  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   modular::AppDriver<modular::ModuleResolverApp> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<modular::ModuleResolverApp>(context.get(), is_test),

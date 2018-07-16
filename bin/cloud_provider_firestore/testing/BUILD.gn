@@ -16,7 +16,7 @@ source_set("testing") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//peridot/bin/cloud_provider_firestore/fidl",
     "//peridot/bin/cloud_provider_firestore/include",
     "//peridot/lib/firebase_auth/testing:service_account",

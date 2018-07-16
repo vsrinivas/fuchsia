@@ -59,7 +59,7 @@ std::string GetRandomId() {
 }  // namespace
 
 UserProviderImpl::UserProviderImpl(
-    std::shared_ptr<fuchsia::sys::StartupContext> context,
+    std::shared_ptr<component::StartupContext> context,
     const fuchsia::modular::AppConfig& user_runner,
     const fuchsia::modular::AppConfig& default_user_shell,
     const fuchsia::modular::AppConfig& story_shell,

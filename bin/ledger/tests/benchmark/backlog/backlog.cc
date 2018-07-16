@@ -61,7 +61,7 @@ BacklogBenchmark::BacklogBenchmark(
     PageDataGenerator::ReferenceStrategy reference_strategy,
     std::string server_id)
     : loop_(loop),
-      startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+      startup_context_(component::StartupContext::CreateFromStartupInfo()),
       cloud_provider_firebase_factory_(startup_context_.get()),
       sync_watcher_binding_(this),
       unique_key_count_(unique_key_count),

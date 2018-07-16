@@ -24,7 +24,7 @@ std::set<std::string> g_test_points;
 bool g_connected;
 }  // namespace
 
-void Init(fuchsia::sys::StartupContext* context, const std::string& identity) {
+void Init(component::StartupContext* context, const std::string& identity) {
   FXL_CHECK(context);
   FXL_CHECK(!g_test_runner.is_bound());
   FXL_CHECK(!g_test_runner_store.is_bound());

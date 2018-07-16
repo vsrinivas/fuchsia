@@ -77,7 +77,7 @@ class TestApp : ComponentContextTestService {
   fuchsia::modular::ComponentContextPtr component_context_;
   fuchsia::modular::AgentControllerPtr two_agent_controller_;
 
-  fuchsia::sys::ServiceNamespace agent_services_;
+  component::ServiceNamespace agent_services_;
   fidl::BindingSet<ComponentContextTestService> agent_interface_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
@@ -87,7 +87,7 @@ class TestApp : ComponentContextTestService {
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   modular::AgentDriver<TestApp> driver(context.get(), [&loop] { loop.Quit(); });
   loop.Run();
   return 0;

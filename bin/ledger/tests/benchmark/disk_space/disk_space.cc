@@ -53,7 +53,7 @@ DiskSpaceBenchmark::DiskSpaceBenchmark(async::Loop* loop, size_t page_count,
                                        size_t value_size)
     : loop_(loop),
       tmp_dir_(kStoragePath),
-      startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+      startup_context_(component::StartupContext::CreateFromStartupInfo()),
       page_count_(page_count),
       unique_key_count_(unique_key_count),
       commit_count_(commit_count),

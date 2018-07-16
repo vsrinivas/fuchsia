@@ -5,7 +5,7 @@
 #ifndef PERIDOT_LIB_TESTING_COMPONENT_BASE_H_
 #define PERIDOT_LIB_TESTING_COMPONENT_BASE_H_
 
-#include <lib/app/cpp/connect.h>
+#include <lib/component/cpp/connect.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fxl/memory/weak_ptr.h>
@@ -41,7 +41,7 @@ class ComponentBase : protected SingleServiceApp<Component> {
   // name. Cf. http://en.cppreference.com/w/cpp/language/dependent_name.
   using Base = SingleServiceApp<Component>;
 
-  ComponentBase(fuchsia::sys::StartupContext* const startup_context)
+  ComponentBase(component::StartupContext* const startup_context)
       : Base(startup_context), weak_factory_(this) {}
 
   ~ComponentBase() override = default;
@@ -101,7 +101,7 @@ template <typename Impl, typename... Args>
 void ComponentMain(Args... args) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   modular::AppDriver<Impl> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<Impl>(context.get(), std::move(args)...),

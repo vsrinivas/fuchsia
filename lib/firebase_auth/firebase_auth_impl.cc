@@ -41,7 +41,7 @@ bool IsRetriableError(fuchsia::modular::auth::Status status) {
 FirebaseAuthImpl::FirebaseAuthImpl(
     Config config, async_dispatcher_t* dispatcher,
     fuchsia::modular::auth::TokenProviderPtr token_provider,
-    fuchsia::sys::StartupContext* startup_context)
+    component::StartupContext* startup_context)
     : FirebaseAuthImpl(std::move(config), dispatcher, std::move(token_provider),
                        std::make_unique<backoff::ExponentialBackoff>(),
                        startup_context

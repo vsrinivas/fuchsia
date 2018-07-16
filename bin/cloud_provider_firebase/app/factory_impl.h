@@ -22,7 +22,7 @@ namespace cloud_provider_firebase {
 class FactoryImpl : public Factory {
  public:
   explicit FactoryImpl(async_dispatcher_t* dispatcher,
-                       fuchsia::sys::StartupContext* startup_context,
+                       component::StartupContext* startup_context,
                        network_wrapper::NetworkWrapper* network_wrapper,
                        std::string cobalt_client_name);
 
@@ -38,7 +38,7 @@ class FactoryImpl : public Factory {
       GetCloudProviderCallback callback) override;
 
   async_dispatcher_t* const dispatcher_;
-  fuchsia::sys::StartupContext* const startup_context_;
+  component::StartupContext* const startup_context_;
   network_wrapper::NetworkWrapper* const network_wrapper_;
   const std::string cobalt_client_name_;
   callback::CancellableContainer token_requests_;

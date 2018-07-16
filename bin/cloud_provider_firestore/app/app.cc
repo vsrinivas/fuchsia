@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fxl/command_line.h>
@@ -25,7 +25,7 @@ class App : public fuchsia::modular::Lifecycle {
  public:
   explicit App(AppParams app_params)
       : loop_(&kAsyncLoopConfigMakeDefault),
-        startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+        startup_context_(component::StartupContext::CreateFromStartupInfo()),
         trace_provider_(loop_.dispatcher()),
         factory_impl_(
             loop_.dispatcher(), startup_context_.get(),
@@ -51,7 +51,7 @@ class App : public fuchsia::modular::Lifecycle {
 
  private:
   async::Loop loop_;
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   trace::TraceProvider trace_provider_;
 
   FactoryImpl factory_impl_;

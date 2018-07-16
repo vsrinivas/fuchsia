@@ -4,7 +4,7 @@
 
 #include "peridot/lib/cobalt/cobalt.h"
 
-#include <lib/app/cpp/service_provider_impl.h>
+#include <lib/component/cpp/service_provider_impl.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fxl/logging.h>
@@ -205,14 +205,14 @@ class CobaltTest : public gtest::TestLoopFixture {
   CobaltTest() : context_(InitStartupContext()) {}
   ~CobaltTest() override {}
 
-  fuchsia::sys::StartupContext* context() { return context_.get(); }
+  component::StartupContext* context() { return context_.get(); }
 
   FakeCobaltEncoderImpl* cobalt_encoder() {
     return factory_impl_->cobalt_encoder();
   }
 
  private:
-  std::unique_ptr<fuchsia::sys::StartupContext> InitStartupContext() {
+  std::unique_ptr<component::StartupContext> InitStartupContext() {
     factory_impl_.reset(new FakeCobaltEncoderFactoryImpl());
     service_provider.AddService<fuchsia::cobalt::CobaltEncoderFactory>(
         [this](fidl::InterfaceRequest<fuchsia::cobalt::CobaltEncoderFactory>
@@ -227,14 +227,14 @@ class CobaltTest : public gtest::TestLoopFixture {
         [this](fidl::InterfaceRequest<fuchsia::sys::Launcher> request) {
           launcher_request_ = std::move(request);
         });
-    return std::make_unique<fuchsia::sys::StartupContext>(
+    return std::make_unique<component::StartupContext>(
         service_provider.OpenAsDirectory(), zx::channel());
   }
 
-  fuchsia::sys::ServiceProviderBridge service_provider;
+  component::ServiceProviderBridge service_provider;
   std::unique_ptr<FakeCobaltEncoderFactoryImpl> factory_impl_;
   std::unique_ptr<FakeCobaltEncoderImpl> cobalt_encoder_;
-  std::unique_ptr<fuchsia::sys::StartupContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   fidl::BindingSet<fuchsia::cobalt::CobaltEncoderFactory> factory_bindings_;
   fidl::InterfaceRequest<fuchsia::sys::Launcher> launcher_request_;
   fidl::InterfaceRequest<fuchsia::sys::Environment> app_environment_request_;

@@ -20,7 +20,7 @@ executable_package("module_resolver") {
 
   deps = [
     ":local_module_resolver",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/fidl/fuchsia.net.oldhttp",
     "//peridot/lib/module_manifest_source:firebase_source",

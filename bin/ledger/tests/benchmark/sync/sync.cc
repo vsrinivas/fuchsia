@@ -58,7 +58,7 @@ SyncBenchmark::SyncBenchmark(
     PageDataGenerator::ReferenceStrategy reference_strategy,
     std::string server_id)
     : loop_(loop),
-      startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+      startup_context_(component::StartupContext::CreateFromStartupInfo()),
       cloud_provider_firebase_factory_(startup_context_.get()),
       change_count_(change_count),
       value_size_(value_size),
