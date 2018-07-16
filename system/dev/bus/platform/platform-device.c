@@ -640,6 +640,10 @@ zx_status_t platform_device_add(platform_bus_t* bus, const pbus_dev_t* pdev, uin
 
     dev->bus = bus;
     dev->flags = flags;
+    if (!pdev->name) {
+        status = ZX_ERR_INVALID_ARGS;
+        goto fail;
+    }
     strlcpy(dev->name, pdev->name, sizeof(dev->name));
     dev->vid = pdev->vid;
     dev->pid = pdev->pid;
