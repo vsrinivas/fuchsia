@@ -132,13 +132,7 @@ func init() {
 		},
 	}
 
-	clientHeaders := []clientHeader{
-		{
-			sysroot,
-			"garnet/public/lib/netstack/c/netconfig.h",
-			"netstack/netconfig.h",
-		},
-	}
+	clientHeaders := []clientHeader{}
 
 	clientLibs := []clientLib{}
 
