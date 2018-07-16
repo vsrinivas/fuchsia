@@ -14,6 +14,7 @@
 #include <kernel/thread.h>
 #include <kernel/timer.h>
 #include <lib/cbuf.h>
+#include <lib/debuglog.h>
 #include <lk/init.h>
 #include <platform.h>
 #include <platform/console.h>
@@ -290,7 +291,8 @@ void pc_init_debug(void) {
         return;
     }
 
-    if ((uart_irq == 0) || cmdline_get_bool("kernel.debug_uart_poll", false)) {
+    if ((uart_irq == 0) || cmdline_get_bool("kernel.debug_uart_poll", false) ||
+        dlog_bypass()) {
         printf("debug-uart: polling enabled\n");
         platform_debug_start_uart_timer();
     } else {
@@ -305,9 +307,7 @@ void pc_init_debug(void) {
         const uint8_t mcr = uart_read(4);
         uart_write(4, mcr | 0x8);
         printf("UART: started IRQ driven RX\n");
-#if !ENABLE_KERNEL_LL_DEBUG
         tx_irq_driven = true;
-#endif
     }
     if (tx_irq_driven) {
         // start up tx driven output

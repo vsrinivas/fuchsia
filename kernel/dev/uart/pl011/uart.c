@@ -10,6 +10,7 @@
 #include <trace.h>
 #include <arch/arm64/periphmap.h>
 #include <lib/cbuf.h>
+#include <lib/debuglog.h>
 #include <kernel/thread.h>
 #include <dev/interrupt.h>
 #include <dev/uart.h>
@@ -122,13 +123,13 @@ static void pl011_uart_init(const void* driver_data, uint32_t length)
     // enable interrupt
     unmask_interrupt(uart_irq);
 
-#if ENABLE_KERNEL_LL_DEBUG
-    uart_tx_irq_enabled = false;
-#else
-    /* start up tx driven output */
-    printf("UART: started IRQ driven TX\n");
-    uart_tx_irq_enabled = true;
-#endif
+    if (dlog_bypass() == true)
+        uart_tx_irq_enabled = false;
+    else {
+        /* start up tx driven output */
+        printf("UART: started IRQ driven TX\n");
+        uart_tx_irq_enabled = true;
+    }
 }
 
 static int pl011_uart_getc(bool wait)

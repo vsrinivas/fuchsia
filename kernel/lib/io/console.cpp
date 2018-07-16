@@ -21,11 +21,8 @@
 #include <string.h>
 #include <vm/vm.h>
 
-/* enable this to cause the kernel-originated messages to splat messages out of the platform
- * putc mechanism immediately instead of going through the debug log
- */
-#ifndef ENABLE_KERNEL_LL_DEBUG
-#define ENABLE_KERNEL_LL_DEBUG 0
+#if WITH_LIB_DEBUGLOG
+#include <lib/debuglog.h>
 #endif
 
 /* routines for dealing with main console io */
@@ -56,8 +53,9 @@ void __kernel_console_write(const char* str, size_t len) {
     }
 }
 
-static void __kernel_stdout_write(const char* str, size_t len) {
-#if WITH_LIB_DEBUGLOG && !ENABLE_KERNEL_LL_DEBUG
+static void __kernel_stdout_write(const char *str, size_t len)
+{
+#if WITH_LIB_DEBUGLOG
     if (dlog_write(0, str, len)) {
         __kernel_console_write(str, len);
         __kernel_serial_write(str, len);
