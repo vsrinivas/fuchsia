@@ -232,6 +232,9 @@
                 "size"
             ],
             "properties": {
+                "max_handles": {
+                    "$ref": "#/definitions/max-handles"
+                },
                 "maybe_attributes": {
                     "$ref": "#/definitions/attributes-list"
                 },
@@ -288,6 +291,9 @@
                 "alignment"
             ],
             "properties": {
+                "max_handles": {
+                    "$ref": "#/definitions/max-handles"
+                },
                 "maybe_attributes": {
                     "$ref": "#/definitions/attributes-list"
                 },
@@ -773,6 +779,11 @@
         "library-identifier": {
             "type": "string",
             "pattern": "([_A-Za-z][_A-Za-z0-9]*-)*[_A-Za-z][_A-Za-z0-9]*"
+        },
+        "max-handles": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
         },
         "size": {
             "type": "integer",

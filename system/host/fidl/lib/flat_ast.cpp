@@ -33,7 +33,23 @@ private:
     std::set<T> scope_;
 };
 
-constexpr TypeShape kHandleTypeShape = TypeShape(4u, 4u);
+// A helper class to track when a Decl is compiling and compiled.
+class Compiling {
+public:
+    explicit Compiling(Decl* decl)
+        : decl_(decl) {
+        decl_->compiling = true;
+    }
+    ~Compiling() {
+        decl_->compiling = false;
+        decl_->compiled = true;
+    }
+
+private:
+    Decl* decl_;
+};
+
+constexpr TypeShape kHandleTypeShape = TypeShape(4u, 4u, 0u, 1u);
 constexpr TypeShape kInt8TypeShape = TypeShape(1u, 1u);
 constexpr TypeShape kInt16TypeShape = TypeShape(2u, 2u);
 constexpr TypeShape kInt32TypeShape = TypeShape(4u, 4u);
@@ -54,10 +70,21 @@ uint32_t AlignTo(uint32_t size, uint32_t alignment) {
     return size;
 }
 
-TypeShape CStructTypeShape(std::vector<FieldShape*>* fields) {
+uint32_t ClampedMultiply(uint32_t a, uint32_t b) {
+    uint64_t product = (uint64_t)a * b;
+    return std::min(product, (uint64_t)std::numeric_limits<uint32_t>::max());
+}
+
+uint32_t ClampedAdd(uint32_t a, uint32_t b) {
+    uint64_t sum = (uint64_t)a + b;
+    return std::min(sum, (uint64_t)std::numeric_limits<uint32_t>::max());
+}
+
+TypeShape CStructTypeShape(std::vector<FieldShape*>* fields, uint32_t extra_handles = 0) {
     uint32_t size = 0u;
     uint32_t alignment = 1u;
     uint32_t depth = 0u;
+    uint32_t max_handles = 0u;
 
     for (FieldShape* field : *fields) {
         TypeShape typeshape = field->Typeshape();
@@ -66,26 +93,31 @@ TypeShape CStructTypeShape(std::vector<FieldShape*>* fields) {
         field->SetOffset(size);
         size += typeshape.Size();
         depth = std::max(depth, typeshape.Depth());
+        max_handles = ClampedAdd(max_handles, typeshape.MaxHandles());
     }
 
+    max_handles = ClampedAdd(max_handles, extra_handles);
+
     size = AlignTo(size, alignment);
-    return TypeShape(size, alignment, depth);
+    return TypeShape(size, alignment, depth, max_handles);
 }
 
 TypeShape CUnionTypeShape(const std::vector<flat::Union::Member>& members) {
     uint32_t size = 0u;
     uint32_t alignment = 1u;
     uint32_t depth = 0u;
+    uint32_t max_handles = 0u;
 
     for (const auto& member : members) {
         const auto& fieldshape = member.fieldshape;
         size = std::max(size, fieldshape.Size());
         alignment = std::max(alignment, fieldshape.Alignment());
         depth = std::max(depth, fieldshape.Depth());
+        max_handles = std::max(max_handles, fieldshape.Typeshape().MaxHandles());
     }
 
     size = AlignTo(size, alignment);
-    return TypeShape(size, alignment, depth);
+    return TypeShape(size, alignment, depth, max_handles);
 }
 
 TypeShape FidlStructTypeShape(std::vector<FieldShape*>* fields) {
@@ -104,19 +136,22 @@ TypeShape PointerTypeShape(TypeShape element) {
     // limit.
     uint32_t depth = std::numeric_limits<uint32_t>::max();
     if (element.Size() > 0 && element.Depth() < std::numeric_limits<uint32_t>::max())
-        depth = element.Depth() + 1;
-    return TypeShape(8u, 8u, depth);
+        depth = ClampedAdd(element.Depth(), 1);
+    return TypeShape(8u, 8u, depth, element.MaxHandles());
 }
 
 TypeShape ArrayTypeShape(TypeShape element, uint32_t count) {
-    return TypeShape(element.Size() * count, element.Alignment(), element.Depth());
+    return TypeShape(element.Size() * count,
+                     element.Alignment(),
+                     element.Depth(),
+                     ClampedMultiply(element.MaxHandles(), count));
 }
 
-TypeShape VectorTypeShape(TypeShape element) {
+TypeShape VectorTypeShape(TypeShape element, uint32_t max_element_count) {
     auto size = FieldShape(kUint64TypeShape);
     auto data = FieldShape(PointerTypeShape(element));
     std::vector<FieldShape*> header{&size, &data};
-    return CStructTypeShape(&header);
+    return CStructTypeShape(&header, ClampedMultiply(element.MaxHandles(), max_element_count));
 }
 
 TypeShape StringTypeShape() {
@@ -949,6 +984,7 @@ bool Library::SortDeclarations() {
 }
 
 bool Library::CompileConst(Const* const_declaration) {
+    Compiling guard(const_declaration);
     TypeShape typeshape;
     if (!CompileType(const_declaration->type.get(), &typeshape)) {
         return false;
@@ -960,6 +996,7 @@ bool Library::CompileConst(Const* const_declaration) {
 }
 
 bool Library::CompileEnum(Enum* enum_declaration) {
+    Compiling guard(enum_declaration);
     switch (enum_declaration->type) {
     case types::PrimitiveSubtype::kInt8:
     case types::PrimitiveSubtype::kInt16:
@@ -986,6 +1023,7 @@ bool Library::CompileEnum(Enum* enum_declaration) {
 }
 
 bool Library::CompileInterface(Interface* interface_declaration) {
+    Compiling guard(interface_declaration);
     // TODO(TO-703) Add subinterfaces here.
     Scope<StringView> name_scope;
     Scope<uint32_t> ordinal_scope;
@@ -1025,22 +1063,34 @@ bool Library::CompileInterface(Interface* interface_declaration) {
 }
 
 bool Library::CompileStruct(Struct* struct_declaration) {
+    Compiling guard(struct_declaration);
     Scope<StringView> scope;
     std::vector<FieldShape*> fidl_struct;
+
+    uint32_t max_member_handles = 0;
     for (auto& member : struct_declaration->members) {
         if (!scope.Insert(member.name.data()))
             return Fail(member.name, "Multiple struct fields with the same name");
         if (!CompileType(member.type.get(), &member.fieldshape.Typeshape()))
             return false;
         fidl_struct.push_back(&member.fieldshape);
+        max_member_handles = ClampedAdd(max_member_handles, member.fieldshape.Typeshape().MaxHandles());
     }
 
-    struct_declaration->typeshape = FidlStructTypeShape(&fidl_struct);
+    if (struct_declaration->recursive) {
+        max_member_handles = std::numeric_limits<uint32_t>::max();
+    } else {
+        // Member handles will be counted by CStructTypeShape.
+        max_member_handles = 0;
+    }
+
+    struct_declaration->typeshape = CStructTypeShape(&fidl_struct, max_member_handles);
 
     return true;
 }
 
 bool Library::CompileUnion(Union* union_declaration) {
+    Compiling guard(union_declaration);
     Scope<StringView> scope;
     for (auto& member : union_declaration->members) {
         if (!scope.Insert(member.name.data()))
@@ -1051,8 +1101,12 @@ bool Library::CompileUnion(Union* union_declaration) {
 
     auto tag = FieldShape(kUint32TypeShape);
     union_declaration->membershape = FieldShape(CUnionTypeShape(union_declaration->members));
+    uint32_t extra_handles = 0;
+    if (union_declaration->recursive && union_declaration->membershape.MaxHandles()) {
+        extra_handles = std::numeric_limits<uint32_t>::max();
+    }
     std::vector<FieldShape*> fidl_union = {&tag, &union_declaration->membershape};
-    union_declaration->typeshape = CStructTypeShape(&fidl_union);
+    union_declaration->typeshape = CStructTypeShape(&fidl_union, extra_handles);
 
     // This is either 4 or 8, depending on whether any union members
     // have alignment 8.
@@ -1117,6 +1171,8 @@ bool Library::Compile() {
         default:
             abort();
         }
+        assert(!decl->compiling);
+        assert(decl->compiled);
     }
 
     return true;
@@ -1131,15 +1187,16 @@ bool Library::CompileArrayType(flat::ArrayType* array_type, TypeShape* out_types
 }
 
 bool Library::CompileVectorType(flat::VectorType* vector_type, TypeShape* out_typeshape) {
-    // We do not need the typeshape, but we do need to compile the
-    // element type. Compiling the type is the time we check for
-    // certain invalid states, like optional enums (prior to this we
-    // do not know if |Foo?| is referring to a struct or union, or an
-    // enum).
+    // All we need from the element typeshape is the maximum number of handles.
     TypeShape element_typeshape;
     if (!CompileType(vector_type->element_type.get(), &element_typeshape))
         return false;
-    *out_typeshape = VectorTypeShape(element_typeshape);
+    uint32_t max_element_count = vector_type->element_count.Value();
+    if (max_element_count == Size::Max().Value()) {
+        // No upper bound specified on vector.
+        max_element_count = std::numeric_limits<uint32_t>::max();
+    }
+    *out_typeshape = VectorTypeShape(element_typeshape, max_element_count);
     return true;
 }
 
@@ -1174,8 +1231,9 @@ bool Library::CompileIdentifierType(flat::IdentifierType* identifier_type,
     TypeShape typeshape;
 
     auto named_decl = LookupDeclByName(identifier_type->name);
-    if (!named_decl)
+    if (!named_decl) {
         return Fail(identifier_type->name, "Undefined reference in identifier type name");
+    }
 
     switch (named_decl->kind) {
     case Decl::Kind::kConst: {
@@ -1197,13 +1255,33 @@ bool Library::CompileIdentifierType(flat::IdentifierType* identifier_type,
         break;
     }
     case Decl::Kind::kStruct: {
-        typeshape = static_cast<const Struct*>(named_decl)->typeshape;
+        Struct* struct_decl = static_cast<Struct*>(named_decl);
+        if (!struct_decl->compiled) {
+            if (struct_decl->compiling) {
+                struct_decl->recursive = true;
+            } else {
+                if (!CompileStruct(struct_decl)) {
+                    return false;
+                }
+            }
+        }
+        typeshape = struct_decl->typeshape;
         if (identifier_type->nullability == types::Nullability::kNullable)
             typeshape = PointerTypeShape(typeshape);
         break;
     }
     case Decl::Kind::kUnion: {
-        typeshape = static_cast<const Union*>(named_decl)->typeshape;
+        Union* union_decl = static_cast<Union*>(named_decl);
+        if (!union_decl->compiled) {
+            if (union_decl->compiling) {
+                union_decl->recursive = true;
+            } else {
+                if (!CompileUnion(union_decl)) {
+                    return false;
+                }
+            }
+        }
+        typeshape = union_decl->typeshape;
         if (identifier_type->nullability == types::Nullability::kNullable)
             typeshape = PointerTypeShape(typeshape);
         break;

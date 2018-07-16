@@ -401,6 +401,7 @@ void JSONGenerator::Generate(const flat::Struct& value) {
         GenerateObjectMember("members", value.members);
         GenerateObjectMember("size", value.typeshape.Size());
         GenerateObjectMember("alignment", value.typeshape.Alignment());
+        GenerateObjectMember("max_handles", value.typeshape.MaxHandles());
     });
 }
 
@@ -413,6 +414,7 @@ void JSONGenerator::Generate(const flat::Struct::Member& value) {
         GenerateObjectMember("size", value.fieldshape.Size());
         GenerateObjectMember("alignment", value.fieldshape.Alignment());
         GenerateObjectMember("offset", value.fieldshape.Offset());
+        GenerateObjectMember("max_handles", value.fieldshape.MaxHandles());
     });
 }
 
@@ -424,6 +426,7 @@ void JSONGenerator::Generate(const flat::Union& value) {
         GenerateObjectMember("members", value.members);
         GenerateObjectMember("size", value.typeshape.Size());
         GenerateObjectMember("alignment", value.typeshape.Alignment());
+        GenerateObjectMember("max_handles", value.typeshape.MaxHandles());
     });
 }
 

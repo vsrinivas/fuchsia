@@ -150,6 +150,9 @@ struct Decl {
 
     bool HasAttribute(fidl::StringView name) const;
     fidl::StringView GetAttribute(fidl::StringView name) const;
+
+    bool compiling = false;
+    bool compiled = false;
 };
 
 struct Type {
@@ -430,6 +433,7 @@ struct Struct : public Decl {
 
     std::vector<Member> members;
     TypeShape typeshape;
+    bool recursive = false;
 };
 
 struct Union : public Decl {
@@ -449,6 +453,7 @@ struct Union : public Decl {
     // The offset of each of the union members is the same, so store
     // it here as well.
     FieldShape membershape;
+    bool recursive = false;
 };
 
 class Library {
