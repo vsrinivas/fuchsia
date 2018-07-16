@@ -10,7 +10,7 @@
 namespace media_player {
 
 NetMediaServiceImpl::NetMediaServiceImpl(
-    std::unique_ptr<fuchsia::sys::StartupContext> startup_context)
+    std::unique_ptr<component::StartupContext> startup_context)
     : FactoryServiceBase(std::move(startup_context)) {
   this->startup_context()->outgoing().AddPublicService(
       bindings_.GetHandler(this));

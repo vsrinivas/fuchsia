@@ -20,7 +20,7 @@ static T duplicate(const T& handle, zx_rights_t rights) {
 namespace machina {
 
 GuestControllerImpl::GuestControllerImpl(
-    fuchsia::sys::StartupContext* startup_context, const PhysMem& phys_mem)
+    component::StartupContext* startup_context, const PhysMem& phys_mem)
     : vmo_(duplicate(phys_mem.vmo(), kVmoRights)) {
   zx_status_t status = zx::socket::create(0, &server_socket_, &client_socket_);
   FXL_CHECK(status == ZX_OK) << "Failed to create socket";

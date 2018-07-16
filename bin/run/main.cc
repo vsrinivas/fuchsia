@@ -9,7 +9,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <zircon/syscalls.h>
 
-#include "lib/app/cpp/environment_services.h"
+#include "lib/component/cpp/environment_services.h"
 
 static fuchsia::sys::FileDescriptorPtr CloneFileDescriptor(int fd) {
   zx_handle_t handles[FDIO_MAX_HANDLES] = {0, 0, 0};
@@ -60,7 +60,7 @@ int main(int argc, const char** argv) {
 
   // Connect to the Launcher service through our static environment.
   fuchsia::sys::LauncherSyncPtr launcher;
-  fuchsia::sys::ConnectToEnvironmentService(launcher.NewRequest());
+  component::ConnectToEnvironmentService(launcher.NewRequest());
 
   if (daemonize) {
     launcher->CreateComponent(std::move(launch_info), {});

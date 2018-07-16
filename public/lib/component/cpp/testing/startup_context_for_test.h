@@ -8,12 +8,11 @@
 #include <fs/pseudo-dir.h>
 #include <fuchsia/sys/cpp/fidl.h>
 
-#include "lib/app/cpp/startup_context.h"
-#include "lib/app/cpp/testing/fake_launcher.h"
+#include "lib/component/cpp/startup_context.h"
+#include "lib/component/cpp/testing/fake_launcher.h"
 #include "lib/svc/cpp/services.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 namespace testing {
 
 // A fake |StartupContext| for testing.
@@ -56,7 +55,7 @@ class StartupContextForTest : public StartupContext {
   friend class Controller;
   Controller controller_;
 
-  fuchsia::sys::Services outgoing_public_services_;
+  component::Services outgoing_public_services_;
   fs::SynchronousVfs service_root_vfs_;
   fbl::RefPtr<fs::PseudoDir> service_root_dir_;
   FakeLauncher fake_launcher_;
@@ -65,7 +64,6 @@ class StartupContextForTest : public StartupContext {
 };
 
 }  // namespace testing
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component
 
 #endif  // LIB_APP_CPP_TESTING_STARTUP_CONTEXT_FOR_TEST_H_

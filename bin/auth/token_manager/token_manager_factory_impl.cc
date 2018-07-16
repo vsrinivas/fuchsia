@@ -9,7 +9,7 @@
 namespace auth {
 
 TokenManagerFactoryImpl::TokenManagerFactoryImpl(
-    fuchsia::sys::StartupContext* context)
+    component::StartupContext* context)
     : app_context_(context) {
   FXL_CHECK(app_context_);
 }

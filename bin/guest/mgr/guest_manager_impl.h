@@ -10,7 +10,7 @@
 #include <unordered_map>
 
 #include "garnet/bin/guest/mgr/guest_environment_impl.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 
@@ -31,7 +31,7 @@ class GuestManagerImpl : public fuchsia::guest::GuestManager {
       uint32_t id,
       fidl::InterfaceRequest<fuchsia::guest::GuestEnvironment> env) override;
 
-  std::unique_ptr<fuchsia::sys::StartupContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   fidl::BindingSet<fuchsia::guest::GuestManager> bindings_;
   std::unordered_map<uint32_t, std::unique_ptr<GuestEnvironmentImpl>>
       environments_;

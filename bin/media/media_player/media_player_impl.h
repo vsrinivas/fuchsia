@@ -17,7 +17,7 @@
 #include "garnet/bin/media/media_player/player/player.h"
 #include "garnet/bin/media/media_player/render/fidl_audio_renderer.h"
 #include "garnet/bin/media/media_player/render/fidl_video_renderer.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
@@ -29,12 +29,12 @@ class MediaPlayerImpl : public fuchsia::mediaplayer::MediaPlayer {
  public:
   static std::unique_ptr<MediaPlayerImpl> Create(
       fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer> request,
-      fuchsia::sys::StartupContext* startup_context,
+      component::StartupContext* startup_context,
       fit::closure quit_callback);
 
   MediaPlayerImpl(
       fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer> request,
-      fuchsia::sys::StartupContext* startup_context,
+      component::StartupContext* startup_context,
       fit::closure quit_callback);
 
   ~MediaPlayerImpl() override;
@@ -120,7 +120,7 @@ class MediaPlayerImpl : public fuchsia::mediaplayer::MediaPlayer {
   void UpdateStatus();
 
   async_dispatcher_t* dispatcher_;
-  fuchsia::sys::StartupContext* startup_context_;
+  component::StartupContext* startup_context_;
   fit::closure quit_callback_;
   fidl::BindingSet<fuchsia::mediaplayer::MediaPlayer> bindings_;
   Player player_;

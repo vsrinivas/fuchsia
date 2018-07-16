@@ -5,7 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/media/audio_server/audio_server_impl.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);

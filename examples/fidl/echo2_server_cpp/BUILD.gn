@@ -12,7 +12,7 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/examples/fidl/services:echo2",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
   ]
 }
@@ -48,7 +48,7 @@ executable("echo2_server_cpp_unittests") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/app/cpp/testing",
+    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl/test:gtest_main",
   ]
 }

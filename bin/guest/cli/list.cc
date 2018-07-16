@@ -7,11 +7,11 @@
 #include <fuchsia/guest/cpp/fidl.h>
 #include <iostream>
 
-#include "lib/app/cpp/environment_services.h"
+#include "lib/component/cpp/environment_services.h"
 
 void handle_list() {
   fuchsia::guest::GuestManagerSyncPtr guestmgr;
-  fuchsia::sys::ConnectToEnvironmentService(guestmgr.NewRequest());
+  component::ConnectToEnvironmentService(guestmgr.NewRequest());
   fidl::VectorPtr<fuchsia::guest::GuestEnvironmentInfo> env_infos;
   guestmgr->ListEnvironments(&env_infos);
 

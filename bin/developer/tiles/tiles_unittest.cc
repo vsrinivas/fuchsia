@@ -6,8 +6,8 @@
 #include <gtest/gtest.h>
 
 #include "garnet/bin/developer/tiles/tiles.h"
-#include "lib/app/cpp/startup_context.h"
-#include "lib/app/cpp/testing/startup_context_for_test.h"
+#include "lib/component/cpp/startup_context.h"
+#include "lib/component/cpp/testing/startup_context_for_test.h"
 #include "lib/gtest/test_loop_fixture.h"
 
 namespace {
@@ -41,9 +41,9 @@ class FakeViewManager : public fuchsia::ui::views_v1::ViewManager {
 class TilesTest : public gtest::TestLoopFixture {
  public:
   TilesTest()
-      : context_(fuchsia::sys::testing::StartupContextForTest::Create()) {
+      : context_(component::testing::StartupContextForTest::Create()) {
     // Drop original starting context to make sure nothing depends on it.
-    fuchsia::sys::StartupContext::CreateFromStartupInfo();
+    component::StartupContext::CreateFromStartupInfo();
   }
 
   void SetUp() final {
@@ -66,7 +66,7 @@ class TilesTest : public gtest::TestLoopFixture {
 
  private:
   FakeViewManager view_manager_;
-  std::unique_ptr<fuchsia::sys::testing::StartupContextForTest> context_;
+  std::unique_ptr<component::testing::StartupContextForTest> context_;
   std::unique_ptr<tiles::Tiles> tiles_impl_;
   fuchsia::developer::tiles::Tiles* tiles_;
 };

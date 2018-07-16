@@ -12,8 +12,8 @@
 
 #include "garnet/bin/auth/store/auth_db_file_impl.h"
 #include "gtest/gtest.h"
-#include "lib/app/cpp/connect.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/connect.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/file.h"
@@ -62,7 +62,7 @@ class GoogleTokenManagerApp : fuchsia::auth::AuthenticationContextProvider {
                         const std::string& refresh_token)
       : user_profile_id_(user_profile_id),
         refresh_token_(refresh_token),
-        startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+        startup_context_(component::StartupContext::CreateFromStartupInfo()),
         auth_context_provider_binding_(this) {}
 
   ~GoogleTokenManagerApp() {}
@@ -85,7 +85,7 @@ class GoogleTokenManagerApp : fuchsia::auth::AuthenticationContextProvider {
   }
 
   void Initialize() {
-    fuchsia::sys::Services services;
+    component::Services services;
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = "token_manager";
     launch_info.directory_request = services.NewRequest();
@@ -181,7 +181,7 @@ class GoogleTokenManagerApp : fuchsia::auth::AuthenticationContextProvider {
 
   const std::string user_profile_id_;
   const std::string refresh_token_;
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   fuchsia::sys::ComponentControllerPtr controller_;
 
   fidl::Binding<fuchsia::auth::AuthenticationContextProvider>

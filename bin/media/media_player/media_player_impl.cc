@@ -39,14 +39,14 @@ static const char* kDumpEntry = "dump";
 // static
 std::unique_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
     fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer> request,
-    fuchsia::sys::StartupContext* startup_context, fit::closure quit_callback) {
+    component::StartupContext* startup_context, fit::closure quit_callback) {
   return std::make_unique<MediaPlayerImpl>(std::move(request), startup_context,
                                            std::move(quit_callback));
 }
 
 MediaPlayerImpl::MediaPlayerImpl(
     fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer> request,
-    fuchsia::sys::StartupContext* startup_context, fit::closure quit_callback)
+    component::StartupContext* startup_context, fit::closure quit_callback)
     : dispatcher_(async_get_default_dispatcher()),
       startup_context_(startup_context),
       quit_callback_(std::move(quit_callback)),

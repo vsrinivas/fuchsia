@@ -15,7 +15,7 @@ executable("timezone_unittests") {
 
   deps = [
     "//garnet/bin/timezone:lib",
-    "//garnet/public/lib/app/cpp/testing",
+    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl/test:gtest_main",
   ]
 }

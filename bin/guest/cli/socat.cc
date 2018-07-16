@@ -9,7 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/guest/cli/serial.h"
-#include "lib/app/cpp/environment_services.h"
+#include "lib/component/cpp/environment_services.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
 
@@ -40,7 +40,7 @@ void handle_socat_listen(uint32_t env_id, uint32_t port) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   fuchsia::guest::GuestManagerSyncPtr guestmgr;
-  fuchsia::sys::ConnectToEnvironmentService(guestmgr.NewRequest());
+  component::ConnectToEnvironmentService(guestmgr.NewRequest());
   fuchsia::guest::GuestEnvironmentSyncPtr guest_env;
   guestmgr->ConnectToEnvironment(env_id, guest_env.NewRequest());
 
@@ -63,7 +63,7 @@ void handle_socat_connect(uint32_t env_id, uint32_t cid, uint32_t port) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   fuchsia::guest::GuestManagerSyncPtr guestmgr;
-  fuchsia::sys::ConnectToEnvironmentService(guestmgr.NewRequest());
+  component::ConnectToEnvironmentService(guestmgr.NewRequest());
   fuchsia::guest::GuestEnvironmentSyncPtr guest_env;
   guestmgr->ConnectToEnvironment(env_id, guest_env.NewRequest());
 

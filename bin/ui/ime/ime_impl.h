@@ -9,7 +9,7 @@
 #include <vector>
 
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/command_line.h"

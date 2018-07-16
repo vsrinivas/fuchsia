@@ -2973,7 +2973,7 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv) {
   trace::TraceProvider trace_provider(demo->fuchsia_state->loop.dispatcher());
 #endif
 
-  auto startup_context_ = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto startup_context_ = component::StartupContext::CreateFromStartupInfo();
 
   demo->fuchsia_state->view_provider_service =
       std::make_unique<mozart::ViewProviderService>(

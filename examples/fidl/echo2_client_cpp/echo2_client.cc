@@ -11,7 +11,7 @@
 #include <zircon/processargs.h>
 
 #include "echo_client_app.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/svc/cpp/services.h"
 
 int main(int argc, const char** argv) {

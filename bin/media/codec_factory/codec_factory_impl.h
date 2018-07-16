@@ -9,7 +9,7 @@
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 
 namespace codec_factory {
@@ -19,7 +19,7 @@ namespace codec_factory {
 class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
  public:
   static void CreateSelfOwned(CodecFactoryApp* app,
-                              fuchsia::sys::StartupContext* startup_context,
+                              component::StartupContext* startup_context,
                               zx::channel request);
 
   // See .fidl file comments.
@@ -29,7 +29,7 @@ class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
 
  private:
   CodecFactoryImpl(CodecFactoryApp* app,
-                   fuchsia::sys::StartupContext* startup_context,
+                   component::StartupContext* startup_context,
                    zx::channel channel);
   void OwnSelf(std::unique_ptr<CodecFactoryImpl> self);
 
@@ -39,7 +39,7 @@ class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
   // This class doesn't own these pointers - the creator of CodecFactoryImpl
   // must ensure these outlast this instance of CodecFactoryImpl.
   CodecFactoryApp* app_ = nullptr;
-  fuchsia::sys::StartupContext* startup_context_ = nullptr;
+  component::StartupContext* startup_context_ = nullptr;
   // This is only holding the underlying channel between construction and
   // OwnSelf(), at which point the channel moves into the binding.
   zx::channel channel_temp_;

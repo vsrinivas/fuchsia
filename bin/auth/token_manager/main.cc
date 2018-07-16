@@ -9,7 +9,7 @@
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/auth/token_manager/token_manager_factory_impl.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/vmo/strings.h"
@@ -24,14 +24,14 @@ namespace {
 
 class TokenManagerApp {
  public:
-  TokenManagerApp(std::unique_ptr<fuchsia::sys::StartupContext> context)
+  TokenManagerApp(std::unique_ptr<component::StartupContext> context)
       : app_context_(std::move(context)), factory_impl_(app_context_.get()) {
     app_context_->outgoing().AddPublicService(
         factory_bindings_.GetHandler(&factory_impl_));
   }
 
  private:
-  std::unique_ptr<fuchsia::sys::StartupContext> app_context_;
+  std::unique_ptr<component::StartupContext> app_context_;
 
   auth::TokenManagerFactoryImpl factory_impl_;
   fidl::BindingSet<auth::TokenManagerFactory> factory_bindings_;
@@ -49,7 +49,7 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   trace::TraceProvider trace_provider(loop.dispatcher());
-  TokenManagerApp app(fuchsia::sys::StartupContext::CreateFromStartupInfo());
+  TokenManagerApp app(component::StartupContext::CreateFromStartupInfo());
   loop.Run();
   return 0;
 }

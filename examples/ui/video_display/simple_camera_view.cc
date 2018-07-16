@@ -34,7 +34,7 @@ constexpr float kInitialWindowYPos = 240;
 static const std::string kSimpleCameraServiceUrl = "simple_camera_server_cpp";
 
 SimpleCameraView::SimpleCameraView(
-    async::Loop* loop, fuchsia::sys::StartupContext* startup_context,
+    async::Loop* loop, component::StartupContext* startup_context,
     ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
         view_owner_request,

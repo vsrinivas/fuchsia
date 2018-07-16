@@ -14,7 +14,7 @@ executable("google_oauth_demo") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//third_party/googletest:gtest",
   ]
 

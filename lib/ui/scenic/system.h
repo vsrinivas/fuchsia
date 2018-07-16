@@ -13,11 +13,9 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 class StartupContext;
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component
 
 namespace scenic {
 
@@ -28,17 +26,17 @@ class Session;
 // exposing the system's host (typically a Scenic, except for testing).
 class SystemContext final {
  public:
-  explicit SystemContext(fuchsia::sys::StartupContext* app_context,
+  explicit SystemContext(component::StartupContext* app_context,
                          fit::closure quit_callback);
   SystemContext(SystemContext&& context);
 
-  fuchsia::sys::StartupContext* app_context() const { return app_context_; }
+  component::StartupContext* app_context() const { return app_context_; }
 
   // Calls quit on the associated message loop.
   void Quit() { quit_callback_(); }
 
  private:
-  fuchsia::sys::StartupContext* const app_context_;
+  component::StartupContext* const app_context_;
   fit::closure quit_callback_;
 };
 

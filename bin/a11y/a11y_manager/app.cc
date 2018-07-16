@@ -7,7 +7,7 @@
 namespace a11y_manager {
 
 App::App()
-    : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()) {
   FXL_DCHECK(startup_context_);
   FXL_LOG(INFO) << "Publishing a11y manager service";
   a11y_manager_.reset(new ManagerImpl());

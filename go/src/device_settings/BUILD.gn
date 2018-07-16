@@ -17,7 +17,7 @@ go_test("device_settings_integration_test") {
   extra_dependencies = [
     "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/fidl/fuchsia.devicesettings($go_toolchain)",
-    "//garnet/public/lib/app/go/src/app",
+    "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/fidl/go/src/fidl/bindings",
   ]
 }

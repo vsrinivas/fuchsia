@@ -16,7 +16,7 @@ class FfmpegDecoderFactory : public DecoderFactory {
  public:
   // Creates an ffmmpeg decoder factory.
   static std::unique_ptr<DecoderFactory> Create(
-      fuchsia::sys::StartupContext* startup_context);
+      component::StartupContext* startup_context);
 
   FfmpegDecoderFactory();
 

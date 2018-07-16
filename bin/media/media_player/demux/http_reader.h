@@ -12,7 +12,7 @@
 
 #include "garnet/bin/media/media_player/demux/reader.h"
 #include "garnet/bin/media/media_player/util/incident.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 
 namespace media_player {
 
@@ -20,9 +20,9 @@ namespace media_player {
 class HttpReader : public Reader {
  public:
   static std::shared_ptr<HttpReader> Create(
-      fuchsia::sys::StartupContext* startup_context, const std::string& url);
+      component::StartupContext* startup_context, const std::string& url);
 
-  HttpReader(fuchsia::sys::StartupContext* startup_context,
+  HttpReader(component::StartupContext* startup_context,
              const std::string& url);
 
   ~HttpReader() override;

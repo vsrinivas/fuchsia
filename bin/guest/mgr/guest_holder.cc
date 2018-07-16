@@ -8,7 +8,7 @@ namespace guestmgr {
 
 GuestHolder::GuestHolder(uint32_t cid, std::string label,
                          std::unique_ptr<RemoteVsockEndpoint> socket_endpoint,
-                         fuchsia::sys::Services services,
+                         component::Services services,
                          fuchsia::sys::ComponentControllerPtr component_controller)
     : cid_(cid),
       label_(std::move(label)),

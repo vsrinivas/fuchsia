@@ -15,8 +15,8 @@
 #include "garnet/bin/auth/token_manager/token_manager_factory_impl.h"
 #include "garnet/bin/auth/token_manager/token_manager_impl.h"
 #include "gtest/gtest.h"
-#include "lib/app/cpp/connect.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/connect.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/callback/capture.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
@@ -53,7 +53,7 @@ class DevTokenManagerAppTest : public gtest::RealLoopFixture,
                                fuchsia::auth::AuthenticationContextProvider {
  public:
   DevTokenManagerAppTest()
-      : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+      : startup_context_(component::StartupContext::CreateFromStartupInfo()),
         auth_context_provider_binding_(this) {}
 
   ~DevTokenManagerAppTest() {}
@@ -61,7 +61,7 @@ class DevTokenManagerAppTest : public gtest::RealLoopFixture,
  protected:
   // ::testing::Test:
   void SetUp() override {
-    fuchsia::sys::Services services;
+    component::Services services;
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = "token_manager";
     launch_info.directory_request = services.NewRequest();
@@ -107,7 +107,7 @@ class DevTokenManagerAppTest : public gtest::RealLoopFixture,
   }
 
  private:
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   fuchsia::sys::ComponentControllerPtr controller_;
 
  protected:
@@ -362,7 +362,7 @@ int main(int argc, char** argv) {
   {
     async::Loop loop(&kAsyncLoopConfigMakeDefault);
     auto context =
-        fuchsia::sys::StartupContext::CreateFromStartupInfoNotChecked();
+        component::StartupContext::CreateFromStartupInfoNotChecked();
     test_runner::ReportResult(argv[0], context.get(), listener.GetResults());
   }
 

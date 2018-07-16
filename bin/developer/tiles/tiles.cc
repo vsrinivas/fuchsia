@@ -36,7 +36,7 @@ fuchsia::ui::scenic::SessionPtr GetSession(
 
 Tiles::Tiles(::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
              fidl::InterfaceRequest<ViewOwner> view_owner_request,
-             fuchsia::sys::StartupContext* startup_context, int border)
+             component::StartupContext* startup_context, int border)
     : startup_context_(startup_context),
       view_manager_(std::move(view_manager)),
       view_listener_binding_(this),
@@ -82,7 +82,7 @@ void Tiles::AddTileFromURL(fidl::StringPtr url,
                            fidl::VectorPtr<fidl::StringPtr> args,
                            AddTileFromURLCallback callback) {
   FXL_VLOG(2) << "AddTile " << url;
-  fuchsia::sys::Services services;
+  component::Services services;
   fuchsia::sys::ComponentControllerPtr controller;
 
   fuchsia::sys::LaunchInfo launch_info;

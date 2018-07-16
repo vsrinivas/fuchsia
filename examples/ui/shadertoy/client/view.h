@@ -8,7 +8,7 @@
 #include <fuchsia/examples/shadertoy/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/scenic/cpp/base_view.h"
 #include "lib/ui/scenic/cpp/resources.h"
@@ -21,7 +21,7 @@ namespace shadertoy_client {
 // TODO(SCN-589): Should be folded back into the latter when the former dies.
 class ViewImpl {
  public:
-  ViewImpl(fuchsia::sys::StartupContext* startup_context,
+  ViewImpl(component::StartupContext* startup_context,
            scenic::Session* session, scenic::EntityNode* parent_node);
 
   void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info,
@@ -35,7 +35,7 @@ class ViewImpl {
   bool IsAnimating() const { return animation_state_ != kFourCorners; }
 
  private:
-  fuchsia::sys::StartupContext* const startup_context_;
+  component::StartupContext* const startup_context_;
   scenic::Session* const session_;
   scenic::EntityNode* const parent_node_;
 
@@ -69,7 +69,7 @@ class ViewImpl {
 // Views v1, deprecated.
 class OldView : public mozart::BaseView {
  public:
-  OldView(fuchsia::sys::StartupContext* startup_context,
+  OldView(component::StartupContext* startup_context,
           ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
           fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
               view_owner_request);

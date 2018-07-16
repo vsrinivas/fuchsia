@@ -5,8 +5,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 
-#include "lib/app/cpp/connect.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/connect.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
@@ -75,7 +75,7 @@ class WGetApp {
  public:
   WGetApp(async::Loop* loop)
       : loop_(loop),
-        context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
+        context_(component::StartupContext::CreateFromStartupInfo()) {
     http_service_ =
         context_->ConnectToEnvironmentService<http::HttpService>();
     FXL_DCHECK(http_service_);
@@ -109,7 +109,7 @@ class WGetApp {
 
  private:
   async::Loop* const loop_;
-  std::unique_ptr<fuchsia::sys::StartupContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
 
   http::HttpServicePtr http_service_;
   http::URLLoaderPtr url_loader_;

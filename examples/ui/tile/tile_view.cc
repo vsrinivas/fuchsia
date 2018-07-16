@@ -18,7 +18,7 @@ TileView::TileView(
     ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
         view_owner_request,
-    fuchsia::sys::StartupContext* startup_context, const TileParams& params)
+    component::StartupContext* startup_context, const TileParams& params)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Tile"),
       startup_context_(startup_context),
       params_(params),
@@ -41,7 +41,7 @@ void TileView::Present(
 
 void TileView::ConnectViews() {
   for (const auto& url : params_.view_urls) {
-    fuchsia::sys::Services services;
+    component::Services services;
     fuchsia::sys::ComponentControllerPtr controller;
 
     fuchsia::sys::LaunchInfo launch_info;

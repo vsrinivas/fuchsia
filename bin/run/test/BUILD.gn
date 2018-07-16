@@ -14,8 +14,8 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/app/cpp/testing:fake_launcher",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing:fake_launcher",
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl/test:gtest_main",

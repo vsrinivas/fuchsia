@@ -21,7 +21,7 @@ static constexpr uint32_t kMaxBufferSizeMegabytes = 64;
 
 }  // namespace
 
-TraceManager::TraceManager(fuchsia::sys::StartupContext* context,
+TraceManager::TraceManager(component::StartupContext* context,
                            const Config& config)
     : context_(context), config_(config) {
   // TODO(jeffbrown): We should do this in StartTracing() and take care

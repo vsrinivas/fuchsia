@@ -9,7 +9,7 @@
 #include <lib/fit/function.h>
 #include <lib/vmo-utils/vmo_mapper.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 
 namespace examples {
 
@@ -17,10 +17,10 @@ class MediaApp {
  public:
   MediaApp(fit::closure quit_callback);
 
-  void Run(fuchsia::sys::StartupContext* app_context);
+  void Run(component::StartupContext* app_context);
 
  private:
-  void AcquireRenderer(fuchsia::sys::StartupContext* app_context);
+  void AcquireRenderer(component::StartupContext* app_context);
   void SetMediaType();
 
   zx_status_t CreateMemoryMapping();

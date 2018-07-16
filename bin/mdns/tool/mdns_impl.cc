@@ -19,7 +19,7 @@
 
 namespace mdns {
 
-MdnsImpl::MdnsImpl(fuchsia::sys::StartupContext* startup_context,
+MdnsImpl::MdnsImpl(component::StartupContext* startup_context,
                    MdnsParams* params, fit::closure quit_callback)
     : quit_callback_(std::move(quit_callback)), binding_(this) {
   FXL_DCHECK(startup_context);

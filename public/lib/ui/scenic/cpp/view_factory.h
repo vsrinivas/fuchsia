@@ -9,7 +9,7 @@
 #include <functional>
 #include <vector>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 
 #include "lib/ui/scenic/cpp/base_view.h"
 #include "lib/ui/scenic/cpp/session.h"
@@ -22,7 +22,7 @@ struct ViewFactoryArgs {
   zx::eventpair view_token;
   fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services;
   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services;
-  fuchsia::sys::StartupContext* startup_context;
+  component::StartupContext* startup_context;
 };
 
 // A callback to create a view in response to a call to

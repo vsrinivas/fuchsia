@@ -8,7 +8,7 @@
 
 namespace scenic {
 
-SystemContext::SystemContext(fuchsia::sys::StartupContext* app_context,
+SystemContext::SystemContext(component::StartupContext* app_context,
                              fit::closure quit_callback)
     : app_context_(app_context), quit_callback_(std::move(quit_callback)) {
   FXL_DCHECK(app_context_);
@@ -17,7 +17,7 @@ SystemContext::SystemContext(fuchsia::sys::StartupContext* app_context,
 SystemContext::SystemContext(SystemContext&& context)
     : SystemContext(context.app_context_, std::move(context.quit_callback_)) {
   auto& other_app_context =
-      const_cast<fuchsia::sys::StartupContext*&>(context.app_context_);
+      const_cast<component::StartupContext*&>(context.app_context_);
   other_app_context = nullptr;
 }
 

@@ -16,7 +16,7 @@
 #include "garnet/bin/media/audio_server/audio_packet_ref.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
 #include "garnet/bin/media/audio_server/pending_flush_token.h"
-#include "lib/app/cpp/outgoing.h"
+#include "lib/component/cpp/outgoing.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
@@ -82,7 +82,7 @@ class AudioServerImpl : public fuchsia::media::Audio {
   void Shutdown();
   void DoPacketCleanup();
 
-  fuchsia::sys::Outgoing outgoing_;
+  component::Outgoing outgoing_;
   fidl::BindingSet<fuchsia::media::Audio> bindings_;
 
   // A reference to our thread's dispatcher object.  Allows us to post events to

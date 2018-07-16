@@ -12,8 +12,7 @@
 
 #include <utility>
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 ServiceProviderBridge::ServiceProviderBridge()
     : vfs_(async_get_default_dispatcher()), weak_factory_(this) {
@@ -98,5 +97,4 @@ zx_status_t ServiceProviderBridge::ServiceProviderDir::Getattr(vnattr_t* attr) {
   return ZX_OK;
 }
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

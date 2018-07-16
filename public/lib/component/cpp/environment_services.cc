@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/app/cpp/environment_services.h"
+#include "lib/component/cpp/environment_services.h"
 
 #include <lib/fdio/util.h>
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 // static
 void ConnectToEnvironmentService(const std::string& interface_name,
@@ -34,5 +33,4 @@ zx::channel CreateStaticServiceRootHandle() {
 
 }  // namespace subtle
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

@@ -9,10 +9,9 @@
 #include <fs/synchronous-vfs.h>
 #include <lib/async/default.h>
 
-#include "lib/app/cpp/testing/fake_launcher.h"
+#include "lib/component/cpp/testing/fake_launcher.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 namespace testing {
 
 // A fake component that implements FIDL interfaces.
@@ -52,7 +51,6 @@ class FakeComponent {
 };
 
 }  // namespace testing
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component
 
 #endif  // LIB_APP_CPP_TESTING_FAKE_COMPONENT_H_

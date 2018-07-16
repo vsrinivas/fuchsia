@@ -16,12 +16,11 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 // An implementation of |ServiceProvider|, which can be customized appropriately
 // (to select what services it provides).
-class ServiceProviderImpl : public ServiceProvider {
+class ServiceProviderImpl : public fuchsia::sys::ServiceProvider {
  public:
   // |ServiceConnector| is the generic, type-unsafe interface for objects used
   // by |ServiceProviderImpl| to connect generic "interface requests" (i.e.,
@@ -102,14 +101,14 @@ class ServiceProviderImpl : public ServiceProvider {
   //
   // Calling this function replaces any value set previously by
   // |SetDefaultServiceConnector| or |SetDefaultServiceProvider|.
-  void SetDefaultServiceProvider(ServiceProviderPtr provider);
+  void SetDefaultServiceProvider(fuchsia::sys::ServiceProviderPtr provider);
 
  private:
   // Overridden from |ServiceProvider|:
   void ConnectToService(fidl::StringPtr service_name,
                         zx::channel client_handle) override;
 
-  fidl::BindingSet<ServiceProvider> bindings_;
+  fidl::BindingSet<fuchsia::sys::ServiceProvider> bindings_;
 
   std::unordered_map<std::string, ServiceConnector> name_to_service_connector_;
   DefaultServiceConnector default_service_connector_;
@@ -117,7 +116,6 @@ class ServiceProviderImpl : public ServiceProvider {
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderImpl);
 };
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component
 
 #endif  // LIB_APP_CPP_SERVICE_PROVIDER_IMPL_H_

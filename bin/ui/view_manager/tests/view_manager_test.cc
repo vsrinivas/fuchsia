@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
-#include "lib/app/cpp/connect.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/connect.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
@@ -14,7 +14,7 @@
 #include "lib/ui/tests/mocks/mock_view_listener.h"
 #include "lib/ui/tests/mocks/mock_view_tree_listener.h"
 
-extern std::unique_ptr<fuchsia::sys::StartupContext> g_startup_context;
+extern std::unique_ptr<component::StartupContext> g_startup_context;
 
 namespace view_manager {
 namespace test {

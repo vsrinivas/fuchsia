@@ -11,7 +11,7 @@
 #include <fuchsia/tracing/cpp/fidl.h>
 
 #include "garnet/bin/trace_manager/trace_manager.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
@@ -23,7 +23,7 @@ class TraceManagerApp {
   ~TraceManagerApp();
 
  private:
-  std::unique_ptr<fuchsia::sys::StartupContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   TraceManager trace_manager_;
   fidl::BindingSet<fuchsia::tracelink::Registry> trace_registry_bindings_;
   fidl::BindingSet<fuchsia::tracing::TraceController> trace_controller_bindings_;

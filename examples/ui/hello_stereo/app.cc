@@ -20,7 +20,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-#include "lib/app/cpp/connect.h"
+#include "lib/component/cpp/connect.h"
 #include "lib/escher/util/image_utils.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
@@ -35,7 +35,7 @@ namespace hello_stereo {
 static constexpr float kEdgeLength = 900;
 
 App::App(async::Loop* loop)
-    : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
       loop_(loop) {
   // Connect to the SceneManager service.
   scenic_ = startup_context_

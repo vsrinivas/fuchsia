@@ -8,7 +8,7 @@
 #include <pretty/hexdump.h>
 #include <iostream>
 
-#include "lib/app/cpp/environment_services.h"
+#include "lib/component/cpp/environment_services.h"
 
 static void dump(zx::vmo vmo, zx_vaddr_t addr, size_t len) {
   uint64_t vmo_size;
@@ -37,7 +37,7 @@ static void dump(zx::vmo vmo, zx_vaddr_t addr, size_t len) {
 void handle_dump(uint32_t env_id, uint32_t cid, zx_vaddr_t addr, size_t len) {
   // Connect to environment.
   fuchsia::guest::GuestManagerSyncPtr guestmgr;
-  fuchsia::sys::ConnectToEnvironmentService(guestmgr.NewRequest());
+  component::ConnectToEnvironmentService(guestmgr.NewRequest());
   fuchsia::guest::GuestEnvironmentSyncPtr env_ptr;
   guestmgr->ConnectToEnvironment(env_id, env_ptr.NewRequest());
 

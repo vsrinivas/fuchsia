@@ -9,7 +9,7 @@
 #include <lib/async/default.h>
 
 #include "gtest/gtest.h"
-#include "lib/app/cpp/environment_services.h"
+#include "lib/component/cpp/environment_services.h"
 #include "lib/gtest/real_loop_fixture.h"
 
 namespace component {
@@ -36,7 +36,7 @@ TEST_F(RealmTest, CreateTwoKillOne) {
   // Connect to the Launcher service through our static environment.
   // This launcher is from sys realm so our hub would be scoped to it
   fuchsia::sys::LauncherSyncPtr launcher;
-  fuchsia::sys::ConnectToEnvironmentService(launcher.NewRequest());
+  component::ConnectToEnvironmentService(launcher.NewRequest());
 
   // Launch two components
   fuchsia::sys::ComponentControllerPtr controller1 =

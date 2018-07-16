@@ -19,7 +19,7 @@
 #include <utility>
 
 #include <fuchsia/crash/cpp/fidl.h>
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "third_party/crashpad/client/settings.h"
 #include "third_party/crashpad/handler/fuchsia/crash_report_exception_handler.h"
 #include "third_party/crashpad/third_party/mini_chromium/mini_chromium/base/files/scoped_file.h"
@@ -172,8 +172,8 @@ class AnalyzerImpl : public fuchsia::crash::Analyzer {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  std::unique_ptr<fuchsia::sys::StartupContext> app_context(
-      fuchsia::sys::StartupContext::CreateFromStartupInfo());
+  std::unique_ptr<component::StartupContext> app_context(
+      component::StartupContext::CreateFromStartupInfo());
 
   AnalyzerImpl analyzer;
 

@@ -16,7 +16,7 @@ executable("dev_auth_provider") {
   ]
 
   deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/fidl/fuchsia.auth",
     "//garnet/public/lib/fsl",

@@ -18,7 +18,7 @@ source_set("testing_deps") {
   ]
   public_deps = [
     "//garnet/lib/ui/scenic",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest_main",

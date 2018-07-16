@@ -6,13 +6,13 @@
 
 #include <algorithm>
 
-#include "lib/app/cpp/connect.h"
+#include "lib/component/cpp/connect.h"
 #include "lib/fxl/logging.h"
 
 namespace mozart {
 
 ViewProviderService::ViewProviderService(
-    fuchsia::sys::StartupContext* startup_context, ViewFactory view_factory)
+    component::StartupContext* startup_context, ViewFactory view_factory)
     : startup_context_(startup_context), view_factory_(view_factory) {
   FXL_DCHECK(startup_context_);
 

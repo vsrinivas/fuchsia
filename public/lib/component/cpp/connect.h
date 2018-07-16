@@ -13,15 +13,14 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include "lib/fidl/cpp/interface_request.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 // Helper for using a |ServiceProvider|'s |ConnectToService()| that creates
 // a new channel and returns a fully-typed interface pointer (and can use
 // the default interface name).
 template <typename Interface>
 inline fidl::InterfacePtr<Interface> ConnectToService(
-    ServiceProvider* service_provider,
+    fuchsia::sys::ServiceProvider* service_provider,
     const std::string& interface_name = Interface::Name_) {
   fidl::InterfacePtr<Interface> interface_ptr;
   service_provider->ConnectToService(interface_name,
@@ -33,14 +32,13 @@ inline fidl::InterfacePtr<Interface> ConnectToService(
 // fully-typed interface request (and can use the default interface name).
 template <typename Interface>
 inline void ConnectToService(
-    ServiceProvider* service_provider,
+    fuchsia::sys::ServiceProvider* service_provider,
     fidl::InterfaceRequest<Interface> interface_request,
     const std::string& interface_name = Interface::Name_) {
   service_provider->ConnectToService(interface_name,
                                      interface_request.TakeChannel());
 }
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component
 
 #endif  // LIB_APP_CPP_CONNECT_H_

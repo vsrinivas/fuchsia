@@ -13,7 +13,7 @@ class FfmpegDemuxFactory : public DemuxFactory {
  public:
   // Creates an ffmpeg demux factory.
   static std::unique_ptr<DemuxFactory> Create(
-      fuchsia::sys::StartupContext* startup_context);
+      component::StartupContext* startup_context);
 
   FfmpegDemuxFactory();
 

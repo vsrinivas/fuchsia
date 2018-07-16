@@ -30,7 +30,7 @@ static_library("common") {
 
   if (is_fuchsia) {
     deps += [
-      "//garnet/public/lib/app/cpp",
+      "//garnet/public/lib/component/cpp",
       "//garnet/public/lib/fsl",
       "//zircon/public/lib/async-loop-cpp"
     ]

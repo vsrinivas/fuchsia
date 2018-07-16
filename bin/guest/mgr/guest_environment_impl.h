@@ -12,7 +12,7 @@
 #include "garnet/bin/guest/mgr/guest_holder.h"
 #include "garnet/bin/guest/mgr/host_vsock_endpoint.h"
 #include "garnet/bin/guest/mgr/vsock_server.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
@@ -28,7 +28,7 @@ class GuestEnvironmentImpl : public fuchsia::guest::GuestEnvironment {
  public:
   GuestEnvironmentImpl(
       uint32_t id, const std::string& label,
-      fuchsia::sys::StartupContext* context,
+      component::StartupContext* context,
       fidl::InterfaceRequest<fuchsia::guest::GuestEnvironment> request);
   ~GuestEnvironmentImpl() override;
 
@@ -61,13 +61,13 @@ class GuestEnvironmentImpl : public fuchsia::guest::GuestEnvironment {
   const uint32_t id_;
   const std::string label_;
 
-  fuchsia::sys::StartupContext* context_;
+  component::StartupContext* context_;
   fidl::BindingSet<fuchsia::guest::GuestEnvironment> bindings_;
 
   fuchsia::sys::EnvironmentPtr env_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
   fuchsia::sys::LauncherPtr launcher_;
-  fuchsia::sys::ServiceProviderBridge service_provider_bridge_;
+  component::ServiceProviderBridge service_provider_bridge_;
 
   VsockServer socket_server_;
   HostVsockEndpoint host_socket_endpoint_;

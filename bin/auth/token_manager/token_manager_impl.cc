@@ -7,7 +7,7 @@
 #include <fuchsia/auth/cpp/fidl.h>
 
 #include "garnet/bin/auth/token_manager/token_manager_impl.h"
-#include "lib/app/cpp/connect.h"
+#include "lib/component/cpp/connect.h"
 #include "lib/svc/cpp/services.h"
 
 namespace auth {
@@ -28,7 +28,7 @@ using fuchsia::auth::FirebaseTokenPtr;
 using fuchsia::auth::Status;
 
 TokenManagerImpl::TokenManagerImpl(
-    fuchsia::sys::StartupContext* app_context,
+    component::StartupContext* app_context,
     std::unique_ptr<store::AuthDb> auth_db,
     fidl::VectorPtr<fuchsia::auth::AuthProviderConfig> auth_provider_configs,
     fidl::InterfaceHandle<fuchsia::auth::AuthenticationContextProvider>
@@ -49,7 +49,7 @@ TokenManagerImpl::TokenManagerImpl(
 
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = config.url;
-    fuchsia::sys::Services services;
+    component::Services services;
     launch_info.directory_request = services.NewRequest();
 
     fuchsia::sys::ComponentControllerPtr controller;

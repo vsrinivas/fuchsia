@@ -43,7 +43,7 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher, std::chrono::seconds schedu
                      std::chrono::seconds min_interval,
                      const std::string& product_name)
     : system_data_(product_name),
-      context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+      context_(component::StartupContext::CreateFromStartupInfo()),
       shuffler_client_(kCloudShufflerUri, true),
       send_retryer_(&shuffler_client_),
       network_wrapper_(

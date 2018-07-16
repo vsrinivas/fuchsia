@@ -9,7 +9,7 @@
 namespace tracing {
 
 TraceManagerApp::TraceManagerApp(const Config& config)
-    : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+    : context_(component::StartupContext::CreateFromStartupInfo()),
       trace_manager_(context_.get(), config) {
   context_->outgoing().AddPublicService(
       trace_registry_bindings_.GetHandler(&trace_manager_));

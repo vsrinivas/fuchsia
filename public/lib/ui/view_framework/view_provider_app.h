@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/view_framework/view_provider_service.h"
 
@@ -20,12 +20,12 @@ class ViewProviderApp {
  public:
   explicit ViewProviderApp(ViewFactory factory);
   // Does not take ownership of |startup_context|.
-  ViewProviderApp(fuchsia::sys::StartupContext* startup_context,
+  ViewProviderApp(component::StartupContext* startup_context,
                   ViewFactory factory);
   ~ViewProviderApp();
 
  private:
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   ViewProviderService service_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewProviderApp);

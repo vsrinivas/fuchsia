@@ -13,7 +13,7 @@
 #include <lib/vmo-utils/vmo_mapper.h>
 
 #include "garnet/examples/media/tones/tone_generator.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"

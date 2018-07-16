@@ -4,16 +4,16 @@
 
 #include "echo_server_app.h"
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 
 namespace echo2 {
 
 EchoServerApp::EchoServerApp(bool quiet)
-    : EchoServerApp(fuchsia::sys::StartupContext::CreateFromStartupInfo(),
+    : EchoServerApp(component::StartupContext::CreateFromStartupInfo(),
                     quiet) {}
 
 EchoServerApp::EchoServerApp(
-    std::unique_ptr<fuchsia::sys::StartupContext> context, bool quiet)
+    std::unique_ptr<component::StartupContext> context, bool quiet)
     : context_(std::move(context)), quiet_(quiet) {
   context_->outgoing().AddPublicService(bindings_.GetHandler(this));
 }

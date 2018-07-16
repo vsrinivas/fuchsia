@@ -8,7 +8,7 @@
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include "garnet/bin/ui/root_presenter/renderer_params.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
@@ -46,7 +46,7 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto startup_context_ = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto startup_context_ = component::StartupContext::CreateFromStartupInfo();
 
   // Ask the presenter to change renderer params.
   auto presenter =

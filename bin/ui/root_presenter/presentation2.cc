@@ -21,7 +21,7 @@
 #include <glm/ext.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "lib/app/cpp/connect.h"
+#include "lib/component/cpp/connect.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/ui/input/cpp/formatting.h"

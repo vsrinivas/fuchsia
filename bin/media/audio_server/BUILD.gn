@@ -104,7 +104,7 @@ executable("audio_server") {
     "//garnet/bin/media/audio_server:audio_mixer_lib",
     "//garnet/bin/media/util",
     "//garnet/lib/media/wav_writer",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/audio",
@@ -134,7 +134,7 @@ test("tests") {
   ]
 
   deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",

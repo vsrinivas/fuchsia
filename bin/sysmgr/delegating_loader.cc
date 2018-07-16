@@ -51,7 +51,7 @@ void DelegatingLoader::LoadComponent(fidl::StringPtr url,
 }
 
 void DelegatingLoader::StartDelegate(LoaderRecord* record) {
-  fuchsia::sys::Services services;
+  component::Services services;
   fuchsia::sys::LaunchInfo dup_launch_info;
   dup_launch_info.url = record->launch_info->url;
   fidl::Clone(record->launch_info->arguments, &dup_launch_info.arguments);

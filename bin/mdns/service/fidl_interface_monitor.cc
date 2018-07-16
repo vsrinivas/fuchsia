@@ -11,13 +11,13 @@ namespace mdns {
 
 // static
 std::unique_ptr<InterfaceMonitor> FidlInterfaceMonitor::Create(
-    fuchsia::sys::StartupContext* startup_context) {
+    component::StartupContext* startup_context) {
   return std::unique_ptr<InterfaceMonitor>(
       new FidlInterfaceMonitor(startup_context));
 }
 
 FidlInterfaceMonitor::FidlInterfaceMonitor(
-    fuchsia::sys::StartupContext* startup_context)
+    component::StartupContext* startup_context)
     : binding_(this) {
   netstack_ = startup_context
                   ->ConnectToEnvironmentService<fuchsia::netstack::Netstack>();

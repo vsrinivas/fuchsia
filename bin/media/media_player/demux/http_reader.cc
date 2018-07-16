@@ -8,7 +8,7 @@
 #include <lib/async/default.h>
 
 #include "garnet/bin/http/http_errors.h"
-#include "lib/app/cpp/connect.h"
+#include "lib/component/cpp/connect.h"
 #include "lib/fxl/logging.h"
 
 namespace media_player {
@@ -30,11 +30,11 @@ constexpr uint32_t kStatusNotFound = 404u;
 
 // static
 std::shared_ptr<HttpReader> HttpReader::Create(
-    fuchsia::sys::StartupContext* startup_context, const std::string& url) {
+    component::StartupContext* startup_context, const std::string& url) {
   return std::make_shared<HttpReader>(startup_context, url);
 }
 
-HttpReader::HttpReader(fuchsia::sys::StartupContext* startup_context,
+HttpReader::HttpReader(component::StartupContext* startup_context,
                        const std::string& url)
     : url_(url), ready_(async_get_default_dispatcher()) {
   http::HttpServicePtr network_service =

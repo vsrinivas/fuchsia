@@ -19,7 +19,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   trace::TraceProvider trace_provider(loop.dispatcher());
 
-  auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
   // Export deprecated |fuchsia.ui.views_v1.ViewProvider| service.
   mozart::ViewProviderApp mozart_app(

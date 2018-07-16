@@ -7,7 +7,7 @@
 
 #include <fidl/examples/echo/cpp/fidl.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 
 namespace echo2 {
 
@@ -17,13 +17,13 @@ class EchoServerApp : public fidl::examples::echo::Echo {
   virtual void EchoString(fidl::StringPtr value, EchoStringCallback callback);
 
  protected:
-  EchoServerApp(std::unique_ptr<fuchsia::sys::StartupContext> context,
+  EchoServerApp(std::unique_ptr<component::StartupContext> context,
                 bool quiet);
 
  private:
   EchoServerApp(const EchoServerApp&) = delete;
   EchoServerApp& operator=(const EchoServerApp&) = delete;
-  std::unique_ptr<fuchsia::sys::StartupContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   fidl::BindingSet<Echo> bindings_;
   bool quiet_;
 };

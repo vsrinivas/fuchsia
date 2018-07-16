@@ -45,7 +45,7 @@ executable("scenic") {
 source_set("base_deps") {
   public_deps = [
     "//garnet/lib/ui/scenic",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

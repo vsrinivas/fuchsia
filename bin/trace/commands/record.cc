@@ -201,7 +201,7 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
 
 Command::Info Record::Describe() {
   return Command::Info{
-      [](fuchsia::sys::StartupContext* context) {
+      [](component::StartupContext* context) {
         return std::make_unique<Record>(context);
       },
       "record",
@@ -230,7 +230,7 @@ Command::Info Record::Describe() {
         "tracing ends unless --detach is specified"}}};
 }
 
-Record::Record(fuchsia::sys::StartupContext* context)
+Record::Record(component::StartupContext* context)
     : CommandWithTraceController(context), weak_ptr_factory_(this) {}
 
 void Record::Start(const fxl::CommandLine& command_line) {

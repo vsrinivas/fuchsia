@@ -10,7 +10,7 @@
 #include <lib/zx/channel.h>
 
 #include "garnet/bin/mdns/tool/mdns_params.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/macros.h"
 #include "lib/mdns/cpp/service_subscriber.h"
@@ -19,7 +19,7 @@ namespace mdns {
 
 class MdnsImpl : public fuchsia::mdns::MdnsResponder {
  public:
-  MdnsImpl(fuchsia::sys::StartupContext* startup_context, MdnsParams* params,
+  MdnsImpl(component::StartupContext* startup_context, MdnsParams* params,
            fit::closure quit_callback);
 
   ~MdnsImpl() override;

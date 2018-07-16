@@ -15,7 +15,7 @@
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "garnet/bin/ui/root_presenter/presentation1.h"
 #include "garnet/bin/ui/root_presenter/presentation2.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
@@ -79,7 +79,7 @@ class App : public fuchsia::ui::policy::Presenter,
   Presentation::ShutdownCallback GetShutdownCallback(
       Presentation* presentation);
 
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   fidl::BindingSet<fuchsia::ui::policy::Presenter> presenter_bindings_;
   fidl::BindingSet<fuchsia::ui::policy::Presenter2> presenter2_bindings_;
   fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry>

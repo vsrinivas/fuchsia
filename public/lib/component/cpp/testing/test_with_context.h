@@ -5,11 +5,10 @@
 #ifndef LIB_APP_CPP_TESTING_TEST_WITH_CONTEXT_H_
 #define LIB_APP_CPP_TESTING_TEST_WITH_CONTEXT_H_
 
-#include "lib/app/cpp/testing/startup_context_for_test.h"
+#include "lib/component/cpp/testing/startup_context_for_test.h"
 #include "lib/gtest/test_loop_fixture.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 namespace testing {
 
 // Test fixture for tests where a |StartupContext| is needed.
@@ -29,7 +28,6 @@ class TestWithContext : public gtest::TestLoopFixture {
 };
 
 }  // namespace testing
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component
 
 #endif  // LIB_APP_CPP_TESTING_TEST_WITH_CONTEXT_H_

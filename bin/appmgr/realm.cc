@@ -25,7 +25,7 @@
 #include "garnet/bin/appmgr/sandbox_metadata.h"
 #include "garnet/bin/appmgr/url_resolver.h"
 #include "garnet/bin/appmgr/util.h"
-#include "lib/app/cpp/connect.h"
+#include "lib/component/cpp/connect.h"
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/fsl/vmo/file.h"
@@ -203,7 +203,7 @@ Realm::Realm(RealmArgs args)
 
   fuchsia::sys::ServiceProviderPtr service_provider;
   default_namespace_->services()->AddBinding(service_provider.NewRequest());
-  loader_ = fuchsia::sys::ConnectToService<fuchsia::sys::Loader>(
+  loader_ = component::ConnectToService<fuchsia::sys::Loader>(
       service_provider.get());
 }
 
@@ -658,7 +658,7 @@ RunnerHolder* Realm::GetOrCreateRunner(const std::string& runner) {
   // recursively to detect cycles.
   auto result = runners_.emplace(runner, nullptr);
   if (result.second) {
-    fuchsia::sys::Services runner_services;
+    Services runner_services;
     fuchsia::sys::ComponentControllerPtr runner_controller;
     fuchsia::sys::LaunchInfo runner_launch_info;
     runner_launch_info.url = runner;

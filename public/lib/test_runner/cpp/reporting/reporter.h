@@ -8,13 +8,13 @@
 #include <vector>
 
 #include <fuchsia/testing/runner/cpp/fidl.h>
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 
 using fuchsia::testing::runner::TestResultPtr;
 
 namespace test_runner {
 
-void ReportResult(std::string identity, fuchsia::sys::StartupContext* context,
+void ReportResult(std::string identity, component::StartupContext* context,
                   std::vector<TestResultPtr> results);
 
 }  // namespace test_runner

@@ -8,7 +8,7 @@ import("//build/go/toolchain.gni")
 go_library("syslog") {
   name = "syslog"
   deps = [
-    "//garnet/public/lib/app/go/src/app($go_toolchain)",
+    "//garnet/public/lib/component/go/src/app($go_toolchain)",
     "//zircon/public/fidl/fuchsia-logger($go_toolchain)",
   ]
 }

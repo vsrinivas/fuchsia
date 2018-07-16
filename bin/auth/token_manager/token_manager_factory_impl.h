@@ -7,7 +7,7 @@
 
 #include <fuchsia/auth/cpp/fidl.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
@@ -25,7 +25,7 @@ const std::string kAuthDbPostfix = "token_store.db";
 
 class TokenManagerFactoryImpl : public TokenManagerFactory {
  public:
-  TokenManagerFactoryImpl(fuchsia::sys::StartupContext* context);
+  TokenManagerFactoryImpl(component::StartupContext* context);
 
   ~TokenManagerFactoryImpl() override;
 
@@ -38,7 +38,7 @@ class TokenManagerFactoryImpl : public TokenManagerFactory {
           auth_context_provider,
       fidl::InterfaceRequest<TokenManager> request) override;
 
-  fuchsia::sys::StartupContext* const app_context_;
+  component::StartupContext* const app_context_;
 
   fidl::BindingSet<TokenManager, std::unique_ptr<TokenManager>>
       token_manager_bindings_;

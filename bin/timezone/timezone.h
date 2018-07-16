@@ -8,7 +8,7 @@
 #include <vector>
 
 #include <fuchsia/timezone/cpp/fidl.h>
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "third_party/icu/source/common/unicode/strenum.h"
 
@@ -23,7 +23,7 @@ namespace time_zone {
 class TimezoneImpl : public fuchsia::timezone::Timezone {
  public:
   // Constructs the time service with a caller-owned application context.
-  TimezoneImpl(std::unique_ptr<fuchsia::sys::StartupContext> context,
+  TimezoneImpl(std::unique_ptr<component::StartupContext> context,
                const char icu_data_path[], const char tz_id_path[]);
   ~TimezoneImpl();
 
@@ -48,7 +48,7 @@ class TimezoneImpl : public fuchsia::timezone::Timezone {
   // methods. Returns a guaranteed-valid timezone ID.
   fidl::StringPtr GetTimezoneIdImpl();
 
-  std::unique_ptr<fuchsia::sys::StartupContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   const char* const icu_data_path_;
   const char* const tz_id_path_;
 

@@ -9,7 +9,7 @@
 #include <functional>
 #include <vector>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/scenic/cpp/base_view.h"
@@ -25,7 +25,7 @@ namespace scenic {
 // This is only intended to be used for simple example programs.
 class ViewProviderService : private fuchsia::ui::app::ViewProvider {
  public:
-  explicit ViewProviderService(fuchsia::sys::StartupContext* startup_context,
+  explicit ViewProviderService(component::StartupContext* startup_context,
                                fuchsia::ui::scenic::Scenic* scenic,
                                ViewFactory factory);
   ~ViewProviderService();
@@ -38,7 +38,7 @@ class ViewProviderService : private fuchsia::ui::app::ViewProvider {
       override;
 
  private:
-  fuchsia::sys::StartupContext* const startup_context_;
+  component::StartupContext* const startup_context_;
   fuchsia::ui::scenic::Scenic* const scenic_;
   ViewFactory view_factory_;
 

@@ -9,7 +9,7 @@
 #include <unordered_map>
 
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/tests/mocks/mock_input_device.h"
 

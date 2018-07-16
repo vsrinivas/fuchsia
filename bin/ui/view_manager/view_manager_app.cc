@@ -10,7 +10,7 @@
 namespace view_manager {
 
 ViewManagerApp::ViewManagerApp()
-    : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()) {
   FXL_DCHECK(startup_context_);
 
   registry_.reset(new ViewRegistry(startup_context_.get()));

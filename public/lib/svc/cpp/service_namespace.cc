@@ -14,8 +14,7 @@
 
 #include "lib/fxl/files/unique_fd.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 ServiceNamespace::ServiceNamespace()
     : directory_(fbl::AdoptRef(new fs::PseudoDir())) {}
@@ -75,5 +74,4 @@ void ServiceNamespace::ConnectCommon(const std::string& service_name,
     it->second(std::move(channel));
 }
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

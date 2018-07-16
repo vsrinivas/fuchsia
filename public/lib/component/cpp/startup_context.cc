@@ -2,19 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 
 #include <lib/async/default.h>
 #include <lib/fdio/util.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
-#include "lib/app/cpp/connect.h"
-#include "lib/app/cpp/environment_services.h"
+#include "lib/component/cpp/connect.h"
+#include "lib/component/cpp/environment_services.h"
 #include "lib/fxl/logging.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 namespace {
 
@@ -49,8 +48,8 @@ StartupContext::CreateFromStartupInfoNotChecked() {
 }
 
 std::unique_ptr<StartupContext> StartupContext::CreateFrom(
-    StartupInfo startup_info) {
-  FlatNamespace& flat = startup_info.flat_namespace;
+    fuchsia::sys::StartupInfo startup_info) {
+  fuchsia::sys::FlatNamespace& flat = startup_info.flat_namespace;
   if (flat.paths->size() != flat.directories->size())
     return nullptr;
 
@@ -72,5 +71,4 @@ void StartupContext::ConnectToEnvironmentService(
   incoming_services().ConnectToService(std::move(channel), interface_name);
 }
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

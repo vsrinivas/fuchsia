@@ -6,7 +6,7 @@
 #include <utility>
 
 #include "garnet/bin/fonts/font_provider_impl.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
@@ -14,7 +14,7 @@ namespace fonts {
 
 class App {
  public:
-  App() : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
+  App() : context_(component::StartupContext::CreateFromStartupInfo()) {
     if (!font_provider_.LoadFonts())
       exit(ZX_ERR_UNAVAILABLE);
     context_->outgoing().AddPublicService<fuchsia::fonts::FontProvider>(
@@ -24,7 +24,7 @@ class App {
   }
 
  private:
-  std::unique_ptr<fuchsia::sys::StartupContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   FontProviderImpl font_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);

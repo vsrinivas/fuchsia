@@ -7,8 +7,8 @@
 #include <zircon/syscalls.h>
 
 #include <fuchsia/timezone/cpp/fidl.h>
-#include "lib/app/cpp/environment_services.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/environment_services.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
@@ -21,7 +21,7 @@ static constexpr char kGetTimezoneIdCmd[] = "get_timezone_id";
 class TzUtil {
  public:
   TzUtil() {
-    fuchsia::sys::ConnectToEnvironmentService(timezone_.NewRequest());
+    component::ConnectToEnvironmentService(timezone_.NewRequest());
   }
 
   void Run(fxl::CommandLine command_line) {

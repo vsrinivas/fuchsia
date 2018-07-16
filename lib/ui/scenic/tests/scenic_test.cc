@@ -7,13 +7,13 @@
 namespace scenic {
 namespace test {
 
-std::unique_ptr<fuchsia::sys::StartupContext> ScenicTest::app_context_;
+std::unique_ptr<component::StartupContext> ScenicTest::app_context_;
 
 void ScenicTest::SetUp() {
   // TODO(SCN-720): Wrap CreateFromStartupInfo using ::gtest::Environment
   // instead of this hack.  This code has the chance to break non-ScenicTests.
   if (app_context_ == nullptr) {
-    app_context_ = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+    app_context_ = component::StartupContext::CreateFromStartupInfo();
   }
   scenic_ =
       std::make_unique<Scenic>(app_context_.get(), [this] { QuitLoop(); });

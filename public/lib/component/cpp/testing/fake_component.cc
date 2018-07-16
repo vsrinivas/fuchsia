@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/app/cpp/testing/fake_component.h"
+#include "lib/component/cpp/testing/fake_component.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 namespace testing {
 
 FakeComponent::FakeComponent()
@@ -25,5 +24,4 @@ void FakeComponent::Register(std::string url, FakeLauncher& fake_launcher) {
 }
 
 }  // namespace testing
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

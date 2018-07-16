@@ -163,7 +163,7 @@ source_set("gfx") {
 
   public_deps = [
     "//garnet/lib/ui/scenic",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/escher",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",

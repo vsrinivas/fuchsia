@@ -12,7 +12,7 @@
 #include "garnet/lib/machina/gpu_scanout.h"
 #include "garnet/lib/machina/input_dispatcher.h"
 #include "garnet/lib/machina/virtio_gpu.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
@@ -32,11 +32,11 @@ class GuestView;
 class ScenicScanout : public machina::GpuScanout,
                       public ::fuchsia::ui::views_v1::ViewProvider {
  public:
-  static zx_status_t Create(fuchsia::sys::StartupContext* startup_context,
+  static zx_status_t Create(component::StartupContext* startup_context,
                             machina::InputDispatcher* input_dispatcher,
                             fbl::unique_ptr<ScenicScanout>* out);
 
-  ScenicScanout(fuchsia::sys::StartupContext* startup_context,
+  ScenicScanout(component::StartupContext* startup_context,
                 machina::InputDispatcher* input_dispatcher);
 
   // |GpuScanout|
@@ -51,7 +51,7 @@ class ScenicScanout : public machina::GpuScanout,
 
  private:
   machina::InputDispatcher* input_dispatcher_;
-  fuchsia::sys::StartupContext* startup_context_;
+  component::StartupContext* startup_context_;
   fidl::BindingSet<ViewProvider> bindings_;
   fbl::unique_ptr<GuestView> view_;
 };

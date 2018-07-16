@@ -9,7 +9,7 @@
 #include <memory>
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include "lib/fxl/logging.h"
@@ -19,7 +19,7 @@ namespace codec_factory {
 // CodecFactoryApp is singleton per-process.
 class CodecFactoryApp {
  public:
-  CodecFactoryApp(std::unique_ptr<fuchsia::sys::StartupContext> startup_context,
+  CodecFactoryApp(std::unique_ptr<component::StartupContext> startup_context,
                   async::Loop* loop);
 
   // The caller must only call this on the FIDL thread, and the returned * is
@@ -47,7 +47,7 @@ class CodecFactoryApp {
 
   void DiscoverMediaCodecDrivers();
 
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
 
   async::Loop* loop_;
 

@@ -12,7 +12,7 @@
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include "garnet/examples/ui/tile/tile_params.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
@@ -26,7 +26,7 @@ class TileView : public mozart::BaseView, public fuchsia::ui::policy::Presenter 
   TileView(::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
            fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
                view_owner_request,
-           fuchsia::sys::StartupContext* startup_context,
+           component::StartupContext* startup_context,
            const TileParams& tile_params);
 
   ~TileView() override;
@@ -80,11 +80,11 @@ class TileView : public mozart::BaseView, public fuchsia::ui::policy::Presenter 
   // Nested environment within which the apps started by TileView will run.
   fuchsia::sys::EnvironmentPtr env_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
-  fuchsia::sys::ServiceProviderBridge service_provider_bridge_;
+  component::ServiceProviderBridge service_provider_bridge_;
   fuchsia::sys::LauncherPtr env_launcher_;
 
   // Context inherited when TileView is launched.
-  fuchsia::sys::StartupContext* startup_context_;
+  component::StartupContext* startup_context_;
 
   // Parsed command-line parameters for this program.
   TileParams params_;

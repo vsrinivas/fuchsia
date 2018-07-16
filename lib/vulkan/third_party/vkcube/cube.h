@@ -36,8 +36,8 @@
 #if defined(CUBE_USE_IMAGE_PIPE)
 #include <lib/async-loop/cpp/loop.h>
 
-#include "lib/app/cpp/connect.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/connect.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings.h"
 #include "lib/fxl/logging.h"

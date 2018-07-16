@@ -8,7 +8,7 @@ executable("bin") {
   output_name = "crashpad_analyzer"
 
   deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//third_party/crashpad/client",
     "//third_party/crashpad/handler",
     "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",

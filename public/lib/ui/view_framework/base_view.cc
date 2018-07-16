@@ -6,7 +6,7 @@
 
 #include <trace/event.h>
 
-#include "lib/app/cpp/connect.h"
+#include "lib/component/cpp/connect.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_point.h"
 #include "lib/ui/geometry/cpp/geometry_util.h"
@@ -41,7 +41,7 @@ BaseView::BaseView(
                             view_listener_binding_.NewBinding(),
                             std::move(parent_export_token), label);
 
-  fuchsia::sys::ConnectToService(GetViewServiceProvider(),
+  component::ConnectToService(GetViewServiceProvider(),
                               input_connection_.NewRequest());
   input_connection_->SetEventListener(input_listener_binding_.NewBinding());
 

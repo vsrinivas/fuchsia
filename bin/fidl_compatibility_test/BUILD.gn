@@ -12,7 +12,7 @@ executable("fidl_compatibility_test") {
   ]
 
   deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service",
     "//garnet/public/lib/fidl/compatibility_test:echo_client_app",
     "//garnet/public/lib/fidl/cpp",
@@ -30,7 +30,7 @@ executable("compatibility_test_server_cpp_bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service",
     "//garnet/public/lib/fidl/compatibility_test:echo_client_app",
     "//garnet/public/lib/fidl/cpp",

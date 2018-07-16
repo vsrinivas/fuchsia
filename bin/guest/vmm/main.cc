@@ -44,7 +44,7 @@
 #include "garnet/lib/machina/virtio_net.h"
 #include "garnet/lib/machina/virtio_vsock.h"
 #include "garnet/public/lib/fxl/files/file.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 
 #if __aarch64__
 #include "garnet/lib/machina/arch/arm64/pl031.h"
@@ -154,7 +154,7 @@ static zx_status_t setup_zircon_framebuffer(
 }
 
 static zx_status_t setup_scenic_framebuffer(
-    fuchsia::sys::StartupContext* startup_context, machina::VirtioGpu* gpu,
+    component::StartupContext* startup_context, machina::VirtioGpu* gpu,
     machina::InputDispatcher* input_dispatcher,
     machina::GuestControllerImpl* guest_controller,
     fbl::unique_ptr<machina::GpuScanout>* scanout) {
@@ -185,8 +185,8 @@ static zx_status_t read_guest_cfg(const char* cfg_path, int argc, char** argv,
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   trace::TraceProvider trace_provider(loop.dispatcher());
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context =
-      fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<component::StartupContext> startup_context =
+      component::StartupContext::CreateFromStartupInfo();
 
   GuestConfig cfg;
   zx_status_t status =

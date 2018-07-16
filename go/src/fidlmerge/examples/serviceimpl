@@ -288,7 +288,7 @@ fidlmerge -template serviceimpl \
         {{- end }}
     {{- end }}
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 {{/* keep the newline */}}
     {{- range .Name.Parts }}
@@ -303,7 +303,7 @@ namespace {{ . }} {
     {{- $name := .Name.Parts.Name -}}
 class {{ $name }}Impl {
  public:
-  {{ $name }}Impl(fuchsia::sys::StartupContext* startup_context);
+  {{ $name }}Impl(component::StartupContext* startup_context);
 
   virtual ~{{ $name }}Impl();
 
@@ -318,7 +318,7 @@ class {{ $name }}Impl {
   {{ $name }}Impl(const {{ $name }}&) = delete;
   {{ $name }}Impl& operator=(const {{ $name }}Impl&) = delete
 
-  fuchsia::sys::StartupContext* startup_context_;
+  component::StartupContext* startup_context_;
   fidl::BindingSet<{{ $name }}f> bindings_;
 };
 {{ end }}
@@ -358,7 +358,7 @@ namespace {{ . }} {
 {{/* Produces interface definitions for a C++ implementation file from a types.Interface. */}}
 {{- define "InterfaceImplementationDefs" }}
     {{- $interface := . }}
-{{ template "Id" .Name }}Impl::{{ template "Id" .Name }}Impl(fuchsia::sys::StartupContext* startup_context)
+{{ template "Id" .Name }}Impl::{{ template "Id" .Name }}Impl(component::StartupContext* startup_context)
     : startup_context_(startup_context) {}
 
 {{ template "Id" .Name }}Impl::~{{ template "Id" .Name }}Impl() {}

@@ -5,7 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "gtest/gtest.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/test_runner/cpp/reporting/gtest_listener.h"
 #include "lib/test_runner/cpp/reporting/reporter.h"
 
@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
 
   {
     async::Loop loop(&kAsyncLoopConfigMakeDefault);
-    auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+    auto context = component::StartupContext::CreateFromStartupInfo();
     test_runner::ReportResult(argv[0], context.get(), listener.GetResults());
   }
 

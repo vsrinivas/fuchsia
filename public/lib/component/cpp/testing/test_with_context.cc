@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/app/cpp/testing/test_with_context.h"
+#include "lib/component/cpp/testing/test_with_context.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 namespace testing {
 
 TestWithContext::TestWithContext()
     : context_(StartupContextForTest::Create()),
       controller_(&context_->controller()) {
   // Take the real StartupContext to prevent code under test from having it
-  fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  component::StartupContext::CreateFromStartupInfo();
 }
 
 std::unique_ptr<StartupContext> TestWithContext::TakeContext() {
@@ -20,5 +19,4 @@ std::unique_ptr<StartupContext> TestWithContext::TakeContext() {
 }
 
 }  // namespace testing
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

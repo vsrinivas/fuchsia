@@ -9,7 +9,7 @@
 #include <lib/fit/function.h>
 
 #include "garnet/lib/media/wav_writer/wav_writer.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
@@ -25,7 +25,7 @@ class WavRecorder {
   }
 
   ~WavRecorder();
-  void Run(fuchsia::sys::StartupContext* app_context);
+  void Run(component::StartupContext* app_context);
 
  private:
   void Usage();

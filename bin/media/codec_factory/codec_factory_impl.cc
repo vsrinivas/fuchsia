@@ -24,7 +24,7 @@ namespace codec_factory {
 // to mitigate that problem locally in this class, it seems better to intergrate
 // with a more general-purpose request spam mitigation mechanism.
 void CodecFactoryImpl::CreateSelfOwned(
-    CodecFactoryApp* app, fuchsia::sys::StartupContext* startup_context,
+    CodecFactoryApp* app, component::StartupContext* startup_context,
     zx::channel request) {
   // I considered just doing "new CodecFactoryImpl(...)" here and declaring that
   // it always inherently owns itself (and implementing it that way), but that
@@ -41,7 +41,7 @@ void CodecFactoryImpl::CreateSelfOwned(
 }
 
 CodecFactoryImpl::CodecFactoryImpl(
-    CodecFactoryApp* app, fuchsia::sys::StartupContext* startup_context,
+    CodecFactoryApp* app, component::StartupContext* startup_context,
     zx::channel channel)
     : app_(app),
       startup_context_(startup_context),
@@ -82,7 +82,7 @@ void CodecFactoryImpl::CreateDecoder(
   // For now, we always forward to a kIsolateUrlOmx app instance that we create
   // here.
   fuchsia::sys::ComponentControllerPtr component_controller;
-  fuchsia::sys::Services services;
+  component::Services services;
   fuchsia::sys::LaunchInfo launch_info{};
   std::string url = kIsolateUrlOmx;
   launch_info.url = url;

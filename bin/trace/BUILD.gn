@@ -39,7 +39,7 @@ source_set("trace_app") {
   public_deps = [
     "//garnet/lib/measure",
     "//garnet/lib/trace_converters:chromium",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/fidl/fuchsia.tracing",

@@ -21,7 +21,7 @@ constexpr int32_t kMillisecondsInMinute = 60000;
 namespace time_zone {
 
 TimezoneImpl::TimezoneImpl(
-    std::unique_ptr<fuchsia::sys::StartupContext> context,
+    std::unique_ptr<component::StartupContext> context,
     const char icu_data_path[], const char tz_id_path[])
     : context_(std::move(context)),
       icu_data_path_(icu_data_path),

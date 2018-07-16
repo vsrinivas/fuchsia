@@ -8,14 +8,14 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include "garnet/bin/ui/ime/ime_impl.h"
-#include "lib/app/cpp/connect.h"
+#include "lib/component/cpp/connect.h"
 #include "lib/fxl/logging.h"
 #include "lib/ui/input/cpp/formatting.h"
 
 namespace ime {
 
 App::App(const fxl::CommandLine& command_line)
-    : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()) {
   FXL_DCHECK(startup_context_);
   startup_context_->outgoing().AddPublicService(ime_bindings_.GetHandler(this));
 }

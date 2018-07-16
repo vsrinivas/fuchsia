@@ -10,7 +10,7 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/examples/escher/common/demo_harness.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 
 class DemoHarnessFuchsia : public DemoHarness {
@@ -20,7 +20,7 @@ class DemoHarnessFuchsia : public DemoHarness {
   // |DemoHarness|
   void Run(Demo* demo) override;
 
-  fuchsia::sys::StartupContext* startup_context() {
+  component::StartupContext* startup_context() {
     return startup_context_.get();
   }
 
@@ -44,7 +44,7 @@ class DemoHarnessFuchsia : public DemoHarness {
   async::Loop* loop_;
   std::unique_ptr<async::Loop> owned_loop_;
 
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
 };
 
 #endif  // GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_FUCHSIA_H_

@@ -9,7 +9,7 @@
 #include <vector>
 
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
@@ -35,7 +35,7 @@ class App : public fuchsia::ui::input::ImeService {
 
   void OnImeDisconnected(ImeImpl* ime);
 
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   std::vector<std::unique_ptr<ImeImpl>> ime_;
   fidl::BindingSet<fuchsia::ui::input::ImeService> ime_bindings_;
 

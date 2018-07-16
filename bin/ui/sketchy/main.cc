@@ -6,7 +6,7 @@
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/ui/sketchy/app.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/escher/escher.h"
 #include "lib/escher/escher_process_init.h"
 

@@ -10,7 +10,7 @@
 #include <lib/vmo-utils/vmo_mapper.h>
 
 #include "garnet/lib/media/wav_writer/wav_writer.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 
 namespace media {
 namespace tools {
@@ -59,11 +59,11 @@ class MediaApp {
     audio_policy_ = policy;
   }
 
-  void Run(fuchsia::sys::StartupContext* app_context);
+  void Run(component::StartupContext* app_context);
 
  private:
   bool SetupPayloadCoefficients();
-  void AcquireRenderer(fuchsia::sys::StartupContext* app_context);
+  void AcquireRenderer(component::StartupContext* app_context);
   void SetMediaType();
 
   zx_status_t CreateMemoryMapping();

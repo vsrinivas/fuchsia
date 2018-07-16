@@ -153,7 +153,7 @@ void TestRunnerImpl::PassTestPoint() {
 }
 
 TestRunContext::TestRunContext(
-    std::shared_ptr<fuchsia::sys::StartupContext> app_context,
+    std::shared_ptr<component::StartupContext> app_context,
     TestRunObserver* connection, const std::string& test_id,
     const std::string& url, const std::vector<std::string>& args)
     : test_runner_connection_(connection), test_id_(test_id), success_(true) {

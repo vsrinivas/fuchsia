@@ -10,7 +10,7 @@
 #include "garnet/lib/ui/scenic/scenic.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "gtest/gtest.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/gtest/test_loop_fixture.h"
 
@@ -52,7 +52,7 @@ class ScenicTest : public ::gtest::TestLoopFixture,
     }
   }
 
-  static std::unique_ptr<fuchsia::sys::StartupContext> app_context_;
+  static std::unique_ptr<component::StartupContext> app_context_;
   std::unique_ptr<Scenic> scenic_;
   std::vector<std::string> reported_errors_;
   std::vector<fuchsia::ui::scenic::Event> events_;

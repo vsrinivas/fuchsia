@@ -13,7 +13,7 @@ source_set("testing") {
   ]
 
   deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
   ]
 
   public_deps = [
@@ -32,7 +32,7 @@ source_set("fake_launcher") {
   ]
 
   deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
   ]
 }
 
@@ -46,6 +46,6 @@ source_set("fake_component") {
 
   deps = [
     ":fake_launcher",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
   ]
 }

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 
@@ -37,13 +37,13 @@ void test_factory() {
   //     creating problems.
   fidl_loop.StartThread("FIDL_thread");
 
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context;
+  std::unique_ptr<component::StartupContext> startup_context;
   // Use FIDL thread to run CreateFromStartupInfo(), since it uses the calling
   // thread's default async_t, and we don't want to be accidentally doing
   // FIDL requests from the main thread, so we don't use
   // kAsyncLoopConfigMakeDefault above.
   PostSerial(fidl_loop.dispatcher(), [&startup_context] {
-    startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+    startup_context = component::StartupContext::CreateFromStartupInfo();
   });
 
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;

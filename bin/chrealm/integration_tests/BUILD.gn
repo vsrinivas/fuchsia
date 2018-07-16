@@ -17,7 +17,7 @@ executable("tests") {
     "fidl/fuchsia.testing.chrealm",
     "//garnet/bin/appmgr:lib",
     "//garnet/public/fidl/fuchsia.sys",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//zircon/public/lib/fs",
@@ -35,7 +35,7 @@ executable("get_message_client_bin") {
   deps = [
     "fidl/fuchsia.testing.chrealm",
     "//garnet/public/fidl/fuchsia.sys",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//zircon/public/lib/zx",
   ]

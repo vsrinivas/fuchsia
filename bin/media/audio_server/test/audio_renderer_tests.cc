@@ -7,7 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/gtest/real_loop_fixture.h>
 
-#include "lib/app/cpp/environment_services.h"
+#include "lib/component/cpp/environment_services.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
 
@@ -19,7 +19,7 @@ namespace test {
 class AudioRendererTest : public gtest::RealLoopFixture {
  protected:
   void SetUp() override {
-    fuchsia::sys::ConnectToEnvironmentService(audio_.NewRequest());
+    component::ConnectToEnvironmentService(audio_.NewRequest());
     ASSERT_TRUE(audio_);
 
     audio_.set_error_handler([this]() {
@@ -96,7 +96,7 @@ TEST_F(AudioRendererTest, SetPcmFormat_Double) {
 class AudioRendererSyncTest : public gtest::RealLoopFixture {
  protected:
   void SetUp() override {
-    fuchsia::sys::ConnectToEnvironmentService(audio_.NewRequest());
+    component::ConnectToEnvironmentService(audio_.NewRequest());
     ASSERT_TRUE(audio_);
 
     ASSERT_EQ(ZX_OK, audio_->CreateRendererV2(audio_renderer_.NewRequest()));

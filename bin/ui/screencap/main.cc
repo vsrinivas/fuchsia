@@ -10,7 +10,7 @@
 
 #include "garnet/lib/ui/scenic/scenic.h"
 #include "garnet/lib/ui/scenic/system.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/vmo/vector.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
@@ -49,8 +49,8 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   trace::TraceProvider trace_provider(loop.dispatcher());
-  std::unique_ptr<fuchsia::sys::StartupContext> app_context(
-      fuchsia::sys::StartupContext::CreateFromStartupInfo());
+  std::unique_ptr<component::StartupContext> app_context(
+      component::StartupContext::CreateFromStartupInfo());
   // Connect to the SceneManager service.
   auto scenic =
       app_context->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();

@@ -9,7 +9,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/service_namespace.h"
 #include "lib/svc/cpp/services.h"
@@ -45,7 +45,7 @@ class RespondingServiceHost {
  private:
   class ServicesHolder {
    public:
-    ServicesHolder(fuchsia::sys::Services services,
+    ServicesHolder(component::Services services,
                    fuchsia::sys::ComponentControllerPtr controller)
         : services_(std::move(services)) {}
     ServicesHolder(fuchsia::sys::ServiceProviderPtr service_provider)
@@ -54,13 +54,13 @@ class RespondingServiceHost {
     void ConnectToService(const std::string& service_name, zx::channel c);
 
    private:
-    fuchsia::sys::Services services_;
+    component::Services services_;
     fuchsia::sys::ServiceProviderPtr service_provider_;
     const bool is_service_provider_{};
   };
   std::unordered_map<std::string, ServicesHolder> service_providers_by_name_;
 
-  fuchsia::sys::ServiceNamespace service_namespace_;
+  component::ServiceNamespace service_namespace_;
   fuchsia::sys::LauncherPtr launcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RespondingServiceHost);

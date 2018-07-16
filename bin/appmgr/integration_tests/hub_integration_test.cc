@@ -13,7 +13,7 @@
 #include "garnet/bin/appmgr/service_provider_dir_impl.h"
 #include "garnet/bin/appmgr/util.h"
 #include "gtest/gtest.h"
-#include "lib/app/cpp/environment_services.h"
+#include "lib/component/cpp/environment_services.h"
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/svc/cpp/services.h"
@@ -51,7 +51,7 @@ class HubTest : public ::testing::Test {
         vfs_(async_get_default_dispatcher()),
         services_(fbl::AdoptRef(new ServiceProviderDirImpl())) {
     // we are currently have access to sys environment and not root environment.
-    fuchsia::sys::ConnectToEnvironmentService(sys_env_.NewRequest());
+    component::ConnectToEnvironmentService(sys_env_.NewRequest());
     sys_env_->GetServices(svc_.NewRequest());
     services_->AddService(
         fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
@@ -146,7 +146,7 @@ TEST_F(HubTest, ScopePolicy) {
   // Connect to the Launcher service through our static environment.
   // This launcher is from sys realm so our hub would be scoped to it
   fuchsia::sys::LauncherSyncPtr launcher;
-  fuchsia::sys::ConnectToEnvironmentService(launcher.NewRequest());
+  component::ConnectToEnvironmentService(launcher.NewRequest());
 
   std::string glob_url = "glob";
   // test that we can find logger

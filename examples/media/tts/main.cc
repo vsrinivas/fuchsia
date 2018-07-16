@@ -7,8 +7,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 
-#include "lib/app/cpp/connect.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/connect.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
 
@@ -27,7 +27,7 @@ class TtsClient {
 TtsClient::TtsClient(fit::closure quit_callback)
     : quit_callback_(std::move(quit_callback)) {
   FXL_DCHECK(quit_callback_);
-  auto app_ctx = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto app_ctx = component::StartupContext::CreateFromStartupInfo();
   tts_service_ = app_ctx->ConnectToEnvironmentService<fuchsia::tts::TtsService>();
   tts_service_.set_error_handler([this]() {
     printf("Connection error when trying to talk to the TtsService\n");

@@ -19,7 +19,7 @@ using fuchsia::sys::TerminationReason;
 
 namespace component {
 
-RunnerHolder::RunnerHolder(fuchsia::sys::Services services,
+RunnerHolder::RunnerHolder(Services services,
                            fuchsia::sys::ComponentControllerPtr controller,
                            fuchsia::sys::LaunchInfo launch_info, Realm* realm,
                            std::function<void()> error_handler)

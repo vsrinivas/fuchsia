@@ -5,13 +5,13 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/mdns/service/mdns_service_impl.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context =
-      fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<component::StartupContext> startup_context =
+      component::StartupContext::CreateFromStartupInfo();
 
   mdns::MdnsServiceImpl impl(startup_context.get());
 

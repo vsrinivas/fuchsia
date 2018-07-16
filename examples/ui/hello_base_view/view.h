@@ -17,7 +17,7 @@ namespace hello_base_view {
 class ShadertoyEmbedderView : public scenic::BaseView {
  public:
   ShadertoyEmbedderView(
-      fuchsia::sys::StartupContext* startup_context,
+      component::StartupContext* startup_context,
       scenic::SessionPtrAndListenerRequest session_and_listener_request,
       zx::eventpair view_token);
   ~ShadertoyEmbedderView();

@@ -11,7 +11,7 @@
 
 #include "garnet/bin/cpuperf_provider/categories.h"
 #include "garnet/lib/cpuperf/controller.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
 
@@ -35,7 +35,7 @@ class App {
   // This is the max value cpu-trace will accept
   static constexpr uint32_t kMaxBufferSizeInMb = 256;
 
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   trace::TraceObserver trace_observer_;
   TraceConfig trace_config_;
   trace_context_t* context_ = nullptr;

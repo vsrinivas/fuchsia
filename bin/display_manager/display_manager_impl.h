@@ -4,7 +4,7 @@
 #include <fuchsia/device/display/cpp/fidl.h>
 
 #include "display.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 
 namespace display {
 
@@ -17,13 +17,13 @@ class DisplayManagerImpl : public fuchsia::device::display::DisplayManager {
   virtual void SetBrightness(double brightness, SetBrightnessCallback callback);
 
  protected:
-  DisplayManagerImpl(std::unique_ptr<fuchsia::sys::StartupContext> context);
+  DisplayManagerImpl(std::unique_ptr<component::StartupContext> context);
 
  private:
   DisplayManagerImpl(const DisplayManager&) = delete;
   DisplayManager& operator=(const DisplayManager&) = delete;
 
-  std::unique_ptr<fuchsia::sys::StartupContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   fidl::BindingSet<DisplayManager> bindings_;
   std::unique_ptr<Display> display_;
 };

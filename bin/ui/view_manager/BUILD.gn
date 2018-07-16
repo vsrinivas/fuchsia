@@ -40,7 +40,7 @@ source_set("lib") {
   public_deps = [
     "//garnet/bin/ui/view_manager/input",
     "//garnet/bin/ui/view_manager/internal",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/fidl/fuchsia.ui.a11y",

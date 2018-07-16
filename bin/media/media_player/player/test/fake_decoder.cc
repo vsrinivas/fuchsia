@@ -56,7 +56,7 @@ Result FakeDecoderFactory::CreateDecoder(
 
 // static
 std::unique_ptr<DecoderFactory> DecoderFactory::Create(
-    fuchsia::sys::StartupContext* startup_context) {
+    component::StartupContext* startup_context) {
   return std::make_unique<test::FakeDecoderFactory>();
 }
 

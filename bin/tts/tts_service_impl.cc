@@ -11,7 +11,7 @@
 namespace tts {
 
 TtsServiceImpl::TtsServiceImpl(
-    std::unique_ptr<fuchsia::sys::StartupContext> startup_context)
+    std::unique_ptr<component::StartupContext> startup_context)
     : startup_context_(std::move(startup_context)) {
   FXL_DCHECK(startup_context_);
 

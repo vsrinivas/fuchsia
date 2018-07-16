@@ -4,7 +4,7 @@
 
 #include "garnet/bin/timezone/timezone.h"
 #include "gtest/gtest.h"
-#include "lib/app/cpp/testing/test_with_context.h"
+#include "lib/component/cpp/testing/test_with_context.h"
 
 namespace time_zone {
 namespace test {
@@ -17,7 +17,7 @@ constexpr char kIcuDataPath[] =
     "/pkgfs/packages/timezone_tests/0/data/icudtl.dat";
 constexpr char kTzIdPath[] = "/tmp/timezone-unittest-tz_id_path";
 
-class TimezoneUnitTest : public fuchsia::sys::testing::TestWithContext {
+class TimezoneUnitTest : public component::testing::TestWithContext {
  protected:
   TimezoneUnitTest()
       : timezone_(std::make_unique<TimezoneImpl>(TakeContext(), kIcuDataPath,

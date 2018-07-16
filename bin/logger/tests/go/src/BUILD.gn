@@ -15,6 +15,6 @@ go_test("logger_integration_go_tests") {
   ]
   extra_dependencies = [
     "//garnet/public/lib/syslog/go/src/syslog",
-    "//garnet/public/lib/app/go/src/app",
+    "//garnet/public/lib/component/go/src/app",
   ]
 }

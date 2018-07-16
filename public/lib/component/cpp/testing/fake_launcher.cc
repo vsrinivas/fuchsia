@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/app/cpp/testing/fake_launcher.h"
+#include "lib/component/cpp/testing/fake_launcher.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 namespace testing {
 
 FakeLauncher::FakeLauncher() : binding_(this) {}
@@ -31,5 +30,4 @@ void FakeLauncher::Bind(fidl::InterfaceRequest<Launcher> request) {
 }
 
 }  // namespace testing
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

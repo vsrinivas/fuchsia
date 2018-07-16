@@ -16,7 +16,7 @@ executable("tests") {
 
   deps = [
     "//garnet/bin/appmgr:lib",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fxl/test:gtest_main",

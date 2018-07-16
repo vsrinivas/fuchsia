@@ -4,7 +4,7 @@
 
 #include <string>
 
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include "codec_factory_app.h"
@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   codec_factory::CodecFactoryApp app(
-      fuchsia::sys::StartupContext::CreateFromStartupInfo(), &loop);
+      component::StartupContext::CreateFromStartupInfo(), &loop);
 
   loop.Run();
 

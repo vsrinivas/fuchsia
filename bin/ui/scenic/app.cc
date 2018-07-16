@@ -18,7 +18,7 @@
 
 namespace scenic {
 
-App::App(fuchsia::sys::StartupContext* app_context, fit::closure quit_callback)
+App::App(component::StartupContext* app_context, fit::closure quit_callback)
     : scenic_(std::make_unique<Scenic>(app_context, std::move(quit_callback))) {
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
   auto scenic = scenic_->RegisterSystem<scenic::gfx::GfxSystem>();

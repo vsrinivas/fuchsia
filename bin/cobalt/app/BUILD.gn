@@ -25,7 +25,7 @@ source_set("lib") {
   public_deps = [
     "//garnet/bin/cobalt/utils:fuchsia_http_client",
     "//garnet/lib/wlan/mlme:mlme",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/network_wrapper",

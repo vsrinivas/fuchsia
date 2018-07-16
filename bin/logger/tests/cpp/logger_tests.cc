@@ -8,7 +8,7 @@
 #include <syslog/wire_format.h>
 #include <zircon/syscalls/log.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/gtest/real_loop_fixture.h"
 #include "lib/syslog/cpp/logger.h"
@@ -28,7 +28,7 @@ class LogListenerMock : public fuchsia::logger::LogListener {
     return log_messages_;
   }
   void CollectLogs(size_t expected_logs);
-  bool ConnectToLogger(fuchsia::sys::StartupContext* startup_context,
+  bool ConnectToLogger(component::StartupContext* startup_context,
                        zx_koid_t pid);
 
  private:
@@ -55,7 +55,7 @@ void LogListenerMock::Log(fuchsia::logger::LogMessage log) {
 void LogListenerMock::Done() {}
 
 bool LogListenerMock::ConnectToLogger(
-    fuchsia::sys::StartupContext* startup_context, zx_koid_t pid) {
+    component::StartupContext* startup_context, zx_koid_t pid) {
   if (!log_listener_) {
     return false;
   }
@@ -124,7 +124,7 @@ TEST_F(LoggerTest, Integration) {
   auto tag = "logger_integration_cpp_test";
   ASSERT_EQ(syslog::InitLogger({tag}), ZX_OK);
   FX_LOGS(INFO) << "my message";
-  auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
   ASSERT_TRUE(log_listener.ConnectToLogger(startup_context.get(), pid));
   auto& logs = log_listener.GetLogs();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&logs] { return logs.size() >= 1u; },

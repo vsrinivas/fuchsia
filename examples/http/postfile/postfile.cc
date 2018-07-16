@@ -10,8 +10,8 @@
 #include <lib/async/default.h>
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 
-#include "lib/app/cpp/connect.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/connect.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/socket/files.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/file_descriptor.h"
@@ -76,7 +76,7 @@ class PostFileApp {
  public:
   PostFileApp(async::Loop* loop)
       : loop_(loop),
-        context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
+        context_(component::StartupContext::CreateFromStartupInfo()) {
     http_service_ =
         context_->ConnectToEnvironmentService<http::HttpService>();
   }
@@ -140,7 +140,7 @@ class PostFileApp {
 
  private:
   async::Loop* const loop_;
-  std::unique_ptr<fuchsia::sys::StartupContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   http::HttpServicePtr http_service_;
   http::URLLoaderPtr url_loader_;
 };

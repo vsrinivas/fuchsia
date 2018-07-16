@@ -6,7 +6,7 @@
 #include <lib/zx/channel.h>
 #include <test/sysmgr/cpp/fidl.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 
 namespace sysmgr {
 namespace test {
@@ -14,7 +14,7 @@ namespace {
 
 class Service : public ::test::sysmgr::Interface {
  public:
-  Service() : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
+  Service() : context_(component::StartupContext::CreateFromStartupInfo()) {
     context_->outgoing().AddPublicService(bindings_.GetHandler(this));
   }
 
@@ -25,7 +25,7 @@ class Service : public ::test::sysmgr::Interface {
   }
 
  private:
-  std::unique_ptr<fuchsia::sys::StartupContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   fidl::BindingSet<::test::sysmgr::Interface> bindings_;
 };
 

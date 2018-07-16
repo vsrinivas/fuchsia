@@ -7,7 +7,7 @@
 #include <algorithm>
 
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include "lib/app/cpp/connect.h"
+#include "lib/component/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
@@ -16,7 +16,7 @@
 namespace root_presenter {
 
 App::App(const fxl::CommandLine& command_line)
-    : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
       input_reader_(this) {
   FXL_DCHECK(startup_context_);
 

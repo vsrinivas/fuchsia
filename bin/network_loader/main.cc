@@ -12,7 +12,7 @@
 #include <lib/async/default.h>
 #include <zx/time.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -126,7 +126,7 @@ class RetryingLoader {
 class NetworkLoader : public fuchsia::sys::Loader {
  public:
   NetworkLoader()
-      : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
+      : context_(component::StartupContext::CreateFromStartupInfo()) {
     context_->outgoing().AddPublicService(bindings_.GetHandler(this));
     context_->ConnectToEnvironmentService(http_.NewRequest());
   }
@@ -145,7 +145,7 @@ class NetworkLoader : public fuchsia::sys::Loader {
   }
 
  private:
-  std::unique_ptr<fuchsia::sys::StartupContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   fidl::BindingSet<fuchsia::sys::Loader> bindings_;
 
   http::HttpServicePtr http_;

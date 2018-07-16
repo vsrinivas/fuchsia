@@ -12,7 +12,7 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/examples/fidl/services:echo2",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
   ]
 }
@@ -27,7 +27,7 @@ executable("bin") {
   deps = [
     ":lib",
     "//garnet/examples/fidl/services:echo2",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/svc/cpp",
     "//zircon/public/lib/async-default",
@@ -52,7 +52,7 @@ executable("echo2_client_cpp_unittests") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/app/cpp/testing",
+    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl/test:gtest_main",
   ]
 }

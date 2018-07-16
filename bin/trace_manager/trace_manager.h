@@ -13,7 +13,7 @@
 #include "garnet/bin/trace_manager/config.h"
 #include "garnet/bin/trace_manager/trace_provider_bundle.h"
 #include "garnet/bin/trace_manager/trace_session.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fidl/cpp/interface_request.h"
@@ -24,7 +24,7 @@ namespace tracing {
 class TraceManager : public fuchsia::tracelink::Registry,
                      public fuchsia::tracing::TraceController {
  public:
-  TraceManager(fuchsia::sys::StartupContext* context, const Config& config);
+  TraceManager(component::StartupContext* context, const Config& config);
   ~TraceManager() override;
 
  private:
@@ -41,7 +41,7 @@ class TraceManager : public fuchsia::tracelink::Registry,
   void FinalizeTracing();
   void LaunchConfiguredProviders();
 
-  fuchsia::sys::StartupContext* const context_;
+  component::StartupContext* const context_;
   const Config& config_;
 
   uint32_t next_provider_id_ = 1u;

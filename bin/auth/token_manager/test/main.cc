@@ -9,7 +9,7 @@
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/auth/token_manager/test/factory_impl.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/vmo/strings.h"
@@ -28,7 +28,7 @@ class DevAuthProviderApp {
  public:
   DevAuthProviderApp()
       : loop_(&kAsyncLoopConfigMakeDefault),
-        app_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+        app_context_(component::StartupContext::CreateFromStartupInfo()),
         trace_provider_(loop_.dispatcher()) {
     FXL_CHECK(app_context_);
   }
@@ -41,7 +41,7 @@ class DevAuthProviderApp {
 
  private:
   async::Loop loop_;
-  std::unique_ptr<fuchsia::sys::StartupContext> app_context_;
+  std::unique_ptr<component::StartupContext> app_context_;
   trace::TraceProvider trace_provider_;
 
   auth::dev_auth_provider::FactoryImpl factory_impl_;

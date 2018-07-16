@@ -8,7 +8,7 @@
 #include <fuchsia/mediaplayer/cpp/fidl.h>
 
 #include "garnet/bin/media/net_media_service/factory_service_base.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
@@ -18,7 +18,7 @@ class NetMediaServiceImpl : public FactoryServiceBase<NetMediaServiceImpl>,
                             public fuchsia::mediaplayer::NetMediaService {
  public:
   NetMediaServiceImpl(
-      std::unique_ptr<fuchsia::sys::StartupContext> startup_context);
+      std::unique_ptr<component::StartupContext> startup_context);
   ~NetMediaServiceImpl() override;
 
   // NetMediaService implementation.

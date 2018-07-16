@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "echo_server_app.h"
-#include "lib/app/cpp/testing/test_with_context.h"
+#include "lib/component/cpp/testing/test_with_context.h"
 
 namespace echo2 {
 namespace testing {
@@ -13,11 +13,11 @@ using namespace fidl::examples::echo;
 class EchoServerAppForTest : public EchoServerApp {
  public:
   // Expose injecting constructor so we can pass an instrumented Context
-  EchoServerAppForTest(std::unique_ptr<fuchsia::sys::StartupContext> context)
+  EchoServerAppForTest(std::unique_ptr<component::StartupContext> context)
       : EchoServerApp(std::move(context), false) {}
 };
 
-class EchoServerAppTest : public fuchsia::sys::testing::TestWithContext {
+class EchoServerAppTest : public component::testing::TestWithContext {
  public:
   void SetUp() override {
     TestWithContext::SetUp();

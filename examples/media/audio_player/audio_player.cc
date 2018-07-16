@@ -13,7 +13,7 @@
 #include <lib/fit/function.h>
 
 #include "garnet/examples/media/audio_player/audio_player_params.h"
-#include "lib/app/cpp/connect.h"
+#include "lib/component/cpp/connect.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/fxl/logging.h"
@@ -29,7 +29,7 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
   FXL_DCHECK(params.is_valid());
   FXL_DCHECK(quit_callback_);
 
-  auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
   media_player_ =
       startup_context

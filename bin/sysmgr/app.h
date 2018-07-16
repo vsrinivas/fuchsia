@@ -12,7 +12,7 @@
 #include <fs/managed-vfs.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include "garnet/bin/sysmgr/delegating_loader.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/service_namespace.h"
 #include "lib/svc/cpp/services.h"
@@ -40,10 +40,10 @@ class App {
   void RegisterAppLoaders(Config::ServiceMap app_loaders);
   void LaunchApplication(fuchsia::sys::LaunchInfo launch_info);
 
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
 
   // Keep track of all services, indexed by url.
-  std::map<std::string, fuchsia::sys::Services> services_;
+  std::map<std::string, component::Services> services_;
 
   // Nested environment within which the apps started by sysmgr will run.
   fuchsia::sys::EnvironmentPtr env_;

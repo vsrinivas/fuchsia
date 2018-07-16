@@ -47,8 +47,8 @@ int main(int argc, char* argv[]) {
 
   async::Now(loop.dispatcher());
 
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context =
-      fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<component::StartupContext> startup_context =
+      component::StartupContext::CreateFromStartupInfo();
 
   codec_runner::CodecRunnerComponent codec_runner(loop.dispatcher(), thrd_current(),
                                                   std::move(startup_context));

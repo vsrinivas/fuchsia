@@ -9,7 +9,7 @@
 namespace media_player {
 
 std::unique_ptr<DemuxFactory> DemuxFactory::Create(
-    fuchsia::sys::StartupContext* startup_context) {
+    component::StartupContext* startup_context) {
   return FfmpegDemuxFactory::Create(startup_context);
 }
 

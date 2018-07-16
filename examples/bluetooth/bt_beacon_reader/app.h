@@ -8,7 +8,7 @@
 #include <fuchsia/bluetooth/le/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 
 namespace bt_beacon_reader {
@@ -26,7 +26,7 @@ class App final : public fuchsia::bluetooth::le::CentralDelegate {
   void OnPeripheralDisconnected(::fidl::StringPtr identifier);
 
   async::Loop* const loop_;
-  std::unique_ptr<fuchsia::sys::StartupContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   fuchsia::bluetooth::le::CentralPtr central_;
 
   // Local CentralDelegate binding.

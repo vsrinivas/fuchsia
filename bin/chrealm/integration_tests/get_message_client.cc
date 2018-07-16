@@ -10,7 +10,7 @@
 #include <zircon/types.h>
 #include <zx/channel.h>
 
-#include "lib/app/cpp/environment_services.h"
+#include "lib/component/cpp/environment_services.h"
 #include "lib/svc/cpp/services.h"
 
 int main(int argc, const char** argv) {
@@ -30,7 +30,7 @@ int main(int argc, const char** argv) {
 
   fuchsia::sys::EnvironmentSyncPtr env;
   fuchsia::sys::ServiceProviderSyncPtr svc;
-  fuchsia::sys::ConnectToEnvironmentService(env.NewRequest());
+  component::ConnectToEnvironmentService(env.NewRequest());
   status = env->GetServices(svc.NewRequest());
   if (status != ZX_OK) {
     fprintf(stderr, "Getting services failed: %s\n",

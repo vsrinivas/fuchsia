@@ -48,7 +48,7 @@ class TestRunObserverImpl : public test_runner::TestRunObserver {
 };
 
 bool RunTest(async::Loop* loop,
-             std::shared_ptr<fuchsia::sys::StartupContext> app_context,
+             std::shared_ptr<component::StartupContext> app_context,
              const std::string& url, const std::vector<std::string>& args) {
   FXL_CHECK(loop);
   uint64_t random_number;
@@ -100,8 +100,8 @@ int RunIntegrationTestsMain(int argc, char** argv) {
 
   TestRunnerConfig config(test_file);
 
-  std::shared_ptr<fuchsia::sys::StartupContext> app_context =
-      fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  std::shared_ptr<component::StartupContext> app_context =
+      component::StartupContext::CreateFromStartupInfo();
 
   std::vector<std::string> test_names = settings.positional_args();
   if (test_names.empty()) {

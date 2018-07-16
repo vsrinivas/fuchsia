@@ -57,7 +57,7 @@ namespace hello_views {
 static fuchsia::sys::ComponentControllerPtr s_subview_controller;
 
 App::App(async::Loop* loop, AppType type)
-    : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
       loop_(loop),
       type_(type) {
   // Connect the ExampleViewProviderService.
@@ -65,7 +65,7 @@ App::App(async::Loop* loop, AppType type)
     // Launch the subview app.  Clone our stdout and stderr file descriptors
     // into it so output (FXL_LOG, etc) from the subview app will show up as
     // if it came from us.
-    fuchsia::sys::Services subview_services;
+    component::Services subview_services;
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.out = CloneFileDescriptor(STDOUT_FILENO);
     launch_info.err = CloneFileDescriptor(STDERR_FILENO);

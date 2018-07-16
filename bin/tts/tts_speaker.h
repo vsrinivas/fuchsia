@@ -15,7 +15,7 @@
 #include <lib/fit/function.h>
 #include <zircon/types.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
@@ -29,7 +29,7 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
   ~TtsSpeaker() = default;
 
   zx_status_t Init(
-      const std::unique_ptr<fuchsia::sys::StartupContext>& startup_context);
+      const std::unique_ptr<component::StartupContext>& startup_context);
 
   zx_status_t Speak(fidl::StringPtr words, fit::closure speak_complete_cbk);
   void Shutdown();

@@ -6,7 +6,7 @@
 #include <memory>
 
 #include <fuchsia/gralloc/cpp/fidl.h>
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/logging.h"
 
 class GrallocImpl : public fuchsia::gralloc::Gralloc {
@@ -27,8 +27,8 @@ class GrallocImpl : public fuchsia::gralloc::Gralloc {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  std::unique_ptr<fuchsia::sys::StartupContext> app_context(
-      fuchsia::sys::StartupContext::CreateFromStartupInfo());
+  std::unique_ptr<component::StartupContext> app_context(
+      component::StartupContext::CreateFromStartupInfo());
 
   GrallocImpl grallocator;
 

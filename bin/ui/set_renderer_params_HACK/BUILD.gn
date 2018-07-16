@@ -9,7 +9,7 @@ executable("set_renderer_params") {
 
   deps = [
     "//garnet/bin/ui/root_presenter:renderer_params",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/fidl/fuchsia.ui.gfx",
     "//garnet/public/fidl/fuchsia.ui.policy",

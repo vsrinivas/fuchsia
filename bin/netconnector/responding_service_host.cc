@@ -4,7 +4,7 @@
 
 #include "garnet/bin/netconnector/responding_service_host.h"
 
-#include "lib/app/cpp/connect.h"
+#include "lib/component/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
@@ -41,7 +41,7 @@ void RespondingServiceHost::RegisterSingleton(
           fuchsia::sys::LaunchInfo dup_launch_info;
           dup_launch_info.url = launch_info->url;
           fidl::Clone(launch_info->arguments, &dup_launch_info.arguments);
-          fuchsia::sys::Services services;
+          component::Services services;
           dup_launch_info.directory_request = services.NewRequest();
 
           fuchsia::sys::ComponentControllerPtr controller;

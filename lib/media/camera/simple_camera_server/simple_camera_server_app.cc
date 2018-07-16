@@ -4,12 +4,12 @@
 
 #include "simple_camera_server_app.h"
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 
 namespace simple_camera {
 
 SimpleCameraApp::SimpleCameraApp()
-    : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
+    : context_(component::StartupContext::CreateFromStartupInfo()) {
   context_->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 

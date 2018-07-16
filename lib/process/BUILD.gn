@@ -16,7 +16,7 @@ source_set("process") {
   ]
 
   deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//zircon/public/lib/fdio",
   ]
 }

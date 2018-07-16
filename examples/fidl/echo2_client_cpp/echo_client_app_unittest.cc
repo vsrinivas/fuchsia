@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "echo_client_app.h"
-#include "lib/app/cpp/testing/fake_component.h"
-#include "lib/app/cpp/testing/test_with_context.h"
+#include "lib/component/cpp/testing/fake_component.h"
+#include "lib/component/cpp/testing/test_with_context.h"
 
 namespace echo2 {
 namespace testing {
@@ -26,12 +26,12 @@ class FakeEcho : public Echo {
   void SetAnswer(fidl::StringPtr answer) { answer_ = answer; }
 
   // Register to be launched with a fake URL
-  void Register(fuchsia::sys::testing::FakeLauncher& fake_launcher) {
+  void Register(component::testing::FakeLauncher& fake_launcher) {
     component_.Register(kURL_, fake_launcher);
   }
 
  private:
-  fuchsia::sys::testing::FakeComponent component_;
+  component::testing::FakeComponent component_;
   fidl::BindingSet<Echo> bindings_;
   fidl::StringPtr answer_;
 };
@@ -41,11 +41,11 @@ const std::string FakeEcho::kURL_ = "fake-echo";
 class EchoClientAppForTest : public EchoClientApp {
  public:
   // Expose injecting constructor so we can pass an instrumented Context
-  EchoClientAppForTest(std::unique_ptr<fuchsia::sys::StartupContext> context)
+  EchoClientAppForTest(std::unique_ptr<component::StartupContext> context)
       : EchoClientApp(std::move(context)) {}
 };
 
-class EchoClientAppTest : public fuchsia::sys::testing::TestWithContext {
+class EchoClientAppTest : public component::testing::TestWithContext {
  public:
   void SetUp() override {
     TestWithContext::SetUp();

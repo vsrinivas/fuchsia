@@ -9,7 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/examples/ui/shadertoy/service/shadertoy_impl.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/escher/escher.h"
 #include "lib/fidl/cpp/binding_set.h"
 
@@ -25,7 +25,7 @@ class ShadertoyState;
 // ShadertoyFactory.  What is the best-practice pattern to use here?
 class App : public fuchsia::examples::shadertoy::ShadertoyFactory {
  public:
-  App(async::Loop* loop, fuchsia::sys::StartupContext* app_context,
+  App(async::Loop* loop, component::StartupContext* app_context,
       escher::EscherWeakPtr escher);
   ~App();
 

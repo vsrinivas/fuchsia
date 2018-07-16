@@ -43,7 +43,7 @@ class Record : public CommandWithTraceController {
 
   static Info Describe();
 
-  explicit Record(fuchsia::sys::StartupContext* context);
+  explicit Record(component::StartupContext* context);
 
  protected:
   void Start(const fxl::CommandLine& command_line) override;

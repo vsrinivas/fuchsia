@@ -8,8 +8,8 @@
 #include <lib/async/default.h>
 #include <zircon/syscalls.h>
 
-// #include "lib/app/cpp/connect.h"
-#include "lib/app/cpp/environment_services.h"
+// #include "lib/component/cpp/connect.h"
+#include "lib/component/cpp/environment_services.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
 
@@ -22,7 +22,7 @@ MediaApp::MediaApp(fit::closure quit_callback)
 }
 
 // Prepare for playback, submit initial data, start the presentation timeline.
-void MediaApp::Run(fuchsia::sys::StartupContext* app_context) {
+void MediaApp::Run(component::StartupContext* app_context) {
   if (!SetupPayloadCoefficients()) {
     Shutdown();
     return;
@@ -146,10 +146,10 @@ bool MediaApp::SetupPayloadCoefficients() {
 
 // Use StartupContext to acquire AudioPtr and AudioRendererPtr in turn. Set
 // error handler, in case of channel closure.
-void MediaApp::AcquireRenderer(fuchsia::sys::StartupContext* app_context) {
+void MediaApp::AcquireRenderer(component::StartupContext* app_context) {
   // The Audio interface is needed only long enough to create the renderer(s).
   fuchsia::media::AudioSyncPtr audio;
-  fuchsia::sys::ConnectToEnvironmentService(audio.NewRequest());
+  component::ConnectToEnvironmentService(audio.NewRequest());
 
   if (set_system_gain_) {
     audio->SetSystemGain(system_gain_db_);

@@ -10,7 +10,7 @@
 #include "garnet/bin/media/media_player/framework/payload_allocator.h"
 #include "garnet/bin/media/media_player/framework/result.h"
 #include "garnet/bin/media/media_player/framework/types/stream_type.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 
 namespace media_player {
 
@@ -28,7 +28,7 @@ class DecoderFactory {
  public:
   // Creates a decoder factory.
   static std::unique_ptr<DecoderFactory> Create(
-      fuchsia::sys::StartupContext* startup_context);
+      component::StartupContext* startup_context);
 
   virtual ~DecoderFactory() {}
 

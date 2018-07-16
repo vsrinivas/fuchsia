@@ -19,8 +19,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 // ServiceProviderBridge is a bridge between a service provider and a service
 // directory.
@@ -28,7 +27,7 @@ namespace sys {
 // The bridge takes a service provider to use as a backend and exposes both the
 // service provider interface and the directory interface, which will make it
 // easier to migrate clients to the directory interface.
-class ServiceProviderBridge : public ServiceProvider {
+class ServiceProviderBridge : public fuchsia::sys::ServiceProvider {
  public:
   ServiceProviderBridge();
   ~ServiceProviderBridge() override;
@@ -48,7 +47,7 @@ class ServiceProviderBridge : public ServiceProvider {
         service_name);
   }
 
-  void set_backend(ServiceProviderPtr backend) {
+  void set_backend(fuchsia::sys::ServiceProviderPtr backend) {
     backend_ = std::move(backend);
   }
 
@@ -89,7 +88,7 @@ class ServiceProviderBridge : public ServiceProvider {
   fbl::RefPtr<ServiceProviderDir> directory_;
 
   std::map<std::string, ServiceConnector> name_to_service_connector_;
-  ServiceProviderPtr backend_;
+  fuchsia::sys::ServiceProviderPtr backend_;
   zx::channel backing_dir_;
 
   fxl::WeakPtrFactory<ServiceProviderBridge> weak_factory_;
@@ -97,7 +96,6 @@ class ServiceProviderBridge : public ServiceProvider {
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderBridge);
 };
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component
 
 #endif  // LIB_SVC_CPP_SERVICE_PROVIDER_BRIDGE_H_

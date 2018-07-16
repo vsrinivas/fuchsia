@@ -37,7 +37,7 @@ zx_status_t TtsSpeaker::Speak(fidl::StringPtr words,
 }
 
 zx_status_t TtsSpeaker::Init(
-    const std::unique_ptr<fuchsia::sys::StartupContext>& startup_context) {
+    const std::unique_ptr<component::StartupContext>& startup_context) {
   zx_status_t res;
 
   if (wakeup_event_.is_valid()) {

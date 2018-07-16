@@ -9,7 +9,7 @@
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 
 #include "garnet/bin/guest/cli/serial.h"
-#include "lib/app/cpp/environment_services.h"
+#include "lib/component/cpp/environment_services.h"
 #include "lib/svc/cpp/services.h"
 
 void handle_launch(int argc, const char* argv[]) {
@@ -17,7 +17,7 @@ void handle_launch(int argc, const char* argv[]) {
 
   // Create environment.
   fuchsia::guest::GuestManagerSyncPtr guestmgr;
-  fuchsia::sys::ConnectToEnvironmentService(guestmgr.NewRequest());
+  component::ConnectToEnvironmentService(guestmgr.NewRequest());
   fuchsia::guest::GuestEnvironmentSyncPtr guest_env;
   guestmgr->CreateEnvironment(argv[0], guest_env.NewRequest());
 
@@ -45,7 +45,7 @@ void handle_launch(int argc, const char* argv[]) {
 
     // Ask the presenter to display it.
     fuchsia::ui::policy::PresenterSyncPtr presenter;
-    fuchsia::sys::ConnectToEnvironmentService(presenter.NewRequest());
+    component::ConnectToEnvironmentService(presenter.NewRequest());
     presenter->Present(std::move(view_owner), nullptr);
   });
 

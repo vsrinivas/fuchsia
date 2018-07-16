@@ -27,7 +27,7 @@ constexpr uint32_t kShapeWidth = 384;
 constexpr uint32_t kShapeHeight = 288;
 }  // namespace
 
-ViewImpl::ViewImpl(fuchsia::sys::StartupContext* startup_context,
+ViewImpl::ViewImpl(component::StartupContext* startup_context,
                    scenic::Session* sess, scenic::EntityNode* parnt_node)
     : startup_context_(startup_context),
       session_(sess),
@@ -194,7 +194,7 @@ void ViewImpl::QuitLoop() {
 }
 
 OldView::OldView(
-    fuchsia::sys::StartupContext* startup_context,
+    component::StartupContext* startup_context,
     ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
         view_owner_request)

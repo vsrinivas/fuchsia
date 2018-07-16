@@ -7,7 +7,7 @@
 #include "garnet/examples/ui/hello_base_view/example_presenter.h"
 #include "garnet/examples/ui/hello_base_view/view.h"
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/ui/scenic/cpp/view_provider_service.h"
@@ -31,7 +31,7 @@ int main(int argc, const char** argv) {
     exit(0);
   }
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
   auto scenic =
       startup_context

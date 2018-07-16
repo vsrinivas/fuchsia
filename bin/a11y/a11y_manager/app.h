@@ -5,7 +5,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 
 #include "garnet/bin/a11y/a11y_manager/manager_impl.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/logging.h"
@@ -19,7 +19,7 @@ class App {
   ~App();
 
  private:
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
 
   std::unique_ptr<ManagerImpl> a11y_manager_;
   fidl::BindingSet<fuchsia::accessibility::Manager> binding_set_;

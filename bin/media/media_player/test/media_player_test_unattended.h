@@ -12,8 +12,8 @@
 
 #include "garnet/bin/media/media_player/test/fakes/fake_audio_renderer.h"
 #include "garnet/bin/media/media_player/test/fakes/fake_wav_reader.h"
-#include "lib/app/cpp/connect.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/connect.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline_rate.h"
@@ -26,7 +26,7 @@ class MediaPlayerTestUnattended {
   MediaPlayerTestUnattended(fit::function<void(int)> quit_callback);
 
  private:
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   fit::function<void(int)> quit_callback_;
   FakeWavReader fake_reader_;
   FakeAudioRenderer fake_audio_renderer_;

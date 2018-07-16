@@ -6,13 +6,13 @@
 
 #include <memory>
 
-#include "lib/app/cpp/environment_services.h"
+#include "lib/component/cpp/environment_services.h"
 #include "lib/fxl/logging.h"
 
 namespace guest_runner {
 
 GuestRunner::GuestRunner()
-    : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
+    : context_(component::StartupContext::CreateFromStartupInfo()) {
   context_->environment()->GetLauncher(launcher_.NewRequest());
   context_->outgoing().AddPublicService(bindings_.GetHandler(this));
 }

@@ -11,7 +11,7 @@
 #include "garnet/bin/mdns/service/host_name.h"
 #include "garnet/bin/mdns/service/mdns_fidl_util.h"
 #include "garnet/bin/mdns/service/mdns_names.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/types/type_converters.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
@@ -19,7 +19,7 @@
 
 namespace mdns {
 
-MdnsServiceImpl::MdnsServiceImpl(fuchsia::sys::StartupContext* startup_context)
+MdnsServiceImpl::MdnsServiceImpl(component::StartupContext* startup_context)
     : startup_context_(startup_context) {
   startup_context_->outgoing().AddPublicService(bindings_.GetHandler(this));
   Start();

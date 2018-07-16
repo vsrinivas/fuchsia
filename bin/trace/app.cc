@@ -10,7 +10,7 @@
 
 namespace tracing {
 
-App::App(fuchsia::sys::StartupContext* context) : Command(context) {
+App::App(component::StartupContext* context) : Command(context) {
   RegisterCommand(ListCategories::Describe());
   RegisterCommand(Record::Describe());
 }

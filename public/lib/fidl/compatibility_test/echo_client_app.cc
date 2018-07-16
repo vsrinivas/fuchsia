@@ -10,7 +10,7 @@ namespace test {
 namespace compatibility {
 
 EchoClientApp::EchoClientApp()
-    : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {}
+    : context_(component::StartupContext::CreateFromStartupInfo()) {}
 
 EchoPtr& EchoClientApp::echo() { return echo_; }
 

@@ -10,7 +10,7 @@
 #include <fuchsia/mediaplayer/cpp/fidl.h>
 
 #include "garnet/examples/media/audio_player/audio_player_params.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/media/timeline/timeline_function.h"
 

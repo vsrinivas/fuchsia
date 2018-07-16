@@ -10,7 +10,7 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
@@ -24,7 +24,7 @@ class Tiles : public fuchsia::ui::views_v1::ViewListener,
   Tiles(::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
         fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
             view_owner_request,
-        fuchsia::sys::StartupContext* startup_context, int border);
+        component::StartupContext* startup_context, int border);
 
   ~Tiles() final;
 
@@ -81,7 +81,7 @@ class Tiles : public fuchsia::ui::views_v1::ViewListener,
   void PresentScene();
 
   // Context inherited when TileView is launched.
-  fuchsia::sys::StartupContext* startup_context_;
+  component::StartupContext* startup_context_;
 
   // Connection to the view manager and root view.
   fuchsia::ui::views_v1::ViewManagerPtr view_manager_;

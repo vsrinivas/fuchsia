@@ -159,7 +159,7 @@ executable("test_amlogic_codec_factory") {
     "tests/manual/test_amlogic_codec_factory.cc",
   ]
   deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/fidl/fuchsia.mediacodec",
     "//zircon/public/lib/async-loop-cpp",
   ]

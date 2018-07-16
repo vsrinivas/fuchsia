@@ -23,7 +23,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 
-#include "lib/app/cpp/connect.h"
+#include "lib/component/cpp/connect.h"
 #include "lib/escher/util/image_utils.h"
 
 #include "lib/fxl/functional/make_copyable.h"
@@ -44,7 +44,7 @@ static constexpr float kEdgeLength = 900;
 static constexpr uint64_t kBillion = 1000000000;
 
 App::App(async::Loop* loop)
-    : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
       loop_(loop) {
   // Connect to the Mozart service.
   scenic_ = startup_context_

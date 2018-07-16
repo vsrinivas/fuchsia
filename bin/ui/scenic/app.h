@@ -15,7 +15,7 @@ namespace scenic {
 
 class App {
  public:
-  explicit App(fuchsia::sys::StartupContext* app_context,
+  explicit App(component::StartupContext* app_context,
                fit::closure quit_callback);
 
  private:

@@ -14,7 +14,7 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls/object.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/time/stopwatch.h"
 
 using fuchsia::testing::runner::TestResult;
@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto app_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto app_context = component::StartupContext::CreateFromStartupInfo();
   auto test_runner =
       app_context->ConnectToEnvironmentService<TestRunner>();
   Reporter reporter(&loop, name, test_runner.get());

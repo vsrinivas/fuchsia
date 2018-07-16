@@ -19,12 +19,12 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include "lib/app/cpp/environment_services.h"
+#include "lib/component/cpp/environment_services.h"
 
 namespace process {
 
 ProcessBuilder::ProcessBuilder() {
-  fuchsia::sys::ConnectToEnvironmentService(launcher_.NewRequest());
+  component::ConnectToEnvironmentService(launcher_.NewRequest());
 }
 
 ProcessBuilder::ProcessBuilder(zx::job job) : ProcessBuilder() {

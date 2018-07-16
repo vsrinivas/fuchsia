@@ -10,7 +10,7 @@
 namespace scenic {
 
 BaseView::BaseView(
-    fuchsia::sys::StartupContext* startup_context,
+    component::StartupContext* startup_context,
     std::pair<fuchsia::ui::scenic::SessionPtr,
               fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener>>
         session_and_listener,

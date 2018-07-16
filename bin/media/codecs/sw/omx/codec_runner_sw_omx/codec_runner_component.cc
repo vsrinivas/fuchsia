@@ -19,7 +19,7 @@ namespace codec_runner {
 
 CodecRunnerComponent::CodecRunnerComponent(
     async_dispatcher_t* fidl_dispatcher, thrd_t fidl_thread,
-    std::unique_ptr<fuchsia::sys::StartupContext> startup_context)
+    std::unique_ptr<component::StartupContext> startup_context)
     : fidl_dispatcher_(fidl_dispatcher),
       fidl_thread_(fidl_thread),
       startup_context_(std::move(startup_context)) {

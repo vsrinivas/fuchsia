@@ -23,7 +23,7 @@
 
 #include "garnet/bin/appmgr/util.h"
 #include "gtest/gtest.h"
-#include "lib/app/cpp/environment_services.h"
+#include "lib/component/cpp/environment_services.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"
@@ -52,7 +52,7 @@ class ChrealmTest : public ::testing::Test,
         services_(fbl::AdoptRef(new fs::PseudoDir)) {}
 
   void SetUp() override {
-    fuchsia::sys::ConnectToEnvironmentService(sys_env_.NewRequest());
+    component::ConnectToEnvironmentService(sys_env_.NewRequest());
     ASSERT_EQ(ZX_OK, sys_env_->GetServices(svc_.NewRequest()));
     // Add a TestService that the test realm can use.
     zx_status_t status = services_->AddEntry(

@@ -10,7 +10,7 @@
 #include "garnet/lib/ui/gfx/util/vulkan_utils.h"
 #include "garnet/lib/ui/scenic/scenic.h"
 #include "garnet/public/lib/escher/util/check_vulkan_support.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/escher/escher_process_init.h"
 #include "lib/escher/fs/hack_filesystem.h"
 #include "public/lib/syslog/cpp/logger.h"

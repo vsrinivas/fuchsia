@@ -4,13 +4,13 @@
 
 #include "garnet/examples/ui/shadertoy/service/app.h"
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/escher/vk/vulkan_device_queues.h"
 #include "lib/escher/vk/vulkan_instance.h"
 
 namespace shadertoy {
 
-App::App(async::Loop* loop, fuchsia::sys::StartupContext* app_context,
+App::App(async::Loop* loop, component::StartupContext* app_context,
          escher::EscherWeakPtr weak_escher)
     : escher_(std::move(weak_escher)),
       renderer_(escher_, kDefaultImageFormat),

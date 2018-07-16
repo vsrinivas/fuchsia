@@ -30,7 +30,7 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params,
                                    fit::closure quit_callback)
     : params_(params),
       quit_callback_(std::move(quit_callback)),
-      startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+      startup_context_(component::StartupContext::CreateFromStartupInfo()),
       // TODO(dalesat): Create a new RespondingServiceHost per user.
       // Requestors should provide user credentials allowing a ServiceAgent
       // to obtain a user environment. A RespondingServiceHost should be

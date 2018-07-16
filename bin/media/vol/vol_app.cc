@@ -13,7 +13,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/command_line.h"
@@ -81,7 +81,7 @@ class EscapeDecoder {
 class VolApp {
  public:
   VolApp(int argc, const char** argv, fit::closure quit_callback)
-      : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+      : startup_context_(component::StartupContext::CreateFromStartupInfo()),
         quit_callback_(std::move(quit_callback)) {
     FXL_DCHECK(quit_callback_);
 
@@ -609,7 +609,7 @@ class VolApp {
 
   bool interactive() const { return non_interactive_actions_.empty(); }
 
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   fit::closure quit_callback_;
   std::deque<fit::closure> non_interactive_actions_;
   fuchsia::media::AudioDeviceEnumeratorPtr audio_;

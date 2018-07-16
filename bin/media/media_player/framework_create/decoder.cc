@@ -9,7 +9,7 @@
 namespace media_player {
 
 std::unique_ptr<DecoderFactory> DecoderFactory::Create(
-    fuchsia::sys::StartupContext* startup_context) {
+    component::StartupContext* startup_context) {
   return FfmpegDecoderFactory::Create(startup_context);
 }
 

@@ -16,7 +16,7 @@
 #include "garnet/bin/ui/view_manager/view_impl.h"
 #include "garnet/bin/ui/view_manager/view_tree_impl.h"
 #include "garnet/public/lib/escher/util/type_utils.h"
-#include "lib/app/cpp/connect.h"
+#include "lib/component/cpp/connect.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -102,7 +102,7 @@ bool Equals(const ::fuchsia::ui::views_v1::ViewPropertiesPtr& a,
 
 }  // namespace
 
-ViewRegistry::ViewRegistry(fuchsia::sys::StartupContext* startup_context)
+ViewRegistry::ViewRegistry(component::StartupContext* startup_context)
     : startup_context_(startup_context),
       scenic_(startup_context_
                   ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>()),
@@ -830,7 +830,7 @@ void ViewRegistry::GetSoftKeyboardContainer(
   auto provider = FindViewServiceProvider(
       view_token.value, fuchsia::ui::input::SoftKeyboardContainer::Name_);
   if (provider) {
-    fuchsia::sys::ConnectToService(provider, std::move(container));
+    component::ConnectToService(provider, std::move(container));
   }
 }
 
@@ -843,7 +843,7 @@ void ViewRegistry::GetImeService(
   auto provider = FindViewServiceProvider(
       view_token.value, fuchsia::ui::input::ImeService::Name_);
   if (provider) {
-    fuchsia::sys::ConnectToService(provider, std::move(ime_service));
+    component::ConnectToService(provider, std::move(ime_service));
   } else {
     startup_context_->ConnectToEnvironmentService(std::move(ime_service));
   }
@@ -1012,7 +1012,7 @@ void ViewRegistry::A11yNotifyViewSelected(
             fuchsia::ui::a11y::A11yClient::Name_);
     if (a11y_provider != nullptr) {
       auto a11y_client =
-          fuchsia::sys::ConnectToService<fuchsia::ui::a11y::A11yClient>(
+          component::ConnectToService<fuchsia::ui::a11y::A11yClient>(
               a11y_provider);
       a11y_client->NotifyViewSelected();
     }

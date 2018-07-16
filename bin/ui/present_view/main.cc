@@ -8,7 +8,7 @@
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
@@ -42,10 +42,10 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto startup_context_ = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto startup_context_ = component::StartupContext::CreateFromStartupInfo();
 
   // Launch application.
-  fuchsia::sys::Services services;
+  component::Services services;
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = positional_args[0];
   for (size_t i = 1; i < positional_args.size(); ++i)

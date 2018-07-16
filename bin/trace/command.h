@@ -13,7 +13,7 @@
 #include <lib/fit/function.h>
 #include <fuchsia/tracing/cpp/fidl.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
 
@@ -26,7 +26,7 @@ class Command {
   using OnDoneCallback = fit::function<void(int32_t)>;
   struct Info {
     using CommandFactory =
-        fit::function<std::unique_ptr<Command>(fuchsia::sys::StartupContext*)>;
+        fit::function<std::unique_ptr<Command>(component::StartupContext*)>;
 
     CommandFactory factory;
     std::string name;
@@ -41,10 +41,10 @@ class Command {
  protected:
   static std::ostream& out();
 
-  explicit Command(fuchsia::sys::StartupContext* context);
+  explicit Command(component::StartupContext* context);
 
-  fuchsia::sys::StartupContext* context();
-  fuchsia::sys::StartupContext* context() const;
+  component::StartupContext* context();
+  component::StartupContext* context() const;
 
   // Starts running the command.
   // The command must invoke Done() when finished.
@@ -52,7 +52,7 @@ class Command {
   void Done(int32_t return_code);
 
  private:
-  fuchsia::sys::StartupContext* context_;
+  component::StartupContext* context_;
   OnDoneCallback on_done_;
   int32_t return_code_ = -1;
 
@@ -61,13 +61,13 @@ class Command {
 
 class CommandWithTraceController : public Command {
  protected:
-  explicit CommandWithTraceController(fuchsia::sys::StartupContext* context);
+  explicit CommandWithTraceController(component::StartupContext* context);
 
   fuchsia::tracing::TraceControllerPtr& trace_controller();
   const fuchsia::tracing::TraceControllerPtr& trace_controller() const;
 
  private:
-  std::unique_ptr<fuchsia::sys::StartupContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   fuchsia::tracing::TraceControllerPtr trace_controller_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CommandWithTraceController);

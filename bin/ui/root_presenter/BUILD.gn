@@ -35,7 +35,7 @@ executable("root_presenter") {
     ":renderer_params",
     "//garnet/bin/ui/input_reader",
     "//garnet/bin/ui/presentation_mode",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/fidl/fuchsia.ui.gfx",

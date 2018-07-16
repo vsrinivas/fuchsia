@@ -8,7 +8,7 @@
 #include "use_aac_decoder.h"
 #include "use_h264_decoder.h"
 
-#include <lib/app/cpp/startup_context.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fxl/command_line.h>
 
@@ -29,8 +29,8 @@ int main(int argc, char* argv[]) {
   async::Loop main_loop(&kAsyncLoopConfigMakeDefault);
   main_loop.StartThread("FIDL_thread");
 
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context =
-      fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<component::StartupContext> startup_context =
+      component::StartupContext::CreateFromStartupInfo();
   fuchsia::mediacodec::CodecFactoryPtr codec_factory =
       startup_context
           ->ConnectToEnvironmentService<fuchsia::mediacodec::CodecFactory>();

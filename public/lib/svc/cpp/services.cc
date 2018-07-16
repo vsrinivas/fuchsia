@@ -8,8 +8,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 void ConnectToService(const zx::channel& directory,
                       zx::channel request,
@@ -40,5 +39,4 @@ void Services::Bind(zx::channel directory) {
   directory_ = std::move(directory);
 }
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

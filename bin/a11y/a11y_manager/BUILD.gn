@@ -11,7 +11,7 @@ executable("a11y_manager") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//zircon/public/lib/trace-provider",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -30,7 +30,7 @@ source_set("lib") {
   ]
 
   deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

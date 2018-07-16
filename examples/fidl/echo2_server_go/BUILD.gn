@@ -22,7 +22,7 @@ go_binary("echo2_server_go_bin") {
     },
     {
       package = "app"
-      source = "//garnet/public/lib/app/go/src/app"
+      source = "//garnet/public/lib/component/go/src/app"
     },
     {
       package = "svc"

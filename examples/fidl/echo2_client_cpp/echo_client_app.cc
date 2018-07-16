@@ -4,15 +4,15 @@
 
 #include "echo_client_app.h"
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 
 namespace echo2 {
 
 EchoClientApp::EchoClientApp()
-    : EchoClientApp(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {}
+    : EchoClientApp(component::StartupContext::CreateFromStartupInfo()) {}
 
 EchoClientApp::EchoClientApp(
-    std::unique_ptr<fuchsia::sys::StartupContext> context)
+    std::unique_ptr<component::StartupContext> context)
     : context_(std::move(context)) {}
 
 void EchoClientApp::Start(std::string server_url) {

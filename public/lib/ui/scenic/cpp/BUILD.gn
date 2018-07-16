@@ -76,7 +76,7 @@ source_set("base_view") {
 
   public_deps = [
     ":cpp",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/fidl/fuchsia.ui.app",
   ]
 

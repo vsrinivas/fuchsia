@@ -9,7 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/ui/sketchy/canvas.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/escher/escher.h"
 #include "lib/fidl/cpp/binding_set.h"
 
@@ -21,7 +21,7 @@ class App {
 
  private:
   async::Loop* const loop_;
-  std::unique_ptr<fuchsia::sys::StartupContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
   std::unique_ptr<scenic::Session> session_;
   fidl::BindingSet<::fuchsia::ui::sketchy::Canvas> bindings_;

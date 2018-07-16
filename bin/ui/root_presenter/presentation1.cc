@@ -21,7 +21,7 @@
 #include <glm/ext.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "lib/app/cpp/connect.h"
+#include "lib/component/cpp/connect.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/ui/input/cpp/formatting.h"
@@ -165,7 +165,7 @@ void Presentation1::CreateViewTree(
   fuchsia::sys::ServiceProviderPtr tree_service_provider;
   tree_->GetServiceProvider(tree_service_provider.NewRequest());
   input_dispatcher_ =
-      fuchsia::sys::ConnectToService<fuchsia::ui::input::InputDispatcher>(
+      component::ConnectToService<fuchsia::ui::input::InputDispatcher>(
           tree_service_provider.get());
   input_dispatcher_.set_error_handler([this] {
     // This isn't considered a fatal error right now since it is still useful

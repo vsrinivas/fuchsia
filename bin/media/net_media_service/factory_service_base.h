@@ -15,7 +15,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
@@ -147,14 +147,14 @@ class FactoryServiceBase {
   };
 
   FactoryServiceBase(
-      std::unique_ptr<fuchsia::sys::StartupContext> startup_context)
+      std::unique_ptr<component::StartupContext> startup_context)
       : startup_context_(std::move(startup_context)),
         dispatcher_(async_get_default_dispatcher()) {}
 
   virtual ~FactoryServiceBase() {}
 
   // Gets the application context.
-  fuchsia::sys::StartupContext* startup_context() {
+  component::StartupContext* startup_context() {
     return startup_context_.get();
   }
 
@@ -189,7 +189,7 @@ class FactoryServiceBase {
   virtual void OnLastProductRemoved() {}
 
  private:
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   async_dispatcher_t* dispatcher_;
   mutable std::mutex mutex_;
   std::unordered_set<std::shared_ptr<ProductBase>> products_

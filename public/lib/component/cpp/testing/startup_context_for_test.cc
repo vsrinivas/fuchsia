@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/app/cpp/testing/startup_context_for_test.h"
+#include "lib/component/cpp/testing/startup_context_for_test.h"
 
 #include <lib/async/default.h>
 #include <lib/fdio/util.h>
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 namespace testing {
 
 StartupContextForTest::StartupContextForTest(
@@ -27,7 +26,7 @@ StartupContextForTest::StartupContextForTest(
       FakeLauncher::Name_,
       fbl::AdoptRef(new fs::Service([&](zx::channel channel) {
         fake_launcher_.Bind(
-            fidl::InterfaceRequest<Launcher>(std::move(channel)));
+            fidl::InterfaceRequest<fuchsia::sys::Launcher>(std::move(channel)));
         return ZX_OK;
       })));
   ZX_ASSERT(status == ZX_OK);
@@ -69,5 +68,4 @@ zx::channel StartupContextForTest::ChannelConnectAt(zx_handle_t root,
 }
 
 }  // namespace testing
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

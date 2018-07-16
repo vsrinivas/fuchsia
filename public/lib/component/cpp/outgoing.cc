@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/app/cpp/outgoing.h"
+#include "lib/component/cpp/outgoing.h"
 
 #include <lib/async/default.h>
 #include <lib/fdio/util.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 Outgoing::Outgoing()
     : vfs_(async_get_default_dispatcher()),
@@ -37,5 +36,4 @@ zx_status_t Outgoing::ServeFromStartupInfo() {
   return Serve(zx::channel(dir_request));
 }
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

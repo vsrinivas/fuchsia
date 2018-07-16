@@ -7,7 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/syslogger/init.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
@@ -24,8 +24,8 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   trace::TraceProvider trace_provider(loop.dispatcher());
-  std::unique_ptr<fuchsia::sys::StartupContext> app_context(
-      fuchsia::sys::StartupContext::CreateFromStartupInfo());
+  std::unique_ptr<component::StartupContext> app_context(
+      component::StartupContext::CreateFromStartupInfo());
 
   scenic::App app(app_context.get(), [&loop] { loop.Quit(); });
 

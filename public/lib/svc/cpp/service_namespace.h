@@ -19,15 +19,14 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 // ServiceNamespace lets a client to publish services in the form of a
 // directory and provides compatibility with ServiceProvider.
 //
 // This class will be deprecated and removed once ServiceProvider is replaced
 // by direct use of directories for publishing and discoverying services.
-class ServiceNamespace : public ServiceProvider {
+class ServiceNamespace : public fuchsia::sys::ServiceProvider {
  public:
   // |ServiceConnector| is the generic, type-unsafe interface for objects used
   // by |ServiceNamespace| to connect generic "interface requests" (i.e.,
@@ -40,7 +39,7 @@ class ServiceNamespace : public ServiceProvider {
   // Constructs this service provider implementation, binding it to the given
   // interface request. Note: If |request| is not valid ("pending"), then the
   // object will be put into an unbound state.
-  explicit ServiceNamespace(fidl::InterfaceRequest<ServiceProvider> request);
+  explicit ServiceNamespace(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request);
 
   explicit ServiceNamespace(fbl::RefPtr<fs::PseudoDir> directory);
 
@@ -52,7 +51,7 @@ class ServiceNamespace : public ServiceProvider {
   // Binds this service provider implementation to the given interface request.
   // Multiple bindings may be added.  They are automatically removed when closed
   // remotely.
-  void AddBinding(fidl::InterfaceRequest<ServiceProvider> request);
+  void AddBinding(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request);
 
   // Disconnect this service provider implementation and put it in a state where
   // it can be rebound to a new request (i.e., restores this object to an
@@ -104,12 +103,11 @@ class ServiceNamespace : public ServiceProvider {
   std::unordered_map<std::string, ServiceConnector> name_to_service_connector_;
 
   fbl::RefPtr<fs::PseudoDir> directory_;
-  fidl::BindingSet<ServiceProvider> bindings_;
+  fidl::BindingSet<fuchsia::sys::ServiceProvider> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceNamespace);
 };
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component
 
 #endif  // LIB_SVC_CPP_SERVICE_NAMESPACE_H_

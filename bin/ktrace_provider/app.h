@@ -8,7 +8,7 @@
 #include <trace/observer.h>
 
 #include "garnet/bin/ktrace_provider/log_importer.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
@@ -26,7 +26,7 @@ class App {
   void StartKTrace(uint32_t group_mask);
   void StopKTrace();
 
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   trace::TraceObserver trace_observer_;
   LogImporter log_importer_;
   uint32_t current_group_mask_ = 0u;

@@ -22,8 +22,8 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include "lib/app/cpp/connect.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/connect.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/media/timeline/timeline_function.h"
 
@@ -730,8 +730,8 @@ int main(int argc, char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context =
-      fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<component::StartupContext> startup_context =
+      component::StartupContext::CreateFromStartupInfo();
 
   fuchsia::media::AudioPtr audio =
       startup_context->ConnectToEnvironmentService<fuchsia::media::Audio>();

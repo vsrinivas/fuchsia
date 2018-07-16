@@ -16,7 +16,7 @@
 #include "garnet/bin/media/media_player/framework/packet.h"
 #include "garnet/bin/media/media_player/framework/result.h"
 #include "garnet/bin/media/media_player/framework/types/stream_type.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 
 namespace media_player {
 
@@ -66,7 +66,7 @@ class DemuxFactory {
  public:
   // Creates a demux factory.
   static std::unique_ptr<DemuxFactory> Create(
-      fuchsia::sys::StartupContext* startup_context);
+      component::StartupContext* startup_context);
 
   virtual ~DemuxFactory() {}
 

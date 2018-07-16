@@ -8,7 +8,7 @@
 #include <math.h>
 #include <zircon/syscalls.h>
 
-#include "lib/app/cpp/environment_services.h"
+#include "lib/component/cpp/environment_services.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
 
@@ -131,7 +131,7 @@ int MediaApp::Run() {
 // Connect to the Audio service and get an AudioRenderer.
 bool MediaApp::AcquireRenderer() {
   fuchsia::media::AudioSyncPtr audio;
-  fuchsia::sys::ConnectToEnvironmentService(audio.NewRequest());
+  component::ConnectToEnvironmentService(audio.NewRequest());
   return audio->CreateRendererV2(audio_renderer_.NewRequest()) == ZX_OK;
 }
 

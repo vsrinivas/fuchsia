@@ -7,12 +7,11 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 
-#include "lib/app/cpp/outgoing.h"
-#include "lib/app/cpp/service_provider_impl.h"
+#include "lib/component/cpp/outgoing.h"
+#include "lib/component/cpp/service_provider_impl.h"
 #include "lib/svc/cpp/services.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 // Provides access to the component's environment and allows the component
 // to publish outgoing services back to its creator.
@@ -43,12 +42,12 @@ class StartupContext {
   // and provide meaningful error messages.
   static std::unique_ptr<StartupContext> CreateFromStartupInfoNotChecked();
 
-  static std::unique_ptr<StartupContext> CreateFrom(StartupInfo startup_info);
+  static std::unique_ptr<StartupContext> CreateFrom(fuchsia::sys::StartupInfo startup_info);
 
   // Gets the component's environment.
   //
   // May be null if the component does not have access to its environment.
-  const EnvironmentPtr& environment() const { return environment_; }
+  const fuchsia::sys::EnvironmentPtr& environment() const { return environment_; }
 
   // Whether this component was given services by its environment.
   bool has_environment_services() const {
@@ -59,7 +58,7 @@ class StartupContext {
   // its environment.
   //
   // May be null if the component does not have access to its environment.
-  const LauncherPtr& launcher() const { return launcher_; }
+  const fuchsia::sys::LauncherPtr& launcher() const { return launcher_; }
 
   const Services& incoming_services() const { return incoming_services_; }
   const Outgoing& outgoing() const { return outgoing_; }
@@ -94,15 +93,14 @@ class StartupContext {
                                    zx::channel channel);
 
  protected:
-  LauncherPtr launcher_;
+  fuchsia::sys::LauncherPtr launcher_;
 
  private:
   Services incoming_services_;
   Outgoing outgoing_;
-  EnvironmentPtr environment_;
+  fuchsia::sys::EnvironmentPtr environment_;
 };
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // component
 
 #endif  // LIB_APP_CPP_STARTUP_CONTEXT_H_

@@ -34,7 +34,7 @@ executable("codec_runner_sw_omx") {
   ]
 
   deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/fidl/fuchsia.mediacodec",
 

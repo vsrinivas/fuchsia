@@ -6,13 +6,13 @@
 
 #include <algorithm>
 
-#include "lib/app/cpp/connect.h"
+#include "lib/component/cpp/connect.h"
 #include "lib/fxl/logging.h"
 
 namespace scenic {
 
 ViewProviderService::ViewProviderService(
-    fuchsia::sys::StartupContext* startup_context,
+    component::StartupContext* startup_context,
     fuchsia::ui::scenic::Scenic* scenic, ViewFactory view_factory)
     : startup_context_(startup_context),
       scenic_(scenic),

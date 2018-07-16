@@ -10,7 +10,7 @@
 
 #include <fuchsia/netconnector/cpp/fidl.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/service_namespace.h"
@@ -25,7 +25,7 @@ class NetStubResponder {
   // Constructor. |actual| must outlive this.
   NetStubResponder(const fidl::InterfacePtr<TInterface>& actual,
                    const std::string& service_name,
-                   fuchsia::sys::StartupContext* startup_context)
+                   component::StartupContext* startup_context)
       : actual_(actual) {
     FXL_DCHECK(actual_);
     FXL_DCHECK(!service_name.empty());
@@ -55,7 +55,7 @@ class NetStubResponder {
 
  private:
   const fidl::InterfacePtr<TInterface>& actual_;
-  fuchsia::sys::ServiceNamespace service_namespace_;
+  component::ServiceNamespace service_namespace_;
   std::unordered_set<std::shared_ptr<TStub>> stubs_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(NetStubResponder);

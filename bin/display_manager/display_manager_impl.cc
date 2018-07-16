@@ -4,10 +4,10 @@
 namespace display {
 DisplayManagerImpl::DisplayManagerImpl()
     : DisplayManagerImpl(
-          fuchsia::sys::StartupContext::CreateFromStartupInfo()) {}
+          component::StartupContext::CreateFromStartupInfo()) {}
 
 DisplayManagerImpl::DisplayManagerImpl(
-    std::unique_ptr<fuchsia::sys::StartupContext> context)
+    std::unique_ptr<component::StartupContext> context)
     : context_(std::move(context)) {
   display_ = std::unique_ptr<Display>(Display::GetDisplay());
 

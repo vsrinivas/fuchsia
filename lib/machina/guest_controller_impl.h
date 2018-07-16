@@ -9,7 +9,7 @@
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 
 #include "garnet/lib/machina/phys_mem.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 
 namespace machina {
@@ -18,7 +18,7 @@ namespace machina {
 // This exposes some guest services over FIDL.
 class GuestControllerImpl : public fuchsia::guest::GuestController {
  public:
-  GuestControllerImpl(fuchsia::sys::StartupContext* startup_context,
+  GuestControllerImpl(component::StartupContext* startup_context,
                       const PhysMem& phys_mem);
 
   void set_view_provider(::fuchsia::ui::views_v1::ViewProvider* view_provider) {

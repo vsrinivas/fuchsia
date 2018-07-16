@@ -9,7 +9,7 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/svc/cpp/services.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
@@ -26,7 +26,7 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
  public:
   // Subclasses are typically created by ViewProviderService::CreateView(),
   // which provides the necessary args to pass down to this base class.
-  BaseView(fuchsia::sys::StartupContext* startup_context,
+  BaseView(component::StartupContext* startup_context,
            scenic::SessionPtrAndListenerRequest session_and_listener,
            zx::eventpair view_token, const std::string& debug_name);
 
@@ -80,7 +80,7 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
     // Services provided by the launched app.  Must not be destroyed
     // immediately, otherwise the |view_provider| connection may not be
     // established.
-    fuchsia::sys::Services app_services;
+    component::Services app_services;
 
     // ViewProvider service obtained from the app via |app_services|.  Must not
     // be destroyed immediately, otherwise the call to CreateView() might not
@@ -168,7 +168,7 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
 
   void PresentScene(zx_time_t presentation_time);
 
-  fuchsia::sys::StartupContext* const startup_context_;
+  component::StartupContext* const startup_context_;
   fidl::Binding<fuchsia::ui::scenic::SessionListener> listener_binding_;
   Session session_;
   View view_;

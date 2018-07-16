@@ -12,7 +12,7 @@
 
 #include "garnet/bin/mdns/service/mdns.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 
@@ -20,7 +20,7 @@ namespace mdns {
 
 class MdnsServiceImpl : public fuchsia::mdns::MdnsService {
  public:
-  MdnsServiceImpl(fuchsia::sys::StartupContext* startup_context);
+  MdnsServiceImpl(component::StartupContext* startup_context);
 
   ~MdnsServiceImpl() override;
 
@@ -136,7 +136,7 @@ class MdnsServiceImpl : public fuchsia::mdns::MdnsService {
   // Starts the service.
   void Start();
 
-  fuchsia::sys::StartupContext* startup_context_;
+  component::StartupContext* startup_context_;
   fidl::BindingSet<fuchsia::mdns::MdnsService> bindings_;
   mdns::Mdns mdns_;
   size_t next_subscriber_id_ = 0;

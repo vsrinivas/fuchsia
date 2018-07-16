@@ -14,7 +14,7 @@ executable("token_manager") {
   ]
 
   deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//garnet/public/fidl/fuchsia.auth",

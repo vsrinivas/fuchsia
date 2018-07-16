@@ -13,7 +13,7 @@
 #include "garnet/bin/appmgr/job_provider_impl.h"
 #include "garnet/bin/appmgr/realm.h"
 #include "garnet/bin/appmgr/util.h"
-#include "lib/app/cpp/environment_services.h"
+#include "lib/component/cpp/environment_services.h"
 
 namespace component {
 
@@ -45,7 +45,7 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
       Launcher::Name_);
   services_->AddService(
       fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-        fuchsia::sys::ConnectToEnvironmentService(
+        component::ConnectToEnvironmentService(
             fidl::InterfaceRequest<fuchsia::process::Launcher>(
                 std::move(channel)));
         return ZX_OK;

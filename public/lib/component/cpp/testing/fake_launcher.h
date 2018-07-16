@@ -10,8 +10,7 @@
 
 #include "lib/fidl/cpp/binding.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 namespace testing {
 
 // A fake |StartupContext| for testing.
@@ -54,7 +53,6 @@ class FakeLauncher : public fuchsia::sys::Launcher {
 };
 
 }  // namespace testing
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component
 
 #endif  // LIB_APP_CPP_TESTING_FAKE_LAUNCHER_H_

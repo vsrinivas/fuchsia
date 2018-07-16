@@ -8,7 +8,7 @@
 #include <fuchsia/simplecamera/cpp/fidl.h>
 #include <garnet/lib/media/camera/simple_camera_lib/video_display.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 
 namespace simple_camera {
 
@@ -23,7 +23,7 @@ class SimpleCameraApp : public fuchsia::simplecamera::SimpleCamera {
   SimpleCameraApp(const SimpleCameraApp&) = delete;
   SimpleCameraApp& operator=(const SimpleCameraApp&) = delete;
 
-  std::unique_ptr<fuchsia::sys::StartupContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   fidl::BindingSet<SimpleCamera> bindings_;
 
   simple_camera::VideoDisplay video_display_;

@@ -9,7 +9,7 @@
 #include <vector>
 
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/view_framework/base_view.h"
@@ -18,7 +18,7 @@ namespace mozart {
 
 // Parameters for creating a view.
 struct ViewContext {
-  fuchsia::sys::StartupContext* startup_context;
+  component::StartupContext* startup_context;
   ::fuchsia::ui::views_v1::ViewManagerPtr view_manager;
   fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
       view_owner_request;
@@ -37,7 +37,7 @@ using ViewFactory =
 // This is only intended to be used for simple example programs.
 class ViewProviderService : public ::fuchsia::ui::views_v1::ViewProvider {
  public:
-  explicit ViewProviderService(fuchsia::sys::StartupContext* startup_context,
+  explicit ViewProviderService(component::StartupContext* startup_context,
                                ViewFactory factory);
   ~ViewProviderService();
 
@@ -49,7 +49,7 @@ class ViewProviderService : public ::fuchsia::ui::views_v1::ViewProvider {
       override;
 
  private:
-  fuchsia::sys::StartupContext* startup_context_;
+  component::StartupContext* startup_context_;
   ViewFactory view_factory_;
 
   fidl::BindingSet<ViewProvider> bindings_;

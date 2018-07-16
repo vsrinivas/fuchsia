@@ -12,14 +12,14 @@
 #include <lib/async/default.h>
 
 // static
-zx_status_t ScenicScanout::Create(fuchsia::sys::StartupContext* startup_context,
+zx_status_t ScenicScanout::Create(component::StartupContext* startup_context,
                                   machina::InputDispatcher* input_dispatcher,
                                   fbl::unique_ptr<ScenicScanout>* out) {
   *out = fbl::make_unique<ScenicScanout>(startup_context, input_dispatcher);
   return ZX_OK;
 }
 
-ScenicScanout::ScenicScanout(fuchsia::sys::StartupContext* startup_context,
+ScenicScanout::ScenicScanout(component::StartupContext* startup_context,
                              machina::InputDispatcher* input_dispatcher)
     : input_dispatcher_(input_dispatcher), startup_context_(startup_context) {
   // The actual framebuffer can't be created until we've connected to the

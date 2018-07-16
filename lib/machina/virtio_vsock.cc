@@ -325,7 +325,7 @@ zx_status_t VirtioVsock::SocketConnection::Write(VirtioQueue* queue,
   return status;
 }
 
-VirtioVsock::VirtioVsock(fuchsia::sys::StartupContext* context,
+VirtioVsock::VirtioVsock(component::StartupContext* context,
                          const PhysMem& phys_mem,
                          async_dispatcher_t* dispatcher)
     : VirtioDeviceBase(phys_mem),

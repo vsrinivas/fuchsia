@@ -23,7 +23,7 @@ class Clock;
 //   - provide a host environment for Services
 class Scenic : public fuchsia::ui::scenic::Scenic {
  public:
-  explicit Scenic(fuchsia::sys::StartupContext* app_context,
+  explicit Scenic(component::StartupContext* app_context,
                   fit::closure quit_callback);
   ~Scenic();
 
@@ -41,12 +41,12 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
       ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
       override;
 
-  fuchsia::sys::StartupContext* app_context() const { return app_context_; }
+  component::StartupContext* app_context() const { return app_context_; }
 
   size_t num_sessions() { return session_bindings_.size(); }
 
  private:
-  fuchsia::sys::StartupContext* const app_context_;
+  component::StartupContext* const app_context_;
   fit::closure quit_callback_;
 
   fidl::BindingSet<fuchsia::ui::scenic::Session, std::unique_ptr<Session>>

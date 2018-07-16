@@ -33,7 +33,7 @@ int main(int argc, const char** argv) {
     return 0;
   }
 
-  auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
   auto view_manager =
       startup_context

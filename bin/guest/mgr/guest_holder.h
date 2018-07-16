@@ -21,7 +21,7 @@ class GuestHolder {
  public:
   GuestHolder(uint32_t cid, std::string label,
               std::unique_ptr<RemoteVsockEndpoint> socket_endpoint,
-              fuchsia::sys::Services services,
+              component::Services services,
               fuchsia::sys::ComponentControllerPtr component_controller);
 
   uint32_t cid() const { return cid_; }
@@ -34,7 +34,7 @@ class GuestHolder {
   const uint32_t cid_;
   const std::string label_;
   std::unique_ptr<RemoteVsockEndpoint> socket_endpoint_;
-  fuchsia::sys::Services guest_services_;
+  component::Services guest_services_;
   fuchsia::sys::ComponentControllerPtr guest_component_controller_;
   fuchsia::guest::GuestControllerPtr guest_controller_;
 

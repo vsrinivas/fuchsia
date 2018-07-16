@@ -23,7 +23,7 @@
 #include "garnet/bin/netconnector/requestor_agent.h"
 #include "garnet/bin/netconnector/responding_service_host.h"
 #include "garnet/bin/netconnector/service_agent.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/mdns/cpp/service_subscriber.h"
@@ -83,7 +83,7 @@ class NetConnectorImpl : public fuchsia::netconnector::NetConnector {
 
   NetConnectorParams* params_;
   fit::closure quit_callback_;
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   std::string host_name_;
   fidl::BindingSet<fuchsia::netconnector::NetConnector> bindings_;
   Listener listener_;

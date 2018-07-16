@@ -16,7 +16,7 @@ executable("client") {
   deps = [
     "//garnet/examples/ui/shadertoy/service",
     "//garnet/examples/ui/shadertoy/service/services",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/fidl/fuchsia.ui.gfx",

@@ -24,7 +24,7 @@ source_set("use_aac_decoder_source_set") {
     "//garnet/lib/media/raw_video_writer:raw_video_writer",
     "//garnet/lib/media/wav_writer:wav_writer",
 
-    #"//garnet/public/lib/app/cpp",
+    #"//garnet/public/lib/component/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 
@@ -43,7 +43,7 @@ executable("use_aac_decoder") {
 
   deps = [
     ":use_aac_decoder_source_set",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -62,7 +62,7 @@ test("test") {
   deps = [
     ":use_aac_decoder_source_set",
     "//garnet/bin/appmgr:appmgr_for_test",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

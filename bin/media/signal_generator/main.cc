@@ -6,7 +6,7 @@
 #include <lib/async/cpp/task.h>
 
 #include "garnet/bin/media/signal_generator/signal_generator.h"
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 
@@ -107,7 +107,7 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
   media::tools::MediaApp media_app(
       [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });

@@ -7,7 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 
 #include "garnet/examples/media/wav_record/wav_recorder.h"
@@ -15,7 +15,7 @@
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
   examples::WavRecorder wav_recorder(
       fxl::CommandLineFromArgcArgv(argc, argv),
       [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });

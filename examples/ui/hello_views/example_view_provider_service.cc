@@ -8,14 +8,14 @@
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <lib/zx/eventpair.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
 
 namespace hello_views {
 
 ExampleViewProviderService::ExampleViewProviderService(
-    fuchsia::sys::StartupContext* startup_ctx, ViewFactory factory)
+    component::StartupContext* startup_ctx, ViewFactory factory)
     : startup_ctx_(startup_ctx), view_factory_fn_(factory) {
   FXL_DCHECK(startup_ctx_);
 

@@ -23,7 +23,7 @@
 #include <lib/async/cpp/task.h>
 #include <zx/time.h>
 
-#include "lib/app/cpp/connect.h"
+#include "lib/component/cpp/connect.h"
 #include "lib/escher/util/image_utils.h"
 
 #include "lib/fxl/functional/make_copyable.h"
@@ -40,7 +40,7 @@ namespace hello_scenic {
 static constexpr uint64_t kBillion = 1000000000;
 
 App::App(async::Loop* loop)
-    : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
       loop_(loop) {
   // Connect to the SceneManager service.
   scenic_ = startup_context_

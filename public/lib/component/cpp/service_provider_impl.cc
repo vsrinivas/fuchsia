@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/app/cpp/service_provider_impl.h"
+#include "lib/component/cpp/service_provider_impl.h"
 
 #include <utility>
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 ServiceProviderImpl::ServiceProviderImpl() {}
 
@@ -52,7 +51,7 @@ void ServiceProviderImpl::SetDefaultServiceConnector(
 }
 
 void ServiceProviderImpl::SetDefaultServiceProvider(
-    ServiceProviderPtr provider) {
+    fuchsia::sys::ServiceProviderPtr provider) {
   if (!provider) {
     default_service_connector_ = DefaultServiceConnector();
     return;
@@ -65,5 +64,4 @@ void ServiceProviderImpl::SetDefaultServiceProvider(
       };
 }
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

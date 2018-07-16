@@ -105,7 +105,7 @@ go_binary("netstack_bin") {
     "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
     "//garnet/public/fidl/fuchsia.devicesettings($go_toolchain)",
-    "//garnet/public/lib/app/go/src/app",
+    "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/fidl/go/src/fidl/bindings",
     "//zircon/public/fidl/fuchsia-net($go_toolchain)",
     "//zircon/public/fidl/fuchsia-net-stack($go_toolchain)",

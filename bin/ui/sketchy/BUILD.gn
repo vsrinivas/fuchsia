@@ -50,7 +50,7 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/escher",
     "//garnet/public/lib/ui/scenic/cpp",
     "//garnet/public/fidl/fuchsia.ui.sketchy",

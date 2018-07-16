@@ -18,7 +18,7 @@ namespace codec_factory {
 namespace {}  // namespace
 
 CodecFactoryApp::CodecFactoryApp(
-    std::unique_ptr<fuchsia::sys::StartupContext> startup_context,
+    std::unique_ptr<component::StartupContext> startup_context,
     async::Loop* loop)
     : startup_context_(std::move(startup_context)), loop_(loop) {
   // TODO(dustingreen): Determine if this is useful and if we're holding it

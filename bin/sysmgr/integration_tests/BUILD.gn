@@ -22,7 +22,7 @@ executable("service") {
 
   deps = [
     ":interface",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-default",
@@ -40,7 +40,7 @@ executable("service_startup_test") {
   deps = [
     ":interface",
     "//garnet/bin/appmgr:appmgr_for_test",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",

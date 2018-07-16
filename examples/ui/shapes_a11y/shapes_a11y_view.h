@@ -10,7 +10,7 @@
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 
 #include "garnet/examples/ui/shapes_a11y/a11y_client_app.h"
-#include "lib/app/cpp/service_provider_impl.h"
+#include "lib/component/cpp/service_provider_impl.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/services.h"
 #include "lib/ui/scenic/cpp/resources.h"
@@ -37,7 +37,7 @@ class ShapesA11yView : public mozart::BaseView {
 
   scenic::ShapeNode background_node_;
 
-  fuchsia::sys::ServiceProviderImpl a11y_provider_;
+  component::ServiceProviderImpl a11y_provider_;
   fuchsia::sys::ComponentControllerPtr controller_;
 
   examples::A11yClientApp a11y_client_app_;

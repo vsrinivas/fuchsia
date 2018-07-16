@@ -11,7 +11,7 @@ executable("wav_record") {
 
   deps = [
     "//garnet/lib/media/wav_writer",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/audio",
     "//garnet/public/fidl/fuchsia.media",

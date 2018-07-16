@@ -9,7 +9,7 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
 
@@ -39,7 +39,7 @@ class App : public fuchsia::sys::ServiceProvider {
   // Creates all of the scene resources and sets up the scene graph.
   void CreateScene(float display_width, float display_height);
 
-  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   async::Loop* const loop_;
 
   AppType type_;
