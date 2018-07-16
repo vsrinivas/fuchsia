@@ -33,6 +33,10 @@ class CobaltEncoderFactoryImpl : public fuchsia::cobalt::CobaltEncoderFactory {
       int32_t project_id,
       fidl::InterfaceRequest<fuchsia::cobalt::CobaltEncoder> request);
 
+  void GetEncoderForConfig(
+      fidl::StringPtr config,
+      fidl::InterfaceRequest<fuchsia::cobalt::CobaltEncoder> request);
+
   std::shared_ptr<config::ClientConfig> client_config_;
   ClientSecret client_secret_;
   fidl::BindingSet<fuchsia::cobalt::CobaltEncoder,

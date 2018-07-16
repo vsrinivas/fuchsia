@@ -35,5 +35,10 @@ void CobaltEncoderFactoryImpl::GetEncoder(
                                       std::move(request));
 }
 
+void CobaltEncoderFactoryImpl::GetEncoderForConfig(
+    fidl::StringPtr config, fidl::InterfaceRequest<CobaltEncoder> request) {
+  // Implementation is on the way
+}
+
 }  // namespace encoder
 }  // namespace cobalt
