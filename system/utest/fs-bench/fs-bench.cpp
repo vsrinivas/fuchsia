@@ -171,7 +171,11 @@ bool RunBenchmark(int argc, char** argv) {
     FixtureOptions f_opts = FixtureOptions::Default(DISK_FORMAT_MINFS);
     PerformanceTestOptions p_opts;
     const int rw_test_sample_counts[] = {
-        1024, 2048, 4096, 8192, 16384,
+        1024,
+        2048,
+        4096,
+        8192,
+        16384,
     };
 
     if (!fs_test_utils::ParseCommandLineArgs(argc, argv, &f_opts, &p_opts)) {
@@ -191,11 +195,11 @@ bool RunBenchmark(int argc, char** argv) {
         for (int cycle = 0; cycle < cycles; ++cycle) {
             TestInfo write_test, read_test;
             write_test.name =
-                fbl::StringPrintf("%s/%dCycle/Write", testcase.name.c_str(), cycle + 1);
+                fbl::StringPrintf("%s/%d-Cycle/Write", testcase.name.c_str(), cycle + 1);
             write_test.test_fn = [](perftest::RepeatState* state, Fixture* fixture) {
                 return WriteBigFile(16 * (1 << 10), state, fixture);
             };
-            write_test.required_disk_space = test_sample_count * 16 * 1024;
+            write_test.required_disk_space = test_sample_count * 16 * 1024 * (cycle + 1);
             testcase.tests.push_back(fbl::move(write_test));
 
             read_test.name =
@@ -203,7 +207,7 @@ bool RunBenchmark(int argc, char** argv) {
             read_test.test_fn = [](perftest::RepeatState* state, Fixture* fixture) {
                 return ReadBigFile(16 * (1 << 10), state, fixture);
             };
-            read_test.required_disk_space = test_sample_count * 16 * 1024;
+            read_test.required_disk_space = test_sample_count * 16 * 1024 * (cycle + 1);
             testcase.tests.push_back(fbl::move(read_test));
         }
         testcases.push_back(fbl::move(testcase));
