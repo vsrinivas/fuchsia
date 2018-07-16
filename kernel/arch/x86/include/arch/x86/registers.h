@@ -75,6 +75,8 @@
 #define X86_MSR_PKG_POWER_LIMIT_PL1_ENABLE  (1 << 15)
 #define X86_MSR_PKG_POWER_INFO          0x00000614 /* Package power range info */
 #define X86_MSR_DRAM_ENERGY_STATUS      0x00000619 /* DRAM energy status */
+#define X86_MSR_PP0_ENERGY_STATUS       0x00000639 /* PP0 energy status */
+#define X86_MSR_PP1_ENERGY_STATUS       0x00000641 /* PP1 energy status */
 
 /* EFLAGS/RFLAGS */
 #define X86_FLAGS_CF                    (1<<0)
