@@ -20,6 +20,7 @@
 #include "peridot/bin/ledger/testing/get_ledger.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
+#include "peridot/bin/ledger/testing/sync_params.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace {
@@ -27,7 +28,6 @@ constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/fetch";
 constexpr fxl::StringView kEntryCountFlag = "entry-count";
 constexpr fxl::StringView kValueSizeFlag = "value-size";
 constexpr fxl::StringView kPartSizeFlag = "part-size";
-constexpr fxl::StringView kServerIdFlag = "server-id";
 
 constexpr size_t kKeySize = 100;
 
@@ -40,7 +40,7 @@ void PrintUsage(const char* executable_name) {
             << " --" << kEntryCountFlag << "=<int>"
             << " --" << kValueSizeFlag << "=<int>"
             << " --" << kPartSizeFlag << "=<int>"
-            << " --" << kServerIdFlag << "=<string>" << std::endl;
+            << test::benchmark::GetSyncParamsUsage() << std::endl;
 }
 
 }  // namespace
@@ -279,8 +279,8 @@ int main(int argc, const char** argv) {
       value_size == 0 ||
       !command_line.GetOptionValue(kPartSizeFlag.ToString(), &part_size_str) ||
       !fxl::StringToNumberWithError(part_size_str, &part_size) ||
-      !command_line.GetOptionValue(kServerIdFlag.ToString(), &server_id) ||
-      server_id.empty()) {
+      !test::benchmark::ParseSyncParamsFromCommandLine(&command_line,
+                                                       &server_id)) {
     PrintUsage(argv[0]);
     return -1;
   }

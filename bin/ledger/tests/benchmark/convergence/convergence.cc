@@ -20,6 +20,7 @@
 #include "peridot/bin/ledger/testing/get_ledger.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
+#include "peridot/bin/ledger/testing/sync_params.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace {
@@ -27,12 +28,15 @@ constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/convergence";
 constexpr fxl::StringView kEntryCountFlag = "entry-count";
 constexpr fxl::StringView kValueSizeFlag = "value-size";
 constexpr fxl::StringView kDeviceCountFlag = "device-count";
-constexpr fxl::StringView kServerIdFlag = "server-id";
 
 void PrintUsage(const char* executable_name) {
-  std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
-            << "=<int> --" << kValueSizeFlag << "=<int> --" << kDeviceCountFlag
-            << "=<int> --" << kServerIdFlag << "=<string>" << std::endl;
+  std::cout << "Usage: "
+            << executable_name
+            // Comment to make clang format not break formatting.
+            << " --" << kEntryCountFlag << "=<int>"
+            << " --" << kValueSizeFlag << "=<int>"
+            << " --" << kDeviceCountFlag << "=<int>"
+            << test::benchmark::GetSyncParamsUsage() << std::endl;
 }
 
 constexpr size_t kKeySize = 100;
@@ -202,7 +206,8 @@ int main(int argc, const char** argv) {
                                    &device_count_str) ||
       !fxl::StringToNumberWithError(device_count_str, &device_count) ||
       device_count <= 0 ||
-      !command_line.GetOptionValue(kServerIdFlag.ToString(), &server_id)) {
+      !test::benchmark::ParseSyncParamsFromCommandLine(&command_line,
+                                                       &server_id)) {
     PrintUsage(argv[0]);
     return -1;
   }

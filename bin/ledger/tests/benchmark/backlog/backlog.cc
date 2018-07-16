@@ -22,6 +22,7 @@
 #include "peridot/bin/ledger/testing/get_ledger.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
+#include "peridot/bin/ledger/testing/sync_params.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace {
@@ -30,7 +31,6 @@ constexpr fxl::StringView kUniqueKeyCountFlag = "unique-key-count";
 constexpr fxl::StringView kValueSizeFlag = "value-size";
 constexpr fxl::StringView kCommitCountFlag = "commit-count";
 constexpr fxl::StringView kRefsFlag = "refs";
-constexpr fxl::StringView kServerIdFlag = "server-id";
 
 constexpr fxl::StringView kRefsOnFlag = "on";
 constexpr fxl::StringView kRefsOffFlag = "off";
@@ -46,8 +46,7 @@ void PrintUsage(const char* executable_name) {
             << " --" << kValueSizeFlag << "=<int>"
             << " --" << kCommitCountFlag << "=<int>"
             << " --" << kRefsFlag << "=(" << kRefsOnFlag << "|" << kRefsOffFlag
-            << ")"
-            << " --" << kServerIdFlag << "=<string>" << std::endl;
+            << ")" << test::benchmark::GetSyncParamsUsage() << std::endl;
 }
 
 }  // namespace
@@ -349,9 +348,8 @@ int main(int argc, const char** argv) {
                                    &commit_count_str) ||
       !fxl::StringToNumberWithError(commit_count_str, &commit_count) ||
       commit_count <= 0 ||
-      !command_line.GetOptionValue(kRefsFlag.ToString(),
-                                   &reference_strategy_str) ||
-      !command_line.GetOptionValue(kServerIdFlag.ToString(), &server_id)) {
+      !test::benchmark::ParseSyncParamsFromCommandLine(&command_line,
+                                                       &server_id)) {
     PrintUsage(argv[0]);
     return -1;
   }
