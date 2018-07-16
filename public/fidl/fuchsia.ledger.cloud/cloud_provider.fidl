@@ -51,8 +51,7 @@ interface DeviceSet {
   // when the fingerprint is erased.
   //
   // At most one watcher can be set at any given time. If more than one watcher
-  // is set, only the one set most recently is notified when the fingerprint is
-  // erased.
+  // is set, only the one set most recently receives notifications.
   //
   // The returned status is:
   //
@@ -144,8 +143,7 @@ interface PageCloud {
   // Watches the cloud for push notifications.
   //
   // At most one watcher can be set at any given time. If more than one watcher
-  // is set, only the one set most recently is notified when the fingerprint is
-  // erased.
+  // is set, only the one set most recently receives notifications.
   //
   // All commits newer than |min_position_token| added to the cloud before or
   // after making this call are guaranteed to be delivered to |watcher|. In
