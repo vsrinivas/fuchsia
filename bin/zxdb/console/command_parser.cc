@@ -181,10 +181,9 @@ Err ConsumeVerb(const std::vector<std::string>& tokens, size_t* token_index_ptr,
 
   // Consume the verb.
   const auto& verb_strings = GetStringVerbMap();
-  auto found_verb_str = verb_strings.find(tokens[token_index]);
+  auto found_verb_str = verb_strings.find(token);
   if (found_verb_str == verb_strings.end()) {
-    return Err("The string \"" + tokens[token_index] +
-               "\" is not a valid verb.");
+    return Err("The string \"" + token + "\" is not a valid verb.");
   }
   output->set_verb(found_verb_str->second);
   token_index++;
