@@ -12,11 +12,8 @@ class {{ .ProxyName }};
 class {{ .StubName }};
 class {{ .EventSenderName }};
 class {{ .SyncName }};
-class {{ .Sync2Name }};
 using {{ .Name }}SyncPtr = ::fidl::SynchronousInterfacePtr<{{ .Name }}>;
-using {{ .Name }}Sync2Ptr = ::fidl::Synchronous2InterfacePtr<{{ .Name }}>;
 class {{ .SyncProxyName }};
-class {{ .Sync2ProxyName }};
 {{- end }}
 
 {{- define "Params" -}}
@@ -64,7 +61,6 @@ class {{ .Name }} {
   using Stub_ = {{ .StubName }};
   using EventSender_ = {{ .EventSenderName }};
   using Sync_ = {{ .SyncName }};
-  using Sync2_ = {{ .Sync2Name }};
   {{- if .ServiceName }}
   static const char Name_[];
   {{- end }}
@@ -105,18 +101,6 @@ class {{ .SyncName }} {
     {{- end }}
   {{- end }}
 };
-
-class {{ .Sync2Name }} {
-  public:
-   using Proxy_ = {{ .Sync2ProxyName }};
-   virtual ~{{ .Sync2Name }}();
-
-   {{- range .Methods }}
-     {{- if .HasRequest }}
-   virtual ::fidl::Sync2Status {{ template "SyncRequestMethodSignature" . }} = 0;
-     {{- end }}
-   {{- end }}
- };
 
 class {{ .ProxyName }} : public ::fidl::internal::Proxy, public {{ .Name }} {
  public:
@@ -176,23 +160,6 @@ class {{ .SyncProxyName }} : public {{ .SyncName }} {
   private:
   ::fidl::internal::SynchronousProxy proxy_;
 };
-
-class {{ .Sync2ProxyName }} : public {{ .Sync2Name }} {
- public:
-  explicit {{ .Sync2ProxyName }}(::zx::channel channel);
-  ~{{ .Sync2ProxyName }}() override;
-
-  ::fidl::internal::SynchronousProxy& proxy() { return proxy_; }
-
-  {{- range .Methods }}
-    {{- if .HasRequest }}
-  ::fidl::Sync2Status {{ template "SyncRequestMethodSignature" . }} override;
-    {{- end }}
-  {{- end }}
-
- private:
-  ::fidl::internal::SynchronousProxy proxy_;
- };
 {{- end }}
 
 {{- define "InterfaceDefinition" }}
@@ -219,8 +186,6 @@ const char {{ .Name }}::Name_[] = {{ .ServiceName }};
 {{ .EventSenderName }}::~{{ .EventSenderName }}() = default;
 
 {{ .SyncName }}::~{{ .SyncName }}() = default;
-
-{{ .Sync2Name }}::~{{ .Sync2Name }}() = default;
 
 {{ .ProxyName }}::{{ .ProxyName }}(::fidl::internal::ProxyController* controller)
     : controller_(controller) {
@@ -454,41 +419,6 @@ zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }}
   return ZX_OK;
     {{- else }}
   return proxy_.Send(&{{ .RequestTypeName }}, _encoder.GetMessage());
-    {{- end }}
-}
-  {{- end }}
-{{- end }}
-
-{{ .Sync2ProxyName }}::{{ .Sync2ProxyName }}(::zx::channel channel)
-  : proxy_(::std::move(channel)) {}
-
-{{ .Sync2ProxyName }}::~{{ .Sync2ProxyName }}() = default;
-
-{{- range .Methods }}
-  {{- if .HasRequest }}
-::fidl::Sync2Status {{ $.Sync2ProxyName }}::{{ template "SyncRequestMethodSignature" . }} {
-  ::fidl::Encoder _encoder({{ .OrdinalName }});
-    {{- if .Request }}
-  _encoder.Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t));
-      {{- range .Request }}
-  ::fidl::Encode(&_encoder, &{{ .Name }}, {{ .Offset }});
-      {{- end }}
-    {{- end }}
-    {{- if .HasResponse }}
-  ::fidl::MessageBuffer buffer_;
-  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
-  zx_status_t status_ = proxy_.Call(&{{ .RequestTypeName }}, &{{ .ResponseTypeName }}, _encoder.GetMessage(), &response_);
-  if (status_ != ZX_OK)
-    return ::fidl::Sync2Status(status_);
-      {{- if .Response }}
-  ::fidl::Decoder decoder_(std::move(response_));
-        {{- range $index, $param := .Response }}
-  *out_{{ .Name }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder_, {{ .Offset }});
-        {{- end }}
-      {{- end }}
-  return ::fidl::Sync2Status(ZX_OK);;
-    {{- else }}
-  return ::fidl::Sync2Status(proxy_.Send(&{{ .RequestTypeName }}, _encoder.GetMessage()));
     {{- end }}
 }
   {{- end }}

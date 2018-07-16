@@ -90,8 +90,6 @@ type Interface struct {
 	EventSenderName string
 	SyncName        string
 	SyncProxyName   string
-	Sync2Name       string
-	Sync2ProxyName  string
 	Methods         []Method
 }
 
@@ -556,8 +554,6 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		c.compileCompoundIdentifier(val.Name, "_EventSender"),
 		c.compileCompoundIdentifier(val.Name, "_Sync"),
 		c.compileCompoundIdentifier(val.Name, "_SyncProxy"),
-		c.compileCompoundIdentifier(val.Name, "_Sync2"),
-		c.compileCompoundIdentifier(val.Name, "_Sync2Proxy"),
 		[]Method{},
 	}
 
