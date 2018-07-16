@@ -99,7 +99,7 @@ FuturePtr<> StoryStorage::UpdateModuleData(
     return did_mutate;
   };
 
-  auto ret = Future<>::Create("StoryStorage.ReadModuleData.ret");
+  auto ret = Future<>::Create("StoryStorage.UpdateModuleData.ret");
   operation_queue_.Add(NewCallbackOperation(
       "StoryStorage::UpdateModuleData", std::move(op_body), ret->Completer()));
   return ret;
