@@ -3,15 +3,20 @@
 // found in the LICENSE file.
 
 use app;
-use async;
+use async::TimeoutExt;
 use bt::error::Error as BTError;
-use common::bluetooth_facade::BluetoothFacade;
+use common::bluetooth_facade::{listen_central_events, BluetoothFacade};
+use common::constants::*;
 use failure::{Error, ResultExt};
 use fidl_ble::{AdvertisingData, PeripheralMarker, PeripheralProxy};
-use futures::FutureExt;
-use parking_lot::{RwLock, RwLockWriteGuard};
-use serde_json::Value;
+use fidl_ble::{CentralMarker, CentralProxy, ScanFilter};
+use futures::future::Either::{Left, Right};
+use futures::prelude::*;
+use futures::{future, FutureExt};
+use parking_lot::RwLock;
+use serde_json::{to_value, Value};
 use std::sync::Arc;
+use zx::prelude::*;
 
 // Takes a serde_json::Value and converts it to arguments required for
 // a FIDL ble_advertise command
@@ -48,47 +53,167 @@ fn ble_advertise_to_fidl(
     Ok((ad, interval))
 }
 
-// TODO(aniramakri): Implement translation layer that converts method to
-// respective FIDL method
-pub fn convert_to_fidl(
+// Takes a serde_json::Value and converts it to arguments required for a FIDL
+// ble_scan command
+fn ble_scan_to_fidl(scan_args_raw: Value) -> Result<(Option<ScanFilter>, Option<u64>), Error> {
+    let timeout_raw = match scan_args_raw.get("scan_time_ms") {
+        Some(t) => Some(t).unwrap().clone(),
+        None => return Err(BTError::new("Timeout_ms missing.").into()),
+    };
+
+    let scan_filter_raw = match scan_args_raw.get("filter") {
+        Some(f) => Some(f).unwrap().clone(),
+        None => return Err(BTError::new("Scan filter missing.").into()),
+    };
+
+    let timeout: Option<u64> = timeout_raw.as_u64();
+    let name_substring: Option<String> =
+        scan_filter_raw["name_substring"].as_str().map(String::from);
+
+    // For now, no scan profile, so default to empty ScanFilter
+    let filter = Some(ScanFilter {
+        service_uuids: None,
+        service_data_uuids: None,
+        manufacturer_identifier: None,
+        connectable: None,
+        name_substring: name_substring,
+        max_path_loss: None,
+    });
+
+    Ok((filter, timeout))
+}
+
+// Takes a serde_json::Value and converts it to arguments required for a FIDL
+// stop_advertising command. For stop advertise, no arguments are sent, rather
+// uses current advertisement id (if it exists)
+fn ble_stop_advertise_to_fidl(
+    _stop_adv_args_raw: Value,
+    bt_facade: Arc<RwLock<BluetoothFacade>>,
+) -> Result<String, Error> {
+    let adv_id = bt_facade.read().get_adv_id().clone();
+
+    match adv_id {
+        Some(aid) => Ok(aid.to_string()),
+        None => Err(BTError::new("No advertisement id outstanding.").into()),
+    }
+}
+
+// Takes ACTS method command and executes corresponding FIDL method
+// Packages result into serde::Value
+pub fn method_to_fidl(
     method_name: String,
     args: Value,
     bt_facade: Arc<RwLock<BluetoothFacade>>,
-) -> Result<(), Error> {
-    // Translate test suite method to FIDL method
+) -> impl Future<Item = Option<Value>, Error = Never> {
     match method_name.as_ref() {
         "BleAdvertise" => {
             let (ad, interval) = match ble_advertise_to_fidl(args) {
                 Ok((adv_data, intv)) => (adv_data, intv),
-                Err(e) => return Err(e),
+                Err(_) => (None, None),
             };
 
-            start_adv_sync(ad, interval, bt_facade.write())
+            let adv_fut = start_adv_async(bt_facade.clone(), ad, interval);
+            Right(Right(adv_fut))
         }
-        _ => Err(BTError::new("Invalid fidl method.").into()),
+        "BleScan" => {
+            let (filter, timeout) = match ble_scan_to_fidl(args) {
+                Ok((f, t)) => (f, t),
+                Err(_) => (None, None),
+            };
+
+            let scan_fut = start_scan_async(bt_facade.clone(), filter, timeout);
+            Left(Right(scan_fut))
+        }
+        "BleStopAdvertise" => {
+            let advertisement_id = match ble_stop_advertise_to_fidl(args, bt_facade.clone()) {
+                Ok(aid) => aid,
+                Err(_) => "".to_string(),
+            };
+
+            let stop_fut = stop_adv_async(bt_facade.clone(), advertisement_id.clone());
+            Right(Left(stop_fut))
+        }
+        _ => Left(Left(future::ok(None))),
     }
 }
 
-// Synchronous wrapper for advertising
-pub fn start_adv_sync(
+fn start_adv_async(
+    bt_facade: Arc<RwLock<BluetoothFacade>>,
     ad: Option<AdvertisingData>,
     interval: Option<u32>,
-    mut bt_facade: RwLockWriteGuard<BluetoothFacade>,
-) -> Result<(), Error> {
-    let mut executor = async::Executor::new().context("Error creating event loop")?;
-
-    // Set up periph proxy and initialize this in our BTF object
+) -> impl Future<Item = Option<Value>, Error = Never> {
+    // TODO(aniramakri): Change structure of proxy creation such that
+    // BluetoothFacade deals with opening proxies. This allows for all ownership
+    // (set/get) to be done on the BluetoothFacade level
     let peripheral_svc: PeripheralProxy = app::client::connect_to_service::<PeripheralMarker>()
-        .context("Failed to connect to BLE Peripheral service.")?;
-    bt_facade.set_peripheral_proxy(peripheral_svc)?;
+        .context("Failed to connect to BLE Peripheral service.")
+        .unwrap();
+    bt_facade.write().set_peripheral_proxy(peripheral_svc);
 
-    // Initialize the start advertising futures
-    // TODO(aniramakri): Setup peripheral state cleanup for all peripheral commands
-    let adv_fut = bt_facade.start_adv(ad, interval).then(|res| {
-        bt_facade.cleanup_peripheral();
-        res
+    let start_adv = bt_facade.write().start_adv(ad, interval);
+    let adv_fut = start_adv.then(move |aid| match aid {
+        Ok(adv_id) => {
+            let id = adv_id.clone();
+            bt_facade.write().update_adv_id(id);
+            Ok(adv_id.clone())
+        }
+        Err(_e) => Ok(None),
     });
 
-    // Run future to completion
-    executor.run_singlethreaded(adv_fut).map_err(Into::into)
+    adv_fut.and_then(|adv_res| match to_value(adv_res) {
+        Ok(val) => Ok(Some(val)),
+        Err(_) => Ok(None),
+    })
+}
+
+fn stop_adv_async(
+    bt_facade: Arc<RwLock<BluetoothFacade>>,
+    advertisement_id: String,
+) -> impl Future<Item = Option<Value>, Error = Never> {
+    let stop_adv_fut = bt_facade.write().stop_adv(advertisement_id);
+
+    stop_adv_fut.then(|res| match res {
+        Ok(r) => match to_value(r) {
+            Ok(val) => Ok(Some(val)),
+            Err(_) => Ok(None),
+        },
+        Err(_) => Ok(None),
+    })
+}
+
+// Synchronous wrapper for scanning
+fn start_scan_async(
+    bt_facade: Arc<RwLock<BluetoothFacade>>,
+    filter: Option<ScanFilter>,
+    timeout: Option<u64>,
+) -> impl Future<Item = Option<Value>, Error = Never> {
+    // TODO(aniramakri): Change structure of proxy creation such that
+    // BluetoothFacade deals with opening proxies. This allows for all ownership
+    // (set/get) to be done on the BluetoothFacade level
+    let central_svc: CentralProxy = app::client::connect_to_service::<CentralMarker>()
+        .context("Failed to connect to BLE Central Service")
+        .unwrap();
+    bt_facade.write().set_central_proxy(central_svc);
+
+    eprintln!("start_scan_async");
+
+    // Create scanning future and listen on central events for scan
+    let scan_fut = bt_facade.write().start_scan(filter);
+    let event_fut = listen_central_events(bt_facade.clone())
+        .map_err(|_| unreachable!("Listening to events should never fail"));
+    let fut = scan_fut.and_then(move |_| event_fut);
+
+    // Wrap the future in the timeout window. Scan for timeout_ms duration
+    let timeout_ms = timeout.unwrap_or(DEFAULT_SCAN_TIMEOUT_MS).millis();
+
+    let fut = fut.on_timeout(timeout_ms.after_now(), || Ok(()))
+        .expect("failed to set timeout");
+
+    fut.then(move |_| {
+        let devices = bt_facade.read().get_devices();
+        match to_value(devices) {
+            Ok(dev) => Ok(Some(dev)),
+            Err(_) => Ok(None),
+        }
+    })
 }

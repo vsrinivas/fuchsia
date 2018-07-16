@@ -5,4 +5,5 @@
 pub mod bluetooth_commands;
 pub mod bluetooth_facade;
 pub mod constants;
+pub mod sl4f_executor;
 pub mod sl4f_types;
