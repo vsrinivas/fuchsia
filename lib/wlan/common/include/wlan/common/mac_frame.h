@@ -363,6 +363,10 @@ const uint16_t kHtCtrlLen = 4;
 const uint16_t kQosCtrlLen = 2;
 const uint16_t kFcsLen = 4;
 
+struct EmptyHdr{
+    constexpr size_t len() const { return 0; }
+} __PACKED;
+
 // IEEE Std 802.11-2016, 9.2.4.1.1
 class FrameControl : public common::BitField<uint16_t> {
    public:
@@ -390,7 +394,7 @@ class FrameControl : public common::BitField<uint16_t> {
 
     bool HasHtCtrl() const { return htc_order() != 0; }
 
-    constexpr uint16_t len() const { return sizeof(FrameControl); }
+    constexpr size_t len() const { return sizeof(*this); }
 };
 
 // IEEE Std 802.11-2016, 9.3.3.2
@@ -407,7 +411,7 @@ struct MgmtFrameHeader {
     // Use accessors for optional field.
     // uint8_t ht_ctrl[4];
 
-    uint16_t len() const {
+    size_t len() const {
         size_t len = sizeof(MgmtFrameHeader);
         if (fc.HasHtCtrl()) { len += kHtCtrlLen; }
         return len;
@@ -447,6 +451,8 @@ struct Beacon {
     CapabilityInfo cap;
 
     uint8_t elements[];
+
+    constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.3.10
@@ -457,6 +463,8 @@ struct ProbeRequest {
 
     size_t hdr_len() { return 0; }
     uint8_t elements[];
+
+    constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.3.11
@@ -473,6 +481,8 @@ struct ProbeResponse {
     CapabilityInfo cap;
 
     uint8_t elements[];
+
+    constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.1.1
@@ -501,6 +511,8 @@ struct Authentication {
     uint16_t status_code;
 
     uint8_t elements[];
+
+    constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.3.13
@@ -513,6 +525,8 @@ struct Deauthentication {
     // Vendor-specific elements and optional Management MIC element (MME) at the
     // end
     uint8_t elements[];
+
+    constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.3.6
@@ -527,6 +541,8 @@ struct AssociationRequest {
     uint16_t listen_interval;
 
     uint8_t elements[];
+
+    constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
 
 constexpr uint16_t kAidMask = (1 << 11) - 1;
@@ -545,6 +561,8 @@ struct AssociationResponse {
     uint16_t aid;
 
     uint8_t elements[];
+
+    constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.3.5
@@ -557,6 +575,8 @@ struct Disassociation {
     // Vendor-specific elements and optional Management MIC element (MME) at the
     // end
     uint8_t elements[];
+
+    constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.2.1
@@ -622,6 +642,12 @@ struct DataFrameHeader {
     const DataFrameHeader* const_this() { return const_cast<const DataFrameHeader*>(this); }
 } __PACKED;
 
+struct NullFrame : public EmptyHdr {
+    static constexpr bool IsSubtype(uint8_t subtype) {
+        return subtype == DataSubtype::kNull || subtype == DataSubtype::kQosnull;
+    }
+} __PACKED;
+
 // IEEE Std 802.11-2016, 9.3.1.1
 // Although the FrameControl is part of every control frame, IEEE does not name
 // the FrameControl to be a common header of all control frames.
@@ -631,11 +657,12 @@ struct DataFrameHeader {
 // In that sense, this implementation slightly, but knowingly diverges from IEEEs
 // definition.
 struct CtrlFrameHdr {
+
     static constexpr FrameType Type() { return FrameType::kControl; }
 
     FrameControl fc;
 
-    constexpr size_t len() const { return sizeof(CtrlFrameHdr); }
+    constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.1.5
@@ -646,7 +673,7 @@ struct PsPollFrame {
     common::MacAddr bssid;
     common::MacAddr ta;
 
-    constexpr size_t len() const { return sizeof(PsPollFrame); }
+    constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
 
 // IEEE Std 802.2, 1998 Edition, 3.2
@@ -658,6 +685,8 @@ struct LlcHeader {
     uint8_t oui[3];
     uint16_t protocol_id;
     uint8_t payload[];
+
+    constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.2.2.2
@@ -749,7 +778,7 @@ struct EthernetII {
     uint16_t ether_type;
     uint8_t payload[];
 
-    constexpr size_t len() const { return sizeof(EthernetII); }
+    constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
 
 // IEEE Std 802.1X-2010, 11.3, Figure 11-1
@@ -758,6 +787,8 @@ struct EapolFrame {
     uint8_t packet_type;
     uint16_t packet_body_length;
     uint8_t packet_body[];
+
+    constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
 
 }  // namespace wlan
