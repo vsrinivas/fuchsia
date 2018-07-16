@@ -18,6 +18,58 @@
 namespace fs_test_utils {
 namespace {
 
+constexpr char kUsage[] = R"(
+Usage:
+
+    %s [mode] [fixture options] [test options]    
+    Runs a set of benchmarks and write results.
+
+    Note: Argument order matters, latest overrides earliest.
+
+    [Mode]
+        -h,--help                      Print usage description. This message.
+
+        -p                             Performance test mode. Default mode is 
+                                       Unit test.
+
+    [Fixture Options]
+        --block_device PATH            The block device exposed in PATH will be
+                                       used as block device.
+
+        --use_ramdisk                  A ramdisk will be used as block device.
+
+        --ramdisk_block_size SIZE      Size in bytes of the ramdisk's block.
+
+        --ramdisk_block_count COUNT    Number of blocks in the ramdisk.
+
+        --use_fvm                      A FVM will be created on the block 
+                                       device.
+
+        --fvm_slice_size SIZE          Size in bytes of the FVM's slices.
+
+        --fs FS_NAME                   Will use FS_NAME filesystem to format 
+                                       the block device.
+                                       (Options: blobfs, minfs)
+
+        --seed SEED                    An unsigned integer to initialize 
+                                       pseudo-ramdom number generator.
+
+    [Test Options]
+         --out PATH                    In performace test mode, collected
+                                       results will be written to PATH.
+
+         --summary_path PATH           In performace test mode, result summary
+                                       statistics will be written to PATH.
+
+         --print_statistics            In performace test mode, result summary
+                                       statistics will be written to STDOUT.
+
+         --run COUNT                   In performace test mode, limits the
+                                       number of times to execute each test to
+                                       COUNT.
+
+)";
+
 // Gather some info about the executed tests, and use it to display
 // gTest lookalike summary.
 struct TestStats {
@@ -80,51 +132,7 @@ void PrintTestsCasesSummary(size_t test_case_count, const TestStats& stats, zx::
 }
 
 void PrintUsage(char* arg0, FILE* out) {
-    fprintf(out, R"(
-Usage:
-
-    %s [mode] [fixture options] [test options]    
-    Runs a set of benchmarks and write results.
-
-    Note: Argument order matters, latest overrides earliest.
-
-    [Mode]
-        -h,--help                      Print usage description. This message.
-
-        -p                             Performance test mode. Default mode is Unit test.
-
-    [Fixture Options]
-        --block_device PATH            The block device exposed in PATH will be used as block 
-                                       device.
-
-        --use_ramdisk                  A ramdisk will be used as block device.
-
-        --ramdisk_block_size SIZE      Size in bytes of the ramdisk's block.
-
-        --ramdisk_block_count COUNT    Number of blocks in the ramdisk.
-
-        --use_fvm                      A FVM will be created on the block device.
-
-        --fvm_slice_size SIZE          Size in bytes of the FVM's slices.
-
-        --fs FS_NAME                   Will use FS_NAME filesystem to format the block device. 
-                                       (Options: blobfs, minfs.
-
-    [Test Options]
-         --out PATH                    In performace test mode, collected results will be written to 
-                                       PATH.
-
-         --summary_path PATH           In performace test mode, result summary statistics will be 
-                                       written to PATH.
-
-         --print_statistics            In performace test mode, result summary statistics will be
-                                       written to STDOUT.
-    
-         --run COUNT                   In performace test mode, limits the number of times to execute 
-                                       each test to COUNT.
-
-)",
-            arg0);
+    fprintf(out, kUsage, arg0);
     return;
 }
 
@@ -165,6 +173,7 @@ void RunTest(const fbl::String& test_case_name, const TestInfo& test, uint32_t s
         return result;
     };
 
+    srand(fixture->options().seed);
     bool failed = !perftest::RunTest(test_case_name.c_str(), test.name.c_str(), test_wrapper,
                                      sample_count, result_set, &error);
     if (failed) {
@@ -303,6 +312,7 @@ bool ParseCommandLineArgs(int argc, const char* const* argv, FixtureOptions* fix
         {"summary_path", required_argument, nullptr, 0},
         {"print_statistics", no_argument, nullptr, 0},
         {"runs", required_argument, nullptr, 0},
+        {"seed", required_argument, nullptr, 0},
         {0, 0, 0, 0},
     };
     // Resets the internal state of getopt*, making this function idempotent.
@@ -365,6 +375,9 @@ bool ParseCommandLineArgs(int argc, const char* const* argv, FixtureOptions* fix
                 break;
             case 11:
                 performance_test_options->sample_count = atoi(optarg);
+                break;
+            case 12:
+                fixture_options->seed = static_cast<unsigned int>(strtoul(optarg, NULL, 0));
                 break;
             default:
                 break;

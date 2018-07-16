@@ -13,6 +13,7 @@
 #include <fbl/vector.h>
 #include <fs-management/mount.h>
 #include <fvm/fvm.h>
+#include <lib/zx/time.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -22,6 +23,12 @@
 #define LOG_ERROR(error_code, msg_fmt, ...)        \
     fprintf(stderr, "[%s:%d] Error(%s): " msg_fmt, \
             __FILE__, __LINE__, zx_status_get_string(error_code), ##__VA_ARGS__)
+
+// Macro for printing more information in stdout.
+// "[File:Line] Info: Message\n"
+#define LOG_INFO(msg_fmt, ...)                \
+    fprintf(stdout, "[%s:%d] Info: " msg_fmt, \
+            __FILE__, __LINE__, ##__VA_ARGS__)
 
 namespace fs_test_utils {
 
@@ -48,6 +55,7 @@ struct FixtureOptions {
         options.use_fvm = false;
         options.fvm_slice_size = kFvmBlockSize * (2 << 10);
         options.fs_type = format;
+        options.seed = static_cast<unsigned int>(zx::ticks::now().get());
         return options;
     }
 
@@ -83,6 +91,9 @@ struct FixtureOptions {
 
     // Mount the device in |Fixture::fs_path()|. Format is auto detected.
     bool fs_mount = true;
+
+    // Seed for pseudo random number generator.
+    unsigned int seed = 0;
 };
 
 // Provides a base fixture for File system tests.

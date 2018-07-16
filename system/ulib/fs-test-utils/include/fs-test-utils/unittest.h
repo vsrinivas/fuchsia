@@ -34,6 +34,7 @@ namespace fs_test_utils {
 #define RUN_FS_TEST_F_TYPE(test_fn, size)                                                 \
     if (result == ZX_OK) {                                                                \
         fbl::Function<bool()> test_wrapper = [&fixture]() {                               \
+            srand(fixture.options().seed);                                                \
             return test_fn(&fixture);                                                     \
         };                                                                                \
         fs_test_utils::fs_test_utils_internal::current_test_wrapper = &test_wrapper;      \

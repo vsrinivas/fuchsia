@@ -278,6 +278,7 @@ zx_status_t Fixture::Umount() {
 }
 
 zx_status_t Fixture::SetUpTestCase() {
+    LOG_INFO("Using random seed: %u\n", options_.seed);
     if (options_.use_ramdisk) {
         zx_status_t result = MakeRamdisk(options_, &block_device_path_);
         if (result != ZX_OK) {
