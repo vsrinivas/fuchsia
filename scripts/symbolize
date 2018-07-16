@@ -223,6 +223,32 @@ def kaslr_offset(addr, code_start, bias):
         return '%x' % addr
     return addr
 
+ARCH_REMAP_LUT = { 'x86_64' : 'x64',
+                   'aarch64' : 'arm64'
+                 }
+def choose_build_dirs(cli_args, arch):
+    arch = ARCH_REMAP_LUT.get(arch, arch)
+    zircon_build_dir = os.path.join(
+        os.path.dirname(SCRIPT_DIR), "build-%s" % (arch, ))
+    if not os.path.exists(zircon_build_dir):
+        zircon_build_dir = os.path.join(
+            os.path.dirname(SCRIPT_DIR), os.pardir, "out", "build-zircon", "build-%s" % (arch, ))
+    build_dirs = [zircon_build_dir]
+    if cli_args.build_dir:
+        build_dirs = cli_args.build_dir + build_dirs
+    else:
+        # Put the unstripped path ahead of the stripped one, we want the
+        # former searched first. This does mean the unstripped directory
+        # will get searched twice, but relative to the entire search time,
+        # the addition is small.
+        # Plus once a file is found its location is cached.
+        # Plus this is only used as a fallback in case the file isn't found
+        # in ids.txt.
+        fuchsia_build_dir = os.path.abspath(os.path.join(
+            os.path.dirname(SCRIPT_DIR), os.pardir, "out", arch))
+        fuchsia_unstripped_dir = os.path.join(fuchsia_build_dir, "exe.unstripped")
+        build_dirs = [fuchsia_unstripped_dir, fuchsia_build_dir] + build_dirs
+    return build_dirs
 
 def main():
     parser = argparse.ArgumentParser(
@@ -259,29 +285,9 @@ def main():
     global gdb_tool_path
     gdb_tool_path = args.gdb
 
-    zircon_build_dir = os.path.join(
-        os.path.dirname(SCRIPT_DIR), "build-x64")
-    if not os.path.exists(zircon_build_dir):
-        zircon_build_dir = os.path.join(
-            os.path.dirname(SCRIPT_DIR), os.pardir, "out", "build-zircon", "build-x64")
-    build_dirs = [zircon_build_dir]
-    if args.build_dir:
-        build_dirs = args.build_dir + build_dirs
-    else:
-        # Put the unstripped path ahead of the stripped one, we want the
-        # former searched first. This does mean the unstripped directory
-        # will get searched twice, but relative to the entire search time,
-        # the addition is small.
-        # Plus once a file is found its location is cached.
-        # Plus this is only used as a fallback in case the file isn't found
-        # in ids.txt.
-        fuchsia_build_dir = os.path.abspath(os.path.join(
-            os.path.dirname(SCRIPT_DIR), os.pardir, "out", "x64"))
-        fuchsia_unstripped_dir = os.path.join(fuchsia_build_dir, "exe.unstripped")
-        build_dirs = [fuchsia_unstripped_dir, fuchsia_build_dir] + build_dirs
-
     # Parsing vars
     arch = "x86_64"
+    build_dirs = choose_build_dirs(args, arch)
     bias = 0
     name_to_buildid = {}
     bias_to_name = {}
@@ -362,7 +368,16 @@ def main():
 
         m = arch_re.match(line)
         if m:
-            arch = m.group(2)
+            # If the architecture has changed, choose our new build dirs and
+            # clear our DSO cache.  We may be symbolizing the output of
+            # logserver, and it may be reasonable for the target architecture to
+            # be changing as the user boots and tests on different
+            # architectures.
+            new_arch = m.group(2)
+            if (arch != new_arch):
+                arch = new_arch
+                name_to_full_path = {}
+                build_dirs = choose_build_dirs(args, arch)
             continue
         m = build_id_re.match(line)
         if m:
