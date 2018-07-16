@@ -1,0 +1,24 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/package.gni")
+
+rustc_binary("spinning_square_rs") {
+  name = "spinning_square_rs"
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
+    "//garnet/public/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1:fuchsia.ui.viewsv1-rustc",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1token:fuchsia.ui.viewsv1token-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/crates/fuchsia-app",
+    "//garnet/public/rust/crates/fuchsia-async",
+    "//garnet/public/rust/crates/fuchsia-scenic",
+    "//garnet/public/rust/crates/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures",
+  ]
+}

@@ -15,6 +15,7 @@
         "//garnet/examples/ui:sketchy_client",
         "//garnet/bin/ui/sketchy:sketchy_service",
         "//garnet/examples/ui:spinning_square_view",
+        "//garnet/examples/ui:spinning_square_rs_pkg",
         "//garnet/examples/ui:tile_view",
         "//garnet/examples/ui:video_display",
         "//garnet/examples/ui:yuv_to_image_pipe"
