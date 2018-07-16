@@ -355,7 +355,7 @@ impl<A: IpAddr> Debug for Subnet<A> {
 /// For IPv4, this is the protocol number. For IPv6, this is the next header
 /// number.
 #[allow(missing_docs)]
-#[derive(Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 #[repr(u8)]
 pub enum IpProto {
     Tcp = IpProto::TCP,

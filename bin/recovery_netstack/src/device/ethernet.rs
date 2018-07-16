@@ -137,9 +137,8 @@ pub struct EthernetDeviceState {
 /// have sufficient space preceding the body for all encapsulating headers or
 /// does not have enough body plus padding bytes to satisfy the requirement
 /// passed to the callback.
-pub fn send_ip_frame<'a, A, B, F>(
-    state: &mut StackState, device_id: u64, local_addr: A, get_buffer: F,
-) where
+pub fn send_ip_frame<A, B, F>(state: &mut StackState, device_id: u64, local_addr: A, get_buffer: F)
+where
     A: IpAddr,
     B: AsRef<[u8]> + AsMut<[u8]>,
     F: SerializationCallback<B>,

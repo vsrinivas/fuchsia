@@ -14,12 +14,19 @@
 //! caller does not need to worry about it. Any necessary conversions are
 //! performed under the hood.
 
+// TODO(joshlf): Move into debug_err! and debug_err_fn! definitions once
+// attributes are allowed on expressions
+// (https://github.com/rust-lang/rust/issues/15701).
+#![cfg_attr(feature = "cargo-clippy", allow(block_in_if_condition_stmt))]
+
 /// Emit a debug message and return an error.
 ///
 /// Invoke the `debug!` macro on all but the first argument. A call to
 /// `debug_err!(err, ...)` is an expression whose value is the expression `err`.
 macro_rules! debug_err {
     ($err:expr, $($arg:tt)*) => (
+        // TODO(joshlf): Uncomment once attributes are allowed on expressions
+        // #[cfg_attr(feature = "cargo-clippy", allow(block_in_if_condition_stmt))]
         {
             debug!($($arg)*);
             $err
@@ -33,6 +40,8 @@ macro_rules! debug_err {
 /// the first argument, and returns the first argument.
 macro_rules! debug_err_fn {
     ($err:expr, $($arg:tt)*) => (
+        // TODO(joshlf): Uncomment once attributes are allowed on expressions
+        // #[cfg_attr(feature = "cargo-clippy", allow(block_in_if_condition_stmt))]
         || {
             debug!($($arg)*);
             $err

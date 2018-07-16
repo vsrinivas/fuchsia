@@ -292,7 +292,7 @@ fn min_header_len<I: Ip>() -> usize {
 
 // Serialize an IP packet into the provided buffer, returning the byte range
 // within the buffer corresponding to the serialized packet.
-fn serialize_packet<'a, A: IpAddr, B: AsMut<[u8]>>(
+fn serialize_packet<A: IpAddr, B: AsMut<[u8]>>(
     src_ip: A, dst_ip: A, ttl: u8, proto: IpProto, buffer: BufferAndRange<B>,
 ) -> BufferAndRange<B> {
     // serialize_ip! can't handle trait bounds with type arguments, so create
@@ -301,7 +301,7 @@ fn serialize_packet<'a, A: IpAddr, B: AsMut<[u8]>>(
     trait AsMutU8: AsMut<[u8]> {}
     impl<A: AsMut<[u8]>> AsMutU8 for A {}
     specialize_ip!(
-        fn serialize<'a, B>(
+        fn serialize<B>(
             src_ip: Self::Addr, dst_ip: Self::Addr, ttl: u8, proto: IpProto, buffer: BufferAndRange<B>
         ) -> BufferAndRange<B>
         where

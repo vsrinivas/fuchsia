@@ -424,7 +424,7 @@ impl Ipv4PacketBuilder {
             NetworkEndian::write_u16(&mut packet.hdr_prefix.id, self.id);
             NetworkEndian::write_u16(
                 &mut packet.hdr_prefix.flags_frag_off,
-                ((self.flags as u16) << 13) | self.frag_off,
+                ((u16::from(self.flags)) << 13) | self.frag_off,
             );
             packet.hdr_prefix.ttl = self.ttl;
             packet.hdr_prefix.proto = self.proto;

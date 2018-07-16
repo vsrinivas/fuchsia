@@ -56,7 +56,7 @@ mod checksum {
         pub fn add_bytes(&mut self, mut bytes: &[u8]) {
             // if there's a trailing byte, consume it first
             if let Some(byte) = self.trailing_byte {
-                if bytes.len() > 0 {
+                if !bytes.is_empty() {
                     Self::add_u16(&mut self.sum, NetworkEndian::read_u16(&[byte, bytes[0]]));
                     bytes = &bytes[1..];
                     self.trailing_byte = None;
@@ -399,6 +399,7 @@ mod options {
 
         fn next(&mut self) -> Option<O::Output> {
             // use match rather than expect because expect requires that Err: Debug
+            #[cfg_attr(feature = "cargo-clippy", allow(match_wild_err_arm))]
             match next::<&'a [u8], O>(&self.bytes, &mut self.idx) {
                 Ok(o) => o,
                 Err(_) => panic!("already-validated options should not fail to parse"),
@@ -831,18 +832,18 @@ mod buffer {
 
     impl<B: AsRef<[u8]>> AsRef<[u8]> for RefOrOwned<B> {
         fn as_ref(&self) -> &[u8] {
-            match &self.inner {
-                &RefOrOwnedInner::Ref(ref r) => r.as_ref(),
-                &RefOrOwnedInner::Owned(ref v) => v.as_slice(),
+            match self.inner {
+                RefOrOwnedInner::Ref(ref r) => r.as_ref(),
+                RefOrOwnedInner::Owned(ref v) => v.as_slice(),
             }
         }
     }
 
     impl<B: AsMut<[u8]>> AsMut<[u8]> for RefOrOwned<B> {
         fn as_mut(&mut self) -> &mut [u8] {
-            match &mut self.inner {
-                &mut RefOrOwnedInner::Ref(ref mut r) => r.as_mut(),
-                &mut RefOrOwnedInner::Owned(ref mut v) => v.as_mut_slice(),
+            match *(&mut self.inner) {
+                RefOrOwnedInner::Ref(ref mut r) => r.as_mut(),
+                RefOrOwnedInner::Owned(ref mut v) => v.as_mut_slice(),
             }
         }
     }
