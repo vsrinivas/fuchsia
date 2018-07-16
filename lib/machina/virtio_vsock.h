@@ -92,7 +92,7 @@ class VirtioVsock
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
               fuchsia::guest::VsockAcceptor::AcceptCallback callback) override;
   void ConnectCallback(ConnectionKey key, zx_status_t status,
-                       zx::socket socket);
+                       zx::handle handle);
 
   zx_status_t AddConnectionLocked(ConnectionKey key,
                                   fbl::unique_ptr<Connection> conn)

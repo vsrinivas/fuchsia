@@ -10,7 +10,7 @@ library fuchsia.guest;
 // corresponding |GuestInfo| structure.
 const uint32 kHostCid = 2;
 
-// Exposed by commponents capable of listening on vsocks. On a request to
+// Exposed by components capable of listening on vsocks. On a request to
 // establish a connection, the |Accept| method will be called. If the port is
 // open and accepting connections, the implementation should return |ZX_OK|,
 // create a new socket, and return the remote endpoint.
@@ -18,7 +18,7 @@ const uint32 kHostCid = 2;
 // Also see |VsockEndpoint|.
 interface VsockAcceptor {
   1: Accept(uint32 src_cid, uint32 src_port, uint32 port)
-      -> (status s, handle<socket>? socket);
+      -> (status @status, handle? @handle);
 };
 
 // Allow for out-bound connections to be established to the target (cid,port)
@@ -26,7 +26,7 @@ interface VsockAcceptor {
 // this connection.
 interface VsockConnector {
   1: Connect(uint32 src_port, uint32 cid, uint32 port)
-      -> (status s, handle<socket>? socket);
+      -> (status @status, handle? @handle);
 };
 
 // Exposed by components capable of handling vsock traffic. During
@@ -49,10 +49,10 @@ interface VsockEndpoint {
 interface ManagedVsockEndpoint {
   // Register |acceptor| to be invoked for any connection requests to |port|.
   1: Listen(uint32 port, VsockAcceptor acceptor)
-      -> (status s);
+      -> (status @status);
 
   // Similar to |VsockConnector.Connect| except the |src_port| will be generated
   // automatically.
   2: Connect(uint32 cid, uint32 port)
-      -> (status s, handle<socket>? socket);
+      -> (status @status, handle? @handle);
 };

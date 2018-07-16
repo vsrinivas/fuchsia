@@ -50,12 +50,12 @@ class HostVsockEndpoint : public VsockEndpoint,
  private:
   struct Connection {
     uint32_t port;
-    zx::socket socket;
+    zx::handle handle;
     async::Wait wait;
   };
 
   void ConnectCallback(
-      zx_status_t status, zx::socket socket, uint32_t port,
+      zx_status_t status, zx::handle handle, uint32_t src_port,
       fuchsia::guest::ManagedVsockEndpoint::ConnectCallback remote_callback);
 
   void OnPeerClosed(Connection* conn);

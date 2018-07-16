@@ -18,15 +18,15 @@ VsockEndpoint::~VsockEndpoint() {
   }
 }
 
-void VsockEndpoint::Connect(uint32_t src_port, uint32_t dest_cid,
-                            uint32_t dest_port, ConnectCallback callback) {
+void VsockEndpoint::Connect(uint32_t src_port, uint32_t cid, uint32_t port,
+                            ConnectCallback callback) {
   FXL_DCHECK(vsock_server_);
-  VsockEndpoint* dest = vsock_server_->FindEndpoint(dest_cid);
-  if (dest == nullptr) {
-    callback(ZX_ERR_CONNECTION_REFUSED, zx::socket());
+  VsockEndpoint* endpoint = vsock_server_->FindEndpoint(cid);
+  if (endpoint == nullptr) {
+    callback(ZX_ERR_CONNECTION_REFUSED, zx::handle());
     return;
   }
-  dest->Accept(cid_, src_port, dest_port, std::move(callback));
+  endpoint->Accept(cid_, src_port, port, std::move(callback));
 }
 
 }  //  namespace guestmgr

@@ -52,10 +52,10 @@ struct TestConnection {
   zx::socket socket;
 
   fuchsia::guest::VsockAcceptor::AcceptCallback callback() {
-    return [this](zx_status_t status, zx::socket socket) {
+    return [this](zx_status_t status, zx::handle handle) {
       count++;
       this->status = status;
-      this->socket = std::move(socket);
+      this->socket = zx::socket(std::move(handle));
     };
   }
 };

@@ -24,7 +24,7 @@ void HostVsockEndpoint::Accept(uint32_t src_cid, uint32_t src_port,
                                uint32_t port, AcceptCallback callback) {
   auto it = listeners_.find(port);
   if (it == listeners_.end()) {
-    callback(ZX_ERR_CONNECTION_REFUSED, zx::socket());
+    callback(ZX_ERR_CONNECTION_REFUSED, zx::handle());
     return;
   }
   it->second->Accept(src_cid, src_port, port, std::move(callback));
@@ -59,46 +59,47 @@ void HostVsockEndpoint::Connect(
   uint32_t src_port;
   zx_status_t status = FindEphemeralPort(&src_port);
   if (status != ZX_OK) {
-    callback(ZX_ERR_NO_RESOURCES, zx::socket());
+    callback(ZX_ERR_NO_RESOURCES, zx::handle());
     return;
   }
   Connect(src_port, cid, port,
           [this, src_port, callback = std::move(callback)](
-              zx_status_t status, zx::socket socket) mutable {
-            ConnectCallback(status, std::move(socket), src_port,
+              zx_status_t status, zx::handle handle) mutable {
+            ConnectCallback(status, std::move(handle), src_port,
                             std::move(callback));
           });
 }
 
 void HostVsockEndpoint::ConnectCallback(
-    zx_status_t status, zx::socket socket, uint32_t src_port,
+    zx_status_t status, zx::handle handle, uint32_t src_port,
     fuchsia::guest::ManagedVsockEndpoint::ConnectCallback callback) {
   auto free_port =
       fbl::MakeAutoCall([this, src_port]() { FreePort(src_port); });
   if (status != ZX_OK) {
-    callback(status, std::move(socket));
+    callback(status, std::move(handle));
     return;
   }
+
   auto conn = std::make_unique<Connection>();
   conn->port = src_port;
-  status = socket.duplicate(ZX_RIGHT_WAIT, &conn->socket);
+  status = handle.duplicate(ZX_RIGHT_WAIT, &conn->handle);
   if (status != ZX_OK) {
-    callback(ZX_ERR_CONNECTION_REFUSED, zx::socket());
+    callback(ZX_ERR_CONNECTION_REFUSED, zx::handle());
     return;
   }
-  conn->wait.set_trigger(ZX_SOCKET_PEER_CLOSED);
-  conn->wait.set_object(conn->socket.get());
+  conn->wait.set_trigger(__ZX_OBJECT_PEER_CLOSED);
+  conn->wait.set_object(conn->handle.get());
   conn->wait.set_handler(
       [this, conn = conn.get()](...) { OnPeerClosed(conn); });
   status = conn->wait.Begin(async_get_default_dispatcher());
   if (status != ZX_OK) {
-    callback(ZX_ERR_CONNECTION_REFUSED, zx::socket());
+    callback(ZX_ERR_CONNECTION_REFUSED, zx::handle());
     return;
   }
 
   free_port.cancel();
   connections_.emplace(conn->port, std::move(conn));
-  callback(ZX_OK, std::move(socket));
+  callback(ZX_OK, std::move(handle));
 }
 
 void HostVsockEndpoint::OnPeerClosed(Connection* conn) {

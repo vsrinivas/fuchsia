@@ -29,7 +29,7 @@ void RemoteVsockEndpoint::SetVsockAcceptor(
 void RemoteVsockEndpoint::Accept(uint32_t src_cid, uint32_t src_port,
                                  uint32_t port, AcceptCallback callback) {
   if (!remote_acceptor_) {
-    callback(ZX_ERR_CONNECTION_REFUSED, zx::socket());
+    callback(ZX_ERR_CONNECTION_REFUSED, zx::handle());
     return;
   }
   remote_acceptor_->Accept(src_cid, src_port, port, std::move(callback));

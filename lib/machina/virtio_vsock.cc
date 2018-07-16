@@ -133,7 +133,7 @@ VirtioVsock::SocketConnection::~SocketConnection() {
   rx_wait_.Cancel();
   tx_wait_.Cancel();
   if (accept_callback_) {
-    accept_callback_(ZX_ERR_CONNECTION_REFUSED, zx::socket());
+    accept_callback_(ZX_ERR_CONNECTION_REFUSED, zx::handle());
   }
 }
 
@@ -367,7 +367,7 @@ void VirtioVsock::Accept(
     uint32_t src_cid, uint32_t src_port, uint32_t port,
     fuchsia::guest::VsockAcceptor::AcceptCallback callback) {
   if (HasConnection(src_cid, src_port, port)) {
-    callback(ZX_ERR_ALREADY_BOUND, zx::socket());
+    callback(ZX_ERR_ALREADY_BOUND, zx::handle());
     return;
   }
 
@@ -399,9 +399,22 @@ void VirtioVsock::Accept(
 }
 
 void VirtioVsock::ConnectCallback(ConnectionKey key, zx_status_t status,
-                                  zx::socket socket) {
-  auto new_conn = fbl::make_unique<SocketConnection>(std::move(socket),
-                                                     zx::socket(), nullptr);
+                                  zx::handle handle) {
+  if (handle) {
+    zx_info_handle_basic_t info;
+    zx_status_t info_status = handle.get_info(ZX_INFO_HANDLE_BASIC, &info,
+                                              sizeof(info), nullptr, nullptr);
+    if (info_status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to get handle info " << info_status;
+      return;
+    } else if (info.type != zx::socket::TYPE) {
+      FXL_LOG(ERROR) << "Unexpected handle type " << info.type;
+      return;
+    }
+  }
+
+  auto new_conn = fbl::make_unique<SocketConnection>(
+      zx::socket(std::move(handle)), zx::socket(), nullptr);
   SocketConnection* conn = new_conn.get();
 
   {
@@ -672,12 +685,12 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
       } else if (connector_) {
         // We received a request for the guest to connect to an external CID.
         //
-        // If we don't have a socket connector then implicitly just refuse any
-        // outbound connections. Otherwise send out a request for a socket
-        // connection to the remote CID.
+        // If we don't have a connector then implicitly just refuse any outbound
+        // connections. Otherwise send out a request for a connection to the
+        // remote CID.
         connector_->Connect(header->src_port, header->dst_cid, header->dst_port,
-                            [this, key](zx_status_t status, zx::socket socket) {
-                              ConnectCallback(key, status, std::move(socket));
+                            [this, key](zx_status_t status, zx::handle handle) {
+                              ConnectCallback(key, status, std::move(handle));
                             });
         continue;
       }

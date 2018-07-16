@@ -39,7 +39,7 @@ class VsockEndpoint : public fuchsia::guest::VsockConnector,
   void set_vsock_server(VsockServer* server) { vsock_server_ = server; }
 
   // |fuchsia::guest::VsockConnector|
-  void Connect(uint32_t port, uint32_t dest_cid, uint32_t dest_port,
+  void Connect(uint32_t src_port, uint32_t cid, uint32_t port,
                ConnectCallback callback) override;
 
  private:

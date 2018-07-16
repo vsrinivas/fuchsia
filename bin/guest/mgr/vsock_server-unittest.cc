@@ -26,14 +26,14 @@ struct TestConnection {
   zx_status_t status = ZX_ERR_BAD_STATE;
 
   fuchsia::guest::VsockConnector::ConnectCallback callback() {
-    return [this](zx_status_t status, zx::socket socket) {
+    return [this](zx_status_t status, zx::handle handle) {
       this->status = status;
-      this->socket = std::move(socket);
+      this->socket = zx::socket(std::move(handle));
     };
   }
 };
 
-static void NoOpConnectCallback(zx_status_t status, zx::socket socket) {}
+static void NoOpConnectCallback(zx_status_t status, zx::handle handle) {}
 
 // A simple |fuchsia::guest::VsockAcceptor| that just retains a list of all
 // connection requests.
