@@ -32,8 +32,9 @@ frame:
    corresponding to the TCP segment itself.
 3. The TCP layer parses the payload as a TCP segment. It contains data which the
    TCP layer would like to acknowledge. Once the TCP layer has extracted all of
-   the data that it needs out of the segment, it drops the segment, regaining
-   direct access to the original buffer. Since the entire buffer - not just the
+   the data that it needs out of the segment, it drops the segment (the
+   `TcpSegment` object, which itself borrowed the buffer), regaining direct
+   mutable access to the original buffer. Since the entire buffer - not just the
    sub-set of the buffer containing the payload - has been passed up the stack,
    the TCP stack still has access to the entire buffer. It figures out how much
    space must be left at the beginning of the buffer for all lower-layer headers
@@ -216,3 +217,64 @@ the concrete types - `Ipv4Addr` or `Ipv6Addr` - that the function is
 instantiated with. Finally, the blocks associated with these labels become the
 function bodies, and so must return, in this case, `Option<Ipv4Addr>` or
 `Option<Ipv6Addr>` respectively.
+
+## Control Flow
+
+Control flow in the netstack is event-driven. The netstack runs in a single
+thread, which runs the event loop. The event loop blocks waiting for an event.
+When an event occurs, control passes to the code responsible for processing that
+event. That code is responsible for processing the event in its entirety,
+including updating any state and emitting any other events in response to the
+incoming event.
+
+There are three types of events in the system:
+- Incoming packets from the network
+- Incoming requests from local application clients (open new connection, read on
+  an existing connection, etc)
+- Timers firing (a timer fire event may include associated data, the type of the
+  timer (e.g. "TCP ACK timeout"), etc)
+
+The netstack may emit three types of events:
+- Outgoing packets to the network
+- Responses to requests from local application clients (return newly-created
+  connection, return data for a read request on an existing connection, etc)
+- Installing timers
+
+Once an event has been fully processed, the code responsible for its processing
+returns, and the event loop goes back to blocking for a future event.
+
+Consider the following example of an event being handled:
+1. The netstack receives an Ethernet frame from the Ethernet driver. This causes
+   the event loop to become unblocked.
+2. The event loop executes the function responsible for processing incoming
+   Ethernet frames.
+3. This function parses the frame, and discovers that it contains an IPv4
+   packet. It passes control to the function responsible for processing incoming
+   IPv4 packets.
+4. This function parses the packet, and discovers that it contains a TCP
+   segment. It passes control to the function responsible for processing
+   incoming TCP segments.
+5. This function parses the segment, and discovers that it is a SYN from a
+   remote host attempting to initiate a new TCP connection. It finds the
+   appropriate local TCP listener, and creates a new TCP connection object to
+   track the new connection. It emits the following events:
+   - It sends a SYN/ACK segment back to the sender of the SYN segment.
+   - It sends a message to the local application client which created the TCP
+     listener to inform it that there's a new connection.
+   - It installs a timer which will fire if the remote side doesn't respond with
+     an ACK within a certain period of time.
+6. This function is done, so it returns. None of the parent functions (the one
+   for processing incoming IPv4 packets or the one for processing incoming
+   Ethernet frames) have any more work to do, so they return as well.
+7. The event loop returns to its steady state of waiting for further events to
+   process.
+
+This control flow design has a number of advantages:
+- Since it is entirely single-threaded, there's no need for synchronization
+  of any common data structures.
+- Since each event results in a single function call, the flow of control
+  within the core of the netstack is easy to follow, and follows normal
+  function call flow. There's no indirect flow, for example in the form
+  of scheduling and later executing callbacks or other event processing.
+- Since data is never shared between threads, the design is quite
+  cache-friendly.
