@@ -39,6 +39,7 @@ class LowEnergyConnection;
 // TODO(armansito): Document the usage pattern.
 
 class LowEnergyConnectionManager;
+class PairingDelegate;
 class RemoteDevice;
 class RemoteDeviceCache;
 
@@ -135,6 +136,15 @@ class LowEnergyConnectionManager final {
   // A link with the given handle should not have been previously registered.
   LowEnergyConnectionRefPtr RegisterRemoteInitiatedLink(
       hci::ConnectionPtr link);
+
+  // Returns the PairingDelegate currently assigned to this connection manager.
+  PairingDelegate* pairing_delegate() const { return pairing_delegate_.get(); }
+
+  // Assigns a new PairingDelegate to handle LE authentication challenges.
+  // Replacing an existing pairing delegate cancels all ongoing pairing
+  // procedures. If a delegate is not set then all pairing requests will be
+  // rejected.
+  void SetPairingDelegate(fxl::WeakPtr<PairingDelegate> delegate);
 
   // TODO(armansito): Add a RemoteDeviceCache::Observer interface and move these
   // callbacks there.
@@ -300,6 +310,10 @@ class LowEnergyConnectionManager final {
   ConnectionMap::iterator FindConnection(hci::ConnectionHandle handle);
 
   fxl::RefPtr<hci::Transport> hci_;
+
+  // The pairing delegate used for authentication challenges. If nullptr, all
+  // pairing requests will be rejected.
+  fxl::WeakPtr<PairingDelegate> pairing_delegate_;
 
   // Time after which a connection attempt is considered to have timed out. This
   // is configurable to allow unit tests to set a shorter value.

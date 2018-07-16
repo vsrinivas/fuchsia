@@ -147,6 +147,11 @@ void BrEdrConnectionManager::SetConnectable(bool connectable,
       });
 }
 
+void BrEdrConnectionManager::SetPairingDelegate(
+    fxl::WeakPtr<PairingDelegate> delegate) {
+  // TODO(armansito): implement
+}
+
 void BrEdrConnectionManager::WritePageScanSettings(uint16_t interval,
                                                    uint16_t window,
                                                    bool interlaced,

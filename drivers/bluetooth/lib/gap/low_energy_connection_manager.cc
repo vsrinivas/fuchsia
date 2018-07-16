@@ -10,10 +10,14 @@
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel_manager.h"
+#include "garnet/drivers/bluetooth/lib/sm/pairing_state.h"
+#include "garnet/drivers/bluetooth/lib/sm/util.h"
 
 #include "lib/fxl/logging.h"
+#include "lib/fxl/random/rand.h"
 #include "lib/fxl/strings/string_printf.h"
 
+#include "pairing_delegate.h"
 #include "remote_device.h"
 #include "remote_device_cache.h"
 
@@ -91,16 +95,46 @@ class LowEnergyConnection {
         return;
       }
 
-      gatt->AddConnection(self->id(), std::move(att));
+      // Obtain the local I/O capabilities from the delegate. Default to
+      // NoInputNoOutput if no delegate is available.
+      auto io_cap = sm::IOCapability::kNoInputNoOutput;
+      if (self->conn_mgr_->pairing_delegate()) {
+        io_cap = self->conn_mgr_->pairing_delegate()->io_capability();
+      }
+      auto pairing = std::make_unique<sm::PairingState>(self->link_->WeakPtr(),
+                                                        std::move(smp), io_cap);
+      pairing->set_legacy_tk_delegate([self](auto method, auto responder) {
+        if (self) {
+          self->OnTKRequest(method, std::move(responder));
+        }
+      });
+      pairing->set_le_ltk_callback([self](const sm::LTK& ltk) {
+        if (self) {
+          self->OnNewLTK(ltk);
+        }
+      });
 
-      // TODO(armansito): Retain |smp| here. For now we close the channel.
-      smp->Deactivate();
+      // TODO(armansito): Don't pair automatically. Do this in response to a
+      // service request instead.
+      pairing->UpdateSecurity(
+          sm::SecurityLevel::kEncrypted,
+          [](sm::Status status, const auto& props) {
+            FXL_LOG(INFO) << "gap: Pairing status: " << status.ToString()
+                          << ", properties: " << props.ToString();
+          });
+
+      gatt->AddConnection(self->id(), std::move(att));
+      self->pairing_ = std::move(pairing);
     };
 
     l2cap->AddLEConnection(link_->handle(), link_->role(), std::move(cp_cb),
                            std::move(link_error_cb), std::move(channels_cb),
                            dispatcher_);
   }
+
+  // Cancels any on-going pairing procedures and sets up SMP to use the provided
+  // new I/O capabilities for future pairing procedures.
+  void ResetPairingState(sm::IOCapability ioc) { pairing_->Reset(ioc); }
 
   size_t ref_count() const { return refs_.size(); }
 
@@ -109,6 +143,64 @@ class LowEnergyConnection {
   hci::Connection* link() const { return link_.get(); }
 
  private:
+  // Called when a new LTK is received for this connection.
+  void OnNewLTK(const sm::LTK& ltk) {
+    FXL_VLOG(1) << "gap: Connection has new LTK";
+
+    // TODO(armansito): Store key with remote device cache.
+  }
+
+  // Called when a TK is needed for pairing. This request should be resolved by
+  // a pairing delegate after involving the user.
+  void OnTKRequest(sm::PairingMethod method,
+                   sm::PairingState::TKResponse responder) {
+    FXL_VLOG(1) << "gap: TK request - method: "
+                << sm::util::PairingMethodToString(method);
+
+    auto delegate = conn_mgr_->pairing_delegate();
+    if (!delegate) {
+      FXL_LOG(ERROR) << "gap: Rejecting pairing without a PairingDelegate!";
+      responder(false, 0);
+      return;
+    }
+
+    if (method == sm::PairingMethod::kPasskeyEntryInput) {
+      // The TK will be provided by the user.
+      delegate->RequestPasskey(
+          id(), [responder = std::move(responder)](int64_t passkey) {
+            if (passkey < 0) {
+              responder(false, 0);
+            } else {
+              responder(true, static_cast<uint32_t>(passkey));
+            }
+          });
+      return;
+    }
+
+    if (method == sm::PairingMethod::kPasskeyEntryDisplay) {
+      // Randomly generate a 6 digit passkey.
+      // TODO(armansito): Use a uniform prng.
+      uint32_t passkey = fxl::RandUint64() % 1000000;
+      delegate->DisplayPasskey(
+          id(), passkey,
+          [passkey, responder = std::move(responder)](bool confirm) {
+            responder(confirm, passkey);
+          });
+      return;
+    }
+
+    // TODO(armansito): Support providing a TK out of band.
+    // OnTKRequest() should only be called for legacy pairing.
+    FXL_DCHECK(method == sm::PairingMethod::kJustWorks);
+
+    delegate->ConfirmPairing(id(),
+                             [responder = std::move(responder)](bool confirm) {
+                               // The TK for Just Works pairing is 0 (Vol 3,
+                               // Part H, 2.3.5.2).
+                               responder(confirm, 0);
+                             });
+  }
+
   void CloseRefs() {
     for (auto* ref : refs_) {
       ref->MarkClosed();
@@ -121,6 +213,9 @@ class LowEnergyConnection {
   std::unique_ptr<hci::Connection> link_;
   async_dispatcher_t* dispatcher_;
   fxl::WeakPtr<LowEnergyConnectionManager> conn_mgr_;
+
+  // SMP pairing manager.
+  std::unique_ptr<sm::PairingState> pairing_;
 
   // LowEnergyConnectionManager is responsible for making sure that these
   // pointers are always valid.
@@ -359,6 +454,16 @@ LowEnergyConnectionManager::RegisterRemoteInitiatedLink(
   // Currently this will refuse the connection and disconnect the link if |peer|
   // is already connected to us by a different local address.
   return InitializeConnection(peer->identifier(), std::move(link));
+}
+
+void LowEnergyConnectionManager::SetPairingDelegate(
+    fxl::WeakPtr<PairingDelegate> delegate) {
+  for (auto& iter : connections_) {
+    iter.second->ResetPairingState(delegate
+                                       ? delegate->io_capability()
+                                       : sm::IOCapability::kNoInputNoOutput);
+  }
+  pairing_delegate_ = delegate;
 }
 
 void LowEnergyConnectionManager::SetConnectionParametersCallbackForTesting(

@@ -188,6 +188,11 @@ void Adapter::ShutDown() {
   CleanUp();
 }
 
+void Adapter::SetPairingDelegate(fxl::WeakPtr<PairingDelegate> delegate) {
+  le_connection_manager()->SetPairingDelegate(delegate);
+  bredr_connection_manager()->SetPairingDelegate(delegate);
+}
+
 bool Adapter::IsDiscovering() const {
   return (le_discovery_manager_ && le_discovery_manager_->discovering()) ||
          (bredr_discovery_manager_ && bredr_discovery_manager_->discovering());

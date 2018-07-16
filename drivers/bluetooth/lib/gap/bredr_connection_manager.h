@@ -21,6 +21,7 @@ class Transport;
 
 namespace gap {
 
+class PairingDelegate;
 class RemoteDeviceCache;
 
 // Manages all activity related to connections in the BR/EDR section of the
@@ -35,6 +36,12 @@ class BrEdrConnectionManager {
 
   // Set whether this host is connectable
   void SetConnectable(bool connectable, hci::StatusCallback status_cb);
+
+  // Assigns a new PairingDelegate to handle BR/EDR authentication challenges.
+  // Replacing an existing pairing delegate cancels all ongoing pairing
+  // procedures. If a delegate is not set then all pairing requests will be
+  // rejected.
+  void SetPairingDelegate(fxl::WeakPtr<PairingDelegate> delegate);
 
  private:
   // Reads the controller page scan settings.

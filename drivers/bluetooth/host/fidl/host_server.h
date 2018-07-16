@@ -21,6 +21,7 @@
 #include "garnet/drivers/bluetooth/lib/gap/bredr_connection_manager.h"
 #include "garnet/drivers/bluetooth/lib/gap/bredr_discovery_manager.h"
 #include "garnet/drivers/bluetooth/lib/gap/low_energy_discovery_manager.h"
+#include "garnet/drivers/bluetooth/lib/gap/pairing_delegate.h"
 
 namespace bthost {
 
@@ -28,7 +29,8 @@ class GattHost;
 
 // Implements the Host FIDL interface. Owns all FIDL connections that have been
 // opened through it.
-class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host> {
+class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host>,
+                   public btlib::gap::PairingDelegate {
  public:
   HostServer(zx::channel channel, fxl::WeakPtr<btlib::gap::Adapter> adapter,
              fbl::RefPtr<GattHost> gatt_host);
@@ -46,10 +48,6 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host> {
                       SetConnectableCallback callback) override;
   void SetDiscoverable(bool discoverable,
                        SetDiscoverableCallback callback) override;
-
-  // Called by |adapter()->remote_device_cache()| when a remote device is updated.
-  void OnRemoteDeviceUpdated(const ::btlib::gap::RemoteDevice& remote_device);
-
   void RequestLowEnergyCentral(
       ::fidl::InterfaceRequest<fuchsia::bluetooth::le::Central> central)
       override;
@@ -60,6 +58,18 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host> {
       ::fidl::InterfaceRequest<fuchsia::bluetooth::gatt::Server> server)
       override;
   void Close() override;
+
+  // ::btlib::gap::PairingDelegate overrides:
+  btlib::sm::IOCapability io_capability() const override;
+  void StopPairing(std::string id, btlib::sm::Status status) override;
+  void ConfirmPairing(std::string id, ConfirmCallback confirm) override;
+  void DisplayPasskey(std::string id, uint32_t passkey,
+                      ConfirmCallback confirm) override;
+  void RequestPasskey(std::string id, PasskeyResponseCallback respond) override;
+
+  // Called by |adapter()->remote_device_cache()| when a remote device is
+  // updated.
+  void OnRemoteDeviceUpdated(const ::btlib::gap::RemoteDevice& remote_device);
 
   // Called when |server| receives a channel connection error.
   void OnConnectionError(Server* server);

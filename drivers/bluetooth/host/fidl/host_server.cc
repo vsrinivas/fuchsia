@@ -12,6 +12,7 @@
 #include "garnet/drivers/bluetooth/lib/gap/gap.h"
 #include "garnet/drivers/bluetooth/lib/gap/low_energy_discovery_manager.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "helpers.h"
 #include "low_energy_central_server.h"
@@ -31,12 +32,17 @@ HostServer::HostServer(zx::channel channel,
       gatt_host_(gatt_host),
       weak_ptr_factory_(this) {
   FXL_DCHECK(gatt_host_);
+
+  auto self = weak_ptr_factory_.GetWeakPtr();
   adapter->remote_device_cache()->set_device_updated_callback(
-      [self = weak_ptr_factory_.GetWeakPtr()](const auto& device) {
+      [self](const auto& device) {
         if (self) {
           self->OnRemoteDeviceUpdated(device);
         }
       });
+
+  // TODO(armansito): Do this in response to Host::SetPairingDelegate().
+  adapter->SetPairingDelegate(self);
 }
 
 void HostServer::GetInfo(GetInfoCallback callback) {
@@ -244,6 +250,37 @@ void HostServer::Close() {
   // Destroy all bindings.
   servers_.clear();
   gatt_host_->CloseServers();
+}
+
+btlib::sm::IOCapability HostServer::io_capability() const {
+  // TODO(armansito): implement
+  return btlib::sm::IOCapability::kDisplayOnly;
+}
+
+void HostServer::StopPairing(std::string id, btlib::sm::Status status) {
+  // TODO(armansito): implement
+}
+
+void HostServer::ConfirmPairing(std::string id, ConfirmCallback confirm) {
+  FXL_LOG(INFO) << "bthost: Pairing request for device: " << id;
+
+  // TODO(armansito): Call out to PairingDelegate FIDL interface
+  confirm(true);
+}
+
+void HostServer::DisplayPasskey(std::string id, uint32_t passkey,
+                                ConfirmCallback confirm) {
+  FXL_LOG(INFO) << "bthost: Pairing request for device: " << id;
+
+  // TODO(armansito): Call out to PairingDelegate FIDL interface
+  FXL_LOG(INFO) << fxl::StringPrintf("bthost: Enter passkey: %06u", passkey);
+  confirm(true);
+}
+
+void HostServer::RequestPasskey(std::string id,
+                                PasskeyResponseCallback respond) {
+  // TODO(armansito): Call out to PairingDelegate FIDL interface
+  respond(-1);
 }
 
 void HostServer::OnConnectionError(Server* server) {
