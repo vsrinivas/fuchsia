@@ -35,7 +35,15 @@ zx_status_t WaitBase::Cancel() {
 
     async_dispatcher_t* dispatcher = dispatcher_;
     dispatcher_ = nullptr;
-    return async_cancel_wait(dispatcher, &wait_);
+
+    zx_status_t status = async_cancel_wait(dispatcher, &wait_);
+    // |dispatcher| is required to be single-threaded, Cancel() is
+    // only supposed to be called on |dispatcher|'s thread, and
+    // we verified that the wait was pending before calling
+    // async_cancel_wait(). Assuming that |dispatcher| never queues
+    // a wait, |wait_| must have been pending with |dispatcher|.
+    ZX_DEBUG_ASSERT(status != ZX_ERR_NOT_FOUND);
+    return status;
 }
 
 Wait::Wait(zx_handle_t object, zx_signals_t trigger, Handler handler)

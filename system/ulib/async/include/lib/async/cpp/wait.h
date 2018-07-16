@@ -66,9 +66,7 @@ public:
     // Returns |ZX_OK| if the wait was pending and it has been successfully
     // canceled; its handler will not run again and can be released immediately.
     // Returns |ZX_ERR_NOT_FOUND| if there was no pending wait either because it
-    // already completed, had not been started, or its completion packet has been
-    // dequeued from the port and is pending delivery to its handler (perhaps on
-    // another thread).
+    // already completed, or had not been started.
     // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
     zx_status_t Cancel();
 
