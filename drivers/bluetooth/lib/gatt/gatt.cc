@@ -185,6 +185,20 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
     });
   }
 
+  void DiscoverServices(std::string peer_id) override {
+    FXL_VLOG(1) << "gatt: Discover services: " << peer_id;
+
+    PostMessage([this, peer_id = std::move(peer_id)] {
+      auto iter = connections_.find(peer_id);
+      if (iter == connections_.end()) {
+        FXL_LOG(WARNING) << "gatt: Unknown peer: " << peer_id;
+        return;
+      }
+
+      iter->second.Initialize();
+    });
+  }
+
   void RegisterRemoteServiceWatcher(RemoteServiceWatcher callback,
                                     async_dispatcher_t* dispatcher) override {
     FXL_DCHECK(callback);

@@ -45,6 +45,10 @@ void FakeLayer::SendNotification(IdType service_id,
   // TODO: implement
 }
 
+void FakeLayer::DiscoverServices(std::string peer_id) {
+  // TODO: implement
+}
+
 void FakeLayer::RegisterRemoteServiceWatcher(RemoteServiceWatcher callback,
                                              async_dispatcher_t* dispatcher) {
   // TODO: implement

@@ -48,8 +48,10 @@ class GATT : public fbl::RefCounted<GATT> {
   virtual void Initialize() = 0;
   virtual void ShutDown() = 0;
 
-  // Initializes a new GATT profile connection with the given peer. The GATT
-  // profile is implemented over the L2CAP ATT fixed channel.
+  // Registers the given connection with the GATT profile without initiating
+  // service discovery. Once a connection is registered with GATT, the peer can
+  // access local services and clients can call the "Remote Service" methods
+  // below using |peer_id|.
   //
   // |peer_id|: The identifier for the peer device that the link belongs to.
   //            This is used to identify the peer while handling certain events.
@@ -127,6 +129,10 @@ class GATT : public fbl::RefCounted<GATT> {
   // The methods below are for interacting with remote GATT services. These
   // methods operate asynchronously.
 
+  // Perform service discovery and initialize remote services for the peer with
+  // the given |peer_id|.
+  virtual void DiscoverServices(std::string peer_id) = 0;
+
   // Register a handler that will be notified when a remote service gets
   // discovered on a connected peer.
   //
@@ -140,7 +146,11 @@ class GATT : public fbl::RefCounted<GATT> {
                                             async_dispatcher_t* dispatcher = nullptr) = 0;
 
   // Returns the list of remote services that were found on the device with
-  // |peer_id|. |callback| will run on the GATT loop.
+  // |peer_id|. If |peer_id| was registered but DiscoverServices() has not been
+  // called yet, this request will be buffered until remote services have been
+  // discovered. If the connection is removed without discovery services,
+  // |callback| will be called with an error status. |callback| will always run
+  // on the GATT loop.
   virtual void ListServices(std::string peer_id,
                             std::vector<common::UUID> uuids,
                             ServiceListCallback callback) = 0;

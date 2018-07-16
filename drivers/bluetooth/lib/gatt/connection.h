@@ -45,7 +45,7 @@ class Connection final {
              fxl::RefPtr<att::Database> local_db,
              RemoteServiceWatcher svc_watcher,
              async_dispatcher_t* gatt_dispatcher);
-  ~Connection();
+  ~Connection() = default;
 
   Connection() = default;
   Connection(Connection&&) = default;
@@ -56,7 +56,13 @@ class Connection final {
     return remote_service_manager_.get();
   }
 
+  // Initiate MTU exchange followed by primary service discovery. On failure,
+  // signals a link error through the ATT channel (which is expected to
+  // disconnect the link).
+  void Initialize();
+
  private:
+  fxl::RefPtr<att::Bearer> att_;
   std::unique_ptr<Server> server_;
   std::unique_ptr<RemoteServiceManager> remote_service_manager_;
 
