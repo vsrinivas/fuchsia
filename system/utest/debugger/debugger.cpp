@@ -1237,9 +1237,6 @@ void scan_argv(int argc, char** argv) {
         if (strncmp(argv[i], "v=", 2) == 0) {
             int verbosity = atoi(argv[i] + 2);
             unittest_set_verbosity_level(verbosity);
-        } else if (strncmp(argv[i], "ts=", 3) == 0) {
-            int scale = atoi(argv[i] + 3);
-            tu_set_timeout_scale(scale);
         }
     }
 }

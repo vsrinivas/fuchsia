@@ -17,8 +17,6 @@
 
 #define TU_FAIL_ERRCODE 10
 
-static int timeout_scale = 1;
-
 void* tu_malloc(size_t size)
 {
     void* result = malloc(size);
@@ -118,24 +116,14 @@ void tu_thread_create_c11(thrd_t* t, thrd_start_t entry, void* arg,
 zx_status_t tu_wait(uint32_t num_objects,
                     const zx_handle_t* handles,
                     const zx_signals_t* signals,
-                    zx_signals_t* pending,
-                    zx_time_t timeout)
+                    zx_signals_t* pending)
 {
     zx_wait_item_t items[num_objects];
     for (uint32_t n = 0; n < num_objects; n++) {
         items[n].handle = handles[n];
         items[n].waitfor = signals[n];
     }
-    if (timeout != ZX_TIME_INFINITE) {
-        zx_time_t scaled_timeout = timeout * timeout_scale;
-        // Overflow -> infinity.
-        if (scaled_timeout < timeout)
-            timeout = ZX_TIME_INFINITE;
-        else
-            timeout = scaled_timeout;
-    }
-    zx_time_t deadline = zx_deadline_after(timeout);
-    zx_status_t status = zx_object_wait_many(items, num_objects, deadline);
+    zx_status_t status = zx_object_wait_many(items, num_objects, ZX_TIME_INFINITE);
     for (uint32_t n = 0; n < num_objects; n++) {
         pending[n] = items[n].pending;
     }
@@ -171,7 +159,7 @@ bool tu_channel_wait_readable(zx_handle_t channel)
 {
     zx_signals_t signals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     zx_signals_t pending;
-    zx_status_t result = tu_wait(1, &channel, &signals, &pending, ZX_TIME_INFINITE);
+    zx_status_t result = tu_wait(1, &channel, &signals, &pending);
     if (result != ZX_OK)
         tu_fatal(__func__, result);
     if ((pending & ZX_CHANNEL_READABLE) == 0) {
@@ -240,7 +228,7 @@ void tu_process_wait_signaled(zx_handle_t process)
 {
     zx_signals_t signals = ZX_PROCESS_TERMINATED;
     zx_signals_t pending;
-    zx_status_t result = tu_wait(1, &process, &signals, &pending, ZX_TIME_INFINITE);
+    zx_status_t result = tu_wait(1, &process, &signals, &pending);
     if (result != ZX_OK)
         tu_fatal(__func__, result);
     if ((pending & ZX_PROCESS_TERMINATED) == 0) {
@@ -429,12 +417,4 @@ int tu_run_command(const char* progname, const char* cmd)
     };
 
     return tu_run_program(progname, countof(argv), argv);
-}
-
-int tu_set_timeout_scale(int scale)
-{
-    int prev = timeout_scale;
-    if (scale != 0)
-        timeout_scale = scale;
-    return prev;
 }

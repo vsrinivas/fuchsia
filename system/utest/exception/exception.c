@@ -1699,7 +1699,7 @@ static bool exit_closing_excp_handle_test(void)
 
     zx_signals_t signals = ZX_PROCESS_TERMINATED;
     zx_signals_t pending;
-    zx_status_t result = tu_wait(1, &child, &signals, &pending, ZX_TIME_INFINITE);
+    zx_status_t result = tu_wait(1, &child, &signals, &pending);
     EXPECT_EQ(result, ZX_OK, "");
     EXPECT_TRUE(pending & ZX_PROCESS_TERMINATED, "");
 
@@ -1749,9 +1749,6 @@ static void scan_argv(int argc, char** argv)
         if (strncmp(argv[i], "v=", 2) == 0) {
             int verbosity = atoi(argv[i] + 2);
             unittest_set_verbosity_level(verbosity);
-        } else if (strncmp(argv[i], "ts=", 3) == 0) {
-            int scale = atoi(argv[i] + 3);
-            tu_set_timeout_scale(scale);
         }
     }
 }

@@ -72,13 +72,11 @@ void tu_thread_create_c11(thrd_t* thread, thrd_start_t entry, void* arg,
 
 // A wrapper on zx_object_wait_many that can be easier to call.
 // |num_objects| is the number of elements in |handles,signals,pending|.
-// Also, this applies |timeout_scale| to |timeout|.
 
 zx_status_t tu_wait(uint32_t num_objects,
                     const zx_handle_t* handles,
                     const zx_signals_t* signals,
-                    zx_signals_t* pending,
-                    zx_time_t timeout);
+                    zx_signals_t* pending);
 
 // A wrapper on zx_channel_create.
 
