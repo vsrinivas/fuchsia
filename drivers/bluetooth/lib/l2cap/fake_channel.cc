@@ -31,7 +31,9 @@ void FakeChannel::Receive(const common::ByteBuffer& data) {
 
   auto pdu = fragmenter_.BuildBasicFrame(id(), data);
   async::PostTask(dispatcher_,
-                  [cb = rx_cb_.share(), pdu = std::move(pdu)] { cb(pdu); });
+                  [cb = rx_cb_.share(), pdu = std::move(pdu)]() mutable {
+                    cb(std::move(pdu));
+                  });
 }
 
 void FakeChannel::SetSendCallback(SendCallback callback,

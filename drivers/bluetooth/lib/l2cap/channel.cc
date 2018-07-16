@@ -204,7 +204,9 @@ void ChannelImpl::HandleRxPdu(PDU&& pdu) {
     }
 
     dispatcher = dispatcher_;
-    task = [func = rx_cb_.share(), pdu = std::move(pdu)] { func(pdu); };
+    task = [func = rx_cb_.share(), pdu = std::move(pdu)]() mutable {
+      func(std::move(pdu));
+    };
 
     FXL_DCHECK(rx_cb_);
   }

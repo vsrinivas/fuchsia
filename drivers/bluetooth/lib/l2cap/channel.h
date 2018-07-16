@@ -77,7 +77,7 @@ class Channel : public fbl::RefCounted<Channel> {
   // Callback invoked when a new SDU is received on this channel. Any previously
   // buffered SDUs will be sent to |rx_cb| right away, provided that |rx_cb| is
   // not empty and the underlying logical link is active.
-  using RxCallback = fit::function<void(const SDU& sdu)>;
+  using RxCallback = fit::function<void(SDU sdu)>;
 
   // Activates this channel assigning |dispatcher| to execute |rx_callback| and
   // |closed_callback|.
