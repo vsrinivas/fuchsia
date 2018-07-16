@@ -28,14 +28,4 @@ case $# in
   ;;
 esac
 
-# TODO(mcgrathr): Temporary until symbolize gets fixed to default -color
-# correctly based on isatty && TERM details.
-if tty -s <&1; then
-  # On a terminal, use default logic based on $TERM.
-  COLOR=
-else
-  # Not a terminal, so disable color.
-  COLOR=-color=false
-fi
-
-exec "$SYMBOLIZE" $COLOR -llvm-symbolizer "$LLVM_SYMBOLIZER" -ids "$build_id_file"
+exec "$SYMBOLIZE" -llvm-symbolizer "$LLVM_SYMBOLIZER" -ids "$build_id_file"
