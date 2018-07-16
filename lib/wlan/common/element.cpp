@@ -270,4 +270,22 @@ bool VhtCapabilities::Create(void* buf, size_t len, size_t* actual,
     return true;
 }
 
+bool VhtOperation::Create(void* buf, size_t len, size_t* actual, uint8_t vht_cbw,
+                          uint8_t center_freq_seg0, uint8_t center_freq_seg1,
+                          const VhtMcsNss& vht_mcs_nss) {
+    constexpr size_t elem_size = sizeof(VhtOperation);
+    if (elem_size > len) { return false; }
+
+    auto elem = static_cast<VhtOperation*>(buf);
+    elem->hdr.id = element_id::kVhtOperation;
+    elem->hdr.len = elem_size - sizeof(ElementHeader);
+
+    elem->vht_cbw = vht_cbw;
+    elem->center_freq_seg0 = center_freq_seg0;
+    elem->center_freq_seg1 = center_freq_seg1;
+    elem->vht_mcs_nss = VhtMcsNss(vht_mcs_nss.val());
+
+    *actual = elem_size;
+    return true;
+}
 }  // namespace wlan

@@ -879,4 +879,31 @@ struct VhtCapabilities : public Element<VhtCapabilities, element_id::kVhtCapabil
 
 } __PACKED;
 
+// IEEE Std 802.11-2016, 9.4.2.159
+struct VhtOperation : public Element<VhtOperation, element_id::kVhtOperation> {
+    static bool Create(void* buf, size_t len, size_t* actual, uint8_t vht_cbw,
+                       uint8_t center_freq_seg0, uint8_t center_freq_seg1,
+                       const VhtMcsNss& vht_mcs_nss);
+    static constexpr size_t kMinLen = 5;
+    static constexpr size_t kMaxLen = 5;
+
+    ElementHeader hdr;
+
+    uint8_t vht_cbw;
+    uint8_t center_freq_seg0;
+    uint8_t center_freq_seg1;
+
+    VhtMcsNss vht_mcs_nss;
+
+    enum VhtChannelBandwidth {
+        VHT_CBW_20_40 = 0,
+        VHT_CBW_80_160_80P80 = 1,
+        VHT_CBW_160 = 2,    // Deprecated
+        VHT_CBW_80P80 = 3,  // Deprecated
+
+        // 4 - 255 reserved
+    };
+
+} __PACKED;
+
 }  // namespace wlan
