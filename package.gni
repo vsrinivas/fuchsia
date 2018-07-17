@@ -52,7 +52,12 @@ template("pm_build_package") {
       system_package_key,
     ]
 
+    depfile = "$pkg_out_dir/meta.far.d"
+
     outputs = [
+      # produced by seal, must be listed first because of depfile rules.
+      "$pkg_out_dir/meta.far",
+
       # update
       "$pkg_out_dir/meta/contents",
 
@@ -61,7 +66,6 @@ template("pm_build_package") {
       "$pkg_out_dir/meta/signature",
 
       # seal
-      "$pkg_out_dir/meta.far",
       "$pkg_out_dir/meta.far.merkle",
     ]
 
@@ -73,6 +77,7 @@ template("pm_build_package") {
       "-m",
       rebase_path(pkg_manifest_file, root_build_dir),
       "build",
+      "-depfile"
     ]
   }
 }

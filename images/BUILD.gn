@@ -249,12 +249,14 @@ zircon_tool_action("blob.blk") {
   outputs = [
     blob_image_path,
   ]
+  depfile = blob_image_path + ".d"
   inputs = [
     blob_manifest,
   ]
   tool = "blobfs"
   args = [
-    rebase_path(blob_image_path),
+    "--depfile",
+    rebase_path(blob_image_path, root_build_dir),
     "create",
     "--manifest",
     rebase_path(blob_manifest, root_build_dir),
