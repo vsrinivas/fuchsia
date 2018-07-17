@@ -99,6 +99,21 @@ bool test_pseudo_dir() {
         EXPECT_TRUE(dc.ExpectEnd());
     }
 
+    // test removed entries do not appear in readdir or lookup
+    dir->RemoveEntry("file1");
+    {
+        fs::vdircookie_t cookie = {};
+        uint8_t buffer[4096];
+        size_t length;
+        EXPECT_EQ(dir->Readdir(&cookie, buffer, sizeof(buffer), &length), ZX_OK);
+        DirentChecker dc(buffer, length);
+        EXPECT_TRUE(dc.ExpectEntry(".", V_TYPE_DIR));
+        EXPECT_TRUE(dc.ExpectEntry("subdir", V_TYPE_DIR));
+        EXPECT_TRUE(dc.ExpectEntry("file2b", V_TYPE_FILE));
+        EXPECT_TRUE(dc.ExpectEnd());
+    }
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, dir->Lookup(&node, "file1"));
+
     // remove all entries
     dir->RemoveAllEntries();
 

@@ -4,9 +4,10 @@
 
 #pragma once
 
-#include <fbl/intrusive_double_list.h>
+#include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
+#include <fbl/ref_counted.h>
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 
@@ -65,7 +66,9 @@ public:
 private:
     static constexpr uint64_t kDotId = 1u;
 
-    class Entry : public fbl::DoublyLinkedListable<fbl::unique_ptr<Entry>> {
+    struct NameTreeTraits;
+    struct IdTreeTraits;
+    class Entry {
     public:
         Entry(uint64_t id, fbl::String name, fbl::RefPtr<fs::Vnode> node);
         ~Entry();
@@ -78,13 +81,59 @@ private:
         uint64_t const id_;
         fbl::String name_;
         fbl::RefPtr<fs::Vnode> node_;
+
+        // Node states.
+        friend IdTreeTraits;
+        friend NameTreeTraits;
+        fbl::WAVLTreeNodeState<fbl::unique_ptr<Entry>> id_tree_state_;
+        fbl::WAVLTreeNodeState<Entry*> name_tree_state_;
     };
-    using EntryList = fbl::DoublyLinkedList<fbl::unique_ptr<Entry>>;
+
+    struct KeyByIdTraits {
+        static uint64_t GetKey(const Entry& entry) {
+            return entry.id();
+        }
+        static bool LessThan(uint64_t key1, uint64_t key2) { return key1 < key2; }
+        static bool EqualTo(uint64_t key1, uint64_t key2) { return key1 == key2; }
+    };
+
+    struct KeyByNameTraits {
+        static fbl::String GetKey(const Entry& entry) {
+            return entry.name();
+        }
+        static bool LessThan(const fbl::String& key1, const fbl::String& key2) {
+          return key1 < key2;
+        }
+        static bool EqualTo(const fbl::String& key1, const fbl::String& key2) {
+          return key1 == key2;
+        }
+    };
+
+    struct IdTreeTraits {
+        using PtrTraits = fbl::internal::ContainerPtrTraits<fbl::unique_ptr<Entry>>;
+        static fbl::WAVLTreeNodeState<fbl::unique_ptr<Entry>>& node_state(
+            Entry& entry) {
+            return entry.id_tree_state_;
+        }
+    };
+
+    struct NameTreeTraits {
+        using PtrTraits = fbl::internal::ContainerPtrTraits<Entry*>;
+        static fbl::WAVLTreeNodeState<Entry*>& node_state(Entry& entry) {
+            return entry.name_tree_state_;
+        }
+    };
+
+    using EntryByIdMap = fbl::WAVLTree<uint64_t, fbl::unique_ptr<Entry>,
+                                       KeyByIdTraits, IdTreeTraits>;
+    using EntryByNameMap = fbl::WAVLTree<fbl::String, Entry*,
+                                         KeyByNameTraits, NameTreeTraits>;
 
     mutable fbl::Mutex mutex_;
 
     uint64_t next_node_id_ __TA_GUARDED(mutex_) = kDotId + 1;
-    EntryList entries_ __TA_GUARDED(mutex_);
+    EntryByIdMap entries_by_id_ __TA_GUARDED(mutex_);
+    EntryByNameMap entries_by_name_ __TA_GUARDED(mutex_);
 
     fs::WatcherContainer watcher_; // note: uses its own internal mutex
 
