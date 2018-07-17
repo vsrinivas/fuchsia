@@ -14,6 +14,7 @@ MODULE_FIDL_LIBRARY := fuchsia.net
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/net.fidl \
+    $(LOCAL_DIR)/connectivity.fidl \
     $(LOCAL_DIR)/socket.fidl
 
 include make/module.mk
