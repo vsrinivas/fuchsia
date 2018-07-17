@@ -64,7 +64,7 @@ static bool spaceship_test(void) {
     ASSERT_EQ(ZX_OK, status, "");
 
     async_loop_t* loop = NULL;
-    ASSERT_EQ(ZX_OK, async_loop_create(NULL, &loop), "");
+    ASSERT_EQ(ZX_OK, async_loop_create(&kAsyncLoopConfigNoAttachToThread, &loop), "");
     ASSERT_EQ(ZX_OK, async_loop_start_thread(loop, "spaceship-dispatcher", NULL), "");
 
     async_dispatcher_t* dispacher = async_loop_get_dispatcher(loop);

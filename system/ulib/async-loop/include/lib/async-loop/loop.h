@@ -54,17 +54,13 @@ typedef struct async_loop_config {
     void* data;
 } async_loop_config_t;
 
-// TODO(davemoore): Remove once all other layers have been migrated to new
-// constants
-extern const async_loop_config_t kAsyncLoopConfigMakeDefault;
-
 // Simple config that when passed to async_loop_create will create a loop
 // that will automatically register itself as the default
 // dispatcher for the thread upon which it was created and will
 // automatically unregister itself when destroyed (which must occur on
 // the same thread).
-
 extern const async_loop_config_t kAsyncLoopConfigAttachToThread;
+
 // Simple config that when passed to async_loop_create will create a loop
 // that is not registered to the current thread.
 extern const async_loop_config_t kAsyncLoopConfigNoAttachToThread;

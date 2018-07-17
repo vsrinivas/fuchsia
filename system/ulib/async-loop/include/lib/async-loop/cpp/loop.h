@@ -29,7 +29,7 @@ public:
     // is the same as that of a zero-initialized instance of async_loop_config_t.
     //
     // See also |kAsyncLoopConfigAttachToThread| and |kAsyncLoopConfigNoAttachToThread|.
-    explicit Loop(const async_loop_config_t* config = nullptr);
+    explicit Loop(const async_loop_config_t* config);
 
     Loop(const Loop&) = delete;
     Loop(Loop&&) = delete;

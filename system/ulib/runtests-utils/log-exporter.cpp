@@ -23,7 +23,8 @@ fbl::String ToFblString(fidl_string_t string) {
 } // namespace
 
 LogExporter::LogExporter(zx::channel channel, FILE* output_file)
-    : channel_(fbl::move(channel)),
+    : loop_(&kAsyncLoopConfigNoAttachToThread),
+      channel_(fbl::move(channel)),
       wait_(this, channel_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED),
       output_file_(output_file) {
     wait_.Begin(loop_.dispatcher());

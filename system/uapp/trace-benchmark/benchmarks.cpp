@@ -25,7 +25,7 @@ public:
 
     void Run(const char* name, Benchmark benchmark) {
         if (enabled_) {
-            async::Loop loop;
+            async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
             BenchmarkHandler handler(&loop, spec_->name,
                                      spec_->buffer_size);
 
