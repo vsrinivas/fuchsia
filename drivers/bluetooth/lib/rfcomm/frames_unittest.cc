@@ -6,7 +6,8 @@
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
-#include "garnet/drivers/bluetooth/lib/rfcomm/frame.h"
+#include "garnet/drivers/bluetooth/lib/rfcomm/frames.h"
+#include "garnet/drivers/bluetooth/lib/rfcomm/mux_commands.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/rfcomm.h"
 #include "gtest/gtest.h"
 
@@ -112,6 +113,36 @@ const auto kFuchsiaFrame = common::CreateStaticByteBuffer(
     // Please see GSM 5.2.1.6, GSM Annex B, and RFCOMM 5.1.1.
     0b10000001);
 
+constexpr Role kTestCommandFrameRole = Role::kInitiator;
+constexpr CommandResponse kTestCommandFrameCR = CommandResponse::kCommand;
+constexpr FrameType kTestCommandFrameType =
+    FrameType::kUnnumberedInfoHeaderCheck;
+constexpr bool kTestCommandCreditBasedFlow = true;
+constexpr uint8_t kTestCommandFrameCredits = 63;
+constexpr MuxCommandType kTestCommandFrameMuxCommandType =
+    MuxCommandType::kTestCommand;
+const auto kTestCommandFrameMuxCommandPattern =
+    common::CreateStaticByteBuffer(0, 1, 2, 3);
+constexpr CommandResponse kTestCommandFrameMuxCommandCR =
+    CommandResponse::kCommand;
+const auto kTestCommandFrame = common::CreateStaticByteBuffer(
+    // Address: E/A = 1, C/R is 1 for a command from the initiator, DLCI = 0.
+    0b00000011,
+    // Control: UIH is 1111p11, P/F is 1 due to presence of a credits field.
+    0b11111111,
+    // Length: E/A = 1, length = 6
+    0b00001101,
+    // Credits
+    kTestCommandFrameCredits,
+    // Mux command type field octet: E/A = 1, C/R = 1, Test Command type
+    0b00100011,
+    // Mux command length field: E/A = 1, length = 4
+    0b00001001,
+    // Mux command test pattern
+    0, 1, 2, 3,
+    // FCS
+    0b01101100);
+
 const auto kInvalidLengthFrame = common::CreateStaticByteBuffer(0, 1, 2);
 
 // Same as the hellofuchsia frame, but information field is too short.
@@ -130,6 +161,16 @@ const auto kInvalidFCSFrame = common::CreateStaticByteBuffer(
     0b00000101,
     'h', 'e', 'l', 'l', 'o', 'f', 'u', 'c', 'h', 's', 'i', 'a',
     0b10000001 + 1);
+
+// Same as the hellofuchsia frame, but with an invalid DLCI (1)
+const auto kInvalidDLCIFrame = common::CreateStaticByteBuffer(
+    0b00000101, 0b11111111, 0b00011001, 0b00000101, 'h', 'e', 'l', 'l', 'o',
+    'f', 'u', 'c', 'h', 's', 'i', 'a', 0b11000011);
+
+// Same as the hellofuchsia frame, but with an invalid DLCI (62)
+const auto kInvalidDLCIFrame2 = common::CreateStaticByteBuffer(
+    0b11111001, 0b11111111, 0b00011001, 0b00000101, 'h', 'e', 'l', 'l', 'o',
+    'f', 'u', 'c', 'h', 's', 'i', 'a', 0b10011111);
 
 using RFCOMM_FrameTest = ::testing::Test;
 
@@ -164,6 +205,18 @@ TEST_F(RFCOMM_FrameTest, WriteFrameWithDataAndCredits) {
   EXPECT_EQ(kFuchsiaFrame, buffer);
 }
 
+TEST_F(RFCOMM_FrameTest, WriteFrameWithMuxCommandAndCredits) {
+  auto mux_command = std::make_unique<TestCommand>(
+      kTestCommandFrameMuxCommandCR, kTestCommandFrameMuxCommandPattern);
+  MuxCommandFrame frame(kTestCommandFrameRole, kTestCommandCreditBasedFlow,
+                        std::move(mux_command));
+  frame.set_credits(kTestCommandFrameCredits);
+  EXPECT_EQ(kTestCommandFrame.size(), frame.written_size());
+  common::DynamicByteBuffer buffer(frame.written_size());
+  frame.Write(buffer.mutable_view());
+  EXPECT_EQ(kTestCommandFrame, buffer);
+}
+
 TEST_F(RFCOMM_FrameTest, ReadFrame) {
   auto frame =
       Frame::Parse(kEmptyFrameCreditBasedFlow, kEmptyFrameRole, kEmptyFrame);
@@ -178,7 +231,7 @@ TEST_F(RFCOMM_FrameTest, ReadFrameWithData) {
   auto frame =
       Frame::Parse(kHelloFrameCreditBasedFlow, kHelloFrameRole, kHelloFrame);
   EXPECT_EQ((uint8_t)kHelloFrameType, frame->control());
-  auto user_data_frame = Frame::ToUserDataFrame(&frame);
+  auto user_data_frame = Frame::DowncastFrame<UserDataFrame>(std::move(frame));
   EXPECT_EQ(nullptr, frame);
   EXPECT_EQ(kHelloFrameCR, user_data_frame->command_response());
   EXPECT_EQ(kHelloFrameDLCI, user_data_frame->dlci());
@@ -193,7 +246,7 @@ TEST_F(RFCOMM_FrameTest, ReadFrameWithDataAndCredits) {
   auto frame = Frame::Parse(kFuchsiaFrameCreditBasedFlow, kFuchsiaFrameRole,
                             kFuchsiaFrame);
   EXPECT_EQ((uint8_t)kFuchsiaFrameType, frame->control());
-  auto user_data_frame = Frame::ToUserDataFrame(&frame);
+  auto user_data_frame = Frame::DowncastFrame<UserDataFrame>(std::move(frame));
   EXPECT_EQ(nullptr, frame);
   EXPECT_EQ(kFuchsiaFrameCR, user_data_frame->command_response());
   EXPECT_EQ(kFuchsiaFrameDLCI, user_data_frame->dlci());
@@ -202,6 +255,24 @@ TEST_F(RFCOMM_FrameTest, ReadFrameWithDataAndCredits) {
   EXPECT_EQ(kFuchsiaFrameCredits, user_data_frame->credits());
   EXPECT_EQ(kFuchsiaFrameInformation, *user_data_frame->TakeInformation());
   EXPECT_EQ(nullptr, user_data_frame->TakeInformation());
+}
+
+TEST_F(RFCOMM_FrameTest, ReadFrameWithMuxCommandAndCredits) {
+  auto frame = Frame::Parse(kTestCommandCreditBasedFlow, kTestCommandFrameRole,
+                            kTestCommandFrame);
+  EXPECT_EQ(kTestCommandFrameCR, frame->command_response());
+  EXPECT_EQ(kTestCommandFrameType, static_cast<FrameType>(frame->control()));
+  EXPECT_EQ(kMuxControlDLCI, frame->dlci());
+  auto mux_command_frame =
+      Frame::DowncastFrame<MuxCommandFrame>(std::move(frame));
+  EXPECT_EQ(nullptr, frame);
+  auto mux_command = mux_command_frame->TakeMuxCommand();
+  EXPECT_EQ(kTestCommandFrameMuxCommandCR, mux_command->command_response());
+  EXPECT_EQ(kTestCommandFrameMuxCommandType, mux_command->command_type());
+  EXPECT_EQ(nullptr, mux_command_frame->TakeMuxCommand());
+  auto test_command = std::unique_ptr<TestCommand>(
+      static_cast<TestCommand*>(mux_command.release()));
+  EXPECT_EQ(kTestCommandFrameMuxCommandPattern, test_command->test_pattern());
 }
 
 TEST_F(RFCOMM_FrameTest, ReadInvalidFrame_TooShort) {
@@ -217,6 +288,11 @@ TEST_F(RFCOMM_FrameTest, ReadInvalidFrame_EndsUnexpectedly) {
 TEST_F(RFCOMM_FrameTest, ReadInvalidFrame_InvalidFCS) {
   auto frame = Frame::Parse(true, Role::kInitiator, kInvalidFCSFrame);
   EXPECT_EQ(nullptr, frame);
+}
+
+TEST_F(RFCOMM_FrameTest, ReadInvalidFrame_InvalidDLCI) {
+  EXPECT_EQ(nullptr, Frame::Parse(true, Role::kInitiator, kInvalidDLCIFrame));
+  EXPECT_EQ(nullptr, Frame::Parse(true, Role::kInitiator, kInvalidDLCIFrame2));
 }
 
 }  // namespace

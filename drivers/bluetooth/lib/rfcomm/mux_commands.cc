@@ -275,8 +275,6 @@ void TestCommand::Write(common::MutableBufferView buffer) const {
   }
 
   buffer.Write(test_pattern_, idx);
-
-  FXL_DCHECK(idx + test_pattern_.size() == buffer.size());
 }
 
 size_t TestCommand::written_size() const {

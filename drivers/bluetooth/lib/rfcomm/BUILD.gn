@@ -6,8 +6,8 @@ static_library("rfcomm") {
   sources = [
     "channel.cc",
     "channel.h",
-    "frame.cc",
-    "frame.h",
+    "frames.cc",
+    "frames.h",
     "mux_commands.cc",
     "mux_commands.h",
     "rfcomm.h",
@@ -26,7 +26,7 @@ source_set("tests") {
   testonly = true
 
   sources = [
-    "frame_unittest.cc",
+    "frames_unittest.cc",
     "mux_commands_unittest.cc",
   ]
 

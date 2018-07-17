@@ -7,12 +7,14 @@
 #include <cstdlib>
 
 #include "garnet/drivers/bluetooth/lib/common/packet_view.h"
+#include "garnet/drivers/bluetooth/lib/rfcomm/mux_commands.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/rfcomm.h"
 
 namespace btlib {
 namespace rfcomm {
 
 class UserDataFrame;
+class MuxCommandFrame;
 
 // Represents an RFCOMM frame.
 // The Frame class has two primary uses:
@@ -31,7 +33,7 @@ class UserDataFrame;
 //  - DisconnectedModeResponse
 //  - UnnumberedInfoHeaderCheckFrame (abstract)
 //    - UserDataFrame
-//    - MuxCommandFrame (planned)
+//    - MuxCommandFrame
 //
 // To use Frame in the first way (to write RFCOMM frames), construct the
 // subclass of Frame corresponding to the type of RFCOMM frame you would like.
@@ -68,9 +70,6 @@ class Frame {
   // accessors to read information about the frame. If the frame type is UIH,
   // then the DLCI should be inspected. If the DLCI is a user data DLCI, the
   // Frame should be converted to a UserDataFrame using ToUserDataFrame.
-  //
-  // TODO(gusss): Add this snipped of documentation when MuxCommandFrames are
-  // added:
   // Otherwise, if the DLCI is 0, the frame should be cast to a MuxCommandFrame
   // using ToMuxCommandFrame.
   //
@@ -116,14 +115,19 @@ class Frame {
   // is no payload. This is overridden for UIH frames.
   inline virtual InformationLength length() const { return 0; }
 
-  // Convert this frame into a MuxCommandFrame or UserDataFrame. If the
-  // underlying frame is not a MuxCommandFrame or UserDataFrame, these functions
-  // return nullptr, and the passed pointer will not be modified. If the
-  // function is successful, then the passed pointer will be set to nullptr.
+  // Downcast this Frame to a Frame subclass. It is expected that the caller
+  // will first check that the frame is of the subclass they are downcasting to;
+  // for example, by checking that the DLCI is 0 for MuxCommandFrames, or
+  // checking that the DLCI is in [kMinUserDLCI, kMaxUserDLCI] for
+  // UserDataFrames.
   //
-  // TODO(gusss): add ToMuxCommandFrame when mux commands are added.
-  static std::unique_ptr<UserDataFrame> ToUserDataFrame(
-      std::unique_ptr<Frame>* frame);
+  // TODO(NET-1224): find a cleaner and less bug-prone way to do downcasting.
+  template <typename T>
+  static inline std::unique_ptr<T> DowncastFrame(std::unique_ptr<Frame> frame) {
+    static_assert(std::is_base_of<Frame, T>::value,
+                  "Must be downcasting to a Frame subclass");
+    return std::unique_ptr<T>(static_cast<T*>(frame.release()));
+  }
 
  protected:
   // The size of the header. We consider the header to be the address octet,
@@ -243,6 +247,30 @@ class UserDataFrame : public UnnumberedInfoHeaderCheckFrame {
 
  private:
   common::ByteBufferPtr information_;
+};
+
+// Represents a UIH frame encapsulating a multiplexer control channel command.
+// These frames will always have DLCI=0 (the multiplexer control channel).
+class MuxCommandFrame : public UnnumberedInfoHeaderCheckFrame {
+ public:
+  MuxCommandFrame(Role role, bool credit_based_flow,
+                  std::unique_ptr<MuxCommand> mux_command);
+
+  // UnnumberedInfoHeaderCheckFrame overrides
+  void Write(common::MutableBufferView buffer) const override;
+  size_t written_size() const override;
+  inline InformationLength length() const override {
+    return mux_command_->written_size();
+  }
+
+  // Transfers ownership of the MuxCommand owned by this MuxCommandFrame. In the
+  // common usage of MuxCommandFrame, this will be called just before
+  // MuxCommandFrame is destructed. However, a call to TakeMuxCommand() before
+  // destruction is not necessary.
+  std::unique_ptr<MuxCommand> TakeMuxCommand();
+
+ private:
+  std::unique_ptr<MuxCommand> mux_command_;
 };
 
 }  // namespace rfcomm

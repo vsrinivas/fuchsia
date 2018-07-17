@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/drivers/bluetooth/lib/rfcomm/frame.h"
+#include "garnet/drivers/bluetooth/lib/rfcomm/frames.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/rfcomm.h"
 
@@ -170,21 +170,36 @@ std::unique_ptr<Frame> Frame::Parse(bool credit_based_flow, Role role,
     return nullptr;
   }
 
-  // TODO(gusss): when MuxCommands are added, we will potentially parse a
-  // MuxCommand here instead of copying the buffer. (If DLCI=0 and type=UIH).
-  common::MutableByteBufferPtr information = nullptr;
-  if (length > 0) {
-    information = common::NewSlabBuffer(length);
-    buffer.Copy(information.get(), header_size, length);
-  }
-
   if (frame_type == FrameType::kUnnumberedInfoHeaderCheck) {
-    // TODO(gusss): when MuxCommands are added, we will potentially construct a
-    // MuxCommandFrame here instead of a UserDataFrame.
-    auto user_data_frame = std::make_unique<UserDataFrame>(
-        role, credit_based_flow, dlci, std::move(information));
-    user_data_frame->set_credits(credits);
-    return user_data_frame;
+    // Determine whether to parse a MuxControlFrame or a UserDataFrame based on
+    // the DLCI.
+    if (dlci == kMuxControlDLCI) {
+      std::unique_ptr<MuxCommand> mux_command =
+          MuxCommand::Parse(buffer.view(header_size, length));
+      if (!mux_command) {
+        FXL_LOG(WARNING) << "Unable to parse mux command";
+        return nullptr;
+      }
+      auto mux_command_frame = std::make_unique<MuxCommandFrame>(
+          role, credit_based_flow, std::move(mux_command));
+      mux_command_frame->set_credits(credits);
+      return mux_command_frame;
+    } else if (dlci >= kMinUserDLCI && dlci <= kMaxUserDLCI) {
+      common::MutableByteBufferPtr information;
+      if (length > 0) {
+        information = common::NewSlabBuffer(length);
+        buffer.Copy(information.get(), header_size, length);
+      }
+      auto user_data_frame = std::make_unique<UserDataFrame>(
+          role, credit_based_flow, dlci, std::move(information));
+      user_data_frame->set_credits(credits);
+      return user_data_frame;
+    } else {
+      FXL_LOG(ERROR) << "Parsed DLCI " << static_cast<unsigned>(dlci)
+                     << " is not the multiplexer control channel or a valid"
+                     << " user data channel";
+      return nullptr;
+    }
   } else {
     return std::make_unique<Frame>(role, command_response, dlci,
                                    uint8_t(frame_type), poll_final);
@@ -208,17 +223,6 @@ void Frame::Write(common::MutableBufferView buffer) const {
       (FrameType)control_ == FrameType::kUnnumberedInfoHeaderCheck ? 2 : 3;
   uint8_t fcs = CalculateFCS(buffer.view(0, num_octets));
   buffer[offset] = fcs;
-}
-
-std::unique_ptr<UserDataFrame> Frame::ToUserDataFrame(
-    std::unique_ptr<Frame>* frame) {
-  if ((FrameType)(*frame)->control() != FrameType::kUnnumberedInfoHeaderCheck ||
-      !((*frame)->dlci() >= kMinUserDLCI && (*frame)->dlci() <= kMaxUserDLCI))
-    return nullptr;
-
-  auto user_data_frame = std::unique_ptr<UserDataFrame>(
-      static_cast<UserDataFrame*>(frame->release()));
-  return user_data_frame;
 }
 
 void Frame::WriteHeader(common::MutableBufferView buffer) const {
@@ -369,18 +373,43 @@ void UserDataFrame::Write(common::MutableBufferView buffer) const {
 }
 
 size_t UserDataFrame::written_size() const {
-  return sizeof(uint8_t)                                         // Address
-         + sizeof(uint8_t)                                       // Control
-         + sizeof(uint8_t) * (TwoOctetLength(length()) ? 2 : 1)  // Length
-         + sizeof(uint8_t) * (has_credit_octet() ? 1 : 0)        // Credits
-         + length()                                              // Information
-         + sizeof(uint8_t);                                      // FCS
+  return UnnumberedInfoHeaderCheckFrame::header_size() +
+         length()            // Information
+         + sizeof(uint8_t);  // FCS
 }
 
 common::ByteBufferPtr UserDataFrame::TakeInformation() {
   auto tmp = std::move(information_);
   information_ = nullptr;
   return tmp;
+}
+
+MuxCommandFrame::MuxCommandFrame(Role role, bool credit_based_flow,
+                                 std::unique_ptr<MuxCommand> mux_command)
+    : UnnumberedInfoHeaderCheckFrame(role, credit_based_flow, kMuxControlDLCI),
+      mux_command_(std::move(mux_command)) {}
+
+void MuxCommandFrame::Write(common::MutableBufferView buffer) const {
+  FXL_DCHECK(buffer.size() >= written_size());
+
+  WriteHeader(buffer);
+
+  size_t offset = header_size();
+  mux_command_->Write(buffer.mutable_view(offset));
+  offset += mux_command_->written_size();
+
+  // FCS is always calculated over first two octets for UIH frames.
+  buffer[offset] = CalculateFCS(buffer.view(0, 2));
+}
+
+size_t MuxCommandFrame::written_size() const {
+  return UnnumberedInfoHeaderCheckFrame::header_size() +
+         +mux_command_->written_size()  // MuxCommand
+         + sizeof(uint8_t);             // FCS
+}
+
+std::unique_ptr<MuxCommand> MuxCommandFrame::TakeMuxCommand() {
+  return std::move(mux_command_);
 }
 
 }  // namespace rfcomm
