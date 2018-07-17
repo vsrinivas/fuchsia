@@ -14,9 +14,9 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <lib/async/cpp/future.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/async/cpp/future.h>
 #include <lib/entity/cpp/json.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/interface_handle.h>
@@ -545,7 +545,7 @@ class StoryControllerImpl::StopCall : public Operation<> {
       did_teardowns.emplace_back(did_teardown);
     }
 
-    Future<>::Wait("StoryControllerImpl.StopCall.Run.Wait", did_teardowns)
+    Future<>::Wait2("StoryControllerImpl.StopCall.Run.Wait", did_teardowns)
         ->AsyncMap([this] {
           auto did_teardown = Future<>::Create(
               "StoryControllerImpl.StopCall.Run.did_teardown2");
@@ -907,8 +907,8 @@ class StoryControllerImpl::FindModulesCall
               }));
     }
 
-    Future<>::Wait("StoryControllerImpl.FindModulesCall.Run.Wait",
-                   constraint_futs_)
+    Future<>::Wait2("StoryControllerImpl.FindModulesCall.Run.Wait",
+                    constraint_futs_)
         ->Then([this, flow] {
           resolver_query_.parameter_constraints = std::move(constraint_params_);
           story_controller_impl_->story_provider_impl_->module_resolver()
@@ -1228,10 +1228,10 @@ class StoryControllerImpl::StartContainerInShellCall : public Operation<> {
       did_add_intents.emplace_back(did_add_intent);
     }
 
-    Future<fuchsia::modular::StartModuleStatus>::Wait(
+    Future<fuchsia::modular::StartModuleStatus>::Wait2(
         "StoryControllerImpl.StartContainerInShellCall.Run.Wait",
         did_add_intents)
-        ->Then([this, flow] {
+        ->Then([this, flow](auto) {
           if (!story_controller_impl_->story_shell_) {
             return;
           }
@@ -1444,9 +1444,9 @@ fuchsia::modular::LinkPathPtr StoryControllerImpl::GetLinkPathForParameterName(
   auto mod_info = FindRunningModInfo(module_path);
   // NOTE: |mod_info| will only be valid if the module at |module_path| is
   // running. Strictly speaking, this is unsafe. The source of truth is the
-  // Ledger, accessible through StoryStorage, but the call would be dispatcher, which
-  // would change the flow of all clients of this method. For now, we leave
-  // as-is.
+  // Ledger, accessible through StoryStorage, but the call would be dispatcher,
+  // which would change the flow of all clients of this method. For now, we
+  // leave as-is.
   FXL_DCHECK(mod_info) << PathString(module_path);
 
   const auto& param_map = mod_info->module_data->parameter_map;

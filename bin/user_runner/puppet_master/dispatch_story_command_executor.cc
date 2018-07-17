@@ -60,8 +60,7 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
 
     // Keep track of the number of commands we need to run. When they are all
     // done, we complete this operation.
-    std::vector<FuturePtr<fuchsia::modular::ExecuteResult>>
-        did_execute_commands;
+    std::vector<FuturePtr<>> did_execute_commands;
     did_execute_commands.reserve(commands_.size());
 
     for (auto& command : commands_) {
@@ -89,18 +88,19 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
       queue_.Add(new RunStoryCommandCall(tag_string, command_runner, story_id_,
                                          std::move(command),
                                          did_execute_command->Completer()));
-      did_execute_command->Then([this](fuchsia::modular::ExecuteResult result) {
-        // Check for error for this command. If there was an error, abort
-        // early. All of the remaining operations (if any) in queue_ will
-        // not be run.
-        if (result.status != fuchsia::modular::ExecuteStatus::OK) {
-          Done(std::move(result));
-        }
-      });
-      did_execute_commands.emplace_back(did_execute_command);
+      auto did_execute_command_callback = did_execute_command->Then(
+          [this](fuchsia::modular::ExecuteResult result) {
+            // Check for error for this command. If there was an error, abort
+            // early. All of the remaining operations (if any) in queue_ will
+            // not be run.
+            if (result.status != fuchsia::modular::ExecuteStatus::OK) {
+              Done(std::move(result));
+            }
+          });
+      did_execute_commands.emplace_back(did_execute_command_callback);
     }
 
-    Future<fuchsia::modular::ExecuteResult>::Wait(
+    Future<>::Wait2(
         "DispatchStoryCommandExecutor.ExecuteStoryCommandsCall.Run.Wait",
         did_execute_commands)
         ->Then([this] {

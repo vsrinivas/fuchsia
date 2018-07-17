@@ -156,29 +156,23 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
   auto future_story2 = storage->CreateStory(nullptr /* extra_info */,
                                             false /* is_kind_of_proto_story */);
 
-  auto wait = Future<fidl::StringPtr, fuchsia::ledger::PageId>::Wait(
+  auto wait = Future<fidl::StringPtr, fuchsia::ledger::PageId>::Wait2(
       "SessionStorageTest.CreateMultipleAndDeleteOne.wait",
       {future_story1, future_story2});
 
-  bool done{};
-  wait->Then([&] { done = true; });
-  RunLoopUntil([&] { return done; });
-
-  // |future_story1| and |future_story2| are complete, so we can get their
-  // contents synchronously.
   fidl::StringPtr story1_id;
   fuchsia::ledger::PageId story1_pageid;
-  future_story1->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId page_id) {
-    story1_id = std::move(id);
-    story1_pageid = std::move(page_id);
-  });
-
   fidl::StringPtr story2_id;
   fuchsia::ledger::PageId story2_pageid;
-  future_story2->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId page_id) {
-    story2_id = std::move(id);
-    story2_pageid = std::move(page_id);
+  bool done{};
+  wait->Then([&](auto results) {
+    story1_id = std::move(std::get<0>(results[0]));
+    story1_pageid = std::move(std::get<1>(results[0]));
+    story2_id = std::move(std::get<0>(results[1]));
+    story2_pageid = std::move(std::get<1>(results[1]));
+    done = true;
   });
+  RunLoopUntil([&] { return done; });
 
   EXPECT_NE(story1_id, story2_id);
   EXPECT_NE(story1_pageid, story2_pageid);
