@@ -96,7 +96,7 @@ function main {
   if [[ -r "$esp_raw" ]]; then
     bootserver_args+=(--efi "$esp_raw")
   fi
-  local vboot="${dir_src}images/zircon-pc.vboot"
+  local vboot="${dir_src}/images/zircon-pc.vboot"
   if [[ -r "$vboot" ]]; then
     bootserver_args+=(--kernc "$vboot")
   fi
