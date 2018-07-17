@@ -99,7 +99,7 @@ class ComponentBase : protected SingleServiceApp<Component> {
 //
 template <typename Impl, typename... Args>
 void ComponentMain(Args... args) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   auto context = component::StartupContext::CreateFromStartupInfo();
   modular::AppDriver<Impl> driver(

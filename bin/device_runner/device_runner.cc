@@ -384,7 +384,7 @@ int main(int argc, const char** argv) {
   }
 
   modular::Settings settings(command_line);
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());
   auto context = std::shared_ptr<component::StartupContext>(
       component::StartupContext::CreateFromStartupInfo());

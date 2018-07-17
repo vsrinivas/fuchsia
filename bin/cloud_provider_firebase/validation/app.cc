@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   std::unique_ptr<component::StartupContext> startup_context =
       component::StartupContext::CreateFromStartupInfo();
   test::CloudProviderFirebaseFactory factory(startup_context.get());

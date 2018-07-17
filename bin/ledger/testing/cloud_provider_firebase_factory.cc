@@ -16,7 +16,8 @@ constexpr char kCloudProviderFirebaseAppUrl[] = "cloud_provider_firebase";
 
 CloudProviderFirebaseFactory::CloudProviderFirebaseFactory(
     component::StartupContext* startup_context)
-    : startup_context_(startup_context) {}
+    : startup_context_(startup_context),
+      loop_(&kAsyncLoopConfigNoAttachToThread) {}
 
 CloudProviderFirebaseFactory::~CloudProviderFirebaseFactory() {
   loop_.Shutdown();

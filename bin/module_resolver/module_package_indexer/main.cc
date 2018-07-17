@@ -45,7 +45,7 @@ std::string FindModulePackageIndexerService() {
 }
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   fxl::SetLogSettingsFromCommandLine(command_line);

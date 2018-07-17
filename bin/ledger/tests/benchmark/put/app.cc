@@ -103,7 +103,7 @@ int main(int argc, const char** argv) {
     seed = fxl::RandUint64();
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   test::benchmark::PutBenchmark app(&loop, entry_count, transaction_size,
                                     key_size, value_size, update, ref_strategy,
                                     seed);

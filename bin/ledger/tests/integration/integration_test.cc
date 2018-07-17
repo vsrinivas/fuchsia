@@ -27,7 +27,8 @@ void PrintUsage(const char* executable_name) {
 }
 }  // namespace
 
-BaseIntegrationTest::BaseIntegrationTest() = default;
+BaseIntegrationTest::BaseIntegrationTest()
+    : loop_(&kAsyncLoopConfigNoAttachToThread) {}
 
 BaseIntegrationTest::~BaseIntegrationTest() = default;
 

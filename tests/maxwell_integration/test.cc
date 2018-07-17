@@ -6,7 +6,7 @@
 
 namespace maxwell {
 
-MaxwellTestBase::MaxwellTestBase() : loop_(&kAsyncLoopConfigMakeDefault) {
+MaxwellTestBase::MaxwellTestBase() : loop_(&kAsyncLoopConfigAttachToThread) {
   startup_context_ = component::StartupContext::CreateFromStartupInfo();
   auto root_environment = startup_context_->environment().get();
   FXL_CHECK(root_environment != nullptr);

@@ -285,7 +285,7 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   test::benchmark::FetchBenchmark app(&loop, entry_count, value_size, part_size,
                                       server_id);
   return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });

@@ -51,7 +51,7 @@ class SuggestionEngineApp {
 }  // namespace modular
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = component::StartupContext::CreateFromStartupInfo();
   auto suggestion_engine =
       std::make_unique<modular::SuggestionEngineApp>(context.get());

@@ -121,6 +121,7 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     : test::LedgerAppInstanceFactory::LedgerAppInstance(
           loop_controller, integration::RandomArray(1),
           std::move(repository_factory_ptr)),
+      loop_(&kAsyncLoopConfigNoAttachToThread),
       services_dispatcher_(services_dispatcher),
       cloud_provider_(cloud_provider),
       weak_ptr_factory_(this) {
@@ -202,7 +203,8 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
  public:
   LedgerAppInstanceFactoryImpl(ledger::InjectNetworkError inject_network_error,
                                EnableP2PMesh enable_p2p_mesh)
-      : cloud_provider_(
+      : services_loop_(&kAsyncLoopConfigNoAttachToThread),
+        cloud_provider_(
             ledger::FakeCloudProvider::Builder().SetInjectNetworkError(
                 inject_network_error)),
         enable_p2p_mesh_(enable_p2p_mesh) {}

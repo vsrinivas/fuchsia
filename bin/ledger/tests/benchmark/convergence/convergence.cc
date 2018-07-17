@@ -207,7 +207,7 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   test::benchmark::ConvergenceBenchmark app(&loop, entry_count, value_size,
                                             device_count, server_id);
   return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });

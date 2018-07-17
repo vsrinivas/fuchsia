@@ -9,7 +9,7 @@
 #include "peridot/examples/swap_cpp/module.h"
 
 int main(int /*argc*/, const char** /*argv*/) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   auto context = component::StartupContext::CreateFromStartupInfo();
   modular::AppDriver<modular_example::ModuleApp> driver(

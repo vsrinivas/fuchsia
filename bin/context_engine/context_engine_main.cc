@@ -46,7 +46,7 @@ class ContextEngineApp {
 }  // namespace modular
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = component::StartupContext::CreateFromStartupInfo();
   auto context_engine_app =
       std::make_unique<modular::ContextEngineApp>(context.get());

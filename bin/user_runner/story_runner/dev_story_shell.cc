@@ -110,7 +110,7 @@ class DevStoryShellApp
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   auto context = component::StartupContext::CreateFromStartupInfo();
   modular::AppDriver<DevStoryShellApp> driver(

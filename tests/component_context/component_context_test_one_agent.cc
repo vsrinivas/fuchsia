@@ -86,7 +86,7 @@ class TestApp : ComponentContextTestService {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = component::StartupContext::CreateFromStartupInfo();
   modular::AgentDriver<TestApp> driver(context.get(), [&loop] { loop.Quit(); });
   loop.Run();

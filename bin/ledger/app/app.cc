@@ -55,7 +55,8 @@ class App : public ledger_internal::LedgerController {
  public:
   explicit App(AppParams app_params)
       : app_params_(app_params),
-        loop_(&kAsyncLoopConfigMakeDefault),
+        loop_(&kAsyncLoopConfigAttachToThread),
+        io_loop_(&kAsyncLoopConfigNoAttachToThread),
         trace_provider_(loop_.dispatcher()),
         startup_context_(component::StartupContext::CreateFromStartupInfo()),
         cobalt_cleaner_(SetupCobalt(app_params_.disable_statistics,

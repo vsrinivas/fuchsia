@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   std::unique_ptr<component::StartupContext> startup_context =
       component::StartupContext::CreateFromStartupInfo();
   cloud_provider_firestore::CloudProviderFactory factory(startup_context.get(),

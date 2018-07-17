@@ -41,7 +41,7 @@ class DeviceRunnerMonitorApp : fuchsia::modular::DeviceRunnerMonitor {
 }  // namespace modular
 
 int main(int /*argc*/, const char** /*argv*/) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   modular::DeviceRunnerMonitorApp app;
   loop.Run();
   return 0;

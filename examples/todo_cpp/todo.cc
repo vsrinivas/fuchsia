@@ -199,7 +199,7 @@ void TodoApp::Act() {
 }  // namespace todo
 
 int main(int /*argc*/, const char** /*argv*/) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   todo::TodoApp app(&loop);
   loop.Run();
   return 0;

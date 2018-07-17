@@ -177,7 +177,7 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   test::benchmark::DiskSpaceBenchmark app(&loop, page_count, unique_key_count,
                                           commit_count, key_size, value_size);
 

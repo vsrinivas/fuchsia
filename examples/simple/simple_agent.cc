@@ -47,7 +47,7 @@ class SimpleAgent {
 }  // namespace simple
 
 int main(int /*argc*/, const char** /*argv*/) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = component::StartupContext::CreateFromStartupInfo();
   modular::AgentDriver<simple::SimpleAgent> driver(context.get(),
                                                    [&loop] { loop.Quit(); });

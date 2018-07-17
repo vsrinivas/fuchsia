@@ -273,7 +273,7 @@ class ModuleResolverApp : fuchsia::modular::ContextListener {
 const char kUsage[] = R"USAGE(%s [--test])USAGE";
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (command_line.HasOption("help")) {
     printf(kUsage, argv[0]);

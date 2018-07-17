@@ -59,7 +59,8 @@ class CloudProviderFactory::TokenProviderContainer {
 CloudProviderFactory::CloudProviderFactory(
     component::StartupContext* startup_context, std::string credentials_path)
     : startup_context_(startup_context),
-      credentials_path_(std::move(credentials_path)) {}
+      credentials_path_(std::move(credentials_path)),
+      services_loop_(&kAsyncLoopConfigNoAttachToThread) {}
 
 CloudProviderFactory::~CloudProviderFactory() { services_loop_.Shutdown(); }
 

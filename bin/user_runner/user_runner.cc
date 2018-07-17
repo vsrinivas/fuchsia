@@ -28,7 +28,7 @@ int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   const bool test = command_line.HasOption("test");
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());
   std::unique_ptr<component::StartupContext> context =
       component::StartupContext::CreateFromStartupInfo();

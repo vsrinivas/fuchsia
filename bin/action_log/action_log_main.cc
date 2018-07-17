@@ -72,7 +72,7 @@ class UserActionLogFactoryApp {
 }  // namespace
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   UserActionLogFactoryApp app;
   loop.Run();
   return 0;

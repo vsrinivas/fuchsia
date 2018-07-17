@@ -28,7 +28,7 @@ struct AppParams {
 class App : public fuchsia::modular::Lifecycle {
  public:
   explicit App(AppParams app_params)
-      : loop_(&kAsyncLoopConfigMakeDefault),
+      : loop_(&kAsyncLoopConfigAttachToThread),
         startup_context_(component::StartupContext::CreateFromStartupInfo()),
         trace_provider_(loop_.dispatcher()),
         network_wrapper_(

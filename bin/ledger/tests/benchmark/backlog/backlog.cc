@@ -370,7 +370,7 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   test::benchmark::BacklogBenchmark app(&loop, unique_key_count, value_size,
                                         commit_count, reference_strategy,
                                         server_id);

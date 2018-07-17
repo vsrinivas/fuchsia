@@ -183,7 +183,7 @@ int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   modular::Settings settings(command_line);
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   auto context = component::StartupContext::CreateFromStartupInfo();
   modular::AppDriver<modular::DevDeviceShellApp> driver(

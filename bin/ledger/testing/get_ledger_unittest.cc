@@ -14,7 +14,7 @@ namespace test {
 namespace {
 
 TEST(GetLedgerTest, CreateAndDeleteLedger) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   files::ScopedTempDir temp_dir;
 
   auto startup_context = component::StartupContext::CreateFromStartupInfo();
@@ -34,7 +34,7 @@ TEST(GetLedgerTest, CreateAndDeleteLedger) {
 }
 
 TEST(GetLedgerTest, GetPageEnsureInitialized) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   files::ScopedTempDir temp_dir;
 
   auto startup_context = component::StartupContext::CreateFromStartupInfo();

@@ -165,7 +165,7 @@ int main(int argc, const char** argv) {
 
   FXL_LOG(INFO) << "Starting Maxwell with config: \n" << config;
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = component::StartupContext::CreateFromStartupInfo();
   maxwell::App app(context.get(), config);
   loop.Run();

@@ -49,7 +49,7 @@ namespace modular {
 // };
 //
 // int main(int argc, const char** argv) {
-//   async::Loop loop(&kAsyncLoopConfigMakeDefault);
+//   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 //   auto context = component::StartupContext::CreateFromStartupInfo();
 //   modular::AppDriver<HelloWorldApp> driver(
 //       context->outgoing().deprecated_services(),
