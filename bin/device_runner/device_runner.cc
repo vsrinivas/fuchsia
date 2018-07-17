@@ -13,8 +13,8 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/array.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
@@ -57,6 +57,7 @@ class Settings {
     ignore_monitor = command_line.HasOption("ignore_monitor");
     no_minfs = command_line.HasOption("no_minfs");
     test = command_line.HasOption("test");
+    enable_presenter = command_line.HasOption("enable_presenter");
 
     ParseShellArgs(
         command_line.GetOptionValueWithDefault("device_shell_args", ""),
@@ -99,6 +100,7 @@ class Settings {
       --ignore_monitor
       --no_minfs
       --test
+      --enable_presenter
     DEVICE_NAME: Name which user shell uses to identify this device.
     DEVICE_SHELL: URL of the device shell to run.
                 Defaults to "userpicker_device_shell".
@@ -128,6 +130,7 @@ class Settings {
   bool ignore_monitor;
   bool no_minfs;
   bool test;
+  bool enable_presenter;
 
  private:
   void ParseShellArgs(const std::string& value,
@@ -264,7 +267,8 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
     fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> root_view;
     fuchsia::ui::policy::PresentationPtr presentation;
     device_shell_view_provider->CreateView(root_view.NewRequest(), nullptr);
-    if (!settings_.test) {
+    // |enable_presenter| overrides |test| for running the presenter service.
+    if (!settings_.test || settings_.enable_presenter) {
       context_->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>()
           ->Present(std::move(root_view), presentation.NewRequest());
     }
@@ -366,7 +370,8 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerApp);
 };
 
-fxl::AutoCall<fit::closure> SetupCobalt(Settings& settings, async_dispatcher_t* dispatcher,
+fxl::AutoCall<fit::closure> SetupCobalt(Settings& settings,
+                                        async_dispatcher_t* dispatcher,
                                         component::StartupContext* context) {
   if (settings.disable_statistics) {
     return fxl::MakeAutoCall<fit::closure>([] {});
@@ -388,8 +393,8 @@ int main(int argc, const char** argv) {
   trace::TraceProvider trace_provider(loop.dispatcher());
   auto context = std::shared_ptr<component::StartupContext>(
       component::StartupContext::CreateFromStartupInfo());
-  fxl::AutoCall<fit::closure> cobalt_cleanup =
-      modular::SetupCobalt(settings, std::move(loop.dispatcher()), context.get());
+  fxl::AutoCall<fit::closure> cobalt_cleanup = modular::SetupCobalt(
+      settings, std::move(loop.dispatcher()), context.get());
 
   modular::DeviceRunnerApp app(settings, context, [&loop, &cobalt_cleanup] {
     cobalt_cleanup.call();

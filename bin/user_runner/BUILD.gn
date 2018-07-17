@@ -88,6 +88,7 @@ executable_package("dev_user_shell") {
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",
     "//peridot/lib/rapidjson",
+    "//peridot/lib/testing:test_driver",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",

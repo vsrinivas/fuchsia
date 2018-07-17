@@ -186,3 +186,10 @@ source_set("wait_until_idle") {
     "//third_party/googletest:gtest",
   ]
 }
+
+
+source_set("test_driver") {
+  sources = [
+    "test_driver.h",
+  ]
+}

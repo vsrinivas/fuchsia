@@ -45,6 +45,7 @@
         "//peridot/tests/story_update:story_update_test_user_shell",
         "//peridot/tests/suggestion:suggestion_test_module",
         "//peridot/tests/suggestion:suggestion_test_user_shell",
+        "//peridot/tests/test_driver:test_driver_module",
         "//peridot/tests/trigger:trigger_test_agent",
         "//peridot/tests/trigger:trigger_test_module",
         "//peridot/tests/trigger:trigger_test_user_shell",

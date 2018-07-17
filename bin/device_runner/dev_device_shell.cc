@@ -11,14 +11,15 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/callback/scoped_callback.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 #include <lib/fxl/memory/weak_ptr.h>
+#include "lib/fxl/strings/string_number_conversions.h"
 
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/testing/reporting.h"
@@ -37,10 +38,23 @@ class Settings {
 
     // If passed, runs as a test harness.
     test = command_line.HasOption("test");
+
+    test_timeout_ms = testing::kTestTimeoutMilliseconds;
+
+    if (command_line.HasOption("test_timeout_ms")) {
+      std::string test_timeout_ms_string;
+      command_line.GetOptionValue("test_timeout_ms", &test_timeout_ms_string);
+      if (!fxl::StringToNumberWithError<uint64_t>(test_timeout_ms_string,
+                                                  &test_timeout_ms)) {
+        FXL_LOG(WARNING) << "Unable to parse timeout from '"
+                         << test_timeout_ms_string << "'. Setting to default.";
+      }
+    }
   }
 
   std::string device_name;
   std::string user;
+  uint64_t test_timeout_ms;
   bool test{};
 };
 
@@ -48,8 +62,8 @@ class DevDeviceShellApp
     : modular::SingleServiceApp<fuchsia::modular::DeviceShell>,
       fuchsia::modular::UserWatcher {
  public:
-  explicit DevDeviceShellApp(
-      component::StartupContext* const startup_context, Settings settings)
+  explicit DevDeviceShellApp(component::StartupContext* const startup_context,
+                             Settings settings)
       : SingleServiceApp(startup_context),
         settings_(std::move(settings)),
         user_watcher_binding_(this),
@@ -67,7 +81,7 @@ class DevDeviceShellApp
                                  FXL_LOG(WARNING) << "DevDeviceShell timed out";
                                  device_shell_context_->Shutdown();
                                }),
-          zx::msec(testing::kTestTimeoutMilliseconds));
+          zx::msec(settings_.test_timeout_ms));
     }
   }
 

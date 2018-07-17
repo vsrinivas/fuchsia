@@ -13,10 +13,10 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include <lib/component/cpp/connect.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/connect.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fxl/command_line.h>
@@ -26,6 +26,8 @@
 #include "peridot/lib/common/names.h"
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/fidl/view_host.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
+#include "peridot/lib/testing/test_driver.h"
 
 namespace {
 
@@ -36,11 +38,17 @@ class Settings {
         command_line.GetOptionValueWithDefault("root_module", "example_recipe");
     root_link = command_line.GetOptionValueWithDefault("root_link", "");
     story_id = command_line.GetOptionValueWithDefault("story_id", "");
+    module_under_test_url =
+        command_line.GetOptionValueWithDefault("module_under_test_url", "");
+    test_driver_url =
+        command_line.GetOptionValueWithDefault("test_driver_url", "");
   }
 
   std::string root_module;
   std::string root_link;
   std::string story_id;
+  std::string module_under_test_url;
+  std::string test_driver_url;
 };
 
 class DevUserShellApp
@@ -112,6 +120,40 @@ class DevUserShellApp
     }
   }
 
+  fidl::VectorPtr<fuchsia::modular::IntentParameter> CreateIntentParameters() {
+    if (settings_.module_under_test_url.empty() ||
+        settings_.test_driver_url.empty()) {
+      // For debugging: log that both items must be set in the event that one is
+      // set and the other is not. It may be unclear why the intent is not being
+      // created with the intended links if one is forgotten by accident.
+      if (settings_.module_under_test_url.empty() !=
+          settings_.test_driver_url.empty()) {
+        FXL_LOG(WARNING) << "Both the module_under_test_url and "
+                            "test_driver_url must be set";
+      }
+      return nullptr;
+    }
+    auto intent_params =
+        fidl::VectorPtr<fuchsia::modular::IntentParameter>::New(0);
+    fuchsia::modular::IntentParameterData test_driver_link_data;
+
+    rapidjson::Document document;
+    document.SetObject();
+    document.AddMember(modular::testing::kModuleUnderTestPath,
+                       settings_.module_under_test_url,
+                       document.GetAllocator());
+    document.AddMember(modular::testing::kTestDriverPath,
+                       settings_.test_driver_url, document.GetAllocator());
+    test_driver_link_data.set_json(modular::JsonValueToString(document));
+
+    fuchsia::modular::IntentParameter test_driver_link_param;
+    test_driver_link_param.name = modular::testing::kTestDriverLinkName;
+    test_driver_link_param.data = std::move(test_driver_link_data);
+    intent_params.push_back(std::move(test_driver_link_param));
+
+    return intent_params;
+  }
+
   void StartStoryById(const fidl::StringPtr& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
     story_controller_.set_error_handler([this, story_id] {
@@ -121,7 +163,7 @@ class DevUserShellApp
 
     fuchsia::modular::Intent intent;
     intent.handler = settings_.root_module;
-    intent.parameters = nullptr;
+    intent.parameters = CreateIntentParameters();
     story_controller_->AddModule(nullptr, modular::kRootModuleName,
                                  std::move(intent), nullptr);
 

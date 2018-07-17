@@ -1,0 +1,34 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//peridot/build/executable_package.gni")
+
+executable_package("test_driver_module") {
+  testonly = true
+
+  sources = [
+    "test_driver_module.cc",
+  ]
+  deps = [
+    ":defs",
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/fidl/fuchsia.testing.runner",
+    "//peridot/lib/rapidjson",
+    "//peridot/lib/testing",
+    "//peridot/lib/testing:test_driver",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/app_driver/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+source_set("defs") {
+  testonly = true
+
+  sources = [
+    "defs.h",
+  ]
+}
