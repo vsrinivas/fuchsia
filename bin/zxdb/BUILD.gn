@@ -44,14 +44,3 @@ install_host_tools("zxdb_host") {
     "zxdb"
   ]
 }
-
-
-install_host_tools("zxdb_tests_host") {
-  testonly = true
-  deps = [
-    ":zxdb_tests",
-  ]
-  outputs = [
-    "zxdb_tests",
-  ]
-}

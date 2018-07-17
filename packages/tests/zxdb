@@ -1,5 +1,5 @@
 {
-    "labels": [
-        "//garnet/bin/zxdb:zxdb_tests_host"
+    "host_tests": [
+        "//garnet/bin/zxdb:zxdb_tests"
     ]
 }

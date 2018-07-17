@@ -133,7 +133,11 @@ There are tests for the debugger that run on the host. These are relavant
 if you're working on the debugger client.
 
 ```sh
-out/x64/host_x64/zxdb_tests
+fx run-host-tests zxdb_tests
+```
+or directly with
+```sh
+out/x64/host_tests/zxdb_tests
 ```
 
 The debug agent tests are in
