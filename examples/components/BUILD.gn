@@ -1,0 +1,37 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("bin") {
+  output_name = "app"
+
+  sources = [
+    "hello_world.cc",
+  ]
+}
+
+executable("bin2") {
+  output_name = "app2"
+
+  sources = [
+    "hello_world2.cc",
+  ]
+}
+
+package("component_hello_world") {
+  deps = [
+    ":bin",
+    ":bin2",
+  ]
+
+  binaries = [
+    {
+      name = "app"
+    },
+    {
+      name = "app2"
+    },
+  ]
+}
