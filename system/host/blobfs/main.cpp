@@ -53,6 +53,7 @@ bool BlobfsCreator::IsCommandValid(Command command) {
 bool BlobfsCreator::IsOptionValid(Option option) {
     //TODO(planders): Add offset and length support to blobfs.
     switch (option) {
+    case Option::kDepfile:
     case Option::kReadonly:
     case Option::kHelp:
         return true;
@@ -175,10 +176,17 @@ zx_status_t BlobfsCreator::Add() {
                     return;
                 }
                 zx_status_t res;
+                if ((res = AppendDepfile(blob_list_[i].c_str())) != ZX_OK) {
+                    mtx.lock();
+                    status = res;
+                    mtx.unlock();
+                    return;
+                }
                 if ((res = AddBlob(blobfs.get(), blob_list_[i].c_str())) < 0) {
                     mtx.lock();
                     status = res;
                     mtx.unlock();
+                    return;
                 }
             }
         }));

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <mutex>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,6 +28,7 @@ enum class Command {
 };
 
 enum class Option {
+    kDepfile,
     kReadonly,
     kOffset,
     kLength,
@@ -56,11 +58,15 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(FsCreator);
 
     FsCreator(uint64_t data_blocks) : data_blocks_(data_blocks),command_(Command::kNone),
-                                      offset_(0), length_(0), read_only_(false) {}
+                                      offset_(0), length_(0), read_only_(false), depfile_lock_() {}
     virtual ~FsCreator() {}
 
     // Process the command line arguments and run the specified command.
     zx_status_t ProcessAndRun(int argc, char** argv);
+
+    // If a depfile was requested, |str| will be appended (followed by a space)
+    // to the depfile. |str| must be less than PATH_MAX.
+    zx_status_t AppendDepfile(const char* str);
 
 protected:
     // Print usage information for all options, commands, and arguments valid for this fs.
@@ -110,6 +116,7 @@ protected:
     off_t GetLength() const { return length_; }
 
     fbl::unique_fd fd_;
+
     off_t data_blocks_;
 
 private:
@@ -131,4 +138,6 @@ private:
     off_t offset_;
     off_t length_;
     bool read_only_;
+    std::mutex depfile_lock_;
+    fbl::unique_fd depfile_;
 };

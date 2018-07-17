@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
 #include <getopt.h>
 #include <inttypes.h>
 #include <libgen.h>
@@ -23,6 +24,8 @@ struct {
     const char* default_value;
     const char* help;
 } OPTS[] = {
+    {"depfile", Option::kDepfile, "",          nullptr,
+        "Produce a depfile"},
     {"readonly", Option::kReadonly, "",        nullptr,
         "Mount filesystem read-only"},
     {"offset",   Option::kOffset,   "[bytes]", "0",
@@ -205,6 +208,8 @@ zx_status_t FsCreator::ProcessArgs(int argc, char** argv) {
         return Usage();
     }
 
+    bool depfile_needed = false;
+
     // Read options.
     while (true) {
         // Set up options struct for pre-device option processing.
@@ -224,12 +229,15 @@ zx_status_t FsCreator::ProcessArgs(int argc, char** argv) {
 
         int opt_index;
 
-        int c = getopt_long(argc, argv, "+ro:l:h", opts, &opt_index);
+        int c = getopt_long(argc, argv, "+dro:l:h", opts, &opt_index);
         if (c < 0) {
             break;
         }
 
         switch (c) {
+        case 'd':
+            depfile_needed = true;
+            break;
         case 'r':
             read_only_ = true;
             break;
@@ -372,6 +380,49 @@ zx_status_t FsCreator::ProcessArgs(int argc, char** argv) {
         return status;
     }
 
+    if (depfile_needed) {
+        size_t len = strlen(device);
+        assert(len+2 < PATH_MAX);
+        char buf[PATH_MAX] = {0};
+        memcpy(&buf[0], device, strlen(device));
+        buf[len++] = '.';
+        buf[len++] = 'd';
+
+        depfile_.reset(open(buf, O_CREAT|O_TRUNC|O_WRONLY, 0644));
+        if (!depfile_) {
+            fprintf(stderr, "error: cannot open '%s'\n", buf);
+            return ZX_ERR_IO;
+        }
+
+        // update the buf to be suitable to pass to AppendDepfile.
+        buf[len-2] = ':';
+        buf[len-1] = 0;
+
+        status = AppendDepfile(&buf[0]);
+    }
+
+    return status;
+}
+
+zx_status_t FsCreator::AppendDepfile(const char* str) {
+    if (!depfile_) {
+        return ZX_OK;
+    }
+
+    size_t len = strlen(str);
+    assert(len < PATH_MAX);
+    char buf[PATH_MAX] = {0};
+    memcpy(&buf[0], str, len);
+    buf[len++] = ' ';
+
+    std::lock_guard<std::mutex> lock(depfile_lock_);
+
+    // this code makes assumptions about the size of atomic writes on target
+    // platforms which currently hold true, but are not part of e.g. POSIX.
+    if (write(depfile_.get(), buf, len) != len) {
+        fprintf(stderr, "error: depfile append error\n");
+        return ZX_ERR_IO;
+    }
     return ZX_OK;
 }
 
