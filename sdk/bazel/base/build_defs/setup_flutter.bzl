@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-load(":pub_repository.bzl", "pub_repository")
+load("@io_bazel_rules_dart//dart/build_rules/internal:pub.bzl", "pub_repository")
 
 FLUTTER_DOWNLOAD_URL = (
     "https://github.com/flutter/flutter/archive/v0.5.5.zip"
@@ -37,14 +37,14 @@ def _install_flutter_impl(repository_ctx):
     # Download Flutter.
     repository_ctx.download_and_extract(
         url = FLUTTER_DOWNLOAD_URL,
-        output = "flutter",
+        output = ".",
         sha256 = FLUTTER_SHA256,
         type = "zip",
         stripPrefix = "flutter-0.5.5",
     )
     # Set up the BUILD file from the Fuchsia SDK.
     repository_ctx.symlink(
-        Label("@fuchsia_sdk//build_defs:BUILD.flutter"), "BUILD")
+        Label("@fuchsia_sdk//build_defs:BUILD.flutter"), "packages/flutter/BUILD")
 
 _install_flutter = repository_rule(
     implementation = _install_flutter_impl,
@@ -52,4 +52,4 @@ _install_flutter = repository_rule(
 
 def setup_flutter():
     _install_flutter_dependencies()
-    _install_flutter(name = "flutter")
+    _install_flutter(name = "vendor_flutter")

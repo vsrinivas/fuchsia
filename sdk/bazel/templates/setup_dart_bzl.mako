@@ -1,6 +1,6 @@
 <%include file="header_no_license.mako" />
 
-load(":pub_repository.bzl", "pub_repository")
+load("@io_bazel_rules_dart//dart/build_rules/internal:pub.bzl", "pub_repository")
 
 def setup_dart():
     % if data:

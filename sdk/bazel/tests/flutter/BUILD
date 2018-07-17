@@ -8,8 +8,9 @@ load("@fuchsia_sdk//build_defs:package.bzl", "fuchsia_package")
 flutter_app(
     name = "app",
     main = "main.dart",
+    package_name = "tests.flutter_app",
     deps = [
-        "@flutter//:flutter",
+        "@vendor_flutter//packages/flutter:flutter",
     ],
 )
 

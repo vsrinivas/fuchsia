@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-load(":dart.bzl", "compile_kernel_action", "DartLibraryInfo")
+load(":dart.bzl", "compile_kernel_action")
 load(":package_info.bzl", "PackageLocalInfo")
 
 # A Fuchsia Dart application
@@ -26,11 +26,11 @@ def _dart_app_impl(context):
     manifest_file = context.outputs.manifest
     mappings = compile_kernel_action(
         context = context,
+        package_name = context.attr.package_name,
         dart_exec = context.executable._dart,
         kernel_compiler = context.files._kernel_compiler[0],
         sdk_root = context.files._platform_lib[0],
         main = context.files.main[0],
-        packages_file = context.outputs.packages,
         kernel_snapshot_file = kernel_snapshot_file,
         manifest_file = manifest_file,
         main_dilp_file = context.outputs.main_dilp,
@@ -55,10 +55,14 @@ dart_app = rule(
             allow_files = True,
             single_file = True,
         ),
+        "package_name": attr.string(
+            doc = "The Dart package name",
+            mandatory = True,
+        ),
         "deps": attr.label_list(
             doc = "The list of libraries this app depends on",
             mandatory = False,
-            providers = [DartLibraryInfo],
+            providers = ["dart"],
         ),
         "_dart": attr.label(
             default = Label("//tools:dart"),
@@ -86,7 +90,5 @@ dart_app = rule(
         "dilp_list": "%{name}_kernel.dilpmanifest.dilplist",
         # Fuchsia package manifest file.
         "manifest": "%{name}_kernel.dilpmanifest",
-        # The .packages file.
-        "packages": "%{name}.packages",
     },
 )

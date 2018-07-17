@@ -72,6 +72,8 @@ the `--no-sdk` flag.
 
 ## Consuming
 
+### C++
+
 The produced Bazel SDK can be consumed by adding those lines to a Bazel
 `WORKSPACE`:
 
@@ -102,4 +104,31 @@ Targets can then be built for Fuschsia with:
 
 ```
 $ bazel build --config=fuchsia //...
+```
+
+### Dart & Flutter
+
+To build Dart & Flutter packages using the Bazel SDK, add those lines to the
+Bazel `WORKSPACE`:
+
+```
+http_archive(
+  name = "fuchsia_sdk",
+  path = "<FUCHSIA_SDK_URL>",
+)
+
+http_archive(
+  name = "io_bazel_rules_dart",
+  url = "https://github.com/dart-lang/rules_dart/archive/master.zip",
+  strip_prefix = "rules_dart-master",
+)
+
+load("@io_bazel_rules_dart//dart/build_rules:repositories.bzl", "dart_repositories")
+dart_repositories()
+
+load("@fuchsia_sdk//build_defs:setup_dart.bzl", "setup_dart")
+setup_dart()
+
+load("@fuchsia_sdk//build_defs:setup_flutter.bzl", "setup_flutter")
+setup_flutter()
 ```

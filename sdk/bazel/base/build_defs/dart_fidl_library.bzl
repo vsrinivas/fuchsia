@@ -2,7 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-load(":dart.bzl", "produce_package_info", "generate_dot_packages_action", "DartLibraryInfo")
+load(
+    "@io_bazel_rules_dart//dart/build_rules/common:context.bzl",
+    "make_dart_context"
+)
+load(
+    "@io_bazel_rules_dart//dart/build_rules/internal:analyze.bzl",
+    "summary_action",
+)
 load(":fidl_library.bzl", "FidlLibraryInfo")
 
 # A Dart library backed by a FIDL library.
@@ -16,8 +23,11 @@ def _dart_codegen_impl(target, context):
     ir = target[FidlLibraryInfo].ir
     library_name = target[FidlLibraryInfo].name
 
-    package_root = context.actions.declare_directory(
-        context.rule.attr.name + "_fidl_dart/lib")
+    package_root_dir = context.rule.attr.name + "_fidl_dart/lib"
+    package_root = context.actions.declare_directory(package_root_dir)
+    fidl_dart_file = context.new_file(package_root_dir + "/fidl.dart")
+    fidl_async_dart_file = context.new_file(
+        package_root_dir + "/fidl_async.dart")
 
     context.actions.run(
         executable = context.executable._fidlgen,
@@ -34,17 +44,34 @@ def _dart_codegen_impl(target, context):
         ],
         outputs = [
             package_root,
+            fidl_dart_file,
+            fidl_async_dart_file,
         ],
         mnemonic = "FidlGenDart",
     )
 
     package_name = "fidl_" + library_name.replace(".", "_")
     deps = context.rule.attr.deps + context.attr._deps
-    library_info = produce_package_info(package_name, package_root, deps)
 
-    return [
-        library_info,
-    ]
+    dart_ctx = make_dart_context(
+        context,
+        generated_srcs = [
+            fidl_dart_file,
+            fidl_async_dart_file,
+        ],
+        lib_root = context.label.package + "/" + package_root_dir,
+        deps = deps,
+        enable_summaries = True,
+        package = package_name,
+    )
+
+    summary_action(context, dart_ctx)
+    files_provider = depset([dart_ctx.strong_summary])
+
+    return struct(
+        dart = dart_ctx,
+        files_provider = files_provider,
+    )
 
 # This aspects runs the FIDL code generator on a given FIDL library.
 _dart_codegen = aspect(
@@ -60,33 +87,24 @@ _dart_codegen = aspect(
             executable = True,
             cfg = "host",
         ),
+        "_analyzer": attr.label(
+            default = Label("@dart_sdk//:analyzer"),
+            executable = True,
+            cfg = "host",
+        ),
         "_deps": attr.label_list(
             default = [
                 Label("//dart/fidl"),
             ],
         ),
     },
-    provides = [
-        DartLibraryInfo,
-    ],
 )
 
 def _dart_fidl_library_impl(context):
-    info = context.attr.library[DartLibraryInfo]
-
-    # Add all generated directories to force the codegen to happen.
-    files = [package.root for package in info.package_map.to_list()]
-
-    # TODO(pylaligand): this should eventually be done in the aspect.
-    packages_file = context.actions.declare_file(
-        context.attr.name + ".packages")
-    generate_dot_packages_action(context, packages_file, info)
-    files.append(packages_file)
-
-    return [
-        DefaultInfo(files = depset(files)),
-        info,
-    ]
+    return struct(
+        dart = context.attr.library.dart,
+        files = context.attr.library.files_provider,
+    )
 
 dart_fidl_library = rule(
     implementation = _dart_fidl_library_impl,
@@ -99,7 +117,4 @@ dart_fidl_library = rule(
             aspects = [_dart_codegen],
         ),
     },
-    provides = [
-        DartLibraryInfo,
-    ],
 )

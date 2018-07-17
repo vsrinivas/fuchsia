@@ -2,14 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-load("@fuchsia_sdk//build_defs:dart_library.bzl", "dart_library")
+load("@io_bazel_rules_dart//dart/build_rules:core.bzl", "dart_library")
 
 package(default_visibility = ["//visibility:public"])
 
 dart_library(
     name = "flutter",
-    package_name = "flutter",
-    source_dir = "flutter/packages/flutter/lib",
+    pub_pkg_name = "flutter",
+    srcs = glob(["lib/**/*.dart"]),
     deps = [
         "@vendor_collection//:collection",
         "@vendor_meta//:meta",
