@@ -494,9 +494,11 @@ TEST_F(FutureTest, Wait2) {
     async_expectations.Signal();
   });
 
-  f1->Complete(10, "10");
-  EXPECT_EQ(0, async_expectations.count());
+  // Go ahead and insert out of order to also ensure that Wait2 produces results
+  // in insertion order rather than completion order.
   f2->Complete(20, "20");
+  EXPECT_EQ(0, async_expectations.count());
+  f1->Complete(10, "10");
   EXPECT_EQ(0, async_expectations.count());
   f3->Complete(30, "30");
 

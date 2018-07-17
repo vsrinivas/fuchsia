@@ -286,7 +286,8 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   // A strong reference is kept to every future in |futures|, so each future
   // will be kept alive if they otherwise go out of scope. The future returned
   // by Wait2() will also be kept alive until every future in |futures|
-  // completes.
+  // completes. The order of the results corresponds to the order of the given
+  // futures, regardless of their completion order.
   //
   // For example:
   //
@@ -309,29 +310,39 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   static FuturePtr<Results> Wait2(
       std::string trace_name,
       const std::vector<FuturePtr<Result...>>& futures) {
-    auto results = std::make_shared<Results>();
-    results->reserve(futures.size());
+    using ElementType = std::tuple<Result...>;
 
     if (futures.empty()) {
-      return Future<Results>::CreateCompleted(trace_name + "(Completed)",
-                                              std::move(*results));
+      return Future<Results>::CreateCompleted(trace_name + "(Completed)", {});
     }
+
+    // Use unique ptrs initially so that we can reserve even if there's a
+    // |Result| type that's not default-constructible.
+    auto results = std::make_shared<std::vector<std::unique_ptr<ElementType>>>(
+        futures.size());
 
     FuturePtr<Results> all_futures_completed =
         Future<Results>::Create(trace_name + "(WillWait2)");
 
-    const auto futures_count = futures.size();
-    for (auto future : futures) {
+    auto finished_count = std::make_shared<size_t>(0);
+
+    for (size_t i = 0; i < futures.size(); i++) {
+      const auto& future = futures[i];
       // Note that |future| is captured by the callback, to ensure that it'll be
       // completed even if its refcount drops to zero. The callback will be
       // reset after it's run to prevent a retain cycle.
-      future->SetCallback([future, all_futures_completed, results,
-                           futures_count](Result&&... result) {
-        results->emplace_back(
-            std::forward_as_tuple(std::forward<Result&&>(result)...));
+      future->SetCallback([i, future, all_futures_completed, results,
+                           finished_count](Result&&... result) {
+        (*results)[i] =
+            std::make_unique<ElementType>(std::forward<Result&&>(result)...);
 
-        if (results->size() == futures_count) {
-          all_futures_completed->Complete(std::move(*results));
+        if (++(*finished_count) == results->size()) {
+          Results final_results;
+          final_results.reserve(results->size());
+          for (const auto& result : *results) {
+            final_results.push_back(*result);
+          }
+          all_futures_completed->Complete(std::move(final_results));
         }
 
         // null out the callback, otherwise there'll be a retain cycle
