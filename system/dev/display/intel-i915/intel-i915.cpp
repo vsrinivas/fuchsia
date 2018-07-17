@@ -1096,8 +1096,8 @@ void Controller::ReallocatePipeBuffers(bool is_hotplug) {
 
                     if ((other_active->start <= goal_alloc->start
                                 && goal_alloc->start < other_active->end)
-                            || (other_active->start <= goal_alloc->end
-                                && goal_alloc->end < other_active->end)) {
+                            || (other_active->start < goal_alloc->end
+                                && goal_alloc->end <= other_active->end)) {
                         overlap = true;
                         break;
                     }
