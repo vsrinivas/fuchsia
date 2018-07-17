@@ -46,6 +46,7 @@
         "garnet/packages/tests/runtime",
         "garnet/packages/tests/rust_crates",
         "garnet/packages/tests/scenic",
+        "garnet/packages/tests/scpi",
         "garnet/packages/tests/svc",
         "garnet/packages/tests/syslog",
         "garnet/packages/tests/sysmgr",

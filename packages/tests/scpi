@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/bin/scpi:scpi_server_tests"
+    ]
+}

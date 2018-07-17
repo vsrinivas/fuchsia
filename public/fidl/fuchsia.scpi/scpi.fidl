@@ -1,0 +1,43 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// System Control Power Interface
+library fuchsia.scpi;
+
+const uint32 MAX_DVFS_OPPS = 16;
+
+enum Status {
+    // the call completed successfully
+    OK                    = 0;
+    // failed to get the DVFS operating
+    // points information
+    ERR_DVFS_INFO         = 1;
+    // failed to get the dvfs opp index
+    // which is set currently
+    ERR_DVFS_OPP_IDX      = 2;
+    // failed to get the temperature
+    ERR_TEMPERATURE       = 3;
+};
+
+struct DvfsOpp {
+    uint32 freq_hz;
+    uint32 volt_mv;
+};
+
+struct SystemStatus {
+    // operating point index for big cluster
+    uint32 big_cluster_op_index;
+
+    // operating point index for small cluster
+    uint32 small_cluster_op_index;
+
+    // current CPU temperature
+    uint32 temperature;
+};
+
+[Discoverable]
+interface SystemController {
+  1: GetDvfsInfo(uint32 power_domain) -> (Status err, vector<DvfsOpp> opps);
+  2: GetSystemStatus() -> (Status err, SystemStatus sys_status);
+};

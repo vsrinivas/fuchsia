@@ -1,0 +1,74 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("lib") {
+  sources = [
+    "app.cc",
+    "app.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.scpi",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//zircon/public/lib/ddk",
+  ]
+}
+
+executable("bin") {
+  output_name = "scpi"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("scpi_unittests") {
+  testonly = true
+
+  sources = [
+    "app_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fxl/test:gtest_main",
+  ]
+}
+
+package("scpi") {
+  deps = [
+    ":bin",
+  ]
+  meta = [
+    {
+      path = rebase_path("meta/scpi.cmx")
+      dest = "scpi.cmx"
+    },
+  ]
+
+  binary = "scpi"
+}
+
+package("scpi_server_tests") {
+  testonly = true
+  deps = [
+    ":scpi_unittests",
+  ]
+  tests = [
+    {
+      name = "scpi_unittests"
+      dest = "disabled/scpi_unittests"
+    },
+  ]
+}
