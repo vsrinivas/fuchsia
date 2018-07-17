@@ -586,7 +586,7 @@ ifeq ($(call TOBOOL,$(ENABLE_ULIB_ONLY)),false)
 all:: kernel
 else
 # No kernel, but we want the bootfs.manifest listing the installed libraries.
-all:: $(USER_MANIFEST)
+all:: user-manifest
 endif
 
 # meta rule for building just packages
