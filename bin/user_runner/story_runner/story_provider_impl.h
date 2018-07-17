@@ -290,6 +290,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   class DeleteStoryCall;
   class GetControllerCall;
   class StopAllStoriesCall;
+  class StopStoryIfNoRunningModulesCall;
   class StopStoryShellCall;
   class GetImportanceCall;
   class GetLinkPeerCall;

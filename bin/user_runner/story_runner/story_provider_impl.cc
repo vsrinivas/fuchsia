@@ -640,13 +640,18 @@ void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
 
 // |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::RunningStories(RunningStoriesCallback callback) {
-  auto stories = fidl::VectorPtr<fidl::StringPtr>::New(0);
-  for (const auto& impl_container : story_controller_impls_) {
-    if (impl_container.second.impl->IsRunning()) {
-      stories.push_back(impl_container.second.impl->GetStoryId());
+  auto on_run = Future<>::Create("StoryProviderImpl.RunningStories.on_run");
+  auto done = on_run->Map([this]() {
+    auto stories = fidl::VectorPtr<fidl::StringPtr>::New(0);
+    for (const auto& impl_container : story_controller_impls_) {
+      if (impl_container.second.impl->IsRunning()) {
+        stories.push_back(impl_container.second.impl->GetStoryId());
+      }
     }
-  }
-  callback(std::move(stories));
+    return stories;
+  });
+  operation_queue_.Add(WrapFutureAsOperation(
+      "StoryProviderImpl::RunningStories", on_run, done, callback));
 }
 
 // |fuchsia::modular::StoryProvider|

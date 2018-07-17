@@ -50,6 +50,7 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
   // |fuchsia::modular::ModuleContext|
   void GetLink(fidl::StringPtr name,
                fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
+
   // |fuchsia::modular::ModuleContext|
   void EmbedModule(
       fidl::StringPtr name, fuchsia::modular::Intent intent,
@@ -57,32 +58,42 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
           module_controller,
       fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner,
       EmbedModuleCallback callback) override;
+
   // |fuchsia::modular::ModuleContext|
   void StartModule(fidl::StringPtr name, fuchsia::modular::Intent intent,
                    fidl::InterfaceRequest<fuchsia::modular::ModuleController>
                        module_controller,
                    fuchsia::modular::SurfaceRelationPtr surface_relation,
                    StartModuleCallback callback) override;
+
   // |fuchsia::modular::ModuleContext|
   void StartContainerInShell(
       fidl::StringPtr name, fuchsia::modular::SurfaceRelation parent_relation,
       fidl::VectorPtr<fuchsia::modular::ContainerLayout> layout,
       fidl::VectorPtr<fuchsia::modular::ContainerRelationEntry> relationships,
       fidl::VectorPtr<fuchsia::modular::ContainerNode> nodes) override;
+
   // |fuchsia::modular::ModuleContext|
   void GetComponentContext(
       fidl::InterfaceRequest<fuchsia::modular::ComponentContext>
           context_request) override;
+
   // |fuchsia::modular::ModuleContext|
   void GetIntelligenceServices(
       fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request)
       override;
+
   // |fuchsia::modular::ModuleContext|
   void GetStoryId(GetStoryIdCallback callback) override;
+
   // |fuchsia::modular::ModuleContext|
   void RequestFocus() override;
+
   // |fuchsia::modular::ModuleContext|
   void Active() override;
+
+  // |fuchsia::modular::ModuleContext|
+  void Done() override;
 
   // Identifies the module by its path, holds the URL of the running module, and
   // the link it was started with.

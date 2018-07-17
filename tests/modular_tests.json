@@ -63,6 +63,10 @@
     {
       "name":"user_shell",
       "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=user_shell_test_user_shell --story_shell=dev_story_shell"
+    },
+    {
+      "name":"module_context",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=module_context_test_user_shell --story_shell=dev_story_shell"
     }
   ]
 }

@@ -675,6 +675,37 @@ class StoryControllerImpl::StopModuleCall : public Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(StopModuleCall);
 };
 
+class StoryControllerImpl::StopModuleAndStoryIfEmptyCall : public Operation<> {
+ public:
+  StopModuleAndStoryIfEmptyCall(
+      StoryControllerImpl* const story_controller_impl,
+      const fidl::VectorPtr<fidl::StringPtr>& module_path,
+      const std::function<void()>& done)
+      : Operation("StoryControllerImpl::StopModuleAndStoryIfEmptyCall", done),
+        story_controller_impl_(story_controller_impl),
+        module_path_(module_path.Clone()) {}
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+    operation_queue_.Add(new StopModuleCall(
+        story_controller_impl_, story_controller_impl_->story_storage_,
+        module_path_, [this, flow] {
+          if (story_controller_impl_->running_mod_infos_.empty()) {
+            operation_queue_.Add(new StopCall(story_controller_impl_,
+                                              true /* notify */, [flow] {}));
+          }
+        }));
+  }
+
+  StoryControllerImpl* const story_controller_impl_;  // not owned
+  const fidl::VectorPtr<fidl::StringPtr> module_path_;
+
+  OperationQueue operation_queue_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(StopModuleAndStoryIfEmptyCall);
+};
+
 class StoryControllerImpl::DeleteCall : public Operation<> {
  public:
   DeleteCall(StoryControllerImpl* const story_controller_impl,
@@ -1792,5 +1823,11 @@ void StoryControllerImpl::WatchVisualState(
 }
 
 void StoryControllerImpl::Active() { story_provider_impl_->Active(story_id_); }
+
+void StoryControllerImpl::HandleModuleDone(
+    const fidl::VectorPtr<fidl::StringPtr>& module_path) {
+  operation_queue_.Add(
+      new StopModuleAndStoryIfEmptyCall(this, module_path, [] {}));
+}
 
 }  // namespace modular

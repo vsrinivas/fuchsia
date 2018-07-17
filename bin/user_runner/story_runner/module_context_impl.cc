@@ -119,4 +119,8 @@ void ModuleContextImpl::RequestFocus() {
 
 void ModuleContextImpl::Active() { story_controller_impl_->Active(); }
 
+void ModuleContextImpl::Done() {
+  story_controller_impl_->HandleModuleDone(module_data_->module_path);
+}
+
 }  // namespace modular

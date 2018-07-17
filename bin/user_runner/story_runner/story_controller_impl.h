@@ -150,6 +150,10 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
   // Called by ModuleContextImpl.
   void Active();
 
+  // Stops the module at |module_path| in response to a call to
+  // |ModuleContext.Done|.
+  void HandleModuleDone(const fidl::VectorPtr<fidl::StringPtr>& module_path);
+
  private:
   // |StoryController|
   void GetInfo(GetInfoCallback callback) override;
@@ -308,6 +312,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
   class StartContainerInShellCall;
   class StopCall;
   class StopModuleCall;
+  class StopModuleAndStoryIfEmptyCall;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryControllerImpl);
 };

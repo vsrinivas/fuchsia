@@ -82,6 +82,10 @@ interface ModuleContext {
   // while activity is ongoing. Once the activity ceases, the module should just
   // not issue calls anymore. See StoryProviderWatcher for more motivation.
   11: Active();
+
+  // When a module calls |Done()| the framework will stop the module. If there are
+  // no more running modules in the story the story will be stopped.
+  12: Done();
 };
 
 // Communicates the status of an Intent to a Module.

@@ -26,6 +26,9 @@ interface StoryController {
   4: Stop() -> ();
 
   // Registers a watcher for changes of the story state.
+  //
+  // Note that stories can stop themselves at any time and it is advisable
+  // for the holder of a StoryController to provide a watcher.
   5: Watch(StoryWatcher watcher);
 
   // Adds a module matching the provided Intent to the story.

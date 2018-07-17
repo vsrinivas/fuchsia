@@ -1,0 +1,58 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//peridot/build/executable_package.gni")
+
+executable_package("module_context_test_user_shell") {
+  testonly = true
+
+  sources = [
+    "module_context_test_user_shell.cc",
+  ]
+
+  deps = [
+    ":defs",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/fidl/fuchsia.testing.runner",
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/lib/fidl:single_service_app",
+    "//peridot/lib/rapidjson",
+    "//peridot/lib/testing",
+    "//peridot/lib/testing:component_base",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/context/cpp:formatting",
+    "//peridot/tests/common:defs",
+  ]
+}
+
+executable_package("module_context_test_module") {
+  testonly = true
+
+  sources = [
+    "module_context_test_module.cc",
+  ]
+
+  deps = [
+    ":defs",
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
+    "//peridot/lib/rapidjson",
+    "//peridot/lib/testing",
+    "//peridot/lib/testing:component_base",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/tests/common:defs",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+source_set("defs") {
+  testonly = true
+
+  sources = [
+    "defs.h",
+  ]
+}
