@@ -10,6 +10,10 @@ executable("bin") {
   sources = [
     "hello_world.cc",
   ]
+
+  deps = [
+    "//zircon/public/lib/zx",
+  ]
 }
 
 executable("bin2") {
@@ -17,6 +21,10 @@ executable("bin2") {
 
   sources = [
     "hello_world2.cc",
+  ]
+
+  deps = [
+    "//zircon/public/lib/zx",
   ]
 }
 

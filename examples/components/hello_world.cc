@@ -2,10 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/syscalls.h>
 #include <iostream>
+
 using namespace std;
 
 int main() {
-  cout << "Hello, World!\n";
+  while (true) {
+    zx_nanosleep(zx_deadline_after(ZX_SEC(3)));
+    cout << "Hello, World!\n";
+  }
   return 0;
 }
