@@ -25,6 +25,12 @@ typedef struct sdio_device {
     sdio_function_t funcs[SDIO_MAX_FUNCS];
 } sdio_device_t;
 
+
+static inline bool sdio_is_uhs_supported(uint32_t hw_caps) {
+    return ((hw_caps & SDIO_CARD_UHS_SDR50) || (hw_caps & SDIO_CARD_UHS_SDR104) ||
+           (hw_caps & SDIO_CARD_UHS_DDR50));
+}
+
 static inline void update_bits(uint32_t *x, uint32_t mask, uint32_t loc, uint32_t val) {
     *x &= ~mask;
     *x |= ((val << loc) & mask);

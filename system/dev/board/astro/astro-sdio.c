@@ -44,6 +44,11 @@ static const pbus_gpio_t sdio_gpios[] = {
 static aml_sd_emmc_config_t config = {
     //PORTA on s905D2 does not support DMA.
     .supports_dma = false,
+    // TODO: Astro fails the I/O requests if the frequency is more than 25MHz.
+    // The same succeeds on vim2. This could probably be because of the PORT issues on astro.
+    // Set the right frequency once the PORT issues are resolved.
+    .max_freq = 25000000,
+    .min_freq = 400000,
 };
 
 static const pbus_metadata_t aml_sd_emmc_metadata[] = {

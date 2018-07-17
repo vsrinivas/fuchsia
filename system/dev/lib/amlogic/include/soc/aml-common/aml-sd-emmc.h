@@ -9,11 +9,6 @@
 
 //From EMMC Design documentation provided by AMLOGIC
 #define AML_SD_EMMC_IRQ_ALL_CLEAR            0x3fff
-#define AML_SD_EMMC_MIN_FREQ                 400000     //400KHz
-//As per AMlogic for S912 chipset, HS400 can be operated at 125MHZ or low.
-//However setting it to 150MHZ still works and gives better performance.
-//Set it to safest for now and tune this in future as required.
-#define AML_SD_EMMC_MAX_FREQ                 120000000
 #define AML_SD_EMMC_CTS_OSCIN_CLK_FREQ       24000000   //24MHz
 #define AML_SD_EMMC_CTS_OSCIN_CLK_SRC        0
 #define AML_SD_EMMC_FCLK_DIV2_FREQ           1000000000 //1GHz
@@ -224,6 +219,8 @@ typedef struct {
 
 typedef struct {
     bool supports_dma;
+    uint32_t max_freq;
+    uint32_t min_freq;
 } aml_sd_emmc_config_t;
 
 static const uint8_t aml_sd_emmc_tuning_blk_pattern_4bit[64] = {

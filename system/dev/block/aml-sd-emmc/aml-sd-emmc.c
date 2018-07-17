@@ -464,7 +464,8 @@ static zx_status_t aml_sd_emmc_set_bus_timing(void* ctx, sdmmc_timing_t timing) 
     uint32_t config = regs->sd_emmc_cfg;
     uint32_t clk_val = regs->sd_emmc_clock;
 
-    if (timing == SDMMC_TIMING_HS400 || timing == SDMMC_TIMING_HSDDR) {
+    if (timing == SDMMC_TIMING_HS400 || timing == SDMMC_TIMING_HSDDR ||
+        timing == SDMMC_TIMING_DDR50) {
         if (timing == SDMMC_TIMING_HS400) {
             config |= AML_SD_EMMC_CFG_CHK_DS;
         } else {
@@ -1025,8 +1026,8 @@ static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {
         dev->info.max_transfer_size = AML_SD_EMMC_MAX_PIO_DATA_SIZE;
     }
 
-    dev->max_freq = AML_SD_EMMC_MAX_FREQ;
-    dev->min_freq = AML_SD_EMMC_MIN_FREQ;
+    dev->max_freq = dev_config.max_freq;
+    dev->min_freq = dev_config.min_freq;
     // Create the device.
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,

@@ -71,6 +71,9 @@ static const pbus_gpio_t emmc_gpios[] = {
 
 static aml_sd_emmc_config_t config = {
     .supports_dma = true,
+    //As per AMlogic, on S912 chipset, HS400 mode can be operated at 125MHZ or low.
+    .min_freq = 400000,
+    .max_freq = 120000000,
 };
 
 static const pbus_metadata_t emmc_metadata[] = {

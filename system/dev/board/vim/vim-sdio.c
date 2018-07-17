@@ -44,6 +44,8 @@ static const pbus_gpio_t sdio_gpios[] = {
 
 static aml_sd_emmc_config_t config = {
     .supports_dma = true,
+    .max_freq = 125000000,
+    .min_freq = 400000,
 };
 
 static const pbus_metadata_t aml_sd_emmc_metadata[] = {

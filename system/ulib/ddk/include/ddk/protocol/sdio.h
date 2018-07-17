@@ -34,6 +34,15 @@ typedef struct sdio_device_hw_info {
 #define SDIO_CARD_HIGH_SPEED     (1 << 5)
 #define SDIO_CARD_HIGH_POWER     (1 << 6)
 #define SDIO_CARD_4BIT_BUS       (1 << 7)
+#define SDIO_CARD_HS_SDR12       (1 << 8)
+#define SDIO_CARD_HS_SDR25       (1 << 9)
+#define SDIO_CARD_UHS_SDR50      (1 << 10)
+#define SDIO_CARD_UHS_SDR104     (1 << 11)
+#define SDIO_CARD_UHS_DDR50      (1 << 12)
+#define SDIO_DRIVER_TYPE_A       (1 << 13)
+#define SDIO_DRIVER_TYPE_B       (1 << 14)
+#define SDIO_DRIVER_TYPE_C       (1 << 15)
+#define SDIO_DRIVER_TYPE_D       (1 << 16)
 } sdio_device_hw_info_t;
 
 typedef struct sdio_hw_info {

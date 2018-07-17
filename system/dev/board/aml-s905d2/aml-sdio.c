@@ -45,6 +45,8 @@ static const pbus_gpio_t sdio_gpios[] = {
 static aml_sd_emmc_config_t config = {
     //PORTA on s905D2 does not support DMA.
     .supports_dma = false,
+    .min_freq = 400000,
+    .max_freq = 25000000,
 };
 
 static const pbus_metadata_t aml_sd_emmc_metadata[] = {

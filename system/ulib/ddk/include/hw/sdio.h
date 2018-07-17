@@ -117,6 +117,7 @@
 #define SDIO_CIA_CCCR_BUS_SPEED_SEL_SHS         0x01
 #define SDIO_CIA_CCCR_BUS_SPEED_BSS_LOC         1
 #define SDIO_CIA_CCCR_BUS_SPEED_BSS_MASK        0x0e
+
 #define SDIO_BUS_SPEED_SDR12                    0
 #define SDIO_BUS_SPEED_SDR25                    1
 #define SDIO_BUS_SPEED_SDR50                    2
@@ -128,6 +129,12 @@
 #define SDIO_CIA_CCCR_UHS_SDR50                 0x01
 #define SDIO_CIA_CCCR_UHS_SDR104                0x02
 #define SDIO_CIA_CCCR_UHS_DDR50                 0x04
+
+#define SDIO_UHS_SDR104_MAX_FREQ                208000000
+#define SDIO_UHS_SDR50_MAX_FREQ                 100000000
+#define SDIO_UHS_DDR50_MAX_FREQ                 50000000
+#define SDIO_HS_MAX_FREQ                        50000000
+#define SDIO_DEFAULT_FREQ                       25000000
 
 #define SDIO_CIA_CCCR_DRV_STRENGTH_ADDR         0x15
 #define SDIO_CIA_CCCR_DRV_STRENGTH_SDTA         0x01
