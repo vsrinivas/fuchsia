@@ -1,3 +1,7 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 #pragma once
 
 #include <cstddef>
@@ -28,6 +32,22 @@ enum class MuxCommandType : uint8_t {
 // function Write which knows how to write these fields into a buffer
 // in the format defined by the RFCOMM/GSM specs.
 //
+// MuxCommands are used in two ways:
+//  1. Parsing multiplexer commands out of a received buffer and reading their
+//      fields
+//  2. Constructing multiplexer commands and writing them into a buffer to send
+//
+// To use MuxCommands in the first way, use MuxCommand::Parse() on a received
+// buffer. Check the type using command_type(), and cast the returned pointer
+// to the appropriate subclass.
+//
+// TODO(gusss): this downcasting mechanism is non-ideal -- it is potentially
+// very bug-prone. NET-1224 tracks the improvement of this mechanism.
+//
+// To use MuxCommands in the second way, construct the specific MuxCommand
+// subtype which you are trying to send, allocate a buffer (using written_size()
+// to calculate the needed size), and write into the buffer using Write().
+//
 // Supported commands are listed in RFCOMM 4.3.
 class MuxCommand {
  public:
@@ -53,9 +73,7 @@ class MuxCommand {
   inline CommandResponse command_response() const { return command_response_; }
 
  protected:
-  inline MuxCommand(MuxCommandType command_type,
-                    CommandResponse command_response)
-      : command_type_(command_type), command_response_(command_response){};
+  MuxCommand(MuxCommandType command_type, CommandResponse command_response);
 
   // Forms the type field octet for this multiplexer command by ORing:
   //  - the EA bit (which is always 1 for GSM/RFCOMM -- see GSM 5.4.6.1)
@@ -104,8 +122,7 @@ class TestCommand : public MuxCommand {
 // GSM 5.4.6.3.5.
 class FlowControlOnCommand : public MuxCommand {
  public:
-  inline FlowControlOnCommand(CommandResponse command_response)
-      : MuxCommand(MuxCommandType::kFlowControlOnCommand, command_response) {}
+  explicit FlowControlOnCommand(CommandResponse command_response);
 
   // Returns nullptr if parse fails. |command_response| is a parameter which has
   // already been parsed from |buffer|.
@@ -121,8 +138,7 @@ class FlowControlOnCommand : public MuxCommand {
 // GSM 5.4.6.3.6.
 class FlowControlOffCommand : public MuxCommand {
  public:
-  inline FlowControlOffCommand(CommandResponse command_response)
-      : MuxCommand(MuxCommandType::kFlowControlOffCommand, command_response) {}
+  explicit FlowControlOffCommand(CommandResponse command_response);
 
   // Returns nullptr if parse fails. |command_response| is a parameter which has
   // already been parsed from |buffer|.
@@ -151,13 +167,9 @@ constexpr BreakValue kDefaultInvalidBreakValue = 0xFF;
 // This command conveys the virtual V.24 signals. See GSM 5.4.6.3.7.
 class ModemStatusCommand : public MuxCommand {
  public:
-  inline ModemStatusCommand(CommandResponse command_response, DLCI dlci,
-                            ModemStatusCommandSignals signals,
-                            BreakValue break_value = kDefaultInvalidBreakValue)
-      : MuxCommand(MuxCommandType::kModemStatusCommand, command_response),
-        dlci_(dlci),
-        signals_(signals),
-        break_value_(break_value){};
+  ModemStatusCommand(CommandResponse command_response, DLCI dlci,
+                     ModemStatusCommandSignals signals,
+                     BreakValue break_value = kDefaultInvalidBreakValue);
 
   // Returns nullptr if parse fails. |command_response| and |length| are
   // parameters which have already been parsed from |buffer|.
@@ -185,6 +197,196 @@ class ModemStatusCommand : public MuxCommand {
   DLCI dlci_;
   ModemStatusCommandSignals signals_;
   BreakValue break_value_;
+};
+
+// GSM table 12
+// clang-format off
+enum class Baud : uint8_t {
+  k2400   = 0,
+  k4800   = 1,
+  k7200   = 2,
+  k9600   = 3,
+  k19200  = 4,
+  k38400  = 5,
+  k57600  = 6,
+  k115200 = 7,
+  k230400 = 8
+};
+// clang-format on
+constexpr Baud kDefaultBaud = Baud::k9600;
+
+// GSM 5.4.6.3.9 (below table 12)
+enum class DataBits : uint8_t {
+  k5Bits = 0,
+  k6Bits = 2,
+  k7Bits = 1,
+  k8Bits = 3
+};
+constexpr DataBits kDefaultDataBits = DataBits::k8Bits;
+
+// GSM 5.4.6.3.9 (below table 12)
+// clang-format off
+enum class StopBits : bool {
+  k1Bit         = 0,
+  k1AndHalfBits = 1
+};
+// clang-format on
+constexpr StopBits kDefaultStopBits = StopBits::k1Bit;
+
+// GSM 5.4.6.3.9 (below table 12)
+// clang-format off
+enum class ParityType : uint8_t {
+  kOdd    = 0,
+  kMark   = 1,
+  kEven   = 2,
+  kSpace  = 3
+};
+// clang-format on
+// No default is defined in the spec, so we choose even arbitrarily.
+constexpr ParityType kDefaultParityType = ParityType::kEven;
+// Whether parity is on or off by default. This is not defined in the spec.
+constexpr bool kDefaultParity = true;
+
+// GSM 5.4.6.3.9 (below table 12)
+// clang-format off
+enum FlowControlFlags : uint8_t {
+  kXonXoffInputFlag   = 1 << 0,
+  kXonXoffOutputFlag  = 1 << 1,
+  kRTRInputFlag       = 1 << 2,
+  kRTROutputFlag      = 1 << 3,
+  kRTCInputFlag       = 1 << 4,
+  kRTCOutputFlag      = 1 << 5
+};
+// clang-format on
+using FlowControlFlagsBitfield = uint8_t;
+// GSM 5.4.6.3.9 (below table 12)
+constexpr FlowControlFlagsBitfield kDefaultFlowControlFlags = 0;
+
+struct RemotePortNegotiationParams {
+  Baud baud;
+  DataBits data_bits;
+  StopBits stop_bits;
+  bool parity;
+  ParityType parity_type;
+  FlowControlFlagsBitfield flow_control;
+  uint8_t xon_character;
+  uint8_t xoff_character;
+};
+// GSM 5.4.6.3.9 (below table 12)
+constexpr uint8_t kDefaultXONCharacter = 0x01;   // DC1
+constexpr uint8_t kDefaultXOFFCharacter = 0x03;  // DC3
+constexpr RemotePortNegotiationParams kDefaultRemotePortNegotiationParams = {
+    kDefaultBaud,         kDefaultDataBits,     kDefaultStopBits,
+    kDefaultParity,       kDefaultParityType,   kDefaultFlowControlFlags,
+    kDefaultXONCharacter, kDefaultXOFFCharacter};
+
+// GSM 5.4.6.3.9 (below table 12)
+// clang-format off
+enum RemotePortNegotiationMask : uint16_t {
+  kXonXoffInput   = 1 << 0,
+  kXonXoffOutput  = 1 << 1,
+  kRTRInput       = 1 << 2,
+  kRTROutput      = 1 << 3,
+  kRTCInput       = 1 << 4,
+  kRTCOutput      = 1 << 5,
+  kBitRate        = 1 << 8,
+  kDataBits       = 1 << 9,
+  kStopBits       = 1 << 10,
+  kParity         = 1 << 11,
+  kParityType     = 1 << 12,
+  kXONCharacter   = 1 << 13,
+  kXOFFCharacter  = 1 << 14
+};
+// clang-format on
+using RemotePortNegotiationMaskBitfield = uint16_t;
+// This default is not defined in the spec.
+constexpr RemotePortNegotiationMaskBitfield
+    kDefaultRemotePortNegotiationMaskBitfield = 0;
+
+// This command is used to negotiate port settings such as baud rate. See GSM
+// 5.4.6.3.9.
+class RemotePortNegotiationCommand : public MuxCommand {
+ public:
+  // Creates an RPN command with one value octet. This type of RPN command is
+  // used to request the remote port settings.
+  RemotePortNegotiationCommand(CommandResponse command_response, DLCI dlci);
+
+  // Creates an RPN command with eight value octets. This type of RPN command is
+  // used to negotiate port settings.
+  RemotePortNegotiationCommand(CommandResponse command_response, DLCI dlci,
+                               RemotePortNegotiationParams params,
+                               RemotePortNegotiationMaskBitfield mask);
+
+  // Returns nullptr if parse fails. |command_response| and |length| are
+  // parameters which have already been parsed from |buffer|.
+  static std::unique_ptr<RemotePortNegotiationCommand> Parse(
+      CommandResponse command_response, size_t length,
+      const common::ByteBuffer& buffer);
+
+  // MuxCommand overrides
+  void Write(common::MutableBufferView buffer) const override;
+  size_t written_size() const override;
+
+  // The DLCI which this RPN command is negotiating over.
+  inline DLCI dlci() const { return dlci_; }
+
+  // The Remote Port Negotiation parameters. These are described in detaul in
+  // GSM 5.4.6.3.9.
+  inline RemotePortNegotiationParams params() const { return params_; }
+
+  // The mask used to indicate which parameters are being negotiated.
+  inline RemotePortNegotiationMaskBitfield mask() const { return mask_; }
+
+ private:
+  // Indicates whether this is the short (1 value octet) or long (8 value
+  // octets) version of the RPN command.
+  bool short_RPN_command_;
+
+  DLCI dlci_;
+
+  RemotePortNegotiationParams params_;
+  RemotePortNegotiationMaskBitfield mask_;
+};
+
+// GSM 5.4.6.3.10 (below table 15)
+// clang-format off
+enum class LineError : uint8_t {
+  kOverrunError = (1 << 0),
+  kParityError  = (1 << 1),
+  kFramingError = (1 << 2)
+};
+// clang-format on
+
+// This command is used to convey changes in the status of the line. See GSM
+// 5.4.6.3.10.
+class RemoteLineStatusCommand : public MuxCommand {
+ public:
+  RemoteLineStatusCommand(CommandResponse command_response, DLCI dlci,
+                          bool error_occurred, LineError error);
+
+  // Returns nullptr if parse fails. |command_response| is a parameter which has
+  // already been parsed from |buffer|.
+  static std::unique_ptr<RemoteLineStatusCommand> Parse(
+      CommandResponse command_response, const common::ByteBuffer& buffer);
+
+  // MuxCommand overrides
+  void Write(common::MutableBufferView buffer) const override;
+  size_t written_size() const override;
+
+  // The DLCI which this command pertains to.
+  inline DLCI dlci() const { return dlci_; }
+
+  // Whether or not this frame contains an error.
+  inline bool error_occurred() const { return error_occurred_; }
+
+  // The type of error which occured. See GSM 5.4.6.3.10 for an explanation of
+  // the errors.
+  inline LineError error() const { return error_; }
+
+ private:
+  DLCI dlci_;
+  bool error_occurred_;
+  LineError error_;
 };
 
 // RFCOMM table 5.3.
@@ -217,10 +419,8 @@ struct ParameterNegotiationParams {
 // RFCOMM 5.5.3.
 class DLCParameterNegotiationCommand : public MuxCommand {
  public:
-  inline DLCParameterNegotiationCommand(CommandResponse command_response,
-                                        ParameterNegotiationParams params)
-      : MuxCommand(MuxCommandType::kDLCParameterNegotiation, command_response),
-        params_(params) {}
+  DLCParameterNegotiationCommand(CommandResponse command_response,
+                                 ParameterNegotiationParams params);
 
   // Returns nullptr if parse fails. |command_response| is a parameter which has
   // already been parsed from |buffer|.
@@ -243,12 +443,8 @@ class NonSupportedCommandResponse : public MuxCommand {
  public:
   // Note that NSC is always a response.
   // |incoming_non_supported_command| is 6 bits.
-  inline NonSupportedCommandResponse(CommandResponse incoming_command_response,
-                                     uint8_t incoming_non_supported_command)
-      : MuxCommand(MuxCommandType::kNonSupportedCommandResponse,
-                   CommandResponse::kResponse),
-        incoming_command_response_(incoming_command_response),
-        incoming_non_supported_command_(incoming_non_supported_command) {}
+  NonSupportedCommandResponse(CommandResponse incoming_command_response,
+                              uint8_t incoming_non_supported_command);
 
   // Returns nullptr if parse fails. |command_response| is a parameter which has
   // already been parsed from |buffer|.

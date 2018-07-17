@@ -1,6 +1,10 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 #include <cstring>
 
-#include "mux_command.h"
+#include "garnet/drivers/bluetooth/lib/rfcomm/mux_commands.h"
 
 namespace btlib {
 namespace rfcomm {
@@ -25,6 +29,9 @@ constexpr size_t kMSCWithBreakLength = 3;
 constexpr size_t kNSCLength = 1;
 constexpr size_t kFConLength = 0;
 constexpr size_t kFCoffLength = 0;
+constexpr size_t kRPNShortLength = 1;
+constexpr size_t kRPNLongLength = 8;
+constexpr size_t kRLSLength = 2;
 
 constexpr size_t kPNCreditBasedFlowHandshakeShift = 4;
 
@@ -45,6 +52,21 @@ constexpr size_t kMSCBreakValueShift = 4;
 
 constexpr size_t kNSCNotSupportedCommandShift = 2;
 constexpr size_t kNSCCRShift = 1;
+
+constexpr size_t kRPNDLCIShift = 2;
+constexpr uint8_t kRPNDataBitsMask = 0b11;
+constexpr size_t kRPNStopBitsShift = 2;
+constexpr uint8_t kRPNStopBitsMask = 1;
+constexpr size_t kRPNParityShift = 3;
+constexpr uint8_t kRPNParityMask = 1;
+constexpr size_t kRPNParityTypeShift = 4;
+constexpr uint8_t kRPNParityTypeMask = 0b11;
+
+constexpr size_t kRLSDLCIShift = 2;
+constexpr size_t kRLSErrorOccurredShift = 0;
+constexpr uint8_t kRLSErrorOccurredMask = 1 << kRLSErrorOccurredShift;
+constexpr size_t kRLSErrorShift = 1;
+constexpr uint8_t kRLSErrorMask = 0b111;
 
 constexpr uint8_t kPNDLCIMask = 0b00111111;
 constexpr uint8_t kPNPriorityMask = 0b00111111;
@@ -132,14 +154,18 @@ bool CommandLengthValid(MuxCommandType type, size_t length) {
     case MuxCommandType::kNonSupportedCommandResponse:
       return length == kNSCLength;
     case MuxCommandType::kRemoteLineStatusCommand:
+      return length == kRLSLength;
     case MuxCommandType::kRemotePortNegotiationCommand:
-      // TODO(gusss): change when RLS/RPN implemented
-      return false;
+      return length == kRPNShortLength || length == kRPNLongLength;
   }
   return false;
 }
 
 }  // namespace
+
+MuxCommand::MuxCommand(MuxCommandType command_type,
+                       CommandResponse command_response)
+    : command_type_(command_type), command_response_(command_response){};
 
 std::unique_ptr<MuxCommand> MuxCommand::Parse(
     const common::ByteBuffer& buffer) {
@@ -200,6 +226,13 @@ std::unique_ptr<MuxCommand> MuxCommand::Parse(
     case MuxCommandType::kNonSupportedCommandResponse:
       return NonSupportedCommandResponse::Parse(command_response, buffer);
 
+    case MuxCommandType::kRemotePortNegotiationCommand:
+      return RemotePortNegotiationCommand::Parse(command_response, length,
+                                                 buffer);
+
+    case MuxCommandType::kRemoteLineStatusCommand:
+      return RemoteLineStatusCommand::Parse(command_response, buffer);
+
     default:
       FXL_LOG(WARNING) << "Unrecognized multiplexer command type: "
                        << unsigned(type);
@@ -252,6 +285,9 @@ size_t TestCommand::written_size() const {
          + test_pattern_.size();                        // Payload
 }
 
+FlowControlOnCommand::FlowControlOnCommand(CommandResponse command_response)
+    : MuxCommand(MuxCommandType::kFlowControlOnCommand, command_response) {}
+
 std::unique_ptr<FlowControlOnCommand> FlowControlOnCommand::Parse(
     CommandResponse command_response) {
   return std::make_unique<FlowControlOnCommand>(command_response);
@@ -278,7 +314,19 @@ void FlowControlOffCommand::Write(common::MutableBufferView buffer) const {
   buffer[kLengthIndex] = kFlowcontrolOffLength;
 }
 
+FlowControlOffCommand::FlowControlOffCommand(CommandResponse command_response)
+    : MuxCommand(MuxCommandType::kFlowControlOffCommand, command_response) {}
+
 size_t FlowControlOffCommand::written_size() const { return 2ul + kFConLength; }
+
+ModemStatusCommand::ModemStatusCommand(CommandResponse command_response,
+                                       DLCI dlci,
+                                       ModemStatusCommandSignals signals,
+                                       BreakValue break_value)
+    : MuxCommand(MuxCommandType::kModemStatusCommand, command_response),
+      dlci_(dlci),
+      signals_(signals),
+      break_value_(break_value){};
 
 std::unique_ptr<ModemStatusCommand> ModemStatusCommand::Parse(
     CommandResponse command_response, size_t length,
@@ -323,9 +371,7 @@ void ModemStatusCommand::Write(common::MutableBufferView buffer) const {
               | signals_.ready_to_receive         << kMSCReadyToReceiveShift
               | signals_.incoming_call            << kMSCIncomingCallShift
               | signals_.data_valid               << kMSCDataValidShift;
-  // clang-format on
   if (has_break_signal()) {
-    // clang-format off
     buffer[4] = kEAMask
                 | has_break_signal()  << kMSCBreakSignalShift
                 | break_value_        << kMSCBreakValueShift;
@@ -337,6 +383,132 @@ size_t ModemStatusCommand::written_size() const {
   return 2ul +
          (has_break_signal() ? kMSCWithBreakLength : kMSCWithoutBreakLength);
 }
+
+RemotePortNegotiationCommand::RemotePortNegotiationCommand(
+    CommandResponse command_response, DLCI dlci)
+    : MuxCommand(MuxCommandType::kRemotePortNegotiationCommand,
+                 command_response),
+      short_RPN_command_(true),
+      dlci_(dlci),
+      params_(kDefaultRemotePortNegotiationParams),
+      mask_(kDefaultRemotePortNegotiationMaskBitfield) {}
+
+RemotePortNegotiationCommand::RemotePortNegotiationCommand(
+    CommandResponse command_response, DLCI dlci,
+    RemotePortNegotiationParams params, RemotePortNegotiationMaskBitfield mask)
+    : MuxCommand(MuxCommandType::kRemotePortNegotiationCommand,
+                 command_response),
+      short_RPN_command_(false),
+      dlci_(dlci),
+      params_(params),
+      mask_(mask) {}
+
+std::unique_ptr<RemotePortNegotiationCommand>
+RemotePortNegotiationCommand::Parse(CommandResponse command_response,
+                                    size_t length,
+                                    const common::ByteBuffer& buffer) {
+  DLCI dlci = buffer[2] >> kRPNDLCIShift;
+
+  if (length == kRPNShortLength) {
+    return std::make_unique<RemotePortNegotiationCommand>(command_response,
+                                                          dlci);
+  }
+
+  RemotePortNegotiationParams params;
+  RemotePortNegotiationMaskBitfield mask;
+
+  // TODO(gusss): again, this kind of casting is probably not a good idea.
+  params.baud = static_cast<Baud>(buffer[3]);
+  params.data_bits = static_cast<DataBits>(buffer[4] & kRPNDataBitsMask);
+  params.stop_bits =
+      static_cast<StopBits>(buffer[4] >> kRPNStopBitsShift & kRPNStopBitsMask);
+  params.parity = buffer[4] & kRPNParityMask << kRPNParityShift;
+  params.parity_type = static_cast<ParityType>(
+      buffer[4] >> kRPNParityTypeShift & kRPNParityTypeMask);
+  params.flow_control = buffer[5];
+  params.xon_character = buffer[6];
+  params.xoff_character = buffer[7];
+  mask = buffer[8] << 8 | buffer[9];
+
+  return std::make_unique<RemotePortNegotiationCommand>(
+      command_response, dlci, std::move(params), std::move(mask));
+}
+
+void RemotePortNegotiationCommand::Write(
+    common::MutableBufferView buffer) const {
+  FXL_CHECK(buffer.size() >= written_size());
+  buffer[kTypeIndex] = type_field_octet();
+  // EA bit = 1.
+  buffer[kLengthIndex] =
+      ((short_RPN_command_ ? kRPNShortLength : kRPNLongLength)
+       << kLengthShift) |
+      kEAMask;
+  // EA bit = 1, bit 2 = 1.
+  buffer[2] = kEAMask | (1 << 1) | (dlci_ << kRPNDLCIShift);
+
+  if (short_RPN_command_)
+    return;
+
+  // See GSM table 11.
+  buffer[3] = static_cast<uint8_t>(params_.baud);
+  buffer[4] = static_cast<uint8_t>(params_.data_bits);
+  buffer[4] |= (static_cast<bool>(params_.stop_bits) << kRPNStopBitsShift);
+  buffer[4] |= (params_.parity << kRPNParityShift);
+  buffer[4] |=
+      (static_cast<uint8_t>(params_.parity_type) << kRPNParityTypeShift);
+  buffer[5] = params_.flow_control;
+  buffer[6] = params_.xon_character;
+  buffer[7] = params_.xoff_character;
+  buffer[8] = static_cast<uint8_t>(mask_ >> 8);
+  buffer[9] = static_cast<uint8_t>(mask_);
+}
+
+size_t RemotePortNegotiationCommand::written_size() const {
+  return 2ul + (short_RPN_command_ ? kRPNShortLength : kRPNLongLength);
+}
+
+RemoteLineStatusCommand::RemoteLineStatusCommand(
+    CommandResponse command_response, DLCI dlci, bool error_occurred,
+    LineError error)
+    : MuxCommand(MuxCommandType::kRemoteLineStatusCommand, command_response),
+      dlci_(dlci),
+      error_occurred_(error_occurred),
+      error_(error) {}
+
+std::unique_ptr<RemoteLineStatusCommand> RemoteLineStatusCommand::Parse(
+    CommandResponse command_response, const common::ByteBuffer& buffer) {
+  DLCI dlci = buffer[2] >> kRLSDLCIShift;
+  bool error_occurred = buffer[3] & kRLSErrorOccurredMask;
+  // TODO(gusss)
+  LineError error =
+      static_cast<LineError>(buffer[3] >> kRLSErrorShift & kRLSErrorMask);
+
+  return std::make_unique<RemoteLineStatusCommand>(command_response, dlci,
+                                                   error_occurred, error);
+}
+
+void RemoteLineStatusCommand::Write(common::MutableBufferView buffer) const {
+  FXL_CHECK(buffer.size() >= written_size());
+  buffer[kTypeIndex] = type_field_octet();
+  // EA bit = 1.
+  buffer[kLengthIndex] = (kRLSLength << kLengthShift) | kEAMask;
+  // EA bit = 1, bit 2 = 1.
+  buffer[2] = kEAMask | (1 << 1) | (dlci_ << kRLSDLCIShift);
+  buffer[3] =
+      error_occurred_ | (static_cast<uint8_t>(error_) << kRLSErrorShift);
+}
+
+size_t RemoteLineStatusCommand::written_size() const {
+  return 2ul + kRLSLength;
+}
+
+NonSupportedCommandResponse::NonSupportedCommandResponse(
+    CommandResponse incoming_command_response,
+    uint8_t incoming_non_supported_command)
+    : MuxCommand(MuxCommandType::kNonSupportedCommandResponse,
+                 CommandResponse::kResponse),
+      incoming_command_response_(incoming_command_response),
+      incoming_non_supported_command_(incoming_non_supported_command) {}
 
 std::unique_ptr<NonSupportedCommandResponse> NonSupportedCommandResponse::Parse(
     CommandResponse command_response, const common::ByteBuffer& buffer) {
@@ -366,6 +538,11 @@ size_t NonSupportedCommandResponse::written_size() const {
   return 2ul + kNSCLength;
 }
 
+DLCParameterNegotiationCommand::DLCParameterNegotiationCommand(
+    CommandResponse command_response, ParameterNegotiationParams params)
+    : MuxCommand(MuxCommandType::kDLCParameterNegotiation, command_response),
+      params_(params) {}
+
 std::unique_ptr<DLCParameterNegotiationCommand>
 DLCParameterNegotiationCommand::Parse(CommandResponse command_response,
                                       const common::ByteBuffer& buffer) {
@@ -390,12 +567,12 @@ void DLCParameterNegotiationCommand::Write(
   buffer[kLengthIndex] = (kPNLength << kLengthShift) | kEAMask;
 
   buffer[2] = params_.dlci & kPNDLCIMask;
-  buffer[3] = (uint8_t)params_.credit_based_flow_handshake
+  buffer[3] = static_cast<uint8_t>(params_.credit_based_flow_handshake)
               << kPNCreditBasedFlowHandshakeShift;
   buffer[4] = params_.priority & kPNPriorityMask;
   buffer[5] = 0;
-  buffer[6] = (uint8_t)params_.maximum_frame_size;
-  buffer[7] = (uint8_t)(params_.maximum_frame_size >> 8);
+  buffer[6] = static_cast<uint8_t>(params_.maximum_frame_size);
+  buffer[7] = static_cast<uint8_t>(params_.maximum_frame_size >> 8);
   buffer[8] = 0;
   buffer[9] = params_.initial_credits & kPNInitialCreditsMask;
 }

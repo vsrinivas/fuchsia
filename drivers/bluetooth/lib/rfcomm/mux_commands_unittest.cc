@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/drivers/bluetooth/lib/rfcomm/mux_command.h"
+#include "garnet/drivers/bluetooth/lib/rfcomm/mux_commands.h"
 #include "gtest/gtest.h"
 
 namespace btlib {
@@ -156,6 +156,98 @@ TEST_F(RFCOMM_MuxCommandTest, ModemStatusCommand) {
   EXPECT_EQ(msc->signals().data_valid, signals.data_valid);
   EXPECT_TRUE(msc->has_break_signal());
   EXPECT_EQ(msc->break_value(), break_value);
+}
+
+TEST_F(RFCOMM_MuxCommandTest, RemotePortNegotiationCommand8Octets) {
+  FlowControlFlagsBitfield flow_control = FlowControlFlags::kXonXoffInputFlag |
+                                          FlowControlFlags::kRTRInputFlag |
+                                          FlowControlFlags::kRTCInputFlag;
+
+  RemotePortNegotiationParams params;
+  params.baud = Baud::k115200;
+  params.data_bits = DataBits::k7Bits;
+  params.stop_bits = StopBits::k1AndHalfBits;
+  params.parity = true;
+  params.parity_type = ParityType::kOdd;
+  params.flow_control = flow_control;
+  params.xon_character = 0x23;
+  params.xoff_character = 0xDA;
+
+  RemotePortNegotiationMaskBitfield mask;
+  mask = RemotePortNegotiationMask::kBitRate |
+         RemotePortNegotiationMask::kStopBits |
+         RemotePortNegotiationMask::kParityType |
+         RemotePortNegotiationMask::kXOFFCharacter |
+         RemotePortNegotiationMask::kXonXoffInput |
+         RemotePortNegotiationMask::kXonXoffOutput |
+         RemotePortNegotiationMask::kRTROutput |
+         RemotePortNegotiationMask::kRTCInput;
+
+  RemotePortNegotiationCommand command(CommandResponse::kCommand, 61, params,
+                                       mask);
+  EXPECT_EQ(command.written_size(), 10ul);
+
+  common::DynamicByteBuffer buffer(command.written_size());
+  command.Write(buffer.mutable_view());
+  EXPECT_EQ(buffer,
+            common::CreateStaticByteBuffer(0b10010011, 0b00010001, 0b11110111,
+                                           0b00000111, 0b00001101, 0b00010101,
+                                           0x23, 0xDA, 0b01010101, 0b00011011));
+
+  auto read_command = MuxCommand::Parse(buffer);
+  EXPECT_EQ(read_command->command_response(), CommandResponse::kCommand);
+  EXPECT_EQ(read_command->command_type(),
+            MuxCommandType::kRemotePortNegotiationCommand);
+  auto rpn_command = std::unique_ptr<RemotePortNegotiationCommand>(
+      static_cast<RemotePortNegotiationCommand*>(read_command.release()));
+  EXPECT_EQ(rpn_command->dlci(), 61);
+  EXPECT_EQ(rpn_command->mask(), mask);
+  EXPECT_EQ(rpn_command->params().baud, params.baud);
+  EXPECT_EQ(rpn_command->params().data_bits, params.data_bits);
+  EXPECT_EQ(rpn_command->params().stop_bits, params.stop_bits);
+  EXPECT_EQ(rpn_command->params().parity, params.parity);
+  EXPECT_EQ(rpn_command->params().parity_type, params.parity_type);
+  EXPECT_EQ(rpn_command->params().xon_character, params.xon_character);
+  EXPECT_EQ(rpn_command->params().xoff_character, params.xoff_character);
+  EXPECT_EQ(rpn_command->params().flow_control, flow_control);
+}
+TEST_F(RFCOMM_MuxCommandTest, RemotePortNegotiationCommand1Octet) {
+  RemotePortNegotiationCommand command(CommandResponse::kCommand, 61);
+  ASSERT_EQ(command.written_size(), 3ul);
+
+  common::DynamicByteBuffer buffer(command.written_size());
+  command.Write(buffer.mutable_view());
+  ASSERT_EQ(buffer,
+            common::CreateStaticByteBuffer(0b10010011, 0b00000011, 0b11110111));
+
+  auto read_command = MuxCommand::Parse(buffer);
+  EXPECT_EQ(read_command->command_response(), CommandResponse::kCommand);
+  ASSERT_EQ(read_command->command_type(),
+            MuxCommandType::kRemotePortNegotiationCommand);
+  auto rpn_command = std::unique_ptr<RemotePortNegotiationCommand>(
+      static_cast<RemotePortNegotiationCommand*>(read_command.release()));
+  EXPECT_EQ(rpn_command->dlci(), 61);
+}
+
+TEST_F(RFCOMM_MuxCommandTest, RemoteLineStatusCommand) {
+  RemoteLineStatusCommand command(CommandResponse::kCommand, 61, true,
+                                  LineError::kFramingError);
+  ASSERT_EQ(command.written_size(), 4ul);
+
+  common::DynamicByteBuffer buffer(command.written_size());
+  command.Write(buffer.mutable_view());
+  ASSERT_EQ(buffer, common::CreateStaticByteBuffer(0b01010011, 0b00000101,
+                                                   0b11110111, 0b00001001));
+
+  auto read_command = MuxCommand::Parse(buffer);
+  EXPECT_EQ(read_command->command_response(), CommandResponse::kCommand);
+  ASSERT_EQ(read_command->command_type(),
+            MuxCommandType::kRemoteLineStatusCommand);
+  auto rpn_command = std::unique_ptr<RemoteLineStatusCommand>(
+      static_cast<RemoteLineStatusCommand*>(read_command.release()));
+  EXPECT_EQ(rpn_command->dlci(), 61);
+  EXPECT_EQ(rpn_command->error_occurred(), true);
+  EXPECT_EQ(rpn_command->error(), LineError::kFramingError);
 }
 
 TEST_F(RFCOMM_MuxCommandTest, NonSupportedCommandResponse) {
