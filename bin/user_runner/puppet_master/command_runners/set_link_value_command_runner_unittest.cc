@@ -88,7 +88,7 @@ TEST_F(SetLinkValueCommandRunnerTest, Execute) {
   auto command = GetSetLinkValueCommand("link", "10");
   runner->Execute(story_id, std::move(command),
                   [&](fuchsia::modular::ExecuteResult result) {
-                    EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK,
+                    ASSERT_EQ(fuchsia::modular::ExecuteStatus::OK,
                               result.status);
                     done = true;
                   });
@@ -111,7 +111,7 @@ TEST_F(SetLinkValueCommandRunnerTest, Execute) {
   auto command2 = GetSetLinkValueCommand("link", "20");
   runner->Execute(story_id, std::move(command2),
                   [&](fuchsia::modular::ExecuteResult result) {
-                    EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK,
+                    ASSERT_EQ(fuchsia::modular::ExecuteStatus::OK,
                               result.status);
                     done = true;
                   });

@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_USER_RUNNER_PUPPET_MASTER_COMMAND_RUNNERS_SET_LINK_VALUE_COMMAND_RUNNER_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/async/cpp/operation.h>
 
 #include "peridot/bin/user_runner/puppet_master/command_runners/command_runner.h"
 #include "peridot/bin/user_runner/storage/story_storage.h"
@@ -22,15 +23,7 @@ class SetLinkValueCommandRunner : public CommandRunner {
       std::function<void(fuchsia::modular::ExecuteResult)> done) override;
 
  private:
-  // Returns a future that will update the link value at |link_path| with
-  // |value| using the given |story_storage|. |story_id| is the id of the story
-  // of the given |story_storage|.
-  // The returned |ExecuteResult| indicates whether or not the update was
-  // successful and if not, why it wasn't.
-  FuturePtr<fuchsia::modular::ExecuteResult> UpdateLinkValue(
-      std::unique_ptr<StoryStorage> story_storage,
-      const fidl::StringPtr& story_id, const fuchsia::modular::LinkPath& path,
-      std::string value);
+  OperationQueue operation_queue_;
 };
 
 }  // namespace modular
