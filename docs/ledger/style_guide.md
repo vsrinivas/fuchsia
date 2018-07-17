@@ -45,15 +45,21 @@ call them `on_<event>`.
 
 ### Usage of fxl::StringView vs std::string
 
-When unsure about which kind of string to use (i.e. when none of the foreign
-APIs used in your functionality expect null-terminated strings or std::strings),
-follow the following guidelines:
+This section discusses which string types to use for C++ API arguments.
 
-Use a `fxl::StringView` (const, non-ref) if the functionality just reads the
-string: `fxl::StringView` can handle any stream of byte without copies.
+Use a `fxl::StringView` (non-ref) if the functionality just reads the string:
+`fxl::StringView` can handle any stream of bytes without copies.
 
-Use a `std::string` (non-const, non-ref) if the functionality needs to take
-ownership of the string: it allows users of the functionality to `std::move`
-the string if they don't reuse it afterward.
+Use a `std::string` (non-ref) if:
+
+ - the functionality needs to take ownership of the string (it allows users of
+   the functionality to `std::move` the string if they don't reuse it
+   afterwards), or
+ - you need to pass the string over to a function that requires an
+   `std::string`.
+
+You might want to use a `const std:string&` (const ref), if you need to call a
+function that itself takes a `const std:string&` (and you cannot or don't want
+to change it to take an `fxl::StringView`).
 
 [Google C++ Style Guide]: https://github.com/google/googletes://github.com/google/googletest
