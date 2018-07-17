@@ -9,6 +9,7 @@ use fidl::encoding2::OutOfLine;
 use fidl_ble::{AdvertisingData, PeripheralProxy, RemoteDevice};
 use fidl_ble::{CentralEvent, CentralProxy, ScanFilter};
 use futures::future;
+use futures::future::ok as fok;
 use futures::future::Either::{Left, Right};
 use futures::prelude::*;
 use parking_lot::RwLock;
@@ -47,8 +48,7 @@ pub struct BluetoothFacade {
 
 impl BluetoothFacade {
     pub fn new(
-        central_proxy: Option<CentralProxy>,
-        peripheral_proxy: Option<PeripheralProxy>,
+        central_proxy: Option<CentralProxy>, peripheral_proxy: Option<PeripheralProxy>,
     ) -> Arc<RwLock<BluetoothFacade>> {
         Arc::new(RwLock::new(BluetoothFacade {
             central: central_proxy,
@@ -62,7 +62,7 @@ impl BluetoothFacade {
     pub fn set_peripheral_proxy(&mut self, peripheral_proxy: PeripheralProxy) {
         let new_periph = match self.peripheral.clone() {
             Some(p) => {
-                eprintln!(
+                fx_log_warn!(tag: "set_peripheral_proxy",
                     "Current peripheral: {:?}. New peripheral: {:?}",
                     p, peripheral_proxy
                 );
@@ -78,7 +78,7 @@ impl BluetoothFacade {
     pub fn set_central_proxy(&mut self, central_proxy: CentralProxy) {
         let new_central = match self.central.clone() {
             Some(c) => {
-                eprintln!("Current central: {:?}. New central: {:?}", c, central_proxy);
+                fx_log_warn!(tag: "set_central_proxy", "Current central: {:?}. New central: {:?}", c, central_proxy);
                 Some(c)
             }
             None => Some(central_proxy),
@@ -90,7 +90,7 @@ impl BluetoothFacade {
     // Update the devices dictionary with a discovered RemoteDevice
     pub fn update_devices(&mut self, id: String, device: RemoteDevice) {
         if self.devices.contains_key(&id) {
-            eprintln!("Already discovered: {:?}", id);
+            fx_log_warn!(tag: "update_devices", "Already discovered: {:?}", id);
         } else {
             self.devices.insert(id, device);
         }
@@ -101,7 +101,7 @@ impl BluetoothFacade {
         if self.adv_id.is_none() {
             self.adv_id = aid
         } else {
-            eprintln!("Current aid: {:?}. Attempted aid: {:?}", self.adv_id, aid);
+            fx_log_warn!(tag: "update_adv_id", "Current aid: {:?}. Attempted aid: {:?}", self.adv_id, aid);
         }
     }
 
@@ -135,6 +135,7 @@ impl BluetoothFacade {
         &self.peripheral
     }
 
+    /* Clean-up methods for BT Facade */
     // Close peripheral proxy
     pub fn cleanup_peripheral_proxy(&mut self) {
         self.peripheral = None;
@@ -159,18 +160,18 @@ impl BluetoothFacade {
 
     pub fn cleanup_peripheral(&mut self) {
         self.cleanup_peripheral_proxy();
+        self.cleanup_adv_id();
     }
 
     // Close both central and peripheral proxies
     pub fn cleanup_facade(&mut self) {
         self.cleanup_peripheral();
         self.cleanup_central();
-        self.cleanup_devices();
-        self.cleanup_adv_id();
     }
 
+    /* Print/Debug methods for BT Facade */
     pub fn print_facade(&self) {
-        eprintln!(
+        fx_log_info!(tag: "print_facade",
             "Facade: {:?}, {:?}, {:?}, {:?}",
             self.get_central_proxy(),
             self.get_peripheral_proxy(),
@@ -180,9 +181,7 @@ impl BluetoothFacade {
     }
 
     pub fn start_adv(
-        &self,
-        adv_data: Option<AdvertisingData>,
-        interval: Option<u32>,
+        &self, adv_data: Option<AdvertisingData>, interval: Option<u32>,
     ) -> impl Future<Item = Option<String>, Error = Error> {
         // Default interval (ms) to 1 second
         let intv: u32 = interval.unwrap_or(DEFAULT_BLE_ADV_INTERVAL_MS);
@@ -207,24 +206,27 @@ impl BluetoothFacade {
                     .map_err(|e| e.context("failed to initiate advertise.").into())
                     .and_then(|(status, aid)| match status.error {
                         None => {
-                            eprintln!("Started advertising id: {:?}", aid);
+                            fx_log_info!(tag: "start_adv", "Started advertising id: {:?}", aid);
                             Ok(aid)
                         }
                         Some(e) => {
                             let err = BTError::from(*e);
-                            eprintln!("Failed to start adveritising: {:?}", err);
+                            fx_log_err!(tag: "start_adv", "Failed to start adveritising: {:?}", err);
                             Err(err.into())
                         }
                     }),
             ),
-            None => Left(future::err(
-                BTError::new("No peripheral proxy created.").into(),
-            )),
+            None => {
+                fx_log_err!(tag: "start_adv", "No peripheral created.");
+                Left(future::err(
+                    BTError::new("No peripheral proxy created.").into(),
+                ))
+            }
         }
     }
 
     pub fn stop_adv(&self, aid: String) -> impl Future<Item = (), Error = Error> {
-        eprintln!("Stop_adv with aid: {:?}", aid);
+        fx_log_info!(tag: "stop_adv", "stop_adv with aid: {:?}", aid);
 
         match &self.peripheral {
             Some(p) => Right(
@@ -233,17 +235,17 @@ impl BluetoothFacade {
                     .and_then(|status| match status.error {
                         Some(e) => {
                             let err = BTError::from(*e);
-                            eprintln!("Failed to stop advertising: {:?}", err);
+                            fx_log_err!(tag: "stop_adv", "Failed to stop advertising: {:?}", err);
                             Err(err.into())
                         }
                         None => {
-                            eprintln!("No error in stop adv fut");
+                            fx_log_info!(tag: "stop_adv", "No error in stop adv fut");
                             Ok(())
                         }
                     }),
             ),
             None => {
-                eprintln!("No peripheral proxy created!");
+                fx_log_err!(tag: "stop_adv", "No peripheral proxy created!");
                 Left(future::err(
                     BTError::new("No peripheral proxy created.").into(),
                 ))
@@ -252,8 +254,7 @@ impl BluetoothFacade {
     }
 
     pub fn start_scan(
-        &self,
-        mut filter: Option<ScanFilter>,
+        &self, mut filter: Option<ScanFilter>,
     ) -> impl Future<Item = (), Error = Error> {
         match &self.central {
             Some(c) => Right(
@@ -283,7 +284,7 @@ pub fn listen_central_events(
         .for_each(move |evt| {
             match evt {
                 CentralEvent::OnScanStateChanged { scanning } => {
-                    eprintln!("Scan state changed: {:?}", scanning);
+                    fx_log_info!(tag: "listen_central_events", "Scan state changed: {:?}", scanning);
                 }
                 CentralEvent::OnDeviceDiscovered { device } => {
                     let id = device.identifier.clone();
@@ -292,15 +293,17 @@ pub fn listen_central_events(
                         None => None,
                     };
 
-                    eprintln!("Device discovered: id: {:?}, name: {:?}", id, name);
+                    fx_log_info!(tag: "listen_central_events", "Device discovered: id: {:?}, name: {:?}", id, name);
                     bt_facade.write().update_devices(id, device);
                 }
                 CentralEvent::OnPeripheralDisconnected { identifier } => {
-                    eprintln!("Peer disconnected: {:?}", identifier);
+                    fx_log_info!(tag: "listen_central_events", "Peer disconnected: {:?}", identifier);
                 }
             }
-            future::ok(())
+            fok(())
         })
         .map(|_| ())
-        .recover(|e| eprintln!("failed to subscribe to BLE Central events: {:?}", e))
+        .recover(
+            |e| fx_log_err!(tag: "listen_central_events", "failed to subscribe to BLE Central events: {:?}", e),
+        )
 }

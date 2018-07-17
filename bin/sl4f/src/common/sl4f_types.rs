@@ -6,14 +6,14 @@ use failure::Error;
 use serde_json::Value;
 use std::sync::mpsc;
 
-// Information about each client that has connected
+/// Information about each client that has connected
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ClientData {
     // client_id: String ID of client (ACTS test suite)
     pub client_id: String,
 }
 
-// Required fields for making a request
+/// Required fields for making a request
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CommandRequest {
     // method: name of method to be called
@@ -26,8 +26,7 @@ pub struct CommandRequest {
     pub params: Value,
 }
 
-// TODO(aniramakri): Add support for proper error handling over JSON RPC
-// Return packet after SL4F runs command
+/// Return packet after SL4F runs command
 #[derive(Serialize, Debug)]
 pub struct CommandResponse {
     // id: Integer id of command
@@ -64,10 +63,7 @@ pub struct AsyncRequest {
 
 impl AsyncRequest {
     pub fn new(
-        tx: mpsc::Sender<AsyncResponse>,
-        id: u32,
-        name: String,
-        params: Value,
+        tx: mpsc::Sender<AsyncResponse>, id: u32, name: String, params: Value,
     ) -> AsyncRequest {
         AsyncRequest {
             tx,

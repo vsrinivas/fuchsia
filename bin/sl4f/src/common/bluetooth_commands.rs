@@ -10,9 +10,10 @@ use common::constants::*;
 use failure::{Error, ResultExt};
 use fidl_ble::{AdvertisingData, PeripheralMarker, PeripheralProxy};
 use fidl_ble::{CentralMarker, CentralProxy, ScanFilter};
+use futures::future::ok as fok;
 use futures::future::Either::{Left, Right};
 use futures::prelude::*;
-use futures::{future, FutureExt};
+use futures::FutureExt;
 use parking_lot::RwLock;
 use serde_json::{to_value, Value};
 use std::sync::Arc;
@@ -87,8 +88,7 @@ fn ble_scan_to_fidl(scan_args_raw: Value) -> Result<(Option<ScanFilter>, Option<
 // stop_advertising command. For stop advertise, no arguments are sent, rather
 // uses current advertisement id (if it exists)
 fn ble_stop_advertise_to_fidl(
-    _stop_adv_args_raw: Value,
-    bt_facade: Arc<RwLock<BluetoothFacade>>,
+    _stop_adv_args_raw: Value, bt_facade: Arc<RwLock<BluetoothFacade>>,
 ) -> Result<String, Error> {
     let adv_id = bt_facade.read().get_adv_id().clone();
 
@@ -100,16 +100,18 @@ fn ble_stop_advertise_to_fidl(
 
 // Takes ACTS method command and executes corresponding FIDL method
 // Packages result into serde::Value
+// Nested Either types are for type coercion of the Future return values
+// Nested Left() handles error case.
+// This is not scalable for new methods that return a different type
+// TODO(aniramakri): Implement using many_futures! macro for scalable solution
 pub fn method_to_fidl(
-    method_name: String,
-    args: Value,
-    bt_facade: Arc<RwLock<BluetoothFacade>>,
-) -> impl Future<Item = Option<Value>, Error = Never> {
+    method_name: String, args: Value, bt_facade: Arc<RwLock<BluetoothFacade>>,
+) -> impl Future<Item = Result<Value, Error>, Error = Never> {
     match method_name.as_ref() {
         "BleAdvertise" => {
             let (ad, interval) = match ble_advertise_to_fidl(args) {
                 Ok((adv_data, intv)) => (adv_data, intv),
-                Err(_) => (None, None),
+                Err(e) => return Left(Left(fok(Err(e)))),
             };
 
             let adv_fut = start_adv_async(bt_facade.clone(), ad, interval);
@@ -118,7 +120,7 @@ pub fn method_to_fidl(
         "BleScan" => {
             let (filter, timeout) = match ble_scan_to_fidl(args) {
                 Ok((f, t)) => (f, t),
-                Err(_) => (None, None),
+                Err(e) => return Left(Left(fok(Err(e)))),
             };
 
             let scan_fut = start_scan_async(bt_facade.clone(), filter, timeout);
@@ -127,21 +129,19 @@ pub fn method_to_fidl(
         "BleStopAdvertise" => {
             let advertisement_id = match ble_stop_advertise_to_fidl(args, bt_facade.clone()) {
                 Ok(aid) => aid,
-                Err(_) => "".to_string(),
+                Err(e) => return Left(Left(fok(Err(e)))),
             };
 
             let stop_fut = stop_adv_async(bt_facade.clone(), advertisement_id.clone());
             Right(Left(stop_fut))
         }
-        _ => Left(Left(future::ok(None))),
+        _ => Left(Left(fok(Err(BTError::new("Invalid FIDL method").into())))),
     }
 }
 
 fn start_adv_async(
-    bt_facade: Arc<RwLock<BluetoothFacade>>,
-    ad: Option<AdvertisingData>,
-    interval: Option<u32>,
-) -> impl Future<Item = Option<Value>, Error = Never> {
+    bt_facade: Arc<RwLock<BluetoothFacade>>, ad: Option<AdvertisingData>, interval: Option<u32>,
+) -> impl Future<Item = Result<Value, Error>, Error = Never> {
     // TODO(aniramakri): Change structure of proxy creation such that
     // BluetoothFacade deals with opening proxies. This allows for all ownership
     // (set/get) to be done on the BluetoothFacade level
@@ -161,32 +161,32 @@ fn start_adv_async(
     });
 
     adv_fut.and_then(|adv_res| match to_value(adv_res) {
-        Ok(val) => Ok(Some(val)),
-        Err(_) => Ok(None),
+        Ok(val) => fok(Ok(val)),
+        Err(e) => fok(Err(e.into())),
     })
 }
 
 fn stop_adv_async(
-    bt_facade: Arc<RwLock<BluetoothFacade>>,
-    advertisement_id: String,
-) -> impl Future<Item = Option<Value>, Error = Never> {
+    bt_facade: Arc<RwLock<BluetoothFacade>>, advertisement_id: String,
+) -> impl Future<Item = Result<Value, Error>, Error = Never> {
     let stop_adv_fut = bt_facade.write().stop_adv(advertisement_id);
 
-    stop_adv_fut.then(|res| match res {
-        Ok(r) => match to_value(r) {
-            Ok(val) => Ok(Some(val)),
-            Err(_) => Ok(None),
-        },
-        Err(_) => Ok(None),
+    stop_adv_fut.then(move |res| {
+        bt_facade.write().cleanup_peripheral();
+        match res {
+            Ok(r) => match to_value(r) {
+                Ok(val) => fok(Ok(val)),
+                Err(e) => fok(Err(e.into())),
+            },
+            Err(e) => fok(Err(e.into())),
+        }
     })
 }
 
 // Synchronous wrapper for scanning
 fn start_scan_async(
-    bt_facade: Arc<RwLock<BluetoothFacade>>,
-    filter: Option<ScanFilter>,
-    timeout: Option<u64>,
-) -> impl Future<Item = Option<Value>, Error = Never> {
+    bt_facade: Arc<RwLock<BluetoothFacade>>, filter: Option<ScanFilter>, timeout: Option<u64>,
+) -> impl Future<Item = Result<Value, Error>, Error = Never> {
     // TODO(aniramakri): Change structure of proxy creation such that
     // BluetoothFacade deals with opening proxies. This allows for all ownership
     // (set/get) to be done on the BluetoothFacade level
@@ -194,8 +194,6 @@ fn start_scan_async(
         .context("Failed to connect to BLE Central Service")
         .unwrap();
     bt_facade.write().set_central_proxy(central_svc);
-
-    eprintln!("start_scan_async");
 
     // Create scanning future and listen on central events for scan
     let scan_fut = bt_facade.write().start_scan(filter);
@@ -205,15 +203,18 @@ fn start_scan_async(
 
     // Wrap the future in the timeout window. Scan for timeout_ms duration
     let timeout_ms = timeout.unwrap_or(DEFAULT_SCAN_TIMEOUT_MS).millis();
-
-    let fut = fut.on_timeout(timeout_ms.after_now(), || Ok(()))
+    let fut = fut
+        .on_timeout(timeout_ms.after_now(), || Ok(()))
         .expect("failed to set timeout");
 
     fut.then(move |_| {
         let devices = bt_facade.read().get_devices();
+
+        // Cleanup the central state after reading devices discovered
+        bt_facade.write().cleanup_central();
         match to_value(devices) {
-            Ok(dev) => Ok(Some(dev)),
-            Err(_) => Ok(None),
+            Ok(dev) => fok(Ok(dev)),
+            Err(e) => fok(Err(e.into())),
         }
     })
 }

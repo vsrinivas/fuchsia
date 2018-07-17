@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use async;
-use bt::error::Error as BTError;
 use failure::ResultExt;
 use futures::channel::mpsc;
 use futures::{FutureExt, StreamExt};
@@ -15,8 +14,7 @@ use common::bluetooth_facade::BluetoothFacade;
 use common::sl4f_types::{AsyncRequest, AsyncResponse};
 
 pub fn run_fidl_loop(
-    bt_facade: Arc<RwLock<BluetoothFacade>>,
-    receiver: mpsc::UnboundedReceiver<AsyncRequest>,
+    bt_facade: Arc<RwLock<BluetoothFacade>>, receiver: mpsc::UnboundedReceiver<AsyncRequest>,
 ) {
     let mut executor = async::Executor::new()
         .context("Error creating event loop")
@@ -30,17 +28,14 @@ pub fn run_fidl_loop(
             params,
         } => {
             let bt_facade = bt_facade.clone();
-            eprintln!(
+            fx_log_info!(tag: "sl4f_asyc_execute",
                 "Received sync request: {:?}, {:?}, {:?}, {:?}",
                 tx, id, name, params
             );
 
             let fidl_fut = method_to_fidl(name.clone(), params.clone(), bt_facade.clone());
             fidl_fut.and_then(move |resp| {
-                let response = match resp {
-                    Some(r) => AsyncResponse::new(Ok(r)),
-                    None => AsyncResponse::new(Err(BTError::new("FIDL Command Failed").into())),
-                };
+                let response = AsyncResponse::new(resp);
 
                 // Ignore any tx sending errors, other requests can still be outstanding
                 let _ = tx.send(response);
