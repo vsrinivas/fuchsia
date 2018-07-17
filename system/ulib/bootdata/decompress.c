@@ -94,7 +94,9 @@ static zx_status_t decompress_bootfs_vmo(zx_handle_t vmar, const uint8_t* data,
     }
     data += sizeof(uint32_t);
 
-    check_lz4_frame((const lz4_frame_desc*)data, _outsize, err);
+    zx_status_t status = check_lz4_frame((const lz4_frame_desc*)data, _outsize, err);
+    if (status < 0)
+        return status;
     data += sizeof(lz4_frame_desc);
 
     size_t outsize = (_outsize + 4095) & ~4095;
@@ -104,7 +106,7 @@ static zx_status_t decompress_bootfs_vmo(zx_handle_t vmar, const uint8_t* data,
         return ZX_ERR_NO_MEMORY;
     }
     zx_handle_t dst_vmo;
-    zx_status_t status = zx_vmo_create((uint64_t)outsize, 0, &dst_vmo);
+    status = zx_vmo_create((uint64_t)outsize, 0, &dst_vmo);
     if (status < 0) {
         *err = "zx_vmo_create failed for decompressing bootfs";
         return status;
