@@ -35,6 +35,7 @@
 #include <platform.h>
 #include <platform/timer.h>
 #include <trace.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 #define LOCAL_TRACE 0
@@ -61,13 +62,10 @@ static void update_platform_timer(uint cpu, zx_time_t new_deadline) {
 }
 
 static void insert_timer_in_queue(uint cpu, timer_t* timer,
-                                  uint64_t early_slack, uint64_t late_slack) {
+                                  zx_time_t earliest_deadline, zx_time_t latest_deadline) {
 
     DEBUG_ASSERT(arch_ints_disabled());
     LTRACEF("timer %p, cpu %u, scheduled %" PRIu64 "\n", timer, cpu, timer->scheduled_time);
-
-    zx_time_t earliest_deadline = timer->scheduled_time - early_slack;
-    zx_time_t latest_deadline = timer->scheduled_time + late_slack;
 
     // For inserting the timer we consider several cases. In general we
     // want to coalesce with the current timer unless we can prove that
@@ -143,8 +141,10 @@ static void insert_timer_in_queue(uint cpu, timer_t* timer,
                 //
                 //  --------------(-e---t---n-)-----------------------> time
                 //
-                zx_duration_t delta_entry = timer->scheduled_time - entry->scheduled_time;
-                zx_duration_t delta_next = next->scheduled_time - timer->scheduled_time;
+                zx_duration_t delta_entry =
+                    zx_time_sub_time(timer->scheduled_time, entry->scheduled_time);
+                zx_duration_t delta_next =
+                    zx_time_sub_time(next->scheduled_time, timer->scheduled_time);
                 if (delta_next < delta_entry) {
                     // New timer is closer to the next timer, handle it in the
                     // next iteration.
@@ -175,7 +175,7 @@ static void insert_timer_in_queue(uint cpu, timer_t* timer,
 }
 
 void timer_set(timer_t* timer, zx_time_t deadline,
-               enum slack_mode mode, uint64_t slack,
+               enum slack_mode mode, zx_duration_t slack,
                timer_callback callback, void* arg) {
     LTRACEF("timer %p deadline %" PRIu64 " slack %" PRIu64 " callback %p arg %p\n",
             timer, deadline, slack, callback, arg);
@@ -187,25 +187,25 @@ void timer_set(timer_t* timer, zx_time_t deadline,
         panic("timer %p already in list\n", timer);
     }
 
-    zx_duration_t late_slack;
-    zx_duration_t early_slack;
+    zx_time_t latest_deadline;
+    zx_time_t earliest_deadline;
 
     if (slack == 0u) {
-        late_slack = 0u;
-        early_slack = 0u;
+        latest_deadline = deadline;
+        earliest_deadline = deadline;
     } else {
         switch (mode) {
         case TIMER_SLACK_CENTER:
-            late_slack = ((deadline + slack) < deadline) ? (UINT64_MAX - deadline) : slack;
-            early_slack = ((deadline - slack) > deadline) ? deadline : slack;
+            latest_deadline = zx_time_add_duration(deadline, slack);
+            earliest_deadline = zx_time_sub_duration(deadline, slack);
             break;
         case TIMER_SLACK_LATE:
-            late_slack = ((deadline + slack) < deadline) ? (UINT64_MAX - deadline) : slack;
-            early_slack = 0u;
+            latest_deadline = zx_time_add_duration(deadline, slack);
+            earliest_deadline = deadline;
             break;
         case TIMER_SLACK_EARLY:
-            early_slack = ((deadline - slack) > deadline) ? deadline : slack;
-            late_slack = 0u;
+            earliest_deadline = zx_time_sub_duration(deadline, slack);
+            latest_deadline = deadline;
             break;
         default:
             panic("invalid timer mode\n");
@@ -235,7 +235,7 @@ void timer_set(timer_t* timer, zx_time_t deadline,
 
     LTRACEF("scheduled time %" PRIu64 "\n", timer->scheduled_time);
 
-    insert_timer_in_queue(cpu, timer, early_slack, late_slack);
+    insert_timer_in_queue(cpu, timer, earliest_deadline, latest_deadline);
 
     if (list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node) == timer) {
         // we just modified the head of the timer queue
@@ -460,7 +460,7 @@ void timer_transition_off_cpu(uint old_cpu) {
         // We lost the original asymmetric slack information so when we combine them
         // with the other timer queue they are not coalesced again.
         // TODO(cpu): figure how important this case is.
-        insert_timer_in_queue(cpu, entry, 0u, 0u);
+        insert_timer_in_queue(cpu, entry, entry->scheduled_time, entry->scheduled_time);
     }
 
     timer_t* new_head = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
@@ -515,8 +515,8 @@ static void dump_timer_queues(char* buf, size_t len) {
             timer_t* t;
             zx_time_t last = now;
             list_for_every_entry (&percpu[i].timer_queue, t, timer_t, node) {
-                zx_duration_t delta_now = (t->scheduled_time > now) ? (t->scheduled_time - now) : 0;
-                zx_duration_t delta_last = (t->scheduled_time > last) ? (t->scheduled_time - last) : 0;
+                zx_duration_t delta_now = zx_time_sub_time(t->scheduled_time, now);
+                zx_duration_t delta_last = zx_time_sub_time(t->scheduled_time, last);
                 ptr += snprintf(buf + ptr, len - ptr,
                                 "\ttime %" PRIu64 " delta_now %" PRIu64 " delta_last %" PRIu64 " func %p arg %p\n",
                                 t->scheduled_time, delta_now, delta_last, t->callback, t->arg);

@@ -88,7 +88,7 @@ void timer_init(timer_t*);
 // - TIMER_SLACK_LATE: |dealine| to |deadline + slack|
 // - TIMER_SLACK_EARLY: |deadline - slack| to |deadline|
 void timer_set(timer_t* timer, zx_time_t deadline,
-               enum slack_mode mode, uint64_t slack, timer_callback callback, void* arg);
+               enum slack_mode mode, zx_duration_t slack, timer_callback callback, void* arg);
 
 //
 // Cancel a pending timer
