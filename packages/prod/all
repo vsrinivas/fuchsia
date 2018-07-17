@@ -8,6 +8,7 @@
         "garnet/packages/prod/boringssl",
         "garnet/packages/prod/broadcom",
         "garnet/packages/prod/build_info",
+        "garnet/packages/prod/camera_drivers",
         "garnet/packages/prod/chrealm",
         "garnet/packages/prod/cmdutils",
         "garnet/packages/prod/cobalt_client",

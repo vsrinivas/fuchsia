@@ -1,0 +1,39 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("lib") {
+  sources = [
+    "camera_stream_impl.cc",
+    "camera_stream_impl.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.camera.driver",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+  ]
+}
+
+executable("bin") {
+  output_name = "camera_driver_server_cpp"
+
+  sources = [
+    "camera_driver_server.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+package("camera_driver_server_cpp") {
+  deps = [
+    ":bin",
+  ]
+  binary = "camera_driver_server_cpp"
+}
