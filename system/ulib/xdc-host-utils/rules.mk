@@ -4,24 +4,16 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-MODULE := $(LOCAL_DIR).server
+# Host library.
 
-MODULE_TYPE := hostapp
+MODULE := $(LOCAL_DIR).hostlib
 
-MODULE_SRCS += \
-    $(LOCAL_DIR)/xdc-server.cpp \
+MODULE_TYPE := hostlib
 
 MODULE_COMPILEFLAGS := \
-    -Werror-implicit-function-declaration \
-    -Wstrict-prototypes -Wwrite-strings \
     -Isystem/ulib/fbl/include \
-    -Isystem/ulib/xdc-host-utils/include \
 
 MODULE_HOST_LIBS := \
     system/ulib/fbl.hostlib \
-
-MODULE_NAME := xdc-server
-
-MODULE_PACKAGE := bin
 
 include make/module.mk

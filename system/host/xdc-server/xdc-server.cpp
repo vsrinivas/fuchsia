@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <xdc-host-utils/conn.h>
 #include <zircon/device/debug.h>
 
 #include <errno.h>
@@ -19,13 +20,7 @@
 namespace xdc {
 
 static constexpr uint32_t MAX_PENDING_CONN_BACKLOG = 128;
-// The UNIX domain socket address for the host xdc server.
-static const char* XDC_SOCKET_PATH = "/tmp/xdc";
 static const char* XDC_LOCK_PATH   = "/tmp/xdc.lock";
-
-//  Messages from / to clients registering a host stream id.
-using RegisterStreamRequest  = uint32_t;
-using RegisterStreamResponse = bool;
 
 void Client::SetStreamId(uint32_t stream_id) {
     registered_ = true;
