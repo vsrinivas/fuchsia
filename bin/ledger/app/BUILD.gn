@@ -102,6 +102,7 @@ source_set("lib") {
     "//peridot/bin/ledger/fidl/include",
     "//peridot/bin/ledger/fidl_helpers",
     "//peridot/bin/ledger/filesystem",
+    "//peridot/bin/ledger/lock",
     "//peridot/bin/ledger/p2p_provider/impl",
     "//peridot/bin/ledger/p2p_sync/impl",
     "//peridot/bin/ledger/p2p_sync/public",

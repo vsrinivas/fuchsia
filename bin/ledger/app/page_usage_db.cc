@@ -8,6 +8,7 @@
 
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/app/constants.h"
+#include "peridot/bin/ledger/lock/lock.h"
 #include "peridot/bin/ledger/storage/impl/number_serialization.h"
 #include "peridot/bin/ledger/storage/public/iterator.h"
 #include "peridot/lib/convert/convert.h"
@@ -92,7 +93,8 @@ class PageInfoIterator : public storage::Iterator<const PageUsageDb::PageInfo> {
 };
 }  // namespace
 
-PageUsageDb::PageUsageDb(async_dispatcher_t* dispatcher, ledger::DetachedPath db_path)
+PageUsageDb::PageUsageDb(async_dispatcher_t* dispatcher,
+                         ledger::DetachedPath db_path)
     : db_(dispatcher, std::move(db_path)) {}
 
 PageUsageDb::~PageUsageDb() {}
@@ -170,6 +172,12 @@ Status PageUsageDb::GetPages(
 Status PageUsageDb::Put(coroutine::CoroutineHandler* handler,
                         fxl::StringView key, fxl::StringView value) {
   std::unique_ptr<storage::Db::Batch> batch;
+  std::unique_ptr<lock::Lock> lock;
+  // Used for serializing Put and Delete operations.
+  if (lock::AcquireLock(handler, &serializer_, &lock) ==
+      coroutine::ContinuationStatus::INTERRUPTED) {
+    return Status::INTERNAL_ERROR;
+  }
   storage::Status status = db_.StartBatch(handler, &batch);
   if (status != storage::Status::OK) {
     return PageUtils::ConvertStatus(status);
@@ -184,6 +192,12 @@ Status PageUsageDb::Put(coroutine::CoroutineHandler* handler,
 Status PageUsageDb::Delete(coroutine::CoroutineHandler* handler,
                            fxl::StringView key) {
   std::unique_ptr<storage::Db::Batch> batch;
+  // Used for serializing Put and Delete operations.
+  std::unique_ptr<lock::Lock> lock;
+  if (lock::AcquireLock(handler, &serializer_, &lock) ==
+      coroutine::ContinuationStatus::INTERRUPTED) {
+    return Status::INTERNAL_ERROR;
+  }
   storage::Status status = db_.StartBatch(handler, &batch);
   if (status != storage::Status::OK) {
     return PageUtils::ConvertStatus(status);

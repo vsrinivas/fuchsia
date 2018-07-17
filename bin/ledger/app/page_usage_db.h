@@ -5,9 +5,11 @@
 #ifndef PERIDOT_BIN_LEDGER_APP_PAGE_USAGE_DB_H_
 #define PERIDOT_BIN_LEDGER_APP_PAGE_USAGE_DB_H_
 
-#include <zx/time.h>
 #include <functional>
 #include <memory>
+
+#include <lib/callback/operation_serializer.h>
+#include <zx/time.h>
 
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/app/page_utils.h"
@@ -80,6 +82,12 @@ class PageUsageDb {
   Status Delete(coroutine::CoroutineHandler* handler, fxl::StringView key);
 
   storage::LevelDb db_;
+
+  // A serializer used for Put and Delete. Both these operations need to be
+  // serialized to guarantee that consecutive calls to update the contents of a
+  // single page (e.g. a page is opened and then closed) are written in |db_| in
+  // the right order, i.e. the order in which they were called.
+  callback::OperationSerializer serializer_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageUsageDb);
 };
