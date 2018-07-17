@@ -54,8 +54,9 @@ class System {
     kGfx = 0,
     kViews = 1,
     kSketchy = 2,
-    kDummySystem = 3,
-    kMaxSystems = 4,
+    kVectorial = 3,
+    kDummySystem = 4,
+    kMaxSystems = 5,
     kInvalid = kMaxSystems,
   };
 
@@ -115,6 +116,8 @@ inline System::TypeId SystemTypeForCmd(
       return System::TypeId::kGfx;
     case fuchsia::ui::scenic::Command::Tag::kViews:
       return System::TypeId::kViews;
+    case fuchsia::ui::scenic::Command::Tag::kVectorial:
+      return System::TypeId::kVectorial;
     default:
       return System::TypeId::kInvalid;
   }

@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.ui.scenic;
+library fuchsia.ui.vectorial;
 
 union Command {
-  fuchsia.ui.gfx.Command gfx;
-  fuchsia.ui.vectorial.Command vectorial;
-  fuchsia.ui.views.Command views;
+  bool placeHolder;
 };
