@@ -25,31 +25,20 @@ The namespace given to a process strongly influences how much of the system the
 process can influence. Therefore, configuring the sandbox in which a process
 runs amounts to configuring the process's namespace.
 
-## Archives and namespaces
+## Packages and namespaces
 
 In our current implementation, a process runs in a sandbox if its binary is
-contained in an archive (i.e., a [FAR](../glossary.md#FAR)). As the package manager
-evolves, these details are likely to change.
+contained in a package. As the package manager evolves, these details are
+likely to change.
 
-An component run from an archive is given access to two namespaces by default:
+An component run from a package is given access to two namespaces by default:
 
  * `/svc`, which is a bundle of services from the environment in which the
    component runs.
- * `/pkg`, which is a read-only view of the archive containing the component.
+ * `/pkg`, which is a read-only view of the package containing the component.
 
 A typical component will interact with a number of services from `/svc` in
 order to play some useful role in the system.
-
-The `far` command-line tool can be used to inspect packages installed on the
-system. For example, `far list --archive=/system/pkgs/root_presenter` will list
-the contents of the `root_presenter` archive:
-
-```
-$ far list --archive=/system/pkgs/root_presenter
-bin/app
-data/cursor32.png
-meta/sandbox
-```
 
 To access these resources at runtime, a process can use the `/pkg` namespace.
 For example, the `root_presenter` can access `cursor32.png` using the absolute
@@ -72,13 +61,11 @@ direct access to the input driver:
 In the current implementation, the [AppMgr](../glossary.md#AppMgr) grants all such
 requests, but that is likely to change as the system evolves.
 
-## Building an archive
+## Building a package
 
 To build a package, use the `package()` macro in `gn` defined in
 [`//build/package.gni`](https://fuchsia.googlesource.com/build/+/master/package.gni).
-Specifically, to create a Fuchsia Archive (FAR) for your package (which will
-trigger sandboxing), set the `archive` flag to `true`. See the documentation for
-the `package()` macro for details about including resources
+See the documentation for the `package()` macro for details about including resources.
 
 For examples, see [https://fuchsia.googlesource.com/garnet/+/master/packages/prod/fortune]
 and [https://fuchsia.googlesource.com/garnet/+/master/bin/fortune/BUILD.gn].
