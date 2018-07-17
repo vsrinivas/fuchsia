@@ -40,7 +40,8 @@ def main():
 $test_runner \\
   --packages=$dot_packages \\
   --shell=$flutter_shell \\
-  --test-directory=$source_dir
+  --test-directory=$source_dir \\
+  "$$@"
 ''')
   with open(test_file, 'w') as file:
       file.write(script_template.substitute(args.__dict__))
