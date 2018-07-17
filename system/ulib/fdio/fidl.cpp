@@ -779,6 +779,7 @@ zx_status_t fidl_seek(zxrio_t* rio, off_t offset, int whence, off_t* out) {
         return response->s;
     }
 
+    *out = response->offset;
     return ZX_OK;
 }
 

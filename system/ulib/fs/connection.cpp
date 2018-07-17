@@ -522,7 +522,8 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
             return r;
         }
         size_t n;
-        switch (whence) { case SEEK_SET:
+        switch (whence) {
+        case SEEK_SET:
             if (offset < 0) {
                 return ZX_ERR_INVALID_ARGS;
             }
