@@ -75,3 +75,14 @@ discussion.
 ## How to handle third-party code
 
 See the [guidelines](README.fuchsia.md) on writing README.fuchsia files.
+
+## Troubleshooting
+
+### Authentication errors
+
+If you see an error when you check out the code warning you about `Invalid
+authentication credentials`, you likely have a cookie in your
+`$HOME/.gitcookies` file that applies to repositories that jiri tries to check
+out anonymously (likely in the domain `.googlesource.com`).  You can follow the
+onscreen directions to get passwords for the specific repositories, or you can
+delete the offending cookie from your `.gitcookies` file.
