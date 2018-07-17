@@ -8,15 +8,11 @@
 
 #include <zircon/types.h>
 
-extern zx_status_t ralink_init(void** out_ctx);
 extern zx_status_t ralink_bind(void* ctx, zx_device_t* device);
-extern void ralink_release(void* ctx);
 
 static zx_driver_ops_t ralink_driver_ops = {
     .version = DRIVER_OPS_VERSION,
-    .init = ralink_init,
     .bind = ralink_bind,
-    .release = ralink_release,
 };
 
 // clang-format off

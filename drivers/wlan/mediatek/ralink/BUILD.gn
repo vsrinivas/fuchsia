@@ -14,13 +14,11 @@ driver_module("ralink_driver") {
     "device.cpp",
     "device.h",
     "driver.cpp",
-    "driver.h",
     "ralink.h",
     "register.h",
   ]
 
   deps = [
-    "//garnet/drivers/wlan/lib",
     "//garnet/lib/wlan/common",
     "//garnet/lib/wlan/fidl",
     "//garnet/lib/wlan/mlme",

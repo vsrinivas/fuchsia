@@ -4,7 +4,6 @@
 
 #include "device.h"
 
-#include "driver.h"
 #include "ralink.h"
 
 #include <ddk/protocol/usb.h>
@@ -17,11 +16,11 @@
 #include <wlan/common/logging.h>
 #include <wlan/common/mac_frame.h>
 #include <wlan/mlme/debug.h>
-#include <wlan/protocol/ioctl.h>
 #include <wlan/protocol/mac.h>
-#include <wlan/protocol/phy.h>
+#include <wlan/protocol/phy-impl.h>
 #include <zircon/assert.h>
 #include <zircon/hw/usb.h>
+#include <zircon/status.h>
 
 #include <endian.h>
 #include <inttypes.h>
@@ -82,14 +81,10 @@ namespace ralink {
 namespace wlan_device = ::fuchsia::wlan::device;
 
 #define DEV(c) static_cast<Device*>(c)
-static zx_protocol_device_t wlanphy_device_ops = {
+static zx_protocol_device_t wlanphy_impl_device_ops = {
     .version = DEVICE_OPS_VERSION,
-    .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
-    .release = [](void* ctx) { DEV(ctx)->Release(); },
-    .ioctl = [](void* ctx, uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                size_t out_len, size_t* out_actual) -> zx_status_t {
-        return DEV(ctx)->Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
-    },
+    .unbind = [](void* ctx) { DEV(ctx)->PhyUnbind(); },
+    .release = [](void* ctx) { DEV(ctx)->PhyRelease(); },
 };
 
 static zx_protocol_device_t wlanmac_device_ops = {
@@ -98,8 +93,16 @@ static zx_protocol_device_t wlanmac_device_ops = {
     .release = [](void* ctx) { DEV(ctx)->MacRelease(); },
 };
 
-static wlanphy_protocol_ops_t wlanphy_ops = {
-    .reserved = 0,
+static wlanphy_impl_protocol_ops_t wlanphy_impl_ops = {
+    .query = [](void* ctx, wlanphy_info_t* info) -> zx_status_t {
+        return DEV(ctx)->PhyQuery(info);
+    },
+    .create_iface = [](void* ctx, uint16_t mac_role, uint16_t* id) -> zx_status_t {
+        return DEV(ctx)->CreateIface(mac_role, id);
+    },
+    .destroy_iface = [](void* ctx, uint16_t id) -> zx_status_t {
+        return DEV(ctx)->DestroyIface(id);
+    }
 };
 
 static wlanmac_protocol_ops_t wlanmac_ops = {
@@ -138,8 +141,7 @@ Device::Device(zx_device_t* device, usb_protocol_t usb, uint8_t bulk_in,
     : parent_(device),
       usb_(usb),
       rx_endpt_(bulk_in),
-      tx_endpts_(std::move(bulk_out)),
-      dispatcher_(ralink_async_t()) {
+      tx_endpts_(std::move(bulk_out)) {
     debugf("Device dev=%p bulk_in=%u\n", parent_, rx_endpt_);
 }
 
@@ -3306,50 +3308,46 @@ void Device::HandleTxComplete(usb_request_t* request) {
     free_write_reqs_.push_back(request);
 }
 
-void Device::Unbind() {
+void Device::PhyUnbind() {
     debugfn();
-
-    StopInterruptPolling();
 
     {
         std::lock_guard<std::mutex> guard(lock_);
-        dead_ = true;
+        phy_state_ = PHY_DESTROYING;
     }
 
-    // Stop accepting new FIDL requests. Once the dispatcher is shut down,
-    // remove the device.
-    dispatcher_.InitiateShutdown([this] { device_remove(zxdev_); });
+    StopInterruptPolling();
+    device_remove(zxdev_);
 }
 
-void Device::Release() {
+void Device::PhyRelease() {
     debugfn();
     delete this;
 }
 
-zx_status_t Device::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                          size_t out_len, size_t* out_actual) {
-    debugfn();
-    switch (op) {
-    case IOCTL_WLANPHY_CONNECT:
-        return Connect(in_buf, in_len);
-    default:
-        errorf("ioctl unknown: %0x\n", op);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-}
-
 void Device::MacUnbind() {
     debugfn();
-    device_remove(wlanmac_dev_);
+    zx_device_t* dev;
+    {
+        std::lock_guard<std::mutex> guard(lock_);
+        if (iface_state_ == IFC_DESTROYING) {
+            return;
+        }
+        iface_state_ = IFC_DESTROYING;
+        dev = wlanmac_dev_;
+    }
+    device_remove(dev);
 }
 
 void Device::MacRelease() {
     debugfn();
-    // Do not delete this right now, as the wlanmac device shares a context with the wlanphy
-    // device. When the wlanphy is released, then the memory will be freed. We do forget that
+    // Do not delete this right now, as the wlanmac device shares a context with the wlanphy-impl
+    // device. When the wlanphy-impl is released, then the memory will be freed. We do forget that
     // this device existed though.
     std::lock_guard<std::mutex> guard(lock_);
     wlanmac_dev_ = nullptr;
+    iface_role_ = 0;
+    iface_state_ = IFC_NONE;
     // Bump the iface id in case the phy isn't being released and we want to create another
     // iface.
     iface_id_++;
@@ -3359,11 +3357,11 @@ zx_status_t Device::AddPhyDevice() {
     debugfn();
     device_add_args_t args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = "ralink";
+    args.name = "ralink-wlanphy";
     args.ctx = this;
-    args.ops = &wlanphy_device_ops;
-    args.proto_id = ZX_PROTOCOL_WLANPHY;
-    args.proto_ops = &wlanphy_ops;
+    args.ops = &wlanphy_impl_device_ops;
+    args.proto_id = ZX_PROTOCOL_WLANPHY_IMPL;
+    args.proto_ops = &wlanphy_impl_ops;
 
     return device_add(parent_, &args, &zxdev_);
 }
@@ -3378,162 +3376,27 @@ zx_status_t Device::AddMacDevice() {
     args.proto_id = ZX_PROTOCOL_WLANMAC;
     args.proto_ops = &wlanmac_ops;
 
-    return device_add(zxdev_, &args, &wlanmac_dev_);
+    zx_device_t* dev;
+    zx_status_t status;
+    status = device_add(zxdev_, &args, &dev);
+    if (status == ZX_OK) {
+        std::lock_guard<std::mutex> guard(lock_);
+        wlanmac_dev_ = dev;
+    }
+    return status;
 }
 
-zx_status_t Device::Connect(const void* buf, size_t len) {
+zx_status_t Device::Query(wlan_info_t* info) {
     debugfn();
-    if (buf == nullptr || len < sizeof(zx_handle_t)) { return ZX_ERR_INVALID_ARGS; }
-
-    zx_handle_t hnd = *reinterpret_cast<const zx_handle_t*>(buf);
-    zx::channel chan(hnd);
-
-    return dispatcher_.AddBinding(std::move(chan), this);
-}
-
-void Device::Query(QueryCallback callback) {
-    debugfn();
-    wlan_device::PhyInfo info;
-
-    info.supported_phys->push_back(wlan_device::SupportedPhy::DSSS);
-    info.supported_phys->push_back(wlan_device::SupportedPhy::CCK);
-    info.supported_phys->push_back(wlan_device::SupportedPhy::OFDM);
-    info.supported_phys->push_back(wlan_device::SupportedPhy::HT);
-
-    info.driver_features.resize(0);
-
-    info.mac_roles->push_back(wlan_device::MacRole::CLIENT);
-
-    info.caps->push_back(wlan_device::Capability::SHORT_PREAMBLE);
-    info.caps->push_back(wlan_device::Capability::SHORT_SLOT_TIME);
-
-    wlan_device::BandInfo band24;
-    band24.description = "2.4 GHz";
-    band24.ht_caps.ht_capability_info = 0x01fe;
-    auto& band24mcs = band24.ht_caps.supported_mcs_set;
-    std::fill(band24mcs.begin(), band24mcs.end(), 0);
-    band24mcs[0] = 0xff;                              // mcs 0-7
-    band24mcs[1] = rt_type_ == RT5592 ? 0xff : 0x00;  // mcs 8-15 for RT5592
-    band24mcs[3] = 0x80;                              // mcs 32
-    band24mcs[12] = 0x01;                             // Tx MCS defined, same as Rx MCS
-    // Basic rates are given in units of 0.5Mbps
-    band24.basic_rates.reset(std::vector<uint8_t>{2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108});
-    band24.supported_channels.base_freq = 2407;
-    band24.supported_channels.channels.reset(
-        std::vector<uint8_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14});
-
-    info.bands->push_back(std::move(band24));
-
-    if (rt_type_ == RT5592) {
-        wlan_device::BandInfo band5;
-        band5.description = "5 GHz";
-        band5.ht_caps.ht_capability_info = 0x01fe;
-        auto& band5mcs = band5.ht_caps.supported_mcs_set;
-        std::fill(band5mcs.begin(), band5mcs.end(), 0);
-        band5mcs[0] = 0xff;   // mcs 0-7
-        band5mcs[1] = 0xff;   // mcs 8-15 for RT5592
-        band5mcs[3] = 0x80;   // mcs 32
-        band5mcs[12] = 0x01;  // Tx MCS defined, same as Rx MCS
-        // Basic rates are given in units of 0.5Mbps
-        band5.basic_rates.reset(std::vector<uint8_t>{12, 18, 24, 36, 48, 72, 96, 108});
-        band5.supported_channels.base_freq = 5000;
-        band5.supported_channels.channels.reset(std::vector<uint8_t>{
-            // clang-format off
-                    36,  38,  40,  42,  44,  46,  48,  50,
-                    52,  54,  56,  58,  60,  62,  64,  100,
-                    102, 104, 106, 108, 110, 112, 114, 116,
-                    118, 120, 122, 124, 126, 128, 130, 132,
-                    134, 136, 138, 140, 149, 151, 153, 155,
-                    157, 159, 161, 165, 184, 188, 192, 196,
-            // clang-format on
-        });
-
-        info.bands->push_back(std::move(band5));
-    }
-
-    wlan_device::QueryResponse resp;
-    resp.info = std::move(info);
-    callback(std::move(resp));
-}
-
-void Device::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCallback callback) {
-    debugfn();
-    wlan_device::CreateIfaceResponse resp;
-
-    std::lock_guard<std::mutex> guard(lock_);
-
-    if (wlanmac_dev_ != nullptr) {
-        // Only one interface supported for now.
-        resp.status = ZX_ERR_ALREADY_BOUND;
-        callback(std::move(resp));
-        return;
-    }
-
-    switch (req.role) {
-    case wlan_device::MacRole::CLIENT:
-        iface_role_ = WLAN_MAC_ROLE_CLIENT;
-        break;
-    case wlan_device::MacRole::AP:
-        iface_role_ = WLAN_MAC_ROLE_AP;
-        break;
-    default:
-        errorf("Unknown MacRole: %u\n", req.role);
-        resp.status = ZX_ERR_NOT_SUPPORTED;
-        callback(std::move(resp));
-        return;
-    }
-
-    zx_status_t status = AddMacDevice();
-    if (status != ZX_OK) {
-        errorf("could not add iface device err=%d\n", status);
-        resp.status = status;
-        iface_role_ = 0;
-    } else {
-        infof("iface added\n");
-        resp.status = ZX_OK;
-    }
-    callback(std::move(resp));
-}
-
-void Device::DestroyIface(wlan_device::DestroyIfaceRequest req, DestroyIfaceCallback callback) {
-    debugfn();
-    wlan_device::DestroyIfaceResponse resp;
-
-    std::lock_guard<std::mutex> guard(lock_);
-
-    if (wlanmac_dev_ == nullptr) {
-        errorf("calling destroy iface when no iface exists\n");
-        resp.status = ZX_ERR_BAD_STATE;
-        callback(std::move(resp));
-        return;
-    }
-
-    if (req.id != iface_id_) {
-        errorf("unknown iface id in destroy request: %u (expected: %u)\n", req.id, iface_id_);
-        resp.status = ZX_ERR_INVALID_ARGS;
-        callback(std::move(resp));
-        return;
-    }
-
-    iface_role_ = 0;
-    device_remove(wlanmac_dev_);
-    resp.status = ZX_OK;
-    callback(std::move(resp));
-}
-
-zx_status_t Device::WlanmacQuery(uint32_t options, wlanmac_info_t* info) {
-    ZX_DEBUG_ASSERT(iface_role_ != 0);
-    if (iface_role_ == 0) { return ZX_ERR_BAD_STATE; }
 
     memset(info, 0, sizeof(*info));
-    wlan_info_t* ifc_info = &info->ifc_info;
-    std::memcpy(ifc_info->mac_addr, mac_addr_, ETH_MAC_SIZE);
+    std::memcpy(info->mac_addr, mac_addr_, ETH_MAC_SIZE);
 
-    ifc_info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT;
-    ifc_info->mac_role = iface_role_;
-    ifc_info->caps = WLAN_CAP_SHORT_PREAMBLE | WLAN_CAP_SHORT_SLOT_TIME;
-    ifc_info->num_bands = 1;
-    ifc_info->bands[0] = {
+    info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT;
+    info->mac_role = WLAN_MAC_ROLE_CLIENT;
+    info->caps = WLAN_CAP_SHORT_PREAMBLE | WLAN_CAP_SHORT_SLOT_TIME;
+    info->num_bands = 1;
+    info->bands[0] = {
         .desc = "2.4 GHz",
         // TODO(tkilbourn): verify these
         // (*) represents a property to verify later
@@ -3598,10 +3461,10 @@ zx_status_t Device::WlanmacQuery(uint32_t options, wlanmac_info_t* info) {
             },
     };
     if (rt_type_ == RT5592) {
-        ifc_info->num_bands = 2;
+        info->num_bands = 2;
         // Add MCS 8-15 to band 0
-        ifc_info->bands[0].ht_caps.supported_mcs_set[1] = 0xff;
-        ifc_info->bands[1] = {
+        info->bands[0].ht_caps.supported_mcs_set[1] = 0xff;
+        info->bands[1] = {
             .desc = "5 GHz",
             // See above for descriptions of these capabilities
             .ht_caps =
@@ -3654,11 +3517,89 @@ zx_status_t Device::WlanmacQuery(uint32_t options, wlanmac_info_t* info) {
     return ZX_OK;
 }
 
+zx_status_t Device::PhyQuery(wlanphy_info_t* info) {
+    return Query(&info->wlan_info);
+}
+
+zx_status_t Device::CreateIface(uint16_t role, uint16_t* id) {
+    debugfn();
+
+    {
+        std::lock_guard<std::mutex> guard(lock_);
+        if (phy_state_ != PHY_RUNNING) {
+            return ZX_ERR_BAD_STATE;
+        }
+        if (iface_state_ != IFC_NONE) {
+            return ZX_ERR_ALREADY_BOUND;
+        }
+        iface_state_ = IFC_CREATING;
+    }
+
+    zx_status_t status = AddMacDevice();
+
+    if (status != ZX_OK) {
+        errorf("could not add iface device err: %s\n", zx_status_get_string(status));
+        std::lock_guard<std::mutex> guard(lock_);
+        iface_state_ = IFC_NONE;
+        return status;
+    }
+
+    {
+        std::lock_guard<std::mutex> guard(lock_);
+        *id = iface_id_;
+        iface_role_ = role;
+        iface_state_ = IFC_RUNNING;
+    }
+
+    infof("iface added\n");
+    return status;
+}
+
+zx_status_t Device::DestroyIface(uint16_t id) {
+    debugfn();
+
+    zx_device_t* dev;
+
+    {
+        std::lock_guard<std::mutex> guard(lock_);
+        if (phy_state_ != PHY_RUNNING || iface_state_ != IFC_RUNNING) {
+            return ZX_ERR_BAD_STATE;
+        }
+
+        if (id != iface_id_) {
+            errorf("unknown iface id in destroy request: %u (expected %u)\n", id, iface_id_);
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        iface_state_ = IFC_DESTROYING;
+        dev = wlanmac_dev_;
+    }
+
+    // device_remove() may invoke MacRelease(), so we can't hold the lock across the call
+    device_remove(dev);
+
+    return ZX_OK;
+}
+
+zx_status_t Device::WlanmacQuery(uint32_t options, wlanmac_info_t* info) {
+    uint16_t role;
+    {
+        std::lock_guard<std::mutex> guard(lock_);
+        if (phy_state_ != PHY_RUNNING || iface_state_ != IFC_RUNNING) {
+            return ZX_ERR_BAD_STATE;
+        }
+        role = iface_role_;
+    }
+    zx_status_t status = Query(&info->ifc_info);
+    info->ifc_info.mac_role = role;
+    return status;
+}
+
 zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
     debugfn();
     std::lock_guard<std::mutex> guard(lock_);
 
-    if (dead_) { return ZX_ERR_PEER_CLOSED; }
+    if (phy_state_ != PHY_RUNNING) { return ZX_ERR_PEER_CLOSED; }
     if (wlanmac_proxy_ != nullptr) { return ZX_ERR_ALREADY_BOUND; }
 
     zx_status_t status = LoadFirmware();

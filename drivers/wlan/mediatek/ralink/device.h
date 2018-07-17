@@ -10,8 +10,8 @@
 #include <fbl/unique_ptr.h>
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
-#include <wlan/async/dispatcher.h>
 #include <wlan/protocol/mac.h>
+#include <wlan/protocol/phy-impl.h>
 #include <zircon/compiler.h>
 
 #include <fuchsia/wlan/device/cpp/fidl.h>
@@ -54,7 +54,7 @@ class WlanmacIfcProxy {
     void* cookie_;
 };
 
-class Device : public ::fuchsia::wlan::device::Phy {
+class Device {
    public:
     Device(zx_device_t* device, usb_protocol_t usb, uint8_t bulk_in,
            std::vector<uint8_t>&& bulk_out);
@@ -63,12 +63,15 @@ class Device : public ::fuchsia::wlan::device::Phy {
     zx_status_t Bind();
 
     // ddk device methods
-    void Unbind();
-    void Release();
-    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len,
-                      size_t* out_actual);
+    void PhyUnbind();
+    void PhyRelease();
     void MacUnbind();
     void MacRelease();
+
+    // ddk wlanphy_protocol_ops
+    zx_status_t PhyQuery(wlanphy_info_t* info);
+    zx_status_t CreateIface(uint16_t role, uint16_t* id);
+    zx_status_t DestroyIface(uint16_t id);
 
     // ddk wlanmac_protocol_ops methods
     zx_status_t WlanmacQuery(uint32_t options, wlanmac_info_t* info);
@@ -81,11 +84,7 @@ class Device : public ::fuchsia::wlan::device::Phy {
     zx_status_t WlanmacConfigureBeacon(uint32_t options, wlan_tx_packet_t* pkt);
     zx_status_t WlanmacSetKey(uint32_t options, wlan_key_config_t* key_config);
 
-    virtual void Query(QueryCallback callback) override;
-    virtual void CreateIface(::fuchsia::wlan::device::CreateIfaceRequest req,
-                             CreateIfaceCallback callback) override;
-    virtual void DestroyIface(::fuchsia::wlan::device::DestroyIfaceRequest req,
-                              DestroyIfaceCallback callback) override;
+    zx_status_t Query(wlan_info_t* info);
 
    private:
     struct TxCalibrationValues {
@@ -129,8 +128,6 @@ class Device : public ::fuchsia::wlan::device::Phy {
 
     zx_status_t AddPhyDevice();
     zx_status_t AddMacDevice();
-
-    zx_status_t Connect(const void* buf, size_t len);
 
     // read and write general registers
     zx_status_t ReadRegister(uint16_t offset, uint32_t* value);
@@ -242,16 +239,18 @@ class Device : public ::fuchsia::wlan::device::Phy {
     size_t GetL2PadLen(const wlan_tx_packet_t& wlan_pkt);
     zx_device_t* parent_ = nullptr;
     zx_device_t* zxdev_ = nullptr;
-    zx_device_t* wlanmac_dev_ = nullptr;
+    zx_device_t* wlanmac_dev_ __TA_GUARDED(lock_) = nullptr;
     usb_protocol_t usb_;
 
     uint8_t rx_endpt_ = 0;
     std::vector<uint8_t> tx_endpts_;
 
     std::mutex lock_;
-    bool dead_ __TA_GUARDED(lock_) = false;
+    enum { PHY_RUNNING, PHY_DESTROYING }
+         phy_state_ __TA_GUARDED(lock_) = PHY_RUNNING;
+    enum { IFC_NONE, IFC_CREATING, IFC_RUNNING, IFC_DESTROYING }
+         iface_state_ __TA_GUARDED(lock_) = IFC_NONE;
     fbl::unique_ptr<WlanmacIfcProxy> wlanmac_proxy_ __TA_GUARDED(lock_);
-    wlan::async::Dispatcher<::fuchsia::wlan::device::Phy> dispatcher_;
 
     constexpr static size_t kEepromSize = 0x0100;
     std::array<uint16_t, kEepromSize> eeprom_ = {};
@@ -288,8 +287,8 @@ class Device : public ::fuchsia::wlan::device::Phy {
     uint8_t bssid_[6];
 
     std::vector<usb_request_t*> free_write_reqs_ __TA_GUARDED(lock_);
-    uint16_t iface_id_ = 0;
-    uint16_t iface_role_ = 0;
+    uint16_t iface_id_ __TA_GUARDED(lock_) = 0;
+    uint16_t iface_role_ __TA_GUARDED(lock_) = 0;
 
     // Thread which periodically reads interrupt registers.
     // Required because the device doesn't support USB interrupt endpoints.

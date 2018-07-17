@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "driver.h"
-
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -18,20 +16,6 @@
 
 #include "device.h"
 
-// Not guarded by a mutex, because it will be valid between .init and .release and nothing else will
-// exist outside those two calls.
-static async::Loop* loop = nullptr;
-
-extern "C" zx_status_t ralink_init(void** out_ctx) {
-    loop = new async::Loop;
-    zx_status_t status = loop->StartThread("ralink-loop");
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "ralink: could not create event loop: %d\n", status);
-        delete loop;
-        loop = nullptr;
-    }
-    return status;
-}
 extern "C" zx_status_t ralink_bind(void* ctx, zx_device_t* device) {
     zxlogf(TRACE, "%s\n", __func__);
 
@@ -73,17 +57,4 @@ extern "C" zx_status_t ralink_bind(void* ctx, zx_device_t* device) {
     if (status != ZX_OK) { delete rtdev; }
 
     return status;
-}
-
-extern "C" void ralink_release(void* ctx) {
-    if (loop != nullptr) {
-        zxlogf(INFO, "ralink: event loop shutdown\n");
-        loop->Shutdown();
-    }
-    delete loop;
-    loop = nullptr;
-}
-
-async_dispatcher_t* ralink_async_t() {
-    return loop->dispatcher();
 }
