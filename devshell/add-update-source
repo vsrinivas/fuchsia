@@ -41,17 +41,16 @@ function main {
       --remove-localhost)
         remove_localhost=true
         ;;
+      *)
+        echo "Unrecognized option: $1"
+        usage
+        exit 1
     esac
     shift
   done
 
   if ! [[ -x "$(command -v sha256sum)" ]]; then
     echo "'sha256sum' binary not found"
-    exit 1
-  fi
-
-  if ! [[ -x "$(command -v cut)" ]]; then
-    echo "'cut' binary not found"
     exit 1
   fi
 
@@ -94,7 +93,7 @@ function main {
   fi
 
   if $remove_localhost; then
-    fx-command-run shell $device_arg amber_ctl rm_src -n localhost
+    fx-command-run shell $device_arg amber_ctl rm_src -n localhost 2>/dev/null || true
   fi
 }
 

@@ -4,22 +4,46 @@
 # found in the LICENSE file.
 
 ### start the update server and attach to a running fuchsia device
-## usage: fx serve-updates [-v] [-d <device>]
+## usage: fx serve-updates [-v] [-d <device>] [--direct]
 ##   -v verbose (do not suppress amber-srv output)
 ##   -d <device> to specify a specific target device
-##
-## -v must come before -d.
+##   --direct configure target to not use the SSH tunnel
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
-# Flag order restrictions exist because we're using the get-device-addr helper
-# from vars.sh which needs -d to appear in $1 in order to work.
+function usage {
+  fx-command-help serve-updates
+}
+
+fx-standard-switches "$@"
+set -- "${FX_ARGV[@]}"
+
 verbose=false
-if [[ "$1" == "-v" ]]; then
-  verbose=true
+device=""
+device_arg=""
+direct=false
+while (($#)); do
+  case "$1" in
+    -v|--verbose)
+      verbose=true
+      ;;
+    -d|--device)
+      device="$2"
+      device_arg="-d $2"
+      shift
+      ;;
+    --direct)
+      direct=true
+      ;;
+    *)
+      echo "Unrecognized option: $1"
+      usage
+      exit 1
+      ;;
+  esac
   shift
-fi
+done
 
 # Recover from present situation by finding any already-running amber-srv
 amber_srv_pid=$(pgrep amber-srv)
@@ -59,7 +83,7 @@ device_addr=
 update_device_addr() {
   device_addr=$(get-device-addr "$@")
   if [[ -z "${device_addr}" ]]; then
-    device_addr="$(fx-command-run netaddr --fuchsia 2>/dev/null)"
+    device_addr="$(fx-command-run netaddr --fuchsia "$@" 2>/dev/null)"
   fi
 }
 
@@ -72,7 +96,7 @@ while true; do
     exit 1
   fi
 
-  update_device_addr "$@"
+  update_device_addr $device_arg
   if [[ -z "${device_addr}" ]]; then
     if [[ "${state}" != "discover1" ]]; then
       log "No device found, waiting..."
@@ -85,10 +109,23 @@ while true; do
   if [[ "$state" == "discover" || "$state" == "discover1" ]]; then
     log "SSH Tunnel connecting to ${device_addr}..."
     if fx-command-run ssh -f -o LogLevel=ERROR -o ExitOnForwardFailure=yes -R 8083:localhost:8083 "${device_addr}" "echo -n"; then
-      if [[ "$state" != "ready" ]]; then
+      log "SSH Tunnel connected"
+      state="config"
+    else
+      sleep 1
+    fi
+  fi
+
+  if [[ "$state" == "config" ]]; then
+    if $direct; then
+      log "Registering devhost as update source"
+      if fx-command-run add-update-source --remove-localhost $device_arg; then
         log "Ready to push packages!"
         state="ready"
       fi
+    else
+      log "Ready to push packages!"
+      state="ready"
     fi
 
     sleep 1

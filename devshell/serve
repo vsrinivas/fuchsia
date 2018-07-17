@@ -4,11 +4,10 @@
 # found in the LICENSE file.
 
 ### start `boot` and `serve-updates` in a single command
-## usage: fx serve [-v] [-d device]
+## usage: fx serve [-v] [-d device] [--direct]
 ##   -v enable more verbose output (must be first argument)
 ##   -d target a specifc device
-##
-## If supplied '-v' it must be the first argument
+##   --direct configure target to not use the SSH tunnel
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
@@ -25,6 +24,9 @@ trap kill_child_processes EXIT
 boot_args=()
 serve_args=()
 device=""
+
+fx-standard-switches "$@"
+set -- "${FX_ARGV[@]}"
 
 while (($#)); do
   case "$1" in
@@ -47,7 +49,10 @@ while (($#)); do
       device="${device:0:${#prefix}}"
       boot_args+=("${device}")
       ;;
-    -v)
+    -v|--verbose)
+      serve_args+=("$1")
+      ;;
+    --direct)
       serve_args+=("$1")
       ;;
     *)
