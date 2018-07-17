@@ -585,8 +585,8 @@ ifeq ($(call TOBOOL,$(ENABLE_ULIB_ONLY)),false)
 # add the kernel to the build
 all:: kernel
 else
-# No kernel, but we want the bootdata.bin containing the shared libraries.
-all:: $(USER_BOOTDATA)
+# No kernel, but we want the bootfs.manifest listing the installed libraries.
+all:: $(USER_MANIFEST)
 endif
 
 # meta rule for building just packages
