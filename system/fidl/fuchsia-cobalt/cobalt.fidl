@@ -116,6 +116,7 @@ struct ProjectProfile {
 [Discoverable]
 // CobaltEncoderFactory creates a CobaltEncoder for a particular project.
 interface CobaltEncoderFactory {
+  // DEPRECATED, use GetEncoderForProject instead
   // Creates a CobaltEncoder for the specified project.
   // |project_id| Should be a project ID registered with the Cobalt system.
   1: GetEncoder(int32 project_id, request<CobaltEncoder> encoder);
