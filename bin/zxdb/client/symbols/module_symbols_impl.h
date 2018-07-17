@@ -26,6 +26,8 @@ class Binary;
 
 namespace zxdb {
 
+class DwarfSymbolFactory;
+
 // Represents the symbols for a module (executable or shared library).
 //
 // All addresses in and out of the API of this class are module-relative. This
@@ -41,6 +43,10 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   ~ModuleSymbolsImpl();
 
   llvm::DWARFContext* context() { return context_.get(); }
+  llvm::DWARFUnitSection<llvm::DWARFCompileUnit>& compile_units() {
+    return compile_units_;
+  }
+  DwarfSymbolFactory* symbol_factory() { return symbol_factory_.get(); }
 
   Err Load();
 
@@ -70,6 +76,8 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   llvm::DWARFUnitSection<llvm::DWARFCompileUnit> compile_units_;
 
   ModuleSymbolIndex index_;
+
+  fxl::RefPtr<DwarfSymbolFactory> symbol_factory_;
 
   fxl::WeakPtrFactory<ModuleSymbolsImpl> weak_factory_;
 

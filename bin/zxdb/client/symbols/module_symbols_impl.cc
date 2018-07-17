@@ -6,6 +6,7 @@
 
 #include <algorithm>
 
+#include "garnet/bin/zxdb/client/symbols/dwarf_symbol_factory.h"
 #include "garnet/bin/zxdb/client/symbols/line_details.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -156,7 +157,10 @@ std::vector<LineMatch> GetFirstEntryForEachInline(
 
 ModuleSymbolsImpl::ModuleSymbolsImpl(const std::string& name,
                                      const std::string& build_id)
-    : name_(name), build_id_(build_id), weak_factory_(this) {}
+    : name_(name), build_id_(build_id), weak_factory_(this) {
+  symbol_factory_ = fxl::MakeRefCounted<DwarfSymbolFactory>(GetWeakPtr());
+}
+
 ModuleSymbolsImpl::~ModuleSymbolsImpl() = default;
 
 fxl::WeakPtr<ModuleSymbolsImpl> ModuleSymbolsImpl::GetWeakPtr() {
@@ -221,6 +225,7 @@ Location ModuleSymbolsImpl::RelativeLocationForRelativeAddress(
           llvm::DILineInfoSpecifier::FunctionNameKind::ShortName));
   if (!line_info)
     return Location(Location::State::kSymbolized, address);  // No symbol.
+  // TODO(brettw) hook up LazySymbol to the location.
   return Location(address,
                   FileLine(std::move(line_info.FileName), line_info.Line),
                   line_info.Column, line_info.FunctionName);

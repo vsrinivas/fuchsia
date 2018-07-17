@@ -13,6 +13,7 @@
 namespace zxdb {
 
 class BaseType;
+class Function;
 class ModifiedType;
 class Type;
 
@@ -139,6 +140,7 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   // Packed types are used only by Pascal and ADA. Can ignore.
   static constexpr int kTagPackedType = 0x2d;
 
+  // A function. Represented by a zxdb::Function object.
   static constexpr int kTagSubprogram = 0x2e;
   static constexpr int kTagTemplateTypeParameter = 0x2f;
   static constexpr int kTagTemplateValueParameter = 0x30;
@@ -198,12 +200,16 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
 
   // Manual RTTI.
   virtual const BaseType* AsBaseType() const;
+  virtual const Function* AsFunction() const;
   virtual const ModifiedType* AsModifiedType() const;
   virtual const Type* AsType() const;
 
   // Non-const manual RTTI wrappers.
   BaseType* AsBaseType() {
     return const_cast<BaseType*>(const_cast<const Symbol*>(this)->AsBaseType());
+  }
+  Function* AsFunction() {
+    return const_cast<Function*>(const_cast<const Symbol*>(this)->AsFunction());
   }
   ModifiedType* AsModifiedType() {
     return const_cast<ModifiedType*>(

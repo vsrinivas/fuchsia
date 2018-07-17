@@ -339,7 +339,7 @@ std::string MemoryAnalysis::GetPointedToAnnotation(uint64_t data) const {
   }
   // TODO(brettw) this should indicate the byte offset from the beginning of
   // the function, or maybe the file/line number.
-  return "▷ inside " + loc.function() + "()";
+  return "▷ inside " + loc.function_name() + "()";
 }
 
 }  // namespace internal

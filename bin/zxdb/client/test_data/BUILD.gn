@@ -16,6 +16,7 @@ assert(current_toolchain == "${default_toolchain}-shared")
 shared_library("zxdb_symbol_test") {
   sources = [
     "line_lookup_symbol_test.cc",
+    "type_test.cc",
     "zxdb_symbol_test.cc",
     "zxdb_symbol_test2.cc",
   ]

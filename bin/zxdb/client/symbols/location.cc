@@ -4,19 +4,29 @@
 
 #include "garnet/bin/zxdb/client/symbols/location.h"
 
+#include "garnet/bin/zxdb/client/symbols/function.h"
+#include "garnet/bin/zxdb/client/symbols/symbol.h"
+
 namespace zxdb {
 
 Location::Location() = default;
 Location::Location(State state, uint64_t address)
     : state_(state), address_(address) {}
 Location::Location(uint64_t address, FileLine&& file_line, int column,
-                   std::string function)
+                   std::string function_name, const LazySymbol& symbol)
     : state_(State::kSymbolized),
       address_(address),
       file_line_(std::move(file_line)),
       column_(column),
-      function_(std::move(function)) {}
+      function_name_(std::move(function_name)),
+      symbol_(symbol) {}
 Location::~Location() = default;
+
+const Function* Location::GetFunction() const {
+  if (!symbol_.is_valid())
+    return nullptr;
+  return symbol_.Get()->AsFunction();
+}
 
 void Location::AddAddressOffset(uint64_t offset) {
   if (!is_valid())

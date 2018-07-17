@@ -7,8 +7,11 @@
 #include <stdint.h>
 
 #include "garnet/bin/zxdb/client/symbols/file_line.h"
+#include "garnet/bin/zxdb/client/symbols/lazy_symbol.h"
 
 namespace zxdb {
+
+class Function;
 
 // Represents all the symbol information for a code location.
 class Location {
@@ -24,7 +27,7 @@ class Location {
   Location();
   Location(State state, uint64_t address);
   Location(uint64_t address, FileLine&& file_line, int column,
-           std::string function);
+           std::string function_name, const LazySymbol& symbol = LazySymbol());
   ~Location();
 
   bool is_valid() const { return state_ != State::kInvalid; }
@@ -37,7 +40,18 @@ class Location {
   uint64_t address() const { return address_; }
   const FileLine& file_line() const { return file_line_; }
   int column() const { return column_; }
-  const std::string& function() const { return function_; }
+
+  // TODO(brettw) remove this and have users use the function(). But that
+  // currently doesn't provide a fully-qualified function name.
+  const std::string& function_name() const { return function_name_; }
+
+  // TODO(brettw) this is a work in progress and not currently set.
+  const LazySymbol& symbol() const { return symbol_; }
+
+  // Retrieves the function associated with this location. This may be null.
+  // This will not include inlined functions: this returns the real function
+  // enclosing the given code (if any).
+  const Function* GetFunction() const;
 
   // Offsets the code addresses in this by adding an amount. This is used to
   // convert module-relative addresses to global ones by adding the module
@@ -49,7 +63,8 @@ class Location {
   uint64_t address_ = 0;
   FileLine file_line_;
   int column_ = 0;
-  std::string function_;
+  std::string function_name_;
+  LazySymbol symbol_;
 };
 
 }  // namespace zxdb

@@ -16,9 +16,14 @@ class Type : public Symbol {
   // Symbol overrides.
   const Type* AsType() const final;
 
-  // Most types will have a name but some won't so this may be empty.
-  const std::string& name() const { return name_; }
-  void set_name(std::string n) { name_ = std::move(n); }
+  // The type name that should be shown to the user. This incorporates
+  // modifiers like pointers and consts.
+  virtual const std::string& GetTypeName() const;
+
+  // The name assigned in the DWARF file. This will be empty for modified
+  // types (Which usually have no assigned name).
+  const std::string& assigned_name() const { return assigned_name_; }
+  void set_assigned_name(std::string n) { assigned_name_ = std::move(n); }
 
   // For forward-defines where the size of the structure is not known, the
   // byte size will be 0.
@@ -33,7 +38,7 @@ class Type : public Symbol {
   virtual ~Type();
 
  private:
-  std::string name_;
+  std::string assigned_name_;
   uint32_t byte_size_;
 };
 

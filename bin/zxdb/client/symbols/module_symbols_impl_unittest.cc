@@ -61,6 +61,15 @@ TEST(ModuleSymbols, Basic) {
       module.RelativeAddressesForFunction(TestSymbolModule::kMyFunctionName);
   ASSERT_EQ(1u, addrs.size());
 
+  // On one occasion Clang generated a symbol file that listed many functions
+  // in this file starting at offset 0. This obviously causes problems and
+  // the test fails below with bafflingly incorrect line numbers. The problem
+  // went away after forcing recompilation of that file. It might be an
+  // intermittent Clang bug or some random corruption. If this assert hits,
+  // check the function start addresses in the DWARF dump, there should be
+  // no functions starting at offset 0 in the file.
+  ASSERT_NE(0u, addrs[0]);
+
   // That address should resolve back to the function name.
   Location loc = module.RelativeLocationForRelativeAddress(addrs[0]);
   EXPECT_TRUE(loc.is_symbolized());

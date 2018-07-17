@@ -25,20 +25,31 @@ class ModifiedType final : public Type {
   // Returns true if the given DWARF tag is a type modifier.
   static bool IsTypeModifierTag(int tag);
 
-  // Symbol overrides.
-  const ModifiedType* AsModifiedType() const;
+  // Type/Symbol overrides.
+  const ModifiedType* AsModifiedType() const override;
+  const std::string& GetTypeName() const override;
 
   // The underlying modified type.
   const LazySymbol& modified() const { return modified_; }
+  void set_modified(const LazySymbol& m) { modified_ = m; }
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(ModifiedType);
   FRIEND_MAKE_REF_COUNTED(ModifiedType);
 
   explicit ModifiedType(int kind);
-  ~ModifiedType();
+  ~ModifiedType() override;
+
+  // Computes the fully modified type name but does not store it.
+  std::string ComputeTypeName() const;
 
   LazySymbol modified_;
+
+  // Lazily computed full type name (including type modifiers). This will be
+  // not present if it hasn't been computed yet.
+  // TODO(brettw) use std::optional when we can use C++17.
+  mutable bool computed_type_name_ = false;
+  mutable std::string type_name_;
 };
 
 }  // namespace zxdb

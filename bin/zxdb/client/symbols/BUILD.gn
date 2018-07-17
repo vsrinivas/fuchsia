@@ -12,7 +12,9 @@ static_library("symbols") {
 
   public = [
     "base_type.h",
+    "code_block.h",
     "file_line.h",
+    "function.h",
     "lazy_symbol.h",
     "line_details.h",
     "loaded_module_symbols.h",
@@ -30,11 +32,13 @@ static_library("symbols") {
 
   sources = [
     "base_type.cc",
+    "code_block.cc",
     "dwarf_die_decoder.cc",
     "dwarf_die_decoder.h",
     "dwarf_symbol_factory.cc",
     "dwarf_symbol_factory.h",
     "file_line.cc",
+    "function.cc",
     "lazy_symbol.cc",
     "line_details.cc",
     "loaded_module_symbols.cc",
@@ -92,6 +96,10 @@ source_set("tests") {
   testonly = true
 
   sources = [
+    "dwarf_symbol_factory_unittest.cc",
+    "dwarf_test_util.cc",
+    "dwarf_test_util.h",
+    "modified_type_unittest.cc",
     "module_symbol_index_unittest.cc",
     "module_symbol_index_node_unittest.cc",
     "module_symbols_impl_unittest.cc",

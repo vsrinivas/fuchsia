@@ -21,11 +21,20 @@ class SymbolFactory;
 class LazySymbol {
  public:
   LazySymbol();  // Creates a !is_valid() one.
+  LazySymbol(const LazySymbol& other);
+  LazySymbol(LazySymbol&& other);
   LazySymbol(fxl::RefPtr<SymbolFactory> factory, void* factory_data_ptr,
              uint32_t factory_data_offset);
+  // Creates a non-lazy one, mostly for tests.
+  explicit LazySymbol(fxl::RefPtr<Symbol> symbol);
   ~LazySymbol();
 
-  bool is_valid() const { return factory_.get(); }
+  LazySymbol& operator=(const LazySymbol& other);
+  LazySymbol& operator=(LazySymbol&& other);
+
+  // Validity tests both for the factory and the symbol since non-lazy ones
+  // don't need a factory.
+  bool is_valid() const { return factory_.get() || symbol_.get(); }
   explicit operator bool() const { return is_valid(); }
 
   // Returns the type associated with this LazySymbol. If this class is invalid

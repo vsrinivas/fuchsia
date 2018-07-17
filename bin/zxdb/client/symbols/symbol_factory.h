@@ -33,8 +33,7 @@ class SymbolFactory : public fxl::RefCountedThreadSafe<SymbolFactory> {
 
   // This function should never return null. To indicate failure, return a new
   // default-constructed Symbol object.
-  virtual fxl::RefPtr<Symbol> CreateSymbol(void* data_ptr,
-                                           uint32_t offset) const = 0;
+  virtual fxl::RefPtr<Symbol> CreateSymbol(void* data_ptr, uint32_t offset) = 0;
 };
 
 }  // namespace zxdb

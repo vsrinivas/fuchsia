@@ -71,10 +71,12 @@ const int Symbol::kTagTemplateAlias;
 const int Symbol::kTagLoUser;
 const int Symbol::kTagHiUser;
 
+Symbol::Symbol() = default;
 Symbol::Symbol(int tag) : tag_(tag) {}
 Symbol::~Symbol() = default;
 
 const BaseType* Symbol::AsBaseType() const { return nullptr; }
+const Function* Symbol::AsFunction() const { return nullptr; }
 const ModifiedType* Symbol::AsModifiedType() const { return nullptr; }
 const Type* Symbol::AsType() const { return nullptr; }
 
