@@ -52,7 +52,7 @@ class LoaderImpl : public fuchsia::vulkan::loader::Loader {
 };
 
 int main(int argc, const char* const* argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   fxl::SetLogSettingsFromCommandLine(fxl::CommandLineFromArgcArgv(argc, argv));
 
   auto context = component::StartupContext::CreateFromStartupInfo();

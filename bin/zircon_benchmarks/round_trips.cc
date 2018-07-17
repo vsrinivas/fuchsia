@@ -543,7 +543,7 @@ class FidlTest {
     FXL_CHECK(handles.size() == 1);
     zx::channel channel(handles[0]);
 
-    async::Loop loop(&kAsyncLoopConfigMakeDefault);
+    async::Loop loop(&kAsyncLoopConfigAttachToThread);
     RoundTripServiceImpl service_impl;
     fidl::Binding<fuchsia::zircon::benchmarks::RoundTripService> binding(
         &service_impl, std::move(channel));

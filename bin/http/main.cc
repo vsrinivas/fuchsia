@@ -13,7 +13,7 @@ int main(int argc, const char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   http::HttpServiceDelegate delegate2(loop.dispatcher());
   loop.Run();
   return 0;

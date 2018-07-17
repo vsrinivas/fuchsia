@@ -16,7 +16,7 @@
 static async::Loop* loop = nullptr;
 
 extern "C" zx_status_t wlanphy_init(void** out_ctx) {
-    loop = new async::Loop;
+    loop = new async::Loop(&kAsyncLoopConfigNoAttachToThread);
     zx_status_t status = loop->StartThread("wlanphy-loop");
     if (status != ZX_OK) {
         zxlogf(ERROR, "wlanphy: could not create event loop: %s\n", zx_status_get_string(status));

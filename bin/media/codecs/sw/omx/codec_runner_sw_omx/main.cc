@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
     exit(-1);
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   async::Now(loop.dispatcher());
 

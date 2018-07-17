@@ -214,7 +214,7 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   google_oauth_demo::GoogleTokenManagerApp gtm(std::move(refresh_token),
                                                std::move(user_profile_id_));
   gtm.Run();

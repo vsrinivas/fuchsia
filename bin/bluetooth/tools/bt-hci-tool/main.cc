@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
   // Make sure the HCI Transport gets shut down cleanly upon exit.
   auto ac = fxl::MakeAutoCall([&hci] { hci->ShutDown(); });
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   bluetooth_tools::CommandDispatcher dispatcher;
   hcitool::CommandData cmd_data(hci->command_channel(), loop.dispatcher());

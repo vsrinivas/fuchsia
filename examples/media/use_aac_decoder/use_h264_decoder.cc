@@ -46,7 +46,7 @@ void use_h264_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                       uint8_t out_md[SHA256_DIGEST_LENGTH]) {
   VLOGF("use_h264_decoder()\n");
   memset(out_md, 0, SHA256_DIGEST_LENGTH);
-  async::Loop loop;
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
   loop.StartThread("use_h264_decoder_loop");
 
   // payload data for bear.h264 is 00 00 00 01 start code before each NAL, with

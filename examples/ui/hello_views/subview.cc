@@ -13,7 +13,7 @@ int main(int argc, const char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   hello_views::App subspace_app(&loop, hello_views::AppType::SUBVIEW);
   loop.Run();
 

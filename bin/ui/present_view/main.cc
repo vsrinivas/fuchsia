@@ -41,7 +41,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto startup_context_ = component::StartupContext::CreateFromStartupInfo();
 
   // Launch application.

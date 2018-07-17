@@ -45,7 +45,7 @@ int main(int argc, const char** argv) {
     renderer_params.push_back(std::move(param));
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto startup_context_ = component::StartupContext::CreateFromStartupInfo();
 
   // Ask the presenter to change renderer params.

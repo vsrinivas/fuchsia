@@ -17,7 +17,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   int result;
   auto quit_callback = [&loop, &result](int exit_code) {
     result = exit_code;

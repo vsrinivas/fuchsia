@@ -92,7 +92,7 @@ struct FuchsiaState {
   uint32_t elapsed_frames = 0;
   std::chrono::time_point<std::chrono::high_resolution_clock> t0{};
 
-  FuchsiaState() : loop(&kAsyncLoopConfigMakeDefault) {}
+  FuchsiaState() : loop(&kAsyncLoopConfigAttachToThread) {}
 };
 #endif
 

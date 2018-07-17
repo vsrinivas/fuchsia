@@ -221,7 +221,7 @@ void SystemMetricsApp::ConnectToEnvironmentService() {
 }
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   SystemMetricsApp app(kIntervalMinutes);
   app.Main();
   return 0;

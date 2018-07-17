@@ -13,7 +13,7 @@
 #include "lib/svc/cpp/services.h"
 
 void handle_launch(int argc, const char* argv[]) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   // Create environment.
   fuchsia::guest::GuestManagerSyncPtr guestmgr;

@@ -27,7 +27,7 @@ using fuchsia::auth::AuthProviderFactory;
 class DevAuthProviderApp {
  public:
   DevAuthProviderApp()
-      : loop_(&kAsyncLoopConfigMakeDefault),
+      : loop_(&kAsyncLoopConfigAttachToThread),
         app_context_(component::StartupContext::CreateFromStartupInfo()),
         trace_provider_(loop_.dispatcher()) {
     FXL_CHECK(app_context_);

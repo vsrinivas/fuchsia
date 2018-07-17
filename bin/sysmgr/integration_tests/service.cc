@@ -34,7 +34,7 @@ class Service : public ::test::sysmgr::Interface {
 }  // namespace sysmgr
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   sysmgr::test::Service service;
   loop.Run();

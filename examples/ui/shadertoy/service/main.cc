@@ -41,7 +41,7 @@ int main(int argc, const char** argv) {
 
     escher::Escher escher(vulkan_device);
 
-    async::Loop loop(&kAsyncLoopConfigMakeDefault);
+    async::Loop loop(&kAsyncLoopConfigAttachToThread);
     trace::TraceProvider trace_provider(loop.dispatcher());
 
     std::unique_ptr<component::StartupContext> app_context(

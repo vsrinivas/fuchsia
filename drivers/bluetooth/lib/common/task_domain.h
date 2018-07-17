@@ -92,7 +92,7 @@ class TaskDomain {
   TaskDomain(T* obj, std::string name) {
     Init(obj);
 
-    loop_ = std::make_unique<async::Loop>();
+    loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
     loop_->StartThread(name.c_str());
     dispatcher_ = loop_->dispatcher();
   }

@@ -40,7 +40,7 @@ class VsockAcceptor : public fuchsia::guest::VsockAcceptor {
 };
 
 void handle_socat_listen(uint32_t env_id, uint32_t port) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   fuchsia::guest::GuestManagerSyncPtr guestmgr;
   component::ConnectToEnvironmentService(guestmgr.NewRequest());
@@ -63,7 +63,7 @@ void handle_socat_listen(uint32_t env_id, uint32_t port) {
 }
 
 void handle_socat_connect(uint32_t env_id, uint32_t cid, uint32_t port) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   fuchsia::guest::GuestManagerSyncPtr guestmgr;
   component::ConnectToEnvironmentService(guestmgr.NewRequest());

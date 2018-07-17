@@ -29,7 +29,7 @@ class Guest {
  public:
   using VcpuFactory = fit::function<zx_status_t(Guest* guest, uintptr_t entry,
                                                 uint64_t id, Vcpu* vcpu)>;
-
+  Guest();
   ~Guest();
 
   zx_status_t Init(size_t mem_size);

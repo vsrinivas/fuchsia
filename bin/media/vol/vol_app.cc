@@ -625,7 +625,7 @@ class VolApp {
 }  // namespace media
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   media::VolApp app(argc, argv, [&loop]() {
     async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
   });

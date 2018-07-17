@@ -7,7 +7,7 @@
 #include "garnet/bin/guest/mgr/guest_manager_impl.h"
 
 int main(int argc, char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   guestmgr::GuestManagerImpl guestmgr;
   loop.Run();
 }

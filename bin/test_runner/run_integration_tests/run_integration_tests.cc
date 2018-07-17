@@ -72,7 +72,7 @@ void PrintKnownTests(const TestRunnerConfig& config) {
 }
 
 int RunIntegrationTestsMain(int argc, char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   fxl::CommandLine settings = fxl::CommandLineFromArgcArgv(argc, argv);
   std::string test_file;
   bool has_test_file = settings.GetOptionValue("test_file", &test_file);

@@ -155,7 +155,7 @@ class NetworkLoader : public fuchsia::sys::Loader {
 }  // namespace
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   NetworkLoader app;
   loop.Run();
   return 0;

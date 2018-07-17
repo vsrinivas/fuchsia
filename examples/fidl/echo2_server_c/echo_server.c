@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
   }
 
   async_loop_t* loop = NULL;
-  zx_status_t status = async_loop_create(&kAsyncLoopConfigMakeDefault, &loop);
+  zx_status_t status = async_loop_create(&kAsyncLoopConfigAttachToThread, &loop);
   if (status != ZX_OK) {
     printf("error: async_loop_create returned: %d (%s)\n", status, zx_status_get_string(status));
     return status;

@@ -106,7 +106,7 @@ int main(int argc, const char** argv) {
     return 0;
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
   media::tools::MediaApp media_app(

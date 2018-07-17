@@ -849,7 +849,7 @@ int main(int argc, const char** argv) {
   auto num_observations_per_batch = std::stoi(
       command_line.GetOptionValueWithDefault(kNumObservationsPerBatch, "7"));
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   CobaltTestApp app(use_network, do_environment_test,
                     num_observations_per_batch);
   if (!app.RunAllTestingStrategies()) {

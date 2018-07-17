@@ -16,7 +16,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   examples::AudioPlayer audio_player(params, [&loop]() {
     async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });

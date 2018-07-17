@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  async::Loop main_loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop main_loop(&kAsyncLoopConfigAttachToThread);
   main_loop.StartThread("FIDL_thread");
 
   std::unique_ptr<component::StartupContext> startup_context =

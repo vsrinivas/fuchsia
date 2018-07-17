@@ -76,7 +76,7 @@ TEST(FidlTypes, UnboundBinding) {
 
 // Tests Binding formatting.
 TEST(FidlTypes, Binding) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   std::ostringstream os;
   fuchsia::sys::ServiceProvider* impl = nullptr;
@@ -106,7 +106,7 @@ TEST(FidlTypes, UnboundInterfaceHandle) {
 
 // Tests InterfaceHandle formatting.
 TEST(FidlTypes, InterfaceHandle) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   std::ostringstream os;
   fuchsia::sys::ServiceProvider* impl = nullptr;
@@ -136,7 +136,7 @@ TEST(FidlTypes, UnboundInterfacePtr) {
 
 // Tests InterfacePtr formatting.
 TEST(FidlTypes, InterfacePtr) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   std::ostringstream os;
   fidl::InterfacePtr<fuchsia::sys::ServiceProvider> interface_ptr;
@@ -165,7 +165,7 @@ TEST(FidlTypes, InvalidInterfaceRequest) {
 
 // Tests InterfaceRequest formatting.
 TEST(FidlTypes, InterfaceRequest) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   std::ostringstream os;
   fidl::InterfacePtr<fuchsia::sys::ServiceProvider> interface_ptr;

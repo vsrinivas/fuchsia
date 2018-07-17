@@ -18,7 +18,7 @@ int main(int argc, const char** argv) {
 
   bool use_fake_camera = command_line.HasOption("fake_camera");
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());
 
   mozart::ViewProviderApp app(

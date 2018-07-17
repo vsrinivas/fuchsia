@@ -10,7 +10,7 @@
 
 int main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   examples::Tones tones(command_line.HasOption("interactive"), [&loop]() {
     async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });

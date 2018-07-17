@@ -13,7 +13,7 @@
 #include <zx/time.h>
 
 int main(int argc, char** argv) {
-  async::Loop loop;
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
   trace::TraceProvider provider(loop.dispatcher());
 
   // Wait for tracing to get set up.  This works around a race condition in

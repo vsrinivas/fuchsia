@@ -183,7 +183,7 @@ static zx_status_t read_guest_cfg(const char* cfg_path, int argc, char** argv,
 }
 
 int main(int argc, char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());
   std::unique_ptr<component::StartupContext> startup_context =
       component::StartupContext::CreateFromStartupInfo();

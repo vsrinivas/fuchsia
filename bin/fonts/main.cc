@@ -33,7 +33,7 @@ class App {
 }  // namespace fonts
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   fonts::App app;
   loop.Run();
   return 0;

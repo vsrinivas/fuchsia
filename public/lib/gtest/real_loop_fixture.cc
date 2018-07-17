@@ -56,7 +56,7 @@ bool RunGivenLoopWithTimeoutOrUntil(async::Loop* loop,
 
 }  // namespace
 
-RealLoopFixture::RealLoopFixture() : loop_(&kAsyncLoopConfigMakeDefault) {}
+RealLoopFixture::RealLoopFixture() : loop_(&kAsyncLoopConfigAttachToThread) {}
 
 RealLoopFixture::~RealLoopFixture() = default;
 

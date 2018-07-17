@@ -372,7 +372,7 @@ int main(int argc, char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   input::InputApp app(&loop);
   async::PostTask(loop.dispatcher(),
                   [&app, command_line] { app.Run(command_line); });

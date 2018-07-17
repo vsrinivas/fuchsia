@@ -13,7 +13,7 @@
 #include "garnet/examples/media/wav_record/wav_recorder.h"
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   auto startup_context = component::StartupContext::CreateFromStartupInfo();
   examples::WavRecorder wav_recorder(

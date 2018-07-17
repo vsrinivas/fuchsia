@@ -121,7 +121,7 @@ void SerialConsole::Start(zx::socket socket) {
 }
 
 void handle_serial(uint32_t env_id, uint32_t cid) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   // Connect to environment.
   fuchsia::guest::GuestManagerSyncPtr guestmgr;

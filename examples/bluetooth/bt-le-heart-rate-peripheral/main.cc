@@ -15,7 +15,7 @@
 int main(int argc, char* argv[]) {
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
-  async::Loop message_loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop message_loop(&kAsyncLoopConfigAttachToThread);
 
   auto heart_model = std::make_unique<bt_le_heart_rate::SystemLoadHeartModel>();
   bt_le_heart_rate::App app(std::move(heart_model));

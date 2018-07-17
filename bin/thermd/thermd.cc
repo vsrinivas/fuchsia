@@ -94,7 +94,7 @@ static zx_status_t thermal_device_added(int dirfd, int event, const char* name, 
 
 static void start_trace(void) {
     // Create a message loop
-    static async::Loop loop;
+    static async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     static trace::TraceProvider trace_provider(loop.dispatcher());
     static bool started = false;
     if (!started) {

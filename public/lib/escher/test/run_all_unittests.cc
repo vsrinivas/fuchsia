@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
   escher::test::SetUpEscher();
 #ifdef OS_FUCHSIA
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 #endif
   int result = RUN_ALL_TESTS();
   escher::test::TearDownEscher();

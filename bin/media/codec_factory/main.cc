@@ -10,7 +10,7 @@
 #include "codec_factory_app.h"
 
 int main(int argc, char* argv[]) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   codec_factory::CodecFactoryApp app(
       component::StartupContext::CreateFromStartupInfo(), &loop);

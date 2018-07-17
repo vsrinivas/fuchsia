@@ -22,6 +22,7 @@ namespace inferior_control {
 Server::Server(zx::job job_for_search, zx::job job_for_launch)
     : job_for_search_(std::move(job_for_search)),
       job_for_launch_(std::move(job_for_launch)),
+      message_loop_(&kAsyncLoopConfigNoAttachToThread),
       exception_port_(message_loop_.dispatcher()),
       run_status_(true) {}
 

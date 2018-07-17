@@ -73,10 +73,10 @@ zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent) {
 }  // namespace
 
 DriverCtx::DriverCtx() {
-  // We don't use kAsyncLoopConfigMakeDefault here, because we don't really want
+  // We use kAsyncLoopConfigNoAttachToThread here, because we don't really want
   // to be setting the default async_t for the the thread that creates the
   // DriverCtx.  We'll plumb async_t(s) explicitly instead.
-  shared_fidl_loop_ = std::make_unique<async::Loop>();
+  shared_fidl_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
   shared_fidl_loop_->StartThread("shared_fidl_thread", &shared_fidl_thread_);
 }
 

@@ -16,7 +16,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   mdns::MdnsStandalone standalone(command_line.positional_args()[0]);
 

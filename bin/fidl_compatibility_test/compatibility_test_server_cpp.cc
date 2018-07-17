@@ -92,7 +92,7 @@ class EchoServerApp : public Echo {
 
 int main(int argc, const char** argv) {
   // The FIDL support lib requires async_get_default_dispatcher() to return non-null.
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   fidl::test::compatibility::EchoServerApp app(&loop);
   loop.Run();

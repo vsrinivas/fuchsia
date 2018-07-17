@@ -45,7 +45,7 @@ int main(int argc, const char** argv) {
     }
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());
 
   std::unique_ptr<component::StartupContext> startup_context =

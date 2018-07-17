@@ -171,7 +171,7 @@ class AnalyzerImpl : public fuchsia::crash::Analyzer {
 };
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   std::unique_ptr<component::StartupContext> app_context(
       component::StartupContext::CreateFromStartupInfo());
 

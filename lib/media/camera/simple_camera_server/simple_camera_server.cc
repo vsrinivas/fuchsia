@@ -7,7 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   simple_camera::SimpleCameraApp app;
   loop.Run();
   return 0;

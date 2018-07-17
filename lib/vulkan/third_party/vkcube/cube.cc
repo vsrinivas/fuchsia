@@ -3056,7 +3056,7 @@ int test_vk_cube(int argc, char** argv) {
   VulkanShimInit();
 #endif
 #if defined(MAGMA_ENABLE_TRACING)
-  async::Loop loop;
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
   loop.StartThread();
   trace::TraceProvider trace_provider(loop.dispatcher());
 #endif

@@ -30,7 +30,7 @@ int main(int argc, const char** argv) {
         << "Cannot set both --use_root_presenter and --use_example_presenter";
     exit(0);
   }
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
   auto scenic =

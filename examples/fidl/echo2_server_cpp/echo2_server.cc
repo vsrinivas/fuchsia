@@ -8,7 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   bool quiet = (argc >= 2) && std::string("-q") == argv[1];
   echo2::EchoServerApp app(quiet);
   loop.Run();

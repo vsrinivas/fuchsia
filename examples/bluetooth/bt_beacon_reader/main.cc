@@ -12,7 +12,7 @@ int main(int argc, char* argv[]) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   bool just_tilts = command_line.HasOption("tilt");
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   bt_beacon_reader::App app(&loop, just_tilts);
 

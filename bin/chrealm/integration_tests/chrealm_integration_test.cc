@@ -47,7 +47,7 @@ class ChrealmTest : public ::testing::Test,
 
  protected:
   ChrealmTest()
-      : loop_(&kAsyncLoopConfigMakeDefault),
+      : loop_(&kAsyncLoopConfigAttachToThread),
         vfs_(async_get_default_dispatcher()),
         services_(fbl::AdoptRef(new fs::PseudoDir)) {}
 

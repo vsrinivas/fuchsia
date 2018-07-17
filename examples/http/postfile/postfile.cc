@@ -149,7 +149,7 @@ class PostFileApp {
 
 int main(int argc, const char** argv) {
   std::vector<std::string> args(argv, argv + argc);
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   examples::PostFileApp postfile_app(&loop);
   if (postfile_app.Start(args))

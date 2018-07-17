@@ -293,7 +293,7 @@ bool OmxCodecRunner::Load() {
   // which prevents any overlap between Setup items and StreamControl items.
   //
   // The StreamControl thread is allowed to block.
-  stream_control_ = std::make_unique<async::Loop>();
+  stream_control_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
   zx_status_t start_thread_result = stream_control_->StartThread(
       "StreamControl_ordering_domain", &stream_control_thread_);
   if (start_thread_result != ZX_OK) {

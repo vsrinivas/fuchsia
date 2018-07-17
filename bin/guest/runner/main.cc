@@ -8,7 +8,7 @@
 #include "lib/fxl/logging.h"
 
 int main(int argc, char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   guest_runner::GuestRunner runner;
   loop.Run();
 }

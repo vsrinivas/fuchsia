@@ -194,6 +194,7 @@ public:
           local_endpoint_(std::move(local_endpoint)), remote_endpoint_(std::move(remote_endpoint)),
           local_notification_endpoint_(std::move(local_notification_endpoint)),
           remote_notification_endpoint_(std::move(remote_notification_endpoint)),
+          async_loop_(&kAsyncLoopConfigNoAttachToThread),
           async_wait_channel_(this, local_endpoint_.get(),
                               ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED),
           async_wait_shutdown_(

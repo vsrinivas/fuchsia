@@ -27,7 +27,7 @@ class MainService {
 }  // namespace time_zone
 
 int main(int argc, char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   time_zone::MainService svc;
   loop.Run();
   return 0;

@@ -29,8 +29,7 @@ void test_factory() {
   // We don't just use Sync FIDL proxies because we might need to recieve events
   // before long.
 
-  // Intentionally not using kAsyncLoopConfigMakeDefault here.
-  async::Loop fidl_loop;
+  async::Loop fidl_loop(kAsyncLoopConfigNoAttachToThread);
   // Start a separate FIDL thread for two reasons:
   //   * It's handy for the main thread to stay separate to control the test.
   //   * By having a separate FIDL thread, this test shows how to do so without
@@ -40,8 +39,8 @@ void test_factory() {
   std::unique_ptr<component::StartupContext> startup_context;
   // Use FIDL thread to run CreateFromStartupInfo(), since it uses the calling
   // thread's default async_t, and we don't want to be accidentally doing
-  // FIDL requests from the main thread, so we don't use
-  // kAsyncLoopConfigMakeDefault above.
+  // FIDL requests from the main thread, so we use
+  // kAsyncLoopConfigNoAttachToThread above.
   PostSerial(fidl_loop.dispatcher(), [&startup_context] {
     startup_context = component::StartupContext::CreateFromStartupInfo();
   });

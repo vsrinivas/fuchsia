@@ -12,7 +12,7 @@
 int main(int argc, char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
 
   component::AppmgrArgs args{.pa_directory_request = std::move(request),

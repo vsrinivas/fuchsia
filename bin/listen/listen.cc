@@ -215,7 +215,7 @@ int main(int argc, const char** argv) {
   // introspection services for debugging.
   zx_handle_close(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
 
-  async::Loop loop;
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
   async_set_default_dispatcher(loop.dispatcher());
 
   if (argc < 3) {

@@ -52,6 +52,8 @@ static constexpr uint32_t trap_kind(machina::TrapType type) {
 
 namespace machina {
 
+Guest::Guest() : device_loop_(&kAsyncLoopConfigNoAttachToThread) {}
+
 zx_status_t Guest::Init(size_t mem_size) {
   zx_status_t status = phys_mem_.Init(mem_size);
   if (status != ZX_OK) {

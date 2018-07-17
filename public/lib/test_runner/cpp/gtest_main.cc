@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
   testing::UnitTest::GetInstance()->listeners().Release(&listener);
 
   {
-    async::Loop loop(&kAsyncLoopConfigMakeDefault);
+    async::Loop loop(&kAsyncLoopConfigAttachToThread);
     auto context = component::StartupContext::CreateFromStartupInfo();
     test_runner::ReportResult(argv[0], context.get(), listener.GetResults());
   }

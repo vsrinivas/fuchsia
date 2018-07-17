@@ -26,7 +26,8 @@ const DeviceAddress kAddress0(DeviceAddress::Type::kLEPublic,
                               "00:00:00:00:00:01");
 const DeviceAddress kAddress1(DeviceAddress::Type::kBREDR, "00:00:00:00:00:02");
 
-Device::Device(zx_device_t* device) : parent_(device) {}
+Device::Device(zx_device_t* device)
+    : loop_(&kAsyncLoopConfigNoAttachToThread), parent_(device) {}
 
 #define DEV(c) static_cast<Device*>(c)
 static zx_protocol_device_t bthci_fake_device_ops = {

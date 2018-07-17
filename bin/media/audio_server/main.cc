@@ -8,7 +8,7 @@
 #include "lib/component/cpp/startup_context.h"
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   media::audio::AudioServerImpl impl;
   loop.Run();
   return 0;

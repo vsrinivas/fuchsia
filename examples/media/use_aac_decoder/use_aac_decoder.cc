@@ -148,7 +148,7 @@ void use_aac_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
   // those sends which are already on the loop thread, vs. what we're doing
   // which only needs anything extra for sends we queue from threads that aren't
   // the loop thread.
-  async::Loop loop;
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
 
   // This example will give the loop it's own thread, so that the main thread
   // can be used to sequence overall control of the Codec instance using a

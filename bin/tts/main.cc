@@ -7,7 +7,7 @@
 #include "garnet/bin/tts/tts_service_impl.h"
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   tts::TtsServiceImpl impl(component::StartupContext::CreateFromStartupInfo());
 

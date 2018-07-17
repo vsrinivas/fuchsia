@@ -11,6 +11,7 @@ namespace gfx {
 
 EventTimestamper::EventTimestamper()
     : main_dispatcher_(async_get_default_dispatcher()),
+      background_loop_(&kAsyncLoopConfigNoAttachToThread),
       task_([] { zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */); }) {
   FXL_DCHECK(main_dispatcher_);
   background_loop_.StartThread();

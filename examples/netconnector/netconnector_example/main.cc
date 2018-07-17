@@ -17,7 +17,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   examples::NetConnectorExampleImpl impl(&params, [&loop]() {
     async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });

@@ -2,7 +2,7 @@
 #include "display_manager_impl.h"
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   display::DisplayManagerImpl manager;
   loop.Run();
   return 0;

@@ -9,7 +9,7 @@
 #include "lib/ui/view_framework/view_provider_app.h"
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());
   // Launching server app
 

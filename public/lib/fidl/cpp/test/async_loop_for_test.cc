@@ -11,7 +11,7 @@ namespace test {
 
 class AsyncLoopForTestImpl {
  public:
-  AsyncLoopForTestImpl() : loop_(&kAsyncLoopConfigMakeDefault) {}
+  AsyncLoopForTestImpl() : loop_(&kAsyncLoopConfigAttachToThread) {}
   ~AsyncLoopForTestImpl() = default;
 
   async::Loop* loop() { return &loop_; }

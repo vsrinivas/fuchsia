@@ -14,7 +14,7 @@
 #include "lib/fidl/cpp/binding_set.h"
 
 TEST(Run, Daemonize) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   const char* run_d_command_argv[] = {"/system/bin/run", "-d",
                                       "test_program_name", nullptr};

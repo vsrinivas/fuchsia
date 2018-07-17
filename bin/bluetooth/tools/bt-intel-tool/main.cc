@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   CommandChannel channel(hci_dev_path);
 
   bluetooth_tools::CommandDispatcher dispatcher;

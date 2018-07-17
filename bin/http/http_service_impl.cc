@@ -42,6 +42,7 @@ class HttpServiceImpl::UrlLoaderContainer
       : request_(std::move(request)),
         top_coordinator_(top_coordinator),
         main_dispatcher_(main_dispatcher),
+        io_loop_(&kAsyncLoopConfigNoAttachToThread),
         weak_ptr_factory_(this) {
     FXL_DCHECK(main_dispatcher_);
     weak_ptr_ = weak_ptr_factory_.GetWeakPtr();

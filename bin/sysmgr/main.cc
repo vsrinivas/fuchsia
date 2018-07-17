@@ -68,7 +68,7 @@ int main(int argc, const char** argv) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   sysmgr::App app(std::move(config));
 
   loop.Run();

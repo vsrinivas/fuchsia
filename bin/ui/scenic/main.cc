@@ -22,7 +22,7 @@ int main(int argc, const char** argv) {
   if (fsl::InitLoggerFromCommandLine(command_line, {"scenic"}) != ZX_OK)
     return 1;
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());
   std::unique_ptr<component::StartupContext> app_context(
       component::StartupContext::CreateFromStartupInfo());

@@ -25,7 +25,7 @@ public:
     zx_status_t GetOrStartLoop(async_dispatcher_t** out) {
         std::lock_guard<std::mutex> guard(mutex_);
         if (!loop_) {
-            auto l = std::make_unique<async::Loop>();
+            auto l = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
             zx_status_t status = l->StartThread("wlantap-loop");
             if (status != ZX_OK) {
                 return status;

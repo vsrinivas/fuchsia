@@ -47,7 +47,7 @@ fuchsia::sys::FileDescriptorPtr CloneFileDescriptor(int fd) {
 class HubTest : public ::testing::Test {
  protected:
   HubTest()
-      : loop_(&kAsyncLoopConfigMakeDefault),
+      : loop_(&kAsyncLoopConfigAttachToThread),
         vfs_(async_get_default_dispatcher()),
         services_(fbl::AdoptRef(new ServiceProviderDirImpl())) {
     // we are currently have access to sys environment and not root environment.

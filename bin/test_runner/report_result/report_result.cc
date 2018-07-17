@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
     name = "report_result";
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto app_context = component::StartupContext::CreateFromStartupInfo();
   auto test_runner =
       app_context->ConnectToEnvironmentService<TestRunner>();

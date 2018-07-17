@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
   // separate process.  That sysmgr process will start a codec_factory process
   // when a request for pa_directory/svc/fuchsia.mediacodec.CodecFactory
   // arrives.
-  async::Loop main_loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop main_loop(&kAsyncLoopConfigAttachToThread);
   zx::channel appmgr_pa_directory_client, appmgr_pa_directory_server;
   zx_status_t zx_result = zx::channel::create(0, &appmgr_pa_directory_client,
                                               &appmgr_pa_directory_server);

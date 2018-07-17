@@ -35,7 +35,7 @@ int main(int argc, const char** argv) {
 
     escher::Escher escher(vulkan_device);
 
-    async::Loop loop(&kAsyncLoopConfigMakeDefault);
+    async::Loop loop(&kAsyncLoopConfigAttachToThread);
     trace::TraceProvider trace_provider(loop.dispatcher());
 
     sketchy_service::App app(&loop, escher.GetWeakPtr());

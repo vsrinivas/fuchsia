@@ -150,7 +150,7 @@ int main(int argc, const char** argv) {
     }
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());
 
   ScreenshotTaker taker(&loop, output_screen);

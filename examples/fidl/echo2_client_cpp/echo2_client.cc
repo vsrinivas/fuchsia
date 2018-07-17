@@ -26,7 +26,7 @@ int main(int argc, const char** argv) {
     }
   }
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   echo2::EchoClientApp app;
   app.Start(server_url);
