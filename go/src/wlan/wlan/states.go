@@ -452,6 +452,11 @@ func (s *scanState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 		} else if c.cfg != nil && c.cfg.SSID != "" {
 			aps := CollectScanResults(v, c.cfg.SSID, c.cfg.BSSID)
 			s.aps = append(s.aps, aps...)
+
+			if len(s.aps) == 0 && s.channelScanOffset == len(s.supportedChannels) {
+				fmt.Printf("wlan: no matching network found for \"%s\" after a round of scanning\n", c.cfg.SSID)
+			}
+
 			// TODO(NET-420) find a way to stream results upward and let higher level
 			// take care of de-duping
 			if !s.running {

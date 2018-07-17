@@ -70,9 +70,6 @@ func CollectScanResults(resp *mlme.ScanConfirm, ssid string, bssid string) []AP 
 		}
 	}
 
-	if len(resp.BssDescriptionSet) > 0 && len(aps) == 0 {
-		fmt.Printf("wlan: no matching network among %d scanned\n", len(resp.BssDescriptionSet))
-	}
 	sort.Slice(aps, func(i, j int) bool { return aps[i].RssiDbm > aps[j].RssiDbm })
 	return aps
 }
