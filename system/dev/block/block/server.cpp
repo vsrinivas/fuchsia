@@ -471,9 +471,9 @@ zx_status_t BlockServer::Serve() {
             bool use_group = requests[i].opcode & BLOCKIO_GROUP_ITEM;
 
             reqid_t reqid = requests[i].reqid;
-            groupid_t group = requests[i].group;
 
             if (use_group) {
+                groupid_t group = requests[i].group;
                 if (group >= MAX_TXN_GROUP_COUNT) {
                     // Operation which is not accessing a valid group.
                     if (wants_reply) {
@@ -489,8 +489,7 @@ zx_status_t BlockServer::Serve() {
                     continue;
                 }
             } else {
-                ZX_DEBUG_ASSERT_MSG(false, "NO GROUP");
-                group = kNoGroup;
+                requests[i].group = kNoGroup;
             }
 
             ProcessRequest(&requests[i]);
