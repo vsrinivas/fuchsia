@@ -43,6 +43,7 @@ source_set("lib") {
     "mmu.cc",
     "null.cc",
     "ports.cc",
+    "pseudo-dir.cc",
     "pthreads.cc",
     "round_trips.cc",
     "sockets.cc",
@@ -51,21 +52,20 @@ source_set("lib") {
     "vmo.cc",
   ]
   deps = [
+    ":fidl_interface",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//third_party/gflags",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fs",
     "//zircon/public/lib/zx",
-    ":fidl_interface",
   ]
   public_deps = [
     "//third_party/benchmark",
     "//zircon/public/lib/perftest",
   ]
-  libs = [
-    "zircon",
-  ]
+  libs = [ "zircon" ]
 }
 
 fidl("fidl_interface") {
