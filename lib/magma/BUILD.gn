@@ -33,16 +33,17 @@ package("magma-tools") {
 }
 
 package("vkcube") {
-  deprecated_system_image = true
-
   if (have_libvulkan || use_vulkan_loader_for_tests) {
     deps = [
       "//garnet/lib/magma/tests/vkcube",
     ]
 
-    binaries = [
+    binary = "vkcube"
+
+    meta = [
       {
-        name = "vkcube"
+        path = rebase_path("meta/vkcube.cmx")
+        dest = "vkcube.cmx"
       },
     ]
   }
