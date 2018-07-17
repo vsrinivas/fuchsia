@@ -55,6 +55,8 @@ source_set("testing") {
     "fake_channel_test.h",
     "fake_layer.cc",
     "fake_layer.h",
+    "fake_signaling_channel.cc",
+    "fake_signaling_channel.h",
   ]
 
   public_deps = [
