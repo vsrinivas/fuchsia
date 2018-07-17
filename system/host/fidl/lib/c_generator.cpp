@@ -25,6 +25,7 @@ CGenerator::Member MessageHeader() {
         "hdr",
         {},
         {},
+        types::Nullability::kNonnullable,
     };
 }
 
@@ -100,7 +101,14 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
             break;
         case flat::Decl::Kind::kStruct:
         case flat::Decl::Kind::kUnion:
-            *file << "const " << member.type << "* " << member.name;
+            switch (member.nullability) {
+            case types::Nullability::kNullable:
+                *file << "const " << member.type << " " << member.name;
+                break;
+            case types::Nullability::kNonnullable:
+                *file << "const " << member.type << "* " << member.name;
+                break;
+            }
             break;
         }
         break;
@@ -115,20 +123,41 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
             *file << "[" << array_count << "]";
         }
     case flat::Type::Kind::kVector:
-        *file << member.element_type << "* " << member.name << "_data, "
+        *file << member.element_type << "* " << member.name << "_buffer, "
               << "size_t " << member.name << "_capacity, "
               << "size_t* out_" << member.name << "_count";
         break;
     case flat::Type::Kind::kString:
-        *file << "char* " << member.name << "_data, "
+        *file << "char* " << member.name << "_buffer, "
               << "size_t " << member.name << "_capacity, "
               << "size_t* out_" << member.name << "_size";
         break;
     case flat::Type::Kind::kHandle:
     case flat::Type::Kind::kRequestHandle:
     case flat::Type::Kind::kPrimitive:
+        *file << member.type << "* out_" << member.name;
+        break;
     case flat::Type::Kind::kIdentifier:
-        *file << member.type << "* " << member.name;
+        switch (member.decl_kind) {
+        case flat::Decl::Kind::kConst:
+            assert(false && "bad decl kind for member");
+            break;
+        case flat::Decl::Kind::kEnum:
+        case flat::Decl::Kind::kInterface:
+            *file << member.type << "* out_" << member.name;
+            break;
+        case flat::Decl::Kind::kStruct:
+        case flat::Decl::Kind::kUnion:
+            switch (member.nullability) {
+            case types::Nullability::kNullable:
+                *file << member.type << " out_" << member.name;
+                break;
+            case types::Nullability::kNonnullable:
+                *file << member.type << "* out_" << member.name;
+                break;
+            }
+            break;
+        }
         break;
     }
 }
@@ -178,15 +207,38 @@ void EmitServerReplyDecl(std::ostream* file, StringView method_name,
     *file << ")";
 }
 
-void EmitMeasureParams(std::ostream* file,
-                       const std::vector<CGenerator::Member>& params,
-                       StringView vector_suffix,
-                       StringView string_suffix) {
+bool IsStoredOutOfLine(const CGenerator::Member& member) {
+    if (member.kind == flat::Type::Kind::kVector ||
+        member.kind == flat::Type::Kind::kString)
+        return true;
+    if (member.kind == flat::Type::Kind::kIdentifier) {
+        return member.nullability == types::Nullability::kNullable &&
+               (member.decl_kind == flat::Decl::Kind::kStruct || member.decl_kind == flat::Decl::Kind::kUnion);
+    }
+    return false;
+}
+
+void EmitMeasureInParams(std::ostream* file,
+                         const std::vector<CGenerator::Member>& params) {
     for (const auto& member : params) {
         if (member.kind == flat::Type::Kind::kVector)
-            *file << " + FIDL_ALIGN(sizeof(*" << member.name << "_data) * " << member.name << vector_suffix << ")";
+            *file << " + FIDL_ALIGN(sizeof(*" << member.name << "_data) * " << member.name << "_count)";
         else if (member.kind == flat::Type::Kind::kString)
-            *file << " + FIDL_ALIGN(" << member.name << string_suffix << ")";
+            *file << " + FIDL_ALIGN(" << member.name << "_size)";
+        else if (IsStoredOutOfLine(member))
+            *file << " + (" << member.name << " ? sizeof(*" << member.name << ") : 0u)";
+    }
+}
+
+void EmitMeasureOutParams(std::ostream* file,
+                          const std::vector<CGenerator::Member>& params) {
+    for (const auto& member : params) {
+        if (member.kind == flat::Type::Kind::kVector)
+            *file << " + FIDL_ALIGN(sizeof(*" << member.name << "_buffer) * " << member.name << "_capacity)";
+        else if (member.kind == flat::Type::Kind::kString)
+            *file << " + FIDL_ALIGN(" << member.name << "_capacity)";
+        else if (IsStoredOutOfLine(member))
+            *file << " + (out_" << member.name << " ? sizeof(*out_" << member.name << ") : 0u)";
     }
 }
 
@@ -197,8 +249,7 @@ void EmitMeasureParams(std::ostream* file,
 size_t CountSecondaryObjects(const std::vector<CGenerator::Member>& params) {
     size_t count = 0u;
     for (const auto& member : params) {
-        if (member.kind == flat::Type::Kind::kVector ||
-            member.kind == flat::Type::Kind::kString)
+        if (IsStoredOutOfLine(member))
             ++count;
     }
     return count;
@@ -245,7 +296,20 @@ void EmitLinearizeMessage(std::ostream* file,
                 break;
             case flat::Decl::Kind::kStruct:
             case flat::Decl::Kind::kUnion:
-                *file << kIndent << receiver << "->" << name << " = *" << name << ";\n";
+                switch (member.nullability) {
+                case types::Nullability::kNullable:
+                    *file << kIndent << "if (" << name << ") {\n";
+                    *file << kIndent << kIndent << receiver << "->" << name << " = (void*)&" << bytes << "[_next];\n";
+                    *file << kIndent << kIndent << "memcpy(" << receiver << "->" << name << ", " << name << ", sizeof(*" << name << "));\n";
+                    *file << kIndent << kIndent << "_next += sizeof(*" << name << ");\n";
+                    *file << kIndent << "} else {\n";
+                    *file << kIndent << kIndent << receiver << "->" << name << " = NULL;\n";
+                    *file << kIndent << "}\n";
+                    break;
+                case types::Nullability::kNonnullable:
+                    *file << kIndent << receiver << "->" << name << " = *" << name << ";\n";
+                    break;
+                }
                 break;
             }
         }
@@ -368,7 +432,7 @@ flat::Decl::Kind GetDeclKind(const flat::Library* library, const flat::Type* typ
     if (type->kind != flat::Type::Kind::kIdentifier)
         return flat::Decl::Kind::kConst;
     auto identifier_type = static_cast<const flat::IdentifierType*>(type);
-    auto named_decl = library->LookupType(identifier_type->name);
+    auto named_decl = library->LookupDeclByName(identifier_type->name);
     assert(named_decl && "library must contain declaration");
     return named_decl->kind;
 }
@@ -386,6 +450,11 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl) {
         const flat::Type* element_type = vector_type->element_type.get();
         element_type_name = NameFlatCType(element_type, GetDeclKind(library, element_type));
     }
+    types::Nullability nullability = types::Nullability::kNonnullable;
+    if (type->kind == flat::Type::Kind::kIdentifier) {
+        auto identifier_type = static_cast<const flat::IdentifierType*>(type);
+        nullability = identifier_type->nullability;
+    }
     return CGenerator::Member{
         type->kind,
         decl_kind,
@@ -393,6 +462,7 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl) {
         std::move(name),
         std::move(element_type_name),
         std::move(array_counts),
+        nullability,
     };
 }
 
@@ -713,7 +783,7 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
         EmitClientMethodDecl(&file_, method_info.c_name, request, response);
         file_ << " {\n";
         file_ << kIndent << "uint32_t _wr_num_bytes = sizeof(" << method_info.request->c_name << ")";
-        EmitMeasureParams(&file_, request, "_count", "_size");
+        EmitMeasureInParams(&file_, request);
         file_ << ";\n";
         file_ << kIndent << "FIDL_ALIGNDECL char _wr_bytes[_wr_num_bytes];\n";
         file_ << kIndent << method_info.request->c_name << "* _request = (" << method_info.request->c_name << "*)_wr_bytes;\n";
@@ -731,7 +801,7 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
             file_ << kIndent << "return zx_channel_write(_channel, 0u, _wr_bytes, _wr_num_bytes, _handles, _wr_num_handles);\n";
         } else {
             file_ << kIndent << "uint32_t _rd_num_bytes = sizeof(" << method_info.response->c_name << ")";
-            EmitMeasureParams(&file_, response, "_capacity", "_capacity");
+            EmitMeasureOutParams(&file_, response);
             file_ << ";\n";
             file_ << kIndent << "FIDL_ALIGNDECL char _rd_bytes[_rd_num_bytes];\n";
             if (!response.empty())
@@ -772,6 +842,10 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
                         if (i++ > 0u)
                             file_ << " || ";
                         file_ << "(_response->" << member.name << ".size > " << member.name << "_capacity)";
+                    } else if (IsStoredOutOfLine(member)) {
+                        if (i++ > 0u)
+                            file_ << " || ";
+                        file_ << "((uintptr_t)_response->" << member.name << " == FIDL_ALLOC_PRESENT && out_" << member.name << " == NULL)";
                     }
                 }
                 if (count > 1u)
@@ -795,18 +869,50 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
                     file_ << kIndent << "memcpy(out_" << name << ", _response->" << name << ", sizeof(out_" << name << "));\n";
                     break;
                 case flat::Type::Kind::kVector:
-                    file_ << kIndent << "memcpy(" << name << "_data, _response->" << name << ".data, sizeof(*" << name << "_data) * _response->" << name << ".count);\n";
+                    file_ << kIndent << "memcpy(" << name << "_buffer, _response->" << name << ".data, sizeof(*" << name << "_buffer) * _response->" << name << ".count);\n";
                     file_ << kIndent << "*out_" << name << "_count = _response->" << name << ".count;\n";
                     break;
                 case flat::Type::Kind::kString:
-                    file_ << kIndent << "memcpy(" << name << "_data, _response->" << name << ".data, _response->" << name << ".size);\n";
+                    file_ << kIndent << "memcpy(" << name << "_buffer, _response->" << name << ".data, _response->" << name << ".size);\n";
                     file_ << kIndent << "*out_" << name << "_size = _response->" << name << ".size;\n";
                     break;
                 case flat::Type::Kind::kHandle:
                 case flat::Type::Kind::kRequestHandle:
                 case flat::Type::Kind::kPrimitive:
+                    file_ << kIndent << "*out_" << name << " = _response->" << name << ";\n";
+                    break;
                 case flat::Type::Kind::kIdentifier:
-                    file_ << kIndent << "*" << name << " = _response->" << name << ";\n";
+                    switch (member.decl_kind) {
+                    case flat::Decl::Kind::kConst:
+                        assert(false && "bad decl kind for member");
+                        break;
+                    case flat::Decl::Kind::kEnum:
+                    case flat::Decl::Kind::kInterface:
+                        file_ << kIndent << "*out_" << name << " = _response->" << name << ";\n";
+                        break;
+                    case flat::Decl::Kind::kStruct:
+                    case flat::Decl::Kind::kUnion:
+                        switch (member.nullability) {
+                        case types::Nullability::kNullable:
+                            file_ << kIndent << "if (_response->" << name << ") {\n";
+                            file_ << kIndent << kIndent << "*out_" << name << " = *(_response->" << name << ");\n";
+                            file_ << kIndent << "} else {\n";
+                            // We don't have a great way of signaling that the optional response member
+                            // was not in the message. That means these bindings aren't particularly
+                            // useful when the client needs to extract that bit. The best we can do is
+                            // zero out the value to make sure the client has defined behavior.
+                            //
+                            // In many cases, the response contains other information (e.g., a status code)
+                            // that lets the client do something reasonable.
+                            file_ << kIndent << kIndent << "memset(out_" << name << ", 0, sizeof(*out_" << name << "));\n";
+                            file_ << kIndent << "}\n";
+                            break;
+                        case types::Nullability::kNonnullable:
+                            file_ << kIndent << "*out_" << name << " = _response->" << name << ";\n";
+                            break;
+                        }
+                        break;
+                    }
                     break;
                 }
             }
@@ -894,7 +1000,14 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
                     break;
                 case flat::Decl::Kind::kStruct:
                 case flat::Decl::Kind::kUnion:
-                    file_ << ", &(request->" << member.name << ")";
+                    switch (member.nullability) {
+                    case types::Nullability::kNullable:
+                        file_ << ", request->" << member.name;
+                        break;
+                    case types::Nullability::kNonnullable:
+                        file_ << ", &(request->" << member.name << ")";
+                        break;
+                    }
                     break;
                 }
             }
@@ -922,7 +1035,7 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
         EmitServerReplyDecl(&file_, method_info.c_name, response);
         file_ << " {\n";
         file_ << kIndent << "uint32_t _wr_num_bytes = sizeof(" << method_info.response->c_name << ")";
-        EmitMeasureParams(&file_, response, "_count", "_size");
+        EmitMeasureInParams(&file_, response);
         file_ << ";\n";
         file_ << kIndent << "char _wr_bytes[_wr_num_bytes];\n";
         file_ << kIndent << method_info.response->c_name << "* _response = (" << method_info.response->c_name << "*)_wr_bytes;\n";

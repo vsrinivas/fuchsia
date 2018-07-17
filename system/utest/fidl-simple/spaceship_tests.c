@@ -35,11 +35,25 @@ static zx_status_t SpaceShip_SetDefenseCondition(void* ctx, fidl_test_spaceship_
     return ZX_OK;
 }
 
+static zx_status_t SpaceShip_GetFuelRemaining(void* ctx, zx_handle_t cancel, fidl_txn_t* txn) {
+    EXPECT_EQ(ZX_HANDLE_INVALID, cancel, "");
+    const fidl_test_spaceship_FuelLevel level = {
+        .reaction_mass = 1641u,
+    };
+    return fidl_test_spaceship_SpaceShipGetFuelRemaining_reply(txn, ZX_OK, &level);
+}
+
+static zx_status_t SpaceShip_AddFuelTank(void* ctx, const fidl_test_spaceship_FuelLevel* level, fidl_txn_t* txn) {
+    return fidl_test_spaceship_SpaceShipAddFuelTank_reply(txn, level->reaction_mass / 2);
+}
+
 static const fidl_test_spaceship_SpaceShip_ops_t kOps = {
     .AdjustHeading = SpaceShip_AdjustHeading,
     .ScanForLifeforms = SpaceShip_ScanForLifeforms,
     .SetAstrometricsListener = SpaceShip_SetAstrometricsListener,
     .SetDefenseCondition = SpaceShip_SetDefenseCondition,
+    .GetFuelRemaining = SpaceShip_GetFuelRemaining,
+    .AddFuelTank = SpaceShip_AddFuelTank,
 };
 
 static bool spaceship_test(void) {
@@ -86,6 +100,22 @@ static bool spaceship_test(void) {
 
     {
         ASSERT_EQ(ZX_OK, fidl_test_spaceship_SpaceShipSetDefenseCondition(client, fidl_test_spaceship_Alert_RED), "");
+    }
+
+    {
+        fidl_test_spaceship_FuelLevel level;
+        ASSERT_EQ(ZX_OK, fidl_test_spaceship_SpaceShipGetFuelRemaining(client, ZX_HANDLE_INVALID, &status, &level), "");
+        ASSERT_EQ(ZX_OK, status, "");
+        ASSERT_EQ(1641u, level.reaction_mass, "");
+    }
+
+    {
+        fidl_test_spaceship_FuelLevel level = {
+            .reaction_mass = 9482,
+        };
+        uint32_t out_consumed = 0u;
+        ASSERT_EQ(ZX_OK, fidl_test_spaceship_SpaceShipAddFuelTank(client, &level, &out_consumed), "");
+        ASSERT_EQ(4741u, out_consumed, "");
     }
 
     ASSERT_EQ(ZX_OK, zx_handle_close(client), "");

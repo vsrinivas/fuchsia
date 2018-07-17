@@ -77,6 +77,7 @@ const uint32 kOpenFlagDescribe       = 0x00800000;
 const uint32 kOpenFlagStatus         = 0x01000000;
 
 // Object defines the minimal interface for entities which can be accessed in a filesystem.
+[Layout="Simple"]
 interface Object {
   // May be used to create another connection to the same remote object.
   0x80000001: Clone(uint32 flags, request<Object> object);
@@ -146,6 +147,7 @@ const uint32 kNodeAttributeFlagModificationTime = 0x00000002;
 
 // Node defines a filesystem object, which implements a minimal set of functionality
 // to be compatible with posix filesystem operations.
+[Layout="Simple"]
 interface Node : Object {
   // Synchronizes updates to the node to the underlying media, if it exists.
   0x81000001: Sync() -> (status s);
@@ -177,6 +179,7 @@ const uint32 kVmoFlagExec    = 0x00000004;
 const uint32 kVmoFlagPrivate = 0x00010000;
 
 // File defines the interface of a node which contains a flat layout of data.
+[Layout="Simple"]
 interface File : Node {
   // Read 'count' bytes at the seek offset.
   // The seek offset is moved forward by the number of bytes read.
@@ -224,6 +227,7 @@ const uint32 kDirentTypeSocket = 12;
 const uint32 kDirentTypeService = 16;
 
 // Directory defines a node which is capable of containing other Objects.
+[Layout="Simple"]
 interface Directory : Node {
   // Open a new object relative to this directory object.
   0x83000001: Open(uint32 flags, uint32 mode, string:kMaxPath path, request<Object> object);

@@ -10,10 +10,10 @@ namespace {
 
 const char* NameNullability(types::Nullability nullability) {
     switch (nullability) {
-    case types::Nullability::kNonnullable:
-        return "nonnullable";
     case types::Nullability::kNullable:
         return "nullable";
+    case types::Nullability::kNonnullable:
+        return "nonnullable";
     }
 }
 

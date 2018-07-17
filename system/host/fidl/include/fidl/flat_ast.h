@@ -500,7 +500,11 @@ private:
     // declaration. For example, if |type| refers to int32 or if it is
     // a struct pointer, this will return null. If it is a struct, it
     // will return a pointer to the declaration of the type.
-    Decl* LookupType(const flat::Type* type) const;
+    enum class LookupOption {
+        kIgnoreNullable,
+        kIncludeNullable,
+    };
+    Decl* LookupDeclByType(const flat::Type* type, LookupOption option) const;
 
     bool DeclDependencies(Decl* decl, std::set<Decl*>* out_edges);
 
@@ -528,7 +532,7 @@ private:
 public:
     // Returns nullptr when the |name| cannot be resolved to a
     // Name. Otherwise it returns the declaration.
-    Decl* LookupType(const Name& name) const;
+    Decl* LookupDeclByName(const Name& name) const;
 
     // TODO(TO-702) Add a validate literal function. Some things
     // (e.g. array indexes) want to check the value but print the
@@ -573,7 +577,7 @@ public:
         switch (constant->kind) {
         case Constant::Kind::kIdentifier: {
             auto identifier_constant = static_cast<const IdentifierConstant*>(constant);
-            auto decl = LookupType(identifier_constant->name);
+            auto decl = LookupDeclByName(identifier_constant->name);
             if (!decl || decl->kind != Decl::Kind::kConst)
                 return false;
             return ParseIntegerConstant(static_cast<Const*>(decl)->value.get(), out_value);

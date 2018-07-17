@@ -42,6 +42,7 @@ public:
         std::string name;
         std::string element_type;
         std::vector<uint32_t> array_counts;
+        types::Nullability nullability;
     };
 
     struct NamedMessage {

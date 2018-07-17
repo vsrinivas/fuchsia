@@ -185,10 +185,8 @@ fidl::StringView Decl::GetAttribute(fidl::StringView name) const {
 }
 
 bool Interface::Method::Parameter::IsSimple() const {
-    if (type->kind == Type::Kind::kString) {
-        auto string_type = static_cast<StringType*>(type.get());
-        return string_type->max_size.Value() < Size::Max().Value();
-    } else if (type->kind == Type::Kind::kVector) {
+    switch (type->kind) {
+    case Type::Kind::kVector: {
         auto vector_type = static_cast<VectorType*>(type.get());
         if (vector_type->element_count.Value() == Size::Max().Value())
             return false;
@@ -204,7 +202,27 @@ bool Interface::Method::Parameter::IsSimple() const {
             return false;
         }
     }
-    return fieldshape.Depth() == 0u;
+    case Type::Kind::kString: {
+        auto string_type = static_cast<StringType*>(type.get());
+        return string_type->max_size.Value() < Size::Max().Value();
+    }
+    case Type::Kind::kArray:
+    case Type::Kind::kHandle:
+    case Type::Kind::kRequestHandle:
+    case Type::Kind::kPrimitive:
+        return fieldshape.Depth() == 0u;
+    case Type::Kind::kIdentifier: {
+        auto identifier_type = static_cast<IdentifierType*>(type.get());
+        switch (identifier_type->nullability) {
+        case types::Nullability::kNullable:
+            // If the identifier is nullable, then we can handle a depth of 1
+            // because the secondary object is directly accessible.
+            return fieldshape.Depth() <= 1u;
+        case types::Nullability::kNonnullable:
+            return fieldshape.Depth() == 0u;
+        }
+    }
+    }
 }
 
 // Consuming the AST is primarily concerned with walking the tree and
@@ -713,7 +731,7 @@ bool Library::TypecheckConst(const Const* const_declaration) {
     }
     case Type::Kind::kIdentifier: {
         auto identifier_type = static_cast<const IdentifierType*>(type);
-        auto decl = LookupType(identifier_type);
+        auto decl = LookupDeclByType(identifier_type, LookupOption::kIgnoreNullable);
         switch (decl->kind) {
         case Decl::Kind::kConst:
             assert(false && "const declarations don't make types!");
@@ -732,7 +750,7 @@ bool Library::TypecheckConst(const Const* const_declaration) {
 }
 
 Decl* Library::LookupConstant(const Type* type, const Name& name) {
-    auto decl = LookupType(type);
+    auto decl = LookupDeclByType(type, LookupOption::kIgnoreNullable);
     if (decl == nullptr) {
         // This wasn't a named type. Thus we are looking up a
         // top-level constant, of string or primitive type.
@@ -757,7 +775,7 @@ Decl* Library::LookupConstant(const Type* type, const Name& name) {
     return nullptr;
 }
 
-Decl* Library::LookupType(const Type* type) const {
+Decl* Library::LookupDeclByType(const Type* type, LookupOption option) const {
     for (;;) {
         switch (type->kind) {
         case flat::Type::Kind::kString:
@@ -775,16 +793,16 @@ Decl* Library::LookupType(const Type* type) const {
         }
         case flat::Type::Kind::kIdentifier: {
             auto identifier_type = static_cast<const flat::IdentifierType*>(type);
-            if (identifier_type->nullability == types::Nullability::kNullable) {
+            if (identifier_type->nullability == types::Nullability::kNullable && option == LookupOption::kIgnoreNullable) {
                 return nullptr;
             }
-            return LookupType(identifier_type->name);
+            return LookupDeclByName(identifier_type->name);
         }
         }
     }
 }
 
-Decl* Library::LookupType(const Name& name) const {
+Decl* Library::LookupDeclByName(const Name& name) const {
     auto iter = declarations_.find(&name);
     if (iter == declarations_.end()) {
         return nullptr;
@@ -800,8 +818,8 @@ Decl* Library::LookupType(const Name& name) const {
 // unlike inline structs or unions, do not have dependency edges.
 bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
     std::set<Decl*> edges;
-    auto maybe_add_decl = [this, &edges](const Type* type) {
-        auto type_decl = LookupType(type);
+    auto maybe_add_decl = [this, &edges](const Type* type, LookupOption option) {
+        auto type_decl = LookupDeclByType(type, option);
         if (type_decl != nullptr) {
             edges.insert(type_decl);
         }
@@ -841,12 +859,12 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
         for (const auto& method : interface_decl->methods) {
             if (method.maybe_request != nullptr) {
                 for (const auto& parameter : method.maybe_request->parameters) {
-                    maybe_add_decl(parameter.type.get());
+                    maybe_add_decl(parameter.type.get(), LookupOption::kIncludeNullable);
                 }
             }
             if (method.maybe_response != nullptr) {
                 for (const auto& parameter : method.maybe_response->parameters) {
-                    maybe_add_decl(parameter.type.get());
+                    maybe_add_decl(parameter.type.get(), LookupOption::kIncludeNullable);
                 }
             }
         }
@@ -855,7 +873,7 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
     case Decl::Kind::kStruct: {
         auto struct_decl = static_cast<const Struct*>(decl);
         for (const auto& member : struct_decl->members) {
-            maybe_add_decl(member.type.get());
+            maybe_add_decl(member.type.get(), LookupOption::kIgnoreNullable);
             if (member.maybe_default_value) {
                 if (!maybe_add_constant(member.type.get(), member.maybe_default_value.get()))
                     return false;
@@ -866,7 +884,7 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
     case Decl::Kind::kUnion: {
         auto union_decl = static_cast<const Union*>(decl);
         for (const auto& member : union_decl->members) {
-            maybe_add_decl(member.type.get());
+            maybe_add_decl(member.type.get(), LookupOption::kIgnoreNullable);
         }
         break;
     }
@@ -1138,7 +1156,7 @@ bool Library::CompileHandleType(flat::HandleType* handle_type, TypeShape* out_ty
 
 bool Library::CompileRequestHandleType(flat::RequestHandleType* request_type,
                                        TypeShape* out_typeshape) {
-    auto named_decl = LookupType(request_type->name);
+    auto named_decl = LookupDeclByName(request_type->name);
     if (!named_decl || named_decl->kind != Decl::Kind::kInterface)
         return Fail(request_type->name, "Undefined reference in request handle name");
 
@@ -1155,7 +1173,7 @@ bool Library::CompileIdentifierType(flat::IdentifierType* identifier_type,
                                     TypeShape* out_typeshape) {
     TypeShape typeshape;
 
-    auto named_decl = LookupType(identifier_type->name);
+    auto named_decl = LookupDeclByName(identifier_type->name);
     if (!named_decl)
         return Fail(identifier_type->name, "Undefined reference in identifier type name");
 
