@@ -1,0 +1,50 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/fidl/fidl.gni")
+
+executable("bin") {
+  output_name = "display_capture_test"
+  testonly = true
+  sources = [
+    "alpha_tests.cc",
+    "basic_tests.cc",
+    "context.cc",
+    "context.h",
+    "image.cc",
+    "image.h",
+    "layer.cc",
+    "layer.h",
+    "main.cc",
+    "position_tests.cc",
+    "runner.cc",
+    "runner.h",
+    "test.h",
+  ]
+
+  deps = [
+    "//garnet/lib/media/camera/simple_camera_lib",
+    "//garnet/public/lib/fsl",
+    "//zircon/public/fidl/fuchsia-display",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+package("display_capture_test") {
+  testonly = true
+
+  deps = [
+    ":bin",
+  ]
+
+  binary = "display_capture_test"
+
+  meta = [
+    {
+      path = rebase_path("meta/display_capture_test.cmx")
+      dest = "display_capture_test.cmx"
+    },
+  ]
+}
