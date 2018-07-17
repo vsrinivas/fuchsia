@@ -453,22 +453,25 @@ TEST(RefCountedTest, SelfAssignment) {
 }
 
 TEST(RefCountedTest, Swap) {
-  MyClass* created1 = nullptr;
-  bool was_destroyed1 = false;
-  RefPtr<MyClass> r1(MakeRefCounted<MyClass>(&created1, &was_destroyed1));
-  EXPECT_TRUE(created1);
-  EXPECT_EQ(created1, r1.get());
+  bool was_destroyed1, was_destroyed2;
+  {
+    MyClass* created1 = nullptr;
+    was_destroyed1 = false;
+    RefPtr<MyClass> r1(MakeRefCounted<MyClass>(&created1, &was_destroyed1));
+    EXPECT_TRUE(created1);
+    EXPECT_EQ(created1, r1.get());
 
-  MyClass* created2 = nullptr;
-  bool was_destroyed2 = false;
-  RefPtr<MyClass> r2(MakeRefCounted<MyClass>(&created2, &was_destroyed2));
-  EXPECT_TRUE(created2);
-  EXPECT_EQ(created2, r2.get());
-  EXPECT_NE(created1, created2);
+    MyClass* created2 = nullptr;
+    was_destroyed2 = false;
+    RefPtr<MyClass> r2(MakeRefCounted<MyClass>(&created2, &was_destroyed2));
+    EXPECT_TRUE(created2);
+    EXPECT_EQ(created2, r2.get());
+    EXPECT_NE(created1, created2);
 
-  r1.swap(r2);
-  EXPECT_EQ(created2, r1.get());
-  EXPECT_EQ(created1, r2.get());
+    r1.swap(r2);
+    EXPECT_EQ(created2, r1.get());
+    EXPECT_EQ(created1, r2.get());
+  }
 }
 
 TEST(RefCountedTest, GetAndDereferenceOperators) {
@@ -586,29 +589,6 @@ TEST(RefCountedTest, PublicCtorAndDtor) {
   r1 = nullptr;
   EXPECT_FALSE(r1);
 }
-
-// The danger with having a public constructor or destructor is that certain
-// things will compile. You should get some protection by assertions in Debug
-// builds.
-#ifndef NDEBUG
-TEST(RefCountedTest, DebugChecks) {
-  {
-    MyPublicClass* p = new MyPublicClass();
-    EXPECT_DEATH_IF_SUPPORTED(delete p, "!adoption_required_");
-  }
-
-  {
-    MyPublicClass* p = new MyPublicClass();
-    EXPECT_DEATH_IF_SUPPORTED(RefPtr<MyPublicClass> r(p),
-                              "!adoption_required_");
-  }
-
-  {
-    RefPtr<MyPublicClass> r(MakeRefCounted<MyPublicClass>());
-    EXPECT_DEATH_IF_SUPPORTED(delete r.get(), "destruction_started_");
-  }
-}
-#endif
 
 // TODO(vtl): Add (threaded) stress tests.
 

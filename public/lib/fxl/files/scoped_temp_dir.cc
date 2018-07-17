@@ -50,7 +50,7 @@ fxl::UniqueFD MksTempAt(int root_fd, char* tp, size_t tp_length) {
   do {
     GenerateRandName(tp + tp_length - 6);
     fxl::UniqueFD result(
-        HANDLE_EINTR(openat(root_fd, tp, O_WRONLY | O_CREAT | O_EXCL)));
+        HANDLE_EINTR(openat(root_fd, tp, O_CREAT | O_EXCL, 0700)));
     if (result.is_valid()) {
       return result;
     }

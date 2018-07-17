@@ -85,6 +85,7 @@ TEST(ScopedTempDirAt, Deletion) {
   EXPECT_FALSE(IsDirectoryAt(root_fd.get(), path));
 }
 
+#if defined(OS_LINUX) || defined(OS_FUCHSIA)
 TEST(ScopedTempDirAt, NewTempFile) {
   ScopedTempDir named_dir;
   fxl::UniqueFD root_fd(open(named_dir.path().c_str(), O_RDONLY));
@@ -96,6 +97,7 @@ TEST(ScopedTempDirAt, NewTempFile) {
   EXPECT_FALSE(path.empty());
   EXPECT_TRUE(IsFileAt(root_fd.get(), path));
 }
+#endif
 
 TEST(ScopedTempDirAt, CustomParent) {
   ScopedTempDir named_dir;
