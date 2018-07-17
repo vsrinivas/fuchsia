@@ -240,6 +240,135 @@ TEST(CatapultConverter, Convert) {
   AssertJsonEqual(output, expected_output);
 }
 
+// Test the case where the "samples" list contains multiple entries and
+// these entries have their own "label" fields.
+TEST(CatapultConverter, ConvertNested) {
+  const char* input_str = R"JSON(
+[
+    {
+        "label": "Example Of Split Results",
+        "samples": [
+            {"label": "samples 0 to 0",
+             "values": [200]},
+            {"label": "subsequent samples",
+             "values": [50, 60, 70]}
+        ],
+        "unit": "nanoseconds"
+    }
+]
+)JSON";
+
+  const char* expected_output_str = R"JSON(
+[
+    {
+        "guid": "dummy_guid_0",
+        "type": "GenericSet",
+        "values": [
+            4321
+        ]
+    },
+    {
+        "guid": "dummy_guid_1",
+        "type": "GenericSet",
+        "values": [
+            "example_test_suite"
+        ]
+    },
+    {
+        "guid": "dummy_guid_2",
+        "type": "GenericSet",
+        "values": [
+            "example_bots"
+        ]
+    },
+    {
+        "guid": "dummy_guid_3",
+        "type": "GenericSet",
+        "values": [
+            "example_masters"
+        ]
+    },
+    {
+        "name": "Example_Of_Split_Results_samples_0_to_0",
+        "unit": "ms_smallerIsBetter",
+        "description": "",
+        "diagnostics": {
+            "chromiumCommitPositions": "dummy_guid_0",
+            "benchmarks": "dummy_guid_1",
+            "bots": "dummy_guid_2",
+            "masters": "dummy_guid_3"
+        },
+        "running": [
+            1,
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere"
+        ],
+        "guid": "dummy_guid_4",
+        "maxNumSampleValues": 1,
+        "numNans": 0
+    },
+    {
+        "name": "Example_Of_Split_Results_subsequent_samples",
+        "unit": "ms_smallerIsBetter",
+        "description": "",
+        "diagnostics": {
+            "chromiumCommitPositions": "dummy_guid_0",
+            "benchmarks": "dummy_guid_1",
+            "bots": "dummy_guid_2",
+            "masters": "dummy_guid_3"
+        },
+        "running": [
+            3,
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere"
+        ],
+        "guid": "dummy_guid_5",
+        "maxNumSampleValues": 3,
+        "numNans": 0
+    }
+]
+)JSON";
+
+  rapidjson::Document input;
+  CheckParseResult(input.Parse(input_str));
+
+  rapidjson::Document expected_output;
+  CheckParseResult(expected_output.Parse(expected_output_str));
+
+  rapidjson::Document output;
+  ConverterArgs args;
+  args.timestamp = 4321;
+  args.masters = "example_masters";
+  args.test_suite = "example_test_suite";
+  args.bots = "example_bots";
+  args.use_test_guids = true;
+  Convert(&input, &output, &args);
+
+  AssertApproxEqual(&output, &output[4]["running"][1], 0.0002);
+  AssertApproxEqual(&output, &output[4]["running"][2], -8.5171);
+  AssertApproxEqual(&output, &output[4]["running"][3], 0.0002);
+  AssertApproxEqual(&output, &output[4]["running"][4], 0.0002);
+  AssertApproxEqual(&output, &output[4]["running"][5], 0.0002);
+  AssertApproxEqual(&output, &output[4]["running"][6], 0);
+
+  AssertApproxEqual(&output, &output[5]["running"][1], 7.000e-5);
+  AssertApproxEqual(&output, &output[5]["running"][2], -9.7305);
+  AssertApproxEqual(&output, &output[5]["running"][3], 6.000e-5);
+  AssertApproxEqual(&output, &output[5]["running"][4], 5.000e-5);
+  AssertApproxEqual(&output, &output[5]["running"][5], 0.00017999);
+  AssertApproxEqual(&output, &output[5]["running"][6], 1.000e-10);
+
+  AssertJsonEqual(output, expected_output);
+}
+
 class TempFile {
  public:
   TempFile(const char* contents) {
