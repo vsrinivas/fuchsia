@@ -40,7 +40,7 @@ def _dart_app_impl(context):
     context.actions.write(
         output = dart_jit_runner,
         content = _DART_JIT_RUNNER_CONTENT)
-    mappings["meta/runtime"] = dart_jit_runner
+    mappings["meta/deprecated_runtime"] = dart_jit_runner
     return [
         DefaultInfo(files = depset([kernel_snapshot_file, manifest_file])),
         PackageLocalInfo(mappings = mappings.items()),

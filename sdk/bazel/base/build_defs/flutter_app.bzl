@@ -40,7 +40,7 @@ def _flutter_app_impl(context):
     context.actions.write(
         output = flutter_jit_runner,
         content = _FLUTTER_JIT_RUNNER_CONTENT)
-    mappings["meta/runtime"] = flutter_jit_runner
+    mappings["meta/deprecated_runtime"] = flutter_jit_runner
     return [
         DefaultInfo(files = depset([kernel_snapshot_file, manifest_file])),
         PackageLocalInfo(mappings = mappings.items()),
