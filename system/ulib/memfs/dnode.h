@@ -34,14 +34,7 @@ public:
     // ChildTraits is the state used for a Dnode to appear as the child
     // of another dnode.
     struct TypeChildTraits { static NodeState& node_state(Dnode& dn) { return dn.type_child_state_; }};
-    // DeviceTraits it the state used by devices to effectively create
-    // multiple hard links to a single device vnode. This is used
-    // extensively by the device manager to make the "same" device
-    // vnode appear in multiple locations within "/dev".
-    struct TypeDeviceTraits { static NodeState& node_state(Dnode& dn) { return dn.type_device_state_; }};
-
     using ChildList = fbl::DoublyLinkedList<fbl::RefPtr<Dnode>, Dnode::TypeChildTraits>;
-    using DeviceList = fbl::DoublyLinkedList<fbl::RefPtr<Dnode>, Dnode::TypeDeviceTraits>;
 
     // Allocates a dnode, attached to a vnode
     static fbl::RefPtr<Dnode> Create(fbl::StringPiece name, fbl::RefPtr<VnodeMemfs> vn);
@@ -96,7 +89,6 @@ public:
 
 private:
     friend struct TypeChildTraits;
-    friend struct TypeDeviceTraits;
 
     Dnode(fbl::RefPtr<VnodeMemfs> vn, fbl::unique_ptr<char[]> name, uint32_t flags);
 
@@ -104,7 +96,6 @@ private:
     bool NameMatch(fbl::StringPiece name) const;
 
     NodeState type_child_state_;
-    NodeState type_device_state_;
     fbl::RefPtr<VnodeMemfs> vnode_;
     fbl::RefPtr<Dnode> parent_;
     // Used to impose an absolute order on dnodes within a directory.
