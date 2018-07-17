@@ -81,7 +81,16 @@ zx_status_t TaskBase::Cancel() {
 
     async_dispatcher_t* dispatcher = dispatcher_;
     dispatcher_ = nullptr;
-    return async_cancel_task(dispatcher, &task_);
+
+    zx_status_t status = async_cancel_task(dispatcher, &task_);
+    // |dispatcher| is required to be single-threaded, Cancel() is
+    // only supposed to be called on |dispatcher|'s thread, and we
+    // verified that the task was pending before calling
+    // async_cancel_task(). Assuming that |dispatcher| does not yield
+    // between removing the task and invoking the task's handler,
+    // |task_| must have been pending with |dispatcher|.
+    ZX_DEBUG_ASSERT(status != ZX_ERR_NOT_FOUND);
+    return status;
 }
 
 Task::Task(Handler handler)

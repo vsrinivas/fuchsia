@@ -108,8 +108,7 @@ public:
     // Returns |ZX_OK| if the task was pending and it has been successfully
     // canceled; its handler will not run again and can be released immediately.
     // Returns |ZX_ERR_NOT_FOUND| if task was not pending either because its
-    // handler already ran, the task had not been posted, or the task has
-    // already been dequeued and is pending execution (perhaps on another thread).
+    // handler already ran, or the task had not been posted.
     // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
     zx_status_t Cancel();
 
