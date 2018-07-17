@@ -76,6 +76,9 @@ static int aml_thermal_notify_thread(void* ctx) {
             return status;
         }
 
+        // Update the temperature in our context
+        dev->current_temperature = temperature;
+
         uint32_t idx = dev->current_trip_idx;
         bool signal = true;
 
@@ -130,18 +133,25 @@ static int aml_thermal_notify_thread(void* ctx) {
 
 static zx_status_t aml_thermal_set_dvfs_opp(aml_thermal_t* dev,
                                      dvfs_info_t* info) {
-    uint16_t op_idx;
-    zx_status_t status = scpi_get_dvfs_idx(&dev->scpi, info->power_domain, &op_idx);
-    if (status != ZX_OK) {
-        THERMAL_ERROR("Unable to get current dvfs info");
-        return status;
+    bool set_new_opp = false;
+
+    if (info->power_domain == BIG_CLUSTER_POWER_DOMAIN) {
+        if (dev->current_big_cluster_opp_idx != info->op_idx) {
+            set_new_opp = true;
+            dev->current_big_cluster_opp_idx = info->op_idx;
+        }
+    } else {
+        if (dev->current_little_cluster_opp_idx != info->op_idx) {
+            set_new_opp = true;
+            dev->current_little_cluster_opp_idx = info->op_idx;
+        }
     }
 
-    if (op_idx == info->op_idx) {
+    if (set_new_opp) {
+        return scpi_set_dvfs_idx(&dev->scpi, info->power_domain, info->op_idx);
+    } else {
         return ZX_OK;
     }
-
-    return scpi_set_dvfs_idx(&dev->scpi, info->power_domain, info->op_idx);
 }
 
 static void aml_thermal_get_device_info(aml_thermal_t* dev,
@@ -222,13 +232,8 @@ static zx_status_t aml_thermal_ioctl(void* ctx, uint32_t op,
             if (out_len != sizeof(uint32_t)) {
                 return ZX_ERR_INVALID_ARGS;
             }
-
-            status = scpi_get_sensor_value(&dev->scpi,
-                                           dev->device->temp_sensor_id,
-                                           out_buf);
-            if (status != ZX_OK) {
-                return status;
-            }
+            uint32_t *temperature = (uint32_t*)out_buf;
+            *temperature = dev->current_temperature;
             *out_actual = sizeof(uint32_t);
             return status;
         }
@@ -244,6 +249,21 @@ static zx_status_t aml_thermal_ioctl(void* ctx, uint32_t op,
             memcpy(out_buf, &dev->device->opps[*power_domain],
                    sizeof(scpi_opp_t));
             *out_actual = sizeof(scpi_opp_t);
+            return ZX_OK;
+        }
+
+        case IOCTL_THERMAL_GET_DVFS_OPP: {
+            if (in_len != sizeof(uint32_t) || out_len != sizeof(uint32_t)) {
+                return ZX_ERR_INVALID_ARGS;
+            }
+            uint32_t *power_domain = (uint32_t*)in_buf;
+            uint32_t *opp_idx = (uint32_t*)out_buf;
+            if (power_domain == BIG_CLUSTER_POWER_DOMAIN) {
+                *opp_idx = dev->current_big_cluster_opp_idx;
+            } else {
+                *opp_idx = dev->current_little_cluster_opp_idx;
+            }
+            *out_actual = sizeof(uint32_t);
             return ZX_OK;
         }
 

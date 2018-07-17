@@ -104,6 +104,9 @@ typedef struct {
 #define IOCTL_THERMAL_GET_DVFS_INFO \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_THERMAL, 9)
 
+#define IOCTL_THERMAL_GET_DVFS_OPP \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_THERMAL, 10)
+
 // ssize_t ioctl_thermal_get_info(int fd, thermal_info_t* out)
 IOCTL_WRAPPER_OUT(ioctl_thermal_get_info, IOCTL_THERMAL_GET_INFO, thermal_info_t);
 
@@ -134,8 +137,10 @@ IOCTL_WRAPPER_IN(ioctl_thermal_set_dvfs_opp,
 // ssize_t ioctl_thermal_get_temperature(int fd, uint32_t* temp)
 IOCTL_WRAPPER_OUT(ioctl_thermal_get_temperature, IOCTL_THERMAL_GET_TEMPERATURE, uint32_t);
 
-// ssize_t ioctl_thermal_get_dvfs_info(int fd, uint32_t power_domain, scpi_opp_t* opp)
+// ssize_t ioctl_thermal_get_dvfs_info(int fd, uint32_t* power_domain, scpi_opp_t* opp)
 IOCTL_WRAPPER_INOUT(ioctl_thermal_get_dvfs_info, IOCTL_THERMAL_GET_DVFS_INFO,
                     uint32_t, scpi_opp_t);
 
-
+// ssize_t ioctl_thermal_get_dvfs_opp(int fd, uint32_t* power_domain, uint32_t* opp)
+IOCTL_WRAPPER_INOUT(ioctl_thermal_get_dvfs_opp, IOCTL_THERMAL_GET_DVFS_OPP,
+                    uint32_t, uint32_t);
