@@ -58,22 +58,23 @@ fn on_phy_added(listener: &Arc<Listener>, id: u16)
         .and_then(move |resp| {
             let (status, query_resp) = resp;
             if let Err(e) = zx::Status::ok(status) {
-                println!("failed to query phy {}: {:?}", id, e);
+                println!("wlancfg: failed to query phy {}: {:?}", id, e);
                 return future::ok(()).left_future();
             }
 
             let info = match query_resp {
                 Some(r) => r.info,
                 None => {
-                    println!("query_phy failed to return a a PhyInfo in the QueryPhyResponse");
+                    println!("wlancfg: query_phy failed to return a PhyInfo in the QueryPhyResponse");
                     return future::ok(()).left_future();
                 }
             };
             let path = info.dev_path.unwrap_or("*".into());
+            println!("wlancfg: received a PhyInfo from phy #{}: path is {}", id, path);
             let roles_to_create = match listener_ref.config.roles_for_path(&path) {
                 Some(roles) => roles,
                 None => {
-                    println!("no matches for wlan phy {}", id);
+                    println!("wlancfg: no matches for wlan phy {}", id);
                     return future::ok(()).left_future();
                 }
             };
@@ -81,7 +82,7 @@ fn on_phy_added(listener: &Arc<Listener>, id: u16)
             roles_to_create
                 .iter()
                 .map(|role: &config::Role| {
-                    println!("Creating {:?} iface for phy {}", role, id);
+                    println!("wlancfg: Creating {:?} iface for phy {}", role, id);
                     let mut req = wlan_service::CreateIfaceRequest {
                         phy_id: id,
                         role: wlan::MacRole::from(*role),

@@ -269,6 +269,7 @@ struct WlantapPhy : wlan_device::Phy, wlantap::WlantapPhy, WlantapMac::Listener 
     // wlan_device::Phy impl
 
     virtual void Query(QueryCallback callback) override {
+        zxlogf(INFO, "wlantap phy: received a 'Query' FIDL request\n");
         wlan_device::QueryResponse response;
         response.status = phy_config_->phy_info.Clone(&response.info);
         callback(std::move(response));

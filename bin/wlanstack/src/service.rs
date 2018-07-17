@@ -115,17 +115,20 @@ fn list_phys(phys: &Arc<PhyMap>) -> wlan_service::ListPhysResponse {
 fn query_phy(phys: &Arc<PhyMap>, id: u16)
     -> impl Future<Item = (zx::Status, Option<wlan_service::QueryPhyResponse>), Error = Never>
 {
+    info!("query_phy(id = {})", id);
     let phy = phys.get(&id)
         .map(|phy| (phy.device.path().to_string_lossy().into_owned(), phy.proxy.clone()))
         .ok_or(zx::Status::NOT_FOUND);
     phy.into_future()
         .and_then(move |(path, proxy)| {
+            info!("query_phy(id = {}): sending 'Query' request to device", id);
             proxy.query()
                 .map_err(move |e| {
-                    error!("Error sending 'Query' request to phy #{}: {}", id, e);
+                    error!("query_phy(id = {}): error sending 'Query' request to phy: {}", id, e);
                     zx::Status::INTERNAL
                 })
                 .and_then(move |query_result| {
+                    info!("query_phy(id = {}): received a 'QueryResult' from device", id);
                     zx::Status::ok(query_result.status)
                         .map(|()| {
                             let mut info = query_result.info;
