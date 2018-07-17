@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cmath>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -14,13 +15,13 @@
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/future.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/array.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/string.h>
-#include <lib/fit/function.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
@@ -29,10 +30,12 @@
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
 #include "peridot/bin/device_runner/user_provider_impl.h"
 #include "peridot/lib/common/async_holder.h"
+#include "peridot/lib/common/names.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"
+#include "peridot/lib/user_shell_settings/user_shell_settings.h"
 #include "peridot/lib/util/filesystem.h"
 
 namespace modular {
@@ -49,7 +52,7 @@ class Settings {
     user_runner.url =
         command_line.GetOptionValueWithDefault("user_runner", "user_runner");
     user_shell.url = command_line.GetOptionValueWithDefault(
-        "user_shell", "armadillo_user_shell");
+        "user_shell", "ermine_user_shell");
     account_provider.url = command_line.GetOptionValueWithDefault(
         "account_provider", "oauth_token_manager");
 
@@ -108,7 +111,7 @@ class Settings {
     USER_RUNNER: URL of the user runner to run.
                 Defaults to "user_runner".
     USER_SHELL: URL of the user shell to run.
-                Defaults to "armadillo_user_shell".
+                Defaults to "ermine_user_shell".
                 For integration testing use "dev_user_shell".
     STORY_SHELL: URL of the story shell to run.
                 Defaults to "mondrian".
@@ -192,7 +195,9 @@ class Settings {
 }  // namespace
 
 class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
-                        fuchsia::modular::auth::AccountProviderContext {
+                        fuchsia::modular::auth::AccountProviderContext,
+                        fuchsia::ui::policy::KeyboardCaptureListenerHACK,
+                        modular::UserProviderImpl::Delegate {
  public:
   explicit DeviceRunnerApp(
       const Settings& settings,
@@ -204,54 +209,48 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
         on_shutdown_(std::move(on_shutdown)),
         device_shell_context_binding_(this),
         account_provider_context_binding_(this) {
-    // 0a. Check if environment handle / services have been initialized.
     if (!context_->has_environment_services()) {
       FXL_LOG(ERROR) << "Failed to receive services from the environment.";
       exit(1);
     }
 
-    // 0b. Connect to the device runner monitor and check this
-    // instance is the only one running, unless the command line asks
-    // to ignore the monitor check.
+    // TODO(SCN-595): Presentation is now discoverable, so we don't need
+    // kPresentationService anymore.
+    service_namespace_.AddService(presentation_state_.bindings.GetHandler(
+                                      presentation_state_.presentation.get()),
+                                  kPresentationService);
+
     if (settings.ignore_monitor) {
       Start();
-
-    } else {
-      context_->ConnectToEnvironmentService(monitor_.NewRequest());
-
-      monitor_.set_error_handler([] {
-        FXL_LOG(ERROR) << "No device runner monitor found.";
-        exit(1);
-      });
-
-      monitor_->GetConnectionCount([this](uint32_t count) {
-        if (count != 1) {
-          FXL_LOG(ERROR) << "Another device runner is running."
-                         << " Please use that one, or shut it down first.";
-          exit(1);
-        }
-
-        Start();
-      });
+      return;
     }
+
+    context_->ConnectToEnvironmentService(monitor_.NewRequest());
+
+    monitor_.set_error_handler([] {
+      FXL_LOG(ERROR) << "No device runner monitor found.";
+      exit(1);
+    });
+
+    monitor_->GetConnectionCount([this](uint32_t count) {
+      if (count != 1) {
+        FXL_LOG(ERROR) << "Another device runner is running."
+                       << " Please use that one, or shut it down first.";
+        exit(1);
+      }
+
+      Start();
+    });
   }
 
  private:
-  void Start() {
-    // 0. Print test banner.
-    if (settings_.test) {
-      FXL_LOG(INFO)
-          << std::endl
-          << std::endl
-          << "======================== Starting Test [" << settings_.test_name
-          << "]" << std::endl
-          << "============================================================"
-          << std::endl;
+  void StartDeviceShell() {
+    if (device_shell_running_) {
+      FXL_DLOG(INFO) << "StartDeviceShell() called when already running";
+
+      return;
     }
 
-    // 1. Start the device shell. This also connects the root view of the device
-    // to the device shell. This is done first so that we can show some UI until
-    // other things come up.
     device_shell_app_ =
         std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
             context_->launcher().get(), CloneStruct(settings_.device_shell));
@@ -271,6 +270,7 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
     if (!settings_.test || settings_.enable_presenter) {
       context_->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>()
           ->Present(std::move(root_view), presentation.NewRequest());
+      AddGlobalKeyboardShortcuts(presentation);
     }
 
     // Populate parameters and initialize the device shell.
@@ -279,12 +279,50 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
     device_shell_->Initialize(device_shell_context_binding_.NewBinding(),
                               std::move(params));
 
-    // 2. Wait for persistent data to come up.
+    device_shell_running_ = true;
+  }
+
+  FuturePtr<> StopDeviceShell() {
+    if (!device_shell_running_) {
+      FXL_DLOG(INFO) << "StopDeviceShell() called when already stopped";
+
+      return Future<>::CreateCompleted("StopDeviceShell::Completed");
+    }
+
+    auto did_stop = Future<>::Create("StopDeviceShell");
+
+    device_shell_app_->Teardown(kBasicTimeout, [did_stop, this] {
+      FXL_DLOG(INFO) << "- fuchsia::modular::DeviceShell down";
+
+      device_shell_running_ = false;
+      did_stop->Complete();
+    });
+
+    return did_stop;
+  }
+
+  void Start() {
+    if (settings_.test) {
+      // 0. Print test banner.
+      FXL_LOG(INFO)
+          << std::endl
+          << std::endl
+          << "======================== Starting Test [" << settings_.test_name
+          << "]" << std::endl
+          << "============================================================"
+          << std::endl;
+    }
+
+    // Start the device shell. This is done first so that we can show some UI
+    // until other things come up.
+    StartDeviceShell();
+
+    // Wait for persistent data to come up.
     if (!settings_.no_minfs) {
       WaitForMinfs();
     }
 
-    // 3. Start OAuth Token Manager App.
+    // Start OAuth Token Manager App.
     fuchsia::modular::AppConfig token_manager_config;
     token_manager_config.url = settings_.account_provider.url;
     token_manager_ =
@@ -297,10 +335,9 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
     token_manager_->primary_service()->Initialize(
         account_provider_context_binding_.NewBinding());
 
-    // 4. Setup user provider.
     user_provider_impl_.reset(new UserProviderImpl(
         context_, settings_.user_runner, settings_.user_shell,
-        settings_.story_shell, token_manager_->primary_service().get()));
+        settings_.story_shell, token_manager_->primary_service().get(), this));
 
     ReportEvent(ModularEvent::BOOTED_TO_DEVICE_RUNNER);
   }
@@ -333,8 +370,7 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
       FXL_DLOG(INFO) << "- fuchsia::modular::UserProvider down";
       token_manager_->Teardown(kBasicTimeout, [this] {
         FXL_DLOG(INFO) << "- AuthProvider down";
-        device_shell_app_->Teardown(kBasicTimeout, [this] {
-          FXL_DLOG(INFO) << "- fuchsia::modular::DeviceShell down";
+        StopDeviceShell()->Then([this] {
           FXL_LOG(INFO) << "Clean Shutdown";
           on_shutdown_();
         });
@@ -347,10 +383,205 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
       fidl::StringPtr account_id,
       fidl::InterfaceRequest<fuchsia::modular::auth::AuthenticationContext>
           request) override {
+    // TODO(MI4-1107): DeviceRunner needs to implement AuthenticationContext
+    // itself, and proxy calls for StartOverlay & StopOverlay to DeviceShell,
+    // starting it if it's not running yet.
+
     device_shell_->GetAuthenticationContext(account_id, std::move(request));
   }
 
+  // |UserProviderImpl::Delegate|
+  void DidLogin() override {
+    if (settings_.test) {
+      // TODO(MI4-1117): Integration tests currently expect device shell to
+      // always be running. So, if we're running under a test, do not shut down
+      // the device shell after login.
+      return;
+    }
+
+    FXL_DLOG(INFO) << "Stopping device shell due to login";
+
+    StopDeviceShell();
+
+    auto presentation_request =
+        presentation_state_.presentation.is_bound()
+            ? presentation_state_.presentation.Unbind().NewRequest()
+            : presentation_state_.presentation.NewRequest();
+
+    context_->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>()
+        ->Present(std::move(user_shell_view_owner_),
+                  std::move(presentation_request));
+
+    AddGlobalKeyboardShortcuts(presentation_state_.presentation);
+
+    const auto& settings_vector = UserShellSettings::GetSystemSettings();
+    if (active_user_shell_index_ >= settings_vector.size()) {
+      FXL_LOG(ERROR) << "Active user shell index is "
+                     << active_user_shell_index_ << ", but only "
+                     << settings_vector.size() << " user shells exist.";
+      return;
+    }
+
+    UpdatePresentation(settings_vector[active_user_shell_index_]);
+  }
+
+  // |UserProviderImpl::Delegate|
+  void DidLogout() override {
+    if (settings_.test) {
+      // TODO(MI4-1117): Integration tests currently expect device shell to
+      // always be running. So, if we're running under a test, DidLogin() will
+      // not shut down the device shell after login; thus this method doesn't
+      // need to re-start the device shell after a logout.
+      return;
+    }
+
+    FXL_DLOG(INFO) << "Re-starting device shell due to logout";
+
+    StartDeviceShell();
+  }
+
+  // |UserProviderImpl::Delegate|
+  fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
+  GetUserShellViewOwner(
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>) override {
+    return user_shell_view_owner_.is_bound()
+               ? user_shell_view_owner_.Unbind().NewRequest()
+               : user_shell_view_owner_.NewRequest();
+  }
+
+  // |UserProviderImpl::Delegate|
+  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
+  GetUserShellServiceProvider(
+      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>) override {
+    fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> handle;
+    service_namespace_.AddBinding(handle.NewRequest());
+    return handle;
+  }
+
+  // |KeyboardCaptureListenerHACK|
+  void OnEvent(fuchsia::ui::input::KeyboardEvent event) override {
+    switch (event.code_point) {
+      case ' ': {
+        SwapUserShell();
+        break;
+      }
+      case 's': {
+        SetNextShadowTechnique();
+        break;
+      }
+      case 'l':
+        ToggleClipping();
+        break;
+      default:
+        FXL_DLOG(INFO) << "Unknown keyboard event: codepoint="
+                       << event.code_point << ", modifiers=" << event.modifiers;
+        break;
+    }
+  }
+
+  void AddGlobalKeyboardShortcuts(
+      fuchsia::ui::policy::PresentationPtr& presentation) {
+    presentation->CaptureKeyboardEventHACK(
+        {
+            .code_point = ' ',  // spacebar
+            .modifiers = fuchsia::ui::input::kModifierLeftControl,
+        },
+        keyboard_capture_listener_bindings_.AddBinding(this));
+    presentation->CaptureKeyboardEventHACK(
+        {
+            .code_point = 's',
+            .modifiers = fuchsia::ui::input::kModifierLeftControl,
+        },
+        keyboard_capture_listener_bindings_.AddBinding(this));
+    presentation->CaptureKeyboardEventHACK(
+        {
+            .code_point = 'l',
+            .modifiers = fuchsia::ui::input::kModifierRightAlt,
+        },
+        keyboard_capture_listener_bindings_.AddBinding(this));
+  }
+
+  void UpdatePresentation(const UserShellSettings& settings) {
+    if (settings.display_usage != fuchsia::ui::policy::DisplayUsage::kUnknown) {
+      FXL_DLOG(INFO) << "Setting display usage: "
+                     << fidl::ToUnderlying(settings.display_usage);
+      presentation_state_.presentation->SetDisplayUsage(settings.display_usage);
+    }
+
+    if (!std::isnan(settings.screen_width) &&
+        !std::isnan(settings.screen_height)) {
+      FXL_DLOG(INFO) << "Setting display size: " << settings.screen_width
+                     << " x " << settings.screen_height;
+      presentation_state_.presentation->SetDisplaySizeInMm(
+          settings.screen_width, settings.screen_height);
+    }
+  }
+
+  void SwapUserShell() {
+    if (UserShellSettings::GetSystemSettings().empty()) {
+      FXL_DLOG(INFO) << "No user shells has been defined";
+      return;
+    }
+
+    active_user_shell_index_ = (active_user_shell_index_ + 1) %
+                               UserShellSettings::GetSystemSettings().size();
+    const auto& settings =
+        UserShellSettings::GetSystemSettings().at(active_user_shell_index_);
+
+    auto user_shell_config = fuchsia::modular::AppConfig::New();
+    user_shell_config->url = settings.name;
+
+    user_provider_impl_->SwapUserShell(std::move(*user_shell_config))->Then([] {
+      FXL_DLOG(INFO) << "Swapped user shell";
+    });
+  }
+
+  void SetNextShadowTechnique() {
+    using ShadowTechnique = fuchsia::ui::gfx::ShadowTechnique;
+
+    auto next_shadow_technique =
+        [](ShadowTechnique shadow_technique) -> ShadowTechnique {
+      switch (shadow_technique) {
+        case ShadowTechnique::UNSHADOWED:
+          return ShadowTechnique::SCREEN_SPACE;
+        case ShadowTechnique::SCREEN_SPACE:
+          return ShadowTechnique::SHADOW_MAP;
+        default:
+          FXL_LOG(ERROR) << "Unknown shadow technique: "
+                         << fidl::ToUnderlying(shadow_technique);
+          // Fallthrough
+        case ShadowTechnique::SHADOW_MAP:
+        case ShadowTechnique::MOMENT_SHADOW_MAP:
+          return ShadowTechnique::UNSHADOWED;
+      }
+    };
+
+    presentation_state_.shadow_technique =
+        next_shadow_technique(presentation_state_.shadow_technique);
+
+    fuchsia::ui::gfx::RendererParam param;
+    param.set_shadow_technique(presentation_state_.shadow_technique);
+
+    FXL_DLOG(INFO) << "Setting shadow technique to "
+                   << fidl::ToUnderlying(presentation_state_.shadow_technique);
+    auto renderer_params =
+        fidl::VectorPtr<fuchsia::ui::gfx::RendererParam>::New(0);
+    renderer_params.push_back(std::move(param));
+    presentation_state_.presentation->SetRendererParams(
+        std::move(renderer_params));
+  }
+
+  void ToggleClipping() {
+    FXL_DLOG(INFO) << "Toggling clipping";
+
+    presentation_state_.clipping_enabled =
+        !presentation_state_.clipping_enabled;
+    presentation_state_.presentation->EnableClipping(
+        presentation_state_.clipping_enabled);
+  }
+
   const Settings& settings_;  // Not owned nor copied.
+
   AsyncHolder<UserProviderImpl> user_provider_impl_;
 
   std::shared_ptr<component::StartupContext> const context_;
@@ -364,8 +595,27 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
 
   std::unique_ptr<AppClient<fuchsia::modular::auth::AccountProvider>>
       token_manager_;
+
+  bool device_shell_running_{};
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> device_shell_app_;
   fuchsia::modular::DeviceShellPtr device_shell_;
+
+  fidl::BindingSet<fuchsia::ui::policy::KeyboardCaptureListenerHACK>
+      keyboard_capture_listener_bindings_;
+
+  fuchsia::ui::viewsv1token::ViewOwnerPtr user_shell_view_owner_;
+
+  struct {
+    fuchsia::ui::policy::PresentationPtr presentation;
+    fidl::BindingSet<fuchsia::ui::policy::Presentation> bindings;
+
+    fuchsia::ui::gfx::ShadowTechnique shadow_technique{};
+    bool clipping_enabled{};
+  } presentation_state_;
+
+  component::ServiceNamespace service_namespace_;
+
+  std::vector<UserShellSettings>::size_type active_user_shell_index_{};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerApp);
 };

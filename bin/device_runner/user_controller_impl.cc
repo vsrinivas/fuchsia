@@ -98,10 +98,18 @@ void UserControllerImpl::GetPresentation(
   }
 }
 
+FuturePtr<> UserControllerImpl::SwapUserShell(
+    fuchsia::modular::AppConfig user_shell_config) {
+  auto future = Future<>::Create("SwapUserShell");
+  SwapUserShell(std::move(user_shell_config), future->Completer());
+  return future;
+}
+
 // |fuchsia::modular::UserController|
-void UserControllerImpl::SwapUserShell(fuchsia::modular::AppConfig user_shell,
-                                       SwapUserShellCallback callback) {
-  user_runner_->SwapUserShell(std::move(user_shell), callback);
+void UserControllerImpl::SwapUserShell(
+    fuchsia::modular::AppConfig user_shell_config,
+    SwapUserShellCallback callback) {
+  user_runner_->SwapUserShell(std::move(user_shell_config), callback);
 }
 
 // |fuchsia::modular::UserController|

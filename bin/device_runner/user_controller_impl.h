@@ -11,6 +11,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
+#include <lib/async/cpp/future.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/array.h>
 #include <lib/fidl/cpp/binding.h>
@@ -55,6 +56,10 @@ class UserControllerImpl : fuchsia::modular::UserController,
   // This will effectively tear down the entire instance by calling |done|.
   // |fuchsia::modular::UserController|
   void Logout(LogoutCallback done) override;
+
+  // Stops the active user shell, and starts the user shell specified in
+  // |user_shell_config|.
+  FuturePtr<> SwapUserShell(fuchsia::modular::AppConfig user_shell_config);
 
  private:
   // |fuchsia::modular::UserController|

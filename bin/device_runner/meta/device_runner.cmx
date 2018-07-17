@@ -3,6 +3,7 @@
     "binary": "bin/app"
   },
   "sandbox": {
-    "features": [ "persistent-storage" ]
+    "features": [ "persistent-storage" ],
+    "system": [ "data/sysui" ]
   }
 }
