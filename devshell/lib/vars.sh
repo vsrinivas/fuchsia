@@ -226,3 +226,8 @@ function fx-choose-build-concurrency {
 
   echo "$job_count"
 }
+
+function fx-cpu-count {
+  local -r cpu_count=$(getconf _NPROCESSORS_ONLN)
+  echo "$cpu_count"
+}

@@ -57,6 +57,7 @@ function main {
 
   locked env -i ${env_args} \
     "${FUCHSIA_DIR}/buildtools/ninja" -j "$(fx-choose-build-concurrency)" \
+                                      -l "$(fx-cpu-count)" \
                                       -C "${FUCHSIA_BUILD_DIR}" "$@"
 }
 
