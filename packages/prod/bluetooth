@@ -1,7 +1,8 @@
 {
     "packages": [
-        "//garnet/bin/bluetooth/bt-mgr",
+        "//garnet/bin/bluetooth/profiles/bt-a2dp-sink",
         "//garnet/bin/bluetooth/bt-gap",
+        "//garnet/bin/bluetooth/bt-mgr",
         "//garnet/bin/bluetooth/tools:bt-tools",
         "//garnet/drivers/bluetooth/hci/atheros:btatheros",
         "//garnet/drivers/bluetooth/hci/fake:bthci_fake",

@@ -53,6 +53,24 @@ enum ProtocolIdentifier : uint16 {
   L2CAP = 256;
 };
 
+// Defined PSMs from the Bluetooth Assigned Numbers
+// https://www.bluetooth.com/specifications/assigned-numbers/logical-link-control
+// Used in DataElementData for protocol parameters for L2CAP.
+const int64 kPSM_SDP = 1;
+const int64 kPSM_RFCOMM = 3;
+const int64 kPSM_TCSBIN = 5; // Telephony Control Specification
+const int64 kPSM_TCSBINCordless = 7;
+const int64 kPSM_BNEP = 15; // Bluetooth Network Encapsulation Protocol
+const int64 kPSM_HIDControl = 17; // Human Interface Device
+const int64 kPSM_HIDInterrupt = 19; // Human Interface Device
+const int64 kPSM_AVCTP = 23; // Audio/Video Control Transport Protocol
+const int64 kPSM_AVDTP = 25; // Audio/Video Distribution Transport Protocol
+const int64 kPSM_AVCTP_Browse = 27; // Audio/Video Remote Control Profile (Browsing)
+const int64 kPSM_ATT = 31; // ATT
+const int64 kPSM_3DSP = 33; // 3D Synchronization Profile
+const int64 kPSM_LE_IPSP = 35; // Internet Protocol Support Profile
+const int64 kPSM_OTS = 37; // Object Transfer Service
+
 // Identifies a communications protocol along with protocol-specific parameters.
 struct ProtocolDescriptor {
   ProtocolIdentifier protocol;
