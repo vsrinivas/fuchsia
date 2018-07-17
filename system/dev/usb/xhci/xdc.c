@@ -1184,6 +1184,8 @@ static zx_status_t xdc_init_internal(xdc_t* xdc) {
 
     atomic_init(&xdc->suspended, false);
 
+    list_initialize(&xdc->host_streams);
+
     completion_reset(&xdc->has_instance_completion);
     atomic_init(&xdc->num_instances, 0);
 
