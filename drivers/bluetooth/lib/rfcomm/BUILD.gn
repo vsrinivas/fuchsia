@@ -8,6 +8,8 @@ static_library("rfcomm") {
     "channel.h",
     "frame.cc",
     "frame.h",
+    "mux_command.cc",
+    "mux_command.h",
     "rfcomm.h",
     "session.h",
   ]
@@ -25,6 +27,7 @@ source_set("tests") {
 
   sources = [
     "frame_unittest.cc",
+    "mux_command_unittest.cc",
   ]
 
   deps = [

@@ -50,6 +50,12 @@ constexpr ServerChannel kInvalidServerChannel = 0;
 // length field can be one or two octets, and can encode at most a 15-bit value.
 using InformationLength = uint16_t;
 
+// The maximum Length value which can be encoded in a single-octet length field.
+// This constant is used to quickly determine whether two (or more) length
+// octets will be needed to encode a length value. It is used by Frames and
+// MuxCommands alike.
+constexpr InformationLength kMaxSingleOctetLength = 127;
+
 // Encodes the Control Field; see table 2, GSM 07.10 5.2.1.3 and RFCOMM 4.2.
 // The P/F bit is set to 0 for all frame types.
 // clang-format off

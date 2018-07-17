@@ -75,7 +75,6 @@ constexpr size_t kLengthSecondOctetShift = 7;
 constexpr size_t kDLCIShift = 2;
 // Address field, control field, length field, FCS field. See RFCOMM 5.2.6.
 constexpr size_t kMinimumFrameSize = 4;
-constexpr InformationLength kMaxSingleOctetLength = 127;
 
 // The length field in RFCOMM frames and multiplexer control commands can be
 // extended from one octet to two. This function checks whether two octets are
