@@ -22,26 +22,30 @@ struct TestHdr1 {
     uint8_t c;
     uint8_t d;
 
-    constexpr size_t len() const { return sizeof(TestHdr1); }
+    constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
 
 // Dynamic length based on value of field `has_padding`.
 struct TestHdr2 {
-    bool has_padding;
+    bool has_padding = false;
     uint8_t b;
     uint8_t c;
 
-    size_t len() const { return sizeof(TestHdr2) + (has_padding ? k4BytePaddingLen : 0); }
+    size_t len() const { return sizeof(*this) + (has_padding ? k4BytePaddingLen : 0); }
 } __PACKED;
 
 struct TestHdr3 {
     uint16_t a;
     uint16_t b;
 
-    constexpr size_t len() const { return sizeof(TestHdr3); }
+    constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
 
-using FixedSizedPayload = uint8_t[10];
+struct FixedSizedPayload {
+    uint8_t data[10];
+
+    constexpr size_t len() const { return sizeof(*this); }
+};
 
 // Frame which holds 3 headers and some optional padding and payload.
 template <size_t padding_len, size_t payload_len> struct TripleHdrFrame {
@@ -172,7 +176,7 @@ TEST(Frame, NextFrame) {
     test_frame->hdr3.a = 42;
 
     // Start with first header.
-    Frame<TestHdr1> frame(fbl::move(pkt));
+    Frame<TestHdr1, TestHdr2> frame(fbl::move(pkt));
 
     // Access second frame with unknown body. Verify correct length and accessors.
     auto second_frame = frame.NextFrame<TestHdr2>();

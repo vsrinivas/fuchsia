@@ -12,6 +12,7 @@
 #include <wlan/common/bitfield.h>
 #include <wlan/common/mac_frame.h>
 #include <wlan/common/macaddr.h>
+#include <wlan/mlme/frame_validation.h>
 #include <wlan/mlme/packet.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -20,33 +21,14 @@
 
 namespace wlan {
 
-namespace {
-template <unsigned int N, typename T> T align(T t) {
-    static_assert(N > 1 && !(N & (N - 1)), "alignment must be with a power of 2");
-    return (t + (N - 1)) & ~(N - 1);
-}
-
-template <typename T> static constexpr bool CanCarryRxInfo() {
-    constexpr bool is_data_frame = std::is_same<T, DataFrameHeader>::value;
-    constexpr bool is_mgmt_frame = std::is_same<T, MgmtFrameHeader>::value;
-    constexpr bool is_ctrl_frame = std::is_same<T, CtrlFrameHdr>::value;
-    return is_data_frame || is_mgmt_frame || is_ctrl_frame;
-}
-
-template <typename T> static constexpr bool CanCarryTxInfo() { return CanCarryRxInfo<T>(); }
-
-}  // namespace
-
 using NilHeader = uint8_t[0];
-struct UnknownBody {
-    uint8_t data[];
-} __PACKED;
 
 // A temporary representation of a frame.
 template <typename Header, typename Body = UnknownBody> class FrameView {
    public:
     FrameView(const Packet* pkt, size_t offset = 0) : data_offset_(offset), pkt_(pkt) {
         ZX_DEBUG_ASSERT(pkt_ != nullptr);
+        ZX_DEBUG_ASSERT(pkt->len() >= offset);
     }
 
     const Header* hdr() const {
@@ -84,7 +66,7 @@ template <typename Header, typename Body = UnknownBody> class FrameView {
     bool has_rx_info() const {
         ZX_DEBUG_ASSERT(pkt_ != nullptr);
 
-        if (!CanCarryRxInfo<Header>()) { return false; }
+        if (!is_mac_hdr<Header>::value) { return false; }
 
         return pkt_->has_ctrl_data<wlan_rx_info_t>();
     }
@@ -92,7 +74,7 @@ template <typename Header, typename Body = UnknownBody> class FrameView {
     const wlan_rx_info_t* rx_info() const {
         ZX_DEBUG_ASSERT(pkt_ != nullptr);
         ZX_DEBUG_ASSERT(has_rx_info());
-        static_assert(CanCarryRxInfo<Header>(), "only MAC frame can carry rx_info");
+        static_assert(is_mac_hdr<Header>::value, "only MAC frame can carry rx_info");
 
         return pkt_->ctrl_data<wlan_rx_info_t>();
     }
@@ -100,8 +82,7 @@ template <typename Header, typename Body = UnknownBody> class FrameView {
     bool HasValidLen() const {
         ZX_DEBUG_ASSERT(pkt_ != nullptr);
 
-        if (pkt_->field<Header>(hdr_offset()) == nullptr) { return false; }
-        return pkt_->field<Body>(body_offset()) != nullptr;
+        return is_valid_frame_length<Header, Body>(pkt_, data_offset_);
     }
 
     // Advances the frame such that it points to the beginning of its previous Body.
@@ -141,13 +122,8 @@ template <typename Header, typename Body = UnknownBody> class FrameView {
     size_t hdr_offset() const { return data_offset_; }
 
     size_t body_offset() const {
-        size_t hdr_len = hdr()->len();
-        auto rx = pkt_->ctrl_data<wlan_rx_info_t>();
-        if (CanCarryRxInfo<Header>() && rx != nullptr &&
-            rx->rx_flags & WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4) {
-            hdr_len = align<4>(hdr_len);
-        }
-        return hdr_offset() + hdr_len;
+        auto padding_func = get_packet_padding_func<Header>(pkt_);
+        return hdr_offset() + padding_func(hdr()->len());
     }
 
    private:
@@ -199,7 +175,7 @@ template <typename Header, typename Body = UnknownBody> class Frame {
     size_t len() const { return View().len(); }
 
     zx_status_t FillTxInfo() {
-        static_assert(CanCarryTxInfo<Header>(), "only MAC frame can carry tx_info");
+        static_assert(is_mac_hdr<Header>::value, "only MAC frame can carry tx_info");
         ZX_DEBUG_ASSERT(pkt_ != nullptr);
 
         wlan_tx_info_t txinfo = {

@@ -642,8 +642,8 @@ struct DataFrameHeader {
     const DataFrameHeader* const_this() { return const_cast<const DataFrameHeader*>(this); }
 } __PACKED;
 
-struct NullFrame : public EmptyHdr {
-    static constexpr bool IsSubtype(uint8_t subtype) {
+struct NullDataHdr : public EmptyHdr {
+    static bool IsSubtype(uint8_t subtype) {
         return subtype == DataSubtype::kNull || subtype == DataSubtype::kQosnull;
     }
 } __PACKED;

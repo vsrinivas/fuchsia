@@ -45,6 +45,7 @@ executable("mac_tests") {
     "channel_unittest.cpp",
     "element_unittest.cpp",
     "energy_unittest.cpp",
+    "frame_validation_unittest.cpp",
     "mac_frame_unittest.cpp",
     "macaddr_unittest.cpp",
     "packet_unittest.cpp",
