@@ -42,10 +42,6 @@ source_set("${data.name}") {
   public_configs = [
     ":${data.name}_config",
   ]
-
-  defines = [
-    "_ALL_SOURCE=1",
-  ]
 }
 
 sdk_atom("${data.name}_sdk") {
