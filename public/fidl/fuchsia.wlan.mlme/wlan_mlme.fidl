@@ -71,6 +71,83 @@ struct ScanRequest {
 
 // MLME-SCAN.confirm (IEEE Std 802.11-2016 6.3.3.3)
 
+enum MaxMpduLen : uint8 {
+    OCTETS_3895 = 0;
+    OCTETS_7991 = 1;
+    OCTETS_11454 = 2;
+};
+
+enum VhtLinkAdaptation : uint8 {
+    NO_FEEDBACK = 0;
+    // 1 reserved
+    UNSOLICITED = 2;
+    BOTH = 3;
+};
+
+// IEEE Std 802.11-2016, 9.4.2.158.2
+struct VhtCapabilitiesInfo {
+    MaxMpduLen mpdu_len;
+    uint8 supported_cbw_set;
+    bool rx_ldpc;
+    bool sgi_cbw80;
+    bool sgi_cbw160;
+    bool tx_stbc;
+    uint8 rx_stbc; // number of spatial streams supported. [0, 4] are valid. [5, 7] are reserved.
+    bool su_bfer;
+    bool su_bfee;
+    uint8 bfee_sts; // Maximum number of STS - 1, if su_bfee is true. Reserved otherwise.
+    uint8 num_sounding;
+    bool mu_bfer;
+    bool mu_bfee;
+    bool txop_ps;
+    bool htc_vht;
+    uint8 max_ampdu_exp;
+    VhtLinkAdaptation link_adapt;
+    bool rx_ant_pattern;
+    bool tx_ant_pattern;
+    uint8 ext_nss_bw;
+};
+
+enum VhtMcs : uint8 {
+    SET_0_TO_7 = 0;
+    SET_0_TO_8 = 1;
+    SET_0_TO_9 = 2;
+    SET_NONE = 3;
+};
+
+// IEEE Std 802.11-2016 9.4.2.158.3
+struct VhtMcsNss {
+    array<VhtMcs>:8 rx_max_mcs;  // idx 0 for ss1, .. idx 7 for ss8
+    uint16 rx_max_data_rate;     // Mbps
+    uint8 max_nsts;
+
+    array<VhtMcs>:8 tx_max_mcs; // idx 0 for ss1, .. idx 7 for ss8
+    uint16 tx_max_data_rate;    // Mbps
+    bool ext_nss_bw;
+};
+
+// IEEE Std 802.11-2016 9.5.2.158
+struct VhtCapabilities {
+    VhtCapabilitiesInfo vht_cap_info;
+    VhtMcsNss vht_mcs_nss;
+};
+
+// IEEE Std 802.11-2016 deprecates the use of CBW_160, CBW_80P80
+enum VhtCbw : uint8 {
+    CBW_20_40 = 0;
+    CBW_80_160_80P80 = 1;
+    CBW_160 = 2;
+    CBW_80P80 = 3;
+};
+
+// IEEE Std 802.11-2016 9.5.2.159
+struct VhtOperation {
+    VhtCbw vht_cbw;
+    uint8 center_freq_seg0;  // channel number
+    uint8 center_freq_seg1;  // channel number
+    VhtMcsNss vht_mcs_nss;
+};
+
 struct BSSDescription {
     array<uint8>:6 bssid;
     string ssid;
@@ -79,16 +156,19 @@ struct BSSDescription {
     uint32 dtim_period;
     uint64 timestamp;
     uint64 local_time;
+
     // TODO(hahnr): This field represents an IE and should thus be named RSNE.
     vector<uint8>? rsn;
 
+    VhtCapabilities? vht_cap;
+    VhtOperation? vht_op;
+
+    // List up non-standard, Fuchsia only parameters
     WlanChan chan;
 
-    // For the following measurements, 255 means measurement not available.
     int8 rssi_dbm;   // dBm. This field is not in the standard
     int16 rcpi_dbmh; // 0.5 step dBm. Do not use encoding from IEEE Std 802.11-2016 9.4.2.38.
     int16 rsni_dbh;  // 0.5 step dB.  Do not use encoding from IEEE Std 802.11-2016 9.4.2.41.
-    // etc
 };
 
 enum ScanResultCodes {

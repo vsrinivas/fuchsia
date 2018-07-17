@@ -15,6 +15,8 @@ pub fn fake_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
         timestamp: 0,
         local_time: 0,
         rsn: None,
+        vht_cap: None,
+        vht_op: None,
         chan: fidl_mlme::WlanChan { primary: 1, secondary80: 0, cbw: fidl_mlme::Cbw::Cbw20 },
         rssi_dbm: 0,
         rcpi_dbmh: 0,

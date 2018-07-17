@@ -93,6 +93,10 @@ mod tests {
             timestamp: 0,
             local_time: 0,
             rsn: if compatible { None } else { Some(Vec::new()) },
+
+            vht_cap: None,
+            vht_op: None,
+
             chan: fidl_mlme::WlanChan { primary: 1, secondary80: 0, cbw: fidl_mlme::Cbw::Cbw20 },
             rssi_dbm,
             rcpi_dbmh,

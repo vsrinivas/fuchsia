@@ -278,6 +278,34 @@ fn report_connect_finished<T>(token: Option<T::ConnectToken>,
     }
 }
 
+fn clone_vht_mcs_nss(m: &fidl_mlme::VhtMcsNss) -> fidl_mlme::VhtMcsNss {
+    fidl_mlme::VhtMcsNss {
+        rx_max_mcs: m.rx_max_mcs.clone(),
+        tx_max_mcs: m.tx_max_mcs.clone(),
+        ..*m
+    }
+}
+
+fn clone_vht_capabilities_info(i: &fidl_mlme::VhtCapabilitiesInfo) -> fidl_mlme::VhtCapabilitiesInfo {
+    fidl_mlme::VhtCapabilitiesInfo {
+        ..*i
+    }
+}
+
+fn clone_vht_capabilities(c: &fidl_mlme::VhtCapabilities) -> fidl_mlme::VhtCapabilities {
+    fidl_mlme::VhtCapabilities {
+        vht_cap_info: clone_vht_capabilities_info(&c.vht_cap_info),
+        vht_mcs_nss: clone_vht_mcs_nss(&c.vht_mcs_nss)
+    }
+}
+
+fn clone_vht_operation(o: &fidl_mlme::VhtOperation) -> fidl_mlme::VhtOperation {
+    fidl_mlme::VhtOperation {
+        vht_mcs_nss: clone_vht_mcs_nss(&o.vht_mcs_nss),
+        ..*o
+    }
+}
+
 fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescription {
     fidl_mlme::BssDescription {
         bssid: d.bssid.clone(),
@@ -287,7 +315,12 @@ fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescription {
         dtim_period: d.dtim_period,
         timestamp: d.timestamp,
         local_time: d.local_time,
+
         rsn: d.rsn.clone(),
+
+        vht_cap: d.vht_cap.as_ref().map(|v| Box::new(clone_vht_capabilities(v))),
+        vht_op:  d.vht_op.as_ref().map(|v| Box::new(clone_vht_operation(v))),
+
         chan: fidl_mlme::WlanChan {
             primary: d.chan.primary,
             cbw: d.chan.cbw,
