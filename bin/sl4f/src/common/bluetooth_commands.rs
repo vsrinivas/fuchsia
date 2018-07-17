@@ -2,22 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use app;
 use async::TimeoutExt;
 use bt::error::Error as BTError;
 use common::bluetooth_facade::{listen_central_events, BluetoothFacade};
 use common::constants::*;
-use failure::{Error, ResultExt};
-use fidl_ble::{AdvertisingData, PeripheralMarker, PeripheralProxy};
-use fidl_ble::{CentralMarker, CentralProxy, ScanFilter};
+use failure::Error;
+use fidl_ble::{AdvertisingData, ScanFilter};
 use futures::future::ok as fok;
-use futures::future::Either::{Left, Right};
 use futures::prelude::*;
 use futures::FutureExt;
 use parking_lot::RwLock;
 use serde_json::{to_value, Value};
 use std::sync::Arc;
 use zx::prelude::*;
+
+use common::bluetooth_facade::BluetoothMethod;
 
 // Takes a serde_json::Value and converts it to arguments required for
 // a FIDL ble_advertise command
@@ -56,7 +55,9 @@ fn ble_advertise_to_fidl(
 
 // Takes a serde_json::Value and converts it to arguments required for a FIDL
 // ble_scan command
-fn ble_scan_to_fidl(scan_args_raw: Value) -> Result<(Option<ScanFilter>, Option<u64>), Error> {
+fn ble_scan_to_fidl(
+    scan_args_raw: Value,
+) -> Result<(Option<ScanFilter>, Option<u64>, Option<u64>), Error> {
     let timeout_raw = match scan_args_raw.get("scan_time_ms") {
         Some(t) => Some(t).unwrap().clone(),
         None => return Err(BTError::new("Timeout_ms missing.").into()),
@@ -67,9 +68,15 @@ fn ble_scan_to_fidl(scan_args_raw: Value) -> Result<(Option<ScanFilter>, Option<
         None => return Err(BTError::new("Scan filter missing.").into()),
     };
 
+    let scan_count_raw = match scan_args_raw.get("scan_count") {
+        Some(c) => Some(c).unwrap().clone(),
+        None => return Err(BTError::new("Scan count missing.").into()),
+    };
+
     let timeout: Option<u64> = timeout_raw.as_u64();
     let name_substring: Option<String> =
         scan_filter_raw["name_substring"].as_str().map(String::from);
+    let count: Option<u64> = scan_count_raw.as_u64();
 
     // For now, no scan profile, so default to empty ScanFilter
     let filter = Some(ScanFilter {
@@ -81,7 +88,7 @@ fn ble_scan_to_fidl(scan_args_raw: Value) -> Result<(Option<ScanFilter>, Option<
         max_path_loss: None,
     });
 
-    Ok((filter, timeout))
+    Ok((filter, timeout, count))
 }
 
 // Takes a serde_json::Value and converts it to arguments required for a FIDL
@@ -100,56 +107,46 @@ fn ble_stop_advertise_to_fidl(
 
 // Takes ACTS method command and executes corresponding FIDL method
 // Packages result into serde::Value
-// Nested Either types are for type coercion of the Future return values
-// Nested Left() handles error case.
-// This is not scalable for new methods that return a different type
-// TODO(aniramakri): Implement using many_futures! macro for scalable solution
-pub fn method_to_fidl(
+// To add new methods, add to the many_futures! macro and case to match
+pub fn ble_method_to_fidl(
     method_name: String, args: Value, bt_facade: Arc<RwLock<BluetoothFacade>>,
 ) -> impl Future<Item = Result<Value, Error>, Error = Never> {
-    match method_name.as_ref() {
-        "BleAdvertise" => {
+    many_futures!(Output, [BleAdvertise, BleScan, BleStopAdvertise, Error]);
+    match BluetoothMethod::from_str(method_name) {
+        Some(BluetoothMethod::BleAdvertise) => {
             let (ad, interval) = match ble_advertise_to_fidl(args) {
                 Ok((adv_data, intv)) => (adv_data, intv),
-                Err(e) => return Left(Left(fok(Err(e)))),
+                Err(e) => return Output::Error(fok(Err(e))),
             };
 
             let adv_fut = start_adv_async(bt_facade.clone(), ad, interval);
-            Right(Right(adv_fut))
+            Output::BleAdvertise(adv_fut)
         }
-        "BleScan" => {
-            let (filter, timeout) = match ble_scan_to_fidl(args) {
-                Ok((f, t)) => (f, t),
-                Err(e) => return Left(Left(fok(Err(e)))),
+        Some(BluetoothMethod::BleScan) => {
+            let (filter, timeout, _count) = match ble_scan_to_fidl(args) {
+                Ok((f, t, c)) => (f, t, c),
+                Err(e) => return Output::Error(fok(Err(e))),
             };
 
             let scan_fut = start_scan_async(bt_facade.clone(), filter, timeout);
-            Left(Right(scan_fut))
+            Output::BleScan(scan_fut)
         }
-        "BleStopAdvertise" => {
+        Some(BluetoothMethod::BleStopAdvertise) => {
             let advertisement_id = match ble_stop_advertise_to_fidl(args, bt_facade.clone()) {
                 Ok(aid) => aid,
-                Err(e) => return Left(Left(fok(Err(e)))),
+                Err(e) => return Output::Error(fok(Err(e))),
             };
 
             let stop_fut = stop_adv_async(bt_facade.clone(), advertisement_id.clone());
-            Right(Left(stop_fut))
+            Output::BleStopAdvertise(stop_fut)
         }
-        _ => Left(Left(fok(Err(BTError::new("Invalid FIDL method").into())))),
+        _ => Output::Error(fok(Err(BTError::new("Invalid BLE FIDL method").into()))),
     }
 }
 
 fn start_adv_async(
     bt_facade: Arc<RwLock<BluetoothFacade>>, ad: Option<AdvertisingData>, interval: Option<u32>,
 ) -> impl Future<Item = Result<Value, Error>, Error = Never> {
-    // TODO(aniramakri): Change structure of proxy creation such that
-    // BluetoothFacade deals with opening proxies. This allows for all ownership
-    // (set/get) to be done on the BluetoothFacade level
-    let peripheral_svc: PeripheralProxy = app::client::connect_to_service::<PeripheralMarker>()
-        .context("Failed to connect to BLE Peripheral service.")
-        .unwrap();
-    bt_facade.write().set_peripheral_proxy(peripheral_svc);
-
     let start_adv = bt_facade.write().start_adv(ad, interval);
     let adv_fut = start_adv.then(move |aid| match aid {
         Ok(adv_id) => {
@@ -187,14 +184,6 @@ fn stop_adv_async(
 fn start_scan_async(
     bt_facade: Arc<RwLock<BluetoothFacade>>, filter: Option<ScanFilter>, timeout: Option<u64>,
 ) -> impl Future<Item = Result<Value, Error>, Error = Never> {
-    // TODO(aniramakri): Change structure of proxy creation such that
-    // BluetoothFacade deals with opening proxies. This allows for all ownership
-    // (set/get) to be done on the BluetoothFacade level
-    let central_svc: CentralProxy = app::client::connect_to_service::<CentralMarker>()
-        .context("Failed to connect to BLE Central Service")
-        .unwrap();
-    bt_facade.write().set_central_proxy(central_svc);
-
     // Create scanning future and listen on central events for scan
     let scan_fut = bt_facade.write().start_scan(filter);
     let event_fut = listen_central_events(bt_facade.clone())

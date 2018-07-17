@@ -9,12 +9,12 @@ use futures::{FutureExt, StreamExt};
 use parking_lot::RwLock;
 use std::sync::Arc;
 
-use common::bluetooth_commands::method_to_fidl;
-use common::bluetooth_facade::BluetoothFacade;
+use common::sl4f::method_to_fidl;
+use common::sl4f::Sl4f;
 use common::sl4f_types::{AsyncRequest, AsyncResponse};
 
 pub fn run_fidl_loop(
-    bt_facade: Arc<RwLock<BluetoothFacade>>, receiver: mpsc::UnboundedReceiver<AsyncRequest>,
+    sl4f_session: Arc<RwLock<Sl4f>>, receiver: mpsc::UnboundedReceiver<AsyncRequest>,
 ) {
     let mut executor = async::Executor::new()
         .context("Error creating event loop")
@@ -24,16 +24,22 @@ pub fn run_fidl_loop(
         AsyncRequest {
             tx,
             id,
+            method_type,
             name,
             params,
         } => {
-            let bt_facade = bt_facade.clone();
+            let curr_sl4f_session = sl4f_session.clone();
             fx_log_info!(tag: "sl4f_asyc_execute",
-                "Received sync request: {:?}, {:?}, {:?}, {:?}",
-                tx, id, name, params
+                "Received sync request: {:?}, {:?}, {:?}, {:?}, {:?}",
+                tx, id, method_type, name, params
             );
 
-            let fidl_fut = method_to_fidl(name.clone(), params.clone(), bt_facade.clone());
+            let fidl_fut = method_to_fidl(
+                method_type.clone(),
+                name.clone(),
+                params.clone(),
+                curr_sl4f_session.clone(),
+            );
             fidl_fut.and_then(move |resp| {
                 let response = AsyncResponse::new(resp);
 

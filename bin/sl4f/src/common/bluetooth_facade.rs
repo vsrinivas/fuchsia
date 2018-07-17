@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use app;
 use bt::error::Error as BTError;
 use common::constants::*;
-use failure::{Error, Fail};
+use failure::{Error, Fail, ResultExt};
 use fidl::encoding2::OutOfLine;
-use fidl_ble::{AdvertisingData, PeripheralProxy, RemoteDevice};
-use fidl_ble::{CentralEvent, CentralProxy, ScanFilter};
+use fidl_ble::{AdvertisingData, PeripheralMarker, PeripheralProxy, RemoteDevice};
+use fidl_ble::{CentralEvent, CentralMarker, CentralProxy, ScanFilter};
 use futures::future;
 use futures::future::ok as fok;
 use futures::future::Either::{Left, Right};
@@ -59,29 +60,40 @@ impl BluetoothFacade {
     }
 
     // Set the peripheral proxy only if none exists, otherwise, use existing
-    pub fn set_peripheral_proxy(&mut self, peripheral_proxy: PeripheralProxy) {
+    pub fn set_peripheral_proxy(&mut self) {
         let new_periph = match self.peripheral.clone() {
             Some(p) => {
                 fx_log_warn!(tag: "set_peripheral_proxy",
-                    "Current peripheral: {:?}. New peripheral: {:?}",
-                    p, peripheral_proxy
+                    "Current peripheral: {:?}",
+                    p,
                 );
                 Some(p)
             }
-            None => Some(peripheral_proxy),
+            None => {
+                let peripheral_svc: PeripheralProxy =
+                    app::client::connect_to_service::<PeripheralMarker>()
+                        .context("Failed to connect to BLE Peripheral service.")
+                        .unwrap();
+                Some(peripheral_svc)
+            }
         };
 
         self.peripheral = new_periph
     }
 
     // Update the central proxy if none exists, otherwise raise error
-    pub fn set_central_proxy(&mut self, central_proxy: CentralProxy) {
+    pub fn set_central_proxy(&mut self) {
         let new_central = match self.central.clone() {
             Some(c) => {
-                fx_log_warn!(tag: "set_central_proxy", "Current central: {:?}. New central: {:?}", c, central_proxy);
+                fx_log_warn!(tag: "set_central_proxy", "Current central: {:?}", c);
                 Some(c)
             }
-            None => Some(central_proxy),
+            None => {
+                let central_svc: CentralProxy = app::client::connect_to_service::<CentralMarker>()
+                    .context("Failed to connect to BLE Central Service")
+                    .unwrap();
+                Some(central_svc)
+            }
         };
 
         self.central = new_central
@@ -170,9 +182,9 @@ impl BluetoothFacade {
     }
 
     /* Print/Debug methods for BT Facade */
-    pub fn print_facade(&self) {
-        fx_log_info!(tag: "print_facade",
-            "Facade: {:?}, {:?}, {:?}, {:?}",
+    pub fn print(&self) {
+        fx_log_info!(tag: "print",
+            "BluetoothFacade: {:?}, {:?}, {:?}, {:?}",
             self.get_central_proxy(),
             self.get_peripheral_proxy(),
             self.get_devices(),
@@ -181,7 +193,7 @@ impl BluetoothFacade {
     }
 
     pub fn start_adv(
-        &self, adv_data: Option<AdvertisingData>, interval: Option<u32>,
+        &mut self, adv_data: Option<AdvertisingData>, interval: Option<u32>,
     ) -> impl Future<Item = Option<String>, Error = Error> {
         // Default interval (ms) to 1 second
         let intv: u32 = interval.unwrap_or(DEFAULT_BLE_ADV_INTERVAL_MS);
@@ -199,6 +211,9 @@ impl BluetoothFacade {
                 uris: None,
             },
         };
+
+        // Create peripheral proxy if necessary
+        self.set_peripheral_proxy();
 
         match &self.peripheral {
             Some(p) => Right(
@@ -238,10 +253,7 @@ impl BluetoothFacade {
                             fx_log_err!(tag: "stop_adv", "Failed to stop advertising: {:?}", err);
                             Err(err.into())
                         }
-                        None => {
-                            fx_log_info!(tag: "stop_adv", "No error in stop adv fut");
-                            Ok(())
-                        }
+                        None => Ok(()),
                     }),
             ),
             None => {
@@ -254,8 +266,9 @@ impl BluetoothFacade {
     }
 
     pub fn start_scan(
-        &self, mut filter: Option<ScanFilter>,
+        &mut self, mut filter: Option<ScanFilter>,
     ) -> impl Future<Item = (), Error = Error> {
+        self.set_central_proxy();
         match &self.central {
             Some(c) => Right(
                 c.start_scan(filter.as_mut().map(OutOfLine))
@@ -272,6 +285,9 @@ impl BluetoothFacade {
     }
 }
 
+// Listens for central events
+// If count is None, then listens for DEFAULT_SCAN_TIMEOUT_MS amount of time
+// Otherwise, terminates after count number of devices discovered
 pub fn listen_central_events(
     bt_facade: Arc<RwLock<BluetoothFacade>>,
 ) -> impl Future<Item = (), Error = Never> {
@@ -279,6 +295,8 @@ pub fn listen_central_events(
         Some(c) => c.take_event_stream(),
         None => panic!("No central created!"),
     };
+
+    let mut devices_found: u64 = 0;
 
     evt_stream
         .for_each(move |evt| {
@@ -293,8 +311,10 @@ pub fn listen_central_events(
                         None => None,
                     };
 
-                    fx_log_info!(tag: "listen_central_events", "Device discovered: id: {:?}, name: {:?}", id, name);
+                    // Update the device list and increment count
+                    fx_log_info!(tag: "listen_central_events", "Device discovered: id: {:?}, name: {:?}, count: {:?}", id, name, devices_found);
                     bt_facade.write().update_devices(id, device);
+                    devices_found += 1;
                 }
                 CentralEvent::OnPeripheralDisconnected { identifier } => {
                     fx_log_info!(tag: "listen_central_events", "Peer disconnected: {:?}", identifier);
@@ -306,4 +326,23 @@ pub fn listen_central_events(
         .recover(
             |e| fx_log_err!(tag: "listen_central_events", "failed to subscribe to BLE Central events: {:?}", e),
         )
+}
+
+/// Enum for supported FIDL commands, to extend support for new commands, add to this definition,
+/// update ble_method_to_fidl, and implement helper methods in BluetoothFacade
+pub enum BluetoothMethod {
+    BleScan,
+    BleAdvertise,
+    BleStopAdvertise,
+}
+
+impl BluetoothMethod {
+    pub fn from_str(method: String) -> Option<BluetoothMethod> {
+        match method.as_ref() {
+            "BleScan" => Some(BluetoothMethod::BleScan),
+            "BleAdvertise" => Some(BluetoothMethod::BleAdvertise),
+            "BleStopAdvertise" => Some(BluetoothMethod::BleStopAdvertise),
+            _ => None,
+        }
+    }
 }

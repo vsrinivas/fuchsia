@@ -54,6 +54,9 @@ pub struct AsyncRequest {
     // id: Integer id of the method
     pub id: u32,
 
+    // type: Method type of the request (e.g bluetooth, wlan, etc...)
+    pub method_type: String,
+
     // name: Name of the method
     pub name: String,
 
@@ -63,11 +66,12 @@ pub struct AsyncRequest {
 
 impl AsyncRequest {
     pub fn new(
-        tx: mpsc::Sender<AsyncResponse>, id: u32, name: String, params: Value,
+        tx: mpsc::Sender<AsyncResponse>, id: u32, method_type: String, name: String, params: Value,
     ) -> AsyncRequest {
         AsyncRequest {
             tx,
             id,
+            method_type,
             name,
             params,
         }
@@ -84,5 +88,22 @@ pub struct AsyncResponse {
 impl AsyncResponse {
     pub fn new(res: Result<Value, Error>) -> AsyncResponse {
         AsyncResponse { res }
+    }
+}
+
+/// Enum for supported connectivity stacks
+/// Make sure to update sl4f.rs:method_to_fidl() match statement
+pub enum FacadeType {
+    Bluetooth,
+    Wlan,
+}
+
+impl FacadeType {
+    pub fn from_str(facade: String) -> Option<FacadeType> {
+        match facade.as_ref() {
+            "bluetooth" => Some(FacadeType::Bluetooth),
+            "wlan" => Some(FacadeType::Wlan),
+            _ => None,
+        }
     }
 }
