@@ -1,5 +1,6 @@
 {
     "imports": [
+        "garnet/packages/config/appmgr",
         "garnet/packages/config/network",
         "garnet/packages/config/openssh_keys",
         "garnet/packages/prod/netstack",
