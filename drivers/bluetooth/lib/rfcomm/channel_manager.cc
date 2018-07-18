@@ -39,20 +39,26 @@ void ChannelManager::OpenRemoteChannel(hci::ConnectionHandle handle,
                                        ServerChannel server_channel,
                                        ChannelOpenedCallback channel_opened_cb,
                                        async_dispatcher_t* dispatcher) {
-  // TODO(gusss): open L2CAP channel if needed. The L2CAP API for opening L2CAP
-  // channels isn't merged yet.
-  if (handle_to_session_.find(handle) == handle_to_session_.end()) {
+  auto session_it = handle_to_session_.find(handle);
+
+  if (session_it == handle_to_session_.end()) {
+    // TODO(gusss): open L2CAP channel if needed.
     FXL_NOTIMPLEMENTED();
     async::PostTask(dispatcher, [cb = std::move(channel_opened_cb)] {
       cb(nullptr, kInvalidServerChannel);
     });
   }
 
-  // TODO(gusss): open RFCOMM channel on the correct Session, once Session has
-  // this capability.
-  async::PostTask(dispatcher, [cb = std::move(channel_opened_cb)] {
-    cb(nullptr, kInvalidServerChannel);
-  });
+  FXL_DCHECK(session_it != handle_to_session_.end());
+
+  session_it->second->OpenRemoteChannel(
+      server_channel, [cb = std::move(channel_opened_cb), dispatcher](
+                          auto rfcomm_channel, auto server_channel) mutable {
+        async::PostTask(dispatcher, [cb_ = std::move(cb), rfcomm_channel,
+                                     server_channel]() {
+          cb_(rfcomm_channel, server_channel);
+        });
+      });
 }
 
 ServerChannel ChannelManager::AllocateLocalChannel(
@@ -70,16 +76,16 @@ ServerChannel ChannelManager::AllocateLocalChannel(
   return kInvalidServerChannel;
 }
 
-void ChannelManager::ChannelOpened(std::unique_ptr<Channel> rfcomm_channel,
+void ChannelManager::ChannelOpened(fbl::RefPtr<Channel> rfcomm_channel,
                                    ServerChannel server_channel) {
-  FXL_DCHECK(server_channels_.find(server_channel) != server_channels_.end())
-      << "New channel created on an unallocated Server Channel.";
+  auto server_channel_it = server_channels_.find(server_channel);
+  FXL_DCHECK(server_channel_it != server_channels_.end())
+      << "rfcomm: New channel created on an unallocated Server Channel";
 
-  auto& cb_and_dispatcher = server_channels_[server_channel];
-  async::PostTask(cb_and_dispatcher.second,
-                  [server_channel, channel = std::move(rfcomm_channel),
-                   cb = cb_and_dispatcher.first.share()]() mutable {
-                    cb(std::move(channel), server_channel);
+  async::PostTask(server_channel_it->second.second,
+                  [server_channel, rfcomm_channel,
+                   cb = server_channel_it->second.first.share()]() {
+                    cb(rfcomm_channel, server_channel);
                   });
 }
 

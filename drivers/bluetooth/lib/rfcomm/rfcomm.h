@@ -22,9 +22,11 @@ enum class CommandResponse { kCommand, kResponse };
 // is described in RFCOMM 5.2.1; the device which starts up the multiplexer
 // control channel is considered the initiator (see "RFCOMM initiator" in the
 // glossary, RFCOMM 9).
-// A value of kUnassigned indicates that the RFCOMM session has not completed
-// its start-up procedure, and thus no role has yet been assigned.
-enum class Role { kUnassigned, kInitiator, kResponder };
+// A value of kUnassigned indicates that the RFCOMM session has not started the
+// start-up procedure, and thus no role has yet been assigned. A value of
+// kNegotiating indicates that the start-up procedure has started, but not
+// finished.
+enum class Role { kUnassigned, kNegotiating, kInitiator, kResponder };
 
 // Return the Role opposite to the one given in |role|. The opposite of the
 // Unassigned role is Unassigned. This is used to get our peer's role when we
@@ -37,7 +39,7 @@ inline constexpr Role OppositeRole(Role role) {
 
 // This function defines what it means for a multiplexer to be started: namely,
 // it has its role set to initiator or responder.
-inline constexpr bool MultiplexerStarted(Role role) {
+inline constexpr bool IsMultiplexerStarted(Role role) {
   return role == Role::kInitiator || role == Role::kResponder;
 }
 

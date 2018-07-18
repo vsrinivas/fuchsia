@@ -123,7 +123,7 @@ std::unique_ptr<Frame> Frame::Parse(bool credit_based_flow, Role role,
   DLCI dlci = buffer[kAddressIndex] >> kDLCIShift;
   FrameType frame_type = (FrameType)(buffer[kControlIndex] & kControlMask);
 
-  if (!MultiplexerStarted(role) && !IsMuxStartupFrame(frame_type, dlci)) {
+  if (!IsMultiplexerStarted(role) && !IsMuxStartupFrame(frame_type, dlci)) {
     FXL_LOG(WARNING) << "rfcomm: Frame type "
                      << static_cast<unsigned>(frame_type)
                      << " before mux start";
@@ -134,7 +134,7 @@ std::unique_ptr<Frame> Frame::Parse(bool credit_based_flow, Role role,
   // See table 1 in 5.2.1.2, which describes exactly how the C/R bit is
   // interpreted.
   CommandResponse command_response;
-  if (MultiplexerStarted(role)) {
+  if (IsMultiplexerStarted(role)) {
     // See table 1 in 5.2.1.2, which describes exactly how the C/R bit is
     // interpreted.
     command_response = (role == Role::kInitiator && cr_bit) ||
@@ -274,7 +274,7 @@ void Frame::WriteHeader(common::MutableBufferView buffer) const {
                             command_response_ == CommandResponse::kCommand) ||
                            (role_ == Role::kResponder &&
                             command_response_ == CommandResponse::kResponse);
-  } else if (role_ == Role::kUnassigned) {
+  } else if (role_ == Role::kUnassigned || role_ == Role::kNegotiating) {
     // There are only specific frames which can be encoded when the multiplexer
     // is not yet started.
     FXL_DCHECK(IsMuxStartupFrame(FrameType(control_), dlci_));
@@ -287,8 +287,8 @@ void Frame::WriteHeader(common::MutableBufferView buffer) const {
     //  - DM (response) frames come from would-be responder, C/R = 1
     command_response_bit = 1;
   } else {
-    FXL_DCHECK(false) << "Unexpected role while writing frame: "
-                      << unsigned(role_);
+    FXL_NOTREACHED() << "rfcomm: Unexpected role while writing frame: "
+                     << unsigned(role_);
     return;
   }
 

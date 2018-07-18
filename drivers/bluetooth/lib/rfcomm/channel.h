@@ -6,6 +6,7 @@
 
 #include <queue>
 
+#include <fbl/ref_counted.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 
@@ -18,7 +19,7 @@ namespace rfcomm {
 
 class Session;
 
-class Channel {
+class Channel : public fbl::RefCounted<Channel> {
  public:
   virtual ~Channel() = default;
 

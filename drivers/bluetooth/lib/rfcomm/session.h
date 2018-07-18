@@ -5,9 +5,11 @@
 #ifndef GARNET_DRIVERS_BLUETOOTH_LIB_RFCOMM_SESSION_H_
 #define GARNET_DRIVERS_BLUETOOTH_LIB_RFCOMM_SESSION_H_
 
+#include <queue>
 #include <unordered_map>
 
 #include <fbl/ref_ptr.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/memory/weak_ptr.h>
 
@@ -26,13 +28,15 @@ class Session {
   void Send(DLCI dlci, common::ByteBufferPtr data);
 
  private:
+  friend class ChannelManager;
+
   // Returns nullptr if creation fails -- for example, if activating the L2CAP
   // channel fails. |channel_opened_cb| will be called whenever a new channel is
   // opened on this session. The callback will be dispatched on |dispatcher|.
   // |dispatcher| will also be used for dispatching all of Session's other
   // tasks.
   using ChannelOpenedCallback =
-      fit::function<void(std::unique_ptr<Channel>, ServerChannel)>;
+      fit::function<void(fbl::RefPtr<Channel>, ServerChannel)>;
   static std::unique_ptr<Session> Create(
       fbl::RefPtr<l2cap::Channel> l2cap_channel,
       ChannelOpenedCallback channel_opened_cb, async_dispatcher_t* dispatcher);
@@ -47,13 +51,37 @@ class Session {
   // be called from Create() during Session creation.
   bool SetL2CAPChannel(fbl::RefPtr<l2cap::Channel> l2cap_channel);
 
-  void SendFrame(std::unique_ptr<Frame> frame);
+  // Opens a remote channel and delivers it via |channel_opened_cb|.
+  void OpenRemoteChannel(ServerChannel server_channel,
+                         ChannelOpenedCallback channel_opened_cb);
 
   // l2cap::Channel callbacks.
   void RxCallback(const l2cap::SDU& sdu);
   void ClosedCallback();
 
-  inline bool multiplexer_started() { return MultiplexerStarted(role_); }
+  // The raw frame-sending function. Some frames (e.g. SABM and DISC) expect a
+  // response (UA or DM). This function takes an optional callback which should
+  // be called when the response is received. If an error occurs, the callback
+  // is not called. Otherwise, if |callback| is given, it will be called with a
+  // valid UA or DM frame.
+  using FrameResponseCallback = fit::function<void(std::unique_ptr<Frame>)>;
+  bool SendFrame(std::unique_ptr<Frame> frame,
+                 FrameResponseCallback callback = nullptr);
+
+  // Handle an incoming SABM request.
+  void HandleSABM(DLCI dlci);
+
+  // Begin the multiplexer start-up routine described in RFCOMM 5.2.1. This
+  // function implements the "initiator" side of the multiplexer startup
+  // protocol. For the "responder" side, see HandleSABM().
+  void StartupMultiplexer();
+
+  // Sets |role_|, and runs any Tasks that were pending multiplexer startup.
+  void SetMultiplexerStarted(Role role);
+
+  inline bool multiplexer_started() { return IsMultiplexerStarted(role_); }
+
+  void Closedown();
 
   l2cap::ScopedChannel l2cap_channel_;
 
@@ -79,7 +107,19 @@ class Session {
   // passed in to Create().
   async_dispatcher_t* dispatcher_;
 
-  friend class ChannelManager;
+  // Tasks which are to be run once the multiplexer starts.
+  std::queue<fit::closure> tasks_pending_mux_startup_;
+
+  // Called when a command frame or a multiplexer command doesn't receive a
+  // response.
+  using TimeoutCallback = async::TaskClosure;
+
+  // Outstanding frames awaiting responses. GSM 5.4.4.1 states that there can be
+  // at most one command with the P bit set to 1 outstanding on a given DLC at
+  // any time. Thus, we can identify outstanding frames by their DLCI.
+  using FrameResponseCallbacks =
+      std::pair<FrameResponseCallback, std::unique_ptr<TimeoutCallback>>;
+  std::unordered_map<DLCI, FrameResponseCallbacks> outstanding_frames_;
 
   fxl::WeakPtrFactory<Session> weak_ptr_factory_;
 

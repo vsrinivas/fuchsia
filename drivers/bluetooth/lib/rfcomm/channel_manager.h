@@ -47,7 +47,7 @@ class ChannelManager {
   // kInvalidServerChannel as the ServerChannel, and a nullptr as the Channel
   // pointer.
   using ChannelOpenedCallback =
-      fit::function<void(std::unique_ptr<Channel>, ServerChannel)>;
+      fit::function<void(fbl::RefPtr<Channel>, ServerChannel)>;
 
   // Open an outgoing RFCOMM channel to the remote device represented by
   // |handle|. Registers an L2CAP channel to |handle| if necessary.
@@ -66,7 +66,7 @@ class ChannelManager {
  private:
   // Calls the appropriate callback for |server_channel|, passing in
   // |rfcomm_channel|.
-  void ChannelOpened(std::unique_ptr<Channel> rfcomm_channel,
+  void ChannelOpened(fbl::RefPtr<Channel> rfcomm_channel,
                      ServerChannel server_channel);
 
   // Holds callbacks for Server Channels allocated via AllocateLocalChannel.
