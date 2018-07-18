@@ -519,6 +519,7 @@ REGISTER_NAME(ParserControl, ParserRegisterIo, 0x2960)
 
 DEFINE_REGISTER(ParserVideoStartPtr, ParserRegisterIo, 0x2980)
 DEFINE_REGISTER(ParserVideoEndPtr, ParserRegisterIo, 0x2981)
+DEFINE_REGISTER(ParserVideoWp, ParserRegisterIo, 0x2982)
 
 REGISTER_NAME(ParserEsControl, ParserRegisterIo, 0x2977)
   DEF_BIT(0, video_manual_read_ptr_update)
@@ -526,6 +527,7 @@ REGISTER_NAME(ParserEsControl, ParserRegisterIo, 0x2977)
 
 REGISTER_NAME(ParserIntStatus, ParserRegisterIo, 0x296c)
   DEF_BIT(7, fetch_complete)
+  DEF_BIT(0, start_code_found)
 };
 REGISTER_NAME(ParserIntEnable, ParserRegisterIo, 0x296b)
   DEF_BIT(8, host_en_start_code_found)

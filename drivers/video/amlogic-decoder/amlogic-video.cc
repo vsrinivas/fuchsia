@@ -52,6 +52,8 @@ enum Interrupt {
   kDosMbox2Irq,
 };
 
+AmlogicVideo::AmlogicVideo() { zx::event::create(0, &parser_finished_event_); }
+
 AmlogicVideo::~AmlogicVideo() {
   if (parser_interrupt_handle_) {
     zx_interrupt_destroy(parser_interrupt_handle_.get());
@@ -77,6 +79,7 @@ AmlogicVideo::~AmlogicVideo() {
   io_buffer_release(&mmio_aobus_);
   io_buffer_release(&mmio_dmc_);
   io_buffer_release(&stream_buffer_);
+  io_buffer_release(&search_pattern_);
 }
 
 void AmlogicVideo::UngateClocks() {
@@ -242,6 +245,22 @@ zx_status_t AmlogicVideo::InitializeEsParser() {
 
   core_->InitializeParserInput();
 
+  // 512 bytes includes some padding to force the parser to read it completely.
+  constexpr uint32_t kSearchPatternSize = 512;
+  zx_status_t status =
+      io_buffer_init(&search_pattern_, bti_.get(), kSearchPatternSize,
+                     IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  if (status != ZX_OK) {
+    DECODE_ERROR("Failed to create search pattern buffer");
+    return status;
+  }
+
+  uint8_t input_search_pattern[kSearchPatternSize] = {0, 0, 1, 0xff};
+
+  memcpy(io_buffer_virt(&search_pattern_), input_search_pattern,
+         kSearchPatternSize);
+  io_buffer_cache_flush(&search_pattern_, 0, kSearchPatternSize);
+
   parser_interrupt_thread_ = std::thread([this]() {
     DLOG("Starting parser thread\n");
     while (true) {
@@ -255,15 +274,19 @@ zx_status_t AmlogicVideo::InitializeEsParser() {
       // Clear interrupt.
       status.WriteTo(parser_.get());
       DLOG("Got Parser interrupt status %x\n", status.reg_value());
-      if (status.fetch_complete()) {
-        parser_finished_promise_.set_value();
+      if (status.start_code_found()) {
+        PfifoRdPtr::Get().FromValue(0).WriteTo(parser_.get());
+        PfifoWrPtr::Get().FromValue(0).WriteTo(parser_.get());
+        parser_finished_event_.signal(0, ZX_USER_SIGNAL_0);
       }
     }
   });
 
   ParserIntStatus::Get().FromValue(0xffff).WriteTo(parser_.get());
-  ParserIntEnable::Get().FromValue(0).set_host_en_fetch_complete(true).WriteTo(
-      parser_.get());
+  ParserIntEnable::Get()
+      .FromValue(0)
+      .set_host_en_start_code_found(true)
+      .WriteTo(parser_.get());
 
   return ZX_OK;
 }
@@ -277,6 +300,8 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
     return ZX_ERR_NO_MEMORY;
   }
 
+  PfifoRdPtr::Get().FromValue(0).WriteTo(parser_.get());
+  PfifoWrPtr::Get().FromValue(0).WriteTo(parser_.get());
   ParserControl::Get()
       .ReadFrom(parser_.get())
       .set_es_pack_size(len)
@@ -291,16 +316,30 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
   memcpy(io_buffer_virt(&input_file), data, len);
   io_buffer_cache_flush(&input_file, 0, len);
 
-  parser_finished_promise_ = std::promise<void>();
   ParserFetchAddr::Get()
       .FromValue(truncate_to_32(io_buffer_phys(&input_file)))
       .WriteTo(parser_.get());
   ParserFetchCmd::Get().FromValue(0).set_len(len).set_fetch_endian(7).WriteTo(
       parser_.get());
 
-  auto future_status =
-      parser_finished_promise_.get_future().wait_for(std::chrono::seconds(10));
-  if (future_status != std::future_status::ready) {
+  // The parser finished interrupt shouldn't be signalled until after
+  // es_pack_size data has been read.
+  assert(ZX_ERR_TIMED_OUT == parser_finished_event_.wait_one(
+                                 ZX_USER_SIGNAL_0, zx::time(), nullptr));
+
+  ParserFetchAddr::Get()
+      .FromValue(truncate_to_32(io_buffer_phys(&search_pattern_)))
+      .WriteTo(parser_.get());
+  ParserFetchCmd::Get()
+      .FromValue(0)
+      .set_len(io_buffer_size(&search_pattern_, 0))
+      .set_fetch_endian(7)
+      .WriteTo(parser_.get());
+
+  status = parser_finished_event_.wait_one(
+      ZX_USER_SIGNAL_0, zx::deadline_after(zx::msec(10000)), nullptr);
+  parser_finished_event_.signal(ZX_USER_SIGNAL_0, 0);
+  if (status != ZX_OK) {
     DECODE_ERROR("Parser timed out\n");
     ParserFetchCmd::Get().FromValue(0).WriteTo(parser_.get());
     io_buffer_release(&input_file);

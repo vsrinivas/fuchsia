@@ -31,6 +31,8 @@
 class AmlogicVideo final : public VideoDecoder::Owner,
                            public DecoderCore::Owner {
  public:
+  AmlogicVideo();
+
   ~AmlogicVideo();
 
   zx_status_t InitRegisters(zx_device_t* parent);
@@ -94,9 +96,13 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   // The stream buffer is a FIFO between the parser and the decoder.
   io_buffer_t stream_buffer_ = {};
 
+  // This buffer holds an ES start code that's used to get an interrupt when the
+  // parser is finished.
+  io_buffer_t search_pattern_ = {};
+
   zx::handle bti_;
 
-  std::promise<void> parser_finished_promise_;
+  zx::event parser_finished_event_;
 
   zx::handle parser_interrupt_handle_;
   zx::handle vdec0_interrupt_handle_;
