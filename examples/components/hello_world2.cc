@@ -5,12 +5,10 @@
 #include <zircon/syscalls.h>
 #include <iostream>
 
-using namespace std;
-
 int main() {
   while (true) {
     zx_nanosleep(zx_deadline_after(ZX_SEC(3)));
-    cout << "Hello, World2!\n";
+    std::cout << "Hello, World2!\n";
   }
   return 0;
 }
