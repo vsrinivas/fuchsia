@@ -17,6 +17,8 @@ struct VideoFrame {
   uint32_t width = 0;
   uint32_t height = 0;
   uint32_t uv_plane_offset = 0;
+  uint32_t display_width = 0;
+  uint32_t display_height = 0;
   // Index into the vector of decoded frames - for decoder use only.
   uint32_t index = 0xffffffff;
 };

@@ -159,7 +159,9 @@ void Mpeg12Decoder::HandleInterrupt() {
 
   auto& frame = video_frames_[index].frame;
   frame->width = std::min(width, kMaxWidth);
+  frame->display_width = width;
   frame->height = std::min(height, kMaxHeight);
+  frame->display_height = height;
   if (notifier_)
     notifier_(frame);
 

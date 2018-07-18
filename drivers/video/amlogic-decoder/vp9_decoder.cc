@@ -751,6 +751,14 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params) {
                                      kLcuCount * kLcuMvBytes);
   }
 
+  if (params->render_size_present) {
+    new_frame->frame->display_width = params->render_width;
+    new_frame->frame->display_height = params->render_height;
+  } else {
+    new_frame->frame->display_width = params->width;
+    new_frame->frame->display_height = params->height;
+  }
+
   current_frame_ = new_frame;
   current_frame_->refcount++;
   current_frame_->decoded_index = decoded_frame_count_++;

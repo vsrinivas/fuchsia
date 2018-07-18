@@ -22,6 +22,19 @@ class StreamInfo
   static auto Get() { return AddrType(0x09c1 * 4); }
 };
 
+// AvScratch6
+class CropInfo
+    : public TypedRegisterBase<DosRegisterIo, CropInfo, uint32_t> {
+ public:
+  // All quantities are the number of pixels to be cropped from each side.
+  DEF_FIELD(7, 0, bottom);
+  DEF_FIELD(15, 8, top); // Ignored
+  DEF_FIELD(23, 16, right);
+  DEF_FIELD(31, 24, left); // Ignored
+
+  static auto Get() { return AddrType(0x09c6 * 4); }
+};
+
 // AvScratchF
 class CodecSettings
     : public TypedRegisterBase<DosRegisterIo, CodecSettings, uint32_t> {
@@ -283,7 +296,8 @@ void H264Decoder::SetFrameReadyNotifier(FrameReadyNotifier notifier) {
 }
 
 zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
-                                          uint32_t height) {
+                                          uint32_t height, uint32_t display_width,
+                                          uint32_t display_height) {
   for (auto& frame : video_frames_) {
     owner_->FreeCanvas(std::move(frame.y_canvas));
     owner_->FreeCanvas(std::move(frame.uv_canvas));
@@ -304,6 +318,8 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
     frame->stride = width;
     frame->width = width;
     frame->height = height;
+    frame->display_width = display_width;
+    frame->display_height = display_height;
     frame->index = i;
 
     auto y_canvas = owner_->ConfigureCanvas(&frame->buffer, 0, frame->stride,
@@ -406,7 +422,11 @@ void H264Decoder::InitializeStream() {
                  mv_buffer_size)
       .WriteTo(owner_->dosbus());
 
-  InitializeFrames(kActualDPBSize, mb_width * 16, mb_height * 16);
+  auto crop_info = CropInfo::Get().ReadFrom(owner_->dosbus());
+  uint32_t display_width = mb_width * 16 - crop_info.right();
+  uint32_t display_height = mb_height * 16 - crop_info.bottom();
+
+  InitializeFrames(kActualDPBSize, mb_width * 16, mb_height * 16, display_width, display_height);
 
   AvScratch0::Get()
       .FromValue((max_reference_size << 24) | (kActualDPBSize << 16) |

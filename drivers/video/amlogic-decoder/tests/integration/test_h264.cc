@@ -103,6 +103,8 @@ class TestH264 {
           [&frames_to_return, &frame_count,
            &wait_valid](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
+            EXPECT_EQ(320u, frame->display_width);
+            EXPECT_EQ(180u, frame->display_height);
             DLOG("Got frame %d width: %d height: %d\n", frame_count,
                  frame->width, frame->height);
             constexpr uint32_t kFirstVideoFrameCount = 26;

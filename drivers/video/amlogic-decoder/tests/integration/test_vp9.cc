@@ -189,6 +189,8 @@ class TestVP9 {
            &frames_returned](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
             DLOG("Got frame %d\n", frame_count);
+            EXPECT_EQ(320u, frame->display_width);
+            EXPECT_EQ(240u, frame->display_height);
 #if DUMP_VIDEO_TO_FILE
             DumpVideoFrameToFile(frame, filename);
 #endif
