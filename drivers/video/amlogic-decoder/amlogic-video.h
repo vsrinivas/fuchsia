@@ -53,6 +53,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   zx_status_t AllocateIoBuffer(io_buffer_t* buffer, size_t size,
                                uint32_t alignment_log2,
                                uint32_t flags) override;
+  PtsManager* pts_manager() override { return pts_manager_.get(); }
 
   // DecoderCore::Owner implementation.
   MmioRegisters* mmio() override { return registers_.get(); }
@@ -115,6 +116,8 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   std::thread vdec1_interrupt_thread_;
 
   std::unique_ptr<DecoderCore> core_;
+
+  std::unique_ptr<PtsManager> pts_manager_;
   std::mutex video_decoder_lock_;
   FXL_GUARDED_BY(video_decoder_lock_)
   std::unique_ptr<VideoDecoder> video_decoder_;

@@ -60,6 +60,8 @@ source_set("sources") {
     "macros.h",
     "mpeg12_decoder.cc",
     "mpeg12_decoder.h",
+    "pts_manager.cc",
+    "pts_manager.h",
     "registers.h",
     "vdec1.cc",
     "vdec1.h",

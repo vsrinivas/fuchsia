@@ -6,6 +6,7 @@
 
 #include "firmware_blob.h"
 #include "macros.h"
+#include "pts_manager.h"
 #include "third_party/libvpx/vp9/common/vp9_loopfilter.h"
 
 using HevcDecStatusReg = HevcAssistScratch0;
@@ -336,6 +337,8 @@ void Vp9Decoder::ProcessCompletedFrames() {
     return;
 
   if (current_frame_data_.show_frame && notifier_) {
+    current_frame_->frame->has_pts = current_frame_data_.has_pts;
+    current_frame_->frame->pts = current_frame_data_.pts;
     current_frame_->refcount++;
     notifier_(current_frame_->frame);
   }
@@ -624,6 +627,17 @@ void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
     DECODE_ERROR("Showing existing frame that doesn't exist");
     return;
   }
+  // stream_offset points to an offset within the header of the frame. With
+  // superframes, the offset stored in the PTS manager will be the start of the
+  // superframe, but since the offset here is less than the start of the next
+  // superframe the correct PTS will be found.
+  //
+  // When show_existing_frame is set, the original PTS from when the reference
+  // frame was decoded is ignored.
+  uint32_t stream_offset =
+      HevcShiftByteCount::Get().ReadFrom(owner_->dosbus()).reg_value();
+  frame->frame->has_pts =
+      owner_->pts_manager()->LookupPts(stream_offset, &frame->frame->pts);
   if (notifier_) {
     frame->refcount++;
     notifier_(frame->frame);
@@ -658,6 +672,13 @@ void Vp9Decoder::PrepareNewFrame() {
     return;
 
   last_frame_data_ = current_frame_data_;
+  // See comments about stream_offset above. Multiple frames will return the
+  // same PTS if they're part of a superframe, but only one of the frames should
+  // have show_frame set, so only that frame will be output with that PTS.
+  uint32_t stream_offset =
+      HevcShiftByteCount::Get().ReadFrom(owner_->dosbus()).reg_value();
+  current_frame_data_.has_pts =
+      owner_->pts_manager()->LookupPts(stream_offset, &current_frame_data_.pts);
   current_frame_data_.keyframe = params.frame_type == 0;
   current_frame_data_.intra_only = params.intra_only;
   current_frame_data_.refresh_frame_flags = params.refresh_frame_flags;

@@ -7,6 +7,7 @@
 
 #include "firmware_blob.h"
 #include "macros.h"
+#include "pts_manager.h"
 
 static const uint32_t kBufferAlignShift = 4 + 12;
 
@@ -449,6 +450,17 @@ void H264Decoder::ReceivedFrames(uint32_t frame_count) {
         0xf;
     if (pic_info.eos())
       hit_eos = true;
+
+    uint32_t stream_byte_offset = pic_info.stream_offset();
+    stream_byte_offset |=
+        ((AvScratch::Get(0xa + i / 2).ReadFrom(owner_->dosbus()).reg_value() >>
+          ((i % 2) * 16)) &
+         0xffff)
+        << 16;
+
+    video_frames_[buffer_index].frame->has_pts =
+        owner_->pts_manager()->LookupPts(
+            stream_byte_offset, &video_frames_[buffer_index].frame->pts);
 
     if (notifier_)
       notifier_(video_frames_[buffer_index].frame);

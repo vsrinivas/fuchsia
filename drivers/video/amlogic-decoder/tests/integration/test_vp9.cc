@@ -13,6 +13,7 @@
 #include "vp9_decoder.h"
 
 #include "macros.h"
+#include "pts_manager.h"
 
 struct __attribute__((__packed__)) IvfHeader {
   uint32_t signature;
@@ -150,6 +151,34 @@ std::vector<uint8_t> ConvertIvfToAmlV(const uint8_t* data, uint32_t length) {
   return output_vector;
 }
 
+struct FrameData {
+  uint64_t presentation_timestamp;
+  std::vector<uint8_t> data;
+};
+// Split IVF-level frames
+std::vector<FrameData> ConvertIvfToAmlVFrames(const uint8_t* data,
+                                              uint32_t length) {
+  uint32_t offset = sizeof(IvfHeader);
+  std::vector<FrameData> output_vector;
+  while (offset < length) {
+    auto frame_header = reinterpret_cast<const IvfFrameHeader*>(data + offset);
+    uint32_t frame_size = frame_header->size_bytes;
+    uint32_t data_offset = offset + sizeof(IvfFrameHeader);
+    if (data_offset + frame_size > length) {
+      DECODE_ERROR("Invalid IVF file, truncating\n");
+      return output_vector;
+    }
+
+    FrameData frame_data;
+    frame_data.presentation_timestamp = frame_header->presentation_timestamp;
+    SplitSuperframe(data + data_offset, frame_size, &frame_data.data);
+    output_vector.push_back(std::move(frame_data));
+
+    offset = data_offset + frame_size;
+  }
+  return output_vector;
+}
+
 class TestVP9 {
  public:
   static void Decode(bool use_parser, const char* filename) {
@@ -157,6 +186,8 @@ class TestVP9 {
     ASSERT_TRUE(video);
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
+
+    video->pts_manager_ = std::make_unique<PtsManager>();
 
     video->core_ = std::make_unique<HevcDec>(video.get());
     video->core_->PowerOn();
@@ -234,6 +265,82 @@ class TestVP9 {
     video.reset();
   }
 
+  static void DecodePerFrame() {
+    auto video = std::make_unique<AmlogicVideo>();
+    ASSERT_TRUE(video);
+
+    EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
+
+    auto test_ivf =
+        TestSupport::LoadFirmwareFile("video_test_data/test-25fps.vp9");
+    ASSERT_NE(nullptr, test_ivf);
+    video->pts_manager_ = std::make_unique<PtsManager>();
+
+    video->core_ = std::make_unique<HevcDec>(video.get());
+    video->core_->PowerOn();
+
+    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(true, PAGE_SIZE));
+
+    video->InitializeInterrupts();
+
+    EXPECT_EQ(ZX_OK, video->InitializeEsParser());
+
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      video->video_decoder_ = std::make_unique<Vp9Decoder>(video.get());
+      EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
+    }
+
+    uint32_t frame_count = 0;
+    std::promise<void> wait_valid;
+    bool frames_returned = false;  // Protected by video->video_decoder_lock_
+    std::vector<std::shared_ptr<VideoFrame>> frames_to_return;
+    uint64_t next_pts = 0;
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      video->video_decoder_->SetFrameReadyNotifier(
+          [&video, &frames_to_return, &frame_count, &wait_valid,
+           &frames_returned, &next_pts](std::shared_ptr<VideoFrame> frame) {
+            ++frame_count;
+            DLOG("Got frame %d, pts: %ld\n", frame_count, frame->pts);
+#if DUMP_VIDEO_TO_FILE
+            DumpVideoFrameToFile(frame, filename);
+#endif
+            EXPECT_TRUE(frame->has_pts);
+            // All frames are shown, so pts should be in order. Due to rounding,
+            // pts may be 1 off.
+            EXPECT_LE(next_pts, frame->pts);
+            EXPECT_GE(next_pts + 1, frame->pts);
+
+            // 25 fps video
+            next_pts = frame->pts + 1000 / 25;
+            ReturnFrame(video.get(), frame);
+            if (frame_count == 241)
+              wait_valid.set_value();
+          });
+    }
+
+    // Put on a separate thread because it needs video decoding to progress in
+    // order to finish.
+    auto parser = std::async([&video, &test_ivf]() {
+      auto aml_data = ConvertIvfToAmlVFrames(test_ivf->ptr, test_ivf->size);
+      uint32_t stream_offset = 0;
+      for (auto& data : aml_data) {
+        video->pts_manager_->InsertPts(stream_offset,
+                                       data.presentation_timestamp);
+        video->ParseVideo(data.data.data(), data.data.size());
+        stream_offset += data.data.size();
+      }
+    });
+
+    EXPECT_EQ(std::future_status::ready,
+              wait_valid.get_future().wait_for(std::chrono::seconds(2)));
+
+    EXPECT_EQ(std::future_status::ready,
+              parser.wait_for(std::chrono::seconds(1)));
+    video.reset();
+  }
+
  private:
   // This is called from the interrupt handler, which already holds the lock.
   static void ReturnFrame(AmlogicVideo* video,
@@ -248,3 +355,5 @@ TEST(VP9, Decode) { TestVP9::Decode(true, "/tmp/bearvp9.yuv"); }
 TEST(VP9, DecodeNoParser) {
   TestVP9::Decode(false, "/tmp/bearvp9noparser.yuv");
 }
+
+TEST(VP9, DecodePerFrame) { TestVP9::DecodePerFrame(); }

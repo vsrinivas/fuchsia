@@ -4,6 +4,7 @@
 
 #include "amlogic-video.h"
 #include "gtest/gtest.h"
+#include "pts_manager.h"
 #include "tests/test_support.h"
 #include "vp9_decoder.h"
 
@@ -61,12 +62,14 @@ class FakeOwner : public VideoDecoder::Owner {
     }
     return ZX_OK;
   }
+  PtsManager* pts_manager() override { return &pts_manager_; }
 
  private:
   DosRegisterIo* dosbus_;
   FakeDecoderCore core_;
   uint64_t phys_map_start_ = 0x1000;
   FirmwareBlob blob_;
+  PtsManager pts_manager_;
 };
 
 constexpr uint32_t kDosbusMemorySize = 0x4000;

@@ -29,6 +29,7 @@
 #include "local_codec_factory.h"
 #include "macros.h"
 #include "mpeg12_decoder.h"
+#include "pts_manager.h"
 #include "registers.h"
 
 #if ENABLE_DECODER_TESTS

@@ -113,6 +113,8 @@ class Vp9Decoder : public VideoDecoder {
     uint32_t refresh_frame_flags = 0;
     bool show_frame;
     bool error_resilient_mode;
+    bool has_pts = false;
+    uint64_t pts = 0;
   };
 
   union HardwareRenderParams;

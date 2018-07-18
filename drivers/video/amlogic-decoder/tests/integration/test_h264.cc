@@ -8,6 +8,7 @@
 #include "tests/test_support.h"
 
 #include "macros.h"
+#include "pts_manager.h"
 #include "vdec1.h"
 
 std::vector<std::vector<uint8_t>> SplitNalUnits(const uint8_t* start_data,
@@ -42,6 +43,16 @@ std::vector<std::vector<uint8_t>> SplitNalUnits(const uint8_t* start_data,
   }
 }
 
+uint8_t GetNalUnitType(const std::vector<uint8_t>& nal_unit) {
+  // Also works with 4-byte startcodes.
+  uint8_t start_code[3] = {0, 0, 1};
+  uint8_t* next_start =
+      static_cast<uint8_t*>(memmem(nal_unit.data(), nal_unit.size(), start_code,
+                                   sizeof(start_code))) +
+      sizeof(start_code);
+  return *next_start & 0xf;
+}
+
 class TestH264 {
  public:
   static void Decode(bool use_parser) {
@@ -56,6 +67,8 @@ class TestH264 {
     zx_status_t status = video->InitRegisters(TestSupport::parent_device());
     EXPECT_EQ(ZX_OK, status);
 
+    video->pts_manager_ = std::make_unique<PtsManager>();
+
     video->core_ = std::make_unique<Vdec1>(video.get());
     video->core_->PowerOn();
     status = video->InitializeStreamBuffer(
@@ -64,12 +77,14 @@ class TestH264 {
     EXPECT_EQ(ZX_OK, status);
     std::promise<void> first_wait_valid;
     std::promise<void> second_wait_valid;
+    uint32_t frame_count = 0;
+    constexpr uint32_t kFirstVideoFrameCount = 26;
+    constexpr uint32_t kSecondVideoFrameCount = 244;
+
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->video_decoder_ = std::make_unique<H264Decoder>(video.get());
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
-
-      uint32_t frame_count = 0;
       video->video_decoder_->SetFrameReadyNotifier(
           [&video, &frame_count, &first_wait_valid,
            &second_wait_valid](std::shared_ptr<VideoFrame> frame) {
@@ -79,8 +94,6 @@ class TestH264 {
 #if DUMP_VIDEO_TO_FILE
             DumpVideoFrameToFile(frame, "/tmp/bearh264.yuv");
 #endif
-            constexpr uint32_t kFirstVideoFrameCount = 26;
-            constexpr uint32_t kSecondVideoFrameCount = 80;
             if (frame_count == kFirstVideoFrameCount)
               first_wait_valid.set_value();
             if (frame_count == kFirstVideoFrameCount + kSecondVideoFrameCount)
@@ -109,6 +122,9 @@ class TestH264 {
     EXPECT_EQ(std::future_status::ready,
               second_wait_valid.get_future().wait_for(std::chrono::seconds(1)));
 
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    EXPECT_EQ(kFirstVideoFrameCount + kSecondVideoFrameCount, frame_count);
+
     video.reset();
   }
 
@@ -118,6 +134,7 @@ class TestH264 {
 
     zx_status_t status = video->InitRegisters(TestSupport::parent_device());
     EXPECT_EQ(ZX_OK, status);
+    video->pts_manager_ = std::make_unique<PtsManager>();
 
     auto bear_h264 = TestSupport::LoadFirmwareFile("video_test_data/bear.h264");
     ASSERT_NE(nullptr, bear_h264);
@@ -177,6 +194,7 @@ class TestH264 {
 
     zx_status_t status = video->InitRegisters(TestSupport::parent_device());
     EXPECT_EQ(ZX_OK, status);
+    video->pts_manager_ = std::make_unique<PtsManager>();
     auto bear_h264 = TestSupport::LoadFirmwareFile("video_test_data/bear.h264");
     ASSERT_NE(nullptr, bear_h264);
 
@@ -187,6 +205,7 @@ class TestH264 {
     video->InitializeInterrupts();
     EXPECT_EQ(ZX_OK, status);
     std::promise<void> first_wait_valid;
+    std::set<uint64_t> received_pts_set;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->video_decoder_ = std::make_unique<H264Decoder>(video.get());
@@ -194,8 +213,8 @@ class TestH264 {
 
       uint32_t frame_count = 0;
       video->video_decoder_->SetFrameReadyNotifier(
-          [&video, &frame_count,
-           &first_wait_valid](std::shared_ptr<VideoFrame> frame) {
+          [&video, &frame_count, &first_wait_valid,
+           &received_pts_set](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
             DLOG("Got frame %d width: %d height: %d\n", frame_count,
                  frame->width, frame->height);
@@ -206,29 +225,51 @@ class TestH264 {
             if (frame_count == kFirstVideoFrameCount)
               first_wait_valid.set_value();
             ReturnFrame(video.get(), frame);
+            EXPECT_TRUE(frame->has_pts);
+            // In the test video the decode order isn't exactly the same as the
+            // presentation order, so allow the current PTS to be 2 frames
+            // older then the last received.
+            if (received_pts_set.size() > 0)
+              EXPECT_LE(*std::prev(received_pts_set.end()), frame->pts + 2);
+            EXPECT_EQ(0u, received_pts_set.count(frame->pts));
+            received_pts_set.insert(frame->pts);
           });
     }
 
     auto split_nal = SplitNalUnits(bear_h264->ptr, bear_h264->size);
+    uint32_t parsed_video_size = 0;
+    uint64_t pts_count = 0;
     if (use_parser) {
       EXPECT_EQ(ZX_OK, video->InitializeEsParser());
-      uint32_t total_size = 0;
-      for (auto& nal : split_nal) {
-        total_size += nal.size();
-      }
-      EXPECT_EQ(bear_h264->size, total_size);
-      for (auto& nal : split_nal) {
-        EXPECT_EQ(ZX_OK, video->ParseVideo(nal.data(), nal.size()));
-      }
     } else {
       video->core_->InitializeDirectInput();
-      for (auto& nal : split_nal) {
+    }
+    uint32_t total_size = 0;
+    for (auto& nal : split_nal) {
+      total_size += nal.size();
+    }
+    EXPECT_EQ(bear_h264->size, total_size);
+    for (auto& nal : split_nal) {
+      uint8_t nal_type = GetNalUnitType(nal);
+      if (nal_type == 1 || nal_type == 5) {
+        video->pts_manager_->InsertPts(parsed_video_size, pts_count++);
+      }
+      if (use_parser) {
+        EXPECT_EQ(ZX_OK, video->ParseVideo(nal.data(), nal.size()));
+      } else {
         EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(nal.data(), nal.size()));
       }
+      parsed_video_size += nal.size();
     }
 
     EXPECT_EQ(std::future_status::ready,
               first_wait_valid.get_future().wait_for(std::chrono::seconds(1)));
+
+    for (uint32_t i = 0; i < 27; i++) {
+      // Frame 25 isn't flushed out of the decoder.
+      if (i != 25)
+        EXPECT_TRUE(received_pts_set.count(i));
+    }
 
     video.reset();
   }

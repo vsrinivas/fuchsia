@@ -21,6 +21,8 @@ struct VideoFrame {
   uint32_t display_height = 0;
   // Index into the vector of decoded frames - for decoder use only.
   uint32_t index = 0xffffffff;
+  bool has_pts = false;
+  uint64_t pts = 0;
 };
 
 // The video frame must be in NV12 format. The output file can be read using

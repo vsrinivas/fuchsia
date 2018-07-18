@@ -19,6 +19,7 @@
 #include "video_frame.h"
 
 class FirmwareBlob;
+class PtsManager;
 
 enum class DeviceType {
   kUnknown,
@@ -63,6 +64,7 @@ class VideoDecoder {
     virtual zx_status_t AllocateIoBuffer(io_buffer_t* buffer, size_t size,
                                          uint32_t alignement_log2,
                                          uint32_t flags) = 0;
+    virtual PtsManager* pts_manager() = 0;
   };
 
   virtual zx_status_t Initialize() = 0;
