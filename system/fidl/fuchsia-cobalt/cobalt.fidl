@@ -92,17 +92,44 @@ union Value {
   vector<BucketDistributionEntry> int_bucket_distribution;
 };
 
+// TODO(prathyushk): Get rid of this struct and move to fuchsia.mem.Buffer
+// This is a temporary workaround for ZX-2406.
+// Since fuchsia.mem cannot be added as a dependency to this library, we create
+// a copy here.
+struct Buffer {
+  // The vmo.
+  handle<vmo> vmo;
+
+  // The size of the data in the vmo. This size must be smaller than the
+  // physical size of the vmo.
+  uint64 size;
+};
+
+// A ProjectProfile is used to describe the client's Cobalt project
+struct ProjectProfile {
+  // The |config| Buffer contains the bytes of a serialized Cobalt config proto
+  // message. This specifies registered metric and encoding definitions for a
+  // single project.
+  Buffer config;
+};
+
 [Discoverable]
 // CobaltEncoderFactory creates a CobaltEncoder for a particular project.
 interface CobaltEncoderFactory {
   // Creates a CobaltEncoder for the specified project.
   // |project_id| Should be a project ID registered with the Cobalt system.
   1: GetEncoder(int32 project_id, request<CobaltEncoder> encoder);
-  // Creates a CobaltEncoder with the given configuration for the specific
-  // project.
-  // |config| Should be a string representation of a CobaltConfig proto that
-  //          contains only a single project_id.
-  2: GetEncoderForConfig(string config, request<CobaltEncoder> encoder);
+
+  // Creates a CobaltEncoder with the given configuration for the project
+  // specified by the config in |profile|.
+  // |profile| A ProjectProfile describing the Cobalt project that the returned
+  //           Encoder is for.
+  // |status| Returns OK on success or INVALID_ARGUMENTS if the project profile
+  //          does not contain a valid Cobalt config with only a single
+  //          project_id.
+  2: GetEncoderForProject(ProjectProfile profile,
+                         request<CobaltEncoder> encoder)
+      -> (Status @status);
 };
 
 // CobaltEncoder accumulates Observations in a local cache and periodically
@@ -123,7 +150,7 @@ interface CobaltEncoder {
   //               the definition of the metric and encoding. Some encodings
   //               restrict the set of values to a pre-defined list.
   1: AddStringObservation(uint32 metric_id, uint32 encoding_id,
-                         string observation)
+                          string observation)
       -> (Status @status);
 
   // Adds an integer observation. It will eventually be sent to the Cobalt
@@ -152,7 +179,7 @@ interface CobaltEncoder {
   // |observation| The double value to be encoded. Must be consistent with
   //               the definition of the metric and encoding.
   5: AddDoubleObservation(uint32 metric_id, uint32 encoding_id,
-                         float64 observation)
+                          float64 observation)
       -> (Status @status);
 
   // Adds an observation specified by its index. This only makes sense if
@@ -196,7 +223,7 @@ interface CobaltEncoder {
   // |observation| The Observation to be encoded. The runtime type must be
   //               consistent with the definition of the metric and encoding.
   8: AddObservation(uint32 metric_id, uint32 encoding_id,
-                   Value observation)
+                    Value observation)
       -> (Status @status);
 
   // Adds a distribution of int observations. It will eventually be sent to the
@@ -215,7 +242,7 @@ interface CobaltEncoder {
   //                IntegerBuckets in the MetricPart definition registered with
   //                Cobalt.
   7: AddIntBucketDistribution(uint32 metric_id, uint32 encoding_id,
-                             vector<BucketDistributionEntry> distribution)
+                              vector<BucketDistributionEntry> distribution)
       -> (Status @status);
 
   // Adds a multi-part observation. It will eventually be sent to the Cobalt
@@ -226,7 +253,7 @@ interface CobaltEncoder {
   // |observation| The multi-value Observation to be encoded. Must be
   //               consistent with the definition of the metric and encoding.
   6: AddMultipartObservation(uint32 metric_id,
-                            vector<ObservationValue> observation)
+                             vector<ObservationValue> observation)
       -> (Status @status);
 
   // This method is part of Cobalt's helper service for measuring the time
