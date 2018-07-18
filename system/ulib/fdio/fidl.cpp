@@ -15,12 +15,12 @@
 #include <zircon/syscalls.h>
 
 #include <fbl/function.h>
+#include <fuchsia/io/c/fidl.h>
 #include <lib/fidl/cpp/builder.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/string_view.h>
 #include <lib/fidl/cpp/vector_view.h>
 #include <lib/fdio/debug.h>
-#include <lib/fdio/io.fidl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/remoteio.h>
 #include <lib/fdio/util.h>

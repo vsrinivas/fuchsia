@@ -21,8 +21,8 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/debug.h>
-#include <lib/fdio/io.fidl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/remoteio.h>

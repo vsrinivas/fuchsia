@@ -9,10 +9,9 @@
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-
 #include <zircon/device/vfs.h>
 
-#include <lib/fdio/io.fidl.h>
+#include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/remoteio.h>
 #include <lib/fdio/util.h>
 

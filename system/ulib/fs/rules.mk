@@ -24,6 +24,9 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vnode.cpp \
     $(LOCAL_DIR)/watcher.cpp \
 
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-io
+
 MODULE_STATIC_LIBS := \
     system/ulib/async.cpp \
     system/ulib/async \

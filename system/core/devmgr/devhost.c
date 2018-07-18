@@ -21,7 +21,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
-#include <lib/fdio/io.fidl.h>
+#include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/remoteio.h>
 

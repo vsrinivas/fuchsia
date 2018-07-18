@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fdio/io.fidl.h>
 #include <fs/managed-vfs.h>
 #include <fs/synchronous-vfs.h>
 #include <fs/vnode.h>
 #include <fs/vfs.h>
+#include <fuchsia/io/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/channel.h>

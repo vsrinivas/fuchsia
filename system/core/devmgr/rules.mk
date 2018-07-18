@@ -32,6 +32,7 @@ MODULE_FIDL_LIBS := \
 
 # ddk is needed only for ddk/device.h
 MODULE_HEADER_DEPS := \
+    system/fidl/fuchsia-io \
     system/ulib/ddk
 
 MODULE_STATIC_LIBS := \

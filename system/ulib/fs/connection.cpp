@@ -11,15 +11,15 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include <fs/trace.h>
+#include <fs/vnode.h>
+#include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/debug.h>
-#include <lib/fdio/io.fidl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/remoteio.h>
 #include <lib/fdio/vfs.h>
-#include <fs/trace.h>
-#include <fs/vnode.h>
-#include <zircon/assert.h>
 #include <lib/zx/handle.h>
+#include <zircon/assert.h>
 
 #define ZXDEBUG 0
 
