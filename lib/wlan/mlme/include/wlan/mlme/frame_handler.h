@@ -117,8 +117,7 @@ class FrameHandler {
     WLAN_DECL_FUNC_HANDLE_MGMT(AssociationRequest)
     WLAN_DECL_FUNC_HANDLE_MGMT(AssociationResponse)
     WLAN_DECL_FUNC_HANDLE_MGMT(Disassociation)
-    WLAN_DECL_FUNC_HANDLE_MGMT(AddBaRequestFrame)
-    WLAN_DECL_FUNC_HANDLE_MGMT(AddBaResponseFrame)
+    WLAN_DECL_FUNC_HANDLE_MGMT(ActionFrame)
 
     // Control frame handlers.
     virtual zx_status_t HandleCtrlFrame(const FrameControl& fc) { return ZX_OK; }
@@ -140,8 +139,7 @@ class FrameHandler {
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(AssociationRequest)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(AssociationResponse)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(Disassociation)
-    WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(AddBaRequestFrame)
-    WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(AddBaResponseFrame)
+    WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(ActionFrame)
 
     // Internal Ethernet frame handlers.
     zx_status_t HandleFrameInternal(const EthFrame& frame) { return HandleEthFrame(frame); }

@@ -37,14 +37,12 @@ class RemoteClient : public RemoteClientInterface {
     zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
     zx_status_t HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame) override;
-    zx_status_t HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>& rx_frame) override;
-    zx_status_t HandleAddBaResponseFrame(const MgmtFrame<AddBaResponseFrame>& rx_frame) override;
 
     zx_status_t SendAuthentication(status_code::StatusCode result);
     zx_status_t SendAssociationResponse(aid_t aid, status_code::StatusCode result);
     zx_status_t SendDeauthentication(reason_code::ReasonCode reason_code);
     zx_status_t SendAddBaRequest();
-    zx_status_t SendAddBaResponse(const MgmtFrame<AddBaRequestFrame>& rx_frame);
+    zx_status_t SendAddBaResponse(const AddBaRequestFrame& rx_frame);
 
     uint8_t GetTid();
     uint8_t GetTid(const EthFrame& frame);
@@ -207,8 +205,7 @@ class AssociatedState : public BaseState {
     // TODO(hahnr): Forward MLME message from Ap to here.
     zx_status_t HandleMlmeEapolReq(const MlmeMsg<::fuchsia::wlan::mlme::EapolRequest>& req);
     zx_status_t HandleMlmeSetKeysReq(const MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest>& req);
-    zx_status_t HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>& frame) override;
-    zx_status_t HandleAddBaResponseFrame(const MgmtFrame<AddBaResponseFrame>& frame) override;
+    zx_status_t HandleActionFrame(const MgmtFrame<ActionFrame>& frame) override;
 
     inline const char* name() const override { return kName; }
 

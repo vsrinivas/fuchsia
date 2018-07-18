@@ -223,8 +223,7 @@ std::string Describe(const BlockAckParameters& params) {
 std::string Describe(const AddBaRequestFrame& req) {
     char buf[256];
     size_t offset = 0;
-    BUFFER("category:%u", req.category);
-    BUFFER("action:%u", req.action);
+    BUFFER("addbareq frame:");
     BUFFER("dialog_token:0x%02x", req.dialog_token);
     BUFFER("params: %s", Describe(req.params).c_str());
     BUFFER("timeout:%u", req.timeout);
@@ -236,8 +235,7 @@ std::string Describe(const AddBaRequestFrame& req) {
 std::string Describe(const AddBaResponseFrame& resp) {
     char buf[256];
     size_t offset = 0;
-    BUFFER("category:%u", resp.category);
-    BUFFER("action:%u", resp.action);
+    BUFFER("addbaresp frame:");
     BUFFER("dialog_token:0x%02x", resp.dialog_token);
     BUFFER("status_code:%u", resp.status_code);
     BUFFER("params: %s", Describe(resp.params).c_str());

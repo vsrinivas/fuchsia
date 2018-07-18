@@ -570,16 +570,49 @@ zx_status_t Station::HandleDisassociation(const MgmtFrame<Disassociation>& frame
     return service::SendDisassociateIndication(device_, bssid, disassoc->reason_code);
 }
 
-zx_status_t Station::HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>& rx_frame) {
+zx_status_t Station::HandleActionFrame(const MgmtFrame<ActionFrame>& frame) {
     debugfn();
 
-    auto addbar = rx_frame.body();
-    finspect("Inbound ADDBA Req frame: len %zu\n", rx_frame.body_len());
-    finspect("  addba req: %s\n", debug::Describe(*addbar).c_str());
+    // TODO(porce): Handle AddBaResponses and keep the result of negotiation.
+
+    // TODO(hahnr): We need to use a FrameView until frames are moved rather than passed by const
+    // reference.
+    auto mgmt_frame = frame.View();
+
+    // TODO(hahnr): Frame::NextFrame should do the validation and return an empty frame on error.
+    // Remove the validation here once we merged the new validation framework for frames.
+    if (mgmt_frame.body()->category != ActionFrameBlockAck::ActionCategory()) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    auto action_frame = mgmt_frame.NextFrame();
+    if (action_frame.body_len() < sizeof(ActionFrameBlockAck)) { return ZX_ERR_NOT_SUPPORTED; }
+
+    auto ba_frame = action_frame.NextFrame<ActionFrameBlockAck>();
+    if (ba_frame.hdr()->action == AddBaResponseFrame::BlockAckAction()) {
+        if (ba_frame.body_len() < sizeof(AddBaResponseFrame)) { return ZX_ERR_NOT_SUPPORTED; }
+
+        auto addbarresp_frame = ba_frame.NextFrame<AddBaRequestFrame>();
+        finspect("Inbound ADDBA Resp frame: len %zu\n", addbarresp_frame.len());
+        finspect("  addba resp: %s\n", debug::Describe(*addbarresp_frame.hdr()).c_str());
+
+        // TODO(porce): Keep the result of negotiation.
+    } else if (ba_frame.hdr()->action == AddBaRequestFrame::BlockAckAction()) {
+        auto addbarreq_frame = ba_frame.NextFrame<AddBaRequestFrame>();
+        finspect("Inbound ADDBA Req frame: len %zu\n", addbarreq_frame.len());
+        finspect("  addba req: %s\n", debug::Describe(*addbarreq_frame.hdr()).c_str());
+        return HandleAddBaRequest(*addbarreq_frame.hdr());
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Station::HandleAddBaRequest(const AddBaRequestFrame& addbareq) {
+    debugfn();
 
     // Construct AddBaResponse frame
-    MgmtFrame<AddBaResponseFrame> frame;
-    auto status = BuildMgmtFrame(&frame);
+    MgmtFrame<ActionFrame> frame;
+    size_t payload_len = sizeof(ActionFrameBlockAck) + sizeof(AddBaRequestFrame);
+    auto status = BuildMgmtFrame(&frame, payload_len);
     if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
@@ -590,51 +623,45 @@ zx_status_t Station::HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>&
     SetSeqNo(hdr, &seq_);
     frame.FillTxInfo();
 
-    auto resp = frame.body();
-    resp->category = action::Category::kBlockAck;
-    resp->action = action::BaAction::kAddBaResponse;
-    resp->dialog_token = addbar->dialog_token;
+    auto action_frame = frame.body();
+    action_frame->category = ActionFrameBlockAck::ActionCategory();
+
+    auto ba_frame = frame.NextFrame<ActionFrameBlockAck>();
+    ba_frame.hdr()->action = AddBaResponseFrame::BlockAckAction();
+
+    auto addbaresp_frame = ba_frame.NextFrame<AddBaResponseFrame>();
+    auto addbaresp = addbaresp_frame.hdr();
+    addbaresp->dialog_token = addbareq.dialog_token;
 
     // TODO(porce): Implement DelBa as a response to AddBar for decline
 
     // Note: Returning AddBaResponse with status_code::kRefused seems ineffective.
     // ArubaAP is persistent not honoring that.
-    resp->status_code = status_code::kSuccess;
+    addbaresp->status_code = status_code::kSuccess;
 
     // TODO(porce): Query the radio chipset capability to build the response.
     // TODO(NET-567): Use the outcome of the association negotiation
-    resp->params.set_amsdu(addbar->params.amsdu() == 1 && IsAmsduRxReady());
-    resp->params.set_policy(BlockAckParameters::kImmediate);
-    resp->params.set_tid(addbar->params.tid());
+    addbaresp->params.set_amsdu(addbareq.params.amsdu() == 1 && IsAmsduRxReady());
+    addbaresp->params.set_policy(BlockAckParameters::kImmediate);
+    addbaresp->params.set_tid(addbareq.params.tid());
 
     // TODO(porce): Once chipset capability is ready, refactor below buffer_size
     // calculation.
-    auto buffer_size_ap = addbar->params.buffer_size();
+    auto buffer_size_ap = addbareq.params.buffer_size();
     constexpr size_t buffer_size_ralink = 64;
     auto buffer_size = (buffer_size_ap <= buffer_size_ralink) ? buffer_size_ap : buffer_size_ralink;
-    resp->params.set_buffer_size(buffer_size);
-    resp->timeout = addbar->timeout;
+    addbaresp->params.set_buffer_size(buffer_size);
+    addbaresp->timeout = addbareq.timeout;
 
-    finspect("Outbound ADDBA Resp frame: len %zu\n", frame.len());
-    finspect("Outbound Mgmt Frame(ADDBA Resp): %s\n", debug::Describe(*hdr).c_str());
+    finspect("Outbound ADDBA Resp frame: len %zu\n", addbaresp_frame.len());
+    finspect("Outbound Mgmt Frame(ADDBA Resp): %s\n", debug::Describe(*addbaresp).c_str());
 
-    status = device_->SendWlan(frame.Take());
+    status = device_->SendWlan(addbaresp_frame.Take());
     if (status != ZX_OK) {
         errorf("could not send AddBaResponse: %d\n", status);
         return status;
     }
 
-    return ZX_OK;
-}
-
-zx_status_t Station::HandleAddBaResponseFrame(const MgmtFrame<AddBaResponseFrame>& rx_frame) {
-    debugfn();
-
-    auto addba_resp = rx_frame.body();
-    finspect("Inbound ADDBA Resp frame: len %zu\n", rx_frame.body_len());
-    finspect("  addba resp: %s\n", debug::Describe(*addba_resp).c_str());
-
-    // TODO(porce): Keep the result of negotiation.
     return ZX_OK;
 }
 
@@ -1010,12 +1037,12 @@ zx_status_t Station::SendAddBaRequestFrame() {
         return ZX_ERR_BAD_STATE;
     }
 
-    MgmtFrame<AddBaRequestFrame> frame;
-    auto status = BuildMgmtFrame(&frame);
+    MgmtFrame<ActionFrame> frame;
+    size_t payload_len = sizeof(ActionFrameBlockAck) + sizeof(AddBaRequestFrame);
+    auto status = BuildMgmtFrame(&frame, payload_len);
     if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
-    auto req = frame.body();
     const common::MacAddr& mymac = device_->GetState()->address();
     hdr->addr1 = bssid_;
     hdr->addr2 = mymac;
@@ -1023,25 +1050,31 @@ zx_status_t Station::SendAddBaRequestFrame() {
     SetSeqNo(hdr, &seq_);
     frame.FillTxInfo();
 
-    req->category = action::Category::kBlockAck;
-    req->action = action::BaAction::kAddBaRequest;
+    auto action_hdr = frame.body();
+    action_hdr->category = ActionFrameBlockAck::ActionCategory();
+
+    auto ba_frame = frame.NextFrame<ActionFrameBlockAck>();
+    ba_frame.hdr()->action = AddBaRequestFrame::BlockAckAction();
+
+    auto addbareq_frame = ba_frame.NextFrame<AddBaRequestFrame>();
+    auto addbareq = addbareq_frame.hdr();
+
     // It appears there is no particular rule to choose the value for
     // dialog_token. See IEEE Std 802.11-2016, 9.6.5.2.
-    req->dialog_token = 0x01;
-    req->params.set_amsdu(IsAmsduRxReady());
-    req->params.set_policy(BlockAckParameters::BlockAckPolicy::kImmediate);
-    req->params.set_tid(GetTid());  // TODO(porce): Communicate this with lower MAC.
+    addbareq->dialog_token = 0x01;
+    addbareq->params.set_amsdu(IsAmsduRxReady());
+    addbareq->params.set_policy(BlockAckParameters::BlockAckPolicy::kImmediate);
+    addbareq->params.set_tid(GetTid());  // TODO(porce): Communicate this with lower MAC.
     // TODO(porce): Fix the discrepancy of this value from the Ralink's TXWI ba_win_size setting
-    req->params.set_buffer_size(64);
-    req->timeout = 0;               // Disables the timeout
-    req->seq_ctrl.set_fragment(0);  // TODO(porce): Send this down to the lower MAC
-    req->seq_ctrl.set_starting_seq(1);
+    addbareq->params.set_buffer_size(64);
+    addbareq->timeout = 0;               // Disables the timeout
+    addbareq->seq_ctrl.set_fragment(0);  // TODO(porce): Send this down to the lower MAC
+    addbareq->seq_ctrl.set_starting_seq(1);
 
-    finspect("Outbound ADDBA Req frame: len %zu\n", frame.len());
-    finspect("  addba req: %s\n", debug::Describe(*req).c_str());
-    finspect("Outbound Mgmt Frame(ADDBA Req): %s\n", debug::Describe(*hdr).c_str());
+    finspect("Outbound ADDBA Req frame: len %zu\n", addbareq_frame.len());
+    finspect("  addba req: %s\n", debug::Describe(*addbareq).c_str());
 
-    status = device_->SendWlan(frame.Take());
+    status = device_->SendWlan(addbareq_frame.Take());
     if (status != ZX_OK) {
         errorf("could not send AddBaRequest: %d\n", status);
         return status;
@@ -1399,6 +1432,6 @@ uint8_t Station::GetTid(const EthFrame& frame) {
 }
 
 wlan_stats::ClientMlmeStats Station::stats() const {
-  return stats_.ToFidl();
+    return stats_.ToFidl();
 }
 }  // namespace wlan

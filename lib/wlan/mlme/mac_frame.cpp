@@ -45,8 +45,7 @@ DECLARE_BUILD_MGMTFRAME(Deauthentication);
 DECLARE_BUILD_MGMTFRAME(AssociationRequest);
 DECLARE_BUILD_MGMTFRAME(AssociationResponse);
 DECLARE_BUILD_MGMTFRAME(Disassociation);
-DECLARE_BUILD_MGMTFRAME(AddBaRequestFrame);
-DECLARE_BUILD_MGMTFRAME(AddBaResponseFrame);
+DECLARE_BUILD_MGMTFRAME(ActionFrame);
 
 // IEEE Std 802.11-2016, 10.3.2.11.2 Table 10-3 SNS1
 seq_t NextSeqNo(const MgmtFrameHeader& hdr, Sequence* seq) {

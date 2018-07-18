@@ -77,49 +77,6 @@ zx_status_t HandleDataPacket(fbl::unique_ptr<Packet> packet, FrameHandler* targe
     }
 }
 
-zx_status_t HandleActionPacket(MgmtFrame<ActionFrame> action_frame, FrameHandler* target) {
-    if (action_frame.body()->category != action::Category::kBlockAck) {
-        verbosef("Rxed Action frame with category %d. Not handled.\n",
-                 action_frame.body()->category);
-        return ZX_OK;
-    }
-
-    auto ba_frame = action_frame.Specialize<ActionFrameBlockAck>();
-    if (!ba_frame.HasValidLen()) {
-        errorf("bloackack packet too small (len=%zd)\n", ba_frame.len());
-        return ZX_ERR_IO;
-    }
-
-    switch (ba_frame.body()->action) {
-    case action::BaAction::kAddBaRequest: {
-        auto addbar = ba_frame.Specialize<AddBaRequestFrame>();
-        if (!addbar.HasValidLen()) {
-            errorf("addbar packet too small (len=%zd)\n", addbar.len());
-            return ZX_ERR_IO;
-        }
-
-        // TODO(porce): Support AddBar. Work with lower mac.
-        // TODO(porce): Make this conditional depending on the hardware capability.
-
-        return target->HandleFrame(addbar);
-    }
-    case action::BaAction::kAddBaResponse: {
-        auto addba_resp = ba_frame.Specialize<AddBaResponseFrame>();
-        if (!addba_resp.HasValidLen()) {
-            errorf("addba_resp packet too small (len=%zd)\n", addba_resp.len());
-            return ZX_ERR_IO;
-        }
-        return target->HandleFrame(addba_resp);
-    }
-    case action::BaAction::kDelBa:
-    // fall-through
-    default:
-        warnf("BlockAck action frame with action %u not handled.\n", ba_frame.body()->action);
-        break;
-    }
-    return ZX_OK;
-}
-
 zx_status_t HandleMgmtPacket(fbl::unique_ptr<Packet> packet, FrameHandler* target) {
     debugfn();
     ZX_DEBUG_ASSERT(packet->has_ctrl_data<wlan_rx_info_t>());
@@ -212,11 +169,7 @@ zx_status_t HandleMgmtPacket(fbl::unique_ptr<Packet> packet, FrameHandler* targe
             errorf("action packet too small (len=%zd)\n", frame.len());
             return ZX_ERR_IO;
         }
-        if (!frame.hdr()->IsAction()) {
-            errorf("action packet is not an action\n");
-            return ZX_ERR_IO;
-        }
-        HandleActionPacket(fbl::move(frame), target);
+        return target->HandleFrame(frame);
     }
     default:
         if (!dst.IsBcast()) {

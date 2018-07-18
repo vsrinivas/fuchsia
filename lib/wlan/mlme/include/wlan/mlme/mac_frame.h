@@ -109,6 +109,7 @@ template <typename Header, typename Body = UnknownBody> class FrameView {
     //     DataFrameView<> data_frame(packet_ptr);
     //     FrameView<LlcHeader> llc_frame = data_frame.NextFrame<LlcHeader>();
     //     FrameView<Eapol> eapol_frame = llc_frame.NextFrame<Eapol>();
+    // TODO(hahnr): This should be called NextHdr instead.
     template <typename NextH = Body, typename NextB = UnknownBody>
     FrameView<NextH, NextB> NextFrame() const {
         ZX_DEBUG_ASSERT(pkt_ != nullptr);

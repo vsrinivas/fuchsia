@@ -86,8 +86,7 @@ class Station : public FrameHandler {
     zx_status_t HandleDeauthentication(const MgmtFrame<Deauthentication>& frame) override;
     zx_status_t HandleAssociationResponse(const MgmtFrame<AssociationResponse>& frame) override;
     zx_status_t HandleDisassociation(const MgmtFrame<Disassociation>& frame) override;
-    zx_status_t HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>& frame) override;
-    zx_status_t HandleAddBaResponseFrame(const MgmtFrame<AddBaResponseFrame>& frame) override;
+    zx_status_t HandleActionFrame(const MgmtFrame<ActionFrame>& frame) override;
 
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
     zx_status_t HandleNullDataFrame(const DataFrame<NilHeader>& frame) override;
@@ -116,6 +115,7 @@ class Station : public FrameHandler {
     zx_status_t HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& req);
     zx_status_t HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysRequest>& req);
 
+    zx_status_t HandleAddBaRequest(const AddBaRequestFrame&);
     zx_status_t SendAddBaRequestFrame();
 
     zx_status_t SetPowerManagementMode(bool ps_mode);
