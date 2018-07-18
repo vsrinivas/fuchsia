@@ -20,6 +20,7 @@
 #include <zircon/types.h>
 
 namespace wlan {
+
 // BeaconHash is a signature to compare consecutive beacons without memcmp().
 // TODO(porce): Revamp to exclude varying IEs.
 typedef uint32_t BeaconHash;
@@ -73,7 +74,10 @@ class Bss : public fbl::RefCounted<Bss> {
     // TODO(porce): Move Beacon method into Beacon class.
     uint32_t GetBeaconSignature(const Beacon& beacon, size_t len) const;
 
-    common::MacAddr bssid_;  // From Addr3 of Mgmt Header.
+    ::fuchsia::wlan::mlme::BSSDescription bss_desc;
+
+    // TODO(porce): Unify into FIDL data structure
+    common::MacAddr bssid_;      // From Addr3 of Mgmt Header.
     zx::time_utc ts_refreshed_;  // Last time of Bss object update.
 
     // TODO(porce): Don't trust instantaneous values. Keep history.
@@ -109,8 +113,15 @@ class Bss : public fbl::RefCounted<Bss> {
     size_t rsne_len_{0};
 
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Bss);
-};  // namespace wlan
+};
 
 using BssMap = MacAddrMap<fbl::RefPtr<Bss>, macaddr_map_type::kBss>;
+
+::fuchsia::wlan::mlme::VhtMcsNss VhtMcsNssToFidl(const VhtMcsNss& vmn);
+::fuchsia::wlan::mlme::VhtCapabilitiesInfo VhtCapabilitiesInfoToFidl(
+    const VhtCapabilitiesInfo& vci);
+std::unique_ptr<::fuchsia::wlan::mlme::VhtCapabilities> VhtCapabilitiesToFidl(
+    const VhtCapabilities& ie);
+std::unique_ptr<::fuchsia::wlan::mlme::VhtOperation> VhtOperationToFidl(const VhtOperation& ie);
 
 }  // namespace wlan

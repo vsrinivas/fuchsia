@@ -129,7 +129,7 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
         const ElementHeader* hdr = reader.peek();
         if (hdr == nullptr) break;
 
-        // TODO(porce): Process HT Capabilities IE's HT Capabilites Info to get CBW announcement.
+        // TODO(porce): Process HT Capabilities IE's HT Capabilities Info to get CBW announcement.
 
         snprintf(dbgmsghdr, sizeof(dbgmsghdr), "  IE %3u (Len %3u): ", hdr->id, hdr->len);
         switch (hdr->id) {
@@ -201,6 +201,29 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
             debugbcn("%s RSN\n", dbgmsghdr);
             break;
         }
+        case element_id::kVhtCapabilities: {
+            auto ie = reader.read<VhtCapabilities>();
+            if (ie == nullptr) {
+                debugbcn("%s Failed to parse\n", dbgmsghdr);
+                return ZX_ERR_INTERNAL;
+            }
+
+            bss_desc.vht_cap = VhtCapabilitiesToFidl(*ie);
+            debugbcn("%s VhtCapabilities parsed\n", dbgmsghdr);
+            break;
+        }
+        case element_id::kVhtOperation: {
+            auto ie = reader.read<VhtOperation>();
+            if (ie == nullptr) {
+                debugbcn("%s Failed to parse\n", dbgmsghdr);
+                return ZX_ERR_INTERNAL;
+            }
+
+            bss_desc.vht_op = VhtOperationToFidl(*ie);
+            debugbcn("%s VhtOperation parsed\n", dbgmsghdr);
+            break;
+        }
+
         default:
             ie_unparsed_cnt++;
             debugbcn("%s Unparsed\n", dbgmsghdr);
@@ -211,6 +234,71 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
 
     debugbcn("  IE Summary: parsed %u / all %u\n", (ie_cnt - ie_unparsed_cnt), ie_cnt);
     return ZX_OK;
+}
+
+wlan_mlme::VhtMcsNss VhtMcsNssToFidl(const VhtMcsNss& vmn) {
+    wlan_mlme::VhtMcsNss fidl;
+
+    for (uint8_t i = 0; i < 8; i++) {
+        fidl.rx_max_mcs[i] = static_cast<wlan_mlme::VhtMcs>(vmn.get_rx_max_mcs_ss(i));
+    }
+    fidl.rx_max_data_rate = vmn.rx_max_data_rate();
+    fidl.max_nsts = vmn.max_nsts();
+
+    for (uint8_t i = 0; i < 8; i++) {
+        fidl.tx_max_mcs[i] = static_cast<wlan_mlme::VhtMcs>(vmn.get_tx_max_mcs_ss(i));
+    }
+    fidl.tx_max_data_rate = vmn.tx_max_data_rate();
+    fidl.ext_nss_bw = (vmn.ext_nss_bw() == 1);
+
+    return fidl;
+}
+
+wlan_mlme::VhtCapabilitiesInfo VhtCapabilitiesInfoToFidl(const VhtCapabilitiesInfo& vci) {
+    wlan_mlme::VhtCapabilitiesInfo fidl;
+
+    fidl.mpdu_len = static_cast<wlan_mlme::MaxMpduLen>(vci.max_mpdu_len());
+    fidl.supported_cbw_set = vci.supported_cbw_set();
+    fidl.rx_ldpc = (vci.rx_ldpc() == 1);
+    fidl.sgi_cbw80 = (vci.sgi_cbw80() == 1);
+    fidl.sgi_cbw160 = (vci.sgi_cbw160() == 1);
+    fidl.tx_stbc = (vci.tx_stbc() == 1);
+    fidl.rx_stbc = (vci.rx_stbc() == 1);
+    fidl.su_bfer = (vci.su_bfer() == 1);
+    fidl.su_bfee = (vci.su_bfee() == 1);
+    fidl.bfee_sts = vci.bfee_sts();
+    fidl.num_sounding = vci.num_sounding();
+    fidl.mu_bfer = (vci.mu_bfer() == 1);
+    fidl.mu_bfee = (vci.mu_bfee() == 1);
+    fidl.txop_ps = (vci.txop_ps() == 1);
+    fidl.htc_vht = (vci.htc_vht() == 1);
+    fidl.max_ampdu_exp = vci.max_ampdu_exp();
+    fidl.link_adapt = static_cast<wlan_mlme::VhtLinkAdaptation>(vci.link_adapt());
+    fidl.rx_ant_pattern = (vci.rx_ant_pattern() == 1);
+    fidl.tx_ant_pattern = (vci.tx_ant_pattern() == 1);
+    fidl.ext_nss_bw = vci.ext_nss_bw();
+
+    return fidl;
+}
+
+std::unique_ptr<wlan_mlme::VhtCapabilities> VhtCapabilitiesToFidl(const VhtCapabilities& ie) {
+    auto fidl = wlan_mlme::VhtCapabilities::New();
+
+    fidl->vht_cap_info = VhtCapabilitiesInfoToFidl(ie.vht_cap_info);
+    fidl->vht_mcs_nss = VhtMcsNssToFidl(ie.vht_mcs_nss);
+
+    return fidl;
+}
+
+std::unique_ptr<wlan_mlme::VhtOperation> VhtOperationToFidl(const VhtOperation& ie) {
+    auto fidl = wlan_mlme::VhtOperation::New();
+
+    fidl->vht_cbw = static_cast<wlan_mlme::VhtCbw>(ie.vht_cbw);
+    fidl->center_freq_seg0 = ie.center_freq_seg0;
+    fidl->center_freq_seg1 = ie.center_freq_seg1;
+    fidl->vht_mcs_nss = VhtMcsNssToFidl(ie.vht_mcs_nss);
+
+    return fidl;
 }
 
 BeaconHash Bss::GetBeaconSignature(const Beacon& beacon, size_t frame_len) const {

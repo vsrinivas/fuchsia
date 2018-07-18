@@ -863,6 +863,24 @@ struct VhtMcsNss : public common::BitField<uint64_t> {
         VHT_MCS_0_TO_9 = 2,
         VHT_MCS_NONE = 3,
     };
+
+    uint8_t get_rx_max_mcs_ss(uint8_t ss_num) const {
+        ZX_DEBUG_ASSERT(1 <= ss_num && ss_num <= 8);
+        constexpr uint8_t kMcsBitOffset = 0;  // rx_max_mcs_ss1
+        constexpr uint8_t kBitWidth = 2;
+        uint8_t offset = kMcsBitOffset + (ss_num - 1) * kBitWidth;
+        uint64_t mask = ((1ull << kBitWidth) - 1) << offset;
+        return (val() & mask) >> offset;
+    }
+
+    uint8_t get_tx_max_mcs_ss(uint8_t ss_num) const {
+        ZX_DEBUG_ASSERT(1 <= ss_num && ss_num <= 8);
+        constexpr uint8_t kMcsBitOffset = 32;  // tx_max_mcs_ss1
+        constexpr uint8_t kBitWidth = 2;
+        uint8_t offset = kMcsBitOffset + (ss_num - 1) * kBitWidth;
+        uint64_t mask = ((1ull << kBitWidth) - 1) << offset;
+        return (val() & mask) >> offset;
+    }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.158
