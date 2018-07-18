@@ -15,6 +15,7 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/scoped_channel.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/channel.h"
+#include "garnet/drivers/bluetooth/lib/rfcomm/frames.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/rfcomm.h"
 
 namespace btlib {
@@ -46,9 +47,13 @@ class Session {
   // be called from Create() during Session creation.
   bool SetL2CAPChannel(fbl::RefPtr<l2cap::Channel> l2cap_channel);
 
+  void SendFrame(std::unique_ptr<Frame> frame);
+
   // l2cap::Channel callbacks.
   void RxCallback(const l2cap::SDU& sdu);
   void ClosedCallback();
+
+  inline bool multiplexer_started() { return MultiplexerStarted(role_); }
 
   l2cap::ScopedChannel l2cap_channel_;
 
