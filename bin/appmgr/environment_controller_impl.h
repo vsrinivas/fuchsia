@@ -29,6 +29,8 @@ class EnvironmentControllerImpl : public fuchsia::sys::EnvironmentController {
 
   void Detach() override;
 
+  void OnCreated();
+
  private:
   fidl::Binding<fuchsia::sys::EnvironmentController> binding_;
   std::unique_ptr<Realm> realm_;

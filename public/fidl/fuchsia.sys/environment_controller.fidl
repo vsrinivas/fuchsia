@@ -25,4 +25,7 @@ interface EnvironmentController {
   // After calling |Detach|, the environment will not be implicitly killed when
   // this interface is closed.
   2: Detach();
+
+  // Event that is triggered when the environment is created.
+  3: -> OnCreated();
 };

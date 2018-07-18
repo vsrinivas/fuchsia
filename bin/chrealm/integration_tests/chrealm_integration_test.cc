@@ -13,7 +13,6 @@
 #include <fs/synchronous-vfs.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/testing/chrealm/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/spawn.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
@@ -29,6 +28,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/split_string.h"
+#include "lib/gtest/real_loop_fixture.h"
 #include "lib/svc/cpp/services.h"
 
 namespace chrealm {
@@ -37,7 +37,7 @@ namespace {
 const char kMessage[] = "hello";
 const char kRealm[] = "chrealmtest";
 
-class ChrealmTest : public ::testing::Test,
+class ChrealmTest : public ::gtest::RealLoopFixture,
                     public fuchsia::testing::chrealm::TestService {
  public:
   void GetMessage(
@@ -47,13 +47,12 @@ class ChrealmTest : public ::testing::Test,
 
  protected:
   ChrealmTest()
-      : loop_(&kAsyncLoopConfigAttachToThread),
-        vfs_(async_get_default_dispatcher()),
+      : vfs_(async_get_default_dispatcher()),
         services_(fbl::AdoptRef(new fs::PseudoDir)) {}
 
   void SetUp() override {
     component::ConnectToEnvironmentService(sys_env_.NewRequest());
-    ASSERT_EQ(ZX_OK, sys_env_->GetServices(svc_.NewRequest()));
+    sys_env_->GetServices(svc_.NewRequest());
     // Add a TestService that the test realm can use.
     zx_status_t status = services_->AddEntry(
         fuchsia::testing::chrealm::TestService::Name_,
@@ -74,15 +73,10 @@ class ChrealmTest : public ::testing::Test,
           return ZX_OK;
         })));
     ASSERT_EQ(ZX_OK, status);
-
-    // Run a loop that services_ can use.
-    ASSERT_EQ(ZX_OK, loop_.StartThread());
   }
 
   void TearDown() override {
     KillRealm();
-    loop_.Quit();
-    loop_.JoinThreads();
   }
 
   void CreateRealm(std::string* realm_path) {
@@ -93,10 +87,14 @@ class ChrealmTest : public ::testing::Test,
     ASSERT_EQ(GLOB_NOMATCH, glob(kRealmGlob, 0, nullptr, &globbuf));
 
     // Create a nested realm to test with.
-    fuchsia::sys::EnvironmentSyncPtr nested_env;
+    fuchsia::sys::EnvironmentPtr nested_env;
     sys_env_->CreateNestedEnvironment(
         component::Util::OpenAsDirectory(&vfs_, services_),
         nested_env.NewRequest(), controller_.NewRequest(), kRealm);
+    bool started = false;
+    controller_.events().OnCreated = [&started](){ started = true; };
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&started] { return started; },
+                                          zx::sec(5)));
 
     // Get the path to the test realm in /hub. Test is running in the root
     // realm, so we find the realm under sys.
@@ -109,13 +107,16 @@ class ChrealmTest : public ::testing::Test,
 
   void KillRealm() {
     if (controller_) {
-      ASSERT_EQ(ZX_OK, controller_->Kill());
+      bool alive = true;
+      controller_.set_error_handler([&alive] { alive = false; });
+      controller_->Kill([](){});
+      ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+          [&alive] { return !alive; }, zx::sec(5)));
       controller_.Unbind();
     }
   }
 
-  static void RunCommand(const std::vector<const char*>& argv,
-                         std::string* out) {
+  void RunCommand(const std::vector<const char*>& argv, std::string* out) {
     *out = "";
 
     FILE* tmpf = std::tmpfile();
@@ -125,13 +126,19 @@ class ChrealmTest : public ::testing::Test,
     const int tmpfd = fileno(tmpf);
     zx_handle_t proc = ZX_HANDLE_INVALID;
     RunCommandAsync(argv, tmpfd, &proc);
-    zx_status_t status = zx_object_wait_one(
-        proc, ZX_PROCESS_TERMINATED, zx_deadline_after(ZX_SEC(10)), nullptr);
-
-    ASSERT_EQ(status, ZX_OK);
+    bool proc_terminated = false;
+    async::Wait async_wait(
+        proc, ZX_PROCESS_TERMINATED,
+        [&proc_terminated](async_t* async, async::WaitBase* wait,
+                           zx_status_t status, const zx_packet_signal* signal) {
+          proc_terminated = true;
+        });
+    ASSERT_EQ(ZX_OK, async_wait.Begin(dispatcher()));
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+        [&proc_terminated] { return proc_terminated; }, zx::sec(10)));
     zx_info_process_t info;
-    status = zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info),
-                                nullptr, nullptr);
+    zx_status_t status = zx_object_get_info(proc, ZX_INFO_PROCESS, &info,
+                                            sizeof(info), nullptr, nullptr);
     ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(info.return_code, 0)
         << "Command failed with code " << info.return_code;
@@ -162,12 +169,11 @@ class ChrealmTest : public ::testing::Test,
   }
 
  private:
-  async::Loop loop_;
   fs::SynchronousVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> services_;
-  fuchsia::sys::EnvironmentSyncPtr sys_env_;
-  fuchsia::sys::ServiceProviderSyncPtr svc_;
-  fuchsia::sys::EnvironmentControllerSyncPtr controller_;
+  fuchsia::sys::EnvironmentPtr sys_env_;
+  fuchsia::sys::ServiceProviderPtr svc_;
+  fuchsia::sys::EnvironmentControllerPtr controller_;
   fidl::BindingSet<fuchsia::testing::chrealm::TestService> bindings_;
 };
 

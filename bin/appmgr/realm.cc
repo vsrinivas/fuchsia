@@ -249,14 +249,15 @@ void Realm::CreateNestedJob(
   // update hub
   hub_.AddRealm(child->HubInfo());
 
-  children_.emplace(child, std::move(controller));
-
   Realm* root_realm = this;
   while (root_realm->parent() != nullptr) {
     root_realm = root_realm->parent();
   }
   child->default_namespace_->ServeServiceDirectory(
       std::move(root_realm->svc_channel_server_));
+
+  controller->OnCreated();
+  children_.emplace(child, std::move(controller));
 
   if (run_virtual_console_) {
     // TODO(anmittal): remove svc hardcoding once we no longer need to launch
