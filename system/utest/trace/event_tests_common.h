@@ -1000,7 +1000,11 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
     END_TRACE_TEST;
 }
 
+#ifdef NO_OPTIM
+static bool test_koid_arguments_no_optim(void) {
+#else
 static bool test_koid_arguments(void) {
+#endif
     BEGIN_TRACE_TEST;
 
     fixture_start_tracing();
@@ -1074,17 +1078,23 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {k1
 }
 
 #ifdef __cplusplus
+
 #ifndef NTRACE
 #define _NAME event_tests_cpp
 #else
 #define _NAME event_tests_cpp_ntrace
 #endif // NTRACE
+
 #else
-#ifndef NTRACE
-#define _NAME event_tests_c
-#else
+
+#if defined(NTRACE)
 #define _NAME event_tests_c_ntrace
+#elif defined(NO_OPTIM)
+#define _NAME event_tests_c_no_optim
+#else
+#define _NAME event_tests_c
 #endif // NTRACE
+
 #endif // __cplusplus
 
 #define _BEGIN_TEST_CASE(name) BEGIN_TEST_CASE(name)
@@ -1118,7 +1128,11 @@ RUN_TEST(test_char_array_arguments)
 RUN_TEST(test_string_arguments)
 RUN_TEST(test_string_literal_arguments)
 RUN_TEST(test_pointer_arguments)
+#ifdef NO_OPTIM
+RUN_TEST(test_koid_arguments_no_optim)
+#else
 RUN_TEST(test_koid_arguments)
+#endif
 RUN_TEST(test_all_argument_counts)
 _END_TEST_CASE(_NAME)
 

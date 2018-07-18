@@ -75,7 +75,7 @@ void trace_context_register_string_copy(
 
 // Registers a copy of a string and returns its string ref.
 // Helper for |trace_context_register_thread()|.
-inline trace_string_ref_t trace_context_make_registered_string_copy(
+static inline trace_string_ref_t trace_context_make_registered_string_copy(
     trace_context_t* context,
     const char* string, size_t length) {
     trace_string_ref_t ref;
@@ -104,7 +104,7 @@ void trace_context_register_string_literal(
 
 // Registers a string literal and returns its string ref.
 // Helper for |trace_context_register_string_literal()|.
-inline trace_string_ref_t trace_context_make_registered_string_literal(
+static inline trace_string_ref_t trace_context_make_registered_string_literal(
     trace_context_t* context,
     const char* string_literal) {
     trace_string_ref_t ref;
@@ -175,7 +175,7 @@ void trace_context_register_thread(
 
 // Registers a thread and returns its thread ref.
 // Helper for |trace_context_register_thread()|.
-inline trace_thread_ref_t trace_context_make_registered_thread(
+static inline trace_thread_ref_t trace_context_make_registered_thread(
     trace_context_t* context,
     zx_koid_t process_koid, zx_koid_t thread_koid) {
     trace_thread_ref_t ref;

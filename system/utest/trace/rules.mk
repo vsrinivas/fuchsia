@@ -17,6 +17,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/fields_tests.cpp \
     $(LOCAL_DIR)/fixture.cpp \
     $(LOCAL_DIR)/main.c \
+    $(LOCAL_DIR)/no_optimization.c \
     $(LOCAL_DIR)/record_tests.cpp
 
 MODULE_NAME := trace-test

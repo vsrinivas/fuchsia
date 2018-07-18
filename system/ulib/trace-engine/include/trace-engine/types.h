@@ -4,6 +4,8 @@
 
 //
 // Types, constants, and inline functions used to encode and decode trace records.
+// This header is used by C and C++ code. For simple support of all choices of
+// C/C++ and -O0/-On the inline functions are "static inline".
 //
 
 #pragma once
@@ -75,29 +77,29 @@ typedef struct trace_string_ref {
 } trace_string_ref_t;
 
 // Makes true if the string ref's content is empty.
-inline bool trace_is_empty_string_ref(const trace_string_ref_t* string_ref) {
+static inline bool trace_is_empty_string_ref(const trace_string_ref_t* string_ref) {
     return string_ref->encoded_value == TRACE_ENCODED_STRING_REF_EMPTY;
 }
 
 // Returns true if the string ref's content is stored inline (rather than empty or indexed).
-inline bool trace_is_inline_string_ref(const trace_string_ref_t* string_ref) {
+static inline bool trace_is_inline_string_ref(const trace_string_ref_t* string_ref) {
     return string_ref->encoded_value & TRACE_ENCODED_STRING_REF_INLINE_FLAG;
 }
 
 // Returns true if the string ref's content is stored as an index into the string table.
-inline bool trace_is_indexed_string_ref(const trace_string_ref_t* string_ref) {
+static inline bool trace_is_indexed_string_ref(const trace_string_ref_t* string_ref) {
     return string_ref->encoded_value >= TRACE_ENCODED_STRING_REF_MIN_INDEX &&
            string_ref->encoded_value <= TRACE_ENCODED_STRING_REF_MAX_INDEX;
 }
 
 // Returns the length of an inline string.
 // Only valid for inline strings.
-inline size_t trace_inline_string_ref_length(const trace_string_ref_t* string_ref) {
+static inline size_t trace_inline_string_ref_length(const trace_string_ref_t* string_ref) {
     return string_ref->encoded_value & TRACE_ENCODED_STRING_REF_LENGTH_MASK;
 }
 
 // Makes an empty string ref.
-inline trace_string_ref_t trace_make_empty_string_ref(void) {
+static inline trace_string_ref_t trace_make_empty_string_ref(void) {
     trace_string_ref_t ref = {
         .encoded_value = TRACE_ENCODED_STRING_REF_EMPTY,
         .inline_string = NULL};
@@ -108,7 +110,7 @@ inline trace_string_ref_t trace_make_empty_string_ref(void) {
 // The |string| does not need to be null-terminated because its length is provided.
 // The |string| must not be null if length is non-zero.
 // The |string| is truncated if longer than |TRACE_ENCODED_STRING_REF_MAX_LENGTH|.
-inline trace_string_ref_t trace_make_inline_string_ref(
+static inline trace_string_ref_t trace_make_inline_string_ref(
     const char* string, size_t length) {
     if (!length)
         return trace_make_empty_string_ref();
@@ -125,7 +127,7 @@ inline trace_string_ref_t trace_make_inline_string_ref(
 
 // Makes an inline or empty string ref from a null-terminated string.
 // The |string| is truncated if longer than |TRACE_ENCODED_STRING_REF_MAX_LENGTH|.
-inline trace_string_ref_t trace_make_inline_c_string_ref(const char* string) {
+static inline trace_string_ref_t trace_make_inline_c_string_ref(const char* string) {
     return trace_make_inline_string_ref(string,
                                         string ? strlen(string) : 0u);
 }
@@ -133,7 +135,7 @@ inline trace_string_ref_t trace_make_inline_c_string_ref(const char* string) {
 // Makes an indexed string ref.
 // The |index| must be >= |TRACE_ENCODED_STRING_REF_MIN_INDEX|
 // and <= |TRACE_ENCODED_STRING_REF_MAX_INDEX|.
-inline trace_string_ref_t trace_make_indexed_string_ref(trace_string_index_t index) {
+static inline trace_string_ref_t trace_make_indexed_string_ref(trace_string_index_t index) {
     ZX_DEBUG_ASSERT(index >= TRACE_ENCODED_STRING_REF_MIN_INDEX &&
                     index <= TRACE_ENCODED_STRING_REF_MAX_INDEX);
     trace_string_ref_t ref = {
@@ -150,20 +152,20 @@ typedef struct trace_thread_ref {
 } trace_thread_ref_t;
 
 // Returns true if the thread ref's value is unknown.
-inline bool trace_is_unknown_thread_ref(const trace_thread_ref_t* thread_ref) {
+static inline bool trace_is_unknown_thread_ref(const trace_thread_ref_t* thread_ref) {
     return thread_ref->encoded_value == TRACE_ENCODED_THREAD_REF_INLINE &&
            thread_ref->inline_process_koid == ZX_KOID_INVALID &&
            thread_ref->inline_thread_koid == ZX_KOID_INVALID;
 }
 
 // Returns true if the thread ref's content is stored as an index into the thread table.
-inline bool trace_is_indexed_thread_ref(const trace_thread_ref_t* thread_ref) {
+static inline bool trace_is_indexed_thread_ref(const trace_thread_ref_t* thread_ref) {
     return thread_ref->encoded_value >= TRACE_ENCODED_THREAD_REF_MIN_INDEX &&
            thread_ref->encoded_value <= TRACE_ENCODED_THREAD_REF_MAX_INDEX;
 }
 
 // Returns true if the thread ref's value is stored inline (rather than unknown or indexed).
-inline bool trace_is_inline_thread_ref(const trace_thread_ref_t* thread_ref) {
+static inline bool trace_is_inline_thread_ref(const trace_thread_ref_t* thread_ref) {
     return thread_ref->encoded_value == TRACE_ENCODED_THREAD_REF_INLINE &&
            (thread_ref->inline_process_koid != ZX_KOID_INVALID ||
             thread_ref->inline_thread_koid != ZX_KOID_INVALID);
@@ -172,7 +174,7 @@ inline bool trace_is_inline_thread_ref(const trace_thread_ref_t* thread_ref) {
 // Makes a thread ref representing an unknown thread.
 // TODO(ZX-1030): Reserve thread ref index 0 for unknown threads,
 // use thread ref index 255 for inline threads.
-inline trace_thread_ref_t trace_make_unknown_thread_ref(void) {
+static inline trace_thread_ref_t trace_make_unknown_thread_ref(void) {
     trace_thread_ref_t ref = {
         .encoded_value = TRACE_ENCODED_THREAD_REF_INLINE,
         .inline_process_koid = ZX_KOID_INVALID,
@@ -182,8 +184,8 @@ inline trace_thread_ref_t trace_make_unknown_thread_ref(void) {
 
 // Makes a thread ref with an inline value.
 // The process and thread koids must not both be invalid.
-inline trace_thread_ref_t trace_make_inline_thread_ref(zx_koid_t process_koid,
-                                                       zx_koid_t thread_koid) {
+static inline trace_thread_ref_t trace_make_inline_thread_ref(zx_koid_t process_koid,
+                                                              zx_koid_t thread_koid) {
     ZX_DEBUG_ASSERT(process_koid != ZX_KOID_INVALID ||
                     thread_koid != ZX_KOID_INVALID);
     trace_thread_ref_t ref = {
@@ -196,7 +198,7 @@ inline trace_thread_ref_t trace_make_inline_thread_ref(zx_koid_t process_koid,
 // Makes an indexed thread ref.
 // The index must be >= |TRACE_ENCODED_THREAD_REF_MIN_INDEX|
 // and <= |TRACE_ENCODED_THREAD_REF_MAX_INDEX|.
-inline trace_thread_ref_t trace_make_indexed_thread_ref(trace_thread_index_t index) {
+static inline trace_thread_ref_t trace_make_indexed_thread_ref(trace_thread_index_t index) {
     ZX_DEBUG_ASSERT(index >= TRACE_ENCODED_THREAD_REF_MIN_INDEX &&
                     index <= TRACE_ENCODED_THREAD_REF_MAX_INDEX);
     trace_thread_ref_t ref = {
@@ -241,62 +243,62 @@ typedef struct {
 } trace_arg_value_t;
 
 // Makes a null argument value.
-inline trace_arg_value_t trace_make_null_arg_value(void) {
+static inline trace_arg_value_t trace_make_null_arg_value(void) {
     trace_arg_value_t arg_value = {.type = TRACE_ARG_NULL, {}};
     return arg_value;
 }
 
 // Makes a signed 32-bit integer argument value.
-inline trace_arg_value_t trace_make_int32_arg_value(int32_t value) {
+static inline trace_arg_value_t trace_make_int32_arg_value(int32_t value) {
     trace_arg_value_t arg_value = {.type = TRACE_ARG_INT32,
                                    {.int32_value = value}};
     return arg_value;
 }
 
 // Makes an unsigned 32-bit integer argument value.
-inline trace_arg_value_t trace_make_uint32_arg_value(uint32_t value) {
+static inline trace_arg_value_t trace_make_uint32_arg_value(uint32_t value) {
     trace_arg_value_t arg_value = {.type = TRACE_ARG_UINT32,
                                    {.uint32_value = value}};
     return arg_value;
 }
 
 // Makes a signed 64-bit integer argument value.
-inline trace_arg_value_t trace_make_int64_arg_value(int64_t value) {
+static inline trace_arg_value_t trace_make_int64_arg_value(int64_t value) {
     trace_arg_value_t arg_value = {.type = TRACE_ARG_INT64,
                                    {.int64_value = value}};
     return arg_value;
 }
 
 // Makes an unsigned 64-bit integer argument value.
-inline trace_arg_value_t trace_make_uint64_arg_value(uint64_t value) {
+static inline trace_arg_value_t trace_make_uint64_arg_value(uint64_t value) {
     trace_arg_value_t arg_value = {.type = TRACE_ARG_UINT64,
                                    {.uint64_value = value}};
     return arg_value;
 }
 
 // Makes a double-precision floating point argument value.
-inline trace_arg_value_t trace_make_double_arg_value(double value) {
+static inline trace_arg_value_t trace_make_double_arg_value(double value) {
     trace_arg_value_t arg_value = {.type = TRACE_ARG_DOUBLE,
                                    {.double_value = value}};
     return arg_value;
 }
 
 // Makes a string argument value.
-inline trace_arg_value_t trace_make_string_arg_value(trace_string_ref_t value_ref) {
+static inline trace_arg_value_t trace_make_string_arg_value(trace_string_ref_t value_ref) {
     trace_arg_value_t arg_value = {.type = TRACE_ARG_STRING,
                                    {.string_value_ref = value_ref}};
     return arg_value;
 }
 
 // Makes a pointer argument value.
-inline trace_arg_value_t trace_make_pointer_arg_value(uintptr_t value) {
+static inline trace_arg_value_t trace_make_pointer_arg_value(uintptr_t value) {
     trace_arg_value_t arg_value = {.type = TRACE_ARG_POINTER,
                                    {.pointer_value = value}};
     return arg_value;
 }
 
 // Makes a koid argument value.
-inline trace_arg_value_t trace_make_koid_arg_value(zx_koid_t value) {
+static inline trace_arg_value_t trace_make_koid_arg_value(zx_koid_t value) {
     trace_arg_value_t arg_value = {.type = TRACE_ARG_KOID,
                                    {.koid_value = value}};
     return arg_value;
@@ -310,8 +312,8 @@ typedef struct {
 } trace_arg_t;
 
 // Makes an argument with name and value.
-inline trace_arg_t trace_make_arg(trace_string_ref_t name_ref,
-                                  trace_arg_value_t value) {
+static inline trace_arg_t trace_make_arg(trace_string_ref_t name_ref,
+                                         trace_arg_value_t value) {
     trace_arg_t arg = {.name_ref = name_ref, .value = value};
     return arg;
 }

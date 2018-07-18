@@ -22,7 +22,7 @@ void fixture_stop_tracing_hard(void);
 zx_status_t fixture_get_disposition(void);
 bool fixture_compare_records(const char* expected);
 
-inline void fixture_scope_cleanup(bool* scope) {
+static inline void fixture_scope_cleanup(bool* scope) {
     fixture_tear_down();
 }
 

@@ -62,7 +62,7 @@ trace_state_t trace_state(void);
 // Returns true if tracing is enabled (started or stopping but not stopped).
 //
 // This function is thread-safe and lock-free.
-inline bool trace_is_enabled(void) {
+static inline bool trace_is_enabled(void) {
     return trace_state() != TRACE_STOPPED;
 }
 
