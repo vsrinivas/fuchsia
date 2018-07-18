@@ -54,7 +54,6 @@ sdk("garnet") {
     "//zircon/public/lib/async-default:async-default_sdk",
     "//zircon/public/lib/async:async_sdk",
     "//zircon/public/lib/async-loop:async-loop_sdk",
-    "//zircon/public/lib/async-loop-cpp:async-loop-cpp_sdk",
     "//zircon/public/lib/fdio:fdio_sdk",
     "//zircon/public/sysroot:sysroot_sdk",
     "//zircon/public/tool/bootserver:bootserver_sdk($host_toolchain)",
