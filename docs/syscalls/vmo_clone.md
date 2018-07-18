@@ -52,12 +52,6 @@ If *options* is *ZX_VMO_CLONE_COPY_ON_WRITE* the following rights are added:
 
 - **ZX_RIGHT_WRITE**
 
-*TEMPORARY* The following rights are added:
-
-- **ZX_RIGHT_EXECUTE**
-
-- **ZX_RIGHT_MAP**
-
 ## NOTES
 
 Cloning a VMO causes the existing (source) VMO **ZX_VMO_ZERO_CHILDREN** signal
