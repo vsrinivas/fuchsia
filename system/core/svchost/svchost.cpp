@@ -135,7 +135,6 @@ void publish_deprecated_services(const fbl::RefPtr<fs::PseudoDir>& dir) {
         dir->AddEntry(
             service_name,
             fbl::MakeRefCounted<fs::Service>([service_name](zx::channel request) {
-                fprintf(stderr, "svchost: warning: Using deprecated path to %s.\n", service_name);
                 return fdio_service_connect_at(appmgr_svc, service_name, request.release());
             }));
     }
