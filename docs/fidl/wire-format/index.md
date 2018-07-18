@@ -48,7 +48,7 @@ header**).
 
 To store variable-size or optional data, the primary object may refer to
 **secondary objects**, such as string content, vector content, structs, and
-unions. Secondary objects are stored** out-of-line** sequentially in traversal
+unions. Secondary objects are stored **out-of-line** sequentially in traversal
 order following the object which reference them. In encoded messages, the
 presence of secondary objects is marked by a flag. In decoded messages, the
 flags are substituted with pointers to their location in memory (or null
