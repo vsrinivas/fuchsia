@@ -57,7 +57,7 @@ template("sdk_molecule") {
 
   # Builds a manifest representing members of the group.
   action(target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker, [ "assert_no_deps", "testonly" ])
 
     manifest = "$target_gen_dir/$target_name.sdk"
 
