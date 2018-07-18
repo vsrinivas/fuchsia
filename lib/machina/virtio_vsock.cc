@@ -6,6 +6,8 @@
 
 #include <fbl/auto_call.h>
 
+#include "lib/fsl/handles/object_info.h"
+
 namespace machina {
 
 template <VirtioVsock::StreamFunc F>
@@ -123,17 +125,14 @@ zx_status_t VirtioVsock::Connection::WaitOnReceive(zx_status_t status) {
 }
 
 VirtioVsock::SocketConnection::SocketConnection(
-    zx::socket socket, zx::socket remote_socket,
-    fuchsia::guest::VsockAcceptor::AcceptCallback callback)
-    : socket_(std::move(socket)),
-      remote_socket_(std::move(remote_socket)),
-      accept_callback_(std::move(callback)) {}
+    zx::handle handle, fuchsia::guest::VsockAcceptor::AcceptCallback callback)
+    : socket_(std::move(handle)), accept_callback_(std::move(callback)) {}
 
 VirtioVsock::SocketConnection::~SocketConnection() {
   rx_wait_.Cancel();
   tx_wait_.Cancel();
   if (accept_callback_) {
-    accept_callback_(ZX_ERR_CONNECTION_REFUSED, zx::handle());
+    accept_callback_(ZX_ERR_CONNECTION_REFUSED);
   }
 }
 
@@ -251,11 +250,11 @@ zx_status_t VirtioVsock::SocketConnection::Accept() {
   // into the RW state and let the connector know that the socket is
   // ready.
   //
-  // If we don't have an acceptor or remote_socket (provisioned in Accept)
-  // then this is a spurious response so reset the connection.
-  if (accept_callback_ && remote_socket_) {
+  // If we don't have an acceptor then this is a spurious response so reset the
+  // connection.
+  if (accept_callback_) {
     UpdateOp(VIRTIO_VSOCK_OP_RW);
-    accept_callback_(ZX_OK, std::move(remote_socket_));
+    accept_callback_(ZX_OK);
     accept_callback_ = nullptr;
     return WaitOnReceive(ZX_OK);
   } else {
@@ -364,28 +363,25 @@ void VirtioVsock::SetContextId(
 }
 
 void VirtioVsock::Accept(
-    uint32_t src_cid, uint32_t src_port, uint32_t port,
+    uint32_t src_cid, uint32_t src_port, uint32_t port, zx::handle handle,
     fuchsia::guest::VsockAcceptor::AcceptCallback callback) {
   if (HasConnection(src_cid, src_port, port)) {
-    callback(ZX_ERR_ALREADY_BOUND, zx::handle());
+    callback(ZX_ERR_ALREADY_BOUND);
     return;
   }
-
-  zx::socket socket, remote_socket;
-  zx_status_t status =
-      zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create connection socket " << status;
+  zx_obj_type_t type = fsl::GetType(handle.get());
+  if (type != zx::socket::TYPE) {
+    callback(ZX_ERR_CONNECTION_REFUSED);
     return;
   }
-  auto conn = fbl::make_unique<SocketConnection>(
-      std::move(socket), std::move(remote_socket), std::move(callback));
+  auto conn = fbl::make_unique<SocketConnection>(std::move(handle),
+                                                 std::move(callback));
 
   // From here on out the |conn| destructor will handle connection refusal upon
   // deletion.
 
   ConnectionKey key{src_cid, src_port, port};
-  status = conn->Init(dispatcher_, [this, key] {
+  zx_status_t status = conn->Init(dispatcher_, [this, key] {
     fbl::AutoLock lock(&mutex_);
     WaitOnQueueLocked(key);
   });
@@ -401,20 +397,15 @@ void VirtioVsock::Accept(
 void VirtioVsock::ConnectCallback(ConnectionKey key, zx_status_t status,
                                   zx::handle handle) {
   if (handle) {
-    zx_info_handle_basic_t info;
-    zx_status_t info_status = handle.get_info(ZX_INFO_HANDLE_BASIC, &info,
-                                              sizeof(info), nullptr, nullptr);
-    if (info_status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to get handle info " << info_status;
-      return;
-    } else if (info.type != zx::socket::TYPE) {
-      FXL_LOG(ERROR) << "Unexpected handle type " << info.type;
+    zx_obj_type_t type = fsl::GetType(handle.get());
+    if (type != zx::socket::TYPE) {
+      FXL_LOG(ERROR) << "Unexpected handle type " << type;
       return;
     }
   }
 
   auto new_conn = fbl::make_unique<SocketConnection>(
-      zx::socket(std::move(handle)), zx::socket(), nullptr);
+      zx::socket(std::move(handle)), nullptr);
   SocketConnection* conn = new_conn.get();
 
   {

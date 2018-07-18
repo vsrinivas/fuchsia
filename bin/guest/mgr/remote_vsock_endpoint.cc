@@ -27,12 +27,14 @@ void RemoteVsockEndpoint::SetVsockAcceptor(
 }
 
 void RemoteVsockEndpoint::Accept(uint32_t src_cid, uint32_t src_port,
-                                 uint32_t port, AcceptCallback callback) {
+                                 uint32_t port, zx::handle handle,
+                                 AcceptCallback callback) {
   if (!remote_acceptor_) {
-    callback(ZX_ERR_CONNECTION_REFUSED, zx::handle());
+    callback(ZX_ERR_CONNECTION_REFUSED);
     return;
   }
-  remote_acceptor_->Accept(src_cid, src_port, port, std::move(callback));
+  remote_acceptor_->Accept(src_cid, src_port, port, std::move(handle),
+                           std::move(callback));
 }
 
 }  //  namespace guestmgr

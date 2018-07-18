@@ -34,7 +34,7 @@ class HostVsockEndpoint : public VsockEndpoint,
 
   // |fuchsia::guest::VsockAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
-              AcceptCallback callback) override;
+              zx::handle handle, AcceptCallback callback) override;
 
   // |fuchsia::guest::ManagedVsockEndpoint|
   void Listen(uint32_t port, fidl::InterfaceHandle<VsockAcceptor> acceptor,

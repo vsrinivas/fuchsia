@@ -21,13 +21,15 @@ void HostVsockEndpoint::AddBinding(
 }
 
 void HostVsockEndpoint::Accept(uint32_t src_cid, uint32_t src_port,
-                               uint32_t port, AcceptCallback callback) {
+                               uint32_t port, zx::handle handle,
+                               AcceptCallback callback) {
   auto it = listeners_.find(port);
   if (it == listeners_.end()) {
-    callback(ZX_ERR_CONNECTION_REFUSED, zx::handle());
+    callback(ZX_ERR_CONNECTION_REFUSED);
     return;
   }
-  it->second->Accept(src_cid, src_port, port, std::move(callback));
+  it->second->Accept(src_cid, src_port, port, std::move(handle),
+                     std::move(callback));
 }
 
 void HostVsockEndpoint::Listen(uint32_t port,

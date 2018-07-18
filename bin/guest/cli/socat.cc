@@ -11,6 +11,7 @@
 #include "garnet/bin/guest/cli/serial.h"
 #include "lib/component/cpp/environment_services.h"
 #include "lib/fidl/cpp/binding.h"
+#include "lib/fsl/handles/object_info.h"
 #include "lib/fxl/logging.h"
 
 class VsockAcceptor : public fuchsia::guest::VsockAcceptor {
@@ -18,20 +19,20 @@ class VsockAcceptor : public fuchsia::guest::VsockAcceptor {
   VsockAcceptor(uint32_t port, async::Loop* loop)
       : port_(port), console_(loop) {}
 
+  // |fuchsia::guest::VsockAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
-              AcceptCallback callback) {
+              zx::handle handle, AcceptCallback callback) override {
     if (port != port_) {
-      callback(ZX_ERR_CONNECTION_REFUSED, zx::handle());
+      callback(ZX_ERR_CONNECTION_REFUSED);
       return;
     }
-    zx::socket h1, h2;
-    zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2);
-    if (status != ZX_OK) {
-      callback(ZX_ERR_CONNECTION_REFUSED, zx::handle());
+    zx_obj_type_t type = fsl::GetType(handle.get());
+    if (type != zx::socket::TYPE) {
+      callback(ZX_ERR_CONNECTION_REFUSED);
       return;
     }
-    callback(ZX_OK, std::move(h2));
-    console_.Start(std::move(h1));
+    callback(ZX_OK);
+    console_.Start(zx::socket(std::move(handle)));
   }
 
  private:
@@ -80,15 +81,9 @@ void handle_socat_connect(uint32_t env_id, uint32_t cid, uint32_t port) {
     std::cerr << "Failed to connect " << status << "\n";
     return;
   }
-
-  zx_info_handle_basic_t info;
-  status = handle.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr,
-                           nullptr);
-  if (status != ZX_OK) {
-    std::cerr << "Failed to get handle info " << status << "\n";
-    return;
-  } else if (info.type != zx::socket::TYPE) {
-    std::cerr << "Unexpected handle type " << info.type << "\n";
+  zx_obj_type_t type = fsl::GetType(handle.get());
+  if (type != zx::socket::TYPE) {
+    std::cerr << "Unexpected handle type " << type << "\n";
     return;
   }
 

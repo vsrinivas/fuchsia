@@ -43,6 +43,7 @@ class TestVsockAcceptor : public fuchsia::guest::VsockAcceptor {
     uint32_t src_cid;
     uint32_t src_port;
     uint32_t port;
+    zx::handle handle;
     AcceptCallback callback;
   };
 
@@ -58,9 +59,9 @@ class TestVsockAcceptor : public fuchsia::guest::VsockAcceptor {
 
   // |fuchsia::guest::VsockAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
-              AcceptCallback callback) override {
-    connection_requests_.emplace_back(
-        ConnectionRequest{src_cid, src_port, port, std::move(callback)});
+              zx::handle handle, AcceptCallback callback) override {
+    connection_requests_.emplace_back(ConnectionRequest{
+        src_cid, src_port, port, std::move(handle), std::move(callback)});
   }
 
  private:
@@ -74,8 +75,9 @@ class TestVsockEndpoint : public VsockEndpoint, public TestVsockAcceptor {
 
   // |fuchsia::guest::VsockAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
-              AcceptCallback callback) override {
-    TestVsockAcceptor::Accept(src_cid, src_port, port, std::move(callback));
+              zx::handle handle, AcceptCallback callback) override {
+    TestVsockAcceptor::Accept(src_cid, src_port, port, std::move(handle),
+                              std::move(callback));
   }
 };
 
@@ -106,9 +108,7 @@ TEST_F(VsockServerTest, Connect) {
   ASSERT_EQ(ZX_OK, server.AddEndpoint(&cid2));
   ASSERT_EQ(ZX_OK, server.AddEndpoint(&cid3));
 
-  // Setup acceptor to transfer |h2| to the caller.
-  zx::socket h1, h2;
-  ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2));
+  // Setup acceptor to transfer to the caller.
   TestVsockAcceptor endpoint;
   cid3.SetVsockAcceptor(endpoint.NewBinding());
   RunLoopUntilIdle();
@@ -125,12 +125,11 @@ TEST_F(VsockServerTest, Connect) {
   ASSERT_EQ(12345u, request.src_port);
   ASSERT_EQ(1111u, request.port);
 
-  request.callback(ZX_OK, std::move(h2));
+  request.callback(ZX_OK);
   RunLoopUntilIdle();
 
-  // Expect |h2| to have been transferred during the connect.
+  // Expect to have been transferred during the connect.
   ASSERT_EQ(ZX_OK, connection.status);
-  ASSERT_FALSE(h2.is_valid());
   ASSERT_TRUE(connection.socket.is_valid());
 }
 
@@ -214,12 +213,10 @@ TEST_F(VsockServerTest, HostConnectFreeEphemeralPort) {
   ASSERT_EQ(request1.src_cid, 2u);
   ASSERT_GE(request1.src_port, kFirstEphemeralPort);
   ASSERT_EQ(request1.port, 1111u);
-  zx::socket h1, h2;
-  ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2));
-  request1.callback(ZX_OK, std::move(h1));
+  request1.callback(ZX_OK);
 
-  // Attempt another connection. Since |h2| is still valid it should not reuse
-  // the connection.
+  // Attempt another connection. Since request1 is still valid it should not
+  // reuse the connection.
   host_endpoint.Connect(3, 1111, NoOpConnectCallback);
   requests = test_endpoint.TakeRequests();
   ASSERT_EQ(1u, requests.size());
@@ -227,8 +224,8 @@ TEST_F(VsockServerTest, HostConnectFreeEphemeralPort) {
   ASSERT_NE(request1.src_port, request2.src_port);
   ASSERT_GE(request2.src_port, kFirstEphemeralPort);
 
-  // Close |h2|.
-  h2.reset();
+  // Close request1.
+  request1.handle.reset();
   RunLoopUntilIdle();
 
   // Attempt a final connection. Expect |src_port| from the first request to

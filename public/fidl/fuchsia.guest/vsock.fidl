@@ -17,8 +17,8 @@ const uint32 kHostCid = 2;
 //
 // Also see |VsockEndpoint|.
 interface VsockAcceptor {
-  1: Accept(uint32 src_cid, uint32 src_port, uint32 port)
-      -> (status @status, handle? @handle);
+  1: Accept(uint32 src_cid, uint32 src_port, uint32 port, handle? @handle)
+      -> (status @status);
 };
 
 // Allow for out-bound connections to be established to the target (cid,port)

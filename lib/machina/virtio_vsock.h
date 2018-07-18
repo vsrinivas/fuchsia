@@ -90,6 +90,7 @@ class VirtioVsock
       fidl::InterfaceRequest<fuchsia::guest::VsockAcceptor> acceptor) override;
   // |fuchsia::guest::VsockAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
+              zx::handle handle,
               fuchsia::guest::VsockAcceptor::AcceptCallback callback) override;
   void ConnectCallback(ConnectionKey key, zx_status_t status,
                        zx::handle handle);
@@ -189,7 +190,7 @@ class VirtioVsock::NullConnection final : public VirtioVsock::Connection {
 
 class VirtioVsock::SocketConnection final : public VirtioVsock::Connection {
  public:
-  SocketConnection(zx::socket socket, zx::socket remote_socket,
+  SocketConnection(zx::handle handle,
                    fuchsia::guest::VsockAcceptor::AcceptCallback callback);
   ~SocketConnection() override;
 
@@ -207,7 +208,6 @@ class VirtioVsock::SocketConnection final : public VirtioVsock::Connection {
   void OnReady(zx_status_t status, const zx_packet_signal_t* signal);
 
   zx::socket socket_;
-  zx::socket remote_socket_;
   fuchsia::guest::VsockAcceptor::AcceptCallback accept_callback_;
   fit::closure queue_callback_;
 };

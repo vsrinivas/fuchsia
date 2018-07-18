@@ -37,7 +37,7 @@ class RemoteVsockEndpoint : public VsockEndpoint {
 
   // |fuchsia::guest::VsockAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
-              AcceptCallback callback) override;
+              zx::handle handle, AcceptCallback callback) override;
 
  private:
   fidl::BindingSet<fuchsia::guest::VsockConnector> connector_bindings_;
