@@ -33,6 +33,7 @@ mod config;
 mod device;
 mod ess_store;
 mod shim;
+mod state_machine;
 
 use config::Config;
 use app::server::ServicesServer;
