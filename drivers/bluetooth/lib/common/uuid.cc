@@ -43,6 +43,12 @@ constexpr size_t k128BitSize = 16;
 bool ParseUuidString(const std::string& uuid_string, UInt128* out_bytes) {
   FXL_DCHECK(out_bytes);
 
+  if (uuid_string.length() == 4) {
+    // Possibly a 16-bit short UUID, parse it in context of the Base UUID.
+    return ParseUuidString(
+        "0000" + uuid_string + "-0000-1000-8000-00805F9B34FB", out_bytes);
+  }
+
   // This is a 36 character string, including 4 "-" characters and two
   // characters for each of the 16-octets that form the 128-bit UUID.
   if (uuid_string.length() != 36)

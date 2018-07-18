@@ -175,6 +175,22 @@ TEST(UUIDTest, StringToUuid) {
   EXPECT_EQ(kId3As128, uuid.value());
 }
 
+TEST(UUIDTest, StringToUuid16) {
+  UUID uuid;
+
+  EXPECT_FALSE(StringToUuid("0180d", &uuid));
+  EXPECT_FALSE(StringToUuid("0000180d", &uuid));
+  EXPECT_FALSE(StringToUuid("why", &uuid));
+  EXPECT_FALSE(StringToUuid("d", &uuid));
+  EXPECT_FALSE(StringToUuid("0x180d", &uuid));
+
+  // Combinations of lower and upper case characters should work.
+  EXPECT_TRUE(StringToUuid("180d", &uuid));
+  EXPECT_EQ(kId1As16, uuid);
+  EXPECT_TRUE(StringToUuid("180D", &uuid));
+  EXPECT_EQ(kId1As16, uuid);
+}
+
 TEST(UUIDTest, FromBytes) {
   auto kUuid16Bytes = common::CreateStaticByteBuffer(0x0d, 0x18);
   auto kUuid32Bytes = common::CreateStaticByteBuffer(0x0d, 0x18, 0x00, 0x00);
