@@ -9,7 +9,13 @@
 
 ## Overview
 
-This guide will walk you through the process of adding a benchmark to CI so that its results are tracked over time in the performance dashboard.  Right now this process only works for the Garnet and Peridot projects. Topaz and Zircon support is coming ([IN-199](https://fuchsia.atlassian.net/browse/IN-199))
+This guide will walk you through the process of adding a benchmark to CI so that its results are tracked over time in the performance dashboard.
+Today this process is supported for:
+* Garnet
+* Peridot
+* Topaz
+
+Note that Zircon benchmarks run in the Garnet layer.
 
 The reader should be familiar with the following:
 
