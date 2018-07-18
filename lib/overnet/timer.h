@@ -9,7 +9,7 @@
 #include <ostream>
 #include <type_traits>
 #include "callback.h"
-#include "manual_constructor.h"
+#include "optional.h"
 
 namespace overnet {
 
@@ -225,20 +225,27 @@ inline void Timer::FireTimeout(Timeout* timeout, Status status) {
 
 template <class F>
 void Timer::At(TimeStamp t, F f) {
-  struct Holder {
-    ManualConstructor<Timeout> timeout;
+  struct CB {
+    CB(F f) : fn(std::move(f)) {}
+    Optional<Timeout> timeout;
+    F fn;
+    bool done = false;
+    bool initialized = false;
   };
-  Holder* h = new Holder();
-  h->timeout.Init(
-      this, t,
-      StatusCallback(ALLOCATED_CALLBACK,
-                     [h, f = std::move(f)](const Status& status) mutable {
-                       if (status.is_ok()) {
-                         f();
-                       }
-                       h->timeout.Destroy();
-                       delete h;
-                     }));
+  auto* cb = new CB(std::move(f));
+  cb->timeout.Reset(this, t, [cb](const Status& status) {
+    if (status.is_ok()) {
+      cb->fn();
+    }
+    cb->done = true;
+    if (cb->done && cb->initialized) {
+      delete cb;
+    }
+  });
+  cb->initialized = true;
+  if (cb->done && cb->initialized) {
+    delete cb;
+  }
 }
 
 }  // namespace overnet

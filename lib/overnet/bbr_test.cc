@@ -195,6 +195,9 @@ class Simulator {
         }));
   }
 
+  std::vector<BBR::SentPacket> ack_packets_;
+  std::vector<BBR::SentPacket> nack_packets_;
+
   TestTimer timer_;
   BBR bbr_;
 
@@ -205,8 +208,6 @@ class Simulator {
 
   uint64_t next_seq_ = 1;
 
-  std::vector<BBR::SentPacket> ack_packets_;
-  std::vector<BBR::SentPacket> nack_packets_;
   bool ack_scheduled_ = false;
 
   TimeDelta half_rtt_ = TimeDelta::FromMilliseconds(1);

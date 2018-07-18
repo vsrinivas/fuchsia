@@ -23,6 +23,7 @@ class TestTimer final : public Timer {
   virtual void CancelTimeout(Timeout* timeout, Status status) override;
 
   uint64_t now_;
+  bool shutting_down_ = false;
   std::multimap<uint64_t, Timeout*> pending_timeouts_;
 };
 

@@ -7,6 +7,7 @@
 namespace overnet {
 
 TestTimer::~TestTimer() {
+  shutting_down_ = true;
   for (auto tmr : pending_timeouts_) {
     assert(tmr.first > now_);
     FireTimeout(tmr.second, Status::Cancelled());
@@ -14,10 +15,12 @@ TestTimer::~TestTimer() {
 }
 
 TimeStamp TestTimer::Now() {
+  if (shutting_down_) return TimeStamp::AfterEpoch(TimeDelta::PositiveInf());
   return TimeStamp::AfterEpoch(TimeDelta::FromMicroseconds(now_));
 }
 
 bool TestTimer::Step(uint64_t microseconds) {
+  if (shutting_down_) return false;
   auto new_now = now_ + microseconds;
   if (now_ > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
     return false;
@@ -38,14 +41,14 @@ bool TestTimer::Step(uint64_t microseconds) {
 }
 
 bool TestTimer::StepUntilNextEvent(uint64_t jitter_us) {
-  if (pending_timeouts_.empty()) return false;
+  if (shutting_down_ || pending_timeouts_.empty()) return false;
   Step(pending_timeouts_.begin()->first - now_ +
        (jitter_us ? rand() % jitter_us : 0));
   return true;
 }
 
 void TestTimer::InitTimeout(Timeout* timeout, TimeStamp when) {
-  if (when.after_epoch().as_us() <= static_cast<int64_t>(now_)) {
+  if (shutting_down_ || when.after_epoch().as_us() <= static_cast<int64_t>(now_)) {
     FireTimeout(timeout, Status::Ok());
     return;
   }
