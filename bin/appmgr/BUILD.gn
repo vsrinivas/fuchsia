@@ -138,11 +138,6 @@ package("appmgr") {
       name = "appmgr"
     },
   ]
-}
-
-package("config") {
-  deprecated_system_image = true
-  package_name = "appmgr_config"
   resources = [
     {
       dest = "appmgr/scheme_map.config"
