@@ -30,20 +30,9 @@ Mixer::Mixer(uint32_t pos_filter_width, uint32_t neg_filter_width)
 // specified, or if Resampler::Default, the existing selection algorithm is
 // used. Note that requiring a specific resampler may cause Mixer::Select() to
 // fail (i.e. return nullptr), even in cases where 'Default' would succeed.
-MixerPtr Mixer::Select(const fuchsia::media::AudioMediaTypeDetails& src_format,
-                       const fuchsia::media::AudioMediaTypeDetails& dst_format,
+MixerPtr Mixer::Select(const fuchsia::media::AudioStreamType& src_format,
+                       const fuchsia::media::AudioStreamType& dst_format,
                        Resampler resampler) {
-  // We have no mixer for these formats.
-  FXL_DCHECK(src_format.sample_format !=
-             fuchsia::media::AudioSampleFormat::ANY);
-  FXL_DCHECK(src_format.sample_format !=
-             fuchsia::media::AudioSampleFormat::NONE);
-  FXL_DCHECK(dst_format.sample_format !=
-             fuchsia::media::AudioSampleFormat::ANY);
-  FXL_DCHECK(dst_format.sample_format !=
-             fuchsia::media::AudioSampleFormat::NONE);
-  // MTWN-93: Consider eliminating these enums; they never lead to happy endings
-
   // If user specified a particular Resampler, directly select it.
   switch (resampler) {
     case Resampler::SampleAndHold:

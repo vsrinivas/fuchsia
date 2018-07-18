@@ -36,7 +36,7 @@ WavRecorder::~WavRecorder() {
     FXL_DCHECK(payload_buf_size_ != 0);
     FXL_DCHECK(bytes_per_frame_ != 0);
     zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(payload_buf_virt_),
-                                payload_buf_size_);
+                                 payload_buf_size_);
   }
 }
 
@@ -72,7 +72,7 @@ void WavRecorder::Run(component::StartupContext* app_context) {
   });
 
   // Fetch the initial media type and figure out what we need to do from there.
-  capturer_->GetMediaType([this](fuchsia::media::MediaType type) {
+  capturer_->GetStreamType([this](fuchsia::media::StreamType type) {
     OnDefaultFormatFetched(std::move(type));
   });
 
@@ -135,7 +135,7 @@ bool WavRecorder::SetupPayloadBuffer() {
 
   uintptr_t tmp;
   res = zx::vmar::root_self()->map(0, payload_buf_vmo_, 0, payload_buf_size_,
-                                  ZX_VM_FLAG_PERM_READ, &tmp);
+                                   ZX_VM_FLAG_PERM_READ, &tmp);
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to map " << payload_buf_size_
                    << " byte payload buffer (res " << res << ")";
@@ -166,16 +166,16 @@ void WavRecorder::SendCaptureJob() {
   }
 }
 
-void WavRecorder::OnDefaultFormatFetched(fuchsia::media::MediaType type) {
+void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
   zx_status_t res;
 
-  if (!type.details.is_audio()) {
+  if (!type.medium_specific.is_audio()) {
     FXL_LOG(ERROR) << "default format is not audio!";
     return;
   }
 
-  const auto& fmt = type.details.audio();
+  const auto& fmt = type.medium_specific.audio();
 
   sample_format_ = cmd_line_.HasOption(kFloatFormatOption)
                        ? fuchsia::media::AudioSampleFormat::FLOAT
@@ -246,8 +246,14 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::MediaType type) {
   // If our desired format is different from the default capturer format, change
   // formats now.
   if (change_format) {
-    capturer_->SetMediaType(media::CreateLpcmMediaType(
+    fuchsia::media::MediumSpecificStreamType medium_specific_stream_type;
+    medium_specific_stream_type.set_audio(media::CreateAudioStreamType(
         sample_format_, channel_count_, frames_per_second_));
+
+    fuchsia::media::StreamType stream_type;
+    stream_type.medium_specific = std::move(medium_specific_stream_type);
+    stream_type.encoding = fuchsia::media::AUDIO_ENCODING_LPCM;
+    capturer_->SetStreamType(std::move(stream_type));
   }
 
   // Create our shared payload buffer, map it into place, then dup the handle

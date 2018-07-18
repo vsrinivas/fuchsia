@@ -71,7 +71,7 @@ class AudioDriver {
   zx_status_t Init(zx::channel stream_channel);
   void Cleanup();
   void SnapshotRingBuffer(RingBufferSnapshot* snapshot) const;
-  fuchsia::media::AudioMediaTypeDetailsPtr GetSourceFormat() const;
+  fuchsia::media::AudioStreamTypePtr GetSourceFormat() const;
 
   bool plugged() const {
     fbl::AutoLock lock(&plugged_lock_);
@@ -264,7 +264,7 @@ class AudioDriver {
   // destintions (either outputs or capturers) when determining what mixer to
   // use.
   mutable std::mutex configured_format_lock_;
-  fuchsia::media::AudioMediaTypeDetailsPtr configured_format_
+  fuchsia::media::AudioStreamTypePtr configured_format_
       FXL_GUARDED_BY(configured_format_lock_);
 
   // Ring buffer state.  Note, the details of the ring buffer state are

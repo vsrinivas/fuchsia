@@ -27,7 +27,8 @@ void FakeAudioRenderer::Bind(
   binding_.Bind(std::move(renderer));
 }
 
-void FakeAudioRenderer::SetPcmFormat(fuchsia::media::AudioPcmFormat format) {
+void FakeAudioRenderer::SetPcmStreamType(
+    fuchsia::media::AudioStreamType format) {
   format_ = format;
 }
 

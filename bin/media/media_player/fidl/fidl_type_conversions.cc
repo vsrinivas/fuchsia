@@ -15,41 +15,41 @@ namespace {
 
 bool KnownEncodingsMatch() {
   return !strcmp(media_player::StreamType::kAudioEncodingAac,
-                 fuchsia::media::kAudioEncodingAac) &&
+                 fuchsia::media::AUDIO_ENCODING_AAC) &&
          !strcmp(media_player::StreamType::kAudioEncodingAmrNb,
-                 fuchsia::media::kAudioEncodingAmrNb) &&
+                 fuchsia::media::AUDIO_ENCODING_AMRNB) &&
          !strcmp(media_player::StreamType::kAudioEncodingAmrWb,
-                 fuchsia::media::kAudioEncodingAmrWb) &&
+                 fuchsia::media::AUDIO_ENCODING_AMRWB) &&
          !strcmp(media_player::StreamType::kAudioEncodingFlac,
-                 fuchsia::media::kAudioEncodingFlac) &&
+                 fuchsia::media::AUDIO_ENCODING_FLAC) &&
          !strcmp(media_player::StreamType::kAudioEncodingGsmMs,
-                 fuchsia::media::kAudioEncodingGsmMs) &&
+                 fuchsia::media::AUDIO_ENCODING_GSMMS) &&
          !strcmp(media_player::StreamType::kAudioEncodingLpcm,
-                 fuchsia::media::kAudioEncodingLpcm) &&
+                 fuchsia::media::AUDIO_ENCODING_LPCM) &&
          !strcmp(media_player::StreamType::kAudioEncodingMp3,
-                 fuchsia::media::kAudioEncodingMp3) &&
+                 fuchsia::media::AUDIO_ENCODING_MP3) &&
          !strcmp(media_player::StreamType::kAudioEncodingPcmALaw,
-                 fuchsia::media::kAudioEncodingPcmALaw) &&
+                 fuchsia::media::AUDIO_ENCODING_PCMALAW) &&
          !strcmp(media_player::StreamType::kAudioEncodingPcmMuLaw,
-                 fuchsia::media::kAudioEncodingPcmMuLaw) &&
+                 fuchsia::media::AUDIO_ENCODING_PCMMULAW) &&
          !strcmp(media_player::StreamType::kAudioEncodingVorbis,
-                 fuchsia::media::kAudioEncodingVorbis) &&
+                 fuchsia::media::AUDIO_ENCODING_VORBIS) &&
          !strcmp(media_player::StreamType::kVideoEncodingH263,
-                 fuchsia::media::kVideoEncodingH263) &&
+                 fuchsia::media::VIDEO_ENCODING_H263) &&
          !strcmp(media_player::StreamType::kVideoEncodingH264,
-                 fuchsia::media::kVideoEncodingH264) &&
+                 fuchsia::media::VIDEO_ENCODING_H264) &&
          !strcmp(media_player::StreamType::kVideoEncodingMpeg4,
-                 fuchsia::media::kVideoEncodingMpeg4) &&
+                 fuchsia::media::VIDEO_ENCODING_MPEG4) &&
          !strcmp(media_player::StreamType::kVideoEncodingTheora,
-                 fuchsia::media::kVideoEncodingTheora) &&
+                 fuchsia::media::VIDEO_ENCODING_THEORA) &&
          !strcmp(media_player::StreamType::kVideoEncodingUncompressed,
-                 fuchsia::media::kVideoEncodingUncompressed) &&
+                 fuchsia::media::VIDEO_ENCODING_UNCOMPRESSED) &&
          !strcmp(media_player::StreamType::kVideoEncodingVp3,
-                 fuchsia::media::kVideoEncodingVp3) &&
+                 fuchsia::media::VIDEO_ENCODING_VP3) &&
          !strcmp(media_player::StreamType::kVideoEncodingVp8,
-                 fuchsia::media::kVideoEncodingVp8) &&
+                 fuchsia::media::VIDEO_ENCODING_VP8) &&
          !strcmp(media_player::StreamType::kVideoEncodingVp9,
-                 fuchsia::media::kVideoEncodingVp9);
+                 fuchsia::media::VIDEO_ENCODING_VP9);
 }
 
 }  // namespace
@@ -86,34 +86,11 @@ TypeConverter<media_player::Result, fuchsia::mediaplayer::MediaResult>::Convert(
   return media_player::Result::kUnknownError;
 }
 
-media_player::StreamType::Medium TypeConverter<
-    media_player::StreamType::Medium,
-    fuchsia::media::MediaTypeMedium>::Convert(fuchsia::media::MediaTypeMedium
-                                                  media_type_medium) {
-  switch (media_type_medium) {
-    case fuchsia::media::MediaTypeMedium::AUDIO:
-      return media_player::StreamType::Medium::kAudio;
-    case fuchsia::media::MediaTypeMedium::VIDEO:
-      return media_player::StreamType::Medium::kVideo;
-    case fuchsia::media::MediaTypeMedium::TEXT:
-      return media_player::StreamType::Medium::kText;
-    case fuchsia::media::MediaTypeMedium::SUBPICTURE:
-      return media_player::StreamType::Medium::kSubpicture;
-  }
-
-  FXL_LOG(ERROR) << "unrecognized medium";
-  abort();
-}
-
 media_player::AudioStreamType::SampleFormat
 TypeConverter<media_player::AudioStreamType::SampleFormat,
               fuchsia::media::AudioSampleFormat>::
     Convert(fuchsia::media::AudioSampleFormat audio_sample_format) {
   switch (audio_sample_format) {
-    case fuchsia::media::AudioSampleFormat::NONE:
-      return media_player::AudioStreamType::SampleFormat::kNone;
-    case fuchsia::media::AudioSampleFormat::ANY:
-      return media_player::AudioStreamType::SampleFormat::kAny;
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
       return media_player::AudioStreamType::SampleFormat::kUnsigned8;
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
@@ -228,34 +205,11 @@ TypeConverter<media_player::VideoStreamType::ColorSpace,
   return media_player::VideoStreamType::ColorSpace::kUnknown;
 }
 
-fuchsia::media::MediaTypeMedium TypeConverter<
-    fuchsia::media::MediaTypeMedium,
-    media_player::StreamType::Medium>::Convert(media_player::StreamType::Medium
-                                                   medium) {
-  switch (medium) {
-    case media_player::StreamType::Medium::kAudio:
-      return fuchsia::media::MediaTypeMedium::AUDIO;
-    case media_player::StreamType::Medium::kVideo:
-      return fuchsia::media::MediaTypeMedium::VIDEO;
-    case media_player::StreamType::Medium::kText:
-      return fuchsia::media::MediaTypeMedium::TEXT;
-    case media_player::StreamType::Medium::kSubpicture:
-      return fuchsia::media::MediaTypeMedium::SUBPICTURE;
-  }
-
-  FXL_LOG(ERROR) << "unrecognized medium";
-  abort();
-}
-
 fuchsia::media::AudioSampleFormat
 TypeConverter<fuchsia::media::AudioSampleFormat,
               media_player::AudioStreamType::SampleFormat>::
     Convert(media_player::AudioStreamType::SampleFormat sample_format) {
   switch (sample_format) {
-    case media_player::AudioStreamType::SampleFormat::kNone:
-      return fuchsia::media::AudioSampleFormat::NONE;
-    case media_player::AudioStreamType::SampleFormat::kAny:
-      return fuchsia::media::AudioSampleFormat::ANY;
     case media_player::AudioStreamType::SampleFormat::kUnsigned8:
       return fuchsia::media::AudioSampleFormat::UNSIGNED_8;
     case media_player::AudioStreamType::SampleFormat::kSigned16:
@@ -264,6 +218,8 @@ TypeConverter<fuchsia::media::AudioSampleFormat,
       return fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
     case media_player::AudioStreamType::SampleFormat::kFloat:
       return fuchsia::media::AudioSampleFormat::FLOAT;
+    default:
+      break;
   }
 
   FXL_LOG(ERROR) << "unrecognized sample format";
@@ -368,79 +324,76 @@ fuchsia::media::ColorSpace TypeConverter<
   abort();
 }
 
-fuchsia::media::MediaType
-TypeConverter<fuchsia::media::MediaType, media_player::StreamType>::Convert(
+fuchsia::media::StreamType
+TypeConverter<fuchsia::media::StreamType, media_player::StreamType>::Convert(
     const media_player::StreamType& input) {
   FXL_DCHECK(KnownEncodingsMatch());
 
   switch (input.medium()) {
     case media_player::StreamType::Medium::kAudio: {
-      fuchsia::media::AudioMediaTypeDetails audio_details;
-      audio_details.sample_format =
+      fuchsia::media::AudioStreamType audio_stream_type;
+      audio_stream_type.sample_format =
           To<fuchsia::media::AudioSampleFormat>(input.audio()->sample_format());
-      audio_details.channels = input.audio()->channels();
-      audio_details.frames_per_second = input.audio()->frames_per_second();
-      fuchsia::media::MediaTypeDetails details;
-      details.set_audio(std::move(audio_details));
-      fuchsia::media::MediaType media_type;
-      media_type.medium = fuchsia::media::MediaTypeMedium::AUDIO;
-      media_type.details = std::move(details);
-      media_type.encoding = input.encoding();
-      media_type.encoding_parameters =
+      audio_stream_type.channels = input.audio()->channels();
+      audio_stream_type.frames_per_second = input.audio()->frames_per_second();
+      fuchsia::media::MediumSpecificStreamType medium_specific_stream_type;
+      medium_specific_stream_type.set_audio(std::move(audio_stream_type));
+      fuchsia::media::StreamType stream_type;
+      stream_type.medium_specific = std::move(medium_specific_stream_type);
+      stream_type.encoding = input.encoding();
+      stream_type.encoding_parameters =
           To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters());
-      return media_type;
+      return stream_type;
     }
     case media_player::StreamType::Medium::kVideo: {
-      fuchsia::media::VideoMediaTypeDetails video_details;
-      video_details.profile =
+      fuchsia::media::VideoStreamType video_stream_type;
+      video_stream_type.profile =
           To<fuchsia::media::VideoProfile>(input.video()->profile());
-      video_details.pixel_format =
+      video_stream_type.pixel_format =
           To<fuchsia::media::PixelFormat>(input.video()->pixel_format());
-      video_details.color_space =
+      video_stream_type.color_space =
           To<fuchsia::media::ColorSpace>(input.video()->color_space());
-      video_details.width = input.video()->width();
-      video_details.height = input.video()->height();
-      video_details.coded_width = input.video()->coded_width();
-      video_details.coded_height = input.video()->coded_height();
-      video_details.pixel_aspect_ratio_width =
+      video_stream_type.width = input.video()->width();
+      video_stream_type.height = input.video()->height();
+      video_stream_type.coded_width = input.video()->coded_width();
+      video_stream_type.coded_height = input.video()->coded_height();
+      video_stream_type.pixel_aspect_ratio_width =
           input.video()->pixel_aspect_ratio_width();
-      video_details.pixel_aspect_ratio_height =
+      video_stream_type.pixel_aspect_ratio_height =
           input.video()->pixel_aspect_ratio_height();
-      video_details.line_stride =
+      video_stream_type.line_stride =
           To<fidl::VectorPtr<uint32_t>>(input.video()->line_stride());
-      video_details.plane_offset =
+      video_stream_type.plane_offset =
           To<fidl::VectorPtr<uint32_t>>(input.video()->plane_offset());
-      fuchsia::media::MediaTypeDetails details;
-      details.set_video(std::move(video_details));
-      fuchsia::media::MediaType media_type;
-      media_type.medium = fuchsia::media::MediaTypeMedium::VIDEO;
-      media_type.details = std::move(details);
-      media_type.encoding = input.encoding();
-      media_type.encoding_parameters =
+      fuchsia::media::MediumSpecificStreamType medium_specific_stream_type;
+      medium_specific_stream_type.set_video(std::move(video_stream_type));
+      fuchsia::media::StreamType stream_type;
+      stream_type.medium_specific = std::move(medium_specific_stream_type);
+      stream_type.encoding = input.encoding();
+      stream_type.encoding_parameters =
           To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters());
-      return media_type;
+      return stream_type;
     }
     case media_player::StreamType::Medium::kText: {
-      fuchsia::media::MediaTypeDetails details;
-      details.set_text(fuchsia::media::TextMediaTypeDetails());
-      fuchsia::media::MediaType media_type;
-      media_type.medium = fuchsia::media::MediaTypeMedium::TEXT;
-      media_type.details = std::move(details);
-      media_type.encoding = input.encoding();
-      media_type.encoding_parameters =
+      fuchsia::media::MediumSpecificStreamType medium_specific_stream_type;
+      medium_specific_stream_type.set_text(fuchsia::media::TextStreamType());
+      fuchsia::media::StreamType stream_type;
+      stream_type.medium_specific = std::move(medium_specific_stream_type);
+      stream_type.encoding = input.encoding();
+      stream_type.encoding_parameters =
           To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters());
-      return media_type;
+      return stream_type;
     }
     case media_player::StreamType::Medium::kSubpicture: {
-      fuchsia::media::MediaTypeDetails details;
-      details.set_subpicture(fuchsia::media::SubpictureMediaTypeDetails());
-      fuchsia::media::MediaType media_type;
-      media_type.medium = fuchsia::media::MediaTypeMedium::SUBPICTURE;
-      media_type.details = std::move(details);
-      media_type.encoding = input.encoding();
-      media_type.encoding_parameters =
+      fuchsia::media::MediumSpecificStreamType medium_specific_stream_type;
+      medium_specific_stream_type.set_subpicture(
+          fuchsia::media::SubpictureStreamType());
+      fuchsia::media::StreamType stream_type;
+      stream_type.medium_specific = std::move(medium_specific_stream_type);
+      stream_type.encoding = input.encoding();
+      stream_type.encoding_parameters =
           To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters());
-      return media_type;
+      return stream_type;
     }
   }
 
@@ -450,43 +403,47 @@ TypeConverter<fuchsia::media::MediaType, media_player::StreamType>::Convert(
 
 std::unique_ptr<media_player::StreamType> TypeConverter<
     std::unique_ptr<media_player::StreamType>,
-    fuchsia::media::MediaType>::Convert(const fuchsia::media::MediaType&
-                                            input) {
+    fuchsia::media::StreamType>::Convert(const fuchsia::media::StreamType&
+                                             input) {
   FXL_DCHECK(KnownEncodingsMatch());
 
-  switch (input.medium) {
-    case fuchsia::media::MediaTypeMedium::AUDIO:
+  switch (input.medium_specific.Which()) {
+    case fuchsia::media::MediumSpecificStreamType::Tag::kAudio:
       return media_player::AudioStreamType::Create(
           input.encoding,
           To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters),
           To<media_player::AudioStreamType::SampleFormat>(
-              input.details.audio().sample_format),
-          input.details.audio().channels,
-          input.details.audio().frames_per_second);
-    case fuchsia::media::MediaTypeMedium::VIDEO:
+              input.medium_specific.audio().sample_format),
+          input.medium_specific.audio().channels,
+          input.medium_specific.audio().frames_per_second);
+    case fuchsia::media::MediumSpecificStreamType::Tag::kVideo:
       return media_player::VideoStreamType::Create(
           input.encoding,
           To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters),
           To<media_player::VideoStreamType::VideoProfile>(
-              input.details.video().profile),
+              input.medium_specific.video().profile),
           To<media_player::VideoStreamType::PixelFormat>(
-              input.details.video().pixel_format),
+              input.medium_specific.video().pixel_format),
           To<media_player::VideoStreamType::ColorSpace>(
-              input.details.video().color_space),
-          input.details.video().width, input.details.video().height,
-          input.details.video().coded_width, input.details.video().coded_height,
-          input.details.video().pixel_aspect_ratio_width,
-          input.details.video().pixel_aspect_ratio_height,
-          input.details.video().line_stride,
-          input.details.video().plane_offset);
-    case fuchsia::media::MediaTypeMedium::TEXT:
+              input.medium_specific.video().color_space),
+          input.medium_specific.video().width,
+          input.medium_specific.video().height,
+          input.medium_specific.video().coded_width,
+          input.medium_specific.video().coded_height,
+          input.medium_specific.video().pixel_aspect_ratio_width,
+          input.medium_specific.video().pixel_aspect_ratio_height,
+          input.medium_specific.video().line_stride,
+          input.medium_specific.video().plane_offset);
+    case fuchsia::media::MediumSpecificStreamType::Tag::kText:
       return media_player::TextStreamType::Create(
           input.encoding,
           To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters));
-    case fuchsia::media::MediaTypeMedium::SUBPICTURE:
+    case fuchsia::media::MediumSpecificStreamType::Tag::kSubpicture:
       return media_player::SubpictureStreamType::Create(
           input.encoding,
           To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters));
+    default:
+      break;
   }
 
   return nullptr;

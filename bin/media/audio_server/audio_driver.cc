@@ -125,13 +125,13 @@ void AudioDriver::SnapshotRingBuffer(RingBufferSnapshot* snapshot) const {
   snapshot->gen_id = ring_buffer_state_gen_.get();
 }
 
-fuchsia::media::AudioMediaTypeDetailsPtr AudioDriver::GetSourceFormat() const {
+fuchsia::media::AudioStreamTypePtr AudioDriver::GetSourceFormat() const {
   std::lock_guard<std::mutex> lock(configured_format_lock_);
 
   if (!configured_format_)
     return nullptr;
 
-  fuchsia::media::AudioMediaTypeDetailsPtr result;
+  fuchsia::media::AudioStreamTypePtr result;
   fidl::Clone(configured_format_, &result);
   return result;
 }
@@ -299,7 +299,7 @@ zx_status_t AudioDriver::Configure(uint32_t frames_per_second,
 
   {
     std::lock_guard<std::mutex> lock(configured_format_lock_);
-    configured_format_ = fuchsia::media::AudioMediaTypeDetails::New();
+    configured_format_ = fuchsia::media::AudioStreamType::New();
     configured_format_->sample_format = fmt;
     configured_format_->channels = channels;
     configured_format_->frames_per_second = frames_per_second;

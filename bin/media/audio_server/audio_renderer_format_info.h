@@ -19,11 +19,9 @@ class AudioRendererFormatInfo
     : public fbl::RefCounted<AudioRendererFormatInfo> {
  public:
   static fbl::RefPtr<AudioRendererFormatInfo> Create(
-      fuchsia::media::AudioMediaTypeDetails format);
+      fuchsia::media::AudioStreamType format);
 
-  const fuchsia::media::AudioMediaTypeDetails& format() const {
-    return format_;
-  }
+  const fuchsia::media::AudioStreamType& format() const { return format_; }
   const TimelineRate& frames_per_ns() const { return frames_per_ns_; }
   const TimelineRate& frame_to_media_ratio() const {
     return frame_to_media_ratio_;
@@ -33,9 +31,9 @@ class AudioRendererFormatInfo
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(AudioRendererFormatInfo);
 
-  AudioRendererFormatInfo(fuchsia::media::AudioMediaTypeDetails format);
+  AudioRendererFormatInfo(fuchsia::media::AudioStreamType format);
 
-  fuchsia::media::AudioMediaTypeDetails format_;
+  fuchsia::media::AudioStreamType format_;
   TimelineRate frames_per_ns_;
   TimelineRate frame_to_media_ratio_;
   uint32_t bytes_per_frame_;

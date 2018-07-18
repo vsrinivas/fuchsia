@@ -97,8 +97,7 @@ class SilenceMaker<
 template <typename DType>
 class OutputFormatterImpl : public OutputFormatter {
  public:
-  explicit OutputFormatterImpl(
-      const fuchsia::media::AudioMediaTypeDetailsPtr& format)
+  explicit OutputFormatterImpl(const fuchsia::media::AudioStreamTypePtr& format)
       : OutputFormatter(format, sizeof(DType)) {}
 
   void ProduceOutput(const float* source, void* dest_void,
@@ -120,8 +119,7 @@ class OutputFormatterImpl : public OutputFormatter {
 
 // Constructor/destructor for the common OutputFormatter base class.
 OutputFormatter::OutputFormatter(
-    const fuchsia::media::AudioMediaTypeDetailsPtr& format,
-    uint32_t bytes_per_sample)
+    const fuchsia::media::AudioStreamTypePtr& format, uint32_t bytes_per_sample)
     : channels_(format->channels),
       bytes_per_sample_(bytes_per_sample),
       bytes_per_frame_(bytes_per_sample * format->channels) {
@@ -131,11 +129,8 @@ OutputFormatter::OutputFormatter(
 // Selection routine which will instantiate a particular templatized version of
 // the output formatter.
 OutputFormatterPtr OutputFormatter::Select(
-    const fuchsia::media::AudioMediaTypeDetailsPtr& format) {
+    const fuchsia::media::AudioStreamTypePtr& format) {
   FXL_DCHECK(format);
-  FXL_DCHECK(format->sample_format != fuchsia::media::AudioSampleFormat::ANY);
-  FXL_DCHECK(format->sample_format != fuchsia::media::AudioSampleFormat::NONE);
-  // MTWN-93: Consider eliminating these enums if we don't foresee using them.
 
   switch (format->sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:

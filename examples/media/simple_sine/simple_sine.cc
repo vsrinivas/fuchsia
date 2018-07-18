@@ -10,7 +10,7 @@
 namespace {
 // This example feeds the system 1 second of audio, in 10-millisecond payloads.
 constexpr size_t kNumPayloads = 100;
-// Set the renderer format to: 48 kHz, mono, 32-bit float.
+// Set the renderer stream type to: 48 kHz, mono, 32-bit float.
 constexpr float kRendererFrameRate = 48000.0f;
 constexpr size_t kFramesPerPayload = kRendererFrameRate / kNumPayloads;
 
@@ -29,7 +29,7 @@ MediaApp::MediaApp(fit::closure quit_callback)
 // Prepare for playback, submit initial data and start the presentation timeline
 void MediaApp::Run(component::StartupContext* app_context) {
   AcquireRenderer(app_context);
-  SetMediaType();
+  SetStreamType();
 
   if (CreateMemoryMapping() != ZX_OK) {
     Shutdown();
@@ -60,17 +60,17 @@ void MediaApp::AcquireRenderer(component::StartupContext* app_context) {
   });
 }
 
-// Set the renderer's audio format: mono 48kHz 32-bit float.
-void MediaApp::SetMediaType() {
+// Set the renderer's audio stream_type: mono 48kHz 32-bit float.
+void MediaApp::SetStreamType() {
   FXL_DCHECK(audio_renderer_);
 
-  fuchsia::media::AudioPcmFormat format;
+  fuchsia::media::AudioStreamType stream_type;
 
-  format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
-  format.channels = 1;
-  format.frames_per_second = kRendererFrameRate;
+  stream_type.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
+  stream_type.channels = 1;
+  stream_type.frames_per_second = kRendererFrameRate;
 
-  audio_renderer_->SetPcmFormat(std::move(format));
+  audio_renderer_->SetPcmStreamType(std::move(stream_type));
 }
 
 // Create a Virtual Memory Object, and map enough memory for audio buffers.
@@ -146,8 +146,9 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
-  examples::MediaApp media_app(
-      [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });
+  examples::MediaApp media_app([&loop]() {
+    async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
+  });
 
   media_app.Run(startup_context.get());
 

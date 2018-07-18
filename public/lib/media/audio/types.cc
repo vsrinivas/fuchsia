@@ -4,13 +4,12 @@
 
 #include "lib/media/audio/types.h"
 
+#include "lib/fxl/logging.h"
+
 namespace media {
 
 uint32_t BytesPerSample(fuchsia::media::AudioSampleFormat sample_format) {
   switch (sample_format) {
-    case fuchsia::media::AudioSampleFormat::NONE:
-    case fuchsia::media::AudioSampleFormat::ANY:
-      return 0;
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
       return sizeof(uint8_t);
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
@@ -22,23 +21,17 @@ uint32_t BytesPerSample(fuchsia::media::AudioSampleFormat sample_format) {
   }
 }
 
-fuchsia::media::MediaType CreateLpcmMediaType(
+fuchsia::media::AudioStreamType CreateAudioStreamType(
     fuchsia::media::AudioSampleFormat sample_format, uint32_t channel_count,
     uint32_t frames_per_second) {
-  fuchsia::media::AudioMediaTypeDetails audio_details;
-  audio_details.sample_format = sample_format;
-  audio_details.channels = channel_count;
-  audio_details.frames_per_second = frames_per_second;
+  FXL_DCHECK(channel_count != 0);
 
-  fuchsia::media::MediaTypeDetails media_details;
-  media_details.set_audio(std::move(audio_details));
+  fuchsia::media::AudioStreamType audio_stream_type;
+  audio_stream_type.sample_format = sample_format;
+  audio_stream_type.channels = channel_count;
+  audio_stream_type.frames_per_second = frames_per_second;
 
-  fuchsia::media::MediaType media_type;
-  media_type.medium = fuchsia::media::MediaTypeMedium::AUDIO;
-  media_type.details = std::move(media_details);
-  media_type.encoding = fuchsia::media::kAudioEncodingLpcm;
-
-  return media_type;
+  return audio_stream_type;
 }
 
 }  // namespace media

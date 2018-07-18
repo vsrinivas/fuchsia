@@ -70,12 +70,12 @@ zx_status_t TtsSpeaker::Init(
 
   audio->CreateRendererV2(audio_renderer_.NewRequest());
 
-  fuchsia::media::AudioPcmFormat format;
+  fuchsia::media::AudioStreamType format;
   format.sample_format = kFliteSampleFormat;
   format.channels = kFliteChannelCount;
   format.frames_per_second = kFliteFrameRate;
 
-  audio_renderer_->SetPcmFormat(std::move(format));
+  audio_renderer_->SetPcmStreamType(std::move(format));
   audio_renderer_->SetPayloadBuffer(std::move(shared_vmo));
 
   return ZX_OK;

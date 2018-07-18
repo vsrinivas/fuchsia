@@ -54,10 +54,9 @@ class Mixer {
   // For optimum system performance across changing conditions, callers should
   // take care when directly specifying a resampler type, if they do so at all.
   // The default should be allowed whenever possible.
-  static MixerPtr Select(
-      const fuchsia::media::AudioMediaTypeDetails& src_format,
-      const fuchsia::media::AudioMediaTypeDetails& dst_format,
-      Resampler resampler_type = Resampler::Default);
+  static MixerPtr Select(const fuchsia::media::AudioStreamType& src_format,
+                         const fuchsia::media::AudioStreamType& dst_format,
+                         Resampler resampler_type = Resampler::Default);
 
   //
   // Mix

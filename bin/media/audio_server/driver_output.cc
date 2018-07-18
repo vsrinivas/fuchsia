@@ -337,8 +337,8 @@ void DriverOutput::OnDriverInfoFetched() {
       static_cast<uint32_t>(retention_frames));
 
   // Select our output formatter
-  fuchsia::media::AudioMediaTypeDetailsPtr config(
-      fuchsia::media::AudioMediaTypeDetails::New());
+  fuchsia::media::AudioStreamTypePtr config(
+      fuchsia::media::AudioStreamType::New());
   config->frames_per_second = pref_fps;
   config->channels = pref_chan;
   config->sample_format = pref_fmt;

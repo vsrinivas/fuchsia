@@ -64,7 +64,7 @@ class MediaApp {
  private:
   bool SetupPayloadCoefficients();
   void AcquireRenderer(component::StartupContext* app_context);
-  void SetMediaType();
+  void SetStreamType();
 
   zx_status_t CreateMemoryMapping();
 

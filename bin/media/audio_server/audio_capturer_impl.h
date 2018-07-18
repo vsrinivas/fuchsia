@@ -39,7 +39,7 @@ class AudioCapturerImpl
       AudioServerImpl* owner, bool loopback);
 
   bool loopback() const { return loopback_; }
-  void SetInitialFormat(fuchsia::media::AudioMediaTypeDetails format)
+  void SetInitialFormat(fuchsia::media::AudioStreamType format)
       FXL_LOCKS_EXCLUDED(mix_domain_->token());
   void Shutdown() FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
@@ -154,8 +154,8 @@ class AudioCapturerImpl
                     AudioServerImpl* owner, bool loopback);
 
   // AudioCapturer FIDL implementation
-  void GetMediaType(GetMediaTypeCallback cbk) final;
-  void SetMediaType(fuchsia::media::MediaType media_type) final;
+  void GetStreamType(GetStreamTypeCallback cbk) final;
+  void SetStreamType(fuchsia::media::StreamType media_type) final;
   void SetGain(float gain) final;
   void SetPayloadBuffer(zx::vmo payload_buf_vmo) final;
   void CaptureAt(uint32_t offset_frames, uint32_t num_frames,
@@ -206,7 +206,7 @@ class AudioCapturerImpl
   const bool loopback_;
 
   // Capture format and gain state.
-  fuchsia::media::AudioMediaTypeDetailsPtr format_;
+  fuchsia::media::AudioStreamTypePtr format_;
   uint32_t bytes_per_frame_;
   TimelineRate frames_to_clock_mono_rate_;
   uint32_t max_frames_per_capture_;

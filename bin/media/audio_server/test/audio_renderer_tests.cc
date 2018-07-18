@@ -44,13 +44,13 @@ class AudioRendererTest : public gtest::RealLoopFixture {
   bool error_occurred_ = false;
 };
 
-// Basic validation of SetPcmFormat() for the asynchronous AudioRenderer.
-TEST_F(AudioRendererTest, SetPcmFormat) {
-  fuchsia::media::AudioPcmFormat format;
+// Basic validation of SetPcmStreamType() for the asynchronous AudioRenderer.
+TEST_F(AudioRendererTest, SetPcmStreamType) {
+  fuchsia::media::AudioStreamType format;
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 2;
   format.frames_per_second = 48000;
-  audio_renderer_->SetPcmFormat(std::move(format));
+  audio_renderer_->SetPcmStreamType(std::move(format));
 
   int64_t lead_time = -1;
   audio_renderer_->GetMinLeadTime([this, &lead_time](int64_t min_lead_time) {
@@ -62,19 +62,20 @@ TEST_F(AudioRendererTest, SetPcmFormat) {
   EXPECT_GE(lead_time, 0);
 }
 
-// If renderer is not in operational mode, a second SetPcmFormat should succeed.
+// If renderer is not in operational mode, a second SetPcmStreamType should
+// succeed.
 TEST_F(AudioRendererTest, SetPcmFormat_Double) {
-  fuchsia::media::AudioPcmFormat format;
+  fuchsia::media::AudioStreamType format;
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 2;
   format.frames_per_second = 48000;
-  audio_renderer_->SetPcmFormat(std::move(format));
+  audio_renderer_->SetPcmStreamType(std::move(format));
 
-  fuchsia::media::AudioPcmFormat format2;
+  fuchsia::media::AudioStreamType format2;
   format2.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format2.channels = 2;
   format2.frames_per_second = 44100;
-  audio_renderer_->SetPcmFormat(std::move(format2));
+  audio_renderer_->SetPcmStreamType(std::move(format2));
 
   int64_t lead_time = -1;
   audio_renderer_->GetMinLeadTime([this, &lead_time](int64_t min_lead_time) {
@@ -107,32 +108,33 @@ class AudioRendererSyncTest : public gtest::RealLoopFixture {
   fuchsia::media::AudioRenderer2SyncPtr audio_renderer_;
 };
 
-// Basic validation of SetPcmFormat() for the synchronous AudioRenderer.
-TEST_F(AudioRendererSyncTest, SetPcmFormat) {
-  fuchsia::media::AudioPcmFormat format;
+// Basic validation of SetPcmStreamType() for the synchronous AudioRenderer.
+TEST_F(AudioRendererSyncTest, SetPcmStreamType) {
+  fuchsia::media::AudioStreamType format;
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 2;
   format.frames_per_second = 48000;
-  EXPECT_EQ(ZX_OK, audio_renderer_->SetPcmFormat(std::move(format)));
+  EXPECT_EQ(ZX_OK, audio_renderer_->SetPcmStreamType(std::move(format)));
 
   int64_t min_lead_time = -1;
   ASSERT_EQ(ZX_OK, audio_renderer_->GetMinLeadTime(&min_lead_time));
   EXPECT_GE(min_lead_time, 0);
 }
 
-// If renderer is not in operational mode, a second SetPcmFormat should succeed.
+// If renderer is not in operational mode, a second SetPcmStreamType should
+// succeed.
 TEST_F(AudioRendererSyncTest, SetPcmFormat_Double) {
-  fuchsia::media::AudioPcmFormat format;
+  fuchsia::media::AudioStreamType format;
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 2;
   format.frames_per_second = 48000;
-  EXPECT_EQ(ZX_OK, audio_renderer_->SetPcmFormat(std::move(format)));
+  EXPECT_EQ(ZX_OK, audio_renderer_->SetPcmStreamType(std::move(format)));
 
-  fuchsia::media::AudioPcmFormat format2;
+  fuchsia::media::AudioStreamType format2;
   format2.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   format2.channels = 1;
   format2.frames_per_second = 44100;
-  EXPECT_EQ(ZX_OK, audio_renderer_->SetPcmFormat(std::move(format2)));
+  EXPECT_EQ(ZX_OK, audio_renderer_->SetPcmStreamType(std::move(format2)));
 
   int64_t min_lead_time = -1;
   EXPECT_EQ(ZX_OK, audio_renderer_->GetMinLeadTime(&min_lead_time));

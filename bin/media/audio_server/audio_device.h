@@ -72,7 +72,7 @@ class AudioDevice : public AudioObject,
   // TODO(johngro) : Remove this once device driver format selection is under
   // control of the policy manager layer instead of here.
   virtual void NotifyDestFormatPreference(
-      const fuchsia::media::AudioMediaTypeDetailsPtr& fmt)
+      const fuchsia::media::AudioStreamTypePtr& fmt)
       FXL_LOCKS_EXCLUDED(mix_domain_->token()) {}
 
   // GetSourceFormatPreference
@@ -85,7 +85,7 @@ class AudioDevice : public AudioObject,
   // what formats they support, and to influence what their capturers can be
   // bound to or not.  "Preference" of an audio device is not a concept which
   // belongs in the mixer.
-  virtual fuchsia::media::AudioMediaTypeDetailsPtr GetSourceFormatPreference() {
+  virtual fuchsia::media::AudioStreamTypePtr GetSourceFormatPreference() {
     return nullptr;
   }
 

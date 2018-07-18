@@ -48,7 +48,7 @@ void MediaApp::Run(component::StartupContext* app_context) {
          duration_secs_, num_payloads_, msecs_per_payload_);
 
   AcquireRenderer(app_context);
-  SetMediaType();
+  SetStreamType();
 
   if (CreateMemoryMapping() != ZX_OK) {
     Shutdown();
@@ -169,10 +169,10 @@ void MediaApp::AcquireRenderer(component::StartupContext* app_context) {
 }
 
 // Set the Mediarenderer's audio format to stereo 48kHz 16-bit (LPCM).
-void MediaApp::SetMediaType() {
+void MediaApp::SetStreamType() {
   FXL_DCHECK(audio_renderer_);
 
-  fuchsia::media::AudioPcmFormat format;
+  fuchsia::media::AudioStreamType format;
 
   format.sample_format =
       (use_int16_ ? fuchsia::media::AudioSampleFormat::SIGNED_16
@@ -180,7 +180,7 @@ void MediaApp::SetMediaType() {
   format.channels = num_channels_;
   format.frames_per_second = frame_rate_;
 
-  audio_renderer_->SetPcmFormat(std::move(format));
+  audio_renderer_->SetPcmStreamType(std::move(format));
 
   // Set renderer gain, and clear the mute status.
   audio_renderer_->SetGainMuteNoReply(

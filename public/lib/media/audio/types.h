@@ -14,9 +14,8 @@ namespace media {
 // Returns the size in bytes of samples of the specified format.
 uint32_t BytesPerSample(fuchsia::media::AudioSampleFormat format);
 
-// Creates a |MediaType| for LPCM audio.
-// TODO(dalesat): Need to add channel configuration.
-fuchsia::media::MediaType CreateLpcmMediaType(
+// Creates an |AudioStreamType| for LPCM audio. |channel_count| may not be zero.
+fuchsia::media::AudioStreamType CreateAudioStreamType(
     fuchsia::media::AudioSampleFormat sample_format, uint32_t channel_count,
     uint32_t frames_per_second);
 

@@ -560,15 +560,15 @@ bool NxNLinearSamplerImpl<SType>::Mix(
 // LinearSampler Mixer configurations.
 template <size_t DChCount, typename SType, size_t SChCount>
 static inline MixerPtr SelectLSM(
-    const fuchsia::media::AudioMediaTypeDetails& src_format,
-    const fuchsia::media::AudioMediaTypeDetails& dst_format) {
+    const fuchsia::media::AudioStreamType& src_format,
+    const fuchsia::media::AudioStreamType& dst_format) {
   return MixerPtr(new LinearSamplerImpl<DChCount, SType, SChCount>());
 }
 
 template <size_t DChCount, typename SType>
 static inline MixerPtr SelectLSM(
-    const fuchsia::media::AudioMediaTypeDetails& src_format,
-    const fuchsia::media::AudioMediaTypeDetails& dst_format) {
+    const fuchsia::media::AudioStreamType& src_format,
+    const fuchsia::media::AudioStreamType& dst_format) {
   switch (src_format.channels) {
     case 1:
       return SelectLSM<DChCount, SType, 1>(src_format, dst_format);
@@ -581,8 +581,8 @@ static inline MixerPtr SelectLSM(
 
 template <size_t DChCount>
 static inline MixerPtr SelectLSM(
-    const fuchsia::media::AudioMediaTypeDetails& src_format,
-    const fuchsia::media::AudioMediaTypeDetails& dst_format) {
+    const fuchsia::media::AudioStreamType& src_format,
+    const fuchsia::media::AudioStreamType& dst_format) {
   switch (src_format.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
       return SelectLSM<DChCount, uint8_t>(src_format, dst_format);
@@ -596,7 +596,7 @@ static inline MixerPtr SelectLSM(
 }
 
 static inline MixerPtr SelectNxNLSM(
-    const fuchsia::media::AudioMediaTypeDetails& src_format) {
+    const fuchsia::media::AudioStreamType& src_format) {
   switch (src_format.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
       return MixerPtr(new NxNLinearSamplerImpl<uint8_t>(src_format.channels));
@@ -610,8 +610,8 @@ static inline MixerPtr SelectNxNLSM(
 }
 
 MixerPtr LinearSampler::Select(
-    const fuchsia::media::AudioMediaTypeDetails& src_format,
-    const fuchsia::media::AudioMediaTypeDetails& dst_format) {
+    const fuchsia::media::AudioStreamType& src_format,
+    const fuchsia::media::AudioStreamType& dst_format) {
   if (src_format.channels == dst_format.channels && src_format.channels > 2) {
     return SelectNxNLSM(src_format);
   }

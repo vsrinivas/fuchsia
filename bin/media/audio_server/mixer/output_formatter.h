@@ -18,7 +18,7 @@ using OutputFormatterPtr = std::unique_ptr<OutputFormatter>;
 class OutputFormatter {
  public:
   static OutputFormatterPtr Select(
-      const fuchsia::media::AudioMediaTypeDetailsPtr& output_format);
+      const fuchsia::media::AudioStreamTypePtr& output_format);
 
   virtual ~OutputFormatter() = default;
 
@@ -51,18 +51,16 @@ class OutputFormatter {
    */
   virtual void FillWithSilence(void* dest, uint32_t frames) const = 0;
 
-  const fuchsia::media::AudioMediaTypeDetailsPtr& format() const {
-    return format_;
-  }
+  const fuchsia::media::AudioStreamTypePtr& format() const { return format_; }
   uint32_t channels() const { return channels_; }
   uint32_t bytes_per_sample() const { return bytes_per_sample_; }
   uint32_t bytes_per_frame() const { return bytes_per_frame_; }
 
  protected:
-  OutputFormatter(const fuchsia::media::AudioMediaTypeDetailsPtr& output_format,
+  OutputFormatter(const fuchsia::media::AudioStreamTypePtr& output_format,
                   uint32_t bytes_per_sample);
 
-  fuchsia::media::AudioMediaTypeDetailsPtr format_;
+  fuchsia::media::AudioStreamTypePtr format_;
   uint32_t channels_ = 0;
   uint32_t bytes_per_sample_ = 0;
   uint32_t bytes_per_frame_ = 0;

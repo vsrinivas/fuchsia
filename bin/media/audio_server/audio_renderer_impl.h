@@ -58,7 +58,7 @@ class AudioRendererImpl
   float db_gain() const { return db_gain_; }
 
   // AudioRenderer Interface
-  void SetPcmFormat(fuchsia::media::AudioPcmFormat format) final;
+  void SetPcmStreamType(fuchsia::media::AudioStreamType format) final;
   void SetPayloadBuffer(zx::vmo payload_buffer) final;
   void SetPtsUnits(uint32_t tick_per_second_numerator,
                    uint32_t tick_per_second_denominator) final;

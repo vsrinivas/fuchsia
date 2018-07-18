@@ -13,7 +13,8 @@
 #include "lib/fxl/logging.h"
 
 namespace {
-// Set the renderer format to: 44.1 kHz, stereo, 16-bit LPCM (signed integer).
+// Set the renderer stream_type to: 44.1 kHz, stereo, 16-bit LPCM (signed
+// integer).
 constexpr float kRendererFrameRate = 44100.0f;
 constexpr size_t kNumChannels = 2;
 
@@ -58,7 +59,7 @@ int MediaApp::Run() {
     return 1;
   }
 
-  SetMediaType();
+  SetStreamType();
 
   if (CreateMemoryMapping() != ZX_OK) {
     return 2;
@@ -135,19 +136,19 @@ bool MediaApp::AcquireRenderer() {
   return audio->CreateRendererV2(audio_renderer_.NewRequest()) == ZX_OK;
 }
 
-// Set the AudioRenderer's audio format to stereo 48kHz.
-void MediaApp::SetMediaType() {
+// Set the AudioRenderer's audio stream_type to stereo 48kHz.
+void MediaApp::SetStreamType() {
   FXL_DCHECK(audio_renderer_);
 
-  fuchsia::media::AudioPcmFormat format;
-  format.sample_format = use_float_
-                             ? fuchsia::media::AudioSampleFormat::FLOAT
-                             : fuchsia::media::AudioSampleFormat::SIGNED_16;
-  format.channels = kNumChannels;
-  format.frames_per_second = kRendererFrameRate;
+  fuchsia::media::AudioStreamType stream_type;
+  stream_type.sample_format =
+      use_float_ ? fuchsia::media::AudioSampleFormat::FLOAT
+                 : fuchsia::media::AudioSampleFormat::SIGNED_16;
+  stream_type.channels = kNumChannels;
+  stream_type.frames_per_second = kRendererFrameRate;
 
-  if (audio_renderer_->SetPcmFormat(std::move(format)) != ZX_OK)
-    FXL_LOG(ERROR) << "Could not set format";
+  if (audio_renderer_->SetPcmStreamType(std::move(stream_type)) != ZX_OK)
+    FXL_LOG(ERROR) << "Could not set stream type";
 }
 
 // Create a single Virtual Memory Object, and map enough memory for our audio

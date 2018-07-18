@@ -44,7 +44,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer2 {
   bool expected() { return expected_; }
 
   // AudioRenderer implementation.
-  void SetPcmFormat(fuchsia::media::AudioPcmFormat format) override;
+  void SetPcmStreamType(fuchsia::media::AudioStreamType format) override;
 
   void SetPayloadBuffer(::zx::vmo payload_buffer) override;
 
@@ -107,7 +107,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer2 {
   async_dispatcher_t* dispatcher_;
   fidl::Binding<fuchsia::media::AudioRenderer2> binding_;
 
-  fuchsia::media::AudioPcmFormat format_;
+  fuchsia::media::AudioStreamType format_;
   media::MappedSharedBuffer mapped_buffer_;
   float threshold_seconds_ = 0.0f;
   float gain_ = 1.0f;

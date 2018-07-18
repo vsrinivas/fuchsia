@@ -1,0 +1,150 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media;
+
+// Describes the type of an elementary stream.
+struct StreamType {
+  // Medium-specific type information.
+  MediumSpecificStreamType medium_specific;
+
+  // Encoding (see constants below).
+  string encoding;
+
+  // Encoding-specific parameters.
+  vector<uint8>? encoding_parameters;
+};
+
+// A union of all medium-specific stream type structs.
+union MediumSpecificStreamType {
+  AudioStreamType audio;
+  VideoStreamType video;
+  TextStreamType text;
+  SubpictureStreamType subpicture;
+};
+
+const string MEDIA_ENCODING_UNSUPPORTED = "fuchsia.media.unsupported";
+
+const string AUDIO_ENCODING_AAC = "fuchsia.media.aac";
+const string AUDIO_ENCODING_AMRNB = "fuchsia.media.amrnb";
+const string AUDIO_ENCODING_AMRWB = "fuchsia.media.amrwb";
+const string AUDIO_ENCODING_FLAC = "fuchsia.media.flac";
+const string AUDIO_ENCODING_GSMMS = "fuchsia.media.gsmms";
+const string AUDIO_ENCODING_LPCM = "fuchsia.media.lpcm";
+const string AUDIO_ENCODING_MP3 = "fuchsia.media.mp3";
+const string AUDIO_ENCODING_PCMALAW = "fuchsia.media.pcmalaw";
+const string AUDIO_ENCODING_PCMMULAW = "fuchsia.media.pcmmulaw";
+const string AUDIO_ENCODING_VORBIS = "fuchsia.media.vorbis";
+
+const string VIDEO_ENCODING_H263 = "fuchsia.media.h263";
+const string VIDEO_ENCODING_H264 = "fuchsia.media.h264";
+const string VIDEO_ENCODING_MPEG4 = "fuchsia.media.mpeg4";
+const string VIDEO_ENCODING_THEORA = "fuchsia.media.theora";
+const string VIDEO_ENCODING_UNCOMPRESSED = "fuchsia.media.uncompressed_video";
+const string VIDEO_ENCODING_VP3 = "fuchsia.media.vp3";
+const string VIDEO_ENCODING_VP8 = "fuchsia.media.vp8";
+const string VIDEO_ENCODING_VP9 = "fuchsia.media.vp9";
+
+///////////////////////////////////////////////////////////////////////////////
+// Audio
+
+struct AudioStreamType {
+  AudioSampleFormat sample_format;
+  uint32 channels;
+  uint32 frames_per_second;
+  // TODO(mpuryear): Add channel config.
+};
+
+enum AudioSampleFormat {
+  // 8-bit unsigned samples, sample size 1 byte.
+  UNSIGNED_8 = 1;
+
+  // 16-bit signed samples, host-endian, sample size 2 bytes.
+  SIGNED_16 = 2;
+
+  // 24-bit signed samples in 32 bits, host-endian, sample size 4 bytes.
+  SIGNED_24_IN_32 = 3;
+
+  // 32-bit floating-point samples, sample size 4 bytes.
+  FLOAT = 4;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Video
+
+struct VideoStreamType {
+  VideoProfile profile; // Needed?
+  PixelFormat pixel_format;
+  ColorSpace color_space; // Needed?
+  uint32 width;
+  uint32 height;
+  uint32 coded_width;
+  uint32 coded_height;
+  uint32 pixel_aspect_ratio_width;
+  uint32 pixel_aspect_ratio_height;
+  vector<uint32> line_stride;
+  vector<uint32> plane_offset;
+};
+
+// TODO(dalesat): Blindly copied from Chromium, revisit.
+enum VideoProfile {
+  UNKNOWN = 0;
+  NOT_APPLICABLE = 1;
+  H264_BASELINE = 2;
+  H264_MAIN = 3;
+  H264_EXTENDED = 4;
+  H264_HIGH = 5;
+  H264_HIGH10 = 6;
+  H264_HIGH422 = 7;
+  H264_HIGH444_PREDICTIVE = 8;
+  H264_SCALABLE_BASELINE = 9;
+  H264_SCALABLE_HIGH = 10;
+  H264_STEREO_HIGH = 11;
+  H264_MULTIVIEW_HIGH = 12;
+};
+
+// TODO(dalesat): Blindly copied from Chromium, revisit.
+enum PixelFormat {
+  UNKNOWN = 0;
+  I420 = 1;  // 12bpp YUV planar 1x1 Y, 2x2 UV samples, a.k.a. YU12.
+  YV12 = 2;  // 12bpp YVU planar 1x1 Y, 2x2 VU samples.
+  YV16 = 3;  // 16bpp YVU planar 1x1 Y, 2x1 VU samples.
+  YV12A = 4;  // 20bpp YUVA planar 1x1 Y, 2x2 VU, 1x1 A samples.
+  YV24 = 5;  // 24bpp YUV planar, no subsampling.
+  NV12 = 6;  // 12bpp with Y plane followed by a 2x2 interleaved UV plane.
+  NV21 = 7;  // 12bpp with Y plane followed by a 2x2 interleaved VU plane.
+  UYVY = 8;  // 16bpp interleaved 2x1 U, 1x1 Y, 2x1 V, 1x1 Y samples.
+  YUY2 = 9;  // 16bpp interleaved 1x1 Y, 2x1 U, 1x1 Y, 2x1 V samples.
+  ARGB = 10;  // 32bpp ARGB, 1 plane.
+  XRGB = 11;  // 24bpp XRGB, 1 plane.
+  RGB24 = 12;  // 24bpp BGR, 1 plane.
+  RGB32 = 13;  // 32bpp BGRA, 1 plane.
+  MJPEG = 14;  // MJPEG compressed.
+  MT21 = 15;
+};
+
+// TODO(dalesat): Blindly copied from Chromium, revisit.
+enum ColorSpace {
+  UNKNOWN = 0;
+  NOT_APPLICABLE = 1;
+  JPEG = 2;
+  HD_REC709 = 3;
+  SD_REC601 = 4;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Text
+
+struct TextStreamType {
+  // TODO(dalesat): Define.
+  uint8 dummy;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Subpicture
+
+struct SubpictureStreamType {
+  // TODO(dalesat): Define.
+  uint8 dummy;
+};

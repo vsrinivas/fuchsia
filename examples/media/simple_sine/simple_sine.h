@@ -21,7 +21,7 @@ class MediaApp {
 
  private:
   void AcquireRenderer(component::StartupContext* app_context);
-  void SetMediaType();
+  void SetStreamType();
 
   zx_status_t CreateMemoryMapping();
   void WriteAudioIntoBuffer();

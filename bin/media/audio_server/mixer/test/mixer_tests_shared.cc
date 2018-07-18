@@ -24,12 +24,12 @@ MixerPtr SelectMixer(fuchsia::media::AudioSampleFormat src_format,
                      uint32_t src_channels, uint32_t src_frame_rate,
                      uint32_t dst_channels, uint32_t dst_frame_rate,
                      Resampler resampler) {
-  fuchsia::media::AudioMediaTypeDetails src_details;
+  fuchsia::media::AudioStreamType src_details;
   src_details.sample_format = src_format;
   src_details.channels = src_channels;
   src_details.frames_per_second = src_frame_rate;
 
-  fuchsia::media::AudioMediaTypeDetails dst_details;
+  fuchsia::media::AudioStreamType dst_details;
   dst_details.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   dst_details.channels = dst_channels;
   dst_details.frames_per_second = dst_frame_rate;
@@ -46,8 +46,8 @@ MixerPtr SelectMixer(fuchsia::media::AudioSampleFormat src_format,
 // can calculate the size of a (multi-channel) audio frame.
 OutputFormatterPtr SelectOutputFormatter(
     fuchsia::media::AudioSampleFormat dst_format, uint32_t num_channels) {
-  fuchsia::media::AudioMediaTypeDetailsPtr dst_details =
-      fuchsia::media::AudioMediaTypeDetails::New();
+  fuchsia::media::AudioStreamTypePtr dst_details =
+      fuchsia::media::AudioStreamType::New();
   dst_details->sample_format = dst_format;
   dst_details->channels = num_channels;
   dst_details->frames_per_second = 48000;

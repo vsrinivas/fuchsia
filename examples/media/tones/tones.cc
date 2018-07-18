@@ -112,12 +112,12 @@ Tones::Tones(bool interactive, fit::closure quit_callback)
     Quit();
   });
 
-  // Configure the format of the renderer.
-  fuchsia::media::AudioPcmFormat format;
-  format.sample_format = kSampleFormat;
-  format.channels = kChannelCount;
-  format.frames_per_second = kFramesPerSecond;
-  audio_renderer_->SetPcmFormat(std::move(format));
+  // Configure the stream_type of the renderer.
+  fuchsia::media::AudioStreamType stream_type;
+  stream_type.sample_format = kSampleFormat;
+  stream_type.channels = kChannelCount;
+  stream_type.frames_per_second = kFramesPerSecond;
+  audio_renderer_->SetPcmStreamType(std::move(stream_type));
 
   // Fetch the minimum lead time.  When we know what this is, we can allocate
   // our payload buffer and start the synthesis loop.

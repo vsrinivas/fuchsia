@@ -26,13 +26,6 @@ struct TypeConverter<media_player::Result, fuchsia::mediaplayer::MediaResult> {
 };
 
 template <>
-struct TypeConverter<media_player::StreamType::Medium,
-                     fuchsia::media::MediaTypeMedium> {
-  static media_player::StreamType::Medium Convert(
-      fuchsia::media::MediaTypeMedium media_type_medium);
-};
-
-template <>
 struct TypeConverter<media_player::AudioStreamType::SampleFormat,
                      fuchsia::media::AudioSampleFormat> {
   static media_player::AudioStreamType::SampleFormat Convert(
@@ -58,13 +51,6 @@ struct TypeConverter<media_player::VideoStreamType::ColorSpace,
                      fuchsia::media::ColorSpace> {
   static media_player::VideoStreamType::ColorSpace Convert(
       fuchsia::media::ColorSpace color_space);
-};
-
-template <>
-struct TypeConverter<fuchsia::media::MediaTypeMedium,
-                     media_player::StreamType::Medium> {
-  static fuchsia::media::MediaTypeMedium Convert(
-      media_player::StreamType::Medium medium);
 };
 
 template <>
@@ -96,44 +82,44 @@ struct TypeConverter<fuchsia::media::ColorSpace,
 };
 
 template <>
-struct TypeConverter<fuchsia::media::MediaType, media_player::StreamType> {
-  static fuchsia::media::MediaType Convert(
+struct TypeConverter<fuchsia::media::StreamType, media_player::StreamType> {
+  static fuchsia::media::StreamType Convert(
       const media_player::StreamType& input);
 };
 
 template <>
-struct TypeConverter<fuchsia::media::MediaType,
+struct TypeConverter<fuchsia::media::StreamType,
                      std::unique_ptr<media_player::StreamType>> {
-  static fuchsia::media::MediaType Convert(
+  static fuchsia::media::StreamType Convert(
       const std::unique_ptr<media_player::StreamType>& input) {
     FXL_DCHECK(input);
-    return fxl::To<fuchsia::media::MediaType>(*input);
+    return fxl::To<fuchsia::media::StreamType>(*input);
   }
 };
 
 template <>
-struct TypeConverter<fuchsia::media::MediaTypePtr,
+struct TypeConverter<fuchsia::media::StreamTypePtr,
                      std::unique_ptr<media_player::StreamType>> {
-  static fuchsia::media::MediaTypePtr Convert(
+  static fuchsia::media::StreamTypePtr Convert(
       const std::unique_ptr<media_player::StreamType>& input) {
     if (!input)
       return nullptr;
-    return fidl::MakeOptional(fxl::To<fuchsia::media::MediaType>(*input));
+    return fidl::MakeOptional(fxl::To<fuchsia::media::StreamType>(*input));
   }
 };
 
 template <>
 struct TypeConverter<std::unique_ptr<media_player::StreamType>,
-                     fuchsia::media::MediaType> {
+                     fuchsia::media::StreamType> {
   static std::unique_ptr<media_player::StreamType> Convert(
-      const fuchsia::media::MediaType& input);
+      const fuchsia::media::StreamType& input);
 };
 
 template <>
 struct TypeConverter<std::unique_ptr<media_player::StreamType>,
-                     fuchsia::media::MediaTypePtr> {
+                     fuchsia::media::StreamTypePtr> {
   static std::unique_ptr<media_player::StreamType> Convert(
-      const fuchsia::media::MediaTypePtr& input) {
+      const fuchsia::media::StreamTypePtr& input) {
     if (!input)
       return nullptr;
     return To<std::unique_ptr<media_player::StreamType>>(*input);

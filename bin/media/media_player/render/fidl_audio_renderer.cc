@@ -213,13 +213,14 @@ void FidlAudioRenderer::SetStreamType(const StreamType& stream_type) {
   FXL_DCHECK(async_get_default_dispatcher() == dispatcher());
   FXL_DCHECK(stream_type.audio());
 
-  fuchsia::media::AudioPcmFormat format;
-  format.sample_format = fxl::To<fuchsia::media::AudioSampleFormat>(
+  fuchsia::media::AudioStreamType audio_stream_type;
+  audio_stream_type.sample_format = fxl::To<fuchsia::media::AudioSampleFormat>(
       stream_type.audio()->sample_format());
-  format.channels = stream_type.audio()->channels();
-  format.frames_per_second = stream_type.audio()->frames_per_second();
+  audio_stream_type.channels = stream_type.audio()->channels();
+  audio_stream_type.frames_per_second =
+      stream_type.audio()->frames_per_second();
 
-  audio_renderer_->SetPcmFormat(std::move(format));
+  audio_renderer_->SetPcmStreamType(std::move(audio_stream_type));
 
   // TODO: What about stream type changes?
 

@@ -20,14 +20,14 @@ library fuchsia.media;
 //
 // ** Format support **
 //
-// See (Get|Set)MediaType below.  By default, the captured media type will be
-// initially determined by the currently configured media type of the source
+// See (Get|Set)StreamType below.  By default, the captured stream type will be
+// initially determined by the currently configured stream type of the source
 // that the capturer was bound to at creation time.  Users may either fetch this
-// type using GetMediaType, or they may choose to have the media
-// resampled/converted to a type of their choosing by calling SetMediaType.
-// Note: the media type may only be set while the system is not running, meaning
-// that there are no pending capture regions (specified using CaptureAt) and
-// that the system is not currently running in 'async' capture mode.
+// type using GetStreamType, or they may choose to have the media
+// resampled/converted to a type of their choosing by calling SetStreamType.
+// Note: the stream type may only be set while the system is not running,
+// meaning that there are no pending capture regions (specified using CaptureAt)
+// and that the system is not currently running in 'async' capture mode.
 //
 // ** Buffers and memory management **
 //
@@ -41,7 +41,7 @@ library fuchsia.media;
 //    error.
 // ++ The payload buffer may not be changed while there are any capture
 //    operations pending.
-// ++ The media type may not be changed after the payload buffer has been set.
+// ++ The stream type may not be changed after the payload buffer has been set.
 // ++ The payload buffer must be an integral number of audio frame sizes (in
 //    bytes)
 // ++ When running in 'async' mode (see below), the payload buffer must be at
@@ -249,24 +249,25 @@ library fuchsia.media;
 // ++ Consider allowing the mixer to produce compressed audio.
 //
 interface AudioCapturer {
-  // Gets the currently configured media type.  Note: for a capturer which was
-  // just created and has not yet had its media type explicitly set, this will
-  // retrieve the media type -- at the time the capturer was created -- of the
+  // Gets the currently configured stream type.  Note: for a capturer which was
+  // just created and has not yet had its stream type explicitly set, this will
+  // retrieve the stream type -- at the time the capturer was created -- of the
   // source (input or looped-back output) to which the capturer is bound.
   //
   // TODO(johngro) : Get rid of this.  Eventually, capturers will be bindable to
-  // a set of inputs/outputs/renderers, so the concept of a "native" media type
+  // a set of inputs/outputs/renderers, so the concept of a "native" stream type
   // will go away.  Mechanisms will need to be put in place to allow users to
   // enumerate the configuration of these bind-able endpoints (and perhaps to
   // exercise control over them), but it will be the user of the capturer's job
   // to specify the format they want.
-  1: GetMediaType() -> (MediaType media_type);
+  1: GetStreamType() -> (StreamType stream_type);
 
-  // Sets the media type of the stream to be delivered.  Causes the source
+  // Sets the stream type of the stream to be delivered.  Causes the source
   // material to be reformatted/resampled if needed in order to produce the
-  // requested media type.  Note that the media type may not be changed after
+  // requested stream type.  Note that the stream type may not be changed after
   // the payload buffer has been established.
-  2: SetMediaType(MediaType media_type);
+  // TODO(dalesat): Should this be an AudioStreamType?
+  2: SetStreamType(StreamType stream_type);
 
   // Set the gain (in dB) applied to the fuchsia.ui.input.  Gain may be adjusted
   // at any time, but must be within the range [kMutedGain, kMaxGain].

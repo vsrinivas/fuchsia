@@ -53,7 +53,7 @@ interface Audio {
   // Calls to SetSystemMute or SetSystemGain that do NOT result in a change to
   // these values (e.g. calling SetSystemMute(false) when Mute is already false)
   // will not cause the callbacks to be triggered.
-  // 
+  //
   // During and immediately following connecting to Audio, it is essential that
   // clients keep in mind the fundamental single-threaded nature of FIDL.
   // Specifically, if a newly-connected client registers a SystemGainMuteChanged
@@ -66,7 +66,6 @@ interface Audio {
   5: -> SystemGainMuteChanged(float32 gain_db, bool muted);
 
   6: SetRoutingPolicy(AudioOutputRoutingPolicy policy);
-
 };
 
 // A placeholder for various types of simple routing policies.  This should be
@@ -83,3 +82,15 @@ enum AudioOutputRoutingPolicy {
   // This is the initial setting for audio output routing.
   kLastPluggedOutput = 1;
 };
+
+// Permitted ranges for AudioRendererV2 and AudioCapturer
+// TODO(dalesat): Eliminate this duplication and use UPPER_SNAKE_CASE.
+const uint32 kMinLpcmChannelCount = 1;
+const uint32 kMaxLpcmChannelCount = 8;
+const uint32 kMinLpcmFramesPerSecond = 1000;
+const uint32 kMaxLpcmFramesPerSecond = 192000;
+
+const uint32 kMinChannelCount = 1;
+const uint32 kMaxChannelCount = 8;
+const uint32 kMinFramesPerSecond = 1000;
+const uint32 kMaxFramesPerSecond = 192000;

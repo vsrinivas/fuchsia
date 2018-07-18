@@ -384,7 +384,7 @@ void AudioDeviceManager::LinkOutputToRenderer(AudioOutput* output,
 
   // Do not create any links if the renderer's output format has not been set.
   // Links will be created during SelectOutputsForRenderer when the renderer
-  // finally has its format set via AudioRendererImpl::SetMediaType
+  // finally has its format set via AudioRendererImpl::SetStreamType
   if (!renderer->format_info_valid())
     return;
 

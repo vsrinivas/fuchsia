@@ -64,7 +64,7 @@ shutdown process.
 
 ##### Set Playback Format
 
-We populate an `AudioPcmFormat` struct with the appropriate number of channels,
+We populate an `AudioStreamType` struct with the appropriate number of channels,
 sample rate, and sample format. This example uses 32-bit floating-point format,
 playing a 1-channel signal at 48 kHz.
 

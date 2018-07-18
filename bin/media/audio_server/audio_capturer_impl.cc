@@ -56,7 +56,7 @@ AudioCapturerImpl::AudioCapturerImpl(
 
   // TODO(johngro) : Initialize this with the native configuration of the source
   // we are initally bound to.
-  format_ = fuchsia::media::AudioMediaTypeDetails::New();
+  format_ = fuchsia::media::AudioStreamType::New();
   UpdateFormat(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 8000);
 }
 
@@ -68,7 +68,7 @@ AudioCapturerImpl::~AudioCapturerImpl() {
 }
 
 void AudioCapturerImpl::SetInitialFormat(
-    fuchsia::media::AudioMediaTypeDetails format) {
+    fuchsia::media::AudioStreamType format) {
   UpdateFormat(format.sample_format, format.channels, format.frames_per_second);
 }
 
@@ -144,15 +144,14 @@ zx_status_t AudioCapturerImpl::InitializeSourceLink(const AudioLinkPtr& link) {
   return res;
 }
 
-void AudioCapturerImpl::GetMediaType(GetMediaTypeCallback cbk) {
-  fuchsia::media::MediaType ret;
-  ret.medium = fuchsia::media::MediaTypeMedium::AUDIO;
-  ret.encoding = fuchsia::media::kAudioEncodingLpcm;
-  ret.details.set_audio(*format_);
+void AudioCapturerImpl::GetStreamType(GetStreamTypeCallback cbk) {
+  fuchsia::media::StreamType ret;
+  ret.encoding = fuchsia::media::AUDIO_ENCODING_LPCM;
+  ret.medium_specific.set_audio(*format_);
   cbk(std::move(ret));
 }
 
-void AudioCapturerImpl::SetMediaType(fuchsia::media::MediaType media_type) {
+void AudioCapturerImpl::SetStreamType(fuchsia::media::StreamType media_type) {
   // If something goes wrong, hang up the phone and shutdown.
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
 
@@ -167,15 +166,14 @@ void AudioCapturerImpl::SetMediaType(fuchsia::media::MediaType media_type) {
   }
 
   // The specified media type needs to be audio LPCM
-  if ((media_type.medium != fuchsia::media::MediaTypeMedium::AUDIO) ||
-      (media_type.encoding != fuchsia::media::kAudioEncodingLpcm) ||
-      !media_type.details.is_audio()) {
+  if ((media_type.encoding != fuchsia::media::AUDIO_ENCODING_LPCM) ||
+      !media_type.medium_specific.is_audio()) {
     FXL_LOG(ERROR) << "Bad media type!";
     return;
   }
 
   // Sanity check the details of the mode request.
-  const auto& details = media_type.details.audio();
+  const auto& details = media_type.medium_specific.audio();
   if ((details.channels < fuchsia::media::kMinLpcmChannelCount) ||
       (details.channels > fuchsia::media::kMaxLpcmChannelCount)) {
     FXL_LOG(ERROR) << "Bad channel count, " << details.channels
@@ -1359,7 +1357,7 @@ zx_status_t AudioCapturerImpl::ChooseMixer(
 
   // Get the driver's currently configured format.  If it does not have one, we
   // cannot set up the mixer.
-  fuchsia::media::AudioMediaTypeDetailsPtr source_format;
+  fuchsia::media::AudioStreamTypePtr source_format;
   source_format = device->driver()->GetSourceFormat();
   if (!source_format) {
     FXL_LOG(INFO)

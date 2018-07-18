@@ -110,7 +110,7 @@ void VideoConverter::ConvertFrame(uint8_t* rgba_buffer, uint32_t view_width,
   FXL_DCHECK(payload != nullptr);
   FXL_DCHECK(payload_size != 0);
   FXL_DCHECK(video_stream_type_ != nullptr)
-      << "need to call SetMediaType before ConvertFrame";
+      << "need to call SetStreamType before ConvertFrame";
 
   uint32_t height = std::min(video_stream_type_->height(), view_height);
   uint32_t width = std::min(video_stream_type_->width(), view_width);

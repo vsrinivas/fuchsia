@@ -32,7 +32,7 @@ class WavRecorder {
   void Shutdown();
   bool SetupPayloadBuffer();
   void SendCaptureJob();
-  void OnDefaultFormatFetched(fuchsia::media::MediaType type);
+  void OnDefaultFormatFetched(fuchsia::media::StreamType type);
   void OnPacketCaptured(fuchsia::media::MediaPacket pkt);
   void OnQuit();
 

@@ -81,6 +81,6 @@ struct MediaPacket {
   // Size in bytes of the packet payload.
   uint64 payload_size;
 
-  // Revised media type describing this and subsequent packets.
-  MediaType? revised_media_type;
+  // Revised stream type describing this and subsequent packets.
+  StreamType? revised_stream_type;
 };

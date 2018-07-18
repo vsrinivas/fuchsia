@@ -70,9 +70,10 @@ interface AudioRenderer2 {
   //////////////////////////////////////////////////////////////////////////////
 
   // Sets the PCM type of the stream to be delivered by the client.
-  //
-  // TODO(johngro): Define how to set a compressed format.
-  101: SetPcmFormat(AudioPcmFormat format);
+  101: SetPcmStreamType(AudioStreamType stream_type);
+
+  // TODO(dalesat): For compressed pass-through, add another SetStreamType-ish
+  // method that allows encoding to be specified.
 
   // Set the shared buffer used to transport the frames of audio to be rendered.
   //

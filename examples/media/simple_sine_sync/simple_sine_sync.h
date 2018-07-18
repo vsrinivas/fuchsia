@@ -28,7 +28,7 @@ class MediaApp {
 
  private:
   bool AcquireRenderer();
-  void SetMediaType();
+  void SetStreamType();
 
   zx_status_t CreateMemoryMapping();
 

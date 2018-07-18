@@ -11,7 +11,7 @@ namespace media {
 namespace audio {
 
 AudioRendererFormatInfo::AudioRendererFormatInfo(
-    fuchsia::media::AudioMediaTypeDetails format)
+    fuchsia::media::AudioStreamType format)
     : format_(std::move(format)) {
   // Precompute some useful timing/format stuff.
   //
@@ -40,7 +40,7 @@ AudioRendererFormatInfo::AudioRendererFormatInfo(
 
     default:
       // Format filtering was supposed to happen during
-      // AudioRendererImpl::SetMediaType.  It should never be attempting to
+      // AudioRendererImpl::SetStreamType.  It should never be attempting to
       // create a FormatInfo structure with a sample format that we do not
       // understand.
       FXL_CHECK(false) << "unrecognized sample format";
@@ -53,7 +53,7 @@ AudioRendererFormatInfo::AudioRendererFormatInfo(
 
 // static
 fbl::RefPtr<AudioRendererFormatInfo> AudioRendererFormatInfo::Create(
-    fuchsia::media::AudioMediaTypeDetails format) {
+    fuchsia::media::AudioStreamType format) {
   return fbl::AdoptRef(new AudioRendererFormatInfo(std::move(format)));
 }
 

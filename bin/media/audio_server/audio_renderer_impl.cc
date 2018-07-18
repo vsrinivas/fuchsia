@@ -179,7 +179,8 @@ void AudioRendererImpl::ComputePtsToFracFrames(int64_t first_pts) {
 //
 // AudioRenderer Interface
 //
-void AudioRendererImpl::SetPcmFormat(fuchsia::media::AudioPcmFormat format) {
+void AudioRendererImpl::SetPcmStreamType(
+    fuchsia::media::AudioStreamType format) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
 
   // We cannot change the format while we are currently operational
@@ -198,9 +199,10 @@ void AudioRendererImpl::SetPcmFormat(fuchsia::media::AudioPcmFormat format) {
     // TODO(johngro): Add more sample formats (24 bit, etc..) as the
     // mixer core learns to handle them.
     default:
-      FXL_LOG(ERROR) << "Unsupported sample format ("
-                     << fidl::ToUnderlying(format.sample_format)
-                     << ") in fuchsia::media::AudioRendererImpl::SetPcmFormat.";
+      FXL_LOG(ERROR)
+          << "Unsupported sample format ("
+          << fidl::ToUnderlying(format.sample_format)
+          << ") in fuchsia::media::AudioRendererImpl::SetPcmStreamType.";
       return;
   }
 
@@ -208,7 +210,7 @@ void AudioRendererImpl::SetPcmFormat(fuchsia::media::AudioPcmFormat format) {
       (format.channels > fuchsia::media::kMaxChannelCount)) {
     FXL_LOG(ERROR)
         << "Invalid channel count (" << format.channels
-        << ") in fuchsia::media::AudioRendererImpl::SetPcmFormat.  Must "
+        << ") in fuchsia::media::AudioRendererImpl::SetPcmStreamType.  Must "
            "be on the range ["
         << fuchsia::media::kMinChannelCount << ", "
         << fuchsia::media::kMaxChannelCount << "]";
@@ -219,7 +221,7 @@ void AudioRendererImpl::SetPcmFormat(fuchsia::media::AudioPcmFormat format) {
       (format.frames_per_second > fuchsia::media::kMaxFramesPerSecond)) {
     FXL_LOG(ERROR)
         << "Invalid frame rate (" << format.frames_per_second
-        << ") in fuchsia::media::AudioRendererImpl::SetPcmFormat.  Must "
+        << ") in fuchsia::media::AudioRendererImpl::SetPcmStreamType.  Must "
            "be on the range ["
         << fuchsia::media::kMinFramesPerSecond << ", "
         << fuchsia::media::kMaxFramesPerSecond << "]";
@@ -234,8 +236,8 @@ void AudioRendererImpl::SetPcmFormat(fuchsia::media::AudioPcmFormat format) {
   // Create a new format info object so we can create links to outputs.
   // TODO(johngro): Look into eliminating most of the format_info class when we
   // finish removing the old audio renderer interface.  At the very least,
-  // switch to using the AudioPcmFormat struct instead of AudioMediaTypeDetails
-  fuchsia::media::AudioMediaTypeDetails cfg;
+  // switch to using the AudioStreamType struct instead of AudioStreamType
+  fuchsia::media::AudioStreamType cfg;
   cfg.sample_format = format.sample_format;
   cfg.channels = format.channels;
   cfg.frames_per_second = format.frames_per_second;
