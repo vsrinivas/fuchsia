@@ -23,7 +23,7 @@
 namespace modular {
 namespace {
 // NOTE: This must match the path specified in
-// //peridot/build/manifest_manifest.gni
+// //peridot/build/module_manifest.gni
 constexpr char kInitialModulePackagesIndexDir[] =
     "/system/data/initial_module_packages";
 }  // namespace
