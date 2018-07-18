@@ -339,8 +339,8 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
         if (++(*finished_count) == results->size()) {
           Results final_results;
           final_results.reserve(results->size());
-          for (const auto& result : *results) {
-            final_results.push_back(*result);
+          for (auto& result : *results) {
+            final_results.push_back(std::move(*result));
           }
           all_futures_completed->Complete(std::move(final_results));
         }

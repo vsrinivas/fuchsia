@@ -544,6 +544,27 @@ TEST_F(FutureTest, Wait2RetainsFuturesBeforeCompletion) {
   EXPECT_EQ(1, async_expectations.count());
 }
 
+TEST_F(FutureTest, Wait2OnMoveOnlyType) {
+  auto f1 = Future<std::unique_ptr<int>>::Create(
+      std::string(__PRETTY_FUNCTION__) + std::string("1"));
+
+  AsyncExpectations async_expectations;
+
+  auto f = Future<std::unique_ptr<int>>::Wait2(
+      std::string(__PRETTY_FUNCTION__) + std::string("2"), {f1});
+  f->Then([&](std::vector<std::tuple<std::unique_ptr<int>>> v) {
+    EXPECT_EQ(v.size(), 1u);
+
+    EXPECT_EQ(*std::get<0>(v[0]), 42);
+
+    async_expectations.Signal();
+  });
+
+  f1->Complete(std::make_unique<int>(42));
+
+  EXPECT_EQ(1, async_expectations.count());
+}
+
 TEST_F(FutureTest, Wait2DoesNotOverRetainFutures) {
   fxl::WeakPtr<Future<int>> weak_f1;
 
