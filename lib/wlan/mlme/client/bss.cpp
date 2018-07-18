@@ -257,7 +257,7 @@ wlan_mlme::VhtMcsNss VhtMcsNssToFidl(const VhtMcsNss& vmn) {
 wlan_mlme::VhtCapabilitiesInfo VhtCapabilitiesInfoToFidl(const VhtCapabilitiesInfo& vci) {
     wlan_mlme::VhtCapabilitiesInfo fidl;
 
-    fidl.mpdu_len = static_cast<wlan_mlme::MaxMpduLen>(vci.max_mpdu_len());
+    fidl.max_mpdu_len = static_cast<wlan_mlme::MaxMpduLen>(vci.max_mpdu_len());
     fidl.supported_cbw_set = vci.supported_cbw_set();
     fidl.rx_ldpc = (vci.rx_ldpc() == 1);
     fidl.sgi_cbw80 = (vci.sgi_cbw80() == 1);

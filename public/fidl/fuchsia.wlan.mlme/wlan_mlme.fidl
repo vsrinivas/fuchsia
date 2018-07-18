@@ -86,7 +86,7 @@ enum VhtLinkAdaptation : uint8 {
 
 // IEEE Std 802.11-2016, 9.4.2.158.2
 struct VhtCapabilitiesInfo {
-    MaxMpduLen mpdu_len;
+    MaxMpduLen max_mpdu_len;
     uint8 supported_cbw_set;
     bool rx_ldpc;
     bool sgi_cbw80;
