@@ -311,10 +311,6 @@ syscall task_bind_exception_port
     (handle: zx_handle_t, port: zx_handle_t, key: uint64_t, options: uint32_t)
     returns (zx_status_t);
 
-syscall task_suspend
-    (handle: zx_handle_t)
-    returns (zx_status_t);
-
 syscall task_resume
     (handle: zx_handle_t, options: uint32_t)
     returns (zx_status_t);

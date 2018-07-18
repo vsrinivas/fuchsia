@@ -804,7 +804,8 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
     zx_signals_t signals = ZX_THREAD_TERMINATED | ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED;
     tu_object_wait_async(thread, eport, signals);
 
-    ASSERT_EQ(zx_task_suspend(thread), ZX_OK);
+    zx_handle_t token;
+    ASSERT_EQ(zx_task_suspend_token(thread, &token), ZX_OK);
 
     ASSERT_TRUE(wait_thread_suspended(self_proc, thread, eport));
 
@@ -850,7 +851,7 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
         ASSERT_EQ(zx_object_signal(syscall_handle, 0u, ZX_EVENT_SIGNALED), ZX_OK);
     }
 
-    ASSERT_EQ(zx_task_resume(thread, 0), ZX_OK);
+    ASSERT_EQ(zx_handle_close(token), ZX_OK);
     thrd_join(thread_c11, NULL);
     tu_handle_close(thread);
 
@@ -941,7 +942,8 @@ bool suspended_in_exception_handler(zx_handle_t inferior, zx_handle_t port,
 
             // Suspend the thread before fixing the segv to verify register
             // access works while the thread is in an exception and suspended.
-            ASSERT_EQ(zx_task_suspend(data->thread_handle), ZX_OK);
+            zx_handle_t token;
+            ASSERT_EQ(zx_task_suspend_token(data->thread_handle, &token), ZX_OK);
 
             // Waiting for the thread to suspend doesn't work here as the
             // thread stays in the exception until we pass ZX_RESUME_EXCEPTION.
