@@ -34,6 +34,7 @@ mod macros;
 // mark all modules as public so that deny(missing_docs) will be more powerful
 pub mod device;
 pub mod error;
+pub mod eventloop;
 pub mod ip;
 #[cfg(test)]
 pub mod testutil;
@@ -42,9 +43,12 @@ pub mod wire;
 
 use device::DeviceLayerState;
 use ip::IpLayerState;
+use eventloop::EventLoop;
 use transport::TransportLayerState;
 
-fn main() {}
+fn main() {
+    let event_loop = EventLoop{};
+}
 
 /// The state associated with the network stack.
 #[allow(missing_docs)]
