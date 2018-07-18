@@ -15,6 +15,7 @@
 #include <block-client/client.h>
 #include <zircon/device/block.h>
 #include <zircon/misc/xorshiftrand.h>
+#include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
@@ -38,7 +39,7 @@ static bool iochk_failure;
 
 static void generate_block_data(int blk_idx, void* buffer, size_t len) {
     // Block size should be a multiple of sizeof(uint64_t), but assert just to be safe
-    assert(len % sizeof(uint64_t) == 0);
+    ZX_ASSERT(len % sizeof(uint64_t) == 0);
 
     rand64_t seed_gen = RAND63SEED(base_seed + blk_idx);
     for (int i = 0; i < 10; i++) {
@@ -160,7 +161,7 @@ static int init_txn_resources(zx_handle_t* vmo, vmoid_t* vmoid, groupid_t* group
     }
 
     *group = atomic_fetch_add(&next_txid, 1);
-    assert(*group < MAX_TXN_GROUP_COUNT);
+    ZX_ASSERT(*group < MAX_TXN_GROUP_COUNT);
 
     return 0;
 }
@@ -421,6 +422,9 @@ int iochk(int argc, char** argv) {
         return -1;
     }
 
+    // Reset the txid count before launching any worker threads.
+    atomic_store(&next_txid, 0);
+
     printf("starting worker threads...\n");
     mtx_init(&lock, mtx_plain);
     thrd_t thrds[num_threads];
@@ -440,6 +444,10 @@ int iochk(int argc, char** argv) {
     for (int i = 0; i < num_threads; i++) {
         thrd_join(thrds[i], NULL);
     }
+
+    // Reset the txid count after launching worker threads to avoid hitting
+    // the capacity.
+    atomic_store(&next_txid, 0);
 
     if (!iochk_failure) {
         printf("re-verifying device...");
