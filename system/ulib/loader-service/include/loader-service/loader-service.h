@@ -12,7 +12,7 @@ __BEGIN_CDECLS
 typedef struct async_dispatcher async_dispatcher_t; // From <lib/async/dispatcher.h>
 
 // These functions provide an implementation of the shared library loading
-// service.  See <zircon/loader.fidl> for a definition of the protocol.
+// service.  See system/fidl/fuchsia-ldsvc/ldsvc.fidl for a definition of the protocol.
 //
 // These implementations are compatible with |dl_set_loader_service| and are
 // primarily used by devmgr, fshost, and appmgr to provide shared libraries to
