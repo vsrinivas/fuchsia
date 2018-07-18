@@ -252,6 +252,82 @@ constexpr bool is_convertible_v = std::is_convertible<From, To>::value;
 template <class T>
 constexpr bool is_void_v = std::is_void<T>::value;
 
+template <typename... Result>
+class DefaultResultsFuture {
+ public:
+  using type = Future<std::vector<std::tuple<Result...>>>;
+};
+
+template <typename Result>
+class DefaultResultsFuture<Result> {
+ public:
+  using type = Future<std::vector<Result>>;
+};
+
+template <>
+class DefaultResultsFuture<> {
+ public:
+  using type = Future<>;
+};
+
+template <typename... Result>
+using DefaultResultsFuture_t = typename DefaultResultsFuture<Result...>::type;
+
+template <typename ResultsFuture>
+class ResultCollector {
+ public:
+  // ResultsFuture = Future<std::vector<ElementType>>
+  using ElementType = typename std::tuple_element_t<
+      0, typename ResultsFuture::result_tuple_type>::value_type;
+
+  ResultCollector(size_t reserved_count) : results_(reserved_count) {}
+
+  bool IsComplete() const { return finished_count_ == results_.size(); }
+
+  template <typename... Result>
+  void AssignResult(size_t result_index, Result&&... result) {
+    results_[result_index] =
+        std::make_unique<ElementType>(std::forward<Result>(result)...);
+    finished_count_++;
+  }
+
+  void Complete(ResultsFuture* future) {
+    std::vector<ElementType> final_results;
+    final_results.reserve(results_.size());
+    for (auto& result : results_) {
+      final_results.push_back(std::move(*result));
+    }
+    future->Complete(std::move(final_results));
+  }
+
+ private:
+  size_t finished_count_ = 0;
+  // Use unique ptrs initially so that we can reserve even if |ElementType| is
+  // not default-constructible.
+  //
+  // TODO(rosswang): Consider adding a specialization for default-constructible
+  // types.
+  std::vector<std::unique_ptr<ElementType>> results_;
+};
+
+template <>
+class ResultCollector<Future<>> {
+ public:
+  ResultCollector(size_t reserved_count) : reserved_count_(reserved_count) {}
+
+  bool IsComplete() const { return finished_count_ == reserved_count_; }
+
+  void AssignResult(size_t) { finished_count_++; }
+
+  void Complete(Future<>* future) const;
+  // needs to be out-of-line or C++ complains about trying to instantiate
+  // Future<> before it's defined.
+
+ private:
+  size_t finished_count_ = 0;
+  size_t reserved_count_;
+};
+
 }  // namespace
 
 template <typename... Result>
@@ -289,66 +365,67 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   // completes. The order of the results corresponds to the order of the given
   // futures, regardless of their completion order.
   //
-  // For example:
+  // The default type of the resulting future depends on the types of the
+  // component futures. Void futures produce a void future. Monadic futures
+  // produce a future of a flat vector. Polyadic futures produce a future of a
+  // vector of tuples. That is:
+  //
+  // Components         | Result
+  // -------------------+------------------------------------
+  // FuturePtr<>        | FuturePtr<>
+  // FuturePtr<T>       | FuturePtr<std::vector<T>>
+  // FuturePtr<T, U...> | FuturePtr<std::vector<std::tuple<T, U...>>>
+  //
+  // These defaults may be overridden by specifying the template argument for
+  // Wait2 as the type of future desired.
+  //
+  // Example usage:
   //
   // FuturePtr<Bytes> f1 = MakeNetworkRequest(request1);
   // FuturePtr<Bytes> f2 = MakeNetworkRequest(request2);
   // FuturePtr<Bytes> f3 = MakeNetworkRequest(request3);
   // std::vector<FuturePtr<Bytes>> requests{f1, f2, f3};
   // Future<Bytes>::Wait2("NetworkRequests", requests)->Then([](
-  //     std::vector<std::tuple<Bytes>> bytes_vector) {
-  //   // Note that bytes_vector is an std::vector<std::tuple<Bytes>>, not
-  //   // std::vector<Bytes>. This is because Future is a variadic template, but
-  //   // std::vector isn't, so each result must be wrapped in a std::tuple.
-  //   Bytes f1_bytes = std::get<0>(bytes_vector[0]);
-  //   Bytes f2_bytes = std::get<0>(bytes_vector[1]);
-  //   Bytes f3_bytes = std::get<0>(bytes_vector[2]);
+  //     std::vector<Bytes> bytes_vector) {
+  //   Bytes f1_bytes = bytes_vector[0];
+  //   Bytes f2_bytes = bytes_vector[1];
+  //   Bytes f3_bytes = bytes_vector[2];
   // });
   //
   // This is similar to Promise.All() in JavaScript, or Join() in Rust.
-  template <typename Results = std::vector<std::tuple<Result...>>>
-  static FuturePtr<Results> Wait2(
+  template <typename ResultsFuture = DefaultResultsFuture_t<Result...>>
+  static fxl::RefPtr<ResultsFuture> Wait2(
       std::string trace_name,
       const std::vector<FuturePtr<Result...>>& futures) {
-    using ElementType = std::tuple<Result...>;
-
     if (futures.empty()) {
-      return Future<Results>::CreateCompleted(trace_name + "(Completed)", {});
+      auto immediate = ResultsFuture::Create(trace_name + "(Completed)");
+      immediate->CompleteWithTuple({});
+      return immediate;
     }
 
-    // Use unique ptrs initially so that we can reserve even if there's a
-    // |Result| type that's not default-constructible.
-    auto results = std::make_shared<std::vector<std::unique_ptr<ElementType>>>(
-        futures.size());
+    auto results =
+        std::make_shared<ResultCollector<ResultsFuture>>(futures.size());
 
-    FuturePtr<Results> all_futures_completed =
-        Future<Results>::Create(trace_name + "(WillWait2)");
-
-    auto finished_count = std::make_shared<size_t>(0);
+    fxl::RefPtr<ResultsFuture> all_futures_completed =
+        ResultsFuture::Create(trace_name + "(WillWait2)");
 
     for (size_t i = 0; i < futures.size(); i++) {
       const auto& future = futures[i];
       // Note that |future| is captured by the callback, to ensure that it'll be
       // completed even if its refcount drops to zero. The callback will be
       // reset after it's run to prevent a retain cycle.
-      future->SetCallback([i, future, all_futures_completed, results,
-                           finished_count](Result&&... result) {
-        (*results)[i] =
-            std::make_unique<ElementType>(std::forward<Result&&>(result)...);
+      future->SetCallback(
+          [i, future, all_futures_completed, results](Result&&... result) {
+            results->AssignResult(i, std::forward<Result>(result)...);
 
-        if (++(*finished_count) == results->size()) {
-          Results final_results;
-          final_results.reserve(results->size());
-          for (auto& result : *results) {
-            final_results.push_back(std::move(*result));
-          }
-          all_futures_completed->Complete(std::move(final_results));
-        }
+            if (results->IsComplete()) {
+              results->Complete(all_futures_completed.get());
+            }
 
-        // null out the callback, otherwise there'll be a retain cycle
-        // (because |future| is on this callback's capture list).
-        future->SetCallback(nullptr);
-      });
+            // null out the callback, otherwise there'll be a retain cycle
+            // (because |future| is on this callback's capture list).
+            future->SetCallback(nullptr);
+          });
     }
 
     return all_futures_completed;
@@ -395,7 +472,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   //    called, because if Complete() is called, the code that calls Complete()
   //    must have a reference to the future.
   void Complete(Result&&... result) {
-    CompleteWithTuple(std::forward_as_tuple(std::forward<Result&&>(result)...));
+    CompleteWithTuple(std::forward_as_tuple(std::forward<Result>(result)...));
   }
 
   // Returns a std::function<void(Result)> that, when called, calls Complete()
@@ -421,7 +498,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   //   }
   std::function<void(Result...)> Completer() {
     return [shared_this = FuturePtr<Result...>(this)](Result&&... result) {
-      shared_this->Complete(std::forward<Result&&>(result)...);
+      shared_this->Complete(std::forward<Result>(result)...);
     };
   }
 
@@ -592,7 +669,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   void SetCallbackWithTuple(
       std::function<void(std::tuple<Result...>)>&& callback) {
     SetCallback([callback](Result&&... result) {
-      callback(std::forward_as_tuple(std::forward<Result&&>(result)...));
+      callback(std::forward_as_tuple(std::forward<Result>(result)...));
     });
   }
 
@@ -772,6 +849,14 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(Future);
 };
+
+namespace {
+
+void ResultCollector<Future<>>::Complete(Future<>* future) const {
+  future->Complete();
+}
+
+}  // namespace
 
 }  // namespace modular
 

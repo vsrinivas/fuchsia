@@ -71,15 +71,12 @@ class UpdateModCall : public Operation<fuchsia::modular::ExecuteResult> {
     }
     Future<fuchsia::modular::ExecuteResult>::Wait2(
         "UpdateModCommandRunner.UpdateMod.Wait2", did_update_links)
-        ->Then([this,
-                flow](std::vector<std::tuple<fuchsia::modular::ExecuteResult>>
-                          result_values) {
-          for (auto& result_value : result_values) {
-            auto result = std::get<0>(result_value);
+        ->Then([this, flow](
+                   std::vector<fuchsia::modular::ExecuteResult> result_values) {
+          for (auto& result : result_values) {
             if (result.status != fuchsia::modular::ExecuteStatus::OK) {
-              result_.status = result.status;
-              result_.error_message = result.error_message;
-              Done(std::move(result_));
+              result.story_id = std::move(result_.story_id);
+              Done(std::move(result));
               return;
             }
           }
