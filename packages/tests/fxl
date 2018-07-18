@@ -1,6 +1,6 @@
 {
-    "labels": [
-        "//garnet/public/lib/fxl:fxl_unittests(//build/toolchain:host_x64)"
+    "host_tests": [
+        "//garnet/public/lib/fxl:fxl_unittests"
     ],
     "packages": [
         "//garnet/public/lib/fxl:unittests_package"
