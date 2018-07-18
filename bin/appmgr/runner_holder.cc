@@ -65,9 +65,6 @@ void RunnerHolder::CreateComponentCallback(ComponentControllerImpl* component) {
   impl_object_ = component;
   koid_ = component->koid();
 
-  // add error handler
-  impl_object_->Wait([this](int exit_code) { Cleanup(); });
-
   // update hub
   for (auto& n : components_) {
     n.second->SetParentJobId(koid_);

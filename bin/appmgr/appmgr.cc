@@ -5,6 +5,9 @@
 #include <lib/fxl/strings/string_printf.h>
 
 #include "garnet/bin/appmgr/appmgr.h"
+#include "lib/component/cpp/termination_reason.h"
+
+using fuchsia::sys::TerminationReason;
 
 namespace component {
 namespace {
@@ -44,17 +47,21 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = sysmgr_url_;
     launch_info.arguments.reset(sysmgr_args_);
-    // TODO(CP-82): Create a generic solution to the Wait race condition.
-    auto req = sysmgr_.NewRequest();
-    sysmgr_->Wait([this](zx_status_t status) {
-      if (status == ZX_ERR_INVALID_ARGS) {
-        FXL_LOG(ERROR) << "sysmgr reported invalid arguments";
-        sysmgr_permanently_failed_ = true;
-      } else {
-        FXL_LOG(ERROR) << "sysmgr exited with status " << status;
-      }
-    });
-    root_realm_->CreateComponent(std::move(launch_info), std::move(req));
+    sysmgr_.events().OnTerminated =
+        [this](zx_status_t status, TerminationReason termination_reason) {
+          if (termination_reason != TerminationReason::EXITED) {
+            FXL_LOG(ERROR) << "sysmgr launch failed: "
+                           << component::TerminationReasonToString(
+                                  termination_reason);
+            sysmgr_permanently_failed_ = true;
+          } else if (status == ZX_ERR_INVALID_ARGS) {
+            FXL_LOG(ERROR) << "sysmgr reported invalid arguments";
+            sysmgr_permanently_failed_ = true;
+          } else {
+            FXL_LOG(ERROR) << "sysmgr exited with status " << status;
+          }
+        };
+    root_realm_->CreateComponent(std::move(launch_info), sysmgr_.NewRequest());
   };
 
   if (!args.retry_sysmgr_crash) {

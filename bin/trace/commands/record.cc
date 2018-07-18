@@ -554,11 +554,14 @@ void Record::LaunchApp() {
       // that case, |StopTrace| below does nothing.
       StopTrace(-1);
   });
-  component_controller_->Wait([this](int32_t return_code) {
-    out() << "Application exited with return code " << return_code << std::endl;
-    if (!options_.decouple)
-      StopTrace(return_code);
-  });
+  component_controller_.events().OnTerminated =
+      [this](int64_t return_code,
+             fuchsia::sys::TerminationReason termination_reason) {
+        out() << "Application exited with return code " << return_code
+              << std::endl;
+        if (!options_.decouple)
+          StopTrace(return_code);
+      };
   if (options_.detach) {
     component_controller_->Detach();
   }

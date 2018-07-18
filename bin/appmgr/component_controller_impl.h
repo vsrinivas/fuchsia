@@ -98,7 +98,6 @@ class FailedComponentController : public fuchsia::sys::ComponentController {
       TerminationCallback termination_callback,
       fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller);
   virtual ~FailedComponentController();
-  void Wait(WaitCallback callback) override;
   void Kill() override;
   void Detach() override;
 
@@ -160,7 +159,6 @@ class ComponentControllerImpl : public ComponentControllerBase {
 
   // |fuchsia::sys::ComponentController| implementation:
   void Kill() override;
-  void Wait(WaitCallback callback) override;
 
  private:
   void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
@@ -172,7 +170,6 @@ class ComponentControllerImpl : public ComponentControllerBase {
   zx::job job_;
   zx::process process_;
   const std::string koid_;
-  std::vector<WaitCallback> wait_callbacks_;
 
   async::WaitMethod<ComponentControllerImpl, &ComponentControllerImpl::Handler>
       wait_;
@@ -208,13 +205,17 @@ class ComponentBridge : public ComponentControllerBase {
 
   // |fuchsia::sys::ComponentController| implementation:
   void Kill() override;
-  void Wait(WaitCallback callback) override;
+
+  void OnTerminated(OnTerminatedCallback callback) {
+    on_terminated_event_ = std::move(callback);
+  }
 
  private:
   fuchsia::sys::ComponentControllerPtr remote_controller_;
   ComponentContainer<ComponentBridge>* container_;
   TerminationCallback termination_callback_;
   fuchsia::sys::TerminationReason termination_reason_;
+  OnTerminatedCallback on_terminated_event_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentBridge);
 };

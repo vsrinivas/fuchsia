@@ -40,7 +40,11 @@ class HubTest : public component::testing::TestWithEnvironment {
     launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
 
     int64_t return_code = INT64_MIN;
-    controller->Wait([&return_code](int64_t code) { return_code = code; });
+    controller.events().OnTerminated =
+        [&return_code](int64_t code,
+                       fuchsia::sys::TerminationReason reason) {
+          return_code = code;
+        };
     ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
         [&return_code] { return return_code != INT64_MIN; }, zx::sec(10)));
     std::string output;

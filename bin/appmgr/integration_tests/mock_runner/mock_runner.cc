@@ -44,10 +44,6 @@ void FakeSubComponent::Kill() {
 
 void FakeSubComponent::SendReturnCodeIfTerminated() {
   if (!alive_) {
-    for (const auto& iter : wait_callbacks_) {
-      iter(return_code_);
-    }
-    wait_callbacks_.clear();
     binding_.events().OnTerminated(return_code_, TerminationReason::EXITED);
   }
 }

@@ -36,10 +36,6 @@ class FakeSubComponent : public fuchsia::sys::ComponentController,
   // fuchsia::sys::ComponentController
   void Kill() override;
   void Detach() override;
-  void Wait(WaitCallback callback) override {
-    wait_callbacks_.push_back(std::move(callback));
-    SendReturnCodeIfTerminated();
-  }
 
   void SetReturnCode(int64_t code) { return_code_ = code; }
 
@@ -76,7 +72,6 @@ class FakeSubComponent : public fuchsia::sys::ComponentController,
   zx::channel service_dir_;
   fidl::Binding<fuchsia::sys::ComponentController> binding_;
   fidl::BindingSet<mockrunner::MockComponent> mock_bindings_;
-  std::vector<WaitCallback> wait_callbacks_;
   MockRunner* runner_;
   std::unique_ptr<StartupContext> startup_context_;
 

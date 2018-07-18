@@ -89,7 +89,10 @@ TEST_F(RealmTest, CreateTwoKillOne) {
 
   // Kill one of the two components, make sure it's exited via Wait
   bool wait = false;
-  controller1->Wait([&wait](int64_t errcode) { wait = true; });
+  controller1.events().OnTerminated =
+      [&wait](int64_t return_code, fuchsia::sys::TerminationReason reason) {
+        wait = true;
+      };
   controller1->Kill();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, kTimeout));
 

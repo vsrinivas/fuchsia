@@ -121,13 +121,6 @@ class ComponentBridgeTest : public gtest::RealLoopFixture,
     binding_.Unbind();
   }
 
-  void Wait(WaitCallback callback) override {
-    wait_callbacks_.push_back(callback);
-    if (!binding_.is_bound()) {
-      SendReturnCode();
-    }
-  }
-
   void Detach() override { binding_.set_error_handler(nullptr); }
 
  protected:
@@ -151,14 +144,9 @@ class ComponentBridgeTest : public gtest::RealLoopFixture,
   void SetReturnCode(int64_t errcode) { errcode_ = errcode; }
 
   void SendReturnCode() {
-    for (const auto& iter : wait_callbacks_) {
-      iter(errcode_);
-    }
-    wait_callbacks_.clear();
     binding_.events().OnTerminated(errcode_, TerminationReason::EXITED);
   }
 
-  std::vector<WaitCallback> wait_callbacks_;
   FakeRunner runner_;
   ::fidl::Binding<fuchsia::sys::ComponentController> binding_;
   fuchsia::sys::ComponentControllerPtr remote_controller_;
@@ -245,8 +233,8 @@ TEST_F(ComponentControllerTest, CreateAndKill) {
                                             TerminationReason reason) {
     return_code = err;
     termination_reason = reason;
+    wait = true;
   };
-  component_ptr->Wait([&wait](int64_t errcode) { wait = true; });
   component_ptr->Kill();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, zx::sec(5)));
 
@@ -299,7 +287,10 @@ TEST_F(ComponentControllerTest, DetachController) {
   {
     fuchsia::sys::ComponentControllerPtr component_ptr;
     auto component = create_component(component_ptr);
-    component->Wait([&wait](int64_t errcode) { wait = true; });
+    component_ptr.events().OnTerminated =
+        [&](int64_t return_code, TerminationReason termination_reason) {
+          wait = true;
+        };
     realm_.AddComponent(std::move(component));
 
     ASSERT_EQ(realm_.ComponentCount(), 1u);
@@ -435,9 +426,11 @@ TEST_F(ComponentBridgeTest, ControllerScope) {
   {
     fuchsia::sys::ComponentControllerPtr component_ptr;
     auto component = create_component_bridge(component_ptr);
-    component->Wait([&wait](int64_t errcode) { wait = true; });
+    component->OnTerminated(
+        [&wait](int64_t return_code, TerminationReason termination_reason) {
+          wait = true;
+        });
     runner_.AddComponent(std::move(component));
-
     ASSERT_EQ(runner_.ComponentCount(), 1u);
   }
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, zx::sec(5)));
@@ -453,7 +446,6 @@ TEST_F(ComponentBridgeTest, DetachController) {
   {
     fuchsia::sys::ComponentControllerPtr component_ptr;
     auto component = create_component_bridge(component_ptr);
-    component->Wait([&wait](int64_t errcode) { wait = true; });
     component_bridge_ptr = component.get();
     runner_.AddComponent(std::move(component));
 
@@ -472,6 +464,10 @@ TEST_F(ComponentBridgeTest, DetachController) {
 
   // bridge should be still connected, kill that to see if we are able to kill
   // real component.
+  component_bridge_ptr->OnTerminated(
+      [&wait](int64_t return_code, TerminationReason termination_reason) {
+        wait = true;
+      });
   component_bridge_ptr->Kill();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, zx::sec(5)));
 

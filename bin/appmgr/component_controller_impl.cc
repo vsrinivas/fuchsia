@@ -95,10 +95,6 @@ FailedComponentController::~FailedComponentController() {
   termination_callback_(return_code_, termination_reason_, &binding_.events());
 }
 
-void FailedComponentController::Wait(WaitCallback callback) {
-  callback(return_code_);
-}
-
 void FailedComponentController::Kill() {}
 
 void FailedComponentController::Detach() {}
@@ -214,11 +210,6 @@ bool ComponentControllerImpl::SendReturnCodeIfTerminated() {
   FXL_DCHECK(result == ZX_OK);
 
   if (process_info.exited) {
-    // If the process has exited, call the callbacks.
-    for (const auto& iter : wait_callbacks_) {
-      iter(process_info.return_code);
-    }
-    wait_callbacks_.clear();
     if (termination_callback_) {
       termination_callback_(process_info.return_code, TerminationReason::EXITED,
                             &binding_.events());
@@ -227,11 +218,6 @@ bool ComponentControllerImpl::SendReturnCodeIfTerminated() {
   }
 
   return process_info.exited;
-}
-
-void ComponentControllerImpl::Wait(WaitCallback callback) {
-  wait_callbacks_.push_back(std::move(callback));
-  SendReturnCodeIfTerminated();
 }
 
 zx_status_t ComponentControllerImpl::AddSubComponentHub(
@@ -281,6 +267,10 @@ ComponentBridge::ComponentBridge(
   remote_controller_.events().OnTerminated =
       [this](int64_t result_code,
              TerminationReason termination_reason) mutable {
+        // Propagate the events to the external proxy.
+        if (on_terminated_event_) {
+          on_terminated_event_(result_code, termination_reason);
+        }
         termination_callback_(result_code, termination_reason,
                               &binding_.events());
         remote_controller_.events().OnTerminated = nullptr;
@@ -307,10 +297,6 @@ void ComponentBridge::SetParentJobId(const std::string& id) {
 }
 
 void ComponentBridge::Kill() { remote_controller_->Kill(); }
-
-void ComponentBridge::Wait(WaitCallback callback) {
-  remote_controller_->Wait(std::move(callback));
-}
 
 void ComponentBridge::SetTerminationReason(
     TerminationReason termination_reason) {
