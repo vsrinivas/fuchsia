@@ -4,14 +4,13 @@
 
 #pragma once
 
-#include <lib/async/default.h>
 #include <lib/async-loop/loop.h>
-#include <fbl/macros.h>
+#include <lib/async/default.h>
+#include <lib/zx/time.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <threads.h>
 #include <zircon/compiler.h>
-#include <lib/zx/time.h>
 
 namespace async {
 
@@ -31,6 +30,11 @@ public:
     //
     // See also |kAsyncLoopConfigAttachToThread| and |kAsyncLoopConfigNoAttachToThread|.
     explicit Loop(const async_loop_config_t* config = nullptr);
+
+    Loop(const Loop&) = delete;
+    Loop(Loop&&) = delete;
+    Loop& operator=(const Loop&) = delete;
+    Loop& operator=(Loop&&) = delete;
 
     // Destroys the message loop.
     // Implicitly calls |Shutdown()|.
@@ -117,8 +121,6 @@ public:
 
 private:
     async_loop_t* loop_;
-
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Loop);
 };
 
 } // namespace async
