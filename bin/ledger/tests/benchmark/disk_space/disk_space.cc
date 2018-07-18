@@ -32,7 +32,7 @@ constexpr fxl::StringView kKeySizeFlag = "key-size";
 constexpr fxl::StringView kValueSizeFlag = "value-size";
 
 void PrintUsage(const char* executable_name) {
-  std::cout << "Usage: trace record --categories=benchmark,ledger "
+  std::cout << "Usage: trace record "
             << executable_name
             // Comment to make clang format not break formatting.
             << " --" << kPageCountFlag << "=<int>"

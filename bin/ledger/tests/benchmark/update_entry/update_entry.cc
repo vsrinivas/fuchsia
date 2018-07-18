@@ -31,7 +31,7 @@ constexpr fxl::StringView kTransactionSizeFlag = "transaction-size";
 const int kKeySize = 100;
 
 void PrintUsage(const char* executable_name) {
-  std::cout << "Usage: "
+  std::cout << "Usage: trace record "
             << executable_name
             // Comment to make clang format not break formatting.
             << " --" << kEntryCountFlag << "=<int>"

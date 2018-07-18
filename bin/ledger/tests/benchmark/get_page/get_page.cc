@@ -26,7 +26,7 @@ constexpr fxl::StringView kPageCountFlag = "requests-count";
 constexpr fxl::StringView kReuseFlag = "reuse";
 
 void PrintUsage(const char* executable_name) {
-  std::cout << "Usage: "
+  std::cout << "Usage: trace record "
             << executable_name
             // Comment to make clang format not break formatting.
             << " --" << kPageCountFlag << "=<int>"
