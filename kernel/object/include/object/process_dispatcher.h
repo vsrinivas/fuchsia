@@ -105,11 +105,6 @@ public:
     zx_status_t RemoveHandles(user_in_ptr<const zx_handle_t> user_handles,
                               size_t num_handles);
 
-    // Puts back the |handle_value| which has not yet been given to another process
-    // back into this process.
-    void UndoRemoveHandleLocked(zx_handle_t handle_value) TA_REQ(handle_table_lock_);
-
-
     // Get the dispatcher corresponding to this handle value.
     template <typename T>
     zx_status_t GetDispatcher(zx_handle_t handle_value,

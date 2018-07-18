@@ -470,11 +470,6 @@ zx_status_t ProcessDispatcher::RemoveHandles(user_in_ptr<const zx_handle_t> user
     return status;
 }
 
-void ProcessDispatcher::UndoRemoveHandleLocked(zx_handle_t handle_value) {
-    auto handle = map_value_to_handle(handle_value, handle_rand_);
-    AddHandleLocked(HandleOwner(handle));
-}
-
 zx_koid_t ProcessDispatcher::GetKoidForHandle(zx_handle_t handle_value) {
     AutoLock lock(&handle_table_lock_);
     Handle* handle = GetHandleLocked(handle_value);
