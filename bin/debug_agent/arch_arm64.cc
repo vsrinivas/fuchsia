@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/debug_agent/arch.h"
+#include "garnet/lib/debug_ipc/register_desc.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {
@@ -53,9 +54,21 @@ uint64_t* SPInRegs(zx_thread_state_general_regs* regs) { return &regs->sp; }
 
 namespace {
 
+using debug_ipc::RegisterID;
+
+inline debug_ipc::Register CreateRegister(RegisterID id,
+                                          uint32_t length,
+                                          const void* val_ptr) {
+  debug_ipc::Register reg;
+  reg.id = id;
+  reg.data.reserve(length);
+  memcpy(&reg.data[0], val_ptr, length);
+  return reg;
+}
+
 inline zx_status_t ReadGeneralRegs(
     const zx::thread& thread, std::vector<debug_ipc::Register>* registers) {
-  // We get the general state registers
+  // We get the general state registers.
   zx_thread_state_general_regs general_registers;
   zx_status_t status =
       thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &general_registers,
@@ -63,16 +76,22 @@ inline zx_status_t ReadGeneralRegs(
   if (status != ZX_OK)
     return false;
 
-  // We add the X0-X29 registers
+  // We add the X0-X29 registers.
+  uint32_t base = static_cast<uint32_t>(RegisterID::ARMv8_x0);
   for (int i = 0; i < 30; i++) {
-    registers->push_back({fxl::StringPrintf("X%d", i), general_registers.r[i]});
+    RegisterID type = static_cast<RegisterID>(base + i);
+    registers->push_back(CreateRegister(type, 8u, &general_registers.r[i]));
   }
 
-  // Add the named registers
-  registers->push_back({"LR", general_registers.lr});
-  registers->push_back({"SP", general_registers.sp});
-  registers->push_back({"PC", general_registers.pc});
-  registers->push_back({"CPSR", general_registers.cpsr});
+  // Add the named registers.
+  registers->push_back(
+      CreateRegister(RegisterID::ARMv8_lr, 8u, &general_registers.lr));
+  registers->push_back(
+      CreateRegister(RegisterID::ARMv8_sp, 8u, &general_registers.sp));
+  registers->push_back(
+      CreateRegister(RegisterID::ARMv8_pc, 8u, &general_registers.pc));
+  registers->push_back(
+      CreateRegister(RegisterID::ARMv8_cpsr, 8u, &general_registers.cpsr));
 
   return ZX_OK;
 }

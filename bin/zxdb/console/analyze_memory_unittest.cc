@@ -5,6 +5,7 @@
 #include "garnet/bin/zxdb/console/analyze_memory.h"
 #include "garnet/bin/zxdb/client/mock_frame.h"
 #include "garnet/bin/zxdb/client/mock_process.h"
+#include "garnet/bin/zxdb/client/register.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/symbols/mock_process_symbols.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
@@ -16,6 +17,7 @@ namespace zxdb {
 namespace {
 
 using ::zxdb::internal::MemoryAnalysis;
+using namespace debug_ipc;
 
 // Provides just enough of a Process implementation for the analyzer to run.
 // It just needs a ProcessSymbols implementation.
@@ -37,6 +39,24 @@ class AnalyzeMemoryTest : public testing::Test {
 
  private:
   debug_ipc::PlatformMessageLoop loop_;
+};
+
+class MyMockRegisterSet : public RegisterSet {
+ public:
+  void AddRegister(RegisterCategory::Type cat_type, RegisterID id,
+                   uint32_t length, uint64_t value) {
+    std::vector<uint8_t> data(sizeof(value));
+    memcpy(&data[0], &value, sizeof(value));
+    debug_ipc::Register ipc_reg({id, std::move(data)});
+    reg_map_[cat_type].push_back(Register(std::move(ipc_reg)));
+  }
+
+  const RegisterMap& register_map() const override {
+    return reg_map_;
+  }
+
+ private:
+  RegisterMap reg_map_;
 };
 
 }  // namespace
@@ -103,14 +123,13 @@ TEST_F(AnalyzeMemoryTest, Basic) {
 
   // Setup registers (ESP points to beginning of block).
   constexpr uint64_t kAway = 0xFF00000000000;
-  std::vector<debug_ipc::Register> registers = {{"ESP", kBegin},
-                                                {"RAX", kAway}};
-  std::vector<debug_ipc::RegisterCategory> cats = {{
-    debug_ipc::RegisterCategory::Type::kGeneral,
-    std::move(registers)
-  }};
 
-  analysis->SetRegisters(cats);
+  MyMockRegisterSet registers;
+  registers.AddRegister(RegisterCategory::Type::kGeneral, RegisterID::x64_rax, 8u,
+                        kBegin);
+  registers.AddRegister(RegisterCategory::Type::kGeneral, RegisterID::x64_rcx, 8u,
+                        kAway);
+  analysis->SetRegisters(registers);
 
   analysis->Schedule(opts);
   debug_ipc::MessageLoop::Current()->Run();
@@ -118,7 +137,7 @@ TEST_F(AnalyzeMemoryTest, Basic) {
   // The pointer to "inner" aspace entry should be annotated. The "outer"
   // aspace entry is too large and so will be omitted.
   EXPECT_EQ("Address               Data \n"
-            " 0x1000 0x0000000000001000 ◁ ESP. ▷ inside map \"inner\"\n"
+            " 0x1000 0x0000000000001000 ◁ rax. ▷ inside map \"inner\"\n"
             " 0x1008 0x0000000010000000 ◁ frame 1 SP\n"
             " 0x1010 0x0000000000000000 \n",
             output.AsString());

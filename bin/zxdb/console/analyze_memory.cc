@@ -13,13 +13,16 @@
 #include "garnet/bin/zxdb/client/memory_dump.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/symbols/process_symbols.h"
+#include "garnet/bin/zxdb/client/register.h"
 #include "garnet/bin/zxdb/client/thread.h"
+#include "garnet/bin/zxdb/console/format_register.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/lib/debug_ipc/records.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
+
 
 namespace zxdb {
 
@@ -62,9 +65,8 @@ void MemoryAnalysis::Schedule(const AnalyzeMemoryOptions& opts) {
     // Request registers.
     if (!have_registers_) {
       opts.thread->GetRegisters(
-          [this_ref](const Err& err,
-                     std::vector<debug_ipc::RegisterCategory> reg_cats) {
-            this_ref->OnRegisters(err, reg_cats);
+          [this_ref](const Err& err, const RegisterSet& registers) {
+            this_ref->OnRegisters(err, registers);
           });
     }
 
@@ -136,15 +138,14 @@ void MemoryAnalysis::SetMemory(MemoryDump dump) {
   memory_ = std::move(dump);
 }
 
-void MemoryAnalysis::SetRegisters(
-    const std::vector<debug_ipc::RegisterCategory>& categories) {
+void MemoryAnalysis::SetRegisters(const RegisterSet& registers) {
   FXL_DCHECK(!have_registers_);
   have_registers_ = true;
-  for (const auto& category : categories)
+  for (const auto& kv: registers.register_map())
     // We look for the general section registers
-    if (category.type == debug_ipc::RegisterCategory::Type::kGeneral)
-      for (const auto& reg : category.registers)
-        AddAnnotation(reg.value, reg.name);
+    if (kv.first == debug_ipc::RegisterCategory::Type::kGeneral)
+      for (const auto& reg : kv.second)
+        AddAnnotation(reg.GetValue(), RegisterIDToString(reg.id()));
 }
 
 void MemoryAnalysis::DoAnalysis() {
@@ -208,14 +209,14 @@ void MemoryAnalysis::OnAspace(const Err& err,
     DoAnalysis();
 }
 
-void MemoryAnalysis::OnRegisters(
-    const Err& err, const std::vector<debug_ipc::RegisterCategory>& reg_cats) {
+void MemoryAnalysis::OnRegisters(const Err& err,
+                                 const RegisterSet& registers) {
   if (aborted_)
     return;
 
   // This function can continue without registers (say, if the thread has been
   // resumed by the time the request got executed). So just ignore failures.
-  SetRegisters(reg_cats);
+  SetRegisters(registers);
 
   if (HasEverything())
     DoAnalysis();

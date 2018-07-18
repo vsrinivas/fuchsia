@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+#include "garnet/lib/debug_ipc/register_desc.h"
+
 namespace debug_ipc {
 
 #pragma pack(push, 8)
@@ -131,10 +133,14 @@ struct AddressRegion {
   uint64_t depth;
 };
 
+// Registers -------------------------------------------------------------------
+
 // Value representing a particular register.
 struct Register {
-  std::string name;
-  uint64_t value;
+  RegisterID id;
+  // This data is stored in the architecture native's endianness
+  // (eg. the result of running memcpy over the data).
+  std::vector<uint8_t> data;
 };
 
 // Division of RegisterSections, according to their usage.

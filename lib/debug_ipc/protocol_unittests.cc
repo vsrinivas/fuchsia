@@ -469,6 +469,27 @@ TEST(Protocol, AspaceReply) {
 
 // Registers -------------------------------------------------------------------
 
+using debug_ipc::RegisterID;
+
+std::vector<uint8_t> CreateData(size_t length) {
+  std::vector<uint8_t> data;
+  data.reserve(length);
+  // So that we get the number backwards (0x0102...).
+  uint8_t base = length;
+  for (size_t i = 0; i < length; i++) {
+    data.emplace_back(base - i);
+  }
+  return data;
+}
+
+debug_ipc::Register CreateRegister(RegisterID id,
+                                   size_t length) {
+  debug_ipc::Register reg;
+  reg.id = id;
+  reg.data = CreateData(length);
+  return reg;
+}
+
 TEST(Protocol, RegistersRequest) {
   RegistersRequest initial;
   initial.process_koid = 0x1234;
@@ -486,17 +507,25 @@ TEST(Protocol, RegistersReply) {
 
   RegisterCategory cat1;
   cat1.type = RegisterCategory::Type::kGeneral;
-  cat1.registers.push_back({"EAX", 0xF000});
-  cat1.registers.push_back({"EBX", 0xF001});
-  cat1.registers.push_back({"ECX", 0xF002});
+  cat1.registers.push_back(CreateRegister(RegisterID::ARMv8_lr, 1));
+  cat1.registers.push_back(CreateRegister(RegisterID::ARMv8_pc, 2));
+  cat1.registers.push_back(CreateRegister(RegisterID::ARMv8_sp, 4));
+  cat1.registers.push_back(CreateRegister(RegisterID::ARMv8_cpsr, 8));
   initial.categories.push_back(cat1);
+
+  // Sanity check
+  ASSERT_EQ(*(uint8_t*)&(cat1.registers[0].data[0]), 0x01u);
+  ASSERT_EQ(*(uint16_t*)&(cat1.registers[1].data[0]), 0x0102u);
+  ASSERT_EQ(*(uint32_t*)&(cat1.registers[2].data[0]), 0x01020304u);
+  ASSERT_EQ(*(uint64_t*)&(cat1.registers[3].data[0]), 0x0102030405060708u);
 
   RegisterCategory cat2;
   cat2.type = RegisterCategory::Type::kVector;
-  cat2.registers.push_back({"XMM0", 0xF003});
-  cat2.registers.push_back({"XMM1", 0xF004});
-  cat2.registers.push_back({"YMM1", 0xF007});
-  cat2.registers.push_back({"YMM2", 0xF008});
+  cat2.registers.push_back(CreateRegister(RegisterID::ARMv8_x0, 1));
+  cat2.registers.push_back(CreateRegister(RegisterID::ARMv8_x1, 2));
+  cat2.registers.push_back(CreateRegister(RegisterID::ARMv8_x2, 4));
+  cat2.registers.push_back(CreateRegister(RegisterID::ARMv8_x3, 8));
+  cat2.registers.push_back(CreateRegister(RegisterID::ARMv8_x4, 16));
   initial.categories.push_back(cat2);
 
   RegistersReply second;
@@ -507,26 +536,26 @@ TEST(Protocol, RegistersReply) {
   // Check cat1
   auto& out_cat1= second.categories[0];
   EXPECT_EQ(out_cat1.type, cat1.type);
-  ASSERT_EQ(out_cat1.registers.size(), 3u);
-  EXPECT_EQ(out_cat1.registers[0].name,   cat1.registers[0].name);
-  EXPECT_EQ(out_cat1.registers[0].value,  cat1.registers[0].value);
-  EXPECT_EQ(out_cat1.registers[1].name,   cat1.registers[1].name);
-  EXPECT_EQ(out_cat1.registers[1].value,  cat1.registers[1].value);
-  EXPECT_EQ(out_cat1.registers[2].name,   cat1.registers[2].name);
-  EXPECT_EQ(out_cat1.registers[2].value,  cat1.registers[2].value);
+  ASSERT_EQ(out_cat1.registers.size(), 4u);
+  EXPECT_EQ(out_cat1.registers[0].id, cat1.registers[0].id);
+  EXPECT_EQ(out_cat1.registers[0].data, cat1.registers[0].data);
+  EXPECT_EQ(out_cat1.registers[1].id, cat1.registers[1].id);
+  EXPECT_EQ(out_cat1.registers[1].data, cat1.registers[1].data);
+  EXPECT_EQ(out_cat1.registers[2].id, cat1.registers[2].id);
+  EXPECT_EQ(out_cat1.registers[2].data, cat1.registers[2].data);
 
   // Check cat2
-  auto& out_cat2= second.categories[1];
+  auto& out_cat2 = second.categories[1];
   EXPECT_EQ(out_cat2.type, cat2.type);
-  ASSERT_EQ(out_cat2.registers.size(), 4u);
-  EXPECT_EQ(out_cat2.registers[0].name,   cat2.registers[0].name);
-  EXPECT_EQ(out_cat2.registers[0].value,  cat2.registers[0].value);
-  EXPECT_EQ(out_cat2.registers[1].name,   cat2.registers[1].name);
-  EXPECT_EQ(out_cat2.registers[1].value,  cat2.registers[1].value);
-  EXPECT_EQ(out_cat2.registers[2].name,   cat2.registers[2].name);
-  EXPECT_EQ(out_cat2.registers[2].value,  cat2.registers[2].value);
-  EXPECT_EQ(out_cat2.registers[3].name,   cat2.registers[3].name);
-  EXPECT_EQ(out_cat2.registers[3].value,  cat2.registers[3].value);
+  ASSERT_EQ(out_cat2.registers.size(), 5u);
+  EXPECT_EQ(out_cat2.registers[0].id, cat2.registers[0].id);
+  EXPECT_EQ(out_cat2.registers[0].data, cat2.registers[0].data);
+  EXPECT_EQ(out_cat2.registers[1].id, cat2.registers[1].id);
+  EXPECT_EQ(out_cat2.registers[1].data, cat2.registers[1].data);
+  EXPECT_EQ(out_cat2.registers[2].id, cat2.registers[2].id);
+  EXPECT_EQ(out_cat2.registers[2].data, cat2.registers[2].data);
+  EXPECT_EQ(out_cat2.registers[3].id, cat2.registers[3].id);
+  EXPECT_EQ(out_cat2.registers[3].data, cat2.registers[3].data);
 }
 
 // Notifications ---------------------------------------------------------------

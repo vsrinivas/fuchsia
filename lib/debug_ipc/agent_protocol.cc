@@ -64,8 +64,10 @@ void Serialize(const Module& module, MessageWriter* writer) {
 }
 
 void Serialize(const Register& reg, MessageWriter* writer) {
-  writer->WriteString(reg.name);
-  writer->WriteUint64(reg.value);
+  writer->WriteUint32(*reinterpret_cast<const uint32_t*>(&reg.id));
+  // We send the length before serializing the actual data.
+  writer->WriteUint32(reg.data.size());
+  writer->WriteBytes(&reg.data[0], reg.data.size());
 }
 
 void Serialize(const RegisterCategory& reg_cat, MessageWriter* writer) {

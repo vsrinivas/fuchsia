@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/debug_agent/arch.h"
+#include "garnet/lib/debug_ipc/register_desc.h"
 
 namespace debug_agent {
 namespace arch {
@@ -44,6 +45,18 @@ uint64_t* SPInRegs(zx_thread_state_general_regs* regs) { return &regs->rsp; }
 
 namespace {
 
+using debug_ipc::RegisterID;
+
+inline debug_ipc::Register CreateRegister(RegisterID id,
+                                          uint32_t length,
+                                          const void* val_ptr) {
+  debug_ipc::Register reg;
+  reg.id = id;
+  reg.data.reserve(length);
+  memcpy(&reg.data[0], val_ptr, length);
+  return reg;
+}
+
 inline zx_status_t ReadGeneralRegs(
     const zx::thread& thread, std::vector<debug_ipc::Register>* registers) {
   // We get the general state registers.
@@ -54,24 +67,42 @@ inline zx_status_t ReadGeneralRegs(
   if (status != ZX_OK)
     return false;
 
-  registers->push_back({"RAX", general_registers.rax});
-  registers->push_back({"RBX", general_registers.rbx});
-  registers->push_back({"RCX", general_registers.rcx});
-  registers->push_back({"RDX", general_registers.rdx});
-  registers->push_back({"RSI", general_registers.rsi});
-  registers->push_back({"RDI", general_registers.rdi});
-  registers->push_back({"RBP", general_registers.rbp});
-  registers->push_back({"RSP", general_registers.rsp});
-  registers->push_back({"R8", general_registers.r8});
-  registers->push_back({"R9", general_registers.r9});
-  registers->push_back({"R10", general_registers.r10});
-  registers->push_back({"R11", general_registers.r11});
-  registers->push_back({"R12", general_registers.r12});
-  registers->push_back({"R13", general_registers.r13});
-  registers->push_back({"R14", general_registers.r14});
-  registers->push_back({"R15", general_registers.r15});
-  registers->push_back({"RIP", general_registers.rip});
-  registers->push_back({"RFLAGS", general_registers.rflags});
+  registers->push_back(
+      CreateRegister(RegisterID::x64_rax, 8u, &general_registers.rax));
+  registers->push_back(
+      CreateRegister(RegisterID::x64_rbx, 8u, &general_registers.rbx));
+  registers->push_back(
+      CreateRegister(RegisterID::x64_rcx, 8u, &general_registers.rcx));
+  registers->push_back(
+      CreateRegister(RegisterID::x64_rdx, 8u, &general_registers.rdx));
+  registers->push_back(
+      CreateRegister(RegisterID::x64_rsi, 8u, &general_registers.rsi));
+  registers->push_back(
+      CreateRegister(RegisterID::x64_rdi, 8u, &general_registers.rdi));
+  registers->push_back(
+      CreateRegister(RegisterID::x64_rbp, 8u, &general_registers.rbp));
+  registers->push_back(
+      CreateRegister(RegisterID::x64_rsp, 8u, &general_registers.rsp));
+  registers->push_back(
+      CreateRegister(RegisterID::x64_r8, 8u, &general_registers.r8));
+  registers->push_back(
+      CreateRegister(RegisterID::x64_r9, 8u, &general_registers.r9));
+  registers->push_back(
+      CreateRegister(RegisterID::x64_r10, 8u, &general_registers.r10));
+  registers->push_back(
+      CreateRegister(RegisterID::x64_r11, 8u, &general_registers.r11));
+  registers->push_back(
+      CreateRegister(RegisterID::x64_r12, 8u, &general_registers.r12));
+  registers->push_back(
+      CreateRegister(RegisterID::x64_r13, 8u, &general_registers.r13));
+  registers->push_back(
+      CreateRegister(RegisterID::x64_r14, 8u, &general_registers.r14));
+  registers->push_back(
+      CreateRegister(RegisterID::x64_r15, 8u, &general_registers.r15));
+  registers->push_back(
+      CreateRegister(RegisterID::x64_rip, 8u, &general_registers.rip));
+  registers->push_back(
+      CreateRegister(RegisterID::x64_rflags, 8u, &general_registers.rflags));
 
   return ZX_OK;
 }

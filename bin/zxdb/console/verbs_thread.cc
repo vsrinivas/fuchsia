@@ -17,7 +17,7 @@
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/input_location_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
-#include "garnet/bin/zxdb/console/register_util.h"
+#include "garnet/bin/zxdb/console/format_register.h"
 #include "garnet/bin/zxdb/console/verbs.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
@@ -353,7 +353,7 @@ Examples
 )";
 
 void OnRegsComplete(const Err& cmd_err,
-                    const std::vector<debug_ipc::RegisterCategory>& categories,
+                    const RegisterSet& registers,
                     const std::string& reg_name) {
   Console* console = Console::get();
   if (cmd_err.has_error()) {
@@ -362,7 +362,7 @@ void OnRegsComplete(const Err& cmd_err,
   }
 
   OutputBuffer out;
-  Err err = FormatRegisters(categories, reg_name, &out);
+  Err err = FormatRegisters(registers, reg_name, &out);
   if (err.has_error()) {
     console->Output(err);
     return;
@@ -387,10 +387,8 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
   }
 
   // We pass the given register name to the callback
-  auto regs_cb = [reg_name](
-                     const Err& err,
-                     std::vector<debug_ipc::RegisterCategory> categories) {
-    OnRegsComplete(err, categories, reg_name);
+  auto regs_cb = [reg_name](const Err& err, const RegisterSet& registers) {
+    OnRegsComplete(err, registers, reg_name);
   };
 
   cmd.thread()->GetRegisters(regs_cb);

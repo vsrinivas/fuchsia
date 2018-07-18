@@ -23,6 +23,7 @@ class Err;
 class Frame;
 struct InputLocation;
 class Process;
+class RegisterSet;
 
 // The flow control commands on this object (Pause, Continue, Step...) apply
 // only to this thread (other threads will continue to run or not run
@@ -101,8 +102,7 @@ class Thread : public ClientObject {
   // The returned structures are architecture independent, but the contents
   // will be dependent on the architecture the target is running on.
   virtual void GetRegisters(
-      std::function<void(const Err&,
-                         std::vector<debug_ipc::RegisterCategory>)>) = 0;
+      std::function<void(const Err&, const RegisterSet&)>) = 0;
 
  protected:
   fxl::ObserverList<ThreadObserver>& observers() { return observers_; }

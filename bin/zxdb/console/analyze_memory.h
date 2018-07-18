@@ -21,6 +21,7 @@ class Frame;
 class OutputBuffer;
 class Process;
 class Thread;
+class RegisterSet;
 
 struct AnalyzeMemoryOptions {
   // Required.
@@ -74,15 +75,14 @@ class MemoryAnalysis : public fxl::RefCountedThreadSafe<MemoryAnalysis> {
   void SetAspace(std::vector<debug_ipc::AddressRegion> aspace);
   void SetFrames(const std::vector<Frame*>& frames);
   void SetMemory(MemoryDump dump);
-  void SetRegisters(const std::vector<debug_ipc::RegisterCategory>&);
+  void SetRegisters(const RegisterSet&);
 
  private:
   void DoAnalysis();
 
   // Request callbacks.
   void OnAspace(const Err& err, std::vector<debug_ipc::AddressRegion> aspace);
-  void OnRegisters(const Err& err,
-                   const std::vector<debug_ipc::RegisterCategory>&);
+  void OnRegisters(const Err&, const RegisterSet&);
   void OnMemory(const Err& err, MemoryDump dump);
   void OnFrames(fxl::WeakPtr<Thread> thread);
 

@@ -66,11 +66,14 @@ bool Deserialize(MessageReader* reader, Module* module) {
 };
 
 bool Deserialize(MessageReader* reader, Register* reg) {
-  if (!reader->ReadString(&reg->name))
+  if (!reader->ReadUint32(reinterpret_cast<uint32_t*>(&reg->id)))
     return false;
-  if (!reader->ReadUint64(&reg->value))
+  // Length is sent implicitly.
+  uint32_t length;
+  if (!reader->ReadUint32(&length))
     return false;
-  return true;
+  reg->data.resize(length);
+  return reader->ReadBytes(length, &reg->data[0]);
 }
 
 bool Deserialize(MessageReader* reader, RegisterCategory* reg_cat) {

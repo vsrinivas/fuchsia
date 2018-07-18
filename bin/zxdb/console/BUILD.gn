@@ -37,8 +37,8 @@ static_library("console") {
     "output_buffer.h",
     "nouns.cc",
     "nouns.h",
-    "register_util.cc",
-    "register_util.h",
+    "format_register.cc",
+    "format_register.h",
     "string_util.cc",
     "string_util.h",
     "verbs.h",
@@ -80,7 +80,7 @@ source_set("tests") {
     "input_location_parser_unittest.cc",
     "line_input_unittest.cc",
     "memory_format_unittest.cc",
-    "register_util_unittest.cc",
+    "format_register_unittest.cc",
     "string_util_unittest.cc",
   ]
 

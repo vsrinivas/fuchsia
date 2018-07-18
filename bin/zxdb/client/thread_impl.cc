@@ -143,17 +143,19 @@ void ThreadImpl::SyncFrames(std::function<void()> callback) {
 }
 
 void ThreadImpl::GetRegisters(
-    std::function<void(const Err&, std::vector<debug_ipc::RegisterCategory>)>
-        callback) {
+    std::function<void(const Err&, const RegisterSet&)> callback) {
   debug_ipc::RegistersRequest request;
   request.process_koid = process_->GetKoid();
   request.thread_koid = koid_;
 
   session()->remote_api()->Registers(
-      request, [ process = weak_factory_.GetWeakPtr(), callback ](
+      request, [thread = weak_factory_.GetWeakPtr(), callback](
                    const Err& err, debug_ipc::RegistersReply reply) {
+        thread->registers_ =
+            std::make_unique<RegisterSet>(std::move(reply.categories));
+
         if (callback)
-          callback(err, std::move(reply.categories));
+          callback(err, *thread->registers_.get());
       });
 }
 
