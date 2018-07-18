@@ -8,7 +8,7 @@
 #include "magma.h"
 #include "magma_util/inflight_list.h"
 #include "magma_util/macros.h"
-#include "zircon/zircon_platform_ioctl.h"
+#include "garnet/lib/magma/src/magma_util/platform/zircon/zircon_platform_ioctl.h"
 #include "gtest/gtest.h"
 
 namespace {

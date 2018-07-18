@@ -4,29 +4,8 @@
 
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
-shared_library("libmagma") {
-  output_name = "magma"
-
-  public_deps = [
-    "$magma_build_root/include:magma_abi",
-    "$magma_build_root/src/magma_util",
-    "$magma_build_root/src/magma_util/platform:buffer",
-    "$magma_build_root/src/magma_util/platform:port",
-    "$magma_build_root/src/magma_util/platform:semaphore",
-    "$magma_build_root/src/magma_util/platform:thread",
-  ]
-
-  sources = [
-    "magma.cc",
-  ]
-
-  deps = [
-    "$magma_build_root/src/magma_util:command_buffer",
-    "$magma_build_root/src/magma_util/platform:connection",
-    "$magma_build_root/src/magma_util/platform:trace",
-  ]
-
-  configs -= [ "//build/config:symbol_visibility_hidden" ]
+group("libmagma") {
+  public_deps = [ ":libmagma_static" ]
 }
 
 static_library("libmagma_static") {

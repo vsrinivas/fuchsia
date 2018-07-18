@@ -21,9 +21,8 @@ executable("msd_intel_gen_integration_tests") {
     "test_shutdown.cc",
   ]
 
-  public_deps = [
+  deps = [
     "$magma_build_root/src/libmagma",
-    "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util:inflight_list",
     "//third_party/googletest:gtest",

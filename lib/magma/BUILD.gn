@@ -5,19 +5,6 @@
 import("//build/package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
-# TODO(MA-416): should libmagma be a source set?
-package("libmagma") {
-  deprecated_system_image = true
-  deps = [
-    "//garnet/lib/magma/src/libmagma",
-  ]
-  libraries = [
-    {
-      name = "libmagma.so"
-    },
-  ]
-}
-
 package("magma-tools") {
   deprecated_system_image = true
 
