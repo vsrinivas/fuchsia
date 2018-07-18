@@ -5,9 +5,6 @@
 $VerifiedPlatform linux-amd64
 $VerifiedPlatform mac-amd64
 
-# GN
-gn/gn/${platform} git_revision:d7111cb6877187d1f378bd231e14ffdd5fdd87ae
-
 # vpython
 infra/tools/luci/vpython/${platform} git_revision:b9c4670197dcefd8762d6e509302acd3efc6e303
 
@@ -19,6 +16,9 @@ infra/tools/luci/logdog/logdog/${platform} git_revision:cf9d281c2ff478928ff11dfa
 
 # Ninja
 infra/ninja/${platform} version:1.8.2
+
+# GN
+infra/tools/gn/${platform} gn_version:549249
 
 # Breakpad
 fuchsia/tools/breakpad/${os=linux}-${arch} git_revision:9eac2058b70615519b2c4d8c6bdbfca1bd079e39
