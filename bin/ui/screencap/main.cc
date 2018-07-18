@@ -44,6 +44,7 @@ class ScreenshotTaker {
   bool encountered_error() const { return encountered_error_; }
 
   void TakeScreenshot() {
+    FXL_LOG(INFO) << "start TakeScreenshot";
     // If we wait for a call back from GetDisplayInfo, we are guaranteed that
     // the GFX system is initialized, which is a prerequisite for taking a
     // screenshot. TODO(SCN-678): Remove call to GetDisplayInfo once bug done.
@@ -55,9 +56,11 @@ class ScreenshotTaker {
 
  private:
   void TakeScreenshotInternal() {
+    FXL_LOG(INFO) << "start TakeScreenshotInternal";
     scenic_->TakeScreenshot([this](
-                               fuchsia::ui::scenic::ScreenshotData screenshot,
-                               bool status) {
+                                fuchsia::ui::scenic::ScreenshotData screenshot,
+                                bool status) {
+      FXL_LOG(INFO) << "start pixel capture";
       std::vector<uint8_t> imgdata;
       if (!status || !fsl::VectorFromVmo(screenshot.data, &imgdata)) {
         FXL_LOG(ERROR) << "TakeScreenshot failed";
@@ -74,6 +77,7 @@ class ScreenshotTaker {
         std::cout << 255 << "\n";
       }
 
+      FXL_LOG(INFO) << "capturing pixels";
       const uint8_t* pchannel = &imgdata[0];
       for (uint32_t pixel = 0;
            pixel < screenshot.info.width * screenshot.info.height; pixel++) {
@@ -94,8 +98,10 @@ class ScreenshotTaker {
         // For success, there should be at least 1M green or red pixels combined
         // The typical number is > 1.5M
         if (histogram[kGreen] + histogram[kRed] > kMinExpectedPixels) {
+          FXL_LOG(INFO) << "success";
           printf("success\n");
         } else {
+          FXL_LOG(INFO) << "failure";
           printf("failure\n");
           printf("black: %d, white: %d, green: %d, red: %d\n",
                  histogram[kBlack], histogram[kWhite], histogram[kGreen],
@@ -130,6 +136,7 @@ class ScreenshotTaker {
 
 
 int main(int argc, const char** argv) {
+  FXL_LOG(INFO) << "starting screen capture";
   bool output_screen = true;
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
@@ -140,6 +147,7 @@ int main(int argc, const char** argv) {
     if (positional_args.size() == 1 &&
         positional_args[0].compare("-histogram") == 0) {
       output_screen = false;
+      FXL_LOG(INFO) << "in histogram mode";
     } else {
       FXL_LOG(ERROR) << "Usage: screencap\n"
                      << "Takes a screenshot in PPM format and writes it "
@@ -149,13 +157,17 @@ int main(int argc, const char** argv) {
       return 1;
     }
   }
+  FXL_LOG(INFO) << "setting up event loop";
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());
 
+  FXL_LOG(INFO) << "starting taker";
   ScreenshotTaker taker(&loop, output_screen);
   taker.TakeScreenshot();
+  FXL_LOG(INFO) << "starting Run()";
   loop.Run();
 
+  FXL_LOG(INFO) << "returning result";
   return taker.encountered_error() ? EXIT_FAILURE : EXIT_SUCCESS;
 }
