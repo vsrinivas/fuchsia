@@ -13,6 +13,7 @@ static_library("rfcomm") {
     "mux_commands.cc",
     "mux_commands.h",
     "rfcomm.h",
+    "session.cc",
     "session.h",
   ]
 
@@ -30,10 +31,12 @@ source_set("tests") {
   sources = [
     "frames_unittest.cc",
     "mux_commands_unittest.cc",
+    "rfcomm_unittest.cc",
   ]
 
   deps = [
     ":rfcomm",
+    "//garnet/drivers/bluetooth/lib/l2cap:testing",
     "//garnet/drivers/bluetooth/lib/testing",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",

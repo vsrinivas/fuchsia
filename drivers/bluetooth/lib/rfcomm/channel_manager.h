@@ -13,6 +13,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/channel.h"
+#include "garnet/drivers/bluetooth/lib/rfcomm/session.h"
 
 namespace btlib {
 

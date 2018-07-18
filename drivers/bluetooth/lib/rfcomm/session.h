@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_RFCOMM_SESSION_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_RFCOMM_SESSION_H_
 
 #include <unordered_map>
 
@@ -12,6 +13,7 @@
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/scoped_channel.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/channel.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/rfcomm.h"
 
@@ -23,34 +25,32 @@ class Session {
   void Send(DLCI dlci, common::ByteBufferPtr data);
 
  private:
-  // Returns nullptr if creation fails -- for example, if opening the link
-  // fails. |channel_opened_cb| will be called whenever a new channel is opened
-  // on this session. The callback will be dispatched on |dispatcher|.
+  // Returns nullptr if creation fails -- for example, if activating the L2CAP
+  // channel fails. |channel_opened_cb| will be called whenever a new channel is
+  // opened on this session. The callback will be dispatched on |dispatcher|.
   // |dispatcher| will also be used for dispatching all of Session's other
   // tasks.
   using ChannelOpenedCallback =
       fit::function<void(std::unique_ptr<Channel>, ServerChannel)>;
   static std::unique_ptr<Session> Create(
-      fbl::RefPtr<l2cap::Channel> link, ChannelOpenedCallback channel_opened_cb,
-      async_dispatcher_t* dispatcher);
+      fbl::RefPtr<l2cap::Channel> l2cap_channel,
+      ChannelOpenedCallback channel_opened_cb, async_dispatcher_t* dispatcher);
 
   // Should only be called from Create().
-  inline Session(ChannelOpenedCallback channel_opened_cb,
-                 async_dispatcher_t* dispatcher)
-      : channel_opened_cb_(std::move(channel_opened_cb)),
-        dispatcher_(dispatcher),
-        weak_ptr_factory_(this) {}
+  Session(ChannelOpenedCallback channel_opened_cb,
+          async_dispatcher_t* dispatcher);
 
-  // Sets |link| as the Session's underlying L2CAP link. |link| should not be
-  // activated. This function activates |link|; returns true iff link activation
-  // succeeds. Should only be called from Create() during Session creation.
-  bool SetLink(fbl::RefPtr<l2cap::Channel> link);
+  // Sets |l2cap_channel| as the Session's underlying L2CAP channel.
+  // |l2cap_channel| should not be activated. This function activates
+  // |l2cap_channel|; returns true iff channel activation succeeds. Should only
+  // be called from Create() during Session creation.
+  bool SetL2CAPChannel(fbl::RefPtr<l2cap::Channel> l2cap_channel);
 
   // l2cap::Channel callbacks.
   void RxCallback(const l2cap::SDU& sdu);
   void ClosedCallback();
 
-  fbl::RefPtr<l2cap::Channel> link_;
+  l2cap::ScopedChannel l2cap_channel_;
 
   // The RFCOMM role of this device for this particular Session. This is
   // determined not when the object is created, but when the multiplexer control
@@ -83,3 +83,5 @@ class Session {
 
 }  // namespace rfcomm
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_RFCOMM_SESSION_H_
