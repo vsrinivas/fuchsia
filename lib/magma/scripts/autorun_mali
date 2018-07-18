@@ -9,12 +9,12 @@ echo [UNIT TEST START=]
 /pkgfs/packages/magma_arm_mali_nonhardware_tests/0/test/msd_arm_mali_nonhardware_tests
 echo [UNIT TEST END===]
 echo [INTEGRATION TEST START=]
-/system/test/magma_abi_conformance_tests --gtest_filter=-*Display*:MagmaAbi.WaitRendering
+/system/test/magma_abi_conformance_tests
 /system/test/msd_arm_mali_integration_tests
-if [ -e /system/test/vkext ]; then
-  /system/test/vkext --gtest_filter=-VulkanExtension.Scanout
-  /system/test/vkreadback
+if [ -e /pkgfs/packages/vulkan-tests/0/test/vkext ]; then
+  /pkgfs/packages/vulkan-tests/0/test/vkext --gtest_filter=-VulkanExtension.Scanout
+  /pkgfs/packages/vulkan-tests/0/test/vkreadback
 else
-  echo SKIPPED app tests - no /system/test/vkext
+  echo SKIPPED app tests - no /pkgfs/packages/vulkan-tests/0/test/vkext
 fi
 echo [INTEGRATION TEST END===]

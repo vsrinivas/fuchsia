@@ -17,6 +17,6 @@ echo [UNIT TEST END===]
 echo [INTEGRATION TEST START=]
 /system/test/magma_abi_conformance_tests
 /system/test/msd_intel_gen_integration_tests --gtest_filter=-*Stress*
-/system/test/vkreadback
-/system/test/vkext
+/pkgfs/packages/vulkan-tests/0/test/vkreadback
+/pkgfs/packages/vulkan-tests/0/test/vkext
 echo [INTEGRATION TEST END===]
