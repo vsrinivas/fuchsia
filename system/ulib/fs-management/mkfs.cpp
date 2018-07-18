@@ -9,7 +9,9 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <fbl/string_buffer.h>
 #include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/vfs.h>
@@ -21,8 +23,8 @@
 
 namespace {
 
-zx_status_t MkfsNativeFs(const char* binary, const char* device_path,
-                         LaunchCallback cb, const mkfs_options_t* options) {
+zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCallback cb,
+                         const mkfs_options_t* options) {
     zx_handle_t hnd[FDIO_MAX_HANDLES * 2];
     uint32_t ids[FDIO_MAX_HANDLES * 2];
     size_t n = 0;
@@ -38,24 +40,28 @@ zx_status_t MkfsNativeFs(const char* binary, const char* device_path,
     }
     n += status;
 
-    fbl::unique_ptr<const char*[]> argv(new const char*[2 + NUM_MKFS_OPTIONS]);
-    int argc = 0;
-    argv[argc++] = binary;
+    fbl::Vector<const char*> argv;
+    argv.push_back(binary);
     if (options->verbose) {
-        argv[argc++] = "-v";
+        argv.push_back("-v");
     }
-    argv[argc++] = "mkfs";
-    status = static_cast<zx_status_t>(cb(argc, argv.get(), hnd, ids, n));
+    fbl::StringBuffer<20> fvm_data_slices;
+    if (options->fvm_data_slices > default_mkfs_options.fvm_data_slices) {
+        argv.push_back("--fvm_data_slices");
+        fvm_data_slices.AppendPrintf("%u", options->fvm_data_slices);
+        argv.push_back(fvm_data_slices.c_str());
+    }
+    argv.push_back("mkfs");
+    status = static_cast<zx_status_t>(cb(static_cast<int>(argv.size()), argv.get(), hnd, ids, n));
     return status;
 }
 
-zx_status_t MkfsFat(const char* device_path, LaunchCallback cb,
-                    const mkfs_options_t* options) {
+zx_status_t MkfsFat(const char* device_path, LaunchCallback cb, const mkfs_options_t* options) {
     const char* argv[] = {"/boot/bin/mkfs-msdosfs", device_path};
     return cb(countof(argv), argv, NULL, NULL, 0);
 }
 
-}  // namespace
+} // namespace
 
 zx_status_t mkfs(const char* device_path, disk_format_t df, LaunchCallback cb,
                  const mkfs_options_t* options) {

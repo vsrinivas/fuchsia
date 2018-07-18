@@ -88,12 +88,13 @@ typedef struct mount_options {
 extern const mount_options_t default_mount_options;
 
 typedef struct mkfs_options {
+    uint32_t fvm_data_slices;
     bool verbose;
 } mkfs_options_t;
 
 extern const mkfs_options_t default_mkfs_options;
 
-#define NUM_MKFS_OPTIONS 1
+#define NUM_MKFS_OPTIONS 2
 
 typedef struct fsck_options {
     bool verbose;

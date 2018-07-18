@@ -26,10 +26,20 @@ typedef struct minfs_options {
     bool readonly;
     bool metrics;
     bool verbose;
+
+    // Number of slices to preallocate for data when the filesystem is created.
+    uint32_t fvm_data_slices = 1;
 } minfs_options_t;
 
+using Options = minfs_options_t;
+
 // Format the partition backed by |bc| as MinFS.
-zx_status_t Mkfs(fbl::unique_ptr<Bcache> bc);
+zx_status_t Mkfs(const Options& options, fbl::unique_ptr<Bcache> bc);
+
+// Format the partition backed by |bc| as MinFS.
+inline zx_status_t Mkfs(fbl::unique_ptr<Bcache> bc) {
+    return Mkfs({}, fbl::move(bc));
+}
 
 #ifdef __Fuchsia__
 
@@ -40,8 +50,8 @@ zx_status_t Mkfs(fbl::unique_ptr<Bcache> bc);
 // requests will not be dispatched if that async_dispatcher_t object is not
 // active.
 zx_status_t MountAndServe(const minfs_options_t* options, async_dispatcher_t* dispatcher,
-                          fbl::unique_ptr<Bcache> bc,
-                          zx::channel mount_channel, fbl::Closure on_unmount);
+                          fbl::unique_ptr<Bcache> bc, zx::channel mount_channel,
+                          fbl::Closure on_unmount);
 #endif
 
 } // namespace minfs

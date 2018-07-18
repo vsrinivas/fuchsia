@@ -14,10 +14,10 @@
 #include <fbl/type_support.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fs/client.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/vfs.h>
-#include <fs/client.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
@@ -51,20 +51,20 @@ public:
                       LaunchCallback cb);
 
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Mounter);
+
 private:
     zx_status_t PrepareHandles(unique_fd device);
     zx_status_t MakeDirAndMount(const mount_options_t& options);
-    zx_status_t LaunchAndMount(LaunchCallback cb, const mount_options_t& options,
-                               const char** argv, int argc);
-    zx_status_t MountNativeFs(const char* binary, unique_fd device,
-                              const mount_options_t& options, LaunchCallback cb);
-    zx_status_t MountFat(unique_fd device, const mount_options_t& options,
-                         LaunchCallback cb);
+    zx_status_t LaunchAndMount(LaunchCallback cb, const mount_options_t& options, const char** argv,
+                               int argc);
+    zx_status_t MountNativeFs(const char* binary, unique_fd device, const mount_options_t& options,
+                              LaunchCallback cb);
+    zx_status_t MountFat(unique_fd device, const mount_options_t& options, LaunchCallback cb);
 
     zx_handle_t root_ = ZX_HANDLE_INVALID;
     const char* path_;
     int fd_;
-    uint32_t flags_ = 0;  // Currently not used.
+    uint32_t flags_ = 0; // Currently not used.
     size_t num_handles_ = 0;
     zx_handle_t handles_[FDIO_MAX_HANDLES * 2];
     uint32_t ids_[FDIO_MAX_HANDLES * 2];
@@ -96,16 +96,15 @@ zx_status_t Mounter::PrepareHandles(unique_fd device) {
 }
 
 zx_status_t Mounter::MakeDirAndMount(const mount_options_t& options) {
-    auto cleanup = fbl::MakeAutoCall([this, options]() {
-        UnmountHandle(root_, options.wait_until_ready);
-    });
+    auto cleanup =
+        fbl::MakeAutoCall([this, options]() { UnmountHandle(root_, options.wait_until_ready); });
 
     // Open the parent path as O_ADMIN, and sent the mkdir+mount command
     // to that directory.
     char parent_path[PATH_MAX];
     const char* name;
     strcpy(parent_path, path_);
-    char *last_slash = strrchr(parent_path, '/');
+    char* last_slash = strrchr(parent_path, '/');
     if (last_slash == NULL) {
         strcpy(parent_path, ".");
         name = path_;
@@ -124,7 +123,7 @@ zx_status_t Mounter::MakeDirAndMount(const mount_options_t& options) {
 
     size_t config_size = sizeof(mount_mkdir_config_t) + strlen(name) + 1;
     fbl::AllocChecker checker;
-    fbl::unique_ptr<char[]> config_buffer(new(&checker) char[config_size]);
+    fbl::unique_ptr<char[]> config_buffer(new (&checker) char[config_size]);
     mount_mkdir_config_t* config = reinterpret_cast<mount_mkdir_config_t*>(config_buffer.get());
     if (!checker.check()) {
         return ZX_ERR_NO_MEMORY;
@@ -142,9 +141,8 @@ zx_status_t Mounter::MakeDirAndMount(const mount_options_t& options) {
 // Calls the 'launch callback' and mounts the remote handle to the target vnode, if successful.
 zx_status_t Mounter::LaunchAndMount(LaunchCallback cb, const mount_options_t& options,
                                     const char** argv, int argc) {
-    auto cleanup = fbl::MakeAutoCall([this, options]() {
-        UnmountHandle(root_, options.wait_until_ready);
-    });
+    auto cleanup =
+        fbl::MakeAutoCall([this, options]() { UnmountHandle(root_, options.wait_until_ready); });
 
     zx_status_t status = cb(argc, argv, handles_, ids_, num_handles_);
     if (status != ZX_OK) {
@@ -202,8 +200,7 @@ zx_status_t Mounter::MountNativeFs(const char* binary, unique_fd device,
     return LaunchAndMount(cb, options, argv, argc);
 }
 
-zx_status_t Mounter::MountFat(unique_fd device, const mount_options_t& options,
-                              LaunchCallback cb) {
+zx_status_t Mounter::MountFat(unique_fd device, const mount_options_t& options, LaunchCallback cb) {
     zx_status_t status = PrepareHandles(fbl::move(device));
     if (status != ZX_OK) {
         return status;
@@ -227,8 +224,8 @@ zx_status_t Mounter::MountFat(unique_fd device, const mount_options_t& options,
     return LaunchAndMount(cb, options, argv, countof(argv));
 }
 
-zx_status_t Mounter::Mount(unique_fd device, disk_format_t format,
-                           const mount_options_t& options, LaunchCallback cb) {
+zx_status_t Mounter::Mount(unique_fd device, disk_format_t format, const mount_options_t& options,
+                           LaunchCallback cb) {
     switch (format) {
     case DISK_FORMAT_MINFS:
         return MountNativeFs("/boot/bin/minfs", fbl::move(device), options, cb);
@@ -241,7 +238,7 @@ zx_status_t Mounter::Mount(unique_fd device, disk_format_t format,
     }
 }
 
-}  // namespace
+} // namespace
 
 const mount_options_t default_mount_options = {
     .readonly = false,
@@ -252,6 +249,7 @@ const mount_options_t default_mount_options = {
 };
 
 const mkfs_options_t default_mkfs_options = {
+    .fvm_data_slices = 1,
     .verbose = false,
 };
 
@@ -301,8 +299,8 @@ disk_format_t detect_disk_format(int fd) {
     return DISK_FORMAT_UNKNOWN;
 }
 
-zx_status_t fmount(int device_fd, int mount_fd, disk_format_t df,
-                   const mount_options_t* options, LaunchCallback cb) {
+zx_status_t fmount(int device_fd, int mount_fd, disk_format_t df, const mount_options_t* options,
+                   LaunchCallback cb) {
     Mounter mounter(mount_fd);
     return mounter.Mount(unique_fd(device_fd), df, *options, cb);
 }

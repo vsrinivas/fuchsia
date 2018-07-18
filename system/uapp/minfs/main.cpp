@@ -14,10 +14,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <lib/async-loop/cpp/loop.h>
 #include <fbl/unique_free_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fs/trace.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <minfs/fsck.h>
 #include <minfs/minfs.h>
 #include <trace-provider/provider.h>
@@ -27,12 +27,11 @@
 
 namespace {
 
-int do_minfs_check(fbl::unique_ptr<minfs::Bcache> bc) {
+int do_minfs_check(fbl::unique_ptr<minfs::Bcache> bc, const minfs::Options& options) {
     return minfs_check(fbl::move(bc));
 }
 
-int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc,
-                   minfs::minfs_options_t* options) {
+int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, const minfs::Options& options) {
     zx_handle_t h = zx_take_startup_handle(PA_HND(PA_USER0, 0));
     if (h == ZX_HANDLE_INVALID) {
         FS_TRACE_ERROR("minfs: Could not access startup handle to mount point\n");
@@ -44,15 +43,15 @@ int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc,
 
     auto loop_quit = [&loop]() { loop.Quit(); };
     zx_status_t status;
-    if ((status = MountAndServe(options, loop.dispatcher(), fbl::move(bc),
-                                zx::channel(h), fbl::move(loop_quit)) != ZX_OK)) {
-        if (options->verbose) {
+    if ((status = MountAndServe(&options, loop.dispatcher(), fbl::move(bc), zx::channel(h),
+                                fbl::move(loop_quit)) != ZX_OK)) {
+        if (options.verbose) {
             fprintf(stderr, "minfs: Failed to mount: %d\n", status);
         }
         return -1;
     }
 
-    if (options->verbose) {
+    if (options.verbose) {
         fprintf(stderr, "minfs: Mounted successfully\n");
     }
 
@@ -60,13 +59,13 @@ int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc,
     return 0;
 }
 
-int do_minfs_mkfs(fbl::unique_ptr<minfs::Bcache> bc) {
-    return Mkfs(fbl::move(bc));
+int do_minfs_mkfs(fbl::unique_ptr<minfs::Bcache> bc, const minfs::Options& options) {
+    return Mkfs(options, fbl::move(bc));
 }
 
 struct {
     const char* name;
-    int (*func)(fbl::unique_ptr<minfs::Bcache> bc);
+    int (*func)(fbl::unique_ptr<minfs::Bcache> bc, const minfs::Options&);
     uint32_t flags;
     const char* help;
 } CMDS[] = {
@@ -77,21 +76,22 @@ struct {
 };
 
 int usage() {
-    fprintf(stderr,
-            "usage: minfs [ <option>* ] <command> [ <arg>* ]\n"
-            "\n"
-            "options:  -v|--verbose     Some debug messages\n"
-            "          -r|--readonly    Mount filesystem read-only\n"
-            "          -m|--metrics     Collect filesystem metrics\n"
-            "          -h|--help        Display this message\n"
-            "\n"
-            "On Fuchsia, MinFS takes the block device argument by handle.\n"
-            "This can make 'minfs' commands hard to invoke from command line.\n"
-            "Try using the [mkfs,fsck,mount,umount] commands instead\n"
-            "\n");
+    fprintf(stderr, "usage: minfs [ <option>* ] <command> [ <arg>* ]\n"
+                    "\n"
+                    "options:\n"
+                    "    -v|--verbose                  Some debug messages\n"
+                    "    -r|--readonly                 Mount filesystem read-only\n"
+                    "    -m|--metrics                  Collect filesystem metrics\n"
+                    "    -s|--fvm_data_slices SLICES   When mkfs on top of FVM,\n"
+                    "                                  preallocate |SLICES| slices of data. \n"
+                    "    -h|--help                     Display this message\n"
+                    "\n"
+                    "On Fuchsia, MinFS takes the block device argument by handle.\n"
+                    "This can make 'minfs' commands hard to invoke from command line.\n"
+                    "Try using the [mkfs,fsck,mount,umount] commands instead\n"
+                    "\n");
     for (unsigned n = 0; n < fbl::count_of(CMDS); n++) {
-        fprintf(stderr, "%9s %-10s %s\n", n ? "" : "commands:",
-                CMDS[n].name, CMDS[n].help);
+        fprintf(stderr, "%9s %-10s %s\n", n ? "" : "commands:", CMDS[n].name, CMDS[n].help);
     }
     fprintf(stderr, "%9s %-10s %s\n", "", "mount", "mount filesystem");
     fprintf(stderr, "\n");
@@ -120,11 +120,12 @@ int main(int argc, char** argv) {
             {"readonly", no_argument, nullptr, 'r'},
             {"metrics", no_argument, nullptr, 'm'},
             {"verbose", no_argument, nullptr, 'v'},
+            {"fvm_data_slices", required_argument, nullptr, 's'},
             {"help", no_argument, nullptr, 'h'},
             {nullptr, 0, nullptr, 0},
         };
         int opt_index;
-        int c = getopt_long(argc, argv, "rvh", opts, &opt_index);
+        int c = getopt_long(argc, argv, "rmvhs:", opts, &opt_index);
         if (c < 0) {
             break;
         }
@@ -137,6 +138,9 @@ int main(int argc, char** argv) {
             break;
         case 'v':
             options.verbose = true;
+            break;
+        case 's':
+            options.fvm_data_slices = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
             break;
         case 'h':
         default:
@@ -180,12 +184,12 @@ int main(int argc, char** argv) {
     }
 
     if (!strcmp(cmd, "mount")) {
-        return do_minfs_mount(fbl::move(bc), &options);
+        return do_minfs_mount(fbl::move(bc), options);
     }
 
     for (unsigned i = 0; i < fbl::count_of(CMDS); i++) {
         if (!strcmp(cmd, CMDS[i].name)) {
-            int r = CMDS[i].func(fbl::move(bc));
+            int r = CMDS[i].func(fbl::move(bc), options);
             if (options.verbose) {
                 fprintf(stderr, "minfs: %s completed with result: %d\n", cmd, r);
             }
