@@ -6,6 +6,7 @@
 #define GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_FAKE_LAYER_H_
 
 #include <unordered_map>
+#include <utility>
 
 #include "garnet/drivers/bluetooth/lib/hci/connection_parameters.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
@@ -27,17 +28,14 @@ class FakeLayer final : public L2CAP {
       hci::ConnectionHandle handle,
       const hci::LEPreferredConnectionParameters& params);
 
+  // Triggers the creation of an inbound dynamic channel on the given link. The
+  // channels created will be provided to handlers passed to RegisterService.
+  void TriggerInboundChannel(hci::ConnectionHandle handle, PSM psm,
+                             ChannelId id, ChannelId remote_id);
+
+  // L2CAP overrides
   void Initialize() override;
   void ShutDown() override;
-
-  // Called when a new channel gets opened. Tests can use this to obtain a
-  // reference to all channels.
-  using NewChannelCallback = fit::function<void(fbl::RefPtr<l2cap::Channel>)>;
-  void set_channel_callback(NewChannelCallback callback) {
-    chan_cb_ = std::move(callback);
-  }
-
- protected:
   void AddACLConnection(hci::ConnectionHandle handle,
                         hci::Connection::Role role,
                         LinkErrorCallback link_error_callback,
@@ -48,11 +46,20 @@ class FakeLayer final : public L2CAP {
                        AddLEConnectionCallback channel_callback,
                        async_dispatcher_t* dispatcher) override;
   void RemoveConnection(hci::ConnectionHandle handle) override;
+  bool RegisterService(PSM psm, ChannelCallback cb,
+                       async_dispatcher_t* dispatcher) override;
+  void UnregisterService(PSM psm) override;
+
+  // Called when a new channel gets opened. Tests can use this to obtain a
+  // reference to all channels.
+  void set_channel_callback(ChannelCallback callback) {
+    chan_cb_ = std::move(callback);
+  }
 
  private:
   friend class fbl::RefPtr<FakeLayer>;
-  FakeLayer() = default;
-  ~FakeLayer() override = default;
+
+  using ChannelDelivery = std::pair<ChannelCallback, async_dispatcher_t*>;
 
   struct LinkData {
     hci::ConnectionHandle handle;
@@ -68,6 +75,9 @@ class FakeLayer final : public L2CAP {
     LEConnectionParameterUpdateCallback le_conn_param_cb;
   };
 
+  FakeLayer() = default;
+  ~FakeLayer() override = default;
+
   LinkData* RegisterInternal(hci::ConnectionHandle handle,
                              hci::Connection::Role role,
                              hci::Connection::LinkType link_type,
@@ -78,10 +88,12 @@ class FakeLayer final : public L2CAP {
   fbl::RefPtr<Channel> OpenFakeFixedChannel(LinkData* link, ChannelId id) {
     return OpenFakeChannel(link, id, id);
   }
+  LinkData& FindLinkData(hci::ConnectionHandle handle);
 
   bool initialized_ = false;
   std::unordered_map<hci::ConnectionHandle, LinkData> links_;
   ChannelCallback chan_cb_;
+  std::unordered_map<PSM, ChannelDelivery> inbound_conn_cbs_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeLayer);
 };

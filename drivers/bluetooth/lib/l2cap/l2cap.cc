@@ -87,6 +87,16 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
     });
   }
 
+  bool RegisterService(PSM psm, ChannelCallback cb,
+                       async_dispatcher_t* dispatcher) override {
+    FXL_LOG(WARNING) << "l2cap: RegisterService not implemented";
+    return false;
+  }
+
+  void UnregisterService(PSM psm) override {
+    FXL_LOG(WARNING) << "l2cap: UnregisterService not implemented";
+  }
+
  private:
   fxl::RefPtr<hci::Transport> hci_;
 

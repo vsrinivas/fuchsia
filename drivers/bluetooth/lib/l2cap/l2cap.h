@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_L2CAP_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_L2CAP_H_
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -84,7 +85,8 @@ class L2CAP : public fbl::RefCounted<L2CAP> {
       hci::ConnectionHandle handle, hci::Connection::Role role,
       LEConnectionParameterUpdateCallback conn_param_callback,
       LinkErrorCallback link_error_callback,
-      AddLEConnectionCallback channel_callback, async_dispatcher_t* dispatcher) = 0;
+      AddLEConnectionCallback channel_callback,
+      async_dispatcher_t* dispatcher) = 0;
 
   // Removes a previously registered connection. All corresponding Channels will
   // be closed and all incoming data packets on this link will be dropped.
@@ -97,6 +99,33 @@ class L2CAP : public fbl::RefCounted<L2CAP> {
   // Has no effect if L2CAP is uninitialized or shut down.
   virtual void RemoveConnection(hci::ConnectionHandle handle) = 0;
 
+  // Registers a handler for peer-initiated dynamic channel requests that have
+  // the Protocol/Service Multiplexing (PSM) code |psm|.
+  //
+  // |cb| will be called on |dispatcher| with the channel created by each
+  // inbound connection request received. Handlers must be unregistered before
+  // they are replaced.
+  //
+  // Returns false if |psm| is invalid or already has a handler registered.
+  //
+  // Inbound connection requests with a PSM that has no registered handler will
+  // be rejected.
+  //
+  // Has no effect if L2CAP is uninitialized or shut down.
+  //
+  // TODO(xow): NET-1084 Pass in required channel configurations. Call signature
+  //            will likely change.
+  // TODO(xow): Dynamic PSMs may need their routing space (ACL or LE) identified
+  virtual bool RegisterService(PSM psm, ChannelCallback cb,
+                               async_dispatcher_t* dispatcher) = 0;
+
+  // Removes the handler for inbound channel requests for the previously-
+  // registered service identified by |psm|. This only prevents new inbound
+  // channels from being opened but does not close already-open channels.
+  //
+  // Has no effect if L2CAP is uninitialized or shut down.
+  virtual void UnregisterService(PSM psm) = 0;
+
  protected:
   friend class fbl::RefPtr<L2CAP>;
   L2CAP() = default;
@@ -108,3 +137,5 @@ class L2CAP : public fbl::RefCounted<L2CAP> {
 
 }  // namespace l2cap
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_L2CAP_H_

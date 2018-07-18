@@ -12,24 +12,36 @@ namespace btlib {
 namespace l2cap {
 namespace testing {
 
-void FakeLayer::Initialize() { initialized_ = true; }
-
-void FakeLayer::ShutDown() { initialized_ = false; }
-
 void FakeLayer::TriggerLEConnectionParameterUpdate(
     hci::ConnectionHandle handle,
     const hci::LEPreferredConnectionParameters& params) {
   FXL_DCHECK(initialized_);
 
-  auto iter = links_.find(handle);
-  FXL_DCHECK(iter != links_.end())
-      << "l2cap: fake link not found: (handle: " << handle << ")";
-
-  LinkData& link_data = iter->second;
+  LinkData& link_data = FindLinkData(handle);
   async::PostTask(
       link_data.dispatcher,
       [params, cb = link_data.le_conn_param_cb.share()] { cb(params); });
 }
+
+void FakeLayer::TriggerInboundChannel(hci::ConnectionHandle handle, PSM psm,
+                                      ChannelId id, ChannelId remote_id) {
+  FXL_DCHECK(initialized_);
+
+  LinkData& link_data = FindLinkData(handle);
+  auto cb_iter = inbound_conn_cbs_.find(psm);
+  FXL_DCHECK(cb_iter != inbound_conn_cbs_.end())
+      << "l2cap: no service registered for PSM " << psm;
+
+  ChannelCallback& cb = cb_iter->second.first;
+  async_dispatcher_t* const dispatcher = cb_iter->second.second;
+  async::PostTask(dispatcher, [this, &cb, &link_data, id, remote_id] {
+    cb(OpenFakeChannel(&link_data, id, remote_id));
+  });
+}
+
+void FakeLayer::Initialize() { initialized_ = true; }
+
+void FakeLayer::ShutDown() { initialized_ = false; }
 
 void FakeLayer::AddACLConnection(hci::ConnectionHandle handle,
                                  hci::Connection::Role role,
@@ -68,17 +80,21 @@ void FakeLayer::RemoveConnection(hci::ConnectionHandle handle) {
   links_.erase(handle);
 }
 
-fbl::RefPtr<Channel> FakeLayer::OpenFakeChannel(LinkData* link, ChannelId id,
-                                                ChannelId remote_id) {
-  auto chan =
-      fbl::AdoptRef(new FakeChannel(id, remote_id, link->handle, link->type));
-  chan->SetLinkErrorCallback(link->link_error_cb.share(), link->dispatcher);
+bool FakeLayer::RegisterService(PSM psm, ChannelCallback cb,
+                                async_dispatcher_t* dispatcher) {
+  if (!initialized_)
+    return false;
 
-  if (chan_cb_) {
-    chan_cb_(chan);
-  }
+  auto result =
+      inbound_conn_cbs_.emplace(psm, std::make_pair(std::move(cb), dispatcher));
+  return result.second;
+}
 
-  return chan;
+void FakeLayer::UnregisterService(PSM psm) {
+  if (!initialized_)
+    return;
+
+  inbound_conn_cbs_.erase(psm);
 }
 
 FakeLayer::LinkData* FakeLayer::RegisterInternal(
@@ -97,6 +113,26 @@ FakeLayer::LinkData* FakeLayer::RegisterInternal(
 
   auto insert_res = links_.emplace(handle, std::move(data));
   return &insert_res.first->second;
+}
+
+fbl::RefPtr<Channel> FakeLayer::OpenFakeChannel(LinkData* link, ChannelId id,
+                                                ChannelId remote_id) {
+  auto chan =
+      fbl::AdoptRef(new FakeChannel(id, remote_id, link->handle, link->type));
+  chan->SetLinkErrorCallback(link->link_error_cb.share(), link->dispatcher);
+
+  if (chan_cb_) {
+    chan_cb_(chan);
+  }
+
+  return chan;
+}
+
+FakeLayer::LinkData& FakeLayer::FindLinkData(hci::ConnectionHandle handle) {
+  auto link_iter = links_.find(handle);
+  FXL_DCHECK(link_iter != links_.end())
+      << "l2cap: fake link not found: (handle: " << handle << ")";
+  return link_iter->second;
 }
 
 }  // namespace testing

@@ -149,6 +149,10 @@ enum class LECreditBasedConnectionResult : uint16_t {
   kUnacceptableParameters = 0x000B,
 };
 
+// Type used for all Protocol and Service Multiplexer (PSM) identifiers,
+// including those dynamically-assigned/-obtained
+using PSM = uint16_t;
+
 // Identifier assigned to each signaling transaction. This is used to match each
 // signaling channel request with a response.
 using CommandId = uint8_t;

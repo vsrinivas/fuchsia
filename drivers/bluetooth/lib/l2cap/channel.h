@@ -25,6 +25,9 @@
 namespace btlib {
 namespace l2cap {
 
+class Channel;
+using ChannelCallback = fit::function<void(fbl::RefPtr<Channel>)>;
+
 // Represents a L2CAP channel. Each instance is owned by a service
 // implementation that operates on the corresponding channel. Instances can only
 // be obtained from a ChannelManager.
