@@ -243,7 +243,7 @@ class Future;
 template <typename... Result>
 using FuturePtr = fxl::RefPtr<Future<Result...>>;
 
-namespace {
+namespace internal {
 
 // type_traits functions, ported from C++17.
 template <typename From, typename To>
@@ -313,22 +313,17 @@ class ResultCollector {
 template <>
 class ResultCollector<Future<>> {
  public:
-  ResultCollector(size_t reserved_count) : reserved_count_(reserved_count) {}
-
-  bool IsComplete() const { return finished_count_ == reserved_count_; }
-
-  void AssignResult(size_t) { finished_count_++; }
-
+  ResultCollector(size_t reserved_count);
+  bool IsComplete() const;
+  void AssignResult(size_t);
   void Complete(Future<>* future) const;
-  // needs to be out-of-line or C++ complains about trying to instantiate
-  // Future<> before it's defined.
 
  private:
   size_t finished_count_ = 0;
   size_t reserved_count_;
 };
 
-}  // namespace
+}  // namespace internal
 
 template <typename... Result>
 class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
@@ -393,7 +388,8 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   // });
   //
   // This is similar to Promise.All() in JavaScript, or Join() in Rust.
-  template <typename ResultsFuture = DefaultResultsFuture_t<Result...>>
+  template <
+      typename ResultsFuture = internal::DefaultResultsFuture_t<Result...>>
   static fxl::RefPtr<ResultsFuture> Wait2(
       std::string trace_name,
       const std::vector<FuturePtr<Result...>>& futures) {
@@ -403,8 +399,8 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
       return immediate;
     }
 
-    auto results =
-        std::make_shared<ResultCollector<ResultsFuture>>(futures.size());
+    auto results = std::make_shared<internal::ResultCollector<ResultsFuture>>(
+        futures.size());
 
     fxl::RefPtr<ResultsFuture> all_futures_completed =
         ResultsFuture::Create(trace_name + "(WillWait2)");
@@ -525,8 +521,9 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   // The type of this function looks complex, but is basically:
   //
   //   FuturePtr<> Then(std::function<void(Result...)> callback);
-  template <typename Callback, typename = typename std::enable_if_t<is_void_v<
-                                   std::result_of_t<Callback(Result...)>>>>
+  template <typename Callback,
+            typename = typename std::enable_if_t<
+                internal::is_void_v<std::result_of_t<Callback(Result...)>>>>
   FuturePtr<> Then(Callback callback) {
     return SubfutureCreate(
         Future<>::Create(trace_name_ + "(Then)"),
@@ -540,7 +537,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   // completed.
   template <typename Callback, typename T,
             typename = typename std::enable_if_t<
-                is_void_v<std::result_of_t<Callback(Result...)>>>>
+                internal::is_void_v<std::result_of_t<Callback(Result...)>>>>
   FuturePtr<> WeakThen(fxl::WeakPtr<T> weak_ptr, Callback callback) {
     return SubfutureCreate(
         Future<>::Create(trace_name_ + "(WeakThen)"),
@@ -602,8 +599,8 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
             typename AsyncMapResult = std::result_of_t<Callback(Result...)>,
             typename MapResult =
                 typename AsyncMapResult::element_type::result_tuple_type,
-            typename = typename std::enable_if_t<
-                is_convertible_v<FuturePtr<MapResult>, AsyncMapResult>>>
+            typename = typename std::enable_if_t<internal::is_convertible_v<
+                FuturePtr<MapResult>, AsyncMapResult>>>
   AsyncMapResult AsyncMap(Callback callback) {
     return SubfutureCreate(
         AsyncMapResult::element_type::Create(trace_name_ + "(AsyncMap)"),
@@ -615,8 +612,8 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
             typename AsyncMapResult = std::result_of_t<Callback(Result...)>,
             typename MapResult =
                 typename AsyncMapResult::element_type::result_tuple_type,
-            typename = typename std::enable_if_t<
-                is_convertible_v<FuturePtr<MapResult>, AsyncMapResult>>>
+            typename = typename std::enable_if_t<internal::is_convertible_v<
+                FuturePtr<MapResult>, AsyncMapResult>>>
   AsyncMapResult WeakAsyncMap(fxl::WeakPtr<T> weak_ptr, Callback callback) {
     return SubfutureCreate(
         AsyncMapResult::element_type::Create(trace_name_ + "(WeakAsyncMap)"),
@@ -849,14 +846,6 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(Future);
 };
-
-namespace {
-
-void ResultCollector<Future<>>::Complete(Future<>* future) const {
-  future->Complete();
-}
-
-}  // namespace
 
 }  // namespace modular
 

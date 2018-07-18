@@ -4,6 +4,7 @@
 
 source_set("future") {
   sources = [
+    "future.cc",
     "future.h",
   ]
 
