@@ -394,13 +394,15 @@ struct Interface : public Decl {
         Method(Method&&) = default;
         Method& operator=(Method&&) = default;
 
-        Method(Ordinal ordinal, SourceLocation name, std::unique_ptr<Message> maybe_request,
+        Method(std::unique_ptr<raw::AttributeList> attributes,
+               Ordinal ordinal, SourceLocation name, std::unique_ptr<Message> maybe_request,
                std::unique_ptr<Message> maybe_response)
-            : ordinal(std::move(ordinal)), name(std::move(name)),
+            : attributes(std::move(attributes)), ordinal(std::move(ordinal)), name(std::move(name)),
               maybe_request(std::move(maybe_request)), maybe_response(std::move(maybe_response)) {
             assert(this->maybe_request != nullptr || this->maybe_response != nullptr);
         }
 
+        std::unique_ptr<raw::AttributeList> attributes;
         Ordinal ordinal;
         SourceLocation name;
         std::unique_ptr<Message> maybe_request;

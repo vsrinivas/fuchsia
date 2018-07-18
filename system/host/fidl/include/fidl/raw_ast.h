@@ -28,7 +28,8 @@ namespace fidl {
 namespace raw {
 
 struct Identifier {
-    explicit Identifier(SourceLocation location) : location(location) {}
+    explicit Identifier(SourceLocation location)
+        : location(location) {}
 
     SourceLocation location;
 };
@@ -50,29 +51,34 @@ struct Literal {
         kFalse,
     };
 
-    explicit Literal(Kind kind) : kind(kind) {}
+    explicit Literal(Kind kind)
+        : kind(kind) {}
 
     const Kind kind;
 };
 
 struct StringLiteral : public Literal {
-    explicit StringLiteral(SourceLocation location) : Literal(Kind::kString), location(location) {}
+    explicit StringLiteral(SourceLocation location)
+        : Literal(Kind::kString), location(location) {}
 
     SourceLocation location;
 };
 
 struct NumericLiteral : public Literal {
-    NumericLiteral(SourceLocation location) : Literal(Kind::kNumeric), location(location) {}
+    NumericLiteral(SourceLocation location)
+        : Literal(Kind::kNumeric), location(location) {}
 
     SourceLocation location;
 };
 
 struct TrueLiteral : public Literal {
-    TrueLiteral() : Literal(Kind::kTrue) {}
+    TrueLiteral()
+        : Literal(Kind::kTrue) {}
 };
 
 struct FalseLiteral : public Literal {
-    FalseLiteral() : Literal(Kind::kFalse) {}
+    FalseLiteral()
+        : Literal(Kind::kFalse) {}
 };
 
 struct Constant {
@@ -83,7 +89,8 @@ struct Constant {
         kLiteral,
     };
 
-    explicit Constant(Kind kind) : kind(kind) {}
+    explicit Constant(Kind kind)
+        : kind(kind) {}
 
     const Kind kind;
 };
@@ -130,7 +137,8 @@ struct Type {
         kIdentifier,
     };
 
-    explicit Type(Kind kind) : kind(kind) {}
+    explicit Type(Kind kind)
+        : kind(kind) {}
 
     const Kind kind;
 };
@@ -254,12 +262,16 @@ struct ParameterList {
 };
 
 struct InterfaceMethod {
-    InterfaceMethod(std::unique_ptr<NumericLiteral> ordinal, std::unique_ptr<Identifier> identifier,
+    InterfaceMethod(std::unique_ptr<AttributeList> attributes,
+                    std::unique_ptr<NumericLiteral> ordinal,
+                    std::unique_ptr<Identifier> identifier,
                     std::unique_ptr<ParameterList> maybe_request,
                     std::unique_ptr<ParameterList> maybe_response)
-        : ordinal(std::move(ordinal)), identifier(std::move(identifier)),
+        : attributes(std::move(attributes)),
+          ordinal(std::move(ordinal)), identifier(std::move(identifier)),
           maybe_request(std::move(maybe_request)), maybe_response(std::move(maybe_response)) {}
 
+    std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<NumericLiteral> ordinal;
     std::unique_ptr<Identifier> identifier;
     std::unique_ptr<ParameterList> maybe_request;

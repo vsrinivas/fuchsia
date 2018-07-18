@@ -159,6 +159,9 @@
                 "has_response"
             ],
             "properties": {
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list"
+                },
                 "ordinal": {
                     "$ref": "#/definitions/ordinal"
                 },

@@ -81,7 +81,8 @@ private:
 
     std::unique_ptr<raw::Parameter> ParseParameter();
     std::unique_ptr<raw::ParameterList> ParseParameterList();
-    std::unique_ptr<raw::InterfaceMethod> ParseInterfaceMethod();
+    std::unique_ptr<raw::InterfaceMethod> ParseInterfaceMethod(
+        std::unique_ptr<raw::AttributeList> attributes);
     std::unique_ptr<raw::InterfaceDeclaration>
     ParseInterfaceDeclaration(std::unique_ptr<raw::AttributeList> attributes);
 

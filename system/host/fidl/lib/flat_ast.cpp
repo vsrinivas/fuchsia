@@ -516,6 +516,7 @@ bool Library::ConsumeInterfaceDeclaration(
 
     std::vector<Interface::Method> methods;
     for (auto& method : interface_declaration->methods) {
+        auto attributes = std::move(method->attributes);
         auto ordinal_literal = std::move(method->ordinal);
         uint32_t value;
         if (!ParseIntegerLiteral<decltype(value)>(ordinal_literal.get(), &value))
@@ -552,7 +553,9 @@ bool Library::ConsumeInterfaceDeclaration(
 
         assert(maybe_request != nullptr || maybe_response != nullptr);
 
-        methods.emplace_back(std::move(ordinal), std::move(method_name), std::move(maybe_request),
+        methods.emplace_back(std::move(attributes),
+                             std::move(ordinal),
+                             std::move(method_name), std::move(maybe_request),
                              std::move(maybe_response));
     }
 

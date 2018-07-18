@@ -97,7 +97,8 @@ void JSONGenerator::GenerateEOF() {
     EmitNewline(&json_file_);
 }
 
-template <typename Iterator> void JSONGenerator::GenerateArray(Iterator begin, Iterator end) {
+template <typename Iterator>
+void JSONGenerator::GenerateArray(Iterator begin, Iterator end) {
     EmitArrayBegin(&json_file_);
 
     if (begin != end)
@@ -115,11 +116,13 @@ template <typename Iterator> void JSONGenerator::GenerateArray(Iterator begin, I
     EmitArrayEnd(&json_file_);
 }
 
-template <typename Collection> void JSONGenerator::GenerateArray(const Collection& collection) {
+template <typename Collection>
+void JSONGenerator::GenerateArray(const Collection& collection) {
     GenerateArray(collection.begin(), collection.end());
 }
 
-template <typename Callback> void JSONGenerator::GenerateObject(Callback callback) {
+template <typename Callback>
+void JSONGenerator::GenerateObject(Callback callback) {
     int original_indent_level = indent_level_;
 
     EmitObjectBegin(&json_file_);
@@ -154,11 +157,13 @@ void JSONGenerator::Generate(const flat::Decl* decl) {
     Generate(decl->name);
 }
 
-template <typename T> void JSONGenerator::Generate(const std::unique_ptr<T>& value) {
+template <typename T>
+void JSONGenerator::Generate(const std::unique_ptr<T>& value) {
     Generate(*value);
 }
 
-template <typename T> void JSONGenerator::Generate(const std::vector<T>& value) {
+template <typename T>
+void JSONGenerator::Generate(const std::vector<T>& value) {
     GenerateArray(value);
 }
 
@@ -367,6 +372,8 @@ void JSONGenerator::Generate(const flat::Interface::Method& value) {
         GenerateObjectMember("ordinal", value.ordinal, Position::kFirst);
         GenerateObjectMember("name", value.name);
         GenerateObjectMember("has_request", value.maybe_request != nullptr);
+        if (value.attributes)
+            GenerateObjectMember("maybe_attributes", value.attributes);
         if (value.maybe_request != nullptr) {
             GenerateObjectMember("maybe_request", value.maybe_request->parameters);
             GenerateObjectMember("maybe_request_size", value.maybe_request->typeshape.Size());

@@ -6,33 +6,33 @@
 
 namespace fidl {
 
-#define TOKEN_PRIMITIVE_TYPE_CASES                                                                 \
-    case Token::Kind::kBool:                                                                       \
-    case Token::Kind::kStatus:                                                                     \
-    case Token::Kind::kInt8:                                                                       \
-    case Token::Kind::kInt16:                                                                      \
-    case Token::Kind::kInt32:                                                                      \
-    case Token::Kind::kInt64:                                                                      \
-    case Token::Kind::kUint8:                                                                      \
-    case Token::Kind::kUint16:                                                                     \
-    case Token::Kind::kUint32:                                                                     \
-    case Token::Kind::kUint64:                                                                     \
-    case Token::Kind::kFloat32:                                                                    \
+#define TOKEN_PRIMITIVE_TYPE_CASES \
+    case Token::Kind::kBool:       \
+    case Token::Kind::kStatus:     \
+    case Token::Kind::kInt8:       \
+    case Token::Kind::kInt16:      \
+    case Token::Kind::kInt32:      \
+    case Token::Kind::kInt64:      \
+    case Token::Kind::kUint8:      \
+    case Token::Kind::kUint16:     \
+    case Token::Kind::kUint32:     \
+    case Token::Kind::kUint64:     \
+    case Token::Kind::kFloat32:    \
     case Token::Kind::kFloat64
 
-#define TOKEN_TYPE_CASES                                                                           \
-    TOKEN_PRIMITIVE_TYPE_CASES:                                                                    \
-    case Token::Kind::kIdentifier:                                                                 \
-    case Token::Kind::kArray:                                                                      \
-    case Token::Kind::kVector:                                                                     \
-    case Token::Kind::kString:                                                                     \
-    case Token::Kind::kHandle:                                                                     \
+#define TOKEN_TYPE_CASES           \
+    TOKEN_PRIMITIVE_TYPE_CASES:    \
+    case Token::Kind::kIdentifier: \
+    case Token::Kind::kArray:      \
+    case Token::Kind::kVector:     \
+    case Token::Kind::kString:     \
+    case Token::Kind::kHandle:     \
     case Token::Kind::kRequest
 
-#define TOKEN_LITERAL_CASES                                                                        \
-    case Token::Kind::kTrue:                                                                       \
-    case Token::Kind::kFalse:                                                                      \
-    case Token::Kind::kNumericLiteral:                                                             \
+#define TOKEN_LITERAL_CASES            \
+    case Token::Kind::kTrue:           \
+    case Token::Kind::kFalse:          \
+    case Token::Kind::kNumericLiteral: \
     case Token::Kind::kStringLiteral
 
 namespace {
@@ -649,7 +649,7 @@ std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {
     return std::make_unique<raw::ParameterList>(std::move(parameter_list));
 }
 
-std::unique_ptr<raw::InterfaceMethod> Parser::ParseInterfaceMethod() {
+std::unique_ptr<raw::InterfaceMethod> Parser::ParseInterfaceMethod(std::unique_ptr<raw::AttributeList> attributes) {
     auto ordinal = ParseNumericLiteral();
     if (!Ok())
         return Fail();
@@ -698,7 +698,9 @@ std::unique_ptr<raw::InterfaceMethod> Parser::ParseInterfaceMethod() {
     assert(method_name);
     assert(maybe_request || maybe_response);
 
-    return std::make_unique<raw::InterfaceMethod>(std::move(ordinal), std::move(method_name),
+    return std::make_unique<raw::InterfaceMethod>(std::move(attributes),
+                                                  std::move(ordinal),
+                                                  std::move(method_name),
                                                   std::move(maybe_request),
                                                   std::move(maybe_response));
 }
@@ -741,7 +743,7 @@ Parser::ParseInterfaceDeclaration(std::unique_ptr<raw::AttributeList> attributes
             return Done;
 
         case Token::Kind::kNumericLiteral:
-            methods.emplace_back(ParseInterfaceMethod());
+            methods.emplace_back(ParseInterfaceMethod(std::move(attributes)));
             return More;
         }
     };
