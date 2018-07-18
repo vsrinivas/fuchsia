@@ -5,6 +5,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 
 	"app/context"
@@ -27,8 +28,8 @@ import (
 	_ "net/http/pprof"
 )
 
-// TODO(tkilbourn): disable this after tracking down NET-1077
-const pprofServer = true
+// TODO(tkilbourn): change the default to false after tracking down NET-1077
+var pprofServer = flag.Bool("pprof", true, "run the pprof http server")
 
 var ns *netstack
 
@@ -96,7 +97,7 @@ func main() {
 	go bindings.Serve()
 	go bindings.Serve()
 
-	if pprofServer {
+	if *pprofServer {
 		go func() {
 			log.Println("starting http pprof server on 0.0.0.0:6060")
 			log.Println(http.ListenAndServe("0.0.0.0:6060", nil))
