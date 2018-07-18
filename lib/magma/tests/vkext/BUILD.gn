@@ -16,6 +16,7 @@ executable("vkext") {
   deps = [
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:semaphore",
+    "//garnet/lib/magma/tests/helper:config_namespace_helper",
     "//third_party/googletest:gtest",
   ]
 

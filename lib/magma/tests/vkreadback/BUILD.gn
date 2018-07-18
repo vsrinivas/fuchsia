@@ -14,12 +14,14 @@ executable("vkreadback") {
 
   public_deps = [
     "$magma_build_root/src/magma_util",
+    "//garnet/lib/magma/tests/helper:config_namespace_helper",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fdio",
   ]
 
   if (use_vulkan_loader_for_tests) {
-    public_deps += [ "//third_party/vulkan_loader_and_validation_layers:vulkan" ]
+    public_deps +=
+        [ "//third_party/vulkan_loader_and_validation_layers:vulkan" ]
   } else {
     public_deps += [ "$magma_build_root/tests/vulkan_shim" ]
   }
@@ -36,7 +38,8 @@ executable("mt_create_vkdevice_loop") {
   ]
 
   if (use_vulkan_loader_for_tests) {
-    public_deps += [ "//third_party/vulkan_loader_and_validation_layers:vulkan" ]
+    public_deps +=
+        [ "//third_party/vulkan_loader_and_validation_layers:vulkan" ]
   } else {
     public_deps += [ "$magma_build_root/tests/vulkan_shim" ]
   }

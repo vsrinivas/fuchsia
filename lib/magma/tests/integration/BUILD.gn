@@ -22,9 +22,10 @@ executable("magma_abi_conformance_tests") {
   ]
 
   deps = [
-    "$magma_build_root/src/libmagma",
     "$magma_build_root/include:magma_abi",
+    "$magma_build_root/src/libmagma",
     "$magma_build_root/src/magma_util/platform:buffer",
+    "//garnet/lib/magma/tests/helper:config_namespace_helper",
     "//third_party/googletest:gtest",
   ]
 }

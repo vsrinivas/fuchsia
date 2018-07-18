@@ -15,6 +15,8 @@
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 
+#include "garnet/lib/magma/tests/helper/config_namespace_helper.h"
+
 #if defined(MAGMA_USE_SHIM)
 #include "vulkan_shim.h"
 #else
@@ -261,7 +263,9 @@ bool VkCopyTest::InitBuffers(uint32_t buffer_size)
     DLOG("Command buffer begin");
 
     VkBufferCopy copy_region = {
-        .srcOffset = 0, .dstOffset = 0, .size = buffer_size,
+        .srcOffset = 0,
+        .dstOffset = 0,
+        .size = buffer_size,
     };
 
     vkCmdCopyBuffer(vk_command_buffer_, vk_buffer_[0], vk_buffer_[1], 1, &copy_region);
@@ -303,6 +307,10 @@ int main(void)
 #if defined(MAGMA_USE_SHIM)
     VulkanShimInit();
 #endif
+
+    if (!InstallConfigDirectoryIntoGlobalNamespace()) {
+        return 1;
+    }
 
     uint32_t buffer_size = 60 * 1024 * 1024;
     uint32_t iterations = 1000;

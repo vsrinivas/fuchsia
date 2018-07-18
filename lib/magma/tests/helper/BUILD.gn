@@ -34,3 +34,17 @@ source_set("command_buffer_helper") {
     "$magma_build_root/src/sys_driver",
   ]
 }
+
+source_set("config_namespace_helper") {
+  testonly = true
+
+  sources = [
+    "config_namespace_helper.cc",
+    "config_namespace_helper.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fdio",
+  ]
+}
