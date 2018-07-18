@@ -14,6 +14,7 @@
 namespace btlib {
 namespace rfcomm {
 
+class UnnumberedInfoHeaderCheckFrame;
 class UserDataFrame;
 class MuxCommandFrame;
 
@@ -73,9 +74,9 @@ class Frame {
   // all of the useful information out of the Frame; simply use the Frame
   // accessors to read information about the frame. If the frame type is UIH,
   // then the DLCI should be inspected. If the DLCI is a user data DLCI, the
-  // Frame should be converted to a UserDataFrame using ToUserDataFrame.
+  // Frame should be converted to a UserDataFrame using AsUserDataFrame.
   // Otherwise, if the DLCI is 0, the frame should be cast to a MuxCommandFrame
-  // using ToMuxCommandFrame.
+  // using AsMuxCommandFrame.
   //
   // For UIH frames, this function will copy from |buffer|.
   static std::unique_ptr<Frame> Parse(bool credit_based_flow, Role role,
@@ -119,11 +120,22 @@ class Frame {
   // is no payload. This is overridden for UIH frames.
   inline virtual InformationLength length() const { return 0; }
 
+  // Pointer to this Frame as a MuxCommandFrame.
+  // Must only be called if the DLCI is 0.
+  MuxCommandFrame* AsMuxCommandFrame();
+
+  // Pointer to this Frame as a MuxCommandFrame.
+  // Must only be called if the IsUserDLCI() for this frame is true.
+  UserDataFrame* AsUserDataFrame();
+
+  // Pointer to this Frame as a UnnumberedInfoHeaderCheckFrame
+  // Must only be called if this frame is a UIH frame.
+  UnnumberedInfoHeaderCheckFrame* AsUnnumberedInfoHeaderCheckFrame();
+
   // Downcast this Frame to a Frame subclass. It is expected that the caller
   // will first check that the frame is of the subclass they are downcasting to;
   // for example, by checking that the DLCI is 0 for MuxCommandFrames, or
-  // checking that the DLCI is in [kMinUserDLCI, kMaxUserDLCI] for
-  // UserDataFrames.
+  // checking IsUserDLCI() for UserDataFrames.
   //
   // TODO(NET-1224): find a cleaner and less bug-prone way to do downcasting.
   template <typename T>
@@ -241,7 +253,7 @@ class UserDataFrame : public UnnumberedInfoHeaderCheckFrame {
   void Write(common::MutableBufferView buffer) const override;
   size_t written_size() const override;
   inline InformationLength length() const override {
-    return information_->size();
+    return information_ ? information_->size() : 0;
   }
 
   // Transfers ownership of the information field (aka the payload) from this

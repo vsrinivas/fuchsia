@@ -4,6 +4,7 @@
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
+#include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_channel_test.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_layer.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/channel_manager.h"
@@ -18,6 +19,8 @@ constexpr hci::ConnectionHandle kHandle1 = 1;
 
 void DoNothingWithChannel(fbl::RefPtr<Channel> channel,
                           ServerChannel server_channel) {}
+
+void DoNothingWithBuffer(common::ByteBufferPtr buffer) {}
 
 class RFCOMM_ChannelManagerTest : public l2cap::testing::FakeChannelTest {
  public:
@@ -71,8 +74,8 @@ class RFCOMM_ChannelManagerTest : public l2cap::testing::FakeChannelTest {
   }
 
   void TearDown() override {
-    channel_manager_.release();
-    l2cap_.reset();
+    channel_manager_ = nullptr;
+    l2cap_ = nullptr;
     handle_to_peer_state_.clear();
     handle_to_fake_channel_.clear();
     handle_to_incoming_frames_.clear();
@@ -107,7 +110,7 @@ class RFCOMM_ChannelManagerTest : public l2cap::testing::FakeChannelTest {
     auto frame = Frame::Parse(state.credit_based_flow, OppositeRole(state.role),
                               queue_it->second.front()->view());
     queue_it->second.pop();
-    EXPECT_TRUE(frame);
+    ASSERT_TRUE(frame);
     EXPECT_EQ(type, static_cast<FrameType>(frame->control()));
     EXPECT_EQ(dlci, frame->dlci());
   }
@@ -237,6 +240,10 @@ fbl::RefPtr<Channel> RFCOMM_ChannelManagerTest::OpenOutgoingChannel(
     params.credit_based_flow_handshake =
         state.credit_based_flow ? CreditBasedFlowHandshake::kSupportedResponse
                                 : CreditBasedFlowHandshake::kUnsupported;
+
+    // Give max credits
+    params.initial_credits = kMaxInitialCredits;
+
     ReceiveFrame(handle, std::make_unique<MuxCommandFrame>(
                              state.role, state.credit_based_flow,
                              std::make_unique<DLCParameterNegotiationCommand>(
@@ -749,9 +756,11 @@ TEST_F(RFCOMM_ChannelManagerTest, OpenIncomingChannel) {
       [&channel](auto received_channel, auto) { channel = received_channel; },
       dispatcher());
 
+  bt_log(SPEW, "unittests", "rfcomm allocated channel %d", server_channel);
+
   OpenIncomingChannel(kHandle1, server_channel);
   RunLoopUntilIdle();
-  EXPECT_TRUE(channel);
+  ASSERT_TRUE(channel);
 
   DLCI dlci = ServerChannelToDLCI(server_channel, OppositeRole(state.role));
 
@@ -768,7 +777,7 @@ TEST_F(RFCOMM_ChannelManagerTest, OpenIncomingChannel) {
   auto frame =
       Frame::Parse(state.credit_based_flow, OppositeRole(state.role),
                    handle_to_incoming_frames_[kHandle1].front()->view());
-  EXPECT_TRUE(frame);
+  ASSERT_TRUE(frame);
   EXPECT_EQ(FrameType::kUnnumberedInfoHeaderCheck,
             static_cast<FrameType>(frame->control()));
   EXPECT_EQ(dlci, frame->dlci());
@@ -783,6 +792,204 @@ TEST_F(RFCOMM_ChannelManagerTest, OpenIncomingChannel) {
 
   EXPECT_TRUE(received_data);
   EXPECT_EQ(pattern, *received_data);
+}
+
+// In this test, we test outgoing credit-based flow with the following series of
+// actions:
+// (We begin with kInitialMaxCredits (7) credits)
+// 1. Send 7 frames and ensure they all sent.
+// 2. Send 1 more frame and ensure it didn't send.
+// 3. Give 2 credits and ensure the frame above sent.
+// 4. Send 3 frames and ensure that just 1 of them sent.
+// 5. Give 1 credit and ensure that 1 more of the above 3 sent.
+// 6. Give 100 credits and ensure that the last of the above 3 sent.
+TEST_F(RFCOMM_ChannelManagerTest, CreditBasedFlow_Outgoing) {
+  PeerState& state = AddFakePeerState(
+      kHandle1, PeerState{true /*credit-based flow*/, Role::kUnassigned});
+
+  auto channel = OpenOutgoingChannel(kHandle1, kMinServerChannel);
+  channel->Activate(&DoNothingWithBuffer, [] {}, dispatcher());
+
+  auto& queue = handle_to_incoming_frames_[kHandle1];
+
+  for (uint8_t i = 0; i < kMaxInitialCredits; i++) {
+    // Send UIH frame with data.
+    channel->Send(common::NewBuffer(i));
+    RunLoopUntilIdle();
+  }
+
+  // Expect that all of those frames sent.
+  EXPECT_EQ(7ul, queue.size());
+
+  {
+    // Send one more.
+    channel->Send(common::NewBuffer(7));
+    RunLoopUntilIdle();
+  }
+
+  // Expect that the last frame didn't send.
+  EXPECT_EQ(7ul, queue.size());
+
+  {
+    // Replenish credits.
+    auto frame = std::make_unique<UserDataFrame>(
+        state.role, state.credit_based_flow,
+        ServerChannelToDLCI(kMinServerChannel, state.role), nullptr);
+    frame->set_credits(2);
+    ReceiveFrame(kHandle1, std::move(frame));
+    RunLoopUntilIdle();
+  }
+
+  // Expect that the last frame sent.
+  EXPECT_EQ(8ul, queue.size());
+
+  for (uint8_t i = 0; i < 3; i++) {
+    channel->Send(common::NewBuffer(8 + i));
+    RunLoopUntilIdle();
+  }
+
+  // Expect that only one of the above frames sent.
+  EXPECT_EQ(9ul, queue.size());
+
+  {
+    // Replenish no credits.
+    auto frame = std::make_unique<UserDataFrame>(
+        state.role, state.credit_based_flow,
+        ServerChannelToDLCI(kMinServerChannel, state.role), nullptr);
+    frame->set_credits(0);
+    ReceiveFrame(kHandle1, std::move(frame));
+    RunLoopUntilIdle();
+  }
+
+  // No more frames should have sent.
+  EXPECT_EQ(9ul, queue.size());
+
+  {
+    // Replenish just one credit.
+    auto frame = std::make_unique<UserDataFrame>(
+        state.role, state.credit_based_flow,
+        ServerChannelToDLCI(kMinServerChannel, state.role), nullptr);
+    frame->set_credits(1);
+    ReceiveFrame(kHandle1, std::move(frame));
+    RunLoopUntilIdle();
+  }
+
+  // Just one more frame should have sent.
+  EXPECT_EQ(10ul, queue.size());
+
+  {
+    // Replenish a lot of credits.
+    auto frame = std::make_unique<UserDataFrame>(
+        state.role, state.credit_based_flow,
+        ServerChannelToDLCI(kMinServerChannel, state.role), nullptr);
+    frame->set_credits(100);
+    ReceiveFrame(kHandle1, std::move(frame));
+    RunLoopUntilIdle();
+  }
+
+  // Just one more frame should have sent.
+  EXPECT_EQ(11ul, queue.size());
+
+  // Check that they sent in order.
+  size_t count = 0;
+  while (!queue.empty()) {
+    auto frame = Frame::Parse(state.credit_based_flow, state.role,
+                              queue.front()->view());
+    queue.pop();
+    EXPECT_TRUE(frame);
+    EXPECT_EQ(
+        count,
+        static_cast<UserDataFrame*>(frame.get())->TakeInformation()->view()[0]);
+    count++;
+  }
+}
+
+// In this test, we test incoming credit-based flow with the following series of
+// actions:
+// 1. Receive a frame on session, which should trigger the session to replenish
+//    to the max amount of credits (because we start below the low water mark).
+// 2. Receive two frames; nothing should happen.
+// 3. Receive an empty frame; nothing should happen.
+// 4. Send a frame, which should come attached with two credits for each of the
+//    non-empty frames above.
+TEST_F(RFCOMM_ChannelManagerTest, CreditBasedFlow_Incoming) {
+  PeerState& state = AddFakePeerState(
+      kHandle1, PeerState{true /*credit-based flow*/, Role::kUnassigned});
+
+  auto channel = OpenOutgoingChannel(kHandle1, kMinServerChannel);
+  DLCI dlci = ServerChannelToDLCI(kMinServerChannel, state.role);
+  channel->Activate(&DoNothingWithBuffer, [] {}, dispatcher());
+
+  auto& queue = handle_to_incoming_frames_[kHandle1];
+
+  // We'll get kMaxInitialCredits during PN.
+  Credits credits = kMaxInitialCredits;
+
+  {
+    // Send one frame.
+    ReceiveFrame(kHandle1, std::make_unique<UserDataFrame>(
+                               state.role, state.credit_based_flow, dlci,
+                               common::NewBuffer(0)));
+    credits--;
+    RunLoopUntilIdle();
+  }
+
+  {
+    // Expect that we get back an empty user data frame with credits.
+    EXPECT_EQ(1ul, queue.size());
+    auto frame = Frame::Parse(state.credit_based_flow, state.role,
+                              queue.front()->view());
+    queue.pop();
+    EXPECT_TRUE(frame);
+    EXPECT_EQ(FrameType::kUnnumberedInfoHeaderCheck,
+              static_cast<FrameType>(frame->control()));
+    EXPECT_EQ(dlci, frame->dlci());
+    credits +=
+        static_cast<UnnumberedInfoHeaderCheckFrame*>(frame.get())->credits();
+    // TODO(gusss): we're hard-coding kHighWaterMark here.
+    EXPECT_EQ(100ul, credits);
+  }
+
+  // Receive two frames.
+  for (int i = 0; i < 2; i++) {
+    ReceiveFrame(kHandle1, std::make_unique<UserDataFrame>(
+                               state.role, state.credit_based_flow, dlci,
+                               common::NewBuffer(i + 1)));
+    credits--;
+    RunLoopUntilIdle();
+  }
+
+  // Expect no new frames.
+  EXPECT_EQ(0ul, queue.size());
+
+  {
+    // Send frame to the remote, to which we should attach credits.
+    channel->Send(common::NewBuffer(3));
+    RunLoopUntilIdle();
+  }
+
+  {
+    // Send and empty frame, which shouldn't cost any credits.
+    ReceiveFrame(kHandle1, std::make_unique<UserDataFrame>(
+                               state.role, state.credit_based_flow, dlci,
+                               common::NewSlabBuffer(0)));
+    RunLoopUntilIdle();
+  }
+
+  {
+    // Expect that the frame has credits attached.
+    EXPECT_EQ(1ul, queue.size());
+    auto frame = Frame::Parse(state.credit_based_flow, state.role,
+                              queue.front()->view());
+    EXPECT_TRUE(frame);
+    EXPECT_EQ(FrameType::kUnnumberedInfoHeaderCheck,
+              static_cast<FrameType>(frame->control()));
+    EXPECT_EQ(dlci, frame->dlci());
+    credits +=
+        static_cast<UnnumberedInfoHeaderCheckFrame*>(frame.get())->credits();
+    // TODO(gusss): we're hard-coding kHighWaterMark here.
+    EXPECT_EQ(100ul, credits);
+  }
 }
 
 }  // namespace

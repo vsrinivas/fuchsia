@@ -11,7 +11,13 @@ namespace btlib {
 namespace rfcomm {
 
 Channel::Channel(DLCI dlci, Session* session)
-    : dlci_(dlci), session_(session){};
+    : dlci_(dlci),
+      session_(session),
+      established_(false),
+      negotiation_state_(ParameterNegotiationState::kNotNegotiated),
+      local_credits_(0),
+      remote_credits_(0),
+      wait_queue_{} {};
 
 namespace internal {
 

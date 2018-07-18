@@ -403,10 +403,6 @@ using Priority = uint8_t;
 constexpr Priority kMinPriority = 0;
 constexpr Priority kMaxPriority = 63;
 
-using InitialCredits = uint8_t;
-constexpr InitialCredits kMinInitialCredits = 0;
-constexpr InitialCredits kMaxInitialCredits = 7;
-
 // See GSM 5.4.6.3.1 and the modifications presented in RFCOMM 5.5.3.
 struct ParameterNegotiationParams {
   // 6 bits wide.

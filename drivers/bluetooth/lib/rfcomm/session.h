@@ -7,6 +7,7 @@
 
 #include <queue>
 #include <unordered_map>
+#include <map>
 
 #include <fbl/ref_ptr.h>
 #include <lib/async/cpp/task.h>
@@ -23,9 +24,26 @@
 namespace btlib {
 namespace rfcomm {
 
+// Represents a single RFCOMM session from this device to another remote device,
+// mulitplexed over a single L2CAP channel. We assume the underlying L2CAP
+// channel is reliable. All data-sending functions are asynchronous, and do not
+// provide notifications of delivery.
+//
+// THREAD SAFETY
+//
+// Session is not thread safe, and should only be accessed from the thread it is
+// created on. Session will dispatch all tasks onto the thread it is created on.
 class Session {
  public:
+  // User should first use GetMaximumUserDataLength() to determine the maximum
+  // amount of data they can send.
   void SendUserData(DLCI dlci, common::ByteBufferPtr data);
+
+  // Get the maximum length of data which can be sent in a single RFCOMM frame.
+  // This should only be called after initial parameter negotiation is complete.
+  // Once initial parameter negotiation is complete, the value returned will not
+  // change.
+  size_t GetMaximumUserDataLength() const;
 
  private:
   friend class ChannelManager;
@@ -70,7 +88,8 @@ class Session {
 
   // The raw frame-sending function. This function should only be called by the
   // other frame-sending functions. |sent_cb| is called synchronously once the
-  // frame is actually sent.
+  // frame is actually sent. Returns true if the frame was sent or queued;
+  // returns false on send error.
   bool SendFrame(std::unique_ptr<Frame> frame, fit::closure sent_cb = nullptr);
 
   // Send a multiplexer command along the multiplexer control channel.
@@ -125,6 +144,26 @@ class Session {
   // Set initial parameter negotiation as complete and run any pending tasks.
   void InitialParameterNegotiationComplete();
 
+  // Queue a frame for sending later, when the flow control situation changes
+  // (e.g. when more credits are available).
+  void QueueFrame(std::unique_ptr<Frame> frame, fit::closure sent_cb);
+
+  // Attempt to send any queued frames.
+  void TrySendQueued();
+  // Attempt to send any queued frames for |dlci|.
+  void TrySendQueued(DLCI dlci);
+
+  // Finds or iniitalizes a new Channel object for |dlci|
+  // Returns a pair with the channel and a boolean indicating if it was created.
+  std::pair<fbl::RefPtr<Channel>, bool> FindOrCreateChannel(DLCI dicl);
+
+  // Gets the Channel for |dlci|, or a null pointer if it doesn't exist.
+  fbl::RefPtr<Channel> GetChannel(DLCI dlci);
+
+  // Called when an incoming frame has credits attached. Adds |credits| to this
+  // Session's store of outgoing credits.
+  void HandleReceivedCredits(DLCI dlci, FrameCredits credits);
+
   l2cap::ScopedChannel l2cap_channel_;
 
   // The RFCOMM role of this device for this particular Session. This is
@@ -138,7 +177,7 @@ class Session {
   bool credit_based_flow_;
 
   // Keeps track of opened channels.
-  std::unordered_map<DLCI, fbl::RefPtr<Channel>> channels_;
+  std::map<DLCI, fbl::RefPtr<Channel>> channels_;
 
   // Called when the remote peer opens a new incoming channel. The session
   // object constructs a new channel and then passes ownership of the channel
@@ -183,12 +222,6 @@ class Session {
                      outstanding_mux_commands_hash>
       outstanding_mux_commands_;
 
-  enum class ParameterNegotiationState {
-    kNotNegotiated,
-    kNegotiating,
-    kNegotiated
-  };
-
   // Tracks whether the initial parameter negotiation has completed. RFCOMM
   // requires that parameter negotiation run at least once, before any DLCs are
   // opened. The first request to open a DLC to the remote peer will trigger
@@ -198,12 +231,6 @@ class Session {
 
   // Tasks which are to be run once parameter negotiation completes.
   std::queue<fit::closure> tasks_pending_parameter_negotiation_;
-
-  // Channels undergoing parameter negotiation. Multiple channels can be
-  // negotiated simultaneously. Note that the only parameter negotiation that
-  // our RFCOMM implementation will initiate is the required first PN; any other
-  // PNs which occur will be triggered by the remote.
-  std::unordered_map<DLCI, ParameterNegotiationState> channels_negotiating_;
 
   // The RX and TX MTU for this Session. This is determined during initial
   // parameter negotiation, and is based on the MTU of the underlying L2CAP

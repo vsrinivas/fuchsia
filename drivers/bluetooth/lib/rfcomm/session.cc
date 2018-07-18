@@ -10,11 +10,20 @@
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/rfcomm.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/session.h"
+#include "lib/fxl/functional/auto_call.h"
 
 namespace btlib {
 namespace rfcomm {
 
 namespace {
+
+// When the remote credit count drops below the low water mark, we will
+// replenish.
+constexpr Credits kLowWaterMark = 10;
+
+// This is the maximum amount of credits we will allow the remote Session to
+// have.
+constexpr Credits kHighWaterMark = 100;
 
 // Timeout system parameters (see RFCOMM 5.3, table 5.1)
 //
@@ -80,12 +89,40 @@ constexpr bool IsValidLocalChannel(Role role, DLCI dlci) {
   return (role == Role::kInitiator ? 1 : 0) == dlci % 2;
 }
 
+// Returns true if a frame should have credit-based flow control applied to it.
+// Credit-based flow applies only to UIH frames containing a nonzero amount
+// of user data. It does not apply to multiplexer commands. See RFCOMM 6.5.
+bool CreditsApply(const Frame& frame) {
+  return (static_cast<FrameType>(frame.control()) ==
+          FrameType::kUnnumberedInfoHeaderCheck) &&
+         IsUserDLCI(frame.dlci()) && (frame.length() > 0);
+}
+
+// Returns true if a frame can carry credits to the remote peer.
+// Only UIH frames may contain a credit field.
+// It only makes sense to carry credits on user DLCIs, the multiplexer DLCI is
+// not credit-based flow controlled.
+bool CreditsCandidate(Frame* frame) {
+  return IsUserDLCI(frame->dlci()) &&
+         (static_cast<FrameType>(frame->control()) ==
+          FrameType::kUnnumberedInfoHeaderCheck);
+}
+
 }  // namespace
 
 void Session::SendUserData(DLCI dlci, common::ByteBufferPtr data) {
+  ZX_DEBUG_ASSERT(!data || data->size() <= GetMaximumUserDataLength());
   bool sent = SendFrame(std::make_unique<UserDataFrame>(
       role_, credit_based_flow_, dlci, std::move(data)));
   ZX_DEBUG_ASSERT(sent);
+}
+
+size_t Session::GetMaximumUserDataLength() const {
+  ZX_DEBUG_ASSERT(initial_param_negotiation_state_ ==
+                  ParameterNegotiationState::kNegotiated);
+
+  // If credit-based flow is on, we always reserve a single octet for credits.
+  return credit_based_flow_ ? (maximum_frame_size_ - 1) : maximum_frame_size_;
 }
 
 std::unique_ptr<Session> Session::Create(
@@ -140,6 +177,14 @@ void Session::OpenRemoteChannel(ServerChannel server_channel,
   // device, and the inverse of its own direction bit for the session."
   DLCI dlci = ServerChannelToDLCI(server_channel, OppositeRole(role_));
 
+  // Make a new channel (with initial not-negotiated state) if this is the
+  // first we've heard of this DLCI.
+  auto chan_place = FindOrCreateChannel(dlci);
+  if (chan_place.second) {
+    bt_log(TRACE, "rfcomm", "initialized new remote channel %u", dlci);
+  }
+
+  // If we haven't negotiated initial parameters, queue this and possibly start.
   if (initial_param_negotiation_state_ !=
       ParameterNegotiationState::kNegotiated) {
     tasks_pending_parameter_negotiation_.emplace(
@@ -165,20 +210,21 @@ void Session::OpenRemoteChannel(ServerChannel server_channel,
         switch (type) {
           case FrameType::kUnnumberedAcknowledgement: {
             bt_log(TRACE, "rfcomm", "channel %u started successfully", dlci);
-            new_channel = fbl::AdoptRef(new internal::ChannelImpl(dlci, this));
-            ZX_DEBUG_ASSERT(channels_.find(dlci) == channels_.end());
-            channels_.emplace(dlci, new_channel);
+            new_channel = GetChannel(dlci);
+            ZX_DEBUG_ASSERT(new_channel);
+            new_channel->established_ = true;
             break;
           }
           case FrameType::kDisconnectedMode:
             bt_log(TRACE, "rfcomm", "channel %u failed to start", dlci);
+            channels_.erase(dlci);
             break;
           default:
             bt_log(WARN, "rfcomm", "unexpected response to SABM: %u",
                    static_cast<unsigned>(type));
+            channels_.erase(dlci);
             break;
         }
-
         // Send the result.
         async::PostTask(dispatcher_,
                         [server_channel, new_channel, cb_ = std::move(cb)] {
@@ -225,18 +271,37 @@ void Session::RxCallback(const l2cap::SDU& sdu) {
 
       case FrameType::kUnnumberedInfoHeaderCheck: {
         if (dlci == kMuxControlDLCI) {
-          HandleMuxCommand(
-              static_cast<MuxCommandFrame*>(frame.get())->TakeMuxCommand());
+          HandleMuxCommand(frame->AsMuxCommandFrame()->TakeMuxCommand());
           return;
         } else if (IsUserDLCI(dlci)) {
-          auto channel_it = channels_.find(dlci);
-          if (channel_it == channels_.end()) {
-            bt_log(WARN, "rfcomm", "user data received for unopened DLCI %u",
-                   static_cast<unsigned>(dlci));
+          auto chan = GetChannel(dlci);
+          if (!chan) {
+            bt_log(WARN, "rfcomm", "data received for unopened DLCI %u", dlci);
             return;
           }
-          channel_it->second->Receive(
-              static_cast<UserDataFrame*>(frame.get())->TakeInformation());
+
+          auto* data_frame = frame->AsUserDataFrame();
+          // TODO(gusss): Currently, our UIH frames can bear credits, but it
+          // only makes sense for UserDataFrames to bear credits (because you
+          // don't send credits along the mux control channel). Should change
+          // this in frames.[h,cc].
+          if (credit_based_flow_) {
+            HandleReceivedCredits(dlci, data_frame->credits());
+            if (CreditsApply(*frame)) {
+              // Reduce their number of credits if it should be reduced.
+              if (frame->length() > 0) {
+                chan->remote_credits_--;
+              }
+
+              if (chan->remote_credits_ <= kLowWaterMark) {
+                // Replenish the remote's credits by sending an empty user data
+                // frame, which will attach the max amount of credits.
+                SendUserData(dlci, nullptr);
+              }
+            }
+          }
+
+          chan->Receive(data_frame->TakeInformation());
           return;
         } else {
           bt_log(WARN, "rfcomm", "UIH frame on invalid DLCI %u", dlci);
@@ -316,6 +381,9 @@ bool Session::SendFrame(std::unique_ptr<Frame> frame, fit::closure sent_cb) {
   const DLCI dlci = frame->dlci();
   const FrameType type = static_cast<FrameType>(frame->control());
 
+  auto chan = GetChannel(dlci);
+  ZX_DEBUG_ASSERT(chan);
+
   // If the multiplexer isn't started, only startup frames should be sent.
   ZX_DEBUG_ASSERT(multiplexer_started() || IsMuxStartupFrame(type, dlci));
 
@@ -324,7 +392,20 @@ bool Session::SendFrame(std::unique_ptr<Frame> frame, fit::closure sent_cb) {
   // TODO(NET-1079, NET-1080): check flow control and queue the frame if it
   // needs to be queued.
 
-  // TODO(gusss): attach credits to frame.
+  // Checking that we have enough credits to send this frame.
+  if (credit_based_flow_ && CreditsApply(*frame)) {
+    if (chan->local_credits_ <= 0) {
+      QueueFrame(std::move(frame), std::move(sent_cb));
+      return true;
+    }
+  }
+
+  // The number of credits which will be attached to this frame.
+  FrameCredits replenish_credits = 0;
+  if (credit_based_flow_ && CreditsCandidate(frame.get())) {
+    replenish_credits = kHighWaterMark - chan->remote_credits_;
+    frame->AsUnnumberedInfoHeaderCheckFrame()->set_credits(replenish_credits);
+  }
 
   // Allocate and write the buffer.
   auto buffer = common::NewSlabBuffer(frame->written_size());
@@ -336,6 +417,19 @@ bool Session::SendFrame(std::unique_ptr<Frame> frame, fit::closure sent_cb) {
   frame->Write(buffer->mutable_view());
 
   if (l2cap_channel_->Send(std::move(buffer))) {
+    if (credit_based_flow_) {
+      // If the frame had attached credits, increment remote credits.
+      if (CreditsCandidate(frame.get())) {
+        chan->remote_credits_ += replenish_credits;
+      }
+
+      // If this frame itself required a credit to send, reduce our number of
+      // credits.
+      if (CreditsApply(*frame)) {
+        chan->local_credits_--;
+      }
+    }
+
     if (sent_cb)
       sent_cb();
     return true;
@@ -393,6 +487,7 @@ void Session::StartupMultiplexer() {
   }
 
   bt_log(TRACE, "rfcomm", "starting multiplexer");
+  FindOrCreateChannel(kMuxControlDLCI);
 
   role_ = Role::kNegotiating;
 
@@ -440,7 +535,8 @@ void Session::HandleSABM(DLCI dlci) {
       case Role::kUnassigned: {
         // We received a SABM request to start the multiplexer. Reply positively
         // to the request, meaning that the peer becomes the initiator and this
-        // session becomes the responder.
+        // session becomes the responder, and initialize our MuxCommand channel.
+        FindOrCreateChannel(kMuxControlDLCI);
         SendResponse(FrameType::kUnnumberedAcknowledgement, dlci);
         SetMultiplexerStarted(Role::kResponder);
         return;
@@ -494,7 +590,13 @@ void Session::HandleSABM(DLCI dlci) {
   }
 
   // TODO(NET-1301): unit test this case.
-  if (channels_.find(dlci) != channels_.end()) {
+  // Initialize the channel if we don't already know about it, to respond to
+  // negotiation appropriately.
+  auto chan_placed = FindOrCreateChannel(dlci);
+  auto channel = std::move(chan_placed.first);
+  // If the channel already exists, we must have just negotiated it, without
+  // having it be established.
+  if (channel->established_) {
     // If the channel is already open, the remote is confused about the state of
     // the Session. Send a DM and a DISC for that channel.
     // TODO(NET-1274): do we want to just shut down the whole session here?
@@ -504,16 +606,14 @@ void Session::HandleSABM(DLCI dlci) {
     SendCommand(FrameType::kDisconnect, dlci, [](auto response) {
       // TODO(NET-1273): implement clean channel close + state reset
     });
-
+    channels_.erase(dlci);
     return;
   }
 
   // Start the channel by first responding positively.
   SendResponse(FrameType::kUnnumberedAcknowledgement, dlci);
+  channel->established_ = true;
 
-  // Now form the channel and pass it off.
-  auto channel = fbl::AdoptRef(new internal::ChannelImpl(dlci, this));
-  channels_.emplace(dlci, channel);
   async::PostTask(dispatcher_, [this, dlci, channel] {
     channel_opened_cb_(channel, DLCIToServerChannel(dlci));
   });
@@ -566,40 +666,53 @@ void Session::HandleMuxCommand(std::unique_ptr<MuxCommand> mux_command) {
         return;
       }
 
-      if (channels_negotiating_.find(received_params.dlci) !=
-              channels_negotiating_.end() &&
-          channels_negotiating_[received_params.dlci] !=
-              ParameterNegotiationState::kNotNegotiated) {
-        // RFCOMM 5.5.3 states that supporting re-negotiation of DLCIs is
-        // optional, and that instead we may just reply with our own parameters.
-        bt_log(TRACE, "rfcomm", "request to negotiate already-negotiated DLCI");
-        SendResponse(FrameType::kDisconnectedMode, received_params.dlci);
-        ParameterNegotiationParams our_params =
-            GetIdealParameters(received_params.dlci);
-        our_params.credit_based_flow_handshake =
-            CreditBasedFlowHandshake::kSupportedResponse;
-        our_params.maximum_frame_size = maximum_frame_size_;
-        SendMuxCommand(std::make_unique<DLCParameterNegotiationCommand>(
-            CommandResponse::kResponse, our_params));
+      auto chan = GetChannel(received_params.dlci);
+      if (chan) {
+        if (chan->negotiation_state_ !=
+            ParameterNegotiationState::kNotNegotiated) {
+          // RFCOMM 5.5.3 states that supporting re-negotiation of DLCIs is
+          // optional, and we can just reply with our own parameters.
+          bt_log(TRACE, "rfcomm", "negotiate already-negotiated DLCI %u",
+                 received_params.dlci);
+          ParameterNegotiationParams our_params =
+              GetIdealParameters(received_params.dlci);
+          our_params.credit_based_flow_handshake =
+              CreditBasedFlowHandshake::kSupportedResponse;
+          our_params.maximum_frame_size = maximum_frame_size_;
+          SendMuxCommand(std::make_unique<DLCParameterNegotiationCommand>(
+              CommandResponse::kResponse, our_params));
+          return;
+        }
+
+        if (initial_param_negotiation_state_ ==
+                ParameterNegotiationState::kNegotiated &&
+            received_params.maximum_frame_size != maximum_frame_size_) {
+          // RFCOMM 5.5.3 states that a responder may issue a DM frame if they
+          // are unwilling to establish a connection. In this case, we use it to
+          // reject any non-initial PN command which attempts to change the
+          // maximum frame size.
+          bt_log(TRACE, "rfcomm",
+                 "peer requested different max frame size after initial "
+                 "negotiation; rejecting");
+          SendResponse(FrameType::kDisconnectedMode, received_params.dlci);
+        }
         return;
       }
 
-      if (initial_param_negotiation_state_ ==
-              ParameterNegotiationState::kNegotiated &&
-          received_params.maximum_frame_size != maximum_frame_size_) {
-        // RFCOMM 5.5.3 states that a responder may issue a DM frame if they are
-        // unwilling to establish a connection. In this case, we use it to
-        // reject any non-initial PN command which attempts to change the
-        // maximum frame size.
-        bt_log(TRACE, "rfcomm",
-               "peer requested different max frame size after"
-               " initial negotiation; rejecting");
-        SendResponse(FrameType::kDisconnectedMode, received_params.dlci);
-        return;
-      }
+      // Unknown channel being negotiated.  Initialize it.
+      auto chan_place = FindOrCreateChannel(received_params.dlci);
+      ZX_DEBUG_ASSERT(chan_place.second);
+      chan = std::move(chan_place.first);
+      bt_log(TRACE, "rfcomm", "initialized DLCI %d for parameter negotiation",
+             received_params.dlci);
 
       ParameterNegotiationParams ideal_params =
           GetIdealParameters(received_params.dlci);
+
+      // Take the credits they give us, and log the credits we give them.
+      HandleReceivedCredits(received_params.dlci,
+                            received_params.initial_credits);
+      chan->remote_credits_ = ideal_params.initial_credits;
 
       // Parameter negotiation described in GSM 5.4.6.3.1 (under table 5).
       ParameterNegotiationParams negotiated_params;
@@ -645,16 +758,15 @@ void Session::HandleMuxCommand(std::unique_ptr<MuxCommand> mux_command) {
 
       // TODO(NET-1130): set priority if/when priority is implemented.
 
-      // TODO(NET-1079): receive credits when credit-based flow is implemented.
-
       bt_log(TRACE, "rfcomm",
-             "parameters negotiated: DLCI %u, credit-based flow %s, (credits %u"
-             "), priority %u, max frame size %u",
+             "parameters negotiated: DLCI %u, credit-based flow %s, "
+             "(ours %u, theirs %u), priority %u, max frame size %u",
              negotiated_params.dlci,
              (negotiated_params.credit_based_flow_handshake ==
                       CreditBasedFlowHandshake::kSupportedResponse
                   ? "on"
                   : "off"),
+             received_params.initial_credits,
              negotiated_params.initial_credits, negotiated_params.priority,
              negotiated_params.maximum_frame_size);
 
@@ -662,9 +774,7 @@ void Session::HandleMuxCommand(std::unique_ptr<MuxCommand> mux_command) {
       SendMuxCommand(std::make_unique<DLCParameterNegotiationCommand>(
           CommandResponse::kResponse, negotiated_params));
 
-      channels_negotiating_[negotiated_params.dlci] =
-          ParameterNegotiationState::kNegotiated;
-
+      chan->negotiation_state_ = ParameterNegotiationState::kNegotiated;
       return;
     }
     default: {
@@ -705,8 +815,11 @@ void Session::RunInitialParameterNegotiation(DLCI dlci) {
                           ParameterNegotiationState::kNotNegotiated,
                       "initial parameter negotiation already run");
 
+  auto chan = GetChannel(dlci);
+  ZX_DEBUG_ASSERT(chan);
+
   // Mark the DLCI as in the negotiating state.
-  channels_negotiating_[dlci] = ParameterNegotiationState::kNegotiating;
+  chan->negotiation_state_ = ParameterNegotiationState::kNegotiating;
   initial_param_negotiation_state_ = ParameterNegotiationState::kNegotiating;
 
   auto params = GetIdealParameters(dlci);
@@ -715,25 +828,29 @@ void Session::RunInitialParameterNegotiation(DLCI dlci) {
       CommandResponse::kCommand, params);
   SendMuxCommand(std::move(pn_command), [this, dlci, priority = params.priority,
                                          maximum_frame_size =
-                                             params.maximum_frame_size](
+                                             params.maximum_frame_size,
+                                         their_credits = params.initial_credits,
+                                         chan = std::move(chan)](
                                             auto mux_command) {
     ZX_DEBUG_ASSERT(initial_param_negotiation_state_ ==
                         ParameterNegotiationState::kNegotiating ||
                     initial_param_negotiation_state_ ==
                         ParameterNegotiationState::kNegotiated);
 
-    if (mux_command == nullptr) {
-      // A response of nullptr signals a DM response from the peer.
-      bt_log(TRACE, "rfcomm", "PN command for DLCI %u rejected", dlci);
-      channels_negotiating_[dlci] = ParameterNegotiationState::kNotNegotiated;
-
-      // If initial parameter negotiation didn't already finish since we started
-      // this PN command, then reset it back to kNotNegotiated.
+    // If we fail negotation for any reason, remove the nascent channel and
+    // reset to not-negotiated if negotiation didn't already finish.
+    auto failed_negotiation = fxl::MakeAutoCall([this, dlci] {
+      channels_.erase(dlci);
       if (initial_param_negotiation_state_ ==
           ParameterNegotiationState::kNegotiating) {
         initial_param_negotiation_state_ =
             ParameterNegotiationState::kNotNegotiated;
       }
+    });
+
+    if (mux_command == nullptr) {
+      // A response of nullptr signals a DM response from the peer.
+      bt_log(TRACE, "rfcomm", "PN command for DLCI %u rejected", dlci);
       return;
     }
 
@@ -749,12 +866,7 @@ void Session::RunInitialParameterNegotiation(DLCI dlci) {
     if (dlci != params.dlci) {
       bt_log(TRACE, "rfcomm", "remote changed DLCI in PN response");
       SendCommand(FrameType::kDisconnect, dlci);
-      channels_negotiating_[dlci] = ParameterNegotiationState::kNotNegotiated;
-      if (initial_param_negotiation_state_ ==
-          ParameterNegotiationState::kNegotiating) {
-        initial_param_negotiation_state_ =
-            ParameterNegotiationState::kNotNegotiated;
-      }
+      // don't need to erase params.dlci, it's unknown.
       return;
     }
 
@@ -767,11 +879,6 @@ void Session::RunInitialParameterNegotiation(DLCI dlci) {
       bt_log(WARN, "rfcomm",
              "peer's PN response contained an invalid max frame size");
       SendCommand(FrameType::kDisconnect, dlci);
-      channels_negotiating_[dlci] = ParameterNegotiationState::kNotNegotiated;
-      if (initial_param_negotiation_state_ ==
-          ParameterNegotiationState::kNegotiating)
-        initial_param_negotiation_state_ =
-            ParameterNegotiationState::kNotNegotiated;
       return;
     }
 
@@ -782,13 +889,11 @@ void Session::RunInitialParameterNegotiation(DLCI dlci) {
              "peer tried to change max frame size after initial"
              " param negotiation; rejecting");
       SendCommand(FrameType::kDisconnect, dlci);
-      channels_negotiating_[dlci] = ParameterNegotiationState::kNotNegotiated;
-      if (initial_param_negotiation_state_ ==
-          ParameterNegotiationState::kNegotiating)
-        initial_param_negotiation_state_ =
-            ParameterNegotiationState::kNotNegotiated;
       return;
     }
+
+    // Successfully negotiated.
+    failed_negotiation.cancel();
 
     // Only set these parameters on initial parameter negotiation.
     if (initial_param_negotiation_state_ ==
@@ -802,19 +907,19 @@ void Session::RunInitialParameterNegotiation(DLCI dlci) {
       InitialParameterNegotiationComplete();
     }
 
-    // TODO(NET-1079): Handle credits here when credit-based flow implemented
-    // HandleReceivedCredits(dlci, params.initial_credits);
+    // Take the credits they give us, and log the credits we give them.
+    HandleReceivedCredits(dlci, params.initial_credits);
+    chan->remote_credits_ = their_credits;
 
     bt_log(TRACE, "rfcomm",
-           "arameters negotiated: DLCI %u, credit-based flow %s (credits: %u), "
-           "priority %u, max frame size %u",
+           "parameters negotiated: DLCI %u, credit-based flow %s "
+           "(ours %u, theirs %u), priority %u, max frame size %u",
            params.dlci, (credit_based_flow_ ? "on" : "off"),
-           params.initial_credits, params.priority, maximum_frame_size_);
+           params.initial_credits, their_credits, params.priority,
+           maximum_frame_size_);
 
     // Set channel to not negotiating anymore.
-    ZX_DEBUG_ASSERT(channels_negotiating_.find(dlci) !=
-                    channels_negotiating_.end());
-    channels_negotiating_[dlci] = ParameterNegotiationState::kNegotiated;
+    chan->negotiation_state_ = ParameterNegotiationState::kNegotiated;
   });
 }
 
@@ -850,10 +955,8 @@ ParameterNegotiationParams Session::GetIdealParameters(DLCI dlci) const {
 
   return {dlci,
           // We always attempt to enable credit-based flow (RFCOMM 5.5.3).
-          CreditBasedFlowHandshake::kSupportedRequest,
-          // TODO(NET-1079): send initial credits when credit-based flow
-          // implemented.
-          priority, maximum_frame_size, 0};
+          CreditBasedFlowHandshake::kSupportedRequest, priority,
+          maximum_frame_size, kMaxInitialCredits};
 }
 
 void Session::InitialParameterNegotiationComplete() {
@@ -861,13 +964,76 @@ void Session::InitialParameterNegotiationComplete() {
 
   initial_param_negotiation_state_ = ParameterNegotiationState::kNegotiated;
 
+  // TODO(gusss): need to test this in unittests. try starting multiple channels
+  // before completing parameter negotiation.
   while (!tasks_pending_parameter_negotiation_.empty()) {
     async::PostTask(dispatcher_,
                     std::move(tasks_pending_parameter_negotiation_.front()));
     tasks_pending_parameter_negotiation_.pop();
   }
+}
 
-  // TODO(gusss): send frames from queue when queueing is implemented.
+void Session::QueueFrame(std::unique_ptr<Frame> frame, fit::closure sent_cb) {
+  auto chan = GetChannel(frame->dlci());
+  ZX_DEBUG_ASSERT(chan);
+  chan->wait_queue_.push(std::make_pair(std::move(frame), std::move(sent_cb)));
+}
+
+void Session::TrySendQueued() {
+  for (const auto& it : channels_)  {
+    TrySendQueued(it.first);
+  }
+}
+
+void Session::TrySendQueued(DLCI dlci) {
+  ZX_DEBUG_ASSERT(dlci == kMuxControlDLCI || IsUserDLCI(dlci));
+  auto chan = GetChannel(dlci);
+  if (!chan) {
+    return;
+  }
+  auto& queue = chan->wait_queue_;
+
+  // We attempt to send each frame in the queue. Note that some frames might get
+  // added back to the queue, while others may not (e.g. we might successfully
+  // send a multiplexer command, but a user data frame might get queued due to
+  // credit-based flow control).
+  size_t num_to_send = queue.size();
+  while (num_to_send--) {
+    auto& frame_and_cb = queue.front();
+    bool sent = SendFrame(std::move(frame_and_cb.first),
+                          std::move(frame_and_cb.second));
+    ZX_DEBUG_ASSERT(sent);
+    queue.pop();
+  }
+}
+
+// Gets the Channel for |dlci|, or a null pointer if it doesn't exist.
+fbl::RefPtr<Channel> Session::GetChannel(DLCI dlci) {
+  auto it = channels_.find(dlci);
+  if (it == channels_.end()) {
+    return nullptr;
+  }
+  return it->second;
+}
+
+// Finds or iniitalizes a new Channel object for |dlci|
+// Returns a pair with the channel and a boolean indicating if it was created.
+std::pair<fbl::RefPtr<Channel>, bool> Session::FindOrCreateChannel(DLCI dlci) {
+  auto chan_place = channels_.emplace(
+      dlci, fbl::AdoptRef(new internal::ChannelImpl(dlci, this)));
+  return std::make_pair(chan_place.first->second, chan_place.second);
+}
+
+void Session::HandleReceivedCredits(DLCI dlci, FrameCredits credits) {
+  auto chan = GetChannel(dlci);
+  ZX_DEBUG_ASSERT(chan);
+
+  bool credits_were_zero = chan->local_credits_ == 0;
+  chan->local_credits_ += credits;
+
+  // If we went from zero to nonzero credits, attempt to send frames.
+  if (credits_were_zero && credits)
+    TrySendQueued();
 }
 
 }  // namespace rfcomm

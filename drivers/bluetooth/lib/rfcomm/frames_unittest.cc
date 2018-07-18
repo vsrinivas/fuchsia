@@ -197,6 +197,33 @@ const auto kPreMuxDMFrame = common::CreateStaticByteBuffer(
     // Please see GSM 5.2.1.6, GSM Annex B, and RFCOMM 5.1.1.
     0b00110110);
 
+// Contruction of empty user data frame
+//  - Sent from the RFCOMM responder
+//  - UIH frame
+//  - Sent to DLCI 0x23
+//  - Command frame
+//  - Credits: 11
+constexpr Role kEmptyUserDataFrameRole = Role::kResponder;
+constexpr DLCI kEmptyUserDataFrameDLCI = 0x23;
+constexpr bool kEmptyUserDataFrameCreditBasedFlow = true;
+constexpr FrameCredits kEmptyUserDataFrameCredits = 11;
+const auto kEmptyUserDataFrame = common::CreateStaticByteBuffer(
+    // Address octet:
+    // E/A bit is always 1. C/R bit is 0 in the case of a command being sent
+    // from the responder role. DLCI is 0x23. Thus: 1 (E/A) ++ 0 (C/R) ++ 110001
+    // (DLCI) = 10110001
+    0b10001101,
+    // Control octet:
+    // UIH is 1111p111, P/F bit (p) is 1 (credit-based fc) --> 11111111
+    0b11111111,
+    // Length octet: length is 0
+    0b00000001,
+    // Credits: 11
+    0b00001011,
+    // FCS octet:
+    // Please see GSM 5.2.1.6, GSM Annex B, and RFCOMM 5.1.1.
+    0b10000001);
+
 const auto kInvalidLengthFrame = common::CreateStaticByteBuffer(0, 1, 2);
 
 // Same as the hellofuchsia frame, but information field is too short.
@@ -283,6 +310,17 @@ TEST_F(RFCOMM_FrameTest, WritePreMuxStartupDM) {
   EXPECT_EQ(kPreMuxDMFrame, buffer);
 }
 
+TEST_F(RFCOMM_FrameTest, WriteEmptyUserDataFrameWithCredits) {
+  UserDataFrame frame(kEmptyUserDataFrameRole,
+                      kEmptyUserDataFrameCreditBasedFlow,
+                      kEmptyUserDataFrameDLCI, nullptr);
+  frame.set_credits(kEmptyUserDataFrameCredits);
+  EXPECT_EQ(kEmptyUserDataFrame.size(), frame.written_size());
+  common::DynamicByteBuffer buffer(frame.written_size());
+  frame.Write(buffer.mutable_view());
+  EXPECT_EQ(kEmptyUserDataFrame, buffer);
+}
+
 TEST_F(RFCOMM_FrameTest, ReadFrame) {
   auto frame =
       Frame::Parse(kEmptyFrameCreditBasedFlow, kEmptyFrameRole, kEmptyFrame);
@@ -357,6 +395,17 @@ TEST_F(RFCOMM_FrameTest, ReadFramesPreMuxStartup) {
   EXPECT_FALSE(Frame::Parse(true, Role::kUnassigned, kHelloFrame));
   EXPECT_FALSE(Frame::Parse(true, Role::kUnassigned, kFuchsiaFrame));
   EXPECT_FALSE(Frame::Parse(true, Role::kUnassigned, kTestCommandFrame));
+}
+
+TEST_F(RFCOMM_FrameTest, ReadEmptyUserDataFrameWithCredits) {
+  auto frame = Frame::Parse(kEmptyUserDataFrameCreditBasedFlow,
+                            kEmptyUserDataFrameRole, kEmptyUserDataFrame);
+  EXPECT_EQ(FrameType::kUnnumberedInfoHeaderCheck,
+            static_cast<FrameType>(frame->control()));
+  EXPECT_EQ(kEmptyUserDataFrameDLCI, frame->dlci());
+  auto user_data_frame = Frame::DowncastFrame<UserDataFrame>(std::move(frame));
+  EXPECT_EQ(0, user_data_frame->length());
+  EXPECT_EQ(nullptr, user_data_frame->TakeInformation());
 }
 
 TEST_F(RFCOMM_FrameTest, ReadInvalidFrame_TooShort) {

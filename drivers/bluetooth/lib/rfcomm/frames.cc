@@ -221,7 +221,7 @@ std::unique_ptr<Frame> Frame::Parse(bool credit_based_flow, Role role,
           role, credit_based_flow, std::move(mux_command));
       mux_command_frame->set_credits(credits);
       return mux_command_frame;
-    } else if (dlci >= kMinUserDLCI && dlci <= kMaxUserDLCI) {
+    } else if (IsUserDLCI(dlci)) {
       common::MutableByteBufferPtr information;
       if (length > 0) {
         information = common::NewSlabBuffer(length);
@@ -328,6 +328,22 @@ size_t Frame::header_size() const {
          sizeof(uint8_t) * (TwoOctetLength(length()) ? 2 : 1);
 }
 
+MuxCommandFrame* Frame::AsMuxCommandFrame() {
+  ZX_DEBUG_ASSERT(dlci() == 0);
+  return static_cast<MuxCommandFrame*>(this);
+}
+
+UserDataFrame* Frame::AsUserDataFrame() {
+  ZX_DEBUG_ASSERT(IsUserDLCI(dlci()));
+  return static_cast<UserDataFrame*>(this);
+}
+
+UnnumberedInfoHeaderCheckFrame* Frame::AsUnnumberedInfoHeaderCheckFrame() {
+  FrameType type = static_cast<FrameType>(control());
+  ZX_DEBUG_ASSERT(type == FrameType::kUnnumberedInfoHeaderCheck);
+  return static_cast<UnnumberedInfoHeaderCheckFrame*>(this);
+}
+
 DisconnectCommand::DisconnectCommand(Role role, DLCI dlci)
     : Frame(role,
             // DISC frames are always commands.
@@ -419,10 +435,12 @@ void UserDataFrame::Write(common::MutableBufferView buffer) const {
   ZX_DEBUG_ASSERT(buffer.size() >= written_size());
 
   WriteHeader(buffer);
-
   size_t offset = header_size();
-  buffer.Write(*information_, offset);
-  offset += information_->size();
+
+  if (information_) {
+    buffer.Write(*information_, offset);
+    offset += information_->size();
+  }
 
   // FCS is always calculated over first two octets for UIH frames.
   buffer[offset] = CalculateFCS(buffer.view(0, 2));
@@ -435,9 +453,7 @@ size_t UserDataFrame::written_size() const {
 }
 
 common::ByteBufferPtr UserDataFrame::TakeInformation() {
-  auto tmp = std::move(information_);
-  information_ = nullptr;
-  return tmp;
+  return std::move(information_);
 }
 
 MuxCommandFrame::MuxCommandFrame(Role role, bool credit_based_flow,

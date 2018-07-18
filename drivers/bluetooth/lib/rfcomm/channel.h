@@ -19,6 +19,7 @@ namespace btlib {
 namespace rfcomm {
 
 class Session;
+class Frame;
 
 class Channel : public fbl::RefCounted<Channel> {
  public:
@@ -47,6 +48,20 @@ class Channel : public fbl::RefCounted<Channel> {
   const DLCI dlci_;
   // The Session owning this Channel. |session_| will always outlive |this|.
   Session* session_;
+
+  // True if the channel is established (DLC Establishment has taken place)
+  bool established_;
+
+  // The negotiation state of this channel
+  ParameterNegotiationState negotiation_state_;
+
+  // The number of local and remote credits available on this channel.
+  Credits local_credits_;
+  Credits remote_credits_;
+
+  // Frames waiting on this channel to receive credits to be sent (and
+  // sent callbacks)
+  std::queue<std::pair<std::unique_ptr<Frame>, fit::closure>> wait_queue_;
 
   // Called by |session_| when a new frame is received for this channel. If an
   // |rx_callback_| is registered, the frame is forwarded to the callback;

@@ -71,6 +71,11 @@ constexpr ServerChannel kMaxServerChannel = 30;
 // Used to indicate error.
 constexpr ServerChannel kInvalidServerChannel = 0;
 
+constexpr bool IsValidServerChannel(ServerChannel server_channel) {
+  return server_channel >= kMinServerChannel &&
+         server_channel <= kMaxServerChannel;
+}
+
 // Used to convert between Server Channel and DLCI. See RFCOMM 5.4 for the
 // spec's description of Server Channels and how they relate to DLCIs.
 constexpr size_t kServerChannelShift = 1;
@@ -83,8 +88,7 @@ inline constexpr ServerChannel DLCIToServerChannel(DLCI dlci) {
 inline constexpr DLCI ServerChannelToDLCI(ServerChannel server_channel,
                                           Role role) {
   ZX_DEBUG_ASSERT(role == Role::kInitiator || role == Role::kResponder);
-  ZX_DEBUG_ASSERT(server_channel >= kMinServerChannel &&
-                  server_channel <= kMaxServerChannel);
+  ZX_DEBUG_ASSERT(IsValidServerChannel(server_channel));
   return (server_channel << kServerChannelShift) |
          (role == Role::kInitiator ? 1 : 0);
 }
@@ -98,6 +102,17 @@ using InformationLength = uint16_t;
 // octets will be needed to encode a length value. It is used by Frames and
 // MuxCommands alike.
 constexpr InformationLength kMaxSingleOctetLength = 127;
+
+// This type is used to store the number of credits an RFCOMM peer currently
+// holds.
+using Credits = size_t;
+// The type used for transferring credits in a frame. The value can range from 0
+// to 255. See RFCOMM 6.5.2.
+using FrameCredits = uint8_t;
+// The type used for the initial amount of credits in a frame. See RFCOMM 5.5.3.
+using InitialCredits = uint8_t;
+constexpr InitialCredits kMinInitialCredits = 0;
+constexpr InitialCredits kMaxInitialCredits = 7;
 
 // Encodes the Control Field; see table 2, GSM 07.10 5.2.1.3 and RFCOMM 4.2.
 // The P/F bit is set to 0 for all frame types.
@@ -120,6 +135,13 @@ constexpr bool IsMuxStartupFrame(FrameType type, DLCI dlci) {
           type == FrameType::kUnnumberedAcknowledgement ||
           type == FrameType::kDisconnectedMode);
 }
+
+// The negotiation state of parameters for each channel (or initial parameters)
+enum class ParameterNegotiationState {
+  kNotNegotiated,
+  kNegotiating,
+  kNegotiated
+};
 
 }  // namespace rfcomm
 }  // namespace btlib
