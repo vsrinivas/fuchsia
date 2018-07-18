@@ -29,7 +29,13 @@ impl<'a> fmt::Display for IpAddress<'a> {
     }
 }
 
-struct InterfaceAddress<'a>(&'a netstack::InterfaceAddress);
+pub struct InterfaceAddress<'a>(&'a netstack::InterfaceAddress);
+
+impl<'a> From<&'a netstack::InterfaceAddress> for InterfaceAddress<'a> {
+    fn from(a: &'a netstack::InterfaceAddress) -> Self {
+        InterfaceAddress(a)
+    }
+}
 
 impl<'a> fmt::Display for InterfaceAddress<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {

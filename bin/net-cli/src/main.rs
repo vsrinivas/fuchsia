@@ -38,7 +38,10 @@ fn main() -> Result<(), Error> {
     }
 }
 
-many_futures!(IfFut, [List, GetInfo, Enable, Disable, AddrAdd, AddrDel,]);
+many_futures!(
+    IfFut,
+    [List, GetInfo, Enable, Disable, AddrAdd, AddrDel, Error]
+);
 
 fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> impl Future<Item = (), Error = Error> {
     match cmd {
@@ -88,9 +91,30 @@ fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> impl Future<Item = (), Error = 
                     }
                 })
         }),
-        IfCmd::Addr(AddrCmd::Add { .. }) => IfFut::AddrAdd({
-            println!("{:?} not implemented!", cmd);
-            futures::future::ok(())
+        IfCmd::Addr(AddrCmd::Add { id, addr, prefix }) => IfFut::AddrAdd({
+            let parsed_addr = match parse_ip_addr(&addr) {
+                Ok(a) => a,
+                Err(e) => return IfFut::Error({ futures::future::err(e) }),
+            };
+            let mut fidl_addr = netstack::InterfaceAddress {
+                ip_address: parsed_addr,
+                prefix_len: prefix,
+                peer_address: None,
+            };
+            stack
+                .add_interface_address(id, &mut fidl_addr)
+                .map_err(|e| e.context("error setting interface address").into())
+                .map(move |response| {
+                    if let Some(e) = response {
+                        println!("Error adding interface address {}: {:?}", id, e)
+                    } else {
+                        println!(
+                            "Address {} added to interface {}",
+                            pretty::InterfaceAddress::from(&fidl_addr),
+                            id
+                        )
+                    }
+                })
         }),
         IfCmd::Addr(AddrCmd::Del { .. }) => IfFut::AddrDel({
             println!("{:?} not implemented!", cmd);
@@ -102,4 +126,15 @@ fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> impl Future<Item = (), Error = 
 fn do_fwd(cmd: opts::FwdCmd, _stack: StackProxy) -> impl Future<Item = (), Error = Error> {
     println!("{:?} not implemented!", cmd);
     futures::future::ok(())
+}
+
+fn parse_ip_addr(addr: &str) -> Result<net::IpAddress, Error> {
+    match addr.parse()? {
+        ::std::net::IpAddr::V4(ipv4) => Ok(net::IpAddress::Ipv4(net::IPv4Address {
+            addr: ipv4.octets(),
+        })),
+        ::std::net::IpAddr::V6(ipv6) => Ok(net::IpAddress::Ipv6(net::IPv6Address {
+            addr: ipv6.octets(),
+        })),
+    }
 }
