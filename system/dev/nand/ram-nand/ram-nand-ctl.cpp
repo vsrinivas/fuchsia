@@ -13,7 +13,7 @@
 #include <zircon/device/ram-nand.h>
 #include <zircon/types.h>
 
-#include "device.h"
+#include "ram-nand.h"
 #include "ram-nand-ctl.h"
 
 namespace {
@@ -57,7 +57,7 @@ zx_status_t RamNandCtl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
 zx_status_t RamNandCtl::CreateDevice(const NandParams& params, void* out_buf,
                                      size_t* out_actual) {
     fbl::AllocChecker checker;
-    fbl::unique_ptr<RamNandDevice> device(new (&checker) RamNandDevice(zxdev(), params));
+    fbl::unique_ptr<NandDevice> device(new (&checker) NandDevice(params, zxdev()));
     if (!checker.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -71,7 +71,7 @@ zx_status_t RamNandCtl::CreateDevice(const NandParams& params, void* out_buf,
     strcpy(static_cast<char*>(out_buf), device->name());
 
     // devmgr is now in charge of the device.
-    __UNUSED RamNandDevice* dummy = device.release();
+    __UNUSED NandDevice* dummy = device.release();
     return ZX_OK;
 }
 

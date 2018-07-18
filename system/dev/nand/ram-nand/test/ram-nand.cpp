@@ -11,6 +11,7 @@
 #include <zircon/device/ram-nand.h>
 #include <zircon/process.h>
 
+#include "fake-ddk.h"
 #include "ram-nand.h"
 
 namespace {
@@ -37,6 +38,23 @@ bool TrivialLifetimeTest() {
         ASSERT_EQ(ZX_OK, device.Init(name));
         EXPECT_EQ(0, strncmp("ram-nand-1", name, NAME_MAX));
     }
+    END_TEST;
+}
+
+bool DdkLifetimeTest() {
+    BEGIN_TEST;
+    NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);  // 6 bits of ECC, no OOB.
+    char name[NAME_MAX];
+    NandDevice* device(new NandDevice(params, fake_ddk::kFakeParent));
+    ASSERT_EQ(ZX_OK, device->Init(name));
+
+    fake_ddk::Bind ddk;
+    device->Bind();
+    device->DdkUnbind();
+    EXPECT_TRUE(ddk.Ok());
+
+    // This should delete the object, which means this test should not leak.
+    device->DdkRelease();
     END_TEST;
 }
 
@@ -68,12 +86,12 @@ bool BasicDeviceProtocolTest() {
     char name[NAME_MAX];
     ASSERT_EQ(ZX_OK, device.Init(name));
 
-    ASSERT_EQ(kPageSize * kNumPages, device.GetSize());
+    ASSERT_EQ(kPageSize * kNumPages, device.DdkGetSize());
 
-    device.Unbind();
+    device.DdkUnbind();
 
     ASSERT_EQ(ZX_ERR_BAD_STATE,
-              device.Ioctl(IOCTL_RAM_NAND_UNLINK, nullptr, 0, nullptr, 0, nullptr));
+              device.DdkIoctl(IOCTL_RAM_NAND_UNLINK, nullptr, 0, nullptr, 0, nullptr));
     END_TEST;
 }
 
@@ -82,11 +100,11 @@ bool UnlinkTest() {
     fbl::unique_ptr<NandDevice> device = CreateDevice(nullptr);
     ASSERT_TRUE(device);
 
-    ASSERT_EQ(ZX_OK, device->Ioctl(IOCTL_RAM_NAND_UNLINK, nullptr, 0, nullptr, 0, nullptr));
+    ASSERT_EQ(ZX_OK, device->DdkIoctl(IOCTL_RAM_NAND_UNLINK, nullptr, 0, nullptr, 0, nullptr));
 
     // The device is "dead" now.
     ASSERT_EQ(ZX_ERR_BAD_STATE,
-              device->Ioctl(IOCTL_RAM_NAND_UNLINK, nullptr, 0, nullptr, 0, nullptr));
+              device->DdkIoctl(IOCTL_RAM_NAND_UNLINK, nullptr, 0, nullptr, 0, nullptr));
     END_TEST;
 }
 
@@ -111,8 +129,8 @@ bool FactoryBadBlockListTest() {
 
     uint32_t bad_blocks[] = {1, 3, 5};
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED,
-              device->Ioctl(IOCTL_RAM_NAND_SET_BAD_BLOCKS, bad_blocks, sizeof(bad_blocks),
-                            nullptr, 0, nullptr));
+              device->DdkIoctl(IOCTL_RAM_NAND_SET_BAD_BLOCKS, bad_blocks, sizeof(bad_blocks),
+                               nullptr, 0, nullptr));
 
     uint32_t result[4];
     uint32_t num_bad_blocks;
@@ -673,6 +691,7 @@ bool EraseTest() {
 
 BEGIN_TEST_CASE(RamNandTests)
 RUN_TEST_SMALL(TrivialLifetimeTest)
+RUN_TEST_SMALL(DdkLifetimeTest)
 RUN_TEST_SMALL(BasicDeviceProtocolTest)
 RUN_TEST_SMALL(UnlinkTest)
 RUN_TEST_SMALL(QueryTest)

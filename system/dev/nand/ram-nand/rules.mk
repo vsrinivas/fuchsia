@@ -9,7 +9,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/device.cpp \
     $(LOCAL_DIR)/ram-nand.c \
     $(LOCAL_DIR)/ram-nand.cpp \
     $(LOCAL_DIR)/ram-nand-ctl.cpp \
@@ -41,6 +40,7 @@ TEST_DIR := $(LOCAL_DIR)/test
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/ram-nand.cpp \
+    $(TEST_DIR)/fake-ddk.cpp \
     $(TEST_DIR)/main.cpp \
     $(TEST_DIR)/ram-nand.cpp \
     $(TEST_DIR)/ram-nand-ctl.cpp \
@@ -50,6 +50,7 @@ MODULE_COMPILEFLAGS := -I$(LOCAL_DIR)
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/ddk \
+    system/ulib/ddktl \
     system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \

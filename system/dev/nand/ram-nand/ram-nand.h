@@ -9,6 +9,8 @@
 #include <threads.h>
 
 #include <ddk/protocol/nand.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/nand.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <lib/zx/vmo.h>
@@ -40,11 +42,17 @@ struct NandParams : public nand_info_t {
     }
 };
 
+class NandDevice;
+using DeviceType = ddk::Device<NandDevice, ddk::GetSizable, ddk::Unbindable, ddk::Ioctlable>;
+
 // Provides the bulk of the functionality for a ram-backed NAND device.
-class NandDevice {
+class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice> {
   public:
-    explicit NandDevice(const NandParams& params);
+    explicit NandDevice(const NandParams& params, zx_device_t* parent = nullptr);
     ~NandDevice();
+
+    zx_status_t Bind();
+    void DdkRelease() { delete this; }
 
     // Performs the object initialization, returning the required data to create
     // an actual device (to call device_add()). The provided callback will be
@@ -52,10 +60,10 @@ class NandDevice {
     zx_status_t Init(char name[NAME_MAX]);
 
     // Device protocol implementation.
-    uint64_t GetSize() const { return params_.GetSize(); }
-    void Unbind();
-    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
-                      void* out_buf, size_t out_len, size_t* out_actual);
+    zx_off_t DdkGetSize() { return params_.GetSize(); }
+    void DdkUnbind();
+    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
+                         void* out_buf, size_t out_len, size_t* out_actual);
 
     // NAND protocol implementation.
     void Query(nand_info_t* info_out, size_t* nand_op_size_out);

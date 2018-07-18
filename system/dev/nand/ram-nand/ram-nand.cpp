@@ -24,7 +24,8 @@ struct RamNandOp {
 
 }  // namespace
 
-NandDevice::NandDevice(const NandParams& params) : params_(params) {
+NandDevice::NandDevice(const NandParams& params, zx_device_t* parent)
+        : DeviceType(parent), params_(params) {
 }
 
 NandDevice::~NandDevice() {
@@ -45,26 +46,35 @@ NandDevice::~NandDevice() {
     }
 
     if (mapped_addr_) {
-        zx_vmar_unmap(zx_vmar_root_self(), mapped_addr_, GetSize());
+        zx_vmar_unmap(zx_vmar_root_self(), mapped_addr_, DdkGetSize());
     }
+}
+
+zx_status_t NandDevice::Bind() {
+    char name[NAME_MAX];
+    zx_status_t status = Init(name);
+    if (status != ZX_OK) {
+        return status;
+    }
+    return DdkAdd(name);
 }
 
 zx_status_t NandDevice::Init(char name[NAME_MAX]) {
     static uint64_t dev_count = 0;
     snprintf(name, NAME_MAX, "ram-nand-%" PRIu64, dev_count++);
 
-    zx_status_t status = zx::vmo::create(GetSize(), 0, &vmo_);
+    zx_status_t status = zx::vmo::create(DdkGetSize(), 0, &vmo_);
     if (status != ZX_OK) {
         return status;
     }
 
-    status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_.get(), 0, GetSize(),
+    status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_.get(), 0, DdkGetSize(),
                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                          &mapped_addr_);
     if (status != ZX_OK) {
         return status;
     }
-    memset(reinterpret_cast<char*>(mapped_addr_), 0xff, GetSize());
+    memset(reinterpret_cast<char*>(mapped_addr_), 0xff, DdkGetSize());
 
     list_initialize(&txn_list_);
     if (thrd_create(&worker_, WorkerThreadStub, this) != thrd_success) {
@@ -75,13 +85,14 @@ zx_status_t NandDevice::Init(char name[NAME_MAX]) {
     return ZX_OK;
 }
 
-void NandDevice::Unbind() {
+void NandDevice::DdkUnbind() {
     Kill();
     completion_signal(&wake_signal_);
+    DdkRemove();
 }
 
-zx_status_t NandDevice::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
-                              void* out_buf, size_t out_len, size_t* out_actual) {
+zx_status_t NandDevice::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
+                                 void* out_buf, size_t out_len, size_t* out_actual) {
     {
         fbl::AutoLock lock(&lock_);
         if (dead_) {
@@ -91,7 +102,7 @@ zx_status_t NandDevice::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
 
     switch (op) {
     case IOCTL_RAM_NAND_UNLINK:
-        Unbind();
+        DdkUnbind();
         return ZX_OK;
 
     default:
