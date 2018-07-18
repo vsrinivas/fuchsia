@@ -587,5 +587,76 @@ const DataElement* DataElement::At(size_t idx) const {
   return &aggregate_[idx];
 }
 
+std::ostream& operator<<(std::ostream& stream, const DataElement::Size& sz) {
+  switch (sz) {
+    case DataElement::Size::kOneByte:
+      stream << "1";
+      return stream;
+    case DataElement::Size::kTwoBytes:
+      stream << "2";
+      return stream;
+    case DataElement::Size::kFourBytes:
+      stream << "4";
+      return stream;
+    case DataElement::Size::kEightBytes:
+      stream << "8";
+      return stream;
+    case DataElement::Size::kSixteenBytes:
+      stream << "16";
+      return stream;
+    case DataElement::Size::kNextOne:
+      stream << "1+";
+      return stream;
+    case DataElement::Size::kNextTwo:
+      stream << "2+";
+      return stream;
+    case DataElement::Size::kNextFour:
+      stream << "4+";
+      return stream;
+  }
+}
+
+std::string DataElement::Describe() const {
+  std::ostringstream out;
+  switch (type_) {
+    case Type::kNull:
+      out << "Null";
+      return out.str();
+    case Type::kBoolean:
+      out << "Boolean(" << (int_value_ != 0) << ")";
+      return out.str();
+    case Type::kUnsignedInt:
+      out << "UnsignedInt:" << size_ << "(" << uint_value_ << ")";
+      return out.str();
+    case Type::kSignedInt:
+      out << "SignedInt:" << size_ << "(" << int_value_ << ")";
+      return out.str();
+    case Type::kUuid:
+      out << "UUID(" << uuid_.ToString() << ")";
+      return out.str();
+    case Type::kString:
+      out << "String(" << string_ << ")";
+      return out.str();
+    case Type::kSequence:
+      out << "Sequence { ";
+      for (const auto &it : aggregate_) {
+        out << it.Describe() << " ";
+      }
+      out << "}";
+      return out.str();
+    case Type::kAlternative:
+      out << "Alternatives { ";
+      for (const auto &it : aggregate_) {
+        out << it.Describe() << " ";
+      }
+      out << "}";
+      return out.str();
+    default:
+      FXL_VLOG(2) << "Unhandled type in Describe()";
+      // Fallthrough to unknown.
+  }
+
+  return "(unknown)";
+}
 }  // namespace sdp
 }  // namespace btlib

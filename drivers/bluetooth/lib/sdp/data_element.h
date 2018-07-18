@@ -132,6 +132,10 @@ class DataElement {
   // Returns the number of bytes used for writing this element.
   size_t Write(common::MutableByteBuffer* buffer) const;
 
+  // Describes this element in a string, i.e. UnsignedInt:4(15) or
+  // Sequence { UUID(1567), UUID(2502) }
+  std::string Describe() const;
+
  private:
   // Sets the size type based on a variable size (Next one, two, or four)
   void SetVariableSize(size_t length);
