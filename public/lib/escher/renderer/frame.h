@@ -63,10 +63,17 @@ class Frame : public Resource {
 
  private:
   // Constructor called by Escher::NewFrame().
+  // NOTE: moving the BlockAllocator into the Frame (instead of e.g. passing a
+  // unique_ptr) avoids an extra pointer indirection on each allocation.
   friend class impl::FrameManager;
-  Frame(impl::FrameManager* manager, uint64_t frame_number,
-        const char* trace_literal, bool enable_gpu_logging);
+  Frame(impl::FrameManager* manager, BlockAllocator allocator,
+        uint64_t frame_number, const char* trace_literal,
+        bool enable_gpu_logging);
   void BeginFrame();
+
+  // Called by impl::FrameManager when the Frame is returned to the pool, so
+  // that it can be reused in newly constructed frames.
+  BlockAllocator TakeBlockAllocator() { return std::move(block_allocator_); }
 
   static void LogGpuQueryResults(
       uint64_t frame_number,
@@ -91,9 +98,6 @@ class Frame : public Resource {
   impl::CommandBuffer* command_buffer_ = nullptr;
   vk::CommandBuffer vk_command_buffer_;
 
-  // TODO(ES-97): Escher::NewFrame() constructs a new Frame every time, so we
-  // don't get the benefits of reusing previously-allocated blocks from frame to
-  // frame.
   BlockAllocator block_allocator_;
 
   TimestampProfilerPtr profiler_;

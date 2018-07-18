@@ -18,7 +18,8 @@ namespace escher {
 // these are allocated separately (although still freed at the same time).
 class BlockAllocator {
  public:
-  BlockAllocator(size_t fixed_size_block_size = 256 * 1024);
+  explicit BlockAllocator(size_t fixed_size_block_size = 256 * 1024);
+  BlockAllocator(BlockAllocator&& other) = default;
 
   void* Allocate(size_t size, size_t alignment = ESCHER_CACHE_LINE_SIZE);
 

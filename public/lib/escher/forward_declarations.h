@@ -10,6 +10,7 @@
 
 namespace escher {
 
+class BlockAllocator;
 class Buffer;
 class Camera;
 class CommandBuffer;

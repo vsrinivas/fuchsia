@@ -5,6 +5,8 @@
 #ifndef LIB_ESCHER_IMPL_FRAME_MANAGER_H_
 #define LIB_ESCHER_IMPL_FRAME_MANAGER_H_
 
+#include <queue>
+
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/resources/resource_manager.h"
 
@@ -16,6 +18,7 @@ namespace impl {
 class FrameManager : public ResourceManager {
  public:
   explicit FrameManager(EscherWeakPtr escher);
+  ~FrameManager();
 
   FramePtr NewFrame(const char* trace_literal, uint64_t frame_number,
                     bool enable_gpu_logging);
@@ -29,6 +32,12 @@ class FrameManager : public ResourceManager {
  private:
   // |Owner::OnReceiveOwnable()|
   void OnReceiveOwnable(std::unique_ptr<Resource> resource) override;
+
+  // Return a free BlockAllocator from |block_allocators_|, or a new one if none
+  // are free.
+  std::unique_ptr<BlockAllocator> GetBlockAllocator();
+
+  std::queue<std::unique_ptr<BlockAllocator>> block_allocators_;
 
   uint32_t num_outstanding_frames_ = 0;
 };

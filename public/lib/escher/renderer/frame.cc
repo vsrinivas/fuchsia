@@ -29,14 +29,16 @@ static uint64_t NextFrameNumber() {
 const ResourceTypeInfo Frame::kTypeInfo("Frame", ResourceType::kResource,
                                         ResourceType::kFrame);
 
-Frame::Frame(impl::FrameManager* manager, uint64_t frame_number,
-             const char* trace_literal, bool enable_gpu_logging)
+Frame::Frame(impl::FrameManager* manager, BlockAllocator allocator,
+             uint64_t frame_number, const char* trace_literal,
+             bool enable_gpu_logging)
     : Resource(manager),
       frame_number_(frame_number),
       escher_frame_number_(NextFrameNumber()),
       trace_literal_(trace_literal),
       enable_gpu_logging_(enable_gpu_logging),
       queue_(escher()->device()->vk_main_queue()),
+      block_allocator_(std::move(allocator)),
       profiler_(escher()->supports_timer_queries()
                     ? fxl::MakeRefCounted<TimestampProfiler>(
                           escher()->vk_device(), escher()->timestamp_period())
@@ -82,26 +84,26 @@ void Frame::EndFrame(const SemaphorePtr& frame_done,
   AddTimestamp("end of frame");
 
   command_buffer_->AddSignalSemaphore(frame_done);
-  command_buffer_->Submit(queue_, [
-    frame_retired_callback, profiler{std::move(profiler_)},
-    frame_number = frame_number_, trace_literal = trace_literal_,
-    enable_gpu_logging = enable_gpu_logging_, this_frame = FramePtr(this)
-  ]() {
-    if (frame_retired_callback) {
-      frame_retired_callback();
-    }
+  command_buffer_->Submit(
+      queue_, [frame_retired_callback, profiler{std::move(profiler_)},
+               frame_number = frame_number_, trace_literal = trace_literal_,
+               enable_gpu_logging = enable_gpu_logging_,
+               this_frame = FramePtr(this)]() {
+        if (frame_retired_callback) {
+          frame_retired_callback();
+        }
 
-    if (profiler) {
-      auto timestamps = profiler->GetQueryResults();
-      TraceGpuQueryResults(frame_number, timestamps, trace_literal);
-      if (enable_gpu_logging) {
-        LogGpuQueryResults(frame_number, timestamps);
-      }
-    }
+        if (profiler) {
+          auto timestamps = profiler->GetQueryResults();
+          TraceGpuQueryResults(frame_number, timestamps, trace_literal);
+          if (enable_gpu_logging) {
+            LogGpuQueryResults(frame_number, timestamps);
+          }
+        }
 
-    static_cast<impl::FrameManager*>(this_frame->owner())
-        ->DecrementNumOutstandingFrames();
-  });
+        static_cast<impl::FrameManager*>(this_frame->owner())
+            ->DecrementNumOutstandingFrames();
+      });
 
   new_command_buffer_ = nullptr;
   command_buffer_ = nullptr;
