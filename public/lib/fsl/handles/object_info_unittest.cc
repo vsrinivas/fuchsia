@@ -50,6 +50,17 @@ TEST(ObjectInfo, GetRelatedKoidOfChannel) {
   EXPECT_EQ(GetKoid(channel1.get()), GetRelatedKoid(channel2.get()));
 }
 
+TEST(ObjectInfo, GetType) {
+  zx::event event;
+  ASSERT_EQ(ZX_OK, zx::event::create(0u, &event));
+  EXPECT_EQ(ZX_OBJ_TYPE_EVENT, GetType(event.get()));
+
+  zx::channel channel1, channel2;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0u, &channel1, &channel2));
+  EXPECT_EQ(ZX_OBJ_TYPE_CHANNEL, GetType(channel1.get()));
+  EXPECT_EQ(ZX_OBJ_TYPE_CHANNEL, GetType(channel2.get()));
+}
+
 TEST(ObjectInfo, GetRelatedKoidOfChannelWithClosedEndpoint) {
   zx::channel channel1;
   zx_handle_t invalid_channel2_handle;

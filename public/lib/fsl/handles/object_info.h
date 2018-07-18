@@ -51,6 +51,9 @@ FXL_EXPORT zx_koid_t GetRelatedKoid(zx_handle_t handle);
 // the std::pair will contain a valid koid in this case.
 FXL_EXPORT std::pair<zx_koid_t, zx_koid_t> GetKoids(zx_handle_t handle);
 
+// Gets the type of a kernel object.
+FXL_EXPORT zx_obj_type_t GetType(zx_handle_t handle);
+
 // Gets the name of a kernel object.
 FXL_EXPORT std::string GetObjectName(zx_handle_t handle);
 

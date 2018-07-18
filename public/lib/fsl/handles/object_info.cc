@@ -34,6 +34,13 @@ std::pair<zx_koid_t, zx_koid_t> GetKoids(zx_handle_t handle) {
       status == ZX_OK ? info.related_koid : ZX_KOID_INVALID);
 }
 
+FXL_EXPORT zx_obj_type_t GetType(zx_handle_t handle) {
+  zx_info_handle_basic_t info;
+  zx_status_t status = zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info,
+                                          sizeof(info), nullptr, nullptr);
+  return status == ZX_OK ? info.type : ZX_OBJ_TYPE_NONE;
+}
+
 std::string GetObjectName(zx_handle_t handle) {
   char name[ZX_MAX_NAME_LEN];
   zx_status_t status =
