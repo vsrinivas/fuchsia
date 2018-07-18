@@ -76,6 +76,13 @@ struct FixtureOptions {
 
     // Type of filesystem to mount.
     disk_format_t fs_type;
+
+    // Format the device device with the given |fs_type|. This is useful
+    // when a test requires a block_device(and fvm) for tests.
+    bool fs_format = true;
+
+    // Mount the device in |Fixture::fs_path()|. Format is auto detected.
+    bool fs_mount = true;
 };
 
 // Provides a base fixture for File system tests.
@@ -118,6 +125,22 @@ public:
     // Returns the path where the filesystem was mounted.
     const fbl::String& fs_path() const {
         return fs_path_;
+    }
+
+    // Unmounts the FS from fs_path.
+    zx_status_t Umount();
+
+    // Mounts the FsBlockDevice into fs_path.
+    zx_status_t Mount();
+
+    // Umounts and then Mounts the device.
+    zx_status_t Remount() {
+        zx_status_t res = Umount();
+        if (res != ZX_OK) {
+            return res;
+        }
+        res = Mount();
+        return res;
     }
 
     // Sets up MemFs and Ramdisk, allocating resources for the tests.

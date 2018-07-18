@@ -325,12 +325,133 @@ bool UseBlockDeviceWithFvmIsOk() {
     END_TEST;
 }
 
+bool SkipFormatIsOk() {
+    BEGIN_TEST;
+    FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_MINFS);
+    options.use_ramdisk = false;
+    options.fs_format = false;
+
+    // Create a Ramdisk which will be passed as the 'block_device'.
+    char block_device[kPathSize];
+    ASSERT_EQ(create_ramdisk(options.ramdisk_block_size,
+                             options.ramdisk_block_count, block_device),
+              ZX_OK);
+    options.block_device_path = block_device;
+
+    auto clean_up = fbl::MakeAutoCall([&options]() {
+        destroy_ramdisk(options.block_device_path.c_str());
+    });
+
+    mkfs_options_t mkfs_options = default_mkfs_options;
+    ASSERT_EQ(mkfs(options.block_device_path.c_str(), DISK_FORMAT_BLOBFS,
+                   launch_stdio_sync, &mkfs_options),
+              ZX_OK);
+
+    Fixture fixture(options);
+
+    ASSERT_EQ(fixture.SetUpTestCase(), ZX_OK);
+    EXPECT_TRUE(options.block_device_path == fixture.block_device_path());
+    EXPECT_TRUE(options.block_device_path == fixture.GetFsBlockDevice());
+    fbl::unique_fd block_fd(open(fixture.block_device_path().c_str(), O_RDONLY));
+    ASSERT_TRUE(block_fd);
+    disk_format_t actual_format = detect_disk_format(block_fd.get());
+    ASSERT_EQ(actual_format, DISK_FORMAT_BLOBFS);
+
+    ASSERT_EQ(fixture.SetUp(), ZX_OK);
+    block_fd.reset(open(fixture.block_device_path().c_str(), O_RDONLY));
+    ASSERT_TRUE(block_fd);
+    actual_format = detect_disk_format(block_fd.get());
+    ASSERT_EQ(actual_format, DISK_FORMAT_BLOBFS);
+
+    ASSERT_EQ(fixture.TearDown(), ZX_OK);
+    block_fd.reset(open(fixture.block_device_path().c_str(), O_RDONLY));
+    ASSERT_TRUE(block_fd);
+    actual_format = detect_disk_format(block_fd.get());
+    ASSERT_EQ(actual_format, DISK_FORMAT_BLOBFS);
+
+    ASSERT_EQ(fixture.TearDownTestCase(), ZX_OK);
+    END_TEST;
+}
+
+bool SkipMountIsOk() {
+    BEGIN_TEST;
+    FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_MINFS);
+    options.fs_mount = false;
+
+    Fixture fixture(options);
+    ASSERT_EQ(fixture.SetUpTestCase(), ZX_OK);
+    ASSERT_EQ(fixture.SetUp(), ZX_OK);
+
+    // Verify nothing is mounted anymore.
+    ASSERT_EQ(umount(fixture.fs_path().c_str()), ZX_ERR_NOT_FOUND);
+    ASSERT_EQ(fixture.TearDown(), ZX_OK);
+    ASSERT_EQ(fixture.TearDownTestCase(), ZX_OK);
+    END_TEST;
+}
+
+bool MountIsOk() {
+    BEGIN_TEST;
+    FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_MINFS);
+    options.fs_mount = false;
+
+    Fixture fixture(options);
+    ASSERT_EQ(fixture.SetUpTestCase(), ZX_OK);
+    ASSERT_EQ(fixture.SetUp(), ZX_OK);
+    ASSERT_EQ(umount(fixture.fs_path().c_str()), ZX_ERR_NOT_FOUND);
+    ASSERT_EQ(fixture.Mount(), ZX_OK);
+    ASSERT_EQ(umount(fixture.fs_path().c_str()), ZX_OK);
+
+    // Since we need to try to umount to verify if the device is mounted,
+    // the fixture still sees the device as mounted, so it will try to umount
+    // and fail with not found, which is ok.
+    ASSERT_EQ(fixture.TearDown(), ZX_ERR_NOT_FOUND);
+    ASSERT_EQ(fixture.TearDownTestCase(), ZX_OK);
+    END_TEST;
+}
+
+bool UmountIsOk() {
+    BEGIN_TEST;
+    FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_MINFS);
+    options.fs_mount = true;
+
+    Fixture fixture(options);
+    ASSERT_EQ(fixture.SetUpTestCase(), ZX_OK);
+    ASSERT_EQ(fixture.SetUp(), ZX_OK);
+    ASSERT_EQ(fixture.Umount(), ZX_OK);
+    // Verify nothing is mounted anymore.
+    ASSERT_EQ(umount(fixture.fs_path().c_str()), ZX_ERR_NOT_FOUND);
+    ASSERT_EQ(fixture.TearDown(), ZX_OK);
+    ASSERT_EQ(fixture.TearDownTestCase(), ZX_OK);
+    END_TEST;
+}
+
+bool RemountIsOk() {
+    BEGIN_TEST;
+    FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_MINFS);
+    options.fs_mount = true;
+
+    Fixture fixture(options);
+    ASSERT_EQ(fixture.SetUpTestCase(), ZX_OK);
+    ASSERT_EQ(fixture.SetUp(), ZX_OK);
+    ASSERT_EQ(fixture.Remount(), ZX_OK);
+    ASSERT_EQ(umount(fixture.fs_path().c_str()), ZX_OK);
+    // Teardown will return this error because we manually umount the underlying
+    ASSERT_EQ(fixture.TearDown(), ZX_ERR_NOT_FOUND);
+    ASSERT_EQ(fixture.TearDownTestCase(), ZX_OK);
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(FixtureTest);
 RUN_TEST(RamdiskSetupAndCleanup);
 RUN_TEST(DiskIsFormattedCorrectlyNoFvm);
 RUN_TEST(DiskAndFvmAreFormattedCorrectly);
 RUN_TEST(UseBlockDeviceIsOk);
 RUN_TEST(UseBlockDeviceWithFvmIsOk);
+RUN_TEST(SkipFormatIsOk);
+RUN_TEST(SkipMountIsOk);
+RUN_TEST(MountIsOk);
+RUN_TEST(UmountIsOk);
+RUN_TEST(RemountIsOk);
 END_TEST_CASE(FixtureTest);
 
 } // namespace
