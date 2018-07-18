@@ -18,6 +18,7 @@ import (
 	stack "fidl/fuchsia/net_stack"
 
 	"github.com/google/netstack/tcpip"
+	"github.com/google/netstack/tcpip/network/ipv4"
 )
 
 type stackImpl struct{}
@@ -127,6 +128,47 @@ func setInterfaceState(id uint64, enabled bool) *stack.Error {
 	return nil
 }
 
+func addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *stack.Error {
+	// The ns mutex is held in the setInterfaceAddress call below so release it
+	// after we find the right ifState.
+	ns.mu.Lock()
+	var ifs *ifState = nil
+	for i, ifState := range ns.ifStates {
+		if uint64(i) == id {
+			ifs = ifState
+			break
+		}
+	}
+	ns.mu.Unlock()
+
+	if ifs == nil {
+		return &stack.Error{Type: stack.ErrorTypeNotFound}
+	}
+
+	var protocol tcpip.NetworkProtocolNumber
+	switch ifAddr.IpAddress.Which() {
+	case netfidl.IpAddressIpv4:
+		if len(ifs.nic.Addr) > 0 {
+			return &stack.Error{Type: stack.ErrorTypeAlreadyExists}
+		}
+		protocol = ipv4.ProtocolNumber
+	case netfidl.IpAddressIpv6:
+		// TODO(tkilbourn): support IPv6 addresses (NET-1181)
+		return &stack.Error{Type: stack.ErrorTypeNotSupported}
+	}
+
+	nic := ifs.nic.ID
+	addr := fidlconv.ToTCPIPAddress(ifAddr.IpAddress)
+	sn, err := fidlconv.ToTCPIPSubnet(netfidl.Subnet{Addr: ifAddr.IpAddress, PrefixLen: ifAddr.PrefixLen})
+	if err != nil {
+		return &stack.Error{Type: stack.ErrorTypeInternal}
+	}
+	if err := ns.setInterfaceAddress(nic, protocol, addr, sn); err != nil {
+		return &stack.Error{Type: stack.ErrorTypeBadState}
+	}
+	return nil
+}
+
 func (ni *stackImpl) ListInterfaces() ([]stack.InterfaceInfo, error) {
 	return getNetInterfaces(), nil
 }
@@ -145,7 +187,7 @@ func (ni *stackImpl) DisableInterface(id uint64) (*stack.Error, error) {
 }
 
 func (ni *stackImpl) AddInterfaceAddress(id uint64, addr stack.InterfaceAddress) (*stack.Error, error) {
-	panic("not implemented")
+	return addInterfaceAddr(id, addr), nil
 }
 
 func (ni *stackImpl) DelInterfaceAddress(id uint64, addr netfidl.IpAddress) (*stack.Error, error) {

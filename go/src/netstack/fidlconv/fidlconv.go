@@ -54,6 +54,16 @@ func ToNetSubnets(addrs []tcpip.Address) ([]net.Subnet, error) {
 	return out[:total], nil
 }
 
+func ToTCPIPSubnet(sn net.Subnet) (tcpip.Subnet, error) {
+	// Use ToTCPIPAddress to abstract the IPv4 vs IPv6 behavior.
+	a := []byte(ToTCPIPAddress(sn.Addr))
+	m := tcpip.CIDRMask(int(sn.PrefixLen), int(len(a)*8))
+	for i, _ := range a {
+		a[i] = a[i] & m[i]
+	}
+	return tcpip.NewSubnet(tcpip.Address(a), m)
+}
+
 func GetPrefixLen(mask tcpip.Address) uint8 {
 	prefixLen := uint8(0)
 	switch len(mask) {

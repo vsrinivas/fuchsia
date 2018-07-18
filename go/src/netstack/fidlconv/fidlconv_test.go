@@ -123,6 +123,38 @@ func TestToSubnetsInvalid(t *testing.T) {
 	}
 }
 
+func TestToTCPIPSubnet(t *testing.T) {
+	cases := []struct {
+		addr [4]uint8
+		prefix uint8
+		expected string
+	}{
+		{[4]uint8{255, 255, 255, 255}, 32, "255.255.255.255/32"},
+		{[4]uint8{255, 255, 255, 254}, 31, "255.255.255.254/31"},
+		{[4]uint8{255, 255, 255, 0}, 24, "255.255.255.0/24"},
+		{[4]uint8{255, 0, 0, 0}, 8, "255.0.0.0/8"},
+		{[4]uint8{128, 0, 0, 0}, 1, "128.0.0.0/1"},
+		{[4]uint8{0, 0, 0, 0}, 0, "0.0.0.0/0"},
+	}
+	for _, testCase := range cases {
+		netSubnet := newNetSubnet(testCase.addr, testCase.prefix)
+		to, err := ToTCPIPSubnet(netSubnet)
+		if err != nil {
+			t.Errorf("Error generating tcpip.Subnet: %v", err)
+			continue
+		}
+		_, expected, err := tcpip.ParseCIDR(testCase.expected)
+		if err != nil {
+			t.Fatalf("Error creating tcpip.Subnet: %v", err)
+		}
+		if to != expected {
+			t.Errorf("Expected:\n {%v, %v}\nActual: {%v, %v}",
+				[]byte(expected.ID()), []byte(expected.Mask()),
+				[]byte(to.ID()), []byte(to.Mask()))
+		}
+	}
+}
+
 func TestPrefixLenIPv4(t *testing.T) {
 	cases := []struct {
 		mask   tcpip.Address
@@ -184,4 +216,11 @@ func TestPrefixLenInvalidLength(t *testing.T) {
 
 	GetPrefixLen(tcpip.Address("\x00\x00"))
 	t.Errorf("Expected to fail on invalid address length")
+}
+
+func newNetSubnet(addr [4]uint8, prefix uint8) net.Subnet {
+	subnet := net.Subnet{}
+	subnet.Addr.SetIpv4(net.IPv4Address{Addr: addr})
+	subnet.PrefixLen = prefix
+	return subnet
 }
