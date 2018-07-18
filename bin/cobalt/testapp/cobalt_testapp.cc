@@ -9,7 +9,6 @@
 //
 // It is also invoked by the cobalt_client CQ and CI.
 
-#include <fstream>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -20,6 +19,7 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
+#include "lib/fsl/vmo/file.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
@@ -138,8 +138,9 @@ class CobaltTestApp {
         num_observations_per_batch_(num_observations_per_batch),
         context_(component::StartupContext::CreateFromStartupInfo()) {}
 
-  // Loads the CobaltConfig proto for this project and returns it in a string
-  std::string LoadCobaltConfig();
+  // Loads the CobaltConfig proto for this project and writes it to a VMO.
+  // Returns the VMO and the size of the proto in bytes
+  fuchsia::cobalt::ProjectProfile LoadCobaltConfig();
 
   // We have multiple testing strategies based on the method we use to
   // connect to the FIDL service and the method we use to determine whether
@@ -275,20 +276,16 @@ class CobaltTestApp {
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltTestApp);
 };
 
-std::string CobaltTestApp::LoadCobaltConfig() {
-  // Open the cobalt config file.
-  std::ifstream config_file_stream;
-  config_file_stream.open(kConfigBinProtoPath);
-  FXL_CHECK(config_file_stream && config_file_stream.good())
-      << "Could not open the Cobalt config file: " << kConfigBinProtoPath;
-  std::string cobalt_config_bytes;
-  cobalt_config_bytes.assign(
-      (std::istreambuf_iterator<char>(config_file_stream)),
-      std::istreambuf_iterator<char>());
-  FXL_CHECK(!cobalt_config_bytes.empty())
-      << "Could not read the Cobalt config file: " << kConfigBinProtoPath;
+fuchsia::cobalt::ProjectProfile CobaltTestApp::LoadCobaltConfig() {
+  fsl::SizedVmo config_vmo;
+  bool success = fsl::VmoFromFilename(kConfigBinProtoPath, &config_vmo);
+  FXL_CHECK(success) << "Could not read Cobalt config file into VMO";
 
-  return cobalt_config_bytes;
+  fuchsia::cobalt::ProjectProfile profile;
+  fuchsia::mem::Buffer buf = std::move(config_vmo).ToTransport();
+  profile.config.vmo = std::move(buf.vmo);
+  profile.config.size = buf.size;
+  return profile;
 }
 
 bool CobaltTestApp::RunAllTestingStrategies() {
@@ -339,7 +336,12 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
 
   fuchsia::cobalt::CobaltEncoderFactorySyncPtr factory;
   services.ConnectToService(factory.NewRequest());
-  factory->GetEncoderForConfig(LoadCobaltConfig(), encoder_.NewRequest());
+
+  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  factory->GetEncoderForProject(LoadCobaltConfig(), encoder_.NewRequest(),
+                               &status);
+  FXL_CHECK(status == fuchsia::cobalt::Status::OK)
+      << "GetEncoderForProject() => " << StatusToString(status);
 
   services.ConnectToService(cobalt_controller_.NewRequest());
 }
@@ -383,7 +385,11 @@ bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
   fuchsia::cobalt::CobaltEncoderFactorySyncPtr factory;
   context_->ConnectToEnvironmentService(factory.NewRequest());
 
-  factory->GetEncoderForConfig(LoadCobaltConfig(), encoder_.NewRequest());
+  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  factory->GetEncoderForProject(LoadCobaltConfig(), encoder_.NewRequest(),
+                               &status);
+  FXL_CHECK(status == fuchsia::cobalt::Status::OK)
+      << "GetEncoderForProject() => " << StatusToString(status);
 
   // Invoke TestRareEventWithIndicesUsingServiceFromEnvironment() three times
   // and return true if it succeeds all three times.

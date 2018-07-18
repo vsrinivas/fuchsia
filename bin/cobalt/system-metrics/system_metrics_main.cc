@@ -6,7 +6,6 @@
 // on a regular basis.
 
 #include <fcntl.h>
-#include <fstream>
 #include <chrono>
 #include <memory>
 #include <thread>
@@ -18,6 +17,7 @@
 #include <zircon/device/sysinfo.h>
 
 #include "lib/component/cpp/startup_context.h"
+#include "lib/fsl/vmo/file.h"
 #include "lib/fxl/logging.h"
 
 constexpr char kConfigBinProtoPath[] = "/pkg/data/cobalt_config.binproto";
@@ -205,19 +205,20 @@ void SystemMetricsApp::ConnectToEnvironmentService() {
   fuchsia::cobalt::CobaltEncoderFactorySyncPtr factory;
   context_->ConnectToEnvironmentService(factory.NewRequest());
 
-  // Open the cobalt config file.
-  std::ifstream config_file_stream;
-  config_file_stream.open(kConfigBinProtoPath);
-  FXL_CHECK(config_file_stream && config_file_stream.good())
-      << "Could not open the Cobalt config file: " << kConfigBinProtoPath;
-  std::string cobalt_config_bytes;
-  cobalt_config_bytes.assign(
-      (std::istreambuf_iterator<char>(config_file_stream)),
-      std::istreambuf_iterator<char>());
-  FXL_CHECK(!cobalt_config_bytes.empty())
-      << "Could not read the Cobalt config file: " << kConfigBinProtoPath;
+  fsl::SizedVmo config_vmo;
+  bool success = fsl::VmoFromFilename(kConfigBinProtoPath, &config_vmo);
+  FXL_CHECK(success) << "Could not read Cobalt config file into VMO";
 
-  factory->GetEncoderForConfig(cobalt_config_bytes, encoder_.NewRequest());
+  fuchsia::cobalt::ProjectProfile profile;
+  fuchsia::mem::Buffer buf = std::move(config_vmo).ToTransport();
+  profile.config.vmo = std::move(buf.vmo);
+  profile.config.size = buf.size;
+
+  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  factory->GetEncoderForProject(std::move(profile), encoder_.NewRequest(),
+                               &status);
+  FXL_CHECK(status == fuchsia::cobalt::Status::OK)
+      << "GetEncoderForProject() => " << StatusToString(status);
 }
 
 int main(int argc, const char** argv) {

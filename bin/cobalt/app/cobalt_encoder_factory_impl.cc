@@ -4,6 +4,8 @@
 
 #include "garnet/bin/cobalt/app/cobalt_encoder_factory_impl.h"
 
+#include "lib/fsl/vmo/strings.h"
+
 namespace cobalt {
 namespace encoder {
 
@@ -40,12 +42,38 @@ void CobaltEncoderFactoryImpl::GetEncoder(
                                       std::move(request));
 }
 
-void CobaltEncoderFactoryImpl::GetEncoderForConfig(
-    fidl::StringPtr config, fidl::InterfaceRequest<CobaltEncoder> request) {
+void CobaltEncoderFactoryImpl::GetEncoderForProject(
+    fuchsia::cobalt::ProjectProfile profile,
+    fidl::InterfaceRequest<CobaltEncoder> request,
+    GetEncoderForProjectCallback callback) {
+  fuchsia::mem::Buffer config_buffer{.vmo = std::move(profile.config.vmo),
+                                     .size = profile.config.size};
+  fsl::SizedVmo config_vmo;
+  bool success =
+      fsl::SizedVmo::FromTransport(std::move(config_buffer), &config_vmo);
+  if (!success) {
+    FXL_LOG(ERROR) << "Transport buffer is invalid";
+    callback(Status::INVALID_ARGUMENTS);
+    return;
+  }
+
+  std::string config_bytes;
+  success = fsl::StringFromVmo(config_vmo, &config_bytes);
+  if (!success) {
+    FXL_LOG(ERROR) << "Could not read Cobalt config from VMO";
+    callback(Status::INVALID_ARGUMENTS);
+    return;
+  }
+
   std::shared_ptr<config::ClientConfig> project_config;
   auto config_id_pair =
-      ClientConfig::CreateFromCobaltProjectConfigBytes(config);
+      ClientConfig::CreateFromCobaltProjectConfigBytes(config_bytes);
   project_config.reset(config_id_pair.first.release());
+  if (project_config == nullptr) {
+    FXL_LOG(ERROR) << "Cobalt config is invalid";
+    callback(Status::INVALID_ARGUMENTS);
+  }
+
   std::unique_ptr<ProjectContext> project_context(new ProjectContext(
       kFuchsiaCustomerId, config_id_pair.second, project_config));
 
@@ -55,6 +83,7 @@ void CobaltEncoderFactoryImpl::GetEncoderForConfig(
       timer_manager_));
   cobalt_encoder_bindings_.AddBinding(std::move(cobalt_encoder_impl),
                                       std::move(request));
+  callback(Status::OK);
 }
 
 }  // namespace encoder
