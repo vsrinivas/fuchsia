@@ -877,9 +877,6 @@ class StoryControllerImpl::FindModulesCall
 
     constraint_futs_.reserve(intent_->parameters->size());
 
-    constraint_params_.resize(0);
-    constraint_params_->reserve(intent_->parameters->size());
-
     resolver_query_.action = intent_->action;
     resolver_query_.parameter_constraints.resize(0);
     resolver_query_.parameter_constraints->reserve(intent_->parameters->size());
@@ -898,19 +895,23 @@ class StoryControllerImpl::FindModulesCall
       constraint_futs_.push_back(
           GetTypesFromIntentParameter(requesting_module_path_.Clone(),
                                       param.data)
-              ->Then([this, name = param.name](std::vector<std::string> types) {
+              ->Map([this, name = param.name](std::vector<std::string> types) {
                 fuchsia::modular::FindModulesParameterConstraint constraint;
                 constraint.param_name = name;
                 constraint.param_types =
                     fxl::To<fidl::VectorPtr<fidl::StringPtr>>(std::move(types));
-                constraint_params_.push_back(std::move(constraint));
+                return constraint;
               }));
     }
 
-    Future<>::Wait2("StoryControllerImpl.FindModulesCall.Run.Wait",
-                    constraint_futs_)
-        ->Then([this, flow] {
-          resolver_query_.parameter_constraints = std::move(constraint_params_);
+    Future<fuchsia::modular::FindModulesParameterConstraint>::Wait2(
+        "StoryControllerImpl.FindModulesCall.Run.Wait", constraint_futs_)
+        ->Then([this, flow](
+                   std::vector<fuchsia::modular::FindModulesParameterConstraint>
+                       constraint_params) {
+          resolver_query_.parameter_constraints =
+              fidl::VectorPtr<fuchsia::modular::FindModulesParameterConstraint>(
+                  std::move(constraint_params));
           story_controller_impl_->story_provider_impl_->module_resolver()
               ->FindModules(
                   std::move(resolver_query_),
@@ -977,9 +978,8 @@ class StoryControllerImpl::FindModulesCall
   const fidl::VectorPtr<fidl::StringPtr> requesting_module_path_;
 
   fuchsia::modular::FindModulesQuery resolver_query_;
-  std::vector<FuturePtr<>> constraint_futs_;
-  fidl::VectorPtr<fuchsia::modular::FindModulesParameterConstraint>
-      constraint_params_;
+  std::vector<FuturePtr<fuchsia::modular::FindModulesParameterConstraint>>
+      constraint_futs_;
   fuchsia::modular::LinkPtr link_;  // in case we need itf for
   fuchsia::modular::FindModulesResponse response_;
 
