@@ -54,6 +54,7 @@ zx_protocol_device_t IntelHDAController::CONTROLLER_DEVICE_THUNKS = {
     .suspend      = nullptr,
     .resume       = nullptr,
     .rxrpc        = nullptr,
+    .message      = nullptr,
 };
 #undef DEV
 
@@ -307,6 +308,7 @@ zx_protocol_device_t IntelHDAController::ROOT_DEVICE_THUNKS = {
     .suspend      = nullptr,
     .resume       = nullptr,
     .rxrpc        = nullptr,
+    .message      = nullptr,
 };
 #undef DEV
 

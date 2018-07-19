@@ -18,10 +18,20 @@ typedef struct zx_device_prop zx_device_prop_t;
 
 typedef struct zx_protocol_device zx_protocol_device_t;
 
+typedef struct fidl_msg fidl_msg_t;
+typedef struct fidl_txn fidl_txn_t;
+
 #define ZX_DEVICE_NAME_MAX 31
 
-// echo -n "zx_device_ops_v0.5" | sha256sum | cut -c1-16
-#define DEVICE_OPS_VERSION 0Xc9410d2a24f57424
+// echo -n "mx_device_ops_v0.5" | sha256sum | cut -c1-16
+#define DEVICE_OPS_VERSION_0_50 0xc9410d2a24f57424
+
+// echo -n "zx_device_ops_v0.51" | sha256sum | cut -c1-16
+#define DEVICE_OPS_VERSION_0_51 0xc4640f7115d2ee49
+
+// Current Version
+#define DEVICE_OPS_VERSION DEVICE_OPS_VERSION_0_51
+
 
 // TODO: temporary flags used by devcoord to communicate
 // with the system bus device.
@@ -201,6 +211,8 @@ typedef struct zx_protocol_device {
     // when a new client connects -- at which point any state from
     // the previous client should be torn down.
     zx_status_t (*rxrpc)(void* ctx, zx_handle_t channel);
+
+    zx_status_t (*message)(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
 } zx_protocol_device_t;
 
 

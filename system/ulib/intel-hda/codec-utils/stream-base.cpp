@@ -40,6 +40,7 @@ zx_protocol_device_t IntelHDAStreamBase::STREAM_DEVICE_THUNKS = {
     .suspend      = nullptr,
     .resume       = nullptr,
     .rxrpc        = nullptr,
+    .message      = nullptr,
 };
 
 IntelHDAStreamBase::IntelHDAStreamBase(uint32_t id, bool is_input)

@@ -47,6 +47,7 @@ zx_protocol_device_t IntelHDACodecDriverBase::CODEC_DEVICE_THUNKS = {
     .suspend      = nullptr,
     .resume       = nullptr,
     .rxrpc        = nullptr,
+    .message      = nullptr,
 };
 #undef DEV
 

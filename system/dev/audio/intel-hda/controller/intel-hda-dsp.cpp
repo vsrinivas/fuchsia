@@ -46,6 +46,7 @@ zx_protocol_device_t IntelHDADSP::DSP_DEVICE_THUNKS = {
     .suspend      = nullptr,
     .resume       = nullptr,
     .rxrpc        = nullptr,
+    .message      = nullptr,
 };
 
 ihda_dsp_protocol_ops_t IntelHDADSP::DSP_PROTO_THUNKS = {

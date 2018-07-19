@@ -63,6 +63,7 @@ zx_protocol_device_t IntelHDACodec::CODEC_DEVICE_THUNKS = {
     .suspend      = nullptr,
     .resume       = nullptr,
     .rxrpc        = nullptr,
+    .message      = nullptr,
 };
 
 ihda_codec_protocol_ops_t IntelHDACodec::CODEC_PROTO_THUNKS = {
