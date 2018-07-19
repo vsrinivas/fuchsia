@@ -33,6 +33,8 @@ public:
         return zx_bti_pin(get(), options, vmo.get(), offset, size, addrs, addrs_count,
                           pmt->reset_and_get_address());
     }
+
+    zx_status_t release_quarantine() const { return zx_bti_release_quarantine(get()); }
 };
 
 using unowned_bti = unowned<bti>;
