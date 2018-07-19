@@ -14,6 +14,7 @@ MODULE_SRCS += \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-crash \
+    system/fidl/fuchsia-process \
     system/fidl/fuchsia-sysmem \
 
 MODULE_STATIC_LIBS := \
