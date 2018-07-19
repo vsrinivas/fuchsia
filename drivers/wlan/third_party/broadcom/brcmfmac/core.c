@@ -337,15 +337,7 @@ void brcmf_netif_rx(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf) {
     ifp->ndev->stats.rx_packets++;
 
     brcmf_dbg(DATA, "rx proto=0x%X\n", be16toh(netbuf->protocol));
-    if (in_interrupt()) {
-        netif_rx(netbuf);
-    } else {
-        /* If the receive is not processed inside an ISR,
-         * the softirqd must be woken explicitly to service
-         * the NET_RX_SOFTIRQ.  This is handled by netif_rx_ni().
-         */
-        netif_rx_ni(netbuf);
-    }
+    netif_rx_ni(netbuf);
 }
 
 static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf* netbuf,

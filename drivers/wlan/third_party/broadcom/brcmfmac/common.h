@@ -47,7 +47,6 @@ extern struct brcmf_mp_global_t brcmf_mp_global;
  * struct brcmfmac_sdio_pd - SDIO-specific device module parameters
  */
 struct brcmfmac_sdio_pd {
-    int oob_irq_nr;
     int sd_sgentry_align;
     int sd_head_align;
     int drive_strength;

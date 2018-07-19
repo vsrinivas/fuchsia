@@ -16,8 +16,13 @@
 /* ****************** SDIO CARD Interface Functions **************************/
 
 #include <lib/sync/completion.h>
+#include <zircon/status.h>
 
 #include <stdatomic.h>
+#ifndef _ALL_SOURCE
+#define _ALL_SOURCE // Enables thrd_create_with_name in <threads.h>.
+#endif
+#include <threads.h>
 
 #include "brcm_hw_ids.h"
 #include "brcmu_utils.h"
@@ -54,23 +59,26 @@ struct brcmf_sdiod_freezer {
     sync_completion_t resumed;
 };
 
-static irqreturn_t brcmf_sdiod_oob_irqhandler(int irq, void* dev_id) {
-    struct brcmf_bus* bus_if = dev_to_bus(dev_id);
-    struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
+static int brcmf_sdiod_oob_irqhandler(void* cookie) {
+    struct brcmf_sdio_dev* sdiodev = cookie;
+    zx_status_t status;
 
-    brcmf_dbg(INTR, "OOB intr triggered\n");
+    while ((status = zx_interrupt_wait(sdiodev->irq_handle, NULL)) == ZX_OK) {
+        brcmf_dbg(INTR, "OOB intr triggered\n");
 
-    /* out-of-band interrupt is level-triggered which won't
-     * be cleared until dpc
-     */
-    if (sdiodev->irq_en) {
-        disable_irq_nosync(irq);
-        sdiodev->irq_en = false;
+        /* out-of-band interrupt is level-triggered which won't
+        * be cleared until dpc
+        */
+        if (sdiodev->irq_en) {
+            //disable_irq_nosync(irq); Not needed with Fuchsia interrupt handling.
+            sdiodev->irq_en = false;
+        }
+
+        brcmf_sdio_isr(sdiodev->bus);
     }
 
-    brcmf_sdio_isr(sdiodev->bus);
-
-    return IRQ_HANDLED;
+    brcmf_err("ISR exiting with status %s\n", zx_status_get_string(status));
+    return (int)status;
 }
 
 static void brcmf_sdiod_ib_irqhandler(struct brcmf_sdio_dev* sdiodev) {
@@ -89,20 +97,22 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
     uint32_t addr, gpiocontrol;
 
     pdata = &sdiodev->settings->bus.sdio;
+    // TODO(cphoenix): Always?
+    pdata->oob_irq_supported = true;
     if (pdata->oob_irq_supported) {
-        brcmf_dbg(SDIO, "Enter, register OOB IRQ %d\n", pdata->oob_irq_nr);
+        brcmf_dbg(SDIO, "Enter, register OOB IRQ\n");
         //spin_lock_init(&sdiodev->irq_en_lock);
+        // TODO(cphoenix): Add error handling for sdio_get_oob_irq, thrd_create_with_name, and
+        // thrd_detach. Note that the thrd_ functions don't return zx_status_t; check for
+        // thrd_success and maybe thrd_nomem. See zircon/third_party/ulib/musl/include/threads.h
         sdiodev->irq_en = true;
-
-        ret = request_irq(pdata->oob_irq_nr, brcmf_sdiod_oob_irqhandler, pdata->oob_irq_flags,
-                          "brcmf_oob_intr", &sdiodev->dev);
-        if (ret != ZX_OK) {
-            brcmf_err("request_irq failed %d\n", ret);
-            return ret;
-        }
+        sdio_get_oob_irq(sdiodev->sdio_proto, &sdiodev->irq_handle);
+        thrd_create_with_name(&sdiodev->isr_thread, brcmf_sdiod_oob_irqhandler, sdiodev,
+                              "brcmf-sdio-isr");
+        thrd_detach(sdiodev->isr_thread);
         sdiodev->oob_irq_requested = true;
 
-        ret = enable_irq_wake(pdata->oob_irq_nr);
+        ret = enable_irq_wake(sdiodev->irq_handle);
         if (ret != ZX_OK) {
             brcmf_err("enable_irq_wake failed %d\n", ret);
             return ret;
@@ -162,10 +172,10 @@ void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev) {
 
         sdiodev->oob_irq_requested = false;
         if (sdiodev->irq_wake) {
-            disable_irq_wake(pdata->oob_irq_nr);
+            disable_irq_wake(sdiodev->irq_handle);
             sdiodev->irq_wake = false;
         }
-        free_irq(pdata->oob_irq_nr, &sdiodev->dev);
+        zx_handle_close(sdiodev->irq_handle);
         sdiodev->irq_en = false;
         sdiodev->oob_irq_requested = false;
     }
@@ -851,7 +861,7 @@ static zx_status_t brcmf_ops_sdio_suspend(struct brcmf_sdio_dev* sdiodev, uint32
     sdio_flags = MMC_PM_KEEP_POWER;
     if (sdiodev->wowl_enabled) {
         if (sdiodev->settings->bus.sdio.oob_irq_supported) {
-            enable_irq_wake(sdiodev->settings->bus.sdio.oob_irq_nr);
+            enable_irq_wake(sdiodev->irq_handle);
         } else {
             sdio_flags |= MMC_PM_WAKE_SDIO_IRQ;
         }

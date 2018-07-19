@@ -65,7 +65,7 @@
 
 // TODO(cphoenix): Clean up all these names to make it clearer what's an address vs. a value.
 #define SDIO_CCCR_INT_ENABLE  0x04
-#define SDIO_CCCR_INTx		  0x05
+#define SDIO_CCCR_INTx        0x05
 #define SDIO_CCCR_ABORT_RESET 0x06
 
 /* function 1 miscellaneous registers */
@@ -186,6 +186,8 @@ struct brcmf_sdio_dev {
     uint32_t product_id;
     zx_device_t* zxdev;
     sdio_protocol_t* sdio_proto;
+    zx_handle_t irq_handle;
+    thrd_t isr_thread;
     struct brcmf_device dev;
     uint32_t sbwad;             /* Save backplane window address */
     struct brcmf_core* cc_core; /* chipcommon core info struct */

@@ -166,13 +166,11 @@ static inline uint32_t get_unaligned_le32(void* addr) {
     return value;
 }
 
-LINUX_FUNCVI(netdev_mc_count) // In core.c
-LINUX_FUNCVI(waitqueue_active) // In core.c
+LINUX_FUNCVI(netdev_mc_count) // In core.c - Count of multicast addresses in netdev.
 LINUX_FUNCX(rtnl_lock) // In core.c and p2p.c
 LINUX_FUNCX(rtnl_unlock) // In core.c and p2p.c
 LINUX_FUNCVV(bcm47xx_nvram_get_contents) // In firmware.c
 LINUX_FUNCVI(bcm47xx_nvram_release_contents) // In firmware.c
-LINUX_FUNCX(in_interrupt) // In core.c and sdio.c
 
 LINUX_FUNCVI(device_set_wakeup_enable) // USB only
 LINUX_FUNCVI(usb_deregister) // USB only
@@ -181,7 +179,6 @@ LINUX_FUNCVI(driver_for_each_device) // In usb.c only
 LINUX_FUNCII(send_sig) // SDIO only
 LINUX_FUNCVI(kthread_stop) // SDIO only
 LINUX_FUNCVI(pr_warn) // SDIO only
-LINUX_FUNCII(enable_irq) // SDIO only
 // Last parameter of this returns an error code. Must be a zx_status_t (0 or negative).
 LINUX_FUNCVI(sdio_readb) // SDIO only
 // Last parameter of this returns an error code. Must be a zx_status_t (0 or negative).
@@ -203,8 +200,7 @@ LINUX_FUNCVI(sdio_memcpy_toio)
 LINUX_FUNCVI(sdio_f0_readb)
 LINUX_FUNCVI(pm_runtime_allow) // SDIO only
 LINUX_FUNCVI(pm_runtime_forbid) // SDIO only
-LINUX_FUNCII(disable_irq_nosync) // SDIO only
-LINUX_FUNCII(request_irq) // SDIO only
+// Leave enable/disable_irq_wake() NOPs for now. TODO(cphoenix): Use the ZX equivalent.
 LINUX_FUNCII(enable_irq_wake) // SDIO only
 LINUX_FUNCII(disable_irq_wake) // SDIO only
 LINUX_FUNCVI(of_device_is_compatible)
@@ -213,7 +209,6 @@ LINUX_FUNCVI(of_find_property)
 LINUX_FUNCVI(irq_of_parse_and_map) // OF only
 LINUX_FUNCII(irqd_get_trigger_type) // OF only
 LINUX_FUNCII(irq_get_irq_data) // OF only
-LINUX_FUNCII(free_irq) // PCI & SDIO only
 LINUX_FUNCII(allow_signal) // SDIO only
 LINUX_FUNCX(kthread_should_stop) // SDIO only
 LINUX_FUNCVS(kthread_run) // SDIO only
@@ -273,7 +268,7 @@ LINUX_FUNCVI(dev_coredumpv)
     pci_config_read32(&pdev->pci_proto, offset, value)
 LINUX_FUNCcVI(pci_enable_msi)
 LINUX_FUNCcVI(pci_disable_msi)
-//LINUX_FUNCII(free_irq) // PCI & SDIO only
+LINUX_FUNCII(free_irq) // PCI
 LINUX_FUNCII(request_threaded_irq) // PCI only
 LINUX_FUNCVV(dma_alloc_coherent) // PCI only
 LINUX_FUNCVV(dma_free_coherent) // PCI only
@@ -304,13 +299,11 @@ enum {
     IEEE80211_STYPE_PROBE_REQ = 0,
     IEEE80211_P2P_ATTR_LISTEN_CHANNEL = (57),
     SIGTERM = (55),
-    TASK_INTERRUPTIBLE = (0),
-    TASK_RUNNING = (1),
     IFNAMSIZ = (16),
     WLAN_PMKID_LEN = (16),
     WLAN_MAX_KEY_LEN = (128),
     IEEE80211_MAX_SSID_LEN = (32),
-    IRQF_SHARED,
+    IRQF_SHARED, // TODO(cphoenix) - Used only in PCI
     IEEE80211_RATE_SHORT_PREAMBLE,
     WLAN_CIPHER_SUITE_AES_CMAC,
     WLAN_CIPHER_SUITE_CCMP,
@@ -423,29 +416,9 @@ enum {
     BRCMF_H2D_TXFLOWRING_ITEMSIZE,
     NL80211_SCAN_FLAG_RANDOM_ADDR,
     WLAN_AUTH_OPEN,
-    IRQF_TRIGGER_HIGH,
-    SDIO_CCCR_IENx,
-    SSB_IMSTATE_BUSY,
-    SSB_IDLOW_INITIATOR,
-    SSB_TMSHIGH_SERR,
-    SSB_IMSTATE_IBE,
-    SSB_IMSTATE_TO,
-    BCMA_CC_CAP_EXT_AOB_PRESENT,
-    SSB_TMSLOW_FGC,
-    MMC_RSP_SPI_R5,
-    MMC_RSP_R5,
-    MMC_CMD_ADTC,
     WIPHY_VENDOR_CMD_NEED_WDEV,
     WIPHY_VENDOR_CMD_NEED_NETDEV,
-    SDIO_CCCR_ABORT,
-    SDIO_IO_RW_EXTENDED,
-    MMC_DATA_READ,
-    MMC_DATA_WRITE,
     BRCMF_SCAN_IE_LEN_MAX,
-    SD_IO_RW_EXTENDED,
-    MMC_CAP_NONREMOVABLE,
-    MMC_QUIRK_LENIENT_FN0,
-    DUMP_PREFIX_OFFSET,
 };
 
 typedef enum { IRQ_WAKE_THREAD, IRQ_NONE, IRQ_HANDLED } irqreturn_t;

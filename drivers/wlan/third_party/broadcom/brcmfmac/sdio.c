@@ -2371,7 +2371,6 @@ static inline void brcmf_sdio_clrintr(struct brcmf_sdio* bus) {
         //spin_lock_irqsave(&sdiodev->irq_en_lock, flags);
         pthread_mutex_lock(&irq_callback_lock);
         if (!sdiodev->irq_en && !atomic_load(&bus->ipend)) {
-            enable_irq(sdiodev->settings->bus.sdio.oob_irq_nr);
             sdiodev->irq_en = true;
         }
         //spin_unlock_irqrestore(&sdiodev->irq_en_lock, flags);
@@ -3369,9 +3368,7 @@ void brcmf_sdio_isr(struct brcmf_sdio* bus) {
 
     /* Count the interrupt call */
     bus->sdcnt.intrcount++;
-    if (in_interrupt()) {
-        atomic_store(&bus->ipend, 1);
-    } else if (brcmf_sdio_intr_rstatus(bus) != ZX_OK) {
+    if (brcmf_sdio_intr_rstatus(bus) != ZX_OK) {
         brcmf_err("failed backplane access\n");
     }
 

@@ -425,6 +425,7 @@ struct brcmf_mp_device* brcmf_get_module_param(struct brcmf_device* dev,
 #endif
 
     if (bus_type == BRCMF_BUSTYPE_SDIO) {
+        // TODO(cphoenix): Do we really want to use default? (If so, delete =0 lines because calloc)
         settings->bus.sdio.sd_sgentry_align = 0; // Use default
         settings->bus.sdio.sd_head_align = 0; // Use default
         settings->bus.sdio.drive_strength = 0; // Use default
