@@ -20,11 +20,11 @@ each user on behalf of which it runs.
 ``` cpp
 module_context->GetComponentContext(
     component_context_.NewRequest());
-ledger::LedgerPtr ledger;
+fuchsia::ledger::LedgerPtr ledger;
 component_context_->GetLedger(
     ledger.NewRequest(),
-    [] (ledger::Status status) {
-  if (status != ledger::Status::OK) {
+    [] (fuchsia::ledger::Status status) {
+  if (status != fuchsia::ledger::Status::OK) {
     // Handle errors.
   }
 });
@@ -38,10 +38,12 @@ ledger.set_error_handler([] {
 ``` dart
 moduleContext.getComponentContext(
     componentContext.ctrl.request());
-final LedgerProxy ledger = new LedgerProxy()
+final LedgerProxy ledger = new LedgerProxy();
 componentContext.getLedger(
     ledger.ctrl.request(), (Status status) {
-  // Check for errors.
+  if (status != Status.ok) {
+    // Handle errors.
+  }
 });
 ledger.ctrl.error.then((ProxyError error) {
   // Handle connection errors.
@@ -71,10 +73,10 @@ which retrieves the page with id `[0, 0 ... , 0]`.
 #### C++
 
 ``` cpp
-ledger::PagePtr page;
+fuchsia::ledger::PagePtr page;
 ledger->GetRootPage(page.NewRequest(),
-    [] (ledger::Status status) {
-  if (status != ledger::Status::OK) {
+    [] (fuchsia::ledger::Status status) {
+  if (status != fuchsia::ledger::Status::OK) {
     // Handle errors.
   }
 });
@@ -87,7 +89,12 @@ page.set_error_handler([] {
 
 ``` dart
 final PageProxy page = new PageProxy();
-_ledger.getRootPage(page.ctrl.request(), (Status status) {});
+_ledger.getRootPage(
+    page.ctrl.request(), (Status status) {  
+  if (status != Status.ok) {
+    // Handle errors.
+  }
+});
 page.ctrl.error.then((ProxyError error) {
   // Handle connection errors.
 }
@@ -266,6 +273,6 @@ automatically in the background, and clients do not have to manage them.
  - [Data Organization](data_organization.md)
  - [Examples of client apps](examples.md)
 
-[FIDL interface]: ../../public/fidl/fuchsia.ledger/ledger.fidl
-[C++ watcher example]: https://fuchsia.googlesource.com/moterm/+/master/history.h
-[Dart watcher example]: https://fuchsia.googlesource.com/modules/prototypes/+/master/modules/todo_list/lib/src/modular/todo_list_module_model.dart
+[FIDL interface]: /public/fidl/fuchsia.ledger/ledger.fidl
+[C++ watcher example]: /examples/todo_cpp/todo.h
+[Dart watcher example]: https://fuchsia.googlesource.com/topaz/+/master/app/chat/agents/content_provider/lib/src/base_page_watcher.dart

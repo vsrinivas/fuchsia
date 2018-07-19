@@ -62,4 +62,4 @@ You might want to use a `const std:string&` (const ref), if you need to call a
 function that itself takes a `const std:string&` (and you cannot or don't want
 to change it to take an `fxl::StringView`).
 
-[Google C++ Style Guide]: https://github.com/google/googletes://github.com/google/googletest
+[Google C++ Style Guide]: https://google.github.io/styleguide/cppguide.html

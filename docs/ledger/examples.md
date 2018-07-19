@@ -19,8 +19,8 @@ apps that use Ledger through Framework fuchsia::modular::Link objects.
    * this is a minimal working example of a Ledger-based app
 
 [chat]: https://fuchsia.googlesource.com/topaz/+/master/app/chat/
-[clipboard]: https://fuchsia.googlesource.com/peridot/+/master/bin/agents/clipboard/
+[clipboard]: /bin/agents/clipboard/
 [contacts]: https://fuchsia.googlesource.com/topaz/+/master/app/contacts/
-[Ledger benchmarks]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/tests/benchmark
-[story runner]: https://fuchsia.googlesource.com/peridot/+/master/bin/user_runner/story_runner/
-[todo list]: https://fuchsia.googlesource.com/topaz/examples/+/master/ledger/todo_list
+[Ledger benchmarks]: /bin/ledger/tests/benchmark
+[story runner]: /bin/user_runner/story_runner/
+[todo list]: https://fuchsia.googlesource.com/topaz/+/master/examples/ledger/todo_list/

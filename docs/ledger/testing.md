@@ -51,7 +51,7 @@ executed on Fuchsia by running
 `/pkgfs/packages/ledger_tests/0/test/disabled/ledger_e2e_sync`.
 
 [Google Test]: https://github.com/google/googletest
-[TestLoopFixture]: /lib/gtest/test_loop_fixture.h
+[TestLoopFixture]: https://fuchsia.googlesource.com/garnet/+/master/public/lib/gtest/test_loop_fixture.h
 [IntegrationTest]: /bin/ledger/tests/integration/integration_test.h
 [/bin/ledger/tests/integration]: /bin/ledger/tests/integration
 [Synchronization end-to-end tests]: /bin/ledger/tests/e2e_sync/README.md

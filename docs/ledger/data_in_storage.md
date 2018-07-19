@@ -176,8 +176,8 @@ For more information see also:
  - [Ledger Architecture - Storage](architecture.md#Storage)
 
 
-[commit.fbs]: ../../bin/ledger/storage/impl/commit.fbs
-[split.cc]: ../../bin/ledger/storage/impl/split.cc
-[split.h]: ../../bin/ledger/storage/impl/split.h
-[tree_node.fbs]: ../../bin/ledger/storage/impl/btree/tree_node.fbs
+[commit.fbs]: /bin/ledger/storage/impl/commit.fbs
+[split.cc]: /bin/ledger/storage/impl/split.cc
+[split.h]: /bin/ledger/storage/impl/split.h
+[tree_node.fbs]: /bin/ledger/storage/impl/btree/tree_node.fbs
 [journals]: life_of_a_put.md#Journals
