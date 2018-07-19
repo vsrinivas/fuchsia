@@ -71,6 +71,37 @@ class CoroutineService {
 //
 // |async_call| will be never be called after this method returns. As such, it
 // can capture local variables by reference.
+//
+// For instance, suppose you have the following asynchronous function LongAsyncComputation that
+// signals its completion by passing the computed string and integer to a
+// callback:
+//
+// void LongAsyncComputation(fit::function<void(std::string, int)> on_done);
+//
+// Here is how to execute it synchronously in a coroutine:
+//
+// CoroutineHandler* handler;
+// std::string s; int i;
+// if (SyncCall(handler, &LongAsyncComputation, &s, &i) ==
+//     ContinuationStatus::INTERRUPTED) {
+//   return ContinuationStatus::INTERRUPTED;
+// }
+// FXL_LOG(INFO) << "LongAsyncComputation returned: " << s << " " << i;
+//
+// Another usage pattern is to have a lambda in place of LongAsyncComputation,
+// that will immediately store the callback provided by SyncCall in some
+// ancillary data structure. The SyncCall will then yield until some other part
+// of the code invokes this callback with a result:
+//
+// if (SyncCall(handler,
+//              [this](fit::function<void(string, int)> on_done) {
+//                pending_callbacks_.emplace_back(std::move(on_done));
+//              },
+//              &s, &i) == ContinuationStatus::INTERRUPTED) {
+//   return ContinuationStatus::INTERRUPTED;
+// }
+// FXL_LOG(INFO) << "Some background task computed: " << s << " " << i;
+//
 template <typename A, typename... Args>
 FXL_WARN_UNUSED_RESULT ContinuationStatus SyncCall(CoroutineHandler* handler,
                                                    A async_call,
