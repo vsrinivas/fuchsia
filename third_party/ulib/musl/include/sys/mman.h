@@ -10,10 +10,6 @@ extern "C" {
 #define __NEED_size_t
 #define __NEED_off_t
 
-#if defined(_GNU_SOURCE)
-#define __NEED_ssize_t
-#endif
-
 #include <bits/alltypes.h>
 
 #define MAP_FAILED ((void*)-1)

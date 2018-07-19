@@ -14,10 +14,6 @@ extern "C" {
 #define __NEED_off_t
 #endif
 
-#ifdef _GNU_SOURCE
-#define __NEED_pid_t
-#endif
-
 #include <bits/alltypes.h>
 
 #define UIO_MAXIOV 1024
