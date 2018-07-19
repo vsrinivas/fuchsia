@@ -64,13 +64,6 @@ class CloudStorageImplTest : public gtest::TestLoopFixture {
     fake_network_wrapper_.SetResponse(std::move(server_response));
   }
 
-  bool CreateFile(const std::string& content, std::string* path) {
-    if (!tmp_dir_.NewTempFile(path))
-      return false;
-    return files::WriteFile(*path, content.data(), content.size());
-  }
-
-  files::ScopedTempDir tmp_dir_;
   network_wrapper::FakeNetworkWrapper fake_network_wrapper_;
   CloudStorageImpl gcs_;
 
