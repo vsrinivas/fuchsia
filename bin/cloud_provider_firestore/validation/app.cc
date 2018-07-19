@@ -56,6 +56,13 @@ int main(int argc, char** argv) {
     return -1;
   }
 
+  std::string credentials;
+  if (!files::ReadFileToString(credentials_path, &credentials)) {
+    std::cerr << "Cannot read " << credentials_path << std::endl;
+    cloud_provider_firestore::PrintUsage(argv[0]);
+    return -1;
+  }
+
   const std::set<std::string> known_options(
       {cloud_provider_firestore::kServerIdFlag.ToString(),
        cloud_provider_firestore::kApiKeyFlag.ToString(),
@@ -72,7 +79,7 @@ int main(int argc, char** argv) {
   std::unique_ptr<component::StartupContext> startup_context =
       component::StartupContext::CreateFromStartupInfo();
   cloud_provider_firestore::CloudProviderFactory factory(startup_context.get(),
-                                                         credentials_path);
+                                                         credentials);
 
   cloud_provider::ValidationTestsLauncher launcher(
       startup_context.get(), [&factory, api_key, server_id](auto request) {

@@ -25,8 +25,9 @@ constexpr char kAppUrl[] = "cloud_provider_firestore";
 class CloudProviderFactory::TokenProviderContainer {
  public:
   TokenProviderContainer(
-      component::StartupContext* startup_context, async_dispatcher_t* dispatcher,
-      std::string credentials_path, std::string user_id,
+      component::StartupContext* startup_context,
+      async_dispatcher_t* dispatcher, fxl::StringView credentials,
+      std::string user_id,
       fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request)
       : startup_context_(startup_context),
         network_wrapper_(
@@ -37,9 +38,9 @@ class CloudProviderFactory::TokenProviderContainer {
             }),
         token_provider_(&network_wrapper_, std::move(user_id)),
         binding_(&token_provider_, std::move(request)) {
-    if (!token_provider_.LoadCredentials(credentials_path)) {
-      FXL_LOG(ERROR) << "Failed to load token provider credentials at: "
-                     << credentials_path;
+    if (!token_provider_.LoadCredentials(credentials)) {
+      FXL_LOG(ERROR) << "Failed to load token provider credentials: "
+                     << credentials;
     }
   }
 
@@ -57,9 +58,9 @@ class CloudProviderFactory::TokenProviderContainer {
 };
 
 CloudProviderFactory::CloudProviderFactory(
-    component::StartupContext* startup_context, std::string credentials_path)
+    component::StartupContext* startup_context, std::string credentials)
     : startup_context_(startup_context),
-      credentials_path_(std::move(credentials_path)),
+      credentials_(std::move(credentials)),
       services_loop_(&kAsyncLoopConfigNoAttachToThread) {}
 
 CloudProviderFactory::~CloudProviderFactory() { services_loop_.Shutdown(); }
@@ -95,8 +96,7 @@ void CloudProviderFactory::MakeCloudProviderWithGivenUserId(
       fxl::MakeCopyable([this, user_id = std::move(user_id),
                          request = token_provider.NewRequest()]() mutable {
         token_providers_.emplace(startup_context_, services_loop_.dispatcher(),
-                                 credentials_path_, user_id,
-                                 std::move(request));
+                                 credentials_, user_id, std::move(request));
       }));
 
   cloud_provider_firestore::Config firebase_config;

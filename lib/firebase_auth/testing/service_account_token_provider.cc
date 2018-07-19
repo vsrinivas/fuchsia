@@ -139,18 +139,11 @@ ServiceAccountTokenProvider::~ServiceAccountTokenProvider() {
   }
 }
 
-bool ServiceAccountTokenProvider::LoadCredentials(
-    const std::string& json_file) {
-  std::string file_content;
-  if (!files::ReadFileToString(json_file, &file_content)) {
-    FXL_LOG(ERROR) << "Unable to read file at: " << json_file;
-    return false;
-  }
-
+bool ServiceAccountTokenProvider::LoadCredentials(fxl::StringView json) {
   rapidjson::Document document;
-  document.Parse(file_content.c_str(), file_content.size());
+  document.Parse(json.data(), json.size());
   if (document.HasParseError() || !document.IsObject()) {
-    FXL_LOG(ERROR) << "Json file is incorrect at: " << json_file;
+    FXL_LOG(ERROR) << "Json file is incorrect: " << json;
     return false;
   }
 

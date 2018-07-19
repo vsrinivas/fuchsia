@@ -10,6 +10,7 @@
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <lib/callback/cancellable.h>
 #include <lib/fxl/macros.h>
+#include <lib/fxl/strings/string_view.h>
 #include <lib/network_wrapper/network_wrapper.h>
 
 namespace service_account {
@@ -34,10 +35,10 @@ class ServiceAccountTokenProvider
 
   // Loads the service account credentials.
   //
-  // This method must be called before this class is usable. |json_file| must be
-  // a path to the service account configuration file that can be retrieved from
-  // the firebase admin console (see the class-level comment).
-  bool LoadCredentials(const std::string& json_file);
+  // This method must be called before this class is usable. |json| must be the
+  // content of the service account configuration file that can be retrieved
+  // from the firebase admin console (see the class-level comment).
+  bool LoadCredentials(fxl::StringView json);
 
   // fuchsia::modular::auth::TokenProvider:
   void GetAccessToken(GetAccessTokenCallback callback) override;

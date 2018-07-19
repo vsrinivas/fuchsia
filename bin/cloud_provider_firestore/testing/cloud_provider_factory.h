@@ -26,7 +26,7 @@ namespace cloud_provider_firestore {
 class CloudProviderFactory {
  public:
   CloudProviderFactory(component::StartupContext* startup_context,
-                       std::string credentials_path);
+                       std::string credentials);
   ~CloudProviderFactory();
 
   void Init();
@@ -42,7 +42,7 @@ class CloudProviderFactory {
  private:
   class TokenProviderContainer;
   component::StartupContext* const startup_context_;
-  const std::string credentials_path_;
+  const std::string credentials_;
 
   // Loop on which the token manager runs.
   async::Loop services_loop_;

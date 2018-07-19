@@ -8,7 +8,6 @@
 #include <lib/callback/set_when_called.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/files/file.h>
-#include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/gtest/test_loop_fixture.h>
@@ -62,20 +61,6 @@ class ServiceAccountTokenProviderTest : public gtest::TestLoopFixture {
         token_provider_(&network_wrapper_, "user_id") {}
 
  protected:
-  std::string GetConfigFile(fxl::StringView config) {
-    std::string path;
-    if (!dir_.NewTempFile(&path)) {
-      ADD_FAILURE() << "Unable to create file.";
-      return "";
-    }
-    if (!files::WriteFile(path, config.data(), config.size())) {
-      ADD_FAILURE() << "Unable to write file.";
-      return "";
-    }
-
-    return path;
-  }
-
   std::string GetSuccessResponseBody(std::string token, size_t expiration) {
     rapidjson::StringBuffer string_buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(string_buffer);
@@ -118,13 +103,12 @@ class ServiceAccountTokenProviderTest : public gtest::TestLoopFixture {
     return called;
   }
 
-  files::ScopedTempDir dir_;
   network_wrapper::FakeNetworkWrapper network_wrapper_;
   ServiceAccountTokenProvider token_provider_;
 };
 
 TEST_F(ServiceAccountTokenProviderTest, GetToken) {
-  ASSERT_TRUE(token_provider_.LoadCredentials(GetConfigFile(kTestConfig)));
+  ASSERT_TRUE(token_provider_.LoadCredentials(kTestConfig));
 
   network_wrapper_.SetResponse(
       GetResponse(nullptr, 200, GetSuccessResponseBody("token", 3600)));
@@ -137,7 +121,7 @@ TEST_F(ServiceAccountTokenProviderTest, GetToken) {
 }
 
 TEST_F(ServiceAccountTokenProviderTest, GetTokenFromCache) {
-  ASSERT_TRUE(token_provider_.LoadCredentials(GetConfigFile(kTestConfig)));
+  ASSERT_TRUE(token_provider_.LoadCredentials(kTestConfig));
 
   network_wrapper_.SetResponse(
       GetResponse(nullptr, 200, GetSuccessResponseBody("token", 3600)));
@@ -161,7 +145,7 @@ TEST_F(ServiceAccountTokenProviderTest, GetTokenFromCache) {
 }
 
 TEST_F(ServiceAccountTokenProviderTest, GetTokenNoCacheCache) {
-  ASSERT_TRUE(token_provider_.LoadCredentials(GetConfigFile(kTestConfig)));
+  ASSERT_TRUE(token_provider_.LoadCredentials(kTestConfig));
 
   network_wrapper_.SetResponse(
       GetResponse(nullptr, 200, GetSuccessResponseBody("token", 0)));
@@ -184,14 +168,13 @@ TEST_F(ServiceAccountTokenProviderTest, GetTokenNoCacheCache) {
 }
 
 TEST_F(ServiceAccountTokenProviderTest, IncorrectCredentials) {
-  EXPECT_FALSE(token_provider_.LoadCredentials(GetConfigFile("")));
-  EXPECT_FALSE(token_provider_.LoadCredentials(GetConfigFile("{}")));
-  EXPECT_FALSE(
-      token_provider_.LoadCredentials(GetConfigFile(kWrongKeyTestConfig)));
+  EXPECT_FALSE(token_provider_.LoadCredentials(""));
+  EXPECT_FALSE(token_provider_.LoadCredentials("{}"));
+  EXPECT_FALSE(token_provider_.LoadCredentials(kWrongKeyTestConfig));
 }
 
 TEST_F(ServiceAccountTokenProviderTest, NetworkError) {
-  ASSERT_TRUE(token_provider_.LoadCredentials(GetConfigFile(kTestConfig)));
+  ASSERT_TRUE(token_provider_.LoadCredentials(kTestConfig));
 
   auto network_error = http::HttpError::New();
   network_error->description = "Error";
@@ -208,7 +191,7 @@ TEST_F(ServiceAccountTokenProviderTest, NetworkError) {
 }
 
 TEST_F(ServiceAccountTokenProviderTest, AuthenticationError) {
-  ASSERT_TRUE(token_provider_.LoadCredentials(GetConfigFile(kTestConfig)));
+  ASSERT_TRUE(token_provider_.LoadCredentials(kTestConfig));
 
   network_wrapper_.SetResponse(GetResponse(nullptr, 401, "Unauthorized"));
 
@@ -222,7 +205,7 @@ TEST_F(ServiceAccountTokenProviderTest, AuthenticationError) {
 }
 
 TEST_F(ServiceAccountTokenProviderTest, ResponseFormatError) {
-  ASSERT_TRUE(token_provider_.LoadCredentials(GetConfigFile(kTestConfig)));
+  ASSERT_TRUE(token_provider_.LoadCredentials(kTestConfig));
 
   network_wrapper_.SetResponse(GetResponse(nullptr, 200, ""));
 
