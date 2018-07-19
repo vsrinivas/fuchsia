@@ -15,30 +15,31 @@
 
 namespace ledger {
 
-bool GetDirectoryContentSize(fxl::StringView directory, uint64_t* size) {
+bool GetDirectoryContentSize(DetachedPath directory, uint64_t* size) {
   *size = 0;
-  std::queue<std::string> directories;
-  directories.push(directory.ToString());
+  std::queue<DetachedPath> directories;
+  directories.push(std::move(directory));
   while (!directories.empty()) {
-    std::string parent = directories.front();
+    DetachedPath parent = std::move(directories.front());
     directories.pop();
-    if (!DirectoryReader::GetDirectoryEntries(
-            parent, [&parent, size, &directories](fxl::StringView child) {
-              std::string full_path =
-                  files::AbsolutePath(parent + "/" + child.ToString());
-              if (files::IsDirectory(full_path)) {
-                directories.push(full_path);
-              } else {
-                uint64_t file_size = 0;
-                if (!files::GetFileSize(full_path, &file_size)) {
-                  FXL_LOG(ERROR) << "Couldn't get file size of " << full_path;
-                  return false;
-                }
-                *size += file_size;
-              }
-              return true;
-            })) {
-      FXL_LOG(ERROR) << "Couldn't retrieve contents of " << parent;
+    if (!GetDirectoryEntries(parent, [&parent, size,
+                                      &directories](fxl::StringView child) {
+          DetachedPath child_path = parent.SubPath(child);
+          if (files::IsDirectoryAt(child_path.root_fd(), child_path.path())) {
+            directories.push(child_path);
+          } else {
+            uint64_t file_size = 0;
+            if (!files::GetFileSizeAt(child_path.root_fd(), child_path.path(),
+                                      &file_size)) {
+              FXL_LOG(ERROR)
+                  << "Couldn't get file size of " << child_path.path();
+              return false;
+            }
+            *size += file_size;
+          }
+          return true;
+        })) {
+      FXL_LOG(ERROR) << "Couldn't retrieve contents of " << parent.path();
       return false;
     }
   }

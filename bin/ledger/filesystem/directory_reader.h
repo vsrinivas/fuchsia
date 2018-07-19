@@ -5,27 +5,19 @@
 #ifndef PERIDOT_BIN_LEDGER_FILESYSTEM_DIRECTORY_READER_H_
 #define PERIDOT_BIN_LEDGER_FILESYSTEM_DIRECTORY_READER_H_
 
-#include <functional>
-
 #include <lib/fit/function.h>
-#include <lib/fxl/strings/string_view.h>
 
 #include "peridot/bin/ledger/filesystem/detached_path.h"
 
 namespace ledger {
 
-class DirectoryReader {
- public:
-  // Returns the list of directories and files inside the provided directory.
-  static bool GetDirectoryEntries(
-      const std::string& directory,
-      fit::function<bool(fxl::StringView)> callback);
-
-  // Returns the list of directories and files inside the provided directory.
-  static bool GetDirectoryEntriesAt(
-      const DetachedPath& directory,
-      fit::function<bool(fxl::StringView)> callback);
-};
+// Returns the list of directories and files inside the provided directory. The
+// callback will be called once for each directory and files and is guaranteed
+// to never be called again once this method returns. This method will returns
+// immediately if |callback| returns |false|. This method will returns |false|
+// if an error occured while reading the directory and |true| otherwise.
+bool GetDirectoryEntries(const DetachedPath& directory,
+                         fit::function<bool(fxl::StringView)> callback);
 
 }  // namespace ledger
 

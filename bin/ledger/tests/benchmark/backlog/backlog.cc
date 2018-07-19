@@ -307,7 +307,8 @@ void BacklogBenchmark::GetEntriesStep(std::unique_ptr<ledger::Token> token,
 void BacklogBenchmark::RecordDirectorySize(const std::string& event_name,
                                            const std::string& path) {
   uint64_t tmp_dir_size = 0;
-  FXL_CHECK(ledger::GetDirectoryContentSize(path, &tmp_dir_size));
+  FXL_CHECK(ledger::GetDirectoryContentSize(ledger::DetachedPath(path),
+                                            &tmp_dir_size));
   TRACE_COUNTER("benchmark", event_name.c_str(), 0, "directory_size",
                 TA_UINT64(tmp_dir_size));
 }

@@ -122,7 +122,8 @@ void DeleteEntryBenchmark::RunSingle(size_t i) {
     ShutDown();
 
     uint64_t tmp_dir_size = 0;
-    FXL_CHECK(ledger::GetDirectoryContentSize(tmp_dir_.path(), &tmp_dir_size));
+    FXL_CHECK(ledger::GetDirectoryContentSize(
+        ledger::DetachedPath(tmp_dir_.path()), &tmp_dir_size));
     TRACE_COUNTER("benchmark", "ledger_directory_size", 0, "directory_size",
                   TA_UINT64(tmp_dir_size));
     return;

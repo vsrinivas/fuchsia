@@ -154,7 +154,7 @@ void LedgerStorageImpl::DeletePageStorage(
 
 std::vector<PageId> LedgerStorageImpl::ListLocalPages() {
   std::vector<PageId> local_pages;
-  ledger::DirectoryReader::GetDirectoryEntriesAt(
+  ledger::GetDirectoryEntries(
       storage_dir_, [&local_pages](fxl::StringView encoded_page_id) {
         local_pages.emplace_back(GetId(encoded_page_id));
         return true;

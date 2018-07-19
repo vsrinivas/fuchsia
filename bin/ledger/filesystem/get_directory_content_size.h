@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_FILESYSTEM_GET_DIRECTORY_CONTENT_SIZE_H_
 #define PERIDOT_BIN_LEDGER_FILESYSTEM_GET_DIRECTORY_CONTENT_SIZE_H_
 
-#include <lib/fxl/strings/string_view.h>
+#include "peridot/bin/ledger/filesystem/detached_path.h"
 
 namespace ledger {
 
@@ -14,7 +14,7 @@ namespace ledger {
 // size of any of the non-directory entries can't be obtained, this will return
 // false and post an error in the log. Otherwise, |size| will contain the
 // accumulated size in bytes.
-bool GetDirectoryContentSize(fxl::StringView directory, uint64_t* size);
+bool GetDirectoryContentSize(DetachedPath directory, uint64_t* size);
 
 }  // namespace ledger
 

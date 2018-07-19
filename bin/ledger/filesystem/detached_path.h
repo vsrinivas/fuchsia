@@ -22,6 +22,9 @@ class DetachedPath {
   // If |path| is absolute, DetachedPath is equivalent to it. If |path| is
   // relative, it is resolved with |root_fd| as reference. See |openat(2)|.
   explicit DetachedPath(int root_fd = AT_FDCWD, std::string path = ".");
+  // If |path| is absolute, DetachedPath is equivalent to it. If |path| is
+  // relative, it is resolved relative to the current working directory.
+  explicit DetachedPath(std::string path);
   ~DetachedPath();
   DetachedPath(const DetachedPath& other);
   DetachedPath(DetachedPath&& other) noexcept;

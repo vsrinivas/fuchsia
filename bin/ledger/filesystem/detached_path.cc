@@ -13,6 +13,9 @@ namespace ledger {
 DetachedPath::DetachedPath(int root_fd, std::string path)
     : root_fd_(root_fd), path_(std::move(path)) {}
 
+DetachedPath::DetachedPath(std::string path)
+    : root_fd_(AT_FDCWD), path_(std::move(path)) {}
+
 DetachedPath::~DetachedPath() {}
 
 DetachedPath::DetachedPath(const DetachedPath& other) = default;
