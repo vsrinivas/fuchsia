@@ -11,6 +11,9 @@
 #include <utility>
 #include <vector>
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "garnet/public/lib/fxl/functional/apply.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/ref_counted.h"
@@ -246,6 +249,12 @@ using FuturePtr = fxl::RefPtr<Future<Result...>>;
 
 namespace internal {
 
+enum class FutureStatus {
+  kAwaiting,   // not completed
+  kCompleted,  // value available, not yet moved into callback
+  kConsumed    // value moved into callback
+};
+
 // type_traits functions, ported from C++17.
 template <typename From, typename To>
 constexpr bool is_convertible_v = std::is_convertible<From, To>::value;
@@ -332,11 +341,6 @@ class ResultCollector<Future<>> {
 };
 
 }  // namespace internal
-
-template <typename ResultsFuture, typename... Result>
-fxl::RefPtr<ResultsFuture> Wait(
-    const std::string& trace_name,
-    const std::vector<FuturePtr<Result...>>& futures);
 
 template <typename... Result>
 class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
@@ -567,6 +571,12 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
       const std::string& trace_name,
       const std::vector<FuturePtr<Args...>>& futures);
 
+  template <typename ResultsFuture, typename TimeoutCallback, typename... Args>
+  friend fxl::RefPtr<ResultsFuture> WaitWithTimeout(
+      const std::string& trace_name, async_dispatcher_t* dispatcher,
+      zx::duration timeout, TimeoutCallback on_timeout,
+      const std::vector<FuturePtr<Args...>>& futures);
+
   FRIEND_REF_COUNTED_THREAD_SAFE(Future);
 
   Future() : result_{}, weak_factory_(this) {}
@@ -592,7 +602,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
     // It's impossible to add a const callback after a future is completed
     // *and* it has a callback: the completed value will be moved into the
     // callback and won't be available for a ConstThen().
-    if (has_result_ && callback_) {
+    if (status_ == internal::FutureStatus::kConsumed) {
       FXL_LOG(FATAL)
           << "Future@" << static_cast<void*>(this)
           << (trace_name_.length() ? "(" + trace_name_ + ")" : "")
@@ -606,19 +616,19 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   }
 
   void CompleteWithTuple(std::tuple<Result...>&& result) {
-    FXL_DCHECK(!has_result_)
+    FXL_DCHECK(status_ == internal::FutureStatus::kAwaiting)
         << "Future@" << static_cast<void*>(this)
         << (trace_name_.length() ? "(" + trace_name_ + ")" : "")
         << ": Complete() called twice.";
 
     result_ = std::forward<std::tuple<Result...>>(result);
-    has_result_ = true;
+    status_ = internal::FutureStatus::kCompleted;
 
     MaybeInvokeCallbacks();
   }
 
   void MaybeInvokeCallbacks() {
-    if (!has_result_) {
+    if (status_ == internal::FutureStatus::kAwaiting) {
       return;
     }
 
@@ -635,7 +645,9 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
     }
 
     if (callback_) {
-      fxl::Apply(callback_, std::move(result_));
+      auto callback = std::move(callback_);
+      status_ = internal::FutureStatus::kConsumed;
+      fxl::Apply(callback, std::move(result_));
     }
   }
 
@@ -739,7 +751,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
 
   std::string trace_name_;
 
-  bool has_result_ = false;
+  internal::FutureStatus status_ = internal::FutureStatus::kAwaiting;
   std::tuple<Result...> result_;
 
   // TODO(MI4-1102): Convert std::function to fit::function here & everywhere.
@@ -762,18 +774,19 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
 
   // For unit tests only.
   const std::tuple<Result...>& get() const {
-    FXL_DCHECK(has_result_) << trace_name_ << ": get() called on unset future";
+    FXL_DCHECK(status_ != internal::FutureStatus::kAwaiting)
+        << trace_name_ << ": get() called on unset future";
 
     return result_;
   }
 };
 
 // Returns a Future that completes when every future in |futures| is complete.
-// A strong reference is kept to every future in |futures|, so each future
-// will be kept alive if they otherwise go out of scope. The future returned
-// by Wait() will also be kept alive until every future in |futures|
-// completes. The order of the results corresponds to the order of the given
-// futures, regardless of their completion order.
+// The future returned by Wait() will be kept alive until every future in
+// |futures| either completes or is destroyed. If any future in |futures| is
+// destroyed prior to completing, the returned future will never complete. The
+// order of the results corresponds to the order of the given futures,
+// regardless of their completion order.
 //
 // The default type of the resulting future depends on the types of the
 // component futures. Void futures produce a void future. Monadic futures
@@ -781,7 +794,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
 // vector of tuples. That is:
 //
 // Components         | Result
-// -------------------+------------------------------------
+// -------------------+--------------------------------------------
 // FuturePtr<>        | FuturePtr<>
 // FuturePtr<T>       | FuturePtr<std::vector<T>>
 // FuturePtr<T, U...> | FuturePtr<std::vector<std::tuple<T, U...>>>
@@ -818,34 +831,140 @@ fxl::RefPtr<ResultsFuture> Wait(
       futures.size());
 
   fxl::RefPtr<ResultsFuture> all_futures_completed =
-      ResultsFuture::Create(trace_name + "(WillWait2)");
+      ResultsFuture::Create(trace_name + "(WillWait)");
 
   for (size_t i = 0; i < futures.size(); i++) {
     const auto& future = futures[i];
-    // Note that |future| is captured by the callback, to ensure that it'll be
-    // completed even if its refcount drops to zero. The callback will be
-    // reset after it's run to prevent a retain cycle.
     future->SetCallback(
-        [i, future, all_futures_completed, results](Result&&... result) {
+        [i, all_futures_completed, results](Result&&... result) {
           results->AssignResult(i, std::forward<Result>(result)...);
 
           if (results->IsComplete()) {
             results->Complete(all_futures_completed.get());
           }
-
-          // null out the callback, otherwise there'll be a retain cycle
-          // (because |future| is on this callback's capture list).
-          future->SetCallback(nullptr);
         });
   }
 
   return all_futures_completed;
 }
 
+// Like |Wait|, but gives up after a timeout. After the timeout, |on_timeout| is
+// invoked with a diagnostic error string containing the trace names of the
+// futures that have not completed.
+//
+// This maintains a reference to the returned |Future| until all component
+// futures have been completed or destroyed, or until the timeout has elapsed,
+// whichever happens first. However, |on_timeout| will be invoked on timeout if
+// any future has not completed even if any or all futures have been destroyed.
+template <typename ResultsFuture, typename TimeoutCallback, typename... Result>
+fxl::RefPtr<ResultsFuture> WaitWithTimeout(
+    const std::string& trace_name, async_dispatcher_t* dispatcher,
+    zx::duration timeout,
+    TimeoutCallback on_timeout /* void (const std::string&) */,
+    const std::vector<FuturePtr<Result...>>& futures) {
+  auto all_futures_completed = Wait<ResultsFuture>(trace_name, futures);
+
+  if (all_futures_completed->status_ != internal::FutureStatus::kAwaiting) {
+    return all_futures_completed;
+  }
+
+  auto all_trace_names =
+      std::make_shared<std::vector<std::unique_ptr<std::string>>>();
+  all_trace_names->reserve(futures.size());
+
+  for (const auto& future : futures) {
+    // There's no point in waiting on completed futures. Furthermore if we tried
+    // that we'd have to put this before |Wait| since |Wait| consumes the
+    // results, but then if all futures are already completed this is all just
+    // wasted effort.
+    if (future->status_ == internal::FutureStatus::kAwaiting) {
+      size_t i = all_trace_names->size();
+      all_trace_names->push_back(
+          std::make_unique<std::string>(future->trace_name_));
+      future->AddConstCallback([i, all_trace_names](const Result&...) {
+        if (!all_trace_names->empty()) {
+          (*all_trace_names)[i] = nullptr;
+        }
+      });
+    }
+  }
+
+  // Return a proxy so that we can cancel result forwarding in the case of a
+  // timeout. This could with more difficulty be done within |Wait|, but this
+  // way allows us to reuse the logic more easily.
+  fxl::RefPtr<ResultsFuture> all_proxy =
+      ResultsFuture::Create(trace_name + "(WillWaitWithTimeout)");
+  all_futures_completed->SetCallback(all_proxy->Completer());
+
+  // TODO(rosswang): Factor this into dump and cancel functions that can be
+  // called at other times.
+  async::PostDelayedTask(
+      dispatcher,
+      [all_trace_names = std::move(all_trace_names),
+       on_timeout = std::move(on_timeout),
+       all_futures_completed =
+           all_futures_completed->weak_factory_.GetWeakPtr()] {
+        std::ostringstream msg;
+        for (const auto& trace_name : *all_trace_names) {
+          if (trace_name) {
+            msg << "\n\t" << *trace_name;
+          }
+        }
+        if (!msg.str().empty()) {
+          on_timeout("Wait timed out. Still waiting for futures:" + msg.str());
+          if (all_futures_completed) {
+            // cancel results forwarding (possibly releasing all_proxy)
+            all_futures_completed->SetCallback(nullptr);
+          }
+          // Possibly release the component futures. Once this task completes
+          // and goes out of scope, the last reference to the Wait future (also
+          // holding onto the component futures) should be released as well.
+          all_trace_names->clear();
+        }
+      },
+      timeout);
+
+  return all_proxy;
+}
+
+// |WaitWithTimeout| on the thread defaut dispatcher.
+template <typename ResultsFuture, typename TimeoutCallback, typename... Result>
+fxl::RefPtr<ResultsFuture> WaitWithTimeout(
+    const std::string& trace_name, zx::duration timeout,
+    TimeoutCallback on_timeout /* void (const std::string&) */,
+    const std::vector<FuturePtr<Result...>>& futures) {
+  return WaitWithTimeout<ResultsFuture>(trace_name,
+                                        async_get_default_dispatcher(), timeout,
+                                        std::move(on_timeout), futures);
+}
+
+// These overloads allow us to effectively default the first template parameter,
+// |ResultsFuture| (since the others are intended to be inferred).
+// TODO(rosswang): If the overload combinatoric explosion gets too heavy, we can
+// use a dummy struct parameter instead to encapsulate that template parameter.
+
 template <typename... Result>
 auto Wait(const std::string& trace_name,
           const std::vector<FuturePtr<Result...>>& futures) {
   return Wait<internal::DefaultResultsFuture_t<Result...>>(trace_name, futures);
+}
+
+template <typename TimeoutCallback, typename... Result>
+auto WaitWithTimeout(const std::string& trace_name,
+                     async_dispatcher_t* dispatcher, zx::duration timeout,
+                     TimeoutCallback on_timeout,
+                     const std::vector<FuturePtr<Result...>>& futures) {
+  return WaitWithTimeout<internal::DefaultResultsFuture_t<Result...>>(
+      trace_name, dispatcher, timeout, std::move(on_timeout), futures);
+}
+
+template <typename TimeoutCallback, typename... Result>
+auto WaitWithTimeout(const std::string& trace_name, zx::duration timeout,
+                     TimeoutCallback on_timeout /* void (const std::string&) */,
+                     const std::vector<FuturePtr<Result...>>& futures) {
+  return WaitWithTimeout<internal::DefaultResultsFuture_t<Result...>>(
+      trace_name, async_get_default_dispatcher(), timeout,
+      std::move(on_timeout), futures);
 }
 
 // We need to provide the initializer list overloads or template deduction fails
@@ -859,10 +978,48 @@ auto Wait(const std::string& trace_name,
                              std::vector<FuturePtr<Result...>>(futures));
 }
 
+template <typename ResultsFuture, typename TimeoutCallback, typename... Result>
+fxl::RefPtr<ResultsFuture> WaitWithTimeout(
+    const std::string& trace_name, async_dispatcher_t* dispatcher,
+    zx::duration timeout, TimeoutCallback on_timeout,
+    std::initializer_list<FuturePtr<Result...>> futures) {
+  return WaitWithTimeout<ResultsFuture>(
+      trace_name, dispatcher, timeout, std::move(on_timeout),
+      std::vector<FuturePtr<Result...>>(futures));
+}
+
+template <typename ResultsFuture, typename TimeoutCallback, typename... Result>
+fxl::RefPtr<ResultsFuture> WaitWithTimeout(
+    const std::string& trace_name, zx::duration timeout,
+    TimeoutCallback on_timeout /* void (const std::string&) */,
+    std::initializer_list<FuturePtr<Result...>> futures) {
+  return WaitWithTimeout<ResultsFuture>(
+      trace_name, async_get_default_dispatcher(), timeout,
+      std::move(on_timeout), std::vector<FuturePtr<Result...>>(futures));
+}
+
 template <typename... Result>
 auto Wait(const std::string& trace_name,
           std::initializer_list<FuturePtr<Result...>> futures) {
   return Wait(trace_name, std::vector<FuturePtr<Result...>>(futures));
+}
+
+template <typename TimeoutCallback, typename... Result>
+auto WaitWithTimeout(const std::string& trace_name,
+                     async_dispatcher_t* dispatcher, zx::duration timeout,
+                     TimeoutCallback on_timeout,
+                     std::initializer_list<FuturePtr<Result...>> futures) {
+  return WaitWithTimeout(trace_name, dispatcher, timeout, std::move(on_timeout),
+                         std::vector<FuturePtr<Result...>>(futures));
+}
+
+template <typename TimeoutCallback, typename... Result>
+auto WaitWithTimeout(const std::string& trace_name, zx::duration timeout,
+                     TimeoutCallback on_timeout /* void (const std::string&) */,
+                     std::initializer_list<FuturePtr<Result...>> futures) {
+  return WaitWithTimeout(trace_name, async_get_default_dispatcher(), timeout,
+                         std::move(on_timeout),
+                         std::vector<FuturePtr<Result...>>(futures));
 }
 
 }  // namespace modular

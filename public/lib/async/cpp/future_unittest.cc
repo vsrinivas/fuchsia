@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include <lib/async-testutils/test_loop.h>
 #include <lib/fxl/logging.h>
 
 #include "gtest/gtest-spi.h"
@@ -13,6 +14,11 @@
 namespace modular {
 
 namespace {
+
+// https://www.reddit.com/r/Stargate/comments/114165/stargate_sg_1_episode_200_what_is_your_favorite/c6j8ryy
+// https://en.wikiquote.org/wiki/Stargate_SG-1/Season_10#200_[10.6]
+// (The actual duration is immaterial because we control time in unit tests.)
+constexpr zx::duration kPause = zx::min(38);
 
 // This is a simple class to enable asynchronous callbacks to be tested. In each
 // test:
@@ -477,37 +483,151 @@ TEST_F(FutureTest, WaitOnZeroFutures) {
   EXPECT_EQ(1, async_expectations.count());
 }
 
-TEST_F(FutureTest, WaitRetainsFuturesBeforeCompletion) {
-  FuturePtr<std::vector<int>> f;
-  fxl::WeakPtr<Future<int>> weak_f1;
+TEST_F(
+    FutureTest,
+    WaitReleasesReturnedFutureIfAllComponentFuturesHaveBeenCompletedOrDestroyed) {
+  fxl::WeakPtr<Future<std::vector<int>>> weak_f;
+
+  auto f1 = Future<int>::Create(__PRETTY_FUNCTION__ + std::string("1"));
+  {
+    auto f2 = Future<int>::Create(__PRETTY_FUNCTION__ + std::string("2"));
+    weak_f =
+        weak_factory(Wait(__PRETTY_FUNCTION__ + std::string("Wait"), {f1, f2}))
+            .GetWeakPtr();
+  }
+
+  ASSERT_TRUE(weak_f);
+  weak_f->Then([&](std::vector<int>) { FAIL(); });
+  f1->Complete(42);
+  EXPECT_FALSE(weak_f);
+}
+
+// This test is the happy case, more or less identical to |Wait|.
+TEST_F(FutureTest, WaitWithTimeout) {
+  auto f1 = Future<int, std::string>::Create(std::string(__PRETTY_FUNCTION__) +
+                                             std::string("1"));
+  auto f2 = Future<int, std::string>::Create(std::string(__PRETTY_FUNCTION__) +
+                                             std::string("2"));
+  auto f3 = Future<int, std::string>::Create(std::string(__PRETTY_FUNCTION__) +
+                                             std::string("3"));
 
   AsyncExpectations async_expectations;
+  async::TestLoop loop;
 
-  {
-    auto f1 = Future<int>::Create(__PRETTY_FUNCTION__);
-    weak_f1 = weak_factory(f1).GetWeakPtr();
+  auto f = WaitWithTimeout(
+      std::string(__PRETTY_FUNCTION__) + std::string("4"), loop.dispatcher(),
+      kPause, [](const std::string& msg) { FAIL() << msg; }, {f1, f2, f3});
 
-    f = Wait(__PRETTY_FUNCTION__ + std::string("1"), {f1});
-  }
+  f->Then([&](std::vector<std::tuple<int, std::string>> v) {
+    EXPECT_EQ(v.size(), 3ul);
 
-  EXPECT_TRUE(weak_f1);
+    EXPECT_EQ(v[0], std::make_tuple(10, "10"));
+    EXPECT_EQ(v[1], std::make_tuple(20, "20"));
+    EXPECT_EQ(v[2], std::make_tuple(30, "30"));
 
-  if (weak_f1) {
-    weak_f1->Complete(5);
-  }
+    async_expectations.Signal();
+  });
 
-  f->Then([&](std::vector<int>) { async_expectations.Signal(); });
+  loop.RunUntilIdle();  // ensure the timeout does not occur
+
+  // Go ahead and insert out of order to also ensure that Wait produces results
+  // in insertion order rather than completion order.
+  f2->Complete(20, "20");
+  EXPECT_EQ(0, async_expectations.count());
+  f1->Complete(10, "10");
+  EXPECT_EQ(0, async_expectations.count());
+  f3->Complete(30, "30");
 
   EXPECT_EQ(1, async_expectations.count());
 }
 
-TEST_F(FutureTest, WaitOnMoveOnlyType) {
+// Zero futures should instantly complete regardless of timeout.
+TEST_F(FutureTest, WaitWithTimeoutOnZeroFutures) {
+  AsyncExpectations async_expectations;
+  async::TestLoop loop;
+
+  auto f = WaitWithTimeout(__PRETTY_FUNCTION__, loop.dispatcher(), {},
+                           [](const std::string& msg) { FAIL() << msg; },
+                           std::vector<FuturePtr<int>>{});
+
+  loop.RunUntilIdle();
+
+  f->Then([&](std::vector<int> v) {
+    EXPECT_EQ(v.size(), 0ul);
+    async_expectations.Signal();
+  });
+
+  EXPECT_EQ(1, async_expectations.count());
+}
+
+TEST_F(FutureTest, WaitWithTimeoutCallsCallbackOnTimeout) {
+  AsyncExpectations async_expectations;
+  async::TestLoop loop;
+
+  auto f1 =
+      Future<>::Create(std::string(__PRETTY_FUNCTION__) + std::string("1"));
+
+  auto f = WaitWithTimeout(std::string(__PRETTY_FUNCTION__) + std::string("2"),
+                           loop.dispatcher(), {},
+                           [&](const std::string& msg) {
+                             EXPECT_EQ('1', msg[msg.size() - 1]);
+                             async_expectations.Signal();
+                           },
+                           {f1});
+
+  loop.RunUntilIdle();
+  EXPECT_EQ(1, async_expectations.count());
+}
+
+TEST_F(FutureTest, WaitWithTimeoutWithDefaultDispatcher) {
+  AsyncExpectations async_expectations;
+  async::TestLoop loop;
+
+  async_set_default_dispatcher(loop.dispatcher());
+
+  auto f1 =
+      Future<>::Create(std::string(__PRETTY_FUNCTION__) + std::string("1"));
+
+  auto f =
+      WaitWithTimeout(std::string(__PRETTY_FUNCTION__) + std::string("2"), {},
+                      [&](const std::string& msg) {
+                        EXPECT_EQ('1', msg[msg.size() - 1]);
+                        async_expectations.Signal();
+                      },
+                      {f1});
+
+  loop.RunUntilIdle();
+  EXPECT_EQ(1, async_expectations.count());
+}
+
+TEST_F(FutureTest, WaitWithTimeoutDoesNotCompleteAfterTimeout) {
+  async::TestLoop loop;
+
+  auto f1 =
+      Future<>::Create(std::string(__PRETTY_FUNCTION__) + std::string("1"));
+
+  auto f = WaitWithTimeout(std::string(__PRETTY_FUNCTION__) + std::string("2"),
+                           loop.dispatcher(), {}, [](const auto&) {}, {f1});
+
+  f->Then([] { FAIL(); });
+
+  loop.RunUntilIdle();
+  f1->Complete();
+}
+
+// The following several tests also test additional Wait functionality, since
+// WaitWithTimeout is implemented in terms of Wait.
+TEST_F(FutureTest, WaitWithTimeoutOnMoveOnlyType) {
+  AsyncExpectations async_expectations;
+  async::TestLoop loop;
+
   auto f1 = Future<std::unique_ptr<int>>::Create(
       std::string(__PRETTY_FUNCTION__) + std::string("1"));
 
-  AsyncExpectations async_expectations;
+  auto f = WaitWithTimeout(std::string(__PRETTY_FUNCTION__) + std::string("2"),
+                           loop.dispatcher(), kPause,
+                           [](const std::string& msg) { FAIL() << msg; }, {f1});
 
-  auto f = Wait(std::string(__PRETTY_FUNCTION__) + std::string("2"), {f1});
   f->Then([&](std::vector<std::unique_ptr<int>> v) {
     EXPECT_EQ(v.size(), 1u);
 
@@ -517,36 +637,133 @@ TEST_F(FutureTest, WaitOnMoveOnlyType) {
   });
 
   f1->Complete(std::make_unique<int>(42));
-
   EXPECT_EQ(1, async_expectations.count());
 }
 
-// This test contains no assertions as it is a compile-time test.
-TEST_F(FutureTest, WaitNoTypeStreamlining) {
+TEST_F(FutureTest, WaitWithTimeoutNoTypeStreamlining) {
+  // This test contains no assertions as it is a compile-time test.
+  async::TestLoop loop;
   auto f1 =
       Future<>::Create(std::string(__PRETTY_FUNCTION__) + std::string("1"));
 
-  auto f = Wait<Future<std::vector<std::tuple<>>>>(
-      std::string(__PRETTY_FUNCTION__) + std::string("2"), {f1});
-  f->Then([&](std::vector<std::tuple<>> v) {});
+  auto f = WaitWithTimeout<Future<std::vector<std::tuple<>>>>(
+      std::string(__PRETTY_FUNCTION__) + std::string("2"), loop.dispatcher(),
+      kPause, [](const auto&) {}, {f1});
+  f->Then([](std::vector<std::tuple<>> v) {});
 }
 
-TEST_F(FutureTest, WaitDoesNotOverRetainFutures) {
+// This tests a specific bug case where some futures started completed and some
+// did not. In this bug, WaitWithTimeout added its notification const callbacks
+// after invoking Wait. The futures that were completed would invoke the
+// callback added by Wait immediately, making the const callbacks then added by
+// WaitWithTimeout illegal. This did not manifest when all futures started
+// completed due to an optimization in WaitWithTimeout that returns immediately
+// if the Wait future starts complete.
+TEST_F(FutureTest, WaitWithTimeoutOnPartiallyCompletedFutures) {
+  AsyncExpectations async_expectations;
+  async::TestLoop loop;
+
+  auto f1 = Future<int>::Create(__PRETTY_FUNCTION__ + std::string("1"));
+  auto f2 = Future<int>::Create(__PRETTY_FUNCTION__ + std::string("2"));
+  f1->Complete(42);
+  auto f =
+      WaitWithTimeout(__PRETTY_FUNCTION__ + std::string("Wait"),
+                      loop.dispatcher(), kPause, [](const auto&) {}, {f1, f2})
+          ->Then([&](const std::vector<int>& results) {
+            ASSERT_EQ(2u, results.size());
+            EXPECT_EQ(42, results[0]);
+            EXPECT_EQ(54, results[1]);
+            async_expectations.Signal();
+          });
+  f2->Complete(54);  // http://hitchhikers.wikia.com/wiki/42
+  EXPECT_EQ(1, async_expectations.count());
+}
+
+TEST_F(FutureTest, WaitWithTimeoutReleasesFuturesOnCompletion) {
+  async::TestLoop loop;
   fxl::WeakPtr<Future<>> weak_f1;
 
   {
-    auto f1 = Future<>::Create(__PRETTY_FUNCTION__);
+    auto f1 = Future<>::Create(__PRETTY_FUNCTION__ + std::string("1"));
     weak_f1 = weak_factory(f1).GetWeakPtr();
 
-    auto f = Wait(__PRETTY_FUNCTION__ + std::string("1"), {f1});
+    auto f =
+        WaitWithTimeout(__PRETTY_FUNCTION__ + std::string("Wait"),
+                        loop.dispatcher(), kPause, [](const auto&) {}, {f1});
     f1->Complete();
-
-    AsyncExpectations async_expectations;
-    f->Then([&] { async_expectations.Signal(); });
-    EXPECT_EQ(1, async_expectations.count());
   }
 
-  EXPECT_FALSE(bool(weak_f1));
+  EXPECT_FALSE(weak_f1);
+}
+
+TEST_F(FutureTest, WaitWithTimeoutReleasesFuturesOnTimeout) {
+  async::TestLoop loop;
+  fxl::WeakPtr<Future<>> weak_f1;
+
+  {
+    auto f1 = Future<>::Create(__PRETTY_FUNCTION__ + std::string("1"));
+    weak_f1 = weak_factory(f1).GetWeakPtr();
+
+    WaitWithTimeout(__PRETTY_FUNCTION__ + std::string("Wait"),
+                    loop.dispatcher(), {}, [](const auto&) {}, {f1});
+    loop.RunUntilIdle();
+  }
+
+  EXPECT_FALSE(weak_f1);
+}
+
+TEST_F(FutureTest,
+       WaitWithTimeoutCallsCallbackOnTimeoutEvenIfFuturesAreDestroyed) {
+  AsyncExpectations async_expectations;
+  async::TestLoop loop;
+
+  {
+    auto f1 = Future<>::Create(__PRETTY_FUNCTION__ + std::string("1"));
+    WaitWithTimeout(__PRETTY_FUNCTION__ + std::string("Wait"),
+                    loop.dispatcher(), {},
+                    [&](const auto&) { async_expectations.Signal(); }, {f1});
+  }
+
+  loop.RunUntilIdle();
+  EXPECT_EQ(1, async_expectations.count());
+}
+
+TEST_F(
+    FutureTest,
+    WaitWithTimeoutReleasesReturnedFutureIfAllComponentFuturesHaveBeenCompletedOrDestroyed) {
+  async::TestLoop loop;
+  fxl::WeakPtr<Future<std::vector<int>>> weak_f;
+
+  auto f1 = Future<int>::Create(__PRETTY_FUNCTION__ + std::string("1"));
+  {
+    auto f2 = Future<int>::Create(__PRETTY_FUNCTION__ + std::string("2"));
+    weak_f =
+        weak_factory(WaitWithTimeout(__PRETTY_FUNCTION__ + std::string("Wait"),
+                                     loop.dispatcher(), kPause,
+                                     [](const auto&) {}, {f1, f2}))
+            .GetWeakPtr();
+  }
+
+  ASSERT_TRUE(weak_f);
+  weak_f->Then([&](std::vector<int>) { FAIL(); });
+  f1->Complete(42);
+  EXPECT_FALSE(weak_f);
+}
+
+TEST_F(FutureTest, WaitWithTimeoutReleasesReturnedFutureOnTimeout) {
+  async::TestLoop loop;
+  fxl::WeakPtr<Future<std::vector<int>>> weak_f;
+
+  {
+    auto f1 = Future<int>::Create(__PRETTY_FUNCTION__ + std::string("1"));
+    weak_f = weak_factory(WaitWithTimeout(
+                              __PRETTY_FUNCTION__ + std::string("Wait"),
+                              loop.dispatcher(), {}, [](const auto&) {}, {f1}))
+                 .GetWeakPtr();
+  }
+
+  loop.RunUntilIdle();
+  EXPECT_FALSE(weak_f);
 }
 
 TEST_F(FutureTest, Completer) {

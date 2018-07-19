@@ -11,6 +11,7 @@ source_set("future") {
   public_deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-default",
   ]
 }
 

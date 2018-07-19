@@ -61,12 +61,14 @@ source_set("session_storage") {
 
   deps = [
     ":session_storage_xdr",
-    ":story_storage",
     "//peridot/bin/user_runner/storage:constants_and_utils",
     "//peridot/lib/fidl:clone",
     "//peridot/lib/ledger_client:operations",
+  ]
+
+  public_deps = [
+    ":story_storage",
     "//peridot/lib/ledger_client:page_client",
-    "//peridot/public/fidl/fuchsia.ledger",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/fidl/fuchsia.modular.internal",
     "//peridot/public/lib/async/cpp:future",

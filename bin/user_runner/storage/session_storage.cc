@@ -4,7 +4,6 @@
 
 #include "peridot/bin/user_runner/storage/session_storage.h"
 
-#include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fxl/functional/make_copyable.h>
 
