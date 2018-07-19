@@ -25,6 +25,11 @@ import("//topaz/runtime/dart_runner/dart_app.gni")
 #   disable_analysis (optional)
 #     Prevents analysis from being run on this target.
 #
+#   package_only (optional)
+#     Prevents creation of a sh file, which in turn prevents the test from
+#     being run automatically.
+#     Defaults to False.
+#
 # Example of usage:
 #
 #   dart_fuchsia_test("some_tests") {
@@ -42,6 +47,12 @@ template("dart_fuchsia_test") {
     test_source_dir = invoker.source_dir
   } else {
     test_source_dir = "test"
+  }
+
+  if (defined(invoker.package_only)) {
+    test_package_only = invoker.package_only
+  } else {
+    test_package_only = false
   }
 
   generated_test_main_target = target_name + "__test_main"
@@ -68,17 +79,19 @@ template("dart_fuchsia_test") {
     ]
   }
 
-  generated_run_test_sh_target = "run_${target_name}"
-  # package.gni requires all test files to be under $root_build_dir.
-  generated_run_test_sh = "${root_build_dir}/${generated_run_test_sh_target}.sh"
+  if (!test_package_only) {
+    generated_run_test_sh_target = "run_${target_name}"
+    # package.gni requires all test files to be under $root_build_dir.
+    generated_run_test_sh = "${root_build_dir}/${generated_run_test_sh_target}.sh"
 
-  action(generated_run_test_sh_target) {
-    script = "//build/dart/gen_run_sh.py"
-    outputs = [generated_run_test_sh]
-    args = [
-      "--out=" + rebase_path(generated_run_test_sh),
-      "--to_be_run=${invoker.target_name}",
-    ]
+    action(generated_run_test_sh_target) {
+      script = "//build/dart/gen_run_sh.py"
+      outputs = [generated_run_test_sh]
+      args = [
+        "--out=" + rebase_path(generated_run_test_sh),
+        "--to_be_run=${invoker.target_name}",
+      ]
+    }
   }
 
   dart_jit_app(target_name) {
@@ -92,9 +105,11 @@ template("dart_fuchsia_test") {
 
     testonly = true
 
-    tests = [{
-      name = "${generated_run_test_sh_target}.sh"
-    }]
+    if (!test_package_only) {
+      tests = [{
+        name = "${generated_run_test_sh_target}.sh"
+      }]
+    }
 
     deps = [
       "//third_party/dart-pkg/pub/test",
@@ -104,8 +119,12 @@ template("dart_fuchsia_test") {
       deps += invoker.deps
     }
 
-    non_dart_deps = [ ":$generated_test_main_target($target_toolchain)",
-                      ":$generated_run_test_sh_target($target_toolchain)",]
+
+    non_dart_deps = [ ":$generated_test_main_target($target_toolchain)" ]
+    if (!test_package_only) {
+      non_dart_deps += [ ":$generated_run_test_sh_target($target_toolchain)" ]
+    }
+
     if (defined(invoker.non_dart_deps)) {
       non_dart_deps += invoker.non_dart_deps
     }
