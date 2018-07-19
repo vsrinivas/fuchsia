@@ -137,7 +137,7 @@ The simplest way to build LLVM is to use the following commands:
 cmake -GNinja \
   -DCMAKE_BUILD_TYPE=Debug \
   -DLLVM_ENABLE_PROJECTS="clang;lld" \
-  ${LLVM_SRCDIR}
+  ${LLVM_SRCDIR}/llvm
 ninja
 ```
 
@@ -209,7 +209,7 @@ cmake -GNinja \
   -DLLVM_USE_SANITIZER=Memory \
   -DLLVM_ENABLE_LIBCXX=ON \
   -DLLVM_ENABLE_LLD=ON \
-  ${LLVM_SRCDIR}
+  ${LLVM_SRCDIR}/llvm
 ```
 
 Normally you would run Ninja at this point but we want to build
@@ -241,7 +241,7 @@ cmake -GNinja \
   -DLLVM_USE_SANITIZER=Address \
   -DLLVM_ENABLE_LIBCXX=ON \
   -DLLVM_ENABLE_LLD=ON \
-  ${LLVM_SRCDIR}
+  ${LLVM_SRCDIR}/llvm
 ninja libcxx libcxxabi
 ninja
 ```
@@ -296,7 +296,7 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
   -DFUCHSIA_SDK=${SDK_DIR} \
   -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia-stage2.cmake \
-  ${LLVM_SRCDIR}
+  ${LLVM_SRCDIR}/llvm
 ninja distribution
 ```
 
@@ -316,7 +316,7 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
   -DFUCHSIA_SDK=${SDK_DIR} \
   -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia-stage2.cmake \
-  ${LLVM_SRCDIR}
+  ${LLVM_SRCDIR}/llvm
 ninja distribution -j${JOBS}
 ```
 
