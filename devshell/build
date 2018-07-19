@@ -12,29 +12,30 @@ fx-config-read
 
 readonly LOCK_FILE="${FUCHSIA_DIR}"/.build_lock
 
+# Use a lock file around a command.
+# Print a message if the lock isn't immediately entered,
+# and block until it is.
+function locked {
+  # This will cause a deadlock if any subcommand calls back to fx build,
+  # because shlock isn't reentrant by forked processes.
+  if shlock -f "${LOCK_FILE}" -p $$; then
+    cmd_locked "$@"
+  else
+    echo "Locked by ${LOCK_FILE}..."
+    while ! shlock -f "${LOCK_FILE}" -p $$; do sleep .1; done
+    cmd_locked "$@"
+  fi
+}
+
 # Exit trap to clean up lock file
 function _rmlock () {
   [[ -n "${LOCK_FILE}" ]] && rm -f "${LOCK_FILE}"
 }
 
-# Use a lock file around a command.
-# Print a message if the lock isn't immediately entered,
-# and block until it is.
-function locked {
-  declare -r cmd="$@"
-  # This will cause a deadlock if any subcommand calls back to fx build,
-  # because shlock isn't reentrant by forked processes.
-  if shlock -f "${LOCK_FILE}" -p $$; then
-    trap _rmlock EXIT
-    ${cmd}
-    _rmlock
-  else
-    echo "Locked by ${LOCK_FILE}..."
-    while ! shlock -f "${LOCK_FILE}" -p $$; do sleep .1; done
-    trap _rmlock EXIT
-    ${cmd}
-    _rmlock
-  fi
+function cmd_locked {
+  trap _rmlock EXIT
+  $@
+  exit $?
 }
 
 function main {
