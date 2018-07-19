@@ -42,25 +42,6 @@ TEST(File, WriteFileInTwoPhases) {
 }
 
 #if defined(OS_LINUX) || defined(OS_FUCHSIA)
-TEST(File, GetFileSizeAt) {
-  ScopedTempDir dir;
-  fxl::UniqueFD dirfd(open(dir.path().c_str(), O_RDONLY));
-  ASSERT_TRUE(dirfd.get() != -1);
-
-  std::string full_path;
-  ASSERT_TRUE(dir.NewTempFile(&full_path));
-  std::string path = GetBaseName(full_path);
-
-  uint64_t size;
-  EXPECT_TRUE(GetFileSizeAt(dirfd.get(), path, &size));
-  EXPECT_EQ(0u, size);
-
-  std::string content = "Hello World";
-  ASSERT_TRUE(WriteFileAt(dirfd.get(), path, content.data(), content.size()));
-  EXPECT_TRUE(GetFileSizeAt(dirfd.get(), path, &size));
-  EXPECT_EQ(content.size(), size);
-}
-
 TEST(File, IsFileAt) {
   ScopedTempDir dir;
   std::string path;
