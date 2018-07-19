@@ -66,6 +66,9 @@ FXL_EXPORT bool IsFileAt(int dirfd, const std::string& path);
 
 // If the given path is a file, set size to the size of the file.
 FXL_EXPORT bool GetFileSize(const std::string& path, uint64_t* size);
+#if defined(OS_LINUX) || defined(OS_FUCHSIA)
+FXL_EXPORT bool GetFileSizeAt(int dirfd, const std::string& path, uint64_t* size);
+#endif
 
 }  // namespace files
 
