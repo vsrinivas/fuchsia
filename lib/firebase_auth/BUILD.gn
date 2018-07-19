@@ -7,6 +7,12 @@ visibility = [
   "//peridot/lib/*",
 ]
 
+# TODO(prathyushk): Refactor this once the GN feature discussed below
+# is available.
+# https://groups.google.com/a/chromium.org/d/msg/gn-dev/zoVnBgjLgnQ/9yzGr7r3BAAJ
+#
+# This source_set depends on including the generated ledger Cobalt
+# config as a resource. See peridot/bin/ledger/BUILD.gn for an example.
 source_set("firebase_auth") {
   sources = [
     "firebase_auth.h",

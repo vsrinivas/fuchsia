@@ -9,14 +9,15 @@
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/callback/cancellable_helper.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/vmo/file.h>
 #include <lib/fxl/functional/closure.h>
 #include <lib/fxl/functional/make_copyable.h>
 
 namespace firebase_auth {
 namespace {
 
-// Cobalt constants. See third_party/cobalt_config/fuchsia/ledger/config.yaml.
-constexpr int32_t kLedgerCobaltProjectId = 100;
+constexpr char kConfigBinProtoPath[] =
+    "/pkg/data/firebase_auth_cobalt_config.binproto";
 constexpr int32_t kCobaltAuthFailureMetricId = 3;
 constexpr int32_t kCobaltNoOpEncodingId = 3;
 
@@ -42,12 +43,23 @@ FirebaseAuthImpl::FirebaseAuthImpl(
     Config config, async_dispatcher_t* dispatcher,
     fuchsia::modular::auth::TokenProviderPtr token_provider,
     component::StartupContext* startup_context)
-    : FirebaseAuthImpl(std::move(config), dispatcher, std::move(token_provider),
-                       std::make_unique<backoff::ExponentialBackoff>(),
-                       startup_context ? cobalt::MakeCobaltContext(
-                                             dispatcher, startup_context,
-                                             kLedgerCobaltProjectId)
-                                       : nullptr) {}
+    : api_key_(std::move(config.api_key)),
+      token_provider_(std::move(token_provider)),
+      backoff_(std::make_unique<backoff::ExponentialBackoff>()),
+      max_retries_(config.max_retries),
+      cobalt_client_name_(std::move(config.cobalt_client_name)),
+      task_runner_(dispatcher) {
+  if (startup_context) {
+    fsl::SizedVmo config;
+    FXL_CHECK(fsl::VmoFromFilename(kConfigBinProtoPath, &config))
+        << "Could not read Cobalt config file into VMO";
+
+    cobalt_context_ = cobalt::MakeCobaltContext(dispatcher, startup_context,
+                                                std::move(config));
+  } else {
+    cobalt_context_ = nullptr;
+  }
+}
 
 FirebaseAuthImpl::FirebaseAuthImpl(
     Config config, async_dispatcher_t* dispatcher,
