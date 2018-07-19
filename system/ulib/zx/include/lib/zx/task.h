@@ -38,14 +38,10 @@ public:
     zx_status_t suspend() const { return zx_task_suspend(object<T>::get()); }
 
     zx_status_t suspend(suspend_token* result) {
-        zx_handle_t h;
-        zx_status_t status = zx_task_suspend_token(object<T>::get(), &h);
-        if (status < 0) {
-            result->reset(ZX_HANDLE_INVALID);
-        } else {
-            result->reset(h);
-        }
-        return status;
+        // Assume |result| must refer to a different container than |this|, due
+        // to strict aliasing.
+        return zx_task_suspend_token(
+            object<T>::get(), result->reset_and_get_address());
     }
 };
 
