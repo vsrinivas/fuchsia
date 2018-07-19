@@ -11,24 +11,26 @@ build=${1:-debug-x64}
 builddir=out/build-doom3
 
 if [[ $build == *"arm64" ]]; then
-	shared_path=arm64
-	system_processor=aarch64
+  arch=arm64
+  shared_path=arm64
+  system_processor=aarch64
 else
-	shared_path=x64-shared
-	system_processor=x86_64
+  arch=x64
+  shared_path=x64-shared
+  system_processor=x86_64
 fi
 
 if [[ $build == "debug"* ]]; then
-	cmake_build_type="Debug"
+  cmake_build_type="Debug"
 else
-	cmake_build_type="Release"
+  cmake_build_type="Release"
 fi
 
 export VULKAN_INCLUDE_DIR=$fuchsia_root/third_party/vulkan_loader_and_validation_layers/include
 export SDL_INCLUDE_DIR=$fuchsia_root/third_party/sdl/include
 export FUCHSIA_LIB_DIR=$fuchsia_root/out/$build/$shared_path
 
-sysroot=$fuchsia_root/out/$build/sdks/zircon_sysroot/sysroot
+sysroot=$fuchsia_root/out/$build/sdks/zircon_sysroot/arch/$arch/sysroot
 ninja_path=$fuchsia_root/buildtools/ninja
 
 mkdir -p $builddir
