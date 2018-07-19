@@ -26,7 +26,7 @@ struct dlog {
     size_t head;
     size_t tail;
 
-    void* data;
+    uint8_t* data;
 
     bool panic;
 

@@ -15,6 +15,7 @@
 #include <lib/version.h>
 #include <lk/init.h>
 #include <platform.h>
+#include <stdint.h>
 #include <string.h>
 #include <vm/vm.h>
 #include <zircon/types.h>
@@ -33,6 +34,7 @@ static dlog_t DLOG = {
     .head = 0,
     .tail = 0,
     .data = DLOG_DATA,
+    .panic = false,
     .event = EVENT_INITIAL_VALUE(DLOG.event, 0, EVENT_FLAG_AUTOUNSIGNAL),
 
     .readers_lock = MUTEX_INITIAL_VALUE(DLOG.readers_lock),
@@ -67,7 +69,8 @@ static dlog_t DLOG = {
 
 #define ALIGN4(n) (((n) + 3) & (~3))
 
-zx_status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
+zx_status_t dlog_write(uint32_t flags, const void* data_ptr, size_t len) {
+    const uint8_t* ptr = static_cast<const uint8_t*>(data_ptr);
     dlog_t* log = &DLOG;
 
     if (len > DLOG_MAX_DATA) {
@@ -85,9 +88,9 @@ zx_status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
 
     // Prepare the record header before taking the lock
     dlog_header_t hdr;
-    hdr.header = DLOG_HDR_SET(wiresize, DLOG_MIN_RECORD + len);
-    hdr.datalen = len;
-    hdr.flags = flags;
+    hdr.header = static_cast<uint32_t>(DLOG_HDR_SET(wiresize, DLOG_MIN_RECORD + len));
+    hdr.datalen = static_cast<uint16_t>(len);
+    hdr.flags = static_cast<uint16_t>(flags);
     hdr.timestamp = current_time();
     thread_t* t = get_current_thread();
     if (t) {
@@ -104,7 +107,7 @@ zx_status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
     // Discard records at tail until there is enough
     // space for the new record.
     while ((log->head - log->tail) > (DLOG_SIZE - wiresize)) {
-        uint32_t header = *((uint32_t*)(log->data + (log->tail & DLOG_MASK)));
+        uint32_t header = *reinterpret_cast<uint32_t*>(log->data + (log->tail & DLOG_MASK));
         log->tail += DLOG_HDR_GET_FIFOLEN(header);
     }
 
@@ -119,7 +122,7 @@ zx_status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
     } else if (fifospace < sizeof(hdr)) {
         // the wrap happens in the header
         memcpy(log->data + offset, &hdr, fifospace);
-        memcpy(log->data, ((void*)&hdr) + fifospace, sizeof(hdr) - fifospace);
+        memcpy(log->data, reinterpret_cast<uint8_t*>(&hdr) + fifospace, sizeof(hdr) - fifospace);
         memcpy(log->data + (sizeof(hdr) - fifospace), ptr, len);
     } else {
         // the wrap happens in the data
@@ -145,20 +148,25 @@ zx_status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
 
     spin_unlock_irqrestore(&log->lock, state);
 
-    // if we happen to be called from within the global thread lock, use a
-    // special version of event signal
-    if (holding_thread_lock) {
-        event_signal_thread_locked(&log->event);
-    } else {
-        event_signal(&log->event, false);
-    }
+    [log, holding_thread_lock]() TA_NO_THREAD_SAFETY_ANALYSIS {
+        // if we happen to be called from within the global thread lock, use a
+        // special version of event signal
+        if (holding_thread_lock) {
+            event_signal_thread_locked(&log->event);
+        } else {
+            event_signal(&log->event, false);
+        }
+    }();
+
 
     return ZX_OK;
 }
 
 // TODO: support reading multiple messages at a time
 // TODO: filter with flags
-zx_status_t dlog_read(dlog_reader_t* rdr, uint32_t flags, void* ptr, size_t len, size_t* _actual) {
+zx_status_t dlog_read(dlog_reader_t* rdr, uint32_t flags, void* data_ptr,
+                      size_t len, size_t* _actual) {
+    uint8_t* ptr = static_cast<uint8_t*>(data_ptr);
     // must be room for worst-case read
     if (len < DLOG_MAX_RECORD) {
         return ZX_ERR_BUFFER_TOO_SMALL;
@@ -182,7 +190,7 @@ zx_status_t dlog_read(dlog_reader_t* rdr, uint32_t flags, void* ptr, size_t len,
 
     if (rtail != log->head) {
         size_t offset = (rtail & DLOG_MASK);
-        uint32_t header = *((uint32_t*)(log->data + offset));
+        uint32_t header = *reinterpret_cast<uint32_t*>(log->data + offset);
 
         size_t actual = DLOG_HDR_GET_READLEN(header);
         size_t fifospace = DLOG_SIZE - offset;
@@ -286,7 +294,7 @@ void dlog_serial_write(const char* data, size_t len) {
 // debuglog writes and dump them to the kernel consoles
 // and kernel serial console.
 static void debuglog_dumper_notify(void* cookie) {
-    event_t* event = cookie;
+    event_t* event = reinterpret_cast<event_t*>(cookie);
     event_signal(event, false);
 }
 
