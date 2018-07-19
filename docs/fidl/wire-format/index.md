@@ -472,10 +472,11 @@ to the selected option.
     client and implementation of an interface over a Zircon channel.
 *   Each message is prefixed with a simple 16 byte header, the body immediately
     follows header.
-    *   `zx_txid_t txid`, transaction ID (currently 32 bits, padded to 64 bits)
+    *   `zx_txid_t txid`, transaction ID (32 bits)
         * txids with the high bit set are reserved for use by zx_channel_call
         * txids with the high bit unset are reserved for use by userspace
         * See the [channel call] manpage for more details on txid allocation
+    *   `uint32 reserved0`, reserved for future use.
     *   `uint32 flags`, all unused bits must be set to zero
     *   `uint32 ordinal`
         *   The zero ordinal is invalid.
