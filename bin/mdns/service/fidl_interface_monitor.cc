@@ -22,17 +22,13 @@ FidlInterfaceMonitor::FidlInterfaceMonitor(
   netstack_ = startup_context
                   ->ConnectToEnvironmentService<fuchsia::netstack::Netstack>();
 
-  fidl::InterfaceHandle<fuchsia::netstack::NotificationListener>
-      listener_handle;
-
-  binding_.Bind(listener_handle.NewRequest());
   binding_.set_error_handler([this]() {
     binding_.set_error_handler(nullptr);
     binding_.Unbind();
     FXL_LOG(ERROR) << "Connection to netstack dropped.";
   });
-
-  netstack_->RegisterListener(std::move(listener_handle));
+  netstack_.events().InterfacesChanged =
+      fit::bind_member(this, &FidlInterfaceMonitor::OnInterfacesChanged);
 
   netstack_->GetInterfaces(
       [this](fidl::VectorPtr<fuchsia::netstack::NetInterface> interfaces) {
