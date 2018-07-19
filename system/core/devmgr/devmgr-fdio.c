@@ -24,7 +24,7 @@
 void devmgr_io_init(void) {
     // setup stdout
     zx_handle_t h;
-    if (zx_log_create(0, &h) < 0) {
+    if (zx_debuglog_create(ZX_HANDLE_INVALID, 0, &h) < 0) {
         return;
     }
     fdio_t* logger;
@@ -110,7 +110,7 @@ zx_status_t devmgr_launch(
     launchpad_set_nametable(lp, count, nametable);
 
     if (stdiofd < 0) {
-        if ((status = zx_log_create(0, &h) < 0)) {
+        if ((status = zx_debuglog_create(ZX_HANDLE_INVALID, 0, &h) < 0)) {
             launchpad_abort(lp, status, "devmgr: cannot create debuglog handle");
         } else {
             launchpad_add_handle(lp, h, PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO | 0));

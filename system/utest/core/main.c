@@ -92,7 +92,7 @@ int isatty(int fd) {
 }
 
 int main(int argc, char** argv) {
-    if (zx_log_create(0, &log_handle) < 0) {
+    if (zx_debuglog_create(ZX_HANDLE_INVALID, 0, &log_handle) < 0) {
         return -2;
     }
     zx_debuglog_write(log_handle, 0, "TEST", 4);

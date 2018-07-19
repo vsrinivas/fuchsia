@@ -685,7 +685,7 @@ static ssize_t devhost_log_write(void* cookie, const void* data, size_t len) {
 }
 
 static void devhost_io_init(void) {
-    if (zx_log_create(0, &devhost_log_handle) < 0) {
+    if (zx_debuglog_create(ZX_HANDLE_INVALID, 0, &devhost_log_handle) < 0) {
         return;
     }
     fdio_t* io;

@@ -58,7 +58,7 @@ static int get_log_line(char* out) {
 }
 
 int debuglog_init(void) {
-    if (zx_log_create(ZX_LOG_FLAG_READABLE, &loghandle) < 0) {
+    if (zx_debuglog_create(ZX_HANDLE_INVALID, ZX_LOG_FLAG_READABLE, &loghandle) < 0) {
         return -1;
     }
 

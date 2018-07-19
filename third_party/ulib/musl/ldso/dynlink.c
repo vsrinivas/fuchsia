@@ -1997,7 +1997,7 @@ __NO_SAFESTACK NO_ASAN static dl_start_return_t __dls3(void* start_arg) {
     // TODO(mcgrathr): For now, always use a kernel log channel.
     // This needs to be replaced by a proper unprivileged logging scheme ASAP.
     if (logger == ZX_HANDLE_INVALID) {
-        _zx_log_create(0, &logger);
+        _zx_debuglog_create(ZX_HANDLE_INVALID, 0, &logger);
     }
 
     if (__zircon_process_self == ZX_HANDLE_INVALID)

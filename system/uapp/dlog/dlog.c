@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
         argv++;
     }
 
-    if (zx_log_create(ZX_LOG_FLAG_READABLE, &h) < 0) {
+    if (zx_debuglog_create(ZX_HANDLE_INVALID, ZX_LOG_FLAG_READABLE, &h) < 0) {
         fprintf(stderr, "dlog: cannot open debug log\n");
         return -1;
     }

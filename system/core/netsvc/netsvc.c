@@ -29,7 +29,7 @@ bool netbootloader = false;
 
 static void run_program(const char *progname, const char** argv, zx_handle_t h) {
     zx_handle_t logger = ZX_HANDLE_INVALID;
-    zx_log_create(0, &logger);
+    zx_debuglog_create(ZX_HANDLE_INVALID, 0, &logger);
 
     fdio_spawn_action_t actions[] = {
         {.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = progname}},

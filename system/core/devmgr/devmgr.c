@@ -810,7 +810,7 @@ zx_status_t svchost_start(void) {
         goto error;
     }
 
-    status = zx_log_create(0, &logger);
+    status = zx_debuglog_create(ZX_HANDLE_INVALID, 0, &logger);
     if (status != ZX_OK) {
         goto error;
     }

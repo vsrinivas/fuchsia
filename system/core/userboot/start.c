@@ -338,7 +338,7 @@ static noreturn void bootstrap(zx_handle_t log, zx_handle_t bootstrap_pipe) {
 // to run in user mode.
 noreturn void _start(void* start_arg) {
     zx_handle_t log = ZX_HANDLE_INVALID;
-    zx_log_create(0, &log);
+    zx_debuglog_create(ZX_HANDLE_INVALID, 0, &log);
     if (log == ZX_HANDLE_INVALID)
         printl(log, "zx_log_create failed, using zx_debug_write instead");
 
