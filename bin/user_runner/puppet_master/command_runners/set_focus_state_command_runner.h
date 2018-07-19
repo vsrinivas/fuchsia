@@ -13,12 +13,16 @@ namespace modular {
 
 class SetFocusStateCommandRunner : public CommandRunner {
  public:
-  SetFocusStateCommandRunner(SessionStorage* const session_storage);
+  SetFocusStateCommandRunner(SessionStorage* const session_storage,
+                             fuchsia::modular::FocusProviderPtr focus_provider);
   ~SetFocusStateCommandRunner();
 
   void Execute(
       fidl::StringPtr story_id, fuchsia::modular::StoryCommand command,
       std::function<void(fuchsia::modular::ExecuteResult)> done) override;
+
+ private:
+  fuchsia::modular::FocusProviderPtr focus_provider_;
 };
 
 }  // namespace modular

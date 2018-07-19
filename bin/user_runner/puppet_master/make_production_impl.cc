@@ -19,11 +19,13 @@ class PuppetMasterImpl;
 
 std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
     DispatchStoryCommandExecutor::OperationContainerAccessor factory,
-    SessionStorage* session_storage) {
+    SessionStorage* session_storage,
+    fuchsia::modular::FocusProviderPtr focus_provider) {
   std::map<fuchsia::modular::StoryCommand::Tag, std::unique_ptr<CommandRunner>>
       command_runners;
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kSetFocusState,
-                          new SetFocusStateCommandRunner(session_storage));
+                          new SetFocusStateCommandRunner(
+                              session_storage, std::move(focus_provider)));
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kAddMod,
                           new AddModCommandRunner(session_storage));
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kUpdateMod,

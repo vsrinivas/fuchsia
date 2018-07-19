@@ -175,8 +175,8 @@ class UserRunnerImpl::PresentationProviderImpl : public PresentationProvider {
   UserRunnerImpl* const impl_;
 };
 
-UserRunnerImpl::UserRunnerImpl(
-    component::StartupContext* const startup_context, const bool test)
+UserRunnerImpl::UserRunnerImpl(component::StartupContext* const startup_context,
+                               const bool test)
     : startup_context_(startup_context),
       test_(test),
       user_shell_context_binding_(this),
@@ -602,9 +602,13 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   AtEnd(Teardown(kStoryProviderTimeout, "fuchsia::modular::StoryProvider",
                  &story_provider_impl_));
 
+  fuchsia::modular::FocusProviderPtr focus_provider_puppet_master;
+  auto focus_provider_request_puppet_master =
+      focus_provider_puppet_master.NewRequest();
   // Initialize the fuchsia::modular::PuppetMaster.
-  story_command_executor_ =
-      MakeProductionStoryCommandExecutor(nullptr, session_storage_.get());
+  story_command_executor_ = MakeProductionStoryCommandExecutor(
+      nullptr, session_storage_.get(), std::move(focus_provider_puppet_master));
+
   puppet_master_impl_.reset(
       new PuppetMasterImpl(story_command_executor_.get()));
 
@@ -617,6 +621,8 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_maxwell));
   focus_handler_->AddProviderBinding(
       std::move(focus_provider_request_story_provider));
+  focus_handler_->AddProviderBinding(
+      std::move(focus_provider_request_puppet_master));
 
   visible_stories_handler_ = std::make_unique<VisibleStoriesHandler>();
   visible_stories_handler_->AddProviderBinding(
