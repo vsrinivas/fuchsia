@@ -5,32 +5,36 @@
 use std::fmt;
 use std::mem;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
 
-use futures::{Async, Future, Poll};
+use executor::{EHandle, PacketReceiver, ReceiverRegistration};
 use futures::task::{self, AtomicWaker};
-use executor::{PacketReceiver, ReceiverRegistration, EHandle};
+use futures::{Async, Future, Poll};
+use parking_lot::Mutex;
 use zx::{self, AsHandleRef};
 
-struct OnSignalsReceiver {
-    maybe_signals: AtomicUsize,
+struct State {
+    maybe_signals: u32,
     task: AtomicWaker,
+}
+struct OnSignalsReceiver {
+    state: Arc<Mutex<State>>,
 }
 
 impl OnSignalsReceiver {
     fn get_signals(&self, cx: &mut task::Context) -> Async<zx::Signals> {
-        let signals = self.maybe_signals.load(Ordering::SeqCst);
-        if signals == 0 {
-            self.task.register(cx.waker());
+        let state = self.state.lock();
+        if state.maybe_signals == 0 {
+            state.task.register(cx.waker());
             Async::Pending
         } else {
-            Async::Ready(zx::Signals::from_bits_truncate(signals as u32))
+            Async::Ready(zx::Signals::from_bits_truncate(state.maybe_signals))
         }
     }
 
     fn set_signals(&self, signals: zx::Signals) {
-        self.maybe_signals.store(signals.bits() as usize, Ordering::SeqCst);
-        self.task.wake();
+        let mut state = self.state.lock();
+        state.maybe_signals = signals.bits();
+        state.task.wake();
     }
 }
 
@@ -38,7 +42,9 @@ impl PacketReceiver for OnSignalsReceiver {
     fn receive_packet(&self, packet: zx::Packet) {
         let observed = if let zx::PacketContents::SignalOne(p) = packet.contents() {
             p.observed()
-        } else { return };
+        } else {
+            return;
+        };
 
         self.set_signals(observed);
     }
@@ -52,12 +58,15 @@ impl OnSignals {
     /// Creates a new `OnSignals` object which will receive notifications when
     /// any signals in `signals` occur on `handle`.
     pub fn new<T>(handle: &T, signals: zx::Signals) -> Self
-        where T: AsHandleRef
+    where
+        T: AsHandleRef,
     {
         let ehandle = EHandle::local();
         let receiver = ehandle.register_receiver(Arc::new(OnSignalsReceiver {
-            maybe_signals: AtomicUsize::new(0),
-            task: AtomicWaker::new(),
+            state: Arc::new(Mutex::new(State {
+                maybe_signals: 0,
+                task: AtomicWaker::new(),
+            })),
         }));
 
         let res = handle.wait_async_handle(
@@ -75,7 +84,8 @@ impl Future for OnSignals {
     type Item = zx::Signals;
     type Error = zx::Status;
     fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
-        self.0.as_mut()
+        self.0
+            .as_mut()
             .map(|receiver| receiver.receiver().get_signals(cx))
             .map_err(|e| mem::replace(e, zx::Status::OK))
     }
