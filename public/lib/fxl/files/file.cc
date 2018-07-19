@@ -124,11 +124,11 @@ std::pair<uint8_t*, intptr_t> ReadFileToBytes(const std::string& path) {
 
 std::pair<uint8_t*, intptr_t> ReadFileDescriptorToBytes(int fd) {
   std::pair<uint8_t*, intptr_t> failure_pair{nullptr, -1};
-  struct stat st;
-  if (fstat(fd, &st) != 0) {
+  struct stat stat_buffer;
+  if (fstat(fd, &stat_buffer) != 0) {
     return failure_pair;
   }
-  intptr_t file_size = st.st_size;
+  intptr_t file_size = stat_buffer.st_size;
   uint8_t* ptr = (uint8_t*)malloc(file_size);
 
   size_t bytes_left = file_size;
@@ -145,24 +145,25 @@ std::pair<uint8_t*, intptr_t> ReadFileDescriptorToBytes(int fd) {
 }
 
 bool IsFile(const std::string& path) {
-  struct stat buf;
-  if (stat(path.c_str(), &buf) != 0)
-    return false;
-  return S_ISREG(buf.st_mode);
+  return IsFileAt(AT_FDCWD, path);
 }
 
 #if defined(OS_LINUX) || defined(OS_FUCHSIA)
 bool IsFileAt(int dirfd, const std::string& path) {
-  struct stat buf;
-  if (fstatat(dirfd, path.c_str(), &buf, 0 /* flags */) != 0)
+  struct stat stat_buffer;
+  if (fstatat(dirfd, path.c_str(), &stat_buffer, /* flags = */ 0 ) != 0)
     return false;
-  return S_ISREG(buf.st_mode);
+  return S_ISREG(stat_buffer.st_mode);
 }
 #endif
 
 bool GetFileSize(const std::string& path, uint64_t* size) {
+  return GetFileSizeAt(AT_FDCWD, path, size);
+}
+
+bool GetFileSizeAt(int dirfd, const std::string& path, uint64_t* size) {
   struct stat stat_buffer;
-  if (stat(path.c_str(), &stat_buffer) != 0)
+  if (fstatat(dirfd, path.c_str(), &stat_buffer, /* flags = */ 0) != 0)
     return false;
   *size = stat_buffer.st_size;
   return true;
