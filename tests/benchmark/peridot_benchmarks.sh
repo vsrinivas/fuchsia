@@ -43,10 +43,45 @@ runbench_exec "${OUT_DIR}/ledger.put_as_reference.json" \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/put_as_reference.tspec \
     --benchmark-results-file="${OUT_DIR}/ledger.put_as_reference.json"
 
+runbench_exec "${OUT_DIR}/ledger.put_big_entry.json" \
+    trace record \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/put_big_entry.tspec \
+    --benchmark-results-file="${OUT_DIR}/ledger.put_big_entry.json"
+
 runbench_exec "${OUT_DIR}/ledger.transaction.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/transaction.tspec \
     --benchmark-results-file="${OUT_DIR}/ledger.transaction.json"
+
+runbench_exec "${OUT_DIR}/ledger.update_entry.json" \
+    trace record \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/update_entry.tspec \
+    --benchmark-results-file="${OUT_DIR}/ledger.update_entry.json"
+
+runbench_exec "${OUT_DIR}/ledger.update_big_entry.json" \
+    trace record \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/update_big_entry.tspec \
+    --benchmark-results-file="${OUT_DIR}/ledger.update_big_entry.json"
+
+runbench_exec "${OUT_DIR}/ledger.update_entry_transactions.json" \
+    trace record \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/update_entry_transactions.tspec \
+    --benchmark-results-file="${OUT_DIR}/ledger.update_entry_transactions.json"
+
+runbench_exec "${OUT_DIR}/ledger.delete_entry.json" \
+    trace record \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/delete_entry.tspec \
+    --benchmark-results-file="${OUT_DIR}/ledger.delete_entry.json"
+
+runbench_exec "${OUT_DIR}/ledger.delete_big_entry.json" \
+    trace record \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/delete_big_entry.tspec \
+    --benchmark-results-file="${OUT_DIR}/ledger.delete_big_entry.json"
+
+runbench_exec "${OUT_DIR}/ledger.delete_entry_transactions.json" \
+    trace record \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/delete_entry_transactions.tspec \
+    --benchmark-results-file="${OUT_DIR}/ledger.delete_entry_transactions.json"
 
 # Exit with a code indicating whether any errors occurred.
 runbench_finish "${OUT_DIR}"
