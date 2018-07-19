@@ -24,6 +24,7 @@
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/remoteio.h>
+#include <lib/fidl/coding.h>
 
 #include "devcoordinator.h"
 #include "devhost.h"
@@ -224,6 +225,10 @@ static void dh_send_status(zx_handle_t h, zx_status_t status) {
     zx_channel_write(h, 0, &reply, sizeof(reply), NULL, 0);
 }
 
+static zx_status_t dh_null_reply(fidl_txn_t* reply, const fidl_msg_t* msg) {
+    return ZX_OK;
+}
+
 static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
     dc_msg_t msg;
     zx_handle_t hin[3];
@@ -239,14 +244,9 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
     char buffer[512];
     const char* path = mkdevpath(ios->dev, buffer, sizeof(buffer));
 
-    if ((msize >= sizeof(fidl_message_header_t)) && (msg.op == ZXFIDL_OPEN)) {
-        if (hcount != 1) {
-            log(ERROR, "devhost: Malformed open request (bad handle count)\n");
-            r = ZX_ERR_INTERNAL;
-            goto fail;
-        }
+    if (msize >= sizeof(fidl_message_header_t) && msg.op == ZXFIDL_OPEN) {
+        log(RPC_RIO, "devhost[%s] FIDL OPEN\n", path);
 
-        fuchsia_io_DirectoryOpenRequest* request = (fuchsia_io_DirectoryOpenRequest*) &msg;
         fidl_msg_t fidl_msg = {
             .bytes = &msg,
             .handles = hin,
@@ -254,24 +254,17 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
             .num_handles = hcount,
         };
 
-        // Decode open request (FIDL)
-        if ((msize < sizeof(fuchsia_io_DirectoryOpenRequest)) ||
-            (FIDL_ALIGN(sizeof(fuchsia_io_DirectoryOpenRequest)) +
-             FIDL_ALIGN(request->path.size) != msize) ||
-            (request->object != FIDL_HANDLE_PRESENT) ||
-            (request->path.data != (char*) FIDL_ALLOC_PRESENT)) {
-            log(ERROR, "devhost: Malformed open request (bad message)\n");
-            r = ZX_ERR_IO;
-            goto fail;
-        }
-        request->object = hin[0];
-        request->path.data = (void*)((uintptr_t)(&msg) +
-                                     FIDL_ALIGN(sizeof(fuchsia_io_DirectoryOpenRequest)));
-        log(RPC_RIO, "devhost[%s] remoteio OPEN\n", path);
-        if ((r = devhost_rio_handler(&fidl_msg, ios)) < 0) {
-            if (r != ERR_DISPATCHER_INDIRECT) {
-                log(ERROR, "devhost: OPEN failed: %d\n", r);
-            }
+        zxfidl_connection_t connection = {
+            .txn = {
+                .reply = dh_null_reply,
+            },
+            .channel = ZX_HANDLE_INVALID,
+            .txid = 0,
+        };
+
+        if ((r = devhost_fidl_handler(&fidl_msg, &connection.txn, ios)) != ZX_OK) {
+            log(ERROR, "devhost: OPEN failed: %d\n", r);
+            return r;
         }
 
         return ZX_OK;
@@ -487,7 +480,7 @@ static zx_status_t dh_handle_dc_rpc(port_handler_t* ph, zx_signals_t signals, ui
     }
     if (ios->dead) {
         // ports does not let us cancel packets that are
-        // alread in the queue, so the dead flag enables us
+        // already in the queue, so the dead flag enables us
         // to ignore them
         return ZX_ERR_STOP;
     }
@@ -508,19 +501,19 @@ static zx_status_t dh_handle_dc_rpc(port_handler_t* ph, zx_signals_t signals, ui
 }
 
 // handles remoteio rpc
-static zx_status_t dh_handle_rio_rpc(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+static zx_status_t dh_handle_fidl_rpc(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
     iostate_t* ios = ios_from_ph(ph);
 
     zx_status_t r;
     if (signals & ZX_CHANNEL_READABLE) {
-        if ((r = zxrio_handle_rpc(ph->handle, devhost_rio_handler, ios)) == ZX_OK) {
+        if ((r = zxfidl_handler(ph->handle, devhost_fidl_handler, ios)) == ZX_OK) {
             return ZX_OK;
         }
     } else if (signals & ZX_CHANNEL_PEER_CLOSED) {
-        zxrio_handle_close(devhost_rio_handler, ios);
+        zxfidl_handler(ZX_HANDLE_INVALID, devhost_fidl_handler, ios);
         r = ZX_ERR_STOP;
     } else {
-        printf("dh_handle_rio_rpc: invalid signals %x\n", signals);
+        printf("dh_handle_fidl_rpc: invalid signals %x\n", signals);
         exit(0);
     }
 
@@ -551,7 +544,7 @@ static zx_status_t dh_handle_proxy_rpc(port_handler_t* ph, zx_signals_t signals,
     if (ios->dev == NULL) {
         log(RPC_SDW, "proxy-rpc: stale rpc? (ios=%p)\n", ios);
         // ports does not let us cancel packets that are
-        // alread in the queue, so the dead flag enables us
+        // already in the queue, so the dead flag enables us
         // to ignore them
         return ZX_ERR_STOP;
     }
@@ -951,7 +944,7 @@ zx_handle_t root_resource_handle;
 zx_status_t devhost_start_iostate(devhost_iostate_t* ios, zx_handle_t h) {
     ios->ph.handle = h;
     ios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-    ios->ph.func = dh_handle_rio_rpc;
+    ios->ph.func = dh_handle_fidl_rpc;
     return port_wait(&dh_port, &ios->ph);
 }
 

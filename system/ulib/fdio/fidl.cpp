@@ -14,18 +14,13 @@
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
-#include <fbl/function.h>
+#include <fbl/auto_call.h>
 #include <fuchsia/io/c/fidl.h>
-#include <lib/fidl/cpp/builder.h>
-#include <lib/fidl/cpp/message.h>
-#include <lib/fidl/cpp/string_view.h>
-#include <lib/fidl/cpp/vector_view.h>
 #include <lib/fdio/debug.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/remoteio.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/vfs.h>
-#include <lib/zx/channel.h>
 
 #include "private-fidl.h"
 
@@ -33,680 +28,166 @@
 
 namespace {
 
-void discard_handles(const zx_handle_t* handles, size_t count) {
-    while (count-- > 0) {
-        zx_handle_close(*handles++);
+zx_status_t TxnReply(fidl_txn_t* txn, const fidl_msg_t* msg) {
+    auto connection = reinterpret_cast<zxfidl_connection_t*>(txn);
+    auto hdr = static_cast<fidl_message_header_t*>(msg->bytes);
+    hdr->txid = connection->txid;
+    return zx_channel_write(connection->channel, 0, msg->bytes, msg->num_bytes,
+                            msg->handles, msg->num_handles);
+};
+
+// Don't actually send anything on a channel when completing this operation.
+// This is useful for mocking out "close" requests.
+zx_status_t TxnNullReply(fidl_txn_t* reply, const fidl_msg_t* msg) {
+    return ZX_OK;
+}
+
+zx_status_t HandleRpcClose(zxfidl_cb_t cb, void* cookie) {
+    fuchsia_io_ObjectCloseRequest request;
+    memset(&request, 0, sizeof(request));
+    request.hdr.ordinal = ZXFIDL_CLOSE;
+    fidl_msg_t msg = {
+        .bytes = &request,
+        .handles = NULL,
+        .num_bytes = sizeof(request),
+        .num_handles = 0u,
+    };
+
+    zxfidl_connection_t connection = {
+        .txn = {
+            .reply = TxnNullReply,
+        },
+        .channel = ZX_HANDLE_INVALID,
+        .txid = 0,
+    };
+
+    // Remote side was closed.
+    cb(&msg, reinterpret_cast<fidl_txn_t*>(&connection), cookie);
+    return ERR_DISPATCHER_DONE;
+}
+
+zx_status_t HandleRpc(zx_handle_t h, zxfidl_cb_t cb, void* cookie) {
+    uint8_t bytes[ZXFIDL_MAX_MSG_BYTES];
+    zx_handle_t handles[ZXFIDL_MAX_MSG_HANDLES];
+    fidl_msg_t msg = {
+        .bytes = bytes,
+        .handles = handles,
+        .num_bytes = 0,
+        .num_handles = 0,
+    };
+
+    zx_status_t r = zx_channel_read(h, 0, bytes, handles, countof(bytes),
+                                    countof(handles), &msg.num_bytes,
+                                    &msg.num_handles);
+    if (r != ZX_OK) {
+        return r;
     }
-}
 
-// Convert a message to a primary object, validating that
-// there are enough bytes to do this conversion.
-//
-// Returns nullptr if this conversion is invalid.
-template <typename T>
-T* to_primary(const fidl::Message* msg) {
-    if (msg->bytes().actual() < sizeof(T)) {
-        fprintf(stderr, "%s: Message (%u bytes) is smaller than primary (%zu bytes)\n",
-                __PRETTY_FUNCTION__, msg->bytes().actual(), sizeof(T));
-        return nullptr;
-    }
-    return reinterpret_cast<T*>(msg->bytes().data());
-}
+    auto cleanup = fbl::MakeAutoCall([&] {
+        zx_handle_close_many(msg.handles, msg.num_handles);
+    });
 
-// Semantic sugar for creating a new FIDL request object
-// and setting the ordinal.
-template <typename T, uint32_t Ordinal>
-T* new_request(zxrio_t* rio, fidl::Builder* builder) {
-    T* request = builder->New<T>();
-    request->hdr.ordinal = Ordinal;
-    return request;
-}
-
-template <typename T>
-void* get_secondary(T* request) {
-    return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(request) +
-                                   FIDL_ALIGN(sizeof(T)));
-}
-
-void* next_secondary(void* secondary, size_t size) {
-    return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(secondary) +
-                                   FIDL_ALIGN(size));
-}
-
-// A small wrapper for "Call" which extracts the appropriate
-// response status.
-//
-// Since outgoing / incoming handles are contained in fidl::Message,
-// they will be automatically closed whenever it goes out of scope.
-zx_status_t fidl_call(zx_handle_t h, fidl::Message* message) {
-    return message->Call(h, 0, ZX_TIME_INFINITE, message);
-}
-
-// zxrio_decode_request always takes ownership of the incoming handles.
-//
-// If ClearHandlesUnsafe is not called on the msg, all provided handles
-// will automatically be closed by the destructor of |msg|.
-zx_status_t zxrio_decode_request(fidl::Message* msg) {
-    if (!msg->has_header()) {
-        fprintf(stderr, "zxrio_decode_request: Missing header\n");
+    if (msg.num_bytes < sizeof(fidl_message_header_t)) {
         return ZX_ERR_IO;
     }
-    uint32_t op = msg->ordinal();
-    const uint32_t hcount = msg->handles().actual();
-    const zx_handle_t* handles = msg->handles().data();
-    const uint32_t dsz = msg->bytes().actual();
 
-    // FIDL objects which require additional secondary object validation
-    switch (op) {
-    case ZXFIDL_CLONE: {
-        fuchsia_io_ObjectCloneRequest* request = to_primary<fuchsia_io_ObjectCloneRequest>(msg);
-        if (request == nullptr) {
-            return ZX_ERR_IO;
-        } else if (hcount != 1 || request->object != FIDL_HANDLE_PRESENT) {
-            fprintf(stderr, "ZXFIDL_CLONE failed: Missing handle\n");
-            return ZX_ERR_IO;
-        }
-        request->object = handles[0];
-        msg->ClearHandlesUnsafe();
-        return ZX_OK;
-    }
-    case ZXFIDL_OPEN: {
-        fuchsia_io_DirectoryOpenRequest* request = to_primary<fuchsia_io_DirectoryOpenRequest>(msg);
-        if (request == nullptr) {
-            return ZX_ERR_IO;
-        } else if (hcount != 1 || request->object != FIDL_HANDLE_PRESENT) {
-            fprintf(stderr, "ZXFIDL_OPEN failed: Missing handle\n");
-            return ZX_ERR_IO;
-        } else if (FIDL_ALIGN(request->path.size) +
-                   FIDL_ALIGN(sizeof(fuchsia_io_DirectoryOpenRequest)) != dsz) {
-            fprintf(stderr, "ZXFIDL_OPEN failed: Bad secondary size\n");
-            return ZX_ERR_IO;
-        } else if ((request->path.data != (void*) FIDL_ALLOC_PRESENT)) {
-            fprintf(stderr, "ZXFIDL_OPEN failed: Bad secondary pointer\n");
-            return ZX_ERR_IO;
-        }
+    fidl_message_header_t& header = *reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+    zxfidl_connection_t connection = {
+        .txn = {
+            .reply = TxnReply,
+        },
+        .channel = h,
+        .txid = header.txid,
+    };
 
-        request->object = handles[0];
-        request->path.data = static_cast<char*>(get_secondary(request));
-        msg->ClearHandlesUnsafe();
-        return ZX_OK;
-    }
-    case ZXFIDL_WRITE: {
-        fuchsia_io_FileWriteRequest* request = to_primary<fuchsia_io_FileWriteRequest>(msg);
-        if (request == nullptr) {
-            return ZX_ERR_IO;
-        } else if (FIDL_ALIGN(request->data.count) +
-                   FIDL_ALIGN(sizeof(fuchsia_io_FileWriteRequest)) != dsz) {
-            fprintf(stderr, "ZXFIDL_WRITE failed: bad secondary\n");
-            return ZX_ERR_IO;
-        } else if (request->data.data != (void*) FIDL_ALLOC_PRESENT) {
-            fprintf(stderr, "ZXFIDL_WRITE failed: bad secondary pointer\n");
-            return ZX_ERR_IO;
-        }
-        request->data.data = get_secondary(request);
-        return ZX_OK;
-    }
-    case ZXFIDL_IOCTL: {
-        fuchsia_io_NodeIoctlRequest* request = to_primary<fuchsia_io_NodeIoctlRequest>(msg);
-        if (request == nullptr) {
-            fprintf(stderr, "ZXFIDL_IOCTL failed: missing response space\n");
-            return ZX_ERR_IO;
-        } else if ((request->handles.data != (void*) FIDL_ALLOC_PRESENT) ||
-            (request->in.data != (void*) FIDL_ALLOC_PRESENT)) {
-            fprintf(stderr, "ZXFIDL_IOCTL failed: missing necessary vector\n");
-            return ZX_ERR_IO;
-        }
-        if (hcount != request->handles.count) {
-            fprintf(stderr, "ZXFIDL_IOCTL failed: bad hcount\n");
-            return ZX_ERR_IO;
-        }
-        request->handles.data = get_secondary(request);
-        zx_handle_t* hptr = reinterpret_cast<zx_handle_t*>(request->handles.data);
-        for (size_t i = 0; i < request->handles.count; i++) {
-            if (hptr[i] != FIDL_HANDLE_PRESENT) {
-                fprintf(stderr, "ZXFIDL_IOCTL: Handles are required; must be present\n");
-                return ZX_ERR_IO;
-            }
-        }
-
-        switch (IOCTL_KIND(request->opcode)) {
-        case IOCTL_KIND_SET_HANDLE:
-            if (request->handles.count != 1) {
-                fprintf(stderr, "ZXFIDL_IOCTL: bad hcount (expected to set one)\n");
-                return ZX_ERR_IO;
-            }
-            break;
-        case IOCTL_KIND_SET_TWO_HANDLES:
-            if (request->handles.count != 2) {
-                fprintf(stderr, "ZXFIDL_IOCTL: bad hcount (expected to set two)\n");
-                return ZX_ERR_IO;
-            }
-            break;
-        case IOCTL_KIND_GET_HANDLE:
-        case IOCTL_KIND_GET_TWO_HANDLES:
-        case IOCTL_KIND_GET_THREE_HANDLES:
-        default:
-            if (request->handles.count != 0) {
-                fprintf(stderr, "ZXFIDL_IOCTL: bad hcount (expected to set none)\n");
-                return ZX_ERR_IO;
-            }
-        }
-
-        size_t secondary_size = FIDL_ALIGN(request->handles.count * sizeof(zx_handle_t)) +
-                                FIDL_ALIGN(request->in.count);
-        if (FIDL_ALIGN(sizeof(fuchsia_io_NodeIoctlRequest)) + secondary_size != dsz) {
-            fprintf(stderr, "ZXFIDL_IOCTL failed: bad secondary size\n");
-            return ZX_ERR_IO;
-        }
-
-        // Patch up handles, pointers
-        memcpy(request->handles.data, handles, hcount * sizeof(zx_handle_t));
-        request->in.data = next_secondary(request->handles.data, hcount * sizeof(zx_handle_t));
-        msg->ClearHandlesUnsafe();
-        return ZX_OK;
-    }
-    case ZXFIDL_UNLINK: {
-        fuchsia_io_DirectoryUnlinkRequest* request =
-            to_primary<fuchsia_io_DirectoryUnlinkRequest>(msg);
-        if (request == nullptr) {
-            return ZX_ERR_IO;
-        } else if (FIDL_ALIGN(request->path.size) +
-                   FIDL_ALIGN(sizeof(fuchsia_io_DirectoryUnlinkRequest)) != dsz) {
-            fprintf(stderr, "ZXFIDL_UNLINK failed: bad secondary\n");
-            return ZX_ERR_IO;
-        } else if (request->path.data != (void*) FIDL_ALLOC_PRESENT) {
-            fprintf(stderr, "ZXFIDL_UNLINK failed: bad secondary pointer\n");
-            return ZX_ERR_IO;
-        }
-        request->path.data = static_cast<char*>(get_secondary(request));
-        return ZX_OK;
-    }
-    case ZXFIDL_WRITE_AT: {
-        fuchsia_io_FileWriteAtRequest* request = to_primary<fuchsia_io_FileWriteAtRequest>(msg);
-        if (request == nullptr) {
-            return ZX_ERR_IO;
-        } else if (FIDL_ALIGN(request->data.count) +
-                   FIDL_ALIGN(sizeof(fuchsia_io_FileWriteAtRequest)) != dsz) {
-            fprintf(stderr, "ZXFIDL_WRITE_AT failed: bad secondary\n");
-            return ZX_ERR_IO;
-        } else if (request->data.data != (void*) FIDL_ALLOC_PRESENT) {
-            fprintf(stderr, "ZXFIDL_WRITE_AT failed: bad secondary pointer\n");
-            return ZX_ERR_IO;
-        }
-        request->data.data = get_secondary(request);
-        return ZX_OK;
-    }
-    case ZXFIDL_RENAME: {
-        fuchsia_io_DirectoryRenameRequest* request = to_primary<fuchsia_io_DirectoryRenameRequest>(msg);
-        if (request == nullptr) {
-            return ZX_ERR_IO;
-        } else if (FIDL_ALIGN(sizeof(fuchsia_io_DirectoryRenameRequest)) +
-                   FIDL_ALIGN(request->src.size) + FIDL_ALIGN(request->dst.size)
-                   != dsz) {
-            fprintf(stderr, "ZXFIDL_RENAME failed: Bad secondary\n");
-            return ZX_ERR_IO;
-        } else if (request->src.data != (void*) FIDL_ALLOC_PRESENT ||
-                   request->dst_parent_token != FIDL_HANDLE_PRESENT ||
-                   request->dst.data != (void*) FIDL_ALLOC_PRESENT) {
-            fprintf(stderr, "ZXFIDL_RENAME failed: Bad secondary pointer\n");
-            return ZX_ERR_IO;
-        } else if (hcount != 1) {
-            fprintf(stderr, "ZXFIDL_RENAME failed: Unexpected handle count\n");
-            return ZX_ERR_IO;
-        }
-
-        request->src.data = static_cast<char*>(get_secondary(request));
-        request->dst_parent_token = handles[0];
-        request->dst.data = static_cast<char*>(next_secondary(request->src.data,
-                                                              request->src.size));
-        msg->ClearHandlesUnsafe();
-        return ZX_OK;
-    }
-    case ZXFIDL_LINK: {
-        fuchsia_io_DirectoryLinkRequest* request = to_primary<fuchsia_io_DirectoryLinkRequest>(msg);
-        if (request == nullptr) {
-            return ZX_ERR_IO;
-        } else if (FIDL_ALIGN(sizeof(fuchsia_io_DirectoryLinkRequest)) +
-                   FIDL_ALIGN(request->src.size) + FIDL_ALIGN(request->dst.size)
-                   != dsz) {
-            fprintf(stderr, "ZXFIDL_LINK failed: Bad secondary\n");
-            return ZX_ERR_IO;
-        } else if (request->src.data != (void*) FIDL_ALLOC_PRESENT ||
-                   request->dst_parent_token != FIDL_HANDLE_PRESENT ||
-                   request->dst.data != (void*) FIDL_ALLOC_PRESENT) {
-            fprintf(stderr, "ZXFIDL_LINK failed: Bad secondary pointer\n");
-            return ZX_ERR_IO;
-        } else if (hcount != 1) {
-            fprintf(stderr, "ZXFIDL_LINK failed: Unexpected handle count\n");
-            return ZX_ERR_IO;
-        }
-
-        request->src.data = static_cast<char*>(get_secondary(request));
-        request->dst_parent_token = handles[0];
-        request->dst.data = static_cast<char*>(next_secondary(request->src.data,
-                                                              request->src.size));
-        msg->ClearHandlesUnsafe();
-        return ZX_OK;
-    }
-    }
-
-    return ZX_OK;
-}
-
-// Simplify a common pattern of encoding:
-// Cast to the response message, set the size to the response message size, and
-// insert the status into the response.
-template <typename T>
-T* encode_response_status(void* msg, zx_status_t status, uint32_t* sz) {
-    T* response = static_cast<T*>(msg);
-    *sz = sizeof(T);
-    response->s = status;
-    return response;
-}
-
-zx_status_t zxrio_encode_response(zx_status_t status, fidl_msg_t* msg) {
-    void* bytes = msg->bytes;
-    uint32_t* sz = &msg->num_bytes;
-    zx_handle_t* handles = msg->handles;
-    uint32_t* num_handles = &msg->num_handles;
-    *num_handles = 0;
-    fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header*>(bytes);
-    switch (hdr->ordinal) {
-    case ZXFIDL_CLOSE: {
-        encode_response_status<fuchsia_io_ObjectCloseResponse>(bytes, status, sz);
-        break;
-    }
-    case ZXFIDL_READ: {
-        auto response = encode_response_status<fuchsia_io_FileReadResponse>(bytes, status, sz);
-        response->data.data = (void*) FIDL_ALLOC_PRESENT;
-        if (response->s != ZX_OK) {
-            response->data.count = 0;
-        }
-        *sz += static_cast<uint32_t>(FIDL_ALIGN(response->data.count));
-        break;
-    }
-    case ZXFIDL_WRITE: {
-        auto response = encode_response_status<fuchsia_io_FileWriteResponse>(bytes, status, sz);
-        if (response->s != ZX_OK) {
-            response->actual = 0;
-        }
-        break;
-    }
-    case ZXFIDL_SEEK: {
-        encode_response_status<fuchsia_io_FileSeekResponse>(bytes, status, sz);
-        break;
-    }
-    case ZXFIDL_STAT: {
-        encode_response_status<fuchsia_io_NodeGetAttrResponse>(bytes, status, sz);
-        break;
-    }
-    case ZXFIDL_SETATTR: {
-        encode_response_status<fuchsia_io_NodeSetAttrResponse>(bytes, status, sz);
-        break;
-    }
-    case ZXFIDL_READDIR: {
-        auto response = encode_response_status<fuchsia_io_DirectoryReadDirentsResponse>(bytes,
-                                                                                        status, sz);
-        response->dirents.data = (void*) FIDL_ALLOC_PRESENT;
-        if (response->s != ZX_OK) {
-            response->dirents.count = 0;
-        }
-        *sz += static_cast<uint32_t>(FIDL_ALIGN(response->dirents.count));
-        break;
-    }
-    case ZXFIDL_IOCTL: {
-        auto response = encode_response_status<fuchsia_io_NodeIoctlResponse>(bytes, status, sz);
-        if (response->s != ZX_OK) {
-            response->handles.count = 0;
-            response->out.count = 0;
-        }
-        memcpy(handles, response->handles.data, response->handles.count * sizeof(zx_handle_t));
-
-        zx_handle_t* hptr = reinterpret_cast<zx_handle_t*>(response->handles.data);
-        for (size_t i = 0; i < response->handles.count; i++) {
-            hptr[i] = FIDL_HANDLE_PRESENT;
-        }
-        *num_handles = static_cast<uint32_t>(response->handles.count);
-        response->handles.data = (void*) FIDL_ALLOC_PRESENT;
-        response->out.data = (void*) FIDL_ALLOC_PRESENT;
-        *sz += static_cast<uint32_t>(FIDL_ALIGN(response->handles.count * sizeof(zx_handle_t)) +
-                                     FIDL_ALIGN(response->out.count));
-        break;
-    }
-    case ZXFIDL_UNLINK: {
-        encode_response_status<fuchsia_io_DirectoryUnlinkResponse>(bytes, status, sz);
-        break;
-    }
-    case ZXFIDL_READ_AT: {
-        auto response = encode_response_status<fuchsia_io_FileReadAtResponse>(bytes, status, sz);
-        response->data.data = (void*) FIDL_ALLOC_PRESENT;
-        if (response->s != ZX_OK) {
-            response->data.count = 0;
-        }
-        *sz += static_cast<uint32_t>(FIDL_ALIGN(response->data.count));
-        break;
-    }
-    case ZXFIDL_WRITE_AT: {
-        auto response = encode_response_status<fuchsia_io_FileWriteAtResponse>(bytes, status, sz);
-        if (response->s != ZX_OK) {
-            response->actual = 0;
-        }
-        break;
-    }
-    case ZXFIDL_TRUNCATE: {
-        encode_response_status<fuchsia_io_FileTruncateResponse>(bytes, status, sz);
-        break;
-    }
-    case ZXFIDL_RENAME: {
-        encode_response_status<fuchsia_io_DirectoryRenameResponse>(bytes, status, sz);
-        break;
-    }
-    case ZXFIDL_SYNC: {
-        encode_response_status<fuchsia_io_NodeSyncResponse>(bytes, status, sz);
-        break;
-    }
-    case ZXFIDL_LINK: {
-        encode_response_status<fuchsia_io_DirectoryLinkResponse>(bytes, status, sz);
-        break;
-    }
-    case ZXFIDL_REWIND: {
-        encode_response_status<fuchsia_io_DirectoryRewindResponse>(bytes, status, sz);
-        break;
-    }
-    case ZXFIDL_GET_TOKEN: {
-        auto response = encode_response_status<fuchsia_io_DirectoryGetTokenResponse>(bytes, status,
-                                                                                     sz);
-        if (response->s != ZX_OK) {
-            response->token = FIDL_HANDLE_ABSENT;
-        } else {
-            handles[0] = response->token;
-            *num_handles = 1;
-            response->token = FIDL_HANDLE_PRESENT;
-        }
-        break;
-    }
-    case ZXFIDL_GET_VMO: {
-        auto response = encode_response_status<fuchsia_io_FileGetVmoResponse>(bytes, status, sz);
-        if (response->s != ZX_OK) {
-            response->vmo = FIDL_HANDLE_ABSENT;
-        } else {
-            handles[0] = response->vmo;
-            *num_handles = 1;
-            response->vmo = FIDL_HANDLE_PRESENT;
-        }
-        break;
-    }
-    case ZXFIDL_GET_FLAGS: {
-        encode_response_status<fuchsia_io_FileGetFlagsResponse>(bytes, status, sz);
-        break;
-    }
-    case ZXFIDL_SET_FLAGS: {
-        encode_response_status<fuchsia_io_FileSetFlagsResponse>(bytes, status, sz);
-        break;
-    }
-    default:
-        fprintf(stderr, "Unsupported FIDL operation: 0x%x\n", hdr->ordinal);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    return ZX_OK;
+    // Callback is responsible for decoding the message, and closing
+    // any associated handles.
+    cleanup.cancel();
+    r = cb(&msg, &connection.txn, cookie);
+    return r;
 }
 
 } // namespace
 
-zx_status_t zxrio_read_request(zx_handle_t h, fidl_msg_t* fidl_msg) {
-    zx_status_t r;
-    fidl::Message msg(fidl::BytePart(static_cast<unsigned char*>(fidl_msg->bytes),
-                                     fidl_msg->num_bytes),
-                      fidl::HandlePart(fidl_msg->handles, fidl_msg->num_handles));
-    if ((r = msg.Read(h, 0)) != ZX_OK) {
-        return r;
+zx_status_t zxfidl_handler(zx_handle_t h, zxfidl_cb_t cb, void* cookie) {
+    if (h == ZX_HANDLE_INVALID) {
+        return HandleRpcClose(cb, cookie);
+    } else {
+        ZX_ASSERT(zx_object_get_info(h, ZX_INFO_HANDLE_VALID, NULL, 0,
+                                     NULL, NULL) == ZX_OK);
+        return HandleRpc(h, cb, cookie);
     }
-
-    fidl_msg->num_handles = msg.handles().actual();
-    fidl_msg->num_bytes = msg.bytes().actual();
-
-    if ((r = zxrio_decode_request(&msg)) != ZX_OK) {
-        fprintf(stderr, "zxrio_read_request failed to decode\n");
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    return r;
-}
-
-zx_status_t zxrio_write_response(zx_handle_t h, zx_status_t status, fidl_msg_t* msg) {
-    // Encode
-    if (zxrio_encode_response(status, msg) != ZX_OK) {
-        fprintf(stderr, "zxrio_write_response: Failed to encode response\n");
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    // Transmit
-    return zx_channel_write(h, 0, msg->bytes, msg->num_bytes, msg->handles, msg->num_handles);
 }
 
 // Always consumes cnxn.
 zx_status_t fidl_clone_request(zx_handle_t srv, zx_handle_t cnxn, uint32_t flags) {
-    char byte_buffer[ZXFIDL_MAX_MSG_BYTES];
-    fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
-    fidl::HandlePart handles(&cnxn, 1, 1);
-
-    // Setup the request message header
-    fuchsia_io_ObjectCloneRequest* request = builder.New<fuchsia_io_ObjectCloneRequest>();
-    request->hdr.ordinal = ZXFIDL_CLONE;
-    request->flags = flags;
-    request->object = FIDL_HANDLE_PRESENT;
-
-    fidl::Message message(builder.Finalize(), fbl::move(handles));
-    return message.Write(srv, 0);
+    return fuchsia_io_ObjectClone(srv, flags, cnxn);
 }
 
+// Always consumes cnxn.
 zx_status_t fidl_open_request(zx_handle_t srv, zx_handle_t cnxn, uint32_t flags,
                               uint32_t mode, const char* path, size_t pathlen) {
-    // Prepare buffers for input & output
-    char byte_buffer[ZXFIDL_MAX_MSG_BYTES];
-    fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
-    fidl::HandlePart handles(&cnxn, 1, 1);
-
-    // Setup the request message header
-    fuchsia_io_DirectoryOpenRequest* request = builder.New<fuchsia_io_DirectoryOpenRequest>();
-    request->hdr.ordinal = ZXFIDL_OPEN;
-
-    // Setup the request message primary
-    request->flags = flags;
-    request->mode = mode;
-    request->path.data = (char*) FIDL_ALLOC_PRESENT;
-    request->path.size = pathlen;
-    request->object = FIDL_HANDLE_PRESENT;
-
-    // Setup the request message secondary
-    char* secondary = builder.NewArray<char>(static_cast<uint32_t>(pathlen));
-    memcpy(secondary, path, pathlen);
-
-    fidl::Message message(builder.Finalize(), fbl::move(handles));
-    return message.Write(srv, 0);
+    return fuchsia_io_DirectoryOpen(srv, flags, mode, path, pathlen, cnxn);
 }
 
 zx_status_t fidl_close(zxrio_t* rio) {
-    // Prepare buffers for input & output
-    char byte_buffer[ZXFIDL_MAX_MSG_BYTES];
-    fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
-
-    // Setup the request message header
-    new_request<fuchsia_io_ObjectCloseRequest, ZXFIDL_CLOSE>(rio, &builder);
-
-    fidl::Message message(builder.Finalize(), fidl::HandlePart());
-    zx_status_t r = fidl_call(zxrio_handle(rio), &message);
-    if (r != ZX_OK) {
-        return r;
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_ObjectClose(zxrio_handle(rio), &status)) != ZX_OK) {
+        return io_status;
     }
-
-    // Validate primary size
-    auto response = to_primary<fuchsia_io_ObjectCloseResponse>(&message);
-    if (response == nullptr) {
-        return ZX_ERR_IO;
-    }
-
-    return response->s;
+    return status;
 }
 
 zx_status_t fidl_write(zxrio_t* rio, const void* data, uint64_t length,
                        uint64_t* actual) {
-    // Prepare buffers for input & output
-    char byte_buffer[ZXFIDL_MAX_MSG_BYTES];
-    fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
-
-    // Setup the request message header
-    auto request = new_request<fuchsia_io_FileWriteRequest, ZXFIDL_WRITE>(rio, &builder);
-
-    // Setup the request message primary
-    request->data.count = length;
-    request->data.data = (void*) FIDL_ALLOC_PRESENT;
-
-    // Setup the request message secondary
-    char* secondary = builder.NewArray<char>(static_cast<uint32_t>(length));
-    memcpy(secondary, data, length);
-
-    fidl::Message message(builder.Finalize(), fidl::HandlePart());
-    zx_status_t r = fidl_call(zxrio_handle(rio), &message);
-    if (r != ZX_OK) {
-        return r;
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_FileWrite(zxrio_handle(rio), static_cast<const uint8_t*>(data),
+                                          length, &status, actual)) != ZX_OK) {
+        return io_status;
     }
-
-    // Validate primary size
-    auto response = to_primary<fuchsia_io_FileWriteResponse>(&message);
-    if (response == nullptr) {
+    if (*actual > length) {
         return ZX_ERR_IO;
     }
-
-    if (response->actual > length) {
-        return ZX_ERR_IO;
-    }
-    *actual = response->actual;
-    return response->s;
+    return status;
 }
 
 zx_status_t fidl_writeat(zxrio_t* rio, const void* data, uint64_t length,
                          off_t offset, uint64_t* actual) {
-    // Prepare buffers for input & output
-    char byte_buffer[ZXFIDL_MAX_MSG_BYTES];
-    fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
-
-    // Setup the request message header
-    auto request = new_request<fuchsia_io_FileWriteAtRequest, ZXFIDL_WRITE_AT>(rio, &builder);
-
-    // Setup the request message primary
-    request->data.count = length;
-    request->data.data = (void*) FIDL_ALLOC_PRESENT;
-    request->offset = offset;
-
-    // Setup the request message secondary
-    char* secondary = builder.NewArray<char>(static_cast<uint32_t>(length));
-    memcpy(secondary, data, length);
-
-    fidl::Message message(builder.Finalize(), fidl::HandlePart());
-    zx_status_t r = fidl_call(zxrio_handle(rio), &message);
-    if (r != ZX_OK) {
-        return r;
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_FileWriteAt(zxrio_handle(rio), static_cast<const uint8_t*>(data),
+                                                         length, offset, &status,
+                                                         actual)) != ZX_OK) {
+        return io_status;
     }
-
-    // Validate primary size
-    auto response = to_primary<fuchsia_io_FileWriteAtResponse>(&message);
-    if (response == nullptr) {
+    if (*actual > length) {
         return ZX_ERR_IO;
     }
-
-    if (response->actual > length) {
-        return ZX_ERR_IO;
-    }
-    *actual = response->actual;
-    return response->s;
+    return status;
 }
 
 zx_status_t fidl_read(zxrio_t* rio, void* data, uint64_t length, uint64_t* actual) {
-    // Prepare buffers for input & output
-    char byte_buffer[ZXFIDL_MAX_MSG_BYTES];
-    fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
-
-    // Setup the request message header
-    auto request = new_request<fuchsia_io_FileReadRequest, ZXFIDL_READ>(rio, &builder);
-
-    // Setup the request message primary
-    request->count = length;
-
-    // Setup the request message secondary
-    char* secondary = builder.NewArray<char>(static_cast<uint32_t>(length));
-    memcpy(secondary, data, length);
-
-    fidl::Message message(builder.Finalize(), fidl::HandlePart());
-    zx_status_t r = fidl_call(zxrio_handle(rio), &message);
-    if (r != ZX_OK) {
-        return r;
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_FileRead(zxrio_handle(rio), length, &status,
+                                         static_cast<uint8_t*>(data), length, actual)) != ZX_OK) {
+        return io_status;
     }
-
-    // Validate primary size
-    auto response = to_primary<fuchsia_io_FileReadResponse>(&message);
-    if (response == nullptr) {
+    if (*actual > length) {
         return ZX_ERR_IO;
     }
-    if ((response->data.data != (void*) FIDL_ALLOC_PRESENT) ||
-        (message.bytes().actual() != FIDL_ALIGN(sizeof(fuchsia_io_FileReadResponse)) +
-         FIDL_ALIGN(response->data.count))) {
-        return ZX_ERR_IO;
-    }
-    response->data.data = get_secondary(response);
-
-    // Extract data
-    if (response->data.count > length) {
-        return ZX_ERR_IO;
-    }
-    memcpy(data, response->data.data, response->data.count);
-    *actual = response->data.count;
-    return response->s;
+    return status;
 }
 
 zx_status_t fidl_readat(zxrio_t* rio, void* data, uint64_t length, off_t offset,
                         uint64_t* actual) {
-
-    // Prepare buffers for input & output
-    char byte_buffer[ZXFIDL_MAX_MSG_BYTES];
-    fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
-
-    // Setup the request message header
-    auto request = new_request<fuchsia_io_FileReadAtRequest, ZXFIDL_READ_AT>(rio, &builder);
-
-    // Setup the request message primary
-    request->count = length;
-    request->offset = offset;
-
-    // Setup the request message secondary
-    char* secondary = builder.NewArray<char>(static_cast<uint32_t>(length));
-    memcpy(secondary, data, length);
-
-    fidl::Message message(builder.Finalize(), fidl::HandlePart());
-    zx_status_t r = fidl_call(zxrio_handle(rio), &message);
-    if (r != ZX_OK) {
-        return r;
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_FileReadAt(zxrio_handle(rio), length, offset, &status,
+                                           static_cast<uint8_t*>(data), length, actual)) != ZX_OK) {
+        return io_status;
     }
-
-    // Validate primary size
-    auto response = to_primary<fuchsia_io_FileReadAtResponse>(&message);
-    if (response == nullptr) {
+    if (*actual > length) {
         return ZX_ERR_IO;
     }
-    if ((response->data.data != (void*) FIDL_ALLOC_PRESENT) ||
-        (message.bytes().actual() != FIDL_ALIGN(sizeof(fuchsia_io_FileReadAtResponse)) +
-         FIDL_ALIGN(response->data.count))) {
-        return ZX_ERR_IO;
-    }
-    response->data.data = get_secondary(response);
-
-    // Extract data
-    if (response->data.count > length) {
-        return ZX_ERR_IO;
-    }
-    memcpy(data, response->data.data, response->data.count);
-    *actual = response->data.count;
-    return response->s;
+    return status;
 }
 
 static_assert(SEEK_SET == fuchsia_io_SeekOrigin_Start, "");
@@ -714,560 +195,216 @@ static_assert(SEEK_CUR == fuchsia_io_SeekOrigin_Current, "");
 static_assert(SEEK_END == fuchsia_io_SeekOrigin_End, "");
 
 zx_status_t fidl_seek(zxrio_t* rio, off_t offset, int whence, off_t* out) {
-    // Prepare buffers for input & output
-    char byte_buffer[ZXFIDL_MAX_MSG_BYTES];
-    fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
-
-    // Setup the request message header
-    auto request = new_request<fuchsia_io_FileSeekRequest, ZXFIDL_SEEK>(rio, &builder);
-
-    // Setup the request message primary
-    request->offset = offset;
-    request->start = whence;
-
-    fidl::Message message(builder.Finalize(), fidl::HandlePart());
-    zx_status_t r = fidl_call(zxrio_handle(rio), &message);
-    if (r != ZX_OK) {
-        return r;
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_FileSeek(zxrio_handle(rio), offset, whence, &status,
+                                         reinterpret_cast<uint64_t*>(out))) != ZX_OK) {
+        return io_status;
     }
-
-    // Validate primary size
-    auto response = to_primary<fuchsia_io_FileSeekResponse>(&message);
-    if (response == nullptr) {
-        return ZX_ERR_IO;
-    } else if (response->s != ZX_OK) {
-        return response->s;
-    }
-
-    *out = response->offset;
-    return ZX_OK;
+    return status;
 }
 
 zx_status_t fidl_stat(zxrio_t* rio, size_t len, vnattr_t* out, size_t* out_sz) {
     ZX_DEBUG_ASSERT(len >= sizeof(vnattr_t));
 
-    // Prepare buffers for input & output
-    char byte_buffer[ZXFIDL_MAX_MSG_BYTES];
-    fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
-
-    // Setup the request message header
-    new_request<fuchsia_io_NodeGetAttrRequest, ZXFIDL_STAT>(rio, &builder);
-
-    fidl::Message message(builder.Finalize(), fidl::HandlePart());
-    zx_status_t r = fidl_call(zxrio_handle(rio), &message);
-    if (r != ZX_OK) {
-        return r;
+    fuchsia_io_NodeAttributes attr;
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_NodeGetAttr(zxrio_handle(rio),
+                                            &status, &attr)) != ZX_OK) {
+        return io_status;
     }
-
-    // Validate primary size
-    auto response = to_primary<fuchsia_io_NodeGetAttrResponse>(&message);
-    if (response == nullptr) {
-        return ZX_ERR_IO;
-    } else if (response->s != ZX_OK) {
-        return response->s;
+    if (status != ZX_OK) {
+        return status;
     }
 
     // Translate NodeAttributes --> vnattr
-    out->mode = response->attributes.mode;
-    out->inode = response->attributes.id;
-    out->size = response->attributes.content_size;
+    out->mode = attr.mode;
+    out->inode = attr.id;
+    out->size = attr.content_size;
     out->blksize = VNATTR_BLKSIZE;
-    out->blkcount = response->attributes.storage_size / VNATTR_BLKSIZE;
-    out->nlink = response->attributes.link_count;
-    out->create_time = response->attributes.creation_time;
-    out->modify_time = response->attributes.modification_time;
+    out->blkcount = attr.storage_size / VNATTR_BLKSIZE;
+    out->nlink = attr.link_count;
+    out->create_time = attr.creation_time;
+    out->modify_time = attr.modification_time;
 
     *out_sz = sizeof(vnattr_t);
     return ZX_OK;
 }
 
 zx_status_t fidl_setattr(zxrio_t* rio, const vnattr_t* attr) {
-    // Prepare buffers for input & output
-    char byte_buffer[ZXFIDL_MAX_MSG_BYTES];
-    fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
-
-    // Setup the request message header
-    auto request = new_request<fuchsia_io_NodeSetAttrRequest, ZXFIDL_SETATTR>(rio, &builder);
-
     // Setup the request message primary
     // TODO(smklein): Replace with autogenerated constants
     const uint32_t kFlagCreationTime = 1;
     const uint32_t kFlagModificationTime = 2;
     static_assert(kFlagCreationTime == ATTR_CTIME, "SetAttr flags unaligned");
     static_assert(kFlagModificationTime == ATTR_MTIME, "SetAttr flags unaligned");
-    request->flags = attr->valid;
-    request->attributes.creation_time = attr->create_time;
-    request->attributes.modification_time = attr->modify_time;
+    uint32_t flags = attr->valid;
+    fuchsia_io_NodeAttributes attrs;
+    memset(&attrs, 0, sizeof(attrs));
+    attrs.creation_time = attr->create_time;
+    attrs.modification_time = attr->modify_time;
 
-    fidl::Message message(builder.Finalize(), fidl::HandlePart());
-    zx_status_t r = fidl_call(zxrio_handle(rio), &message);
-    if (r != ZX_OK) {
-        return r;
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_NodeSetAttr(zxrio_handle(rio), flags, &attrs,
+                                            &status)) != ZX_OK) {
+        return io_status;
     }
-
-    // Validate primary size
-    auto response = to_primary<fuchsia_io_NodeSetAttrResponse>(&message);
-    if (response == nullptr) {
-        return ZX_ERR_IO;
-    }
-    return response->s;
+    return status;
 }
 
 zx_status_t fidl_sync(zxrio_t* rio) {
-    // Prepare buffers for input & output
-    char byte_buffer[ZXFIDL_MAX_MSG_BYTES];
-    fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
-
-    // Setup the request message header
-    new_request<fuchsia_io_NodeSyncRequest, ZXFIDL_SYNC>(rio, &builder);
-
-    fidl::Message message(builder.Finalize(), fidl::HandlePart());
-    zx_status_t r = fidl_call(zxrio_handle(rio), &message);
-    if (r != ZX_OK) {
-        return r;
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_NodeSync(zxrio_handle(rio), &status)) != ZX_OK) {
+        return io_status;
     }
-
-    // Validate primary size
-    auto response = to_primary<fuchsia_io_NodeSyncResponse>(&message);
-    if (response == nullptr) {
-        return ZX_ERR_IO;
-    }
-
-    return response->s;
+    return status;
 }
 
 zx_status_t fidl_readdirents(zxrio_t* rio, void* data, size_t length, size_t* out_sz) {
-    // Prepare buffers for input & output
-    char byte_buffer[ZXFIDL_MAX_MSG_BYTES];
-    fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
-
-    // Setup the request message header
-    auto request = new_request<fuchsia_io_DirectoryReadDirentsRequest, ZXFIDL_READDIR>(rio, &builder);
-
-    // Setup the request message primary
-    request->max_out = length;
-
-    fidl::Message message(builder.Finalize(), fidl::HandlePart());
-    zx_status_t r = fidl_call(zxrio_handle(rio), &message);
-    if (r != ZX_OK) {
-        return r;
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_DirectoryReadDirents(zxrio_handle(rio), length,
+                                                     &status, static_cast<uint8_t*>(data),
+                                                     length, out_sz)) != ZX_OK) {
+        return io_status;
     }
-
-    // Validate primary size
-    auto response = to_primary<fuchsia_io_DirectoryReadDirentsResponse>(&message);
-    if (response == nullptr) {
+    if (*out_sz > length) {
         return ZX_ERR_IO;
     }
-    if ((response->dirents.data != (void*) FIDL_ALLOC_PRESENT) ||
-        (message.bytes().actual() != FIDL_ALIGN(sizeof(fuchsia_io_DirectoryReadDirentsResponse)) +
-         FIDL_ALIGN(response->dirents.count))) {
-        fprintf(stderr, "fidl_readdirents failed to decode response\n");
-        return ZX_ERR_IO;
-    }
-    response->dirents.data = get_secondary(response);
-
-    // Extract data
-    if (response->dirents.count > length) {
-        return ZX_ERR_IO;
-    }
-    memcpy(data, response->dirents.data, response->dirents.count);
-    *out_sz = response->dirents.count;
-    return response->s;
+    return status;
 }
 
 zx_status_t fidl_rewind(zxrio_t* rio) {
-    // Prepare buffers for input & output
-    char byte_buffer[ZXFIDL_MAX_MSG_BYTES];
-    fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
-
-    // Setup the request message header
-    new_request<fuchsia_io_DirectoryRewindRequest, ZXFIDL_REWIND>(rio, &builder);
-    fidl::Message message(builder.Finalize(), fidl::HandlePart());
-    zx_status_t r = fidl_call(zxrio_handle(rio), &message);
-    if (r != ZX_OK) {
-        return r;
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_DirectoryRewind(zxrio_handle(rio), &status)) != ZX_OK) {
+        return io_status;
     }
-
-    // Validate primary size
-    auto response = to_primary<fuchsia_io_DirectoryRewindResponse>(&message);
-    if (response == nullptr) {
-        return ZX_ERR_IO;
-    }
-    return response->s;
+    return status;
 }
 
 zx_status_t fidl_unlink(zxrio_t* rio, const char* name, size_t namelen) {
-    // Prepare buffers for input & output
-    char byte_buffer[ZXFIDL_MAX_MSG_BYTES];
-    fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
-
-    // Setup the request message header
-    fuchsia_io_DirectoryUnlinkRequest* request =
-            new_request<fuchsia_io_DirectoryUnlinkRequest, ZXFIDL_UNLINK>(rio, &builder);
-
-    // Setup the request message primary
-    request->path.size = namelen;
-    request->path.data = (char*) FIDL_ALLOC_PRESENT;
-
-    // Setup the request message secondary
-    char* secondary = builder.NewArray<char>(static_cast<uint32_t>(namelen));
-    memcpy(secondary, name, namelen);
-
-    fidl::Message message(builder.Finalize(), fidl::HandlePart());
-
-    zx_status_t r = fidl_call(zxrio_handle(rio), &message);
-    if (r != ZX_OK) {
-        return r;
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_DirectoryUnlink(zxrio_handle(rio), name, namelen,
+                                                &status)) != ZX_OK) {
+        return io_status;
     }
-
-    // Validate primary size
-    auto response = to_primary<fuchsia_io_DirectoryUnlinkResponse>(&message);
-    if (response == nullptr) {
-        return ZX_ERR_IO;
-    }
-
-    return response->s;
+    return status;
 }
 
 zx_status_t fidl_truncate(zxrio_t* rio, uint64_t length) {
-    // Prepare buffers for input & output
-    char byte_buffer[ZXFIDL_MAX_MSG_BYTES];
-    fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
-
-    // Setup the request message header
-    auto request = new_request<fuchsia_io_FileTruncateRequest, ZXFIDL_TRUNCATE>(rio, &builder);
-
-    // Setup the request message primary
-    request->length = length;
-
-    fidl::Message message(builder.Finalize(), fidl::HandlePart());
-    zx_status_t r = fidl_call(zxrio_handle(rio), &message);
-    if (r != ZX_OK) {
-        return r;
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_FileTruncate(zxrio_handle(rio), length,
+                                             &status)) != ZX_OK) {
+        return io_status;
     }
-
-    // Validate primary size
-    auto response = to_primary<fuchsia_io_FileTruncateResponse>(&message);
-    if (response == nullptr) {
-        return ZX_ERR_IO;
-    }
-
-    return response->s;
+    return status;
 }
 
 zx_status_t fidl_rename(zxrio_t* rio, const char* src, size_t srclen,
                         zx_handle_t dst_token, const char* dst, size_t dstlen) {
-    // Prepare buffers for input & output
-    char byte_buffer[ZXFIDL_MAX_MSG_BYTES];
-    fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
-    fidl::HandlePart handles(&dst_token, 1, 1);
-
-    // Setup the request message header
-    auto request = new_request<fuchsia_io_DirectoryRenameRequest, ZXFIDL_RENAME>(rio, &builder);
-
-    // Setup the request message primary
-    request->src.size = srclen;
-    request->src.data = (char*) FIDL_ALLOC_PRESENT;
-    request->dst_parent_token = FIDL_HANDLE_PRESENT;
-    request->dst.size = dstlen;
-    request->dst.data = (char*) FIDL_ALLOC_PRESENT;
-
-    // Setup the request message secondary
-    char* secondary = builder.NewArray<char>(static_cast<uint32_t>(srclen));
-    memcpy(secondary, src, srclen);
-    secondary = builder.NewArray<char>(static_cast<uint32_t>(dstlen));
-    memcpy(secondary, dst, dstlen);
-
-    fidl::Message message(builder.Finalize(), fbl::move(handles));
-    zx_status_t r = fidl_call(zxrio_handle(rio), &message);
-    if (r != ZX_OK) {
-        return r;
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_DirectoryRename(zxrio_handle(rio), src, srclen,
+                                                dst_token, dst, dstlen,
+                                                &status)) != ZX_OK) {
+        return io_status;
     }
-
-    // Validate primary size
-    auto response = to_primary<fuchsia_io_DirectoryRenameResponse>(&message);
-    if (response == nullptr) {
-        return ZX_ERR_IO;
-    }
-
-    return response->s;
+    return status;
 }
 
 zx_status_t fidl_link(zxrio_t* rio, const char* src, size_t srclen,
                       zx_handle_t dst_token, const char* dst, size_t dstlen) {
-    // Prepare buffers for input & output
-    char byte_buffer[ZXFIDL_MAX_MSG_BYTES];
-    fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
-    fidl::HandlePart handles(&dst_token, 1, 1);
-
-    // Setup the request message header
-    auto request = new_request<fuchsia_io_DirectoryLinkRequest, ZXFIDL_LINK>(rio, &builder);
-
-    // Setup the request message primary
-    request->src.size = srclen;
-    request->src.data = (char*) FIDL_ALLOC_PRESENT;
-    request->dst_parent_token = FIDL_HANDLE_PRESENT;
-    request->dst.size = dstlen;
-    request->dst.data = (char*) FIDL_ALLOC_PRESENT;
-
-    // Setup the request message secondary
-    char* secondary = builder.NewArray<char>(static_cast<uint32_t>(srclen));
-    memcpy(secondary, src, srclen);
-    secondary = builder.NewArray<char>(static_cast<uint32_t>(dstlen));
-    memcpy(secondary, dst, dstlen);
-
-    fidl::Message message(builder.Finalize(), fbl::move(handles));
-    zx_status_t r = fidl_call(zxrio_handle(rio), &message);
-    if (r != ZX_OK) {
-        return r;
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_DirectoryLink(zxrio_handle(rio), src, srclen,
+                                              dst_token, dst, dstlen,
+                                              &status)) != ZX_OK) {
+        return io_status;
     }
-
-    // Validate primary size
-    auto response = to_primary<fuchsia_io_DirectoryLinkResponse>(&message);
-    if (response == nullptr) {
-        return ZX_ERR_IO;
-    }
-
-    return response->s;
+    return status;
 }
 
 zx_status_t fidl_ioctl(zxrio_t* rio, uint32_t op, const void* in_buf,
                        size_t in_len, void* out_buf, size_t out_len,
                        size_t* out_actual) {
-
-    // Prepare buffers for input & output
-    char byte_buffer[ZXFIDL_MAX_MSG_BYTES];
-    fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
-    zx_handle_t handle_buffer[FDIO_MAX_HANDLES];
-    fidl::HandlePart handles(handle_buffer, FDIO_MAX_HANDLES);
-
-    // Setup the request message header
-    auto request = new_request<fuchsia_io_NodeIoctlRequest, ZXFIDL_IOCTL>(rio, &builder);
-
-    // Setup the request message primary
-    request->opcode = op;
-    request->max_out = out_len;
-    request->handles.count = 0;
-    request->handles.data = (void*) FIDL_ALLOC_PRESENT;
-    request->in.count = in_len;
-    request->in.data = (void*) FIDL_ALLOC_PRESENT;
-
+    size_t in_handle_count = 0;
+    size_t out_handle_count = 0;
     switch (IOCTL_KIND(op)) {
     case IOCTL_KIND_GET_HANDLE:
-        if (out_len < sizeof(zx_handle_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
+        out_handle_count = 1;
         break;
     case IOCTL_KIND_GET_TWO_HANDLES:
-        if (out_len < 2 * sizeof(zx_handle_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
+        out_handle_count = 2;
         break;
     case IOCTL_KIND_GET_THREE_HANDLES:
-        if (out_len < 3 * sizeof(zx_handle_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
+        out_handle_count = 3;
         break;
     case IOCTL_KIND_SET_HANDLE:
-        if (in_len < sizeof(zx_handle_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        request->handles.count = 1;
+        in_handle_count = 1;
         break;
     case IOCTL_KIND_SET_TWO_HANDLES:
-        if (in_len < 2 * sizeof(zx_handle_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        request->handles.count = 2;
+        in_handle_count = 2;
         break;
     }
 
-    if (request->handles.count) {
-        uint32_t hcount = static_cast<uint32_t>(request->handles.count);
-        handles.set_actual(hcount);
-        auto secondary = builder.NewArray<zx_handle_t>(hcount);
-        for (size_t i = 0; i < hcount; i++) {
-            handle_buffer[i] = *((zx_handle_t*) in_buf + i);
-            secondary[i] = FIDL_HANDLE_PRESENT;
-        }
+    if (in_len < in_handle_count * sizeof(zx_handle_t)) {
+        return ZX_ERR_INVALID_ARGS;
     }
-    if (in_len > 0) {
-        auto secondary = builder.NewArray<char>(static_cast<uint32_t>(in_len));
-        memcpy(secondary, in_buf, in_len);
+    if (out_len < out_handle_count * sizeof(zx_handle_t)) {
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    fidl::Message message(builder.Finalize(), fbl::move(handles));
-
-    zx_status_t r = fidl_call(zxrio_handle(rio), &message);
-    if (r != ZX_OK) {
-        fprintf(stderr, "ioctl fidl call failure: %d\n", r);
-        return r;
+    zx_handle_t hbuf[out_handle_count];
+    size_t out_handle_actual;
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_NodeIoctl(zxrio_handle(rio), op,
+                                          out_len, static_cast<const zx_handle_t*>(in_buf),
+                                          in_handle_count, static_cast<const uint8_t*>(in_buf),
+                                          in_len, &status, hbuf,
+                                          out_handle_count, &out_handle_actual,
+                                          static_cast<uint8_t*>(out_buf), out_len,
+                                          out_actual)) != ZX_OK) {
+        return io_status;
     }
 
-    // Validate primary size
-    auto response = to_primary<fuchsia_io_NodeIoctlResponse>(&message);
-    if (response == nullptr) {
-        fprintf(stderr, "failed to get ioctl primary\n");
+    if (status != ZX_OK) {
+        zx_handle_close_many(hbuf, out_handle_actual);
+        return status;
+    }
+    if (out_handle_actual != out_handle_count) {
+        zx_handle_close_many(hbuf, out_handle_actual);
         return ZX_ERR_IO;
     }
 
-    // Validate primary
-    if ((response->handles.data != (void*) FIDL_ALLOC_PRESENT) ||
-        (response->out.data != (void*) FIDL_ALLOC_PRESENT)) {
-        fprintf(stderr, "Ioctl: Decoding bad primary\n");
-        return ZX_ERR_IO;
-    }
-
-    // Validate secondary
-    if (response->handles.count != message.handles().actual()) {
-        fprintf(stderr, "Ioctl: Decoding bad hcount\n");
-        return ZX_ERR_IO;
-    }
-    const void* secondary = get_secondary(response);
-
-    size_t expected_handles_len = FIDL_ALIGN(sizeof(zx_handle_t) *
-                                             response->handles.count);
-    const void* secondary_data =
-            reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(secondary) +
-                                          expected_handles_len);
-
-    size_t expected_data_len = FIDL_ALIGN(response->out.count);
-    if (message.bytes().actual() != FIDL_ALIGN(sizeof(fuchsia_io_NodeIoctlResponse)) +
-        expected_handles_len + expected_data_len) {
-        fprintf(stderr, "Ioctl: Decoding bad output size\n");
-        return ZX_ERR_IO;
-    }
-
-    if ((sizeof(zx_handle_t) * response->handles.count > out_len) ||
-        (response->out.count > out_len)) {
-        fprintf(stderr, "Ioctl: Decoding response larger than out_len\n");
-        return ZX_ERR_IO;
-    }
-
-    if (response->s != ZX_OK) {
-        return response->s;
-    }
-
-    size_t expected_handles = 0;
-    switch (IOCTL_KIND(op)) {
-    case IOCTL_KIND_GET_HANDLE:
-        expected_handles = 1;
-        break;
-    case IOCTL_KIND_GET_TWO_HANDLES:
-        expected_handles = 2;
-        break;
-    case IOCTL_KIND_GET_THREE_HANDLES:
-        expected_handles = 3;
-        break;
-    }
-
-    // Extract handles
-    if (expected_handles != message.handles().actual()) {
-        fprintf(stderr, "ioctl client decode: Unexpected Handle count\n");
-        return ZX_ERR_IO;
-    }
-
-    // Extract handles on top of data
-    *out_actual = 0;
-    if (response->out.count > 0) {
-        memcpy(out_buf, secondary_data, response->out.count);
-        *out_actual = response->out.count;
-    }
-    memcpy(out_buf, message.handles().data(),
-           message.handles().actual() * sizeof(zx_handle_t));
-    if (*out_actual == 0) {
-        *out_actual = message.handles().actual() * sizeof(zx_handle_t);
-    }
-
-    message.ClearHandlesUnsafe();
+    memcpy(out_buf, hbuf, out_handle_count * sizeof(zx_handle_t));
     return ZX_OK;
 }
 
 zx_status_t fidl_getvmo(zxrio_t* rio, uint32_t flags, zx_handle_t* out) {
-    // Prepare buffers for input & output
-    char byte_buffer[ZXFIDL_MAX_MSG_BYTES];
-    fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
-    fidl::HandlePart handles(out, 1);
-
-    // Setup the request message header
-    auto request = new_request<fuchsia_io_FileGetVmoRequest, ZXFIDL_GET_VMO>(rio, &builder);
-
-    // Setup the request message primary
-    request->flags = flags;
-
-    fidl::Message message(builder.Finalize(), fbl::move(handles));
-    zx_status_t r = fidl_call(zxrio_handle(rio), &message);
-    if (r != ZX_OK) {
-        return r;
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_FileGetVmo(zxrio_handle(rio), flags, &status,
+                                           out)) != ZX_OK) {
+        return io_status;
     }
-
-    // Validate primary size
-    auto response = to_primary<fuchsia_io_FileGetVmoResponse>(&message);
-    if (response == nullptr) {
-        fprintf(stderr, "fidl_getvmo couldn't convert to primary\n");
-        return ZX_ERR_IO;
-    } else if (response->s != ZX_OK) {
-        return response->s;
-    } else if (message.handles().actual() != 1) {
-        fprintf(stderr, "fidl_getvmo missing VMO\n");
+    if (status != ZX_OK) {
+        return status;
+    }
+    if (*out == ZX_HANDLE_INVALID) {
         return ZX_ERR_IO;
     }
-
-    // Already reading directly into |out|.
-    if (response->vmo != FIDL_HANDLE_PRESENT) {
-        fprintf(stderr, "fidl_getvmo: Missing response VMO\n");
-        return ZX_ERR_IO;
-    }
-    message.ClearHandlesUnsafe();
     return ZX_OK;
 }
 
 zx_status_t fidl_getflags(zxrio_t* rio, uint32_t* outflags) {
-    // Prepare buffers for input & output
-    char byte_buffer[ZXFIDL_MAX_MSG_BYTES];
-    fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
-
-    // Setup the request message header
-    new_request<fuchsia_io_FileGetFlagsRequest, ZXFIDL_GET_FLAGS>(rio, &builder);
-
-    fidl::Message message(builder.Finalize(), fidl::HandlePart());
-    zx_status_t r = fidl_call(zxrio_handle(rio), &message);
-    if (r != ZX_OK) {
-        return r;
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_FileGetFlags(zxrio_handle(rio), &status,
+                                             outflags)) != ZX_OK) {
+        return io_status;
     }
-
-    // Validate primary size
-    auto response = to_primary<fuchsia_io_FileGetFlagsResponse>(&message);
-    if (response == nullptr) {
-        return ZX_ERR_IO;
-    }
-
-    *outflags = response->flags;
-    return response->s;
+    return status;
 }
 
 zx_status_t fidl_setflags(zxrio_t* rio, uint32_t flags) {
-    // Prepare buffers for input & output
-    char byte_buffer[ZXFIDL_MAX_MSG_BYTES];
-    fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
-
-    // Setup the request message header
-    auto request = new_request<fuchsia_io_FileSetFlagsRequest, ZXFIDL_SET_FLAGS>(rio, &builder);
-
-    // Setup the request message primary
-    request->flags = flags;
-
-    fidl::Message message(builder.Finalize(), fidl::HandlePart());
-    zx_status_t r = fidl_call(zxrio_handle(rio), &message);
-    if (r != ZX_OK) {
-        return r;
+    zx_status_t io_status, status;
+    if ((io_status = fuchsia_io_FileSetFlags(zxrio_handle(rio), flags,
+                                             &status)) != ZX_OK) {
+        return io_status;
     }
-
-    // Validate primary size
-    auto response = to_primary<fuchsia_io_FileSetFlagsResponse>(&message);
-    if (response == nullptr) {
-        return ZX_ERR_IO;
-    }
-
-    return response->s;
+    return status;
 }

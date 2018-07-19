@@ -16,17 +16,6 @@ typedef struct zxrio zxrio_t;
 // Acquire a rio object's RPC handle
 zx_handle_t zxrio_handle(zxrio_t* rio);
 
-// Encode and transmit an outgoing message (to a server)
-zx_status_t zxrio_write_response(zx_handle_t h, zx_status_t status, fidl_msg_t* msg);
-
-// Read and decode an incoming message (from a client)
-zx_status_t zxrio_read_request(zx_handle_t h, fidl_msg_t* msg);
-
-typedef struct fidl_open_response {
-    alignas(FIDL_ALIGNMENT) fuchsia_io_ObjectOnOpenEvent response;
-    alignas(FIDL_ALIGNMENT) fuchsia_io_ObjectInfo info;
-} fidl_open_response_t;
-
 // FIDL functions
 
 // Request-only functions. These functions do not wait for a reply.

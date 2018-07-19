@@ -28,6 +28,7 @@
 #include <lib/fdio/debug.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
+#include <lib/fidl/coding.h>
 
 #define ZXDEBUG 0
 
@@ -188,7 +189,7 @@ static ssize_t do_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_
             name = "unknown";
         }
         r = strlen(name);
-        if (out_len < (size_t)r) {
+        if (out_len <= (size_t)r) {
             r = ZX_ERR_BUFFER_TOO_SMALL;
         } else {
             strncpy(out_buf, name, r);
@@ -261,240 +262,353 @@ static ssize_t do_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_
     }
 }
 
-static void discard_handles(zx_handle_t* handles, size_t count) {
-    while (count-- > 0) {
-        zx_handle_close(*handles++);
-    }
+static zx_status_t fidl_object_clone(void* ctx, uint32_t flags, zx_handle_t object) {
+    devhost_iostate_t* ios = ctx;
+    flags = ios->flags | (flags & ZX_FS_FLAG_DESCRIBE);
+    devhost_get_handles(object, ios->dev, NULL, flags);
+    return ZX_OK;
 }
 
-zx_status_t devhost_rio_handler(fidl_msg_t* msg, void* cookie) {
-    fidl_message_header_t* hdr = (fidl_message_header_t*) msg->bytes;
-    devhost_iostate_t* ios = cookie;
+static zx_status_t fidl_object_close(void* ctx, fidl_txn_t* txn) {
+    devhost_iostate_t* ios = ctx;
+    device_close(ios->dev, ios->flags);
+    // The ios released its reference to this device by calling
+    // device_close() Put an invalid pointer in its dev field to ensure any
+    // use-after-release attempts explode.
+    ios->dev = (void*) 0xdead;
+    fuchsia_io_ObjectClose_reply(txn, ZX_OK);
+    return ERR_DISPATCHER_DONE;
+}
+
+static zx_status_t fidl_object_bind(void* ctx, const char* name, size_t namelen) {
+    fprintf(stderr, "devhost: Object Bind not yet implemented\n");
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t fidl_object_describe(void* ctx, fidl_txn_t* txn) {
+    fprintf(stderr, "devhost: Object Describe not yet implemented\n");
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static const fuchsia_io_Object_ops_t kObjectOps = {
+    .Clone = fidl_object_clone,
+    .Close = fidl_object_close,
+    .Bind = fidl_object_bind,
+    .Describe = fidl_object_describe,
+};
+
+static zx_status_t fidl_directory_open(void* ctx, uint32_t flags, uint32_t mode,
+                                       const char* path_data, size_t path_size,
+                                       zx_handle_t object) {
+    devhost_iostate_t* ios = ctx;
     zx_device_t* dev = ios->dev;
-    switch (hdr->ordinal) {
-    case ZXFIDL_CLOSE:
-        device_close(dev, ios->flags);
-        // The ios released its reference to this device by calling device_close()
-        // Put an invalid pointer in its dev field to ensure any use-after-release
-        // attempts explode.
-        ios->dev = (void*) 0xdead;
+    if ((path_size < 1) || (path_size > 1024)) {
+        zx_handle_close(object);
         return ZX_OK;
-    case ZXFIDL_OPEN: {
-        fuchsia_io_DirectoryOpenRequest* request = (fuchsia_io_DirectoryOpenRequest*) hdr;
-
-        uint32_t len = request->path.size;
-        zx_handle_t h = request->object;
-        char* name = request->path.data;
-        uint32_t flags = request->flags;
-
-        if ((len < 1) || (len > 1024)) {
-            zx_handle_close(h);
-            return ERR_DISPATCHER_INDIRECT;
-        }
-        name[len] = 0;
-        if (!strcmp(name, ".")) {
-            name = NULL;
-        }
-        devhost_get_handles(h, dev, name, flags);
-        return ERR_DISPATCHER_INDIRECT;
     }
-    case ZXFIDL_CLONE: {
-        fuchsia_io_ObjectCloneRequest* request = (fuchsia_io_ObjectCloneRequest*) hdr;
-        zx_handle_t h = request->object;
-        uint32_t flags = request->flags;
-        flags = ios->flags | (flags & ZX_FS_FLAG_DESCRIBE);
-        devhost_get_handles(h, dev, NULL, flags);
-        return ERR_DISPATCHER_INDIRECT;
+    // TODO(smklein): Avoid assuming paths are null-terminated; this is only
+    // safe because the path is the last secondary object in the DirectoryOpen
+    // request.
+    ((char*) path_data)[path_size] = 0;
+
+    if (!strcmp(path_data, ".")) {
+        path_data = NULL;
     }
-    case ZXFIDL_READ: {
-        if (!CAN_READ(ios)) {
-            return ZX_ERR_ACCESS_DENIED;
-        }
-        fuchsia_io_FileReadRequest* request = (fuchsia_io_FileReadRequest*) hdr;
-        fuchsia_io_FileReadResponse* response = (fuchsia_io_FileReadResponse*) hdr;
-        void* data = (void*)((uintptr_t)(response) +
-                FIDL_ALIGN(sizeof(fuchsia_io_FileReadResponse)));
-        uint32_t len = request->count;
+    devhost_get_handles(object, dev, path_data, flags);
+    return ZX_OK;
+}
 
-        zx_status_t r = do_sync_io(dev, DO_READ, data, len, ios->io_off);
-        if (r >= 0) {
-            ios->io_off += r;
-            response->data.count = r;
-            r = ZX_OK;
-        }
-        return r;
+static zx_status_t fidl_directory_unlink(void* ctx, const char* path_data,
+                                         size_t path_size, fidl_txn_t* txn) {
+    return fuchsia_io_DirectoryUnlink_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+static zx_status_t fidl_directory_readdirents(void* ctx, uint64_t max_out, fidl_txn_t* txn) {
+    return fuchsia_io_DirectoryReadDirents_reply(txn, ZX_ERR_NOT_SUPPORTED, NULL, 0);
+}
+
+static zx_status_t fidl_directory_rewind(void* ctx, fidl_txn_t* txn) {
+    return fuchsia_io_DirectoryRewind_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+static zx_status_t fidl_directory_gettoken(void* ctx, fidl_txn_t* txn) {
+    return fuchsia_io_DirectoryGetToken_reply(txn, ZX_ERR_NOT_SUPPORTED, ZX_HANDLE_INVALID);
+}
+
+static zx_status_t fidl_directory_rename(void* ctx, const char* src_data,
+                                         size_t src_size, zx_handle_t dst_parent_token,
+                                         const char* dst_data, size_t dst_size,
+                                         fidl_txn_t* txn) {
+    zx_handle_close(dst_parent_token);
+    return fuchsia_io_DirectoryRename_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+static zx_status_t fidl_directory_link(void* ctx, const char* src_data,
+                                       size_t src_size, zx_handle_t dst_parent_token,
+                                       const char* dst_data, size_t dst_size,
+                                       fidl_txn_t* txn) {
+    zx_handle_close(dst_parent_token);
+    return fuchsia_io_DirectoryLink_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+static const fuchsia_io_Directory_ops_t kDirectoryOps = {
+    .Open = fidl_directory_open,
+    .Unlink = fidl_directory_unlink,
+    .ReadDirents = fidl_directory_readdirents,
+    .Rewind = fidl_directory_rewind,
+    .GetToken = fidl_directory_gettoken,
+    .Rename = fidl_directory_rename,
+    .Link = fidl_directory_link,
+};
+
+static zx_status_t fidl_file_read(void* ctx, uint64_t count, fidl_txn_t* txn) {
+    devhost_iostate_t* ios = ctx;
+    zx_device_t* dev = ios->dev;
+    if (!CAN_READ(ios)) {
+        return fuchsia_io_FileRead_reply(txn, ZX_ERR_ACCESS_DENIED, NULL, 0);
+    } else if (count > ZXFIDL_MAX_MSG_BYTES) {
+        return fuchsia_io_FileRead_reply(txn, ZX_ERR_INVALID_ARGS, NULL, 0);
     }
-    case ZXFIDL_READ_AT: {
-        if (!CAN_READ(ios)) {
-            return ZX_ERR_ACCESS_DENIED;
-        }
-        fuchsia_io_FileReadAtRequest* request = (fuchsia_io_FileReadAtRequest*) hdr;
-        fuchsia_io_FileReadAtResponse* response = (fuchsia_io_FileReadAtResponse*) hdr;
-        void* data = (void*)((uintptr_t)(response) +
-                     FIDL_ALIGN(sizeof(fuchsia_io_FileReadAtResponse)));
-        uint32_t len = request->count;
-        uint64_t offset = request->offset;
-        zx_status_t r = do_sync_io(dev, DO_READ, data, len, offset);
 
-        response->data.count = r;
-        return r > 0 ? ZX_OK : r;
+    uint8_t data[count];
+    size_t actual = 0;
+    zx_status_t r = do_sync_io(dev, DO_READ, data, count, ios->io_off);
+    if (r >= 0) {
+        ios->io_off += r;
+        actual = r;
+        r = ZX_OK;
     }
-    case ZXFIDL_WRITE: {
-        if (!CAN_WRITE(ios)) {
-            return ZX_ERR_ACCESS_DENIED;
-        }
-        fuchsia_io_FileWriteRequest* request = (fuchsia_io_FileWriteRequest*) hdr;
-        fuchsia_io_FileWriteResponse* response = (fuchsia_io_FileWriteResponse*) hdr;
-        void* data = request->data.data;
-        uint32_t len = request->data.count;
+    return fuchsia_io_FileRead_reply(txn, r, data, actual);
+}
 
-        zx_status_t r = do_sync_io(dev, DO_WRITE, data, len, ios->io_off);
-        if (r >= 0) {
-            ios->io_off += r;
-            response->actual = r;
-            r = ZX_OK;
-        }
-        return r;
+static zx_status_t fidl_file_readat(void* ctx, uint64_t count, uint64_t offset, fidl_txn_t* txn) {
+    devhost_iostate_t* ios = ctx;
+    if (!CAN_READ(ios)) {
+        return fuchsia_io_FileReadAt_reply(txn, ZX_ERR_ACCESS_DENIED, NULL, 0);
+    } else if (count > ZXFIDL_MAX_MSG_BYTES) {
+        return fuchsia_io_FileReadAt_reply(txn, ZX_ERR_INVALID_ARGS, NULL, 0);
     }
-    case ZXFIDL_WRITE_AT: {
-        if (!CAN_WRITE(ios)) {
-            return ZX_ERR_ACCESS_DENIED;
-        }
-        fuchsia_io_FileWriteAtRequest* request = (fuchsia_io_FileWriteAtRequest*) hdr;
-        fuchsia_io_FileWriteAtResponse* response = (fuchsia_io_FileWriteAtResponse*) hdr;
-        void* data = request->data.data;
-        uint32_t len = request->data.count;
-        uint64_t offset = request->offset;
 
-        zx_status_t r = do_sync_io(dev, DO_WRITE, data, len, offset);
-        response->actual = r > 0 ? r : 0;
-        return r > 0 ? ZX_OK : r;
+    uint8_t data[count];
+    size_t actual = 0;
+    zx_status_t r = do_sync_io(ios->dev, DO_READ, data, count, offset);
+    if (r >= 0) {
+        actual = r;
+        r = ZX_OK;
     }
-    case ZXFIDL_SEEK: {
-        fuchsia_io_FileSeekRequest* request = (fuchsia_io_FileSeekRequest*) hdr;
-        fuchsia_io_FileSeekResponse* response = (fuchsia_io_FileSeekResponse*) hdr;
+    return fuchsia_io_FileReadAt_reply(txn, r, data, actual);
+}
 
-        static_assert(SEEK_SET == fuchsia_io_SeekOrigin_Start, "");
-        static_assert(SEEK_CUR == fuchsia_io_SeekOrigin_Current, "");
-        static_assert(SEEK_END == fuchsia_io_SeekOrigin_End, "");
+static zx_status_t fidl_file_write(void* ctx, const uint8_t* data, size_t count, fidl_txn_t* txn) {
+    devhost_iostate_t* ios = ctx;
+    if (!CAN_WRITE(ios)) {
+        return fuchsia_io_FileWrite_reply(txn, ZX_ERR_ACCESS_DENIED, 0);
+    }
+    size_t actual = 0;
+    zx_status_t r = do_sync_io(ios->dev, DO_WRITE, (uint8_t*) data, count, ios->io_off);
+    if (r >= 0) {
+        ios->io_off += r;
+        actual = r;
+        r = ZX_OK;
+    }
+    return fuchsia_io_FileWrite_reply(txn, r, actual);
+}
 
-        off_t offset = request->offset;
-        int whence = request->start;
+static zx_status_t fidl_file_writeat(void* ctx, const uint8_t* data, size_t count,
+                                     uint64_t offset, fidl_txn_t* txn) {
+    devhost_iostate_t* ios = ctx;
+    if (!CAN_WRITE(ios)) {
+        return fuchsia_io_FileWriteAt_reply(txn, ZX_ERR_ACCESS_DENIED, 0);
+    }
 
-        size_t end, n;
-        end = dev_op_get_size(dev);
-        switch (whence) {
-        case SEEK_SET:
-            if ((offset < 0) || ((size_t)offset > end)) {
-                return ZX_ERR_INVALID_ARGS;
+    size_t actual = 0;
+    zx_status_t r = do_sync_io(ios->dev, DO_WRITE, (uint8_t*) data, count, offset);
+    if (r >= 0) {
+        actual = r;
+        r = ZX_OK;
+    }
+    return fuchsia_io_FileWriteAt_reply(txn, r, actual);
+}
+
+static zx_status_t fidl_file_seek(void* ctx, int64_t offset, fuchsia_io_SeekOrigin start,
+                                  fidl_txn_t* txn) {
+    devhost_iostate_t* ios = ctx;
+    size_t end, n;
+    end = dev_op_get_size(ios->dev);
+    switch (start) {
+    case fuchsia_io_SeekOrigin_Start:
+        if ((offset < 0) || ((size_t)offset > end)) {
+            goto bad_args;
+        }
+        n = offset;
+        break;
+    case fuchsia_io_SeekOrigin_Current:
+        // TODO: track seekability with flag, don't update off
+        // at all on read/write if not seekable
+        n = ios->io_off + offset;
+        if (offset < 0) {
+            // if negative seek
+            if (n > ios->io_off) {
+                // wrapped around
+                goto bad_args;
             }
-            n = offset;
+        } else {
+            // positive seek
+            if (n < ios->io_off) {
+                // wrapped around
+                goto bad_args;
+            }
+        }
+        break;
+    case fuchsia_io_SeekOrigin_End:
+        n = end + offset;
+        if (offset <= 0) {
+            // if negative or exact-end seek
+            if (n > end) {
+                // wrapped around
+                goto bad_args;
+            }
+        } else {
+            if (n < end) {
+                // wrapped around
+                goto bad_args;
+            }
+        }
+        break;
+    default:
+        goto bad_args;
+    }
+    if (n > end) {
+        // devices may not seek past the end
+        goto bad_args;
+    }
+    ios->io_off = n;
+    return fuchsia_io_FileSeek_reply(txn, ZX_OK, ios->io_off);
+
+bad_args:
+    return fuchsia_io_FileSeek_reply(txn, ZX_ERR_INVALID_ARGS, 0);
+}
+
+static zx_status_t fidl_file_truncate(void* ctx, uint64_t length, fidl_txn_t* txn) {
+    return fuchsia_io_FileTruncate_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+static zx_status_t fidl_file_getflags(void* ctx, fidl_txn_t* txn) {
+    return fuchsia_io_FileGetFlags_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
+}
+
+static zx_status_t fidl_file_setflags(void* ctx, uint32_t flags, fidl_txn_t* txn) {
+    return fuchsia_io_FileSetFlags_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+static zx_status_t fidl_file_getvmo(void* ctx, uint32_t flags, fidl_txn_t* txn) {
+    return fuchsia_io_FileGetVmo_reply(txn, ZX_ERR_NOT_SUPPORTED, ZX_HANDLE_INVALID);
+}
+
+static zx_status_t fidl_file_getvmoat(void* ctx, uint32_t flags, uint64_t offset,
+                                         uint64_t length, fidl_txn_t* txn) {
+    return fuchsia_io_FileGetVmoAt_reply(txn, ZX_ERR_NOT_SUPPORTED, ZX_HANDLE_INVALID);
+}
+
+static const fuchsia_io_File_ops_t kFileOps = {
+    .Read = fidl_file_read,
+    .ReadAt = fidl_file_readat,
+    .Write = fidl_file_write,
+    .WriteAt = fidl_file_writeat,
+    .Seek = fidl_file_seek,
+    .Truncate = fidl_file_truncate,
+    .GetFlags = fidl_file_getflags,
+    .SetFlags = fidl_file_setflags,
+    .GetVmo = fidl_file_getvmo,
+    .GetVmoAt = fidl_file_getvmoat,
+};
+
+static zx_status_t fidl_node_sync(void* ctx, fidl_txn_t* txn) {
+    devhost_iostate_t* ios = ctx;
+    size_t actual;
+    zx_status_t status = do_ioctl(ios->dev, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0, &actual);
+    return fuchsia_io_NodeSync_reply(txn, status);
+}
+
+static zx_status_t fidl_node_getattr(void* ctx, fidl_txn_t* txn) {
+    devhost_iostate_t* ios = ctx;
+    fuchsia_io_NodeAttributes attributes;
+    memset(&attributes, 0, sizeof(attributes));
+    attributes.mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
+    attributes.content_size = dev_op_get_size(ios->dev);
+    attributes.link_count = 1;
+    return fuchsia_io_NodeGetAttr_reply(txn, ZX_OK, &attributes);
+}
+
+static zx_status_t fidl_node_setattr(void* ctx, uint32_t flags,
+                                        const fuchsia_io_NodeAttributes* attributes,
+                                        fidl_txn_t* txn) {
+    return fuchsia_io_NodeSetAttr_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+static zx_status_t fidl_node_ioctl(void* ctx, uint32_t opcode, uint64_t max_out,
+                                   const zx_handle_t* handles_data, size_t handles_count,
+                                   const uint8_t* in_data, size_t in_count,
+                                   fidl_txn_t* txn) {
+    devhost_iostate_t* ios = ctx;
+    char in_buf[FDIO_IOCTL_MAX_INPUT];
+    size_t hsize = handles_count * sizeof(zx_handle_t);
+    if ((in_count > FDIO_IOCTL_MAX_INPUT) || (max_out > ZXFIDL_MAX_MSG_BYTES)) {
+        zx_handle_close_many(handles_data, handles_count);
+        return fuchsia_io_NodeIoctl_reply(txn, ZX_ERR_INVALID_ARGS, NULL, 0,
+                                          NULL, 0);
+    }
+    memcpy(in_buf, in_data, in_count);
+    memcpy(in_buf, handles_data, hsize);
+
+    uint8_t out[max_out];
+    zx_handle_t* out_handles = (zx_handle_t*) out;
+    size_t out_count = 0;
+    zx_status_t r = do_ioctl(ios->dev, opcode, in_buf, in_count, out, max_out, &out_count);
+    size_t out_hcount = 0;
+    if (r >= 0) {
+        switch (IOCTL_KIND(opcode)) {
+        case IOCTL_KIND_GET_HANDLE:
+            out_hcount = 1;
             break;
-        case SEEK_CUR:
-            // TODO: track seekability with flag, don't update off
-            // at all on read/write if not seekable
-            n = ios->io_off + offset;
-            if (offset < 0) {
-                // if negative seek
-                if (n > ios->io_off) {
-                    // wrapped around
-                    return ZX_ERR_INVALID_ARGS;
-                }
-            } else {
-                // positive seek
-                if (n < ios->io_off) {
-                    // wrapped around
-                    return ZX_ERR_INVALID_ARGS;
-                }
-            }
+        case IOCTL_KIND_GET_TWO_HANDLES:
+            out_hcount = 2;
             break;
-        case SEEK_END:
-            n = end + offset;
-            if (offset <= 0) {
-                // if negative or exact-end seek
-                if (n > end) {
-                    // wrapped around
-                    return ZX_ERR_INVALID_ARGS;
-                }
-            } else {
-                if (n < end) {
-                    // wrapped around
-                    return ZX_ERR_INVALID_ARGS;
-                }
-            }
+        case IOCTL_KIND_GET_THREE_HANDLES:
+            out_hcount = 3;
             break;
         default:
-            return ZX_ERR_INVALID_ARGS;
+            out_hcount = 0;
+            break;
         }
-        if (n > end) {
-            // devices may not seek past the end
-            return ZX_ERR_INVALID_ARGS;
-        }
-        ios->io_off = n;
-        response->offset = ios->io_off;
-        return ZX_OK;
     }
-    case ZXFIDL_STAT: {
-        fuchsia_io_NodeGetAttrResponse* response = (fuchsia_io_NodeGetAttrResponse*) hdr;
-        memset(&response->attributes, 0, sizeof(response->attributes));
-        response->attributes.mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
-        response->attributes.content_size = dev_op_get_size(dev);
-        response->attributes.link_count = 1;
-        return ZX_OK;
-    }
-    case ZXFIDL_SYNC: {
-        size_t actual;
-        return do_ioctl(dev, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0, &actual);
-    }
-    case ZXFIDL_IOCTL: {
-        fuchsia_io_NodeIoctlRequest* request = (fuchsia_io_NodeIoctlRequest*) hdr;
-        fuchsia_io_NodeIoctlResponse* response = (fuchsia_io_NodeIoctlResponse*) hdr;
 
-        char in_buf[FDIO_IOCTL_MAX_INPUT];
-        size_t hsize = request->handles.count * sizeof(zx_handle_t);
-        if (hsize + request->in.count > FDIO_IOCTL_MAX_INPUT) {
-            discard_handles(request->handles.data, request->handles.count);
-            return ZX_ERR_INVALID_ARGS;
-        }
-        memcpy(in_buf, request->in.data, request->in.count);
-        memcpy(in_buf, request->handles.data, hsize);
+    return fuchsia_io_NodeIoctl_reply(txn, r, out_handles, out_hcount, out, out_count);
+}
 
-        uint32_t op = request->opcode;
-        void* secondary = (void*)((uintptr_t)(hdr) +
-                FIDL_ALIGN(sizeof(fuchsia_io_NodeIoctlResponse)));
-        response->out.count = 0;
-        zx_status_t r = do_ioctl(dev, op, in_buf, request->in.count,
-                                 secondary, request->max_out, &response->out.count);
-        if (r >= 0) {
-            switch (IOCTL_KIND(op)) {
-            case IOCTL_KIND_GET_HANDLE:
-                response->handles.count = 1;
-                break;
-            case IOCTL_KIND_GET_TWO_HANDLES:
-                response->handles.count = 2;
-                break;
-            case IOCTL_KIND_GET_THREE_HANDLES:
-                response->handles.count = 3;
-                break;
-            default:
-                response->handles.count = 0;
-                break;
-            }
-        }
+static const fuchsia_io_Node_ops_t kNodeOps = {
+    .Sync = fidl_node_sync,
+    .GetAttr = fidl_node_getattr,
+    .SetAttr = fidl_node_setattr,
+    .Ioctl = fidl_node_ioctl,
+};
 
-        // FIDL messages expect to receive "handles" in the secondary object,
-        // followed by "data". Although the space for "handles" is duplicated
-        // in the "data" field, both secondary objects must be present if
-        // any handles are returned.
-        response->handles.data = secondary;
-        response->out.data = secondary + FIDL_ALIGN(sizeof(zx_handle_t) * response->handles.count);
-        if (response->handles.count > 0) {
-            memmove(response->out.data, secondary, response->out.count);
-        }
-        return r;
-    }
-    default:
-        // close inbound handles so they do not leak
+zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie) {
+    fidl_message_header_t* hdr = (fidl_message_header_t*) msg->bytes;
+    if (hdr->ordinal >= fuchsia_io_ObjectCloneOrdinal &&
+        hdr->ordinal <= fuchsia_io_ObjectOnOpenOrdinal) {
+        return fuchsia_io_Object_dispatch(cookie, txn, msg, &kObjectOps);
+    } else if (hdr->ordinal >= fuchsia_io_NodeSyncOrdinal &&
+               hdr->ordinal <= fuchsia_io_NodeIoctlOrdinal) {
+        return fuchsia_io_Node_dispatch(cookie, txn, msg, &kNodeOps);
+    } else if (hdr->ordinal >= fuchsia_io_FileReadOrdinal &&
+               hdr->ordinal <= fuchsia_io_FileGetVmoAtOrdinal) {
+        return fuchsia_io_File_dispatch(cookie, txn, msg, &kFileOps);
+    } else if (hdr->ordinal >= fuchsia_io_DirectoryOpenOrdinal &&
+               hdr->ordinal <= fuchsia_io_DirectoryLinkOrdinal) {
+        return fuchsia_io_Directory_dispatch(cookie, txn, msg, &kDirectoryOps);
+    } else {
+        fprintf(stderr, "devhost: Unsupported FIDL operation: 0x%x\n", hdr->ordinal);
         zx_handle_close_many(msg->handles, msg->num_handles);
         return ZX_ERR_NOT_SUPPORTED;
     }

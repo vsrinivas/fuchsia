@@ -44,4 +44,7 @@ MODULE_LIBS := \
     system/ulib/unittest \
     system/ulib/zircon \
 
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-io \
+
 include make/module.mk

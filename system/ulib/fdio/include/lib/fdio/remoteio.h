@@ -58,18 +58,11 @@ __BEGIN_CDECLS
 #define ZXFIDL_MAX_MSG_BYTES    (FDIO_CHUNK_SIZE * 2)
 #define ZXFIDL_MAX_MSG_HANDLES  (FDIO_MAX_HANDLES)
 
-// dispatcher callback return code that there were no messages to read
-#define ERR_DISPATCHER_NO_WORK ZX_ERR_SHOULD_WAIT
-
-// indicates message handed off to another server
-// used by rio remote handler for deferred reply pipe completion
-#define ERR_DISPATCHER_INDIRECT ZX_ERR_NEXT
-
 // indicates the callback is taking responsibility for the
 // channel receiving incoming messages.
 //
 // Unlike ERR_DISPATCHER_INDIRECT, this callback is propagated
-// through the zxrio_handlers.
+// through the zxfidl_handlers.
 #define ERR_DISPATCHER_ASYNC ZX_ERR_ASYNC
 
 // indicates that this was a close message and that no further
@@ -88,27 +81,24 @@ __BEGIN_CDECLS
 // - otherwise, the return value is treated as the status to send
 //   in the rpc response, and msg.len indicates how much valid data
 //   to send.  On error return msg.len will be set to 0.
-typedef zx_status_t (*zxrio_cb_t)(fidl_msg_t* msg, void* cookie);
+typedef zx_status_t (*zxfidl_cb_t)(fidl_msg_t* msg, fidl_txn_t* txn,
+                                   void* cookie);
 
-// a fdio_dispatcher_handler suitable for use with a fdio_dispatcher
-zx_status_t zxrio_handler(zx_handle_t h, zxrio_cb_t cb, void* cookie);
+typedef struct zxfidl_connection {
+    fidl_txn_t txn;
+    zx_handle_t channel;
+    zx_txid_t txid;
+} zxfidl_connection_t;
 
-// the underlying handling for regular rpc or for a synthetic close,
-// called by zxrio_handler.  handle_rpc() processes a single message
-// from the provideded channel, returning a negative error value on
-// error or 1 on clean shutdown (indicating no further callbacks
-// should be made).  handle_close() processes a "synthetic" close
-// event (eg, channel was remotely closed), and neither function
-// should be called again after handle_close().
-zx_status_t zxrio_handle_rpc(zx_handle_t h, zxrio_cb_t cb, void* cookie);
+static_assert(offsetof(zxfidl_connection_t, txn) == 0,
+              "Connection must transparently be a fidl_txn");
 
-// Invokes the callback with a "fake" close message. Useful when the
-// client abruptly closes a handle without an explicit close message;
-// this function allows the server to react the same way as a "clean" close.
-zx_status_t zxrio_handle_close(zxrio_cb_t cb, void* cookie);
+inline zxfidl_connection_t zxfidl_txn_copy(fidl_txn_t* txn) {
+    return *(zxfidl_connection_t*) txn;
+}
 
-// Transmits a response message |msg| back to the client on the peer end of |h|.
-zx_status_t zxrio_write_response(zx_handle_t h, zx_status_t status, fidl_msg_t* msg);
+// A fdio_dispatcher_handler suitable for use with a fdio_dispatcher.
+zx_status_t zxfidl_handler(zx_handle_t h, zxfidl_cb_t cb, void* cookie);
 
 // OPEN and CLONE ops do not return a reply
 // Instead they receive a channel handle that they write their status

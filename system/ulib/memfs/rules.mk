@@ -42,6 +42,9 @@ MODULE_LIBS := \
     system/ulib/fdio \
     system/ulib/zircon \
 
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-io \
+
 MODULE_PACKAGE := src
 
 include make/module.mk
@@ -82,6 +85,9 @@ MODULE_LIBS := \
     system/ulib/fdio \
     system/ulib/trace-engine \
     system/ulib/zircon \
+
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-io \
 
 MODULE_SO_NAME := $(MODULE_NAME)
 MODULE_EXPORT := so

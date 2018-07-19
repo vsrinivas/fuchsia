@@ -88,7 +88,7 @@ typedef struct devhost_iostate {
 } devhost_iostate_t;
 
 devhost_iostate_t* create_devhost_iostate(zx_device_t* dev);
-zx_status_t devhost_rio_handler(fidl_msg_t* msg, void* cookie);
+zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie);
 
 zx_status_t devhost_start_iostate(devhost_iostate_t* ios, zx_handle_t h);
 

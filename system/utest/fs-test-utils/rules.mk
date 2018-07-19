@@ -43,6 +43,9 @@ MODULE_LIBS := \
     system/ulib/trace-engine \
     system/ulib/zircon \
 
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-io \
+
 MODULE_COMPILEFLAGS := \
     -Isystem/ulib/fs-test/include \
 

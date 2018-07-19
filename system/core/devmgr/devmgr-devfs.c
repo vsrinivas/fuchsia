@@ -15,6 +15,7 @@
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/remoteio.h>
 #include <lib/fdio/util.h>
+#include <lib/fidl/coding.h>
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -80,7 +81,7 @@ static devnode_t root_devnode = {
 
 static devnode_t* class_devnode;
 
-static zx_status_t dc_rio_handler(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
+static zx_status_t dc_fidl_handler(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
 static devnode_t* devfs_mkdir(devnode_t* parent, const char* name);
 
 #define PNMAX 16
@@ -142,7 +143,7 @@ static zx_status_t iostate_create(devnode_t* dn, zx_handle_t h) {
 
     ios->ph.handle = h;
     ios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-    ios->ph.func = dc_rio_handler;
+    ios->ph.func = dc_fidl_handler;
     ios->devnode = dn;
     list_add_tail(&dn->iostate, &ios->node);
 
@@ -228,6 +229,7 @@ static void devfs_notify(devnode_t* dn, const char* name, unsigned op) {
 static zx_status_t devfs_watch(devnode_t* dn, zx_handle_t h, uint32_t mask) {
     watcher_t* watcher = calloc(1, sizeof(watcher_t));
     if (watcher == NULL) {
+        zx_handle_close(h);
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -552,23 +554,8 @@ fail:
         return;
     }
 
-    // Otherwise we will pass the request on to the remote
-    char bytes[ZXFIDL_MAX_MSG_BYTES];
-    fuchsia_io_DirectoryOpenRequest* request = (fuchsia_io_DirectoryOpenRequest*) &bytes;
-    memset(request, 0, sizeof(fuchsia_io_DirectoryOpenRequest));
-    request->hdr.ordinal = ZXFIDL_OPEN;
-    request->path.size = strlen(path);
-    request->path.data = (char*) FIDL_ALLOC_PRESENT;
-    request->flags = flags;
-    request->object = FIDL_HANDLE_PRESENT;
-    void* secondary = (void*)((uintptr_t)(request) +
-                              FIDL_ALIGN(sizeof(fuchsia_io_DirectoryOpenRequest)));
-    memcpy(secondary, path, request->path.size);
-    uint32_t msize = FIDL_ALIGN(sizeof(fuchsia_io_DirectoryOpenRequest)) +
-                     FIDL_ALIGN(request->path.size);
-    zx_channel_write(dn->device->hrpc, 0, bytes, msize, &h, 1);
-    // If zx_channel_write fails, the kernel will close h, which will cause the
-    // client to observe the error.
+    // Otherwise we will pass the request on to the remote.
+    fuchsia_io_DirectoryOpen(dn->device->hrpc, flags, 0, path, strlen(path), h);
 }
 
 // Double-check that OPEN (the only message we forward)
@@ -627,7 +614,28 @@ static zx_status_t devfs_readdir(devnode_t* dn, uint64_t* _ino, void* data, size
     return ptr - data;
 }
 
-static zx_status_t devfs_rio_handler(fidl_msg_t* msg, void* cookie) {
+// Helper macros for |devfs_fidl_handler| which make it easier
+// avoid typing generated names.
+
+// Decode the incoming request, returning an error and consuming
+// all handles on error.
+#define DECODE_REQUEST(MSG, METHOD)                                     \
+    do {                                                                \
+        zx_status_t r;                                                  \
+        if ((r = fidl_decode_msg(&fuchsia_io_ ## METHOD ##RequestTable, \
+                                 msg, NULL)) != ZX_OK) {                \
+            return r;                                                   \
+        }                                                               \
+    } while(0);
+
+// Define a variable |request| from the incoming method, of
+// the requested type.
+#define DEFINE_REQUEST(MSG, METHOD)                     \
+    fuchsia_io_ ## METHOD ## Request* request =         \
+        (fuchsia_io_ ## METHOD ## Request*) MSG->bytes;
+
+
+static zx_status_t devfs_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie) {
     iostate_t* ios = cookie;
     devnode_t* dn = ios->devnode;
     if (dn == NULL) {
@@ -639,16 +647,18 @@ static zx_status_t devfs_rio_handler(fidl_msg_t* msg, void* cookie) {
     zx_status_t r;
     switch (hdr->ordinal) {
     case ZXFIDL_CLONE: {
-        fuchsia_io_ObjectCloneRequest* request = (fuchsia_io_ObjectCloneRequest*) hdr;
+        DECODE_REQUEST(msg, ObjectClone);
+        DEFINE_REQUEST(msg, ObjectClone);
         zx_handle_t h = request->object;
         uint32_t flags = request->flags;
         char path[PATH_MAX];
         path[0] = '\0';
         devfs_open(dn, h, path, flags | ZX_FS_FLAG_NOREMOTE);
-        return ERR_DISPATCHER_INDIRECT;
+        return ZX_OK;
     }
     case ZXFIDL_OPEN: {
-        fuchsia_io_DirectoryOpenRequest* request = (fuchsia_io_DirectoryOpenRequest*) hdr;
+        DECODE_REQUEST(msg, DirectoryOpen);
+        DEFINE_REQUEST(msg, DirectoryOpen);
         uint32_t len = request->path.size;
         char* path = request->path.data;
         zx_handle_t h = request->object;
@@ -659,11 +669,10 @@ static zx_status_t devfs_rio_handler(fidl_msg_t* msg, void* cookie) {
             path[len] = '\0';
             devfs_open(dn, h, path, flags);
         }
-        return ERR_DISPATCHER_INDIRECT;
+        return ZX_OK;
     }
     case ZXFIDL_STAT: {
-        fuchsia_io_NodeGetAttrResponse* response = (fuchsia_io_NodeGetAttrResponse*) hdr;
-
+        DECODE_REQUEST(msg, NodeGetAttr);
         uint32_t mode;
         if (devnode_is_dir(dn)) {
             mode = V_TYPE_DIR | V_IRUSR | V_IWUSR;
@@ -671,85 +680,71 @@ static zx_status_t devfs_rio_handler(fidl_msg_t* msg, void* cookie) {
             mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
         }
 
-        memset(&response->attributes, 0, sizeof(response->attributes));
-        response->attributes.mode = mode;
-        response->attributes.content_size = 0;
-        response->attributes.link_count = 1;
-        response->attributes.id = dn->ino;
-        return ZX_OK;
+        fuchsia_io_NodeAttributes attributes;
+        memset(&attributes, 0, sizeof(attributes));
+        attributes.mode = mode;
+        attributes.content_size = 0;
+        attributes.link_count = 1;
+        attributes.id = dn->ino;
+        return fuchsia_io_NodeGetAttr_reply(txn, ZX_OK, &attributes);
     }
     case ZXFIDL_REWIND: {
+        DECODE_REQUEST(msg, DirectoryRewind);
         ios->readdir_ino = 0;
-        return ZX_OK;
+        return fuchsia_io_DirectoryRewind_reply(txn, ZX_OK);
     }
     case ZXFIDL_READDIR: {
-        fuchsia_io_DirectoryReadDirentsRequest* request =
-            (fuchsia_io_DirectoryReadDirentsRequest*) hdr;
-        fuchsia_io_DirectoryReadDirentsResponse* response =
-            (fuchsia_io_DirectoryReadDirentsResponse*) hdr;
-        void* data = (void*)((uintptr_t)(response) +
-                     FIDL_ALIGN(sizeof(fuchsia_io_DirectoryReadDirentsResponse)));
-        uint32_t max_out = request->max_out;
+        DECODE_REQUEST(msg, DirectoryReadDirents);
+        DEFINE_REQUEST(msg, DirectoryReadDirents);
 
-        if (max_out > FDIO_CHUNK_SIZE) {
-            return ZX_ERR_INVALID_ARGS;
+        if (request->max_out > ZXFIDL_MAX_MSG_BYTES) {
+            return fuchsia_io_DirectoryReadDirents_reply(txn, ZX_ERR_INVALID_ARGS, NULL, 0);
         }
-        r = devfs_readdir(dn, &ios->readdir_ino, data, max_out);
+
+        uint8_t data[request->max_out];
+        size_t actual = 0;
+        r = devfs_readdir(dn, &ios->readdir_ino, data, request->max_out);
         if (r >= 0) {
-            response->dirents.count = r;
+            actual = r;
             r = ZX_OK;
         }
-        return r;
+        return fuchsia_io_DirectoryReadDirents_reply(txn, r, data, actual);
     }
     case ZXFIDL_IOCTL: {
-        fuchsia_io_NodeIoctlRequest* request = (fuchsia_io_NodeIoctlRequest*) hdr;
-        fuchsia_io_NodeIoctlResponse* response = (fuchsia_io_NodeIoctlResponse*) hdr;
-        void* secondary = (void*)((uintptr_t)(hdr) +
-                FIDL_ALIGN(sizeof(fuchsia_io_NodeIoctlResponse)));
+        DECODE_REQUEST(msg, NodeIoctl);
+        DEFINE_REQUEST(msg, NodeIoctl);
 
-        uint32_t op = request->opcode;
-        void* in_data = request->in.data;
-        uint32_t inlen = request->in.count;
-        void* out_data = secondary;
-        uint32_t outmax = request->max_out;
-        zx_handle_t* handles = (zx_handle_t*) request->handles.data;
-
-        switch (op) {
+        switch (request->opcode) {
         case IOCTL_VFS_WATCH_DIR: {
-            vfs_watch_dir_t* wd = (vfs_watch_dir_t*) in_data;
-            if ((inlen != sizeof(vfs_watch_dir_t)) ||
+            vfs_watch_dir_t* wd = (vfs_watch_dir_t*) request->in.data;
+            zx_handle_t* handles = (zx_handle_t*) request->handles.data;
+            if ((request->in.count != sizeof(vfs_watch_dir_t)) ||
                 (wd->options != 0) ||
-                (wd->mask & (~VFS_WATCH_MASK_ALL))) {
-                r = ZX_ERR_INVALID_ARGS;
-            } else {
-                r = devfs_watch(dn, handles[0], wd->mask);
+                (wd->mask & (~VFS_WATCH_MASK_ALL)) ||
+                request->handles.count != 1) {
+                zx_handle_close_many(msg->handles, msg->num_handles);
+                return fuchsia_io_NodeIoctl_reply(txn, ZX_ERR_INVALID_ARGS, NULL, 0, NULL, 0);
             }
-            if (r != ZX_OK) {
-                zx_handle_close(handles[0]);
-            }
-            r = r > 0 ? ZX_OK : r;
-            response->handles.count = 0;
-            response->out.count = 0;
-            return r;
+            r = devfs_watch(dn, handles[0], wd->mask);
+            return fuchsia_io_NodeIoctl_reply(txn, r, NULL, 0, NULL, 0);
         }
         case IOCTL_VFS_QUERY_FS: {
             const char* devfs_name = "devfs";
-            if (outmax < sizeof(vfs_query_info_t) + strlen(devfs_name)) {
-                return ZX_ERR_INVALID_ARGS;
+            if ((request->max_out < sizeof(vfs_query_info_t) + strlen(devfs_name)) ||
+                (request->handles.count != 0)) {
+                zx_handle_close_many(msg->handles, msg->num_handles);
+                return fuchsia_io_NodeIoctl_reply(txn, ZX_ERR_INVALID_ARGS, NULL, 0, NULL, 0);
             }
-            vfs_query_info_t* info = (vfs_query_info_t*) out_data;
+            uint8_t out[request->max_out];
+            vfs_query_info_t* info = (vfs_query_info_t*) out;
             memset(info, 0, sizeof(*info));
             memcpy(info->name, devfs_name, strlen(devfs_name));
             size_t outlen = sizeof(vfs_query_info_t) + strlen(devfs_name);
-            response->handles.count = 0;
-            response->out.count = outlen;
-            response->out.data = secondary;
-            r = ZX_OK;
-            return r;
+            return fuchsia_io_NodeIoctl_reply(txn, ZX_OK, NULL, 0, out, outlen);
         }
         default:
             zx_handle_close_many(msg->handles, msg->num_handles);
-            return ZX_ERR_NOT_SUPPORTED;
+            return fuchsia_io_NodeIoctl_reply(txn, ZX_ERR_NOT_SUPPORTED, NULL, 0, NULL, 0);
         }
     }
     }
@@ -759,19 +754,19 @@ static zx_status_t devfs_rio_handler(fidl_msg_t* msg, void* cookie) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t dc_rio_handler(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+static zx_status_t dc_fidl_handler(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
     iostate_t* ios = containerof(ph, iostate_t, ph);
 
     zx_status_t r;
     if (signals & ZX_CHANNEL_READABLE) {
-        if ((r = zxrio_handle_rpc(ph->handle, devfs_rio_handler, ios)) == ZX_OK) {
+        if ((r = zxfidl_handler(ph->handle, devfs_fidl_handler, ios)) == ZX_OK) {
             return ZX_OK;
         }
     } else if (signals & ZX_CHANNEL_PEER_CLOSED) {
-        zxrio_handle_close(devfs_rio_handler, ios);
+        zxfidl_handler(ZX_HANDLE_INVALID, devfs_fidl_handler, ios);
         r = ZX_ERR_STOP;
     } else {
-        printf("dc_rio_handler: invalid signals %x\n", signals);
+        printf("dc_fidl_handler: invalid signals %x\n", signals);
         exit(0);
     }
 

@@ -47,75 +47,6 @@ static_assert((POLLOUT << POLL_SHIFT) == DEVICE_SIGNAL_WRITABLE, "");
 static_assert((POLLERR << POLL_SHIFT) == DEVICE_SIGNAL_ERROR, "");
 static_assert((POLLHUP << POLL_SHIFT) == DEVICE_SIGNAL_HANGUP, "");
 
-static void discard_handles(zx_handle_t* handles, unsigned count) {
-    while (count-- > 0) {
-        zx_handle_close(*handles++);
-    }
-}
-
-zx_status_t zxrio_handle_rpc(zx_handle_t h, zxrio_cb_t cb, void* cookie) {
-    char bytes[ZXFIDL_MAX_MSG_BYTES];
-    zx_handle_t handles[ZXFIDL_MAX_MSG_HANDLES];
-    fidl_msg_t msg = {
-        .bytes = bytes,
-        .handles = handles,
-        .num_bytes = countof(bytes),
-        .num_handles = countof(handles),
-    };
-    zx_status_t r = zxrio_read_request(h, &msg);
-    if (r != ZX_OK) {
-        return r;
-    }
-    const fidl_message_header_t* hdr = (fidl_message_header_t*) msg.bytes;
-    bool is_close = (hdr->ordinal == ZXFIDL_CLOSE);
-
-    r = cb(&msg, cookie);
-    switch (r) {
-    case ERR_DISPATCHER_INDIRECT:
-        // callback is handling the reply itself
-        // and took ownership of the reply handle
-        return ZX_OK;
-    case ERR_DISPATCHER_ASYNC:
-        // Same as the indirect case, but also identify that
-        // the callback will asynchronously re-trigger the
-        // dispatcher.
-        return ERR_DISPATCHER_ASYNC;
-    }
-
-    r = zxrio_write_response(h, r, &msg);
-
-    if (is_close) {
-        // signals to not perform a close callback
-        return ERR_DISPATCHER_DONE;
-    } else {
-        return r;
-    }
-}
-
-zx_status_t zxrio_handle_close(zxrio_cb_t cb, void* cookie) {
-    fuchsia_io_ObjectCloseRequest request;
-    memset(&request, 0, sizeof(request));
-    request.hdr.ordinal = ZXFIDL_CLOSE;
-    fidl_msg_t msg = {
-        .bytes = &request,
-        .handles = NULL,
-        .num_bytes = sizeof(request),
-        .num_handles = 0u,
-    };
-
-    // Remote side was closed.
-    cb(&msg, cookie);
-    return ERR_DISPATCHER_DONE;
-}
-
-zx_status_t zxrio_handler(zx_handle_t h, zxrio_cb_t cb, void* cookie) {
-    if (h == ZX_HANDLE_INVALID) {
-        return zxrio_handle_close(cb, cookie);
-    } else {
-        return zxrio_handle_rpc(h, cb, cookie);
-    }
-}
-
 zx_handle_t zxrio_handle(zxrio_t* rio) {
     return rio->h;
 }
@@ -697,13 +628,13 @@ bind:
     *fd_out = fd;
     return ZX_OK;
 fail:
-    discard_handles(handles, hcount);
+    zx_handle_close_many(handles, hcount);
     return r;
 }
 
 zx_status_t fdio_from_handles(zx_handle_t handle, zxrio_object_info_t* info,
                               fdio_t** out) {
-    // All failure cases which require discard_handles set r and break
+    // All failure cases which discard handles set r and break
     // to the end. All other cases in which handle ownership is moved
     // on return locally.
     zx_status_t r;

@@ -15,6 +15,7 @@
 #include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
+#include <fuchsia/io/c/fidl.h>
 #include <lib/zx/event.h>
 #include <zircon/fidl.h>
 
@@ -63,6 +64,47 @@ public:
     // Must be called at most once in the lifetime of the connection.
     zx_status_t Serve();
 
+    // Object Operations.
+    zx_status_t ObjectClone(uint32_t flags, zx_handle_t object);
+    zx_status_t ObjectClose(fidl_txn_t* txn);
+    zx_status_t ObjectBind(const char* interface_name_data, size_t interface_name_size);
+    zx_status_t ObjectDescribe(fidl_txn_t* txn);
+
+    // Node Operations.
+    zx_status_t NodeSync(fidl_txn_t* txn);
+    zx_status_t NodeGetAttr(fidl_txn_t* txn);
+    zx_status_t NodeSetAttr(uint32_t flags,
+                            const fuchsia_io_NodeAttributes* attributes,
+                            fidl_txn_t* txn);
+    zx_status_t NodeIoctl(uint32_t opcode, uint64_t max_out,
+                          const zx_handle_t* handles_data, size_t handles_count,
+                          const uint8_t* in_data, size_t in_count, fidl_txn_t* txn);
+
+    // File Operations.
+    zx_status_t FileRead(uint64_t count, fidl_txn_t* txn);
+    zx_status_t FileReadAt(uint64_t count, uint64_t offset, fidl_txn_t* txn);
+    zx_status_t FileWrite(const uint8_t* data_data, size_t data_count, fidl_txn_t* txn);
+    zx_status_t FileWriteAt(const uint8_t* data_data, size_t data_count,
+                            uint64_t offset, fidl_txn_t* txn);
+    zx_status_t FileSeek(int64_t offset, fuchsia_io_SeekOrigin start, fidl_txn_t* txn);
+    zx_status_t FileTruncate(uint64_t length, fidl_txn_t* txn);
+    zx_status_t FileGetFlags(fidl_txn_t* txn);
+    zx_status_t FileSetFlags(uint32_t flags, fidl_txn_t* txn);
+    zx_status_t FileGetVmo(uint32_t flags, fidl_txn_t* txn);
+    zx_status_t FileGetVmoAt(uint32_t flags, uint64_t offset, uint64_t length, fidl_txn_t* txn);
+
+    // Directory Operations.
+    zx_status_t DirectoryOpen(uint32_t flags, uint32_t mode, const char* path_data,
+                              size_t path_size, zx_handle_t object);
+    zx_status_t DirectoryUnlink(const char* path_data, size_t path_size, fidl_txn_t* txn);
+    zx_status_t DirectoryReadDirents(uint64_t max_out, fidl_txn_t* txn);
+    zx_status_t DirectoryRewind(fidl_txn_t* txn);
+    zx_status_t DirectoryGetToken(fidl_txn_t* txn);
+    zx_status_t DirectoryRename(const char* src_data, size_t src_size, zx_handle_t dst_parent_token,
+                                const char* dst_data, size_t dst_size, fidl_txn_t* txn);
+    zx_status_t DirectoryLink(const char* src_data, size_t src_size, zx_handle_t dst_parent_token,
+                              const char* dst_data, size_t dst_size, fidl_txn_t* txn);
+
 private:
     void HandleSignals(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                        const zx_packet_signal_t* signal);
@@ -78,8 +120,8 @@ private:
     // and has been opened.
     void CallClose();
 
-    static zx_status_t HandleMessageThunk(fidl_msg_t* msg, void* cookie);
-    zx_status_t HandleMessage(fidl_msg_t* msg);
+    static zx_status_t HandleMessageThunk(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie);
+    zx_status_t HandleMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
     bool is_open() const { return wait_.object() != ZX_HANDLE_INVALID; }
     void set_closed() { wait_.set_object(ZX_HANDLE_INVALID); }

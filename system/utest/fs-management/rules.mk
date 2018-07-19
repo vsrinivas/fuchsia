@@ -35,6 +35,9 @@ MODULE_STATIC_LIBS := \
     system/ulib/zx \
     system/ulib/zxcpp \
 
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-io
+
 MODULE_LIBS := \
     system/ulib/async.default \
     system/ulib/fs-management \
