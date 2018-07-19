@@ -71,6 +71,23 @@ struct ScanRequest {
 
 // MLME-SCAN.confirm (IEEE Std 802.11-2016 6.3.3.3)
 
+// IEEE Std 802.11-2016, 9.4.1.4
+struct CapabilityInfo {
+    bool ess;
+    bool ibss;
+    bool cf_pollable;
+    bool cf_poll_req;
+    bool privacy;
+    bool short_preamble;
+    bool spectrum_mgmt;
+    bool qos;
+    bool short_slot_time;
+    bool apsd;
+    bool radio_msmt;
+    bool delayed_block_ack;
+    bool immediate_block_ack;
+};
+
 enum MaxMpduLen : uint8 {
     OCTETS_3895 = 0;
     OCTETS_7991 = 1;
@@ -160,6 +177,8 @@ struct BSSDescription {
     uint8 dtim_period;
     uint64 timestamp;
     uint64 local_time;
+
+    CapabilityInfo cap;
 
     // TODO(hahnr): This field represents an IE and should thus be named RSNE.
     vector<uint8>? rsn;

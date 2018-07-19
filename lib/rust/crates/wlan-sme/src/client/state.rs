@@ -318,6 +318,8 @@ fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescription {
 
         rsn: d.rsn.clone(),
 
+        cap: fidl_mlme::CapabilityInfo { ..d.cap },
+
         vht_cap: d.vht_cap.as_ref().map(|v| Box::new(clone_vht_capabilities(v))),
         vht_op:  d.vht_op.as_ref().map(|v| Box::new(clone_vht_operation(v))),
 

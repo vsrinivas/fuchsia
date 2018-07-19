@@ -14,12 +14,31 @@ pub fn fake_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
         dtim_period: 100,
         timestamp: 0,
         local_time: 0,
+        cap: fidl_mlme::CapabilityInfo {
+            ess: false,
+            ibss: false,
+            cf_pollable: false,
+            cf_poll_req: false,
+            privacy: false,
+            short_preamble: false,
+            spectrum_mgmt: false,
+            qos: false,
+            short_slot_time: false,
+            apsd: false,
+            radio_msmt: false,
+            delayed_block_ack: false,
+            immediate_block_ack: false,
+        },
         rsn: None,
         vht_cap: None,
         vht_op: None,
-        chan: fidl_mlme::WlanChan { primary: 1, secondary80: 0, cbw: fidl_mlme::Cbw::Cbw20 },
+        chan: fidl_mlme::WlanChan {
+            primary: 1,
+            secondary80: 0,
+            cbw: fidl_mlme::Cbw::Cbw20,
+        },
         rssi_dbm: 0,
         rcpi_dbmh: 0,
-        rsni_dbh: 0
+        rsni_dbh: 0,
     }
 }
