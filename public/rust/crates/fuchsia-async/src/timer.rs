@@ -182,4 +182,53 @@ mod test {
             Either::Right(_) => panic!("wrong timer fired"),
         }
     }
+
+    #[test]
+    fn fires_after_timeout() {
+        let mut exec = Executor::new().unwrap();
+        let deadline = 5.seconds().after_now();
+        let mut future = Timer::<Never>::new(deadline);
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut future));
+        assert_eq!(Some(deadline), exec.wake_next_timer());
+        assert_eq!(Ok(Async::Ready(())), exec.run_until_stalled(&mut future));
+    }
+
+    #[test]
+    fn interval() {
+        let mut exec = Executor::new().unwrap();
+        let start = 0.seconds().after_now();
+
+        let counter = Arc::new(::std::sync::atomic::AtomicUsize::new(0));
+        let mut future = {
+            let counter = counter.clone();
+            Interval::<Never>::new(5.seconds())
+                .for_each(move |()| {
+                    counter.fetch_add(1, Ordering::SeqCst);
+                    Ok(())
+                })
+                .map(|_stream| ())
+        };
+
+        // Poll for the first time before the timer runs
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut future));
+        assert_eq!(0, counter.load(Ordering::SeqCst));
+
+        // Pretend to wait until the next timer
+        let first_deadline = exec.wake_next_timer().expect("Expected a pending timeout (1)");
+        assert!(first_deadline >= start + 5.seconds());
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut future));
+        assert_eq!(1, counter.load(Ordering::SeqCst));
+
+        // Polling again before the timer runs shouldn't produce another item from the stream
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut future));
+        assert_eq!(1, counter.load(Ordering::SeqCst));
+
+        // "Wait" until the next timeout and poll again: expect another item from the stream
+        let second_deadline = exec.wake_next_timer().expect("Expected a pending timeout (2)");
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut future));
+        assert_eq!(2, counter.load(Ordering::SeqCst));
+
+        assert_eq!(second_deadline, first_deadline + 5.seconds());
+    }
+
 }

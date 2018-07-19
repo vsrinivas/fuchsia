@@ -256,6 +256,28 @@ impl Executor {
         }
     }
 
+    /// Wake up the next task waiting for a timer, if any, and return the time for which the
+    /// timer was scheduled.
+    ///
+    /// This is intended for use in test code in conjunction with `run_until_stalled`.
+    /// For example, here is how one could test that the Timer future fires after the given
+    /// timeout:
+    ///
+    ///     let deadline = 5.seconds().after_now();
+    ///     let mut future = Timer::<Never>::new(deadline);
+    ///     assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut future));
+    ///     assert_eq!(Some(deadline), exec.wake_next_timer());
+    ///     assert_eq!(Ok(Async::Ready(())), exec.run_until_stalled(&mut future));
+    pub fn wake_next_timer(&mut self) -> Option<zx::Time> {
+        with_local_timer_heap(|timer_heap| {
+            let next_timer = timer_heap.pop();
+            if let Some(waker) = &next_timer {
+                waker.wake();
+            }
+            next_timer.map(|waker| waker.time)
+        })
+    }
+
     /// Run a single future to completion using multiple threads.
     // Takes `&mut self` to ensure that only one thread-manager is running at a time.
     pub fn run<F>(&mut self, future: F, num_threads: usize)
