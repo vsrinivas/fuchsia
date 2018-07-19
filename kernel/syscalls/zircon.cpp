@@ -160,8 +160,17 @@ zx_status_t sys_eventpair_create(uint32_t options,
     return result;
 }
 
-zx_status_t sys_log_create(uint32_t options, user_out_handle* out) {
+zx_status_t sys_debuglog_create(zx_handle_t rsrc, uint32_t options,
+                                user_out_handle* out) {
     LTRACEF("options 0x%x\n", options);
+
+    // TODO(ZX-2184) Require a non-INVALID handle.
+    if (rsrc != ZX_HANDLE_INVALID) {
+        // TODO(ZX-971): finer grained validation
+        zx_status_t status = validate_resource(rsrc, ZX_RSRC_KIND_ROOT);
+        if (status != ZX_OK)
+            return status;
+    }
 
     // create a Log dispatcher
     fbl::RefPtr<Dispatcher> dispatcher;
@@ -178,19 +187,6 @@ zx_status_t sys_log_create(uint32_t options, user_out_handle* out) {
 
     // create a handle and attach the dispatcher to it
     return out->make(fbl::move(dispatcher), rights);
-}
-
-zx_status_t sys_debuglog_create(zx_handle_t rsrc, uint32_t options,
-                                user_out_handle* out) {
-    // TODO(ZX-2184) Require a non-INVALID handle.
-    if (rsrc != ZX_HANDLE_INVALID) {
-        // TODO(ZX-971): finer grained validation
-        zx_status_t status = validate_resource(rsrc, ZX_RSRC_KIND_ROOT);
-        if (status != ZX_OK)
-            return status;
-    }
-
-    return sys_log_create(options, out);
 }
 
 zx_status_t sys_debuglog_write(zx_handle_t log_handle, uint32_t options,

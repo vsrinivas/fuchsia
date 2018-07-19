@@ -9,7 +9,7 @@
 namespace zx {
 
 zx_status_t log::create(uint32_t flags, log* result) {
-    return zx_log_create(flags, result->reset_and_get_address());
+    return zx_debuglog_create(ZX_HANDLE_INVALID, flags, result->reset_and_get_address());
 }
 
 } // namespace zx

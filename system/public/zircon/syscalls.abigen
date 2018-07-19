@@ -511,10 +511,6 @@ syscall futex_wake_handle_close_thread_exit vdsocall noreturn
 
 # Logging
 
-syscall log_create
-    (options: uint32_t)
-    returns (zx_status_t, out: zx_handle_t handle_acquire);
-
 syscall log_write
     (handle: zx_handle_t, len: uint32_t, buffer: any[len] IN, options: uint32_t)
     returns (zx_status_t);
