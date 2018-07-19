@@ -97,7 +97,7 @@ if (current_toolchain != shlib_toolchain) {
       "../${dep}",
       % endfor
       % for dep in sorted(data.fidl_deps):
-      "../../fidl/${dep}",
+      "../../fidl/${dep}_c",
       % endfor
     ]
 

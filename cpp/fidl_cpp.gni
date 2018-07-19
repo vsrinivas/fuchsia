@@ -38,8 +38,6 @@ template("fidl_cpp") {
   # toolchain.  Since `fidling/gen` contains nothing but FIDL-generated
   # code, it's not so scary to have that included in code built by multiple
   # other toolchains.
-  fidl_target_gen_dir =
-      get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
   fidl_root_gen_dir =
       get_label_info(":$target_name($fidl_toolchain)", "root_gen_dir")
 
@@ -50,14 +48,16 @@ template("fidl_cpp") {
       ],
       "trim string")
   file_stem = "$fidl_root_gen_dir/$include_stem"
-  coding_tables = "$fidl_target_gen_dir/$target_name.fidl.tables.cc"
 
   # Only do the generation in the base toolchain, since it would
   # be identical in all variants.
   if (current_toolchain == toolchain_variant.base) {
+    fidl_target_gen_dir =
+        get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
+    json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
+
     fidl_root_gen_dir =
         get_label_info(":$target_name($fidl_toolchain)", "root_gen_dir")
-    json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
 
     compiled_action(generation_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
@@ -108,13 +108,13 @@ template("fidl_cpp") {
     sources = [
       "$file_stem.cc",
       "$file_stem.h",
-      coding_tables,
     ]
 
     # Let dependencies use `#include "$file_stem.h"`.
     public_configs = [ "//build/cpp:fidl_gen_config" ]
 
     deps = [
+      ":${main_target_name}_tables",
       ":$generation_target_name(${toolchain_variant.base})",
       ":$main_target_name($fidl_toolchain)",
     ]

@@ -72,6 +72,10 @@ template("fidl") {
     import("//build/cpp/fidl_cpp.gni")
     import("//build/c/fidl_c.gni")
 
+    fidl_tables(target_name) {
+      forward_variables_from(invoker, [ "testonly", "visibility" ])
+    }
+
     # TODO(cramertj): remove pending TC-81.
     fidl_rust_library(target_name) {
       forward_variables_from(invoker, "*")
@@ -87,6 +91,15 @@ template("fidl") {
 
     fidl_c_server(target_name) {
       forward_variables_from(invoker, "*")
+    }
+
+    group("${target_name}_c") {
+      forward_variables_from(invoker, [ "testonly", "visibility" ])
+
+      public_deps = [
+        ":${target_name}_client",
+        ":${target_name}_server",
+      ]
     }
   } else {
     assert(false,

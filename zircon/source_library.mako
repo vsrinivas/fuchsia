@@ -29,7 +29,7 @@ source_set("${data.name}") {
     "../${dep}",
     % endfor
     % for dep in sorted(data.fidl_deps):
-    "../../fidl/${dep}",
+    "../../fidl/${dep}:${dep}_c",
     % endfor
   ]
 
