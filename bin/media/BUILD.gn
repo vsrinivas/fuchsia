@@ -81,11 +81,23 @@ package("tests") {
     "//garnet/bin/media/media_player/player:tests",
     "//garnet/bin/media/media_player/util:tests",
     "//garnet/bin/media/net_media_service:tests",
+    "//garnet/public/lib/media/audio_dfx:lib",
+    "//garnet/public/lib/media/audio_dfx:tests",
     "//garnet/public/lib/media/timeline:tests",
     "//garnet/public/lib/media/transport:tests",
   ]
 
+  libraries = [
+    {
+      name = "libaudio_dfx.so"
+    },
+  ]
+
   tests = [
+    {
+      name = "audio_dfx_tests"
+    },
+
     {
       name = "audio_mixer_tests"
     },
@@ -123,3 +135,4 @@ package("tests") {
     },
   ]
 }
+ 

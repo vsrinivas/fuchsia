@@ -1,0 +1,50 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test.gni")
+
+# This DFX exists for test purposes, to validate the DFX interface.
+shared_library("lib") {
+  testonly = true
+  output_name = "audio_dfx"
+
+  sources = [
+    "audio_device_fx.h",
+    "lib/dfx_base.cc",
+    "lib/dfx_base.h",
+    "lib/dfx_delay.cc",
+    "lib/dfx_delay.h",
+    "lib/dfx_rechannel.h",
+    "lib/dfx_swap.h",
+    "lib/lib_dfx.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fbl",
+   ]
+}
+
+# This standalone test expects to find a libaudio_dfx.so in this package.
+test("tests") {
+  testonly = true
+  output_name = "audio_dfx_tests"
+
+  sources = [
+    "audio_device_fx.h",
+    "lib/dfx_base.h",
+    "lib/dfx_delay.h",
+    "lib/dfx_rechannel.h",
+    "lib/dfx_swap.h",
+    "test/audio_dfx_tests.cc",
+  ]
+
+  libs = [ "zircon" ]
+
+  deps = [
+    "//third_party/googletest:gtest_main",
+  ]
+}
+ 
