@@ -11,7 +11,6 @@
 
 #include <zircon/rights.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_lock.h>
 
 zx_status_t EventPairDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
                                         fbl::RefPtr<Dispatcher>* dispatcher1,

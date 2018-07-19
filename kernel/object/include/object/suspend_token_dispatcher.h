@@ -12,7 +12,8 @@
 
 #include <sys/types.h>
 
-class SuspendTokenDispatcher final : public SoloDispatcher {
+class SuspendTokenDispatcher final :
+    public SoloDispatcher<SuspendTokenDispatcher> {
 public:
     static zx_status_t Create(fbl::RefPtr<ThreadDispatcher> thread,
                               fbl::RefPtr<Dispatcher>* dispatcher,

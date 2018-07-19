@@ -8,12 +8,9 @@
 
 #include <object/dispatcher.h>
 #include <fbl/arena.h>
-#include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <lib/counters.h>
 #include <pow2.h>
-
-using fbl::AutoLock;
 
 namespace {
 
@@ -53,7 +50,6 @@ static_assert(((3 << 30) ^ kHandleGenerationMask ^ kHandleIndexMask) ==
 
 }  // namespace
 
-fbl::Mutex Handle::mutex_;
 fbl::Arena Handle::arena_;
 
 void Handle::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -63,7 +59,7 @@ void Handle::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
 // Returns a new |base_value| based on the value stored in the free
 // arena slot pointed to by |addr|. The new value will be different
 // from the last |base_value| used by this slot.
-uint32_t Handle::GetNewBaseValue(void* addr) TA_REQ(mutex_) {
+uint32_t Handle::GetNewBaseValue(void* addr) TA_REQ(ArenaLock::Get()) {
     // Get the index of this slot within the arena.
     uint32_t handle_index = HandleToIndex(reinterpret_cast<Handle*>(addr));
     DEBUG_ASSERT((handle_index & ~kHandleIndexMask) == 0);
@@ -88,7 +84,7 @@ void* Handle::Alloc(const fbl::RefPtr<Dispatcher>& dispatcher,
                     const char* what, uint32_t* base_value) {
     size_t outstanding_handles;
     {
-        AutoLock lock(&mutex_);
+        Guard<fbl::Mutex> guard{ArenaLock::Get()};
         void* addr = arena_.Alloc();
         outstanding_handles = arena_.DiagnosticCount();
         if (likely(addr)) {
@@ -150,7 +146,7 @@ Handle::Handle(Handle* rhs, zx_rights_t rights, uint32_t base_value)
 // Destroys, but does not free, the Handle, and fixes up its memory to protect
 // against stale pointers to it. Also stashes the Handle's base_value for reuse
 // the next time this slot is allocated.
-void Handle::TearDown() TA_EXCL(mutex_) {
+void Handle::TearDown() TA_EXCL(ArenaLock::Get()) {
     uint32_t old_base_value = base_value();
 
     // Calling the handle dtor can cause many things to happen, so it is
@@ -183,7 +179,7 @@ void Handle::Delete() {
 
     bool zero_handles = false;
     {
-        AutoLock lock(&mutex_);
+        Guard<fbl::Mutex> guard{ArenaLock::Get()};
         zero_handles = disp->decrement_handle_count();
         arena_.Free(this);
     }
@@ -199,7 +195,7 @@ void Handle::Delete() {
 Handle* Handle::FromU32(uint32_t value) TA_NO_THREAD_SAFETY_ANALYSIS {
     uintptr_t handle_addr = IndexToHandle(value & kHandleIndexMask);
     {
-        AutoLock lock(&mutex_);
+        Guard<fbl::Mutex> guard{ArenaLock::Get()};
         if (unlikely(!arena_.in_range(handle_addr)))
             return nullptr;
     }
@@ -208,17 +204,17 @@ Handle* Handle::FromU32(uint32_t value) TA_NO_THREAD_SAFETY_ANALYSIS {
 }
 
 uint32_t Handle::Count(const fbl::RefPtr<const Dispatcher>& dispatcher) {
-    // Handle::mutex_ also guards Dispatcher::handle_count_.
-    AutoLock lock(&mutex_);
+    // Handle::ArenaLock also guards Dispatcher::handle_count_.
+    Guard<fbl::Mutex> guard{ArenaLock::Get()};
     return dispatcher->current_handle_count();
 }
 
 size_t Handle::diagnostics::OutstandingHandles() {
-    AutoLock lock(&mutex_);
+    Guard<fbl::Mutex> guard{ArenaLock::Get()};
     return arena_.DiagnosticCount();
 }
 
 void Handle::diagnostics::DumpTableInfo() {
-    AutoLock lock(&mutex_);
+    Guard<fbl::Mutex> guard{ArenaLock::Get()};
     arena_.Dump();
 }

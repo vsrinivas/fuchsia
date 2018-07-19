@@ -9,6 +9,7 @@
 
 #include <dev/pci_common.h>
 #include <dev/pcie_device.h>
+#include <kernel/lockdep.h>
 #include <kernel/spinlock.h>
 #include <vm/vm_aspace.h>
 #include <zircon/syscalls/pci.h>
@@ -23,7 +24,7 @@
 
 class PciInterruptDispatcher;
 
-class PciDeviceDispatcher final : public SoloDispatcher {
+class PciDeviceDispatcher final : public SoloDispatcher<PciDeviceDispatcher> {
 public:
     static zx_status_t Create(uint32_t index,
                               zx_pcie_device_info_t*    out_info,
@@ -65,7 +66,7 @@ private:
     // held for the duration of most of our dispatcher API implementations.  It
     // is unsafe to ever attempt to acquire this lock during a callback from the
     // PCI bus driver level.
-    fbl::Mutex lock_;
+    DECLARE_MUTEX(PciDeviceDispatcher) lock_;
     fbl::RefPtr<PcieDevice> device_ TA_GUARDED(lock_);
 
     uint irqs_avail_cnt_  TA_GUARDED(lock_) = 0;

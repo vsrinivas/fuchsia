@@ -9,6 +9,7 @@
 #include <lib/user_copy/user_ptr.h>
 #include <zircon/types.h>
 #include <fbl/mutex.h>
+#include <kernel/lockdep.h>
 #include <object/futex_node.h>
 
 // FutexContext is a class that encapsulates support for futex operations.
@@ -56,7 +57,7 @@ private:
     bool UnqueueNodeLocked(FutexNode* node) TA_REQ(lock_);
 
     // protects futex_table_
-    fbl::Mutex lock_;
+    DECLARE_MUTEX(FutexContext) lock_;
 
     // Hash table for futexes in this context.
     // Key is futex address, value is the FutexNode for the head of futex's blocked thread list.

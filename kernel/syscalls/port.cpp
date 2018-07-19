@@ -14,7 +14,6 @@
 #include <object/process_dispatcher.h>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 
 #include <zircon/syscalls/policy.h>
@@ -101,7 +100,7 @@ zx_status_t sys_port_cancel(zx_handle_t handle, zx_handle_t source, uint64_t key
         return status;
 
     {
-        fbl::AutoLock lock(up->handle_table_lock());
+        Guard<fbl::Mutex> guard{up->handle_table_lock()};
         Handle* watched = up->GetHandleLocked(source);
         if (!watched)
             return ZX_ERR_BAD_HANDLE;

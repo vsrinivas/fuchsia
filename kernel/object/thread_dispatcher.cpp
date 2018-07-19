@@ -37,8 +37,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
-using fbl::AutoLock;
-
 #define LOCAL_TRACE 0
 
 // static
@@ -106,7 +104,7 @@ ThreadDispatcher::~ThreadDispatcher() {
 zx_status_t ThreadDispatcher::Initialize(const char* name, size_t len) {
     LTRACE_ENTRY_OBJ;
 
-    AutoLock lock(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
 
     DEBUG_ASSERT(state_ == State::INITIAL);
 
@@ -172,7 +170,7 @@ zx_status_t ThreadDispatcher::set_name(const char* name, size_t len) {
     if (len >= ZX_MAX_NAME_LEN)
         len = ZX_MAX_NAME_LEN - 1;
 
-    AutoSpinLock lock(&name_lock_);
+    Guard<SpinLock, IrqSave> guard{&name_lock_};
     memcpy(thread_.name, name, len);
     memset(thread_.name + len, 0, ZX_MAX_NAME_LEN - len);
     return ZX_OK;
@@ -181,7 +179,7 @@ zx_status_t ThreadDispatcher::set_name(const char* name, size_t len) {
 void ThreadDispatcher::get_name(char out_name[ZX_MAX_NAME_LEN]) const {
     canary_.Assert();
 
-    AutoSpinLock lock(&name_lock_);
+    Guard<SpinLock, IrqSave> guard{&name_lock_};
     memset(out_name, 0, ZX_MAX_NAME_LEN);
     strlcpy(out_name, thread_.name, ZX_MAX_NAME_LEN);
 }
@@ -194,7 +192,7 @@ zx_status_t ThreadDispatcher::Start(uintptr_t entry, uintptr_t sp,
 
     LTRACE_ENTRY_OBJ;
 
-    AutoLock lock(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
 
     if (state_ != State::INITIALIZED)
         return ZX_ERR_BAD_STATE;
@@ -233,7 +231,7 @@ void ThreadDispatcher::Exit() {
     DEBUG_ASSERT(get_current_thread() == &thread_);
 
     {
-        AutoLock lock(get_lock());
+        Guard<fbl::Mutex> guard{get_lock()};
 
         DEBUG_ASSERT(state_ == State::RUNNING || state_ == State::DYING);
 
@@ -252,7 +250,7 @@ void ThreadDispatcher::Kill() {
 
     LTRACE_ENTRY_OBJ;
 
-    AutoLock lock(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
 
     switch (state_) {
     case State::INITIAL:
@@ -279,7 +277,7 @@ zx_status_t ThreadDispatcher::Suspend() {
 
     LTRACE_ENTRY_OBJ;
 
-    AutoLock lock(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
 
     LTRACEF("%p: state %s\n", this, StateToString(state_));
 
@@ -300,7 +298,7 @@ zx_status_t ThreadDispatcher::Resume() {
 
     LTRACE_ENTRY_OBJ;
 
-    AutoLock lock(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
 
     LTRACEF("%p: state %s\n", this, StateToString(state_));
 
@@ -352,7 +350,7 @@ void ThreadDispatcher::Exiting() {
     // marked dead, and we don't want to have a state where the process is
     // dead but one thread is not.
     {
-        AutoLock lock(get_lock());
+        Guard<fbl::Mutex> guard{get_lock()};
 
         DEBUG_ASSERT(state_ == State::DYING);
 
@@ -391,7 +389,7 @@ void ThreadDispatcher::Suspending() {
     // Update the state before sending any notifications out. We want the
     // receiver to see the new state.
     {
-        AutoLock lock(get_lock());
+        Guard<fbl::Mutex> guard{get_lock()};
 
         DEBUG_ASSERT(state_ == State::RUNNING || state_ == State::DYING);
         if (state_ == State::RUNNING) {
@@ -408,7 +406,7 @@ void ThreadDispatcher::Resuming() {
     // Update the state before sending any notifications out. We want the
     // receiver to see the new state.
     {
-        AutoLock lock(get_lock());
+        Guard<fbl::Mutex> guard{get_lock()};
 
         DEBUG_ASSERT(state_ == State::SUSPENDED || state_ == State::DYING);
         if (state_ == State::SUSPENDED) {
@@ -469,7 +467,7 @@ void ThreadDispatcher::SetStateLocked(State state) {
 
     LTRACEF("thread %p: state %u (%s)\n", this, static_cast<unsigned int>(state), StateToString(state));
 
-    DEBUG_ASSERT(get_lock()->IsHeld());
+    DEBUG_ASSERT(get_lock()->lock().IsHeld());
 
     state_ = state;
 
@@ -499,7 +497,7 @@ zx_status_t ThreadDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport)
 
     // Lock |state_lock_| to ensure the thread doesn't transition to dead
     // while we're setting the exception handler.
-    AutoLock state_lock(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
     if (state_ == State::DEAD)
         return ZX_ERR_NOT_FOUND;
     if (exception_port_)
@@ -518,7 +516,7 @@ bool ThreadDispatcher::ResetExceptionPort(bool quietly) {
     // we don't want it to hit another exception and get back into
     // ExceptionHandlerExchange.
     {
-        AutoLock lock(get_lock());
+        Guard<fbl::Mutex> guard{get_lock()};
         exception_port_.swap(eport);
         if (eport == nullptr) {
             // Attempted to unbind when no exception port is bound.
@@ -553,7 +551,7 @@ bool ThreadDispatcher::ResetExceptionPort(bool quietly) {
 fbl::RefPtr<ExceptionPort> ThreadDispatcher::exception_port() {
     canary_.Assert();
 
-    AutoLock lock(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
     return exception_port_;
 }
 
@@ -575,7 +573,7 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
     // where the handler can see/modify thread state.
 
     {
-        AutoLock lock(get_lock());
+        Guard<fbl::Mutex> guard{get_lock()};
 
         // Mark that we're in an exception.
         thread_.exception_context = arch_context;
@@ -615,7 +613,7 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
         } while (status == ZX_ERR_INTERNAL_INTR_RETRY);
     }
 
-    AutoLock lock(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
 
     // Note: If |status| != ZX_OK, then |exception_status_| is still
     // ExceptionStatus::UNPROCESSED.
@@ -659,7 +657,7 @@ zx_status_t ThreadDispatcher::MarkExceptionHandled(ExceptionStatus estatus) {
     DEBUG_ASSERT(estatus != ExceptionStatus::IDLE &&
                  estatus != ExceptionStatus::UNPROCESSED);
 
-    AutoLock lock(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
     if (!InExceptionLocked())
         return ZX_ERR_BAD_STATE;
 
@@ -688,7 +686,7 @@ zx_status_t ThreadDispatcher::MarkExceptionHandled(PortDispatcher* eport,
     DEBUG_ASSERT(estatus != ExceptionStatus::IDLE &&
                  estatus != ExceptionStatus::UNPROCESSED);
 
-    AutoLock lock(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
     if (!InExceptionLocked())
         return ZX_ERR_BAD_STATE;
 
@@ -716,7 +714,7 @@ void ThreadDispatcher::OnExceptionPortRemoval(const fbl::RefPtr<ExceptionPort>& 
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
-    AutoLock lock(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
     if (!InExceptionLocked())
         return;
     DEBUG_ASSERT(exception_status_ != ExceptionStatus::IDLE);
@@ -733,7 +731,7 @@ bool ThreadDispatcher::InExceptionLocked() {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
-    DEBUG_ASSERT(get_lock()->IsHeld());
+    DEBUG_ASSERT(get_lock()->lock().IsHeld());
     return thread_stopped_in_exception(&thread_);
 }
 
@@ -750,7 +748,7 @@ zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
     // We need to fetch all these values under lock, but once we have them
     // we no longer need the lock.
     {
-        AutoLock state_lock(get_lock());
+        Guard<fbl::Mutex> guard{get_lock()};
         state = state_;
         blocked_reason = blocked_reason_;
         if (InExceptionLocked() &&
@@ -868,7 +866,7 @@ zx_status_t ThreadDispatcher::GetExceptionReport(zx_exception_report_t* report) 
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
-    AutoLock lock(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
     if (!InExceptionLocked())
         return ZX_ERR_BAD_STATE;
     DEBUG_ASSERT(exception_report_ != nullptr);
@@ -886,7 +884,7 @@ zx_status_t ThreadDispatcher::ReadState(zx_thread_state_topic_t state_kind,
 
     // We can't be reading regs while the thread transitions from
     // SUSPENDED to RUNNING.
-    AutoLock state_lock(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
 
     if (state_ != State::SUSPENDED && !InExceptionLocked())
         return ZX_ERR_BAD_STATE;
@@ -936,7 +934,7 @@ zx_status_t ThreadDispatcher::WriteState(zx_thread_state_topic_t state_kind,
 
     // We can't be reading regs while the thread transitions from
     // SUSPENDED to RUNNING.
-    AutoLock state_lock(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
 
     if (state_ != State::SUSPENDED && !InExceptionLocked())
         return ZX_ERR_BAD_STATE;
@@ -975,7 +973,7 @@ zx_status_t ThreadDispatcher::WriteState(zx_thread_state_topic_t state_kind,
 }
 
 zx_status_t ThreadDispatcher::SetPriority(int32_t priority) {
-    AutoLock state_lock(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
     if ((state_ == State::INITIAL) ||
         (state_ == State::DYING) ||
         (state_ == State::DEAD)) {

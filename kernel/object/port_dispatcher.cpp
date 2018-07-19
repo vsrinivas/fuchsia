@@ -23,8 +23,6 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
 
-using fbl::AutoLock;
-
 static_assert(sizeof(zx_packet_signal_t) == sizeof(zx_packet_user_t),
               "size of zx_packet_signal_t must match zx_packet_user_t");
 static_assert(sizeof(zx_packet_exception_t) == sizeof(zx_packet_user_t),
@@ -195,25 +193,22 @@ PortDispatcher::~PortDispatcher() {
 void PortDispatcher::on_zero_handles() {
     canary_.Assert();
 
-    {
-        AutoLock al(get_lock());
-        zero_handles_ = true;
+    Guard<fbl::Mutex> guard{get_lock()};
+    zero_handles_ = true;
 
-        // Unlink and unbind exception ports.
-        while (!eports_.is_empty()) {
-            auto eport = eports_.pop_back();
+    // Unlink and unbind exception ports.
+    while (!eports_.is_empty()) {
+        auto eport = eports_.pop_back();
 
-            // Tell the eport to unbind itself, then drop our ref to it.
-            get_lock()->Release(); // The eport may call our ::UnlinkExceptionPort
-            eport->OnPortZeroHandles();
-            get_lock()->Acquire();
-        }
+        // Tell the eport to unbind itself, then drop our ref to it. Called
+        // unlocked because the eport may call our ::UnlinkExceptionPort.
+        guard.CallUnlocked([&eport]() { eport->OnPortZeroHandles(); });
+    }
 
-        // Free any queued packets.
-        while (!packets_.is_empty()) {
-            FreePacket(packets_.pop_front());
-            --num_packets_;
-        }
+    // Free any queued packets.
+    while (!packets_.is_empty()) {
+        FreePacket(packets_.pop_front());
+        --num_packets_;
     }
 }
 
@@ -234,7 +229,7 @@ zx_status_t PortDispatcher::QueueUser(const zx_port_packet_t& packet) {
 }
 
 bool PortDispatcher::RemoveInterruptPacket(PortInterruptPacket* port_packet) {
-    AutoSpinLock al(&spinlock_);
+    Guard<SpinLock, IrqSave> guard{&spinlock_};
     if (port_packet->InContainer()) {
         interrupt_packets_.erase(*port_packet);
         return true;
@@ -243,7 +238,7 @@ bool PortDispatcher::RemoveInterruptPacket(PortInterruptPacket* port_packet) {
 }
 
 bool PortDispatcher::QueueInterruptPacket(PortInterruptPacket* port_packet, zx_time_t timestamp) {
-    AutoSpinLock al(&spinlock_);
+    Guard<SpinLock, IrqSave> guard{&spinlock_};
     if (port_packet->InContainer()) {
         return false;
     } else {
@@ -257,8 +252,8 @@ bool PortDispatcher::QueueInterruptPacket(PortInterruptPacket* port_packet, zx_t
 zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed, uint64_t count) {
     canary_.Assert();
 
-    AutoReschedDisable resched_disable; // Must come before the AutoLock.
-    AutoLock al(get_lock());
+    AutoReschedDisable resched_disable; // Must come before the lock guard.
+    Guard<fbl::Mutex> guard{get_lock()};
     if (zero_handles_)
         return ZX_ERR_BAD_STATE;
 
@@ -291,7 +286,7 @@ zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, zx_port_packet_t* out_pa
 
     while (true) {
         if (options_ == PORT_BIND_TO_INTERRUPT) {
-            AutoSpinLock al(&spinlock_);
+            Guard<SpinLock, IrqSave> guard{&spinlock_};
             PortInterruptPacket* port_interrupt_packet = interrupt_packets_.pop_front();
             if (port_interrupt_packet != nullptr) {
                 *out_packet = {};
@@ -303,7 +298,7 @@ zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, zx_port_packet_t* out_pa
             }
         }
         {
-            AutoLock al(get_lock());
+            Guard<fbl::Mutex> guard{get_lock()};
             PortPacket* port_packet = packets_.pop_front();
             if (port_packet != nullptr) {
                 --num_packets_;
@@ -339,7 +334,7 @@ void PortDispatcher::FreePacket(PortPacket* port_packet) {
 bool PortDispatcher::CanReap(PortObserver* observer, PortPacket* port_packet) {
     canary_.Assert();
 
-    AutoLock al(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
     if (!port_packet->InContainer())
         return true;
     // The destruction will happen when the packet is dequeued or in CancelQueued()
@@ -383,7 +378,7 @@ zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint6
 bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
     canary_.Assert();
 
-    AutoLock al(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
 
     // This loop can take a while if there are many items.
     // In practice, the number of pending signal packets is
@@ -429,7 +424,7 @@ bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
 void PortDispatcher::LinkExceptionPort(ExceptionPort* eport) {
     canary_.Assert();
 
-    AutoLock al(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
     DEBUG_ASSERT_COND(eport->PortMatches(this, /* allow_null */ false));
     DEBUG_ASSERT(!eport->InContainer());
     eports_.push_back(fbl::move(AdoptRef(eport)));
@@ -438,7 +433,7 @@ void PortDispatcher::LinkExceptionPort(ExceptionPort* eport) {
 void PortDispatcher::UnlinkExceptionPort(ExceptionPort* eport) {
     canary_.Assert();
 
-    AutoLock al(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
     DEBUG_ASSERT_COND(eport->PortMatches(this, /* allow_null */ true));
     if (eport->InContainer()) {
         eports_.erase(*eport);

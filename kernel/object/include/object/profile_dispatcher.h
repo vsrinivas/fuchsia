@@ -12,7 +12,7 @@
 #include <fbl/canary.h>
 #include <object/dispatcher.h>
 
-class ProfileDispatcher final : public SoloDispatcher {
+class ProfileDispatcher final : public SoloDispatcher<ProfileDispatcher> {
 public:
     static zx_status_t Create(const zx_profile_info_t& info,
                               fbl::RefPtr<Dispatcher>* dispatcher,

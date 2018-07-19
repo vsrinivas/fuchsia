@@ -13,8 +13,6 @@
 #include <fbl/auto_lock.h>
 #include <object/handle.h>
 
-using fbl::AutoLock;
-
 // static
 zx_status_t FifoDispatcher::Create(size_t count, size_t elemsize, uint32_t options,
                                    fbl::RefPtr<Dispatcher>* dispatcher0,
@@ -101,7 +99,7 @@ zx_status_t FifoDispatcher::WriteFromUser(size_t elem_size, user_in_ptr<const ui
     TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
 
-    AutoLock lock(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
     if (!peer_)
         return ZX_ERR_PEER_CLOSED;
     return peer_->WriteSelfLocked(elem_size, ptr, count, actual);
@@ -176,7 +174,7 @@ zx_status_t FifoDispatcher::ReadToUser(size_t elem_size, user_out_ptr<uint8_t> p
     if (count == 0)
         return ZX_ERR_OUT_OF_RANGE;
 
-    AutoLock lock(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
 
     uint32_t old_tail = tail_;
 

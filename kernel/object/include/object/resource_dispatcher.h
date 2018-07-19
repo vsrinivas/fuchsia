@@ -6,10 +6,10 @@
 
 #pragma once
 
-#include <fbl/auto_lock.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/name.h>
+#include <kernel/lockdep.h>
 #include <kernel/mutex.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>
@@ -22,7 +22,7 @@
 
 class ResourceRecord;
 
-class ResourceDispatcher final : public SoloDispatcher,
+class ResourceDispatcher final : public SoloDispatcher<ResourceDispatcher>,
                                  public fbl::DoublyLinkedListable<ResourceDispatcher*> {
 public:
     static constexpr size_t kMaxRegionPoolSize = 64 << 10;
@@ -52,8 +52,8 @@ public:
 
     template <typename T>
     static zx_status_t ForEachResource(T func, ResourceList* resource_list = &static_resource_list_)
-        TA_EXCL(resources_lock_) {
-        fbl::AutoLock lock(&resources_lock_);
+        TA_EXCL(ResourcesLock::Get()) {
+        Guard<fbl::Mutex> guard{ResourcesLock::Get()};
         return ForEachResourceLocked(func, resource_list);
     }
 
@@ -91,7 +91,7 @@ private:
     template <typename T>
     static zx_status_t ForEachResourceLocked(T callback,
                                              ResourceList* resource_list = &static_resource_list_)
-        TA_REQ(resources_lock_) {
+        TA_REQ(ResourcesLock::Get()) {
         for (const auto& resource : *resource_list) {
             zx_status_t status = callback(resource);
             if (status != ZX_OK) {
@@ -116,11 +116,11 @@ private:
     // back to the allocator. Likewise, exclusive allocations will check to
     // ensure that the region has not already been allocated as a shared region
     // by checking the static resource list.
-    static fbl::Mutex resources_lock_;
-    static RegionAllocator static_rallocs_[ZX_RSRC_KIND_COUNT] TA_GUARDED(resources_lock_);
+    DECLARE_SINGLETON_MUTEX(ResourcesLock);
+    static RegionAllocator static_rallocs_[ZX_RSRC_KIND_COUNT] TA_GUARDED(ResourcesLock::Get());
     static RegionAllocator::RegionPool::RefPtr region_pool_;
     // A single global list is used for all resources so that root and hypervisor resources can
     // still be tracked, and filtering can be done via client tools/commands when displaying
     // the list is concerned.
-    static ResourceList static_resource_list_ TA_GUARDED(resources_lock_);
+    static ResourceList static_resource_list_ TA_GUARDED(ResourcesLock::Get());
 };

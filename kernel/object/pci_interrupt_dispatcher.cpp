@@ -48,7 +48,7 @@ zx_status_t PciInterruptDispatcher::Create(
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    fbl::AutoLock lock(interrupt_dispatcher->get_lock());
+    Guard<fbl::Mutex> guard{interrupt_dispatcher->get_lock()};
 
     interrupt_dispatcher->set_flags(INTERRUPT_UNMASK_PREWAIT);
 

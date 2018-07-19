@@ -20,7 +20,8 @@
 class BusTransactionInitiatorDispatcher;
 class VmObject;
 
-class PinnedMemoryTokenDispatcher final : public SoloDispatcher,
+class PinnedMemoryTokenDispatcher final :
+    public SoloDispatcher<PinnedMemoryTokenDispatcher>,
     public fbl::DoublyLinkedListable<PinnedMemoryTokenDispatcher*> {
 public:
     ~PinnedMemoryTokenDispatcher();

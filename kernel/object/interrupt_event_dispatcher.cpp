@@ -33,7 +33,7 @@ zx_status_t InterruptEventDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher
     // cleaned up automatically.
     auto disp_ref = fbl::AdoptRef<Dispatcher>(disp);
 
-    fbl::AutoLock lock(disp->get_lock());
+    Guard<fbl::Mutex> guard{disp->get_lock()};
 
     uint32_t interrupt_flags = 0;
 

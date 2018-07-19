@@ -31,7 +31,7 @@
 
 class ProcessDispatcher;
 
-class ThreadDispatcher final : public SoloDispatcher {
+class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher> {
 public:
     // Traits to belong in the parent process's list.
     struct ThreadListTraits {
@@ -279,7 +279,7 @@ private:
     int suspend_count_ = 0;
 
     // Used to protect thread name read/writes
-    mutable SpinLock name_lock_;
+    mutable DECLARE_SPINLOCK(ThreadDispatcher) name_lock_;
 
     // hold a reference to the mapping and vmar used to wrap the mapping of this
     // thread's kernel stack

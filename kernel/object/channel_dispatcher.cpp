@@ -26,8 +26,6 @@
 #include <zircon/rights.h>
 #include <zircon/types.h>
 
-using fbl::AutoLock;
-
 #define LOCAL_TRACE 0
 
 KCOUNTER(channel_packet_depth_1, "kernel.channel.depth.1");
@@ -110,7 +108,7 @@ ChannelDispatcher::~ChannelDispatcher() {
 zx_status_t ChannelDispatcher::add_observer(StateObserver* observer) {
     canary_.Assert();
 
-    AutoLock lock(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
     StateObserver::CountInfo cinfo =
         {{{message_count_, ZX_CHANNEL_READABLE}, {0u, 0u}}};
     AddObserverLocked(observer, &cinfo);
@@ -118,7 +116,7 @@ zx_status_t ChannelDispatcher::add_observer(StateObserver* observer) {
 }
 
 void ChannelDispatcher::RemoveWaiter(MessageWaiter* waiter) {
-    AutoLock lock(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
     if (!waiter->InContainer()) {
         return;
     }
@@ -165,7 +163,7 @@ zx_status_t ChannelDispatcher::Read(uint32_t* msg_size,
     auto max_size = *msg_size;
     auto max_handle_count = *msg_handle_count;
 
-    AutoLock lock(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
 
     if (messages_.is_empty())
         return peer_ ? ZX_ERR_SHOULD_WAIT : ZX_ERR_PEER_CLOSED;
@@ -191,9 +189,9 @@ zx_status_t ChannelDispatcher::Read(uint32_t* msg_size,
 zx_status_t ChannelDispatcher::Write(fbl::unique_ptr<MessagePacket> msg) {
     canary_.Assert();
 
-    AutoReschedDisable resched_disable; // Must come before the AutoLock.
+    AutoReschedDisable resched_disable; // Must come before the lock guard.
     resched_disable.Disable();
-    AutoLock lock(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
 
     if (!peer_)
         return ZX_ERR_PEER_CLOSED;
@@ -216,9 +214,9 @@ zx_status_t ChannelDispatcher::Call(fbl::unique_ptr<MessagePacket> msg,
     }
 
     {
-        AutoReschedDisable resched_disable; // Must come before the AutoLock.
+        AutoReschedDisable resched_disable; // Must come before the lock guard.
         resched_disable.Disable();
-        AutoLock lock(get_lock());
+        Guard<fbl::Mutex> guard{get_lock()};
 
         if (!peer_) {
             waiter->EndWait(reply);
@@ -282,7 +280,7 @@ zx_status_t ChannelDispatcher::ResumeInterruptedCall(MessageWaiter* waiter,
     // from the list *but* another thread could still
     // cause (3A), (3B), or (3C) before the lock below.
     {
-        AutoLock lock(get_lock());
+        Guard<fbl::Mutex> guard{get_lock()};
 
         // (4) If any of (3A), (3B), or (3C) have occurred,
         // we were removed from the waiters list already

@@ -15,12 +15,12 @@
 
 #include <zircon/types.h>
 #include <fbl/array.h>
-#include <fbl/auto_lock.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/name.h>
 #include <fbl/ref_counted.h>
+#include <kernel/lockdep.h>
 
 class JobNode;
 
@@ -55,7 +55,7 @@ protected:
 // and in the current implementation will call platform_halt() when its process
 // and job count reaches zero. The root job is not exposed to user mode, instead
 // the single child Job of the root job is given to the userboot process.
-class JobDispatcher final : public SoloDispatcher {
+class JobDispatcher final : public SoloDispatcher<JobDispatcher> {
 public:
     // Traits to belong to the parent's raw job list.
     struct ListTraitsRaw {
@@ -106,7 +106,7 @@ public:
     // returning the error value.
     template <typename T>
     static zx_status_t ForEachJob(T func) {
-        fbl::AutoLock lock(&all_jobs_lock_);
+        Guard<fbl::Mutex> guard{AllJobsLock::Get()};
         for (auto &job : all_jobs_list_) {
             zx_status_t s = func(&job);
             if (s != ZX_OK)
@@ -204,9 +204,10 @@ private:
     using AllJobsList =
         fbl::DoublyLinkedList<JobDispatcher*, ListTraitsAllJobs>;
 
-    static fbl::Mutex all_jobs_lock_;
+    DECLARE_SINGLETON_MUTEX(AllJobsLock);
+
     // All jobs in the system.
-    static AllJobsList all_jobs_list_ TA_GUARDED(all_jobs_lock_);
+    static AllJobsList all_jobs_list_ TA_GUARDED(AllJobsLock::Get());
 };
 
 // Returns the job that is the ancestor of all other tasks.

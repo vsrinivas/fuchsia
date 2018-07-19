@@ -19,12 +19,9 @@
 #include <object/socket_dispatcher.h>
 
 #include <zircon/syscalls/policy.h>
-#include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 
 #include "priv.h"
-
-using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 

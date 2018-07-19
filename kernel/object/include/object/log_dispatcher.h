@@ -13,7 +13,7 @@
 #include <fbl/canary.h>
 #include <fbl/mutex.h>
 
-class LogDispatcher final : public SoloDispatcher {
+class LogDispatcher final : public SoloDispatcher<LogDispatcher> {
 public:
     static zx_status_t Create(uint32_t flags, fbl::RefPtr<Dispatcher>* dispatcher,
                               zx_rights_t* rights);

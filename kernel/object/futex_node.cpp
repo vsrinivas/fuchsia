@@ -145,14 +145,19 @@ FutexNode* FutexNode::RemoveFromHead(FutexNode* list_head, uint32_t count,
 // This blocks the current thread.  This releases the given mutex (which
 // must be held when BlockThread() is called).  To reduce contention, it
 // does not reclaim the mutex on return.
-zx_status_t FutexNode::BlockThread(fbl::Mutex* mutex, zx_time_t deadline) TA_NO_THREAD_SAFETY_ANALYSIS {
+zx_status_t FutexNode::BlockThread(Guard<fbl::Mutex>&& adopt_guard, zx_time_t deadline) {
+    // Adopt the guarded lock from the caller. This could happen before or after
+    // the following locks because the underlying lock is held from the caller's
+    // frame. The runtime validator state is not affected by the adoption.
+    Guard<fbl::Mutex> guard{AdoptLock, fbl::move(adopt_guard)};
+
     AutoThreadLock lock;
     ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::FUTEX);
 
-    // We specifically want reschedule=false here, otherwise the
-    // combination of releasing the mutex and enqueuing the current thread
+    // We specifically want reschedule=MutexPolicy::NoReschedule here, otherwise
+    // the combination of releasing the mutex and enqueuing the current thread
     // would not be atomic, which would mean that we could miss wakeups.
-    mutex_release_thread_locked(mutex->GetInternal(), /* reschedule= */ false);
+    guard.Release(MutexPolicy::ThreadLockHeld, MutexPolicy::NoReschedule);
 
     thread_t* current_thread = get_current_thread();
     zx_status_t result;

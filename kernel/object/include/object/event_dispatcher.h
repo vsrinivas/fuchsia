@@ -12,7 +12,7 @@
 
 #include <sys/types.h>
 
-class EventDispatcher final : public SoloDispatcher {
+class EventDispatcher final : public SoloDispatcher<EventDispatcher> {
 public:
     static zx_status_t Create(uint32_t options, fbl::RefPtr<Dispatcher>* dispatcher,
                               zx_rights_t* rights);

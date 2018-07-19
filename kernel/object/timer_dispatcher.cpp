@@ -18,8 +18,6 @@
 #include <zircon/rights.h>
 #include <zircon/types.h>
 
-using fbl::AutoLock;
-
 static void timer_irq_callback(timer* timer, zx_time_t now, void* arg) {
     // We are in IRQ context and cannot touch the timer state_tracker, so we
     // schedule a DPC to do so. TODO(cpu): figure out ways to reduce the lag.
@@ -73,7 +71,7 @@ TimerDispatcher::~TimerDispatcher() {
 void TimerDispatcher::on_zero_handles() {
     // The timers can be kept alive indefinitely by the callbacks, so
     // we need to cancel when there are no more user-mode clients.
-    AutoLock al(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
 
     // We must ensure that the timer callback (running in interrupt context,
     // possibly on a different CPU) has completed before possibly destroy
@@ -85,7 +83,7 @@ void TimerDispatcher::on_zero_handles() {
 zx_status_t TimerDispatcher::Set(zx_time_t deadline, zx_duration_t slack) {
     canary_.Assert();
 
-    AutoLock al(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
 
     bool did_cancel = CancelTimerLocked();
 
@@ -120,7 +118,7 @@ zx_status_t TimerDispatcher::Set(zx_time_t deadline, zx_duration_t slack) {
 
 zx_status_t TimerDispatcher::Cancel() {
     canary_.Assert();
-    AutoLock al(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
     CancelTimerLocked();
     return ZX_OK;
 }
@@ -166,7 +164,7 @@ void TimerDispatcher::OnTimerFired() {
     canary_.Assert();
 
     {
-        AutoLock al(get_lock());
+        Guard<fbl::Mutex> guard{get_lock()};
 
         if (cancel_pending_) {
             // We previously attempted to cancel the timer but the dpc had already

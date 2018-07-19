@@ -197,7 +197,7 @@ zx_status_t PinnedMemoryTokenDispatcher::UnmapFromIommuLocked() {
 }
 
 void PinnedMemoryTokenDispatcher::MarkUnpinned() {
-    fbl::AutoLock guard(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
     explicitly_unpinned_ = true;
 }
 
@@ -210,7 +210,7 @@ void PinnedMemoryTokenDispatcher::InvalidateMappedAddrsLocked() {
 }
 
 void PinnedMemoryTokenDispatcher::on_zero_handles() {
-    fbl::AutoLock guard(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
 
     // Once usermode has dropped the handle, either through zx_handle_close(),
     // zx_pmt_unpin(), or process crash, prevent access to the pinned memory.
@@ -265,7 +265,7 @@ PinnedMemoryTokenDispatcher::PinnedMemoryTokenDispatcher(
 zx_status_t PinnedMemoryTokenDispatcher::EncodeAddrs(bool compress_results,
                                                      dev_vaddr_t* mapped_addrs,
                                                      size_t mapped_addrs_count) {
-    fbl::AutoLock guard(get_lock());
+    Guard<fbl::Mutex> guard{get_lock()};
 
     const fbl::Array<dev_vaddr_t>& pmo_addrs = mapped_addrs_;
     const size_t found_addrs = pmo_addrs.size();

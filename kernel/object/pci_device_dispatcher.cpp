@@ -20,8 +20,6 @@
 #include <err.h>
 #include <trace.h>
 
-using fbl::AutoLock;
-
 zx_status_t PciDeviceDispatcher::Create(uint32_t                  index,
                                         zx_pcie_device_info_t*    out_info,
                                         fbl::RefPtr<Dispatcher>* out_dispatcher,
@@ -89,7 +87,7 @@ PciDeviceDispatcher::~PciDeviceDispatcher() {
 zx_status_t PciDeviceDispatcher::EnableBusMaster(bool enable) {
     canary_.Assert();
 
-    AutoLock lock(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     DEBUG_ASSERT(device_);
 
     device_->EnableBusMaster(enable);
@@ -100,7 +98,7 @@ zx_status_t PciDeviceDispatcher::EnableBusMaster(bool enable) {
 zx_status_t PciDeviceDispatcher::EnablePio(bool enable) {
     canary_.Assert();
 
-    AutoLock lock(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     DEBUG_ASSERT(device_);
 
     device_->EnablePio(enable);
@@ -111,7 +109,7 @@ zx_status_t PciDeviceDispatcher::EnablePio(bool enable) {
 zx_status_t PciDeviceDispatcher::EnableMmio(bool enable) {
     canary_.Assert();
 
-    AutoLock lock(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     DEBUG_ASSERT(device_ && device_);
 
     device_->EnableMmio(enable);
@@ -120,14 +118,14 @@ zx_status_t PciDeviceDispatcher::EnableMmio(bool enable) {
 }
 
 const pcie_bar_info_t* PciDeviceDispatcher::GetBar(uint32_t bar_num) {
-    AutoLock lock(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     DEBUG_ASSERT(device_);
 
     return device_->GetBarInfo(bar_num);
 }
 
 zx_status_t PciDeviceDispatcher::GetConfig(pci_config_info_t* out) {
-    AutoLock lock(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     DEBUG_ASSERT(device_);
 
     if (!out) {
@@ -145,7 +143,7 @@ zx_status_t PciDeviceDispatcher::GetConfig(pci_config_info_t* out) {
 zx_status_t PciDeviceDispatcher::ResetDevice() {
     canary_.Assert();
 
-    AutoLock lock(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     DEBUG_ASSERT(device_);
 
     return device_->DoFunctionLevelReset();
@@ -156,7 +154,7 @@ zx_status_t PciDeviceDispatcher::MapInterrupt(int32_t which_irq,
                                               zx_rights_t* rights) {
     canary_.Assert();
 
-    AutoLock lock(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     DEBUG_ASSERT(device_);
 
     if ((which_irq < 0) ||
@@ -185,7 +183,7 @@ static_assert(static_cast<uint>(ZX_PCIE_IRQ_MODE_MSI_X) ==
               static_cast<uint>(PCIE_IRQ_MODE_MSI_X),
               "Mode mismatch, ZX_PCIE_IRQ_MODE_MSI_X != PCIE_IRQ_MODE_MSI_X");
 zx_status_t PciDeviceDispatcher::QueryIrqModeCaps(zx_pci_irq_mode_t mode, uint32_t* out_max_irqs) {
-    AutoLock lock(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     DEBUG_ASSERT(device_);
 
     pcie_irq_mode_caps_t caps;
@@ -199,7 +197,7 @@ zx_status_t PciDeviceDispatcher::QueryIrqModeCaps(zx_pci_irq_mode_t mode, uint32
 zx_status_t PciDeviceDispatcher::SetIrqMode(zx_pci_irq_mode_t mode, uint32_t requested_irq_count) {
     canary_.Assert();
 
-    AutoLock lock(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     DEBUG_ASSERT(device_);
 
     if (mode == ZX_PCIE_IRQ_MODE_DISABLED)

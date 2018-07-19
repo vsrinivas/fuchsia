@@ -9,6 +9,7 @@
 #include <dev/iommu.h>
 #include <fbl/canary.h>
 #include <fbl/mutex.h>
+#include <kernel/lockdep.h>
 #include <object/dispatcher.h>
 #include <object/pinned_memory_token_dispatcher.h>
 
@@ -16,7 +17,8 @@
 
 class Iommu;
 
-class BusTransactionInitiatorDispatcher final : public SoloDispatcher {
+class BusTransactionInitiatorDispatcher final :
+    public SoloDispatcher<BusTransactionInitiatorDispatcher> {
 public:
     static zx_status_t Create(fbl::RefPtr<Iommu> iommu, uint64_t bti_id,
                               fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights);
@@ -81,7 +83,7 @@ private:
     fbl::Canary<fbl::magic("BTID")> canary_;
 
     // TODO(teisenbe): Unify this lock with the SoloDispatcher lock
-    fbl::Mutex lock_;
+    DECLARE_MUTEX(BusTransactionInitiatorDispatcher) lock_;
     const fbl::RefPtr<Iommu> iommu_;
     const uint64_t bti_id_;
 

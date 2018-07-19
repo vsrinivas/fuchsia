@@ -9,6 +9,7 @@
 #include <trace.h>
 
 #include <kernel/event.h>
+#include <kernel/lockdep.h>
 #include <kernel/thread.h>
 #include <platform.h>
 
@@ -20,15 +21,12 @@
 #include <object/process_dispatcher.h>
 #include <object/wait_state_observer.h>
 
-#include <fbl/auto_lock.h>
 #include <fbl/inline_array.h>
 #include <fbl/ref_ptr.h>
 
 #include <zircon/types.h>
 
 #include "priv.h"
-
-using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
@@ -51,7 +49,7 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value,
 
     auto up = ProcessDispatcher::GetCurrent();
     {
-        AutoLock lock(up->handle_table_lock());
+        Guard<fbl::Mutex> guard{up->handle_table_lock()};
 
         Handle* handle = up->GetHandleLocked(handle_value);
         if (!handle)
@@ -122,7 +120,7 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
     size_t num_added = 0;
     {
         auto up = ProcessDispatcher::GetCurrent();
-        AutoLock lock(up->handle_table_lock());
+        Guard<fbl::Mutex> guard{up->handle_table_lock()};
 
         for (; num_added != count; ++num_added) {
             Handle* handle = up->GetHandleLocked(items[num_added].handle);
@@ -182,7 +180,7 @@ zx_status_t sys_object_wait_async(zx_handle_t handle_value, zx_handle_t port_han
         return status;
 
     {
-        AutoLock lock(up->handle_table_lock());
+        Guard<fbl::Mutex> guard{up->handle_table_lock()};
         Handle* handle = up->GetHandleLocked(handle_value);
         if (!handle)
             return ZX_ERR_BAD_HANDLE;

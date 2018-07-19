@@ -15,7 +15,7 @@
 #include <sys/types.h>
 #include <vm/vm_object.h>
 
-class VmObjectDispatcher final : public SoloDispatcher,
+class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher>,
                                  public VmObjectChildObserver {
 public:
     static zx_status_t Create(fbl::RefPtr<VmObject> vmo,

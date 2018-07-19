@@ -15,7 +15,7 @@
 
 #include <sys/types.h>
 
-class TimerDispatcher final : public SoloDispatcher {
+class TimerDispatcher final : public SoloDispatcher<TimerDispatcher> {
 public:
     static zx_status_t Create(uint32_t options,
                               fbl::RefPtr<Dispatcher>* dispatcher,

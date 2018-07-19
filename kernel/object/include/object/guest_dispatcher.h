@@ -13,7 +13,7 @@
 class Guest;
 class VmObject;
 
-class GuestDispatcher final : public SoloDispatcher {
+class GuestDispatcher final : public SoloDispatcher<GuestDispatcher> {
 public:
     static zx_status_t Create(fbl::RefPtr<Dispatcher>* guest_dispatcher,
                               zx_rights_t* guest_rights,

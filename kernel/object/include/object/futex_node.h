@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <kernel/lockdep.h>
 #include <kernel/thread.h>
 #include <kernel/wait.h>
 #include <list.h>
@@ -41,8 +42,9 @@ public:
                                      uintptr_t old_hash_key,
                                      uintptr_t new_hash_key);
 
-    // This must be called with |mutex| held and returns without |mutex| held.
-    zx_status_t BlockThread(fbl::Mutex* mutex, zx_time_t deadline) TA_REL(mutex);
+    // This must be called with a guard held in the calling scope. Releases the
+    // guard and does not reacquire it.
+    zx_status_t BlockThread(Guard<fbl::Mutex>&& adopt_guard, zx_time_t deadline);
 
     void set_hash_key(uintptr_t key) {
         hash_key_ = key;

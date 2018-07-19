@@ -27,7 +27,6 @@ KCOUNTER(irq_resource_created, "resource.irq.created");
 KCOUNTER(ioport_resource_created, "resource.ioport.created");
 
 // Storage for static members of ResourceDispatcher
-fbl::Mutex ResourceDispatcher::resources_lock_;
 RegionAllocator ResourceDispatcher::static_rallocs_[ZX_RSRC_KIND_COUNT];
 ResourceDispatcher::ResourceList ResourceDispatcher::static_resource_list_;
 RegionAllocator::RegionPool::RefPtr ResourceDispatcher::region_pool_;
@@ -42,7 +41,7 @@ zx_status_t ResourceDispatcher::Create(fbl::RefPtr<ResourceDispatcher>* dispatch
                                        const char name[ZX_MAX_NAME_LEN],
                                        RegionAllocator rallocs[ZX_RSRC_KIND_COUNT],
                                        ResourceList* resource_list) {
-    fbl::AutoLock lock(&resources_lock_);
+    Guard<fbl::Mutex> guard{ResourcesLock::Get()};
     if (kind >= ZX_RSRC_KIND_COUNT || (flags & ZX_RSRC_FLAGS_MASK) != flags) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -154,7 +153,7 @@ ResourceDispatcher::ResourceDispatcher(uint32_t kind,
 ResourceDispatcher::~ResourceDispatcher() {
     // exclusive allocations will be released when the uptr goes out of scope,
     // shared need to be removed from |all_shared_list_|
-    fbl::AutoLock lock(&resources_lock_);
+    Guard<fbl::Mutex> guard{ResourcesLock::Get()};
     char name[ZX_MAX_NAME_LEN];
     get_name(name);
     resource_list_->erase(*this);
@@ -167,7 +166,7 @@ zx_status_t ResourceDispatcher::InitializeAllocator(uint32_t kind,
     DEBUG_ASSERT(kind < ZX_RSRC_KIND_COUNT);
     DEBUG_ASSERT(size > 0);
 
-    fbl::AutoLock lock(&resources_lock_);
+    Guard<fbl::Mutex> guard{ResourcesLock::Get()};
     zx_status_t status;
 
     // This method should only be called for resource kinds with bookkeeping.

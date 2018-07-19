@@ -14,7 +14,7 @@ class VmObject;
 
 typedef struct zx_port_packet zx_port_packet_t;
 
-class VcpuDispatcher final : public SoloDispatcher {
+class VcpuDispatcher final : public SoloDispatcher<VcpuDispatcher> {
 public:
     static zx_status_t Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher, zx_vaddr_t entry,
                               fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights);

@@ -9,13 +9,13 @@
 #include <stdint.h>
 
 #include <arch/exception.h>
+#include <kernel/lockdep.h>
 #include <kernel/mutex.h>
 #include <object/dispatcher.h>
 
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
-#include <fbl/auto_lock.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
@@ -97,7 +97,7 @@ private:
     // The system exception port doesn't have a Dispatcher, hence the bool.
     fbl::RefPtr<Dispatcher> target_ TA_GUARDED(lock_);
 
-    fbl::Mutex lock_;
+    DECLARE_MUTEX(ExceptionPort) lock_;
 
     // NOTE: The DoublyLinkedListNodeState is guarded by |port_|'s lock,
     // and should only be touched using port_->LinkExceptionPort()

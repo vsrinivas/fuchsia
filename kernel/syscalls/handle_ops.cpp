@@ -10,7 +10,6 @@
 
 #include <object/handle.h>
 #include <object/process_dispatcher.h>
-#include <fbl/auto_lock.h>
 
 #include "priv.h"
 
@@ -44,7 +43,7 @@ static zx_status_t handle_dup_replace(
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    fbl::AutoLock lock(up->handle_table_lock());
+    Guard<fbl::Mutex> guard{up->handle_table_lock()};
     auto source = up->GetHandleLocked(handle_value);
     if (!source)
         return ZX_ERR_BAD_HANDLE;

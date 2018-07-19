@@ -28,7 +28,7 @@
 
 class JobDispatcher;
 
-class ProcessDispatcher final : public SoloDispatcher {
+class ProcessDispatcher final : public SoloDispatcher<ProcessDispatcher> {
 public:
     static zx_status_t Create(
         fbl::RefPtr<JobDispatcher> job, fbl::StringPiece name, uint32_t flags,
@@ -168,7 +168,7 @@ public:
     // returning the error value.
     template <typename T>
     zx_status_t ForEachHandle(T func) const {
-        fbl::AutoLock lock(&handle_table_lock_);
+        Guard<fbl::Mutex> guard{&handle_table_lock_};
         for (const auto& handle : handles_) {
             const Dispatcher* dispatcher = handle.dispatcher().get();
             zx_status_t s = func(MapHandleToValue(&handle), handle.rights(),
@@ -181,7 +181,9 @@ public:
     }
 
     // accessors
-    fbl::Mutex* handle_table_lock() TA_RET_CAP(handle_table_lock_) { return &handle_table_lock_; }
+    Lock<fbl::Mutex>* handle_table_lock() TA_RET_CAP(handle_table_lock_) {
+        return &handle_table_lock_;
+    }
     FutexContext* futex_context() { return &futex_context_; }
     State state() const;
     fbl::RefPtr<VmAspace> aspace() { return aspace_; }
@@ -313,7 +315,7 @@ private:
     fbl::RefPtr<VmAspace> aspace_;
 
     // our list of handles
-    mutable fbl::Mutex handle_table_lock_; // protects |handles_|.
+    mutable DECLARE_MUTEX(ProcessDispatcher) handle_table_lock_; // protects |handles_|.
     fbl::DoublyLinkedList<Handle*> handles_ TA_GUARDED(handle_table_lock_);
 
     FutexContext futex_context_;

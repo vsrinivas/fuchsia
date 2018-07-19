@@ -19,12 +19,9 @@
 #include <zircon/types.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 
 #include "priv.h"
-
-using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
@@ -247,7 +244,7 @@ static zx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg,
     zx_status_t status = ZX_OK;
 
     {
-        AutoLock lock(up->handle_table_lock());
+        Guard<fbl::Mutex> guard{up->handle_table_lock()};
 
         for (size_t ix = 0; ix != num_handles; ++ix) {
             auto handle = up->RemoveHandleLocked(handles[ix]).release();

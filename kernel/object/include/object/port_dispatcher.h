@@ -16,6 +16,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
+#include <kernel/spinlock.h>
 
 #include <sys/types.h>
 
@@ -158,7 +159,7 @@ private:
 // thread unblocks and gets the packet. In all cases |sema_| is used to signal
 // and manage the waiting threads.
 
-class PortDispatcher final : public SoloDispatcher {
+class PortDispatcher final : public SoloDispatcher<PortDispatcher> {
 public:
     static void Init();
     static PortAllocator* DefaultPortAllocator();
@@ -217,6 +218,6 @@ private:
     fbl::DoublyLinkedList<PortPacket*> packets_ TA_GUARDED(get_lock());
     fbl::DoublyLinkedList<fbl::RefPtr<ExceptionPort>> eports_ TA_GUARDED(get_lock());
     // Next two members handle the interrupt notifications.
-    SpinLock spinlock_;
+    DECLARE_SPINLOCK(PortDispatcher) spinlock_;
     fbl::DoublyLinkedList<PortInterruptPacket*> interrupt_packets_ TA_GUARDED(spinlock_);
 };
