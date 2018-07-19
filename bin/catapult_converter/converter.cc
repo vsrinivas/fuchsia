@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <getopt.h>
+#include <map>
 #include <math.h>
 #include <numeric>
 #include <vector>
@@ -86,10 +87,9 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
     return helper.MakeString(uuid.c_str());
   };
 
-  rapidjson::Value diagnostic_map;
-  diagnostic_map.SetObject();
-
-  auto AddSharedDiagnostic = [&](const char* key, rapidjson::Value value) {
+  // Add a "diagnostic" entry representing the given value.  Returns a GUID
+  // value identifying the diagnostic.
+  auto AddDiagnostic = [&](rapidjson::Value value) -> rapidjson::Value {
     rapidjson::Value guid = MakeUuid();
 
     // Add top-level description.
@@ -103,15 +103,36 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
     diagnostic.AddMember("values", values, alloc);
     output->PushBack(diagnostic, alloc);
 
-    // Make a reference to the top-level description.
-    diagnostic_map.AddMember(helper.MakeString(key), guid, alloc);
+    return guid;
+  };
+
+  // Build a JSON object containing the "diagnostic" values that are common
+  // to all the test cases.
+  rapidjson::Value shared_diagnostic_map;
+  shared_diagnostic_map.SetObject();
+  auto AddSharedDiagnostic = [&](const char* key, rapidjson::Value value) {
+    auto guid = AddDiagnostic(std::move(value));
+    shared_diagnostic_map.AddMember(helper.MakeString(key), guid, alloc);
   };
   rapidjson::Value timestamp;
   timestamp.SetInt(args->timestamp);
   AddSharedDiagnostic("chromiumCommitPositions", std::move(timestamp));
-  AddSharedDiagnostic("benchmarks", helper.MakeString(args->test_suite));
   AddSharedDiagnostic("bots", helper.MakeString(args->bots));
   AddSharedDiagnostic("masters", helper.MakeString(args->masters));
+
+  // Allocate a GUID for the given test suite name (by creating a
+  // "diagnostic" entry).  Memoize this allocation so that we don't
+  // allocate >1 GUID for the same test suite name.
+  std::map<std::string, rapidjson::Value> test_suite_to_guid;
+  auto MakeGuidForTestSuiteName = [&](const char* test_suite) {
+    auto it = test_suite_to_guid.find(test_suite);
+    if (it != test_suite_to_guid.end()) {
+      return helper.Copy(it->second);
+    }
+    rapidjson::Value guid = AddDiagnostic(helper.MakeString(test_suite));
+    test_suite_to_guid[test_suite] = helper.Copy(guid);
+    return guid;
+  };
 
   for (auto& element : input->GetArray()) {
     uint32_t inner_label_count = 0;
@@ -139,7 +160,14 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
       histogram.AddMember("name", name, alloc);
       histogram.AddMember("unit", "ms_smallerIsBetter", alloc);
       histogram.AddMember("description", "", alloc);
-      histogram.AddMember("diagnostics", helper.Copy(diagnostic_map), alloc);
+
+      // The "test_suite" field in the input becomes the "benchmarks"
+      // diagnostic in the output.
+      rapidjson::Value test_suite_guid =
+          MakeGuidForTestSuiteName(element["test_suite"].GetString());
+      rapidjson::Value diagnostic_map = helper.Copy(shared_diagnostic_map);
+      diagnostic_map.AddMember("benchmarks", test_suite_guid, alloc);
+      histogram.AddMember("diagnostics", diagnostic_map, alloc);
 
       rapidjson::Value& values = sample["values"];
       std::vector<double> vals;
@@ -220,7 +248,6 @@ int ConverterMain(int argc, char** argv) {
       "output file:\n"
       "  --execution-timestamp-ms NUMBER\n"
       "  --masters STRING\n"
-      "  --test-suite STRING\n"
       "  --bots STRING\n"
       "See README.md for the meanings of these parameters.\n";
 
@@ -231,7 +258,6 @@ int ConverterMain(int argc, char** argv) {
     {"output", required_argument, nullptr, 'o'},
     {"execution-timestamp-ms", required_argument, nullptr, 'e'},
     {"masters", required_argument, nullptr, 'm'},
-    {"test-suite", required_argument, nullptr, 't'},
     {"bots", required_argument, nullptr, 'b'},
   };
   ConverterArgs args;
@@ -258,9 +284,6 @@ int ConverterMain(int argc, char** argv) {
       case 'm':
         args.masters = optarg;
         break;
-      case 't':
-        args.test_suite = optarg;
-        break;
       case 'b':
         args.bots = optarg;
         break;
@@ -283,10 +306,6 @@ int ConverterMain(int argc, char** argv) {
   }
   if (!args.masters) {
     fprintf(stderr, "--masters argument is required\n");
-    failed = true;
-  }
-  if (!args.test_suite) {
-    fprintf(stderr, "--test-suite argument is required\n");
     failed = true;
   }
   if (!args.bots) {

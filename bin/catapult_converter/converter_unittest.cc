@@ -118,11 +118,13 @@ TEST(CatapultConverter, Convert) {
 [
     {
         "label": "ExampleNullSyscall",
+        "test_suite": "my_test_suite",
         "samples": [{"values": [101.0, 102.0, 103.0, 104.0, 105.0]}],
         "unit": "nanoseconds"
     },
     {
         "label": "ExampleOtherTest",
+        "test_suite": "my_test_suite",
         "samples": [{"values": [200, 6, 100, 110]}],
         "unit": "ms"
     }
@@ -142,21 +144,21 @@ TEST(CatapultConverter, Convert) {
         "guid": "dummy_guid_1",
         "type": "GenericSet",
         "values": [
-            "example_test_suite"
+            "example_bots"
         ]
     },
     {
         "guid": "dummy_guid_2",
         "type": "GenericSet",
         "values": [
-            "example_bots"
+            "example_masters"
         ]
     },
     {
         "guid": "dummy_guid_3",
         "type": "GenericSet",
         "values": [
-            "example_masters"
+            "my_test_suite"
         ]
     },
     {
@@ -165,9 +167,9 @@ TEST(CatapultConverter, Convert) {
         "description": "",
         "diagnostics": {
             "chromiumCommitPositions": "dummy_guid_0",
-            "benchmarks": "dummy_guid_1",
-            "bots": "dummy_guid_2",
-            "masters": "dummy_guid_3"
+            "bots": "dummy_guid_1",
+            "masters": "dummy_guid_2",
+            "benchmarks": "dummy_guid_3"
         },
         "running": [
             5,
@@ -188,9 +190,9 @@ TEST(CatapultConverter, Convert) {
         "description": "",
         "diagnostics": {
             "chromiumCommitPositions": "dummy_guid_0",
-            "benchmarks": "dummy_guid_1",
-            "bots": "dummy_guid_2",
-            "masters": "dummy_guid_3"
+            "bots": "dummy_guid_1",
+            "masters": "dummy_guid_2",
+            "benchmarks": "dummy_guid_3"
         },
         "running": [
             4,
@@ -218,7 +220,6 @@ TEST(CatapultConverter, Convert) {
   ConverterArgs args;
   args.timestamp = 4321;
   args.masters = "example_masters";
-  args.test_suite = "example_test_suite";
   args.bots = "example_bots";
   args.use_test_guids = true;
   Convert(&input, &output, &args);
@@ -247,6 +248,7 @@ TEST(CatapultConverter, ConvertNested) {
 [
     {
         "label": "Example Of Split Results",
+        "test_suite": "some_test_suite",
         "samples": [
             {"label": "samples 0 to 0",
              "values": [200]},
@@ -271,21 +273,21 @@ TEST(CatapultConverter, ConvertNested) {
         "guid": "dummy_guid_1",
         "type": "GenericSet",
         "values": [
-            "example_test_suite"
+            "example_bots"
         ]
     },
     {
         "guid": "dummy_guid_2",
         "type": "GenericSet",
         "values": [
-            "example_bots"
+            "example_masters"
         ]
     },
     {
         "guid": "dummy_guid_3",
         "type": "GenericSet",
         "values": [
-            "example_masters"
+            "some_test_suite"
         ]
     },
     {
@@ -294,9 +296,9 @@ TEST(CatapultConverter, ConvertNested) {
         "description": "",
         "diagnostics": {
             "chromiumCommitPositions": "dummy_guid_0",
-            "benchmarks": "dummy_guid_1",
-            "bots": "dummy_guid_2",
-            "masters": "dummy_guid_3"
+            "bots": "dummy_guid_1",
+            "masters": "dummy_guid_2",
+            "benchmarks": "dummy_guid_3"
         },
         "running": [
             1,
@@ -317,9 +319,9 @@ TEST(CatapultConverter, ConvertNested) {
         "description": "",
         "diagnostics": {
             "chromiumCommitPositions": "dummy_guid_0",
-            "benchmarks": "dummy_guid_1",
-            "bots": "dummy_guid_2",
-            "masters": "dummy_guid_3"
+            "bots": "dummy_guid_1",
+            "masters": "dummy_guid_2",
+            "benchmarks": "dummy_guid_3"
         },
         "running": [
             3,
@@ -347,7 +349,6 @@ TEST(CatapultConverter, ConvertNested) {
   ConverterArgs args;
   args.timestamp = 4321;
   args.masters = "example_masters";
-  args.test_suite = "example_test_suite";
   args.bots = "example_bots";
   args.use_test_guids = true;
   Convert(&input, &output, &args);
@@ -399,7 +400,6 @@ TEST(CatapultConverter, ConverterMain) {
     "--output", output_file.pathname(),
     "--execution-timestamp-ms", "3456",
     "--masters", "example_arg_masters",
-    "--test-suite", "example_arg_test_suite",
     "--bots", "example_arg_bots",
   };
   EXPECT_EQ(ConverterMain(countof(args), const_cast<char**>(args)), 0);

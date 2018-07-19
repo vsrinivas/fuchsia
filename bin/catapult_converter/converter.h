@@ -11,7 +11,6 @@ struct ConverterArgs {
   // README.md file for the meanings of these parameters.
   long timestamp = 0;
   const char* masters = nullptr;
-  const char* test_suite = nullptr;
   const char* bots = nullptr;
 
   // Generate deterministic GUIDs instead of random GUIDs.  This is used
