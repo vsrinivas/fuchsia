@@ -39,5 +39,21 @@ TEST(VectorPtr, Control) {
   EXPECT_EQ(0, sized->at(0));
 }
 
+TEST(VectorPtr, ResetMoveOnlyType) {
+  std::vector<std::unique_ptr<int>> original;
+  // can't use initializer list on a move-only type...
+  original.push_back(std::make_unique<int>(1));
+  original.push_back(std::make_unique<int>(2));
+  original.push_back(std::make_unique<int>(3));
+  VectorPtr<std::unique_ptr<int>> vector;
+  vector.reset(std::move(original));
+  EXPECT_FALSE(vector.is_null());
+  EXPECT_TRUE(vector);
+  EXPECT_EQ(1, *vector->at(0));
+  EXPECT_EQ(2, *vector->at(1));
+  EXPECT_EQ(3, *vector->at(2));
+  EXPECT_EQ(3u, vector->size());
+}
+
 }  // namespace
 }  // namespace fidl

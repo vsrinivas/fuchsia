@@ -59,7 +59,7 @@ class VectorPtr {
   //
   // After this method returns, the VectorPtr is non-null.
   void reset(std::vector<T> vec) {
-    vec_ = vec;
+    vec_ = std::move(vec);
     is_null_if_empty_ = false;
   }
 
