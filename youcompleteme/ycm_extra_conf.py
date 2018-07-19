@@ -27,7 +27,9 @@ if os.path.exists(os.path.join(zircon_dir, 'compile_commands.json')):
 
 os.chdir(fuchsia_root)
 fuchsia_build = subprocess.check_output(
-    [os.path.join(fuchsia_paths.FUCHSIA_ROOT, 'scripts/fx'), 'get-build-dir']).strip()
+    [os.path.join(fuchsia_paths.FUCHSIA_ROOT, 'scripts/fx'),
+     'get-build-dir']
+    ).strip().decode('utf-8')
 
 fuchsia_clang = os.path.join(fuchsia_paths.BUILDTOOLS_PATH, 'clang')
 ninja_path = os.path.join(fuchsia_root, 'buildtools', 'ninja')
