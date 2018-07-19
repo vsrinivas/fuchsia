@@ -552,11 +552,6 @@ extern {
         handle: zx_handle_t
         );
 
-    pub fn zx_log_create(
-        options: u32,
-        out: *mut zx_handle_t
-        ) -> zx_status_t;
-
     pub fn zx_log_write(
         handle: zx_handle_t,
         len: u32,
@@ -569,7 +564,27 @@ extern {
         len: u32,
         buffer: *mut u8,
         options: u32
-        ) -> zx_status_t;
+    ) -> zx_status_t;
+
+    pub fn zx_debuglog_create(
+        resource: zx_handle_t,
+        options: u32,
+        out: *mut zx_handle_t
+    ) -> zx_status_t;
+
+    pub fn zx_debuglog_write(
+        handle: zx_handle_t,
+        options: u32,
+        buffer: *const u8,
+        buffer_size: usize
+    ) -> zx_status_t;
+
+    pub fn zx_debuglog_read(
+        handle: zx_handle_t,
+        options: u32,
+        buffer: *mut u8,
+        buffer_size: usize
+    ) -> zx_status_t;
 
     pub fn zx_ktrace_read(
         handle: zx_handle_t,

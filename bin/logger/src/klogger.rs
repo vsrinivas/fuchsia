@@ -24,7 +24,7 @@ where
     let handle_ptr = &mut handle as *mut _ as *mut u32;
 
     unsafe {
-        zx::ok(zx::sys::zx_log_create(ZX_LOG_FLAG_READABLE, handle_ptr))?;
+        zx::ok(zx::sys::zx_debuglog_create(zx::sys::ZX_HANDLE_INVALID, ZX_LOG_FLAG_READABLE, handle_ptr))?;
     };
     let h = unsafe { zx::Handle::from_raw(handle) };
 
