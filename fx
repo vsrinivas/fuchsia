@@ -228,7 +228,7 @@ if [ -z "${iterative}" ]; then
 elif which inotifywait >/dev/null; then
   # Watch everything except out/ and files/directories beginning with "."
   # such as lock files, swap files, .git, etc'.
-  inotifywait -qrme modify --exclude "/\." "${fuchsia_dir}" @"${fuchsia_dir}"/out | while read; do
+  inotifywait -qrme modify --exclude "/\." --exclude "lock" "${fuchsia_dir}" @"${fuchsia_dir}"/out | while read; do
     # Drain all subsequent events in a batch.
     # Otherwise when multiple files are changes at once we'd run multiple
     # times.
@@ -244,7 +244,7 @@ elif which apt-get >/dev/null; then
   echo "Missing inotifywait"
   echo "Try: sudo apt-get install inotify-tools"
 elif which fswatch >/dev/null; then
-  fswatch --one-per-batch --event=Updated -e "${fuchsia_dir}"/out/ -e "/\." . | while read; do
+  fswatch --one-per-batch --event=Updated -e "${fuchsia_dir}"/out/ -e "/\." -e "lock" . | while read; do
     echo "---------------------------------- fx -i ${cmd_and_args} ---------------------------------------"
     "${command_path}" "$@"
     echo "--- Done!"
