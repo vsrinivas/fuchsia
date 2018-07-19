@@ -9,8 +9,9 @@ extern crate futures;
 use super::dev_auth_provider::AuthProvider;
 use fidl::endpoints2::RequestStream;
 use fidl::Error;
-use fidl_fuchsia_auth::{AuthProviderFactoryRequest, AuthProviderFactoryRequestStream};
-use futures::future::{self, FutureResult};
+use fidl_fuchsia_auth::{AuthProviderFactoryRequest, AuthProviderStatus,
+                        AuthProviderFactoryRequestStream};
+use futures::future::FutureResult;
 use futures::prelude::*;
 
 /// The AuthProviderFactory struct is holding implementation of
@@ -36,10 +37,10 @@ impl AuthProviderFactory {
         // Using let binding here as GetAuthProvider is currently the only method.
         let AuthProviderFactoryRequest::GetAuthProvider {
             auth_provider: server_end,
-            ..
+            responder,
         } = req;
         info!("Creating auth provider");
         AuthProvider::spawn(server_end);
-        future::ok::<(), Error>(())
+        responder.send(AuthProviderStatus::Ok).into_future()
     }
 }
