@@ -100,9 +100,8 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
       did_execute_commands.emplace_back(did_execute_command_callback);
     }
 
-    Future<>::Wait(
-        "DispatchStoryCommandExecutor.ExecuteStoryCommandsCall.Run.Wait",
-        did_execute_commands)
+    Wait("DispatchStoryCommandExecutor.ExecuteStoryCommandsCall.Run.Wait",
+         did_execute_commands)
         ->Then([this] {
           fuchsia::modular::ExecuteResult result;
           result.status = fuchsia::modular::ExecuteStatus::OK;

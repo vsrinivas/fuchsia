@@ -144,16 +144,17 @@ namespace modular {
 //
 // ## Use Wait() to synchronize on multiple futures
 //
-// If multiple futures are running, use the static Wait() method to create a
+// If multiple futures are running, use the Wait() function to create a
 // Future that completes when all the futures passed to it are completed:
 //
 // FuturePtr<Bytes> f1 = MakeNetworkRequest(request1);
 // FuturePtr<Bytes> f2 = MakeNetworkRequest(request2);
 // FuturePtr<Bytes> f3 = MakeNetworkRequest(request3);
-// std::vector<FuturePtr<Bytes>> requests{f1, f2, f3};
-// Future<Bytes>::Wait(requests)->Then([] (std::vector<Bytes> results) {
+// Wait<Future<>>("Network requests", {f1, f2, f3})->Then([] {
 //   AllNetworkRequestsAreComplete();
 // });
+//
+// See the Wait() function documentation for more details.
 //
 // ## Use Completer() to integrate with functions requiring callbacks
 //
@@ -315,7 +316,14 @@ class ResultCollector<Future<>> {
  public:
   ResultCollector(size_t reserved_count);
   bool IsComplete() const;
-  void AssignResult(size_t);
+
+  // The template on this allows us to use Future<> collectors to swallow
+  // unneeded results of futures we're waiting on.
+  template <typename... Result>
+  void AssignResult(size_t, Result... result) {
+    finished_count_++;
+  }
+
   void Complete(Future<>* future) const;
 
  private:
@@ -325,6 +333,11 @@ class ResultCollector<Future<>> {
 
 }  // namespace internal
 
+template <typename ResultsFuture, typename... Result>
+fxl::RefPtr<ResultsFuture> Wait(
+    const std::string& trace_name,
+    const std::vector<FuturePtr<Result...>>& futures);
+
 template <typename... Result>
 class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
  public:
@@ -333,7 +346,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   // Creates a FuturePtr<Result...>. |trace_name| is used solely for debugging
   // purposes, and is logged when something goes wrong (e.g. Complete() is
   // called twice.)
-  static FuturePtr<Result...> Create(std::string trace_name) {
+  static FuturePtr<Result...> Create(const std::string& trace_name) {
     auto f = fxl::AdoptRef(new Future<Result...>);
     f->trace_name_ = std::move(trace_name);
     return f;
@@ -346,85 +359,11 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   //     // this lambda executes immediately
   //     assert(i == 5);
   //   });
-  static FuturePtr<Result...> CreateCompleted(std::string trace_name,
+  static FuturePtr<Result...> CreateCompleted(const std::string& trace_name,
                                               Result&&... result) {
     auto f = Create(std::move(trace_name));
     f->Complete(std::forward<Result>(result)...);
     return f;
-  }
-
-  // Returns a Future that completes when every future in |futures| is complete.
-  // A strong reference is kept to every future in |futures|, so each future
-  // will be kept alive if they otherwise go out of scope. The future returned
-  // by Wait() will also be kept alive until every future in |futures|
-  // completes. The order of the results corresponds to the order of the given
-  // futures, regardless of their completion order.
-  //
-  // The default type of the resulting future depends on the types of the
-  // component futures. Void futures produce a void future. Monadic futures
-  // produce a future of a flat vector. Polyadic futures produce a future of a
-  // vector of tuples. That is:
-  //
-  // Components         | Result
-  // -------------------+------------------------------------
-  // FuturePtr<>        | FuturePtr<>
-  // FuturePtr<T>       | FuturePtr<std::vector<T>>
-  // FuturePtr<T, U...> | FuturePtr<std::vector<std::tuple<T, U...>>>
-  //
-  // These defaults may be overridden by specifying the template argument for
-  // Wait as the type of future desired.
-  //
-  // Example usage:
-  //
-  // FuturePtr<Bytes> f1 = MakeNetworkRequest(request1);
-  // FuturePtr<Bytes> f2 = MakeNetworkRequest(request2);
-  // FuturePtr<Bytes> f3 = MakeNetworkRequest(request3);
-  // std::vector<FuturePtr<Bytes>> requests{f1, f2, f3};
-  // Future<Bytes>::Wait("NetworkRequests", requests)->Then([](
-  //     std::vector<Bytes> bytes_vector) {
-  //   Bytes f1_bytes = bytes_vector[0];
-  //   Bytes f2_bytes = bytes_vector[1];
-  //   Bytes f3_bytes = bytes_vector[2];
-  // });
-  //
-  // This is similar to Promise.All() in JavaScript, or Join() in Rust.
-  template <
-      typename ResultsFuture = internal::DefaultResultsFuture_t<Result...>>
-  static fxl::RefPtr<ResultsFuture> Wait(
-      std::string trace_name,
-      const std::vector<FuturePtr<Result...>>& futures) {
-    if (futures.empty()) {
-      auto immediate = ResultsFuture::Create(trace_name + "(Completed)");
-      immediate->CompleteWithTuple({});
-      return immediate;
-    }
-
-    auto results = std::make_shared<internal::ResultCollector<ResultsFuture>>(
-        futures.size());
-
-    fxl::RefPtr<ResultsFuture> all_futures_completed =
-        ResultsFuture::Create(trace_name + "(WillWait)");
-
-    for (size_t i = 0; i < futures.size(); i++) {
-      const auto& future = futures[i];
-      // Note that |future| is captured by the callback, to ensure that it'll be
-      // completed even if its refcount drops to zero. The callback will be
-      // reset after it's run to prevent a retain cycle.
-      future->SetCallback(
-          [i, future, all_futures_completed, results](Result&&... result) {
-            results->AssignResult(i, std::forward<Result>(result)...);
-
-            if (results->IsComplete()) {
-              results->Complete(all_futures_completed.get());
-            }
-
-            // null out the callback, otherwise there'll be a retain cycle
-            // (because |future| is on this callback's capture list).
-            future->SetCallback(nullptr);
-          });
-    }
-
-    return all_futures_completed;
   }
 
   // Completes a future with |result|. This causes any callbacks registered
@@ -620,16 +559,17 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   const std::string& trace_name() const { return trace_name_; }
 
  private:
-  Future() : result_{}, weak_factory_(this) {}
+  template <typename... Args>
+  friend class Future;
+
+  template <typename ResultsFuture, typename... Args>
+  friend fxl::RefPtr<ResultsFuture> Wait(
+      const std::string& trace_name,
+      const std::vector<FuturePtr<Args...>>& futures);
+
   FRIEND_REF_COUNTED_THREAD_SAFE(Future);
 
-  // For unit tests only.
-  friend class FutureTest;
-  const std::tuple<Result...>& get() const {
-    FXL_DCHECK(has_result_) << trace_name_ << ": get() called on unset future";
-
-    return result_;
-  }
+  Future() : result_{}, weak_factory_(this) {}
 
   void SetCallback(std::function<void(Result...)>&& callback) {
     callback_ = callback;
@@ -797,9 +737,6 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
     };
   }
 
-  template <typename... Args>
-  friend class Future;
-
   std::string trace_name_;
 
   bool has_result_ = false;
@@ -819,7 +756,114 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   fxl::WeakPtrFactory<Future<Result...>> weak_factory_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(Future);
+
+  // For unit tests only.
+  friend class FutureTest;
+
+  // For unit tests only.
+  const std::tuple<Result...>& get() const {
+    FXL_DCHECK(has_result_) << trace_name_ << ": get() called on unset future";
+
+    return result_;
+  }
 };
+
+// Returns a Future that completes when every future in |futures| is complete.
+// A strong reference is kept to every future in |futures|, so each future
+// will be kept alive if they otherwise go out of scope. The future returned
+// by Wait() will also be kept alive until every future in |futures|
+// completes. The order of the results corresponds to the order of the given
+// futures, regardless of their completion order.
+//
+// The default type of the resulting future depends on the types of the
+// component futures. Void futures produce a void future. Monadic futures
+// produce a future of a flat vector. Polyadic futures produce a future of a
+// vector of tuples. That is:
+//
+// Components         | Result
+// -------------------+------------------------------------
+// FuturePtr<>        | FuturePtr<>
+// FuturePtr<T>       | FuturePtr<std::vector<T>>
+// FuturePtr<T, U...> | FuturePtr<std::vector<std::tuple<T, U...>>>
+//
+// These defaults may be overridden by specifying the template argument for
+// Wait as the type of future desired. All cases may produce a Future<> or a
+// Future<std::vector<std::tuple<...>>>.
+//
+// Example usage:
+//
+// FuturePtr<Bytes> f1 = MakeNetworkRequest(request1);
+// FuturePtr<Bytes> f2 = MakeNetworkRequest(request2);
+// FuturePtr<Bytes> f3 = MakeNetworkRequest(request3);
+// std::vector<FuturePtr<Bytes>> requests{f1, f2, f3};
+// Wait("NetworkRequests", requests)->Then([](
+//     std::vector<Bytes> bytes_vector) {
+//   Bytes f1_bytes = bytes_vector[0];
+//   Bytes f2_bytes = bytes_vector[1];
+//   Bytes f3_bytes = bytes_vector[2];
+// });
+//
+// This is similar to Promise.All() in JavaScript, or Join() in Rust.
+template <typename ResultsFuture, typename... Result>
+fxl::RefPtr<ResultsFuture> Wait(
+    const std::string& trace_name,
+    const std::vector<FuturePtr<Result...>>& futures) {
+  if (futures.empty()) {
+    auto immediate = ResultsFuture::Create(trace_name + "(Completed)");
+    immediate->CompleteWithTuple({});
+    return immediate;
+  }
+
+  auto results = std::make_shared<internal::ResultCollector<ResultsFuture>>(
+      futures.size());
+
+  fxl::RefPtr<ResultsFuture> all_futures_completed =
+      ResultsFuture::Create(trace_name + "(WillWait2)");
+
+  for (size_t i = 0; i < futures.size(); i++) {
+    const auto& future = futures[i];
+    // Note that |future| is captured by the callback, to ensure that it'll be
+    // completed even if its refcount drops to zero. The callback will be
+    // reset after it's run to prevent a retain cycle.
+    future->SetCallback(
+        [i, future, all_futures_completed, results](Result&&... result) {
+          results->AssignResult(i, std::forward<Result>(result)...);
+
+          if (results->IsComplete()) {
+            results->Complete(all_futures_completed.get());
+          }
+
+          // null out the callback, otherwise there'll be a retain cycle
+          // (because |future| is on this callback's capture list).
+          future->SetCallback(nullptr);
+        });
+  }
+
+  return all_futures_completed;
+}
+
+template <typename... Result>
+auto Wait(const std::string& trace_name,
+          const std::vector<FuturePtr<Result...>>& futures) {
+  return Wait<internal::DefaultResultsFuture_t<Result...>>(trace_name, futures);
+}
+
+// We need to provide the initializer list overloads or template deduction fails
+// for the above overloads if given an initializer list.
+// TODO(rosswang): Add a potentially heterogeneous variadic template instead,
+// and prefer it over initializer lists outside of tests.
+template <typename ResultsFuture, typename... Result>
+auto Wait(const std::string& trace_name,
+          std::initializer_list<FuturePtr<Result...>> futures) {
+  return Wait<ResultsFuture>(trace_name,
+                             std::vector<FuturePtr<Result...>>(futures));
+}
+
+template <typename... Result>
+auto Wait(const std::string& trace_name,
+          std::initializer_list<FuturePtr<Result...>> futures) {
+  return Wait(trace_name, std::vector<FuturePtr<Result...>>(futures));
+}
 
 }  // namespace modular
 

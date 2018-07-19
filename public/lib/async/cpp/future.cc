@@ -15,8 +15,6 @@ bool ResultCollector<Future<>>::IsComplete() const {
   return finished_count_ == reserved_count_;
 }
 
-void ResultCollector<Future<>>::AssignResult(size_t) { finished_count_++; }
-
 void ResultCollector<Future<>>::Complete(Future<>* future) const {
   future->Complete();
 }
