@@ -3,21 +3,22 @@
 // found in the LICENSE file.
 
 #include <hid/tcs3400.h>
+#include <hid/descriptor.h>
 
 static const uint8_t tcs3400_report_desc[] = {
-    0x05, 0x20,                   // Usage Page (Sensor)
-    0x09, 0x41,                   // Usage (Ambient Light)
-    0xA1, 0x01,                   // Collection (Application)
-    0x85, 0x01,                   //   Report ID (1)
-    0x0A, 0xD1, 0x04,             //   Usage (Light Illuminance)
-    0x15, 0x00,                   //   Logical Minimum (0)
-    0x27, 0xFF, 0xFF, 0x00, 0x00, //   Logical Maximum (65534)
-    0x75, 0x10,                   //   Report Size (16 bits per field)
-    0x95, 0x01,                   //   Report Count (1: Illuminance)
-    0x65, 0x00,                   //   Units (Not Specified, explicitly not Lux)
-    0x81, 0x02,                   //   Input Data (0=Data 1=Variable 0=Absolute 0=NoWrap 0=Linear
-                                  //               0=PrefState 0=NoNull 0=NonVolatile 0=Bitmap)
-    0xC0,                         // End Collection
+    HID_USAGE_PAGE(0x20), // Sensor
+    HID_USAGE(0x41), // Ambient Light
+    HID_COLLECTION_APPLICATION,
+    HID_REPORT_ID(0x01),
+    HID_USAGE16(0x04D1), // Light Illuminance
+    HID_LOGICAL_MIN(0x00),
+    HID_LOGICAL_MAX32(0xFFFF),
+    HID_REPORT_SIZE(16),
+    HID_REPORT_COUNT(1),
+    HID_USAGE_SENSOR_GENERIC_UNITS_NOT_SPECIFIED, // Explicitly not Lux
+    HID_INPUT(0x02), // Input Data (0=Data 1=Variable 0=Absolute 0=NoWrap 0=Linear 0=PrefState
+                     //             0=NoNull 0=NonVolatile 0=Bitmap)
+    HID_END_COLLECTION,
 };
 
 size_t get_tcs3400_report_desc(const uint8_t** buf) {
