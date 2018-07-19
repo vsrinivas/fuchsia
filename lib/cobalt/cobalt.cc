@@ -35,6 +35,17 @@ fidl::VectorPtr<ObservationValue> CloneObservationValues(
   FXL_DCHECK(status == ZX_OK);
   return result;
 }
+
+fxl::AutoCall<fit::closure> InitializeCobalt(
+    std::unique_ptr<CobaltContext> context, CobaltContext** cobalt_context) {
+  FXL_DCHECK(!*cobalt_context);
+  *cobalt_context = context.get();
+  return fxl::MakeAutoCall<fit::closure>(
+      [context = std::move(context), cobalt_context]() mutable {
+        context.reset();
+        *cobalt_context = nullptr;
+      });
+}
 }  // namespace
 
 CobaltObservation::CobaltObservation(uint32_t metric_id, uint32_t encoding_id,
@@ -190,6 +201,8 @@ class CobaltContextImpl : public CobaltContext {
  public:
   CobaltContextImpl(async_dispatcher_t* dispatcher,
                     component::StartupContext* context, int32_t project_id);
+  CobaltContextImpl(async_dispatcher_t* dispatcher,
+                    component::StartupContext* context, fsl::SizedVmo config);
   ~CobaltContextImpl();
 
   void ReportObservation(CobaltObservation observation) override;
@@ -205,7 +218,8 @@ class CobaltContextImpl : public CobaltContext {
   async_dispatcher_t* const dispatcher_;
   component::StartupContext* context_;
   fuchsia::cobalt::CobaltEncoderPtr encoder_;
-  const int32_t project_id_;
+  const int32_t project_id_ = 0;
+  const fsl::SizedVmo config_;
 
   std::multiset<CobaltObservation> observations_to_send_;
   std::multiset<CobaltObservation> observations_in_transit_;
@@ -217,6 +231,13 @@ CobaltContextImpl::CobaltContextImpl(async_dispatcher_t* dispatcher,
                                      component::StartupContext* context,
                                      int32_t project_id)
     : dispatcher_(dispatcher), context_(context), project_id_(project_id) {
+  ConnectToCobaltApplication();
+}
+
+CobaltContextImpl::CobaltContextImpl(async_dispatcher_t* dispatcher,
+                                     component::StartupContext* context,
+                                     fsl::SizedVmo config)
+    : dispatcher_(dispatcher), context_(context), config_(std::move(config)) {
   ConnectToCobaltApplication();
 }
 
@@ -242,10 +263,36 @@ void CobaltContextImpl::ReportObservation(CobaltObservation observation) {
 void CobaltContextImpl::ConnectToCobaltApplication() {
   auto encoder_factory =
       context_->ConnectToEnvironmentService<CobaltEncoderFactory>();
-  encoder_factory->GetEncoder(project_id_, encoder_.NewRequest());
-  encoder_.set_error_handler([this] { OnConnectionError(); });
 
-  SendObservations();
+  if (project_id_ > 0) {
+    encoder_factory->GetEncoder(project_id_, encoder_.NewRequest());
+    encoder_.set_error_handler([this] { OnConnectionError(); });
+    SendObservations();
+  } else {
+    fsl::SizedVmo config_vmo;
+    FXL_CHECK(config_.Duplicate(0, &config_vmo) == ZX_OK)
+        << "Could not clone config VMO";
+
+    fuchsia::cobalt::ProjectProfile profile;
+    fuchsia::mem::Buffer buf = std::move(config_vmo).ToTransport();
+    profile.config.vmo = std::move(buf.vmo);
+    profile.config.size = buf.size;
+
+    encoder_factory->GetEncoderForProject(
+        std::move(profile), encoder_.NewRequest(), [this](Status status) {
+          if (status == Status::OK) {
+            if (encoder_) {
+              encoder_.set_error_handler([this] { OnConnectionError(); });
+              SendObservations();
+            } else {
+              OnConnectionError();
+            }
+          } else {
+            FXL_LOG(ERROR)
+                << "GetEncoderForProject() received invalid arguments";
+          }
+        });
+  }
 }
 
 void CobaltContextImpl::OnConnectionError() {
@@ -345,17 +392,26 @@ std::unique_ptr<CobaltContext> MakeCobaltContext(
   return std::make_unique<CobaltContextImpl>(dispatcher, context, project_id);
 }
 
+std::unique_ptr<CobaltContext> MakeCobaltContext(
+    async_dispatcher_t* dispatcher, component::StartupContext* context,
+    fsl::SizedVmo config) {
+  return std::make_unique<CobaltContextImpl>(dispatcher, context,
+                                             std::move(config));
+}
+
 fxl::AutoCall<fit::closure> InitializeCobalt(
     async_dispatcher_t* dispatcher, component::StartupContext* startup_context,
     int32_t project_id, CobaltContext** cobalt_context) {
-  FXL_DCHECK(!*cobalt_context);
-  auto context = MakeCobaltContext(dispatcher, startup_context, project_id);
-  *cobalt_context = context.get();
-  return fxl::MakeAutoCall<fit::closure>(fxl::MakeCopyable(
-      [context = std::move(context), cobalt_context]() mutable {
-        context.reset();
-        *cobalt_context = nullptr;
-      }));
+  return InitializeCobalt(
+      MakeCobaltContext(dispatcher, startup_context, project_id),
+      cobalt_context);
+}
+
+fxl::AutoCall<fit::closure> InitializeCobalt(
+    async_dispatcher_t* dispatcher, component::StartupContext* startup_context,
+    fsl::SizedVmo config, CobaltContext** cobalt_context) {
+  return InitializeCobalt(
+      MakeCobaltContext(dispatcher, startup_context, std::move(config)), cobalt_context);
 }
 
 void ReportObservation(CobaltObservation observation,

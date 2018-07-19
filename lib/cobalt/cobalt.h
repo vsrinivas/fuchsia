@@ -10,9 +10,10 @@
 #include <utility>
 
 #include <fuchsia/cobalt/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/backoff/exponential_backoff.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fxl/functional/auto_call.h>
 #include <lib/fxl/macros.h>
 #include <lib/fxl/memory/ref_ptr.h>
@@ -56,7 +57,13 @@ class CobaltContext {
 
 // Returns a CobaltContext initialized with the provided parameters.
 std::unique_ptr<CobaltContext> MakeCobaltContext(
-    async_dispatcher_t* dispatcher, component::StartupContext* context, int32_t project_id);
+    async_dispatcher_t* dispatcher, component::StartupContext* context,
+    int32_t project_id);
+
+// Returns a CobaltContext initialized with the provided parameters.
+std::unique_ptr<CobaltContext> MakeCobaltContext(
+    async_dispatcher_t* dispatcher, component::StartupContext* context,
+    fsl::SizedVmo config);
 
 // Cobalt initialization. When cobalt is not needed anymore, the returned object
 // must be deleted. This method must not be called again until then.
@@ -64,6 +71,13 @@ std::unique_ptr<CobaltContext> MakeCobaltContext(
 fxl::AutoCall<fit::closure> InitializeCobalt(
     async_dispatcher_t* dispatcher, component::StartupContext* startup_context,
     int32_t project_id, CobaltContext** cobalt_context);
+
+// Cobalt initialization. When cobalt is not needed anymore, the returned object
+// must be deleted. This method must not be called again until then.
+// DEPRECATED - prefer MakeCobaltContext().
+fxl::AutoCall<fit::closure> InitializeCobalt(
+    async_dispatcher_t* dispatcher, component::StartupContext* startup_context,
+    fsl::SizedVmo config, CobaltContext** cobalt_context);
 
 // Reports an observation to Cobalt if |cobalt_context| is not nullptr.
 // DEPRECATED - prefer calling CobaltContext::ReportObservation directly

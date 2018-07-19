@@ -4,9 +4,10 @@
 
 #include "peridot/lib/cobalt/cobalt.h"
 
-#include <lib/component/cpp/service_provider_impl.h>
 #include <lib/async/default.h>
+#include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fidl/cpp/clone.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
@@ -248,6 +249,17 @@ TEST_F(CobaltTest, InitializeCobalt) {
   CobaltContext* cobalt_context = nullptr;
   auto ac = InitializeCobalt(async_get_default_dispatcher(), context(),
                              kFakeCobaltProjectId, &cobalt_context);
+  EXPECT_NE(cobalt_context, nullptr);
+  ac.call();
+  EXPECT_EQ(cobalt_context, nullptr);
+}
+
+TEST_F(CobaltTest, InitializeCobaltWithProjectProfile) {
+  CobaltContext* cobalt_context = nullptr;
+  fsl::SizedVmo fake_cobalt_config;
+  ASSERT_TRUE(fsl::VmoFromString("FakeConfig", &fake_cobalt_config));
+  auto ac = InitializeCobalt(async_get_default_dispatcher(), context(),
+                             std::move(fake_cobalt_config), &cobalt_context);
   EXPECT_NE(cobalt_context, nullptr);
   ac.call();
   EXPECT_EQ(cobalt_context, nullptr);
