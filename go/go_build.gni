@@ -98,7 +98,7 @@ template("go_build") {
 
     zircon_sysroot = sysroot
     if (is_fuchsia) {
-      zircon_sysroot = rebase_path("$root_out_dir/sdks/zircon_sysroot/sysroot")
+      zircon_sysroot = rebase_path("$root_out_dir/sdks/zircon_sysroot/arch/$target_cpu/sysroot")
     }
 
     args = [

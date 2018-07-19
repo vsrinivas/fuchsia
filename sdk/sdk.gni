@@ -24,20 +24,16 @@ import("sdk_molecule.gni")
 #     on an official SDK.
 #     Defaults to false.
 #
-#   old_school (optional)
-#     If `export` is true, controls the layout of the produced SDK.
-#     An old-school SDK will essentially be a sysroot containing all the
-#     C/C++ packages.
-#     Note: this is a stop-gap measure to port runtimes to the new sysroot
-#     shape.
-#     Defaults to true.
-#
 #   domains (optional)
 #     If `export` is true, specifies the domains of SDK elements to export.
 #     Only the "cpp" domain is currently supported.
 
 template("sdk") {
   assert(defined(invoker.category), "Must define an SDK category")
+
+  if (defined(invoker.old_school)) {
+    not_needed(invoker, ["old_school"])
+  }
 
   main_target_name = target_name
   generation_target_name = "${target_name}_molecule"
@@ -73,7 +69,6 @@ template("sdk") {
                            [
                              "domains",
                              "export",
-                             "old_school",
                            ])
 
     category = invoker.category
@@ -186,11 +181,9 @@ template("sdk") {
                rebase_path(depfile),
                "--depname",
                rebase_path(stamp_file, root_build_dir),
+               "--arch",
+               target_cpu,
              ]
-
-      if (defined(invoker.old_school) && invoker.old_school) {
-        args += [ "--old-school" ]
-      }
 
       deps = [
         ":$copy_target_name",
@@ -200,9 +193,6 @@ template("sdk") {
   } else {  # Not exported.
     if (defined(invoker.domains)) {
       assert(false, "A domain list may only be set if export = true.")
-    }
-    if (defined(invoker.old_school)) {
-      assert(false, "Only exported SDKs may be old-school.")
     }
   }
 }

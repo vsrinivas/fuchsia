@@ -295,7 +295,7 @@ template("rustc_artifact") {
         "--clang_prefix",
         rebase_path(clang_prefix, "", root_out_dir),
         "--sysroot",
-        rebase_path("$root_out_dir/sdks/zircon_sysroot/sysroot"),
+        rebase_path("$root_out_dir/sdks/zircon_sysroot/arch/$target_cpu/sysroot"),
       ]
     }
     args += dep_info_paths

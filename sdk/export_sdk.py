@@ -43,9 +43,9 @@ def main():
     parser.add_argument('--depfile',
                         help='Path to the depfile to generate',
                         required=True)
-    parser.add_argument('--old-school',
-                        help='Turns the SDK into a big sysroot',
-                        action='store_true')
+    parser.add_argument('--arch',
+                        help='Target architecture',
+                        required=True)
     args = parser.parse_args()
 
     if len(args.domains) != 1 and args.domains[0] != 'cpp':
@@ -57,20 +57,19 @@ def main():
 
     with open(args.manifest, 'r') as manifest_file:
         manifest = json.load(manifest_file)
-    atoms = filter(lambda a: a['id']['domain'] == 'cpp', manifest['atoms'])
 
-    def get_atom_dir(atom_name):
-        if args.old_school:
-            return os.path.join(args.out_dir, 'sysroot')
-        else:
-            return os.path.join(args.out_dir, 'pkg', atom_name)
+    atoms = manifest['atoms']
+    if len(atoms) != 1 or atoms[0]['id']['name'] != 'system':
+        print(atoms)
+        print('Only the sysroot atom is supported.')
+        return 1
+    atom = atoms[0]
 
-    for atom in atoms:
-        dir = get_atom_dir(atom['id']['name'])
-        for file in atom['files']:
-            destination = os.path.join(dir, file['destination'])
-            make_dir(destination)
-            shutil.copyfile(file['source'], destination)
+    base = os.path.join(args.out_dir, 'arch', args.arch, 'sysroot')
+    for file in atom['files']:
+        destination = os.path.join(base, file['destination'])
+        make_dir(destination)
+        shutil.copyfile(file['source'], destination)
 
     with open(args.depfile, 'w') as dep_file:
         dep_file.write('%s:\n' % args.depname)
