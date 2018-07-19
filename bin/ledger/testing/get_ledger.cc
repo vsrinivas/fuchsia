@@ -26,7 +26,8 @@ void GetLedger(
     fidl::InterfaceRequest<fuchsia::sys::ComponentController>
         controller_request,
     cloud_provider::CloudProviderPtr cloud_provider, std::string ledger_name,
-    std::string ledger_repository_path, fit::function<void()> error_handler,
+    const ledger::DetachedPath& ledger_repository_path,
+    fit::function<void()> error_handler,
     fit::function<void(ledger::Status, ledger::LedgerPtr)> callback) {
   auto repository_factory =
       std::make_unique<ledger_internal::LedgerRepositoryFactoryPtr>();
@@ -44,10 +45,11 @@ void GetLedger(
   auto repository = std::make_unique<ledger_internal::LedgerRepositoryPtr>();
   auto request = repository->NewRequest();
 
-  fxl::UniqueFD dir(open(ledger_repository_path.c_str(), O_PATH));
+  fxl::UniqueFD dir(openat(ledger_repository_path.root_fd(),
+                           ledger_repository_path.path().c_str(), O_PATH));
   if (!dir.is_valid()) {
-    FXL_LOG(ERROR) << "Unable to open directory at " << ledger_repository_path
-                   << ". errno: " << errno;
+    FXL_LOG(ERROR) << "Unable to open directory at "
+                   << ledger_repository_path.path() << ". errno: " << errno;
     callback(ledger::Status::IO_ERROR, nullptr);
     return;
   }

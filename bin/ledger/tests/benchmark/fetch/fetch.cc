@@ -89,8 +89,8 @@ void FetchBenchmark::Run() {
       server_id_, "", cloud_provider_writer.NewRequest());
   test::GetLedger(
       startup_context_.get(), writer_controller_.NewRequest(),
-      std::move(cloud_provider_writer), "fetch", std::move(writer_path),
-      QuitLoopClosure(),
+      std::move(cloud_provider_writer), "fetch",
+      ledger::DetachedPath(std::move(writer_path)), QuitLoopClosure(),
       [this](ledger::Status status, ledger::LedgerPtr ledger) {
         if (QuitOnError(QuitLoopClosure(), status, "Get writer ledger")) {
           return;
@@ -157,8 +157,8 @@ void FetchBenchmark::ConnectReader() {
       server_id_, "", cloud_provider_reader.NewRequest());
   test::GetLedger(
       startup_context_.get(), reader_controller_.NewRequest(),
-      std::move(cloud_provider_reader), "fetch", std::move(reader_path),
-      QuitLoopClosure(),
+      std::move(cloud_provider_reader), "fetch",
+      ledger::DetachedPath(std::move(reader_path)), QuitLoopClosure(),
       [this](ledger::Status status, ledger::LedgerPtr ledger) {
         if (QuitOnError(QuitLoopClosure(), status, "ConnectReader")) {
           return;

@@ -17,6 +17,7 @@
 #include <lib/fxl/strings/string_view.h>
 
 #include "peridot/bin/ledger/fidl/include/types.h"
+#include "peridot/bin/ledger/filesystem/detached_path.h"
 
 namespace test {
 
@@ -26,7 +27,8 @@ void GetLedger(component::StartupContext* context,
                fidl::InterfaceRequest<fuchsia::sys::ComponentController>
                    controller_request,
                cloud_provider::CloudProviderPtr cloud_provider,
-               std::string ledger_name, std::string ledger_repository_path,
+               std::string ledger_name,
+               const ledger::DetachedPath& ledger_repository_path,
                fit::function<void()> error_handler,
                fit::function<void(ledger::Status, ledger::LedgerPtr)> callback);
 

@@ -65,7 +65,7 @@ void UpdateEntryBenchmark::Run() {
                 << " --transaction-size=" << transaction_size_;
   test::GetLedger(
       startup_context_.get(), component_controller_.NewRequest(), nullptr,
-      "update_entry", tmp_dir_.path(), QuitLoopClosure(),
+      "update_entry", ledger::DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
       [this](ledger::Status status, ledger::LedgerPtr ledger) {
         if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
           return;

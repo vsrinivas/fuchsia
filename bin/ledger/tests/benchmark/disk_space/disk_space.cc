@@ -70,7 +70,7 @@ DiskSpaceBenchmark::DiskSpaceBenchmark(async::Loop* loop, size_t page_count,
 void DiskSpaceBenchmark::Run() {
   test::GetLedger(
       startup_context_.get(), component_controller_.NewRequest(), nullptr,
-      "disk_space", tmp_dir_.path(), QuitLoopClosure(),
+      "disk_space", ledger::DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
       [this](ledger::Status status, ledger::LedgerPtr ledger) {
         if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
           return;

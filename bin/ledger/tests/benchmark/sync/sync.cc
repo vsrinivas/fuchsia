@@ -90,8 +90,8 @@ void SyncBenchmark::Run() {
       server_id_, "", cloud_provider_alpha.NewRequest());
   test::GetLedger(
       startup_context_.get(), alpha_controller_.NewRequest(),
-      std::move(cloud_provider_alpha), "sync", std::move(alpha_path),
-      QuitLoopClosure(),
+      std::move(cloud_provider_alpha), "sync",
+      ledger::DetachedPath(std::move(alpha_path)), QuitLoopClosure(),
       [this, beta_path = std::move(beta_path)](
           ledger::Status status, ledger::LedgerPtr ledger) mutable {
         if (QuitOnError(QuitLoopClosure(), status, "alpha ledger")) {
@@ -105,8 +105,8 @@ void SyncBenchmark::Run() {
 
         test::GetLedger(
             startup_context_.get(), beta_controller_.NewRequest(),
-            std::move(cloud_provider_beta), "sync", beta_path,
-            QuitLoopClosure(),
+            std::move(cloud_provider_beta), "sync",
+            ledger::DetachedPath(beta_path), QuitLoopClosure(),
             [this, beta_path](ledger::Status status, ledger::LedgerPtr ledger) {
               if (QuitOnError(QuitLoopClosure(), status, "beta ledger")) {
                 return;

@@ -50,7 +50,8 @@ GetPageBenchmark::GetPageBenchmark(async::Loop* loop, size_t requests_count,
 
 void GetPageBenchmark::Run() {
   test::GetLedger(startup_context_.get(), component_controller_.NewRequest(),
-                  nullptr, "get_page", tmp_dir_.path(), QuitLoopClosure(),
+                  nullptr, "get_page", ledger::DetachedPath(tmp_dir_.path()),
+                  QuitLoopClosure(),
                   [this](ledger::Status status, ledger::LedgerPtr ledger) {
                     if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
                       return;

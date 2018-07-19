@@ -100,8 +100,8 @@ void ConvergenceBenchmark::Run() {
 
     test::GetLedger(
         startup_context_.get(), device_context->controller.NewRequest(),
-        std::move(cloud_provider), "convergence", synced_dir_path,
-        QuitLoopClosure(),
+        std::move(cloud_provider), "convergence",
+        ledger::DetachedPath(synced_dir_path), QuitLoopClosure(),
         [this, device_context = device_context.get(),
          callback = waiter->NewCallback()](ledger::Status status,
                                            ledger::LedgerPtr ledger) mutable {

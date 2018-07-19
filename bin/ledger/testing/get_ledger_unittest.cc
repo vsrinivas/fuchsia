@@ -5,17 +5,17 @@
 #include "peridot/bin/ledger/testing/get_ledger.h"
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fxl/files/scoped_temp_dir.h>
 
 #include "garnet/public/lib/callback/capture.h"
 #include "gtest/gtest.h"
+#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace test {
 namespace {
 
 TEST(GetLedgerTest, CreateAndDeleteLedger) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  files::ScopedTempDir temp_dir;
+  scoped_tmpfs::ScopedTmpFS tmpfs;
 
   auto startup_context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::sys::ComponentControllerPtr controller;
@@ -24,7 +24,8 @@ TEST(GetLedgerTest, CreateAndDeleteLedger) {
   ledger::LedgerPtr ledger;
 
   GetLedger(startup_context.get(), controller.NewRequest(), nullptr,
-            "ledger_name", temp_dir.path(), [&] { loop.Quit(); },
+            "ledger_name", ledger::DetachedPath(tmpfs.root_fd()),
+            [&] { loop.Quit(); },
             callback::Capture([&] { loop.Quit(); }, &status, &ledger));
   loop.Run();
 
@@ -35,7 +36,7 @@ TEST(GetLedgerTest, CreateAndDeleteLedger) {
 
 TEST(GetLedgerTest, GetPageEnsureInitialized) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  files::ScopedTempDir temp_dir;
+  scoped_tmpfs::ScopedTmpFS tmpfs;
 
   auto startup_context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::sys::ComponentControllerPtr controller;
@@ -44,7 +45,8 @@ TEST(GetLedgerTest, GetPageEnsureInitialized) {
   ledger::LedgerPtr ledger;
 
   GetLedger(startup_context.get(), controller.NewRequest(), nullptr,
-            "ledger_name", temp_dir.path(), [&] { loop.Quit(); },
+            "ledger_name", ledger::DetachedPath(tmpfs.root_fd()),
+            [&] { loop.Quit(); },
             callback::Capture([&] { loop.Quit(); }, &status, &ledger));
   loop.Run();
   loop.ResetQuit();

@@ -57,7 +57,7 @@ void PutBenchmark::Run() {
                 << (update_ ? " --update" : "");
   test::GetLedger(
       startup_context_.get(), component_controller_.NewRequest(), nullptr,
-      "put", tmp_dir_.path(), QuitLoopClosure(),
+      "put", ledger::DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
       [this](ledger::Status status, ledger::LedgerPtr ledger) {
         if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
           return;
