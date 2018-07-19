@@ -591,7 +591,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
             response->attributes.mode = attr.mode;
             response->attributes.id = attr.inode;
             response->attributes.content_size = attr.size;
-            response->attributes.storage_size = attr.blksize * attr.blkcount;
+            response->attributes.storage_size = VNATTR_BLKSIZE * attr.blkcount;
             response->attributes.link_count = attr.nlink;
             response->attributes.creation_time = attr.create_time;
             response->attributes.modification_time = attr.modify_time;
