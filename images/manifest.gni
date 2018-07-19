@@ -54,6 +54,7 @@ declare_args() {
 #   response_file_contents (required)
 #   data_deps (optional)
 #   deps (optional)
+#   public_deps (optional)
 #   testonly (optional)
 #   visibility (optional)
 #     Same as for any GN `action()` target.
@@ -64,6 +65,7 @@ template("generate_response_file") {
                            [
                              "data_deps",
                              "deps",
+                             "public_deps",
                              "output_name",
                              "response_file_contents",
                              "testonly",
@@ -139,6 +141,7 @@ template("generate_manifest") {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "public_deps",
                              "sources",
                              "testonly",
                              "visibility",
