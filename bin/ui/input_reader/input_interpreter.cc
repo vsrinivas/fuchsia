@@ -10,6 +10,7 @@
 #include <hid/hid.h>
 #include <hid/paradise.h>
 #include <hid/samsung.h>
+#include <hid/ambient-light.h>
 #include <hid/usages.h>
 
 #include <sys/types.h>
@@ -45,6 +46,7 @@ fuchsia::ui::input::InputReport CloneReport(
 // TODO(SCN-473): Extract sensor IDs from HID.
 const size_t kParadiseAccLid = 0;
 const size_t kParadiseAccBase = 1;
+const size_t kAmbientLight = 2;
 }  // namespace
 
 namespace mozart {
@@ -319,6 +321,19 @@ bool InputInterpreter::Initialize() {
 
     sensor_report_ = fuchsia::ui::input::InputReport::New();
     sensor_report_->sensor = fuchsia::ui::input::SensorReport::New();
+  } else if (protocol == HidDecoder::Protocol::LightSensor) {
+    FXL_VLOG(2) << "Device " << name() << " has an ambient light sensor";
+    sensor_device_type_ = SensorDeviceType::AMBIENT_LIGHT;
+    has_sensors_ = true;
+
+    fuchsia::ui::input::SensorDescriptorPtr desc =
+        fuchsia::ui::input::SensorDescriptor::New();
+    desc->type = fuchsia::ui::input::SensorType::LIGHTMETER;
+    desc->loc = fuchsia::ui::input::SensorLocation::UNKNOWN;
+    sensor_descriptors_[kAmbientLight] = std::move(desc);
+
+    sensor_report_ = fuchsia::ui::input::InputReport::New();
+    sensor_report_->sensor = fuchsia::ui::input::SensorReport::New();
   } else {
     FXL_VLOG(2) << "Device " << name() << " has unsupported HID device";
     return false;
@@ -505,6 +520,16 @@ bool InputInterpreter::Read(bool discard) {
   switch (sensor_device_type_) {
     case SensorDeviceType::PARADISE:
       if (ParseParadiseSensorReport(report.data(), rc)) {
+        if (!discard) {
+          FXL_DCHECK(sensor_idx_ < kMaxSensorCount);
+          FXL_DCHECK(sensor_devices_[sensor_idx_]);
+          sensor_devices_[sensor_idx_]->DispatchReport(
+              CloneReport(sensor_report_));
+        }
+      }
+      break;
+    case SensorDeviceType::AMBIENT_LIGHT:
+      if (ParseAmbientLightSensorReport()) {
         if (!discard) {
           FXL_DCHECK(sensor_idx_ < kMaxSensorCount);
           FXL_DCHECK(sensor_devices_[sensor_idx_]);
@@ -797,5 +822,23 @@ bool InputInterpreter::ParseParadiseSensorReport(uint8_t* r, size_t len) {
               << "): " << *sensor_report_;
   return true;
 }
+
+// Writes out result to sensor_report_ and sensor_idx_.
+bool InputInterpreter::ParseAmbientLightSensorReport() {
+  HidDecoder::HidAmbientLightSimple data;
+  if (!hid_decoder_.Read(&data)) {
+    FXL_LOG(ERROR) << " failed reading from ambient light sensor";
+    return false;
+  }
+  sensor_report_->sensor->set_scalar(data.illuminance);
+  sensor_report_->event_time = InputEventTimestampNow();
+  sensor_idx_ = kAmbientLight;
+
+  FXL_VLOG(2) << name()
+              << " parsed (sensor=" << static_cast<uint16_t>(sensor_idx_)
+              << "): " << *sensor_report_;
+  return true;
+}
+
 
 }  // namespace mozart

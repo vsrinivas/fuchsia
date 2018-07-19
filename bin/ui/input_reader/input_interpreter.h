@@ -66,6 +66,7 @@ class InputInterpreter {
   enum class SensorDeviceType {
     NONE,
     PARADISE,
+    AMBIENT_LIGHT,
   };
 
   InputInterpreter(std::string name, int fd,
@@ -85,6 +86,8 @@ class InputInterpreter {
   template <typename ReportT>
   bool ParseParadiseTouchpadReport(uint8_t* report, size_t len);
   bool ParseParadiseSensorReport(uint8_t* report, size_t len);
+
+  bool ParseAmbientLightSensorReport();
 
   fuchsia::ui::input::InputDeviceRegistry* registry_;
 

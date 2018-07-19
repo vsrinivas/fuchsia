@@ -28,6 +28,8 @@ bool log_err(ssize_t rc, const std::string& what, const std::string& name) {
   return false;
 }
 
+// TODO(SCN-843): We need to generalize these extraction functions
+
 // Casting from unsigned to signed can change the bit pattern so
 // we need to resort to this method.
 int8_t signed_bit_cast(uint8_t src) {
@@ -35,15 +37,32 @@ int8_t signed_bit_cast(uint8_t src) {
   memcpy(&dest, &src, sizeof(uint8_t));
   return dest;
 }
-// Extracts an int8_t sign extended to int32_t from a byte vector |v|.
+
+// Extracts a up to 8 bits unsigned number from a byte vector |v|.
 // Both |begin| and |count| are in bits units. This function does not
 // check for the vector being long enough.
-int32_t extract_int(const std::vector<uint8_t>& v, uint32_t begin,
-                    uint32_t count) {
+static uint8_t extract_uint8(const std::vector<uint8_t>& v, uint32_t begin,
+                            uint32_t count) {
   uint8_t val = v[begin / 8u] >> (begin % 8u);
-  val = (count < 8) ? (val & ~(1u << count)) : val;
+  return (count < 8) ? (val & ~(1u << count)) : val;
+}
+
+// Extracts a 16 bits unsigned number from a byte vector |v|.
+// |begin| is in bits units. This function does not check for the vector
+// being long enough.
+static uint16_t extract_uint16(const std::vector<uint8_t>& v, uint32_t begin) {
+  return static_cast<uint16_t>(extract_uint8(v, begin, 8)) |
+      static_cast<uint16_t>(extract_uint8(v, begin + 8, 8)) << 8;
+}
+
+// Extracts up to 8 bits sign extended to int32_t from a byte vector |v|.
+// Both |begin| and |count| are in bits units. This function does not
+// check for the vector being long enough.
+static int32_t extract_int8_ext(const std::vector<uint8_t>& v, uint32_t begin,
+                               uint32_t count) {
+  uint8_t val = extract_uint8(v, begin, count);
   return signed_bit_cast(val);
-};
+}
 
 }  // namespace
 
@@ -65,6 +84,25 @@ bool HidDecoder::Init() {
 bool HidDecoder::GetEvent(zx_handle_t* handle) {
   ssize_t rc = ioctl_device_get_event_handle(fd_, handle);
   return (rc < 0) ? log_err(rc, "event handle", name_) : true;
+}
+
+HidDecoder::Protocol ExtractProtocol(hid::Usage input) {
+  using ::hid::usage::Page;
+  using ::hid::usage::Sensor;
+  struct {
+    Page page;
+    Sensor usage;
+    HidDecoder::Protocol protocol;
+  } usage_to_protocol[] = {
+      {Page::kSensor, Sensor::kAmbientLight, HidDecoder::Protocol::LightSensor},
+      // Add more sensors here
+  };
+  for (const auto& j : usage_to_protocol) {
+    if (input.page == j.page && input.usage == j.usage) {
+      return j.protocol;
+    }
+  }
+  return HidDecoder::Protocol::Other;
 }
 
 bool HidDecoder::ParseProtocol(Protocol* protocol) {
@@ -190,11 +228,20 @@ bool HidDecoder::ParseProtocol(Protocol* protocol) {
                 << collection->usage.page << " and usage "
                 << collection->usage.usage;
 
-  if (collection->usage.page == hid::usage::Page::kGenericDesktop) {
-    if (collection->usage.usage == hid::usage::GenericDesktop::kJoystick) {
-      // Most modern gamepads report themselves as Joysticks. Madness.
-      if (ParseGamepadDescriptor(input_fields, field_count))
-        protocol_ = Protocol::Gamepad;
+  // Most modern gamepads report themselves as Joysticks. Madness.
+  if (collection->usage.page == hid::usage::Page::kGenericDesktop &&
+      collection->usage.usage == hid::usage::GenericDesktop::kJoystick &&
+      ParseGamepadDescriptor(input_fields, field_count)) {
+    protocol_ = Protocol::Gamepad;
+  } else {
+    protocol_ = ExtractProtocol(collection->usage);
+    switch (protocol_) {
+      case Protocol::LightSensor:
+        ParseAmbientLightDescriptor(input_fields, field_count);
+        break;
+      // Add more protocols here
+      default:
+        break;
     }
   }
 
@@ -259,6 +306,42 @@ bool HidDecoder::ParseGamepadDescriptor(const hid::ReportField* fields,
   return true;
 }
 
+bool HidDecoder::ParseAmbientLightDescriptor(const hid::ReportField* fields,
+                                             size_t count) {
+  if (count == 0u)
+    return false;
+
+  decoder_.resize(2u);
+  uint8_t offset = 0;
+
+  if (fields[0].report_id != 0) {
+    // If exists, the first entry (8-bits) is always the report id and
+    // all items start after the first byte.
+    decoder_[0] = DataLocator{0u, 8u, fields[0].report_id};
+    offset = 8u;
+  }
+
+  uint32_t bit_count = 0;
+
+  // Traverse each input report field and see if there is a match in the table.
+  // If so place the location in |decoder_| array.
+  for (size_t ix = 0; ix != count; ix++) {
+    if (fields[ix].type != hid::kInput)
+      continue;
+
+    if (fields[ix].attr.usage.usage == hid::usage::Sensor::kLightIlluminance) {
+      decoder_[1] = DataLocator{bit_count + offset, fields[ix].attr.bit_sz, 0};
+      // Found a required usage.
+      // Here |decoder_| should look like this:
+      // [rept_id][abs_light]
+      return true;
+    }
+
+    bit_count += fields[ix].attr.bit_sz;
+  }
+  return false;
+}
+
 const std::vector<uint8_t>& HidDecoder::Read(int* bytes_read) {
   *bytes_read = read(fd_, report_.data(), report_.size());
   return report_;
@@ -287,16 +370,45 @@ bool HidDecoder::Read(HidGamepadSimple* gamepad) {
     ++cur;
   }
 
-  gamepad->left_x = extract_int(report, cur->begin, cur->count) / 2;
+  gamepad->left_x = extract_int8_ext(report, cur->begin, cur->count) / 2;
   ++cur;
-  gamepad->left_y = extract_int(report, cur->begin, cur->count) / 2;
+  gamepad->left_y = extract_int8_ext(report, cur->begin, cur->count) / 2;
   ++cur;
-  gamepad->right_x = extract_int(report, cur->begin, cur->count) / 2;
+  gamepad->right_x = extract_int8_ext(report, cur->begin, cur->count) / 2;
   ++cur;
-  gamepad->right_y = extract_int(report, cur->begin, cur->count) / 2;
+  gamepad->right_y = extract_int8_ext(report, cur->begin, cur->count) / 2;
   ++cur;
-  gamepad->hat_switch = extract_int(report, cur->begin, cur->count);
+  gamepad->hat_switch = extract_int8_ext(report, cur->begin, cur->count);
   return true;
 }
 
+bool HidDecoder::Read(HidAmbientLightSimple* data) {
+  if (protocol_ != Protocol::LightSensor)
+    return false;
+
+  int rc;
+  auto report = Read(&rc);
+  if (rc < 1) {
+    FXL_LOG(ERROR) << "Failed to read from input: " << rc;
+    return false;
+  }
+
+  auto cur = &decoder_[0];
+  if ((cur->match != 0) && (cur->count == 8u)) {
+    // The first byte is the report id.
+    if (report[0] != cur->match) {
+      // This is a normal condition. The device can generate reports
+      // for controls we don't yet handle.
+      *data = {};
+      return true;
+    }
+    ++cur;
+  }
+  if (cur->count != 16u) {
+    FXL_LOG(ERROR) << "Unexpected count in report from ambient light:" << cur->count;
+    return false;
+  }
+  data->illuminance = extract_uint16(report, cur->begin);
+  return true;
+}
 }  // namespace mozart

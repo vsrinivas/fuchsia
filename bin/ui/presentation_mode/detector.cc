@@ -36,6 +36,8 @@ std::pair<bool, fuchsia::ui::policy::PresentationMode> Detector::Update(
     case fuchsia::ui::input::SensorLocation::LID:
       lid_accelerometer_->Update(data);
       break;
+    default:
+      break;
   }
 
   AccelerometerData base_avg = base_accelerometer_->Average();

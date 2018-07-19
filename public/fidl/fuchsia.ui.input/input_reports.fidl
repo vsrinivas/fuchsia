@@ -6,9 +6,9 @@ library fuchsia.ui.input;
 
 // Descriptors are used to describe the capabilities of an input device.
 //
-// Devices can have multiple descriptors of the following kinds
-// |KeyboardDescriptor|, |MouseDescriptor|, |StylusDescriptor| and
-// |TouchscreenDescriptor|
+// Devices can have multiple descriptors of multiple kinds, for example:
+// |KeyboardDescriptor|, |MouseDescriptor|, |StylusDescriptor|,
+// |TouchscreenDescriptor| and |SensorDescriptor|
 //
 // An input device will generate |InputReport| corresponding to the
 // capabilities of that device listed in its descriptor.
@@ -180,8 +180,9 @@ enum SensorType {
 };
 
 enum SensorLocation {
-  BASE = 0;
-  LID = 1;
+  UNKNOWN = 0;
+  BASE = 1;
+  LID = 2;
 };
 
 // |SensorDescriptor| describes the capabilities of a sensor device.  It does
@@ -201,7 +202,7 @@ struct SensorDescriptor {
   // Accelerometer ranges are given in Gs.
   // Gyroscope ranges are given in deg/s.
   // Magnetometer ranges are given in multiples of 1/16 uT.
-  // Light meter ranges are given in lux (to be confirmed!).
+  // Light meter ranges can be given in Lux or units not specified.
   int32 phys_min;
   int32 phys_max;
 };

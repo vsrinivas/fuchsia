@@ -25,7 +25,7 @@ class HidDecoder {
     Touch,
     Touchpad,
     Gamepad,
-    Sensor,
+    LightSensor,
     // The ones below are hacks that need to be removed.
     Acer12Touch,
     SamsungTouch,
@@ -44,6 +44,10 @@ class HidDecoder {
     int32_t right_x;
     int32_t right_y;
     uint32_t hat_switch;
+  };
+
+  struct HidAmbientLightSimple {
+    int16_t illuminance;
   };
 
   // The decoder does not take ownership of the |fd|. InputReader takes
@@ -72,9 +76,10 @@ class HidDecoder {
   // input interpreter.
   const std::vector<uint8_t>& Read(int* bytes_read);
 
-  // Reads data from the |fd| and decodes it into the |gamepad| struct.
-  // Only valid if Init() out_proto is Protocol::Gamepad.
+  // Read data from the |fd| and decodes it into the specified struct.
+  // Only valid if Init() out_proto is valid.
   bool Read(HidGamepadSimple* gamepad);
+  bool Read(HidAmbientLightSimple* light);
 
  private:
   struct DataLocator {
@@ -85,6 +90,7 @@ class HidDecoder {
 
   bool ParseProtocol(Protocol* protocol);
   bool ParseGamepadDescriptor(const hid::ReportField* fields, size_t count);
+  bool ParseAmbientLightDescriptor(const hid::ReportField* fields, size_t count);
 
   const int fd_;
   const std::string name_;
