@@ -12,13 +12,8 @@ flatbuffer("users") {
   ]
 }
 
-executable_package("device_runner") {
-  meta = [
-    {
-      path = "meta/device_runner.cmx"
-      dest = "device_runner.cmx"
-    },
-  ]
+executable("device_runner_bin") {
+  output_name = "device_runner_bin"
 
   sources = [
     "device_runner.cc",
@@ -46,6 +41,33 @@ executable_package("device_runner") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
+}
+
+package("device_runner") {
+  deps = [
+    ":device_runner_bin",
+    "//peridot/bin/device_runner/cobalt:generate_device_runner_config",
+  ]
+
+  meta = [
+    {
+      path = "meta/device_runner.cmx"
+      dest = "device_runner.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              get_label_info(
+                             "//peridot/bin/device_runner/cobalt:generate_device_runner_config",
+                             "target_gen_dir")
+              + "/cobalt_config.binproto")
+      dest = "cobalt_config.binproto"
+    },
+  ]
+
+  binary = "device_runner_bin"
 }
 
 tests_package("device_runner_unittests") {
