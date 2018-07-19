@@ -9,7 +9,6 @@
 #include <lib/callback/capture.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/optional.h>
-#include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/macros.h>
 
 #include "gtest/gtest.h"
@@ -42,7 +41,6 @@ class PageIntegrationTest : public IntegrationTest {
 TEST_P(PageIntegrationTest, LedgerRepositoryDuplicate) {
   auto instance = NewLedgerAppInstance();
 
-  files::ScopedTempDir tmp_dir;
   ledger_internal::LedgerRepositoryPtr repository =
       instance->GetTestLedgerRepository();
 
