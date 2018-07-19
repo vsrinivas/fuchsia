@@ -5,12 +5,14 @@
 #include "peridot/bin/ledger/cobalt/cobalt.h"
 
 #include <lib/fit/function.h>
+#include <lib/fsl/vmo/file.h>
 
 #include "peridot/lib/cobalt/cobalt.h"
 
 namespace ledger {
 namespace {
-constexpr int32_t kLedgerCobaltProjectId = 100;
+constexpr char kConfigBinProtoPath[] =
+    "/pkg/data/ledger_cobalt_config.binproto";
 constexpr int32_t kCobaltMetricId = 2;
 constexpr int32_t kCobaltEncodingId = 2;
 
@@ -22,8 +24,13 @@ fxl::AutoCall<fit::closure> InitializeCobalt(
     async_dispatcher_t* dispatcher, component::StartupContext* context) {
   static std::unique_ptr<cobalt::CobaltContext> cobalt_context;
   FXL_DCHECK(!cobalt_context);
+
+  fsl::SizedVmo config;
+  FXL_CHECK(fsl::VmoFromFilename(kConfigBinProtoPath, &config))
+      << "Could not read Cobalt config file into VMO";
+
   cobalt_context =
-      cobalt::MakeCobaltContext(dispatcher, context, kLedgerCobaltProjectId);
+      cobalt::MakeCobaltContext(dispatcher, context, std::move(config));
   g_cobalt_context = cobalt_context.get();
   return fxl::MakeAutoCall<fit::closure>([&] {
     g_cobalt_context = nullptr;

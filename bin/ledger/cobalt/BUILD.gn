@@ -2,7 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//third_party/cobalt_config/cobalt_config.gni")
+
 visibility = [ "//peridot/bin/ledger/*" ]
+
+cobalt_config("generate_ledger_config") {
+  project_id = 100
+}
 
 source_set("cobalt") {
   sources = [

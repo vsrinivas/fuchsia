@@ -9,6 +9,7 @@ visibility = [ "//peridot/*" ]
 package("ledger") {
   deps = [
     "app",
+    "cobalt:generate_ledger_config",
   ]
 
   binary = "ledger"
@@ -17,6 +18,17 @@ package("ledger") {
     {
       path = rebase_path("meta/ledger.cmx")
       dest = "ledger.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              get_label_info(
+                             "cobalt:generate_ledger_config",
+                             "target_gen_dir")
+              + "/cobalt_config.binproto")
+      dest = "ledger_cobalt_config.binproto"
     },
   ]
 }
