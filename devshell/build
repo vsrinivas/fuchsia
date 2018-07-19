@@ -34,7 +34,7 @@ function _rmlock () {
 
 function cmd_locked {
   trap _rmlock EXIT
-  $@
+  "$@"
   exit $?
 }
 
