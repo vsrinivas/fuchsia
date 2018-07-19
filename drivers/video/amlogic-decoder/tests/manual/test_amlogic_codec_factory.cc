@@ -29,7 +29,7 @@ void test_factory() {
   // We don't just use Sync FIDL proxies because we might need to recieve events
   // before long.
 
-  async::Loop fidl_loop(kAsyncLoopConfigNoAttachToThread);
+  async::Loop fidl_loop(&kAsyncLoopConfigNoAttachToThread);
   // Start a separate FIDL thread for two reasons:
   //   * It's handy for the main thread to stay separate to control the test.
   //   * By having a separate FIDL thread, this test shows how to do so without
