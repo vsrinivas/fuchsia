@@ -16,6 +16,7 @@ struct State {
     maybe_signals: u32,
     task: AtomicWaker,
 }
+
 struct OnSignalsReceiver {
     state: Arc<Mutex<State>>,
 }
