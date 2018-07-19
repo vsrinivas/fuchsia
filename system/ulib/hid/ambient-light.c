@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hid/tcs3400.h>
+#include <hid/ambient-light.h>
 #include <hid/descriptor.h>
 
-static const uint8_t tcs3400_report_desc[] = {
+static const uint8_t ambient_light_report_desc[] = {
     HID_USAGE_PAGE(0x20), // Sensor
     HID_USAGE(0x41), // Ambient Light
     HID_COLLECTION_APPLICATION,
-    HID_REPORT_ID(0x01),
+    HID_REPORT_ID(AMBIENT_LIGHT_RPT_ID_SIMPLE_POLL),
     HID_USAGE16(0x04D1), // Light Illuminance
     HID_LOGICAL_MIN(0x00),
     HID_LOGICAL_MAX32(0xFFFF),
@@ -21,7 +21,7 @@ static const uint8_t tcs3400_report_desc[] = {
     HID_END_COLLECTION,
 };
 
-size_t get_tcs3400_report_desc(const uint8_t** buf) {
-    *buf = tcs3400_report_desc;
-    return sizeof(tcs3400_report_desc);
+size_t get_ambient_light_report_desc(const uint8_t** buf) {
+    *buf = ambient_light_report_desc;
+    return sizeof(ambient_light_report_desc);
 }

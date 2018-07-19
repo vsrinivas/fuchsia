@@ -10,7 +10,7 @@
 
 #include <fbl/mutex.h>
 
-#include <hid/tcs3400.h>
+#include <hid/ambient-light.h>
 
 #define TCS3400_POLL_SLEEP_SECS 2
 
@@ -60,7 +60,7 @@ private:
     fbl::atomic<bool> running_;
     fbl::Mutex proxy_lock_;
     ddk::HidBusIfcProxy proxy_ __TA_GUARDED(proxy_lock_);
-    tcs3400_data_t tcs_rpt_ __TA_GUARDED(proxy_lock_);
+    ambient_light_data_t tcs_rpt_ __TA_GUARDED(proxy_lock_);
 
     zx_status_t FillRpt() __TA_REQUIRES(proxy_lock_);
     void ShutDown() __TA_EXCLUDES(proxy_lock_);

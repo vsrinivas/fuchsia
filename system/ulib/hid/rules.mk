@@ -16,7 +16,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/keymaps.c \
     $(LOCAL_DIR)/paradise.c \
     $(LOCAL_DIR)/samsung.c \
-    $(LOCAL_DIR)/tcs3400.c \
+    $(LOCAL_DIR)/ambient-light.c \
 
 MODULE_EXPORT := so
 MODULE_SO_NAME := hid

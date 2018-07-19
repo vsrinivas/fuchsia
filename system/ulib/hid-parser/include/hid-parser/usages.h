@@ -30,6 +30,8 @@ enum class Page : uint16_t {
 
     kAlphanumericDisplay        = 0x14,
 
+    kSensor                     = 0x20,
+
     kMedicalInstrument          = 0x40,
 
     kMonitor                    = 0x80,
@@ -331,6 +333,25 @@ enum class Consumer : uint32_t {
     kGenericGUIAppControls      = 0x200
 };
 
+enum class Sensor : uint32_t {
+    kUndefined                      = 0x00,
+
+    kAmbientLight                   = 0x41,
+    kLightIlluminance               = 0x4D1,
+    kLightColorTemperature          = 0x4D2,
+    kLightChromaticity              = 0x4D3,
+    kLightChromaticityX             = 0x4D4,
+    kLightChromaticityY             = 0x4D5,
+    kLightConsumerIrSentenceReceive = 0x4D6,
+    kLightInfraredLight             = 0x4D7,
+    kLightRedLight                  = 0x4D8,
+    kLightGreenLight                = 0x4D9,
+    kLightBlueLight                 = 0x4DA,
+    kLightUltravioletALight         = 0x4DB,
+    kLightUltravioletBLight         = 0x4DC,
+    kLightUltravioletIndex          = 0x4DD,
+};
+
 }   // namespace usage
 }   // namespace hid
 
@@ -348,4 +369,8 @@ inline bool operator==(uint32_t e, hid::usage::LEDs gd) {
 
 inline bool operator==(uint32_t e, hid::usage::Consumer gd) {
     return (static_cast<uint32_t>(gd) == e);
+}
+
+inline bool operator==(uint32_t e, hid::usage::Sensor s) {
+    return (static_cast<uint32_t>(s) == e);
 }

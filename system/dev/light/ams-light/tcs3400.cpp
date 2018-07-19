@@ -63,10 +63,10 @@ int Tcs3400Device::Thread() {
         {
             fbl::AutoLock lock(&proxy_lock_);
             if (proxy_.is_valid()) {
-                tcs_rpt_.rpt_id = TCS3400_RPT_ID_POLL;
+                tcs_rpt_.rpt_id = AMBIENT_LIGHT_RPT_ID_SIMPLE_POLL;
                 status = FillRpt();
                 if (status == ZX_OK) {
-                    proxy_.IoQueue(reinterpret_cast<uint8_t*>(&tcs_rpt_), sizeof(tcs3400_data_t));
+                    proxy_.IoQueue(reinterpret_cast<uint8_t*>(&tcs_rpt_), sizeof(ambient_light_data_t));
                 }
             }
         }
@@ -132,7 +132,7 @@ void Tcs3400Device::HidBusStop() {
 zx_status_t Tcs3400Device::HidBusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
     const uint8_t* desc_ptr;
     uint8_t* buf;
-    *len = get_tcs3400_report_desc(&desc_ptr);
+    *len = get_ambient_light_report_desc(&desc_ptr);
     fbl::AllocChecker ac;
     buf = new (&ac) uint8_t[*len];
     if (!ac.check()) {
