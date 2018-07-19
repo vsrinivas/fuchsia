@@ -24,6 +24,52 @@ func (sp *socketProviderImpl) OpenSocket(d net.SocketDomain, t net.SocketType, p
 	return zx.Socket(s), 0, nil
 }
 
+func netStringToString(ns *net.String) (string, net.AddrInfoStatus) {
+	v := ns.Val[:]
+	if len(v) < int(ns.Len) {
+		return "", net.AddrInfoStatusBufferOverflow
+	}
+	return string(v[:ns.Len]), net.AddrInfoStatusOk
+}
+
+func (sp *socketProviderImpl) GetAddrInfo(n *net.String, s *net.String, h *net.AddrInfoHints) (net.AddrInfoStatus, int32, *net.AddrInfo, *net.AddrInfo, *net.AddrInfo, *net.AddrInfo, error) {
+	var node *string
+	if n != nil {
+		str, status := netStringToString(n)
+		if status != net.AddrInfoStatusOk {
+			return status, 0, nil, nil, nil, nil, nil
+		}
+		node = &str
+	}
+	var service *string
+	if s != nil {
+		str, status := netStringToString(s)
+		if status != net.AddrInfoStatusOk {
+			return status, 0, nil, nil, nil, nil, nil
+		}
+		service = &str
+	}
+
+	status, addrInfo := ns.dispatcher.GetAddrInfo(node, service, h)
+	if status != 0 {
+		return status, 0, nil, nil, nil, nil, nil
+	}
+
+	nai := len(addrInfo)
+	if nai > 4 {
+		nai = 4
+	}
+	ai := make([]*net.AddrInfo, 4)
+	for i := 0; i < 4; i++ {
+		if i < nai {
+			ai[i] = addrInfo[i]
+		} else {
+			ai[i] = nil
+		}
+	}
+	return 0, int32(nai), ai[0], ai[1], ai[2], ai[3], nil
+}
+
 var socketProvider *net.LegacySocketProviderService
 
 // AddLegacySocketProvider registers the legacy socket provider with the

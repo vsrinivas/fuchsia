@@ -21,6 +21,7 @@ import (
 
 	"app/context"
 	"fidl/fuchsia/devicesettings"
+	"fidl/fuchsia/net"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
@@ -1277,6 +1278,26 @@ func (s *socketServer) opConnect(ios *iostate, msg *zxsocket.Msg) (status zx.Sta
 	return zx.ErrOk
 }
 
+func addrInfoStatusToEAI(status net.AddrInfoStatus) int32 {
+	switch status {
+	case net.AddrInfoStatusBadFlags:
+		return EAI_BADFLAGS;
+	case net.AddrInfoStatusNoName:
+		return EAI_NONAME;
+	case net.AddrInfoStatusAgain:
+		return EAI_AGAIN;
+	case net.AddrInfoStatusFail:
+		return EAI_FAIL;
+	case net.AddrInfoStatusNoData:
+		return EAI_NONAME;
+	case net.AddrInfoStatusBufferOverflow:
+		return EAI_OVERFLOW;
+	case net.AddrInfoStatusSystemError:
+		return EAI_SYSTEM;
+	}
+	return 0
+}
+
 func (s *socketServer) opGetAddrInfo(ios *iostate, msg *zxsocket.Msg) zx.Status {
 	var val c_mxrio_gai_req
 	if err := val.Decode(msg); err != nil {
@@ -1284,112 +1305,166 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *zxsocket.Msg) zx.Status 
 	}
 	node, service, hints := val.Unpack()
 
-	if debug2 {
-		log.Printf("getaddrinfo node=%q, service=%q", node, service)
+	nodeP := &node
+	if val.node_is_null == 1 {
+		nodeP = nil
 	}
 
+	serviceP := &service
+	if val.service_is_null == 1 {
+		serviceP = nil
+	}
+
+	h := &net.AddrInfoHints{
+		Flags:    hints.ai_flags,
+		Family:   hints.ai_family,
+		SockType: hints.ai_socktype,
+		Protocol: hints.ai_protocol,
+	}
+	if val.hints_is_null == 1 {
+		h = nil
+	}
+
+	status, addrInfo := s.GetAddrInfo(nodeP, serviceP, h)
+	retval := addrInfoStatusToEAI(status)
+
+	rep := c_mxrio_gai_reply{retval: retval}
+	if retval != 0 {
+		rep.Encode(msg)
+		return zx.ErrOk
+	}
+
+	for i := 0; i < len(addrInfo); i++ {
+		res := &rep.res[rep.nres]
+		res.ai.ai_family = addrInfo[i].Family
+		res.ai.ai_socktype = addrInfo[i].SockType
+		res.ai.ai_protocol = addrInfo[i].Protocol
+		// The 0xdeadbeef constant indicates the other side needs to
+		// adjust ai_addr with the value passed below.
+		res.ai.ai_addr = 0xdeadbeef
+		switch addrInfo[i].Family {
+		case AF_INET:
+			sockaddr := c_sockaddr_in{sin_family: AF_INET}
+			sockaddr.sin_port.setPort(addrInfo[i].Port)
+			copy(sockaddr.sin_addr[:], addrInfo[i].Addr.Val[:4])
+			writeSockaddrStorage4(&res.addr, &sockaddr)
+			res.ai.ai_addrlen = c_socklen(c_sockaddr_in_len)
+			rep.nres++
+		case AF_INET6:
+			sockaddr := c_sockaddr_in6{sin6_family: AF_INET6}
+			sockaddr.sin6_port.setPort(addrInfo[i].Port)
+			copy(sockaddr.sin6_addr[:], addrInfo[i].Addr.Val[:16])
+			writeSockaddrStorage6(&res.addr, &sockaddr)
+			res.ai.ai_addrlen = c_socklen(c_sockaddr_in6_len)
+			rep.nres++
+		}
+	}
+	rep.Encode(msg)
+	return zx.ErrOk
+}
+
+func (s *socketServer) GetAddrInfo(node *string, service *string, hints *net.AddrInfoHints) (net.AddrInfoStatus, []*net.AddrInfo) {
 	s.mu.Lock()
 	dnsClient := s.dnsClient
 	s.mu.Unlock()
 
 	if dnsClient == nil {
 		log.Println("getaddrinfo called, but no DNS client available.")
-		rep := c_mxrio_gai_reply{retval: EAI_FAIL}
-		rep.Encode(msg)
-		return zx.ErrOk
+		return net.AddrInfoStatusFail, nil
 	}
 
-	if hints.ai_socktype == 0 {
-		hints.ai_socktype = SOCK_STREAM
+	if hints == nil {
+		hints = &net.AddrInfoHints{}
 	}
-	if hints.ai_protocol == 0 {
-		if hints.ai_socktype == SOCK_STREAM {
-			hints.ai_protocol = IPPROTO_TCP
-		} else if hints.ai_socktype == SOCK_DGRAM {
-			hints.ai_protocol = IPPROTO_UDP
+	if hints.SockType == 0 {
+		hints.SockType = SOCK_STREAM
+	}
+	if hints.Protocol == 0 {
+		if hints.SockType == SOCK_STREAM {
+			hints.Protocol = IPPROTO_TCP
+		} else if hints.SockType == SOCK_DGRAM {
+			hints.Protocol = IPPROTO_UDP
 		}
 	}
-	t, err := sockProto(int(hints.ai_socktype), int(hints.ai_protocol))
+
+	t, err := sockProto(int(hints.SockType), int(hints.Protocol))
 	if err != nil {
-		return errStatus(err)
+		if debug {
+			log.Printf("getaddrinfo: sockProto: %v", err)
+		}
+		return net.AddrInfoStatusSystemError, nil
 	}
 	var port uint16
-	if service != "" {
-		port, err = serviceLookup(service, t)
+	if service != nil && *service != "" {
+		port, err = serviceLookup(*service, t)
 		if err != nil {
-			log.Printf("getaddrinfo: %v", err)
-			return zx.ErrNotSupported
+			if debug {
+				log.Printf("getaddrinfo: serviceLookup: %v", err)
+			}
+			return net.AddrInfoStatusSystemError, nil
 		}
 	}
 
 	var addrs []tcpip.Address
-	if val.node_is_null == 1 {
+	if node == nil {
 		addrs = append(addrs, "\x00\x00\x00\x00")
 	} else {
-		addrs, err = dnsClient.LookupIP(node)
+		addrs, err = dnsClient.LookupIP(*node)
 		if err != nil {
-			if node == "localhost" {
+			if *node == "localhost" {
 				addrs = append(addrs, "\x7f\x00\x00\x01")
 			} else {
-				addrs = append(addrs, tcpip.Parse(node))
-
+				addrs = append(addrs, tcpip.Parse(*node))
 				if debug2 {
 					log.Printf("getaddrinfo: addr=%v, err=%v", addrs, err)
 				}
 			}
 		}
 	}
-	if debug2 {
-		log.Printf("getaddrinfo: addrs=%v", addrs)
-	}
 
 	if len(addrs) == 0 || len(addrs[0]) == 0 {
-		rep := c_mxrio_gai_reply{retval: EAI_NONAME}
-		rep.Encode(msg)
-		return zx.ErrOk
+		return net.AddrInfoStatusNoName, nil
 	}
 
-	rep := c_mxrio_gai_reply{}
-	for i := 0; i < len(addrs) && rep.nres < ZXRIO_GAI_REPLY_MAX; i++ {
-		res := &rep.res[rep.nres]
-		res.ai.ai_socktype = hints.ai_socktype
-		res.ai.ai_protocol = hints.ai_protocol
-		// The 0xdeadbeef constant indicates the other side needs to
-		// adjust ai_addr with the value passed below.
-		res.ai.ai_addr = 0xdeadbeef
+	n := 0
+	addrInfo := make([]*net.AddrInfo, n, len(addrs))
+	for i := 0; i < len(addrs); i++ {
+		ai := &net.AddrInfo{
+			Flags:    0,
+			SockType: hints.SockType,
+			Protocol: hints.Protocol,
+			Port:     port,
+		}
+
 		switch len(addrs[i]) {
 		case 4:
-			if hints.ai_family != AF_UNSPEC && hints.ai_family != AF_INET {
+			if hints.Family != AF_UNSPEC && hints.Family != AF_INET {
 				continue
 			}
-			rep.nres++
-			res.ai.ai_family = AF_INET
-			res.ai.ai_addrlen = c_socklen(c_sockaddr_in_len)
-			sockaddr := c_sockaddr_in{sin_family: AF_INET}
-			sockaddr.sin_port.setPort(port)
-			copy(sockaddr.sin_addr[:], addrs[i])
-			writeSockaddrStorage4(&res.addr, &sockaddr)
+			ai.Family = AF_INET
+			ai.Addr.Len = 4
+			copy(ai.Addr.Val[:4], addrs[i])
 		case 16:
-			if hints.ai_family != AF_UNSPEC && hints.ai_family != AF_INET6 {
+			if hints.Family != AF_UNSPEC && hints.Family != AF_INET6 {
 				continue
 			}
-			rep.nres++
-			res.ai.ai_family = AF_INET6
-			res.ai.ai_addrlen = c_socklen(c_sockaddr_in6_len)
-			sockaddr := c_sockaddr_in6{sin6_family: AF_INET6}
-			sockaddr.sin6_port.setPort(port)
-			copy(sockaddr.sin6_addr[:], addrs[i])
-			writeSockaddrStorage6(&res.addr, &sockaddr)
+			ai.Family = AF_INET6
+			ai.Addr.Len = 16
+			copy(ai.Addr.Val[:16], addrs[i])
 		default:
 			if debug {
 				log.Printf("getaddrinfo: len(addr)=%d, wrong size", len(addrs[i]))
 			}
 			// TODO: failing to resolve is a valid reply. fill out retval
-			return zx.ErrBadState
+			return net.AddrInfoStatusSystemError, nil
 		}
+
+		n++
+		addrInfo = addrInfo[:n]
+		addrInfo[n-1] = ai
 	}
-	rep.Encode(msg)
-	return zx.ErrOk
+
+	return net.AddrInfoStatusOk, addrInfo
 }
 
 func (s *socketServer) opFcntl(ios *iostate, msg *zxsocket.Msg) zx.Status {
