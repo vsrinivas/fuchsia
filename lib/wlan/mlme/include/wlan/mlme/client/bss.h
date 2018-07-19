@@ -56,7 +56,7 @@ class Bss : public fbl::RefCounted<Bss> {
     }
 
     ::fuchsia::wlan::mlme::BSSDescription ToFidl() const;
-    fidl::StringPtr SsidToFidlString() const;
+
     const common::MacAddr& bssid() { return bssid_; }
     zx::time_utc ts_refreshed() { return ts_refreshed_; }
 
@@ -74,16 +74,8 @@ class Bss : public fbl::RefCounted<Bss> {
     // TODO(porce): Move Beacon method into Beacon class.
     uint32_t GetBeaconSignature(const Beacon& beacon, size_t len) const;
 
-    ::fuchsia::wlan::mlme::BSSDescription bss_desc;
-
-    // TODO(porce): Unify into FIDL data structure
     common::MacAddr bssid_;      // From Addr3 of Mgmt Header.
     zx::time_utc ts_refreshed_;  // Last time of Bss object update.
-
-    // TODO(porce): Don't trust instantaneous values. Keep history.
-    common::dBm rssi_dbm_{WLAN_RSSI_DBM_INVALID};
-    common::dBmh rcpi_dbmh_{WLAN_RCPI_DBMH_INVALID};
-    common::dBh rsni_dbh_{WLAN_RSNI_DBH_INVALID};
 
     // TODO(porce): Separate into class BeaconTracker.
     BeaconHash bcn_hash_{0};
@@ -92,13 +84,10 @@ class Bss : public fbl::RefCounted<Bss> {
 
     // TODO(porce): Add ProbeResponse.
 
-    // Fixed fields.
-    uint64_t timestamp_{0};     // IEEE Std 802.11-2016, 9.4.1.10, 11.1.3.1. usec.
-    uint16_t bcn_interval_{0};  // IEEE Std 802.11-2016, 9.4.1.3.
-                                // TUs between TBTTs. 1 TU is 1024 usec.
-    CapabilityInfo cap_;        // IEEE Std 802.11-2016, 9.4.1.4
+    ::fuchsia::wlan::mlme::BSSDescription bss_desc;
 
-    // Info Elments.
+    // TODO(porce): Unify into FIDL data structure
+    CapabilityInfo cap_;  // IEEE Std 802.11-2016, 9.4.1.4
     // TODO(porce): Store IEs AS-IS without translation.
     uint8_t ssid_[SsidElement::kMaxLen]{0};
     size_t ssid_len_{0};

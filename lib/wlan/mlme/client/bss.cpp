@@ -50,7 +50,7 @@ std::string Bss::ToString() const {
     snprintf(
         buf, sizeof(buf), "BSSID %s Infra %s  RSSI %3d  Country %3s Channel %4s Cap %04x SSID [%s]",
         bssid_.ToString().c_str(), GetBssType() == wlan_mlme::BSSTypes::INFRASTRUCTURE ? "Y" : "N",
-        rssi_dbm_.val, country_.c_str(), common::ChanStr(bcn_rx_chan_).c_str(), cap_.val(),
+        bss_desc.rssi_dbm, country_.c_str(), common::ChanStr(bcn_rx_chan_).c_str(), cap_.val(),
         SsidToString().c_str());
     return std::string(buf);
 }
@@ -58,7 +58,7 @@ std::string Bss::ToString() const {
 bool Bss::IsBeaconValid(const Beacon& beacon) const {
     // TODO(porce): Place holder. Add sanity logics.
 
-    if (timestamp_ > beacon.timestamp) {
+    if (bss_desc.timestamp > beacon.timestamp) {
         // Suspicious. Wrap around?
         // TODO(porce): deauth if the client was in association.
     }
@@ -70,7 +70,7 @@ bool Bss::IsBeaconValid(const Beacon& beacon) const {
 }
 
 void Bss::Renew(const Beacon& beacon, const wlan_rx_info_t* rx_info) {
-    timestamp_ = beacon.timestamp;
+    bss_desc.timestamp = beacon.timestamp;
 
     // TODO(porce): Take a deep look. Which resolution do we want to track?
     if (zx::clock::get(&ts_refreshed_) != ZX_OK) { ts_refreshed_ = zx::time_utc(); }
@@ -82,9 +82,13 @@ void Bss::Renew(const Beacon& beacon, const wlan_rx_info_t* rx_info) {
 
     // If the latest beacons lack measurements, keep the last report.
     // TODO(NET-856): Change DDK wlan_rx_info_t and do translation in the vendor device driver.
-    if (rx_info->valid_fields & WLAN_RX_INFO_VALID_RSSI) { rssi_dbm_.val = rx_info->rssi_dbm; }
-    if (rx_info->valid_fields & WLAN_RX_INFO_VALID_RCPI) { rcpi_dbmh_.val = rx_info->rcpi_dbmh; }
-    if (rx_info->valid_fields & WLAN_RX_INFO_VALID_SNR) { rsni_dbh_.val = rx_info->snr_dbh; }
+    // TODO(porce): Don't trust instantaneous values. Keep history.
+    bss_desc.rssi_dbm = (rx_info->valid_fields & WLAN_RX_INFO_VALID_RSSI) ? rx_info->rssi_dbm
+                                                                          : WLAN_RSSI_DBM_INVALID;
+    bss_desc.rcpi_dbmh = (rx_info->valid_fields & WLAN_RX_INFO_VALID_RCPI) ? rx_info->rcpi_dbmh
+                                                                           : WLAN_RCPI_DBMH_INVALID;
+    bss_desc.rsni_dbh =
+        (rx_info->valid_fields & WLAN_RX_INFO_VALID_SNR) ? rx_info->snr_dbh : WLAN_RSNI_DBH_INVALID;
 }
 
 bool Bss::HasBeaconChanged(const Beacon& beacon, size_t frame_len) const {
@@ -101,7 +105,7 @@ zx_status_t Bss::Update(const Beacon& beacon, size_t frame_len) {
     bcn_hash_ = GetBeaconSignature(beacon, frame_len);
 
     // Fields that are always present.
-    bcn_interval_ = beacon.beacon_interval;
+    bss_desc.beacon_period = beacon.beacon_interval;  // name mismatch is spec-compliant.
     cap_ = beacon.cap;
 
     // IE's.
@@ -316,24 +320,18 @@ BeaconHash Bss::GetBeaconSignature(const Beacon& beacon, size_t frame_len) const
     return hash;
 }
 
-fidl::StringPtr Bss::SsidToFidlString() const {
-    // TODO(porce): Merge into SSID Element upon IE revamp.
-    return fidl::StringPtr(reinterpret_cast<const char*>(ssid_), ssid_len_);
-}
-
 wlan_mlme::BSSDescription Bss::ToFidl() const {
     // Translates the Bss object into FIDL message.
     // Note, this API does not directly handle Beacon frame or ProbeResponse frame.
 
     wlan_mlme::BSSDescription fidl;
+    // TODO(NET-1170): Decommission Bss::ToFidl()
+    bss_desc.Clone(&fidl);
 
     std::memcpy(fidl.bssid.mutable_data(), bssid_.byte, common::kMacAddrLen);
 
     fidl.bss_type = GetBssType();
-    fidl.ssid = SsidToFidlString();
-
-    fidl.beacon_period = bcn_interval_;  // TODO(porce): consistent naming.
-    fidl.timestamp = timestamp_;
+    fidl.ssid = fidl::StringPtr(reinterpret_cast<const char*>(ssid_), ssid_len_);
 
     if (has_dsss_param_set_chan_ == true) {
         // Channel was explicitly announced by the AP
@@ -343,11 +341,6 @@ wlan_mlme::BSSDescription Bss::ToFidl() const {
         fidl.chan.primary = bcn_rx_chan_.primary;
     }
     fidl.chan.cbw = static_cast<wlan_mlme::CBW>(bcn_rx_chan_.cbw);
-
-    // Stats
-    fidl.rssi_dbm = rssi_dbm_.val;
-    fidl.rcpi_dbmh = rcpi_dbmh_.val;
-    fidl.rsni_dbh = rsni_dbh_.val;
 
     // RSN
     fidl.rsn.reset();

@@ -148,12 +148,16 @@ struct VhtOperation {
     VhtMcsNss vht_mcs_nss;
 };
 
+// IEEE Std 802.11-2016 6.3.3.3.2
 struct BSSDescription {
     array<uint8>:6 bssid;
+
+    // TODO(NET-698): Use vector<uint8>:32
     string ssid;
+
     BSSTypes bss_type;
-    uint32 beacon_period;  // in TimeUnits
-    uint32 dtim_period;
+    uint16 beacon_period;  // in TU
+    uint8 dtim_period;
     uint64 timestamp;
     uint64 local_time;
 
@@ -163,12 +167,12 @@ struct BSSDescription {
     VhtCapabilities? vht_cap;
     VhtOperation? vht_op;
 
-    // List up non-standard, Fuchsia only parameters
-    WlanChan chan;
-
-    int8 rssi_dbm;   // dBm. This field is not in the standard
     int16 rcpi_dbmh; // 0.5 step dBm. Do not use encoding from IEEE Std 802.11-2016 9.4.2.38.
     int16 rsni_dbh;  // 0.5 step dB.  Do not use encoding from IEEE Std 802.11-2016 9.4.2.41.
+
+    // List up non-standard, Fuchsia only parameters
+    WlanChan chan;
+    int8 rssi_dbm;   // dBm
 };
 
 enum ScanResultCodes {
