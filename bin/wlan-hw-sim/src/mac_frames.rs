@@ -2,15 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    bitfield::{
-        bitfield,
-        bitfield_fields,
-        bitfield_struct,
-    },
-    byteorder::{LittleEndian, WriteBytesExt},
-    std::io,
-};
+use {bitfield::{bitfield, bitfield_fields, bitfield_struct},
+     byteorder::{LittleEndian, WriteBytesExt},
+     std::io};
 
 // IEEE Std 802.11-2016, 9.2.4.1.3 Table 9-1
 #[derive(Clone, Copy, Debug)]
@@ -20,7 +14,22 @@ pub enum FrameControlType {
 
 #[derive(Clone, Copy, Debug)]
 pub enum MgmtSubtype {
+    AssociationRequest = 0b0000,
+    AssociationResponse = 0b0001,
     Beacon = 0b1000,
+    Authentication = 0b1011,
+}
+
+// IEEE Std 802.11-2016, 9.4.1.9, Table 9-46
+#[derive(Clone, Copy, Debug)]
+pub enum StatusCode {
+    Success = 0,
+}
+
+// IEEE Std 802.11-2016, 9.4.1.1
+#[derive(Clone, Copy, Debug)]
+pub enum AuthAlgorithm {
+    OpenSystem = 0,
 }
 
 bitfield!{
@@ -37,6 +46,27 @@ bitfield!{
     pub more_data, set_more_data: 13;
     pub protected_frame, set_protected_frame: 14;
     pub htc_order, set_htc_order: 15;
+}
+
+// IEEE Std 802.11-2016, 9.4.1.4
+bitfield!{
+    #[derive(Clone, Copy, Debug)]
+    pub struct CapabilityInfo(u16);
+    pub ess, set_ess: 0;
+    pub ibss, set_ibss: 1;
+    pub cf_pollable, set_cf_pollable: 2;
+    pub cf_pll_req, set_cf_poll_req: 3;
+    pub privacy, set_privacy: 4;
+    pub short_preamble, set_short_preamble: 5;
+    // bit 6-7 reserved
+    pub spectrum_mgmt, set_spectrum_mgmt: 8;
+    pub qos, set_qos: 9;
+    pub short_slot_time, set_short_slot_time: 10;
+    pub apsd, set_apsd: 11;
+    pub radio_msmt, set_radio_msmt: 12;
+    // bit 13 reserved
+    pub delayed_block_ack, set_delayed_block_ack: 14;
+    pub immediate_block_ack, set_immediate_block_ack: 15;
 }
 
 // IEEE Std 802.11-2016, 9.2.4.4
@@ -67,9 +97,23 @@ pub struct MgmtHeader {
 // IEEE Std 802.11-2016, 9.3.3.3
 #[derive(Clone, Copy, Debug)]
 pub struct BeaconFields {
-    pub timestamp: u64,       // IEEE Std 802.11-2016, 9.4.1.10
-    pub beacon_interval: u16, // IEEE Std 802.11-2016, 9.4.1.3
-    pub capability_info: u16, // IEEE Std 802.11-2016, 9.4.1.4
+    pub timestamp: u64,                  // IEEE Std 802.11-2016, 9.4.1.10
+    pub beacon_interval: u16,            // IEEE Std 802.11-2016, 9.4.1.3
+    pub capability_info: CapabilityInfo, // IEEE Std 802.11-2016, 9.4.1.4
+}
+
+// IEEE Std 802.11-2016, 9.3.3.12
+pub struct AuthenticationFields {
+    pub auth_algorithm_number: u16, // 9.4.1.1
+    pub auth_txn_seq_number: u16,   // 9.4.1.2
+    pub status_code: u16,           // 9.4.1.9
+}
+
+// IEEE Std 802.11-2016, 9.3.3.7
+pub struct AssociationResponseFields {
+    pub capability_info: CapabilityInfo, // 9.4.1.4
+    pub status_code: u16,                // 9.4.1.9
+    pub association_id: u16,             // 9.4.1.8
 }
 
 pub const BROADCAST_ADDR: [u8; 6] = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
@@ -96,7 +140,30 @@ impl<W: io::Write> MacFrameWriter<W> {
         self.write_mgmt_header(header, MgmtSubtype::Beacon)?;
         self.w.write_u64::<LittleEndian>(beacon.timestamp)?;
         self.w.write_u16::<LittleEndian>(beacon.beacon_interval)?;
-        self.w.write_u16::<LittleEndian>(beacon.capability_info)?;
+        self.w
+            .write_u16::<LittleEndian>(beacon.capability_info.0 as u16)?;
+        Ok(ElementWriter { w: self.w })
+    }
+
+    pub fn authentication(
+        mut self, header: &MgmtHeader, auth: &AuthenticationFields,
+    ) -> io::Result<ElementWriter<W>> {
+        self.write_mgmt_header(header, MgmtSubtype::Authentication)?;
+        self.w
+            .write_u16::<LittleEndian>(auth.auth_algorithm_number)?;
+        self.w.write_u16::<LittleEndian>(auth.auth_txn_seq_number)?;
+        self.w.write_u16::<LittleEndian>(auth.status_code)?;
+        Ok(ElementWriter { w: self.w })
+    }
+
+    pub fn association_response(
+        mut self, header: &MgmtHeader, assoc: &AssociationResponseFields,
+    ) -> io::Result<ElementWriter<W>> {
+        self.write_mgmt_header(header, MgmtSubtype::AssociationResponse)?;
+        self.w
+            .write_u16::<LittleEndian>(assoc.capability_info.0 as u16)?;
+        self.w.write_u16::<LittleEndian>(assoc.status_code)?;
+        self.w.write_u16::<LittleEndian>(assoc.association_id)?;
         Ok(ElementWriter { w: self.w })
     }
 
@@ -177,10 +244,9 @@ mod tests {
                 &BeaconFields {
                     timestamp: 0x1122334455667788u64,
                     beacon_interval: 0xBEAC,
-                    capability_info: 0xCAFE,
+                    capability_info: CapabilityInfo(0xCAFE),
                 },
-            )
-            .unwrap()
+            ).unwrap()
             .ssid(&[0xAA, 0xBB, 0xCC, 0xDD, 0xEE])
             .unwrap()
             .into_writer();
@@ -194,6 +260,76 @@ mod tests {
             0xC5, 0xAB, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11,
             // Interval Cap info    SSID element
             0xAC, 0xBE, 0xFE, 0xCA, 0x00, 0x05, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE
+        ];
+        assert_eq!(expected_frame, &frame[..]);
+    }
+
+    #[test]
+    fn simple_auth() {
+        let frame = MacFrameWriter::new(vec![])
+            .authentication(
+                &MgmtHeader {
+                    frame_control: FrameControl(0),
+                    duration: 0x9876,
+                    addr1: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
+                    addr2: [0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C],
+                    addr3: [0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12],
+                    seq_control: SeqControl {
+                        frag_num: 5,
+                        seq_num: 0xABC,
+                    },
+                    ht_control: None,
+                },
+                &AuthenticationFields {
+                    auth_algorithm_number: 0xA1B2,
+                    auth_txn_seq_number: 0x23AB,
+                    status_code: 0xC3D4,
+                },
+            ).unwrap()
+            .into_writer();
+        #[cfg_attr(rustfmt, rustfmt_skip)]
+        let expected_frame: &[u8] = &[
+            // Framectl Duration    Address 1
+            0xb0, 0x00, 0x76, 0x98, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+            // Address 2                        Address 3
+            0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12,
+            // Seq ctl  Algo num    Seq num     Status
+            0xC5, 0xAB, 0xB2, 0xA1, 0xAB, 0x23, 0xD4, 0xC3,
+        ];
+        assert_eq!(expected_frame, &frame[..]);
+    }
+
+    #[test]
+    fn simple_assoc() {
+        let frame = MacFrameWriter::new(vec![])
+            .association_response(
+                &MgmtHeader {
+                    frame_control: FrameControl(0),
+                    duration: 0x8765,
+                    addr1: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
+                    addr2: [0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C],
+                    addr3: [0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12],
+                    seq_control: SeqControl {
+                        frag_num: 6,
+                        seq_num: 0xDEF,
+                    },
+                    ht_control: None,
+                },
+                &AssociationResponseFields {
+                    capability_info: CapabilityInfo(0xBCDE),
+                    status_code: 0x9876,
+                    association_id: 0x6543,
+                },
+            ).unwrap()
+            .into_writer();
+        #[cfg_attr(rustfmt, rustfmt_skip)]
+        let expected_frame: &[u8] = &[
+            // Framectl Duration    Address 1
+            0x10, 0x00, 0x65, 0x87, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+            // Address 2                        Address 3
+            0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12,
+            // Seq ctl  Cap info    Status code Assoc id
+            0xF6, 0xDE, 0xDE, 0xBC, 0x76, 0x98, 0x43, 0x65,
         ];
         assert_eq!(expected_frame, &frame[..]);
     }

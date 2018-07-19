@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(futures_api, pin, arbitrary_self_types)]
+#![feature(async_await, await_macro, futures_api, pin, arbitrary_self_types)]
 #![deny(warnings)]
 
 use {
+    byteorder::{LittleEndian, ReadBytesExt},
     fidl_fuchsia_wlan_device as wlan_device,
     fidl_fuchsia_wlan_tap as wlantap,
     fuchsia_async as fasync,
     fuchsia_zircon::prelude::*,
     futures::prelude::*,
+    std::io::Cursor,
     std::sync::{Arc, Mutex},
     wlantap_client::Wlantap,
 };
@@ -19,6 +21,9 @@ mod mac_frames;
 
 #[cfg(test)]
 mod test_utils;
+
+const HW_MAC_ADDR: [u8; 6] = [0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b];
+const BSSID: [u8; 6] = [0x62, 0x73, 0x73, 0x62, 0x73, 0x73];
 
 fn create_2_4_ghz_band_info() -> wlan_device::BandInfo {
     wlan_device::BandInfo{
@@ -49,7 +54,7 @@ fn create_wlantap_config() -> wlantap::WlantapPhyConfig {
         phy_info: wlan_device::PhyInfo{
             id: 0,
             dev_path: None,
-            hw_mac_address: [ 0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b ],
+            hw_mac_address: HW_MAC_ADDR,
             supported_phys: vec![
                 SupportedPhy::Dsss, SupportedPhy::Cck, SupportedPhy::Ofdm, SupportedPhy::Ht
             ],
@@ -104,13 +109,82 @@ fn send_beacon(frame_buf: &mut Vec<u8>, channel: &wlan_device::Channel, bss_id: 
             &mac_frames::BeaconFields{
                 timestamp: 0,
                 beacon_interval: 100,
-                capability_info: 0,
+                capability_info: mac_frames::CapabilityInfo(0),
             })?
         .ssid(ssid.as_bytes())?
         .supported_rates(&[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24])?
         .dsss_parameter_set(channel.primary)?;
 
-    let rx_info = &mut wlantap::WlanRxInfo {
+    let rx_info = &mut create_rx_info(channel);
+    proxy.rx(0, &mut frame_buf.iter().cloned(), rx_info)?;
+    Ok(())
+}
+
+fn send_authentication(frame_buf: &mut Vec<u8>, channel: &wlan_device::Channel, bss_id: &[u8; 6],
+                       proxy: &wlantap::WlantapPhyProxy)
+    -> Result<(), failure::Error>
+{
+    frame_buf.clear();
+    mac_frames::MacFrameWriter::<&mut Vec<u8>>::new(frame_buf).authentication(
+        &mac_frames::MgmtHeader {
+            frame_control: mac_frames::FrameControl(0), // will be filled automatically
+            duration: 0,
+            addr1: HW_MAC_ADDR,
+            addr2: bss_id.clone(),
+            addr3: bss_id.clone(),
+            seq_control: mac_frames::SeqControl {
+                frag_num: 0,
+                seq_num: 123,
+            },
+            ht_control: None,
+        },
+        &mac_frames::AuthenticationFields {
+            auth_algorithm_number: mac_frames::AuthAlgorithm::OpenSystem as u16,
+            auth_txn_seq_number: 2, // Always 2 for successful authentication
+            status_code: mac_frames::StatusCode::Success as u16,
+        },
+    )?;
+
+    let rx_info = &mut create_rx_info(channel);
+    proxy.rx(0, &mut frame_buf.iter().cloned(), rx_info)?;
+    Ok(())
+}
+
+fn send_association_response(
+    frame_buf: &mut Vec<u8>, channel: &wlan_device::Channel, bss_id: &[u8; 6],
+    proxy: &wlantap::WlantapPhyProxy,
+) -> Result<(), failure::Error> {
+    frame_buf.clear();
+    let mut cap_info = mac_frames::CapabilityInfo(0);
+    cap_info.set_ess(true);
+    cap_info.set_short_preamble(true);
+    mac_frames::MacFrameWriter::<&mut Vec<u8>>::new(frame_buf).association_response(
+        &mac_frames::MgmtHeader {
+            frame_control: mac_frames::FrameControl(0), // will be filled automatically
+            duration: 0,
+            addr1: HW_MAC_ADDR,
+            addr2: bss_id.clone(),
+            addr3: bss_id.clone(),
+            seq_control: mac_frames::SeqControl {
+                frag_num: 0,
+                seq_num: 123,
+            },
+            ht_control: None,
+        },
+        &mac_frames::AssociationResponseFields {
+            capability_info: cap_info,
+            status_code: 0,    // Success
+            association_id: 2, // Can be any
+        },
+    )?;
+
+    let rx_info = &mut create_rx_info(channel);
+    proxy.rx(0, &mut frame_buf.iter().cloned(), rx_info)?;
+    Ok(())
+}
+
+fn create_rx_info(channel: &wlan_device::Channel) -> wlantap::WlanRxInfo {
+    wlantap::WlanRxInfo {
         rx_flags: 0,
         valid_fields: 0,
         phy: 0,
@@ -124,9 +198,27 @@ fn send_beacon(frame_buf: &mut Vec<u8>, channel: &wlan_device::Channel, bss_id: 
         rssi_dbm: 0,
         rcpi_dbmh: 0,
         snr_dbh: 0,
-    };
-    proxy.rx(0, &mut frame_buf.iter().cloned(), rx_info)?;
-    Ok(())
+    }
+}
+
+fn handle_tx(args: wlantap::TxArgs, state: &mut State, proxy: &wlantap::WlantapPhyProxy) {
+    let mut reader = Cursor::new(args.packet.data);
+    let frame_ctrl = reader.read_u16::<LittleEndian>().unwrap();
+    let frame_ctrl = mac_frames::FrameControl(frame_ctrl);
+    println!("Frame Control: type: {:?}, subtype: {:?}", frame_ctrl.typ(), frame_ctrl.subtype());
+    if frame_ctrl.typ() == mac_frames::FrameControlType::Mgmt as u16 {
+        if frame_ctrl.subtype() == mac_frames::MgmtSubtype::Authentication as u16 {
+            println!("Authentication received.");
+            send_authentication(&mut state.frame_buf, &state.current_channel, &BSSID, proxy)
+                .expect("Error sending fake authentication frame.");
+            println!("Authentication sent.");
+        } else if frame_ctrl.subtype() == mac_frames::MgmtSubtype::AssociationRequest as u16 {
+            println!("Association Request received.");
+            send_association_response(&mut state.frame_buf, &state.current_channel, &BSSID, proxy)
+                .expect("Error sending fake association response frame.");
+            println!("Association Response sent.");
+        }
+    }
 }
 
 fn main() -> Result<(), failure::Error> {
@@ -134,32 +226,37 @@ fn main() -> Result<(), failure::Error> {
     let wlantap = Wlantap::open()?;
     let state = Arc::new(Mutex::new(State::new()));
     let proxy = wlantap.create_phy(create_wlantap_config())?;
-    let event_listener = {
+    let event_listener = async {
         let state = state.clone();
-        proxy.take_event_stream().try_for_each(move |event| {
+        let mut events = proxy.take_event_stream();
+        while let Some(event) = await!(events.try_next()).unwrap() {
             match event {
                 wlantap::WlantapPhyEvent::SetChannel{ args } => {
                     let mut state = state.lock().unwrap();
                     state.current_channel = args.chan;
                     println!("setting channel to {:?}", state.current_channel);
+                }
+                wlantap::WlantapPhyEvent::Tx { args } => {
+                    let mut state = state.lock().unwrap();
+                    handle_tx(args, &mut state, &proxy);
                 },
                 _ => {}
             }
-            future::ready(Ok(()))
-        })
-        .unwrap_or_else(|e| eprintln!("error running wlantap event listener: {:?}", e))
+        }
     };
-    let beacon_timer = fasync::Interval::new(102_400_000.nanos())
-        .for_each(move |_| {
+
+    let beacon_timer = async {
+        let mut beacon_timer_stream = fasync::Interval::new(102_400_000.nanos());
+        while let Some(_) = await!(beacon_timer_stream.next()) {
             let state = &mut *state.lock().unwrap();
             if state.current_channel.primary == 6 {
                 eprintln!("sending beacon!");
                 send_beacon(&mut state.frame_buf, &state.current_channel,
-                            &[0x62, 0x73, 0x73, 0x62, 0x73, 0x73], "fakenet", &proxy).unwrap();
+                         &BSSID, "fakenet", &proxy).unwrap();
             }
-            future::ready(())
-        });
-    let ((), ()) = exec.run_singlethreaded(event_listener.join(beacon_timer));
+            }
+    };
+    exec.run_singlethreaded(event_listener.join(beacon_timer));
     Ok(())
 }
 

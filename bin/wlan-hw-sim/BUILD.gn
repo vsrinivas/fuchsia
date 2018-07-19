@@ -14,8 +14,9 @@ rustc_binary("bin") {
   deps = [
     "//garnet/lib/rust/crates/wlantap-client",
     "//garnet/lib/wlan/fidl:fidl-rustc",
-    "//garnet/public/fidl/fuchsia.wlan.service:fuchsia.wlan.service-rustc",
     "//garnet/lib/wlan/fidl:wlantap-rustc",
+    "//garnet/public/fidl/fuchsia.wlan.service:fuchsia.wlan.service-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/crates/fuchsia-app",
     "//garnet/public/rust/crates/fuchsia-async",
     "//garnet/public/rust/crates/fuchsia-zircon",
@@ -37,21 +38,21 @@ package("wlan-hw-sim") {
     {
       path = rebase_path("meta/wlan-hw-sim.cmx")
       dest = "wlan-hw-sim.cmx"
-    }
+    },
   ]
 }
 
 package("wlan-hw-sim-tests") {
-    testonly = true
+  testonly = true
 
-    deps = [
-        ":bin"
-    ]
+  deps = [
+    ":bin",
+  ]
 
-    tests = [
-        {
-            name = "wlan_hw_sim_bin_test_rustc"
-            dest =  "wlan-hw-sim_bin_test_rustc"
-        }
-    ]
+  tests = [
+    {
+      name = "wlan_hw_sim_bin_test_rustc"
+      dest = "wlan-hw-sim_bin_test_rustc"
+    },
+  ]
 }
