@@ -69,8 +69,8 @@ class UpdateModCall : public Operation<fuchsia::modular::ExecuteResult> {
             UpdateLinkValue(entry.link_path, parameter.data));
       }
     }
-    Future<fuchsia::modular::ExecuteResult>::Wait2(
-        "UpdateModCommandRunner.UpdateMod.Wait2", did_update_links)
+    Future<fuchsia::modular::ExecuteResult>::Wait(
+        "UpdateModCommandRunner.UpdateMod.Wait", did_update_links)
         ->Then([this, flow](
                    std::vector<fuchsia::modular::ExecuteResult> result_values) {
           for (auto& result : result_values) {

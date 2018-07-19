@@ -100,7 +100,7 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
       did_execute_commands.emplace_back(did_execute_command_callback);
     }
 
-    Future<>::Wait2(
+    Future<>::Wait(
         "DispatchStoryCommandExecutor.ExecuteStoryCommandsCall.Run.Wait",
         did_execute_commands)
         ->Then([this] {

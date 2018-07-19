@@ -432,46 +432,6 @@ TEST_F(FutureTest, CreateCompleted) {
 }
 
 TEST_F(FutureTest, Wait) {
-  auto f1 =
-      Future<int>::Create(std::string(__PRETTY_FUNCTION__) + std::string("1"));
-  auto f2 =
-      Future<int>::Create(std::string(__PRETTY_FUNCTION__) + std::string("2"));
-  auto f3 =
-      Future<int>::Create(std::string(__PRETTY_FUNCTION__) + std::string("3"));
-
-  AsyncExpectations async_expectations;
-
-  auto f =
-      Future<int>::Wait(std::string(__PRETTY_FUNCTION__) + std::string("4"),
-                        std::vector<FuturePtr<int>>{f1, f2, f3});
-  f->Then([&] {
-    // Note: f1, f2 and f3's Complete()d values are ignored by Wait(); the
-    // result is a Future<>, not a future<std::vector<int>>. There's a TODO in
-    // the Wait() docstring to improve this.
-    async_expectations.Signal();
-  });
-
-  f1->Complete(10);
-  EXPECT_EQ(0, async_expectations.count());
-  f2->Complete(20);
-  EXPECT_EQ(0, async_expectations.count());
-  f3->Complete(30);
-
-  EXPECT_EQ(1, async_expectations.count());
-}
-
-TEST_F(FutureTest, WaitOnZeroFutures) {
-  auto f =
-      Future<int>::Wait(__PRETTY_FUNCTION__, std::vector<FuturePtr<int>>{});
-
-  AsyncExpectations async_expectations;
-
-  f->Then([&] { async_expectations.Signal(); });
-
-  EXPECT_EQ(1, async_expectations.count());
-}
-
-TEST_F(FutureTest, Wait2) {
   auto f1 = Future<int, std::string>::Create(std::string(__PRETTY_FUNCTION__) +
                                              std::string("1"));
   auto f2 = Future<int, std::string>::Create(std::string(__PRETTY_FUNCTION__) +
@@ -481,7 +441,7 @@ TEST_F(FutureTest, Wait2) {
 
   AsyncExpectations async_expectations;
 
-  auto f = Future<int, std::string>::Wait2(
+  auto f = Future<int, std::string>::Wait(
       std::string(__PRETTY_FUNCTION__) + std::string("4"),
       std::vector<FuturePtr<int, std::string>>{f1, f2, f3});
   f->Then([&](std::vector<std::tuple<int, std::string>> v) {
@@ -494,7 +454,7 @@ TEST_F(FutureTest, Wait2) {
     async_expectations.Signal();
   });
 
-  // Go ahead and insert out of order to also ensure that Wait2 produces results
+  // Go ahead and insert out of order to also ensure that Wait produces results
   // in insertion order rather than completion order.
   f2->Complete(20, "20");
   EXPECT_EQ(0, async_expectations.count());
@@ -505,9 +465,9 @@ TEST_F(FutureTest, Wait2) {
   EXPECT_EQ(1, async_expectations.count());
 }
 
-TEST_F(FutureTest, Wait2OnZeroFutures) {
+TEST_F(FutureTest, WaitOnZeroFutures) {
   auto f =
-      Future<int>::Wait2(__PRETTY_FUNCTION__, std::vector<FuturePtr<int>>{});
+      Future<int>::Wait(__PRETTY_FUNCTION__, std::vector<FuturePtr<int>>{});
 
   AsyncExpectations async_expectations;
 
@@ -519,7 +479,7 @@ TEST_F(FutureTest, Wait2OnZeroFutures) {
   EXPECT_EQ(1, async_expectations.count());
 }
 
-TEST_F(FutureTest, Wait2RetainsFuturesBeforeCompletion) {
+TEST_F(FutureTest, WaitRetainsFuturesBeforeCompletion) {
   FuturePtr<std::vector<int>> f;
   fxl::WeakPtr<Future<int>> weak_f1;
 
@@ -529,8 +489,8 @@ TEST_F(FutureTest, Wait2RetainsFuturesBeforeCompletion) {
     auto f1 = Future<int>::Create(__PRETTY_FUNCTION__);
     weak_f1 = weak_factory(f1).GetWeakPtr();
 
-    f = Future<int>::Wait2(__PRETTY_FUNCTION__ + std::string("1"),
-                           std::vector<FuturePtr<int>>{f1});
+    f = Future<int>::Wait(__PRETTY_FUNCTION__ + std::string("1"),
+                          std::vector<FuturePtr<int>>{f1});
   }
 
   EXPECT_TRUE(weak_f1);
@@ -544,13 +504,13 @@ TEST_F(FutureTest, Wait2RetainsFuturesBeforeCompletion) {
   EXPECT_EQ(1, async_expectations.count());
 }
 
-TEST_F(FutureTest, Wait2OnMoveOnlyType) {
+TEST_F(FutureTest, WaitOnMoveOnlyType) {
   auto f1 = Future<std::unique_ptr<int>>::Create(
       std::string(__PRETTY_FUNCTION__) + std::string("1"));
 
   AsyncExpectations async_expectations;
 
-  auto f = Future<std::unique_ptr<int>>::Wait2(
+  auto f = Future<std::unique_ptr<int>>::Wait(
       std::string(__PRETTY_FUNCTION__) + std::string("2"), {f1});
   f->Then([&](std::vector<std::unique_ptr<int>> v) {
     EXPECT_EQ(v.size(), 1u);
@@ -566,23 +526,23 @@ TEST_F(FutureTest, Wait2OnMoveOnlyType) {
 }
 
 // This test contains no assertions as it is a compile-time test.
-TEST_F(FutureTest, Wait2NoTypeStreamlining) {
+TEST_F(FutureTest, WaitNoTypeStreamlining) {
   auto f1 =
       Future<>::Create(std::string(__PRETTY_FUNCTION__) + std::string("1"));
 
-  auto f = Future<>::Wait2<Future<std::vector<std::tuple<>>>>(
+  auto f = Future<>::Wait<Future<std::vector<std::tuple<>>>>(
       std::string(__PRETTY_FUNCTION__) + std::string("2"), {f1});
   f->Then([&](std::vector<std::tuple<>> v) {});
 }
 
-TEST_F(FutureTest, Wait2DoesNotOverRetainFutures) {
+TEST_F(FutureTest, WaitDoesNotOverRetainFutures) {
   fxl::WeakPtr<Future<>> weak_f1;
 
   {
     auto f1 = Future<>::Create(__PRETTY_FUNCTION__);
     weak_f1 = weak_factory(f1).GetWeakPtr();
 
-    auto f = Future<>::Wait2(__PRETTY_FUNCTION__ + std::string("1"), {f1});
+    auto f = Future<>::Wait(__PRETTY_FUNCTION__ + std::string("1"), {f1});
     f1->Complete();
 
     AsyncExpectations async_expectations;

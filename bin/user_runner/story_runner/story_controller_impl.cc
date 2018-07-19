@@ -545,7 +545,7 @@ class StoryControllerImpl::StopCall : public Operation<> {
       did_teardowns.emplace_back(did_teardown);
     }
 
-    Future<>::Wait2("StoryControllerImpl.StopCall.Run.Wait", did_teardowns)
+    Future<>::Wait("StoryControllerImpl.StopCall.Run.Wait", did_teardowns)
         ->AsyncMap([this] {
           auto did_teardown = Future<>::Create(
               "StoryControllerImpl.StopCall.Run.did_teardown2");
@@ -904,7 +904,7 @@ class StoryControllerImpl::FindModulesCall
               }));
     }
 
-    Future<fuchsia::modular::FindModulesParameterConstraint>::Wait2(
+    Future<fuchsia::modular::FindModulesParameterConstraint>::Wait(
         "StoryControllerImpl.FindModulesCall.Run.Wait", constraint_futs_)
         ->Then([this, flow](
                    std::vector<fuchsia::modular::FindModulesParameterConstraint>
@@ -1228,7 +1228,7 @@ class StoryControllerImpl::StartContainerInShellCall : public Operation<> {
       did_add_intents.emplace_back(did_add_intent);
     }
 
-    Future<fuchsia::modular::StartModuleStatus>::Wait2(
+    Future<fuchsia::modular::StartModuleStatus>::Wait(
         "StoryControllerImpl.StartContainerInShellCall.Run.Wait",
         did_add_intents)
         ->Then([this, flow](auto) {

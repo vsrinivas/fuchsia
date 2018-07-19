@@ -151,7 +151,7 @@ namespace modular {
 // FuturePtr<Bytes> f2 = MakeNetworkRequest(request2);
 // FuturePtr<Bytes> f3 = MakeNetworkRequest(request3);
 // std::vector<FuturePtr<Bytes>> requests{f1, f2, f3};
-// Future<Bytes>::Wait(requests)->Then([] {
+// Future<Bytes>::Wait(requests)->Then([] (std::vector<Bytes> results) {
 //   AllNetworkRequestsAreComplete();
 // });
 //
@@ -356,7 +356,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   // Returns a Future that completes when every future in |futures| is complete.
   // A strong reference is kept to every future in |futures|, so each future
   // will be kept alive if they otherwise go out of scope. The future returned
-  // by Wait2() will also be kept alive until every future in |futures|
+  // by Wait() will also be kept alive until every future in |futures|
   // completes. The order of the results corresponds to the order of the given
   // futures, regardless of their completion order.
   //
@@ -372,7 +372,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   // FuturePtr<T, U...> | FuturePtr<std::vector<std::tuple<T, U...>>>
   //
   // These defaults may be overridden by specifying the template argument for
-  // Wait2 as the type of future desired.
+  // Wait as the type of future desired.
   //
   // Example usage:
   //
@@ -380,7 +380,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   // FuturePtr<Bytes> f2 = MakeNetworkRequest(request2);
   // FuturePtr<Bytes> f3 = MakeNetworkRequest(request3);
   // std::vector<FuturePtr<Bytes>> requests{f1, f2, f3};
-  // Future<Bytes>::Wait2("NetworkRequests", requests)->Then([](
+  // Future<Bytes>::Wait("NetworkRequests", requests)->Then([](
   //     std::vector<Bytes> bytes_vector) {
   //   Bytes f1_bytes = bytes_vector[0];
   //   Bytes f2_bytes = bytes_vector[1];
@@ -390,7 +390,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   // This is similar to Promise.All() in JavaScript, or Join() in Rust.
   template <
       typename ResultsFuture = internal::DefaultResultsFuture_t<Result...>>
-  static fxl::RefPtr<ResultsFuture> Wait2(
+  static fxl::RefPtr<ResultsFuture> Wait(
       std::string trace_name,
       const std::vector<FuturePtr<Result...>>& futures) {
     if (futures.empty()) {
@@ -403,7 +403,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
         futures.size());
 
     fxl::RefPtr<ResultsFuture> all_futures_completed =
-        ResultsFuture::Create(trace_name + "(WillWait2)");
+        ResultsFuture::Create(trace_name + "(WillWait)");
 
     for (size_t i = 0; i < futures.size(); i++) {
       const auto& future = futures[i];
@@ -425,32 +425,6 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
     }
 
     return all_futures_completed;
-  }
-
-  // DEPRECATED: Use Wait2() instead. This is an older Wait() method that
-  // returns a void subfuture rather than a future with results.
-  //
-  // TODO(MI4-1101): Convert existing uses of Wait() to Wait2(), and remove this
-  // method.
-  static FuturePtr<> Wait(std::string trace_name,
-                          const std::vector<FuturePtr<Result...>>& futures) {
-    if (futures.size() == 0) {
-      return Future<>::CreateCompleted(trace_name + "(Completed)");
-    }
-
-    FuturePtr<> subfuture = Future<>::Create(trace_name + "(WillWait)");
-
-    auto pending_futures = std::make_shared<size_t>(futures.size());
-
-    for (auto future : futures) {
-      future->AddConstCallback([subfuture, pending_futures](const Result&...) {
-        if (--(*pending_futures) == 0) {
-          subfuture->Complete();
-        }
-      });
-    }
-
-    return subfuture;
   }
 
   // Completes a future with |result|. This causes any callbacks registered
