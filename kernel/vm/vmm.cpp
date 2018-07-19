@@ -9,8 +9,8 @@
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/auto_lock.h>
 #include <kernel/mutex.h>
+#include <kernel/thread_lock.h>
 #include <lib/console.h>
 #include <lib/ktrace.h>
 #include <object/diagnostics.h>
@@ -84,7 +84,7 @@ void vmm_set_active_aspace(vmm_aspace_t* aspace) {
         return;
 
     // grab the thread lock and switch to the new address space
-    AutoThreadLock lock;
+    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
     vmm_aspace_t* old = t->aspace;
     t->aspace = aspace;
     vmm_context_switch(old, t->aspace);

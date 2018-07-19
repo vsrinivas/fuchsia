@@ -10,15 +10,12 @@
 #include <assert.h>
 #include <err.h>
 #include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
 #include <inttypes.h>
 #include <string.h>
 #include <trace.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 #include <zircon/types.h>
-
-using fbl::AutoLock;
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
@@ -33,7 +30,7 @@ VmAddressRegionOrMapping::VmAddressRegionOrMapping(
 zx_status_t VmAddressRegionOrMapping::Destroy() {
     canary_.Assert();
 
-    AutoLock guard(aspace_->lock());
+    Guard<fbl::Mutex> guard{aspace_->lock()};
     if (state_ != LifeCycleState::ALIVE) {
         return ZX_ERR_BAD_STATE;
     }
@@ -53,7 +50,7 @@ VmAddressRegionOrMapping::~VmAddressRegionOrMapping() {
 
 bool VmAddressRegionOrMapping::IsAliveLocked() const {
     canary_.Assert();
-    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
+    DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
     return state_ == LifeCycleState::ALIVE;
 }
 
@@ -87,7 +84,7 @@ bool VmAddressRegionOrMapping::is_valid_mapping_flags(uint arch_mmu_flags) {
 }
 
 size_t VmAddressRegionOrMapping::AllocatedPages() const {
-    AutoLock guard(aspace_->lock());
+    Guard<fbl::Mutex> guard{aspace_->lock()};
     if (state_ != LifeCycleState::ALIVE) {
         return 0;
     }

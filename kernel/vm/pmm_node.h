@@ -8,6 +8,7 @@
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 
+#include <kernel/lockdep.h>
 #include <kernel/mutex.h>
 #include <vm/pmm.h>
 
@@ -57,7 +58,7 @@ public:
 private:
     fbl::Canary<fbl::magic("PNOD")> canary_;
 
-    mutable fbl::Mutex lock_;
+    mutable DECLARE_MUTEX(PmmNode) lock_;
 
     uint64_t arena_cumulative_size_ TA_GUARDED(lock_) = 0;
     uint64_t free_count_ TA_GUARDED(lock_) = 0;

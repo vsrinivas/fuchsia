@@ -8,6 +8,7 @@
 #include <kernel/event.h>
 #include <kernel/interrupt.h>
 #include <kernel/sched.h>
+#include <kernel/thread_lock.h>
 #include <kernel/timer.h>
 #include <platform.h>
 #include <lib/unittest/unittest.h>
@@ -33,9 +34,10 @@ static void timer_callback_func(timer_t* timer, zx_time_t now, void* arg) {
     // Test that sched_reschedule() sets the preempt_pending flag when
     // preempt_disable is set.
     thread->preempt_pending = false;
-    THREAD_LOCK(state);
-    sched_reschedule();
-    THREAD_UNLOCK(state);
+    {
+        Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+        sched_reschedule();
+    }
     ASSERT(thread->preempt_pending);
 
     // Test that thread_preempt_set_pending() sets the preempt_pending

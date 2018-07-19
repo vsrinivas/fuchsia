@@ -13,7 +13,6 @@
 #include <err.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
 #include <inttypes.h>
 #include <lib/console.h>
 #include <stdlib.h>
@@ -24,8 +23,6 @@
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <zircon/types.h>
-
-using fbl::AutoLock;
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
@@ -255,7 +252,7 @@ zx_status_t VmObjectPaged::CloneCOW(bool resizable, uint64_t offset, uint64_t si
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     // add the new VMO as a child before we do anything, since its
     // dtor expects to find it in its parent's child list
@@ -285,7 +282,7 @@ void VmObjectPaged::Dump(uint depth, bool verbose) {
     // This can grab our lock.
     uint64_t parent_id = parent_user_id();
 
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     size_t count = 0;
     page_list_.ForEveryPage([&count](const auto p, uint64_t) {
@@ -314,7 +311,7 @@ void VmObjectPaged::Dump(uint depth, bool verbose) {
 
 size_t VmObjectPaged::AllocatedPagesInRange(uint64_t offset, uint64_t len) const {
     canary_.Assert();
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     uint64_t new_len;
     if (!TrimRange(offset, len, size_, &new_len)) {
         return 0;
@@ -333,14 +330,14 @@ size_t VmObjectPaged::AllocatedPagesInRange(uint64_t offset, uint64_t len) const
 }
 
 zx_status_t VmObjectPaged::AddPage(vm_page_t* p, uint64_t offset) {
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     return AddPageLocked(p, offset);
 }
 
 zx_status_t VmObjectPaged::AddPageLocked(vm_page_t* p, uint64_t offset) {
     canary_.Assert();
-    DEBUG_ASSERT(lock_.IsHeld());
+    DEBUG_ASSERT(lock_.lock().IsHeld());
 
     LTRACEF("vmo %p, offset %#" PRIx64 ", page %p (%#" PRIxPTR ")\n", this, offset, p, p->paddr());
 
@@ -369,7 +366,7 @@ zx_status_t VmObjectPaged::AddPageLocked(vm_page_t* p, uint64_t offset) {
 zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
                                          vm_page_t** const page_out, paddr_t* const pa_out) {
     canary_.Assert();
-    DEBUG_ASSERT(lock_.IsHeld());
+    DEBUG_ASSERT(lock_.lock().IsHeld());
 
     if (offset >= size_)
         return ZX_ERR_OUT_OF_RANGE;
@@ -522,7 +519,7 @@ zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len, uint64_t* 
     if (committed)
         *committed = 0;
 
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     // trim the size
     uint64_t new_len;
@@ -610,7 +607,7 @@ zx_status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len, uint64_t
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     // trim the size
     uint64_t new_len;
@@ -657,7 +654,7 @@ zx_status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len, uint64_t
 zx_status_t VmObjectPaged::Pin(uint64_t offset, uint64_t len) {
     canary_.Assert();
 
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     return PinLocked(offset, len);
 }
 
@@ -704,13 +701,13 @@ zx_status_t VmObjectPaged::PinLocked(uint64_t offset, uint64_t len) {
 }
 
 void VmObjectPaged::Unpin(uint64_t offset, uint64_t len) {
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     UnpinLocked(offset, len);
 }
 
 void VmObjectPaged::UnpinLocked(uint64_t offset, uint64_t len) {
     canary_.Assert();
-    DEBUG_ASSERT(lock_.IsHeld());
+    DEBUG_ASSERT(lock_.lock().IsHeld());
 
     // verify that the range is within the object
     ASSERT(InRange(offset, len, size_));
@@ -742,7 +739,7 @@ void VmObjectPaged::UnpinLocked(uint64_t offset, uint64_t len) {
 
 bool VmObjectPaged::AnyPagesPinnedLocked(uint64_t offset, size_t len) {
     canary_.Assert();
-    DEBUG_ASSERT(lock_.IsHeld());
+    DEBUG_ASSERT(lock_.lock().IsHeld());
     DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
 
@@ -766,7 +763,7 @@ bool VmObjectPaged::AnyPagesPinnedLocked(uint64_t offset, size_t len) {
 
 zx_status_t VmObjectPaged::ResizeLocked(uint64_t s) {
     canary_.Assert();
-    DEBUG_ASSERT(lock_.IsHeld());
+    DEBUG_ASSERT(lock_.lock().IsHeld());
 
     LTRACEF("vmo %p, size %" PRIu64 "\n", this, s);
 
@@ -822,13 +819,13 @@ zx_status_t VmObjectPaged::ResizeLocked(uint64_t s) {
 }
 
 zx_status_t VmObjectPaged::Resize(uint64_t s) {
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     return ResizeLocked(s);
 }
 
 zx_status_t VmObjectPaged::SetParentOffsetLocked(uint64_t offset) {
-    DEBUG_ASSERT(lock_.IsHeld());
+    DEBUG_ASSERT(lock_.lock().IsHeld());
 
     // offset must be page aligned
     if (!IS_PAGE_ALIGNED(offset))
@@ -853,7 +850,7 @@ template <typename T>
 zx_status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, bool write, T copyfunc) {
     canary_.Assert();
 
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     // are we uncached? abort in this case
     if (cache_policy_ != ARCH_MMU_FLAG_CACHED)
@@ -938,7 +935,7 @@ zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
     if (unlikely(len == 0))
         return ZX_ERR_INVALID_ARGS;
 
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     // verify that the range is within the object
     if (unlikely(!InRange(offset, len, size_)))
@@ -1072,7 +1069,7 @@ zx_status_t VmObjectPaged::CacheOp(const uint64_t start_offset, const uint64_t l
     if (unlikely(len == 0))
         return ZX_ERR_INVALID_ARGS;
 
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     if (unlikely(!InRange(start_offset, len, size_)))
         return ZX_ERR_OUT_OF_RANGE;
@@ -1127,7 +1124,7 @@ zx_status_t VmObjectPaged::CacheOp(const uint64_t start_offset, const uint64_t l
 }
 
 zx_status_t VmObjectPaged::GetMappingCachePolicy(uint32_t* cache_policy) {
-    AutoLock lock(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     *cache_policy = cache_policy_;
 
@@ -1140,7 +1137,7 @@ zx_status_t VmObjectPaged::SetMappingCachePolicy(const uint32_t cache_policy) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    AutoLock lock(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     // conditions for allowing the cache policy to be set:
     // 1) vmo has no pages committed currently

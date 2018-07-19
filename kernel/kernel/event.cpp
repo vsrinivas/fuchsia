@@ -28,7 +28,9 @@
 #include <debug.h>
 #include <err.h>
 #include <kernel/event.h>
+#include <kernel/spinlock.h>
 #include <kernel/thread.h>
+#include <kernel/thread_lock.h>
 #include <sys/types.h>
 #include <zircon/types.h>
 
@@ -70,7 +72,7 @@ static zx_status_t event_wait_worker(event_t* e, zx_time_t deadline,
     DEBUG_ASSERT(e->magic == EVENT_MAGIC);
     DEBUG_ASSERT(!arch_in_int_handler());
 
-    THREAD_LOCK(state);
+    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
     current_thread->interruptable = interruptable;
 
@@ -86,8 +88,6 @@ static zx_status_t event_wait_worker(event_t* e, zx_time_t deadline,
     }
 
     current_thread->interruptable = false;
-
-    THREAD_UNLOCK(state);
 
     return ret;
 }
@@ -132,18 +132,9 @@ zx_status_t event_wait_with_mask(event_t* e, uint signal_mask) {
     return event_wait_worker(e, ZX_TIME_INFINITE, true, signal_mask);
 }
 
-// We need to disable thread safety analysis due to the conditional locking of
-// the thread lock (Clang does not support conditional analysis).
-static int event_signal_internal(event_t* e, bool reschedule, zx_status_t wait_result,
-                                 bool thread_lock_held) TA_NO_THREAD_SAFETY_ANALYSIS {
+static int event_signal_internal(event_t* e, bool reschedule,
+                                 zx_status_t wait_result) TA_REQ(thread_lock) {
     DEBUG_ASSERT(e->magic == EVENT_MAGIC);
-
-    // conditionally acquire/release the thread lock
-    // NOTE: using the manual spinlock grab/release instead of THREAD_LOCK because
-    // the state variable needs to exit in either path.
-    spin_lock_saved_state_t state = 0;
-    if (!thread_lock_held)
-        spin_lock_irqsave(&thread_lock, state);
 
     int wake_count = 0;
 
@@ -164,10 +155,6 @@ static int event_signal_internal(event_t* e, bool reschedule, zx_status_t wait_r
             wake_count = wait_queue_wake_all(&e->wait, reschedule, wait_result);
         }
     }
-
-    // conditionally THREAD_UNLOCK
-    if (!thread_lock_held)
-        spin_unlock_irqrestore(&thread_lock, state);
 
     return wake_count;
 }
@@ -192,7 +179,8 @@ static int event_signal_internal(event_t* e, bool reschedule, zx_status_t wait_r
  * @return  Returns the number of threads that have been unblocked.
  */
 int event_signal_etc(event_t* e, bool reschedule, zx_status_t wait_result) {
-    return event_signal_internal(e, reschedule, wait_result, false);
+    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+    return event_signal_internal(e, reschedule, wait_result);
 }
 
 /**
@@ -213,7 +201,8 @@ int event_signal_etc(event_t* e, bool reschedule, zx_status_t wait_result) {
  * @return  Returns the number of threads that have been unblocked.
  */
 int event_signal(event_t* e, bool reschedule) {
-    return event_signal_internal(e, reschedule, ZX_OK, false);
+    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+    return event_signal_internal(e, reschedule, ZX_OK);
 }
 
 /* same as above, but the thread lock must already be held */
@@ -221,7 +210,7 @@ int event_signal_thread_locked(event_t* e) {
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-    return event_signal_internal(e, false, ZX_OK, true);
+    return event_signal_internal(e, false, ZX_OK);
 }
 
 /**

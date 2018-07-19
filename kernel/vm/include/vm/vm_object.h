@@ -14,6 +14,7 @@
 #include <fbl/name.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <kernel/lockdep.h>
 #include <kernel/mutex.h>
 #include <lib/user_copy/user_ptr.h>
 #include <list.h>
@@ -183,8 +184,8 @@ public:
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    fbl::Mutex* lock() TA_RET_CAP(lock_) { return &lock_; }
-    fbl::Mutex& lock_ref() TA_RET_CAP(lock_) { return lock_; }
+    Lock<fbl::Mutex>* lock() TA_RET_CAP(lock_) { return &lock_; }
+    Lock<fbl::Mutex>& lock_ref() TA_RET_CAP(lock_) { return lock_; }
 
     void AddMappingLocked(VmMapping* r) TA_REQ(lock_);
     void RemoveMappingLocked(VmMapping* r) TA_REQ(lock_);
@@ -207,7 +208,7 @@ public:
     // error value.
     template <typename T>
     static zx_status_t ForEach(T func) {
-        fbl::AutoLock a(&all_vmos_lock_);
+        Guard<fbl::Mutex> guard{AllVmosLock::Get()};
         for (const auto& iter : all_vmos_) {
             zx_status_t s = func(iter);
             if (s != ZX_OK) {
@@ -245,10 +246,10 @@ protected:
     // declare a local mutex and default to pointing at it
     // if constructed with a parent vmo, point lock_ at the parent's lock
 private:
-    fbl::Mutex local_lock_;
+    DECLARE_MUTEX(VmObject) local_lock_;
 
 protected:
-    fbl::Mutex& lock_;
+    Lock<fbl::Mutex>& lock_;
 
     // list of every mapping
     fbl::DoublyLinkedList<VmMapping*> mapping_list_ TA_GUARDED(lock_);
@@ -284,6 +285,6 @@ private:
         }
     };
     using GlobalList = fbl::DoublyLinkedList<VmObject*, GlobalListTraits>;
-    static fbl::Mutex all_vmos_lock_;
-    static GlobalList all_vmos_ TA_GUARDED(all_vmos_lock_);
+    DECLARE_SINGLETON_MUTEX(AllVmosLock);
+    static GlobalList all_vmos_ TA_GUARDED(AllVmosLock::Get());
 };

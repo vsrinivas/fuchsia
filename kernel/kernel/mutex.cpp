@@ -22,6 +22,7 @@
 #include <inttypes.h>
 #include <kernel/sched.h>
 #include <kernel/thread.h>
+#include <kernel/thread_lock.h>
 #include <lib/ktrace.h>
 #include <trace.h>
 #include <zircon/types.h>
@@ -84,44 +85,42 @@ retry:
               ct, ct->name, m);
 #endif
 
-    // we contended with someone else, will probably need to block
-    THREAD_LOCK(state);
+    {
+        // we contended with someone else, will probably need to block
+        Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
-    // save the current state and check to see if it wasn't released in the interim
-    oldval = mutex_val(m);
-    if (unlikely(oldval == 0)) {
-        THREAD_UNLOCK(state);
-        goto retry;
+        // save the current state and check to see if it wasn't released in the interim
+        oldval = mutex_val(m);
+        if (unlikely(oldval == 0)) {
+            goto retry;
+        }
+
+        // try to exchange again with a flag indicating that we're blocking is set
+        if (unlikely(!atomic_cmpxchg_u64(&m->val, &oldval, oldval | MUTEX_FLAG_QUEUED))) {
+            // if we fail, just start over from the top
+            goto retry;
+        }
+
+        // have the holder inherit our priority
+        // discard the local reschedule flag because we're just about to block anyway
+        bool unused;
+        sched_inherit_priority(mutex_holder(m), ct->effec_priority, &unused);
+
+        // we have signalled that we're blocking, so drop into the wait queue
+        zx_status_t ret = wait_queue_block(&m->wait, ZX_TIME_INFINITE);
+        if (unlikely(ret < ZX_OK)) {
+            // mutexes are not interruptable and cannot time out, so it
+            // is illegal to return with any error state.
+            panic("mutex_acquire: wait_queue_block returns with error %d m %p, thr %p, sp %p\n",
+                  ret, m, ct, __GET_FRAME());
+        }
+
+        // someone must have woken us up, we should own the mutex now
+        DEBUG_ASSERT(ct == mutex_holder(m));
+
+        // record that we hold it
+        ct->mutexes_held++;
     }
-
-    // try to exchange again with a flag indicating that we're blocking is set
-    if (unlikely(!atomic_cmpxchg_u64(&m->val, &oldval, oldval | MUTEX_FLAG_QUEUED))) {
-        // if we fail, just start over from the top
-        THREAD_UNLOCK(state);
-        goto retry;
-    }
-
-    // have the holder inherit our priority
-    // discard the local reschedule flag because we're just about to block anyway
-    bool unused;
-    sched_inherit_priority(mutex_holder(m), ct->effec_priority, &unused);
-
-    // we have signalled that we're blocking, so drop into the wait queue
-    zx_status_t ret = wait_queue_block(&m->wait, ZX_TIME_INFINITE);
-    if (unlikely(ret < ZX_OK)) {
-        // mutexes are not interruptable and cannot time out, so it
-        // is illegal to return with any error state.
-        panic("mutex_acquire: wait_queue_block returns with error %d m %p, thr %p, sp %p\n",
-              ret, m, ct, __GET_FRAME());
-    }
-
-    // someone must have woken us up, we should own the mutex now
-    DEBUG_ASSERT(ct == mutex_holder(m));
-
-    // record that we hold it
-    ct->mutexes_held++;
-
-    THREAD_UNLOCK(state);
 }
 
 // shared implementation of release

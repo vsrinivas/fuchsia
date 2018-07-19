@@ -10,7 +10,6 @@
 #include <assert.h>
 #include <err.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_lock.h>
 #include <inttypes.h>
 #include <pow2.h>
 #include <trace.h>
@@ -22,8 +21,6 @@
 #if WITH_LIB_VDSO
 #include <lib/vdso.h>
 #endif
-
-using fbl::AutoLock;
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
@@ -84,7 +81,7 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
                                                    fbl::RefPtr<VmAddressRegionOrMapping>* out) {
     DEBUG_ASSERT(out);
 
-    AutoLock guard(aspace_->lock());
+    Guard<fbl::Mutex> guard{aspace_->lock()};
     if (state_ != LifeCycleState::ALIVE) {
         return ZX_ERR_BAD_STATE;
     }
@@ -282,7 +279,7 @@ zx_status_t VmAddressRegion::OverwriteVmMapping(
     uint arch_mmu_flags, fbl::RefPtr<VmAddressRegionOrMapping>* out) {
 
     canary_.Assert();
-    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
+    DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
     DEBUG_ASSERT(vmo);
     DEBUG_ASSERT(vmar_flags & VMAR_FLAG_SPECIFIC_OVERWRITE);
 
@@ -307,7 +304,7 @@ zx_status_t VmAddressRegion::OverwriteVmMapping(
 
 zx_status_t VmAddressRegion::DestroyLocked() {
     canary_.Assert();
-    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
+    DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
     LTRACEF("%p '%s'\n", this, name_);
 
     // The cur reference prevents regions from being destructed after dropping
@@ -357,7 +354,7 @@ void VmAddressRegion::RemoveSubregion(VmAddressRegionOrMapping* region) {
 }
 
 fbl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegion(vaddr_t addr) {
-    AutoLock guard(aspace_->lock());
+    Guard<fbl::Mutex> guard{aspace_->lock()};
     if (state_ != LifeCycleState::ALIVE) {
         return nullptr;
     }
@@ -379,7 +376,7 @@ fbl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegionLocked(vaddr_t 
 
 size_t VmAddressRegion::AllocatedPagesLocked() const {
     canary_.Assert();
-    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
+    DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
 
     if (state_ != LifeCycleState::ALIVE) {
         return 0;
@@ -394,7 +391,7 @@ size_t VmAddressRegion::AllocatedPagesLocked() const {
 
 zx_status_t VmAddressRegion::PageFault(vaddr_t va, uint pf_flags) {
     canary_.Assert();
-    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
+    DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
 
     auto vmar = WrapRefPtr(this);
     while (auto next = vmar->FindRegionLocked(va)) {
@@ -408,7 +405,7 @@ zx_status_t VmAddressRegion::PageFault(vaddr_t va, uint pf_flags) {
 }
 
 bool VmAddressRegion::IsRangeAvailableLocked(vaddr_t base, size_t size) {
-    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
+    DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
     DEBUG_ASSERT(size > 0);
 
     // Find the first region with base > *base*.  Since subregions_ has no
@@ -444,7 +441,7 @@ bool VmAddressRegion::CheckGapLocked(const ChildList::iterator& prev,
                                      const ChildList::iterator& next,
                                      vaddr_t* pva, vaddr_t search_base, vaddr_t align,
                                      size_t region_size, size_t min_gap, uint arch_mmu_flags) {
-    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
+    DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
 
     vaddr_t gap_beg; // first byte of a gap
     vaddr_t gap_end; // last byte of a gap
@@ -524,7 +521,7 @@ zx_status_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, ui
                                              vaddr_t* spot) {
     canary_.Assert();
     DEBUG_ASSERT(size > 0 && IS_PAGE_ALIGNED(size));
-    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
+    DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
 
     LTRACEF_LEVEL(2, "aspace %p size 0x%zx align %hhu\n", this, size,
                   align_pow2);
@@ -543,7 +540,7 @@ zx_status_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, ui
 bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve, uint depth) {
     canary_.Assert();
     DEBUG_ASSERT(ve != nullptr);
-    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
+    DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
     for (auto& child : subregions_) {
         DEBUG_ASSERT(child.IsAliveLocked());
         if (child.is_mapping()) {
@@ -580,7 +577,7 @@ void VmAddressRegion::Dump(uint depth, bool verbose) const {
 
 void VmAddressRegion::Activate() {
     DEBUG_ASSERT(state_ == LifeCycleState::NOT_READY);
-    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
+    DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
 
     state_ = LifeCycleState::ALIVE;
     parent_->subregions_.insert(fbl::RefPtr<VmAddressRegionOrMapping>(this));
@@ -594,7 +591,7 @@ zx_status_t VmAddressRegion::Unmap(vaddr_t base, size_t size) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    AutoLock guard(aspace_->lock());
+    Guard<fbl::Mutex> guard{aspace_->lock()};
     if (state_ != LifeCycleState::ALIVE) {
         return ZX_ERR_BAD_STATE;
     }
@@ -603,7 +600,7 @@ zx_status_t VmAddressRegion::Unmap(vaddr_t base, size_t size) {
 }
 
 zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size, bool can_destroy_regions) {
-    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
+    DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
 
     if (!is_in_range(base, size)) {
         return ZX_ERR_INVALID_ARGS;
@@ -692,7 +689,7 @@ zx_status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mm
         return ZX_ERR_INVALID_ARGS;
     }
 
-    AutoLock guard(aspace_->lock());
+    Guard<fbl::Mutex> guard{aspace_->lock()};
     if (state_ != LifeCycleState::ALIVE) {
         return ZX_ERR_BAD_STATE;
     }
@@ -768,7 +765,7 @@ zx_status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mm
 
 zx_status_t VmAddressRegion::LinearRegionAllocatorLocked(size_t size, uint8_t align_pow2,
                                                          uint arch_mmu_flags, vaddr_t* spot) {
-    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
+    DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
 
     const vaddr_t base = 0;
 
@@ -840,7 +837,7 @@ constexpr size_t AllocationSpotsInRange(size_t range_size, size_t alloc_size, ui
 zx_status_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
                                                                        uint arch_mmu_flags,
                                                                        vaddr_t* spot) {
-    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
+    DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
     DEBUG_ASSERT(spot);
 
     align_pow2 = fbl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));
@@ -911,7 +908,7 @@ zx_status_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t si
 zx_status_t VmAddressRegion::CompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
                                                                     uint arch_mmu_flags,
                                                                     vaddr_t* spot) {
-    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
+    DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
 
     align_pow2 = fbl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));
     const vaddr_t align = 1UL << align_pow2;

@@ -354,11 +354,6 @@ void set_current_thread(thread_t*);
 // scheduler lock
 extern spin_lock_t thread_lock;
 
-#define THREAD_LOCK(state)         \
-    spin_lock_saved_state_t state; \
-    spin_lock_irqsave(&thread_lock, state)
-#define THREAD_UNLOCK(state) spin_unlock_irqrestore(&thread_lock, state)
-
 static inline bool thread_lock_held(void) {
     return spin_lock_held(&thread_lock);
 }
@@ -501,22 +496,6 @@ __END_CDECLS
 #ifdef __cplusplus
 
 #include <fbl/macros.h>
-
-class AutoThreadLock {
-public:
-    AutoThreadLock() TA_ACQ(thread_lock) {
-        spin_lock_irqsave(&thread_lock, state_);
-    }
-
-    ~AutoThreadLock() TA_REL(thread_lock) {
-        spin_unlock_irqrestore(&thread_lock, state_);
-    }
-
-    DISALLOW_COPY_ASSIGN_AND_MOVE(AutoThreadLock);
-
-private:
-    spin_lock_saved_state_t state_;
-};
 
 // AutoReschedDisable is an RAII helper for disabling rescheduling
 // using thread_resched_disable()/thread_resched_reenable().

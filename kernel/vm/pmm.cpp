@@ -34,8 +34,6 @@
 #include <zircon/types.h>
 #include <zxcpp/new.h>
 
-using fbl::AutoLock;
-
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
 // The (currently) one and only pmm node

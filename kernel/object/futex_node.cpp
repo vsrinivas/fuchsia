@@ -12,6 +12,7 @@
 #include <fbl/mutex.h>
 #include <platform.h>
 #include <trace.h>
+#include <kernel/thread_lock.h>
 #include <zircon/types.h>
 
 #define LOCAL_TRACE 0
@@ -151,7 +152,7 @@ zx_status_t FutexNode::BlockThread(Guard<fbl::Mutex>&& adopt_guard, zx_time_t de
     // frame. The runtime validator state is not affected by the adoption.
     Guard<fbl::Mutex> guard{AdoptLock, fbl::move(adopt_guard)};
 
-    AutoThreadLock lock;
+    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
     ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::FUTEX);
 
     // We specifically want reschedule=MutexPolicy::NoReschedule here, otherwise
@@ -184,7 +185,7 @@ void FutexNode::WakeThread() {
     // We must do this before we wake the thread, to handle case 2.
     MarkAsNotInQueue();
 
-    AutoThreadLock lock;
+    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
     wait_queue_.WakeOne(/* reschedule */ true, ZX_OK);
 }
 

@@ -9,7 +9,9 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/registers.h>
 #include <err.h>
+#include <kernel/lockdep.h>
 #include <kernel/thread.h>
+#include <kernel/thread_lock.h>
 #include <string.h>
 #include <sys/types.h>
 #include <zircon/syscalls/debug.h>
@@ -120,7 +122,7 @@ zx_status_t x86_get_set_vector_regs(struct thread* thread, zx_thread_state_vecto
     // Whether to force the components to be marked present in the xsave area.
     bool mark_present = access == RegAccess::kSet;
 
-    AutoThreadLock lock;
+    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
     if (thread->state == THREAD_RUNNING) {
         return ZX_ERR_BAD_STATE;
     }
@@ -202,7 +204,7 @@ zx_status_t x86_get_set_vector_regs(struct thread* thread, zx_thread_state_vecto
 } // namespace
 
 zx_status_t arch_get_general_regs(struct thread* thread, zx_thread_state_general_regs_t* out) {
-    AutoThreadLock lock;
+    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
     // Punt if registers aren't available. E.g.,
     // ZX-563 (registers aren't available in synthetic exceptions)
@@ -226,7 +228,7 @@ zx_status_t arch_get_general_regs(struct thread* thread, zx_thread_state_general
 }
 
 zx_status_t arch_set_general_regs(struct thread* thread, const zx_thread_state_general_regs_t* in) {
-    AutoThreadLock lock;
+    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
     // Punt if registers aren't available. E.g.,
     // ZX-563 (registers aren't available in synthetic exceptions)
@@ -260,7 +262,7 @@ zx_status_t arch_set_general_regs(struct thread* thread, const zx_thread_state_g
 }
 
 zx_status_t arch_get_single_step(struct thread* thread, bool* single_step) {
-    AutoThreadLock lock;
+    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
     // Punt if registers aren't available. E.g.,
     // ZX-563 (registers aren't available in synthetic exceptions)
@@ -285,7 +287,7 @@ zx_status_t arch_get_single_step(struct thread* thread, bool* single_step) {
 }
 
 zx_status_t arch_set_single_step(struct thread* thread, bool single_step) {
-    AutoThreadLock lock;
+    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
     // Punt if registers aren't available. E.g.,
     // ZX-563 (registers aren't available in synthetic exceptions)
@@ -317,7 +319,7 @@ zx_status_t arch_get_fp_regs(struct thread* thread, zx_thread_state_fp_regs* out
     // Don't leak any reserved fields.
     memset(out, 0, sizeof(zx_thread_state_fp_regs));
 
-    AutoThreadLock lock;
+    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
     if (thread->state == THREAD_RUNNING) {
         return ZX_ERR_BAD_STATE;
     }
@@ -340,7 +342,7 @@ zx_status_t arch_get_fp_regs(struct thread* thread, zx_thread_state_fp_regs* out
 }
 
 zx_status_t arch_set_fp_regs(struct thread* thread, const zx_thread_state_fp_regs* in) {
-    AutoThreadLock lock;
+    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
     if (thread->state == THREAD_RUNNING) {
         return ZX_ERR_BAD_STATE;
     }
@@ -373,7 +375,7 @@ zx_status_t arch_set_vector_regs(struct thread* thread, const zx_thread_state_ve
 }
 
 zx_status_t arch_get_x86_register_fs(struct thread* thread, uint64_t* out) {
-    AutoThreadLock lock;
+    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
     if (thread->state == THREAD_RUNNING) {
         return ZX_ERR_BAD_STATE;
     }
@@ -383,7 +385,7 @@ zx_status_t arch_get_x86_register_fs(struct thread* thread, uint64_t* out) {
 }
 
 zx_status_t arch_set_x86_register_fs(struct thread* thread, const uint64_t* in) {
-    AutoThreadLock lock;
+    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
     if (thread->state == THREAD_RUNNING) {
         return ZX_ERR_BAD_STATE;
     }
@@ -393,7 +395,7 @@ zx_status_t arch_set_x86_register_fs(struct thread* thread, const uint64_t* in) 
 }
 
 zx_status_t arch_get_x86_register_gs(struct thread* thread, uint64_t* out) {
-    AutoThreadLock lock;
+    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
     if (thread->state == THREAD_RUNNING) {
         return ZX_ERR_BAD_STATE;
     }
@@ -403,7 +405,7 @@ zx_status_t arch_get_x86_register_gs(struct thread* thread, uint64_t* out) {
 }
 
 zx_status_t arch_set_x86_register_gs(struct thread* thread, const uint64_t* in) {
-    AutoThreadLock lock;
+    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
     if (thread->state == THREAD_RUNNING) {
         return ZX_ERR_BAD_STATE;
     }

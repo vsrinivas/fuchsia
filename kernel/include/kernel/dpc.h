@@ -7,6 +7,7 @@
 
 #include <list.h>
 #include <sys/types.h>
+#include <kernel/thread.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -40,7 +41,7 @@ zx_status_t dpc_queue(dpc_t* dpc, bool reschedule);
 
 // queue a dpc, but must be holding the thread lock
 // does not force a reschedule
-zx_status_t dpc_queue_thread_locked(dpc_t* dpc);
+zx_status_t dpc_queue_thread_locked(dpc_t* dpc) TA_REQ(thread_lock);
 
 // Begins the DPC shutdown process for |cpu|.
 //

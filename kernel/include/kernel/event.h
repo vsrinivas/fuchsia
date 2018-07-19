@@ -70,7 +70,7 @@ zx_status_t event_wait_with_mask(event_t*, uint signal_mask);
 
 int event_signal_etc(event_t*, bool reschedule, zx_status_t result);
 int event_signal(event_t*, bool reschedule);
-int event_signal_thread_locked(event_t*);
+int event_signal_thread_locked(event_t*) TA_REQ(thread_lock);
 zx_status_t event_unsignal(event_t*);
 
 static inline bool event_initialized(const event_t* e) {

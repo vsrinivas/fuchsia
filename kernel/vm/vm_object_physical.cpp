@@ -11,7 +11,6 @@
 #include <assert.h>
 #include <err.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_lock.h>
 #include <inttypes.h>
 #include <lib/console.h>
 #include <stdlib.h>
@@ -19,8 +18,6 @@
 #include <trace.h>
 #include <vm/vm.h>
 #include <zircon/types.h>
-
-using fbl::AutoLock;
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
@@ -62,7 +59,7 @@ zx_status_t VmObjectPhysical::Create(paddr_t base, uint64_t size, fbl::RefPtr<Vm
 void VmObjectPhysical::Dump(uint depth, bool verbose) {
     canary_.Assert();
 
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     for (uint i = 0; i < depth; ++i) {
         printf("  ");
     }
@@ -96,7 +93,7 @@ zx_status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_ino
     if (unlikely(len == 0))
         return ZX_ERR_INVALID_ARGS;
 
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     // verify that the range is within the object
     if (unlikely(!InRange(offset, len, size_)))
@@ -139,7 +136,7 @@ zx_status_t VmObjectPhysical::Lookup(uint64_t offset, uint64_t len, uint pf_flag
     if (unlikely(len == 0))
         return ZX_ERR_INVALID_ARGS;
 
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     if (unlikely(!InRange(offset, len, size_)))
         return ZX_ERR_OUT_OF_RANGE;
 
@@ -157,7 +154,7 @@ zx_status_t VmObjectPhysical::Lookup(uint64_t offset, uint64_t len, uint pf_flag
 }
 
 zx_status_t VmObjectPhysical::GetMappingCachePolicy(uint32_t* cache_policy) {
-    AutoLock l(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     if (!cache_policy) {
         return ZX_ERR_INVALID_ARGS;
@@ -173,7 +170,7 @@ zx_status_t VmObjectPhysical::SetMappingCachePolicy(const uint32_t cache_policy)
         return ZX_ERR_INVALID_ARGS;
     }
 
-    AutoLock l(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     // If the cache policy is already configured on this VMO and matches
     // the requested policy then this is a no-op. This is a common practice

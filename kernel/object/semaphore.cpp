@@ -7,6 +7,7 @@
 #include <object/semaphore.h>
 
 #include <err.h>
+#include <kernel/thread_lock.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -19,7 +20,7 @@ Semaphore::~Semaphore() {
 void Semaphore::Post() {
     // If the count is or was negative then a thread is waiting for a resource,
     // otherwise it's safe to just increase the count available with no downsides.
-    AutoThreadLock lock;
+    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
     if (unlikely(++count_ <= 0))
         waitq_.WakeOne(true, ZX_OK);
 }
@@ -32,7 +33,7 @@ zx_status_t Semaphore::Wait(zx_time_t deadline) {
     zx_status_t ret = ZX_OK;
 
     {
-        AutoThreadLock lock;
+        Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
         current_thread->interruptable = true;
         bool block = --count_ < 0;
 

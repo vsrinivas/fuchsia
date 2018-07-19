@@ -11,13 +11,13 @@
 #include <err.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/type_support.h>
 #include <inttypes.h>
 #include <kernel/cmdline.h>
 #include <kernel/thread.h>
+#include <kernel/thread_lock.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/crypto/prng.h>
 #include <stdlib.h>
@@ -35,8 +35,6 @@
 #include <lib/vdso.h>
 #endif
 
-using fbl::AutoLock;
-
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
 #define GUEST_PHYSICAL_ASPACE_BASE 0UL
@@ -49,7 +47,8 @@ VmAspace* VmAspace::kernel_aspace_ = nullptr;
 static VmAddressRegion* dummy_root_vmar = nullptr;
 
 // list of all address spaces
-static fbl::Mutex aspace_list_lock;
+struct VmAspaceListGlobal {};
+static DECLARE_MUTEX(VmAspaceListGlobal) aspace_list_lock;
 static fbl::DoublyLinkedList<VmAspace*> aspaces TA_GUARDED(aspace_list_lock);
 
 // Called once at boot to initialize the singleton kernel address
@@ -204,7 +203,7 @@ fbl::RefPtr<VmAspace> VmAspace::Create(uint32_t flags, const char* name) {
 
     // add it to the global list
     {
-        AutoLock a(&aspace_list_lock);
+        Guard<fbl::Mutex> guard{&aspace_list_lock};
         aspaces.push_back(aspace.get());
     }
 
@@ -226,7 +225,7 @@ VmAspace::~VmAspace() {
 
     // pop it out of the global aspace list
     {
-        AutoLock a(&aspace_list_lock);
+        Guard<fbl::Mutex> guard{&aspace_list_lock};
         if (this->InContainer()) {
             aspaces.erase(*this);
         }
@@ -240,7 +239,7 @@ VmAspace::~VmAspace() {
 }
 
 fbl::RefPtr<VmAddressRegion> VmAspace::RootVmar() {
-    AutoLock guard(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     fbl::RefPtr<VmAddressRegion> ref(root_vmar_);
     return fbl::move(ref);
 }
@@ -249,7 +248,7 @@ zx_status_t VmAspace::Destroy() {
     canary_.Assert();
     LTRACEF("%p '%s'\n", this, name_);
 
-    AutoLock guard(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
 #if WITH_LIB_VDSO
     // Don't let a vDSO mapping prevent destroying a VMAR
@@ -273,7 +272,7 @@ zx_status_t VmAspace::Destroy() {
 }
 
 bool VmAspace::is_destroyed() const {
-    AutoLock guard(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     return aspace_destroyed_;
 }
 
@@ -513,7 +512,7 @@ void VmAspace::AttachToThread(thread_t* t) {
     DEBUG_ASSERT(t);
 
     // point the lk thread at our object via the dummy C vmm_aspace_t struct
-    AutoThreadLock lock;
+    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
     // not prepared to handle setting a new address space or one on a running thread
     DEBUG_ASSERT(!t->aspace);
@@ -535,7 +534,7 @@ zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
     // for now, hold the aspace lock across the page fault operation,
     // which stops any other operations on the address space from moving
     // the region out from underneath it
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     return root_vmar_->PageFault(va, flags);
 }
@@ -545,7 +544,7 @@ void VmAspace::Dump(bool verbose) const {
     printf("as %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx fl %#x ref %d '%s'\n", this,
            base_, base_ + size_ - 1, size_, flags_, ref_count_debug(), name_);
 
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     if (verbose)
         root_vmar_->Dump(1, verbose);
@@ -554,7 +553,7 @@ void VmAspace::Dump(bool verbose) const {
 bool VmAspace::EnumerateChildren(VmEnumerator* ve) {
     canary_.Assert();
     DEBUG_ASSERT(ve != nullptr);
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     if (root_vmar_ == nullptr || aspace_destroyed_) {
         // Aspace hasn't been initialized or has already been destroyed.
         return true;
@@ -567,7 +566,7 @@ bool VmAspace::EnumerateChildren(VmEnumerator* ve) {
 }
 
 void DumpAllAspaces(bool verbose) {
-    AutoLock a(&aspace_list_lock);
+    Guard<fbl::Mutex> guard{&aspace_list_lock};
 
     for (const auto& a : aspaces)
         a.Dump(verbose);
@@ -587,7 +586,7 @@ VmAspace* VmAspace::vaddr_to_aspace(uintptr_t address) {
 size_t VmAspace::AllocatedPages() const {
     canary_.Assert();
 
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     return root_vmar_->AllocatedPagesLocked();
 }
 
@@ -600,12 +599,12 @@ void VmAspace::InitializeAslr() {
 
 #if WITH_LIB_VDSO
 uintptr_t VmAspace::vdso_base_address() const {
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     return VDso::base_address(vdso_code_mapping_);
 }
 
 uintptr_t VmAspace::vdso_code_address() const {
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     return vdso_code_mapping_ ? vdso_code_mapping_->base() : 0;
 }
 #endif

@@ -23,6 +23,7 @@
 #include <err.h>
 #include <inttypes.h>
 #include <kernel/align.h>
+#include <kernel/lockdep.h>
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
 #include <kernel/sched.h>
@@ -40,7 +41,12 @@
 
 #define LOCAL_TRACE 0
 
-static spin_lock_t timer_lock __CPU_ALIGN_EXCLUSIVE = SPIN_LOCK_INITIAL_VALUE;
+namespace {
+
+spin_lock_t timer_lock __CPU_ALIGN_EXCLUSIVE = SPIN_LOCK_INITIAL_VALUE;
+DECLARE_SINGLETON_LOCK_WRAPPER(TimerLock, timer_lock);
+
+} // anonymous namespace
 
 void timer_init(timer_t* timer) {
     *timer = (timer_t)TIMER_INITIAL_VALUE(*timer);
@@ -212,8 +218,7 @@ void timer_set(timer_t* timer, zx_time_t deadline,
         };
     }
 
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&timer_lock, state);
+    Guard<spin_lock_t, IrqSave> guard{TimerLock::Get()};
 
     uint cpu = arch_curr_cpu_num();
 
@@ -221,7 +226,7 @@ void timer_set(timer_t* timer, zx_time_t deadline,
     if (unlikely(currently_active)) {
         // the timer is active on our own cpu, we must be inside the callback
         if (timer->cancel)
-            goto out;
+            return;
     } else if (unlikely(timer->active_cpu >= 0)) {
         panic("timer %p currently active on a different cpu %d\n", timer, timer->active_cpu);
     }
@@ -241,9 +246,6 @@ void timer_set(timer_t* timer, zx_time_t deadline,
         // we just modified the head of the timer queue
         update_platform_timer(cpu, deadline);
     }
-
-out:
-    spin_unlock_irqrestore(&timer_lock, state);
 }
 
 void timer_preempt_reset(zx_time_t deadline) {
@@ -274,8 +276,7 @@ void timer_preempt_cancel() {
 bool timer_cancel(timer_t* timer) {
     DEBUG_ASSERT(timer->magic == TIMER_MAGIC);
 
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&timer_lock, state);
+    Guard<spin_lock_t, IrqSave> guard{TimerLock::Get()};
 
     uint cpu = arch_curr_cpu_num();
 
@@ -293,7 +294,6 @@ bool timer_cancel(timer_t* timer) {
         timer->arg = NULL;
 
         // we're done, so return back to the callback
-        spin_unlock_irqrestore(&timer_lock, state);
         return false;
     }
 
@@ -329,7 +329,7 @@ bool timer_cancel(timer_t* timer) {
         callback_not_running = false;
     }
 
-    spin_unlock_irqrestore(&timer_lock, state);
+    guard.Release();
 
     // wait for the timer to become un-busy in case a callback is currently active on another cpu
     while (timer->active_cpu >= 0) {
@@ -358,13 +358,13 @@ void timer_tick(zx_time_t now) {
     // platform timer has fired, no deadline is set
     percpu[cpu].next_timer_deadline = ZX_TIME_INFINITE;
 
-    // service preempt timer before acquiring the timer_lock
+    // service preempt timer before acquiring the timer lock
     if (now >= percpu[cpu].preempt_timer_deadline) {
         percpu[cpu].preempt_timer_deadline = ZX_TIME_INFINITE;
         sched_preempt_timer_tick(now);
     }
 
-    spin_lock(&timer_lock);
+    Guard<spin_lock_t, NoIrqSave> guard{TimerLock::Get()};
 
     for (;;) {
         // see if there's an event to process
@@ -385,21 +385,22 @@ void timer_tick(zx_time_t now) {
 
         // mark the timer busy
         timer->active_cpu = cpu;
-        // spinlock below acts as a memory barrier
+        // Unlocking the spinlock in CallUnlocked acts as a memory barrier.
 
-        // we pulled it off the list, release the list lock to handle it
-        spin_unlock(&timer_lock);
+        // Now that the timer is off of the list, release the spinlock to handle
+        // the callback, then re-acquire in case it is requeued.
+        guard.CallUnlocked(
+            [timer, now]() {
+                LTRACEF("dequeued timer %p, scheduled %" PRIu64 "\n", timer, timer->scheduled_time);
 
-        LTRACEF("dequeued timer %p, scheduled %" PRIu64 "\n", timer, timer->scheduled_time);
+                CPU_STATS_INC(timers);
 
-        CPU_STATS_INC(timers);
+                LTRACEF("timer %p firing callback %p, arg %p\n", timer, timer->callback, timer->arg);
+                timer->callback(timer, now, timer->arg);
 
-        LTRACEF("timer %p firing callback %p, arg %p\n", timer, timer->callback, timer->arg);
-        timer->callback(timer, now, timer->arg);
-
-        DEBUG_ASSERT(arch_ints_disabled());
-        // it may have been requeued, grab the lock so we can safely inspect it
-        spin_lock(&timer_lock);
+                DEBUG_ASSERT(arch_ints_disabled());
+            }
+        );
 
         // mark it not busy
         timer->active_cpu = -1;
@@ -408,7 +409,6 @@ void timer_tick(zx_time_t now) {
         // make sure any spinners wake up
         arch_spinloop_signal();
     }
-
 
     // get the deadline of the event at the head of the queue (if any)
     zx_time_t deadline = ZX_TIME_INFINITE;
@@ -421,7 +421,7 @@ void timer_tick(zx_time_t now) {
     }
 
     // we're done manipulating the timer queue
-    spin_unlock(&timer_lock);
+    guard.Release();
 
     // set the platform timer to the *soonest* of queue event and preempt timer
     if (percpu[cpu].preempt_timer_deadline < deadline) {
@@ -447,8 +447,7 @@ zx_status_t timer_trylock_or_cancel(timer_t* t, spin_lock_t* lock) {
 }
 
 void timer_transition_off_cpu(uint old_cpu) {
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&timer_lock, state);
+    Guard<spin_lock_t, IrqSave> guard{TimerLock::Get()};
     uint cpu = arch_curr_cpu_num();
 
     timer_t* old_head = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
@@ -468,13 +467,11 @@ void timer_transition_off_cpu(uint old_cpu) {
         // we just modified the head of the timer queue
         update_platform_timer(cpu, new_head->scheduled_time);
     }
-
-    spin_unlock_irqrestore(&timer_lock, state);
 }
 
 void timer_thaw_percpu(void) {
     DEBUG_ASSERT(arch_ints_disabled());
-    spin_lock(&timer_lock);
+    Guard<spin_lock_t, NoIrqSave> guard{TimerLock::Get()};
 
     uint cpu = arch_curr_cpu_num();
 
@@ -487,7 +484,7 @@ void timer_thaw_percpu(void) {
         }
     }
 
-    spin_unlock(&timer_lock);
+    guard.Release();
 
     update_platform_timer(cpu, deadline);
 }
@@ -505,8 +502,7 @@ static void dump_timer_queues(char* buf, size_t len) {
     size_t ptr = 0;
     zx_time_t now = current_time();
 
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&timer_lock, state);
+    Guard<spin_lock_t, IrqSave> guard{TimerLock::Get()};
 
     for (uint i = 0; i < SMP_MAX_CPUS; i++) {
         if (mp_is_cpu_online(i)) {
@@ -524,8 +520,6 @@ static void dump_timer_queues(char* buf, size_t len) {
             }
         }
     }
-
-    spin_unlock_irqrestore(&timer_lock, state);
 }
 
 #if WITH_LIB_CONSOLE

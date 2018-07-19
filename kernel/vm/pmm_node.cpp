@@ -16,8 +16,6 @@
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
-using fbl::AutoLock;
-
 namespace {
 
 void set_state_alloc(vm_page* page) {
@@ -94,7 +92,7 @@ void PmmNode::AddFreePages(list_node* list) TA_NO_THREAD_SAFETY_ANALYSIS {
 }
 
 vm_page_t* PmmNode::AllocPage(uint alloc_flags, paddr_t* pa) {
-    AutoLock al(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     vm_page* page = list_remove_head_type(&free_list_, vm_page, queue_node);
     if (!page)
@@ -130,7 +128,7 @@ size_t PmmNode::AllocPages(size_t count, uint alloc_flags, list_node* list) {
     if (count == 0)
         return 0;
 
-    AutoLock al(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     size_t allocated = 0;
     while (allocated < count) {
@@ -167,7 +165,7 @@ size_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) {
 
     address = ROUNDDOWN(address, PAGE_SIZE);
 
-    AutoLock al(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     // walk through the arenas, looking to see if the physical page belongs to it
     for (auto& a : arena_list_) {
@@ -209,7 +207,7 @@ size_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8_t al
     if (alignment_log2 < PAGE_SIZE_SHIFT)
         alignment_log2 = PAGE_SIZE_SHIFT;
 
-    AutoLock al(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     for (auto& a : arena_list_) {
         vm_page_t* p = a.FindFreeContiguous(count, alignment_log2);
@@ -251,7 +249,7 @@ size_t PmmNode::Free(list_node* list) {
 
     DEBUG_ASSERT(list);
 
-    AutoLock al(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     uint count = 0;
     while (!list_is_empty(list)) {
@@ -287,7 +285,7 @@ size_t PmmNode::Free(list_node* list) {
 void PmmNode::Free(vm_page* page) {
     LTRACEF("page %p, pa %#" PRIxPTR "\n", page, page->paddr());
 
-    AutoLock al(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
 
     DEBUG_ASSERT(page->state != VM_PAGE_STATE_OBJECT || page->object.pin_count == 0);
     DEBUG_ASSERT(!page->is_free());
@@ -321,7 +319,7 @@ uint64_t PmmNode::CountTotalBytes() const TA_NO_THREAD_SAFETY_ANALYSIS {
 void PmmNode::CountTotalStates(uint64_t state_count[VM_PAGE_STATE_COUNT_]) const {
     // TODO(MG-833): This is extremely expensive, holding a global lock
     // and touching every page/arena. We should keep a running count instead.
-    AutoLock al(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     for (auto& a : arena_list_) {
         a.CountStates(state_count);
     }
@@ -332,18 +330,21 @@ void PmmNode::DumpFree() const TA_NO_THREAD_SAFETY_ANALYSIS {
     printf(" %zu free MBs\n", megabytes_free);
 }
 
-// No lock analysis here, as we want to just go for it in the panic case without the lock.
-void PmmNode::Dump(bool is_panic) const TA_NO_THREAD_SAFETY_ANALYSIS {
-    if (!is_panic) {
-        lock_.Acquire();
-    }
-    printf("pmm node %p: free_count %zu (%zu bytes), total size %zu\n",
-           this, free_count_, free_count_ * PAGE_SIZE, arena_cumulative_size_);
-    for (auto& a : arena_list_) {
-        a.Dump(false, false);
-    }
-    if (!is_panic) {
-        lock_.Release();
+void PmmNode::Dump(bool is_panic) const {
+    // No lock analysis here, as we want to just go for it in the panic case without the lock.
+    auto dump = [this]() TA_NO_THREAD_SAFETY_ANALYSIS {
+        printf("pmm node %p: free_count %zu (%zu bytes), total size %zu\n",
+                this, free_count_, free_count_ * PAGE_SIZE, arena_cumulative_size_);
+        for (auto& a : arena_list_) {
+            a.Dump(false, false);
+        }
+    };
+
+    if (is_panic) {
+        dump();
+    } else {
+        Guard<fbl::Mutex> guard{&lock_};
+        dump();
     }
 }
 

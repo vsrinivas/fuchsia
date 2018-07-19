@@ -10,6 +10,7 @@
 
 #include <kernel/mp.h>
 #include <kernel/stats.h>
+#include <kernel/thread_lock.h>
 #include <lib/heap.h>
 #include <platform.h>
 #include <vm/pmm.h>
@@ -427,7 +428,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
 
             // account for idle time if a cpu is currently idle
             {
-                AutoSpinLock lock(&thread_lock);
+                Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
                 zx_time_t idle_time = cpu->stats.idle_time;
                 bool is_idle = mp_is_cpu_idle(i);

@@ -24,11 +24,8 @@
 
 #include <zircon/types.h>
 
-using fbl::AutoLock;
-
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
-fbl::Mutex VmObject::all_vmos_lock_ = {};
 VmObject::GlobalList VmObject::all_vmos_ = {};
 
 VmObject::VmObject(fbl::RefPtr<VmObject> parent)
@@ -38,7 +35,7 @@ VmObject::VmObject(fbl::RefPtr<VmObject> parent)
 
     // Add ourself to the global VMO list, newer VMOs at the end.
     {
-        AutoLock a(&all_vmos_lock_);
+        Guard<fbl::Mutex> guard{AllVmosLock::Get()};
         all_vmos_.push_back(this);
     }
 }
@@ -54,12 +51,13 @@ VmObject::~VmObject() {
         // conditionally grab our shared lock with the parent, but only if it's
         // not held. There are some destruction paths that may try to tear
         // down the object with the parent locks held.
-        bool need_lock = !lock_.IsHeld();
-        if (need_lock)
-            lock_.Acquire();
-        parent_->RemoveChildLocked(this);
-        if (need_lock)
-            lock_.Release();
+        const bool need_lock = !lock_.lock().IsHeld();
+        if (need_lock) {
+            Guard<fbl::Mutex> guard{&lock_};
+            parent_->RemoveChildLocked(this);
+        } else {
+            parent_->RemoveChildLocked(this);
+        }
     }
 
     DEBUG_ASSERT(mapping_list_.is_empty());
@@ -67,7 +65,7 @@ VmObject::~VmObject() {
 
     // Remove ourself from the global VMO list.
     {
-        AutoLock a(&all_vmos_lock_);
+        Guard<fbl::Mutex> guard{AllVmosLock::Get()};
         DEBUG_ASSERT(global_list_state_.InContainer() == true);
         all_vmos_.erase(*this);
     }
@@ -85,14 +83,14 @@ zx_status_t VmObject::set_name(const char* name, size_t len) {
 
 void VmObject::set_user_id(uint64_t user_id) {
     canary_.Assert();
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     DEBUG_ASSERT(user_id_ == 0);
     user_id_ = user_id;
 }
 
 uint64_t VmObject::user_id() const {
     canary_.Assert();
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     return user_id_;
 }
 
@@ -102,7 +100,7 @@ uint64_t VmObject::parent_user_id() const {
     // it's probably the same lock.
     fbl::RefPtr<VmObject> parent;
     {
-        AutoLock a(&lock_);
+        Guard<fbl::Mutex> guard{&lock_};
         if (parent_ == nullptr) {
             return 0u;
         }
@@ -113,20 +111,20 @@ uint64_t VmObject::parent_user_id() const {
 
 bool VmObject::is_cow_clone() const {
     canary_.Assert();
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     return parent_ != nullptr;
 }
 
 void VmObject::AddMappingLocked(VmMapping* r) {
     canary_.Assert();
-    DEBUG_ASSERT(lock_.IsHeld());
+    DEBUG_ASSERT(lock_.lock().IsHeld());
     mapping_list_.push_front(r);
     mapping_list_len_++;
 }
 
 void VmObject::RemoveMappingLocked(VmMapping* r) {
     canary_.Assert();
-    DEBUG_ASSERT(lock_.IsHeld());
+    DEBUG_ASSERT(lock_.lock().IsHeld());
     mapping_list_.erase(*r);
     DEBUG_ASSERT(mapping_list_len_ > 0);
     mapping_list_len_--;
@@ -134,13 +132,13 @@ void VmObject::RemoveMappingLocked(VmMapping* r) {
 
 uint32_t VmObject::num_mappings() const {
     canary_.Assert();
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     return mapping_list_len_;
 }
 
 bool VmObject::IsMappedByUser() const {
     canary_.Assert();
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     for (const auto& m : mapping_list_) {
         if (m.aspace()->is_user()) {
             return true;
@@ -152,7 +150,7 @@ bool VmObject::IsMappedByUser() const {
 uint32_t VmObject::share_count() const {
     canary_.Assert();
 
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     if (mapping_list_len_ < 2) {
         return 1;
     }
@@ -196,13 +194,13 @@ uint32_t VmObject::share_count() const {
 }
 
 void VmObject::SetChildObserver(VmObjectChildObserver* child_observer) {
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     child_observer_ = child_observer;
 }
 
 void VmObject::AddChildLocked(VmObject* o) {
     canary_.Assert();
-    DEBUG_ASSERT(lock_.IsHeld());
+    DEBUG_ASSERT(lock_.lock().IsHeld());
     children_list_.push_front(o);
     children_list_len_++;
 
@@ -214,7 +212,7 @@ void VmObject::AddChildLocked(VmObject* o) {
 
 void VmObject::RemoveChildLocked(VmObject* o) {
     canary_.Assert();
-    DEBUG_ASSERT(lock_.IsHeld());
+    DEBUG_ASSERT(lock_.lock().IsHeld());
     children_list_.erase(*o);
     DEBUG_ASSERT(children_list_len_ > 0);
     children_list_len_--;
@@ -227,13 +225,13 @@ void VmObject::RemoveChildLocked(VmObject* o) {
 
 uint32_t VmObject::num_children() const {
     canary_.Assert();
-    AutoLock a(&lock_);
+    Guard<fbl::Mutex> guard{&lock_};
     return children_list_len_;
 }
 
 void VmObject::RangeChangeUpdateLocked(uint64_t offset, uint64_t len) {
     canary_.Assert();
-    DEBUG_ASSERT(lock_.IsHeld());
+    DEBUG_ASSERT(lock_.lock().IsHeld());
 
     // offsets for vmos needn't be aligned, but vmars use aligned offsets
     const uint64_t aligned_offset = ROUNDDOWN(offset, PAGE_SIZE);
