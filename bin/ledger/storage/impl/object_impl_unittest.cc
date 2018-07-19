@@ -5,12 +5,13 @@
 #include "peridot/bin/ledger/storage/impl/object_impl.h"
 
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/random/rand.h>
 
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
+#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "third_party/leveldb/include/leveldb/db.h"
+#include "util/env_fuchsia.h"
 
 namespace storage {
 namespace {
@@ -88,13 +89,14 @@ TEST(ObjectImplTest, StringObject) {
 }
 
 TEST(ObjectImplTest, LevelDBObject) {
-  files::ScopedTempDir temp_dir;
+  scoped_tmpfs::ScopedTmpFS tmpfs;
+  auto env = leveldb::MakeFuchsiaEnv(tmpfs.root_fd());
 
   leveldb::DB* db = nullptr;
   leveldb::Options options;
+  options.env = env.get();
   options.create_if_missing = true;
-  leveldb::Status status =
-      leveldb::DB::Open(options, temp_dir.path() + "/db", &db);
+  leveldb::Status status = leveldb::DB::Open(options, "db", &db);
   ASSERT_TRUE(status.ok());
   std::unique_ptr<leveldb::DB> db_ptr(db);
 
