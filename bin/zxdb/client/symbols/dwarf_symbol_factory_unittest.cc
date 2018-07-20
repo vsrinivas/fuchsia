@@ -188,7 +188,6 @@ TEST(DwarfSymbolFactory, CodeBlocks) {
   ASSERT_TRUE(struct_arg);
   const Type* struct_arg_type = struct_arg->type().Get()->AsType();
   ASSERT_TRUE(struct_arg_type);
-  // TODO(brettw) enable when struct types are decoded.
   EXPECT_EQ("const Struct&", struct_arg_type->GetTypeName());
 
   // Validate the arg2 type (int).
@@ -215,7 +214,6 @@ TEST(DwarfSymbolFactory, CodeBlocks) {
   ASSERT_TRUE(var2);
   const Type* var2_type = var2->type().Get()->AsType();
   ASSERT_TRUE(var2_type);
-  // TODO(brettw) enable when struct types are decoded.
   EXPECT_EQ("volatile Struct", var2_type->GetTypeName());
 
   // The lexical scope should have no other children.
