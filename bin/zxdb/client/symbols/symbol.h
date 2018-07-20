@@ -13,9 +13,14 @@
 namespace zxdb {
 
 class BaseType;
+class CodeBlock;
+class DataMember;
 class Function;
 class ModifiedType;
+class StructClass;
 class Type;
+class Value;
+class Variable;
 
 // Represents the type of a variable. This is a deserialized version of the
 // various DWARF DIE entries that define types. It is normally generated from
@@ -200,13 +205,26 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
 
   // Manual RTTI.
   virtual const BaseType* AsBaseType() const;
+  virtual const CodeBlock* AsCodeBlock() const;
+  virtual const DataMember* AsDataMember() const;
   virtual const Function* AsFunction() const;
   virtual const ModifiedType* AsModifiedType() const;
+  virtual const StructClass* AsStructClass() const;
   virtual const Type* AsType() const;
+  virtual const Value* AsValue() const;
+  virtual const Variable* AsVariable() const;
 
   // Non-const manual RTTI wrappers.
   BaseType* AsBaseType() {
     return const_cast<BaseType*>(const_cast<const Symbol*>(this)->AsBaseType());
+  }
+  CodeBlock* AsCodeBlock() {
+    return const_cast<CodeBlock*>(
+        const_cast<const Symbol*>(this)->AsCodeBlock());
+  }
+  DataMember* AsDataMember() {
+    return const_cast<DataMember*>(
+        const_cast<const Symbol*>(this)->AsDataMember());
   }
   Function* AsFunction() {
     return const_cast<Function*>(const_cast<const Symbol*>(this)->AsFunction());
@@ -215,8 +233,18 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
     return const_cast<ModifiedType*>(
         const_cast<const Symbol*>(this)->AsModifiedType());
   }
+  StructClass* AsStructClass() {
+    return const_cast<StructClass*>(
+        const_cast<const Symbol*>(this)->AsStructClass());
+  }
   Type* AsType() {
     return const_cast<Type*>(const_cast<const Symbol*>(this)->AsType());
+  }
+  Value* AsValue() {
+    return const_cast<Value*>(const_cast<const Symbol*>(this)->AsValue());
+  }
+  Variable* AsVariable() {
+    return const_cast<Variable*>(const_cast<const Symbol*>(this)->AsVariable());
   }
 
  protected:
@@ -232,4 +260,4 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   int tag_ = kTagNone;
 };
 
-}  // namespace
+}  // namespace zxdb

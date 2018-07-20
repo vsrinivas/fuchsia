@@ -30,6 +30,13 @@ class Type : public Symbol {
   uint32_t byte_size() const { return byte_size_; }
   void set_byte_size(uint32_t bs) { byte_size_ = bs; }
 
+  // The enclosing scope. The enclosing scope for a type is usually either
+  // a namespace, struct, class, or unit (for toplevel symbols). However it
+  // could be a function or random code block if a type is defined locally in a
+  // function.
+  const LazySymbol& enclosing() const { return enclosing_; }
+  void set_enclosing(const LazySymbol& e) { enclosing_ = e; }
+
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(Type);
   FRIEND_MAKE_REF_COUNTED(Type);
@@ -40,6 +47,7 @@ class Type : public Symbol {
  private:
   std::string assigned_name_;
   uint32_t byte_size_;
+  LazySymbol enclosing_;
 };
 
 }  // namespace

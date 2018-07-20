@@ -30,8 +30,7 @@ namespace zxdb {
 // DIE that generated the object.
 class Function final : public CodeBlock {
  public:
-  Function();
-  ~Function();
+  // Construct with fxl::MakeRefCounted().
 
   // Symbol overrides.
   const Function* AsFunction() const;
@@ -55,11 +54,22 @@ class Function final : public CodeBlock {
   const LazySymbol& return_type() const { return return_type_; }
   void set_return_type(const LazySymbol& rt) { return_type_ = rt; }
 
+  // Parameters passed to the function.
+  const std::vector<LazySymbol>& parameters() const { return parameters_; }
+  void set_parameters(std::vector<LazySymbol> p) { parameters_ = std::move(p); }
+
  private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(Function);
+  FRIEND_MAKE_REF_COUNTED(Function);
+
+  Function();
+  ~Function();
+
   std::string name_;
   std::string linkage_name_;
   FileLine decl_line_;
   LazySymbol return_type_;
+  std::vector<LazySymbol> parameters_;
 };
 
 }  // namespace zxdb

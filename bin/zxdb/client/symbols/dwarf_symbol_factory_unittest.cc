@@ -5,12 +5,15 @@
 #include "garnet/bin/zxdb/client/symbols/dwarf_symbol_factory.h"
 #include "garnet/bin/zxdb/client/string_util.h"
 #include "garnet/bin/zxdb/client/symbols/base_type.h"
+#include "garnet/bin/zxdb/client/symbols/data_member.h"
 #include "garnet/bin/zxdb/client/symbols/dwarf_test_util.h"
 #include "garnet/bin/zxdb/client/symbols/function.h"
 #include "garnet/bin/zxdb/client/symbols/modified_type.h"
 #include "garnet/bin/zxdb/client/symbols/module_symbols_impl.h"
+#include "garnet/bin/zxdb/client/symbols/struct_class.h"
 #include "garnet/bin/zxdb/client/symbols/symbol.h"
 #include "garnet/bin/zxdb/client/symbols/test_symbol_module.h"
+#include "garnet/bin/zxdb/client/symbols/variable.h"
 #include "gtest/gtest.h"
 
 namespace zxdb {
@@ -31,9 +34,8 @@ fxl::RefPtr<const Function> GetFunctionWithName(ModuleSymbolsImpl& module,
     return fxl::RefPtr<Function>();
 
   // Find the GetIntPtr function.
-  const char kGetIntPtrName[] = "GetIntPtr";
   llvm::DWARFDie get_int_ptr_function_die = GetFirstDieOfTagAndName(
-      module.context(), unit, llvm::dwarf::DW_TAG_subprogram, kGetIntPtrName);
+      module.context(), unit, llvm::dwarf::DW_TAG_subprogram, name);
   EXPECT_TRUE(get_int_ptr_function_die);
   if (!get_int_ptr_function_die)
     return fxl::RefPtr<Function>();
@@ -120,6 +122,104 @@ TEST(DwarfSymbolFactory, ModifiedBaseType) {
   // This is not a bitfield.
   EXPECT_EQ(0u, base->bit_size());
   EXPECT_EQ(0u, base->bit_offset());
+}
+
+TEST(DwarfSymbolFactory, StructClass) {
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  Err err = module.Load();
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  // Find the GetStruct function.
+  const char kGetStruct[] = "GetStruct";
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kGetStruct);
+  ASSERT_TRUE(function);
+
+  // The return type should be the struct.
+  auto* struct_type = function->return_type().Get()->AsStructClass();
+  ASSERT_TRUE(struct_type);
+  EXPECT_EQ("Struct", struct_type->GetTypeName());
+
+  // The struct has two data members.
+  ASSERT_EQ(2u, struct_type->data_members().size());
+
+  // The first member should be "int member_a" at offset 0.
+  auto* member_a = struct_type->data_members()[0].Get()->AsDataMember();
+  ASSERT_TRUE(member_a);
+  auto* member_a_type = member_a->type().Get()->AsType();
+  EXPECT_EQ("int", member_a_type->GetTypeName());
+  EXPECT_EQ(0u, member_a->member_location());
+
+  // The first member should be "int member_a". To have flexibility with the
+  // compiler packing, just ensure that the offset is > 0 and a multiple of 4.
+  auto* member_b = struct_type->data_members()[1].Get()->AsDataMember();
+  ASSERT_TRUE(member_b);
+  auto* member_b_type = member_b->type().Get()->AsType();
+  EXPECT_EQ("Struct*", member_b_type->GetTypeName());
+  EXPECT_LT(0u, member_b->member_location());
+  EXPECT_TRUE(member_b->member_location() % 4 == 0);
+}
+
+// Tests nested code blocks, variables, and parameters.
+TEST(DwarfSymbolFactory, CodeBlocks) {
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  Err err = module.Load();
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  // Find the DoStructCall function.
+  const char kDoStructCall[] = "DoStructCall";
+  fxl::RefPtr<const Function> function =
+      GetFunctionWithName(module, kDoStructCall);
+  ASSERT_TRUE(function);
+
+  // It should have two parameters, arg1 and arg2.
+  const Variable* struct_arg = nullptr;
+  const Variable* int_arg = nullptr;
+  ASSERT_EQ(2u, function->parameters().size());
+  for (const auto& param : function->parameters()) {
+    const Variable* cur_var = param.Get()->AsVariable();
+    ASSERT_TRUE(cur_var);  // Each parameter should decode to a variable.
+    if (cur_var->name() == "arg1")
+      struct_arg = cur_var;
+    else if (cur_var->name() == "arg2")
+      int_arg = cur_var;
+  }
+
+  // Validate the arg1 type (const Struct&).
+  ASSERT_TRUE(struct_arg);
+  const Type* struct_arg_type = struct_arg->type().Get()->AsType();
+  ASSERT_TRUE(struct_arg_type);
+  // TODO(brettw) enable when struct types are decoded.
+  EXPECT_EQ("const Struct&", struct_arg_type->GetTypeName());
+
+  // Validate the arg2 type (int).
+  ASSERT_TRUE(int_arg);
+  const Type* int_arg_type = int_arg->type().Get()->AsType();
+  ASSERT_TRUE(int_arg_type);
+  EXPECT_EQ("int", int_arg_type->GetTypeName());
+
+  // The function block should have one variable (var1).
+  ASSERT_EQ(1u, function->variables().size());
+  const Variable* var1 = function->variables()[0].Get()->AsVariable();
+  ASSERT_TRUE(var1);
+  const Type* var1_type = var1->type().Get()->AsType();
+  ASSERT_TRUE(var1_type);
+  EXPECT_EQ("volatile int", var1_type->GetTypeName());
+
+  // There should be one child lexical scope.
+  ASSERT_EQ(1u, function->inner_blocks().size());
+  const CodeBlock* inner = function->inner_blocks()[0].Get()->AsCodeBlock();
+
+  // The lexical scope should have one child variable.
+  ASSERT_EQ(1u, inner->variables().size());
+  const Variable* var2 = inner->variables()[0].Get()->AsVariable();
+  ASSERT_TRUE(var2);
+  const Type* var2_type = var2->type().Get()->AsType();
+  ASSERT_TRUE(var2_type);
+  // TODO(brettw) enable when struct types are decoded.
+  EXPECT_EQ("volatile Struct", var2_type->GetTypeName());
+
+  // The lexical scope should have no other children.
+  EXPECT_TRUE(inner->inner_blocks().empty());
 }
 
 }  // namespace zxdb

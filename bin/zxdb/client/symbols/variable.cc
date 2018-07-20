@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/client/symbols/code_block.h"
+#include "garnet/bin/zxdb/client/symbols/variable.h"
 
 namespace zxdb {
 
-CodeBlock::CodeBlock(int tag) : Symbol(tag) {}
-CodeBlock::~CodeBlock() = default;
+Variable::Variable(int tag) : Value(tag) {}
+Variable::~Variable() = default;
 
-const CodeBlock* CodeBlock::AsCodeBlock() const { return this; }
+const Variable* Variable::AsVariable() const { return this; }
 
 }  // namespace zxdb

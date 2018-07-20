@@ -8,3 +8,36 @@
 // tests to query symbol information. The actual code is not run.
 
 EXPORT const int* GetIntPtr() { return nullptr; }  // Line 10.
+
+namespace my_ns {
+
+struct Struct {
+  int member_a;
+  Struct* member_b;
+};
+
+EXPORT Struct GetStruct() { return Struct(); }
+
+// This provides a test for struct type decode, function parameters, and
+// local variables.
+EXPORT int DoStructCall(const Struct& arg1, int arg2) {
+  // This uses "volatile" to prevent the values from being optimized out.
+  volatile int var1 = 2;
+  var1 *= 2;
+
+  // Introduce a lexical scope with another varuable in it.
+  {
+    volatile Struct var2;
+    var2.member_a = 1;
+    return var1 + var2.member_a;
+  }
+}
+
+}  // my_ns
+
+// TODO(brettw) test:
+//   stuff in an anonymous namespace
+//   typedef
+//   using
+//   local types defined in functions
+

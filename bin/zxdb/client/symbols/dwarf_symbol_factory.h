@@ -29,12 +29,19 @@ class DwarfSymbolFactory : public SymbolFactory {
   LazySymbol MakeLazy(const llvm::DWARFDie& die);
 
  private:
+  // Internal version that creates a symbol from a Die.
+  fxl::RefPtr<Symbol> DecodeSymbol(const llvm::DWARFDie& die);
+
   // is_specification will be set when this function recursively calls itself
   // to parse the specification of a function implementation.
   fxl::RefPtr<Symbol> DecodeFunction(const llvm::DWARFDie& die,
                                      bool is_specification = false);
   fxl::RefPtr<Symbol> DecodeBaseType(const llvm::DWARFDie& die);
-  fxl::RefPtr<Symbol> DecodeModifierType(const llvm::DWARFDie& die);
+  fxl::RefPtr<Symbol> DecodeDataMember(const llvm::DWARFDie& die);
+  fxl::RefPtr<Symbol> DecodeLexicalBlock(const llvm::DWARFDie& die);
+  fxl::RefPtr<Symbol> DecodeModifiedType(const llvm::DWARFDie& die);
+  fxl::RefPtr<Symbol> DecodeStructClass(const llvm::DWARFDie& die);
+  fxl::RefPtr<Symbol> DecodeVariable(const llvm::DWARFDie& die);
 
   // This can be null if the module is unloaded but there are still some
   // dangling type references to it.
