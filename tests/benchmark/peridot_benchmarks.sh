@@ -23,10 +23,11 @@ OUT_DIR="$1"
 # Run "local" Ledger benchmarks.  These don't need external services to function
 # properly.
 
-runbench_exec "${OUT_DIR}/ledger.add_new_page.json" \
-    trace record \
-    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/add_new_page.tspec \
-    --benchmark-results-file="${OUT_DIR}/ledger.add_new_page.json"
+# TODO(LE-425): Fix & re-enable this test.
+# runbench_exec "${OUT_DIR}/ledger.add_new_page.json" \
+#    trace record \
+#    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/add_new_page.tspec \
+#    --benchmark-results-file="${OUT_DIR}/ledger.add_new_page.json"
 
 runbench_exec "${OUT_DIR}/ledger.get_same_page.json" \
     trace record \
