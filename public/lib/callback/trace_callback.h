@@ -22,10 +22,7 @@ namespace internal {
 template <typename C>
 class TracingLambda {
  public:
-  TracingLambda(C callback,
-                uint64_t id,
-                const char* category,
-                const char* name,
+  TracingLambda(C callback, uint64_t id, const char* category, const char* name,
                 const char* callback_name)
       : id_(id),
         category_(category),
@@ -98,9 +95,7 @@ class TracingLambda {
 // NOLINT suppresses check about 'args' being unused. It might be used in the
 // future if TRACE_CALLBACK (see below) is used providing additional arguments.
 template <typename C, typename... ArgType>
-auto TraceCallback(C callback,
-                   const char* category,
-                   const char* name,
+auto TraceCallback(C callback, const char* category, const char* name,
                    const char* callback_name,
                    ArgType... args) {  // NOLINT
   uint64_t id = TRACE_NONCE();

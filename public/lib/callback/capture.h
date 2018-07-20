@@ -8,7 +8,6 @@
 #include <functional>
 #include <utility>
 
-
 namespace callback {
 namespace internal {
 

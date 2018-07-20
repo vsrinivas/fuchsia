@@ -27,9 +27,7 @@ void CancellableImpl::Cancel() {
   on_cancel_();
 }
 
-bool CancellableImpl::IsDone() {
-  return is_done_;
-}
+bool CancellableImpl::IsDone() { return is_done_; }
 
 void CancellableImpl::SetOnDone(fit::closure callback) {
   FXL_DCHECK(!on_done_);

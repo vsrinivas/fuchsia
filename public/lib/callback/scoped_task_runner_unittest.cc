@@ -12,7 +12,8 @@
 namespace callback {
 namespace {
 
-inline void InvokeTaskHandler(async_dispatcher_t* dispatcher, async_task_t* task) {
+inline void InvokeTaskHandler(async_dispatcher_t* dispatcher,
+                              async_task_t* task) {
   task->handler(dispatcher, task, ZX_OK);
 }
 
