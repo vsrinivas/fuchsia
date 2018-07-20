@@ -32,7 +32,7 @@ static inline void list_clear_node(list_node_t* item) {
     item->prev = item->next = 0;
 }
 
-static inline bool list_in_list(list_node_t* item) {
+static inline bool list_in_list(const list_node_t* item) {
     if (item->prev == 0 && item->next == 0)
         return false;
     else
@@ -252,13 +252,13 @@ static inline list_node_t* list_next_wrap(list_node_t* list, list_node_t* item) 
          &(entry)->member != (list);                                     \
          entry = temp_entry, temp_entry = containerof((temp_entry)->member.next, type, member))
 
-static inline bool list_is_empty(list_node_t* list) {
+static inline bool list_is_empty(const list_node_t* list) {
     return (list->next == list) ? true : false;
 }
 
-static inline size_t list_length(list_node_t* list) {
+static inline size_t list_length(const list_node_t* list) {
     size_t cnt = 0;
-    list_node_t* node = list;
+    const list_node_t* node = list;
     list_for_every(list, node) {
         cnt++;
     }
@@ -266,17 +266,39 @@ static inline size_t list_length(list_node_t* list) {
     return cnt;
 }
 
+// Splice the contents of splice_from into the list immediately following pos.
+static inline void list_splice_after(list_node_t* splice_from, list_node_t* pos) {
+    if (list_is_empty(splice_from)) {
+        return;
+    }
+    splice_from->next->prev = pos;
+    splice_from->prev->next = pos->next;
+    pos->next->prev = splice_from->prev;
+    pos->next = splice_from->next;
+    list_initialize(splice_from);
+}
+
+// Split the contents of list after (but not including) pos, into split_to
+// (which should be empty).
+static inline void list_split_after(list_node_t* list, list_node_t* pos,
+                                    list_node_t* split_to) {
+    if (pos->next == list) {
+        list_initialize(split_to);
+        return;
+    }
+    split_to->prev = list->prev;
+    split_to->prev->next = split_to;
+    split_to->next = pos->next;
+    split_to->next->prev = split_to;
+    pos->next = list;
+    list->prev = pos;
+}
+
 // Moves all the contents of old_list (which may or may not be empty)
 // to new_list (which should be empty).
 static inline void list_move(list_node_t* old_list, list_node_t* new_list) {
-    if (list_is_empty(old_list)) {
-        return;
-    }
-    new_list->next = old_list->next;
-    new_list->prev = old_list->prev;
-    new_list->next->prev = new_list;
-    new_list->prev->next = new_list;
-    list_initialize(old_list);
+    list_initialize(new_list);
+    list_splice_after(old_list, new_list);
 }
 
 __END_CDECLS;
