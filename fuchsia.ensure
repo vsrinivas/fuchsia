@@ -5,6 +5,8 @@
 $VerifiedPlatform linux-amd64
 $VerifiedPlatform mac-amd64
 
+$ParanoidMode CheckPresence
+
 # vpython
 infra/tools/luci/vpython/${platform} git_revision:b9c4670197dcefd8762d6e509302acd3efc6e303
 
