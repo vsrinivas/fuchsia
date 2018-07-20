@@ -7,12 +7,23 @@
 namespace a11y_manager {
 
 App::App()
-    : startup_context_(component::StartupContext::CreateFromStartupInfo()) {
-  FXL_DCHECK(startup_context_);
-  FXL_LOG(INFO) << "Publishing a11y manager service";
-  a11y_manager_.reset(new ManagerImpl());
-}
 
-App::~App() {}
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      semantic_tree_(new SemanticTree()),
+      a11y_manager_(
+          new ManagerImpl(startup_context_.get(), semantic_tree_.get())) {
+  startup_context_->outgoing()
+      .AddPublicService<fuchsia::accessibility::Manager>(
+          [this](
+              fidl::InterfaceRequest<fuchsia::accessibility::Manager> request) {
+            a11y_manager_->AddBinding(std::move(request));
+          });
+  startup_context_->outgoing()
+      .AddPublicService<fuchsia::accessibility::SemanticsRoot>(
+          [this](fidl::InterfaceRequest<fuchsia::accessibility::SemanticsRoot>
+                     request) {
+            semantic_tree_->AddBinding(std::move(request));
+          });
+}
 
 }  // namespace a11y_manager

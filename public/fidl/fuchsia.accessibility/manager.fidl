@@ -23,7 +23,7 @@ interface Manager {
     // Returns the deepest node that the input touches. We currently need to
     // pass the view tree token for the current view manager implementation to
     // know which view tree to search.
-    1: GetHitNode(fuchsia.ui.views_v1.ViewTreeToken tree_token,
+    1: GetHitAccessibilityNode(fuchsia.ui.viewsv1.ViewTreeToken tree_token,
                   fuchsia.ui.input.PointerEvent input)
       -> (int32 view_id, Node? node);
 
@@ -33,7 +33,7 @@ interface Manager {
 
     // Performs an accessibility action on the current accessibility focused
     // element. If no element has accessibility focus, does nothing.
-    3: PerformAction(Action action);
+    3: PerformAccessibilityAction(Action action);
 
     // Event to notify that a node in a front-end referenced by id had an
     // action applied on it.

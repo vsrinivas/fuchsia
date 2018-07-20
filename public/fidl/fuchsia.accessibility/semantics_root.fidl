@@ -12,29 +12,36 @@ library fuchsia.accessibility;
 // This is a stub implementation and is currently a work in progress.
 [Discoverable]
 interface SemanticsRoot {
-     // Registers a frontend with an view id to the root. All future updates
-     // that a frontend makes need to include the view id. The frontend is
-     // required to pass a SemanticsProvider interface on registration for the
-     // manager to call front-end accessibility actions. Currently, to get the
-     // view id, the front-end needs to call GetToken() on its Scenic view.
-     // TODO(SCN-847): Use event pairs to set up initial
-     // front-end/Scenic/Manager connections.
-     1: RegisterSemanticsProvider(int32 view_id, SemanticsProvider provider);
+    // Registers a frontend with an view id to the root. All future updates
+    // that a frontend makes need to include the view id. The frontend is
+    // required to pass a SemanticsProvider interface on registration for the
+    // manager to call front-end accessibility actions. Providers need to re-register
+    // on connection error. Currently, to get the
+    // view id, the front-end needs to call GetToken() on its Scenic view.
+    // TODO(SCN-847): Use event pairs to set up initial
+    // front-end/Scenic/Manager connections.
+    1: RegisterSemanticsProvider(int32 view_id, SemanticsProvider provider);
 
-     // Sends new/updated nodes to the root. Does nothing if the id was not
-     // registered to the front-end beforehand.
-     2: UpdateSemanticNodes(int32 view_id, vector<Node> nodes);
+    // Commits changes to node tree associated with the view_id using
+    // UpdateSemanticNodes and DeleteSemanticNodes. This function must
+    // always be called at the end of a full update push to signal the end of an update.
+    // No-op if the client did not register that ID.
 
-     // Removes nodes with node_ids from the frontend referenced by id. NOP if
-     // the client did not register that ID.
-     3: DeleteSemanticNodes(int32 view_id, vector<int32> node_ids);
+    // This commit system is used to allow for atomic changes of the tree that
+    // exceed the FIDL transfer limit and allows both updates and deletes as part
+    // of one commit. We give front-ends the responsibility of splitting a full update
+    // into multiple update and delete calls that do not exceed FIDL transfer data limits.
+    2: Commit(int32 view_id);
 
-     // Commits changes to node tree using UpdateSemanticNodes and
-     // DeleteSemanticNodes. This function is used to allow for atomic changes
-     // of the tree that exceed the FIDL transfer limit and both updates and
-     // deletes as part of one commit. This function must always be called at
-     // the end of a full update push to signal the end of an update.
-     4: Commit(int32 id);
+    // Sends new/updated nodes to the root to add to the cache on the next commit.
+    // No-op if the client did not register that ID.
+    3: UpdateSemanticNodes(int32 view_id, vector<Node> nodes);
+
+    // Tells the root to remove nodes with node_ids from the frontend referenced by
+    // view_id on the next commit. No-op if the client did not register that ID.
+    4: DeleteSemanticNodes(int32 view_id, vector<int32> node_ids);
+
+
 };
 
 // A semantic provider is the client-side interface that the manager can use to
