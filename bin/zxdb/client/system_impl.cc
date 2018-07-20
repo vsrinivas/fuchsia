@@ -23,6 +23,11 @@ SystemImpl::~SystemImpl() {
   // Target destruction may depend on the symbol system. Ensure the targets
   // get cleaned up first.
   for (auto& target : targets_) {
+    // It's better if process destruction notifications are sent before target
+    // ones because the target owns the process. Because this class sends the
+    // target notifications, force the process destruction before doing
+    // anything.
+    target->ImplicitlyDetach();
     for (auto& observer : observers())
       observer.WillDestroyTarget(target.get());
   }

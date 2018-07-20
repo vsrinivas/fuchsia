@@ -28,10 +28,17 @@ class TargetImpl : public Target {
   // a real copy, because any process information is not cloned.
   std::unique_ptr<TargetImpl> Clone(SystemImpl* system);
 
-  // Tests can use these functions to create and destroy targets for mocking
-  // purposes without making any IPC.
+  // Tests can use this to create a target for mocking purposes without making
+  // any IPC. To destroy call ImplicitlyDetach().
   void CreateProcessForTesting(uint64_t koid, const std::string& process_name);
-  void DestroyProcessForTesting();
+
+  // Removes the process from this target without making any IPC calls. This
+  // can be used to clean up after a CreateProcessForTesting(), and during
+  // final shutdown. In final shutdown, we assume anything still left running
+  // will continue running as-is and just clean up local references.
+  //
+  // If the process is not running, this will do nothing.
+  void ImplicitlyDetach();
 
   // Target implementation:
   State GetState() const override;
