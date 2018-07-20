@@ -81,7 +81,8 @@ class Vp9UnitTest {
     uint32_t dosbus_memory[kDosbusMemorySize] = {};
     DosRegisterIo dosbus(dosbus_memory);
     FakeOwner fake_owner(&dosbus);
-    auto decoder = std::make_unique<Vp9Decoder>(&fake_owner);
+    auto decoder = std::make_unique<Vp9Decoder>(
+        &fake_owner, Vp9Decoder::InputType::kSingleStream);
     decoder->InitLoopFilter();
     // This should be the 32nd value written to this register.
     EXPECT_EQ(0x3fc13ebeu,
@@ -93,7 +94,8 @@ class Vp9UnitTest {
     uint32_t dosbus_memory[kDosbusMemorySize] = {};
     DosRegisterIo dosbus(dosbus_memory);
     FakeOwner fake_owner(&dosbus);
-    auto decoder = std::make_unique<Vp9Decoder>(&fake_owner);
+    auto decoder = std::make_unique<Vp9Decoder>(
+        &fake_owner, Vp9Decoder::InputType::kSingleStream);
     EXPECT_EQ(ZX_OK, decoder->InitializeBuffers());
     EXPECT_EQ(0, memcmp(dosbus_memory, zeroed_memory, sizeof(zeroed_memory)));
 

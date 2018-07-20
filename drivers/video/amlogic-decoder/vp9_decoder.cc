@@ -99,7 +99,8 @@ uint32_t Vp9Decoder::WorkingBuffer::addr32() {
   return truncate_to_32(io_buffer_phys(&buffer_));
 }
 
-Vp9Decoder::Vp9Decoder(Owner* owner) : owner_(owner) {
+Vp9Decoder::Vp9Decoder(Owner* owner, InputType input_type)
+    : owner_(owner), input_type_(input_type) {
   InitializeLoopFilterData();
 }
 
@@ -309,7 +310,10 @@ zx_status_t Vp9Decoder::InitializeHardware() {
 
   DecodeStopPos::Get().FromValue(0).WriteTo(owner_->dosbus());
 
-  owner_->core()->StartDecoding();
+  // In the multi-stream case, don't start yet to give the caller the chance
+  // to restore the input state.
+  if (input_type_ == InputType::kSingleStream)
+    owner_->core()->StartDecoding();
   return ZX_OK;
 }
 
@@ -375,6 +379,28 @@ void Vp9Decoder::ReturnFrame(std::shared_ptr<VideoFrame> frame) {
     PrepareNewFrame();
   }
 }
+enum Vp9Command {
+  // Sent from the host to the device after a header has been decoded to say
+  // that the compressed frame body should be decoded.
+  kVp9CommandDecodeSlice = 5,
+
+  // Sent from the device to the host to say that all of the input data (from
+  // HevcDecodeSize) has been processed. Only sent in multi-stream mode.
+  kVp9CommandDecodingDataDone = 0xa,
+
+  // Sent from the device to the host to say that a frame has finished decoding.
+  // This is only sent in multi-stream mode.
+  kVp9CommandNalDecodeDone = 0xe,
+
+  // Sent from the device to the host to say that a VP9 header has been
+  // decoded and the parameter buffer has data. In single-stream mode this also
+  // signals that the previous frame finished decoding.
+  kProcessedHeader = 0xf0,
+
+  // Sent from the host to the device to say that the last interupt has been
+  // processed.
+  kVp9ActionDone = 0xff,
+};
 
 void Vp9Decoder::HandleInterrupt() {
   DLOG("Got VP9 interrupt\n");
@@ -388,11 +414,23 @@ void Vp9Decoder::HandleInterrupt() {
 
   DLOG("Decoder state: %x %x\n", dec_status, adapt_prob_status);
 
+  if (dec_status == kVp9CommandDecodingDataDone) {
+    // Signal that there's more data that can be decoded.
+    uint32_t new_input_data_size = frame_data_provider_->GetInputDataSize();
+    HevcDecodeSize::Get()
+        .FromValue(
+            HevcDecodeSize::Get().ReadFrom(owner_->dosbus()).reg_value() +
+            new_input_data_size)
+        .WriteTo(owner_->dosbus());
+    HevcDecStatusReg::Get().FromValue(kVp9ActionDone).WriteTo(owner_->dosbus());
+    return;
+  }
   ProcessCompletedFrames();
 
-  enum {
-    kProcessedHeader = 0xf0,
-  };
+  if (dec_status == kVp9CommandNalDecodeDone) {
+    frame_data_provider_->FrameWasOutput();
+    return;
+  }
   if (dec_status != kProcessedHeader) {
     DECODE_ERROR("Unexpected decode status %x\n", dec_status);
     return;
@@ -615,10 +653,6 @@ void Vp9Decoder::ConfigureFrameOutput(uint32_t width, uint32_t height) {
       .set_double_write_endian(HevcdIppAxiifConfig::kBigEndian64)
       .WriteTo(owner_->dosbus());
 }
-
-enum Vp9Command {
-  kVp9CommandDecodeSlice = 5,
-};
 
 void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
   Frame* frame = reference_frame_map_[params->frame_to_show];
@@ -942,12 +976,34 @@ void Vp9Decoder::InitializeParser() {
 
   HevcStreamSwapTest::Get().FromValue(0).WriteTo(owner_->dosbus());
   enum DecodeModes {
-    kDecodeModeSingle =
-        (0x80 << 24),  // One decoder, instead of multiple at a time.
+    kDecodeModeSingle = (0x80 << 24) | 0,
+    kDecodeModeMultiStreamBased = (0x80 << 24) | 1,
+    kDecodeModeMultiFrameBased = (0x80 << 24) | 2,
   };
-  DecodeMode::Get().FromValue(kDecodeModeSingle).WriteTo(owner_->dosbus());
-  HevcDecodeSize::Get().FromValue(0).WriteTo(owner_->dosbus());
-  HevcDecodeCount::Get().FromValue(0).WriteTo(owner_->dosbus());
+  uint32_t decode_mode;
+  switch (input_type_) {
+    case InputType::kSingleStream:
+      decode_mode = kDecodeModeSingle;
+      break;
+    case InputType::kMultiStream:
+      decode_mode = kDecodeModeMultiStreamBased;
+      break;
+    case InputType::kMultiFrameBased:
+      decode_mode = kDecodeModeMultiFrameBased;
+      break;
+  }
+  DecodeMode::Get().FromValue(decode_mode).WriteTo(owner_->dosbus());
+  if (input_type_ == InputType::kSingleStream) {
+    HevcDecodeSize::Get().FromValue(0).WriteTo(owner_->dosbus());
+    HevcDecodeCount::Get().FromValue(0).WriteTo(owner_->dosbus());
+  } else {
+    HevcDecodeSize::Get()
+        .FromValue(frame_data_provider_->GetInputDataSize())
+        .WriteTo(owner_->dosbus());
+    HevcDecodeCount::Get()
+        .FromValue(decoded_frame_count_)
+        .WriteTo(owner_->dosbus());
+  }
 
   HevcParserCmdWrite::Get().FromValue(1 << 16).WriteTo(owner_->dosbus());
 

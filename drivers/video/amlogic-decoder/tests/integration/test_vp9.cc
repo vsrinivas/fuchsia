@@ -179,6 +179,43 @@ std::vector<FrameData> ConvertIvfToAmlVFrames(const uint8_t* data,
   return output_vector;
 }
 
+class TestFrameProvider : public Vp9Decoder::FrameDataProvider {
+ public:
+  TestFrameProvider(AmlogicVideo* video) : video_(video) {}
+
+  // Always claim that 50 more bytes are available. Due to the 16kB of padding
+  // at the end this is always true.
+  uint32_t GetInputDataSize() override { return 50; }
+
+  // Called while the decoder lock is held.
+  void FrameWasOutput() override FXL_NO_THREAD_SAFETY_ANALYSIS {
+    DLOG("Resetting hardware");
+    // FrameWasOutput() is called during handling of kVp9CommandNalDecodeDone on
+    // the interrupt thread, which means the decoder HW is currently paused,
+    // which means it's ok to save the state before the stop+wait (without any
+    // explicit pause before the save here).  The decoder HW remains paused
+    // after the save, and makes no further progress until later after the
+    // restore.
+    video_->core_->SaveInputContext(&context_);
+    video_->core_->StopDecoding();
+    video_->core()->WaitForIdle();
+    // Completely power off the hardware to clear all the registers and ensure
+    // the code correctly restores all the state.
+    video_->core()->PowerOff();
+    video_->core()->PowerOn();
+    static_cast<Vp9Decoder*>(video_->video_decoder_.get())
+        ->InitializeHardware();
+    video_->core_->RestoreInputContext(&context_);
+    video_->core()->StartDecoding();
+  }
+
+  InputContext* context() { return &context_; }
+
+ private:
+  AmlogicVideo* video_;
+  InputContext context_;
+};
+
 class TestVP9 {
  public:
   static void Decode(bool use_parser, const char* filename) {
@@ -204,7 +241,8 @@ class TestVP9 {
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->video_decoder_ = std::make_unique<Vp9Decoder>(video.get());
+      video->video_decoder_ = std::make_unique<Vp9Decoder>(
+          video.get(), Vp9Decoder::InputType::kSingleStream);
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
     }
 
@@ -287,7 +325,8 @@ class TestVP9 {
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->video_decoder_ = std::make_unique<Vp9Decoder>(video.get());
+      video->video_decoder_ = std::make_unique<Vp9Decoder>(
+          video.get(), Vp9Decoder::InputType::kSingleStream);
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
     }
 
@@ -341,6 +380,76 @@ class TestVP9 {
     video.reset();
   }
 
+  static void DecodeResetHardware(const char* filename) {
+    auto video = std::make_unique<AmlogicVideo>();
+    ASSERT_TRUE(video);
+
+    EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
+
+    video->pts_manager_ = std::make_unique<PtsManager>();
+
+    video->core_ = std::make_unique<HevcDec>(video.get());
+    video->core_->PowerOn();
+
+    // Don't use parser, because we need to be able to save and restore the read
+    // and write pointers, which can't be done if the parser is using them as
+    // well.
+    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(false, 1024 * PAGE_SIZE));
+
+    video->InitializeInterrupts();
+
+    TestFrameProvider frame_provider(video.get());
+    EXPECT_EQ(ZX_OK,
+              video->core_->InitializeInputContext(frame_provider.context()));
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      video->video_decoder_ = std::make_unique<Vp9Decoder>(
+          video.get(), Vp9Decoder::InputType::kMultiStream);
+      static_cast<Vp9Decoder*>(video->video_decoder_.get())
+          ->SetFrameDataProvider(&frame_provider);
+      EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
+    }
+
+    uint32_t frame_count = 0;
+    std::promise<void> wait_valid;
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      video->video_decoder_->SetFrameReadyNotifier(
+          [&video, &frame_count, &wait_valid,
+           filename](std::shared_ptr<VideoFrame> frame) {
+            ++frame_count;
+            DLOG("Got frame %d\n", frame_count);
+#if DUMP_VIDEO_TO_FILE
+            DumpVideoFrameToFile(frame.get(), filename);
+#endif
+            ReturnFrame(video.get(), frame);
+            // Only 49 of the first 50 frames are shown.
+            if (frame_count == 49)
+              wait_valid.set_value();
+          });
+    }
+
+    auto test_ivf =
+        TestSupport::LoadFirmwareFile("video_test_data/test-25fps.vp9");
+    ASSERT_NE(nullptr, test_ivf);
+    auto aml_data = ConvertIvfToAmlVFrames(test_ivf->ptr, test_ivf->size);
+    video->core_->InitializeDirectInput();
+    // Only use the first 50 frames to save time.
+    for (uint32_t i = 0; i < 50; i++) {
+      video->ProcessVideoNoParser(aml_data[i].data.data(),
+                                  aml_data[i].data.size());
+    }
+    // Force all frames to be processed.
+    uint8_t padding[16384] = {};
+    video->ProcessVideoNoParser(padding, sizeof(padding));
+    video->core()->StartDecoding();
+
+    EXPECT_EQ(std::future_status::ready,
+              wait_valid.get_future().wait_for(std::chrono::seconds(2)));
+
+    video.reset();
+  }
+
  private:
   // This is called from the interrupt handler, which already holds the lock.
   static void ReturnFrame(AmlogicVideo* video,
@@ -357,3 +466,7 @@ TEST(VP9, DecodeNoParser) {
 }
 
 TEST(VP9, DecodePerFrame) { TestVP9::DecodePerFrame(); }
+
+TEST(VP9, DecodeResetHardware) {
+  TestVP9::DecodeResetHardware("/tmp/bearvp9reset.yuv");
+}

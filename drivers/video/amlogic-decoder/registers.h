@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef REGISTERS_H_
-#define REGISTERS_H_
+#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_REGISTERS_H_
+#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_REGISTERS_H_
 
 #include <hwreg/bitfields.h>
 #include <hwreg/mmio.h>
@@ -298,6 +298,12 @@ REGISTER_NAME(HevcCabacControl, DosRegisterIo, 0x3110)
 REGISTER_NAME(HevcParserCoreControl, DosRegisterIo, 0x3113)
   DEF_BIT(0, clock_enable);
 };
+DEFINE_REGISTER(HevcStreamSwapAddr, DosRegisterIo, 0x3134);
+REGISTER_NAME(HevcStreamSwapCtrl, DosRegisterIo, 0x3135)
+  DEF_BIT(0, enable);
+  DEF_BIT(1, save); // 0 means restore
+  DEF_BIT(7, in_progress);
+};
 DEFINE_REGISTER(HevcIqitScalelutWrAddr, DosRegisterIo, 0x3702);
 DEFINE_REGISTER(HevcIqitScalelutData, DosRegisterIo, 0x3704);
 DEFINE_REGISTER(HevcParserCmdWrite, DosRegisterIo, 0x3112);
@@ -545,4 +551,4 @@ REGISTER_NAME(ParserFetchCmd, ParserRegisterIo, 0x2962)
 #undef REGISTER_NAME
 #undef DEFINE_REGISTER
 
-#endif  // REGISTERS_H_
+#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_REGISTERS_H_

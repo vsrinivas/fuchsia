@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef VP9_DECODER_H_
-#define VP9_DECODER_H_
+#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VP9_DECODER_H_
+#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VP9_DECODER_H_
 
 #include <vector>
 
@@ -17,7 +17,23 @@ struct segmentation;
 
 class Vp9Decoder : public VideoDecoder {
  public:
-  explicit Vp9Decoder(Owner* owner);
+  enum class InputType {
+    // A single stream is decoded at once
+    kSingleStream,
+    // Multiple streams are decoded at once
+    kMultiStream,
+    // Multiple streams, each with input buffers divided on frame boundaries,
+    // are decoded at once.
+
+    kMultiFrameBased
+  };
+  class FrameDataProvider {
+   public:
+    // Returns how much data is currently available to be decoded.
+    virtual uint32_t GetInputDataSize() = 0;
+    virtual void FrameWasOutput() = 0;
+  };
+  explicit Vp9Decoder(Owner* owner, InputType input_type);
   Vp9Decoder(const Vp9Decoder&) = delete;
 
   ~Vp9Decoder() override;
@@ -29,6 +45,8 @@ class Vp9Decoder : public VideoDecoder {
 
  private:
   friend class Vp9UnitTest;
+  friend class TestVP9;
+  friend class TestFrameProvider;
   class WorkingBuffer;
 
   class BufferAllocator {
@@ -137,8 +155,13 @@ class Vp9Decoder : public VideoDecoder {
   zx_status_t InitializeBuffers();
   zx_status_t InitializeHardware();
   void InitializeLoopFilterData();
+  void SetFrameDataProvider(FrameDataProvider* provider) {
+    frame_data_provider_ = provider;
+  }
 
   Owner* owner_;
+  InputType input_type_;
+  FrameDataProvider* frame_data_provider_ = nullptr;
 
   WorkingBuffers working_buffers_;
   FrameReadyNotifier notifier_;
@@ -165,4 +188,4 @@ class Vp9Decoder : public VideoDecoder {
   Frame* current_reference_frames_[3] = {};
 };
 
-#endif  // VP9_DECODER_H_
+#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VP9_DECODER_H_

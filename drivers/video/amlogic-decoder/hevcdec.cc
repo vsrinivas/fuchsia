@@ -114,6 +114,7 @@ void HevcDec::PowerOff() {
 }
 
 void HevcDec::StartDecoding() {
+  assert(!decoding_started_);
   decoding_started_ = true;
   // Delay to wait for previous command to finish.
   for (uint32_t i = 0; i < 3; i++) {
@@ -248,4 +249,56 @@ uint32_t HevcDec::GetStreamInputOffset() {
       HevcStreamStartAddr::Get().ReadFrom(mmio()->dosbus).reg_value();
   assert(write_ptr >= buffer_start);
   return write_ptr - buffer_start;
+}
+
+zx_status_t HevcDec::InitializeInputContext(InputContext* context) {
+  constexpr uint32_t kInputContextSize = 4096;
+  zx_status_t status =
+      io_buffer_init_aligned(&context->buffer, owner_->bti(), kInputContextSize,
+                             0, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  if (status != ZX_OK) {
+    DECODE_ERROR("Failed to allocate input context, status %d\n", status);
+    return status;
+  }
+  io_buffer_cache_flush(&context->buffer, 0, kInputContextSize);
+  return status;
+}
+
+void HevcDec::SaveInputContext(InputContext* context) {
+  HevcStreamSwapAddr::Get()
+      .FromValue(truncate_to_32(io_buffer_phys(&context->buffer)))
+      .WriteTo(mmio()->dosbus);
+  HevcStreamSwapCtrl::Get()
+      .FromValue(0)
+      .set_enable(true)
+      .set_save(true)
+      .WriteTo(mmio()->dosbus);
+  bool finished = SpinWaitForRegister(std::chrono::milliseconds(100), [this]() {
+    return !HevcStreamSwapCtrl::Get().ReadFrom(mmio()->dosbus).in_progress();
+  });
+  // TODO: return error on failure.
+  FXL_CHECK(finished);
+  HevcStreamSwapCtrl::Get().FromValue(0).WriteTo(mmio()->dosbus);
+}
+
+void HevcDec::RestoreInputContext(InputContext* context) {
+  // Stream fetching enabled needs to be set before the rest of the state is
+  // restored, or else the parser's state becomes incorrect and decoding fails.
+  HevcStreamControl::Get()
+      .ReadFrom(mmio()->dosbus)
+      .set_endianness(7)
+      .set_use_parser_vbuf_wp(false)
+      .set_stream_fetch_enable(true)
+      .WriteTo(mmio()->dosbus);
+  HevcStreamSwapAddr::Get()
+      .FromValue(truncate_to_32(io_buffer_phys(&context->buffer)))
+      .WriteTo(mmio()->dosbus);
+  HevcStreamSwapCtrl::Get().FromValue(0).set_enable(true).WriteTo(
+      mmio()->dosbus);
+  bool finished = SpinWaitForRegister(std::chrono::milliseconds(100), [this]() {
+    return !HevcStreamSwapCtrl::Get().ReadFrom(mmio()->dosbus).in_progress();
+  });
+  // TODO: return error on failure.
+  FXL_CHECK(finished);
+  HevcStreamSwapCtrl::Get().FromValue(0).WriteTo(mmio()->dosbus);
 }

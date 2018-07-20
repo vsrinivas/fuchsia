@@ -65,6 +65,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   friend class TestH264;
   friend class TestMpeg2;
   friend class TestVP9;
+  friend class TestFrameProvider;
   friend class CodecAdapterH264;
 
   zx_status_t InitializeStreamBuffer(bool use_parser, uint32_t size);

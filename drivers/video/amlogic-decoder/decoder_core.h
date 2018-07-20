@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DECODER_CORE_H_
-#define DECODER_CORE_H_
+#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DECODER_CORE_H_
+#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DECODER_CORE_H_
 
+#include <ddk/io-buffer.h>
 #include <zx/handle.h>
 
 #include "registers.h"
@@ -15,6 +16,12 @@ struct MmioRegisters {
   DmcRegisterIo* dmc;
   HiuRegisterIo* hiubus;
   ResetRegisterIo* reset;
+};
+
+struct InputContext {
+  ~InputContext() { io_buffer_release(&buffer); }
+
+  io_buffer_t buffer = {};
 };
 
 class DecoderCore {
@@ -45,6 +52,12 @@ class DecoderCore {
   // This is the offset between the start of the stream buffer and the write
   // pointer.
   virtual uint32_t GetStreamInputOffset() = 0;
+
+  virtual zx_status_t InitializeInputContext(InputContext* context) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  virtual void SaveInputContext(InputContext* context) {}
+  virtual void RestoreInputContext(InputContext* context) {}
 };
 
-#endif  // DECODER_CORE_H_
+#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DECODER_CORE_H_

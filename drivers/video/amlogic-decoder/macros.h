@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MACROS_H_
-#define MACROS_H_
+#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MACROS_H_
+#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MACROS_H_
 
 #include <ddk/debug.h>
 
@@ -48,4 +48,19 @@ bool WaitForRegister(DurationType timeout, T condition) {
   return true;
 }
 
-#endif  // MACROS_H_
+template <typename DurationType, typename T>
+__WARN_UNUSED_RESULT bool SpinWaitForRegister(DurationType timeout,
+                                              T condition) {
+  auto start = std::chrono::high_resolution_clock::now();
+  auto cast_timeout =
+      std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(
+          timeout);
+  while (!condition()) {
+    if (std::chrono::high_resolution_clock::now() - start >= cast_timeout) {
+      return condition();
+    }
+  }
+  return true;
+}
+
+#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MACROS_H_
