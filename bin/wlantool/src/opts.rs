@@ -95,7 +95,9 @@ pub enum ClientCmd {
         #[structopt(raw(required = "true"))]
         iface_id: u16,
         #[structopt(raw(required = "true"))]
-        ssid: String
+        ssid: String,
+        #[structopt(short = "p", long = "password")]
+        password: String
     },
     #[structopt(name = "status")]
     Status {

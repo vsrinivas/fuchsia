@@ -170,7 +170,7 @@ fn new_client_service(client: Arc<Mutex<Client>>, endpoint: ClientSmeEndpoint)
                         .unwrap_or_else(|e| error!("Error starting a scan transaction: {:?}", e)))
                 },
                 ClientSmeRequest::Connect { req, txn, control_handle } => {
-                    Ok(connect(&client, req.ssid, txn)
+                    Ok(connect(&client, req.ssid, req.password, txn)
                         .unwrap_or_else(|e| error!("Error starting a connect transaction: {:?}", e)))
                 },
                 ClientSmeRequest::Status { responder } => responder.send(&mut status(&client)),
@@ -188,7 +188,7 @@ fn scan(client: &Arc<Mutex<Client>>,
     Ok(())
 }
 
-fn connect(client: &Arc<Mutex<Client>>, ssid: Vec<u8>,
+fn connect(client: &Arc<Mutex<Client>>, ssid: Vec<u8>, password: Vec<u8>,
            txn: Option<ServerEnd<fidl_sme::ConnectTransactionMarker>>)
     -> Result<(), failure::Error>
 {
@@ -196,7 +196,7 @@ fn connect(client: &Arc<Mutex<Client>>, ssid: Vec<u8>,
         None => None,
         Some(txn) => Some(txn.into_stream()?.control_handle())
     };
-    client.lock().unwrap().on_connect_command(ssid, handle);
+    client.lock().unwrap().on_connect_command(ssid, password, handle);
     Ok(())
 }
 

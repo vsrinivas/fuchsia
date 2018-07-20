@@ -67,9 +67,14 @@ use self::internal::*;
 
 pub type UserStream<T> = mpsc::UnboundedReceiver<UserEvent<T>>;
 
+pub struct ConnectConfig<T> {
+    user_token: T,
+    password: Vec<u8>,
+}
+
 pub struct ClientSme<T: Tokens> {
     state: Option<State<T>>,
-    scan_sched: ScanScheduler<T::ScanToken, T::ConnectToken>,
+    scan_sched: ScanScheduler<T::ScanToken, ConnectConfig<T::ConnectToken>>,
     mlme_sink: MlmeSink,
     user_sink: UserSink<T>,
     device_info: Arc<DeviceInfo>,
@@ -117,12 +122,16 @@ impl<T: Tokens> ClientSme<T> {
         )
     }
 
-    pub fn on_connect_command(&mut self, ssid: Ssid, token: T::ConnectToken) {
-        let (canceled_token, req) = self.scan_sched.enqueue_scan_to_join(JoinScan { ssid, token });
+    pub fn on_connect_command(&mut self, ssid: Ssid, password: Vec<u8>, token: T::ConnectToken) {
+        let (canceled_token, req) = self.scan_sched.enqueue_scan_to_join(
+            JoinScan {
+                ssid,
+                token: ConnectConfig { user_token: token, password }
+            });
         // If the new scan replaced an existing pending JoinScan, notify the existing transaction
         if let Some(t) = canceled_token {
             self.user_sink.send(UserEvent::ConnectFinished {
-                token: t,
+                token: t.user_token,
                 result: ConnectResult::Canceled
             });
         }
@@ -154,7 +163,7 @@ impl<T: Tokens> ClientSme<T> {
         }
     }
 
-    fn get_connect_command(&self, token: T::ConnectToken, bss: BssDescription)
+    fn get_connect_command(&self, token: ConnectConfig<T::ConnectToken>, bss: BssDescription)
         -> Option<ConnectCommand<T::ConnectToken>>
     {
         let a_rsne = bss.rsn.as_ref().and_then(|a_rsne| {
@@ -171,7 +180,11 @@ impl<T: Tokens> ClientSme<T> {
                 eprintln!("cannot join BSS {:?} invalid RSNE", bss.bssid);
                 None
             },
-            None => Some(ConnectCommand { bss: Box::new(bss), token: Some(token), rsna: None }),
+            None => Some(ConnectCommand {
+                bss: Box::new(bss),
+                token: Some(token.user_token),
+                rsna: None
+            }),
             Some(a_rsne) => match derive_s_rsne(&a_rsne) {
                 None => {
                     eprintln!("cannot join BSS {:?} unsupported RSNE {:?}", bss.bssid, a_rsne);
@@ -180,15 +193,18 @@ impl<T: Tokens> ClientSme<T> {
                 Some(s_rsne) => {
                     let ssid = bss.ssid.clone();
                     match make_esssa(ssid.as_bytes(),
-                                     // TODO(hahnr): Pass password along.
-                                     &vec![][..],
+                                     &token.password[..],
                                      self.device_info.addr,
                                      s_rsne.clone(),
                                      bss.bssid,
                                      a_rsne) {
                         Ok(esssa) => {
                             let rsna =  Some(Rsna::new(s_rsne, esssa));
-                            Some(ConnectCommand { bss: Box::new(bss), token: Some(token), rsna })
+                            Some(ConnectCommand {
+                                bss: Box::new(bss),
+                                token: Some(token.user_token),
+                                rsna
+                            })
                         },
                         Err(e) => {
                             eprintln!("cannot join BSS {:?} error creating ESS-SA: {:?}",
@@ -226,7 +242,7 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                     ScanResult::CannotJoin { token, reason } => {
                         eprintln!("Cannot join network because scan failed: {:?}", reason);
                         self.user_sink.send(UserEvent::ConnectFinished {
-                            token,
+                            token: token.user_token,
                             result: match reason {
                                 JoinScanFailure::Canceled => ConnectResult::Canceled,
                                 _ => ConnectResult::Failed
@@ -311,7 +327,7 @@ mod tests {
         // Issue a connect command and expect the status to change appropriately.
         // We also check that the association machine state is still disconnected
         // to make sure that the status comes from the scanner.
-        sme.on_connect_command(b"foo".to_vec(), 10);
+        sme.on_connect_command(b"foo".to_vec(), vec![], 10);
         assert_eq!(None,
                    sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(Status{ connected_to: None, connecting_to: Some(b"foo".to_vec()) },
@@ -338,7 +354,7 @@ mod tests {
 
         // Even if we scheduled a scan to connect to another network "bar", we should
         // still report that we are connecting to "foo".
-        sme.on_connect_command(b"bar".to_vec(), 10);
+        sme.on_connect_command(b"bar".to_vec(), vec![], 10);
         assert_eq!(Status{ connected_to: None, connecting_to: Some(b"foo".to_vec()) },
                    sme.status());
 
