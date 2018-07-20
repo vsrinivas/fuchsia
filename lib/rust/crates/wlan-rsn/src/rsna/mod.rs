@@ -10,7 +10,7 @@ pub mod esssa;
 #[cfg(test)]
 pub mod test_util;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Role {
     Authenticator,
     Supplicant,

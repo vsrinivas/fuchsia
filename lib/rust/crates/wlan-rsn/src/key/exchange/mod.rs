@@ -56,6 +56,7 @@ impl Method {
     }
 }
 
+#[derive(Clone)]
 pub enum Config {
     FourWayHandshake(fourway::Config),
     // TODO(hahnr): Add Group Key Handshake support,

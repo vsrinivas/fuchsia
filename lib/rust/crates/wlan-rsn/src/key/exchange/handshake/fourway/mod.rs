@@ -33,7 +33,7 @@ pub enum MessageNumber {
     Message4 = 4,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Config {
     pub role: Role,
     pub s_addr: [u8; 6],

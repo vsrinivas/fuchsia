@@ -17,6 +17,12 @@ struct Pmksa {
     pmk: Option<Vec<u8>>,
 }
 
+impl Pmksa {
+    fn reset(&mut self) {
+        self.pmk = None;
+    }
+}
+
 enum Ptksa {
     Uninitialized(Option<exchange::Config>),
     Initialized(PtksaCfg),
@@ -24,20 +30,24 @@ enum Ptksa {
 
 impl Ptksa {
     fn initialize(&mut self, pmk: Vec<u8>) -> Result<(), failure::Error> {
-        let cfg_option = match self {
+        let cfg = match self {
             Ptksa::Uninitialized(cfg) => cfg.take(),
             _ => None,
         };
-        match cfg_option {
-            Some(cfg) => {
-                *self = Ptksa::Initialized(PtksaCfg {
-                    method: exchange::Method::from_config(cfg, pmk)?,
-                    ptk: None,
-                });
-            }
-            _ => (),
-        }
+        let cfg = cfg.expect("invalid state: PTK configuration cannot be None");
+        *self = Ptksa::Initialized(PtksaCfg {
+            cfg: Some(cfg.clone()),
+            method: exchange::Method::from_config(cfg, pmk)?,
+            ptk: None,
+        });
         Ok(())
+    }
+
+    fn reset(&mut self) {
+        *self = Ptksa::Uninitialized(match self {
+            Ptksa::Uninitialized(cfg) => cfg.take(),
+            Ptksa::Initialized(PtksaCfg{cfg, ..}) => cfg.take(),
+        });
     }
 
     fn is_established(&self) -> bool {
@@ -53,6 +63,7 @@ impl Ptksa {
 }
 
 struct PtksaCfg {
+    cfg: Option<exchange::Config>,
     method: exchange::Method,
     ptk: Option<Ptk>,
 }
@@ -86,6 +97,11 @@ impl EssSa {
         };
         rsna.init_pmksa()?;
         Ok(rsna)
+    }
+
+    pub fn reset(&mut self) {
+        self.pmksa.reset();
+        self.ptksa.reset();
     }
 
     fn on_key_confirmed(&mut self, key: Key) -> Result<(), failure::Error> {
