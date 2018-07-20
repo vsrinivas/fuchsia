@@ -8,6 +8,7 @@
 #include <map>
 #include <memory>
 
+#include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
@@ -24,6 +25,7 @@
 #include "garnet/bin/ui/root_presenter/presentation.h"
 #include "garnet/bin/ui/root_presenter/presentation_switcher.h"
 #include "garnet/bin/ui/root_presenter/renderer_params.h"
+#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -73,7 +75,8 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
   Presentation1(::fuchsia::ui::viewsv1::ViewManager* view_manager,
                 fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session,
                 RendererParams renderer_params,
-                int32_t display_startup_rotation_adjustment);
+                int32_t display_startup_rotation_adjustment,
+                component::StartupContext* startup_context);
 
   ~Presentation1() override;
 
@@ -210,6 +213,11 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
   bool GlobalHooksHandleEvent(const fuchsia::ui::input::InputEvent& event);
 
   void OnEvent(fuchsia::ui::input::InputEvent event);
+
+  // Checks for whether to send an input event through regular dispatch or
+  // accessibility input dispatch.
+  void OnAccessibilityEvent(fuchsia::ui::input::InputEvent event);
+
   void OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputReport event);
 
   void PresentScene();
@@ -333,6 +341,19 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
   // Presentation mode, based on last N measurements
   fuchsia::ui::policy::PresentationMode presentation_mode_;
   std::unique_ptr<presentation_mode::Detector> presentation_mode_detector_;
+
+  // Hooks for accessibility input dispatch.
+  // Used to reconnect |a11y_input_connection_| once the presentation receives
+  // input.
+  component::StartupContext* startup_context_;
+  // Flag to allow connecting to |a11y_input_connection_| and piping input to
+  // it. We currently leave no way to set this to true, while a11y
+  // infrastructure is still in development.
+  bool accessibility_mode_ = false;
+  fuchsia::accessibility::InputReceiverPtr a11y_input_connection_;
+  // We store the view tree token to pass to |a11y_input_connection_| on
+  // registration.
+  fuchsia::ui::viewsv1::ViewTreeToken current_view_tree_;
 
   fxl::WeakPtrFactory<Presentation1> weak_factory_;
 

@@ -95,7 +95,7 @@ void App::Present(fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
 
   auto presentation = std::make_unique<Presentation1>(
       view_manager_.get(), scenic_.get(), session_.get(), renderer_params_,
-      display_startup_rotation_adjustment);
+      display_startup_rotation_adjustment, startup_context_.get());
   presentation->Present(view_owner_handle.Bind(),
                         std::move(presentation_request), GetYieldCallback(),
                         GetShutdownCallback(presentation.get()));

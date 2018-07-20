@@ -23,7 +23,7 @@ namespace talkback {
 constexpr zx::duration kTapDelay = zx::msec(120);
 // Duration to wait between the first touch down and first touch up
 // to distinguish between a short tap and long press. Time in nanoseconds.
-constexpr  uint64_t kLongPressDelay = zx::msec(120).to_nsecs();
+constexpr uint64_t kLongPressDelay = zx::msec(120).to_nsecs();
 // Duration to wait after registering a touch move event during a finger move
 // or long press before registering another touch move event. This is done
 // to limit the rate of move calls made while a finger is held on the screen.
