@@ -319,6 +319,10 @@ zx_status_t AmlBadBlock::FindBadBlockTable() {
         return ZX_ERR_INTERNAL;
     }
 
+    for (size_t idx = valid_blocks - 1; idx < kBlockListMax; idx++) {
+        block_list_[idx].valid = false;
+    }
+
     zxlogf(TRACE, "nandpart: Finding last BBT in block %u\n", block_entry_->block);
 
     // Next find the last valid BBT entry in block.
