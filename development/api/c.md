@@ -54,7 +54,7 @@ consideration of FFI friendliness went into these decisions.
 
 ## Language versions
 
-# C
+### C
 
 Fuchsia C libraries are written against the C11 standard (with a small
 set of exceptions, such as unix signal support, that are not
@@ -83,7 +83,7 @@ rules below: the name of the library is not a prefix. Doing so would
 make the names fit less well next to other functions like
 `thrd_current` and `dlopen`, and so we allow the exceptions.
 
-# C++
+### C++
 
 While C++ is not an exact superset of C, we still design C libraries
 to be usable from C++. Fuchsia C headers should be compatible with the
