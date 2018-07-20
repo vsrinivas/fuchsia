@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_RFCOMM_FRAMES_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_RFCOMM_FRAMES_H_
 
 #include <cstdlib>
 
@@ -275,3 +276,5 @@ class MuxCommandFrame : public UnnumberedInfoHeaderCheckFrame {
 
 }  // namespace rfcomm
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_RFCOMM_FRAMES_H_

@@ -6,6 +6,8 @@ static_library("rfcomm") {
   sources = [
     "channel.cc",
     "channel.h",
+    "channel_manager.cc",
+    "channel_manager.h",
     "frames.cc",
     "frames.h",
     "mux_commands.cc",

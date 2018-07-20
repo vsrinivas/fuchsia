@@ -147,20 +147,12 @@ const auto kInvalidLengthFrame = common::CreateStaticByteBuffer(0, 1, 2);
 
 // Same as the hellofuchsia frame, but information field is too short.
 const auto kInvalidLengthFrame2 = common::CreateStaticByteBuffer(
-    0b10001101,
-    0b11111111,
-    0b00011001,
-    0b00000101,
-    'h', 'e', 'l', 'l', 'o');
+    0b10001101, 0b11111111, 0b00011001, 0b00000101, 'h', 'e', 'l', 'l', 'o');
 
 // Same as the hellofuchsia frame, but with an invalid FCS.
 const auto kInvalidFCSFrame = common::CreateStaticByteBuffer(
-    0b10001101,
-    0b11111111,
-    0b00011001,
-    0b00000101,
-    'h', 'e', 'l', 'l', 'o', 'f', 'u', 'c', 'h', 's', 'i', 'a',
-    0b10000001 + 1);
+    0b10001101, 0b11111111, 0b00011001, 0b00000101, 'h', 'e', 'l', 'l', 'o',
+    'f', 'u', 'c', 'h', 's', 'i', 'a', 0b10000001 + 1);
 
 // Same as the hellofuchsia frame, but with an invalid DLCI (1)
 const auto kInvalidDLCIFrame = common::CreateStaticByteBuffer(

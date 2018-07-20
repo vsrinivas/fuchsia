@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_RFCOMM_RFCOMM_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_RFCOMM_RFCOMM_H_
 
 #include <cstdint>
+
+#include <lib/fxl/logging.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 
@@ -35,6 +38,12 @@ inline constexpr Role OppositeRole(Role role) {
 // DLCIs are 6 bits. See RFCOMM 5.4. Any DLCI value will be truncated to the
 // least significant 6 bits.
 using DLCI = uint8_t;
+// DLCI 0 is internally used by RFCOMM as the multiplexer control channel, over
+// which the two multiplexers communicate. DLCIs 2-61 correspond to user data
+// channels, which can be used by applications.
+constexpr DLCI kMuxControlDLCI = 0;
+constexpr DLCI kMinUserDLCI = 2;
+constexpr DLCI kMaxUserDLCI = 61;
 
 // Server Channels are 5 bits wide; they are the 5 most significant bits of the
 // DLCI. Server Channels are exposed to the outside world; a user who is
@@ -45,6 +54,25 @@ constexpr ServerChannel kMinServerChannel = 1;
 constexpr ServerChannel kMaxServerChannel = 30;
 // Used to indicate error.
 constexpr ServerChannel kInvalidServerChannel = 0;
+
+// Used to convert between Server Channel and DLCI. See RFCOMM 5.4 for the
+// spec's description of Server Channels and how they relate to DLCIs.
+constexpr size_t kServerChannelShift = 1;
+
+inline constexpr ServerChannel DLCIToServerChannel(DLCI dlci) {
+  FXL_DCHECK(dlci == kMuxControlDLCI ||
+             (dlci >= kMinUserDLCI && dlci <= kMaxUserDLCI));
+  return dlci >> kServerChannelShift;
+}
+
+inline constexpr DLCI ServerChannelToDLCI(ServerChannel server_channel,
+                                          Role role) {
+  FXL_DCHECK(role == Role::kInitiator || role == Role::kResponder);
+  FXL_DCHECK(server_channel >= kMinServerChannel &&
+             server_channel <= kMaxServerChannel);
+  return (server_channel << kServerChannelShift) |
+         (role == Role::kInitiator ? 1 : 0);
+}
 
 // The length field encodes the length of the information (payload) field. The
 // length field can be one or two octets, and can encode at most a 15-bit value.
@@ -68,12 +96,7 @@ enum class FrameType : uint8_t {
 };
 // clang-format on
 
-// DLCI 0 is internally used by RFCOMM as the multiplexer control channel, over
-// which the two multiplexers communicate. DLCIs 2-61 correspond to user data
-// channels, which can be used by applications.
-constexpr DLCI kMuxControlDLCI = 0;
-constexpr DLCI kMinUserDLCI = 2;
-constexpr DLCI kMaxUserDLCI = 61;
-
 }  // namespace rfcomm
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_RFCOMM_RFCOMM_H_
