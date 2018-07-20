@@ -7,7 +7,7 @@ runbenchmarks
 programs written using this library are used by Fuchsia infrastructure which
 executes the benchmarks and uploads the results to the performance dashboard.
 
-For example usage see `//garnet/bin/benchmarks`.
+For example usage see `//garnet/tests/benchmarks`.
 
 ## API Reference
 

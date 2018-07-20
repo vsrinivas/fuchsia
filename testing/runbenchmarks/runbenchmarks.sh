@@ -5,7 +5,7 @@
 # found in the LICENSE file.
 #
 # This script defines a set of utility functions for running benchmarks on
-# Fuchisa.  For example usage, see the package //garnet/bin/benchmarks. For
+# Fuchisa.  For example usage, see the package //garnet/tests/benchmarks. For
 # detailed instructions see README.md.
 
 # Enable stricter error handling:
