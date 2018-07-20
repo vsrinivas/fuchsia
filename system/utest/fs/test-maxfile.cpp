@@ -236,9 +236,9 @@ bool test_zipped_maxfiles(void) {
 }
 
 const test_disk_t disk = {
-    .block_count = (1LLU << 20),
-    .block_size = (1LLU << 9),
-    .slice_size = (1LLU << 23),
+    .block_count = 1LLU << 17,
+    .block_size = 1LLU << 9,
+    .slice_size = 1LLU << 23,
 };
 
 }  // namespace

@@ -105,9 +105,9 @@ bool test_use_all_data(void) {
 }
 
 const test_disk_t disk = {
-    .block_count = (1 << 26) / TEST_BLOCK_SIZE_DEFAULT,
-    .block_size = TEST_BLOCK_SIZE_DEFAULT,
-    .slice_size = (1LLU << 22),
+    .block_count = 1LLU << 17,
+    .block_size = 1LLU << 9,
+    .slice_size = 1LLU << 22,
 };
 
 }  // namespace

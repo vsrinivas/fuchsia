@@ -313,9 +313,9 @@ static bool test_work_concurrently(void) {
 }
 
 const test_disk_t disk = {
-    .block_count = (1LLU << 23),
-    .block_size = (1LLU << 9),
-    .slice_size = (1LLU << 23),
+    .block_count = 3 * (1LLU << 16),
+    .block_size = 1LLU << 9,
+    .slice_size = 1LLU << 23,
 };
 
 RUN_FOR_ALL_FILESYSTEMS_SIZE(rw_workers_test, disk,
