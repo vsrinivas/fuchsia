@@ -37,6 +37,7 @@ void TestFirestoreService::GetDocument(
     std::shared_ptr<grpc::CallCredentials> /*call_credentials*/,
     fit::function<void(grpc::Status, google::firestore::v1beta1::Document)>
         callback) {
+  FXL_DCHECK(!shutdown_callback);
   get_document_records.push_back({std::move(request), std::move(callback)});
 }
 
@@ -46,6 +47,7 @@ void TestFirestoreService::ListDocuments(
     fit::function<void(grpc::Status,
                        google::firestore::v1beta1::ListDocumentsResponse)>
         callback) {
+  FXL_DCHECK(!shutdown_callback);
   list_documents_records.push_back({std::move(request), std::move(callback)});
 }
 
@@ -54,6 +56,7 @@ void TestFirestoreService::CreateDocument(
     std::shared_ptr<grpc::CallCredentials> /*call_credentials*/,
     fit::function<void(grpc::Status, google::firestore::v1beta1::Document)>
         callback) {
+  FXL_DCHECK(!shutdown_callback);
   create_document_records.push_back({std::move(request), std::move(callback)});
 }
 
@@ -61,6 +64,7 @@ void TestFirestoreService::DeleteDocument(
     google::firestore::v1beta1::DeleteDocumentRequest request,
     std::shared_ptr<grpc::CallCredentials> /*call_credentials*/,
     fit::function<void(grpc::Status)> callback) {
+  FXL_DCHECK(!shutdown_callback);
   delete_document_records.push_back({std::move(request), std::move(callback)});
 }
 
@@ -71,6 +75,7 @@ void TestFirestoreService::RunQuery(
         void(grpc::Status,
              std::vector<google::firestore::v1beta1::RunQueryResponse>)>
         callback) {
+  FXL_DCHECK(!shutdown_callback);
   run_query_records.push_back({std::move(request), std::move(callback)});
 }
 
@@ -80,17 +85,20 @@ void TestFirestoreService::Commit(
     fit::function<void(grpc::Status,
                        google::firestore::v1beta1::CommitResponse)>
         callback) {
+  FXL_DCHECK(!shutdown_callback);
   commit_records.push_back({std::move(request), std::move(callback)});
 }
 
 std::unique_ptr<ListenCallHandler> TestFirestoreService::Listen(
     std::shared_ptr<grpc::CallCredentials> /*call_credentials*/,
     ListenCallClient* client) {
+  FXL_DCHECK(!shutdown_callback);
   listen_clients.push_back(client);
   return std::make_unique<TestListenCallHandler>();
 }
 
 void TestFirestoreService::ShutDown(fit::closure callback) {
+  FXL_DCHECK(!shutdown_callback);
   shutdown_callback = std::move(callback);
 }
 

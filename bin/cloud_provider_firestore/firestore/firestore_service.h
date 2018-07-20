@@ -92,6 +92,9 @@ class FirestoreService {
 
   // Shuts the client down.
   //
+  // It is not allowed to make any calls on FirestoreService after ShutDown()
+  // was called.
+  //
   // It is only safe to delete the class after the callback is called.
   virtual void ShutDown(fit::closure callback) = 0;
 
