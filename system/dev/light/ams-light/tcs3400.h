@@ -4,7 +4,9 @@
 
 #pragma once
 
+#include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/hidbus.h>
 
@@ -12,7 +14,11 @@
 
 #include <hid/ambient-light.h>
 
+#include <lib/zx/interrupt.h>
+
 #define TCS3400_POLL_SLEEP_SECS 2
+#define TCS3400_MIN_WITHIN_INTERRUPTS_SECS 1
+#define TCS3400_INTERRUPT_IDX 0
 
 namespace tcs {
 
@@ -56,6 +62,8 @@ private:
     // Only one I2c channel is passed to this driver, so index should always be zero.
     static constexpr uint32_t kI2cIndex = 0;
     i2c_protocol_t i2c_;
+    gpio_protocol_t gpio_;
+    zx::interrupt irq_;
     thrd_t thread_;
     fbl::atomic<bool> running_;
     fbl::Mutex proxy_lock_;

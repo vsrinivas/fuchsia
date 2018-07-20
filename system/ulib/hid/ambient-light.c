@@ -9,7 +9,11 @@ static const uint8_t ambient_light_report_desc[] = {
     HID_USAGE_PAGE(0x20), // Sensor
     HID_USAGE(0x41), // Ambient Light
     HID_COLLECTION_APPLICATION,
+#ifdef TCS3400_INTERRUPT_ENABLED
+    HID_REPORT_ID(AMBIENT_LIGHT_RPT_ID_SIMPLE_INTERRUPT),
+#else
     HID_REPORT_ID(AMBIENT_LIGHT_RPT_ID_SIMPLE_POLL),
+#endif
     HID_USAGE16(0x04D1), // Light Illuminance
     HID_LOGICAL_MIN(0x00),
     HID_LOGICAL_MAX32(0xFFFF),

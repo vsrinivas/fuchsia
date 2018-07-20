@@ -16,6 +16,10 @@
 #include "tcs3400-regs.h"
 #include "tcs3400.h"
 
+// Are we in a dark room?
+#define LOW_THRESHOLD 0x0004
+#define HIGH_THRESHOLD 0xFFFF
+
 namespace tcs {
 
 zx_status_t Tcs3400Device::FillRpt() {
@@ -48,29 +52,71 @@ zx_status_t Tcs3400Device::FillRpt() {
 }
 
 int Tcs3400Device::Thread() {
-    uint8_t cmd[] = {TCS_I2C_ENABLE, TCS_I2C_ENABLE_POWER_ON | TCS_I2C_ENABLE_ADC_ENABLE};
-    zx_status_t status = i2c_transact_sync(&i2c_, kI2cIndex, &cmd, sizeof(cmd), NULL, 0);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "Tcs3400Device::Thread: i2c_transact_sync failed: %d\n", status);
-        return thrd_error;
+    // The device will trigger an interrupt outside the thresholds
+    struct Setup {
+        uint8_t cmd;
+        uint8_t val;
+    } setup[] = {
+        {TCS_I2C_ENABLE, TCS_I2C_ENABLE_POWER_ON | TCS_I2C_ENABLE_ADC_ENABLE
+#ifdef TCS3400_INTERRUPT_ENABLED
+                             | TCS_I2C_ENABLE_INT_ENABLE
+#endif
+        },
+        {TCS_I2C_AILTL, LOW_THRESHOLD & 0xFF},
+        {TCS_I2C_AILTH, (LOW_THRESHOLD & 0xFF00) >> 8},
+        {TCS_I2C_AIHTL, HIGH_THRESHOLD & 0xFF},
+        {TCS_I2C_AIHTH, (HIGH_THRESHOLD & 0xFF00) >> 8},
+        {TCS_I2C_PERS, 1}, // Consecutive samples to trigger
+    };
+    for (const auto& i : setup) {
+        uint8_t cmd[] = {i.cmd, i.val};
+        zx_status_t status = i2c_transact_sync(&i2c_, kI2cIndex, &cmd, sizeof(cmd), NULL, 0);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "Tcs3400Device::Thread: i2c_transact_sync failed: %d\n", status);
+            return thrd_error;
+        }
     }
-
-    // TODO(andresoportus): Interrupt support pending on interface with upper layers via HID
+    // TODO(andresoportus): Pending HID interrupt Interface
     while (1) {
         if (!running_.load()) {
             return thrd_success;
         }
+#ifdef TCS3400_INTERRUPT_ENABLED
+        zx_status_t status = irq_.wait(nullptr);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "Tcs3400Device interrupt error %d\n", status);
+        }
+        {
+            fbl::AutoLock lock(&proxy_lock_);
+            if (proxy_.is_valid()) {
+                tcs_rpt_.rpt_id = AMBIENT_LIGHT_RPT_ID_SIMPLE_INTERRUPT;
+                status = FillRpt();
+                if (status == ZX_OK) {
+                    proxy_.IoQueue(reinterpret_cast<uint8_t*>(&tcs_rpt_),
+                                   sizeof(ambient_light_data_t));
+                }
+            }
+        }
+        sleep(TCS3400_MIN_WITHIN_INTERRUPTS_SECS);
+        uint8_t cmd[2] = {TCS_I2C_AICLEAR, 0x00};
+        status = i2c_transact_sync(&i2c_, kI2cIndex, &cmd, sizeof(cmd), NULL, 0);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "Tcs3400Device::Thread: i2c_transact_sync failed: %d\n", status);
+        }
+#else
         {
             fbl::AutoLock lock(&proxy_lock_);
             if (proxy_.is_valid()) {
                 tcs_rpt_.rpt_id = AMBIENT_LIGHT_RPT_ID_SIMPLE_POLL;
-                status = FillRpt();
+                zx_status_t status = FillRpt();
                 if (status == ZX_OK) {
-                    proxy_.IoQueue(reinterpret_cast<uint8_t*>(&tcs_rpt_), sizeof(ambient_light_data_t));
+                    proxy_.IoQueue(reinterpret_cast<uint8_t*>(&tcs_rpt_),
+                                   sizeof(ambient_light_data_t));
                 }
             }
         }
         sleep(TCS3400_POLL_SLEEP_SECS);
+#endif
     }
     return thrd_success;
 }
@@ -174,6 +220,19 @@ zx_status_t Tcs3400Device::Bind() {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
+    zx_status_t status;
+    if (device_get_protocol(parent_, ZX_PROTOCOL_GPIO, &gpio_) != ZX_OK) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    gpio_config(&gpio_, TCS3400_INTERRUPT_IDX, GPIO_DIR_IN);
+
+    status = gpio_get_interrupt(&gpio_, TCS3400_INTERRUPT_IDX,
+                                ZX_INTERRUPT_MODE_EDGE_LOW,
+                                irq_.reset_and_get_address());
+    if (status != ZX_OK) {
+        return status;
+    }
     auto cleanup = fbl::MakeAutoCall([&]() { ShutDown(); });
 
     running_.store(true);
@@ -187,7 +246,7 @@ zx_status_t Tcs3400Device::Bind() {
         return ZX_ERR_INTERNAL;
     }
 
-    zx_status_t status = DdkAdd("tcs-3400");
+    status = DdkAdd("tcs-3400");
     if (status != ZX_OK) {
         zxlogf(ERROR, "Tcs3400Device::Bind: DdkAdd failed: %d\n", status);
         return status;
@@ -200,6 +259,7 @@ zx_status_t Tcs3400Device::Bind() {
 void Tcs3400Device::ShutDown() {
     running_.store(false);
     thrd_join(thread_, NULL);
+    irq_.destroy();
     {
         fbl::AutoLock lock(&proxy_lock_);
         proxy_.clear();

@@ -7,12 +7,21 @@
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
 
+#include <soc/aml-s905d2/s905d2-gpio.h>
+
 #include "astro.h"
 
 static const pbus_i2c_channel_t tcs3400_light_i2c[] = {
     {
         .bus_id = ASTRO_I2C_A0_0,
         .address = I2C_AMBIENTLIGHT_ADDR,
+    },
+};
+
+static const pbus_gpio_t tcs3400_light_gpios[] = {
+    {
+        // interrupt
+        .gpio = S905D2_GPIOAO(5),
     },
 };
 
@@ -23,6 +32,8 @@ static pbus_dev_t tcs3400_light_dev = {
     .did = PDEV_DID_AMS_LIGHT,
     .i2c_channels = tcs3400_light_i2c,
     .i2c_channel_count = countof(tcs3400_light_i2c),
+    .gpios = tcs3400_light_gpios,
+    .gpio_count = countof(tcs3400_light_gpios),
 };
 
 zx_status_t ams_light_init(aml_bus_t* bus) {
