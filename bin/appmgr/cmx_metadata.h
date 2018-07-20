@@ -24,7 +24,14 @@ class CmxMetadata {
 
   // Takes a package's resolved_url, e.g. file:///pkgfs/packages/<FOO>/0, and
   // returns the default component's .cmx path, e.g. meta/<FOO>.cmx
-  static std::string GetCmxPath(std::string resolved_url);
+  static std::string GetCmxPath(const std::string& resolved_url);
+
+  // Returns true if path ends in .cmx, false otherwise
+  static bool IsCmxExtension(const std::string& path);
+
+  // Returns the package name from a .cmx file's full /pkgfs path. Returns the
+  // empty string "" if unmatched.
+  static std::string GetPackageNameFromCmxPath(const std::string& cmx_path);
 };
 
 }  // namespace component

@@ -8,6 +8,7 @@
 
 #include <utility>
 
+#include "garnet/bin/appmgr/cmx_metadata.h"
 #include "garnet/bin/appmgr/url_resolver.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/io/fd.h"
@@ -38,8 +39,21 @@ void RootLoader::LoadComponent(fidl::StringPtr url,
   // but we cannot load the component, exit immediately.
   fxl::UniqueFD fd(open(path.c_str(), O_RDONLY));
   if (fd.is_valid() || path[0] == '/') {
+    // 1a. If the URL points to a cmx file, load its package.
+    std::string package_name = CmxMetadata::GetPackageNameFromCmxPath(path);
+    if (!package_name.empty()) {
+      if (!LoadComponentFromPkgfs(package_name, callback)) {
+        FXL_LOG(ERROR) << "Could not load package from cmx path: " << url;
+        callback(nullptr);
+      }
+      return;
+    }
+
+    // 1b. Load whatever the URL points to.
     if (!LoadComponentWithProcess(fd, path, callback)) {
-      FXL_LOG(ERROR) << "Could not load url: " << url;
+      FXL_LOG(ERROR) << "Could not load url: " << url
+                     << "; resource located at path, but it could not be "
+                        "launched as a component.";
       callback(nullptr);
     }
     return;

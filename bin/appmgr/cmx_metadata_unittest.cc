@@ -47,5 +47,28 @@ TEST(CmxMetadata, GetCmxPath) {
   EXPECT_EQ("", CmxMetadata::GetCmxPath("file:///pkgfs/nothing/sysmgr/0"));
 }
 
+TEST(CmxMetadata, IsCmxExtension) {
+  EXPECT_TRUE(CmxMetadata::IsCmxExtension(
+      "/pkgfs/packages/component_hello_world/0/meta/hello_world.cmx"));
+  EXPECT_FALSE(CmxMetadata::IsCmxExtension(
+      "/pkgfs/packages/component_hello_world/0/bin/app"));
+  EXPECT_TRUE(CmxMetadata::IsCmxExtension("meta/hello_world.cmx"));
+  EXPECT_FALSE(CmxMetadata::IsCmxExtension("bin/app"));
+}
+
+TEST(CmxMetadata, GetPackageNameFromCmxPath) {
+  EXPECT_EQ(
+      "component_hello_world",
+      CmxMetadata::GetPackageNameFromCmxPath(
+          "/pkgfs/packages/component_hello_world/0/meta/hello_world.cmx"));
+  EXPECT_EQ("", CmxMetadata::GetPackageNameFromCmxPath(
+                    "/pkgfs/packages/component_hello_world/0/bin/app"));
+  EXPECT_EQ("",
+            CmxMetadata::GetPackageNameFromCmxPath(
+                "/pkgfs/nothing/component_hello_world/0/meta/hello_world.cmx"));
+  EXPECT_EQ("", CmxMetadata::GetPackageNameFromCmxPath(
+                    "/pkgfs/packages//0/meta/hello_world.cmx"));
+}
+
 }  // namespace
 }  // namespace component

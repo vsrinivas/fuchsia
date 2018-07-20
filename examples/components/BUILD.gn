@@ -42,4 +42,11 @@ package("component_hello_world") {
       name = "app2"
     },
   ]
+
+  meta = [
+    {
+      path = rebase_path("meta/hello_world.cmx")
+      dest = "hello_world.cmx"
+    },
+  ]
 }
