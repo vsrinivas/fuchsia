@@ -75,6 +75,8 @@ class ManagedContainer {
 
   size_t empty() { return managed_elements_.empty(); }
 
+  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
+
  private:
   class Element {
    public:
@@ -98,7 +100,10 @@ class ManagedContainer {
 
   fit::closure ManageElement(std::unique_ptr<Element> element);
 
+  void CheckEmpty();
+
   std::vector<std::unique_ptr<Element>> managed_elements_;
+  fit::closure on_empty_;
   fxl::WeakPtrFactory<ManagedContainer> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ManagedContainer);

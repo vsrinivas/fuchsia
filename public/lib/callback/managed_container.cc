@@ -28,7 +28,14 @@ fit::closure ManagedContainer::ManageElement(std::unique_ptr<Element> element) {
         [ptr](const std::unique_ptr<Element>& c) { return c.get() == ptr; });
     FXL_DCHECK(it != managed_elements_.end());
     managed_elements_.erase(it);
+    CheckEmpty();
   });
+}
+
+void ManagedContainer::CheckEmpty() {
+  if (managed_elements_.empty() && on_empty_) {
+    on_empty_();
+  }
 }
 
 }  // namespace callback

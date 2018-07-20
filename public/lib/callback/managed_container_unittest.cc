@@ -5,6 +5,7 @@
 #include "lib/callback/managed_container.h"
 
 #include "gtest/gtest.h"
+#include "lib/callback/set_when_called.h"
 #include "lib/fxl/functional/auto_call.h"
 
 namespace callback {
@@ -67,6 +68,18 @@ TEST(ManagedContainer, DoNotCrashIfManagerDeleted) {
   EXPECT_EQ(1u, called);
   result.reset();
   // Nothing bad should happen
+}
+
+TEST(ManagedContainer, OnEmpty) {
+  ManagedContainer managed_container;
+  bool called = false;
+  managed_container.set_on_empty(SetWhenCalled(&called));
+  auto item1 = managed_container.Manage(true);
+  auto item2 = managed_container.Manage(true);
+  item1.reset();
+  EXPECT_FALSE(called);
+  item2.reset();
+  EXPECT_TRUE(called);
 }
 
 }  // namespace
