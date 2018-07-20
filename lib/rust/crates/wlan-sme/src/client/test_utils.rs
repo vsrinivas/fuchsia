@@ -29,6 +29,7 @@ pub fn fake_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
             delayed_block_ack: false,
             immediate_block_ack: false,
         },
+        country: None,
         rsn: None,
         vht_cap: None,
         vht_op: None,

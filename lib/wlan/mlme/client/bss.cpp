@@ -47,11 +47,12 @@ zx_status_t Bss::ProcessBeacon(const Beacon& beacon, size_t frame_len,
 std::string Bss::ToString() const {
     // TODO(porce): Convert to finspect Describe()
     char buf[1024];
-    snprintf(
-        buf, sizeof(buf), "BSSID %s Infra %s  RSSI %3d  Country %3s Channel %4s Cap %04x SSID [%s]",
-        bssid_.ToString().c_str(), GetBssType() == wlan_mlme::BSSTypes::INFRASTRUCTURE ? "Y" : "N",
-        bss_desc_.rssi_dbm, country_.c_str(), common::ChanStr(bcn_rx_chan_).c_str(), cap_.val(),
-        SsidToString().c_str());
+    snprintf(buf, sizeof(buf), "BSSID %s Infra %s  RSSI %3d  Country %3s Channel %4s SSID [%s]",
+             bssid_.ToString().c_str(),
+             bss_desc_.bss_type == wlan_mlme::BSSTypes::INFRASTRUCTURE ? "Y" : "N",
+             bss_desc_.rssi_dbm,
+             (bss_desc_.country != nullptr) ? bss_desc_.country->c_str() : "---",
+             common::ChanStr(bcn_rx_chan_).c_str(), bss_desc_.ssid->c_str());
     return std::string(buf);
 }
 
@@ -107,7 +108,8 @@ zx_status_t Bss::Update(const Beacon& beacon, size_t frame_len) {
 
     // Fields that are always present.
     bss_desc_.beacon_period = beacon.beacon_interval;  // name mismatch is spec-compliant.
-    cap_ = beacon.cap;
+    ParseCapabilityInfo(beacon.cap);
+    bss_desc_.bss_type = GetBssType(beacon.cap);
 
     // IE's.
     auto ie_chains = beacon.elements;
@@ -116,6 +118,23 @@ zx_status_t Bss::Update(const Beacon& beacon, size_t frame_len) {
     ZX_DEBUG_ASSERT(ie_chains != nullptr);
     ZX_DEBUG_ASSERT(ie_chains_len <= frame_len);
     return ParseIE(ie_chains, ie_chains_len);
+}
+
+void Bss::ParseCapabilityInfo(const CapabilityInfo& cap) {
+    auto& c = bss_desc_.cap;
+    c.ess = (cap.ess() == 1);
+    c.ibss = (cap.ibss() == 1);
+    c.cf_pollable = (cap.cf_pollable() == 1);
+    c.cf_poll_req = (cap.cf_poll_req() == 1);
+    c.privacy = (cap.privacy() == 1);
+    c.short_preamble = (cap.short_preamble() == 1);
+    c.spectrum_mgmt = (cap.spectrum_mgmt() == 1);
+    c.qos = (cap.qos() == 1);
+    c.short_slot_time = (cap.short_slot_time() == 1);
+    c.apsd = (cap.apsd() == 1);
+    c.radio_msmt = (cap.radio_msmt() == 1);
+    c.delayed_block_ack = (cap.delayed_block_ack() == 1);
+    c.immediate_block_ack = (cap.immediate_block_ack() == 1);
 }
 
 zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
@@ -144,11 +163,9 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
                 debugbcn("%s Failed to parse\n", dbgmsghdr);
                 return ZX_ERR_INTERNAL;
             }
-
-            ssid_len_ = ie->hdr.len;
-            memcpy(ssid_, ie->ssid, ssid_len_);
-
-            debugbcn("%s SSID: [%s]\n", dbgmsghdr, SsidToString().c_str());
+            bss_desc_.ssid = fidl::StringPtr(reinterpret_cast<const char*>(ie->ssid), ie->hdr.len);
+            // TODO(NET-698): Not all SSIDs are ASCII-printable. Write a designated printer module.
+            debugbcn("%s SSID: [%s]\n", dbgmsghdr, bss_desc_.ssid->c_str());
             break;
         }
         case element_id::kSuppRates: {
@@ -188,10 +205,9 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
                 return ZX_ERR_INTERNAL;
             }
 
-            char buf[CountryElement::kCountryLen + 1];
-            snprintf(buf, sizeof(buf), "%s", ie->country);
-            country_ = std::string(buf);
-            debugbcn("%s Country: %s\n", dbgmsghdr, country_.c_str());
+            bss_desc_.country = fidl::StringPtr(reinterpret_cast<const char*>(ie->country),
+                                                CountryElement::kCountryLen);
+            debugbcn("%s Country: %s\n", dbgmsghdr, bss_desc_.country->c_str());
             break;
         }
         case element_id::kRsn: {
@@ -327,16 +343,12 @@ BeaconHash Bss::GetBeaconSignature(const Beacon& beacon, size_t frame_len) const
 
 wlan_mlme::BSSDescription Bss::ToFidl() const {
     // Translates the Bss object into FIDL message.
-    // Note, this API does not directly handle Beacon frame or ProbeResponse frame.
 
     wlan_mlme::BSSDescription fidl;
     // TODO(NET-1170): Decommission Bss::ToFidl()
     bss_desc_.Clone(&fidl);
 
     std::memcpy(fidl.bssid.mutable_data(), bssid_.byte, common::kMacAddrLen);
-
-    fidl.bss_type = GetBssType();
-    fidl.ssid = fidl::StringPtr(reinterpret_cast<const char*>(ssid_), ssid_len_);
 
     if (has_dsss_param_set_chan_ == true) {
         // Channel was explicitly announced by the AP
@@ -357,37 +369,6 @@ wlan_mlme::BSSDescription Bss::ToFidl() const {
     return fidl;
 }
 
-std::string Bss::SsidToString() const {
-    // SSID is of UTF-8 codepoints that may include NULL character.
-    // Convert that to human-readable form in best effort.
-
-    // TODO(porce): Implement this half-baked PoC code.
-
-    bool is_printable = true;  // printable ascii
-    for (size_t idx = 0; idx < ssid_len_; idx++) {
-        if (ssid_[idx] < 32 || ssid_[idx] > 127) {
-            is_printable = false;
-            break;
-        }
-    }
-
-    if (is_printable) {
-        char buf[SsidElement::kMaxLen + 1];
-        memcpy(buf, ssid_, ssid_len_);
-        buf[ssid_len_] = '\0';  // NULL termination.
-        return std::string(buf);
-    }
-
-    // Good luck
-    char utf_buf[SsidElement::kMaxLen * 3];
-    char* ptr = utf_buf;
-    ptr += std::snprintf(ptr, 10, "[utf8] ");
-    for (size_t idx = 0; idx < ssid_len_; idx++) {
-        ptr += std::snprintf(ptr, 4, "%02x ", ssid_[idx]);
-    }
-    return std::string(utf_buf);
-}
-
 std::string Bss::SupportedRatesToString() const {
     constexpr uint8_t kBasicRateMask = 0x80;
     char buf[SupportedRatesElement::kMaxLen * 6 + 1];
@@ -401,6 +382,21 @@ std::string Bss::SupportedRatesToString() const {
     // TODO: Support BSSMembershipSelectorSet.
 
     return std::string(buf);
+}
+
+wlan_mlme::BSSTypes GetBssType(const CapabilityInfo& cap) {
+    // Note. This is in Beacon / Probe Response frames context.
+    // IEEE Std 802.11-2016, 9.4.1.4
+    if (cap.ess() == 0x1 && cap.ibss() == 0x0) {
+        return ::fuchsia::wlan::mlme::BSSTypes::INFRASTRUCTURE;
+    } else if (cap.ess() == 0x0 && cap.ibss() == 0x1) {
+        return ::fuchsia::wlan::mlme::BSSTypes::INDEPENDENT;
+    } else if (cap.ess() == 0x0 && cap.ibss() == 0x0) {
+        return ::fuchsia::wlan::mlme::BSSTypes::MESH;
+    } else {
+        // Undefined
+        return ::fuchsia::wlan::mlme::BSSTypes::ANY_BSS;
+    }
 }
 
 }  // namespace wlan

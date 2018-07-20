@@ -92,6 +92,7 @@ mod tests {
             dtim_period: 100,
             timestamp: 0,
             local_time: 0,
+            country: None,
             rsn: if compatible { None } else { Some(Vec::new()) },
             cap: fidl_mlme::CapabilityInfo {
                 ess: false,

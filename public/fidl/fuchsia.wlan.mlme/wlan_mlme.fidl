@@ -179,6 +179,7 @@ struct BSSDescription {
     uint64 local_time;
 
     CapabilityInfo cap;
+    string? country;
 
     // TODO(hahnr): This field represents an IE and should thus be named RSNE.
     vector<uint8>? rsn;

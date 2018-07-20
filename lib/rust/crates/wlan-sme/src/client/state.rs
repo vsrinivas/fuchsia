@@ -316,6 +316,7 @@ fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescription {
         timestamp: d.timestamp,
         local_time: d.local_time,
 
+        country: d.country.clone(),
         rsn: d.rsn.clone(),
 
         cap: fidl_mlme::CapabilityInfo { ..d.cap },

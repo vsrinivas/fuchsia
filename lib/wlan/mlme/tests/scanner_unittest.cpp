@@ -17,11 +17,11 @@
 
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <gtest/gtest.h>
 #include <fuchsia/wlan/mlme/c/fidl.h>
-#include <cstring>
-
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <gtest/gtest.h>
+
+#include <cstring>
 
 namespace wlan {
 
