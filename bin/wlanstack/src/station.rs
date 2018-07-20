@@ -280,6 +280,7 @@ fn send_connect_result(token: Option<fidl_sme::ConnectTransactionControlHandle>,
             ConnectResult::Success => fidl_sme::ConnectResultCode::Success,
             ConnectResult::Canceled => fidl_sme::ConnectResultCode::Canceled,
             ConnectResult::Failed => fidl_sme::ConnectResultCode::Failed,
+            ConnectResult::BadCredentials => fidl_sme::ConnectResultCode::BadCredentials,
         };
         token.send_on_finished(code)?;
     }

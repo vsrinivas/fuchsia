@@ -83,7 +83,8 @@ pub struct ClientSme<T: Tokens> {
 pub enum ConnectResult {
     Success,
     Canceled,
-    Failed
+    Failed,
+    BadCredentials,
 }
 
 // A message from the Client to a user or a group of listeners

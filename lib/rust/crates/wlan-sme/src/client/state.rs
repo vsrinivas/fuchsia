@@ -36,7 +36,7 @@ impl Rsna {
     pub fn new(s_rsne: Rsne, esssa: EssSa) -> Rsna {
         assert_eq!(s_rsne.pairwise_cipher_suites.len(), 1);
         assert_eq!(s_rsne.akm_suites.len(), 1);
-        assert!(s_rsne.group_data_cipher_suite.is_none());
+        assert!(s_rsne.group_data_cipher_suite.is_some());
 
         Rsna {s_rsne, esssa}
     }
@@ -147,6 +147,10 @@ impl<T: Tokens> State<T> {
                     to_associating_state(cmd, mlme_sink)
                 },
                 MlmeEvent::DeauthenticateInd{ .. } => {
+                    // TODO(hahnr): Evaluate reason code.
+                    // Not all authentication and key exchange methods used in an RSNA are able to
+                    // detect if bad credentials were used. Often, the Authenticator will issue a
+                    // Deauthentication instead with a corresponding reason code.
                     State::Idle
                 },
                 MlmeEvent::SignalReport{ ind } => {
@@ -160,7 +164,7 @@ impl<T: Tokens> State<T> {
                     State::Associated {
                         bss,
                         last_rssi,
-                        link_state: process_eapol_ind(mlme_sink, link_state, &ind),
+                        link_state: process_eapol_ind(mlme_sink, user_sink, link_state, &ind),
                     }
                 }
                 _ => State::Associated{ bss, last_rssi, link_state }
@@ -230,12 +234,13 @@ impl<T: Tokens> State<T> {
     }
 }
 
-fn process_eapol_ind<T>(mlme_sink: &MlmeSink, link_state: LinkState<T>, ind: &fidl_mlme::EapolIndication)
+fn process_eapol_ind<T>(mlme_sink: &MlmeSink, user_sink: &UserSink<T>,
+                        link_state: LinkState<T>, ind: &fidl_mlme::EapolIndication)
     -> LinkState<T>
     where T: Tokens
 {
     let link_was_up = if let LinkState::LinkUp(_) = &link_state { true } else { false };
-    let (token, mut rsna) = match link_state {
+    let (mut token, mut rsna) = match link_state {
         LinkState::EstablishingRsna(token, rsna) => (token, rsna),
         LinkState::LinkUp(Some(rsna)) => (None, rsna),
         LinkState::LinkUp(None) => return LinkState::LinkUp(None),
@@ -268,15 +273,20 @@ fn process_eapol_ind<T>(mlme_sink: &MlmeSink, link_state: LinkState<T>, ind: &fi
                         send_keys(mlme_sink, bssid, &rsna.s_rsne, key)
                     },
                     // Received a status update.
+                    // TODO(hahnr): Rework this part.
+                    // As of now, we depend on the fact that the status is always the last update.
+                    // However, this fact is not clear from the API.
+                    // We should fix the API and make this more explicit.
+                    // Then we should rework this part.
                     SecAssocUpdate::Status(status) => match status {
-                        // ESS Security Association was successfully established.
-                        // Link is now up.
+                        // ESS Security Association was successfully established. Link is now up.
                         SecAssocStatus::EssSaEstablished => {
-                            // TODO(hahnr): Report connect finished.
+                            report_connect_finished(token.take(), user_sink, ConnectResult::Success);
                             return LinkState::LinkUp(Some(rsna));
                         },
                         SecAssocStatus::WrongPassword => {
-                            // TODO(hahnr): Report wrong password further up the stack.
+                            // TODO(hahnr): Report wrong password further up the stack and send
+                            // deauthentication notification to AP.
                         }
                     },
                 }
@@ -294,8 +304,7 @@ fn process_eapol_ind<T>(mlme_sink: &MlmeSink, link_state: LinkState<T>, ind: &fi
 
 fn get_mic_size(s_rsne: &Rsne) -> u16
 {
-    // TODO(hahnr): The client should never authenticates with a BSS which uses an AKM with an
-    // unknown MIC size. For now simply fail.
+    // The client should never authenticate with a BSS which uses an AKM with an unknown MIC size.
     s_rsne.akm_suites.iter().next().expect("expected RSNE to carry exactly one AKM suite")
         .mic_bytes().expect("expected AKM to have a known MIC size")
 }

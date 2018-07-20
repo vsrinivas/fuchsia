@@ -232,6 +232,8 @@ fn handle_connect_transaction(connect_txn: fidl_sme::ConnectTransactionProxy)
                         ConnectResultCode::Canceled =>
                             eprintln!("Connecting was canceled or superseded by another command"),
                         ConnectResultCode::Failed => eprintln!("Failed to connect to network"),
+                        ConnectResultCode::BadCredentials =>
+                            eprintln!("Failed to connect to network; bad credentials"),
                     }
                     true
                 },

@@ -217,6 +217,8 @@ fn convert_connect_result(code: fidl_sme::ConnectResultCode) -> legacy::Error {
         fidl_sme::ConnectResultCode::Success => success(),
         fidl_sme::ConnectResultCode::Canceled
             => error_message("Request was canceled"),
+        fidl_sme::ConnectResultCode::BadCredentials
+            => error_message("Failed to join; bad credentials"),
         fidl_sme::ConnectResultCode::Failed
             => error_message("Failed to join")
     }

@@ -45,7 +45,9 @@ enum ConnectResultCode {
     CANCELED = 1;
     // Failed to join for some reason
     FAILED = 2;
-    // TODO(gbonik): possibly add more granular error codes, e.g. "BAD_CREDENTIALS"
+    // Failed to join due to bad credentials
+    BAD_CREDENTIALS = 3;
+    // TODO(hahnr): Add result code for attempting to join an incompatible network
 };
 
 interface ConnectTransaction {
