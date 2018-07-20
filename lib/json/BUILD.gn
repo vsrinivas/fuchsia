@@ -1,0 +1,48 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("json") {
+  sources = [
+    "json_parser.cc",
+    "json_parser.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//third_party/rapidjson",
+  ]
+}
+
+executable("tests") {
+  testonly = true
+
+  output_name = "json_unittests"
+
+  sources = [
+    "json_parser_unittest.cc",
+  ]
+
+  deps = [
+    ":json",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
+    "//third_party/rapidjson",
+  ]
+}
+
+package("json_unittests") {
+  testonly = true
+
+  deps = [
+    ":tests",
+  ]
+  tests = [
+    {
+      name = "json_unittests"
+    },
+  ]
+}

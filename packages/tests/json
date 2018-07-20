@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/lib/json:json_unittests"
+    ]
+}
