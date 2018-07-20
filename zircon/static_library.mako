@@ -38,7 +38,7 @@ group("${data.name}") {
     "../${dep}",
     % endfor
     % for dep in sorted(data.fidl_deps):
-    "../../fidl/${dep}_c",
+    "../../fidl/${dep}:${dep}_c",
     % endfor
   ]
 
