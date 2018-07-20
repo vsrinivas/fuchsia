@@ -13,6 +13,7 @@
 
 #include <lib/fdio/remoteio.h>
 
+#include <zircon/fidl.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
@@ -87,7 +88,7 @@ typedef struct devhost_iostate {
 } devhost_iostate_t;
 
 devhost_iostate_t* create_devhost_iostate(zx_device_t* dev);
-zx_status_t devhost_rio_handler(zxrio_msg_t* msg, void* cookie);
+zx_status_t devhost_rio_handler(fidl_msg_t* msg, void* cookie);
 
 zx_status_t devhost_start_iostate(devhost_iostate_t* ios, zx_handle_t h);
 

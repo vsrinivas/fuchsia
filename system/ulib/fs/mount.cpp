@@ -118,14 +118,15 @@ zx_status_t Vfs::UninstallRemote(fbl::RefPtr<Vnode> vn, zx::channel* h) {
     return UninstallRemoteLocked(fbl::move(vn), h);
 }
 
-zx_status_t Vfs::ForwardMessageRemote(fbl::RefPtr<Vnode> vn, zx::channel channel,
-                                      zxrio_msg_t* msg) {
+zx_status_t Vfs::ForwardMessageRemote(fbl::RefPtr<Vnode> vn, fidl_msg_t* msg) {
     fbl::AutoLock lock(&vfs_lock_);
     zx_handle_t h = vn->GetRemote();
     if (h == ZX_HANDLE_INVALID) {
+        zx_handle_close_many(msg->handles, msg->num_handles);
         return ZX_ERR_NOT_FOUND;
     }
-    zx_status_t r = zxrio_txn_handoff(h, channel.release(), msg);
+    zx_status_t r = zx_channel_write(h, 0, msg->bytes, msg->num_bytes,
+                                     msg->handles, msg->num_handles);
     if (r == ZX_ERR_PEER_CLOSED) {
         zx::channel c;
         UninstallRemoteLocked(fbl::move(vn), &c);

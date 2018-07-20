@@ -38,7 +38,7 @@ static zx_status_t read_file_into_vmo(fdio_t* io, zx_handle_t* out_vmo) {
     zx_handle_t current_vmar_handle = zx_vmar_root_self();
 
     vnattr_t attr;
-    int r = io->ops->misc(io, ZXRIO_STAT, 0, sizeof(attr), &attr, 0);
+    int r = io->ops->misc(io, ZXFIDL_STAT, 0, sizeof(attr), &attr, 0);
     if (r < 0) {
         return ZX_ERR_BAD_HANDLE;
     }

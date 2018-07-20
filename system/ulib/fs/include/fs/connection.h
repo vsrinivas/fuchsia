@@ -16,6 +16,7 @@
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <lib/zx/event.h>
+#include <zircon/fidl.h>
 
 namespace fs {
 
@@ -77,8 +78,8 @@ private:
     // and has been opened.
     void CallClose();
 
-    static zx_status_t HandleMessageThunk(zxrio_msg_t* msg, void* cookie);
-    zx_status_t HandleMessage(zxrio_msg_t* msg);
+    static zx_status_t HandleMessageThunk(fidl_msg_t* msg, void* cookie);
+    zx_status_t HandleMessage(fidl_msg_t* msg);
 
     bool is_open() const { return wait_.object() != ZX_HANDLE_INVALID; }
     void set_closed() { wait_.set_object(ZX_HANDLE_INVALID); }

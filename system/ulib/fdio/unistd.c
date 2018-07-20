@@ -780,7 +780,7 @@ zx_status_t fdio_wait_fd(int fd, uint32_t events, uint32_t* _pending, zx_time_t 
 
 int fdio_stat(fdio_t* io, struct stat* s) {
     vnattr_t attr;
-    int r = io->ops->misc(io, ZXRIO_STAT, 0, sizeof(attr), &attr, 0);
+    int r = io->ops->misc(io, ZXFIDL_STAT, 0, sizeof(attr), &attr, 0);
     if (r < 0) {
         return r;
     }
@@ -803,7 +803,7 @@ int fdio_stat(fdio_t* io, struct stat* s) {
 
 
 zx_status_t fdio_setattr(fdio_t* io, vnattr_t* vn){
-    zx_status_t r = io->ops->misc(io, ZXRIO_SETATTR, 0, 0, vn, sizeof(*vn));
+    zx_status_t r = io->ops->misc(io, ZXFIDL_SETATTR, 0, 0, vn, sizeof(*vn));
     if (r < 0) {
         return ZX_ERR_BAD_HANDLE;
     }
@@ -913,7 +913,7 @@ zx_status_t _mmap_file(size_t offset, size_t len, uint32_t zx_flags, int flags, 
     data.length = len;
     data.flags = zx_flags | (flags & MAP_PRIVATE ? FDIO_MMAP_FLAG_PRIVATE : 0);
 
-    zx_status_t r = io->ops->misc(io, ZXRIO_MMAP, 0, sizeof(data), &data, sizeof(data));
+    zx_status_t r = io->ops->misc(io, ZXFIDL_GET_VMO, 0, sizeof(data), &data, sizeof(data));
     fdio_release(io);
     if (r < 0) {
         return r;
@@ -939,7 +939,7 @@ int unlinkat(int dirfd, const char* path, int flags) {
     if ((r = __fdio_opendir_containing_at(&io, dirfd, path, name)) < 0) {
         return ERROR(r);
     }
-    r = io->ops->misc(io, ZXRIO_UNLINK, 0, 0, (void*)name, strlen(name));
+    r = io->ops->misc(io, ZXFIDL_UNLINK, 0, 0, (void*)name, strlen(name));
     io->ops->close(io);
     fdio_release(io);
     return STATUS(r);
@@ -1176,7 +1176,7 @@ int fcntl(int fd, int cmd, ...) {
             return ERRNO(EBADF);
         }
         uint32_t flags = 0;
-        zx_status_t r = io->ops->misc(io, ZXRIO_FCNTL, 0, F_GETFL, &flags, 0);
+        zx_status_t r = io->ops->misc(io, ZXFIDL_GET_FLAGS, 0, 0, &flags, 0);
         if (r == ZX_ERR_NOT_SUPPORTED) {
             // We treat this as non-fatal, as it's valid for a remote to
             // simply not support FCNTL, but we still want to correctly
@@ -1202,14 +1202,14 @@ int fcntl(int fd, int cmd, ...) {
         GET_INT_ARG(n);
 
         zx_status_t r;
-        if (n == O_NONBLOCK) {
+        if ((n | O_NONBLOCK) == O_NONBLOCK) {
             // NONBLOCK is local, so we can avoid the rpc for it
             // which is good in situations where the remote doesn't
             // support FCNTL but it's still valid to set non-blocking
             r = ZX_OK;
         } else {
             uint32_t flags = fdio_flags_to_zxio(n & ~O_NONBLOCK);
-            r = io->ops->misc(io, ZXRIO_FCNTL, flags, F_SETFL, NULL, 0);
+            r = io->ops->misc(io, ZXFIDL_SET_FLAGS, flags, 0, NULL, 0);
         }
         if (r != ZX_OK) {
             n = STATUS(r);
@@ -1264,7 +1264,7 @@ static int getdirents(int fd, void* ptr, size_t len, long cmd) {
     if (io == NULL) {
         return ERRNO(EBADF);
     }
-    int r = STATUS(io->ops->misc(io, ZXRIO_READDIR, cmd, len, ptr, 0));
+    int r = STATUS(io->ops->misc(io, ZXFIDL_READDIR, cmd, len, ptr, 0));
     fdio_release(io);
     return r;
 }
@@ -1276,7 +1276,7 @@ static int truncateat(int dirfd, const char* path, off_t len) {
     if ((r = __fdio_open_at(&io, dirfd, path, O_WRONLY, 0)) < 0) {
         return ERROR(r);
     }
-    r = io->ops->misc(io, ZXRIO_TRUNCATE, len, 0, NULL, 0);
+    r = io->ops->misc(io, ZXFIDL_TRUNCATE, len, 0, NULL, 0);
     fdio_close(io);
     fdio_release(io);
     return STATUS(r);
@@ -1291,7 +1291,7 @@ int ftruncate(int fd, off_t len) {
     if (io == NULL) {
         return ERRNO(EBADF);
     }
-    int r = STATUS(io->ops->misc(io, ZXRIO_TRUNCATE, len, 0, NULL, 0));
+    int r = STATUS(io->ops->misc(io, ZXFIDL_TRUNCATE, len, 0, NULL, 0));
      fdio_release(io);
      return r;
 }
@@ -1356,15 +1356,15 @@ oldparent_open:
 }
 
 int renameat(int olddirfd, const char* oldpath, int newdirfd, const char* newpath) {
-    return two_path_op_at(ZXRIO_RENAME, olddirfd, oldpath, newdirfd, newpath);
+    return two_path_op_at(ZXFIDL_RENAME, olddirfd, oldpath, newdirfd, newpath);
 }
 
 int rename(const char* oldpath, const char* newpath) {
-    return two_path_op_at(ZXRIO_RENAME, AT_FDCWD, oldpath, AT_FDCWD, newpath);
+    return two_path_op_at(ZXFIDL_RENAME, AT_FDCWD, oldpath, AT_FDCWD, newpath);
 }
 
 int link(const char* oldpath, const char* newpath) {
-    return two_path_op_at(ZXRIO_LINK, AT_FDCWD, oldpath, AT_FDCWD, newpath);
+    return two_path_op_at(ZXFIDL_LINK, AT_FDCWD, oldpath, AT_FDCWD, newpath);
 }
 
 int unlink(const char* path) {
@@ -1439,7 +1439,7 @@ int fsync(int fd) {
     if (io == NULL) {
         return ERRNO(EBADF);
     }
-    int r = STATUS(io->ops->misc(io, ZXRIO_SYNC, 0, 0, 0, 0));
+    int r = STATUS(io->ops->misc(io, ZXFIDL_SYNC, 0, 0, 0, 0));
     fdio_release(io);
     return r;
 }

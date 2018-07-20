@@ -367,8 +367,8 @@ static zx_status_t mxdir_misc(fdio_t* io, uint32_t op, int64_t off,
                               uint32_t maxreply, void* ptr, size_t len) {
     mxdir_t* dir = (mxdir_t*) io;
     zx_status_t r;
-    switch (ZXRIO_OP(op)) {
-    case ZXRIO_READDIR:
+    switch (op) {
+    case ZXFIDL_READDIR:
         LOG(6, "READDIR\n");
         mtx_lock(&dir->ns->lock);
         int n = atomic_fetch_add(&dir->seq, 1);
@@ -379,7 +379,7 @@ static zx_status_t mxdir_misc(fdio_t* io, uint32_t op, int64_t off,
         }
         mtx_unlock(&dir->ns->lock);
         return r;
-    case ZXRIO_STAT:
+    case ZXFIDL_STAT:
         LOG(6, "STAT\n");
         if (maxreply < sizeof(vnattr_t)) {
             return ZX_ERR_INVALID_ARGS;
@@ -390,7 +390,7 @@ static zx_status_t mxdir_misc(fdio_t* io, uint32_t op, int64_t off,
         attr->inode = 1;
         attr->nlink = 1;
         return sizeof(vnattr_t);
-    case ZXRIO_UNLINK:
+    case ZXFIDL_UNLINK:
         return ZX_ERR_UNAVAILABLE;
     default:
         LOG(6, "MISC OP %u\n", op);

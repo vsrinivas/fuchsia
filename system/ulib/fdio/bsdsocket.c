@@ -141,7 +141,7 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
     }
 
     zx_status_t r;
-    r = io->ops->misc(io, ZXRIO_CONNECT, 0, 0, (void*)addr, len);
+    r = io->ops->misc(io, ZXSIO_CONNECT, 0, 0, (void*)addr, len);
     if (r == ZX_ERR_SHOULD_WAIT) {
         if (io->ioflag & IOFLAG_NONBLOCK) {
             io->ioflag |= IOFLAG_SOCKET_CONNECTING;
@@ -198,7 +198,7 @@ int bind(int fd, const struct sockaddr* addr, socklen_t len) {
     }
 
     zx_status_t r;
-    r = io->ops->misc(io, ZXRIO_BIND, 0, 0, (void*)addr, len);
+    r = io->ops->misc(io, ZXSIO_BIND, 0, 0, (void*)addr, len);
     fdio_release(io);
     return STATUS(r);
 }
@@ -210,7 +210,7 @@ int listen(int fd, int backlog) {
     }
 
     zx_status_t r;
-    r = io->ops->misc(io, ZXRIO_LISTEN, 0, 0, &backlog, sizeof(backlog));
+    r = io->ops->misc(io, ZXSIO_LISTEN, 0, 0, &backlog, sizeof(backlog));
     fdio_release(io);
     return STATUS(r);
 }
@@ -249,7 +249,7 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
 
     if (addr != NULL && len != NULL) {
         zxrio_sockaddr_reply_t reply;
-        if ((r = io2->ops->misc(io2, ZXRIO_GETPEERNAME, 0,
+        if ((r = io2->ops->misc(io2, ZXSIO_GETPEERNAME, 0,
                                 sizeof(zxrio_sockaddr_reply_t), &reply,
                                 sizeof(reply))) < 0) {
             io->ops->close(io2);
@@ -459,11 +459,11 @@ static int getsockaddr(int fd, int op, struct sockaddr* restrict addr,
 }
 
 int getsockname(int fd, struct sockaddr* restrict addr, socklen_t* restrict len) {
-    return getsockaddr(fd, ZXRIO_GETSOCKNAME, addr, len);
+    return getsockaddr(fd, ZXSIO_GETSOCKNAME, addr, len);
 }
 
 int getpeername(int fd, struct sockaddr* restrict addr, socklen_t* restrict len) {
-    return getsockaddr(fd, ZXRIO_GETPEERNAME, addr, len);
+    return getsockaddr(fd, ZXSIO_GETPEERNAME, addr, len);
 }
 
 static zx_status_t fdio_getsockopt(fdio_t* io, int level, int optname,
@@ -475,7 +475,7 @@ static zx_status_t fdio_getsockopt(fdio_t* io, int level, int optname,
     zxrio_sockopt_req_reply_t req_reply;
     req_reply.level = level;
     req_reply.optname = optname;
-    zx_status_t r = io->ops->misc(io, ZXRIO_GETSOCKOPT, 0,
+    zx_status_t r = io->ops->misc(io, ZXSIO_GETSOCKOPT, 0,
                                   sizeof(zxrio_sockopt_req_reply_t),
                                   &req_reply, sizeof(req_reply));
     if (r < 0) {
@@ -537,7 +537,7 @@ int setsockopt(int fd, int level, int optname, const void* optval,
     }
     memcpy(req.optval, optval, optlen);
     req.optlen = optlen;
-    zx_status_t r = io->ops->misc(io, ZXRIO_SETSOCKOPT, 0, 0, &req,
+    zx_status_t r = io->ops->misc(io, ZXSIO_SETSOCKOPT, 0, 0, &req,
                                   sizeof(req));
     fdio_release(io);
     return STATUS(r);

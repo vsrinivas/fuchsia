@@ -114,7 +114,7 @@ static zx_status_t vmofile_close(fdio_t* io) {
 static zx_status_t vmofile_misc(fdio_t* io, uint32_t op, int64_t off, uint32_t maxreply, void* ptr, size_t len) {
     vmofile_t* vf = (vmofile_t*)io;
     switch (op) {
-    case ZXRIO_STAT: {
+    case ZXFIDL_STAT: {
         vnattr_t attr;
         memset(&attr, 0, sizeof(attr));
         attr.size = vf->end - vf->off;
@@ -125,7 +125,7 @@ static zx_status_t vmofile_misc(fdio_t* io, uint32_t op, int64_t off, uint32_t m
         memcpy(ptr, &attr, sizeof(attr));
         return sizeof(attr);
     }
-    case ZXRIO_MMAP: {
+    case ZXFIDL_GET_VMO: {
         if (len != sizeof(zxrio_mmap_data_t) || maxreply < sizeof(zxrio_mmap_data_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
@@ -155,22 +155,15 @@ static zx_status_t vmofile_misc(fdio_t* io, uint32_t op, int64_t off, uint32_t m
         }
         return out;
     }
-    case ZXRIO_FCNTL: {
-        uint32_t cmd = maxreply;
-        switch (cmd) {
-        case F_GETFL: {
-            uint32_t* flags = (uint32_t*) ptr;
-            if (flags) {
-                *flags = 0;
-            }
-            return ZX_OK;
+    case ZXFIDL_GET_FLAGS: {
+        uint32_t* flags = (uint32_t*) ptr;
+        if (flags) {
+            *flags = 0;
         }
-        case F_SETFL:
-            return ZX_OK;
-        default:
-            return ZX_ERR_NOT_SUPPORTED;
-        }
+        return ZX_OK;
     }
+    case ZXFIDL_SET_FLAGS:
+        return ZX_OK;
     default:
         return ZX_ERR_INVALID_ARGS;
     }

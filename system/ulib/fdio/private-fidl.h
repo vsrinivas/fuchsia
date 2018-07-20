@@ -7,6 +7,7 @@
 #include <lib/fdio/remoteio.h>
 #include <lib/fdio/vfs.h>
 #include <zircon/compiler.h>
+#include <zircon/fidl.h>
 
 __BEGIN_CDECLS
 
@@ -16,10 +17,10 @@ typedef struct zxrio zxrio_t;
 zx_handle_t zxrio_handle(zxrio_t* rio);
 
 // Encode and transmit an outgoing message (to a server)
-zx_status_t zxrio_write_response(zx_handle_t h, zx_status_t status, zxrio_msg_t* msg);
+zx_status_t zxrio_write_response(zx_handle_t h, zx_status_t status, fidl_msg_t* msg);
 
 // Read and decode an incoming message (from a client)
-zx_status_t zxrio_read_request(zx_handle_t h, zxrio_msg_t* msg);
+zx_status_t zxrio_read_request(zx_handle_t h, fidl_msg_t* msg);
 
 typedef struct fidl_open_response {
     alignas(FIDL_ALIGNMENT) fuchsia_io_ObjectOnOpenEvent response;
@@ -59,9 +60,5 @@ zx_status_t fidl_ioctl(zxrio_t* rio, uint32_t op, const void* in_buf,
 zx_status_t fidl_getvmo(zxrio_t* rio, uint32_t flags, zx_handle_t* out);
 zx_status_t fidl_getflags(zxrio_t* rio, uint32_t* outflags);
 zx_status_t fidl_setflags(zxrio_t* rio, uint32_t flags);
-
-// Legacy RIO functions
-bool is_rio_message_valid(zxrio_msg_t* msg);
-bool is_rio_message_reply_valid(zxrio_msg_t* msg, uint32_t size);
 
 __END_CDECLS

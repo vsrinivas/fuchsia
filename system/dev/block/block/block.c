@@ -89,7 +89,8 @@ static int blockserver_thread(void* arg) {
     return blockserver_thread_serve((blkdev_t*)arg);
 }
 
-static zx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_len) {
+static zx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_len,
+                                    size_t* out_actual) {
     if (out_len < sizeof(zx_handle_t)) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -118,7 +119,8 @@ static zx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_le
     if (thrd_create(&thread, blockserver_thread, bdev) == thrd_success) {
         thrd_detach(thread);
         sync_completion_wait(&bdev->lock_signal, ZX_TIME_INFINITE);
-        return sizeof(zx_handle_t);
+        *out_actual = sizeof(zx_handle_t);
+        return ZX_OK;
     }
 
     mtx_lock(&bdev->lock);
@@ -179,7 +181,7 @@ static zx_status_t blkdev_ioctl(void* ctx, uint32_t op, const void* cmd,
     blkdev_t* blkdev = ctx;
     switch (op) {
     case IOCTL_BLOCK_GET_FIFOS:
-        return blkdev_get_fifos(blkdev, reply, max);
+        return blkdev_get_fifos(blkdev, reply, max, out_actual);
     case IOCTL_BLOCK_ATTACH_VMO:
         return blkdev_attach_vmo(blkdev, cmd, cmdlen, reply, max, out_actual);
     case IOCTL_BLOCK_FIFO_CLOSE: {

@@ -177,11 +177,11 @@ public:
     // Unpin a handle to a remote filesystem from a vnode, if one exists.
     zx_status_t UninstallRemote(fbl::RefPtr<Vnode> vn, zx::channel* h) __TA_EXCLUDES(vfs_lock_);
 
-    // Forwards a RIO message on a remote handle.
+    // Forwards an encoded FIDL message on a remote handle.
     // If the remote handle is closed (handing off returns ZX_ERR_PEER_CLOSED),
     // it is automatically unmounted.
-    zx_status_t ForwardMessageRemote(fbl::RefPtr<Vnode> vn, zx::channel channel,
-                                     zxrio_msg_t* msg) __TA_EXCLUDES(vfs_lock_);
+    zx_status_t ForwardMessageRemote(fbl::RefPtr<Vnode> vn,
+                                     fidl_msg_t* msg) __TA_EXCLUDES(vfs_lock_);
 
     // Unpins all remote filesystems in the current filesystem, and waits for the
     // response of each one with the provided deadline.
@@ -198,8 +198,8 @@ private:
     // or we encounter a vnode that represents a remote filesystem
     //
     // On success,
-    // |out| is the vnode at which we stopped searching
-    // |pathout| is the reaminer of the path to search
+    // |out| is the vnode at which we stopped searching.
+    // |pathout| is the remainder of the path to search.
     zx_status_t Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
                      fbl::StringPiece path, fbl::StringPiece* pathout) __TA_REQUIRES(vfs_lock_);
 

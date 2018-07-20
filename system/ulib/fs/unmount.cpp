@@ -16,7 +16,6 @@
 // Consumes 'srv'.
 zx_status_t vfs_unmount_handle(zx_handle_t srv, zx_time_t deadline) {
     // TODO(smklein): use shared ioctl impl?
-#ifdef ZXRIO_FIDL
     uint8_t msg[FIDL_ALIGN(sizeof(fuchsia_io_NodeIoctlRequest)) + FDIO_CHUNK_SIZE];
     fuchsia_io_NodeIoctlRequest* request = (fuchsia_io_NodeIoctlRequest*) msg;
     fuchsia_io_NodeIoctlResponse* response = (fuchsia_io_NodeIoctlResponse*) msg;
@@ -59,44 +58,6 @@ zx_status_t vfs_unmount_handle(zx_handle_t srv, zx_time_t deadline) {
             status = response->s;
         }
     }
-#else
-    zxrio_msg_t msg;
-    memset(&msg, 0, ZXRIO_HDR_SZ);
-
-    // the only other messages we ever send are no-reply OPEN or CLONE with
-    // txid of 0.
-    msg.txid = 1;
-    msg.op = ZXRIO_IOCTL;
-    msg.arg2.op = IOCTL_VFS_UNMOUNT_FS;
-
-    zx_channel_call_args_t args;
-    args.wr_bytes = &msg;
-    args.wr_handles = NULL;
-    args.rd_bytes = &msg;
-    args.rd_handles = NULL;
-    args.wr_num_bytes = ZXRIO_HDR_SZ;
-    args.wr_num_handles = 0;
-    args.rd_num_bytes = ZXRIO_HDR_SZ + FDIO_CHUNK_SIZE;
-    args.rd_num_handles = 0;
-
-    uint32_t dsize;
-    uint32_t hcount;
-
-    // At the moment, we don't actually care what the response is from the
-    // filesystem server (or even if it supports the unmount operation). As
-    // soon as ANY response comes back, either in the form of a closed handle
-    // or a visible response, shut down.
-    zx_status_t status = zx_channel_call(srv, 0, deadline, &args, &dsize, &hcount);
-    if (status == ZX_OK) {
-        // Read phase succeeded. If the target filesystem returned an error, we
-        // should parse it.
-        if (dsize < ZXRIO_HDR_SZ) {
-            status = ZX_ERR_IO;
-        } else {
-            status = msg.arg;
-        }
-    }
-#endif
     zx_handle_close(srv);
     return status;
 }

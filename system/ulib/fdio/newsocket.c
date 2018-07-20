@@ -627,8 +627,7 @@ static zx_status_t zxsio_txn(zxsio_t* sio, zxsio_msg_t* msg) {
 
     size_t dsize = (size_t)r;
     // check for protocol errors
-    if (!is_rio_message_reply_valid(msg, dsize) ||
-        (ZXRIO_OP(msg->op) != request_op)) {
+    if (!is_rio_message_reply_valid(msg, dsize) || (msg->op != request_op)) {
         return ZX_ERR_IO;
     }
     return msg->arg;
@@ -645,15 +644,15 @@ static zx_status_t zxsio_misc(fdio_t* io, uint32_t op, int64_t off,
     }
 
     switch (op) {
-    case ZXRIO_GETADDRINFO:
-    case ZXRIO_GETSOCKNAME:
-    case ZXRIO_GETPEERNAME:
-    case ZXRIO_GETSOCKOPT:
-    case ZXRIO_SETSOCKOPT:
-    case ZXRIO_CONNECT:
-    case ZXRIO_BIND:
-    case ZXRIO_LISTEN:
-    case ZXRIO_FCNTL:
+    case ZXSIO_GETADDRINFO:
+    case ZXSIO_GETSOCKNAME:
+    case ZXSIO_GETPEERNAME:
+    case ZXSIO_GETSOCKOPT:
+    case ZXSIO_SETSOCKOPT:
+    case ZXSIO_CONNECT:
+    case ZXSIO_BIND:
+    case ZXSIO_LISTEN:
+    case ZXSIO_FCNTL:
         break;
     default:
         return ZX_ERR_NOT_SUPPORTED;
@@ -678,7 +677,7 @@ static zx_status_t zxsio_misc(fdio_t* io, uint32_t op, int64_t off,
         memcpy(ptr, msg.data, msg.datalen);
     }
 
-    if (op == ZXRIO_LISTEN && r == ZX_OK) {
+    if (op == ZXSIO_LISTEN && r == ZX_OK) {
         sio->flags |= ZXSIO_DID_LISTEN;
     }
 
@@ -691,7 +690,7 @@ static zx_status_t zxsio_close(fdio_t* io) {
     zx_status_t r;
 
     memset(&msg, 0, ZXSIO_HDR_SZ);
-    msg.op = ZXRIO_CLOSE;
+    msg.op = ZXSIO_CLOSE;
     r = zxsio_txn(sio, &msg);
 
     zx_handle_t h = sio->s;
@@ -717,7 +716,7 @@ static ssize_t zxsio_ioctl(fdio_t* io, uint32_t op, const void* in_buf,
     }
 
     memset(&msg, 0, ZXSIO_HDR_SZ);
-    msg.op = ZXRIO_IOCTL;
+    msg.op = ZXSIO_IOCTL;
     msg.datalen = in_len;
     msg.arg = out_len;
     msg.arg2.op = op;

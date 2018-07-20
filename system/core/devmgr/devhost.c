@@ -239,9 +239,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
     char buffer[512];
     const char* path = mkdevpath(ios->dev, buffer, sizeof(buffer));
 
-    // handle remoteio open messages only
-    if ((msize >= sizeof(fidl_message_header_t)) &&
-        ((msg.op == ZXRIO_OPEN) || (msg.op == ZXFIDL_OPEN))) {
+    if ((msize >= sizeof(fidl_message_header_t)) && (msg.op == ZXFIDL_OPEN)) {
         if (hcount != 1) {
             log(ERROR, "devhost: Malformed open request (bad handle count)\n");
             r = ZX_ERR_INTERNAL;
@@ -249,30 +247,28 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         }
 
         fuchsia_io_DirectoryOpenRequest* request = (fuchsia_io_DirectoryOpenRequest*) &msg;
-        zxrio_msg_t* rmsg = (zxrio_msg_t*) &msg;
+        fidl_msg_t fidl_msg = {
+            .bytes = &msg,
+            .handles = hin,
+            .num_bytes = msize,
+            .num_handles = hcount,
+        };
 
-        if (msg.op == ZXFIDL_OPEN) {
-            // Decode open request (FIDL)
-            if ((msize < sizeof(fuchsia_io_DirectoryOpenRequest)) ||
-                (FIDL_ALIGN(sizeof(fuchsia_io_DirectoryOpenRequest)) +
-                 FIDL_ALIGN(request->path.size) != msize) ||
-                (request->object != FIDL_HANDLE_PRESENT) ||
-                (request->path.data != (char*) FIDL_ALLOC_PRESENT)) {
-                log(ERROR, "devhost: Malformed open request (bad message)\n");
-                r = ZX_ERR_IO;
-                goto fail;
-            }
-            request->object = hin[0];
-            request->path.data = (void*)((uintptr_t)(&msg) +
-                                         FIDL_ALIGN(sizeof(fuchsia_io_DirectoryOpenRequest)));
-        } else {
-            // Decode open request (RIO)
-            rmsg->hcount = 1;
-            rmsg->handle[0] = hin[0];
+        // Decode open request (FIDL)
+        if ((msize < sizeof(fuchsia_io_DirectoryOpenRequest)) ||
+            (FIDL_ALIGN(sizeof(fuchsia_io_DirectoryOpenRequest)) +
+             FIDL_ALIGN(request->path.size) != msize) ||
+            (request->object != FIDL_HANDLE_PRESENT) ||
+            (request->path.data != (char*) FIDL_ALLOC_PRESENT)) {
+            log(ERROR, "devhost: Malformed open request (bad message)\n");
+            r = ZX_ERR_IO;
+            goto fail;
         }
-
+        request->object = hin[0];
+        request->path.data = (void*)((uintptr_t)(&msg) +
+                                     FIDL_ALIGN(sizeof(fuchsia_io_DirectoryOpenRequest)));
         log(RPC_RIO, "devhost[%s] remoteio OPEN\n", path);
-        if ((r = devhost_rio_handler(rmsg, ios)) < 0) {
+        if ((r = devhost_rio_handler(&fidl_msg, ios)) < 0) {
             if (r != ERR_DISPATCHER_INDIRECT) {
                 log(ERROR, "devhost: OPEN failed: %d\n", r);
             }
@@ -516,9 +512,8 @@ static zx_status_t dh_handle_rio_rpc(port_handler_t* ph, zx_signals_t signals, u
     iostate_t* ios = ios_from_ph(ph);
 
     zx_status_t r;
-    zxrio_msg_t msg;
     if (signals & ZX_CHANNEL_READABLE) {
-        if ((r = zxrio_handle_rpc(ph->handle, &msg, devhost_rio_handler, ios)) == ZX_OK) {
+        if ((r = zxrio_handle_rpc(ph->handle, devhost_rio_handler, ios)) == ZX_OK) {
             return ZX_OK;
         }
     } else if (signals & ZX_CHANNEL_PEER_CLOSED) {

@@ -103,7 +103,7 @@ zx_status_t zx_pipe_misc(fdio_t* io, uint32_t op, int64_t off, uint32_t maxreply
     default:
         return ZX_ERR_NOT_SUPPORTED;
 
-    case ZXRIO_STAT: {
+    case ZXFIDL_STAT: {
         vnattr_t attr = {};
         if (maxreply < sizeof(attr)) {
             return ZX_ERR_INVALID_ARGS;
@@ -113,7 +113,7 @@ zx_status_t zx_pipe_misc(fdio_t* io, uint32_t op, int64_t off, uint32_t maxreply
         *attr_out = attr;
         return sizeof(attr);
     }
-    case ZXRIO_FCNTL: {
+    case ZXFIDL_GET_FLAGS: {
         uint32_t* flags = (uint32_t*) data;
         if (flags) {
             *flags = 0;
