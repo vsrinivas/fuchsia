@@ -96,6 +96,7 @@ AutoGich::AutoGich(GichState* gich_state)
 
     // Load
     gic_write_gich_vmcr(gich_state_->vmcr);
+    gic_write_gich_apr(gich_state_->apr);
     for (uint32_t i = 0; i < gich_state_->num_lrs; i++) {
         gic_write_gich_lr(i, gich_state->lr[i]);
     }
@@ -107,6 +108,7 @@ AutoGich::~AutoGich() {
     // Save
     gich_state_->vmcr = gic_read_gich_vmcr();
     gich_state_->elrsr = gic_read_gich_elrsr();
+    gich_state_->apr = gic_read_gich_apr();
     for (uint32_t i = 0; i < gich_state_->num_lrs; i++) {
         gich_state_->lr[i] = gic_read_gich_lr(i);
     }
@@ -162,6 +164,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, fbl::unique_ptr<Vcpu>* 
     vcpu->gich_state_.num_lrs = gic_get_num_lrs();
     vcpu->gich_state_.vmcr = gic_default_gich_vmcr();
     vcpu->gich_state_.elrsr = gic_read_gich_elrsr();
+    vcpu->gich_state_.apr = 0;
     vcpu->el2_state_->guest_state.system_state.elr_el2 = entry;
     vcpu->el2_state_->guest_state.system_state.spsr_el2 = kSpsrDaif | kSpsrEl1h;
     uint64_t mpidr = ARM64_READ_SYSREG(mpidr_el1);

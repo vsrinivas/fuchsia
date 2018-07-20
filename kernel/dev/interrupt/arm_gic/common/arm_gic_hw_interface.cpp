@@ -78,3 +78,11 @@ uint32_t gic_get_vector_from_lr(uint64_t lr) {
 uint32_t gic_get_num_lrs() {
     return gic_ops->get_num_lrs();
 }
+
+void gic_write_gich_apr(uint32_t val) {
+    return gic_ops->write_gich_apr(val);
+}
+
+uint32_t gic_read_gich_apr() {
+    return gic_ops->read_gich_apr();
+}

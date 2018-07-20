@@ -33,12 +33,20 @@ static void gicv3_write_gich_vmcr(uint32_t val) {
     arm64_el2_gicv3_write_gich_vmcr(val);
 }
 
+static uint32_t gicv3_read_gich_misr() {
+    return arm64_el2_gicv3_read_gich_misr();
+}
+
 static uint64_t gicv3_read_gich_elrsr() {
     return arm64_el2_gicv3_read_gich_elrsr();
 }
 
-static uint32_t gicv3_read_gich_misr() {
-    return arm64_el2_gicv3_read_gich_misr();
+static uint32_t gicv3_read_gich_apr() {
+    return arm64_el2_gicv3_read_gich_apr();
+}
+
+static void gicv3_write_gich_apr(uint32_t val) {
+    arm64_el2_gicv3_write_gich_apr(val);
 }
 
 static uint64_t gicv3_read_gich_lr(uint32_t idx) {
@@ -77,8 +85,10 @@ static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
     .default_gich_vmcr = gicv3_default_gich_vmcr,
     .read_gich_vmcr = gicv3_read_gich_vmcr,
     .write_gich_vmcr = gicv3_write_gich_vmcr,
-    .read_gich_elrsr = gicv3_read_gich_elrsr,
     .read_gich_misr = gicv3_read_gich_misr,
+    .read_gich_elrsr = gicv3_read_gich_elrsr,
+    .read_gich_apr = gicv3_read_gich_apr,
+    .write_gich_apr = gicv3_write_gich_apr,
     .read_gich_lr = gicv3_read_gich_lr,
     .write_gich_lr = gicv3_write_gich_lr,
     .get_gicv = gicv3_get_gicv,

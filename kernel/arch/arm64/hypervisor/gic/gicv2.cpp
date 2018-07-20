@@ -71,6 +71,14 @@ static uint64_t gicv2_read_gich_elrsr() {
     return gich->elrsr;
 }
 
+static uint32_t gicv2_read_gich_apr() {
+    return gich->apr;
+}
+
+static void gicv2_write_gich_apr(uint32_t val) {
+    gich->apr = val;
+}
+
 static uint64_t gicv2_read_gich_lr(uint32_t idx) {
     return gich->lr[idx];
 }
@@ -106,8 +114,10 @@ static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
     .default_gich_vmcr = gicv2_default_gich_vmcr,
     .read_gich_vmcr = gicv2_read_gich_vmcr,
     .write_gich_vmcr = gicv2_write_gich_vmcr,
-    .read_gich_elrsr = gicv2_read_gich_elrsr,
     .read_gich_misr = gicv2_read_gich_misr,
+    .read_gich_elrsr = gicv2_read_gich_elrsr,
+    .read_gich_apr = gicv2_read_gich_apr,
+    .write_gich_apr = gicv2_write_gich_apr,
     .read_gich_lr = gicv2_read_gich_lr,
     .write_gich_lr = gicv2_write_gich_lr,
     .get_gicv = gicv2_get_gicv,

@@ -17,8 +17,10 @@ struct arm_gic_hw_interface_ops {
     uint32_t (*default_gich_vmcr)();
     uint32_t (*read_gich_vmcr)();
     void (*write_gich_vmcr)(uint32_t val);
-    uint64_t (*read_gich_elrsr)();
     uint32_t (*read_gich_misr)();
+    uint64_t (*read_gich_elrsr)();
+    uint32_t (*read_gich_apr)();
+    void (*write_gich_apr)(uint32_t val);
     uint64_t (*read_gich_lr)(uint32_t idx);
     void (*write_gich_lr)(uint32_t idx, uint64_t val);
     zx_status_t (*get_gicv)(paddr_t* gicv_paddr);
@@ -70,3 +72,9 @@ void arm_gic_hw_interface_register(const struct arm_gic_hw_interface_ops* ops);
 bool arm_gic_is_registered();
 
 uint32_t gic_get_num_lrs();
+
+// Returns the GICH_APR value.
+uint32_t gic_read_gich_apr();
+
+// Writes to the GICH_APR register.
+void gic_write_gich_apr(uint32_t val);

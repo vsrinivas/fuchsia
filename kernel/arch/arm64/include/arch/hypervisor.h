@@ -70,6 +70,7 @@ struct GichState {
     uint32_t num_lrs;
     uint32_t vmcr;
     uint64_t elrsr;
+    uint32_t apr;
     uint64_t lr[64] = {};
 };
 
