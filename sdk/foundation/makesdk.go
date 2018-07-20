@@ -65,17 +65,6 @@ type file struct {
 	src, dst string
 }
 
-type clientHeader struct {
-	flag *bool
-	src  string // Path to the source of the header, relative to root of the Fuchsia tree
-	dst  string // Path within the target sysroot
-}
-
-type clientLib struct {
-	flag *bool
-	name string
-}
-
 var (
 	hostOs      string
 	hostCpu     string
@@ -100,16 +89,6 @@ func init() {
 
 	dirs := []dir{
 		{
-			sysroot,
-			path.Join(x64BuildDir, "sdks/zircon_sysroot/sysroot/"),
-			"sysroot/x86_64-fuchsia/",
-		},
-		{
-			sysroot,
-			path.Join(armBuildDir, "sdks/zircon_sysroot/sysroot/"),
-			"sysroot/aarch64-fuchsia",
-		},
-		{
 			qemu,
 			qemuDir,
 			"qemu",
@@ -131,10 +110,6 @@ func init() {
 			"toolchain_libs/clang/7.0.0/lib/fuchsia",
 		},
 	}
-
-	clientHeaders := []clientHeader{}
-
-	clientLibs := []clientLib{}
 
 	files := []file{
 		{
@@ -254,16 +229,6 @@ func init() {
 			customType,
 			copyIdsTxt,
 		},
-	}
-	for _, c := range clientHeaders {
-		files = append(files, file{c.flag, c.src, path.Join("sysroot/x86_64-fuchsia/include", c.dst)})
-		files = append(files, file{c.flag, c.src, path.Join("sysroot/aarch64-fuchsia/include", c.dst)})
-	}
-	for _, c := range clientLibs {
-		files = append(files, file{c.flag, path.Join(x64BuildDir, "x64-shared", c.name), path.Join("sysroot/x86_64-fuchsia/lib", c.name)})
-		files = append(files, file{c.flag, path.Join(x64BuildDir, "x64-shared/lib.unstripped", c.name), path.Join("sysroot/x86_64-fuchsia/debug", c.name)})
-		files = append(files, file{c.flag, path.Join(armBuildDir, "arm64-shared", c.name), path.Join("sysroot/aarch64-fuchsia/lib", c.name)})
-		files = append(files, file{c.flag, path.Join(armBuildDir, "arm64-shared/lib.unstripped", c.name), path.Join("sysroot/aarch64-fuchsia/debug", c.name)})
 	}
 	for _, d := range dirs {
 		components = append(components, component{d.flag, d.src, d.dst, dirType, nil})
