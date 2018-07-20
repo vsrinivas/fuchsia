@@ -14,7 +14,7 @@ TEST(Array, BuilderTest) {
   fidl::Builder builder(buffer, ZX_CHANNEL_MAX_MSG_BYTES);
 
   fidl::Array<int, 3>* view = builder.New<fidl::Array<int, 3>>();
-  EXPECT_EQ(3u, view->count());
+  EXPECT_EQ(3u, view->size());
 
   (*view)[0] = 0;
   (*view)[1] = 1;
@@ -29,6 +29,8 @@ TEST(Array, BuilderTest) {
     EXPECT_EQ(i, value);
     ++i;
   }
+
+  EXPECT_NE(view->data(), nullptr);
 }
 
 }  // namespace

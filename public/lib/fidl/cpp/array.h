@@ -17,9 +17,15 @@ class Array {
  public:
   Array() { memset(data_, 0, sizeof(data_)); }
 
+  constexpr size_t size() const { return N; }
+
+  // TODO(FIDL-245) Remove this overload.
   constexpr size_t count() const { return N; }
 
   const T* data() const { return data_; }
+  T* data() { return data_; }
+
+  // TODO(FIDL-245) Remove this overload.
   T* mutable_data() { return data_; }
 
   const T& at(size_t offset) const { return data()[offset]; }
