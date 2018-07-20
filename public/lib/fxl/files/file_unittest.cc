@@ -14,6 +14,42 @@
 namespace files {
 namespace {
 
+TEST(File, WriteFileInTwoPhases) {
+  ScopedTempDir dir;
+  std::string path = dir.path() + "/destination";
+
+  std::string content = "Hello World";
+  ASSERT_TRUE(WriteFileInTwoPhases(path, content, dir.path()));
+  std::string read_content;
+  ASSERT_TRUE(ReadFileToString(path, &read_content));
+  EXPECT_EQ(read_content, content);
+}
+
+TEST(File, ReadWriteFileAt) {
+  ScopedTempDir dir;
+  std::string filename = "bar";
+  std::string content = "content";
+  fxl::UniqueFD dirfd(open(dir.path().c_str(), O_RDONLY));
+
+  EXPECT_TRUE(files::WriteFileAt(dirfd.get(), filename, content.c_str(),
+                                 content.size()));
+
+  std::string read_content;
+  EXPECT_TRUE(files::ReadFileToStringAt(dirfd.get(), filename, &read_content));
+  EXPECT_EQ(content, read_content);
+}
+
+TEST(File, IsFileAt) {
+  ScopedTempDir dir;
+  std::string path;
+
+  ASSERT_TRUE(dir.NewTempFile(&path));
+
+  fxl::UniqueFD dirfd(open(dir.path().c_str(), O_RDONLY));
+  ASSERT_TRUE(dirfd.get() != -1);
+  EXPECT_TRUE(IsFileAt(dirfd.get(), GetBaseName(path)));
+}
+
 TEST(File, GetFileSize) {
   ScopedTempDir dir;
   std::string path;
@@ -30,18 +66,6 @@ TEST(File, GetFileSize) {
   EXPECT_EQ(content.size(), size);
 }
 
-TEST(File, WriteFileInTwoPhases) {
-  ScopedTempDir dir;
-  std::string path = dir.path() + "/destination";
-
-  std::string content = "Hello World";
-  ASSERT_TRUE(WriteFileInTwoPhases(path, content, dir.path()));
-  std::string read_content;
-  ASSERT_TRUE(ReadFileToString(path, &read_content));
-  EXPECT_EQ(read_content, content);
-}
-
-#if defined(OS_LINUX) || defined(OS_FUCHSIA)
 TEST(File, GetFileSizeAt) {
   ScopedTempDir dir;
   fxl::UniqueFD dirfd(open(dir.path().c_str(), O_RDONLY));
@@ -60,32 +84,6 @@ TEST(File, GetFileSizeAt) {
   EXPECT_TRUE(GetFileSizeAt(dirfd.get(), path, &size));
   EXPECT_EQ(content.size(), size);
 }
-
-TEST(File, IsFileAt) {
-  ScopedTempDir dir;
-  std::string path;
-
-  ASSERT_TRUE(dir.NewTempFile(&path));
-
-  fxl::UniqueFD dirfd(open(dir.path().c_str(), O_RDONLY));
-  ASSERT_TRUE(dirfd.get() != -1);
-  EXPECT_TRUE(IsFileAt(dirfd.get(), GetBaseName(path)));
-}
-
-TEST(File, ReadWriteFileAt) {
-  ScopedTempDir dir;
-  std::string filename = "bar";
-  std::string content = "content";
-  fxl::UniqueFD dirfd(open(dir.path().c_str(), O_RDONLY));
-
-  EXPECT_TRUE(files::WriteFileAt(dirfd.get(), filename, content.c_str(),
-                                 content.size()));
-
-  std::string read_content;
-  EXPECT_TRUE(files::ReadFileToStringAt(dirfd.get(), filename, &read_content));
-  EXPECT_EQ(content, read_content);
-}
-#endif
 
 }  // namespace
 }  // namespace files
