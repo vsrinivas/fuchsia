@@ -91,7 +91,7 @@ class Bss : public fbl::RefCounted<Bss> {
     // TODO(porce): Store IEs AS-IS without translation.
     uint8_t ssid_[SsidElement::kMaxLen]{0};
     size_t ssid_len_{0};
-    std::vector<uint8_t> supported_rates_{0};
+    std::vector<uint8_t> supported_rates_{};
 
     // Conditionally present. See IEEE Std 802.11-2016, 9.3.3.3 Table 9-27
     bool has_dsss_param_set_chan_ = false;

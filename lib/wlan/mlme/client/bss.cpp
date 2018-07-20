@@ -157,9 +157,13 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
                 return ZX_ERR_INTERNAL;
             }
 
+            if (!supported_rates_.empty()) {
+                supported_rates_.clear();
+            }
             for (uint8_t idx = 0; idx < ie->hdr.len; idx++) {
                 supported_rates_.push_back(ie->rates[idx]);
             }
+            ZX_DEBUG_ASSERT(supported_rates_.size() <= SupportedRatesElement::kMaxLen);
             debugbcn("%s Supported rates: %s\n", dbgmsghdr, SupportedRatesToString().c_str());
             break;
         }
@@ -384,8 +388,18 @@ std::string Bss::SsidToString() const {
 }
 
 std::string Bss::SupportedRatesToString() const {
-    // TODO(porce): Distinguish BSSBasicRateSet, OperationalRateSet, BSSMembershipSelectorSet.
-    return "NOT_IMPLEMENTED";
+    constexpr uint8_t kBasicRateMask = 0x80;
+    char buf[SupportedRatesElement::kMaxLen * 6 + 1];
+    char* ptr = buf;
+    for (auto const& rate : supported_rates_) {
+        // Rates are printed as Mbps, a preceding * indicates a basic rate
+        ptr += std::snprintf(ptr, 6, "%s%.1f ", (rate & kBasicRateMask) ? "" : "*",
+                             (rate & (kBasicRateMask - 1)) / 2.0);
+    }
+
+    // TODO: Support BSSMembershipSelectorSet.
+
+    return std::string(buf);
 }
 
 }  // namespace wlan
