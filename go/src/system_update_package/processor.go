@@ -157,14 +157,16 @@ func fetchPackage(p *Package, amber *amber.ControlInterface) error {
 	return nil
 }
 
+var diskImagerPath = filepath.Join("/boot", "bin", "install-disk-image")
+
 func WriteImgs(imgs []string, imgsPath string) error {
 	for _, img := range imgs {
 		var c *exec.Cmd
 		switch img {
 		case "efi":
-			c = exec.Command("install-disk-image", "install-efi")
+			c = exec.Command(diskImagerPath, "install-efi")
 		case "kernc":
-			c = exec.Command("install-disk-image", "install-kernc")
+			c = exec.Command(diskImagerPath, "install-kernc")
 		default:
 			return fmt.Errorf("unrecognized image %q", img)
 		}
