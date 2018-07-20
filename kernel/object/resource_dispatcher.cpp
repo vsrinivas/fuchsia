@@ -11,6 +11,7 @@
 #include <fbl/alloc_checker.h>
 #include <pretty/sizes.h>
 #include <inttypes.h>
+#include <lib/counters.h>
 #include <kernel/auto_lock.h>
 #include <kernel/range_check.h>
 #include <string.h>
@@ -18,6 +19,12 @@
 #include <trace.h>
 
 #define LOCAL_TRACE 0
+
+KCOUNTER(root_resource_created, "resource.root.created");
+KCOUNTER(hypervisor_resource_created, "resource.hypervisor.created");
+KCOUNTER(mmio_resource_created, "resource.mmio.created");
+KCOUNTER(irq_resource_created, "resource.irq.created");
+KCOUNTER(ioport_resource_created, "resource.ioport.created");
 
 // Storage for static members of ResourceDispatcher
 fbl::Mutex ResourceDispatcher::resources_lock_;
@@ -134,6 +141,13 @@ ResourceDispatcher::ResourceDispatcher(uint32_t kind,
         exclusive_region_ = fbl::move(region);
     }
 
+    switch(kind_) {
+    case ZX_RSRC_KIND_ROOT:       kcounter_add(root_resource_created, 1);       break;
+    case ZX_RSRC_KIND_HYPERVISOR: kcounter_add(hypervisor_resource_created, 1); break;
+    case ZX_RSRC_KIND_MMIO:       kcounter_add(mmio_resource_created, 1);       break;
+    case ZX_RSRC_KIND_IRQ:        kcounter_add(irq_resource_created, 1);        break;
+    case ZX_RSRC_KIND_IOPORT:     kcounter_add(ioport_resource_created, 1);     break;
+    }
     resource_list_->push_back(this);
 }
 
