@@ -37,6 +37,7 @@ executable("mac_tests") {
   testonly = true
 
   sources = [
+    "bss_unittest.cpp",
     "channel_unittest.cpp",
     "element_unittest.cpp",
     "energy_unittest.cpp",
