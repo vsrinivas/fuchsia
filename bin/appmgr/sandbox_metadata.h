@@ -25,12 +25,14 @@ class SandboxMetadata {
   const std::vector<std::string>& system() const { return system_; }
   const std::vector<std::string>& pkgfs() const { return pkgfs_; }
   const std::vector<std::string>& features() const { return features_; }
+  const std::vector<std::string>& boot() const { return boot_; }
 
  private:
   std::vector<std::string> dev_;
   std::vector<std::string> system_;
   std::vector<std::string> pkgfs_;
   std::vector<std::string> features_;
+  std::vector<std::string> boot_;
 };
 
 }  // namespace component

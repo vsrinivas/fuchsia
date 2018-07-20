@@ -98,6 +98,9 @@ void NamespaceBuilder::AddSandbox(
       PushDirectoryFromPath("/system/lib");
     }
   }
+
+  for (const auto& path : sandbox.boot())
+    PushDirectoryFromPath("/boot/" + path);
 }
 
 void NamespaceBuilder::AddDeprecatedDefaultDirectories() {

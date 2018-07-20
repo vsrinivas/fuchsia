@@ -29,6 +29,7 @@ constexpr char kDev[] = "dev";
 constexpr char kSystem[] = "system";
 constexpr char kPkgfs[] = "pkgfs";
 constexpr char kFeatures[] = "features";
+constexpr char kBoot[] = "boot";
 
 SandboxMetadata::SandboxMetadata() = default;
 
@@ -63,6 +64,12 @@ bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value) {
   auto features = sandbox_value.FindMember(kFeatures);
   if (features != sandbox_value.MemberEnd()) {
     if (!CopyArrayToVector(features->value, &features_))
+      return false;
+  }
+
+  auto boot = sandbox_value.FindMember(kBoot);
+  if (boot != sandbox_value.MemberEnd()) {
+    if (!CopyArrayToVector(boot->value, &boot_))
       return false;
   }
 

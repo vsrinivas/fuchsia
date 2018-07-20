@@ -1,5 +1,6 @@
 {
     "imports": [
+        "garnet/packages/config/kernel_crash_checker",
         "garnet/packages/prod/scenic",
         "garnet/packages/products/sshd"
     ]

@@ -27,6 +27,7 @@
         "garnet/packages/prod/installblob",
         "garnet/packages/prod/installer",
         "garnet/packages/prod/listen",
+        "garnet/packages/prod/kernel_crash_checker",
         "garnet/packages/prod/log_listener",
         "garnet/packages/prod/logger",
         "garnet/packages/prod/magma",

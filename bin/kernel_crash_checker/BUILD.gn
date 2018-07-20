@@ -1,0 +1,41 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("bin") {
+  output_name = "kernel_crash_checker"
+
+  sources = [
+    "main.c",
+  ]
+
+  ldflags = [ "-nostdlib++" ]
+}
+
+package("kernel_crash_checker") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "kernel_crash_checker"
+
+  meta = [
+    {
+      path = rebase_path("meta/kernel_crash_checker.cmx")
+      dest = "kernel_crash_checker.cmx"
+    },
+  ]
+}
+
+package("config") {
+  deprecated_system_image = true
+  package_name = "kernel_crash_checker_config"
+  resources = [
+    {
+      dest = "sysmgr/kernel_crash_checker.config"
+      path = rebase_path("kernel_crash_checker.config")
+    },
+  ]
+}
