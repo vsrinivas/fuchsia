@@ -11,7 +11,7 @@ set -e
 DEBIAN_GUEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 usage() {
-  echo "usage: ${0} x86|arm64"
+  echo "usage: ${0} {arm64, x64}"
   echo
   exit 1
 }
@@ -21,7 +21,7 @@ declare -r ARCH=$1
 case "${ARCH}" in
 arm64)
   ROOT_GUID=B921B045-1DF0-41C3-AF44-4C6F280D3FAE;;
-x86)
+x64)
   ROOT_GUID=4F68BCE3-E8CD-4DB1-96E7-FBCAF984B709;;
 *)
   usage;;

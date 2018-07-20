@@ -11,7 +11,7 @@ DEBIAN_GUEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 pushd "${DEBIAN_GUEST_DIR}"
 
 usage() {
-  echo "usage: ${0} [OPTIONS] x86|arm64"
+  echo "usage: ${0} [OPTIONS] {arm64, x64}"
   echo
   echo "OPTIONS:"
   echo "  -d DEVICE     Build the image on the given block device."
@@ -20,7 +20,7 @@ usage() {
 }
 
 check_dep() {
-  local bin="$1"
+  local bin="${1}"
   local package="${2:-${bin}}"
   type -P "${bin}" &>/dev/null && return 0
 
@@ -48,7 +48,7 @@ arm64)
   # foreign architectures.
   check_dep qemu-aarch64-static qemu-user-static;
   HOST_QEMU_BIN=qemu-aarch64-static;;
-x86)
+x64)
   MULTISTRAP_CONFIG=multistrap/x86.cfg;
   ARCH="x86";;
 *)
