@@ -79,6 +79,7 @@ typedef struct {
     uint8_t                             color_depth;
 
     uint8_t*                            edid_buf;
+    uint16_t                            edid_length;
     struct hdmi_param*                  p;
     detailed_timing_t                   std_raw_dtd;
     disp_timing_t                       std_disp_timing;

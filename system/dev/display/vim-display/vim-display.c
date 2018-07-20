@@ -82,7 +82,7 @@ static zx_status_t vim_get_display_info(void* ctx, uint64_t display_id, display_
 
     info->edid_present = true;
     info->panel.edid.data = display->edid_buf;
-    info->panel.edid.length = EDID_BUF_SIZE;
+    info->panel.edid.length = display->edid_length;
     info->pixel_formats = &_gsupported_pixel_formats;
     info->pixel_format_count = sizeof(_gsupported_pixel_formats) / sizeof(zx_pixel_format_t);
 

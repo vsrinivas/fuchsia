@@ -77,6 +77,7 @@ bool edid_has_extension(const uint8_t* edid_buf);
 zx_status_t edid_get_num_dtd(const uint8_t* edid_buf, uint8_t* num_dtd);
 zx_status_t edid_parse_std_display_timing(const uint8_t* edid_buf, detailed_timing_t* raw_dtd,
                                         disp_timing_t* disp_timing);
-zx_status_t edid_parse_display_timing(const uint8_t* edid_buf, detailed_timing_t* raw_dtd,
-                                            disp_timing_t* std_disp_timing,
-                                            disp_timing_t* pref_disp_timing);
+zx_status_t edid_parse_display_timing(const uint8_t* edid_buf, uint16_t edid_length,
+                                      detailed_timing_t* raw_dtd,
+                                      disp_timing_t* std_disp_timing,
+                                      disp_timing_t* pref_disp_timing);

@@ -111,9 +111,10 @@ static void populate_timings(detailed_timing_t* raw_dtd, disp_timing_t* disp_tim
 /* This function reads the detailed timing found in block0 and block1 (referred to standard
  * and preferred
  */
-zx_status_t edid_parse_display_timing(const uint8_t* edid_buf, detailed_timing_t* raw_dtd,
-                                            disp_timing_t* std_disp_timing,
-                                            disp_timing_t* pref_disp_timing)
+zx_status_t edid_parse_display_timing(const uint8_t* edid_buf, uint16_t edid_length,
+                                      detailed_timing_t* raw_dtd,
+                                      disp_timing_t* std_disp_timing,
+                                      disp_timing_t* pref_disp_timing)
 {
     const uint8_t* start_dtd;
     const uint8_t* start_ext;
@@ -131,24 +132,12 @@ zx_status_t edid_parse_display_timing(const uint8_t* edid_buf, detailed_timing_t
     memcpy(s_r_dtd, start_dtd, 18);
     populate_timings(raw_dtd, std_disp_timing);
 
-    if (!edid_has_extension(edid_buf)) {
-        DISP_INFO("extension flag not found!\n");
-        // we should exit here but there are cases where there were more blocks eventhough flag was
-        // not set. So we'll read it anyways
-        // return ZX_OK;
+    if (edid_length == 128) {
+        return ZX_OK;
     }
 
     // It has extension. Read from start of DTD until you hit 00 00
     start_ext = &edid_buf[128];
-
-    if (start_ext[0] != 0x2 ) {
-        if(!edid_has_extension(edid_buf)) {
-            // No extension and no valid tag. Not worth reading on.
-            return ZX_OK;
-        }
-        DISP_ERROR("%s: Unknown tag! %d\n", __FUNCTION__, start_ext[0]);
-        return ZX_ERR_WRONG_TYPE;
-    }
 
     if (start_ext[2] == 0) {
         DISP_ERROR("%s: Invalid DTD pointer! 0x%x\n", __FUNCTION__, start_ext[2]);
@@ -410,8 +399,18 @@ zx_status_t get_preferred_res(vim2_display_t* display, uint16_t edid_buf_size)
         }
     }
 
-    if ( (status = edid_parse_display_timing(display->edid_buf, &display->std_raw_dtd,
-        &display->std_disp_timing, &display->pref_disp_timing)) != ZX_OK) {
+    display->edid_length = 128;
+    if (edid_has_extension(display->edid_buf)) {
+        if (display->edid_buf[128] == 0x02) {
+            display->edid_length = 256;
+        } else {
+            DISP_ERROR("%s: Unknown tag! %d\n", __FUNCTION__, display->edid_buf[128]);
+        }
+    }
+
+    if ((status = edid_parse_display_timing(display->edid_buf, display->edid_length,
+            &display->std_raw_dtd, &display->std_disp_timing,
+            &display->pref_disp_timing)) != ZX_OK) {
             DISP_ERROR("Something went wrong in EDID Parsing (%d)\n", status);
             return status;
     }
@@ -431,7 +430,7 @@ zx_status_t get_preferred_res(vim2_display_t* display, uint16_t edid_buf_size)
         display->output_color_format = HDMI_COLOR_FORMAT_444;
     }
 
-    dump_raw_edid(display->edid_buf, edid_buf_size);
+    dump_raw_edid(display->edid_buf, display->edid_length);
 
     return ZX_OK;
 
