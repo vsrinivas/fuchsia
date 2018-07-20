@@ -602,10 +602,6 @@ zx_status_t Controller::AddDisplay(fbl::unique_ptr<DisplayDevice>&& display) {
     if (ac.check()) {
         display_devices_.push_back(fbl::move(display), &ac);
         assert(ac.check());
-
-        fbl::unique_ptr<DisplayDevice>& new_device = display_devices_[display_devices_.size() - 1];
-        LOG_INFO("Display %ld connected (%d x %d, fmt=%08x)\n", new_device->id(),
-                 new_device->width(), new_device->height(), new_device->format());
     } else {
         LOG_WARN("Failed to add display device\n");
         return ZX_ERR_NO_MEMORY;

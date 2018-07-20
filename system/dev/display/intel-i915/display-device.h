@@ -54,10 +54,6 @@ public:
     Controller* controller() { return controller_; }
     const edid::Edid& edid() { return edid_; }
 
-    uint32_t width() const { return info_.v_addressable; }
-    uint32_t height() const { return info_.h_addressable; }
-    uint32_t format() const { return ZX_PIXEL_FORMAT_ARGB_8888; }
-
     virtual bool HasBacklight() { return false; }
     virtual void SetBacklightState(bool power, uint8_t brightness) {}
     virtual void GetBacklightState(bool* power, uint8_t* brightness) {}
