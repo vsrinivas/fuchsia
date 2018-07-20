@@ -3,20 +3,21 @@
 # found in the LICENSE file.
 
 import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
 import("//build/host.gni")
+
+go_library("fidlmerge_lib") {
+  name = "fidlmerge"
+
+  deps = [
+    "//garnet/go/src/fidl:fidl_lib"
+  ]
+}
 
 go_binary("fidlmerge") {
   gopackage = "fidlmerge"
 
-  go_dependencies = [
-    {
-      package = "fidlmerge"
-    },
-    {
-      package = "fidl"
-      source = "//garnet/go/src/fidl"
-    },
-  ]
+  extra_dependencies = [ ":fidlmerge_lib" ]
 }
 
 install_host_tools("host") {

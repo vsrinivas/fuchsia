@@ -118,8 +118,8 @@
              gerrithost="https://fuchsia-review.googlesource.com"
              revision="276d10cc9a0f0a1701ecd59286ba6766d29d3d24"
              path="third_party/go"/>
-    <project name="go_x_crypto"
-             path="third_party/golang/crypto"
+    <project name="third_party/golibs/golang.org/x/crypto"
+             path="third_party/golibs/golang.org/x/crypto"
              remote="https://fuchsia.googlesource.com/third_party/golang/crypto"
              gerrithost="https://fuchsia-review.googlesource.com"
              revision="c78caca803c95773f48a844d3dcab04b9bc4d6dd"/>
@@ -225,7 +225,7 @@
              revision="5544d67ab99a7e14c98142ed4dc50ecff7fb37bc"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/netstack"
-             path="third_party/netstack"
+             path="third_party/golibs/github.com/google/netstack"
              remote="https://fuchsia.googlesource.com/third_party/netstack"
              revision="119be4161d370f95f45cd3908d79bb81b5ae13f9"
              gerrithost="https://fuchsia-review.googlesource.com"/>
@@ -346,7 +346,6 @@
              gerrithost="https://fuchsia-review.googlesource.com"
              revision="5a6d2ed866da7e104c6e79fc2f2a9d5e0738cb98"/>
 
-    <!-- TODO(INTK-60) should supersede the need for this, as it will be delivered by cipd instead -->
     <project name="third_party/vboot_reference"
              path="third_party/vboot_reference"
              remote="https://fuchsia.googlesource.com/third_party/vboot_reference"
@@ -356,14 +355,6 @@
     <!-- TODO(abarth): These projects have the wrong names. The names should
          match the path under fuchsia.googlesource.com -->
 
-    <project name="glog"
-             path="garnet/go/src/thinfs/vendor/github.com/golang/glog"
-             remote="https://fuchsia.googlesource.com/third_party/golang/glog"
-             revision="23def4e6c14b4da8ac2ed8007337bc5eb5007998"/>
-    <project name="errors"
-             path="garnet/go/src/thinfs/vendor/github.com/pkg/errors"
-             remote="https://fuchsia.googlesource.com/third_party/pkg/errors"
-             revision="839d9e913e063e28dfd0e6c7b7512793e0a48be9"/>
     <project name="goleveldb"
              path="third_party/golibs/github.com/syndtr/goleveldb"
              remote="https://fuchsia.googlesource.com/third_party/goleveldb"

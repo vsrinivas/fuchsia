@@ -8,18 +8,8 @@ import("//build/go/toolchain.gni")
 go_binary("netstack_service_test") {
   gopackage = "netstack/netstack_service_test"
 
-  go_dependencies = [
-    {
-      package = "netstack"
-      source = "//garnet/go/src/netstack"
-    },
-    {
-      package = "github.com/google/netstack"
-      source = "//third_party/netstack"
-    },
-  ]
-
   extra_dependencies = [
+    "//garnet/go/src/netstack:netstack_lib",
     "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
     "//garnet/public/lib/component/go/src/app",

@@ -3,22 +3,23 @@
 # found in the LICENSE file.
 
 import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
 import("//build/host.gni")
 import("//build/package.gni")
 
+go_library("lib") {
+  name = "tally"
+
+  deps = [
+    "//garnet/public/go/third_party:github.com/dustin/go-humanize"
+  ]
+}
+
 go_binary("bin") {
   output_name = "traceutil-generate-tally"
-
   gopackage = "tally"
-  go_dependencies = [
-    {
-      package = "tally"
-    },
-    {
-      package = "github.com/dustin/humanize"
-      source = "//third_party/golibs/github.com/dustin/go-humanize"
-    },
-  ]
+
+  extra_dependencies = [":lib"]
 }
 
 install_host_tools("tally") {

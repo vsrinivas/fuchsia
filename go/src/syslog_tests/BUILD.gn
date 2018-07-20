@@ -2,17 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/package.gni")
 
+go_library("syslog_tests_lib") {
+  name = "syslog_tests"
+  deps = [
+    "//garnet/public/lib/syslog/go/src/syslog",
+  ]
+}
+
 go_test("syslog_go_tests") {
   gopackage = "syslog_tests"
-  go_dependencies = [
-    {
-      package = "syslog_tests"
-    },
-  ]
-  extra_dependencies = [ "//garnet/public/lib/syslog/go/src/syslog" ]
+  extra_dependencies = [":syslog_tests_lib"]
 }
 
 package("syslog_gotests") {

@@ -3,26 +3,24 @@
 # found in the LICENSE file.
 
 import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
 import("//build/go/toolchain.gni")
 
 go_binary("netfilter") {
   gopackage = "netstack/filter/netfilter"
 
-  go_dependencies = [
-    {
-      package = "netstack"
-      source = "//garnet/go/src/netstack"
-    },
-    {
-      package = "github.com/google/netstack"
-      source = "//third_party/netstack"
-    },
-  ]
+  extra_dependencies = [ ":netfilter_lib" ]
+}
 
-  extra_dependencies = [
+go_library("netfilter_lib") {
+  name = "netfilter"
+
+  deps = [
+    "//garnet/go/src/netstack:netstack_lib",
     "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
     "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/fidl/go/src/fidl/bindings",
   ]
+
 }

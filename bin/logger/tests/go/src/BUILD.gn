@@ -3,18 +3,20 @@
 # found in the LICENSE file.
 
 import("//build/go/go_test.gni")
+import("//build/go/go_library.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
 
-go_test("logger_integration_go_tests") {
-  gopackage = "logger_integration_tests"
-  go_dependencies = [
-    {
-      package = "logger_integration_tests"
-    },
-  ]
-  extra_dependencies = [
+go_library("logger_integration_go_tests_lib") {
+  name = "logger_integration_tests"
+
+  deps = [
     "//garnet/public/lib/syslog/go/src/syslog",
     "//garnet/public/lib/component/go/src/app",
   ]
+}
+
+go_test("logger_integration_go_tests") {
+  gopackage = "logger_integration_tests"
+  extra_dependencies = [ ":logger_integration_go_tests_lib" ]
 }

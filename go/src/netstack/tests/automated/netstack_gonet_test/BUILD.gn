@@ -7,8 +7,7 @@ import("//build/package.gni")
 
 go_test("netstack_gonet_test") {
   gopackage = "netstack/tests/automated/netstack_gonet_test"
-  go_dependencies = [ {
-        package = "netstack"
-        source = "//garnet/go/src/netstack"
-      } ]
+  extra_dependencies = [
+    "//garnet/go/src/netstack:netstack_lib",
+  ]
 }

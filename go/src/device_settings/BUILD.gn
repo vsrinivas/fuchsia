@@ -3,18 +3,19 @@
 # found in the LICENSE file.
 
 import("//build/go/go_test.gni")
+import("//build/go/go_library.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
 
+go_library("device_settings") {
+  name = "device_settings"
+}
+
 go_test("device_settings_integration_test") {
   gopackage = "device_settings"
-  go_dependencies = [
-    {
-      package = "device_settings"
-    },
-  ]
 
   extra_dependencies = [
+    ":device_settings",
     "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/fidl/fuchsia.devicesettings($go_toolchain)",
     "//garnet/public/lib/component/go/src/app",

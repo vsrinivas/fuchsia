@@ -3,16 +3,17 @@
 # found in the LICENSE file.
 
 import("//build/go/go_test.gni")
+import("//build/go/go_library.gni")
 import("//build/package.gni")
+
+go_library("far") {
+  name = "fuchsia.googlesource.com/far"
+}
 
 go_test("go_far_test") {
   gopackage = "fuchsia.googlesource.com/far"
 
-  go_dependencies = [
-    {
-      package = "fuchsia.googlesource.com/far"
-    },
-  ]
+  extra_dependencies = [ ":far" ]
 }
 
 package("go_far_tests") {

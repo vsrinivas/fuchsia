@@ -15,7 +15,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/dustin/humanize"
+	humanize "github.com/dustin/go-humanize"
 )
 
 type EventArgs struct {
@@ -77,7 +77,7 @@ func commaFormat(n uint64) string {
 
 var (
 	outputFile string
-	title string
+	title      string
 )
 
 func init() {
@@ -168,7 +168,7 @@ func main() {
 	for k := range perCpuRecords {
 		cpus = append(cpus, k)
 	}
-	sort.Slice(cpus, func (i, j int) bool { return cpus[i] < cpus[j] })
+	sort.Slice(cpus, func(i, j int) bool { return cpus[i] < cpus[j] })
 	for _, cpu := range cpus {
 		if cpu == 0 {
 			fmt.Fprintf(out, "System-wide\n")

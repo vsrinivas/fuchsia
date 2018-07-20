@@ -8,22 +8,9 @@ import("//build/go/toolchain.gni")
 go_binary("ifconfig") {
   gopackage = "netstack/ifconfig"
 
-  go_dependencies = [
-    {
-      package = "netstack"
-      source = "//garnet/go/src/netstack"
-    },
-    {
-      package = "github.com/google/netstack"
-      source = "//third_party/netstack"
-    },
-    {
-      package = "wlan/wlan"
-      source = "wlan"
-    },
-  ]
-
   extra_dependencies = [
+    "//garnet/go/src/netstack:netstack_lib",
+    "//garnet/go/src/wlan:wlan_lib",
     "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
     "//garnet/public/fidl/fuchsia.wlan.service($go_toolchain)",

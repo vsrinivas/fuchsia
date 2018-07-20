@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
@@ -85,23 +86,10 @@ package("netstack_gotests") {
   ]
 }
 
-go_binary("netstack_bin") {
-  output_name = "netstack"
+go_library("netstack_lib") {
+  name = "netstack"
 
-  gopackage = "netstack"
-
-  go_dependencies = [
-    {
-      package = "netstack"
-      source = "//garnet/go/src/netstack"
-    },
-    {
-      package = "github.com/google/netstack"
-      source = "//third_party/netstack"
-    },
-  ]
-
-  extra_dependencies = [
+  deps = [
     "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
     "//garnet/public/fidl/fuchsia.devicesettings($go_toolchain)",
@@ -109,53 +97,31 @@ go_binary("netstack_bin") {
     "//garnet/public/lib/fidl/go/src/fidl/bindings",
     "//zircon/public/fidl/fuchsia-net($go_toolchain)",
     "//zircon/public/fidl/fuchsia-net-stack($go_toolchain)",
+    "//garnet/public/go/third_party:github.com/google/netstack",
+  ]
+}
+
+go_binary("netstack_bin") {
+  output_name = "netstack"
+
+  gopackage = "netstack"
+
+  extra_dependencies = [
+    ":netstack_lib"
   ]
 }
 
 go_test("netstack_fidlconv_test") {
   gopackage = "netstack/fidlconv"
-  go_dependencies = [
-    {
-      package = "fidl/bindings"
-      source = "//garnet/public/lib/fidl/go/src/fidl/bindings"
-    },
-    {
-      package = "netstack"
-      source = "//garnet/go/src/netstack"
-    },
-    {
-      package = "github.com/google/netstack"
-      source = "//third_party/netstack"
-    },
-  ]
-  extra_dependencies =
-      [ "//zircon/public/fidl/fuchsia-net-stack($go_toolchain)" ]
+  extra_dependencies = [ ":netstack_lib" ]
 }
 
 go_test("netstack_netiface_test") {
   gopackage = "netstack/netiface"
-  go_dependencies = [
-    {
-      package = "netstack"
-      source = "//garnet/go/src/netstack"
-    },
-    {
-      package = "github.com/google/netstack"
-      source = "//third_party/netstack"
-    },
-  ]
+  extra_dependencies = [":netstack_lib"]
 }
 
 go_test("netstack_filter_test") {
   gopackage = "netstack/filter"
-  go_dependencies = [
-    {
-      package = "netstack"
-      source = "//garnet/go/src/netstack"
-    },
-    {
-      package = "github.com/google/netstack"
-      source = "//third_party/netstack"
-    },
-  ]
+  extra_dependencies = [":netstack_lib"]
 }

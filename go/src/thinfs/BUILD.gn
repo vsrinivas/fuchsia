@@ -3,15 +3,22 @@
 # found in the LICENSE file.
 
 import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
 import("//build/package.gni")
+
+go_library("thinfs_lib") {
+  name = "thinfs"
+
+  deps = [
+    "//garnet/public/go/third_party:github.com/golang/glog",
+    "//garnet/public/go/third_party:github.com/pkg/errors",
+  ]
+}
 
 go_binary("thinfs_bin") {
   output_name = "thinfs"
   gopackage = "thinfs/cmd/thinfs"
-  go_dependencies = [ {
-        package = "thinfs"
-        source = "//garnet/go/src/thinfs"
-      } ]
+  extra_dependencies = [ ":thinfs_lib" ]
 }
 
 package("thinfs") {

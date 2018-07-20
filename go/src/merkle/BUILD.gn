@@ -3,16 +3,17 @@
 # found in the LICENSE file.
 
 import("//build/go/go_test.gni")
+import("//build/go/go_library.gni")
 import("//build/package.gni")
+
+go_library("merkle") {
+  name = "fuchsia.googlesource.com/merkle"
+}
 
 go_test("go_merkle_test") {
   gopackage = "fuchsia.googlesource.com/merkle"
 
-  go_dependencies = [
-    {
-      package = "fuchsia.googlesource.com/merkle"
-    },
-  ]
+  extra_dependencies = [ ":merkle" ]
 }
 
 package("go_merkle_tests") {

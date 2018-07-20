@@ -3,160 +3,91 @@
 # found in the LICENSE file.
 
 import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
 
-# These go dependencies are common to wlanstack and wlanstack_test
-wlan_go_dependencies = [
-  {
-    package = "wlanstack"
-    source = "wlanstack"
-  },
-  {
-    package = "wlan/wlan"
-    source = "wlan"
-  },
-  {
-    package = "wlan/keywrap"
-    source = "keywrap"
-  },
-  {
-    package = "wlan/eapol"
-    source = "eapol"
-  },
-  {
-    package = "netstack/link/eth"
-    source = "//garnet/go/src/netstack/link/eth"
-  },
-  {
-    package = "github.com/google/netstack"
-    source = "//third_party/netstack"
-  },
-  {
-    package = "netstack/watcher"
-    source = "//garnet/go/src/netstack/watcher"
-  },
-  {
-    package = "netstack/trace"
-    source = "//garnet/go/src/netstack/trace"
-  },
-  {
-    source = "//third_party/golang/crypto"
-    package = "golang.org/x/crypto"
-  },
-]
 
-wlan_gn_deps = [
-  "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
-  "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
-  "//garnet/public/fidl/fuchsia.wlan.service($go_toolchain)",
-  "//garnet/public/lib/component/go/src/app",
-  "//garnet/public/lib/fidl/go/src/fidl/bindings",
-]
+go_library("wlan_lib") {
+  name = "wlan"
+  deps = [
+    "//garnet/public/fidl/fuchsia.wlan.mlme($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.wlan.service($go_toolchain)",
+    "//garnet/public/go/third_party:golang.org/x/crypto",
+    "//garnet/public/lib/fidl/go/src/fidl/bindings",
+  ]
+}
+
+go_library("wlanstack_lib") {
+  name = "wlanstack"
+  source_dir = "wlanstack"
+  deps = [
+    # TODO(raggi): the source imports fidl/fuchsia/wlan/stats, which is not here
+    "//garnet/go/src/netstack:netstack_lib",
+    "//garnet/public/fidl/fuchsia.wlan.service($go_toolchain)",
+    "//garnet/public/lib/component/go/src/app",
+    "//garnet/public/lib/fidl/go/src/fidl/bindings",
+    ":wlan_lib",
+  ]
+}
+
+go_library("wlantool_lib") {
+  name = "wlantool"
+  source_dir = "wlantool"
+
+  deps = [
+    "//garnet/public/lib/component/go/src/app",
+    ":wlan_lib",
+  ]
+}
 
 go_test("keywrap_test_bin") {
   output_name = "keywrap_test"
   gopackage = "wlan/keywrap"
 
-  # TODO(hahnr): This program has a smaller dependency set in practice, its go_dependencies list
-  # should be updated to match the code.
-  go_dependencies = wlan_go_dependencies
-
-  extra_dependencies = wlan_gn_deps
+  extra_dependencies = [ ":wlan_lib" ]
 }
 
 go_test("elements_test_bin") {
   output_name = "elements_test"
   gopackage = "wlan/wlan/elements"
-  go_dependencies = [
-    {
-      package = "wlan/wlan/elements"
-      source = "wlan/elements"
-    },
-  ]
+  extra_dependencies = [ ":wlan_lib" ]
 }
 
 go_test("eapol_handshake_test_bin") {
   output_name = "eapol_handshake_test"
   gopackage = "wlan/eapol/handshake"
-  go_dependencies = [
-    {
-      package = "wlan/wlan"
-      source = "wlan"
-    },
-    {
-      package = "wlan/eapol"
-      source = "eapol"
-    },
-    {
-      package = "wlan/keywrap"
-      source = "keywrap"
-    },
-    {
-      source = "//third_party/golang/crypto"
-      package = "golang.org/x/crypto"
-    },
-  ]
 
-  extra_dependencies = wlan_gn_deps
-  extra_dependencies += [ "//garnet/public/fidl/fuchsia.wlan.mlme($go_toolchain)" ]
+  extra_dependencies = [ ":wlan_lib" ]
 }
 
 go_test("eapol_crypto_test_bin") {
   output_name = "eapol_crypto_test"
   gopackage = "wlan/eapol/crypto"
-  go_dependencies = [
-    {
-      package = "wlan/eapol/crypto"
-      source = "eapol/crypto"
-    },
-    {
-      source = "//third_party/golang/crypto"
-      package = "golang.org/x/crypto"
-    },
-  ]
+
+  extra_dependencies = [ ":wlan_lib" ]
 }
 
 go_binary("wlanstack_bin") {
   output_name = "wlanstack"
   gopackage = "wlanstack"
-  go_dependencies = wlan_go_dependencies
-  extra_dependencies = wlan_gn_deps
-  extra_dependencies += [
-    "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
-    "//garnet/public/fidl/fuchsia.wlan.service($go_toolchain)",
-    "//garnet/public/fidl/fuchsia.wlan.mlme($go_toolchain)",
-  ]
+
+  extra_dependencies = [ ":wlanstack_lib" ]
 }
 
 go_binary("wlantool_bin") {
   output_name = "wlan"
   gopackage = "wlantool"
-  go_dependencies = [
-    {
-      package = "wlantool"
-      source = "wlantool"
-    },
-  ]
-  extra_dependencies = [
-    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
-    "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
-    "//garnet/public/fidl/fuchsia.wlan.service($go_toolchain)",
-    "//garnet/public/lib/component/go/src/app",
-    "//garnet/public/lib/fidl/go/src/fidl/bindings",
-  ]
+
+  extra_dependencies = [ ":wlantool_lib" ]
 }
 
 go_test("wlanstack_test_bin") {
   output_name = "wlanstack_test"
   gopackage = "wlan/wlan"
-  go_dependencies = wlan_go_dependencies
-  extra_dependencies = wlan_gn_deps
-  extra_dependencies += [
-    "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
-    "//garnet/public/fidl/fuchsia.wlan.mlme($go_toolchain)",
-  ]
+
+  extra_dependencies = [ ":wlanstack_lib" ]
 }
 
 package("wlanstack") {

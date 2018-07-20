@@ -3,43 +3,27 @@
 # found in the LICENSE file.
 
 import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/host.gni")
 import("//build/package.gni")
+
+go_library("pm_lib") {
+  name = "fuchsia.googlesource.com/pm"
+
+  deps = [
+    "//garnet/go/src/far",
+    "//garnet/go/src/merkle",
+    "//garnet/public/go/third_party:github.com/flynn/go-tuf",
+    "//garnet/public/go/third_party:golang.org/x/crypto",
+  ]
+}
 
 go_binary("pm_bin") {
   output_name = "pm"
   gopackage = "fuchsia.googlesource.com/pm/cmd/pm"
   sdk_category = "partner"
-  go_dependencies = [
-    {
-      package = "fuchsia.googlesource.com/pm"
-    },
-    {
-      package = "fuchsia.googlesource.com/far"
-      source = "//garnet/go/src/far"
-    },
-    {
-      package = "fuchsia.googlesource.com/merkle"
-      source = "//garnet/go/src/merkle"
-    },
-    {
-      package = "golang.org/x/crypto"
-      source = "//third_party/golang/crypto"
-    },
-    {
-      package = "github.com/flynn/go-tuf"
-      source = "//third_party/golibs/github.com/flynn/go-tuf"
-    },
-    {
-      package = "github.com/syndtr/goleveldb/leveldb"
-      source = "//third_party/golibs/github.com/syndtr/goleveldb/leveldb"
-    },
-    {
-      package = "github.com/tent/canonical-json-go"
-      source = "//third_party/golibs/github.com/tent/canonical-json-go"
-    },
-  ]
+  extra_dependencies = [":pm_lib"]
 }
 
 package("pm") {

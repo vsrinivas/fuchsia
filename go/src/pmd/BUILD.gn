@@ -3,53 +3,39 @@
 # found in the LICENSE file.
 
 import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/host.gni")
 import("//build/package.gni")
 
-common_dependencies = [
-  {
-    package = "fuchsia.googlesource.com/pmd"
-  },
-  {
-    package = "fuchsia.googlesource.com/pm"
-    source = "//garnet/go/src/pm"
-  },
-  {
-    package = "fuchsia.googlesource.com/far"
-    source = "//garnet/go/src/far"
-  },
-  {
-    package = "fuchsia.googlesource.com/merkle"
-    source = "//garnet/go/src/merkle"
-  },
-  {
-    package = "thinfs"
-    source = "//garnet/go/src/thinfs"
-  },
-  {
-    package = "golang.org/x/crypto"
-    source = "//third_party/golang/crypto"
-  },
-]
+go_library("pmd") {
+  name = "fuchsia.googlesource.com/pmd"
 
-go_binary("pkgsvr_bin") {
-  output_name = "pkgsvr"
-  gopackage = "fuchsia.googlesource.com/pmd/cmd/pkgsvr"
-  extra_dependencies = [
+  deps = [
+    "//garnet/go/src/far",
+    "//garnet/go/src/merkle",
+    "//garnet/go/src/pm:pm_lib",
+    "//garnet/go/src/thinfs:thinfs_lib",
     "//garnet/public/fidl/fuchsia.amber($go_toolchain)",
     "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/fidl/go/src/fidl/bindings",
   ]
-  go_dependencies = common_dependencies
+}
+
+go_binary("pkgsvr_bin") {
+  output_name = "pkgsvr"
+  gopackage = "fuchsia.googlesource.com/pmd/cmd/pkgsvr"
+  extra_dependencies = [
+    ":pmd",
+  ]
 }
 
 go_binary("installblob_bin") {
   output_name = "installblob"
   gopackage = "fuchsia.googlesource.com/pmd/cmd/installblob"
-  go_dependencies = common_dependencies
+  extra_dependencies = [ ":pmd" ]
 }
 
 test_packages = [
@@ -59,16 +45,10 @@ test_packages = [
 foreach(testpkg, test_packages) {
   go_test("pmd_${testpkg}_test") {
     gopackage = "fuchsia.googlesource.com/pmd/${testpkg}"
-    extra_dependencies = [
-      "//garnet/public/fidl/fuchsia.amber($go_toolchain)",
-      "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
-      "//garnet/public/lib/component/go/src/app",
-      "//garnet/public/lib/fidl/go/src/fidl/bindings",
-    ]
+    extra_dependencies = [ ":pmd", ]
     deps = [
       "//zircon/public/lib/fs-management",
     ]
-    go_dependencies = common_dependencies
   }
 }
 

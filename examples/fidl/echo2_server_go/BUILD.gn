@@ -3,34 +3,23 @@
 # found in the LICENSE file.
 
 import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
 
 go_binary("echo2_server_go_bin") {
   output_name = "echo2_server_go"
   gopackage = "echo2_server_go"
-  deps = [
-    "//garnet/examples/fidl/services:echo2",
-  ]
-  go_dependencies = [
-    {
-      package = "echo2_server_go"
-    },
-    {
-      package = "fidl/bindings"
-      source = "//garnet/public/lib/fidl/go/src/fidl/bindings"
-    },
-    {
-      package = "app"
-      source = "//garnet/public/lib/component/go/src/app"
-    },
-    {
-      package = "svc"
-      source = "//garnet/public/lib/svc/go/src/svc"
-    },
-  ]
+  extra_dependencies = [ ":echo2_server_go_lib" ]
+}
 
-  extra_dependencies = [
+go_library("echo2_server_go_lib") {
+  name = "echo2_server_go"
+  deps = [
+    "//garnet/examples/fidl/services:echo2($go_toolchain)",
+    "//garnet/public/lib/fidl/go/src/fidl/bindings",
+    "//garnet/public/lib/component/go/src/app",
+    "//garnet/public/lib/svc/go/src/svc",
     "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/examples/fidl/services:echo2($go_toolchain)",
   ]

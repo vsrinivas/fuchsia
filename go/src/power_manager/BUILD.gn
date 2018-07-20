@@ -2,24 +2,26 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
 
-go_test("power_manager_test") {
-  gopackage = "power_manager"
-  go_dependencies = [
-    {
-      package = "power_manager"
-    },
-  ]
-  extra_dependencies = [
+go_library("power_manager_lib") {
+  name = "power_manager"
+
+  deps = [
     "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/fidl/fuchsia.power($go_toolchain)",
     "//garnet/public/lib/syslog/go/src/syslog",
     "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/fidl/go/src/fidl/bindings",
   ]
+}
+
+go_test("power_manager_test") {
+  gopackage = "power_manager"
+  extra_dependencies = [ ":power_manager_lib" ]
 }
 
 package("power_manager_gotests") {

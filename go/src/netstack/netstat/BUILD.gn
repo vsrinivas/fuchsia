@@ -9,40 +9,18 @@ import("//build/go/toolchain.gni")
 go_binary("netstat") {
   gopackage = "netstack/netstat"
 
-  go_dependencies = [
-    {
-      package = "netstack"
-      source = "//garnet/go/src/netstack"
-    },
-    {
-      package = "github.com/google/netstack"
-      source = "//third_party/netstack"
-    },
-  ]
-
   extra_dependencies = [
-    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
+    "//garnet/go/src/netstack:netstack_lib",
     "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/fidl/go/src/fidl/bindings",
-    "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
   ]
 }
 
 go_test("netstack_netstat_test") {
   gopackage = "netstack/netstat"
-  go_dependencies = [
-    {
-      package = "netstack"
-      source = "//garnet/go/src/netstack"
-    },
-    {
-      package = "github.com/google/netstack"
-      source = "//third_party/netstack"
-    },
-  ]
+
   extra_dependencies = [
-    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
-    "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
+    "//garnet/go/src/netstack:netstack_lib",
     "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/fidl/go/src/fidl/bindings",
   ]

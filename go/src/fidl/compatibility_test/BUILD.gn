@@ -1,16 +1,21 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/package.gni")
 
 go_test("compatibility_test_bin") {
   gopackage = "fidl/compatibility_test"
 
-  go_dependencies = [
-    {
-      package = "fidl/compatibility_test"
-      source = "//garnet/go/src/fidl/compatibility_test"
-    }
-  ]
   output_name = "fidl_compatibility_test"
+
+  extra_dependencies = [ "compatibility_test_lib" ]
+}
+
+go_library("compatibility_test_lib") {
+  name = "fidl/compatibility_test"
 }
 
 package("compatibility_test") {

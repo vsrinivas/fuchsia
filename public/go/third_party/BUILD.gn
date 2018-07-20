@@ -1,0 +1,72 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+
+# TODO(raggi): move this into golibs
+
+# TODO(raggi): move this into golibs
+go_library("github.com/google/syzkaller") {
+  name = "github.com/google/syzkaller"
+  source_dir = "//third_party/syzkaller"
+}
+
+template("golib") {
+  go_library(target_name) {
+    name = target_name
+    source_dir = "//third_party/golibs/$name"
+    forward_variables_from(invoker, ["deps"])
+  }
+}
+
+golib("golang.org/x/crypto") {}
+golib("golang.org/x/net") {}
+golib("golang.org/x/oauth2") {
+  deps = [
+    ":golang.org/x/net",
+  ]
+}
+
+golib("github.com/dustin/go-humanize") {}
+golib("github.com/flynn/go-docopt") {}
+golib("github.com/flynn/go-tuf") {
+  deps = [
+    ":github.com/dustin/go-humanize",
+    ":github.com/flynn/go-docopt",
+    ":github.com/syndtr/goleveldb",
+    ":github.com/tent/canonical-json-go",
+    ":golang.org/x/crypto"
+  ]
+}
+golib("github.com/go-yaml/yaml") {}
+golib("github.com/golang/glog") {}
+golib("github.com/golang/protobuf") {
+  deps = [
+    ":golang.org/x/net"
+  ]
+}
+golib("github.com/golang/snappy") {}
+golib("github.com/google/go-cmp") {}
+golib("github.com/google/netstack") {}
+golib("github.com/google/subcommands") {}
+golib("github.com/kr/fs") {}
+golib("github.com/pkg/errors") {}
+golib("github.com/pkg/sftp") {
+  deps = [
+    ":github.com/kr/fs",
+    ":github.com/pkg/errors",
+    ":golang.org/x/crypto",
+  ]
+}
+golib("github.com/rjw57/oauth2device") {
+  deps = [
+    ":golang.org/x/oauth2"
+  ]
+}
+golib("github.com/syndtr/goleveldb") {
+  deps = [
+    ":github.com/golang/snappy"
+  ]
+}
+golib("github.com/tent/canonical-json-go") {}

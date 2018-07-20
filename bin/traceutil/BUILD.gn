@@ -3,42 +3,25 @@
 # found in the LICENSE file.
 
 import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
 import("//build/host.gni")
 import("//build/package.gni")
 
+go_library("lib") {
+  name = "traceutil"
+
+  deps = [
+    "//garnet/public/go/third_party:github.com/golang/glog",
+    "//garnet/public/go/third_party:github.com/google/subcommands",
+    "//garnet/public/go/third_party:github.com/pkg/sftp",
+    "//garnet/public/go/third_party:golang.org/x/crypto",
+  ]
+}
+
 go_binary("bin") {
   output_name = "traceutil"
-
   gopackage = "traceutil"
-  go_dependencies = [
-    {
-      package = "traceutil"
-    },
-    {
-      package = "github.com/golang/glog"
-      source = "//third_party/golibs/github.com/golang/glog"
-    },
-    {
-      package = "github.com/google/subcommands"
-      source = "//third_party/golibs/github.com/google/subcommands"
-    },
-    {
-      package = "github.com/kr/fs"
-      source = "//third_party/golibs/github.com/kr/fs"
-    },
-    {
-      package = "github.com/pkg/errors"
-      source = "//third_party/golibs/github.com/pkg/errors"
-    },
-    {
-      package = "github.com/pkg/sftp"
-      source = "//third_party/golibs/github.com/pkg/sftp"
-    },
-    {
-      package = "golang.org/x/crypto"
-      source = "//third_party/golang/crypto"
-    },
-  ]
+  extra_dependencies = [":lib"]
 }
 
 install_host_tools("traceutil") {

@@ -3,18 +3,19 @@
 # found in the LICENSE file.
 
 import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
 import("//build/host.gni")
+
+go_library("fidl_lib") {
+  name = "fidl"
+}
 
 go_binary("fidlgen") {
   gopackage = "fidl/compiler/backend"
 
   sdk_category = "partner"
 
-  go_dependencies = [
-    {
-      package = "fidl"
-    },
-  ]
+  extra_dependencies = [ ":fidl_lib" ]
 }
 
 install_host_tools("fidl") {
