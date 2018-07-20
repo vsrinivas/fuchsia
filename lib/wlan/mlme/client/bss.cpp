@@ -243,14 +243,14 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
 wlan_mlme::VhtMcsNss VhtMcsNssToFidl(const VhtMcsNss& vmn) {
     wlan_mlme::VhtMcsNss fidl;
 
-    for (uint8_t i = 0; i < 8; i++) {
-        fidl.rx_max_mcs[i] = static_cast<wlan_mlme::VhtMcs>(vmn.get_rx_max_mcs_ss(i));
+    for (uint8_t ss_num = 1; ss_num <= 8; ss_num++) {
+        fidl.rx_max_mcs[ss_num - 1] = static_cast<wlan_mlme::VhtMcs>(vmn.get_rx_max_mcs_ss(ss_num));
     }
     fidl.rx_max_data_rate = vmn.rx_max_data_rate();
     fidl.max_nsts = vmn.max_nsts();
 
-    for (uint8_t i = 0; i < 8; i++) {
-        fidl.tx_max_mcs[i] = static_cast<wlan_mlme::VhtMcs>(vmn.get_tx_max_mcs_ss(i));
+    for (uint8_t ss_num = 1; ss_num <= 8; ss_num++) {
+        fidl.tx_max_mcs[ss_num - 1] = static_cast<wlan_mlme::VhtMcs>(vmn.get_tx_max_mcs_ss(ss_num));
     }
     fidl.tx_max_data_rate = vmn.tx_max_data_rate();
     fidl.ext_nss_bw = (vmn.ext_nss_bw() == 1);
