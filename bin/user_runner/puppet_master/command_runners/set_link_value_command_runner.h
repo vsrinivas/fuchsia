@@ -9,7 +9,6 @@
 #include <lib/async/cpp/operation.h>
 
 #include "peridot/bin/user_runner/puppet_master/command_runners/command_runner.h"
-#include "peridot/bin/user_runner/storage/story_storage.h"
 
 namespace modular {
 

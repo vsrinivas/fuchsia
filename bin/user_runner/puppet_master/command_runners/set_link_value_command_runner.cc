@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/user_runner/puppet_master/command_runners/set_link_value_command_runner.h"
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/fsl/vmo/strings.h>
+
+#include "peridot/bin/user_runner/puppet_master/command_runners/set_link_value_command_runner.h"
+#include "peridot/bin/user_runner/storage/story_storage.h"
 
 namespace modular {
 

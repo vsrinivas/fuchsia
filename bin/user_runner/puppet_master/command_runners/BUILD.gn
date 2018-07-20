@@ -111,6 +111,7 @@ source_set("remove_mod_command_runner") {
   deps = [
     ":command_runner",
     "//garnet/public/lib/fxl",
+    "//peridot/public/lib/async/cpp:operation",
   ]
 }
 
@@ -124,6 +125,7 @@ executable("remove_mod_command_runner_unittest") {
   deps = [
     ":remove_mod_command_runner",
     "//garnet/public/lib/gtest",
+    "//peridot/lib/testing:test_with_ledger",
     "//third_party/googletest:gtest_main",
   ]
 }
