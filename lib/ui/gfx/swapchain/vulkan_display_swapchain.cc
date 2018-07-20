@@ -22,7 +22,14 @@ namespace {
 
 #define VK_CHECK_RESULT(XXX) FXL_CHECK(XXX.result == vk::Result::eSuccess)
 
+#if SCENIC_IGNORE_VSYNC
+// The display will only release the currently-drawing frame on vsync, so
+// without at least 3 images this can only render at an even division of the
+// vsync rate.
+const uint32_t kDesiredSwapchainImageCount = 3;
+#else
 const uint32_t kDesiredSwapchainImageCount = 2;
+#endif
 
 }  // namespace
 

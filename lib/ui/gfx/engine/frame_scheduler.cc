@@ -130,7 +130,11 @@ FrameScheduler::ComputeTargetPresentationAndWakeupTimes(
     wakeup_time += vsync_interval;
   }
 
+#if SCENIC_IGNORE_VSYNC
+  return std::make_pair(now, now);
+#else
   return std::make_pair(target_presentation_time, wakeup_time);
+#endif
 }
 
 void FrameScheduler::ScheduleFrame() {

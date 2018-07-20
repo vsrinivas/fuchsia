@@ -11,6 +11,7 @@ declare_args() {
   } else {
     scenic_vulkan_swapchain = 0
   }
+  scenic_ignore_vsync = false
 }
 
 config("common_include_dirs") {
@@ -21,7 +22,10 @@ config("common_include_dirs") {
 }
 
 config("swapchain") {
-  defines = [ "SCENIC_VULKAN_SWAPCHAIN=$scenic_vulkan_swapchain" ]
+  defines = [
+    "SCENIC_VULKAN_SWAPCHAIN=$scenic_vulkan_swapchain",
+    "SCENIC_IGNORE_VSYNC=$scenic_ignore_vsync",
+  ]
 }
 
 source_set("gfx") {
@@ -163,14 +167,14 @@ source_set("gfx") {
 
   public_deps = [
     "//garnet/lib/ui/scenic",
+    "//garnet/public/fidl/fuchsia.math",
+    "//garnet/public/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/escher",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/geometry/cpp",
-    "//garnet/public/fidl/fuchsia.math",
-    "//garnet/public/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/vulkan",
     "//zircon/public/lib/fit",
   ]
