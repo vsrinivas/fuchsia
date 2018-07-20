@@ -22,7 +22,8 @@ class CppBuilder(Builder):
 
     def __init__(self, output, overlay):
         super(CppBuilder, self).__init__(
-            domains=['cpp', 'exe', 'fidl', 'image'])
+            domains=['cpp', 'exe', 'fidl', 'image'],
+            ignored_domains=['dart'])
         self.output = output
         self.is_overlay = overlay
 
