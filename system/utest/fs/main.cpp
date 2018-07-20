@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
 
     int i = 1;
     while (i < argc) {
-        if (!strcmp(argv[i], "-d") && (i + 1 < argc)) {
+        if (strcmp(argv[i], "-d") == 0 && (i + 1 < argc)) {
             fbl::unique_fd fd(open(argv[i + 1], O_RDWR));
             if (!fd) {
                 fprintf(stderr, "[fs] Could not open block device\n");
@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
             } else if (ioctl_device_get_topo_path(fd.get(), test_disk_path, PATH_MAX) < 0) {
                 fprintf(stderr, "[fs] Could not acquire topological path of block device\n");
                 return -1;
-            } else if (ioctl_block_get_info(fd.get(), &real_disk_info) < 0) {
+            } else if (ioctl_block_get_info(fd.get(), &test_disk_info) < 0) {
                 fprintf(stderr, "[fs] Could not read disk info\n");
                 return -1;
             }

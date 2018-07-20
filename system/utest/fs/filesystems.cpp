@@ -26,7 +26,7 @@ const char* kTmpfsPath = "/fs-test-tmp";
 const char* kMountPath = "/fs-test-tmp/mount";
 
 bool use_real_disk = false;
-block_info_t real_disk_info;
+block_info_t test_disk_info;
 char test_disk_path[PATH_MAX];
 fs_info_t* test_info;
 
@@ -74,6 +74,9 @@ void setup_fs_test(test_disk_t disk, fs_test_type_t test_class) {
             fprintf(stderr, "[FAILED]: Could not create ramdisk for test\n");
             exit(-1);
         }
+
+        test_disk_info.block_size = static_cast<uint32_t>(disk.block_size);
+        test_disk_info.block_count = disk.block_count;
     }
 
     if (test_class == FS_TEST_FVM) {

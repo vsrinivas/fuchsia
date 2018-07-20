@@ -67,22 +67,22 @@ bool test_use_all_inodes(void) {
     END_TEST;
 }
 
-constexpr size_t kBufSize = (1 << 20);
-constexpr size_t kFileBufCount = (1 << 5);
-constexpr size_t kFileCount = (1 << 4);
-constexpr size_t kTotalDataSize = kBufSize * kFileBufCount * kFileCount;
-
 bool test_use_all_data(void) {
     BEGIN_TEST;
+    constexpr size_t kBufSize = (1 << 20);
+    constexpr size_t kFileBufCount = 20;
     ASSERT_TRUE(test_info->supports_resize);
+
+    uint64_t disk_size = test_disk_info.block_count * test_disk_info.block_size;
+    size_t file_count = disk_size / kBufSize / kFileBufCount * 9 / 10;
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[kBufSize]);
     ASSERT_TRUE(ac.check());
     memset(buf.get(), 0, kBufSize);
 
-    for (size_t f = 0; f < kFileCount; f++) {
-        printf("Creating 32MB file #%lu\n", f);
+    for (size_t f = 0; f < file_count; f++) {
+        printf("Creating 20 MB file #%lu\n", f);
         char fname[128];
         snprintf(fname, sizeof(fname), "::%lu", f);
         int fd = open(fname, O_CREAT | O_RDWR | O_EXCL);
@@ -95,7 +95,7 @@ bool test_use_all_data(void) {
 
     ASSERT_TRUE(check_remount(), "Could not remount filesystem");
 
-    for (size_t f = 0; f < kFileCount; f++) {
+    for (size_t f = 0; f < file_count; f++) {
         char fname[128];
         snprintf(fname, sizeof(fname), "::%lu", f);
         ASSERT_EQ(unlink(fname), 0);
@@ -105,7 +105,7 @@ bool test_use_all_data(void) {
 }
 
 const test_disk_t disk = {
-    .block_count = (kTotalDataSize + (1 << 26)) / TEST_BLOCK_SIZE_DEFAULT,
+    .block_count = (1 << 26) / TEST_BLOCK_SIZE_DEFAULT,
     .block_size = TEST_BLOCK_SIZE_DEFAULT,
     .slice_size = (1LLU << 22),
 };

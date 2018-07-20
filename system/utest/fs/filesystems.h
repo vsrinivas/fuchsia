@@ -42,8 +42,9 @@ extern char test_disk_path[];
 
 // Identify if a real disk is being tested instead of a ramdisk.
 extern bool use_real_disk;
-// (Only valid if use_real_disk is true) The disk's cached info.
-extern block_info_t real_disk_info;
+
+// The disk's cached info.
+extern block_info_t test_disk_info;
 
 // A filter of the filesystems; indicates which one should be tested.
 extern const char* filesystem_name_filter;
@@ -84,7 +85,7 @@ inline bool can_execute_test(const fs_info_t* info, const test_disk_t* requested
                              fs_test_type_t t) {
 
     uint64_t requested_size = requested_disk->block_count * requested_disk->block_size;
-    uint64_t real_size = real_disk_info.block_count * real_disk_info.block_size;
+    uint64_t real_size = test_disk_info.block_count * test_disk_info.block_size;
 
     if (use_real_disk && (real_size < requested_size)) {
         printf("Disk too small (is %zu bytes, must be %zu bytes): \n",
