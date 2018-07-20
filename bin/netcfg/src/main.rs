@@ -65,28 +65,24 @@ fn main() -> Result<(), Error> {
     let device_settings_manager = app::client::connect_to_service::<DeviceSettingsManagerMarker>()
         .context("failed to connect to device settings manager")?;
 
-    let f1 = netstack.get_interfaces().into_stream().left_stream();
-    let f2 =
-        netstack
-            .take_event_stream()
-            .filter_map(|NetstackEvent::InterfacesChanged { interfaces: ifs }| future::ok(Some(ifs)))
-            .right_stream();
-
-    let fs = futures::stream::select_all(vec![f1, f2])
-        .filter_map(|ifs| future::ok(derive_device_name(ifs)))
-        .next()
-        .map_err(|(e, _)| e)
-        .and_then(|(opt, _)| {
-            match opt {
-                Some(name) => device_settings_manager.set_string(DEVICE_NAME_KEY, &name).left_future(),
-                None => future::ok(false).right_future()
-            }
-        });
-
-    let _ = match default_config.device_name {
-        Some(configured_name) => executor.run_singlethreaded(device_settings_manager.set_string(DEVICE_NAME_KEY, &configured_name)),
-        None => executor.run_singlethreaded(fs),
+    let f = match default_config.device_name {
+        Some(name) => device_settings_manager.set_string(DEVICE_NAME_KEY, &name).left_future(),
+        None =>
+            netstack
+                .take_event_stream()
+                .filter_map(|NetstackEvent::InterfacesChanged { interfaces: is }| future::ok(derive_device_name(is)))
+                .next()
+                .map_err(|(e, _)| e)
+                .and_then(|(opt, _)| {
+                    match opt {
+                        Some(name) => device_settings_manager.set_string(DEVICE_NAME_KEY, &name).left_future(),
+                        None => future::ok(false).right_future(),
+                    }
+                })
+                .right_future()
     };
+
+    let _ = executor.run_singlethreaded(f)?;
 
     Ok(())
 }

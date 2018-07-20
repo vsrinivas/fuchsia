@@ -29,11 +29,6 @@ FidlInterfaceMonitor::FidlInterfaceMonitor(
   });
   netstack_.events().InterfacesChanged =
       fit::bind_member(this, &FidlInterfaceMonitor::OnInterfacesChanged);
-
-  netstack_->GetInterfaces(
-      [this](fidl::VectorPtr<fuchsia::netstack::NetInterface> interfaces) {
-        OnInterfacesChanged(std::move(interfaces));
-      });
 }
 
 FidlInterfaceMonitor::~FidlInterfaceMonitor() {
