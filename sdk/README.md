@@ -39,7 +39,6 @@ their code in an SDK:
 - [`sdk_shared_library`](/cpp/sdk_shared_library.gni)
 - [`sdk_source_set`](/cpp/sdk_source_set.gni)
 - [`sdk_static_library`](/cpp/sdk_static_library.gni)
-- [`sdk_group`](sdk_group.gni)
 - [`sdk_executable`](/cpp/sdk_executable.gni)
 
 Some language-specific targets are also SDK-ready:
