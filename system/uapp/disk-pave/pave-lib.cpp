@@ -432,25 +432,6 @@ void RecommendWipe(const char* reason) {
     ERROR("-----------------------------------------------------\n");
 }
 
-zx_status_t FvmInitSparseReader(fbl::unique_fd src_fd, fbl::unique_ptr<fvm::SparseReader>* reader) {
-    zx_status_t status;
-    if ((status = fvm::SparseReader::Create(fbl::move(src_fd), reader)) != ZX_OK) {
-        return status;
-    }
-
-    fvm::sparse_image_t* hdr = (*reader)->Image();
-    // Verify the header, then allocate and stream the remaining metadata
-    if (hdr->magic != fvm::kSparseFormatMagic) {
-        ERROR("Bad magic\n");
-        return ZX_ERR_IO;
-    } else if (hdr->version != fvm::kSparseFormatVersion) {
-        ERROR("Unexpected sparse file version\n");
-        return ZX_ERR_IO;
-    }
-
-    return ZX_OK;
-}
-
 // Given an fd representing a "sparse FVM format", fill the FVM with the
 // provided partitions described by |src_fd|.
 //
@@ -458,8 +439,8 @@ zx_status_t FvmInitSparseReader(fbl::unique_fd src_fd, fbl::unique_ptr<fvm::Spar
 // GUID, not the instance GUID.
 zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_fd) {
     fbl::unique_ptr<fvm::SparseReader> reader;
-    zx_status_t status = FvmInitSparseReader(fbl::move(src_fd), &reader);
-    if (status != ZX_OK) {
+    zx_status_t status;
+    if ((status = fvm::SparseReader::Create(fbl::move(src_fd), &reader)) != ZX_OK) {
         return status;
     }
 
