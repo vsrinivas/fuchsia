@@ -46,7 +46,7 @@ function main {
 
   # PATH is required to find a number of tools on the host system.
   if [[ -n "${PATH}" ]]; then
-    env_args="${env_args} PATH=${PATH}"
+    env_args="${env_args} PATH=\\\"${PATH}\\\""
   fi
 
   # TERM is required by ninja to print status messages on the same line.
@@ -56,7 +56,7 @@ function main {
 
   # TMPDIR is required by goma on Mac OS X.
   if [[ -n "${TMPDIR}" ]]; then
-    env_args="${env_args} TMPDIR=${TMPDIR}"
+    env_args="${env_args} TMPDIR=\\\"${TMPDIR}\\\""
   fi
 
   try_locked env -i ${env_args} \
