@@ -232,12 +232,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceTimeout) {
   EXPECT_EQ(RemoteDevice::ConnectionState::kInitializing,
             dev->le_connection_state());
 
-  // Make sure the first HCI transaction completes before advancing the fake
-  // clock.
-  RunLoopUntilIdle();
-
-  AdvanceTimeBy(zx::msec(kTestRequestTimeoutMs));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::msec(kTestRequestTimeoutMs));
 
   EXPECT_FALSE(status);
   EXPECT_EQ(common::HostError::kTimedOut, status.error()) << status.ToString();

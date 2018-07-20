@@ -423,8 +423,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestart) {
   EXPECT_TRUE(scan_enabled());
 
   // End the scan period.
-  AdvanceTimeBy(zx::msec(kTestScanPeriodMs));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::msec(kTestScanPeriodMs));
   ASSERT_EQ(kNumScanStates, scan_states().size());
   EXPECT_TRUE(scan_states()[0]);
   EXPECT_FALSE(scan_states()[1]);
@@ -456,8 +455,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestartFailure) {
   EXPECT_TRUE(scan_enabled());
 
   // End the scan period. The scan should not restart.
-  AdvanceTimeBy(zx::msec(kTestScanPeriodMs));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::msec(kTestScanPeriodMs));
 
   ASSERT_EQ(kNumScanStates, scan_states().size());
   EXPECT_TRUE(scan_states()[0]);
@@ -490,8 +488,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestartRemoveSession) {
   EXPECT_TRUE(scan_enabled());
 
   // End the scan period.
-  AdvanceTimeBy(zx::msec(kTestScanPeriodMs));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::msec(kTestScanPeriodMs));
 
   ASSERT_EQ(kNumScanStates, scan_states().size());
   EXPECT_TRUE(scan_states()[0]);
@@ -527,8 +524,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
   EXPECT_TRUE(scan_enabled());
 
   // End the scan period.
-  AdvanceTimeBy(zx::msec(kTestScanPeriodMs));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::msec(kTestScanPeriodMs));
 
   ASSERT_EQ(kNumScanStates, scan_states().size());
   EXPECT_TRUE(scan_states()[0]);
@@ -565,8 +561,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
   EXPECT_TRUE(scan_enabled());
 
   // End the scan period.
-  AdvanceTimeBy(zx::msec(kTestScanPeriodMs));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::msec(kTestScanPeriodMs));
 
   // Scan should have been disabled and re-enabled.
   ASSERT_EQ(kTotalNumStates, scan_states().size());

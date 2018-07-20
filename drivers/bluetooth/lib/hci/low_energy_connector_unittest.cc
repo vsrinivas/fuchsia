@@ -357,13 +357,8 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionTimeout) {
 
   EXPECT_FALSE(request_canceled);
 
-  // Advance the loop until the HCI command is processed (advancing the fake
-  // clock here would cause the HCI command to time out).
-  RunLoopUntilIdle();
-
   // Make the connection attempt time out.
-  AdvanceTimeBy(zx::msec(kConnectTimeoutMs));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::msec(kConnectTimeoutMs));
 
   EXPECT_FALSE(connector()->request_pending());
   EXPECT_TRUE(callback_called);

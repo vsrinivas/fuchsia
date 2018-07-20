@@ -537,71 +537,61 @@ class GAP_RemoteDeviceCacheTest_ExpirationTest
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        TemporaryDiesSixtySecondsAfterBirth) {
-  AdvanceTimeBy(zx::sec(60));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::sec(60));
   EXPECT_FALSE(cache()->FindDeviceById(device_id()));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        TemporaryLivesForSixtySecondsAfterBirth) {
-  AdvanceTimeBy(zx::sec(60) - zx::msec(1));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::sec(60) - zx::msec(1));
   EXPECT_TRUE(cache()->FindDeviceById(device_id()));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        TemporaryLivesForSixtySecondsSinceLastSeen) {
-  AdvanceTimeBy(zx::sec(60) - zx::msec(1));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::sec(60) - zx::msec(1));
   ASSERT_EQ(device_ptr(), cache()->FindDeviceById(device_id()));
 
   // Tickle device, and verify it sticks around for another cache timeout.
   device_ptr()->SetName("nombre");
-  AdvanceTimeBy(zx::sec(60) - zx::msec(1));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::sec(60) - zx::msec(1));
   EXPECT_TRUE(cache()->FindDeviceById(device_id()));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        TemporaryDiesSixtySecondsAfterLastSeen) {
-  AdvanceTimeBy(zx::sec(60) - zx::msec(1));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::sec(60) - zx::msec(1));
   ASSERT_EQ(device_ptr(), cache()->FindDeviceById(device_id()));
 
   // Tickle device, and verify it expires after cache timeout.
   device_ptr()->SetName("nombre");
-  AdvanceTimeBy(zx::sec(60));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::sec(60));
   EXPECT_FALSE(cache()->FindDeviceById(device_id()));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        NonTemporaryLivesMuchMoreThanSixtySeconds) {
   ASSERT_TRUE(device_ptr()->TryMakeNonTemporary());
-  AdvanceTimeBy(zx::sec(60) * 10);
-  RunLoopUntilIdle();
+  RunLoopFor(zx::sec(60) * 10);
   EXPECT_TRUE(cache()->FindDeviceById(device_id()));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        CanMakeNonTemporaryJustBeforeSixtySeconds) {
   // At last possible moment, make device non-temporary,
-  AdvanceTimeBy(zx::sec(60) - zx::msec(1));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::sec(60) - zx::msec(1));
   ASSERT_EQ(device_ptr(), cache()->FindDeviceById(device_id()));
   ASSERT_TRUE(device_ptr()->TryMakeNonTemporary());
 
   // Verify that devices survives.
-  AdvanceTimeBy(zx::sec(60) * 10);
-  RunLoopUntilIdle();
+  RunLoopFor(zx::sec(60) * 10);
   EXPECT_TRUE(cache()->FindDeviceById(device_id()));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        LEConnectedDeviceLivesMuchMoreThanSixtySeconds) {
   device_ptr()->SetLEConnectionState(RemoteDevice::ConnectionState::kConnected);
-  AdvanceTimeBy(zx::sec(60) * 10);
-  RunLoopUntilIdle();
+  RunLoopFor(zx::sec(60) * 10);
   EXPECT_TRUE(cache()->FindDeviceById(device_id()));
 }
 
@@ -609,22 +599,19 @@ TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        BREDRConnectedDeviceLivesMuchMoreThanSixtySeconds) {
   device_ptr()->SetBREDRConnectionState(
       RemoteDevice::ConnectionState::kConnected);
-  AdvanceTimeBy(zx::sec(60) * 10);
-  RunLoopUntilIdle();
+  RunLoopFor(zx::sec(60) * 10);
   EXPECT_TRUE(cache()->FindDeviceById(device_id()));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        LEDisconnectTriggersExpirationAfterSixtySeconds) {
   device_ptr()->SetLEConnectionState(RemoteDevice::ConnectionState::kConnected);
-  AdvanceTimeBy(zx::sec(60) * 10);
-  RunLoopUntilIdle();
+  RunLoopFor(zx::sec(60) * 10);
   ASSERT_TRUE(cache()->FindDeviceById(device_id()));
 
   device_ptr()->SetLEConnectionState(
       RemoteDevice::ConnectionState::kNotConnected);
-  AdvanceTimeBy(zx::sec(60));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::sec(60));
   EXPECT_FALSE(cache()->FindDeviceById(device_id()));
 }
 
@@ -632,29 +619,25 @@ TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        BREDRDisconnectTriggersExpirationAfterSixySeconds) {
   device_ptr()->SetBREDRConnectionState(
       RemoteDevice::ConnectionState::kConnected);
-  AdvanceTimeBy(zx::sec(60) * 10);
-  RunLoopUntilIdle();
+  RunLoopFor(zx::sec(60) * 10);
   ASSERT_TRUE(cache()->FindDeviceById(device_id()));
 
   device_ptr()->SetBREDRConnectionState(
       RemoteDevice::ConnectionState::kNotConnected);
-  AdvanceTimeBy(zx::sec(60));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::sec(60));
   EXPECT_FALSE(cache()->FindDeviceById(device_id()));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest, ExpirationUpdatesAddressMap) {
-  AdvanceTimeBy(zx::sec(60));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::sec(60));
   EXPECT_FALSE(cache()->FindDeviceByAddress(device_addr()));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        SetLEAdvertisingDataUpdatesExpiration) {
-  AdvanceTimeBy(zx::sec(60) - zx::msec(1));
+  RunLoopFor(zx::sec(60) - zx::msec(1));
   device_ptr()->SetLEAdvertisingData(kTestRSSI, common::StaticByteBuffer<1>{});
-  AdvanceTimeBy(zx::msec(1));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::msec(1));
   EXPECT_TRUE(cache()->FindDeviceById(device_id()));
 }
 
@@ -662,10 +645,9 @@ TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        SetInquiryDataFromInquiryResultUpdatesExpiration) {
   hci::InquiryResult ir;
   ir.bd_addr = device_addr().value();
-  AdvanceTimeBy(zx::sec(60) - zx::msec(1));
+  RunLoopFor(zx::sec(60) - zx::msec(1));
   device_ptr()->SetInquiryData(ir);
-  AdvanceTimeBy(zx::msec(1));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::msec(1));
   EXPECT_TRUE(cache()->FindDeviceById(device_id()));
 }
 
@@ -673,10 +655,9 @@ TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        SetInquiryDataFromInquiryResultRSSIUpdatesExpiration) {
   hci::InquiryResultRSSI irr;
   irr.bd_addr = device_addr().value();
-  AdvanceTimeBy(zx::sec(60) - zx::msec(1));
+  RunLoopFor(zx::sec(60) - zx::msec(1));
   device_ptr()->SetInquiryData(irr);
-  AdvanceTimeBy(zx::msec(1));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::msec(1));
   EXPECT_TRUE(cache()->FindDeviceById(device_id()));
 }
 
@@ -684,18 +665,16 @@ TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
        SetInquiryDataFromExtendedInquiryResultEventParamsUpdatesExpiration) {
   hci::ExtendedInquiryResultEventParams eirep;
   eirep.bd_addr = device_addr().value();
-  AdvanceTimeBy(zx::sec(60) - zx::msec(1));
+  RunLoopFor(zx::sec(60) - zx::msec(1));
   device_ptr()->SetInquiryData(eirep);
-  AdvanceTimeBy(zx::msec(1));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::msec(1));
   EXPECT_TRUE(cache()->FindDeviceById(device_id()));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest, SetNameUpdatesExpiration) {
-  AdvanceTimeBy(zx::sec(60) - zx::msec(1));
+  RunLoopFor(zx::sec(60) - zx::msec(1));
   device_ptr()->SetName({});
-  AdvanceTimeBy(zx::msec(1));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::msec(1));
   EXPECT_TRUE(cache()->FindDeviceById(device_id()));
 }
 

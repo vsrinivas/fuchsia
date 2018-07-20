@@ -47,9 +47,6 @@ class TestLoopFixture : public ::testing::Test {
   // current time; else, nothing happens.
   void AdvanceTimeTo(zx::time time) { loop_.AdvanceTimeTo(time); }
 
-  // Advances the fake clock time by |delta|.
-  void AdvanceTimeBy(zx::duration delta) { loop_.AdvanceTimeBy(delta); }
-
   // Dispatches all waits and all tasks posted to the message loop with
   // deadlines up until |deadline|, progressively advancing the fake clock.
   // Returns true iff any tasks or waits were invoked during the run.

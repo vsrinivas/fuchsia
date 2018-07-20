@@ -895,8 +895,7 @@ TEST_F(HCI_CommandChannelTest, CommandTimeout) {
   RunLoopUntilIdle();
   ASSERT_EQ(0u, cb_count);
 
-  AdvanceTimeBy(zx::msec(kCommandTimeoutMs));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::msec(kCommandTimeoutMs));
 
   EXPECT_EQ(2u, cb_count);
 }

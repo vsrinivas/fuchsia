@@ -235,8 +235,8 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScan) {
       kScanPeriodMs, cb));
 
   // After 10 s (kScanPeriodMs) the scan should stop by itself.
-  AdvanceTimeBy(zx::msec(kScanPeriodMs));
-  RunLoopUntilIdle();
+  RunLoopFor(zx::msec(kScanPeriodMs));
+
   EXPECT_EQ(LowEnergyScanner::ScanStatus::kComplete, status);
   EXPECT_FALSE(test_device()->le_scan_state().enabled);
   EXPECT_EQ(LowEnergyScanner::State::kIdle, scanner()->state());
