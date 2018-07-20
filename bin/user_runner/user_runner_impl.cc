@@ -30,6 +30,7 @@
 #include "peridot/bin/user_runner/puppet_master/make_production_impl.h"
 #include "peridot/bin/user_runner/puppet_master/puppet_master_impl.h"
 #include "peridot/bin/user_runner/puppet_master/story_command_executor.h"
+#include "peridot/bin/user_runner/session_ctl.h"
 #include "peridot/bin/user_runner/storage/constants_and_utils.h"
 #include "peridot/bin/user_runner/storage/session_storage.h"
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
@@ -503,7 +504,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
     context_engine_app_->services().ConnectToService(
         std::move(context_engine_request));
     AtEnd(Reset(&context_engine_app_));
-    AtEnd(Teardown(kBasicTimeout, "fuchsia::modular::ContextEngine",
+    AtEnd(Teardown(kBasicTimeout, "ContextEngine",
                    context_engine_app_.get()));
   }
 
@@ -599,21 +600,25 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
       entity_provider_runner_.get(), presentation_provider_impl_.get(), test_));
   story_provider_impl_->Connect(std::move(story_provider_request));
 
-  AtEnd(Teardown(kStoryProviderTimeout, "fuchsia::modular::StoryProvider",
+  AtEnd(Teardown(kStoryProviderTimeout, "StoryProvider",
                  &story_provider_impl_));
 
   fuchsia::modular::FocusProviderPtr focus_provider_puppet_master;
   auto focus_provider_request_puppet_master =
       focus_provider_puppet_master.NewRequest();
-  // Initialize the fuchsia::modular::PuppetMaster.
+  // Initialize the PuppetMaster.
   story_command_executor_ = MakeProductionStoryCommandExecutor(
       nullptr, session_storage_.get(), std::move(focus_provider_puppet_master));
 
   puppet_master_impl_.reset(
       new PuppetMasterImpl(story_command_executor_.get()));
 
+  session_ctl_.reset(new SessionCtl(startup_context_->outgoing().debug_dir(),
+                                    "sessionctl", puppet_master_impl_.get()));
+
   AtEnd(Reset(&story_command_executor_));
   AtEnd(Reset(&puppet_master_impl_));
+  AtEnd(Reset(&session_ctl_));
 
   focus_handler_ = std::make_unique<FocusHandler>(
       device_map_impl_->current_device_id(), ledger_client_.get(),

@@ -43,6 +43,7 @@ class LedgerClient;
 class LinkImpl;
 class MessageQueueManager;
 class PuppetMasterImpl;
+class SessionCtl;
 class SessionStorage;
 class StoryCommandExecutor;
 class StoryProviderImpl;
@@ -213,6 +214,8 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
 
   std::unique_ptr<StoryCommandExecutor> story_command_executor_;
   std::unique_ptr<PuppetMasterImpl> puppet_master_impl_;
+
+  std::unique_ptr<SessionCtl> session_ctl_;
 
   // Services we provide to |context_engine_app_|.
   component::ServiceProviderImpl context_engine_ns_services_;

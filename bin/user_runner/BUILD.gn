@@ -24,6 +24,7 @@ executable_package("user_runner") {
     ":component_context",
     ":focus",
     ":presentation_provider",
+    ":session_ctl",
     "//garnet/public/fidl/fuchsia.net.oldhttp",
     "//garnet/public/fidl/fuchsia.ui.policy",
     "//garnet/public/fidl/fuchsia.ui.viewsv1",
@@ -92,6 +93,20 @@ executable_package("dev_user_shell") {
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+source_set("session_ctl") {
+  sources = [
+    "session_ctl.h",
+    "session_ctl.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/user_runner/puppet_master:puppet_master_impl",
+    "//zircon/public/lib/fs",
   ]
 }
 
