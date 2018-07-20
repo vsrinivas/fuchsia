@@ -168,13 +168,13 @@ static_assert(sizeof(ddi_config_t) == 38, "Bad ddi_config_t size");
 typedef struct edp_config {
     static constexpr uint32_t kBlockType = 27;
 
-    uint8_t unused[188];
+    uint8_t unused[204];
     // Contains 16 nibbles, one for each panel type 0x0-0xf. If the value
     // is 0, then the panel is a low voltage panel.
     uint8_t vswing_preemphasis[8];
     // A bunch of other unused stuff
 } edp_config_t;
-static_assert(offsetof(edp_config_t, vswing_preemphasis) == 188, "Bad vswing_preemphasis offset");
+static_assert(offsetof(edp_config_t, vswing_preemphasis) == 204, "Bad vswing_preemphasis offset");
 
 typedef struct lvds_config {
     static constexpr uint32_t kBlockType = 40;
