@@ -350,8 +350,16 @@ func AddNetstackService(ctx *context.Context) error {
 	}
 	netstackService = &nsfidl.NetstackService{}
 	ctx.OutgoingService.AddService(nsfidl.NetstackName, func(c zx.Channel) error {
-		_, err := netstackService.Add(&netstackImpl{}, c, nil)
-		return err
+		k, err := netstackService.Add(&netstackImpl{}, c, nil)
+		if err != nil {
+			return err
+		}
+		// Send a synthetic InterfacesChanged event to each client when they join
+		// Prevents clients from having to race GetInterfaces / InterfacesChanged.
+		if p, ok := netstackService.EventProxyFor(k); ok {
+			p.InterfacesChanged(getInterfaces())
+		}
+		return nil
 	})
 
 	return nil
