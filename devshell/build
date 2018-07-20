@@ -12,13 +12,16 @@ fx-config-read
 
 readonly LOCK_FILE="${FUCHSIA_DIR}"/.build_lock
 
-# Use a lock file around a command.
+# Use a lock file around a command if possible.
 # Print a message if the lock isn't immediately entered,
 # and block until it is.
-function locked {
-  # This will cause a deadlock if any subcommand calls back to fx build,
-  # because shlock isn't reentrant by forked processes.
-  if shlock -f "${LOCK_FILE}" -p $$; then
+function try_locked {
+  if !(command -v shlock >/dev/null); then
+    # Can't lock! Fall back to unlocked operation.
+    "$@"
+  elif shlock -f "${LOCK_FILE}" -p $$; then
+    # This will cause a deadlock if any subcommand calls back to fx build,
+    # because shlock isn't reentrant by forked processes.
     cmd_locked "$@"
   else
     echo "Locked by ${LOCK_FILE}..."
@@ -56,7 +59,7 @@ function main {
     env_args="${env_args} TMPDIR=${TMPDIR}"
   fi
 
-  locked env -i ${env_args} \
+  try_locked env -i ${env_args} \
     "${FUCHSIA_DIR}/buildtools/ninja" -j "$(fx-choose-build-concurrency)" \
                                       -l "$(fx-cpu-count)" \
                                       -C "${FUCHSIA_BUILD_DIR}" "$@"
