@@ -10,26 +10,41 @@
 #     Name of the domain this element too.
 #     Domains regroup elements of similar nature. Language-based domains are
 #     most common.
+#     TODO(DX-340): remove me.
 #
 #   name (optional)
 #     Name of the element.
 #     Must be unique within the given domain.
+#     TODO(DX-340): remove me.
 #
 #   name_file (optional)
 #     Path to a file containing the name of the element.
 #     This should be used when the element's name requires some computation in
 #     its own build target.
+#     TODO(DX-340): remove me.
 #
 #     NOTE: Exactly one of `name` or `name_file` must be set.
 #
+#   id (optional)
+#     Identifier of this element within SDKs.
+#     The identifier should represent the canonical base path of the element
+#     within SDKs according to the standard layout (https://fuchsia.googlesource.com/docs/+/master/development/sdk/layout.md).
+#     TODO(DX-340): make this attribute required.
+#     For an element at $ROOT/pkg/foo, the id should be "sdk://pkg/foo".
+#
 #   category
-#     Describes the availability of the atom.
+#     Describes the availability of the element.
 #     Possible values, from most restrictive to least restrictive:
 #       - excluded     : the atom may not be included in SDKs;
 #       - experimental : the atom is available with no quality guarantee;
 #       - internal     : the atom is exposed within the Fuchsia tree;
 #       - partner      : the atom may be used by select partners;
 #       - public       : the atom may be included in published SDKs.
+#
+#   meta (optional)
+#     Scope describing the element's metadata file.
+#     See the "Metadata scope" section for how to populate this attribute.
+#     TODO(DX-340): make this attribute required.
 #
 #   files (optional)
 #     List of scopes describing the contents of this element.
@@ -77,9 +92,26 @@
 #   manifest_file (optional)
 #     Path to the manifest to generate.
 #
+# Metadata scope
+#
+# This scope describes a metadata file to be added to the SDK element. Its
+# supported attributes are:
+#
+#   source (required)
+#     Path to the metadata file.
+#
+#   dest (required)
+#     Path to the metadata file in the SDK, relatively to the SDK root
+#
+#   schema (required)
+#     Name of the schema for this file, ignoring the extension.
+#     Metadata files are hosted under //build/sdk/atom_schemas.
+#     If the metadata file conforms to //build/sdk/atom_schemas/foo.json, the
+#     present attribute should have a value of "foo".
+#
 # File scopes
 #
-# Each scope describe a file to be added to the SDK element. The supported
+# Each scope describes a file to be added to the SDK element. The supported
 # attributes are:
 #
 #   source (required)
@@ -102,6 +134,8 @@ template("sdk_atom") {
 
   assert(defined(invoker.category), "Must define an SDK category")
   category = invoker.category
+
+  not_needed(invoker, ["id", "meta"])
 
   if (defined(invoker.name)) {
     name_args = [
