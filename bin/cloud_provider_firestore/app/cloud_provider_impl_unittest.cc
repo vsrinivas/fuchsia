@@ -5,11 +5,14 @@
 #include "peridot/bin/cloud_provider_firestore/app/cloud_provider_impl.h"
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/callback/capture.h>
+#include <lib/callback/set_when_called.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/test_firestore_service.h"
+#include "peridot/lib/convert/convert.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
 
 namespace cloud_provider_firestore {
@@ -70,6 +73,40 @@ TEST_F(CloudProviderImplTest, EmptyWhenFirebaseAuthDisconnected) {
   // Verify that on_empty is called when the shutdown callback is executed.
   firestore_service_->shutdown_callback();
   EXPECT_TRUE(on_empty_called);
+}
+
+TEST_F(CloudProviderImplTest, GetDeviceSet) {
+  bool callback_called = false;
+  auto status = cloud_provider::Status::INTERNAL_ERROR;
+  cloud_provider::DeviceSetPtr device_set;
+  cloud_provider_->GetDeviceSet(
+      device_set.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(callback_called);
+  EXPECT_EQ(cloud_provider::Status::OK, status);
+
+  // Expect one placeholder document creation request: root document of the
+  // serialization version.
+  EXPECT_EQ(1u, firestore_service_->create_document_records.size());
+}
+
+TEST_F(CloudProviderImplTest, GetPageCloud) {
+  bool callback_called = false;
+  auto status = cloud_provider::Status::INTERNAL_ERROR;
+  cloud_provider::PageCloudPtr page_cloud;
+  cloud_provider_->GetPageCloud(
+      convert::ToArray("app_id"), convert::ToArray("page_id"),
+      page_cloud.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(callback_called);
+  EXPECT_EQ(cloud_provider::Status::OK, status);
+
+  // Expect three placeholder document creation request: root document of the
+  // serialization version, root document of the app namespace, root document of
+  // the page.
+  EXPECT_EQ(3u, firestore_service_->create_document_records.size());
 }
 
 }  // namespace cloud_provider_firestore

@@ -7,9 +7,11 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/firestore/cpp/fidl.h>
+#include <lib/callback/managed_container.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
+#include <lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/bin/cloud_provider_firestore/app/device_set_impl.h"
 #include "peridot/bin/cloud_provider_firestore/app/page_cloud_impl.h"
@@ -48,6 +50,20 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
       fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
       GetPageCloudCallback callback) override;
 
+  // Makes a best-effort attempt to create a placeholder document at the given
+  // location.
+  //
+  // Placeholder documents have a single field "exists: true" and ensure that
+  // data under this path is visible when querying the parent collection. This
+  // works around limitations of the web client API for purposes of the
+  // development cloud dashboard, see LE-522.
+  void CreatePlaceholderDocument(std::string parent_document_path,
+                                 std::string collection_id,
+                                 std::string document_id);
+
+  void ScopedGetCredentials(
+      fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback);
+
   const std::string user_id_;
 
   std::unique_ptr<CredentialsProvider> credentials_provider_;
@@ -57,6 +73,12 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
 
   callback::AutoCleanableSet<DeviceSetImpl> device_sets_;
   callback::AutoCleanableSet<PageCloudImpl> page_clouds_;
+
+  // Tracks pending requests to create placeholder documents.
+  callback::ManagedContainer pending_placeholder_requests_;
+
+  // Must be the last member.
+  fxl::WeakPtrFactory<CloudProviderImpl> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CloudProviderImpl);
 };
