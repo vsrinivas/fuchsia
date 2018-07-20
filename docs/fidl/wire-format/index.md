@@ -3,7 +3,7 @@
 This document is a specification of the Fuchsia Interface Definition Language
 (FIDL) data structure encoding.
 
-See [FIDL: Overview](index.md) for more information about FIDL's overall
+See [FIDL: Overview](../index.md) for more information about FIDL's overall
 purpose, goals, and requirements, as well as links to related documents.
 
 [TOC]
