@@ -20,13 +20,22 @@ fx-standard-switches "$@"
 set -- "${FX_ARGV[@]}"
 
 verbose=false
+very_verbose=false
 device=""
 device_arg=""
 direct=true
 while (($#)); do
   case "$1" in
     -v|--verbose)
+      if $verbose; then
+        very_verbose=true
+      else
+        verbose=true
+      fi
+      ;;
+    -vv)
       verbose=true
+      very_verbose=true
       ;;
     -d|--device)
       device="$2"
@@ -65,6 +74,12 @@ log() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') [serve-updates] $@"
 }
 
+log_verbose() {
+  if [[ "$very_verbose" == true ]]; then
+    log "$@"
+  fi
+}
+
 if [[ -z "${amber_srv_pid}" ]]; then
   if [[ "${verbose}" = true ]]; then
     ${FUCHSIA_BUILD_DIR}/host_x64/amber-srv -d ${FUCHSIA_BUILD_DIR} &
@@ -87,6 +102,18 @@ update_device_addr() {
   device_addr="$(fx-command-run netaddr --nowait --timeout=1000 --fuchsia "$@" 2>/dev/null)"
 }
 
+if [[ "$(uname -s)" = "Darwin" ]]; then
+  ping_device() {
+    # Darwin's "ping" doesn't recognize IPv6 addresses and doesn't accept a
+    # timeout parameter, which appears to default to 10 seconds.
+    ping6 -c 1 "$1" >/dev/null
+  }
+else
+  ping_device() {
+    ping -c 1 -W 1 "$1" >/dev/null
+  }
+fi
+
 # State is used to prevent too much output
 state="discover"
 while true; do
@@ -96,47 +123,81 @@ while true; do
     exit 1
   fi
 
-  update_device_addr $device_arg
-  if [[ -z "${device_addr}" ]]; then
-    if [[ "${state}" != "discover1" ]]; then
-      log "No device found, waiting..."
-      state="discover1"
+  if [[ "$direct" == false ]]; then
+    log_verbose "Updating device address"
+    update_device_addr $device_arg
+    if [[ -z "${device_addr}" ]]; then
+      if [[ "${state}" != "discover1" ]]; then
+        log "No device found, waiting..."
+        state="discover1"
+      fi
+      sleep 1
+      continue
     fi
-    sleep 1
-    continue
-  fi
 
-  if [[ "$state" == "discover" || "$state" == "discover1" ]]; then
-    log "SSH Tunnel connecting to ${device_addr}..."
-    if fx-command-run ssh -f -o LogLevel=ERROR -o ExitOnForwardFailure=yes -R 8083:localhost:8083 "${device_addr}" "echo -n"; then
-      log "SSH Tunnel connected"
-      state="config"
-    else
+    if [[ "$state" == "discover" || "$state" == "discover1" ]]; then
+      log "SSH Tunnel connecting to ${device_addr}..."
+      if fx-command-run ssh -f -o LogLevel=ERROR -o ExitOnForwardFailure=yes -R 8083:localhost:8083 "${device_addr}" "echo -n"; then
+        log "Ready to push packages!"
+        state="ready"
+      fi
+
       sleep 1
     fi
-  fi
 
-  if [[ "$state" == "config" ]]; then
-    if $direct; then
+    if [[ "$state" == "ready" ]]; then
+      if fx-command-run ssh -O check "${device_addr}" 2> /dev/null; then
+        sleep 1
+      else
+        log "SSH Tunnel lost, restarting..."
+        state="discover"
+      fi
+    fi
+
+  else # $direct == true
+
+    if [[ "$state" == "discover" || "$state" == "discover1" ]]; then
+      log_verbose "Updating device address"
+      update_device_addr $device_arg
+      if [[ -z "${device_addr}" ]]; then
+        if [[ "${state}" != "discover1" ]]; then
+          log "No device found, waiting..."
+          state="discover1"
+        fi
+        sleep 1
+        continue
+      fi
+
+      log_verbose "Ping $device_addr"
+      if ping_device $device_addr; then
+        log "Device up"
+        state="config"
+      fi
+
+      sleep 1
+    fi
+
+    if [[ "$state" == "config" ]]; then
       log "Registering devhost as update source"
       if fx-command-run add-update-source --remove-localhost $device_arg; then
         log "Ready to push packages!"
         state="ready"
+      else
+        log "Device lost while configuring update source"
+        state="discover"
       fi
-    else
-      log "Ready to push packages!"
-      state="ready"
+
+      sleep 1
     fi
 
-    sleep 1
-  fi
-
-  if [[ "$state" == "ready" ]]; then
-    if fx-command-run ssh -O check "${device_addr}" 2> /dev/null; then
-      sleep 1
-    else
-      log "SSH Tunnel lost, restarting..."
-      state="discover"
+    if [[ "$state" == "ready" ]]; then
+      log_verbose "Ping $device_addr"
+      if ping_device $device_addr; then
+        sleep 1
+      else
+        log "Device lost"
+        state="discover"
+      fi
     fi
   fi
 done

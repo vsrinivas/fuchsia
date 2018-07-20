@@ -50,7 +50,7 @@ while (($#)); do
       device="${device:0:${#prefix}}"
       boot_args+=("${device}")
       ;;
-    -v|--verbose)
+    -v|-vv|--verbose)
       serve_args+=("$1")
       ;;
     --no-direct|--direct)
