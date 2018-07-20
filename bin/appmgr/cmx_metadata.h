@@ -32,21 +32,8 @@ class CmxMetadata {
 
   // Takes a package's resolved_url, e.g. file:///pkgfs/packages/<FOO>/0, and
   // returns the default component's .cmx path, e.g. meta/<FOO>.cmx.
-  static std::string GetCmxPathFromFullPackagePath(
+  static std::string GetDefaultComponentCmxPath(
       const std::string& package_resolved_url);
-
-  // Takes a manifest's resolved_url, e.g.
-  // file:///pkgfs/packages/<FOO>/0/meta/<BAR>.cmx, and returns the package
-  // relative .cmx path, e.g. meta/<BAR>.cmx.
-  static std::string ExtractRelativeCmxPath(
-      const std::string& cmx_resolved_url);
-
-  // Returns true if path ends in .cmx, false otherwise.
-  static bool IsCmxExtension(const std::string& path);
-
-  // Returns the package name from a .cmx file's full /pkgfs path. Returns the
-  // empty string "" if unmatched.
-  static std::string GetPackageNameFromCmxPath(const std::string& cmx_path);
 
   const SandboxMetadata& sandbox_meta() { return sandbox_meta_; }
   const RuntimeMetadata& runtime_meta() { return runtime_meta_; }

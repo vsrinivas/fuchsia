@@ -47,8 +47,4 @@ std::string FuchsiaPkgUrl::pkgfs_dir_path() {
   return fxl::Concatenate({"/pkgfs/packages/", package_name(), "/0"});
 }
 
-std::string FuchsiaPkgUrl::pkgfs_resource_path() {
-  return fxl::Concatenate({pkgfs_dir_path(), "/", resource_path()});
-}
-
 }  // namespace component

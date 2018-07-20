@@ -21,8 +21,6 @@ class FuchsiaPkgUrl {
 
   std::string pkgfs_dir_path();
 
-  std::string pkgfs_resource_path();
-
  private:
   std::string package_name_;
   std::string resource_path_;

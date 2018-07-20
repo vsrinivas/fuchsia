@@ -35,9 +35,7 @@ void RootLoader::LoadComponent(fidl::StringPtr url,
       return;
     }
     std::string pkgfs_dir_path = fp.pkgfs_dir_path();
-    std::string pkgfs_resource_path = fp.pkgfs_resource_path();
-    if (!LoadComponentFromPkgfs(pkgfs_resource_path, pkgfs_dir_path,
-                                callback)) {
+    if (!LoadComponentFromPkgfs(url.get(), pkgfs_dir_path, callback)) {
       FXL_LOG(ERROR) << "Could not load package from cmx: " << url;
       callback(nullptr);
     }
@@ -90,17 +88,18 @@ void RootLoader::LoadComponent(fidl::StringPtr url,
   }
 }
 
-bool RootLoader::LoadComponentFromPackage(std::string& package_name,
+bool RootLoader::LoadComponentFromPackage(const std::string& package_name,
                                           LoadComponentCallback callback) {
   // TODO(CP-105): We're currently hardcoding version 0 of the package,
   // but we'll eventually need to do something smarter.
   std::string pkg_path =
       fxl::Concatenate({"/pkgfs/packages/", package_name, "/0"});
-  return LoadComponentFromPkgfs(pkg_path, pkg_path, callback);
+  std::string target_path = fxl::Concatenate({"file://", pkg_path});
+  return LoadComponentFromPkgfs(target_path, pkg_path, callback);
 }
 
-bool RootLoader::LoadComponentFromPkgfs(std::string& target_path,
-                                        std::string& pkg_path,
+bool RootLoader::LoadComponentFromPkgfs(const std::string& target_path,
+                                        const std::string& pkg_path,
                                         LoadComponentCallback callback) {
   fxl::UniqueFD fd(open(pkg_path.c_str(), O_DIRECTORY | O_RDONLY));
   if (fd.is_valid()) {
@@ -108,7 +107,7 @@ bool RootLoader::LoadComponentFromPkgfs(std::string& target_path,
     if (directory) {
       fuchsia::sys::Package package;
       package.directory = std::move(directory);
-      package.resolved_url = fxl::Concatenate({"file://", target_path});
+      package.resolved_url = target_path;
       callback(fidl::MakeOptional(std::move(package)));
       return true;
     }
@@ -116,7 +115,8 @@ bool RootLoader::LoadComponentFromPkgfs(std::string& target_path,
   return false;
 }
 
-bool RootLoader::LoadComponentWithProcess(fxl::UniqueFD& fd, std::string& path,
+bool RootLoader::LoadComponentWithProcess(fxl::UniqueFD& fd,
+                                          const std::string& path,
                                           LoadComponentCallback callback) {
   fsl::SizedVmo data;
   if (fsl::VmoFromFd(std::move(fd), &data)) {

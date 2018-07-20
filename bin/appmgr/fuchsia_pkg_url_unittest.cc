@@ -36,13 +36,5 @@ TEST(FuchsiaPkgUrl, pkgfs_dir_path) {
   EXPECT_EQ("/pkgfs/packages/component_hello_world/0", fp.pkgfs_dir_path());
 }
 
-TEST(FuchsiaPkgUrl, pkgfs_resource_path) {
-  FuchsiaPkgUrl fp;
-  EXPECT_TRUE(fp.Parse(
-      "fuchsia-pkg://fuchsia.com/component_hello_world#meta/hello_world.cmx"));
-  EXPECT_EQ("/pkgfs/packages/component_hello_world/0/meta/hello_world.cmx",
-            fp.pkgfs_resource_path());
-}
-
 }  // namespace
 }  // namespace component

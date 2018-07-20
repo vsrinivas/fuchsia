@@ -97,53 +97,14 @@ TEST_F(CmxMetadataTest, ParseWithErrors) {
                     "$0: 'binary' in program is not a string.");
 }
 
-TEST_F(CmxMetadataTest, GetCmxPathFromFullPackagePath) {
-  EXPECT_EQ("meta/sysmgr.cmx", CmxMetadata::GetCmxPathFromFullPackagePath(
+TEST_F(CmxMetadataTest, GetDefaultComponentCmxPath) {
+  EXPECT_EQ("meta/sysmgr.cmx", CmxMetadata::GetDefaultComponentCmxPath(
                                    "file:///pkgfs/packages/sysmgr/0"));
-  EXPECT_EQ("", CmxMetadata::GetCmxPathFromFullPackagePath(
-                    "/pkgfs/packages/sysmgr/0"));
-  EXPECT_EQ("", CmxMetadata::GetCmxPathFromFullPackagePath(
-                    "file:///pkgfs/nothing/sysmgr/0"));
-  EXPECT_EQ("", CmxMetadata::GetCmxPathFromFullPackagePath(""));
-}
-
-TEST_F(CmxMetadataTest, ExtractRelativeCmxPath) {
-  EXPECT_EQ("meta/sysmgr2.cmx",
-            CmxMetadata::ExtractRelativeCmxPath(
-                "file:///pkgfs/packages/sysmgr/0/meta/sysmgr2.cmx"));
-  EXPECT_EQ("meta/sysmgr2.cmx",
-            CmxMetadata::ExtractRelativeCmxPath(
-                "/pkgfs/packages/sysmgr/0/meta/sysmgr2.cmx"));
-  EXPECT_EQ("", CmxMetadata::ExtractRelativeCmxPath(
-                    "file:///pkgfs/nothing/sysmgr/0"));
-  EXPECT_EQ("", CmxMetadata::ExtractRelativeCmxPath(
-                    "file:///pkgfs/packages/sysmgr/0/meta/runtime"));
-  EXPECT_EQ("", CmxMetadata::ExtractRelativeCmxPath(
-                    "file:///pkgfs/nothing/sysmgr/0/something/sysmgr2.cmx"));
-  EXPECT_EQ("", CmxMetadata::ExtractRelativeCmxPath(""));
-}
-
-TEST_F(CmxMetadataTest, IsCmxExtension) {
-  EXPECT_TRUE(CmxMetadata::IsCmxExtension(
-      "/pkgfs/packages/component_hello_world/0/meta/hello_world.cmx"));
-  EXPECT_FALSE(CmxMetadata::IsCmxExtension(
-      "/pkgfs/packages/component_hello_world/0/bin/app"));
-  EXPECT_TRUE(CmxMetadata::IsCmxExtension("meta/hello_world.cmx"));
-  EXPECT_FALSE(CmxMetadata::IsCmxExtension("bin/app"));
-}
-
-TEST_F(CmxMetadataTest, GetPackageNameFromCmxPath) {
   EXPECT_EQ(
-      "component_hello_world",
-      CmxMetadata::GetPackageNameFromCmxPath(
-          "/pkgfs/packages/component_hello_world/0/meta/hello_world.cmx"));
-  EXPECT_EQ("", CmxMetadata::GetPackageNameFromCmxPath(
-                    "/pkgfs/packages/component_hello_world/0/bin/app"));
-  EXPECT_EQ("",
-            CmxMetadata::GetPackageNameFromCmxPath(
-                "/pkgfs/nothing/component_hello_world/0/meta/hello_world.cmx"));
-  EXPECT_EQ("", CmxMetadata::GetPackageNameFromCmxPath(
-                    "/pkgfs/packages//0/meta/hello_world.cmx"));
+      "", CmxMetadata::GetDefaultComponentCmxPath("/pkgfs/packages/sysmgr/0"));
+  EXPECT_EQ("", CmxMetadata::GetDefaultComponentCmxPath(
+                    "file:///pkgfs/nothing/sysmgr/0"));
+  EXPECT_EQ("", CmxMetadata::GetDefaultComponentCmxPath(""));
 }
 
 }  // namespace

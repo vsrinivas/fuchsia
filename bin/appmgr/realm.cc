@@ -19,8 +19,10 @@
 
 #include "garnet/bin/appmgr/cmx_metadata.h"
 #include "garnet/bin/appmgr/dynamic_library_loader.h"
+#include "garnet/bin/appmgr/fuchsia_pkg_url.h"
 #include "garnet/bin/appmgr/hub/realm_hub.h"
 #include "garnet/bin/appmgr/namespace_builder.h"
+#include "garnet/bin/appmgr/program_metadata.h"
 #include "garnet/bin/appmgr/runtime_metadata.h"
 #include "garnet/bin/appmgr/sandbox_metadata.h"
 #include "garnet/bin/appmgr/scheme_map.h"
@@ -530,8 +532,19 @@ void Realm::CreateComponentFromPackage(
 
   // Parse cmx manifest file, if it's there.
   CmxMetadata cmx;
-  const std::string cmx_path =
-      CmxMetadata::GetCmxPathFromFullPackagePath(package->resolved_url.get());
+  std::string cmx_path;
+  FuchsiaPkgUrl fp;
+  if (fp.Parse(package->resolved_url.get())) {
+    // The package's resolved_url uses fuchsia-pkg://. This means it is a cmx,
+    // and we are requesting to launch a specific component, instead of the
+    // package default component.
+    cmx_path = fp.resource_path();
+  } else {
+    // If we do not specify a cmx, then we are launching the default component
+    // of the package.
+    cmx_path =
+        CmxMetadata::GetDefaultComponentCmxPath(package->resolved_url.get());
+  }
   if (!cmx_path.empty() && files::IsFileAt(fd.get(), cmx_path)) {
     if (!cmx.ParseFromFileAt(fd.get(), cmx_path)) {
       FXL_LOG(ERROR) << "cmx file failed to parse: " << cmx.error_str();
@@ -556,7 +569,13 @@ void Realm::CreateComponentFromPackage(
   // we fall back to the default runner, which is running an ELF binary.
   fsl::SizedVmo app_data;
   if (runtime.IsNull()) {
-    VmoFromFilenameAt(fd.get(), kAppPath, &app_data);
+    ProgramMetadata program;
+    if (cmx.program_meta().IsNull()) {
+      VmoFromFilenameAt(fd.get(), kAppPath, &app_data);
+    } else {
+      ProgramMetadata program = cmx.program_meta();
+      VmoFromFilenameAt(fd.get(), program.binary(), &app_data);
+    }
     if (!app_data) {
       FXL_LOG(ERROR) << "component has neither runner nor elf binary: "
                      << runtime_parse_error;
