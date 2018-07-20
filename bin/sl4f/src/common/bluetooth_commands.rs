@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use async;
 use async::TimeoutExt;
 use bt::error::Error as BTError;
-use common::bluetooth_facade::{listen_central_events, BluetoothFacade};
+use common::bluetooth_facade::BluetoothFacade;
 use common::constants::*;
 use failure::Error;
 use fidl_ble::{AdvertisingData, ScanFilter};
 use futures::future::ok as fok;
+use futures::future::Either::{Left, Right};
 use futures::prelude::*;
 use futures::FutureExt;
 use parking_lot::RwLock;
@@ -16,7 +18,7 @@ use serde_json::{to_value, Value};
 use std::sync::Arc;
 use zx::prelude::*;
 
-use common::bluetooth_facade::BluetoothMethod;
+use common::bluetooth_facade::{BleAdvertiseResponse, BluetoothMethod};
 
 // Takes a serde_json::Value and converts it to arguments required for
 // a FIDL ble_advertise command
@@ -99,7 +101,7 @@ fn ble_stop_advertise_to_fidl(
 ) -> Result<String, Error> {
     let adv_id = bt_facade.read().get_adv_id().clone();
 
-    match adv_id {
+    match adv_id.name {
         Some(aid) => Ok(aid.to_string()),
         None => Err(BTError::new("No advertisement id outstanding.").into()),
     }
@@ -107,13 +109,13 @@ fn ble_stop_advertise_to_fidl(
 
 // Takes ACTS method command and executes corresponding FIDL method
 // Packages result into serde::Value
-// To add new methods, add to the many_futures! macro and case to match
+// To add new methods, add to the many_futures! macro
 pub fn ble_method_to_fidl(
     method_name: String, args: Value, bt_facade: Arc<RwLock<BluetoothFacade>>,
 ) -> impl Future<Item = Result<Value, Error>, Error = Never> {
     many_futures!(Output, [BleAdvertise, BleScan, BleStopAdvertise, Error]);
     match BluetoothMethod::from_str(method_name) {
-        Some(BluetoothMethod::BleAdvertise) => {
+        BluetoothMethod::BleAdvertise => {
             let (ad, interval) = match ble_advertise_to_fidl(args) {
                 Ok((adv_data, intv)) => (adv_data, intv),
                 Err(e) => return Output::Error(fok(Err(e))),
@@ -122,16 +124,16 @@ pub fn ble_method_to_fidl(
             let adv_fut = start_adv_async(bt_facade.clone(), ad, interval);
             Output::BleAdvertise(adv_fut)
         }
-        Some(BluetoothMethod::BleScan) => {
-            let (filter, timeout, _count) = match ble_scan_to_fidl(args) {
+        BluetoothMethod::BleScan => {
+            let (filter, timeout, count) = match ble_scan_to_fidl(args) {
                 Ok((f, t, c)) => (f, t, c),
                 Err(e) => return Output::Error(fok(Err(e))),
             };
 
-            let scan_fut = start_scan_async(bt_facade.clone(), filter, timeout);
+            let scan_fut = start_scan_async(bt_facade.clone(), filter, timeout, count);
             Output::BleScan(scan_fut)
         }
-        Some(BluetoothMethod::BleStopAdvertise) => {
+        BluetoothMethod::BleStopAdvertise => {
             let advertisement_id = match ble_stop_advertise_to_fidl(args, bt_facade.clone()) {
                 Ok(aid) => aid,
                 Err(e) => return Output::Error(fok(Err(e))),
@@ -157,9 +159,12 @@ fn start_adv_async(
         Err(_e) => Ok(None),
     });
 
-    adv_fut.and_then(|adv_res| match to_value(adv_res) {
-        Ok(val) => fok(Ok(val)),
-        Err(e) => fok(Err(e.into())),
+    adv_fut.and_then(|aid| {
+        let aid_response = BleAdvertiseResponse::new(aid.clone());
+        match to_value(aid_response) {
+            Ok(val) => fok(Ok(val)),
+            Err(e) => fok(Err(e.into())),
+        }
     })
 }
 
@@ -169,7 +174,7 @@ fn stop_adv_async(
     let stop_adv_fut = bt_facade.write().stop_adv(advertisement_id);
 
     stop_adv_fut.then(move |res| {
-        bt_facade.write().cleanup_peripheral();
+        BluetoothFacade::cleanup_peripheral(bt_facade.clone());
         match res {
             Ok(r) => match to_value(r) {
                 Ok(val) => fok(Ok(val)),
@@ -183,27 +188,51 @@ fn stop_adv_async(
 // Synchronous wrapper for scanning
 fn start_scan_async(
     bt_facade: Arc<RwLock<BluetoothFacade>>, filter: Option<ScanFilter>, timeout: Option<u64>,
+    count: Option<u64>,
 ) -> impl Future<Item = Result<Value, Error>, Error = Never> {
+    let timeout_ms = timeout.unwrap_or(DEFAULT_SCAN_TIMEOUT_MS).millis();
     // Create scanning future and listen on central events for scan
-    let scan_fut = bt_facade.write().start_scan(filter);
-    let event_fut = listen_central_events(bt_facade.clone())
-        .map_err(|_| unreachable!("Listening to events should never fail"));
+    let scan_fut = BluetoothFacade::start_scan(bt_facade.clone(), filter);
+
+    // Based on if a scan count is provided, either use TIMEOUT as termination criteria or custom
+    // future to terminate when <count> remote devices are discovered
+    let event_fut = if count.is_none() {
+        Left(async::Timer::new(timeout_ms.after_now()))
+    } else {
+        // Future resolves when number of devices discovered is equal to count
+        let custom_fut =
+            BluetoothFacade::new_devices_found_future(bt_facade.clone(), count.unwrap())
+                .map_err(|_| unreachable!("Failed to instantiate new_devices_found_future"));
+
+        // Chain the custom future with a timeout
+        Right(
+            custom_fut
+                .on_timeout(timeout_ms.after_now(), || Ok(()))
+                .expect("Failed to set timeout"),
+        )
+    };
+
     let fut = scan_fut.and_then(move |_| event_fut);
 
-    // Wrap the future in the timeout window. Scan for timeout_ms duration
-    let timeout_ms = timeout.unwrap_or(DEFAULT_SCAN_TIMEOUT_MS).millis();
-    let fut = fut
-        .on_timeout(timeout_ms.after_now(), || Ok(()))
-        .expect("failed to set timeout");
+    // Grab the central proxy created
+    let facade = bt_facade.clone();
+    let central = facade
+        .read()
+        .get_central_proxy()
+        .clone()
+        .expect("No central proxy.");
 
+    // After futures resolve, grab set of devices discovered and stop the scan
     fut.then(move |_| {
         let devices = bt_facade.read().get_devices();
 
-        // Cleanup the central state after reading devices discovered
-        bt_facade.write().cleanup_central();
-        match to_value(devices) {
-            Ok(dev) => fok(Ok(dev)),
-            Err(e) => fok(Err(e.into())),
+        if let Err(e) = central.stop_scan() {
+            fok(Err(e.into()))
+        } else {
+            match to_value(devices) {
+                Ok(dev) => fok(Ok(dev)),
+                Err(e) => fok(Err(e.into())),
+            }
         }
     })
 }

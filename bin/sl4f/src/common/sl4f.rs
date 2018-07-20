@@ -22,7 +22,7 @@ use std::sync::Arc;
 use common::bluetooth_commands::ble_method_to_fidl;
 use common::bluetooth_facade::BluetoothFacade;
 
-// Standardized sl4f types
+// Standardized sl4f types.
 use common::sl4f_types::{AsyncRequest, AsyncResponse, ClientData, CommandRequest, CommandResponse,
                          FacadeType};
 
@@ -60,7 +60,7 @@ impl Sl4f {
     }
 
     pub fn cleanup(&mut self) {
-        self.bt_facade.write().cleanup_facade();
+        BluetoothFacade::cleanup(self.bt_facade.clone());
         self.cleanup_clients();
     }
 
@@ -260,12 +260,12 @@ pub fn method_to_fidl(
 ) -> impl Future<Item = Result<Value, Error>, Error = Never> {
     many_futures!(MethodType, [Bluetooth, Wlan, Error]);
     match FacadeType::from_str(method_type) {
-        Some(FacadeType::Bluetooth) => MethodType::Bluetooth(ble_method_to_fidl(
+        FacadeType::Bluetooth => MethodType::Bluetooth(ble_method_to_fidl(
             method_name,
             args,
             sl4f_session.write().get_bt_facade().clone(),
         )),
-        Some(FacadeType::Wlan) => MethodType::Wlan(fok(Err(BTError::new(
+        FacadeType::Wlan => MethodType::Wlan(fok(Err(BTError::new(
             "Nice try. WLAN not implemented yet",
         ).into()))),
         _ => MethodType::Error(fok(Err(BTError::new("Invalid FIDL method type").into()))),

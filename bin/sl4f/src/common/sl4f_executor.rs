@@ -29,8 +29,8 @@ pub fn run_fidl_loop(
             params,
         } => {
             let curr_sl4f_session = sl4f_session.clone();
-            fx_log_info!(tag: "sl4f_asyc_execute",
-                "Received sync request: {:?}, {:?}, {:?}, {:?}, {:?}",
+            fx_log_info!(tag: "run_fidl_loop",
+                "Received synchronous request: {:?}, {:?}, {:?}, {:?}, {:?}",
                 tx, id, method_type, name, params
             );
 

@@ -96,14 +96,15 @@ impl AsyncResponse {
 pub enum FacadeType {
     Bluetooth,
     Wlan,
+    Undefined,
 }
 
 impl FacadeType {
-    pub fn from_str(facade: String) -> Option<FacadeType> {
+    pub fn from_str(facade: String) -> FacadeType {
         match facade.as_ref() {
-            "bluetooth" => Some(FacadeType::Bluetooth),
-            "wlan" => Some(FacadeType::Wlan),
-            _ => None,
+            "bluetooth" => FacadeType::Bluetooth,
+            "wlan" => FacadeType::Wlan,
+            _ => FacadeType::Undefined,
         }
     }
 }
