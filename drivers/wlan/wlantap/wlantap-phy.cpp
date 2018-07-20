@@ -215,19 +215,25 @@ struct WlantapPhy : wlan_device::Phy, wlantap::WlantapPhy, WlantapMac::Listener 
         event_sender_(user_channel_binding_.channel())
     {
         user_channel_binding_.set_error_handler([this] {
+            zxlogf(INFO, "wlantap phy: unbinding device because the channel was closed\n");
             // Remove the device if the client closed the channel
             user_channel_binding_.set_error_handler(nullptr);
             Unbind();
+            zxlogf(INFO, "wlantap phy: done unbinding\n");
         });
     }
 
     static void DdkUnbind(void* ctx) {
+        zxlogf(INFO, "wlantap phy: unbinding device per request from DDK\n");
         auto self = static_cast<WlantapPhy*>(ctx);
         self->Unbind();
+        zxlogf(INFO, "wlantap phy: done unbinding\n");
     }
 
     static void DdkRelease(void* ctx) {
+        zxlogf(INFO, "wlantap phy: DdkRelease\n");
         delete static_cast<WlantapPhy*>(ctx);
+        zxlogf(INFO, "wlantap phy: DdkRelease done\n");
     }
 
     void Unbind() {
@@ -260,9 +266,11 @@ struct WlantapPhy : wlan_device::Phy, wlantap::WlantapPhy, WlantapMac::Listener 
 
     zx_status_t IoctlConnect(const void* in_buf, size_t in_len) {
         if (in_buf == nullptr || in_len < sizeof(zx_handle_t)) {
+            zxlogf(ERROR, "wlantap phy: IoctlConnect: input buffer too short\n");
             return ZX_ERR_INVALID_ARGS;
         }
         phy_dispatcher_.AddBinding(zx::channel(*static_cast<const zx_handle_t*>(in_buf)), this);
+        zxlogf(ERROR, "wlantap phy: IoctlConnect: added the channel to the binding set\n");
         return ZX_OK;
     }
 
@@ -273,6 +281,7 @@ struct WlantapPhy : wlan_device::Phy, wlantap::WlantapPhy, WlantapMac::Listener 
         wlan_device::QueryResponse response;
         response.status = phy_config_->phy_info.Clone(&response.info);
         callback(std::move(response));
+        zxlogf(INFO, "wlantap phy: responded to 'Query' with status %d\n", response.status);
     }
 
     template<typename V, typename T>
@@ -282,10 +291,12 @@ struct WlantapPhy : wlan_device::Phy, wlantap::WlantapPhy, WlantapMac::Listener 
 
     virtual void CreateIface(wlan_device::CreateIfaceRequest req,
                              CreateIfaceCallback callback) override {
+        zxlogf(INFO, "wlantap phy: received a 'CreateIface' FIDL request\n");
         wlan_device::CreateIfaceResponse response;
         if (!contains(*phy_config_->phy_info.mac_roles, req.role)) {
             response.status = ZX_ERR_NOT_SUPPORTED;
             callback(std::move(response));
+            zxlogf(ERROR, "wlantap phy: CreateIface: role not supported\n");
             return;
         }
         std::lock_guard<std::mutex> guard(wlanmac_lock_);
@@ -296,74 +307,90 @@ struct WlantapPhy : wlan_device::Phy, wlantap::WlantapPhy, WlantapMac::Listener 
         if (status != ZX_OK) {
             response.status = ZX_ERR_NO_RESOURCES;
             callback(std::move(response));
+            zxlogf(ERROR, "wlantap phy: CreateIface: maximum number of interfaces already reached\n");
             return;
         }
         callback(std::move(response));
+        zxlogf(INFO, "wlantap phy: CreateIface: success\n");
     }
 
     virtual void DestroyIface(wlan_device::DestroyIfaceRequest req,
                               DestroyIfaceCallback callback) override {
+        zxlogf(INFO, "wlantap phy: received a 'DestroyIface' FIDL request\n");
         wlan_device::DestroyIfaceResponse response;
         std::lock_guard<std::mutex> guard(wlanmac_lock_);
         WlantapMac* wlanmac = wlanmac_devices_.Release(req.id);
         if (wlanmac == nullptr) {
+            zxlogf(ERROR, "wlantap phy: DestroyIface: invalid iface id\n");
             response.status = ZX_ERR_INVALID_ARGS;
         } else {
             wlanmac->RemoveDevice();
             response.status = ZX_OK;
         }
         callback(std::move(response));
+        zxlogf(ERROR, "wlantap phy: DestroyIface: done\n");
     }
 
     // wlantap::WlantapPhy impl
 
     virtual void Rx(uint16_t wlanmac_id, ::fidl::VectorPtr<uint8_t> data,
                     wlantap::WlanRxInfo info) override {
+        zxlogf(INFO, "wlantap phy: Rx(%zu bytes)\n", data->size());
         std::lock_guard<std::mutex> guard(wlanmac_lock_);
         if (WlantapMac* wlanmac = wlanmac_devices_.Get(wlanmac_id)) {
             wlanmac->Rx(data, info);
         }
+        zxlogf(INFO, "wlantap phy: Rx done\n");
     }
 
     virtual void Status(uint16_t wlanmac_id, uint32_t st) override {
+        zxlogf(INFO, "wlantap phy: Status(%u)\n", st);
         std::lock_guard<std::mutex> guard(wlanmac_lock_);
         if (WlantapMac* wlanmac = wlanmac_devices_.Get(wlanmac_id)) {
             wlanmac->Status(st);
         }
+        zxlogf(INFO, "wlantap phy: Status done\n");
     }
 
     // WlantapMac::Listener impl
 
     virtual void WlantapMacStart(uint16_t wlanmac_id) override {
-        printf("WlantapMacStart id=%u\n", wlanmac_id);
+        zxlogf(INFO, "wlantap phy: WlantapMacStart id=%u\n", wlanmac_id);
         std::lock_guard<std::mutex> guard(event_sender_lock_);
         event_sender_.SendWlanmacStartEvent(wlanmac_id);
+        zxlogf(INFO, "wlantap phy: WlantapMacStart done\n");
     }
 
     virtual void WlantapMacStop(uint16_t wlanmac_id) override {
-        printf("WlantapMacStop id=%u\n", wlanmac_id);
+        zxlogf(INFO, "wlantap phy: WlantapMacStop\n");
     }
 
     virtual void WlantapMacQueueTx(uint16_t wlanmac_id, wlan_tx_packet_t* pkt) override {
-        printf("WlantapMacQueueTx id=%u\n", wlanmac_id);
+        zxlogf(INFO, "wlantap phy: WlantapMacQueueTx id=%u\n", wlanmac_id);
         std::lock_guard<std::mutex> guard(event_sender_lock_);
         event_sender_.SendTxEvent(wlanmac_id, pkt);
+        zxlogf(INFO, "wlantap phy: WlantapMacQueueTx done\n");
     }
 
     virtual void WlantapMacSetChannel(uint16_t wlanmac_id, wlan_channel_t* channel) override {
+        zxlogf(INFO, "wlantap phy: WlantapMacSetChannel id=%u\n", wlanmac_id);
         std::lock_guard<std::mutex> guard(event_sender_lock_);
         event_sender_.SendSetChannelEvent(wlanmac_id, channel);
+        zxlogf(INFO, "wlantap phy: WlantapMacSetChannel done\n");
     }
 
     virtual void WlantapMacConfigureBss(uint16_t wlanmac_id, wlan_bss_config_t* config) override {
-        printf("WlantapMacConfigureBss id=%u\n", wlanmac_id);
+        zxlogf(INFO, "wlantap phy: WlantapMacConfigureBss id=%u\n", wlanmac_id);
         std::lock_guard<std::mutex> guard(event_sender_lock_);
         event_sender_.SendConfigureBssEvent(wlanmac_id, config);
+        zxlogf(INFO, "wlantap phy: WlantapMacConfigureBss done\n");
     }
 
     virtual void WlantapMacSetKey(uint16_t wlanmac_id, wlan_key_config_t* key_config) override {
+        zxlogf(INFO, "wlantap phy: WlantapMacSetKey id=%u\n", wlanmac_id);
         std::lock_guard<std::mutex> guard(event_sender_lock_);
         event_sender_.SendSetKeyEvent(wlanmac_id, key_config);
+        zxlogf(INFO, "wlantap phy: WlantapMacSetKey done\n");
     }
 
     zx_device_t* device_;
@@ -380,6 +407,7 @@ struct WlantapPhy : wlan_device::Phy, wlantap::WlantapPhy, WlantapMac::Listener 
 
 zx_status_t CreatePhy(zx_device_t* wlantapctl, zx::channel user_channel,
                       std::unique_ptr<wlantap::WlantapPhyConfig> config, async_dispatcher_t* loop) {
+    zxlogf(INFO, "wlantap: creating phy\n");
     auto phy = std::make_unique<WlantapPhy>(wlantapctl, std::move(user_channel), std::move(config),
                                             loop);
     static zx_protocol_device_t device_ops = {
@@ -399,11 +427,12 @@ zx_status_t CreatePhy(zx_device_t* wlantapctl, zx::channel user_channel,
     };
     zx_status_t status = device_add(wlantapctl, &args, &phy->device_);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: could not add device: %d\n", __func__, status);
+        zxlogf(ERROR, "wlantap: %s: could not add device: %d\n", __func__, status);
         return status;
     }
     // Transfer ownership to devmgr
     phy.release();
+    zxlogf(INFO, "wlantap: phy successfully created\n");
     return ZX_OK;
 }
 

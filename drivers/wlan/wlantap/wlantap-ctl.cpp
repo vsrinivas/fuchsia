@@ -68,8 +68,10 @@ struct WlantapCtl {
         auto& self = *static_cast<WlantapCtl*>(ctx);
         switch (op) {
             case IOCTL_WLANTAP_CREATE_WLANPHY:
+                zxlogf(INFO, "wlantapctl: IOCTL_WLANTAP_CREATE_WLANPHY\n");
                 return self.IoctlCreateWlanphy(in_buf, in_len, out_buf, out_len, out_actual);
             default:
+                zxlogf(ERROR, "wlantapctl: unknown ioctl %u\n", op);
                 return ZX_ERR_NOT_SUPPORTED;
         }
     }
@@ -77,6 +79,7 @@ struct WlantapCtl {
     zx_status_t IoctlCreateWlanphy(const void* in_buf, size_t in_len, void* out_buf,
                                    size_t out_len, size_t* out_actual) {
         if (in_buf == nullptr || in_len < sizeof(wlantap_ioctl_create_wlanphy_t)) {
+            zxlogf(ERROR, "wlantapctl: IOCTL_WLANTAP_CREATE_WLANPHY: invalid input buffer\n");
             return ZX_ERR_INVALID_ARGS;
         }
         auto& in = *static_cast<const wlantap_ioctl_create_wlanphy_t*>(in_buf);
@@ -87,23 +90,25 @@ struct WlantapCtl {
         const uint8_t* in_end = static_cast<const uint8_t*>(in_buf) + in_len;
         zx_status_t status = DecodeFidl(&in.config[0], in_end - &in.config[0], phy_config.get());
         if (status != ZX_OK) {
+            zxlogf(ERROR, "wlantapctl: IOCTL_WLANTAP_CREATE_WLANPHY: failed to parse input buffer as FIDL\n");
             return status;
         }
 
         async_dispatcher_t* loop;
         status = driver_->GetOrStartLoop(&loop);
         if (status != ZX_OK) {
-            zxlogf(ERROR, "could not start wlantap event loop: %d", status);
+            zxlogf(ERROR, "wlantapctl: could not start wlantap event loop: %d\n", status);
             return status;
         }
         status = wlan::CreatePhy(device_, std::move(user_channel), std::move(phy_config), loop);
         if (status != ZX_OK) {
-            zxlogf(ERROR, "could not create wlantap phy: %d\n", status);
+            zxlogf(ERROR, "wlantapctl: could not create wlantap phy: %d\n", status);
             return status;
         }
         if (out_actual != nullptr) {
             *out_actual = 0;
         }
+        zxlogf(ERROR, "wlantapctl: IOCTL_WLANTAP_CREATE_WLANPHY: success\n");
         return ZX_OK;
     }
 
