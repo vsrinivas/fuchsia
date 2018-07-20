@@ -525,8 +525,8 @@ static int eth_tx_thread(void* arg) {
                 zx_signals_t observed;
                 if ((status = zx_object_wait_one(edev->tx_fifo,
                                                  ZX_FIFO_READABLE |
-                                                     ZX_FIFO_PEER_CLOSED |
-                                                     kSignalFifoTerminate,
+                                                 ZX_FIFO_PEER_CLOSED |
+                                                 kSignalFifoTerminate,
                                                  ZX_TIME_INFINITE,
                                                  &observed)) < 0) {
                     zxlogf(ERROR, "eth [%s]: tx_fifo: error waiting: %d\n", edev->name, status);
@@ -634,7 +634,11 @@ fail:
     if (edev->io_buf) {
         zx_status_t unmap_status =
             zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)edev->io_buf, size);
-        ZX_DEBUG_ASSERT(unmap_status == ZX_OK);
+        if (unmap_status != ZX_OK) {
+            zxlogf(ERROR, "eth [%s]: could not unmap io_buf: %d\n",
+                   edev->name, unmap_status);
+            status = unmap_status;
+        }
         edev->io_buf = NULL;
     }
     free(edev->paddr_map);
