@@ -83,9 +83,11 @@ TEST(FormatContext, FormatSourceContext_LineOffEnd) {
   opts.last_line = 100;
   opts.active_line = 10;  // This line is off the end of the input.
   opts.highlight_line = 10;
+  opts.require_active_line = true;
 
   OutputBuffer out;
   Err err = FormatSourceContext("file.cc", kSimpleProgram, opts, &out);
+  ASSERT_TRUE(err.has_error());
   EXPECT_EQ("There is no line 10 in the file file.cc", err.msg());
 }
 
