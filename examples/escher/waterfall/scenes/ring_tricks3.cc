@@ -41,7 +41,8 @@ void RingTricks3::Init(escher::Stage* stage) {
 RingTricks3::~RingTricks3() {}
 
 escher::Model* RingTricks3::Update(const escher::Stopwatch& stopwatch,
-                                   uint64_t frame_count, escher::Stage* stage) {
+                                   uint64_t frame_count, escher::Stage* stage,
+                                   escher::PaperRenderQueue* render_queue) {
   float current_time_sec = stopwatch.GetElapsedSeconds();
 
   float screen_width = stage->viewing_volume().width();

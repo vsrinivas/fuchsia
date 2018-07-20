@@ -16,34 +16,24 @@
 
 using namespace escher;
 
-WaterfallRendererPtr WaterfallRenderer::New(EscherWeakPtr escher,
-                                            ShaderProgramPtr program) {
-  return fxl::AdoptRef(
-      new WaterfallRenderer(std::move(escher), std::move(program)));
+WaterfallRendererPtr WaterfallRenderer::New(EscherWeakPtr escher) {
+  return fxl::AdoptRef(new WaterfallRenderer(std::move(escher)));
 }
 
-WaterfallRenderer::WaterfallRenderer(EscherWeakPtr weak_escher,
-                                     ShaderProgramPtr program)
-    : Renderer(weak_escher),
-      program_(std::move(program)),
-      render_queue_(std::move(weak_escher), program_) {
-  uniforms_ = Buffer::New(escher()->resource_recycler(),
-                          escher()->gpu_allocator(), 10000,
-                          vk::BufferUsageFlagBits::eTransferDst |
-                              vk::BufferUsageFlagBits::eTransferSrc |
-                              vk::BufferUsageFlagBits::eUniformBuffer,
-                          vk::MemoryPropertyFlagBits::eHostVisible |
-                              vk::MemoryPropertyFlagBits::eHostCoherent);
-
+WaterfallRenderer::WaterfallRenderer(EscherWeakPtr weak_escher)
+    : Renderer(weak_escher), render_queue_(std::move(weak_escher)) {
   // Need at least one.
   SetNumDepthBuffers(1);
 }
 
 WaterfallRenderer::~WaterfallRenderer() { escher()->Cleanup(); }
 
-void WaterfallRenderer::DrawFrame(const FramePtr& frame, const Stage& stage,
-                                  const Model& model, const Camera& camera,
-                                  const ImagePtr& output_image) {
+void WaterfallRenderer::DrawFrame(const escher::FramePtr& frame,
+                                  escher::Stage* stage,
+                                  const escher::Camera& camera,
+                                  const escher::Stopwatch& stopwatch,
+                                  uint64_t frame_count, Scene* scene,
+                                  const escher::ImagePtr& output_image) {
   TRACE_DURATION("gfx", "WaterfallRenderer::DrawFrame");
 
   auto cb = frame->cmds();
@@ -51,8 +41,8 @@ void WaterfallRenderer::DrawFrame(const FramePtr& frame, const Stage& stage,
   frame->command_buffer()->TakeWaitSemaphore(
       output_image, vk::PipelineStageFlagBits::eColorAttachmentOutput);
 
-  render_queue_.InitFrame(frame, camera);
-  render_queue_.PushModel(model);
+  render_queue_.InitFrame(frame, *stage, camera);
+  scene->Update(stopwatch, frame_count, stage, &render_queue_);
   render_queue_.Sort();
   BeginRenderPass(frame, output_image);
   render_queue_.GenerateCommands(cb, nullptr);
@@ -95,7 +85,7 @@ void WaterfallRenderer::BeginRenderPass(const escher::FramePtr& frame,
     rp.op_flags = RenderPassInfo::kClearDepthStencilOp |
                   RenderPassInfo::kOptimalColorLayoutOp |
                   RenderPassInfo::kOptimalDepthStencilLayoutOp;
-    rp.clear_color[0].setFloat32({0.3f, 0.f, 0.f, 1.f});
+    rp.clear_color[0].setFloat32({0.f, 0.f, 0.2f, 1.f});
   }
   FXL_CHECK(render_pass_info.Validate());
 

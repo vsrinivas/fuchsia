@@ -5,9 +5,8 @@
 #ifndef GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_DEMO_SCENE_H_
 #define GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_DEMO_SCENE_H_
 
-#include "lib/escher/escher.h"
-
 #include "garnet/examples/escher/waterfall/scenes/scene.h"
+#include "lib/escher/escher.h"
 
 class DemoScene : public Scene {
  public:
@@ -17,7 +16,8 @@ class DemoScene : public Scene {
   void Init(escher::Stage* stage) override;
 
   escher::Model* Update(const escher::Stopwatch& stopwatch,
-                        uint64_t frame_count, escher::Stage* stage) override;
+                        uint64_t frame_count, escher::Stage* stage,
+                        escher::PaperRenderQueue* render_queue) override;
 
  private:
   std::unique_ptr<escher::Model> model_;

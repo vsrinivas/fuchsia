@@ -42,12 +42,28 @@ package("escher_waterfall2") {
   loadable_modules = vulkan_validation_layers.loadable_modules
   resources = [
       {
-          path = "waterfall2/shaders/simple.vert"
-          dest = "shaders/simple.vert"
+          path = "//garnet/public/lib/escher/shaders/model_renderer/main.frag"
+          dest = "shaders/model_renderer/main.frag"
       },
       {
-          path = "waterfall2/shaders/simple.frag"
-          dest = "shaders/simple.frag"
+          path = "//garnet/public/lib/escher/shaders/model_renderer/main.vert"
+          dest = "shaders/model_renderer/main.vert"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/model_renderer/default_position.vert"
+          dest = "shaders/model_renderer/default_position.vert"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/model_renderer/shadow_map_generation.frag"
+          dest = "shaders/model_renderer/shadow_map_generation.frag"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/model_renderer/shadow_map_lighting.frag"
+          dest = "shaders/model_renderer/shadow_map_lighting.frag"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/model_renderer/wobble_position.vert"
+          dest = "shaders/model_renderer/wobble_position.vert"
       },
   ] + vulkan_validation_layers.resources
 }

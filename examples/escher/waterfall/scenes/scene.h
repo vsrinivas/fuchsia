@@ -7,6 +7,7 @@
 
 #include "garnet/examples/escher/common/demo.h"
 #include "lib/escher/escher.h"
+#include "lib/escher/paper/paper_render_queue.h"
 
 namespace escher {
 class Stopwatch;
@@ -25,8 +26,15 @@ class Scene {
   // subclasses a chance to update properties on |stage| (mainly brightness).
   // The returned Model only needs to be valid for the duration of the
   // frame.
-  virtual escher::Model* Update(const escher::Stopwatch& stopwatch,
-                                uint64_t frame_count, escher::Stage* stage) = 0;
+  // NOTE: this method signature allows the Scene to be used with both the
+  // Waterfall and Waterfall2 demos, the former by iterating over the returned
+  // Model, and the latter by pushing objects into |render_queue|.  In the
+  // near-ish future, Waterfall will be deleted, and the |render_queue| argument
+  // to this method will become non-optional.
+  virtual escher::Model* Update(
+      const escher::Stopwatch& stopwatch, uint64_t frame_count,
+      escher::Stage* stage,
+      escher::PaperRenderQueue* render_queue = nullptr) = 0;
 
   // Optionally returns a |Model| for the specified time, frame_count, and
   // screen dimensions.  The returned Model only needs to be valid for the

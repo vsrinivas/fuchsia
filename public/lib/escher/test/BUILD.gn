@@ -18,6 +18,7 @@ if (is_mac) {
     sources = [
       "fs/hack_filesystem_unittest.cc",
       "geometry/bounding_box_unittest.cc",
+      "geometry/clip_planes_unittest.cc",
       "gpu_mem_unittest.cc",
       "impl/glsl_compiler_unittest.cc",
       "impl/pipeline_cache_unittest.cc",

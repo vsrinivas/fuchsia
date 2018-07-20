@@ -8,8 +8,10 @@
 #include "garnet/public/lib/escher/test/vk/vulkan_tester.h"
 
 #include "lib/escher/defaults/default_shader_program_factory.h"
+#include "lib/escher/geometry/clip_planes.h"
 #include "lib/escher/geometry/tessellation.h"
 #include "lib/escher/shape/mesh.h"
+#include "lib/escher/util/string_utils.h"
 #include "lib/escher/vk/command_buffer.h"
 #include "lib/escher/vk/shader_module_template.h"
 #include "lib/escher/vk/shader_variant_args.h"
@@ -68,9 +70,13 @@ VK_TEST_F(ShaderProgramTest, CachedVariants) {
   auto escher = test::GetEscher();
 
   ShaderVariantArgs variant1(
-      {{"NO_SHADOW_LIGHTING_PASS", "1"}, {"USE_UV_ATTRIBUTE", "1"}});
+      {{"NO_SHADOW_LIGHTING_PASS", "1"},
+       {"USE_UV_ATTRIBUTE", "1"},
+       {"NUM_CLIP_PLANES", ToString(ClipPlanes::kNumPlanes)}});
   ShaderVariantArgs variant2(
-      {{"NO_SHADOW_LIGHTING_PASS", "1"}, {"USE_UV_ATTRIBUTE", "0"}});
+      {{"NO_SHADOW_LIGHTING_PASS", "1"},
+       {"USE_UV_ATTRIBUTE", "0"},
+       {"NUM_CLIP_PLANES", ToString(ClipPlanes::kNumPlanes)}});
 
   const char* kMainVert = "shaders/model_renderer/main.vert";
   const char* kMainFrag = "shaders/model_renderer/main.frag";
@@ -95,7 +101,9 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelines) {
   auto escher = test::GetEscher();
 
   ShaderVariantArgs variant(
-      {{"NO_SHADOW_LIGHTING_PASS", "1"}, {"USE_UV_ATTRIBUTE", "1"}});
+      {{"NO_SHADOW_LIGHTING_PASS", "1"},
+       {"USE_UV_ATTRIBUTE", "1"},
+       {"NUM_CLIP_PLANES", ToString(ClipPlanes::kNumPlanes)}});
 
   auto program =
       escher->GetGraphicsProgram("shaders/model_renderer/main.vert",

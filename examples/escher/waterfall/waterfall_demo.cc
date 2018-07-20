@@ -50,6 +50,8 @@ WaterfallDemo::~WaterfallDemo() {
   FXL_LOG(INFO) << "Average frame rate: " << fps;
   FXL_LOG(INFO) << "First frame took: " << first_frame_microseconds_ / 1000.0
                 << " milliseconds";
+
+  escher()->Cleanup();
 }
 
 void WaterfallDemo::ProcessCommandLineArgs(int argc, char** argv) {

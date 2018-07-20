@@ -13,6 +13,7 @@ namespace escher {
 class BlockAllocator;
 class Buffer;
 class Camera;
+struct ClipPlanes;
 class CommandBuffer;
 class DefaultShaderProgramFactory;
 class Escher;
@@ -35,6 +36,7 @@ class Object;
 // a PipelineLayout in impl/vk.
 class PipelineLayout;
 class PaperRenderer;
+class PaperRenderQueue;
 class Resource;
 class ResourceRecycler;
 class Renderer;

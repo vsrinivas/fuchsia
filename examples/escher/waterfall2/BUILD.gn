@@ -13,6 +13,7 @@ executable("waterfall2") {
 
   deps = [
     "//garnet/examples/escher/common",
+    "//garnet/examples/escher/waterfall:scenes",
     "//garnet/public/lib/escher:vulkan",
   ]
 

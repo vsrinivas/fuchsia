@@ -11,6 +11,7 @@
 
 #include "garnet/examples/escher/common/demo.h"
 #include "garnet/examples/escher/common/demo_harness.h"
+#include "garnet/examples/escher/waterfall/scenes/scene.h"
 #include "garnet/examples/escher/waterfall2/waterfall_renderer.h"
 
 #include "lib/escher/escher.h"
@@ -55,6 +56,14 @@ class WaterfallDemo : public Demo {
   escher::MaterialPtr material_;
   escher::MaterialPtr material2_;
 
+  // 4 camera projection modes:
+  // - orthographic full-screen
+  // - perspective where floor plane is full-screen, and parallel to screen
+  // - perspective from tilted viewpoint (from x-center of stage).
+  // - perspective from tilted viewpoint (from corner).
+  int camera_projection_mode_ = 0;
+
+  std::unique_ptr<Scene> scene_;
   escher::Stopwatch stopwatch_;
   uint64_t frame_count_ = 0;
   uint64_t first_frame_microseconds_;

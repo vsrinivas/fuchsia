@@ -1,3 +1,10 @@
+// #included by main.frag
+
+// TODO(ES-109): this code was extracted from the old ad-hoc shader generation
+// classes so that whoever implements this doesn't have to work though that
+// twisted logic.  But it hasn't ever been tested or run.
+#error Not implemented.
+
 #ifndef MOMENT_SHADOW_MAP
 // Regular shadow map simply returns the depth.
 vec4 EncodeDepth(float depth) {
@@ -27,5 +34,5 @@ vec4 EncodeDepth(float z) {
 #endif
 
 void main() {
-  outColor = EncodeDepth(gl_FragCoord.z));
+  outColor = EncodeDepth(gl_FragCoord.z);
 }

@@ -4,6 +4,7 @@
 
 #include "garnet/examples/escher/waterfall/scenes/ring_tricks2.h"
 
+#include "lib/escher/geometry/clip_planes.h"
 #include "lib/escher/geometry/tessellation.h"
 #include "lib/escher/geometry/types.h"
 #include "lib/escher/material/material.h"
@@ -66,7 +67,8 @@ void RingTricks2::Init(escher::Stage* stage) {
 RingTricks2::~RingTricks2() {}
 
 escher::Model* RingTricks2::Update(const escher::Stopwatch& stopwatch,
-                                   uint64_t frame_count, escher::Stage* stage) {
+                                   uint64_t frame_count, escher::Stage* stage,
+                                   escher::PaperRenderQueue* render_queue) {
   float current_time_sec = stopwatch.GetElapsedSeconds();
 
   float screen_width = stage->viewing_volume().width();
@@ -78,7 +80,7 @@ escher::Model* RingTricks2::Update(const escher::Stopwatch& stopwatch,
 
   std::vector<Object> objects;
 
-  // Orbiting circle1
+  // Orbiting circle1.
   float circle1_orbit_radius = 275.f;
   vec3 circle1_pos(sin(current_time_sec * 1.f) * circle1_orbit_radius +
                        (screen_width * 0.5f),
@@ -88,7 +90,7 @@ escher::Model* RingTricks2::Update(const escher::Stopwatch& stopwatch,
   Object circle1(Object::NewCircle(circle1_pos, 60.f, red_));
   objects.push_back(circle1);
 
-  // Orbiting circle2
+  // Orbiting circle2.
   float circle2_orbit_radius = 120.f;
   vec2 circle2_offset(sin(current_time_sec * 2.f) * circle2_orbit_radius,
                       cos(current_time_sec * 2.f) * circle2_orbit_radius);
@@ -100,17 +102,17 @@ escher::Model* RingTricks2::Update(const escher::Stopwatch& stopwatch,
   Object circle2(Object::NewCircle(circle2_pos, 30.f, color1_));
   objects.push_back(circle2);
 
-  // Create the ring that will do the fancy trick
+  // Create the ring that will do the fancy trick.
   vec3 inner_ring_pos(screen_width * 0.5f, screen_height * 0.5f, mid_elevation);
   Object inner_ring(inner_ring_pos, ring_mesh1_, color2_);
-  inner_ring.set_shape_modifiers(ShapeModifier::kWobble);
   objects.push_back(inner_ring);
 
-  // Create our background plane
+  // Create our background plane.
   Object bg_plane(
       Object::NewRect(vec3(0, 0, 0), vec2(screen_width, screen_height), bg_));
   objects.push_back(bg_plane);
 
+  // Stack of circles.
   Object circle4(Object::NewCircle(vec2(100, 100), 90.f, 35.f, red_));
   objects.push_back(circle4);
 
@@ -140,6 +142,37 @@ escher::Model* RingTricks2::Update(const escher::Stopwatch& stopwatch,
   // Create the Model
   model_ = std::unique_ptr<escher::Model>(new escher::Model(objects));
   model_->set_time(current_time_sec);
+
+  // The following code allows the scene to be rendered in both the Waterfall
+  // and Waterfall2 demos.  In the near-ish future, only Waterfall2 will remain,
+  // and this method signature will be changed to no longer return a Model.
+  // Therefore it will no longer be necessary to collect these objects in a
+  // vector.
+  if (render_queue) {
+    render_queue->PushObject(circle1);
+    render_queue->PushObject(circle2);
+    render_queue->PushObject(inner_ring);
+    render_queue->PushObject(bg_plane);
+    render_queue->PushObject(round_rect1);
+    render_queue->PushObject(sphere);
+
+    // Animate a clip plane to wipe the stack of circles.
+    auto clip_planes =
+        escher::ClipPlanes::FromBox(stage->viewing_volume().bounding_box());
+    float dist_from_origin = glm::length(vec2(100, 100));
+    vec3 clip_dir(1, 1, 0);
+    clip_dir = glm::normalize(clip_dir);
+    float x_clip = dist_from_origin + 70.f * sin(current_time_sec * 1.5);
+    clip_planes.planes[0] = escher::vec4(-clip_dir, x_clip);
+    render_queue->SetClipPlanes(clip_planes);
+
+    render_queue->PushObject(circle4);
+    render_queue->PushObject(circle5);
+    render_queue->PushObject(circle6);
+    render_queue->PushObject(circle7);
+    render_queue->PushObject(circle8);
+    render_queue->PushObject(circle9);
+  }
 
   return model_.get();
 }

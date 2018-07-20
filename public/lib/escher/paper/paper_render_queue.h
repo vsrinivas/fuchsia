@@ -6,6 +6,7 @@
 #define LIB_ESCHER_PAPER_PAPER_RENDER_QUEUE_H_
 
 #include "lib/escher/forward_declarations.h"
+#include "lib/escher/geometry/clip_planes.h"
 #include "lib/escher/renderer/render_queue.h"
 #include "lib/escher/renderer/uniform_allocation.h"
 #include "lib/escher/util/hash_map.h"
@@ -16,16 +17,15 @@ namespace escher {
 // RenderQueues, one for opaque and one for translucent objects.
 class PaperRenderQueue {
  public:
-  PaperRenderQueue(EscherWeakPtr escher, ShaderProgramPtr program);
+  explicit PaperRenderQueue(EscherWeakPtr escher);
 
   // Set up view-point specific data that is used for the rest of the frame.
   // This includes both uniforms that will be passed to shaders, as well as
   // camera position and orientation that will be used for generating
   // RenderQueueItem sort-keys.
-  void InitFrame(const FramePtr& frame, const Camera& camera);
+  void InitFrame(const FramePtr& frame, const Stage& stage,
+                 const Camera& camera);
 
-  // Iterate over all Objects in the Model, and invoke PushObject() for each.
-  void PushModel(const Model& model);
   // Generate an appropriate RenderQueueItem for the object, and push it onto
   // the appropriate RenderQueue (either opaque or translucent).
   void PushObject(const Object& obj);
@@ -42,6 +42,10 @@ class PaperRenderQueue {
 
   // Clear per-frame data, as well as the opaque/translucent RenderQueues.
   void Clear();
+
+  // Set clip planes that will be applied to all subsequent calls of PushModel()
+  // and PushObject(), until the next time InitFrame() is called.
+  void SetClipPlanes(const ClipPlanes& planes) { clip_planes_ = planes; }
 
   // Helper for the creation of uint64_t sort-keys for the opaque and
   // translucent RenderQueues.
@@ -76,6 +80,8 @@ class PaperRenderQueue {
 
   RenderQueue opaque_;
   RenderQueue translucent_;
+
+  ClipPlanes clip_planes_;
 
   // Per-frame data.
   FramePtr frame_;

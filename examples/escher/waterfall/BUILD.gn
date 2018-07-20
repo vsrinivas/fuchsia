@@ -4,21 +4,12 @@
 
 executable("waterfall") {
   sources = [
-    "scenes/demo_scene.cc",
-    "scenes/ring_tricks1.cc",
-    "scenes/ring_tricks2.cc",
-    "scenes/ring_tricks3.cc",
-    "scenes/scene.cc",
-    "scenes/uber_scene.cc",
-    "scenes/uber_scene2.cc",
-    "scenes/uber_scene3.cc",
-    "scenes/wobbly_ocean_scene.cc",
-    "scenes/wobbly_rings_scene.cc",
     "waterfall_demo.cc",
     "waterfall_demo.h",
     "waterfall_main.cc",
   ]
   deps = [
+    ":scenes",
     "//garnet/examples/escher/common",
     "//garnet/public/lib/escher:vulkan",
   ]
@@ -27,5 +18,34 @@ executable("waterfall") {
     "//lib",
     "//garnet/public/lib/escher",
     "//third_party/glm",
+  ]
+}
+
+source_set("scenes") {
+  sources = [
+    "scenes/demo_scene.cc",
+    "scenes/demo_scene.h",
+    "scenes/ring_tricks1.cc",
+    "scenes/ring_tricks1.h",
+    "scenes/ring_tricks2.cc",
+    "scenes/ring_tricks2.h",
+    "scenes/ring_tricks3.cc",
+    "scenes/ring_tricks3.h",
+    "scenes/scene.cc",
+    "scenes/scene.h",
+    "scenes/uber_scene.cc",
+    "scenes/uber_scene.h",
+    "scenes/uber_scene2.cc",
+    "scenes/uber_scene2.h",
+    "scenes/uber_scene3.cc",
+    "scenes/uber_scene3.h",
+    "scenes/wobbly_ocean_scene.cc",
+    "scenes/wobbly_ocean_scene.h",
+    "scenes/wobbly_rings_scene.cc",
+    "scenes/wobbly_rings_scene.h",
+  ]
+
+  deps = [
+    "//garnet/examples/escher/common",
   ]
 }

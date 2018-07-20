@@ -187,11 +187,36 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
     extension_names.push_back(extension.c_str());
   }
 
+  // Specify the required physical device features, and verify that they are all
+  // supported.
+  // TODO(ES-111): instead of hard-coding the required features here, provide a
+  // mechanism for Escher clients to specify additional required features.
+  vk::PhysicalDeviceFeatures required_device_features;
+  vk::PhysicalDeviceFeatures supported_device_features;
+  physical_device.getFeatures(&supported_device_features);
+  bool device_has_all_required_features = true;
+#define ADD_REQUIRED_FEATURE(X)                                   \
+  required_device_features.X = true;                              \
+  if (!supported_device_features.X) {                             \
+    FXL_LOG(WARNING) << "Could not create Vulkan Device: '" << #X \
+                     << "' not supported.";                       \
+    device_has_all_required_features = false;                     \
+  }
+
+  ADD_REQUIRED_FEATURE(shaderClipDistance);
+
+  if (!device_has_all_required_features) {
+    return fxl::RefPtr<VulkanDeviceQueues>();
+  }
+#undef ADD_REQUIRED_FEATURE
+
+  // Almost ready to create the device; start populating the VkDeviceCreateInfo.
   vk::DeviceCreateInfo device_info;
   device_info.queueCreateInfoCount = 2;
   device_info.pQueueCreateInfos = queue_info;
   device_info.enabledExtensionCount = extension_names.size();
   device_info.ppEnabledExtensionNames = extension_names.data();
+  device_info.pEnabledFeatures = &required_device_features;
 
   // It's possible that the main queue and transfer queue are in the same
   // queue family.  Adjust the device-creation parameters to account for this.

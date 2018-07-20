@@ -31,7 +31,6 @@ layout(set = 0, binding = 0) uniform PerModel {
 };
 layout(set = 1, binding = 0) uniform PerObject {
   mat4 camera_transform;
-  mat4 light_transform;
   vec4 color;
 };
 layout(set = 1, binding = 1) uniform sampler2D material_tex;

@@ -68,9 +68,9 @@ void WobblyOceanScene::Init(escher::Stage* stage) {
 
 WobblyOceanScene::~WobblyOceanScene() {}
 
-escher::Model* WobblyOceanScene::Update(const escher::Stopwatch& stopwatch,
-                                        uint64_t frame_count,
-                                        escher::Stage* stage) {
+escher::Model* WobblyOceanScene::Update(
+    const escher::Stopwatch& stopwatch, uint64_t frame_count,
+    escher::Stage* stage, escher::PaperRenderQueue* render_queue) {
   float current_time_sec = stopwatch.GetElapsedSeconds();
 
   float screenWidth = stage->viewing_volume().width();

@@ -49,7 +49,8 @@ void UberScene::Init(escher::Stage* stage) {
 UberScene::~UberScene() {}
 
 escher::Model* UberScene::Update(const escher::Stopwatch& stopwatch,
-                                 uint64_t frame_count, escher::Stage* stage) {
+                                 uint64_t frame_count, escher::Stage* stage,
+                                 escher::PaperRenderQueue* render_queue) {
   float current_time_sec = stopwatch.GetElapsedSeconds();
 
   float screen_width = stage->viewing_volume().width();

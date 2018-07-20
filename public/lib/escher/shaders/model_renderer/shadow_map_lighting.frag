@@ -1,3 +1,9 @@
+// #included by main.frag
+
+// TODO(ES-109): this code was extracted from the old ad-hoc shader generation
+// classes so that whoever implements this doesn't have to work though that
+// twisted logic.  But it hasn't ever been tested or run.
+#error Not implemented.
 
 // Common to all shadow map techniques.
 layout(location = 0) in vec2 inUV;
@@ -15,8 +21,12 @@ layout(set = 0, binding = 1) uniform sampler2D shadow_map_tex;
 
 layout(set = 1, binding = 0) uniform PerObject {
   mat4 camera_transform;
-  mat4 light_transform;
+  // TODO(ES-109): See comment in main.vert: perhaps this shouldn't be per-obj.
+  // Anyway, it's not defined in the vertex shaders, so it needs to go somewhere
+  // else.
+  // mat4 light_transform;
   vec4 color;
+  vec4 clip_planes[NUM_CLIP_PLANES];
 };
 
 layout(set = 1, binding = 1) uniform sampler2D material_tex;

@@ -65,6 +65,7 @@ class PaperRenderFuncs {
     uint32_t uniform_binding_count;
     UniformBinding* uniform_bindings;
 
+    // TODO(ES-109): move these into MeshInstanceData.
     Texture* texture;
     ShaderProgram* shader_program;
   };

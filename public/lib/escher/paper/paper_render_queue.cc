@@ -7,14 +7,17 @@
 #include <glm/gtc/matrix_access.hpp>
 
 #include "lib/escher/escher.h"
+#include "lib/escher/geometry/clip_planes.h"
 #include "lib/escher/geometry/tessellation.h"
 #include "lib/escher/impl/mesh_manager.h"
 #include "lib/escher/paper/paper_render_funcs.h"
 #include "lib/escher/renderer/frame.h"
 #include "lib/escher/scene/model.h"
 #include "lib/escher/scene/object.h"
+#include "lib/escher/scene/stage.h"
 #include "lib/escher/shape/mesh.h"
 #include "lib/escher/util/hasher.h"
+#include "lib/escher/util/string_utils.h"
 #include "lib/escher/util/trace_macros.h"
 #include "lib/escher/vk/shader_program.h"
 
@@ -34,10 +37,16 @@ TexturePtr CreateWhiteTexture(Escher* escher) {
 
 }  // anonymous namespace
 
-PaperRenderQueue::PaperRenderQueue(EscherWeakPtr escher,
-                                   ShaderProgramPtr program)
+PaperRenderQueue::PaperRenderQueue(EscherWeakPtr escher)
     : escher_(std::move(escher)),
-      program_(std::move(program)),
+
+      program_(escher_->GetGraphicsProgram(
+          "shaders/model_renderer/main.vert",
+          "shaders/model_renderer/main.frag",
+          ShaderVariantArgs(
+              {{"USE_UV_ATTRIBUTE", "1"},
+               {"NO_SHADOW_LIGHTING_PASS", "1"},
+               {"NUM_CLIP_PLANES", ToString(ClipPlanes::kNumPlanes)}}))),
       rectangle_(NewSimpleRectangleMesh(escher_->mesh_manager())),
       circle_(NewCircleMesh(escher_->mesh_manager(),
                             {MeshAttribute::kPosition2D | MeshAttribute::kUV},
@@ -45,9 +54,12 @@ PaperRenderQueue::PaperRenderQueue(EscherWeakPtr escher,
       white_texture_(CreateWhiteTexture(escher_.get())),
       view_projection_uniform_{} {}
 
-void PaperRenderQueue::InitFrame(const FramePtr& frame, const Camera& camera) {
+void PaperRenderQueue::InitFrame(const FramePtr& frame, const Stage& stage,
+                                 const Camera& camera) {
   FXL_DCHECK(!frame_ && view_projection_uniform_.buffer == nullptr);
   frame_ = frame;
+
+  clip_planes_ = ClipPlanes::FromBox(stage.viewing_volume().bounding_box());
 
   view_projection_uniform_ = frame->AllocateUniform(
       sizeof(glm::mat4), kMinUniformBufferOffsetAlignment);
@@ -165,10 +177,11 @@ void PaperRenderQueue::PushObject(const Object& obj) {
   PaperRenderFuncs::MeshInstanceData* inst_data =
       frame_->Allocate<PaperRenderFuncs::MeshInstanceData>();
 
-  // Matches ObjectProperties in simple.vert
+  // Matches ObjectProperties in vertex shader (default_position.vert etc.).
   struct ObjectProperties {
     mat4 model_transform;
     vec4 color;
+    ClipPlanes clip_planes;
   };
 
   UniformAllocation props = frame_->AllocateUniform(
@@ -176,6 +189,8 @@ void PaperRenderQueue::PushObject(const Object& obj) {
   auto& object_properties = props.as_ref<ObjectProperties>();
   object_properties.model_transform = obj.transform();
   object_properties.color = material->color();
+  object_properties.clip_planes = clip_planes_;
+
   inst_data->object_properties =
       PaperRenderFuncs::UniformBinding{.descriptor_set_index = 1,
                                        .binding_index = 0,
@@ -206,13 +221,6 @@ void PaperRenderQueue::PushObject(const Object& obj) {
     translucent_.Push(
         SortKey::NewTranslucent(pipeline_hash, object_hash, depth).key(),
         obj_data, inst_data, PaperRenderFuncs::RenderMesh);
-  }
-}
-
-void PaperRenderQueue::PushModel(const Model& model) {
-  TRACE_DURATION("gfx", "escher::PaperRenderQueue::PushModel");
-  for (auto& obj : model.objects()) {
-    PushObject(obj);
   }
 }
 

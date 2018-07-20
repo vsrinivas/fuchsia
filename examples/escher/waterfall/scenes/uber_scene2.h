@@ -17,7 +17,8 @@ class UberScene2 : public Scene {
   void Init(escher::Stage* stage) override;
 
   escher::Model* Update(const escher::Stopwatch& stopwatch,
-                        uint64_t frame_count, escher::Stage* stage) override;
+                        uint64_t frame_count, escher::Stage* stage,
+                        escher::PaperRenderQueue* render_queue) override;
 
   escher::Model* UpdateOverlay(const escher::Stopwatch& stopwatch,
                                uint64_t frame_count, uint32_t width,
