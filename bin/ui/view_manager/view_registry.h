@@ -20,7 +20,9 @@
 #include "garnet/bin/ui/view_manager/view_state.h"
 #include "garnet/bin/ui/view_manager/view_stub.h"
 #include "garnet/bin/ui/view_manager/view_tree_state.h"
+
 #include "lib/component/cpp/startup_context.h"
+
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/ui/scenic/cpp/session.h"
@@ -29,7 +31,9 @@ namespace view_manager {
 
 // Maintains a registry of the state of all views.
 // All ViewState objects are owned by the registry.
-class ViewRegistry : public ViewInspector, public InputOwner {
+class ViewRegistry : public ViewInspector,
+                     public InputOwner,
+                     public fuchsia::ui::viewsv1::AccessibilityViewInspector {
  public:
   explicit ViewRegistry(component::StartupContext* startup_context);
   ~ViewRegistry() override;
@@ -187,9 +191,8 @@ class ViewRegistry : public ViewInspector, public InputOwner {
 
   // SIGNALING
 
-  void SendPropertiesChanged(
-      ViewState* view_state,
-      ::fuchsia::ui::viewsv1::ViewProperties properties);
+  void SendPropertiesChanged(ViewState* view_state,
+                             ::fuchsia::ui::viewsv1::ViewProperties properties);
   void SendChildAttached(ViewContainerState* container_state,
                          uint32_t child_key,
                          ::fuchsia::ui::viewsv1::ViewInfo child_view_info);
@@ -236,6 +239,16 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   // Calls a view's accessibility service if it exists.
   void A11yNotifyViewSelected(
       ::fuchsia::ui::viewsv1token::ViewToken view_token);
+
+  // A11Y VIEW INSPECTOR
+
+  // Performs a view hit-test on the view tree corresponding to
+  // the associated token and returns a vector of gfx::Hit objects
+  // corresponding to the views hit, in order of first to last hit.
+  void PerformHitTest(fuchsia::ui::viewsv1::ViewTreeToken token,
+                      fuchsia::math::Point3F origin,
+                      fuchsia::math::Point3F direction,
+                      PerformHitTestCallback callback) override;
 
   component::StartupContext* startup_context_;
   fuchsia::ui::scenic::ScenicPtr scenic_;

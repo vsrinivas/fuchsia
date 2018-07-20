@@ -40,17 +40,18 @@ source_set("lib") {
   public_deps = [
     "//garnet/bin/ui/view_manager/input",
     "//garnet/bin/ui/view_manager/internal",
+    "//garnet/public/fidl/fuchsia.accessibility",
+    "//garnet/public/fidl/fuchsia.ui.a11y",
+    "//garnet/public/fidl/fuchsia.ui.gfx",
+    "//garnet/public/fidl/fuchsia.ui.input",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/fidl/fuchsia.ui.a11y",
     "//garnet/public/lib/ui/geometry/cpp",
-    "//garnet/public/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/ui/input/cpp",
-    "//garnet/public/fidl/fuchsia.ui.input",
     "//garnet/public/lib/ui/scenic/cpp",
     "//garnet/public/lib/ui/views/cpp",
-    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

@@ -23,6 +23,13 @@ ViewManagerApp::ViewManagerApp()
                 std::make_unique<ViewManagerImpl>(registry_.get()),
                 std::move(request));
           });
+  startup_context_->outgoing()
+      .AddPublicService<fuchsia::ui::viewsv1::AccessibilityViewInspector>(
+          [this](fidl::InterfaceRequest<
+                 fuchsia::ui::viewsv1::AccessibilityViewInspector>
+                     request) {
+            inspector_bindings_.AddBinding(registry_.get(), std::move(request));
+          });
 }
 
 ViewManagerApp::~ViewManagerApp() {}

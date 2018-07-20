@@ -32,6 +32,10 @@ class ViewManagerApp {
                    std::unique_ptr<ViewManagerImpl>>
       view_manager_bindings_;
 
+  // Binding to expose view hit-test service to the a11y manager.
+  fidl::BindingSet<fuchsia::ui::viewsv1::AccessibilityViewInspector>
+      inspector_bindings_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewManagerApp);
 };
 

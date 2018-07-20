@@ -8,6 +8,7 @@
 #include <cmath>
 #include <utility>
 
+#include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/a11y/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -542,10 +543,11 @@ void ViewRegistry::InvalidateViewTree(ViewTreeState* tree_state,
 void ViewRegistry::ScheduleTraversal() {
   if (!traversal_scheduled_) {
     traversal_scheduled_ = true;
-    async::PostTask(async_get_default_dispatcher(), [weak = weak_factory_.GetWeakPtr()] {
-      if (weak)
-        weak->Traverse();
-    });
+    async::PostTask(async_get_default_dispatcher(),
+                    [weak = weak_factory_.GetWeakPtr()] {
+                      if (weak)
+                        weak->Traverse();
+                    });
   }
 }
 
@@ -675,10 +677,11 @@ void ViewRegistry::TraverseView(ViewState* view_state,
 void ViewRegistry::SchedulePresentSession() {
   if (!present_session_scheduled_) {
     present_session_scheduled_ = true;
-    async::PostTask(async_get_default_dispatcher(), [weak = weak_factory_.GetWeakPtr()] {
-      if (weak)
-        weak->PresentSession();
-    });
+    async::PostTask(async_get_default_dispatcher(),
+                    [weak = weak_factory_.GetWeakPtr()] {
+                      if (weak)
+                        weak->PresentSession();
+                    });
   }
 }
 
@@ -1017,6 +1020,29 @@ void ViewRegistry::A11yNotifyViewSelected(
       a11y_client->NotifyViewSelected();
     }
   }
+}
+
+void ViewRegistry::PerformHitTest(
+    fuchsia::ui::viewsv1::ViewTreeToken view_tree_token,
+    fuchsia::math::Point3F ray_origin, fuchsia::math::Point3F ray_direction,
+    PerformHitTestCallback callback) {
+  // Direct copy of the internal view registry HitTest method.
+  // The only difference is the callback returns fuchsia::ui::gfx::Hit, the
+  // FIDL equivalent of view_manager::ViewHit.
+  ViewTreeState* view_tree = FindViewTree(view_tree_token.value);
+  if (!view_tree || !view_tree->GetRoot() ||
+      !view_tree->GetRoot()->host_node()) {
+    callback(fidl::VectorPtr<fuchsia::ui::gfx::Hit>());
+    return;
+  }
+  session_.HitTestDeviceRay(
+      (float[3]){ray_origin.x, ray_origin.y, ray_origin.z},
+      (float[3]){ray_direction.x, ray_direction.y, ray_direction.z},
+      fxl::MakeCopyable(
+          [this, callback = std::move(callback), ray_origin,
+           ray_direction](fidl::VectorPtr<fuchsia::ui::gfx::Hit> hits) {
+            callback(std::move(hits));
+          }));
 }
 
 }  // namespace view_manager
