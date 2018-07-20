@@ -31,10 +31,6 @@ import("sdk_molecule.gni")
 template("sdk") {
   assert(defined(invoker.category), "Must define an SDK category")
 
-  if (defined(invoker.old_school)) {
-    not_needed(invoker, ["old_school"])
-  }
-
   main_target_name = target_name
   generation_target_name = "${target_name}_molecule"
   copy_target_name = "${target_name}_copy"
