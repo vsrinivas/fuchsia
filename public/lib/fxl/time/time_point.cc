@@ -11,8 +11,6 @@
 #include <mach/mach_time.h>
 #elif defined(OS_FUCHSIA)
 #include <zircon/syscalls.h>
-#elif defined(OS_WIN)
-#include <windows.h>
 #else
 #include <time.h>
 #endif  // defined(OS_MACOSX) || defined(OS_IOS)
@@ -48,16 +46,6 @@ TimePoint TimePoint::Now() {
 // static
 TimePoint TimePoint::Now() {
   return TimePoint(zx_clock_get(ZX_CLOCK_MONOTONIC));
-}
-
-#elif defined(OS_WIN)
-
-TimePoint TimePoint::Now() {
-  uint64_t freq = 0;
-  uint64_t count = 0;
-  QueryPerformanceFrequency((LARGE_INTEGER *)&freq);
-  QueryPerformanceCounter((LARGE_INTEGER *)&count);
-  return TimePoint((count * 1000000000) / freq);
 }
 
 #else

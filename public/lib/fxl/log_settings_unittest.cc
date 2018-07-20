@@ -4,13 +4,14 @@
 
 #include "lib/fxl/log_settings.h"
 
+#include <unistd.h>
+
 #include "gtest/gtest.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
-#include "lib/fxl/portable_unistd.h"
 
 namespace fxl {
 namespace {

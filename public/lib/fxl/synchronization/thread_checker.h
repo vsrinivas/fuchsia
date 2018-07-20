@@ -10,11 +10,7 @@
 
 #include "lib/fxl/build_config.h"
 
-#if defined(OS_WIN)
-#include <windows.h>
-#else
 #include <pthread.h>
-#endif
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -31,16 +27,6 @@ namespace fxl {
 // there's a small space cost to having even an empty class. )
 class ThreadChecker final {
  public:
-#if defined(OS_WIN)
-  ThreadChecker() : self_(GetCurrentThreadId()) {}
-  ~ThreadChecker() {}
-
-  bool IsCreationThreadCurrent() const { return GetCurrentThreadId() == self_; }
-
- private:
-  const DWORD self_;
-
-#else
   ThreadChecker() : self_(pthread_self()) {}
   ~ThreadChecker() {}
 
@@ -52,7 +38,6 @@ class ThreadChecker final {
 
  private:
   const pthread_t self_;
-#endif
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ThreadChecker);
 };

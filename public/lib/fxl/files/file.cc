@@ -7,21 +7,16 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
-#if defined(OS_WIN)
-#define FILE_CREATE_MODE _S_IREAD | _S_IWRITE
-#define BINARY_MODE _O_BINARY
-#else
 #define FILE_CREATE_MODE 0666
 #define BINARY_MODE 0
-#endif
 
 #include "lib/fxl/files/eintr_wrapper.h"
 #include "lib/fxl/files/file_descriptor.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
-#include "lib/fxl/portable_unistd.h"
 
 namespace files {
 namespace {

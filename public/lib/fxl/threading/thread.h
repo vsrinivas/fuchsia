@@ -7,12 +7,7 @@
 
 #include "lib/fxl/build_config.h"
 
-#if defined(OS_WIN)
-#include <windows.h>
-#else
 #include <pthread.h>
-#endif
-
 #include <functional>
 
 #include "lib/fxl/fxl_export.h"
@@ -35,11 +30,7 @@ class FXL_EXPORT Thread {
   void Main();
 
   std::function<void(void)> runnable_;
-#if defined(OS_WIN)
-  HANDLE thread_;
-#else
   pthread_t thread_;
-#endif
   bool running_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Thread);

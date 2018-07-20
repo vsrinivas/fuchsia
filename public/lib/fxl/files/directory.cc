@@ -7,12 +7,11 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <sys/stat.h>
-
+#include <unistd.h>
 #include <vector>
 
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/logging.h"
-#include "lib/fxl/portable_unistd.h"
 
 namespace files {
 

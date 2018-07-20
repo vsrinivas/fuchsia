@@ -8,12 +8,7 @@
 #define LIB_FXL_TEST_TIMEOUT_TOLERANCE_H_
 
 namespace fxl {
-#if defined(OS_WIN)
-// On Windows, timeouts sometimes happen a tiny, tiny bit too early.
-constexpr TimeDelta kTimeoutTolerance = TimeDelta::FromMicroseconds(500);
-#else
 constexpr TimeDelta kTimeoutTolerance = TimeDelta::Zero();
-#endif  // defined(OS_WIN
 }  // namespace fxl
 
 #endif  // LIB_FXL_TEST_TIMEOUT_TOLERANCE_H_

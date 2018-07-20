@@ -19,13 +19,6 @@ bool Thread::Run(size_t stack_size) {
   if (running_) {
     return false;
   }
-#if defined(OS_WIN)
-  thread_ = CreateThread(NULL, stack_size,
-                         (LPTHREAD_START_ROUTINE)&Thread::Entry, this, 0, NULL);
-  if (thread_ != NULL) {
-    running_ = true;
-  }
-#else
   pthread_attr_t attr;
 
   if (pthread_attr_init(&attr) != 0) {
@@ -45,7 +38,6 @@ bool Thread::Run(size_t stack_size) {
   }
 
   pthread_attr_destroy(&attr);
-#endif
 
   return running_;
 }
@@ -64,11 +56,7 @@ bool Thread::Join() {
     return false;
   }
 
-#if defined(OS_WIN)
-  int exit_code = WaitForSingleObject(thread_, INFINITE);
-#else
   int exit_code = pthread_join(thread_, nullptr);
-#endif
 
   if (exit_code == 0) {
     running_ = false;

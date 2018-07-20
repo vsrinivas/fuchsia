@@ -5,11 +5,11 @@
 #ifndef LIB_FXL_FILES_FILE_H_
 #define LIB_FXL_FILES_FILE_H_
 
+#include <stdint.h>
 #include <string>
 #include <vector>
 
 #include "lib/fxl/fxl_export.h"
-#include "lib/fxl/inttypes.h"
 #include "lib/fxl/strings/string_view.h"
 
 namespace files {

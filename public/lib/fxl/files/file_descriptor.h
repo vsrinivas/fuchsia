@@ -5,9 +5,10 @@
 #ifndef LIB_FXL_FILES_FILE_DESCRIPTOR_H_
 #define LIB_FXL_FILES_FILE_DESCRIPTOR_H_
 
+#include <stdint.h>
+#include <unistd.h>
+
 #include "lib/fxl/fxl_export.h"
-#include "lib/fxl/inttypes.h"
-#include "lib/fxl/portable_unistd.h"
 
 namespace fxl {
 

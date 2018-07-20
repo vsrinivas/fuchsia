@@ -10,19 +10,6 @@
 #if defined(OS_FUCHSIA)
 #include <zircon/syscalls.h>
 
-#elif defined(OS_WIN)
-#include <stddef.h>
-#include <stdint.h>
-#include <windows.h>
-// #define needed to link in RtlGenRandom(), a.k.a. SystemFunction036.  See the
-// "Community Additions" comment on MSDN here:
-// http://msdn.microsoft.com/en-us/library/windows/desktop/aa387694.aspx
-#define SystemFunction036 NTAPI SystemFunction036
-#include <NTSecAPI.h>
-#undef SystemFunction036
-#include <algorithm>
-#include <limits>
-
 #else
 #include <errno.h>
 #include <fcntl.h>
@@ -48,19 +35,6 @@ bool RandBytes(void* output, size_t output_length) {
 #if defined(OS_FUCHSIA)
   zx_cprng_draw(output, output_length);
   return true;
-#elif defined(OS_WIN)
-  unsigned char* offset = static_cast<unsigned char*>(output);
-  bool success = true;
-  while (output_length > 0) {
-    const ULONG output_bytes_this_pass = std::min(
-        static_cast<ULONG>(output_length), std::numeric_limits<ULONG>::max());
-    success = RtlGenRandom(offset, output_bytes_this_pass) != FALSE;
-    if (!success)
-      return false;
-    output_length -= output_bytes_this_pass;
-    offset += output_bytes_this_pass;
-  }
-  return success;
 #else
   fxl::UniqueFD fd(open("/dev/urandom", O_RDONLY | O_CLOEXEC));
   if (!fd.is_valid())

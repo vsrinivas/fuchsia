@@ -65,19 +65,20 @@ source_set("fxl_lib") {
     "files/directory.h",
     "files/eintr_wrapper.h",
     "files/file.cc",
-    "files/file.h",
     "files/file_descriptor.cc",
     "files/file_descriptor.h",
+    "files/file.h",
     "files/path.h",
+    "files/path.cc",
     "files/scoped_temp_dir.cc",
     "files/scoped_temp_dir.h",
     "files/symlink.h",
+    "files/symlink.cc",
     "files/unique_fd.cc",
     "files/unique_fd.h",
     "functional/apply.h",
     "functional/cancelable_callback.h",
     "functional/make_copyable.h",
-    "inttypes.h",
     "memory/ref_counted.h",
     "memory/ref_counted_internal.h",
     "memory/ref_ptr.h",
@@ -122,18 +123,6 @@ source_set("fxl_lib") {
     "time/time_point.h",
     "type_converter.h",
   ]
-
-  if (is_win) {
-    sources += [
-      "files/path_win.cc",
-      "files/symlink_win.cc",
-    ]
-  } else {
-    sources += [
-      "files/path_posix.cc",
-      "files/symlink_posix.cc",
-    ]
-  }
 
   public_deps = [
     ":fxl_common",

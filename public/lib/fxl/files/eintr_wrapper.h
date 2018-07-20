@@ -9,14 +9,6 @@
 
 #include <errno.h>
 
-#if defined(OS_WIN)
-
-// Windows has no concept of EINTR.
-#define HANDLE_EINTR(x) (x)
-#define IGNORE_EINTR(x) (x)
-
-#else
-
 #if defined(NDEBUG)
 
 #define HANDLE_EINTR(x)                                     \
@@ -54,7 +46,5 @@
     } while (0);                                          \
     eintr_wrapper_result;                                 \
   })
-
-#endif  // defined(OS_WIN)
 
 #endif  // LIB_FXL_FILES_EINTR_WRAPPER_H_

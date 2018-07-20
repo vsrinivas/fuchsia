@@ -6,12 +6,11 @@
 
 #include <fcntl.h>
 #include <string.h>
-
+#include <unistd.h>
 #include <algorithm>
 #include <iostream>
 
 #include "lib/fxl/logging.h"
-#include "lib/fxl/portable_unistd.h"
 
 namespace fxl {
 namespace state {
