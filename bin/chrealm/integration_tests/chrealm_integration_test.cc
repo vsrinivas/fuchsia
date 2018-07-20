@@ -129,7 +129,7 @@ class ChrealmTest : public ::gtest::RealLoopFixture,
     bool proc_terminated = false;
     async::Wait async_wait(
         proc, ZX_PROCESS_TERMINATED,
-        [&proc_terminated](async_t* async, async::WaitBase* wait,
+        [&proc_terminated](async_dispatcher_t* dispatcher, async::WaitBase* wait,
                            zx_status_t status, const zx_packet_signal* signal) {
           proc_terminated = true;
         });

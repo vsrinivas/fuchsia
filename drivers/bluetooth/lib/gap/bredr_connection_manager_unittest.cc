@@ -508,7 +508,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, ConfirmationRequest) {
   size_t transactions = 0;
 
   test_device()->SetTransactionCallback([&transactions]() { transactions++; },
-                                        async_get_default());
+                                        async_get_default_dispatcher());
 
   test_device()->QueueCommandTransaction(kConfirmationRequestReply,
                                          {&kConfirmationRequestReplyRsp});
