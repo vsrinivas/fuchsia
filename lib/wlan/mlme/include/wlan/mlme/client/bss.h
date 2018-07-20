@@ -84,7 +84,7 @@ class Bss : public fbl::RefCounted<Bss> {
 
     // TODO(porce): Add ProbeResponse.
 
-    ::fuchsia::wlan::mlme::BSSDescription bss_desc;
+    ::fuchsia::wlan::mlme::BSSDescription bss_desc_;
 
     // TODO(porce): Unify into FIDL data structure
     CapabilityInfo cap_;  // IEEE Std 802.11-2016, 9.4.1.4

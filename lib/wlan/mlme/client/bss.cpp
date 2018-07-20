@@ -50,7 +50,7 @@ std::string Bss::ToString() const {
     snprintf(
         buf, sizeof(buf), "BSSID %s Infra %s  RSSI %3d  Country %3s Channel %4s Cap %04x SSID [%s]",
         bssid_.ToString().c_str(), GetBssType() == wlan_mlme::BSSTypes::INFRASTRUCTURE ? "Y" : "N",
-        bss_desc.rssi_dbm, country_.c_str(), common::ChanStr(bcn_rx_chan_).c_str(), cap_.val(),
+        bss_desc_.rssi_dbm, country_.c_str(), common::ChanStr(bcn_rx_chan_).c_str(), cap_.val(),
         SsidToString().c_str());
     return std::string(buf);
 }
@@ -58,7 +58,7 @@ std::string Bss::ToString() const {
 bool Bss::IsBeaconValid(const Beacon& beacon) const {
     // TODO(porce): Place holder. Add sanity logics.
 
-    if (bss_desc.timestamp > beacon.timestamp) {
+    if (bss_desc_.timestamp > beacon.timestamp) {
         // Suspicious. Wrap around?
         // TODO(porce): deauth if the client was in association.
     }
@@ -70,7 +70,7 @@ bool Bss::IsBeaconValid(const Beacon& beacon) const {
 }
 
 void Bss::Renew(const Beacon& beacon, const wlan_rx_info_t* rx_info) {
-    bss_desc.timestamp = beacon.timestamp;
+    bss_desc_.timestamp = beacon.timestamp;
 
     // TODO(porce): Take a deep look. Which resolution do we want to track?
     if (zx::clock::get(&ts_refreshed_) != ZX_OK) { ts_refreshed_ = zx::time_utc(); }
@@ -83,11 +83,12 @@ void Bss::Renew(const Beacon& beacon, const wlan_rx_info_t* rx_info) {
     // If the latest beacons lack measurements, keep the last report.
     // TODO(NET-856): Change DDK wlan_rx_info_t and do translation in the vendor device driver.
     // TODO(porce): Don't trust instantaneous values. Keep history.
-    bss_desc.rssi_dbm = (rx_info->valid_fields & WLAN_RX_INFO_VALID_RSSI) ? rx_info->rssi_dbm
-                                                                          : WLAN_RSSI_DBM_INVALID;
-    bss_desc.rcpi_dbmh = (rx_info->valid_fields & WLAN_RX_INFO_VALID_RCPI) ? rx_info->rcpi_dbmh
-                                                                           : WLAN_RCPI_DBMH_INVALID;
-    bss_desc.rsni_dbh =
+    bss_desc_.rssi_dbm = (rx_info->valid_fields & WLAN_RX_INFO_VALID_RSSI) ? rx_info->rssi_dbm
+                                                                           : WLAN_RSSI_DBM_INVALID;
+    bss_desc_.rcpi_dbmh = (rx_info->valid_fields & WLAN_RX_INFO_VALID_RCPI)
+                              ? rx_info->rcpi_dbmh
+                              : WLAN_RCPI_DBMH_INVALID;
+    bss_desc_.rsni_dbh =
         (rx_info->valid_fields & WLAN_RX_INFO_VALID_SNR) ? rx_info->snr_dbh : WLAN_RSNI_DBH_INVALID;
 }
 
@@ -105,7 +106,7 @@ zx_status_t Bss::Update(const Beacon& beacon, size_t frame_len) {
     bcn_hash_ = GetBeaconSignature(beacon, frame_len);
 
     // Fields that are always present.
-    bss_desc.beacon_period = beacon.beacon_interval;  // name mismatch is spec-compliant.
+    bss_desc_.beacon_period = beacon.beacon_interval;  // name mismatch is spec-compliant.
     cap_ = beacon.cap;
 
     // IE's.
@@ -216,7 +217,7 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
                 return ZX_ERR_INTERNAL;
             }
 
-            bss_desc.vht_cap = VhtCapabilitiesToFidl(*ie);
+            bss_desc_.vht_cap = VhtCapabilitiesToFidl(*ie);
             debugbcn("%s VhtCapabilities parsed\n", dbgmsghdr);
             break;
         }
@@ -227,7 +228,7 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
                 return ZX_ERR_INTERNAL;
             }
 
-            bss_desc.vht_op = VhtOperationToFidl(*ie);
+            bss_desc_.vht_op = VhtOperationToFidl(*ie);
             debugbcn("%s VhtOperation parsed\n", dbgmsghdr);
             break;
         }
@@ -330,7 +331,7 @@ wlan_mlme::BSSDescription Bss::ToFidl() const {
 
     wlan_mlme::BSSDescription fidl;
     // TODO(NET-1170): Decommission Bss::ToFidl()
-    bss_desc.Clone(&fidl);
+    bss_desc_.Clone(&fidl);
 
     std::memcpy(fidl.bssid.mutable_data(), bssid_.byte, common::kMacAddrLen);
 
