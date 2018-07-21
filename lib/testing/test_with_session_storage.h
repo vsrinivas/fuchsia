@@ -32,6 +32,10 @@ class TestWithSessionStorage : public testing::TestWithLedger {
                     const std::string& link_path,
                     const std::string& link_value);
 
+  void SetLinkValue(StoryStorage* const story_storage,
+                    const fuchsia::modular::LinkPath& link_path,
+                    const std::string& link_value);
+
   void WriteModuleData(StoryStorage* const story_storage,
                        fuchsia::modular::ModuleData module_data);
 

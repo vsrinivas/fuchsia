@@ -25,7 +25,6 @@ source_set("set_link_value_command_runner") {
     "//garnet/public/lib/fsl",
     "//peridot/bin/user_runner/storage:story_storage",
     "//peridot/public/fidl/fuchsia.modular",
-    "//peridot/public/fidl/fuchsia.modular.internal",
     "//peridot/public/lib/async/cpp:operation",
   ]
 }
@@ -85,7 +84,12 @@ source_set("add_mod_command_runner") {
 
   deps = [
     ":command_runner",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
+    "//peridot/bin/user_runner/puppet_master/command_runners/operation_calls",
+    "//peridot/lib/fidl:clone",
+    "//peridot/public/lib/async/cpp:operation",
+    "//peridot/public/lib/entity/cpp:json",
   ]
 }
 
@@ -98,7 +102,13 @@ executable("add_mod_command_runner_unittest") {
 
   deps = [
     ":add_mod_command_runner",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
+    "//peridot/lib/testing:entity_resolver_fake",
+    "//peridot/lib/testing:module_resolver_fake",
+    "//peridot/lib/testing:test_with_session_storage",
     "//third_party/googletest:gtest_main",
   ]
 }

@@ -30,6 +30,9 @@
 #include <lib/fxl/type_converter.h>
 
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
+#include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/find_modules_call.h"
+#include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/get_types_from_entity_call.h"
+#include "peridot/bin/user_runner/puppet_master/command_runners/operation_calls/initialize_chain_call.h"
 #include "peridot/bin/user_runner/storage/constants_and_utils.h"
 #include "peridot/bin/user_runner/storage/story_storage.h"
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
@@ -152,14 +155,13 @@ bool ShouldRestartModuleForNewIntent(
 // view owner request appropriately.
 class StoryControllerImpl::LaunchModuleCall : public Operation<> {
  public:
-  LaunchModuleCall(
-      StoryControllerImpl* const story_controller_impl,
-      fuchsia::modular::ModuleData module_data,
-      fidl::InterfaceRequest<fuchsia::modular::ModuleController>
-          module_controller_request,
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner_request,
-      ResultCall result_call)
+  LaunchModuleCall(StoryControllerImpl* const story_controller_impl,
+                   fuchsia::modular::ModuleData module_data,
+                   fidl::InterfaceRequest<fuchsia::modular::ModuleController>
+                       module_controller_request,
+                   fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
+                       view_owner_request,
+                   ResultCall result_call)
       : Operation("StoryControllerImpl::LaunchModuleCall",
                   std::move(result_call)),
         story_controller_impl_(story_controller_impl),
@@ -347,83 +349,6 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
   std::function<void()> done_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(KillModuleCall);
-};
-
-// Populates a fuchsia::modular::ModuleParameterMap struct from a
-// fuchsia::modular::CreateModuleParameterMapInfo struct. May create new Links
-// for any fuchsia::modular::CreateModuleParameterMapInfo.property_info if
-// property_info[i].is_create_link_info().
-class StoryControllerImpl::InitializeChainCall
-    : public Operation<fuchsia::modular::ModuleParameterMapPtr> {
- public:
-  InitializeChainCall(StoryControllerImpl* const story_controller_impl,
-                      fidl::VectorPtr<fidl::StringPtr> module_path,
-                      fuchsia::modular::CreateModuleParameterMapInfoPtr
-                          create_parameter_map_info,
-                      ResultCall result_call)
-      : Operation("InitializeChainCall", std::move(result_call)),
-        story_controller_impl_(story_controller_impl),
-        module_path_(std::move(module_path)),
-        create_parameter_map_info_(std::move(create_parameter_map_info)) {}
-
- private:
-  void Run() override {
-    FlowToken flow{this, &result_};
-
-    result_ = fuchsia::modular::ModuleParameterMap::New();
-    result_->entries.resize(0);
-
-    if (!create_parameter_map_info_) {
-      return;
-    }
-
-    // For each property in |create_parameter_map_info_|, either:
-    // a) Copy the |link_path| to |result_| directly or
-    // b) Create & populate a new Link and add the correct mapping to
-    // |result_|.
-    for (auto& entry : *create_parameter_map_info_->property_info) {
-      const auto& key = entry.key;
-      const auto& info = entry.value;
-
-      auto mapping = fuchsia::modular::ModuleParameterMapEntry::New();
-      mapping->name = key;
-      if (info.is_link_path()) {
-        info.link_path().Clone(&mapping->link_path);
-      } else {  // info->is_create_link()
-        mapping->link_path.module_path.resize(0);
-        for (const auto& i : *module_path_) {
-          mapping->link_path.module_path.push_back(i);
-        }
-        mapping->link_path.link_name = key;
-
-        // We issue N UpdateLinkValue calls and capture |flow| on each. We rely
-        // on the fact that once all refcounted instances of |flow| are
-        // destroyed, the InitializeChainCall will automatically finish.
-        auto initial_data = info.create_link().initial_data;
-        story_controller_impl_->story_storage_->UpdateLinkValue(
-            mapping->link_path,
-            [initial_data, flow](fidl::StringPtr* value) {
-              if (value->is_null()) {
-                // This is a new link. If it weren't, *value would be set to
-                // some valid JSON.
-                *value = initial_data;
-              }
-            },
-            this /* context */);
-      }
-
-      result_->entries.push_back(std::move(*mapping));
-    }
-  }
-
-  StoryControllerImpl* const story_controller_impl_;
-  const fidl::VectorPtr<fidl::StringPtr> module_path_;
-  const fuchsia::modular::CreateModuleParameterMapInfoPtr
-      create_parameter_map_info_;
-
-  fuchsia::modular::ModuleParameterMapPtr result_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(InitializeChainCall);
 };
 
 // Calls LaunchModuleCall to get a running instance, and delegates visual
@@ -843,178 +768,6 @@ class StoryControllerImpl::DefocusCall : public Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(DefocusCall);
 };
 
-class StoryControllerImpl::GetTypesFromEntityCall
-    : public Operation<std::vector<std::string>> {
- public:
-  GetTypesFromEntityCall(
-      fuchsia::modular::EntityResolver* const entity_resolver,
-      const fidl::StringPtr& entity_reference, ResultCall result)
-      : Operation("ParameterTypeInferenceHelper::GetTypesFromEntityCall",
-                  std::move(result)),
-        entity_resolver_(entity_resolver),
-        entity_reference_(entity_reference) {}
-
-  void Run() {
-    entity_resolver_->ResolveEntity(entity_reference_, entity_.NewRequest());
-    entity_->GetTypes([this](const fidl::VectorPtr<fidl::StringPtr>& types) {
-      Done(fxl::To<std::vector<std::string>>(types));
-    });
-  }
-
- private:
-  fuchsia::modular::EntityResolver* const entity_resolver_;
-  fidl::StringPtr const entity_reference_;
-  fuchsia::modular::EntityPtr entity_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(GetTypesFromEntityCall);
-};
-
-class StoryControllerImpl::FindModulesCall
-    : public Operation<fuchsia::modular::FindModulesResponse> {
- public:
-  // If |intent| originated from a Module, |requesting_module_path| must be
-  // non-null.  Otherwise, it is an error for the |intent| to have any
-  // Parameters of type 'link_name' (since a fuchsia::modular::Link with a link
-  // name without an associated Module path is impossible to locate).
-  FindModulesCall(StoryControllerImpl* const story_controller_impl,
-                  fuchsia::modular::IntentPtr intent,
-                  fidl::VectorPtr<fidl::StringPtr> requesting_module_path,
-                  ResultCall result_call)
-      : Operation("StoryControllerImpl::FindModulesCall",
-                  std::move(result_call)),
-        story_controller_impl_(story_controller_impl),
-        intent_(std::move(intent)),
-        requesting_module_path_(std::move(requesting_module_path)) {}
-
- private:
-  void Run() {
-    FlowToken flow{this, &response_};
-    if (intent_->handler) {
-      // We don't need to find a module if we already know which one to use, but
-      // we do need to ask the resolver for a copy of its manifest.
-      story_controller_impl_->story_provider_impl_->module_resolver()
-          ->GetModuleManifest(
-              intent_->handler,
-              [this, flow](fuchsia::modular::ModuleManifestPtr manifest) {
-                fuchsia::modular::FindModulesResult result;
-                result.module_id = intent_->handler;
-                result.manifest = CloneOptional(manifest);
-                response_.results.push_back(std::move(result));
-              });
-      return;
-    }
-
-    FXL_DCHECK(intent_->action);
-
-    constraint_futs_.reserve(intent_->parameters->size());
-
-    resolver_query_.action = intent_->action;
-    resolver_query_.parameter_constraints.resize(0);
-    resolver_query_.parameter_constraints->reserve(intent_->parameters->size());
-
-    for (const auto& param : *intent_->parameters) {
-      if (param.name.is_null() && intent_->handler.is_null()) {
-        // It is not allowed to have a null intent name (left in for backwards
-        // compatibility with old code: MI4-736) and rely on action-based
-        // resolution.
-        // TODO(thatguy): Return an error string.
-        FXL_LOG(WARNING) << "A null-named module parameter is not allowed "
-                         << "when using fuchsia::modular::Intent.action.";
-        return;
-      }
-
-      constraint_futs_.push_back(
-          GetTypesFromIntentParameter(requesting_module_path_.Clone(),
-                                      param.data)
-              ->Map([this, name = param.name](std::vector<std::string> types) {
-                fuchsia::modular::FindModulesParameterConstraint constraint;
-                constraint.param_name = name;
-                constraint.param_types =
-                    fxl::To<fidl::VectorPtr<fidl::StringPtr>>(std::move(types));
-                return constraint;
-              }));
-    }
-
-    Wait("StoryControllerImpl.FindModulesCall.Run.Wait", constraint_futs_)
-        ->Then([this, flow](
-                   std::vector<fuchsia::modular::FindModulesParameterConstraint>
-                       constraint_params) {
-          resolver_query_.parameter_constraints.reset(
-              std::move(constraint_params));
-          story_controller_impl_->story_provider_impl_->module_resolver()
-              ->FindModules(
-                  std::move(resolver_query_),
-                  [this, flow](fuchsia::modular::FindModulesResponse response) {
-                    response_ = std::move(response);
-                    // This operation should end once |flow| goes out of scope
-                    // here.
-                  });
-        });
-  }
-
-  // To avoid deadlocks, this function must not depend on anything that executes
-  // on the story controller's operation queue.
-  FuturePtr<std::vector<std::string>> GetTypesFromIntentParameter(
-      fidl::VectorPtr<fidl::StringPtr> module_path,
-      const fuchsia::modular::IntentParameterData& input) {
-    auto fut = Future<std::vector<std::string>>::Create(
-        "StoryController::GetTypesFromIntentParameter");
-    if (input.is_entity_type()) {
-      fut->Complete(std::vector<std::string>(input.entity_type()->begin(),
-                                             input.entity_type()->end()));
-    } else if (input.is_json()) {
-      fut->Complete(GetTypesFromJson(input.json()));
-    } else if (input.is_entity_reference()) {
-      operations_.Add(new GetTypesFromEntityCall(
-          story_controller_impl_->story_provider_impl_->entity_resolver(),
-          input.entity_reference(), fut->Completer()));
-    } else if (input.is_link_name() || input.is_link_path()) {
-      LinkPathPtr lp;
-      if (input.is_link_name()) {
-        lp = story_controller_impl_->GetLinkPathForParameterName(
-            module_path, input.link_name());
-      } else {
-        lp = CloneOptional(input.link_path());
-      }
-      GetTypesFromLink(std::move(lp), fut->Completer());
-    }
-    return fut;
-  }
-
-  std::vector<std::string> GetTypesFromJson(const fidl::StringPtr& input) {
-    std::vector<std::string> types;
-    if (!ExtractEntityTypesFromJson(input, &types)) {
-      FXL_LOG(WARNING) << "Mal-formed JSON in parameter: " << input;
-      return {};
-    } else {
-      return types;
-    }
-  }
-
-  void GetTypesFromLink(fuchsia::modular::LinkPathPtr link_path,
-                        std::function<void(std::vector<std::string>)> done) {
-    story_controller_impl_->ConnectLinkPath(std::move(link_path),
-                                            link_.NewRequest());
-    link_->Get(nullptr /* path */, [this, done](fidl::StringPtr content) {
-      done(GetTypesFromJson(content));
-    });
-  }
-
-  OperationCollection operations_;
-
-  StoryControllerImpl* const story_controller_impl_;  // not owned
-  const fuchsia::modular::IntentPtr intent_;
-  const fidl::VectorPtr<fidl::StringPtr> requesting_module_path_;
-
-  fuchsia::modular::FindModulesQuery resolver_query_;
-  std::vector<FuturePtr<fuchsia::modular::FindModulesParameterConstraint>>
-      constraint_futs_;
-  fuchsia::modular::LinkPtr link_;  // in case we need itf for
-  fuchsia::modular::FindModulesResponse response_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FindModulesCall);
-};  // namespace modular
-
 // An operation that first performs module resolution with the provided
 // fuchsia::modular::Intent and subsequently starts the most appropriate
 // resolved module in the story shell.
@@ -1046,8 +799,10 @@ class StoryControllerImpl::AddIntentCall
   void Run() {
     FlowToken flow{this, &start_module_status_};
     operation_queue_.Add(new FindModulesCall(
-        story_controller_impl_, CloneOptional(intent_),
-        requesting_module_path_.Clone(),
+        story_controller_impl_->story_storage_,
+        story_controller_impl_->story_provider_impl_->module_resolver(),
+        story_controller_impl_->story_provider_impl_->entity_resolver(),
+        CloneOptional(intent_), requesting_module_path_.Clone(),
         [this, flow](fuchsia::modular::FindModulesResponse response) {
           AddModuleFromResult(flow, std::move(response));
         }));
@@ -1078,7 +833,8 @@ class StoryControllerImpl::AddIntentCall
     // Initialize the chain, which we need to do to get
     // fuchsia::modular::ModuleParameterMap, which belongs in |module_data_|.
     operation_queue_.Add(new InitializeChainCall(
-        story_controller_impl_, fidl::Clone(module_data_.module_path),
+        story_controller_impl_->story_storage_,
+        fidl::Clone(module_data_.module_path),
         std::move(create_parameter_map_info),
         [this, flow](fuchsia::modular::ModuleParameterMapPtr parameter_map) {
           WriteModuleData(flow, std::move(parameter_map));

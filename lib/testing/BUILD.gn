@@ -62,6 +62,20 @@ source_set("entity_resolver_fake") {
   ]
 }
 
+source_set("module_resolver_fake") {
+  testonly = true
+
+  sources = [
+    "module_resolver_fake.cc",
+    "module_resolver_fake.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fidl/cpp",
+    "//peridot/public/fidl/fuchsia.modular",
+  ]
+}
+
 source_set("story_controller_mock") {
   testonly = true
 

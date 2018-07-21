@@ -8,6 +8,7 @@ tests_package("puppet_master_unittests") {
   deps = [
     ":dispatch_story_command_executor_unittest",
     ":puppet_master_impl_unittest",
+    "command_runners:add_mod_command_runner_unittest",
     "command_runners:remove_mod_command_runner_unittest",
     "command_runners:set_focus_state_command_runner_unittest",
     "command_runners:set_link_value_command_runner_unittest",

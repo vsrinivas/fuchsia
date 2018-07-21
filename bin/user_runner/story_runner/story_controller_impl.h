@@ -299,10 +299,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
   class AddIntentCall;
   class DefocusCall;
   class DeleteCall;
-  class FindModulesCall;
   class FocusCall;
-  class GetTypesFromEntityCall;
-  class InitializeChainCall;
   class KillModuleCall;
   class LaunchModuleCall;
   class LaunchModuleInShellCall;

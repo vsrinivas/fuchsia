@@ -47,12 +47,19 @@ fidl::StringPtr TestWithSessionStorage::CreateStory(
 }
 
 void TestWithSessionStorage::SetLinkValue(StoryStorage* const story_storage,
-                                          const std::string& link_path,
+                                          const std::string& link_name,
                                           const std::string& link_value) {
+  SetLinkValue(story_storage, MakeLinkPath(link_name), link_value);
+}
+
+void TestWithSessionStorage::SetLinkValue(
+    StoryStorage* const story_storage,
+    const fuchsia::modular::LinkPath& link_path,
+    const std::string& link_value) {
   bool done{};
   int context;
   story_storage
-      ->UpdateLinkValue(MakeLinkPath(link_path),
+      ->UpdateLinkValue(link_path,
                         [&](fidl::StringPtr* value) { *value = link_value; },
                         &context)
       ->Then([&](StoryStorage::Status status) {

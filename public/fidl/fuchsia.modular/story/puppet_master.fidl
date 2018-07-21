@@ -21,6 +21,9 @@ enum ExecuteStatus {
   // The mod specified in AddMod, RemoveMod or SendModCommand
   // was not found.
   INVALID_MOD = 4;
+
+  // Resolution of the intent provided in AddMod returned zero results.
+  NO_MODULES_FOUND = 5;
 };
 
 struct ExecuteResult {

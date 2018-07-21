@@ -18,15 +18,18 @@ namespace modular {
 class PuppetMasterImpl;
 
 std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
-    SessionStorage* session_storage,
-    fuchsia::modular::FocusProviderPtr focus_provider) {
+    SessionStorage* const session_storage,
+    fuchsia::modular::FocusProviderPtr focus_provider,
+    fuchsia::modular::ModuleResolver* const module_resolver,
+    fuchsia::modular::EntityResolver* const entity_resolver) {
   std::map<fuchsia::modular::StoryCommand::Tag, std::unique_ptr<CommandRunner>>
       command_runners;
   command_runners.emplace(
       fuchsia::modular::StoryCommand::Tag::kSetFocusState,
       new SetFocusStateCommandRunner(std::move(focus_provider)));
-  command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kAddMod,
-                          new AddModCommandRunner());
+  command_runners.emplace(
+      fuchsia::modular::StoryCommand::Tag::kAddMod,
+      new AddModCommandRunner(module_resolver, entity_resolver));
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kUpdateMod,
                           new UpdateModCommandRunner());
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kRemoveMod,

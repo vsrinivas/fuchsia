@@ -1,0 +1,72 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("operation_calls") {
+  public_deps = [
+    ":find_modules_call",
+    ":get_link_path_for_parameter_name_call",
+    ":get_types_from_entity_call",
+    ":initialize_chain_call",
+  ]
+}
+
+source_set("find_modules_call") {
+  sources = [
+    "find_modules_call.cc",
+    "find_modules_call.h",
+  ]
+
+  deps = [
+    ":get_link_path_for_parameter_name_call",
+    ":get_types_from_entity_call",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/user_runner/storage:story_storage",
+    "//peridot/lib/fidl:clone",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/async/cpp:operation",
+    "//peridot/public/lib/entity/cpp:json",
+  ]
+}
+
+source_set("get_link_path_for_parameter_name_call") {
+  sources = [
+    "get_link_path_for_parameter_name_call.cc",
+    "get_link_path_for_parameter_name_call.h",
+  ]
+
+  deps = [
+    "//peridot/bin/user_runner/storage:story_storage",
+    "//peridot/lib/fidl:clone",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/async/cpp:operation",
+  ]
+}
+
+source_set("initialize_chain_call") {
+  sources = [
+    "initialize_chain_call.cc",
+    "initialize_chain_call.h",
+  ]
+
+  deps = [
+    "//peridot/bin/user_runner/storage:story_storage",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/async/cpp:operation",
+  ]
+}
+
+source_set("get_types_from_entity_call") {
+  sources = [
+    "get_types_from_entity_call.cc",
+    "get_types_from_entity_call.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/async/cpp:operation",
+  ]
+}

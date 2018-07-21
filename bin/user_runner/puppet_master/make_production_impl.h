@@ -16,7 +16,9 @@ class StoryCommandExecutor;
 // Returns a StoryCommandExecutor suitable for use in production.
 std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
     SessionStorage* session_storage,
-    fuchsia::modular::FocusProviderPtr focus_provider);
+    fuchsia::modular::FocusProviderPtr focus_provider,
+    fuchsia::modular::ModuleResolver* module_resolver,
+    fuchsia::modular::EntityResolver* entity_resolver);
 
 }  // namespace modular
 
