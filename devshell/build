@@ -42,10 +42,13 @@ function cmd_locked {
 }
 
 function main {
-  # TMPDIR is passed for Goma on macOS
   # TERM is passed for the pretty ninja UI
   # PATH is passed as some tools are referenced via $PATH due to platform differences.
-  try_locked env -i TMPDIR="${TMPDIR}" TERM="${TERM}" PATH="${PATH}" \
+  # TMPDIR is passed for Goma on macOS. TMPDIR must be set, or unset, not
+  # empty. Some Dart build tools have been observed writing into source paths
+  # when TMPDIR="" - it is deliberately unquoted and using the ${+} expansion
+  # expression).
+  try_locked env -i TERM="${TERM}" PATH="${PATH}" ${TMPDIR+"TMPDIR=$TMPDIR"} \
     "${FUCHSIA_DIR}/buildtools/ninja" -j "$(fx-choose-build-concurrency)" \
                                       -l "$(fx-cpu-count)" \
                                       -C "${FUCHSIA_BUILD_DIR}" "$@"
