@@ -56,6 +56,7 @@ typedef struct {
 
     uint32_t                            current_trip_idx;
     uint32_t                            current_temperature;
+    uint32_t                            current_fan_level;
     uint32_t                            current_big_cluster_opp_idx;
     uint32_t                            current_little_cluster_opp_idx;
 } aml_thermal_t;

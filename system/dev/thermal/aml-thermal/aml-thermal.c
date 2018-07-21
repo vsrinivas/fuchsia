@@ -46,6 +46,7 @@ static void aml_set_fan_level(aml_thermal_t *dev, uint32_t level) {
         default:
             break;
     }
+    dev->current_fan_level = level;
 }
 
 static zx_status_t aml_notify_thermal_deamon(zx_handle_t port, uint32_t trip_id) {
@@ -220,6 +221,16 @@ static zx_status_t aml_thermal_ioctl(void* ctx, uint32_t op,
             return ZX_OK;
         }
 
+        case IOCTL_THERMAL_GET_FAN_LEVEL: {
+            if (out_len != sizeof(uint32_t)) {
+                return ZX_ERR_INVALID_ARGS;
+            }
+            uint32_t *fan_level = (uint32_t*)out_buf;
+            *fan_level = dev->current_fan_level;
+            *out_actual = sizeof(uint32_t);
+            return ZX_OK;
+        }
+
         case IOCTL_THERMAL_SET_DVFS_OPP: {
             if (in_len != sizeof(dvfs_info_t)) {
                 return ZX_ERR_INVALID_ARGS;
@@ -235,7 +246,7 @@ static zx_status_t aml_thermal_ioctl(void* ctx, uint32_t op,
             uint32_t *temperature = (uint32_t*)out_buf;
             *temperature = dev->current_temperature;
             *out_actual = sizeof(uint32_t);
-            return status;
+            return ZX_OK;
         }
 
         case IOCTL_THERMAL_GET_DVFS_INFO: {

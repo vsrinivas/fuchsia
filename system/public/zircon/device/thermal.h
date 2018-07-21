@@ -107,6 +107,9 @@ typedef struct {
 #define IOCTL_THERMAL_GET_DVFS_OPP \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_THERMAL, 10)
 
+#define IOCTL_THERMAL_GET_FAN_LEVEL \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_THERMAL, 11)
+
 // ssize_t ioctl_thermal_get_info(int fd, thermal_info_t* out)
 IOCTL_WRAPPER_OUT(ioctl_thermal_get_info, IOCTL_THERMAL_GET_INFO, thermal_info_t);
 
@@ -144,3 +147,8 @@ IOCTL_WRAPPER_INOUT(ioctl_thermal_get_dvfs_info, IOCTL_THERMAL_GET_DVFS_INFO,
 // ssize_t ioctl_thermal_get_dvfs_opp(int fd, uint32_t* power_domain, uint32_t* opp)
 IOCTL_WRAPPER_INOUT(ioctl_thermal_get_dvfs_opp, IOCTL_THERMAL_GET_DVFS_OPP,
                     uint32_t, uint32_t);
+
+// ssize_t ioctl_thermal_get_fan_level(int fd, uint32_t* fan_level)
+IOCTL_WRAPPER_OUT(ioctl_thermal_get_fan_level, IOCTL_THERMAL_GET_FAN_LEVEL, uint32_t);
+
+
