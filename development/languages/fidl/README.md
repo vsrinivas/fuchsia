@@ -6,9 +6,9 @@ Fidl is the IPC system for Fuchsia.
 
 ## Language
 
-### Style guide
+### Readability rubric
 
-Fuchsia has adopted a [style guide](style.md) for its Fidl files.
+Fuchsia has adopted a [readability rubric](../../api/fidl.md) for FIDL libraries.
 
 ## Bindings
 
