@@ -37,7 +37,7 @@ zx_status_t MappedVmo::Create(size_t size, const char* name, fbl::unique_ptr<Map
         return status;
     }
 
-    zx_object_set_property(vmo, ZX_PROP_NAME, name, strlen(name));
+    zx_object_set_property(vmo, ZX_PROP_NAME, name, name ? strlen(name) : 0);
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<MappedVmo> mvmo(new (&ac) MappedVmo(vmo, addr, size));

@@ -31,6 +31,8 @@ public:
     // Attempting to shrink the mapping to a length of zero or
     // requesting a "shrink" that would increase the mapping size
     // returns an error.
+    //
+    // If |len| is not page aligned, shrinking will fail.
     zx_status_t Shrink(size_t len);
 
     // Attempts to increase both VMO size and VMAR mapping:
@@ -41,6 +43,8 @@ public:
     // current size will return an error.
     //
     // On failure, the Mapping will be safe to use, but will remain at its original size.
+    //
+    // Unlike shrinking, it's permissible to grow to a non-page-aligned |len|.
     zx_status_t Grow(size_t len);
 
     // Returns a borrowed copied of the underlying |vmo_|, i.e. this
