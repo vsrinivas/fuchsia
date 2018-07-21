@@ -58,6 +58,8 @@ use std::env;
 use std::fs::File;
 
 const DEFAULT_ETH: &str = "/dev/class/ethernet/000";
+// Hardcoded IPv4 address: if you use something other than a /24, update the subnet below as well.
+const FIXED_IPADDR: ip::Ipv4Addr = ip::Ipv4Addr::new([192, 168, 1, 39]);
 
 fn main() -> Result<(), failure::Error> {
     fuchsia_syslog::init()?;
@@ -84,6 +86,10 @@ fn main() -> Result<(), failure::Error> {
     let eth_id = state
         .device
         .add_ethernet_device(device::ethernet::EthernetDeviceState::default());
+    // Hardcoded subnet: if you update the IPADDR above to use a network that's not /24, update
+    // this as well.
+    let fixed_subnet = ip::Subnet::new(ip::Ipv4Addr::new([255, 255, 255, 0]), 24);
+    device::ethernet::set_ip_addr(&mut state, eth_id.id(), FIXED_IPADDR, fixed_subnet);
 
     let mut buf = [0; 2048];
     let stream = client.get_stream().for_each(|evt| {
@@ -92,7 +98,7 @@ fn main() -> Result<(), failure::Error> {
                 let len = rx.read(&mut buf);
                 device::receive_frame(&mut state, eth_id, &mut buf[..len]);
             }
-            _ => (),
+            other => println!("unhandled Ethernet event: {:?}", other),
         }
         futures::future::ok(())
     });

@@ -29,6 +29,11 @@ impl DeviceId {
             protocol: DeviceProtocol::Ethernet,
         }
     }
+
+    #[allow(missing_docs)]
+    pub fn id(&self) -> u64 {
+        self.id
+    }
 }
 
 impl Display for DeviceId {
