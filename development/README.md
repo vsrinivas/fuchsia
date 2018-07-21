@@ -34,6 +34,8 @@ and debugging Fuchsia and programs running on Fuchsia.
 ## API
 
  - [System](api/system.md) - Rubric for designing the Zircon System Interface
+ - [FIDL](api/fidl.md) - Rubric for designing FIDL protocols
+ - [C](api/c.md) - Rubric for designing C library interfaces
 
 ## SDK
 
