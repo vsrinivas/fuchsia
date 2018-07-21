@@ -3,41 +3,43 @@
 # found in the LICENSE file.
 
 import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/host.gni")
 import("//build/package.gni")
 
-remote_module_resolver_godeps = [
-  {
-    package = "remote_module_resolver"
-    source = "//peridot/cloud/go/src/remote_module_resolver"
-  },
-  {
-    package = "github.com/xeipuuv/gojsonpointer"
-    source =
-        "//peridot/cloud/third_party/golibs/github.com/xeipuuv/gojsonpointer"
-  },
-  {
-    package = "github.com/xeipuuv/gojsonreference"
-    source =
-        "//peridot/cloud/third_party/golibs/github.com/xeipuuv/gojsonreference"
-  },
-  {
-    package = "github.com/xeipuuv/gojsonschema"
-    source =
-        "//peridot/cloud/third_party/golibs/github.com/xeipuuv/gojsonschema"
-  },
-]
+go_library("remote_module_resolver_lib") {
+  name = "remote_module_resolver"
+
+  deps = [
+    ":gojsonpointer",
+    ":gojsonreference",
+    ":gojsonschema",
+  ]
+}
+
+go_library("gojsonpointer") {
+  name = "github.com/xeipuuv/gojsonpointer"
+  source_dir = "//peridot/cloud/third_party/golibs/github.com/xeipuuv/gojsonpointer"
+}
+go_library("gojsonreference") {
+  name = "github.com/xeipuuv/gojsonreference"
+  source_dir = "//peridot/cloud/third_party/golibs/github.com/xeipuuv/gojsonreference"
+}
+go_library("gojsonschema") {
+  name = "github.com/xeipuuv/gojsonschema"
+  source_dir = "//peridot/cloud/third_party/golibs/github.com/xeipuuv/gojsonschema"
+}
 
 go_binary("remote_module_resolver") {
   gopackage = "remote_module_resolver"
   output_name = "remote_module_resolver"
-  go_dependencies = remote_module_resolver_godeps
+  extra_dependencies = [ ":remote_module_resolver_lib" ]
 }
 
 go_test("remote_module_resolver_test") {
   gopackage = "remote_module_resolver/repository"
-  go_dependencies = remote_module_resolver_godeps
+  extra_dependencies = [ ":remote_module_resolver_lib" ]
 }
 
 install_host_tools("host") {
