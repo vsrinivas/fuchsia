@@ -7,7 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   scpi::App app;
   zx_status_t status = app.Start();
   if (status != ZX_OK) {
