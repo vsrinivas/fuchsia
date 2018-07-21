@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 
 import argparse
-from common import FUCHSIA_ROOT, get_package_imports
+from common import FUCHSIA_ROOT, get_package_imports, get_product_imports
 import json
 import os
 import subprocess
@@ -18,6 +18,10 @@ ROOT_CANONICAL_PACKAGES = [
     'buildbot',
     'default',
     'kitchen_sink',
+]
+
+REQUIRED_PRODUCTS = [
+    'default'
 ]
 
 # Standard names for packages in a layer.
@@ -53,10 +57,9 @@ def check_json(packages):
     return all_json
 
 
-def check_schema(packages, validator):
+def check_schema(packages, validator, schema):
     '''Verifies that all files adhere to the schema.'''
     all_valid = True
-    schema = os.path.join(SCRIPT_DIR, 'package_schema.json')
     for package in packages:
         if subprocess.call([validator, schema, package]) != 0:
             all_valid = False
@@ -136,6 +139,19 @@ def check_root(base, layer):
     return all_there
 
 
+def check_product_root(base, layer):
+    '''Verified that the default product is present.'''
+    missing = []
+    for product in REQUIRED_PRODUCTS:
+        path = os.path.join(base, product)
+        if not os.path.isfile(path):
+            missing.append(path)
+    if not missing:
+        return True
+    print('Missing products: %s' % missing)
+    return False
+
+
 def main():
     parser = argparse.ArgumentParser(
             description=('Checks that packages in a given layer are properly '
@@ -154,21 +170,36 @@ def main():
     os.chdir(FUCHSIA_ROOT)
     if args.layer:
         layer = args.layer
-        base = os.path.join(layer, 'packages')
+        packages_base = os.path.join(layer, 'packages')
+        products_base = os.path.join(layer, 'products')
     else:
         layer = args.vendor_layer
-        base = os.path.join('vendor', layer, 'packages')
+        packages_base = os.path.join('vendor', layer, 'packages')
+        products_base = os.path.join('vendor', layer, 'products')
 
     # List all packages files.
     packages = []
-    for dirpath, dirnames, filenames in os.walk(base):
+    for dirpath, dirnames, filenames in os.walk(packages_base):
         packages.extend([os.path.join(dirpath, f) for f in filenames
+                         if f not in NON_PACKAGE_FILES])
+
+    products = []
+    for dirpath, dirnames, filenames in os.walk(products_base):
+        products.extend([os.path.join(dirpath, f) for f in filenames
                          if f not in NON_PACKAGE_FILES])
 
     if not check_json(packages):
         return False
 
-    if not check_schema(packages, args.json_validator):
+    if not check_json(products):
+        return False
+
+    schema = os.path.join(SCRIPT_DIR, 'package_schema.json')
+    if not check_schema(packages, args.json_validator, schema):
+        return False
+
+    schema = os.path.join(SCRIPT_DIR, 'product_schema.json')
+    if not check_schema(products, args.json_validator, schema):
         return False
 
     deps = dict([(p, get_package_imports(p)) for p in packages])
@@ -176,13 +207,20 @@ def main():
     if not check_deps_exist(deps):
         return False
 
-    if not check_all(base, deps, layer):
+    if not check_all(packages_base, deps, layer):
         return False
 
     if not check_no_fuchsia_packages_in_all(packages):
         return False
 
-    if not check_root(base, layer):
+    if not check_root(packages_base, layer):
+        return False
+
+    deps = dict([(p, get_product_imports(p)) for p in products])
+    if not check_deps_exist(deps):
+        return False
+
+    if not check_product_root(products_base, layer):
         return False
 
     return True
