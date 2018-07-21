@@ -1214,8 +1214,12 @@ bool Library::CompileHandleType(flat::HandleType* handle_type, TypeShape* out_ty
 bool Library::CompileRequestHandleType(flat::RequestHandleType* request_type,
                                        TypeShape* out_typeshape) {
     auto named_decl = LookupDeclByName(request_type->name);
-    if (!named_decl || named_decl->kind != Decl::Kind::kInterface)
-        return Fail(request_type->name, "Undefined reference in request handle name");
+    if (!named_decl || named_decl->kind != Decl::Kind::kInterface) {
+        std::string message = "Undefined reference \"";
+        message.append(request_type->name.name().data());
+        message.append("\" in request handle name");
+        return Fail(request_type->name, message);
+    }
 
     *out_typeshape = kHandleTypeShape;
     return true;
@@ -1232,7 +1236,10 @@ bool Library::CompileIdentifierType(flat::IdentifierType* identifier_type,
 
     auto named_decl = LookupDeclByName(identifier_type->name);
     if (!named_decl) {
-        return Fail(identifier_type->name, "Undefined reference in identifier type name");
+        std::string message("Undefined reference \"");
+        message.append(identifier_type->name.name().data());
+        message.append("\" in identifier type name");
+        return Fail(identifier_type->name, message);
     }
 
     switch (named_decl->kind) {
