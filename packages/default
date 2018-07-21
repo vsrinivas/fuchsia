@@ -2,8 +2,8 @@
     "imports": [
         "garnet/packages/config/amber",
         "garnet/packages/config/kernel_crash_checker",
-        "garnet/packages/config/network",
         "garnet/packages/config/netcfg",
+        "garnet/packages/config/network",
         "garnet/packages/config/openssh_keys",
         "garnet/packages/config/thermd",
         "garnet/packages/config/wlancfg",

@@ -1,10 +1,10 @@
 {
     "imports": [
         "garnet/packages/config/amber",
+        "garnet/packages/config/netcfg",
         "garnet/packages/config/network",
         "garnet/packages/config/openssh_keys",
         "garnet/packages/config/thermd",
-        "garnet/packages/config/netcfg",
         "garnet/packages/config/wlancfg",
         "garnet/packages/prod/all"
     ]
