@@ -1,5 +1,6 @@
 {
     "packages": [
-        "//garnet/examples/escher:escher_examples"
+        "//garnet/examples/escher:escher_waterfall",
+        "//garnet/examples/escher:escher_waterfall2"
     ]
 }

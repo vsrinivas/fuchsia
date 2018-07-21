@@ -3,21 +3,51 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
 
-package("escher_examples") {
-  deprecated_system_image = true
-
+package("escher_waterfall") {
   deps = [
     "waterfall",
+  ]
+
+  binary = "waterfall"
+
+  meta = [
+    {
+      path = rebase_path("meta/escher_examples.cmx")
+      dest = "escher_waterfall.cmx"
+    },
+  ]
+
+  public_deps = vulkan_validation_layers.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources = vulkan_validation_layers.resources
+}
+
+package("escher_waterfall2") {
+  deps = [
     "waterfall2",
   ]
 
-  binaries = [
+  binary = "waterfall2"
+
+  meta = [
     {
-      name = "waterfall"
-    },
-    {
-      name = "waterfall2"
+      path = rebase_path("meta/escher_examples.cmx")
+      dest = "escher_waterfall2.cmx"
     },
   ]
+
+  public_deps = vulkan_validation_layers.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources = [
+      {
+          path = "waterfall2/shaders/simple.vert"
+          dest = "shaders/simple.vert"
+      },
+      {
+          path = "waterfall2/shaders/simple.frag"
+          dest = "shaders/simple.frag"
+      },
+  ] + vulkan_validation_layers.resources
 }

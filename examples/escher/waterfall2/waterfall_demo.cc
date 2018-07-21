@@ -22,11 +22,16 @@ static constexpr float kFar = -1.f;
 // Directional light is 50% intensity; ambient light will adjust automatically.
 static constexpr float kLightIntensity = 0.5f;
 
+#ifdef __Fuchsia__
+static const char* kDataDir = "/pkg/data/";
+#else
+static const char* kDataDir = "garnet/examples/escher/waterfall2/";
+#endif
+
 // Constructor helper.
 ShaderProgramPtr CreateShaderProgram(Escher* escher) {
   escher->shader_program_factory()->filesystem()->InitializeWithRealFiles(
-      {"shaders/simple.vert", "shaders/simple.frag"},
-      "garnet/examples/escher/waterfall2/");
+      {"shaders/simple.vert", "shaders/simple.frag"}, kDataDir);
 
   // We only obtain the factory above in order to to initialize with files from
   // the filesystem.  The usual, convenient way to obtain a shader program is to
