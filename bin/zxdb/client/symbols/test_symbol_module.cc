@@ -25,11 +25,9 @@ const char TestSymbolModule::kMyMemberTwoName[] =
 TestSymbolModule::TestSymbolModule() = default;
 TestSymbolModule::~TestSymbolModule() = default;
 
-// static
-std::string TestSymbolModule::GetTestFileName() {
-  // We assume the "test_data:copy_test_so" build step has generated and
-  // copied this shared library compiled for the target to the same directory
-  // as the test.
+namespace {
+
+inline std::string GetTestFilePath(const std::string& rel_path) {
   std::string path = GetSelfPath();
   size_t last_slash = path.rfind('/');
   if (last_slash == std::string::npos) {
@@ -37,7 +35,27 @@ std::string TestSymbolModule::GetTestFileName() {
   } else {
     path.resize(last_slash + 1);
   }
+  return path + rel_path;
+}
+
+// This test file will be copied over to this specific location at build time.
+const char kRelativeSharedLibPath[] = "../test_data/zxdb/";
+// The binary is located in $fuchsia_build_root
+const char kRelativeTestDataPath[] =
+    "../../../garnet/bin/zxdb/client/test_data/";
+
+}  // namespace
+
+// static
+std::string TestSymbolModule::GetTestFileName() {
+  std::string path = GetTestFilePath(kRelativeSharedLibPath);
   return path + "libzxdb_symbol_test.targetso";
+  return path;
+}
+
+std::string TestSymbolModule::GetCheckedInTestFileName() {
+  std::string path = GetTestFilePath(kRelativeTestDataPath);
+  return path + "libsymbol_test_so.targetso";
 }
 
 bool TestSymbolModule::Load(std::string* err_msg) {

@@ -28,7 +28,7 @@ class ScopedUnlink {
 
 // Trying to load a nonexistand file should error.
 TEST(ModuleSymbols, NonExistantFile) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName() +
+  ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName() +
                            "_NONEXISTANT", "");
   Err err = module.Load();
   EXPECT_TRUE(err.has_error());
@@ -45,14 +45,14 @@ TEST(ModuleSymbols, BadFileType) {
   EXPECT_LT(0, write(fd, temp_name, strlen(temp_name)));
   close(fd);
 
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName() +
+  ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName() +
                            "_NONEXISTANT", "");
   Err err = module.Load();
   EXPECT_TRUE(err.has_error());
 }
 
 TEST(ModuleSymbols, Basic) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName(), "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
@@ -78,7 +78,7 @@ TEST(ModuleSymbols, Basic) {
 }
 
 TEST(ModuleSymbols, LineDetailsForRelativeAddress) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName(), "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
@@ -124,7 +124,7 @@ TEST(ModuleSymbols, LineDetailsForRelativeAddress) {
 }
 
 TEST(ModuleSymbols, AddressesForLine) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName(), "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 

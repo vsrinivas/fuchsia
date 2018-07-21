@@ -13,6 +13,7 @@
 # be referenced once to generate the correct file.
 assert(current_toolchain == "${default_toolchain}-shared")
 
+# This rule will be called as a dependency of the zxdb tests.
 shared_library("zxdb_symbol_test") {
   sources = [
     "line_lookup_symbol_test.cc",
@@ -35,10 +36,28 @@ copy("copy_test_so") {
   # Use a ".targetso" extension because this isn't a library that can actually
   # loaded on the host platform.
   outputs = [
-    "$root_build_dir/host_x64/libzxdb_symbol_test.targetso",
+    "$root_build_dir/test_data/zxdb/libzxdb_symbol_test.targetso",
   ]
 
   deps = [
     ":zxdb_symbol_test",
   ]
 }
+
+## NOT RUN BY BUILD, REFERENCE ONLY --------------------------------------------
+
+## Generates a static line_lookup_test used in the ModuleSymbols tests.
+## This output should not change, as the tests heavily rely on the binary layout
+## being the same. Ideally, we would have a way of extracting only the debug
+## information and test against that, instead on relying on pre-compiled
+## binaries.
+##
+## This rule is ran offline for the x64 architecture and the result is checked
+## in for the testing.
+# shared_library("symbol_test_so") {
+#   sources = [
+#     "line_lookup_symbol_test.cc",
+#     "zxdb_symbol_test.cc",
+#     "zxdb_symbol_test2.cc",
+#   ]
+# }

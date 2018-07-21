@@ -44,6 +44,10 @@ class TestSymbolModule {
   // it that involve different types of setup.
   static std::string GetTestFileName();
 
+  // Returns the checked in .so used for line testing. As the mapping changes
+  // between architectures, the file is compiled offline and remains the same.
+  static std::string GetCheckedInTestFileName();
+
   // Loads the test file. On failure, returns false and sets the given error
   // message to be something helpful.
   bool Load(std::string* err_msg);
