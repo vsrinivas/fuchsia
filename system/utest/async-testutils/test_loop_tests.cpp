@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fbl/function.h>
 #include <lib/async-testutils/test_loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
-
 #include <lib/zx/event.h>
 #include <lib/zx/time.h>
 #include <unittest/unittest.h>
@@ -15,385 +15,411 @@
 
 namespace {
 
-// Initializes |wait| to updates |var| to point to |value| once |ZX_USER_SIGNAL_0| is
-// seen.
-void InitVariableUpdateWait(async::Wait* wait, int* var, int value, zx::event* event) {
-    wait->set_object(event->get());
-    wait->set_trigger(ZX_USER_SIGNAL_0);
-    wait->set_handler([var, value](async_dispatcher_t*, async::Wait*, zx_status_t,
-                                   const zx_packet_signal_t*) {
-        *var = value;
+// Initializes |wait| to wait on |event| to call |closure| once |trigger| is
+// signaled.
+void InitWait(async::Wait* wait, fbl::Closure closure, const zx::event& event,
+              zx_signals_t trigger) {
+    wait->set_handler(
+        [closure = fbl::move(closure)] (async_dispatcher_t*, async::Wait*,
+                                        zx_status_t,
+                                        const zx_packet_signal_t*) {
+        closure();
     });
+    wait->set_object(event.get());
+    wait->set_trigger(trigger);
 }
 
-bool get_default_test() {
+
+bool DefaultDispatcherIsSetAndUnset() {
     BEGIN_TEST;
 
     EXPECT_NULL(async_get_default_dispatcher());
-
-    async::TestLoop* loop = new async::TestLoop();
-    EXPECT_EQ(loop->dispatcher(), async_get_default_dispatcher());
-
-    delete loop;
+    {
+        async::TestLoop loop;;
+        EXPECT_EQ(loop.dispatcher(), async_get_default_dispatcher());
+    }
     EXPECT_NULL(async_get_default_dispatcher());
 
     END_TEST;
 }
 
-bool fake_clock_test() {
-    async::TestLoop loop;
-    async_dispatcher_t* dispatcher = loop.dispatcher();
-
+bool FakeClockTimeIsCorrect() {
     BEGIN_TEST;
 
-    EXPECT_EQ(zx::sec(0).get(), loop.Now().get());
-    EXPECT_EQ(zx::sec(0).get(), async_now(dispatcher));
+    async::TestLoop loop;
 
-    EXPECT_FALSE(loop.RunUntilIdle());
+    EXPECT_EQ(0, loop.Now().get());
+    EXPECT_EQ(0, async::Now(loop.dispatcher()).get());
 
-    // Loop was idle already, so current time should remain the same.
-    EXPECT_EQ(zx::sec(0).get(), loop.Now().get());
-    EXPECT_EQ(zx::sec(0).get(), async_now(dispatcher));
+    loop.RunUntilIdle();
+    EXPECT_EQ(0, loop.Now().get());
+    EXPECT_EQ(0, async::Now(loop.dispatcher()).get());
 
-    loop.AdvanceTimeBy(zx::sec(1));
-    EXPECT_EQ(zx::sec(1).get(), loop.Now().get());
-    EXPECT_EQ(zx::sec(1).get(), async_now(dispatcher));
+    loop.RunFor(zx::nsec(1));
+    EXPECT_EQ(1, loop.Now().get());
+    EXPECT_EQ(1, async::Now(loop.dispatcher()).get());
 
-    loop.AdvanceTimeTo(zx::time(0) + zx::sec(3));
-    EXPECT_EQ(zx::sec(3).get(), loop.Now().get());
-    EXPECT_EQ(zx::sec(3).get(), async_now(dispatcher));
+    loop.RunUntil(zx::time() + zx::nsec(3));
+    EXPECT_EQ(3, loop.Now().get());
+    EXPECT_EQ(3, async::Now(loop.dispatcher()).get());
 
-    EXPECT_FALSE(loop.RunFor(zx::sec(7)));
-    EXPECT_EQ(zx::sec(10).get(), loop.Now().get());
-    EXPECT_EQ(zx::sec(10).get(), async_now(dispatcher));
+    loop.RunFor(zx::nsec(7));
+    EXPECT_EQ(10, loop.Now().get());
+    EXPECT_EQ(10, async::Now(loop.dispatcher()).get());
 
-    EXPECT_FALSE(loop.RunUntil(zx::time(0) + zx::sec(12)));
-    EXPECT_EQ(zx::sec(12).get(), loop.Now().get());
-    EXPECT_EQ(zx::sec(12).get(), async_now(dispatcher));
+    loop.RunUntil(zx::time() + zx::nsec(12));
+    EXPECT_EQ(12, loop.Now().get());
+    EXPECT_EQ(12, async::Now(loop.dispatcher()).get());
 
     // t = 12, so nothing should happen in trying to reset the clock to t = 10.
-    loop.AdvanceTimeTo(zx::time(0) + zx::sec(10));
-    EXPECT_EQ(zx::sec(12).get(), loop.Now().get());
-    EXPECT_EQ(zx::sec(12).get(), async_now(dispatcher));
+    loop.RunUntil(zx::time() + zx::nsec(10));
+    EXPECT_EQ(12, loop.Now().get());
+    EXPECT_EQ(12, async::Now(loop.dispatcher()).get());
 
     END_TEST;
 }
 
-bool simple_task_posting_test() {
-    async::TestLoop loop;
-    async_dispatcher_t* dispatcher = loop.dispatcher();
-    int var = 0;
-
+bool TasksAreDispatched() {
     BEGIN_TEST;
 
-    // |taskA|: updates |var| to 1 with a deadline of t = 2.
-    async::TaskClosure task([&var] { var = 1; });
-    EXPECT_EQ(ZX_OK, task.PostForTime(dispatcher, zx::time(0) + zx::sec(2)));
+    async::TestLoop loop;
+    bool called = false;
+    async::PostDelayedTask(loop.dispatcher(), [&called] { called = true; }, zx::sec(2));
 
-    // t = 1: nothing should happen, as |taskA| has a deadline of 1.
-    EXPECT_FALSE(loop.RunFor(zx::sec(1)));
-    EXPECT_EQ(0, var);
+    // t = 1: nothing should happen.
+    loop.RunFor(zx::sec(1));
+    EXPECT_FALSE(called);
 
-    // t = 2: |taskA| should have updated |var| to 1.
-    loop.AdvanceTimeBy(zx::sec(1));
-    EXPECT_TRUE(loop.RunUntilIdle());
-    EXPECT_EQ(1, var);
+    // t = 2: task should be dispatched.
+    loop.RunFor(zx::sec(1));
+    EXPECT_TRUE(called);
+
+    called = false;
+    async::PostTask(loop.dispatcher(), [&called] { called = true; });
+    loop.RunUntilIdle();
+    EXPECT_TRUE(called);
 
     END_TEST;
 }
 
-bool task_with_same_deadlines_test() {
-    async::TestLoop loop;
-    async_dispatcher_t* dispatcher = loop.dispatcher();
-    int var = 0;
-
+bool SameDeadlinesDispatchInPostingOrder() {
     BEGIN_TEST;
 
-    // |taskA|: updates |var| to 1 with a deadline of t = 3.
-    // |taskB|: updates |var| to 2 with a deadline of t = 3.
-    async::TaskClosure taskA([&var] { var = 1; });
-    EXPECT_EQ(ZX_OK, taskA.PostDelayed(dispatcher, zx::sec(3)));
-    async::TaskClosure taskB([&var] { var = 2; });
-    EXPECT_EQ(ZX_OK, taskB.PostDelayed(dispatcher, zx::sec(3)));
+    async::TestLoop loop;
+    bool calledA = false;
+    bool calledB = false;
 
-    // t = 3: Since |taskB| was posted after |taskA|, it's handler was called
-    //  after |taskA|'s.'
-    EXPECT_TRUE(loop.RunFor(zx::sec(3)));
-    EXPECT_EQ(2, var);
+    async::PostTask(loop.dispatcher(), [&] {
+        EXPECT_FALSE(calledB);
+        calledA = true;
+    });
+    async::PostTask(loop.dispatcher(), [&] {
+      EXPECT_TRUE(calledA);
+      calledB = true;
+    });
+
+    loop.RunUntilIdle();
+    EXPECT_TRUE(calledA);
+    EXPECT_TRUE(calledB);
+
+    calledA = false;
+    calledB = false;
+    async::PostDelayedTask(
+        loop.dispatcher(),
+        [&] {
+            EXPECT_FALSE(calledB);
+            calledA = true;
+        },
+        zx::sec(5));
+    async::PostDelayedTask(
+        loop.dispatcher(),
+        [&] {
+            EXPECT_TRUE(calledA);
+            calledB = true;
+        },
+        zx::sec(5));
+
+    loop.RunFor(zx::sec(5));
+    EXPECT_TRUE(calledA);
+    EXPECT_TRUE(calledB);
 
     END_TEST;
 }
 
 // Test tasks that post tasks.
-bool compounded_task_posting_test() {
-    async::TestLoop loop;
-    async_dispatcher_t* dispatcher = loop.dispatcher();
-    int var = 0;
-
+bool NestedTasksAreDispatched() {
     BEGIN_TEST;
 
-    // |taskA|: updates |var| to 1 and posts |taskB| at t = 1.
-    // |taskB|: updates |var| to 2 at t = 3.
-    async::TaskClosure taskB([&var] { var = 2; });
-    async::TaskClosure taskA([&var, &taskB, dispatcher] {
-        var = 1;
-        EXPECT_EQ(ZX_OK, taskB.PostForTime(dispatcher, zx::time(0) + zx::sec(2)));
+    async::TestLoop loop;
+    bool called = false;
+
+    async::PostTask(loop.dispatcher(), [&] {
+        async::PostDelayedTask(
+            loop.dispatcher(),
+            [&] {
+                async::PostDelayedTask(
+                      loop.dispatcher(),
+                      [&] { called = true; },
+                      zx::min(25));
+            },
+            zx::min(35));
     });
 
-    EXPECT_EQ(ZX_OK, taskA.PostForTime(dispatcher, zx::time(0) + zx::sec(1)));
-    EXPECT_EQ(0, var);
-
-    // t = 1: |taskA| should have updated |var| to 1.
-    EXPECT_TRUE(loop.RunFor(zx::sec(1)));
-    EXPECT_EQ(1, var);
-
-    // t = 2: |taskB| should have updated |var| to 2.
-    loop.AdvanceTimeTo(zx::time(0) + zx::sec(2));
-    EXPECT_TRUE(loop.RunUntilIdle());
-    EXPECT_EQ(2, var);
+    loop.RunFor(zx::hour(1));
+    EXPECT_TRUE(called);
 
     END_TEST;
 }
 
-bool correct_time_while_dispatching_tasks_test() {
-  async::TestLoop loop;
-  async_dispatcher_t* dispatcher = loop.dispatcher();
-
-  BEGIN_TEST;
-
-  // Post |taskA| for t = 1, set the time to t = 2, and post |taskB| also to
-  // t = 1. During dispatching of both task, the current time to t = 2.
-  async::TaskClosure taskA([dispatcher] {
-      EXPECT_EQ(zx::sec(2).get(), async_now(dispatcher));
-  });
-  async::TaskClosure taskB([dispatcher] {
-      EXPECT_EQ(zx::sec(2).get(), async_now(dispatcher));
-  });
-
-  taskA.PostForTime(dispatcher, zx::time(0) + zx::sec(1));
-  loop.AdvanceTimeTo(zx::time(0) + zx::sec(2));
-  taskB.PostForTime(dispatcher, zx::time(0) + zx::sec(1));
-  EXPECT_TRUE(loop.RunUntilIdle());
-
-
-  // Post |taskC| and |taskD| for t = 4, 5, and then run until t = 6. Both
-  // tasks should have current time equal to deadline on dispatch.
-  async::TaskClosure taskC([dispatcher] {
-      EXPECT_EQ(zx::sec(4).get(), async_now(dispatcher));
-  });
-  async::TaskClosure taskD([dispatcher] {
-      EXPECT_EQ(zx::sec(5).get(), async_now(dispatcher));
-  });
-  taskC.PostForTime(dispatcher, zx::time(0) + zx::sec(4));
-  taskD.PostForTime(dispatcher, zx::time(0) + zx::sec(5));
-
-  EXPECT_TRUE(loop.RunUntil(zx::time(0) + zx::sec(6)));
-
-  END_TEST;
-}
-
-bool task_canceling_test() {
-    async::TestLoop loop;
-    async_dispatcher_t* dispatcher = loop.dispatcher();
-    int var = 0;
-    async::TaskClosure taskA([&var] { var = 2; });
-    async::TaskClosure taskB([&var] { var = 1; });
-    async::TaskClosure taskC([&var] { var = 3; });
-
+bool TimeIsCorrectWhileDispatching() {
     BEGIN_TEST;
 
-    EXPECT_EQ(ZX_OK, taskA.PostDelayed(dispatcher, zx::sec(1)));
-    EXPECT_EQ(ZX_OK, taskB.PostDelayed(dispatcher, zx::sec(2)));
-    EXPECT_EQ(ZX_OK, taskC.PostDelayed(dispatcher, zx::sec(3)));
+    async::TestLoop loop;
+    bool called = false;
 
-    EXPECT_EQ(ZX_OK, taskB.Cancel());
+    async::PostTask(loop.dispatcher(), [&] {
+        EXPECT_EQ(0, loop.Now().get());
 
-    // t = 2; both |taskA| and |taskB| would be due, but since |taskB| was cancelled
-    // only |taskA|'s handler was called: |var| should be 2.
-    EXPECT_TRUE(loop.RunFor(zx::sec(2)));
-    EXPECT_EQ(2, var);
+        async::PostDelayedTask(
+            loop.dispatcher(),
+            [&] {
+                EXPECT_EQ(10, loop.Now().get());
+                async::PostDelayedTask(
+                      loop.dispatcher(),
+                      [&] {
+                          EXPECT_EQ(15, loop.Now().get());
+                          async::PostTask(loop.dispatcher(), [&] {
+                              EXPECT_EQ(15, loop.Now().get());
+                              called = true;
+                          });
+                      },
+                      zx::nsec(5));
+            },
+            zx::nsec(10));
+    });
 
-    EXPECT_EQ(ZX_OK, taskC.Cancel());
-
-    // t = 3: |taskC| was cancelled, so |var| should remain at 2.
-    EXPECT_FALSE(loop.RunFor(zx::sec(1)));
-    EXPECT_EQ(2, var);
+    loop.RunFor(zx::nsec(15));
+    EXPECT_TRUE(called);
 
     END_TEST;
 }
 
-bool simple_wait_posting_test() {
+bool TasksAreCanceled() {
+    BEGIN_TEST;
+
     async::TestLoop loop;
-    async_dispatcher_t* dispatcher = loop.dispatcher();
-    int var = 0;
-    zx::event event;
+    bool calledA = false;
+    bool calledB = false;
+    bool calledC = false;
+
+    async::TaskClosure taskA([&calledA] { calledA = true; });
+    async::TaskClosure taskB([&calledB] { calledB = true; });
+    async::TaskClosure taskC([&calledC] { calledC = true; });
+
+    ASSERT_EQ(ZX_OK, taskA.Post(loop.dispatcher()));
+    ASSERT_EQ(ZX_OK, taskB.Post(loop.dispatcher()));
+    ASSERT_EQ(ZX_OK, taskC.Post(loop.dispatcher()));
+
+    ASSERT_EQ(ZX_OK, taskA.Cancel());
+    ASSERT_EQ(ZX_OK, taskC.Cancel());
+
+    loop.RunUntilIdle();
+
+    EXPECT_FALSE(calledA);
+    EXPECT_TRUE(calledB);
+    EXPECT_FALSE(calledC);
+
+    END_TEST;
+}
+
+bool WaitsAreDispatched() {
+    BEGIN_TEST;
+
+    async::TestLoop loop;
     async::Wait wait;
+    zx::event event;
+    bool called = false;
 
-    BEGIN_TEST;
+    ASSERT_EQ(ZX_OK, zx::event::create(0u, &event));
+    InitWait(&wait, [&called] { called = true; }, event, ZX_USER_SIGNAL_0);
+    ASSERT_EQ(ZX_OK, wait.Begin(loop.dispatcher()));
 
-    EXPECT_EQ(ZX_OK, zx::event::create(0u, &event));
-    InitVariableUpdateWait(&wait, &var, 1, &event);
+    // |wait| has not yet been triggered.
+    loop.RunUntilIdle();
+    EXPECT_FALSE(called);
 
-    EXPECT_EQ(ZX_OK, wait.Begin(dispatcher));
-    EXPECT_FALSE(loop.RunUntilIdle());
-    EXPECT_EQ(0, var);
+    ASSERT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_1));
 
-    // |wait| will only be triggered by |ZX_USER_SIGNAL_1|.
-    EXPECT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_1));
-    EXPECT_FALSE(loop.RunUntilIdle());
-    EXPECT_EQ(0, var);
+    // |wait| will only be triggered by |ZX_USER_SIGNAL_0|.
+    loop.RunUntilIdle();
+    EXPECT_FALSE(called);
 
-    // With the correct signal, |var| should be updated to 1.
-    EXPECT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_0));
-    EXPECT_TRUE(loop.RunUntilIdle());
-    EXPECT_EQ(1, var);
+    ASSERT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_0));
+
+    loop.RunUntilIdle();
+    EXPECT_TRUE(called);
 
     END_TEST;
 }
 
 // Test waits that trigger waits.
-bool compounded_wait_posting_test() {
-    async::TestLoop loop;
-    async_dispatcher_t* dispatcher = loop.dispatcher();
-    int var = 0;
-    zx::event event;
-
+bool NestedWaitsAreDispatched() {
     BEGIN_TEST;
-    EXPECT_EQ(ZX_OK, zx::event::create(0u, &event));
 
-    // |waitA|: updates |var| to 1 and begins |waitB| on |ZX_USER_SIGNAL_1|.
-    // |waitB|: updates |var| to 2 on |ZX_USER_SIGNAL_0|.
-    async::Wait waitB;
-    InitVariableUpdateWait(&waitB, &var, 2, &event);
-
+    async::TestLoop loop;
+    zx::event event;
     async::Wait waitA;
-    waitA.set_object(event.get());
-    waitA.set_trigger(ZX_USER_SIGNAL_1);
-    waitA.set_handler([&waitB, &var](async_dispatcher_t* dispatcher, async::Wait*, zx_status_t,
-                                     const zx_packet_signal_t*) {
-        var = 1;
-        EXPECT_EQ(ZX_OK, waitB.Begin(dispatcher));
-    });
-    EXPECT_EQ(ZX_OK, waitA.Begin(dispatcher));
-    EXPECT_EQ(0, var);
+    async::Wait waitB;
+    async::Wait waitC;
+    bool calledA = false;
+    bool calledB = false;
+    bool calledC = false;
 
-    // |waitA| should trigger.
-    EXPECT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_1));
-    EXPECT_TRUE(loop.RunUntilIdle());
-    EXPECT_EQ(1, var);
+    ASSERT_EQ(ZX_OK, zx::event::create(0u, &event));
+    InitWait(
+        &waitA,
+        [&] {
+            InitWait(
+                &waitB,
+                [&] {
+                    InitWait(&waitC, [&] { calledC = true; }, event, ZX_USER_SIGNAL_2);
+                    waitC.Begin(loop.dispatcher());
+                    calledB = true;
+                },
+                event,
+                ZX_USER_SIGNAL_1);
+            waitB.Begin(loop.dispatcher());
+            calledA = true;
+        },
+        event,
+        ZX_USER_SIGNAL_0);
 
-    // |waitB| should have begun by now and trigger.
-    EXPECT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_0));
-    EXPECT_TRUE(loop.RunUntilIdle());
-    EXPECT_EQ(2, var);
+    ASSERT_EQ(ZX_OK, waitA.Begin(loop.dispatcher()));
+
+    loop.RunUntilIdle();
+    EXPECT_FALSE(calledA);
+    EXPECT_FALSE(calledB);
+    EXPECT_FALSE(calledC);
+
+    ASSERT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_0));
+
+    loop.RunUntilIdle();
+    EXPECT_TRUE(calledA);
+    EXPECT_FALSE(calledB);
+    EXPECT_FALSE(calledC);
+
+    ASSERT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_1));
+
+    loop.RunUntilIdle();
+    EXPECT_TRUE(calledA);
+    EXPECT_TRUE(calledB);
+    EXPECT_FALSE(calledC);
+
+    ASSERT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_2));
+
+    loop.RunUntilIdle();
+    EXPECT_TRUE(calledA);
+    EXPECT_TRUE(calledB);
+    EXPECT_TRUE(calledC);
 
     END_TEST;
 }
 
-bool wait_canceling_test() {
+bool WaitsAreCanceled() {
+    BEGIN_TEST;
+
     async::TestLoop loop;
-    async_dispatcher_t* dispatcher = loop.dispatcher();
-    int var = 0;
-    zx::event eventA;
-    zx::event eventB;
-    zx::event eventC;
+    zx::event event;
     async::Wait waitA;
     async::Wait waitB;
     async::Wait waitC;
+    bool calledA = false;
+    bool calledB = false;
+    bool calledC = false;
 
-    BEGIN_TEST;
+    ASSERT_EQ(ZX_OK, zx::event::create(0u, &event));
 
-    EXPECT_EQ(ZX_OK, zx::event::create(0u, &eventA));
-    EXPECT_EQ(ZX_OK, zx::event::create(0u, &eventB));
-    EXPECT_EQ(ZX_OK, zx::event::create(0u, &eventC));
+    InitWait(&waitA, [&calledA] { calledA = true; }, event, ZX_USER_SIGNAL_0);
+    InitWait(&waitB, [&calledB] { calledB = true; }, event, ZX_USER_SIGNAL_0);
+    InitWait(&waitC, [&calledC] { calledC = true; }, event, ZX_USER_SIGNAL_0);
 
-    InitVariableUpdateWait(&waitA, &var, 1, &eventA);
-    InitVariableUpdateWait(&waitB, &var, 2, &eventB);
-    InitVariableUpdateWait(&waitC, &var, 3, &eventC);
+    ASSERT_EQ(ZX_OK, waitA.Begin(loop.dispatcher()));
+    ASSERT_EQ(ZX_OK, waitB.Begin(loop.dispatcher()));
+    ASSERT_EQ(ZX_OK, waitC.Begin(loop.dispatcher()));
 
-    EXPECT_EQ(ZX_OK, waitA.Begin(dispatcher));
-    EXPECT_EQ(ZX_OK, waitB.Begin(dispatcher));
-    EXPECT_EQ(ZX_OK, waitC.Begin(dispatcher));
+    ASSERT_EQ(ZX_OK, waitA.Cancel());
+    ASSERT_EQ(ZX_OK, waitC.Cancel());
+    ASSERT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_0));
 
-    EXPECT_EQ(ZX_OK, waitB.Cancel());
-
-    // Have |eventA| and |eventB| fire: |waitB| was canceled, so only |waitA|'s
-    // shoud have been called: |var| should be 1.
-    EXPECT_EQ(ZX_OK, eventA.signal(0u, ZX_USER_SIGNAL_0));
-    EXPECT_EQ(ZX_OK, eventB.signal(0u, ZX_USER_SIGNAL_0));
-    EXPECT_TRUE(loop.RunUntilIdle());
-    EXPECT_EQ(1, var);
-
-    // If |eventC| fires before the canceling of |waitC|, |waitC|'s handler
-    // should still not be called.
-    EXPECT_EQ(ZX_OK, eventC.signal(0u, ZX_USER_SIGNAL_0));
-    EXPECT_EQ(ZX_OK, waitC.Cancel());
-    EXPECT_FALSE(loop.RunUntilIdle());
-    EXPECT_EQ(1, var);
+    loop.RunUntilIdle();
+    EXPECT_FALSE(calledA);
+    EXPECT_TRUE(calledB);
+    EXPECT_FALSE(calledC);
 
     END_TEST;
 }
 
 // Test a task that begins a wait to post a task.
-bool mixed_task_and_wait_posting_test() {
-    async::TestLoop loop;
-    async_dispatcher_t* dispatcher = loop.dispatcher();
-    int var = 0;
-    zx::event event;
-
+bool NestedTasksAndWaitsAreDispatched() {
     BEGIN_TEST;
 
-    EXPECT_EQ(ZX_OK, zx::event::create(0u, &event));
+    async::TestLoop loop;
+    zx::event event;
+    async::Wait wait;
+    bool wait_begun = false;
+    bool wait_dispatched = false;
+    bool inner_task_dispatched = false;
 
-    // |taskA|: update var to 1 and begin |waitB| with a deadline of t = 1;
-    // |waitB|: update var to 2 and post |taskC| on seeing |ZX_USER_SIGNAL_0|;
-    // |taskC|: update var to 3 with a deadline of t = 3;
-    async::TaskClosure taskC([&var] {
-        EXPECT_EQ(2, var);
-        var = 3;
-    });
+    ASSERT_EQ(ZX_OK, zx::event::create(0u, &event));
+    InitWait(
+        &wait,
+        [&] {
+            async::PostDelayedTask(loop.dispatcher(),
+                                   [&] { inner_task_dispatched = true; },
+                                   zx::min(2));
+            wait_dispatched = true;
+        },
+        event,
+        ZX_USER_SIGNAL_0);
+    async::PostDelayedTask(loop.dispatcher(),
+                           [&] {
+                               wait.Begin(loop.dispatcher());
+                               wait_begun = true;
+                           },
+                           zx::min(3));
 
-    async::Wait waitB;
-    waitB.set_object(event.get());
-    waitB.set_trigger(ZX_USER_SIGNAL_0);
-    waitB.set_handler([&taskC, &var](async_dispatcher_t* dispatcher, async::Wait*, zx_status_t,
-                                     const zx_packet_signal_t*) {
-        var = 2;
-        EXPECT_EQ(ZX_OK, taskC.PostForTime(dispatcher, zx::time(0) + zx::sec(3)));
-    });
+    loop.RunFor(zx::min(3));
+    EXPECT_TRUE(wait_begun);
+    EXPECT_FALSE(wait_dispatched);
+    EXPECT_FALSE(inner_task_dispatched);
 
-    async::TaskClosure taskA([&waitB, &var, dispatcher] {
-        var = 1;
-        EXPECT_EQ(ZX_OK, waitB.Begin(dispatcher));
-    });
-    EXPECT_EQ(ZX_OK, taskA.PostForTime(dispatcher, zx::time(0) + zx::sec(1)));
-    EXPECT_EQ(0, var);
+    ASSERT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_0));
 
-    // t = 1: |taskA| should have updated |var| to 1.
-    EXPECT_TRUE(loop.RunUntil(zx::time(0) + zx::sec(1)));
-    EXPECT_EQ(1, var);
+    loop.RunUntilIdle();
+    EXPECT_TRUE(wait_begun);
+    EXPECT_TRUE(wait_dispatched);
+    EXPECT_FALSE(inner_task_dispatched);
 
-    // By now, |waitB| should have begun; on signal, |var| should be updated
-    // first to 2, and then to 3 by |taskC|.
-    EXPECT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_0));
-    EXPECT_TRUE(loop.RunUntil(zx::time(0) + zx::sec(3)));
-    EXPECT_EQ(3, var);
+    loop.RunFor(zx::min(2));
+    EXPECT_TRUE(wait_begun);
+    EXPECT_TRUE(wait_dispatched);
+    EXPECT_TRUE(inner_task_dispatched);
 
     END_TEST;
 }
 
 } // namespace
 
-BEGIN_TEST_CASE(test_loop_tests)
-RUN_TEST(get_default_test)
-RUN_TEST(fake_clock_test)
-RUN_TEST(simple_task_posting_test)
-RUN_TEST(task_with_same_deadlines_test)
-RUN_TEST(compounded_task_posting_test)
-RUN_TEST(correct_time_while_dispatching_tasks_test)
-RUN_TEST(task_canceling_test)
-RUN_TEST(simple_wait_posting_test)
-RUN_TEST(compounded_wait_posting_test)
-RUN_TEST(wait_canceling_test)
-RUN_TEST(mixed_task_and_wait_posting_test)
-END_TEST_CASE(test_loop_tests)
+BEGIN_TEST_CASE(TestLoopTest)
+RUN_TEST(DefaultDispatcherIsSetAndUnset)
+RUN_TEST(FakeClockTimeIsCorrect)
+RUN_TEST(TasksAreDispatched)
+RUN_TEST(SameDeadlinesDispatchInPostingOrder)
+RUN_TEST(NestedTasksAreDispatched)
+RUN_TEST(TimeIsCorrectWhileDispatching)
+RUN_TEST(TasksAreCanceled)
+RUN_TEST(WaitsAreDispatched)
+RUN_TEST(NestedWaitsAreDispatched)
+RUN_TEST(WaitsAreCanceled)
+RUN_TEST(NestedTasksAndWaitsAreDispatched)
+END_TEST_CASE(TestLoopTest)
