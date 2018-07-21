@@ -20,14 +20,14 @@ namespace sm {
 
 // Represents the pairing state of a connected peer. The peer device must be a
 // LE or a BR/EDR/LE device.
-class PairingState final {
+class PairingState final : public Bearer::Listener {
  public:
   // |link|: The LE logical link over which pairing procedures occur.
   // |smp|: The L2CAP LE SMP fixed channel that operates over |link|.
   // |ioc|: The initial I/O capability.
   PairingState(fxl::WeakPtr<hci::Connection> link,
                fbl::RefPtr<l2cap::Channel> smp, IOCapability io_capability);
-  ~PairingState();
+  ~PairingState() override;
 
   // Callback used to obtain a Temporary Key used during legacy pairing. The
   // callback should return a TK via the |tk_response| parameter.
@@ -210,24 +210,20 @@ class PairingState final {
   // security.
   void CompleteLegacyPairing();
 
-  // Called when pairing features have been exchanged over the LE transport.
-  void OnLEPairingFeatures(const PairingFeatures& features,
-                           const common::ByteBuffer& preq,
-                           const common::ByteBuffer& pres);
-
-  // Called when pairing fails or is aborted over the LE transport.
-  void OnLEPairingFailed(Status status);
-
-  // Called when pairing confirm and random values are received.
-  void OnLEPairingConfirm(const common::UInt128& confirm);
-  void OnLEPairingRandom(const common::UInt128& random);
-
-  // Called when information about the LE legacy LTK is received.
-  void OnLELongTermKey(const common::UInt128& ltk);
-  void OnLEMasterIdentification(uint16_t ediv, uint64_t random);
+  // Bearer::Listener overrides:
+  void OnPairingFailed(Status status) override;
+  void OnFeatureExchange(const PairingFeatures& features,
+                         const common::ByteBuffer& preq,
+                         const common::ByteBuffer& pres) override;
+  void OnPairingConfirm(const common::UInt128& confirm) override;
+  void OnPairingRandom(const common::UInt128& random) override;
+  void OnLongTermKey(const common::UInt128& ltk) override;
+  void OnMasterIdentification(uint16_t ediv, uint64_t random) override;
+  void OnIdentityResolvingKey(const common::UInt128& irk) override;
+  void OnIdentityAddress(const common::DeviceAddress& address) override;
 
   // Called when the encryption state of the LE link changes.
-  void OnLEEncryptionChange(hci::Status status, bool enabled);
+  void OnLeEncryptionChange(hci::Status status, bool enabled);
 
   // Returns pointers to the initiator and responder addresses. This can be
   // called after pairing Phase 1.

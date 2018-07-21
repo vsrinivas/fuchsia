@@ -16,6 +16,7 @@
 namespace btlib {
 
 using common::ByteBuffer;
+using common::DeviceAddress;
 using common::HostError;
 
 namespace sm {
@@ -34,22 +35,20 @@ common::MutableByteBufferPtr NewPDU(size_t param_size) {
 
 Bearer::Bearer(fbl::RefPtr<l2cap::Channel> chan, hci::Connection::Role role,
                bool sc_supported, IOCapability io_capability,
-               StatusCallback error_callback,
-               FeatureExchangeCallback feature_exchange_callback)
+               fxl::WeakPtr<Listener> listener)
     : chan_(std::move(chan)),
       role_(role),
       oob_available_(false),
       mitm_required_(false),
       sc_supported_(sc_supported),
       io_capability_(io_capability),
-      error_callback_(std::move(error_callback)),
-      feature_exchange_callback_(std::move(feature_exchange_callback)),
+      listener_(listener),
       feature_exchange_pending_(false),
       weak_ptr_factory_(this) {
   FXL_DCHECK(chan_);
-  FXL_DCHECK(error_callback_);
-  FXL_DCHECK(feature_exchange_callback_);
-  FXL_DCHECK(async_get_default_dispatcher()) << "sm: Default dispatcher required!";
+  FXL_DCHECK(listener_);
+  FXL_DCHECK(async_get_default_dispatcher())
+      << "sm: Default dispatcher required!";
 
   if (chan_->link_type() == hci::Connection::LinkType::kLE) {
     FXL_DCHECK(chan_->id() == l2cap::kLESMPChannelId);
@@ -94,31 +93,10 @@ bool Bearer::InitiateFeatureExchange() {
     return false;
   }
 
-  // Always request bonding.
-  AuthReqField auth_req = AuthReq::kBondingFlag;
-  if (sc_supported_) {
-    auth_req |= AuthReq::kSC;
-  }
-  if (mitm_required_) {
-    auth_req |= AuthReq::kMITM;
-  }
-
-  // TODO(armansito): Set the "keypress", and "CT2" flags when they
-  // are supported.
-
   PacketWriter writer(kPairingRequest, pdu.get());
-  auto* payload = writer.mutable_payload<PairingRequestParams>();
-  payload->io_capability = io_capability_;
-  payload->oob_data_flag =
-      oob_available_ ? OOBDataFlag::kPresent : OOBDataFlag::kNotPresent;
-  payload->auth_req = auth_req;
-  payload->max_encryption_key_size = kMaxEncryptionKeySize;
-
-  // TODO(armansito): Set more bits here when we support more things. Make sure
-  // that the correct bits are set based on |sc_supported_| and the link type
-  // (we currently don't support SC and support SMP on LE links only).
-  payload->initiator_key_dist_gen = KeyDistGen::kEncKey;
-  payload->responder_key_dist_gen = KeyDistGen::kEncKey;
+  auto* params = writer.mutable_payload<PairingRequestParams>();
+  BuildPairingParameters(params, &params->initiator_key_dist_gen,
+                         &params->responder_key_dist_gen);
 
   // Cache the pairing request. This will be used as the |preq| parameter for
   // crypto functions later (e.g. during confirm value generation in legacy
@@ -127,7 +105,8 @@ bool Bearer::InitiateFeatureExchange() {
 
   // Start pairing timer.
   FXL_DCHECK(!timeout_task_.is_pending());
-  timeout_task_.PostDelayed(async_get_default_dispatcher(), zx::sec(kPairingTimeout));
+  timeout_task_.PostDelayed(async_get_default_dispatcher(),
+                            zx::sec(kPairingTimeout));
 
   feature_exchange_pending_ = true;
   chan_->Send(std::move(pdu));
@@ -252,7 +231,8 @@ void Bearer::OnFailure(Status status) {
 
   // TODO(armansito): Clear other procedure states here.
   feature_exchange_pending_ = false;
-  error_callback_(status);
+  FXL_DCHECK(listener_);
+  listener_->OnPairingFailed(status);
 }
 
 void Bearer::OnPairingTimeout() {
@@ -323,6 +303,43 @@ ErrorCode Bearer::ResolveFeatures(bool local_initiator,
   return ErrorCode::kNoError;
 }
 
+void Bearer::BuildPairingParameters(PairingRequestParams* params,
+                                    KeyDistGenField* out_local_keys,
+                                    KeyDistGenField* out_remote_keys) {
+  FXL_DCHECK(params);
+  FXL_DCHECK(out_local_keys);
+  FXL_DCHECK(out_remote_keys);
+
+  // We always request bonding.
+  AuthReqField auth_req = AuthReq::kBondingFlag;
+  if (sc_supported_) {
+    auth_req |= AuthReq::kSC;
+  }
+  if (mitm_required_) {
+    auth_req |= AuthReq::kMITM;
+  }
+
+  params->io_capability = io_capability_;
+  params->auth_req = auth_req;
+  params->max_encryption_key_size = kMaxEncryptionKeySize;
+  params->oob_data_flag =
+      oob_available_ ? OOBDataFlag::kPresent : OOBDataFlag::kNotPresent;
+
+  // We always request identity information from the remote.
+  // TODO(armansito): Support sending local identity info when we support local
+  // RPAs.
+  *out_local_keys = 0;
+  *out_remote_keys = KeyDistGen::kIdKey;
+
+  // When we are the master, we request that the slave send us encryption
+  // information as it is required to do so (Vol 3, Part H, 2.4.2.3).
+  // TODO(armansito): Support generating and distributing encryption information
+  // as slave.
+  if (role_ == hci::Connection::Role::kMaster) {
+    *out_remote_keys |= KeyDistGen::kEncKey;
+  }
+}
+
 void Bearer::OnPairingFailed(const PacketReader& reader) {
   if (!pairing_started()) {
     FXL_VLOG(1) << "sm: Received \"Pairing Failed\" while not pairing!";
@@ -359,7 +376,7 @@ void Bearer::OnPairingRequest(const PacketReader& reader) {
   FXL_DCHECK(!feature_exchange_pending_);
   feature_exchange_pending_ = true;
 
-  const auto& params = reader.payload<PairingRequestParams>();
+  const auto& req_params = reader.payload<PairingRequestParams>();
   auto pdu = NewPDU(sizeof(PairingResponseParams));
   if (!pdu) {
     FXL_LOG(ERROR) << "sm: Out of memory!";
@@ -377,40 +394,21 @@ void Bearer::OnPairingRequest(const PacketReader& reader) {
   FXL_DCHECK(!timeout_task_.is_pending());
   timeout_task_.PostDelayed(async_get_default_dispatcher(), zx::sec(kPairingTimeout));
 
-  // Always request bonding.
-  AuthReqField auth_req = AuthReq::kBondingFlag;
-  if (sc_supported_) {
-    auth_req |= AuthReq::kSC;
-  }
-  if (mitm_required_) {
-    auth_req |= AuthReq::kMITM;
-  }
-
-  // TODO(armansito): Set the "keypress", and "CT2" flags when they
-  // are supported.
-
   PacketWriter writer(kPairingResponse, pdu.get());
-  auto* payload = writer.mutable_payload<PairingResponseParams>();
-  payload->io_capability = io_capability_;
-  payload->oob_data_flag =
-      oob_available_ ? OOBDataFlag::kPresent : OOBDataFlag::kNotPresent;
-  payload->auth_req = auth_req;
-  payload->max_encryption_key_size = kMaxEncryptionKeySize;
+  KeyDistGenField local_keys, remote_keys;
+  auto* rsp_params = writer.mutable_payload<PairingResponseParams>();
+  BuildPairingParameters(rsp_params, &local_keys, &remote_keys);
 
-  // TODO(armansito): Set more bits here when we support more things. Make sure
-  // that the correct bits are set based on |sc_supported_| and the link type
-  // (we currently don't support SC and support SMP on LE links only).
-  KeyDistGenField local_keys = KeyDistGen::kEncKey;
-  KeyDistGenField remote_keys = KeyDistGen::kEncKey;
-
-  // The keys that will be exchanged is the intersection of what the initiator
-  // requests and we support.
-  payload->initiator_key_dist_gen = remote_keys & params.initiator_key_dist_gen;
-  payload->responder_key_dist_gen = local_keys & params.responder_key_dist_gen;
+  // The keys that will be exchanged correspond to the intersection of what the
+  // initiator requests and we support.
+  rsp_params->initiator_key_dist_gen =
+      remote_keys & req_params.initiator_key_dist_gen;
+  rsp_params->responder_key_dist_gen =
+      local_keys & req_params.responder_key_dist_gen;
 
   PairingFeatures features;
-  ErrorCode ecode =
-      ResolveFeatures(false /* local_initiator */, params, *payload, &features);
+  ErrorCode ecode = ResolveFeatures(false /* local_initiator */, req_params,
+                                    *rsp_params, &features);
   feature_exchange_pending_ = false;
   if (ecode != ErrorCode::kNoError) {
     FXL_VLOG(1) << "sm: Rejecting pairing features";
@@ -420,14 +418,16 @@ void Bearer::OnPairingRequest(const PacketReader& reader) {
 
   // Copy the pairing response so that it's available after moving |pdu|. (We
   // want to make sure that we send the pairing response before calling
-  // |feature_exchange_callback_| which may trigger other SMP transactions.
+  // Listener::OnFeatureExchange which may trigger other SMP transactions.
   //
   // This will be used as the |pres| parameter for crypto functions later (e.g.
   // during confirm value generation in legacy pairing).
   pdu->Copy(&pairing_payload_buffer_);
   chan_->Send(std::move(pdu));
 
-  feature_exchange_callback_(features, reader.data(), pairing_payload_buffer_);
+  FXL_DCHECK(listener_);
+  listener_->OnFeatureExchange(features, reader.data(),
+                               pairing_payload_buffer_);
 }
 
 void Bearer::OnPairingResponse(const PacketReader& reader) {
@@ -460,7 +460,9 @@ void Bearer::OnPairingResponse(const PacketReader& reader) {
     return;
   }
 
-  feature_exchange_callback_(features, pairing_payload_buffer_, reader.data());
+  FXL_DCHECK(listener_);
+  listener_->OnFeatureExchange(features, pairing_payload_buffer_,
+                               reader.data());
 }
 
 void Bearer::OnPairingConfirm(const PacketReader& reader) {
@@ -483,8 +485,8 @@ void Bearer::OnPairingConfirm(const PacketReader& reader) {
     return;
   }
 
-  FXL_DCHECK(confirm_value_callback_);
-  confirm_value_callback_(reader.payload<PairingConfirmValue>());
+  FXL_DCHECK(listener_);
+  listener_->OnPairingConfirm(reader.payload<PairingConfirmValue>());
 }
 
 void Bearer::OnPairingRandom(const PacketReader& reader) {
@@ -507,8 +509,8 @@ void Bearer::OnPairingRandom(const PacketReader& reader) {
     return;
   }
 
-  FXL_DCHECK(random_value_callback_);
-  random_value_callback_(reader.payload<PairingRandomValue>());
+  FXL_DCHECK(listener_);
+  listener_->OnPairingRandom(reader.payload<PairingRandomValue>());
 }
 
 void Bearer::OnEncryptionInformation(const PacketReader& reader) {
@@ -531,8 +533,8 @@ void Bearer::OnEncryptionInformation(const PacketReader& reader) {
     return;
   }
 
-  FXL_DCHECK(long_term_key_callback_);
-  long_term_key_callback_(reader.payload<EncryptionInformationParams>());
+  FXL_DCHECK(listener_);
+  listener_->OnLongTermKey(reader.payload<EncryptionInformationParams>());
 }
 
 void Bearer::OnMasterIdentification(const PacketReader& reader) {
@@ -555,10 +557,48 @@ void Bearer::OnMasterIdentification(const PacketReader& reader) {
     return;
   }
 
-  FXL_DCHECK(master_id_callback_);
-
   const auto& params = reader.payload<MasterIdentificationParams>();
-  master_id_callback_(le16toh(params.ediv), le64toh(params.rand));
+  FXL_DCHECK(listener_);
+  listener_->OnMasterIdentification(le16toh(params.ediv), le64toh(params.rand));
+}
+
+void Bearer::OnIdentityInformation(const PacketReader& reader) {
+  // Ignore the command if not pairing.
+  if (!pairing_started()) {
+    FXL_VLOG(1) << "sm: Dropped unexpected \"Identity Information\"";
+    return;
+  }
+
+  if (reader.payload_size() != sizeof(IRK)) {
+    FXL_VLOG(1) << "sm: Malformed \"Identity Information\" payload";
+    Abort(ErrorCode::kInvalidParameters);
+    return;
+  }
+
+  FXL_DCHECK(listener_);
+  listener_->OnIdentityResolvingKey(reader.payload<IRK>());
+}
+
+void Bearer::OnIdentityAddressInformation(const PacketReader& reader) {
+  // Ignore the command if not pairing.
+  if (!pairing_started()) {
+    FXL_VLOG(1) << "sm: Dropped unexpected \"Identity Address Information\"";
+    return;
+  }
+
+  if (reader.payload_size() != sizeof(IdentityAddressInformationParams)) {
+    FXL_VLOG(1) << "sm: Malformed \"Identity Address Information\" payload";
+    Abort(ErrorCode::kInvalidParameters);
+    return;
+  }
+
+  const auto& params = reader.payload<IdentityAddressInformationParams>();
+  FXL_DCHECK(listener_);
+  listener_->OnIdentityAddress(
+      DeviceAddress(params.type == AddressType::kStaticRandom
+                        ? DeviceAddress::Type::kLERandom
+                        : DeviceAddress::Type::kLEPublic,
+                    params.bd_addr));
 }
 
 void Bearer::SendPairingFailed(ErrorCode ecode) {
@@ -617,6 +657,12 @@ void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
         break;
       case kMasterIdentification:
         OnMasterIdentification(reader);
+        break;
+      case kIdentityInformation:
+        OnIdentityInformation(reader);
+        break;
+      case kIdentityAddressInformation:
+        OnIdentityAddressInformation(reader);
         break;
       default:
         FXL_VLOG(2) << fxl::StringPrintf("sm: Unsupported command: 0x%02x",

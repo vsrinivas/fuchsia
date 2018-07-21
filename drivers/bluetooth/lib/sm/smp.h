@@ -247,20 +247,20 @@ struct MasterIdentificationParams {
 
 // ===========================================
 // Identity Information (Vol 3, Part H, 3.6.4)
-constexpr Code kIdentityInfo = 0x08;
+constexpr Code kIdentityInformation = 0x08;
 using IRK = common::UInt128;
 
 // ===================================================
 // Identity Address Information (Vol 3, Part H, 3.6.5)
-constexpr Code kIdentityAddressInfo = 0x09;
-struct IdentityAddressInfoParams {
+constexpr Code kIdentityAddressInformation = 0x09;
+struct IdentityAddressInformationParams {
   AddressType type;
   common::DeviceAddressBytes bd_addr;
 } __PACKED;
 
 // ==========================================
 // Signing Information (Vol 3, Part H, 3.6.6)
-constexpr Code kSigningInfo = 0x0A;
+constexpr Code kSigningInformation = 0x0A;
 using CSRK = common::UInt128;
 
 // =======================================

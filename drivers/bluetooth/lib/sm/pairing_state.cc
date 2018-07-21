@@ -99,22 +99,13 @@ PairingState::PairingState(fxl::WeakPtr<hci::Connection> link,
 
   // Set up SMP data bearer.
   // TODO(armansito): Enable SC when we support it.
-  le_smp_ = std::make_unique<Bearer>(
-      std::move(smp), link->role(), false /* sc */, io_capability,
-      fit::bind_member(this, &PairingState::OnLEPairingFailed),
-      fit::bind_member(this, &PairingState::OnLEPairingFeatures));
-  le_smp_->set_confirm_value_callback(
-      fit::bind_member(this, &PairingState::OnLEPairingConfirm));
-  le_smp_->set_random_value_callback(
-      fit::bind_member(this, &PairingState::OnLEPairingRandom));
-  le_smp_->set_long_term_key_callback(
-      fit::bind_member(this, &PairingState::OnLELongTermKey));
-  le_smp_->set_master_id_callback(
-      fit::bind_member(this, &PairingState::OnLEMasterIdentification));
+  le_smp_ =
+      std::make_unique<Bearer>(std::move(smp), link->role(), false /* sc */,
+                               io_capability, weak_ptr_factory_.GetWeakPtr());
 
   // Set up HCI encryption event.
   le_link_->set_encryption_change_callback(
-      fit::bind_member(this, &PairingState::OnLEEncryptionChange));
+      fit::bind_member(this, &PairingState::OnLeEncryptionChange));
 }
 
 PairingState::~PairingState() {
@@ -352,9 +343,28 @@ void PairingState::CompleteLegacyPairing() {
   }
 }
 
-void PairingState::OnLEPairingFeatures(const PairingFeatures& features,
-                                       const ByteBuffer& preq,
-                                       const ByteBuffer& pres) {
+void PairingState::OnPairingFailed(Status status) {
+  FXL_LOG(ERROR) << "sm: LE Pairing failed: " << status.ToString();
+
+  // TODO(armansito): implement "waiting interval" to prevent repeated attempts
+  // as described in Vol 3, Part H, 2.3.6.
+
+  auto requests = std::move(request_queue_);
+  while (!requests.empty()) {
+    requests.front().callback(status, le_sec_);
+    requests.pop();
+  }
+
+  if (legacy_state_) {
+    FXL_DCHECK(le_link_);
+    le_link_->set_link_key(hci::LinkKey());
+    legacy_state_ = nullptr;
+  }
+}
+
+void PairingState::OnFeatureExchange(const PairingFeatures& features,
+                                     const ByteBuffer& preq,
+                                     const ByteBuffer& pres) {
   FXL_VLOG(2) << "sm: Obtained LE Pairing features";
 
   if (!features.initiator) {
@@ -375,26 +385,7 @@ void PairingState::OnLEPairingFeatures(const PairingFeatures& features,
   BeginLegacyPairingPhase2(preq, pres);
 }
 
-void PairingState::OnLEPairingFailed(Status status) {
-  FXL_LOG(ERROR) << "sm: LE Pairing failed: " << status.ToString();
-
-  // TODO(armansito): implement "waiting interval" to prevent repeated attempts
-  // as described in Vol 3, Part H, 2.3.6.
-
-  auto requests = std::move(request_queue_);
-  while (!requests.empty()) {
-    requests.front().callback(status, le_sec_);
-    requests.pop();
-  }
-
-  if (legacy_state_) {
-    FXL_DCHECK(le_link_);
-    le_link_->set_link_key(hci::LinkKey());
-    legacy_state_ = nullptr;
-  }
-}
-
-void PairingState::OnLEPairingConfirm(const UInt128& confirm) {
+void PairingState::OnPairingConfirm(const UInt128& confirm) {
   // TODO(armansito): Have separate subroutines to handle this event for legacy
   // and secure connections.
   if (!legacy_state_) {
@@ -452,7 +443,7 @@ void PairingState::OnLEPairingConfirm(const UInt128& confirm) {
   }
 }
 
-void PairingState::OnLEPairingRandom(const UInt128& random) {
+void PairingState::OnPairingRandom(const UInt128& random) {
   // TODO(armansito): Have separate subroutines to handle this event for legacy
   // and secure connections.
   if (!legacy_state_) {
@@ -560,7 +551,7 @@ void PairingState::OnLEPairingRandom(const UInt128& random) {
   }
 }
 
-void PairingState::OnLELongTermKey(const common::UInt128& ltk) {
+void PairingState::OnLongTermKey(const common::UInt128& ltk) {
   if (!legacy_state_) {
     FXL_VLOG(1) << "sm: Ignoring LTK received while not in legacy pairing";
     return;
@@ -594,7 +585,7 @@ void PairingState::OnLELongTermKey(const common::UInt128& ltk) {
   // Wait to receive EDiv and Rand
 }
 
-void PairingState::OnLEMasterIdentification(uint16_t ediv, uint64_t random) {
+void PairingState::OnMasterIdentification(uint16_t ediv, uint64_t random) {
   if (!legacy_state_) {
     FXL_VLOG(1)
         << "sm: Ignoring ediv/rand received while not in legacy pairing";
@@ -654,7 +645,15 @@ void PairingState::OnLEMasterIdentification(uint16_t ediv, uint64_t random) {
   }
 }
 
-void PairingState::OnLEEncryptionChange(hci::Status status, bool enabled) {
+void PairingState::OnIdentityResolvingKey(const common::UInt128& irk) {
+  // TODO
+}
+
+void PairingState::OnIdentityAddress(const common::DeviceAddress& address) {
+  // TODO
+}
+
+void PairingState::OnLeEncryptionChange(hci::Status status, bool enabled) {
   // TODO(armansito): Have separate subroutines to handle this event for legacy
   // and secure connections.
   if (!legacy_state_) {
