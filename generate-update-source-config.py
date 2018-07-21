@@ -31,6 +31,8 @@ def extract_update_root_keys(manifest_path):
 def generate_devhost_config(args):
   manifest_path = os.path.join(args.build_dir, 'root_manifest.json')
   rootKeys = extract_update_root_keys(manifest_path)
+  status_config = collections.OrderedDict()
+  status_config['enabled']=args.enabled
 
   config = collections.OrderedDict((
       ('id', args.name),
@@ -39,6 +41,7 @@ def generate_devhost_config(args):
       ('rateLimit', 0),
       ('ratePeriod', 0),
       ('rootKeys', rootKeys),
+      ('statusConfig', status_config),
   ))
 
   return config
@@ -68,6 +71,19 @@ def parseargs():
       '--output',
       required=True,
       help="Path to write generated config")
+  enabled = parser.add_mutually_exclusive_group()
+  enabled.add_argument(
+      '--enabled',
+      dest='enabled',
+      action='store_true',
+      help="Enable the repository (default)")
+  enabled.add_argument(
+      '--disabled',
+      dest='enabled',
+      action='store_false',
+      help="Disable the repository")
+  enabled.set_defaults(enabled=True)
+
 
   args = parser.parse_args()
 
