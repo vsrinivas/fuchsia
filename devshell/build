@@ -42,10 +42,24 @@ function cmd_locked {
 }
 
 function main {
-  # TMPDIR is passed for Goma on macOS
-  # TERM is passed for the pretty ninja UI
-  # PATH is passed as some tools are referenced via $PATH due to platform differences.
-  try_locked env -i TMPDIR="${TMPDIR}" TERM="${TERM}" PATH="${PATH}" \
+  local env_args=
+
+  # PATH is required to find a number of tools on the host system.
+  if [[ -n "${PATH}" ]]; then
+    env_args="${env_args} PATH=\\\"${PATH}\\\""
+  fi
+
+  # TERM is required by ninja to print status messages on the same line.
+  if [[ -n "${TERM}" ]]; then
+    env_args="${env_args} TERM=${TERM}"
+  fi
+
+  # TMPDIR is required by goma on Mac OS X.
+  if [[ -n "${TMPDIR}" ]]; then
+    env_args="${env_args} TMPDIR=\\\"${TMPDIR}\\\""
+  fi
+
+  try_locked env -i ${env_args} \
     "${FUCHSIA_DIR}/buildtools/ninja" -j "$(fx-choose-build-concurrency)" \
                                       -l "$(fx-cpu-count)" \
                                       -C "${FUCHSIA_BUILD_DIR}" "$@"
