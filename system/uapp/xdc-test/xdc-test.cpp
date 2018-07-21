@@ -179,7 +179,7 @@ int main(int argc, char** argv) {
         dest_fd = fbl::move(xdc_fd);
     }
 
-    status = transfer(file_fd, file_header.file_size, xdc_fd);
+    status = transfer(src_fd, file_header.file_size, dest_fd);
     if (status != ZX_OK) {
         return -1;
     }
