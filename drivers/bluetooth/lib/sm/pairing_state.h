@@ -22,45 +22,53 @@ namespace sm {
 // LE or a BR/EDR/LE device.
 class PairingState final : public Bearer::Listener {
  public:
+  // Delegate interface for pairing and bonding events.
+  class Delegate {
+   public:
+    virtual ~Delegate() = default;
+
+    // Called to obtain a Temporary Key during legacy pairing. This should
+    // return a TK by invoking the |tk_response| parameter.
+    //
+    // If the delegate fails to obtain the TK, it should signal this by setting
+    // the |success| parameter to false. This will abort the pairing procedure.
+    //
+    // The delegate should use the following algorithm to provide a temporary
+    // key:
+    //
+    //   1. If |method| is kJustWorks, the |tk| should be set to 0. Depending on
+    //   the I/O capabilities the user should be asked to confirm or reject the
+    //   pairing.
+    //
+    //   2. If |method| is kPasskeyEntryDisplay, the |tk| should be set to a
+    //   random integer between 0 and 999,999. This should be displayed to the
+    //   user until the user has finished entering the passkey on the peer
+    //   device.
+    //   TODO(armansito): Notify the delegate on SMP keypress events to
+    //   automatically dismiss the dialog.
+    //
+    //   3. If |method| is kPasskeyEntryInput, the user should be prompted to
+    //   enter a 6-digit passkey. The |tk| should be set to this passkey.
+    using TkResponse = fit::function<void(bool success, uint32_t tk)>;
+    virtual void OnTemporaryKeyRequest(PairingMethod method,
+                                       TkResponse response) = 0;
+
+    // Called when new pairing data has been obtained for this peer.
+    virtual void OnNewPairingData(
+        const common::Optional<LTK>& ltk, const common::Optional<Key>& irk,
+        const common::Optional<common::DeviceAddress>& identity_address,
+        const common::Optional<Key>& csrk) = 0;
+  };
+
   // |link|: The LE logical link over which pairing procedures occur.
   // |smp|: The L2CAP LE SMP fixed channel that operates over |link|.
   // |ioc|: The initial I/O capability.
+  // |delegate|: Delegate responsible for handling authentication challenges and
+  //             storing pairing information.
   PairingState(fxl::WeakPtr<hci::Connection> link,
-               fbl::RefPtr<l2cap::Channel> smp, IOCapability io_capability);
+               fbl::RefPtr<l2cap::Channel> smp, IOCapability io_capability,
+               fxl::WeakPtr<Delegate> delegate);
   ~PairingState() override;
-
-  // Callback used to obtain a Temporary Key used during legacy pairing. The
-  // callback should return a TK via the |tk_response| parameter.
-  //
-  // If the delegate fails to obtain the TK, it should signal this by setting
-  // the |success| parameter to false. This will abort the pairing procedure.
-  //
-  // The delegate should use the following algorithm to provide a temporary key:
-  //
-  //   1. If |method| is kJustWorks, the |tk| should be set to 0. Depending on
-  //   the I/O capabilities the user should be asked to confirm or reject the
-  //   pairing.
-  //
-  //   2. If |method| is kPasskeyEntryDisplay, the |tk| should be set to a
-  //   random integer between 0 and 999,999. This should be displayed to the
-  //   user until the user has finished entering the passkey on the peer device.
-  //   TODO(armansito): Notify the delegate on SMP keypress events to
-  //   automatically dismiss the dialog.
-  //
-  //   3. If |method| is kPasskeyEntryInput, the user should be prompted to
-  //   enter a 6-digit passkey. The |tk| should be set to this passkey.
-  using TKResponse = fit::function<void(bool success, uint32_t tk)>;
-  using TKDelegate = fit::function<void(PairingMethod method, TKResponse)>;
-  void set_legacy_tk_delegate(TKDelegate delegate) {
-    le_tk_delegate_ = std::move(delegate);
-  }
-
-  // Event triggered when a new LE Long Term Key is obtained for this
-  // connection.
-  using LELTKCallback = fit::function<void(const LTK& ltk)>;
-  void set_le_ltk_callback(LELTKCallback callback) {
-    le_ltk_callback_ = std::move(callback);
-  }
 
   // TODO(armansito): Add function to register a BR/EDR link and SMP channel.
 
@@ -124,7 +132,9 @@ class PairingState final : public Bearer::Listener {
     bool RequestedKeysObtained() const;
 
     bool ShouldReceiveLTK() const;  // True if peer should send the LTK
+    bool ShouldReceiveIdentity() const;  // True if peer should send identity
     bool ShouldSendLTK() const;     // True if we should send the LTK
+    bool ShouldSendIdentity() const;  // True if we should send identity info
 
     // True if LTK will be exchanged and the link is yet to be encrypted with
     // the LTK.
@@ -163,10 +173,13 @@ class PairingState final : public Bearer::Listener {
     common::StaticByteBuffer<kPairingRequestSize> preq;
     common::StaticByteBuffer<kPairingRequestSize> pres;
 
-    // Data from the peer tracked during the Phase 3. Parts of LTK are received
-    // in separate events.
+    // Data from the peer tracked during Phase 3. Parts of LTK are received in
+    // separate events.
     bool has_ltk;
+    bool has_irk;
     common::UInt128 ltk_bytes;  // LTK without ediv/rand
+    common::UInt128 irk;
+    common::DeviceAddress identity_address;
 
     // Keys obtained during pairing.
     common::Optional<hci::LinkKey> ltk;  // LTK with ediv/rand
@@ -223,7 +236,13 @@ class PairingState final : public Bearer::Listener {
   void OnIdentityAddress(const common::DeviceAddress& address) override;
 
   // Called when the encryption state of the LE link changes.
-  void OnLeEncryptionChange(hci::Status status, bool enabled);
+  void OnEncryptionChange(hci::Status status, bool enabled);
+
+  // Called when an expected key was received from the peer during Phase 3 of
+  // legacy pairing. Completes the ongoing pairing procedure if all expected
+  // keys have been received. If a LTK was obtained then the link is encrypted
+  // before pairing is complete.
+  void OnExpectedKeyReceived();
 
   // Returns pointers to the initiator and responder addresses. This can be
   // called after pairing Phase 1.
@@ -233,14 +252,9 @@ class PairingState final : public Bearer::Listener {
   // The ID that will be assigned to the next pairing state.
   unsigned int next_pairing_id_;
 
-  // Delegate callback to obtain a TK based on a selected pairing method.
-  TKDelegate le_tk_delegate_;
+  fxl::WeakPtr<Delegate> delegate_;
 
-  // Callbacks used to notify obtained keys during pairing.
-  LELTKCallback le_ltk_callback_;
-
-  // Data for the currently registered LE-U link, if any. This data is valid
-  // only if |le_smp_| is not nullptr.
+  // Data for the currently registered LE-U link, if any.
   fxl::WeakPtr<hci::Connection> le_link_;
   std::unique_ptr<Bearer> le_smp_;       // SMP data bearer for the LE-U link.
   SecurityProperties le_sec_;  // Current security properties of the LE-U link.

@@ -23,12 +23,16 @@
 
 namespace btlib {
 namespace gap {
+
+using common::DeviceAddress;
+using common::Optional;
+
 namespace internal {
 
 // Represents the state of an active connection. Each instance is owned
 // and managed by a LowEnergyConnectionManager and is kept alive as long as
 // there is at least one LowEnergyConnectionRef that references it.
-class LowEnergyConnection {
+class LowEnergyConnection final : public sm::PairingState::Delegate {
  public:
   LowEnergyConnection(const std::string& id,
                       std::unique_ptr<hci::Connection> link,
@@ -45,7 +49,7 @@ class LowEnergyConnection {
     FXL_DCHECK(conn_mgr_);
   }
 
-  ~LowEnergyConnection() {
+  ~LowEnergyConnection() override {
     // Tell the controller to disconnect the link if it is marked as open.
     link_->Close();
 
@@ -101,18 +105,8 @@ class LowEnergyConnection {
       if (self->conn_mgr_->pairing_delegate()) {
         io_cap = self->conn_mgr_->pairing_delegate()->io_capability();
       }
-      auto pairing = std::make_unique<sm::PairingState>(self->link_->WeakPtr(),
-                                                        std::move(smp), io_cap);
-      pairing->set_legacy_tk_delegate([self](auto method, auto responder) {
-        if (self) {
-          self->OnTKRequest(method, std::move(responder));
-        }
-      });
-      pairing->set_le_ltk_callback([self](const sm::LTK& ltk) {
-        if (self) {
-          self->OnNewLTK(ltk);
-        }
-      });
+      auto pairing = std::make_unique<sm::PairingState>(
+          self->link_->WeakPtr(), std::move(smp), io_cap, self);
 
       // TODO(NET-1151): We register the connection with GATT but don't perform
       // service discovery until after pairing has completed. Fix this so that
@@ -126,7 +120,6 @@ class LowEnergyConnection {
                           << ", properties: " << props.ToString();
             gatt->DiscoverServices(id);
           });
-
       self->pairing_ = std::move(pairing);
     };
 
@@ -146,16 +139,40 @@ class LowEnergyConnection {
   hci::Connection* link() const { return link_.get(); }
 
  private:
-  // Called when a new LTK is received for this connection.
-  void OnNewLTK(const sm::LTK& ltk) {
-    FXL_VLOG(1) << "gap: Connection has new LTK";
-    conn_mgr_->device_cache()->StoreLTK(id_, ltk);
+  // sm::PairingState::Delegate override:
+  void OnNewPairingData(const Optional<sm::LTK>& ltk,
+                        const Optional<sm::Key>& irk,
+                        const Optional<DeviceAddress>& identity,
+                        const Optional<sm::Key>& csrk) override {
+    // Consider the pairing temporary if no pairing data was received. This
+    // means we'll remain encrypted with the STK without creating a bond.
+    bool temporary = !ltk && !irk && !identity && csrk;
+
+    if (temporary) {
+      FXL_LOG(INFO) << "gap: Temporarily paired with device (id: " << id()
+                    << ")";
+      return;
+    }
+
+    FXL_LOG(INFO) << fxl::StringPrintf(
+        "gap: New pairing data [%s%s%s%sid: %s]", ltk ? "ltk " : "",
+        irk ? "irk " : "",
+        identity
+            ? fxl::StringPrintf("(identity: %s) ", identity->ToString().c_str())
+                  .c_str()
+            : "",
+        csrk ? "csrk " : "", id().c_str());
+
+    // TODO(armansito): Store all pairing data with the remote device cache.
+    if (ltk) {
+      conn_mgr_->device_cache()->StoreLTK(id_, *ltk);
+    }
   }
 
-  // Called when a TK is needed for pairing. This request should be resolved by
-  // a pairing delegate after involving the user.
-  void OnTKRequest(sm::PairingMethod method,
-                   sm::PairingState::TKResponse responder) {
+  // sm::PairingState::Delegate override:
+  void OnTemporaryKeyRequest(
+      sm::PairingMethod method,
+      sm::PairingState::Delegate::TkResponse responder) override {
     FXL_VLOG(1) << "gap: TK request - method: "
                 << sm::util::PairingMethodToString(method);
 
@@ -266,8 +283,7 @@ void LowEnergyConnectionRef::MarkClosed() {
 }
 
 LowEnergyConnectionManager::PendingRequestData::PendingRequestData(
-    const common::DeviceAddress& address,
-    ConnectionResultCallback first_callback)
+    const DeviceAddress& address, ConnectionResultCallback first_callback)
     : address_(address) {
   callbacks_.push_back(std::move(first_callback));
 }

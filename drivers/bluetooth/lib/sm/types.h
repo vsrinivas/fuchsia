@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "garnet/drivers/bluetooth/lib/common/uint128.h"
 #include "garnet/drivers/bluetooth/lib/hci/link_key.h"
 #include "garnet/drivers/bluetooth/lib/sm/smp.h"
 
@@ -88,6 +89,20 @@ class LTK final {
  private:
   SecurityProperties security_;
   hci::LinkKey key_;
+};
+
+// Represents a 128-bit key.
+class Key final {
+ public:
+  Key() = default;
+  Key(const SecurityProperties& security, const common::UInt128& value);
+
+  const SecurityProperties& security() const { return security_; }
+  const common::UInt128& value() const { return value_; }
+
+ private:
+  SecurityProperties security_;
+  common::UInt128 value_;
 };
 
 }  // namespace sm

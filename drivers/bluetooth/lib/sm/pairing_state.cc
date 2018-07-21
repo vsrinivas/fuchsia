@@ -38,7 +38,8 @@ PairingState::LegacyState::LegacyState(uint64_t id)
       has_peer_rand(false),
       sent_local_confirm(false),
       sent_local_rand(false),
-      has_ltk(false) {}
+      has_ltk(false),
+      has_irk(false) {}
 
 bool PairingState::LegacyState::InPhase1() const {
   return !features && !stk_encrypted;
@@ -74,9 +75,19 @@ bool PairingState::LegacyState::ShouldReceiveLTK() const {
   return (features->remote_key_distribution & KeyDistGen::kEncKey);
 }
 
+bool PairingState::LegacyState::ShouldReceiveIdentity() const {
+  FXL_DCHECK(features);
+  return (features->remote_key_distribution & KeyDistGen::kIdKey);
+}
+
 bool PairingState::LegacyState::ShouldSendLTK() const {
   FXL_DCHECK(features);
   return (features->local_key_distribution & KeyDistGen::kEncKey);
+}
+
+bool PairingState::LegacyState::ShouldSendIdentity() const {
+  FXL_DCHECK(features);
+  return (features->local_key_distribution & KeyDistGen::kIdKey);
 }
 
 bool PairingState::LegacyState::WaitingForEncryptionWithLTK() const {
@@ -89,9 +100,14 @@ PairingState::PendingRequest::PendingRequest(SecurityLevel level,
 
 PairingState::PairingState(fxl::WeakPtr<hci::Connection> link,
                            fbl::RefPtr<l2cap::Channel> smp,
-                           IOCapability io_capability)
-    : next_pairing_id_(0), le_link_(link), weak_ptr_factory_(this) {
-  FXL_DCHECK(link);
+                           IOCapability io_capability,
+                           fxl::WeakPtr<Delegate> delegate)
+    : next_pairing_id_(0),
+      delegate_(delegate),
+      le_link_(link),
+      weak_ptr_factory_(this) {
+  FXL_DCHECK(delegate_);
+  FXL_DCHECK(le_link_);
   FXL_DCHECK(smp);
   FXL_DCHECK(link->handle() == smp->link_handle());
   FXL_DCHECK(link->ll_type() == hci::Connection::LinkType::kLE);
@@ -105,7 +121,7 @@ PairingState::PairingState(fxl::WeakPtr<hci::Connection> link,
 
   // Set up HCI encryption event.
   le_link_->set_encryption_change_callback(
-      fit::bind_member(this, &PairingState::OnLeEncryptionChange));
+      fit::bind_member(this, &PairingState::OnEncryptionChange));
 }
 
 PairingState::~PairingState() {
@@ -243,8 +259,9 @@ void PairingState::BeginLegacyPairingPhase2(const ByteBuffer& preq,
     }
   };
 
-  FXL_DCHECK(le_tk_delegate_);
-  le_tk_delegate_(legacy_state_->features->method, std::move(tk_callback));
+  FXL_DCHECK(delegate_);
+  delegate_->OnTemporaryKeyRequest(legacy_state_->features->method,
+                                   std::move(tk_callback));
 }
 
 void PairingState::LegacySendConfirmValue() {
@@ -304,16 +321,29 @@ void PairingState::CompleteLegacyPairing() {
 
   le_smp_->StopTimer();
 
-  // Notify that we got a LTK. The security properties of |ltk| are defined by
-  // the security properties of the link when LTK was distributed (i.e. the
-  // properties of the STK). This is reflected by |le_sec_|.
+  // The security properties of all keys are determined by the the security
+  // properties of the link used to distribute them. This is reflected by
+  // |le_sec_|.
+
+  common::Optional<LTK> ltk;
   if (legacy_state_->ltk) {
-    FXL_DCHECK(le_ltk_callback_);
-    le_ltk_callback_(LTK(le_sec_, *legacy_state_->ltk));
+    ltk = LTK(le_sec_, *legacy_state_->ltk);
+  }
+
+  common::Optional<Key> irk;
+  common::Optional<DeviceAddress> identity_addr;
+  if (legacy_state_->has_irk) {
+    // If there is an IRK there must also be an identity address.
+    irk = Key(le_sec_, legacy_state_->irk);
+    identity_addr = legacy_state_->identity_address;
   }
 
   FXL_VLOG(1) << "sm: Legacy pairing complete";
   legacy_state_ = nullptr;
+
+  // TODO(armansito): Report CSRK when we support it.
+  FXL_DCHECK(delegate_);
+  delegate_->OnNewPairingData(ltk, irk, identity_addr, common::Optional<Key>());
 
   // Separate out the requests that are satisifed by the current security level
   // from the ones that require a higher level. We'll retry pairing for the
@@ -346,7 +376,7 @@ void PairingState::CompleteLegacyPairing() {
 void PairingState::OnPairingFailed(Status status) {
   FXL_LOG(ERROR) << "sm: LE Pairing failed: " << status.ToString();
 
-  // TODO(armansito): implement "waiting interval" to prevent repeated attempts
+  // TODO(NET-1201): implement "waiting interval" to prevent repeated attempts
   // as described in Vol 3, Part H, 2.3.6.
 
   auto requests = std::move(request_queue_);
@@ -627,33 +657,89 @@ void PairingState::OnMasterIdentification(uint16_t ediv, uint64_t random) {
   legacy_state_->obtained_remote_keys |= KeyDistGen::kEncKey;
   legacy_state_->ltk = ltk;
 
-  // TODO(armansito): Move this to a subroutine called "MaybeCompletePhase3" and
-  // call after each received key.
-  FXL_DCHECK(!legacy_state_->ltk_encrypted);
-  if (legacy_state_->RequestedKeysObtained()) {
-    // We're no longer in Phase 3.
-    FXL_DCHECK(!legacy_state_->InPhase3());
-
-    // TODO(armansito): Distribute local keys if we are the master.
-
-    // We're done. Encrypt the link with the LTK.
-    le_link_->set_link_key(ltk);
-    if (!le_link_->StartEncryption()) {
-      FXL_LOG(ERROR) << "sm: Failed to start encryption";
-      AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
-    }
-  }
+  // "EncKey" received. Complete pairing if possible.
+  OnExpectedKeyReceived();
 }
 
 void PairingState::OnIdentityResolvingKey(const common::UInt128& irk) {
-  // TODO
+  if (!legacy_state_) {
+    FXL_VLOG(1) << "sm: Ignoring IRK received while not in legacy pairing!";
+    return;
+  }
+
+  if (!legacy_state_->InPhase3()) {
+    // The link must be encrypted with the STK for the transfer of the IRK to be
+    // secure.
+    FXL_LOG(ERROR) << "sm: Abort pairing due to IRK received outside phase 3";
+    AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
+    return;
+  }
+
+  if (!legacy_state_->ShouldReceiveIdentity()) {
+    FXL_LOG(ERROR) << "sm: Received unexpected IRK";
+    AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
+    return;
+  }
+
+  // Abort if we receive an IRK more than once.
+  if (legacy_state_->has_irk) {
+    FXL_LOG(ERROR) << "sm: Already received IRK! Aborting;";
+    AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
+    return;
+  }
+
+  FXL_DCHECK(!(legacy_state_->obtained_remote_keys & KeyDistGen::kIdKey));
+  legacy_state_->irk = irk;
+  legacy_state_->has_irk = true;
+
+  // Wait to receive identity address
 }
 
-void PairingState::OnIdentityAddress(const common::DeviceAddress& address) {
-  // TODO
+void PairingState::OnIdentityAddress(
+    const common::DeviceAddress& identity_address) {
+  if (!legacy_state_) {
+    FXL_VLOG(1)
+        << "sm: Ignoring identity address received while not in legacy pairing";
+    return;
+  }
+
+  if (!legacy_state_->InPhase3()) {
+    // The link must be encrypted with the STK for the transfer of the address
+    // to be secure.
+    FXL_LOG(ERROR)
+        << "sm: Abort pairing due to identity address received outside phase 3";
+    AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
+    return;
+  }
+
+  if (!legacy_state_->ShouldReceiveIdentity()) {
+    FXL_LOG(ERROR) << "sm: Received unexpected identity address";
+    AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
+    return;
+  }
+
+  // The identity address must be sent after the IRK (Vol 3, Part H, 3.6.1).
+  if (!legacy_state_->has_irk) {
+    FXL_LOG(ERROR) << "sm: Received identity address before the IRK!";
+    AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
+    return;
+  }
+
+  if (legacy_state_->obtained_remote_keys & KeyDistGen::kIdKey) {
+    FXL_LOG(ERROR) << "sm: Already received identity information!";
+    AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
+    return;
+  }
+
+  // Store the identity address and mark all identity info as received.
+  legacy_state_->identity_address = identity_address;
+  legacy_state_->obtained_remote_keys |= KeyDistGen::kIdKey;
+
+  // "IdKey" received. Complete pairing if possible.
+  OnExpectedKeyReceived();
 }
 
-void PairingState::OnLeEncryptionChange(hci::Status status, bool enabled) {
+void PairingState::OnEncryptionChange(hci::Status status, bool enabled) {
   // TODO(armansito): Have separate subroutines to handle this event for legacy
   // and secure connections.
   if (!legacy_state_) {
@@ -682,6 +768,34 @@ void PairingState::OnLeEncryptionChange(hci::Status status, bool enabled) {
     FXL_VLOG(1) << "sm: Link encrypted with LTK";
     legacy_state_->ltk_encrypted = true;
     CompleteLegacyPairing();
+  }
+}
+
+void PairingState::OnExpectedKeyReceived() {
+  FXL_DCHECK(legacy_state_);
+  FXL_DCHECK(!legacy_state_->ltk_encrypted);
+  FXL_DCHECK(legacy_state_->stk_encrypted);
+
+  if (!legacy_state_->RequestedKeysObtained()) {
+    FXL_DCHECK(legacy_state_->InPhase3());
+    FXL_VLOG(1) << "sm: More keys pending";
+    return;
+  }
+
+  // We are no longer in Phase 3.
+  FXL_DCHECK(!legacy_state_->InPhase3());
+
+  // Complete pairing now if we didn't receive a LTK. Otherwise we'll mark it as
+  // complete when the link is encrypted with it.
+  if (!legacy_state_->ltk) {
+    CompleteLegacyPairing();
+    return;
+  }
+
+  le_link_->set_link_key(*legacy_state_->ltk);
+  if (!le_link_->StartEncryption()) {
+    FXL_LOG(ERROR) << "sm: Failed to start encryption";
+    AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
   }
 }
 
