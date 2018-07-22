@@ -1,0 +1,25 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/package.gni")
+
+rustc_binary("bin") {
+  name = "terminal"
+
+  with_lto = "fat"
+
+  deps = [
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//garnet/public/rust/crates/fuchsia-scenic",
+  ]
+}
+
+package("terminal") {
+  deps = [
+    ":bin"
+  ]
+
+  binary = "rust_crates/terminal"
+}

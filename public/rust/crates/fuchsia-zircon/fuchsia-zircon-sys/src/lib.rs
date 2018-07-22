@@ -47,23 +47,28 @@ multiconst!(zx_time_t, [
 ]);
 
 multiconst!(zx_rights_t, [
-    ZX_RIGHT_NONE         = 0;
-    ZX_RIGHT_DUPLICATE    = 1 << 0;
-    ZX_RIGHT_TRANSFER     = 1 << 1;
-    ZX_RIGHT_READ         = 1 << 2;
-    ZX_RIGHT_WRITE        = 1 << 3;
-    ZX_RIGHT_EXECUTE      = 1 << 4;
-    ZX_RIGHT_MAP          = 1 << 5;
-    ZX_RIGHT_GET_PROPERTY = 1 << 6;
-    ZX_RIGHT_SET_PROPERTY = 1 << 7;
-    ZX_RIGHT_ENUMERATE    = 1 << 8;
-    ZX_RIGHT_DESTROY      = 1 << 9;
-    ZX_RIGHT_SET_POLICY   = 1 << 10;
-    ZX_RIGHT_GET_POLICY   = 1 << 11;
-    ZX_RIGHT_SIGNAL       = 1 << 12;
-    ZX_RIGHT_SIGNAL_PEER  = 1 << 13;
-    ZX_RIGHT_WAIT         = 1 << 14;
-    ZX_RIGHT_SAME_RIGHTS  = 1 << 31;
+    ZX_RIGHT_NONE           = 0;
+    ZX_RIGHT_DUPLICATE      = 1 << 0;
+    ZX_RIGHT_TRANSFER       = 1 << 1;
+    ZX_RIGHT_READ           = 1 << 2;
+    ZX_RIGHT_WRITE          = 1 << 3;
+    ZX_RIGHT_EXECUTE        = 1 << 4;
+    ZX_RIGHT_MAP            = 1 << 5;
+    ZX_RIGHT_GET_PROPERTY   = 1 << 6;
+    ZX_RIGHT_SET_PROPERTY   = 1 << 7;
+    ZX_RIGHT_ENUMERATE      = 1 << 8;
+    ZX_RIGHT_DESTROY        = 1 << 9;
+    ZX_RIGHT_SET_POLICY     = 1 << 10;
+    ZX_RIGHT_GET_POLICY     = 1 << 11;
+    ZX_RIGHT_SIGNAL         = 1 << 12;
+    ZX_RIGHT_SIGNAL_PEER    = 1 << 13;
+    ZX_RIGHT_WAIT           = 1 << 14;
+    ZX_RIGHT_INSPECT        = 1 << 15;
+    ZX_RIGHT_MANAGE_JOB     = 1 << 16;
+    ZX_RIGHT_MANAGE_PROCESS = 1 << 17;
+    ZX_RIGHT_MANAGE_THREAD  = 1 << 18;
+    ZX_RIGHT_APPLY_PROFILE  = 1 << 19;
+    ZX_RIGHT_SAME_RIGHTS    = 1 << 31;
 ]);
 
 multiconst!(u32, [
@@ -94,6 +99,7 @@ multiconst!(u32, [
     ZX_VM_FLAG_CAN_MAP_READ          = 1 << 7;
     ZX_VM_FLAG_CAN_MAP_WRITE         = 1 << 8;
     ZX_VM_FLAG_CAN_MAP_EXECUTE       = 1 << 9;
+    ZX_VM_FLAG_MAP_RANGE             = 1 << 10;
     ZX_VM_FLAG_REQUIRE_NON_RESIZABLE = 1 << 11;
 ]);
 
@@ -412,7 +418,7 @@ pub struct zx_guest_io_t {
     data: [u8; 4],
 }
 
-#[cfg(target_arch="aarch64")]
+#[cfg(target_arch = "aarch64")]
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct zx_guest_memory_t {
@@ -422,7 +428,7 @@ pub struct zx_guest_memory_t {
 
 pub const X86_MAX_INST_LEN: usize = 15;
 
-#[cfg(target_arch="x86_64")]
+#[cfg(target_arch = "x86_64")]
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct zx_guest_memory_t {
@@ -459,35 +465,42 @@ pub struct zx_guest_packet_t {
 
 impl fmt::Debug for zx_guest_packet_t {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(f, "zx_guest_packet_t {{ packet_type: {:?}, contents: ", self.packet_type)?;
+        write!(
+            f,
+            "zx_guest_packet_t {{ packet_type: {:?}, contents: ",
+            self.packet_type
+        )?;
         match self.packet_type {
-            zx_guest_packet_t_type::ZX_GUEST_PKT_MEMORY =>
-                write!(f, "zx_guest_packet_t_union {{ memory: {:?} }} }}",
-                    unsafe { self.contents.memory }
-                ),
-            zx_guest_packet_t_type::ZX_GUEST_PKT_IO =>
-                write!(f, "zx_guest_packet_t_union {{ io: {:?} }} }}",
-                    unsafe { self.contents.io }
-                ),
+            zx_guest_packet_t_type::ZX_GUEST_PKT_MEMORY => {
+                write!(f, "zx_guest_packet_t_union {{ memory: {:?} }} }}", unsafe {
+                    self.contents.memory
+                })
+            }
+            zx_guest_packet_t_type::ZX_GUEST_PKT_IO => {
+                write!(f, "zx_guest_packet_t_union {{ io: {:?} }} }}", unsafe {
+                    self.contents.io
+                })
+            }
         }
     }
 }
 
 impl cmp::PartialEq for zx_guest_packet_t {
     fn eq(&self, other: &Self) -> bool {
-        (self.packet_type == other.packet_type) &&
-        match self.packet_type {
-            zx_guest_packet_t_type::ZX_GUEST_PKT_MEMORY =>
-                unsafe { self.contents.memory == other.contents.memory },
-            zx_guest_packet_t_type::ZX_GUEST_PKT_IO =>
-                unsafe { self.contents.io == other.contents.io },
+        (self.packet_type == other.packet_type) && match self.packet_type {
+            zx_guest_packet_t_type::ZX_GUEST_PKT_MEMORY => unsafe {
+                self.contents.memory == other.contents.memory
+            },
+            zx_guest_packet_t_type::ZX_GUEST_PKT_IO => unsafe {
+                self.contents.io == other.contents.io
+            },
         }
     }
 }
 
 impl cmp::Eq for zx_guest_packet_t {}
 
-#[cfg(target_arch="x86_64")]
+#[cfg(target_arch = "x86_64")]
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct zx_vcpu_create_args_t {
@@ -496,7 +509,7 @@ pub struct zx_vcpu_create_args_t {
     pub apic_vmo: zx_handle_t,
 }
 
-#[cfg(not(target_arch="x86_64"))]
+#[cfg(not(target_arch = "x86_64"))]
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct zx_vcpu_create_args_t {

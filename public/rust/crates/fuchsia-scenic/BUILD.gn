@@ -1,0 +1,20 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("fuchsia-scenic") {
+  name = "fuchsia_scenic"
+  version = "0.1.0"
+  deps = [
+    "//garnet/public/fidl/fuchsia.images:fuchsia.images-rustc",
+    "//garnet/public/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
+    "//garnet/public/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/crates/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+  ]
+}

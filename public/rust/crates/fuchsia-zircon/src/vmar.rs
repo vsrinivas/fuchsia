@@ -103,6 +103,7 @@ bitflags! {
         const CAN_MAP_READ          = sys::ZX_VM_FLAG_CAN_MAP_READ;
         const CAN_MAP_WRITE         = sys::ZX_VM_FLAG_CAN_MAP_WRITE;
         const CAN_MAP_EXECUTE       = sys::ZX_VM_FLAG_CAN_MAP_EXECUTE;
+        const MAP_RANGE             = sys::ZX_VM_FLAG_MAP_RANGE;
         const REQUIRE_NON_RESIZABLE = sys::ZX_VM_FLAG_REQUIRE_NON_RESIZABLE;
     }
 }
