@@ -44,9 +44,9 @@ Err ResolveAddress(const std::string& host, uint16_t port, addrinfo* addr) {
 
   struct addrinfo hints;
   memset(&hints, 0, sizeof(hints));
-  hints.ai_family = AF_INET;
+  hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
-  hints.ai_protocol = 0;
+  hints.ai_protocol = IPPROTO_TCP;
   hints.ai_flags = AI_NUMERICSERV;
 
   struct addrinfo* addrs = nullptr;
@@ -146,9 +146,8 @@ void Session::PendingConnection::Initiate(
 
   // Create the background thread, and run the background function. The
   // context will keep a ref to this class.
-  thread_ =
-      std::make_unique<std::thread>([owner = fxl::RefPtr<PendingConnection>(
-                                         this)]() {
+  thread_ = std::make_unique<std::thread>(
+      [owner = fxl::RefPtr<PendingConnection>(this)]() {
         owner->ConnectBackgroundThread(owner);
       });
 }
@@ -156,7 +155,7 @@ void Session::PendingConnection::Initiate(
 void Session::PendingConnection::ConnectBackgroundThread(
     fxl::RefPtr<PendingConnection> owner) {
   Err err = DoConnectBackgroundThread();
-  main_loop_->PostTask([ owner = std::move(owner), err ]() {
+  main_loop_->PostTask([owner = std::move(owner), err]() {
     owner->ConnectCompleteMainThread(owner, err);
   });
 }
@@ -259,7 +258,7 @@ Err Session::PendingConnection::DoConnectBackgroundThread() {
   if (err.has_error())
     return err;
 
-  socket_.reset(socket(AF_INET, SOCK_STREAM, 0));
+  socket_.reset(socket(addr.ai_family, SOCK_STREAM, IPPROTO_TCP));
   if (!socket_.is_valid())
     return Err(ErrType::kGeneral, "Could not create socket.");
 

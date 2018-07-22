@@ -68,6 +68,8 @@ out/x64/host_x64/zxdb
 If you're launching many times, there is also a command-line switch `zxdb
 --connect=192.168.3.53:2345`.
 
+See `help connect` for more examples, including IPv6 syntax.
+
 ### 4. Run or attach to a program
 
 From within the debugger:

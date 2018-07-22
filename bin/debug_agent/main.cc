@@ -105,19 +105,18 @@ SocketServer::SocketServer() { message_loop_.Init(); }
 SocketServer::~SocketServer() { message_loop_.Cleanup(); }
 
 bool SocketServer::Run(int port) {
-  server_socket_.reset(socket(AF_INET, SOCK_STREAM, 0));
+  server_socket_.reset(socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP));
   if (!server_socket_.is_valid()) {
     fprintf(stderr, "Could not create socket.\n");
     return false;
   }
 
   // Bind to local address.
-  // TODO(brettw) use "6" variants? See listen.cc for example.
-  struct sockaddr_in addr;
+  struct sockaddr_in6 addr;
   memset(&addr, 0, sizeof(addr));
-  addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = INADDR_ANY;
-  addr.sin_port = htons(port);
+  addr.sin6_family = AF_INET6;
+  addr.sin6_addr = in6addr_any;
+  addr.sin6_port = htons(port);
   if (bind(server_socket_.get(), reinterpret_cast<sockaddr*>(&addr),
            sizeof(addr)) < 0) {
     fprintf(stderr, "Could not bind socket.\n");
