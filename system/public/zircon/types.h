@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_TYPES_
+#define ZIRCON_TYPES_
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -170,7 +171,7 @@ typedef uint64_t zx_koid_t;
 // Transaction ID and argument types for zx_channel_call.
 typedef uint32_t zx_txid_t;
 
-typedef struct {
+typedef struct zx_channel_call_args {
     const void* wr_bytes;
     const zx_handle_t* wr_handles;
     void *rd_bytes;
@@ -183,10 +184,10 @@ typedef struct {
 
 // Maximum number of wait items allowed for zx_object_wait_many()
 // TODO(ZX-1349) Re-lower this.
-#define ZX_WAIT_MANY_MAX_ITEMS 16
+#define ZX_WAIT_MANY_MAX_ITEMS ((size_t)16)
 
 // Structure for zx_object_wait_many():
-typedef struct {
+typedef struct zx_wait_item {
     zx_handle_t handle;
     zx_signals_t waitfor;
     zx_signals_t pending;
@@ -231,36 +232,36 @@ typedef uint32_t zx_rights_t;
     (ZX_RIGHT_GET_POLICY | ZX_RIGHT_SET_POLICY)
 
 // VM Object creation options
-#define ZX_VMO_NON_RESIZABLE             1u
+#define ZX_VMO_NON_RESIZABLE             ((uint32_t)1u)
 
 // VM Object opcodes
-#define ZX_VMO_OP_COMMIT                 1u
-#define ZX_VMO_OP_DECOMMIT               2u
-#define ZX_VMO_OP_LOCK                   3u
-#define ZX_VMO_OP_UNLOCK                 4u
+#define ZX_VMO_OP_COMMIT                 ((uint32_t)1u)
+#define ZX_VMO_OP_DECOMMIT               ((uint32_t)2u)
+#define ZX_VMO_OP_LOCK                   ((uint32_t)3u)
+#define ZX_VMO_OP_UNLOCK                 ((uint32_t)4u)
 // opcode 5 was ZX_VMO_OP_LOOKUP, but is now unused.
-#define ZX_VMO_OP_CACHE_SYNC             6u
-#define ZX_VMO_OP_CACHE_INVALIDATE       7u
-#define ZX_VMO_OP_CACHE_CLEAN            8u
-#define ZX_VMO_OP_CACHE_CLEAN_INVALIDATE 9u
+#define ZX_VMO_OP_CACHE_SYNC             ((uint32_t)6u)
+#define ZX_VMO_OP_CACHE_INVALIDATE       ((uint32_t)7u)
+#define ZX_VMO_OP_CACHE_CLEAN            ((uint32_t)8u)
+#define ZX_VMO_OP_CACHE_CLEAN_INVALIDATE ((uint32_t)9u)
 
 // VM Object clone flags
-#define ZX_VMO_CLONE_COPY_ON_WRITE        (1u << 0)
-#define ZX_VMO_CLONE_NON_RESIZEABLE       (1u << 1)
+#define ZX_VMO_CLONE_COPY_ON_WRITE        ((uint32_t)1u << 0)
+#define ZX_VMO_CLONE_NON_RESIZEABLE       ((uint32_t)1u << 1)
 
 // Mapping flags to vmar routines
-#define ZX_VM_FLAG_PERM_READ              (1u << 0)
-#define ZX_VM_FLAG_PERM_WRITE             (1u << 1)
-#define ZX_VM_FLAG_PERM_EXECUTE           (1u << 2)
-#define ZX_VM_FLAG_COMPACT                (1u << 3)
-#define ZX_VM_FLAG_SPECIFIC               (1u << 4)
-#define ZX_VM_FLAG_SPECIFIC_OVERWRITE     (1u << 5)
-#define ZX_VM_FLAG_CAN_MAP_SPECIFIC       (1u << 6)
-#define ZX_VM_FLAG_CAN_MAP_READ           (1u << 7)
-#define ZX_VM_FLAG_CAN_MAP_WRITE          (1u << 8)
-#define ZX_VM_FLAG_CAN_MAP_EXECUTE        (1u << 9)
-#define ZX_VM_FLAG_MAP_RANGE              (1u << 10)
-#define ZX_VM_FLAG_REQUIRE_NON_RESIZABLE  (1u << 11)
+#define ZX_VM_FLAG_PERM_READ              ((uint32_t)1u << 0)
+#define ZX_VM_FLAG_PERM_WRITE             ((uint32_t)1u << 1)
+#define ZX_VM_FLAG_PERM_EXECUTE           ((uint32_t)1u << 2)
+#define ZX_VM_FLAG_COMPACT                ((uint32_t)1u << 3)
+#define ZX_VM_FLAG_SPECIFIC               ((uint32_t)1u << 4)
+#define ZX_VM_FLAG_SPECIFIC_OVERWRITE     ((uint32_t)1u << 5)
+#define ZX_VM_FLAG_CAN_MAP_SPECIFIC       ((uint32_t)1u << 6)
+#define ZX_VM_FLAG_CAN_MAP_READ           ((uint32_t)1u << 7)
+#define ZX_VM_FLAG_CAN_MAP_WRITE          ((uint32_t)1u << 8)
+#define ZX_VM_FLAG_CAN_MAP_EXECUTE        ((uint32_t)1u << 9)
+#define ZX_VM_FLAG_MAP_RANGE              ((uint32_t)1u << 10)
+#define ZX_VM_FLAG_REQUIRE_NON_RESIZABLE  ((uint32_t)1u << 11)
 
 // virtual address
 typedef uintptr_t zx_vaddr_t;
@@ -276,75 +277,75 @@ typedef uintptr_t zx_gpaddr_t;
 typedef uint64_t zx_off_t;
 
 // Maximum string length for kernel names (process name, thread name, etc)
-#define ZX_MAX_NAME_LEN           (32)
+#define ZX_MAX_NAME_LEN              ((size_t)32u)
 
 // Buffer size limits on the cprng syscalls
-#define ZX_CPRNG_DRAW_MAX_LEN        256
-#define ZX_CPRNG_ADD_ENTROPY_MAX_LEN 256
+#define ZX_CPRNG_DRAW_MAX_LEN        ((size_t)256u)
+#define ZX_CPRNG_ADD_ENTROPY_MAX_LEN ((size_t)256u)
 
 // interrupt bind flags
-#define ZX_INTERRUPT_REMAP_IRQ       0x1
-#define ZX_INTERRUPT_MODE_DEFAULT    (0u << 1)
-#define ZX_INTERRUPT_MODE_EDGE_LOW   (1u << 1)
-#define ZX_INTERRUPT_MODE_EDGE_HIGH  (2u << 1)
-#define ZX_INTERRUPT_MODE_LEVEL_LOW  (3u << 1)
-#define ZX_INTERRUPT_MODE_LEVEL_HIGH (4u << 1)
-#define ZX_INTERRUPT_MODE_EDGE_BOTH  (5u << 1)
-#define ZX_INTERRUPT_MODE_MASK       0xe
-#define ZX_INTERRUPT_VIRTUAL         0x10
+#define ZX_INTERRUPT_REMAP_IRQ       ((uint32_t)0x1u)
+#define ZX_INTERRUPT_MODE_DEFAULT    ((uint32_t)0u << 1)
+#define ZX_INTERRUPT_MODE_EDGE_LOW   ((uint32_t)1u << 1)
+#define ZX_INTERRUPT_MODE_EDGE_HIGH  ((uint32_t)2u << 1)
+#define ZX_INTERRUPT_MODE_LEVEL_LOW  ((uint32_t)3u << 1)
+#define ZX_INTERRUPT_MODE_LEVEL_HIGH ((uint32_t)4u << 1)
+#define ZX_INTERRUPT_MODE_EDGE_BOTH  ((uint32_t)5u << 1)
+#define ZX_INTERRUPT_MODE_MASK       ((uint32_t)0xe)
+#define ZX_INTERRUPT_VIRTUAL         ((uint32_t)0x10)
 
 // Preallocated virtual interrupt slot, typically used for signaling interrupt threads to exit.
-#define ZX_INTERRUPT_SLOT_USER              62
+#define ZX_INTERRUPT_SLOT_USER              ((uint32_t)62u)
 // interrupt wait slots must be in the range 0 - 62 inclusive
-#define ZX_INTERRUPT_MAX_SLOTS              62
+#define ZX_INTERRUPT_MAX_SLOTS              ((uint32_t)62u)
 
 // PCI interrupt handles use interrupt slot 0 for the PCI hardware interrupt
-#define ZX_PCI_INTERRUPT_SLOT               0
+#define ZX_PCI_INTERRUPT_SLOT               ((uint32_t)0u)
 
 // Channel options and limits.
-#define ZX_CHANNEL_READ_MAY_DISCARD         1u
+#define ZX_CHANNEL_READ_MAY_DISCARD         ((uint32_t)1u)
 
-#define ZX_CHANNEL_MAX_MSG_BYTES            65536u
-#define ZX_CHANNEL_MAX_MSG_HANDLES          64u
+#define ZX_CHANNEL_MAX_MSG_BYTES            ((uint32_t)65536u)
+#define ZX_CHANNEL_MAX_MSG_HANDLES          ((uint32_t)64u)
 
 // Socket options and limits.
 // These options can be passed to zx_socket_write()
-#define ZX_SOCKET_SHUTDOWN_WRITE            (1u << 0)
-#define ZX_SOCKET_SHUTDOWN_READ             (1u << 1)
+#define ZX_SOCKET_SHUTDOWN_WRITE            ((uint32_t)1u << 0)
+#define ZX_SOCKET_SHUTDOWN_READ             ((uint32_t)1u << 1)
 #define ZX_SOCKET_SHUTDOWN_MASK             (ZX_SOCKET_SHUTDOWN_WRITE | ZX_SOCKET_SHUTDOWN_READ)
 
 // These can be passed to zx_socket_create()
-#define ZX_SOCKET_STREAM                    (0u << 0)
-#define ZX_SOCKET_DATAGRAM                  (1u << 0)
-#define ZX_SOCKET_HAS_CONTROL               (1u << 1)
-#define ZX_SOCKET_HAS_ACCEPT                (1u << 2)
+#define ZX_SOCKET_STREAM                    ((uint32_t)0u)
+#define ZX_SOCKET_DATAGRAM                  ((uint32_t)1u << 0)
+#define ZX_SOCKET_HAS_CONTROL               ((uint32_t)1u << 1)
+#define ZX_SOCKET_HAS_ACCEPT                ((uint32_t)1u << 2)
 #define ZX_SOCKET_CREATE_MASK               (ZX_SOCKET_DATAGRAM | ZX_SOCKET_HAS_CONTROL | ZX_SOCKET_HAS_ACCEPT)
 
 // These can be passed to zx_socket_read() and zx_socket_write().
-#define ZX_SOCKET_CONTROL                   (1u << 2)
+#define ZX_SOCKET_CONTROL                   ((uint32_t)1u << 2)
 
 // Flags which can be used to to control cache policy for APIs which map memory.
-#define ZX_CACHE_POLICY_CACHED              0u
-#define ZX_CACHE_POLICY_UNCACHED            1u
-#define ZX_CACHE_POLICY_UNCACHED_DEVICE     2u
-#define ZX_CACHE_POLICY_WRITE_COMBINING     3u
-#define ZX_CACHE_POLICY_MASK                3u
+#define ZX_CACHE_POLICY_CACHED              ((uint32_t)0u)
+#define ZX_CACHE_POLICY_UNCACHED            ((uint32_t)1u)
+#define ZX_CACHE_POLICY_UNCACHED_DEVICE     ((uint32_t)2u)
+#define ZX_CACHE_POLICY_WRITE_COMBINING     ((uint32_t)3u)
+#define ZX_CACHE_POLICY_MASK                ((uint32_t)3u)
 
 // Flag bits for zx_cache_flush.
-#define ZX_CACHE_FLUSH_INSN         (1u << 0)
-#define ZX_CACHE_FLUSH_DATA         (1u << 1)
-#define ZX_CACHE_FLUSH_INVALIDATE   (1u << 2)
+#define ZX_CACHE_FLUSH_INSN         ((uint32_t)1u << 0)
+#define ZX_CACHE_FLUSH_DATA         ((uint32_t)1u << 1)
+#define ZX_CACHE_FLUSH_INVALIDATE   ((uint32_t)1u << 2)
 
 // Timer options.
-#define ZX_TIMER_SLACK_CENTER       0u
-#define ZX_TIMER_SLACK_EARLY        1u
-#define ZX_TIMER_SLACK_LATE         2u
+#define ZX_TIMER_SLACK_CENTER       ((uint32_t)0u)
+#define ZX_TIMER_SLACK_EARLY        ((uint32_t)1u)
+#define ZX_TIMER_SLACK_LATE         ((uint32_t)2u)
 
 // Bus Transaction Initiatior options.
-#define ZX_BTI_PERM_READ          (1u << 0)
-#define ZX_BTI_PERM_WRITE         (1u << 1)
-#define ZX_BTI_PERM_EXECUTE       (1u << 2)
-#define ZX_BTI_COMPRESS           (1u << 3)
+#define ZX_BTI_PERM_READ          ((uint32_t)1u << 0)
+#define ZX_BTI_PERM_WRITE         ((uint32_t)1u << 1)
+#define ZX_BTI_PERM_EXECUTE       ((uint32_t)1u << 2)
+#define ZX_BTI_COMPRESS           ((uint32_t)1u << 3)
 
 typedef uint32_t zx_obj_type_t;
 
@@ -374,7 +375,7 @@ typedef uint32_t zx_obj_type_t;
 #define ZX_OBJ_TYPE_SUSPEND_TOKEN   ((zx_obj_type_t)27u)
 #define ZX_OBJ_TYPE_LAST            ((zx_obj_type_t)28u)
 
-typedef struct {
+typedef struct zx_handle_info {
     zx_handle_t handle;
     zx_obj_type_t type;
     zx_rights_t rights;
@@ -399,3 +400,5 @@ typedef atomic_int zx_futex_t;
 #endif
 
 __END_CDECLS
+
+#endif // ZIRCON_TYPES_
