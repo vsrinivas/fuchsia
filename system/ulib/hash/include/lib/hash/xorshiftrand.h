@@ -5,7 +5,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <zircon/misc/fnv1hash.h>
+#include <lib/hash/hash.h>
 
 // Xorshift32 and Xorshift64
 //

@@ -13,9 +13,9 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <lib/hash/xorshiftrand.h>
 #include <zircon/compiler.h>
 #include <zircon/listnode.h>
-#include <zircon/misc/xorshiftrand.h>
 #include <zircon/types.h>
 
 #include "filesystems.h"

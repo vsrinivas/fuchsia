@@ -39,6 +39,8 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/fdio/include \
     -Isystem/ulib/zircon/include \
 
+MODULE_HEADER_DEPS := system/ulib/hash
+
 MODULE_HOST_LIBS := \
     system/ulib/unittest.hostlib \
     system/ulib/pretty.hostlib \
