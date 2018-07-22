@@ -9,7 +9,7 @@ There are two GN targets which should be used for Rust projects:
 
 These GN targets do not require a `Cargo.toml` file, as they are not built with
 Cargo during a normal build of Fuchsia. However, a `Cargo.toml` file can be
-created for these targets by running `fx gen-cargo --target path/to/target:label`.
+created for these targets by running `fx gen-cargo path/to/target:label`.
 In order to generate a Cargo.toml, there must have first been a successful build
 of Fuchsia which included the target. Generating `Cargo.toml` files is useful
 for integration with IDEs such as Intellij and VSCode, and for using the
