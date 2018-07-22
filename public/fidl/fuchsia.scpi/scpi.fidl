@@ -18,6 +18,8 @@ enum Status {
     ERR_DVFS_OPP_IDX      = 2;
     // failed to get the temperature
     ERR_TEMPERATURE       = 3;
+    // failed to get the fan level
+    ERR_FAN_LEVEL         = 4;
 };
 
 struct DvfsOpp {
@@ -34,6 +36,9 @@ struct SystemStatus {
 
     // current CPU temperature
     uint32 temperature;
+
+    // current Fan Level
+    uint32 fan_level;
 };
 
 [Discoverable]

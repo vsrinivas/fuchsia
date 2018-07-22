@@ -99,6 +99,12 @@ void App::GetSystemStatus(GetSystemStatusCallback callback) {
     return;
   }
 
+  rc = ioctl_thermal_get_fan_level(fd_.get(), &info.fan_level);
+  if (rc != sizeof(uint32_t)) {
+    fprintf(stderr, "ERROR: Failed to get fan level: %zd\n", rc);
+    callback(fuchsia::scpi::Status::ERR_FAN_LEVEL, std::move(info));
+    return;
+  }
   callback(fuchsia::scpi::Status::OK, std::move(info));
 }
 
