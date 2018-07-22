@@ -123,9 +123,21 @@ fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> impl Future<Item = (), Error = 
     }
 }
 
-fn do_fwd(cmd: opts::FwdCmd, _stack: StackProxy) -> impl Future<Item = (), Error = Error> {
-    println!("{:?} not implemented!", cmd);
-    futures::future::ok(())
+many_futures!(FwdFut, [List,]);
+
+fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> impl Future<Item = (), Error = Error> {
+    match cmd {
+        FwdCmd::List => FwdFut::List({
+            stack
+                .get_forwarding_table()
+                .map_err(|e| e.context("error retrieving forwarding table").into())
+                .map(move |response| {
+                    for entry in response {
+                        println!("{}", pretty::ForwardingEntry::from(entry));
+                    }
+                })
+        }),
+    }
 }
 
 fn parse_ip_addr(addr: &str) -> Result<net::IpAddress, Error> {

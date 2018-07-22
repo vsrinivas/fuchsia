@@ -12,18 +12,15 @@ struct IpAddress<'a>(&'a net::IpAddress);
 impl<'a> fmt::Display for IpAddress<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self.0 {
-            net::IpAddress::Ipv4(a) => {
-                write!(f, "{}.{}.{}.{}", a.addr[0], a.addr[1], a.addr[2], a.addr[3])
-            }
-            // TODO(tkilbourn): better pretty-printing for IPv6 addresses
-            #[cfg_attr(rustfmt, rustfmt_skip)]
+            net::IpAddress::Ipv4(a) => write!(
+                f,
+                "{}",
+                ::std::net::IpAddr::V4(::std::net::Ipv4Addr::from(a.addr))
+            ),
             net::IpAddress::Ipv6(a) => write!(
                 f,
-                "{:x}{:x}:{:x}{:x}:{:x}{:x}:{:x}{:x}:{:x}{:x}:{:x}{:x}:{:x}{:x}:{:x}{:x}",
-                a.addr[0], a.addr[1], a.addr[2], a.addr[3],
-                a.addr[4], a.addr[5], a.addr[6], a.addr[7],
-                a.addr[8], a.addr[9], a.addr[10], a.addr[11],
-                a.addr[12], a.addr[13], a.addr[14], a.addr[15],
+                "{}",
+                ::std::net::IpAddr::V6(::std::net::Ipv6Addr::from(a.addr))
             ),
         }
     }
@@ -87,5 +84,30 @@ impl fmt::Display for InterfaceInfo {
             write!(f, "\n    {}", InterfaceAddress(addr))?;
         }
         Ok(())
+    }
+}
+
+pub struct ForwardingEntry(netstack::ForwardingEntry);
+
+impl From<netstack::ForwardingEntry> for ForwardingEntry {
+    fn from(e: netstack::ForwardingEntry) -> Self {
+        ForwardingEntry(e)
+    }
+}
+
+impl fmt::Display for ForwardingEntry {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "{}/{}: ",
+            IpAddress(&self.0.subnet.addr),
+            self.0.subnet.prefix_len
+        )?;
+        match self.0.destination {
+            netstack::ForwardingDestination::DeviceId(id) => write!(f, "device id {}", id),
+            netstack::ForwardingDestination::NextHop(ref nh) => {
+                write!(f, "next hop {}", IpAddress(&nh))
+            }
+        }
     }
 }
