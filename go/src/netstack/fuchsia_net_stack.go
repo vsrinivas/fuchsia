@@ -169,6 +169,34 @@ func addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *stack.Error {
 	return nil
 }
 
+func getForwardingTable() []stack.ForwardingEntry {
+	ns.mu.Lock()
+	table := ns.stack.GetRouteTable()
+	ns.mu.Unlock()
+
+	entries := make([]stack.ForwardingEntry, 0)
+	for _, route := range table {
+		dest := stack.ForwardingDestination{}
+		// There are two types of destinations: link-local and next-hop.
+		//   If a route has a gateway, use that as the next-hop, and ignore the NIC.
+		//   Otherwise, it is considered link-local, and use the NIC.
+		if route.Gateway == tcpip.Address("") {
+			dest.SetDeviceId(uint64(route.NIC))
+		} else {
+			dest.SetNextHop(fidlconv.ToNetIpAddress(route.Gateway))
+		}
+		entry := stack.ForwardingEntry{
+			Subnet: netfidl.Subnet{
+				Addr:      fidlconv.ToNetIpAddress(route.Destination),
+				PrefixLen: fidlconv.GetPrefixLen(route.Mask),
+			},
+			Destination: dest,
+		}
+		entries = append(entries, entry)
+	}
+	return entries
+}
+
 func (ni *stackImpl) ListInterfaces() ([]stack.InterfaceInfo, error) {
 	return getNetInterfaces(), nil
 }
@@ -195,7 +223,7 @@ func (ni *stackImpl) DelInterfaceAddress(id uint64, addr netfidl.IpAddress) (*st
 }
 
 func (ni *stackImpl) GetForwardingTable() ([]stack.ForwardingEntry, error) {
-	panic("not implemented")
+	return getForwardingTable(), nil
 }
 
 func (ni *stackImpl) AddForwardingEntry(entry stack.ForwardingEntry) (*stack.Error, error) {
