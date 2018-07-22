@@ -93,11 +93,11 @@ func defaultRouteTable(nicid tcpip.NICID, gateway tcpip.Address) []tcpip.Route {
 	}
 }
 
-func subnetRoute(addr tcpip.Address, mask tcpip.AddressMask, nicid tcpip.NICID, gateway tcpip.Address) tcpip.Route {
+func subnetRoute(addr tcpip.Address, mask tcpip.AddressMask, nicid tcpip.NICID) tcpip.Route {
 	return tcpip.Route{
 		Destination: applyMask(addr, mask),
 		Mask:        tcpip.Address(mask),
-		Gateway:     gateway,
+		Gateway:     tcpip.Address(""),
 		NIC:         nicid,
 	}
 }
@@ -160,7 +160,7 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Con
 	// Update default route with new gateway.
 	ifs.ns.mu.Lock()
 	ifs.nic.Routes = defaultRouteTable(ifs.nic.ID, config.Gateway)
-	ifs.nic.Routes = append(ifs.nic.Routes, subnetRoute(newAddr, config.SubnetMask, ifs.nic.ID, config.Gateway))
+	ifs.nic.Routes = append(ifs.nic.Routes, subnetRoute(newAddr, config.SubnetMask, ifs.nic.ID))
 	ifs.nic.Netmask = config.SubnetMask
 	ifs.nic.Addr = newAddr
 	ifs.nic.DNSServers = config.DNS
