@@ -2,18 +2,27 @@
 
 ## Overview
 
-The Fuchsia build system aims at building complete boot images for various
-devices. To do so, it uses [GN][gn-main], a meta-build system that generates
-build files consumed by [Ninja][ninja-main], which executes the actual build.
-[Using GN build][gn-preso] is a good intro to GN.
+The Fuchsia build system aims at building both boot images and installable
+packages for various devices. To do so, it uses [GN][gn-main], a meta-build
+system that generates build files consumed by [Ninja][ninja-main], which
+executes the actual build. [Using GN build][gn-preso] is a good intro to GN.
 
 Note that Zircon uses an entirely different build system based on GNU Make.
 The rest of the build relies on Zircon being built ahead of time.
 
-## Packages
+## Products
 
 The contents of the generated image are controlled by a set of top level
-[packages](packages.md) defining what should go into the GN build.
+products. Products define sets of packages that are included in boot and
+system update images, preinstalled in paver images, and installable using the
+update system. [products](products.md) documents the structure and usage of
+fields in product definitions.
+
+## Packages
+
+The contents of products are packages, which may aggregate or reference other
+packages and GN labels that are to be built. See [packages](packages.md)
+for more information.
 
 ## Build targets
 
@@ -63,12 +72,12 @@ For a list of all options, run `build-zircon.sh -h`. See Zircon's
 ### B
 
 Then configure the content of the generated image by choosing the top level
-packages to incorporate:
+product to build:
 ```
 # fuchsia_base is typically "default".
-# my_stuff is a possibly-empty list of extra packages to include.
+# my_stuff is a possibly-empty list of extra packages to preinstall.
 
-$ buildtools/gn gen out/x64 --args='fuchsia_packages=["build/gn/fuchsia_base","build/gn/my_stuff"]'
+$ buildtools/gn gen out/x64 --args='fuchsia_products=["garnet/products/fuchsia_base"] fuchsia_packages=["build/gn/my_stuff"]'
 ```
 This will create an `out/x64` directory containing Ninja files.
 
@@ -81,7 +90,7 @@ For documentation on the `select_variant` argument, see [Variants](variants.md).
 
 The final step is to run the actual build with Ninja:
 ```
-$ buildtools/ninja -C out/debug-<arch> -j 64
+$ buildtools/ninja -C out/<arch> -j 64
 ```
 
 This is what gets run under the hood by `fx build`.
@@ -107,6 +116,12 @@ changed. After that, run **C** again.
 
 ## Tips and tricks
 
+## Inspecting all packages in a product
+
+```bash
+$ build/gn/preprocess_products.py --products '["garnet/products/default"]'
+```
+
 ### Visualizing the hierarchy of build packages
 
 ```bash
@@ -117,13 +132,13 @@ $ dot -Tpng tree.dot -o tree.png
 ### Inspecting the content of a GN target
 
 ```bash
-$ buildtools/gn desc out/debug-x64 //path/to/my:target
+$ buildtools/gn desc out/x64 //path/to/my:target
 ```
 
 ### Finding references to a GN target
 
 ```bash
-$ buildtools/gn refs out/debug-x64 //path/to/my:target
+$ buildtools/gn refs out/x64 //path/to/my:target
 ```
 
 ### Referencing targets for the build host
@@ -146,7 +161,7 @@ file:
 If a target is defined in a GN build file as `//foo/bar/blah:dash`, that target
 (and its dependencies) can be built with:
 ```bash
-$ buildtools/ninja -C out/debug-x64 -j64 foo/bar/blah:dash
+$ buildtools/ninja -C out/x64 -j64 foo/bar/blah:dash
 ```
 Note that this only works for targets in the default toolchain.
 
@@ -161,7 +176,7 @@ $ buildtools/gn help ninja_rules
 You can also browse the set of Ninja targets currently defined in your output
 directory with:
 ```bash
-$ buildtools/ninja -C out/debug-x64 -t browse
+$ buildtools/ninja -C out/x64 -t browse
 ```
 Note that the presence of a Ninja target does not mean it will be built - for
 that it needs to depend on the “default” target.

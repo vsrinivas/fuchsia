@@ -1,4 +1,4 @@
-# Layout of package directories
+# Layout of Product and Package Directories
 
 Each [layer](/development/source_code/layers.md) of the Fuchsia source tree
 contains a top-level directory called `packages` containing all the
@@ -12,10 +12,15 @@ In the diagram below, "pkg" refers to Fuchsia packages, the unit of installation
 in Fuchsia.
 
 ```
+//<layer>/products
+    default          # default build configuration for this layer
+                     # by convention, default preinstalls development tools,
+                     # and makes all prod packages available.
 //<layer>/packages
     <layer>          # all production pkg up to this layer
     buildbot         # all pkg declared at this layer; used by CQ/CI
-    default          # for daily development at this layer
+    default          # monolith packages for daily development at this layer
+    preinstall       # devtools for daily development at this layer
     kitchen_sink     # all pkg up to this layer
     all              # grab bag of every pkg in this layer
     prod/            # pkg that can be picked up in production
@@ -26,7 +31,6 @@ in Fuchsia.
   * experimental/    # pkg not quite ready for prod
   * config/          # config files for the system (e.g. what to boot into)
     sdk/             # SDK definitions
-  * products/        # definitions for specific products
     ...              # each layer will also define additional packages
 ```
 
@@ -60,8 +64,8 @@ aggregation, as these packages are strictly opt-in already.
 ## Verification
 
 The [`//scripts/packages/verify_layer`][verify-layer] tool is used to verify
-that a layer's `packages` directory's structure matches the description in the
-present document.
+that a layer's `packages` and `products` directory's structure matches the
+description in the present document.
 
 Note that only package files are allowed in such a directory, with the exception
 of `README.md` files for documentation purposes.
