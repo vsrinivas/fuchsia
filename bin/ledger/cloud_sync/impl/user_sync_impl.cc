@@ -79,7 +79,8 @@ void UserSyncImpl::Start() {
   user_config_.cloud_provider->GetDeviceSet(
       device_set_.NewRequest(), [this](auto status) {
         if (status != cloud_provider::Status::OK) {
-          FXL_LOG(ERROR) << "Failed to retrieve the device map: " << status
+          FXL_LOG(ERROR) << "Failed to retrieve the device map: "
+                         << fidl::ToUnderlying(status)
                          << ", sync upload will not work.";
           return;
         }
@@ -154,7 +155,8 @@ void UserSyncImpl::HandleDeviceSetResult(cloud_provider::Status status) {
       on_version_mismatch_();
       return;
     default:
-      FXL_LOG(ERROR) << "Unexpected status returned from device set: " << status
+      FXL_LOG(ERROR) << "Unexpected status returned from device set: "
+                     << fidl::ToUnderlying(status)
                      << ", sync upload will not work.";
       return;
   }

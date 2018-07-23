@@ -12,7 +12,8 @@ namespace benchmark {
 bool QuitOnError(fit::closure quit_callback, ledger::Status status,
                  fxl::StringView description) {
   if (status != ledger::Status::OK) {
-    FXL_LOG(ERROR) << description << " failed with status " << status << ".";
+    FXL_LOG(ERROR) << description << " failed with status "
+                   << fidl::ToUnderlying(status) << ".";
     quit_callback();
     return true;
   }

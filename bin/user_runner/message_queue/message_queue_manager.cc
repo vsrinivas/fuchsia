@@ -258,7 +258,8 @@ class MessageQueueManager::GetQueueTokenCall
                         Protect([this, flow](fuchsia::ledger::Status status) {
                           if (status != fuchsia::ledger::Status::OK) {
                             FXL_LOG(ERROR) << trace_name() << " "
-                                           << "Page.GetSnapshot() " << status;
+                                           << "Page.GetSnapshot() "
+                                           << fidl::ToUnderlying(status);
                             return;
                           }
 
@@ -281,7 +282,7 @@ class MessageQueueManager::GetQueueTokenCall
 
       if (status != fuchsia::ledger::Status::OK) {
         FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
-                       << "PageSnapshot.Get() " << status;
+                       << "PageSnapshot.Get() " << fidl::ToUnderlying(status);
         return;
       }
 
@@ -331,7 +332,8 @@ class MessageQueueManager::GetMessageSenderCall : public PageOperation<> {
                         Protect([this, flow](fuchsia::ledger::Status status) {
                           if (status != fuchsia::ledger::Status::OK) {
                             FXL_LOG(ERROR) << trace_name() << " "
-                                           << "Page.GetSnapshot() " << status;
+                                           << "Page.GetSnapshot() "
+                                           << fidl::ToUnderlying(status);
                             return;
                           }
 
@@ -349,7 +351,7 @@ class MessageQueueManager::GetMessageSenderCall : public PageOperation<> {
           // is accessed for the first time. Don't log an error
           // then.
           FXL_LOG(ERROR) << trace_name() << " " << token_ << " "
-                         << "PageSnapshot.Get() " << status;
+                         << "PageSnapshot.Get() " << fidl::ToUnderlying(status);
         }
         return;
       }
@@ -433,7 +435,8 @@ class MessageQueueManager::ObtainMessageQueueCall : public PageOperation<> {
     page()->StartTransaction(Protect([this](fuchsia::ledger::Status status) {
       if (status != fuchsia::ledger::Status::OK) {
         FXL_LOG(ERROR) << trace_name() << " "
-                       << "Page.StartTransaction() " << status;
+                       << "Page.StartTransaction() "
+                       << fidl::ToUnderlying(status);
       }
     }));
 
@@ -447,8 +450,9 @@ class MessageQueueManager::ObtainMessageQueueCall : public PageOperation<> {
                 Protect([this, key = message_queue_token_key](
                             fuchsia::ledger::Status status) {
                   if (status != fuchsia::ledger::Status::OK) {
-                    FXL_LOG(ERROR) << trace_name() << " " << key << " "
-                                   << "Page.Put() " << status;
+                    FXL_LOG(ERROR)
+                        << trace_name() << " " << key << " "
+                        << "Page.Put() " << fidl::ToUnderlying(status);
                   }
                 }));
 
@@ -462,15 +466,16 @@ class MessageQueueManager::ObtainMessageQueueCall : public PageOperation<> {
                 Protect([this, key = message_queue_key](
                             fuchsia::ledger::Status status) {
                   if (status != fuchsia::ledger::Status::OK) {
-                    FXL_LOG(ERROR) << trace_name() << " " << key << " "
-                                   << "Page.Put() " << status;
+                    FXL_LOG(ERROR)
+                        << trace_name() << " " << key << " "
+                        << "Page.Put() " << fidl::ToUnderlying(status);
                   }
                 }));
 
     page()->Commit(Protect([this, flow](fuchsia::ledger::Status status) {
       if (status != fuchsia::ledger::Status::OK) {
         FXL_LOG(ERROR) << trace_name() << " "
-                       << "Page.Commit() " << status;
+                       << "Page.Commit() " << static_cast<uint32_t>(status);
         return;
       }
 
@@ -545,7 +550,8 @@ class MessageQueueManager::DeleteMessageQueueCall : public PageOperation<> {
               Protect([this](fuchsia::ledger::Status status) {
                 if (status != fuchsia::ledger::Status::OK) {
                   FXL_LOG(ERROR) << trace_name() << " "
-                                 << "Page.StartTransaction() " << status;
+                                 << "Page.StartTransaction() "
+                                 << fidl::ToUnderlying(status);
                 }
               }));
 
@@ -554,7 +560,8 @@ class MessageQueueManager::DeleteMessageQueueCall : public PageOperation<> {
                                      fuchsia::ledger::Status status) {
                            if (status != fuchsia::ledger::Status::OK) {
                              FXL_LOG(ERROR) << trace_name() << " " << key << " "
-                                            << "Page.Delete() " << status;
+                                            << "Page.Delete() "
+                                            << fidl::ToUnderlying(status);
                            }
                          }));
 
@@ -563,7 +570,8 @@ class MessageQueueManager::DeleteMessageQueueCall : public PageOperation<> {
                                      fuchsia::ledger::Status status) {
                            if (status != fuchsia::ledger::Status::OK) {
                              FXL_LOG(ERROR) << trace_name() << " " << key << " "
-                                            << "Page.Delete() " << status;
+                                            << "Page.Delete() "
+                                            << fidl::ToUnderlying(status);
                            }
                          }));
 
@@ -572,7 +580,7 @@ class MessageQueueManager::DeleteMessageQueueCall : public PageOperation<> {
           page()->Commit(Protect([this, flow](fuchsia::ledger::Status status) {
             if (status != fuchsia::ledger::Status::OK) {
               FXL_LOG(ERROR) << trace_name() << " "
-                             << "Page.Commit() " << status;
+                             << "Page.Commit() " << fidl::ToUnderlying(status);
               return;
             }
 
@@ -614,7 +622,8 @@ class MessageQueueManager::DeleteNamespaceCall : public PageOperation<> {
                         Protect([this, flow](fuchsia::ledger::Status status) {
                           if (status != fuchsia::ledger::Status::OK) {
                             FXL_LOG(ERROR) << trace_name() << " "
-                                           << "Page.GetSnapshot() " << status;
+                                           << "Page.GetSnapshot() "
+                                           << fidl::ToUnderlying(status);
                             return;
                           }
                           GetKeysToDelete(flow);
@@ -625,8 +634,9 @@ class MessageQueueManager::DeleteNamespaceCall : public PageOperation<> {
     GetEntries(snapshot_.get(), &component_entries_,
                [this, flow](fuchsia::ledger::Status status) {
                  if (status != fuchsia::ledger::Status::OK) {
-                   FXL_LOG(ERROR) << trace_name() << " "
-                                  << "GetEntries() " << status;
+                   FXL_LOG(ERROR)
+                       << trace_name() << " "
+                       << "GetEntries() " << fidl::ToUnderlying(status);
                    return;
                  }
 
@@ -655,8 +665,8 @@ class MessageQueueManager::DeleteNamespaceCall : public PageOperation<> {
       page()->Delete(
           to_array(i), Protect([this, i, flow](fuchsia::ledger::Status status) {
             if (status != fuchsia::ledger::Status::OK) {
-              FXL_LOG(ERROR)
-                  << trace_name() << " " << i << "Page.Delete() " << status;
+              FXL_LOG(ERROR) << trace_name() << " " << i << "Page.Delete() "
+                             << fidl::ToUnderlying(status);
             }
           }));
     }

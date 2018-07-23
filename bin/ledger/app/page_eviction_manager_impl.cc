@@ -110,7 +110,7 @@ void PageEvictionManagerImpl::TryCleanUp(fit::function<void(Status)> callback) {
         if (status != Status::OK) {
           FXL_LOG(ERROR)
               << "TryCleanUp failed because of initialization error: "
-              << status;
+              << fidl::ToUnderlying(status);
           callback(status);
           return;
         }
@@ -155,7 +155,7 @@ void PageEvictionManagerImpl::OnPageOpened(fxl::StringView ledger_name,
     Status status = initialization_completer_.WaitUntilDone(handler);
     if (status != Status::OK) {
       FXL_LOG(ERROR) << "OnPageOpened failed because of initialization error: "
-                     << status;
+                     << fidl::ToUnderlying(status);
       return;
     }
     status = db_.MarkPageOpened(handler, ledger_name, page_id);
@@ -175,7 +175,7 @@ void PageEvictionManagerImpl::OnPageClosed(fxl::StringView ledger_name,
     Status status = initialization_completer_.WaitUntilDone(handler);
     if (status != Status::OK) {
       FXL_LOG(ERROR) << "OnPageClosed failed because of initialization error: "
-                     << status;
+                     << fidl::ToUnderlying(status);
       return;
     }
     status = db_.MarkPageClosed(handler, ledger_name, page_id);

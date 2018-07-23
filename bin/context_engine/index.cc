@@ -100,7 +100,7 @@ std::set<std::string> EncodeMetadataAndType(
   }
 
   std::ostringstream str;
-  str << kContextValueTypeKey << nodeType;
+  str << kContextValueTypeKey << fidl::ToUnderlying(nodeType);
   ret.insert(str.str());
 
   return ret;

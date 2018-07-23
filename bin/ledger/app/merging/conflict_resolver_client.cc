@@ -64,7 +64,8 @@ void ConflictResolverClient::Start() {
             }
             journal_ = std::move(journal);
             if (status != storage::Status::OK) {
-              FXL_LOG(ERROR) << "Unable to start merge commit: " << status;
+              FXL_LOG(ERROR) << "Unable to start merge commit: "
+                             << fidl::ToUnderlying(status);
               Finalize(PageUtils::ConvertStatus(status));
               return;
             }
@@ -189,8 +190,8 @@ void ConflictResolverClient::GetDiff(
               return;
             }
             if (status != Status::OK) {
-              FXL_LOG(ERROR) << "Unable to compute diff due to error " << status
-                             << ", aborting.";
+              FXL_LOG(ERROR) << "Unable to compute diff due to error "
+                             << fidl::ToUnderlying(status) << ", aborting.";
               callback(status, fidl::VectorPtr<DiffEntry>::New(0), nullptr);
               Finalize(status);
               return;

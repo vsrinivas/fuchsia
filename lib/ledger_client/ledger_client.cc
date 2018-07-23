@@ -211,7 +211,8 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
                                 [this, flow](fuchsia::ledger::Status status) {
                                   if (status != fuchsia::ledger::Status::OK) {
                                     FXL_LOG(ERROR)
-                                        << "ResultProvider.Merge() " << status;
+                                        << "ResultProvider.Merge() "
+                                        << fidl::ToUnderlying(status);
                                   }
                                   MergeDone(flow);
                                 });
@@ -225,7 +226,8 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
     if (--merge_count_ == 0) {
       result_provider_->Done([this, flow](fuchsia::ledger::Status status) {
         if (status != fuchsia::ledger::Status::OK) {
-          FXL_LOG(ERROR) << "ResultProvider.Done() " << status;
+          FXL_LOG(ERROR) << "ResultProvider.Done() "
+                         << fidl::ToUnderlying(status);
         }
         impl_->NotifyWatchers();
       });
@@ -364,8 +366,8 @@ fuchsia::ledger::Page* LedgerClient::GetPage(
   ledger_->GetPage(std::move(page_id_copy), page.NewRequest(),
                    [context](fuchsia::ledger::Status status) {
                      if (status != fuchsia::ledger::Status::OK) {
-                       FXL_LOG(ERROR)
-                           << "Ledger.GetPage() " << context << " " << status;
+                       FXL_LOG(ERROR) << "Ledger.GetPage() " << context << " "
+                                      << fidl::ToUnderlying(status);
                      }
                    });
 

@@ -8,11 +8,11 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/component/cpp/connect.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/callback/waiter.h>
+#include <lib/component/cpp/connect.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/functional/auto_call.h>
@@ -188,8 +188,8 @@ CobaltObservation& CobaltObservation::operator=(CobaltObservation&& rhs) {
 namespace {
 class CobaltContextImpl : public CobaltContext {
  public:
-  CobaltContextImpl(async_dispatcher_t* dispatcher, component::StartupContext* context,
-                    int32_t project_id);
+  CobaltContextImpl(async_dispatcher_t* dispatcher,
+                    component::StartupContext* context, int32_t project_id);
   ~CobaltContextImpl();
 
   void ReportObservation(CobaltObservation observation) override;
@@ -319,13 +319,13 @@ void CobaltContextImpl::AddObservationCallback(CobaltObservation observation,
   switch (status) {
     case Status::INVALID_ARGUMENTS:
     case Status::FAILED_PRECONDITION:
-      FXL_DCHECK(false) << "Unexpected status: " << status;
+      FXL_DCHECK(false) << "Unexpected status: " << fidl::ToUnderlying(status);
     case Status::OBSERVATION_TOO_BIG:  // fall through
       // Log the failure.
       FXL_LOG(WARNING) << "Cobalt rejected obsevation for metric: "
                        << observation.metric_id()
                        << " with value: " << observation.ValueRepr()
-                       << " with status: " << status;
+                       << " with status: " << fidl::ToUnderlying(status);
     case Status::OK:  // fall through
       // Remove the observation from the set of observations to send.
       observations_in_transit_.erase(observation);
@@ -340,7 +340,8 @@ void CobaltContextImpl::AddObservationCallback(CobaltObservation observation,
 }  // namespace
 
 std::unique_ptr<CobaltContext> MakeCobaltContext(
-    async_dispatcher_t* dispatcher, component::StartupContext* context, int32_t project_id) {
+    async_dispatcher_t* dispatcher, component::StartupContext* context,
+    int32_t project_id) {
   return std::make_unique<CobaltContextImpl>(dispatcher, context, project_id);
 }
 

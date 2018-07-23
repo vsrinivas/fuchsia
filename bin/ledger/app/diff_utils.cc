@@ -147,7 +147,8 @@ void ComputePageChange(
                   callback =
                       std::move(callback)](storage::Status status) mutable {
     if (status != storage::Status::OK) {
-      FXL_LOG(ERROR) << "Unable to compute diff for PageChange: " << status;
+      FXL_LOG(ERROR) << "Unable to compute diff for PageChange: "
+                     << fidl::ToUnderlying(status);
       callback(PageUtils::ConvertStatus(status), std::make_pair(nullptr, ""));
       return;
     }
@@ -171,7 +172,7 @@ void ComputePageChange(
       if (status != Status::OK) {
         FXL_LOG(ERROR)
             << "Error while reading changed values when computing PageChange: "
-            << status;
+            << fidl::ToUnderlying(status);
         callback(status, std::make_pair(nullptr, ""));
         return;
       }
@@ -268,7 +269,8 @@ void ComputeThreeWayDiff(
                   callback =
                       std::move(callback)](storage::Status status) mutable {
     if (status != storage::Status::OK) {
-      FXL_LOG(ERROR) << "Unable to compute diff for PageChange: " << status;
+      FXL_LOG(ERROR) << "Unable to compute diff for PageChange: "
+                     << fidl::ToUnderlying(status);
       callback(PageUtils::ConvertStatus(status),
                std::make_pair(fidl::VectorPtr<DiffEntry>::New(0), ""));
       return;
@@ -289,7 +291,7 @@ void ComputeThreeWayDiff(
       if (status != Status::OK) {
         FXL_LOG(ERROR)
             << "Error while reading changed values when computing PageChange: "
-            << status;
+            << fidl::ToUnderlying(status);
         callback(status,
                  std::make_pair(fidl::VectorPtr<DiffEntry>::New(0), ""));
         return;

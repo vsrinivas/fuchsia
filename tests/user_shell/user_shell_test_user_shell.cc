@@ -9,9 +9,9 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/logging.h>
@@ -143,8 +143,9 @@ class StoryProviderStateWatcherImpl : fuchsia::modular::StoryProviderWatcher {
   void OnChange(const fuchsia::modular::StoryInfo story_info,
                 const fuchsia::modular::StoryState story_state) override {
     FXL_LOG(INFO) << "StoryProviderStateWatcherImpl::OnChange() "
-                  << " id " << story_info.id << " state " << story_state
-                  << " url " << story_info.url;
+                  << " id " << story_info.id << " state "
+                  << fidl::ToUnderlying(story_state) << " url "
+                  << story_info.url;
 
     if (deleted_stories_.find(story_info.id) != deleted_stories_.end()) {
       FXL_LOG(ERROR) << "Status change notification for deleted story "

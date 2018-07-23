@@ -825,7 +825,8 @@ fuchsia::ledger::cloud::CloudProviderPtr UserRunnerImpl::GetCloudProvider() {
       std::move(firebase_config), std::move(ledger_token_provider),
       cloud_provider.NewRequest(), [](fuchsia::ledger::cloud::Status status) {
         if (status != fuchsia::ledger::cloud::Status::OK) {
-          FXL_LOG(ERROR) << "Failed to create a cloud provider: " << status;
+          FXL_LOG(ERROR) << "Failed to create a cloud provider: "
+                         << fidl::ToUnderlying(status);
         }
       });
   return cloud_provider;

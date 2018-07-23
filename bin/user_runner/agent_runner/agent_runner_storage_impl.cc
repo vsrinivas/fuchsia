@@ -65,8 +65,9 @@ class AgentRunnerStorageImpl::InitializeCall : public Operation<> {
     GetEntries(snapshot_.get(), &entries_,
                [this, flow](fuchsia::ledger::Status status) {
                  if (status != fuchsia::ledger::Status::OK) {
-                   FXL_LOG(ERROR) << trace_name() << " "
-                                  << "GetEntries() " << status;
+                   FXL_LOG(ERROR)
+                       << trace_name() << " "
+                       << "GetEntries() " << fidl::ToUnderlying(status);
                    return;
                  }
 
@@ -126,7 +127,8 @@ class AgentRunnerStorageImpl::WriteTaskCall : public Operation<bool> {
         [this, key, flow](fuchsia::ledger::Status status) {
           if (status != fuchsia::ledger::Status::OK) {
             FXL_LOG(ERROR) << trace_name() << " " << key << " "
-                           << "Page.PutWithPriority() " << status;
+                           << "Page.PutWithPriority() "
+                           << fidl::ToUnderlying(status);
             return;
           }
 
@@ -164,7 +166,7 @@ class AgentRunnerStorageImpl::DeleteTaskCall : public Operation<bool> {
           if (status != fuchsia::ledger::Status::OK &&
               status != fuchsia::ledger::Status::INVALID_TOKEN) {
             FXL_LOG(ERROR) << trace_name() << " " << key << " "
-                           << "Page.Delete() " << status;
+                           << "Page.Delete() " << fidl::ToUnderlying(status);
             return;
           }
           success_result_ = true;

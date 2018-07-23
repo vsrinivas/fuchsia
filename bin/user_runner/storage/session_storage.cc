@@ -71,7 +71,8 @@ class CreateStoryCall
                       Protect([this, flow](fuchsia::ledger::Status status) {
                         if (status != fuchsia::ledger::Status::OK) {
                           FXL_LOG(ERROR) << trace_name() << " "
-                                         << "Ledger.GetPage() " << status;
+                                         << "Ledger.GetPage() "
+                                         << fidl::ToUnderlying(status);
                           return;
                         }
 
@@ -145,8 +146,8 @@ FuturePtr<> SessionStorage::DeleteStory(fidl::StringPtr story_id) {
                          // Deleting a key that doesn't exist is OK, not
                          // KEY_NOT_FOUND.
                          if (status != fuchsia::ledger::Status::OK) {
-                           FXL_LOG(ERROR)
-                               << "SessionStorage: Page.Delete() " << status;
+                           FXL_LOG(ERROR) << "SessionStorage: Page.Delete() "
+                                          << fidl::ToUnderlying(status);
                          }
                          deleted->Complete();
                        });
@@ -269,7 +270,8 @@ FuturePtr<> SessionStorage::DeleteKindOfProtoStory(fidl::StringPtr story_id) {
                 // Deleting a key that doesn't exist is OK, not
                 // KEY_NOT_FOUND.
                 if (status != fuchsia::ledger::Status::OK) {
-                  FXL_LOG(ERROR) << "SessionStorage: Page.Delete() " << status;
+                  FXL_LOG(ERROR) << "SessionStorage: Page.Delete() "
+                                 << fidl::ToUnderlying(status);
                 }
                 returned_future->Complete();
               });

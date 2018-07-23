@@ -44,10 +44,10 @@ FirebaseAuthImpl::FirebaseAuthImpl(
     component::StartupContext* startup_context)
     : FirebaseAuthImpl(std::move(config), dispatcher, std::move(token_provider),
                        std::make_unique<backoff::ExponentialBackoff>(),
-                       startup_context
-                           ? cobalt::MakeCobaltContext(dispatcher, startup_context,
-                                                       kLedgerCobaltProjectId)
-                           : nullptr) {}
+                       startup_context ? cobalt::MakeCobaltContext(
+                                             dispatcher, startup_context,
+                                             kLedgerCobaltProjectId)
+                                       : nullptr) {}
 
 FirebaseAuthImpl::FirebaseAuthImpl(
     Config config, async_dispatcher_t* dispatcher,
@@ -107,7 +107,8 @@ void FirebaseAuthImpl::GetToken(
           } else {
             FXL_LOG(ERROR)
                 << "Error retrieving the Firebase token from token provider: "
-                << error.status << ", '" << error.message << "', retrying.";
+                << fidl::ToUnderlying(error.status) << ", '" << error.message
+                << "', retrying.";
           }
 
           if (max_retries > 0 && IsRetriableError(error.status)) {

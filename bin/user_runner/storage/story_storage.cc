@@ -166,33 +166,34 @@ class ReadLinkDataCall
       page_snapshot_ = fuchsia::ledger::PageSnapshotPtr();
     });
 
-    page_snapshot_->Get(to_array(key_), [this, flow](
-                                            fuchsia::ledger::Status status,
-                                            fuchsia::mem::BufferPtr value) {
-      std::string value_as_string;
-      switch (status) {
-        case fuchsia::ledger::Status::KEY_NOT_FOUND:
-          // Leave value_ as a null-initialized StringPtr.
-          return;
-        case fuchsia::ledger::Status::OK:
-          if (!value) {
-            value_ = kJsonNull;
-            return;
-          }
+    page_snapshot_->Get(
+        to_array(key_), [this, flow](fuchsia::ledger::Status status,
+                                     fuchsia::mem::BufferPtr value) {
+          std::string value_as_string;
+          switch (status) {
+            case fuchsia::ledger::Status::KEY_NOT_FOUND:
+              // Leave value_ as a null-initialized StringPtr.
+              return;
+            case fuchsia::ledger::Status::OK:
+              if (!value) {
+                value_ = kJsonNull;
+                return;
+              }
 
-          if (!fsl::StringFromVmo(*value, &value_as_string)) {
-            FXL_LOG(ERROR) << trace_name() << " VMO could not be copied.";
-            status_ = StoryStorage::Status::VMO_COPY_ERROR;
-            return;
+              if (!fsl::StringFromVmo(*value, &value_as_string)) {
+                FXL_LOG(ERROR) << trace_name() << " VMO could not be copied.";
+                status_ = StoryStorage::Status::VMO_COPY_ERROR;
+                return;
+              }
+              value_ = value_as_string;
+              return;
+            default:
+              FXL_LOG(ERROR) << trace_name() << " PageSnapshot.Get() "
+                             << fidl::ToUnderlying(status);
+              status_ = StoryStorage::Status::LEDGER_ERROR;
+              return;
           }
-          value_ = value_as_string;
-          return;
-        default:
-          FXL_LOG(ERROR) << trace_name() << " PageSnapshot.Get() " << status;
-          status_ = StoryStorage::Status::LEDGER_ERROR;
-          return;
-      }
-    });
+        });
   }
 
   // Input parameters.
@@ -252,7 +253,7 @@ class WriteLinkDataCall : public Operation<StoryStorage::Status> {
           }
           if (status != fuchsia::ledger::Status::OK) {
             FXL_LOG(ERROR) << "StoryStorage.WriteLinkDataCall " << key_ << " "
-                           << " Page.Put() " << status;
+                           << " Page.Put() " << fidl::ToUnderlying(status);
             status_ = StoryStorage::Status::LEDGER_ERROR;
           }
         });

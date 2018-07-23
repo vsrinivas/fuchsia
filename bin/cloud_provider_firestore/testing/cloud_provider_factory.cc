@@ -107,7 +107,8 @@ void CloudProviderFactory::MakeCloudProviderWithGivenUserId(
       std::move(firebase_config), std::move(token_provider), std::move(request),
       [](cloud_provider::Status status) {
         if (status != cloud_provider::Status::OK) {
-          FXL_LOG(ERROR) << "Failed to create a cloud provider: " << status;
+          FXL_LOG(ERROR) << "Failed to create a cloud provider: "
+                         << fidl::ToUnderlying(status);
         }
       });
 }

@@ -103,8 +103,8 @@ void PageDownload::StartDownload() {
                     FXL_LOG(WARNING)
                         << log_prefix_
                         << "fetching the remote commits failed due to a "
-                        << "connection error, status: " << cloud_status
-                        << ", retrying.";
+                        << "connection error, status: "
+                        << fidl::ToUnderlying(cloud_status) << ", retrying.";
                     SetCommitState(DOWNLOAD_TEMPORARY_ERROR);
                     RetryWithBackoff([this] { StartDownload(); });
                     return;
@@ -251,7 +251,7 @@ void PageDownload::OnError(cloud_provider::Status status) {
   }
 
   FXL_LOG(WARNING) << "Received unexpected error from PageCloudWatcher: "
-                   << status;
+                   << fidl::ToUnderlying(status);
   HandleDownloadCommitError("Received unexpected error from PageCloudWatcher.");
 }
 

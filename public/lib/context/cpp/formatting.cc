@@ -50,13 +50,14 @@ std::ostream& operator<<(std::ostream& os, const ContextMetadata& meta) {
 }
 
 std::ostream& operator<<(std::ostream& os, const ContextValue& value) {
-  return os << "{ type: " << value.type << ", content: " << value.content
-            << ", meta: " << value.meta << " }";
+  return os << "{ type: " << fidl::ToUnderlying(value.type)
+            << ", content: " << value.content << ", meta: " << value.meta
+            << " }";
 }
 
 std::ostream& operator<<(std::ostream& os, const ContextSelector& selector) {
-  return os << "{ type: " << selector.type << ", meta: " << *selector.meta
-            << " }";
+  return os << "{ type: " << fidl::ToUnderlying(selector.type)
+            << ", meta: " << *selector.meta << " }";
 }
 
 std::ostream& operator<<(std::ostream& os, const ContextUpdate& update) {

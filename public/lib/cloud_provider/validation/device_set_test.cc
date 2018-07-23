@@ -32,7 +32,7 @@ class DeviceSetTest : public ValidationTest, public DeviceSetWatcher {
     if (status != Status::OK) {
       return ::testing::AssertionFailure()
              << "Failed to retrieve the device set, received status: "
-             << status;
+             << fidl::ToUnderlying(status);
     }
 
     return ::testing::AssertionSuccess();

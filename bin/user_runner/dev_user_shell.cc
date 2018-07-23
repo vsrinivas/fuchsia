@@ -193,7 +193,7 @@ class DevUserShellApp
 
   // |fuchsia::modular::StoryWatcher|
   void OnStateChange(fuchsia::modular::StoryState state) override {
-    FXL_LOG(INFO) << "DevUserShell State " << state;
+    FXL_LOG(INFO) << "DevUserShell State " << fidl::ToUnderlying(state);
   }
 
   // |fuchsia::modular::StoryWatcher|

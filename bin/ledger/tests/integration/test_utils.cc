@@ -71,7 +71,7 @@ std::vector<ledger::Entry> SnapshotGetEntries(
     waiter->RunUntilCalled();
     EXPECT_TRUE(status == ledger::Status::OK ||
                 status == ledger::Status::PARTIAL_RESULT)
-        << "Actual status: " << status;
+        << "Actual status: " << fidl::ToUnderlying(status);
     if (num_queries) {
       (*num_queries)++;
     }

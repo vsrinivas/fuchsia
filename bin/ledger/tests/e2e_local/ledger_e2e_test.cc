@@ -6,8 +6,8 @@
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/callback/capture.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/fit/function.h>
@@ -87,7 +87,7 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
     RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure()
-             << "GetLedger failed with status " << status;
+             << "GetLedger failed with status " << fidl::ToUnderlying(status);
     }
 
     ledger->GetRootPage(page->NewRequest(),
@@ -95,7 +95,7 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
     RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure()
-             << "GetRootPage failed with status " << status;
+             << "GetRootPage failed with status " << fidl::ToUnderlying(status);
     }
     return ::testing::AssertionSuccess();
   }
@@ -110,7 +110,7 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
     RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure()
-             << "GetSnapshot failed with status " << status;
+             << "GetSnapshot failed with status " << fidl::ToUnderlying(status);
     }
     fidl::VectorPtr<ledger::InlinedEntry> entries;
     std::unique_ptr<ledger::Token> next_token;
@@ -120,7 +120,8 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
     RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure()
-             << "GetEntriesInline failed with status " << status;
+             << "GetEntriesInline failed with status "
+             << fidl::ToUnderlying(status);
     }
     *entry_count = entries->size();
     return ::testing::AssertionSuccess();

@@ -44,7 +44,8 @@ std::unique_ptr<PageSync> LedgerSyncImpl::CreatePageSync(
       convert::ToArray(app_id_), convert::ToArray(page_storage->GetId()),
       page_cloud.NewRequest(), [](auto status) {
         if (status != cloud_provider::Status::OK) {
-          FXL_LOG(ERROR) << "Failed to retrieve page cloud, status: " << status;
+          FXL_LOG(ERROR) << "Failed to retrieve page cloud, status: "
+                         << fidl::ToUnderlying(status);
           // Only log. This should be handled by page cloud connection error
           // handler.
         }

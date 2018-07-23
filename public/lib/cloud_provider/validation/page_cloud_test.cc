@@ -74,7 +74,7 @@ class PageCloudTest : public ValidationTest, public PageCloudWatcher {
     if (status != Status::OK) {
       return ::testing::AssertionFailure()
              << "Failed to retrieve the page cloud, received status: "
-             << status;
+             << fidl::ToUnderlying(status);
     }
 
     return ::testing::AssertionSuccess();
@@ -93,7 +93,7 @@ class PageCloudTest : public ValidationTest, public PageCloudWatcher {
     if (status != Status::OK) {
       return ::testing::AssertionFailure()
              << "Failed to retrieve the position token, received status: "
-             << status;
+             << fidl::ToUnderlying(status);
     }
 
     return ::testing::AssertionSuccess();

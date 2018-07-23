@@ -181,7 +181,7 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
       result_provider.set_error_handler(nullptr);
       if (status != ledger::Status::OK) {
         return ::testing::AssertionFailure()
-               << "Done failed with status " << status;
+               << "Done failed with status " << fidl::ToUnderlying(status);
       }
       return ::testing::AssertionSuccess();
     }
@@ -196,8 +196,8 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
       result_provider.set_error_handler(nullptr);
       if (status != ledger::Status::OK) {
         return ::testing::AssertionFailure()
-               << "MergeNonConflictingEntries failed with status " << status
-               << ".";
+               << "MergeNonConflictingEntries failed with status "
+               << fidl::ToUnderlying(status) << ".";
       }
       return ::testing::AssertionSuccess();
     }
@@ -228,13 +228,13 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
         if (status != ledger::Status::OK &&
             status != ledger::Status::PARTIAL_RESULT) {
           return ::testing::AssertionFailure()
-                 << "GetDiff failed with status " << status;
+                 << "GetDiff failed with status " << fidl::ToUnderlying(status);
         }
         if (!token != (status == ledger::Status::OK)) {
           return ::testing::AssertionFailure()
                  << "token is "
                  << (token ? convert::ToString(token->opaque_id) : "null")
-                 << ", but status is:" << status;
+                 << ", but status is:" << fidl::ToUnderlying(status);
         }
         entries->insert(entries->end(),
                         std::make_move_iterator(new_entries->begin()),
@@ -262,7 +262,7 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
       result_provider.set_error_handler(nullptr);
       if (status != ledger::Status::OK) {
         return ::testing::AssertionFailure()
-               << "Merge failed with status " << status;
+               << "Merge failed with status " << fidl::ToUnderlying(status);
       }
       return ::testing::AssertionSuccess();
     }
