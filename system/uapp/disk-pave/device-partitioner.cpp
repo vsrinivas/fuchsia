@@ -7,6 +7,7 @@
 
 #include <chromeos-disk-setup/chromeos-disk-setup.h>
 #include <fbl/auto_call.h>
+#include <fbl/function.h>
 #include <fs-management/fvm.h>
 #include <gpt/cros.h>
 #include <lib/fdio/watcher.h>
@@ -18,6 +19,9 @@
 #include "pave-logging.h"
 
 namespace paver {
+
+bool (*TestBlockFilter)(const fbl::unique_fd&) = nullptr;
+bool (*TestSkipBlockFilter)(const fbl::unique_fd&) = nullptr;
 
 namespace {
 
@@ -47,35 +51,35 @@ fbl::unique_ptr<T> WrapUnique(T* ptr) {
     return fbl::unique_ptr<T>(ptr);
 }
 
-constexpr char kSkipBlockDevPath[] = "/dev/class/skip-block/";
 
-zx_status_t OpenSkipBlockPartition(const uint8_t* typeGUID, zx_duration_t timeout,
-                                   fbl::unique_fd* out_fd) {
-    ZX_ASSERT(typeGUID);
+zx_status_t OpenPartition(const char* path,
+                          fbl::Function<bool(const fbl::unique_fd&)> should_filter_file,
+                          zx_duration_t timeout, fbl::unique_fd* out_partition) {
+    ZX_ASSERT(path != nullptr);
 
     struct CallbackInfo {
-        const uint8_t* type;
         fbl::unique_fd* out_partition;
+        fbl::Function<bool(const fbl::unique_fd&)> should_filter_file;
     };
 
     CallbackInfo info = {
-        .type = typeGUID,
-        .out_partition = out_fd,
+        .out_partition = out_partition,
+        .should_filter_file = fbl::move(should_filter_file),
     };
 
     auto cb = [](int dirfd, int event, const char* filename, void* cookie) {
-        if (event != WATCH_EVENT_ADD_FILE ||
-            strcmp(filename, ".") == 0 || strcmp(filename, "..") == 0) {
+        if (event != WATCH_EVENT_ADD_FILE) {
             return ZX_OK;
         }
-        auto info = static_cast<CallbackInfo*>(cookie);
+        if ((strcmp(filename, ".") == 0) || strcmp(filename, "..") == 0) {
+            return ZX_OK;
+        }
         fbl::unique_fd devfd(openat(dirfd, filename, O_RDWR));
         if (!devfd) {
             return ZX_OK;
         }
-        skip_block_partition_info_t part_info;
-        if (ioctl_skip_block_get_partition_info(devfd.get(), &part_info) < 0 ||
-            memcmp(part_info.partition_guid, info->type, GUID_LEN) != 0) {
+        auto info = static_cast<CallbackInfo*>(cookie);
+        if (info->should_filter_file(devfd)) {
             return ZX_OK;
         }
         if (info->out_partition) {
@@ -84,7 +88,7 @@ zx_status_t OpenSkipBlockPartition(const uint8_t* typeGUID, zx_duration_t timeou
         return ZX_ERR_STOP;
     };
 
-    DIR* dir = opendir(kSkipBlockDevPath);
+    DIR* dir = opendir(path);
     if (dir == nullptr) {
         return ZX_ERR_IO;
     }
@@ -94,8 +98,57 @@ zx_status_t OpenSkipBlockPartition(const uint8_t* typeGUID, zx_duration_t timeou
     if (fdio_watch_directory(dirfd(dir), cb, deadline, &info) != ZX_ERR_STOP) {
         return ZX_ERR_NOT_FOUND;
     }
-
     return ZX_OK;
+}
+
+constexpr char kBlockDevPath[] = "/dev/class/block/";
+
+zx_status_t OpenBlockPartition(const uint8_t* uniqueGUID, const uint8_t* typeGUID,
+                               zx_duration_t timeout, fbl::unique_fd* out_fd) {
+    ZX_ASSERT(uniqueGUID || typeGUID);
+
+    auto cb = [&](const fbl::unique_fd& fd) {
+        if (TestBlockFilter && TestBlockFilter(fd)) {
+            return true;
+        }
+        uint8_t buf[GUID_LEN];
+        if (typeGUID) {
+            if (ioctl_block_get_type_guid(fd.get(), buf, sizeof(buf)) < 0 ||
+                memcmp(buf, typeGUID, GUID_LEN) != 0) {
+                return true;
+            }
+        }
+        if (uniqueGUID) {
+            if (ioctl_block_get_partition_guid(fd.get(), buf, sizeof(buf)) < 0 ||
+                memcmp(buf, uniqueGUID, GUID_LEN) != 0) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    return OpenPartition(kBlockDevPath, cb, timeout, out_fd);
+}
+
+constexpr char kSkipBlockDevPath[] = "/dev/class/skip-block/";
+
+zx_status_t OpenSkipBlockPartition(const uint8_t* typeGUID, zx_duration_t timeout,
+                                   fbl::unique_fd* out_fd) {
+    ZX_ASSERT(typeGUID);
+
+    auto cb = [&](const fbl::unique_fd& fd) {
+        if (TestSkipBlockFilter && TestSkipBlockFilter(fd)) {
+            return true;
+        }
+        skip_block_partition_info_t part_info;
+        if (ioctl_skip_block_get_partition_info(fd.get(), &part_info) < 0 ||
+            memcmp(part_info.partition_guid, typeGUID, GUID_LEN) != 0) {
+            return true;
+        }
+        return false;
+    };
+
+    return OpenPartition(kSkipBlockDevPath, cb, timeout, out_fd);
 }
 
 bool HasSkipBlockDevice() {
@@ -128,7 +181,6 @@ fbl::unique_ptr<DevicePartitioner> DevicePartitioner::Create() {
  *====================================================*/
 
 bool GptDevicePartitioner::FindTargetGptPath(fbl::String* out) {
-    constexpr char kBlockDevPath[] = "/dev/class/block";
     DIR* d = opendir(kBlockDevPath);
     if (d == nullptr) {
         ERROR("Cannot inspect block devices\n");
@@ -337,10 +389,9 @@ zx_status_t GptDevicePartitioner::AddPartition(
     }
     LOG("Added partition, waiting for bind\n");
 
-    out_fd->reset(open_partition(guid, type, ZX_SEC(5), nullptr));
-    if (!*out_fd) {
+    if ((status = OpenBlockPartition(guid, type, ZX_SEC(5), out_fd)) != ZX_OK) {
         ERROR("Added partition, waiting for bind - NOT FOUND\n");
-        return ZX_ERR_IO;
+        return status;
     }
     LOG("Added partition, waiting for bind - OK\n");
     return ZX_OK;
@@ -360,10 +411,10 @@ zx_status_t GptDevicePartitioner::FindPartition(FilterCallback filter, gpt_parti
                 *out = p;
             }
             if (out_fd) {
-                out_fd->reset(open_partition(p->guid, p->type, ZX_SEC(5), nullptr));
-                if (!*out_fd) {
+                zx_status_t status;
+                if ((status = OpenBlockPartition(p->guid, p->type, ZX_SEC(5), out_fd)) != ZX_OK) {
                     ERROR("Couldn't open partition\n");
-                    return ZX_ERR_IO;
+                    return status;
                 }
             }
             return ZX_OK;
@@ -383,10 +434,10 @@ zx_status_t GptDevicePartitioner::FindPartition(FilterCallback filter,
         if (filter(*p)) {
             LOG("Found partition in GPT, partition %zu\n", i);
             if (out_fd) {
-                out_fd->reset(open_partition(p->guid, p->type, ZX_SEC(5), nullptr));
-                if (!*out_fd) {
+                zx_status_t status;
+                if ((status = OpenBlockPartition(p->guid, p->type, ZX_SEC(5), out_fd)) != ZX_OK) {
                     ERROR("Couldn't open partition\n");
-                    return ZX_ERR_IO;
+                    return status;
                 }
             }
             return ZX_OK;
@@ -412,8 +463,9 @@ zx_status_t GptDevicePartitioner::WipePartitions(FilterCallback filter) {
         // doesn't "reappear" in place.
         char buf[8192];
         memset(buf, 0, sizeof(buf));
-        fbl::unique_fd pfd(open_partition(p->guid, p->type, ZX_SEC(2), nullptr));
-        if (!pfd) {
+
+        fbl::unique_fd pfd;
+        if (OpenBlockPartition(p->guid, p->type, ZX_SEC(2), &pfd) != ZX_OK) {
             ERROR("Warning: Could not open partition to overwrite first 8KB\n");
         } else {
             write(pfd.get(), buf, sizeof(buf));
@@ -854,11 +906,7 @@ zx_status_t FixedDevicePartitioner::FindPartition(Partition partition_type,
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    out_fd->reset(open_partition(nullptr, type, ZX_SEC(5), nullptr));
-    if (!out_fd) {
-        return ZX_ERR_NOT_FOUND;
-    }
-    return ZX_OK;
+    return OpenBlockPartition(nullptr, type, ZX_SEC(5), out_fd);
 }
 
 zx_status_t FixedDevicePartitioner::GetBlockSize(const fbl::unique_fd& device_fd,
@@ -916,11 +964,7 @@ zx_status_t SkipBlockDevicePartitioner::FindPartition(Partition partition_type,
         const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
         memcpy(type, fvm_type, GPT_GUID_LEN);
         // FVM partition is managed so it should expose a normal block device.
-        out_fd->reset(open_partition(nullptr, type, ZX_SEC(5), nullptr));
-        if (!out_fd) {
-            return ZX_ERR_NOT_FOUND;
-        }
-        return ZX_OK;
+        return OpenBlockPartition(nullptr, type, ZX_SEC(5), out_fd);
     }
     default:
         ERROR("partition_type is invalid!\n");

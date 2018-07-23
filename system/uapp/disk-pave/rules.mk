@@ -46,3 +46,42 @@ MODULE_PACKAGE := src
 
 include make/module.mk
 
+# Unit tests.
+
+MODULE := $(LOCAL_DIR).test
+
+MODULE_TYPE := usertest
+
+MODULE_NAME := install-disk-image-test
+
+TEST_DIR := $(LOCAL_DIR)/test
+
+MODULE_SRCS := \
+    $(LOCAL_DIR)/device-partitioner.cpp \
+    $(TEST_DIR)/main.cpp\
+    $(TEST_DIR)/device-partitioner-test.cpp\
+
+MODULE_COMPILEFLAGS := \
+    -I$(LOCAL_DIR) \
+    -DTEST \
+
+MODULE_STATIC_LIBS := \
+    system/ulib/chromeos-disk-setup \
+    system/ulib/ddk \
+    system/ulib/fbl \
+    system/ulib/fs-management \
+    system/ulib/fzl \
+    system/ulib/gpt \
+    system/ulib/sync \
+    system/ulib/zx \
+    system/ulib/zxcpp \
+
+MODULE_LIBS := \
+    system/ulib/c \
+    system/ulib/crypto \
+    system/ulib/fdio \
+    system/ulib/unittest \
+    system/ulib/zircon \
+    system/ulib/zxcrypt \
+
+include make/module.mk

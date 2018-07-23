@@ -31,6 +31,11 @@ enum class Partition {
     kData,
 };
 
+// A special filter for test injection.
+// API should return true if device passed in should be filtered out.
+extern bool (*TestBlockFilter)(const fbl::unique_fd&);
+extern bool (*TestSkipBlockFilter)(const fbl::unique_fd&);
+
 // Abstract device partitioner definition.
 // This class defines common APIs for interacting with a device partitioner.
 class DevicePartitioner {
