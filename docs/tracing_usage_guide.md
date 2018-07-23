@@ -6,6 +6,21 @@ Fuchsia tracing library and utilities require access to the `trace_manager`'s
 services in the environment, which is typically set up by the
 [boot sequence](https://fuchsia.googlesource.com/docs/+/master/the-book/boot_sequence.md).
 
+Note that capturing traces requires that the `devtools` package be included.  If your build
+configuration does not include `devtools` by default, then you can add it manually by invoking
+`fx set` like:
+
+```{shell}
+fx set $ARCH --packages='garnet/packages/products/devtools $DEFAULT_PACKAGES'
+```
+
+where `ARCH` is the target architecture, and `DEFAULT_PACKAGES` is the default package list for the
+selected layer.  So if you were targeting `x64` with `topaz` selected, you would run:
+
+```{shell}
+fx set x64 --packages='garnet/packages/products/devtools topaz/packages/default'
+```
+
 ## Capturing Traces From a Development Host
 
 Traces are captured using the `fx traceutil` host utility.  To record a trace
