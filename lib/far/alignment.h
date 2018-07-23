@@ -5,6 +5,8 @@
 #ifndef GARNET_LIB_FAR_ALIGNMENT_H_
 #define GARNET_LIB_FAR_ALIGNMENT_H_
 
+#include <cstdint>
+
 namespace archive {
 
 constexpr inline uint64_t AlignToPage(uint64_t offset) {
