@@ -64,7 +64,7 @@ function main {
   if [[ -z "$(pgrep amber-srv)" ]]; then
     echo
     echo "WARNING: It looks like amber-srv is not running."
-    echo "WARNING: You probably need to start \"fx serve-updates\""
+    echo "WARNING: You probably need to start \"fx serve\""
     echo
   fi
 
