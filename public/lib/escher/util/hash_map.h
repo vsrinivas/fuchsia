@@ -16,6 +16,8 @@ namespace escher {
 // any padding bytes, their value will be undefined, and therefore the resulting
 // hash value will also be undefined.  All types that are hashed by
 // HashMapHasher should be added to hash_unittest.cc
+//
+// TODO(ES-107): Guarantee the padding assertion at compile time.
 template <typename T, class Enable = void>
 struct HashMapHasher {
   inline size_t operator()(const T& hashee) const {
