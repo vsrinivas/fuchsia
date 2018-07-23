@@ -101,6 +101,7 @@ template("fidl_cpp") {
   source_set(main_target_name) {
     forward_variables_from(invoker,
                            [
+                             "deps",
                              "testonly",
                              "visibility",
                            ])
@@ -113,19 +114,12 @@ template("fidl_cpp") {
     # Let dependencies use `#include "$file_stem.h"`.
     public_configs = [ "//build/cpp:fidl_gen_config" ]
 
-    deps = [
-      ":${main_target_name}_tables",
-      ":$generation_target_name(${toolchain_variant.base})",
-      ":$main_target_name($fidl_toolchain)",
-    ]
-
     public_deps = [
       "//garnet/public/lib/fidl/cpp",
+      ":$generation_target_name(${toolchain_variant.base})",
+      ":$main_target_name($fidl_toolchain)",
+      ":${main_target_name}_tables",
     ]
-
-    if (defined(invoker.deps)) {
-      deps += invoker.deps
-    }
 
     if (defined(invoker.public_deps)) {
       public_deps += invoker.public_deps
