@@ -20,6 +20,7 @@ use device::DeviceId;
 use error::ParseError;
 use ip::forwarding::{Destination, ForwardingTable};
 use wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
+use wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 use wire::{ensure_prefix_padding, AddrSerializationCallback, BufferAndRange, SerializationCallback};
 use zerocopy::ByteSlice;
 use StackState;
@@ -319,7 +320,7 @@ fn serialize_packet<A: IpAddr, B: AsMut<[u8]>>(
             B: AsMutU8,
         {
             Ipv4 => { Ipv4PacketBuilder::new(src_ip, dst_ip, ttl, proto).serialize(buffer) }
-            Ipv6 => { log_unimplemented!(buffer, "ip::serialize_packet: Ipv6 not implemented") }
+            Ipv6 => { Ipv6PacketBuilder::new(src_ip, dst_ip, ttl, proto).serialize(buffer) }
         }
     );
     A::Version::serialize(src_ip, dst_ip, ttl, proto, buffer)
@@ -341,7 +342,9 @@ impl<'a> IpExt<'a> for Ipv4 {
     type Packet = Ipv4Packet<&'a mut [u8]>;
 }
 
-// TODO: Implement IpExt for Ipv6
+impl<'a> IpExt<'a> for Ipv6 {
+    type Packet = Ipv6Packet<&'a mut [u8]>;
+}
 
 // `Ipv4Packet` or `Ipv6Packet`
 trait IpPacket<'a, I: Ip>: Sized + Debug {
@@ -371,5 +374,26 @@ impl<'a> IpPacket<'a, Ipv4> for Ipv4Packet<&'a mut [u8]> {
     }
     fn set_ttl(&mut self, ttl: u8) {
         Ipv4Packet::set_ttl(self, ttl)
+    }
+}
+
+impl<'a> IpPacket<'a, Ipv6> for Ipv6Packet<&'a mut [u8]> {
+    fn parse(bytes: &'a mut [u8]) -> Result<(Ipv6Packet<&'a mut [u8]>, Range<usize>), ParseError> {
+        Ipv6Packet::parse(bytes)
+    }
+    fn src_ip(&self) -> Ipv6Addr {
+        Ipv6Packet::src_ip(self)
+    }
+    fn dst_ip(&self) -> Ipv6Addr {
+        Ipv6Packet::dst_ip(self)
+    }
+    fn proto(&self) -> Result<IpProto, u8> {
+        Ipv6Packet::proto(self)
+    }
+    fn ttl(&self) -> u8 {
+        Ipv6Packet::hop_limit(self)
+    }
+    fn set_ttl(&mut self, ttl: u8) {
+        Ipv6Packet::set_hop_limit(self, ttl)
     }
 }
