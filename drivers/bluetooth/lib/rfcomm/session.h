@@ -25,7 +25,7 @@ namespace rfcomm {
 
 class Session {
  public:
-  void Send(DLCI dlci, common::ByteBufferPtr data);
+  void SendUserData(DLCI dlci, common::ByteBufferPtr data);
 
  private:
   friend class ChannelManager;
@@ -138,7 +138,7 @@ class Session {
   bool credit_based_flow_;
 
   // Keeps track of opened channels.
-  std::unordered_map<DLCI, fxl::WeakPtr<l2cap::Channel>> channels_;
+  std::unordered_map<DLCI, fbl::RefPtr<Channel>> channels_;
 
   // Called when the remote peer opens a new incoming channel. The session
   // object constructs a new channel and then passes ownership of the channel

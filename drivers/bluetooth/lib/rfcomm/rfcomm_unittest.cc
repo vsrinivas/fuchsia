@@ -77,6 +77,24 @@ class RFCOMM_ChannelManagerTest : public l2cap::testing::FakeChannelTest {
     handle_to_incoming_frames_.clear();
   }
 
+  // Emplace a new PeerState for a new fake peer. Should be called for each fake
+  // peer which a test is emulating. The returned PeerState should then be
+  // updated throughout the test (e.g. the multiplexer state should change when
+  // the multiplexer starts up).
+  PeerState& AddFakePeerState(hci::ConnectionHandle handle, PeerState state) {
+    FXL_DCHECK(handle_to_peer_state_.find(handle) ==
+               handle_to_peer_state_.end());
+    handle_to_peer_state_.emplace(handle, std::move(state));
+    return handle_to_peer_state_[handle];
+  }
+
+  fbl::RefPtr<l2cap::testing::FakeChannel> GetFakeChannel(
+      hci::ConnectionHandle handle) {
+    FXL_DCHECK(handle_to_fake_channel_.find(handle) !=
+               handle_to_fake_channel_.end());
+    return handle_to_fake_channel_[handle];
+  }
+
   void ExpectFrame(hci::ConnectionHandle handle, FrameType type, DLCI dlci) {
     auto queue_it = handle_to_incoming_frames_.find(handle);
     EXPECT_FALSE(handle_to_incoming_frames_.end() == queue_it);
@@ -95,31 +113,31 @@ class RFCOMM_ChannelManagerTest : public l2cap::testing::FakeChannelTest {
 
   void ReceiveFrame(hci::ConnectionHandle handle,
                     std::unique_ptr<Frame> frame) {
-    auto channel_it = handle_to_fake_channel_.find(handle);
-    EXPECT_FALSE(channel_it == handle_to_fake_channel_.end());
+    auto channel = GetFakeChannel(handle);
 
     auto buffer = common::NewSlabBuffer(frame->written_size());
     frame->Write(buffer->mutable_view());
-    channel_it->second->Receive(buffer->view());
+    channel->Receive(buffer->view());
   }
 
-  // Emplace a new PeerState for a new fake peer. Should be called for each fake
-  // peer which a test is emulating. The returned PeerState should then be
-  // updated throughout the test (e.g. the multiplexer state should change when
-  // the multiplexer starts up).
-  PeerState& AddFakePeerState(hci::ConnectionHandle handle, PeerState state) {
-    FXL_DCHECK(handle_to_peer_state_.find(handle) ==
-               handle_to_peer_state_.end());
-    handle_to_peer_state_.emplace(handle, std::move(state));
-    return handle_to_peer_state_[handle];
-  }
+  // Makes the asynchronous channel-getting process synchronous, for the
+  // purposes of writing clean tests. This function will imitiate (to
+  // |channel_manager_|) an RFCOMM peer, and will send frames to handle
+  // multiplexer startup, optional parameter negotiation, and finally, channel
+  // opening.
+  //
+  // If this is the first channel which will be opened on this handle,
+  // the state of the peer should first be set in |handle_to_peer_state_|.
+  // These state variables will then be used during the session startup
+  // procedure which will ensue.
+  fbl::RefPtr<Channel> OpenOutgoingChannel(hci::ConnectionHandle handle,
+                                           ServerChannel server_channel);
 
-  fbl::RefPtr<l2cap::testing::FakeChannel> GetFakeChannel(
-      hci::ConnectionHandle handle) {
-    FXL_DCHECK(handle_to_fake_channel_.find(handle) !=
-               handle_to_fake_channel_.end());
-    return handle_to_fake_channel_[handle];
-  }
+  // The fake remote peer represented by |handle| attempts to open
+  // |server_channel|. If no session exists, this function will handle session
+  // startup, multiplexer startup, and parameter negotiation.
+  void OpenIncomingChannel(hci::ConnectionHandle handle,
+                           ServerChannel server_channel);
 
   std::unique_ptr<ChannelManager> channel_manager_;
 
@@ -143,6 +161,181 @@ class RFCOMM_ChannelManagerTest : public l2cap::testing::FakeChannelTest {
   std::unordered_map<hci::ConnectionHandle, PeerState> handle_to_peer_state_;
 };
 
+fbl::RefPtr<Channel> RFCOMM_ChannelManagerTest::OpenOutgoingChannel(
+    hci::ConnectionHandle handle, ServerChannel server_channel) {
+  FXL_DCHECK(handle_to_peer_state_.find(handle) != handle_to_peer_state_.end())
+      << "No peer state for handle " << handle;
+  PeerState& state = handle_to_peer_state_[handle];
+
+  fbl::RefPtr<Channel> return_channel = nullptr;
+  channel_manager_->OpenRemoteChannel(
+      handle, server_channel,
+      [&return_channel](auto channel, auto server_channel) {
+        return_channel = channel;
+      },
+      dispatcher());
+  RunLoopUntilIdle();
+
+  // If the fake L2CAP channel doesn't exist yet, we need to trigger its
+  // creation with TriggerOutboundChannel.
+  if (handle_to_fake_channel_.find(handle) == handle_to_fake_channel_.end()) {
+    l2cap_->TriggerOutboundChannel(handle, l2cap::kRFCOMM, kL2CAPChannelId1,
+                                   kL2CAPChannelId2);
+    RunLoopUntilIdle();
+  }
+
+  EXPECT_FALSE(handle_to_incoming_frames_.find(handle) ==
+               handle_to_incoming_frames_.end());
+  auto& queue = handle_to_incoming_frames_[handle];
+
+  EXPECT_FALSE(queue.empty());
+  auto frame =
+      Frame::Parse(state.credit_based_flow, state.role, queue.front()->view());
+
+  queue.pop();
+  FXL_DCHECK(frame);
+
+  // If we received a mux startup request, respond to it.
+  if (static_cast<FrameType>(frame->control()) ==
+          FrameType::kSetAsynchronousBalancedMode &&
+      frame->dlci() == kMuxControlDLCI) {
+    ReceiveFrame(handle, std::make_unique<UnnumberedAcknowledgementResponse>(
+                             state.role, kMuxControlDLCI));
+
+    state.role = Role::kResponder;
+
+    RunLoopUntilIdle();
+
+    // Expect that another frame has arrived.
+    EXPECT_FALSE(queue.empty());
+    frame = Frame::Parse(state.credit_based_flow, state.role,
+                         queue.front()->view());
+    queue.pop();
+  }
+
+  // If we received a parameter negotiation request, respond to it.
+  if (static_cast<FrameType>(frame->control()) ==
+          FrameType::kUnnumberedInfoHeaderCheck &&
+      frame->dlci() == kMuxControlDLCI) {
+    auto pn_command_mux_command =
+        static_cast<MuxCommandFrame*>(frame.get())->TakeMuxCommand();
+    EXPECT_EQ(MuxCommandType::kDLCParameterNegotiation,
+              pn_command_mux_command->command_type());
+    EXPECT_EQ(CommandResponse::kCommand,
+              pn_command_mux_command->command_response());
+
+    auto pn_command = std::unique_ptr<DLCParameterNegotiationCommand>(
+        static_cast<DLCParameterNegotiationCommand*>(
+            pn_command_mux_command.release()));
+
+    // For now, just send back the same parameters (making sure to send the
+    // correct credit-based flow response based on our credit-based flow
+    // setting).
+    ParameterNegotiationParams params = pn_command->params();
+    params.credit_based_flow_handshake =
+        state.credit_based_flow ? CreditBasedFlowHandshake::kSupportedResponse
+                                : CreditBasedFlowHandshake::kUnsupported;
+    ReceiveFrame(handle, std::make_unique<MuxCommandFrame>(
+                             state.role, state.credit_based_flow,
+                             std::make_unique<DLCParameterNegotiationCommand>(
+                                 CommandResponse::kResponse, params)));
+
+    RunLoopUntilIdle();
+
+    // Expect that another frame has arrived.
+    EXPECT_FALSE(queue.empty());
+    frame = Frame::Parse(state.credit_based_flow, state.role,
+                         queue.front()->view());
+    queue.pop();
+  }
+
+  EXPECT_EQ(FrameType::kSetAsynchronousBalancedMode,
+            FrameType(frame->control()));
+  DLCI dlci = ServerChannelToDLCI(server_channel, state.role);
+  EXPECT_EQ(dlci, frame->dlci());
+
+  ReceiveFrame(handle, std::make_unique<UnnumberedAcknowledgementResponse>(
+                           state.role, dlci));
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(return_channel);
+
+  return return_channel;
+}
+
+void RFCOMM_ChannelManagerTest::OpenIncomingChannel(
+    hci::ConnectionHandle handle, ServerChannel server_channel) {
+  FXL_DCHECK(handle_to_peer_state_.find(handle) != handle_to_peer_state_.end())
+      << "Please set peer state for handle " << handle
+      << " before attempting to open a channel on this handle";
+
+  PeerState& state = handle_to_peer_state_[handle];
+
+  if (handle_to_fake_channel_.find(handle) == handle_to_fake_channel_.end()) {
+    l2cap_->TriggerInboundChannel(handle, l2cap::kRFCOMM, kL2CAPChannelId1,
+                                  kL2CAPChannelId2);
+    RunLoopUntilIdle();
+
+    // If channel didn't exist, then we need to do mux startup and parameter
+    // negotiation.
+    auto l2cap_channel = GetFakeChannel(handle);
+
+    ReceiveFrame(handle, std::make_unique<SetAsynchronousBalancedModeCommand>(
+                             Role::kUnassigned, kMuxControlDLCI));
+    RunLoopUntilIdle();
+    ExpectFrame(handle, FrameType::kUnnumberedAcknowledgement, kMuxControlDLCI);
+    state.role = Role::kInitiator;
+
+    DLCI dlci = ServerChannelToDLCI(server_channel, OppositeRole(state.role));
+
+    // Send parameter negotiation
+    ParameterNegotiationParams params;
+    params.dlci = dlci;
+    params.credit_based_flow_handshake =
+        CreditBasedFlowHandshake::kSupportedRequest;
+    params.priority = 61;
+    params.maximum_frame_size =
+        l2cap_channel->rx_mtu() < l2cap_channel->tx_mtu()
+            ? l2cap_channel->rx_mtu()
+            : l2cap_channel->tx_mtu();
+    params.initial_credits = kMaxInitialCredits;
+    ReceiveFrame(handle, std::make_unique<MuxCommandFrame>(
+                             state.role, state.credit_based_flow,
+                             std::make_unique<DLCParameterNegotiationCommand>(
+                                 CommandResponse::kCommand, params)));
+    RunLoopUntilIdle();
+
+    // Expect parameter negotiation response
+    EXPECT_TRUE(handle_to_incoming_frames_[handle].size());
+    auto frame =
+        Frame::Parse(state.credit_based_flow, state.role,
+                     handle_to_incoming_frames_[handle].front()->view());
+    handle_to_incoming_frames_[handle].pop();
+    EXPECT_EQ(FrameType::kUnnumberedInfoHeaderCheck,
+              static_cast<FrameType>(frame->control()));
+    EXPECT_EQ(kMuxControlDLCI, frame->dlci());
+    auto mux_command =
+        static_cast<MuxCommandFrame*>(frame.get())->TakeMuxCommand();
+    EXPECT_EQ(MuxCommandType::kDLCParameterNegotiation,
+              mux_command->command_type());
+    EXPECT_EQ(CommandResponse::kResponse, mux_command->command_response());
+  }
+
+  // Otherwise, a session must already exist with this remote peer. We can
+  // furthermore assume that a channel must be open, and thus that the
+  // multiplexer has also been started, and parameter negotiation is complete.
+
+  DLCI dlci = ServerChannelToDLCI(server_channel, OppositeRole(state.role));
+
+  // Send SABM.
+  ReceiveFrame(handle, std::make_unique<SetAsynchronousBalancedModeCommand>(
+                           state.role, dlci));
+  RunLoopUntilIdle();
+
+  // Expect UA response.
+  ExpectFrame(handle, FrameType::kUnnumberedAcknowledgement, dlci);
+}
 // Expect that registration of an L2CAP channel with the Channel Manager results
 // in the L2CAP channel's eventual activation.
 TEST_F(RFCOMM_ChannelManagerTest, RegisterL2CAPChannel) {
@@ -218,6 +411,7 @@ TEST_F(RFCOMM_ChannelManagerTest, MuxStartupAndParamNegotiation_Initiator) {
   RunLoopUntilIdle();
 
   state.role = Role::kResponder;
+  DLCI dlci = ServerChannelToDLCI(kMinServerChannel, state.role);
 
   {
     // Expect a PN command from the session
@@ -229,8 +423,6 @@ TEST_F(RFCOMM_ChannelManagerTest, MuxStartupAndParamNegotiation_Initiator) {
     queue_it->second.pop();
     EXPECT_EQ(FrameType::kUnnumberedInfoHeaderCheck,
               static_cast<FrameType>(frame->control()));
-    DLCI dlci =
-        ServerChannelToDLCI(kMinServerChannel, OppositeRole(state.role));
     auto mux_command =
         static_cast<MuxCommandFrame*>(frame.get())->TakeMuxCommand();
     EXPECT_EQ(MuxCommandType::kDLCParameterNegotiation,
@@ -251,8 +443,13 @@ TEST_F(RFCOMM_ChannelManagerTest, MuxStartupAndParamNegotiation_Initiator) {
     RunLoopUntilIdle();
   }
 
+  ExpectFrame(kHandle1, FrameType::kSetAsynchronousBalancedMode, dlci);
+  ReceiveFrame(kHandle1, std::make_unique<UnnumberedAcknowledgementResponse>(
+                             state.role, dlci));
+  RunLoopUntilIdle();
+
   EXPECT_TRUE(channel_received);
-  EXPECT_FALSE(channel);
+  EXPECT_TRUE(channel);
 }
 
 // Test multiplexer startup conflict procedure (resulting role: initiator).
@@ -295,6 +492,7 @@ TEST_F(RFCOMM_ChannelManagerTest,
   RunLoopUntilIdle();
 
   state.role = Role::kResponder;
+  DLCI dlci = ServerChannelToDLCI(kMinServerChannel, state.role);
 
   {
     // Expect a PN command from the session
@@ -306,8 +504,6 @@ TEST_F(RFCOMM_ChannelManagerTest,
     queue_it->second.pop();
     EXPECT_EQ(FrameType::kUnnumberedInfoHeaderCheck,
               static_cast<FrameType>(frame->control()));
-    DLCI dlci =
-        ServerChannelToDLCI(kMinServerChannel, OppositeRole(state.role));
     auto mux_command =
         static_cast<MuxCommandFrame*>(frame.get())->TakeMuxCommand();
     EXPECT_EQ(MuxCommandType::kDLCParameterNegotiation,
@@ -328,8 +524,13 @@ TEST_F(RFCOMM_ChannelManagerTest,
     RunLoopUntilIdle();
   }
 
+  ExpectFrame(kHandle1, FrameType::kSetAsynchronousBalancedMode, dlci);
+  ReceiveFrame(kHandle1, std::make_unique<UnnumberedAcknowledgementResponse>(
+                             state.role, dlci));
+  RunLoopUntilIdle();
+
   EXPECT_TRUE(channel_received);
-  EXPECT_FALSE(channel);
+  EXPECT_TRUE(channel);
 }
 
 // Test multiplexer startup conflict procedure (resulting role: responder).
@@ -382,8 +583,7 @@ TEST_F(RFCOMM_ChannelManagerTest,
     queue.pop();
     EXPECT_EQ(FrameType::kUnnumberedInfoHeaderCheck,
               static_cast<FrameType>(frame->control()));
-    DLCI dlci =
-        ServerChannelToDLCI(kMinServerChannel, OppositeRole(state.role));
+    DLCI dlci = ServerChannelToDLCI(kMinServerChannel, state.role);
     auto mux_command =
         static_cast<MuxCommandFrame*>(frame.get())->TakeMuxCommand();
     EXPECT_EQ(MuxCommandType::kDLCParameterNegotiation,
@@ -434,7 +634,7 @@ TEST_F(RFCOMM_ChannelManagerTest,
   RunLoopUntilIdle();
 
   state.role = Role::kResponder;
-  DLCI dlci = ServerChannelToDLCI(kMinServerChannel, OppositeRole(state.role));
+  DLCI dlci = ServerChannelToDLCI(kMinServerChannel, state.role);
 
   {
     // Expect a PN command from the session
@@ -447,8 +647,7 @@ TEST_F(RFCOMM_ChannelManagerTest,
     queue.pop();
     EXPECT_EQ(FrameType::kUnnumberedInfoHeaderCheck,
               static_cast<FrameType>(frame->control()));
-    DLCI dlci =
-        ServerChannelToDLCI(kMinServerChannel, OppositeRole(state.role));
+    DLCI dlci = ServerChannelToDLCI(kMinServerChannel, state.role);
     auto mux_command =
         static_cast<MuxCommandFrame*>(frame.get())->TakeMuxCommand();
     EXPECT_EQ(MuxCommandType::kDLCParameterNegotiation,
@@ -498,6 +697,90 @@ TEST_F(RFCOMM_ChannelManagerTest,
   ReceiveFrame(kHandle1, std::make_unique<DisconnectedModeResponse>(
                              Role::kUnassigned, kMuxControlDLCI));
   RunLoopUntilIdle();
+}
+
+TEST_F(RFCOMM_ChannelManagerTest, OpenOutgoingChannel) {
+  handle_to_peer_state_.emplace(kHandle1, PeerState{true, Role::kUnassigned});
+  PeerState& state = handle_to_peer_state_[kHandle1];
+
+  auto channel = OpenOutgoingChannel(kHandle1, kMinServerChannel);
+  EXPECT_TRUE(channel);
+
+  DLCI dlci = ServerChannelToDLCI(kMinServerChannel, state.role);
+
+  common::ByteBufferPtr received_data;
+  channel->Activate(
+      [&received_data](auto data) { received_data = std::move(data); }, []() {},
+      dispatcher());
+
+  auto pattern = common::CreateStaticByteBuffer(1, 2, 3, 4);
+  auto buffer = std::make_unique<common::DynamicByteBuffer>(pattern);
+  channel->Send(std::move(buffer));
+  RunLoopUntilIdle();
+
+  auto frame =
+      Frame::Parse(state.credit_based_flow, OppositeRole(state.role),
+                   handle_to_incoming_frames_[kHandle1].front()->view());
+  EXPECT_TRUE(frame);
+  EXPECT_EQ(FrameType::kUnnumberedInfoHeaderCheck,
+            static_cast<FrameType>(frame->control()));
+  EXPECT_EQ(dlci, frame->dlci());
+  EXPECT_EQ(pattern,
+            *static_cast<UserDataFrame*>(frame.get())->TakeInformation());
+
+  buffer = std::make_unique<common::DynamicByteBuffer>(pattern);
+  ReceiveFrame(kHandle1, std::make_unique<UserDataFrame>(
+                             state.role, state.credit_based_flow, dlci,
+                             std::move(buffer)));
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(received_data);
+  EXPECT_EQ(pattern, *received_data);
+}
+
+TEST_F(RFCOMM_ChannelManagerTest, OpenIncomingChannel) {
+  auto& state = AddFakePeerState(
+      kHandle1, PeerState{true /* credit-based flow */, Role::kUnassigned});
+
+  fbl::RefPtr<Channel> channel;
+  auto server_channel = channel_manager_->AllocateLocalChannel(
+      [&channel](auto received_channel, auto) { channel = received_channel; },
+      dispatcher());
+
+  OpenIncomingChannel(kHandle1, server_channel);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(channel);
+
+  DLCI dlci = ServerChannelToDLCI(server_channel, OppositeRole(state.role));
+
+  common::ByteBufferPtr received_data;
+  channel->Activate(
+      [&received_data](auto data) { received_data = std::move(data); }, []() {},
+      dispatcher());
+
+  auto pattern = common::CreateStaticByteBuffer(1, 2, 3, 4);
+  auto buffer = std::make_unique<common::DynamicByteBuffer>(pattern);
+  channel->Send(std::move(buffer));
+  RunLoopUntilIdle();
+
+  auto frame =
+      Frame::Parse(state.credit_based_flow, OppositeRole(state.role),
+                   handle_to_incoming_frames_[kHandle1].front()->view());
+  EXPECT_TRUE(frame);
+  EXPECT_EQ(FrameType::kUnnumberedInfoHeaderCheck,
+            static_cast<FrameType>(frame->control()));
+  EXPECT_EQ(dlci, frame->dlci());
+  EXPECT_EQ(pattern,
+            *static_cast<UserDataFrame*>(frame.get())->TakeInformation());
+
+  buffer = std::make_unique<common::DynamicByteBuffer>(pattern);
+  ReceiveFrame(kHandle1, std::make_unique<UserDataFrame>(
+                             state.role, state.credit_based_flow, dlci,
+                             std::move(buffer)));
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(received_data);
+  EXPECT_EQ(pattern, *received_data);
 }
 
 }  // namespace

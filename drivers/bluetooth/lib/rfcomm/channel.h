@@ -30,10 +30,13 @@ class Channel : public fbl::RefCounted<Channel> {
 
   // Send a buffer of user data. Takes ownership of |data|. This method is
   // asynchronous, and there is no notification of delivery. We operate under
-  // the assumption that the underlying transport is reliable.
+  // the assumption that the underlying transport is reliable. The channel must
+  // be activated prior to sending.
   virtual void Send(common::ByteBufferPtr data) = 0;
 
  protected:
+  friend class rfcomm::Session;
+
   Channel(DLCI dlci, Session* session);
 
   RxCallback rx_callback_;
@@ -63,16 +66,13 @@ class ChannelImpl : public Channel {
   void Send(common::ByteBufferPtr data) override;
 
  private:
-  friend class Session;
+  friend class rfcomm::Session;
 
   // This should only be called from Session.
-  ChannelImpl();
+  ChannelImpl(DLCI dlci, Session* session);
 
   // This should only be called from Session.
   void Receive(std::unique_ptr<common::ByteBuffer> data) override;
-
-  // Post a call to |rx_callback_| on |dispatcher_|, passing in |data|.
-  void CallRxCallback(std::unique_ptr<common::ByteBuffer> data);
 
   std::queue<std::unique_ptr<common::ByteBuffer>> pending_rxed_frames_;
 };

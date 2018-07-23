@@ -4,9 +4,9 @@
 
 #include <lib/async/default.h>
 
-#include "garnet/drivers/bluetooth/lib/rfcomm/session.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/rfcomm.h"
+#include "garnet/drivers/bluetooth/lib/rfcomm/session.h"
 
 namespace btlib {
 namespace rfcomm {
@@ -66,7 +66,24 @@ DLCI GetDLCIFromMuxCommand(MuxCommand* mux_command) {
   }
 }
 
+// Returns true if this user DLCI "belongs to" the side of the session with the
+// given |role|. See RFCOMM 5.2: "...this partitions the DLCI value space such
+// that server applications on the non-initiating device are reachable on DLCIs
+// 2,4,6,...,60, and server applications on the initiating device are reachable
+// on 3,5,7,...,61."
+constexpr bool IsValidLocalChannel(Role role, DLCI dlci) {
+  FXL_DCHECK(IsMultiplexerStarted(role));
+  FXL_DCHECK(IsUserDLCI(dlci));
+  return (role == Role::kInitiator ? 1 : 0) == dlci % 2;
+}
+
 }  // namespace
+
+void Session::SendUserData(DLCI dlci, common::ByteBufferPtr data) {
+  bool sent = SendFrame(std::make_unique<UserDataFrame>(
+      role_, credit_based_flow_, dlci, std::move(data)));
+  FXL_DCHECK(sent);
+}
 
 std::unique_ptr<Session> Session::Create(
     fbl::RefPtr<l2cap::Channel> l2cap_channel,
@@ -115,7 +132,10 @@ void Session::OpenRemoteChannel(ServerChannel server_channel,
     return;
   }
 
-  DLCI dlci = ServerChannelToDLCI(server_channel, role_);
+  // RFCOMM 5.4: An RFCOMM entity making a new DLC on an existing session forms
+  // the DLCI by combining the Server Channel for the application on the other
+  // device, and the inverse of its own direction bit for the session."
+  DLCI dlci = ServerChannelToDLCI(server_channel, OppositeRole(role_));
 
   if (initial_param_negotiation_state_ !=
       ParameterNegotiationState::kNegotiated) {
@@ -132,15 +152,40 @@ void Session::OpenRemoteChannel(ServerChannel server_channel,
     return;
   }
 
-  // TODO(NET-1013): implement channel open
+  SendCommand(
+      FrameType::kSetAsynchronousBalancedMode, dlci,
+      [this, dlci, server_channel, cb = std::move(channel_opened_cb)](
+          std::unique_ptr<Frame> response) mutable {
+        FXL_DCHECK(response);
+        FrameType type = FrameType(response->control());
+        fbl::RefPtr<Channel> new_channel;
+        switch (type) {
+          case FrameType::kUnnumberedAcknowledgement: {
+            FXL_LOG(INFO) << "rfcomm: Channel " << static_cast<unsigned>(dlci)
+                          << " started successfully";
+            new_channel = fbl::AdoptRef(new internal::ChannelImpl(dlci, this));
+            FXL_DCHECK(channels_.find(dlci) == channels_.end());
+            channels_.emplace(dlci, new_channel);
+            break;
+          }
+          case FrameType::kDisconnectedMode:
+            FXL_LOG(WARNING)
+                << "rfcomm: Channel " << static_cast<unsigned>(dlci)
+                << " failed to start";
+            break;
+          default:
+            FXL_LOG(WARNING) << "rfcomm: Unexpected response to SABM: "
+                             << static_cast<unsigned>(type);
+            break;
+        }
 
-  // Return a nullptr channel if we fail to open
-  FXL_LOG(WARNING) << "Not implemented";
-  async::PostTask(dispatcher_, [cb = std::move(channel_opened_cb)] {
-    cb(nullptr, kInvalidServerChannel);
-  });
+        // Send the result.
+        async::PostTask(dispatcher_,
+                        [server_channel, new_channel, cb_ = std::move(cb)] {
+                          cb_(new_channel, server_channel);
+                        });
+      });
 }
-
 void Session::RxCallback(const l2cap::SDU& sdu) {
   l2cap::PDU::Reader reader(&sdu);
   reader.ReadNext(sdu.length(), [&](const common::ByteBuffer& buffer) {
@@ -182,8 +227,19 @@ void Session::RxCallback(const l2cap::SDU& sdu) {
           HandleMuxCommand(
               static_cast<MuxCommandFrame*>(frame.get())->TakeMuxCommand());
           return;
+        } else if (IsUserDLCI(dlci)) {
+          auto channel_it = channels_.find(dlci);
+          if (channel_it == channels_.end()) {
+            FXL_LOG(WARNING) << "rfcomm: User data received for unopened DLCI "
+                             << static_cast<unsigned>(dlci);
+            return;
+          }
+          channel_it->second->Receive(
+              static_cast<UserDataFrame*>(frame.get())->TakeInformation());
+          return;
         } else {
-          FXL_NOTIMPLEMENTED();
+          FXL_LOG(WARNING) << "rfcomm: UIH frame on invalid DLCI "
+                           << static_cast<unsigned>(dlci);
         }
       }
 
@@ -421,17 +477,53 @@ void Session::HandleSABM(DLCI dlci) {
       case Role::kInitiator:
       case Role::kResponder:
         // TODO(gusss): should we send a DM in this case?
-        FXL_LOG(WARNING) << "rfcomm: Request to start alreadys started"
+        FXL_LOG(WARNING) << "rfcomm: Request to start already started"
                          << " multiplexer";
         return;
       default:
         FXL_NOTREACHED();
         return;
     }
-  } else {
-    // TODO(NET-1014): open channel when requested by remote peer
-    FXL_NOTIMPLEMENTED();
   }
+
+  // If it isn't a multiplexer startup request, it must be a request for a user
+  // channel.
+
+  // TODO(NET-1301): unit test this case.
+  if (!IsUserDLCI(dlci) || !IsValidLocalChannel(role_, dlci)) {
+    FXL_LOG(WARNING) << "rfcomm: Remote requested invalid DLCI "
+                     << static_cast<unsigned>(dlci);
+    SendResponse(FrameType::kDisconnectedMode, dlci);
+    return;
+  }
+
+  // TODO(NET-1301): unit test this case.
+  if (channels_.find(dlci) != channels_.end()) {
+    // If the channel is already open, the remote is confused about the state of
+    // the Session. Send a DM and a DISC for that channel.
+    // TODO(NET-1274): do we want to just shut down the whole session here?
+    // Things would be in a nasty state at this point.
+    FXL_LOG(WARNING) << "rfcomm: Remote requested already open channel";
+    SendResponse(FrameType::kDisconnectedMode, dlci);
+    SendCommand(FrameType::kDisconnect, dlci, [](auto response) {
+      // TODO(NET-1273): implement clean channel close + state reset
+    });
+
+    return;
+  }
+
+  // Start the channel by first responding positively.
+  SendResponse(FrameType::kUnnumberedAcknowledgement, dlci);
+
+  // Now form the channel and pass it off.
+  auto channel = fbl::AdoptRef(new internal::ChannelImpl(dlci, this));
+  channels_.emplace(dlci, channel);
+  async::PostTask(dispatcher_, [this, dlci, channel] {
+    channel_opened_cb_(channel, DLCIToServerChannel(dlci));
+  });
+
+  FXL_LOG(INFO) << "rfcomm: Remote peer opened channel with DLCI "
+                << static_cast<unsigned>(dlci);
 }
 
 void Session::HandleMuxCommand(std::unique_ptr<MuxCommand> mux_command) {

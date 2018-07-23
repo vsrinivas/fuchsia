@@ -15,11 +15,8 @@ Channel::Channel(DLCI dlci, Session* session)
 
 namespace internal {
 
-void ChannelImpl::CallRxCallback(common::ByteBufferPtr data) {
-  async::PostTask(dispatcher_, [this, data_ = std::move(data)]() mutable {
-    rx_callback_(std::move(data_));
-  });
-}
+ChannelImpl::ChannelImpl(DLCI dlci, Session* session)
+    : Channel(dlci, session) {}
 
 void ChannelImpl::Activate(RxCallback rx_callback,
                            ClosedCallback closed_callback,
@@ -30,19 +27,24 @@ void ChannelImpl::Activate(RxCallback rx_callback,
 
   while (!pending_rxed_frames_.empty()) {
     auto& data = pending_rxed_frames_.front();
-    CallRxCallback(std::move(data));
+    async::PostTask(dispatcher_, [this, data_ = std::move(data)]() mutable {
+      rx_callback_(std::move(data_));
+    });
     pending_rxed_frames_.pop();
   }
 }
 
 void ChannelImpl::Send(common::ByteBufferPtr data) {
   FXL_DCHECK(session_);
-  session_->Send(dlci_, std::move(data));
+  FXL_DCHECK(rx_callback_) << "Must call Activate() first";
+  session_->SendUserData(dlci_, std::move(data));
 }
 
 void ChannelImpl::Receive(std::unique_ptr<common::ByteBuffer> data) {
   if (rx_callback_) {
-    CallRxCallback(std::move(data));
+    async::PostTask(dispatcher_, [this, data_ = std::move(data)]() mutable {
+      rx_callback_(std::move(data_));
+    });
   } else {
     pending_rxed_frames_.push(std::move(data));
   }
