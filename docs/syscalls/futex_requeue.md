@@ -26,6 +26,10 @@ futex.
 
 This requeueing behavior may be used to avoid thundering herds on wake.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **futex_requeue**() returns **ZX_OK** on success.

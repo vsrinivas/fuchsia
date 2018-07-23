@@ -57,6 +57,10 @@ that the hardware bus transaction initiator will be allowed to use.
 - *ZX_BTI_COMPRESS* causes the returned address list to contain one entry per
   block of *minimum-contiguity* bytes, rather than one per *PAGE_SIZE*.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 On success, **bti_pin**() returns *ZX_OK*.  The device-physical addresses of the

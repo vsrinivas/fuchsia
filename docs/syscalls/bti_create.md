@@ -25,6 +25,10 @@ Upon success a handle for the new BTI is returned.  This handle will have rights
 **ZX_RIGHT_READ**, **ZX_RIGHT_WRITE**, **ZX_RIGHT_MAP**, **ZX_RIGHT_INSPECT**,
 **ZX_RIGHT_DUPLICATE**, and **ZX_RIGHT_TRANSFER**.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **bti_create**() returns **ZX_OK** and a handle to the new BTI

@@ -87,6 +87,10 @@ Optionally it can be augmented via OR with
 + **ZX_POL_ACTION_KILL** terminate the process. It also
 implies **ZX_POL_ACTION_DENY**.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **zx_job_set_policy**() returns **ZX_OK** on success.  In the event of failure,

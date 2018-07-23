@@ -38,6 +38,10 @@ Creates a new VMAR within the one specified by *parent_vmar*.
 
 *offset* must be 0 if *map_flags* does not have **ZX_VM_FLAG_SPECIFIC** set.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **vmar_allocate**() returns **ZX_OK**, the absolute base address of the

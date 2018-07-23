@@ -23,6 +23,10 @@ as if **zx_interrupt_ack**() were called on it.
 
 The wait may be aborted with **zx_interrupt_destroy**() or by closing the handle.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **interrupt_wait**() returns **ZX_OK** on success, and *out_timestamp*, if

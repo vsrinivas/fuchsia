@@ -31,6 +31,10 @@ socket control plane.
 The **ZX_SOCKET_HAS_ACCEPT** flag may be set to enable transfer
 of sockets over this socket via **socket_share**() and **socket_accept**().
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **socket_create**() returns **ZX_OK** on success. In the event of

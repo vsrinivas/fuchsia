@@ -18,6 +18,10 @@ zx_time_t zx_deadline_after(zx_duration_t nanoseconds)
 to absolute deadlines. If *nanoseconds* plus the current time is bigger than the
 maximum value for ``zx_time_t``, the output is clamped to **ZX_TIME_INFINITE**.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **zx_deadline_after**() returns the absolute time (with respect to **CLOCK_MONOTONIC**)

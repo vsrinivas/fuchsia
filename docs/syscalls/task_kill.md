@@ -23,6 +23,10 @@ signal. When the procedure completes, as observed by the signal, the task and
 all its children are considered to be in the dead state and most operations
 will no longer succeed.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 On success, **zx_task_kill**() returns **ZX_OK**. If a process or thread uses

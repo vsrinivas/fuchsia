@@ -20,6 +20,10 @@ This will release the PMTs' underlying references to VMOs and physical page
 pins.  The underlying physical pages may be eligible to be reallocated
 afterwards.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **bti_release_quarantine**() returns **ZX_OK** on success.

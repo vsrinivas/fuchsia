@@ -35,6 +35,10 @@ When the object referenced by *scope* is destroyed or if a handle to that object
 is no longer available, the cookie may no longer be modified or obtained.
 
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **zx_object_get_cookie**() returns **ZX_OK** and the *cookie* value on success.

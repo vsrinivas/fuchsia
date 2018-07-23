@@ -31,6 +31,10 @@ unblocked.
 Invoking **task_kill**() on a task that is suspended will successfully kill
 the task.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **task_suspend**() returns **ZX_OK** on success.

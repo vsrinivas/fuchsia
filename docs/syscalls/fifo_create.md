@@ -32,6 +32,10 @@ The *elem_count* must be a power of two.  The total size of each fifo
 
 The *options* argument must be 0.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **fifo_create**() returns **ZX_OK** on success. In the event of

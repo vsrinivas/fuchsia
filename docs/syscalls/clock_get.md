@@ -29,6 +29,10 @@ invalid.
 
 *ZX_CLOCK_THREAD* number of nanoseconds the current thread has been running for.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 On success, **zx_clock_get**() returns the current time according to the given clock ID.

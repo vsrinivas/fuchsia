@@ -45,6 +45,10 @@ typedef union zx_packet_user {
 
 ```
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **port_queue**() returns **ZX_OK** on successful queue of a packet.

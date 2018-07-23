@@ -21,6 +21,10 @@ manipulated using **object_signal**().
 The newly-created handle will have the *ZX_RIGHT_TRANSFER*, *ZX_RIGHT_DUPLICATE*,
 *ZX_RIGHT_READ*, *ZX_RIGHT_WRITE*, and *ZX_RIGHT_SIGNAL* rights.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **event_create**() returns ZX_OK and a valid event handle (via *out*) on success.

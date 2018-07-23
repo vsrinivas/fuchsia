@@ -34,6 +34,10 @@ truncated, and any remaining bytes in the datagram will be discarded.
 If *options* is set to **ZX_SOCKET_CONTROL**, then **socket_read**()
 attempts to read from the socket control plane.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **socket_read**() returns **ZX_OK** on success, and writes into

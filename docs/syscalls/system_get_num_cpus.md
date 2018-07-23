@@ -18,6 +18,10 @@ uint32_t zx_system_get_num_cpus(void);
 that exist on the system currently running.  This number cannot change
 during a run of the system, only at boot time.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **system_get_num_cpus**() returns the number of CPUs.

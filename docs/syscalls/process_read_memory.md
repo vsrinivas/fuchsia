@@ -32,6 +32,10 @@ enough for at least this many bytes.
 Less bytes than requested may be returned if *vaddr*+*length*
 extends beyond the memory mapped in the process.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **zx_process_read_memory**() returns **ZX_OK** on success.

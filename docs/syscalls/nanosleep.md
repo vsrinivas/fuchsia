@@ -28,6 +28,10 @@ To sleep for a duration, use [**zx_deadline_after**](deadline_after.md) and the
 zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 ```
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **nanosleep**() always returns **ZX_OK**.

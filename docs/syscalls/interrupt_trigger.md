@@ -20,6 +20,10 @@ to a port, or **interrupt_wait**() to return if it is waiting on this interrupt.
 
 *options* must be zero.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **interrupt_signal**() returns **ZX_OK** on success. In the event

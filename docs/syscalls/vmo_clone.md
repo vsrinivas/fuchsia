@@ -74,6 +74,10 @@ ways:
 - If the **vmo_op_range**() LOOKUP mode is used, the parent's pages will be visible
   where the clone has not modified them.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **vmo_clone**() returns **ZX_OK** on success. In the event

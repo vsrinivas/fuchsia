@@ -25,6 +25,10 @@ to another process via channel write), ZX_RIGHT_WRITE (allowing
 packets to be queued), ZX_RIGHT_READ (allowing packets to be read) and
 ZX_RIGHT_DUPLICATE (allowing them to be duplicated).
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **port_create**() returns ZX_OK and a valid IO port handle via *out* on

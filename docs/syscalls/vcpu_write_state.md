@@ -22,6 +22,10 @@ paused.
 
 *kind* may be *ZX_VCPU_STATE* or *ZX_VCPU_IO*.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **vcpu_write_state**() returns ZX_OK on success. On failure, an error value is

@@ -33,6 +33,10 @@ be a bitwise-or of one or more of the following:
 
 If *len* is not page-aligned, it will be rounded up the next page boundary.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **vmar_protect**() returns **ZX_OK** on success.

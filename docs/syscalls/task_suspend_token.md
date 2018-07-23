@@ -37,6 +37,10 @@ resuming is asynchronous so the thread may not be in a running state when the
 [handle_close](handle_close.md) call returns, even if no other suspend tokens
 are open.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **task_suspend**() returns **ZX_OK** on success.

@@ -21,6 +21,10 @@ To duplicate the handle with the same rights use **ZX_RIGHT_SAME_RIGHTS**. If di
 rights are desired they must be strictly lesser than of the source handle. It is possible
 to specify no rights by using 0.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **handle_duplicate**() returns ZX_OK and the duplicate handle via *out* on success.

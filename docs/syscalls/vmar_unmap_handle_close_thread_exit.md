@@ -30,6 +30,10 @@ If the *vmar_unmap* operation is successful, then this call never returns.
 If `close_handle` is an invalid handle so that the *handle_close* operation
 fails, then the thread takes a trap (as if by `__builtin_trap();`).
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **vmar_unmap_handle_close_thread_exit**() does not return on success.

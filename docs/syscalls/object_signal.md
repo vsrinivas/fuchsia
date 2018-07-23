@@ -35,6 +35,10 @@ are 8 signal bits available for userspace processes to use as they see fit:
 The *clear_mask* is first used to clear any bits indicated, and then the
 *set_mask* is used to set any bits indicated.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **zx_object_signal**() and **zx_object_signal_peer**() return **ZX_OK** on success.

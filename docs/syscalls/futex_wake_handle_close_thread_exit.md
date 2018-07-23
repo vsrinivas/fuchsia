@@ -29,6 +29,10 @@ invalid for plain *zx_futex_wake*() or any other call.
 
 If any of the operations fail, then the thread takes a trap (as if by `__builtin_trap();`).
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **futex_wake_handle_close_thread_exit**() does not return.

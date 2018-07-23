@@ -22,6 +22,10 @@ the pause. After handling the reason, execution may be resumed by calling
 
 N.B. Execution of a *vcpu* must be resumed on the same thread it was created on.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **vcpu_resume**() returns ZX_OK on success. On failure, an error value is

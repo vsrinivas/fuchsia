@@ -20,6 +20,10 @@ zx_status_t zx_futex_wait(const zx_futex_t* value_ptr, int32_t current_value,
 `zx_futex_wake`. Optionally, the thread can also be woken up after the
 *deadline* (with respect to **ZX_CLOCK_MONOTONIC**) passes.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **futex_wait**() returns **ZX_OK** on success.

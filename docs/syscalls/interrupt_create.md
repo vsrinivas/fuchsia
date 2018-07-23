@@ -43,6 +43,10 @@ If not bound to a port, an interrupt object may be waited on with **interrupt_wa
 
 Interrupts cannot be waited on with the **object_wait_** family of calls.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **interrupt_create**() returns **ZX_OK** on success. In the event

@@ -53,6 +53,10 @@ inactive whenever a clone of the VMO is created and becomes active again when
 all clones have been destroyed and no mappings of those clones into address
 spaces exist.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **vmo_create**() returns **ZX_OK** on success. In the event

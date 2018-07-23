@@ -20,6 +20,10 @@ zx_status_t zx_vmo_set_size(zx_handle_t handle, uint64_t size);
 The size will be rounded up to the next page size boundary.
 Subsequent calls to **vmo_get_size**() will return the rounded up size.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **vmo_set_size**() returns **ZX_OK** on success. In the event

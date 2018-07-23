@@ -44,6 +44,10 @@ once the last message in its queue is read).
 The maximum number of items that may be waited upon is **ZX_WAIT_MANY_MAX_ITEMS**,
 which is 8.  To wait on more things at once use [Ports](../objects/port.md).
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **object_wait_many**() returns **ZX_OK** if any of *waitfor* signals were

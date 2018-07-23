@@ -17,6 +17,10 @@ zx_status_t zx_vcpu_interrupt(zx_handle_t vcpu, uint32_t vector);
 **vcpu_interrupt**() raises an interrupt of *vector* on *vcpu*, and may be
 called from any thread.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **vcpu_interrupt**() returns ZX_OK on success. On failure, an error value is

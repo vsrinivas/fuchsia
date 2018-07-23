@@ -33,6 +33,10 @@ and *ZX_RIGHT_SIGNAL_PEER* rights.
 Currently, no options are supported, so *options* must be set to 0.
 
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **eventpair_create**() returns **ZX_OK** on success. On failure, a (negative)

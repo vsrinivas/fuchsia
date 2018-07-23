@@ -44,6 +44,10 @@ The following rights will be set on the handle *out* by default:
 
 **ZX_RIGHT_WRITE** — *out* may have its state written
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **vcpu_create**() returns ZX_OK on success. On failure, an error value is

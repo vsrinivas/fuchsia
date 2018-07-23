@@ -42,6 +42,10 @@ option value of 0 is **ZX_TIMER_SLACK_CENTER** and allows both early and
 late firing with an effective interval of *deadline* - *slack* to
 *deadline* + *slack*
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **zx_timer_set**() returns **ZX_OK** on success.

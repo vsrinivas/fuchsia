@@ -45,6 +45,10 @@ pass **ZX_RESUME_TRY_NEXT** for the options.
 zx_status_t status = zx_task_resume_from_exception(thread, ZX_RESUME_TRY_NEXT);
 ```
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **task_resume_from_exception**() returns **ZX_OK** on success.

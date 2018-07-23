@@ -20,6 +20,10 @@ The provided size must be large enough for the complete string
 including its null terminator.
 
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **system_get_version**() returns **ZX_OK** on success.

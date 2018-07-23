@@ -20,6 +20,10 @@ be suitable for cryptographic applications.
 Clients that require a large volume of randomness should consider using these
 bytes to seed a user-space random number generator for better performance.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## NOTES
 
 **zx_cprng_draw**() triggers terminates the calling process if **buffer** is not

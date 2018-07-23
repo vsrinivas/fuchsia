@@ -22,6 +22,10 @@ zx_status_t zx_vmo_write(zx_handle_t handle, const void* buffer,
 
 *buffer_size* number of bytes to attempt to write.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **zx_vmo_write**() returns **ZX_OK** on success, and exactly *buffer_size* bytes will

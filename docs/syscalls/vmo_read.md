@@ -22,6 +22,10 @@ zx_status_t zx_vmo_read(zx_handle_t handle, void* buffer, uint64_t offset, size_
 *buffer_size* number of bytes to attempt to read. *buffer* buffer should be large
 enough for at least this many bytes.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **zx_vmo_read**() returns **ZX_OK** on success, and exactly *buffer_size* bytes will

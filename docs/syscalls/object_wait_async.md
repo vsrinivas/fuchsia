@@ -48,6 +48,10 @@ in the queue are not affected.
 See [port_wait](port_wait.md) for more information about each type
 of packet and their semantics.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **object_wait_async**() returns **ZX_OK** if the subscription succeeded.

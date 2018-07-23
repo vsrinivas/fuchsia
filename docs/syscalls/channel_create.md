@@ -30,6 +30,10 @@ messages to be written to them), and *ZX_RIGHT_READ* (allowing messages
 to be read from them).
 
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **channel_create**() returns **ZX_OK** on success. In the event

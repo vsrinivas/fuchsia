@@ -43,6 +43,10 @@ void thread_entry(uintptr_t arg1, uintptr_t arg2) __attribute__((noreturn)) {
 Failing to call one of the exit functions before reaching the end of
 the function will cause an architecture / toolchain specific exception.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **thread_start**() returns ZX_OK on success.

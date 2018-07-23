@@ -34,6 +34,10 @@ The *deadline* parameter specifies a deadline with respect to
 **ZX_CLOCK_MONOTONIC**.  **ZX_TIME_INFINITE** is a special value meaning wait
 forever.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **object_wait_one**() returns **ZX_OK** if any of *signals* were observed

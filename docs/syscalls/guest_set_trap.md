@@ -51,6 +51,10 @@ To identify what *kind* of trap generated a packet, use *ZX_PKT_TYPE_GUEST_MEM*,
 *ZX_PKT_TYPE_GUEST_VCPU* is a special packet, not caused by a trap, that
 indicates that the guest requested to start an additional VCPU.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **guest_set_trap**() returns ZX_OK on success. On failure, an error value is

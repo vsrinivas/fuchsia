@@ -37,6 +37,10 @@ Passing 0 in options is equivalent to ZX_TIMER_SLACK_CENTER.
 The returned handle has the ZX_RIGHT_DUPLICATE, ZX_RIGHT_TRANSFER,
 ZX_RIGHT_READ and ZX_RIGHT_WRITE right.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **timer_create**() returns **ZX_OK** on success. In the event

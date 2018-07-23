@@ -23,6 +23,10 @@ If *rights* is **ZX_RIGHT_SAME_RIGHTS**, the replacement handle will
 have the same rights as the original handle. Otherwise, *rights* must be
 a subset of original handle's rights.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **handle_replace**() returns ZX_OK and the replacement handle (via *out)

@@ -23,6 +23,10 @@ If the *handle* was used in a pending [object_wait_one](syscalls/object_wait_one
 It is not an error to close the special "never a valid handle" **ZX_HANDLE_INVALID**,
 similar to free(NULL) being a valid call.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **handle_close**() returns **ZX_OK** on success.

@@ -16,6 +16,10 @@ zx_status_t zx_socket_accept(zx_handle_t socket, zx_handle_t* out_socket);
 connection.  The signal **ZX_SOCKET_ACCEPT** is asserted when there is a new
 socket available.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **socket_accept**() returns **ZX_OK** on success and the received handle

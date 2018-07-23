@@ -162,6 +162,10 @@ Allowed operations: **get**
 The maximum number of packets a channel endpoint can have pending in
 its outgoing direction.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **zx_object_get_property**() returns **ZX_OK** on success. In the event of

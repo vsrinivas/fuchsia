@@ -33,6 +33,10 @@ The following rights will be set on the handle *out* by default:
 **ZX_RIGHT_WRITE** - A trap to be may be set using **guest_set_trap**(), or a
 VCPU to be created using **vcpu_create**().
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **guest_create**() returns ZX_OK on success. On failure, an error value is

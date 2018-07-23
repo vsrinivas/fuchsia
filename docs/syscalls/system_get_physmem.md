@@ -17,6 +17,10 @@ size_t zx_system_get_physmem(void);
 **system_get_physmem**() returns the total size of physical memory on
 the machine, in bytes.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **system_get_physmem**() returns a number in bytes.

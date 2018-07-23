@@ -34,6 +34,10 @@ a packet will immediately be delivered to a waiting thread.
 Interrupt packets are delivered via a dedicated queue on ports and are higher priority
 than non-interrupt packets.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **interrupt_bind**() returns **ZX_OK** on success. In the event

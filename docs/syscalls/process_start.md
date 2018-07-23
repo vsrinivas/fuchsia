@@ -31,6 +31,10 @@ appropriate handle value will be placed in arg1 for the newly started
 thread. If **process_start** returns an error, *arg1* is closed rather
 than transferred to the process being started.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **process_start**() returns ZX_OK on success.

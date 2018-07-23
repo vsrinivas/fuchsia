@@ -23,6 +23,10 @@ unmapped.
 
 If *len* is not page-aligned, it will be rounded up the next page boundary.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **vmar_unmap**() returns **ZX_OK** on success.

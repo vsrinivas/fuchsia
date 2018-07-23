@@ -61,6 +61,10 @@ are discarded and **ZX_ERR_BUFFER_TOO_SMALL** is returned in that case.
 As with **zx_channel_write**(), the handles in *handles* are always consumed by
 **zx_channel_call**() and no longer exist in the calling process.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **channel_call**() returns **ZX_OK** on success and the number of bytes and

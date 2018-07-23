@@ -51,6 +51,10 @@ Requires the *ZX_RIGHT_READ* right.
 Requires the *ZX_RIGHT_READ* right.
 
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **vmo_op_range**() returns **ZX_OK** on success. In the event of failure, a negative error

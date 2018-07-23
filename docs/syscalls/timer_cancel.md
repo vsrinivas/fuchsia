@@ -23,6 +23,10 @@ signal is de-asserted. If a new pending timer is immediately needed
 rather than calling **timer_cancel**() first, call **timer_set**()
 with the new deadline.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **zx_timer_cancel**() returns **ZX_OK** on success.

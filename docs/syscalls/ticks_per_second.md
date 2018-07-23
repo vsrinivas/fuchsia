@@ -23,6 +23,10 @@ time elapsed between two subsequent calls to **zx_ticks_get**().
 This value can vary from boot to boot of a given system. Once booted,
 this value is guaranteed not to change.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **zx_ticks_per_second**() returns the number of high-precision timer ticks in a

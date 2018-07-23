@@ -27,6 +27,10 @@ a process under such a job.)
 
 Job handles may be waited on (TODO(cpu): expand this)
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **job_create**() returns ZX_OK and a handle to the new job

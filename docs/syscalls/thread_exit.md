@@ -22,6 +22,10 @@ The signal *ZX_THREAD_TERMINATED* will be assserted on the thread
 object upon exit and may be observed via *object_wait_one*()
 or *object_wait_many*() on a handle to the thread.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **thread_exit**() does not return.

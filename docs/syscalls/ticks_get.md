@@ -19,6 +19,10 @@ zx_ticks_t zx_ticks_get(void)
 These ticks may be processor cycles, high speed timer, profiling timer, etc.
 They are not guaranteed to continue advancing when the system is asleep.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **zx_ticks_get**() returns the number of high-precision timer ticks since boot.

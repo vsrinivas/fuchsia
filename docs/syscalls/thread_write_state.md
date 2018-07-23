@@ -31,6 +31,10 @@ zircon/syscalls/debug.h for the contents of the structures on each platform.
 See [thread_read_state](thread_read_state.md) for the list of available states
 and their corresponding values.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **thread_write_state**() returns **ZX_OK** on success.

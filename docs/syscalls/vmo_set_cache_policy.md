@@ -37,6 +37,10 @@ This is architecture dependent and may be equivalent to
 
 **ZX_CACHE_POLICY_WRITE_COMBINING** - Uncached with write combining.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **vmo_set_cache_policy()** returns **ZX_OK** on success. In the event of

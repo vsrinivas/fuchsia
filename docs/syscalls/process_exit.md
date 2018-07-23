@@ -19,6 +19,10 @@ The **zx_process_exit** call ends the calling process with the given
 return code. The return code of a process can be queried via the
 **ZX_INFO_PROCESS** request to **zx_object_get_info**.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **zx_process_exit** does not return.

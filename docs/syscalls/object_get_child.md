@@ -36,6 +36,10 @@ If the object is a *Resource*, its (immediate) child *Resources* may be
 obtained by this call.
 
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 On success, **ZX_OK** is returned and a handle to the desired child object is returned via *out*.

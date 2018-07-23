@@ -32,6 +32,10 @@ new thread, which will become a child of that process.
 
 For thread lifecycle details see [thread object](../objects/thread.md).
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 On success, **thread_create**() returns **ZX_OK** and a handle (via *out*)

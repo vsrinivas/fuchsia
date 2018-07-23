@@ -20,6 +20,10 @@ On success, the *socket_to_send* is placed into the *socket*'s share
 queue, and is no longer accessible to the caller's process. On any
 failure, *socket_to_send* is discarded rather than transferred.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **socket_share**() returns **ZX_OK** on success.  In the event of failure,

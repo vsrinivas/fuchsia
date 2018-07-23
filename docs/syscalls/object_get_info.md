@@ -562,6 +562,10 @@ typedef struct zx_info_bti {
 } zx_info_bti_t;
 ```
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **zx_object_get_info**() returns **ZX_OK** on success. In the event of

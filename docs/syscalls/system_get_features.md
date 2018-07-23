@@ -19,6 +19,10 @@ hardware-specific features.  *kind* indicates the specific type of features
 to retrieve, e.g. *ZX_FEATURE_KIND_CPU*.  The supported kinds and the meaning
 of individual feature bits is hardware-dependent.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **system_get_features**()  returns **ZX_OK** on success.

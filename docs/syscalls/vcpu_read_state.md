@@ -22,6 +22,10 @@ paused.
 
 *kind* must be *ZX_VCPU_STATE*.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **vcpu_read_state**() returns ZX_OK on success. On failure, an error value is

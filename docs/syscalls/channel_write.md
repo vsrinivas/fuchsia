@@ -37,6 +37,10 @@ The maximum number of bytes which may be sent in a message is
 *ZX_CHANNEL_MAX_MSG_BYTES*, which is 65536.
 
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **channel_write**() returns **ZX_OK** on success.

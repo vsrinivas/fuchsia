@@ -52,6 +52,10 @@ closing the VMO handle does not remove the mapping added by this function.
 the mapping will be assigned an offset at random by the kernel (with an
 allocator determined by policy set on the target VMAR).
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **vmar_map**() returns **ZX_OK** and the absolute base address of the

@@ -42,6 +42,10 @@ the thread may fault as it would for a data read.
 At least one of **ZX_CACHE_FLUSH_DATA** and **ZX_CACHE_FLUSH_INSN**
 must be included in *flags*.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **zx_cache_flush**() returns **ZX_OK** on success, or an error code on failure.

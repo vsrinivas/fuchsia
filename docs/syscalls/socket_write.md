@@ -54,6 +54,10 @@ insufficient space for *buffer*, it writes nothing and returns
 **ZX_ERR_SHOULD_WAIT**. If the write succeeds, *buffer_size* is returned via
 *actual*.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **socket_write**() returns **ZX_OK** on success.

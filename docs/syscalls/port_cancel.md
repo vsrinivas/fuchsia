@@ -23,6 +23,10 @@ When this call succeeds no new packets from the object pointed by
 *source* with *key* will be delivered to *port*, and pending queued
 packets that match *source* and *key* are removed from the port.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **zx_port_cancel**() returns **ZX_OK** if cancellation succeeded and

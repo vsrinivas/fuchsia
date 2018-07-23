@@ -29,6 +29,10 @@ This syscall only operates on interrupts which are bound to a port.  Interrupts
 being waited upon with **interrupt_wait**() do not need to be re-armed with this
 call -- it happens automatically when **interrupt_wait**() is called.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **interrupt_ack**() returns **ZX_OK** on success. In the event

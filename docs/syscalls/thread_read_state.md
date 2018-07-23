@@ -58,6 +58,10 @@ a uint64. This is only relevant on x86 platforms.
 The buffer must point to a **zx_thread_x86_register_gs_t** structure which contains
 a uint64. This is only relevant on x86 platforms.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **thread_read_state**() returns **ZX_OK** on success.

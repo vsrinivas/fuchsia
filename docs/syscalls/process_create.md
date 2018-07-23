@@ -33,6 +33,10 @@ Process handles may be waited on and will assert the signal
 *job* is the controlling [job object](../objects/job.md) for the new
 process, which will become a child of that job.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 On success, **process_create**() returns **ZX_OK**, a handle to the new process

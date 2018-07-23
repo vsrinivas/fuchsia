@@ -80,6 +80,10 @@ handlers to not trip over each other, as well as all other
 software calling **zx_task_resume**() with **ZX_RESUME_EXCEPTION**.
 (ZX-562 documents this issue.)
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **task_resume**() returns **ZX_OK** on success.

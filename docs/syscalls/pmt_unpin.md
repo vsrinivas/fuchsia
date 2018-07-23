@@ -20,6 +20,10 @@ and revokes the access that was granted by the pin call.
 Always consumes the handle *pmt*. It is invalid to use *pmt* afterwards,
 including to call **handle_close**() on it.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 On success, **pmt_unpin**() returns *ZX_OK*.

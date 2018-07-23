@@ -29,6 +29,10 @@ in flight are removed.  Otherwise, **ZX_ERR_NOT_FOUND** is returned, indicating
 that the packet has been read but the interrupt has not been re-armed by calling
 **zx_interrupt_ack**().
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **interrupt_destroy**() returns **ZX_OK** on success. In the event

@@ -20,6 +20,10 @@ futex to be woken up.
 Waking up zero threads is not an error condition.  Passing in an unallocated
 address for `value_ptr` is not an error condition.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **futex_wake**() returns **ZX_OK** on success.

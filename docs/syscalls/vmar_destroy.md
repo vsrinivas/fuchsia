@@ -20,6 +20,10 @@ all sub-regions of the region.  Note that this operation is logically recursive.
 This operation does not close *vmar_handle*.  Any outstanding handles to this
 VMAR will remain valid handles, but all VMAR operations on them will fail.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **vmar_destroy**() returns **ZX_OK** on success.

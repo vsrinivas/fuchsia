@@ -29,6 +29,10 @@ contained within *bootimage_vmo* to a location in physical memory and branch
 directly into the new kernel while providing the address of the loaded initrd
 to the new kernel.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **zx_system_mexec**() shall not return upon success.

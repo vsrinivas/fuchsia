@@ -27,6 +27,10 @@ of the handles is duplicate or invalid.
 It is not an error to close the special "never a valid handle" **ZX_HANDLE_INVALID**,
 similar to free(NULL) being a valid call.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **handle_close_many**() returns **ZX_OK** on success.

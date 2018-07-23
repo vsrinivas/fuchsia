@@ -33,6 +33,10 @@ a single element: if *count* is 1 and **fifo_read**() returns **ZX_OK**,
 
 It is not legal to read zero elements.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **fifo_read**() returns **ZX_OK** on success, and returns

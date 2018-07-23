@@ -81,6 +81,10 @@ therefore match *count* with the operation.
 
 See [object_wait_async](object_wait_async.md) for more details.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **port_wait**() returns **ZX_OK** on successful packet dequeuing.

@@ -18,6 +18,10 @@ zx_time_t zx_clock_get_monotonic(void);
 monotonic clock. This is the number of nanoseconds since the system was
 powered on.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **zx_clock_get**() returns the current monotonic time.

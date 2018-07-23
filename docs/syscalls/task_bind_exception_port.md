@@ -51,6 +51,10 @@ This option is useful, for example, when a debugger wants to detach from the
 thread's process, but leave the thread in stasis waiting for an exception
 response.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **task_bind_exception_port**() returns **ZX_OK** on success.

@@ -33,6 +33,10 @@ done with it.
 *desc* must be a valid pointer to a value of type *zx_iommu_desc_dummy_t*.
 *desc_len* must be *sizeof(zx_iommu_desc_dummy_t)*.
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **iommu_create**() returns ZX_OK and a handle to the new IOMMU

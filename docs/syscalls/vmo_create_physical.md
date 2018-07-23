@@ -52,6 +52,10 @@ spaces exist.
 The VMOs created by this syscall are not usable with **vmo_read**() and
 **vmo_write**().
 
+## RIGHTS
+
+TODO(ZX-2399)
+
 ## RETURN VALUE
 
 **vmo_create_physical**() returns **ZX_OK** on success. In the event
