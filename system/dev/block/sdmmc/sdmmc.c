@@ -63,7 +63,7 @@
 static void register_trace(sdmmc_device_t* dev) {
     dev->trace_on = true;
     // Create a message loop.
-    zx_status_t status = async_loop_create(NULL, &(dev->loop));
+    zx_status_t status = async_loop_create(&kAsyncLoopConfigNoAttachToThread, &(dev->loop));
     if (status != ZX_OK) {
         zxlogf(ERROR, "Failed to create a message loop.\n");
         zxlogf(ERROR, "Failed to register the tracing interface.\n");
