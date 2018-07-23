@@ -453,7 +453,7 @@ only module.
 		}
 	}
 
-	createLayout("garnet", fuchsiaRoot, *outDir)
+	createLayout("topaz", fuchsiaRoot, *outDir)
 
 	for _, c := range components {
 		if *c.flag {
