@@ -8,8 +8,8 @@
 
 set -eo pipefail
 
-LINUX_GUEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-BUILDDIR="${LINUX_GUEST_DIR}/../../../../../out"
+ZIRCON_GUEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+BUILDDIR="${ZIRCON_GUEST_DIR}/../../../../../out"
 MINFS="${BUILDDIR}/build-zircon/tools/minfs"
 
 usage() {
@@ -65,12 +65,11 @@ generate_system_image() {
   local image=${1}
   local sys_part_size_mb=${2}
 
-  dd if=/dev/zero of="${image}" bs=1M count="${sys_part_size_mb}"
-  ${MINFS} ${image} create
+  ${MINFS} ${image}@${sys_part_size_mb}m create
   ${MINFS} ${image} mkdir ::/bin
 
   # Copy binaries from system/uapp into the system image.
-  for app_path in `find "${BUILDDIR}/build-zircon/build-user-${ARCH}/system/uapp" -iname "*.elf"`; do
+  for app_path in `find "${BUILDDIR}/build-zircon/build-${ARCH}/system/uapp" -iname "*.elf"`; do
     local exe_name=`basename "${app_path}"`
     # Strip the '.elf' file extension.
     local app="${exe_name%.*}"
@@ -115,5 +114,5 @@ if [ "${FORCE}" != "true" ] && [ -f "${ZIRCON_GPT_IMAGE}" ]; then
   exit 0
 fi
 
-generate_system_image "${ZIRCON_SYSTEM_IMAGE}" "20"
+generate_system_image "${ZIRCON_SYSTEM_IMAGE}" "30"
 generate_gpt_image "${ZIRCON_GPT_IMAGE}" "${ZIRCON_SYSTEM_IMAGE}"
