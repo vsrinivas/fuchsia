@@ -31,6 +31,11 @@ pub fn fake_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
         },
         country: None,
         rsn: None,
+
+        rcpi_dbmh: 0,
+        rsni_dbh: 0,
+
+        ht_cap: None,
         vht_cap: None,
         vht_op: None,
         chan: fidl_mlme::WlanChan {
@@ -39,7 +44,5 @@ pub fn fake_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
             cbw: fidl_mlme::Cbw::Cbw20,
         },
         rssi_dbm: 0,
-        rcpi_dbmh: 0,
-        rsni_dbh: 0,
     }
 }

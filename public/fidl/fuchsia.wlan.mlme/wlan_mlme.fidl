@@ -88,6 +88,66 @@ struct CapabilityInfo {
     bool immediate_block_ack;
 };
 
+// IEEE Std 802.11-2016, 9.4.2.56
+
+enum ChanWidthSet : uint8 {
+    TWENTY_ONLY = 0;
+    TWENTY_FORTY = 1;
+};
+
+enum SmPowerSave : uint8 {
+    STATIC = 0;
+    DYNAMIC = 1;
+    RESERVED = 2;
+    DISABLED = 3;
+};
+
+enum MaxAmsduLen : uint8 {
+    OCTETS_3839 = 0;
+    OCTETS_7935 = 1;
+};
+
+struct HtCapabilityInfo {
+    bool ldpc_coding_cap;
+    ChanWidthSet chan_width_set;
+    SmPowerSave sm_power_save;
+    bool greenfield;
+    bool short_gi_20;
+    bool short_gi_40;
+    bool tx_stbc;
+    uint8 rx_stbc;
+    bool delayed_block_ack;
+    MaxAmsduLen max_amsdu_len;
+    bool dsss_in_40;
+    bool intolerant_40;
+    bool lsig_txop_protect;
+};
+
+enum MinMpduStartSpacing : uint8 {
+    NO_RESTRICT = 0;
+    QUARTER_USEC = 1;
+    HALF_USEC = 2;
+    ONE_USEC = 3;
+    TWO_USEC = 4;
+    FOUR_USEC = 5;
+    EIGHT_USEC = 6;
+    SIXTEEN_USEC = 7;
+};
+
+struct AmpduParams {
+    uint8 exponent;
+    MinMpduStartSpacing min_start_spacing;
+};
+
+struct HtCapabilities {
+    // TODO(NET-1190): Add substructure as needed
+
+    // Note, a minimum granuality of adding fields selectively is
+    // a group of BitField structure, as defined in element.h
+    HtCapabilityInfo ht_cap_info;
+    AmpduParams ampdu_params;
+};
+
 enum MaxMpduLen : uint8 {
     OCTETS_3895 = 0;
     OCTETS_7991 = 1;
@@ -184,11 +244,13 @@ struct BSSDescription {
     // TODO(hahnr): This field represents an IE and should thus be named RSNE.
     vector<uint8>? rsn;
 
-    VhtCapabilities? vht_cap;
-    VhtOperation? vht_op;
-
     int16 rcpi_dbmh; // 0.5 step dBm. Do not use encoding from IEEE Std 802.11-2016 9.4.2.38.
     int16 rsni_dbh;  // 0.5 step dB.  Do not use encoding from IEEE Std 802.11-2016 9.4.2.41.
+
+    HtCapabilities? ht_cap;
+
+    VhtCapabilities? vht_cap;
+    VhtOperation? vht_op;
 
     // List up non-standard, Fuchsia only parameters
     WlanChan chan;

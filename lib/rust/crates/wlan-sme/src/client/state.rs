@@ -278,6 +278,13 @@ fn report_connect_finished<T>(token: Option<T::ConnectToken>,
     }
 }
 
+fn clone_ht_capabilities(c: &fidl_mlme::HtCapabilities) -> fidl_mlme::HtCapabilities {
+    fidl_mlme::HtCapabilities {
+        ht_cap_info: fidl_mlme::HtCapabilityInfo { ..c.ht_cap_info },
+        ampdu_params: fidl_mlme::AmpduParams { ..c.ampdu_params },
+    }
+}
+
 fn clone_vht_mcs_nss(m: &fidl_mlme::VhtMcsNss) -> fidl_mlme::VhtMcsNss {
     fidl_mlme::VhtMcsNss {
         rx_max_mcs: m.rx_max_mcs.clone(),
@@ -317,9 +324,14 @@ fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescription {
         local_time: d.local_time,
 
         country: d.country.clone(),
+        cap: fidl_mlme::CapabilityInfo { ..d.cap },
+
         rsn: d.rsn.clone(),
 
-        cap: fidl_mlme::CapabilityInfo { ..d.cap },
+        rcpi_dbmh: d.rcpi_dbmh,
+        rsni_dbh: d.rsni_dbh,
+
+        ht_cap: d.ht_cap.as_ref().map(|v| Box::new(clone_ht_capabilities(v))),
 
         vht_cap: d.vht_cap.as_ref().map(|v| Box::new(clone_vht_capabilities(v))),
         vht_op:  d.vht_op.as_ref().map(|v| Box::new(clone_vht_operation(v))),
@@ -330,8 +342,6 @@ fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescription {
             secondary80: d.chan.secondary80,
         },
         rssi_dbm: d.rssi_dbm,
-        rcpi_dbmh: d.rcpi_dbmh,
-        rsni_dbh: d.rsni_dbh
     }
 }
 

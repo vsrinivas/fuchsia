@@ -83,17 +83,17 @@ mod tests {
         assert_eq!(Ordering::Greater, compare_bss(better, worse));
     }
 
-    fn bss(rssi_dbm: i8, rcpi_dbmh: i16, compatible: bool) -> fidl_mlme::BssDescription {
+    fn bss(_rssi_dbm: i8, _rcpi_dbmh: i16, compatible: bool) -> fidl_mlme::BssDescription {
         let ret = fidl_mlme::BssDescription {
             bssid: [0, 0, 0, 0, 0, 0],
             ssid: String::new(),
+
             bss_type: fidl_mlme::BssTypes::Infrastructure,
             beacon_period: 100,
             dtim_period: 100,
             timestamp: 0,
             local_time: 0,
-            country: None,
-            rsn: if compatible { None } else { Some(Vec::new()) },
+
             cap: fidl_mlme::CapabilityInfo {
                 ess: false,
                 ibss: false,
@@ -109,14 +109,18 @@ mod tests {
                 delayed_block_ack: false,
                 immediate_block_ack: false,
             },
+            country: None,
+            rsn: if compatible { None } else { Some(Vec::new()) },
 
+            rcpi_dbmh: _rcpi_dbmh,
+            rsni_dbh: 0,
+
+            ht_cap: None,
             vht_cap: None,
             vht_op: None,
 
             chan: fidl_mlme::WlanChan { primary: 1, secondary80: 0, cbw: fidl_mlme::Cbw::Cbw20 },
-            rssi_dbm,
-            rcpi_dbmh,
-            rsni_dbh: 0
+            rssi_dbm: _rssi_dbm,
         };
         assert_eq!(compatible, is_bss_compatible(&ret));
         ret
