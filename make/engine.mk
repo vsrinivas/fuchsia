@@ -396,6 +396,8 @@ USER_MANIFEST := $(BUILDDIR)/bootfs.manifest
 USER_MANIFEST_LINES :=
 # The contents of this are derived from BOOTFS_DEBUG_MODULES.
 USER_MANIFEST_DEBUG_INPUTS :=
+# Filter on manifest lines by {group} prefix.
+USER_MANIFEST_GROUPS := !sample,ddk-sample
 
 # Directory in the bootfs where MODULE_FIRMWARE files go.
 FIRMWARE_INSTALL_DIR := lib/firmware

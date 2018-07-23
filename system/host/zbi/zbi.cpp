@@ -748,6 +748,10 @@ public:
         if (!strcmp(groups, "all")) {
             groups_.reset();
         } else {
+            not_ = groups[0] == '!';
+            if (not_) {
+                ++groups;
+            }
             groups_ = std::make_unique<std::set<std::string>>();
             while (const char *p = strchr(groups, ',')) {
                 groups_->emplace(groups, p - groups);
@@ -757,16 +761,17 @@ public:
         }
     }
 
-    bool AllowsAll() const {
-        return !groups_;
+    bool AllowsUnspecified() const {
+        return !groups_ || not_;
     }
 
     bool Allows(const std::string& group) const {
-        return AllowsAll() || groups_->find(group) != groups_->end();
+        return !groups_ || (groups_->find(group) == groups_->end()) == not_;
     }
 
 private:
     std::unique_ptr<std::set<std::string>> groups_;
+    bool not_ = false;
 };
 
 // Base class for ManifestInputFileGenerator and DirectoryInputFileGenerator.
@@ -840,7 +845,7 @@ private:
     const char* AllowEntry(const char* start, const char* eq, const char* eol) {
         if (*start != '{') {
             // This entry doesn't specify a group.
-            return filter_->AllowsAll() ? start : nullptr;
+            return filter_->AllowsUnspecified() ? start : nullptr;
         }
         auto end_group = static_cast<const char*>(
             memchr(start + 1, '}', eq - start));
@@ -850,7 +855,10 @@ private:
                     static_cast<int>(eol - start), start);
             exit(1);
         }
-        std::string group(start, end_group - start);
+        std::string group(start + 1, end_group - 1 - start);
+        printf("XXX group=\"%s\" allows=%d rest=%.*s\n",
+               group.c_str(), filter_->Allows(group),
+               (int)(eol-end_group-1), end_group + 1);
         return filter_->Allows(group) ? end_group + 1 : nullptr;
     }
 };
@@ -1760,6 +1768,8 @@ Each DIRECTORY is listed recursively and handled just like a manifest file\n\
 using the path relative to DIRECTORY as the target name (before any PREFIX).\n\
 Each `--group`, `--prefix`, `-g`, or `-p` switch affects each file from a\n\
 manifest or directory in subsequent FILE or DIRECTORY arguments.\n\
+If GROUPS starts with `!` then only manifest entries that match none of\n\
+the listed groups are used.\n\
 \n\
 With `--type` or `-T`, input files are treated as TYPE instead of manifest\n\
 files, and directories are not permitted.  See below for the TYPE strings.\n\
