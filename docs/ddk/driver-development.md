@@ -7,9 +7,15 @@ Device Hosts, Device Coordinator and the driver and device lifecycles.
 
 ## Directory structure
 
-Zircon drivers are found under [system/dev](../../system/dev). They are
-grouped by a device class. Device classes are defined in
+Zircon drivers are found under [system/dev](../../system/dev).
+They are grouped based on the protocols they implement.
+The driver protocols are defined in
 [ddk/include/ddk/protodefs.h](../../system/ulib/ddk/include/ddk/protodefs.h).
+For example, a USB ethernet driver goes in [system/dev/ethernet](../../system/dev/ethernet)
+rather than [system/dev/usb](../../system/dev/usb) because it implements an ethernet protocol.
+However, drivers that implement the USB stack are in [system/dev/usb](../../system/dev/usb)
+because they implement USB protocols.
+
 In the driver's `rules.mk`, the `MODULE_TYPE` should
 be `driver`. This will install the driver shared lib in `/boot/driver/`.
 
