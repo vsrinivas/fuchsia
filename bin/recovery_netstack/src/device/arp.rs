@@ -4,6 +4,10 @@
 
 //! The Address Resolution Protocol (ARP).
 
+use device::ethernet::Mac;
+use ip::Ipv4Addr;
+use std::collections::HashMap;
+
 /// The type of an ARP operation.
 #[derive(Debug, PartialEq)]
 #[allow(missing_docs)]
@@ -50,5 +54,58 @@ impl ArpHardwareType {
             Self::ETHERNET => Some(ArpHardwareType::Ethernet),
             _ => None,
         }
+    }
+}
+
+struct ArpTable {
+    table: HashMap<ArpKey, ArpValue>,
+}
+
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+struct ArpKey {
+    addr: Ipv4Addr,
+}
+
+/// A struct to represent the data stored in an entry in the ARP table.
+#[derive(Debug, PartialEq)]
+pub struct ArpValue {
+    /// The MAC address associated with this entry.
+    // Using Mac as the value is actually incorrect - there should be a generic
+    // hardware address type, if this ARP code is to actually be extensible.
+    // However, this can be dealt with if/once we add more hardware types.
+    pub mac: Mac,
+}
+
+impl ArpTable {
+    pub fn new() -> Self {
+        ArpTable {
+            table: HashMap::new(),
+        }
+    }
+
+    pub fn insert(&mut self, addr: Ipv4Addr, mac: Mac) {
+        self.table
+            .insert(ArpKey { addr }, ArpValue { mac });
+    }
+
+    pub fn lookup(&self, addr: Ipv4Addr) -> Option<&ArpValue> {
+        self.table.get(&ArpKey { addr })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use device::arp::*;
+
+    #[test]
+    fn test_arp_table() {
+        let mut t: ArpTable = ArpTable::new();
+        assert_eq!(t.lookup(Ipv4Addr::new([10, 0, 0, 1])), None);
+        t.insert(Ipv4Addr::new([10, 0, 0, 1]), Mac::new([1, 2, 3, 4, 5, 6]));
+        assert_eq!(
+            t.lookup(Ipv4Addr::new([10, 0, 0, 1])).unwrap().mac,
+            Mac::new([1, 2, 3, 4, 5, 6])
+        );
+        assert_eq!(t.lookup(Ipv4Addr::new([10, 0, 0, 2])), None);
     }
 }
