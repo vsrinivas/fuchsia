@@ -22,6 +22,7 @@
 extern crate byteorder;
 #[macro_use]
 extern crate failure;
+extern crate fuchsia_syslog;
 #[macro_use]
 extern crate log;
 #[cfg(test)]
@@ -46,8 +47,13 @@ use ip::IpLayerState;
 use eventloop::EventLoop;
 use transport::TransportLayerState;
 
-fn main() {
+fn main() -> Result<(), failure::Error> {
+    fuchsia_syslog::init()?;
+    // Severity is set to debug during development.
+    fuchsia_syslog::set_severity(-1);
+
     let event_loop = EventLoop{};
+    Ok(())
 }
 
 /// The state associated with the network stack.

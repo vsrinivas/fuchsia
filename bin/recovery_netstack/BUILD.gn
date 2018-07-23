@@ -10,6 +10,7 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    "//garnet/public/rust/crates/fuchsia-syslog",
     "//garnet/public/rust/crates/zerocopy",
     "//third_party/rust-crates/rustc_deps:byteorder",
     "//third_party/rust-crates/rustc_deps:failure",
