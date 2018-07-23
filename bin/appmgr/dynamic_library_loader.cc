@@ -16,7 +16,7 @@ zx_status_t Start(fxl::UniqueFD fd, zx::channel* result) {
   zx_status_t status = ZX_OK;
 
   if (!ld_loop) {
-    status = async_loop_create(nullptr, &ld_loop);
+    status = async_loop_create(&kAsyncLoopConfigNoAttachToThread, &ld_loop);
     if (status != ZX_OK)
       return status;
 
