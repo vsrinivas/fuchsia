@@ -24,6 +24,7 @@ source_set("tests_not_requiring_hardware") {
   sources = [
     "test_address_manager.cc",
     "test_address_space.cc",
+    "test_buffer.cc",
     "test_connection.cc",
     "test_job_scheduler.cc",
     "test_performance_counters.cc",
@@ -31,7 +32,7 @@ source_set("tests_not_requiring_hardware") {
 
   deps = [
     ":test_deps",
-    "//garnet/lib/magma/tests/mock:bus_mapper"
+    "//garnet/lib/magma/tests/mock:bus_mapper",
   ]
 }
 

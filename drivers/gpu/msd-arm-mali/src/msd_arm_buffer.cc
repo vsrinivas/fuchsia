@@ -69,6 +69,35 @@ bool MsdArmBuffer::SetCommittedPages(uint64_t start_page, uint64_t page_count)
     return success;
 }
 
+bool MsdArmBuffer::EnsureRegionFlushed(uint64_t start_bytes, uint64_t end_bytes)
+{
+    DASSERT(end_bytes >= start_bytes);
+    DASSERT(flushed_region_end_bytes_ >= flushed_region_start_bytes_);
+    if (start_bytes < flushed_region_start_bytes_) {
+        if (!platform_buf_->CleanCache(start_bytes, flushed_region_start_bytes_ - start_bytes,
+                                       false))
+            return DRETF(false, "CleanCache of start failed");
+
+        flushed_region_start_bytes_ = start_bytes;
+    }
+
+    if (end_bytes > flushed_region_end_bytes_) {
+        bool region_exists = flushed_region_end_bytes_ != 0;
+        uint64_t flush_start;
+        if (region_exists) {
+            flush_start = flushed_region_end_bytes_;
+        } else {
+            flush_start = start_bytes;
+            flushed_region_start_bytes_ = flush_start;
+        }
+
+        if (!platform_buf_->CleanCache(flush_start, end_bytes - flush_start, false))
+            return DRETF(false, "CleanCache of end failed");
+        flushed_region_end_bytes_ = end_bytes;
+    }
+    return true;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 msd_buffer_t* msd_buffer_import(uint32_t handle)
