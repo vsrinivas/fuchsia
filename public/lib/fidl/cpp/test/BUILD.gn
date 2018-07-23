@@ -7,18 +7,18 @@ import("//build/fidl/fidl.gni")
 source_set("test") {
   testonly = true
 
-  sources = [
-    "fidl_types.cc",
+  public = [
     "fidl_types.h",
-    "frobinator_impl.cc",
     "frobinator_impl.h",
   ]
 
-  deps = [
-    ":frobinator",
+  sources = [
+    "fidl_types.cc",
+    "frobinator_impl.cc",
   ]
 
   public_deps = [
+    ":frobinator",
     "//garnet/public/lib/fidl/cpp",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
@@ -32,6 +32,6 @@ fidl("frobinator") {
   name = "fidl.test.frobinator"
 
   sources = [
-    "frobinator.fidl"
+    "frobinator.fidl",
   ]
 }

@@ -28,9 +28,10 @@ source_set("player") {
     "//garnet/bin/media/media_player/framework",
     "//garnet/bin/media/media_player/render",
     "//garnet/bin/media/media_player/util",
+    "//garnet/public/fidl/fuchsia.media",
+    "//garnet/public/fidl/fuchsia.mediaplayer",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/fidl/fuchsia.media",
     "//garnet/public/lib/media/timeline",
     "//zircon/public/lib/fbl",
   ]

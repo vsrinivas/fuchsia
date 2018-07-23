@@ -11,10 +11,10 @@ driver_module("wlantap_driver") {
   sources = [
     "binding.c",
     "wlantap-ctl.cpp",
-    "wlantap-mac.h",
     "wlantap-mac.cpp",
-    "wlantap-phy.h",
+    "wlantap-mac.h",
     "wlantap-phy.cpp",
+    "wlantap-phy.h",
   ]
 
   deps = [
@@ -22,6 +22,7 @@ driver_module("wlantap_driver") {
     "//garnet/lib/wlan/common",
     "//garnet/lib/wlan/fidl:wlantap",
     "//garnet/lib/wlan/protocol",
+    "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/driver",
@@ -32,7 +33,6 @@ driver_module("wlantap_driver") {
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
-
 package("wlantap") {
   deprecated_system_image = true
 
@@ -40,7 +40,9 @@ package("wlantap") {
     ":wlantap_driver",
   ]
 
-  drivers = [ {
-        name = "wlantap.so"
-      } ]
+  drivers = [
+    {
+      name = "wlantap.so"
+    },
+  ]
 }

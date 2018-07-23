@@ -73,12 +73,12 @@ sdk_source_set("cpp") {
 source_set("test_support") {
   testonly = true
 
-  sources = [
+  public = [
     "test/async_loop_for_test.h",
   ]
 
   public_deps = [
-    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async",
   ]
 }
 
@@ -95,9 +95,9 @@ fidl("fidl_test") {
 source_set("test_sources") {
   testonly = true
 
-# TODO(jamesr): Make this an sdk source set
-# sdk_name = "fidl_cpp_tests"
-# include_base = "//garnet/public"
+  # TODO(jamesr): Make this an sdk source set
+  # sdk_name = "fidl_cpp_tests"
+  # include_base = "//garnet/public"
 
   sources = [
     "array_unittest.cc",

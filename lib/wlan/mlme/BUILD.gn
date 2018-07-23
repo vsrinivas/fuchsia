@@ -7,22 +7,7 @@ config("wlan_mlme_config") {
 }
 
 source_set("mlme") {
-  sources = [
-    "ap/ap_mlme.cpp",
-    "ap/beacon_sender.cpp",
-    "ap/bss_client_map.cpp",
-    "ap/infra_bss.cpp",
-    "ap/remote_client.cpp",
-    "ap/tim.cpp",
-    "client/bss.cpp",
-    "client/client_mlme.cpp",
-    "client/remote_ap.cpp",
-    "client/scanner.cpp",
-    "client/station.cpp",
-    "debug.cpp",
-    "device_interface.cpp",
-    "dispatcher.cpp",
-    "frame_dispatcher.cpp",
+  public = [
     "include/wlan/mlme/ap/ap_mlme.h",
     "include/wlan/mlme/ap/beacon_sender.h",
     "include/wlan/mlme/ap/bss_client_map.h",
@@ -51,6 +36,24 @@ source_set("mlme") {
     "include/wlan/mlme/service.h",
     "include/wlan/mlme/timer.h",
     "include/wlan/mlme/wlan.h",
+  ]
+
+  sources = [
+    "ap/ap_mlme.cpp",
+    "ap/beacon_sender.cpp",
+    "ap/bss_client_map.cpp",
+    "ap/infra_bss.cpp",
+    "ap/remote_client.cpp",
+    "ap/tim.cpp",
+    "client/bss.cpp",
+    "client/client_mlme.cpp",
+    "client/remote_ap.cpp",
+    "client/scanner.cpp",
+    "client/station.cpp",
+    "debug.cpp",
+    "device_interface.cpp",
+    "dispatcher.cpp",
+    "frame_dispatcher.cpp",
     "mac_frame.cpp",
     "packet.cpp",
     "service.cpp",

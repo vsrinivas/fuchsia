@@ -20,8 +20,12 @@ source_set("test_main") {
 
   sources = [
     "mock_device.h",
-    "test_main.cpp",
     "test_data.h",
+    "test_main.cpp",
+  ]
+
+  public_deps = [
+    "//garnet/lib/wlan/mlme",
   ]
 
   deps = [
@@ -87,8 +91,8 @@ executable("dispatcher_tests") {
   deps = [
     ":test_main",
     "//garnet/lib/wlan/mlme",
-    "//third_party/googletest:gtest",
     "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/fit",
   ]
 
@@ -145,7 +149,7 @@ package("wlan_tests") {
     {
       name = "rust_crates/wlan_test_util"
       dest = "wlan-test-util"
-    }
+    },
   ]
 
   tests = [
@@ -170,7 +174,9 @@ package("wlan_tests") {
     },
   ]
 
-  drivers = [{
-        name = "wlanphy-testdev.so"
-      }]
+  drivers = [
+    {
+      name = "wlanphy-testdev.so"
+    },
+  ]
 }

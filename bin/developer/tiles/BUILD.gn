@@ -10,13 +10,16 @@ source_set("tiles_lib") {
     "tiles.h",
   ]
 
-  deps = [
+  public_deps = [
     "//garnet/public/fidl/fuchsia.developer.tiles",
     "//garnet/public/fidl/fuchsia.ui.policy",
     "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/scenic/cpp",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
   ]
 }
 
