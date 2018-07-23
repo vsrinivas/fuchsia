@@ -7,6 +7,7 @@
 #include "garnet/bin/cobalt/app/utils.h"
 #include "garnet/bin/cobalt/utils/fuchsia_http_client.h"
 #include "lib/backoff/exponential_backoff.h"
+#include "third_party/cobalt/encoder/memory_observation_store.h"
 
 namespace cobalt {
 
@@ -18,6 +19,7 @@ using encoder::ClearcutV1ShippingManager;
 using encoder::ClientSecret;
 using encoder::CobaltEncoderFactoryImpl;
 using encoder::LegacyShippingManager;
+using encoder::MemoryObservationStore;
 using encoder::ShippingManager;
 using utils::FuchsiaHTTPClient;
 
@@ -39,7 +41,8 @@ constexpr char kAnalyzerPublicKeyPemPath[] =
 constexpr char kShufflerPublicKeyPemPath[] =
     "/pkg/data/certs/cobaltv0.1/shuffler_public.pem";
 
-CobaltApp::CobaltApp(async_dispatcher_t* dispatcher, std::chrono::seconds schedule_interval,
+CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
+                     std::chrono::seconds schedule_interval,
                      std::chrono::seconds min_interval,
                      const std::string& product_name)
     : system_data_(product_name),
@@ -51,32 +54,46 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher, std::chrono::seconds schedu
           [this] {
             return context_->ConnectToEnvironmentService<http::HttpService>();
           }),
+      encrypt_to_analyzer_(ReadPublicKeyPem(kAnalyzerPublicKeyPemPath),
+                           EncryptedMessage::HYBRID_ECDH_V1),
+      encrypt_to_shuffler_(ReadPublicKeyPem(kShufflerPublicKeyPemPath),
+                           EncryptedMessage::HYBRID_ECDH_V1),
       timer_manager_(dispatcher),
-      controller_impl_(new CobaltControllerImpl(dispatcher, &shipping_dispatcher_)) {
-  auto size_params = ShippingManager::SizeParams(
-      fuchsia::cobalt::kMaxBytesPerObservation, kMaxBytesPerEnvelope,
-      kMaxBytesTotal, kMinEnvelopeSendSize);
+      controller_impl_(
+          new CobaltControllerImpl(dispatcher, &shipping_dispatcher_)) {
+  store_dispatcher_.Register(
+      ObservationMetadata::LEGACY_BACKEND,
+      std::make_unique<MemoryObservationStore>(
+          fuchsia::cobalt::kMaxBytesPerObservation, kMaxBytesPerEnvelope,
+          kMaxBytesTotal, kMinEnvelopeSendSize));
+  store_dispatcher_.Register(
+      ObservationMetadata::V1_BACKEND,
+      std::make_unique<MemoryObservationStore>(
+          fuchsia::cobalt::kMaxBytesPerObservation, kMaxBytesPerEnvelope,
+          kMaxBytesTotal, kMinEnvelopeSendSize));
+
   auto schedule_params =
       ShippingManager::ScheduleParams(schedule_interval, min_interval);
-  auto envelope_maker_params = ShippingManager::EnvelopeMakerParams(
-      ReadPublicKeyPem(kAnalyzerPublicKeyPemPath),
-      EncryptedMessage::HYBRID_ECDH_V1,
-      ReadPublicKeyPem(kShufflerPublicKeyPemPath),
-      EncryptedMessage::HYBRID_ECDH_V1);
   shipping_dispatcher_.Register(
       ObservationMetadata::LEGACY_BACKEND,
       std::make_unique<LegacyShippingManager>(
-          size_params, schedule_params, envelope_maker_params,
-          ShippingManager::SendRetryerParams(kInitialRpcDeadline,
-                                             kDeadlinePerSendAttempt),
+          schedule_params,
+          store_dispatcher_.GetStore(ObservationMetadata::LEGACY_BACKEND)
+              .ConsumeValueOrDie(),
+          &encrypt_to_shuffler_,
+          LegacyShippingManager::SendRetryerParams(kInitialRpcDeadline,
+                                                   kDeadlinePerSendAttempt),
           &send_retryer_));
   shipping_dispatcher_.Register(
       ObservationMetadata::V1_BACKEND,
       std::make_unique<ClearcutV1ShippingManager>(
-          size_params, schedule_params, envelope_maker_params,
+          schedule_params,
+          store_dispatcher_.GetStore(ObservationMetadata::V1_BACKEND)
+              .ConsumeValueOrDie(),
+          &encrypt_to_shuffler_,
           std::make_unique<ClearcutUploader>(
-              kClearcutServerUri,
-              std::make_unique<FuchsiaHTTPClient>(&network_wrapper_, dispatcher))));
+              kClearcutServerUri, std::make_unique<FuchsiaHTTPClient>(
+                                      &network_wrapper_, dispatcher))));
   shipping_dispatcher_.Start();
 
   // Open the cobalt config file.
@@ -99,7 +116,8 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher, std::chrono::seconds schedu
       << "Could not parse the Cobalt config file: " << kConfigBinProtoPath;
 
   factory_impl_.reset(new CobaltEncoderFactoryImpl(
-      client_config_, getClientSecret(), &shipping_dispatcher_, &system_data_,
+      client_config_, getClientSecret(), &store_dispatcher_,
+      &encrypt_to_analyzer_, &shipping_dispatcher_, &system_data_,
       &timer_manager_));
 
   context_->outgoing().AddPublicService(

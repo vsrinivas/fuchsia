@@ -14,8 +14,9 @@
 
 namespace cobalt {
 
-// Maps a ShippingManager::Status to a fuchsia::cobalt::Status.
-fuchsia::cobalt::Status ToCobaltStatus(encoder::ShippingManager::Status s);
+// Maps an ObservationStore::StoreStatus to a fuchsia::cobalt::Status.
+fuchsia::cobalt::Status ToCobaltStatus(
+    encoder::ObservationStore::StoreStatus s);
 
 // Reads the PEM file at the specified path and returns the contents as
 // a string. CHECK fails if the file cannot be read.

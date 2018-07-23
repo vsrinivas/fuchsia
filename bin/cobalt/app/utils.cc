@@ -8,22 +8,21 @@
 
 namespace cobalt {
 
-using encoder::ShippingManager;
+using encoder::ObservationStore;
 using fuchsia::cobalt::Status;
 
-Status ToCobaltStatus(ShippingManager::Status s) {
+Status ToCobaltStatus(ObservationStore::StoreStatus s) {
   switch (s) {
-    case ShippingManager::kOk:
+    case ObservationStore::kOk:
       return Status::OK;
 
-    case ShippingManager::kObservationTooBig:
+    case ObservationStore::kObservationTooBig:
       return Status::OBSERVATION_TOO_BIG;
 
-    case ShippingManager::kFull:
+    case ObservationStore::kStoreFull:
       return Status::TEMPORARILY_FULL;
 
-    case ShippingManager::kShutDown:
-    case ShippingManager::kEncryptionFailed:
+    case ObservationStore::kWriteFailed:
       return Status::INTERNAL_ERROR;
   }
 }

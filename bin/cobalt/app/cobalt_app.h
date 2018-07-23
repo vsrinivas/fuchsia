@@ -39,7 +39,8 @@ class CobaltApp {
   //
   // |product_name| A product name to override the one used in the
   //                ObservationMetadata.
-  CobaltApp(async_dispatcher_t* dispatcher, std::chrono::seconds schedule_interval,
+  CobaltApp(async_dispatcher_t* dispatcher,
+            std::chrono::seconds schedule_interval,
             std::chrono::seconds min_interval, const std::string& product_name);
 
  private:
@@ -52,7 +53,10 @@ class CobaltApp {
   encoder::ShufflerClient shuffler_client_;
   encoder::send_retryer::SendRetryer send_retryer_;
   network_wrapper::NetworkWrapperImpl network_wrapper_;
+  encoder::ObservationStoreDispatcher store_dispatcher_;
+  util::EncryptedMessageMaker encrypt_to_analyzer_;
   encoder::ShippingDispatcher shipping_dispatcher_;
+  util::EncryptedMessageMaker encrypt_to_shuffler_;
   TimerManager timer_manager_;
 
   std::shared_ptr<config::ClientConfig> client_config_;

@@ -13,17 +13,19 @@
 #include "garnet/bin/cobalt/app/timer_manager.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "third_party/cobalt/config/client_config.h"
+#include "third_party/cobalt/encoder/observation_store_dispatcher.h"
 #include "third_party/cobalt/encoder/shipping_dispatcher.h"
+#include "third_party/cobalt/util/encrypted_message_util.h"
 
 namespace cobalt {
 namespace encoder {
 
 class CobaltEncoderFactoryImpl : public fuchsia::cobalt::CobaltEncoderFactory {
  public:
-  // Does not take ownerhsip of |timer_manager|, |shipping_dispatcher| or
-  // |system_data|.
   CobaltEncoderFactoryImpl(std::shared_ptr<config::ClientConfig> client_config,
                            ClientSecret client_secret,
+                           ObservationStoreDispatcher* store_dispatcher,
+                           util::EncryptedMessageMaker* encrypt_to_analyzer,
                            ShippingDispatcher* shipping_dispatcher,
                            const SystemData* system_data,
                            TimerManager* timer_manager);
@@ -42,9 +44,11 @@ class CobaltEncoderFactoryImpl : public fuchsia::cobalt::CobaltEncoderFactory {
   fidl::BindingSet<fuchsia::cobalt::CobaltEncoder,
                    std::unique_ptr<fuchsia::cobalt::CobaltEncoder>>
       cobalt_encoder_bindings_;
-  ShippingDispatcher* shipping_dispatcher_;  // not owned
-  const SystemData* system_data_;            // not owned
-  TimerManager* timer_manager_;              // not owned
+  ObservationStoreDispatcher* store_dispatcher_;      // not owned
+  util::EncryptedMessageMaker* encrypt_to_analyzer_;  // not owned
+  ShippingDispatcher* shipping_dispatcher_;           // not owned
+  const SystemData* system_data_;                     // not owned
+  TimerManager* timer_manager_;                       // not owned
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltEncoderFactoryImpl);
 };

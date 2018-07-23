@@ -14,10 +14,14 @@ using cobalt::TimerVal;
 
 CobaltEncoderImpl::CobaltEncoderImpl(
     std::unique_ptr<ProjectContext> project_context, ClientSecret client_secret,
+    ObservationStoreDispatcher* store_dispatcher,
+    util::EncryptedMessageMaker* encrypt_to_analyzer,
     ShippingDispatcher* shipping_dispatcher, const SystemData* system_data,
     TimerManager* timer_manager)
     : encoder_(std::move(project_context), std::move(client_secret),
                system_data),
+      store_dispatcher_(store_dispatcher),
+      encrypt_to_analyzer_(encrypt_to_analyzer),
       shipping_dispatcher_(shipping_dispatcher),
       timer_manager_(timer_manager) {}
 
@@ -42,8 +46,25 @@ void CobaltEncoderImpl::AddEncodedObservation(Encoder::Result* result,
       return;
   }
 
-  Status status = ToCobaltStatus(shipping_dispatcher_->AddObservation(
-      *(result->observation), std::move(result->metadata)));
+  auto message = std::make_unique<EncryptedMessage>();
+  if (!encrypt_to_analyzer_->Encrypt(*(result->observation), message.get())) {
+    FXL_LOG(WARNING)
+        << "Cobalt internal error. Unable to encrypt observations.";
+    callback(Status::INTERNAL_ERROR);
+  }
+  // AddEncryptedObservation returns a StatusOr<ObservationStore::StoreStatus>.
+  auto result_or = store_dispatcher_->AddEncryptedObservation(
+      std::move(message), std::move(result->metadata));
+
+  // If the StatusOr is not ok(), that means there was no configured store for
+  // the metadata's backend.
+  if (!result_or.ok()) {
+    callback(Status::INTERNAL_ERROR);
+  }
+
+  // Unpack the inner StoreStatus and convert it to a cobalt Status.
+  Status status = ToCobaltStatus(result_or.ConsumeValueOrDie());
+  shipping_dispatcher_->NotifyObservationsAdded();
   callback(status);
 }
 void CobaltEncoderImpl::AddStringObservation(
@@ -193,7 +214,8 @@ void CobaltEncoderImpl::AddTimerObservationIfReady(
 
     timer_val_ptr->observation.push_back(std::move(value));
     AddMultipartObservation(timer_val_ptr->metric_id,
-                            std::move(timer_val_ptr->observation), std::move(callback));
+                            std::move(timer_val_ptr->observation),
+                            std::move(callback));
   } else {
     AddIntObservation(
         timer_val_ptr->metric_id, timer_val_ptr->encoding_id,
