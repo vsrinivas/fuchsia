@@ -23,6 +23,7 @@
  * Database of settings for the NAND flash devices we support
  */
 struct nand_chip_table nand_chip_table[] = {
+    {0x2C, 0xDC, "Micron", "MT29F4G08ABAEA", {20, 16, 15}, 20, true, 512, 0, 0, 0, 0},
     {0xEC, 0xDC, "Samsung", "K9F4G08U0F", {25, 20, 15}, 30, true, 512, 0, 0, 0, 0},
     /* TODO: This works. but doublecheck Toshiba nand_timings from datasheet */
     {0x98, 0xDC, "Toshiba", "TC58NVG2S0F", {25, 20, /* 15 */ 25}, 20, true, 512, 0, 0, 0, 0},
