@@ -244,48 +244,8 @@ size_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8_t al
     return 0;
 }
 
-size_t PmmNode::Free(list_node* list) {
-    LTRACEF("list %p\n", list);
-
-    DEBUG_ASSERT(list);
-
-    Guard<fbl::Mutex> guard{&lock_};
-
-    uint count = 0;
-    while (!list_is_empty(list)) {
-        vm_page* page = list_remove_head_type(list, vm_page, queue_node);
-
-        LTRACEF("page %p state %u\n", page, page->state);
-        DEBUG_ASSERT(page->state != VM_PAGE_STATE_OBJECT || page->object.pin_count == 0);
-        DEBUG_ASSERT(!page->is_free());
-
-#if PMM_ENABLE_FREE_FILL
-        FreeFill(page);
-#endif
-
-        // remove it from its old queue
-        if (list_in_list(&page->queue_node))
-            list_delete(&page->queue_node);
-
-        // mark it free
-        page->state = VM_PAGE_STATE_FREE;
-
-        // add it to the free queue
-        list_add_head(&free_list_, &page->queue_node);
-
-        free_count_++;
-        count++;
-    }
-
-    LTRACEF("returning count %u\n", count);
-
-    return count;
-}
-
-void PmmNode::Free(vm_page* page) {
-    LTRACEF("page %p, pa %#" PRIxPTR "\n", page, page->paddr());
-
-    Guard<fbl::Mutex> guard{&lock_};
+void PmmNode::FreePageLocked(vm_page* page) {
+    LTRACEF("page %p state %u paddr %#" PRIxPTR "\n", page, page->state, page->paddr());
 
     DEBUG_ASSERT(page->state != VM_PAGE_STATE_OBJECT || page->object.pin_count == 0);
     DEBUG_ASSERT(!page->is_free());
@@ -305,6 +265,26 @@ void PmmNode::Free(vm_page* page) {
     list_add_head(&free_list_, &page->queue_node);
 
     free_count_++;
+}
+
+void PmmNode::Free(list_node* list) {
+    LTRACEF("list %p\n", list);
+
+    DEBUG_ASSERT(list);
+
+    Guard<fbl::Mutex> guard{&lock_};
+
+    while (!list_is_empty(list)) {
+        vm_page* page = list_remove_head_type(list, vm_page, queue_node);
+
+        FreePageLocked(page);
+    }
+}
+
+void PmmNode::Free(vm_page* page) {
+    Guard<fbl::Mutex> guard{&lock_};
+
+    FreePageLocked(page);
 }
 
 // okay if accessed outside of a lock

@@ -52,11 +52,10 @@ size_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t align_log2, 
                             list_node* list);
 
 // Free a list of physical pages.
-// Returns the number of pages freed.
-size_t pmm_free(list_node* list);
+void pmm_free(list_node* list);
 
 // Free a single page.
-size_t pmm_free_page(vm_page_t* page);
+void pmm_free_page(vm_page_t* page);
 
 // Return count of unallocated physical pages in system.
 uint64_t pmm_count_free_pages();

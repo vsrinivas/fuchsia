@@ -34,7 +34,7 @@ public:
     size_t AllocRange(paddr_t address, size_t count, list_node* list);
     size_t AllocContiguous(size_t count, uint alloc_flags, uint8_t alignment_log2, paddr_t* pa, list_node* list);
     void Free(vm_page* page);
-    size_t Free(list_node* list);
+    void Free(list_node* list);
 
     uint64_t CountFreePages() const;
     uint64_t CountTotalBytes() const;
@@ -56,6 +56,8 @@ public:
     void AddFreePages(list_node *list);
 
 private:
+    void FreePageLocked(vm_page* page) TA_REQ(lock_);
+
     fbl::Canary<fbl::magic("PNOD")> canary_;
 
     mutable DECLARE_MUTEX(PmmNode) lock_;

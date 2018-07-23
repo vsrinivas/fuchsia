@@ -84,13 +84,12 @@ size_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t alignment_lo
     return pmm_node.AllocContiguous(count, alloc_flags, alignment_log2, pa, list);
 }
 
-size_t pmm_free(list_node* list) {
-    return pmm_node.Free(list);
+void pmm_free(list_node* list) {
+    pmm_node.Free(list);
 }
 
-size_t pmm_free_page(vm_page* page) {
+void pmm_free_page(vm_page* page) {
     pmm_node.Free(page);
-    return 1;
 }
 
 uint64_t pmm_count_free_pages() {

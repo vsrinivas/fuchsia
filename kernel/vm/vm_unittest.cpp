@@ -32,8 +32,7 @@ static bool pmm_smoke_test() {
     vm_page_t* page2 = paddr_to_vm_page(pa);
     ASSERT_EQ(page2, page, "paddr_to_vm_page on single page");
 
-    auto ret = pmm_free_page(page);
-    ASSERT_EQ(1u, ret, "pmm_free_page on single page");
+    pmm_free_page(page);
     END_TEST;
 }
 
@@ -49,8 +48,7 @@ static bool pmm_large_alloc_test() {
     EXPECT_EQ(alloc_count, list_length(&list),
               "pmm_alloc_pages a bunch of pages list count");
 
-    auto ret = pmm_free(&list);
-    EXPECT_EQ(alloc_count, ret, "pmm_free_page on a list of pages");
+    pmm_free(&list);
     END_TEST;
 }
 
@@ -68,8 +66,7 @@ static bool pmm_oversized_alloc_test() {
     EXPECT_EQ(count, list_length(&list),
               "pmm_alloc_pages too many pages list count");
 
-    auto ret = pmm_free(&list);
-    EXPECT_EQ(count, ret, "pmm_free_page on a list of pages");
+    pmm_free(&list);
     END_TEST;
 }
 
@@ -84,8 +81,7 @@ static bool pmm_alloc_contiguous_one_test() {
     ASSERT_EQ(num_allocated, list_length(&list),
               "pmm_alloc_contiguous list size is wrong");
     ASSERT_NE(nullptr, paddr_to_physmap(pa), "");
-    auto ret = pmm_free(&list);
-    ASSERT_EQ(num_allocated, ret, "pmm_free wrong number");
+    pmm_free(&list);
     END_TEST;
 }
 

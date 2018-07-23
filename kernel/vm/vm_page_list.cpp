@@ -163,8 +163,7 @@ size_t VmPageList::FreeAllPages() {
     ForEveryPage(per_page_func);
 
     // return all the pages to the pmm at once
-    __UNUSED auto freed = pmm_free(&list);
-    DEBUG_ASSERT(freed == count);
+    pmm_free(&list);
 
     // empty the tree
     list_.clear();
