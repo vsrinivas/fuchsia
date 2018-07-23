@@ -156,6 +156,24 @@ enum class LECreditBasedConnectionResult : uint16_t {
 // including those dynamically-assigned/-obtained
 using PSM = uint16_t;
 
+// Well-knonn Protocol and Service Multiplexer values defined by the Bluetooth
+// SIG in Logical Link Control Assigned Numbers
+// https://www.bluetooth.com/specifications/assigned-numbers/logical-link-control
+constexpr PSM kSDP = 0x0001;
+constexpr PSM kRFCOMM = 0x0003;
+constexpr PSM kTCSBIN = 0x0005; // Telephony Control Specification
+constexpr PSM kTCSBINCordless = 0x0007;
+constexpr PSM kBNEP = 0x0009; // Bluetooth Network Encapsulation Protocol
+constexpr PSM kHIDControl = 0x0011; // Human Interface Device
+constexpr PSM kHIDInteerup = 0x0013; // Human Interface Device
+constexpr PSM kAVCTP = 0x0017; // Audio/Video Control Transport Protocol
+constexpr PSM kAVDTP = 0x0019; // Audio/Video Distribution Transport Protocol
+constexpr PSM kAVCTP_Browse = 0x001B; // Audio/Video Remote Control Profile (Browsing)
+constexpr PSM kATT = 0x001F; // ATT
+constexpr PSM k3DSP = 0x0021; // 3D Synchronization Profile
+constexpr PSM kLE_PSM_IPSP = 0x0023; // Internet Protocol Support Profile
+constexpr PSM kOTS = 0x0025; // Object Transfer Service
+
 // Identifier assigned to each signaling transaction. This is used to match each
 // signaling channel request with a response.
 using CommandId = uint8_t;

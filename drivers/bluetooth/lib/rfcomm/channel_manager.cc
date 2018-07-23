@@ -12,8 +12,33 @@
 namespace btlib {
 namespace rfcomm {
 
-ChannelManager::ChannelManager()
-    : dispatcher_(async_get_default_dispatcher()) {}
+std::unique_ptr<ChannelManager> ChannelManager::Create(l2cap::L2CAP* l2cap) {
+  FXL_DCHECK(l2cap);
+  // ChannelManager constructor private; can't use make_unique.
+  auto channel_manager =
+      std::unique_ptr<ChannelManager>(new ChannelManager(l2cap));
+  if (l2cap->RegisterService(
+          l2cap::kRFCOMM,
+          [cm = channel_manager->weak_ptr_factory_.GetWeakPtr()](
+              auto l2cap_channel) {
+            if (cm) {
+              if (cm->RegisterL2CAPChannel(l2cap_channel)) {
+                FXL_LOG(INFO)
+                    << "rfcomm: Registered incoming channel with handle "
+                    << l2cap_channel->link_handle();
+              } else {
+                FXL_LOG(WARNING)
+                    << "rfcomm: Failed to register incoming channel with"
+                    << " handle " << l2cap_channel->link_handle();
+              }
+            }
+          },
+          async_get_default_dispatcher())) {
+    return channel_manager;
+  }
+
+  return nullptr;
+}
 
 bool ChannelManager::RegisterL2CAPChannel(
     fbl::RefPtr<l2cap::Channel> l2cap_channel) {
@@ -25,8 +50,7 @@ bool ChannelManager::RegisterL2CAPChannel(
   }
 
   auto session = Session::Create(
-      l2cap_channel, fit::bind_member(this, &ChannelManager::ChannelOpened),
-      dispatcher_);
+      l2cap_channel, fit::bind_member(this, &ChannelManager::ChannelOpened));
   if (!session) {
     FXL_LOG(ERROR) << "Couldn't start a session on the given L2CAP channel";
     return false;
@@ -39,14 +63,46 @@ void ChannelManager::OpenRemoteChannel(hci::ConnectionHandle handle,
                                        ServerChannel server_channel,
                                        ChannelOpenedCallback channel_opened_cb,
                                        async_dispatcher_t* dispatcher) {
+  FXL_DCHECK(channel_opened_cb);
+  FXL_DCHECK(dispatcher);
+
   auto session_it = handle_to_session_.find(handle);
 
   if (session_it == handle_to_session_.end()) {
-    // TODO(gusss): open L2CAP channel if needed.
-    FXL_NOTIMPLEMENTED();
-    async::PostTask(dispatcher, [cb = std::move(channel_opened_cb)] {
-      cb(nullptr, kInvalidServerChannel);
-    });
+    l2cap_->OpenChannel(
+        handle, l2cap::kRFCOMM,
+        [this, handle, server_channel, dispatcher,
+         cb = std::move(channel_opened_cb)](auto l2cap_channel) mutable {
+          if (!l2cap_channel) {
+            FXL_LOG(ERROR) << "rfcomm: Failed to open L2CAP channel with"
+                           << " handle " << handle;
+            async::PostTask(dispatcher, [cb_ = std::move(cb)] {
+              cb_(nullptr, kInvalidServerChannel);
+            });
+            return;
+          }
+
+          FXL_LOG(INFO) << "rfcomm: opened L2CAP session with handle "
+                        << handle;
+
+          FXL_DCHECK(handle_to_session_.find(handle) ==
+                     handle_to_session_.end());
+          handle_to_session_.emplace(
+              handle,
+              Session::Create(
+                  l2cap_channel,
+                  fbl::BindMember(this, &ChannelManager::ChannelOpened)));
+
+          // Re-run OpenRemoteChannel now that the session is opened.
+          async::PostTask(dispatcher_,
+                          [this, handle, server_channel, dispatcher,
+                           cb_ = std::move(cb)]() mutable {
+                            OpenRemoteChannel(handle, server_channel,
+                                              std::move(cb_), dispatcher);
+                          });
+        },
+        dispatcher_);
+    return;
   }
 
   FXL_DCHECK(session_it != handle_to_session_.end());
@@ -74,6 +130,13 @@ ServerChannel ChannelManager::AllocateLocalChannel(
   }
 
   return kInvalidServerChannel;
+}
+
+ChannelManager::ChannelManager(l2cap::L2CAP* l2cap)
+    : dispatcher_(async_get_default_dispatcher()),
+      l2cap_(l2cap),
+      weak_ptr_factory_(this) {
+  FXL_DCHECK(l2cap_);
 }
 
 void ChannelManager::ChannelOpened(fbl::RefPtr<Channel> rfcomm_channel,

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async/default.h>
+
 #include "garnet/drivers/bluetooth/lib/rfcomm/session.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/rfcomm.h"
@@ -68,19 +70,18 @@ DLCI GetDLCIFromMuxCommand(MuxCommand* mux_command) {
 
 std::unique_ptr<Session> Session::Create(
     fbl::RefPtr<l2cap::Channel> l2cap_channel,
-    ChannelOpenedCallback channel_opened_cb, async_dispatcher_t* dispatcher) {
-  auto session = std::unique_ptr<Session>(
-      new Session(std::move(channel_opened_cb), dispatcher));
+    ChannelOpenedCallback channel_opened_cb) {
+  auto session =
+      std::unique_ptr<Session>(new Session(std::move(channel_opened_cb)));
   if (!session->SetL2CAPChannel(l2cap_channel))
     return nullptr;
   return session;
 }
 
-Session::Session(ChannelOpenedCallback channel_opened_cb,
-                 async_dispatcher_t* dispatcher)
+Session::Session(ChannelOpenedCallback channel_opened_cb)
     : role_(Role::kUnassigned),
       channel_opened_cb_(std::move(channel_opened_cb)),
-      dispatcher_(dispatcher),
+      dispatcher_(async_get_default_dispatcher()),
       initial_param_negotiation_state_(
           ParameterNegotiationState::kNotNegotiated),
       weak_ptr_factory_(this) {}

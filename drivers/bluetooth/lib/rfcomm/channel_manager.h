@@ -9,9 +9,11 @@
 #include <unordered_map>
 
 #include <fbl/ref_ptr.h>
+#include <lib/fxl/memory/weak_ptr.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/channel.h"
 #include "garnet/drivers/bluetooth/lib/rfcomm/session.h"
 
@@ -34,7 +36,10 @@ namespace rfcomm {
 // dispatcher of the thread it was created on.
 class ChannelManager {
  public:
-  ChannelManager();
+  // Returns a new ChannelManager. Returns nullptr if creation fails (e.g. if
+  // registering the RFCOMM PSM with L2CAP fails). |l2cap| must be valid as long
+  // as the created ChannelManager exists.
+  static std::unique_ptr<ChannelManager> Create(l2cap::L2CAP* l2cap);
 
   // Registers |l2cap_channel| with RFCOMM. After this call, we will be able to
   // use OpenRemoteChannel() to get an RFCOMM channel multiplexed on top of this
@@ -64,6 +69,8 @@ class ChannelManager {
                                      async_dispatcher_t* dispatcher);
 
  private:
+  ChannelManager(l2cap::L2CAP* l2cap);
+
   // Calls the appropriate callback for |server_channel|, passing in
   // |rfcomm_channel|.
   void ChannelOpened(fbl::RefPtr<Channel> rfcomm_channel,
@@ -80,6 +87,13 @@ class ChannelManager {
 
   // The dispatcher which ChannelManager uses to run its own tasks.
   async_dispatcher_t* dispatcher_;
+
+  // A reference to the top-level L2CAP object, which creates and owns this
+  // ChannelManager object. This reference is guaranteed to exist. Note that
+  // using a RefPtr here would create a cyclical reference.
+  l2cap::L2CAP* l2cap_;
+
+  fxl::WeakPtrFactory<ChannelManager> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ChannelManager);
 };

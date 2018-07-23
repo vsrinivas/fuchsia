@@ -32,18 +32,16 @@ class Session {
 
   // Returns nullptr if creation fails -- for example, if activating the L2CAP
   // channel fails. |channel_opened_cb| will be called whenever a new channel is
-  // opened on this session. The callback will be dispatched on |dispatcher|.
-  // |dispatcher| will also be used for dispatching all of Session's other
-  // tasks.
+  // opened on this session. The callback will be dispatched onto the thread on
+  // which Session was created.
   using ChannelOpenedCallback =
       fit::function<void(fbl::RefPtr<Channel>, ServerChannel)>;
   static std::unique_ptr<Session> Create(
       fbl::RefPtr<l2cap::Channel> l2cap_channel,
-      ChannelOpenedCallback channel_opened_cb, async_dispatcher_t* dispatcher);
+      ChannelOpenedCallback channel_opened_cb);
 
   // Should only be called from Create().
-  Session(ChannelOpenedCallback channel_opened_cb,
-          async_dispatcher_t* dispatcher);
+  Session(ChannelOpenedCallback channel_opened_cb);
 
   // Sets |l2cap_channel| as the Session's underlying L2CAP channel.
   // |l2cap_channel| should not be activated. This function activates

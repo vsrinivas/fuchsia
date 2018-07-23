@@ -10,6 +10,7 @@
 #include <lib/fxl/logging.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 
 namespace btlib {
 namespace rfcomm {
@@ -76,8 +77,7 @@ constexpr ServerChannel kInvalidServerChannel = 0;
 constexpr size_t kServerChannelShift = 1;
 
 inline constexpr ServerChannel DLCIToServerChannel(DLCI dlci) {
-  FXL_DCHECK(dlci == kMuxControlDLCI ||
-             (dlci >= kMinUserDLCI && dlci <= kMaxUserDLCI));
+  FXL_DCHECK(IsUserDLCI(dlci));
   return dlci >> kServerChannelShift;
 }
 
