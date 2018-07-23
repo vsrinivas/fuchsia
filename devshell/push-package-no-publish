@@ -46,7 +46,7 @@ function main {
   local pkgs
 
   if [[ $# -eq 0 ]]; then
-    pkgs=$("${FUCHSIA_DIR}/scripts/list-repo-targets.py" --repo "${FUCHSIA_BUILD_DIR}/amber-files/repository")
+    pkgs=$("${FUCHSIA_DIR}/scripts/list-repo-targets.py" --repo "${FUCHSIA_BUILD_DIR}/amber-files/repository" | tr '\n' ' ')
   else
     pkgs="$@"
   fi
@@ -54,11 +54,11 @@ function main {
   # The target doesn't support expansions, and a local expansion makes a command
   # too long to spawn, so sending a loop makes things work ok.
   local cmd="
-    for c in \"$pkgs\"; do
-      amber_ctl get_up -n \${c};
+    for c in $pkgs; do
+      amber_ctl get_up -n \"\${c}\";
       manifest_path=\"/pkgfs/packages/\${c}/0/meta/module.json\";
       if [ -s \"\$manifest_path\" ]; then
-        run module_package_indexer \${c} 0;
+        run module_package_indexer \"\${c}\" 0;
       fi
     done
   "
