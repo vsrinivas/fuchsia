@@ -15,8 +15,9 @@ fx-config-read
 kill_child_processes() {
   child_pids=$(jobs -p)
   if [[ -n "${child_pids}" ]]; then
-    kill "${child_pids}" 2> /dev/null
-    wait "${child_pids}" 2> /dev/null
+    # Note: child_pids must be expanded to args here.
+    kill ${child_pids} 2> /dev/null
+    wait 2> /dev/null
   fi
 }
 trap kill_child_processes EXIT
