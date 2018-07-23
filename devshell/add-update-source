@@ -49,8 +49,8 @@ function main {
     shift
   done
 
-  if ! [[ -x "$(command -v sha256sum)" ]]; then
-    echo "'sha256sum' binary not found"
+  if ! [[ -x "$(command -v shasum)" ]]; then
+    echo "'shasum' binary not found"
     exit 1
   fi
 
@@ -81,7 +81,7 @@ function main {
     --output "${config_path}" \
     || exit $?
 
-  config_hash=$(sha256sum $config_path | cut -f1 -d' ')
+  config_hash=$(shasum -a 256 $config_path | cut -f1 -d' ')
 
   fx-command-run shell $device_arg amber_ctl add_src \
     -f "${config_url}" \
