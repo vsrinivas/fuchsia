@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Exception handling support in Zircon was impired by similar support in Mach.
+Exception handling support in Zircon was inspired by similar support in Mach.
 
 Exceptions are mainly used for debugging. Outside of debugging
 one generally uses ["signals"](signals.md).
@@ -25,7 +25,7 @@ This is done with the
 
 Example:
 
-```
+```cpp
   zx_handle_t eport;
   auto status = zx_port_create(0, &eport);
   // ... check status ...
@@ -53,7 +53,7 @@ and the call to the
 [**thread_resume**() system call](syscalls/thread_resume.md)
 to indicate the handler is finished processing the exception.
 
-```
+```cpp
   while (true) {
     zx_port_packet_t packet;
     auto status = zx_port_wait(eport, ZX_TIME_INFINITE, packet);
@@ -85,7 +85,7 @@ to indicate the handler is finished processing the exception.
 To unbind an exception port, pass **ZX_HANDLE_INVALID** for the
 exception port:
 
-```
+```cpp
   uint32_t options = 0;
   status = zx_task_bind_exception_port(child, ZX_HANDLE_INVALID,
                                        key, options);
@@ -114,7 +114,7 @@ If the thread gets another exception then exception processing begins
 again anew. An example of when one would do this is when resuming after a
 debugger breakpoint.
 
-```
+```cpp
   auto status = zx_task_resume(thread, ZX_RESUME_EXCEPTION);
   // ... check status ...
 ```
@@ -124,7 +124,7 @@ current handler, and giving the next exception port in the search order a
 chance to process the exception. An example of when one would do this is
 when the exception is not one the handler intends to process.
 
-```
+```cpp
   auto status = zx_task_resume(thread,
       ZX_RESUME_EXCEPTION | ZX_RESUME_TRY_NEXT);
   // ... check status ...
@@ -137,7 +137,7 @@ unspecified non-zero value.
 The return code can be obtained with *zx_object_get_info(ZX_INFO_PROCESS)*.
 Example:
 
-```
+```cpp
     zx_info_process_t info;
     auto status = zx_object_get_info(process, ZX_INFO_PROCESS, &info,
                                      sizeof(info), nullptr, nullptr);
@@ -212,14 +212,14 @@ This can happen if the thread is suspended while waiting for a response
 from an exception handler. The thread stays paused until it is resumed
 for both the exception and the suspension:
 
-```
+```cpp
   auto status = zx_task_resume(thread, ZX_RESUME_EXCEPTION);
   // ... check status ...
 ```
 
 and one for the suspension:
 
-```
+```cpp
   auto status = zx_task_resume(thread, 0);
   // ... check status ...
 ```
@@ -249,7 +249,7 @@ to have signals regarding each thread sent to the port.
 In other words, there is still just one system call involved to wait
 for something interesting to happen.
 
-```
+```cpp
   uint64_t key = some_key_denoting_the_thread;
   bool is_suspended = thread_is_suspended(thread);
   zx_signals_t signals = ZX_THREAD_TERMINATED;
