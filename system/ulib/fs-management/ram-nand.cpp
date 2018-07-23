@@ -11,6 +11,7 @@
 
 #include <fbl/unique_fd.h>
 #include <zircon/device/ram-nand.h>
+#include <zircon/types.h>
 
 namespace {
 

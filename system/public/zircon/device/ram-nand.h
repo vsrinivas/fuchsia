@@ -6,9 +6,9 @@
 
 #include <limits.h>
 
-#include <ddk/protocol/nand.h>
 #include <zircon/device/ioctl.h>
 #include <zircon/device/ioctl-wrapper.h>
+#include <zircon/device/nand.h>
 
 #define IOCTL_RAM_NAND_CREATE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 1)
