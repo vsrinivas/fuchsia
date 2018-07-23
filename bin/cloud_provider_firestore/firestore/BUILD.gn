@@ -50,5 +50,6 @@ source_set("unittests") {
     "//garnet/public/lib/gtest",
     "//peridot/bin/cloud_provider_firestore/firestore/testing",
     "//peridot/lib/convert",
+    "//third_party/protobuf:protobuf_full",
   ]
 }

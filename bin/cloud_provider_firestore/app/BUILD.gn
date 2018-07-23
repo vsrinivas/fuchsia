@@ -80,5 +80,6 @@ source_set("unittests") {
     "//peridot/bin/cloud_provider_firestore/firestore/testing",
     "//peridot/lib/convert",
     "//peridot/lib/firebase_auth/testing",
+    "//third_party/protobuf:protobuf_full",
   ]
 }

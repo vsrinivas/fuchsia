@@ -27,10 +27,11 @@ source_set("story_runner") {
   ]
 
   public_deps = [
+    "//garnet/public/fidl/fuchsia.ui.policy",
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//peridot/bin/device_runner/cobalt",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/user_runner:component_context",
@@ -75,9 +76,9 @@ executable_package("dev_story_shell") {
   ]
 
   deps = [
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",
     "//peridot/public/fidl/fuchsia.modular",

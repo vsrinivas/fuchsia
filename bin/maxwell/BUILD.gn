@@ -51,7 +51,7 @@ source_set("user_intelligence_provider") {
     ":agent_launcher",
     ":config",
     ":intelligence_services",
-    "//garnet/public/fidl/fuchsia.bluetooth",
+    "//garnet/public/fidl/fuchsia.bluetooth.le",
     "//garnet/public/fidl/fuchsia.net.oldhttp",
     "//peridot/lib:maxwell_internal",
     "//peridot/lib/util:rate_limited_retry",
