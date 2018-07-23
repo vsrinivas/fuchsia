@@ -1,0 +1,63 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/cpp/fidlmerge_cpp.gni")
+
+# Declares a fostr library that contains C++ ostream formatting for a FIDL
+# library.
+#
+# Parameters
+#
+#   fidl_target (required)
+#     Specifies the fidl target from which to read fidl json. For example,
+#     "//zircon/public/fidl/fuchsia-mem:fuchsia-mem_sdk" for fuchsia.mem or
+#     "//garnet/public/fidl/fuchsia.sys" for fuchsia.sys.
+#
+#   template_path (optional)
+#     Specifies the template to use to generate the formatting code. Default
+#     //garnet/public/build/fostr/fostr.fidlmerge.
+#
+#   deps, public_deps, test_only, visibility (optional)
+#     These parameters are forwarded to the source_set. This template lists
+#     //garnet/public/lib/fostr and the value of fidl_target as public_deps.
+#
+
+template("fostr_fidl") {
+  assert(is_fuchsia, "This template can only be used in $target_toolchain.")
+
+  assert(defined(invoker.fidl_target),
+         "fostr_fidl requires parameter fidl_target.")
+
+  fidl_target = invoker.fidl_target
+
+  template_path = "//garnet/public/build/fostr/fostr.fidlmerge"
+  if (defined(invoker.template_path)) {
+    template_path = invoker.template_path
+  }
+
+  fidlmerge_cpp(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    fidl_target = "$fidl_target"
+
+    template_path = "$template_path"
+
+    generated_source_base = "formatting"
+
+    public_deps = [
+      "$fidl_target",
+      "//garnet/public/lib/fostr",
+    ]
+
+    if (defined(invoker.public_deps)) {
+      public_deps += invoker.public_deps
+    }
+  }
+}

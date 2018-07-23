@@ -115,7 +115,7 @@ func (root Root) Generate(outputPath string, template string, data interface{}) 
 		return "", err
 	}
 
-	return outputPath, nil
+	return "", nil
 }
 
 // Returns an output file path with the specified extension.
