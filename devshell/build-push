@@ -55,7 +55,7 @@ function main {
     shift
   done
 
-  fx-command-run build "${args[@]}" updates
+  fx-command-run build "${args[@]}"
 
   if [[ "${push}" -eq 0 ]]; then
     return
