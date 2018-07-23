@@ -11,7 +11,7 @@
 namespace component {
 namespace {
 
-TEST(SandboxMetadata, ParseRapidJson) {
+TEST(SandboxMetadata, Parse) {
   rapidjson::Document dev_document;
   dev_document.SetObject();
   rapidjson::Document::AllocatorType& dev_allocator =
