@@ -17,6 +17,11 @@
 
 #include <zircon/driver/binding.h>
 
+typedef struct {
+    const char* libname;
+    void (*func)(driver_t* drv, const char* version);
+} add_ctx_t;
+
 static bool is_driver_disabled(const char* name) {
     // driver.<driver_name>.disable
     char opt[16 + DRIVER_NAME_LEN_MAX];
@@ -26,6 +31,8 @@ static bool is_driver_disabled(const char* name) {
 
 static void found_driver(zircon_driver_note_payload_t* note,
                          const zx_bind_inst_t* bi, void* cookie) {
+    add_ctx_t* ctx = cookie;
+
     // ensure strings are terminated
     note->name[sizeof(note->name) - 1] = 0;
     note->vendor[sizeof(note->vendor) - 1] = 0;
@@ -35,7 +42,7 @@ static void found_driver(zircon_driver_note_payload_t* note,
         return;
     }
 
-    const char* libname = cookie;
+    const char* libname = ctx->libname;
     size_t pathlen = strlen(libname) + 1;
     size_t namelen = strlen(note->name) + 1;
     size_t bindlen = note->bindcount * sizeof(zx_bind_inst_t);
@@ -78,10 +85,12 @@ static void found_driver(zircon_driver_note_payload_t* note,
     }
 #endif
 
-    dc_driver_added(drv, note->version);
+    ctx->func(drv, note->version);
 }
 
-void find_loadable_drivers(const char* path) {
+void find_loadable_drivers(const char* path,
+                           void (*func)(driver_t* drv, const char* version)) {
+
     DIR* dir = opendir(path);
     if (dir == NULL) {
         return;
@@ -104,7 +113,11 @@ void find_loadable_drivers(const char* path) {
         if ((fd = openat(dirfd(dir), de->d_name, O_RDONLY)) < 0) {
             continue;
         }
-        zx_status_t status = di_read_driver_info(fd, libname, found_driver);
+        add_ctx_t ctx = {
+            .libname = libname,
+            .func = func,
+        };
+        zx_status_t status = di_read_driver_info(fd, &ctx, found_driver);
         close(fd);
 
         if (status) {
@@ -118,14 +131,20 @@ void find_loadable_drivers(const char* path) {
     closedir(dir);
 }
 
-void load_driver(const char* path) {
+void load_driver(const char* path,
+                 void (*func)(driver_t* drv, const char* version)) {
     //TODO: check for duplicate driver add
     int fd;
     if ((fd = open(path, O_RDONLY)) < 0) {
         printf("devcoord: cannot open '%s'\n", path);
         return;
     }
-    zx_status_t status = di_read_driver_info(fd, (void*)path, found_driver);
+
+    add_ctx_t ctx = {
+        .libname = path,
+        .func = func,
+    };
+    zx_status_t status = di_read_driver_info(fd, &ctx, found_driver);
     close(fd);
 
     if (status) {

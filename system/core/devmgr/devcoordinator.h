@@ -145,6 +145,7 @@ struct dc_driver {
     const zx_bind_inst_t* binding;
     uint32_t binding_size;
     uint32_t flags;
+    zx_handle_t dso_vmo;
     struct list_node node;
     const char* libname;
 };
@@ -159,10 +160,10 @@ void devfs_advertise_modified(device_t* dev);
 device_t* coordinator_init(zx_handle_t root_job);
 void coordinator(void);
 
-void dc_driver_added(driver_t* drv, const char* version);
-
-void load_driver(const char* path);
-void find_loadable_drivers(const char* path);
+void load_driver(const char* path,
+                 void (*func)(driver_t* drv, const char* version));
+void find_loadable_drivers(const char* path,
+                           void (*func)(driver_t* drv, const char* version));
 
 bool dc_is_bindable(driver_t* drv, uint32_t protocol_id,
                     zx_device_prop_t* props, size_t prop_count,

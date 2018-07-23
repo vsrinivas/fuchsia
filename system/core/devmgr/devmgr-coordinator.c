@@ -29,6 +29,10 @@
 #include "log.h"
 #include "memfs-private.h"
 
+static void dc_driver_added(driver_t* drv, const char* version);
+static void dc_driver_added_init(driver_t* drv, const char* version);
+
+
 #define BOOT_FIRMWARE_DIR "/boot/lib/firmware"
 #define SYSTEM_FIRMWARE_DIR "/system/lib/firmware"
 
@@ -228,7 +232,7 @@ static zx_status_t handle_dmctl_write(size_t len, const char* cmd) {
         char path[len + 1];
         memcpy(path, cmd + 11, len);
         path[len] = 0;
-        load_driver(path);
+        load_driver(path, dc_driver_added);
         return ZX_OK;
     }
     dmprintf("unknown command\n");
@@ -276,12 +280,7 @@ static driver_t* libname_to_driver(const char* libname) {
     return NULL;
 }
 
-static zx_status_t libname_to_vmo(const char* libname, zx_handle_t* out) {
-    driver_t* drv = libname_to_driver(libname);
-    if (drv == NULL) {
-        log(ERROR, "devcoord: cannot find driver '%s'\n", libname);
-        return ZX_ERR_NOT_FOUND;
-    }
+static zx_status_t load_vmo(const char* libname, zx_handle_t* out) {
     int fd = open(libname, O_RDONLY);
     if (fd < 0) {
         log(ERROR, "devcoord: cannot open driver '%s'\n", libname);
@@ -300,6 +299,28 @@ static zx_status_t libname_to_vmo(const char* libname, zx_handle_t* out) {
     }
     zx_object_set_property(*out, ZX_PROP_NAME, vmo_name, strlen(vmo_name));
     return r;
+}
+
+static zx_status_t libname_to_vmo(const char* libname, zx_handle_t* out) {
+    driver_t* drv = libname_to_driver(libname);
+    if (drv == NULL) {
+        log(ERROR, "devcoord: cannot find driver '%s'\n", libname);
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    // Check for cached DSO
+    if (drv->dso_vmo != ZX_HANDLE_INVALID) {
+        zx_status_t r = zx_handle_duplicate(drv->dso_vmo,
+                                            ZX_RIGHTS_BASIC | ZX_RIGHTS_PROPERTY |
+                                            ZX_RIGHT_READ | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP,
+                                            out);
+        if (r != ZX_OK) {
+            log(ERROR, "devcoord: cannot duplicate cached dso for '%s' '%s'\n", drv->name, libname);
+        }
+        return r;
+    } else {
+        return load_vmo(libname, out);
+    }
 }
 
 void devmgr_set_bootdata(zx_handle_t vmo) {
@@ -1956,27 +1977,12 @@ static bool is_root_driver(driver_t* drv) {
         (memcmp(&root_device_binding, drv->binding, sizeof(root_device_binding)) == 0);
 }
 
-static work_t new_driver_work;
-
-// dc_driver_added is called from driver enumeration either before
-// or after the devcoordinator starts running.  If after, it's added
-// to the list of new drivers and work is queued to process it.  If
-// before it's added to the list of all drivers or fallback list.
-void dc_driver_added(driver_t* drv, const char* version) {
-    //TODO: real priority scheme
-    if (dc_running) {
-        if (version[0] == '*') {
-            // de-prioritize drivers that are "fallback"
-            list_add_tail(&list_drivers_new, &drv->node);
-        } else {
-            list_add_head(&list_drivers_new, &drv->node);
-        }
-
-        if (new_driver_work.op == WORK_IDLE) {
-            queue_work(&new_driver_work, WORK_DRIVER_ADDED, 0);
-        }
-        return;
-    }
+// dc_driver_added_init is called from driver enumeration during
+// startup and before the devcoordinator starts running.  Enumerated
+// drivers are added directly to the all-drivers or fallback list.
+//
+// TODO: fancier priorities
+static void dc_driver_added_init(driver_t* drv, const char* version) {
     if (version[0] == '*') {
         // fallback driver, load only if all else fails
         list_add_tail(&list_drivers_fallback, &drv->node);
@@ -1986,6 +1992,18 @@ void dc_driver_added(driver_t* drv, const char* version) {
         list_add_head(&list_drivers, &drv->node);
     } else {
         list_add_tail(&list_drivers, &drv->node);
+    }
+}
+
+static work_t new_driver_work;
+
+// dc_driver_added is called when a driver is added after the
+// devcoordinator has started.  The driver is added to the new-drivers
+// list and work is queued to process it.
+static void dc_driver_added(driver_t* drv, const char* version) {
+    list_add_tail(&list_drivers_new, &drv->node);
+    if (new_driver_work.op == WORK_IDLE) {
+        queue_work(&new_driver_work, WORK_DRIVER_ADDED, 0);
     }
 }
 
@@ -2052,31 +2070,45 @@ void dc_handle_new_driver(void) {
 }
 
 #define CTL_SCAN_SYSTEM 1
+#define CTL_ADD_SYSTEM 2
 
 static bool system_available;
 static bool system_loaded;
+
+// List of drivers loaded from /system by system_driver_loader()
+static list_node_t list_drivers_system = LIST_INITIAL_VALUE(list_drivers_system);
+
+static int system_driver_loader(void* arg);
 
 static zx_status_t dc_control_event(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
     switch (evt) {
     case CTL_SCAN_SYSTEM:
         if (!system_loaded) {
             system_loaded = true;
-            find_loadable_drivers("/system/driver");
-            find_loadable_drivers("/system/lib/driver");
-            if (require_system && dc_running) {
-                driver_t* drv;
-
-                while ((drv = list_remove_tail_type(&list_drivers_fallback, driver_t, node)) != NULL) {
-                    printf("devcoord: fallback driver '%s' is available\n", drv->name);
-                    list_add_tail(&list_drivers_new, &drv->node);
-                }
-
-                if (new_driver_work.op == WORK_IDLE) {
-                    queue_work(&new_driver_work, WORK_DRIVER_ADDED, 0);
-                }
-            }
+            // Fire up a thread to scan/load system drivers
+            // This avoids deadlocks between the devhosts hosting the block devices
+            // that these drivers may be served from and the devcoordinator loading them.
+            thrd_t t;
+            thrd_create_with_name(&t, system_driver_loader, NULL, "system-driver-loader");
         }
         break;
+    case CTL_ADD_SYSTEM: {
+        driver_t* drv;
+        // Add system drivers to the new list
+        while ((drv = list_remove_head_type(&list_drivers_system, driver_t, node)) != NULL) {
+            list_add_tail(&list_drivers_new, &drv->node);
+        }
+        // Add any remaining fallback drivers to the new list
+        while ((drv = list_remove_tail_type(&list_drivers_fallback, driver_t, node)) != NULL) {
+            printf("devcoord: fallback driver '%s' is available\n", drv->name);
+            list_add_tail(&list_drivers_new, &drv->node);
+        }
+        // Queue Driver Added work if not already queued
+        if (new_driver_work.op == WORK_IDLE) {
+            queue_work(&new_driver_work, WORK_DRIVER_ADDED, 0);
+        }
+        break;
+    }
     }
     return ZX_OK;
 }
@@ -2085,6 +2117,31 @@ static port_handler_t control_handler = {
     .func = dc_control_event,
 };
 
+// Drivers added during system scan (from the dedicated thread)
+// are added to list_drivers_system for bulk processing once
+// CTL_ADD_SYSTEM is sent.
+//
+// TODO: fancier priority management
+static void dc_driver_added_sys(driver_t* drv, const char* version) {
+    log(INFO, "devmgr: adding system driver '%s' '%s'\n", drv->name, drv->libname);
+
+    if (load_vmo(drv->libname, &drv->dso_vmo)) {
+        log(ERROR, "devmgr: system driver '%s' '%s' could not cache DSO\n", drv->name, drv->libname);
+    }
+    if (version[0] == '*') {
+        // de-prioritize drivers that are "fallback"
+        list_add_tail(&list_drivers_system, &drv->node);
+    } else {
+        list_add_head(&list_drivers_system, &drv->node);
+    }
+}
+
+static int system_driver_loader(void* arg) {
+    find_loadable_drivers("/system/driver", dc_driver_added_sys);
+    find_loadable_drivers("/system/lib/driver", dc_driver_added_sys);
+    port_queue(&dc_port, &control_handler, CTL_ADD_SYSTEM);
+    return 0;
+}
 
 void load_system_drivers(void) {
     system_available = true;
@@ -2107,9 +2164,9 @@ void coordinator(void) {
     devfs_publish(&root_device, &sys_device);
     devfs_publish(&root_device, &test_device);
 
-    find_loadable_drivers("/boot/driver");
-    find_loadable_drivers("/boot/driver/test");
-    find_loadable_drivers("/boot/lib/driver");
+    find_loadable_drivers("/boot/driver", dc_driver_added_init);
+    find_loadable_drivers("/boot/driver/test", dc_driver_added_init);
+    find_loadable_drivers("/boot/lib/driver", dc_driver_added_init);
 
     // Special case early handling for the ramdisk boot
     // path where /system is present before the coordinator
