@@ -58,6 +58,8 @@ source_set("machina") {
     "virtio_queue_waiter.h",
     "virtio_vsock.cc",
     "virtio_vsock.h",
+    "virtio_wl.cc",
+    "virtio_wl.h",
     "volatile_write_block_dispatcher.cc",
     "volatile_write_block_dispatcher.h",
   ]

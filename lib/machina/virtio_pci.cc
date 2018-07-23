@@ -73,6 +73,8 @@ static constexpr uint32_t virtio_pci_class_code(uint16_t virtio_id) {
       return 0x02000000;
     case VIRTIO_ID_VSOCK:
       return 0x02800000;
+    case VIRTIO_ID_WL:
+      return 0x0ff08000;
   }
   return 0;
 }

@@ -44,6 +44,7 @@
 #include "garnet/lib/machina/virtio_input.h"
 #include "garnet/lib/machina/virtio_net.h"
 #include "garnet/lib/machina/virtio_vsock.h"
+#include "garnet/lib/machina/virtio_wl.h"
 #include "garnet/public/lib/fxl/files/file.h"
 #include "lib/component/cpp/startup_context.h"
 
@@ -423,6 +424,19 @@ int main(int argc, char** argv) {
                              guest.device_dispatcher());
   status = bus.Connect(vsock.pci_device());
   if (status != ZX_OK) {
+    return status;
+  }
+
+  // Setup wayland device.
+  machina::VirtioWl wl(guest.phys_mem(), guest.device_dispatcher());
+  status = wl.Init();
+  if (status != ZX_OK) {
+    FXL_LOG(INFO) << "Could not init wayland device";
+    return status;
+  }
+  status = bus.Connect(wl.pci_device());
+  if (status != ZX_OK) {
+    FXL_LOG(INFO) << "Could not connect wayland device";
     return status;
   }
 
