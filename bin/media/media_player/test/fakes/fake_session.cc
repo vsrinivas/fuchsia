@@ -25,7 +25,8 @@ constexpr uint32_t kRootNodeId = 1;
 
 }  // namespace
 
-FakeSession::FakeSession() : dispatcher_(async_get_default_dispatcher()), binding_(this) {
+FakeSession::FakeSession()
+    : dispatcher_(async_get_default_dispatcher()), binding_(this) {
   fuchsia::ui::gfx::ResourceArgs root_resource;
   fuchsia::ui::gfx::ViewArgs view_args;
   root_resource.set_view(std::move(view_args));
@@ -102,7 +103,7 @@ void FakeSession::Present(uint64_t presentation_time,
     if (expected_image_info_) {
       if (image->info.transform != expected_image_info_->transform) {
         FXL_LOG(ERROR) << "unexpected ImageInfo.transform value "
-                       << image->info.transform;
+                       << fidl::ToUnderlying(image->info.transform);
         expected_ = false;
       }
 
@@ -126,25 +127,25 @@ void FakeSession::Present(uint64_t presentation_time,
 
       if (image->info.pixel_format != expected_image_info_->pixel_format) {
         FXL_LOG(ERROR) << "unexpected ImageInfo.pixel_format value "
-                       << image->info.pixel_format;
+                       << fidl::ToUnderlying(image->info.pixel_format);
         expected_ = false;
       }
 
       if (image->info.color_space != expected_image_info_->color_space) {
         FXL_LOG(ERROR) << "unexpected ImageInfo.color_space value "
-                       << image->info.color_space;
+                       << fidl::ToUnderlying(image->info.color_space);
         expected_ = false;
       }
 
       if (image->info.tiling != expected_image_info_->tiling) {
         FXL_LOG(ERROR) << "unexpected ImageInfo.tiling value "
-                       << image->info.tiling;
+                       << fidl::ToUnderlying(image->info.tiling);
         expected_ = false;
       }
 
       if (image->info.alpha_format != expected_image_info_->alpha_format) {
         FXL_LOG(ERROR) << "unexpected ImageInfo.alpha_format value "
-                       << image->info.alpha_format;
+                       << fidl::ToUnderlying(image->info.alpha_format);
         expected_ = false;
       }
     }

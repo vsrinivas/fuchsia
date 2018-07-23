@@ -95,7 +95,7 @@ void AudioCapturerImpl::Shutdown() {
   if (payload_buf_virt_ != nullptr) {
     FXL_DCHECK(payload_buf_size_ != 0);
     zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(payload_buf_virt_),
-                                payload_buf_size_);
+                                 payload_buf_size_);
     payload_buf_virt_ = nullptr;
     payload_buf_size_ = 0;
     payload_buf_frames_ = 0;
@@ -202,7 +202,8 @@ void AudioCapturerImpl::SetMediaType(fuchsia::media::MediaType media_type) {
       break;
 
     default:
-      FXL_LOG(ERROR) << "Bad sample format " << details.sample_format;
+      FXL_LOG(ERROR) << "Bad sample format "
+                     << fidl::ToUnderlying(details.sample_format);
       return;
   }
 
@@ -277,8 +278,8 @@ void AudioCapturerImpl::SetPayloadBuffer(zx::vmo payload_buf_vmo) {
   // Map the VMO into our process.
   uintptr_t tmp;
   res = zx::vmar::root_self()->map(0, payload_buf_vmo_, 0, payload_buf_size_,
-                                  ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                                  &tmp);
+                                   ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+                                   &tmp);
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to map payload buffer VMO (res = " << res << ")";
     return;
@@ -1376,10 +1377,10 @@ zx_status_t AudioCapturerImpl::ChooseMixer(
     FXL_LOG(INFO) << "Failed to find mixer for capturer.";
     FXL_LOG(INFO) << "Source cfg: rate " << source_format->frames_per_second
                   << " ch " << source_format->channels << " sample fmt "
-                  << source_format->sample_format;
+                  << fidl::ToUnderlying(source_format->sample_format);
     FXL_LOG(INFO) << "Dest cfg  : rate " << format_->frames_per_second << " ch "
                   << format_->channels << " sample fmt "
-                  << format_->sample_format;
+                  << fidl::ToUnderlying(format_->sample_format);
     return ZX_ERR_NOT_SUPPORTED;
   }
 

@@ -208,8 +208,8 @@ std::ostream& operator<<(
 std::ostream& operator<<(std::ostream& os,
                          const fuchsia::ui::input::SensorDescriptor& value) {
   os << "{Sensor:";
-  os << "type=" << value.type;
-  os << ", loc=" << value.loc;
+  os << "type=" << fidl::ToUnderlying(value.type);
+  os << ", loc=" << fidl::ToUnderlying(value.loc);
   os << ", min_sampling_freq=" << value.min_sampling_freq;
   os << ", max_sampling_freq=" << value.max_sampling_freq;
   os << ", fifo_max_event_count=" << value.fifo_max_event_count;

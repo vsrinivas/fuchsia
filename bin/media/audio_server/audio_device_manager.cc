@@ -472,7 +472,8 @@ fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(
 void AudioDeviceManager::SetRoutingPolicy(
     fuchsia::media::AudioOutputRoutingPolicy routing_policy) {
   if (!ValidateRoutingPolicy(routing_policy)) {
-    FXL_LOG(ERROR) << "Out-of-range RoutingPolicy(" << routing_policy << ")";
+    FXL_LOG(ERROR) << "Out-of-range RoutingPolicy("
+                   << fidl::ToUnderlying(routing_policy) << ")";
     // TODO(mpuryear) Once AudioServer has a way to know which connection made
     // this request, terminate that connection now rather than doing nothing.
     return;

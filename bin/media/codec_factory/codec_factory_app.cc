@@ -101,7 +101,8 @@ void CodecFactoryApp::DiscoverMediaCodecDrivers() {
   FXL_DCHECK(driver_codec_list);
   for (auto& codec_description : driver_codec_list.get()) {
     FXL_LOG(INFO) << "CodecFactory::DiscoverMediaCodecDrivers() registering:"
-                  << " codec_type: " << codec_description.codec_type
+                  << " codec_type: "
+                  << fidl::ToUnderlying(codec_description.codec_type)
                   << " mime_type: " << codec_description.mime_type;
     hw_codecs_.emplace_back(std::make_unique<CodecListEntry>(CodecListEntry{
         .description = std::move(codec_description),

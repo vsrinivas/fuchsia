@@ -36,7 +36,8 @@ RunnerHolder::RunnerHolder(Services services,
   controller_.events().OnTerminated =
       [this](int64_t return_code, TerminationReason termination_reason) {
         if (termination_reason != TerminationReason::EXITED) {
-          FXL_LOG(ERROR) << "Runner terminating, status " << termination_reason;
+          FXL_LOG(ERROR) << "Runner terminating, status "
+                         << fidl::ToUnderlying(termination_reason);
         }
         Cleanup();
 

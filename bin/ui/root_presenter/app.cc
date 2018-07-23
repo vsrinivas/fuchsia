@@ -125,13 +125,13 @@ void App::HACK_SetRendererParams(
         renderer_params_.shadow_technique.set_value(param.shadow_technique());
         FXL_LOG(INFO)
             << "Presenter::HACK_SetRendererParams: Setting shadow technique to "
-            << param.shadow_technique();
+            << fidl::ToUnderlying(param.shadow_technique());
         continue;
       case fuchsia::ui::gfx::RendererParam::Tag::kRenderFrequency:
         renderer_params_.render_frequency.set_value(param.render_frequency());
         FXL_LOG(INFO)
             << "Presenter::HACK_SetRendererParams: Setting render frequency to "
-            << param.render_frequency();
+            << fidl::ToUnderlying(param.render_frequency());
         continue;
       case fuchsia::ui::gfx::RendererParam::Tag::Invalid:
         continue;

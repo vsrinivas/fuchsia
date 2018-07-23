@@ -11,11 +11,7 @@ enum class {{ .Name }} : {{ .Type }} {
   {{ .Name }} = {{ .Value }},
   {{- end }}
 };
-
-inline std::ostream& operator<<(std::ostream& os, const {{ .Name }}& value) {
-  return os << static_cast<{{ .Type }}>(value);
-}
-{{- end }}
+{{ end }}
 
 {{- define "EnumTraits" }}
 template <>

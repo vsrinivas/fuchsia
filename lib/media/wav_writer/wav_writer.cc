@@ -268,9 +268,9 @@ bool WavWriter<enabled>::Initialize(
     return false;
   }
   FXL_LOG(INFO) << "WavWriter[" << this << "] recording Format "
-                << sample_format_ << ", " << bits_per_sample_ << "-bit, "
-                << frame_rate_ << " Hz, " << channel_count_ << "-chan PCM to "
-                << std::quoted(file_name_);
+                << fidl::ToUnderlying(sample_format_) << ", "
+                << bits_per_sample_ << "-bit, " << frame_rate_ << " Hz, "
+                << channel_count_ << "-chan PCM to " << std::quoted(file_name_);
   return true;
 }
 

@@ -198,7 +198,8 @@ void AudioRendererImpl::SetPcmFormat(fuchsia::media::AudioPcmFormat format) {
     // TODO(johngro): Add more sample formats (24 bit, etc..) as the
     // mixer core learns to handle them.
     default:
-      FXL_LOG(ERROR) << "Unsupported sample format (" << format.sample_format
+      FXL_LOG(ERROR) << "Unsupported sample format ("
+                     << fidl::ToUnderlying(format.sample_format)
                      << ") in fuchsia::media::AudioRendererImpl::SetPcmFormat.";
       return;
   }

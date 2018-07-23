@@ -43,7 +43,8 @@ void InputConnectionImpl::DeliverEvent(fuchsia::ui::input::InputEvent event,
     InjectInput(std::move(event_clone));
   }
 
-  event_listener_->OnEvent(std::move(event), fxl::MakeCopyable(std::move(callback)));
+  event_listener_->OnEvent(std::move(event),
+                           fxl::MakeCopyable(std::move(callback)));
 }
 
 void InputConnectionImpl::SetEventListener(
@@ -62,7 +63,7 @@ void InputConnectionImpl::GetInputMethodEditor(
   FXL_DCHECK(editor_request.is_valid());
 
   FXL_VLOG(1) << "GetInputMethodEditor: view_token=" << view_token_
-              << ", keyboard_type=" << keyboard_type
+              << ", keyboard_type=" << fidl::ToUnderlying(keyboard_type)
               << ", initial_state=" << initial_state;
 
   Reset();
@@ -123,7 +124,8 @@ void InputConnectionImpl::ConnectWithImeService(
     fuchsia::ui::input::InputMethodAction action,
     fuchsia::ui::input::TextInputState state) {
   FXL_VLOG(1) << "ConnectWithImeService: view_token=" << view_token_
-              << ", keyboard_type=" << keyboard_type << ", action=" << action
+              << ", keyboard_type=" << fidl::ToUnderlying(keyboard_type)
+              << ", action=" << fidl::ToUnderlying(action)
               << ", initial_state=" << state;
   // Retrieve IME Service from the view tree
   inspector_->GetImeService(view_token_, ime_service_.NewRequest());
@@ -186,11 +188,11 @@ void InputConnectionImpl::SetKeyboardType(
     fuchsia::ui::input::KeyboardType keyboard_type) {
   if (editor_) {
     FXL_VLOG(1) << "SetKeyboardType: view_token=" << view_token_
-                << ", keyboard_type=" << keyboard_type;
+                << ", keyboard_type=" << fidl::ToUnderlying(keyboard_type);
     editor_->SetKeyboardType(keyboard_type);
   } else {
     FXL_VLOG(2) << "Ignoring SetKeyboardType: view_token=" << view_token_
-                << ", keyboard_type=" << keyboard_type;
+                << ", keyboard_type=" << fidl::ToUnderlying(keyboard_type);
   }
 }
 
@@ -215,11 +217,11 @@ void InputConnectionImpl::OnAction(
     fuchsia::ui::input::InputMethodAction action) {
   if (client_) {
     FXL_VLOG(1) << "OnAction: view_token=" << view_token_
-                << ", action=" << action;
+                << ", action=" << fidl::ToUnderlying(action);
     client_->OnAction(action);
   } else {
     FXL_VLOG(2) << "Ignoring OnAction: view_token=" << view_token_
-                << ", action=" << action;
+                << ", action=" << fidl::ToUnderlying(action);
   }
 }
 
