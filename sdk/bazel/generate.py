@@ -65,6 +65,9 @@ class BazelBuilder(Builder):
 
     def add_dart_vendor_package(self, name, version):
         '''Adds a reference to a new Dart third-party package.'''
+        if name == 'flutter' and version == 'flutter_sdk':
+            # The Flutter SDK is set up separately.
+            return
         if name in self.dart_vendor_packages:
             existing_version = self.dart_vendor_packages[name]
             if existing_version != version:

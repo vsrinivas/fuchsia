@@ -44,6 +44,8 @@ def _install_flutter_impl(repository_ctx):
     )
     # Set up the BUILD file from the Fuchsia SDK.
     repository_ctx.symlink(
+        Label("@fuchsia_sdk//build_defs:BUILD.flutter_root"), "BUILD")
+    repository_ctx.symlink(
         Label("@fuchsia_sdk//build_defs:BUILD.flutter"), "packages/flutter/BUILD")
 
 _install_flutter = repository_rule(

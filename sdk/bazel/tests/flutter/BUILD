@@ -10,7 +10,7 @@ flutter_app(
     main = "main.dart",
     package_name = "tests.flutter_app",
     deps = [
-        "@vendor_flutter//packages/flutter:flutter",
+        "@vendor_flutter//:flutter",
     ],
 )
 
