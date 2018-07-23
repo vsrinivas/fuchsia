@@ -13,6 +13,7 @@
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/symbols/location.h"
+#include "garnet/bin/zxdb/client/symbols/symbol_utils.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command.h"
@@ -239,9 +240,8 @@ std::string BreakpointScopeToString(const ConsoleContext* context,
                                context->IdForTarget(settings.scope_target));
     case BreakpointSettings::Scope::kThread:
       return fxl::StringPrintf(
-          "pr %d t %d",
-          context->IdForTarget(
-              settings.scope_thread->GetProcess()->GetTarget()),
+          "pr %d t %d", context->IdForTarget(
+                            settings.scope_thread->GetProcess()->GetTarget()),
           context->IdForThread(settings.scope_thread));
   }
   FXL_NOTREACHED();
@@ -363,8 +363,11 @@ std::string DescribeLocation(const Location& loc, bool always_show_address) {
   if (always_show_address)
     result = fxl::StringPrintf("0x%" PRIx64 ", ", loc.address());
 
-  if (!loc.function_name().empty())
-    result += loc.function_name() + "() " + GetBullet() + " ";
+  if (loc.function()) {
+    std::string func_name = GetFullyQualifiedSymbolName(loc.function().Get());
+    if (!func_name.empty())
+      result += func_name + "() " + GetBullet() + " ";
+  }
   result += DescribeFileLine(loc.file_line());
   return result;
 }

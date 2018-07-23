@@ -17,6 +17,7 @@ class CodeBlock;
 class DataMember;
 class Function;
 class ModifiedType;
+class Namespace;
 class StructClass;
 class Type;
 class Value;
@@ -35,7 +36,7 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   static constexpr int kTagArray = 0x01;
 
   // C++ class definition.
-  static constexpr int kTagClass = 0x02;
+  static constexpr int kTagClassType = 0x02;
 
   // "Alterate entry point" to a function. Seems to be not generated.
   static constexpr int kTagEntryPoint = 0x03;
@@ -203,12 +204,38 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   // on what's in the symbol file).
   int tag() const { return tag_; }
 
+  // The parent symbol. This could be many things. For inlined subroutines
+  // or lexical blocks, it could be an inlined subroutine, a lexical block,
+  // or a function. For a function it could be a class, namespace, or
+  // the top-level compilation unit.
+  //
+  // In the case of function implementations with separate definitions, the
+  // decoder will set the parent symbol to be the parent scope around
+  // the definition, which is how one will discover classes and namespaces
+  // that the function is in. This is what callers normally want, but it means
+  // that the parent symbol isn't necessarily the physical parent of the
+  // DIE that generated this symbol.
+  const LazySymbol& parent() const { return parent_; }
+  void set_parent(const LazySymbol& e) { parent_ = e; }
+
+  // Returns the name associated with this symbol. This name comes from the
+  // corresponding record in the DWARF format (hence "assigned"). It will NOT
+  // include namespace and struct qualifiers. Anything without a name assigned
+  // on the particular DWARF record name will return an empty string, even if
+  // that thing logically has a name that can be computed (as for
+  // ModifiedType).
+  //
+  // This default implementation returns a reference to an empty string.
+  // Derived classes will override as needed.
+  virtual const std::string& GetAssignedName() const;
+
   // Manual RTTI.
   virtual const BaseType* AsBaseType() const;
   virtual const CodeBlock* AsCodeBlock() const;
   virtual const DataMember* AsDataMember() const;
   virtual const Function* AsFunction() const;
   virtual const ModifiedType* AsModifiedType() const;
+  virtual const Namespace* AsNamespace() const;
   virtual const StructClass* AsStructClass() const;
   virtual const Type* AsType() const;
   virtual const Value* AsValue() const;
@@ -232,6 +259,10 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   ModifiedType* AsModifiedType() {
     return const_cast<ModifiedType*>(
         const_cast<const Symbol*>(this)->AsModifiedType());
+  }
+  Namespace* AsNamespace() {
+    return const_cast<Namespace*>(
+        const_cast<const Symbol*>(this)->AsNamespace());
   }
   StructClass* AsStructClass() {
     return const_cast<StructClass*>(
@@ -258,6 +289,8 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
 
  private:
   int tag_ = kTagNone;
+
+  LazySymbol parent_;
 };
 
 }  // namespace zxdb

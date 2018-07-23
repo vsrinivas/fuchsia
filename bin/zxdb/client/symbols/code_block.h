@@ -23,20 +23,6 @@ class CodeBlock : public Symbol {
   // Symbol overrides.
   const CodeBlock* AsCodeBlock() const override;
 
-  // The enclosing symbol. This could be many things. For inlined subroutines
-  // or lexical block, it could be an inlined subroutine, a lexical block,
-  // or a function. For a function it could be a class, namespace, or
-  // the top-level compilation unit.
-  //
-  // In the case of function implementations with separate definitions, the
-  // decoder will set the enclosing symbol to be the enclosing scope around
-  // the definition, which is how one will discover classes and namespaces
-  // that the function is in. This is what callers normally want, but it means
-  // that the enclosing symbol isn't necessarily the physical parent of the
-  // DIE that generated this symbol.
-  const LazySymbol& enclosing() const { return enclosing_; }
-  void set_enclosing(const LazySymbol& e) { enclosing_ = e; }
-
   // The valid ranges of code for this block. In many cases there will be only
   // one range (most functions specify DW_AT_low_pc and DW_AT_high_pc), but
   // some blocks, especially inlined subroutines, may be at multiple
@@ -67,7 +53,6 @@ class CodeBlock : public Symbol {
   ~CodeBlock() override;
 
  private:
-  LazySymbol enclosing_;
   CodeRanges code_ranges_;
   std::vector<LazySymbol> inner_blocks_;
   std::vector<LazySymbol> variables_;

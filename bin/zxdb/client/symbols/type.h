@@ -15,27 +15,21 @@ class Type : public Symbol {
  public:
   // Symbol overrides.
   const Type* AsType() const final;
+  const std::string& GetAssignedName() const final { return assigned_name_; }
 
   // The type name that should be shown to the user. This incorporates
   // modifiers like pointers and consts.
-  virtual const std::string& GetTypeName() const;
+  const std::string& GetTypeName() const;
 
   // The name assigned in the DWARF file. This will be empty for modified
-  // types (Which usually have no assigned name).
-  const std::string& assigned_name() const { return assigned_name_; }
+  // types (Which usually have no assigned name). See
+  // Symbol::GetAssignedName).
   void set_assigned_name(std::string n) { assigned_name_ = std::move(n); }
 
   // For forward-defines where the size of the structure is not known, the
   // byte size will be 0.
   uint32_t byte_size() const { return byte_size_; }
   void set_byte_size(uint32_t bs) { byte_size_ = bs; }
-
-  // The enclosing scope. The enclosing scope for a type is usually either
-  // a namespace, struct, class, or unit (for toplevel symbols). However it
-  // could be a function or random code block if a type is defined locally in a
-  // function.
-  const LazySymbol& enclosing() const { return enclosing_; }
-  void set_enclosing(const LazySymbol& e) { enclosing_ = e; }
 
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(Type);
@@ -44,10 +38,19 @@ class Type : public Symbol {
   explicit Type(int kind);
   virtual ~Type();
 
+  // Implemented by derived classes to compute the fully qualified type name
+  // to be returned by GetTypeName().
+  virtual std::string ComputeTypeName() const;
+
  private:
   std::string assigned_name_;
   uint32_t byte_size_;
-  LazySymbol enclosing_;
+
+  // Lazily computed full type name (including type modifiers). This will be
+  // not present if it hasn't been computed yet.
+  // TODO(brettw) use std::optional when we can use C++17.
+  mutable bool computed_type_name_ = false;
+  mutable std::string type_name_;
 };
 
 }  // namespace

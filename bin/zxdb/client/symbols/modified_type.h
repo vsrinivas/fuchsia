@@ -27,7 +27,7 @@ class ModifiedType final : public Type {
 
   // Type/Symbol overrides.
   const ModifiedType* AsModifiedType() const override;
-  const std::string& GetTypeName() const override;
+  std::string ComputeTypeName() const override;
 
   // The underlying modified type.
   const LazySymbol& modified() const { return modified_; }
@@ -40,16 +40,7 @@ class ModifiedType final : public Type {
   explicit ModifiedType(int kind);
   ~ModifiedType() override;
 
-  // Computes the fully modified type name but does not store it.
-  std::string ComputeTypeName() const;
-
   LazySymbol modified_;
-
-  // Lazily computed full type name (including type modifiers). This will be
-  // not present if it hasn't been computed yet.
-  // TODO(brettw) use std::optional when we can use C++17.
-  mutable bool computed_type_name_ = false;
-  mutable std::string type_name_;
 };
 
 }  // namespace zxdb

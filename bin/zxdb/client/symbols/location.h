@@ -11,6 +11,7 @@
 
 namespace zxdb {
 
+class CodeBlock;
 class Function;
 
 // Represents all the symbol information for a code location.
@@ -27,7 +28,7 @@ class Location {
   Location();
   Location(State state, uint64_t address);
   Location(uint64_t address, FileLine&& file_line, int column,
-           std::string function_name, const LazySymbol& symbol = LazySymbol());
+           const LazySymbol& function = LazySymbol());
   ~Location();
 
   bool is_valid() const { return state_ != State::kInvalid; }
@@ -41,17 +42,13 @@ class Location {
   const FileLine& file_line() const { return file_line_; }
   int column() const { return column_; }
 
-  // TODO(brettw) remove this and have users use the function(). But that
-  // currently doesn't provide a fully-qualified function name.
-  const std::string& function_name() const { return function_name_; }
-
-  // TODO(brettw) this is a work in progress and not currently set.
-  const LazySymbol& symbol() const { return symbol_; }
-
-  // Retrieves the function associated with this location. This may be null.
-  // This will not include inlined functions: this returns the real function
-  // enclosing the given code (if any).
-  const Function* GetFunction() const;
+  // The function associated with this address, if any. This will be the
+  // most specific inline or regular function covering the given address.
+  //
+  // This isn't necessarily valid, even if the State == kSymbolized. It could
+  // be the symbol table indicates file/line info for this address but could
+  // lack a function record for it.
+  const LazySymbol& function() const { return function_; }
 
   // Offsets the code addresses in this by adding an amount. This is used to
   // convert module-relative addresses to global ones by adding the module
@@ -63,8 +60,7 @@ class Location {
   uint64_t address_ = 0;
   FileLine file_line_;
   int column_ = 0;
-  std::string function_name_;
-  LazySymbol symbol_;
+  LazySymbol function_;
 };
 
 }  // namespace zxdb

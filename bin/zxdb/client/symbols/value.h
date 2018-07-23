@@ -19,10 +19,11 @@ class Value : public Symbol {
 
   // Symbol overrides.
   const Value* AsValue() const override;
+  const std::string& GetAssignedName() const final { return assigned_name_; }
 
-  // The name of the variable, parameter, or member name.
-  const std::string& name() const { return name_; }
-  void set_name(const std::string& n) { name_ = n; }
+  // The name of the variable, parameter, or member name. See
+  // Symbol::GetAssignedName().
+  void set_assigned_name(const std::string& n) { assigned_name_ = n; }
 
   const LazySymbol& type() const { return type_; }
   void set_type(const LazySymbol& t) { type_ = t; }
@@ -35,7 +36,7 @@ class Value : public Symbol {
   ~Value();
 
  private:
-  std::string name_;
+  std::string assigned_name_;
   LazySymbol type_;
 };
 

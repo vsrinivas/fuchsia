@@ -19,10 +19,6 @@ class DataMember final : public Value {
   // Symbol overrides.
   const DataMember* AsDataMember() const;
 
-  // This currently doesn't reference the enclosing block (which will be the
-  // class or struct this is a member of) because we normally work down the
-  // other way. This information could be added if needed.
-
   // The byte offset from the containing class or struct of this data member.
   uint32_t member_location() const { return member_location_; }
   void set_member_location(uint32_t m) { member_location_ = m; }

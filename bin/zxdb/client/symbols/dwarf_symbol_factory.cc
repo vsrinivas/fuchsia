@@ -11,6 +11,7 @@
 #include "garnet/bin/zxdb/client/symbols/function.h"
 #include "garnet/bin/zxdb/client/symbols/modified_type.h"
 #include "garnet/bin/zxdb/client/symbols/module_symbols_impl.h"
+#include "garnet/bin/zxdb/client/symbols/namespace.h"
 #include "garnet/bin/zxdb/client/symbols/struct_class.h"
 #include "garnet/bin/zxdb/client/symbols/symbol.h"
 #include "garnet/bin/zxdb/client/symbols/variable.h"
@@ -72,26 +73,48 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeSymbol(
   if (ModifiedType::IsTypeModifierTag(tag))
     return DecodeModifiedType(die);
 
+  fxl::RefPtr<Symbol> symbol;
   switch (tag) {
     case llvm::dwarf::DW_TAG_base_type:
-      return DecodeBaseType(die);
+      symbol = DecodeBaseType(die);
+      break;
     case llvm::dwarf::DW_TAG_formal_parameter:
     case llvm::dwarf::DW_TAG_variable:
-      return DecodeVariable(die);
+      symbol = DecodeVariable(die);
+      break;
     case llvm::dwarf::DW_TAG_lexical_block:
-      return DecodeLexicalBlock(die);
+      symbol = DecodeLexicalBlock(die);
+      break;
     case llvm::dwarf::DW_TAG_member:
-      return DecodeDataMember(die);
+      symbol = DecodeDataMember(die);
+      break;
+    case llvm::dwarf::DW_TAG_namespace:
+      symbol = DecodeNamespace(die);
+      break;
     case llvm::dwarf::DW_TAG_subprogram:
-      return DecodeFunction(die);
+      symbol = DecodeFunction(die);
+      break;
     case llvm::dwarf::DW_TAG_structure_type:
     case llvm::dwarf::DW_TAG_class_type:
-      return DecodeStructClass(die);
+      symbol = DecodeStructClass(die);
+      break;
     default:
       // All unhandled Tag types get a Symbol that has the correct tag, but
       // no other data.
-      return fxl::MakeRefCounted<Symbol>(static_cast<int>(die.getTag()));
+      symbol = fxl::MakeRefCounted<Symbol>(static_cast<int>(die.getTag()));
   }
+
+  // Only set the parent block if it hasn't been set already by the
+  // type-specific factory. In particular, we want the function specification's
+  // parent block if there was a specification since it will contain the
+  // namespace and class stuff.
+  if (!symbol->parent()) {
+    llvm::DWARFDie parent = die.getParent();
+    if (parent)
+      symbol->set_parent(MakeLazy(parent));
+  }
+
+  return symbol;
 }
 
 LazySymbol DwarfSymbolFactory::MakeLazy(const llvm::DWARFDie& die) {
@@ -136,7 +159,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
 
   // If this DIE has a link to a function specification (and we haven't already
   // followed such a link), first read that in to get things like the mangled
-  // name, enclosing context, and declaration locations. Then we'll overlay our
+  // name, parent context, and declaration locations. Then we'll overlay our
   // values on that object.
   if (!is_specification && specification) {
     auto spec = DecodeFunction(specification, true);
@@ -149,17 +172,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
   if (!function)
     function = fxl::MakeRefCounted<Function>();
 
-  // Only set the enclosing block if it hasn't been set already. We want the
-  // function specification's enclosing block if there was a specification
-  // since it will contain the namespace and class stuff.
-  if (!function->enclosing()) {
-    llvm::DWARFDie parent = die.getParent();
-    if (parent)
-      function->set_enclosing(MakeLazy(parent));
-  }
-
   if (name)
-    function->set_name(*name);
+    function->set_assigned_name(*name);
   if (linkage_name)
     function->set_linkage_name(*linkage_name);
   function->set_code_ranges(MakeCodeRanges(low_pc, high_pc));
@@ -189,6 +203,15 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
   function->set_parameters(std::move(parameters));
   function->set_inner_blocks(std::move(inner_blocks));
   function->set_variables(std::move(variables));
+
+  if (is_specification) {
+    // Always set the parent symbol when parsing a specification. This is the
+    // thing that will carry the namespace and struct/class membership
+    // information.
+    llvm::DWARFDie parent = die.getParent();
+    if (parent)
+      function->set_parent(MakeLazy(parent));
+  }
 
   return function;
 }
@@ -231,7 +254,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeBaseType(
   return base_type;
 }
 
-fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeDataMember(const llvm::DWARFDie& die) {
+fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeDataMember(
+    const llvm::DWARFDie& die) {
   DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
 
   llvm::Optional<const char*> name;
@@ -241,14 +265,15 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeDataMember(const llvm::DWARFDie& d
   decoder.AddReference(llvm::dwarf::DW_AT_type, &type);
 
   llvm::Optional<uint64_t> member_offset;
-  decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_data_member_location, &member_offset);
+  decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_data_member_location,
+                              &member_offset);
 
   if (!decoder.Decode(die))
     return fxl::MakeRefCounted<Symbol>();
 
   auto result = fxl::MakeRefCounted<DataMember>();
   if (name)
-    result->set_name(*name);
+    result->set_assigned_name(*name);
   if (type)
     result->set_type(MakeLazy(type));
   if (member_offset)
@@ -266,15 +291,12 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeLexicalBlock(
   llvm::Optional<uint64_t> high_pc;
   decoder.AddAddress(llvm::dwarf::DW_AT_high_pc, &high_pc);
 
-  // TODO(brettW) handle DW_AT_ranges.
+  // TODO(brettw) handle DW_AT_ranges.
 
   if (!decoder.Decode(die))
     return fxl::MakeRefCounted<Symbol>();
 
   auto block = fxl::MakeRefCounted<CodeBlock>(Symbol::kTagLexicalBlock);
-  llvm::DWARFDie parent = die.getParent();
-  if (parent)
-    block->set_enclosing(MakeLazy(parent));
   block->set_code_ranges(MakeCodeRanges(low_pc, high_pc));
 
   // Handle sub-DIEs: child blocks and variables.
@@ -316,11 +338,22 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeModifiedType(
   if (name)
     result->set_assigned_name(*name);
 
-  // Parent.
-  llvm::DWARFDie parent = die.getParent();
-  if (parent)
-    result->set_enclosing(MakeLazy(parent));
+  return result;
+}
 
+fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeNamespace(
+    const llvm::DWARFDie& die) {
+  DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
+
+  llvm::Optional<const char*> name;
+  decoder.AddCString(llvm::dwarf::DW_AT_name, &name);
+
+  if (!decoder.Decode(die))
+    return fxl::MakeRefCounted<Symbol>();
+
+  auto result = fxl::MakeRefCounted<Namespace>();
+  if (name)
+    result->set_assigned_name(*name);
   return result;
 }
 
@@ -355,12 +388,6 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeStructClass(
     }
   }
   result->set_data_members(std::move(data));
-
-  // Parent.
-  llvm::DWARFDie parent = die.getParent();
-  if (parent)
-    result->set_enclosing(MakeLazy(parent));
-
   return result;
 }
 
@@ -379,7 +406,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(
 
   auto result = fxl::MakeRefCounted<Variable>(die.getTag());
   if (name)
-    result->set_name(*name);
+    result->set_assigned_name(*name);
   if (type)
     result->set_type(MakeLazy(type));
   return result;

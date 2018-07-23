@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/client/symbols/type.h"
 
+#include "garnet/bin/zxdb/client/symbols/symbol_utils.h"
 #include "lib/fxl/logging.h"
 
 namespace zxdb {
@@ -14,9 +15,17 @@ Type::~Type() = default;
 const Type* Type::AsType() const { return this; }
 
 const std::string& Type::GetTypeName() const {
-  // This base type class just uses the assigned name for the type name.
-  // Derived classes will override this function to apply modifiers.
-  return assigned_name_;
+  if (!computed_type_name_) {
+    computed_type_name_ = true;
+    type_name_ = ComputeTypeName();
+  }
+  return type_name_;
+}
+
+std::string Type::ComputeTypeName() const {
+  // This base type class just uses the name for the type name. Derived classes
+  // will override this function to apply modifiers.
+  return GetSymbolScopePrefix(this) + GetAssignedName();
 }
 
 }  // namespace zxdb

@@ -11,22 +11,6 @@ ModifiedType::~ModifiedType() = default;
 
 const ModifiedType* ModifiedType::AsModifiedType() const { return this; }
 
-const std::string& ModifiedType::GetTypeName() const {
-  if (!computed_type_name_) {
-    type_name_ = ComputeTypeName();
-    computed_type_name_ = true;
-  }
-  return type_name_;
-}
-
-// static
-bool ModifiedType::IsTypeModifierTag(int tag) {
-  return tag == kTagConstType || tag == kTagPointerType ||
-         tag == kTagReferenceType || tag == kTagRestrictType ||
-         tag == kTagRvalueReferenceType || tag == kTagTypedef ||
-         tag == kTagVolatileType || tag == kTagImportedDeclaration;
-}
-
 std::string ModifiedType::ComputeTypeName() const {
   static const char kUnknown[] = "unknown";
   const Type* modified_type = modified().Get()->AsType();
@@ -55,7 +39,7 @@ std::string ModifiedType::ComputeTypeName() const {
       return modified_type->GetTypeName() + "&&";
     case kTagTypedef:
       // Typedefs just use the assigned name.
-      return assigned_name();
+      return GetAssignedName();
     case kTagVolatileType:
       return "volatile " + modified_type->GetTypeName();
     case kTagImportedDeclaration:
@@ -63,6 +47,14 @@ std::string ModifiedType::ComputeTypeName() const {
       return modified_type->GetTypeName();
   }
   return kUnknown;
+}
+
+// static
+bool ModifiedType::IsTypeModifierTag(int tag) {
+  return tag == kTagConstType || tag == kTagPointerType ||
+         tag == kTagReferenceType || tag == kTagRestrictType ||
+         tag == kTagRvalueReferenceType || tag == kTagTypedef ||
+         tag == kTagVolatileType || tag == kTagImportedDeclaration;
 }
 
 }  // namespace zxdb

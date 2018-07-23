@@ -6,8 +6,8 @@
 
 #include <string>
 
-#include "garnet/bin/zxdb/client/symbols/file_line.h"
 #include "garnet/bin/zxdb/client/symbols/code_block.h"
+#include "garnet/bin/zxdb/client/symbols/file_line.h"
 
 namespace zxdb {
 
@@ -15,7 +15,7 @@ namespace zxdb {
 //
 // Some functions in DWARF are "implementations" that have code ranges
 // associated with them, and some are "specifications" (akin to C forward
-// declarations) that don't. The context about the namespaces and enclosing
+// declarations) that don't. The context about the namespaces and parent
 // classes comes from the specification, while the implementation of the
 // function may be outside of any namespace or class definitions.
 //
@@ -34,13 +34,14 @@ class Function final : public CodeBlock {
 
   // Symbol overrides.
   const Function* AsFunction() const;
+  const std::string& GetAssignedName() const final { return assigned_name_; }
 
   // TODO(brettw) this needs more stuff like DW_AT_frame_base,
   // DW_AT_linkage_name, parameters, inner blocks, local variables.
 
   // Unmangled name. Does not include any class or namespace qualifications.
-  const std::string& name() const { return name_; }
-  void set_name(std::string n) { name_ = std::move(n); }
+  // (see Symbol::GetAssignedName)
+  void set_assigned_name(std::string n) { assigned_name_ = std::move(n); }
 
   // Mangled name.
   const std::string& linkage_name() const { return linkage_name_; }
@@ -65,7 +66,7 @@ class Function final : public CodeBlock {
   Function();
   ~Function();
 
-  std::string name_;
+  std::string assigned_name_;
   std::string linkage_name_;
   FileLine decl_line_;
   LazySymbol return_type_;

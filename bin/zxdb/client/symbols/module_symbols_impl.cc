@@ -208,27 +208,41 @@ Err ModuleSymbolsImpl::Load() {
   return Err();
 }
 
+// This function is similar to llvm::DWARFContext::getLineInfoForAddress
+// but we can't use that because we want the actual DIE reference to the
+// function rather than its name.
 Location ModuleSymbolsImpl::RelativeLocationForRelativeAddress(
     uint64_t address) const {
-  // Currently this just uses the main helper functions on DWARFContext that
-  // retrieve the line information.
-  //
-  // In the future, we will have more advanced needs, like understanding the
-  // local variables at a given address, and detailed information about the
-  // function they're part of. For this, we'll need the nested sequence of
-  // scope DIEs plus the function declaration DIE. In that case, we'll need to
-  // make this more advanced and extract the information ourselves.
-  llvm::DILineInfo line_info = context_->getLineInfoForAddress(
-      address,
-      llvm::DILineInfoSpecifier(
-          llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
-          llvm::DILineInfoSpecifier::FunctionNameKind::ShortName));
-  if (!line_info)
+  // TODO(brettw) handle addresses that aren't code (e.g. data).
+  llvm::DWARFCompileUnit* unit = CompileUnitForAddress(address);
+  if (!unit)
     return Location(Location::State::kSymbolized, address);  // No symbol.
-  // TODO(brettw) hook up LazySymbol to the location.
-  return Location(address,
-                  FileLine(std::move(line_info.FileName), line_info.Line),
-                  line_info.Column, line_info.FunctionName);
+
+  // Get the innermost subroutine or inlined function for the address. This
+  // may be empty, but still lookup the line info below in case its present.
+  llvm::DWARFDie subroutine = unit->getSubroutineForAddress(address);
+  LazySymbol lazy_function;
+  if (subroutine)
+    lazy_function = symbol_factory_->MakeLazy(subroutine);
+
+  // Get the file/line location (may fail).
+  const llvm::DWARFDebugLine::LineTable* line_table =
+      context_->getLineTableForUnit(unit);
+  if (line_table) {
+    llvm::DILineInfo line_info;
+    if (line_table->getFileLineInfoForAddress(
+            address, unit->getCompilationDir(),
+            llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+            line_info)) {
+      // Line info present.
+      return Location(address,
+                      FileLine(std::move(line_info.FileName), line_info.Line),
+                      line_info.Column, std::move(lazy_function));
+    }
+  }
+
+  // No line information.
+  return Location(address, FileLine(), 0, std::move(lazy_function));
 }
 
 // By policy this function decides that line table entries with a "0" line

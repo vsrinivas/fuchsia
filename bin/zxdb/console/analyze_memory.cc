@@ -12,8 +12,9 @@
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/memory_dump.h"
 #include "garnet/bin/zxdb/client/process.h"
-#include "garnet/bin/zxdb/client/symbols/process_symbols.h"
 #include "garnet/bin/zxdb/client/register.h"
+#include "garnet/bin/zxdb/client/symbols/process_symbols.h"
+#include "garnet/bin/zxdb/client/symbols/symbol_utils.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/format_register.h"
 #include "garnet/bin/zxdb/console/format_table.h"
@@ -22,7 +23,6 @@
 #include "garnet/lib/debug_ipc/records.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
-
 
 namespace zxdb {
 
@@ -141,7 +141,7 @@ void MemoryAnalysis::SetMemory(MemoryDump dump) {
 void MemoryAnalysis::SetRegisters(const RegisterSet& registers) {
   FXL_DCHECK(!have_registers_);
   have_registers_ = true;
-  for (const auto& kv: registers.category_map())
+  for (const auto& kv : registers.category_map())
     // We look for the general section registers
     if (kv.first == debug_ipc::RegisterCategory::Type::kGeneral)
       for (const auto& reg : kv.second)
@@ -209,8 +209,7 @@ void MemoryAnalysis::OnAspace(const Err& err,
     DoAnalysis();
 }
 
-void MemoryAnalysis::OnRegisters(const Err& err,
-                                 const RegisterSet& registers) {
+void MemoryAnalysis::OnRegisters(const Err& err, const RegisterSet& registers) {
   if (aborted_)
     return;
 
@@ -317,7 +316,7 @@ std::string MemoryAnalysis::GetPointedToAnnotation(uint64_t data) const {
   if (!process_)
     return std::string();
   Location loc = process_->GetSymbols()->LocationForAddress(data);
-  if (!loc.has_symbols()) {
+  if (!loc.function()) {
     // Check if this points into any relevant aspace entries. Want the deepest
     // one smaller than the max size threshold.
     int max_depth = -1;
@@ -339,7 +338,7 @@ std::string MemoryAnalysis::GetPointedToAnnotation(uint64_t data) const {
   }
   // TODO(brettw) this should indicate the byte offset from the beginning of
   // the function, or maybe the file/line number.
-  return "▷ inside " + loc.function_name() + "()";
+  return "▷ inside " + GetFullyQualifiedSymbolName(loc.function().Get()) + "()";
 }
 
 }  // namespace internal

@@ -40,6 +40,7 @@ class DwarfSymbolFactory : public SymbolFactory {
   fxl::RefPtr<Symbol> DecodeDataMember(const llvm::DWARFDie& die);
   fxl::RefPtr<Symbol> DecodeLexicalBlock(const llvm::DWARFDie& die);
   fxl::RefPtr<Symbol> DecodeModifiedType(const llvm::DWARFDie& die);
+  fxl::RefPtr<Symbol> DecodeNamespace(const llvm::DWARFDie& die);
   fxl::RefPtr<Symbol> DecodeStructClass(const llvm::DWARFDie& die);
   fxl::RefPtr<Symbol> DecodeVariable(const llvm::DWARFDie& die);
 

@@ -66,7 +66,7 @@ TEST(DwarfSymbolFactory, FunctionType) {
   ASSERT_TRUE(function);
 
   // Unmangled name.
-  EXPECT_EQ(kGetIntPtrName, function->name());
+  EXPECT_EQ(kGetIntPtrName, function->GetAssignedName());
 
   // Mangled name. This tries not to depend on the exact name mangling rules
   // while validating that it's reasonable. The mangled name shouldn't be
@@ -115,7 +115,7 @@ TEST(DwarfSymbolFactory, ModifiedBaseType) {
 
   // Validate the BaseType parameters.
   EXPECT_EQ(BaseType::kBaseTypeSigned, base->base_type());
-  EXPECT_EQ("int", base->assigned_name());
+  EXPECT_EQ("int", base->GetAssignedName());
   // Try to be flexible about the size of ints on the platform.
   EXPECT_TRUE(base->byte_size() == 4 || base->byte_size() == 8);
 
@@ -131,13 +131,14 @@ TEST(DwarfSymbolFactory, StructClass) {
 
   // Find the GetStruct function.
   const char kGetStruct[] = "GetStruct";
-  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kGetStruct);
+  fxl::RefPtr<const Function> function =
+      GetFunctionWithName(module, kGetStruct);
   ASSERT_TRUE(function);
 
   // The return type should be the struct.
   auto* struct_type = function->return_type().Get()->AsStructClass();
   ASSERT_TRUE(struct_type);
-  EXPECT_EQ("Struct", struct_type->GetTypeName());
+  EXPECT_EQ("my_ns::Struct", struct_type->GetTypeName());
 
   // The struct has two data members.
   ASSERT_EQ(2u, struct_type->data_members().size());
@@ -154,7 +155,7 @@ TEST(DwarfSymbolFactory, StructClass) {
   auto* member_b = struct_type->data_members()[1].Get()->AsDataMember();
   ASSERT_TRUE(member_b);
   auto* member_b_type = member_b->type().Get()->AsType();
-  EXPECT_EQ("Struct*", member_b_type->GetTypeName());
+  EXPECT_EQ("my_ns::Struct*", member_b_type->GetTypeName());
   EXPECT_LT(0u, member_b->member_location());
   EXPECT_TRUE(member_b->member_location() % 4 == 0);
 }
@@ -178,9 +179,9 @@ TEST(DwarfSymbolFactory, CodeBlocks) {
   for (const auto& param : function->parameters()) {
     const Variable* cur_var = param.Get()->AsVariable();
     ASSERT_TRUE(cur_var);  // Each parameter should decode to a variable.
-    if (cur_var->name() == "arg1")
+    if (cur_var->GetAssignedName() == "arg1")
       struct_arg = cur_var;
-    else if (cur_var->name() == "arg2")
+    else if (cur_var->GetAssignedName() == "arg2")
       int_arg = cur_var;
   }
 
@@ -188,7 +189,7 @@ TEST(DwarfSymbolFactory, CodeBlocks) {
   ASSERT_TRUE(struct_arg);
   const Type* struct_arg_type = struct_arg->type().Get()->AsType();
   ASSERT_TRUE(struct_arg_type);
-  EXPECT_EQ("const Struct&", struct_arg_type->GetTypeName());
+  EXPECT_EQ("const my_ns::Struct&", struct_arg_type->GetTypeName());
 
   // Validate the arg2 type (int).
   ASSERT_TRUE(int_arg);
@@ -214,7 +215,7 @@ TEST(DwarfSymbolFactory, CodeBlocks) {
   ASSERT_TRUE(var2);
   const Type* var2_type = var2->type().Get()->AsType();
   ASSERT_TRUE(var2_type);
-  EXPECT_EQ("volatile Struct", var2_type->GetTypeName());
+  EXPECT_EQ("volatile my_ns::Struct", var2_type->GetTypeName());
 
   // The lexical scope should have no other children.
   EXPECT_TRUE(inner->inner_blocks().empty());

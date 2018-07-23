@@ -34,8 +34,9 @@ std::vector<ResultObject> GetChildObjects(zx_handle_t parent,
 
 zx::thread ThreadForKoid(zx_handle_t process, zx_koid_t thread_koid) {
   zx_handle_t thread_handle = ZX_HANDLE_INVALID;
-  zx_object_get_child(process, thread_koid, ZX_RIGHT_SAME_RIGHTS,
-                      &thread_handle);
+  if (zx_object_get_child(process, thread_koid, ZX_RIGHT_SAME_RIGHTS,
+                          &thread_handle) != ZX_OK)
+    return zx::thread();
   return zx::thread(thread_handle);
 }
 
