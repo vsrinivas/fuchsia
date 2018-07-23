@@ -14,9 +14,16 @@
 
 __BEGIN_CDECLS
 
+/* returns true if |lock| is held by the current CPU;
+ * interrupts should be disabled before calling */
+static inline bool spin_lock_held(spin_lock_t* lock) {
+    return arch_spin_lock_held(lock);
+}
+
 // interrupts should already be disabled
 static inline void spin_lock(spin_lock_t* lock) TA_ACQ(lock) {
     DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(!spin_lock_held(lock));
     arch_spin_lock(lock);
 }
 
@@ -32,12 +39,6 @@ static inline void spin_unlock(spin_lock_t* lock) TA_REL(lock) {
 
 static inline void spin_lock_init(spin_lock_t* lock) {
     arch_spin_lock_init(lock);
-}
-
-/* returns true if |lock| is held by the current CPU;
- * interrupts should be disabled before calling */
-static inline bool spin_lock_held(spin_lock_t* lock) {
-    return arch_spin_lock_held(lock);
 }
 
 // which cpu currently holds the spin lock
