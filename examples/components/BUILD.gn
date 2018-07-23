@@ -48,5 +48,9 @@ package("component_hello_world") {
       path = rebase_path("meta/hello_world.cmx")
       dest = "hello_world.cmx"
     },
+    {
+      path = rebase_path("meta/hello_world2.cmx")
+      dest = "hello_world2.cmx"
+    },
   ]
 }
