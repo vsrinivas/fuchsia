@@ -8,8 +8,8 @@
 ## usage: fx boot [--netboot] [--no-data]
 ##                [--artifacts <dir>]
 ##                [--sign-tool <path_to_sign_tool>]
-##                [<type>] [bootserver arguments]
-##   <type>        see "--help" for list (default: x64 for x64 / none for arm64)
+##                [<type>] -- [bootserver arguments]
+##   <type>        see "--help" for list (default: x64 for x64 / arm64 for arm64)
 ##   --netboot     Boot from ramdisk containing FVM
 ##   --no-data     Use FVM images without a /data partition (preserve existing
 ##                 data)
@@ -43,8 +43,10 @@ usage() {
 netboot=false
 add_data=true
 ip_targ=()
+bootserver_extra=()
 sign_tool=""
-while [[ "$1" =~ ^- ]]; do
+machine_type=
+while [[ $# -gt 0 ]]; do
   case "$1" in
   -h|--help)
     usage
@@ -55,6 +57,7 @@ while [[ "$1" =~ ^- ]]; do
     ;;
   --netboot)
     netboot=true
+    machine_type="netboot"
     ;;
   --no-data)
     echo "##"
@@ -78,29 +81,36 @@ while [[ "$1" =~ ^- ]]; do
     source "${fuchsia_dir}"/zedboot_image_paths.sh
     source "${fuchsia_dir}"/image_paths.sh
     ;;
-  *)
+  --)
+    shift
+    while [[ $# -gt 0 ]]; do
+      bootserver_extra=($bootserver_extra $1)
+      shift
+    done
     break
+    ;;
+  -*)
+    echo "Unknown flag: " "$1"
+    echo "You may be intending to pass this to bootserver."
+    echo "Bootserver flags must be passed at the end of all other flags."
+    echo
+    usage
+    exit 1
+    ;;
+  *)
+    if [[ -n "$machine_type" ]]; then
+      echo >&2 "error: machine type already set (to $machine_type), argument \"$1\" not understood"
+      echo >&2
+      usage
+      exit 1
+    fi
+    machine_type="$1"
+    ;;
   esac
   shift
 done
 
 ramdisk="${fuchsia_dir}/${IMAGE_BOOT_RAM}"
-
-if [[ "$1" =~ ^- ]]; then
-  machine_type=""
-else
-  machine_type="$1"
-  # passing no arguments is valid, but shift will terminate with set -e
-  if [[ $# -ge 1 ]]; then
-    shift
-  fi
-fi
-
-if [[ -z "$machine_type" ]]; then
-  if $netboot; then
-    machine_type="netboot"
-  fi
-fi
 
 case "${machine_type}" in
   help)
@@ -111,7 +121,7 @@ case "${machine_type}" in
     disks=()
     add_fvm=false
   ;;
-  ram|netboot|--netboot)
+  ram|netboot)
     ramdisk="${fuchsia_dir}/${IMAGE_NETBOOT_RAM}"
     disks=()
     add_fvm=false
@@ -120,7 +130,7 @@ case "${machine_type}" in
     disks=("${disks[@]}" --efi "${fuchsia_dir}/${IMAGE_ESP_RAW}")
     disks=("${disks[@]}" --kernc "${fuchsia_dir}/${IMAGE_ZIRCON_VBOOT}")
   ;;
-  arm)
+  arm|arm64)
     disks=("${disks[@]}" --zircona "${fuchsia_dir}/${IMAGE_ZIRCONA_ZBI}"
       --zirconr "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}")
   ;;
@@ -154,7 +164,11 @@ case "${machine_type}" in
                          --zirconr "${fuchsia_dir}/${IMAGE_ZIRCONR_ZBI}.astro.signed")
     add_fvm=false
   ;;
-  *)
+  ""|*)
+    if [[ -n "$machine_type" ]]; then
+      echo >&2 "Unknown machine type: \"$machine_type\", using ${FUCHSIA_ARCH}"
+    fi
+
     if [[ "$FUCHSIA_ARCH" == "x64" ]]; then
       machine_type="x64"
       disks=("${disks[@]}" --efi "${fuchsia_dir}/${IMAGE_ESP_RAW}" \
@@ -166,18 +180,8 @@ case "${machine_type}" in
     fi
 esac
 
-# XXX(raggi): this is ugly, but we want to retain argument pass-through to
-# bootserver
-bootserver_args=()
-if ! $add_fvm; then
-  bootserver_args=("$@")
-else
+if $add_fvm; then
   disks=("${disks[@]}" --fvm "${fuchsia_dir}/${IMAGE_FVM_SPARSE}")
-
-  while [[ $# -gt 0 ]]; do
-      bootserver_args=("${bootserver_args[@]}" "$1")
-      shift
-  done
 
   if $add_data; then
     disks=("${disks[@]}" --fvm "${fuchsia_dir}/${IMAGE_DATA_FVM_RAW}")
@@ -189,4 +193,4 @@ exec "${zircon_tools}/bootserver" \
   "${disks[@]}" \
   "${zircon_dir}/zircon.bin" \
   "${ramdisk}" \
-  "${bootserver_args[@]}"
+  "${bootserver_extra[@]}"
