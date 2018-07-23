@@ -19,6 +19,8 @@ source_set("sources") {
     "driver.cc",
     "gatt_host.cc",
     "gatt_host.h",
+    "gatt_remote_service_device.cc",
+    "gatt_remote_service_device.h",
     "host.cc",
     "host.h",
     "host_device.cc",

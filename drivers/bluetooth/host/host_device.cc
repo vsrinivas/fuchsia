@@ -182,13 +182,27 @@ zx_status_t HostDevice::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
 void HostDevice::OnRemoteGattServiceAdded(
     const std::string& peer_id,
     fbl::RefPtr<btlib::gatt::RemoteService> service) {
-  // TODO(armansito): Publish a bt-gatt-svc device attached to |service|.
+  auto gatt_device =
+      std::make_unique<GattRemoteServiceDevice>(dev_, peer_id, service);
+  auto gatt_device_ptr = gatt_device.get();
+
+  zx_status_t status = gatt_device->Bind();
+  if (status != ZX_OK)
+    return;
+
+  gatt_devices_[gatt_device_ptr] = std::move(gatt_device);
+
+  service->AddRemovedHandler(
+      [this, gatt_device_ptr] { gatt_devices_.erase(gatt_device_ptr); });
 }
 
 void HostDevice::CleanUp() {
   host_ = nullptr;
 
+  // Removing the devices explictly instead of letting unbind handle it for us.
+  gatt_devices_.clear();
   device_remove(dev_);
+
   dev_ = nullptr;
 }
 

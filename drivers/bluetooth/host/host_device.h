@@ -6,9 +6,14 @@
 
 #include <mutex>
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/dispatcher.h>
+
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
+#include "garnet/drivers/bluetooth/host/gatt_remote_service_device.h"
 #include "garnet/drivers/bluetooth/host/host.h"
 
 #include "lib/fxl/macros.h"
@@ -60,6 +65,10 @@ class HostDevice final {
 
   // Guards access to members below.
   std::mutex mtx_;
+
+  // Map of child DDK gatt devices
+  std::unordered_map<GattRemoteServiceDevice*, std::unique_ptr<GattRemoteServiceDevice>>
+      gatt_devices_;
 
   // Host processes all its messages on |loop_|. |loop_| is initialized to run
   // in its own thread.
