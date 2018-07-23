@@ -221,7 +221,7 @@ fn main_ds() -> Result<(), Error> {
             };
 
             d.initialize_keys(DATA_DIR, &["DeviceName", "TestSetting",
-                "Display.Brightness", "FactoryReset"]);
+                "Display.Brightness", "Audio", "FactoryReset"]);
 
             async::spawn(device_settings_server(d, channel))
         }))
