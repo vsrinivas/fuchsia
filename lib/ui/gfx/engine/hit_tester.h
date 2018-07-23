@@ -18,27 +18,17 @@ class Session;
 // Performs a hit test on the contents of a node.
 class HitTester {
  public:
-  HitTester();
-  ~HitTester();
+  HitTester() = default;
+  virtual ~HitTester() = default;
 
-  // Performs a hit test along the specified ray.
-  // Returns a list of hits sorted by increasing distance then by increasing
-  // tree depth.
+  // Performs a hit test along the specified ray.  Returns a list of hits
+  // sorted by increasing distance, then by increasing tree depth.
   //
-  // Only returns hits for Nodes within the same session as |node|.
-  //
-  // See the |Session.HitTest()| API for more information.
+  // The specific hit collection behavior depends on should_participate()
+  // behavior, implemented by each subclass.
   std::vector<Hit> HitTest(Node* node, const escher::ray4& ray);
 
-  // Performs a hit test along the specified ray.
-  // Returns a list of hits sorted by increasing distance then by increasing
-  // tree depth.
-  //
-  // Only returns hits for Nodes within |session|.
-  std::vector<Hit> HitTest(Node* node, const escher::ray4& ray,
-                           Session* session);
-
- private:
+ protected:
   // Describes a possible hit within an enclosing tag node.
   struct TagInfo {
     static constexpr float kNoHit = std::numeric_limits<float>::infinity();
@@ -64,6 +54,11 @@ class HitTester {
     // coordinate system of the object.
     escher::mat4 inverse_transform;
   };
+
+  // Used to determine hit collection behavior.
+  // In a session-based hit test, nodes must have a compatible tag and session.
+  // In a global hit test, all nodes participate, regardless of tag or session.
+  virtual bool should_participate(Node* node) = 0;
 
   // Accumulates hit test results from the node, as seen by its parent.
   // Applies the node's transform to the ray stack.
@@ -99,17 +94,37 @@ class HitTester {
   // The vector which accumulates hits.
   std::vector<Hit> hits_;
 
-  // The session in which the hit test was initiated.
-  // Only nodes belonging to this session will be considered.
-  Session* session_ = nullptr;
-
   // The current tag information.
   // Null if there is no enclosing tagged node.
+  // TODO(SCN-909): Refactor out.
   TagInfo* tag_info_ = nullptr;
 
   // The current ray information.
   // Null if there is no hit test currently in progress.
+  // TODO(SCN-909): Refactor out.
   RayInfo* ray_info_ = nullptr;
+};
+
+class SessionHitTester : public HitTester {
+ public:
+  explicit SessionHitTester(Session* session);
+  virtual ~SessionHitTester() = default;
+
+ private:
+  // Node seen in hit testing only if non-zero tag and compatible session.
+  bool should_participate(Node* node) override;
+
+  Session* session_;
+};
+
+class GlobalHitTester : public HitTester {
+ public:
+  GlobalHitTester() = default;
+  virtual ~GlobalHitTester() = default;
+
+ private:
+  // A node always participates in the hit test, regardless of tag and session.
+  bool should_participate(Node* node) override { return true; }
 };
 
 }  // namespace gfx

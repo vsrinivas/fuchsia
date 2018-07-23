@@ -8,6 +8,7 @@
 #include <set>
 
 #include "garnet/lib/ui/gfx/engine/hit.h"
+#include "garnet/lib/ui/gfx/engine/hit_tester.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
 
 #include "lib/escher/geometry/types.h"
@@ -67,8 +68,9 @@ class Layer : public Resource {
   // Performs a hit test into the scene of renderer, along the provided ray in
   // the layer's coordinate system.
   //
-  // |session| is a pointer to the session that initiated the hit test.
-  std::vector<Hit> HitTest(const escher::ray4& ray, Session* session) const;
+  // The hit collection behavior depends on the hit tester.
+  std::vector<Hit> HitTest(const escher::ray4& ray,
+                           HitTester* hit_tester) const;
 
   // Returns the current viewing volume of the layer. Used by the compositor
   // when initializing the stage, as well as for hit testing.

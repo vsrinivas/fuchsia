@@ -11,29 +11,28 @@
 namespace scenic {
 namespace gfx {
 
-HitTester::HitTester() {}
-
-HitTester::~HitTester() = default;
-
-std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray) {
-  return HitTest(node, ray, node->session());
+SessionHitTester::SessionHitTester(Session* session) : session_(session) {
+  FXL_CHECK(session_);
 }
 
-std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray,
-                                    Session* session) {
+bool SessionHitTester::should_participate(Node* node) {
   FXL_DCHECK(node);
-  FXL_DCHECK(session_ == nullptr);
+  return node->tag_value() != 0 && node->session() == session_;
+}
+
+std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray) {
+  FXL_DCHECK(node);
   FXL_DCHECK(ray_info_ == nullptr);
   FXL_DCHECK(tag_info_ == nullptr);
+  hits_.clear();  // Reset to good state after std::move.
 
   // Trace the ray.
-  session_ = session;
   RayInfo local_ray_info{ray, escher::mat4(1.f)};
   ray_info_ = &local_ray_info;
   AccumulateHitsLocal(node);
-  FXL_DCHECK(tag_info_ == nullptr);
   ray_info_ = nullptr;
-  session_ = nullptr;
+
+  FXL_DCHECK(tag_info_ == nullptr);
 
   // Sort by distance, preserving traversal order in case of ties.
   std::stable_sort(hits_.begin(), hits_.end(), [](const Hit& a, const Hit& b) {
@@ -67,8 +66,8 @@ void HitTester::AccumulateHitsLocal(Node* node) {
       ::fuchsia::ui::gfx::HitTestBehavior::kSuppress)
     return;
 
-  // Take a fast path if the node does not contribute a tag to the hit test.
-  if (!node->tag_value() || node->session() != session_) {
+  // Session-based hit testing may encounter nodes that don't participate.
+  if (!should_participate(node)) {
     AccumulateHitsInner(node);
     return;
   }

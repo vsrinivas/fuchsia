@@ -4,6 +4,7 @@
 
 #include "garnet/lib/ui/gfx/engine/session.h"
 
+#include <memory>
 #include <utility>
 
 #include <lib/async/cpp/task.h>
@@ -1569,7 +1570,7 @@ void Session::HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
                       ::fuchsia::ui::gfx::vec3 ray_direction,
                       fuchsia::ui::scenic::Session::HitTestCallback callback) {
   if (auto node = resources_.FindResource<Node>(node_id)) {
-    HitTester hit_tester;
+    SessionHitTester hit_tester(node->session());
     std::vector<Hit> hits = hit_tester.HitTest(
         node.get(), escher::ray4{escher::vec4(Unwrap(ray_origin), 1.f),
                                  escher::vec4(Unwrap(ray_direction), 0.f)});
@@ -1593,8 +1594,9 @@ void Session::HitTestDeviceRay(
 
   // The layer stack expects the input to the hit test to be in unscaled device
   // coordinates.
+  SessionHitTester hit_tester(this);
   std::vector<Hit> layer_stack_hits =
-      engine_->GetFirstCompositor()->layer_stack()->HitTest(ray, this);
+      engine_->GetFirstCompositor()->layer_stack()->HitTest(ray, &hit_tester);
 
   callback(WrapHits(layer_stack_hits));
 }
