@@ -29,7 +29,7 @@ class Builder;
 // Typically, |InterfaceRequest| objects are created by a prospective client of
 // |Interface|, which then sends the |InterfaceRequest| to another process to
 // request that the remote process implement the |Interface|. This pattern
-// enables *pipelined* operation, in which the client can being calling methods
+// enables *pipelined* operation, in which the client can start calling methods
 // on an associated |InterfacePtr| immediately, before the |InterfaceRequest|
 // has reached the remote process and been bound to an implementation. These
 // method calls are buffered by the underlying channel until they are read by
@@ -42,7 +42,7 @@ class Builder;
 //   class FooImpl : public Foo {
 //    public:
 //     explicit FooImpl(InterfaceRequest<Foo> request)
-//         : binding_(this, std::move(request) {}
+//         : binding_(this, std::move(request)) {}
 //
 //     // Foo implementation here.
 //
@@ -51,7 +51,7 @@ class Builder;
 //   };
 //
 // After the |InterfaceRequest| has been bound to an implementation, the
-// implementation will receive methods calls from the remote endpoint of the
+// implementation will receive method calls from the remote endpoint of the
 // channel on the thread on which the |InterfaceRequest| was bound.
 //
 // See also:

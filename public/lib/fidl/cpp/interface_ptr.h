@@ -256,19 +256,40 @@ class InterfacePtr {
   }
 #endif
 
-  // Sets an error handler that will be called if an error causes the
-  // underlying channel to be closed.
+  // Sets an error handler that will be called if an error causes the underlying
+  // channel to be closed.
+  //
+  // If the error is being reported because an error occurred on the local side
+  // of the channel, the zx_status_t of that error will be passed as the
+  // parameter to the handler.
+  //
+  // If an Epitaph was present on the channel, its error value will be passed as
+  // the parameter.  See the FIDL language specification for more detail on
+  // Epitaphs.
   //
   // For example, the error handler will be called if the remote side of the
   // channel sends an invalid message. When the error handler is called, the
-  // |InterfacePtr| will no longer be bound to the channel.
-  void set_error_handler(fit::closure error_handler) {
+  // |Binding| will no longer be bound to the channel.
+  //
+  // TODO(FIDL-319): change this signature to void
+  // set_error_handler(fit::function<void(zx_status_t)>) when there are no more
+  // incompatible callers.
+  template <class T>
+  void set_error_handler(T error_handler) {
     impl_->controller.reader().set_error_handler(std::move(error_handler));
   }
 
   // The underlying channel.
   const zx::channel& channel() const {
     return impl_->controller.reader().channel();
+  }
+
+  // Closes the channel and sends an Epitaph with the given error.  See the FIDL
+  // language spec for information about Epitaphs.
+  //
+  // The return value can be any of the return values of zx_channel_write.
+  zx_status_t Close(zx_status_t epitaph_value) {
+    return impl_->controller.reader().Close(epitaph_value);
   }
 
  private:

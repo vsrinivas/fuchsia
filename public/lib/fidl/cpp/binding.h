@@ -79,9 +79,10 @@ class Binding {
   // the |channel| lacks |ZX_RIGHT_WAIT|), the |Binding| will be constructed
   // in an unbound state.
   //
-  // Uses the given async_t (e.g., a message loop) in order to read messages
-  // from the channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|.
-  // If |dispatcher| is null, the current thread must have a default async_t.
+  // Uses the given async_dispatcher_t (e.g., a message loop) in order to read
+  // messages from the channel and to monitor the channel for
+  // |ZX_CHANNEL_PEER_CLOSED|.  If |dispatcher| is null, the current thread must
+  // have a default async_dispatcher_t.
   Binding(ImplPtr impl, zx::channel channel,
           async_dispatcher_t* dispatcher = nullptr)
       : Binding(std::forward<ImplPtr>(impl)) {
@@ -96,9 +97,10 @@ class Binding {
   // the |channel| lacks |ZX_RIGHT_WAIT|), the |Binding| will be constructed
   // in an unbound state.
   //
-  // Uses the given async_t (e.g., a message loop) in order to read messages
-  // from the channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|.
-  // If |dispatcher| is null, the current thread must have a default async_t.
+  // Uses the given async_dispatcher_t (e.g., a message loop) in order to read
+  // messages from the channel and to monitor the channel for
+  // |ZX_CHANNEL_PEER_CLOSED|.  If |dispatcher| is null, the current thread must
+  // have a default async_dispatcher_t.
   Binding(ImplPtr impl, InterfaceRequest<Interface> request,
           async_dispatcher_t* dispatcher = nullptr)
       : Binding(std::forward<ImplPtr>(impl)) {
@@ -114,9 +116,10 @@ class Binding {
   // If |NewBinding| fails to create the underlying channel, the returned
   // |InterfaceHandle| will return false from |is_valid()|.
   //
-  // Uses the given async_t (e.g., a message loop) in order to read messages
-  // from the channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|.
-  // If |dispatcher| is null, the current thread must have a default async_t.
+  // Uses the given async_dispatcher_t (e.g., a message loop) in order to read
+  // messages from the channel and to monitor the channel for
+  // |ZX_CHANNEL_PEER_CLOSED|.  If |dispatcher| is null, the current thread must
+  // have a default async_dispatcher_t.
   InterfaceHandle<Interface> NewBinding(
       async_dispatcher_t* dispatcher = nullptr) {
     InterfaceHandle<Interface> client;
@@ -129,9 +132,10 @@ class Binding {
   // If the |Binding| was prevously bound to another channel, that channel is
   // closed.
   //
-  // Uses the given async_t (e.g., a message loop) in order to read messages
-  // from the channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|.
-  // If |dispatcher| is null, the current thread must have a default async_t.
+  // Uses the given async_dispatcher_t (e.g., a message loop) in order to read
+  // messages from the channel and to monitor the channel for
+  // |ZX_CHANNEL_PEER_CLOSED|.  If |dispatcher| is null, the current thread must
+  // have a default async_dispatcher_t.
   //
   // Returns an error if the binding was not able to be created (e.g., because
   // the |channel| lacks |ZX_RIGHT_WAIT|).
@@ -146,9 +150,10 @@ class Binding {
   // If the |Binding| was prevously bound to another channel, that channel is
   // closed.
   //
-  // Uses the given async_t (e.g., a message loop) in order to read messages
-  // from the channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|.
-  // If |dispatcher| is null, the current thread must have a default async_t.
+  // Uses the given async_dispatcher_t (e.g., a message loop) in order to read
+  // messages from the channel and to monitor the channel for
+  // |ZX_CHANNEL_PEER_CLOSED|.  If |dispatcher| is null, the current thread must
+  // have a default async_dispatcher_t.
   //
   // Returns an error if the binding was not able to be created (e.g., because
   // the |channel| lacks |ZX_RIGHT_WAIT|).
@@ -167,6 +172,17 @@ class Binding {
     return InterfaceRequest<Interface>(controller_.reader().Unbind());
   }
 
+  // Sends an Epitaph over the bound channel corresponding to the error passed
+  // as a parameter, closes the channel, and unbinds it.  An Epitaph is the last
+  // message sent over a channel before a close operation; for the purposes of
+  // this function, it can be thought of as a return code.  See the FIDL
+  // language spec for more information about Epitaphs.
+  //
+  // The return value can be any of the return values of zx_channel_write.
+  zx_status_t Close(zx_status_t epitaph_value) {
+    return controller_.reader().Close(epitaph_value);
+  }
+
   // Blocks the calling thread until either a message arrives on the previously
   // bound channel or an error occurs.
   //
@@ -182,13 +198,26 @@ class Binding {
         zx::time::infinite());
   }
 
-  // Sets an error handler that will be called if an error causes the
-  // underlying channel to be closed.
+  // Sets an error handler that will be called if an error causes the underlying
+  // channel to be closed.
+  //
+  // If the error is being reported because an error occurred on the local side
+  // of the channel, the zx_status_t of that error will be passed as the
+  // parameter to the handler.
+  //
+  // If an Epitaph was present on the channel, its error value will be passed as
+  // the parameter.  See the FIDL language specification for more detail on
+  // Epitaphs.
   //
   // For example, the error handler will be called if the remote side of the
   // channel sends an invalid message. When the error handler is called, the
   // |Binding| will no longer be bound to the channel.
-  void set_error_handler(fit::closure error_handler) {
+  //
+  // TODO(FIDL-319): change this signature to void
+  // set_error_handler(fit::function<void(zx_status_t)>) when there are no more
+  // incompatible callers.
+  template <class Callable>
+  void set_error_handler(Callable error_handler) {
     controller_.reader().set_error_handler(std::move(error_handler));
   }
 

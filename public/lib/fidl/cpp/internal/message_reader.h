@@ -11,6 +11,7 @@
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
+#include <functional>
 #include <memory>
 #include <utility>
 
@@ -59,6 +60,15 @@ class MessageReader {
   // |MessageReader|.
   zx_status_t TakeChannelAndErrorHandlerFrom(MessageReader* other);
 
+  // Sends an epitaph with the given value, unbinds, and then closes the channel
+  // associated with this |MessageReader|.
+  //
+  // The |MessageReader| will send an Epitaph with the given error, unbind
+  // the channel, and then close it.
+  //
+  // The return value can be any of the return values of zx_channel_write.
+  zx_status_t Close(zx_status_t epitaph_value);
+
   // Whether the |MessageReader| is currently bound.
   //
   // See |Bind()| and |Unbind()|.
@@ -71,7 +81,8 @@ class MessageReader {
   // the peer closes. If the channel is readable, reads a single message from
   // the channel and dispatches it to the message handler.
   //
-  // Returns |ZX_ERR_BAD_STATE| if this |MessageReader| is not bound.
+  // Returns |ZX_ERR_BAD_STATE| if this |MessageReader| is not bound, or if it
+  // receives a malformed Epitaph.
   zx_status_t WaitAndDispatchOneMessageUntil(zx::time deadline);
 
   // The given message handler is called whenever the |MessageReader| reads a
@@ -93,6 +104,9 @@ class MessageReader {
     message_handler_ = message_handler;
   }
 
+  // DEPRECATED - Do not use, will be deleted soon.  Use the version whose
+  // function takes an error parameter, instead.
+  //
   // The given error handler is called whenever the |MessageReader| encounters
   // an error on the channel.
   //
@@ -102,7 +116,38 @@ class MessageReader {
   // |zx::channel|.
   //
   // The handler can destroy the |MessageReader|.
-  void set_error_handler(fit::closure error_handler) {
+  template <class Callable>
+  typename std::enable_if<!std::is_assignable<fit::function<void(zx_status_t)>,
+                                              Callable>::value>::type
+  set_error_handler(Callable error_handler) {
+    error_handler_ = [handler = std::move(error_handler)](
+                         zx_status_t ignored) mutable { handler(); };
+  }
+
+  // The given error handler is called whenever the |MessageReader| encounters
+  // an error on the channel.
+  //
+  // If the error is being reported because an error occurred on the local side
+  // of the channel, the zx_status_t of that error will be passed as the
+  // parameter to the handler.
+  //
+  // If an Epitaph was present on the channel, its error value will be passed as
+  // the parameter.  See the FIDL language specification for more detail on
+  // Epitaphs.
+  //
+  // For example, the error handler will be called if the remote side of the
+  // channel sends an invalid message. When the error handler is called, the
+  // |Binding| will no longer be bound to the channel.
+  //
+  // The handler can destroy the |MessageReader|.
+  //
+  // TODO(FIDL-319): Change this signature to void
+  // set_error_handler(fit::function<void(zx_status_t)>) when all callers of the
+  // other set_error_handler function are migrated to this one.
+  template <class Callable>
+  typename std::enable_if<std::is_assignable<fit::function<void(zx_status_t)>,
+                                             Callable>::value>::type
+  set_error_handler(Callable error_handler) {
     error_handler_ = std::move(error_handler);
   }
 
@@ -112,7 +157,7 @@ class MessageReader {
   void OnHandleReady(async_dispatcher_t* dispatcher, zx_status_t status,
                      const zx_packet_signal_t* signal);
   zx_status_t ReadAndDispatchMessage(MessageBuffer* buffer);
-  void NotifyError();
+  void NotifyError(zx_status_t epitaph_value);
   void Stop();
 
   async_wait_t wait_;  // Must be first.
@@ -120,7 +165,7 @@ class MessageReader {
   async_dispatcher_t* dispatcher_;
   bool* should_stop_;  // See |Canary| in message_reader.cc.
   MessageHandler* message_handler_;
-  fit::closure error_handler_;
+  fit::function<void(zx_status_t)> error_handler_;
 };
 
 }  // namespace internal
