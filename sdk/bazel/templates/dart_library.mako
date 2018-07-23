@@ -7,6 +7,7 @@ package(default_visibility = ["//visibility:public"])
 dart_library(
     name = "${data.name}",
     pub_pkg_name = "${data.package_name}",
+    enable_ddc = False,
     srcs = glob(["lib/**"]),
     deps = [
         % for dep in sorted(data.deps):
