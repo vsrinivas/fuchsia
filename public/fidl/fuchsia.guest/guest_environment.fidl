@@ -36,5 +36,5 @@ interface GuestEnvironment {
   3: ConnectToGuest(uint32 id, request<GuestController> controller);
 
   // Returns an interface that can be used to access the host vsock endpoint.
-  4: GetHostVsockEndpoint(request<ManagedVsockEndpoint> endpoint);
+  4: GetHostVsockEndpoint(request<HostVsockEndpoint> endpoint);
 };

@@ -46,10 +46,9 @@ void GuestManagerImpl::ConnectToEnvironment(
     uint32_t id,
     fidl::InterfaceRequest<fuchsia::guest::GuestEnvironment> request) {
   const auto& it = environments_.find(id);
-  if (it == environments_.end()) {
-    return;
+  if (it != environments_.end()) {
+    it->second->AddBinding(std::move(request));
   }
-  it->second->AddBinding(std::move(request));
 }
 
 }  // namespace guestmgr

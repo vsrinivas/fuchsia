@@ -8,27 +8,23 @@ source_set("lib") {
   visibility = [ ":*" ]
 
   sources = [
+    "guest_component.cc",
+    "guest_component.h",
     "guest_environment_impl.cc",
     "guest_environment_impl.h",
-    "guest_holder.cc",
-    "guest_holder.h",
     "guest_manager_impl.cc",
     "guest_manager_impl.h",
+    "guest_vsock_endpoint.cc",
+    "guest_vsock_endpoint.h",
     "host_vsock_endpoint.cc",
     "host_vsock_endpoint.h",
-    "remote_vsock_endpoint.cc",
-    "remote_vsock_endpoint.h",
-    "vsock_endpoint.cc",
-    "vsock_endpoint.h",
-    "vsock_server.cc",
-    "vsock_server.h",
   ]
 
   public_deps = [
-    "//garnet/public/lib/component/cpp",
-    "//garnet/public/fidl/fuchsia.sys",
-    "//garnet/public/lib/fxl",
     "//garnet/public/fidl/fuchsia.guest",
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/bitmap",
@@ -59,7 +55,7 @@ executable("guestmgr_unittests") {
   testonly = true
 
   sources = [
-    "vsock_server-unittest.cc",
+    "host_vsock_endpoint-unittest.cc",
   ]
 
   deps = [

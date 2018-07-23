@@ -4,55 +4,59 @@
 
 library fuchsia.guest;
 
-// |kHostCid| is reserved for use to address the host via vsock communications.
+// |kHostCid| is the reserved context ID (CID) of the host.
 //
 // CIDs for guests are assigned by the GuestManager and can be found in the
 // corresponding |GuestInfo| structure.
 const uint32 kHostCid = 2;
 
-// Exposed by components capable of listening on vsocks. On a request to
-// establish a connection, the |Accept| method will be called. If the port is
-// open and accepting connections, the implementation should return |ZX_OK|,
-// create a new socket, and return the remote endpoint.
+// Exposed by guests capable of listening via vsocks. On a request to establish
+// a connection, the |Accept| method will be called. If the port is open and
+// accepting connections, the implementation should return |ZX_OK|.
 //
-// Also see |VsockEndpoint|.
-interface VsockAcceptor {
+// Also see |GuestVsockEndpoint|.
+interface GuestVsockAcceptor {
   1: Accept(uint32 src_cid, uint32 src_port, uint32 port, handle? @handle)
       -> (status @status);
 };
 
-// Allow for out-bound connections to be established to the target (cid,port)
-// target. The caller must allocate a unique port number |src_port| to identify
-// this connection.
-interface VsockConnector {
-  1: Connect(uint32 src_port, uint32 cid, uint32 port)
+// Exposed by a host capable of listening via vsocks. A variant of a
+// |GuestVsockAcceptor| that is responsible for creating the |handle| with which
+// to communicate.
+interface HostVsockAcceptor {
+  1: Accept(uint32 src_cid, uint32 src_port, uint32 port)
       -> (status @status, handle? @handle);
 };
 
-// Exposed by components capable of handling vsock traffic. During
-// initialization the guestmgr will assign a unique context ID (CID) to this
-// endpoint and provide a |VsockConnector| that can be used to establish out-
-// bound connections on this CID. The implementation should provide a
-// |VsockAcceptor| implementation that can handle any in-bound connection
-// requests.
-[Discoverable]
-interface VsockEndpoint {
-  1: SetContextId(uint32 cid, VsockConnector connector,
-                  request<VsockAcceptor> acceptor);
+// Exposed by a host capable of connecting via vsocks. This allows a guest to
+// identify itself via {src_cid, src_port}, and request to connect to
+// {cid, port}. The host should return |ZX_OK|, and create a handle with which
+// to communicate.
+interface HostVsockConnector {
+  1: Connect(uint32 src_cid, uint32 src_port, uint32 cid, uint32 port)
+      -> (status @status, handle? @handle);
 };
 
-// An interface that provides access to a shared socked endpoint (ex: the host
-// endpoint).
-//
-// Allows listeners to be multiplexed by port and manages dynamic port
-// allocation for out-bound connections.
-interface ManagedVsockEndpoint {
+// Exposed by guests capable of handling vsock traffic. During
+// initialization the GuestManager will assign a unique CID to this endpoint and
+// provide a |HostVsockConnector| that can be used to establish outbound
+// connections. The implementation should provide a |GuestVsockAcceptor|
+// implementation that can handle any inbound connection requests.
+[Discoverable]
+interface GuestVsockEndpoint {
+  1: SetContextId(uint32 cid, HostVsockConnector connector,
+                  request<GuestVsockAcceptor> acceptor);
+};
+
+// Exposed by a host to provide the ability for listeners to be multiplexed by
+// port and to manage dynamic port allocation for outbound connections.
+interface HostVsockEndpoint {
   // Register |acceptor| to be invoked for any connection requests to |port|.
-  1: Listen(uint32 port, VsockAcceptor acceptor)
+  1: Listen(uint32 port, HostVsockAcceptor acceptor)
       -> (status @status);
 
-  // Similar to |VsockConnector.Connect| except the |src_port| will be generated
-  // automatically.
-  2: Connect(uint32 cid, uint32 port)
-      -> (status @status, handle? @handle);
+  // Similar to |HostVsockConnector.Connect| except the |src_cid| is
+  // |kHostCid| and |src_port| is generated automatically.
+  2: Connect(uint32 cid, uint32 port, handle? @handle)
+      -> (status @status);
 };

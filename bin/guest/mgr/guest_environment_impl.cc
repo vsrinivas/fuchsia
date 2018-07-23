@@ -4,80 +4,85 @@
 
 #include "garnet/bin/guest/mgr/guest_environment_impl.h"
 
-#include "lib/fxl/logging.h"
+#include <lib/fxl/logging.h>
 
 namespace guestmgr {
 
 GuestEnvironmentImpl::GuestEnvironmentImpl(
-    uint32_t id, const std::string& label,
-    component::StartupContext* context,
+    uint32_t id, const std::string& label, component::StartupContext* context,
     fidl::InterfaceRequest<fuchsia::guest::GuestEnvironment> request)
     : id_(id),
       label_(label),
       context_(context),
-      host_socket_endpoint_(fuchsia::guest::kHostCid) {
-  CreateEnvironment(label);
+      host_vsock_endpoint_(
+          fit::bind_member(this, &GuestEnvironmentImpl::GetAcceptor)) {
+  // Create environment.
+  context_->environment()->CreateNestedEnvironment(
+      service_provider_bridge_.OpenAsDirectory(), env_.NewRequest(),
+      env_controller_.NewRequest(), label);
+  env_->GetLauncher(launcher_.NewRequest());
+  zx::channel h1, h2;
+  FXL_CHECK(zx::channel::create(0, &h1, &h2) == ZX_OK);
+  context_->environment()->GetDirectory(std::move(h1));
+  service_provider_bridge_.set_backing_dir(std::move(h2));
+
   AddBinding(std::move(request));
-  FXL_CHECK(socket_server_.AddEndpoint(&host_socket_endpoint_) == ZX_OK);
-}
-
-GuestEnvironmentImpl::~GuestEnvironmentImpl() = default;
-
-void GuestEnvironmentImpl::AddBinding(
-    fidl::InterfaceRequest<GuestEnvironment> request) {
-  bindings_.AddBinding(this, std::move(request));
 }
 
 void GuestEnvironmentImpl::set_unbound_handler(std::function<void()> handler) {
   bindings_.set_empty_set_handler(std::move(handler));
 }
 
+void GuestEnvironmentImpl::AddBinding(
+    fidl::InterfaceRequest<GuestEnvironment> request) {
+  bindings_.AddBinding(this, std::move(request));
+}
+
 void GuestEnvironmentImpl::LaunchGuest(
     fuchsia::guest::GuestLaunchInfo launch_info,
     fidl::InterfaceRequest<fuchsia::guest::GuestController> controller,
     LaunchGuestCallback callback) {
-  component::Services guest_services;
-  fuchsia::sys::ComponentControllerPtr guest_component_controller;
-  fuchsia::sys::LaunchInfo guest_launch_info;
-  guest_launch_info.url = launch_info.url;
-  guest_launch_info.arguments = std::move(launch_info.vmm_args);
-  guest_launch_info.directory_request = guest_services.NewRequest();
-  guest_launch_info.flat_namespace = std::move(launch_info.flat_namespace);
-  launcher_->CreateComponent(std::move(guest_launch_info),
-                             guest_component_controller.NewRequest());
+  component::Services services;
+  fuchsia::sys::ComponentControllerPtr component_controller;
+  fuchsia::sys::LaunchInfo info;
+  info.url = launch_info.url;
+  info.arguments = std::move(launch_info.vmm_args);
+  info.directory_request = services.NewRequest();
+  info.flat_namespace = std::move(launch_info.flat_namespace);
+  launcher_->CreateComponent(std::move(info),
+                             component_controller.NewRequest());
 
-  // Setup vsock endpoint.
+  // Setup guest endpoint.
   uint32_t cid = next_guest_cid_++;
-  auto vsock_endpoint = std::make_unique<RemoteVsockEndpoint>(cid);
-  zx_status_t status = socket_server_.AddEndpoint(vsock_endpoint.get());
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to allocate vsock endpoint on CID " << cid << ": "
-                   << status;
+  fuchsia::guest::GuestVsockEndpointPtr guest_endpoint;
+  services.ConnectToService(guest_endpoint.NewRequest());
+  auto endpoint = std::make_unique<GuestVsockEndpoint>(
+      cid, std::move(guest_endpoint), &host_vsock_endpoint_);
+
+  auto& label = launch_info.label ? launch_info.label : launch_info.url;
+  component_controller.set_error_handler([this, cid] { guests_.erase(cid); });
+  auto component = std::make_unique<GuestComponent>(
+      label, std::move(endpoint), std::move(services),
+      std::move(component_controller));
+  component->AddBinding(std::move(controller));
+
+  bool inserted;
+  std::tie(std::ignore, inserted) = guests_.insert({cid, std::move(component)});
+  if (!inserted) {
+    FXL_LOG(ERROR) << "Failed to allocate guest endpoint on CID " << cid;
     callback(fuchsia::guest::GuestInfo());
     return;
   }
-  fuchsia::guest::VsockEndpointPtr remote_endpoint;
-  guest_services.ConnectToService(remote_endpoint.NewRequest());
-  vsock_endpoint->BindVsockEndpoint(std::move(remote_endpoint));
 
-  guest_component_controller.set_error_handler(
-      [this, cid] { guests_.erase(cid); });
-  auto& label = launch_info.label ? launch_info.label : launch_info.url;
-  auto holder = std::make_unique<GuestHolder>(
-      cid, label, std::move(vsock_endpoint), std::move(guest_services),
-      std::move(guest_component_controller));
-  holder->AddBinding(std::move(controller));
-  guests_.insert({cid, std::move(holder)});
-
-  fuchsia::guest::GuestInfo info;
-  info.cid = cid;
-  info.label = label;
-  callback(std::move(info));
+  fuchsia::guest::GuestInfo guest_info;
+  guest_info.cid = cid;
+  guest_info.label = label;
+  callback(std::move(guest_info));
 }
 
 void GuestEnvironmentImpl::GetHostVsockEndpoint(
-    fidl::InterfaceRequest<fuchsia::guest::ManagedVsockEndpoint> request) {
-  host_socket_endpoint_.AddBinding(std::move(request));
+    fidl::InterfaceRequest<fuchsia::guest::HostVsockEndpoint> request) {
+  host_vsock_endpoint_.AddBinding(std::move(request));
 }
 
 fidl::VectorPtr<fuchsia::guest::GuestInfo> GuestEnvironmentImpl::ListGuests() {
@@ -100,23 +105,15 @@ void GuestEnvironmentImpl::ConnectToGuest(
     uint32_t id,
     fidl::InterfaceRequest<fuchsia::guest::GuestController> request) {
   const auto& it = guests_.find(id);
-  if (it == guests_.end()) {
-    return;
+  if (it != guests_.end()) {
+    it->second->AddBinding(std::move(request));
   }
-  it->second->AddBinding(std::move(request));
 }
 
-void GuestEnvironmentImpl::CreateEnvironment(const std::string& label) {
-  context_->environment()->CreateNestedEnvironment(
-      service_provider_bridge_.OpenAsDirectory(), env_.NewRequest(),
-      env_controller_.NewRequest(), label);
-  env_->GetLauncher(launcher_.NewRequest());
-  zx::channel h1, h2;
-  if (zx::channel::create(0, &h1, &h2) < 0) {
-    return;
-  }
-  context_->environment()->GetDirectory(std::move(h1));
-  service_provider_bridge_.set_backing_dir(std::move(h2));
+fuchsia::guest::GuestVsockAcceptor* GuestEnvironmentImpl::GetAcceptor(
+    uint32_t cid) {
+  const auto& it = guests_.find(cid);
+  return it == guests_.end() ? nullptr : it->second->endpoint();
 }
 
 }  // namespace guestmgr

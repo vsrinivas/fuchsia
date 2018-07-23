@@ -7,15 +7,14 @@
 
 #include <fuchsia/guest/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/component/cpp/startup_context.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fxl/macros.h>
+#include <lib/svc/cpp/service_provider_bridge.h>
 #include <unordered_map>
 
-#include "garnet/bin/guest/mgr/guest_holder.h"
+#include "garnet/bin/guest/mgr/guest_component.h"
 #include "garnet/bin/guest/mgr/host_vsock_endpoint.h"
-#include "garnet/bin/guest/mgr/vsock_server.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
-#include "lib/svc/cpp/service_provider_bridge.h"
 
 namespace guestmgr {
 
@@ -27,20 +26,17 @@ static constexpr uint32_t kFirstGuestCid = 3;
 class GuestEnvironmentImpl : public fuchsia::guest::GuestEnvironment {
  public:
   GuestEnvironmentImpl(
-      uint32_t id, const std::string& label,
-      component::StartupContext* context,
+      uint32_t id, const std::string& label, component::StartupContext* context,
       fidl::InterfaceRequest<fuchsia::guest::GuestEnvironment> request);
-  ~GuestEnvironmentImpl() override;
 
-  void AddBinding(fidl::InterfaceRequest<GuestEnvironment> request);
-
-  fidl::VectorPtr<fuchsia::guest::GuestInfo> ListGuests();
   uint32_t id() const { return id_; }
   const std::string& label() const { return label_; }
-
   // Invoked once all bindings have been removed and this environment has been
   // orphaned.
   void set_unbound_handler(std::function<void()> handler);
+
+  void AddBinding(fidl::InterfaceRequest<GuestEnvironment> request);
+  fidl::VectorPtr<fuchsia::guest::GuestInfo> ListGuests();
 
  private:
   // |fuchsia::guest::GuestEnvironment|
@@ -53,10 +49,10 @@ class GuestEnvironmentImpl : public fuchsia::guest::GuestEnvironment {
                       fidl::InterfaceRequest<fuchsia::guest::GuestController>
                           controller) override;
   void GetHostVsockEndpoint(
-      fidl::InterfaceRequest<fuchsia::guest::ManagedVsockEndpoint> endpoint)
+      fidl::InterfaceRequest<fuchsia::guest::HostVsockEndpoint> endpoint)
       override;
 
-  void CreateEnvironment(const std::string& label);
+  fuchsia::guest::GuestVsockAcceptor* GetAcceptor(uint32_t cid);
 
   const uint32_t id_;
   const std::string label_;
@@ -69,10 +65,9 @@ class GuestEnvironmentImpl : public fuchsia::guest::GuestEnvironment {
   fuchsia::sys::LauncherPtr launcher_;
   component::ServiceProviderBridge service_provider_bridge_;
 
-  VsockServer socket_server_;
-  HostVsockEndpoint host_socket_endpoint_;
+  HostVsockEndpoint host_vsock_endpoint_;
   uint32_t next_guest_cid_ = kFirstGuestCid;
-  std::unordered_map<uint32_t, std::unique_ptr<GuestHolder>> guests_;
+  std::unordered_map<uint32_t, std::unique_ptr<GuestComponent>> guests_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GuestEnvironmentImpl);
 };

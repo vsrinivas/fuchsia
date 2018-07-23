@@ -5,8 +5,7 @@
 #include "garnet/lib/machina/virtio_vsock.h"
 
 #include <fbl/auto_call.h>
-
-#include "lib/fsl/handles/object_info.h"
+#include <lib/fsl/handles/object_info.h>
 
 namespace machina {
 
@@ -125,7 +124,8 @@ zx_status_t VirtioVsock::Connection::WaitOnReceive(zx_status_t status) {
 }
 
 VirtioVsock::SocketConnection::SocketConnection(
-    zx::handle handle, fuchsia::guest::VsockAcceptor::AcceptCallback callback)
+    zx::handle handle,
+    fuchsia::guest::GuestVsockAcceptor::AcceptCallback callback)
     : socket_(std::move(handle)), accept_callback_(std::move(callback)) {}
 
 VirtioVsock::SocketConnection::~SocketConnection() {
@@ -351,8 +351,8 @@ bool VirtioVsock::HasConnection(uint32_t src_cid, uint32_t src_port,
 
 void VirtioVsock::SetContextId(
     uint32_t cid,
-    fidl::InterfaceHandle<fuchsia::guest::VsockConnector> connector,
-    fidl::InterfaceRequest<fuchsia::guest::VsockAcceptor> acceptor) {
+    fidl::InterfaceHandle<fuchsia::guest::HostVsockConnector> connector,
+    fidl::InterfaceRequest<fuchsia::guest::GuestVsockAcceptor> acceptor) {
   {
     fbl::AutoLock lock(&config_mutex_);
     config_.guest_cid = cid;
@@ -364,7 +364,7 @@ void VirtioVsock::SetContextId(
 
 void VirtioVsock::Accept(
     uint32_t src_cid, uint32_t src_port, uint32_t port, zx::handle handle,
-    fuchsia::guest::VsockAcceptor::AcceptCallback callback) {
+    fuchsia::guest::GuestVsockAcceptor::AcceptCallback callback) {
   if (HasConnection(src_cid, src_port, port)) {
     callback(ZX_ERR_ALREADY_BOUND);
     return;
@@ -673,13 +673,19 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
         // the connection should be shut down.
         set_shutdown(header);
         FXL_LOG(ERROR) << "Connection request for an existing connection";
+      } else if (header->src_cid != guest_cid()) {
+        // If the source CID does not match guest CID, then the driver is in a
+        // bad state and the request should be ignored.
+        FXL_LOG(ERROR) << "Source CID does not match guest CID";
+        continue;
       } else if (connector_) {
         // We received a request for the guest to connect to an external CID.
         //
         // If we don't have a connector then implicitly just refuse any outbound
         // connections. Otherwise send out a request for a connection to the
         // remote CID.
-        connector_->Connect(header->src_port, header->dst_cid, header->dst_port,
+        connector_->Connect(header->src_cid, header->src_port, header->dst_cid,
+                            header->dst_port,
                             [this, key](zx_status_t status, zx::handle handle) {
                               ConnectCallback(key, status, std::move(handle));
                             });
