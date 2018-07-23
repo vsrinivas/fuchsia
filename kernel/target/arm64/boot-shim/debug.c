@@ -6,12 +6,18 @@
 #include "debug.h"
 
 // #define QEMU_PRINT 1
+// #define HIKEY960_PRINT 1
 // #define VIM2_PRINT 1
 
 #if QEMU_PRINT
 static volatile uint32_t* uart_fifo_dr = (uint32_t *)0x09000000;
 static volatile uint32_t* uart_fifo_fr = (uint32_t *)0x09000018;
+#elif HIKEY960_PRINT
+static volatile uint32_t* uart_fifo_dr = (uint32_t *)0xfff32000;
+static volatile uint32_t* uart_fifo_fr = (uint32_t *)0xfff32018;
+#endif
 
+#if QEMU_PRINT || HIKEY960_PRINT
 static void uart_pputc(char c)
 {
     /* spin while fifo is full */
@@ -19,7 +25,9 @@ static void uart_pputc(char c)
         ;
     *uart_fifo_dr = c;
 }
-#elif VIM2_PRINT
+#endif
+
+#if VIM2_PRINT
 static volatile uint32_t* uart_wfifo = (uint32_t *)0xc81004c0;
 static volatile uint32_t* uart_status = (uint32_t *)0xc81004cc;
 
@@ -32,7 +40,7 @@ static void uart_pputc(char c)
 }
 #endif
 
-#if QEMU_PRINT || VIM2_PRINT
+#if QEMU_PRINT || HIKEY960_PRINT || VIM2_PRINT
 void uart_puts(const char* str) {
     char ch;
     while ((ch = *str++)) {

@@ -236,13 +236,13 @@ boot_shim_return_t boot_shim(void* device_tree) {
     if (zbi != NULL) {
         zbi_header_t* bad_hdr;
         zbi_result_t check = zbi_check(zbi, &bad_hdr);
-        if (check != ZBI_RESULT_OK) {
-            fail("invalid ZBI from device tree\n");
-        }
-        // There is a ZBI.  Is it complete?
-        if (zbi->length > sizeof(zbi_header_t) &&
+        if (check == ZBI_RESULT_OK && zbi->length > sizeof(zbi_header_t) &&
             zbi[1].type == ZBI_TYPE_KERNEL_ARM64) {
             kernel = (zircon_kernel_t*) zbi;
+        } else {
+            // No valid ZBI in device tree.
+            // We will look in embedded_zbi instead.
+            zbi = NULL;
         }
     }
 
