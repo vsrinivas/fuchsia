@@ -151,8 +151,8 @@ void ThreadImpl::GetRegisters(
   session()->remote_api()->Registers(
       request, [thread = weak_factory_.GetWeakPtr(), callback](
                    const Err& err, debug_ipc::RegistersReply reply) {
-        thread->registers_ =
-            std::make_unique<RegisterSet>(std::move(reply.categories));
+        thread->registers_ = std::make_unique<RegisterSet>(
+            thread->session()->arch(), std::move(reply.categories));
 
         if (callback)
           callback(err, *thread->registers_.get());

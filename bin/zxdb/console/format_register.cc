@@ -120,7 +120,7 @@ Err FormatRegisters(const RegisterSet& registers,
                     const std::string& searched_register, OutputBuffer* out,
                     std::vector<debug_ipc::RegisterCategory::Type> categories) {
   std::vector<OutputBuffer> out_buffers;
-  const auto& register_map = registers.register_map();
+  const auto& category_map = registers.category_map();
 
   // If no category was set, print all of them.
   if (categories.empty()) {
@@ -132,8 +132,8 @@ Err FormatRegisters(const RegisterSet& registers,
 
   // Go category to category trying to print.
   for (const auto& category : categories) {
-    auto it = register_map.find(category);
-    if (it == register_map.end()) {
+    auto it = category_map.find(category);
+    if (it == category_map.end()) {
       continue;
     }
     Err err = InternalFormatCategory(category, it->second, searched_register,
@@ -172,66 +172,69 @@ std::string RegisterCategoryTypeToString(debug_ipc::RegisterCategory::Type type)
 
 std::string RegisterIDToString(RegisterID id) {
   switch (id) {
+    case RegisterID::kUnknown:
+      break;
+
     // ARMv8 -------------------------------------------------------------------
 
-    case RegisterID::ARMv8_x0: return "x0";
-    case RegisterID::ARMv8_x1: return "x1";
-    case RegisterID::ARMv8_x2: return "x2";
-    case RegisterID::ARMv8_x3: return "x3";
-    case RegisterID::ARMv8_x4: return "x4";
-    case RegisterID::ARMv8_x5: return "x5";
-    case RegisterID::ARMv8_x6: return "x6";
-    case RegisterID::ARMv8_x7: return "x7";
-    case RegisterID::ARMv8_x8: return "x8";
-    case RegisterID::ARMv8_x9: return "x9";
-    case RegisterID::ARMv8_x10: return "x10";
-    case RegisterID::ARMv8_x11: return "x11";
-    case RegisterID::ARMv8_x12: return "x12";
-    case RegisterID::ARMv8_x13: return "x13";
-    case RegisterID::ARMv8_x14: return "x14";
-    case RegisterID::ARMv8_x15: return "x15";
-    case RegisterID::ARMv8_x16: return "x16";
-    case RegisterID::ARMv8_x17: return "x17";
-    case RegisterID::ARMv8_x18: return "x18";
-    case RegisterID::ARMv8_x19: return "x19";
-    case RegisterID::ARMv8_x20: return "x20";
-    case RegisterID::ARMv8_x21: return "x21";
-    case RegisterID::ARMv8_x22: return "x22";
-    case RegisterID::ARMv8_x23: return "x23";
-    case RegisterID::ARMv8_x24: return "x24";
-    case RegisterID::ARMv8_x25: return "x25";
-    case RegisterID::ARMv8_x26: return "x26";
-    case RegisterID::ARMv8_x27: return "x27";
-    case RegisterID::ARMv8_x28: return "x28";
-    case RegisterID::ARMv8_x29: return "x29";
-    case RegisterID::ARMv8_lr: return "lr";
-    case RegisterID::ARMv8_sp: return "sp";
-    case RegisterID::ARMv8_pc: return "pc";
-    case RegisterID::ARMv8_cpsr: return "cpsr";
+    case RegisterID::kARMv8_x0: return "x0";
+    case RegisterID::kARMv8_x1: return "x1";
+    case RegisterID::kARMv8_x2: return "x2";
+    case RegisterID::kARMv8_x3: return "x3";
+    case RegisterID::kARMv8_x4: return "x4";
+    case RegisterID::kARMv8_x5: return "x5";
+    case RegisterID::kARMv8_x6: return "x6";
+    case RegisterID::kARMv8_x7: return "x7";
+    case RegisterID::kARMv8_x8: return "x8";
+    case RegisterID::kARMv8_x9: return "x9";
+    case RegisterID::kARMv8_x10: return "x10";
+    case RegisterID::kARMv8_x11: return "x11";
+    case RegisterID::kARMv8_x12: return "x12";
+    case RegisterID::kARMv8_x13: return "x13";
+    case RegisterID::kARMv8_x14: return "x14";
+    case RegisterID::kARMv8_x15: return "x15";
+    case RegisterID::kARMv8_x16: return "x16";
+    case RegisterID::kARMv8_x17: return "x17";
+    case RegisterID::kARMv8_x18: return "x18";
+    case RegisterID::kARMv8_x19: return "x19";
+    case RegisterID::kARMv8_x20: return "x20";
+    case RegisterID::kARMv8_x21: return "x21";
+    case RegisterID::kARMv8_x22: return "x22";
+    case RegisterID::kARMv8_x23: return "x23";
+    case RegisterID::kARMv8_x24: return "x24";
+    case RegisterID::kARMv8_x25: return "x25";
+    case RegisterID::kARMv8_x26: return "x26";
+    case RegisterID::kARMv8_x27: return "x27";
+    case RegisterID::kARMv8_x28: return "x28";
+    case RegisterID::kARMv8_x29: return "x29";
+    case RegisterID::kARMv8_lr: return "lr";
+    case RegisterID::kARMv8_sp: return "sp";
+    case RegisterID::kARMv8_pc: return "pc";
+    case RegisterID::kARMv8_cpsr: return "cpsr";
 
     // x64 ---------------------------------------------------------------------
 
-    case RegisterID::x64_rax: return "rax";
-    case RegisterID::x64_rbx: return "rbx";
-    case RegisterID::x64_rcx: return "rcx";
-    case RegisterID::x64_rdx: return "rdx";
-    case RegisterID::x64_rsi: return "rsi";
-    case RegisterID::x64_rdi: return "rdi";
-    case RegisterID::x64_rbp: return "rbp";
-    case RegisterID::x64_rsp: return "rsp";
-    case RegisterID::x64_r8: return "r8";
-    case RegisterID::x64_r9: return "r9";
-    case RegisterID::x64_r10: return "r10";
-    case RegisterID::x64_r11: return "r11";
-    case RegisterID::x64_r12: return "r12";
-    case RegisterID::x64_r13: return "r13";
-    case RegisterID::x64_r14: return "r14";
-    case RegisterID::x64_r15: return "r15";
-    case RegisterID::x64_rip: return "rip";
-    case RegisterID::x64_rflags: return "rflags";
+    case RegisterID::kX64_rax: return "rax";
+    case RegisterID::kX64_rbx: return "rbx";
+    case RegisterID::kX64_rcx: return "rcx";
+    case RegisterID::kX64_rdx: return "rdx";
+    case RegisterID::kX64_rsi: return "rsi";
+    case RegisterID::kX64_rdi: return "rdi";
+    case RegisterID::kX64_rbp: return "rbp";
+    case RegisterID::kX64_rsp: return "rsp";
+    case RegisterID::kX64_r8: return "r8";
+    case RegisterID::kX64_r9: return "r9";
+    case RegisterID::kX64_r10: return "r10";
+    case RegisterID::kX64_r11: return "r11";
+    case RegisterID::kX64_r12: return "r12";
+    case RegisterID::kX64_r13: return "r13";
+    case RegisterID::kX64_r14: return "r14";
+    case RegisterID::kX64_r15: return "r15";
+    case RegisterID::kX64_rip: return "rip";
+    case RegisterID::kX64_rflags: return "rflags";
   }
 
-  FXL_NOTREACHED();
+  FXL_NOTREACHED() << "Unknown register requested.";
   return std::string();
 }
 

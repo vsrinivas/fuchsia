@@ -68,41 +68,41 @@ inline zx_status_t ReadGeneralRegs(
     return false;
 
   registers->push_back(
-      CreateRegister(RegisterID::x64_rax, 8u, &general_registers.rax));
+      CreateRegister(RegisterID::kX64_rax, 8u, &general_registers.rax));
   registers->push_back(
-      CreateRegister(RegisterID::x64_rbx, 8u, &general_registers.rbx));
+      CreateRegister(RegisterID::kX64_rbx, 8u, &general_registers.rbx));
   registers->push_back(
-      CreateRegister(RegisterID::x64_rcx, 8u, &general_registers.rcx));
+      CreateRegister(RegisterID::kX64_rcx, 8u, &general_registers.rcx));
   registers->push_back(
-      CreateRegister(RegisterID::x64_rdx, 8u, &general_registers.rdx));
+      CreateRegister(RegisterID::kX64_rdx, 8u, &general_registers.rdx));
   registers->push_back(
-      CreateRegister(RegisterID::x64_rsi, 8u, &general_registers.rsi));
+      CreateRegister(RegisterID::kX64_rsi, 8u, &general_registers.rsi));
   registers->push_back(
-      CreateRegister(RegisterID::x64_rdi, 8u, &general_registers.rdi));
+      CreateRegister(RegisterID::kX64_rdi, 8u, &general_registers.rdi));
   registers->push_back(
-      CreateRegister(RegisterID::x64_rbp, 8u, &general_registers.rbp));
+      CreateRegister(RegisterID::kX64_rbp, 8u, &general_registers.rbp));
   registers->push_back(
-      CreateRegister(RegisterID::x64_rsp, 8u, &general_registers.rsp));
+      CreateRegister(RegisterID::kX64_rsp, 8u, &general_registers.rsp));
   registers->push_back(
-      CreateRegister(RegisterID::x64_r8, 8u, &general_registers.r8));
+      CreateRegister(RegisterID::kX64_r8, 8u, &general_registers.r8));
   registers->push_back(
-      CreateRegister(RegisterID::x64_r9, 8u, &general_registers.r9));
+      CreateRegister(RegisterID::kX64_r9, 8u, &general_registers.r9));
   registers->push_back(
-      CreateRegister(RegisterID::x64_r10, 8u, &general_registers.r10));
+      CreateRegister(RegisterID::kX64_r10, 8u, &general_registers.r10));
   registers->push_back(
-      CreateRegister(RegisterID::x64_r11, 8u, &general_registers.r11));
+      CreateRegister(RegisterID::kX64_r11, 8u, &general_registers.r11));
   registers->push_back(
-      CreateRegister(RegisterID::x64_r12, 8u, &general_registers.r12));
+      CreateRegister(RegisterID::kX64_r12, 8u, &general_registers.r12));
   registers->push_back(
-      CreateRegister(RegisterID::x64_r13, 8u, &general_registers.r13));
+      CreateRegister(RegisterID::kX64_r13, 8u, &general_registers.r13));
   registers->push_back(
-      CreateRegister(RegisterID::x64_r14, 8u, &general_registers.r14));
+      CreateRegister(RegisterID::kX64_r14, 8u, &general_registers.r14));
   registers->push_back(
-      CreateRegister(RegisterID::x64_r15, 8u, &general_registers.r15));
+      CreateRegister(RegisterID::kX64_r15, 8u, &general_registers.r15));
   registers->push_back(
-      CreateRegister(RegisterID::x64_rip, 8u, &general_registers.rip));
+      CreateRegister(RegisterID::kX64_rip, 8u, &general_registers.rip));
   registers->push_back(
-      CreateRegister(RegisterID::x64_rflags, 8u, &general_registers.rflags));
+      CreateRegister(RegisterID::kX64_rflags, 8u, &general_registers.rflags));
 
   return ZX_OK;
 }

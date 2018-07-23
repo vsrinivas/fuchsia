@@ -507,10 +507,10 @@ TEST(Protocol, RegistersReply) {
 
   RegisterCategory cat1;
   cat1.type = RegisterCategory::Type::kGeneral;
-  cat1.registers.push_back(CreateRegister(RegisterID::ARMv8_lr, 1));
-  cat1.registers.push_back(CreateRegister(RegisterID::ARMv8_pc, 2));
-  cat1.registers.push_back(CreateRegister(RegisterID::ARMv8_sp, 4));
-  cat1.registers.push_back(CreateRegister(RegisterID::ARMv8_cpsr, 8));
+  cat1.registers.push_back(CreateRegister(RegisterID::kARMv8_lr, 1));
+  cat1.registers.push_back(CreateRegister(RegisterID::kARMv8_pc, 2));
+  cat1.registers.push_back(CreateRegister(RegisterID::kARMv8_sp, 4));
+  cat1.registers.push_back(CreateRegister(RegisterID::kARMv8_cpsr, 8));
   initial.categories.push_back(cat1);
 
   // Sanity check
@@ -521,11 +521,11 @@ TEST(Protocol, RegistersReply) {
 
   RegisterCategory cat2;
   cat2.type = RegisterCategory::Type::kVector;
-  cat2.registers.push_back(CreateRegister(RegisterID::ARMv8_x0, 1));
-  cat2.registers.push_back(CreateRegister(RegisterID::ARMv8_x1, 2));
-  cat2.registers.push_back(CreateRegister(RegisterID::ARMv8_x2, 4));
-  cat2.registers.push_back(CreateRegister(RegisterID::ARMv8_x3, 8));
-  cat2.registers.push_back(CreateRegister(RegisterID::ARMv8_x4, 16));
+  cat2.registers.push_back(CreateRegister(RegisterID::kARMv8_x0, 1));
+  cat2.registers.push_back(CreateRegister(RegisterID::kARMv8_x1, 2));
+  cat2.registers.push_back(CreateRegister(RegisterID::kARMv8_x2, 4));
+  cat2.registers.push_back(CreateRegister(RegisterID::kARMv8_x3, 8));
+  cat2.registers.push_back(CreateRegister(RegisterID::kARMv8_x4, 16));
   initial.categories.push_back(cat2);
 
   RegistersReply second;

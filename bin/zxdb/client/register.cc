@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
+
 #include "garnet/bin/zxdb/client/register.h"
+#include "garnet/bin/zxdb/client/register_dwarf.h"
 #include "garnet/bin/zxdb/client/session.h"
-#include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
@@ -14,7 +16,9 @@ namespace zxdb {
 
 RegisterSet::RegisterSet() = default;
 
-RegisterSet::RegisterSet(std::vector<debug_ipc::RegisterCategory> categories) {
+RegisterSet::RegisterSet(debug_ipc::Arch arch,
+                         std::vector<debug_ipc::RegisterCategory> categories)
+    : arch_(arch) {
   for (auto& category : categories) {
     std::vector<Register> registers;
     registers.reserve(category.registers.size());
@@ -22,7 +26,7 @@ RegisterSet::RegisterSet(std::vector<debug_ipc::RegisterCategory> categories) {
       registers.emplace_back(Register(std::move(ipc_reg)));
     }
 
-    register_map_[category.type] = std::move(registers);
+    category_map_[category.type] = std::move(registers);
   }
 }
 
@@ -30,6 +34,50 @@ RegisterSet::RegisterSet(RegisterSet&&) = default;
 RegisterSet& RegisterSet::operator=(RegisterSet&&) = default;
 
 RegisterSet::~RegisterSet() = default;
+
+const Register* RegisterSet::operator[](debug_ipc::RegisterID id) const {
+  if (id == debug_ipc::RegisterID::kUnknown)
+    return nullptr;
+
+  // If this becomes to costly, switch to a cache RegisterID <--> Register map.
+  const Register* found_reg = nullptr;
+  for (const auto& kv : category_map_) {
+    for (const auto& reg : kv.second) {
+      if (reg.id() == id) {
+        found_reg = &reg;
+        break;
+      }
+    }
+  }
+  return found_reg;
+}
+
+const Register* RegisterSet::GetRegisterFromDWARF(uint32_t dwarf_reg_id) const {
+  debug_ipc::RegisterID reg_id = GetDWARFRegisterID(arch_, dwarf_reg_id);
+  // If kUnknown, this will return null.
+  return (*this)[reg_id];
+}
+
+bool RegisterSet::GetRegisterValueFromDWARF(uint32_t dwarf_reg_id,
+                                           uint64_t* out) const {
+  const Register* reg = GetRegisterFromDWARF(dwarf_reg_id);
+  if (!reg)
+    return false;
+  *out = reg->GetValue();
+  return true;
+}
+
+bool RegisterSet::GetRegisterDataFromDWARF(uint32_t dwarf_reg_id,
+                                           std::vector<uint8_t>* data) const {
+  const Register* reg = GetRegisterFromDWARF(dwarf_reg_id);
+  if (!reg)
+    return false;
+
+  data->clear();
+  data->reserve(reg->size());
+  data->insert(data->begin(), reg->begin(), reg->end());
+  return true;
+}
 
 // Register --------------------------------------------------------------------
 

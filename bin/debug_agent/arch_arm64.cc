@@ -77,7 +77,7 @@ inline zx_status_t ReadGeneralRegs(
     return false;
 
   // We add the X0-X29 registers.
-  uint32_t base = static_cast<uint32_t>(RegisterID::ARMv8_x0);
+  uint32_t base = static_cast<uint32_t>(RegisterID::kARMv8_x0);
   for (int i = 0; i < 30; i++) {
     RegisterID type = static_cast<RegisterID>(base + i);
     registers->push_back(CreateRegister(type, 8u, &general_registers.r[i]));
@@ -85,13 +85,13 @@ inline zx_status_t ReadGeneralRegs(
 
   // Add the named registers.
   registers->push_back(
-      CreateRegister(RegisterID::ARMv8_lr, 8u, &general_registers.lr));
+      CreateRegister(RegisterID::kARMv8_lr, 8u, &general_registers.lr));
   registers->push_back(
-      CreateRegister(RegisterID::ARMv8_sp, 8u, &general_registers.sp));
+      CreateRegister(RegisterID::kARMv8_sp, 8u, &general_registers.sp));
   registers->push_back(
-      CreateRegister(RegisterID::ARMv8_pc, 8u, &general_registers.pc));
+      CreateRegister(RegisterID::kARMv8_pc, 8u, &general_registers.pc));
   registers->push_back(
-      CreateRegister(RegisterID::ARMv8_cpsr, 8u, &general_registers.cpsr));
+      CreateRegister(RegisterID::kARMv8_cpsr, 8u, &general_registers.cpsr));
 
   return ZX_OK;
 }

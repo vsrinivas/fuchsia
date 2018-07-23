@@ -141,7 +141,7 @@ void MemoryAnalysis::SetMemory(MemoryDump dump) {
 void MemoryAnalysis::SetRegisters(const RegisterSet& registers) {
   FXL_DCHECK(!have_registers_);
   have_registers_ = true;
-  for (const auto& kv: registers.register_map())
+  for (const auto& kv: registers.category_map())
     // We look for the general section registers
     if (kv.first == debug_ipc::RegisterCategory::Type::kGeneral)
       for (const auto& reg : kv.second)

@@ -48,15 +48,15 @@ class MyMockRegisterSet : public RegisterSet {
     std::vector<uint8_t> data(sizeof(value));
     memcpy(&data[0], &value, sizeof(value));
     debug_ipc::Register ipc_reg({id, std::move(data)});
-    reg_map_[cat_type].push_back(Register(std::move(ipc_reg)));
+    cat_map_[cat_type].push_back(Register(std::move(ipc_reg)));
   }
 
-  const RegisterMap& register_map() const override {
-    return reg_map_;
+  const CategoryMap& category_map() const override {
+    return cat_map_;
   }
 
  private:
-  RegisterMap reg_map_;
+  CategoryMap cat_map_;
 };
 
 }  // namespace
@@ -125,9 +125,9 @@ TEST_F(AnalyzeMemoryTest, Basic) {
   constexpr uint64_t kAway = 0xFF00000000000;
 
   MyMockRegisterSet registers;
-  registers.AddRegister(RegisterCategory::Type::kGeneral, RegisterID::x64_rax, 8u,
+  registers.AddRegister(RegisterCategory::Type::kGeneral, RegisterID::kX64_rax, 8u,
                         kBegin);
-  registers.AddRegister(RegisterCategory::Type::kGeneral, RegisterID::x64_rcx, 8u,
+  registers.AddRegister(RegisterCategory::Type::kGeneral, RegisterID::kX64_rcx, 8u,
                         kAway);
   analysis->SetRegisters(registers);
 
