@@ -13,7 +13,7 @@
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <lib/hash/hash.h>
+#include <zircon/misc/fnv1hash.h>
 
 namespace trace {
 namespace internal {

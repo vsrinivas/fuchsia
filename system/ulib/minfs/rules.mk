@@ -23,8 +23,6 @@ MODULE_SRCS := \
     $(COMMON_SRCS) \
     $(LOCAL_DIR)/metrics.cpp \
 
-MODULE_HEADER_DEPS := system/ulib/hash
-
 MODULE_STATIC_LIBS := \
     system/ulib/fs \
     system/ulib/fzl \
@@ -75,8 +73,6 @@ MODULE_TYPE := hostlib
 MODULE_SRCS := $(MODULE_HOST_SRCS)
 
 MODULE_COMPILEFLAGS := $(MODULE_HOST_COMPILEFLAGS)
-
-MODULE_HEADER_DEPS := system/ulib/hash
 
 MODULE_HOST_LIBS := \
     system/ulib/fbl.hostlib

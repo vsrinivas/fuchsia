@@ -13,9 +13,9 @@
 #include <unistd.h>
 
 #include <block-client/client.h>
-#include <lib/hash/xorshiftrand.h>
-#include <zircon/assert.h>
 #include <zircon/device/block.h>
+#include <zircon/misc/xorshiftrand.h>
+#include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>

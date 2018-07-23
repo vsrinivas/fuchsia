@@ -12,7 +12,7 @@
 
 #include <zircon/syscalls.h>
 #include <zircon/device/block.h>
-#include <lib/hash/xorshiftrand.h>
+#include <zircon/misc/xorshiftrand.h>
 #include <sync/completion.h>
 
 static uint64_t number(const char* str) {

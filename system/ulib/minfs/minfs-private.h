@@ -33,7 +33,7 @@
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 
-#include <lib/hash/hash.h>
+#include <zircon/misc/fnv1hash.h>
 
 #include <minfs/allocator.h>
 #include <minfs/format.h>

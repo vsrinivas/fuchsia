@@ -14,8 +14,6 @@ MODULE_SRCS = \
     $(LOCAL_DIR)/trace_provider.fidl.cpp \
     $(LOCAL_DIR)/trace_provider.fidl.h \
 
-MODULE_HEADER_DEPS := system/ulib/hash
-
 MODULE_STATIC_LIBS := \
     system/ulib/trace \
     system/ulib/async.cpp \

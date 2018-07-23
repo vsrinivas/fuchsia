@@ -11,8 +11,6 @@ MODULE_GROUP := misc
 
 MODULE_SRCS += $(LOCAL_DIR)/biotime.c
 
-MODULE_HEADER_DEPS := system/ulib/hash
-
 MODULE_STATIC_LIBS := \
     system/ulib/sync
 

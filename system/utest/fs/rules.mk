@@ -50,8 +50,6 @@ MODULE_LDFLAGS += --wrap rename --wrap truncate --wrap opendir
 MODULE_LDFLAGS += --wrap utimes --wrap link --wrap symlink --wrap rmdir
 MODULE_LDFLAGS += --wrap chdir --wrap renameat --wrap realpath --wrap remove
 
-MODULE_HEADER_DEPS := system/ulib/hash
-
 MODULE_STATIC_LIBS := \
     system/ulib/async.cpp \
     system/ulib/async \
