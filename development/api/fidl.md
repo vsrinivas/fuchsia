@@ -85,7 +85,7 @@ Prefer functional names (e.g., `fuchsia.media`) over product or codenames (e.g.,
 `fuchsia.amber` or `fuchsia.mozart`).  Product names are appropriate when the
 product has some external existence beyond Fuchsia and when the interface is
 specific to that product.  For example, `fuchsia.cobalt` is a better name for
-the Cobalt interface than `fuchsia.metrics` because Cobalt other metrics
+the Cobalt interface than `fuchsia.metrics` because other metrics
 implementations (e.g., Firebase) are unlikely to implement the same protocol.
 
 FIDL libraries defined in the Fuchsia source tree (i.e., defined in
