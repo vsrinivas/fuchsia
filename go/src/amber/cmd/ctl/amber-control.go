@@ -373,7 +373,7 @@ func getUpdateComplete(proxy *amber.ControlInterface, pkgName, merkle *string) e
 	c, err := proxy.GetUpdateComplete(*pkgName, nil, merkle)
 	if err == nil {
 		defer c.Close()
-		b := make([]byte, 1024)
+		b := make([]byte, 64*1024)
 		daemonErr := false
 		for {
 			var err error
