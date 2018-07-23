@@ -31,7 +31,20 @@ class RootLoader : public fuchsia::sys::Loader {
  private:
   fidl::BindingSet<fuchsia::sys::Loader> bindings_;
 
-  bool LoadComponentFromPkgfs(std::string& path,
+  // package_name: Name of the package this cmx resides in. E.g. sysmgr.
+  // path: Absolute path to the cmx. E.g. /pkgfs/packages/sysmgr/0/sysmgr.cmx.
+  bool LoadComponentFromComponentManifest(std::string& package_name,
+                                          std::string& path,
+                                          LoadComponentCallback callback);
+
+  // package_name: Name of the package this cmx resides in. E.g. sysmgr.
+  bool LoadComponentFromPackage(std::string& package_name,
+                                LoadComponentCallback callback);
+
+  // target_path: Absolute path of the target cmx or package. E.g.
+  // /pkgfs/packages/sysmgr/0/sysmgr.cmx, or /pkgfs/packages/sysmgr/0.
+  // pkg_path: Absolute path to the package root. E.g. /pkgfs/packages/sysmgr/0.
+  bool LoadComponentFromPkgfs(std::string& target_path, std::string& pkg_path,
                               LoadComponentCallback callback);
 
   bool LoadComponentWithProcess(fxl::UniqueFD& fd, std::string& path,

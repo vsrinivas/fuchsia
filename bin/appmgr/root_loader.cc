@@ -42,7 +42,7 @@ void RootLoader::LoadComponent(fidl::StringPtr url,
     // 1a. If the URL points to a cmx file, load its package.
     std::string package_name = CmxMetadata::GetPackageNameFromCmxPath(path);
     if (!package_name.empty()) {
-      if (!LoadComponentFromPkgfs(package_name, callback)) {
+      if (!LoadComponentFromComponentManifest(package_name, path, callback)) {
         FXL_LOG(ERROR) << "Could not load package from cmx path: " << url;
         callback(nullptr);
       }
@@ -61,7 +61,7 @@ void RootLoader::LoadComponent(fidl::StringPtr url,
 
   // 2. Try to load the URL from /pkgfs.
   if (path.find('/') == std::string::npos &&
-      LoadComponentFromPkgfs(path, callback)) {
+      LoadComponentFromPackage(path, callback)) {
     return;
   }
 
@@ -81,18 +81,35 @@ void RootLoader::LoadComponent(fidl::StringPtr url,
   }
 }
 
-bool RootLoader::LoadComponentFromPkgfs(std::string& path,
-                                        LoadComponentCallback callback) {
-  // TODO(abarth): We're currently hardcoding version 0 of the package,
+bool RootLoader::LoadComponentFromComponentManifest(
+    std::string& package_name, std::string& path,
+    LoadComponentCallback callback) {
+  // TODO(CP-105): We're currently hardcoding version 0 of the package,
   // but we'll eventually need to do something smarter.
-  std::string pkg_path = fxl::Concatenate({"/pkgfs/packages/", path, "/0"});
+  std::string pkg_path =
+      fxl::Concatenate({"/pkgfs/packages/", package_name, "/0"});
+  return LoadComponentFromPkgfs(path, pkg_path, callback);
+}
+
+bool RootLoader::LoadComponentFromPackage(std::string& package_name,
+                                          LoadComponentCallback callback) {
+  // TODO(CP-105): We're currently hardcoding version 0 of the package,
+  // but we'll eventually need to do something smarter.
+  std::string pkg_path =
+      fxl::Concatenate({"/pkgfs/packages/", package_name, "/0"});
+  return LoadComponentFromPkgfs(pkg_path, pkg_path, callback);
+}
+
+bool RootLoader::LoadComponentFromPkgfs(std::string& target_path,
+                                        std::string& pkg_path,
+                                        LoadComponentCallback callback) {
   fxl::UniqueFD fd(open(pkg_path.c_str(), O_DIRECTORY | O_RDONLY));
   if (fd.is_valid()) {
     zx::channel directory = fsl::CloneChannelFromFileDescriptor(fd.get());
     if (directory) {
       fuchsia::sys::Package package;
       package.directory = std::move(directory);
-      package.resolved_url = fxl::Concatenate({"file://", pkg_path});
+      package.resolved_url = fxl::Concatenate({"file://", target_path});
       callback(fidl::MakeOptional(std::move(package)));
       return true;
     }
