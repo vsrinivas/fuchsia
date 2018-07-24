@@ -18,8 +18,8 @@ rustc_library("wlan-rsn") {
     "//third_party/rust-crates/rustc_deps:num",
     "//third_party/rust-crates/rustc_deps:num-bigint",
     "//third_party/rust-crates/rustc_deps:rand",
-    "//third_party/rust-crates/rustc_deps:rust-crypto",
     "//third_party/rust-crates/rustc_deps:time",
+    "//third_party/rust-mirrors/rust-crypto",
   ]
 }
 
