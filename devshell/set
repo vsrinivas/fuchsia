@@ -6,8 +6,9 @@
 ### set up a build directory
 
 ## usage: fx set TARGET [[--build-dir] OUTDIR]
+##               [--products P1,P2,...]
 ##               [--packages P1,P2,...]
-##               [--netboot] [--bootfs]
+##               [--netboot]
 ##               [--args ARG] [--help-args [ARG]] [--variant VARIANT]
 ##               [--goma|--no-goma] [--no-ensure-goma]
 ##               [--goma-dir DIR]
@@ -30,12 +31,15 @@
 ## optional arguments:
 ##   --build-dir OUTDIR    Using this option is deprecated.  It's the same
 ##                         as just giving OUTDIR as a non-option argument.
-##   --packages            Include the listed packages (separated by commas) in the
-##                         system build. Defaults to the default set of packages
-##                         for the current layer (e.g., "garnet/packages/default"
-##                         for the Garnet layer). If the --packages argument is
-##                         given multiple times, all the specified packages are
-##                         included in the build.
+##   --products            Include the listed products (separated by commas) in
+##                         the build. Defaults to the default product for the
+##                         current layer (e.g., "garnet/packages/default" for
+##                         the Garnet layer). If the --products argument is
+##                         given multiple times, the products configurations
+##                         are merged.
+##   --packages            Additional packages to be built and made available.
+##                         If the --packages argument is given multiple times,
+##                         all the specified packages are included in the build.
 ##   --variant             Pass a `select_variant=[VARIANT*,...]` GN build argument
 ##                         collecting all the --variant arguments in order.
 ##   --args                Additional argument to pass to gn. If the --args
@@ -103,8 +107,9 @@ function main {
   local gn_cmd='gen'
   local -a gn_switches=(--check)
   local gn_args="target_cpu=\"${arch}\""
-  local packages=
-  local extra_packages=
+  local products=()
+  local packages=()
+  local extra_packages=()
   local build_dir=
   local variant=
   local use_goma
@@ -113,20 +118,24 @@ function main {
   local ccache
   while [[ $# -ne 0 ]]; do
     case "$1" in
+      --products)
+        if [[ $# -lt 2 ]]; then
+          fx-command-help
+          return 1
+        fi
+        products+=("$2")
+        shift
+        ;;
       --packages)
         if [[ $# -lt 2 ]]; then
           fx-command-help
           return 1
         fi
-        packages+="${packages:+,}$2"
+        packages+=("$2")
         shift
         ;;
       --netboot)
-        extra_packages+=',build/packages/netboot'
-        ;;
-      --bootfs)
-        extra_packages+=',build/packages/bootfs'
-        gn_args+=' bootfs_packages=true'
+        extra_packages+=('build/packages/netboot')
         ;;
       # TODO(mcgrathr): Remove this after a deprecation period.
       --build-dir)
@@ -217,18 +226,6 @@ function main {
     shift
   done
 
-  if [[ -z "${packages}" ]]; then
-    # This is the default logic GN would use, but we have to append
-    # $extra_packages, so repeat it here.
-    local layers
-    layers="$(${FUCHSIA_DIR}/build/gn/guess_layer.py)" || return 1
-    readonly layers
-    local layer
-    for layer in $layers; do
-      packages+="${packages:+,}$layer/packages/default"
-    done
-  fi
-
   # Remove any trailing slash from build directory name.
   build_dir="${build_dir%/}"
 
@@ -281,9 +278,14 @@ function main {
     gn_args+=" use_ccache=true"
   fi
 
+  gn_args+=" fuchsia_products=["
+  for product in ${products[@]}; do
+    gn_args+="\"${product}\","
+  done
+  gn_args+="]"
+
   gn_args+=" fuchsia_packages=["
-  IFS=,
-  for package in ${packages}${extra_packages}; do
+  for package in ${packages[@]} ${extra_packages[@]}; do
     gn_args+="\"${package}\","
   done
   gn_args+="]"
