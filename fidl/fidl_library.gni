@@ -192,6 +192,7 @@ template("fidl_library") {
     sdk_atom("${target_name}_sdk") {
       domain = "fidl"
       name = library_name
+      id = "sdk://fidl/$library_name"
 
       category = invoker.sdk_category
 

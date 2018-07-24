@@ -15,9 +15,8 @@ import("//build/cpp/sdk_library.gni")
 #     Publication level of the library in SDKs.
 #     See //build/sdk/sdk_atom.gni.
 #
-#   sdk_name (optional)
+#   sdk_name (required)
 #     Name of the library in the SDK.
-#     If not specified, a name is inferred from the target's label.
 
 template("sdk_shared_library") {
   sdk_library(target_name) {

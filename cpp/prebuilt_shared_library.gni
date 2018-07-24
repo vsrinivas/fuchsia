@@ -18,7 +18,7 @@ import("//build/sdk/sdk_atom.gni")
 #
 #   sdk_name (optional)
 #     Name of the library in the SDK.
-#     If not specified, a name is inferred from the target's label.
+#     Defaults to the library's output name.
 #
 #   include_base (optional)
 #     Path to the root directory for includes.
@@ -84,41 +84,17 @@ template("prebuilt_shared_library") {
     write_runtime_deps = "$target_out_dir/$target_name.runtime_deps"
   }
 
-  compute_name = false
-  if (defined(invoker.sdk_name)) {
-    atom_name = invoker.sdk_name
-  } else if (defined(invoker.output_name)) {
-    atom_name = invoker.output_name
-  } else {
-    compute_name = true
-    name_target_name = "${target_name}_name"
-    default_name = target_name
-    target_label = get_label_info(":$target_name", "label_no_toolchain")
-    atom_name_file = "$target_gen_dir/${target_name}_sdk_name.txt"
-
-    action(name_target_name) {
-      script = "//build/cpp/compute_sdk_name.py"
-
-      outputs = [
-        atom_name_file,
-      ]
-
-      args = [
-        "--out",
-        rebase_path(atom_name_file),
-        "--default-name",
-        default_name,
-        "--label",
-        target_label,
-      ]
-    }
-  }
-
   sdk_manifest_file = "$target_gen_dir/$sdk_target_name.sdk"
 
   output_name = target_name
   if (defined(invoker.output_name)) {
     output_name = invoker.output_name
+  }
+
+  if (defined(invoker.sdk_name)) {
+    atom_name = invoker.sdk_name
+  } else {
+    atom_name = output_name
   }
 
   sdk_atom(manifest_target_name) {
@@ -137,11 +113,8 @@ template("prebuilt_shared_library") {
     manifest_file = sdk_manifest_file
 
     domain = "cpp"
-    if (compute_name) {
-      name_file = atom_name_file
-    } else {
-      name = atom_name
-    }
+    name = atom_name
+    id = "sdk://pkg/$atom_name"
     tags = [ "type:compiled_shared" ]
 
     category = invoker.category
@@ -218,9 +191,6 @@ template("prebuilt_shared_library") {
     }
 
     non_sdk_deps = [ ":$main_target_name" ]
-    if (compute_name) {
-      non_sdk_deps += [ ":$name_target_name" ]
-    }
 
     # Explicitly add non-public dependencies, in case some of the source files
     # are generated.

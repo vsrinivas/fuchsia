@@ -15,9 +15,8 @@ import("//build/sdk/sdk_atom.gni")
 #     Publication level of the library in SDKs.
 #     See //build/sdk/sdk_atom.gni.
 #
-#   sdk_name (optional)
+#   sdk_name (required)
 #     Name of the library in the SDK.
-#     If not specified, a name is inferred from the target's label.
 #
 #   source_dir (optional)
 #     If set, path to the base directory of the sources.
@@ -30,14 +29,13 @@ import("//build/sdk/sdk_atom.gni")
 
 template("sdk_library") {
   assert(defined(invoker.type), "Must specify a library type.")
-  library_type = invoker.type
-
   assert(defined(invoker.category), "Must define an SDK category")
+  assert(defined(invoker.sdk_name), "Must define an SDK name")
 
   main_target_name = target_name
   sdk_target_name = "${target_name}_sdk"
 
-  target(library_type, main_target_name) {
+  target(invoker.type, main_target_name) {
     forward_variables_from(invoker,
                            "*",
                            [
@@ -53,33 +51,6 @@ template("sdk_library") {
     }
   }
 
-  compute_name = !defined(invoker.sdk_name)
-  if (compute_name) {
-    name_target_name = "${target_name}_name"
-    default_name = target_name
-    target_label = get_label_info(":$target_name", "label_no_toolchain")
-    atom_name_file = "$target_gen_dir/${target_name}_sdk_name.txt"
-
-    action(name_target_name) {
-      script = "//build/cpp/compute_sdk_name.py"
-
-      outputs = [
-        atom_name_file,
-      ]
-
-      args = [
-        "--out",
-        rebase_path(atom_name_file),
-        "--default-name",
-        default_name,
-        "--label",
-        target_label,
-      ]
-    }
-  } else {
-    atom_name = invoker.sdk_name
-  }
-
   sdk_atom(sdk_target_name) {
     forward_variables_from(invoker,
                            [
@@ -88,12 +59,8 @@ template("sdk_library") {
                            ])
 
     domain = "cpp"
-    if (compute_name) {
-      name_file = atom_name_file
-    } else {
-      name = atom_name
-    }
-
+    name = invoker.sdk_name
+    id = "sdk://pkg/${invoker.sdk_name}"
     category = invoker.category
 
     tags = [ "type:sources" ]
@@ -147,9 +114,6 @@ template("sdk_library") {
     }
 
     non_sdk_deps = [ ":$main_target_name" ]
-    if (compute_name) {
-      non_sdk_deps += [ ":$name_target_name" ]
-    }
 
     # Explicitly add non-public dependencies, in case some of the source files
     # are generated.

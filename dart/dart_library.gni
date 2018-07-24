@@ -462,6 +462,7 @@ if (current_toolchain == dart_toolchain) {
       }
 
       sdk_atom("${target_name}_sdk") {
+        id = "sdk://dart/${invoker.package_name}"
         domain = "dart"
         tags = [
           "type:library",
