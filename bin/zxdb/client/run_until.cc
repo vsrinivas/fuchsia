@@ -24,11 +24,37 @@ namespace {
 
 using Callback = std::function<void(const Err&)>;
 
+class RunUntilHelper;
+
+// Class whose only purpose it to serve as a nominal owner for RunUntilHelpers
+// instances. See RunUntilHelper class comment for more information.
+// Implementation is at the end for clarity.
+class RunUntilHolder {
+ public:
+  // Only one global instance is needed
+  static RunUntilHolder& Get();
+
+  // This will set the RunUntilHelper Id
+  void AddRunUntilHelper(std::unique_ptr<RunUntilHelper>);
+  void DeleteRunUntilHelper(uint32_t id);
+
+ private:
+  RunUntilHolder() = default;
+
+  uint32_t next_helper_id_ = 0;
+  std::map<int, std::unique_ptr<RunUntilHelper>> helpers_map_;
+};
+
 // This class corresponds to an invocation of one "run until" command. Under
 // the current design "run until" is something the user triggers that's
-// associated with a thread or process. It is not owned by any particular
-// object: it watches for the appropriate thread or process changes and deletes
-// itself when the operation is no longer needed.
+// associated with a thread or process.
+//
+// Conceptually, it is not owned by any particular object: it watches for the
+// appropriate thread or process changes and schedules itself for deletion when
+// the operation is no longer needed. In practice, is owned by a manager object
+// whose only purpose is to hold these self-managed objects. This is because
+// memory checking tools (eg. ASAN) get tripped up the having un-owned new
+// calls.
 //
 // TODO(brettw) this will need to be revisited when there are more thread
 // control primitives. It could be that the process step case is completely
@@ -40,13 +66,14 @@ class RunUntilHelper : public ProcessObserver,
                        public TargetObserver,
                        public BreakpointController {
  public:
-  RunUntilHelper(Process* process, InputLocation location, Callback cb);
+  RunUntilHelper(Process* process, InputLocation location,
+                 Callback cb);
 
   // Non-zero frame SPs will check the current frame's SP and only trigger the
   // breakpoint when it matches. A zero SP will ignore the stack and always
   // trigger at the location.
-  RunUntilHelper(Thread* thread, InputLocation location, uint64_t frame_sp,
-                 Callback cb);
+  RunUntilHelper(Thread* thread, InputLocation location,
+                 uint64_t frame_sp, Callback cb);
 
   virtual ~RunUntilHelper();
 
@@ -69,6 +96,9 @@ class RunUntilHelper : public ProcessObserver,
   // double-deletes.
   void ScheduleDelete();
 
+  uint32_t id() { return id_; }
+  void set_id(uint32_t id) { id_ = id; }
+
  private:
   System* system_;
 
@@ -86,6 +116,7 @@ class RunUntilHelper : public ProcessObserver,
   // Set when an asynchronous deletion is scheduled. We should not schedule
   // another if this is set.
   bool pending_delete_ = false;
+  uint32_t id_;   // Set up by RunUntilHolder.
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RunUntilHelper);
 };
@@ -232,25 +263,49 @@ void RunUntilHelper::ScheduleDelete() {
   // happens before posted task is run), ensure we only delete once.
   if (!pending_delete_) {
     pending_delete_ = true;
-    debug_ipc::MessageLoop::Current()->PostTask([this]() { delete this; });
+    debug_ipc::MessageLoop::Current()->PostTask([this]() {
+        RunUntilHolder::Get().DeleteRunUntilHelper(this->id());
+    });
   }
+}
+
+// RunUntilHelper definition ---------------------------------------------------
+
+RunUntilHolder& RunUntilHolder::Get() {
+  static RunUntilHolder holder;
+  return holder;
+}
+
+void RunUntilHolder::AddRunUntilHelper(std::unique_ptr<RunUntilHelper> helper) {
+  helper->set_id(next_helper_id_++);
+  helpers_map_[helper->id()] = std::move(helper);
+}
+
+void RunUntilHolder::DeleteRunUntilHelper(uint32_t id) {
+  helpers_map_.erase(id);
 }
 
 }  // namespace
 
+// Public interface ------------------------------------------------------------
+
 void RunUntil(Process* process, InputLocation location,
               std::function<void(const Err&)> cb) {
-  new RunUntilHelper(process, location, std::move(cb));
+  auto h = std::make_unique<RunUntilHelper>(process, location, std::move(cb));
+  RunUntilHolder::Get().AddRunUntilHelper(std::move(h));
 }
 
 void RunUntil(Thread* thread, InputLocation location,
               std::function<void(const Err&)> cb) {
-  new RunUntilHelper(thread, location, 0, std::move(cb));
+  auto h = std::make_unique<RunUntilHelper>(thread, location, 0, std::move(cb));
+  RunUntilHolder::Get().AddRunUntilHelper(std::move(h));
 }
 
 void RunUntil(Thread* thread, InputLocation location, uint64_t frame_sp,
               std::function<void(const Err&)> cb) {
-  new RunUntilHelper(thread, location, frame_sp, std::move(cb));
+  auto h = std::make_unique<RunUntilHelper>(thread, location, frame_sp,
+                                            std::move(cb));
+  RunUntilHolder::Get().AddRunUntilHelper(std::move(h));
 }
 
 }  // namespace zxdb
