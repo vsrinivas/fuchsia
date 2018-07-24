@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![deny(warnings)]
+
 extern crate fidl;
 extern crate fidl_fuchsia_images;
 extern crate fidl_fuchsia_ui_gfx;
@@ -12,17 +14,18 @@ extern crate parking_lot;
 mod cmd;
 
 use fidl_fuchsia_images::{ImageInfo, MemoryType, PixelFormat, PresentationInfo, Tiling};
-use fidl_fuchsia_ui_gfx::{EntityNodeArgs, ImageArgs, MaterialArgs, MemoryArgs, ResourceArgs,
-                          ShapeNodeArgs};
+use fidl_fuchsia_ui_gfx::{CircleArgs, ColorRgba, EntityNodeArgs, ImageArgs, ImportSpec,
+                          MaterialArgs, MemoryArgs, RectangleArgs, ResourceArgs,
+                          RoundedRectangleArgs, ShapeNodeArgs, Value};
 use fidl_fuchsia_ui_scenic::{Command, SessionProxy};
-use fuchsia_zircon::{Event, HandleBased, Rights, Status, Vmar, VmarFlags, Vmo};
+use fuchsia_zircon::{Event, EventPair, HandleBased, Rights, Status, Vmar, VmarFlags, Vmo};
 use parking_lot::Mutex;
 use std::collections::VecDeque;
 use std::mem;
 use std::ops::Deref;
 use std::sync::Arc;
 
-struct Session {
+pub struct Session {
     session: SessionProxy,
     next_resource_id: u32,
     resource_count: u32,
@@ -31,16 +34,18 @@ struct Session {
     release_fences: Vec<Event>,
 }
 
+pub type SessionPtr = Arc<Mutex<Session>>;
+
 impl Session {
-    fn new(session: SessionProxy) -> Session {
-        Session {
+    pub fn new(session: SessionProxy) -> SessionPtr {
+        Arc::new(Mutex::new(Session {
             session,
             next_resource_id: 1,
             resource_count: 0,
             commands: vec![],
             acquire_fences: vec![],
             release_fences: vec![],
-        }
+        }))
     }
 
     fn enqueue(&mut self, command: Command) {
@@ -48,12 +53,14 @@ impl Session {
     }
 
     fn flush(&mut self) {
-        self.session.enqueue(&mut self.commands.iter_mut()).ok();
+        let mut commands = mem::replace(&mut self.commands, vec![]);
+        self.session.enqueue(&mut commands.iter_mut()).ok();
     }
 
-    fn present(
+    pub fn present(
         &mut self, presentation_time: u64,
     ) -> fidl::client2::QueryResponseFut<(PresentationInfo)> {
+        self.flush();
         self.session.present(
             presentation_time,
             &mut self.acquire_fences.drain(..),
@@ -75,8 +82,6 @@ impl Session {
     }
 }
 
-type SessionPtr = Arc<Mutex<Session>>;
-
 struct Resource {
     session: SessionPtr,
     id: u32,
@@ -92,6 +97,21 @@ impl Resource {
         };
         Resource { session, id }
     }
+
+    fn import(session: SessionPtr, token: EventPair, spec: ImportSpec) -> Resource {
+        let id = {
+            let mut s = session.lock();
+            let id = s.alloc_resource_id();
+            s.enqueue(cmd::import_resource(id, token, spec));
+            id
+        };
+        Resource { session, id }
+    }
+
+    fn enqueue(&self, command: Command) {
+        let mut session = self.session.lock();
+        session.enqueue(command);
+    }
 }
 
 impl Drop for Resource {
@@ -101,12 +121,12 @@ impl Drop for Resource {
     }
 }
 
-struct Memory {
+pub struct Memory {
     resource: Resource,
 }
 
 impl Memory {
-    fn new(session: SessionPtr, vmo: Vmo, memory_type: MemoryType) -> Memory {
+    pub fn new(session: SessionPtr, vmo: Vmo, memory_type: MemoryType) -> Memory {
         let args = MemoryArgs {
             vmo: vmo,
             memory_type,
@@ -115,19 +135,15 @@ impl Memory {
             resource: Resource::new(session, ResourceArgs::Memory(args)),
         }
     }
-
-    fn id(&self) -> u32 {
-        self.resource.id
-    }
 }
 
-struct Image {
+pub struct Image {
     resource: Resource,
     info: ImageInfo,
 }
 
 impl Image {
-    fn new(memory: &Memory, memory_offset: u32, info: ImageInfo) -> Image {
+    pub fn new(memory: &Memory, memory_offset: u32, info: ImageInfo) -> Image {
         let args = ImageArgs {
             memory_id: memory.resource.id,
             memory_offset,
@@ -145,12 +161,93 @@ impl Image {
     }
 }
 
-struct Material {
+pub struct Shape {
+    resource: Resource,
+}
+
+impl Shape {
+    fn new(resource: Resource) -> Shape {
+        Shape { resource }
+    }
+
+    fn id(&self) -> u32 {
+        self.resource.id
+    }
+}
+
+pub struct Circle(Shape);
+
+impl Circle {
+    pub fn new(session: SessionPtr, radius: f32) -> Circle {
+        let args = CircleArgs {
+            radius: Value::Vector1(radius),
+        };
+        Circle(Shape::new(Resource::new(
+            session,
+            ResourceArgs::Circle(args),
+        )))
+    }
+}
+
+pub struct Rectangle(Shape);
+
+impl Rectangle {
+    pub fn new(session: SessionPtr, width: f32, height: f32) -> Rectangle {
+        let args = RectangleArgs {
+            width: Value::Vector1(width),
+            height: Value::Vector1(height),
+        };
+        Rectangle(Shape::new(Resource::new(
+            session,
+            ResourceArgs::Rectangle(args),
+        )))
+    }
+}
+
+impl Deref for Rectangle {
+    type Target = Shape;
+
+    fn deref(&self) -> &Shape {
+        &self.0
+    }
+}
+
+pub struct RoundedRectangle(Shape);
+
+impl RoundedRectangle {
+    pub fn new(
+        session: SessionPtr, width: f32, height: f32, top_left_radius: f32, top_right_radius: f32,
+        bottom_right_radius: f32, bottom_left_radius: f32,
+    ) -> RoundedRectangle {
+        let args = RoundedRectangleArgs {
+            width: Value::Vector1(width),
+            height: Value::Vector1(height),
+            top_left_radius: Value::Vector1(top_left_radius),
+            top_right_radius: Value::Vector1(top_right_radius),
+            bottom_right_radius: Value::Vector1(bottom_right_radius),
+            bottom_left_radius: Value::Vector1(bottom_left_radius),
+        };
+        RoundedRectangle(Shape::new(Resource::new(
+            session,
+            ResourceArgs::RoundedRectangle(args),
+        )))
+    }
+}
+
+impl Deref for RoundedRectangle {
+    type Target = Shape;
+
+    fn deref(&self) -> &Shape {
+        &self.0
+    }
+}
+
+pub struct Material {
     resource: Resource,
 }
 
 impl Material {
-    fn new(session: SessionPtr) -> Material {
+    pub fn new(session: SessionPtr) -> Material {
         let args = MaterialArgs { dummy: 0 };
         Material {
             resource: Resource::new(session, ResourceArgs::Material(args)),
@@ -161,42 +258,68 @@ impl Material {
         self.resource.id
     }
 
-    fn set_texture(&self, image: &Image) {
-        let mut session = self.resource.session.lock();
-        session.enqueue(cmd::set_texture(self.id(), image.id()));
+    pub fn set_color(&self, color: ColorRgba) {
+        self.resource.enqueue(cmd::set_color(self.id(), color));
+    }
+
+    pub fn set_texture(&self, image: &Image) {
+        self.resource
+            .enqueue(cmd::set_texture(self.id(), image.id()));
     }
 }
 
-struct Node {
+pub struct Node {
     resource: Resource,
 }
 
 impl Node {
-    fn new(session: SessionPtr, resource: ResourceArgs) -> Node {
-        Node {
-            resource: Resource::new(session, resource),
-        }
+    fn new(resource: Resource) -> Node {
+        Node { resource }
     }
 
     fn id(&self) -> u32 {
         self.resource.id
     }
 
+    pub fn set_translation(&self, x: f32, y: f32, z: f32) {
+        self.resource
+            .enqueue(cmd::set_translation(self.id(), x, y, z))
+    }
+
+    pub fn set_scale(&self, x: f32, y: f32, z: f32) {
+        self.resource.enqueue(cmd::set_scale(self.id(), x, y, z))
+    }
+
+    pub fn set_rotation(&self, x: f32, y: f32, z: f32, w: f32) {
+        self.resource
+            .enqueue(cmd::set_rotation(self.id(), x, y, z, w))
+    }
+
+    pub fn detach(&self) {
+        self.resource.enqueue(cmd::detach(self.id()))
+    }
+
     fn enqueue(&self, command: Command) {
-        let mut session = self.resource.session.lock();
-        session.enqueue(command);
+        self.resource.enqueue(command);
     }
 }
 
-struct ShapeNode(Node);
+pub struct ShapeNode(Node);
 
 impl ShapeNode {
-    fn new(session: SessionPtr) -> ShapeNode {
+    pub fn new(session: SessionPtr) -> ShapeNode {
         let args = ShapeNodeArgs { unused: 0 };
-        ShapeNode(Node::new(session, ResourceArgs::ShapeNode(args)))
+        ShapeNode(Node::new(Resource::new(
+            session,
+            ResourceArgs::ShapeNode(args),
+        )))
     }
 
-    fn set_material(&self, material: &Material) {
+    pub fn set_shape(&self, shape: &Shape) {
+        self.enqueue(cmd::set_shape(self.id(), shape.id()));
+    }
+
+    pub fn set_material(&self, material: &Material) {
         self.enqueue(cmd::set_material(self.id(), material.id()));
     }
 }
@@ -209,14 +332,14 @@ impl Deref for ShapeNode {
     }
 }
 
-struct ContainerNode(Node);
+pub struct ContainerNode(Node);
 
 impl ContainerNode {
-    fn new(session: SessionPtr, resource: ResourceArgs) -> ContainerNode {
-        ContainerNode(Node::new(session, resource))
+    fn new(resource: Resource) -> ContainerNode {
+        ContainerNode(Node::new(resource))
     }
 
-    fn add_child(&self, node: &Node) {
+    pub fn add_child(&self, node: &Node) {
         self.enqueue(cmd::add_child(self.id(), node.id()));
     }
 }
@@ -229,12 +352,35 @@ impl Deref for ContainerNode {
     }
 }
 
-struct EntityNode(ContainerNode);
+pub struct ImportNode(ContainerNode);
+
+impl ImportNode {
+    pub fn new(session: SessionPtr, token: EventPair) -> ImportNode {
+        ImportNode(ContainerNode::new(Resource::import(
+            session,
+            token,
+            ImportSpec::Node,
+        )))
+    }
+}
+
+impl Deref for ImportNode {
+    type Target = ContainerNode;
+
+    fn deref(&self) -> &ContainerNode {
+        &self.0
+    }
+}
+
+pub struct EntityNode(ContainerNode);
 
 impl EntityNode {
-    fn new(session: SessionPtr) -> EntityNode {
+    pub fn new(session: SessionPtr) -> EntityNode {
         let args = EntityNodeArgs { unused: 0 };
-        EntityNode(ContainerNode::new(session, ResourceArgs::EntityNode(args)))
+        EntityNode(ContainerNode::new(Resource::new(
+            session,
+            ResourceArgs::EntityNode(args),
+        )))
     }
 }
 
@@ -285,13 +431,13 @@ impl Drop for MemoryMapping {
     }
 }
 
-struct HostMemory {
+pub struct HostMemory {
     memory: Memory,
     mapping: Arc<MemoryMapping>,
 }
 
 impl HostMemory {
-    fn allocate(session: SessionPtr, size: usize) -> Result<HostMemory, Status> {
+    pub fn allocate(session: SessionPtr, size: usize) -> Result<HostMemory, Status> {
         let (vmo, mapping) = MemoryMapping::allocate(size)?;
         Ok(HostMemory {
             memory: Memory::new(session, vmo, MemoryType::HostMemory),
@@ -299,21 +445,21 @@ impl HostMemory {
         })
     }
 
-    fn size(&self) -> usize {
+    pub fn size(&self) -> usize {
         self.mapping.len
     }
 }
 
-struct HostImage {
+pub struct HostImage {
     image: Image,
-    mapping: Arc<MemoryMapping>,
+    _mapping: Arc<MemoryMapping>,
 }
 
 impl HostImage {
-    fn new(memory: &HostMemory, memory_offset: u32, info: ImageInfo) -> HostImage {
+    pub fn new(memory: &HostMemory, memory_offset: u32, info: ImageInfo) -> HostImage {
         HostImage {
             image: Image::new(&memory.memory, memory_offset, info),
-            mapping: memory.mapping.clone(),
+            _mapping: memory.mapping.clone(),
         }
     }
 }
@@ -344,15 +490,15 @@ impl<'a> Drop for HostImageGuard<'a> {
     }
 }
 
-struct HostImageCycler {
+pub struct HostImageCycler {
     entity: EntityNode,
-    content_node: ShapeNode,
+    _content_node: ShapeNode,
     content_material: Material,
     pool: VecDeque<(HostMemory, HostImage)>,
 }
 
 impl HostImageCycler {
-    fn new(session: SessionPtr) -> HostImageCycler {
+    pub fn new(session: SessionPtr) -> HostImageCycler {
         let entity = EntityNode::new(session.clone());
         let content_node = ShapeNode::new(session.clone());
         let content_material = Material::new(session);
@@ -360,14 +506,10 @@ impl HostImageCycler {
         entity.add_child(&content_node);
         HostImageCycler {
             entity,
-            content_node,
+            _content_node: content_node,
             content_material,
             pool: VecDeque::with_capacity(2),
         }
-    }
-
-    fn id(&self) -> u32 {
-        self.entity.id()
     }
 
     pub fn acquire<'a>(&'a mut self, info: ImageInfo) -> Result<HostImageGuard<'a>, Status> {
