@@ -125,6 +125,7 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
     categories = std::move(spec.categories);
     duration = std::move(spec.duration);
     measurements = std::move(spec.measurements);
+    test_suite = std::move(spec.test_suite_name);
   }
 
   // --categories=<cat1>,<cat2>,...

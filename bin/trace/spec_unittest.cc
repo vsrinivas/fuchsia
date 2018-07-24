@@ -118,6 +118,14 @@ TEST(Spec, DecodeDuration) {
             result.duration.ToNanoseconds());
 }
 
+TEST(Spec, DecodeTestSuiteName) {
+  std::string json = R"({"test_suite_name": "test.suite"})";
+
+  Spec result;
+  ASSERT_TRUE(DecodeSpec(json, &result));
+  EXPECT_EQ("test.suite", result.test_suite_name);
+}
+
 TEST(Spec, ErrorOnNegativeDuration) {
   std::string json = R"({"duration": -42})";
 
