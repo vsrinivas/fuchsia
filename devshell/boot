@@ -84,7 +84,7 @@ while [[ $# -gt 0 ]]; do
   --)
     shift
     while [[ $# -gt 0 ]]; do
-      bootserver_extra=($bootserver_extra $1)
+      bootserver_extra=("${bootserver_extra[@]}" "$1")
       shift
     done
     break
