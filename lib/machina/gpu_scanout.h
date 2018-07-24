@@ -36,8 +36,6 @@ class GpuScanout {
   // Called whenever the scanout bitmap has been redrawn.
   virtual void InvalidateRegion(const GpuRect& rect) {}
 
-  void Draw(const GpuResource& res, const GpuRect& src, const GpuRect& dest);
-
   virtual void SetResource(GpuResource* res,
                            const virtio_gpu_set_scanout_t* request);
 

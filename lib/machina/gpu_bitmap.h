@@ -53,12 +53,18 @@ class GpuBitmap {
   uint8_t pixelsize() const { return ZX_PIXEL_FORMAT_BYTES(format_); }
   uint8_t* buffer() const { return ptr_; }
 
+  enum class DrawBitmapFlags : uint32_t {
+    NONE = 0,
+    FORCE_ALPHA = 1, // force interpretation of the x-channel as alpha
+  };
+
   // Draws a portion of another bitmap into this one.
   //
   // |source_rect| and |dest_rect| must both be wholly contained within
   // the respective bitmaps and must have the same width and height.
   void DrawBitmap(const GpuBitmap& from, const GpuRect& source_rect,
-                  const GpuRect& dest_rect);
+                  const GpuRect& dest_rect,
+                  DrawBitmapFlags flags = DrawBitmapFlags::NONE);
 
  private:
   uint32_t width_;
@@ -71,6 +77,17 @@ class GpuBitmap {
   fbl::unique_ptr<uint8_t[]> buffer_;
   uint8_t* ptr_;
 };
+
+inline GpuBitmap::DrawBitmapFlags operator&(GpuBitmap::DrawBitmapFlags a,
+                                            GpuBitmap::DrawBitmapFlags b) {
+  return static_cast<GpuBitmap::DrawBitmapFlags>(static_cast<uint32_t>(a) &
+                                                 static_cast<uint32_t>(b));
+}
+inline GpuBitmap::DrawBitmapFlags operator|(GpuBitmap::DrawBitmapFlags a,
+                                            GpuBitmap::DrawBitmapFlags b) {
+  return static_cast<GpuBitmap::DrawBitmapFlags>(static_cast<uint32_t>(a) |
+                                                 static_cast<uint32_t>(b));
+}
 
 }  // namespace machina
 

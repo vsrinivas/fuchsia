@@ -26,16 +26,11 @@ void GpuScanout::DrawScanoutResource(const virtio_gpu_rect_t& rect) {
   dest_rect.width = rect.width;
   dest_rect.height = rect.height;
 
-  Draw(*res, source_rect, dest_rect);
+  surface_.DrawBitmap(resource_->bitmap(), source_rect, dest_rect);
   if (cursor_resource_ && cursor_position_.Overlaps(dest_rect)) {
     DrawCursor();
   }
   InvalidateRegion(dest_rect);
-}
-
-void GpuScanout::Draw(const GpuResource& res, const GpuRect& source_rect,
-                      const GpuRect& dest_rect) {
-  surface_.DrawBitmap(res.bitmap(), source_rect, dest_rect);
 }
 
 void GpuScanout::SetResource(GpuResource* res,
@@ -90,7 +85,7 @@ void GpuScanout::EraseCursor() {
       cursor_position_.width,
       cursor_position_.height,
   };
-  Draw(*resource_, source, cursor_position_);
+  surface_.DrawBitmap(resource_->bitmap(), source, cursor_position_);
 }
 
 void GpuScanout::DrawCursor() {
@@ -103,7 +98,8 @@ void GpuScanout::DrawCursor() {
       cursor_resource_->bitmap().width(),
       cursor_resource_->bitmap().height(),
   };
-  Draw(*cursor_resource_, source, cursor_position_);
+  surface_.DrawBitmap(cursor_resource_->bitmap(), source, cursor_position_,
+                      GpuBitmap::DrawBitmapFlags::FORCE_ALPHA);
 }
 
 void GpuScanout::SetReady(bool ready) {
