@@ -1,5 +1,5 @@
 {
-  "test_suite_name": "fuchsia.ledger",
+  "test_suite_name": "fuchsia.ledger.local",
   "app": "/pkgfs/packages/ledger_benchmarks/0/bin/ledger_benchmark_delete_entry",
   "args": ["--entry-count=100", "--key-size=100", "--value-size=1000",
            "--transaction-size=0"],

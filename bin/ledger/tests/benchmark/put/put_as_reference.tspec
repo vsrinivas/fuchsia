@@ -1,5 +1,5 @@
 {
-  "test_suite_name": "fuchsia.ledger",
+  "test_suite_name": "fuchsia.ledger.local",
   "app": "/pkgfs/packages/ledger_benchmarks/0/bin/ledger_benchmark_put",
   "args": [
     "--entry-count=100", "--transaction-size=0", "--key-size=100",

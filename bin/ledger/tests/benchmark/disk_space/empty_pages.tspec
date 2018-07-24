@@ -1,5 +1,5 @@
 {
-  "test_suite_name": "fuchsia.ledger",
+  "test_suite_name": "fuchsia.ledger.local",
   "app": "/pkgfs/packages/ledger_benchmarks/0/bin/ledger_benchmark_disk_space",
   "args": ["--page-count=10", "--unique-key-count=0", "--key-size=10",
            "--value-size=10", "--commit-count=0"],
