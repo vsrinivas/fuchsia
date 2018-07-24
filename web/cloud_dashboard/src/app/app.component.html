@@ -18,7 +18,9 @@
     <mat-card class="lcd-card">
       <mat-card-content>
         <h1>Delete in progress</h1>
-        <p>Please don't close the tab.</p>
+        <p>Please don't close the tab!!!</p>
+        <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+        <p>Deleted documents: <b>{{ deletedDocumentCount }} </b></p>
       </mat-card-content>
     </mat-card>
   </div>
@@ -29,7 +31,7 @@
       <mat-card-content>
         <h1>User</h1>
         <p>You are signed in as <b>{{ (user | async)?.email }}</b>
-          a.k.a {{ uid }} (Firebase user ID).</p>
+          a.k.a <b>{{ uid }}</b> (Firebase user ID).</p>
       </mat-card-content>
       <mat-card-actions>
         <button mat-raised-button color="accent" (click)="logout()">Logout</button>
@@ -51,10 +53,10 @@
           <p>There are <b>{{ (devices | async)?.length }}</b> devices syncing.</p>
           <ul>
             <li class="text" *ngFor="let device of devices | async">
-              {{device.key}}
-              <span *ngIf="device.value != true">
+              {{device.id}}
+              <span *ngIf="device.connectionTimestamp">
                 -- Last connection at
-                {{device.value | date:'yyyy-MM-dd HH:mm:ss Z'}}</span>
+                {{device.connectionTimestamp | date:'yyyy-MM-dd HH:mm:ss Z'}}</span>
             </li>
           </ul>
           <p>Device IDs are opaque and meaningful only to Ledger.</p>
@@ -69,6 +71,10 @@
         <p><i>Why do we even have this lever?</i></p>
         <p><b>This will also trigger erase of the local data, the next time each of
             the devices sync</b></p>
+        <p>Collections to be erased:</p>
+        <ul *ngFor="let collection of allCollections">
+          <li>{{ collection.ref.path }}</li>
+        </ul>
       </mat-card-content>
       <mat-card-actions>
         <button mat-raised-button color="warn" (click)="erase()">Permanently erase all my data</button>
