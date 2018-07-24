@@ -11,12 +11,14 @@ extern crate parking_lot;
 
 mod cmd;
 
-use fidl_fuchsia_images::{ImageInfo, MemoryType, PresentationInfo};
+use fidl_fuchsia_images::{ImageInfo, MemoryType, PixelFormat, PresentationInfo, Tiling};
 use fidl_fuchsia_ui_gfx::{EntityNodeArgs, ImageArgs, MaterialArgs, MemoryArgs, ResourceArgs,
                           ShapeNodeArgs};
 use fidl_fuchsia_ui_scenic::{Command, SessionProxy};
 use fuchsia_zircon::{Event, HandleBased, Rights, Status, Vmar, VmarFlags, Vmo};
 use parking_lot::Mutex;
+use std::collections::VecDeque;
+use std::mem;
 use std::ops::Deref;
 use std::sync::Arc;
 
@@ -121,6 +123,7 @@ impl Memory {
 
 struct Image {
     resource: Resource,
+    info: ImageInfo,
 }
 
 impl Image {
@@ -128,10 +131,12 @@ impl Image {
         let args = ImageArgs {
             memory_id: memory.resource.id,
             memory_offset,
-            info: info,
+            // TODO: Use clone once FIDL generated the proper annotations.
+            info: ImageInfo { ..info },
         };
         Image {
             resource: Resource::new(memory.resource.session.clone(), ResourceArgs::Image(args)),
+            info: info,
         }
     }
 
@@ -310,5 +315,100 @@ impl HostImage {
             image: Image::new(&memory.memory, memory_offset, info),
             mapping: memory.mapping.clone(),
         }
+    }
+}
+
+fn get_image_size(info: &ImageInfo) -> usize {
+    assert!(info.tiling == Tiling::Linear);
+    match info.pixel_format {
+        PixelFormat::Bgra8 => (info.height * info.stride) as usize,
+        PixelFormat::Yuy2 => (info.height * info.stride) as usize,
+    }
+}
+
+fn can_reuse_memory(memory: &HostMemory, desired_size: usize) -> bool {
+    let current_size = memory.size();
+    current_size >= desired_size && current_size <= desired_size * 2
+}
+
+pub struct HostImageGuard<'a> {
+    cycler: &'a mut HostImageCycler,
+    memory: Option<HostMemory>,
+    image: Option<HostImage>,
+}
+
+impl<'a> Drop for HostImageGuard<'a> {
+    fn drop(&mut self) {
+        self.cycler
+            .release(self.memory.take().unwrap(), self.image.take().unwrap());
+    }
+}
+
+struct HostImageCycler {
+    entity: EntityNode,
+    content_node: ShapeNode,
+    content_material: Material,
+    pool: VecDeque<(HostMemory, HostImage)>,
+}
+
+impl HostImageCycler {
+    fn new(session: SessionPtr) -> HostImageCycler {
+        let entity = EntityNode::new(session.clone());
+        let content_node = ShapeNode::new(session.clone());
+        let content_material = Material::new(session);
+        content_node.set_material(&content_material);
+        entity.add_child(&content_node);
+        HostImageCycler {
+            entity,
+            content_node,
+            content_material,
+            pool: VecDeque::with_capacity(2),
+        }
+    }
+
+    fn id(&self) -> u32 {
+        self.entity.id()
+    }
+
+    pub fn acquire<'a>(&'a mut self, info: ImageInfo) -> Result<HostImageGuard<'a>, Status> {
+        if info.tiling != Tiling::Linear {
+            return Err(Status::NOT_SUPPORTED);
+        }
+
+        let desired_size = get_image_size(&info);
+        self.pool
+            .retain(|(memory, _image)| can_reuse_memory(&memory, desired_size));
+
+        match self.pool.pop_front() {
+            None => {
+                let memory =
+                    HostMemory::allocate(self.entity.resource.session.clone(), desired_size)?;
+                let image = HostImage::new(&memory, 0, info);
+                Ok(HostImageGuard {
+                    cycler: self,
+                    memory: Some(memory),
+                    image: Some(image),
+                })
+            }
+            Some((memory, image)) => {
+                let i = if image.image.info == info {
+                    image
+                } else {
+                    HostImage::new(&memory, 0, info)
+                };
+                Ok(HostImageGuard {
+                    cycler: self,
+                    memory: Some(memory),
+                    image: Some(i),
+                })
+            }
+        }
+    }
+
+    fn release(&mut self, memory: HostMemory, image: HostImage) {
+        self.content_material.set_texture(&image.image);
+        // TODO(abarth): Call set_shape on self.content_node once we have
+        // Rectangle.
+        self.pool.push_back((memory, image));
     }
 }
