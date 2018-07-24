@@ -195,7 +195,6 @@ template <typename H, typename B> bool is_valid_frame_type(const Packet* pkt, si
 
     const uint8_t* buf = pkt->data() + offset;
     size_t len = pkt->len() - offset;
-    auto padding = get_packet_padding_func<H>(pkt);
     return is_valid_frame_type<H, B>(buf, len);
 }
 

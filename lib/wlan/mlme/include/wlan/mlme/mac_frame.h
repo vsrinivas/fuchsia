@@ -23,12 +23,59 @@ namespace wlan {
 
 using NilHeader = uint8_t[0];
 
+template <typename H, typename B> class Frame;
+template <typename H, typename B> class FrameView;
+
+template <typename H, typename B> class VerifiedFrameType {
+   public:
+    static VerifiedFrameType<H, B> Valid(FrameView<H, B> frame) {
+        ZX_DEBUG_ASSERT(!frame.IsEmpty());
+        return VerifiedFrameType<H, B>(frame);
+    }
+
+    static VerifiedFrameType<H, B> Invalid() { return VerifiedFrameType<H, B>(FrameView<H, B>()); }
+
+    FrameView<H, B> CheckLength() const {
+        if (!IsValid()) { return frame_; }
+
+        if (!frame_.HasValidLen()) { return FrameView<H, B>(); }
+        return frame_;
+    }
+
+    bool IsValid() const { return !frame_.IsEmpty(); }
+    operator bool() const { return IsValid(); }
+
+   private:
+    explicit VerifiedFrameType(FrameView<H, B> frame) : frame_(frame) {}
+
+    FrameView<H, B> frame_;
+};
+
 // A temporary representation of a frame.
 template <typename Header, typename Body = UnknownBody> class FrameView {
    public:
-    FrameView(const Packet* pkt, size_t offset = 0) : data_offset_(offset), pkt_(pkt) {
+    explicit FrameView(const Packet* pkt, size_t offset = 0) : data_offset_(offset), pkt_(pkt) {
         ZX_DEBUG_ASSERT(pkt_ != nullptr);
         ZX_DEBUG_ASSERT(pkt->len() >= offset);
+    }
+
+    FrameView() : data_offset_(0), pkt_(nullptr) {}
+
+    static VerifiedFrameType<Header, Body> CheckType(const Packet* pkt, size_t offset = 0) {
+        if (!is_valid_frame_type<Header, Body>(pkt, offset)) {
+            return VerifiedFrameType<Header, Body>::Invalid();
+        }
+
+        return VerifiedFrameType<Header, Body>::Valid(FrameView<Header, Body>(pkt, offset));
+    }
+
+    template <typename NewBody> VerifiedFrameType<Header, NewBody> CheckBodyType() {
+        return FrameView<Header, NewBody>::CheckType(pkt_, data_offset_);
+    }
+
+    Frame<Header, Body> IntoOwned(fbl::unique_ptr<Packet> pkt) {
+        ZX_DEBUG_ASSERT(pkt != nullptr && pkt.get() == pkt_);
+        return Frame<Header, Body>(data_offset_, fbl::move(pkt));
     }
 
     const Header* hdr() const {
@@ -84,6 +131,9 @@ template <typename Header, typename Body = UnknownBody> class FrameView {
 
         return is_valid_frame_length<Header, Body>(pkt_, data_offset_);
     }
+
+    bool IsEmpty() const { return pkt_ == nullptr; }
+    operator bool() const { return !IsEmpty(); }
 
     // Advances the frame such that it points to the beginning of its previous Body.
     // Example:
@@ -144,7 +194,7 @@ template <typename Header, typename Body = UnknownBody> class Frame {
     Frame() : data_offset_(0), pkt_(nullptr) {}
 
     Header* hdr() {
-        ZX_DEBUG_ASSERT(!IsTaken());
+        ZX_DEBUG_ASSERT(!IsEmpty());
 
         auto hdr = pkt_->mut_field<Header>(View().hdr_offset());
         ZX_DEBUG_ASSERT(hdr != nullptr);
@@ -154,7 +204,7 @@ template <typename Header, typename Body = UnknownBody> class Frame {
     const Header* hdr() const { return View().hdr(); }
 
     Body* body() {
-        ZX_DEBUG_ASSERT(!IsTaken());
+        ZX_DEBUG_ASSERT(!IsEmpty());
 
         auto body = pkt_->mut_field<Body>(View().body_offset());
         ZX_DEBUG_ASSERT(body != nullptr);
@@ -166,7 +216,7 @@ template <typename Header, typename Body = UnknownBody> class Frame {
     size_t body_len() const { return View().body_len(); }
 
     zx_status_t set_body_len(size_t len) {
-        ZX_DEBUG_ASSERT(!IsTaken());
+        ZX_DEBUG_ASSERT(!IsEmpty());
         ZX_DEBUG_ASSERT(len <= pkt_->len());
 
         return pkt_->set_len(View().body_offset() + len);
@@ -201,7 +251,7 @@ template <typename Header, typename Body = UnknownBody> class Frame {
     }
 
     bool HasValidLen() const {
-        if (IsTaken()) { return false; }
+        if (IsEmpty()) { return false; }
         return View().HasValidLen();
     }
 
@@ -216,17 +266,17 @@ template <typename Header, typename Body = UnknownBody> class Frame {
     }
 
     // `true` if the frame was 'taken' and should no longer be used.
-    bool IsTaken() const { return pkt_ == nullptr; }
+    bool IsEmpty() const { return pkt_ == nullptr; }
 
     // Returns the Frame's underlying Packet. The Frame will no longer own the Packet and
     // will be `empty` from that moment on and should no longer be used.
     fbl::unique_ptr<Packet> Take() {
-        ZX_DEBUG_ASSERT(!IsTaken());
+        ZX_DEBUG_ASSERT(!IsEmpty());
         return fbl::move(pkt_);
     }
 
     FrameView<Header, Body> View() const {
-        ZX_DEBUG_ASSERT(!IsTaken());
+        ZX_DEBUG_ASSERT(!IsEmpty());
 
         return FrameView<Header, Body>(pkt_.get(), data_offset_);
     }

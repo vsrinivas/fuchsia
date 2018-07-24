@@ -91,15 +91,11 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
 }
 
 zx_status_t ClientMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
-    // TODO(hahnr): Extract into some form of helper method.
-    MgmtFrameView<> mgmt_frame(pkt.get());
-    if (mgmt_frame.hdr()->fc.IsMgmt()) {
-        if (mgmt_frame.hdr()->IsBeacon()) {
-            auto bcn = mgmt_frame.Specialize<Beacon>();
-            if (bcn.HasValidLen()) { scanner_->HandleBeacon(bcn); }
-        } else if (mgmt_frame.hdr()->IsProbeResponse()) {
-            auto proberesp = mgmt_frame.Specialize<ProbeResponse>();
-            if (proberesp.HasValidLen()) { scanner_->HandleProbeResponse(proberesp); }
+    if (auto mgmt_frame = MgmtFrameView<>::CheckType(pkt.get()).CheckLength()) {
+        if (auto bcn_frame = mgmt_frame.CheckBodyType<Beacon>().CheckLength()) {
+            scanner_->HandleBeacon(bcn_frame);
+        } else if (auto probe_resp = mgmt_frame.CheckBodyType<ProbeResponse>().CheckLength()) {
+            scanner_->HandleProbeResponse(probe_resp);
         }
     }
 

@@ -122,7 +122,7 @@ TEST(Frame, General) {
     // Verify frame's accessors and length.
     Frame<TestHdr1> frame(fbl::move(pkt));
     ASSERT_TRUE(frame.HasValidLen());
-    ASSERT_FALSE(frame.IsTaken());
+    ASSERT_FALSE(frame.IsEmpty());
     ASSERT_EQ(frame.len(), DefaultTripleHdrFrame::len());
     ASSERT_EQ(frame.hdr()->a, 42);
     ASSERT_EQ(frame.body_len(), DefaultTripleHdrFrame::body_len());
@@ -139,7 +139,7 @@ TEST(Frame, General_Const_Frame) {
     // Verify a constant frame's accessors and length. Constant accessors differ from regular ones.
     const Frame<TestHdr1> frame(fbl::move(pkt));
     ASSERT_TRUE(frame.HasValidLen());
-    ASSERT_FALSE(frame.IsTaken());
+    ASSERT_FALSE(frame.IsEmpty());
     ASSERT_EQ(frame.len(), DefaultTripleHdrFrame::len());
     ASSERT_EQ(frame.hdr()->a, 42);
     ASSERT_EQ(frame.body_len(), DefaultTripleHdrFrame::body_len());
@@ -158,10 +158,10 @@ TEST(Frame, Take) {
     // ... and take the frame's underlying Packet to construct a new, specialized frame.
     Frame<TestHdr1, TestHdr2> specialized_frame(frame.Take());
     // Verify the first frame is considered "taken" and that the new specialized one is valid.
-    ASSERT_TRUE(frame.IsTaken());
+    ASSERT_TRUE(frame.IsEmpty());
     ASSERT_FALSE(frame.HasValidLen());
     ASSERT_TRUE(specialized_frame.HasValidLen());
-    ASSERT_FALSE(specialized_frame.IsTaken());
+    ASSERT_FALSE(specialized_frame.IsEmpty());
     ASSERT_EQ(specialized_frame.len(), DefaultTripleHdrFrame::len());
     ASSERT_EQ(specialized_frame.hdr()->a, 42);
     ASSERT_EQ(specialized_frame.body_len(), DefaultTripleHdrFrame::body_len());
@@ -180,18 +180,18 @@ TEST(Frame, NextFrame) {
 
     // Access second frame with unknown body. Verify correct length and accessors.
     auto second_frame = frame.NextFrame<TestHdr2>();
-    ASSERT_TRUE(frame.IsTaken());
+    ASSERT_TRUE(frame.IsEmpty());
     ASSERT_TRUE(second_frame.HasValidLen());
-    ASSERT_FALSE(second_frame.IsTaken());
+    ASSERT_FALSE(second_frame.IsEmpty());
     ASSERT_EQ(second_frame.len(), DefaultTripleHdrFrame::second_frame_len());
     ASSERT_EQ(second_frame.body_len(), DefaultTripleHdrFrame::second_frame_body_len());
     ASSERT_EQ(second_frame.hdr()->b, 24);
 
     // Access the third frame with unknown body. Verify correct length and accessors.
     auto third_frame = second_frame.NextFrame<TestHdr3>();
-    ASSERT_TRUE(second_frame.IsTaken());
+    ASSERT_TRUE(second_frame.IsEmpty());
     ASSERT_TRUE(third_frame.HasValidLen());
-    ASSERT_FALSE(third_frame.IsTaken());
+    ASSERT_FALSE(third_frame.IsEmpty());
     ASSERT_EQ(third_frame.len(), DefaultTripleHdrFrame::third_frame_len());
     ASSERT_EQ(third_frame.body_len(), DefaultTripleHdrFrame::third_frame_body_len());
     ASSERT_EQ(third_frame.hdr()->a, 42);
@@ -209,9 +209,9 @@ TEST(Frame, NextFrame_FullSpecialized) {
 
     // Access second frame. Verify correct length and accessors.
     auto second_frame = frame.NextFrame<TestHdr2, TestHdr3>();
-    ASSERT_TRUE(frame.IsTaken());
+    ASSERT_TRUE(frame.IsEmpty());
     ASSERT_TRUE(second_frame.HasValidLen());
-    ASSERT_FALSE(second_frame.IsTaken());
+    ASSERT_FALSE(second_frame.IsEmpty());
     ASSERT_EQ(second_frame.len(), DefaultTripleHdrFrame::second_frame_len());
     ASSERT_EQ(second_frame.body_len(), DefaultTripleHdrFrame::second_frame_body_len());
     ASSERT_EQ(second_frame.hdr()->b, 24);
@@ -228,17 +228,17 @@ TEST(Frame, NextFrame_DynamicSized) {
 
     Frame<TestHdr1> frame(fbl::move(pkt));
     auto second_frame = frame.NextFrame<TestHdr2>();
-    ASSERT_TRUE(frame.IsTaken());
+    ASSERT_TRUE(frame.IsEmpty());
     ASSERT_TRUE(second_frame.HasValidLen());
-    ASSERT_FALSE(second_frame.IsTaken());
+    ASSERT_FALSE(second_frame.IsEmpty());
     ASSERT_EQ(second_frame.len(), PaddedTripleHdrFrame::second_frame_len());
     ASSERT_EQ(second_frame.body_len(), PaddedTripleHdrFrame::second_frame_body_len());
 
     // Third frame should be accessible as expected.
     auto third_frame = second_frame.NextFrame<TestHdr3>();
-    ASSERT_TRUE(second_frame.IsTaken());
+    ASSERT_TRUE(second_frame.IsEmpty());
     ASSERT_TRUE(third_frame.HasValidLen());
-    ASSERT_FALSE(third_frame.IsTaken());
+    ASSERT_FALSE(third_frame.IsEmpty());
     ASSERT_EQ(third_frame.len(), PaddedTripleHdrFrame::third_frame_len());
     ASSERT_EQ(third_frame.body_len(), PaddedTripleHdrFrame::third_frame_body_len());
     ASSERT_EQ(third_frame.hdr()->a, 42);
@@ -400,7 +400,7 @@ TEST(Frame, RxInfo_NoPaddingAlignedBody) {
 
 TEST(Frame, ConstructEmptyFrame) {
     Frame<TestHdr1> frame;
-    ASSERT_TRUE(frame.IsTaken());
+    ASSERT_TRUE(frame.IsEmpty());
     ASSERT_FALSE(frame.HasValidLen());
 }
 
@@ -415,8 +415,8 @@ TEST(Frame, Specialize) {
     Frame<TestHdr1> frame(fbl::move(pkt));
     Frame<TestHdr1, TestHdr2> specialized_frame = frame.Specialize<TestHdr2>();
     ASSERT_TRUE(specialized_frame.HasValidLen());
-    ASSERT_FALSE(specialized_frame.IsTaken());
-    ASSERT_TRUE(frame.IsTaken());
+    ASSERT_FALSE(specialized_frame.IsEmpty());
+    ASSERT_TRUE(frame.IsEmpty());
     ASSERT_EQ(specialized_frame.len(), DefaultTripleHdrFrame::len());
     ASSERT_EQ(specialized_frame.hdr()->a, 42);
     ASSERT_EQ(specialized_frame.body_len(), DefaultTripleHdrFrame::body_len());
@@ -436,8 +436,8 @@ TEST(Frame, Specialize_ProgressedFrame) {
     Frame<TestHdr2, UnknownBody> second_frame = frame.NextFrame<TestHdr2>();
     Frame<TestHdr2, TestHdr3> specialized_frame = second_frame.Specialize<TestHdr3>();
     ASSERT_TRUE(specialized_frame.HasValidLen());
-    ASSERT_FALSE(specialized_frame.IsTaken());
-    ASSERT_TRUE(second_frame.IsTaken());
+    ASSERT_FALSE(specialized_frame.IsEmpty());
+    ASSERT_TRUE(second_frame.IsEmpty());
     ASSERT_EQ(specialized_frame.hdr()->b, 24);
     ASSERT_EQ(specialized_frame.body_len(), DefaultTripleHdrFrame::second_frame_body_len());
     ASSERT_EQ(specialized_frame.body()->b, 1337);
