@@ -30,7 +30,7 @@ zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 
 ## RIGHTS
 
-TODO(ZX-2399)
+No rights are required.
 
 ## RETURN VALUE
 

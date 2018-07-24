@@ -25,7 +25,7 @@ a subset of original handle's rights.
 
 ## RIGHTS
 
-TODO(ZX-2399)
+No rights are required.
 
 ## RETURN VALUE
 

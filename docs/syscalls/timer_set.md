@@ -19,7 +19,7 @@ zx_status_t zx_timer_set(zx_handle_t handle, zx_time_t deadline,
 **zx_timer_set**() starts a one-shot timer that will fire when
 *deadline* passes. If a previous call to **zx_timer_set**() was
 pending, the previous timer is canceled and
-*ZX_TIMER_SIGNALED* is de-asserted as needed.
+**ZX_TIMER_SIGNALED** is de-asserted as needed.
 
 The *deadline* parameter specifies a deadline with respect to
 **ZX_CLOCK_MONOTONIC**. To wait for a relative interval,
@@ -27,7 +27,7 @@ use **zx_deadline_after**() returned value in *deadline*.
 
 To fire the timer immediately pass 0 to *deadline*.
 
-When the timer fires it asserts *ZX_TIMER_SIGNALED*. To de-assert this
+When the timer fires it asserts **ZX_TIMER_SIGNALED**. To de-assert this
 signal call **timer_cancel**() or **timer_set**() again.
 
 The *slack* parameter specifies a range from *deadline* - *slack* to
@@ -44,7 +44,7 @@ late firing with an effective interval of *deadline* - *slack* to
 
 ## RIGHTS
 
-TODO(ZX-2399)
+*handle* must have **ZX_RIGHT_WRITE**.
 
 ## RETURN VALUE
 
@@ -56,7 +56,7 @@ In the event of failure, a negative error value is returned.
 
 **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ZX_ERR_ACCESS_DENIED**  *handle* lacks the right *ZX_RIGHT_WRITE*.
+**ZX_ERR_ACCESS_DENIED**  *handle* lacks the right **ZX_RIGHT_WRITE**.
 
 ## SEE ALSO
 

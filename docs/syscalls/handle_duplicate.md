@@ -23,7 +23,7 @@ to specify no rights by using 0.
 
 ## RIGHTS
 
-TODO(ZX-2399)
+*handle* must have **ZX_RIGHT_DUPLICATE**.
 
 ## RETURN VALUE
 

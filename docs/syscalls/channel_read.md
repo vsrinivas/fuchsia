@@ -56,7 +56,7 @@ are validated against the expected values.
 
 ## RIGHTS
 
-TODO(ZX-2399)
+*handle* must have **ZX_RIGHT_READ**.
 
 ## RETURN VALUE
 

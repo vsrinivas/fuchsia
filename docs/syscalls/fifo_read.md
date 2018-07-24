@@ -35,7 +35,7 @@ It is not legal to read zero elements.
 
 ## RIGHTS
 
-TODO(ZX-2399)
+*handle* must have **ZX_RIGHT_READ**.
 
 ## RETURN VALUE
 
