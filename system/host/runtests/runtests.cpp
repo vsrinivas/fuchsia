@@ -39,7 +39,7 @@ private:
 
 int main(int argc, char** argv) {
     PosixStopwatch stopwatch;
-    return runtests::RunAllTests(&runtests::PosixRunTest, argc, argv,
-                                 /*default_test_dirs=*/ {}, &stopwatch,
-                                 /*syslog_file_name=*/ "");
+    return runtests::DiscoverAndRunTests(&runtests::PosixRunTest, argc, argv,
+                                         /*default_test_dirs=*/{}, &stopwatch,
+                                         /*syslog_file_name=*/"");
 }

@@ -90,6 +90,6 @@ int main(int argc, char** argv) {
     }
 
     FuchsiaStopwatch stopwatch;
-    return runtests::RunAllTests(&runtests::FuchsiaRunTest, argc, argv,
-                                 default_test_dirs, &stopwatch, kSyslogFileName);
+    return runtests::DiscoverAndRunTests(&runtests::FuchsiaRunTest, argc, argv, default_test_dirs,
+                                         &stopwatch, kSyslogFileName);
 }

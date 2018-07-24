@@ -102,12 +102,10 @@ int WriteSummaryJSON(const fbl::Vector<fbl::unique_ptr<Result>>& results,
 int ResolveGlobs(const fbl::Vector<fbl::String>& globs,
                  fbl::Vector<fbl::String>* resolved);
 
-// Executes all test binaries in a directory (non-recursive).
+// Executes all specified binaries.
 //
 // |run_test| is the function used to invoke the test binaries.
-// |dir_path| is the directory to search.
-// |filter_names| is a list of test names to filter on (i.e. tests whose names
-//   don't match are skipped). May be empty, in which case all tests will be run.
+// |test_paths| are the paths of the binaries to execute.
 // |output_dir| is the output directory for all the tests' output. May be nullptr, in which case
 //   output will not be captured.
 // |output_file_basename| is the basename of the tests' output files. May be nullptr only if
@@ -122,13 +120,30 @@ int ResolveGlobs(const fbl::Vector<fbl::String>& globs,
 // |results| is an output paramater to which run results will be appended.
 //
 // Returns false if any test binary failed, true otherwise.
-bool RunTestsInDir(const RunTestFn& run_test, const fbl::StringPiece dir_path,
-                   const fbl::Vector<fbl::String>& filter_names, const char* output_dir,
-                   const char* output_file_basename, signed char verbosity,
-                   int* num_failed, fbl::Vector<fbl::unique_ptr<Result>>* results);
+bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_paths,
+              const char* output_dir, const fbl::StringPiece output_file_basename,
+              signed char verbosity, int* failed_count,
+              fbl::Vector<fbl::unique_ptr<Result>>* results);
 
-// Conditionally runs all tests within given directories, with the option
-// of writing an aggregated summary file.
+// Expands |dir_globs| and searches those directories for files.
+//
+// |dir_globs| are expanded as globs to directory names, and then those directories are searched.
+// |ignore_dir_name| iff not null, any directory with this basename will not be searched.
+// |basename_whitelist| iff not empty, only files that have a basename in this whitelist will be
+//    returned.
+// |test_paths| is an output parameter to which absolute file paths will be appended.
+//
+// Returns 0 on success, else an error code compatible with errno.
+int DiscoverTestsInDirGlobs(const fbl::Vector<fbl::String>& dir_globs, const char* ignore_dir_name,
+                            const fbl::Vector<fbl::String>& basename_whitelist,
+                            fbl::Vector<fbl::String>* test_paths);
+
+// Reads |test_list_file| and appends whatever tests it finds to |test_paths|.
+//
+// Returns 0 on success, else an error code compatible with errno.
+int DiscoverTestsInListFile(FILE* test_list_file, fbl::Vector<fbl::String>* test_paths);
+
+// Discovers and runs tests based on command line arguments.
 //
 // |RunTest|: function to run each test.
 // |argc|: length of |argv|.
@@ -141,9 +156,9 @@ bool RunTestsInDir(const RunTestFn& run_test, const fbl::StringPiece dir_path,
 //    will be written to a file under that directory and this name.
 //
 // Returns EXIT_SUCCESS if all tests passed; else, returns EXIT_FAILURE.
-int RunAllTests(const RunTestFn& RunTest, int argc, const char* const* argv,
-                const fbl::Vector<fbl::String>& default_test_dirs,
-                Stopwatch* stopwatch, const fbl::StringPiece syslog_file_name);
+int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* argv,
+                        const fbl::Vector<fbl::String>& default_test_dirs,
+                        Stopwatch* stopwatch, const fbl::StringPiece syslog_file_name);
 
 } // namespace runtests
 

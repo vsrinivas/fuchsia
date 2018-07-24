@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(IN-527): Rename this file to discover-and-run-tests.cpp to match the function name.
+
 #include <runtests-utils/runtests-utils.h>
 
 #include <errno.h>
@@ -65,6 +67,7 @@ int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
             "   -a: Turn on All tests                              \n"
             "   -t: Filter tests by name                           \n"
             "       (accepts a comma-separated list)               \n"
+            "   -f: Run tests specified in this file               \n"
             "   -o: Write test output to a directory               \n"
             "   -w: Watchdog timeout                               \n"
             "       (accepts the timeout value in seconds)         \n"
@@ -85,7 +88,8 @@ int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
             "variable.                                             \n"
             "The watchdog timeout option -w only works for tests   \n"
             "that support the RUNTESTS_WATCHDOG_TIMEOUT environment\n"
-            "variable.                                             \n");
+            "variable.                                             \n"
+            "-f and [directory globs ...] are mutually exclusive.  \n");
     return EXIT_FAILURE;
 }
 
@@ -114,17 +118,16 @@ void SyncPathAndAncestors(const char* path) {
 };
 } // namespace
 
-
-// TODO(IN-478): Split this function up into smaller functions.
-int RunAllTests(const RunTestFn& RunTest, int argc, const char* const* argv,
-                const fbl::Vector<fbl::String>& default_test_dirs,
-                Stopwatch* stopwatch, const fbl::StringPiece syslog_file_name) {
+int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* argv,
+                        const fbl::Vector<fbl::String>& default_test_dirs, Stopwatch* stopwatch,
+                        const fbl::StringPiece syslog_file_name) {
     unsigned int test_types = TEST_DEFAULT;
-    fbl::Vector<fbl::String> filter_names;
-    fbl::Vector<fbl::String> test_globs;
+    fbl::Vector<fbl::String> basename_whitelist;
+    fbl::Vector<fbl::String> test_dir_globs;
     const char* output_dir = nullptr;
     signed char verbosity = -1;
     int watchdog_timeout_seconds = -1;
+    const char* test_list_path = nullptr;
 
     // TODO(IN-478): Convert this logic to use getopt_long().
     int i = 1;
@@ -158,13 +161,19 @@ int RunAllTests(const RunTestFn& RunTest, int argc, const char* const* argv,
             if (i + 1 >= argc) {
                 return Usage(argv[0], default_test_dirs);
             }
-            ParseTestNames(argv[i + 1], &filter_names);
+            ParseTestNames(argv[i + 1], &basename_whitelist);
             i++;
         } else if (strcmp(argv[i], "-o") == 0) {
             if (i + 1 >= argc) {
                 return Usage(argv[0], default_test_dirs);
             }
-            output_dir = (const char*)argv[i + 1];
+            output_dir = argv[i + 1];
+            i++;
+        } else if (strcmp(argv[i], "-f") == 0) {
+            if (i + 1 >= argc) {
+                return Usage(argv[0], default_test_dirs);
+            }
+            test_list_path = argv[i + 1];
             i++;
         } else if (strcmp(argv[i], "-w") == 0) {
             if (i + 1 >= argc) {
@@ -181,13 +190,17 @@ int RunAllTests(const RunTestFn& RunTest, int argc, const char* const* argv,
         } else if (argv[i][0] != '-') {
             // Treat the rest of the argv array as a list of directory globs.
             while (i < argc) {
-                test_globs.push_back(argv[i++]);
+                test_dir_globs.push_back(argv[i++]);
             }
             break;
         } else {
             return Usage(argv[0], default_test_dirs);
         }
         i++;
+    }
+    if (test_list_path && !test_dir_globs.is_empty()) {
+        fprintf(stderr, "Can't set both -f and directory globs.\n");
+        return Usage(argv[0], default_test_dirs);
     }
 
     // Configure the types of tests which are meant to be executed by putting
@@ -215,88 +228,51 @@ int RunAllTests(const RunTestFn& RunTest, int argc, const char* const* argv,
         unsetenv(WATCHDOG_ENV_NAME);
     }
 
-    // If we got no test globs, just set it to the default test dirs so we can
-    // use glob patterns there too.
-    if (test_globs.is_empty()) {
-        if (default_test_dirs.is_empty()) {
-            fprintf(stderr, "Test directory globs or default test directories must be specified.");
+    fbl::Vector<fbl::String> test_paths;
+    const auto* test_dir_globs_or_default =
+        test_dir_globs.is_empty() ? &default_test_dirs : &test_dir_globs;
+    if (test_list_path) {
+        FILE* test_list_file = fopen(test_list_path, "r");
+        if (!test_list_file) {
+            fprintf(stderr, "Failed to open test list file %s: %s\n", test_list_path,
+                    strerror(errno));
+            return false;
+        }
+        const int err = DiscoverTestsInListFile(test_list_file, &test_paths);
+        fclose(test_list_file);
+        if (err) {
+            fprintf(stderr, "Failed to read test list from %s: %s\n", test_list_path,
+                    strerror(err));
             return EXIT_FAILURE;
         }
-        for (const fbl::String& test_dir : default_test_dirs) {
-            test_globs.push_back(test_dir);
+    } else if (!test_dir_globs_or_default->is_empty()) {
+        const int err = DiscoverTestsInDirGlobs(*test_dir_globs_or_default, kIgnoreDirName,
+                                                basename_whitelist, &test_paths);
+        if (err) {
+            fprintf(stderr, "Failed to find tests in dirs: %s\n", strerror(err));
+            return EXIT_FAILURE;
         }
-    }
-
-    // Takes test_globs and resolves them, putting the result in test_dirs, which
-    // is used by the rest of the code.
-    fbl::Vector<fbl::String> test_dirs;
-    const int error = ResolveGlobs(test_globs, &test_dirs);
-    if (error) {
-        fprintf(stderr, "Error: Failed to resolve globs, error = %d\n", error);
+    } else {
+        fprintf(
+            stderr,
+            "Test list path, test directory globs or default test directories must be specified.");
         return EXIT_FAILURE;
     }
-    // TODO(mknyszek): Sort test_dirs in order to make running tests more
-    // deterministic.
+
+
     struct stat st;
     if (output_dir != nullptr && stat(output_dir, &st) < 0 && (st.st_mode & S_IFMT) == S_IFDIR) {
         fprintf(stderr, "Error: Could not open %s\n", output_dir);
         return EXIT_FAILURE;
     }
 
+    // TODO(mknyszek): Sort test_paths for deterministic behavior. Should be easy after ZX-1751.
     stopwatch->Start();
     int failed_count = 0;
     fbl::Vector<fbl::unique_ptr<Result>> results;
-    for (const fbl::String& test_dir : test_dirs) {
-        // In the event of failures around a directory not existing or being an empty node
-        // we will continue to the next entries rather than aborting. This allows us to handle
-        // different sets of default test directories.
-        if (stat(test_dir.c_str(), &st) < 0) {
-            fprintf(stderr, "Could not open %s, skipping...\n", test_dir.c_str());
-            continue;
-        }
-        if (!S_ISDIR(st.st_mode)) {
-            // Silently skip non-directories, as they may have been picked up in
-            // the glob.
-            continue;
-        }
-
-        // Resolve an absolute path to the test directory to ensure output
-        // directory names will never collide.
-        char abs_test_dir[PATH_MAX];
-        if (realpath(test_dir.c_str(), abs_test_dir) == nullptr) {
-            fprintf(stderr, "Error: Could not resolve path %s: %s\n",
-                    test_dir.c_str(), strerror(errno));
-            continue;
-        }
-
-        // Silently skip |kIgnoreDirName|.
-        // The user may have done something like runtests /foo/bar/h*.
-        const auto test_dir_base = basename(abs_test_dir);
-        if (strcmp(test_dir_base, kIgnoreDirName) == 0) {
-            continue;
-        }
-
-        // Ensure the output directory for this test binary's output exists.
-        if (output_dir != nullptr) {
-            char buf[PATH_MAX];
-            size_t path_len = snprintf(buf, sizeof(buf), "%s/%s", output_dir, abs_test_dir);
-            if (path_len >= sizeof(buf)) {
-                fprintf(stderr, "Error: Output path is too long: %s/%s\n",
-                        output_dir, abs_test_dir);
-                return EXIT_FAILURE;
-            }
-            const int error = MkDirAll(buf);
-            if (error) {
-                fprintf(stderr, "Error: Could not create output directory %s: %s\n",
-                        buf, strerror(error));
-                return EXIT_FAILURE;
-            }
-        }
-
-        int num_failed = 0;
-        RunTestsInDir(RunTest, test_dir, filter_names, output_dir,
-                      kOutputFileName, verbosity, &num_failed, &results);
-        failed_count += num_failed;
+    if (!RunTests(RunTest, test_paths, output_dir, kOutputFileName, verbosity, &failed_count,
+                  &results)) {
+        return EXIT_FAILURE;
     }
 
     // It's not catastrophic if we can't unset it; we're just trying to clean up

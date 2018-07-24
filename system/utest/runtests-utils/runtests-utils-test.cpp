@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <libgen.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -74,8 +75,7 @@ fbl::StringPiece ScopedScriptFile::path() const {
 class ScopedTestDir {
 
 public:
-    ScopedTestDir()
-        : path_(GetNextTestDir()) {
+    ScopedTestDir() : basename_(NextBasename()), path_(JoinPath(TestFsRoot(), basename_)) {
         if (mkdir(path_.c_str(), 0755)) {
             printf("FAILURE: mkdir failed to open %s: %s\n",
                    path_.c_str(), strerror(errno));
@@ -85,14 +85,15 @@ public:
     ~ScopedTestDir() {
         CleanUpDir(path_.c_str());
     }
+    const char* basename() { return basename_.c_str(); }
     const char* path() { return path_.c_str(); }
 
 private:
-    // Returns a unique subdirectory of TestFsRoot().
-    fbl::String GetNextTestDir() {
-        char dir_num[64];  // More than big enough to print INT_MAX.
-        sprintf(dir_num, "%d", num_test_dirs_created_++);
-        return JoinPath(TestFsRoot(), dir_num);
+    fbl::String NextBasename() {
+        // More than big enough to print INT_MAX.
+        char buf[64];
+        sprintf(buf, "%d", num_test_dirs_created_++);
+        return fbl::String(buf);
     }
 
     // Recursively removes the directory at |dir_path| and its contents.
@@ -121,6 +122,7 @@ private:
         rmdir(dir_path);
     }
 
+    const fbl::String basename_;
     const fbl::String path_;
 
     // Used to generate unique subdirectories of TestFsRoot().
@@ -405,6 +407,7 @@ bool MkDirAllParentDoesNotExist() {
 bool WriteSummaryJSONSucceeds() {
     BEGIN_TEST;
 
+    // TODO(IN-499): Use fmemopen instead of tmpfile.
     FILE* output_file = tmpfile();
     ASSERT_NONNULL(output_file);
     fbl::Vector<fbl::unique_ptr<Result>> results;
@@ -430,6 +433,7 @@ bool WriteSummaryJSONSucceeds() {
 bool WriteSummaryJSONSucceedsWithoutSyslogPath() {
     BEGIN_TEST;
 
+    // TODO(IN-499): Use fmemopen instead of tmpfile.
     FILE* output_file = tmpfile();
     ASSERT_NONNULL(output_file);
     fbl::Vector<fbl::unique_ptr<Result>> results;
@@ -454,6 +458,7 @@ bool WriteSummaryJSONSucceedsWithoutSyslogPath() {
 bool WriteSummaryJSONBadTestName() {
     BEGIN_TEST;
 
+    // TODO(IN-499): Use fmemopen instead of tmpfile.
     FILE* output_file = tmpfile();
     ASSERT_NONNULL(output_file);
     // A test name and output file consisting entirely of slashes should trigger an error.
@@ -590,76 +595,100 @@ bool RunTestFailureToLoadFile() {
     END_TEST;
 }
 
-bool RunTestsInDirBasic() {
+bool DiscoverTestsInDirGlobsBasic() {
     BEGIN_TEST;
 
     ScopedTestDir test_dir;
-    const fbl::String succeed_file_name = JoinPath(test_dir.path(), "succeed.sh");
-    ScopedScriptFile succeed_file(succeed_file_name, kEchoSuccessAndArgs);
-    const fbl::String fail_file_name = JoinPath(test_dir.path(), "fail.sh");
-    ScopedScriptFile fail_file(fail_file_name, kEchoFailureAndArgs);
-    int num_failed;
-    fbl::Vector<fbl::unique_ptr<Result>> results;
-    const signed char verbosity = -1;
-    EXPECT_FALSE(RunTestsInDir(PlatformRunTest, test_dir.path(), {}, nullptr,
-                               nullptr, verbosity, &num_failed, &results));
-    EXPECT_EQ(1, num_failed);
-    EXPECT_EQ(2, results.size());
-    bool found_succeed_result = false;
-    bool found_fail_result = false;
+    const fbl::String a_file_name = JoinPath(test_dir.path(), "a.sh");
+    ScopedScriptFile a_file(a_file_name, "");
+    const fbl::String b_file_name = JoinPath(test_dir.path(), "b.sh");
+    ScopedScriptFile b_file(b_file_name, "");
+    fbl::Vector<fbl::String> discovered_paths;
+    EXPECT_EQ(0, DiscoverTestsInDirGlobs({test_dir.path()}, nullptr, {}, &discovered_paths));
+    EXPECT_EQ(2, discovered_paths.size());
+    bool discovered_a = false;
+    bool discovered_b = false;
     // The order of the results is not defined, so just check that each is present.
-    for (const fbl::unique_ptr<Result>& result : results) {
-        if (fbl::StringPiece(result->name) == succeed_file.path()) {
-            found_succeed_result = true;
-            EXPECT_EQ(SUCCESS, result->launch_status);
-        } else if (fbl::StringPiece(result->name) == fail_file.path()) {
-            found_fail_result = true;
-            EXPECT_EQ(FAILED_NONZERO_RETURN_CODE, result->launch_status);
+    for (const auto& path : discovered_paths) {
+        if (fbl::StringPiece(path) == a_file.path()) {
+            discovered_a = true;
+        } else if (fbl::StringPiece(path) == b_file.path()) {
+            discovered_b = true;
         }
     }
-    EXPECT_TRUE(found_succeed_result);
-    EXPECT_TRUE(found_fail_result);
+    EXPECT_TRUE(discovered_a);
+    EXPECT_TRUE(discovered_b);
 
     END_TEST;
 }
 
-bool RunTestsInDirFilter() {
+bool DiscoverTestsInDirGlobsFilter() {
+    BEGIN_TEST;
+
+    ScopedTestDir test_dir;
+    const char kHopefullyUniqueFileBasename[] = "e829cea9919fe045ca199945db7ac99a";
+    const fbl::String unique_file_name = JoinPath(test_dir.path(), kHopefullyUniqueFileBasename);
+    ScopedScriptFile unique_file(unique_file_name, "");
+    // This one should be ignored because its basename is not in the white list.
+    const fbl::String other_file_name = JoinPath(test_dir.path(), "foo.sh");
+    ScopedScriptFile fail_file(other_file_name, "");
+    fbl::Vector<fbl::String> discovered_paths;
+    EXPECT_EQ(0, DiscoverTestsInDirGlobs({JoinPath(TestFsRoot(), "*")}, nullptr,
+                                         {kHopefullyUniqueFileBasename}, &discovered_paths));
+    EXPECT_EQ(1, discovered_paths.size());
+    EXPECT_STR_EQ(unique_file_name.c_str(), discovered_paths[0].c_str());
+
+    END_TEST;
+}
+
+bool DiscoverTestsInDirGlobsIgnore() {
+    BEGIN_TEST;
+    ScopedTestDir test_dir_a, test_dir_b;
+    const fbl::String a_name = JoinPath(test_dir_a.path(), "foo.sh");
+    ScopedScriptFile a_file(a_name, "");
+    const fbl::String b_name = JoinPath(test_dir_b.path(), "foo.sh");
+    ScopedScriptFile fail_file(b_name, "");
+    fbl::Vector<fbl::String> discovered_paths;
+    EXPECT_EQ(0, DiscoverTestsInDirGlobs({test_dir_a.path(), test_dir_b.path()},
+                                         test_dir_b.basename(), {}, &discovered_paths));
+    EXPECT_EQ(1, discovered_paths.size());
+    EXPECT_STR_EQ(a_name.c_str(), discovered_paths[0].c_str());
+    END_TEST;
+}
+
+bool DiscoverTestsInListFileWithTrailingWhitespace() {
+    BEGIN_TEST;
+    // TODO(IN-499): Use fmemopen instead of tmpfile.
+    FILE* test_list_file = tmpfile();
+    ASSERT_NONNULL(test_list_file);
+    fprintf(test_list_file, "trailing/tab\t\n");
+    fprintf(test_list_file, "trailing/space \n");
+    fprintf(test_list_file, "trailing/return\r");
+    rewind(test_list_file);
+    fbl::Vector<fbl::String> test_paths;
+    EXPECT_EQ(0, DiscoverTestsInListFile(test_list_file, &test_paths));
+    EXPECT_EQ(3, test_paths.size());
+    EXPECT_STR_EQ("trailing/tab", test_paths[0].c_str());
+    EXPECT_STR_EQ("trailing/space", test_paths[1].c_str());
+    EXPECT_STR_EQ("trailing/return", test_paths[2].c_str());
+    fclose(test_list_file);
+    END_TEST;
+}
+
+bool RunTestsWithVerbosity() {
     BEGIN_TEST;
 
     ScopedTestDir test_dir;
     const fbl::String succeed_file_name = JoinPath(test_dir.path(), "succeed.sh");
     ScopedScriptFile succeed_file(succeed_file_name, kEchoSuccessAndArgs);
-    const fbl::String fail_file_name = JoinPath(test_dir.path(), "fail.sh");
-    ScopedScriptFile fail_file(fail_file_name, kEchoFailureAndArgs);
-    int num_failed;
-    fbl::Vector<fbl::unique_ptr<Result>> results;
-    fbl::Vector<fbl::String> filter_names({"succeed.sh"});
-    const signed char verbosity = -1;
-    EXPECT_TRUE(RunTestsInDir(PlatformRunTest, test_dir.path(), filter_names,
-                              nullptr, nullptr, verbosity, &num_failed,
-                              &results));
-    EXPECT_EQ(0, num_failed);
-    EXPECT_EQ(1, results.size());
-    EXPECT_STR_EQ(results[0]->name.c_str(), succeed_file.path().data());
-
-    END_TEST;
-}
-
-bool RunTestsInDirWithVerbosity() {
-    BEGIN_TEST;
-
-    ScopedTestDir test_dir;
-    const fbl::String succeed_file_name = JoinPath(test_dir.path(), "succeed.sh");
-    ScopedScriptFile succeed_file(succeed_file_name, kEchoSuccessAndArgs);
-    int num_failed;
+    int num_failed = 0;
     fbl::Vector<fbl::unique_ptr<Result>> results;
     const signed char verbosity = 77;
     const fbl::String output_dir = JoinPath(test_dir.path(), "output");
     const char output_file_base_name[] = "output.txt";
     ASSERT_EQ(0, MkDirAll(output_dir));
-    EXPECT_TRUE(RunTestsInDir(PlatformRunTest, test_dir.path(), {},
-                              output_dir.c_str(), output_file_base_name, verbosity,
-                              &num_failed, &results));
+    EXPECT_TRUE(RunTests(PlatformRunTest, {succeed_file_name}, output_dir.c_str(),
+                         output_file_base_name, verbosity, &num_failed, &results));
     EXPECT_EQ(0, num_failed);
     EXPECT_EQ(1, results.size());
 
@@ -676,7 +705,7 @@ bool RunTestsInDirWithVerbosity() {
     END_TEST;
 }
 
-bool RunAllTestsBasicPass() {
+bool DiscoverAndRunTestsBasicPass() {
     BEGIN_TEST;
 
     ScopedTestDir test_dir;
@@ -686,12 +715,12 @@ bool RunAllTestsBasicPass() {
     ScopedScriptFile succeed_file2(succeed_file_name2, kEchoSuccessAndArgs);
     const char* const argv[] = {"./runtests", test_dir.path()};
     TestStopwatch stopwatch;
-    EXPECT_EQ(EXIT_SUCCESS, RunAllTests(PlatformRunTest, 2, argv, {}, &stopwatch, ""));
+    EXPECT_EQ(EXIT_SUCCESS, DiscoverAndRunTests(PlatformRunTest, 2, argv, {}, &stopwatch, ""));
 
     END_TEST;
 }
 
-bool RunAllTestsBasicFail() {
+bool DiscoverAndRunTestsBasicFail() {
     BEGIN_TEST;
 
     ScopedTestDir test_dir;
@@ -701,12 +730,12 @@ bool RunAllTestsBasicFail() {
     ScopedScriptFile fail_file(fail_file_name, kEchoFailureAndArgs);
     const char* const argv[] = {"./runtests", test_dir.path()};
     TestStopwatch stopwatch;
-    EXPECT_EQ(EXIT_FAILURE, RunAllTests(PlatformRunTest, 2, argv, {}, &stopwatch, ""));
+    EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(PlatformRunTest, 2, argv, {}, &stopwatch, ""));
 
     END_TEST;
 }
 
-bool RunAllTestsFallsBackToDefaultDirs() {
+bool DiscoverAndRunTestsFallsBackToDefaultDirs() {
     BEGIN_TEST;
 
     ScopedTestDir test_dir;
@@ -714,12 +743,12 @@ bool RunAllTestsFallsBackToDefaultDirs() {
     ScopedScriptFile succeed_file(succeed_file_name, kEchoSuccessAndArgs);
     const char* const argv[] = {"./runtests"};
     TestStopwatch stopwatch;
-    EXPECT_EQ(EXIT_SUCCESS, RunAllTests(PlatformRunTest, 1, argv, {test_dir.path()}, &stopwatch, ""));
+    EXPECT_EQ(EXIT_SUCCESS, DiscoverAndRunTests(PlatformRunTest, 1, argv, {test_dir.path()}, &stopwatch, ""));
 
     END_TEST;
 }
 
-bool RunAllTestsFailsWithNoTestGlobsOrDefaultDirs() {
+bool DiscoverAndRunTestsFailsWithNoTestGlobsOrDefaultDirs() {
     BEGIN_TEST;
 
     ScopedTestDir test_dir;
@@ -727,12 +756,12 @@ bool RunAllTestsFailsWithNoTestGlobsOrDefaultDirs() {
     ScopedScriptFile succeed_file(succeed_file_name, kEchoSuccessAndArgs);
     const char* const argv[] = {"./runtests"};
     TestStopwatch stopwatch;
-    EXPECT_EQ(EXIT_FAILURE, RunAllTests(PlatformRunTest, 1, argv, {}, &stopwatch, ""));
+    EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(PlatformRunTest, 1, argv, {}, &stopwatch, ""));
 
     END_TEST;
 }
 
-bool RunAllTestsFailsWithBadArgs() {
+bool DiscoverAndRunTestsFailsWithBadArgs() {
     BEGIN_TEST;
 
     ScopedTestDir test_dir;
@@ -740,12 +769,12 @@ bool RunAllTestsFailsWithBadArgs() {
     ScopedScriptFile succeed_file(succeed_file_name, kEchoSuccessAndArgs);
     const char* const argv[] = {"./runtests", "-?", "unknown-arg", test_dir.path()};
     TestStopwatch stopwatch;
-    EXPECT_EQ(EXIT_FAILURE, RunAllTests(PlatformRunTest, 4, argv, {}, &stopwatch, ""));
+    EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(PlatformRunTest, 4, argv, {}, &stopwatch, ""));
 
     END_TEST;
 }
 
-bool RunAllTestsWithGlobs() {
+bool DiscoverAndRunTestsWithGlobs() {
     BEGIN_TEST;
 
     ScopedTestDir test_dir;
@@ -765,14 +794,14 @@ bool RunAllTestsWithGlobs() {
     fbl::String glob = JoinPath(test_dir.path(), "A/*/C");
     const char* const argv[] = {"./runtests", test_dir.path(), glob.c_str()};
     TestStopwatch stopwatch;
-    EXPECT_EQ(EXIT_SUCCESS, RunAllTests(PlatformRunTest, 3, argv, {}, &stopwatch, ""));
+    EXPECT_EQ(EXIT_SUCCESS, DiscoverAndRunTests(PlatformRunTest, 3, argv, {}, &stopwatch, ""));
 
     END_TEST;
 }
 
 // Passing an -o argument should result in output being written to that
 // location.
-bool RunAllTestsWithOutput() {
+bool DiscoverAndRunTestsWithOutput() {
     BEGIN_TEST;
 
     ScopedTestDir test_dir;
@@ -786,7 +815,7 @@ bool RunAllTestsWithOutput() {
 
     const char* const argv[] = {"./runtests", "-o", output_dir.c_str(), test_dir.path()};
     TestStopwatch stopwatch;
-    EXPECT_EQ(EXIT_FAILURE, RunAllTests(PlatformRunTest, 4, argv, {}, &stopwatch, ""));
+    EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(PlatformRunTest, 4, argv, {}, &stopwatch, ""));
 
     // Prepare the expected output.
     fbl::String success_output_rel_path;
@@ -856,7 +885,7 @@ bool RunAllTestsWithOutput() {
 
 // Passing an -o argument *and* a syslog file name should result in output being
 // written that includes a syslog reference.
-bool RunAllTestsWithSyslogOutput() {
+bool DiscoverAndRunTestsWithSyslogOutput() {
     BEGIN_TEST;
 
     ScopedTestDir test_dir;
@@ -870,7 +899,7 @@ bool RunAllTestsWithSyslogOutput() {
 
     const char* const argv[] = {"./runtests", "-o", output_dir.c_str(), test_dir.path()};
     TestStopwatch stopwatch;
-    EXPECT_EQ(EXIT_FAILURE, RunAllTests(PlatformRunTest, 4, argv, {}, &stopwatch, "syslog.txt"));
+    EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(PlatformRunTest, 4, argv, {}, &stopwatch, "syslog.txt"));
 
     // Prepare the expected output.
     fbl::String success_output_rel_path;
@@ -955,21 +984,29 @@ RUN_TEST(RunTestFailureWithStderr)
 RUN_TEST(RunTestFailureToLoadFile)
 END_TEST_CASE(RunTest)
 
-BEGIN_TEST_CASE(RunTestsInDir)
-RUN_TEST_MEDIUM(RunTestsInDirBasic)
-RUN_TEST_MEDIUM(RunTestsInDirFilter)
-RUN_TEST_MEDIUM(RunTestsInDirWithVerbosity)
-END_TEST_CASE(RunTestsInDir)
+BEGIN_TEST_CASE(DiscoverTestsInDirGlobs)
+RUN_TEST(DiscoverTestsInDirGlobsBasic)
+RUN_TEST(DiscoverTestsInDirGlobsFilter)
+RUN_TEST(DiscoverTestsInDirGlobsIgnore)
+END_TEST_CASE(DiscoverTestsInDirGlobs)
 
-BEGIN_TEST_CASE(RunAllTests)
-RUN_TEST_MEDIUM(RunAllTestsBasicPass)
-RUN_TEST_MEDIUM(RunAllTestsBasicFail)
-RUN_TEST_MEDIUM(RunAllTestsFallsBackToDefaultDirs)
-RUN_TEST_MEDIUM(RunAllTestsFailsWithNoTestGlobsOrDefaultDirs)
-RUN_TEST_MEDIUM(RunAllTestsFailsWithBadArgs)
-RUN_TEST_MEDIUM(RunAllTestsWithGlobs)
-RUN_TEST_MEDIUM(RunAllTestsWithOutput)
-RUN_TEST_MEDIUM(RunAllTestsWithSyslogOutput)
-END_TEST_CASE(RunAllTests)
+BEGIN_TEST_CASE(DiscoverTestsInListFile)
+RUN_TEST(DiscoverTestsInListFileWithTrailingWhitespace)
+END_TEST_CASE(DiscoverTestsInListFile)
+
+BEGIN_TEST_CASE(RunTests)
+RUN_TEST_MEDIUM(RunTestsWithVerbosity)
+END_TEST_CASE(RunTests)
+
+BEGIN_TEST_CASE(DiscoverAndRunTests)
+RUN_TEST_MEDIUM(DiscoverAndRunTestsBasicPass)
+RUN_TEST_MEDIUM(DiscoverAndRunTestsBasicFail)
+RUN_TEST_MEDIUM(DiscoverAndRunTestsFallsBackToDefaultDirs)
+RUN_TEST_MEDIUM(DiscoverAndRunTestsFailsWithNoTestGlobsOrDefaultDirs)
+RUN_TEST_MEDIUM(DiscoverAndRunTestsFailsWithBadArgs)
+RUN_TEST_MEDIUM(DiscoverAndRunTestsWithGlobs)
+RUN_TEST_MEDIUM(DiscoverAndRunTestsWithOutput)
+RUN_TEST_MEDIUM(DiscoverAndRunTestsWithSyslogOutput)
+END_TEST_CASE(DiscoverAndRunTests)
 } // namespace
 } // namespace runtests
