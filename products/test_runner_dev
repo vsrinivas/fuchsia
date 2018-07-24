@@ -1,0 +1,11 @@
+{
+  "monolith": [
+    "garnet/packages/products/test_runner_dev"
+  ],
+  "preinstall": [
+
+  ],
+  "available": [
+
+  ]
+}
