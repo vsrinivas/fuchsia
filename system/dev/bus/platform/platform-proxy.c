@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +21,6 @@
 typedef struct {
     zx_device_t* zxdev;
     zx_handle_t rpc_channel;
-    atomic_int next_txid;
 } platform_proxy_t;
 
 static zx_status_t platform_dev_rpc(platform_proxy_t* proxy, pdev_req_t* req, uint32_t req_length,
@@ -31,8 +29,6 @@ static zx_status_t platform_dev_rpc(platform_proxy_t* proxy, pdev_req_t* req, ui
                                     zx_handle_t* out_handles, uint32_t out_handle_count,
                                     uint32_t* out_data_received) {
     uint32_t resp_size, handle_count;
-
-    req->txid = atomic_fetch_add(&proxy->next_txid, 1);
 
     zx_channel_call_args_t args = {
         .wr_bytes = req,
