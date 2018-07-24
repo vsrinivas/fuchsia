@@ -172,8 +172,10 @@ MeshPtr NewRingMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
       // when both:
       //   - the vk::SamplerAddressMode is eRepeat
       //   - the vk::Filter is eLinear
-      //(*vertex_p.uv) = 0.5f * (dir + vec2(1.f, 1.f));
       (*vertex_p.uv) = 0.49f * (dir + vec2(1.f, 1.02f));
+      // TODO(ES-108): once we can specify a SamplerAddressMode of eClampToEdge,
+      // remove the hack above and replace it with the code below:
+      // (*vertex_p.uv) = 0.5f * (dir + vec2(1.f, 1.f));
     }
     if (vertex_p.pos_offset)
       (*vertex_p.pos_offset) = dir * outer_offset_magnitude;

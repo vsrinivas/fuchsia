@@ -129,7 +129,7 @@ void CommandBuffer::BeginRenderPass(const RenderPassInfo& info) {
 
   // Gather clear values for each color attachment that is flagged as needing
   // clearing.
-  for (uint32_t i = 0; i < info.num_color_attachments; i++) {
+  for (uint32_t i = 0; i < info.num_color_attachments; ++i) {
     FXL_DCHECK(info.color_attachments[i]);
     if (info.clear_attachments & (1u << i)) {
       clear_values[i].color = info.clear_color[i];
@@ -357,7 +357,7 @@ void CommandBuffer::FlushRenderState() {
     // perhaps by a change in the descriptor set layout; it doesn't matter).
     uint32_t num_ranges =
         current_pipeline_layout_->spec().num_push_constant_ranges;
-    for (unsigned i = 0; i < num_ranges; i++) {
+    for (unsigned i = 0; i < num_ranges; ++i) {
       auto& range = current_pipeline_layout_->spec().push_constant_ranges[i];
       vk().pushConstants(current_vk_pipeline_layout_, range.stageFlags,
                          range.offset, range.size,
@@ -602,7 +602,7 @@ void CommandBuffer::SaveState(CommandBuffer::SavedStateFlags flags,
                               CommandBuffer::SavedState* state) const {
   TRACE_DURATION("gfx", "escher::CommandBuffer::SaveState");
 
-  for (unsigned i = 0; i < VulkanLimits::kNumDescriptorSets; i++) {
+  for (unsigned i = 0; i < VulkanLimits::kNumDescriptorSets; ++i) {
     if (flags & (kSavedBindingsBit0 << i)) {
       memcpy(&state->bindings.descriptor_sets[i], &bindings_.descriptor_sets[i],
              sizeof(bindings_.descriptor_sets[i]));
@@ -632,7 +632,7 @@ void CommandBuffer::SaveState(CommandBuffer::SavedStateFlags flags,
 void CommandBuffer::RestoreState(const CommandBuffer::SavedState& state) {
   TRACE_DURATION("gfx", "escher::CommandBuffer::RestoreState");
 
-  for (unsigned i = 0; i < VulkanLimits::kNumDescriptorSets; i++) {
+  for (unsigned i = 0; i < VulkanLimits::kNumDescriptorSets; ++i) {
     if (state.flags & (kSavedBindingsBit0 << i)) {
       if (memcmp(&state.bindings.descriptor_sets[i],
                  &bindings_.descriptor_sets[i],

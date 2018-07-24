@@ -16,7 +16,8 @@ FrameManager::FrameManager(EscherWeakPtr escher)
     : ResourceManager(escher),
       // TODO(ES-103): the intention here was to use UniformBufferPool's
       // recently-added ring-based recycling to manage resource reclamation.
-      // However, this would conflict with upcoming GpuUploader changes.
+      // However, this would conflict with upcoming GpuUploader changes; see
+      // SCN-842.
       // For now, clients must use an approach like ModelDisplayListBuilder's,
       // which takes additional steps to retain uniform buffers to prevent them
       // from being returned to the pool too early, resulting in the current
