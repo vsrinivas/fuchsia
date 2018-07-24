@@ -282,6 +282,10 @@ fn clone_ht_capabilities(c: &fidl_mlme::HtCapabilities) -> fidl_mlme::HtCapabili
     fidl_mlme::HtCapabilities {
         ht_cap_info: fidl_mlme::HtCapabilityInfo { ..c.ht_cap_info },
         ampdu_params: fidl_mlme::AmpduParams { ..c.ampdu_params },
+        mcs_set: fidl_mlme::SupportedMcsSet { ..c.mcs_set },
+        ht_ext_cap: fidl_mlme::HtExtCapabilities { ..c.ht_ext_cap },
+        txbf_cap: fidl_mlme::TxBfCapability { ..c.txbf_cap },
+        asel_cap: fidl_mlme::AselCapability { ..c.asel_cap },
     }
 }
 

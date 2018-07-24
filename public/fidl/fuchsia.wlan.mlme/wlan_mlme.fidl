@@ -139,13 +139,107 @@ struct AmpduParams {
     MinMpduStartSpacing min_start_spacing;
 };
 
-struct HtCapabilities {
-    // TODO(NET-1190): Add substructure as needed
+// IEEE Std 802.11-2016, 9.4.2.56.4 Table 9-164
+struct SupportedMcsSet {
+    // Names are deviated from //garnet/lib/wlan/common/include/wlan/common/element.h's class SupportedMcsSet
+    array<uint8>:10 rx_mcs_bitmasks; // bit 0-76 indicates MCS
+    uint16 rx_highest_rate; // Mbps
+    bool tx_mcs_set_defined;
+    bool tx_rx_diff;
+    uint8 tx_max_ss; // 0 for 1 spatial stream, 1 for 2 ss and so on
+    bool tx_ueqm; // Transmit Unequal Modulation
+};
 
+// HtExtCapabilities
+// IEEE Std 802.11-2016, 9.4.2.56.5 Table 9-165
+enum PcoTransitionTime : uint8 {
+    PCO_RESERVED = 0;  // Often translated as "No transition".
+    PCO_400_USEC = 1;
+    PCO_1500_USEC = 2;
+    PCO_5000_USEC = 3;
+};
+
+enum McsFeedback : uint8 {
+    MCS_NOFEEDBACK = 0;
+    MCS_RESERVED = 1;
+    MCS_UNSOLICIED = 2;
+    MCS_BOTH = 3;
+};
+
+struct HtExtCapabilities {
+    bool pco;
+    PcoTransitionTime pco_transition;
+    McsFeedback mcs_feedback;
+    bool htc_ht_support;
+    bool rd_responder;
+};
+
+// TxBfCapability
+// IEEE Std 802.11-2016, 9.4.2.56.6 Table 9-166
+enum Calibration : uint8 {
+    CALIBRATION_NONE = 0;
+    CALIBRATION_RESPOND_NOINITIATE = 1;
+    CALIBRATION_RESERVED = 2;
+    CALIBRATION_RESPOND_INITIATE = 3;
+};
+
+enum Feedback : uint8 {
+    // Shared for csi_feedback, noncomp_feedback, comp_feedback
+    FEEDBACK_NONE = 0;
+    FEEDBACK_DELAYED = 1;
+    FEEDBACK_IMMEDIATE = 2;
+    FEEDBACK_DELAYED_IMMEDIATE = 3;
+};
+
+enum MinGroup : uint8 {
+    MIN_GROUP_ONE = 0;  // Meaning no grouping
+    MIN_GROUP_ONE_TWO = 1;
+    MIN_GROUP_ONE_FOUR = 2;
+    MIN_GROUP_ONE_TWO_FOUR = 3;
+};
+
+struct TxBfCapability {
+    bool implicit_rx;
+    bool rx_stag_sounding;
+    bool tx_stag_sounding;
+    bool rx_ndp;
+    bool tx_ndp;
+    bool implicit;
+    Calibration calibration;
+    bool csi; // Explicit CsI Transmit Beamforming
+    bool noncomp_steering; // Explicit Noncompressed Steering
+    bool comp_steering; // Explicit Compressed Steering
+    Feedback csi_feedback;
+    Feedback noncomp_feedback;
+    Feedback comp_feedback;
+    MinGroup min_grouping;
+    uint8 csi_antennas; // 0 for 1 antennas, 1 for 2 and so on
+    uint8 noncomp_steering_ants; // 0 for 1 antennas, 1 for 2 and so on
+    uint8 comp_steering_ants; // 0 for 1 antennas, 1 for 2 and so on
+    uint8 csi_rows; // 0 for 1 row, 1 for 2 and so on;
+    uint8 chan_estimation; // 0 for 1 space-time stream, 1 for 2 and so on
+};
+
+// IEEE Std 802.11-2016, 9.4.2.56.7 Table 9-167
+struct AselCapability {
+    bool asel;
+    bool csi_feedback_tx_asel; // Explicit CSI Feedback Based Transmit ASEL
+    bool ant_idx_feedback_tx_asel;
+    bool explicit_csi_feedback;
+    bool antenna_idx_feedback;
+    bool rx_asel;
+    bool tx_sounding_ppdu;
+};
+
+struct HtCapabilities {
     // Note, a minimum granuality of adding fields selectively is
     // a group of BitField structure, as defined in element.h
     HtCapabilityInfo ht_cap_info;
     AmpduParams ampdu_params;
+    SupportedMcsSet mcs_set;
+    HtExtCapabilities ht_ext_cap;
+    TxBfCapability txbf_cap;
+    AselCapability asel_cap;
 };
 
 enum MaxMpduLen : uint8 {
