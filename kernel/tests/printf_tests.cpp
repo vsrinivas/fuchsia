@@ -156,6 +156,26 @@ static bool printf_tests() {
     END_TEST;
 }
 
+static bool printf_field_width_test() {
+    BEGIN_TEST;
+
+    char input[] = "0123456789";
+    EXPECT_TRUE(test_printf("", "%.", input), "");
+    EXPECT_TRUE(test_printf("", "%.s", input), "");
+    EXPECT_TRUE(test_printf("'0'", "'%.*s'", 1, input), "");
+    EXPECT_TRUE(test_printf("'01'", "'%.*s'", 2, input), "");
+    EXPECT_TRUE(test_printf("'012'", "'%.*s'", 3, input), "");
+    EXPECT_TRUE(test_printf("'0123'", "'%.*s'", 4, input), "");
+    EXPECT_TRUE(test_printf("'01234'", "'%.*s'", 5, input), "");
+    EXPECT_TRUE(test_printf("'012345'", "'%.*s'", 6, input), "");
+    EXPECT_TRUE(test_printf("'0123456'", "'%.*s'", 7, input), "");
+    EXPECT_TRUE(test_printf("'01234567'", "'%.*s'", 8, input), "");
+    EXPECT_TRUE(test_printf("'012345678'", "'%.*s'", 9, input), "");
+    EXPECT_TRUE(test_printf("'0123456789'", "'%.*s'", 10, input), "");
+
+    END_TEST;
+}
+
 // Test snprintf() when the output is larger than the given buffer.
 static bool snprintf_truncation_test() {
     BEGIN_TEST;
@@ -184,5 +204,6 @@ static bool snprintf_truncation_test() {
 
 UNITTEST_START_TESTCASE(printf_tests)
 UNITTEST("printf_tests", printf_tests)
+UNITTEST("printf_field_width_tests", printf_field_width_test)
 UNITTEST("snprintf_truncation_test", snprintf_truncation_test)
 UNITTEST_END_TESTCASE(printf_tests, "printf_tests", "printf_tests");

@@ -12,6 +12,7 @@
 #include <stdarg.h>
 #include <sys/types.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <platform/debug.h>
 
@@ -82,6 +83,7 @@ PRINTF_DECL(snprintf)(char *str, size_t len, const char *fmt, ...)
 #define LEFTFORMATFLAG 0x00000800
 #define LEADZEROFLAG   0x00001000
 #define BLANKPOSFLAG   0x00002000
+#define FIELDWIDTHFLAG 0x00004000
 
 __NO_INLINE static char *longlong_to_string(char *buf, unsigned long long n, size_t len, uint flag, char *signchar)
 {
@@ -200,7 +202,18 @@ next_format:
                 format_num += c - '0';
                 goto next_format;
             case '.':
-                /* XXX for now eat numeric formatting */
+                // Check the next character. It either should be * (if valid)
+                // or something else (if invalid) that we consume as invalid.
+                c = *fmt;
+                if (c == '*') {
+                    fmt++;
+                    flags |= FIELDWIDTHFLAG;
+                    format_num = va_arg(ap, intmax_t);
+                } else if (c == 's') {
+                    // %.s is invalid, and testing glibc printf it
+                    // results in no output so force skipping the 's'
+                    fmt++;
+                }
                 goto next_format;
             case '%':
                 OUTPUT_CHAR('%');
@@ -315,6 +328,12 @@ hex:
         /* shared output code */
 _output_string:
         string_len = strlen(s);
+
+        // In the event of a field width smaller than the length, we need to
+        // truncate the width to fit. This only applies to %s.
+        if (flags & FIELDWIDTHFLAG) {
+            string_len = MIN(string_len, format_num);
+        }
 
         if (flags & LEFTFORMATFLAG) {
             /* left justify the text */
