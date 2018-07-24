@@ -84,13 +84,7 @@ enum AudioOutputRoutingPolicy {
 };
 
 // Permitted ranges for AudioRendererV2 and AudioCapturer
-// TODO(dalesat): Eliminate this duplication and use UPPER_SNAKE_CASE.
-const uint32 kMinLpcmChannelCount = 1;
-const uint32 kMaxLpcmChannelCount = 8;
-const uint32 kMinLpcmFramesPerSecond = 1000;
-const uint32 kMaxLpcmFramesPerSecond = 192000;
-
-const uint32 kMinChannelCount = 1;
-const uint32 kMaxChannelCount = 8;
-const uint32 kMinFramesPerSecond = 1000;
-const uint32 kMaxFramesPerSecond = 192000;
+const uint32 MIN_PCM_CHANNEL_COUNT = 1;
+const uint32 MAX_PCM_CHANNEL_COUNT = 8;
+const uint32 MIN_PCM_FRAMES_PER_SECOND = 1000;
+const uint32 MAX_PCM_FRAMES_PER_SECOND = 192000;

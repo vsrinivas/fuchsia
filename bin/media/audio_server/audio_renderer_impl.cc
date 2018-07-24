@@ -206,25 +206,25 @@ void AudioRendererImpl::SetPcmStreamType(
       return;
   }
 
-  if ((format.channels < fuchsia::media::kMinChannelCount) ||
-      (format.channels > fuchsia::media::kMaxChannelCount)) {
+  if ((format.channels < fuchsia::media::MIN_PCM_CHANNEL_COUNT) ||
+      (format.channels > fuchsia::media::MAX_PCM_CHANNEL_COUNT)) {
     FXL_LOG(ERROR)
         << "Invalid channel count (" << format.channels
         << ") in fuchsia::media::AudioRendererImpl::SetPcmStreamType.  Must "
            "be on the range ["
-        << fuchsia::media::kMinChannelCount << ", "
-        << fuchsia::media::kMaxChannelCount << "]";
+        << fuchsia::media::MIN_PCM_CHANNEL_COUNT << ", "
+        << fuchsia::media::MAX_PCM_CHANNEL_COUNT << "]";
     return;
   }
 
-  if ((format.frames_per_second < fuchsia::media::kMinFramesPerSecond) ||
-      (format.frames_per_second > fuchsia::media::kMaxFramesPerSecond)) {
+  if ((format.frames_per_second < fuchsia::media::MIN_PCM_FRAMES_PER_SECOND) ||
+      (format.frames_per_second > fuchsia::media::MAX_PCM_FRAMES_PER_SECOND)) {
     FXL_LOG(ERROR)
         << "Invalid frame rate (" << format.frames_per_second
         << ") in fuchsia::media::AudioRendererImpl::SetPcmStreamType.  Must "
            "be on the range ["
-        << fuchsia::media::kMinFramesPerSecond << ", "
-        << fuchsia::media::kMaxFramesPerSecond << "]";
+        << fuchsia::media::MIN_PCM_FRAMES_PER_SECOND << ", "
+        << fuchsia::media::MAX_PCM_FRAMES_PER_SECOND << "]";
     return;
   }
 

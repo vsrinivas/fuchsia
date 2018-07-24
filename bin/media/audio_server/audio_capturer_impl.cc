@@ -174,21 +174,21 @@ void AudioCapturerImpl::SetStreamType(fuchsia::media::StreamType media_type) {
 
   // Sanity check the details of the mode request.
   const auto& details = media_type.medium_specific.audio();
-  if ((details.channels < fuchsia::media::kMinLpcmChannelCount) ||
-      (details.channels > fuchsia::media::kMaxLpcmChannelCount)) {
+  if ((details.channels < fuchsia::media::MIN_PCM_CHANNEL_COUNT) ||
+      (details.channels > fuchsia::media::MAX_PCM_CHANNEL_COUNT)) {
     FXL_LOG(ERROR) << "Bad channel count, " << details.channels
                    << " is not in the range ["
-                   << fuchsia::media::kMinLpcmChannelCount << ", "
-                   << fuchsia::media::kMaxLpcmChannelCount << "]";
+                   << fuchsia::media::MIN_PCM_CHANNEL_COUNT << ", "
+                   << fuchsia::media::MAX_PCM_CHANNEL_COUNT << "]";
     return;
   }
 
-  if ((details.frames_per_second < fuchsia::media::kMinLpcmFramesPerSecond) ||
-      (details.frames_per_second > fuchsia::media::kMaxLpcmFramesPerSecond)) {
+  if ((details.frames_per_second < fuchsia::media::MIN_PCM_FRAMES_PER_SECOND) ||
+      (details.frames_per_second > fuchsia::media::MAX_PCM_FRAMES_PER_SECOND)) {
     FXL_LOG(ERROR) << "Bad frame rate, " << details.frames_per_second
                    << " is not in the range ["
-                   << fuchsia::media::kMinLpcmFramesPerSecond << ", "
-                   << fuchsia::media::kMaxLpcmFramesPerSecond << "]";
+                   << fuchsia::media::MIN_PCM_FRAMES_PER_SECOND << ", "
+                   << fuchsia::media::MAX_PCM_FRAMES_PER_SECOND << "]";
     return;
   }
 

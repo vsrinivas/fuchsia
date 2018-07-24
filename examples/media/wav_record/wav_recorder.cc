@@ -90,8 +90,8 @@ void WavRecorder::Usage() {
   printf("  --%s : capture using 'async-mode'\n", kAsyncModeOption.c_str());
   printf("  --%s : use floating-point format\n", kFloatFormatOption.c_str());
   printf("  --%s=<rate> : desired capture frame rate, on the range [%u, %u].\n",
-         kFrameRateOption.c_str(), fuchsia::media::kMinLpcmFramesPerSecond,
-         fuchsia::media::kMaxLpcmFramesPerSecond);
+         kFrameRateOption.c_str(), fuchsia::media::MIN_PCM_FRAMES_PER_SECOND,
+         fuchsia::media::MAX_PCM_FRAMES_PER_SECOND);
   printf(
       "  --%s=<count> : desired number of channels to capture, on the range "
       "[%u, %u].\n",
@@ -197,11 +197,11 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
       return;
     }
 
-    if ((rate < fuchsia::media::kMinLpcmFramesPerSecond) ||
-        (rate > fuchsia::media::kMaxLpcmFramesPerSecond)) {
+    if ((rate < fuchsia::media::MIN_PCM_FRAMES_PER_SECOND) ||
+        (rate > fuchsia::media::MAX_PCM_FRAMES_PER_SECOND)) {
       printf("Frame rate (%u) must be on the range [%u, %u]\n", rate,
-             fuchsia::media::kMinLpcmFramesPerSecond,
-             fuchsia::media::kMaxLpcmFramesPerSecond);
+             fuchsia::media::MIN_PCM_FRAMES_PER_SECOND,
+             fuchsia::media::MAX_PCM_FRAMES_PER_SECOND);
       return;
     }
 

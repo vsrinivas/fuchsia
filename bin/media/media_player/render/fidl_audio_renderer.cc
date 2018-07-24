@@ -53,25 +53,25 @@ FidlAudioRenderer::FidlAudioRenderer(
   supported_stream_types_.push_back(AudioStreamTypeSet::Create(
       {StreamType::kAudioEncodingLpcm},
       AudioStreamType::SampleFormat::kUnsigned8,
-      Range<uint32_t>(fuchsia::media::kMinChannelCount,
-                      fuchsia::media::kMaxChannelCount),
-      Range<uint32_t>(fuchsia::media::kMinFramesPerSecond,
-                      fuchsia::media::kMaxFramesPerSecond)));
+      Range<uint32_t>(fuchsia::media::MIN_PCM_CHANNEL_COUNT,
+                      fuchsia::media::MAX_PCM_CHANNEL_COUNT),
+      Range<uint32_t>(fuchsia::media::MIN_PCM_FRAMES_PER_SECOND,
+                      fuchsia::media::MAX_PCM_FRAMES_PER_SECOND)));
 
   supported_stream_types_.push_back(AudioStreamTypeSet::Create(
       {StreamType::kAudioEncodingLpcm},
       AudioStreamType::SampleFormat::kSigned16,
-      Range<uint32_t>(fuchsia::media::kMinChannelCount,
-                      fuchsia::media::kMaxChannelCount),
-      Range<uint32_t>(fuchsia::media::kMinFramesPerSecond,
-                      fuchsia::media::kMaxFramesPerSecond)));
+      Range<uint32_t>(fuchsia::media::MIN_PCM_CHANNEL_COUNT,
+                      fuchsia::media::MAX_PCM_CHANNEL_COUNT),
+      Range<uint32_t>(fuchsia::media::MIN_PCM_FRAMES_PER_SECOND,
+                      fuchsia::media::MAX_PCM_FRAMES_PER_SECOND)));
 
   supported_stream_types_.push_back(AudioStreamTypeSet::Create(
       {StreamType::kAudioEncodingLpcm}, AudioStreamType::SampleFormat::kFloat,
-      Range<uint32_t>(fuchsia::media::kMinChannelCount,
-                      fuchsia::media::kMaxChannelCount),
-      Range<uint32_t>(fuchsia::media::kMinFramesPerSecond,
-                      fuchsia::media::kMaxFramesPerSecond)));
+      Range<uint32_t>(fuchsia::media::MIN_PCM_CHANNEL_COUNT,
+                      fuchsia::media::MAX_PCM_CHANNEL_COUNT),
+      Range<uint32_t>(fuchsia::media::MIN_PCM_FRAMES_PER_SECOND,
+                      fuchsia::media::MAX_PCM_FRAMES_PER_SECOND)));
 }
 
 FidlAudioRenderer::~FidlAudioRenderer() {
