@@ -37,7 +37,7 @@ struct FrameDispatchTest : public ::testing::Test, public FrameHandler {
     IMPL_HANDLE_FRAME(PsPollFrame, CtrlFrame<PsPollFrame>);
     IMPL_HANDLE_FRAME(Deauthentication, MgmtFrame<Deauthentication>);
     IMPL_HANDLE_FRAME(DataFrame, DataFrame<LlcHeader>);
-    IMPL_HANDLE_FRAME(NullDataFrame, DataFrame<NilHeader>);
+    IMPL_HANDLE_FRAME(NullDataFrame, DataFrame<NullDataHdr>);
     IMPL_HANDLE_FRAME(EthFrame, EthFrame);
 
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override {

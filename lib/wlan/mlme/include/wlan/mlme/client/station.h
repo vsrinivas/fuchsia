@@ -6,7 +6,6 @@
 
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/eapol.h>
-#include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/sequence.h>
@@ -28,7 +27,7 @@ namespace wlan_mlme = wlan_mlme;
 class Packet;
 class Timer;
 
-class Station : public FrameHandler {
+class Station {
    public:
     Station(DeviceInterface* device, fbl::unique_ptr<Timer> timer);
 
@@ -78,36 +77,37 @@ class Station : public FrameHandler {
 
     zx_status_t SendKeepAliveResponse();
 
-    zx_status_t HandleAnyMlmeMsg(const BaseMlmeMsg& mlme_msg);
-
-    zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
-    zx_status_t HandleBeacon(const MgmtFrame<Beacon>& frame) override;
-    zx_status_t HandleAuthentication(const MgmtFrame<Authentication>& frame) override;
-    zx_status_t HandleDeauthentication(const MgmtFrame<Deauthentication>& frame) override;
-    zx_status_t HandleAssociationResponse(const MgmtFrame<AssociationResponse>& frame) override;
-    zx_status_t HandleDisassociation(const MgmtFrame<Disassociation>& frame) override;
-    zx_status_t HandleActionFrame(const MgmtFrame<ActionFrame>& frame) override;
-
-    zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
-    zx_status_t HandleNullDataFrame(const DataFrame<NilHeader>& frame) override;
-    zx_status_t HandleDataFrame(const DataFrame<LlcHeader>& frame) override;
-    zx_status_t HandleLlcFrame(const LlcHeader& llc_frame, size_t llc_frame_len,
-                               const common::MacAddr& dest, const common::MacAddr& src);
-    zx_status_t HandleAmsduFrame(const DataFrame<LlcHeader>& frame);
-
-    zx_status_t HandleEthFrame(const EthFrame& frame) override;
+    zx_status_t HandleAnyMlmeMsg(const BaseMlmeMsg&);
+    zx_status_t HandleAnyFrame(fbl::unique_ptr<Packet>);
     zx_status_t HandleTimeout();
 
     zx_status_t PreChannelChange(wlan_channel_t chan);
     zx_status_t PostChannelChange();
-
-    void DumpDataFrame(const DataFrame<LlcHeader>& frame);
 
     const Timer& timer() const { return *timer_; }
 
     ::fuchsia::wlan::stats::ClientMlmeStats stats() const;
 
    private:
+    zx_status_t HandleEthFrame(EthFrame&&);
+    zx_status_t HandleAnyWlanFrame(fbl::unique_ptr<Packet>);
+    zx_status_t HandleAnyMgmtFrame(MgmtFrame<>&&);
+    zx_status_t HandleAnyDataFrame(DataFrame<>&&);
+    bool ShouldDropMgmtFrame(const MgmtFrameView<>&);
+    zx_status_t HandleBeacon(MgmtFrame<Beacon>&&);
+    zx_status_t HandleAuthentication(MgmtFrame<Authentication>&&);
+    zx_status_t HandleDeauthentication(MgmtFrame<Deauthentication>&&);
+    zx_status_t HandleAssociationResponse(MgmtFrame<AssociationResponse>&&);
+    zx_status_t HandleDisassociation(MgmtFrame<Disassociation>&&);
+    zx_status_t HandleActionFrame(MgmtFrame<ActionFrame>&&);
+    bool ShouldDropDataFrame(const DataFrameView<>&);
+    zx_status_t HandleNullDataFrame(DataFrame<NullDataHdr>&& frame);
+    zx_status_t HandleDataFrame(DataFrame<LlcHeader>&& frame);
+    zx_status_t HandleLlcFrame(const LlcHeader& llc_frame, size_t llc_frame_len,
+                               const common::MacAddr& dest, const common::MacAddr& src);
+    zx_status_t HandleAmsduFrame(const DataFrame<LlcHeader>& frame);
+    zx_status_t HandleAddBaRequest(const AddBaRequestFrame&);
+
     zx_status_t HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& req);
     zx_status_t HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequest>& req);
     zx_status_t HandleMlmeDeauthReq(const MlmeMsg<wlan_mlme::DeauthenticateRequest>& req);
@@ -115,11 +115,11 @@ class Station : public FrameHandler {
     zx_status_t HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& req);
     zx_status_t HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysRequest>& req);
 
-    zx_status_t HandleAddBaRequest(const AddBaRequestFrame&);
     zx_status_t SendAddBaRequestFrame();
 
     zx_status_t SetPowerManagementMode(bool ps_mode);
     zx_status_t SendPsPoll();
+    void DumpDataFrame(const DataFrameView<>&);
 
     zx::time deadline_after_bcn_period(size_t bcn_count);
 

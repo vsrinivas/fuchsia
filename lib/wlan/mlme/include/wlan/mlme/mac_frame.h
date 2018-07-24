@@ -21,8 +21,6 @@
 
 namespace wlan {
 
-using NilHeader = uint8_t[0];
-
 template <typename H, typename B> class Frame;
 template <typename H, typename B> class FrameView;
 

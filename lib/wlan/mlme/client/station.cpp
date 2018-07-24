@@ -73,6 +73,95 @@ zx_status_t Station::HandleAnyMlmeMsg(const BaseMlmeMsg& mlme_msg) {
     return ZX_OK;
 }
 
+zx_status_t Station::HandleAnyFrame(fbl::unique_ptr<Packet> pkt) {
+    switch (pkt->peer()) {
+    case Packet::Peer::kEthernet: {
+        if (auto eth_frame = EthFrameView::CheckType(pkt.get()).CheckLength()) {
+            HandleEthFrame(eth_frame.IntoOwned(fbl::move(pkt)));
+        }
+        break;
+    }
+    case Packet::Peer::kWlan:
+        return HandleAnyWlanFrame(fbl::move(pkt));
+    default:
+        errorf("unknown Packet peer: %u\n", pkt->peer());
+        break;
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t Station::HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt) {
+    if (auto possible_mgmt_frame = MgmtFrameView<>::CheckType(pkt.get())) {
+        auto mgmt_frame = possible_mgmt_frame.CheckLength();
+        if (!mgmt_frame) { return ZX_ERR_BUFFER_TOO_SMALL; }
+
+        HandleAnyMgmtFrame(mgmt_frame.IntoOwned(fbl::move(pkt)));
+    } else if (auto possible_data_frame = DataFrameView<>::CheckType(pkt.get())) {
+        auto data_frame = possible_data_frame.CheckLength();
+        if (!data_frame) { return ZX_ERR_BUFFER_TOO_SMALL; }
+
+        HandleAnyDataFrame(data_frame.IntoOwned(fbl::move(pkt)));
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t Station::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
+    auto mgmt_frame = frame.View();
+
+    WLAN_STATS_INC(mgmt_frame.in);
+    if (ShouldDropMgmtFrame(mgmt_frame)) {
+        WLAN_STATS_INC(mgmt_frame.drop);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    WLAN_STATS_INC(mgmt_frame.out);
+
+    if (auto possible_bcn_frame = mgmt_frame.CheckBodyType<Beacon>()) {
+        if (auto bcn_frame = possible_bcn_frame.CheckLength()) {
+            HandleBeacon(bcn_frame.IntoOwned(frame.Take()));
+        }
+    } else if (auto possible_auth_frame = mgmt_frame.CheckBodyType<Authentication>()) {
+        if (auto auth_frame = possible_auth_frame.CheckLength()) {
+            HandleAuthentication(auth_frame.IntoOwned(frame.Take()));
+        }
+    } else if (auto possible_deauth_frame = mgmt_frame.CheckBodyType<Deauthentication>()) {
+        if (auto deauth_frame = possible_deauth_frame.CheckLength()) {
+            HandleDeauthentication(deauth_frame.IntoOwned(frame.Take()));
+        }
+    } else if (auto possible_assoc_resp_frame = mgmt_frame.CheckBodyType<AssociationResponse>()) {
+        if (auto assoc_resp_frame = possible_assoc_resp_frame.CheckLength()) {
+            HandleAssociationResponse(assoc_resp_frame.IntoOwned(frame.Take()));
+        }
+    } else if (auto possible_disassoc_frame = mgmt_frame.CheckBodyType<Disassociation>()) {
+        if (auto disassoc_frame = possible_disassoc_frame.CheckLength()) {
+            HandleDisassociation(disassoc_frame.IntoOwned(frame.Take()));
+        }
+    } else if (auto possible_action_frame = mgmt_frame.CheckBodyType<ActionFrame>()) {
+        if (auto action_frame = possible_action_frame.CheckLength()) {
+            HandleActionFrame(action_frame.IntoOwned(frame.Take()));
+        }
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t Station::HandleAnyDataFrame(DataFrame<>&& frame) {
+    auto data_frame = frame.View();
+    if (kFinspectEnabled) { DumpDataFrame(data_frame); }
+
+    WLAN_STATS_INC(data_frame.in);
+    if (ShouldDropDataFrame(data_frame)) { return ZX_ERR_NOT_SUPPORTED; }
+
+    if (auto llc_frame = data_frame.CheckBodyType<LlcHeader>().CheckLength()) {
+        HandleDataFrame(llc_frame.IntoOwned(frame.Take()));
+    } else if (auto null_frame = data_frame.CheckBodyType<NullDataHdr>().CheckLength()) {
+        HandleNullDataFrame(null_frame.IntoOwned(frame.Take()));
+    }
+
+    return ZX_OK;
+}
+
 zx_status_t Station::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& req) {
     debugfn();
 
@@ -377,20 +466,14 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     return status;
 }
 
-zx_status_t Station::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
-    WLAN_STATS_INC(mgmt_frame.in);
+bool Station::ShouldDropMgmtFrame(const MgmtFrameView<>& frame) {
     // Drop management frames if either, there is no BSSID set yet,
     // or the frame is not from the BSS.
-    if (bssid() == nullptr || *bssid() != hdr.addr3) {
-        WLAN_STATS_INC(mgmt_frame.drop);
-        return ZX_ERR_STOP;
-    }
-    WLAN_STATS_INC(mgmt_frame.out);
-    return ZX_OK;
+    return bssid() == nullptr || *bssid() != frame.hdr()->addr3;
 }
 
 // TODO(hahnr): Support ProbeResponses.
-zx_status_t Station::HandleBeacon(const MgmtFrame<Beacon>& frame) {
+zx_status_t Station::HandleBeacon(MgmtFrame<Beacon>&& frame) {
     debugfn();
     ZX_DEBUG_ASSERT(bss_ != nullptr);
 
@@ -434,7 +517,7 @@ done_iter:
     return ZX_OK;
 }
 
-zx_status_t Station::HandleAuthentication(const MgmtFrame<Authentication>& frame) {
+zx_status_t Station::HandleAuthentication(MgmtFrame<Authentication>&& frame) {
     debugfn();
 
     if (state_ != WlanState::kUnauthenticated) {
@@ -476,7 +559,7 @@ zx_status_t Station::HandleAuthentication(const MgmtFrame<Authentication>& frame
     return ZX_OK;
 }
 
-zx_status_t Station::HandleDeauthentication(const MgmtFrame<Deauthentication>& frame) {
+zx_status_t Station::HandleDeauthentication(MgmtFrame<Deauthentication>&& frame) {
     debugfn();
 
     if (state_ != WlanState::kAssociated && state_ != WlanState::kAuthenticated) {
@@ -495,7 +578,7 @@ zx_status_t Station::HandleDeauthentication(const MgmtFrame<Deauthentication>& f
                                          static_cast<wlan_mlme::ReasonCode>(deauth->reason_code));
 }
 
-zx_status_t Station::HandleAssociationResponse(const MgmtFrame<AssociationResponse>& frame) {
+zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& frame) {
     debugfn();
 
     if (state_ != WlanState::kAuthenticated) {
@@ -547,7 +630,7 @@ zx_status_t Station::HandleAssociationResponse(const MgmtFrame<AssociationRespon
     return ZX_OK;
 }
 
-zx_status_t Station::HandleDisassociation(const MgmtFrame<Disassociation>& frame) {
+zx_status_t Station::HandleDisassociation(MgmtFrame<Disassociation>&& frame) {
     debugfn();
 
     if (state_ != WlanState::kAssociated) {
@@ -570,40 +653,27 @@ zx_status_t Station::HandleDisassociation(const MgmtFrame<Disassociation>& frame
     return service::SendDisassociateIndication(device_, bssid, disassoc->reason_code);
 }
 
-zx_status_t Station::HandleActionFrame(const MgmtFrame<ActionFrame>& frame) {
+zx_status_t Station::HandleActionFrame(MgmtFrame<ActionFrame>&& frame) {
     debugfn();
 
-    // TODO(porce): Handle AddBaResponses and keep the result of negotiation.
+    auto action_frame = frame.View().NextFrame();
+    if (auto action_ba_frame = action_frame.CheckBodyType<ActionFrameBlockAck>().CheckLength()) {
+        auto ba_frame = action_ba_frame.NextFrame();
+        if (auto add_ba_resp_frame = ba_frame.CheckBodyType<AddBaResponseFrame>().CheckLength()) {
+            finspect("Inbound ADDBA Resp frame: len %zu\n", add_ba_resp_frame.body_len());
+            finspect("  addba resp: %s\n", debug::Describe(*add_ba_resp_frame.body()).c_str());
 
-    // TODO(hahnr): We need to use a FrameView until frames are moved rather than passed by const
-    // reference.
-    auto mgmt_frame = frame.View();
+            // TODO(porce): Handle AddBaResponses and keep the result of negotiation.
+        } else if (auto add_ba_req_frame =
+                       ba_frame.CheckBodyType<AddBaRequestFrame>().CheckLength()) {
+            finspect("Inbound ADDBA Req frame: len %zu\n", add_ba_req_frame.body_len());
+            finspect("  addba req: %s\n", debug::Describe(*add_ba_req_frame.body()).c_str());
 
-    // TODO(hahnr): Frame::NextFrame should do the validation and return an empty frame on error.
-    // Remove the validation here once we merged the new validation framework for frames.
-    if (mgmt_frame.body()->category != ActionFrameBlockAck::ActionCategory()) {
-        return ZX_ERR_NOT_SUPPORTED;
+            return HandleAddBaRequest(*add_ba_req_frame.body());
+        }
     }
 
-    auto action_frame = mgmt_frame.NextFrame();
-    if (action_frame.body_len() < sizeof(ActionFrameBlockAck)) { return ZX_ERR_NOT_SUPPORTED; }
-
-    auto ba_frame = action_frame.NextFrame<ActionFrameBlockAck>();
-    if (ba_frame.hdr()->action == AddBaResponseFrame::BlockAckAction()) {
-        if (ba_frame.body_len() < sizeof(AddBaResponseFrame)) { return ZX_ERR_NOT_SUPPORTED; }
-
-        auto addbarresp_frame = ba_frame.NextFrame<AddBaRequestFrame>();
-        finspect("Inbound ADDBA Resp frame: len %zu\n", addbarresp_frame.len());
-        finspect("  addba resp: %s\n", debug::Describe(*addbarresp_frame.hdr()).c_str());
-
-        // TODO(porce): Keep the result of negotiation.
-    } else if (ba_frame.hdr()->action == AddBaRequestFrame::BlockAckAction()) {
-        auto addbarreq_frame = ba_frame.NextFrame<AddBaRequestFrame>();
-        finspect("Inbound ADDBA Req frame: len %zu\n", addbarreq_frame.len());
-        finspect("  addba req: %s\n", debug::Describe(*addbarreq_frame.hdr()).c_str());
-        return HandleAddBaRequest(*addbarreq_frame.hdr());
-    }
-    return ZX_ERR_NOT_SUPPORTED;
+    return ZX_OK;
 }
 
 zx_status_t Station::HandleAddBaRequest(const AddBaRequestFrame& addbareq) {
@@ -665,16 +735,13 @@ zx_status_t Station::HandleAddBaRequest(const AddBaRequestFrame& addbareq) {
     return ZX_OK;
 }
 
-zx_status_t Station::HandleDataFrame(const DataFrameHeader& hdr) {
-    WLAN_STATS_INC(data_frame.in);
-    if (state_ != WlanState::kAssociated) { return ZX_OK; }
+bool Station::ShouldDropDataFrame(const DataFrameView<>& frame) {
+    if (state_ != WlanState::kAssociated) { return true; }
 
-    auto from_bss = (bssid() != nullptr && *bssid() == hdr.addr2);
-    if (!from_bss) { return ZX_ERR_STOP; }
-    return ZX_OK;
+    return bssid() == nullptr || *bssid() != frame.hdr()->addr2;
 }
 
-zx_status_t Station::HandleNullDataFrame(const DataFrame<NilHeader>& frame) {
+zx_status_t Station::HandleNullDataFrame(DataFrame<NullDataHdr>&& frame) {
     debugfn();
     ZX_DEBUG_ASSERT(bssid() != nullptr);
     ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
@@ -689,16 +756,8 @@ zx_status_t Station::HandleNullDataFrame(const DataFrame<NilHeader>& frame) {
     return ZX_OK;
 }
 
-zx_status_t Station::HandleDataFrame(const DataFrame<LlcHeader>& frame) {
+zx_status_t Station::HandleDataFrame(DataFrame<LlcHeader>&& frame) {
     debugfn();
-    if (kFinspectEnabled) { DumpDataFrame(frame); }
-
-    auto associated = (state_ == WlanState::kAssociated);
-    if (!associated) {
-        debugf("dropping data packet while not associated\n");
-        return ZX_ERR_STOP;
-    }
-
     ZX_DEBUG_ASSERT(bssid() != nullptr);
     ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
 
@@ -852,7 +911,7 @@ zx_status_t Station::HandleAmsduFrame(const DataFrame<LlcHeader>& frame) {
     return ZX_OK;
 }
 
-zx_status_t Station::HandleEthFrame(const EthFrame& frame) {
+zx_status_t Station::HandleEthFrame(EthFrame&& frame) {
     debugfn();
 
     // Drop Ethernet frames when not associated.
@@ -1199,7 +1258,7 @@ zx_status_t Station::PostChannelChange() {
     return ZX_OK;
 }
 
-void Station::DumpDataFrame(const DataFrame<LlcHeader>& frame) {
+void Station::DumpDataFrame(const DataFrameView<>& frame) {
     // TODO(porce): Should change the API signature to MSDU
     const common::MacAddr& mymac = device_->GetState()->address();
 
@@ -1216,8 +1275,7 @@ void Station::DumpDataFrame(const DataFrame<LlcHeader>& frame) {
 
     if (!is_interesting) { return; }
 
-    auto msdu = reinterpret_cast<const uint8_t*>(frame.body());
-
+    auto msdu = frame.body()->data;
     finspect("Inbound data frame: len %zu\n", frame.len());
     finspect("  wlan hdr: %s\n", debug::Describe(*hdr).c_str());
     finspect("  msdu    : %s\n", debug::HexDump(msdu, frame.body_len()).c_str());

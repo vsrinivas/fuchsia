@@ -58,7 +58,7 @@ zx_status_t HandleDataPacket(fbl::unique_ptr<Packet> packet, FrameHandler* targe
     case DataSubtype::kNull:
         // Fall-through
     case DataSubtype::kQosnull: {
-        auto null_frame = data_frame.Specialize<NilHeader>();
+        auto null_frame = data_frame.Specialize<NullDataHdr>();
         return target->HandleFrame(null_frame);
     }
     case DataSubtype::kDataSubtype:

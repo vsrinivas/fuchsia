@@ -99,7 +99,7 @@ zx_status_t ClientMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
         }
     }
 
-    if (sta_ != nullptr) { DispatchFramePacket(fbl::move(pkt), sta_.get()); }
+    if (sta_ != nullptr) { sta_->HandleAnyFrame(fbl::move(pkt)); }
     return ZX_OK;
 }
 

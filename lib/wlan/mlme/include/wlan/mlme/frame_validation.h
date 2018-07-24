@@ -108,6 +108,10 @@ struct FrameTypeValidator<CtrlFrameHdr, B> {
     }
 };
 
+template <typename B> struct FrameTypeValidator<EthernetII, B> {
+    static bool is_valid(const uint8_t* buf, size_t len) { return true; }
+};
+
 template<typename B>
 struct FrameTypeValidator<ActionFrame, B> {
     static bool is_valid(const uint8_t* buf, size_t len) {

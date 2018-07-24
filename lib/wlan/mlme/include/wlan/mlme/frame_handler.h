@@ -102,7 +102,7 @@ class FrameHandler {
 
     // Data frame handlers.
     virtual zx_status_t HandleDataFrame(const DataFrameHeader& hdr) { return ZX_OK; }
-    WLAN_DECL_VIRT_FUNC_HANDLE_DATA(NullDataFrame, NilHeader)
+    WLAN_DECL_VIRT_FUNC_HANDLE_DATA(NullDataFrame, NullDataHdr)
     // TODO(hahnr): Rename to something more specific since there are two HandleDataFrame methods
     // now.
     WLAN_DECL_VIRT_FUNC_HANDLE_DATA(DataFrame, LlcHeader)
@@ -151,7 +151,7 @@ class FrameHandler {
 
         return HandleDataFrameInternal(frame);
     }
-    WLAN_DECL_FUNC_INTERNAL_HANDLE_DATA(NullDataFrame, NilHeader)
+    WLAN_DECL_FUNC_INTERNAL_HANDLE_DATA(NullDataFrame, NullDataHdr)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_DATA(DataFrame, LlcHeader)
 
     // Internal Control frame handlers.
