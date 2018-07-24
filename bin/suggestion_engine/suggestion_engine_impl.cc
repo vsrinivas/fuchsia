@@ -188,7 +188,7 @@ void SuggestionEngineImpl::NotifyInteraction(
         PerformActions(std::move(proposal.on_selected),
                        std::move(proposal.listener), proposal.id,
                        proposal.story_name, suggestion->prototype->source_url,
-                       std::move(proposal.display));
+                       proposal.story_id, std::move(proposal.display));
       } else {
         should_delete_story = false;
         auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
@@ -317,11 +317,11 @@ void SuggestionEngineImpl::PerformActions(
     fidl::VectorPtr<fuchsia::modular::Action> actions,
     fidl::InterfaceHandle<fuchsia::modular::ProposalListener> listener,
     const std::string& proposal_id, const std::string& story_name,
-    const std::string& source_url,
+    const std::string& source_url, const std::string& proposal_story_id,
     fuchsia::modular::SuggestionDisplay suggestion_display) {
   if (story_name.empty()) {
     ExecuteActions(std::move(actions), std::move(listener), proposal_id,
-                   std::move(suggestion_display), "" /* override_story_id */);
+                   std::move(suggestion_display), proposal_story_id);
     return;
   }
   const std::string key = StoryNameKey(source_url, story_name);

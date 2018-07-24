@@ -93,7 +93,6 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   // Should only be called from ProposalPublisherImpl.
   void ProposeNavigation(fuchsia::modular::NavigationAction navigation);
 
-
   // |fuchsia::modular::SuggestionProvider|
   void SubscribeToInterruptions(
       fidl::InterfaceHandle<fuchsia::modular::InterruptionListener> listener)
@@ -182,11 +181,13 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   // |story_name| is the external id for the story that the client chooses.
   // |source_url| is the url of the source of the proposal containing
   // the provided actions.
+  // |proposal_story_id| is the story id associated with the proposal. This will
+  // be empty if a new story is being created.
   void PerformActions(
       fidl::VectorPtr<fuchsia::modular::Action> actions,
       fidl::InterfaceHandle<fuchsia::modular::ProposalListener> listener,
       const std::string& proposal_id, const std::string& story_name,
-      const std::string& source_url,
+      const std::string& source_url, const std::string& proposal_story_id,
       fuchsia::modular::SuggestionDisplay suggestion_display);
 
   void ExecuteActions(
@@ -214,8 +215,7 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   void PerformAddModuleAction(
       const fuchsia::modular::Action& action,
       fidl::InterfaceHandle<fuchsia::modular::ProposalListener> listener,
-      const std::string& proposal_id,
-      const std::string& override_story_id);
+      const std::string& proposal_id, const std::string& override_story_id);
 
   void PerformSetLinkValueAction(const fuchsia::modular::Action& action,
                                  const std::string& override_story_id);
