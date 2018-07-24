@@ -421,7 +421,7 @@ If a method can return either an error or a result, use the following pattern:
 enum MyStatus { OK; ERR_FOO; ... };
 
 interface Frobinator {
-  1: Frobinate(...) -> (MyStatus @status, FrobinateResult? result);
+    1: Frobinate(...) -> (MyStatus @status, FrobinateResult? result);
 };
 ```
 
@@ -592,7 +592,7 @@ event that the server sends at the start of the protocol:
 
 ```
 interface Codec2 {
-  1: -> OnReady();
+    1: -> OnReady();
 };
 
 interface CodecProvider2 {
@@ -791,7 +791,10 @@ piece of state has several disadvantages:
 
 Creating separate interface instances for each logical object consumes kernel
 resources because each interface instance requires a separate channel object.
-Each interface instance maintains a separate FIFO queue of messages.  Using separate interface instances for each logical object means that messages sent to different objects can be reordered with respect to each other, leading to out-of-order interactions between the client and the server.
+Each interface instance maintains a separate FIFO queue of messages.  Using
+separate interface instances for each logical object means that messages sent
+to different objects can be reordered with respect to each other, leading to
+out-of-order interactions between the client and the server.
 
 The _client-assigned identifier pattern_ avoids these problems by having the
 client assign uint32 or uint64 identifiers to objects retained by the server.
