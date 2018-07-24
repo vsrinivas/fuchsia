@@ -15,6 +15,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//garnet/lib/json",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",

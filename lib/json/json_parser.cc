@@ -41,30 +41,26 @@ void GetLineAndColumnForOffset(const std::string& input, size_t offset,
 }
 }  // namespace
 
-rapidjson::Document JSONParser::ParseFrom(const std::string& file) {
-  FXL_CHECK(!initialized_) << "Document was already initialized";
-
+rapidjson::Document JSONParser::ParseFromFile(const std::string& file) {
   file_ = file;
-  if (!files::ReadFileToString(file, &data_)) {
+  std::string data;
+  if (!files::ReadFileToString(file, &data)) {
     errors_.push_back(StringPrintf("Failed to read file: %s", file.c_str()));
     return rapidjson::Document();
   }
-  return Parse();
+  return ParseFromString(data, file);
 }
 
-rapidjson::Document JSONParser::Parse() {
-  FXL_CHECK(!initialized_) << "Parser was already initialized";
-
-  errors_.clear();
+rapidjson::Document JSONParser::ParseFromString(const std::string& data,
+                                                const std::string& file) {
+  data_ = data;
+  file_ = file;
   rapidjson::Document document;
   document.Parse(data_);
   if (document.HasParseError()) {
     ReportErrorInternal(document.GetErrorOffset(),
                         GetParseError_En(document.GetParseError()));
-    return document;
   }
-
-  initialized_ = true;
   return document;
 }
 

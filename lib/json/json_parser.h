@@ -24,10 +24,20 @@ namespace json {
 class JSONParser {
  public:
   JSONParser() = default;
+  JSONParser(JSONParser&&) = default;
+  JSONParser& operator=(JSONParser&&) = default;
 
   // Parses a JSON file. If reading or parsing the file fails, reports errors in
-  // error_str(). Must only be called once.
-  rapidjson::Document ParseFrom(const std::string& file);
+  // error_str(). May be called multiple times, for example on multiple files,
+  // in which case any previous errors will be retained.
+  rapidjson::Document ParseFromFile(const std::string& file);
+
+  // Initialize the document from a JSON string |data|. If parsing fails,
+  // reports errors in error_str(). |file| is not read, but it is used as the
+  // prefix for lines in error_str(). May be called multiple times, for example
+  // on multiple files, in which case any previous errors will be retained.
+  rapidjson::Document ParseFromString(const std::string& data,
+                                      const std::string& file);
 
   // Returns true if there was an error initializing the document.
   bool HasError() const;
@@ -42,17 +52,11 @@ class JSONParser {
   // Internal version of |ReportError| that includes an offset.
   void ReportErrorInternal(size_t offset, const std::string& error);
 
-  // Initialize the document from a JSON string. Calls InitializeFrom(), which
-  // should translate the document to object state. If parsing fails, returns
-  // false and reports errors in errors();
-  rapidjson::Document Parse();
-
   std::vector<std::string> errors_;
   // Stores the filename, for reporting debug information.
   std::string file_;
   // Stores the file content, for reporting debug information.
   std::string data_;
-  bool initialized_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(JSONParser);
 };

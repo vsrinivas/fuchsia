@@ -20,11 +20,11 @@ namespace {
 class JSONParserTest : public ::testing::Test {
  protected:
   // ExpectFailedParse() will replace '$0' with the JSON filename, if present.
-  void ExpectFailedParse(const std::string& json, std::string expected_error) {
+  void ExpectFailedParse(JSONParser* parser, const std::string& json,
+                         std::string expected_error) {
     const std::string json_file = NewJSONFile(json);
     std::string error;
-    EXPECT_FALSE(Parse(json_file, &error));
-    std::string resolved_expected_error;
+    EXPECT_FALSE(ParseFromFile(parser, json_file, &error));
     // TODO(DX-338): Use strings/substitute.h once that actually exists in fxl.
     size_t pos;
     while ((pos = expected_error.find("$0")) != std::string::npos) {
@@ -33,14 +33,14 @@ class JSONParserTest : public ::testing::Test {
     EXPECT_EQ(error, expected_error);
   }
 
-  bool Parse(const std::string& file, std::string* error) {
-    JSONParser parser;
-    rapidjson::Document document = parser.ParseFrom(file);
-    if (!parser.HasError()) {
-      InterpretDocument(&parser, document);
+  bool ParseFromFile(JSONParser* parser, const std::string& file,
+                     std::string* error) {
+    rapidjson::Document document = parser->ParseFromFile(file);
+    if (!parser->HasError()) {
+      InterpretDocument(parser, document);
     }
-    *error = parser.error_str();
-    return !parser.HasError();
+    *error = parser->error_str();
+    return !parser->HasError();
   }
 
   std::string NewJSONFile(const std::string& json) {
@@ -80,11 +80,12 @@ class JSONParserTest : public ::testing::Test {
   files::ScopedTempDir tmp_dir_;
 };
 
-TEST_F(JSONParserTest, ReadInvalid) {
+TEST_F(JSONParserTest, ReadInvalidFile) {
   const std::string invalid_path =
       fxl::StringPrintf("%s/does_not_exist", tmp_dir_.path().c_str());
   std::string error;
-  EXPECT_FALSE(Parse(invalid_path, &error));
+  JSONParser parser;
+  EXPECT_FALSE(ParseFromFile(&parser, invalid_path, &error));
   EXPECT_EQ(error,
             fxl::StringPrintf("Failed to read file: %s", invalid_path.c_str()));
 }
@@ -93,27 +94,67 @@ TEST_F(JSONParserTest, ParseWithErrors) {
   std::string json;
 
   // One error, in parsing.
-  json = R"JSON({
+  {
+    const std::string json = R"JSON({
   "prop1": "missing closing quote,
   "prop2": 42
   })JSON";
-  ExpectFailedParse(json, "$0:2:35: Invalid encoding in string.");
+    JSONParser parser;
+    ExpectFailedParse(&parser, json, "$0:2:35: Invalid encoding in string.");
+  }
 
   // Multiple errors, after parsing.
-  json = R"JSON({
+  {
+    const std::string json = R"JSON({
   "prop2": "wrong_type"
   })JSON";
-  ExpectFailedParse(json, "$0: missing prop1\n$0: prop2 has wrong type");
+    JSONParser parser;
+    ExpectFailedParse(&parser, json,
+                      "$0: missing prop1\n$0: prop2 has wrong type");
+  }
 }
 
-TEST_F(JSONParserTest, Parse) {
+TEST_F(JSONParserTest, ParseFromString) {
+  const std::string json = R"JSON({
+  "prop1": "missing closing quote
+  })JSON";
+  JSONParser parser;
+  parser.ParseFromString(json, "test_file");
+  EXPECT_TRUE(parser.HasError());
+  EXPECT_EQ(parser.error_str(),
+            "test_file:2:34: Invalid encoding in string.");
+}
+
+TEST_F(JSONParserTest, ParseTwice) {
+  std::string json;
+  JSONParser parser;
+
+  // Two failed parses. Errors should accumulate.
+  json = R"JSON({
+  "prop1": invalid_value,
+  })JSON";
+  parser.ParseFromString(json, "test_file");
+
+  json = R"JSON({
+  "prop1": "missing closing quote
+  })JSON";
+  parser.ParseFromString(json, "test_file");
+
+  EXPECT_TRUE(parser.HasError());
+  EXPECT_EQ(parser.error_str(),
+            "test_file:2:12: Invalid value.\n"
+            "test_file:2:34: Invalid encoding in string.");
+}
+
+TEST_F(JSONParserTest, ParseValid) {
   const std::string json = R"JSON({
   "prop1": "foo",
   "prop2": 42
   })JSON";
   const std::string file = NewJSONFile(json);
   std::string error;
-  EXPECT_TRUE(Parse(file, &error));
+  JSONParser parser;
+  EXPECT_TRUE(ParseFromFile(&parser, file, &error));
   EXPECT_EQ("", error);
 }
 

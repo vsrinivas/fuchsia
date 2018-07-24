@@ -4,6 +4,7 @@
 
 #include "garnet/bin/sysmgr/config.h"
 
+#include <string>
 #include <utility>
 
 #include "lib/fxl/files/file.h"
@@ -15,7 +16,6 @@
 namespace sysmgr {
 namespace {
 
-using ErrorCallback = std::function<void(size_t, const std::string&)>;
 using fxl::StringPrintf;
 
 constexpr char kAppLoaders[] = "loaders";
@@ -23,9 +23,109 @@ constexpr char kApps[] = "apps";
 constexpr char kServices[] = "services";
 constexpr char kStartupServices[] = "startup_services";
 
-fuchsia::sys::LaunchInfoPtr GetLaunchInfo(
-    const rapidjson::Document::ValueType& value, const std::string& name,
-    const ErrorCallback& error_callback) {
+}  // namespace
+
+bool Config::ParseFromFile(const std::string& config_file) {
+  const rapidjson::Document document = json_parser_.ParseFromFile(config_file);
+  if (!json_parser_.HasError()) {
+    Parse(document);
+  }
+  return !json_parser_.HasError();
+}
+
+bool Config::ParseFromString(const std::string& data,
+                             const std::string& pseudo_file) {
+  const rapidjson::Document document =
+      json_parser_.ParseFromString(data, pseudo_file);
+  if (!json_parser_.HasError()) {
+    Parse(document);
+  }
+  return !json_parser_.HasError();
+}
+
+bool Config::HasError() const {
+  return json_parser_.HasError();
+}
+
+std::string Config::error_str() const {
+  return json_parser_.error_str();
+}
+
+void Config::Parse(const rapidjson::Document& document) {
+  if (!document.IsObject()) {
+    json_parser_.ReportError("Config file is not a JSON object.");
+    return;
+  }
+
+  if (!ParseServiceMap(document, kServices, &services_) ||
+      !ParseServiceMap(document, kAppLoaders, &app_loaders_)) {
+    return;
+  }
+
+  auto apps_it = document.FindMember(kApps);
+  if (apps_it != document.MemberEnd()) {
+    const auto& value = apps_it->value;
+    const auto* name = apps_it->name.GetString();
+    if (value.IsArray()) {
+      for (const auto& app : value.GetArray()) {
+        auto launch_info = GetLaunchInfo(app, name);
+        if (launch_info) {
+          apps_.push_back(std::move(launch_info));
+        }
+      }
+    } else {
+      json_parser_.ReportError(StringPrintf("'%s' is not an array.", name));
+    }
+  }
+
+  auto startup_services_it = document.FindMember(kStartupServices);
+  if (startup_services_it != document.MemberEnd()) {
+    const auto& value = startup_services_it->value;
+    const auto* name = startup_services_it->name.GetString();
+    if (value.IsArray() &&
+        std::all_of(
+            value.GetArray().begin(), value.GetArray().end(),
+            [](const rapidjson::Value& val) { return val.IsString(); })) {
+      for (const auto& service : value.GetArray()) {
+        startup_services_.push_back(service.GetString());
+      }
+    } else {
+      json_parser_.ReportError(
+          StringPrintf("'%s' is not an array of strings.", name));
+    }
+  }
+}
+
+bool Config::ParseServiceMap(const rapidjson::Document& document,
+                             const std::string& key,
+                             Config::ServiceMap* services) {
+  auto it = document.FindMember(key);
+  if (it != document.MemberEnd()) {
+    const auto& value = it->value;
+    if (!value.IsObject()) {
+      json_parser_.ReportError(StringPrintf("'%s' must be an object.",
+                                            key.c_str()));
+      return false;
+    }
+    for (const auto& reg : value.GetObject()) {
+      if (!reg.name.IsString()) {
+        json_parser_.ReportError(
+            StringPrintf("Keys of '%s' must be strings.", key.c_str()));
+        continue;
+      }
+      std::string service_key = reg.name.GetString();
+      auto launch_info = GetLaunchInfo(
+          reg.value, StringPrintf("%s.%s", key.c_str(), service_key.c_str()));
+      if (launch_info) {
+        services->emplace(service_key, std::move(launch_info));
+      }
+    }
+  }
+  return !json_parser_.HasError();
+}
+
+fuchsia::sys::LaunchInfoPtr Config::GetLaunchInfo(
+    const rapidjson::Document::ValueType& value, const std::string& name) {
   auto launch_info = fuchsia::sys::LaunchInfo::New();
   if (value.IsString()) {
     launch_info->url = value.GetString();
@@ -48,159 +148,10 @@ fuchsia::sys::LaunchInfoPtr GetLaunchInfo(
     }
   }
 
-  error_callback(
-      0, StringPrintf("%s must be a string or a non-empty array of strings",
-                      name.c_str()));
+  json_parser_.ReportError(StringPrintf(
+      "'%s' must be a string or a non-empty array of strings.",
+      name.c_str()));
   return nullptr;
-}
-
-bool ParseServiceMap(const rapidjson::Document& document,
-                     const std::string& key, Config::ServiceMap* services,
-                     const ErrorCallback& error_callback) {
-  bool has_error = false;
-  auto it = document.FindMember(key);
-  if (it != document.MemberEnd()) {
-    const auto& value = it->value;
-    if (!value.IsObject()) {
-      error_callback(0, StringPrintf("%s must be an object", key.c_str()));
-      return false;
-    }
-    for (const auto& reg : value.GetObject()) {
-      if (!reg.name.IsString()) {
-        error_callback(0, StringPrintf("%s keys must be strings", key.c_str()));
-        has_error = true;
-        continue;
-      }
-      std::string service_key = reg.name.GetString();
-      auto launch_info = GetLaunchInfo(
-          reg.value, StringPrintf("%s.%s", key.c_str(), service_key.c_str()),
-          error_callback);
-      if (launch_info) {
-        services->emplace(service_key, std::move(launch_info));
-      } else {
-        has_error = true;
-      }
-    }
-  }
-  return !has_error;
-}
-
-void GetLineAndColumnForOffset(const std::string& input, size_t offset,
-                               int32_t* output_line, int32_t* output_column) {
-  if (offset == 0) {
-    // Errors at position 0 are assumed to be related to the whole file.
-    *output_line = 0;
-    *output_column = 0;
-    return;
-  }
-  *output_line = 1;
-  *output_column = 1;
-  for (size_t i = 0; i < input.size() && i < offset; i++) {
-    if (input[i] == '\n') {
-      *output_line += 1;
-      *output_column = 1;
-    } else {
-      *output_column += 1;
-    }
-  }
-}
-
-}  // namespace
-
-Config::Config() = default;
-
-Config::Config(Config&& other) = default;
-
-Config& Config::operator=(Config&& other) = default;
-
-Config::~Config() = default;
-
-bool Config::ReadFrom(const std::string& config_file) {
-  std::string data;
-  if (!files::ReadFileToString(config_file, &data)) {
-    errors_.emplace_back(
-        StringPrintf("Failed to read file %s", config_file.c_str()));
-    return false;
-  }
-  Parse(data, config_file);
-  return !HasErrors();
-}
-
-void Config::Parse(const std::string& string, const std::string& config_file) {
-  errors_.clear();
-  rapidjson::Document document;
-  document.Parse(string);
-
-  // If there is an error in parsing, store the incoming config for debug
-  // purposes.
-  auto store_debug_on_error = fxl::MakeAutoCall([&]() {
-    if (HasErrors()) {
-      failed_config_data_ = string;
-    }
-  });
-
-  auto error_callback = [this, &string, &config_file](
-                            size_t offset, const std::string& error) {
-    int32_t line;
-    int32_t column;
-    GetLineAndColumnForOffset(string, offset, &line, &column);
-    if (line == 0) {
-      errors_.emplace_back(
-          StringPrintf("%s: %s", config_file.c_str(), error.c_str()));
-    } else {
-      errors_.emplace_back(StringPrintf("%s:%d:%d %s", config_file.c_str(),
-                                        line, column, error.c_str()));
-    }
-  };
-
-  if (document.HasParseError()) {
-    error_callback(document.GetErrorOffset(),
-                   GetParseError_En(document.GetParseError()));
-    return;
-  }
-
-  if (!document.IsObject()) {
-    error_callback(0, "Config file is not a JSON object");
-    return;
-  }
-
-  if (!(ParseServiceMap(document, kServices, &services_, error_callback) &&
-        ParseServiceMap(document, kAppLoaders, &app_loaders_,
-                        error_callback))) {
-    return;
-  }
-
-  auto apps_it = document.FindMember(kApps);
-  if (apps_it != document.MemberEnd()) {
-    const auto& value = apps_it->value;
-    const auto* name = apps_it->name.GetString();
-    if (value.IsArray()) {
-      for (const auto& app : value.GetArray()) {
-        auto launch_info = GetLaunchInfo(app, name, error_callback);
-        if (launch_info) {
-          apps_.push_back(std::move(launch_info));
-        }
-      }
-    } else {
-      error_callback(0, StringPrintf("%s value is not an array", name));
-    }
-  }
-
-  auto startup_services_it = document.FindMember(kStartupServices);
-  if (startup_services_it != document.MemberEnd()) {
-    const auto& value = startup_services_it->value;
-    const auto* name = startup_services_it->name.GetString();
-    if (value.IsArray() &&
-        std::all_of(
-            value.GetArray().begin(), value.GetArray().end(),
-            [](const rapidjson::Value& val) { return val.IsString(); })) {
-      for (const auto& service : value.GetArray()) {
-        startup_services_.push_back(service.GetString());
-      }
-    } else {
-      error_callback(0, StringPrintf("%s is not an array of strings", name));
-    }
-  }
 }
 
 }  // namespace sysmgr
