@@ -8,9 +8,9 @@
 
 #include "lib/fidl/cpp/optional.h"
 
-using ::fuchsia::ui::views_v1::ViewProperties;
-using ::fuchsia::ui::views_v1::ViewProvider;
-using ::fuchsia::ui::views_v1_token::ViewOwner;
+using ::fuchsia::ui::viewsv1::ViewProperties;
+using ::fuchsia::ui::viewsv1::ViewProvider;
+using ::fuchsia::ui::viewsv1token::ViewOwner;
 
 constexpr float kTileElevation = 5.f;
 
@@ -19,7 +19,7 @@ namespace tiles {
 namespace {
 
 fuchsia::ui::scenic::ScenicPtr GetScenic(
-    ::fuchsia::ui::views_v1::ViewManager* view_manager) {
+    ::fuchsia::ui::viewsv1::ViewManager* view_manager) {
   fuchsia::ui::scenic::ScenicPtr scenic;
   view_manager->GetScenic(scenic.NewRequest());
   return scenic;
@@ -34,7 +34,7 @@ fuchsia::ui::scenic::SessionPtr GetSession(
 
 }  // anonymous namespace
 
-Tiles::Tiles(::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
+Tiles::Tiles(::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
              fidl::InterfaceRequest<ViewOwner> view_owner_request,
              component::StartupContext* startup_context, int border)
     : startup_context_(startup_context),
@@ -159,7 +159,7 @@ void Tiles::OnPropertiesChanged(ViewProperties properties,
 }
 
 void Tiles::OnChildAttached(uint32_t child_key,
-                            ::fuchsia::ui::views_v1::ViewInfo child_view_info,
+                            ::fuchsia::ui::viewsv1::ViewInfo child_view_info,
                             OnChildAttachedCallback callback) {
   auto it = views_.find(child_key);
   FXL_DCHECK(it != views_.end());
@@ -243,7 +243,7 @@ void Tiles::Layout() {
       ViewData* tile = view_it->second.get();
 
       ViewProperties view_properties;
-      view_properties.view_layout = ::fuchsia::ui::views_v1::ViewLayout::New();
+      view_properties.view_layout = ::fuchsia::ui::viewsv1::ViewLayout::New();
       view_properties.view_layout->size.width = tile_bounds.width;
       view_properties.view_layout->size.height = tile_bounds.height;
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.ui.views_v1;
+library fuchsia.ui.viewsv1;
 
 // Provides a View upon request.
 //
@@ -20,6 +20,6 @@ interface ViewProvider {
   //
   // The caller may request services from the created view via the |services|
   // service provider.
-  1: CreateView(request<fuchsia.ui.views_v1_token.ViewOwner> view_owner,
+  1: CreateView(request<fuchsia.ui.viewsv1token.ViewOwner> view_owner,
                request<fuchsia.sys.ServiceProvider>? services);
 };

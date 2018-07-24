@@ -7,7 +7,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/a11y/cpp/fidl.h>
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 
 #include "garnet/examples/ui/shapes_a11y/a11y_client_app.h"
 #include "lib/component/cpp/service_provider_impl.h"
@@ -22,8 +22,8 @@ namespace examples {
 
 class ShapesA11yView : public mozart::BaseView {
  public:
-  ShapesA11yView(fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-                 fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+  ShapesA11yView(fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+                 fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
                      view_owner_request);
 
   ~ShapesA11yView() override;

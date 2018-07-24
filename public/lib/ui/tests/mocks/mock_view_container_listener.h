@@ -5,18 +5,18 @@
 #ifndef LIB_UI_TESTS_MOCKS_MOCK_VIEW_CONTAINER_LISTENER_H_
 #define LIB_UI_TESTS_MOCKS_MOCK_VIEW_CONTAINER_LISTENER_H_
 
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include "lib/fxl/macros.h"
 
 namespace mozart {
 namespace test {
 
 using OnMockChildAttachedCallback =
-    std::function<void(uint32_t, ::fuchsia::ui::views_v1::ViewInfo)>;
+    std::function<void(uint32_t, ::fuchsia::ui::viewsv1::ViewInfo)>;
 using OnMockChildUnavailable = std::function<void(uint32_t)>;
 
 class MockViewContainerListener
-    : public ::fuchsia::ui::views_v1::ViewContainerListener {
+    : public ::fuchsia::ui::viewsv1::ViewContainerListener {
  public:
   MockViewContainerListener();
   MockViewContainerListener(OnMockChildAttachedCallback child_attached_callback,
@@ -25,7 +25,7 @@ class MockViewContainerListener
 
  private:
   void OnChildAttached(uint32_t child_key,
-                       ::fuchsia::ui::views_v1::ViewInfo child_view_info,
+                       ::fuchsia::ui::viewsv1::ViewInfo child_view_info,
                        OnChildAttachedCallback callback) override;
   void OnChildUnavailable(uint32_t child_key,
                           OnChildUnavailableCallback callback) override;

@@ -6,7 +6,7 @@ library fuchsia.mediaplayer;
 
 using fuchsia.math;
 using fuchsia.media;
-using fuchsia.ui.views_v1_token;
+using fuchsia.ui.viewsv1token;
 
 // Plays media.
 [Discoverable]
@@ -33,8 +33,8 @@ interface MediaPlayer {
   7: SetGain(float32 db_gain);
 
   // Creates a video view.
-  8: CreateView(fuchsia.ui.views_v1.ViewManager view_manager,
-                request<fuchsia.ui.views_v1_token.ViewOwner> view_owner);
+  8: CreateView(fuchsia.ui.viewsv1.ViewManager view_manager,
+                request<fuchsia.ui.viewsv1token.ViewOwner> view_owner);
 
   // Used only for testing.
   // TODO(dalesat): Remove when we can test with dependency injection.

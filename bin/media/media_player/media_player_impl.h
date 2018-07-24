@@ -57,8 +57,8 @@ class MediaPlayerImpl : public fuchsia::mediaplayer::MediaPlayer {
   void SetGain(float gain) override;
 
   void CreateView(
-      fidl::InterfaceHandle<::fuchsia::ui::views_v1::ViewManager> view_manager,
-      fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+      fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewManager> view_manager,
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request) override;
 
   void SetAudioRenderer(fidl::InterfaceHandle<fuchsia::media::AudioRenderer2>

@@ -4,7 +4,7 @@
 
 library fuchsia.auth;
 
-using fuchsia.ui.views_v1_token;
+using fuchsia.ui.viewsv1token;
 
 // This file defines an auth provider service that can be used by Garnet's
 // Token Manager service to mint oauth tokens for clients such as Framework,
@@ -95,7 +95,7 @@ interface AuthenticationUIContext {
   // Requests device shell to display |view_owner| for authentication. Another
   // call to StartOverlay() will not be made until StopOverlay() has been
   // called.
-  1: StartOverlay(fuchsia.ui.views_v1_token.ViewOwner view_owner);
+  1: StartOverlay(fuchsia.ui.viewsv1token.ViewOwner view_owner);
 
   // Requests device shell to stop displaying the auth view.
   2: StopOverlay();

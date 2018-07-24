@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.ui.views_v1;
+library fuchsia.ui.viewsv1;
 
 // A view container is an interface exposed by |View| and |ViewTree| to
 // manage their child views.  Although |View| may have any number of children,
@@ -94,7 +94,7 @@ interface ViewContainer {
   // It is an error to add more than one child to a |ViewTree|'s container;
   // it can only have at most one child (its root).
   2: AddChild(uint32 child_key,
-      fuchsia.ui.views_v1_token.ViewOwner child_view_owner,
+      fuchsia.ui.viewsv1token.ViewOwner child_view_owner,
       handle<eventpair> host_import_token);
 
   // Removes the view referenced by |child_key| from the view's
@@ -107,7 +107,7 @@ interface ViewContainer {
   // It is an error to remove a view whose |child_key| does not appear
   // in the container's list of children; the connection will be closed.
   3: RemoveChild(uint32 child_key,
-      request<fuchsia.ui.views_v1_token.ViewOwner>? transferred_view_owner);
+      request<fuchsia.ui.viewsv1token.ViewOwner>? transferred_view_owner);
 
   // Sets view properties for the child, such as layout constraints.
   //

@@ -8,7 +8,7 @@
 #include <lib/async/dispatcher.h>
 #include <zircon/types.h>
 
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include "garnet/lib/machina/gpu_scanout.h"
 #include "garnet/lib/machina/input_dispatcher.h"
 #include "garnet/lib/machina/virtio_gpu.h"
@@ -30,7 +30,7 @@ static constexpr uint32_t kGuestViewDisplayHeight = 768;
 class GuestView;
 
 class ScenicScanout : public machina::GpuScanout,
-                      public ::fuchsia::ui::views_v1::ViewProvider {
+                      public ::fuchsia::ui::viewsv1::ViewProvider {
  public:
   static zx_status_t Create(component::StartupContext* startup_context,
                             machina::InputDispatcher* input_dispatcher,
@@ -44,7 +44,7 @@ class ScenicScanout : public machina::GpuScanout,
 
   // |ViewProvider|
   void CreateView(
-      fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> view_services)
       override;
@@ -60,8 +60,8 @@ class GuestView : public mozart::BaseView {
  public:
   GuestView(machina::GpuScanout* scanout,
             machina::InputDispatcher* input_dispatcher,
-            ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-            fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+            ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+            fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
                 view_owner_request);
 
   ~GuestView() override;

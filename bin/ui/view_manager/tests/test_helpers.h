@@ -37,8 +37,8 @@ inline mozart::SceneTokenPtr MakeDummySceneToken(uint32_t value) {
   return result.Pass();
 }
 
-inline ::fuchsia::ui::views_v1_token::ViewTokenPtr MakeDummyViewToken(uint32_t value) {
-  auto result = ::fuchsia::ui::views_v1_token::ViewToken::New();
+inline ::fuchsia::ui::viewsv1token::ViewTokenPtr MakeDummyViewToken(uint32_t value) {
+  auto result = ::fuchsia::ui::viewsv1token::ViewToken::New();
   result->value = value;
   return result.Pass();
 }

@@ -10,7 +10,7 @@
 
 #include <lib/zx/eventpair.h>
 
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/ui/scenic/cpp/resources.h"
@@ -49,7 +49,7 @@ class ViewStub {
   // |host_import_token| is the import token associated with the node
   // that the parent view exported to host the view's graphical contents.
   ViewStub(ViewRegistry* registry,
-           fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner> owner,
+           fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> owner,
            zx::eventpair host_import_token);
   ~ViewStub();
 
@@ -86,12 +86,12 @@ class ViewStub {
 
   // Gets the properties which the container set on this view, or null
   // if none set or the view has become unavailable.
-  const ::fuchsia::ui::views_v1::ViewPropertiesPtr& properties() const { return properties_; }
+  const ::fuchsia::ui::viewsv1::ViewPropertiesPtr& properties() const { return properties_; }
 
   // Sets the properties set by the container.
   // May be called when the view is pending or attached but not after it
   // has become unavailable.
-  void SetProperties(::fuchsia::ui::views_v1::ViewPropertiesPtr properties);
+  void SetProperties(::fuchsia::ui::viewsv1::ViewPropertiesPtr properties);
 
   // Binds the stub to the specified actual view, which must not be null.
   // Must be called at most once to apply the effects of resolving the
@@ -115,7 +115,7 @@ class ViewStub {
   // be transferred
   void TransferViewOwnerWhenViewResolved(
       std::unique_ptr<ViewStub> view_stub,
-      fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
           transferred_view_owner_request);
 
   // Releases the host import token and host node.
@@ -134,7 +134,7 @@ class ViewStub {
   void SetTreeRecursively(ViewTreeState* tree);
   static void SetTreeForChildrenOfView(ViewState* view, ViewTreeState* tree);
 
-  void OnViewResolved(::fuchsia::ui::views_v1_token::ViewToken view_token, bool success);
+  void OnViewResolved(::fuchsia::ui::viewsv1token::ViewToken view_token, bool success);
 
   // This is true when |ViewStub| has been transferred before |OnViewResolved|
   // has been called, and the child view's ownership is supposed to be
@@ -145,7 +145,7 @@ class ViewStub {
   }
 
   ViewRegistry* registry_;
-  ::fuchsia::ui::views_v1_token::ViewOwnerPtr owner_;
+  ::fuchsia::ui::viewsv1token::ViewOwnerPtr owner_;
   ViewState* state_ = nullptr;
   bool unavailable_ = false;
 
@@ -157,7 +157,7 @@ class ViewStub {
   // ourselves to keep us alive until |OnViewResolved| is called.
   std::unique_ptr<PendingViewOwnerTransferState> pending_view_owner_transfer_;
 
-  ::fuchsia::ui::views_v1::ViewPropertiesPtr properties_;
+  ::fuchsia::ui::viewsv1::ViewPropertiesPtr properties_;
 
   ViewTreeState* tree_ = nullptr;
   ViewState* parent_ = nullptr;

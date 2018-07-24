@@ -8,41 +8,41 @@
 
 namespace fuchsia {
 namespace ui {
-namespace views_v1 {
+namespace viewsv1 {
 
 std::ostream& operator<<(std::ostream& os,
-                         const ::fuchsia::ui::views_v1::ViewTreeToken& value) {
+                         const ::fuchsia::ui::viewsv1::ViewTreeToken& value) {
   return os << "<T" << value.value << ">";
 }
 
 std::ostream& operator<<(std::ostream& os,
-                         const ::fuchsia::ui::views_v1::ViewInfo& value) {
+                         const ::fuchsia::ui::viewsv1::ViewInfo& value) {
   return os << "{}";
 }
 
 std::ostream& operator<<(std::ostream& os,
-                         const ::fuchsia::ui::views_v1::ViewProperties& value) {
+                         const ::fuchsia::ui::viewsv1::ViewProperties& value) {
   return os << "{view_layout=" << *value.view_layout << "}";
 }
 
 std::ostream& operator<<(std::ostream& os,
-                         const ::fuchsia::ui::views_v1::ViewLayout& value) {
+                         const ::fuchsia::ui::viewsv1::ViewLayout& value) {
   return os << "{size=" << value.size << ", inset=" << value.inset << "}";
 }
 
-}  // namespace views_v1
+}  // namespace viewsv1
 }  // namespace ui
 }  // namespace fuchsia
 
 namespace fuchsia {
 namespace ui {
-namespace views_v1_token {
+namespace viewsv1token {
 
 std::ostream& operator<<(
-    std::ostream& os, const ::fuchsia::ui::views_v1_token::ViewToken& value) {
+    std::ostream& os, const ::fuchsia::ui::viewsv1token::ViewToken& value) {
   return os << "<V" << value.value << ">";
 }
 
-}  // namespace views_v1_token
+}  // namespace viewsv1token
 }  // namespace ui
 }  // namespace fuchsia

@@ -26,8 +26,8 @@ class MediaPlayerTestView : public mozart::BaseView {
  public:
   MediaPlayerTestView(
       fit::function<void(int)> quit_callback,
-      ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+      ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
       component::StartupContext* startup_context,
       const MediaPlayerTestParams& params);
@@ -39,12 +39,12 @@ class MediaPlayerTestView : public mozart::BaseView {
 
   // |BaseView|:
   void OnPropertiesChanged(
-      ::fuchsia::ui::views_v1::ViewProperties old_properties) override;
+      ::fuchsia::ui::viewsv1::ViewProperties old_properties) override;
   void OnSceneInvalidated(
       fuchsia::images::PresentationInfo presentation_info) override;
   void OnChildAttached(
       uint32_t child_key,
-      ::fuchsia::ui::views_v1::ViewInfo child_view_info) override;
+      ::fuchsia::ui::viewsv1::ViewInfo child_view_info) override;
   void OnChildUnavailable(uint32_t child_key) override;
   bool OnInputEvent(fuchsia::ui::input::InputEvent event) override;
 

@@ -6,7 +6,7 @@
 
 #include <semaphore.h>
 
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -30,7 +30,7 @@ ScenicScanout::ScenicScanout(component::StartupContext* startup_context,
 }
 
 void ScenicScanout::CreateView(
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> view_services) {
   if (view_) {
@@ -39,7 +39,7 @@ void ScenicScanout::CreateView(
   }
   auto view_manager =
       startup_context_
-          ->ConnectToEnvironmentService<::fuchsia::ui::views_v1::ViewManager>();
+          ->ConnectToEnvironmentService<::fuchsia::ui::viewsv1::ViewManager>();
   view_ = fbl::make_unique<GuestView>(this, input_dispatcher_,
                                       std::move(view_manager),
                                       std::move(view_owner_request));
@@ -56,8 +56,8 @@ void ScenicScanout::InvalidateRegion(const machina::GpuRect& rect) {
 
 GuestView::GuestView(
     machina::GpuScanout* scanout, machina::InputDispatcher* input_dispatcher,
-    ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+    ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Guest"),
       background_node_(session()),

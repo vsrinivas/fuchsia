@@ -6,7 +6,7 @@
 
 #include <lib/fdio/util.h>
 
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"
@@ -15,8 +15,8 @@
 namespace examples {
 
 TileView::TileView(
-    ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+    ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request,
     component::StartupContext* startup_context, const TileParams& params)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Tile"),
@@ -32,7 +32,7 @@ TileView::TileView(
 TileView::~TileView() {}
 
 void TileView::Present(
-    fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner>
+    fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
         child_view_owner,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation) {
   const std::string empty_url;
@@ -54,9 +54,9 @@ void TileView::ConnectViews() {
 
     // Get the view provider back from the launched app.
     auto view_provider =
-        services.ConnectToService<::fuchsia::ui::views_v1::ViewProvider>();
+        services.ConnectToService<::fuchsia::ui::viewsv1::ViewProvider>();
 
-    fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner>
+    fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
         child_view_owner;
     view_provider->CreateView(child_view_owner.NewRequest(), nullptr);
 
@@ -85,7 +85,7 @@ void TileView::CreateNestedEnvironment() {
 }
 
 void TileView::OnChildAttached(
-    uint32_t child_key, ::fuchsia::ui::views_v1::ViewInfo child_view_info) {
+    uint32_t child_key, ::fuchsia::ui::viewsv1::ViewInfo child_view_info) {
   auto it = views_.find(child_key);
   FXL_DCHECK(it != views_.end());
 
@@ -99,7 +99,7 @@ void TileView::OnChildUnavailable(uint32_t child_key) {
 }
 
 void TileView::AddChildView(
-    fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner>
+    fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
         child_view_owner,
     const std::string& url, fuchsia::sys::ComponentControllerPtr controller) {
   const uint32_t view_key = next_child_view_key_++;
@@ -166,13 +166,13 @@ void TileView::OnSceneInvalidated(
     }
     offset += extent;
 
-    ::fuchsia::ui::views_v1::ViewProperties view_properties;
-    view_properties.view_layout = ::fuchsia::ui::views_v1::ViewLayout::New();
+    ::fuchsia::ui::viewsv1::ViewProperties view_properties;
+    view_properties.view_layout = ::fuchsia::ui::viewsv1::ViewLayout::New();
     view_properties.view_layout->size.width = layout_bounds.width;
     view_properties.view_layout->size.height = layout_bounds.height;
 
     if (view_data->view_properties != view_properties) {
-      ::fuchsia::ui::views_v1::ViewProperties view_properties_clone;
+      ::fuchsia::ui::viewsv1::ViewProperties view_properties_clone;
       view_properties.Clone(&view_properties_clone);
       view_data->view_properties = std::move(view_properties_clone);
       GetViewContainer()->SetChildProperties(

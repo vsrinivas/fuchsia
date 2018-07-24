@@ -11,7 +11,7 @@
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/fit/function.h>
 
 #include "garnet/bin/ui/presentation_mode/detector.h"
@@ -235,7 +235,7 @@ class Presentation2 : public Presentation {
   float display_rotation_desired_ = 0.f;
   float display_rotation_current_ = 0.f;
 
-  ::fuchsia::ui::views_v1::ViewPtr root_view_;
+  ::fuchsia::ui::viewsv1::ViewPtr root_view_;
 
   YieldCallback yield_callback_;
   ShutdownCallback shutdown_callback_;

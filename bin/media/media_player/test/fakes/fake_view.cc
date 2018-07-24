@@ -26,10 +26,10 @@ FakeView::FakeView()
 FakeView::~FakeView() {}
 
 void FakeView::Bind(
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1::View> view_request,
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view_request,
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request,
-    ::fuchsia::ui::views_v1::ViewListenerPtr listener,
+    ::fuchsia::ui::viewsv1::ViewListenerPtr listener,
     zx::eventpair parent_export_token, fidl::StringPtr label) {
   binding_.Bind(std::move(view_request));
   owner_.Bind(std::move(view_owner_request));
@@ -39,7 +39,7 @@ void FakeView::Bind(
 }
 
 void FakeView::GetToken(GetTokenCallback callback) {
-  ::fuchsia::ui::views_v1_token::ViewToken view_token;
+  ::fuchsia::ui::viewsv1token::ViewToken view_token;
   view_token.value = kViewTokenValue;
   callback(view_token);
 }
@@ -56,7 +56,7 @@ void FakeView::OfferServiceProvider(
 }
 
 void FakeView::GetContainer(
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewContainer> container) {
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewContainer> container) {
   FXL_NOTIMPLEMENTED();
 }
 
@@ -89,14 +89,14 @@ FakeView::Owner::Owner() : binding_(this) {}
 FakeView::Owner::~Owner() {}
 
 void FakeView::Owner::Bind(
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request) {
   binding_.Bind(std::move(view_owner_request));
 }
 
 void FakeView::Owner::GetToken(GetTokenCallback callback) {
   FXL_LOG(INFO) << "Owner::GetToken";
-  ::fuchsia::ui::views_v1_token::ViewToken view_token;
+  ::fuchsia::ui::viewsv1token::ViewToken view_token;
   view_token.value = kViewTokenValue;
   callback(view_token);
 }

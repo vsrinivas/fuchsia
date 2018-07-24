@@ -20,7 +20,7 @@ fxl::RefPtr<ShadertoyState> ShadertoyState::NewForImagePipe(
 }
 
 fxl::RefPtr<ShadertoyState> ShadertoyState::NewForView(
-    App* app, ::fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+    App* app, ::fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
                   view_owner_request,
     bool handle_input_events) {
   FXL_CHECK(false) << "unimplemented.";

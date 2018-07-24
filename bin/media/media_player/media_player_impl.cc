@@ -479,8 +479,8 @@ void MediaPlayerImpl::SetGain(float gain) {
 }
 
 void MediaPlayerImpl::CreateView(
-    fidl::InterfaceHandle<::fuchsia::ui::views_v1::ViewManager> view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+    fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewManager> view_manager,
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request) {
   MaybeCreateRenderer(StreamType::Medium::kVideo);
   if (!video_renderer_) {

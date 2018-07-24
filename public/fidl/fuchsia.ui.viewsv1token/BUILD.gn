@@ -4,7 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.ui.views_v1_token") {
+fidl("fuchsia.ui.viewsv1token") {
   sdk_category = "partner"
 
   sources = [

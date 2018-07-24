@@ -12,7 +12,7 @@
 namespace view_manager {
 
 // ViewManager interface implementation.
-class ViewManagerImpl : public ::fuchsia::ui::views_v1::ViewManager {
+class ViewManagerImpl : public ::fuchsia::ui::viewsv1::ViewManager {
  public:
   explicit ViewManagerImpl(ViewRegistry* registry);
   ~ViewManagerImpl() override;
@@ -22,13 +22,13 @@ class ViewManagerImpl : public ::fuchsia::ui::views_v1::ViewManager {
   void GetScenic(fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic>
                      scenic_request) override;
   void CreateView(
-      fidl::InterfaceRequest<::fuchsia::ui::views_v1::View> view_request,
-      fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
-      fidl::InterfaceHandle<::fuchsia::ui::views_v1::ViewListener> view_listener,
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view_request,
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner> view_owner_request,
+      fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewListener> view_listener,
       zx::eventpair parent_export_token, fidl::StringPtr label) override;
   void CreateViewTree(
-      fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewTree> view_tree_request,
-      fidl::InterfaceHandle<::fuchsia::ui::views_v1::ViewTreeListener> view_tree_listener,
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewTree> view_tree_request,
+      fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewTreeListener> view_tree_listener,
       fidl::StringPtr label) override;
 
   ViewRegistry* registry_;

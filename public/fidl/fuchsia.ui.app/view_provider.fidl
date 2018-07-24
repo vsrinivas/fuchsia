@@ -6,7 +6,7 @@ library fuchsia.ui.app;
 
 // NOTE: This is likely not the ViewProvider you are looking for!  This is
 // the new ViewProvider interface that will be deprectaing the old one soon.
-// The old ViewProvider is in fuchsia.ui.views_v1.ViewProvider.
+// The old ViewProvider is in fuchsia.ui.viewsv1.ViewProvider.
 // TODO(SCN-589): Remove this when old ViewProvider is deleted.
 //
 // ViewProvider is the standard mechanism for two modules to each obtain half

@@ -5,8 +5,8 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_VIEW_MANAGER_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_VIEW_MANAGER_H_
 
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
 #include "garnet/bin/media/media_player/test/fakes/fake_view.h"
@@ -18,7 +18,7 @@ namespace test {
 class FakeScenic;
 
 // Implements ViewManager for testing.
-class FakeViewManager : public ::fuchsia::ui::views_v1::ViewManager {
+class FakeViewManager : public ::fuchsia::ui::viewsv1::ViewManager {
  public:
   FakeViewManager(FakeScenic* fake_scenic);
 
@@ -26,29 +26,29 @@ class FakeViewManager : public ::fuchsia::ui::views_v1::ViewManager {
 
   // Binds the renderer.
   void Bind(
-      fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewManager> request);
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewManager> request);
 
   // ViewManager implementation.
   void GetScenic(
       fidl::InterfaceRequest<::fuchsia::ui::scenic::Scenic> request) override;
 
   void CreateView(
-      fidl::InterfaceRequest<::fuchsia::ui::views_v1::View> view,
-      fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view,
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
           view_owner,
-      fidl::InterfaceHandle<::fuchsia::ui::views_v1::ViewListener>
+      fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewListener>
           view_listener,
       zx::eventpair parent_export_token, fidl::StringPtr label) override;
 
   void CreateViewTree(
-      fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewTree> view_tree,
-      fidl::InterfaceHandle<::fuchsia::ui::views_v1::ViewTreeListener>
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewTree> view_tree,
+      fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewTreeListener>
           view_tree_listener,
       fidl::StringPtr label) override;
 
  private:
   async_dispatcher_t* dispatcher_;
-  fidl::Binding<::fuchsia::ui::views_v1::ViewManager> binding_;
+  fidl::Binding<::fuchsia::ui::viewsv1::ViewManager> binding_;
   FakeScenic* fake_scenic_;
   FakeView fake_view_;
 };

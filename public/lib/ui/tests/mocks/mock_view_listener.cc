@@ -17,7 +17,7 @@ MockViewListener::MockViewListener(OnMockViewPropertiesCallback callback)
 MockViewListener::~MockViewListener() {}
 
 void MockViewListener::OnPropertiesChanged(
-    ::fuchsia::ui::views_v1::ViewProperties properties,
+    ::fuchsia::ui::viewsv1::ViewProperties properties,
     OnPropertiesChangedCallback callback) {
   if (callback_) {
     callback_(std::move(properties));

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.ui.views_v1;
+library fuchsia.ui.viewsv1;
 
 using fuchsia.ui.scenic;
 
@@ -58,7 +58,7 @@ interface ViewManager {
   // To destroy the view and cause it to be removed from the view tree,
   // simply close the |view|, |view_listener|, or |view_owner| channels.
   2: CreateView(request<View> view,
-               request<fuchsia.ui.views_v1_token.ViewOwner> view_owner,
+               request<fuchsia.ui.viewsv1token.ViewOwner> view_owner,
                ViewListener view_listener,
                handle<eventpair> parent_export_token,
                string? label);

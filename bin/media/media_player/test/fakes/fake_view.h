@@ -5,8 +5,8 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_VIEW_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_VIEW_H_
 
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
 #include "lib/fidl/cpp/binding.h"
@@ -15,7 +15,7 @@ namespace media_player {
 namespace test {
 
 // Implements View for testing.
-class FakeView : public ::fuchsia::ui::views_v1::View,
+class FakeView : public ::fuchsia::ui::viewsv1::View,
                  public ::fuchsia::sys::ServiceProvider,
                  public ::fuchsia::ui::input::InputConnection {
  public:
@@ -23,15 +23,15 @@ class FakeView : public ::fuchsia::ui::views_v1::View,
 
   ~FakeView() override;
 
-  const ::fuchsia::ui::views_v1::ViewListenerPtr& view_listener() {
+  const ::fuchsia::ui::viewsv1::ViewListenerPtr& view_listener() {
     return view_listener_;
   }
 
   // Binds the view.
-  void Bind(fidl::InterfaceRequest<::fuchsia::ui::views_v1::View> view_request,
-            fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+  void Bind(fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view_request,
+            fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
                 view_owner_request,
-            ::fuchsia::ui::views_v1::ViewListenerPtr listener,
+            ::fuchsia::ui::viewsv1::ViewListenerPtr listener,
             zx::eventpair parent_export_token, fidl::StringPtr label);
 
   // View implementation.
@@ -46,7 +46,7 @@ class FakeView : public ::fuchsia::ui::views_v1::View,
       fidl::VectorPtr<fidl::StringPtr> service_names) override;
 
   void GetContainer(
-      fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewContainer> container)
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewContainer> container)
       override;
 
   // ServiceProvider implementation.
@@ -67,26 +67,26 @@ class FakeView : public ::fuchsia::ui::views_v1::View,
       override;
 
  private:
-  class Owner : public ::fuchsia::ui::views_v1_token::ViewOwner {
+  class Owner : public ::fuchsia::ui::viewsv1token::ViewOwner {
    public:
     Owner();
 
     ~Owner() override;
 
     // Binds the view owner.
-    void Bind(fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+    void Bind(fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
                   view_owner_request);
 
     // ViewOwner implementation.
     void GetToken(GetTokenCallback callback) override;
 
    private:
-    fidl::Binding<::fuchsia::ui::views_v1_token::ViewOwner> binding_;
+    fidl::Binding<::fuchsia::ui::viewsv1token::ViewOwner> binding_;
   };
 
   async_dispatcher_t* dispatcher_;
-  fidl::Binding<::fuchsia::ui::views_v1::View> binding_;
-  ::fuchsia::ui::views_v1::ViewListenerPtr view_listener_;
+  fidl::Binding<::fuchsia::ui::viewsv1::View> binding_;
+  ::fuchsia::ui::viewsv1::ViewListenerPtr view_listener_;
   zx::eventpair parent_export_token_;
   std::string label_;
   Owner owner_;

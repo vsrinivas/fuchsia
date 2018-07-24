@@ -52,7 +52,7 @@ class App : public fuchsia::examples::shadertoy::ShadertoyFactory {
   void NewViewShadertoy(
       ::fidl::InterfaceRequest<fuchsia::examples::shadertoy::Shadertoy>
           toy_request,
-      ::fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+      ::fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
       bool handle_input_events) override;
 

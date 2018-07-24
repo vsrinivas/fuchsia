@@ -8,7 +8,7 @@
 #include <memory>
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include "garnet/bin/ui/view_manager/view_registry.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -28,7 +28,7 @@ class ViewManagerApp {
   std::unique_ptr<component::StartupContext> startup_context_;
 
   std::unique_ptr<ViewRegistry> registry_;
-  fidl::BindingSet<::fuchsia::ui::views_v1::ViewManager,
+  fidl::BindingSet<::fuchsia::ui::viewsv1::ViewManager,
                    std::unique_ptr<ViewManagerImpl>>
       view_manager_bindings_;
 

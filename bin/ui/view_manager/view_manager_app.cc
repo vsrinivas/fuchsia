@@ -16,8 +16,8 @@ ViewManagerApp::ViewManagerApp()
   registry_.reset(new ViewRegistry(startup_context_.get()));
 
   startup_context_->outgoing()
-      .AddPublicService<::fuchsia::ui::views_v1::ViewManager>(
-          [this](fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewManager>
+      .AddPublicService<::fuchsia::ui::viewsv1::ViewManager>(
+          [this](fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewManager>
                      request) {
             view_manager_bindings_.AddBinding(
                 std::make_unique<ViewManagerImpl>(registry_.get()),

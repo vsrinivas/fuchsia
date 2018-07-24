@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.ui.views_v1;
+library fuchsia.ui.viewsv1;
 
 // A view is a graphical user interface component which is responsible
 // for drawing and supporting user interactions in the area of the screen
@@ -42,7 +42,7 @@ library fuchsia.ui.views_v1;
 // 3. Set listeners on the input connection to receive events.
 interface View {
   // Gets the view's token.
-  1: GetToken() -> (fuchsia.ui.views_v1_token.ViewToken token);
+  1: GetToken() -> (fuchsia.ui.viewsv1token.ViewToken token);
 
   // Gets a service provider to access services which are associated with
   // the view such as input, accessibility and editing capabilities.

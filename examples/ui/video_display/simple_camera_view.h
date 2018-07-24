@@ -21,8 +21,8 @@ class SimpleCameraView : public mozart::BaseView {
  public:
   SimpleCameraView(
       async::Loop* loop, component::StartupContext* startup_context,
-      ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+      ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
       bool use_fake_camera);
 

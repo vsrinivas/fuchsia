@@ -15,6 +15,6 @@ fidl("services") {
   public_deps = [
     "//garnet/public/fidl/fuchsia.images",
     "//garnet/public/fidl/fuchsia.ui.gfx",
-    "//garnet/public/fidl/fuchsia.ui.views_v1",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
   ]
 }

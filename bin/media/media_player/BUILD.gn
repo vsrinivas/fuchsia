@@ -37,7 +37,7 @@ executable("media_player_bin") {
     "//garnet/public/fidl/fuchsia.mediaplayer",
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/ui/view_framework",
-    "//garnet/public/fidl/fuchsia.ui.views_v1",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]

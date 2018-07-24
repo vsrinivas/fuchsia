@@ -19,7 +19,7 @@ FakeViewManager::FakeViewManager(FakeScenic* fake_scenic)
 FakeViewManager::~FakeViewManager() {}
 
 void FakeViewManager::Bind(
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewManager> request) {
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewManager> request) {
   binding_.Bind(std::move(request));
 }
 
@@ -29,15 +29,15 @@ void FakeViewManager::GetScenic(
 }
 
 void FakeViewManager::CreateView(
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1::View> view,
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner,
-    fidl::InterfaceHandle<::fuchsia::ui::views_v1::ViewListener> view_listener,
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view,
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner> view_owner,
+    fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewListener> view_listener,
     zx::eventpair parent_export_token, fidl::StringPtr label) {
   fake_view_.Bind(std::move(view), std::move(view_owner), view_listener.Bind(),
                   std::move(parent_export_token), label);
 
-  fuchsia::ui::views_v1::ViewProperties properties;
-  properties.view_layout = fuchsia::ui::views_v1::ViewLayout::New();
+  fuchsia::ui::viewsv1::ViewProperties properties;
+  properties.view_layout = fuchsia::ui::viewsv1::ViewLayout::New();
   properties.view_layout->size.width = 1920.0f;
   properties.view_layout->size.height = 1080.0f;
   properties.view_layout->inset.top = 0.0f;
@@ -49,8 +49,8 @@ void FakeViewManager::CreateView(
 }
 
 void FakeViewManager::CreateViewTree(
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewTree> view_tree,
-    fidl::InterfaceHandle<::fuchsia::ui::views_v1::ViewTreeListener>
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewTree> view_tree,
+    fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewTreeListener>
         view_tree_listener,
     fidl::StringPtr label) {
   FXL_NOTIMPLEMENTED();

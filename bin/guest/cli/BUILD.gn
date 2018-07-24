@@ -28,7 +28,7 @@ executable("bin") {
     "//garnet/public/fidl/fuchsia.guest",
     "//garnet/public/lib/svc/cpp",
     "//garnet/public/fidl/fuchsia.ui.policy",
-    "//garnet/public/fidl/fuchsia.ui.views_v1",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/pretty",

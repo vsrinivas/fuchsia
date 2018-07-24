@@ -195,8 +195,8 @@ void ViewImpl::QuitLoop() {
 
 OldView::OldView(
     component::StartupContext* startup_context,
-    ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+    ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request)
     : mozart::BaseView(std::move(view_manager), std::move(view_owner_request),
                        "Shadertoy Example"),

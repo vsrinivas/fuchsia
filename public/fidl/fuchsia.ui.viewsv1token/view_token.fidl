@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.ui.views_v1_token;
+library fuchsia.ui.viewsv1token;
 
 // A view token is an opaque transferable reference to a view.
 //

@@ -4,7 +4,7 @@
 
 library fuchsia.guest;
 
-using fuchsia.ui.views_v1;
+using fuchsia.ui.viewsv1;
 
 // A |GuestController| provides access to services vended by a guest instance.
 [Discoverable]
@@ -18,5 +18,5 @@ interface GuestController {
   2: GetSerial() -> (handle<socket> socket);
 
   // Fetch the guest display view provider.
-  3: GetViewProvider() -> (fuchsia.ui.views_v1.ViewProvider view_provider);
+  3: GetViewProvider() -> (fuchsia.ui.viewsv1.ViewProvider view_provider);
 };

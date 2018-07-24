@@ -45,7 +45,7 @@ executable("root_presenter") {
     "//garnet/public/fidl/fuchsia.ui.policy",
     "//garnet/public/lib/ui/scenic/cpp",
     "//garnet/public/lib/ui/views/cpp",
-    "//garnet/public/fidl/fuchsia.ui.views_v1",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/hid",

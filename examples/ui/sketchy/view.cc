@@ -7,8 +7,8 @@
 namespace sketchy_example {
 
 View::View(async::Loop* loop, component::StartupContext* startup_context,
-           ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-           fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+           ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+           fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
                view_owner_request)
     : BaseView(std::move(view_manager), std::move(view_owner_request),
                "Sketchy Example"),
@@ -30,7 +30,7 @@ View::View(async::Loop* loop, component::StartupContext* startup_context,
 }
 
 void View::OnPropertiesChanged(
-    ::fuchsia::ui::views_v1::ViewProperties old_properties) {
+    ::fuchsia::ui::viewsv1::ViewProperties old_properties) {
   float width = properties().view_layout->size.width;
   float height = properties().view_layout->size.height;
   scenic::Rectangle background_shape(session(), width, height);

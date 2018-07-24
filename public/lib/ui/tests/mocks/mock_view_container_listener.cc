@@ -19,7 +19,7 @@ MockViewContainerListener::MockViewContainerListener(
 MockViewContainerListener::~MockViewContainerListener() {}
 
 void MockViewContainerListener::OnChildAttached(
-    uint32_t child_key, ::fuchsia::ui::views_v1::ViewInfo child_view_info,
+    uint32_t child_key, ::fuchsia::ui::viewsv1::ViewInfo child_view_info,
     OnChildAttachedCallback callback) {
   if (child_attached_callback_) {
     child_attached_callback_(child_key, std::move(child_view_info));

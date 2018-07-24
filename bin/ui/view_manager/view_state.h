@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "garnet/bin/ui/view_manager/view_container_state.h"
 #include "lib/fidl/cpp/binding.h"
@@ -45,9 +45,9 @@ class ViewState : public ViewContainerState {
     INVALIDATION_STALLED = 1u << 4,
   };
 
-  ViewState(ViewRegistry* registry, ::fuchsia::ui::views_v1_token::ViewToken view_token,
-            fidl::InterfaceRequest<::fuchsia::ui::views_v1::View> view_request,
-            ::fuchsia::ui::views_v1::ViewListenerPtr view_listener,
+  ViewState(ViewRegistry* registry, ::fuchsia::ui::viewsv1token::ViewToken view_token,
+            fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view_request,
+            ::fuchsia::ui::viewsv1::ViewListenerPtr view_listener,
             scenic::Session* session, const std::string& label);
   ~ViewState() override;
 
@@ -55,11 +55,11 @@ class ViewState : public ViewContainerState {
 
   // Gets the token used to refer to this view globally.
   // Caller does not obtain ownership of the token.
-  const ::fuchsia::ui::views_v1_token::ViewToken& view_token() const { return view_token_; }
+  const ::fuchsia::ui::viewsv1token::ViewToken& view_token() const { return view_token_; }
 
   // Gets the view listener interface, never null.
   // Caller does not obtain ownership of the view listener.
-  const ::fuchsia::ui::views_v1::ViewListenerPtr& view_listener() const {
+  const ::fuchsia::ui::viewsv1::ViewListenerPtr& view_listener() const {
     return view_listener_;
   }
 
@@ -74,13 +74,13 @@ class ViewState : public ViewContainerState {
   // Gets the properties the view was asked to apply, after applying
   // any inherited properties from the container, or null if none set.
   // This value is preserved across reparenting.
-  const ::fuchsia::ui::views_v1::ViewPropertiesPtr& issued_properties() const {
+  const ::fuchsia::ui::viewsv1::ViewPropertiesPtr& issued_properties() const {
     return issued_properties_;
   }
 
   // Sets the requested properties.
   // Sets |issued_properties_valid()| to true if |properties| is not null.
-  void IssueProperties(::fuchsia::ui::views_v1::ViewPropertiesPtr properties);
+  void IssueProperties(::fuchsia::ui::viewsv1::ViewPropertiesPtr properties);
 
   // Gets or sets flags describing the invalidation state of the view.
   uint32_t invalidation_flags() const { return invalidation_flags_; }
@@ -89,7 +89,7 @@ class ViewState : public ViewContainerState {
   // Binds the |ViewOwner| interface to the view which has the effect of
   // tying the view's lifetime to that of the owner's pipe.
   void BindOwner(
-      fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request);
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner> view_owner_request);
 
   // Unbinds the view from its owner.
   void ReleaseOwner();
@@ -116,20 +116,20 @@ class ViewState : public ViewContainerState {
  private:
   void RebuildFocusChain();
 
-  ::fuchsia::ui::views_v1_token::ViewToken view_token_;
-  ::fuchsia::ui::views_v1::ViewListenerPtr view_listener_;
+  ::fuchsia::ui::viewsv1token::ViewToken view_token_;
+  ::fuchsia::ui::viewsv1::ViewListenerPtr view_listener_;
   scenic::EntityNode top_node_;
 
   const std::string label_;
   mutable std::string formatted_label_cache_;
 
   std::unique_ptr<ViewImpl> impl_;
-  fidl::Binding<::fuchsia::ui::views_v1::View> view_binding_;
-  fidl::Binding<::fuchsia::ui::views_v1_token::ViewOwner> owner_binding_;
+  fidl::Binding<::fuchsia::ui::viewsv1::View> view_binding_;
+  fidl::Binding<::fuchsia::ui::viewsv1token::ViewOwner> owner_binding_;
 
   ViewStub* view_stub_ = nullptr;
 
-  ::fuchsia::ui::views_v1::ViewPropertiesPtr issued_properties_;
+  ::fuchsia::ui::viewsv1::ViewPropertiesPtr issued_properties_;
 
   uint32_t invalidation_flags_ = 0u;
 

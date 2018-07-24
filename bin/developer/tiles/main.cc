@@ -37,13 +37,13 @@ int main(int argc, const char** argv) {
 
   auto view_manager =
       startup_context
-          ->ConnectToEnvironmentService<fuchsia::ui::views_v1::ViewManager>();
+          ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewManager>();
 
   auto border_arg = command_line.GetOptionValueWithDefault("border", "10");
   int border = fxl::StringToNumber<int>(border_arg);
 
   // Create tiles with a token for its root view.
-  fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner> view_owner;
+  fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> view_owner;
   tiles::Tiles tiles(std::move(view_manager), view_owner.NewRequest(),
                      startup_context.get(), border);
 

@@ -7,8 +7,8 @@
 #include "lib/ui/scenic/fidl_helpers.h"
 
 VkCubeView::VkCubeView(
-    ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+    ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request,
     ResizeCallback resize_callback)
     : BaseView(std::move(view_manager), std::move(view_owner_request),

@@ -21,7 +21,7 @@ int main(int argc, const char** argv) {
 
   auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
-  // Export deprecated |fuchsia.ui.views_v1.ViewProvider| service.
+  // Export deprecated |fuchsia.ui.viewsv1.ViewProvider| service.
   mozart::ViewProviderApp mozart_app(
       startup_context.get(), [](mozart::ViewContext view_context) {
         return std::make_unique<shadertoy_client::OldView>(

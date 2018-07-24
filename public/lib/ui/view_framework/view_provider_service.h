@@ -8,7 +8,7 @@
 #include <functional>
 #include <vector>
 
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
@@ -19,8 +19,8 @@ namespace mozart {
 // Parameters for creating a view.
 struct ViewContext {
   component::StartupContext* startup_context;
-  ::fuchsia::ui::views_v1::ViewManagerPtr view_manager;
-  fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+  ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager;
+  fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
       view_owner_request;
   fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services;
 };
@@ -35,7 +35,7 @@ using ViewFactory =
 // when the view provider itself is destroyed.
 //
 // This is only intended to be used for simple example programs.
-class ViewProviderService : public ::fuchsia::ui::views_v1::ViewProvider {
+class ViewProviderService : public ::fuchsia::ui::viewsv1::ViewProvider {
  public:
   explicit ViewProviderService(component::StartupContext* startup_context,
                                ViewFactory factory);
@@ -43,7 +43,7 @@ class ViewProviderService : public ::fuchsia::ui::views_v1::ViewProvider {
 
   // |ViewProvider|
   void CreateView(
-      fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> view_services)
       override;

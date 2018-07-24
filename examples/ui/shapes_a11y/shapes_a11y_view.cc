@@ -11,8 +11,8 @@ constexpr float kBackgroundElevation = 0.f;
 }  // namespace
 
 ShapesA11yView::ShapesA11yView(
-    ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+    ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request)
     : BaseView(std::move(view_manager), std::move(view_owner_request),
                "Shapes_A11y"),

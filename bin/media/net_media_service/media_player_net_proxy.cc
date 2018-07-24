@@ -106,8 +106,8 @@ void MediaPlayerNetProxy::SetGain(float gain) {
 }
 
 void MediaPlayerNetProxy::CreateView(
-    fidl::InterfaceHandle<::fuchsia::ui::views_v1::ViewManager> view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+    fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewManager> view_manager,
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request) {
   FXL_LOG(ERROR) << "CreateView called on MediaPlayer proxy - not supported.";
   UnbindAndReleaseFromOwner();

@@ -14,7 +14,7 @@ namespace view_manager {
 
 InputConnectionImpl::InputConnectionImpl(
     ViewInspector* inspector, InputOwner* owner,
-    ::fuchsia::ui::views_v1_token::ViewToken view_token,
+    ::fuchsia::ui::viewsv1token::ViewToken view_token,
     fidl::InterfaceRequest<fuchsia::ui::input::InputConnection> request)
     : inspector_(inspector),
       owner_(owner),

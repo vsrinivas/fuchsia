@@ -21,6 +21,6 @@ interface ShadertoyFactory {
   // input events, and SetMouse() will behave normally.
   // TODO(MZ-227): not implemented.
   2: NewViewShadertoy(request<Shadertoy> toy,
-                      request<fuchsia.ui.views_v1_token.ViewOwner> view_owner,
+                      request<fuchsia.ui.viewsv1token.ViewOwner> view_owner,
                       bool handle_input_events);
 };

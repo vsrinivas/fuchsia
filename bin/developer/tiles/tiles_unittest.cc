@@ -12,30 +12,30 @@
 
 namespace {
 
-class FakeViewManager : public fuchsia::ui::views_v1::ViewManager {
+class FakeViewManager : public fuchsia::ui::viewsv1::ViewManager {
  public:
   FakeViewManager() : binding_(this) {}
 
-  void Bind(fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewManager> req) {
+  void Bind(fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewManager> req) {
     binding_.Bind(std::move(req));
   }
 
  private:
-  // fuchsia::ui::views_v1::ViewManager implementation.
+  // fuchsia::ui::viewsv1::ViewManager implementation.
   void GetScenic(
       fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> scenic) final {}
   void CreateView(
-      fidl::InterfaceRequest<fuchsia::ui::views_v1::View> view,
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner,
-      fidl::InterfaceHandle<fuchsia::ui::views_v1::ViewListener> view_listener,
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1::View> view,
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
+      fidl::InterfaceHandle<fuchsia::ui::viewsv1::ViewListener> view_listener,
       zx::eventpair parent_export_token, fidl::StringPtr label) final {}
   void CreateViewTree(
-      fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewTree> view_tree,
-      fidl::InterfaceHandle<fuchsia::ui::views_v1::ViewTreeListener>
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewTree> view_tree,
+      fidl::InterfaceHandle<fuchsia::ui::viewsv1::ViewTreeListener>
           view_tree_listener,
       fidl::StringPtr label) final {}
 
-  fidl::Binding<fuchsia::ui::views_v1::ViewManager> binding_;
+  fidl::Binding<fuchsia::ui::viewsv1::ViewManager> binding_;
 };
 
 class TilesTest : public gtest::TestLoopFixture {
@@ -47,9 +47,9 @@ class TilesTest : public gtest::TestLoopFixture {
   }
 
   void SetUp() final {
-    fuchsia::ui::views_v1::ViewManagerPtr view_manager_ptr;
+    fuchsia::ui::viewsv1::ViewManagerPtr view_manager_ptr;
     view_manager_.Bind(view_manager_ptr.NewRequest());
-    fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner;
+    fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner;
 
     tiles_impl_ = std::make_unique<tiles::Tiles>(std::move(view_manager_ptr),
                                                  view_owner.NewRequest(),

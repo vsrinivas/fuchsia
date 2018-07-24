@@ -14,9 +14,9 @@
 namespace view_manager {
 
 ViewTreeState::ViewTreeState(
-    ViewRegistry* registry, ::fuchsia::ui::views_v1::ViewTreeToken view_tree_token,
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewTree> view_tree_request,
-    ::fuchsia::ui::views_v1::ViewTreeListenerPtr view_tree_listener, const std::string& label)
+    ViewRegistry* registry, ::fuchsia::ui::viewsv1::ViewTreeToken view_tree_token,
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewTree> view_tree_request,
+    ::fuchsia::ui::viewsv1::ViewTreeListenerPtr view_tree_listener, const std::string& label)
     : view_tree_token_(std::move(view_tree_token)),
       view_tree_listener_(std::move(view_tree_listener)),
       label_(label),

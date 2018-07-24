@@ -13,7 +13,7 @@ using fuchsia.ui.gfx;
 // TODO(SCN-599): this will be replaced by Presenter2
 [Discoverable]
 interface Presenter {
-  1: Present(fuchsia.ui.views_v1_token.ViewOwner view_owner, request<Presentation>? presentation_request);
+  1: Present(fuchsia.ui.viewsv1token.ViewOwner view_owner, request<Presentation>? presentation_request);
 
   // Sets new default renderer params and forces them on for the duration of the
   // presenter's lifetime. Only applies to any subsequent calls to Present().

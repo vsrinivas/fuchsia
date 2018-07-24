@@ -4,7 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.ui.views_v1") {
+fidl("fuchsia.ui.viewsv1") {
   sdk_category = "partner"
 
   sources = [
@@ -24,6 +24,6 @@ fidl("fuchsia.ui.views_v1") {
     "//garnet/public/fidl/fuchsia.ui.gfx",
     "//garnet/public/fidl/fuchsia.ui.input",
     "//garnet/public/fidl/fuchsia.ui.scenic",
-    "//garnet/public/fidl/fuchsia.ui.views_v1_token",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1token",
   ]
 }

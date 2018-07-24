@@ -8,7 +8,7 @@
 #include <fuchsia/developer/tiles/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 
 #include "lib/component/cpp/startup_context.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
@@ -17,12 +17,12 @@
 
 namespace tiles {
 
-class Tiles : public fuchsia::ui::views_v1::ViewListener,
-              public fuchsia::ui::views_v1::ViewContainerListener,
+class Tiles : public fuchsia::ui::viewsv1::ViewListener,
+              public fuchsia::ui::viewsv1::ViewContainerListener,
               public fuchsia::developer::tiles::Tiles {
  public:
-  Tiles(::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-        fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+  Tiles(::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+        fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
             view_owner_request,
         component::StartupContext* startup_context, int border);
 
@@ -42,17 +42,17 @@ class Tiles : public fuchsia::ui::views_v1::ViewListener,
     fuchsia::sys::ComponentControllerPtr controller;
     scenic::EntityNode host_node;
 
-    ::fuchsia::ui::views_v1::ViewProperties view_properties;
-    ::fuchsia::ui::views_v1::ViewInfo view_info;
+    ::fuchsia::ui::viewsv1::ViewProperties view_properties;
+    ::fuchsia::ui::viewsv1::ViewInfo view_info;
   };
 
-  // |fuchsia::ui::views_v1::ViewListener|:
-  void OnPropertiesChanged(fuchsia::ui::views_v1::ViewProperties properties,
+  // |fuchsia::ui::viewsv1::ViewListener|:
+  void OnPropertiesChanged(fuchsia::ui::viewsv1::ViewProperties properties,
                            OnPropertiesChangedCallback callback) final;
 
-  // |fuchsia::ui::views_v1::ViewContainerListener|:
+  // |fuchsia::ui::viewsv1::ViewContainerListener|:
   void OnChildAttached(uint32_t child_key,
-                       fuchsia::ui::views_v1::ViewInfo child_view_info,
+                       fuchsia::ui::viewsv1::ViewInfo child_view_info,
                        OnChildAttachedCallback) final;
   void OnChildUnavailable(uint32_t child_key,
                           OnChildUnavailableCallback callback) final;
@@ -63,7 +63,7 @@ class Tiles : public fuchsia::ui::views_v1::ViewListener,
                       AddTileFromURLCallback callback) final;
   void AddTileFromViewProvider(
       fidl::StringPtr url,
-      fidl::InterfaceHandle<::fuchsia::ui::views_v1::ViewProvider> provider,
+      fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewProvider> provider,
       AddTileFromViewProviderCallback callback) final;
   void RemoveTile(uint32_t key) final;
   void ListTiles(ListTilesCallback callback) final;
@@ -72,7 +72,7 @@ class Tiles : public fuchsia::ui::views_v1::ViewListener,
 
   void AddChildView(
       uint32_t child_key,
-      fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner>
+      fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
           view_owner,
       const std::string& url, fuchsia::sys::ComponentControllerPtr);
 
@@ -84,18 +84,18 @@ class Tiles : public fuchsia::ui::views_v1::ViewListener,
   component::StartupContext* startup_context_;
 
   // Connection to the view manager and root view.
-  fuchsia::ui::views_v1::ViewManagerPtr view_manager_;
-  fidl::Binding<fuchsia::ui::views_v1::ViewListener> view_listener_binding_;
-  fidl::Binding<fuchsia::ui::views_v1::ViewContainerListener>
+  fuchsia::ui::viewsv1::ViewManagerPtr view_manager_;
+  fidl::Binding<fuchsia::ui::viewsv1::ViewListener> view_listener_binding_;
+  fidl::Binding<fuchsia::ui::viewsv1::ViewContainerListener>
       view_container_listener_binding_;
-  fuchsia::ui::views_v1::ViewPtr view_;
+  fuchsia::ui::viewsv1::ViewPtr view_;
   scenic::Session session_;
 
   scenic::ImportNode root_node_;
   scenic::ShapeNode background_node_;
   scenic::EntityNode container_node_;
 
-  fuchsia::ui::views_v1::ViewContainerPtr view_container_;
+  fuchsia::ui::viewsv1::ViewContainerPtr view_container_;
 
   fuchsia::sys::LauncherPtr launcher_;
   fidl::BindingSet<fuchsia::developer::tiles::Tiles> tiles_binding_;

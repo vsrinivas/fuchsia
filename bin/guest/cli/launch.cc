@@ -6,7 +6,7 @@
 
 #include <fuchsia/guest/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 
 #include "garnet/bin/guest/cli/serial.h"
 #include "lib/component/cpp/environment_services.h"
@@ -40,7 +40,7 @@ void handle_launch(int argc, const char* argv[]) {
     }
     auto view_provider_ptr = view_provider.Bind();
 
-    fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> view_owner;
+    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner;
     view_provider_ptr->CreateView(view_owner.NewRequest(), nullptr);
 
     // Ask the presenter to display it.

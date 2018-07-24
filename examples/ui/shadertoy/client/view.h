@@ -70,8 +70,8 @@ class ViewImpl {
 class OldView : public mozart::BaseView {
  public:
   OldView(component::StartupContext* startup_context,
-          ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-          fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+          ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+          fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
               view_owner_request);
 
   ~OldView() override;

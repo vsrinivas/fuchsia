@@ -9,8 +9,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
 #include "garnet/bin/media/media_player/test/fakes/packet_info.h"

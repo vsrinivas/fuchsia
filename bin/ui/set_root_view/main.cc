@@ -6,7 +6,7 @@
 #include <lib/zx/channel.h>
 
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
@@ -59,9 +59,9 @@ int main(int argc, const char** argv) {
   });
 
   // Create the view.
-  fidl::InterfacePtr<::fuchsia::ui::views_v1::ViewProvider> view_provider;
+  fidl::InterfacePtr<::fuchsia::ui::viewsv1::ViewProvider> view_provider;
   services.ConnectToService(view_provider.NewRequest());
-  fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner> view_owner;
+  fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> view_owner;
   view_provider->CreateView(view_owner.NewRequest(), nullptr);
 
   // Ask the presenter to display it.

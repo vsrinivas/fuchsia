@@ -9,7 +9,7 @@
 #include <memory>
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include "garnet/examples/ui/tile/tile_params.h"
 #include "lib/component/cpp/startup_context.h"
@@ -23,8 +23,8 @@ namespace examples {
 
 class TileView : public mozart::BaseView, public fuchsia::ui::policy::Presenter {
  public:
-  TileView(::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-           fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+  TileView(::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+           fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
                view_owner_request,
            component::StartupContext* startup_context,
            const TileParams& tile_params);
@@ -43,21 +43,21 @@ class TileView : public mozart::BaseView, public fuchsia::ui::policy::Presenter 
     fuchsia::sys::ComponentControllerPtr controller;
     scenic::EntityNode host_node;
 
-    ::fuchsia::ui::views_v1::ViewProperties view_properties;
-    ::fuchsia::ui::views_v1::ViewInfo view_info;
+    ::fuchsia::ui::viewsv1::ViewProperties view_properties;
+    ::fuchsia::ui::viewsv1::ViewInfo view_info;
   };
 
   // |BaseView|:
   void OnChildAttached(
       uint32_t child_key,
-      ::fuchsia::ui::views_v1::ViewInfo child_view_info) override;
+      ::fuchsia::ui::viewsv1::ViewInfo child_view_info) override;
   void OnChildUnavailable(uint32_t child_key) override;
   void OnSceneInvalidated(
       fuchsia::images::PresentationInfo presentation_info) override;
 
   // |Presenter|:
   void Present(
-      fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner>
+      fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
           view_owner,
       fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation) override;
   void HACK_SetRendererParams(
@@ -72,7 +72,7 @@ class TileView : public mozart::BaseView, public fuchsia::ui::policy::Presenter 
   void ConnectViews();
 
   void AddChildView(
-      fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner>
+      fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
           view_owner,
       const std::string& url, fuchsia::sys::ComponentControllerPtr);
   void RemoveChildView(uint32_t child_key);

@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_UI_VIEW_MANAGER_VIEW_TREE_IMPL_H_
 #define GARNET_BIN_UI_VIEW_MANAGER_VIEW_TREE_IMPL_H_
 
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
@@ -16,8 +16,8 @@ class ViewTreeState;
 
 // ViewTree interface implementation.
 // This object is owned by its associated ViewTreeState.
-class ViewTreeImpl : public ::fuchsia::ui::views_v1::ViewTree,
-                     public ::fuchsia::ui::views_v1::ViewContainer,
+class ViewTreeImpl : public ::fuchsia::ui::viewsv1::ViewTree,
+                     public ::fuchsia::ui::viewsv1::ViewContainer,
                      public fuchsia::sys::ServiceProvider {
  public:
   ViewTreeImpl(ViewRegistry* registry, ViewTreeState* state);
@@ -28,22 +28,22 @@ class ViewTreeImpl : public ::fuchsia::ui::views_v1::ViewTree,
   void GetToken(GetTokenCallback callback) override;
   void GetServiceProvider(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
                               service_provider) override;
-  void GetContainer(fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewContainer>
+  void GetContainer(fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewContainer>
                         view_container_request) override;
 
   // |ViewContainer|:
   void SetListener(
-      fidl::InterfaceHandle<::fuchsia::ui::views_v1::ViewContainerListener> listener) override;
+      fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewContainerListener> listener) override;
   void AddChild(
       uint32_t child_key,
-      fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner> child_view_owner,
+      fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> child_view_owner,
       zx::eventpair host_import_token) override;
   void RemoveChild(uint32_t child_key,
-                   fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+                   fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
                        transferred_view_owner_request) override;
   void SetChildProperties(
       uint32_t child_key,
-      ::fuchsia::ui::views_v1::ViewPropertiesPtr child_view_properties) override;
+      ::fuchsia::ui::viewsv1::ViewPropertiesPtr child_view_properties) override;
   void RequestFocus(uint32_t child_key) override;
 
   // |fuchsia::sys::ServiceProvider|:
@@ -53,7 +53,7 @@ class ViewTreeImpl : public ::fuchsia::ui::views_v1::ViewTree,
   ViewRegistry* const registry_;
   ViewTreeState* const state_;
   fidl::BindingSet<fuchsia::sys::ServiceProvider> service_provider_bindings_;
-  fidl::BindingSet<::fuchsia::ui::views_v1::ViewContainer> container_bindings_;
+  fidl::BindingSet<::fuchsia::ui::viewsv1::ViewContainer> container_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewTreeImpl);
 };

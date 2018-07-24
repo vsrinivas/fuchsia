@@ -5,7 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/channel.h>
 
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include "garnet/bin/ui/root_presenter/renderer_params.h"
 #include "lib/component/cpp/startup_context.h"

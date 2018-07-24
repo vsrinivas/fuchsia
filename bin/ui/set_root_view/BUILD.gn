@@ -13,7 +13,7 @@ executable("set_root_view") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//garnet/public/fidl/fuchsia.ui.policy",
-    "//garnet/public/fidl/fuchsia.ui.views_v1",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

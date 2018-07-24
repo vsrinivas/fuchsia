@@ -13,6 +13,6 @@ fidl("fuchsia.developer.tiles") {
 
   deps = [
     "//garnet/public/fidl/fuchsia.math",
-    "//garnet/public/fidl/fuchsia.ui.views_v1",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
   ]
 }

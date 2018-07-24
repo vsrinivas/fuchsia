@@ -17,7 +17,7 @@ fidl("fuchsia.mediaplayer") {
   public_deps = [
     "//garnet/public/fidl/fuchsia.math",
     "//garnet/public/fidl/fuchsia.media",
-    "//garnet/public/fidl/fuchsia.ui.views_v1",
-    "//garnet/public/fidl/fuchsia.ui.views_v1_token",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1token",
   ]
 }

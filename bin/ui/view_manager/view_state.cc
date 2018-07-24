@@ -12,9 +12,9 @@
 namespace view_manager {
 
 ViewState::ViewState(ViewRegistry* registry,
-                     ::fuchsia::ui::views_v1_token::ViewToken view_token,
-                     fidl::InterfaceRequest<::fuchsia::ui::views_v1::View> view_request,
-                     ::fuchsia::ui::views_v1::ViewListenerPtr view_listener,
+                     ::fuchsia::ui::viewsv1token::ViewToken view_token,
+                     fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view_request,
+                     ::fuchsia::ui::viewsv1::ViewListenerPtr view_listener,
                      scenic::Session* session, const std::string& label)
     : view_token_(std::move(view_token)),
       view_listener_(std::move(view_listener)),
@@ -39,12 +39,12 @@ ViewState::ViewState(ViewRegistry* registry,
 
 ViewState::~ViewState() {}
 
-void ViewState::IssueProperties(::fuchsia::ui::views_v1::ViewPropertiesPtr properties) {
+void ViewState::IssueProperties(::fuchsia::ui::viewsv1::ViewPropertiesPtr properties) {
   issued_properties_ = std::move(properties);
 }
 
 void ViewState::BindOwner(
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request) {
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner> view_owner_request) {
   FXL_DCHECK(!owner_binding_.is_bound());
   owner_binding_.Bind(std::move(view_owner_request));
 }

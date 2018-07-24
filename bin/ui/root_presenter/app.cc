@@ -6,7 +6,7 @@
 
 #include <algorithm>
 
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include "lib/component/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -74,7 +74,7 @@ Presentation::ShutdownCallback App::GetShutdownCallback(
 }
 
 void App::Present(
-    fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner>
+    fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_handle,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
         presentation_request) {

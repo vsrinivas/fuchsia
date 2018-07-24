@@ -17,7 +17,7 @@ class PendingViewOwnerTransferState {
  public:
   PendingViewOwnerTransferState(
       std::unique_ptr<ViewStub> view_stub,
-      fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
           transferred_view_owner_request)
       : view_stub_(std::move(view_stub)),
         transferred_view_owner_request_(
@@ -29,12 +29,12 @@ class PendingViewOwnerTransferState {
   std::unique_ptr<ViewStub> view_stub_;
 
   // The |ViewOwner| we want to transfer ownership to.
-  fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+  fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
       transferred_view_owner_request_;
 };
 
 ViewStub::ViewStub(ViewRegistry* registry,
-                   fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner> owner,
+                   fidl::InterfaceHandle<::fuchsia::ui::viewsv1token::ViewOwner> owner,
                    zx::eventpair host_import_token)
     : registry_(registry),
       owner_(owner.Bind()),
@@ -45,9 +45,9 @@ ViewStub::ViewStub(ViewRegistry* registry,
   FXL_DCHECK(host_import_token_);
 
   owner_.set_error_handler(
-      [this] { OnViewResolved(::fuchsia::ui::views_v1_token::ViewToken(), false); });
+      [this] { OnViewResolved(::fuchsia::ui::viewsv1token::ViewToken(), false); });
 
-  owner_->GetToken([this](::fuchsia::ui::views_v1_token::ViewToken view_token) {
+  owner_->GetToken([this](::fuchsia::ui::viewsv1token::ViewToken view_token) {
     OnViewResolved(std::move(view_token), true);
   });
 }
@@ -74,7 +74,7 @@ void ViewStub::AttachView(ViewState* state) {
   SetTreeForChildrenOfView(state_, tree_);
 }
 
-void ViewStub::SetProperties(::fuchsia::ui::views_v1::ViewPropertiesPtr properties) {
+void ViewStub::SetProperties(::fuchsia::ui::viewsv1::ViewPropertiesPtr properties) {
   FXL_DCHECK(!is_unavailable());
 
   properties_ = std::move(properties);
@@ -134,7 +134,7 @@ void ViewStub::SetTreeForChildrenOfView(ViewState* view, ViewTreeState* tree) {
 
 // Called when the ViewOwner returns a token (using GetToken), or when the
 // ViewOwner is disconnected.
-void ViewStub::OnViewResolved(::fuchsia::ui::views_v1_token::ViewToken view_token,
+void ViewStub::OnViewResolved(::fuchsia::ui::viewsv1token::ViewToken view_token,
                               bool success) {
   if (success && transfer_view_owner_when_view_resolved()) {
     // While we were waiting for GetToken(), the view was transferred to a new
@@ -170,7 +170,7 @@ void ViewStub::OnViewResolved(::fuchsia::ui::views_v1_token::ViewToken view_toke
 
 void ViewStub::TransferViewOwnerWhenViewResolved(
     std::unique_ptr<ViewStub> view_stub,
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
         transferred_view_owner_request) {
   FXL_DCHECK(!container());  // Make sure we've been removed from the view tree
   FXL_DCHECK(!pending_view_owner_transfer_);

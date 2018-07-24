@@ -24,14 +24,14 @@ ViewProviderService::~ViewProviderService() {
 }
 
 void ViewProviderService::CreateView(
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> view_services) {
   ViewContext view_context;
   view_context.startup_context = startup_context_;
   view_context.view_manager =
       startup_context_
-          ->ConnectToEnvironmentService<::fuchsia::ui::views_v1::ViewManager>();
+          ->ConnectToEnvironmentService<::fuchsia::ui::viewsv1::ViewManager>();
   view_context.view_owner_request = std::move(view_owner_request);
   view_context.outgoing_services = std::move(view_services);
 

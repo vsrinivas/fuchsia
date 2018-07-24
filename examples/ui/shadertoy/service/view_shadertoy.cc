@@ -8,7 +8,7 @@ namespace shadertoy {
 
 ShadertoyStateForView::ShadertoyStateForView(
     App* app,
-    ::fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
+    ::fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner> view_owner_request,
     bool handle_input_events)
     : ShadertoyState(app) {
   FXL_CHECK(false) << "not implemented";

@@ -5,8 +5,8 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_SCENIC_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKES_FAKE_SCENIC_H_
 
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
 #include "garnet/bin/media/media_player/test/fakes/fake_session.h"

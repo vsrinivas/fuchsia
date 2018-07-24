@@ -17,8 +17,8 @@ constexpr float kCircleRadius = 40.f;
 }  // namespace
 
 ShapesView::ShapesView(
-    ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request)
+    ::fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner> view_owner_request)
     : BaseView(std::move(view_manager), std::move(view_owner_request),
                "Shapes"),
       background_node_(session()),
