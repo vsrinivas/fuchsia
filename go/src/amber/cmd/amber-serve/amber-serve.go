@@ -37,7 +37,7 @@ func main() {
 	}
 
 	if _, e := os.Stat(*srcDir); e != nil {
-		log.Fatalf("Couldn't access respository directory %v\n", e)
+		log.Fatalf("Couldn't access respository directory %v", e)
 		return
 	}
 

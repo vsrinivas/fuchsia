@@ -140,7 +140,11 @@ test_targets = [
   {
     name = "amber_source_test"
     gopkg = "amber/source"
-  }
+  },
+  {
+    name = "amber_lg_test"
+    gopkg = "amber/lg"
+  },
 ]
 foreach(test, test_targets) {
   go_test(test.name) {

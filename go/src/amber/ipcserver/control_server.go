@@ -78,10 +78,12 @@ func (c *ControlSrvr) AddSrc(cfg amber.SourceConfig) (bool, error) {
 }
 
 func (c *ControlSrvr) CheckForSystemUpdate() (bool, error) {
+	lg.Infof("Checking for system update")
 	if c.sysUpdate != nil {
 		c.sysUpdate.Check()
 		return true, nil
 	}
+	lg.Infof("System update is not configured")
 	return false, nil
 }
 
@@ -108,18 +110,18 @@ func (c *ControlSrvr) ListSrcs() ([]amber.SourceConfig, error) {
 func (c *ControlSrvr) getAndWaitForUpdate(name string, version, merkle *string, ch *zx.Channel) {
 	res, err := c.downloadPkgMeta(name, version, merkle)
 	if err != nil {
-		lg.Log.Printf("error downloading package: %s", err)
+		lg.Errorf("error downloading package: %s", err)
 
 		signalErr := ch.Handle().SignalPeer(0, zx.SignalUser0)
 		if signalErr != nil {
-			lg.Log.Printf("signal failed: %s", signalErr)
+			lg.Errorf("signal failed: %s", signalErr)
 		} else {
 			ch.Write([]byte(err.Error()), []zx.Handle{}, 0)
 		}
 		ch.Close()
 		return
 	}
-	lg.Log.Println("Package metadata retrieved, sending for additional processing")
+	lg.Infof("Package metadata retrieved, sending for additional processing")
 	compReq := completeUpdateRequest{pkgData: res, replyChan: ch}
 	c.compReqs <- &compReq
 }
@@ -127,7 +129,7 @@ func (c *ControlSrvr) getAndWaitForUpdate(name string, version, merkle *string, 
 func (c *ControlSrvr) GetUpdateComplete(name string, version, merkle *string) (zx.Channel, error) {
 	r, w, e := zx.NewChannel(0)
 	if e != nil {
-		lg.Log.Printf("Could not create channel")
+		lg.Errorf("Could not create channel: %s", e)
 		return 0, e
 	}
 	go c.getAndWaitForUpdate(name, version, merkle, &w)
@@ -137,7 +139,7 @@ func (c *ControlSrvr) GetUpdateComplete(name string, version, merkle *string) (z
 func (c *ControlSrvr) PackagesActivated(merkle []string) error {
 	for _, m := range merkle {
 		c.activations <- m
-		lg.Log.Printf("control_server: Got package activation for %s\n", m)
+		lg.Infof("Got package activation for %s", m)
 	}
 	return nil
 }
@@ -208,6 +210,8 @@ func (c *ControlSrvr) GetUpdate(name string, version, merkle *string) (*string, 
 }
 
 func (c *ControlSrvr) GetBlob(merkle string) error {
+	lg.Infof("GetBlob: %s", merkle)
+
 	if !merklePat.Match([]byte(merkle)) {
 		return fmt.Errorf("%q is not a valid merkle root", merkle)
 	}

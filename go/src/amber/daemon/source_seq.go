@@ -6,12 +6,12 @@ package daemon
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"sync"
 	"time"
 
+	"amber/lg"
 	"amber/pkg"
 	"amber/source"
 
@@ -75,7 +75,7 @@ func (k *SourceKeeper) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pk
 	}
 
 	if k.CheckLimit() > 0 && uint64(len(k.hist)+1) > k.CheckLimit() {
-		log.Println("Query rate exceeded")
+		lg.Errorf("Query rate exceeded")
 		return nil, ErrRateExceeded
 	}
 

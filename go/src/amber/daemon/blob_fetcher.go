@@ -7,7 +7,6 @@ package daemon
 import (
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -15,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"amber/lg"
 	"amber/source"
 )
 
@@ -60,10 +60,10 @@ func FetchBlob(repos []BlobRepo, blob string, outputDir string) error {
 
 	// if we go this far, the fetch is our job
 	var err error
-	for i := range repos {
-		reader, sz, err2 := FetchBlobFromRepo(repos[i], blob)
+	for _, repo := range repos {
+		reader, sz, err2 := FetchBlobFromRepo(repo, blob)
 		if err2 != nil {
-			log.Printf("got error trying to get blob %q: %s", blob, err2)
+			lg.Errorf("got error trying to get blob %q from repo %q: %s", blob, repo.Address, err2)
 			continue
 		}
 		err = WriteBlob(filepath.Join(outputDir, blob), sz, reader)
