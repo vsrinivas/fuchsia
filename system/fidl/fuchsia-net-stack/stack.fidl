@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(tkilbourn): rename to fuchsia.net.stack once Go can handle nested libraries (BLD-175).
-library fuchsia.net_stack;
+library fuchsia.net.stack;
 
 using fuchsia.net;
 

@@ -10,7 +10,7 @@ MODULE_TYPE := fidl
 
 MODULE_PACKAGE := fidl
 
-MODULE_FIDL_LIBRARY := fuchsia.net_stack
+MODULE_FIDL_LIBRARY := fuchsia.net.stack
 
 MODULE_FIDL_DEPS := system/fidl/fuchsia-net
 
