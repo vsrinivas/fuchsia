@@ -46,7 +46,7 @@ foreach(testpkg, test_packages) {
   go_test("pmd_${testpkg}_test") {
     gopackage = "fuchsia.googlesource.com/pmd/${testpkg}"
     extra_dependencies = [ ":pmd", ]
-    deps = [
+    non_go_deps = [
       "//zircon/public/lib/fs-management",
     ]
   }
