@@ -289,6 +289,14 @@ fn clone_ht_capabilities(c: &fidl_mlme::HtCapabilities) -> fidl_mlme::HtCapabili
     }
 }
 
+fn clone_ht_operation(o: &fidl_mlme::HtOperation) -> fidl_mlme::HtOperation {
+    fidl_mlme::HtOperation {
+        ht_op_info: fidl_mlme::HtOperationInfo { ..o.ht_op_info },
+        mcs_set: fidl_mlme::SupportedMcsSet { ..o.mcs_set },
+        ..*o
+    }
+}
+
 fn clone_vht_mcs_nss(m: &fidl_mlme::VhtMcsNss) -> fidl_mlme::VhtMcsNss {
     fidl_mlme::VhtMcsNss {
         rx_max_mcs: m.rx_max_mcs.clone(),
@@ -336,6 +344,7 @@ fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescription {
         rsni_dbh: d.rsni_dbh,
 
         ht_cap: d.ht_cap.as_ref().map(|v| Box::new(clone_ht_capabilities(v))),
+        ht_op:  d.ht_op.as_ref().map(|v| Box::new(clone_ht_operation(v))),
 
         vht_cap: d.vht_cap.as_ref().map(|v| Box::new(clone_vht_capabilities(v))),
         vht_op:  d.vht_op.as_ref().map(|v| Box::new(clone_vht_operation(v))),

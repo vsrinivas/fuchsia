@@ -36,6 +36,7 @@ pub fn fake_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
         rsni_dbh: 0,
 
         ht_cap: None,
+        ht_op: None,
         vht_cap: None,
         vht_op: None,
         chan: fidl_mlme::WlanChan {

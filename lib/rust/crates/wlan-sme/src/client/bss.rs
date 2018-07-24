@@ -116,6 +116,7 @@ mod tests {
             rsni_dbh: 0,
 
             ht_cap: None,
+            ht_op: None,
             vht_cap: None,
             vht_op: None,
 

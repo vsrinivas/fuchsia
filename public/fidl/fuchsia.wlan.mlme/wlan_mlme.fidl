@@ -242,6 +242,51 @@ struct HtCapabilities {
     AselCapability asel_cap;
 };
 
+// HT Operation Element
+// IEEE Std 802.11-2016 9.4.2.57 Table 9-168
+
+// HTOperationInfo
+enum SecChanOffset : uint8 {
+    SECONDARY_NONE = 0;   // No secondary channel
+    SECONDARY_ABOVE = 1;  // Secondary channel is above the primary channel
+    RESERVED = 2;
+    SECONDARY_BELOW = 3;  // Secondary channel is below the primary channel
+};
+
+enum StaChanWidth : uint8 {
+    TWENTY = 0;  // MHz
+    ANY = 1;     // Any in the Supported Channel Width set
+};
+
+enum HtProtect : uint8 {
+    NONE = 0;
+    NONMEMBER = 1;
+    TWENTY_MHZ = 2;
+    NON_HT_MIXED = 3;
+};
+
+struct HTOperationInfo {
+    SecChanOffset secondary_chan_offset;
+    StaChanWidth sta_chan_width;
+    bool rifs_mode;
+    HtProtect ht_protect;
+    bool nongreenfield_present; // Nongreenfield HT STAs present
+    bool obss_non_ht;           // OBSS Non-HT STAs present
+    uint16 center_freq_seg2;    // VHT
+    bool dual_beacon;
+    bool dual_cts_protect;
+    bool stbc_beacon;
+    bool lsig_txop_protect;
+    bool pco_active;
+    bool pco_phase;
+};
+
+struct HtOperation {
+    uint8 primary_chan;                 // Primary 20 MHz channel.
+    HTOperationInfo ht_op_info;
+    SupportedMcsSet mcs_set;
+};
+
 enum MaxMpduLen : uint8 {
     OCTETS_3895 = 0;
     OCTETS_7991 = 1;
@@ -342,6 +387,7 @@ struct BSSDescription {
     int16 rsni_dbh;  // 0.5 step dB.  Do not use encoding from IEEE Std 802.11-2016 9.4.2.41.
 
     HtCapabilities? ht_cap;
+    HtOperation? ht_op;
 
     VhtCapabilities? vht_cap;
     VhtOperation? vht_op;
