@@ -149,7 +149,7 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
       // outer label.
       if (sample.HasMember("label")) {
         if (sample["label"].GetStringLength() == 0) {
-          printf("Inner label field is empty\n");
+          fprintf(stderr, "Inner label field is empty\n");
           exit(1);
         }
         name += "_";
@@ -192,7 +192,7 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
         }
       } else if (!(strcmp(unit, "milliseconds") == 0 ||
                    strcmp(unit, "ms") == 0)) {
-        printf("Units not recognized: %s\n", unit);
+        fprintf(stderr, "Units not recognized: %s\n", unit);
         exit(1);
       }
 
@@ -231,7 +231,7 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
 
     size_t samples_size = element["samples"].GetArray().Size();
     if (samples_size > 1 && inner_label_count != samples_size) {
-      printf("Some entries in 'samples' array lack labels\n");
+      fprintf(stderr, "Some entries in 'samples' array lack labels\n");
       exit(1);
     }
   }
