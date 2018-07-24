@@ -11,9 +11,24 @@ MODULE_TYPE := driver
 MODULE_SRCS += \
     $(LOCAL_DIR)/aml-sd-emmc.c
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
+MODULE_STATIC_LIBS := system/ulib/ddk \
+    system/ulib/sync \
+    system/ulib/trace-provider \
+    system/ulib/trace \
+    system/ulib/async.cpp \
+    system/ulib/async \
+    system/ulib/async-loop.cpp \
+    system/ulib/async-loop \
+    system/ulib/zxcpp \
+    system/ulib/fbl \
+    system/ulib/zx
 
-MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+
+MODULE_LIBS := system/ulib/driver \
+    system/ulib/zircon \
+    system/ulib/c \
+    system/ulib/async.default \
+    system/ulib/trace-engine
 
 MODULE_HEADER_DEPS := $(LOCAL_DIR) system/dev/lib/amlogic
 
