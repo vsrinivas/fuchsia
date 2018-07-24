@@ -47,6 +47,7 @@ source_set("${data.name}") {
 sdk_atom("${data.name}_sdk") {
   domain = "cpp"
   name = "${data.name}"
+  id = "sdk://pkg/${data.name}"
   category = "partner"
 
   tags = [

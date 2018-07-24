@@ -18,6 +18,7 @@ copy("${data.name}") {
 sdk_atom("${data.name}_sdk") {
   domain = "exe"
   name = "${data.name}"
+  id = "sdk://tools/${data.name}"
   category = "partner"
 
   tags = [ "arch:host" ]
