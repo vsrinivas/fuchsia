@@ -22,21 +22,21 @@ IommuPage::~IommuPage() {
 }
 
 zx_status_t IommuPage::AllocatePage(IommuPage* out) {
-    paddr_t paddr;
-    vm_page_t* page = pmm_alloc_page(0, &paddr);
-    if (!page) {
-        return ZX_ERR_NO_MEMORY;
+    vm_page_t* page;
+    zx_status_t status = pmm_alloc_page(0, &page);
+    if (status != ZX_OK) {
+        return status;
     }
     page->state = VM_PAGE_STATE_IOMMU;
 
     void* vaddr;
     auto kernel_aspace = VmAspace::kernel_aspace();
-    zx_status_t status = kernel_aspace->AllocPhysical(
+    status = kernel_aspace->AllocPhysical(
             "iommu_ctx_tbl",
             PAGE_SIZE,
             &vaddr,
             PAGE_SIZE_SHIFT,
-            paddr,
+            page->paddr(),
             0,
             ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
     if (status != ZX_OK) {

@@ -392,9 +392,10 @@ zx_status_t ArmArchVmAspace::AllocPageTable(paddr_t* paddrp, uint page_size_shif
     // currently we only support allocating a single page
     DEBUG_ASSERT(page_size_shift == PAGE_SIZE_SHIFT);
 
-    vm_page_t* page = pmm_alloc_page(0, paddrp);
-    if (!page) {
-        return ZX_ERR_NO_MEMORY;
+    vm_page_t* page;
+    zx_status_t status = pmm_alloc_page(0, &page, paddrp);
+    if (status != ZX_OK) {
+        return status;
     }
 
     page->state = VM_PAGE_STATE_MMU;
@@ -1066,9 +1067,10 @@ zx_status_t ArmArchVmAspace::Init(vaddr_t base, size_t size, uint flags) {
         size_ = size;
 
         paddr_t pa;
-        vm_page_t* page = pmm_alloc_page(0, &pa);
-        if (!page) {
-            return ZX_ERR_NO_MEMORY;
+        vm_page_t* page;
+        zx_status_t status = pmm_alloc_page(0, &page, &pa);
+        if (status != ZX_OK) {
+            return status;
         }
         page->state = VM_PAGE_STATE_MMU;
 

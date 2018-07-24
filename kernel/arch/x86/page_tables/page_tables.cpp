@@ -296,8 +296,9 @@ void X86PageTableBase::UnmapEntry(ConsistencyManager* cm, PageTableLevel level, 
  */
 static volatile pt_entry_t* _map_alloc_page(void) {
     paddr_t pa;
-    vm_page_t* p = pmm_alloc_page(0, &pa);
-    if (!p) {
+    vm_page* p;
+    zx_status_t status = pmm_alloc_page(0, &p, &pa);
+    if (status != ZX_OK) {
         return nullptr;
     }
     p->state = VM_PAGE_STATE_MMU;

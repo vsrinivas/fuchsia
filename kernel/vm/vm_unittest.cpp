@@ -24,8 +24,10 @@ static const uint kArchRwFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WR
 static bool pmm_smoke_test() {
     BEGIN_TEST;
     paddr_t pa;
+    vm_page_t* page;
 
-    vm_page_t* page = pmm_alloc_page(0, &pa);
+    zx_status_t status = pmm_alloc_page(0, &page, &pa);
+    ASSERT_EQ(ZX_OK, status, "pmm_alloc single page");
     ASSERT_NE(nullptr, page, "pmm_alloc single page");
     ASSERT_NE(0u, pa, "pmm_alloc single page");
 
@@ -60,11 +62,9 @@ static bool pmm_oversized_alloc_test() {
     static const size_t alloc_count =
         (128 * 1024 * 1024 * 1024ULL) / PAGE_SIZE; // 128GB
 
-    auto count = pmm_alloc_pages(alloc_count, 0, &list);
-    EXPECT_NE(alloc_count, 0, "pmm_alloc_pages too many pages count > 0");
-    EXPECT_NE(alloc_count, count, "pmm_alloc_pages too many pages count");
-    EXPECT_EQ(count, list_length(&list),
-              "pmm_alloc_pages too many pages list count");
+    zx_status_t status = pmm_alloc_pages(alloc_count, 0, &list);
+    EXPECT_EQ(ZX_ERR_NO_MEMORY, status, "pmm_alloc_pages failed to alloc");
+    EXPECT_TRUE(list_is_empty(&list), "pmm_alloc_pages list is empty");
 
     pmm_free(&list);
     END_TEST;
@@ -492,13 +492,15 @@ static bool vmo_create_physical_test() {
     BEGIN_TEST;
 
     paddr_t pa;
-    vm_page_t* vm_page = pmm_alloc_page(0, &pa);
+    vm_page_t* vm_page;
+    zx_status_t status = pmm_alloc_page(0, &vm_page, &pa);
     uint32_t cache_policy;
 
+    ASSERT_EQ(ZX_OK, status, "vm page allocation\n");
     ASSERT_TRUE(vm_page, "");
 
     fbl::RefPtr<VmObject> vmo;
-    zx_status_t status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
+    status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
     ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
     ASSERT_TRUE(vmo, "vmobject creation\n");
     EXPECT_EQ(ZX_OK, vmo->GetMappingCachePolicy(&cache_policy), "try get");
@@ -822,7 +824,8 @@ static bool vmo_cache_test() {
     BEGIN_TEST;
 
     paddr_t pa;
-    vm_page_t* vm_page = pmm_alloc_page(0, &pa);
+    vm_page_t* vm_page;
+    zx_status_t status = pmm_alloc_page(0, &vm_page, &pa);
     auto ka = VmAspace::kernel_aspace();
     uint32_t cache_policy = ARCH_MMU_FLAG_UNCACHED_DEVICE;
     uint32_t cache_policy_get;
@@ -832,7 +835,7 @@ static bool vmo_cache_test() {
     // Test that the flags set/get properly
     {
         fbl::RefPtr<VmObject> vmo;
-        zx_status_t status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
+        status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
         ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
         ASSERT_TRUE(vmo, "vmobject creation\n");
         EXPECT_EQ(ZX_OK, vmo->GetMappingCachePolicy(&cache_policy_get), "try get");
@@ -845,7 +848,7 @@ static bool vmo_cache_test() {
     // Test valid flags
     for (uint32_t i = 0; i <= ARCH_MMU_FLAG_CACHE_MASK; i++) {
         fbl::RefPtr<VmObject> vmo;
-        zx_status_t status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
+        status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
         ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
         ASSERT_TRUE(vmo, "vmobject creation\n");
         EXPECT_EQ(ZX_OK, vmo->SetMappingCachePolicy(cache_policy), "try setting valid flags");
@@ -854,7 +857,7 @@ static bool vmo_cache_test() {
     // Test invalid flags
     for (uint32_t i = ARCH_MMU_FLAG_CACHE_MASK + 1; i < 32; i++) {
         fbl::RefPtr<VmObject> vmo;
-        zx_status_t status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
+        status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
         ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
         ASSERT_TRUE(vmo, "vmobject creation\n");
         EXPECT_EQ(ZX_ERR_INVALID_ARGS, vmo->SetMappingCachePolicy(i), "try set with invalid flags");
@@ -863,7 +866,7 @@ static bool vmo_cache_test() {
     // Test valid flags with invalid flags
     {
         fbl::RefPtr<VmObject> vmo;
-        zx_status_t status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
+        status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
         ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
         ASSERT_TRUE(vmo, "vmobject creation\n");
         EXPECT_EQ(ZX_ERR_INVALID_ARGS, vmo->SetMappingCachePolicy(cache_policy | 0x5), "bad 0x5");
@@ -875,7 +878,7 @@ static bool vmo_cache_test() {
     // Test that changing policy while mapped is blocked
     {
         fbl::RefPtr<VmObject> vmo;
-        zx_status_t status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
+        status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
         ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
         ASSERT_TRUE(vmo, "vmobject creation\n");
         ASSERT_EQ(ZX_OK, ka->MapObjectInternal(vmo, "test", 0, PAGE_SIZE, (void**)&ptr, 0, 0,
@@ -964,8 +967,8 @@ static bool arch_noncontiguous_map() {
     // Get some phys pages to test on
     paddr_t phys[3];
     struct list_node phys_list = LIST_INITIAL_VALUE(phys_list);
-    size_t count = pmm_alloc_pages(fbl::count_of(phys), 0, &phys_list);
-    ASSERT_EQ(count, fbl::count_of(phys), "");
+    zx_status_t status = pmm_alloc_pages(fbl::count_of(phys), 0, &phys_list);
+    ASSERT_EQ(ZX_OK, status, "non contig map alloc");
     {
         size_t i = 0;
         vm_page_t* p;
@@ -975,7 +978,6 @@ static bool arch_noncontiguous_map() {
         }
     }
 
-    zx_status_t status;
     {
         ArchVmAspace aspace;
         status = aspace.Init(USER_ASPACE_BASE, USER_ASPACE_SIZE, 0);

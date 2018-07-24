@@ -23,18 +23,17 @@ zx_status_t pvclock_init(void) {
     }
 
     paddr_t pa;
-    vm_page_t* boot_time_page = pmm_alloc_page(0, &pa);
-    if (boot_time_page == nullptr) {
-        return ZX_ERR_NO_MEMORY;
+    zx_status_t status = pmm_alloc_page(0, &pa);
+    if (status != ZX_OK) {
+        return status;
     }
     arch_zero_page(paddr_to_physmap(pa));
     boot_time = static_cast<struct pvclock_boot_time*>(paddr_to_physmap(pa));
     write_msr(kKvmBootTime, pa);
 
-    vm_page_t* system_time_page = pmm_alloc_page(0, &pa);
-    if (system_time_page == nullptr) {
-        pmm_free_page(boot_time_page);
-        return ZX_ERR_NO_MEMORY;
+    status = pmm_alloc_page(0, &pa);
+    if (status != ZX_OK) {
+        return status;
     }
     arch_zero_page(paddr_to_physmap(pa));
     system_time = static_cast<struct pvclock_system_time*>(paddr_to_physmap(pa));

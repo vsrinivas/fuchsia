@@ -29,12 +29,12 @@ public:
     vm_page_t* PaddrToPage(paddr_t addr) TA_NO_THREAD_SAFETY_ANALYSIS;
 
     // main allocator routines
-    vm_page_t* AllocPage(uint alloc_flags, paddr_t* pa);
-    size_t AllocPages(size_t count, uint alloc_flags, list_node* list);
+    zx_status_t AllocPage(uint alloc_flags, vm_page_t** page, paddr_t* pa);
+    zx_status_t AllocPages(size_t count, uint alloc_flags, list_node* list);
     size_t AllocRange(paddr_t address, size_t count, list_node* list);
     size_t AllocContiguous(size_t count, uint alloc_flags, uint8_t alignment_log2, paddr_t* pa, list_node* list);
-    void Free(vm_page* page);
-    void Free(list_node* list);
+    void FreePage(vm_page* page);
+    void FreeList(list_node* list);
 
     uint64_t CountFreePages() const;
     uint64_t CountTotalBytes() const;
@@ -57,6 +57,7 @@ public:
 
 private:
     void FreePageLocked(vm_page* page) TA_REQ(lock_);
+    void FreeListLocked(list_node* list) TA_REQ(lock_);
 
     fbl::Canary<fbl::magic("PNOD")> canary_;
 

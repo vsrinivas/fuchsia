@@ -507,9 +507,10 @@ X86PageTableBase::~X86PageTableBase() {
 // to write to |pages_| since this is part of object construction.
 zx_status_t X86PageTableBase::Init(void* ctx) TA_NO_THREAD_SAFETY_ANALYSIS {
     /* allocate a top level page table for the new address space */
+    vm_page* p;
     paddr_t pa;
-    vm_page_t* p = pmm_alloc_page(0, &pa);
-    if (!p) {
+    zx_status_t status = pmm_alloc_page(0, &p, &pa);
+    if (status != ZX_OK) {
         TRACEF("error allocating top level page directory\n");
         return ZX_ERR_NO_MEMORY;
     }

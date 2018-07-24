@@ -434,8 +434,9 @@ static bool guest_physical_address_space_map_interrupt_controller() {
 
     // Allocate a page to use as the APIC page.
     paddr_t paddr = 0;
-    vm_page_t* vm_page = pmm_alloc_page(0, &paddr);
-    EXPECT_NONNULL(vm_page, "Unable to allocate a page\n");
+    vm_page* vm_page;
+    status = pmm_alloc_page(0, &vm_page, &paddr);
+    EXPECT_EQ(ZX_OK, status, "Unable to allocate a page\n");
 
     // Map APIC page in an arbitrary location.
     const vaddr_t APIC_ADDRESS = 0xffff0000;

@@ -92,9 +92,8 @@ public:
 
         // Allocate a list of pages.
         list_node pages = LIST_INITIAL_VALUE(pages);
-        size_t num_allocated = pmm_alloc_pages(num_buffers, 0, &pages);
-        if (unlikely(num_allocated != num_buffers)) {
-            pmm_free(&pages);
+        zx_status_t status = pmm_alloc_pages(num_buffers, 0, &pages);
+        if (unlikely(status != ZX_OK)) {
             return nullptr;
         }
 

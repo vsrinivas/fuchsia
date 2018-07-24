@@ -17,15 +17,18 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Page);
 
     ~Page() {
-      vm_page_t* page = paddr_to_vm_page(pa_);
-      if (page != nullptr)
-          pmm_free_page(page);
+      if (page_ != nullptr) {
+          pmm_free_page(page_);
+      }
     }
 
     zx_status_t Alloc(uint8_t fill) {
-      vm_page_t* page = pmm_alloc_page(0, &pa_);
-      if (page == nullptr)
-          return ZX_ERR_NO_MEMORY;
+      zx_status_t status = pmm_alloc_page(0, &page_, &pa_);
+      if (status != ZX_OK) {
+          return status;
+      }
+
+      page_->state = VM_PAGE_STATE_WIRED;
 
       memset(VirtualAddress(), fill, PAGE_SIZE);
       return ZX_OK;
@@ -49,6 +52,7 @@ public:
     bool IsAllocated() const { return pa_ != 0; }
 
 private:
+    vm_page* page_ = nullptr;
     zx_paddr_t pa_ = 0;
 };
 

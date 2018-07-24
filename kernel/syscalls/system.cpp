@@ -52,7 +52,8 @@ static zx_status_t identity_page_allocate(fbl::RefPtr<VmAspace>* new_aspace,
     // Start by obtaining an unused physical page. This address will eventually
     // be the physical/virtual address of our identity mapped page.
     paddr_t pa;
-    if (pmm_alloc_page(0, &pa) == nullptr) {
+    result = pmm_alloc_page(0, &pa);
+    if (result != ZX_OK) {
         return ZX_ERR_NO_MEMORY;
     }
 

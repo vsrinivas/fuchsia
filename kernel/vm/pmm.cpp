@@ -55,11 +55,19 @@ zx_status_t pmm_add_arena(const pmm_arena_info_t* info) {
     return pmm_node.AddArena(info);
 }
 
-vm_page_t* pmm_alloc_page(uint alloc_flags, paddr_t* pa) {
-    return pmm_node.AllocPage(alloc_flags, pa);
+zx_status_t pmm_alloc_page(uint alloc_flags, paddr_t* pa) {
+    return pmm_node.AllocPage(alloc_flags, nullptr, pa);
 }
 
-size_t pmm_alloc_pages(size_t count, uint alloc_flags, list_node* list) {
+zx_status_t pmm_alloc_page(uint alloc_flags, vm_page_t** page) {
+    return pmm_node.AllocPage(alloc_flags, page, nullptr);
+}
+
+zx_status_t pmm_alloc_page(uint alloc_flags, vm_page_t** page, paddr_t* pa) {
+    return pmm_node.AllocPage(alloc_flags, page, pa);
+}
+
+zx_status_t pmm_alloc_pages(size_t count, uint alloc_flags, list_node* list) {
     return pmm_node.AllocPages(count, alloc_flags, list);
 }
 
@@ -71,8 +79,9 @@ size_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t alignment_lo
                             list_node* list) {
     // if we're called with a single page, just fall through to the regular allocation routine
     if (unlikely(count == 1 && alignment_log2 == PAGE_SIZE_SHIFT)) {
-        vm_page_t* page = pmm_node.AllocPage(alloc_flags, pa);
-        if (page == nullptr) {
+        vm_page_t* page;
+        zx_status_t status = pmm_node.AllocPage(alloc_flags, &page, pa);
+        if (status != ZX_OK) {
             return 0;
         }
         if (list != nullptr) {
@@ -85,11 +94,11 @@ size_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t alignment_lo
 }
 
 void pmm_free(list_node* list) {
-    pmm_node.Free(list);
+    pmm_node.FreeList(list);
 }
 
 void pmm_free_page(vm_page* page) {
-    pmm_node.Free(page);
+    pmm_node.FreePage(page);
 }
 
 uint64_t pmm_count_free_pages() {

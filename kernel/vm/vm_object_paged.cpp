@@ -423,7 +423,7 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
                 }
             }
             if (!p_clone) {
-                p_clone = pmm_alloc_page(pmm_alloc_flags_, &pa_clone);
+                status = pmm_alloc_page(pmm_alloc_flags_, &p_clone, &pa_clone);
             }
             if (!p_clone) {
                 return ZX_ERR_NO_MEMORY;
@@ -478,7 +478,7 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
         }
     }
     if (!p) {
-        p = pmm_alloc_page(pmm_alloc_flags_, &pa);
+        pmm_alloc_page(pmm_alloc_flags_, &p, &pa);
     }
     if (!p) {
         return ZX_ERR_NO_MEMORY;
@@ -558,11 +558,9 @@ zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len, uint64_t* 
     list_node page_list;
     list_initialize(&page_list);
 
-    size_t allocated = pmm_alloc_pages(count, pmm_alloc_flags_, &page_list);
-    if (allocated < count) {
-        LTRACEF("failed to allocate enough pages (asked for %zu, got %zu)\n", count, allocated);
-        pmm_free(&page_list);
-        return ZX_ERR_NO_MEMORY;
+    zx_status_t status = pmm_alloc_pages(count, pmm_alloc_flags_, &page_list);
+    if (status != ZX_OK) {
+        return status;
     }
 
     // unmap all of the pages in this range on all the mapping regions
