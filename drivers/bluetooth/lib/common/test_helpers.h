@@ -19,16 +19,16 @@ namespace common {
 // equality. If the contents are not equal, this logs a GTEST-style error
 // message to stdout. Meant to be used from unit tests.
 template <class InputIt1, class InputIt2>
-bool ContainersEqual(InputIt1 first1, InputIt1 last1, InputIt2 first2,
-                     InputIt2 last2) {
-  if (std::equal(first1, last1, first2, last2))
+bool ContainersEqual(InputIt1 expected_begin, InputIt1 expected_end,
+                     InputIt2 actual_begin, InputIt2 actual_end) {
+  if (std::equal(expected_begin, expected_end, actual_begin, actual_end))
     return true;
   std::cout << "Expected: { ";
-  for (InputIt1 iter = first1; iter != last1; ++iter) {
+  for (InputIt1 iter = expected_begin; iter != expected_end; ++iter) {
     std::cout << fxl::StringPrintf("0x%02x ", *iter);
   }
   std::cout << "}\n   Found: { ";
-  for (InputIt2 iter = first2; iter != last2; ++iter) {
+  for (InputIt2 iter = actual_begin; iter != actual_end; ++iter) {
     std::cout << fxl::StringPrintf("0x%02x ", *iter);
   }
   std::cout << "}" << std::endl;
@@ -36,14 +36,16 @@ bool ContainersEqual(InputIt1 first1, InputIt1 last1, InputIt2 first2,
 }
 
 template <class Container1, class Container2>
-bool ContainersEqual(const Container1& c1, const Container2& c2) {
-  return ContainersEqual(c1.begin(), c1.end(), c2.begin(), c2.end());
+bool ContainersEqual(const Container1& expected, const Container2& actual) {
+  return ContainersEqual(expected.begin(), expected.end(), actual.begin(),
+                         actual.end());
 }
 
 template <class Container1>
-bool ContainersEqual(const Container1& c1, const uint8_t* bytes,
-                     size_t num_bytes) {
-  return ContainersEqual(c1.begin(), c1.end(), bytes, bytes + num_bytes);
+bool ContainersEqual(const Container1& expected, const uint8_t* actual_bytes,
+                     size_t actual_num_bytes) {
+  return ContainersEqual(expected.begin(), expected.end(), actual_bytes,
+                         actual_bytes + actual_num_bytes);
 }
 
 // Returns a managed pointer to a heap allocated MutableByteBuffer.
