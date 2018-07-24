@@ -122,13 +122,12 @@ class Slice final {
     }
 
     return Slice::WithInitializer(
-        total_length, [begin, end, total_length](uint8_t* out) {
+        total_length, [begin, end](uint8_t* out) {
           size_t offset = 0;
           for (auto it = begin; it != end; ++it) {
             memcpy(out + offset, it->begin(), it->length());
             offset += it->length();
           }
-          assert(offset == total_length);
         });
   }
 
@@ -221,10 +220,9 @@ class Slice final {
   static Slice FromWriters(const W&... w) {
     uint64_t total_length = 0;
     (void)std::initializer_list<int>{(total_length += w.wire_length(), 0)...};
-    return WithInitializer(total_length, [total_length, &w...](uint8_t* bytes) {
+    return WithInitializer(total_length, [&w...](uint8_t* bytes) {
       uint8_t* p = bytes;
       (void)std::initializer_list<int>{(p = w.Write(p), 0)...};
-      assert(p == bytes + total_length);
     });
   }
 
