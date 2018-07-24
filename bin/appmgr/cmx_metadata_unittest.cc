@@ -41,10 +41,30 @@ TEST(CmxMetadata, ParseMissingSandbox) {
   EXPECT_FALSE(sandbox.IsObject());
 }
 
-TEST(CmxMetadata, GetCmxPath) {
-  EXPECT_EQ("meta/sysmgr.cmx",
-            CmxMetadata::GetCmxPath("file:///pkgfs/packages/sysmgr/0"));
-  EXPECT_EQ("", CmxMetadata::GetCmxPath("file:///pkgfs/nothing/sysmgr/0"));
+TEST(CmxMetadata, GetCmxPathFromFullPackagePath) {
+  EXPECT_EQ("meta/sysmgr.cmx", CmxMetadata::GetCmxPathFromFullPackagePath(
+                                   "file:///pkgfs/packages/sysmgr/0"));
+  EXPECT_EQ("", CmxMetadata::GetCmxPathFromFullPackagePath(
+                    "/pkgfs/packages/sysmgr/0"));
+  EXPECT_EQ("", CmxMetadata::GetCmxPathFromFullPackagePath(
+                    "file:///pkgfs/nothing/sysmgr/0"));
+  EXPECT_EQ("", CmxMetadata::GetCmxPathFromFullPackagePath(""));
+}
+
+TEST(CmxMetadata, ExtractRelativeCmxPath) {
+  EXPECT_EQ("meta/sysmgr2.cmx",
+            CmxMetadata::ExtractRelativeCmxPath(
+                "file:///pkgfs/packages/sysmgr/0/meta/sysmgr2.cmx"));
+  EXPECT_EQ("meta/sysmgr2.cmx",
+            CmxMetadata::ExtractRelativeCmxPath(
+                "/pkgfs/packages/sysmgr/0/meta/sysmgr2.cmx"));
+  EXPECT_EQ("", CmxMetadata::ExtractRelativeCmxPath(
+                    "file:///pkgfs/nothing/sysmgr/0"));
+  EXPECT_EQ("", CmxMetadata::ExtractRelativeCmxPath(
+                    "file:///pkgfs/packages/sysmgr/0/meta/runtime"));
+  EXPECT_EQ("", CmxMetadata::ExtractRelativeCmxPath(
+                    "file:///pkgfs/nothing/sysmgr/0/something/sysmgr2.cmx"));
+  EXPECT_EQ("", CmxMetadata::ExtractRelativeCmxPath(""));
 }
 
 TEST(CmxMetadata, IsCmxExtension) {

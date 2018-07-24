@@ -526,7 +526,8 @@ void Realm::CreateComponentFromPackage(
       fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
 
   std::string cmx_data;
-  std::string cmx_path = CmxMetadata::GetCmxPath(package->resolved_url.get());
+  std::string cmx_path =
+      CmxMetadata::GetCmxPathFromFullPackagePath(package->resolved_url.get());
   if (!cmx_path.empty())
     files::ReadFileToStringAt(fd.get(), cmx_path, &cmx_data);
 
