@@ -848,6 +848,17 @@ class TxStaCnt2 : public Register<0x1714> {
     WLAN_BIT_FIELD(tx_udfl_cnt, 16, 16);
 };
 
+class TxStatFifo : public Register<0x1718> {
+   public:
+    WLAN_BIT_FIELD(txq_vld, 0, 1);
+    WLAN_BIT_FIELD(txq_pid, 1, 4);
+    WLAN_BIT_FIELD(txq_ok, 5, 1);
+    WLAN_BIT_FIELD(txq_agg, 6, 1);
+    WLAN_BIT_FIELD(txq_ackreq, 7, 1);
+    WLAN_BIT_FIELD(txq_wcid, 8, 8);
+    WLAN_BIT_FIELD(txq_rate, 16, 16);
+};
+
 // EEPROM word offsets
 constexpr uint16_t EEPROM_CHIP_ID = 0x0000;
 constexpr uint16_t EEPROM_VERSION = 0x0001;

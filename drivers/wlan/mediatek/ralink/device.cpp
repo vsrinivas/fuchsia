@@ -59,6 +59,25 @@ constexpr char kFirmwareFile[] = "rt2870.bin";
 
 constexpr int kMaxBusyReads = 20;
 
+// The polling interval for asynchronous transmission reports.
+constexpr zx::duration kAsyncTxInterruptPollInterval = zx::msec(100);
+
+// The duration of lead time before a beacon frame used to send the pre-beacon notification.
+constexpr zx::duration kPreTbttLeadTime = zx::msec(6);
+
+// The polling interval for beacon frame interrupts, for when the interrupt is close but has not yet
+// elapsed.
+constexpr zx::duration kTbttInterruptPollInterval = zx::msec(1);
+
+// Key which will shut down the currently running interrupt thread.
+constexpr uint64_t kInterruptShutdownKey = 1;
+
+// Key indicating an asynchronous transmission report interrupt.
+constexpr uint64_t kAsyncTxInterruptKey = 2;
+
+// Key indicating a beacon frame interrupt.
+constexpr uint64_t kTbttInterruptKey = 3;
+
 // TODO(hahnr): Use bcast_mac from MacAddr once it was moved to common/.
 const uint8_t kBcastAddr[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
@@ -3707,6 +3726,8 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
     chan.cbw = CBW20;
     status = WlanmacSetChannel(0, &chan);
 
+    StartInterruptPolling();
+
     infof("wlan started\n");
     return ZX_OK;
 }
@@ -3725,35 +3746,108 @@ zx_status_t Device::StartInterruptPolling() {
         return status;
     }
 
-    status = zx::timer::create(0u, ZX_CLOCK_MONOTONIC, &interrupt_timer_);
+    status = zx::timer::create(0u, ZX_CLOCK_MONOTONIC, &async_tx_interrupt_timer_);
     if (status != ZX_OK) {
-        errorf("could not create timer: %d\n", status);
+        errorf("could not create async TX timer: %d\n", status);
         return status;
     }
 
-    status =
-        interrupt_timer_.wait_async(interrupt_port_, 0, ZX_TIMER_SIGNALED, ZX_WAIT_ASYNC_REPEATING);
+    status = async_tx_interrupt_timer_.wait_async(
+        interrupt_port_, kAsyncTxInterruptKey, ZX_TIMER_SIGNALED, ZX_WAIT_ASYNC_REPEATING);
     if (status != ZX_OK) {
-        errorf("could not create timer: %d\n", status);
+        errorf("could not wait on async TX timer: %d\n", status);
+        return status;
+    }
+
+    status = zx::timer::create(0u, ZX_CLOCK_MONOTONIC, &tbtt_interrupt_timer_);
+    if (status != ZX_OK) {
+        errorf("could not create TBTT timer: %d\n", status);
+        return status;
+    }
+
+    status = tbtt_interrupt_timer_.wait_async(
+        interrupt_port_, kTbttInterruptKey, ZX_TIMER_SIGNALED, ZX_WAIT_ASYNC_REPEATING);
+    if (status != ZX_OK) {
+        errorf("could not wait on TBTT timer: %d\n", status);
         return status;
     }
 
     interrupt_thrd_ = std::thread(&Device::InterruptWorker, this);
-
-    zx::duration pre_tbtt = RemainingTbttTime() - kPreTbttLeadTime;
-    interrupt_timer_.set(zx::deadline_after(pre_tbtt), zx::usec(1));
+    async_tx_interrupt_timer_.set(zx::deadline_after(kAsyncTxInterruptPollInterval), zx::msec(1));
     return ZX_OK;
 }
 
 void Device::StopInterruptPolling() {
+    async_tx_interrupt_timer_.cancel();
+    tbtt_interrupt_timer_.cancel();
     if (interrupt_thrd_.joinable()) {
         zx_port_packet_t pkt = {
-            .key = kIntPortPktShutdown,
+            .key = kInterruptShutdownKey,
             .type = ZX_PKT_TYPE_USER,
         };
         interrupt_port_.queue(&pkt);
         interrupt_thrd_.join();
     }
+}
+
+zx_status_t Device::OnTxReportInterruptTimer() {
+    // TODO(sheu): read TX_STAT_FIFO and roll up TX reports.
+    async_tx_interrupt_timer_.set(zx::deadline_after(kAsyncTxInterruptPollInterval), zx::usec(1));
+    return ZX_OK;
+}
+
+zx_status_t Device::OnTbttInterruptTimer() {
+    IntStatus intStatus;
+    auto status = ReadRegister(&intStatus);
+    CHECK_READ(INT_STATUS, status);
+
+    const bool pre_tbtt_interrupt = intStatus.mac_int_1();
+    if (pre_tbtt_interrupt) {
+        {
+            std::lock_guard<std::mutex> guard(lock_);
+            if (wlanmac_proxy_ != nullptr) {
+                wlanmac_proxy_->Indication(WLAN_INDICATION_PRE_TBTT);
+            }
+        }
+
+        // Clear the pre-TBTT interrupt.
+        intStatus.clear();
+        intStatus.set_mac_int_1(1);
+        status = WriteRegister(intStatus);
+        CHECK_WRITE(INT_STATUS, status);
+
+        // Wait for TBTT.
+        zx::duration tbtt = RemainingTbttTime();
+        tbtt_interrupt_timer_.set(zx::deadline_after(tbtt), zx::usec(1));
+        return ZX_OK;
+    }
+
+    const bool tbtt_interrupt = intStatus.mac_int_0();
+    if (tbtt_interrupt) {
+        {
+            // Due to Ralinks limitation of not being able to report actual beacon transmission,
+            // TBTT is used instead.
+            std::lock_guard<std::mutex> guard(lock_);
+            if (wlanmac_proxy_ != nullptr) {
+                wlanmac_proxy_->Indication(WLAN_INDICATION_BCN_TX_COMPLETE);
+            }
+        }
+
+        // Clear the TBTT interrupts.
+        intStatus.clear();
+        intStatus.set_mac_int_0(1);
+        status = WriteRegister(intStatus);
+        CHECK_WRITE(INT_STATUS, status);
+
+        // Wait for next Pre-TBTT.
+        const zx::duration pre_tbtt = RemainingTbttTime() - kPreTbttLeadTime;
+        tbtt_interrupt_timer_.set(zx::deadline_after(pre_tbtt), zx::usec(1));
+        return ZX_OK;
+    }
+
+    // Pre-TBTT or TBTT interrupt is about to happen very soon, poll.
+    tbtt_interrupt_timer_.set(zx::deadline_after(kTbttInterruptPollInterval), zx::usec(1));
+    return ZX_OK;
 }
 
 zx_status_t Device::InterruptWorker() {
@@ -3777,55 +3871,16 @@ zx_status_t Device::InterruptWorker() {
 
         switch (pkt.type) {
         case ZX_PKT_TYPE_USER:
-            if (pkt.key == kIntPortPktShutdown) { return ZX_OK; }
+            if (pkt.key == kInterruptShutdownKey) { return ZX_OK; }
             break;
         case ZX_PKT_TYPE_SIGNAL_REP: {
-            IntStatus intStatus;
-            status = ReadRegister(&intStatus);
-            CHECK_READ(INT_STATUS, status);
-
-            bool tbtt_interrupt = intStatus.mac_int_0();
-            if (tbtt_interrupt) {
-                {
-                    // Due to Ralinks limitation of not being able to report actual
-                    // Beacon transmission, TBTT is used instead.
-                    std::lock_guard<std::mutex> guard(lock_);
-                    if (wlanmac_proxy_ != nullptr) {
-                        wlanmac_proxy_->Indication(WLAN_INDICATION_BCN_TX_COMPLETE);
-                    }
-                }
-
-                // Clear interrupts.
-                status = WriteRegister(intStatus);
-                CHECK_WRITE(INT_STATUS, status);
-
-                // Wait for next Pre-TBTT.
-                zx::duration pre_tbtt = RemainingTbttTime() - kPreTbttLeadTime;
-                interrupt_timer_.set(zx::deadline_after(pre_tbtt), zx::usec(1));
-                break;
+            if (pkt.key == kAsyncTxInterruptKey) {
+                status = OnTxReportInterruptTimer();
+                if (status != ZX_OK) { return status; }
+            } else if (pkt.key == kTbttInterruptKey) {
+                status = OnTbttInterruptTimer();
+                if (status != ZX_OK) { return status; }
             }
-
-            bool pre_tbtt_interrupt = intStatus.mac_int_1();
-            if (pre_tbtt_interrupt) {
-                {
-                    std::lock_guard<std::mutex> guard(lock_);
-                    if (wlanmac_proxy_ != nullptr) {
-                        wlanmac_proxy_->Indication(WLAN_INDICATION_PRE_TBTT);
-                    }
-                }
-
-                // Clear interrupts.
-                status = WriteRegister(intStatus);
-                CHECK_WRITE(INT_STATUS, status);
-
-                // Wait for TBTT.
-                zx::duration tbtt = RemainingTbttTime();
-                interrupt_timer_.set(zx::deadline_after(tbtt), zx::usec(1));
-                break;
-            }
-
-            // Pre-TBTT or TBTT interrupt is about to happen very soon. Poll every millisecond.
-            interrupt_timer_.set(zx::deadline_after(kInterruptReadTimeout), zx::usec(1));
             break;
         }
         default:
@@ -3846,6 +3901,7 @@ zx::duration Device::RemainingTbttTime() {
 void Device::WlanmacStop() {
     debugfn();
     std::lock_guard<std::mutex> guard(lock_);
+    StopInterruptPolling();
     // This is safe even if we're already unbound.
     wlanmac_proxy_.reset();
 
@@ -4159,9 +4215,10 @@ zx_status_t Device::EnableHwBcn(bool active) {
         CHECK_WRITE(interrupt_timer_EN, status);
 
         if (active) {
-            StartInterruptPolling();
+            const zx::duration pre_tbtt = RemainingTbttTime() - kPreTbttLeadTime;
+            tbtt_interrupt_timer_.set(zx::deadline_after(pre_tbtt), zx::usec(1));
         } else {
-            StopInterruptPolling();
+            tbtt_interrupt_timer_.cancel();
         }
     }
     return ZX_OK;

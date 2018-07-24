@@ -179,12 +179,16 @@ class Device {
     // resets all security aspects for a given WCID and shared key as well as their keys.
     zx_status_t ResetWcid(uint8_t wcid, uint8_t skey, uint8_t key_type);
 
+    // interrupt routines
+    zx_status_t OnTxReportInterruptTimer();
+    zx_status_t OnTbttInterruptTimer();
+    zx_status_t InterruptWorker();
+
     // initialization functions
     zx_status_t LoadFirmware();
     zx_status_t EnableRadio();
     zx_status_t StartInterruptPolling();
     void StopInterruptPolling();
-    zx_status_t InterruptWorker();
     zx_status_t InitRegisters();
     zx_status_t InitBbp();
     zx_status_t InitBbp5592();
@@ -292,13 +296,14 @@ class Device {
 
     // Thread which periodically reads interrupt registers.
     // Required because the device doesn't support USB interrupt endpoints.
-    constexpr static zx::duration kInterruptReadTimeout = zx::msec(1);
-    constexpr static zx::duration kPreTbttLeadTime = zx::msec(6);
-    // Message which will shut down the currently running interrupt thread.
-    static constexpr uint64_t kIntPortPktShutdown = 1;
     std::thread interrupt_thrd_;
     zx::port interrupt_port_;
-    zx::timer interrupt_timer_;
+
+    // Timer which handles asynchronous TX reports.
+    zx::timer async_tx_interrupt_timer_;
+
+    // Timer which handles TBTT interrupts for 802.11 beacon frames.
+    zx::timer tbtt_interrupt_timer_;
 };
 
 }  // namespace ralink
