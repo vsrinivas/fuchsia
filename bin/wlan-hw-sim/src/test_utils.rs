@@ -69,7 +69,7 @@ impl TestHelper {
 
     fn wait_for_wlanmac_start(&mut self, exec: &mut async::Executor) {
         let (mut sender, receiver) = mpsc::channel::<()>(1);
-        self.run(exec, 2.seconds(), "receive a WlanmacStart event",
+        self.run(exec, 5.seconds(), "receive a WlanmacStart event",
             move |event| {
                 match event {
                     wlantap::WlantapPhyEvent::WlanmacStart{ .. } => {
