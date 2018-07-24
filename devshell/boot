@@ -60,11 +60,11 @@ while [[ $# -gt 0 ]]; do
     machine_type="netboot"
     ;;
   --no-data)
-    echo "##"
-    echo "## Note: if the target has no pre-existing data partition, then"
-    echo "## none will be created. The resultant system will behave in a"
-    echo "## kind of 'incognito' fashion, as /data will be backed by ram."
-    echo "##"
+    echo >&2 "##"
+    echo >&2 "## Note: if the target has no pre-existing data partition, then"
+    echo >&2 "## none will be created. The resultant system will behave in a"
+    echo >&2 "## kind of 'incognito' fashion, as /data will be backed by ram."
+    echo >&2 "##"
     add_data=false
     ;;
   --sign-tool)
@@ -90,11 +90,13 @@ while [[ $# -gt 0 ]]; do
     break
     ;;
   -*)
-    echo "Unknown flag: " "$1"
-    echo "You may be intending to pass this to bootserver."
-    echo "Bootserver flags must be passed at the end of all other flags."
-    echo
-    usage
+    echo >&2 "error: unknown flag: " "$1"
+    echo >&2
+    echo >&2 "You may be intending to pass this to bootserver."
+    echo >&2 "Bootserver flags must be passed at the end of all other flags, e.g."
+    echo >&2 "  fx boot -- -1"
+    echo >&2
+    echo >&2 "See \`fx boot --help\` for more information."
     exit 1
     ;;
   *)
