@@ -15,6 +15,7 @@
 #include <hid/acer12.h>
 #include <hid/ft3x27.h>
 #include <hid/egalax.h>
+#include <hid/eyoyo.h>
 #include <hid/paradise.h>
 #include <hid/usages.h>
 
@@ -36,6 +37,7 @@ enum touch_panel_type {
     TOUCH_PANEL_PARADISEv2,
     TOUCH_PANEL_PARADISEv3,
     TOUCH_PANEL_EGALAX,
+    TOUCH_PANEL_EYOYO,
     TOUCH_PANEL_FT3X27,
 };
 
@@ -145,6 +147,22 @@ static void egalax_touch_dump(egalax_touch_t* rpt) {
     printf("  finger down: %u\n", egalax_pressed_flags(rpt->button_pad));
     printf("    x: %u\n", rpt->x);
     printf("    y: %u\n", rpt->y);
+}
+
+static void eyoyo_touch_dump(acer12_touch_t* rpt) {
+    printf("report id: %u\n", rpt->rpt_id);
+    for (int i = 0; i < 5; i++) {
+        printf("finger %d\n", i);
+        printf("  finger_id: %u\n", rpt->fingers[i].finger_id);
+        printf("    tswitch: %u\n", acer12_finger_id_tswitch(rpt->fingers[i].finger_id));
+        printf("    contact: %u\n", acer12_finger_id_contact(rpt->fingers[i].finger_id));
+        printf("  width:  %u\n", rpt->fingers[i].width);
+        printf("  height: %u\n", rpt->fingers[i].height);
+        printf("  x:      %u\n", rpt->fingers[i].x);
+        printf("  y:      %u\n", rpt->fingers[i].y);
+    }
+    printf("scan_time: %u\n", rpt->scan_time);
+    printf("contact count: %u\n", rpt->contact_count);
 }
 
 static uint32_t scale32(uint32_t z, uint32_t screen_dim, uint32_t rpt_dim) {
@@ -297,6 +315,37 @@ static void process_egalax_touchscreen_input(void* buf, size_t len, uint32_t* pi
     } else {
         uint32_t x = scale32(rpt->x, info->width, EGALAX_X_MAX);
         uint32_t y = scale32(rpt->y, info->height, EGALAX_Y_MAX);
+        if (x + CLEAR_BTN_SIZE > info->width && y < CLEAR_BTN_SIZE) {
+            clear_screen(pixels, info);
+        }
+        run = !is_exit(x, y, info);
+    }
+}
+
+static void process_eyoyo_touchscreen_input(void* buf, size_t len, uint32_t* pixels,
+                                             display_info_t* info) {
+    eyoyo_touch_t* rpt = buf;
+    if (len < sizeof(*rpt)) {
+        printf("bad report size: %zd < %zd\n", len, sizeof(*rpt));
+        return;
+    }
+#if I2C_HID_DEBUG
+    eyoyo_touch_dump(rpt);
+#endif
+
+    for (uint8_t c = 0; c < 10; c++) {
+        if (!eyoyo_finger_id_tswitch(rpt->fingers[c].finger_id)) continue;
+        uint32_t x = scale32(rpt->fingers[c].x, info->width, EYOYO_X_MAX);
+        uint32_t y = scale32(rpt->fingers[c].y, info->height, EYOYO_Y_MAX);
+        uint32_t width = 10;
+        uint32_t height = 10;
+        uint32_t color = get_color(eyoyo_finger_id_contact(rpt->fingers[c].finger_id));
+        draw_points(pixels, color, x, y, width, height, info->stride, info->height);
+    }
+
+    if (eyoyo_finger_id_tswitch(rpt->fingers[0].finger_id)) {
+        uint32_t x = scale32(rpt->fingers[0].x, info->width, FT3X27_X_MAX);
+        uint32_t y = scale32(rpt->fingers[0].y, info->height, FT3X27_Y_MAX);
         if (x + CLEAR_BTN_SIZE > info->width && y < CLEAR_BTN_SIZE) {
             clear_screen(pixels, info);
         }
@@ -523,6 +572,13 @@ int main(int argc, char* argv[]) {
             break;
         }
 
+        if (is_eyoyo_touch_report_desc(rpt_desc, rpt_desc_len)) {
+            panel = TOUCH_PANEL_EYOYO;
+            printf("touchscreen: %s is eyoyo\n", devname);
+            setup_eyoyo_touch(touchfd);
+            break;
+        }
+
         if (is_ft3x27_touch_report_desc(rpt_desc, rpt_desc_len)) {
             panel = TOUCH_PANEL_FT3X27;
             printf("touchscreen: %s is ft3x27\n", devname);
@@ -592,6 +648,10 @@ next_node:
         } else if (panel == TOUCH_PANEL_EGALAX) {
             if (*(uint8_t*)buf == EGALAX_RPT_ID_TOUCH) {
                 process_egalax_touchscreen_input(buf, r, pixels32, &info);
+            }
+        } else if (panel == TOUCH_PANEL_EYOYO) {
+            if (*(uint8_t*)buf == EYOYO_RPT_ID_TOUCH) {
+                process_eyoyo_touchscreen_input(buf, r, pixels32, &info);
             }
         } else if (panel == TOUCH_PANEL_FT3X27) {
             if (*(uint8_t*)buf == FT3X27_RPT_ID_TOUCH) {

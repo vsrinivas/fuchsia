@@ -11,6 +11,7 @@ MODULE_TYPE := userlib
 MODULE_SRCS += \
     $(LOCAL_DIR)/acer12.c \
     $(LOCAL_DIR)/egalax.c \
+    $(LOCAL_DIR)/eyoyo.c \
     $(LOCAL_DIR)/ft3x27.c \
     $(LOCAL_DIR)/hid.c \
     $(LOCAL_DIR)/keymaps.c \
