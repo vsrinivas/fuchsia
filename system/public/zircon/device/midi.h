@@ -14,9 +14,11 @@ __BEGIN_CDECLS
 
 enum {
     // Device type for MIDI source
-    MIDI_TYPE_SOURCE = 1,
+    MIDI_TYPE_SOURCE = (1u << 0),
     // Device type for MIDI sink
-    MIDI_TYPE_SINK = 2,
+    MIDI_TYPE_SINK   = (1u << 1),
+
+    MIDI_TYPE_SINK_SOURCE = MIDI_TYPE_SINK | MIDI_TYPE_SOURCE,
 };
 
 // returns the device type (either MIDI_TYPE_SOURCE or MIDI_TYPE_SINK)
