@@ -6,8 +6,9 @@
 
 #include <lib/fdio/io.h>
 #include <lib/fdio/private.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/process.h>
 #include <zircon/syscalls/exception.h>
-#include <zircon/syscalls/port.h>
 
 #include "garnet/lib/debug_ipc/helper/fd_watcher.h"
 #include "garnet/lib/debug_ipc/helper/socket_watcher.h"
@@ -43,7 +44,7 @@ struct MessageLoopZircon::WatchInfo {
   SocketWatcher* socket_watcher = nullptr;
   zx_handle_t socket_handle = ZX_HANDLE_INVALID;
 
-  // Process-exception-specific paramters.
+  // Process-exception-specific parameters.
   ZirconExceptionWatcher* exception_watcher = nullptr;
   zx_koid_t process_koid = 0;
   zx_handle_t process_handle = ZX_HANDLE_INVALID;
@@ -260,17 +261,19 @@ void MessageLoopZircon::StopWatching(int id) {
 
   switch (info.type) {
     case WatchType::kFdio:
-      port_.cancel(info.fd_handle, static_cast<uint64_t>(id));
+      port_.cancel(*zx::unowned_handle(info.fd_handle),
+                   static_cast<uint64_t>(id));
       break;
-    case WatchType::kProcessExceptions:
+    case WatchType::kProcessExceptions: {
+      zx::unowned_process process(info.process_handle);
       // Binding an invalid port will detach from the exception port.
-      zx_task_bind_exception_port(info.process_handle, ZX_HANDLE_INVALID, 0,
-                                  ZX_EXCEPTION_PORT_DEBUGGER);
+      process->bind_exception_port(zx::port(), 0, ZX_EXCEPTION_PORT_DEBUGGER);
       // Stop watching for process termination.
-      port_.cancel(info.process_handle, id);
+      port_.cancel(*process, id);
       break;
+    }
     case WatchType::kSocket:
-      port_.cancel(info.socket_handle, id);
+      port_.cancel(*zx::unowned_handle(info.socket_handle), id);
       break;
     default:
       FXL_NOTREACHED();
