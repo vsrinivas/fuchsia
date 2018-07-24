@@ -593,6 +593,7 @@ impl {{ $interface.Name }}ControlHandle {
 /* beginning of response types */
 {{- range $method := $interface.Methods }}
 {{- if and $method.HasRequest $method.HasResponse }}
+#[must_use = "FIDL methods require a response to be sent"]
 pub struct {{ $interface.Name }}{{ $method.CamelName }}Responder {
 	control_handle: {{ $interface.Name }}ControlHandle,
 	tx_id: u32,
