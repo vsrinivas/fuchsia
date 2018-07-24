@@ -16,7 +16,7 @@ namespace {
 class MaxBytesLibrary : public TestLibrary {
 public:
     MaxBytesLibrary() : TestLibrary("max_bytes.fidl", R"FIDL(
-library fidl.test.max_bytes;
+library fidl.test.maxbytes;
 
 struct OneBool {
   bool b;

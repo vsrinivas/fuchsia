@@ -8,6 +8,7 @@
 #include <stdio.h>
 
 #include <algorithm>
+#include <regex>
 #include <sstream>
 
 #include "fidl/attributes.h"
@@ -1142,10 +1143,26 @@ bool Library::CompileUnion(Union* union_declaration) {
     return true;
 }
 
+bool Library::CompileLibraryName() {
+    const std::regex pattern("^[a-z][a-z0-9]*$");
+    for (const auto& part_view : library_name_) {
+        std::string part = part_view;
+        if (!std::regex_match(part, pattern)) {
+            return Fail("Invalid library name part " + part);
+        }
+    }
+    return true;
+}
+
 bool Library::Compile() {
     for (const auto& name_and_library : *dependencies_) {
         const Library* library = name_and_library.second.get();
         constants_.insert(library->constants_.begin(), library->constants_.end());
+    }
+
+    // Verify that the library's name is valid.
+    if (!CompileLibraryName()) {
+        return false;
     }
 
     if (!SortDeclarations()) {

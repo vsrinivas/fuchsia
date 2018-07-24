@@ -16,7 +16,7 @@ namespace {
 class MaxHandlesLibrary : public TestLibrary {
 public:
     MaxHandlesLibrary() : TestLibrary("max_handles.fidl", R"FIDL(
-library fidl.test.max_handles;
+library fidl.test.maxhandles;
 
 struct OneBool {
   bool b;

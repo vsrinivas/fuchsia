@@ -518,6 +518,8 @@ private:
 
     bool SortDeclarations();
 
+    bool CompileLibraryName();
+
     bool CompileConst(Const* const_declaration);
     bool CompileEnum(Enum* enum_declaration);
     bool CompileInterface(Interface* interface_declaration);
