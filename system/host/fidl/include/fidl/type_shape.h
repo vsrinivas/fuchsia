@@ -9,10 +9,10 @@
 
 class TypeShape {
 public:
-    constexpr TypeShape(uint32_t size, uint32_t alignment, uint32_t depth = 0u, uint32_t max_handles = 0u)
-        : size_(size), alignment_(alignment), depth_(depth), max_handles_(max_handles) {}
+    constexpr TypeShape(uint32_t size, uint32_t alignment, uint32_t depth = 0u, uint32_t max_handles = 0u, uint32_t max_out_of_line = 0u)
+        : size_(size), alignment_(alignment), depth_(depth), max_handles_(max_handles), max_out_of_line_(max_out_of_line) {}
     constexpr TypeShape()
-        : TypeShape(0u, 0u, 0u, false) {}
+        : TypeShape(0u, 0u, 0u, 0u, 0u) {}
 
     TypeShape(const TypeShape&) = default;
     TypeShape& operator=(const TypeShape&) = default;
@@ -21,12 +21,14 @@ public:
     uint32_t Alignment() const { return alignment_; }
     uint32_t Depth() const { return depth_; }
     uint32_t MaxHandles() const { return max_handles_; }
+    uint32_t MaxOutOfLine() const { return max_out_of_line_; }
 
 private:
     uint32_t size_;
     uint32_t alignment_;
     uint32_t depth_;
     uint32_t max_handles_;
+    uint32_t max_out_of_line_;
 };
 
 class FieldShape {
@@ -44,6 +46,7 @@ public:
     uint32_t Depth() const { return typeshape_.Depth(); }
     uint32_t Offset() const { return offset_; }
     uint32_t MaxHandles() const { return typeshape_.MaxHandles(); }
+    uint32_t MaxOutOfLine() const { return typeshape_.MaxOutOfLine(); }
 
     void SetTypeshape(TypeShape typeshape) { typeshape_ = typeshape; }
     void SetOffset(uint32_t offset) { offset_ = offset; }

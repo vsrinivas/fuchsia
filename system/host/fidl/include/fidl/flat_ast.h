@@ -150,6 +150,7 @@ struct Decl {
 
     bool HasAttribute(fidl::StringView name) const;
     fidl::StringView GetAttribute(fidl::StringView name) const;
+    std::string GetName() const;
 
     bool compiling = false;
     bool compiled = false;

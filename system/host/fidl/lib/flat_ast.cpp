@@ -63,10 +63,13 @@ constexpr TypeShape kStatusTypeShape = TypeShape(4u, 4u);
 constexpr TypeShape kFloat32TypeShape = TypeShape(4u, 4u);
 constexpr TypeShape kFloat64TypeShape = TypeShape(8u, 8u);
 
-uint32_t AlignTo(uint32_t size, uint32_t alignment) {
+uint32_t AlignTo(uint64_t size, uint64_t alignment) {
     auto mask = alignment - 1;
     size += mask;
     size &= ~mask;
+    if (size > std::numeric_limits<uint32_t>::max()) {
+        size = std::numeric_limits<uint32_t>::max();
+    }
     return size;
 }
 
@@ -80,11 +83,12 @@ uint32_t ClampedAdd(uint32_t a, uint32_t b) {
     return std::min(sum, (uint64_t)std::numeric_limits<uint32_t>::max());
 }
 
-TypeShape CStructTypeShape(std::vector<FieldShape*>* fields, uint32_t extra_handles = 0) {
+TypeShape CStructTypeShape(std::vector<FieldShape*>* fields, uint32_t extra_handles = 0u) {
     uint32_t size = 0u;
     uint32_t alignment = 1u;
     uint32_t depth = 0u;
     uint32_t max_handles = 0u;
+    uint32_t max_out_of_line = 0u;
 
     for (FieldShape* field : *fields) {
         TypeShape typeshape = field->Typeshape();
@@ -94,12 +98,13 @@ TypeShape CStructTypeShape(std::vector<FieldShape*>* fields, uint32_t extra_hand
         size += typeshape.Size();
         depth = std::max(depth, typeshape.Depth());
         max_handles = ClampedAdd(max_handles, typeshape.MaxHandles());
+        max_out_of_line = ClampedAdd(max_out_of_line, typeshape.MaxOutOfLine());
     }
 
     max_handles = ClampedAdd(max_handles, extra_handles);
 
     size = AlignTo(size, alignment);
-    return TypeShape(size, alignment, depth, max_handles);
+    return TypeShape(size, alignment, depth, max_handles, max_out_of_line);
 }
 
 TypeShape CUnionTypeShape(const std::vector<flat::Union::Member>& members) {
@@ -107,6 +112,7 @@ TypeShape CUnionTypeShape(const std::vector<flat::Union::Member>& members) {
     uint32_t alignment = 1u;
     uint32_t depth = 0u;
     uint32_t max_handles = 0u;
+    uint32_t max_out_of_line = 0u;
 
     for (const auto& member : members) {
         const auto& fieldshape = member.fieldshape;
@@ -114,17 +120,18 @@ TypeShape CUnionTypeShape(const std::vector<flat::Union::Member>& members) {
         alignment = std::max(alignment, fieldshape.Alignment());
         depth = std::max(depth, fieldshape.Depth());
         max_handles = std::max(max_handles, fieldshape.Typeshape().MaxHandles());
+        max_out_of_line = std::max(max_out_of_line, fieldshape.Typeshape().MaxOutOfLine());
     }
 
     size = AlignTo(size, alignment);
-    return TypeShape(size, alignment, depth, max_handles);
+    return TypeShape(size, alignment, depth, max_handles, max_out_of_line);
 }
 
 TypeShape FidlStructTypeShape(std::vector<FieldShape*>* fields) {
     return CStructTypeShape(fields);
 }
 
-TypeShape PointerTypeShape(TypeShape element) {
+TypeShape PointerTypeShape(TypeShape element, uint32_t max_element_count = 1u) {
     // Because FIDL supports recursive data structures, we might not have
     // computed the TypeShape for the element we're pointing to. In that case,
     // the size will be zero and we'll use |numeric_limits<uint32_t>::max()| as
@@ -137,7 +144,18 @@ TypeShape PointerTypeShape(TypeShape element) {
     uint32_t depth = std::numeric_limits<uint32_t>::max();
     if (element.Size() > 0 && element.Depth() < std::numeric_limits<uint32_t>::max())
         depth = ClampedAdd(element.Depth(), 1);
-    return TypeShape(8u, 8u, depth, element.MaxHandles());
+
+    // The element(s) will be stored out-of-line.
+    uint32_t elements_size = ClampedMultiply(element.Size(), max_element_count);
+    // Out-of-line data is aligned to 8 bytes.
+    elements_size = AlignTo(elements_size, 8);
+    // The elements may each carry their own out-of-line data.
+    uint32_t elements_out_of_line = ClampedMultiply(element.MaxOutOfLine(), max_element_count);
+
+    uint32_t max_handles = ClampedMultiply(element.MaxHandles(), max_element_count);
+    uint32_t max_out_of_line = ClampedAdd(elements_size, elements_out_of_line);
+
+    return TypeShape(8u, 8u, depth, max_handles, max_out_of_line);
 }
 
 TypeShape ArrayTypeShape(TypeShape element, uint32_t count) {
@@ -149,16 +167,16 @@ TypeShape ArrayTypeShape(TypeShape element, uint32_t count) {
 
 TypeShape VectorTypeShape(TypeShape element, uint32_t max_element_count) {
     auto size = FieldShape(kUint64TypeShape);
-    auto data = FieldShape(PointerTypeShape(element));
-    std::vector<FieldShape*> header{&size, &data};
-    return CStructTypeShape(&header, ClampedMultiply(element.MaxHandles(), max_element_count));
-}
-
-TypeShape StringTypeShape() {
-    auto size = FieldShape(kUint64TypeShape);
-    auto data = FieldShape(PointerTypeShape(kUint8TypeShape));
+    auto data = FieldShape(PointerTypeShape(element, max_element_count));
     std::vector<FieldShape*> header{&size, &data};
     return CStructTypeShape(&header);
+}
+
+TypeShape StringTypeShape(uint32_t max_length) {
+    auto size = FieldShape(kUint64TypeShape);
+    auto data = FieldShape(PointerTypeShape(kUint8TypeShape, max_length));
+    std::vector<FieldShape*> header{&size, &data};
+    return CStructTypeShape(&header, 0);
 }
 
 TypeShape PrimitiveTypeShape(types::PrimitiveSubtype type) {
@@ -217,6 +235,10 @@ fidl::StringView Decl::GetAttribute(fidl::StringView name) const {
         }
     }
     return fidl::StringView();
+}
+
+std::string Decl::GetName() const {
+    return name.name().data();
 }
 
 bool Interface::Method::Parameter::IsSimple() const {
@@ -1077,7 +1099,6 @@ bool Library::CompileStruct(Struct* struct_declaration) {
         if (!CompileType(member.type.get(), &member.fieldshape.Typeshape()))
             return false;
         fidl_struct.push_back(&member.fieldshape);
-        max_member_handles = ClampedAdd(max_member_handles, member.fieldshape.Typeshape().MaxHandles());
     }
 
     if (struct_declaration->recursive) {
@@ -1204,7 +1225,7 @@ bool Library::CompileVectorType(flat::VectorType* vector_type, TypeShape* out_ty
 }
 
 bool Library::CompileStringType(flat::StringType* string_type, TypeShape* out_typeshape) {
-    *out_typeshape = StringTypeShape();
+    *out_typeshape = StringTypeShape(string_type->max_size.Value());
     return true;
 }
 
