@@ -17,7 +17,7 @@
     <project name="external/github.com/catapult-project/catapult"
              path="third_party/catapult"
              remote="https://chromium.googlesource.com/catapult"
-             revision="841a8eca6eec09a8a350992aaae014d65acbb57f"/>
+             revision="c9111f68cac95234cc8ffb83ae965fd2c6dd8153"/>
     <project name="libc-tests"
              path="third_party/libc-tests"
              remote="https://fuchsia.googlesource.com/libc-tests"
