@@ -82,7 +82,7 @@ struct arm64_iframe_long {
     uint64_t elr;
     uint64_t spsr;
     uint64_t mdscr;
-    uint64_t pad2[1];  // Keep structure multiple of 16-bytes for stack alignment.
+    uint64_t pad2[1]; // Keep structure multiple of 16-bytes for stack alignment.
 };
 
 struct arm64_iframe_short {

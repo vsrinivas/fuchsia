@@ -26,22 +26,22 @@ __BEGIN_CDECLS
 #define X86_8BYTE_MASK 0xFFFFFFFF
 
 struct x86_64_iframe {
-    uint64_t rdi, rsi, rbp, rbx, rdx, rcx, rax;         // pushed by common handler
-    uint64_t r8, r9, r10, r11, r12, r13, r14, r15;      // pushed by common handler
-    uint64_t vector;                                    // pushed by stub
-    uint64_t err_code;                                  // pushed by interrupt or stub
-    uint64_t ip, cs, flags;                             // pushed by interrupt
-    uint64_t user_sp, user_ss;                          // pushed by interrupt
+    uint64_t rdi, rsi, rbp, rbx, rdx, rcx, rax;    // pushed by common handler
+    uint64_t r8, r9, r10, r11, r12, r13, r14, r15; // pushed by common handler
+    uint64_t vector;                               // pushed by stub
+    uint64_t err_code;                             // pushed by interrupt or stub
+    uint64_t ip, cs, flags;                        // pushed by interrupt
+    uint64_t user_sp, user_ss;                     // pushed by interrupt
 };
 
 typedef struct x86_64_iframe x86_iframe_t;
 
-void x86_exception_handler(x86_iframe_t *frame);
-void platform_irq(x86_iframe_t *frame);
+void x86_exception_handler(x86_iframe_t* frame);
+void platform_irq(x86_iframe_t* frame);
 
 struct arch_exception_context {
     bool is_page_fault;
-    x86_iframe_t *frame;
+    x86_iframe_t* frame;
     uint64_t cr2;
 };
 
@@ -53,13 +53,13 @@ struct x86_64_context_switch_frame {
     uint64_t rip;
 };
 
-void x86_64_context_switch(vaddr_t *oldsp, vaddr_t newsp);
+void x86_64_context_switch(vaddr_t* oldsp, vaddr_t newsp);
 void x86_uspace_entry(uintptr_t arg1, uintptr_t arg2, uintptr_t sp,
                       uintptr_t pc, uint64_t rflags) __NO_RETURN;
 
 void x86_syscall(void);
 
-void x86_syscall_process_pending_signals(x86_syscall_general_regs_t *gregs);
+void x86_syscall_process_pending_signals(x86_syscall_general_regs_t* gregs);
 
 /* @brief Register all of the CPUs in the system
  *
@@ -69,7 +69,7 @@ void x86_syscall_process_pending_signals(x86_syscall_general_regs_t *gregs);
  *        the list.
  * @param num_cpus The number of entries in the apic_ids list.
  */
-void x86_init_smp(uint32_t *apic_ids, uint32_t num_cpus);
+void x86_init_smp(uint32_t* apic_ids, uint32_t num_cpus);
 
 /* @brief Bring all of the specified APs up and hand them over to the kernel
  *
@@ -86,11 +86,11 @@ void x86_init_smp(uint32_t *apic_ids, uint32_t num_cpus);
  * @return ZX_ERR_BAD_STATE if one of the targets is currently online
  * @return ZX_ERR_TIMED_OUT if one of the targets failed to launch
  */
-zx_status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count);
+zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count);
 
-#define IO_BITMAP_BITS      65536
-#define IO_BITMAP_BYTES     (IO_BITMAP_BITS/8)
-#define IO_BITMAP_LONGS     (IO_BITMAP_BITS/sizeof(long))
+#define IO_BITMAP_BITS 65536
+#define IO_BITMAP_BYTES (IO_BITMAP_BITS / 8)
+#define IO_BITMAP_LONGS (IO_BITMAP_BITS / sizeof(long))
 
 /*
  * Assignment of Interrupt Stack Table entries
@@ -127,185 +127,177 @@ typedef struct {
 
 typedef tss_64_t tss_t;
 
-static inline void x86_clts(void) {__asm__ __volatile__ ("clts"); }
-static inline void x86_hlt(void) {__asm__ __volatile__ ("hlt"); }
-static inline void x86_sti(void) {__asm__ __volatile__ ("sti"); }
-static inline void x86_cli(void) {__asm__ __volatile__ ("cli"); }
-static inline void x86_ltr(uint16_t sel)
-{
-    __asm__ __volatile__ ("ltr %%ax" :: "a" (sel));
+static inline void x86_clts(void) {
+    __asm__ __volatile__("clts");
 }
-static inline void x86_lidt(uintptr_t base)
-{
-    __asm volatile("lidt (%0)" :: "r"(base) : "memory");
+static inline void x86_hlt(void) {
+    __asm__ __volatile__("hlt");
+}
+static inline void x86_sti(void) {
+    __asm__ __volatile__("sti");
+}
+static inline void x86_cli(void) {
+    __asm__ __volatile__("cli");
+}
+static inline void x86_ltr(uint16_t sel) {
+    __asm__ __volatile__("ltr %%ax" ::"a"(sel));
+}
+static inline void x86_lidt(uintptr_t base) {
+    __asm volatile("lidt (%0)" ::"r"(base)
+                   : "memory");
 }
 
-static inline uint8_t inp(uint16_t _port)
-{
+static inline uint8_t inp(uint16_t _port) {
     uint8_t rv;
-    __asm__ __volatile__ ("inb %1, %0"
-                          : "=a" (rv)
-                          : "d" (_port));
+    __asm__ __volatile__("inb %1, %0"
+                         : "=a"(rv)
+                         : "d"(_port));
     return (rv);
 }
 
-static inline uint16_t inpw (uint16_t _port)
-{
+static inline uint16_t inpw(uint16_t _port) {
     uint16_t rv;
-    __asm__ __volatile__ ("inw %1, %0"
-                          : "=a" (rv)
-                          : "d" (_port));
+    __asm__ __volatile__("inw %1, %0"
+                         : "=a"(rv)
+                         : "d"(_port));
     return (rv);
 }
 
-static inline uint32_t inpd(uint16_t _port)
-{
+static inline uint32_t inpd(uint16_t _port) {
     uint32_t rv;
-    __asm__ __volatile__ ("inl %1, %0"
-                          : "=a" (rv)
-                          : "d" (_port));
+    __asm__ __volatile__("inl %1, %0"
+                         : "=a"(rv)
+                         : "d"(_port));
     return (rv);
 }
 
-static inline void outp(uint16_t _port, uint8_t _data)
-{
-    __asm__ __volatile__ ("outb %1, %0"
-                          :
-                          : "d" (_port),
-                          "a" (_data));
+static inline void outp(uint16_t _port, uint8_t _data) {
+    __asm__ __volatile__("outb %1, %0"
+                         :
+                         : "d"(_port),
+                           "a"(_data));
 }
 
-static inline void outpw(uint16_t _port, uint16_t _data)
-{
-    __asm__ __volatile__ ("outw %1, %0"
-                          :
-                          : "d" (_port),
-                          "a" (_data));
+static inline void outpw(uint16_t _port, uint16_t _data) {
+    __asm__ __volatile__("outw %1, %0"
+                         :
+                         : "d"(_port),
+                           "a"(_data));
 }
 
-static inline void outpd(uint16_t _port, uint32_t _data)
-{
-    __asm__ __volatile__ ("outl %1, %0"
-                          :
-                          : "d" (_port),
-                          "a" (_data));
+static inline void outpd(uint16_t _port, uint32_t _data) {
+    __asm__ __volatile__("outl %1, %0"
+                         :
+                         : "d"(_port),
+                           "a"(_data));
 }
 
-static inline uint64_t rdtsc(void)
-{
+static inline uint64_t rdtsc(void) {
     return __rdtsc();
 }
 
-static inline void cpuid(uint32_t sel, uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d)
-{
+static inline void cpuid(uint32_t sel, uint32_t* a, uint32_t* b, uint32_t* c, uint32_t* d) {
     __cpuid(sel, *a, *b, *c, *d);
 }
 
 /* cpuid wrapper with ecx set to a second argument */
-static inline void cpuid_c(uint32_t sel, uint32_t sel_c, uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d)
-{
+static inline void cpuid_c(uint32_t sel, uint32_t sel_c, uint32_t* a, uint32_t* b, uint32_t* c, uint32_t* d) {
     __cpuid_count(sel, sel_c, *a, *b, *c, *d);
 }
 
-static inline void set_in_cr0(ulong mask)
-{
+static inline void set_in_cr0(ulong mask) {
     ulong temp;
 
-    __asm__ __volatile__ (
+    __asm__ __volatile__(
         "mov %%cr0, %0  \n\t"
         "or %1, %0      \n\t"
         "mov %0, %%cr0   \n\t"
-        : "=r" (temp) : "irg" (mask)
+        : "=r"(temp)
+        : "irg"(mask)
         :);
 }
 
-static inline void clear_in_cr0(ulong mask)
-{
+static inline void clear_in_cr0(ulong mask) {
     ulong temp;
 
-    __asm__ __volatile__ (
+    __asm__ __volatile__(
         "mov %%cr0, %0  \n\t"
         "and %1, %0     \n\t"
         "mov %0, %%cr0  \n\t"
-        : "=r" (temp) : "irg" (~mask)
+        : "=r"(temp)
+        : "irg"(~mask)
         :);
 }
 
-static inline ulong x86_get_cr2(void)
-{
+static inline ulong x86_get_cr2(void) {
     ulong rv;
 
-    __asm__ __volatile__ (
+    __asm__ __volatile__(
         "mov %%cr2, %0"
-        : "=r" (rv)
-    );
+        : "=r"(rv));
 
     return rv;
 }
 
-static inline ulong x86_get_cr3(void)
-{
+static inline ulong x86_get_cr3(void) {
     ulong rv;
 
-    __asm__ __volatile__ (
+    __asm__ __volatile__(
         "mov %%cr3, %0"
-        : "=r" (rv));
+        : "=r"(rv));
     return rv;
 }
 
-static inline void x86_set_cr3(ulong in_val)
-{
-    __asm__ __volatile__ (
+static inline void x86_set_cr3(ulong in_val) {
+    __asm__ __volatile__(
         "mov %0,%%cr3 \n\t"
         :
-        :"r" (in_val));
+        : "r"(in_val));
 }
 
-static inline ulong x86_get_cr0(void)
-{
+static inline ulong x86_get_cr0(void) {
     ulong rv;
 
-    __asm__ __volatile__ (
+    __asm__ __volatile__(
         "mov %%cr0, %0 \n\t"
-        : "=r" (rv));
+        : "=r"(rv));
     return rv;
 }
 
-static inline ulong x86_get_cr4(void)
-{
+static inline ulong x86_get_cr4(void) {
     ulong rv;
 
-    __asm__ __volatile__ (
+    __asm__ __volatile__(
         "mov %%cr4, %0 \n\t"
-        : "=r" (rv));
+        : "=r"(rv));
     return rv;
 }
 
-
-static inline void x86_set_cr0(ulong in_val)
-{
-    __asm__ __volatile__ (
+static inline void x86_set_cr0(ulong in_val) {
+    __asm__ __volatile__(
         "mov %0,%%cr0 \n\t"
         :
-        :"r" (in_val));
+        : "r"(in_val));
 }
 
-static inline void x86_set_cr4(ulong in_val)
-{
-    __asm__ __volatile__ (
+static inline void x86_set_cr4(ulong in_val) {
+    __asm__ __volatile__(
         "mov %0,%%cr4 \n\t"
         :
-        :"r" (in_val));
+        : "r"(in_val));
 }
 
-#define DEFINE_REGISTER_ACCESSOR(REG)                           \
-    static inline void set_##REG(uint16_t value) {              \
-        __asm__ volatile("mov %0, %%" #REG : : "r"(value));     \
-    }                                                           \
-    static inline uint16_t get_##REG(void) {                    \
-        uint16_t value;                                         \
-        __asm__ volatile("mov %%" #REG ", %0" : "=r"(value));   \
-        return value;                                           \
+#define DEFINE_REGISTER_ACCESSOR(REG)              \
+    static inline void set_##REG(uint16_t value) { \
+        __asm__ volatile("mov %0, %%" #REG         \
+                         :                         \
+                         : "r"(value));            \
+    }                                              \
+    static inline uint16_t get_##REG(void) {       \
+        uint16_t value;                            \
+        __asm__ volatile("mov %%" #REG ", %0"      \
+                         : "=r"(value));           \
+        return value;                              \
     }
 
 DEFINE_REGISTER_ACCESSOR(ds)
@@ -315,52 +307,47 @@ DEFINE_REGISTER_ACCESSOR(gs)
 
 #undef DEFINE_REGISTER_ACCESSOR
 
-static inline uint64_t read_msr (uint32_t msr_id)
-{
+static inline uint64_t read_msr(uint32_t msr_id) {
     uint32_t msr_read_val_lo;
     uint32_t msr_read_val_hi;
 
-    __asm__ __volatile__ (
+    __asm__ __volatile__(
         "rdmsr \n\t"
-        : "=a" (msr_read_val_lo), "=d" (msr_read_val_hi)
-        : "c" (msr_id));
+        : "=a"(msr_read_val_lo), "=d"(msr_read_val_hi)
+        : "c"(msr_id));
 
     return ((uint64_t)msr_read_val_hi << 32) | msr_read_val_lo;
 }
 
-static inline uint32_t read_msr32 (uint32_t msr_id)
-{
+static inline uint32_t read_msr32(uint32_t msr_id) {
     uint32_t msr_read_val;
 
-    __asm__ __volatile__ (
+    __asm__ __volatile__(
         "rdmsr \n\t"
-        : "=a" (msr_read_val)
-        : "c" (msr_id)
+        : "=a"(msr_read_val)
+        : "c"(msr_id)
         : "rdx");
 
     return msr_read_val;
 }
 
-zx_status_t read_msr_safe(uint32_t msr_id, uint64_t *val);
+zx_status_t read_msr_safe(uint32_t msr_id, uint64_t* val);
 
-static inline void write_msr (uint32_t msr_id, uint64_t msr_write_val)
-{
-    __asm__ __volatile__ (
+static inline void write_msr(uint32_t msr_id, uint64_t msr_write_val) {
+    __asm__ __volatile__(
         "wrmsr \n\t"
-        : : "c" (msr_id), "a" (msr_write_val & 0xffffffff), "d" (msr_write_val >> 32));
+        :
+        : "c"(msr_id), "a"(msr_write_val & 0xffffffff), "d"(msr_write_val >> 32));
 }
 
-
-static inline bool x86_is_paging_enabled(void)
-{
+static inline bool x86_is_paging_enabled(void) {
     if (x86_get_cr0() & X86_CR0_PG)
         return true;
 
     return false;
 }
 
-static inline bool x86_is_PAE_enabled(void)
-{
+static inline bool x86_is_PAE_enabled(void) {
     if (x86_is_paging_enabled() == false)
         return false;
 
@@ -370,133 +357,129 @@ static inline bool x86_is_PAE_enabled(void)
     return true;
 }
 
-static inline uint64_t x86_read_gs_offset64(uintptr_t offset)
-{
+static inline uint64_t x86_read_gs_offset64(uintptr_t offset) {
     uint64_t ret;
-    __asm__( "movq  %%gs:%1, %0" : "=r" (ret) : "m" (*(uint64_t *)(offset)));
+    __asm__("movq  %%gs:%1, %0"
+            : "=r"(ret)
+            : "m"(*(uint64_t*)(offset)));
     return ret;
 }
 
-static inline void x86_write_gs_offset64(uintptr_t offset, uint64_t val)
-{
-    __asm__( "movq  %0, %%gs:%1" : : "ir" (val), "m" (*(uint64_t *)(offset)) : "memory");
+static inline void x86_write_gs_offset64(uintptr_t offset, uint64_t val) {
+    __asm__("movq  %0, %%gs:%1"
+            :
+            : "ir"(val), "m"(*(uint64_t*)(offset))
+            : "memory");
 }
 
-static inline uint32_t x86_read_gs_offset32(uintptr_t offset)
-{
+static inline uint32_t x86_read_gs_offset32(uintptr_t offset) {
     uint32_t ret;
-    __asm__( "movl  %%gs:%1, %0" : "=r" (ret) : "m" (*(uint32_t *)(offset)));
+    __asm__("movl  %%gs:%1, %0"
+            : "=r"(ret)
+            : "m"(*(uint32_t*)(offset)));
     return ret;
 }
 
-static inline void x86_write_gs_offset32(uintptr_t offset, uint32_t val)
-{
-    __asm__( "movl   %0, %%gs:%1" : : "ir" (val), "m" (*(uint32_t *)(offset)) : "memory");
+static inline void x86_write_gs_offset32(uintptr_t offset, uint32_t val) {
+    __asm__("movl   %0, %%gs:%1"
+            :
+            : "ir"(val), "m"(*(uint32_t*)(offset))
+            : "memory");
 }
 
 typedef uint64_t x86_flags_t;
 
-static inline uint64_t x86_save_flags(void)
-{
+static inline uint64_t x86_save_flags(void) {
     uint64_t state;
 
     __asm__ volatile(
         "pushfq;"
         "popq %0"
-        : "=rm" (state)
-        :: "memory");
+        : "=rm"(state)::"memory");
 
     return state;
 }
 
-static inline void x86_restore_flags(uint64_t flags)
-{
+static inline void x86_restore_flags(uint64_t flags) {
     __asm__ volatile(
         "pushq %0;"
-        "popfq"
-        :: "g" (flags)
+        "popfq" ::"g"(flags)
         : "memory", "cc");
 }
 
-static inline void inprep(uint16_t _port, uint8_t *_buffer, uint32_t _reads)
-{
-    __asm__ __volatile__ ("pushfq \n\t"
-                          "cli \n\t"
-                          "cld \n\t"
-                          "rep insb \n\t"
-                          "popfq \n\t"
-                          :
-                          : "d" (_port),
-                          "D" (_buffer),
-                          "c" (_reads));
+static inline void inprep(uint16_t _port, uint8_t* _buffer, uint32_t _reads) {
+    __asm__ __volatile__("pushfq \n\t"
+                         "cli \n\t"
+                         "cld \n\t"
+                         "rep insb \n\t"
+                         "popfq \n\t"
+                         :
+                         : "d"(_port),
+                           "D"(_buffer),
+                           "c"(_reads));
 }
 
-static inline void outprep(uint16_t _port, uint8_t *_buffer, uint32_t _writes)
-{
-    __asm__ __volatile__ ("pushfq \n\t"
-                          "cli \n\t"
-                          "cld \n\t"
-                          "rep outsb \n\t"
-                          "popfq \n\t"
-                          :
-                          : "d" (_port),
-                          "S" (_buffer),
-                          "c" (_writes));
+static inline void outprep(uint16_t _port, uint8_t* _buffer, uint32_t _writes) {
+    __asm__ __volatile__("pushfq \n\t"
+                         "cli \n\t"
+                         "cld \n\t"
+                         "rep outsb \n\t"
+                         "popfq \n\t"
+                         :
+                         : "d"(_port),
+                           "S"(_buffer),
+                           "c"(_writes));
 }
 
-static inline void inpwrep(uint16_t _port, uint16_t *_buffer, uint32_t _reads)
-{
-    __asm__ __volatile__ ("pushfq \n\t"
-                          "cli \n\t"
-                          "cld \n\t"
-                          "rep insw \n\t"
-                          "popfq \n\t"
-                          :
-                          : "d" (_port),
-                          "D" (_buffer),
-                          "c" (_reads));
+static inline void inpwrep(uint16_t _port, uint16_t* _buffer, uint32_t _reads) {
+    __asm__ __volatile__("pushfq \n\t"
+                         "cli \n\t"
+                         "cld \n\t"
+                         "rep insw \n\t"
+                         "popfq \n\t"
+                         :
+                         : "d"(_port),
+                           "D"(_buffer),
+                           "c"(_reads));
 }
 
-static inline void outpwrep(uint16_t _port, uint16_t *_buffer,
-                            uint32_t _writes)
-{
-    __asm__ __volatile__ ("pushfq \n\t"
-                          "cli \n\t"
-                          "cld \n\t"
-                          "rep outsw \n\t"
-                          "popfq \n\t"
-                          :
-                          : "d" (_port),
-                          "S" (_buffer),
-                          "c" (_writes));
+static inline void outpwrep(uint16_t _port, uint16_t* _buffer,
+                            uint32_t _writes) {
+    __asm__ __volatile__("pushfq \n\t"
+                         "cli \n\t"
+                         "cld \n\t"
+                         "rep outsw \n\t"
+                         "popfq \n\t"
+                         :
+                         : "d"(_port),
+                           "S"(_buffer),
+                           "c"(_writes));
 }
 
-static inline void inpdrep(uint16_t _port, uint32_t *_buffer,
-                           uint32_t _reads)
-{
-    __asm__ __volatile__ ("pushfq \n\t"
-                          "cli \n\t"
-                          "cld \n\t"
-                          "rep insl \n\t"
-                          "popfq \n\t"
-                          :
-                          : "d" (_port),
-                          "D" (_buffer),
-                          "c" (_reads));
+static inline void inpdrep(uint16_t _port, uint32_t* _buffer,
+                           uint32_t _reads) {
+    __asm__ __volatile__("pushfq \n\t"
+                         "cli \n\t"
+                         "cld \n\t"
+                         "rep insl \n\t"
+                         "popfq \n\t"
+                         :
+                         : "d"(_port),
+                           "D"(_buffer),
+                           "c"(_reads));
 }
 
-static inline void outpdrep(uint16_t _port, uint32_t *_buffer,
-                            uint32_t _writes)
-{
-    __asm__ __volatile__ ("pushfq \n\t"
-                          "cli \n\t"
-                          "cld \n\t"
-                          "rep outsl \n\t"
-                          "popfq \n\t"
-                          :
-                          : "d" (_port),
-                          "S" (_buffer),
-                          "c" (_writes));
+static inline void outpdrep(uint16_t _port, uint32_t* _buffer,
+                            uint32_t _writes) {
+    __asm__ __volatile__("pushfq \n\t"
+                         "cli \n\t"
+                         "cld \n\t"
+                         "rep outsl \n\t"
+                         "popfq \n\t"
+                         :
+                         : "d"(_port),
+                           "S"(_buffer),
+                           "c"(_writes));
 }
 
 void x86_monitor(volatile void* addr);
