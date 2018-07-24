@@ -12,6 +12,7 @@ struct ConverterArgs {
   long timestamp = 0;
   const char* masters = nullptr;
   const char* bots = nullptr;
+  const char* log_url = nullptr;
 
   // Generate deterministic GUIDs instead of random GUIDs.  This is used
   // only for testing.

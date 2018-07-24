@@ -120,6 +120,13 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
   AddSharedDiagnostic("bots", helper.MakeString(args->bots));
   AddSharedDiagnostic("masters", helper.MakeString(args->masters));
 
+  // The "logUrls" diagnostic contains a list of [name, url] tuples.
+  rapidjson::Value log_url_array;
+  log_url_array.SetArray();
+  log_url_array.PushBack(helper.MakeString("Build Log"), alloc);
+  log_url_array.PushBack(helper.MakeString(args->log_url), alloc);
+  AddSharedDiagnostic("logUrls", std::move(log_url_array));
+
   // Allocate a GUID for the given test suite name (by creating a
   // "diagnostic" entry).  Memoize this allocation so that we don't
   // allocate >1 GUID for the same test suite name.
@@ -249,6 +256,7 @@ int ConverterMain(int argc, char** argv) {
       "  --execution-timestamp-ms NUMBER\n"
       "  --masters STRING\n"
       "  --bots STRING\n"
+      "  --log-url URL\n"
       "See README.md for the meanings of these parameters.\n";
 
   // Parse command line arguments.
@@ -259,6 +267,7 @@ int ConverterMain(int argc, char** argv) {
     {"execution-timestamp-ms", required_argument, nullptr, 'e'},
     {"masters", required_argument, nullptr, 'm'},
     {"bots", required_argument, nullptr, 'b'},
+    {"log-url", required_argument, nullptr, 'l'},
   };
   ConverterArgs args;
   const char* input_filename = nullptr;
@@ -287,6 +296,9 @@ int ConverterMain(int argc, char** argv) {
       case 'b':
         args.bots = optarg;
         break;
+      case 'l':
+        args.log_url = optarg;
+        break;
     }
   }
   if (optind < argc) {
@@ -310,6 +322,10 @@ int ConverterMain(int argc, char** argv) {
   }
   if (!args.bots) {
     fprintf(stderr, "--bots argument is required\n");
+    failed = true;
+  }
+  if (!args.log_url) {
+    fprintf(stderr, "--log-url argument is required\n");
     failed = true;
   }
   if (failed) {

@@ -158,6 +158,16 @@ TEST(CatapultConverter, Convert) {
         "guid": "dummy_guid_3",
         "type": "GenericSet",
         "values": [
+            [
+                "Build Log",
+                "https://ci.example.com/build/100"
+            ]
+        ]
+    },
+    {
+        "guid": "dummy_guid_4",
+        "type": "GenericSet",
+        "values": [
             "my_test_suite"
         ]
     },
@@ -169,7 +179,8 @@ TEST(CatapultConverter, Convert) {
             "chromiumCommitPositions": "dummy_guid_0",
             "bots": "dummy_guid_1",
             "masters": "dummy_guid_2",
-            "benchmarks": "dummy_guid_3"
+            "logUrls": "dummy_guid_3",
+            "benchmarks": "dummy_guid_4"
         },
         "running": [
             5,
@@ -180,7 +191,7 @@ TEST(CatapultConverter, Convert) {
             "compared_elsewhere",
             "compared_elsewhere"
         ],
-        "guid": "dummy_guid_4",
+        "guid": "dummy_guid_5",
         "maxNumSampleValues": 5,
         "numNans": 0
     },
@@ -192,7 +203,8 @@ TEST(CatapultConverter, Convert) {
             "chromiumCommitPositions": "dummy_guid_0",
             "bots": "dummy_guid_1",
             "masters": "dummy_guid_2",
-            "benchmarks": "dummy_guid_3"
+            "logUrls": "dummy_guid_3",
+            "benchmarks": "dummy_guid_4"
         },
         "running": [
             4,
@@ -203,7 +215,7 @@ TEST(CatapultConverter, Convert) {
             "compared_elsewhere",
             "compared_elsewhere"
         ],
-        "guid": "dummy_guid_5",
+        "guid": "dummy_guid_6",
         "maxNumSampleValues": 4,
         "numNans": 0
     }
@@ -221,22 +233,23 @@ TEST(CatapultConverter, Convert) {
   args.timestamp = 4321;
   args.masters = "example_masters";
   args.bots = "example_bots";
+  args.log_url = "https://ci.example.com/build/100";
   args.use_test_guids = true;
   Convert(&input, &output, &args);
 
-  AssertApproxEqual(&output, &output[4]["running"][1], 0.000105);
-  AssertApproxEqual(&output, &output[4]["running"][2], -9.180875);
-  AssertApproxEqual(&output, &output[4]["running"][3], 0.000103);
-  AssertApproxEqual(&output, &output[4]["running"][4], 0.000101);
-  AssertApproxEqual(&output, &output[4]["running"][5], 0.000515);
-  AssertApproxEqual(&output, &output[4]["running"][6], 2.5e-12);
+  AssertApproxEqual(&output, &output[5]["running"][1], 0.000105);
+  AssertApproxEqual(&output, &output[5]["running"][2], -9.180875);
+  AssertApproxEqual(&output, &output[5]["running"][3], 0.000103);
+  AssertApproxEqual(&output, &output[5]["running"][4], 0.000101);
+  AssertApproxEqual(&output, &output[5]["running"][5], 0.000515);
+  AssertApproxEqual(&output, &output[5]["running"][6], 2.5e-12);
 
-  AssertApproxEqual(&output, &output[5]["running"][1], 200);
-  AssertApproxEqual(&output, &output[5]["running"][2], 4.098931);
-  AssertApproxEqual(&output, &output[5]["running"][3], 104);
-  AssertApproxEqual(&output, &output[5]["running"][4], 6);
-  AssertApproxEqual(&output, &output[5]["running"][5], 416);
-  AssertApproxEqual(&output, &output[5]["running"][6], 6290.666);
+  AssertApproxEqual(&output, &output[6]["running"][1], 200);
+  AssertApproxEqual(&output, &output[6]["running"][2], 4.098931);
+  AssertApproxEqual(&output, &output[6]["running"][3], 104);
+  AssertApproxEqual(&output, &output[6]["running"][4], 6);
+  AssertApproxEqual(&output, &output[6]["running"][5], 416);
+  AssertApproxEqual(&output, &output[6]["running"][6], 6290.666);
 
   AssertJsonEqual(output, expected_output);
 }
@@ -287,6 +300,16 @@ TEST(CatapultConverter, ConvertNested) {
         "guid": "dummy_guid_3",
         "type": "GenericSet",
         "values": [
+            [
+                "Build Log",
+                "https://ci.example.com/build/200"
+            ]
+        ]
+    },
+    {
+        "guid": "dummy_guid_4",
+        "type": "GenericSet",
+        "values": [
             "some_test_suite"
         ]
     },
@@ -298,7 +321,8 @@ TEST(CatapultConverter, ConvertNested) {
             "chromiumCommitPositions": "dummy_guid_0",
             "bots": "dummy_guid_1",
             "masters": "dummy_guid_2",
-            "benchmarks": "dummy_guid_3"
+            "logUrls": "dummy_guid_3",
+            "benchmarks": "dummy_guid_4"
         },
         "running": [
             1,
@@ -309,7 +333,7 @@ TEST(CatapultConverter, ConvertNested) {
             "compared_elsewhere",
             "compared_elsewhere"
         ],
-        "guid": "dummy_guid_4",
+        "guid": "dummy_guid_5",
         "maxNumSampleValues": 1,
         "numNans": 0
     },
@@ -321,7 +345,8 @@ TEST(CatapultConverter, ConvertNested) {
             "chromiumCommitPositions": "dummy_guid_0",
             "bots": "dummy_guid_1",
             "masters": "dummy_guid_2",
-            "benchmarks": "dummy_guid_3"
+            "logUrls": "dummy_guid_3",
+            "benchmarks": "dummy_guid_4"
         },
         "running": [
             3,
@@ -332,7 +357,7 @@ TEST(CatapultConverter, ConvertNested) {
             "compared_elsewhere",
             "compared_elsewhere"
         ],
-        "guid": "dummy_guid_5",
+        "guid": "dummy_guid_6",
         "maxNumSampleValues": 3,
         "numNans": 0
     }
@@ -350,22 +375,23 @@ TEST(CatapultConverter, ConvertNested) {
   args.timestamp = 4321;
   args.masters = "example_masters";
   args.bots = "example_bots";
+  args.log_url = "https://ci.example.com/build/200";
   args.use_test_guids = true;
   Convert(&input, &output, &args);
 
-  AssertApproxEqual(&output, &output[4]["running"][1], 0.0002);
-  AssertApproxEqual(&output, &output[4]["running"][2], -8.5171);
-  AssertApproxEqual(&output, &output[4]["running"][3], 0.0002);
-  AssertApproxEqual(&output, &output[4]["running"][4], 0.0002);
-  AssertApproxEqual(&output, &output[4]["running"][5], 0.0002);
-  AssertApproxEqual(&output, &output[4]["running"][6], 0);
+  AssertApproxEqual(&output, &output[5]["running"][1], 0.0002);
+  AssertApproxEqual(&output, &output[5]["running"][2], -8.5171);
+  AssertApproxEqual(&output, &output[5]["running"][3], 0.0002);
+  AssertApproxEqual(&output, &output[5]["running"][4], 0.0002);
+  AssertApproxEqual(&output, &output[5]["running"][5], 0.0002);
+  AssertApproxEqual(&output, &output[5]["running"][6], 0);
 
-  AssertApproxEqual(&output, &output[5]["running"][1], 7.000e-5);
-  AssertApproxEqual(&output, &output[5]["running"][2], -9.7305);
-  AssertApproxEqual(&output, &output[5]["running"][3], 6.000e-5);
-  AssertApproxEqual(&output, &output[5]["running"][4], 5.000e-5);
-  AssertApproxEqual(&output, &output[5]["running"][5], 0.00017999);
-  AssertApproxEqual(&output, &output[5]["running"][6], 1.000e-10);
+  AssertApproxEqual(&output, &output[6]["running"][1], 7.000e-5);
+  AssertApproxEqual(&output, &output[6]["running"][2], -9.7305);
+  AssertApproxEqual(&output, &output[6]["running"][3], 6.000e-5);
+  AssertApproxEqual(&output, &output[6]["running"][4], 5.000e-5);
+  AssertApproxEqual(&output, &output[6]["running"][5], 0.00017999);
+  AssertApproxEqual(&output, &output[6]["running"][6], 1.000e-10);
 
   AssertJsonEqual(output, expected_output);
 }
@@ -400,6 +426,7 @@ TEST(CatapultConverter, ConverterMain) {
     "--output", output_file.pathname(),
     "--execution-timestamp-ms", "3456",
     "--masters", "example_arg_masters",
+    "--log-url", "https://ci.example.com/build/300",
     "--bots", "example_arg_bots",
   };
   EXPECT_EQ(ConverterMain(countof(args), const_cast<char**>(args)), 0);

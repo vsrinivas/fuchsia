@@ -31,5 +31,16 @@ the dashboard:
   by Chrome infrastructure.  The convention now is to use the name of
   the builder for this parameter.
 
+* logUrls: This parameter is taken from the `--log-url` argument.
+
+  This should contain a link to the LUCI build log page (or a page on
+  any similar continuous integration system) for the build that
+  produced the perf test results.  The Catapult dashboard will show
+  this link if you select a point on a performance results graph.
+
+  Note: Although the converter requires the `--log-url` argument, the
+  Catapult dashboard does not require the logUrls field in the
+  HistogramSet data.
+
 For more information on Catapult's format, see [How to Write
 Metrics](https://github.com/catapult-project/catapult/blob/master/docs/how-to-write-metrics.md).
