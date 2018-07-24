@@ -27,61 +27,73 @@ OUT_DIR="$1"
 # runbench_exec "${OUT_DIR}/ledger.add_new_page.json" \
 #    trace record \
 #    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/add_new_page.tspec \
+#    --test-suite=fuchsia.ledger.add_new_page \
 #    --benchmark-results-file="${OUT_DIR}/ledger.add_new_page.json"
 
 runbench_exec "${OUT_DIR}/ledger.get_same_page.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/get_same_page.tspec \
+    --test-suite=fuchsia.ledger.get_same_page \
     --benchmark-results-file="${OUT_DIR}/ledger.get_same_page.json"
 
 runbench_exec "${OUT_DIR}/ledger.put.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/put.tspec \
+    --test-suite=fuchsia.ledger.put \
     --benchmark-results-file="${OUT_DIR}/ledger.put.json"
 
 runbench_exec "${OUT_DIR}/ledger.put_as_reference.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/put_as_reference.tspec \
+    --test-suite=fuchsia.ledger.put_as_reference \
     --benchmark-results-file="${OUT_DIR}/ledger.put_as_reference.json"
 
 runbench_exec "${OUT_DIR}/ledger.put_big_entry.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/put_big_entry.tspec \
+    --test-suite=fuchsia.ledger.put_big_entry \
     --benchmark-results-file="${OUT_DIR}/ledger.put_big_entry.json"
 
 runbench_exec "${OUT_DIR}/ledger.transaction.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/transaction.tspec \
+    --test-suite=fuchsia.ledger.transaction \
     --benchmark-results-file="${OUT_DIR}/ledger.transaction.json"
 
 runbench_exec "${OUT_DIR}/ledger.update_entry.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/update_entry.tspec \
+    --test-suite=fuchsia.ledger.update_entry \
     --benchmark-results-file="${OUT_DIR}/ledger.update_entry.json"
 
 runbench_exec "${OUT_DIR}/ledger.update_big_entry.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/update_big_entry.tspec \
+    --test-suite=fuchsia.ledger.update_big_entry \
     --benchmark-results-file="${OUT_DIR}/ledger.update_big_entry.json"
 
 runbench_exec "${OUT_DIR}/ledger.update_entry_transactions.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/update_entry_transactions.tspec \
+    --test-suite=fuchsia.ledger.update_entry_transactions \
     --benchmark-results-file="${OUT_DIR}/ledger.update_entry_transactions.json"
 
 runbench_exec "${OUT_DIR}/ledger.delete_entry.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/delete_entry.tspec \
+    --test-suite=fuchsia.ledger.delete_entry \
     --benchmark-results-file="${OUT_DIR}/ledger.delete_entry.json"
 
 runbench_exec "${OUT_DIR}/ledger.delete_big_entry.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/delete_big_entry.tspec \
+    --test-suite=fuchsia.ledger.delete_big_entry \
     --benchmark-results-file="${OUT_DIR}/ledger.delete_big_entry.json"
 
 runbench_exec "${OUT_DIR}/ledger.delete_entry_transactions.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/delete_entry_transactions.tspec \
+    --test-suite=fuchsia.ledger.delete_entry_transactions \
     --benchmark-results-file="${OUT_DIR}/ledger.delete_entry_transactions.json"
 
 # Exit with a code indicating whether any errors occurred.
