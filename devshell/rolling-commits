@@ -46,17 +46,17 @@ def http_get(url):
 
 def get_lower_layer(layer):
     """Returns the layer immediately below the given layer."""
+    if layer not in LAYERS:
+        # Special case for "build" and "scripts".
+        return None
     index = LAYERS.index(layer)
     if index == len(LAYERS) - 1:
         return None
     return LAYERS[index + 1]
 
 
-def get_lower_layer_commit(layer, at):
-    """Returns the pinned revision of the layer below the given layer."""
-    lower_layer = get_lower_layer(layer)
-    if not lower_layer:
-        return (None, None)
+def get_lower_layer_commit(layer, at, lower_layer):
+    """Returns the pinned revision of a layer below the given layer."""
     url = ('https://fuchsia.googlesource.com/%s/+/%s/manifest/%s?format=TEXT'
            % (layer, at, layer))
     content = http_get(url)
@@ -65,6 +65,22 @@ def get_lower_layer_commit(layer, at):
     nodes = manifest.findall('./imports/import[@name="%s"]' % lower_layer)
     return (lower_layer, nodes[0].get('revision'))
 
+
+def get_lower_layer_commits(layer, at):
+    """Returns the pinned revision of the 'layers' below the given layer.
+       Multiple 'layers' are needed for the Garnet case, where we want to be
+       able to inspect the revisions of //build and //scripts.
+       """
+    if layer != 'garnet':
+        lower_layer = get_lower_layer(layer)
+        if not lower_layer:
+            return []
+        return [get_lower_layer_commit(layer, at, lower_layer)]
+    return [
+        get_lower_layer_commit('garnet', at, 'zircon'),
+        get_lower_layer_commit('garnet', at, 'build'),
+        get_lower_layer_commit('garnet', at, 'scripts'),
+    ]
 
 def get_commits(layer, revision):
     """Returns the commits in the given layer up to a given commit."""
@@ -184,14 +200,16 @@ For vendor layers, specify the Topaz revision with --topaz-revision.""")
     else:
         revision = 'master'
 
-    while True:
-        (lower_layer, lower_revision) = get_lower_layer_commit(layer, revision)
-        if not lower_layer:
-            break
-        commits = get_commits(lower_layer, lower_revision)
-        print_commits(lower_layer, commits)
-        layer = lower_layer
-        revision = lower_revision
+    next_layers = [(layer, revision)]
+    while next_layers:
+        layer, revision = next_layers.pop(0)
+        layer_refs = get_lower_layer_commits(layer, revision)
+        if not layer_refs:
+            continue
+        for lower_layer, lower_revision in layer_refs:
+            commits = get_commits(lower_layer, lower_revision)
+            print_commits(lower_layer, commits)
+        next_layers.extend(layer_refs)
 
     return 0
 
