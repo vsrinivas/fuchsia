@@ -9,6 +9,8 @@ import("//build/fidl/fidl.gni")
 sdk_source_set("cpp") {
   category = "partner"
 
+  sdk_name = "fidl_cpp"
+
   sources = [
     "array.h",
     "binding.h",
