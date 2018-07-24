@@ -52,8 +52,8 @@ inline debug_ipc::Register CreateRegister(RegisterID id,
                                           const void* val_ptr) {
   debug_ipc::Register reg;
   reg.id = id;
-  reg.data.reserve(length);
-  memcpy(&reg.data[0], val_ptr, length);
+  const uint8_t* ptr = reinterpret_cast<const uint8_t*>(val_ptr);
+  reg.data.assign(ptr, ptr + length);
   return reg;
 }
 
