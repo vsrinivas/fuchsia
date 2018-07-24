@@ -73,4 +73,4 @@ if [[ -n $PACKAGE ]]; then
   GOPATH="${maybe_gopath}:${GOPATH}"
 fi
 
-ZIRCON="${FUCHSIA_DIR}/zircon" CC="${GOROOT}/misc/fuchsia/gccwrap.sh" ZIRCON_SYSROOT="${FUCHSIA_BUILD_DIR}/sdks/zircon_sysroot/sysroot" FUCHSIA_ROOT_OUT_DIR="${FUCHSIA_BUILD_DIR}" GOOS=fuchsia GOARCH=${GOARCH} CGO_ENABLED=1 GOPATH="${GOPATH}" GOROOT="${GOROOT}" "${GOROOT}/bin/go" "$@"
+ZIRCON="${FUCHSIA_DIR}/zircon" CC="${GOROOT}/misc/fuchsia/gccwrap.sh" ZIRCON_SYSROOT="${FUCHSIA_BUILD_DIR}/sdks/zircon_sysroot/arch/${FUCHSIA_ARCH}/sysroot" FUCHSIA_ROOT_OUT_DIR="${FUCHSIA_BUILD_DIR}" GOOS=fuchsia GOARCH=${GOARCH} CGO_ENABLED=1 GOPATH="${GOPATH}" GOROOT="${GOROOT}" "${GOROOT}/bin/go" "$@"
