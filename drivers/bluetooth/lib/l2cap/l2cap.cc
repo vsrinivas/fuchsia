@@ -87,6 +87,12 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
     });
   }
 
+  void OpenChannel(hci::ConnectionHandle handle, PSM psm,
+                   ChannelCallback callback,
+                   async_dispatcher_t* dispatcher) override {
+    FXL_LOG(WARNING) << "l2cap: OpenChannel not implemented";
+  }
+
   bool RegisterService(PSM psm, ChannelCallback cb,
                        async_dispatcher_t* dispatcher) override {
     FXL_LOG(WARNING) << "l2cap: RegisterService not implemented";

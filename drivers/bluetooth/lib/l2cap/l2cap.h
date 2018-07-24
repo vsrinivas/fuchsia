@@ -34,7 +34,6 @@ class Channel;
 // from any thread.
 class L2CAP : public fbl::RefCounted<L2CAP> {
  public:
-  using ChannelCallback = fit::function<void(fbl::RefPtr<Channel>)>;
   using LEConnectionParameterUpdateCallback =
       internal::LESignalingChannel::ConnectionParameterUpdateCallback;
   using LinkErrorCallback = fit::closure;
@@ -98,6 +97,17 @@ class L2CAP : public fbl::RefCounted<L2CAP> {
   //
   // Has no effect if L2CAP is uninitialized or shut down.
   virtual void RemoveConnection(hci::ConnectionHandle handle) = 0;
+
+  // Open an outbound dynamic channel against a peer's Protocol/Service
+  // Multiplexing (PSM) code |psm| on a link identified by |handle|.
+  //
+  // |cb| will be called on |dispatcher| with the channel created to the remote,
+  // or nullptr if the channel creation resulted in an error.
+  //
+  // Has no effect if L2CAP is uninitialized or shut down.
+  virtual void OpenChannel(hci::ConnectionHandle handle, PSM psm,
+                           ChannelCallback cb,
+                           async_dispatcher_t* dispatcher) = 0;
 
   // Registers a handler for peer-initiated dynamic channel requests that have
   // the Protocol/Service Multiplexing (PSM) code |psm|.

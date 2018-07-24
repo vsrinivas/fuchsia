@@ -52,6 +52,8 @@ class FakeChannel : public Channel {
     return weak_ptr_factory_.GetWeakPtr();
   }
 
+  void set_remote_id(ChannelId id) { Channel::remote_id_ = id; }
+
   // Activate() always fails if true.
   void set_activate_fails(bool value) { activate_fails_ = value; }
 

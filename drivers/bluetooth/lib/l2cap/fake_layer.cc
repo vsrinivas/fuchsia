@@ -23,6 +23,31 @@ void FakeLayer::TriggerLEConnectionParameterUpdate(
       [params, cb = link_data.le_conn_param_cb.share()] { cb(params); });
 }
 
+void FakeLayer::TriggerOutboundChannel(hci::ConnectionHandle handle, PSM psm,
+                                       ChannelId id, ChannelId remote_id) {
+  FXL_DCHECK(initialized_);
+
+  LinkData& link_data = FindLinkData(handle);
+  auto cb_iter = link_data.outbound_conn_cbs.find(psm);
+  FXL_DCHECK(cb_iter != link_data.outbound_conn_cbs.end())
+      << "l2cap: no previous call to OpenChannel with PSM " << psm;
+
+  std::list<ChannelDelivery>& handlers = cb_iter->second;
+  FXL_DCHECK(!handlers.empty());
+
+  ChannelCallback& cb = handlers.front().first;
+  auto chan = OpenFakeChannel(&link_data, id, remote_id);
+  async_dispatcher_t* const dispatcher = handlers.front().second;
+  async::PostTask(dispatcher, [cb = std::move(cb), chan = std::move(chan)] {
+    cb(std::move(chan));
+  });
+
+  handlers.pop_front();
+  if (handlers.empty()) {
+    link_data.outbound_conn_cbs.erase(cb_iter);
+  }
+}
+
 void FakeLayer::TriggerInboundChannel(hci::ConnectionHandle handle, PSM psm,
                                       ChannelId id, ChannelId remote_id) {
   FXL_DCHECK(initialized_);
@@ -34,8 +59,9 @@ void FakeLayer::TriggerInboundChannel(hci::ConnectionHandle handle, PSM psm,
 
   ChannelCallback& cb = cb_iter->second.first;
   async_dispatcher_t* const dispatcher = cb_iter->second.second;
-  async::PostTask(dispatcher, [this, &cb, &link_data, id, remote_id] {
-    cb(OpenFakeChannel(&link_data, id, remote_id));
+  auto chan = OpenFakeChannel(&link_data, id, remote_id);
+  async::PostTask(dispatcher, [cb = std::move(cb), chan = std::move(chan)] {
+    cb(std::move(chan));
   });
 }
 
@@ -80,6 +106,17 @@ void FakeLayer::RemoveConnection(hci::ConnectionHandle handle) {
   links_.erase(handle);
 }
 
+void FakeLayer::OpenChannel(hci::ConnectionHandle handle, PSM psm,
+                            ChannelCallback cb,
+                            async_dispatcher_t* dispatcher) {
+  if (!initialized_)
+    return;
+
+  LinkData& link_data = FindLinkData(handle);
+  link_data.outbound_conn_cbs[psm].push_back(
+      std::make_pair(std::move(cb), dispatcher));
+}
+
 bool FakeLayer::RegisterService(PSM psm, ChannelCallback cb,
                                 async_dispatcher_t* dispatcher) {
   if (!initialized_)
@@ -115,8 +152,9 @@ FakeLayer::LinkData* FakeLayer::RegisterInternal(
   return &insert_res.first->second;
 }
 
-fbl::RefPtr<Channel> FakeLayer::OpenFakeChannel(LinkData* link, ChannelId id,
-                                                ChannelId remote_id) {
+fbl::RefPtr<FakeChannel> FakeLayer::OpenFakeChannel(LinkData* link,
+                                                    ChannelId id,
+                                                    ChannelId remote_id) {
   auto chan =
       fbl::AdoptRef(new FakeChannel(id, remote_id, link->handle, link->type));
   chan->SetLinkErrorCallback(link->link_error_cb.share(), link->dispatcher);
@@ -126,6 +164,11 @@ fbl::RefPtr<Channel> FakeLayer::OpenFakeChannel(LinkData* link, ChannelId id,
   }
 
   return chan;
+}
+
+fbl::RefPtr<FakeChannel> FakeLayer::OpenFakeFixedChannel(LinkData* link,
+                                                         ChannelId id) {
+  return OpenFakeChannel(link, id, id);
 }
 
 FakeLayer::LinkData& FakeLayer::FindLinkData(hci::ConnectionHandle handle) {
