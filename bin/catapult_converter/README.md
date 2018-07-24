@@ -19,9 +19,10 @@ the dashboard:
   `--execution-timestamp-ms` argument.  The dashboard uses this value
   to order results from different builds in a graph.
 
-* benchmarks: This parameter is taken from the `--test-suite'
-  argument.  This is usually the name of the executable containing the
-  perf tests, e.g. "zircon_benchmarks".
+* benchmarks: This parameter is taken from the `test_suite` field in
+  the JSON input file.  This is often the name of the executable
+  containing the perf tests, prefixed by "fuchsia.",
+  e.g. "fuchsia.zircon_benchmarks".
 
 * masters: The term "master" is an outdated term from when Buildbot
   was used by Chrome infrastructure.  The convention now is to use the
