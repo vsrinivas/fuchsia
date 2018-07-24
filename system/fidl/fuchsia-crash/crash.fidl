@@ -9,6 +9,8 @@ library fuchsia.crash;
 interface Analyzer {
     // Requests that the crash analyzer analize the given |thread| in |process|,
     // which has crashed.
+    // This method is responsible for resuming or stopping the thread once the
+    // analyze is done.
     //
     // The behavior of this method varies depending on the implementation, but
     // a typical implementation might print a crash dump to the system log or
