@@ -8,17 +8,28 @@
 
 __BEGIN_CDECLS
 
-//#define TCS3400_INTERRUPT_ENABLED
-
 // clang-format off
-#define AMBIENT_LIGHT_RPT_ID_SIMPLE_POLL      0x01
-#define AMBIENT_LIGHT_RPT_ID_SIMPLE_INTERRUPT 0x02
+#define AMBIENT_LIGHT_RPT_ID_INPUT       0x01
+#define AMBIENT_LIGHT_RPT_ID_FEATURE     0x02
 // clang-format on
 
-typedef struct ambient_light_data {
+typedef struct ambient_light_input_rpt {
     uint8_t rpt_id;
+    uint8_t state;
+    uint8_t event;
     uint16_t illuminance;
-} __PACKED ambient_light_data_t;
+    uint16_t red;
+    uint16_t green;
+    uint16_t blue;
+} __PACKED ambient_light_input_rpt_t;
+
+typedef struct ambient_light_feature_rpt {
+    uint8_t rpt_id;
+    uint8_t state;
+    uint32_t interval_ms; // default (0) means no polling
+    uint16_t threshold_low;
+    uint16_t threshold_high;
+} __PACKED ambient_light_feature_rpt_t;
 
 size_t get_ambient_light_report_desc(const uint8_t** buf);
 
