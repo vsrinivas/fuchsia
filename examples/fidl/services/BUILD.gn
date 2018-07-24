@@ -11,3 +11,11 @@ fidl("echo2") {
     "echo2.fidl",
   ]
 }
+
+fidl("heartbeat") {
+  name = "fidl.examples.heartbeat"
+
+  sources = [
+    "heartbeat.fidl",
+  ]
+}

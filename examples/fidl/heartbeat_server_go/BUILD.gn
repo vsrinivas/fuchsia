@@ -1,0 +1,41 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/toolchain.gni")
+import("//build/package.gni")
+
+go_binary("heartbeat_server_go_bin") {
+  output_name = "heartbeat_server_go"
+  gopackage = "heartbeat_server_go"
+  deps  = [
+    ":heartbeat_server_go_lib"
+  ]
+}
+
+go_library("heartbeat_server_go_lib") {
+  name = "heartbeat_server_go"
+  deps = [
+    "//garnet/examples/fidl/services:heartbeat($go_toolchain)",
+    "//garnet/public/lib/fidl/go/src/fidl/bindings",
+    "//garnet/public/lib/component/go/src/app",
+    "//garnet/public/lib/svc/go/src/svc",
+    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
+    "//garnet/examples/fidl/services:heartbeat($go_toolchain)",
+  ]
+}
+
+package("heartbeat_server_go") {
+  deps = [
+    ":heartbeat_server_go_bin",
+  ]
+
+  binary = "heartbeat_server_go"
+
+  meta = [ {
+        path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
+        dest = "legacy_flat_exported_dir"
+      } ]
+}
