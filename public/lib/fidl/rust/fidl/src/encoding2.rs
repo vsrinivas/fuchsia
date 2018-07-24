@@ -471,6 +471,8 @@ impl_codable_for_fixed_array!( 0,  1,  2,  3,  4,  5,  6,  7,
                               16, 17, 18, 19, 20, 21, 22, 23,
                               24, 25, 26, 27, 28, 29, 30, 31,
                               32,);
+// Hack for FIDL library fuchsia.net
+impl_codable_for_fixed_array!(256,);
 
 fn encode_byte_slice(encoder: &mut Encoder, slice_opt: Option<&[u8]>) -> Result<()> {
     match slice_opt {

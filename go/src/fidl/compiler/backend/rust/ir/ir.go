@@ -13,8 +13,9 @@ import (
 )
 
 type Type struct {
-	Decl     string
-	DeclType types.DeclType
+	Decl       string
+	DeclType   types.DeclType
+	LargeArray bool
 }
 
 type Const struct {
@@ -49,10 +50,11 @@ type UnionMember struct {
 }
 
 type Struct struct {
-	Name      string
-	Members   []StructMember
-	Size      int
-	Alignment int
+	Name	    string
+	Members     []StructMember
+	Size        int
+	Alignment   int
+	LargeArrays bool
 }
 
 type StructMember struct {
@@ -61,6 +63,7 @@ type StructMember struct {
 	Offset       int
 	HasDefault   bool
 	DefaultValue string
+	LargeArray   bool
 }
 
 type Interface struct {
@@ -382,6 +385,7 @@ func compileHandleSubtype(val types.HandleSubtype) string {
 func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 	var r string
 	var declType types.DeclType
+	largeArray := false
 	switch val.Kind {
 	case types.ArrayType:
 		t := c.compileType(*val.ElementType, borrowed)
@@ -389,6 +393,7 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 		if borrowed {
 			r = fmt.Sprintf("&mut %s", r)
 		}
+		largeArray = t.LargeArray || *val.ElementCount > 32
 	case types.VectorType:
 		t := c.compileType(*val.ElementType, borrowed)
 		var inner string
@@ -402,6 +407,7 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 		} else {
 			r = inner
 		}
+		largeArray = t.LargeArray
 	case types.StringType:
 		if borrowed {
 			if val.Nullable {
@@ -476,6 +482,7 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 	return Type{
 		Decl:     r,
 		DeclType: declType,
+		LargeArray: largeArray,
 	}
 }
 
@@ -540,26 +547,31 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 }
 
 func (c *compiler) compileStructMember(val types.StructMember) StructMember {
+	memberType := c.compileType(val.Type, false)
 	return StructMember{
-		Type:         c.compileType(val.Type, false).Decl,
+		Type:         memberType.Decl,
 		Name:         compileSnakeIdentifier(val.Name),
 		Offset:       val.Offset,
 		HasDefault:   false,
 		DefaultValue: "", // TODO(cramertj) support defaults
+		LargeArray:   memberType.LargeArray,
 	}
 }
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	name := c.compileCamelCompoundIdentifier(val.Name)
 	r := Struct{
-		Name:      name,
-		Members:   []StructMember{},
-		Size:      val.Size,
-		Alignment: val.Alignment,
+		Name:		 name,
+		Members:	 []StructMember{},
+		Size:		 val.Size,
+		Alignment:	 val.Alignment,
+		LargeArrays: false,
 	}
 
 	for _, v := range val.Members {
-		r.Members = append(r.Members, c.compileStructMember(v))
+		member := c.compileStructMember(v)
+		r.Members = append(r.Members, member)
+		r.LargeArrays = r.LargeArrays || member.LargeArray
 	}
 
 	return r

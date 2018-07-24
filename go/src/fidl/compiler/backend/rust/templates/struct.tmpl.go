@@ -6,7 +6,9 @@ package templates
 
 const Struct = `
 {{- define "StructDeclaration" }}
+{{- if not .LargeArrays }}
 #[derive(Debug, PartialEq)]
+{{- end }}
 pub struct {{ .Name }} {
   {{- range .Members }}
   pub {{ .Name }}: {{ .Type }},
