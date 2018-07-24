@@ -34,7 +34,8 @@ TEST(Results, Duration) {
   ticks[42u] = {1u, 2u, 3u};
 
   auto results = ComputeResults(measurements, ticks, 1000.0);
-  Result expected = {{{{1.0, 2.0, 3.0}, "samples 0 to 2"}}, "ms", "foo (bar)"};
+  Result expected = {
+      {{{1.0, 2.0, 3.0}, "samples 0 to 2"}}, "ms", "foo (bar)", ""};
   EXPECT_EQ(1u, results.size());
   EXPECT_EQ(expected, results[0]);
 }
@@ -48,7 +49,7 @@ TEST(Results, ArgumentValue) {
 
   auto results = ComputeResults(measurements, ticks, 1000.0);
   Result expected = {
-      {{{1.0, 2.0, 3.0}, "samples 0 to 2"}}, "MB", "foo (bar), disk space"};
+      {{{1.0, 2.0, 3.0}, "samples 0 to 2"}}, "MB", "foo (bar), disk space", ""};
   EXPECT_EQ(1u, results.size());
   EXPECT_EQ(expected, results[0]);
 }
@@ -69,7 +70,8 @@ TEST(Results, TimeBetween) {
   auto results = ComputeResults(measurements, ticks, 1000.0);
   Result expected = {{{{1.0, 2.0, 3.0}, "samples 0 to 2"}},
                      "ms",
-                     "foo1 (bar1) to foo2 (bar2)"};
+                     "foo1 (bar1) to foo2 (bar2)",
+                     ""};
   EXPECT_EQ(1u, results.size());
   EXPECT_EQ(expected, results[0]);
 }
@@ -89,7 +91,8 @@ TEST(Results, SplitSamples) {
                          {{3.0, 4.0}, "samples 2 to 3"},
                      },
                      "ms",
-                     "foo (bar)"};
+                     "foo (bar)",
+                     ""};
   EXPECT_EQ(1u, results.size());
   EXPECT_EQ(expected, results[0]);
 }
@@ -103,7 +106,8 @@ TEST(Results, ExpectedSampleCount) {
   ticks[42u] = {1u, 2u, 3u};
 
   auto results = ComputeResults(measurements, ticks, 1000.0);
-  Result expected = {{{{1.0, 2.0, 3.0}, "samples 0 to 2"}}, "ms", "foo (bar)"};
+  Result expected = {
+      {{{1.0, 2.0, 3.0}, "samples 0 to 2"}}, "ms", "foo (bar)", ""};
   EXPECT_EQ(1u, results.size());
   EXPECT_EQ(expected, results[0]);
 }
@@ -117,7 +121,7 @@ TEST(Results, ExpectedSampleCountMismatch) {
   ticks[42u] = {1u, 2u, 3u};
 
   auto results = ComputeResults(measurements, ticks, 1000.0);
-  Result expected = {{}, "ms", "foo (bar)"};
+  Result expected = {{}, "ms", "foo (bar)", ""};
   EXPECT_EQ(1u, results.size());
   EXPECT_EQ(expected, results[0]);
 }

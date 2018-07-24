@@ -27,6 +27,7 @@ struct Result {
   std::vector<SampleGroup> samples;
   std::string unit;
   std::string label;
+  std::string test_suite;
 };
 
 // Computes the results of a benchmark from the measurement spec and the raw

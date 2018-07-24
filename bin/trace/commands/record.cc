@@ -37,6 +37,7 @@ const char kDecouple[] = "decouple";
 const char kLaunchpad[] = "launchpad";
 const char kBufferSize[] = "buffer-size";
 const char kBenchmarkResultsFile[] = "benchmark-results-file";
+const char kTestSuite[] = "test-suite";
 
 zx_handle_t Launch(const std::vector<std::string>& args) {
   zx_handle_t subprocess = ZX_HANDLE_INVALID;
@@ -87,7 +88,8 @@ bool WaitForExit(zx_handle_t process, int* exit_code) {
 bool Record::Options::Setup(const fxl::CommandLine& command_line) {
   const std::unordered_set<std::string> known_options = {
       kSpecFile, kCategories, kAppendArgs, kOutputFile, kDuration,
-      kDetach,   kDecouple,   kLaunchpad,  kBufferSize, kBenchmarkResultsFile};
+      kDetach,   kDecouple,   kLaunchpad,  kBufferSize, kBenchmarkResultsFile,
+      kTestSuite};
 
   for (auto& option : command_line.options()) {
     if (known_options.count(option.name) == 0) {
@@ -184,6 +186,11 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
     benchmark_results_file = command_line.options()[index].value;
   }
 
+  // --test-suite=<test-suite-name>
+  if (command_line.HasOption(kTestSuite, &index)) {
+    test_suite = command_line.options()[index].value;
+  }
+
   // <command> <args...>
   const auto& positional_args = command_line.positional_args();
   if (!positional_args.empty()) {
@@ -225,6 +232,11 @@ Command::Info Record::Describe() {
         "Maximum size of trace buffer for each provider in megabytes"},
        {"benchmark-results-file=[none]",
         "Destination for exported benchmark results"},
+       {"test-suite=[none]",
+        "Test suite name to put into the exported benchmark results file. "
+        "This is used by the Catapult dashboard. This argument is required if "
+        "the results are uploaded to the Catapult dashboard (using "
+        "bin/catapult_converter)"},
        {"[command args]",
         "Run program before starting trace. The program is terminated when "
         "tracing ends unless --detach is specified"}}};
@@ -360,6 +372,9 @@ void Record::ProcessMeasurements() {
   }
 
   if (!options_.benchmark_results_file.empty()) {
+    for (auto& result : results) {
+      result.test_suite = options_.test_suite;
+    }
     if (!ExportResults(options_.benchmark_results_file, results)) {
       FXL_LOG(ERROR) << "Failed to write benchmark results to "
                      << options_.benchmark_results_file;

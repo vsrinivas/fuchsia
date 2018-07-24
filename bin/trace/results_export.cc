@@ -15,6 +15,7 @@ namespace tracing {
 namespace {
 
 const char kLabelKey[] = "label";
+const char kTestSuiteKey[] = "test_suite";
 const char kUnitKey[] = "unit";
 const char kSamplesKey[] = "samples";
 const char kValuesKey[] = "values";
@@ -42,6 +43,11 @@ void EncodeResult(rapidjson::Writer<rapidjson::StringBuffer>* writer,
   {
     writer->Key(kLabelKey);
     writer->String(result.label.c_str());
+
+    if (!result.test_suite.empty()) {
+      writer->Key(kTestSuiteKey);
+      writer->String(result.test_suite.c_str());
+    }
 
     writer->Key(kUnitKey);
     writer->String(result.unit.c_str());

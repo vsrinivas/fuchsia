@@ -38,6 +38,7 @@ class Record : public CommandWithTraceController {
     uint32_t buffer_size_megabytes_hint = 4;
     std::string output_file_name = "/data/trace.json";
     std::string benchmark_results_file;
+    std::string test_suite;
     measure::Measurements measurements;
   };
 
