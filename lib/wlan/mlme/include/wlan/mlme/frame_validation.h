@@ -31,60 +31,80 @@ template <unsigned int N, typename T> T align(T t) {
     return (t + (N - 1)) & ~(N - 1);
 }
 
-template <typename H> bool is_valid_mac_hdr(const uint8_t* buf, size_t len) {
-    if (len < sizeof(FrameControl)) { return false; }
+static bool IsAmsduSubframeHeader(const DataFrameHeader* hdr, size_t available_buf_len) {
+    // Before accessing dynamic fields, verify full header length.
+    if (available_buf_len < hdr->len()) { return false; }
 
-    auto fc = reinterpret_cast<const FrameControl*>(buf);
-    return fc->type() == H::Type();
+    auto qos_ctrl = hdr->qos_ctrl();
+    if (qos_ctrl == nullptr) { return false; }
+
+    return qos_ctrl->amsdu_present() == 1;
 }
 
 template <typename H, typename B> struct FrameTypeValidator {};
 
-template <typename B> struct MacSubtypeValidator {
-    static bool is_valid(const FrameControl& fc) { return fc.subtype() == B::Subtype(); }
-};
-
-template <> struct MacSubtypeValidator<UnknownBody> {
-    static bool is_valid(const FrameControl& fc) { return true; }
-};
-
-template <> struct MacSubtypeValidator<NullDataHdr> {
-    static bool is_valid(const FrameControl& fc) {
-        return fc.subtype() == DataSubtype::kNull || fc.subtype() == DataSubtype::kQosnull;
+template <typename H, typename B> struct MacSubtypeValidator {
+    static bool is_valid(const uint8_t* buf, size_t len) {
+        auto fc = reinterpret_cast<const FrameControl*>(buf);
+        return fc->subtype() == B::Subtype();
     }
 };
 
-template <> struct MacSubtypeValidator<LlcHeader> {
-    static bool is_valid(const FrameControl& fc) {
-        return fc.subtype() == DataSubtype::kDataSubtype || fc.subtype() == DataSubtype::kQosdata;
+template <typename H> struct MacSubtypeValidator<H, UnknownBody> {
+    static bool is_valid(const uint8_t* buf, size_t len) { return true; }
+};
+
+template <> struct MacSubtypeValidator<DataFrameHeader, NullDataHdr> {
+    static bool is_valid(const uint8_t* buf, size_t len) {
+        auto fc = reinterpret_cast<const FrameControl*>(buf);
+        return fc->subtype() == DataSubtype::kNull || fc->subtype() == DataSubtype::kQosnull;
     }
 };
 
-template <typename H, typename B> bool is_valid_mac_frame(const uint8_t* buf, size_t len) {
-    if (len < sizeof(FrameControl)) { return false; }
+template <> struct MacSubtypeValidator<DataFrameHeader, LlcHeader> {
+    static bool is_valid(const uint8_t* buf, size_t len) {
+        auto hdr = reinterpret_cast<const DataFrameHeader*>(buf);
+        if (hdr->fc.subtype() == DataSubtype::kDataSubtype) { return true; }
+        if (hdr->fc.subtype() != DataSubtype::kQosdata) { return false; }
+
+        return !IsAmsduSubframeHeader(hdr, len);
+    }
+};
+
+template <> struct MacSubtypeValidator<DataFrameHeader, AmsduSubframeHeader> {
+    static bool is_valid(const uint8_t* buf, size_t len) {
+        auto hdr = reinterpret_cast<const DataFrameHeader*>(buf);
+        if (hdr->fc.subtype() != DataSubtype::kQosdata) { return false; }
+
+        return IsAmsduSubframeHeader(hdr, len);
+    }
+};
+
+template <typename H, typename B> bool IsValidMacFrameType(const uint8_t* buf, size_t len) {
+    if (len < sizeof(H)) { return false; }
 
     auto fc = reinterpret_cast<const FrameControl*>(buf);
-    return fc->type() == H::Type() && MacSubtypeValidator<B>::is_valid(*fc);
+    return fc->type() == H::Type() && MacSubtypeValidator<H, B>::is_valid(buf, len);
 }
 
 template<typename B>
 struct FrameTypeValidator<MgmtFrameHeader, B> {
     static bool is_valid(const uint8_t* buf, size_t len) {
-        return is_valid_mac_frame<MgmtFrameHeader, B>(buf, len);
+        return IsValidMacFrameType<MgmtFrameHeader, B>(buf, len);
     }
 };
 
 template<typename B>
 struct FrameTypeValidator<DataFrameHeader, B> {
     static bool is_valid(const uint8_t* buf, size_t len) {
-        return is_valid_mac_frame<DataFrameHeader, B>(buf, len);
+        return IsValidMacFrameType<DataFrameHeader, B>(buf, len);
     }
 };
 
 template<typename B>
 struct FrameTypeValidator<CtrlFrameHdr, B> {
     static bool is_valid(const uint8_t* buf, size_t len) {
-        return is_valid_mac_frame<CtrlFrameHdr, B>(buf, len);
+        return IsValidMacFrameType<CtrlFrameHdr, B>(buf, len);
     }
 };
 
@@ -105,6 +125,14 @@ struct FrameTypeValidator<ActionFrameBlockAck, B> {
 
         auto hdr = reinterpret_cast<const ActionFrameBlockAck*>(buf);
         return hdr->action == B::BlockAckAction();
+    }
+};
+
+template <typename B> struct FrameTypeValidator<AmsduSubframeHeader, B> {
+    static bool is_valid(const uint8_t* buf, size_t len) {
+        // An AMSDU header itself carries no information to be identified as such.
+        // A data frame however provides type checks for AMSDU subframe headers.
+        return true;
     }
 };
 

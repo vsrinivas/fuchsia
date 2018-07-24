@@ -61,7 +61,7 @@ size_t add4BytesPadding(size_t v) {
     return v + 4;
 }
 
-void assert_correct_mac_frame_type(FrameType type, const Packet* pkt) {
+void AssertCorrectMacFrameType(FrameType type, const Packet* pkt) {
     bool frame_valid = is_valid_frame_type<MgmtFrameHeader, UnknownBody>(pkt->data(), pkt->len());
     ASSERT_EQ(frame_valid, type == FrameType::kManagement);
 
@@ -72,8 +72,8 @@ void assert_correct_mac_frame_type(FrameType type, const Packet* pkt) {
     ASSERT_EQ(frame_valid, type == FrameType::kControl);
 }
 
-void assert_correct_mgmt_frame_type(ManagementSubtype type, const Packet* pkt) {
-    assert_correct_mac_frame_type(FrameType::kManagement, pkt);
+void AssertCorrectMgmtFrameType(ManagementSubtype type, const Packet* pkt) {
+    AssertCorrectMacFrameType(FrameType::kManagement, pkt);
 
     bool frame_valid =
         is_valid_frame_type<MgmtFrameHeader, AssociationRequest>(pkt->data(), pkt->len());
@@ -105,21 +105,26 @@ void assert_correct_mgmt_frame_type(ManagementSubtype type, const Packet* pkt) {
     ASSERT_EQ(frame_valid, type == ManagementSubtype::kAction);
 }
 
-void assert_correct_ctrl_frame_type(ControlSubtype type, const Packet* pkt) {
-    assert_correct_mac_frame_type(FrameType::kControl, pkt);
+void AssertCorrectCtrlFrameType(ControlSubtype type, const Packet* pkt) {
+    AssertCorrectMacFrameType(FrameType::kControl, pkt);
 
     bool frame_valid = is_valid_frame_type<CtrlFrameHdr, PsPollFrame>(pkt->data(), pkt->len());
     ASSERT_EQ(frame_valid, type == ControlSubtype::kPsPoll);
 }
 
-void assert_correct_data_frame_type(DataSubtype type, const Packet* pkt) {
-    assert_correct_mac_frame_type(FrameType::kData, pkt);
+void AssertCorrectDataFrameType(DataSubtype type, const Packet* pkt, bool is_amsdu = false) {
+    AssertCorrectMacFrameType(FrameType::kData, pkt);
 
     bool frame_valid = is_valid_frame_type<DataFrameHeader, NullDataHdr>(pkt->data(), pkt->len());
     ASSERT_EQ(frame_valid, type == DataSubtype::kNull || type == DataSubtype::kQosnull);
 
     frame_valid = is_valid_frame_type<DataFrameHeader, LlcHeader>(pkt->data(), pkt->len());
-    ASSERT_EQ(frame_valid, type == DataSubtype::kDataSubtype || type == DataSubtype::kQosdata);
+    ASSERT_EQ(frame_valid,
+              !is_amsdu && (type == DataSubtype::kDataSubtype || type == DataSubtype::kQosdata));
+
+    frame_valid =
+        is_valid_frame_type<DataFrameHeader, AmsduSubframeHeader>(pkt->data(), pkt->len());
+    ASSERT_EQ(frame_valid, is_amsdu);
 }
 
 Packet WrapInPacket(std::vector<uint8_t> data, Packet::Peer peer = Packet::Peer::kWlan) {
@@ -240,67 +245,74 @@ TEST(FrameValidation, TestFrameLength_EmptyBody_Padding) {
 
 TEST(FrameValidation, ValidBeaconType) {
     auto pkt = WrapInPacket(kBeaconFrame);
-    assert_correct_mgmt_frame_type(ManagementSubtype::kBeacon, &pkt);
+    AssertCorrectMgmtFrameType(ManagementSubtype::kBeacon, &pkt);
 }
 
 TEST(FrameValidation, ValidPsPollFrameType) {
     auto pkt = WrapInPacket(kPsPollFrame);
-    assert_correct_ctrl_frame_type(ControlSubtype::kPsPoll, &pkt);
+    AssertCorrectCtrlFrameType(ControlSubtype::kPsPoll, &pkt);
 }
 
 TEST(FrameValidation, ValidDeauthFrameType) {
     auto pkt = WrapInPacket(kDeauthFrame);
-    assert_correct_mgmt_frame_type(ManagementSubtype::kDeauthentication, &pkt);
+    AssertCorrectMgmtFrameType(ManagementSubtype::kDeauthentication, &pkt);
 }
 
 TEST(FrameValidation, ValidActionFrameType) {
     auto pkt = WrapInPacket(kActionFrame);
-    assert_correct_mgmt_frame_type(ManagementSubtype::kAction, &pkt);
+    AssertCorrectMgmtFrameType(ManagementSubtype::kAction, &pkt);
 }
 
 TEST(FrameValidation, ValidProbeRequestFrameType) {
     auto pkt = WrapInPacket(kProbeRequestFrame);
-    assert_correct_mgmt_frame_type(ManagementSubtype::kProbeRequest, &pkt);
+    AssertCorrectMgmtFrameType(ManagementSubtype::kProbeRequest, &pkt);
 }
 
 TEST(FrameValidation, ValidAssocRequestFrameType) {
     auto pkt = WrapInPacket(kAssocReqFrame);
-    assert_correct_mgmt_frame_type(ManagementSubtype::kAssociationRequest, &pkt);
+    AssertCorrectMgmtFrameType(ManagementSubtype::kAssociationRequest, &pkt);
 }
 
 TEST(FrameValidation, ValidAssocResponseFrameType) {
     auto pkt = WrapInPacket(kAssocRespFrame);
-    assert_correct_mgmt_frame_type(ManagementSubtype::kAssociationResponse, &pkt);
+    AssertCorrectMgmtFrameType(ManagementSubtype::kAssociationResponse, &pkt);
 }
 
 TEST(FrameValidation, ValidAuthFrameType) {
     auto pkt = WrapInPacket(kAuthFrame);
-    assert_correct_mgmt_frame_type(ManagementSubtype::kAuthentication, &pkt);
+    AssertCorrectMgmtFrameType(ManagementSubtype::kAuthentication, &pkt);
 }
 
 TEST(FrameValidation, ValidDisassocFrameType) {
     auto pkt = WrapInPacket(kDisassocFrame);
-    assert_correct_mgmt_frame_type(ManagementSubtype::kDisassociation, &pkt);
+    AssertCorrectMgmtFrameType(ManagementSubtype::kDisassociation, &pkt);
 }
 
 TEST(FrameValidation, ValidNullDataFrameType) {
     auto pkt = WrapInPacket(kNullDataFrame);
-    assert_correct_data_frame_type(DataSubtype::kNull, &pkt);
+    AssertCorrectDataFrameType(DataSubtype::kNull, &pkt);
 }
 
 TEST(FrameValidation, ValidQosNullDataFrameType) {
     auto pkt = WrapInPacket(kQosNullDataFrame);
-    assert_correct_data_frame_type(DataSubtype::kQosnull, &pkt);
+    AssertCorrectDataFrameType(DataSubtype::kQosnull, &pkt);
 }
 
 TEST(FrameValidation, ValidDataFrameType) {
     auto pkt = WrapInPacket(kDataFrame);
-    assert_correct_data_frame_type(DataSubtype::kDataSubtype, &pkt);
+    AssertCorrectDataFrameType(DataSubtype::kDataSubtype, &pkt);
 }
 
 TEST(FrameValidation, ValidQosDataFrameType) {
-auto pkt = WrapInPacket(kQosDataFrame);
-assert_correct_data_frame_type(DataSubtype::kQosdata, &pkt);
+    auto pkt = WrapInPacket(kQosDataFrame);
+    bool is_amsdu = false;
+    AssertCorrectDataFrameType(DataSubtype::kQosdata, &pkt, is_amsdu);
+}
+
+TEST(FrameValidation, ValidAmsduDataFrameType) {
+    auto pkt = WrapInPacket(kAmsduDataFrame);
+    bool is_amsdu = true;
+    AssertCorrectDataFrameType(DataSubtype::kQosdata, &pkt, is_amsdu);
 }
 
 }  // namespace
