@@ -31,15 +31,17 @@ It is invalid to include *handle* (the handle of the channel being written
 to) in the *handles* array (the handles being sent in the message).
 
 The maximum number of handles which may be sent in a message is
-*ZX_CHANNEL_MAX_MSG_HANDLES*, which is 64.
+**ZX_CHANNEL_MAX_MSG_HANDLES**, which is 64.
 
 The maximum number of bytes which may be sent in a message is
-*ZX_CHANNEL_MAX_MSG_BYTES*, which is 65536.
+**ZX_CHANNEL_MAX_MSG_BYTES**, which is 65536.
 
 
 ## RIGHTS
 
-TODO(ZX-2399)
+*handle* must have **ZX_RIGHT_WRITE**.
+
+Each of the handles in *handles* must have **ZX_RIGHT_TRANSFER**.
 
 ## RETURN VALUE
 
