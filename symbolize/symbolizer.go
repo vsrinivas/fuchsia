@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"fuchsia.googlesource.com/tools/cache"
 	"fuchsia.googlesource.com/tools/elflib"
 )
 
@@ -21,13 +22,19 @@ type Symbolizer interface {
 	FindSrcLoc(file, build string, modRelAddr uint64) <-chan LLVMSymbolizeResult
 }
 
-// TODO (jakehehrlich): Consider add BinaryFileRef here.
+type llvmSymbolizeArgsKey struct {
+	build      string
+	modRelAddr uint64
+}
+
 type llvmSymboArgs struct {
 	file       string
 	build      string
 	modRelAddr uint64
 	output     chan LLVMSymbolizeResult
 }
+
+const maxCacheSize = 128
 
 type LLVMSymbolizeResult struct {
 	Locs []SourceLocation
@@ -40,6 +47,7 @@ type LLVMSymbolizer struct {
 	stdout     io.ReadCloser
 	symbolizer *exec.Cmd
 	input      chan llvmSymboArgs
+	cache      cache.Cache
 }
 
 func NewLLVMSymbolizer(llvmSymboPath string) *LLVMSymbolizer {
@@ -47,6 +55,7 @@ func NewLLVMSymbolizer(llvmSymboPath string) *LLVMSymbolizer {
 	out.path = llvmSymboPath
 	out.symbolizer = exec.Command(llvmSymboPath)
 	out.input = make(chan llvmSymboArgs)
+	out.cache = &cache.LRUCache{Size: maxCacheSize}
 	return &out
 }
 
@@ -64,6 +73,12 @@ func (s *LLVMSymbolizer) handle(ctx context.Context) {
 			return
 		case args, ok := <-s.input:
 			if !ok {
+				return
+			}
+			// See if we've seen this before and send off the result
+			key := llvmSymbolizeArgsKey{args.build, args.modRelAddr}
+			if res, ok := s.cache.Get(key); ok {
+				args.output <- res.(LLVMSymbolizeResult)
 				return
 			}
 			if len(strings.TrimSpace(args.file)) == 0 {
@@ -96,7 +111,9 @@ func (s *LLVMSymbolizer) handle(ctx context.Context) {
 				line, _ := strconv.Atoi(parts[1])
 				out = append(out, SourceLocation{unknownStr(parts[0]), line, unknownStr(function)})
 			}
-			args.output <- LLVMSymbolizeResult{out, nil}
+			outputRes := LLVMSymbolizeResult{out, nil}
+			s.cache.Add(key, outputRes)
+			args.output <- outputRes
 		}
 	}
 }
@@ -119,7 +136,7 @@ func (s *LLVMSymbolizer) Start(ctx context.Context) error {
 func (s *LLVMSymbolizer) FindSrcLoc(file, build string, modRelAddr uint64) <-chan LLVMSymbolizeResult {
 	// Buffer the return chanel so we don't block handle().
 	out := make(chan LLVMSymbolizeResult, 1)
-	args := llvmSymboArgs{file, build, modRelAddr, out}
+	args := llvmSymboArgs{file: file, build: build, modRelAddr: modRelAddr, output: out}
 	s.input <- args
 	return out
 }
