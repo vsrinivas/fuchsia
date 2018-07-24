@@ -33,9 +33,6 @@ def main():
     parser.add_argument('--go-root', help='The go root to use for builds.', required=True)
     parser.add_argument('--is-test', help='True if the target is a go test',
                         default=False)
-    parser.add_argument('--go-dependency', help='Manifest of dest=src of dependencies',
-                        action='append',
-                        default=[])
     parser.add_argument('--go-dep-files',
                         help='List of files describing library dependencies',
                         nargs='*',
@@ -74,26 +71,9 @@ def main():
     shutil.rmtree(os.path.join(project_path, 'src'), ignore_errors=True)
     os.makedirs(os.path.join(project_path, 'src'))
 
-    if args.go_dependency or args.go_dep_files:
+    if args.go_dep_files:
       # Create a gopath for the packages dependency tree
-      dependencies = []
-      for dep in args.go_dependency:
-        dependencies.append(string.split(dep, '=', 1))
-      dependencies.extend(get_sources(args.go_dep_files).items())
-
-      # Make sure the user didn't specify multiple dependencies that all share
-      # the same destination.
-      dsts = set()
-      for dst, src in dependencies:
-        if dst in dsts:
-          raise ValueError('attempted to add dependency that already defined destination location: dst=%s' % (dst,))
-        else:
-          dsts.add(dst)
-
-      for dst, src in dependencies:
-        # |dst| must be relative
-        if os.path.isabs(dst):
-          raise ValueError("--go-dependency destination location must be relative to $project_path/src")
+      for dst, src in get_sources(args.go_dep_files).items():
         dstdir = os.path.join(project_path, 'src', os.path.dirname(dst))
         try:
           os.makedirs(dstdir)
@@ -101,6 +81,7 @@ def main():
           # EEXIST occurs if two gopath entries share the same parent name
           if e.errno != errno.EEXIST:
             raise
+        # TODO(BLD-62): the following check might not be necessary anymore.
         tgt = os.path.join(dstdir, os.path.basename(dst))
         # The source tree is effectively read-only once the build begins.
         # Therefore it is an error if tgt is in the source tree. At first
@@ -109,7 +90,7 @@ def main():
         canon_root_out_dir = os.path.realpath(args.root_out_dir)
         canon_tgt = os.path.realpath(tgt)
         if not canon_tgt.startswith(canon_root_out_dir):
-          raise ValueError("--go-dependency destination not in --root-out-dir: provided=%s, path=%s, realpath=%s" % (dst, tgt, canon_tgt))
+          raise ValueError("Dependency destination not in --root-out-dir: provided=%s, path=%s, realpath=%s" % (dst, tgt, canon_tgt))
         os.symlink(os.path.relpath(src, os.path.dirname(tgt)), tgt)
 
     gopath = os.path.abspath(project_path)

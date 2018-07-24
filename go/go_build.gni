@@ -10,21 +10,15 @@ import("//build/sdk/sdk_atom.gni")
 # A template for an action that builds a Go binary. Users should instead use the
 # go_binary or go_test rules.
 #
-# Every go_build target with any go_dependencies declared has a new GOPATH
-# constructed. The scopes contained within go_dependencies define symlinks that
-# will be added to the GOPATH.
+# Every go_build target with any extra_dependencies declared has a new GOPATH
+# constructed.
 #
 # Example:
 # go_build("mypackage") {
 #   gopackage = "fuchsia.googlesource.com/mypackage"
-#   go_dependencies = [
-#     {
-#       package = "fuchsia.googlesource.com/mypackage"
-#     },
-#     {
-#       source = "//third_party/golang/crypto"
-#       package = "golang.org/x/crypto"
-#     }
+#   extra_dependencies = [
+#     "//foo/bar",
+#     "//baz/blah:yep",
 #   ]
 # }
 #
@@ -41,6 +35,12 @@ import("//build/sdk/sdk_atom.gni")
 #   sdk_category (optional)
 #     Publication level of the library in SDKs.
 #     See //build/sdk/sdk_atom.gni.
+#
+#   deps (optional)
+#     List of labels representing go_library targets this target depends on.
+#
+#   non_go_deps (optional)
+#     List of labels this target depends on that are not Go libraries.
 
 template("go_build") {
   assert(defined(invoker.gopackage),
@@ -55,10 +55,12 @@ template("go_build") {
   output_path = "${root_out_dir}/${output_name}"
 
   action(main_target_name) {
-    forward_variables_from(invoker, [ "deps" ])
-
-    if (!defined(deps)) {
-      deps = []
+    deps = []
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+    if (defined(invoker.non_go_deps)) {
+      deps += invoker.non_go_deps
     }
 
     use_strip = is_fuchsia
@@ -89,11 +91,6 @@ template("go_build") {
         "//garnet/public/sdk:zircon_sysroot_export",
         "//zircon/public/lib/fdio",
       ]
-    }
-
-    go_dependencies = []
-    if (defined(invoker.go_dependencies)) {
-      go_dependencies = invoker.go_dependencies
     }
 
     zircon_sysroot = sysroot
@@ -141,17 +138,6 @@ template("go_build") {
         name = get_label_info(dep, "name")
         args += [ rebase_path("$gen_dir/$name.go_deps") ]
       }
-    }
-
-    foreach(dep, go_dependencies) {
-      if (!defined(dep.source)) {
-        dep.source = "."
-      }
-      source = dep.source
-      args += [
-        "--go-dependency",
-        dep.package + "=" + rebase_path(source),
-      ]
     }
 
     args += [
