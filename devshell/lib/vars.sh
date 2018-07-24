@@ -195,7 +195,7 @@ function fx-standard-switches {
   # not support the `-g` flag to `declare`.
   FX_ARGV=()
   while [[ $# -gt 0 ]]; do
-    if [[ "$1" = "--help" ]]; then
+    if [[ "$1" = "--help" || "$1" = "-h" ]]; then
       fx-print-command-help "$0"
       # Exit rather than return, so we bail out of the whole command early.
       exit 0
