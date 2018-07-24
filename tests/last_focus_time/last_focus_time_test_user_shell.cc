@@ -6,7 +6,7 @@
 #include <string>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fxl/logging.h>
@@ -186,7 +186,7 @@ class TestApp
     story_watcher_.Watch(story_controller_.get());
 
     // Start and show the new story.
-    fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
     story_watcher_.Continue([this] {

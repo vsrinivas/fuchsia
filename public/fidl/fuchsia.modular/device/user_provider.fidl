@@ -47,7 +47,7 @@ struct UserLoginParams {
 
   // |view_owner| is the view given to the |UserShell| started for the newly
   // logged-in user.
-  request<fuchsia.ui.views_v1_token.ViewOwner> view_owner;
+  request<fuchsia.ui.viewsv1token.ViewOwner> view_owner;
 
   // Services provided by the |DeviceShell| that can be offered to the
   // |UserShell| that is being logged into.

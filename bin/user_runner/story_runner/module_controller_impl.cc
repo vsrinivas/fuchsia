@@ -42,7 +42,7 @@ ModuleControllerImpl::ModuleControllerImpl(
     fuchsia::modular::AppConfig module_config,
     const fuchsia::modular::ModuleData* const module_data,
     fuchsia::sys::ServiceListPtr service_list,
-    fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
         view_provider_request)
     : story_controller_impl_(story_controller_impl),
       app_client_(

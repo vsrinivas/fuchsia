@@ -5,7 +5,7 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
@@ -58,7 +58,7 @@ class TestApp
   void GetController(fidl::StringPtr story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
 
-    fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
     fidl::VectorPtr<fidl::StringPtr> module_path;

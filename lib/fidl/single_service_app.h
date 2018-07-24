@@ -8,8 +8,8 @@
 #include <memory>
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fxl/macros.h>
@@ -21,7 +21,7 @@ namespace modular {
 // method that makes it suitable to be used as an Impl class of AppDriver.
 template <class Service>
 class SingleServiceApp : protected Service,
-                         private fuchsia::ui::views_v1::ViewProvider {
+                         private fuchsia::ui::viewsv1::ViewProvider {
  public:
   SingleServiceApp(component::StartupContext* const startup_context)
       : startup_context_(startup_context),
@@ -33,8 +33,8 @@ class SingleServiceApp : protected Service,
           service_binding_->Bind(std::move(request));
         });
     startup_context_->outgoing()
-        .AddPublicService<fuchsia::ui::views_v1::ViewProvider>(
-            [this](fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
+        .AddPublicService<fuchsia::ui::viewsv1::ViewProvider>(
+            [this](fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
                        request) {
               FXL_DCHECK(!view_provider_binding_.is_bound());
               view_provider_binding_.Bind(std::move(request));
@@ -54,13 +54,13 @@ class SingleServiceApp : protected Service,
   // |ViewProvider| -- Derived classes may override this method.
   void CreateView(
       fidl::InterfaceRequest<
-          fuchsia::ui::views_v1_token::ViewOwner> /*view_owner_request*/,
+          fuchsia::ui::viewsv1token::ViewOwner> /*view_owner_request*/,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
       override {}
 
   component::StartupContext* const startup_context_;
   std::unique_ptr<fidl::Binding<Service>> service_binding_;
-  fidl::Binding<fuchsia::ui::views_v1::ViewProvider> view_provider_binding_;
+  fidl::Binding<fuchsia::ui::viewsv1::ViewProvider> view_provider_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SingleServiceApp);
 };
@@ -68,13 +68,13 @@ class SingleServiceApp : protected Service,
 // Base class for a simple application which only provides the ViewProvider
 // service. It also implements a Terminate() method that makes it suitable to be
 // used as an Impl class of AppDriver.
-class ViewApp : private fuchsia::ui::views_v1::ViewProvider {
+class ViewApp : private fuchsia::ui::viewsv1::ViewProvider {
  public:
   ViewApp(component::StartupContext* const startup_context)
       : startup_context_(startup_context), view_provider_binding_(this) {
     startup_context_->outgoing()
-        .AddPublicService<fuchsia::ui::views_v1::ViewProvider>(
-            [this](fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
+        .AddPublicService<fuchsia::ui::viewsv1::ViewProvider>(
+            [this](fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
                        request) {
               FXL_DCHECK(!view_provider_binding_.is_bound());
               view_provider_binding_.Bind(std::move(request));
@@ -94,12 +94,12 @@ class ViewApp : private fuchsia::ui::views_v1::ViewProvider {
   // |ViewProvider| -- Derived classes may override this method.
   void CreateView(
       fidl::InterfaceRequest<
-          fuchsia::ui::views_v1_token::ViewOwner> /*view_owner_request*/,
+          fuchsia::ui::viewsv1token::ViewOwner> /*view_owner_request*/,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
       override {}
 
   component::StartupContext* const startup_context_;
-  fidl::Binding<fuchsia::ui::views_v1::ViewProvider> view_provider_binding_;
+  fidl::Binding<fuchsia::ui::viewsv1::ViewProvider> view_provider_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewApp);
 };

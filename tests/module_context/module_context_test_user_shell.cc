@@ -5,7 +5,7 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/callback/scoped_callback.h>
@@ -183,7 +183,7 @@ class TestApp
 
   std::string story_id_ = "";
 
-  fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> story_view_;
+  fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view_;
 
   fxl::WeakPtrFactory<TestApp> weak_ptr_factory_;
 

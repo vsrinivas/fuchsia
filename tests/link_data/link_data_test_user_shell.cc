@@ -6,7 +6,7 @@
 #include <utility>
 
 #include <fuchsia/modular/internal/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -114,7 +114,7 @@ class TestApp
   TestPoint story1_run_module0_link_{"Story1 Run: Module0 link"};
 
   void TestStory1_Run() {
-    fuchsia::ui::views_v1_token::ViewOwnerPtr story_view;
+    fuchsia::ui::viewsv1token::ViewOwnerPtr story_view;
     story_controller_->Start(story_view.NewRequest());
 
     Await(std::string("module0_link") + ":" + kRootJson1, [this] {
@@ -182,7 +182,7 @@ class TestApp
   void TestStory2_Run() {
     story2_run_.Pass();
 
-    fuchsia::ui::views_v1_token::ViewOwnerPtr story_view;
+    fuchsia::ui::viewsv1token::ViewOwnerPtr story_view;
     story_controller_->Start(story_view.NewRequest());
 
     TestStory2_Wait();

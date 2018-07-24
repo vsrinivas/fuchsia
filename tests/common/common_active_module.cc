@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
@@ -27,7 +27,7 @@ class ActiveModule {
   ActiveModule(
       modular::ModuleHost* const module_host,
       fidl::InterfaceRequest<
-          fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
+          fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host), weak_ptr_factory_(this) {
     modular::testing::Init(module_host_->startup_context(), __FILE__);
     initialized_.Pass();

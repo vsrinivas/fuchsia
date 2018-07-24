@@ -52,7 +52,7 @@ source_set("module_driver") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/fidl/fuchsia.ui.views_v1",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/lifecycle/cpp",
   ]

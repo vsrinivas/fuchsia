@@ -11,8 +11,8 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/connect.h>
@@ -68,7 +68,7 @@ class DevUserShellApp
  private:
   // |SingleServiceApp|
   void CreateView(
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
       override {
@@ -107,7 +107,7 @@ class DevUserShellApp
 
     view_ = std::make_unique<modular::ViewHost>(
         startup_context()
-            ->ConnectToEnvironmentService<fuchsia::ui::views_v1::ViewManager>(),
+            ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewManager>(),
         std::move(view_owner_request_));
 
     if (settings_.story_id.empty()) {
@@ -170,7 +170,7 @@ class DevUserShellApp
     story_controller_->Watch(story_watcher_binding_.NewBinding());
 
     FXL_LOG(INFO) << "DevUserShell Starting story with id: " << story_id;
-    fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner>
+    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner>
         root_module_view;
     story_controller_->Start(root_module_view.NewRequest());
     view_->ConnectView(std::move(root_module_view));
@@ -226,7 +226,7 @@ class DevUserShellApp
 
   const Settings settings_;
 
-  fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+  fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
       view_owner_request_;
   std::unique_ptr<modular::ViewHost> view_;
 

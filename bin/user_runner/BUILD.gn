@@ -26,7 +26,7 @@ executable_package("user_runner") {
     ":presentation_provider",
     "//garnet/public/fidl/fuchsia.net.oldhttp",
     "//garnet/public/fidl/fuchsia.ui.policy",
-    "//garnet/public/fidl/fuchsia.ui.views_v1",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
@@ -79,7 +79,7 @@ executable_package("dev_user_shell") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.ui.views_v1",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/view_framework",

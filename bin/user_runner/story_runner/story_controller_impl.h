@@ -19,7 +19,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -116,7 +116,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
       fidl::StringPtr module_name, fuchsia::modular::IntentPtr intent,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController>
           module_controller_request,
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
       fuchsia::modular::ModuleSource module_source,
       std::function<void(fuchsia::modular::StartModuleStatus)> callback);
@@ -157,7 +157,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
  private:
   // |StoryController|
   void GetInfo(GetInfoCallback callback) override;
-  void Start(fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+  void Start(fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
                  request) override;
   void Stop(StopCallback done) override;
   void Watch(
@@ -185,7 +185,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
 
   // Phases of Start() broken out into separate methods.
   void StartStoryShell(
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> request);
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request);
 
   // Called whenever |story_storage_| sees an updated ModuleData from another
   // device.
@@ -242,7 +242,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
     fidl::VectorPtr<fidl::StringPtr> module_path;
     fuchsia::modular::ModuleManifestPtr module_manifest;
     fuchsia::modular::SurfaceRelationPtr surface_relation;
-    fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner;
+    fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner;
   };
   std::map<fidl::StringPtr, PendingView> pending_views_;
 

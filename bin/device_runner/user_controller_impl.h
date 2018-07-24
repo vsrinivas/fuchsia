@@ -10,7 +10,7 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/array.h>
 #include <lib/fidl/cpp/binding.h>
@@ -44,7 +44,7 @@ class UserControllerImpl : fuchsia::modular::UserController,
       fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
           token_provider_factory,
       fuchsia::modular::auth::AccountPtr account,
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
       fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
           device_shell_services,

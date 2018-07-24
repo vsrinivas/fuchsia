@@ -11,8 +11,8 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/array.h>
@@ -257,14 +257,14 @@ class DeviceRunnerApp : fuchsia::modular::DeviceShellContext,
             context_->launcher().get(), CloneStruct(settings_.device_shell));
     device_shell_app_->services().ConnectToService(device_shell_.NewRequest());
 
-    fuchsia::ui::views_v1::ViewProviderPtr device_shell_view_provider;
+    fuchsia::ui::viewsv1::ViewProviderPtr device_shell_view_provider;
     device_shell_app_->services().ConnectToService(
         device_shell_view_provider.NewRequest());
 
     // We still need to pass a request for root view to device shell since
     // dev_device_shell (which mimics flutter behavior) blocks until it receives
     // the root view request.
-    fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> root_view;
+    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> root_view;
     fuchsia::ui::policy::PresentationPtr presentation;
     device_shell_view_provider->CreateView(root_view.NewRequest(), nullptr);
     // |enable_presenter| overrides |test| for running the presenter service.

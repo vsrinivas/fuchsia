@@ -16,10 +16,10 @@ using ::fuchsia::modular::examples::simple::SimplePtr;
 
 namespace simple {
 
-class SimpleModule : fuchsia::ui::views_v1::ViewProvider {
+class SimpleModule : fuchsia::ui::viewsv1::ViewProvider {
  public:
   SimpleModule(modular::ModuleHost* const module_host,
-               fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
+               fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
                    view_provider_request)
       : view_provider_binding_(this) {
     view_provider_binding_.Bind(std::move(view_provider_request));
@@ -67,13 +67,13 @@ class SimpleModule : fuchsia::ui::views_v1::ViewProvider {
   void Terminate(const std::function<void()>& done) { done(); }
 
  private:
-  // |fuchsia::ui::views_v1::ViewProvider|
+  // |fuchsia::ui::viewsv1::ViewProvider|
   void CreateView(
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner,
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) override {
   }
 
-  fidl::Binding<fuchsia::ui::views_v1::ViewProvider> view_provider_binding_;
+  fidl::Binding<fuchsia::ui::viewsv1::ViewProvider> view_provider_binding_;
 
   std::unique_ptr<modular::MessageReceiverClient> message_receiver_;
 };

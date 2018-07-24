@@ -9,8 +9,8 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -34,7 +34,7 @@ class DevStoryShellApp
  private:
   // |SingleServiceApp|
   void CreateView(
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
       fidl::InterfaceRequest<
           fuchsia::sys::ServiceProvider> /*services_request*/) override {
@@ -51,7 +51,7 @@ class DevStoryShellApp
 
   // |fuchsia::modular::StoryShell|
   void ConnectView(
-      fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> view_owner,
+      fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
       fidl::StringPtr /*view_id*/, fidl::StringPtr /*parent_id*/,
       fuchsia::modular::SurfaceRelationPtr /*surface_relation*/,
       fuchsia::modular::ModuleManifestPtr /*module_manifest*/) override {
@@ -86,7 +86,7 @@ class DevStoryShellApp
       view_ = std::make_unique<modular::ViewHost>(
           startup_context()
               ->ConnectToEnvironmentService<
-                  fuchsia::ui::views_v1::ViewManager>(),
+                  fuchsia::ui::viewsv1::ViewManager>(),
           std::move(view_owner_request_));
 
       for (auto& view_owner : child_views_) {
@@ -98,10 +98,10 @@ class DevStoryShellApp
   }
 
   std::unique_ptr<modular::ViewHost> view_;
-  std::vector<fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner>>
+  std::vector<fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner>>
       child_views_;
 
-  fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+  fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
       view_owner_request_;
   fuchsia::modular::StoryContextPtr story_context_;
   FXL_DISALLOW_COPY_AND_ASSIGN(DevStoryShellApp);

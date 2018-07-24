@@ -53,7 +53,7 @@ void ModuleContextImpl::EmbedModule(
     fidl::StringPtr name, fuchsia::modular::Intent intent,
     fidl::InterfaceRequest<fuchsia::modular::ModuleController>
         module_controller,
-    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner,
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
     EmbedModuleCallback callback) {
   story_controller_impl_->EmbedModule(
       module_data_->module_path, name, fidl::MakeOptional(std::move(intent)),

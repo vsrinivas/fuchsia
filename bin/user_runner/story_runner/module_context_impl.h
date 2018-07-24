@@ -8,7 +8,7 @@
 #include <string>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -56,7 +56,7 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
       fidl::StringPtr name, fuchsia::modular::Intent intent,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController>
           module_controller,
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner,
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
       EmbedModuleCallback callback) override;
 
   // |fuchsia::modular::ModuleContext|

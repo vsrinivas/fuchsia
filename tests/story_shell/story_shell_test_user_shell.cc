@@ -9,7 +9,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -93,7 +93,7 @@ class TestApp
   // |SingleServiceApp|
   void CreateView(
       fidl::InterfaceRequest<
-          fuchsia::ui::views_v1_token::ViewOwner> /*view_owner_request*/,
+          fuchsia::ui::viewsv1token::ViewOwner> /*view_owner_request*/,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
       override {
     create_view_.Pass();
@@ -135,7 +135,7 @@ class TestApp
 
     story_provider_->GetController(story1_id_, story_controller_.NewRequest());
 
-    fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
     // TODO(mesch):
@@ -180,7 +180,7 @@ class TestApp
     Get("root:one:two manifest", proceed_after_5);
     Get("root:one:two ordering", proceed_after_5);
 
-    fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
   }
 
@@ -218,7 +218,7 @@ class TestApp
 
     story_provider_->GetController(story2_id_, story_controller_.NewRequest());
 
-    fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
     fidl::VectorPtr<fidl::StringPtr> parent_one;
@@ -257,7 +257,7 @@ class TestApp
     Get("root:one:two manifest", proceed_after_5);
     Get("root:one:two ordering", proceed_after_5);
 
-    fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
   }
 

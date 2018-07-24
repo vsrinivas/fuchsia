@@ -15,15 +15,15 @@ namespace modular_example {
 class ModuleView : public mozart::BaseView {
  public:
   explicit ModuleView(
-      fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+      fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
       uint32_t color);
 
  private:
   // |BaseView|:
   void OnPropertiesChanged(
-      fuchsia::ui::views_v1::ViewProperties old_properties) override;
+      fuchsia::ui::viewsv1::ViewProperties old_properties) override;
 
   scenic::ShapeNode background_node_;
 
@@ -33,8 +33,8 @@ class ModuleView : public mozart::BaseView {
 class ModuleApp : public modular::ViewApp {
  public:
   using CreateViewCallback = std::function<mozart::BaseView*(
-      fuchsia::ui::views_v1::ViewManagerPtr,
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>)>;
+      fuchsia::ui::viewsv1::ViewManagerPtr,
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>)>;
 
   explicit ModuleApp(component::StartupContext* const startup_context,
                      CreateViewCallback create);
@@ -42,7 +42,7 @@ class ModuleApp : public modular::ViewApp {
  private:
   // |SingleServiceApp|
   void CreateView(
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) override;
 

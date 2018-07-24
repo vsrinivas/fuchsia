@@ -97,7 +97,7 @@ class TestApp
   // |fuchsia::modular::NextListener|
   void OnProcessingChange(bool processing) override {}
 
-  fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner_;
+  fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner_;
   fuchsia::modular::UserShellContextPtr user_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::StoryControllerPtr story_controller_;

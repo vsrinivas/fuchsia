@@ -9,7 +9,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/fxl/command_line.h>
@@ -50,7 +50,7 @@ class TestApp
 
   // |fuchsia::modular::StoryShell|
   void ConnectView(
-      fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> view_owner,
+      fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
       fidl::StringPtr view_id, fidl::StringPtr anchor_id,
       fuchsia::modular::SurfaceRelationPtr /*surface_relation*/,
       fuchsia::modular::ModuleManifestPtr module_manifest) override {

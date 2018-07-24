@@ -9,7 +9,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -37,7 +37,7 @@ class ModuleHost {
 //      // A constructor with the following signature:
 //      Constructor(
 //           modular::ModuleHost* module_host,
-//           fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
+//           fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
 //           view_provider_request);
 //
 //       // Called by ModuleDriver. Call |done| once shutdown sequence is
@@ -50,7 +50,7 @@ class ModuleHost {
 //  public:
 //   HelloWorldModule(
 //      modular::ModuleHost* module_host,
-//      fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
+//      fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
 //      view_provider_request) {}
 //
 //   // Called by ModuleDriver.
@@ -75,8 +75,8 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
         on_terminated_(std::move(on_terminated)) {
     context_->ConnectToEnvironmentService(module_context_.NewRequest());
 
-    context_->outgoing().AddPublicService<fuchsia::ui::views_v1::ViewProvider>(
-        [this](fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
+    context_->outgoing().AddPublicService<fuchsia::ui::viewsv1::ViewProvider>(
+        [this](fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
                    request) {
           impl_ = std::make_unique<Impl>(static_cast<ModuleHost*>(this),
                                          std::move(request));

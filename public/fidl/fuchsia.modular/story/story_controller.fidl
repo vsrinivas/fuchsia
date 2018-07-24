@@ -19,7 +19,7 @@ interface StoryController {
   // story is already running, the view owner request is dropped. If Stop()
   // requests are pending when this request is issued, the request is queued
   // until the Stop() requests complete.
-  3: Start(request<fuchsia.ui.views_v1_token.ViewOwner> view_owner);
+  3: Start(request<fuchsia.ui.viewsv1token.ViewOwner> view_owner);
 
   // Stops this story if it is running, else does nothing. Returns when the
   // story is stopped.

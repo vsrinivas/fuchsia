@@ -5,7 +5,7 @@
 #include <string>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding.h>
@@ -23,7 +23,7 @@ class NullModule : fuchsia::modular::LinkWatcher {
  public:
   NullModule(modular::ModuleHost* const module_host,
              fidl::InterfaceRequest<
-                 fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
+                 fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host), link_watcher_binding_(this) {
     FXL_LOG(INFO) << "NullModule()";
     module_host_->module_context()->GetLink(nullptr, link_.NewRequest());

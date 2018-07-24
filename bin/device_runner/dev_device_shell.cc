@@ -10,7 +10,7 @@
 #include <utility>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/callback/scoped_callback.h>
@@ -99,7 +99,7 @@ class DevDeviceShellApp
  private:
   // |SingleServiceApp|
   void CreateView(
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
       override {
@@ -182,7 +182,7 @@ class DevDeviceShellApp
 
   const Settings settings_;
   fidl::Binding<fuchsia::modular::UserWatcher> user_watcher_binding_;
-  fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+  fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
       view_owner_request_;
   fuchsia::modular::DeviceShellContextPtr device_shell_context_;
   fuchsia::modular::UserControllerPtr user_controller_;

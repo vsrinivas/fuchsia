@@ -9,8 +9,8 @@
 namespace modular_example {
 
 ModuleView::ModuleView(
-    fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+    fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request,
     uint32_t color)
     : BaseView(std::move(view_manager), std::move(view_owner_request),
@@ -23,7 +23,7 @@ ModuleView::ModuleView(
   parent_node().AddChild(background_node_);
 }
 
-void ModuleView::OnPropertiesChanged(fuchsia::ui::views_v1::ViewProperties) {
+void ModuleView::OnPropertiesChanged(fuchsia::ui::viewsv1::ViewProperties) {
   scenic::Rectangle background_shape(session(), logical_size().width,
                                          logical_size().height);
   background_node_.SetShape(background_shape);
@@ -37,12 +37,12 @@ ModuleApp::ModuleApp(component::StartupContext* const startup_context,
     : ViewApp(startup_context), create_(std::move(create)) {}
 
 void ModuleApp::CreateView(
-    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/) {
   view_.reset(create_(
       startup_context()
-          ->ConnectToEnvironmentService<fuchsia::ui::views_v1::ViewManager>(),
+          ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewManager>(),
       std::move(view_owner_request)));
 }
 

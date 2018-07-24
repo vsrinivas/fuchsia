@@ -25,15 +25,15 @@ constexpr std::array<const char*, 2> kModuleQueries{
 class RecipeView : public mozart::BaseView {
  public:
   explicit RecipeView(
-      fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+      fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request)
       : BaseView(std::move(view_manager), std::move(view_owner_request),
                  "RecipeView") {}
 
   ~RecipeView() override = default;
 
-  void SetChild(fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner) {
+  void SetChild(fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner) {
     if (host_node_) {
       GetViewContainer()->RemoveChild(kChildKey, nullptr);
       host_node_->Detach();
@@ -54,9 +54,9 @@ class RecipeView : public mozart::BaseView {
 
  private:
   // |BaseView|:
-  void OnPropertiesChanged(fuchsia::ui::views_v1::ViewProperties) override {
+  void OnPropertiesChanged(fuchsia::ui::viewsv1::ViewProperties) override {
     if (host_node_) {
-      auto child_properties = fuchsia::ui::views_v1::ViewProperties::New();
+      auto child_properties = fuchsia::ui::viewsv1::ViewProperties::New();
       fidl::Clone(properties(), child_properties.get());
       GetViewContainer()->SetChildProperties(kChildKey,
                                              std::move(child_properties));
@@ -79,13 +79,13 @@ class RecipeApp : public modular::ViewApp {
  private:
   // |SingleServiceApp|
   void CreateView(
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
       override {
     view_ = std::make_unique<RecipeView>(
         startup_context()
-            ->ConnectToEnvironmentService<fuchsia::ui::views_v1::ViewManager>(),
+            ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewManager>(),
         std::move(view_owner_request));
     SetChild();
   }
@@ -125,7 +125,7 @@ class RecipeApp : public modular::ViewApp {
 
   fuchsia::modular::ModuleContextPtr module_context_;
   fuchsia::modular::ModuleControllerPtr module_;
-  fuchsia::ui::views_v1_token::ViewOwnerPtr module_view_;
+  fuchsia::ui::viewsv1token::ViewOwnerPtr module_view_;
   std::unique_ptr<RecipeView> view_;
 
   int query_index_ = 0;

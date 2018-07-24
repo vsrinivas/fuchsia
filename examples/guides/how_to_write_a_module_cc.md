@@ -25,18 +25,18 @@ The first step to writing a `Module` is implementing the initializer.
 
 namespace simple {
 
-class SimpleModule : fuchsia::ui::views_v1::ViewProvider {
+class SimpleModule : fuchsia::ui::viewsv1::ViewProvider {
  public:
 	SimpleModule(
 			modular::ModuleHost* module_host,
-			fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider> view_provider_request)
+			fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider> view_provider_request)
 			: view_provider_binding_(this) {
 		view_provider_binding_.Bind(std::move(view_provider_request));
 }
 
  private:
 	modular::ModuleHost* module_host_;
-	fidl::Binding<fuchsia::ui::views_v1::ViewProvider> view_provider_binding_;
+	fidl::Binding<fuchsia::ui::viewsv1::ViewProvider> view_provider_binding_;
 	std::set<std::unique_ptr<SimpleView>> views_;
 };
 

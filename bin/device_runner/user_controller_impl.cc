@@ -24,7 +24,7 @@ UserControllerImpl::UserControllerImpl(
     fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
         token_provider_factory,
     fuchsia::modular::auth::AccountPtr account,
-    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request,
     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> device_shell_services,
     fidl::InterfaceRequest<fuchsia::modular::UserController>

@@ -31,7 +31,7 @@ class TestApp {
 
   TestApp(modular::ModuleHost* module_host,
           fidl::InterfaceRequest<
-              fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
+              fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host), weak_ptr_factory_(this) {
     modular::testing::Init(module_host->startup_context(), __FILE__);
     initialized_.Pass();

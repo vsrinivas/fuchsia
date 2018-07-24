@@ -8,8 +8,8 @@
 #include <map>
 #include <memory>
 
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/fxl/macros.h>
 #include <lib/ui/view_framework/base_view.h>
 
@@ -23,8 +23,8 @@ namespace modular {
 class ViewHost : public mozart::BaseView {
  public:
   explicit ViewHost(
-      fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+      fuchsia::ui::viewsv1::ViewManagerPtr view_manager,
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request);
   ~ViewHost() override;
 
@@ -33,14 +33,14 @@ class ViewHost : public mozart::BaseView {
   // This is experimental to establish data flow patterns in toy
   // applications and can be changed or extended as needed.
   void ConnectView(
-      fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> view_owner);
+      fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner);
 
  private:
   struct ViewData;
 
   // |BaseView|:
   void OnPropertiesChanged(
-      fuchsia::ui::views_v1::ViewProperties old_properties) override;
+      fuchsia::ui::viewsv1::ViewProperties old_properties) override;
   void OnChildUnavailable(uint32_t child_key) override;
 
   void UpdateScene();

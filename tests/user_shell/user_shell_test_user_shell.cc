@@ -8,7 +8,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/component/cpp/startup_context.h>
@@ -223,7 +223,7 @@ class TestApp
   // |SingleServiceApp|
   void CreateView(
       fidl::InterfaceRequest<
-          fuchsia::ui::views_v1_token::ViewOwner> /*view_owner_request*/,
+          fuchsia::ui::viewsv1token::ViewOwner> /*view_owner_request*/,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
       override {
     create_view_.Pass();
@@ -334,7 +334,7 @@ class TestApp
     story_links_watcher_.Watch(&story_controller_);
 
     // Start and show the new story.
-    fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
     story1_run_.Pass();
   }
@@ -399,7 +399,7 @@ class TestApp
 
     // Start and show the new story *while* the GetInfo() call above is in
     // flight.
-    fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
     story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,

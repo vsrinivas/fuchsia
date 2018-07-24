@@ -12,7 +12,7 @@
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/fxl/files/directory.h>
@@ -199,7 +199,7 @@ void UserRunnerImpl::Initialize(
     fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
         token_provider_factory,
     fidl::InterfaceHandle<fuchsia::modular::internal::UserContext> user_context,
-    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request) {
   InitializeUser(std::move(account), std::move(token_provider_factory),
                  std::move(user_context));
@@ -634,13 +634,13 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
 
 void UserRunnerImpl::InitializeUserShell(
     fuchsia::modular::AppConfig user_shell,
-    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request) {
   // We setup our own view and make the fuchsia::modular::UserShell a child of
   // it.
   user_shell_view_host_ = std::make_unique<ViewHost>(
       startup_context_
-          ->ConnectToEnvironmentService<fuchsia::ui::views_v1::ViewManager>(),
+          ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewManager>(),
       std::move(view_owner_request));
   RunUserShell(std::move(user_shell));
   AtEnd([this](std::function<void()> cont) { TerminateUserShell(cont); });
@@ -661,8 +661,8 @@ void UserRunnerImpl::RunUserShell(fuchsia::modular::AppConfig user_shell) {
     Logout();
   });
 
-  fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner;
-  fuchsia::ui::views_v1::ViewProviderPtr view_provider;
+  fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner;
+  fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
   user_shell_app_->services().ConnectToService(view_provider.NewRequest());
   view_provider->CreateView(view_owner.NewRequest(), nullptr);
   user_shell_view_host_->ConnectView(std::move(view_owner));

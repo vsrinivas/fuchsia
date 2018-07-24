@@ -5,7 +5,7 @@
 #include <iostream>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
@@ -49,7 +49,7 @@ class TestApp {
 
   TestApp(modular::ModuleHost* module_host,
           fidl::InterfaceRequest<
-              fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
+              fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
     modular::testing::Init(module_host->startup_context(), __FILE__);
     initialized_.Pass();

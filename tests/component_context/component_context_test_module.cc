@@ -72,7 +72,7 @@ class TestApp {
 
   TestApp(modular::ModuleHost* module_host,
           fidl::InterfaceRequest<
-              fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
+              fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
       : steps_(
             kTotalSimultaneousTests,
             [this, module_host] { Signal(modular::testing::kTestShutdown); }),

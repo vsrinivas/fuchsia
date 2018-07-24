@@ -13,7 +13,7 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/component/cpp/startup_context.h>
@@ -157,7 +157,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
       fuchsia::modular::ModuleData module_data,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController>
           module_controller_request,
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
       ResultCall result_call)
       : Operation("StoryControllerImpl::LaunchModuleCall",
@@ -210,8 +210,8 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     fuchsia::modular::AppConfig module_config;
     module_config.url = module_data_.module_url;
 
-    fuchsia::ui::views_v1::ViewProviderPtr view_provider;
-    fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
+    fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
         view_provider_request = view_provider.NewRequest();
     view_provider->CreateView(std::move(view_owner_request_), nullptr);
 
@@ -273,7 +273,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
   fuchsia::modular::ModuleData module_data_;
   fidl::InterfaceRequest<fuchsia::modular::ModuleController>
       module_controller_request_;
-  fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+  fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
       view_owner_request_;
   const zx_time_t start_time_;
 
@@ -514,7 +514,7 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
       module_controller_request_;
 
   fuchsia::modular::ModuleControllerPtr module_controller_;
-  fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner_;
+  fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner_;
 
   OperationQueue operation_queue_;
 
@@ -1028,7 +1028,7 @@ class StoryControllerImpl::AddIntentCall
                 fidl::InterfaceRequest<fuchsia::modular::ModuleController>
                     module_controller_request,
                 fuchsia::modular::SurfaceRelationPtr surface_relation,
-                fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+                fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
                     view_owner_request,
                 const fuchsia::modular::ModuleSource module_source,
                 ResultCall result_call)
@@ -1185,7 +1185,7 @@ class StoryControllerImpl::AddIntentCall
   fidl::InterfaceRequest<fuchsia::modular::ModuleController>
       module_controller_request_;
   fuchsia::modular::SurfaceRelationPtr surface_relation_;
-  fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+  fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
       view_owner_request_;
   const fuchsia::modular::ModuleSource module_source_;
 
@@ -1291,7 +1291,7 @@ class StoryControllerImpl::StartContainerInShellCall : public Operation<> {
       relation_map_;
 
   // map of node_name to view_owners
-  std::map<fidl::StringPtr, fuchsia::ui::views_v1_token::ViewOwnerPtr>
+  std::map<fidl::StringPtr, fuchsia::ui::viewsv1token::ViewOwnerPtr>
       node_views_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StartContainerInShellCall);
@@ -1302,7 +1302,7 @@ class StoryControllerImpl::StartCall : public Operation<> {
   StartCall(
       StoryControllerImpl* const story_controller_impl,
       StoryStorage* const storage,
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> request)
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request)
       : Operation("StoryControllerImpl::StartCall", [] {}),
         story_controller_impl_(story_controller_impl),
         storage_(storage),
@@ -1344,7 +1344,7 @@ class StoryControllerImpl::StartCall : public Operation<> {
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
   StoryStorage* const storage_;                       // not owned
-  fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> request_;
+  fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request_;
 
   OperationQueue operation_queue_;
 
@@ -1503,7 +1503,7 @@ void StoryControllerImpl::EmbedModule(
     fidl::StringPtr module_name, fuchsia::modular::IntentPtr intent,
     fidl::InterfaceRequest<fuchsia::modular::ModuleController>
         module_controller_request,
-    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request,
     fuchsia::modular::ModuleSource module_source,
     std::function<void(fuchsia::modular::StartModuleStatus)> callback) {
@@ -1634,7 +1634,7 @@ void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
 }
 
 void StoryControllerImpl::Start(
-    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> request) {
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request) {
   operation_queue_.Add(new StartCall(this, story_storage_, std::move(request)));
 }
 
@@ -1750,7 +1750,7 @@ void StoryControllerImpl::AddModule(
 }
 
 void StoryControllerImpl::StartStoryShell(
-    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> request) {
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request) {
   story_shell_app_ = story_provider_impl_->StartStoryShell(std::move(request));
   story_shell_app_->services().ConnectToService(story_shell_.NewRequest());
   story_shell_->Initialize(story_context_binding_.NewBinding());

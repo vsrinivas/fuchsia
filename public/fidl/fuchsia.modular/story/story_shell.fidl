@@ -23,7 +23,7 @@ interface StoryShell {
   // Registers a new view to be displayed by the StoryShell. More context that
   // allows the story shell to decide how to layout will be added later. Also,
   // interface to influence life cycle and focus is obviously missing.
-  2: ConnectView(fuchsia.ui.views_v1_token.ViewOwner owner, string view_id, string parent_id,
+  2: ConnectView(fuchsia.ui.viewsv1token.ViewOwner owner, string view_id, string parent_id,
                  SurfaceRelation? surface_relation, ModuleManifest? module_manifest);
 
   // Focuses the view with view_id, bringing it to the foreground. Optionally
@@ -52,7 +52,7 @@ struct ContainerView {
   string node_name;
 
   // The new view resolved from the intent corresponding to node_name
-  fuchsia.ui.views_v1_token.ViewOwner owner;
+  fuchsia.ui.viewsv1token.ViewOwner owner;
 };
 
 // This interface provides the StoryShell instance with everything it needs to

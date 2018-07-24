@@ -45,7 +45,7 @@ interface ModuleContext {
   // is just closed.
   3: EmbedModule(string name, Intent intent,
                 request<ModuleController> module_controller,
-                request<fuchsia.ui.views_v1_token.ViewOwner> view_owner) -> (StartModuleStatus @status);
+                request<fuchsia.ui.viewsv1token.ViewOwner> view_owner) -> (StartModuleStatus @status);
 
   // Like StartModule(), but starts multiple modules simultaneously and
   // specifies a custom layout for them (aka container).

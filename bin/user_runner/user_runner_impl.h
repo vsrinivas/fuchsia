@@ -17,7 +17,7 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/speech/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_ptr.h>
@@ -70,7 +70,7 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
           token_provider_factory,
       fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
           user_context,
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request) override;
 
   // |UserRunner|
@@ -93,7 +93,7 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
                                    fuchsia::modular::AppConfig story_shell);
   void InitializeUserShell(
       fuchsia::modular::AppConfig user_shell,
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request);
 
   void RunUserShell(fuchsia::modular::AppConfig user_shell);

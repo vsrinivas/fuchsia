@@ -24,7 +24,7 @@ executable_package("link_data_test_user_shell") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/fidl/fuchsia.testing.runner",
-    "//garnet/public/fidl/fuchsia.ui.views_v1",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//peridot/lib/common:names",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
@@ -44,7 +44,7 @@ executable_package("link_data_test_module0") {
 
   deps = [
     ":defs",
-    "//garnet/public/fidl/fuchsia.ui.views_v1",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/public/fidl/fuchsia.modular",
@@ -63,7 +63,7 @@ executable_package("link_data_test_module1") {
 
   deps = [
     ":defs",
-    "//garnet/public/fidl/fuchsia.ui.views_v1",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/public/fidl/fuchsia.modular",
@@ -82,7 +82,7 @@ executable_package("link_data_test_module2") {
 
   deps = [
     ":defs",
-    "//garnet/public/fidl/fuchsia.ui.views_v1",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/public/fidl/fuchsia.modular",

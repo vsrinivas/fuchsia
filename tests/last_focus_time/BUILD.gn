@@ -25,7 +25,7 @@ executable_package("last_focus_time_test_user_shell") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/fidl/fuchsia.testing.runner",
-    "//garnet/public/fidl/fuchsia.ui.views_v1",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//peridot/lib/common:story_provider_watcher_base",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/rapidjson",

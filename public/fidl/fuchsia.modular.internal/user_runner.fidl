@@ -16,7 +16,7 @@ interface UserRunner {
                fuchsia.modular.AppConfig story_shell,
                fuchsia.modular.auth.TokenProviderFactory token_provider_factory,
                UserContext user_context,
-               request<fuchsia.ui.views_v1_token.ViewOwner>? view_owner);
+               request<fuchsia.ui.viewsv1token.ViewOwner>? view_owner);
 
   2: SwapUserShell(fuchsia.modular.AppConfig user_shell) -> ();
 };

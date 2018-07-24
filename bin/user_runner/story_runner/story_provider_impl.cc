@@ -470,7 +470,7 @@ void StoryProviderImpl::Duplicate(
 
 std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>>
 StoryProviderImpl::StartStoryShell(
-    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> request) {
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request) {
   MaybeLoadStoryShell();
 
   auto preloaded_story_shell = std::move(preloaded_story_shell_);
@@ -518,10 +518,10 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
   // CreateView must be called in order to get the Flutter application to
   // run
 
-  fuchsia::ui::views_v1::ViewProviderPtr view_provider;
+  fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
   story_shell_app->services().ConnectToService(view_provider.NewRequest());
 
-  fuchsia::ui::views_v1_token::ViewOwnerPtr story_shell_view;
+  fuchsia::ui::viewsv1token::ViewOwnerPtr story_shell_view;
   view_provider->CreateView(story_shell_view.NewRequest(), nullptr);
 
   preloaded_story_shell_ =

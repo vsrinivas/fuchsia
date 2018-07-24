@@ -67,7 +67,7 @@ interface AccountProviderContext {
 interface AuthenticationContext {
   // Requests device shell to display |view_owner| for authentication. No other
   // call to StartOverlay() must be made until StopOverlay() has been called.
-  1: StartOverlay(fuchsia.ui.views_v1_token.ViewOwner view_owner);
+  1: StartOverlay(fuchsia.ui.viewsv1token.ViewOwner view_owner);
 
   // Requests device shell to stop displaying the auth view.
   2: StopOverlay();
