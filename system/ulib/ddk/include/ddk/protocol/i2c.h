@@ -91,7 +91,7 @@ static inline zx_status_t i2c_transact_sync(i2c_protocol_t* i2c, uint32_t index,
 typedef void (*i2c_impl_complete_cb)(zx_status_t status, void* cookie);
 
 typedef struct {
-    size_t (*get_bus_count)(void* ctx);
+    uint32_t (*get_bus_count)(void* ctx);
     zx_status_t (*get_max_transfer_size)(void* ctx, uint32_t bus_id, size_t* out_size);
     zx_status_t (*set_bitrate)(void* ctx, uint32_t bus_id, uint32_t bitrate);
     zx_status_t (*transact)(void* ctx, uint32_t bus_id, uint16_t address, const void* write_buf,
@@ -103,7 +103,7 @@ typedef struct {
     void* ctx;
 } i2c_impl_protocol_t;
 
-static inline size_t i2c_impl_get_bus_count(i2c_impl_protocol_t* i2c) {
+static inline uint32_t i2c_impl_get_bus_count(i2c_impl_protocol_t* i2c) {
     return i2c->ops->get_bus_count(i2c->ctx);
 }
 

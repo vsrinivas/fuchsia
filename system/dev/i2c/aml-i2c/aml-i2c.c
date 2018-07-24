@@ -284,7 +284,7 @@ init_fail:
     return status;
 }
 
-static size_t aml_i2c_get_bus_count(void* ctx) {
+static uint32_t aml_i2c_get_bus_count(void* ctx) {
     aml_i2c_t* i2c = ctx;
 
     return i2c->dev_count;

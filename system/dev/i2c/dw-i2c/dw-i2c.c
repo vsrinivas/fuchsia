@@ -208,7 +208,7 @@ static zx_status_t i2c_dw_set_bitrate(void* ctx, uint32_t bus_id, uint32_t bitra
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static size_t i2c_dw_get_bus_count(void* ctx) {
+static uint32_t i2c_dw_get_bus_count(void* ctx) {
     i2c_dw_t* i2c = ctx;
 
     return i2c->i2c_dev_count;
