@@ -9,6 +9,7 @@
 #include <utility>
 
 #include <lib/fsl/types/type_converters.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/macros.h>
 #include <lib/fxl/strings/join_strings.h>
 #include <lib/fxl/type_converter.h>
@@ -128,7 +129,12 @@ class EntityProviderRunner::DataEntity : fuchsia::modular::Entity {
   void GetData(fidl::StringPtr type, GetDataCallback result) {
     auto it = data_.find(type);
     if (it != data_.end()) {
-      result(it->second);
+      fsl::SizedVmo vmo;
+      FXL_CHECK(fsl::VmoFromString(it->second, &vmo));
+      auto vmo_ptr =
+          std::make_unique<fuchsia::mem::Buffer>(std::move(vmo).ToTransport());
+
+      result(std::move(vmo_ptr));
     } else {
       result(nullptr);
     }

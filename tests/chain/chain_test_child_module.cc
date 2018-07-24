@@ -7,6 +7,7 @@
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/time/time_delta.h>
 
@@ -59,13 +60,16 @@ class TestApp {
         return;
       }
       entity_resolver_->ResolveEntity(entity_reference, entity_.NewRequest());
-      entity_->GetData("myType", [this](fidl::StringPtr content) {
-        if (content == "1337") {
-          link_one_correct_.Pass();
-        }
+      entity_->GetData(
+          "myType", [this](std::unique_ptr<fuchsia::mem::Buffer> content) {
+            std::string content_string;
+            FXL_CHECK(fsl::StringFromVmo(*content, &content_string));
+            if (content_string == "1337") {
+              link_one_correct_.Pass();
+            }
 
-        VerifyLinkTwo();
-      });
+            VerifyLinkTwo();
+          });
     });
   }
 

@@ -16,6 +16,7 @@
 #include <lib/component/cpp/service_provider_impl.h>
 #include <lib/component/cpp/testing/fake_launcher.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/files/scoped_temp_dir.h>
 #include <lib/fxl/macros.h>
 
@@ -171,7 +172,12 @@ class MyEntityProvider : AgentImpl::Delegate,
   // |fuchsia::modular::EntityProvider|
   void GetData(fidl::StringPtr cookie, fidl::StringPtr type,
                GetDataCallback callback) override {
-    callback(type.get() + ":MyData");
+    fsl::SizedVmo vmo;
+    FXL_CHECK(fsl::VmoFromString(type.get() + ":MyData", &vmo));
+    auto vmo_ptr =
+        std::make_unique<fuchsia::mem::Buffer>(std::move(vmo).ToTransport());
+
+    callback(std::move(vmo_ptr));
   }
 
  private:
@@ -238,10 +244,13 @@ TEST_F(EntityProviderRunnerTest, Basic) {
     EXPECT_EQ("MyType", types->at(0));
     counts["GetTypes"]++;
   });
-  entity->GetData("MyType", [&counts](fidl::StringPtr data) {
-    EXPECT_EQ("MyType:MyData", data.get());
-    counts["GetData"]++;
-  });
+  entity->GetData("MyType",
+                  [&counts](std::unique_ptr<fuchsia::mem::Buffer> data) {
+                    std::string data_string;
+                    FXL_CHECK(fsl::StringFromVmo(*data, &data_string));
+                    EXPECT_EQ("MyType:MyData", data_string);
+                    counts["GetData"]++;
+                  });
   RunLoopWithTimeoutOrUntil(
       [&counts] { return counts["GetTypes"] == 1 && counts["GetData"] == 1; });
   EXPECT_EQ(1u, counts["GetTypes"]);
@@ -270,9 +279,12 @@ TEST_F(EntityProviderRunnerTest, DataEntity) {
   EXPECT_EQ("type1", output_types->at(0));
 
   fidl::StringPtr output_data;
-  entity->GetData("type1", [&output_data](fidl::StringPtr result) {
-    output_data = result;
-  });
+  entity->GetData("type1",
+                  [&output_data](std::unique_ptr<fuchsia::mem::Buffer> result) {
+                    std::string data_string;
+                    FXL_CHECK(fsl::StringFromVmo(*result, &data_string));
+                    output_data = data_string;
+                  });
   RunLoopWithTimeoutOrUntil([&output_data] { return !output_data.is_null(); });
   EXPECT_EQ("data1", output_data);
 }

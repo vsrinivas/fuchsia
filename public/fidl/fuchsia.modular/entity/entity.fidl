@@ -4,6 +4,8 @@
 
 library fuchsia.modular;
 
+using fuchsia.mem;
+
 // |Entity| is obtained by dereferencing an entity reference using
 // |EntityResolver|.
 interface Entity {
@@ -12,9 +14,8 @@ interface Entity {
     1: GetTypes() -> (vector<string> types);
 
    // Given one of the types returned from |GetTypes()| above, returns
-   // associated short-form data as a string of bytes. It is common for the data
+   // associated short-form data as bytes. It is common for the data
    // to be represented as JSON. If data for |type| exists, a non-null |data| is
    // returned.
-   // TODO(vardhan,thatguy): |data| should be a VMO or a file.
-   2: GetData(string type) -> (string? data);
+   2: GetData(string type) -> (fuchsia.mem.Buffer? data);
 };

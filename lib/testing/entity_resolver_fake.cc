@@ -4,6 +4,8 @@
 
 #include "peridot/lib/testing/entity_resolver_fake.h"
 
+#include <lib/fsl/vmo/strings.h>
+
 namespace modular {
 
 class EntityResolverFake::EntityImpl : fuchsia::modular::Entity {
@@ -32,7 +34,12 @@ class EntityResolverFake::EntityImpl : fuchsia::modular::Entity {
       callback(nullptr);
       return;
     }
-    callback(it->second);
+    fsl::SizedVmo vmo;
+    FXL_CHECK(fsl::VmoFromString(it->second, &vmo));
+    auto vmo_ptr =
+        std::make_unique<fuchsia::mem::Buffer>(std::move(vmo).ToTransport());
+
+    callback(std::move(vmo_ptr));
   }
 
   std::map<std::string, std::string> types_and_data_;
