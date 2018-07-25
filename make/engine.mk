@@ -526,8 +526,14 @@ USER_MANIFEST_LINES += {core}$(ASAN_SOLIB_MANIFEST)
 find-clang-asan-solib = $(or $(call find-clang-solib,asan/$1), \
 			     $(call find-clang-solib,$1))
 ASAN_RUNTIME_SONAMES := libc++abi.so.1 libunwind.so.1
-USER_MANIFEST_LINES += $(foreach soname,$(ASAN_RUNTIME_SONAMES),\
-				 {core}$(call find-clang-asan-solib,$(soname)))
+ASAN_RUNTIME_MANIFEST := \
+    $(foreach soname,$(ASAN_RUNTIME_SONAMES),\
+	      {core}$(call find-clang-asan-solib,$(soname)))
+USER_MANIFEST_LINES += $(ASAN_RUNTIME_MANIFEST)
+
+TOOLCHAIN_SOLIBS += \
+    $(foreach entry,$(ASAN_SOLIB_MANIFEST) $(ASAN_RUNTIME_MANIFEST),\
+	      $(word 2,$(subst =, ,$(entry))))
 endif
 
 ifeq ($(call TOBOOL,$(USE_SANCOV)),true)
@@ -566,6 +572,18 @@ SAVED_USER_MANIFEST_LINES := $(USER_MANIFEST_LINES)
 # recursively include any modules in the MODULE variable, leaving a trail of included
 # modules in the ALLMODULES list
 include make/recurse.mk
+
+define link-toolchain-file-cmd
+$(call BUILDECHO,generating $@)
+$(NOECHO)ln -f -L $< $@
+endef
+define toolchain-id-files
+$(foreach lib,$(TOOLCHAIN_SOLIBS),
+EXTRA_IDFILES += $$(BUILDDIR)/$(notdir $(lib)).id
+$$(BUILDDIR)/$(notdir $(lib)): $(lib); $$(link-toolchain-file-cmd)
+)
+endef
+$(eval $(toolchain-id-files))
 
 ifneq ($(EXTRA_IDFILES),)
 $(BUILDDIR)/ids.txt: $(EXTRA_IDFILES)
