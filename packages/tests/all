@@ -25,6 +25,7 @@
         "garnet/packages/tests/fostr",
         "garnet/packages/tests/fsl",
         "garnet/packages/tests/fxl",
+        "garnet/packages/tests/go_benchmarking_tests",
         "garnet/packages/tests/go_far_tests",
         "garnet/packages/tests/go_fidl_bindings_tests",
         "garnet/packages/tests/go_merkle_tests",
