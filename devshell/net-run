@@ -9,18 +9,19 @@
 ## target until netstack is up running. If successful, issues the given SSH
 ## command.
 ##
-## usage: fx net-run [--run RUN_OPTIONS]
+## usage: fx net-run [--klog PATH]
+##                   [--run RUN_OPTIONS]
 ##                   [--target TARGET]
-##                   [--klog PATH]
 ##                   [--] SSH_COMMAND
 ##
+##    --klog        Path where to pipe kernel log. Defaults to stdout.
+##                  stderr will still be visible.
 ##    --run         The options to be passed to "fx run". If not set, it will
 ##                  attempt to load ${FX_NET_RUN_OPTIONS}. Finally, defaults to
 ##                  "-N -u ${FUCHSIA_DIR}/scripts/start-dhcp-server.sh".
 ##    --target      IP or hostname to connect to. If not supplied, it will
 ##                  attempt to guess it from ${FX_NET_RUN_TARGET}.
-##    --klog        Path where to pipe kernel log. Defaults to stdout.
-##                  stderr will still be visible.
+##
 ##    SSH_COMMAND   Any other argument will be passed directly to "fx ssh".
 ##                  If not specified, it will open an interactive SSH session.
 
@@ -71,11 +72,11 @@ fi
 # Run fx run in background. If successful, it will be sent to background.
 echo "Using \"${run_options}\" to boot Fuchsia."
 echo "You might need to run sudo beforehand."
-run_cmd="fx run ${run_options}"
 if [[ -z "$klog" ]]; then
-  ${run_cmd} &
+  fx-command-run "run" ${run_options} &
 else
-  ${run_cmd} > "${klog}" &
+  # Only pipe stdout
+  fx-command-run "run" ${run_options} > "${klog}" &
   echo "Piping Fuchsia output to \"${klog}\"."
 fi
 fx_pid="$!"
@@ -104,5 +105,5 @@ while true; do
   fi
 done
 
-# Finally, run the SSH command
+# Run the SSH command
 fx-command-run "ssh" "${target}" "$@"
