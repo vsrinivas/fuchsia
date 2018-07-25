@@ -155,6 +155,10 @@ interface Netstack {
   // Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
   10: SetInterfaceAddress(uint32 nicid, NetAddress addr, uint8 prefixLen) -> (NetErr result);
 
+  // Removes the address for the interface with the given nicid.
+  // Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
+  15: RemoveInterfaceAddress(uint32 nicid, NetAddress addr, uint8 prefixLen) -> (NetErr result);
+
   11: SetDhcpClientStatus(uint32 nicid, bool enabled) -> (NetErr result);
 
   12: BridgeInterfaces(vector<uint32> nicids) -> (NetErr result);

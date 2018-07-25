@@ -40,12 +40,11 @@ func toSubnets(addrs []tcpip.Address) []nsfidl.Subnet {
 func getInterfaces() (out []nsfidl.NetInterface) {
 	ns.mu.Lock()
 	defer ns.mu.Unlock()
-
 	for nicid, ifs := range ns.ifStates {
 		// Long-hand for: broadaddr = ifs.nic.Addr | ^ifs.nic.Netmask
 		broadaddr := []byte(ifs.nic.Addr)
 		if len(ifs.nic.Netmask) != len(ifs.nic.Addr) {
-			log.Printf("warning: mismatched netmask and address length for nic: %+v", ifs.nic)
+			log.Printf("warning: mismatched netmask and address length for nic: %+v\n", ifs.nic)
 			continue
 		}
 
@@ -75,9 +74,11 @@ func getInterfaces() (out []nsfidl.NetInterface) {
 
 		out = append(out, outif)
 	}
-	sort.Slice(out[:], func(i, j int) bool {
+
+	sort.Slice(out, func(i, j int) bool {
 		return out[i].Id < out[j].Id
 	})
+
 	return out
 }
 
@@ -178,38 +179,53 @@ func (ni *netstackImpl) SetRouteTable(rt []nsfidl.RouteTableEntry) error {
 	return nil
 }
 
-func toSubnet(address nsfidl.NetAddress, prefixLen uint8) (tcpip.Subnet, error) {
-	// TODO: use tcpip.Address#mask after fuchsia/third_party/netstack and github/third_party/netstack are unified and #mask can be made public.
-	a := []byte(fidlconv.NetAddressToTCPIPAddress(address))
-	m := tcpip.CIDRMask(int(prefixLen), int(len(a)*8))
-	for i, _ := range a {
-		a[i] = a[i] & m[i]
+func validateInterfaceAddress(nicid uint32, address nsfidl.NetAddress, prefixLen uint8) (nic tcpip.NICID, protocol tcpip.NetworkProtocolNumber, addr tcpip.Address, retval nsfidl.NetErr) {
+	switch address.Family {
+	case nsfidl.NetAddressFamilyIpv4:
+		protocol = ipv4.ProtocolNumber
+	case nsfidl.NetAddressFamilyIpv6:
+		retval = nsfidl.NetErr{nsfidl.StatusIpv4Only, "IPv6 not yet supported"}
+		return
 	}
-	return tcpip.NewSubnet(tcpip.Address(a), m)
+
+	nic = tcpip.NICID(nicid)
+	addr = fidlconv.NetAddressToTCPIPAddress(address)
+
+	if (8 * len(addr)) < int(prefixLen) {
+		retval = nsfidl.NetErr{nsfidl.StatusParseError, "Prefix length does not match address"}
+		return
+	}
+
+	retval = nsfidl.NetErr{nsfidl.StatusOk, ""}
+	return
 }
 
 // Add address to the given network interface.
 func (ni *netstackImpl) SetInterfaceAddress(nicid uint32, address nsfidl.NetAddress, prefixLen uint8) (result nsfidl.NetErr, endService error) {
 	log.Printf("net address %+v", address)
-	var protocol tcpip.NetworkProtocolNumber
-	switch address.Family {
-	case nsfidl.NetAddressFamilyIpv4:
-		protocol = ipv4.ProtocolNumber
-	case nsfidl.NetAddressFamilyIpv6:
-		return nsfidl.NetErr{nsfidl.StatusIpv4Only, "IPv6 not yet supported for SetInterfaceAddress"}, nil
+
+	nic, protocol, addr, neterr := validateInterfaceAddress(nicid, address, prefixLen)
+	if neterr.Status != nsfidl.StatusOk {
+		return neterr, nil
 	}
 
-	nic := tcpip.NICID(nicid)
-	addr := fidlconv.NetAddressToTCPIPAddress(address)
-	sn, err := toSubnet(address, prefixLen)
-	if err != nil {
-		result = nsfidl.NetErr{nsfidl.StatusParseError, "Error applying subnet mask to interface address"}
-		return result, nil
-	}
-
-	if err = ns.setInterfaceAddress(nic, protocol, addr, sn); err != nil {
+	if err := ns.setInterfaceAddress(nic, protocol, addr, prefixLen); err != nil {
 		return nsfidl.NetErr{nsfidl.StatusUnknownError, err.Error()}, nil
 	}
+	return nsfidl.NetErr{nsfidl.StatusOk, ""}, nil
+}
+
+func (ni *netstackImpl) RemoveInterfaceAddress(nicid uint32, address nsfidl.NetAddress, prefixLen uint8) (result nsfidl.NetErr, endService error) {
+	nic, protocol, addr, neterr := validateInterfaceAddress(nicid, address, prefixLen)
+
+	if neterr.Status != nsfidl.StatusOk {
+		return neterr, nil
+	}
+
+	if err := ns.removeInterfaceAddress(nic, protocol, addr, prefixLen); err != nil {
+		return nsfidl.NetErr{nsfidl.StatusUnknownError, err.Error()}, nil
+	}
+
 	return nsfidl.NetErr{nsfidl.StatusOk, ""}, nil
 }
 
@@ -301,6 +317,7 @@ func (ni *netstackImpl) SetDhcpClientStatus(nicid uint32, enabled bool) (result 
 	if !ok {
 		return nsfidl.NetErr{nsfidl.StatusUnknownInterface, "unknown interface"}, nil
 	}
+
 	ifState.setDHCPStatus(enabled)
 	return nsfidl.NetErr{nsfidl.StatusOk, ""}, nil
 }

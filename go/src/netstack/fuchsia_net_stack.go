@@ -159,11 +159,7 @@ func addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *stack.Error {
 
 	nic := ifs.nic.ID
 	addr := fidlconv.ToTCPIPAddress(ifAddr.IpAddress)
-	sn, err := fidlconv.ToTCPIPSubnet(netfidl.Subnet{Addr: ifAddr.IpAddress, PrefixLen: ifAddr.PrefixLen})
-	if err != nil {
-		return &stack.Error{Type: stack.ErrorTypeInternal}
-	}
-	if err := ns.setInterfaceAddress(nic, protocol, addr, sn); err != nil {
+	if err := ns.setInterfaceAddress(nic, protocol, addr, ifAddr.PrefixLen); err != nil {
 		return &stack.Error{Type: stack.ErrorTypeBadState}
 	}
 	return nil

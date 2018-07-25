@@ -52,6 +52,7 @@ func (a *netstackClientApp) getIfaceByName(name string) *netstack.NetInterface {
 
 func (a *netstackClientApp) printIface(iface netstack.NetInterface) {
 	stats, err := a.netstack.GetStats(iface.Id)
+
 	if err != nil {
 		fmt.Printf("ifconfig: failed to fetch stats for '%v'\n\n", iface.Name)
 		return
@@ -82,13 +83,16 @@ func (a *netstackClientApp) setStatus(iface netstack.NetInterface, up bool) {
 }
 
 func (a *netstackClientApp) addIfaceAddress(iface netstack.NetInterface, cidr string) {
-	netAddr, netSubnet, err := net.ParseCIDR(os.Args[3])
-	if err != nil {
-		fmt.Printf("Error parsing CIDR notation: %s, error: %v\n", os.Args[3], err)
-		usage()
+	netAddr, prefixLen := validateCidr(os.Args[3])
+	result, _ := a.netstack.SetInterfaceAddress(iface.Id, netAddr, prefixLen)
+	if result.Status != netstack.StatusOk {
+		fmt.Printf("Error setting interface address: %s\n", result.Message)
 	}
-	prefixLen, _ := netSubnet.Mask.Size()
-	result, _ := a.netstack.SetInterfaceAddress(iface.Id, toNetAddress(netAddr), uint8(prefixLen))
+}
+
+func (a *netstackClientApp) removeIfaceAddress(iface netstack.NetInterface, cidr string) {
+	netAddr, prefixLen := validateCidr(os.Args[3])
+	result, _ := a.netstack.RemoveInterfaceAddress(iface.Id, netAddr, prefixLen)
 	if result.Status != netstack.StatusOk {
 		fmt.Printf("Error setting interface address: %s\n", result.Message)
 	}
@@ -276,6 +280,17 @@ func toNetAddress(addr net.IP) netstack.NetAddress {
 	return out
 }
 
+func validateCidr(cidr string) (address netstack.NetAddress, prefixLength uint8) {
+	netAddr, netSubnet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		fmt.Printf("Error parsing CIDR notation: %s, error: %v\n", cidr, err)
+		usage()
+	}
+	prefixLen, _ := netSubnet.Mask.Size()
+
+	return toNetAddress(netAddr), uint8(prefixLen)
+}
+
 func isWLAN(features uint32) bool {
 	return features&uint32(netstack.InterfaceFeatureWlan) != 0
 }
@@ -371,6 +386,9 @@ func main() {
 		// fmt.Printf("Created virtual nic %s", bridge)
 		fmt.Printf("Bridged interfaces %s\n", ifaces)
 		return
+	case "help":
+		usage()
+		return
 	default:
 		iface = a.getIfaceByName(os.Args[1])
 		if iface == nil {
@@ -391,8 +409,7 @@ func main() {
 		case "add":
 			a.addIfaceAddress(*iface, os.Args[3])
 		case "del":
-			fmt.Printf("Deleting addresses from an interface is not yet supported.\n")
-			usage()
+			a.removeIfaceAddress(*iface, os.Args[3])
 		case "dhcp":
 			a.setDHCP(*iface, os.Args[3])
 		default:
