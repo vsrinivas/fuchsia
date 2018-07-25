@@ -126,7 +126,7 @@ action("pkgsvr_index") {
   args += [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
   sources = []
   deps = []
-  foreach(pkg_label, monolith_packages) {
+  foreach(pkg_label, package_targets) {
     # Find the response file written by package().
     pkg_target_name = get_label_info(pkg_label, "name")
     pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
@@ -161,7 +161,7 @@ generate_manifest("system_image.manifest") {
   args = []
   deps = []
   sources = []
-  foreach(pkg_label, monolith_packages) {
+  foreach(pkg_label, package_targets) {
     # Find the response file written by package().
     pkg_target_name = get_label_info(pkg_label, "name")
     pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
@@ -227,7 +227,7 @@ action("blob.manifest") {
         rebase_path("$target_out_dir/system_image.meta/meta.far",
                     root_build_dir),
   ]
-  foreach(pkg_label, monolith_packages + preinstall_packages) {
+  foreach(pkg_label, package_targets) {
     pkg_target_name = get_label_info(pkg_label, "name")
     pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
     pkg_blob_rsp = "$pkg_target_out_dir/${pkg_target_name}.blob.rsp"
@@ -870,7 +870,7 @@ action("update_packages.manifest") {
             rebase_path("$target_out_dir/system_image.meta/meta.far.merkle",
                         root_build_dir) ]
 
-  foreach(pkg_label, available_packages) {
+  foreach(pkg_label, package_targets) {
     # Find the response file written by package().
     pkg_target_name = get_label_info(pkg_label, "name")
     pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
@@ -1011,7 +1011,7 @@ action("amber_index") {
   args += [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
   sources = []
   deps = []
-  foreach(pkg_label, available_packages) {
+  foreach(pkg_label, package_targets) {
     # Find the response file written by package().
     pkg_target_name = get_label_info(pkg_label, "name")
     pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
@@ -1133,7 +1133,7 @@ action("ids.txt") {
     system_build_id_map,
   ]
 
-  foreach(pkg_label, available_packages) {
+  foreach(pkg_label, package_targets) {
     # Find the ids.txt file written by package().
     manifest = get_label_info(pkg_label, "label_no_toolchain") + ".manifest"
     manifest_target_name = get_label_info(manifest, "name")

@@ -11,7 +11,7 @@ import("//build/toolchain/goma.gni")
 testonly = true
 
 group("packages") {
-  deps = available_packages
+  deps = package_targets
   data_deps = package_data_deps
 }
 
@@ -20,13 +20,9 @@ group("default") {
     ":host_tests",
     ":packages",
   ]
-  if (monolith_packages != []) {
+  if (package_targets != []) {
     deps += [
       "//build/images",
-    ]
-  }
-  if (available_packages != []) {
-    deps += [
       "//build/images:updates",
     ]
   }
@@ -45,24 +41,11 @@ if (package_host_tests != []) {
     deps = []
     sources = []
     bindir = get_label_info("//anything($host_toolchain)", "root_out_dir")
-
-    # package_host_tests may contain duplicate entries. Those entries must be
-    # de-duplicated here to avoid output collisions.
     foreach(label, package_host_tests) {
-      _full_label = "$label($host_toolchain)"
-      _already_done = false
-      foreach(done_label, deps) {
-        if (done_label == _full_label) {
-          _already_done = true
-        }
-      }
-      if (!_already_done) {
-        deps += [ _full_label ]
-        binary = get_label_info(label, "name")
-        sources += [ "$bindir/$binary" ]
-      }
+      deps += [ "$label($host_toolchain)" ]
+      binary = get_label_info(label, "name")
+      sources += [ "$bindir/$binary" ]
     }
-
     outputs = [
       "$root_build_dir/host_tests/{{source_file_part}}",
     ]
