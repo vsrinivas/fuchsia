@@ -514,7 +514,7 @@ find-clang-solib = $(filter lib/$1=%,$(CLANG_MANIFEST_LINES))
 # Every userland executable and shared library compiled with ASan
 # needs to link with $(ASAN_SOLIB).  module-user{app,lib}.mk adds it
 # to MODULE_EXTRA_OBJS so the linking target will depend on it.
-ASAN_SONAME := libclang_rt.asan-$(CLANG_ARCH).so
+ASAN_SONAME := libclang_rt.asan.so
 ASAN_SOLIB_MANIFEST := $(call find-clang-solib,$(ASAN_SONAME))
 ASAN_SOLIB := $(word 2,$(subst =, ,$(ASAN_SOLIB_MANIFEST)))
 USER_MANIFEST_LINES += {core}$(ASAN_SOLIB_MANIFEST)
@@ -543,7 +543,7 @@ endif
 # lld.  Additionally, we need to make sure the shared objects are available on
 # the device.
 ifeq ($(call TOBOOL,$(USE_ASAN)),true)
-FUZZ_ANAME := libclang_rt.fuzzer-$(CLANG_ARCH).a
+FUZZ_ANAME := libclang_rt.fuzzer.a
 FUZZ_ALIB := $(shell $(CLANG_TOOLCHAIN_PREFIX)clang \
 				 $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS)\
 				 -print-file-name=$(FUZZ_ANAME))
