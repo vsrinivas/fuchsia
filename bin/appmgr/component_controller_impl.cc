@@ -15,6 +15,7 @@
 #include <utility>
 
 #include "garnet/bin/appmgr/component_container.h"
+#include "garnet/bin/appmgr/debug_directory.h"
 #include "garnet/bin/appmgr/namespace.h"
 #include "lib/fsl/handles/object_info.h"
 
@@ -167,6 +168,10 @@ ComponentControllerImpl::ComponentControllerImpl(
 
   hub()->SetJobId(std::to_string(fsl::GetKoid(job_.get())));
   hub()->SetProcessId(koid_);
+
+  auto debug_dir = fbl::AdoptRef(new fs::PseudoDir());
+  debug_dir->AddEntry("threads", fbl::AdoptRef(new DebugDirectory(process_)));
+  hub()->AddEntry("system_debug", debug_dir);
 }
 
 ComponentControllerImpl::~ComponentControllerImpl() {

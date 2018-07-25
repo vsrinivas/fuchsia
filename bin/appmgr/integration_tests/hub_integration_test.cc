@@ -86,5 +86,28 @@ TEST_F(HubTest, ScopePolicy) {
   RunComponent(nested_env->launcher_ptr(), glob_url, {"/hub/c/glob"}, 0);
 }
 
+TEST_F(HubTest, ThreadFiles) {
+  std::string glob_url = "glob";
+
+  auto nested_env = CreateNewEnclosingEnvironment("hubscopepolicytest");
+  ASSERT_TRUE(WaitForEnclosingEnvToStart(nested_env.get()));
+  RunComponent(launcher_ptr(), glob_url, {"/hub/r/hubscopepolicytest/"}, 0);
+
+  // test that we can see threads for the new component
+  RunComponent(nested_env->launcher_ptr(), glob_url,
+               {"/hub/c/glob/*/system_debug/threads/*"}, 0);
+
+  // Get the threads from all components in the sys realm, ensure their thread
+  // files have arch specified.
+  files::Glob glob("/hub/c/sysmgr/*/system_debug/threads/*");
+  EXPECT_NE(glob.size(), 0u);
+  for (const auto& f : glob) {
+    std::string out;
+    EXPECT_TRUE(files::ReadFileToString(f, &out))
+        << "failed to read file " << f;
+    EXPECT_TRUE(out.find("arch:") != std::string::npos);
+  }
+}
+
 }  // namespace
 }  // namespace component

@@ -11,6 +11,7 @@
 #include <lib/zx/process.h>
 
 #include "garnet/bin/appmgr/component_container.h"
+#include "garnet/bin/appmgr/debug_info_retriever.h"
 #include "garnet/bin/appmgr/hub/component_hub.h"
 #include "garnet/bin/appmgr/hub/hub_info.h"
 #include "garnet/bin/appmgr/namespace.h"
