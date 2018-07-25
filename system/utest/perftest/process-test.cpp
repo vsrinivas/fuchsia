@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <dlfcn.h>
-
+#include <limits.h>
 #include <launchpad/launchpad.h>
 #include <perftest/perftest.h>
 #include <zircon/assert.h>
@@ -14,13 +14,6 @@ namespace {
 
 constexpr char pname[] = "benchmark-process";
 constexpr char tname[] = "benchmark-thread";
-
-// The function is the entry point for the child process. It is copied into the child process via
-// zx_vmo_write() so it must have no dependencies (other than zx_thread_exit()).
-void call_exit(zx_handle_t unused, uintptr_t thread_exit_addr) {
-    __typeof(zx_thread_exit)* thread_exit = (__typeof(zx_thread_exit)*)thread_exit_addr;
-    (*thread_exit)();
-}
 
 // Computes the stack pointer. Modeled after zircon/stack.h.
 uintptr_t compute_stack_pointer(uintptr_t stack_base, size_t stack_size) {
@@ -67,9 +60,6 @@ public:
 private:
     // Offset of the zx_thread_exit() syscall from the start of the vDSO.
     uintptr_t thread_exit_offset_ = 0;
-
-    // Base address of child process's stack. Also serves as process entry point.
-    zx_vaddr_t stack_base_ = 0;
 
     uintptr_t sp_ = 0;
 
@@ -123,19 +113,15 @@ void ProcessFixture::Init() {
     launchpad_destroy(lp);
     thread_exit_addr_ = vdso_base + thread_exit_offset_;
 
-    // The child process needs a stack and some code to execute. Create a stack and copy the body of
-    // call_exit() to the bottom of the stack.
+    // The child process needs a stack for the vDSO code to use.
     constexpr uint32_t stack_perm =
-        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_PERM_EXECUTE;
-    // Must be larger than the machine code of call_exit() and smaller than the stack.
-    constexpr size_t num_to_copy = 1024;
-    constexpr uint64_t stack_size = 4096;
+        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+    constexpr uint64_t stack_size = PAGE_SIZE;
     ZX_ASSERT(zx_vmo_create(stack_size, 0, &stack_vmo_) == ZX_OK);
-    ZX_ASSERT(zx_vmo_write(stack_vmo_, reinterpret_cast<void*>(&call_exit), 0, num_to_copy) ==
-              ZX_OK);
-    ZX_ASSERT(zx_vmar_map(vmar_handle_, 0, stack_vmo_, 0, stack_size, stack_perm, &stack_base_) ==
-              ZX_OK);
-    sp_ = compute_stack_pointer(stack_base_, stack_size);
+    uintptr_t stack_base;
+    ZX_ASSERT(zx_vmar_map(vmar_handle_, 0, stack_vmo_, 0, stack_size,
+                          stack_perm, &stack_base) == ZX_OK);
+    sp_ = compute_stack_pointer(stack_base, stack_size);
 
     // The child process needs a thread.
     ZX_ASSERT(zx_thread_create(proc_handle_, tname, sizeof(tname), 0, &thread_handle_) == ZX_OK);
@@ -145,8 +131,9 @@ void ProcessFixture::Init() {
 }
 
 void ProcessFixture::Start() {
-    ZX_ASSERT(zx_process_start(proc_handle_, thread_handle_, stack_base_, sp_, channel_to_transfer_,
-                               thread_exit_addr_) == ZX_OK);
+    ZX_ASSERT(zx_process_start(proc_handle_, thread_handle_,
+                               thread_exit_addr_, sp_, channel_to_transfer_,
+                               0) == ZX_OK);
     channel_to_transfer_ = ZX_HANDLE_INVALID;
 }
 
