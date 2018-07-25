@@ -17,6 +17,38 @@ struct integral_constant {
 using true_type = integral_constant<bool, true>;
 using false_type = integral_constant<bool, false>;
 
+// is_void:
+template <typename T>
+struct is_void : false_type {};
+
+template <>
+struct is_void<void> : true_type {};
+
+template <>
+struct is_void<const void> : true_type {};
+
+template <>
+struct is_void<volatile void> : true_type {};
+
+template <>
+struct is_void<const volatile void> : true_type {};
+
+// is_null_pointer:
+template <typename T>
+struct is_null_pointer : false_type {};
+
+template <>
+struct is_null_pointer<decltype(nullptr)> : true_type {};
+
+template <>
+struct is_null_pointer<const decltype(nullptr)> : true_type {};
+
+template <>
+struct is_null_pointer<volatile decltype(nullptr)> : true_type {};
+
+template <>
+struct is_null_pointer<const volatile decltype(nullptr)> : true_type {};
+
 // is_const:
 
 template <typename T>
@@ -40,6 +72,16 @@ struct is_rvalue_reference : false_type {};
 
 template <typename T>
 struct is_rvalue_reference<T&&> : true_type {};
+
+// is_reference:
+template <typename T>
+struct is_reference : false_type {};
+
+template <typename T>
+struct is_reference<T&> : true_type {};
+
+template <typename T>
+struct is_reference<T&&> : true_type {};
 
 // remove_reference:
 
@@ -243,6 +285,10 @@ struct match_cv<const volatile SrcType, DestType> {
 // is_class builtin
 template <typename T>
 struct is_class : public integral_constant<bool, __is_class(T)> { };
+
+// is_union builtin
+template <typename T>
+struct is_union : public integral_constant<bool, __is_union(T)> { };
 
 // is_base_of builtin
 template <typename Base, typename Derived>
