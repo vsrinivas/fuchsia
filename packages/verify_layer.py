@@ -33,8 +33,6 @@ CANONICAL_PACKAGES = [
 NO_AGGREGATION_DIRECTORIES = [
     'config',
     'disabled',
-    # TODO: force experimental content to be built for each layer.
-    'experimental',
     'products',
 ]
 
