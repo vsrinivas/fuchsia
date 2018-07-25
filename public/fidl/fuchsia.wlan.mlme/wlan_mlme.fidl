@@ -139,14 +139,26 @@ struct AmpduParams {
     MinMpduStartSpacing min_start_spacing;
 };
 
+// SupportedMcsSet
 // IEEE Std 802.11-2016, 9.4.2.56.4 Table 9-164
+enum HtMcs : uint8 {
+    // For each spatial stream, the number of supported MCS must be either 0 or 8.:
+    // Anything else is invalid
+    MCS_INVALID = 0;
+    MCS0_7 = 1;
+    MCS0_15 = 2;
+    MCS0_23 = 3;
+    MCS0_31 = 4;
+    // TODO: MCS 32 and beyond
+};
+
 struct SupportedMcsSet {
     // Names are deviated from //garnet/lib/wlan/common/include/wlan/common/element.h's class SupportedMcsSet
-    array<uint8>:10 rx_mcs_bitmasks; // bit 0-76 indicates MCS
+    HtMcs rx_mcs_set; // bit 0-76 indicates MCS
     uint16 rx_highest_rate; // Mbps
     bool tx_mcs_set_defined;
     bool tx_rx_diff;
-    uint8 tx_max_ss; // 0 for 1 spatial stream, 1 for 2 ss and so on
+    uint8 tx_max_ss; // Actual count, different from IEEE spec
     bool tx_ueqm; // Transmit Unequal Modulation
 };
 
@@ -213,11 +225,11 @@ struct TxBfCapability {
     Feedback noncomp_feedback;
     Feedback comp_feedback;
     MinGroup min_grouping;
-    uint8 csi_antennas; // 0 for 1 antennas, 1 for 2 and so on
-    uint8 noncomp_steering_ants; // 0 for 1 antennas, 1 for 2 and so on
-    uint8 comp_steering_ants; // 0 for 1 antennas, 1 for 2 and so on
-    uint8 csi_rows; // 0 for 1 row, 1 for 2 and so on;
-    uint8 chan_estimation; // 0 for 1 space-time stream, 1 for 2 and so on
+    uint8 csi_antennas;          // Actual count, different from IEEE spec
+    uint8 noncomp_steering_ants; // Actual count, different from IEEE spec
+    uint8 comp_steering_ants;    // Actual count, different from IEEE spec
+    uint8 csi_rows;              // Actual count, different from IEEE spec
+    uint8 chan_estimation;       // Actual count, different from IEEE spec
 };
 
 // IEEE Std 802.11-2016, 9.4.2.56.7 Table 9-167
@@ -284,7 +296,7 @@ struct HTOperationInfo {
 struct HtOperation {
     uint8 primary_chan;                 // Primary 20 MHz channel.
     HTOperationInfo ht_op_info;
-    SupportedMcsSet mcs_set;
+    SupportedMcsSet basic_mcs_set;
 };
 
 enum MaxMpduLen : uint8 {

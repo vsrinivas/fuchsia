@@ -610,7 +610,7 @@ class TxBfCapability : public common::BitField<uint32_t> {
         MIN_GROUP_ONE_TWO_FOUR = 3,
     };
 
-    uint8_t csi_antennas_human() { return csi_antennas() + 1; }
+    uint8_t csi_antennas_human() const { return csi_antennas() + 1; }
     void set_csi_antennas_human(uint8_t num) {
         constexpr uint8_t kLowerbound = 1;
         constexpr uint8_t kUpperbound = 4;
@@ -619,7 +619,7 @@ class TxBfCapability : public common::BitField<uint32_t> {
         set_csi_antennas(num - 1);
     };
 
-    uint8_t noncomp_steering_ants_human() { return noncomp_steering_ants() + 1; }
+    uint8_t noncomp_steering_ants_human() const { return noncomp_steering_ants() + 1; }
     void set_noncomp_steering_ants_human(uint8_t num) {
         constexpr uint8_t kLowerbound = 1;
         constexpr uint8_t kUpperbound = 4;
@@ -628,7 +628,7 @@ class TxBfCapability : public common::BitField<uint32_t> {
         set_noncomp_steering_ants(num - 1);
     }
 
-    uint8_t comp_steering_ants_human() { return comp_steering_ants() + 1; }
+    uint8_t comp_steering_ants_human() const { return comp_steering_ants() + 1; }
     void set_comp_steering_ants_human(uint8_t num) {
         constexpr uint8_t kLowerbound = 1;
         constexpr uint8_t kUpperbound = 4;
@@ -637,7 +637,7 @@ class TxBfCapability : public common::BitField<uint32_t> {
         set_comp_steering_ants(num - 1);
     }
 
-    uint8_t csi_rows_human() { return csi_rows() + 1; }
+    uint8_t csi_rows_human() const { return csi_rows() + 1; }
     void set_csi_rows_human(uint8_t num) {
         constexpr uint8_t kLowerbound = 1;
         constexpr uint8_t kUpperbound = 4;
@@ -646,7 +646,7 @@ class TxBfCapability : public common::BitField<uint32_t> {
         set_csi_rows(num - 1);
     }
 
-    uint8_t chan_estimation_human() { return chan_estimation() + 1; }
+    uint8_t chan_estimation_human() const { return chan_estimation() + 1; }
     void set_chan_estimation_human(uint8_t num) {
         constexpr uint8_t kLowerbound = 1;
         constexpr uint8_t kUpperbound = 4;
@@ -749,7 +749,7 @@ class HtOpInfoTail : public common::BitField<uint8_t> {
 // IEEE Std 802.11-2016, 9.4.2.57
 struct HtOperation : public Element<HtOperation, element_id::kHtOperation> {
     static bool Create(void* buf, size_t len, size_t* actual, uint8_t primary_chan,
-                       HtOpInfoHead head, HtOpInfoTail tail, SupportedMcsSet mcs_set);
+                       HtOpInfoHead head, HtOpInfoTail tail, SupportedMcsSet basic_mcs_set);
     static constexpr size_t kMinLen = 22;
     static constexpr size_t kMaxLen = 22;
 
@@ -760,7 +760,7 @@ struct HtOperation : public Element<HtOperation, element_id::kHtOperation> {
     // Implementation hack to support 40bits bitmap.
     HtOpInfoHead head;
     HtOpInfoTail tail;
-    SupportedMcsSet mcs_set;
+    SupportedMcsSet basic_mcs_set;
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.126

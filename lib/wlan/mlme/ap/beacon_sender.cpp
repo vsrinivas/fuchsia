@@ -349,7 +349,7 @@ zx_status_t BeaconSender::WriteHtCapabilities(ElementWriter* w) {
 
 zx_status_t BeaconSender::WriteHtOperation(ElementWriter* w) {
     HtOperation hto = bss_->BuildHtOperation(bss_->Chan());
-    if (!w->write<HtOperation>(hto.primary_chan, hto.head, hto.tail, hto.mcs_set)) {
+    if (!w->write<HtOperation>(hto.primary_chan, hto.head, hto.tail, hto.basic_mcs_set)) {
         errorf("[bcn-sender] [%s] could not write HtOperation\n", bss_->bssid().ToString().c_str());
         return ZX_ERR_IO;
     }

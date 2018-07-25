@@ -587,7 +587,7 @@ HtOperation InfraBss::BuildHtOperation(const wlan_channel_t& chan) const {
     tail.set_pco_active(0);
     tail.set_pco_phase(0);
 
-    SupportedMcsSet& mcs = hto.mcs_set;
+    SupportedMcsSet& mcs = hto.basic_mcs_set;
     mcs.rx_mcs_head.set_bitmask(0xff);  // MCS 0-7
 
     return hto;

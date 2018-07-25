@@ -222,7 +222,7 @@ bool HtCapabilities::Create(void* buf, size_t len, size_t* actual, HtCapabilityI
 }
 
 bool HtOperation::Create(void* buf, size_t len, size_t* actual, uint8_t primary_chan,
-                         HtOpInfoHead head, HtOpInfoTail tail, SupportedMcsSet mcs_set) {
+                         HtOpInfoHead head, HtOpInfoTail tail, SupportedMcsSet basic_mcs_set) {
     constexpr size_t elem_size = sizeof(HtOperation);
     if (elem_size > len) return false;
 
@@ -233,7 +233,7 @@ bool HtOperation::Create(void* buf, size_t len, size_t* actual, uint8_t primary_
     elem->primary_chan = primary_chan;
     elem->head = head;
     elem->tail = tail;
-    elem->mcs_set = mcs_set;
+    elem->basic_mcs_set = basic_mcs_set;
 
     *actual = elem_size;
     return true;

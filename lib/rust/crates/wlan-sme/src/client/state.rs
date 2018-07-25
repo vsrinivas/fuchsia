@@ -447,7 +447,7 @@ fn clone_ht_capabilities(c: &fidl_mlme::HtCapabilities) -> fidl_mlme::HtCapabili
 fn clone_ht_operation(o: &fidl_mlme::HtOperation) -> fidl_mlme::HtOperation {
     fidl_mlme::HtOperation {
         ht_op_info: fidl_mlme::HtOperationInfo { ..o.ht_op_info },
-        mcs_set: fidl_mlme::SupportedMcsSet { ..o.mcs_set },
+        basic_mcs_set: fidl_mlme::SupportedMcsSet { ..o.basic_mcs_set },
         ..*o
     }
 }

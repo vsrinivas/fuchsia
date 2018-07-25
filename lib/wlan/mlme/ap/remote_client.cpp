@@ -831,7 +831,7 @@ zx_status_t RemoteClient::WriteHtCapabilities(ElementWriter* w) {
 zx_status_t RemoteClient::WriteHtOperation(ElementWriter* w) {
     auto chan = bss_->Chan();
     HtOperation hto = bss_->BuildHtOperation(chan);
-    if (!w->write<HtOperation>(hto.primary_chan, hto.head, hto.tail, hto.mcs_set)) {
+    if (!w->write<HtOperation>(hto.primary_chan, hto.head, hto.tail, hto.basic_mcs_set)) {
         errorf("[client] [%s] could not write HtOperation\n", addr_.ToString().c_str());
         return ZX_ERR_IO;
     }
