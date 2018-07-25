@@ -34,6 +34,7 @@ class FXL_EXPORT ScopedTempDirAt {
   int root_fd();
 
   bool NewTempFile(std::string* output);
+  bool NewTempFileWithData(const std::string& data, std::string* output);
 
  private:
   int root_fd_;
@@ -54,6 +55,7 @@ class FXL_EXPORT ScopedTempDir {
   const std::string& path();
 
   bool NewTempFile(std::string* output);
+  bool NewTempFileWithData(const std::string& data, std::string* output);
 
  private:
   ScopedTempDirAt base_;

@@ -32,6 +32,9 @@ class JSONParser {
   // in which case any previous errors will be retained.
   rapidjson::Document ParseFromFile(const std::string& file);
 
+  // Like |ParseFromFile|, but relative to a directory.
+  rapidjson::Document ParseFromFileAt(int dirfd, const std::string& file);
+
   // Initialize the document from a JSON string |data|. If parsing fails,
   // reports errors in error_str(). |file| is not read, but it is used as the
   // prefix for lines in error_str(). May be called multiple times, for example

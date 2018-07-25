@@ -27,32 +27,29 @@ CmxMetadata::CmxMetadata() = default;
 
 CmxMetadata::~CmxMetadata() = default;
 
-bool CmxMetadata::ParseSandboxMetadata(const std::string& data,
-                                       rapidjson::Value* parsed_value) {
-  rapidjson::Document document;
-  document.Parse(data);
-  if (!document.IsObject())
+bool CmxMetadata::ParseFromFileAt(int dirfd, const std::string& file) {
+  rapidjson::Document document = json_parser_.ParseFromFileAt(dirfd, file);
+  if (HasError()) {
     return false;
-  auto sandbox = document.FindMember(kSandbox);
-  if (sandbox == document.MemberEnd() || !sandbox->value.IsObject())
+  }
+  if (!document.IsObject()) {
+    json_parser_.ReportError("File is not a JSON object.");
     return false;
-
-  *parsed_value = sandbox->value;
-  return true;
+  }
+  ParseSandboxMetadata(document);
+  if (!runtime_meta_.ParseFromDocument(document)) {
+    json_parser_.ReportError("Invalid runtime metadata.");
+  }
+  ParseProgramMetadata(document);
+  return !HasError();
 }
 
-bool CmxMetadata::ParseProgramMetadata(const std::string& data,
-                                       rapidjson::Value* parsed_value) {
-  rapidjson::Document document;
-  document.Parse(data);
-  if (!document.IsObject())
-    return false;
-  auto program = document.FindMember(kProgram);
-  if (program == document.MemberEnd() || !program->value.IsObject())
-    return false;
+bool CmxMetadata::HasError() const {
+  return json_parser_.HasError();
+}
 
-  *parsed_value = program->value;
-  return true;
+std::string CmxMetadata::error_str() const {
+  return json_parser_.error_str();
 }
 
 std::string CmxMetadata::GetCmxPathFromFullPackagePath(
@@ -104,6 +101,40 @@ std::string CmxMetadata::GetPackageNameFromCmxPath(
     return sm[1].str();
   }
   return "";
+}
+
+void CmxMetadata::ParseSandboxMetadata(const rapidjson::Document& document) {
+  auto sandbox = document.FindMember(kSandbox);
+  if (sandbox == document.MemberEnd()) {
+    // Valid syntax, but no value.
+    return;
+  }
+  if (!sandbox->value.IsObject()) {
+    json_parser_.ReportError("'sandbox' is not an object.");
+    return;
+  }
+
+  if (!sandbox_meta_.Parse(sandbox->value)) {
+    json_parser_.ReportError("Invalid sandbox metadata.");
+    return;
+  }
+}
+
+void CmxMetadata::ParseProgramMetadata(const rapidjson::Document& document) {
+  auto program = document.FindMember(kProgram);
+  if (program == document.MemberEnd()) {
+    // Valid syntax, but no value.
+    return;
+  }
+  if (!program->value.IsObject()) {
+    json_parser_.ReportError("'program' is not an object.");
+    return;
+  }
+
+  if (!program_meta_.Parse(program->value)) {
+    json_parser_.ReportError("Invalid program metadata.");
+    return;
+  }
 }
 
 }  // namespace component

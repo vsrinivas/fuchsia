@@ -18,17 +18,15 @@ ProgramMetadata::~ProgramMetadata() = default;
 
 bool ProgramMetadata::Parse(const rapidjson::Value& program_value) {
   binary_.clear();
+  null_ = true;
 
-  if (!program_value.IsObject()) {
-    return false;
-  }
-
-  auto binary = program_value.FindMember(kBinary);
+  const auto binary = program_value.FindMember(kBinary);
   if (binary == program_value.MemberEnd() || !binary->value.IsString()) {
     return false;
   }
   binary_ = binary->value.GetString();
 
+  null_ = false;
   return true;
 }
 

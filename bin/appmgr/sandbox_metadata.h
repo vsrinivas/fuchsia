@@ -12,13 +12,14 @@
 
 namespace component {
 
+// TODO(geb): Use JSONParser to hold errors.
 class SandboxMetadata {
  public:
   SandboxMetadata();
   ~SandboxMetadata();
 
   bool Parse(const rapidjson::Value& sandbox_value);
-  bool HasFeature(const std::string& feature);
+  bool HasFeature(const std::string& feature) const;
   void AddFeature(std::string feature);
 
   const std::vector<std::string>& dev() const { return dev_; }
@@ -27,7 +28,10 @@ class SandboxMetadata {
   const std::vector<std::string>& features() const { return features_; }
   const std::vector<std::string>& boot() const { return boot_; }
 
+  bool IsNull() const { return null_; }
+
  private:
+  bool null_ = true;
   std::vector<std::string> dev_;
   std::vector<std::string> system_;
   std::vector<std::string> pkgfs_;

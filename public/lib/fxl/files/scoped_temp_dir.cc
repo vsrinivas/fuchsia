@@ -13,6 +13,7 @@
 
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/eintr_wrapper.h"
+#include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
@@ -114,6 +115,14 @@ bool ScopedTempDirAt::NewTempFile(std::string* output) {
   return true;
 }
 
+bool ScopedTempDirAt::NewTempFileWithData(const std::string& data,
+                                          std::string* output) {
+  if (!NewTempFile(output)) {
+    return false;
+  }
+  return WriteFile(*output, data.data(), data.size());
+}
+
 ScopedTempDir::ScopedTempDir() : ScopedTempDir("") {}
 
 ScopedTempDir::ScopedTempDir(fxl::StringView parent_path)
@@ -127,4 +136,8 @@ bool ScopedTempDir::NewTempFile(std::string* output) {
   return base_.NewTempFile(output);
 }
 
+bool ScopedTempDir::NewTempFileWithData(const std::string& data,
+                                        std::string* output) {
+  return base_.NewTempFileWithData(data, output);
+}
 }  // namespace files

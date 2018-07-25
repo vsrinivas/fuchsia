@@ -4,6 +4,7 @@
 
 #include "garnet/lib/json/json_parser.h"
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <string>
 
@@ -43,15 +44,21 @@ class JSONParserTest : public ::testing::Test {
     return !parser->HasError();
   }
 
+  bool ParseFromFileAt(JSONParser* parser, int dirfd, const std::string& file,
+                       std::string* error) {
+    rapidjson::Document document = parser->ParseFromFileAt(dirfd, file);
+    if (!parser->HasError()) {
+      InterpretDocument(parser, document);
+    }
+    *error = parser->error_str();
+    return !parser->HasError();
+  }
+
   std::string NewJSONFile(const std::string& json) {
     std::string json_file;
-    if (!tmp_dir_.NewTempFile(&json_file)) {
+    if (!tmp_dir_.NewTempFileWithData(json, &json_file)) {
       return "";
     }
-
-    FILE* tmpf = fopen(json_file.c_str(), "w");
-    fprintf(tmpf, "%s", json.c_str());
-    fclose(tmpf);
     return json_file;
   }
 
@@ -155,6 +162,22 @@ TEST_F(JSONParserTest, ParseValid) {
   std::string error;
   JSONParser parser;
   EXPECT_TRUE(ParseFromFile(&parser, file, &error));
+  EXPECT_EQ("", error);
+}
+
+TEST_F(JSONParserTest, ParseFromFileAt) {
+  const std::string json = R"JSON({
+  "prop1": "foo",
+  "prop2": 42
+  })JSON";
+  const std::string file = NewJSONFile(json);
+  const std::string basename = files::GetBaseName(file);
+  const int dirfd = open(tmp_dir_.path().c_str(), O_RDONLY);
+  ASSERT_GT(dirfd, 0);
+
+  std::string error;
+  JSONParser parser;
+  EXPECT_TRUE(ParseFromFileAt(&parser, dirfd, basename, &error));
   EXPECT_EQ("", error);
 }
 

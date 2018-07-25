@@ -7,18 +7,26 @@
 
 #include <string>
 
+#include "third_party/rapidjson/rapidjson/document.h"
+
 namespace component {
 
+// TODO(geb): Use JSONParser to hold errors.
 class RuntimeMetadata {
  public:
   RuntimeMetadata();
   ~RuntimeMetadata();
 
-  bool Parse(const std::string& data);
+  // Returns false if parsing failed. If a config is missing the runtime but
+  // otherwise there are no errors, parsing succeeds and IsNull() is true.
+  bool ParseFromData(const std::string& data);
+  bool ParseFromDocument(const rapidjson::Document& document);
 
+  bool IsNull() const { return null_; }
   const std::string& runner() const { return runner_; }
 
  private:
+  bool null_ = true;
   std::string runner_;
 };
 

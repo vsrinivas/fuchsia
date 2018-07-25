@@ -51,6 +51,17 @@ rapidjson::Document JSONParser::ParseFromFile(const std::string& file) {
   return ParseFromString(data, file);
 }
 
+rapidjson::Document JSONParser::ParseFromFileAt(int dirfd,
+                                                const std::string& file) {
+  file_ = file;
+  std::string data;
+  if (!files::ReadFileToStringAt(dirfd, file, &data)) {
+    errors_.push_back(StringPrintf("Failed to read file: %s", file.c_str()));
+    return rapidjson::Document();
+  }
+  return ParseFromString(data, file);
+}
+
 rapidjson::Document JSONParser::ParseFromString(const std::string& data,
                                                 const std::string& file) {
   data_ = data;

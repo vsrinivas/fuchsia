@@ -51,6 +51,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//garnet/lib/json",
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/backoff",
@@ -127,6 +128,7 @@ executable("tests") {
     "//garnet/examples/fidl/services:echo2",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
+    "//third_party/googletest:gmock",
   ]
 }
 

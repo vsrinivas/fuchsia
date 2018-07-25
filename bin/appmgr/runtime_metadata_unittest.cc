@@ -11,13 +11,15 @@ namespace {
 
 TEST(RuntimeMetadata, Parse) {
   RuntimeMetadata runtime;
-  EXPECT_FALSE(runtime.Parse(""));
-  EXPECT_FALSE(runtime.Parse("{}"));
+  EXPECT_FALSE(runtime.ParseFromData(""));
+  EXPECT_TRUE(runtime.ParseFromData("{}"));
+  EXPECT_TRUE(runtime.IsNull());
 
-  EXPECT_FALSE(runtime.Parse(R"JSON({ "runner": 10 })JSON"));
-  EXPECT_FALSE(runtime.Parse(R"JSON({ "runner": {} })JSON"));
+  EXPECT_FALSE(runtime.ParseFromData(R"JSON({ "runner": 10 })JSON"));
+  EXPECT_FALSE(runtime.ParseFromData(R"JSON({ "runner": {} })JSON"));
 
-  EXPECT_TRUE(runtime.Parse(R"JSON({ "runner": "dart_runner" })JSON"));
+  EXPECT_TRUE(runtime.ParseFromData(R"JSON({ "runner": "dart_runner" })JSON"));
+  EXPECT_FALSE(runtime.IsNull());
   EXPECT_EQ("dart_runner", runtime.runner());
 }
 

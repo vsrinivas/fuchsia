@@ -20,7 +20,9 @@ TEST(SandboxMetadata, Parse) {
   dev_array.PushBack("class/input", dev_allocator);
   dev_document.AddMember("dev", dev_array, dev_allocator);
   SandboxMetadata dev_sandbox;
+  EXPECT_TRUE(dev_sandbox.IsNull());
   EXPECT_TRUE(dev_sandbox.Parse(dev_document));
+  EXPECT_FALSE(dev_sandbox.IsNull());
   EXPECT_EQ(1u, dev_sandbox.dev().size());
   EXPECT_EQ(0u, dev_sandbox.features().size());
   EXPECT_EQ("class/input", dev_sandbox.dev()[0]);
@@ -33,7 +35,9 @@ TEST(SandboxMetadata, Parse) {
   feat_array.PushBack("vulkan", feat_allocator);
   feat_document.AddMember("features", feat_array, feat_allocator);
   SandboxMetadata feat_sandbox;
+  EXPECT_TRUE(feat_sandbox.IsNull());
   EXPECT_TRUE(feat_sandbox.Parse(feat_document));
+  EXPECT_FALSE(feat_sandbox.IsNull());
   EXPECT_EQ(0u, feat_sandbox.dev().size());
   EXPECT_EQ(1u, feat_sandbox.features().size());
   EXPECT_EQ("vulkan", feat_sandbox.features()[0]);

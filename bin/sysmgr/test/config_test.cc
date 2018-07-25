@@ -7,6 +7,7 @@
 #include "garnet/bin/sysmgr/config.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -38,13 +39,9 @@ class ConfigTest : public ::testing::Test {
 
   std::string NewJSONFile(const std::string& json) {
     std::string json_file;
-    if (!tmp_dir_.NewTempFile(&json_file)) {
+    if (!tmp_dir_.NewTempFileWithData(json, &json_file)) {
       return "";
     }
-
-    FILE* tmpf = fopen(json_file.c_str(), "w");
-    fprintf(tmpf, "%s", json.c_str());
-    fclose(tmpf);
     return json_file;
   }
 

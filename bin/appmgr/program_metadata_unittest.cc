@@ -15,7 +15,9 @@ TEST(ProgramMetadata, Parse) {
   rapidjson::Document document;
   document.Parse(R"JSON({ "binary": "bin/app" })JSON");
   ProgramMetadata program;
+  EXPECT_TRUE(program.IsNull());
   EXPECT_TRUE(program.Parse(document));
+  EXPECT_FALSE(program.IsNull());
   EXPECT_EQ("bin/app", program.binary());
 }
 

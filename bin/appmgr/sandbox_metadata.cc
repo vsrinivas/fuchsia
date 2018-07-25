@@ -38,6 +38,7 @@ SandboxMetadata::~SandboxMetadata() = default;
 bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value) {
   dev_.clear();
   features_.clear();
+  null_ = true;
 
   if (!sandbox_value.IsObject()) {
     return false;
@@ -73,10 +74,11 @@ bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value) {
       return false;
   }
 
+  null_ = false;
   return true;
 }
 
-bool SandboxMetadata::HasFeature(const std::string& feature) {
+bool SandboxMetadata::HasFeature(const std::string& feature) const {
   return std::find(features_.begin(), features_.end(), feature) !=
          features_.end();
 }

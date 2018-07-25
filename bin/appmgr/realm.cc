@@ -525,11 +525,18 @@ void Realm::CreateComponentFromPackage(
   fxl::UniqueFD fd =
       fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
 
-  std::string cmx_data;
-  std::string cmx_path =
+  // Parse cmx manifest file, if it's there.
+  CmxMetadata cmx;
+  const std::string cmx_path =
       CmxMetadata::GetCmxPathFromFullPackagePath(package->resolved_url.get());
-  if (!cmx_path.empty())
-    files::ReadFileToStringAt(fd.get(), cmx_path, &cmx_data);
+  if (!cmx_path.empty() && files::IsFileAt(fd.get(), cmx_path)) {
+    if (!cmx.ParseFromFileAt(fd.get(), cmx_path)) {
+      FXL_LOG(ERROR) << "cmx file failed to parse: " << cmx.error_str();
+      component_request.SetReturnValues(kComponentCreationFailed,
+                                        TerminationReason::INTERNAL_ERROR);
+      return;
+    }
+  }
 
   std::string runtime_data;
   fsl::SizedVmo app_data;
@@ -559,30 +566,16 @@ void Realm::CreateComponentFromPackage(
   builder.AddServices(std::move(svc));
 
   // If meta/*.cmx exists, attempt to read sandbox data from it.
-  if (!cmx_data.empty()) {
-    SandboxMetadata sandbox;
-    CmxMetadata cmx;
-    rapidjson::Value sandbox_meta;
+  if (!cmx.sandbox_meta().IsNull()) {
+    const auto& sandbox = cmx.sandbox_meta();
 
-    if (cmx.ParseSandboxMetadata(cmx_data, &sandbox_meta)) {
-      // If the cmx has a sandbox attribute, but it doesn't properly parse,
-      // return early. Otherwise, proceed normally as it just means there is
-      // no sandbox data for this component.
-      if (!sandbox.Parse(sandbox_meta)) {
-        FXL_LOG(ERROR) << "Failed to parse sandbox metadata for "
-                       << launch_info.url;
-        component_request.SetReturnValues(kComponentCreationFailed,
-                                          TerminationReason::INTERNAL_ERROR);
-        return;
-      }
-      // If an app has the "shell" feature, then we use the libraries from the
-      // system rather than from the package because programs spawned from the
-      // shell will need the system-provided libraries to run.
-      if (sandbox.HasFeature("shell"))
-        loader_service.reset();
+    // If an app has the "shell" feature, then we use the libraries from the
+    // system rather than from the package because programs spawned from the
+    // shell will need the system-provided libraries to run.
+    if (sandbox.HasFeature("shell"))
+      loader_service.reset();
 
-      builder.AddSandbox(sandbox, [this] { return OpenInfoDir(); });
-    }
+    builder.AddSandbox(sandbox, [this] { return OpenInfoDir(); });
   }
 
   // Add the custom namespace.
@@ -621,20 +614,10 @@ void Realm::CreateComponentFromPackage(
   } else {
     RuntimeMetadata runtime;
 
-    // If meta/*.cmx exists, read runtime data from it.
-    if (!cmx_data.empty()) {
-      if (!runtime.Parse(cmx_data)) {
-        if (!runtime.Parse(runtime_data)) {
-          // If meta/*.cmx has no runtime data, fallback to the *package*'s
-          // meta/runtime.
-          FXL_LOG(ERROR) << "Failed to parse runtime metadata for "
-                         << launch_info.url;
-          component_request.SetReturnValues(kComponentCreationFailed,
-                                            TerminationReason::INTERNAL_ERROR);
-          return;
-        }
-      }
-    } else if (!runtime.Parse(runtime_data)) {
+    // If meta/*.cmx has runtime data, get it.
+    if (!cmx.runtime_meta().IsNull()) {
+      runtime = cmx.runtime_meta();
+    } else if (!runtime.ParseFromData(runtime_data)) {
       // If meta/*.cmx has no runtime data, fallback to the *package*'s
       // meta/runtime.
       FXL_LOG(ERROR) << "Failed to parse runtime metadata for "

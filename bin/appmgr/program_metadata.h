@@ -13,20 +13,23 @@
 namespace component {
 
 // Class to parse the "program" attribute in a component manifest.
+// TODO(geb): Use JSONParser to hold errors.
 class ProgramMetadata {
  public:
   ProgramMetadata();
   ~ProgramMetadata();
 
   // Takes in a parsed value assumed to be corresponding to the "program"
-  // attribute.
+  // attribute. Returns false if parsing failed.
   bool Parse(const rapidjson::Value& program_value);
 
+  bool IsNull() const { return null_; }
   // Returns the "binary" attribute. Only applicable if this program is run as
   // an ELF binary.
   const std::string& binary() const { return binary_; }
 
  private:
+  bool null_ = true;
   std::string binary_;
 };
 

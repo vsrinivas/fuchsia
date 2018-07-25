@@ -14,20 +14,32 @@ RuntimeMetadata::RuntimeMetadata() = default;
 
 RuntimeMetadata::~RuntimeMetadata() = default;
 
-bool RuntimeMetadata::Parse(const std::string& data) {
+bool RuntimeMetadata::ParseFromData(const std::string& data) {
   runner_.clear();
+  null_ = true;
 
   rapidjson::Document document;
   document.Parse(data);
-  if (!document.IsObject())
+  if (document.HasParseError()) {
     return false;
+  }
+  return ParseFromDocument(document);
+}
 
-  auto runner = document.FindMember(kRunner);
-  if (runner == document.MemberEnd() || !runner->value.IsString()) {
+bool RuntimeMetadata::ParseFromDocument(const rapidjson::Document& document) {
+  runner_.clear();
+  null_ = true;
+
+  const auto runner = document.FindMember(kRunner);
+  if (runner == document.MemberEnd()) {
+    // Valid config, but no runtime.
+    return true;
+  }
+  if (!runner->value.IsString()) {
     return false;
   }
   runner_ = runner->value.GetString();
-
+  null_ = false;
   return true;
 }
 

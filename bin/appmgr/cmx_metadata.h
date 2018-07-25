@@ -7,8 +7,11 @@
 
 #include <regex>
 #include <string>
-#include <vector>
 
+#include "garnet/bin/appmgr/program_metadata.h"
+#include "garnet/bin/appmgr/runtime_metadata.h"
+#include "garnet/bin/appmgr/sandbox_metadata.h"
+#include "garnet/lib/json/json_parser.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace component {
@@ -18,15 +21,14 @@ class CmxMetadata {
   CmxMetadata();
   ~CmxMetadata();
 
-  // Takes a raw JSON string and parses the value object corresponding to
-  // "sandbox". Returns true if parsing was successful.
-  bool ParseSandboxMetadata(const std::string& data,
-                            rapidjson::Value* parsed_value);
+  // Initializes the CmxMetadata from a JSON file. Returns false if there were
+  // any errors.
+  bool ParseFromFileAt(int dirfd, const std::string& file);
 
-  // Takes a raw JSON string and parses the value object corresponding to
-  // "program"". Returns true if parsing was successful.
-  bool ParseProgramMetadata(const std::string& data,
-                            rapidjson::Value* parsed_value);
+  // Returns true if |ParseSandboxMetadata| encountered an error.
+  bool HasError() const;
+  // Returns the error if |HasError| is true.
+  std::string error_str() const;
 
   // Takes a package's resolved_url, e.g. file:///pkgfs/packages/<FOO>/0, and
   // returns the default component's .cmx path, e.g. meta/<FOO>.cmx.
@@ -46,9 +48,20 @@ class CmxMetadata {
   // empty string "" if unmatched.
   static std::string GetPackageNameFromCmxPath(const std::string& cmx_path);
 
+  const SandboxMetadata& sandbox_meta() { return sandbox_meta_; }
+  const RuntimeMetadata& runtime_meta() { return runtime_meta_; }
+  const ProgramMetadata& program_meta() { return program_meta_; }
+
  private:
   static std::string GetCmxPathFromPath(const std::regex& regex,
                                         const std::string& path);
+  void ParseSandboxMetadata(const rapidjson::Document& document);
+  void ParseProgramMetadata(const rapidjson::Document& document);
+
+  json::JSONParser json_parser_;
+  SandboxMetadata sandbox_meta_;
+  RuntimeMetadata runtime_meta_;
+  ProgramMetadata program_meta_;
 };
 
 }  // namespace component

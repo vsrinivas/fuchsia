@@ -48,7 +48,7 @@ int main(int argc, const char** argv) {
         }
         closedir(cfg_dir);
       } else {
-        FXL_LOG(WARNING) << "Could not open config directory" << kConfigDir;
+        FXL_LOG(WARNING) << "Could not open config directory " << kConfigDir;
       }
     }
   }
