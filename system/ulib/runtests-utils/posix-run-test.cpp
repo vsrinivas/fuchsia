@@ -41,7 +41,7 @@ fbl::unique_ptr<Result> PosixRunTest(const char* argv[],
     // launched process, and ensure its destruction on function exit.
     posix_spawn_file_actions_t file_actions;
     if ((status = posix_spawn_file_actions_init(&file_actions))) {
-        printf("FAILURE: posix_spawn_file_actions_init failed: %s\n",
+        fprintf(stderr, "FAILURE: posix_spawn_file_actions_init failed: %s\n",
                strerror(status));
         return fbl::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);
     }
@@ -78,13 +78,13 @@ fbl::unique_ptr<Result> PosixRunTest(const char* argv[],
         if ((status = posix_spawn_file_actions_addopen(
                  &file_actions, STDOUT_FILENO, output_filename,
                  O_WRONLY | O_CREAT | O_TRUNC, 0644))) {
-            printf("FAILURE: posix_spawn_file_actions_addopen failed: %s\n",
+            fprintf(stderr, "FAILURE: posix_spawn_file_actions_addopen failed: %s\n",
                    strerror(status));
             return fbl::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);
         }
         if ((status = posix_spawn_file_actions_adddup2(&file_actions, STDOUT_FILENO,
                                                        STDERR_FILENO))) {
-            printf("FAILURE: posix_spawn_file_actions_adddup2 failed: %s\n",
+            fprintf(stderr, "FAILURE: posix_spawn_file_actions_adddup2 failed: %s\n",
                    strerror(status));
             return fbl::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);
         }
@@ -95,12 +95,12 @@ fbl::unique_ptr<Result> PosixRunTest(const char* argv[],
     if ((status = posix_spawn(&test_pid, path, &file_actions, nullptr,
                               const_cast<char**>(argv),
                               const_cast<char**>(envp)))) {
-        printf("FAILURE: posix_spawn failed: %s\n", strerror(status));
+        fprintf(stderr, "FAILURE: posix_spawn failed: %s\n", strerror(status));
         return fbl::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);
     }
 
     if (waitpid(test_pid, &status, WUNTRACED | WCONTINUED) == -1) {
-        printf("FAILURE: waitpid failed: %s\n", strerror(errno));
+        fprintf(stderr, "FAILURE: waitpid failed: %s\n", strerror(errno));
         return fbl::make_unique<Result>(path, FAILED_TO_WAIT, 0);
     }
     if (WIFEXITED(status)) {
@@ -110,15 +110,15 @@ fbl::unique_ptr<Result> PosixRunTest(const char* argv[],
         return fbl::make_unique<Result>(path, launch_status, return_code);
     }
     if (WIFSIGNALED(status)) {
-        printf("FAILURE: test process killed by signal %d\n", WTERMSIG(status));
+        fprintf(stderr, "FAILURE: test process killed by signal %d\n", WTERMSIG(status));
         return fbl::make_unique<Result>(path, FAILED_NONZERO_RETURN_CODE, 1);
     }
     if (WIFSTOPPED(status)) {
-        printf("FAILURE: test process stopped by signal %d\n", WSTOPSIG(status));
+        fprintf(stderr, "FAILURE: test process stopped by signal %d\n", WSTOPSIG(status));
         return fbl::make_unique<Result>(path, FAILED_NONZERO_RETURN_CODE, 1);
     }
 
-    printf("FAILURE: test process with unexpected status: %#x", status);
+    fprintf(stderr, "FAILURE: test process with unexpected status: %#x", status);
     return fbl::make_unique<Result>(path, FAILED_UNKNOWN, 0);
 }
 

@@ -26,7 +26,7 @@ fbl::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
     size_t fdio_action_count = 1;  // At least one for SET_NAME.
     if (output_filename != nullptr) {
         if (pipe(fds)) {
-            printf("FAILURE: Failed to create pipe: %s\n", strerror(errno));
+            fprintf(stderr, "FAILURE: Failed to create pipe: %s\n", strerror(errno));
             return fbl::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);
         }
         fdio_action_count += 2;  // Plus two for CLONE_FD and TRANSFER_FD.
@@ -46,14 +46,14 @@ fbl::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
     zx::job test_job;
     status = zx::job::create(*zx::job::default_job(), 0, &test_job);
     if (status != ZX_OK) {
-        printf("FAILURE: zx::job::create() returned %d\n", status);
+        fprintf(stderr, "FAILURE: zx::job::create() returned %d\n", status);
         return fbl::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);
     }
     auto auto_call_kill_job =
         fbl::MakeAutoCall([&test_job]() { test_job.kill(); });
     status = test_job.set_property(ZX_PROP_NAME, "run-test", sizeof("run-test"));
     if (status != ZX_OK) {
-        printf("FAILURE: set_property() returned %d\n", status);
+        fprintf(stderr, "FAILURE: set_property() returned %d\n", status);
         return fbl::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);
     }
     zx::process process;
@@ -63,7 +63,7 @@ fbl::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
                             fdio_action_count, fdio_actions,
                             process.reset_and_get_address(), err_msg);
     if (status != ZX_OK) {
-        printf("FAILURE: Failed to launch %s: %d (%s): %s\n", path, status,
+        fprintf(stderr, "FAILURE: Failed to launch %s: %d (%s): %s\n", path, status,
                zx_status_get_string(status), err_msg);
         return fbl::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);
     }
@@ -71,7 +71,7 @@ fbl::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
     if (output_filename != nullptr) {
         FILE* output_file = fopen(output_filename, "w");
         if (output_file == nullptr) {
-            printf("FAILURE: Could not open output file at %s: %s\n", output_filename,
+            fprintf(stderr, "FAILURE: Could not open output file at %s: %s\n", output_filename,
                    strerror(errno));
             return fbl::make_unique<Result>(path, FAILED_DURING_IO, 0);
         }
@@ -82,7 +82,7 @@ fbl::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
             fwrite(buf, 1, bytes_read, stdout);
         }
         if (fclose(output_file)) {
-            printf("FAILURE:  Could not close %s: %s", output_filename,
+            fprintf(stderr, "FAILURE:  Could not close %s: %s", output_filename,
                    strerror(errno));
             return fbl::make_unique<Result>(path, FAILED_DURING_IO, 0);
         }
@@ -90,7 +90,7 @@ fbl::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
     status =
         process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
     if (status != ZX_OK) {
-        printf("FAILURE: Failed to wait for process exiting %s: %d\n", path,
+        fprintf(stderr, "FAILURE: Failed to wait for process exiting %s: %d\n", path,
                status);
         return fbl::make_unique<Result>(path, FAILED_TO_WAIT, 0);
     }
@@ -101,17 +101,17 @@ fbl::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
                               nullptr, nullptr);
 
     if (status != ZX_OK) {
-        printf("FAILURE: Failed to get process return code %s: %d\n", path, status);
+        fprintf(stderr, "FAILURE: Failed to get process return code %s: %d\n", path, status);
         return fbl::make_unique<Result>(path, FAILED_TO_RETURN_CODE, 0);
     }
 
     if (proc_info.return_code != 0) {
-        printf("FAILURE: %s exited with nonzero status: %" PRId64 "\n", path,
+        fprintf(stderr, "FAILURE: %s exited with nonzero status: %" PRId64 "\n", path,
                proc_info.return_code);
         return fbl::make_unique<Result>(path, FAILED_NONZERO_RETURN_CODE, proc_info.return_code);
     }
 
-    printf("PASSED: %s passed\n", path);
+    fprintf(stderr, "PASSED: %s passed\n", path);
     return fbl::make_unique<Result>(path, SUCCESS, 0);
 }
 

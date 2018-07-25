@@ -118,7 +118,7 @@ int WriteSummaryJSON(const fbl::Vector<fbl::unique_ptr<Result>>& results,
         for (i = 0; i < output_file.size() && output_file[i] == '/'; i++) {
         }
         if (i == output_file.size()) {
-            printf("Error: output_file was empty or all slashes: %s\n", output_file.c_str());
+            fprintf(stderr, "Error: output_file was empty or all slashes: %s\n", output_file.c_str());
             return EINVAL;
         }
         fprintf(summary_json, ",\"output_file\":\"%s\"", &(output_file.c_str()[i]));
@@ -170,13 +170,13 @@ bool RunTestsInDir(const RunTestFn& RunTest, const fbl::StringPiece dir_path,
                    const signed char verbosity, int* num_failed,
                    fbl::Vector<fbl::unique_ptr<Result>>* results) {
     if ((output_dir != nullptr) && (output_file_basename == nullptr)) {
-        printf("Error: output_file_basename is not null, but output_dir is.\n");
+        fprintf(stderr, "Error: output_file_basename is not null, but output_dir is.\n");
         return false;
     }
     fbl::String dir_path_str = fbl::String(dir_path.data());
     DIR* dir = opendir(dir_path_str.c_str());
     if (dir == nullptr) {
-        printf("Error: Could not open test dir %s\n", dir_path_str.c_str());
+        fprintf(stderr, "Error: Could not open test dir %s\n", dir_path_str.c_str());
         return false;
     }
 
@@ -222,7 +222,7 @@ bool RunTestsInDir(const RunTestFn& RunTest, const fbl::StringPiece dir_path,
                 runtests::JoinPath(output_dir, test_path);
             const int error = runtests::MkDirAll(test_output_dir);
             if (error) {
-                printf("Error: Could not output directory for test %s: %s\n", test_name,
+                fprintf(stderr, "Error: Could not output directory for test %s: %s\n", test_name,
                        strerror(error));
                 return false;
             }

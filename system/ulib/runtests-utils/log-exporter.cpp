@@ -253,7 +253,7 @@ fbl::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_pat
     fbl::String syslog_path_str = fbl::String(syslog_path.data());
     FILE* syslog_file = fopen(syslog_path_str.c_str(), "w");
     if (syslog_file == nullptr) {
-        printf("Error: Could not open syslog file: %s.\n", syslog_path_str.c_str());
+        fprintf(stderr, "Error: Could not open syslog file: %s.\n", syslog_path_str.c_str());
         *error = OPEN_FILE;
         return nullptr;
     }
@@ -265,7 +265,7 @@ fbl::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_pat
 
     status = zx::channel::create(0, &logger, &logger_request);
     if (status != ZX_OK) {
-        printf("LaunchLogExporter: cannot create channel for logger service: %d (%s).\n",
+        fprintf(stderr, "LaunchLogExporter: cannot create channel for logger service: %d (%s).\n",
                status, zx_status_get_string(status));
         *error = CREATE_CHANNEL;
         return nullptr;
@@ -273,7 +273,7 @@ fbl::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_pat
 
     status = fdio_service_connect("/svc/fuchsia.logger.Log", logger_request.release());
     if (status != ZX_OK) {
-        printf("LaunchLogExporter: cannot connect to logger service: %d (%s).\n",
+        fprintf(stderr, "LaunchLogExporter: cannot connect to logger service: %d (%s).\n",
                status, zx_status_get_string(status));
         *error = CONNECT_TO_LOGGER_SERVICE;
         return nullptr;
@@ -283,7 +283,7 @@ fbl::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_pat
     zx::channel listener, listener_request;
     status = zx::channel::create(0, &listener, &listener_request);
     if (status != ZX_OK) {
-        printf("LaunchLogExporter: cannot create channel for listener: %d (%s).\n",
+        fprintf(stderr, "LaunchLogExporter: cannot create channel for listener: %d (%s).\n",
                status, zx_status_get_string(status));
         *error = CREATE_CHANNEL;
         return nullptr;
@@ -294,7 +294,7 @@ fbl::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_pat
     zx_handle_t listener_handle = listener.release();
     status = logger.write(0, &req, sizeof(req), &listener_handle, 1);
     if (status != ZX_OK) {
-        printf("LaunchLogExporter: cannot pass listener to logger service: %d (%s).\n",
+        fprintf(stderr, "LaunchLogExporter: cannot pass listener to logger service: %d (%s).\n",
                status, zx_status_get_string(status));
         *error = FIDL_ERROR;
         return nullptr;
@@ -305,16 +305,16 @@ fbl::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_pat
                                                       syslog_file);
     log_exporter->set_error_handler([](zx_status_t status) {
         if (status != ZX_ERR_CANCELED) {
-            printf("log exporter: Failed: %d (%s).\n",
+            fprintf(stderr, "log exporter: Failed: %d (%s).\n",
                    status, zx_status_get_string(status));
         }
     });
     log_exporter->set_file_error_handler([](const char* error) {
-        printf("log exporter: Error writing to file: %s.\n", error);
+        fprintf(stderr, "log exporter: Error writing to file: %s.\n", error);
     });
     status = log_exporter->StartThread();
     if (status != ZX_OK) {
-        printf("LaunchLogExporter: Failed to start log exporter: %d (%s).\n",
+        fprintf(stderr, "LaunchLogExporter: Failed to start log exporter: %d (%s).\n",
                status, zx_status_get_string(status));
         *error = START_LISTENER;
         return nullptr;

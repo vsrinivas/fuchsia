@@ -100,13 +100,13 @@ void SyncPathAndAncestors(const char* path) {
     for (char* p = mutable_path; ; p = dirname(p)) {
         int fd = open(p, O_RDONLY);
         if (fd < 0) {
-            printf("Warning: Could not open %s for syncing: %s", p, strerror(errno));
+            fprintf(stderr, "Warning: Could not open %s for syncing: %s", p, strerror(errno));
             return;
         } else if (fsync(fd)) {
-            printf("Warning: Could not sync %s: %s", p, strerror(errno));
+            fprintf(stderr, "Warning: Could not sync %s: %s", p, strerror(errno));
             return;
         } else if (close(fd)) {
-            printf("Warning: Could not close %s: %s", p, strerror(errno));
+            fprintf(stderr, "Warning: Could not close %s: %s", p, strerror(errno));
             return;
         }
         if (!strcmp(p, "/")) break;
@@ -132,7 +132,7 @@ int RunAllTests(const RunTestFn& RunTest, int argc, const char* const* argv,
         if (strcmp(argv[i], "-q") == 0) {
             verbosity = 0;
         } else if (strcmp(argv[i], "-v") == 0) {
-            printf("verbose output. enjoy.\n");
+            fprintf(stderr, "verbose output. enjoy.\n");
             verbosity = 1;
         } else if (strcmp(argv[i], "-s") == 0) {
             test_types &= ~TEST_SMALL;
@@ -196,7 +196,7 @@ int RunAllTests(const RunTestFn& RunTest, int argc, const char* const* argv,
     char test_opt[32];
     snprintf(test_opt, sizeof(test_opt), "%u", test_types);
     if (setenv(TEST_ENV_NAME, test_opt, 1) != 0) {
-        printf("Error: Could not set %s environment variable\n", TEST_ENV_NAME);
+        fprintf(stderr, "Error: Could not set %s environment variable\n", TEST_ENV_NAME);
         return EXIT_FAILURE;
     }
 
@@ -205,7 +205,7 @@ int RunAllTests(const RunTestFn& RunTest, int argc, const char* const* argv,
         char timeout_str[32];
         snprintf(timeout_str, sizeof(timeout_str), "%d", watchdog_timeout_seconds);
         if (setenv(WATCHDOG_ENV_NAME, timeout_str, 1) != 0) {
-            printf("Error: Could not set %s environment variable\n", WATCHDOG_ENV_NAME);
+            fprintf(stderr, "Error: Could not set %s environment variable\n", WATCHDOG_ENV_NAME);
             return EXIT_FAILURE;
         }
     } else {
@@ -232,14 +232,14 @@ int RunAllTests(const RunTestFn& RunTest, int argc, const char* const* argv,
     fbl::Vector<fbl::String> test_dirs;
     const int error = ResolveGlobs(test_globs, &test_dirs);
     if (error) {
-        printf("Error: Failed to resolve globs, error = %d\n", error);
+        fprintf(stderr, "Error: Failed to resolve globs, error = %d\n", error);
         return EXIT_FAILURE;
     }
     // TODO(mknyszek): Sort test_dirs in order to make running tests more
     // deterministic.
     struct stat st;
     if (output_dir != nullptr && stat(output_dir, &st) < 0 && (st.st_mode & S_IFMT) == S_IFDIR) {
-        printf("Error: Could not open %s\n", output_dir);
+        fprintf(stderr, "Error: Could not open %s\n", output_dir);
         return EXIT_FAILURE;
     }
 
@@ -251,7 +251,7 @@ int RunAllTests(const RunTestFn& RunTest, int argc, const char* const* argv,
         // we will continue to the next entries rather than aborting. This allows us to handle
         // different sets of default test directories.
         if (stat(test_dir.c_str(), &st) < 0) {
-            printf("Could not open %s, skipping...\n", test_dir.c_str());
+            fprintf(stderr, "Could not open %s, skipping...\n", test_dir.c_str());
             continue;
         }
         if (!S_ISDIR(st.st_mode)) {
@@ -264,7 +264,8 @@ int RunAllTests(const RunTestFn& RunTest, int argc, const char* const* argv,
         // directory names will never collide.
         char abs_test_dir[PATH_MAX];
         if (realpath(test_dir.c_str(), abs_test_dir) == nullptr) {
-            printf("Error: Could not resolve path %s: %s\n", test_dir.c_str(), strerror(errno));
+            fprintf(stderr, "Error: Could not resolve path %s: %s\n",
+                    test_dir.c_str(), strerror(errno));
             continue;
         }
 
@@ -280,12 +281,14 @@ int RunAllTests(const RunTestFn& RunTest, int argc, const char* const* argv,
             char buf[PATH_MAX];
             size_t path_len = snprintf(buf, sizeof(buf), "%s/%s", output_dir, abs_test_dir);
             if (path_len >= sizeof(buf)) {
-                printf("Error: Output path is too long: %s/%s\n", output_dir, abs_test_dir);
+                fprintf(stderr, "Error: Output path is too long: %s/%s\n",
+                        output_dir, abs_test_dir);
                 return EXIT_FAILURE;
             }
             const int error = MkDirAll(buf);
             if (error) {
-                printf("Error: Could not create output directory %s: %s\n", buf, strerror(error));
+                fprintf(stderr, "Error: Could not create output directory %s: %s\n",
+                        buf, strerror(error));
                 return EXIT_FAILURE;
             }
         }
@@ -305,17 +308,17 @@ int RunAllTests(const RunTestFn& RunTest, int argc, const char* const* argv,
         snprintf(summary_path, sizeof(summary_path), "%s/summary.json", output_dir);
         FILE* summary_json = fopen(summary_path, "w");
         if (summary_json == nullptr) {
-            printf("Error: Could not open JSON summary file.\n");
+            fprintf(stderr, "Error: Could not open JSON summary file.\n");
             return EXIT_FAILURE;
         }
         const int error = WriteSummaryJSON(results, kOutputFileName,
                                            syslog_file_name, summary_json);
         if (error) {
-            printf("Error: Failed to write JSON summary: %s\n", strerror(error));
+            fprintf(stderr, "Error: Failed to write JSON summary: %s\n", strerror(error));
             return EXIT_FAILURE;
         }
         if (fclose(summary_json)) {
-            printf("Error: Could not close JSON summary.\n");
+            fprintf(stderr, "Error: Could not close JSON summary.\n");
             return EXIT_FAILURE;
         }
 
