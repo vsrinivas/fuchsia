@@ -11,34 +11,34 @@ library fuchsia.accessibility;
 // Represents the purpose of a ui element; ex. button, text area.
 // Currently not being used. Will be expanded in the future.
 enum Role {
-  NONE = 0;
+    NONE = 0;
 };
 
 // Represents actions that can be applied to Nodes.
 enum Action {
-  GAIN_ACCESSIBILITY_FOCUS = 0;
-  LOSE_ACCESSIBILITY_FOCUS = 1;
-  TAP = 2;
+    GAIN_ACCESSIBILITY_FOCUS = 0;
+    LOSE_ACCESSIBILITY_FOCUS = 1;
+    TAP = 2;
 };
 
 // Accessibility data for an UI element. In progress.
 struct Data {
-  Role role;
-  string label;
-  // Local bounding box of this element.
-  fuchsia.ui.gfx.BoundingBox location;
-  // Transform from parent coordinate space to local space.
-  fuchsia.ui.gfx.mat4 transform;
+    Role role;
+    string label;
+    // Local bounding box of this element.
+    fuchsia.ui.gfx.BoundingBox location;
+    // Transform from parent coordinate space to local space.
+    fuchsia.ui.gfx.mat4 transform;
 };
 
 // Wrapper for accessibility data to store structure of UI tree. In progress.
 struct Node {
-  // Node id identifying position in a front-end's local UI structure.
-  // We assume 0 to be the root node.
-  int32 node_id;
-  vector<int32> children_traversal_order;
-  vector<int32> children_hit_test_order;
-  Data data;
+    // Node id identifying position in a front-end's local UI structure.
+    // We assume 0 to be the root node.
+    int32 node_id;
+    vector<int32> children_traversal_order;
+    vector<int32> children_hit_test_order;
+    Data data;
 };
 
 

@@ -7,5 +7,5 @@ library fuchsia.accessibility;
 // This is a stub implementation and is currently a work in progress.
 [Discoverable]
 interface TestClient {
-  1: NotifyViewSelected();
+    1: NotifyViewSelected();
 };
