@@ -44,10 +44,10 @@ members of `monolith` and `preinstall` are inherently `available`.
 
 ### product: default
 
-The `default` product for a layer, found in `//<layer>/products/default by
+The `default` product for a layer, found in `//<layer>/products/default` by
 convention contains:
 
-* `monolith` - a common minimal "base" for this layer that makes up a system
+* `monolith` - a common minimal base for this layer that makes up a system
   update.
 * `preinstall` - a set of most commonly used development tools for the layer
   and other common work-items.
@@ -68,7 +68,7 @@ produces this for the build and can be run by hand:
 $ python build/gn/preprocess_products.py --products '["garnet/products/default"]'
 ```
 
-[garnet-packages-source]: https://fuchsia.googlesource.com/garnet/+/master/packages/
-[peridot-packages-source]: https://fuchsia.googlesource.com/peridot/+/master/packages/
-[topaz-packages-source]: https://fuchsia.googlesource.com/topaz/packages/+/master
+[garnet-products-source]: https://fuchsia.googlesource.com/garnet/+/master/products/
+[peridot-products-source]: https://fuchsia.googlesource.com/peridot/+/master/products/
+[topaz-products-source]: https://fuchsia.googlesource.com/topaz/+/master/products/
 [preprocess-products-py]: https://fuchsia.googlesource.com/build/+/master/gn/prepreprocess_products.py
