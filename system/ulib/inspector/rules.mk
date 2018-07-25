@@ -24,6 +24,8 @@ MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/c \
 
+MODULE_PACKAGE := static
+
 # Compile this with frame pointers so that if we crash
 # the simplistic unwinder will work.
 MODULE_COMPILEFLAGS += $(KEEP_FRAME_POINTER_COMPILEFLAGS)
