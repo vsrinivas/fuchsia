@@ -90,7 +90,7 @@ else
   IFNAME="qemu"
 fi
 
-while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:q:rst::u:Vx:z:h-:" FLAG; do
+while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:q:rs:t::u:Vx:z:h-:" FLAG; do
     case $FLAG in
         A) ASAN=1;;
         a) ARCH=$OPTARG;;
