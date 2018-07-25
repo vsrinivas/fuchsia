@@ -29,6 +29,25 @@ _got_errors=0
 # https://fuchsia.googlesource.com/zircon/+/master/system/uapp/runtests/summary-schema.json
 _benchmark_summaries=""
 
+# Parses command line arguments.  This sets ${OUT_DIR} to the output
+# directory specified on the command line.
+#
+# This will normally be invoked as:
+#   runbench_read_arguments "$@"
+#
+# A script that uses runbench_read_arguments should be invoked as follows:
+#   benchmarks.sh <output-dir>
+#
+# Example: benchmarks.sh /tmp
+runbench_read_arguments() {
+    if [ $# -lt 1 ]; then
+        echo "error: missing output directory"
+        echo "Usage: $0 <output-dir>"
+        exit 1
+    fi
+    OUT_DIR="$1"
+}
+
 # Runs a command and expects a results file to be produced.
 #
 # If the results file was not generated, an error message is logged and a
