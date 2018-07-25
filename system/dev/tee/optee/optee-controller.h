@@ -13,6 +13,7 @@
 #include <zircon/device/tee.h>
 #include <zircon/thread_annotations.h>
 
+#include "optee-message.h"
 #include "shared-memory.h"
 
 namespace optee {
@@ -42,6 +43,12 @@ public:
     zx_status_t GetDescription(tee_ioctl_description_t* out_description, size_t* out_size) const;
 
     void RemoveClient(OpteeClient* client);
+
+    uint32_t CallWithMessage(const Message& message);
+
+    SharedMemoryManager::DriverMemoryPool* driver_pool() const {
+        return shared_memory_manager_->driver_pool();
+    }
 
 private:
     zx_status_t ValidateApiUid() const;

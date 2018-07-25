@@ -281,10 +281,7 @@ zx_status_t OpteeController::GetDescription(tee_ioctl_description_t* out_descrip
                                             size_t* out_size) const {
     // The OP-TEE UUID does not vary and since we validated that the TEE is OP-TEE by checking
     // the API UID, we can skip the OS UUID SMC call and just return the static UUID.
-    out_description->os_uuid[0] = kOpteeOsUuid_0;
-    out_description->os_uuid[1] = kOpteeOsUuid_1;
-    out_description->os_uuid[2] = kOpteeOsUuid_2;
-    out_description->os_uuid[3] = kOpteeOsUuid_3;
+    ::memcpy(out_description->os_uuid, &kOpteeOsUuid, TEE_IOCTL_UUID_SIZE);
     out_description->os_revision = os_revision_;
     out_description->is_global_platform_compliant = true;
 
@@ -299,6 +296,51 @@ void OpteeController::RemoveClient(OpteeClient* client) {
     if (client->InContainer()) {
         clients_.erase(*client);
     }
+}
+
+uint32_t OpteeController::CallWithMessage(const Message& message) {
+    uint32_t return_value = tee::kSmc32ReturnUnknownFunction;
+
+    zx_smc_parameters_t func_call = tee::CreateSmcFunctionCall(
+        optee::kCallWithArgFuncId,
+        static_cast<uint32_t>(message.paddr() >> 32),
+        static_cast<uint32_t>(message.paddr()));
+
+    while (true) {
+
+        union {
+            zx_smc_result_t raw;
+            CallWithArgResult response;
+        } result;
+
+        zx_status_t status = zx_smc_call(secure_monitor_, &func_call, &result.raw);
+
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "optee: Unable to invoke SMC\n");
+            return return_value;
+        }
+
+        if (result.response.status == kReturnEThreadLimit) {
+            // TODO(rjascani): This should actually block until a thread is available. For now,
+            // just quit.
+            zxlogf(ERROR, "optee: Hit thread limit, need to fix this\n");
+            break;
+        } else if (optee::IsReturnRpc(result.response.status)) {
+            // TODO(rjascani): Need proper RPC handling here.
+            zxlogf(ERROR,
+                   "optee: rpc call: %" PRIx32 " arg1: %" PRIx32
+                   " arg2: %" PRIx32 " arg3: %" PRIx32 "\n",
+                   result.response.status,
+                   result.response.arg1,
+                   result.response.arg2,
+                   result.response.arg3);
+            break;
+        } else {
+            return_value = result.response.status;
+            break;
+        }
+    }
+    return return_value;
 }
 
 } // namespace optee

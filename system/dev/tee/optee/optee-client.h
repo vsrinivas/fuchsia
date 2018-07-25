@@ -43,7 +43,16 @@ public:
     // client will notify the caller that the peer has closed.
     void MarkForClosing() { needs_to_close_ = true; }
 
+    // IOCTLs
+    zx_status_t OpenSession(const tee_ioctl_session_request_t* session_request,
+                            tee_ioctl_session_t* out_session,
+                            size_t* out_actual);
+
 private:
+    zx_status_t ConvertIoctlParamsToOpteeParams(const tee_ioctl_param_t* params,
+                                                size_t num_params,
+                                                fbl::Array<MessageParam>* out_optee_params);
+
     OpteeController* controller_;
     bool needs_to_close_ = false;
 };

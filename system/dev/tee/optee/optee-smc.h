@@ -100,10 +100,8 @@ DEFINE_SMC_RESULT_STRUCT(GetOsUuidResult, 4,
                          uint32_t, uuid_2,
                          uint32_t, uuid_3)
 
-constexpr uint32_t kOpteeOsUuid_0 = 0x486178E0;
-constexpr uint32_t kOpteeOsUuid_1 = 0xE7F811E3;
-constexpr uint32_t kOpteeOsUuid_2 = 0xBC5E0002;
-constexpr uint32_t kOpteeOsUuid_3 = 0xA5D5C51B;
+constexpr uint8_t kOpteeOsUuid[] = {0x48, 0x61, 0x78, 0xE0, 0xE7, 0xF8, 0x11, 0xE3,
+                                    0xBC, 0x5E, 0x00, 0x02, 0xA5, 0xD5, 0xC5, 0x1B};
 
 //
 // Get Trusted OS Revision (0x0001)
@@ -135,6 +133,12 @@ constexpr uint32_t kReturnFromRpcFuncId = CreateYieldOpteeFuncId(0x0003);
 //
 // TODO(rjascani) - Document parameters and result values
 constexpr uint32_t kCallWithArgFuncId = CreateYieldOpteeFuncId(0x0004);
+
+DEFINE_SMC_RESULT_STRUCT(CallWithArgResult, 4,
+                         uint32_t, status,
+                         uint32_t, arg1,
+                         uint32_t, arg2,
+                         uint32_t, arg3);
 
 //
 // Get Shared Memory Config (0x0007)

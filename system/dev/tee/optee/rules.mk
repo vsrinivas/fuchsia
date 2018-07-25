@@ -12,7 +12,9 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/binding.c \
     $(LOCAL_DIR)/optee-client.cpp \
     $(LOCAL_DIR)/optee-controller.cpp \
+    $(LOCAL_DIR)/optee-message.cpp \
     $(LOCAL_DIR)/shared-memory.cpp \
+    $(LOCAL_DIR)/util.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
