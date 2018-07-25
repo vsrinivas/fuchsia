@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/appmgr/root_loader.h"
+#include "garnet/bin/appmgr/fuchsia_pkg_url.h"
 
 #include <fcntl.h>
 
@@ -25,31 +26,39 @@ RootLoader::~RootLoader() = default;
 
 void RootLoader::LoadComponent(fidl::StringPtr url,
                                LoadComponentCallback callback) {
+  // 1. If the URL is a fuchsia-pkg:// scheme, we are launching a .cmx.
+  if (FuchsiaPkgUrl::IsFuchsiaPkgScheme(url)) {
+    FuchsiaPkgUrl fp;
+    if (!fp.Parse(url)) {
+      FXL_LOG(ERROR) << "Could not parse fuchsia-pkg://: " << url;
+      callback(nullptr);
+      return;
+    }
+    std::string pkgfs_dir_path = fp.pkgfs_dir_path();
+    std::string pkgfs_resource_path = fp.pkgfs_resource_path();
+    if (!LoadComponentFromPkgfs(pkgfs_resource_path, pkgfs_dir_path,
+                                callback)) {
+      FXL_LOG(ERROR) << "Could not load package from cmx: " << url;
+      callback(nullptr);
+    }
+    return;
+  }
+
   std::string path = GetPathFromURL(url);
   if (path.empty()) {
     // If we see a scheme other than file://, it's an error. Other schemes are
-    // handled by CreateComponent, which invokes the appropriate runner.
+    // handled earlier, or by CreateComponent, which invokes the appropriate
+    // runner.
     FXL_LOG(ERROR) << "Cannot load " << url
                    << " because the scheme is not supported.";
     callback(nullptr);
     return;
   }
 
-  // 1. Try to load the URL directly, if the path is valid. If the path is valid
+  // 2. Try to load the URL directly, if the path is valid. If the path is valid
   // but we cannot load the component, exit immediately.
   fxl::UniqueFD fd(open(path.c_str(), O_RDONLY));
   if (fd.is_valid() || path[0] == '/') {
-    // 1a. If the URL points to a cmx file, load its package.
-    std::string package_name = CmxMetadata::GetPackageNameFromCmxPath(path);
-    if (!package_name.empty()) {
-      if (!LoadComponentFromComponentManifest(package_name, path, callback)) {
-        FXL_LOG(ERROR) << "Could not load package from cmx path: " << url;
-        callback(nullptr);
-      }
-      return;
-    }
-
-    // 1b. Load whatever the URL points to.
     if (!LoadComponentWithProcess(fd, path, callback)) {
       FXL_LOG(ERROR) << "Could not load url: " << url
                      << "; resource located at path, but it could not be "
@@ -59,13 +68,13 @@ void RootLoader::LoadComponent(fidl::StringPtr url,
     return;
   }
 
-  // 2. Try to load the URL from /pkgfs.
+  // 3. Try to load the URL from /pkgfs.
   if (path.find('/') == std::string::npos &&
       LoadComponentFromPackage(path, callback)) {
     return;
   }
 
-  // 3. Try to load the URL from /system, if we cannot from /pkgfs.
+  // 4. Try to load the URL from /system, if we cannot from /pkgfs.
   for (const auto& entry : {"/system/bin", "/system/pkgs"}) {
     std::string qualified_path =
         fxl::Concatenate({fxl::StringView(entry), "/", path});
@@ -79,16 +88,6 @@ void RootLoader::LoadComponent(fidl::StringPtr url,
     FXL_LOG(ERROR) << "Could not load url: " << url;
     callback(nullptr);
   }
-}
-
-bool RootLoader::LoadComponentFromComponentManifest(
-    std::string& package_name, std::string& path,
-    LoadComponentCallback callback) {
-  // TODO(CP-105): We're currently hardcoding version 0 of the package,
-  // but we'll eventually need to do something smarter.
-  std::string pkg_path =
-      fxl::Concatenate({"/pkgfs/packages/", package_name, "/0"});
-  return LoadComponentFromPkgfs(path, pkg_path, callback);
 }
 
 bool RootLoader::LoadComponentFromPackage(std::string& package_name,
