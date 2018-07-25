@@ -24,6 +24,7 @@ sdk_source_set("cpp") {
     "decoder.h",
     "encoder.cc",
     "encoder.h",
+    "enum.h",
     "interface_handle.h",
     "interface_ptr.h",
     "interface_ptr_set.h",
