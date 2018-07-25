@@ -8,9 +8,16 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
-LOCAL_SRCS := $(LOCAL_DIR)/zbi.c
+LOCAL_SRCS := \
+    $(LOCAL_DIR)/zbi.c \
 
-MODULE_SRCS += $(LOCAL_SRCS)
+MODULE_SRCS += \
+    $(LOCAL_SRCS) \
+    $(LOCAL_DIR)/zbi-zx.cpp \
+
+MODULE_STATIC_LIBS += \
+    system/ulib/fbl \
+    system/ulib/zx \
 
 MODULE_PACKAGE = static
 

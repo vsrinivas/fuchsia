@@ -39,6 +39,9 @@ typedef enum zbi_result {
     ZBI_RESULT_ERR_TRUNCATED,
 
     ZBI_RESULT_TOO_BIG,
+
+    ZBI_RESULT_INCOMPLETE_KERNEL,
+    ZBI_RESULT_INCOMPLETE_BOOTFS,
 } zbi_result_t;
 
 typedef zbi_result_t (*zbi_foreach_cb_t)(zbi_header_t* hdr,
@@ -50,6 +53,10 @@ typedef zbi_result_t (*zbi_foreach_cb_t)(zbi_header_t* hdr,
 // in which a problem was found the return value will attempt to specify the
 // nature of the error.
 zbi_result_t zbi_check(const void* base, zbi_header_t** err);
+
+// Same, but also diagnose ZBI_RESULT_INCOMPLETE_* result codes if the
+// ZBI is not a valid complete ZBI for the host platform.
+zbi_result_t zbi_check_complete(const void* base, zbi_header_t** err);
 
 // Call `cb` with a pointer to the header and payload of each ZBI item
 // excluding the root ZBI_TYPE_CONTAINER.

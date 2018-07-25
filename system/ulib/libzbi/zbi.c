@@ -3,10 +3,18 @@
 // found in the LICENSE file.
 
 #include <libzbi/zbi.h>
+#include <stdbool.h>
 #include <string.h>
+
+struct check_state {
+    zbi_header_t** err;
+    bool seen_bootfs;
+};
 
 static zbi_result_t for_each_check_entry(zbi_header_t* hdr, void* payload,
                                          void* cookie) {
+    struct check_state* const state = cookie;
+
     zbi_result_t result = ZBI_RESULT_OK;
 
     if (hdr->magic != ZBI_ITEM_MAGIC) {
@@ -19,16 +27,21 @@ static zbi_result_t for_each_check_entry(zbi_header_t* hdr, void* payload,
     }
 
     // If we found a problem, try to report it back up to the caller.
-    if (cookie && result != ZBI_RESULT_OK) {
-        zbi_header_t** problemHeader = cookie;
-        *problemHeader = hdr;
+    if (state->err != NULL && result != ZBI_RESULT_OK) {
+        *state->err = hdr;
+    }
+
+    if (hdr->type == ZBI_TYPE_STORAGE_BOOTFS) {
+        state->seen_bootfs = true;
     }
 
     return result;
 }
 
 
-zbi_result_t zbi_check(const void* base, zbi_header_t** err) {
+static zbi_result_t zbi_check_internal(const void* base,
+                                       uint32_t check_complete,
+                                       zbi_header_t** err) {
     zbi_result_t res = ZBI_RESULT_OK;
     const zbi_header_t* header = base;
 
@@ -51,7 +64,24 @@ zbi_result_t zbi_check(const void* base, zbi_header_t** err) {
         return res;
     }
 
-    res = zbi_for_each(base, for_each_check_entry, err);
+    struct check_state state = { .err = err };
+    res = zbi_for_each(base, for_each_check_entry, &state);
+
+    if (res == ZBI_RESULT_OK && check_complete != 0) {
+        if (header->length == 0) {
+            res = ZBI_RESULT_ERR_TRUNCATED;
+        } else if (header[1].type != check_complete) {
+            res = ZBI_RESULT_INCOMPLETE_KERNEL;
+            if (err) {
+                *err = (zbi_header_t*)(header + 1);
+            }
+        } else if (!state.seen_bootfs) {
+            res = ZBI_RESULT_INCOMPLETE_BOOTFS;
+            if (err) {
+                *err = (zbi_header_t*)header;
+            }
+        }
+    }
 
     if (err && res == ZBI_RESULT_ERR_TRUNCATED) {
         // A truncated image perhaps indicates a problem with the container?
@@ -61,12 +91,28 @@ zbi_result_t zbi_check(const void* base, zbi_header_t** err) {
     return res;
 }
 
+zbi_result_t zbi_check(const void* base, zbi_header_t** err) {
+    return zbi_check_internal(base, 0, err);
+}
+
+zbi_result_t zbi_check_complete(const void* base, zbi_header_t** err) {
+    return zbi_check_internal(base,
+#ifdef __aarch64__
+                              ZBI_TYPE_KERNEL_ARM64,
+#elif defined(__x86_64__) || defined(__i386__)
+                              ZBI_TYPE_KERNEL_X64,
+#else
+#error "what architecture?"
+#endif
+                              err);
+}
+
 zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t cb,
                           void* cookie) {
     zbi_header_t* header = (zbi_header_t*)(base);
 
     // Skip container header.
-    const uint32_t totalSize = (uint32_t)(sizeof(zbi_header_t) + header->length);
+    const uint32_t totalSize = (uint32_t)sizeof(zbi_header_t) + header->length;
     uint32_t offset = sizeof(zbi_header_t);
     while (offset < totalSize) {
         zbi_header_t* entryHeader =

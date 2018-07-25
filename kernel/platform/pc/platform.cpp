@@ -158,7 +158,7 @@ static void process_zbi(zbi_header_t* hdr, uintptr_t phys) {
         return;
     }
 
-    printf("zbi: @ %p (%zu bytes)\n", image.Base(), image.Length());
+    printf("zbi: @ %p (%u bytes)\n", image.Base(), image.Length());
 
     result = image.ForEach(process_zbi_item, nullptr);
     if (result != ZBI_RESULT_OK) {

@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <zircon/device/ioctl.h>
 #include <zircon/device/ioctl-wrapper.h>
+#include <zircon/types.h>
 
 typedef struct {
     zx_handle_t h;
