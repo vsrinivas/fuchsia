@@ -6,19 +6,12 @@
 #
 # This script runs all benchmarks for the Peridot layer.
 #
-# Usage: peridot_benchmarks.sh <output-dir>
-# Example: peridot_benchmarks.sh /tmp
+# For usage, see runbench_read_arguments in runbenchmarks.sh.
 
 # Import the runbenchmarks library.
 . /pkgfs/packages/runbenchmarks/0/data/runbenchmarks.sh
 
-# Ensure the output directory is specified.
-if [ $# -ne 1 ]; then
-    echo "error: missing output directory"
-    echo "Usage: $0 <output-dir>"
-    exit 1
-fi
-OUT_DIR="$1"
+runbench_read_arguments "$@"
 
 # Run "local" Ledger benchmarks.  These don't need external services to function
 # properly.
