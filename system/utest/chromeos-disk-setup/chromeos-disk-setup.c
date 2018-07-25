@@ -277,7 +277,7 @@ static bool add_fvm_part(gpt_device_t* device, gpt_partition_t* state) {
 
     state->first += blk_sz_fvm;
 
-    ASSERT_TRUE(create_partition(device, "FVM", guid_fvm, &fvm_part), "");
+    ASSERT_TRUE(create_partition(device, "fvm", guid_fvm, &fvm_part), "");
 
     END_HELPER;
 }
@@ -320,7 +320,7 @@ static bool init_test_env(gpt_device_t** d_out, block_info_t* b_out) {
 static bool assert_required_partitions(gpt_device_t* gpt) {
     BEGIN_HELPER;
     gpt_partition_t* part;
-    part = find_by_type_and_name(gpt, guid_fvm, "FVM");
+    part = find_by_type_and_name(gpt, guid_fvm, "fvm");
     ASSERT_NOT_NULL(part);
     ASSERT_TRUE(part_size_gte(part, SZ_FVM_PART, BLOCK_SIZE), "FVM size");
 

@@ -61,6 +61,20 @@ static bool part_size_gte(gpt_partition_t *part, uint64_t size, uint64_t block_s
 }
 
 // find_by_type finds the first partition matching the given type guid.
+static gpt_partition_t* find_by_type(const gpt_device_t* gpt, const uint8_t type_guid[GPT_GUID_LEN]) {
+    for(size_t i = 0; i < PARTITIONS_COUNT; ++i) {
+        gpt_partition_t* p = gpt->partitions[i];
+        if (p == NULL) {
+            continue;
+        }
+        if (!memcmp(p->type, &type_guid[0], GPT_GUID_LEN)) {
+            return p;
+        }
+    }
+    return NULL;
+}
+
+// find_by_type_and_name finds the first partition matching the given type guid and name.
 static gpt_partition_t* find_by_type_and_name(const gpt_device_t* gpt, const uint8_t type_guid[GPT_GUID_LEN], const char *name) {
     for(size_t i = 0; i < PARTITIONS_COUNT; ++i) {
         gpt_partition_t* p = gpt->partitions[i];
@@ -166,9 +180,6 @@ bool is_ready_to_pave(const gpt_device_t* gpt, const block_info_t* blk_info,
             continue;
         }
         if (!memcmp(part->type, fvm_guid, GPT_GUID_LEN)) {
-            if (!part_name_eql(part, "FVM")) {
-                continue;
-            }
             if (!part_size_gte(part, MIN_FVM_SIZE, blk_info->block_size)) {
                 continue;
             }
@@ -260,7 +271,7 @@ zx_status_t config_cros_for_fuchsia(gpt_device_t* gpt,
     if ((p = find_by_type_and_name(gpt, kern_guid, "ZIRCON-R")) != NULL) {
         gpt_partition_remove(gpt, p->guid);
     }
-    if ((p = find_by_type_and_name(gpt, fvm_guid, "FVM")) != NULL) {
+    if ((p = find_by_type(gpt, fvm_guid)) != NULL) {
         gpt_partition_remove(gpt, p->guid);
     }
     if ((p = find_by_type_and_name(gpt, syscfg_guid, "SYSCFG")) != NULL) {
@@ -360,7 +371,7 @@ zx_status_t config_cros_for_fuchsia(gpt_device_t* gpt,
 
     // The created FVM partition will fill the available free space.
     if ((status = create_gpt_entry(gpt, hole_start, (hole_end - hole_start),
-                        fvm_guid, "FVM")) != ZX_OK) {
+                        fvm_guid, "fvm")) != ZX_OK) {
         printf("cros-disk-setup: Error creating FVM\n");
         return status;
     }
