@@ -11,7 +11,7 @@ $ParanoidMode CheckPresence
 infra/tools/luci/vpython/${platform} git_revision:b9c4670197dcefd8762d6e509302acd3efc6e303
 
 # LUCI editor
-infra/tools/luci/led/${platform} git_revision:4fdf96945cb39cddf6e37f11c07acb9877557408
+infra/tools/luci/led/${platform} git_revision:f8fd394bd671f4cf4da8064a1ee074018c275d15
 
 # LogDog CLI client
 infra/tools/luci/logdog/logdog/${platform} git_revision:cf9d281c2ff478928ff11dfa4995d09a97046990
