@@ -96,6 +96,90 @@ start of symbolized stack:
 end of symbolized stack
 ```
 
+For crashes in layers above Zircon run:
+
+```
+bash$ cat backtrace.out | fx symbolize
+[00030.640] 01103.01117> <== fatal exception: process root_presenter[8202] thread initial-thread[8220]
+[00030.640] 01103.01117> <== fatal page fault, PC at 0xa45895d5ca18
+[00030.640] 01103.01117>  x0                   0 x1      0xa45895df8778 x2                 0x6 x3                 0x6
+[00030.640] 01103.01117>  x4       0xe285ef2e9e8 x5                 0x4 x6           0xe285ef6 x7  0xffffffffffffffff
+[00030.640] 01103.01117>  x8       0xe285ef241d8 x9                   0 x10                0xf x11                  0
+[00030.640] 01103.01117>  x12                0x1 x13                  0 x14                  0 x15                  0
+[00030.640] 01103.01117>  x16     0x74a3a860f300 x17     0x9ec1d6974260 x18                  0 x19     0x7ed835906f20
+[00030.640] 01103.01117>  x20      0xe285ef4b210 x21      0xe285ef4b230 x22     0x7ed835906ec0 x23               0x18
+[00030.640] 01103.01117>  x24 0xab3f092f31fd126d x25                0x1 x26     0x7ed835907748 x27     0x7ed835907750
+[00030.640] 01103.01117>  x28     0x192babebb4b0 x29     0x25638ad21c60 lr      0xa45895d5ca08 sp      0x25638ad21bf0
+[00030.640] 01103.01117>  pc      0xa45895d5ca18 psr         0x60000000
+[00030.640] 01103.01117>  far               0x28 esr         0x92000004
+[00030.640] 01103.01117> bottom of user stack:
+[00030.640] 01103.01117> 0x000025638ad21bf0: 35906ed8 00007ed8 00000002 00000000 |.n.5.~..........|
+[00030.640] 01103.01117> 0x000025638ad21c00: 35906ef8 00007ed8 359072c8 00007ed8 |.n.5.~...r.5.~..|
+[00030.640] 01103.01117> 0x000025638ad21c10: 35908a28 00007ed8 359088d8 00007ed8 |(..5.~.....5.~..|
+[00030.640] 01103.01117> 0x000025638ad21c20: 31fd126d ab3f092f 359088e0 00007ed8 |m..1/.?....5.~..|
+[00030.640] 01103.01117> 0x000025638ad21c30: 35907758 00007ed8 31fd126d ab3f092f |Xw.5.~..m..1/.?.|
+[00030.640] 01103.01117> 0x000025638ad21c40: 35907760 00007ed8 abebb4b0 0000192b |`w.5.~......+...|
+[00030.641] 01103.01117> 0x000025638ad21c50: 5ef4b210 00000e28 5ef4b210 00000e28 |...^(......^(...|
+[00030.641] 01103.01117> 0x000025638ad21c60: 8ad21ca0 00002563 95d5c564 0000a458 |....c%..d...X...|
+[00030.641] 01103.01117> 0x000025638ad21c70: abebb4b0 0000192b 00000005 00000000 |....+...........|
+[00030.641] 01103.01117> 0x000025638ad21c80: 5ef4b000 00000e28 3590ae00 00007ed8 |...^(......5.~..|
+[00030.641] 01103.01117> 0x000025638ad21c90: 5ef4b210 00000e28 5ef4b000 00000e28 |...^(......^(...|
+[00030.641] 01103.01117> 0x000025638ad21ca0: 8ad21d00 00002563 95d5ddec 0000a458 |....c%......X...|
+[00030.641] 01103.01117> 0x000025638ad21cb0: 31fd126d ab3f092f 95d5c50c 0000a458 |m..1/.?.....X...|
+[00030.641] 01103.01117> 0x000025638ad21cc0: 35908a30 00007ed8 abebb4b0 0000192b |0..5.~......+...|
+[00030.641] 01103.01117> 0x000025638ad21cd0: 359088f0 00007ed8 00000005 00000000 |...5.~..........|
+[00030.641] 01103.01117> 0x000025638ad21ce0: 5ef4b000 00000e28 3590ae00 00007ed8 |...^(......5.~..|
+[00030.641] 01103.01117> arch: aarch64
+[00030.643] 01103.01117> dso: id=41ae135e613212ff base=0xe4fc1332c000 name=libunwind.so.1
+[00030.643] 01103.01117> dso: id=9b65658a025840b080547ed536361c575fe8ea16 base=0xb2ac96fd6000 name=libsyslog.so
+[00030.643] 01103.01117> dso: id=7e889d06ed38d270affccd2d9a879ac57ac7cd78 base=0xaee389f7b000 name=libasync-default.so
+[00030.643] 01103.01117> dso: id=b5bdbbd9880b788b base=0xa45895cd5000 name=app:root_presenter
+[00030.643] 01103.01117> dso: id=cb93b7e61e1cc5c4335dbd0492cac7ee66069543 base=0x9ec1d6904000 name=libc.so
+[00030.643] 01103.01117> dso: id=0018089642a1bd2af1f4bb7b28197066fceedb74 base=0x8f7930146000 name=<vDSO>
+[00030.643] 01103.01117> dso: id=b885824ac057347f base=0x8e2867628000 name=libc++abi.so.1
+[00030.643] 01103.01117> dso: id=d61017d378402f6d base=0x74a3a852f000 name=libc++.so.2
+[00030.643] 01103.01117> dso: id=3f1cc12a48e0ce54b3774ffceb3e3523e2db1095 base=0x724b49aeb000 name=libfdio.so
+[00030.643] 01103.01117> dso: id=44bcee2c9f650c8641c5e23b76676c715e0eb235 base=0x50bdfd1b7000 name=libhid.so
+[00030.643] 01103.01117> dso: id=fde08f43b850c7e7a51d12120d24a09d6fce85a5 base=0x4e1e21a1b000 name=libtrace-engine.so
+[00030.643] 01103.01117> dso: id=251b7a82e8c01430 base=0x474a6551c000 name=libfxl.so
+[00030.643] 01103.01117> dso: id=9202c12ca075a354 base=0x3d09f44b1000 name=libfsl.so
+[00030.643] 01103.01117> dso: id=546a7506633a04ed base=0x2a4212b36000 name=libfxl_logging.so
+[00030.643] 01103.01117> bt#01: pc 0xa45895d5ca18 sp 0x25638ad21bf0 (app:root_presenter,0x87a18)
+[00030.644] 01103.01117> bt#02: pc 0xa45895d5c564 sp 0x25638ad21c70 (app:root_presenter,0x87564)
+[00030.644] 01103.01117> bt#03: pc 0xa45895d5ddec sp 0x25638ad21cb0 (app:root_presenter,0x88dec)
+[00030.644] 01103.01117> bt#04: pc 0xa45895d5dcec sp 0x25638ad21d10 (app:root_presenter,0x88cec)
+[00030.645] 01103.01117> bt#05: pc 0xa45895d63004 sp 0x25638ad21d70 (app:root_presenter,0x8e004)
+[00030.645] 01103.01117> bt#06: pc 0xa45895d62f64 sp 0x25638ad21dc0 (app:root_presenter,0x8df64)
+[00030.645] 01103.01117> bt#07: pc 0xa45895dabb40 sp 0x25638ad21df0 (app:root_presenter,0xd6b40)
+[00030.646] 01103.01117> bt#08: pc 0xa45895dab6e4 sp 0x25638ad21e20 (app:root_presenter,0xd66e4)
+[00030.646] 01103.01117> bt#09: pc 0xa45895ddc0fc sp 0x25638ad21ea0 (app:root_presenter,0x1070fc)
+[00030.646] 01103.01117> bt#10: pc 0xa45895ddc2a4 sp 0x25638ad21ed0 (app:root_presenter,0x1072a4)
+[00030.647] 01103.01117> bt#11: pc 0xa45895ddc19c sp 0x25638ad21f20 (app:root_presenter,0x10719c)
+[00030.647] 01103.01117> bt#12: pc 0xa45895d9550c sp 0x25638ad21f50 (app:root_presenter,0xc050c)
+[00030.647] 01103.01117> bt#13: pc 0xa45895d4ef40 sp 0x25638ad21f90 (app:root_presenter,0x79f40)
+[00030.647] 01103.01117> bt#14: pc 0x9ec1d691e0e4 sp 0x25638ad21fe0 (libc.so,0x1a0e4)
+[00030.648] 01103.01117> bt#15: pc 0x9ec1d691e2f0 sp 0x25638ad22000 (libc.so,0x1a2f0)
+[00030.648] 01103.01117> bt#16: end
+
+start of symbolized stack:
+#01: mozart::HidDecoder::ParseProtocol(mozart::HidDecoder::Protocol*) at ../../out/arm64/../../garnet/bin/ui/input_reader/hid_decoder.cc:202
+#02: mozart::HidDecoder::Init() at ../../out/arm64/../../garnet/bin/ui/input_reader/hid_decoder.cc:75
+#03: mozart::InputInterpreter::Initialize() at ../../out/arm64/../../garnet/bin/ui/input_reader/input_interpreter.cc:81
+#04: mozart::InputInterpreter::Open(int, std::__2::basic_string<char, std::__2::char_traits<char>, std::__2::allocator<char> >, fuchsia::ui::input::InputDeviceRegistry*) at ../../out/arm64/../../garnet/bin/ui/input_reader/input_interpreter.cc:65
+#05: operator() at ../../out/arm64/../../garnet/bin/ui/input_reader/input_reader.cc:35
+#06: fit::internal::target<mozart::InputReader::Start()::$_0, true, void, int, std::__2::basic_string<char, std::__2::char_traits<char>, std::__2::allocator<char> > >::invoke(void*, int, std::__2::basic_string<char, std::__2::char_traits<char>, std::__2::allocator<char> >) at ../../out/arm64/../../zircon/system/ulib/fit/include/lib/fit/function_internal.h:75
+#07: fit::internal::function<16ul, false, void (int, std::__2::basic_string<char, std::__2::char_traits<char>, std::__2::allocator<char> >)>::operator()(int, std::__2::basic_string<char, std::__2::char_traits<char>, std::__2::allocator<char> >) const at ../../out/arm64/../../zircon/system/ulib/fit/include/lib/fit/function_internal.h:182
+#08: fsl::DeviceWatcher::Handler(async_dispatcher*, async::WaitBase*, int, zx_packet_signal const*) at ../../out/arm64/../../garnet/public/lib/fsl/io/device_watcher.cc:86
+#09: async_loop_dispatch_wait at ../../out/arm64/../../zircon/system/ulib/async-loop/loop.c:299
+#10: async_loop_run_once at ../../out/arm64/../../zircon/system/ulib/async-loop/loop.c:256
+#11: async_loop_run at ../../out/arm64/../../zircon/system/ulib/async-loop/loop.c:213
+#12: async::Loop::Run(zx::basic_time<0u>, bool) at ../../out/arm64/../../zircon/system/ulib/async-loop/loop_wrapper.cpp:25
+#13: main at ../../out/arm64/../../garnet/bin/ui/root_presenter/main.cc:22
+#14: start_main at ../../zircon/third_party/ulib/musl/src/env/__libc_start_main.c:49
+#15: __libc_start_main at ../../zircon/third_party/ulib/musl/src/env/__libc_start_main.c:170
+end of symbolized stack
+```
+
 Any easy way to capture this output from the target is by running
 the `loglistener` program on your development host.
 
