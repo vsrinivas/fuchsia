@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <hid/acer12.h>
 #include <hid/egalax.h>
+#include <hid/eyoyo.h>
 #include <hid/hid.h>
 #include <hid/paradise.h>
 #include <hid/samsung.h>
@@ -321,6 +322,27 @@ bool InputInterpreter::Initialize() {
 
     sensor_report_ = fuchsia::ui::input::InputReport::New();
     sensor_report_->sensor = fuchsia::ui::input::SensorReport::New();
+  } else if (protocol == HidDecoder::Protocol::EyoyoTouch) {
+    FXL_VLOG(2) << "Device " << name() << " has touchscreen";
+    has_touchscreen_ = true;
+    touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
+
+    touchscreen_descriptor_->x.range.min = 0;
+    touchscreen_descriptor_->x.range.max = EYOYO_X_MAX;
+    touchscreen_descriptor_->x.resolution = 1;
+
+    touchscreen_descriptor_->y.range.min = 0;
+    touchscreen_descriptor_->y.range.max = EYOYO_Y_MAX;
+    touchscreen_descriptor_->y.resolution = 1;
+
+    // TODO(jpoichet) do not hardcode this
+    touchscreen_descriptor_->max_finger_id = 255;
+
+    touchscreen_report_ = fuchsia::ui::input::InputReport::New();
+    touchscreen_report_->touchscreen =
+        fuchsia::ui::input::TouchscreenReport::New();
+
+    touch_device_type_ = TouchDeviceType::EYOYO;
   } else if (protocol == HidDecoder::Protocol::LightSensor) {
     FXL_VLOG(2) << "Device " << name() << " has an ambient light sensor";
     sensor_device_type_ = SensorDeviceType::AMBIENT_LIGHT;
@@ -334,6 +356,27 @@ bool InputInterpreter::Initialize() {
 
     sensor_report_ = fuchsia::ui::input::InputReport::New();
     sensor_report_->sensor = fuchsia::ui::input::SensorReport::New();
+  } else if (protocol == HidDecoder::Protocol::EyoyoTouch) {
+    FXL_VLOG(2) << "Device " << name() << " has touchscreen";
+    has_touchscreen_ = true;
+    touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
+
+    touchscreen_descriptor_->x.range.min = 0;
+    touchscreen_descriptor_->x.range.max = EYOYO_X_MAX;
+    touchscreen_descriptor_->x.resolution = 1;
+
+    touchscreen_descriptor_->y.range.min = 0;
+    touchscreen_descriptor_->y.range.max = EYOYO_Y_MAX;
+    touchscreen_descriptor_->y.resolution = 1;
+
+    // TODO(jpoichet) do not hardcode this
+    touchscreen_descriptor_->max_finger_id = 255;
+
+    touchscreen_report_ = fuchsia::ui::input::InputReport::New();
+    touchscreen_report_->touchscreen =
+        fuchsia::ui::input::TouchscreenReport::New();
+
+    touch_device_type_ = TouchDeviceType::EYOYO;
   } else {
     FXL_VLOG(2) << "Device " << name() << " has unsupported HID device";
     return false;
@@ -506,6 +549,16 @@ bool InputInterpreter::Read(bool discard) {
     case TouchDeviceType::EGALAX:
       if (report[0] == EGALAX_RPT_ID_TOUCH) {
         if (ParseEGalaxTouchscreenReport(report.data(), rc)) {
+          if (!discard) {
+            input_device_->DispatchReport(CloneReport(touchscreen_report_));
+          }
+        }
+      }
+      break;
+
+    case TouchDeviceType::EYOYO:
+      if (report[0] == EYOYO_RPT_ID_TOUCH) {
+        if (ParseEyoyoTouchscreenReport(report.data(), rc)) {
           if (!discard) {
             input_device_->DispatchReport(CloneReport(touchscreen_report_));
           }
@@ -840,5 +893,36 @@ bool InputInterpreter::ParseAmbientLightSensorReport() {
   return true;
 }
 
+
+bool InputInterpreter::ParseEyoyoTouchscreenReport(uint8_t* r, size_t len) {
+  if (len != sizeof(eyoyo_touch_t)) {
+    return false;
+  }
+
+  const auto& report = *(reinterpret_cast<eyoyo_touch_t*>(r));
+  touchscreen_report_->event_time = InputEventTimestampNow();
+
+  size_t index = 0;
+  touchscreen_report_->touchscreen->touches.resize(index);
+
+  for (size_t i = 0; i < countof(report.fingers); ++i) {
+    auto fid = report.fingers[i].finger_id;
+
+    if (!eyoyo_finger_id_tswitch(fid))
+      continue;
+
+    fuchsia::ui::input::Touch touch;
+    touch.finger_id = eyoyo_finger_id_contact(fid);
+    touch.x = report.fingers[i].x;
+    touch.y = report.fingers[i].y;
+    // Panel does not support touch width/height.
+    touch.width = 5;
+    touch.height = 5;
+    touchscreen_report_->touchscreen->touches.resize(index + 1);
+    touchscreen_report_->touchscreen->touches->at(index++) = std::move(touch);
+  }
+
+  return true;
+}
 
 }  // namespace mozart

@@ -8,6 +8,7 @@
 
 #include <hid/acer12.h>
 #include <hid/egalax.h>
+#include <hid/eyoyo.h>
 #include <hid/paradise.h>
 #include <hid/samsung.h>
 
@@ -172,6 +173,11 @@ bool HidDecoder::ParseProtocol(Protocol* protocol) {
   }
   if (is_paradise_sensor_report_desc(desc.data(), desc.size())) {
     *protocol = Protocol::ParadiseSensor;
+    return true;
+  }
+  if (is_eyoyo_touch_report_desc(desc.data(), desc.size())) {
+    setup_eyoyo_touch(fd_);
+    *protocol = Protocol::EyoyoTouch;
     return true;
   }
 
