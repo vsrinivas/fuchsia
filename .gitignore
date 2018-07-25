@@ -29,4 +29,3 @@ tools/cipd.gni
 *.iml
 **/Cargo.lock
 **/Cargo.toml
-drivers/video/amlogic-decoder/firmware/
