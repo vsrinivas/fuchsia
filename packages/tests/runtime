@@ -6,6 +6,8 @@
     "packages": [
         "//garnet/bin/appmgr:appmgr_unittests",
         "//garnet/bin/appmgr:appmgr_integrationtests",
+        "//garnet/bin/appmgr/integration_tests/mock_runner:appmgr_mock_runner",
+        "//garnet/bin/appmgr/integration_tests/mock_runner:fake_component_for_runner",
         "//garnet/bin/glob"
     ]
 }

@@ -1,0 +1,6 @@
+{
+  "program": {
+    "binary": "bin/app"
+  },
+  "runner": "appmgr_mock_runner"
+}

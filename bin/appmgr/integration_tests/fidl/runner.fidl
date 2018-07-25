@@ -1,0 +1,29 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library test.component.mockrunner;
+
+struct ComponentInfo {
+  uint64 unique_id;
+  string url;
+};
+
+// TODO: support more function
+// - publish service to component to test exported directory
+interface MockRunner {
+  1: Kill();
+  2: KillComponent(uint64 id, uint64 errorcode);
+
+  101: -> OnComponentCreated(ComponentInfo info);
+  102: -> OnComponentKilled(uint64 id);
+};
+
+// This interface will help mock runners register themselves so that tests can
+// inspect and control them.
+//
+// Mock runners should register to this service when started.
+[Discoverable]
+interface MockRunnerRegistry {
+    1: Register(MockRunner runner);
+};

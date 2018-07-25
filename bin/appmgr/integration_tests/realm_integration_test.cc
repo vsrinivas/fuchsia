@@ -18,42 +18,51 @@
 #include <lib/fdio/util.h>
 
 #include "garnet/bin/appmgr/util.h"
-#include "gtest/gtest.h"
 #include "lib/component/cpp/environment_services.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/gtest/real_loop_fixture.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
 
 namespace component {
 namespace {
 
 using fuchsia::sys::TerminationReason;
 
-class RealmTest : public component::testing::TestWithEnvironment {
+using testing::CloneFileDescriptor;
+using testing::EnclosingEnvironment;
+using testing::TestWithEnvironment;
+
+class RealmTest : public TestWithEnvironment {
  protected:
-  RealmTest() : outf_(std::tmpfile()) {}
+  void SetUp() override {
+    TestWithEnvironment::SetUp();
+    std::string tmp_file;
+    ASSERT_TRUE(tmp_dir_.NewTempFile(&tmp_file));
+    outf_ = std::fopen(tmp_file.c_str(), "w");
+  }
 
   fuchsia::sys::LaunchInfo CreateLaunchInfo(const std::string& url) {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = url;
     int out_fd = fileno(outf_);
 
-    launch_info.out = component::testing::CloneFileDescriptor(out_fd);
+    launch_info.out = CloneFileDescriptor(out_fd);
     return launch_info;
   }
 
   fuchsia::sys::ComponentControllerPtr RunComponent(
-      component::testing::EnclosingEnvironment* enclosing_environment,
-      const std::string& url) {
+      EnclosingEnvironment* enclosing_environment, const std::string& url) {
     return enclosing_environment->CreateComponent(CreateLaunchInfo(url));
   }
 
  private:
-  std::FILE* outf_;
+  files::ScopedTempDir tmp_dir_;
+  FILE* outf_;
 };
 
 const char kRealm[] = "realmintegrationtest";
+const auto kTimeout = zx::sec(5);
 
 // This test exercises the fact that two components should be in separate jobs,
 // and thus when one component controller kills its job due to a .Kill() call
@@ -77,20 +86,48 @@ TEST_F(RealmTest, CreateTwoKillOne) {
   echo->EchoString(message,
                    [&](::fidl::StringPtr retval) { ret_msg = retval; });
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return std::string(ret_msg) == message; }, zx::sec(5)));
+      [&] { return std::string(ret_msg) == message; }, kTimeout));
 
   // Kill one of the two components, make sure it's exited via Wait
   bool wait = false;
   controller1->Wait([&wait](int64_t errcode) { wait = true; });
   controller1->Kill();
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, zx::sec(5)));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, kTimeout));
 
   // Make sure the second component is still running.
   ret_msg = "";
   echo->EchoString(message,
                    [&](::fidl::StringPtr retval) { ret_msg = retval; });
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return std::string(ret_msg) == message; }, zx::sec(5)));
+      [&] { return std::string(ret_msg) == message; }, kTimeout));
+}
+
+TEST_F(RealmTest, KillRealmKillsComponent) {
+  auto enclosing_environment = CreateNewEnclosingEnvironment(kRealm);
+  ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment.get()));
+  ASSERT_EQ(ZX_OK, enclosing_environment->AddServiceWithLaunchInfo(
+                       CreateLaunchInfo("echo2_server_cpp"),
+                       fidl::examples::echo::Echo::Name_));
+
+  // make sure echo service is running.
+  fidl::examples::echo::EchoPtr echo;
+  enclosing_environment->ConnectToService(echo.NewRequest());
+  const std::string message = "CreateTwoKillOne";
+  fidl::StringPtr ret_msg = "";
+  echo->EchoString(message,
+                   [&](::fidl::StringPtr retval) { ret_msg = retval; });
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&] { return std::string(ret_msg) == message; }, kTimeout));
+
+  bool killed = false;
+  echo.set_error_handler([&] { killed = true; });
+  enclosing_environment->Kill();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&] { return enclosing_environment->is_running(); }, kTimeout));
+  // send a msg, without that error handler won't be called.
+  echo->EchoString(message,
+                   [&](::fidl::StringPtr retval) { ret_msg = retval; });
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return killed; }, kTimeout));
 }
 
 class RealmFakeLoaderTest : public RealmTest, public fuchsia::sys::Loader {
@@ -115,13 +152,12 @@ class RealmFakeLoaderTest : public RealmTest, public fuchsia::sys::Loader {
 
   bool WaitForComponentLoad() {
     return RunLoopWithTimeoutOrUntil([this] { return !component_url_.empty(); },
-                                     zx::sec(10));
+                                     kTimeout);
   }
 
   const std::string& component_url() const { return component_url_; }
 
-  std::unique_ptr<component::testing::EnclosingEnvironment>
-      enclosing_environment_;
+  std::unique_ptr<EnclosingEnvironment> enclosing_environment_;
 
  private:
   fbl::RefPtr<fs::Service> loader_service_;
@@ -151,7 +187,7 @@ TEST_F(RealmFakeLoaderTest, CreateInvalidComponent) {
     reason = r;
   };
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return return_code < INT64_MAX; },
-                                        zx::sec(5)));
+                                        kTimeout));
   EXPECT_EQ(TerminationReason::URL_INVALID, reason);
   EXPECT_EQ(-1, return_code);
 }
