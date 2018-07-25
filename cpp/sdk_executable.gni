@@ -29,25 +29,28 @@ template("sdk_executable") {
     output_name = invoker.output_name
   }
 
-  sdk_atom("${target_name}_sdk") {
-    domain = "exe"
-    name = output_name
+  if (!is_fuchsia) {
+    sdk_atom("${target_name}_sdk") {
+      domain = "exe"
+      name = output_name
+      id = "sdk://tools/$output_name"
 
-    category = invoker.category
+      category = invoker.category
 
-    if (is_fuchsia) {
-      tags = [ "arch:target" ]
-    } else {
-      tags = [ "arch:host" ]
+      if (is_fuchsia) {
+        tags = [ "arch:target" ]
+      } else {
+        tags = [ "arch:host" ]
+      }
+
+      files = [
+        {
+          source = "$root_out_dir/$output_name"
+          dest = output_name
+        },
+      ]
+
+      non_sdk_deps = [ ":$main_target_name" ]
     }
-
-    files = [
-      {
-        source = "$root_out_dir/$output_name"
-        dest = output_name
-      },
-    ]
-
-    non_sdk_deps = [ ":$main_target_name" ]
   }
 }

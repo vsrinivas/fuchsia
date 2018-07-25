@@ -132,18 +132,16 @@ template("go_build") {
     ]
   }
 
-  if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
+  if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded" &&
+      !is_fuchsia) {
     sdk_atom("${target_name}_sdk") {
       domain = "exe"
       name = output_name
+      id = "sdk://tools/$output_name"
 
       category = invoker.sdk_category
 
-      if (is_fuchsia) {
-        tags = [ "arch:target" ]
-      } else {
-        tags = [ "arch:host" ]
-      }
+      tags = [ "arch:host" ]
 
       files = [
         {

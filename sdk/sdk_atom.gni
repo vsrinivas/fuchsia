@@ -25,11 +25,10 @@
 #
 #     NOTE: Exactly one of `name` or `name_file` must be set.
 #
-#   id (optional)
+#   id
 #     Identifier of this element within SDKs.
 #     The identifier should represent the canonical base path of the element
 #     within SDKs according to the standard layout (https://fuchsia.googlesource.com/docs/+/master/development/sdk/layout.md).
-#     TODO(DX-340): make this attribute required.
 #     For an element at $ROOT/pkg/foo, the id should be "sdk://pkg/foo".
 #
 #   category
@@ -135,9 +134,9 @@ template("sdk_atom") {
   assert(defined(invoker.category), "Must define an SDK category")
   category = invoker.category
 
-  if (defined(invoker.id)) {
-    not_needed(invoker, ["id"])
-  }
+  assert(defined(invoker.id), "Must define an SDK ID")
+  not_needed(invoker, ["id"])
+
   if (defined(invoker.meta)) {
     not_needed(invoker, ["meta"])
   }

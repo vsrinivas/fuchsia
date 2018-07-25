@@ -1161,6 +1161,7 @@ foreach(image, images) {
     sdk_atom("${image.sdk}_sdk") {
       domain = "image"
       name = image.sdk
+      id = "sdk://images/${image.sdk}"
       category = "partner"
       testonly = true
 
@@ -1190,6 +1191,7 @@ foreach(image, images) {
 sdk_atom("zircon.bin_sdk") {
   domain = "image"
   name = "zircon.bin"
+  id = "sdk://images/zircon.bin"
   category = "partner"
   testonly = true
 
