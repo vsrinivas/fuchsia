@@ -10,6 +10,7 @@ extern crate fidl_fuchsia_ui_gfx;
 extern crate fidl_fuchsia_ui_scenic;
 extern crate fuchsia_zircon;
 extern crate parking_lot;
+extern crate shared_buffer;
 
 mod cmd;
 
@@ -20,6 +21,7 @@ use fidl_fuchsia_ui_gfx::{CircleArgs, ColorRgba, EntityNodeArgs, ImageArgs, Impo
 use fidl_fuchsia_ui_scenic::{Command, SessionProxy};
 use fuchsia_zircon::{Event, EventPair, HandleBased, Rights, Status, Vmar, VmarFlags, Vmo};
 use parking_lot::Mutex;
+use shared_buffer::SharedBuffer;
 use std::collections::VecDeque;
 use std::mem;
 use std::ops::Deref;
@@ -82,7 +84,7 @@ impl Session {
     }
 }
 
-struct Resource {
+pub struct Resource {
     session: SessionPtr,
     id: u32,
 }
@@ -111,6 +113,10 @@ impl Resource {
     fn enqueue(&self, command: Command) {
         let mut session = self.session.lock();
         session.enqueue(command);
+    }
+
+    pub fn set_event_mask(&self, event_mask: u32) {
+        self.enqueue(cmd::set_event_mask(self.id, event_mask))
     }
 }
 
@@ -281,6 +287,10 @@ impl Node {
         self.resource.id
     }
 
+    pub fn resource(&self) -> &Resource {
+        &self.resource
+    }
+
     pub fn set_translation(&self, x: f32, y: f32, z: f32) {
         self.resource
             .enqueue(cmd::set_translation(self.id(), x, y, z))
@@ -421,6 +431,10 @@ impl MemoryMapping {
         let addr = Vmar::root_self().map(0, vmo, offset, len, flags)?;
         Ok(MemoryMapping { addr, len })
     }
+
+    pub fn buffer(&self) -> SharedBuffer {
+        unsafe { SharedBuffer::new(self.addr as *mut u8, self.len) }
+    }
 }
 
 impl Drop for MemoryMapping {
@@ -452,15 +466,27 @@ impl HostMemory {
 
 pub struct HostImage {
     image: Image,
-    _mapping: Arc<MemoryMapping>,
+    mapping: Arc<MemoryMapping>,
 }
 
 impl HostImage {
     pub fn new(memory: &HostMemory, memory_offset: u32, info: ImageInfo) -> HostImage {
         HostImage {
             image: Image::new(&memory.memory, memory_offset, info),
-            _mapping: memory.mapping.clone(),
+            mapping: memory.mapping.clone(),
         }
+    }
+
+    pub fn buffer(&self) -> SharedBuffer {
+        self.mapping.buffer()
+    }
+}
+
+impl Deref for HostImage {
+    type Target = Image;
+
+    fn deref(&self) -> &Image {
+        &self.image
     }
 }
 
@@ -483,6 +509,12 @@ pub struct HostImageGuard<'a> {
     image: Option<HostImage>,
 }
 
+impl<'a> HostImageGuard<'a> {
+    pub fn image(&self) -> &HostImage {
+        self.image.as_ref().unwrap()
+    }
+}
+
 impl<'a> Drop for HostImageGuard<'a> {
     fn drop(&mut self) {
         self.cycler
@@ -491,25 +523,31 @@ impl<'a> Drop for HostImageGuard<'a> {
 }
 
 pub struct HostImageCycler {
-    entity: EntityNode,
-    _content_node: ShapeNode,
+    node: EntityNode,
+    content_node: ShapeNode,
     content_material: Material,
+    content_shape: Option<Rectangle>,
     pool: VecDeque<(HostMemory, HostImage)>,
 }
 
 impl HostImageCycler {
     pub fn new(session: SessionPtr) -> HostImageCycler {
-        let entity = EntityNode::new(session.clone());
+        let node = EntityNode::new(session.clone());
         let content_node = ShapeNode::new(session.clone());
         let content_material = Material::new(session);
         content_node.set_material(&content_material);
-        entity.add_child(&content_node);
+        node.add_child(&content_node);
         HostImageCycler {
-            entity,
-            _content_node: content_node,
+            node,
+            content_node,
             content_material,
+            content_shape: None,
             pool: VecDeque::with_capacity(2),
         }
+    }
+
+    pub fn node(&self) -> &EntityNode {
+        &self.node
     }
 
     pub fn acquire<'a>(&'a mut self, info: ImageInfo) -> Result<HostImageGuard<'a>, Status> {
@@ -524,7 +562,7 @@ impl HostImageCycler {
         match self.pool.pop_front() {
             None => {
                 let memory =
-                    HostMemory::allocate(self.entity.resource.session.clone(), desired_size)?;
+                    HostMemory::allocate(self.node.resource.session.clone(), desired_size)?;
                 let image = HostImage::new(&memory, 0, info);
                 Ok(HostImageGuard {
                     cycler: self,
@@ -533,7 +571,7 @@ impl HostImageCycler {
                 })
             }
             Some((memory, image)) => {
-                let i = if image.image.info == info {
+                let i = if image.info == info {
                     image
                 } else {
                     HostImage::new(&memory, 0, info)
@@ -548,9 +586,14 @@ impl HostImageCycler {
     }
 
     fn release(&mut self, memory: HostMemory, image: HostImage) {
-        self.content_material.set_texture(&image.image);
-        // TODO(abarth): Call set_shape on self.content_node once we have
-        // Rectangle.
+        self.content_material.set_texture(&image);
+        let rectangle = Rectangle::new(
+            self.node.resource.session.clone(),
+            image.info.width as f32,
+            image.info.height as f32,
+        );
+        self.content_node.set_shape(&rectangle);
+        self.content_shape = Some(rectangle);
         self.pool.push_back((memory, image));
     }
 }

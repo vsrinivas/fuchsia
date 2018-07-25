@@ -11,6 +11,8 @@ rustc_binary("bin") {
   with_lto = "fat"
 
   deps = [
+    "//garnet/public/fidl/fuchsia.images:fuchsia.images-rustc",
+    "//garnet/public/fidl/fuchsia.math:fuchsia.math-rustc",
     "//garnet/public/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
     "//garnet/public/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//garnet/public/fidl/fuchsia.ui.viewsv1token:fuchsia.ui.viewsv1token-rustc",

@@ -8,8 +8,8 @@ use self::fidl_fuchsia_ui_gfx::Command as GfxCommand;
 use self::fidl_fuchsia_ui_gfx::{AddChildCmd, ColorRgba, ColorRgbaValue, CreateResourceCmd,
                                 DetachCmd, ImportResourceCmd, ImportSpec, Quaternion,
                                 QuaternionValue, ReleaseResourceCmd, ResourceArgs, SetColorCmd,
-                                SetMaterialCmd, SetRotationCmd, SetScaleCmd, SetShapeCmd,
-                                SetTextureCmd, SetTranslationCmd, Vec3, Vector3Value};
+                                SetEventMaskCmd, SetMaterialCmd, SetRotationCmd, SetScaleCmd,
+                                SetShapeCmd, SetTextureCmd, SetTranslationCmd, Vec3, Vector3Value};
 use fidl_fuchsia_ui_scenic::Command;
 use fuchsia_zircon::EventPair;
 
@@ -26,6 +26,11 @@ pub fn import_resource(id: u32, token: EventPair, spec: ImportSpec) -> Command {
 pub fn release_resource(id: u32) -> Command {
     let cmd = ReleaseResourceCmd { id };
     Command::Gfx(GfxCommand::ReleaseResource(cmd))
+}
+
+pub fn set_event_mask(id: u32, event_mask: u32) -> Command {
+    let cmd = SetEventMaskCmd { id, event_mask };
+    Command::Gfx(GfxCommand::SetEventMask(cmd))
 }
 
 pub fn set_color(material_id: u32, value: ColorRgba) -> Command {
