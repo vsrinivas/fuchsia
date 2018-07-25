@@ -1506,10 +1506,6 @@ void OmxCodecRunner::RecycleOutputPacket(
 void OmxCodecRunner::QueueInputFormatDetails(
     uint64_t stream_lifetime_ordinal,
     fuchsia::mediacodec::CodecFormatDetails format_details) {
-  assert(false &&
-         "QueueInputFormatDetails() not implemented for omx_codec_runner yet");
-
-  // TODO(dustingreen): Here's some of what we'll do though:
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     EnsureFutureStreamSeenLocked(stream_lifetime_ordinal);
@@ -1525,11 +1521,8 @@ void OmxCodecRunner::QueueInputFormatDetails(
 void OmxCodecRunner::QueueInputFormatDetails_StreamControl(
     uint64_t stream_lifetime_ordinal,
     fuchsia::mediacodec::CodecFormatDetails format_details) {
-  // Need to finish the implementation of this method - it's not super far from
-  // done, but need to do another pass over it, as it may be missing things.
-  assert(false && "not implemented");
+  assert(thrd_current() == stream_control_thread_);
 
-  // TODO(dustingreen): decide if we need this; if not, remove...
   std::unique_lock<std::mutex> lock(lock_);
   CheckStreamLifetimeOrdinalLocked(stream_lifetime_ordinal);
   assert(stream_lifetime_ordinal >= stream_lifetime_ordinal_);

@@ -72,6 +72,10 @@ class CodecClient {
   const CodecBuffer& GetInputBufferByIndex(uint32_t packet_index);
   const CodecBuffer& GetOutputBufferByIndex(uint32_t packet_index);
 
+  void QueueInputFormatDetails(
+      uint64_t stream_lifetime_ordinal,
+      fuchsia::mediacodec::CodecFormatDetails input_format_details);
+
   // Queue an input packet to the codec.
   void QueueInputPacket(
       std::unique_ptr<fuchsia::mediacodec::CodecPacket> packet);
@@ -143,8 +147,8 @@ class CodecClient {
   void OnOutputEndOfStream(uint64_t stream_lifetime_ordinal,
                            bool error_detected_before);
   std::mutex lock_;
-  async::Loop* loop_ = nullptr;  // must override
-  async_dispatcher_t* dispatcher_ = nullptr;     // must override
+  async::Loop* loop_ = nullptr;               // must override
+  async_dispatcher_t* dispatcher_ = nullptr;  // must override
   fuchsia::mediacodec::CodecPtr codec_;
   // This only temporarily holds the Codec request that was created during the
   // constructor.  If the caller asks for this more than once, the subsequent

@@ -292,6 +292,17 @@ const CodecBuffer& CodecClient::GetOutputBufferByIndex(uint32_t packet_index) {
   return *all_output_buffers_[packet_index];
 }
 
+void CodecClient::QueueInputFormatDetails(
+    uint64_t stream_lifetime_ordinal,
+    fuchsia::mediacodec::CodecFormatDetails input_format_details) {
+  PostSerial(dispatcher_, [this, stream_lifetime_ordinal,
+                           input_format_details =
+                               std::move(input_format_details)]() mutable {
+    codec_->QueueInputFormatDetails(stream_lifetime_ordinal,
+                                    std::move(input_format_details));
+  });
+}
+
 // buffer - the populated input packet buffer, or an empty input buffers with
 //   end_of_stream set on it.
 void CodecClient::QueueInputPacket(

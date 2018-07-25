@@ -9,6 +9,7 @@
 
 #include <fbl/auto_call.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fidl/cpp/clone.h>
 
 #include "garnet/lib/media/wav_writer/wav_writer.h"
 
@@ -182,13 +183,15 @@ void use_aac_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
   //   * Safe to call client-side proxy methods from multiple threads?  If there
   //     is a response: No.  If there is not a response: Maybe.  While a
   //     no-response send might currently be safe for one-way sends without a
-  //     response_handler, we don't rely on that in this example.  Certainly any
-  //     calls with a response need to be started from a single thread at a
-  //     time.  Posting to the loop thread for all client-side sends covers this
-  //     bullet.
+  //     response_handler, we shouldn't rely on that in this example (see TODO
+  //     on call to CreateDecoder() below for only known current exception).
+  //     Certainly any calls with a response need to be started from a single
+  //     thread at a time.  Posting to the loop thread for all client-side sends
+  //     covers this bullet.
   //   * Safe to call a server-side response_handler's operator() from an
   //     arbitrary server-side thread?  Yes, and seems likely to remain yes.
-  //   * TODO(dustingreen): FIDL events will deserve their own bullet here.
+  //   * The FIDL events are set up within CodecClient's constructor before
+  //     binding.
 
   VLOGF("reading adts file...\n");
   size_t input_size;
@@ -213,13 +216,20 @@ void use_aac_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
   }
 
   // Set all fields to 0 / default.
-  fuchsia::mediacodec::CreateDecoder_Params params = {};
+  fuchsia::mediacodec::CreateDecoder_Params create_params = {};
   // TODO(dustingreen): Remove need for ADTS to specify any codec config since
   // it's in-band, and maybe switch this program over to using .mp4 with
   // AudioSpecificConfig() from the .mp4 file.
-  params.input_details.format_details_version_ordinal = 0;
-  params.input_details.mime_type = "audio/aac-adts";
-  params.input_details.codec_oob_bytes.reset(std::move(asc_vector));
+  create_params.input_details.format_details_version_ordinal = 0;
+  create_params.input_details.mime_type = "audio/aac-adts";
+  // We don't do this here for now, because we want to cover what happens when
+  // CreateDecoder() doesn't specify codec_oob_bytes, but
+  // QueueInputFormatDetails() does.
+  // create_params.input_details.codec_oob_bytes.reset(std::move(asc_vector));
+
+  fuchsia::mediacodec::CodecFormatDetails full_input_details =
+      fidl::Clone(create_params.input_details);
+  full_input_details.codec_oob_bytes.reset(std::move(asc_vector));
 
   // We're using CodecPtr here rather than CodecSyncPtr partly to have this
   // example program be slightly more realistic (with respect to client programs
@@ -233,7 +243,10 @@ void use_aac_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
   VLOGF("before CodecClient::CodecClient()...\n");
   CodecClient codec_client(&loop);
   VLOGF("before codec_factory->CreateAudioDecoder().\n");
-  codec_factory->CreateDecoder(std::move(params),
+  // TODO(dustingreen): Before calling the CodecFactory proxy, we should post to
+  // the same dispatcher as is used for that proxy's binding, but currently we
+  // don't.
+  codec_factory->CreateDecoder(std::move(create_params),
                                codec_client.GetTheRequestOnce());
   VLOGF("before codec_client.Start()...\n");
   codec_client.Start();
@@ -253,7 +266,12 @@ void use_aac_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
   // the caputures go out of scope.
   VLOGF("before starting in_thread...\n");
   std::unique_ptr<std::thread> in_thread = std::make_unique<std::thread>(
-      [&codec_client, &input_bytes, input_size]() {
+      [&codec_client, full_input_details = std::move(full_input_details),
+       &input_bytes, input_size]() mutable {
+        // First queue the full_input_details.
+        codec_client.QueueInputFormatDetails(kStreamLifetimeOrdinal,
+                                             std::move(full_input_details));
+
         // "syncword" bits for ADTS are, starting at byte alignment: 0xFF 0xF.
         // That's 12 1 bits, with the first 1 bit starting at a byte aligned
         // boundary.
