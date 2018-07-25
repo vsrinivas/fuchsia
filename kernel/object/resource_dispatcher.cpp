@@ -22,6 +22,7 @@
 
 KCOUNTER(root_resource_created, "resource.root.created");
 KCOUNTER(hypervisor_resource_created, "resource.hypervisor.created");
+KCOUNTER(vmex_resource_created, "resource.vmex.created");
 KCOUNTER(mmio_resource_created, "resource.mmio.created");
 KCOUNTER(irq_resource_created, "resource.irq.created");
 KCOUNTER(ioport_resource_created, "resource.ioport.created");
@@ -63,6 +64,7 @@ zx_status_t ResourceDispatcher::Create(fbl::RefPtr<ResourceDispatcher>* dispatch
     switch (kind) {
     case ZX_RSRC_KIND_ROOT:
     case ZX_RSRC_KIND_HYPERVISOR:
+    case ZX_RSRC_KIND_VMEX:
         // It does not make sense for an abstract resource type to have a base/size tuple
         if (base || size) {
             return ZX_ERR_INVALID_ARGS;
@@ -143,6 +145,7 @@ ResourceDispatcher::ResourceDispatcher(uint32_t kind,
     switch(kind_) {
     case ZX_RSRC_KIND_ROOT:       kcounter_add(root_resource_created, 1);       break;
     case ZX_RSRC_KIND_HYPERVISOR: kcounter_add(hypervisor_resource_created, 1); break;
+    case ZX_RSRC_KIND_VMEX:       kcounter_add(vmex_resource_created, 1);       break;
     case ZX_RSRC_KIND_MMIO:       kcounter_add(mmio_resource_created, 1);       break;
     case ZX_RSRC_KIND_IRQ:        kcounter_add(irq_resource_created, 1);        break;
     case ZX_RSRC_KIND_IOPORT:     kcounter_add(ioport_resource_created, 1);     break;

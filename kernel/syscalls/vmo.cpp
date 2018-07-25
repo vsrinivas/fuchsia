@@ -15,9 +15,12 @@
 
 #include <object/handle.h>
 #include <object/process_dispatcher.h>
+#include <object/resource.h>
 #include <object/vm_object_dispatcher.h>
 
+#include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
+#include <zircon/thread_annotations.h>
 
 #include "priv.h"
 
@@ -264,4 +267,35 @@ zx_status_t sys_vmo_clone(zx_handle_t handle, uint32_t options,
 
     // create a handle and attach the dispatcher to it
     return out_handle->make(fbl::move(dispatcher), rights);
+}
+
+zx_status_t sys_vmo_replace_as_executable(
+    zx_handle_t vmo, zx_handle_t vmex, user_out_handle* out) {
+    LTRACEF("repexec %x %x\n", vmo, vmex);
+
+    zx_status_t vmex_status = ZX_OK;
+    if (vmex != ZX_HANDLE_INVALID) {
+        vmex_status = validate_resource(vmex, ZX_RSRC_KIND_VMEX);
+    } else {
+        // TODO(mdempsky): Print warning that VMEX resource is
+        // required, and eventually reject outright.
+    }
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    Guard<fbl::Mutex> guard{up->handle_table_lock()};
+    auto source = up->GetHandleLocked(vmo);
+    if (!source)
+        return ZX_ERR_BAD_HANDLE;
+
+    auto handle_cleanup = fbl::MakeAutoCall([up, vmo]() TA_NO_THREAD_SAFETY_ANALYSIS {
+        up->RemoveHandleLocked(vmo);
+    });
+
+    if (vmex_status != ZX_OK)
+        return vmex_status;
+    if (source->dispatcher()->get_type() != ZX_OBJ_TYPE_VMO)
+        return ZX_ERR_BAD_HANDLE;
+
+    return out->dup(source, source->rights() | ZX_RIGHT_EXECUTE);
 }

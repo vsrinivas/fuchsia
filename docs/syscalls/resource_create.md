@@ -34,10 +34,11 @@ range associated with them and are used as a privilege check.
 
 *options* must specify which kind of resource to create and may contain optional
 flags. Valid kinds of resources are **ZX_RSRC_KIND_MMIO**, **ZX_RSRC_KIND_IRQ**,
-**ZX_RSRC_KIND_IOPORT** (x86 only), **ZX_RSRC_KIND_ROOT**, and
-**ZX_RSRC_KIND_HYPERVISOR**. The latter two must not be paired with non-zero
-values for *base* and *len*, as they do not use an address space range. At this
-time the only optional flag is **ZX_RSRC_FLAG_EXCLUSIVE**. If
+**ZX_RSRC_KIND_IOPORT** (x86 only), **ZX_RSRC_KIND_ROOT**,
+**ZX_RSRC_KIND_HYPERVISOR**, and **ZX_RSRC_KIND_VMEX**.
+The latter three must not be paired with non-zero values for *base* and *len*,
+as they do not use an address space range.
+At this time the only optional flag is **ZX_RSRC_FLAG_EXCLUSIVE**. If
 **ZX_RSRC_FLAG_EXCLUSIVE** is provided then the syscall will attempt to
 exclusively reserve the requested address space region, preventing other
 resources creation from overlapping with it as long as it exists.

@@ -211,6 +211,46 @@ static bool test_vmo_creation_unaligned(void) {
     END_TEST;
 }
 
+// Returns zero on failure.
+static zx_rights_t get_vmo_rights(const zx::vmo& vmo) {
+    zx_info_handle_basic_t info;
+    zx_status_t s = zx_object_get_info(vmo.get(), ZX_INFO_HANDLE_BASIC, &info,
+                                       sizeof(info), nullptr, nullptr);
+    if (s != ZX_OK) {
+        EXPECT_EQ(s, ZX_OK);  // Poison the test
+        return 0;
+    }
+    return info.rights;
+}
+
+static bool test_vmo_replace_as_executable() {
+    BEGIN_TEST;
+
+    zx::resource vmex;
+    zx::vmo vmo, vmo2, vmo3;
+
+    // allocate an object
+    ASSERT_EQ(ZX_OK, zx_vmo_create(PAGE_SIZE, 0, vmo.reset_and_get_address()));
+
+    // set-exec with valid VMEX resource
+    ASSERT_EQ(0, zx::resource::create(*root(), ZX_RSRC_KIND_VMEX, 0, 0, NULL, 0, &vmex));
+    ASSERT_EQ(0, zx_handle_duplicate(vmo.get(), ZX_RIGHT_READ, vmo2.reset_and_get_address()));
+    ASSERT_EQ(0, zx_vmo_replace_as_executable(vmo2.get(), vmex.get(), vmo3.reset_and_get_address()));
+    EXPECT_EQ(ZX_RIGHT_READ|ZX_RIGHT_EXECUTE, get_vmo_rights(vmo3));
+
+    // set-exec with ZX_HANDLE_INVALID
+    // TODO(mdempsky): Disallow.
+    ASSERT_EQ(0, zx_handle_duplicate(vmo.get(), ZX_RIGHT_READ, vmo2.reset_and_get_address()));
+    ASSERT_EQ(0, zx_vmo_replace_as_executable(vmo2.get(), ZX_HANDLE_INVALID, vmo3.reset_and_get_address()));
+    EXPECT_EQ(ZX_RIGHT_READ|ZX_RIGHT_EXECUTE, get_vmo_rights(vmo3));
+
+    // verify invalid handle fails
+    ASSERT_EQ(0, zx_handle_duplicate(vmo.get(), ZX_RIGHT_READ, vmo2.reset_and_get_address()));
+    EXPECT_EQ(ZX_ERR_WRONG_TYPE, zx_vmo_replace_as_executable(vmo2.get(), vmo.get(), vmo3.reset_and_get_address()));
+
+    END_TEST;
+}
+
 #if defined(__x86_64__)
 static bool test_ioports(void) {
     BEGIN_TEST;
@@ -238,6 +278,7 @@ RUN_TEST(test_invalid_args);
 RUN_TEST(test_vmo_creation);
 RUN_TEST(test_vmo_creation_smaller);
 RUN_TEST(test_vmo_creation_unaligned);
+RUN_TEST(test_vmo_replace_as_executable);
 #if defined(__x86_64__)
 RUN_TEST(test_ioports);
 #endif

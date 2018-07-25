@@ -422,6 +422,10 @@ syscall vmo_set_cache_policy
     (handle: zx_handle_t, cache_policy: uint32_t)
     returns (zx_status_t);
 
+syscall vmo_replace_as_executable
+    (handle: zx_handle_t handle_release_always, vmex: zx_handle_t)
+    returns (zx_status_t, out: zx_handle_t handle_acquire);
+
 # Address space management
 
 # TODO(davemoore): Updating vmar apis: zx-2264. Remove when no calls remain.

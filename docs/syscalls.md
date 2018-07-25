@@ -84,6 +84,7 @@
 + [vmo_get_size](syscalls/vmo_get_size.md) - obtain the size of a vmo
 + [vmo_set_size](syscalls/vmo_set_size.md) - adjust the size of a vmo
 + [vmo_op_range](syscalls/vmo_op_range.md) - perform an operation on a range of a vmo
++ [vmo_replace_as_executable](syscall/vmo_replace_as_executable.md) - add execute rights to a vmo
 
 ## Virtual Memory Address Regions (VMARs)
 + [vmar_allocate](syscalls/vmar_allocate.md) - create a new child VMAR

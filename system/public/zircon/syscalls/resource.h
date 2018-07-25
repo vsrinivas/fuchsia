@@ -19,7 +19,8 @@
 #define ZX_RSRC_KIND_IOPORT         2u
 #define ZX_RSRC_KIND_HYPERVISOR     3u
 #define ZX_RSRC_KIND_ROOT           4u
-#define ZX_RSRC_KIND_COUNT          5u
+#define ZX_RSRC_KIND_VMEX           5u
+#define ZX_RSRC_KIND_COUNT          6u
 
 #define ZX_RSRC_FLAG_EXCLUSIVE      0x00010000u
 #define ZX_RSRC_FLAGS_MASK          (ZX_RSRC_FLAG_EXCLUSIVE)
