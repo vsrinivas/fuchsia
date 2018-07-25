@@ -10,7 +10,19 @@ use std::sync::mpsc;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ClientData {
     // client_id: String ID of client (ACTS test suite)
-    pub client_id: String,
+    pub command_id: String,
+
+    // command_result: The response of running the command (to be stored in the table)
+    pub command_result: AsyncResponse,
+}
+
+impl ClientData {
+    pub fn new(id: String, result: AsyncResponse) -> ClientData {
+        ClientData {
+            command_id: id,
+            command_result: result,
+        }
+    }
 }
 
 /// Required fields for making a request
@@ -19,18 +31,18 @@ pub struct CommandRequest {
     // method: name of method to be called
     pub method: String,
 
-    // id: Integer id of command
-    pub id: u32,
+    // id: String id of command
+    pub id: String,
 
     // params: Arguments required for method
     pub params: Value,
 }
 
 /// Return packet after SL4F runs command
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Clone, Debug)]
 pub struct CommandResponse {
-    // id: Integer id of command
-    pub id: u32,
+    // id: String id of command
+    pub id: String,
 
     // result: Result value of method call, can be None
     pub result: Option<Value>,
@@ -40,7 +52,7 @@ pub struct CommandResponse {
 }
 
 impl CommandResponse {
-    pub fn new(id: u32, result: Option<Value>, error: Option<String>) -> CommandResponse {
+    pub fn new(id: String, result: Option<Value>, error: Option<String>) -> CommandResponse {
         CommandResponse { id, result, error }
     }
 }
@@ -51,8 +63,8 @@ pub struct AsyncRequest {
     // tx: Transmit channel from FIDL event loop to RPC request side
     pub tx: mpsc::Sender<AsyncResponse>,
 
-    // id: Integer id of the method
-    pub id: u32,
+    // id: String id of the method
+    pub id: String,
 
     // type: Method type of the request (e.g bluetooth, wlan, etc...)
     pub method_type: String,
@@ -66,7 +78,8 @@ pub struct AsyncRequest {
 
 impl AsyncRequest {
     pub fn new(
-        tx: mpsc::Sender<AsyncResponse>, id: u32, method_type: String, name: String, params: Value,
+        tx: mpsc::Sender<AsyncResponse>, id: String, method_type: String, name: String,
+        params: Value,
     ) -> AsyncRequest {
         AsyncRequest {
             tx,
@@ -79,15 +92,26 @@ impl AsyncRequest {
 }
 
 // Represents a RPC response from the FIDL event loop to the RPC request side
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AsyncResponse {
     // res: serde_json::Value of FIDL method result
-    pub res: Result<Value, Error>,
+    pub result: Option<Value>,
+
+    pub error: Option<String>,
 }
 
 impl AsyncResponse {
     pub fn new(res: Result<Value, Error>) -> AsyncResponse {
-        AsyncResponse { res }
+        match res {
+            Ok(v) => AsyncResponse {
+                result: Some(v),
+                error: None,
+            },
+            Err(e) => AsyncResponse {
+                result: None,
+                error: Some(e.to_string()),
+            },
+        }
     }
 }
 

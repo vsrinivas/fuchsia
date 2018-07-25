@@ -3,15 +3,21 @@
 // found in the LICENSE file.
 
 use async;
+use bt::error::Error as BTError;
+use failure::Error;
 use failure::ResultExt;
 use futures::channel::mpsc;
+use futures::future::ok as fok;
+use futures::prelude::*;
 use futures::{FutureExt, StreamExt};
 use parking_lot::RwLock;
+use serde_json::Value;
 use std::sync::Arc;
 
-use common::sl4f::method_to_fidl;
+use common::bluetooth_commands::ble_method_to_fidl;
+
 use common::sl4f::Sl4f;
-use common::sl4f_types::{AsyncRequest, AsyncResponse};
+use common::sl4f_types::{AsyncRequest, AsyncResponse, FacadeType};
 
 pub fn run_fidl_loop(
     sl4f_session: Arc<RwLock<Sl4f>>, receiver: mpsc::UnboundedReceiver<AsyncRequest>,
@@ -53,4 +59,21 @@ pub fn run_fidl_loop(
     executor
         .run_singlethreaded(receiver_fut)
         .expect("Failed to execute requests from Rouille.");
+}
+
+fn method_to_fidl(
+    method_type: String, method_name: String, args: Value, sl4f_session: Arc<RwLock<Sl4f>>,
+) -> impl Future<Item = Result<Value, Error>, Error = Never> {
+    many_futures!(MethodType, [Bluetooth, Wlan, Error]);
+    match FacadeType::from_str(method_type) {
+        FacadeType::Bluetooth => MethodType::Bluetooth(ble_method_to_fidl(
+            method_name,
+            args,
+            sl4f_session.write().get_bt_facade().clone(),
+        )),
+        FacadeType::Wlan => MethodType::Wlan(fok(Err(BTError::new(
+            "Nice try. WLAN not implemented yet",
+        ).into()))),
+        _ => MethodType::Error(fok(Err(BTError::new("Invalid FIDL method type").into()))),
+    }
 }

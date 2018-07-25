@@ -5,8 +5,6 @@
 use bt::error::Error as BTError;
 use failure::Error;
 use futures::channel::mpsc;
-use futures::future::ok as fok;
-use futures::prelude::*;
 use parking_lot::{Mutex, RwLock};
 use rouille;
 use rouille::{Request, Response};
@@ -19,12 +17,10 @@ use std::io::Read;
 use std::sync::Arc;
 
 // Bluetooth related includes (do the same for each connectivity stack)
-use common::bluetooth_commands::ble_method_to_fidl;
 use common::bluetooth_facade::BluetoothFacade;
 
 // Standardized sl4f types.
-use common::sl4f_types::{AsyncRequest, AsyncResponse, ClientData, CommandRequest, CommandResponse,
-                         FacadeType};
+use common::sl4f_types::{AsyncRequest, AsyncResponse, ClientData, CommandRequest, CommandResponse};
 
 /// Sl4f object. This stores all information about state for each connectivity stack.
 /// Every session will have a new Sl4f object.
@@ -36,7 +32,9 @@ pub struct Sl4f {
     bt_facade: Arc<RwLock<BluetoothFacade>>,
 
     // clients: Thread safe map for clients that are connected to the sl4f server.
-    clients: Arc<Mutex<HashMap<String, ClientData>>>,
+    // key = session_id (unique for every ACTS instance) and value = Data about client (see
+    // sl4f_types.rs)
+    clients: Arc<Mutex<HashMap<String, Vec<ClientData>>>>,
 }
 
 impl Sl4f {
@@ -47,12 +45,12 @@ impl Sl4f {
         }))
     }
 
-    pub fn get_bt_facade(&mut self) -> &Arc<RwLock<BluetoothFacade>> {
-        &self.bt_facade
+    pub fn get_bt_facade(&self) -> Arc<RwLock<BluetoothFacade>> {
+        self.bt_facade.clone()
     }
 
-    pub fn get_clients(&mut self) -> &Arc<Mutex<HashMap<String, ClientData>>> {
-        &self.clients
+    pub fn get_clients(&self) -> Arc<Mutex<HashMap<String, Vec<ClientData>>>> {
+        self.clients.clone()
     }
 
     pub fn cleanup_clients(&mut self) {
@@ -64,6 +62,11 @@ impl Sl4f {
         self.cleanup_clients();
     }
 
+    pub fn print_clients(&self) {
+        fx_log_info!("SL4F Clients: {:?}", self.clients);
+    }
+
+    // Add *_facade.print() when new Facade objects are added (i.e WlanFacade)
     pub fn print(&self) {
         self.bt_facade.read().print();
     }
@@ -78,7 +81,7 @@ pub fn serve(
             (GET) (/) => {
                 // Parse the command request
                 fx_log_info!(tag: "serve", "Received command request.");
-                client_request(&request, rouille_sender.clone())
+                client_request(sl4f_session.clone(), &request, rouille_sender.clone())
             },
             (GET) (/init) => {
                 // Initialize a client
@@ -89,6 +92,7 @@ pub fn serve(
                 // Print information about all clients
                 fx_log_info!(tag: "serve", "Received print client request.");
                 const PRINT_ACK: &str = "Successfully printed clients.";
+                sl4f_session.read().print_clients();
                 rouille::Response::json(&PRINT_ACK)
             },
             (GET) (/cleanup) => {
@@ -98,33 +102,57 @@ pub fn serve(
             _ => {
                 fx_log_err!(tag: "serve", "Received unknown server request.");
                 const FAIL_REQUEST_ACK: &str = "Unknown GET request.";
-                let res = CommandResponse::new(0, None, serde::export::Some(FAIL_REQUEST_ACK.to_string()));
+                let res = CommandResponse::new("".to_string(), None, serde::export::Some(FAIL_REQUEST_ACK.to_string()));
                 rouille::Response::json(&res)
             }
         )
 }
 
+// Given the session id, method id, and result of FIDL call, store the result for this client
+fn store_response(
+    sl4f_session: Arc<RwLock<Sl4f>>, client_id: String, method_id: String, result: AsyncResponse,
+) {
+    let clients = sl4f_session.write().clients.clone();
+
+    // If the current client session is found, append the result of the FIDL call to the result
+    // history
+    if clients.lock().contains_key(&client_id) {
+        let command_response = ClientData::new(method_id.clone(), result.clone());
+        clients
+            .lock()
+            .entry(client_id.clone())
+            .or_insert(Vec::new())
+            .push(command_response);
+    } else {
+        fx_log_err!("Client doesn't exist in server database: {:?}", client_id);
+    }
+
+    fx_log_info!("Stored response. Updated clients: {:?}", clients);
+}
+
 // Given the request, map the test request to a FIDL query and execute
 // asynchronously
 fn client_request(
-    request: &Request, rouille_sender: mpsc::UnboundedSender<AsyncRequest>,
+    sl4f_session: Arc<RwLock<Sl4f>>, request: &Request,
+    rouille_sender: mpsc::UnboundedSender<AsyncRequest>,
 ) -> Response {
     const FAIL_TEST_ACK: &str = "Command failed";
 
-    let (method_id, method_type, method_name, method_params) = match parse_request(request) {
-        Ok(res) => res,
-        Err(e) => {
-            fx_log_err!(tag: "client_request", "Failed to parse request. {:?}", e);
-            return Response::json(&FAIL_TEST_ACK);
-        }
-    };
+    let (session_id, method_id, method_type, method_name, method_params) =
+        match parse_request(request) {
+            Ok(res) => res,
+            Err(e) => {
+                fx_log_err!(tag: "client_request", "Failed to parse request. {:?}", e);
+                return Response::json(&FAIL_TEST_ACK);
+            }
+        };
 
     // Create channel for async thread to respond to
     // Package response and ship over JSON RPC
     let (async_sender, rouille_receiver) = std::sync::mpsc::channel();
     let req = AsyncRequest::new(
         async_sender,
-        method_id,
+        method_id.clone(),
         method_type,
         method_name,
         method_params,
@@ -134,15 +162,22 @@ fn client_request(
         .expect("Failed to send request to async thread.");
     let resp: AsyncResponse = rouille_receiver.recv().unwrap();
 
+    store_response(
+        sl4f_session,
+        session_id.clone(),
+        method_id.clone(),
+        resp.clone(),
+    );
     fx_log_info!(tag: "client_request", "Received async thread response: {:?}", resp);
 
-    match resp.res {
-        Ok(r) => {
-            let res = CommandResponse::new(method_id, Some(r), None);
+    // If the response has a return value, package into response, otherwise use error code
+    match resp.result {
+        Some(async_res) => {
+            let res = CommandResponse::new(method_id, Some(async_res), None);
             rouille::Response::json(&res)
         }
-        Err(e) => {
-            let res = CommandResponse::new(method_id, None, serde::export::Some(e.to_string()));
+        None => {
+            let res = CommandResponse::new(method_id, None, resp.error);
             rouille::Response::json(&res)
         }
     }
@@ -150,11 +185,13 @@ fn client_request(
 
 // Initializes a new client, adds to clients, a thread-safe HashMap
 // Returns a rouille::Response
-fn client_init(request: &Request, clients: Arc<Mutex<HashMap<String, ClientData>>>) -> Response {
+fn client_init(
+    request: &Request, clients: Arc<Mutex<HashMap<String, Vec<ClientData>>>>,
+) -> Response {
     const INIT_ACK: &str = "Recieved init request.";
     const FAIL_INIT_ACK: &str = "Failed to init client.";
 
-    let (_, _, _, method_params) = match parse_request(request) {
+    let (_, _, _, _, method_params) = match parse_request(request) {
         Ok(res) => res,
         Err(_) => return Response::json(&FAIL_INIT_ACK),
     };
@@ -164,10 +201,9 @@ fn client_init(request: &Request, clients: Arc<Mutex<HashMap<String, ClientData>
         None => return Response::json(&FAIL_INIT_ACK),
     };
 
+    // Initialize client with key = id, val = client data
     let client_id = client_id_raw.as_str().map(String::from).unwrap();
-    let client_data = ClientData {
-        client_id: client_id.clone(),
-    };
+    let client_data = Vec::new();
 
     if clients.lock().contains_key(&client_id) {
         fx_log_warn!(tag: "client_init",
@@ -186,7 +222,7 @@ fn client_init(request: &Request, clients: Arc<Mutex<HashMap<String, ClientData>
 // Given the name of the ACTS method, derive method type + method name
 // Returns two "", "" on invalid input which will later propagate to
 // method_to_fidl and raise an error
-fn parse_method_name(method_name_raw: String) -> (String, String) {
+fn split_string(method_name_raw: String) -> (String, String) {
     let split = method_name_raw.split(".");
     let string_split: Vec<&str> = split.collect();
 
@@ -199,7 +235,7 @@ fn parse_method_name(method_name_raw: String) -> (String, String) {
 
 // Given a request, grabs the method id, name, and parameters
 // Return BTError if fail
-fn parse_request(request: &Request) -> Result<(u32, String, String, Value), Error> {
+fn parse_request(request: &Request) -> Result<(String, String, String, String, Value), Error> {
     let mut data = match request.data() {
         Some(d) => d,
         None => return Err(BTError::new("Failed to parse request buffer.").into()),
@@ -211,24 +247,30 @@ fn parse_request(request: &Request) -> Result<(u32, String, String, Value), Erro
     }
 
     // Ignore the json_rpc field
-    // TODO(aniramakri): Perhaps there's some checks I should do with the jsonrpc field
     let request_data: CommandRequest = match serde_json::from_str(&buf) {
         Ok(tdata) => tdata,
         Err(_) => return Err(BTError::new("Failed to unpack request data.").into()),
     };
 
-    let method_id = request_data.id.clone();
+    let method_id_raw = request_data.id.clone();
     let method_name_raw = request_data.method.clone();
     let method_params = request_data.params.clone();
     fx_log_info!(tag: "parse_request",
         "method id: {:?}, name: {:?}, args: {:?}",
-        method_id, method_name_raw, method_params
+        method_id_raw, method_name_raw, method_params
     );
 
     // Separate the method_name field of the request into the method type (e.g bluetooth) and the
     // actual method name itself
-    let (method_type, method_name) = parse_method_name(method_name_raw.clone());
-    Ok((method_id, method_type, method_name, method_params))
+    let (method_type, method_name) = split_string(method_name_raw.clone());
+    let (session_id, method_id) = split_string(method_id_raw.clone());
+    Ok((
+        session_id,
+        method_id,
+        method_type,
+        method_name,
+        method_params,
+    ))
 }
 
 fn server_cleanup(request: &Request, sl4f_session: Arc<RwLock<Sl4f>>) -> Response {
@@ -236,7 +278,7 @@ fn server_cleanup(request: &Request, sl4f_session: Arc<RwLock<Sl4f>>) -> Respons
     const CLEANUP_ACK: &str = "Successful cleanup of SL4F resources.";
 
     fx_log_info!(tag: "server_cleanup", "Cleaning up server state");
-    let (method_id, _, _, _) = match parse_request(request) {
+    let (_, method_id, _, _, _) = match parse_request(request) {
         Ok(res) => res,
         Err(_) => return Response::json(&FAIL_CLEANUP_ACK),
     };
@@ -253,21 +295,4 @@ fn server_cleanup(request: &Request, sl4f_session: Arc<RwLock<Sl4f>>) -> Respons
     };
 
     rouille::Response::json(&ack)
-}
-
-pub fn method_to_fidl(
-    method_type: String, method_name: String, args: Value, sl4f_session: Arc<RwLock<Sl4f>>,
-) -> impl Future<Item = Result<Value, Error>, Error = Never> {
-    many_futures!(MethodType, [Bluetooth, Wlan, Error]);
-    match FacadeType::from_str(method_type) {
-        FacadeType::Bluetooth => MethodType::Bluetooth(ble_method_to_fidl(
-            method_name,
-            args,
-            sl4f_session.write().get_bt_facade().clone(),
-        )),
-        FacadeType::Wlan => MethodType::Wlan(fok(Err(BTError::new(
-            "Nice try. WLAN not implemented yet",
-        ).into()))),
-        _ => MethodType::Error(fok(Err(BTError::new("Invalid FIDL method type").into()))),
-    }
 }
