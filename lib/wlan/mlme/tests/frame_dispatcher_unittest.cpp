@@ -79,27 +79,27 @@ struct FrameDispatchTest : public ::testing::Test, public FrameHandler {
 };
 
 TEST_F(FrameDispatchTest, HandleBeacon) {
-    uint64_t handled = DispatchBeacon(kBeaconFrame);
+    uint64_t handled = DispatchBeacon(test_data::kBeaconFrame);
     EXPECT_EQ(handled, static_cast<uint64_t>(1));
     EXPECT_TRUE(mgmt_hdr != nullptr);
     EXPECT_TRUE(ctrl_hdr == nullptr);
     EXPECT_TRUE(data_hdr == nullptr);
     ASSERT_TRUE(handled_packet != nullptr);
-    EXPECT_EQ(memcmp(kBeaconFrame.data(), handled_packet->data(), kBeaconFrame.size()), 0);
+    EXPECT_EQ(memcmp(test_data::kBeaconFrame.data(), handled_packet->data(), test_data::kBeaconFrame.size()), 0);
 }
 
 TEST_F(FrameDispatchTest, HandlePsPoll) {
-    uint64_t handled = DispatchPsPollFrame(kPsPollFrame);
+    uint64_t handled = DispatchPsPollFrame(test_data::kPsPollFrame);
     EXPECT_EQ(handled, static_cast<uint64_t>(1));
     EXPECT_TRUE(ctrl_hdr != nullptr);
     EXPECT_TRUE(mgmt_hdr == nullptr);
     EXPECT_TRUE(data_hdr == nullptr);
     ASSERT_TRUE(handled_packet != nullptr);
-    EXPECT_EQ(memcmp(kPsPollFrame.data(), handled_packet->data(), kPsPollFrame.size()), 0);
+    EXPECT_EQ(memcmp(test_data::kPsPollFrame.data(), handled_packet->data(), test_data::kPsPollFrame.size()), 0);
 }
 
 TEST_F(FrameDispatchTest, HandlePsPollUnsupported) {
-    uint64_t handled = DispatchPsPollFrame(kPsPollHtcUnsupportedFrame);
+    uint64_t handled = DispatchPsPollFrame(test_data::kPsPollHtcUnsupportedFrame);
     EXPECT_EQ(handled, static_cast<uint64_t>(0));
     EXPECT_TRUE(handled_packet == nullptr);
     EXPECT_TRUE(mgmt_hdr == nullptr);
@@ -108,43 +108,43 @@ TEST_F(FrameDispatchTest, HandlePsPollUnsupported) {
 }
 
 TEST_F(FrameDispatchTest, HandleDeauthentication) {
-    uint64_t handled = DispatchDeauthentication(kDeauthFrame);
+    uint64_t handled = DispatchDeauthentication(test_data::kDeauthFrame);
     EXPECT_EQ(handled, static_cast<uint64_t>(1));
     EXPECT_TRUE(mgmt_hdr != nullptr);
     EXPECT_TRUE(ctrl_hdr == nullptr);
     EXPECT_TRUE(data_hdr == nullptr);
     ASSERT_TRUE(handled_packet != nullptr);
-    EXPECT_EQ(memcmp(kDeauthFrame.data(), handled_packet->data(), kDeauthFrame.size()), 0);
+    EXPECT_EQ(memcmp(test_data::kDeauthFrame.data(), handled_packet->data(), test_data::kDeauthFrame.size()), 0);
 }
 
 TEST_F(FrameDispatchTest, HandleDataFrame) {
-    uint64_t handled = DispatchDataFrame(kDataFrame);
+    uint64_t handled = DispatchDataFrame(test_data::kDataFrame);
     EXPECT_EQ(handled, static_cast<uint64_t>(1));
     EXPECT_TRUE(data_hdr != nullptr);
     EXPECT_TRUE(ctrl_hdr == nullptr);
     EXPECT_TRUE(mgmt_hdr == nullptr);
     ASSERT_TRUE(handled_packet != nullptr);
-    EXPECT_EQ(memcmp(kDataFrame.data(), handled_packet->data(), kDataFrame.size()), 0);
+    EXPECT_EQ(memcmp(test_data::kDataFrame.data(), handled_packet->data(), test_data::kDataFrame.size()), 0);
 }
 
 TEST_F(FrameDispatchTest, HandleNullDataFrame) {
-    uint64_t handled = DispatchNullDataFrame(kNullDataFrame);
+    uint64_t handled = DispatchNullDataFrame(test_data::kNullDataFrame);
     EXPECT_EQ(handled, static_cast<uint64_t>(1));
     EXPECT_TRUE(data_hdr != nullptr);
     EXPECT_TRUE(ctrl_hdr == nullptr);
     EXPECT_TRUE(mgmt_hdr == nullptr);
     ASSERT_TRUE(handled_packet != nullptr);
-    EXPECT_EQ(memcmp(kNullDataFrame.data(), handled_packet->data(), kNullDataFrame.size()), 0);
+    EXPECT_EQ(memcmp(test_data::kNullDataFrame.data(), handled_packet->data(), test_data::kNullDataFrame.size()), 0);
 }
 
 TEST_F(FrameDispatchTest, HandleEthFrame) {
-    uint64_t handled = DispatchEthFrame(kEthernetFrame, Packet::Peer::kEthernet);
+    uint64_t handled = DispatchEthFrame(test_data::kEthernetFrame, Packet::Peer::kEthernet);
     EXPECT_EQ(handled, static_cast<uint64_t>(1));
     EXPECT_TRUE(data_hdr == nullptr);
     EXPECT_TRUE(ctrl_hdr == nullptr);
     EXPECT_TRUE(mgmt_hdr == nullptr);
     ASSERT_TRUE(handled_packet != nullptr);
-    EXPECT_EQ(memcmp(kEthernetFrame.data(), handled_packet->data(), kEthernetFrame.size()), 0);
+    EXPECT_EQ(memcmp(test_data::kEthernetFrame.data(), handled_packet->data(), test_data::kEthernetFrame.size()), 0);
 }
 
 #undef IMPL_HANDLE_FRAME

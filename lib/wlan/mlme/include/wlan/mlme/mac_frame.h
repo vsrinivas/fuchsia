@@ -71,6 +71,28 @@ template <typename Header, typename Body = UnknownBody> class FrameView {
         return FrameView<Header, NewBody>::CheckType(pkt_, data_offset_);
     }
 
+    // Skips the header on the underlying data of the frame.
+    // Method has no effect when called on empty frames.
+    FrameView<Body, UnknownBody> SkipHeader() {
+        if (IsEmpty()) { return {}; }
+
+        ZX_DEBUG_ASSERT(data_offset_ + hdr()->len() <= pkt_->len());
+        return FrameView<Body, UnknownBody>(pkt_, data_offset_ + hdr()->len());
+    }
+
+    // Verifies and treats the underlying data as a different frame type.
+    template <typename NewHeader, typename NewBody = UnknownBody>
+    VerifiedFrameType<NewHeader, NewBody> As() {
+        return FrameView<NewHeader, NewBody>::CheckType(pkt_, data_offset_);
+    }
+
+    // Advances the underlying data by `len` bytes and returns a frame of unknown type.
+    // Returns an empty frame if the underlying data is too short.
+    FrameView<UnknownBody, UnknownBody> AdvanceBy(size_t len) {
+        if (IsEmpty() || pkt_->len() - data_offset_ < len) { return {}; }
+        return FrameView<UnknownBody, UnknownBody>(pkt_, data_offset_ + len);
+    }
+
     Frame<Header, Body> IntoOwned(fbl::unique_ptr<Packet> pkt) {
         ZX_DEBUG_ASSERT(pkt != nullptr && pkt.get() == pkt_);
         return Frame<Header, Body>(data_offset_, fbl::move(pkt));

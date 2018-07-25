@@ -21,6 +21,7 @@ source_set("test_main") {
   sources = [
     "mock_device.h",
     "test_data.h",
+    "test_data.cpp",
     "test_main.cpp",
   ]
 

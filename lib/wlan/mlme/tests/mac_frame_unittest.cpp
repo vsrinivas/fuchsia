@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "test_data.h"
+
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/wlan.h>
@@ -441,6 +443,63 @@ TEST(Frame, Specialize_ProgressedFrame) {
     ASSERT_EQ(specialized_frame.hdr()->b, 24);
     ASSERT_EQ(specialized_frame.body_len(), DefaultTripleHdrFrame::second_frame_body_len());
     ASSERT_EQ(specialized_frame.body()->b, 1337);
+}
+
+TEST(Frame, AdvanceThroughFrame) {
+    constexpr size_t kPadding = 2;
+
+    auto frame_data = test_data::kAmsduDataFrame;
+    auto pkt = GetPacket(frame_data.size());
+    pkt->CopyFrom(frame_data.data(), frame_data.size(), 0);
+
+    auto opt_data_frame = DataFrameView<>::CheckType(pkt.get());
+    ASSERT_TRUE(opt_data_frame);
+    auto data_frame = opt_data_frame.CheckLength();
+    ASSERT_TRUE(data_frame);
+
+    auto opt_data_amsdu_frame = data_frame.CheckBodyType<AmsduSubframeHeader>();
+    ASSERT_TRUE(opt_data_amsdu_frame);
+    auto data_amsdu_frame = opt_data_amsdu_frame.CheckLength();
+    ASSERT_TRUE(data_amsdu_frame);
+
+    auto amsdu_subframe1 = data_amsdu_frame.SkipHeader();
+    ASSERT_TRUE(amsdu_subframe1);
+    auto opt_amsdu_llc_subframe1 = amsdu_subframe1.CheckBodyType<LlcHeader>();
+    ASSERT_TRUE(opt_amsdu_llc_subframe1);
+    auto amsdu_llc_subframe1 = opt_amsdu_llc_subframe1.CheckLength();
+    ASSERT_TRUE(amsdu_llc_subframe1);
+
+    size_t msdu_len = amsdu_llc_subframe1.hdr()->msdu_len();
+    ASSERT_EQ(msdu_len, static_cast<uint16_t>(116));
+    auto llc_frame = amsdu_llc_subframe1.SkipHeader();
+    ASSERT_TRUE(llc_frame);
+
+    auto opt_amsdu_llc_subframe2 =
+        llc_frame.AdvanceBy(msdu_len + kPadding).As<AmsduSubframeHeader>();
+    ASSERT_TRUE(opt_amsdu_llc_subframe2);
+    auto amsdu_llc_subframe2 = opt_amsdu_llc_subframe2.CheckLength();
+    ASSERT_TRUE(amsdu_llc_subframe2);
+
+    msdu_len = amsdu_llc_subframe2.hdr()->msdu_len();
+    ASSERT_EQ(msdu_len, static_cast<uint16_t>(102));
+}
+
+TEST(Frame, AdvanceThroughEmptyFrame) {
+    MgmtFrameView<> empty_frame;
+    ASSERT_FALSE(empty_frame);
+    ASSERT_FALSE(empty_frame.SkipHeader());
+    ASSERT_FALSE(empty_frame.CheckBodyType<Beacon>());
+    ASSERT_FALSE(empty_frame.AdvanceBy(5));
+    ASSERT_FALSE(empty_frame.As<DataFrameHeader>());
+}
+
+TEST(Frame, AdvanceOutOfBounds) {
+    auto pkt = GetPacket(20);
+    DataFrameView<> frame(pkt.get());
+    ASSERT_TRUE(frame);
+
+    ASSERT_TRUE(frame.AdvanceBy(20));
+    ASSERT_FALSE(frame.AdvanceBy(21));
 }
 
 }  // namespace

@@ -244,73 +244,73 @@ TEST(FrameValidation, TestFrameLength_EmptyBody_Padding) {
 }
 
 TEST(FrameValidation, ValidBeaconType) {
-    auto pkt = WrapInPacket(kBeaconFrame);
+    auto pkt = WrapInPacket(test_data::kBeaconFrame);
     AssertCorrectMgmtFrameType(ManagementSubtype::kBeacon, &pkt);
 }
 
 TEST(FrameValidation, ValidPsPollFrameType) {
-    auto pkt = WrapInPacket(kPsPollFrame);
+    auto pkt = WrapInPacket(test_data::kPsPollFrame);
     AssertCorrectCtrlFrameType(ControlSubtype::kPsPoll, &pkt);
 }
 
 TEST(FrameValidation, ValidDeauthFrameType) {
-    auto pkt = WrapInPacket(kDeauthFrame);
+    auto pkt = WrapInPacket(test_data::kDeauthFrame);
     AssertCorrectMgmtFrameType(ManagementSubtype::kDeauthentication, &pkt);
 }
 
 TEST(FrameValidation, ValidActionFrameType) {
-    auto pkt = WrapInPacket(kActionFrame);
+    auto pkt = WrapInPacket(test_data::kActionFrame);
     AssertCorrectMgmtFrameType(ManagementSubtype::kAction, &pkt);
 }
 
 TEST(FrameValidation, ValidProbeRequestFrameType) {
-    auto pkt = WrapInPacket(kProbeRequestFrame);
+    auto pkt = WrapInPacket(test_data::kProbeRequestFrame);
     AssertCorrectMgmtFrameType(ManagementSubtype::kProbeRequest, &pkt);
 }
 
 TEST(FrameValidation, ValidAssocRequestFrameType) {
-    auto pkt = WrapInPacket(kAssocReqFrame);
+    auto pkt = WrapInPacket(test_data::kAssocReqFrame);
     AssertCorrectMgmtFrameType(ManagementSubtype::kAssociationRequest, &pkt);
 }
 
 TEST(FrameValidation, ValidAssocResponseFrameType) {
-    auto pkt = WrapInPacket(kAssocRespFrame);
+    auto pkt = WrapInPacket(test_data::kAssocRespFrame);
     AssertCorrectMgmtFrameType(ManagementSubtype::kAssociationResponse, &pkt);
 }
 
 TEST(FrameValidation, ValidAuthFrameType) {
-    auto pkt = WrapInPacket(kAuthFrame);
+    auto pkt = WrapInPacket(test_data::kAuthFrame);
     AssertCorrectMgmtFrameType(ManagementSubtype::kAuthentication, &pkt);
 }
 
 TEST(FrameValidation, ValidDisassocFrameType) {
-    auto pkt = WrapInPacket(kDisassocFrame);
+    auto pkt = WrapInPacket(test_data::kDisassocFrame);
     AssertCorrectMgmtFrameType(ManagementSubtype::kDisassociation, &pkt);
 }
 
 TEST(FrameValidation, ValidNullDataFrameType) {
-    auto pkt = WrapInPacket(kNullDataFrame);
+    auto pkt = WrapInPacket(test_data::kNullDataFrame);
     AssertCorrectDataFrameType(DataSubtype::kNull, &pkt);
 }
 
 TEST(FrameValidation, ValidQosNullDataFrameType) {
-    auto pkt = WrapInPacket(kQosNullDataFrame);
+    auto pkt = WrapInPacket(test_data::kQosNullDataFrame);
     AssertCorrectDataFrameType(DataSubtype::kQosnull, &pkt);
 }
 
 TEST(FrameValidation, ValidDataFrameType) {
-    auto pkt = WrapInPacket(kDataFrame);
+    auto pkt = WrapInPacket(test_data::kDataFrame);
     AssertCorrectDataFrameType(DataSubtype::kDataSubtype, &pkt);
 }
 
 TEST(FrameValidation, ValidQosDataFrameType) {
-    auto pkt = WrapInPacket(kQosDataFrame);
+    auto pkt = WrapInPacket(test_data::kQosDataFrame);
     bool is_amsdu = false;
     AssertCorrectDataFrameType(DataSubtype::kQosdata, &pkt, is_amsdu);
 }
 
 TEST(FrameValidation, ValidAmsduDataFrameType) {
-    auto pkt = WrapInPacket(kAmsduDataFrame);
+    auto pkt = WrapInPacket(test_data::kAmsduDataFrame);
     bool is_amsdu = true;
     AssertCorrectDataFrameType(DataSubtype::kQosdata, &pkt, is_amsdu);
 }

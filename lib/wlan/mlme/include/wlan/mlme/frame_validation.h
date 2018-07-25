@@ -170,7 +170,7 @@ bool is_valid_hdr_length(const uint8_t* buf, size_t len) {
 
 template <typename H, typename B>
 bool is_valid_frame_length(const uint8_t* buf, size_t len, add_padding_func padding) {
-    if (!is_valid_hdr_length<H>(buf, len)) { return false; }
+    if (buf == nullptr || !is_valid_hdr_length<H>(buf, len)) { return false; }
 
     ZX_DEBUG_ASSERT(len >= sizeof(H));
     auto hdr = reinterpret_cast<const H*>(buf);
@@ -181,7 +181,7 @@ bool is_valid_frame_length(const uint8_t* buf, size_t len, add_padding_func padd
 }
 
 template <typename H, typename B> bool is_valid_frame_length(const Packet* pkt, size_t offset) {
-    if (offset > pkt->len()) { return false; }
+    if (pkt == nullptr || offset > pkt->len()) { return false; }
 
     const uint8_t* buf = pkt->data() + offset;
     size_t len = pkt->len() - offset;
@@ -191,11 +191,12 @@ template <typename H, typename B> bool is_valid_frame_length(const Packet* pkt, 
 
 template<typename H, typename B>
 bool is_valid_frame_type(const uint8_t* buf, size_t len) {
+    if (buf == nullptr) { return false; }
     return internal::FrameTypeValidator<H, B>::is_valid(buf, len);
 }
 
 template <typename H, typename B> bool is_valid_frame_type(const Packet* pkt, size_t offset) {
-    if (offset > pkt->len()) { return false; }
+    if (pkt == nullptr || offset > pkt->len()) { return false; }
 
     const uint8_t* buf = pkt->data() + offset;
     size_t len = pkt->len() - offset;
