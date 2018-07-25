@@ -106,9 +106,9 @@ static constexpr uint32_t CreateFunctionId(CallType call_type,
 }
 
 // C++ wrapper function for constructing a zx_smc_parameters_t object. Most of the arguments are
-// rarely used, so this defaults everything other than the function id to 0. Most of the messages
-// are also constant, so they should be populated at compile time if possible.
-static constexpr zx_smc_parameters_t CreateSmcMessage(
+// rarely used, so this defaults everything other than the function id to 0. Most of the function
+// calls are also constant, so they should be populated at compile time if possible.
+static constexpr zx_smc_parameters_t CreateSmcFunctionCall(
     uint32_t func_id,
     uint64_t arg1 = 0, uint64_t arg2 = 0, uint64_t arg3 = 0,
     uint64_t arg4 = 0, uint64_t arg5 = 0, uint64_t arg6 = 0,

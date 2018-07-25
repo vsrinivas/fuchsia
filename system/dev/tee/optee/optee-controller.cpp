@@ -19,7 +19,7 @@
 
 namespace optee {
 
-static bool IsOpteeMsgApi(const tee::TrustedOsCallUidResult& returned_uid) {
+static bool IsOpteeApi(const tee::TrustedOsCallUidResult& returned_uid) {
     return returned_uid.uid_0_3 == kOpteeApiUid_0 &&
            returned_uid.uid_4_7 == kOpteeApiUid_1 &&
            returned_uid.uid_8_11 == kOpteeApiUid_2 &&
@@ -35,27 +35,27 @@ static bool IsOpteeApiRevisionSupported(const tee::TrustedOsCallRevisionResult& 
 }
 
 zx_status_t OpteeController::ValidateApiUid() const {
-    static const zx_smc_parameters_t kGetApiMsg = tee::CreateSmcMessage(
+    static const zx_smc_parameters_t kGetApiFuncCall = tee::CreateSmcFunctionCall(
         tee::kTrustedOsCallUidFuncId);
     union {
         zx_smc_result_t raw;
         tee::TrustedOsCallUidResult uid;
     } result;
-    zx_status_t status = zx_smc_call(secure_monitor_, &kGetApiMsg, &result.raw);
+    zx_status_t status = zx_smc_call(secure_monitor_, &kGetApiFuncCall, &result.raw);
 
     return status == ZX_OK
-               ? IsOpteeMsgApi(result.uid) ? ZX_OK : ZX_ERR_NOT_FOUND
+               ? IsOpteeApi(result.uid) ? ZX_OK : ZX_ERR_NOT_FOUND
                : status;
 }
 
 zx_status_t OpteeController::ValidateApiRevision() const {
-    static const zx_smc_parameters_t kGetApiRevisionMsg = tee::CreateSmcMessage(
+    static const zx_smc_parameters_t kGetApiRevisionFuncCall = tee::CreateSmcFunctionCall(
         tee::kTrustedOsCallRevisionFuncId);
     union {
         zx_smc_result_t raw;
         tee::TrustedOsCallRevisionResult revision;
     } result;
-    zx_status_t status = zx_smc_call(secure_monitor_, &kGetApiRevisionMsg, &result.raw);
+    zx_status_t status = zx_smc_call(secure_monitor_, &kGetApiRevisionFuncCall, &result.raw);
 
     return status == ZX_OK
                ? IsOpteeApiRevisionSupported(result.revision) ? ZX_OK : ZX_ERR_NOT_SUPPORTED
@@ -63,13 +63,13 @@ zx_status_t OpteeController::ValidateApiRevision() const {
 }
 
 zx_status_t OpteeController::GetOsRevision() {
-    static const zx_smc_parameters_t kGetOsRevisionMsg = tee::CreateSmcMessage(
+    static const zx_smc_parameters_t kGetOsRevisionFuncCall = tee::CreateSmcFunctionCall(
         kGetOsRevisionFuncId);
     union {
         zx_smc_result_t raw;
         GetOsRevisionResult revision;
     } result;
-    zx_status_t status = zx_smc_call(secure_monitor_, &kGetOsRevisionMsg, &result.raw);
+    zx_status_t status = zx_smc_call(secure_monitor_, &kGetOsRevisionFuncCall, &result.raw);
 
     if (status != ZX_OK) {
         return status;
@@ -87,14 +87,14 @@ zx_status_t OpteeController::ExchangeCapabilities() {
         nonsecure_world_capabilities |= kNonSecureCapUniprocessor;
     }
 
-    const zx_smc_parameters_t message = tee::CreateSmcMessage(kExchangeCapabilitiesFuncId,
-                                                              nonsecure_world_capabilities);
+    const zx_smc_parameters_t func_call = tee::CreateSmcFunctionCall(kExchangeCapabilitiesFuncId,
+                                                                     nonsecure_world_capabilities);
     union {
         zx_smc_result_t raw;
         ExchangeCapabilitiesResult response;
     } result;
 
-    zx_status_t status = zx_smc_call(secure_monitor_, &message, &result.raw);
+    zx_status_t status = zx_smc_call(secure_monitor_, &func_call, &result.raw);
 
     if (status != ZX_OK) {
         return status;

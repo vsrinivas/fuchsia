@@ -69,7 +69,7 @@ constexpr uint32_t kOpteeApiRevisionMajor = 2;
 constexpr uint32_t kOpteeApiRevisionMinor = 0;
 
 //
-// OP-TEE SMC Messages
+// OP-TEE SMC Functions
 //
 // The below section defines the format for OP-TEE specific Secure Monitor Calls. For each OP-TEE
 // function, there should be a function identifier and an expected result structure. The result
