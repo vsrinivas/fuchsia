@@ -148,6 +148,12 @@ void DwarfDieDecoder::AddFile(llvm::dwarf::Attribute attribute,
       });
 }
 
+void DwarfDieDecoder::AddCustom(
+    llvm::dwarf::Attribute attribute,
+    std::function<void(const llvm::DWARFFormValue&)> callback) {
+  attrs_.emplace_back(attribute, std::move(callback));
+}
+
 bool DwarfDieDecoder::Decode(const llvm::DWARFDie& die) {
   return Decode(*die.getDebugInfoEntry());
 }

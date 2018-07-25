@@ -7,6 +7,7 @@
 #include <string>
 
 #include "garnet/bin/zxdb/client/symbols/value.h"
+#include "garnet/bin/zxdb/client/symbols/variable_location.h"
 
 namespace zxdb {
 
@@ -21,15 +22,8 @@ class Variable : public Value {
   // Symbol overrides.
   const Variable* AsVariable() const override;
 
-  // TODO(brettw) add location information.
-  //
-  // Simple ones that are always valid look like this:
-  //   DW_AT_location (DW_OP_reg5 RDI)
-  //
-  // Complicated ones with valid ranges look like this:
-  //   DW_AT_location:
-  //     [0x00000000000ad6be,  0x00000000000ad6c8): DW_OP_reg2 RCX
-  //     [0x00000000000ad6c8,  0x00000000000ad780): DW_OP_reg14 R14
+  const VariableLocation& location() const { return location_; }
+  void set_location(VariableLocation loc) { location_ = std::move(loc); }
 
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(Variable);
@@ -39,6 +33,7 @@ class Variable : public Value {
   ~Variable();
 
  private:
+  VariableLocation location_;
 };
 
 }  // namespace zxdb

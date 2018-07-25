@@ -20,6 +20,9 @@ namespace zxdb {
 
 namespace {
 
+const char kDoStructCallName[] = "DoStructCall";
+const char kGetIntPtrName[] = "GetIntPtr";
+
 // Returns the function symbol with the given name. The name is assumed to
 // exit as this function will EXPECT_* it to be valid. Returns empty refptr on
 // failure.
@@ -60,7 +63,6 @@ TEST(DwarfSymbolFactory, FunctionType) {
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the GetIntPtr function.
-  const char kGetIntPtrName[] = "GetIntPtr";
   fxl::RefPtr<const Function> function =
       GetFunctionWithName(module, kGetIntPtrName);
   ASSERT_TRUE(function);
@@ -89,7 +91,6 @@ TEST(DwarfSymbolFactory, ModifiedBaseType) {
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the GetIntPtr function.
-  const char kGetIntPtrName[] = "GetIntPtr";
   fxl::RefPtr<const Function> function =
       GetFunctionWithName(module, kGetIntPtrName);
   ASSERT_TRUE(function);
@@ -167,9 +168,8 @@ TEST(DwarfSymbolFactory, CodeBlocks) {
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the DoStructCall function.
-  const char kDoStructCall[] = "DoStructCall";
   fxl::RefPtr<const Function> function =
-      GetFunctionWithName(module, kDoStructCall);
+      GetFunctionWithName(module, kDoStructCallName);
   ASSERT_TRUE(function);
 
   // It should have two parameters, arg1 and arg2.
@@ -184,6 +184,13 @@ TEST(DwarfSymbolFactory, CodeBlocks) {
     else if (cur_var->GetAssignedName() == "arg2")
       int_arg = cur_var;
   }
+
+  // Both args should have valid locations with non-empty expressions. This
+  // doesn't test the actual programs because that could vary by build.
+  ASSERT_FALSE(struct_arg->location().is_null());
+  EXPECT_FALSE(struct_arg->location().locations()[0].expression.empty());
+  ASSERT_FALSE(int_arg->location().is_null());
+  EXPECT_FALSE(int_arg->location().locations()[0].expression.empty());
 
   // Validate the arg1 type (const Struct&).
   ASSERT_TRUE(struct_arg);

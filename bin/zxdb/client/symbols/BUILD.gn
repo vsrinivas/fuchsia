@@ -35,6 +35,7 @@ static_library("symbols") {
     "type.h",
     "value.h",
     "variable.h",
+    "variable_location.h",
   ]
 
   sources = [
@@ -75,6 +76,7 @@ static_library("symbols") {
     "type.cc",
     "value.cc",
     "variable.cc",
+    "variable_location.cc",
   ]
 
   # This library can not use any part of the debugger other than the "common"

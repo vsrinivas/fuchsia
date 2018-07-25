@@ -16,7 +16,10 @@
 #include "garnet/bin/zxdb/client/symbols/symbol.h"
 #include "garnet/bin/zxdb/client/symbols/variable.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
+#include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 
 namespace zxdb {
@@ -46,6 +49,60 @@ FileLine MakeFileLine(const llvm::Optional<std::string>& file,
   if (file && line)
     return FileLine(*file, static_cast<int>(*line));
   return FileLine();
+}
+
+// Decodes the contents of DW_AT_Location attribute.
+VariableLocation DecodeVariableLocation(const llvm::DWARFUnit* unit,
+                                        const llvm::DWARFFormValue& form) {
+  if (form.isFormClass(llvm::DWARFFormValue::FC_Block) ||
+      form.isFormClass(llvm::DWARFFormValue::FC_Exprloc)) {
+    // These forms are both a block of data which is interpreted as a DWARF
+    // expression. There is no validity range for this so assume the expression
+    // is valid as long as the variable is in scope.
+    llvm::ArrayRef<uint8_t> block = *form.getAsBlock();
+    return VariableLocation(block.data(), block.size());
+  }
+
+  if (!form.isFormClass(llvm::DWARFFormValue::FC_SectionOffset))
+    return VariableLocation();  // Unknown type.
+
+  // This form is a "section offset" reference to a block in the .debug_loc
+  // table that contains a list of valid ranges + associated expressions.
+  llvm::DWARFContext& context = unit->getContext();
+  const llvm::DWARFObject& object = context.getDWARFObj();
+  const llvm::DWARFSection& debug_loc_section = object.getLocSection();
+  if (debug_loc_section.Data.empty()) {
+    // LLVM dumpLocation() falls back on the DWARFObject::getLocDWOSection()
+    // call in this case. We don't support DWOs yet so just fail.
+    return VariableLocation();
+  }
+  // Already type-checked this above so can count on the Optional return value
+  // being valid.
+  uint32_t offset = *form.getAsSectionOffset();
+
+  // Extract the LLVM location list.
+  llvm::DWARFDebugLoc debug_loc;
+  llvm::DWARFDataExtractor data(object, debug_loc_section,
+                                context.isLittleEndian(),
+                                object.getAddressSize());
+  llvm::Optional<llvm::DWARFDebugLoc::LocationList> location_list =
+      debug_loc.parseOneLocationList(data, &offset);
+  if (!location_list)
+    return VariableLocation();  // No locations.
+
+  // Convert from llvm::DWARFDebugLoc::Entry to VariableLocation::Entry.
+  std::vector<VariableLocation::Entry> entries;
+  for (const llvm::DWARFDebugLoc::Entry& llvm_entry : location_list->Entries) {
+    entries.emplace_back();
+    VariableLocation::Entry& dest = entries.back();
+
+    dest.begin = llvm_entry.Begin;
+    dest.end = llvm_entry.End;
+    const uint8_t* data =
+        reinterpret_cast<const uint8_t*>(llvm_entry.Loc.data());
+    dest.expression.assign(data, data + llvm_entry.Loc.size());
+  }
+  return VariableLocation(std::move(entries));
 }
 
 }  // namespace
@@ -398,6 +455,13 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(
   llvm::Optional<const char*> name;
   decoder.AddCString(llvm::dwarf::DW_AT_name, &name);
 
+  VariableLocation location;
+  decoder.AddCustom(llvm::dwarf::DW_AT_location,
+                    [ unit = die.getDwarfUnit(),
+                      &location ](const llvm::DWARFFormValue& value) {
+                      location = DecodeVariableLocation(unit, value);
+                    });
+
   llvm::DWARFDie type;
   decoder.AddReference(llvm::dwarf::DW_AT_type, &type);
 
@@ -409,6 +473,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(
     result->set_assigned_name(*name);
   if (type)
     result->set_type(MakeLazy(type));
+  result->set_location(std::move(location));
   return result;
 }
 

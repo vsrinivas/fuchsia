@@ -84,6 +84,13 @@ class DwarfDieDecoder {
   void AddFile(llvm::dwarf::Attribute attribute,
                llvm::Optional<std::string>* output);
 
+  // Extracts data with a custom callback. When the attribute is encountered,
+  // the callback is executed with the associated form value. This can be used
+  // to cover attributes that could be encoded using multiple different
+  // encodings.
+  void AddCustom(llvm::dwarf::Attribute attribute,
+                 std::function<void(const llvm::DWARFFormValue&)> callback);
+
   // Decode one info entry. Returns true if any attributes were decoded. THe
   // outputs for each encountered attribute will be set.
   //
