@@ -88,13 +88,13 @@ prefixing the identifier with the library name or alias.
     using textures as tex;
 
     interface Frob {
-      // "Thing" refers to "Thing" in the "objects" library
-      // "tex.Color" refers to "Color" in the "textures" library
-      Paint(Thing thing, tex.Color color);
+        // "Thing" refers to "Thing" in the "objects" library
+        // "tex.Color" refers to "Color" in the "textures" library
+        Paint(Thing thing, tex.Color color);
     };
 
     struct Thing {
-      string name;
+        string name;
     };
 ```
 
@@ -104,7 +104,7 @@ prefixing the identifier with the library name or alias.
     library textures;
 
     struct Color {
-      uint32 rgba;
+        uint32 rgba;
     };
 ```
 
@@ -114,12 +114,12 @@ FIDL supports the following literal types using C-like syntax: bools, signed
 integers, unsigned integers, floats, strings.
 
 ```
-    const bool kBool = true;
-    const int32 kInt = -333;
-    const uint32 kUInt = 42;
-    const uint64 kDiamond = 0x183c7effff7e3c18;
-    const string kString = "a string";
-    const float32 kFloat = 1.0;
+    const bool BOOL = true;
+    const int32 INT = -333;
+    const uint32 UINT = 42;
+    const uint64 DIAMOND = 0x183c7effff7e3c18;
+    const string STRING = "a string";
+    const float32 FLOAT = 1.0;
 ```
 
 #### Declaration Separator
@@ -160,10 +160,11 @@ declaration together with any "using" declarations needed by that file.
 The library's name may be used by certain language bindings to provide scoping
 for symbols emitted by the code generator.
 
-For example, the C++ bindings generator places declarations for the FIDL library
-"mozart.composition" within the C++ namespace "mozart::composition". Similarly,
-for languages such as Dart and Rust which have their own module system, each
-FIDL library is compiled as a module for that language.
+For example, the C++ bindings generator places declarations for the
+FIDL library "fuchsia.ui" within the C++ namespace
+"fuchsia::ui". Similarly, for languages such as Dart and Rust which
+have their own module system, each FIDL library is compiled as a
+module for that language.
 
 ### Types and Type Declarations
 
@@ -543,7 +544,7 @@ must be either a primitive or an enum.
 
 ```
 // a constant declared at library scope
-const int32 kFavoriteNumber = 42;
+const int32 FAVORITE_NUMBER = 42;
 ```
 
 ### Constant Expressions
