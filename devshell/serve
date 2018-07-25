@@ -7,7 +7,7 @@
 ## usage: fx serve [-v] [-d device] [--direct]
 ##   -v enable more verbose output (must be first argument)
 ##   -d target a specifc device
-##   --direct configure target to not use the SSH tunnel
+##   --no-direct configure target to use an SSH tunnel as transport (deprecated)
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
@@ -53,7 +53,7 @@ while (($#)); do
     -v|--verbose)
       serve_args+=("$1")
       ;;
-    --direct)
+    --no-direct|--direct)
       serve_args+=("$1")
       ;;
     *)

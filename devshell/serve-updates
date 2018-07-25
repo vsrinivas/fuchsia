@@ -7,7 +7,7 @@
 ## usage: fx serve-updates [-v] [-d <device>] [--direct]
 ##   -v verbose (do not suppress amber-srv output)
 ##   -d <device> to specify a specific target device
-##   --direct configure target to not use the SSH tunnel
+##   --no-direct configure target to use an SSH tunnel as transport (deprecated)
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
@@ -22,7 +22,7 @@ set -- "${FX_ARGV[@]}"
 verbose=false
 device=""
 device_arg=""
-direct=false
+direct=true
 while (($#)); do
   case "$1" in
     -v|--verbose)
@@ -32,6 +32,9 @@ while (($#)); do
       device="$2"
       device_arg="-d $2"
       shift
+      ;;
+    --no-direct)
+      direct=false
       ;;
     --direct)
       direct=true
