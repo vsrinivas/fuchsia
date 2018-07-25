@@ -81,7 +81,7 @@ def main():
           # EEXIST occurs if two gopath entries share the same parent name
           if e.errno != errno.EEXIST:
             raise
-        # TODO(BLD-62): the following check might not be necessary anymore.
+        # TODO(BLD-228): the following check might not be necessary anymore.
         tgt = os.path.join(dstdir, os.path.basename(dst))
         # The source tree is effectively read-only once the build begins.
         # Therefore it is an error if tgt is in the source tree. At first

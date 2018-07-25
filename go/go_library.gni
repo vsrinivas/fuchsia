@@ -24,7 +24,7 @@
 #
 #   sources (optional)
 #     List of source files, relative to source_dir.
-#     TODO(BLD-62): make this attribute required.
+#     TODO(BLD-228): make this attribute required.
 #
 #   deps (optional)
 #     List of labels for Go libraries this target depends on.

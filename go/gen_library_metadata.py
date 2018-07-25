@@ -79,7 +79,7 @@ def main():
 
     current_sources = []
     if args.sources:
-        # TODO(BLD-62): verify that the sources are in a single folder.
+        # TODO(BLD-228): verify that the sources are in a single folder.
         for source in args.sources:
             current_sources.append(Source(os.path.join(name, source),
                                           os.path.join(args.source_dir, source),
