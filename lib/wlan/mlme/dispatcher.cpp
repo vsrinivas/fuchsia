@@ -248,12 +248,7 @@ zx_status_t Dispatcher::HandleMlmeStats(uint32_t ordinal) const {
     debugfn();
     ZX_DEBUG_ASSERT(ordinal == fuchsia_wlan_mlme_MLMEStatsQueryReqOrdinal);
 
-    wlan_mlme::StatsQueryResponse resp;
-    resp.stats.dispatcher_stats = stats_.ToFidl();
-    auto mlme_stats = mlme_->GetMlmeStats();
-    if (!mlme_stats.has_invalid_tag()) {
-        resp.stats.mlme_stats = std::make_unique<wlan_stats::MlmeStats>(mlme_->GetMlmeStats());
-    }
+    wlan_mlme::StatsQueryResponse resp = GetStatsToFidl();
     return SendServiceMessage(fuchsia_wlan_mlme_MLMEStatsQueryRespOrdinal, &resp);
 }
 
@@ -276,6 +271,17 @@ void Dispatcher::HwIndication(uint32_t ind) {
 
 void Dispatcher::ResetStats() {
     stats_.Reset();
+}
+
+wlan_mlme::StatsQueryResponse Dispatcher::GetStatsToFidl() const {
+    wlan_mlme::StatsQueryResponse stats_response;
+    stats_response.stats.dispatcher_stats = stats_.ToFidl();
+    auto mlme_stats = mlme_->GetMlmeStats();
+    if (!mlme_stats.has_invalid_tag()) {
+        stats_response.stats.mlme_stats =
+            std::make_unique<wlan_stats::MlmeStats>(mlme_->GetMlmeStats());
+    }
+    return stats_response;
 }
 
 }  // namespace wlan

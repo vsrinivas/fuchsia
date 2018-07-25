@@ -36,6 +36,7 @@ class Dispatcher {
     // Called when the hardware reports an indication such as Pre-TBTT.
     void HwIndication(uint32_t ind);
     void ResetStats();
+    ::fuchsia::wlan::mlme::StatsQueryResponse GetStatsToFidl() const;
 
    private:
     zx_status_t HandleSvcPacket(fbl::unique_ptr<Packet> packet);
