@@ -106,5 +106,5 @@ fastboot flash "${partition}" "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONR_ZBI}" "${ext
 fastboot reboot
 
 if [[ "${pave}" == "true" ]]; then
-  fx-command-exec boot arm -1
+  fx-command-exec boot arm -- -1
 fi
