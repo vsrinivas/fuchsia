@@ -20,16 +20,27 @@ cobalt::CobaltContext* g_cobalt_context = nullptr;
 
 fxl::AutoCall<fit::closure> InitializeCobalt(
     async_dispatcher_t* dispatcher, component::StartupContext* context) {
-  return cobalt::InitializeCobalt(dispatcher, context, kLedgerCobaltProjectId,
-                                  &g_cobalt_context);
+  static std::unique_ptr<cobalt::CobaltContext> cobalt_context;
+  FXL_DCHECK(!cobalt_context);
+  cobalt_context =
+      cobalt::MakeCobaltContext(dispatcher, context, kLedgerCobaltProjectId);
+  g_cobalt_context = cobalt_context.get();
+  return fxl::MakeAutoCall<fit::closure>([&] {
+    g_cobalt_context = nullptr;
+    cobalt_context.reset();
+  });
 }
 
 void ReportEvent(CobaltEvent event) {
+  // Do not do anything if cobalt reporting is disabled.
+  if (!g_cobalt_context) {
+    return;
+  }
   fuchsia::cobalt::Value value;
   value.set_index_value(static_cast<uint32_t>(event));
   cobalt::CobaltObservation observation(kCobaltMetricId, kCobaltEncodingId,
                                         std::move(value));
-  cobalt::ReportObservation(observation, g_cobalt_context);
+  g_cobalt_context->ReportObservation(observation);
 }
 
 }  // namespace ledger

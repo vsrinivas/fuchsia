@@ -29,7 +29,10 @@ enum class CobaltEvent : uint32_t {
 fxl::AutoCall<fit::closure> InitializeCobalt(
     async_dispatcher_t* dispatcher, component::StartupContext* context);
 
-// Report an event to Cobalt.
+// Report an event to Cobalt. he AutoCall object returned by |InitializeCobalt|
+// must be live throughout every call to this function. This is
+// thread-compatible, as long as the previous requirement is ensured across
+// threads.
 void ReportEvent(CobaltEvent event);
 
 };  // namespace ledger
