@@ -14,6 +14,7 @@
 #include <lib/zx/handle.h>
 #include <lib/zx/log.h>
 #include <lib/zx/time.h>
+#include <lib/zx/vmo.h>
 #include <stdio.h>
 #include <third_party/crashpad/client/settings.h>
 #include <third_party/crashpad/handler/fuchsia/crash_report_exception_handler.h>
@@ -166,6 +167,13 @@ class AnalyzerImpl : public fuchsia::crash::Analyzer {
                AnalyzeCallback callback) override {
     callback();
     HandleException(std::move(process), std::move(thread));
+  }
+
+  void Process(fuchsia::crash::Buffer crashlog,
+               ProcessCallback callback) override {
+    callback();
+    // TODO(DX-230): upload a report with the crashlog as attachment.
+    FXL_LOG(WARNING) << "Processing VMO crashlog not supported yet.";
   }
 };
 
