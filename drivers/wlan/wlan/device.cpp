@@ -124,6 +124,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
         return status;
     }
     dispatcher_.reset(new Dispatcher(this, std::move(mlme)));
+    dispatcher_->CreateAndStartTelemetry();
 
     work_thread_ = std::thread(&Device::MainLoop, this);
 

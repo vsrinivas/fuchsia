@@ -12,6 +12,7 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/service.h>
+#include <wlan/mlme/telemetry.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
@@ -37,6 +38,7 @@ class Dispatcher {
     void HwIndication(uint32_t ind);
     void ResetStats();
     ::fuchsia::wlan::mlme::StatsQueryResponse GetStatsToFidl() const;
+    void CreateAndStartTelemetry();
 
    private:
     zx_status_t HandleSvcPacket(fbl::unique_ptr<Packet> packet);
@@ -51,6 +53,7 @@ class Dispatcher {
     // the underlying DeviceInterface, based on the role of the device (e.g., Client or AP).
     fbl::unique_ptr<Mlme> mlme_ = nullptr;
     common::WlanStats<common::DispatcherStats, ::fuchsia::wlan::stats::DispatcherStats> stats_;
+    fbl::unique_ptr<Telemetry> telemetry_;
 };
 
 }  // namespace wlan
