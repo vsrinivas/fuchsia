@@ -187,10 +187,13 @@ class FakeCobaltEncoderFactoryImpl
                                         std::move(request));
   }
 
-  void GetEncoderForConfig(
-      fidl::StringPtr config,
-      fidl::InterfaceRequest<fuchsia::cobalt::CobaltEncoder> request) override {
-    // Implementation is on the way
+  void GetEncoderForProject(
+      fuchsia::cobalt::ProjectProfile profile,
+      fidl::InterfaceRequest<fuchsia::cobalt::CobaltEncoder> request,
+      GetEncoderForProjectCallback callback) override {
+    cobalt_encoder_.reset(new FakeCobaltEncoderImpl());
+    cobalt_encoder_bindings_.AddBinding(cobalt_encoder_.get(),
+                                        std::move(request));
   }
 
   FakeCobaltEncoderImpl* cobalt_encoder() { return cobalt_encoder_.get(); }
