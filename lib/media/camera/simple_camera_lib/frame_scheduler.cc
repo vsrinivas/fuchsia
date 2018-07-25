@@ -36,7 +36,7 @@ uint64_t SimpleFrameScheduler::GetPresentationTimeNs(uint64_t capture_time_ns) {
   // to miss our deadline.  In that case, the best thing we can do is just
   // add the lead delay, and send it out:
   if (now_ns - capture_time_ns > kAcquireDelayNs) {
-    FXL_LOG(WARNING) << "Unexpected delay between capture and availability!"
+    FXL_VLOG(1) << "Unexpected delay between capture and availability!"
                      << " now_ns - capture_time_ns = "
                      << now_ns - capture_time_ns << " > AcquireDelay ("
                      << kAcquireDelayNs << ")";
