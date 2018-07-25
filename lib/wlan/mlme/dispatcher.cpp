@@ -182,21 +182,21 @@ zx_status_t Dispatcher::HandleMlmeMessage(fbl::unique_ptr<Packet> packet, uint32
 }
 
 template <typename T> zx_status_t Dispatcher::SendServiceMessage(uint32_t ordinal, T* msg) const {
-  // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
-  // everyone.
-  size_t buf_len = 4096;
-  // size_t buf_len = sizeof(fidl_message_header_t) + resp->GetSerializedSize();
-  fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
-  if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
+    // everyone.
+    size_t buf_len = 4096;
+    // size_t buf_len = sizeof(fidl_message_header_t) + resp->GetSerializedSize();
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
+    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-  auto packet = fbl::make_unique<Packet>(std::move(buffer), buf_len);
-  packet->set_peer(Packet::Peer::kService);
-  zx_status_t status = SerializeServiceMsg(packet.get(), ordinal, msg);
-  if (status != ZX_OK) {
-      errorf("could not serialize MLME primitive: %d\n", ordinal);
-      return status;
-  }
-  return device_->SendService(fbl::move(packet));
+    auto packet = fbl::make_unique<Packet>(std::move(buffer), buf_len);
+    packet->set_peer(Packet::Peer::kService);
+    zx_status_t status = SerializeServiceMsg(packet.get(), ordinal, msg);
+    if (status != ZX_OK) {
+        errorf("could not serialize MLME primitive: %d\n", ordinal);
+        return status;
+    }
+    return device_->SendService(fbl::move(packet));
 }
 
 zx_status_t Dispatcher::HandleDeviceQueryRequest() {
@@ -252,7 +252,7 @@ zx_status_t Dispatcher::HandleMlmeStats(uint32_t ordinal) const {
     resp.stats.dispatcher_stats = stats_.ToFidl();
     auto mlme_stats = mlme_->GetMlmeStats();
     if (!mlme_stats.has_invalid_tag()) {
-      resp.stats.mlme_stats = std::make_unique<wlan_stats::MlmeStats>(mlme_->GetMlmeStats());
+        resp.stats.mlme_stats = std::make_unique<wlan_stats::MlmeStats>(mlme_->GetMlmeStats());
     }
     return SendServiceMessage(fuchsia_wlan_mlme_MLMEStatsQueryRespOrdinal, &resp);
 }
@@ -272,6 +272,10 @@ zx_status_t Dispatcher::PostChannelChange() {
 void Dispatcher::HwIndication(uint32_t ind) {
     debugfn();
     mlme_->HwIndication(ind);
+}
+
+void Dispatcher::ResetStats() {
+    stats_.Reset();
 }
 
 }  // namespace wlan

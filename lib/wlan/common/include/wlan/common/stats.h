@@ -29,13 +29,13 @@ constexpr bool kStatsDebugEnabled = false;
 namespace common {
 
 struct Counter {
-    std::atomic_uint64_t count;
+    std::atomic_uint64_t count{0};
     std::string name;  // Dynamically set at run-time
     ::fuchsia::wlan::stats::Counter ToFidl() const {
-        return ::fuchsia::wlan::stats::Counter{
-            .count = count.load(std::memory_order_relaxed),
-            .name = name};
+        return ::fuchsia::wlan::stats::Counter{.count = count.load(std::memory_order_relaxed),
+                                               .name = name};
     };
+    void Reset() { count = 0; }
     uint64_t Inc(uint64_t i) { return count.fetch_add(i, std::memory_order_relaxed); }
 };
 
@@ -47,6 +47,11 @@ struct PacketCounter {
         return ::fuchsia::wlan::stats::PacketCounter{
             .in = in.ToFidl(), .out = out.ToFidl(), .drop = drop.ToFidl()};
     };
+    void Reset() {
+        in.Reset();
+        out.Reset();
+        drop.Reset();
+    }
 };
 
 // LINT.IfChange
@@ -57,10 +62,16 @@ struct DispatcherStats {
     PacketCounter data_frame;
     ::fuchsia::wlan::stats::DispatcherStats ToFidl() const {
         return ::fuchsia::wlan::stats::DispatcherStats{.any_packet = any_packet.ToFidl(),
-                                          .mgmt_frame = mgmt_frame.ToFidl(),
-                                          .ctrl_frame = ctrl_frame.ToFidl(),
-                                          .data_frame = data_frame.ToFidl()};
+                                                       .mgmt_frame = mgmt_frame.ToFidl(),
+                                                       .ctrl_frame = ctrl_frame.ToFidl(),
+                                                       .data_frame = data_frame.ToFidl()};
     };
+    void Reset() {
+        any_packet.Reset();
+        mgmt_frame.Reset();
+        ctrl_frame.Reset();
+        data_frame.Reset();
+    }
 };
 
 struct ClientMlmeStats {
@@ -69,9 +80,14 @@ struct ClientMlmeStats {
     PacketCounter mgmt_frame;
     ::fuchsia::wlan::stats::ClientMlmeStats ToFidl() const {
         return ::fuchsia::wlan::stats::ClientMlmeStats{.svc_msg = svc_msg.ToFidl(),
-                                          .data_frame = data_frame.ToFidl(),
-                                          .mgmt_frame = mgmt_frame.ToFidl()};
+                                                       .data_frame = data_frame.ToFidl(),
+                                                       .mgmt_frame = mgmt_frame.ToFidl()};
     };
+    void Reset() {
+        svc_msg.Reset();
+        data_frame.Reset();
+        mgmt_frame.Reset();
+    }
 };
 // LINT.ThenChange(//garnet/public/lib/wlan/fidl/wlan_stats.fidl)
 
@@ -79,6 +95,7 @@ template <typename T, typename U> class WlanStats {
    public:
     T stats;
     U ToFidl() const { return stats.ToFidl(); };
+    void Reset() { stats.Reset(); }
 };
 
 }  // namespace common

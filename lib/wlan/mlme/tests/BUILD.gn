@@ -126,11 +126,13 @@ executable("common_tests") {
 
   sources = [
     "moving_average_unittest.cpp",
+    "stats_unittest.cpp",
   ]
 
   deps = [
     ":test_main",
     "//garnet/lib/wlan/common",
+    "//garnet/public/fidl/fuchsia.wlan.stats",
     "//third_party/googletest:gtest",
   ]
 

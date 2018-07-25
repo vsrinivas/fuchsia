@@ -35,7 +35,7 @@ class Dispatcher {
     zx_status_t PostChannelChange();
     // Called when the hardware reports an indication such as Pre-TBTT.
     void HwIndication(uint32_t ind);
-    common::WlanStats<common::DispatcherStats, ::fuchsia::wlan::stats::DispatcherStats> stats_;
+    void ResetStats();
 
    private:
     zx_status_t HandleSvcPacket(fbl::unique_ptr<Packet> packet);
@@ -43,13 +43,13 @@ class Dispatcher {
     zx_status_t HandleMlmeMessage(fbl::unique_ptr<Packet> packet, uint32_t ordinal);
     zx_status_t HandleDeviceQueryRequest();
     zx_status_t HandleMlmeStats(uint32_t ordinal) const;
-    template <typename T>
-    zx_status_t SendServiceMessage(uint32_t ordinal, T* msg) const;
+    template <typename T> zx_status_t SendServiceMessage(uint32_t ordinal, T* msg) const;
 
     DeviceInterface* device_;
     // The MLME that will handle requests for this dispatcher. This field will be set upon querying
     // the underlying DeviceInterface, based on the role of the device (e.g., Client or AP).
     fbl::unique_ptr<Mlme> mlme_ = nullptr;
+    common::WlanStats<common::DispatcherStats, ::fuchsia::wlan::stats::DispatcherStats> stats_;
 };
 
 }  // namespace wlan
