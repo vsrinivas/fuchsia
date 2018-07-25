@@ -58,68 +58,85 @@ inline debug_ipc::Register CreateRegister(RegisterID id,
 }
 
 inline zx_status_t ReadGeneralRegs(
-    const zx::thread& thread, std::vector<debug_ipc::Register>* registers) {
+    const zx::thread& thread, std::vector<debug_ipc::Register>* out) {
   // We get the general state registers.
-  zx_thread_state_general_regs general_registers;
+  zx_thread_state_general_regs gen_regs;
   zx_status_t status =
-      thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &general_registers,
-                        sizeof(general_registers));
+      thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &gen_regs,
+                        sizeof(gen_regs));
   if (status != ZX_OK)
-    return false;
+    return status;
 
-  registers->push_back(
-      CreateRegister(RegisterID::kX64_rax, 8u, &general_registers.rax));
-  registers->push_back(
-      CreateRegister(RegisterID::kX64_rbx, 8u, &general_registers.rbx));
-  registers->push_back(
-      CreateRegister(RegisterID::kX64_rcx, 8u, &general_registers.rcx));
-  registers->push_back(
-      CreateRegister(RegisterID::kX64_rdx, 8u, &general_registers.rdx));
-  registers->push_back(
-      CreateRegister(RegisterID::kX64_rsi, 8u, &general_registers.rsi));
-  registers->push_back(
-      CreateRegister(RegisterID::kX64_rdi, 8u, &general_registers.rdi));
-  registers->push_back(
-      CreateRegister(RegisterID::kX64_rbp, 8u, &general_registers.rbp));
-  registers->push_back(
-      CreateRegister(RegisterID::kX64_rsp, 8u, &general_registers.rsp));
-  registers->push_back(
-      CreateRegister(RegisterID::kX64_r8, 8u, &general_registers.r8));
-  registers->push_back(
-      CreateRegister(RegisterID::kX64_r9, 8u, &general_registers.r9));
-  registers->push_back(
-      CreateRegister(RegisterID::kX64_r10, 8u, &general_registers.r10));
-  registers->push_back(
-      CreateRegister(RegisterID::kX64_r11, 8u, &general_registers.r11));
-  registers->push_back(
-      CreateRegister(RegisterID::kX64_r12, 8u, &general_registers.r12));
-  registers->push_back(
-      CreateRegister(RegisterID::kX64_r13, 8u, &general_registers.r13));
-  registers->push_back(
-      CreateRegister(RegisterID::kX64_r14, 8u, &general_registers.r14));
-  registers->push_back(
-      CreateRegister(RegisterID::kX64_r15, 8u, &general_registers.r15));
-  registers->push_back(
-      CreateRegister(RegisterID::kX64_rip, 8u, &general_registers.rip));
-  registers->push_back(
-      CreateRegister(RegisterID::kX64_rflags, 8u, &general_registers.rflags));
+  out->push_back(CreateRegister(RegisterID::kX64_rax, 8u, &gen_regs.rax));
+  out->push_back(CreateRegister(RegisterID::kX64_rbx, 8u, &gen_regs.rbx));
+  out->push_back(CreateRegister(RegisterID::kX64_rcx, 8u, &gen_regs.rcx));
+  out->push_back(CreateRegister(RegisterID::kX64_rdx, 8u, &gen_regs.rdx));
+  out->push_back(CreateRegister(RegisterID::kX64_rsi, 8u, &gen_regs.rsi));
+  out->push_back(CreateRegister(RegisterID::kX64_rdi, 8u, &gen_regs.rdi));
+  out->push_back(CreateRegister(RegisterID::kX64_rbp, 8u, &gen_regs.rbp));
+  out->push_back(CreateRegister(RegisterID::kX64_rsp, 8u, &gen_regs.rsp));
+  out->push_back(CreateRegister(RegisterID::kX64_r8,  8u, &gen_regs.r8));
+  out->push_back(CreateRegister(RegisterID::kX64_r9,  8u, &gen_regs.r9));
+  out->push_back(CreateRegister(RegisterID::kX64_r10, 8u, &gen_regs.r10));
+  out->push_back(CreateRegister(RegisterID::kX64_r11, 8u, &gen_regs.r11));
+  out->push_back(CreateRegister(RegisterID::kX64_r12, 8u, &gen_regs.r12));
+  out->push_back(CreateRegister(RegisterID::kX64_r13, 8u, &gen_regs.r13));
+  out->push_back(CreateRegister(RegisterID::kX64_r14, 8u, &gen_regs.r14));
+  out->push_back(CreateRegister(RegisterID::kX64_r15, 8u, &gen_regs.r15));
+  out->push_back(CreateRegister(RegisterID::kX64_rip, 8u, &gen_regs.rip));
+  out->push_back(CreateRegister(RegisterID::kX64_rflags, 8u, &gen_regs.rflags));
+
+  return ZX_OK;
+}
+
+inline zx_status_t ReadFPRegs(const zx::thread& thread,
+                              std::vector<debug_ipc::Register>* out) {
+  zx_thread_state_fp_regs fp_regs;
+  zx_status_t status =
+      thread.read_state(ZX_THREAD_STATE_FP_REGS, &fp_regs, sizeof(fp_regs));
+  if (status != ZX_OK)
+    return status;
+
+  out->push_back(CreateRegister(RegisterID::kX64_fcw, 2u, &fp_regs.fcw));
+  out->push_back(CreateRegister(RegisterID::kX64_fsw, 2u, &fp_regs.fsw));
+  out->push_back(CreateRegister(RegisterID::kX64_ftw, 2u, &fp_regs.ftw));
+  out->push_back(CreateRegister(RegisterID::kX64_fop, 2u, &fp_regs.fop));
+  out->push_back(CreateRegister(RegisterID::kX64_fip, 2u, &fp_regs.fip));
+  out->push_back(CreateRegister(RegisterID::kX64_fdp, 2u, &fp_regs.fdp));
+
+  // Each entry is 16 bytes long, but only 10 are actually used.
+  out->push_back(CreateRegister(RegisterID::kX64_st0, 10u, &fp_regs.st[0]));
+  out->push_back(CreateRegister(RegisterID::kX64_st1, 10u, &fp_regs.st[1]));
+  out->push_back(CreateRegister(RegisterID::kX64_st2, 10u, &fp_regs.st[2]));
+  out->push_back(CreateRegister(RegisterID::kX64_st3, 10u, &fp_regs.st[3]));
+  out->push_back(CreateRegister(RegisterID::kX64_st4, 10u, &fp_regs.st[4]));
+  out->push_back(CreateRegister(RegisterID::kX64_st5, 10u, &fp_regs.st[5]));
+  out->push_back(CreateRegister(RegisterID::kX64_st6, 10u, &fp_regs.st[6]));
+  out->push_back(CreateRegister(RegisterID::kX64_st7, 10u, &fp_regs.st[7]));
 
   return ZX_OK;
 }
 
 }  // namespace
 
-bool GetRegisterStateFromCPU(
-    const zx::thread& thread,
-    std::vector<debug_ipc::RegisterCategory>* categories) {
-  categories->clear();
+bool GetRegisterStateFromCPU(const zx::thread& thread,
+                             std::vector<debug_ipc::RegisterCategory>* cats) {
+  cats->clear();
 
-  categories->push_back({debug_ipc::RegisterCategory::Type::kGeneral, {}});
-  auto& general_category = categories->back();
+  cats->push_back({debug_ipc::RegisterCategory::Type::kGeneral, {}});
+  auto& general_category = cats->back();
   if (ReadGeneralRegs(thread, &general_category.registers) != ZX_OK) {
-    categories->clear();
+    cats->clear();
     return false;
   }
+
+  cats->push_back({debug_ipc::RegisterCategory::Type::kFloatingPoint, {}});
+  auto& fp_category = cats->back();
+  if (ReadFPRegs(thread, &fp_category.registers) != ZX_OK) {
+    cats->clear();
+    return false;
+  }
+
   return true;
 }
 

@@ -16,8 +16,9 @@ namespace debug_ipc {
 enum class RegisterID : uint32_t {
   kUnknown = 0,
 
-  // ARMv8 ---------------------------------------------------------------------
-  // Range: 1000-1999
+  // ARMv8 (Range: 1000-1999) --------------------------------------------------
+
+  // General purpose
 
   kARMv8_x0   = 1000,
   kARMv8_x1   = 1001,
@@ -56,8 +57,9 @@ enum class RegisterID : uint32_t {
 
   // TODO(donosoc): Add ARMv8 vector registers
 
-  // x64 -----------------------------------------------------------------------
-  // Range: 2000-2999
+  // x64 (Range: 2000-2999) ----------------------------------------------------
+
+  // General purpose
 
   kX64_rax    = 2000,
   kX64_rbx    = 2001,
@@ -77,6 +79,28 @@ enum class RegisterID : uint32_t {
   kX64_r15    = 2015,
   kX64_rip    = 2016,
   kX64_rflags = 2017,
+
+  // FP (x87 FPU/MMX)
+
+  kX64_fcw = 2100,  // Control word.
+  kX64_fsw = 2101,  // Status word.
+  kX64_ftw = 2102,  // Tag word.
+                    // 2103 reserved
+  kX64_fop = 2104,  // Opcode.
+  kX64_fip = 2105,  // Instruction pointer.
+  kX64_fdp = 2106,  // Data pointer.
+
+  // The x87/MMX state. For x87 the each "st" entry has the low 80 bits used for
+  // the register contents. For MMX, the low 64 bits are used.
+  // The higher bits are unused.
+  kX64_st0 = 2110,
+  kX64_st1 = 2111,
+  kX64_st2 = 2112,
+  kX64_st3 = 2113,
+  kX64_st4 = 2114,
+  kX64_st5 = 2115,
+  kX64_st6 = 2116,
+  kX64_st7 = 2117,
 
   // TODO(donosoc): Add x64 vector registers
 };

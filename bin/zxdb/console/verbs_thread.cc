@@ -8,6 +8,7 @@
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/process.h"
+#include "garnet/bin/zxdb/client/register.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command.h"
@@ -337,24 +338,48 @@ Err DoStepi(ConsoleContext* context, const Command& cmd) {
 
 // regs ------------------------------------------------------------------------
 
+using debug_ipc::RegisterCategory;
+
 const char kRegsShortHelp[] =
     "regs / rg: Show the current registers for a thread.";
 const char kRegsHelp[] =
-    R"(regs
+    R"(regs [--category=<category>]
 
-  Shows the current registers for  thread.
   Alias: "rg"
+
+  Shows the current registers for a thread. The thread must be stopped.
+  By default the general purpose registers will be shown, but more can be
+  configures through switches.
+
+Arguments:
+
+  --category=<category> | -c <category>
+      Which categories if registers to show.
+      The following options can be set:
+
+      - general: Show general purpose registers.
+      - fp: Show floating point registers.
+      - vector: Show vector registries.
+      - all: Show all the categories available.
+
+      NOTE: not all categories exist within all architectures. For example,
+            ARM64's fp category doesn't have any registers.
 
 Examples
 
   regs
-  thread 4 regs
-  process 2 thread 1 regs
+  thread 4 regs --category=vector
+  process 2 thread 1 regs -c all
 )";
 
-void OnRegsComplete(const Err& cmd_err,
-                    const RegisterSet& registers,
-                    const std::string& reg_name) {
+// Switches
+constexpr int kRegsCategoriesSwitch = 1;
+const std::vector<std::string> kRegsCategoriesValues = {"general", "fp",
+                                                        "vector", "all"};
+
+void OnRegsComplete(const Err& cmd_err, const RegisterSet& registers,
+                    const std::string& reg_name,
+                    const std::vector<RegisterCategory::Type>& cats_to_show) {
   Console* console = Console::get();
   if (cmd_err.has_error()) {
     console->Output(cmd_err);
@@ -362,7 +387,7 @@ void OnRegsComplete(const Err& cmd_err,
   }
 
   OutputBuffer out;
-  Err err = FormatRegisters(registers, reg_name, &out);
+  Err err = FormatRegisters(registers, reg_name, &out, cats_to_show);
   if (err.has_error()) {
     console->Output(err);
     return;
@@ -386,9 +411,33 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
     reg_name = cmd.args().front();
   }
 
+  // Parse the switches
+
+  // General purpose are the default.
+  std::vector<RegisterCategory::Type> cats_to_show = {
+      RegisterCategory::Type::kGeneral};
+  if (cmd.HasSwitch(kRegsCategoriesSwitch)) {
+    auto option = cmd.GetSwitchValue(kRegsCategoriesSwitch);
+    if (option == "all") {
+      cats_to_show = {debug_ipc::RegisterCategory::Type::kGeneral,
+                      debug_ipc::RegisterCategory::Type::kFloatingPoint,
+                      debug_ipc::RegisterCategory::Type::kVector,
+                      debug_ipc::RegisterCategory::Type::kMisc};
+    } else if (option == "general") {
+      cats_to_show = {RegisterCategory::Type::kGeneral};
+    } else if (option == "fp") {
+      cats_to_show = {RegisterCategory::Type::kFloatingPoint};
+    } else if (option == "vector") {
+      cats_to_show = {RegisterCategory::Type::kVector};
+    } else {
+      return Err(fxl::StringPrintf("Unknown category: %s", option.c_str()));
+    }
+  }
+
   // We pass the given register name to the callback
-  auto regs_cb = [reg_name](const Err& err, const RegisterSet& registers) {
-    OnRegsComplete(err, registers, reg_name);
+  auto regs_cb = [reg_name, cats = std::move(cats_to_show)](
+                     const Err& err, const RegisterSet& registers) {
+    OnRegsComplete(err, registers, reg_name, std::move(cats));
   };
 
   cmd.thread()->GetRegisters(regs_cb);
@@ -529,8 +578,16 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kPause] =
       VerbRecord(&DoPause, {"pause", "pa"}, kPauseShortHelp, kPauseHelp,
                  CommandGroup::kProcess);
-  (*verbs)[Verb::kRegs] = VerbRecord(&DoRegs, {"regs", "rg"}, kRegsShortHelp,
-                                     kRegsHelp, CommandGroup::kAssembly);
+
+  // regs ----------------------------------------------------------------------
+
+  SwitchRecord regs_categories(kRegsCategoriesSwitch, true, "category", 'c');
+
+  VerbRecord regs(&DoRegs, {"regs", "rg"}, kRegsShortHelp, kRegsHelp,
+                  CommandGroup::kAssembly);
+  regs.switches.push_back(regs_categories);
+  (*verbs)[Verb::kRegs] = std::move(regs);
+
   (*verbs)[Verb::kStep] =
       VerbRecord(&DoStep, {"step", "s"}, kStepShortHelp, kStepHelp,
                  CommandGroup::kStep, SourceAffinity::kSource);

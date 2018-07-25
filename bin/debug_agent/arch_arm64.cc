@@ -66,13 +66,12 @@ inline debug_ipc::Register CreateRegister(RegisterID id,
   return reg;
 }
 
-inline zx_status_t ReadGeneralRegs(
-    const zx::thread& thread, std::vector<debug_ipc::Register>* registers) {
+inline zx_status_t ReadGeneralRegs(const zx::thread& thread,
+                                   std::vector<debug_ipc::Register>* out) {
   // We get the general state registers.
-  zx_thread_state_general_regs general_registers;
-  zx_status_t status =
-      thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &general_registers,
-                        sizeof(general_registers));
+  zx_thread_state_general_regs gen_regs;
+  zx_status_t status = thread.read_state(ZX_THREAD_STATE_GENERAL_REGS,
+                                         &gen_regs, sizeof(gen_regs));
   if (status != ZX_OK)
     return false;
 
@@ -80,18 +79,14 @@ inline zx_status_t ReadGeneralRegs(
   uint32_t base = static_cast<uint32_t>(RegisterID::kARMv8_x0);
   for (int i = 0; i < 30; i++) {
     RegisterID type = static_cast<RegisterID>(base + i);
-    registers->push_back(CreateRegister(type, 8u, &general_registers.r[i]));
+    out->push_back(CreateRegister(type, 8u, &gen_regs.r[i]));
   }
 
-  // Add the named registers.
-  registers->push_back(
-      CreateRegister(RegisterID::kARMv8_lr, 8u, &general_registers.lr));
-  registers->push_back(
-      CreateRegister(RegisterID::kARMv8_sp, 8u, &general_registers.sp));
-  registers->push_back(
-      CreateRegister(RegisterID::kARMv8_pc, 8u, &general_registers.pc));
-  registers->push_back(
-      CreateRegister(RegisterID::kARMv8_cpsr, 8u, &general_registers.cpsr));
+  // Add the named out.
+  out->push_back(CreateRegister(RegisterID::kARMv8_lr, 8u, &gen_regs.lr));
+  out->push_back(CreateRegister(RegisterID::kARMv8_sp, 8u, &gen_regs.sp));
+  out->push_back(CreateRegister(RegisterID::kARMv8_pc, 8u, &gen_regs.pc));
+  out->push_back(CreateRegister(RegisterID::kARMv8_cpsr, 8u, &gen_regs.cpsr));
 
   return ZX_OK;
 }
@@ -109,6 +104,9 @@ bool GetRegisterStateFromCPU(
     categories->clear();
     return false;
   }
+
+  // There are no FP registers defined for ARM64
+
   return true;
 }
 

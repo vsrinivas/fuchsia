@@ -56,6 +56,15 @@ void GetCategories(RegisterSet* registers) {
   cat2.registers.push_back(CreateRegister(RegisterID::kARMv8_x4, 16));
   categories.push_back(cat2);
 
+  RegisterCategory cat3;
+  cat3.type = RegisterCategory::Type::kMisc;
+  cat3.registers.push_back(CreateRegister(RegisterID::kARMv8_x20, 6));
+  cat3.registers.push_back(CreateRegister(RegisterID::kARMv8_x21, 8));
+  cat3.registers.push_back(CreateRegister(RegisterID::kARMv8_x22, 10));
+  cat3.registers.push_back(CreateRegister(RegisterID::kARMv8_x23, 12));
+  cat3.registers.push_back(CreateRegister(RegisterID::kARMv8_x24, 14));
+  categories.push_back(cat3);
+
   RegisterSet regs(debug_ipc::Arch::kArm64, std::move(categories));
   *registers = std::move(regs);
 }
@@ -72,8 +81,8 @@ TEST(FormatRegisters, GeneralRegisters) {
 
   EXPECT_EQ("General Purpose Registers\n"
             "Name Size               Value\n"
-            "lr      1            00000001\n"
-            "pc      2            00000102\n"
+            "lr      1                  01\n"
+            "pc      2                0102\n"
             "sp      4            01020304\n"
             "cpsr    8   01020304 05060708\n"
             "\n",
@@ -91,11 +100,11 @@ TEST(FormatRegisters, VectorRegisters) {
 
   EXPECT_EQ("Vector Registers\n"
             "Name Size                                 Value\n"
-            "x0      1                              00000001\n"
-            "x1      2                              00000102\n"
+            "x0      1                                    01\n"
+            "x1      2                                  0102\n"
             "x2      4                              01020304\n"
             "x3      8                     01020304 05060708\n"
-            "x4     10   01020304 05060708 090a0b0c 0d0e0f10\n"
+            "x4     16   01020304 05060708 090a0b0c 0d0e0f10\n"
             "\n",
             out.AsString());
 }
@@ -104,24 +113,36 @@ TEST(FormatRegisters, AllRegisters) {
   RegisterSet registers;
   GetCategories(&registers);
   OutputBuffer out;
-  Err err = FormatRegisters(registers, "", &out, {});
+  Err err = FormatRegisters(
+      registers, "", &out,
+      {RegisterCategory::Type::kGeneral, RegisterCategory::Type::kFloatingPoint,
+       RegisterCategory::Type::kVector, RegisterCategory::Type::kMisc});
 
   ASSERT_FALSE(err.has_error()) << err.msg();
 
+  // TODO(donosoc): Detect the maximum length and make the the tables coincide.
   EXPECT_EQ("General Purpose Registers\n"
             "Name Size               Value\n"
-            "lr      1            00000001\n"
-            "pc      2            00000102\n"
+            "lr      1                  01\n"
+            "pc      2                0102\n"
             "sp      4            01020304\n"
             "cpsr    8   01020304 05060708\n"
             "\n"
             "Vector Registers\n"
             "Name Size                                 Value\n"
-            "x0      1                              00000001\n"
-            "x1      2                              00000102\n"
+            "x0      1                                    01\n"
+            "x1      2                                  0102\n"
             "x2      4                              01020304\n"
             "x3      8                     01020304 05060708\n"
-            "x4     10   01020304 05060708 090a0b0c 0d0e0f10\n"
+            "x4     16   01020304 05060708 090a0b0c 0d0e0f10\n"
+            "\n"
+            "Miscellaneous Registers\n"
+            "Name Size                             Value\n"
+            "x20     6                     0102 03040506\n"
+            "x21     8                 01020304 05060708\n"
+            "x22    10            0102 03040506 0708090a\n"
+            "x23    12        01020304 05060708 090a0b0c\n"
+            "x24    14   0102 03040506 0708090a 0b0c0d0e\n"
             "\n",
             out.AsString());
 }
@@ -130,7 +151,8 @@ TEST(FormatRegisters, OneRegister) {
   RegisterSet registers;
   GetCategories(&registers);
   OutputBuffer out;
-  Err err = FormatRegisters(registers, "x3", &out, {});
+  Err err =
+      FormatRegisters(registers, "x3", &out, {RegisterCategory::Type::kVector});
 
   ASSERT_FALSE(err.has_error()) << err.msg();
 
@@ -148,7 +170,6 @@ TEST(FormatRegisters, CannotFindRegister) {
   Err err = FormatRegisters(registers, "W0", &out);
 
   ASSERT_TRUE(err.has_error());
-  EXPECT_EQ(err.msg(), "Unknown register \"W0\"");
 }
 
 }   // namespace zxdb

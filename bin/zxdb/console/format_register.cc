@@ -23,43 +23,58 @@ using debug_ipc::RegisterID;
 namespace {
 
 inline OutputBuffer RegisterValueToOutputBuffer(const Register& reg) {
-  std::string val;
-  // Print in groups 32 bits.
-  switch (reg.size()) {
-    case 1:
-    case 2:
-    case 4:
-      return OutputBuffer::WithContents(
-          fxl::StringPrintf("%.8" PRIx64, reg.GetValue()));
-      break;
-    case 8:
-    case 16:
-    case 32:
-    case 64:
-      std::vector<std::string> chunks;
-      auto it = reg.begin();
-      while (it < reg.end()) {
-        chunks.push_back(fxl::StringPrintf(
-            "%.8x", *reinterpret_cast<const uint32_t*>(it)));
-        it += 4;
-      }
-
-      // We append them backwards
-      OutputBuffer out;
-      auto cit = chunks.rbegin();
-      while (cit != chunks.rend()) {
-        out.Append(*cit);
-        cit++;
-        if (cit != chunks.rend())
-          out.Append(" ");
-      }
-
-      return out;
+  if (reg.data().empty()) {
+    FXL_NOTREACHED() << "Invalid size for " << __PRETTY_FUNCTION__ << ": "
+                     << reg.size();
   }
 
-  FXL_NOTREACHED() << "Invalid size for " << __PRETTY_FUNCTION__ << ": "
-                   << reg.size();
-  return OutputBuffer();
+
+  // For now we print into chunks of 32-bits, shortening the ends.
+  // TODO(donosoc): Extract this logic to be used separatedly by sub-registers.
+  // TODO(donosoc): FP formatting: float, double-float, extended double-float.
+  // TODO(donosoc): Vector formatting.
+  auto cur = reg.begin();
+  auto end = reg.end();
+  std::vector<std::string> chunks;
+  while (cur < end) {
+    auto diff = end - cur;
+    if (diff >= 4) {
+      auto* val = reinterpret_cast<const uint32_t*>(&*cur);
+      chunks.push_back(fxl::StringPrintf("%.8x", *val));
+      cur += 4;
+      continue;
+    }
+
+    switch (diff) {
+      case 1: {
+        auto* val = reinterpret_cast<const uint8_t*>(&*cur);
+        chunks.push_back(fxl::StringPrintf("%.2x", *val));
+        cur += diff;
+        continue;
+      }
+      case 2: {
+        auto* val = reinterpret_cast<const uint16_t*>(&*cur);
+        chunks.push_back(fxl::StringPrintf("%.4x", *val));
+        cur += diff;
+        continue;
+      }
+    }
+
+    FXL_NOTREACHED() << "Invalid size for " << __PRETTY_FUNCTION__ << ": "
+                     << reg.size();
+  }
+
+
+  // We append them backwards
+  OutputBuffer out;
+  auto cit = chunks.rbegin();
+  while (cit != chunks.rend()) {
+    out.Append(*cit);
+    cit++;
+    if (cit != chunks.rend())
+      out.Append(" ");
+  }
+  return out;
 }
 
 // Using a vector of output buffers make it easy to not have to worry about
@@ -100,7 +115,7 @@ Err InternalFormatCategory(debug_ipc::RegisterCategory::Type cat,
 
     row.push_back(OutputBuffer::WithContents(reg_pair.second));
     row.push_back(OutputBuffer::WithContents(
-        fxl::StringPrintf("%zx", reg_pair.first->size())));
+        fxl::StringPrintf("%zu", reg_pair.first->size())));
     row.push_back(RegisterValueToOutputBuffer(*reg_pair.first));
   }
 
@@ -122,14 +137,6 @@ Err FormatRegisters(const RegisterSet& registers,
   std::vector<OutputBuffer> out_buffers;
   const auto& category_map = registers.category_map();
 
-  // If no category was set, print all of them.
-  if (categories.empty()) {
-    categories = {debug_ipc::RegisterCategory::Type::kGeneral,
-                  debug_ipc::RegisterCategory::Type::kFloatingPoint,
-                  debug_ipc::RegisterCategory::Type::kVector,
-                  debug_ipc::RegisterCategory::Type::kMisc};
-  }
-
   // Go category to category trying to print.
   for (const auto& category : categories) {
     auto it = category_map.find(category);
@@ -144,8 +151,13 @@ Err FormatRegisters(const RegisterSet& registers,
   }
   // If nothing was printed, it means that we couldn't find the register.
   if (out_buffers.empty()) {
-    return Err(fxl::StringPrintf("Unknown register \"%s\"",
-                                 searched_register.c_str()));
+    if (searched_register.empty()) {
+      return Err("No registers to show in the selected categories");
+    } else {
+      return Err(fxl::StringPrintf(
+          "Could not find register \"%s\" in the selected categories",
+          searched_register.c_str()));
+    }
   }
 
   // Each section is separated by a new line.
@@ -176,6 +188,8 @@ std::string RegisterIDToString(RegisterID id) {
       break;
 
     // ARMv8 -------------------------------------------------------------------
+
+    // General purpose
 
     case RegisterID::kARMv8_x0: return "x0";
     case RegisterID::kARMv8_x1: return "x1";
@@ -212,7 +226,13 @@ std::string RegisterIDToString(RegisterID id) {
     case RegisterID::kARMv8_pc: return "pc";
     case RegisterID::kARMv8_cpsr: return "cpsr";
 
+    // FP (none defined for ARM64)
+
+    // TODO(donosoc): Add ARM64 vector registers
+
     // x64 ---------------------------------------------------------------------
+
+    // General purpose
 
     case RegisterID::kX64_rax: return "rax";
     case RegisterID::kX64_rbx: return "rbx";
@@ -232,6 +252,27 @@ std::string RegisterIDToString(RegisterID id) {
     case RegisterID::kX64_r15: return "r15";
     case RegisterID::kX64_rip: return "rip";
     case RegisterID::kX64_rflags: return "rflags";
+
+    // FP
+
+    case RegisterID::kX64_fcw: return "fcw";
+    case RegisterID::kX64_fsw: return "fsw";
+    case RegisterID::kX64_ftw: return "ftw";
+    // Reserved
+    case RegisterID::kX64_fop: return "fop";
+    case RegisterID::kX64_fip: return "fip";
+    case RegisterID::kX64_fdp: return "fdp";
+
+    case RegisterID::kX64_st0: return "st0";
+    case RegisterID::kX64_st1: return "st1";
+    case RegisterID::kX64_st2: return "st2";
+    case RegisterID::kX64_st3: return "st3";
+    case RegisterID::kX64_st4: return "st4";
+    case RegisterID::kX64_st5: return "st5";
+    case RegisterID::kX64_st6: return "st6";
+    case RegisterID::kX64_st7: return "st7";
+
+    // TODO(donosoc): Add x64 vector registers
   }
 
   FXL_NOTREACHED() << "Unknown register requested.";

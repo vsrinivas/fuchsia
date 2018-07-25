@@ -74,6 +74,8 @@ class Register {
 
   size_t size() const { return reg_.data.size(); }   // In bytes.
 
+  const std::vector<uint8_t>& data() const { return reg_.data; }
+
   // Intented for <=64-bits values, check length.
   uint64_t GetValue() const;
 
