@@ -7,11 +7,6 @@
 #include <zircon/compiler.h>
 #include <zircon/listnode.h>
 
-// Tracing Includes
-#include <lib/async-loop/loop.h>
-#include <trace-provider/provider.h>
-#include <trace/event.h>
-
 #include <ddk/protocol/block.h>
 
 __BEGIN_CDECLS;
@@ -47,9 +42,6 @@ typedef enum sdmmc_timing {
 typedef struct sdmmc_txn {
     block_op_t bop;
     list_node_t node;
-
-    //member for tracing
-    trace_async_id_t async_id;
 } sdmmc_txn_t;
 
 typedef struct sdmmc_req sdmmc_req_t;

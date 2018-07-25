@@ -105,6 +105,12 @@ static void block_complete(block_op_t* bop, zx_status_t status, sdmmc_device_t* 
     if (bop->completion_cb) {
         if (dev->trace_on) {
             TRACE_ASYNC_END("sdmmc","sdmmc_do_txn", dev->async_id,
+            "command", TA_INT32(bop->rw.command),
+            "extra", TA_INT32(bop->rw.extra),
+            "length", TA_INT32(bop->rw.length),
+            "offset_vmo", TA_INT64(bop->rw.offset_vmo),
+            "offset_dev", TA_INT64(bop->rw.offset_dev),
+            "pages", TA_POINTER(bop->rw.pages),
             "txn_status", TA_INT32(status));
         }
         bop->completion_cb(bop, status);
@@ -222,11 +228,6 @@ static void sdmmc_query(void* ctx, block_info_t* info_out, size_t* block_op_size
 static void sdmmc_queue(void* ctx, block_op_t* btxn) {
     sdmmc_device_t* dev = ctx;
     sdmmc_txn_t* txn = containerof(btxn, sdmmc_txn_t, bop);
-
-    if (dev->trace_on) {
-        txn->async_id = TRACE_NONCE();
-        TRACE_ASYNC_BEGIN("sdmmc","sdmmc_queue", txn->async_id);
-    }
 
     switch (BLOCK_OP(btxn->command)) {
     case BLOCK_OP_READ:
@@ -504,14 +505,10 @@ static int sdmmc_worker_thread(void* arg) {
             // between each txn.
             SDMMC_LOCK(dev);
             sdmmc_txn_t* txn = list_remove_head_type(&dev->txn_list, sdmmc_txn_t, node);
-
             STAT_DEC_IF(pending, txn != NULL);
             if (txn) {
                 // Unlock if we execute the transaction
                 SDMMC_UNLOCK(dev);
-                if (dev->trace_on) {
-                    TRACE_ASYNC_END("sdmmc","sdmmc_queue", txn->async_id);
-                }
                 sdmmc_do_txn(dev, txn);
             } else {
                 // Stay locked if we're clearing the "RECEIVED" flag.
