@@ -34,12 +34,12 @@ go_library("gojsonschema") {
 go_binary("remote_module_resolver") {
   gopackage = "remote_module_resolver"
   output_name = "remote_module_resolver"
-  extra_dependencies = [ ":remote_module_resolver_lib" ]
+  deps = [ ":remote_module_resolver_lib" ]
 }
 
 go_test("remote_module_resolver_test") {
   gopackage = "remote_module_resolver/repository"
-  extra_dependencies = [ ":remote_module_resolver_lib" ]
+  deps = [ ":remote_module_resolver_lib" ]
 }
 
 install_host_tools("host") {
