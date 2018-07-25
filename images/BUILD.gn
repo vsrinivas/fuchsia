@@ -771,7 +771,9 @@ zircon_tool_action("installer") {
       }
     }
   }
+  depfile = "$target_out_dir/installer.blk.d"
   args = [
+    "--depfile",
     rebase_path(outputs[0], root_build_dir),
     "create",
     "--manifest",
