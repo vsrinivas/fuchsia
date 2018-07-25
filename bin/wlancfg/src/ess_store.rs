@@ -43,11 +43,11 @@ struct EssJsonWrite<'a> {
 
 impl EssStore {
     pub fn new() -> Result<Self, failure::Error> {
-        Self::new_inner(PathBuf::from(SAVED_NETWORKS_PATH),
+        Self::new_with_paths(PathBuf::from(SAVED_NETWORKS_PATH),
                         PathBuf::from(TMP_SAVED_NETWORKS_PATH))
     }
 
-    fn new_inner(storage_path: PathBuf, tmp_storage_path: PathBuf)
+    pub fn new_with_paths(storage_path: PathBuf, tmp_storage_path: PathBuf)
         -> Result<Self, failure::Error>
     {
         let ess_list: Vec<EssJsonRead> = match fs::File::open(&storage_path) {
@@ -197,7 +197,7 @@ mod tests {
 
     #[test]
     fn bail_if_path_is_bad() {
-        match EssStore::new_inner(PathBuf::from("/dev/null/foo"), PathBuf::from("/dev/null")) {
+        match EssStore::new_with_paths(PathBuf::from("/dev/null/foo"), PathBuf::from("/dev/null")) {
             Ok(_) => panic!("expected constructor to fail"),
             Err(e) => assert!(e.to_string().contains("Failed to open /dev/null/foo"),
                               format!("error message was: {}", e))
@@ -205,7 +205,7 @@ mod tests {
     }
 
     fn create_ess_store(path: &Path) -> EssStore {
-        EssStore::new_inner(path.join(STORE_JSON_PATH), path.join("store.json.tmp"))
+        EssStore::new_with_paths(path.join(STORE_JSON_PATH), path.join("store.json.tmp"))
             .expect("Failed to create an EssStore")
     }
 
