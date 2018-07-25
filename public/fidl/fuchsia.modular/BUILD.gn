@@ -50,7 +50,6 @@ fidl("fuchsia.modular") {
     "story/create_module_parameter_map.fidl",
     "story/link.fidl",
     "story/puppet_master.fidl",
-    "story/session_watcher.fidl",
     "story/story_command.fidl",
     "story/story_controller.fidl",
     "story/story_info.fidl",

@@ -34,8 +34,8 @@ class PuppetMasterImpl : public fuchsia::modular::PuppetMaster {
 
   // |fuchsia::modular::PuppetMaster|
   void WatchSession(
-      fuchsia::modular::WatchSessionParams params,
       fidl::InterfaceHandle<fuchsia::modular::SessionWatcher> session_watcher,
+      fuchsia::modular::WatchSessionOptionsPtr options,
       WatchSessionCallback done) override;
 
   StoryCommandExecutor* const executor_;  // Not owned.

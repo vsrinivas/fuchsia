@@ -31,8 +31,8 @@ void PuppetMasterImpl::ControlStory(
 }
 
 void PuppetMasterImpl::WatchSession(
-    fuchsia::modular::WatchSessionParams params,
     fidl::InterfaceHandle<fuchsia::modular::SessionWatcher> session_watcher,
+    fuchsia::modular::WatchSessionOptionsPtr options,
     WatchSessionCallback done) {
   FXL_NOTIMPLEMENTED();
 }

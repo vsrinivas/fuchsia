@@ -4,52 +4,6 @@
 
 library fuchsia.modular;
 
-// Enables control of a session. A session, conceptually, is a single
-// full-screen experience of a Fuchsia device. A device can run multiple
-// sessions (ie, when one device powers multiple kiosks); that said, sessions
-// are siloed from each other.
-//
-// A session, concretely, is a collection of stories, their state, the modules
-// within them, any agents that run to support the mods and the various UI
-// shells (session and story shells).
-interface PuppetMaster {
-  // Requests a capability to control a story. If |story_id| is not specified,
-  // a new story is created. New stories are not created (not committed to
-  // session state) until StoryPuppetMaster.Execute() is called and returns OK.
-  // The story id (either that of the new story or |story_id|) is returned in
-  // ExecuteResult.
-  //
-  // |request| is closed if control cannot be granted.
-  1: ControlStory(string? story_id, request<StoryPuppetMaster> @request);
-
-  // Events on the session will be sent to |watcher| as long as |watcher| is
-  // alive. |params| specifies filters and policy about which events are sent
-  // to |watcher|.
-  2: WatchSession(WatchSessionParams params, SessionWatcher watcher) -> ();
-};
-
-struct WatchSessionParams {
-  // If null, all stories are watched. If non-null, only events for
-  // matching stories are returned.
-  vector<string>? filter_story_ids;
-};
-
-interface StoryPuppetMaster {
-  // Enqueues the given |commands| in the order they are given.
-  // Can be called as many times as necessary to specify the full
-  // set of changes to the story.
-  //
-  // To execute all enqueued commands, call Execute().
-  1: Enqueue(vector<StoryCommand> commands);
-
-  // Executes the commands enqueued so far by Enqueue() in order and as
-  // a batch: no other commands from other clients will be interleaved.
-  //
-  // If an error occurs, execution is stopped and an error code
-  // and message are returned.
-  2: Execute() -> (ExecuteResult result);
-};
-
 enum ExecuteStatus {
   OK = 0;
 
@@ -78,4 +32,65 @@ struct ExecuteResult {
   //
   // If an error occurred, this may be null.
   string? story_id;
+};
+
+// Enables control of a session. A session, conceptually, is a single
+// full-screen experience of a Fuchsia device. A device can run multiple
+// sessions (ie, when one device powers multiple kiosks); that said, sessions
+// are siloed from each other.
+//
+// A session, concretely, is a collection of stories, their state, the modules
+// within them, any agents that run to support the mods and the various UI
+// shells (session and story shells).
+interface PuppetMaster {
+  // Requests a capability to control a story. If |story_id| is not specified,
+  // a new story is created. New stories are not created (not committed to
+  // session state) until StoryPuppetMaster.Execute() is called and returns OK.
+  // The story id (either that of the new story or |story_id|) is returned in
+  // ExecuteResult.
+  //
+  // |request| is closed if control cannot be granted.
+  1: ControlStory(string? story_id, request<StoryPuppetMaster> @request);
+
+  // Events on the session will be sent to |watcher| as long as |watcher| is
+  // alive. |options| specifies filters and policy about which events are sent
+  // to |watcher|.
+  2: WatchSession(SessionWatcher watcher, WatchSessionOptions? options) -> ();
+};
+
+struct WatchSessionOptions {
+  // If null, all stories are watched. If non-null, only events for
+  // matching stories are returned.
+  vector<string>? filter_story_ids;
+};
+
+interface SessionWatcher {
+  // Some events, in particular those that represent changes to internal
+  // modular framework state, or those that do not pertain to a single story,
+  // are not represented as commands.
+  1: OnStoryRuntimeState(StoryState state);
+
+  // Indicates the story record was permanently deleted from storage.
+  2: OnStoryDeleted(string story_id);
+
+  // Notifies of StoryCommands. If |is_last| == false, more StoryCommands
+  // were executed in a single batch than can be fit into one message and the
+  // client should expect further calls to OnStoryCommands() immediately.
+  3: OnStoryCommands(string story_id, vector<StoryCommand> commands, bool is_last);
+};
+
+interface StoryPuppetMaster {
+  // Enqueues the given |commands| in the order they are given.
+  // Can be called as many times as necessary to specify the full
+  // set of changes to the story.
+  //
+  // To execute all enqueued commands, call Execute().
+  1: Enqueue(vector<StoryCommand> commands);
+
+  // Executes the commands enqueued so far by Enqueue() in order and as
+  // a batch: no other commands from other clients will be interleaved.
+  //
+  // If an error occurs, execution is stopped and an error code
+  // and message are returned.
+  2: Execute() -> (ExecuteResult result);
 };
