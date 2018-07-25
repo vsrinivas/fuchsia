@@ -57,7 +57,7 @@ iovec Iovec(const T* buffer, size_t size = sizeof(T)) {
 class AppendBuffer {
 public:
     explicit AppendBuffer(size_t size) :
-        buffer_(std::make_unique<uint8_t[]>(size)), ptr_(buffer_.get()) {
+        buffer_(std::make_unique<std::byte[]>(size)), ptr_(buffer_.get()) {
     }
 
     size_t size() const {
@@ -68,26 +68,26 @@ public:
         return Iovec(buffer_.get(), size());
     }
 
-    std::unique_ptr<uint8_t[]> release() {
+    std::unique_ptr<std::byte[]> release() {
         ptr_ = nullptr;
         return std::move(buffer_);
     }
 
     template<typename T>
     void Append(const T* data, size_t bytes = sizeof(T)) {
-        ptr_ = static_cast<uint8_t*>(memcpy(static_cast<void*>(ptr_),
-                                            static_cast<const void*>(data),
-                                            bytes)) + bytes;
+        ptr_ = static_cast<std::byte*>(memcpy(static_cast<void*>(ptr_),
+                                              static_cast<const void*>(data),
+                                              bytes)) + bytes;
     }
 
     void Pad(size_t bytes) {
-        ptr_ = static_cast<uint8_t*>(memset(static_cast<void*>(ptr_), 0,
-                                            bytes)) + bytes;
+        ptr_ = static_cast<std::byte*>(memset(static_cast<void*>(ptr_), 0,
+                                              bytes)) + bytes;
     }
 
 private:
-    std::unique_ptr<uint8_t[]> buffer_;
-    uint8_t* ptr_ = nullptr;
+    std::unique_ptr<std::byte[]> buffer_;
+    std::byte* ptr_ = nullptr;
 };
 
 class Item;
@@ -111,7 +111,7 @@ public:
     // ownership of the memory that buffer.iov_base points into.  This
     // object may refer to buffer.iov_base until Flush() completes.
     void Write(const iovec& buffer,
-               std::unique_ptr<uint8_t[]> owned = nullptr) {
+               std::unique_ptr<std::byte[]> owned = nullptr) {
         assert(buffer.iov_len > 0);
         if (buffer.iov_len + total_ > UINT32_MAX - sizeof(zbi_header_t) + 1) {
             fprintf(stderr, "output size exceeds format maximum\n");
@@ -162,14 +162,14 @@ public:
                 assert(place >= it->iov_len);
             }
             assert(it->iov_len == sizeof(header));
-            auto buffer = std::make_unique<uint8_t[]>(sizeof(header));
+            auto buffer = std::make_unique<std::byte[]>(sizeof(header));
             it->iov_base = memcpy(buffer.get(), &header, sizeof(header));
             owned_buffers_.push_front(std::move(buffer));
         } else {
             assert(flushed_ >= place + sizeof(header));
             // Overwrite the earlier part of the file with pwrite.  This
             // does not affect the current lseek position for the next writev.
-            auto buf = reinterpret_cast<const uint8_t*>(&header);
+            auto buf = reinterpret_cast<const std::byte*>(&header);
             size_t len = sizeof(header);
             while (len > 0) {
                 ssize_t wrote = pwrite(fd_.get(), buf, len, place);
@@ -190,7 +190,7 @@ private:
     IovecArray::iterator write_pos_ = iov_.begin();
     // iov_[n].iov_base might point into these buffers.  They're just
     // stored here to own the buffers until iov_ is flushed.
-    std::forward_list<std::unique_ptr<uint8_t[]>> owned_buffers_;
+    std::forward_list<std::unique_ptr<std::byte[]>> owned_buffers_;
     fbl::unique_fd fd_;
     uint32_t flushed_ = 0;
     uint32_t total_ = 0;
@@ -225,7 +225,7 @@ private:
             // writev wrote only part of this buffer.  Do the rest next time.
             read_pos->iov_len -= wrote;
             read_pos->iov_base = static_cast<void*>(
-                static_cast<uint8_t*>(read_pos->iov_base) + wrote);
+                static_cast<std::byte*>(read_pos->iov_base) + wrote);
         }
         return read_pos;
     }
@@ -492,7 +492,7 @@ private:
     struct Buffer {
         // Move-only type: after moving, data is nullptr and size is 0.
         Buffer() = default;
-        Buffer(std::unique_ptr<uint8_t[]> buffer, size_t max_size) :
+        Buffer(std::unique_ptr<std::byte[]> buffer, size_t max_size) :
             data(std::move(buffer)), size(max_size) {
         }
         Buffer(Buffer&& other) {
@@ -504,7 +504,7 @@ private:
             other.size = 0;
             return *this;
         }
-        std::unique_ptr<uint8_t[]> data;
+        std::unique_ptr<std::byte[]> data;
         size_t size = 0;
     } unused_buffer_;
     zbi_header_t header_;
@@ -522,7 +522,7 @@ private:
         } else {
             // Get a new buffer.
             max_size = std::max(max_size, kMinBufferSize);
-            return {std::make_unique<uint8_t[]>(max_size), max_size};
+            return {std::make_unique<std::byte[]>(max_size), max_size};
         }
     }
 
@@ -545,17 +545,17 @@ const size_t Compressor::kMinBufferSize;
 
 constexpr const LZ4F_decompressOptions_t kDecompressOpt{};
 
-std::unique_ptr<uint8_t[]> Decompress(const std::list<const iovec>& payload,
-                                      uint32_t decompressed_length) {
-    auto buffer = std::make_unique<uint8_t[]>(decompressed_length);
+std::unique_ptr<std::byte[]> Decompress(const std::list<const iovec>& payload,
+                                        uint32_t decompressed_length) {
+    auto buffer = std::make_unique<std::byte[]>(decompressed_length);
 
     LZ4F_decompressionContext_t ctx;
     LZ4F_CALL(LZ4F_createDecompressionContext, &ctx, LZ4F_VERSION);
 
-    uint8_t* dst = buffer.get();
+    std::byte* dst = buffer.get();
     size_t dst_size = decompressed_length;
     for (const auto& iov : payload) {
-        auto src = static_cast<const uint8_t*>(iov.iov_base);
+        auto src = static_cast<const std::byte*>(iov.iov_base);
         size_t src_size = iov.iov_len;
         do {
             if (dst_size == 0) {
@@ -598,7 +598,7 @@ public:
     // Get unowned file contents from a BOOTFS image.
     // The entry has been validated against the payload size.
     FileContents(const zbi_bootfs_dirent_t& entry,
-                 const uint8_t* bootfs_payload) :
+                 const std::byte* bootfs_payload) :
         mapped_(const_cast<void*>(static_cast<const void*>(bootfs_payload +
                                                            entry.data_off))),
         mapped_size_(ZBI_BOOTFS_PAGE_ALIGN(entry.data_len)),
@@ -668,14 +668,14 @@ public:
         assert(length > 0);
         assert(offset < exact_size_);
         assert(exact_size_ - offset >= length);
-        return Iovec(static_cast<const uint8_t*>(mapped_) + offset, length);
+        return Iovec(static_cast<const std::byte*>(mapped_) + offset, length);
     }
 
     const iovec PageRoundedView(size_t offset, size_t length) const {
         assert(length > 0);
         assert(offset < mapped_size_);
         assert(mapped_size_ - offset >= length);
-        return Iovec(static_cast<const uint8_t*>(mapped_) + offset, length);
+        return Iovec(static_cast<const std::byte*>(mapped_) + offset, length);
     }
 
 private:
@@ -1073,7 +1073,7 @@ Extracted items use the file names shown below:\n\
         assert(out->WritePosition() % ZBI_ALIGNMENT == wrote % ZBI_ALIGNMENT);
         uint32_t aligned = ZBI_ALIGN(wrote);
         if (aligned > wrote) {
-            static const uint8_t padding[ZBI_ALIGNMENT]{};
+            static const std::byte padding[ZBI_ALIGNMENT]{};
             out->Write(Iovec(padding, aligned - wrote));
         }
         assert(Aligned(out->WritePosition()));
@@ -1081,7 +1081,7 @@ Extracted items use the file names shown below:\n\
 
     // The buffer will be released when this Item is destroyed.  This item
     // and items earlier on the list can hold pointers into the buffer.
-    void OwnBuffer(std::unique_ptr<uint8_t[]> buffer) {
+    void OwnBuffer(std::unique_ptr<std::byte[]> buffer) {
         buffers_.push_front(std::move(buffer));
     }
     void OwnFile(FileContents file) {
@@ -1098,7 +1098,7 @@ Extracted items use the file names shown below:\n\
 
     // Create from in-core data.
     static ItemPtr CreateFromBuffer(
-        uint32_t type, std::unique_ptr<uint8_t[]> payload, size_t size) {
+        uint32_t type, std::unique_ptr<std::byte[]> payload, size_t size) {
         auto item = MakeItem(NewHeader(type, size));
         item->payload_.emplace_front(Iovec(payload.get(), size));
         item->OwnBuffer(std::move(payload));
@@ -1111,7 +1111,7 @@ Extracted items use the file names shown below:\n\
     // Create from local scratch data.
     template<typename T>
     static ItemPtr Create(uint32_t type, const T& payload) {
-        auto buffer = std::make_unique<uint8_t[]>(sizeof(payload));
+        auto buffer = std::make_unique<std::byte[]>(sizeof(payload));
         memcpy(buffer.get(), &payload, sizeof(payload));
         return CreateFromBuffer(type, std::move(buffer), sizeof(payload));
     }
@@ -1380,7 +1380,7 @@ private:
     // The payload_ items might point into these buffers.  They're just
     // stored here to own the buffers until the payload is exhausted.
     std::forward_list<FileContents> files_;
-    std::forward_list<std::unique_ptr<uint8_t[]>> buffers_;
+    std::forward_list<std::unique_ptr<std::byte[]>> buffers_;
     const bool compress_;
 
     struct ItemTypeInfo {
@@ -1484,7 +1484,7 @@ private:
         return 0;
     }
 
-    const uint8_t* payload_data() {
+    const std::byte* payload_data() {
         if (payload_.size() > 1) {
             AppendBuffer buffer(PayloadSize());
             for (const auto& iov : payload_) {
@@ -1495,7 +1495,7 @@ private:
             OwnBuffer(buffer.release());
         }
         assert(payload_.size() == 1);
-        return static_cast<const uint8_t*>(payload_.front().iov_base);
+        return static_cast<const std::byte*>(payload_.front().iov_base);
     }
 
     class BootFSDirectoryIterator {
@@ -1567,7 +1567,7 @@ private:
         }
 
     private:
-        const uint8_t* next_ = nullptr;
+        const std::byte* next_ = nullptr;
         uint32_t left_ = 0;
     };
 
@@ -2075,7 +2075,7 @@ int main(int argc, char** argv) {
         }
         if (!cmdline.empty()) {
             size_t size = cmdline.size() + 1;
-            auto buffer = std::make_unique<uint8_t[]>(size);
+            auto buffer = std::make_unique<std::byte[]>(size);
             memcpy(buffer.get(), cmdline.c_str(), size);
             items.push_back(Item::CreateFromBuffer(ZBI_TYPE_CMDLINE,
                                                    std::move(buffer), size));
