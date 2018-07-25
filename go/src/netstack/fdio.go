@@ -107,6 +107,7 @@ type iostate struct {
 	controlLoopDone   chan struct{}
 	listenLoopClosing chan struct{} // tell the listen loop to close
 	listenLoopDone    chan struct{} // report that the listen loops has closed
+	dgramLoopClosing  chan struct{} // tell the dgram loop to close
 }
 
 // loopSocketWrite connects libc write to the network stack for TCP sockets.
@@ -347,8 +348,12 @@ func (ios *iostate) loopDgramRead(stk *stack.Stack) {
 			if err == nil {
 				break
 			} else if err == tcpip.ErrWouldBlock {
-				<-notifyCh
-				continue
+				select {
+				case <-notifyCh:
+					continue
+				case <-ios.dgramLoopClosing:
+					return
+				}
 			} else if err == tcpip.ErrClosedForReceive {
 				if debug2 {
 					log.Printf("TODO loopDgramRead closed")
@@ -616,6 +621,7 @@ func (s *socketServer) newIostate(h zx.Handle, netProto tcpip.NetworkProtocolNum
 			go ios.loopSocketWrite(s.stack)
 		}
 	case udp.ProtocolNumber, ipv4.PingProtocolNumber:
+		ios.dgramLoopClosing = make(chan struct{})
 		go ios.loopDgramRead(s.stack)
 		go ios.loopDgramWrite(s.stack)
 	}
@@ -1496,6 +1502,9 @@ func (s *socketServer) opClose(ios *iostate, cookie cookie) zx.Status {
 	err := ios.dataHandle.Signal(0, LOCAL_SIGNAL_CLOSING)
 	if ios.listenLoopClosing != nil {
 		ios.listenLoopClosing <- struct{}{}
+	}
+	if ios.dgramLoopClosing != nil {
+		ios.dgramLoopClosing <- struct{}{}
 	}
 
 	go func() {
