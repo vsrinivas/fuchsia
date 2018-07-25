@@ -27,7 +27,7 @@ go_library("pmd") {
 go_binary("pkgsvr_bin") {
   output_name = "pkgsvr"
   gopackage = "fuchsia.googlesource.com/pmd/cmd/pkgsvr"
-  extra_dependencies = [
+  deps = [
     ":pmd",
   ]
 }
@@ -35,7 +35,7 @@ go_binary("pkgsvr_bin") {
 go_binary("installblob_bin") {
   output_name = "installblob"
   gopackage = "fuchsia.googlesource.com/pmd/cmd/installblob"
-  extra_dependencies = [ ":pmd" ]
+  deps = [ ":pmd" ]
 }
 
 test_packages = [
@@ -45,7 +45,7 @@ test_packages = [
 foreach(testpkg, test_packages) {
   go_test("pmd_${testpkg}_test") {
     gopackage = "fuchsia.googlesource.com/pmd/${testpkg}"
-    extra_dependencies = [ ":pmd", ]
+    deps = [ ":pmd", ]
     non_go_deps = [
       "//zircon/public/lib/fs-management",
     ]

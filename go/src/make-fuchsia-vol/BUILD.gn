@@ -16,7 +16,7 @@ go_library("make-fuchsia-vol_lib") {
 go_binary("make-fuchsia-vol") {
   gopackage = "make-fuchsia-vol"
 
-  extra_dependencies = [ ":make-fuchsia-vol_lib" ]
+  deps = [ ":make-fuchsia-vol_lib" ]
 }
 
 install_host_tools("host") {

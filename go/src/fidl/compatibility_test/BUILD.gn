@@ -11,7 +11,7 @@ go_test("compatibility_test_bin") {
 
   output_name = "fidl_compatibility_test"
 
-  extra_dependencies = [ "compatibility_test_lib" ]
+  deps = [ "compatibility_test_lib" ]
 }
 
 go_library("compatibility_test_lib") {

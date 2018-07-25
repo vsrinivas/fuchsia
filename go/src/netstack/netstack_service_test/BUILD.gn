@@ -8,7 +8,7 @@ import("//build/go/toolchain.gni")
 go_binary("netstack_service_test") {
   gopackage = "netstack/netstack_service_test"
 
-  extra_dependencies = [
+  deps = [
     "//garnet/go/src/netstack:netstack_lib",
     "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",

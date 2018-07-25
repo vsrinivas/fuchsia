@@ -15,7 +15,7 @@ go_library("syslog_tests_lib") {
 
 go_test("syslog_go_tests") {
   gopackage = "syslog_tests"
-  extra_dependencies = [":syslog_tests_lib"]
+  deps = [":syslog_tests_lib"]
 }
 
 package("syslog_gotests") {

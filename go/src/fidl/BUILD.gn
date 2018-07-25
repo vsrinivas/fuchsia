@@ -15,7 +15,7 @@ go_binary("fidlgen") {
 
   sdk_category = "partner"
 
-  extra_dependencies = [ ":fidl_lib" ]
+  deps = [ ":fidl_lib" ]
 }
 
 install_host_tools("fidl") {

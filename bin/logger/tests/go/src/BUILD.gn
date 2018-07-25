@@ -18,5 +18,5 @@ go_library("logger_integration_go_tests_lib") {
 
 go_test("logger_integration_go_tests") {
   gopackage = "logger_integration_tests"
-  extra_dependencies = [ ":logger_integration_go_tests_lib" ]
+  deps = [ ":logger_integration_go_tests_lib" ]
 }

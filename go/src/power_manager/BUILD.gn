@@ -21,7 +21,7 @@ go_library("power_manager_lib") {
 
 go_test("power_manager_test") {
   gopackage = "power_manager"
-  extra_dependencies = [ ":power_manager_lib" ]
+  deps = [ ":power_manager_lib" ]
 }
 
 package("power_manager_gotests") {

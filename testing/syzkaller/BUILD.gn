@@ -7,17 +7,17 @@ import("//build/package.gni")
 
 go_binary("syz-stress") {
   gopackage = "github.com/google/syzkaller/tools/syz-stress"
-  extra_dependencies = [ "//garnet/public/go/third_party:github.com/google/syzkaller" ]
+  deps = [ "//garnet/public/go/third_party:github.com/google/syzkaller" ]
 }
 
 go_binary("syz-fuzzer") {
   gopackage = "github.com/google/syzkaller/syz-fuzzer"
-  extra_dependencies = [ "//garnet/public/go/third_party:github.com/google/syzkaller" ]
+  deps = [ "//garnet/public/go/third_party:github.com/google/syzkaller" ]
 }
 
 go_binary("syz-execprog") {
   gopackage = "github.com/google/syzkaller/tools/syz-execprog"
-  extra_dependencies = [ "//garnet/public/go/third_party:github.com/google/syzkaller" ]
+  deps = [ "//garnet/public/go/third_party:github.com/google/syzkaller" ]
 }
 
 executable("syz-executor") {

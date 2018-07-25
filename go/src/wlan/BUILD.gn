@@ -46,48 +46,48 @@ go_test("keywrap_test_bin") {
   output_name = "keywrap_test"
   gopackage = "wlan/keywrap"
 
-  extra_dependencies = [ ":wlan_lib" ]
+  deps = [ ":wlan_lib" ]
 }
 
 go_test("elements_test_bin") {
   output_name = "elements_test"
   gopackage = "wlan/wlan/elements"
-  extra_dependencies = [ ":wlan_lib" ]
+  deps = [ ":wlan_lib" ]
 }
 
 go_test("eapol_handshake_test_bin") {
   output_name = "eapol_handshake_test"
   gopackage = "wlan/eapol/handshake"
 
-  extra_dependencies = [ ":wlan_lib" ]
+  deps = [ ":wlan_lib" ]
 }
 
 go_test("eapol_crypto_test_bin") {
   output_name = "eapol_crypto_test"
   gopackage = "wlan/eapol/crypto"
 
-  extra_dependencies = [ ":wlan_lib" ]
+  deps = [ ":wlan_lib" ]
 }
 
 go_binary("wlanstack_bin") {
   output_name = "wlanstack"
   gopackage = "wlanstack"
 
-  extra_dependencies = [ ":wlanstack_lib" ]
+  deps = [ ":wlanstack_lib" ]
 }
 
 go_binary("wlantool_bin") {
   output_name = "wlan"
   gopackage = "wlantool"
 
-  extra_dependencies = [ ":wlantool_lib" ]
+  deps = [ ":wlantool_lib" ]
 }
 
 go_test("wlanstack_test_bin") {
   output_name = "wlanstack_test"
   gopackage = "wlan/wlan"
 
-  extra_dependencies = [ ":wlanstack_lib" ]
+  deps = [ ":wlanstack_lib" ]
 }
 
 package("wlanstack") {

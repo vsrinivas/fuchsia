@@ -21,7 +21,7 @@ go_library("go_fidl_bindings_test_lib") {
 go_test("go_fidl_bindings_test") {
   gopackage = "fuchsia.googlesource.com/fidl/bindings/bindings_test"
 
-  extra_dependencies = [
+  deps = [
     "//garnet/public/lib/fidl/go/src/fidl/bindings",
     ":go_fidl_bindings_test_lib",
     ":test_fidl($go_toolchain)",

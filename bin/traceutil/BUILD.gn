@@ -21,7 +21,7 @@ go_library("lib") {
 go_binary("bin") {
   output_name = "traceutil"
   gopackage = "traceutil"
-  extra_dependencies = [":lib"]
+  deps = [":lib"]
 }
 
 install_host_tools("traceutil") {

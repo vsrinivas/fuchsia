@@ -18,7 +18,7 @@ go_library("thinfs_lib") {
 go_binary("thinfs_bin") {
   output_name = "thinfs"
   gopackage = "thinfs/cmd/thinfs"
-  extra_dependencies = [ ":thinfs_lib" ]
+  deps = [ ":thinfs_lib" ]
 }
 
 package("thinfs") {

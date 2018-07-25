@@ -46,7 +46,7 @@ foreach(tgt, amber_target_binaries) {
 
     gopackage = tgt.gopkg
 
-    extra_dependencies = [ ":amber_lib" ]
+    deps = [ ":amber_lib" ]
   }
 }
 
@@ -107,7 +107,7 @@ foreach(tgt, amber_host_binaries) {
 
     gopackage = tgt.gopkg
 
-    extra_dependencies = [ ":amber_lib" ]
+    deps = [ ":amber_lib" ]
   }
 }
 
@@ -143,7 +143,7 @@ foreach(test, test_targets) {
   go_test(test.name) {
     gopackage = test.gopkg
 
-    extra_dependencies = [
+    deps = [
       ":amber_lib",
       "//garnet/public/go/third_party:github.com/google/go-cmp",
     ]

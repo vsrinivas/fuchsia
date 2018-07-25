@@ -13,7 +13,7 @@ go_library("far") {
 go_test("go_far_test") {
   gopackage = "fuchsia.googlesource.com/far"
 
-  extra_dependencies = [ ":far" ]
+  deps = [ ":far" ]
 }
 
 package("go_far_tests") {

@@ -11,7 +11,7 @@ go_binary("echo2_client_go_bin") {
   output_name = "echo2_client_go"
   gopackage = "echo2_client_go"
 
-  extra_dependencies = [
+  deps = [
     ":echo2_client_go_lib"
   ]
 }

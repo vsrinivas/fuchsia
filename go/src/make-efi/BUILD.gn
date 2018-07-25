@@ -16,7 +16,7 @@ go_library("make-efi_lib") {
 go_binary("make-efi") {
   gopackage = "make-efi"
 
-  extra_dependencies = [ ":make-efi_lib" ]
+  deps = [ ":make-efi_lib" ]
 }
 
 install_host_tools("host") {

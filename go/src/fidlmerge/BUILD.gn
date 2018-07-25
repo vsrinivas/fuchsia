@@ -17,7 +17,7 @@ go_library("fidlmerge_lib") {
 go_binary("fidlmerge") {
   gopackage = "fidlmerge"
 
-  extra_dependencies = [ ":fidlmerge_lib" ]
+  deps = [ ":fidlmerge_lib" ]
 }
 
 install_host_tools("host") {

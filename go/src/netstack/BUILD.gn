@@ -106,25 +106,25 @@ go_binary("netstack_bin") {
   output_name = "netstack"
 
   gopackage = "netstack"
-  extra_dependencies = [ ":netstack_lib" ]
+  deps = [ ":netstack_lib" ]
 }
 
 go_test("netstack_fidlconv_test") {
   gopackage = "netstack/fidlconv"
-  extra_dependencies = [ ":netstack_lib" ]
+  deps = [ ":netstack_lib" ]
 }
 
 go_test("netstack_netiface_test") {
   gopackage = "netstack/netiface"
-  extra_dependencies = [ ":netstack_lib" ]
+  deps = [ ":netstack_lib" ]
 }
 
 go_test("netstack_filter_test") {
   gopackage = "netstack/filter"
-  extra_dependencies = [ ":netstack_lib" ]
+  deps = [ ":netstack_lib" ]
 }
 
 go_test("netstack_connectivity_test") {
   gopackage = "netstack/connectivity"
-  extra_dependencies = [ ":netstack_lib" ]
+  deps = [ ":netstack_lib" ]
 }

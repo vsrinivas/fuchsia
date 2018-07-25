@@ -14,7 +14,7 @@ go_library("device_settings") {
 go_test("device_settings_integration_test") {
   gopackage = "device_settings"
 
-  extra_dependencies = [
+  deps = [
     ":device_settings",
     "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/fidl/fuchsia.devicesettings($go_toolchain)",

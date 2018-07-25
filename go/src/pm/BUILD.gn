@@ -23,7 +23,7 @@ go_binary("pm_bin") {
   output_name = "pm"
   gopackage = "fuchsia.googlesource.com/pm/cmd/pm"
   sdk_category = "partner"
-  extra_dependencies = [":pm_lib"]
+  deps = [":pm_lib"]
 }
 
 package("pm") {

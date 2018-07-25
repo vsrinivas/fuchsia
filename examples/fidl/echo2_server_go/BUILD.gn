@@ -10,7 +10,7 @@ import("//build/package.gni")
 go_binary("echo2_server_go_bin") {
   output_name = "echo2_server_go"
   gopackage = "echo2_server_go"
-  extra_dependencies = [ ":echo2_server_go_lib" ]
+  deps = [ ":echo2_server_go_lib" ]
 }
 
 go_library("echo2_server_go_lib") {

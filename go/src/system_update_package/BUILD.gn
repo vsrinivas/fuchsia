@@ -23,12 +23,12 @@ go_binary("sys_updater") {
   output_name = "system_updater"
   gopackage = "system_update_package/cmd/updater"
 
-  extra_dependencies = [ ":system_update_package_lib" ]
+  deps = [ ":system_update_package_lib" ]
 }
 
 go_test("processor_test") {
   gopackage = "system_update_package"
-  extra_dependencies = [ ":system_update_package_lib" ]
+  deps = [ ":system_update_package_lib" ]
 }
 
 package("system_updater") {

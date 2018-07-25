@@ -9,7 +9,7 @@ import("//build/go/toolchain.gni")
 go_binary("netstat") {
   gopackage = "netstack/netstat"
 
-  extra_dependencies = [
+  deps = [
     "//garnet/go/src/netstack:netstack_lib",
     "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/fidl/go/src/fidl/bindings",
@@ -19,7 +19,7 @@ go_binary("netstat") {
 go_test("netstack_netstat_test") {
   gopackage = "netstack/netstat"
 
-  extra_dependencies = [
+  deps = [
     "//garnet/go/src/netstack:netstack_lib",
     "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/fidl/go/src/fidl/bindings",

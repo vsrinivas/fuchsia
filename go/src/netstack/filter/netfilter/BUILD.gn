@@ -9,7 +9,7 @@ import("//build/go/toolchain.gni")
 go_binary("netfilter") {
   gopackage = "netstack/filter/netfilter"
 
-  extra_dependencies = [ ":netfilter_lib" ]
+  deps = [ ":netfilter_lib" ]
 }
 
 go_library("netfilter_lib") {

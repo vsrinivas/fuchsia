@@ -13,7 +13,7 @@ go_library("merkle") {
 go_test("go_merkle_test") {
   gopackage = "fuchsia.googlesource.com/merkle"
 
-  extra_dependencies = [ ":merkle" ]
+  deps = [ ":merkle" ]
 }
 
 package("go_merkle_tests") {

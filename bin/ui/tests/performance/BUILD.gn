@@ -40,5 +40,5 @@ go_binary("process_scenic_trace") {
 
   gopackage = "process_scenic_trace"
 
-  extra_dependencies = [ ":process_scenic_trace_lib" ]
+  deps = [ ":process_scenic_trace_lib" ]
 }

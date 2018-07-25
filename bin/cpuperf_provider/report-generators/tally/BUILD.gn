@@ -19,7 +19,7 @@ go_binary("bin") {
   output_name = "traceutil-generate-tally"
   gopackage = "tally"
 
-  extra_dependencies = [":lib"]
+  deps = [":lib"]
 }
 
 install_host_tools("tally") {
