@@ -8,8 +8,8 @@
 
 // Declare placement allocation functions.
 // Note: This library does not provide an implementation of these functions.
-void* operator new(size_t size, void* ptr);
-void* operator new[](size_t size, void* ptr);
+void* operator new(size_t size, void* ptr) noexcept;
+void* operator new[](size_t size, void* ptr) noexcept;
 
 // Declare (but don't define) non-throwing allocation functions.
 // Note: This library does not provide an implementation of these functions.

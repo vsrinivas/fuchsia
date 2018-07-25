@@ -738,7 +738,7 @@ HOST_COMPILEFLAGS := -g -O2 -Isystem/public -Isystem/private -I$(GENERATED_INCLU
 HOST_COMPILEFLAGS += -Wall -Wextra
 HOST_COMPILEFLAGS += -Wno-unused-parameter -Wno-sign-compare
 HOST_CFLAGS := -std=c11
-HOST_CPPFLAGS := -std=c++14 -fno-exceptions -fno-rtti
+HOST_CPPFLAGS := -std=c++17 -fno-exceptions -fno-rtti
 HOST_LDFLAGS :=
 ifneq ($(HOST_USE_CLANG),)
 # We need to use our provided libc++ and libc++abi (and their pthread
