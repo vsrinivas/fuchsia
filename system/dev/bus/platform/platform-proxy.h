@@ -108,7 +108,7 @@ typedef struct pdev_req {
     union {
         usb_mode_t usb_mode;
         uint32_t gpio_flags;
-        uint32_t gpio_alt_function;
+        uint64_t gpio_alt_function;
         uint8_t gpio_value;
         uint8_t canvas_idx;
         pdev_i2c_txn_ctx_t i2c_txn;
