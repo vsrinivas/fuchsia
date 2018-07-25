@@ -211,7 +211,7 @@ fn log_manager_helper(
             return fok(());
         }
         for tag in &lw.tags {
-            if tag.len() > fidl_fuchsia_logger::MAX_TAG_LEN as usize {
+            if tag.len() > fidl_fuchsia_logger::MAX_TAG_LEN_BYTES as usize {
                 // TODO: close channel
                 return fok(());
             }
@@ -234,7 +234,7 @@ fn log_manager_helper(
         let mut v = vec![];
         for (msg, s) in shared_members.log_msg_buffer.iter_mut() {
             if lw.filter(msg) {
-                if log_length + s > fidl_fuchsia_logger::MAX_LOG_MANY_SIZE as usize {
+                if log_length + s > fidl_fuchsia_logger::MAX_LOG_MANY_SIZE_BYTES as usize {
                     if ListenerStatus::Fine != lw.send_filtered_logs(&mut v) {
                         return fok(());
                     }

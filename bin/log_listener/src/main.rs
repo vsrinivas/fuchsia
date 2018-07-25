@@ -17,7 +17,8 @@ use syslog_listener::LogProcessor;
 
 // Include the generated FIDL bindings for the `Logger` service.
 extern crate fidl_fuchsia_logger;
-use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage, MAX_TAGS, MAX_TAG_LEN};
+use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage,
+                          MAX_TAGS, MAX_TAG_LEN_BYTES};
 
 fn default_log_filter_options() -> LogFilterOptions {
     LogFilterOptions {
@@ -75,10 +76,10 @@ fn parse_flags(args: &[String]) -> Result<LogFilterOptions, String> {
         match argument.as_ref() {
             "--tag" => {
                 let tag = &args[i + 1];
-                if tag.len() > MAX_TAG_LEN as usize {
+                if tag.len() > MAX_TAG_LEN_BYTES as usize {
                     return Err(format!(
                         "'{}' should not be more then {} characters",
-                        tag, MAX_TAG_LEN
+                        tag, MAX_TAG_LEN_BYTES
                     ));
                 }
                 options.tags.push(String::from(tag.as_ref()));
@@ -484,7 +485,7 @@ mod tests {
         fn tag_edge_case() {
             let mut args = vec!["--tag".to_string()];
             let mut tag = "a".to_string();
-            for _ in 1..MAX_TAG_LEN {
+            for _ in 1..MAX_TAG_LEN_BYTES {
                 tag.push('a');
             }
             args.push(tag.clone());
@@ -506,7 +507,7 @@ mod tests {
         fn tag_fail() {
             let mut args = vec!["--tag".to_string()];
             let mut tag = "a".to_string();
-            for _ in 0..MAX_TAG_LEN {
+            for _ in 0..MAX_TAG_LEN_BYTES {
                 tag.push('a');
             }
             args.push(tag);
