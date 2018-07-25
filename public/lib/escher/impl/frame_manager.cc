@@ -5,7 +5,6 @@
 #include "lib/escher/impl/frame_manager.h"
 
 #include "lib/escher/renderer/frame.h"
-
 #include "lib/escher/util/trace_macros.h"
 
 namespace escher {
@@ -35,12 +34,13 @@ FrameManager::FrameManager(EscherWeakPtr escher)
 FrameManager::~FrameManager() = default;
 
 FramePtr FrameManager::NewFrame(const char* trace_literal,
-                                uint64_t frame_number,
-                                bool enable_gpu_logging) {
+                                uint64_t frame_number, bool enable_gpu_logging,
+                                escher::CommandBuffer::Type requested_type) {
   TRACE_DURATION("gfx", "escher::FrameManager::NewFrame");
   uniform_buffer_pool_.BeginFrame();
+  // TODO(SCN-844) Allow client to specify CommandBuffer type.
   FramePtr frame = fxl::AdoptRef<Frame>(
-      new Frame(this, std::move(*GetBlockAllocator().get()),
+      new Frame(this, requested_type, std::move(*GetBlockAllocator().get()),
                 uniform_buffer_pool_.GetWeakPtr(), frame_number, trace_literal,
                 enable_gpu_logging));
   frame->BeginFrame();

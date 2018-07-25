@@ -236,7 +236,8 @@ ShaderProgramPtr Escher::GetProgram(
 }
 
 FramePtr Escher::NewFrame(const char* trace_literal, uint64_t frame_number,
-                          bool enable_gpu_logging) {
+                          bool enable_gpu_logging,
+                          escher::CommandBuffer::Type requested_type) {
   TRACE_DURATION("gfx", "escher::Escher::NewFrame ");
   for (auto& pair : descriptor_set_allocators_) {
     pair.second->BeginFrame();
@@ -244,7 +245,7 @@ FramePtr Escher::NewFrame(const char* trace_literal, uint64_t frame_number,
   framebuffer_allocator_->BeginFrame();
 
   return frame_manager_->NewFrame(trace_literal, frame_number,
-                                  enable_gpu_logging);
+                                  enable_gpu_logging, requested_type);
 }
 
 uint64_t Escher::GetNumGpuBytesAllocated() {

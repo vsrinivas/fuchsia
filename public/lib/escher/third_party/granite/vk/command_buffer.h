@@ -69,12 +69,14 @@ using CommandBufferPtr = fxl::RefPtr<CommandBuffer>;
 // Not thread safe.
 class CommandBuffer : public Reffable {
  public:
+  enum class Type { kGraphics = 0, kCompute, kTransfer, kEnumCount };
+
   // Constructors.
+  static CommandBufferPtr NewForType(Escher* escher, Type type);
   static CommandBufferPtr NewForGraphics(Escher* escher);
   static CommandBufferPtr NewForCompute(Escher* escher);
   static CommandBufferPtr NewForTransfer(Escher* escher);
 
-  enum class Type { kGraphics = 0, kCompute, kTransfer, kEnumCount };
   Type type() const { return type_; }
 
   vk::CommandBuffer vk() const { return vk_; }
@@ -356,7 +358,9 @@ class CommandBuffer : public Reffable {
   };
   using DirtyFlags = uint32_t;
 
-  CommandBuffer(Escher* escher, Type type);
+  // TODO(ES-83): impl::CommandBuffer is deprecated from the get-go.
+  CommandBuffer(EscherWeakPtr escher, Type type,
+                impl::CommandBuffer* command_buffer);
 
   // Sets all flags to dirty, and zeros out DescriptorSetBindings uids.
   void BeginGraphicsOrComputeContext();
@@ -430,14 +434,13 @@ class CommandBuffer : public Reffable {
     return &(set_bindings->infos[binding_index]);
   }
 
-  Escher* const escher_;
+  EscherWeakPtr const escher_;
+  Type type_;
 
   // TODO(ES-83): deprecated from the get-go.
   impl::CommandBuffer* const impl_;
   vk::CommandBuffer vk_;
   vk::Device vk_device_;
-
-  Type type_;
 
   DirtyFlags dirty_ = ~0u;
   uint32_t dirty_descriptor_sets_ = 0;
@@ -459,6 +462,7 @@ class CommandBuffer : public Reffable {
 
   vk::Viewport viewport_ = {};
   vk::Rect2D scissor_ = {};
+
 };  // namespace escher
 
 // Inline function definitions.

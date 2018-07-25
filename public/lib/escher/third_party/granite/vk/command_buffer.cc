@@ -47,24 +47,48 @@
 
 namespace escher {
 
+CommandBufferPtr CommandBuffer::NewForType(Escher* escher, Type type) {
+  switch (type) {
+    case Type::kGraphics:
+      return NewForGraphics(escher);
+    case Type::kCompute:
+      return NewForCompute(escher);
+    case Type::kTransfer:
+      return NewForTransfer(escher);
+    default:
+      FXL_LOG(ERROR) << "Unrecognized CommandBuffer type requested. Cannot "
+                     << "create CommandBuffer.";
+      return nullptr;
+  }
+}
+
 CommandBufferPtr CommandBuffer::NewForGraphics(Escher* escher) {
-  return fxl::AdoptRef(new CommandBuffer(escher, Type::kGraphics));
+  return fxl::AdoptRef(
+      new CommandBuffer(escher->GetWeakPtr(), Type::kGraphics,
+                        escher->command_buffer_pool()->GetCommandBuffer()));
 }
 
 CommandBufferPtr CommandBuffer::NewForCompute(Escher* escher) {
-  return fxl::AdoptRef(new CommandBuffer(escher, Type::kCompute));
+  return fxl::AdoptRef(
+      new CommandBuffer(escher->GetWeakPtr(), Type::kCompute,
+                        escher->command_buffer_pool()->GetCommandBuffer()));
 }
 
 CommandBufferPtr CommandBuffer::NewForTransfer(Escher* escher) {
-  return fxl::AdoptRef(new CommandBuffer(escher, Type::kTransfer));
+  auto pool = escher->transfer_command_buffer_pool()
+                  ? escher->transfer_command_buffer_pool()
+                  : escher->command_buffer_pool();
+  return fxl::AdoptRef(new CommandBuffer(escher->GetWeakPtr(), Type::kTransfer,
+                                         pool->GetCommandBuffer()));
 }
 
-CommandBuffer::CommandBuffer(Escher* escher, Type type)
-    : escher_(escher),
-      impl_(escher->command_buffer_pool()->GetCommandBuffer()),
+CommandBuffer::CommandBuffer(EscherWeakPtr escher, Type type,
+                             impl::CommandBuffer* impl)
+    : escher_(std::move(escher)),
+      type_(type),
+      impl_(impl),
       vk_(impl_->vk()),
-      vk_device_(escher->vk_device()),
-      type_(type) {}
+      vk_device_(escher_->vk_device()) {}
 
 bool CommandBuffer::Submit(CommandBufferFinishedCallback callback) {
   vk::Queue queue;

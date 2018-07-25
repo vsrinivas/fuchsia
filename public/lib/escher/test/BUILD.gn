@@ -26,6 +26,7 @@ if (is_mac) {
       "object_unittest.cc",
       "paper/paper_render_queue_unittest.cc",
       "pose_buffer_latching_test.cc",
+      "renderer/frame_unittest.cc",
       "renderer/render_queue_unittest.cc",
       "run_all_unittests.cc",
       "scene/directional_light_unittest.cc",
@@ -74,6 +75,7 @@ if (is_mac) {
       ]
       deps += [
         "//garnet/public/lib/gtest",
+        "//third_party/googletest:gmock",
         "//zircon/public/lib/async-loop-cpp",
       ]
     }

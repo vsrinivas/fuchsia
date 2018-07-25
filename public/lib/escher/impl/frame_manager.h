@@ -10,6 +10,7 @@
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/impl/uniform_buffer_pool.h"
 #include "lib/escher/resources/resource_manager.h"
+#include "lib/escher/vk/command_buffer.h"
 
 namespace escher {
 namespace impl {
@@ -22,7 +23,8 @@ class FrameManager : public ResourceManager {
   ~FrameManager();
 
   FramePtr NewFrame(const char* trace_literal, uint64_t frame_number,
-                    bool enable_gpu_logging);
+                    bool enable_gpu_logging,
+                    escher::CommandBuffer::Type requested_type);
 
   // Return the number of outstanding frames: frames where BeginFrame() has been
   // called, and either EndFrame() not yet called, or called but Vulkan has not

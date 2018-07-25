@@ -15,6 +15,7 @@
 #include "lib/escher/profiling/timestamp_profiler.h"
 #include "lib/escher/renderer/uniform_block_allocator.h"
 #include "lib/escher/util/block_allocator.h"
+#include "lib/escher/vk/command_buffer.h"
 
 namespace escher {
 
@@ -79,7 +80,8 @@ class Frame : public Resource {
   // NOTE: moving the BlockAllocator into the Frame (instead of e.g. passing a
   // unique_ptr) avoids an extra pointer indirection on each allocation.
   friend class impl::FrameManager;
-  Frame(impl::FrameManager* manager, BlockAllocator allocator,
+  Frame(impl::FrameManager* manager, CommandBuffer::Type requested_type,
+        BlockAllocator allocator,
         impl::UniformBufferPoolWeakPtr uniform_buffer_pool,
         uint64_t frame_number, const char* trace_literal,
         bool enable_gpu_logging);
@@ -90,11 +92,11 @@ class Frame : public Resource {
   BlockAllocator TakeBlockAllocator() { return std::move(block_allocator_); }
 
   static void LogGpuQueryResults(
-      uint64_t frame_number,
+      uint64_t escher_frame_number,
       const std::vector<TimestampProfiler::Result>& timestamps);
 
   static void TraceGpuQueryResults(
-      uint64_t frame_number,
+      uint64_t frame_number, uint64_t escher_frame_number,
       const std::vector<TimestampProfiler::Result>& timestamps,
       const char* trace_literal);
 
@@ -116,6 +118,7 @@ class Frame : public Resource {
   bool enable_gpu_logging_;
   vk::Queue queue_;
 
+  CommandBuffer::Type command_buffer_type_;
   CommandBufferPtr new_command_buffer_;
   impl::CommandBuffer* command_buffer_ = nullptr;
   vk::CommandBuffer vk_command_buffer_;

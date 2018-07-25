@@ -12,6 +12,7 @@
 #include "lib/escher/status.h"
 #include "lib/escher/util/hash.h"
 #include "lib/escher/util/hash_map.h"
+#include "lib/escher/vk/command_buffer.h"
 #include "lib/escher/vk/shader_program_factory.h"
 #include "lib/escher/vk/vulkan_context.h"
 #include "lib/escher/vk/vulkan_device_queues.h"
@@ -52,7 +53,9 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   // |enable_gpu_logging| is true, GPU profiling timestamps will be logged via
   // FXL_LOG().
   FramePtr NewFrame(const char* trace_literal, uint64_t frame_number,
-                    bool enable_gpu_logging = false);
+                    bool enable_gpu_logging = false,
+                    escher::CommandBuffer::Type requested_type =
+                        escher::CommandBuffer::Type::kGraphics);
   // Return the number of frames that have been returned by NewFrame() and which
   // have not finished rendering (after having EndFrame() invoked upon them).
   uint32_t GetNumOutstandingFrames() const;

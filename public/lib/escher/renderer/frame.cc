@@ -29,7 +29,9 @@ static uint64_t NextFrameNumber() {
 const ResourceTypeInfo Frame::kTypeInfo("Frame", ResourceType::kResource,
                                         ResourceType::kFrame);
 
-Frame::Frame(impl::FrameManager* manager, BlockAllocator allocator,
+Frame::Frame(impl::FrameManager* manager,
+             escher::CommandBuffer::Type requested_type,
+             BlockAllocator allocator,
              impl::UniformBufferPoolWeakPtr uniform_buffer_pool,
              uint64_t frame_number, const char* trace_literal,
              bool enable_gpu_logging)
@@ -39,6 +41,7 @@ Frame::Frame(impl::FrameManager* manager, BlockAllocator allocator,
       trace_literal_(trace_literal),
       enable_gpu_logging_(enable_gpu_logging),
       queue_(escher()->device()->vk_main_queue()),
+      command_buffer_type_(requested_type),
       block_allocator_(std::move(allocator)),
       uniform_block_allocator_(std::move(uniform_buffer_pool)),
       profiler_(escher()->supports_timer_queries()
@@ -63,9 +66,10 @@ void Frame::BeginFrame() {
                  frame_number_, "escher_frame_number", escher_frame_number_);
   FXL_DCHECK(state_ == State::kReadyToBegin);
   state_ = State::kInProgress;
-
   static_cast<impl::FrameManager*>(owner())->IncrementNumOutstandingFrames();
-  new_command_buffer_ = CommandBuffer::NewForGraphics(escher());
+
+  new_command_buffer_ =
+      CommandBuffer::NewForType(escher(), command_buffer_type_);
   command_buffer_ = new_command_buffer_->impl();
   vk_command_buffer_ = command_buffer_->vk();
   AddTimestamp("start of frame");
@@ -105,7 +109,8 @@ void Frame::EndFrame(const SemaphorePtr& frame_done,
       queue_,
       [client_callback{std::move(frame_retired_callback)},
        profiler{std::move(profiler_)}, frame_number = frame_number_,
-       trace_literal = trace_literal_, enable_gpu_logging = enable_gpu_logging_,
+       escher_number = escher_frame_number_, trace_literal = trace_literal_,
+       enable_gpu_logging = enable_gpu_logging_,
        this_frame = FramePtr(this)]() {
         // Run the client-specified callback.
         if (client_callback) {
@@ -117,9 +122,10 @@ void Frame::EndFrame(const SemaphorePtr& frame_done,
         // - if specified, log a summary.
         if (profiler) {
           auto timestamps = profiler->GetQueryResults();
-          TraceGpuQueryResults(frame_number, timestamps, trace_literal);
+          TraceGpuQueryResults(frame_number, escher_number, timestamps,
+                               trace_literal);
           if (enable_gpu_logging) {
-            LogGpuQueryResults(frame_number, timestamps);
+            LogGpuQueryResults(escher_number, timestamps);
           }
         }
 
@@ -165,11 +171,11 @@ void Frame::KeepAlive(ResourcePtr resource) {
 }
 
 void Frame::LogGpuQueryResults(
-    uint64_t frame_number,
+    uint64_t escher_frame_number,
     const std::vector<TimestampProfiler::Result>& timestamps) {
   FXL_LOG(INFO) << "--------------------------------"
                    "----------------------";
-  FXL_LOG(INFO) << "Timestamps for frame #" << frame_number;
+  FXL_LOG(INFO) << "Timestamps for frame #" << escher_frame_number;
   FXL_LOG(INFO) << "total\t | \tsince previous (all "
                    "times in microseconds)";
   FXL_LOG(INFO) << "--------------------------------"
@@ -184,7 +190,7 @@ void Frame::LogGpuQueryResults(
 
 #ifndef OS_FUCHSIA
 void Frame::TraceGpuQueryResults(
-    uint64_t frame_number,
+    uint64_t frame_number, uint64_t escher_frame_number,
     const std::vector<TimestampProfiler::Result>& timestamps,
     const char* trace_literal) {}
 #else
@@ -201,7 +207,7 @@ static inline uint64_t NanosToTicks(zx_time_t nanoseconds, zx_time_t now_nanos,
 }
 
 void Frame::TraceGpuQueryResults(
-    uint64_t frame_number,
+    uint64_t frame_number, uint64_t escher_frame_number,
     const std::vector<TimestampProfiler::Result>& timestamps,
     const char* trace_literal) {
   constexpr static const char* kCategoryLiteral = "gfx";
@@ -224,7 +230,8 @@ void Frame::TraceGpuQueryResults(
 
     // Begin async trace.
     {
-      TRACE_INTERNAL_DECLARE_ARGS("frame#", frame_number);
+      TRACE_INTERNAL_DECLARE_ARGS("frame#", frame_number, "escher_frame#",
+                                  escher_frame_number);
       uint64_t ticks = NanosToTicks(timestamps[0].raw_nanoseconds, now_nanos,
                                     now_ticks, ticks_per_nanosecond);
       trace_context_write_async_begin_event_record(
@@ -242,8 +249,9 @@ void Frame::TraceGpuQueryResults(
       // which is the one that has the useful data.
       if (timestamps[i].elapsed) {
         TRACE_INTERNAL_DECLARE_ARGS(
-            "frame#", frame_number, "name", timestamps[i].name, "elapsed",
-            timestamps[i].elapsed, "total", timestamps[i].time, "index", i);
+            "frame#", frame_number, "escher_frame#", escher_frame_number,
+            "name", timestamps[i].name, "elapsed", timestamps[i].elapsed,
+            "total", timestamps[i].time, "index", i);
         uint64_t ticks = NanosToTicks(timestamps[i].raw_nanoseconds, now_nanos,
                                       now_ticks, ticks_per_nanosecond);
         trace_context_write_async_instant_event_record(
@@ -255,7 +263,8 @@ void Frame::TraceGpuQueryResults(
 
     // End async trace.
     {
-      TRACE_INTERNAL_DECLARE_ARGS("frame#");
+      TRACE_INTERNAL_DECLARE_ARGS("frame#", frame_number, "escher_frame#",
+                                  escher_frame_number);
       size_t i = timestamps.size() - 1;
       uint64_t ticks = NanosToTicks(timestamps[i].raw_nanoseconds, now_nanos,
                                     now_ticks, ticks_per_nanosecond);
