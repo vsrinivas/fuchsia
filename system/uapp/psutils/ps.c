@@ -38,6 +38,13 @@ typedef struct {
     size_t capacity; // allocation size
 } task_table_t;
 
+// Controls what is shown.
+typedef struct {
+    bool also_show_threads;
+    bool only_show_jobs;
+    char format_unit;
+} ps_options_t;
+
 // Adds a task entry to the specified table. |*entry| is copied.
 // Returns a pointer to the new table entry.
 task_entry_t* add_entry(task_table_t* table, const task_entry_t* entry) {
@@ -62,7 +69,7 @@ static task_table_t tasks = {};
 static task_entry_t* job_stack[JOB_STACK_SIZE];
 
 // Adds a job's information to |tasks|.
-static zx_status_t job_callback(void* unused_ctx, int depth, zx_handle_t job,
+static zx_status_t job_callback(void* ctx, int depth, zx_handle_t job,
                                 zx_koid_t koid, zx_koid_t parent_koid) {
     task_entry_t e = {.type = 'j', .depth = depth};
     zx_status_t status =
@@ -82,7 +89,7 @@ static zx_status_t job_callback(void* unused_ctx, int depth, zx_handle_t job,
 }
 
 // Adds a process's information to |tasks|.
-static zx_status_t process_callback(void* unused_ctx, int depth,
+static zx_status_t process_callback(void* ctx, int depth,
                                     zx_handle_t process,
                                     zx_koid_t koid, zx_koid_t parent_koid) {
     task_entry_t e = {.type = 'p', .depth = depth};
@@ -114,6 +121,11 @@ static zx_status_t process_callback(void* unused_ctx, int depth,
             // shared_bytes doesn't mean much as a sum, so leave it at zero.
         }
     }
+
+    if (((ps_options_t*)ctx)->only_show_jobs) {
+        return ZX_OK;
+    }
+
     snprintf(e.koid_str, sizeof(e.koid_str), "%" PRIu64, koid);
     snprintf(e.parent_koid_str, sizeof(e.koid_str), "%" PRIu64, parent_koid);
     add_entry(&tasks, &e);
@@ -146,9 +158,14 @@ static const char* state_string(const zx_info_thread_t* info) {
 }
 
 // Adds a thread's information to |tasks|.
-static zx_status_t thread_callback(void* unused_ctx, int depth,
+static zx_status_t thread_callback(void* ctx, int depth,
                                    zx_handle_t thread,
                                    zx_koid_t koid, zx_koid_t parent_koid) {
+    if (!((ps_options_t*)ctx)->also_show_threads) {
+        // TODO(cpu): Should update ancestor process with number of threads.
+        return ZX_OK;
+    }
+
     task_entry_t e = {.type = 't', .depth = depth};
     zx_status_t status =
         zx_object_get_property(thread, ZX_PROP_NAME, e.name, sizeof(e.name));
@@ -169,21 +186,21 @@ static zx_status_t thread_callback(void* unused_ctx, int depth,
     return ZX_OK;
 }
 
-static void print_header(int id_w, bool with_threads) {
-    if (with_threads) {
+static void print_header(int id_w, const ps_options_t* options) {
+    if (options->also_show_threads) {
         printf("%*s %7s %7s %7s %7s %s\n",
                -id_w, "TASK", "PSS", "PRIVATE", "SHARED", "STATE", "NAME");
+    } else if (options->only_show_jobs) {
+        printf("%*s %7s %7s %s\n",
+               -id_w, "TASK", "PSS", "PRIVATE", "NAME");
     } else {
         printf("%*s %7s %7s %7s %s\n",
                -id_w, "TASK", "PSS", "PRIVATE", "SHARED", "NAME");
     }
 }
 
-// The |unit| param to pass to format_size_fixed().
-static char format_unit = 0;
-
 // Prints the contents of |table| to stdout.
-static void print_table(task_table_t* table, bool with_threads) {
+static void print_table(task_table_t* table, const ps_options_t* options) {
     if (table->num_entries == 0) {
         return;
     }
@@ -199,11 +216,11 @@ static void print_table(task_table_t* table, bool with_threads) {
         }
     }
 
-    print_header(id_w, with_threads);
+    print_header(id_w, options);
     char* idbuf = (char*)malloc(id_w + 1);
     for (size_t i = 0; i < table->num_entries; i++) {
         const task_entry_t* e = table->entries + i;
-        if (e->type == 't' && !with_threads) {
+        if (e->type == 't' && !options->also_show_threads) {
             continue;
         }
         snprintf(idbuf, id_w + 1,
@@ -214,23 +231,29 @@ static void print_table(task_table_t* table, bool with_threads) {
         char private_bytes_str[MAX_FORMAT_SIZE_LEN] = {};
         if (e->type == 'j' || e->type == 'p') {
             format_size_fixed(pss_bytes_str, sizeof(pss_bytes_str),
-                              e->pss_bytes, format_unit);
+                              e->pss_bytes, options->format_unit);
             format_size_fixed(private_bytes_str, sizeof(private_bytes_str),
-                              e->private_bytes, format_unit);
+                              e->private_bytes, options->format_unit);
         }
         char shared_bytes_str[MAX_FORMAT_SIZE_LEN] = {};
         if (e->type == 'p') {
             format_size_fixed(shared_bytes_str, sizeof(shared_bytes_str),
-                              e->shared_bytes, format_unit);
+                              e->shared_bytes, options->format_unit);
         }
 
-        if (with_threads) {
+        if (options->also_show_threads) {
             printf("%*s %7s %7s %7s %7s %s\n",
                    -id_w, idbuf,
                    pss_bytes_str,
                    private_bytes_str,
                    shared_bytes_str,
                    e->state_str,
+                   e->name);
+        } else if (options->only_show_jobs) {
+            printf("%*s %7s %7s %s\n",
+                   -id_w, idbuf,
+                   pss_bytes_str,
+                   private_bytes_str,
                    e->name);
         } else {
             printf("%*s %7s %7s %7s %s\n",
@@ -242,12 +265,13 @@ static void print_table(task_table_t* table, bool with_threads) {
         }
     }
     free(idbuf);
-    print_header(id_w, with_threads);
+    print_header(id_w, options);
 }
 
 static void print_help(FILE* f) {
     fprintf(f, "Usage: ps [options]\n");
     fprintf(f, "Options:\n");
+    fprintf(f, " -J             Only show jobs in the output\n");
     // -T for compatibility with linux ps
     fprintf(f, " -T             Include threads in the output\n");
     fprintf(f, " --units=?      Fix all sizes to the named unit\n");
@@ -255,17 +279,24 @@ static void print_help(FILE* f) {
 }
 
 int main(int argc, char** argv) {
-    bool with_threads = false;
+    ps_options_t options = {
+        .also_show_threads = false,
+        .only_show_jobs = false,
+        .format_unit = 0
+    };
+
     for (int i = 1; i < argc; ++i) {
         const char* arg = argv[i];
         if (!strcmp(arg, "--help")) {
             print_help(stdout);
             return 0;
         }
-        if (!strcmp(arg, "-T")) {
-            with_threads = true;
+        if (!strcmp(arg, "-J")) {
+            options.only_show_jobs = true;
+        } else if (!strcmp(arg, "-T")) {
+            options.also_show_threads = true;
         } else if (!strncmp(arg, "--units=", sizeof("--units=") - 1)) {
-            format_unit = arg[sizeof("--units=") - 1];
+            options.format_unit = arg[sizeof("--units=") - 1];
         } else {
             fprintf(stderr, "Unknown option: %s\n", arg);
             print_help(stderr);
@@ -275,14 +306,13 @@ int main(int argc, char** argv) {
 
     int ret = 0;
     zx_status_t status =
-        walk_root_job_tree(job_callback, process_callback,
-                           with_threads ? thread_callback : NULL, NULL);
+        walk_root_job_tree(job_callback, process_callback, thread_callback, &options);
     if (status != ZX_OK) {
         fprintf(stderr, "WARNING: walk_root_job_tree failed: %s (%d)\n",
                 zx_status_get_string(status), status);
         ret = 1;
     }
-    print_table(&tasks, with_threads);
+    print_table(&tasks, &options);
     free(tasks.entries);
     return ret;
 }
