@@ -6,7 +6,7 @@ This document explains how to use golang syslogger library.
 ## gn dependency
 
 ```
-extra_dependencies = [
+deps = [
     "//garnet/public/lib/syslog/go/src/syslog",
     "//garnet/public/lib/app/go/src/app",
 ]
