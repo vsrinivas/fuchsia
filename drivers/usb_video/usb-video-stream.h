@@ -2,21 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_USB_VIDEO_USB_VIDEO_STREAM_H_
+#define GARNET_DRIVERS_USB_VIDEO_USB_VIDEO_STREAM_H_
 
 #include <ddk/usb/usb.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
-#include <dispatcher-pool/dispatcher-channel.h>
-#include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/vector.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/default.h>
 #include <lib/zx/vmo.h>
-#include <zircon/device/camera-proto.h>
 
-#include "usb-video.h"
-#include "video-buffer.h"
+#include "garnet/drivers/usb_video/camera_control_impl.h"
+#include "garnet/drivers/usb_video/usb-video-camera.h"
+#include "garnet/drivers/usb_video/usb-video.h"
+#include "garnet/drivers/usb_video/video-buffer.h"
 
 namespace video {
 namespace usb {
@@ -59,7 +61,7 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
   struct FormatMapping {
     FormatMapping(const UsbVideoFormat* format,
                   const UsbVideoFrameDesc* frame_desc);
-    camera::camera_proto::VideoFormat proto;
+    fuchsia::camera::driver::VideoFormat proto;
 
     const UsbVideoFormat* format;
     const UsbVideoFrameDesc* frame_desc;
@@ -67,13 +69,7 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
 
   UsbVideoStream(zx_device_t* parent, usb_protocol_t* usb,
                  fbl::Vector<UsbVideoFormat>* formats,
-                 fbl::Vector<UsbVideoStreamingSetting>* settings,
-                 fbl::RefPtr<dispatcher::ExecutionDomain>&& default_domain)
-      : UsbVideoStreamBase(parent),
-        usb_(*usb),
-        formats_(fbl::move(*formats)),
-        streaming_settings_(fbl::move(*settings)),
-        default_domain_(fbl::move(default_domain)) {}
+                 fbl::Vector<UsbVideoStreamingSetting>* settings);
 
   zx_status_t Bind(const char* devname, usb_interface_descriptor_t* intf,
                    usb_video_vc_header_desc* control_header,
@@ -92,14 +88,11 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
                               const UsbVideoFrameDesc* frame_desc)
       __TA_REQUIRES(lock_);
 
-  zx_status_t ProcessStreamChannel(dispatcher::Channel* channel);
-  zx_status_t ProcessVideoBufferChannel(dispatcher::Channel* channel);
-
   // Finds the matching format and frame descriptors for the given
   // video format proto.
   // If found returns ZX_OK and populates out_format and out_frame_desc,
   // else returns an error.
-  zx_status_t GetMapping(camera::camera_proto::VideoFormat format,
+  zx_status_t GetMapping(const fuchsia::camera::driver::VideoFormat& format,
                          const UsbVideoFormat** out_format,
                          const UsbVideoFrameDesc** out_frame_desc);
 
@@ -108,33 +101,30 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
   // format_mappings_.
   zx_status_t GenerateFormatMappings();
 
-  zx_status_t GetFormatsLocked(dispatcher::Channel* channel,
-                               const camera::camera_proto::GetFormatsReq& req)
-      __TA_REQUIRES(lock_);
-  zx_status_t SetFormatLocked(dispatcher::Channel* channel,
-                              const camera::camera_proto::SetFormatReq& req)
-      __TA_REQUIRES(lock_);
-
   // Creates a new video buffer and maps it into our address space.
   // The current streaming state must be StreamingState::STOPPED.
   zx_status_t CreateDataVideoBuffer();
-  zx_status_t SetBufferLocked(
-      dispatcher::Channel* channel,
-      const camera::camera_proto::VideoBufSetBufferReq& req,
-      zx::handle rxed_handle) __TA_REQUIRES(lock_);
 
-  zx_status_t StartStreamingLocked(
-      dispatcher::Channel* channel,
-      const camera::camera_proto::VideoBufStartReq& req) __TA_REQUIRES(lock_);
-  zx_status_t StopStreamingLocked(
-      dispatcher::Channel* channel,
-      const camera::camera_proto::VideoBufStopReq& req) __TA_REQUIRES(lock_);
+ public:
+  // Interface with the FIDL Camera Driver
+  zx_status_t GetFormats(
+      fidl::VectorPtr<fuchsia::camera::driver::VideoFormat>& formats);
 
-  zx_status_t FrameReleaseLocked(
-      dispatcher::Channel* channel,
-      const camera::camera_proto::VideoBufFrameReleaseReq& req)
-      __TA_REQUIRES(lock_);
+  zx_status_t SetFormat(
+      const fuchsia::camera::driver::VideoFormat& video_format,
+      uint32_t* max_frame_size);
 
+  zx_status_t SetBuffer(zx::vmo buffer);
+
+  zx_status_t StartStreaming();
+
+  zx_status_t StopStreaming();
+
+  zx_status_t FrameRelease(uint64_t frame_offset);
+
+  void DeactivateVideoBuffer();
+
+ private:
   // Populates the free_reqs_ list with usb requests of the specified size.
   // Returns immediately if the list already contains large enough usb
   // requests, otherwise frees existing requests before allocating new ones.
@@ -162,9 +152,6 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
   // and stores it in the video buffer.
   void ProcessPayloadLocked(usb_request_t* req) __TA_REQUIRES(lock_);
 
-  void DeactivateStreamChannel(const dispatcher::Channel* channel);
-  void DeactivateVideoBufferChannel(const dispatcher::Channel* channel);
-
   usb_protocol_t usb_;
 
   fbl::Vector<UsbVideoFormat> formats_;
@@ -186,11 +173,6 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
   int streaming_ep_type_ = USB_ENDPOINT_INVALID;
   uint8_t iface_num_ = 0;
   uint8_t usb_ep_addr_ = 0;
-
-  // Dispatcher framework state
-  fbl::RefPtr<dispatcher::Channel> stream_channel_ __TA_GUARDED(lock_);
-  fbl::RefPtr<dispatcher::Channel> vb_channel_ __TA_GUARDED(lock_);
-  fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
 
   // Statistics for frame based formats.
   // Number of frames encountered.
@@ -256,7 +238,16 @@ class UsbVideoStream : public UsbVideoStreamBase, public VideoStreamProtocol {
   uint32_t bulk_payload_bytes_ = 0;
 
   fbl::Mutex lock_;
+
+  // CameraStream FIDL interface
+  fbl::unique_ptr<camera::ControlImpl> camera_control_ __TA_GUARDED(lock_) =
+      nullptr;
+
+  // Loop used to run the FIDL server
+  static fbl::unique_ptr<async::Loop> fidl_dispatch_loop_;
 };
 
 }  // namespace usb
 }  // namespace video
+
+#endif  // GARNET_DRIVERS_USB_VIDEO_USB_VIDEO_STREAM_H_

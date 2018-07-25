@@ -4,36 +4,45 @@
 
 import("//build/package.gni")
 
-source_set("lib") {
+source_set("camera_client") {
   sources = [
-    "camera_stream_impl.cc",
-    "camera_stream_impl.h",
+    "camera_client.cc",
+    "camera_client.h",
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.camera.driver",
+    "//garnet/public/fidl/fuchsia.camera.driver:fuchsia.camera.driver",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
   ]
 }
 
 executable("bin") {
-  output_name = "camera_driver_server_cpp"
+  output_name = "example_camera_client"
 
   sources = [
-    "camera_driver_server.cc",
+    "main.cc",
   ]
 
   deps = [
-    ":lib",
+    ":camera_client",
+    "//garnet/public/lib/svc/cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
-package("camera_driver_server_cpp") {
+package("example_camera_client") {
   deps = [
     ":bin",
   ]
-  binary = "camera_driver_server_cpp"
+
+  binary = "example_camera_client"
+
+  meta = [
+    {
+      path = rebase_path("meta/example_camera_client.cmx")
+      dest = "example_camera_client.cmx"
+    },
+  ]
 }

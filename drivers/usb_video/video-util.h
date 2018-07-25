@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_USB_VIDEO_VIDEO_UTIL_H_
+#define GARNET_DRIVERS_USB_VIDEO_VIDEO_UTIL_H_
 
 #include <ddk/usb/usb.h>
 #include <zircon/hw/usb-video.h>
@@ -30,3 +31,5 @@ zx_status_t usb_video_negotiate_commit(
     usb_video_vc_probe_and_commit_controls* ctrls);
 
 __END_CDECLS
+
+#endif  // GARNET_DRIVERS_USB_VIDEO_VIDEO_UTIL_H_

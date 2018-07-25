@@ -1,6 +1,5 @@
 {
     "imports": [
-        "garnet/packages/prod/camera_drivers",
         "garnet/packages/prod/vulkan",
         "garnet/packages/prod/wlan"
     ]

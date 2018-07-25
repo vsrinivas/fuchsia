@@ -6,7 +6,7 @@
 #include <lib/zx/vmar.h>
 #include <string.h>
 
-#include "video-buffer.h"
+#include "garnet/drivers/usb_video/video-buffer.h"
 
 namespace video {
 namespace usb {

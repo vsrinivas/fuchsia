@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//garnet/drivers/usb_video/camera_driver_interface:camera_driver_server_cpp"
-    ]
-}

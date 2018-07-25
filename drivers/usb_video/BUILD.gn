@@ -10,10 +10,12 @@ driver_module("usb_video_driver") {
 
   sources = [
     "binding.c",
-    "usb-video.cpp",
-    "usb-video.h",
+    "camera_control_impl.cpp",
+    "camera_control_impl.h",
     "usb-video-stream.cpp",
     "usb-video-stream.h",
+    "usb-video.cpp",
+    "usb-video.h",
     "video-buffer.cpp",
     "video-buffer.h",
     "video-util.c",
@@ -21,13 +23,19 @@ driver_module("usb_video_driver") {
   ]
 
   deps = [
+    "//garnet/public/fidl/fuchsia.camera.driver",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/driver",
-    "//zircon/public/lib/usb",
     "//zircon/public/lib/dispatcher-pool",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/driver",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
+    "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxcpp",
   ]

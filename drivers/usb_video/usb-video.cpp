@@ -13,24 +13,24 @@
 #include <zircon/device/usb.h>
 #include <zircon/hw/usb-video.h>
 
-#include "usb-video-stream.h"
-#include "usb-video.h"
+#include "garnet/drivers/usb_video/usb-video-stream.h"
+#include "garnet/drivers/usb_video/usb-video.h"
 
 namespace {
 
 // 8 bits for each RGB.
 static constexpr uint32_t MJPEG_BITS_PER_PIXEL = 24;
 
-camera::camera_proto::PixelFormat guid_to_pixel_format(
+fuchsia::camera::driver::PixelFormat guid_to_pixel_format(
     uint8_t guid[GUID_LENGTH]) {
   struct {
     uint8_t guid[GUID_LENGTH];
-    camera::camera_proto::PixelFormat pixel_format;
+    fuchsia::camera::driver::PixelFormat pixel_format;
   } GUID_LUT[] = {
-      {USB_VIDEO_GUID_YUY2_VALUE, YUY2},
-      {USB_VIDEO_GUID_NV12_VALUE, NV12},
-      {USB_VIDEO_GUID_M420_VALUE, M420},
-      {USB_VIDEO_GUID_I420_VALUE, I420},
+      {USB_VIDEO_GUID_YUY2_VALUE, fuchsia::camera::driver::PixelFormat::YUY2},
+      {USB_VIDEO_GUID_NV12_VALUE, fuchsia::camera::driver::PixelFormat::NV12},
+      {USB_VIDEO_GUID_M420_VALUE, fuchsia::camera::driver::PixelFormat::M420},
+      {USB_VIDEO_GUID_I420_VALUE, fuchsia::camera::driver::PixelFormat::I420},
   };
 
   for (const auto& g : GUID_LUT) {
@@ -38,7 +38,7 @@ camera::camera_proto::PixelFormat guid_to_pixel_format(
       return g.pixel_format;
     }
   }
-  return INVALID;
+  return fuchsia::camera::driver::PixelFormat::INVALID;
 }
 
 // Parses the payload format descriptor and any corresponding frame descriptors.
@@ -77,7 +77,7 @@ zx_status_t parse_format(usb_video_vc_desc_header* format_desc,
 
       want_frame_type = USB_VIDEO_VS_FRAME_MJPEG;
       out_format->index = mjpeg_desc->bFormatIndex;
-      out_format->pixel_format = MJPEG;
+      out_format->pixel_format = fuchsia::camera::driver::PixelFormat::MJPEG;
       out_format->bits_per_pixel = MJPEG_BITS_PER_PIXEL;
       want_num_frame_descs = mjpeg_desc->bNumFrameDescriptors;
       out_format->default_frame_index = mjpeg_desc->bDefaultFrameIndex;
@@ -124,7 +124,7 @@ zx_status_t parse_format(usb_video_vc_desc_header* format_desc,
 
         video::usb::UsbVideoFrameDesc frame_desc = {
             .index = desc->bFrameIndex,
-            .capture_type = STREAM,
+            .capture_type = fuchsia::camera::driver::CaptureType::STREAM,
             .default_frame_interval = desc->dwDefaultFrameInterval,
             .width = desc->wWidth,
             .height = desc->wHeight,

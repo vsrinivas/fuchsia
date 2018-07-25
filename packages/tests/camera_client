@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/examples/camera/camera_client:example_camera_client"
+    ]
+}

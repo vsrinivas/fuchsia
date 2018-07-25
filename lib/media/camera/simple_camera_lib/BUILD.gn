@@ -1,7 +1,7 @@
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-  # this has to match the binary name in examples/ui/Build.gn
+# this has to match the binary name in examples/ui/Build.gn
 
 source_set("simple_camera_lib") {
   output_name = "simple_camera_lib"
@@ -9,29 +9,30 @@ source_set("simple_camera_lib") {
   sources = [
     "buffer.cc",
     "buffer.h",
-    "camera_client.h",
-    "camera_client.cc",
-    "fake_camera_source.h",
-    "fake_camera_source.cc",
+    "fake-camera-fidl.cc",
+    "fake-camera-fidl.h",
     "fenced_buffer.cc",
     "fenced_buffer.h",
-    "frame_scheduler.h",
     "frame_scheduler.cc",
-    "camera_interface_base.h",
+    "frame_scheduler.h",
     "video_display.cc",
     "video_display.h",
   ]
 
   public_deps = [
+    "//garnet/public/fidl/fuchsia.camera.driver:fuchsia.camera.driver",
+    "//garnet/public/fidl/fuchsia.ui.scenic",
+    "//garnet/public/fidl/fuchsia.ui.scenic",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/timeline:timeline",
     "//garnet/public/lib/ui/scenic/cpp",
-    "//garnet/public/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/ui/view_framework:view_provider",
-    "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//zircon/public/lib/async",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/trace-provider",

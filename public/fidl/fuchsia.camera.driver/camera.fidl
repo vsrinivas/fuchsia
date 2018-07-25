@@ -7,9 +7,9 @@ library fuchsia.camera.driver;
 enum CaptureType {
   INVALID = 0;
   STILL_IMAGE = 1;       // The source will provide on image.
-  BURST  = 2;              // The source will provide a set of images.
-  STREAM = 3;              // The source will be continuously providing frames
-                           // until signalled to stop.
+  BURST  = 2;            // The source will provide a set of images.
+  STREAM = 3;            // The source will be continuously providing frames
+                         // until signalled to stop.
 };
 
 // This pixel type is a stand-in for the pixel_format that will be defined in
@@ -24,14 +24,14 @@ enum PixelFormat {
   MJPEG = 6;
 };
 
-// A structure used along with the CAMERA_STREAM_CMD_GET_FORMATS command
+// A structure used along with the STREAM_CMD_GET_FORMATS command
 // in order to describe the formats supported by a video stream.
 struct VideoFormat {
   CaptureType capture_type;
   // The width, in pixels, of the decoded video.
-  uint16 width;
+  uint32 width;
   // The height, in pixels, of the decoded video.
-  uint16 height;
+  uint32 height;
   // The number of bytes per line of video.
   uint32 stride;
   // The number of bits per pixel used to specify color in the decoded video.
@@ -54,6 +54,10 @@ enum FrameStatus {
   ERROR_BUFFER_FULL = 2;
 };
 
+struct Metadata {
+    int64 timestamp;
+};
+
 // Sent by the driver to the client when a frame is available for processing,
 // or an error occurred.
 struct FrameAvailableEvent {
@@ -61,42 +65,51 @@ struct FrameAvailableEvent {
   FrameStatus frame_status;
 
   // Number of bytes in the frame.
-  uint32 size;
+  uint32 frame_size;
 
   // The position (in bytes) of the start of the frame in the data buffer.
-  uint64 offset;
+  uint64 frame_offset;
 
-  // TODO(garratt): Add metadata.
+  Metadata metadata;
 };
 
 // These are the original interfaces, which are being used for compatibility.
 // The names are preserved from the ones in camera.h for porting ease.
 [Discoverable]
-interface Stream {
+interface Control {
   // Get the available format types for this device
-  1: GetFormats() -> (vector<VideoFormat> formats);
+  // TODO(CAM-XXX): use pagination pattern
+  1: GetFormats() -> (vector<VideoFormat> formats, zx.status status);
 
   // Sent by the client to indicate desired stream characteristics.
   // If setting the format is successful, the stream request will be honored.
-  2: SetFormats(VideoFormat format, request<VideoBuffer> stream) -> (uint32 max_frame_size);
+  2: SetFormat(VideoFormat format,
+               request<Stream> stream,
+               request<StreamEvents> stream_events) -> (uint32 max_frame_size, zx.status status);
 };
 
-interface VideoBuffer {
+interface StreamEvents {
+  // Sent by the driver to the client when a frame is available for processing,
+  // or an error occurred.
+  1: -> OnFrameAvailable(FrameAvailableEvent frame);
+
+  // Frame streaming stopped
+  2: -> Stopped();
+};
+
+interface Stream {
+  // Set buffer storage used by camera capture.
   // NOTE: The client must transfer a VMO handle for the data buffer
   // with read-write permissions. The size of the VMO should be an
   // integral multiple of max_frame_size returned in SET_FORMAT.
-  1: SetBuffer(handle<vmo> buffer);
+  1: SetBuffer(handle<vmo> buffer) -> (zx.status status);
 
   // Starts the streaming of frames.
-  2: Start();
+  2: Start() -> (zx.status status);
 
   // Stops the streaming of frames.
-  3: Stop();
+  3: Stop() -> (zx.status status);
 
   // Unlocks the specified frame, allowing the driver to reuse the memory.
-  4: FrameRelease(uint64 data_offset);
-
-  // Sent by the driver to the client when a frame is available for processing,
-  // or an error occurred.
-  5: -> OnFrameAvailable(FrameAvailableEvent frame);
+  4: ReleaseFrame(uint64 data_offset) -> (zx.status status);
 };

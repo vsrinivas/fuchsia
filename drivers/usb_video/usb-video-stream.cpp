@@ -9,13 +9,17 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#include <lib/async/cpp/task.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/zx/vmar.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/device/usb.h>
 
-#include "usb-video-stream.h"
-#include "video-util.h"
+#include "garnet/drivers/usb_video/camera_control_impl.h"
+#include "garnet/drivers/usb_video/usb-video-stream.h"
+#include "garnet/drivers/usb_video/video-util.h"
 
 namespace video {
 namespace usb {
@@ -27,6 +31,22 @@ static constexpr uint32_t NANOSECS_IN_SEC = 1e9;
 // The payload header SOF values only have 11 bits before wrapping around,
 // whereas the XHCI host returns 64 bits.
 static constexpr uint16_t USB_SOF_MASK = 0x7FF;
+
+fbl::unique_ptr<async::Loop> UsbVideoStream::fidl_dispatch_loop_ = nullptr;
+
+UsbVideoStream::UsbVideoStream(zx_device_t* parent, usb_protocol_t* usb,
+                               fbl::Vector<UsbVideoFormat>* formats,
+                               fbl::Vector<UsbVideoStreamingSetting>* settings)
+    : UsbVideoStreamBase(parent),
+      usb_(*usb),
+      formats_(fbl::move(*formats)),
+      streaming_settings_(fbl::move(*settings)) {
+  if (fidl_dispatch_loop_ == nullptr) {
+    fidl_dispatch_loop_ =
+        fbl::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+    fidl_dispatch_loop_->StartThread();
+  }
+}
 
 UsbVideoStream::~UsbVideoStream() {
   // List may not have been initialized.
@@ -49,13 +69,9 @@ zx_status_t UsbVideoStream::Create(
       formats->size() == 0 || !settings || settings->size() == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
-  auto domain = dispatcher::ExecutionDomain::Create();
-  if (domain == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
 
   auto dev = fbl::unique_ptr<UsbVideoStream>(
-      new UsbVideoStream(device, usb, formats, settings, fbl::move(domain)));
+      new UsbVideoStream(device, usb, formats, settings));
 
   char name[ZX_DEVICE_NAME_MAX];
   snprintf(name, sizeof(name), "usb-video-source-%d", index);
@@ -147,12 +163,13 @@ UsbVideoStream::FormatMapping::FormatMapping(
 }
 
 zx_status_t UsbVideoStream::GetMapping(
-    camera::camera_proto::VideoFormat format, const UsbVideoFormat** out_format,
+    const fuchsia::camera::driver::VideoFormat& format,
+    const UsbVideoFormat** out_format,
     const UsbVideoFrameDesc** out_frame_desc) {
-  const camera::camera_proto::VideoFormat& f1 = format;
+  const fuchsia::camera::driver::VideoFormat& f1 = format;
 
   for (const FormatMapping& mapping : format_mappings_) {
-    const camera::camera_proto::VideoFormat& f2 = mapping.proto;
+    const fuchsia::camera::driver::VideoFormat& f2 = mapping.proto;
 
     // Simplify frame rate fractions to a common denominator to check for
     // equivalence. Both numerator and denominator are 32 bit.
@@ -349,271 +366,112 @@ zx_status_t UsbVideoStream::DdkIoctl(uint32_t op, const void* in_buf,
 
   fbl::AutoLock lock(&lock_);
 
-  if (stream_channel_ != nullptr) {
-    // TODO(jocelyndang): support multiple concurrent clients.
+  if (camera_control_ != nullptr) {
+    zxlogf(ERROR, "Camera Control already running\n");
+    // TODO(CAM-XXX): support multiple concurrent clients.
     return ZX_ERR_ACCESS_DENIED;
   }
 
-  auto channel = dispatcher::Channel::Create();
-  if (channel == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
+  fidl::InterfaceHandle<fuchsia::camera::driver::Control> control_handle;
+  fidl::InterfaceRequest<fuchsia::camera::driver::Control> control_interface =
+      control_handle.NewRequest();
 
-  dispatcher::Channel::ProcessHandler phandler(
-      [stream = this](dispatcher::Channel* channel) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
-        return stream->ProcessStreamChannel(channel);
-      });
+  if (control_interface.is_valid()) {
+    camera_control_ = fbl::make_unique<camera::ControlImpl>(
+        this, fbl::move(control_interface), fidl_dispatch_loop_->dispatcher(),
+        [this] {
+          fbl::AutoLock lock(&lock_);
 
-  dispatcher::Channel::ChannelClosedHandler chandler(
-      [stream = this](const dispatcher::Channel* channel) -> void {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
-        stream->DeactivateStreamChannel(channel);
-      });
+          camera_control_.reset();
+        });
 
-  zx::channel client_endpoint;
-  zx_status_t res = channel->Activate(&client_endpoint, default_domain_,
-                                      fbl::move(phandler), fbl::move(chandler));
-  if (res == ZX_OK) {
-    stream_channel_ = channel;
-    *(reinterpret_cast<zx_handle_t*>(out_buf)) = client_endpoint.release();
+    *(reinterpret_cast<zx_handle_t*>(out_buf)) =
+        control_handle.TakeChannel().release();
     *out_actual = sizeof(zx_handle_t);
+
+    return ZX_OK;
+  } else {
+    return ZX_ERR_NO_RESOURCES;
   }
-  return res;
 }
 
-#define HREQ(_cmd, _payload, _handler, ...)                                  \
-  case _cmd:                                                                 \
-    if (req_size != sizeof(req._payload)) {                                  \
-      zxlogf(ERROR, "Bad " #_cmd " response length (%u != %zu)\n", req_size, \
-             sizeof(req._payload));                                          \
-      return ZX_ERR_INVALID_ARGS;                                            \
-    }                                                                        \
-    return _handler(channel, req._payload, ##__VA_ARGS__);
-
-zx_status_t UsbVideoStream::ProcessStreamChannel(dispatcher::Channel* channel) {
-  ZX_DEBUG_ASSERT(channel != nullptr);
+zx_status_t UsbVideoStream::GetFormats(
+    fidl::VectorPtr<fuchsia::camera::driver::VideoFormat>& formats) {
   fbl::AutoLock lock(&lock_);
 
-  union {
-    camera::camera_proto::CmdHdr hdr;
-    camera::camera_proto::GetFormatsReq get_formats;
-    camera::camera_proto::SetFormatReq set_format;
-  } req;
-
-  static_assert(
-      sizeof(req) <= 256,
-      "Request buffer is getting to be too large to hold on the stack!");
-
-  uint32_t req_size;
-  zx_status_t res = channel->Read(&req, sizeof(req), &req_size);
-  if (res != ZX_OK)
-    return res;
-
-  if (req_size < sizeof(req.hdr)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  switch (req.hdr.cmd) {
-    HREQ(CAMERA_STREAM_CMD_GET_FORMATS, get_formats, GetFormatsLocked);
-    HREQ(CAMERA_STREAM_CMD_SET_FORMAT, set_format, SetFormatLocked);
-    default:
-      zxlogf(ERROR, "Unrecognized command 0x%04x\n", req.hdr.cmd);
-      return ZX_ERR_NOT_SUPPORTED;
-  }
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t UsbVideoStream::ProcessVideoBufferChannel(
-    dispatcher::Channel* channel) {
-  ZX_DEBUG_ASSERT(channel != nullptr);
-  fbl::AutoLock lock(&lock_);
-
-  union {
-    camera::camera_proto::CmdHdr hdr;
-    camera::camera_proto::VideoBufSetBufferReq set_buffer;
-    camera::camera_proto::VideoBufStartReq vb_start;
-    camera::camera_proto::VideoBufStopReq vb_stop;
-    camera::camera_proto::VideoBufFrameReleaseReq frame_release;
-  } req;
-
-  static_assert(
-      sizeof(req) <= 256,
-      "Request buffer is getting to be too large to hold on the stack!");
-
-  uint32_t req_size;
-  zx::handle out_handle;
-  zx_status_t res = channel->Read(&req, sizeof(req), &req_size, &out_handle);
-  if (res != ZX_OK) {
-    return res;
-  }
-
-  if (req_size < sizeof(req.hdr)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  switch (req.hdr.cmd) {
-    HREQ(CAMERA_VB_CMD_SET_BUFFER, set_buffer, SetBufferLocked,
-         fbl::move(out_handle));
-    HREQ(CAMERA_VB_CMD_START, vb_start, StartStreamingLocked);
-    HREQ(CAMERA_VB_CMD_STOP, vb_stop, StopStreamingLocked);
-    HREQ(CAMERA_VB_CMD_FRAME_RELEASE, frame_release, FrameReleaseLocked);
-    default:
-      zxlogf(ERROR, "Unrecognized video buffer command 0x%04x\n", req.hdr.cmd);
-      return ZX_ERR_NOT_SUPPORTED;
-  }
-  return ZX_ERR_NOT_SUPPORTED;
-}
-#undef HREQ
-
-zx_status_t UsbVideoStream::GetFormatsLocked(
-    dispatcher::Channel* channel,
-    const camera::camera_proto::GetFormatsReq& req) {
-  camera::camera_proto::GetFormatsResp resp = {};
-  resp.hdr = req.hdr;
-  resp.total_format_count = static_cast<uint16_t>(format_mappings_.size());
-
-  // Each channel message is limited in the number of formats it can hold,
-  // so we may have to send several messages.
-  size_t cur_send_count =
-      fbl::min<size_t>(format_mappings_.size(),
-                       CAMERA_STREAM_CMD_GET_FORMATS_MAX_FORMATS_PER_RESPONSE);
-
-  size_t copied_count = 0;
-  for (const auto& mapping : format_mappings_) {
-    memcpy(&resp.formats[copied_count], &mapping.proto,
-           sizeof(camera::camera_proto::VideoFormat));
-    copied_count++;
-
-    // We've filled up the messages' formats array, time to send the message.
-    if (copied_count == cur_send_count) {
-      zx_status_t res = channel->Write(&resp, sizeof(resp));
-      if (res != ZX_OK) {
-        zxlogf(ERROR, "writing formats to channel failed, err: %d\n", res);
-        return res;
-      }
-
-      resp.already_sent_count =
-          static_cast<uint16_t>(resp.already_sent_count + cur_send_count);
-      cur_send_count = fbl::min<size_t>(
-          format_mappings_.size() - resp.already_sent_count,
-          CAMERA_STREAM_CMD_GET_FORMATS_MAX_FORMATS_PER_RESPONSE);
-      copied_count = 0;
-    }
+  for (const UsbVideoStream::FormatMapping& mapping : format_mappings_) {
+    formats.push_back(
+        {.capture_type = mapping.proto.capture_type,
+         .width = mapping.proto.width,
+         .height = mapping.proto.height,
+         .stride = mapping.proto.stride,
+         .bits_per_pixel = mapping.proto.bits_per_pixel,
+         .pixel_format = mapping.proto.pixel_format,
+         .frames_per_sec_numerator = mapping.proto.frames_per_sec_numerator,
+         .frames_per_sec_denominator =
+             mapping.proto.frames_per_sec_denominator});
   }
   return ZX_OK;
 }
 
-zx_status_t UsbVideoStream::SetFormatLocked(
-    dispatcher::Channel* channel,
-    const camera::camera_proto::SetFormatReq& req) {
-  camera::camera_proto::SetFormatResp resp;
-  resp.hdr = req.hdr;
-  resp.result = ZX_ERR_INTERNAL;
-
-  zx::channel client_vb_channel;
+zx_status_t UsbVideoStream::SetFormat(
+    const fuchsia::camera::driver::VideoFormat& video_format,
+    uint32_t* max_frame_size) {
+  fbl::AutoLock lock(&lock_);
 
   // Convert from the client's video format proto to the device driver format
   // and frame descriptors.
   const UsbVideoFormat* format;
   const UsbVideoFrameDesc* frame_desc;
-  zx_status_t status = GetMapping(req.video_format, &format, &frame_desc);
+  zx_status_t status = GetMapping(video_format, &format, &frame_desc);
   if (status != ZX_OK) {
-    resp.result = status;
     zxlogf(ERROR, "could not find a mapping for the requested format\n");
-    return channel->Write(&resp, sizeof(resp));
+    return status;
   }
 
   if (streaming_state_ != StreamingState::STOPPED) {
-    resp.result = ZX_ERR_BAD_STATE;
     zxlogf(ERROR, "cannot set video format while streaming is not stopped\n");
-    return channel->Write(&resp, sizeof(resp));
+    return ZX_ERR_BAD_STATE;
   }
 
   // Try setting the format on the device.
   status = TryFormatLocked(format, frame_desc);
   if (status != ZX_OK) {
-    resp.result = status;
     zxlogf(ERROR, "setting format failed, err: %d\n", status);
-    return channel->Write(&resp, sizeof(resp));
+    return status;
   }
 
-  resp.max_frame_size = max_frame_size_;
+  *max_frame_size = max_frame_size_;
 
-  // Create a new video buffer channel to give to the client.
-  vb_channel_ = dispatcher::Channel::Create();
-  if (vb_channel_ == nullptr) {
-    resp.result = ZX_ERR_NO_MEMORY;
-  } else {
-    // Handler for channel messages.
-    dispatcher::Channel::ProcessHandler phandler(
-        [stream = this](dispatcher::Channel* channel) -> zx_status_t {
-          OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
-          return stream->ProcessVideoBufferChannel(channel);
-        });
-
-    // Handler for channel deactivation.
-    dispatcher::Channel::ChannelClosedHandler chandler(
-        [stream = this](const dispatcher::Channel* channel) -> void {
-          OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
-          stream->DeactivateVideoBufferChannel(channel);
-        });
-
-    resp.result =
-        vb_channel_->Activate(&client_vb_channel, default_domain_,
-                              fbl::move(phandler), fbl::move(chandler));
-    if (resp.result != ZX_OK) {
-      vb_channel_.reset();
-    }
-  }
-
-  if (resp.result == ZX_OK) {
-    return channel->Write(&resp, sizeof(resp), fbl::move(client_vb_channel));
-  } else {
-    return channel->Write(&resp, sizeof(resp));
-  }
+  return ZX_OK;
 }
 
-zx_status_t UsbVideoStream::SetBufferLocked(
-    dispatcher::Channel* channel,
-    const camera::camera_proto::VideoBufSetBufferReq& req,
-    zx::handle rxed_handle) {
-  camera::camera_proto::VideoBufSetBufferResp resp;
-  resp.hdr = req.hdr;
+zx_status_t UsbVideoStream::SetBuffer(zx::vmo buffer) {
+  fbl::AutoLock lock(&lock_);
 
   if (streaming_state_ != StreamingState::STOPPED) {
-    resp.result = ZX_ERR_BAD_STATE;
-    return channel->Write(&resp, sizeof(resp));
+    return ZX_ERR_BAD_STATE;
   }
 
-  if (!rxed_handle.is_valid()) {
-    resp.result = ZX_ERR_BAD_HANDLE;
-    return channel->Write(&resp, sizeof(resp));
+  if (!buffer.is_valid()) {
+    return ZX_ERR_BAD_HANDLE;
   }
 
   // Release any previously stored video buffer.
   video_buffer_.reset();
 
-  resp.result = VideoBuffer::Create(zx::vmo(fbl::move(rxed_handle)),
-                                    &video_buffer_, max_frame_size_);
+  zx_status_t res =
+      VideoBuffer::Create(fbl::move(buffer), &video_buffer_, max_frame_size_);
 
-  zx_status_t res = channel->Write(&resp, sizeof(resp));
-  if (res != ZX_OK) {
-    video_buffer_.reset();
-  }
   return res;
 }
 
-zx_status_t UsbVideoStream::StartStreamingLocked(
-    dispatcher::Channel* channel,
-    const camera::camera_proto::VideoBufStartReq& req) {
-  camera::camera_proto::VideoBufStartResp resp;
-  resp.hdr = req.hdr;
+zx_status_t UsbVideoStream::StartStreaming() {
+  fbl::AutoLock lock(&lock_);
 
   if (!video_buffer_ || !video_buffer_->virt() ||
       streaming_state_ != StreamingState::STOPPED) {
-    resp.result = ZX_ERR_BAD_STATE;
-    return channel->Write(&resp, sizeof(resp));
+    return ZX_ERR_BAD_STATE;
   }
 
   // Initialize the state.
@@ -629,26 +487,21 @@ zx_status_t UsbVideoStream::StartStreamingLocked(
   zx_status_t status =
       usb_set_interface(&usb_, iface_num_, cur_streaming_setting_->alt_setting);
   if (status != ZX_OK) {
-    resp.result = status;
-    return channel->Write(&resp, sizeof(resp));
+    return status;
   }
   streaming_state_ = StreamingState::STARTED;
 
   while (!list_is_empty(&free_reqs_)) {
     QueueRequestLocked();
   }
-  resp.result = ZX_OK;
-  return channel->Write(&resp, sizeof(resp));
+  return ZX_OK;
 }
 
-zx_status_t UsbVideoStream::StopStreamingLocked(
-    dispatcher::Channel* channel,
-    const camera::camera_proto::VideoBufStopReq& req) {
+zx_status_t UsbVideoStream::StopStreaming() {
+  fbl::AutoLock lock(&lock_);
+
   if (streaming_state_ != StreamingState::STARTED) {
-    camera::camera_proto::VideoBufStopResp resp;
-    resp.hdr = req.hdr;
-    resp.result = ZX_ERR_BAD_STATE;
-    return channel->Write(&resp, sizeof(resp));
+    return ZX_ERR_BAD_STATE;
   }
   // Need to wait for all the in-flight usb requests to complete
   // before we can be completely stopped.
@@ -656,20 +509,12 @@ zx_status_t UsbVideoStream::StopStreamingLocked(
   streaming_state_ = StreamingState::STOPPING;
 
   // Switch to the zero bandwidth alternate setting.
-  zx_status_t status = usb_set_interface(&usb_, iface_num_, 0);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return ZX_OK;
+  return usb_set_interface(&usb_, iface_num_, 0);
 }
 
-zx_status_t UsbVideoStream::FrameReleaseLocked(
-    dispatcher::Channel* channel,
-    const camera::camera_proto::VideoBufFrameReleaseReq& req) {
-  camera::camera_proto::VideoBufFrameReleaseResp resp;
-  resp.hdr = req.hdr;
-  resp.result = video_buffer_->FrameRelease(req.data_vb_offset);
-  return channel->Write(&resp, sizeof(resp));
+zx_status_t UsbVideoStream::FrameRelease(uint64_t frame_offset) {
+  fbl::AutoLock lock(&lock_);
+  return video_buffer_->FrameRelease(frame_offset);
 }
 
 void UsbVideoStream::QueueRequestLocked() {
@@ -692,10 +537,9 @@ void UsbVideoStream::RequestComplete(usb_request_t* req) {
              num_frames_);
       streaming_state_ = StreamingState::STOPPED;
 
-      camera::camera_proto::VideoBufStopResp resp;
-      resp.hdr = {.cmd = CAMERA_VB_CMD_STOP};
-      resp.result = ZX_OK;
-      vb_channel_->Write(&resp, sizeof(resp));
+      if (camera_control_) {
+        camera_control_->Stopped();
+      }
     }
     return;
   }
@@ -821,25 +665,25 @@ zx_status_t UsbVideoStream::FrameNotifyLocked() {
            cur_frame_state_.device_sof, cur_frame_state_.host_sof);
   }
 
-  if (vb_channel_ == nullptr) {
+  if (camera_control_ == nullptr) {
     // Can't send a notification if there's no channel.
     return ZX_OK;
   }
 
-  camera::camera_proto::VideoBufFrameNotify notif = {};
-  notif.hdr.cmd = CAMERA_VB_FRAME_NOTIFY;
-  notif.metadata.timestamp = cur_frame_state_.capture_time;
+  fuchsia::camera::driver::FrameAvailableEvent event = {};
+  event.metadata.timestamp = cur_frame_state_.capture_time;
 
   if (cur_frame_state_.error) {
-    notif.error = CAMERA_ERROR_FRAME;
+    event.frame_status = fuchsia::camera::driver::FrameStatus::ERROR_FRAME;
 
   } else if (!has_video_buffer_offset_) {
-    notif.error = CAMERA_ERROR_BUFFER_FULL;
+    event.frame_status =
+        fuchsia::camera::driver::FrameStatus::ERROR_BUFFER_FULL;
 
     // Only mark the frame completed if it had no errors and had data stored.
   } else if (cur_frame_state_.bytes > 0) {
-    notif.frame_size = cur_frame_state_.bytes;
-    notif.data_vb_offset = video_buffer_offset_;
+    event.frame_size = cur_frame_state_.bytes;
+    event.frame_offset = video_buffer_offset_;
 
     // Need to lock the frame before sending the notification.
     zx_status_t status = video_buffer_->FrameCompleted();
@@ -855,9 +699,15 @@ zx_status_t UsbVideoStream::FrameNotifyLocked() {
     return ZX_OK;
   }
 
-  zxlogf(SPEW, "sending NOTIFY_FRAME, timestamp = %ld, error = %d\n",
-         notif.metadata.timestamp, notif.error);
-  return vb_channel_->Write(&notif, sizeof(notif));
+  zxlogf(SPEW,
+         "sending NOTIFY_FRAME, timestamp = %ld, size: %u, offset: %lu, error "
+         "= %d\n",
+         event.metadata.timestamp, event.frame_size, event.frame_offset,
+         event.frame_status);
+
+  camera_control_->OnFrameAvailable(event);
+
+  return ZX_OK;
 }
 
 zx_status_t UsbVideoStream::ParsePayloadHeaderLocked(
@@ -1014,30 +864,15 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
   }
 }
 
-void UsbVideoStream::DeactivateStreamChannel(
-    const dispatcher::Channel* channel) {
+void UsbVideoStream::DeactivateVideoBuffer() {
   fbl::AutoLock lock(&lock_);
 
-  ZX_DEBUG_ASSERT(stream_channel_.get() == channel);
-  ZX_DEBUG_ASSERT(vb_channel_.get() != channel);
-  stream_channel_.reset();
-}
-
-void UsbVideoStream::DeactivateVideoBufferChannel(
-    const dispatcher::Channel* channel) {
-  fbl::AutoLock lock(&lock_);
-
-  ZX_DEBUG_ASSERT(stream_channel_.get() != channel);
-  ZX_DEBUG_ASSERT(vb_channel_.get() == channel);
   if (streaming_state_ != StreamingState::STOPPED) {
     streaming_state_ = StreamingState::STOPPING;
   }
-  vb_channel_.reset();
 }
 
 void UsbVideoStream::DdkUnbind() {
-  default_domain_->Deactivate();
-
   // Unpublish our device node.
   DdkRemove();
 }

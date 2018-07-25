@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_USB_VIDEO_USB_VIDEO_H_
+#define GARNET_DRIVERS_USB_VIDEO_USB_VIDEO_H_
 
 #include <ddk/device.h>
 #include <ddk/usb/usb.h>
 #include <fbl/vector.h>
+#include <fuchsia/camera/driver/cpp/fidl.h>
 #include <zircon/compiler.h>
-#include <zircon/device/camera-proto.h>
 #include <zircon/hw/usb-video.h>
 #include <zircon/hw/usb.h>
 
@@ -20,7 +21,7 @@ namespace usb {
 struct UsbVideoFrameDesc {
   uint8_t index;
 
-  camera::camera_proto::CaptureType capture_type;
+  fuchsia::camera::driver::CaptureType capture_type;
   // Specified in 100ns units.
   uint32_t default_frame_interval;
   uint16_t width;
@@ -31,7 +32,7 @@ struct UsbVideoFrameDesc {
 
 struct UsbVideoFormat {
   uint8_t index;
-  camera::camera_proto::PixelFormat pixel_format;
+  fuchsia::camera::driver::PixelFormat pixel_format;
   uint8_t bits_per_pixel;
 
   fbl::Vector<UsbVideoFrameDesc> frame_descs;
@@ -56,3 +57,5 @@ inline uint32_t setting_bandwidth(const UsbVideoStreamingSetting& setting) {
 
 }  // namespace usb
 }  // namespace video
+
+#endif  // GARNET_DRIVERS_USB_VIDEO_USB_VIDEO_H_

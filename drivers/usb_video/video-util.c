@@ -6,7 +6,7 @@
 #include <ddk/usb/usb.h>
 #include <string.h>
 
-#include "video-util.h"
+#include "garnet/drivers/usb_video/video-util.h"
 
 static void print_controls(usb_video_vc_probe_and_commit_controls* proposal) {
   zxlogf(TRACE, "bmHint 0x%x\n", proposal->bmHint);

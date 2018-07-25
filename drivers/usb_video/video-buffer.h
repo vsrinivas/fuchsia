@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_USB_VIDEO_VIDEO_BUFFER_H_
+#define GARNET_DRIVERS_USB_VIDEO_VIDEO_BUFFER_H_
 
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
@@ -79,3 +80,5 @@ class VideoBuffer {
 
 }  // namespace usb
 }  // namespace video
+
+#endif  // GARNET_DRIVERS_USB_VIDEO_VIDEO_BUFFER_H_
