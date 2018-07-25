@@ -39,7 +39,7 @@ fidl_example("test") {}
 fidl_example("types") {}
 
 fidl("point") {
-  name = "fidl.examples.libraryA"
+  name = "fidl.examples.librarya"
 
   sources = [
     "//zircon/system/host/fidl/examples/library-a/point.fidl"
@@ -47,7 +47,7 @@ fidl("point") {
 }
 
 fidl("view") {
-  name = "fidl.examples.libraryB"
+  name = "fidl.examples.libraryb"
 
   sources = [
     "//zircon/system/host/fidl/examples/library-b/view.fidl"
