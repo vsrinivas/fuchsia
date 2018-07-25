@@ -13,10 +13,10 @@ enum LogLevelFilter: int8 {
 };
 
 // Max tags that can be passed to filter by listener.
-const uint8 kMaxTags = 5;
+const uint8 MAX_TAGS = 5;
 
 // Max tag length that can be passed to filter by listener.
-const uint8 kMaxTagLen = 63;
+const uint8 MAX_TAG_LEN_BYTES = 63;
 
 struct LogFilterOptions {
   bool filter_by_pid;
@@ -31,13 +31,16 @@ struct LogFilterOptions {
 
   LogLevelFilter min_severity;
 
-  // If non-empty, return all messages which contain at least one specified tag.
-  // If empty, messages will not be filtered by tag.
-  // Passed tags should not be more than |kMaxTagLen| bytes in length and max
-  // tags can be |kMaxTags|.
+  // If non-empty, return all messages which contain at least one specified
+  // tag.  If empty, messages will not be filtered by tag.
+  // Passed tags should not be more than |MAX_TAG_LEN_BYTES| bytes in length
+  // and max tags can be |MAX_TAGS|.
   // Listener would be discarded if the limit is not followed.
-  vector<string>:kMaxTags tags;
+  vector<string>:MAX_TAGS tags;
 };
+
+// Max tags that will be attached to a LogMessage.
+const uint8 MAX_TAGS_PER_LOG_MESSAGE = 5;
 
 struct LogMessage {
   uint64 pid;
@@ -51,17 +54,20 @@ struct LogMessage {
   // can be served out of order, this should only be logged if more than last
   // count.
   uint32 dropped_logs;
-  vector<string>:5 tags;
+  vector<string>:MAX_TAGS_PER_LOG_MESSAGE tags;
   string msg;
 };
 
-// Interface for LogListener to listen to.
+// Interface for LogListener to register to listen to logs.
 [Discoverable]
 interface Log {
-  // Listener listens for logs
+  // Listens to new log entries by calling Log() on |log_listener|.
+  // A null |options| indicates no filtering is requested.
   1: Listen(LogListener log_listener, LogFilterOptions? options);
 
-  // Dump all cached logs and then call |Done| function of |LogListener|.
+  // Dumps all cached logs by calling LogMany() followed by Done() on
+  // |log_listener|.
+  // A null |options| indicates no filtering is requested.
   2: DumpLogs(LogListener log_listener, LogFilterOptions? options);
 };
 
@@ -72,16 +78,17 @@ interface LogSink {
   1: Connect(handle<socket> socket);
 };
 
-const uint64 kMaxLogManySize = 16384;
+const uint64 MAX_LOG_MANY_SIZE_BYTES = 16384;
 
 interface LogListener {
   // Called for single messages.
   1: Log(LogMessage log);
 
   // Called when |Log| service is serving cached logs.
-  // Max logs size per call is |kMaxLogManySize| bytes.
-  2: LogMany(vector<LogMessage> Log);
+  // Max logs size per call is |MAX_LOG_MANY_SIZE_BYTES| bytes.
+  2: LogMany(vector<LogMessage> log);
 
-  // Would be only called if |DumpLogs| function of |Log| service is called.
+  // Called in the case |DumpLogs()| function of |Log| service was called and
+  // all cached logs have been dispatched to this listener.
   3: Done();
 };
