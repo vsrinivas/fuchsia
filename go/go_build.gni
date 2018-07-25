@@ -107,19 +107,10 @@ template("go_build") {
       args += [ "--is-test=true" ]
     }
 
-    library_deps = []
     if (defined(invoker.deps)) {
-      library_deps += invoker.deps
-    }
-    # TODO(BLD-62): remove this attribute once every target uses deps.
-    if (defined(invoker.extra_dependencies)) {
-      library_deps += invoker.extra_dependencies
-    }
-
-    if (library_deps != []) {
-      deps += library_deps
+      deps += invoker.deps
       args += [ "--go-dep-files" ]
-      foreach(dep, library_deps) {
+      foreach(dep, invoker.deps) {
         gen_dir = get_label_info(dep, "target_gen_dir")
         name = get_label_info(dep, "name")
         args += [ rebase_path("$gen_dir/$name.go_deps") ]
