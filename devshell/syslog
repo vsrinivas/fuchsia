@@ -15,9 +15,20 @@
 ##                specified, will connect to the only available
 ##                device on the link-local network.
 
-set -e
-
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+
+function listen {
+  trap "exit 0" INT
+  while true; do
+    addr=$(fx-command-run netaddr --fuchsia "${device}")
+    if [[ $? -eq 0 ]]; then
+      echo "Connecting to device..."
+      (fx-command-exec ssh "${addr}" /system/bin/log_listener "$@" || true)
+      echo "Connection lost, looking for device"
+    fi
+    sleep 1
+  done
+}
 
 case $1 in
   -d|--device)
@@ -32,4 +43,5 @@ case $1 in
   ;;
 esac
 
-fx-command-exec ssh "$(fx-command-run netaddr --fuchsia "${device}")" /system/bin/log_listener "$@"
+echo "Looking for device"
+listen
