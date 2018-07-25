@@ -449,57 +449,28 @@ std::unique_ptr<media_player::StreamType> TypeConverter<
   return nullptr;
 }
 
-fuchsia::mediaplayer::MediaMetadataPtr
-TypeConverter<fuchsia::mediaplayer::MediaMetadataPtr,
-              std::unique_ptr<media_player::Metadata>>::
-    Convert(const std::unique_ptr<media_player::Metadata>& input) {
-  return input == nullptr
-             ? nullptr
-             : fxl::To<fuchsia::mediaplayer::MediaMetadataPtr>(*input);
-}
+fuchsia::mediaplayer::Metadata
+TypeConverter<fuchsia::mediaplayer::Metadata, media_player::Metadata>::Convert(
+    const media_player::Metadata& input) {
+  fuchsia::mediaplayer::Metadata result;
+  for (auto& pair : input) {
+    fuchsia::mediaplayer::Property property;
+    property.label = pair.first;
+    property.value = pair.second;
+    result.properties->push_back(property);
+  }
 
-fuchsia::mediaplayer::MediaMetadataPtr TypeConverter<
-    fuchsia::mediaplayer::MediaMetadataPtr,
-    const media_player::Metadata*>::Convert(const media_player::Metadata*
-                                                input) {
-  return input == nullptr
-             ? nullptr
-             : fxl::To<fuchsia::mediaplayer::MediaMetadataPtr>(*input);
-}
-
-fuchsia::mediaplayer::MediaMetadataPtr TypeConverter<
-    fuchsia::mediaplayer::MediaMetadataPtr,
-    media_player::Metadata>::Convert(const media_player::Metadata& input) {
-  auto result = fuchsia::mediaplayer::MediaMetadata::New();
-  result->duration = input.duration_ns();
-  result->title = input.title().empty() ? fidl::StringPtr()
-                                        : fidl::StringPtr(input.title());
-  result->artist = input.artist().empty() ? fidl::StringPtr()
-                                          : fidl::StringPtr(input.artist());
-  result->album = input.album().empty() ? fidl::StringPtr()
-                                        : fidl::StringPtr(input.album());
-  result->publisher = input.publisher().empty()
-                          ? fidl::StringPtr()
-                          : fidl::StringPtr(input.publisher());
-  result->genre = input.genre().empty() ? fidl::StringPtr()
-                                        : fidl::StringPtr(input.genre());
-  result->composer = input.composer().empty()
-                         ? fidl::StringPtr()
-                         : fidl::StringPtr(input.composer());
   return result;
 }
 
-std::unique_ptr<media_player::Metadata>
-TypeConverter<std::unique_ptr<media_player::Metadata>,
-              fuchsia::mediaplayer::MediaMetadataPtr>::
-    Convert(const fuchsia::mediaplayer::MediaMetadataPtr& input) {
-  if (!input) {
-    return nullptr;
+media_player::Metadata
+TypeConverter<media_player::Metadata, fuchsia::mediaplayer::Metadata>::Convert(
+    const fuchsia::mediaplayer::Metadata& input) {
+  media_player::Metadata result(input.properties->size());
+  for (auto& property : *input.properties) {
+    result.emplace(property.label, property.value);
   }
-
-  return media_player::Metadata::Create(
-      input->duration, input->title, input->artist, input->album,
-      input->publisher, input->genre, input->composer);
+  return result;
 }
 
 fidl::VectorPtr<uint8_t>

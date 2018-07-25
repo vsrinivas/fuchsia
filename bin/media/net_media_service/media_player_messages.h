@@ -10,6 +10,7 @@
 #include <fuchsia/mediaplayer/cpp/fidl.h>
 
 #include "garnet/bin/media/net_media_service/serialization.h"
+#include "lib/fxl/logging.h"
 
 namespace media_player {
 
@@ -128,13 +129,28 @@ Serializer& operator<<(Serializer& serializer,
 Serializer& operator<<(Serializer& serializer,
                        const fuchsia::media::TimelineTransformPtr& value);
 Serializer& operator<<(Serializer& serializer,
-                       const fuchsia::mediaplayer::MediaMetadataPtr& value);
+                       const fuchsia::mediaplayer::MetadataPtr& value);
+Serializer& operator<<(Serializer& serializer,
+                       const fuchsia::mediaplayer::Property& value);
 Serializer& operator<<(Serializer& serializer,
                        const fuchsia::mediaplayer::ProblemPtr& value);
+Serializer& operator<<(Serializer& serializer,
+                       const fuchsia::math::SizePtr& value);
 Serializer& operator<<(Serializer& serializer,
                        const std::unique_ptr<MediaPlayerInMessage>& value);
 Serializer& operator<<(Serializer& serializer,
                        const std::unique_ptr<MediaPlayerOutMessage>& value);
+template <typename T>
+Serializer& operator<<(Serializer& serializer,
+                       const fidl::VectorPtr<T>& value) {
+  FXL_DCHECK(value);
+  serializer << value->size();
+  for (auto& element : *value) {
+    serializer << element;
+  }
+
+  return serializer;
+}
 
 // Deserialization overrides.
 Deserializer& operator>>(Deserializer& deserializer, fidl::StringPtr& value);
@@ -160,13 +176,30 @@ Deserializer& operator>>(Deserializer& deserializer,
 Deserializer& operator>>(Deserializer& deserializer,
                          fuchsia::media::TimelineTransformPtr& value);
 Deserializer& operator>>(Deserializer& deserializer,
-                         fuchsia::mediaplayer::MediaMetadataPtr& value);
+                         fuchsia::mediaplayer::MetadataPtr& value);
+Deserializer& operator>>(Deserializer& deserializer,
+                         fuchsia::mediaplayer::Property& value);
 Deserializer& operator>>(Deserializer& deserializer,
                          fuchsia::mediaplayer::ProblemPtr& value);
+Deserializer& operator>>(Deserializer& deserializer,
+                         fuchsia::math::SizePtr& value);
 Deserializer& operator>>(Deserializer& deserializer,
                          std::unique_ptr<MediaPlayerInMessage>& value);
 Deserializer& operator>>(Deserializer& deserializer,
                          std::unique_ptr<MediaPlayerOutMessage>& value);
+template <typename T>
+Deserializer& operator>>(Deserializer& deserializer,
+                         fidl::VectorPtr<T>& value) {
+  size_t size;
+  deserializer >> size;
+  value.reset();
+  value.resize(size);
+  for (size_t i = 0; i < size; ++i) {
+    deserializer >> (*value)[i];
+  }
+
+  return deserializer;
+}
 
 }  // namespace media_player
 

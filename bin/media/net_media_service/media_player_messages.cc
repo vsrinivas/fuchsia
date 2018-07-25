@@ -159,8 +159,9 @@ Serializer& operator<<(
   return serializer << Optional(value->timeline_transform)
                     << value->end_of_stream << value->content_has_audio
                     << value->content_has_video << value->audio_connected
-                    << value->video_connected << Optional(value->metadata)
-                    << Optional(value->problem);
+                    << value->video_connected << Optional(value->video_size)
+                    << Optional(value->pixel_aspect_ratio) << value->duration_ns
+                    << Optional(value->metadata) << Optional(value->problem);
 }
 
 Serializer& operator<<(Serializer& serializer,
@@ -171,18 +172,26 @@ Serializer& operator<<(Serializer& serializer,
 }
 
 Serializer& operator<<(Serializer& serializer,
-                       const fuchsia::mediaplayer::MediaMetadataPtr& value) {
+                       const fuchsia::mediaplayer::MetadataPtr& value) {
   FXL_DCHECK(value);
-  return serializer << value->duration << Optional(value->title)
-                    << Optional(value->artist) << Optional(value->album)
-                    << Optional(value->publisher) << Optional(value->genre)
-                    << Optional(value->composer);
+  return serializer << value->properties;
+}
+
+Serializer& operator<<(Serializer& serializer,
+                       const fuchsia::mediaplayer::Property& value) {
+  return serializer << value.label << value.value;
 }
 
 Serializer& operator<<(Serializer& serializer,
                        const fuchsia::mediaplayer::ProblemPtr& value) {
   FXL_DCHECK(value);
   return serializer << value->type << Optional(value->details);
+}
+
+Serializer& operator<<(Serializer& serializer,
+                       const fuchsia::math::SizePtr& value) {
+  FXL_DCHECK(value);
+  return serializer << value->width << value->height;
 }
 
 Serializer& operator<<(Serializer& serializer,
@@ -320,7 +329,9 @@ Deserializer& operator>>(Deserializer& deserializer,
   deserializer >> Optional(value->timeline_transform) >> value->end_of_stream >>
       value->content_has_audio >> value->content_has_video >>
       value->audio_connected >> value->video_connected >>
-      Optional(value->metadata) >> Optional(value->problem);
+      Optional(value->video_size) >> Optional(value->pixel_aspect_ratio) >>
+      value->duration_ns >> Optional(value->metadata) >>
+      Optional(value->problem);
   if (!deserializer.healthy()) {
     value.reset();
   }
@@ -339,14 +350,21 @@ Deserializer& operator>>(Deserializer& deserializer,
 }
 
 Deserializer& operator>>(Deserializer& deserializer,
-                         fuchsia::mediaplayer::MediaMetadataPtr& value) {
-  value = fuchsia::mediaplayer::MediaMetadata::New();
-  deserializer >> value->duration >> Optional(value->title) >>
-      Optional(value->artist) >> Optional(value->album) >>
-      Optional(value->publisher) >> Optional(value->genre) >>
-      Optional(value->composer);
+                         fuchsia::mediaplayer::MetadataPtr& value) {
+  value = fuchsia::mediaplayer::Metadata::New();
+  deserializer >> value->properties;
   if (!deserializer.healthy()) {
     value.reset();
+  }
+  return deserializer;
+}
+
+Deserializer& operator>>(Deserializer& deserializer,
+                         fuchsia::mediaplayer::Property& value) {
+  deserializer >> value.label >> value.value;
+  if (!deserializer.healthy()) {
+    value.label.reset();
+    value.value.reset();
   }
   return deserializer;
 }
@@ -355,6 +373,16 @@ Deserializer& operator>>(Deserializer& deserializer,
                          fuchsia::mediaplayer::ProblemPtr& value) {
   value = fuchsia::mediaplayer::Problem::New();
   deserializer >> value->type >> Optional(value->details);
+  if (!deserializer.healthy()) {
+    value.reset();
+  }
+  return deserializer;
+}
+
+Deserializer& operator>>(Deserializer& deserializer,
+                         fuchsia::math::SizePtr& value) {
+  value = fuchsia::math::Size::New();
+  deserializer >> value->width >> value->height;
   if (!deserializer.healthy()) {
     value.reset();
   }

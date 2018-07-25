@@ -34,9 +34,10 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
   media_player_ =
       startup_context
           ->ConnectToEnvironmentService<fuchsia::mediaplayer::MediaPlayer>();
-  media_player_.events().StatusChanged = [this](fuchsia::mediaplayer::MediaPlayerStatus status) {
-    HandleStatusChanged(status);
-  };
+  media_player_.events().StatusChanged =
+      [this](fuchsia::mediaplayer::MediaPlayerStatus status) {
+        HandleStatusChanged(status);
+      };
 
   if (!params.service_name().empty()) {
     auto net_media_service = startup_context->ConnectToEnvironmentService<
@@ -90,27 +91,37 @@ void AudioPlayer::HandleStatusChanged(
 
   if (status.metadata && !metadata_shown_) {
     FXL_LOG(INFO) << "duration   " << std::fixed << std::setprecision(1)
-                  << double(status.metadata->duration) / 1000000000.0
-                  << " seconds";
-    if (status.metadata->title) {
-      FXL_LOG(INFO) << "title      " << status.metadata->title;
-    }
-    if (status.metadata->artist) {
-      FXL_LOG(INFO) << "artist     " << status.metadata->artist;
-    }
-    if (status.metadata->album) {
-      FXL_LOG(INFO) << "album      " << status.metadata->album;
-    }
-    if (status.metadata->publisher) {
-      FXL_LOG(INFO) << "publisher  " << status.metadata->publisher;
-    }
-    if (status.metadata->genre) {
-      FXL_LOG(INFO) << "genre      " << status.metadata->genre;
-    }
-    if (status.metadata->composer) {
-      FXL_LOG(INFO) << "composer   " << status.metadata->composer;
-    }
+                  << double(status.duration_ns) / 1000000000.0 << " seconds";
+    MaybeLogMetadataProperty(*status.metadata,
+                             fuchsia::mediaplayer::METADATA_LABEL_TITLE,
+                             "title      ");
+    MaybeLogMetadataProperty(*status.metadata,
+                             fuchsia::mediaplayer::METADATA_LABEL_ARTIST,
+                             "artist     ");
+    MaybeLogMetadataProperty(*status.metadata,
+                             fuchsia::mediaplayer::METADATA_LABEL_ALBUM,
+                             "album      ");
+    MaybeLogMetadataProperty(*status.metadata,
+                             fuchsia::mediaplayer::METADATA_LABEL_PUBLISHER,
+                             "publisher  ");
+    MaybeLogMetadataProperty(*status.metadata,
+                             fuchsia::mediaplayer::METADATA_LABEL_GENRE,
+                             "genre      ");
+    MaybeLogMetadataProperty(*status.metadata,
+                             fuchsia::mediaplayer::METADATA_LABEL_COMPOSER,
+                             "composer   ");
     metadata_shown_ = true;
+  }
+}
+
+void AudioPlayer::MaybeLogMetadataProperty(
+    const fuchsia::mediaplayer::Metadata& metadata,
+    const std::string& property_label, const std::string& prefix) {
+  for (auto& property : *metadata.properties) {
+    if (property.label == property_label) {
+      FXL_LOG(INFO) << prefix << property.value;
+      return;
+    }
   }
 }
 

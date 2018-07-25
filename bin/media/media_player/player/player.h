@@ -28,8 +28,8 @@ class Player {
   ~Player();
 
   // Sets the callback to be called when the status of the player is updated.
-  // This callback notifies of changes to end_of_stream(), metadata() and/or
-  // problem().
+  // This callback notifies of changes to end_of_stream(), duration_ns(),
+  // metadata() and/or problem().
   void SetUpdateCallback(fit::closure update_callback) {
     update_callback_ = std::move(update_callback);
   }
@@ -100,9 +100,14 @@ class Player {
   // Indicates whether the player has reached end of stream.
   bool end_of_stream() const;
 
+  // Returns the duration of the content in nanoseconds or 0 if the duration is
+  // currently unknown.
+  int64_t duration_ns() const;
+
   // Returns the metadata for the current content or nullptr if no metadata
   // has been obtained.
-  // TODO(dalesat): Remove metadata concerns from the player and source segment.
+  // TODO(dalesat): Remove metadata concerns from the player and source
+  // segment.
   const Metadata* metadata() const;
 
   // Returns the current problem preventing intended operation or nullptr if

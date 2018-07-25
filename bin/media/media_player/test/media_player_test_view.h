@@ -87,7 +87,8 @@ class MediaPlayerTestView : public mozart::BaseView {
   fuchsia::math::Size pixel_aspect_ratio_;
   State state_ = State::kPaused;
   media::TimelineFunction timeline_function_;
-  fuchsia::mediaplayer::MediaMetadataPtr metadata_;
+  int64_t duration_ns_ = 0;
+  fuchsia::mediaplayer::MetadataPtr metadata_;
   fuchsia::math::RectF content_rect_;
   fuchsia::math::RectF controls_rect_;
   bool problem_shown_ = false;

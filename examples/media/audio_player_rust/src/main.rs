@@ -80,7 +80,7 @@ impl App {
         let player = connect_to_service::<MediaPlayerMarker>().context("Failed to connect to media player")?;
         if url.scheme() == "file" {
             let file = File::open(url.path())?;
-            let mut channel = channel_from_file(file)?;
+            let channel = channel_from_file(file)?;
             player.set_file_source(channel)?;
         } else {
             player.set_http_source(url.as_str())?;
@@ -111,22 +111,10 @@ impl App {
 
             self.metadata_displayed = true;
 
-            print!("Duration = {:?}\n", metadata.duration);
+            print!("Duration = {} ns\n", status.duration_ns);
 
-            if let Some(ref artist) = metadata.artist {
-                print!("Artist = {:?}\n", artist);
-            }
-            if let Some(ref album) = metadata.album {
-                print!("Album = {:?}\n", album);
-            }
-            if let Some(ref publisher) = metadata.publisher {
-                print!("Publisher = {:?}\n", publisher);
-            }
-            if let Some(ref genre) = metadata.genre {
-                print!("Genre = {:?}\n", genre);
-            }
-            if let Some(ref composer) = metadata.composer {
-                print!("Composer = {:?}\n", composer);
+            for property in &metadata.properties {
+                print!("{} = {}\n", property.label, property.value);
             }
         }
     }

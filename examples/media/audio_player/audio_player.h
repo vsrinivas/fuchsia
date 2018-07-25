@@ -6,8 +6,8 @@
 #define GARNET_EXAMPLES_MEDIA_AUDIO_PLAYER_AUDIO_PLAYER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <lib/fit/function.h>
 #include <fuchsia/mediaplayer/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "garnet/examples/media/audio_player/audio_player_params.h"
 #include "lib/component/cpp/startup_context.h"
@@ -24,7 +24,13 @@ class AudioPlayer {
 
  private:
   // Handles a status update from the player.
-  void HandleStatusChanged(const fuchsia::mediaplayer::MediaPlayerStatus& status);
+  void HandleStatusChanged(
+      const fuchsia::mediaplayer::MediaPlayerStatus& status);
+
+  // Logs a metadata property, if it exists.
+  void MaybeLogMetadataProperty(const fuchsia::mediaplayer::Metadata& metadata,
+                                const std::string& property_label,
+                                const std::string& prefix);
 
   fit::closure quit_callback_;
   fuchsia::mediaplayer::MediaPlayerPtr media_player_;

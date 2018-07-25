@@ -30,6 +30,8 @@ class DemuxSourceSegment : public SourceSegment {
 
   void WillDeprovision() override;
 
+  int64_t duration_ns() const override { return duration_ns_; };
+
   const Metadata* metadata() const override { return metadata_.get(); }
 
   void Flush(bool hold_frame, fit::closure callback) override;
@@ -44,6 +46,7 @@ class DemuxSourceSegment : public SourceSegment {
 
   std::shared_ptr<Demux> demux_;
   NodeRef demux_node_;
+  int64_t duration_ns_ = 0;
   std::unique_ptr<Metadata> metadata_;
   Incident demux_initialized_;
 };

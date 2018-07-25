@@ -25,6 +25,20 @@
 #include "lib/media/timeline/timeline_rate.h"
 
 namespace media_player {
+namespace {
+
+const std::unordered_map<std::string, std::string> kMetadataLabelMap{
+    {"TITLE", fuchsia::mediaplayer::METADATA_LABEL_TITLE},
+    {"ARTIST", fuchsia::mediaplayer::METADATA_LABEL_ARTIST},
+    {"ALBUM", fuchsia::mediaplayer::METADATA_LABEL_ALBUM},
+    {"PUBLISHER", fuchsia::mediaplayer::METADATA_LABEL_PUBLISHER},
+    {"GENRE", fuchsia::mediaplayer::METADATA_LABEL_GENRE},
+    {"COMPOSER", fuchsia::mediaplayer::METADATA_LABEL_COMPOSER},
+};
+
+const std::string kMetadataUnknownPropertyPrefix = "ffmpeg.";
+
+}  // namespace
 
 class FfmpegDemuxImpl : public FfmpegDemux {
  public:
@@ -114,8 +128,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
   PacketPtr PullEndOfStreamPacket(size_t* stream_index_out);
 
   // Copies metadata from the specified source into map.
-  void CopyMetadata(AVDictionary* source,
-                    std::map<std::string, std::string>& map);
+  void CopyMetadata(AVDictionary* source, Metadata& map);
 
   // Calls the status callback, if there is one.
   void SendStatus();
@@ -131,7 +144,8 @@ class FfmpegDemuxImpl : public FfmpegDemux {
   SeekCallback seek_callback_ FXL_GUARDED_BY(mutex_);
   bool packet_requested_ FXL_GUARDED_BY(mutex_) = false;
   bool terminating_ FXL_GUARDED_BY(mutex_) = false;
-  std::unique_ptr<Metadata> metadata_ FXL_GUARDED_BY(mutex_);
+  int64_t duration_ns_ FXL_GUARDED_BY(mutex_);
+  Metadata metadata_ FXL_GUARDED_BY(mutex_);
   std::string problem_type_ FXL_GUARDED_BY(mutex_);
   std::string problem_details_ FXL_GUARDED_BY(mutex_);
 
@@ -268,21 +282,18 @@ void FfmpegDemuxImpl::Worker() {
     return;
   }
 
-  std::map<std::string, std::string> metadata_map;
+  Metadata metadata;
 
-  CopyMetadata(format_context_->metadata, metadata_map);
+  CopyMetadata(format_context_->metadata, metadata);
   for (uint32_t i = 0; i < format_context_->nb_streams; i++) {
     streams_.emplace_back(new FfmpegDemuxStream(*format_context_, i));
-    CopyMetadata(format_context_->streams[i]->metadata, metadata_map);
+    CopyMetadata(format_context_->streams[i]->metadata, metadata);
   }
 
   {
     std::lock_guard<std::mutex> locker(mutex_);
-    metadata_ =
-        Metadata::Create(format_context_->duration * kNanosecondsPerMicrosecond,
-                         metadata_map["TITLE"], metadata_map["ARTIST"],
-                         metadata_map["ALBUM"], metadata_map["PUBLISHER"],
-                         metadata_map["GENRE"], metadata_map["COMPOSER"]);
+    duration_ns_ = format_context_->duration * kNanosecondsPerMicrosecond;
+    metadata_ = std::move(metadata);
   }
 
   result_ = Result::kOk;
@@ -395,8 +406,7 @@ PacketPtr FfmpegDemuxImpl::PullEndOfStreamPacket(size_t* stream_index_out) {
                                    streams_[*stream_index_out]->pts_rate());
 }
 
-void FfmpegDemuxImpl::CopyMetadata(AVDictionary* source,
-                                   std::map<std::string, std::string>& map) {
+void FfmpegDemuxImpl::CopyMetadata(AVDictionary* source, Metadata& metadata) {
   if (source == nullptr) {
     return;
   }
@@ -405,8 +415,22 @@ void FfmpegDemuxImpl::CopyMetadata(AVDictionary* source,
            av_dict_get(source, "", nullptr, AV_DICT_IGNORE_SUFFIX);
        entry != nullptr;
        entry = av_dict_get(source, "", entry, AV_DICT_IGNORE_SUFFIX)) {
-    if (map.find(entry->key) == map.end()) {
-      map.emplace(entry->key, entry->value);
+    std::string label = entry->key;
+    auto iter = kMetadataLabelMap.find(label);
+    if (iter != kMetadataLabelMap.end()) {
+      // Store the property under its fuchsia.mediaplayer label.
+      label = iter->second;
+    } else {
+      // Store the property under "ffmpeg.<ffmpeg label>".
+      std::string temp;
+      temp.reserve(kMetadataUnknownPropertyPrefix.size() + label.size());
+      temp += kMetadataUnknownPropertyPrefix;
+      temp += label;
+      label = std::move(temp);
+    }
+
+    if (metadata.find(label) == metadata.end()) {
+      metadata.emplace(label, entry->value);
     }
   }
 }
@@ -416,18 +440,21 @@ void FfmpegDemuxImpl::SendStatus() {
     return;
   }
 
-  std::unique_ptr<Metadata> metadata;
+  int64_t duration_ns;
+  Metadata metadata;
   std::string problem_type;
   std::string problem_details;
 
   {
     std::lock_guard<std::mutex> locker(mutex_);
-    metadata = SafeClone(metadata_);
+    duration_ns = duration_ns_;
+    metadata = metadata_;
     problem_type = problem_type_;
     problem_details = problem_details_;
   }
 
-  status_callback_(metadata, problem_type, problem_details);
+  status_callback_(duration_ns, std::move(metadata), problem_type,
+                   problem_details);
 }
 
 void FfmpegDemuxImpl::ReportProblem(const std::string& type,

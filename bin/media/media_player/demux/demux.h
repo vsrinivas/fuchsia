@@ -26,13 +26,11 @@ class Demux : public AsyncNode {
  public:
   using SeekCallback = fit::closure;
   using StatusCallback = fit::function<void(
-      const std::unique_ptr<Metadata>& metadata,
+      int64_t duration_ns, const Metadata& metadata,
       const std::string& problem_type, const std::string& problem_details)>;
 
   // Represents a stream produced by the demux.
   class DemuxStream {
-    // TODO(dalesat): Replace this class with stream_type_, unless more stuff
-    // needs to be added.
    public:
     virtual ~DemuxStream() {}
 

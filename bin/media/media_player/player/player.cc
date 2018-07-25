@@ -191,6 +191,14 @@ bool Player::end_of_stream() const {
   return result;
 }
 
+int64_t Player::duration_ns() const {
+  if (source_segment_) {
+    return source_segment_->duration_ns();
+  }
+
+  return 0;
+}
+
 const Metadata* Player::metadata() const {
   if (source_segment_ && source_segment_->metadata()) {
     return source_segment_->metadata();

@@ -241,11 +241,15 @@ TEST_F(PlayerTest, FakeSegments) {
 
   // Make sure metadata works via the source.
   EXPECT_EQ(nullptr, player.metadata());
-  auto metadata =
-      Metadata::Create(1234, "fake title", "fake artist", "fake album",
-                       "fake publisher", "fake genre", "fake composer");
-  source_segment_raw->metadata_ = metadata.get();
-  EXPECT_EQ(metadata.get(), player.metadata());
+  Metadata metadata;
+  metadata.emplace("title", "fake title");
+  metadata.emplace("artist", "fake artist");
+  metadata.emplace("album", "fake album");
+  metadata.emplace("publisher", "fake publisher");
+  metadata.emplace("genre", "fake genre");
+  metadata.emplace("composer", "fake composer");
+  source_segment_raw->metadata_ = &metadata;
+  EXPECT_EQ(&metadata, player.metadata());
 
   // Add a sink segment for audio.
   bool audio_sink_segment_destroyed;

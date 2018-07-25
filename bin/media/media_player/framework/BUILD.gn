@@ -8,7 +8,6 @@ source_set("framework") {
     "formatting.h",
     "graph.cc",
     "graph.h",
-    "metadata.cc",
     "metadata.h",
     "models/async_node.h",
     "models/node.cc",

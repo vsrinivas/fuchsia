@@ -1,0 +1,22 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.mediaplayer;
+
+// Describes media.
+struct Metadata {
+  vector<Property> properties;
+};
+
+struct Property {
+  string label;
+  string value;
+};
+
+const string METADATA_LABEL_TITLE = "fuchsia.mediaplayer.title";
+const string METADATA_LABEL_ARTIST = "fuchsia.mediaplayer.artist";
+const string METADATA_LABEL_ALBUM = "fuchsia.mediaplayer.album";
+const string METADATA_LABEL_PUBLISHER = "fuchsia.mediaplayer.publisher";
+const string METADATA_LABEL_GENRE = "fuchsia.mediaplayer.genre";
+const string METADATA_LABEL_COMPOSER = "fuchsia.mediaplayer.composer";

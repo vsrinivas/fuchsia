@@ -40,6 +40,10 @@ class SourceSegment : public Segment {
   // |Provision|.
   void Deprovision() override;
 
+  // Returns the duration of the content in nanoseconds or 0 if the duration is
+  // currently unknown.
+  virtual int64_t duration_ns() const = 0;
+
   // Returns the metadata for the current content or nullptr if no metadata
   // has been obtained.
   virtual const Metadata* metadata() const = 0;

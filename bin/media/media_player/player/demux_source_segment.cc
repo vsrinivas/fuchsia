@@ -22,10 +22,17 @@ DemuxSourceSegment::DemuxSourceSegment(std::shared_ptr<Demux> demux)
     : demux_(demux) {
   FXL_DCHECK(demux_);
 
-  demux_->SetStatusCallback([this](const std::unique_ptr<Metadata>& metadata,
+  demux_->SetStatusCallback([this](int64_t duration_ns,
+                                   const Metadata& metadata,
                                    const std::string& problem_type,
                                    const std::string& problem_details) {
-    metadata_ = SafeClone(metadata);
+    duration_ns_ = duration_ns;
+    if (metadata.empty()) {
+      metadata_ = nullptr;
+    } else {
+      metadata_ = std::make_unique<Metadata>(metadata);
+    }
+
     NotifyUpdate();
 
     if (problem_type.empty()) {

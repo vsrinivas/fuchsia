@@ -65,38 +65,12 @@ MediaPlayerImpl::MediaPlayerImpl(
       fbl::AdoptRef(new fs::BufferedPseudoFile([this](fbl::String* out) {
         std::ostringstream os;
 
+        os << fostr::NewLine
+           << "duration:           " << AsNs(status_.duration_ns);
+
         if (status_.metadata) {
-          os << fostr::NewLine
-             << "duration:           " << AsNs(status_.metadata->duration);
-
-          if (status_.metadata->title) {
-            os << fostr::NewLine
-               << "title:              " << status_.metadata->title;
-          }
-
-          if (status_.metadata->artist) {
-            os << fostr::NewLine
-               << "artist:             " << status_.metadata->artist;
-          }
-
-          if (status_.metadata->album) {
-            os << fostr::NewLine
-               << "album:              " << status_.metadata->album;
-          }
-
-          if (status_.metadata->publisher) {
-            os << fostr::NewLine
-               << "publisher:          " << status_.metadata->publisher;
-          }
-
-          if (status_.metadata->genre) {
-            os << fostr::NewLine
-               << "genre:              " << status_.metadata->genre;
-          }
-
-          if (status_.metadata->composer) {
-            os << fostr::NewLine
-               << "composer:           " << status_.metadata->composer;
+          for (auto& property : *status_.metadata->properties) {
+            os << fostr::NewLine << property.label << ": " << property.value;
           }
         }
 
@@ -537,8 +511,13 @@ void MediaPlayerImpl::UpdateStatus() {
   status_.video_connected =
       player_.medium_connected(StreamType::Medium::kVideo);
 
+  status_.duration_ns = player_.duration_ns();
+
+  auto metadata = player_.metadata();
   status_.metadata =
-      fxl::To<fuchsia::mediaplayer::MediaMetadataPtr>(player_.metadata());
+      metadata ? fidl::MakeOptional(
+                     fxl::To<fuchsia::mediaplayer::Metadata>(*metadata))
+               : nullptr;
 
   if (video_renderer_) {
     status_.video_size = SafeClone(video_renderer_->video_size());

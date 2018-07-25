@@ -126,10 +126,10 @@ bool MediaPlayerTestView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
   if (event.is_pointer()) {
     const auto& pointer = event.pointer();
     if (pointer.phase == fuchsia::ui::input::PointerEventPhase::DOWN) {
-      if (metadata_ && Contains(controls_rect_, pointer.x, pointer.y)) {
+      if (duration_ns_ != 0 && Contains(controls_rect_, pointer.x, pointer.y)) {
         // User poked the progress bar...seek.
-        media_player_->Seek((pointer.x - controls_rect_.x) *
-                            metadata_->duration / controls_rect_.width);
+        media_player_->Seek((pointer.x - controls_rect_.x) * duration_ns_ /
+                            controls_rect_.width);
         if (state_ != State::kPlaying) {
           media_player_->Play();
         }
@@ -348,6 +348,7 @@ void MediaPlayerTestView::HandleStatusChanged(
     Layout();
   }
 
+  duration_ns_ = status.duration_ns;
   metadata_ = fidl::Clone(status.metadata);
 
   InvalidateScene();
@@ -396,7 +397,7 @@ void MediaPlayerTestView::TogglePlayPause() {
 }
 
 int64_t MediaPlayerTestView::progress_ns() const {
-  if (!metadata_ || metadata_->duration == 0) {
+  if (duration_ns_ == 0) {
     return 0;
   }
 
@@ -407,37 +408,35 @@ int64_t MediaPlayerTestView::progress_ns() const {
     position = 0;
   }
 
-  if (metadata_ && static_cast<uint64_t>(position) > metadata_->duration) {
-    position = metadata_->duration;
+  if (position > duration_ns_) {
+    position = duration_ns_;
   }
 
   return position;
 }
 
 float MediaPlayerTestView::normalized_progress() const {
-  if (!metadata_ || metadata_->duration == 0) {
+  if (duration_ns_ == 0) {
     return 0.0f;
   }
 
-  return progress_ns() / static_cast<float>(metadata_->duration);
+  return progress_ns() / static_cast<float>(duration_ns_);
 }
 
 void MediaPlayerTestView::StartNewSeekInterval() {
   in_current_seek_interval_ = false;
 
-  if (!metadata_ || metadata_->duration == 0) {
+  if (duration_ns_ == 0) {
     // We have no duration yet. Just start over at the start of the file.
     media_player_->Seek(0);
     media_player_->Play();
     seek_interval_end_ = fuchsia::media::kUnspecifiedTime;
   }
 
-  int64_t duration = metadata_->duration;
-
-  // For the start position, generate a number in the range [0..duration] with
-  // a 10% chance of being zero.
-  seek_interval_start_ = rand_less_than(duration + duration / 10);
-  if (seek_interval_start_ >= duration) {
+  // For the start position, generate a number in the range [0..duration_ns_]
+  // with a 10% chance of being zero.
+  seek_interval_start_ = rand_less_than(duration_ns_ + duration_ns_ / 10);
+  if (seek_interval_start_ >= duration_ns_) {
     seek_interval_start_ = 0;
   }
 
@@ -446,9 +445,9 @@ void MediaPlayerTestView::StartNewSeekInterval() {
   // effectively ends at the end of the file.
   seek_interval_end_ =
       seek_interval_start_ +
-      rand_less_than((duration + duration / 10) - seek_interval_start_);
+      rand_less_than((duration_ns_ + duration_ns_ / 10) - seek_interval_start_);
 
-  if (seek_interval_end_ >= duration) {
+  if (seek_interval_end_ >= duration_ns_) {
     FXL_LOG(INFO) << "Seek interval " << AsNs(seek_interval_start_)
                   << " to end";
   } else {

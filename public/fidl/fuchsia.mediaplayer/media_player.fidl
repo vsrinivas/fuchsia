@@ -82,8 +82,11 @@ struct MediaPlayerStatus {
   // Relative dimensions of a video pixel.
   fuchsia.math.Size? pixel_aspect_ratio;
 
+  // Content duration in nanoseconds.
+  uint64 duration_ns;
+
   // Describes the media.
-  MediaMetadata? metadata;
+  Metadata? metadata;
 
   // Indicates a problem preventing intended operation.
   Problem? problem;
