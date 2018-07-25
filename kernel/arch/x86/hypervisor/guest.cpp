@@ -10,7 +10,7 @@
 
 #include "vmx_cpu_state_priv.h"
 
-static void ignore_msr(VmxPage* msr_bitmaps_page, uint32_t msr) {
+static void ignore_msr(VmxPage* msr_bitmaps_page, bool ignore_writes, uint32_t msr) {
     // From Volume 3, Section 24.6.9.
     uint8_t* msr_bitmaps = msr_bitmaps_page->VirtualAddress<uint8_t>();
     if (msr >= 0xc0000000)
@@ -23,9 +23,11 @@ static void ignore_msr(VmxPage* msr_bitmaps_page, uint32_t msr) {
     // Ignore reads to the MSR.
     msr_bitmaps[msr_byte] &= (uint8_t) ~(1 << msr_bit);
 
-    // Ignore writes to the MSR.
-    msr_bitmaps += 2 << 10;
-    msr_bitmaps[msr_byte] &= (uint8_t) ~(1 << msr_bit);
+    if (ignore_writes) {
+        // Ignore writes to the MSR.
+        msr_bitmaps += 2 << 10;
+        msr_bitmaps[msr_byte] &= (uint8_t) ~(1 << msr_bit);
+    }
 }
 
 // static
@@ -53,24 +55,26 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
     if (status != ZX_OK)
         return status;
 
-    ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_IA32_PAT);
-    ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_IA32_EFER);
-    ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_IA32_FS_BASE);
-    ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_IA32_GS_BASE);
-    ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_IA32_KERNEL_GS_BASE);
-    ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_IA32_STAR);
-    ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_IA32_LSTAR);
-    ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_IA32_FMASK);
-    ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_IA32_TSC_ADJUST);
-    ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_IA32_TSC_AUX);
-    ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_IA32_SYSENTER_CS);
-    ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_IA32_SYSENTER_ESP);
-    ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_IA32_SYSENTER_EIP);
-    ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_RAPL_POWER_UNIT);
-    ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_PKG_ENERGY_STATUS);
-    ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_DRAM_ENERGY_STATUS);
-    ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_PP0_ENERGY_STATUS);
-    ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_PP1_ENERGY_STATUS);
+    ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_PAT);
+    ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_EFER);
+    ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_FS_BASE);
+    ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_GS_BASE);
+    ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_KERNEL_GS_BASE);
+    ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_STAR);
+    ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_LSTAR);
+    ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_FMASK);
+    ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_TSC_ADJUST);
+    ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_TSC_AUX);
+    ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_SYSENTER_CS);
+    ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_SYSENTER_ESP);
+    ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_SYSENTER_EIP);
+    ignore_msr(&guest->msr_bitmaps_page_, false, X86_MSR_RAPL_POWER_UNIT);
+    ignore_msr(&guest->msr_bitmaps_page_, false, X86_MSR_DRAM_POWER_LIMIT);
+    ignore_msr(&guest->msr_bitmaps_page_, false, X86_MSR_PKG_ENERGY_STATUS);
+    ignore_msr(&guest->msr_bitmaps_page_, false, X86_MSR_DRAM_ENERGY_STATUS);
+    ignore_msr(&guest->msr_bitmaps_page_, false, X86_MSR_PP0_ENERGY_STATUS);
+    ignore_msr(&guest->msr_bitmaps_page_, false, X86_MSR_PP1_ENERGY_STATUS);
+    ignore_msr(&guest->msr_bitmaps_page_, false, X86_MSR_PLATFORM_ENERGY_COUNTER);
 
     // Setup VPID allocator
     fbl::AutoLock lock(&guest->vcpu_mutex_);

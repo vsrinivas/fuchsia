@@ -746,8 +746,9 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
     case X86_MSR_IA32_MTRR_FIX4K_C0000... X86_MSR_IA32_MTRR_FIX4K_F8000:
     case X86_MSR_IA32_MTRR_PHYSBASE0... X86_MSR_IA32_MTRR_PHYSMASK9:
     case X86_MSR_IA32_BIOS_SIGN_ID:
-    // From AMD64 Volume 2, Section 6.1.1: CSTAR is unused, but Linux likes to set
-    // a null handler, even when not in compatibility mode. Just ignore it.
+    case X86_MSR_DRAM_POWER_LIMIT:
+    // From AMD64 Volume 2, Section 6.1.1: CSTAR is unused, but Linux likes to
+    // set a null handler, even when not in compatibility mode. Just ignore it.
     case X86_MSR_IA32_CSTAR:
         next_rip(exit_info, vmcs);
         return ZX_OK;
