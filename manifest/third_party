@@ -279,7 +279,7 @@
              path="third_party/rust-mirrors/rust-crypto"
              remote="https://fuchsia.googlesource.com/third_party/rust-mirrors/rust-crypto"
              gerrithost="https://fuchsia-review.googlesource.com"
-             revision="ad0bbb9ce20c9ad59863d73488e8e444e6ddfd5b"/>
+             revision="5a39bcd25c4157c64298294de2a53ce3f9ab79c8"/>
     <project name="third_party/rust-mirrors/rustyline"
              path="third_party/rust-mirrors/rustyline"
              remote="https://fuchsia.googlesource.com/third_party/rust-mirrors/rustyline"
