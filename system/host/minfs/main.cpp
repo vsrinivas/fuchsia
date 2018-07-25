@@ -156,6 +156,7 @@ bool MinfsCreator::IsCommandValid(Command command) {
 
 bool MinfsCreator::IsOptionValid(Option option) {
     switch (option) {
+    case Option::kDepfile:
     case Option::kReadonly:
     case Option::kOffset:
     case Option::kLength:
@@ -367,6 +368,9 @@ zx_status_t MinfsCreator::Add() {
 
     // Copy all files.
     for (size_t n = 0; n < file_list_.size(); n++) {
+        if ((status = AppendDepfile(file_list_[n].first.c_str())) != ZX_OK) {
+            return status;
+        }
         if ((status = CopyFile(file_list_[n].first.c_str(), file_list_[n].second.c_str()))
             != ZX_OK) {
             return status;
