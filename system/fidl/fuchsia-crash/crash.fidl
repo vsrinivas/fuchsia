@@ -4,10 +4,21 @@
 
 library fuchsia.crash;
 
+// Copied from system/fidl/fuchsia-mem/buffer.fidl.
+// TODO(ZX-2406): Switch to the original once the build system works.
+struct Buffer {
+  // The vmo.
+  handle<vmo> vmo;
+
+  // The size of the data in the vmo. This size must be smaller than the
+  // physical size of the vmo.
+  uint64 size;
+};
+
 // Analyzes crashed processes.
 [Discoverable, Layout="Simple"]
 interface Analyzer {
-    // Requests that the crash analyzer analize the given |thread| in |process|,
+    // Requests that the crash analyzer analyzes the given |thread| in |process|,
     // which has crashed.
     // This method is responsible for resuming or stopping the thread once the
     // analyze is done.
@@ -16,4 +27,11 @@ interface Analyzer {
     // a typical implementation might print a crash dump to the system log or
     // upload a crash report to a server.
     1: Analyze(handle<process> process, handle<thread> thread) -> ();
+
+    // Requests that the crash analyzer process the crash log.
+    //
+    // The behavior of this method varies depending on the implementation, but
+    // a typical implementation might print the crash log to the system log or
+    // upload a crash report to a server with the log as attachment.
+    2: Process(Buffer crashlog) -> ();
 };

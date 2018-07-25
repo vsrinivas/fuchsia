@@ -370,6 +370,20 @@ static zx_status_t handle_message(zx_handle_t channel, fidl::MessageBuffer* buff
 
         return status;
     }
+    case fuchsia_crash_AnalyzerProcessOrdinal: {
+        fprintf(stderr, "crashanalyzer: error: No processing of crashlog VMO supported\n");
+
+        const char* error_msg = nullptr;
+        zx_status_t status = message.Decode(&fuchsia_crash_AnalyzerProcessRequestTable, &error_msg);
+        if (status != ZX_OK) {
+            fprintf(stderr, "crashanalyzer: error: %s\n", error_msg);
+            return status;
+        }
+        auto* request = message.GetBytesAs<fuchsia_crash_AnalyzerProcessRequest>();
+        zx_handle_close(request->crashlog.vmo);
+
+        return ZX_ERR_NOT_SUPPORTED;
+    }
     default:
         fprintf(stderr, "crashanalyzer: error: Unknown message ordinal: %d\n", message.ordinal());
         return ZX_ERR_NOT_SUPPORTED;
