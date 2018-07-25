@@ -10,26 +10,6 @@ import("//build/sdk/sdk_atom.gni")
 # A template for an action that builds a Go binary. Users should instead use the
 # go_binary or go_test rules.
 #
-# Every go_build target with any extra_dependencies declared has a new GOPATH
-# constructed.
-#
-# Example:
-# go_build("mypackage") {
-#   gopackage = "fuchsia.googlesource.com/mypackage"
-#   extra_dependencies = [
-#     "//foo/bar",
-#     "//baz/blah:yep",
-#   ]
-# }
-#
-# The above go_dependencies declaration is most typical, it creates a GOPATH
-# entry for "fuchsia.googlesource.com/mypackage" that points to the directory
-# containing the caller BUILD.gn. If source is ever omitted, it is assumed to be
-# the directory of the containing action.
-#
-# At minimum there should be a go_dependencies declaration for the package to
-# be built.
-#
 # Parameters
 #
 #   sdk_category (optional)
@@ -56,9 +36,6 @@ template("go_build") {
 
   action(main_target_name) {
     deps = []
-    if (defined(invoker.deps)) {
-      deps += invoker.deps
-    }
     if (defined(invoker.non_go_deps)) {
       deps += invoker.non_go_deps
     }
@@ -130,10 +107,19 @@ template("go_build") {
       args += [ "--is-test=true" ]
     }
 
+    library_deps = []
+    if (defined(invoker.deps)) {
+      library_deps += invoker.deps
+    }
+    # TODO(BLD-62): remove this attribute once every target uses deps.
     if (defined(invoker.extra_dependencies)) {
-      deps += invoker.extra_dependencies
+      library_deps += invoker.extra_dependencies
+    }
+
+    if (library_deps != []) {
+      deps += library_deps
       args += [ "--go-dep-files" ]
-      foreach(dep, invoker.extra_dependencies) {
+      foreach(dep, library_deps) {
         gen_dir = get_label_info(dep, "target_gen_dir")
         name = get_label_info(dep, "name")
         args += [ rebase_path("$gen_dir/$name.go_deps") ]
