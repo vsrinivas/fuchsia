@@ -75,6 +75,7 @@ source_set("sources") {
     "local_codec_factory.h",
   ]
   public_deps = [
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
