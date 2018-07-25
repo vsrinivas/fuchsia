@@ -14,7 +14,7 @@ use atomic_future::AtomicFuture;
 
 use std::{cmp, fmt, mem};
 use std::cell::RefCell;
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 use std::collections::BinaryHeap;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::thread;
@@ -175,7 +175,8 @@ impl Executor {
 
 
             let packet = with_local_timer_heap(|timer_heap| {
-                let deadline = timer_heap.peek().map(|x| x.time).unwrap_or(zx::Time::INFINITE);
+                let deadline = next_deadline(timer_heap).map(|t| t.time)
+                    .unwrap_or(zx::Time::INFINITE);
                 match self.inner.port.wait(deadline) {
                     Ok(packet) => {
                         Some(packet)
@@ -270,11 +271,14 @@ impl Executor {
     ///     assert_eq!(Ok(Async::Ready(())), exec.run_until_stalled(&mut future));
     pub fn wake_next_timer(&mut self) -> Option<zx::Time> {
         with_local_timer_heap(|timer_heap| {
-            let next_timer = timer_heap.pop();
-            if let Some(waker) = &next_timer {
+            let deadline = next_deadline(timer_heap).map(|waker| {
                 waker.wake();
+                waker.time
+            });
+            if deadline.is_some() {
+                timer_heap.pop();
             }
-            next_timer.map(|waker| waker.time)
+            deadline
         })
     }
 
@@ -361,7 +365,8 @@ impl Executor {
             }
 
             let packet = with_local_timer_heap(|timer_heap| {
-                let deadline = timer_heap.peek().map(|x| x.time).unwrap_or(zx::Time::INFINITE);
+                let deadline = next_deadline(timer_heap).map(|t| t.time)
+                    .unwrap_or(zx::Time::INFINITE);
                 match inner.port.wait(deadline) {
                     Ok(packet) => Some(packet),
                     Err(zx::Status::TIMED_OUT) => {
@@ -390,6 +395,20 @@ impl Executor {
                 }
             }
         }
+    }
+}
+
+fn next_deadline(heap: &mut TimerHeap) -> Option<&TimeWaker> {
+    while is_defunct_timer(heap.peek()) {
+        heap.pop();
+    }
+    heap.peek()
+}
+
+fn is_defunct_timer(timer: Option<&TimeWaker>) -> bool {
+    match timer {
+        None => false,
+        Some(timer) => timer.waker_and_bool.upgrade().is_none()
     }
 }
 
@@ -506,9 +525,10 @@ impl EHandle {
     pub(crate) fn register_timer(
         &self,
         time: zx::Time,
-        waker_and_bool: Arc<(AtomicWaker, AtomicBool)>
+        waker_and_bool: &Arc<(AtomicWaker, AtomicBool)>
     ) {
         with_local_timer_heap(|timer_heap| {
+            let waker_and_bool = Arc::downgrade(waker_and_bool);
             timer_heap.push(TimeWaker { time, waker_and_bool })
         })
     }
@@ -571,13 +591,15 @@ struct Inner {
 
 struct TimeWaker {
     time: zx::Time,
-    waker_and_bool: Arc<(AtomicWaker, AtomicBool)>,
+    waker_and_bool: Weak<(AtomicWaker, AtomicBool)>,
 }
 
 impl TimeWaker {
     fn wake(&self) {
-        self.waker_and_bool.1.store(true, Ordering::SeqCst);
-        self.waker_and_bool.0.wake();
+        if let Some(wb) = self.waker_and_bool.upgrade() {
+            wb.1.store(true, Ordering::SeqCst);
+            wb.0.wake();
+        }
     }
 }
 

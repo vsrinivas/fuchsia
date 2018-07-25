@@ -75,7 +75,7 @@ impl<E> Timer<E> {
     /// Create a new timer scheduled to fire at `time`.
     pub fn new(time: zx::Time) -> Self {
         let waker_and_bool = Arc::new((AtomicWaker::new(), AtomicBool::new(false)));
-        EHandle::local().register_timer(time, waker_and_bool.clone());
+        EHandle::local().register_timer(time, &waker_and_bool);
         Timer { waker_and_bool, error_marker: PhantomData }
     }
 
@@ -84,7 +84,7 @@ impl<E> Timer<E> {
     pub fn reset(&mut self, time: zx::Time) {
         assert!(self.did_fire());
         self.waker_and_bool.1.store(false, Ordering::SeqCst);
-        EHandle::local().register_timer(time, self.waker_and_bool.clone())
+        EHandle::local().register_timer(time, &self.waker_and_bool)
     }
 
     fn did_fire(&self) -> bool {
