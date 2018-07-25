@@ -27,7 +27,6 @@ class ModifiedType final : public Type {
 
   // Type/Symbol overrides.
   const ModifiedType* AsModifiedType() const override;
-  std::string ComputeTypeName() const override;
 
   // The underlying modified type.
   const LazySymbol& modified() const { return modified_; }
@@ -39,6 +38,9 @@ class ModifiedType final : public Type {
 
   explicit ModifiedType(int kind);
   ~ModifiedType() override;
+
+  // Symbol protected overrides.
+  std::string ComputeFullName() const override;
 
   LazySymbol modified_;
 };

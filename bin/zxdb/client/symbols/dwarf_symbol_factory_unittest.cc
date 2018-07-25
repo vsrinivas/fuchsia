@@ -99,19 +99,19 @@ TEST(DwarfSymbolFactory, ModifiedBaseType) {
   const ModifiedType* ptr_mod = function->return_type().Get()->AsModifiedType();
   ASSERT_TRUE(ptr_mod) << "Tag = " << function->return_type().Get()->tag();
   EXPECT_EQ(Symbol::kTagPointerType, ptr_mod->tag());
-  EXPECT_EQ("const int*", ptr_mod->GetTypeName());
+  EXPECT_EQ("const int*", ptr_mod->GetFullName());
 
   // The modified type should be a "const" modifier.
   const ModifiedType* const_mod = ptr_mod->modified().Get()->AsModifiedType();
   ASSERT_TRUE(const_mod) << "Tag = " << function->return_type().Get()->tag();
   EXPECT_EQ(Symbol::kTagConstType, const_mod->tag());
-  EXPECT_EQ("const int", const_mod->GetTypeName());
+  EXPECT_EQ("const int", const_mod->GetFullName());
 
   // The modified type should be the int base type.
   const BaseType* base = const_mod->modified().Get()->AsBaseType();
   ASSERT_TRUE(base);
   EXPECT_EQ(Symbol::kTagBaseType, base->tag());
-  EXPECT_EQ("int", base->GetTypeName());
+  EXPECT_EQ("int", base->GetFullName());
 
   // Validate the BaseType parameters.
   EXPECT_EQ(BaseType::kBaseTypeSigned, base->base_type());
@@ -138,7 +138,7 @@ TEST(DwarfSymbolFactory, StructClass) {
   // The return type should be the struct.
   auto* struct_type = function->return_type().Get()->AsStructClass();
   ASSERT_TRUE(struct_type);
-  EXPECT_EQ("my_ns::Struct", struct_type->GetTypeName());
+  EXPECT_EQ("my_ns::Struct", struct_type->GetFullName());
 
   // The struct has two data members.
   ASSERT_EQ(2u, struct_type->data_members().size());
@@ -147,7 +147,7 @@ TEST(DwarfSymbolFactory, StructClass) {
   auto* member_a = struct_type->data_members()[0].Get()->AsDataMember();
   ASSERT_TRUE(member_a);
   auto* member_a_type = member_a->type().Get()->AsType();
-  EXPECT_EQ("int", member_a_type->GetTypeName());
+  EXPECT_EQ("int", member_a_type->GetFullName());
   EXPECT_EQ(0u, member_a->member_location());
 
   // The first member should be "int member_a". To have flexibility with the
@@ -155,7 +155,7 @@ TEST(DwarfSymbolFactory, StructClass) {
   auto* member_b = struct_type->data_members()[1].Get()->AsDataMember();
   ASSERT_TRUE(member_b);
   auto* member_b_type = member_b->type().Get()->AsType();
-  EXPECT_EQ("my_ns::Struct*", member_b_type->GetTypeName());
+  EXPECT_EQ("my_ns::Struct*", member_b_type->GetFullName());
   EXPECT_LT(0u, member_b->member_location());
   EXPECT_TRUE(member_b->member_location() % 4 == 0);
 }
@@ -189,13 +189,13 @@ TEST(DwarfSymbolFactory, CodeBlocks) {
   ASSERT_TRUE(struct_arg);
   const Type* struct_arg_type = struct_arg->type().Get()->AsType();
   ASSERT_TRUE(struct_arg_type);
-  EXPECT_EQ("const my_ns::Struct&", struct_arg_type->GetTypeName());
+  EXPECT_EQ("const my_ns::Struct&", struct_arg_type->GetFullName());
 
   // Validate the arg2 type (int).
   ASSERT_TRUE(int_arg);
   const Type* int_arg_type = int_arg->type().Get()->AsType();
   ASSERT_TRUE(int_arg_type);
-  EXPECT_EQ("int", int_arg_type->GetTypeName());
+  EXPECT_EQ("int", int_arg_type->GetFullName());
 
   // The function block should have one variable (var1).
   ASSERT_EQ(1u, function->variables().size());
@@ -203,7 +203,7 @@ TEST(DwarfSymbolFactory, CodeBlocks) {
   ASSERT_TRUE(var1);
   const Type* var1_type = var1->type().Get()->AsType();
   ASSERT_TRUE(var1_type);
-  EXPECT_EQ("volatile int", var1_type->GetTypeName());
+  EXPECT_EQ("volatile int", var1_type->GetFullName());
 
   // There should be one child lexical scope.
   ASSERT_EQ(1u, function->inner_blocks().size());
@@ -215,7 +215,7 @@ TEST(DwarfSymbolFactory, CodeBlocks) {
   ASSERT_TRUE(var2);
   const Type* var2_type = var2->type().Get()->AsType();
   ASSERT_TRUE(var2_type);
-  EXPECT_EQ("volatile my_ns::Struct", var2_type->GetTypeName());
+  EXPECT_EQ("volatile my_ns::Struct", var2_type->GetFullName());
 
   // The lexical scope should have no other children.
   EXPECT_TRUE(inner->inner_blocks().empty());

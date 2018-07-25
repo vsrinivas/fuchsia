@@ -4,6 +4,8 @@
 
 #include "garnet/bin/zxdb/client/symbols/type.h"
 
+#include "garnet/bin/zxdb/client/symbols/symbol_utils.h"
+
 namespace zxdb {
 
 // Provide storage for the constants.
@@ -80,6 +82,14 @@ const std::string& Symbol::GetAssignedName() const {
   return empty;
 }
 
+const std::string& Symbol::GetFullName() const {
+  if (!computed_full_name_) {
+    computed_full_name_ = true;
+    full_name_ = ComputeFullName();
+  }
+  return full_name_;
+}
+
 const BaseType* Symbol::AsBaseType() const { return nullptr; }
 const CodeBlock* Symbol::AsCodeBlock() const { return nullptr; }
 const DataMember* Symbol::AsDataMember() const { return nullptr; }
@@ -90,5 +100,19 @@ const StructClass* Symbol::AsStructClass() const { return nullptr; }
 const Type* Symbol::AsType() const { return nullptr; }
 const Value* Symbol::AsValue() const { return nullptr; }
 const Variable* Symbol::AsVariable() const { return nullptr; }
+
+std::string Symbol::ComputeFullName() const {
+  const std::string& assigned_name = GetAssignedName();
+  if (assigned_name.empty()) {
+    // When a thing doesn't have a name, don't try to qualify it, since
+    // returning "foo::" for the name of something like a lexical block is
+    // actively confusing.
+    return std::string();
+  }
+
+  // This base type class just uses the qualified name for the full name.
+  // Derived classes will override this function to apply modifiers.
+  return GetSymbolScopePrefix(this) + assigned_name;
+}
 
 }  // namespace zxdb

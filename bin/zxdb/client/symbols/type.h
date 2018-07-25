@@ -17,10 +17,6 @@ class Type : public Symbol {
   const Type* AsType() const final;
   const std::string& GetAssignedName() const final { return assigned_name_; }
 
-  // The type name that should be shown to the user. This incorporates
-  // modifiers like pointers and consts.
-  const std::string& GetTypeName() const;
-
   // The name assigned in the DWARF file. This will be empty for modified
   // types (Which usually have no assigned name). See
   // Symbol::GetAssignedName).
@@ -38,19 +34,9 @@ class Type : public Symbol {
   explicit Type(int kind);
   virtual ~Type();
 
-  // Implemented by derived classes to compute the fully qualified type name
-  // to be returned by GetTypeName().
-  virtual std::string ComputeTypeName() const;
-
  private:
   std::string assigned_name_;
   uint32_t byte_size_;
-
-  // Lazily computed full type name (including type modifiers). This will be
-  // not present if it hasn't been computed yet.
-  // TODO(brettw) use std::optional when we can use C++17.
-  mutable bool computed_type_name_ = false;
-  mutable std::string type_name_;
 };
 
 }  // namespace

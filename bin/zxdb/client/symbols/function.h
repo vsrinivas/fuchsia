@@ -33,7 +33,7 @@ class Function final : public CodeBlock {
   // Construct with fxl::MakeRefCounted().
 
   // Symbol overrides.
-  const Function* AsFunction() const;
+  const Function* AsFunction() const override;
   const std::string& GetAssignedName() const final { return assigned_name_; }
 
   // TODO(brettw) this needs more stuff like DW_AT_frame_base,
@@ -65,6 +65,9 @@ class Function final : public CodeBlock {
 
   Function();
   ~Function();
+
+  // Symbol protected overrides.
+  std::string ComputeFullName() const override;
 
   std::string assigned_name_;
   std::string linkage_name_;

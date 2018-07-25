@@ -227,7 +227,16 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   //
   // This default implementation returns a reference to an empty string.
   // Derived classes will override as needed.
+  //
+  // Most callers will want to use GetUserName().
   virtual const std::string& GetAssignedName() const;
+
+  // Returns the fully-qualified user-visible name for this symbol. This will
+  // include all namespace and struct qualifications.
+  //
+  // This implements caching. Derived classes override ComputeFullName() to
+  // control how the full name is presented.
+  const std::string& GetFullName() const;
 
   // Manual RTTI.
   virtual const BaseType* AsBaseType() const;
@@ -287,10 +296,21 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   explicit Symbol(int tag);
   virtual ~Symbol();
 
+  // Computes the full name. Used by GetFullName() which adds a caching layer.
+  // Derived classes should override this to control how the name is presented.
+  // This implementation returns the scope prefix (namespaces, structs) +
+  // assigned name.
+  virtual std::string ComputeFullName() const;
+
  private:
   int tag_ = kTagNone;
 
   LazySymbol parent_;
+
+  // Lazily computed full symbol name.
+  // TODO(brettw) use std::optional when we can use C++17.
+  mutable bool computed_full_name_ = false;
+  mutable std::string full_name_;
 };
 
 }  // namespace zxdb

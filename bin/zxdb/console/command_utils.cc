@@ -364,9 +364,9 @@ std::string DescribeLocation(const Location& loc, bool always_show_address) {
     result = fxl::StringPrintf("0x%" PRIx64 ", ", loc.address());
 
   if (loc.function()) {
-    std::string func_name = GetFullyQualifiedSymbolName(loc.function().Get());
+    const std::string& func_name = loc.function().Get()->GetFullName();
     if (!func_name.empty())
-      result += func_name + "() " + GetBullet() + " ";
+      result += func_name + " " + GetBullet() + " ";
   }
   result += DescribeFileLine(loc.file_line());
   return result;

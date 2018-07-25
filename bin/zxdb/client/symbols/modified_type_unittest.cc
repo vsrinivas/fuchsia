@@ -27,45 +27,45 @@ fxl::RefPtr<ModifiedType> MakeModified(fxl::RefPtr<Type> modified, int tag) {
 
 }  // namespace
 
-TEST(ModifiedType, GetTypeName) {
+TEST(ModifiedType, GetFullName) {
   // int
   auto int_type = MakeBaseType("int", BaseType::kBaseTypeSigned, 8);
-  EXPECT_EQ("int", int_type->GetTypeName());
+  EXPECT_EQ("int", int_type->GetFullName());
 
   // int*
   auto int_ptr = MakeModified(int_type, Symbol::kTagPointerType);
-  EXPECT_EQ("int*", int_ptr->GetTypeName());
+  EXPECT_EQ("int*", int_ptr->GetFullName());
 
   // const int
   auto const_int = MakeModified(int_type, Symbol::kTagConstType);
-  EXPECT_EQ("const int", const_int->GetTypeName());
+  EXPECT_EQ("const int", const_int->GetFullName());
 
   // const int*
   auto const_int_ptr = MakeModified(const_int, Symbol::kTagPointerType);
-  EXPECT_EQ("const int*", const_int_ptr->GetTypeName());
+  EXPECT_EQ("const int*", const_int_ptr->GetFullName());
 
   // const int* const
   auto const_int_const_ptr = MakeModified(const_int_ptr, Symbol::kTagConstType);
-  EXPECT_EQ("const int* const", const_int_const_ptr->GetTypeName());
+  EXPECT_EQ("const int* const", const_int_const_ptr->GetFullName());
 
   // const int* const&
   auto const_int_const_ptr_ref =
       MakeModified(const_int_const_ptr, Symbol::kTagReferenceType);
-  EXPECT_EQ("const int* const&", const_int_const_ptr_ref->GetTypeName());
+  EXPECT_EQ("const int* const&", const_int_const_ptr_ref->GetFullName());
 
   // volatile
   auto volatile_int = MakeModified(int_type, Symbol::kTagVolatileType);
-  EXPECT_EQ("volatile int", volatile_int->GetTypeName());
+  EXPECT_EQ("volatile int", volatile_int->GetFullName());
 
   // volatile int&&
   auto volatile_int_rvalue_ref =
       MakeModified(volatile_int, Symbol::kTagRvalueReferenceType);
-  EXPECT_EQ("volatile int&&", volatile_int_rvalue_ref->GetTypeName());
+  EXPECT_EQ("volatile int&&", volatile_int_rvalue_ref->GetFullName());
 
   // typedef const int* Foo
   auto typedef_etc = MakeModified(const_int_ptr, Symbol::kTagTypedef);
   typedef_etc->set_assigned_name("Foo");
-  EXPECT_EQ("Foo", typedef_etc->GetTypeName());
+  EXPECT_EQ("Foo", typedef_etc->GetFullName());
 }
 
 }  // namespace zxdb

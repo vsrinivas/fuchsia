@@ -13,7 +13,7 @@ class Namespace final : public Symbol {
   // Construct with fxl::MakeRefCounted().
 
   // Symbol overrides.
-  const Namespace* AsNamespace() const;
+  const Namespace* AsNamespace() const override;
   const std::string& GetAssignedName() const final { return assigned_name_; }
 
   // The name of the namespace. This will be empty for anonymous namespaces.
@@ -29,6 +29,9 @@ class Namespace final : public Symbol {
 
   Namespace();
   virtual ~Namespace();
+
+  // Symbol protected overrides.
+  std::string ComputeFullName() const override;
 
   std::string assigned_name_;
 };
