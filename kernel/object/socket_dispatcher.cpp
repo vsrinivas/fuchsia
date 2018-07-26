@@ -426,9 +426,11 @@ size_t SocketDispatcher::ReceiveBufferSize() const {
     return data_.size();
 }
 
-// NOTE(abdulla): To access peer_ we must take get_lock(), to access peer_->data
-// we must take peer_->get_lock(). These two locks are aliases of one another,
-// however thread-safety analysis can not see that, so we must disable analysis.
+// NOTE(abdulla): peer_ is protected by get_lock() while peer_->data_
+// is protected by peer_->get_lock(). These two locks are aliases of
+// one another so must only acquire one of them. Thread-safety
+// analysis does not know they are the same lock so we must disable
+// analysis.
 size_t SocketDispatcher::TransmitBufferMax() const TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
     AutoLock lock(get_lock());
