@@ -23,7 +23,7 @@
 // Zircon USB includes
 #include <zircon/hw/usb-hub.h>
 #include <zircon/hw/usb.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 #include <dwc2/usb_dwc_regs.h>
 
@@ -123,7 +123,7 @@ typedef struct dwc_usb {
 
     // Pertaining to root hub transactions.
     mtx_t rh_req_mtx;
-    completion_t rh_req_completion;
+    sync_completion_t rh_req_completion;
     list_node_t rh_req_head;
 
     // Pertaining to a free list of request structures.
@@ -141,7 +141,7 @@ typedef struct dwc_usb {
 
     // Pertaining to the availability of channels on this device.
     mtx_t free_channel_mtx;
-    completion_t free_channel_completion;
+    sync_completion_t free_channel_completion;
     uint8_t free_channels;
     uint32_t next_device_address;
 
@@ -150,13 +150,13 @@ typedef struct dwc_usb {
     uint32_t DBG_reqid;
 
     union dwc_host_channel_interrupts channel_interrupts[NUM_HOST_CHANNELS];
-    completion_t channel_complete[NUM_HOST_CHANNELS];
+    sync_completion_t channel_complete[NUM_HOST_CHANNELS];
 
     // Pertaining to threads waiting to schedule a packet on the next start of
     // frame on this device.
     mtx_t sof_waiters_mtx;
     uint n_sof_waiters;
-    completion_t sof_waiters[NUM_HOST_CHANNELS];
+    sync_completion_t sof_waiters[NUM_HOST_CHANNELS];
 
     // Pool of free requests to reuse.
     usb_request_pool_t free_usb_reqs;
@@ -175,7 +175,7 @@ typedef struct dwc_usb_endpoint {
     usb_endpoint_descriptor_t desc;
 
     thrd_t request_scheduler_thread;
-    completion_t request_pending_completion;
+    sync_completion_t request_pending_completion;
 } dwc_usb_endpoint_t;
 
 typedef struct dwc_usb_scheduler_thread_ctx {
@@ -416,7 +416,7 @@ static void dwc_usb_request_queue_rh(dwc_usb_t* dwc,
     mtx_unlock(&dwc->rh_req_mtx);
 
     // Signal to the processor thread to wake up and process this request.
-    completion_signal(&dwc->rh_req_completion);
+    sync_completion_signal(&dwc->rh_req_completion);
 }
 
 // Queue a transaction on external peripherals using the DWC host channels.
@@ -463,7 +463,7 @@ static void dwc_usb_request_queue_hw(dwc_usb_t* dwc,
     mtx_unlock(&target_endpoint->pending_request_mtx);
 
     // Signal the Device/Endpoint to begin the transaction.
-    completion_signal(&target_endpoint->request_pending_completion);
+    sync_completion_signal(&target_endpoint->request_pending_completion);
 }
 
 // Tries to take a request from the list of free request objects. If none are
@@ -598,7 +598,7 @@ static zx_status_t dwc_enable_ep(void* _ctx, uint32_t device_id,
     list_initialize(&ep->pending_requests);
     ep->parent = dev;
     memcpy(&ep->desc, ep_desc, sizeof(*ep_desc));
-    ep->request_pending_completion = COMPLETION_INIT;
+    ep->request_pending_completion = SYNC_COMPLETION_INIT;
 
     dwc_usb_scheduler_thread_ctx_t* ctx = malloc(sizeof(*ctx));
     ctx->ep = ep;
@@ -628,7 +628,7 @@ zx_status_t dwc_config_hub(void* ctx, uint32_t device_id, usb_speed_t speed,
 }
 
 static void usb_control_complete(usb_request_t* usb_req, void* cookie) {
-    completion_signal((completion_t*)cookie);
+    sync_completion_signal((sync_completion_t*)cookie);
 }
 
 zx_status_t dwc_hub_device_added(void* _ctx, uint32_t hub_address, int port,
@@ -671,7 +671,7 @@ zx_status_t dwc_hub_device_added(void* _ctx, uint32_t hub_address, int port,
         assert(status == ZX_OK);
     }
 
-    completion_t completion = COMPLETION_INIT;
+    sync_completion_t completion = SYNC_COMPLETION_INIT;
 
     get_desc->complete_cb = usb_control_complete;
     get_desc->cookie = &completion;
@@ -685,7 +685,7 @@ zx_status_t dwc_hub_device_added(void* _ctx, uint32_t hub_address, int port,
     get_desc->setup.wLength = 8;
 
     dwc_request_queue(dwc, get_desc);
-    completion_wait(&completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
     usb_device_descriptor_t short_descriptor;
     usb_request_copyfrom(get_desc, &short_descriptor, get_desc->response.actual, 0);
@@ -700,7 +700,7 @@ zx_status_t dwc_hub_device_added(void* _ctx, uint32_t hub_address, int port,
         assert(status == ZX_OK);
     }
 
-    completion_reset(&completion);
+    sync_completion_reset(&completion);
 
     set_addr->complete_cb = usb_control_complete;
     set_addr->cookie = &completion;
@@ -714,7 +714,7 @@ zx_status_t dwc_hub_device_added(void* _ctx, uint32_t hub_address, int port,
     set_addr->setup.wLength = 0;
 
     dwc_request_queue(dwc, set_addr);
-    completion_wait(&completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
     zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
 
@@ -739,7 +739,7 @@ zx_status_t dwc_hub_device_added(void* _ctx, uint32_t hub_address, int port,
     ctrl_endpoint->desc.bmAttributes = (USB_ENDPOINT_CONTROL);
     ctrl_endpoint->desc.wMaxPacketSize = short_descriptor.bMaxPacketSize0;
     ctrl_endpoint->desc.bInterval = 0;
-    ctrl_endpoint->request_pending_completion = COMPLETION_INIT;
+    ctrl_endpoint->request_pending_completion = SYNC_COMPLETION_INIT;
 
     list_add_tail(&dwc->usb_devices[dwc->next_device_address].endpoints, &ctrl_endpoint->node);
 
@@ -794,7 +794,7 @@ static void dwc_handle_channel_irq(uint32_t channel, dwc_usb_t* dwc) {
     chanptr->interrupts.val = 0xffffffff;
 
     // Signal to the waiter that this channel is ready.
-    completion_signal(&dwc->channel_complete[channel]);
+    sync_completion_signal(&dwc->channel_complete[channel]);
 }
 
 static void dwc_handle_irq(dwc_usb_t* dwc) {
@@ -846,7 +846,7 @@ static void dwc_handle_irq(dwc_usb_t* dwc) {
     if (interrupts.sof_intr) {
         if ((regs->host_frame_number & 0x7) != 6) {
             for (size_t i = 0; i < NUM_HOST_CHANNELS; i++) {
-                completion_signal(&dwc->sof_waiters[i]);
+                sync_completion_signal(&dwc->sof_waiters[i]);
             }
         }
     }
@@ -1046,10 +1046,10 @@ static void dwc_process_root_hub_request(dwc_usb_t* dwc,
 static int dwc_root_hub_req_worker(void* arg) {
     dwc_usb_t* dwc = (dwc_usb_t*)arg;
 
-    dwc->rh_req_completion = COMPLETION_INIT;
+    dwc->rh_req_completion = SYNC_COMPLETION_INIT;
 
     while (true) {
-        completion_wait(&dwc->rh_req_completion, ZX_TIME_INFINITE);
+        sync_completion_wait(&dwc->rh_req_completion, ZX_TIME_INFINITE);
 
         mtx_lock(&dwc->rh_req_mtx);
 
@@ -1058,7 +1058,7 @@ static int dwc_root_hub_req_worker(void* arg) {
                                   dwc_usb_transfer_request_t, node);
 
         if (list_is_empty(&dwc->rh_req_head)) {
-            completion_reset(&dwc->rh_req_completion);
+            sync_completion_reset(&dwc->rh_req_completion);
         }
 
         mtx_unlock(&dwc->rh_req_mtx);
@@ -1090,7 +1090,7 @@ static uint acquire_channel_blocking(dwc_usb_t* dwc) {
         }
 
         if (next_channel == -1) {
-            completion_reset(&dwc->free_channel_completion);
+            sync_completion_reset(&dwc->free_channel_completion);
         }
 
         mtx_unlock(&dwc->free_channel_mtx);
@@ -1101,7 +1101,7 @@ static uint acquire_channel_blocking(dwc_usb_t* dwc) {
 
         // We couldn't find a free channel, wait for somebody to tell us to
         // wake up and attempt to acquire a channel again.
-        completion_wait(&dwc->free_channel_completion, ZX_TIME_INFINITE);
+        sync_completion_wait(&dwc->free_channel_completion, ZX_TIME_INFINITE);
     }
 
     __UNREACHABLE;
@@ -1116,7 +1116,7 @@ static void release_channel(uint ch, dwc_usb_t* dwc) {
 
     mtx_unlock(&dwc->free_channel_mtx);
 
-    completion_signal(&dwc->free_channel_completion);
+    sync_completion_signal(&dwc->free_channel_completion);
 }
 
 static void dwc_start_transaction(uint8_t chan,
@@ -1151,8 +1151,8 @@ static void dwc_start_transaction(uint8_t chan,
 }
 
 static union dwc_host_channel_interrupts dwc_await_channel_complete(uint32_t channel, dwc_usb_t* dwc) {
-    completion_wait(&dwc->channel_complete[channel], ZX_TIME_INFINITE);
-    completion_reset(&dwc->channel_complete[channel]);
+    sync_completion_wait(&dwc->channel_complete[channel], ZX_TIME_INFINITE);
+    sync_completion_reset(&dwc->channel_complete[channel]);
     return dwc->channel_interrupts[channel];
 }
 
@@ -1328,8 +1328,8 @@ static void await_sof_if_necessary(uint channel, dwc_usb_transfer_request_t* req
         mtx_unlock(&dwc->sof_waiters_mtx);
         // Block until we get a sof interrupt.
 
-        completion_reset(&dwc->sof_waiters[channel]);
-        completion_wait(&dwc->sof_waiters[channel], ZX_TIME_INFINITE);
+        sync_completion_reset(&dwc->sof_waiters[channel]);
+        sync_completion_wait(&dwc->sof_waiters[channel], ZX_TIME_INFINITE);
 
         mtx_lock(&dwc->sof_waiters_mtx);
 
@@ -1410,7 +1410,7 @@ static bool handle_normal_channel_halted(uint channel,
                 mtx_lock(&ep->pending_request_mtx);
                 list_add_head(&ep->pending_requests, &req->node);
                 mtx_unlock(&ep->pending_request_mtx);
-                completion_signal(&ep->request_pending_completion);
+                sync_completion_signal(&ep->request_pending_completion);
 
                 return true;
             }
@@ -1434,7 +1434,7 @@ static bool handle_normal_channel_halted(uint channel,
                 mtx_lock(&ep->pending_request_mtx);
                 list_add_head(&ep->pending_requests, &req->node);
                 mtx_unlock(&ep->pending_request_mtx);
-                completion_signal(&ep->request_pending_completion);
+                sync_completion_signal(&ep->request_pending_completion);
 
                 return true;
             }
@@ -1507,7 +1507,7 @@ static bool handle_channel_halted_interrupt(uint channel,
         mtx_lock(&ep->pending_request_mtx);
         list_add_head(&ep->pending_requests, &req->node);
         mtx_unlock(&ep->pending_request_mtx);
-        completion_signal(&ep->request_pending_completion);
+        sync_completion_signal(&ep->request_pending_completion);
         return true;
     } else if (interrupts.nak_response_received) {
         // Wait a defined period of time
@@ -1545,7 +1545,7 @@ static bool handle_channel_halted_interrupt(uint channel,
         mtx_lock(&ep->pending_request_mtx);
         list_add_head(&ep->pending_requests, &req->node);
         mtx_unlock(&ep->pending_request_mtx);
-        completion_signal(&ep->request_pending_completion);
+        sync_completion_signal(&ep->request_pending_completion);
         return true;
     } else if (interrupts.nyet_response_received) {
         if (++req->cspit_retries >= 8) {
@@ -1586,7 +1586,7 @@ static int endpoint_request_scheduler_thread(void* arg) {
     uint channel = NUM_HOST_CHANNELS + 1;
     while (true) {
         zx_status_t res =
-            completion_wait(&self->request_pending_completion, ZX_TIME_INFINITE);
+            sync_completion_wait(&self->request_pending_completion, ZX_TIME_INFINITE);
         if (res != ZX_OK) {
             zxlogf(ERROR, "dwc_usb: completion wait failed, retcode = %d, "
                     "device_id = %u, ep = %u\n", res, self->parent->device_id,
@@ -1601,7 +1601,7 @@ static int endpoint_request_scheduler_thread(void* arg) {
                                     dwc_usb_transfer_request_t, node);
 
         if (list_is_empty(&self->pending_requests)) {
-            completion_reset(&self->request_pending_completion);
+            sync_completion_reset(&self->request_pending_completion);
         }
 
         mtx_unlock(&self->pending_request_mtx);
@@ -1706,7 +1706,7 @@ static zx_status_t create_default_device(dwc_usb_t* dwc) {
     ep0->desc.wMaxPacketSize = 8;
     ep0->desc.bInterval = 0; // Ignored for ctrl endpoints.
 
-    ep0->request_pending_completion = COMPLETION_INIT;
+    ep0->request_pending_completion = SYNC_COMPLETION_INIT;
 
     list_add_tail(&default_device->endpoints, &ep0->node);
 
@@ -1743,7 +1743,7 @@ static zx_status_t usb_dwc_bind(void* ctx, zx_device_t* dev) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    usb_dwc->free_channel_completion = COMPLETION_INIT;
+    usb_dwc->free_channel_completion = SYNC_COMPLETION_INIT;
     usb_dwc->free_channels = ALL_CHANNELS_FREE;
     usb_dwc->next_device_address = 1;
     usb_dwc->DBG_reqid = 0x1;
@@ -1792,8 +1792,8 @@ static zx_status_t usb_dwc_bind(void* ctx, zx_device_t* dev) {
 
     // Initialize all the channel completions.
     for (size_t i = 0; i < NUM_HOST_CHANNELS; i++) {
-        usb_dwc->channel_complete[i] = COMPLETION_INIT;
-        usb_dwc->sof_waiters[i] = COMPLETION_INIT;
+        usb_dwc->channel_complete[i] = SYNC_COMPLETION_INIT;
+        usb_dwc->sof_waiters[i] = SYNC_COMPLETION_INIT;
     }
 
     // We create a mock device at device_id = 0 for enumeration purposes.

@@ -20,7 +20,7 @@
 #include <fs/vfs.h>
 #include <lib/memfs/cpp/vnode.h>
 #include <lib/memfs/memfs.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/device/vfs.h>
 
 #include "dnode.h"

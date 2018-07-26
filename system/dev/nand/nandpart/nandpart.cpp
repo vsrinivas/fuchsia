@@ -17,7 +17,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/boot/image.h>
 #include <zircon/hw/gpt.h>
 #include <zircon/types.h>

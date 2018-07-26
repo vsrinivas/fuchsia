@@ -30,7 +30,7 @@
 #include <lib/zx/fifo.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <unittest/unittest.h>
 #include <zircon/device/block.h>
 #include <zircon/device/ramdisk.h>
@@ -1388,7 +1388,7 @@ bool ramdisk_test_fifo_sleep_unavailable(void) {
 // The correct calling sequence in the calling thread is:
 //   thrd_create(&thread, fifo_wake_thread, &wake);
 //   ioctl_ramdisk_sleep_after(wake->fd, &one);
-//   completion_signal(&wake.start);
+//   sync_completion_signal(&wake.start);
 //   block_fifo_txn(client, requests, fbl::count_of(requests));
 //   thrd_join(thread, &res);
 //
@@ -1403,7 +1403,7 @@ bool ramdisk_test_fifo_sleep_unavailable(void) {
 typedef struct wake_args {
     int fd;
     uint64_t after;
-    completion_t start;
+    sync_completion_t start;
     zx_time_t deadline;
 } wake_args_t;
 
@@ -1415,8 +1415,8 @@ static int fifo_wake_thread(void* arg) {
     auto cleanup = fbl::MakeAutoCall([&] { ioctl_ramdisk_wake_up(wake->fd); });
 
     // Wait for the start-up signal
-    zx_status_t rc = completion_wait_deadline(&wake->start, wake->deadline);
-    completion_reset(&wake->start);
+    zx_status_t rc = sync_completion_wait_deadline(&wake->start, wake->deadline);
+    sync_completion_reset(&wake->start);
     if (rc != ZX_OK) {
         return rc;
     }
@@ -1487,7 +1487,7 @@ bool ramdisk_test_fifo_sleep_deferred(void) {
     wake_args_t wake;
     wake.fd = ramdisk->fd();
     wake.after = fbl::count_of(requests);
-    completion_reset(&wake.start);
+    sync_completion_reset(&wake.start);
     wake.deadline = zx_deadline_after(ZX_SEC(3));
     uint64_t blks_before_sleep = 1;
     int res;
@@ -1497,7 +1497,7 @@ bool ramdisk_test_fifo_sleep_deferred(void) {
     ASSERT_EQ(thrd_create(&thread, fifo_wake_thread, &wake), thrd_success);
     ASSERT_GE(ioctl_ramdisk_set_flags(ramdisk->fd(), &flags), 0);
     ASSERT_GE(ioctl_ramdisk_sleep_after(ramdisk->fd(), &blks_before_sleep), 0);
-    completion_signal(&wake.start);
+    sync_completion_signal(&wake.start);
     ASSERT_EQ(client.Transaction(&requests[0], fbl::count_of(requests)), ZX_OK);
     ASSERT_EQ(thrd_join(thread, &res), thrd_success);
 
@@ -1522,10 +1522,10 @@ bool ramdisk_test_fifo_sleep_deferred(void) {
 
     // Restart the wake thread and put ramdisk to sleep again.
     wake.after = 1;
-    completion_reset(&wake.start);
+    sync_completion_reset(&wake.start);
     ASSERT_EQ(thrd_create(&thread, fifo_wake_thread, &wake), thrd_success);
     ASSERT_GE(ioctl_ramdisk_sleep_after(ramdisk->fd(), &blks_before_sleep), 0);
-    completion_signal(&wake.start);
+    sync_completion_signal(&wake.start);
     ASSERT_EQ(client.Transaction(&requests[0], 1), ZX_OK);
     ASSERT_EQ(thrd_join(thread, &res), thrd_success);
 

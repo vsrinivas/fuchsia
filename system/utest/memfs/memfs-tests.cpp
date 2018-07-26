@@ -29,9 +29,9 @@ bool test_memfs_null() {
 
     ASSERT_EQ(memfs_create_filesystem(loop.dispatcher(), &vfs, &root), ZX_OK);
     ASSERT_EQ(zx_handle_close(root), ZX_OK);
-    completion_t unmounted;
+    sync_completion_t unmounted;
     memfs_free_filesystem(vfs, &unmounted);
-    ASSERT_EQ(completion_wait(&unmounted, ZX_SEC(3)), ZX_OK);
+    ASSERT_EQ(sync_completion_wait(&unmounted, ZX_SEC(3)), ZX_OK);
 
     END_TEST;
 }
@@ -74,9 +74,9 @@ bool test_memfs_basic() {
     ASSERT_NULL(readdir(d));
 
     ASSERT_EQ(closedir(d), 0);
-    completion_t unmounted;
+    sync_completion_t unmounted;
     memfs_free_filesystem(vfs, &unmounted);
-    ASSERT_EQ(completion_wait(&unmounted, ZX_SEC(3)), ZX_OK);
+    ASSERT_EQ(sync_completion_wait(&unmounted, ZX_SEC(3)), ZX_OK);
 
     END_TEST;
 }
@@ -146,7 +146,7 @@ bool test_memfs_close_during_access() {
 
     struct thread_args {
         DIR* d;
-        completion_t spinning{};
+        sync_completion_t spinning{};
     } args {
         .d = d,
     };
@@ -163,15 +163,15 @@ bool test_memfs_close_during_access() {
             if ((fd = openat(dirfd(d), "foo", O_RDWR)) < 0) {
                 return errno == EPIPE ? 0 : -1;
             }
-            completion_signal(&args->spinning);
+            sync_completion_signal(&args->spinning);
         }
     }, &args), thrd_success);
 
-    ASSERT_EQ(completion_wait(&args.spinning, ZX_SEC(3)), ZX_OK);
+    ASSERT_EQ(sync_completion_wait(&args.spinning, ZX_SEC(3)), ZX_OK);
 
-    completion_t unmounted;
+    sync_completion_t unmounted;
     memfs_free_filesystem(vfs, &unmounted);
-    ASSERT_EQ(completion_wait(&unmounted, ZX_SEC(3)), ZX_OK);
+    ASSERT_EQ(sync_completion_wait(&unmounted, ZX_SEC(3)), ZX_OK);
 
     int result;
     ASSERT_EQ(thrd_join(worker, &result), thrd_success);

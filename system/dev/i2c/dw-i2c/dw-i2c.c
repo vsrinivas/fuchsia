@@ -11,7 +11,7 @@
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
 #include <hw/reg.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/process.h>
 #include <zircon/assert.h>
 

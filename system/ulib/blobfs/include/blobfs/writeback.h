@@ -22,7 +22,7 @@
 #include <fs/queue.h>
 #include <fs/vfs.h>
 
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 #include <lib/fzl/mapped-vmo.h>
 #include <lib/zx/vmo.h>

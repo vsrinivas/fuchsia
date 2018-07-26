@@ -7,7 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <fbl/atomic.h>
 #include <fbl/unique_ptr.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 namespace fs {
 

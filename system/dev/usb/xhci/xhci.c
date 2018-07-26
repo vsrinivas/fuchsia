@@ -149,7 +149,7 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
     mtx_init(&xhci->command_queue_mutex, mtx_plain);
     mtx_init(&xhci->mfindex_mutex, mtx_plain);
     mtx_init(&xhci->input_context_lock, mtx_plain);
-    completion_reset(&xhci->command_queue_completion);
+    sync_completion_reset(&xhci->command_queue_completion);
 
     usb_request_pool_init(&xhci->free_reqs);
 

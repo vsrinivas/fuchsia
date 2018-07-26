@@ -19,7 +19,7 @@ typedef struct platform_i2c_bus {
 
     list_node_t queued_txns;
     list_node_t free_txns;
-    completion_t txn_signal;
+    sync_completion_t txn_signal;
 
     thrd_t thread;
     mtx_t lock;
@@ -75,8 +75,8 @@ static int i2c_bus_thread(void *arg) {
     }
 
     while (1) {
-        completion_wait(&i2c_bus->txn_signal, ZX_TIME_INFINITE);
-        completion_reset(&i2c_bus->txn_signal);
+        sync_completion_wait(&i2c_bus->txn_signal, ZX_TIME_INFINITE);
+        sync_completion_reset(&i2c_bus->txn_signal);
 
         i2c_txn_t* txn;
 
@@ -125,7 +125,7 @@ zx_status_t platform_i2c_init(platform_bus_t* bus, i2c_impl_protocol_t* i2c) {
         mtx_init(&i2c_bus->lock, mtx_plain);
         list_initialize(&i2c_bus->queued_txns);
         list_initialize(&i2c_bus->free_txns);
-        completion_reset(&i2c_bus->txn_signal);
+        sync_completion_reset(&i2c_bus->txn_signal);
         memcpy(&i2c_bus->i2c, i2c, sizeof(i2c_bus->i2c));
 
         status = i2c_impl_get_max_transfer_size(i2c, i, &i2c_bus->max_transfer);
@@ -184,7 +184,7 @@ zx_status_t platform_i2c_transact(platform_bus_t* bus, pdev_req_t* req, pbus_i2c
 
     list_add_tail(&i2c_bus->queued_txns, &txn->node);
     mtx_unlock(&i2c_bus->lock);
-    completion_signal(&i2c_bus->txn_signal);
+    sync_completion_signal(&i2c_bus->txn_signal);
 
     return ZX_OK;
 }

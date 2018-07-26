@@ -38,7 +38,7 @@ typedef struct {
     uint32_t bus_width;  /* 16bit or 8bit ? */
     uint64_t chipsize;   /* MiB */
     uint32_t page_shift; /* NAND page shift */
-    completion_t req_completion;
+    sync_completion_t req_completion;
     struct {
         uint64_t ecc_corrected;
         uint64_t failed;

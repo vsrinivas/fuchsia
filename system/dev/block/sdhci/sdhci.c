@@ -31,7 +31,7 @@
 // Zircon Includes
 #include <zircon/threads.h>
 #include <zircon/assert.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <pretty/hexdump.h>
 
 #define SD_FREQ_SETUP_HZ  400000
@@ -99,7 +99,7 @@ typedef struct sdhci_device {
     // Set to true if the data stage completed before the command stage
     bool data_done;
     // used to signal request complete
-    completion_t req_completion;
+    sync_completion_t req_completion;
 
     // Controller info
     sdmmc_host_info_t info;
@@ -218,7 +218,7 @@ static void sdhci_complete_request_locked(sdhci_device_t* dev, sdmmc_req_t* req,
     dev->data_done = false;
 
     req->status = status;
-    completion_signal(&dev->req_completion);
+    sync_completion_signal(&dev->req_completion);
 }
 
 static void sdhci_cmd_stage_complete_locked(sdhci_device_t* dev) {
@@ -836,11 +836,11 @@ static zx_status_t sdhci_request(void* ctx, sdmmc_req_t* req) {
 
     mtx_unlock(&dev->mtx);
 
-    completion_wait(&dev->req_completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&dev->req_completion, ZX_TIME_INFINITE);
 
     sdhci_finish_req(dev, req);
 
-    completion_reset(&dev->req_completion);
+    sync_completion_reset(&dev->req_completion);
 
     return req->status;
 
@@ -1049,7 +1049,7 @@ static zx_status_t sdhci_bind(void* ctx, zx_device_t* parent) {
     if (!dev) {
         return ZX_ERR_NO_MEMORY;
     }
-    dev->req_completion = COMPLETION_INIT;
+    dev->req_completion = SYNC_COMPLETION_INIT;
 
     zx_status_t status = ZX_OK;
     if (device_get_protocol(parent, ZX_PROTOCOL_SDHCI, (void*)&dev->sdhci)) {

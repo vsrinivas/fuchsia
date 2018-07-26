@@ -9,7 +9,7 @@
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 // Writes on a FIFO, repeating the write later if the FIFO is full.
 static zx_status_t do_write(zx_handle_t fifo, block_fifo_request_t* request, size_t count) {
@@ -60,13 +60,13 @@ static zx_status_t do_read(zx_handle_t fifo, block_fifo_response_t* response) {
 }
 
 typedef struct block_completion {
-    completion_t completion;
+    sync_completion_t completion;
     zx_status_t status;
-} block_completion_t;
+} block_sync_completion_t;
 
 typedef struct fifo_client {
     zx_handle_t fifo;
-    block_completion_t groups[MAX_TXN_GROUP_COUNT];
+    block_sync_completion_t groups[MAX_TXN_GROUP_COUNT];
 } fifo_client_t;
 
 zx_status_t block_fifo_create_client(zx_handle_t fifo, fifo_client_t** out) {
@@ -96,7 +96,7 @@ zx_status_t block_fifo_txn(fifo_client_t* client, block_fifo_request_t* requests
 
     groupid_t group = requests[0].group;
     assert(group < MAX_TXN_GROUP_COUNT);
-    completion_reset(&client->groups[group].completion);
+    sync_completion_reset(&client->groups[group].completion);
     client->groups[group].status = ZX_ERR_IO;
 
     zx_status_t status;
@@ -122,10 +122,10 @@ zx_status_t block_fifo_txn(fifo_client_t* client, block_fifo_request_t* requests
     // Wake up someone who is waiting (it might be ourselves)
     groupid_t response_group = response.group;
     client->groups[response_group].status = response.status;
-    completion_signal(&client->groups[response_group].completion);
+    sync_completion_signal(&client->groups[response_group].completion);
 
     // Wait for someone to signal us.
-    completion_wait(&client->groups[group].completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&client->groups[group].completion, ZX_TIME_INFINITE);
 
     return client->groups[group].status;
 }

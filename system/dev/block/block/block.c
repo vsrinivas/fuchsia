@@ -16,7 +16,7 @@
 #include <string.h>
 #include <sys/param.h>
 #include <threads.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/block.h>
 #include <zircon/process.h>
@@ -38,7 +38,7 @@ typedef struct blkdev {
     zx_device_t* parent;
 
     mtx_t lock;
-    completion_t lock_signal;
+    sync_completion_t lock_signal;
 
     uint32_t threadcount;
 
@@ -55,7 +55,7 @@ typedef struct blkdev {
     mtx_t iolock;
     zx_handle_t iovmo;
     zx_status_t iostatus;
-    completion_t iosignal;
+    sync_completion_t iosignal;
     block_op_t* iobop;
 
     //members for tracing
@@ -67,7 +67,7 @@ typedef struct blkdev {
 static int blockserver_thread_serve(blkdev_t* bdev) {
     mtx_lock(&bdev->lock);
     // Signal when the blockserver_thread has successfully acquired the lock.
-    completion_signal(&bdev->lock_signal);
+    sync_completion_signal(&bdev->lock_signal);
 
     BlockServer* bs = bdev->bs;
     if (!bdev->dead && (bs != NULL)) {
@@ -124,12 +124,12 @@ static zx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_le
 
     // Use this completion to ensure the block server doesn't race initializing
     // with a call to teardown.
-    completion_reset(&bdev->lock_signal);
+    sync_completion_reset(&bdev->lock_signal);
 
     thrd_t thread;
     if (thrd_create(&thread, blockserver_thread, bdev) == thrd_success) {
         thrd_detach(thread);
-        completion_wait(&bdev->lock_signal, ZX_TIME_INFINITE);
+        sync_completion_wait(&bdev->lock_signal, ZX_TIME_INFINITE);
         return sizeof(zx_handle_t);
     }
 
@@ -230,7 +230,7 @@ static zx_status_t blkdev_ioctl(void* ctx, uint32_t op, const void* cmd,
 static void block_completion_cb(block_op_t* bop, zx_status_t status) {
     blkdev_t* bdev = bop->cookie;
     bdev->iostatus = status;
-    completion_signal(&bdev->iosignal);
+    sync_completion_signal(&bdev->iosignal);
 }
 
 // Adapter from read/write to block_op_t
@@ -287,9 +287,9 @@ static zx_status_t blkdev_io(blkdev_t* bdev, void* buf, size_t count,
         bop->completion_cb = block_completion_cb;
         bop->cookie = bdev;
 
-        completion_reset(&bdev->iosignal);
+        sync_completion_reset(&bdev->iosignal);
         bdev->bp.ops->queue(bdev->bp.ctx, bop);
-        completion_wait(&bdev->iosignal, ZX_TIME_INFINITE);
+        sync_completion_wait(&bdev->iosignal, ZX_TIME_INFINITE);
 
         if (bdev->iostatus != ZX_OK) {
             return bdev->iostatus;

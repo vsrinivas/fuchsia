@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <zircon/device/usb.h>
 #include <zircon/hw/usb.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 // Represents an interface within a composite device
 typedef struct {
@@ -31,7 +31,7 @@ typedef struct {
     thrd_t callback_thread;
     bool callback_thread_stop;
     // completion used for signalling callback_thread
-    completion_t callback_thread_completion;
+    sync_completion_t callback_thread_completion;
     // list of requests that need to have client's completion callback called
     list_node_t completed_reqs;
     // mutex that protects the callback_* members above

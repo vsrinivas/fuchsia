@@ -15,7 +15,7 @@
 #include <fbl/limits.h>
 #include <fbl/new.h>
 #include <lib/fzl/mapped-vmo.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
@@ -108,7 +108,7 @@ zx_status_t VPartitionManager::AddPartition(fbl::unique_ptr<VPartition> vp) cons
 struct VpmIoCookie {
     fbl::atomic<size_t> num_txns;
     fbl::atomic<zx_status_t> status;
-    completion_t signal;
+    sync_completion_t signal;
 };
 
 static void IoCallback(block_op_t* op, zx_status_t status) {
@@ -117,7 +117,7 @@ static void IoCallback(block_op_t* op, zx_status_t status) {
         c->status.store(status);
     }
     if (c->num_txns.fetch_sub(1) - 1 == 0) {
-        completion_signal(&c->signal);
+        sync_completion_signal(&c->signal);
     }
 }
 
@@ -141,7 +141,7 @@ zx_status_t VPartitionManager::DoIoLocked(zx_handle_t vmo, size_t off,
     VpmIoCookie cookie;
     cookie.num_txns.store(num_txns);
     cookie.status.store(ZX_OK);
-    completion_reset(&cookie.signal);
+    sync_completion_reset(&cookie.signal);
 
     for (size_t i = 0; i < num_txns; i++) {
         size_t length = fbl::min(len_remaining, max_transfer);
@@ -165,7 +165,7 @@ zx_status_t VPartitionManager::DoIoLocked(zx_handle_t vmo, size_t off,
     }
 
     ZX_DEBUG_ASSERT(len_remaining == 0);
-    completion_wait(&cookie.signal, ZX_TIME_INFINITE);
+    sync_completion_wait(&cookie.signal, ZX_TIME_INFINITE);
     return static_cast<zx_status_t>(cookie.status.load());
 }
 

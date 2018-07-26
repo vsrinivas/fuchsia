@@ -31,7 +31,7 @@
 // Zircon Includes
 #include <zircon/threads.h>
 #include <zircon/assert.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <pretty/hexdump.h>
 
 #include "imx-sdhci.h"
@@ -114,7 +114,7 @@ typedef struct imx_sdhci_device {
     uint16_t                    data_blockid;       // Current block id to transfer (PIO)
     bool                        data_done;          // Set to true if the data stage completed
                                                     // before the cmd stage
-    completion_t                req_completion;     // used to signal request complete
+    sync_completion_t                req_completion;     // used to signal request complete
     sdmmc_host_info_t           info;               // Controller info
     uint32_t                    base_clock;         // Base clock rate
     bool                        ddr_mode;           // DDR Mode enable flag
@@ -303,7 +303,7 @@ static void imx_sdhci_complete_request_locked(imx_sdhci_device_t* dev, sdmmc_req
     dev->data_done = false;
 
     req->status = status;
-    completion_signal(&dev->req_completion);
+    sync_completion_signal(&dev->req_completion);
 }
 
 static void imx_sdhci_cmd_stage_complete_locked(imx_sdhci_device_t* dev) {
@@ -998,11 +998,11 @@ static zx_status_t imx_sdhci_request(void* ctx, sdmmc_req_t* req) {
 
     mtx_unlock(&dev->mtx);
 
-    completion_wait(&dev->req_completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&dev->req_completion, ZX_TIME_INFINITE);
 
     imx_sdhci_finish_req(dev, req);
 
-    completion_reset(&dev->req_completion);
+    sync_completion_reset(&dev->req_completion);
 
     return req->status;
 

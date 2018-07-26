@@ -4,14 +4,14 @@
 
 #pragma once
 
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 #include "xhci.h"
 #include "xhci-transfer.h"
 
 typedef struct {
     xhci_command_context_t context;
-    completion_t completion;
+    sync_completion_t completion;
     // from command completion event TRB
     uint32_t status;
     uint32_t control;

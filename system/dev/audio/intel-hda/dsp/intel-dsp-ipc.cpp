@@ -27,7 +27,7 @@ void IntelDspIpc::Shutdown() {
     fbl::AutoLock ipc_lock(&ipc_lock_);
     // Fail all pending IPCs
     while (!ipc_queue_.is_empty()) {
-        completion_signal(&ipc_queue_.pop_front()->completion);
+        sync_completion_signal(&ipc_queue_.pop_front()->completion);
     }
 }
 
@@ -50,7 +50,7 @@ zx_status_t IntelDspIpc::SendIpcWait(Txn* txn) {
         }
     }
     // Wait for completion
-    zx_status_t res = completion_wait(&txn->completion, ZX_MSEC(300));
+    zx_status_t res = sync_completion_wait(&txn->completion, ZX_MSEC(300));
     if (res != ZX_OK) {
         dsp_.DeviceShutdown();
     }
@@ -198,7 +198,7 @@ void IntelDspIpc::ProcessIpcNotification(const IpcMessage& notif) {
     switch (notif.notif_type()) {
     case NotificationType::FW_READY:
         LOG(TRACE, "firmware ready\n");
-        completion_signal(&fw_ready_completion_);
+        sync_completion_signal(&fw_ready_completion_);
         break;
     case NotificationType::RESOURCE_EVENT: {
         ResourceEventData data;
@@ -250,7 +250,7 @@ void IntelDspIpc::ProcessIpcReply(const IpcMessage& reply) {
         }
     }
 
-    completion_signal(&pending.completion);
+    sync_completion_signal(&pending.completion);
 
     // Send the next ipc in the queue
     if (!ipc_queue_.is_empty()) {

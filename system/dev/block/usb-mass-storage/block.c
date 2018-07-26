@@ -35,7 +35,7 @@ static void ums_block_queue(void* ctx, block_op_t* op) {
     mtx_lock(&ums->txn_lock);
     list_add_tail(&ums->queued_txns, &txn->node);
     mtx_unlock(&ums->txn_lock);
-    completion_signal(&ums->txn_completion);
+    sync_completion_signal(&ums->txn_completion);
 }
 
 static void ums_get_info(void* ctx, block_info_t* info) {

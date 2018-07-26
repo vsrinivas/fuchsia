@@ -7,7 +7,7 @@
 #include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <zircon/device/midi.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -28,7 +28,7 @@ typedef struct {
     // mutex for synchronizing access to free_write_reqs and open
     mtx_t mutex;
     // completion signals free_write_reqs not empty
-    completion_t free_write_completion;
+    sync_completion_t free_write_completion;
 
     bool open;
     bool dead;
@@ -62,7 +62,7 @@ static void usb_midi_sink_write_complete(usb_request_t* req, void* cookie) {
     // FIXME what to do with error here?
     mtx_lock(&sink->mutex);
     list_add_tail(&sink->free_write_reqs, &req->node);
-    completion_signal(&sink->free_write_completion);
+    sync_completion_signal(&sink->free_write_completion);
     update_signals(sink);
     mtx_unlock(&sink->mutex);
 }
@@ -71,7 +71,7 @@ static void usb_midi_sink_unbind(void* ctx) {
     usb_midi_sink_t* sink = ctx;
     sink->dead = true;
     update_signals(sink);
-    completion_signal(&sink->free_write_completion);
+    sync_completion_signal(&sink->free_write_completion);
     device_remove(sink->mxdev);
 }
 
@@ -128,14 +128,14 @@ static zx_status_t usb_midi_sink_write(void* ctx, const void* data, size_t lengt
     const uint8_t* src = (uint8_t *)data;
 
     while (length > 0) {
-        completion_wait(&sink->free_write_completion, ZX_TIME_INFINITE);
+        sync_completion_wait(&sink->free_write_completion, ZX_TIME_INFINITE);
         if (sink->dead) {
             return ZX_ERR_IO_NOT_PRESENT;
         }
         mtx_lock(&sink->mutex);
         list_node_t* node = list_remove_head(&sink->free_write_reqs);
         if (list_is_empty(&sink->free_write_reqs)) {
-            completion_reset(&sink->free_write_completion);
+            sync_completion_reset(&sink->free_write_completion);
         }
         mtx_unlock(&sink->mutex);
         if (!node) {
@@ -225,7 +225,7 @@ zx_status_t usb_midi_sink_create(zx_device_t* device, usb_protocol_t* usb, int i
         req->cookie = sink;
         list_add_head(&sink->free_write_reqs, &req->node);
     }
-    completion_signal(&sink->free_write_completion);
+    sync_completion_signal(&sink->free_write_completion);
 
     char name[ZX_DEVICE_NAME_MAX];
     snprintf(name, sizeof(name), "usb-midi-sink-%d", index);

@@ -6,7 +6,7 @@
 #define LIB_MEMFS_INCLUDE_LIB_MEMFS_MEMFS_H_
 
 #include <lib/async/dispatcher.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -30,7 +30,7 @@ zx_status_t memfs_create_filesystem(async_dispatcher_t* dispatcher, memfs_filesy
 // |memfs_create_filesystem| still be running.
 //
 // Signals the optional argument |unmounted| when memfs has torn down.
-void memfs_free_filesystem(memfs_filesystem_t* fs, completion_t* unmounted);
+void memfs_free_filesystem(memfs_filesystem_t* fs, sync_completion_t* unmounted);
 
 // Creates an in-memory filesystem and installs it into the local namespace at
 // the given path.

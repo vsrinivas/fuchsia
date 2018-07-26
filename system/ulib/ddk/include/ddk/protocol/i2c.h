@@ -6,7 +6,7 @@
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 #include <string.h>
 
@@ -50,7 +50,7 @@ static inline zx_status_t i2c_get_max_transfer_size(i2c_protocol_t* i2c, uint32_
 
 // Helper for synchronous i2c transactions
 typedef struct {
-    completion_t completion;
+    sync_completion_t completion;
     void* read_buf;
     size_t read_length;
     zx_status_t result;
@@ -63,14 +63,14 @@ static inline void pdev_i2c_sync_cb(zx_status_t status, const uint8_t* data, voi
         memcpy(ctx->read_buf, data, ctx->read_length);
     }
 
-    completion_signal(&ctx->completion);
+    sync_completion_signal(&ctx->completion);
 }
 
 static inline zx_status_t i2c_transact_sync(i2c_protocol_t* i2c, uint32_t index,
                                             const void* write_buf, size_t write_length,
                                             void* read_buf, size_t read_length) {
     pdev_i2c_ctx_t ctx;
-    completion_reset(&ctx.completion);
+    sync_completion_reset(&ctx.completion);
     ctx.read_buf = read_buf;
     ctx.read_length = read_length;
 
@@ -79,7 +79,7 @@ static inline zx_status_t i2c_transact_sync(i2c_protocol_t* i2c, uint32_t index,
     if (status != ZX_OK) {
         return status;
     }
-    status = completion_wait(&ctx.completion, ZX_TIME_INFINITE);
+    status = sync_completion_wait(&ctx.completion, ZX_TIME_INFINITE);
     if (status == ZX_OK) {
         return ctx.result;
     } else {

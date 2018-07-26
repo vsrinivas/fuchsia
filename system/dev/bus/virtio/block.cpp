@@ -112,7 +112,7 @@ zx_status_t BlockDevice::virtio_block_ioctl(void* ctx, uint32_t op, const void* 
 
 BlockDevice::BlockDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
     : Device(bus_device, fbl::move(bti), fbl::move(backend)) {
-    completion_reset(&txn_signal_);
+    sync_completion_reset(&txn_signal_);
 
     memset(&blk_req_buf_, 0, sizeof(blk_req_buf_));
 }
@@ -262,7 +262,7 @@ void BlockDevice::IrqRingUpdate() {
         }
 
         if (need_signal) {
-            completion_signal(&txn_signal_);
+            sync_completion_signal(&txn_signal_);
         }
         if (need_complete) {
             txn_complete(txn, ZX_OK);
@@ -458,8 +458,8 @@ void BlockDevice::QueueReadWriteTxn(block_txn_t* txn, bool write) {
             }
         }
 
-        completion_wait(&txn_signal_, ZX_TIME_INFINITE);
-        completion_reset(&txn_signal_);
+        sync_completion_wait(&txn_signal_, ZX_TIME_INFINITE);
+        sync_completion_reset(&txn_signal_);
     }
 }
 

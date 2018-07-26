@@ -2,42 +2,45 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_SYNC_COMPLETION_H_
+#define LIB_SYNC_COMPLETION_H_
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS;
 
-typedef struct completion {
+typedef struct sync_completion {
     zx_futex_t futex;
 
 #ifdef __cplusplus
-    completion()
+    sync_completion()
         : futex(0) {}
 #endif
-} completion_t;
+} sync_completion_t;
 
 #if !defined(__cplusplus)
-#define COMPLETION_INIT ((completion_t){0})
+#define SYNC_COMPLETION_INIT ((sync_completion_t){0})
 #endif
 
 // Returns ZX_ERR_TIMED_OUT if timeout elapses, and ZX_OK if woken by
-// a call to completion_signal or if the completion has already been
+// a call to sync_completion_signal or if the completion has already been
 // signaled.
-zx_status_t completion_wait(completion_t* completion, zx_time_t timeout);
+zx_status_t sync_completion_wait(sync_completion_t* completion, zx_time_t timeout);
 
 // Returns ZX_ERR_TIMED_OUT if deadline elapses, and ZX_OK if woken by
-// a call to completion_signal or if the completion has already been
+// a call to sync_completion_signal or if the completion has already been
 // signaled.
-zx_status_t completion_wait_deadline(completion_t* completion, zx_time_t deadline);
+zx_status_t sync_completion_wait_deadline(sync_completion_t* completion, zx_time_t deadline);
 
 // Awakens all waiters on the completion, and marks the it as
 // signaled. Waits after this call but before a reset of the
 // completion will also see the signal and immediately return.
-void completion_signal(completion_t* completion);
+void sync_completion_signal(sync_completion_t* completion);
 
 // Resets the completion's signaled state to unsignaled.
-void completion_reset(completion_t* completion);
+void sync_completion_reset(sync_completion_t* completion);
 
 __END_CDECLS;
+
+#endif // LIB_SYNC_COMPLETION_H_

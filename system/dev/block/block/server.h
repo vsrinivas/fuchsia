@@ -24,7 +24,7 @@
 #include <fbl/unique_ptr.h>
 #include <lib/fzl/fifo.h>
 #include <lib/zx/vmo.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 // Tracing Includes
 #include <lib/async-loop/cpp/loop.h>

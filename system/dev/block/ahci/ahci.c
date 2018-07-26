@@ -16,7 +16,7 @@
 #include <zircon/types.h>
 #include <zircon/assert.h>
 #include <pretty/hexdump.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -83,10 +83,10 @@ struct ahci_device {
     zx_handle_t bti_handle;
 
     thrd_t worker_thread;
-    completion_t worker_completion;
+    sync_completion_t worker_completion;
 
     thrd_t watchdog_thread;
-    completion_t watchdog_completion;
+    sync_completion_t watchdog_completion;
 
     uint32_t cap;
 
@@ -228,7 +228,7 @@ static void ahci_port_complete_txn(ahci_device_t* dev, ahci_port_t* port, zx_sta
     port->completed |= done;
     mtx_unlock(&port->lock);
     // hit the worker thread to complete commands
-    completion_signal(&dev->worker_completion);
+    sync_completion_signal(&dev->worker_completion);
 }
 
 static zx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, sata_txn_t* txn) {
@@ -367,7 +367,7 @@ static zx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
     // set the watchdog
     // TODO: general timeout mechanism
     txn->timeout = zx_clock_get_monotonic() + ZX_SEC(1);
-    completion_signal(&dev->watchdog_completion);
+    sync_completion_signal(&dev->watchdog_completion);
     return ZX_OK;
 }
 
@@ -491,7 +491,7 @@ void ahci_queue(ahci_device_t* device, int portnr, sata_txn_t* txn) {
     list_add_tail(&port->txn_list, &txn->node);
 
     // hit the worker thread
-    completion_signal(&device->worker_completion);
+    sync_completion_signal(&device->worker_completion);
     mtx_unlock(&port->lock);
 }
 
@@ -601,8 +601,8 @@ next:
             mtx_unlock(&port->lock);
         }
         // wait here until more commands are queued, or a port becomes idle
-        completion_wait(&dev->worker_completion, ZX_TIME_INFINITE);
-        completion_reset(&dev->worker_completion);
+        sync_completion_wait(&dev->worker_completion, ZX_TIME_INFINITE);
+        sync_completion_reset(&dev->worker_completion);
     }
     return 0;
 }
@@ -643,8 +643,8 @@ static int ahci_watchdog_thread(void* arg) {
         }
 
         // no need to run the watchdog if there are no active xfers
-        completion_wait(&dev->watchdog_completion, idle ? ZX_TIME_INFINITE : 5ULL * 1000 * 1000 * 1000);
-        completion_reset(&dev->watchdog_completion);
+        sync_completion_wait(&dev->watchdog_completion, idle ? ZX_TIME_INFINITE : 5ULL * 1000 * 1000 * 1000);
+        sync_completion_reset(&dev->watchdog_completion);
     }
     return 0;
 }
@@ -874,11 +874,11 @@ static zx_status_t ahci_bind(void* ctx, zx_device_t* dev) {
     }
 
     // start watchdog thread
-    device->watchdog_completion = COMPLETION_INIT;
+    device->watchdog_completion = SYNC_COMPLETION_INIT;
     thrd_create_with_name(&device->watchdog_thread, ahci_watchdog_thread, device, "ahci-watchdog");
 
     // start worker thread (for iotxn queue)
-    device->worker_completion = COMPLETION_INIT;
+    device->worker_completion = SYNC_COMPLETION_INIT;
     ret = thrd_create_with_name(&device->worker_thread, ahci_worker_thread, device, "ahci-worker");
     if (ret != thrd_success) {
         zxlogf(ERROR, "ahci: error %d in worker thread create\n", ret);

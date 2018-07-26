@@ -19,7 +19,7 @@
 #include <ddk/protocol/block.h>
 
 #include <gpt/gpt.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/device/block.h>
 #include <zircon/threads.h>
 
@@ -190,7 +190,7 @@ static block_protocol_ops_t block_ops = {
 
 static void mbr_read_sync_complete(block_op_t* bop, zx_status_t status) {
     bop->command = status;
-    completion_signal((completion_t*)bop->cookie);
+    sync_completion_signal((sync_completion_t*)bop->cookie);
 }
 
 static zx_status_t vmo_read(zx_handle_t vmo, void* data, uint64_t off, size_t len) {
@@ -233,7 +233,7 @@ static int mbr_bind_thread(void* arg) {
     }
 
 
-    completion_t cplt = COMPLETION_INIT;
+    sync_completion_t cplt = SYNC_COMPLETION_INIT;
 
     bop->command = BLOCK_OP_READ;
     bop->rw.vmo = vmo;
@@ -245,7 +245,7 @@ static int mbr_bind_thread(void* arg) {
     bop->cookie = &cplt;
 
     bp.ops->queue(bp.ctx, bop);
-    completion_wait(&cplt, ZX_TIME_INFINITE);
+    sync_completion_wait(&cplt, ZX_TIME_INFINITE);
 
     if (bop->command != ZX_OK) {
         zxlogf(ERROR, "mbr: could not read mbr from device, retcode = %d\n", bop->command);

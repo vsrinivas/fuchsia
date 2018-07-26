@@ -12,7 +12,7 @@
 #include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <zircon/hw/usb-hub.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,7 +41,7 @@ typedef struct usb_hub {
     zx_time_t power_on_delay;
 
     usb_request_t* status_request;
-    completion_t completion;
+    sync_completion_t completion;
 
     thrd_t thread;
     atomic_bool thread_done;
@@ -162,7 +162,7 @@ static zx_status_t usb_hub_wait_for_port(usb_hub_t* hub, int port, port_status_t
 static void usb_hub_interrupt_complete(usb_request_t* req, void* cookie) {
     zxlogf(TRACE, "usb_hub_interrupt_complete got %d %" PRIu64 "\n", req->response.status, req->response.actual);
     usb_hub_t* hub = (usb_hub_t*)cookie;
-    completion_signal(&hub->completion);
+    sync_completion_signal(&hub->completion);
 }
 
 static void usb_hub_power_on_port(usb_hub_t* hub, int port) {
@@ -272,7 +272,7 @@ static void usb_hub_unbind(void* ctx) {
     }
 
     atomic_store(&hub->thread_done, true);
-    completion_signal(&hub->completion);
+    sync_completion_signal(&hub->completion);
     thrd_join(hub->thread, NULL);
 
     device_remove(hub->zxdev);
@@ -354,9 +354,9 @@ static int usb_hub_thread(void* arg) {
 
     // This loop handles events from our interrupt endpoint
     while (1) {
-        completion_reset(&hub->completion);
+        sync_completion_reset(&hub->completion);
         usb_request_queue(&hub->usb, req);
-        completion_wait(&hub->completion, ZX_TIME_INFINITE);
+        sync_completion_wait(&hub->completion, ZX_TIME_INFINITE);
         if (req->response.status != ZX_OK || atomic_load(&hub->thread_done)) {
             break;
         }

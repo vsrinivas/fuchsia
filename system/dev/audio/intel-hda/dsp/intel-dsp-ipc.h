@@ -5,7 +5,7 @@
 #pragma once
 
 #include <fbl/intrusive_double_list.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/thread_annotations.h>
 
 #include <intel-hda/utils/intel-audio-dsp-ipc.h>
@@ -47,13 +47,13 @@ public:
         size_t      rx_size = 0;
         size_t      rx_actual = 0;
 
-        completion_t completion;
+        sync_completion_t completion;
     };
 
     void SetLogPrefix(const char* new_prefix);
 
     zx_status_t WaitForFirmwareReady(zx_time_t timeout) {
-        return completion_wait(&fw_ready_completion_, timeout);
+        return sync_completion_wait(&fw_ready_completion_, timeout);
     }
     void Shutdown();
 
@@ -98,7 +98,7 @@ private:
     IntelAudioDsp& dsp_;
 
     // Used to wait for firmware ready
-    completion_t fw_ready_completion_;
+    sync_completion_t fw_ready_completion_;
 };
 
 }  // namespace intel_hda

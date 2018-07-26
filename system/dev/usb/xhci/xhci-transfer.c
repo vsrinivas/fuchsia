@@ -511,7 +511,7 @@ zx_status_t xhci_cancel_transfers(xhci_t* xhci, uint32_t slot_id, uint32_t ep_in
 }
 
 static void xhci_control_complete(usb_request_t* req, void* cookie) {
-    completion_signal((completion_t*)cookie);
+    sync_completion_signal((sync_completion_t*)cookie);
 }
 
 int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, uint8_t request,
@@ -542,21 +542,21 @@ int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, u
         usb_request_copyto(req, data, length, 0);
     }
 
-    completion_t completion = COMPLETION_INIT;
+    sync_completion_t completion = SYNC_COMPLETION_INIT;
 
     req->header.length = length;
     req->complete_cb = xhci_control_complete;
     req->cookie = &completion;
     xhci_request_queue(xhci, req);
-    zx_status_t status = completion_wait(&completion, ZX_SEC(1));
+    zx_status_t status = sync_completion_wait(&completion, ZX_SEC(1));
     if (status == ZX_OK) {
         status = req->response.status;
     } else if (status == ZX_ERR_TIMED_OUT) {
         zxlogf(ERROR, "xhci_control_request ZX_ERR_TIMED_OUT\n");
-        completion_reset(&completion);
+        sync_completion_reset(&completion);
         status = xhci_cancel_transfers(xhci, slot_id, 0);
         if (status == ZX_OK) {
-            completion_wait(&completion, ZX_TIME_INFINITE);
+            sync_completion_wait(&completion, ZX_TIME_INFINITE);
             status = ZX_ERR_TIMED_OUT;
         }
     }

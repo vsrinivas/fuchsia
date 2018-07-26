@@ -136,7 +136,7 @@ static zx_status_t xhci_get_protocol(void* ctx, uint32_t proto_id, void* protoco
 static void xhci_release(void* ctx) {
     dwc3_t* dwc = ctx;
     // signal that XHCI driver has shut down
-    completion_signal(&dwc->xhci_done);
+    sync_completion_signal(&dwc->xhci_done);
 }
 
 static zx_protocol_device_t xhci_dev_proto = {
@@ -351,10 +351,10 @@ static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
         dwc3_stop(dwc);
     } else if (dwc->usb_mode == USB_MODE_HOST) {
         if (dwc->xhci_dev) {
-            completion_reset(&dwc->xhci_done);
+            sync_completion_reset(&dwc->xhci_done);
             device_remove(dwc->xhci_dev);
             // Wait for XHCI to shut down before switching to device mode
-            completion_wait(&dwc->xhci_done, ZX_TIME_INFINITE);
+            sync_completion_wait(&dwc->xhci_done, ZX_TIME_INFINITE);
             dwc->xhci_dev = NULL;
         }
     }

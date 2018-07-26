@@ -573,7 +573,7 @@ static zx_status_t xdc_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
     *dev_out = inst->zxdev;
 
     atomic_fetch_add(&xdc->num_instances, 1);
-    completion_signal(&xdc->has_instance_completion);
+    sync_completion_signal(&xdc->has_instance_completion);
     return ZX_OK;
 
 }
@@ -583,7 +583,7 @@ static void xdc_shutdown(xdc_t* xdc) {
 
     atomic_store(&xdc->suspended, true);
     // The poll thread will be waiting on this completion if no instances are open.
-    completion_signal(&xdc->has_instance_completion);
+    sync_completion_signal(&xdc->has_instance_completion);
 
     int res;
     thrd_join(xdc->start_thread, &res);
@@ -1111,9 +1111,9 @@ zx_status_t xdc_poll(xdc_t* xdc) {
     for (;;) {
         zxlogf(TRACE, "xdc_poll: waiting for a new instance\n");
         // Wait for at least one active instance before polling.
-        completion_wait(&xdc->has_instance_completion, ZX_TIME_INFINITE);
+        sync_completion_wait(&xdc->has_instance_completion, ZX_TIME_INFINITE);
         zxlogf(TRACE, "xdc_poll: instance completion signaled, about to enter poll loop\n");
-        completion_reset(&xdc->has_instance_completion);
+        sync_completion_reset(&xdc->has_instance_completion);
 
         for (;;) {
             if (atomic_load(&xdc->suspended)) {
@@ -1186,7 +1186,7 @@ static zx_status_t xdc_init_internal(xdc_t* xdc) {
 
     list_initialize(&xdc->host_streams);
 
-    completion_reset(&xdc->has_instance_completion);
+    sync_completion_reset(&xdc->has_instance_completion);
     atomic_init(&xdc->num_instances, 0);
 
     usb_request_pool_init(&xdc->free_write_reqs);

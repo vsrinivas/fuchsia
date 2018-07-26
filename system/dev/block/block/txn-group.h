@@ -22,7 +22,7 @@
 #include <fbl/unique_ptr.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 // Should a reponse be sent when we hit ctr?
 constexpr uint32_t kTxnFlagRespond = 0x00000001;

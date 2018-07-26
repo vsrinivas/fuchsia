@@ -28,7 +28,7 @@
 #include <fs-management/ramdisk.h>
 #include <lib/fdio/debug.h>
 #include <lib/zx/vmo.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/errors.h>
@@ -80,7 +80,7 @@ void SyncComplete(block_op_t* block, zx_status_t status) {
     // Use the 32bit command field to shuttle the response back to the callsite that's waiting on
     // the completion
     block->command = status;
-    completion_signal(static_cast<completion_t*>(block->cookie));
+    sync_completion_signal(static_cast<sync_completion_t*>(block->cookie));
 }
 
 // Performs synchronous I/O
@@ -115,8 +115,8 @@ zx_status_t SyncIO(zx_device_t* dev, uint32_t cmd, void* buf, size_t off, size_t
     char raw[op_size];
     block_op_t* block = reinterpret_cast<block_op_t*>(raw);
 
-    completion_t completion;
-    completion_reset(&completion);
+    sync_completion_t completion;
+    sync_completion_reset(&completion);
 
     block->command = cmd;
     block->rw.vmo = vmo.get();
@@ -133,7 +133,7 @@ zx_status_t SyncIO(zx_device_t* dev, uint32_t cmd, void* buf, size_t off, size_t
     }
 
     proto.ops->queue(proto.ctx, block);
-    completion_wait(&completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
     rc = block->command;
     if (rc != ZX_OK) {

@@ -14,7 +14,7 @@
 #include <fs/managed-vfs.h>
 #include <fs/remote.h>
 #include <fs/watcher.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 #endif
 

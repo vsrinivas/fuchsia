@@ -17,7 +17,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 namespace nand {
 
@@ -26,7 +26,7 @@ namespace {
 constexpr uint32_t kBadBlockTableMagic = 0x7462626E; // "nbbt"
 
 struct BlockOperationContext {
-    completion_t* completion_event;
+    sync_completion_t* completion_event;
     zx_status_t status;
 };
 
@@ -35,7 +35,7 @@ void CompletionCallback(nand_op_t* op, zx_status_t status) {
 
     zxlogf(TRACE, "Completion status: %d\n", status);
     ctx->status = status;
-    completion_signal(ctx->completion_event);
+    sync_completion_signal(ctx->completion_event);
     return;
 }
 
@@ -101,7 +101,7 @@ zx_status_t AmlBadBlock::Create(Config config, fbl::RefPtr<BadBlock>* out) {
 }
 
 zx_status_t AmlBadBlock::EraseBlock(uint32_t block) {
-    completion_t completion;
+    sync_completion_t completion;
     BlockOperationContext op_ctx = {.completion_event = &completion,
                                     .status = ZX_ERR_INTERNAL};
     auto* nand_op = reinterpret_cast<nand_op_t*>(nand_op_.get());
@@ -113,7 +113,7 @@ zx_status_t AmlBadBlock::EraseBlock(uint32_t block) {
     nand_.Queue(nand_op);
 
     // Wait on completion.
-    completion_wait(&completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
     return op_ctx.status;
 }
 
@@ -162,7 +162,7 @@ zx_status_t AmlBadBlock::GetNewBlock() {
 }
 
 zx_status_t AmlBadBlock::WritePages(uint32_t nand_page, uint32_t num_pages) {
-    completion_t completion;
+    sync_completion_t completion;
     BlockOperationContext op_ctx = {.completion_event = &completion,
                                     .status = ZX_ERR_INTERNAL};
 
@@ -179,7 +179,7 @@ zx_status_t AmlBadBlock::WritePages(uint32_t nand_page, uint32_t num_pages) {
     nand_.Queue(nand_op);
 
     // Wait on completion.
-    completion_wait(&completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
     return op_ctx.status;
 }
 
@@ -227,7 +227,7 @@ zx_status_t AmlBadBlock::WriteBadBlockTable(bool use_new_block) {
 }
 
 zx_status_t AmlBadBlock::ReadPages(uint32_t nand_page, uint32_t num_pages) {
-    completion_t completion;
+    sync_completion_t completion;
     BlockOperationContext op_ctx = {.completion_event = &completion,
                                     .status = ZX_ERR_INTERNAL};
     auto* nand_op = reinterpret_cast<nand_op_t*>(nand_op_.get());
@@ -243,7 +243,7 @@ zx_status_t AmlBadBlock::ReadPages(uint32_t nand_page, uint32_t num_pages) {
     nand_.Queue(nand_op);
 
     // Wait on completion.
-    completion_wait(&completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
     return op_ctx.status;
 }
 

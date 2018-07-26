@@ -14,7 +14,7 @@
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <lib/zx/vmo.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/listnode.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
@@ -95,7 +95,7 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice> {
 
     bool thread_created_ = false;
 
-    completion_t wake_signal_;
+    sync_completion_t wake_signal_;
     thrd_t worker_;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(NandDevice);

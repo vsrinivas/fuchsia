@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <sys/param.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
@@ -42,7 +42,7 @@ typedef struct sata_device {
 static void sata_device_identify_complete(block_op_t* op, zx_status_t status) {
     sata_txn_t* txn = containerof(op, sata_txn_t, bop);
     txn->status = status;
-    completion_signal((completion_t*)op->cookie);
+    sync_completion_signal((sync_completion_t*)op->cookie);
 }
 
 #define QEMU_MODEL_ID    "EQUMH RADDSI K" // "QEMU HARDDISK"
@@ -69,7 +69,7 @@ static zx_status_t sata_device_identify(sata_device_t* dev, ahci_device_t* contr
         return status;
     }
 
-    completion_t completion = COMPLETION_INIT;
+    sync_completion_t completion = SYNC_COMPLETION_INIT;
     sata_txn_t txn = {
         .bop = {
             .rw.vmo = vmo,
@@ -85,7 +85,7 @@ static zx_status_t sata_device_identify(sata_device_t* dev, ahci_device_t* contr
     };
 
     ahci_queue(controller, dev->port, &txn);
-    completion_wait(&completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
     if (txn.status != ZX_OK) {
         zxlogf(ERROR, "%s: error %d in device identify\n", name, txn.status);

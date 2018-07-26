@@ -13,7 +13,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/device/block.h>
 #include <zircon/misc/xorshiftrand.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 static uint64_t number(const char* str) {
     char* end;
@@ -123,7 +123,7 @@ typedef struct {
     bool linear;
 
     atomic_int pending;
-    completion_t signal;
+    sync_completion_t signal;
 } bio_random_args_t;
 
 static atomic_int_fast32_t next_reqid = 0;
@@ -145,8 +145,8 @@ static int bio_random_thread(void* arg) {
 
     while (count > 0) {
         while (atomic_load(&a->pending) == a->max_pending) {
-            completion_wait(&a->signal, ZX_TIME_INFINITE);
-            completion_reset(&a->signal);
+            sync_completion_wait(&a->signal, ZX_TIME_INFINITE);
+            sync_completion_reset(&a->signal);
         }
 
         block_fifo_request_t req = {
@@ -232,7 +232,7 @@ static zx_status_t bio_random(bio_random_args_t* a, uint64_t* _total, zx_time_t*
         }
         count--;
         if (atomic_fetch_sub(&a->pending, 1) == a->max_pending) {
-            completion_signal(&a->signal);
+            sync_completion_signal(&a->signal);
         }
     }
 
@@ -283,7 +283,7 @@ int main(int argc, char** argv) {
         .linear = true,
     };
 
-    a.signal = COMPLETION_INIT;
+    a.signal = SYNC_COMPLETION_INIT;
 
     size_t total = 0;
 

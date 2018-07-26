@@ -9,7 +9,7 @@
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/usb-dci.h>
 #include <ddk/protocol/usb-mode-switch.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/device/usb-device.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
@@ -86,7 +86,7 @@ typedef struct {
     zx_handle_t bti_handle;
 
     // used to wait for XHCI driver to shut down
-    completion_t xhci_done;
+    sync_completion_t xhci_done;
 
     usb_mode_t usb_mode;
 

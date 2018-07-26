@@ -10,7 +10,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/channel.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/assert.h>
 
 #include <unittest/unittest.h>
@@ -49,13 +49,13 @@ private:
 
 class AsyncTearDownVnode : public FdCountVnode {
 public:
-    AsyncTearDownVnode(completion_t* completions) :
+    AsyncTearDownVnode(sync_completion_t* completions) :
         callback_(nullptr), completions_(completions) {}
 
     ~AsyncTearDownVnode() {
         // C) Tear down the Vnode.
         ZX_ASSERT(fds() == 0);
-        completion_signal(&completions_[2]);
+        sync_completion_signal(&completions_[2]);
     }
 
 private:
@@ -72,9 +72,9 @@ private:
             fbl::RefPtr<AsyncTearDownVnode> vn =
                     fbl::WrapRefPtr(reinterpret_cast<AsyncTearDownVnode*>(arg));
             // A) Identify when the sync has started being processed.
-            completion_signal(&vn->completions_[0]);
+            sync_completion_signal(&vn->completions_[0]);
             // B) Wait until the connection has been closed.
-            completion_wait(&vn->completions_[1], ZX_TIME_INFINITE);
+            sync_completion_wait(&vn->completions_[1], ZX_TIME_INFINITE);
             callback = fbl::move(vn->callback_);
         }
         callback(ZX_OK);
@@ -82,7 +82,7 @@ private:
     }
 
     fs::Vnode::SyncCallback callback_;
-    completion_t* completions_;
+    sync_completion_t* completions_;
 };
 
 bool send_sync(const zx::channel& client) {
@@ -99,7 +99,7 @@ bool send_sync(const zx::channel& client) {
 // in the middle of the async callback.
 //
 // This helps tests get ready to try handling a tricky teardown.
-bool sync_start(completion_t* completions, async::Loop* loop,
+bool sync_start(sync_completion_t* completions, async::Loop* loop,
                 fbl::unique_ptr<fs::ManagedVfs>* vfs) {
     BEGIN_HELPER;
     *vfs = fbl::make_unique<fs::ManagedVfs>(loop->dispatcher());
@@ -116,7 +116,7 @@ bool sync_start(completion_t* completions, async::Loop* loop,
     ASSERT_TRUE(send_sync(client));
 
     // A) Wait for sync to begin.
-    completion_wait(&completions[0], ZX_TIME_INFINITE);
+    sync_completion_wait(&completions[0], ZX_TIME_INFINITE);
 
     client.reset();
     END_HELPER;
@@ -127,24 +127,24 @@ bool test_unposted_teardown() {
     BEGIN_TEST;
 
      async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-    completion_t completions[3];
+    sync_completion_t completions[3];
     fbl::unique_ptr<fs::ManagedVfs> vfs;
 
     ASSERT_TRUE(sync_start(completions, &loop, &vfs));
 
     // B) Let sync complete.
-    completion_signal(&completions[1]);
+    sync_completion_signal(&completions[1]);
 
-    completion_t* vnode_destroyed = &completions[2];
-    completion_t shutdown_done;
+    sync_completion_t* vnode_destroyed = &completions[2];
+    sync_completion_t shutdown_done;
     vfs->Shutdown([&vnode_destroyed, &shutdown_done](zx_status_t status) {
         ZX_ASSERT(status == ZX_OK);
         // C) Issue an explicit shutdown, check that the Vnode has
         // already torn down.
-        ZX_ASSERT(completion_wait(vnode_destroyed, ZX_SEC(0)) == ZX_OK);
-        completion_signal(&shutdown_done);
+        ZX_ASSERT(sync_completion_wait(vnode_destroyed, ZX_SEC(0)) == ZX_OK);
+        sync_completion_signal(&shutdown_done);
     });
-    ASSERT_EQ(completion_wait(&shutdown_done, ZX_SEC(3)), ZX_OK);
+    ASSERT_EQ(sync_completion_wait(&shutdown_done, ZX_SEC(3)), ZX_OK);
     vfs = nullptr;
 
     END_TEST;
@@ -156,26 +156,26 @@ bool test_posted_teardown() {
     BEGIN_TEST;
 
      async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-    completion_t completions[3];
+    sync_completion_t completions[3];
     fbl::unique_ptr<fs::ManagedVfs> vfs;
 
     ASSERT_TRUE(sync_start(completions, &loop, &vfs));
 
     // B) Let sync complete.
-    completion_signal(&completions[1]);
+    sync_completion_signal(&completions[1]);
 
-    completion_t* vnode_destroyed = &completions[2];
-    completion_t shutdown_done;
+    sync_completion_t* vnode_destroyed = &completions[2];
+    sync_completion_t shutdown_done;
     ASSERT_EQ(async::PostTask(loop.dispatcher(), [&]() {
         vfs->Shutdown([&vnode_destroyed, &shutdown_done](zx_status_t status) {
             ZX_ASSERT(status == ZX_OK);
             // C) Issue an explicit shutdown, check that the Vnode has
             // already torn down.
-            ZX_ASSERT(completion_wait(vnode_destroyed, ZX_SEC(0)) == ZX_OK);
-            completion_signal(&shutdown_done);
+            ZX_ASSERT(sync_completion_wait(vnode_destroyed, ZX_SEC(0)) == ZX_OK);
+            sync_completion_signal(&shutdown_done);
         });
     }), ZX_OK);
-    ASSERT_EQ(completion_wait(&shutdown_done, ZX_SEC(3)), ZX_OK);
+    ASSERT_EQ(sync_completion_wait(&shutdown_done, ZX_SEC(3)), ZX_OK);
     vfs = nullptr;
 
     END_TEST;
@@ -186,26 +186,26 @@ bool test_teardown_delete_this() {
     BEGIN_TEST;
 
      async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-    completion_t completions[3];
+    sync_completion_t completions[3];
     fbl::unique_ptr<fs::ManagedVfs> vfs;
 
     ASSERT_TRUE(sync_start(completions, &loop, &vfs));
 
     // B) Let sync complete.
-    completion_signal(&completions[1]);
+    sync_completion_signal(&completions[1]);
 
-    completion_t* vnode_destroyed = &completions[2];
-    completion_t shutdown_done;
+    sync_completion_t* vnode_destroyed = &completions[2];
+    sync_completion_t shutdown_done;
     fs::ManagedVfs* raw_vfs = vfs.release();
     raw_vfs->Shutdown([&raw_vfs, &vnode_destroyed, &shutdown_done](zx_status_t status) {
         ZX_ASSERT(status == ZX_OK);
         // C) Issue an explicit shutdown, check that the Vnode has
         // already torn down.
-        ZX_ASSERT(completion_wait(vnode_destroyed, ZX_SEC(0)) == ZX_OK);
+        ZX_ASSERT(sync_completion_wait(vnode_destroyed, ZX_SEC(0)) == ZX_OK);
         delete raw_vfs;
-        completion_signal(&shutdown_done);
+        sync_completion_signal(&shutdown_done);
     });
-    ASSERT_EQ(completion_wait(&shutdown_done, ZX_SEC(3)), ZX_OK);
+    ASSERT_EQ(sync_completion_wait(&shutdown_done, ZX_SEC(3)), ZX_OK);
 
     END_TEST;
 }
@@ -216,29 +216,29 @@ bool test_teardown_slow_async_callback() {
     BEGIN_TEST;
 
      async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-    completion_t completions[3];
+    sync_completion_t completions[3];
     fbl::unique_ptr<fs::ManagedVfs> vfs;
 
     ASSERT_TRUE(sync_start(completions, &loop, &vfs));
 
-    completion_t* vnode_destroyed = &completions[2];
-    completion_t shutdown_done;
+    sync_completion_t* vnode_destroyed = &completions[2];
+    sync_completion_t shutdown_done;
     vfs->Shutdown([&vnode_destroyed, &shutdown_done](zx_status_t status) {
         ZX_ASSERT(status == ZX_OK);
         // C) Issue an explicit shutdown, check that the Vnode has
         // already torn down.
         //
         // Note: Will not be invoked until (B) completes.
-        ZX_ASSERT(completion_wait(vnode_destroyed, ZX_SEC(0)) == ZX_OK);
-        completion_signal(&shutdown_done);
+        ZX_ASSERT(sync_completion_wait(vnode_destroyed, ZX_SEC(0)) == ZX_OK);
+        sync_completion_signal(&shutdown_done);
     });
 
     // Shutdown should be waiting for our sync to finish.
-    ASSERT_EQ(completion_wait(&shutdown_done, ZX_MSEC(10)), ZX_ERR_TIMED_OUT);
+    ASSERT_EQ(sync_completion_wait(&shutdown_done, ZX_MSEC(10)), ZX_ERR_TIMED_OUT);
 
     // B) Let sync complete.
-    completion_signal(&completions[1]);
-    ASSERT_EQ(completion_wait(&shutdown_done, ZX_SEC(3)), ZX_OK);
+    sync_completion_signal(&completions[1]);
+    ASSERT_EQ(sync_completion_wait(&shutdown_done, ZX_SEC(3)), ZX_OK);
     vfs = nullptr;
 
     END_TEST;
@@ -250,7 +250,7 @@ bool test_teardown_slow_clone() {
     BEGIN_TEST;
 
      async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-    completion_t completions[3];
+    sync_completion_t completions[3];
     auto vfs = fbl::make_unique<fs::ManagedVfs>(loop.dispatcher());
     ASSERT_EQ(loop.StartThread(), ZX_OK);
 
@@ -265,7 +265,7 @@ bool test_teardown_slow_clone() {
     // Block the connection to the server in a sync, while simultanously
     // sending a request to open a new connection.
     send_sync(client);
-    completion_wait(&completions[0], ZX_TIME_INFINITE);
+    sync_completion_wait(&completions[0], ZX_TIME_INFINITE);
 
     zx::channel client2, server2;
     ASSERT_EQ(zx::channel::create(0, &client2, &server2), ZX_OK);
@@ -277,25 +277,25 @@ bool test_teardown_slow_clone() {
     // - Closed.
     client.reset();
 
-    completion_t* vnode_destroyed = &completions[2];
-    completion_t shutdown_done;
+    sync_completion_t* vnode_destroyed = &completions[2];
+    sync_completion_t shutdown_done;
     vfs->Shutdown([&vnode_destroyed, &shutdown_done](zx_status_t status) {
         ZX_ASSERT(status == ZX_OK);
         // C) Issue an explicit shutdown, check that the Vnode has
         // already torn down.
         //
         // Note: Will not be invoked until (B) completes.
-        ZX_ASSERT(completion_wait(vnode_destroyed, ZX_SEC(0)) == ZX_OK);
-        completion_signal(&shutdown_done);
+        ZX_ASSERT(sync_completion_wait(vnode_destroyed, ZX_SEC(0)) == ZX_OK);
+        sync_completion_signal(&shutdown_done);
     });
 
     // Shutdown should be waiting for our sync to finish.
-    ASSERT_EQ(completion_wait(&shutdown_done, ZX_MSEC(10)), ZX_ERR_TIMED_OUT);
+    ASSERT_EQ(sync_completion_wait(&shutdown_done, ZX_MSEC(10)), ZX_ERR_TIMED_OUT);
 
     // B) Let sync complete. This should result in a successful termination
     // of the filesystem, even with the pending clone request.
-    completion_signal(&completions[1]);
-    ASSERT_EQ(completion_wait(&shutdown_done, ZX_SEC(3)), ZX_OK);
+    sync_completion_signal(&completions[1]);
+    ASSERT_EQ(sync_completion_wait(&shutdown_done, ZX_SEC(3)), ZX_OK);
     vfs = nullptr;
 
     END_TEST;

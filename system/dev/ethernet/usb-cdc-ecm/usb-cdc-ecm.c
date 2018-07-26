@@ -10,7 +10,7 @@
 #include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <zircon/hw/usb-cdc.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -59,7 +59,7 @@ typedef struct {
     // Interrupt handling
     ecm_endpoint_t int_endpoint;
     usb_request_t* int_txn_buf;
-    completion_t completion;
+    sync_completion_t completion;
     thrd_t int_thread;
 
     // Send context
@@ -364,7 +364,7 @@ static ethmac_protocol_ops_t ethmac_ops = {
 
 static void ecm_interrupt_complete(usb_request_t* request, void* cookie) {
     ecm_ctx_t* ctx = cookie;
-    completion_signal(&ctx->completion);
+    sync_completion_signal(&ctx->completion);
 }
 
 static void ecm_handle_interrupt(ecm_ctx_t* ctx, usb_request_t* request) {
@@ -413,9 +413,9 @@ static int ecm_int_handler_thread(void* cookie) {
     usb_request_t* txn = ctx->int_txn_buf;
 
     while (true) {
-        completion_reset(&ctx->completion);
+        sync_completion_reset(&ctx->completion);
         usb_request_queue(&ctx->usb, txn);
-        completion_wait(&ctx->completion, ZX_TIME_INFINITE);
+        sync_completion_wait(&ctx->completion, ZX_TIME_INFINITE);
         if (txn->response.status == ZX_OK) {
             ecm_handle_interrupt(ctx, txn);
         } else if (txn->response.status == ZX_ERR_PEER_CLOSED ||

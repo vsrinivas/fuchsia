@@ -73,7 +73,7 @@ static zx_status_t platform_bus_set_protocol(void* ctx, uint32_t proto_id, void*
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    completion_signal(&bus->proto_completion);
+    sync_completion_signal(&bus->proto_completion);
     return ZX_OK;
 }
 
@@ -82,8 +82,8 @@ static zx_status_t platform_bus_wait_protocol(void* ctx, uint32_t proto_id) {
 
     platform_bus_protocol_t dummy;
     while (platform_bus_get_protocol(bus, proto_id, &dummy) == ZX_ERR_NOT_SUPPORTED) {
-        completion_reset(&bus->proto_completion);
-        zx_status_t status = completion_wait(&bus->proto_completion, ZX_TIME_INFINITE);
+        sync_completion_reset(&bus->proto_completion);
+        zx_status_t status = sync_completion_wait(&bus->proto_completion, ZX_TIME_INFINITE);
         if (status != ZX_OK) {
             return status;
         }
@@ -317,7 +317,7 @@ static zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const cha
     if (!bus) {
         return  ZX_ERR_NO_MEMORY;
     }
-    completion_reset(&bus->proto_completion);
+    sync_completion_reset(&bus->proto_completion);
     bus->resource = get_root_resource();
 
     zx_status_t status = platform_bus_read_zbi(bus, zbi_vmo);

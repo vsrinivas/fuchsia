@@ -16,7 +16,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/memfs/cpp/vnode.h>
 #include <lib/memfs/memfs.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/device/vfs.h>
 
 #include "dnode.h"
@@ -77,12 +77,12 @@ zx_status_t memfs_install_at(async_dispatcher_t* dispatcher, const char* path) {
     return ZX_OK;
 }
 
-void memfs_free_filesystem(memfs_filesystem_t* fs, completion_t* unmounted) {
+void memfs_free_filesystem(memfs_filesystem_t* fs, sync_completion_t* unmounted) {
     ZX_DEBUG_ASSERT(fs != nullptr);
     fs->vfs.Shutdown([fs, unmounted](zx_status_t status) {
         delete fs;
         if (unmounted) {
-            completion_signal(unmounted);
+            sync_completion_signal(unmounted);
         }
     });
 }

@@ -6,7 +6,7 @@
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 #include <string.h>
 

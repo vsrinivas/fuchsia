@@ -13,7 +13,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 #include <lib/zx/vmo.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/boot/image.h>
 
 namespace nand {
@@ -27,7 +27,7 @@ struct BlockOperationContext {
     ddk::NandProtocolProxy* nand;
     uint32_t current_block;
     uint32_t physical_block;
-    completion_t* completion_event;
+    sync_completion_t* completion_event;
     zx_status_t status;
     bool mark_bad;
 };
@@ -39,7 +39,7 @@ void ReadCompletionCallback(nand_op_t* op, zx_status_t status) {
     if (status != ZX_OK || ctx->current_block + 1 == ctx->op.block + ctx->op.block_count) {
         ctx->status = status;
         ctx->mark_bad = false;
-        completion_signal(ctx->completion_event);
+        sync_completion_signal(ctx->completion_event);
         return;
     }
     ctx->current_block += 1;
@@ -48,7 +48,7 @@ void ReadCompletionCallback(nand_op_t* op, zx_status_t status) {
     if (status != ZX_OK) {
         ctx->status = status;
         ctx->mark_bad = false;
-        completion_signal(ctx->completion_event);
+        sync_completion_signal(ctx->completion_event);
         return;
     }
 
@@ -68,7 +68,7 @@ void WriteCompletionCallback(nand_op_t* op, zx_status_t status) {
     if (status != ZX_OK || ctx->current_block + 1 == ctx->op.block + ctx->op.block_count) {
         ctx->status = status;
         ctx->mark_bad = status != ZX_OK;
-        completion_signal(ctx->completion_event);
+        sync_completion_signal(ctx->completion_event);
         return;
     }
     ctx->current_block += 1;
@@ -78,7 +78,7 @@ void WriteCompletionCallback(nand_op_t* op, zx_status_t status) {
     if (status != ZX_OK) {
         ctx->status = status;
         ctx->mark_bad = false;
-        completion_signal(ctx->completion_event);
+        sync_completion_signal(ctx->completion_event);
         return;
     }
     op->erase.command = NAND_OP_ERASE;
@@ -97,7 +97,7 @@ void EraseCompletionCallback(nand_op_t* op, zx_status_t status) {
     if (status != ZX_OK) {
         ctx->status = status;
         ctx->mark_bad = true;
-        completion_signal(ctx->completion_event);
+        sync_completion_signal(ctx->completion_event);
         return;
     }
     op->rw.command = NAND_OP_WRITE;
@@ -234,7 +234,7 @@ zx_status_t SkipBlockDevice::Read(const skip_block_rw_operation_t& op) {
     if (status != ZX_OK) {
         return status;
     }
-    completion_t completion;
+    sync_completion_t completion;
     BlockOperationContext op_context = {
         .op = op,
         .nand_info = &nand_info_,
@@ -260,7 +260,7 @@ zx_status_t SkipBlockDevice::Read(const skip_block_rw_operation_t& op) {
     nand_.Queue(nand_op);
 
     // Wait on completion.
-    completion_wait(&completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
     return op_context.status;
 }
 
@@ -279,7 +279,7 @@ zx_status_t SkipBlockDevice::Write(const skip_block_rw_operation_t& op, bool* ba
             return status;
         }
 
-        completion_t completion;
+        sync_completion_t completion;
         BlockOperationContext op_context = {
             .op = op,
             .nand_info = &nand_info_,
@@ -302,7 +302,7 @@ zx_status_t SkipBlockDevice::Write(const skip_block_rw_operation_t& op, bool* ba
         nand_.Queue(nand_op);
 
         // Wait on completion.
-        completion_wait(&completion, ZX_TIME_INFINITE);
+        sync_completion_wait(&completion, ZX_TIME_INFINITE);
         if (op_context.mark_bad) {
             zxlogf(ERROR, "Failed to erase/write block %u, marking bad\n",
                    op_context.physical_block);

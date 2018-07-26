@@ -5,7 +5,7 @@
 #pragma once
 
 #include <hw/reg.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>

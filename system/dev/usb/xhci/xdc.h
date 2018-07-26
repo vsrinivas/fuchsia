@@ -6,7 +6,7 @@
 
 #include <ddk/device.h>
 #include <ddk/usb-request.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <xdc-server-utils/packet.h>
 
 #include "xdc-hw.h"
@@ -129,7 +129,7 @@ typedef struct {
     mtx_t instance_list_lock;
 
     // At least one xdc instance has been opened.
-    completion_t has_instance_completion;
+    sync_completion_t has_instance_completion;
     atomic_int num_instances;
 } xdc_t;
 

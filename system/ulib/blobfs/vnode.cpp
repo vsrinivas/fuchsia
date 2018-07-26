@@ -18,7 +18,7 @@
 #include <fbl/ref_ptr.h>
 #include <lib/fdio/debug.h>
 #include <lib/fdio/vfs.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/syscalls.h>
 
 #define ZXDEBUG 0

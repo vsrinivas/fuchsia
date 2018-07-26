@@ -491,14 +491,14 @@ static int xhci_device_thread(void* arg) {
     while (1) {
         zxlogf(TRACE, "xhci_device_thread top of loop\n");
         // wait for a device to enumerate
-        completion_wait(&xhci->command_queue_completion, ZX_TIME_INFINITE);
+        sync_completion_wait(&xhci->command_queue_completion, ZX_TIME_INFINITE);
 
         mtx_lock(&xhci->command_queue_mutex);
         list_node_t* node = list_remove_head(&xhci->command_queue);
         xhci_device_command_t* command =
                                     (node ? containerof(node, xhci_device_command_t, node) : NULL);
         if (list_is_empty(&xhci->command_queue)) {
-            completion_reset(&xhci->command_queue_completion);
+            sync_completion_reset(&xhci->command_queue_completion);
         }
         mtx_unlock(&xhci->command_queue_mutex);
 
@@ -539,7 +539,7 @@ static zx_status_t xhci_queue_command(xhci_t* xhci, int command, uint32_t hub_ad
 
     mtx_lock(&xhci->command_queue_mutex);
     list_add_tail(&xhci->command_queue, &device_command->node);
-    completion_signal(&xhci->command_queue_completion);
+    sync_completion_signal(&xhci->command_queue_completion);
     mtx_unlock(&xhci->command_queue_mutex);
 
     return ZX_OK;

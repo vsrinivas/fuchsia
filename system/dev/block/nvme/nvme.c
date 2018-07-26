@@ -20,7 +20,7 @@
 #include <hw/reg.h>
 #include <hw/pci.h>
 
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
@@ -114,7 +114,7 @@ typedef struct {
     // The io signal completion is signaled from nvme_queue()
     // or from the irq thread, notifying the io thread that
     // it has work to do.
-    completion_t io_signal;
+    sync_completion_t io_signal;
 
     uint32_t max_xfer;
     block_info_t info;
@@ -134,7 +134,7 @@ typedef struct {
     // context for admin transactions
     // presently we serialize these under the admin_lock
     mtx_t admin_lock;
-    completion_t admin_signal;
+    sync_completion_t admin_signal;
     nvme_cpl_t admin_result;
 
     pci_protocol_t pci;
@@ -295,10 +295,10 @@ static int irq_thread(void* arg) {
         nvme_cpl_t cpl;
         if (nvme_admin_cq_get(nvme, &cpl) == ZX_OK) {
             nvme->admin_result = cpl;
-            completion_signal(&nvme->admin_signal);
+            sync_completion_signal(&nvme->admin_signal);
         }
 
-        completion_signal(&nvme->io_signal);
+        sync_completion_signal(&nvme->io_signal);
     }
     return 0;
 }
@@ -306,11 +306,11 @@ static int irq_thread(void* arg) {
 static zx_status_t nvme_admin_txn(nvme_device_t* nvme, nvme_cmd_t* cmd, nvme_cpl_t* cpl) {
     zx_status_t r;
     mtx_lock(&nvme->admin_lock);
-    completion_reset(&nvme->admin_signal);
+    sync_completion_reset(&nvme->admin_signal);
     if ((r = nvme_admin_sq_put(nvme, cmd)) != ZX_OK) {
         goto done;
     }
-    if ((r = completion_wait(&nvme->admin_signal, ZX_SEC(1))) != ZX_OK) {
+    if ((r = sync_completion_wait(&nvme->admin_signal, ZX_SEC(1))) != ZX_OK) {
         zxlogf(ERROR, "nvme: admin txn: timed out\n");
         goto done;
     }
@@ -531,7 +531,7 @@ static void io_process_cpls(nvme_device_t* nvme) {
 static int io_thread(void* arg) {
     nvme_device_t* nvme = arg;
     for (;;) {
-        if (completion_wait(&nvme->io_signal, ZX_TIME_INFINITE)) {
+        if (sync_completion_wait(&nvme->io_signal, ZX_TIME_INFINITE)) {
             break;
         }
         if (nvme->flags & FLAG_SHUTDOWN) {
@@ -540,7 +540,7 @@ static int io_thread(void* arg) {
             break;
         }
 
-        completion_reset(&nvme->io_signal);
+        sync_completion_reset(&nvme->io_signal);
 
         // process completion messages
         io_process_cpls(nvme);
@@ -601,7 +601,7 @@ static void nvme_queue(void* ctx, block_op_t* op) {
     STAT_INC_MAX(pending);
     mtx_unlock(&nvme->lock);
 
-    completion_signal(&nvme->io_signal);
+    sync_completion_signal(&nvme->io_signal);
 }
 
 static void nvme_query(void* ctx, block_info_t* info_out, size_t* block_op_size_out) {
@@ -690,7 +690,7 @@ static void nvme_release(void* ctx) {
         thrd_join(nvme->irqthread, &r);
     }
     if (nvme->flags & FLAG_IO_THREAD_STARTED) {
-        completion_signal(&nvme->io_signal);
+        sync_completion_signal(&nvme->io_signal);
         thrd_join(nvme->iothread, &r);
     }
 

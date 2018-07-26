@@ -14,7 +14,7 @@
 #include <zircon/device/block.h>
 #include <ddk/protocol/block.h>
 
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 namespace virtio {
 
@@ -101,7 +101,7 @@ private:
     fbl::Mutex txn_lock_;
     list_node txn_list_ = LIST_INITIAL_VALUE(txn_list_);
     bool txn_wait_ = false;
-    completion_t txn_signal_;
+    sync_completion_t txn_signal_;
 
     block_protocol_ops_t block_ops_ = {};
 };

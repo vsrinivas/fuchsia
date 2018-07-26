@@ -261,12 +261,12 @@ class NandTest {
 
         header->operation->OnCompletion(status);
         header->test->num_completed_++;
-        completion_signal(&header->test->event_);
+        sync_completion_signal(&header->test->event_);
     }
 
     bool Wait() {
-        zx_status_t status = completion_wait(&event_, ZX_SEC(5));
-        completion_reset(&event_);
+        zx_status_t status = sync_completion_wait(&event_, ZX_SEC(5));
+        sync_completion_reset(&event_);
         return status == ZX_OK;
     }
 
@@ -280,7 +280,7 @@ class NandTest {
     }
 
   private:
-    completion_t event_;
+    sync_completion_t event_;
     int num_completed_ = 0;
     DISALLOW_COPY_ASSIGN_AND_MOVE(NandTest);
 };

@@ -17,7 +17,7 @@
 #include <ddk/protocol/usb-mode-switch.h>
 #include <ddk/protocol/mailbox.h>
 #include <ddk/protocol/scpi.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/boot/image.h>
 #include <zircon/types.h>
 
@@ -49,7 +49,7 @@ typedef struct {
 
     zx_handle_t dummy_iommu_handle;
 
-    completion_t proto_completion;
+    sync_completion_t proto_completion;
 } platform_bus_t;
 
 // context structure for a platform device

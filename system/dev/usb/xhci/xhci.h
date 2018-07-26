@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb-hub.h>
 #include <zircon/types.h>
@@ -173,7 +173,7 @@ struct xhci {
     // for command processing in xhci-device-manager.c
     list_node_t command_queue;
     mtx_t command_queue_mutex;
-    completion_t command_queue_completion;
+    sync_completion_t command_queue_completion;
 
     // DMA buffers used by xhci_device_thread in xhci-device-manager.c
     uint8_t* input_context;

@@ -50,7 +50,7 @@ static zx_status_t ums_reset(ums_t* ums) {
 
 static void ums_req_complete(usb_request_t* req, void* cookie) {
     if (cookie) {
-        completion_signal((completion_t *)cookie);
+        sync_completion_signal((sync_completion_t *)cookie);
     }
 }
 
@@ -76,18 +76,18 @@ static void ums_send_cbw(ums_t* ums, uint8_t lun, uint32_t transfer_length, uint
     // copy command_len bytes from the command passed in into the command_len
     memcpy(cbw->CBWCB, command, command_len);
 
-    completion_t completion = COMPLETION_INIT;
+    sync_completion_t completion = SYNC_COMPLETION_INIT;
     req->cookie = &completion;
     usb_request_queue(&ums->usb, req);
-    completion_wait(&completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
 }
 
 static zx_status_t ums_read_csw(ums_t* ums, uint32_t* out_residue) {
-    completion_t completion = COMPLETION_INIT;
+    sync_completion_t completion = SYNC_COMPLETION_INIT;
     usb_request_t* csw_request = ums->csw_req;
     csw_request->cookie = &completion;
     usb_request_queue(&ums->usb, csw_request);
-    completion_wait(&completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
     csw_status_t csw_error = ums_verify_csw(ums, csw_request, out_residue);
 
@@ -256,10 +256,10 @@ static zx_status_t ums_data_transfer(ums_t* ums, ums_txn_t* txn, zx_off_t offset
     }
     req->complete_cb = ums_req_complete;
 
-    completion_t completion = COMPLETION_INIT;
+    sync_completion_t completion = SYNC_COMPLETION_INIT;
     req->cookie = &completion;
     usb_request_queue(&ums->usb, req);
-    completion_wait(&completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
     status = req->response.status;
     if (status == ZX_OK && req->response.actual != length) {
@@ -407,7 +407,7 @@ static void ums_unbind(void* ctx) {
     mtx_lock(&ums->txn_lock);
     ums->dead = true;
     mtx_unlock(&ums->txn_lock);
-    completion_signal(&ums->txn_completion);
+    sync_completion_signal(&ums->txn_completion);
 
     // wait for worker thread to finish before removing devices
     thrd_join(ums->worker_thread, NULL);
@@ -562,14 +562,14 @@ static int ums_worker_thread(void* arg) {
     bool wait = true;
     while (1) {
         if (wait) {
-            status = completion_wait(&ums->txn_completion, ZX_SEC(1));
+            status = sync_completion_wait(&ums->txn_completion, ZX_SEC(1));
             if (status == ZX_ERR_TIMED_OUT) {
                 if (ums_check_luns_ready(ums) != ZX_OK) {
                     return status;
                 }
                 continue;
             }
-            completion_reset(&ums->txn_completion);
+            sync_completion_reset(&ums->txn_completion);
         }
 
         mtx_lock(&ums->txn_lock);
@@ -724,7 +724,7 @@ static zx_status_t ums_bind(void* ctx, zx_device_t* device) {
     }
 
     list_initialize(&ums->queued_txns);
-    completion_reset(&ums->txn_completion);
+    sync_completion_reset(&ums->txn_completion);
     mtx_init(&ums->txn_lock, mtx_plain);
 
     ums->usb_zxdev = device;

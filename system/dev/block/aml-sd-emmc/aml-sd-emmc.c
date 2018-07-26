@@ -22,7 +22,7 @@
 #include <soc/aml-common/aml-sd-emmc.h>
 #include <ddk/protocol/sdmmc.h>
 #include <hw/sdmmc.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 #include <zircon/assert.h>
 #include <zircon/types.h>
@@ -57,7 +57,7 @@ typedef struct aml_sd_emmc_t {
     // cur pending req
     sdmmc_req_t *cur_req;
     // used to signal request complete
-    completion_t req_completion;
+    sync_completion_t req_completion;
 } aml_sd_emmc_t;
 
 zx_status_t aml_sd_emmc_request(void *ctx, sdmmc_req_t* req);
@@ -603,7 +603,7 @@ complete:
         req->status = status;
         regs->sd_emmc_status = AML_SD_EMMC_IRQ_ALL_CLEAR;
         dev->cur_req = NULL;
-        completion_signal(&dev->req_completion);
+        sync_completion_signal(&dev->req_completion);
         mtx_unlock(&dev->mtx);
     }
     return 0;
@@ -892,9 +892,9 @@ zx_status_t aml_sd_emmc_request(void *ctx, sdmmc_req_t* req) {
     mtx_unlock(&dev->mtx);
     regs->sd_emmc_start = start_reg;
 
-    completion_wait(&dev->req_completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&dev->req_completion, ZX_TIME_INFINITE);
     aml_sd_emmc_finish_req(dev, req);
-    completion_reset(&dev->req_completion);
+    sync_completion_reset(&dev->req_completion);
     return req->status;
 }
 
@@ -942,7 +942,7 @@ static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "aml-dev_bind: out of memory\n");
         return ZX_ERR_NO_MEMORY;
     }
-    dev->req_completion = COMPLETION_INIT;
+    dev->req_completion = SYNC_COMPLETION_INIT;
 
     zx_status_t status = ZX_OK;
     if ((status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &dev->pdev)) != ZX_OK) {

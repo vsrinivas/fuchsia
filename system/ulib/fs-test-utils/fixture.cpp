@@ -17,7 +17,7 @@
 #include <fs-test-utils/fixture.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/memfs/memfs.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/assert.h>
 #include <zircon/device/device.h>
 #include <zircon/device/vfs.h>

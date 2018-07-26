@@ -11,7 +11,7 @@
 #include <driver/usb.h>
 #include <lib/cksum.h>
 #include <pretty/hexdump.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/assert.h>
 #include <zircon/device/ethernet.h>
 #include <zircon/listnode.h>
@@ -64,7 +64,7 @@ typedef struct {
 
     // interrupt in request
     usb_request_t* interrupt_req;
-    completion_t completion;
+    sync_completion_t completion;
 
     // pool of free USB bulk requests
     list_node_t free_read_reqs;
@@ -412,7 +412,7 @@ static void ax88179_write_complete(usb_request_t* request, void* cookie) {
 
 static void ax88179_interrupt_complete(usb_request_t* request, void* cookie) {
     ax88179_t* eth = (ax88179_t*)cookie;
-    completion_signal(&eth->completion);
+    sync_completion_signal(&eth->completion);
 }
 
 static void ax88179_handle_interrupt(ax88179_t* eth, usb_request_t* request) {
@@ -861,9 +861,9 @@ static int ax88179_thread(void* arg) {
     uint64_t count = 0;
     usb_request_t* req = eth->interrupt_req;
     while (true) {
-        completion_reset(&eth->completion);
+        sync_completion_reset(&eth->completion);
         usb_request_queue(&eth->usb, req);
-        completion_wait(&eth->completion, ZX_TIME_INFINITE);
+        sync_completion_wait(&eth->completion, ZX_TIME_INFINITE);
         if (req->response.status != ZX_OK) {
             return req->response.status;
         }

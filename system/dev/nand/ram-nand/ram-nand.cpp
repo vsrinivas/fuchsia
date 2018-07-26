@@ -31,7 +31,7 @@ NandDevice::NandDevice(const NandParams& params, zx_device_t* parent)
 NandDevice::~NandDevice() {
     if (thread_created_) {
         Kill();
-        completion_signal(&wake_signal_);
+        sync_completion_signal(&wake_signal_);
         int result_code;
         thrd_join(worker_, &result_code);
 
@@ -87,7 +87,7 @@ zx_status_t NandDevice::Init(char name[NAME_MAX]) {
 
 void NandDevice::DdkUnbind() {
     Kill();
-    completion_signal(&wake_signal_);
+    sync_completion_signal(&wake_signal_);
     DdkRemove();
 }
 
@@ -147,7 +147,7 @@ void NandDevice::Queue(nand_op_t* operation) {
     }
 
     if (AddToList(operation)) {
-        completion_signal(&wake_signal_);
+        sync_completion_signal(&wake_signal_);
     } else {
         operation->completion_cb(operation, ZX_ERR_BAD_STATE);
     }
@@ -192,10 +192,10 @@ int NandDevice::WorkerThread() {
                 return 0;
             }
             if (operation) {
-                completion_reset(&wake_signal_);
+                sync_completion_reset(&wake_signal_);
                 break;
             } else {
-                completion_wait(&wake_signal_, ZX_TIME_INFINITE);
+                sync_completion_wait(&wake_signal_, ZX_TIME_INFINITE);
             }
         }
 

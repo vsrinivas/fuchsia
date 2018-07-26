@@ -8,7 +8,7 @@
 #include <ddk/device.h>
 #include <ddk/protocol/block.h>
 #include <ddk/protocol/usb.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/device/block.h>
 #include <zircon/listnode.h>
 
@@ -55,7 +55,7 @@ typedef struct {
     // list of queued transactions
     list_node_t queued_txns;
 
-    completion_t txn_completion;    // signals ums_worker_thread when new txns are available
+    sync_completion_t txn_completion;    // signals ums_worker_thread when new txns are available
                                     // and when device is dead
     mtx_t txn_lock;                 // protects queued_txns, txn_completion and dead
 

@@ -18,7 +18,7 @@
 #include <ddk/protocol/platform-device.h>
 
 #include <string.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 

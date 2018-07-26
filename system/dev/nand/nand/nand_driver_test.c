@@ -13,7 +13,7 @@
 #include <bits/limits.h>
 #include <ddk/debug.h>
 
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
@@ -23,7 +23,7 @@
 // point into this code, called by the nand driver's unit test.
 static void nandtest_complete(nand_op_t* nand_op, zx_status_t status) {
     nand_op->command = status;
-    completion_signal((completion_t*)nand_op->cookie);
+    sync_completion_signal((sync_completion_t*)nand_op->cookie);
 }
 
 static zx_status_t nand_test_get_info(nand_device_t* dev, void* reply, size_t max,
@@ -87,7 +87,7 @@ static zx_status_t nand_test_read(nand_device_t* dev, const void* cmd, size_t cm
         do_oob = true;
     }
 
-    completion_t completion = COMPLETION_INIT;
+    sync_completion_t completion = SYNC_COMPLETION_INIT;
 
     nand_op->command = NAND_OP_READ;
     nand_op->rw.offset_nand = cmd_read_page->nand_page;
@@ -103,7 +103,7 @@ static zx_status_t nand_test_read(nand_device_t* dev, const void* cmd, size_t cm
 
     // Queue the data read op and wait for response.
     dev->nand_proto.ops->queue(dev, nand_op);
-    completion_wait(&completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
     resp_hdr.status = nand_op->command; // Status stored here by callback.
     status = resp_hdr.status;
@@ -164,7 +164,7 @@ static zx_status_t nand_test_write(nand_device_t* dev, const void* cmd, size_t c
     }
     *out_actual = sizeof(resp_hdr);
 
-    completion_t completion = COMPLETION_INIT;
+    sync_completion_t completion = SYNC_COMPLETION_INIT;
 
     // Create nand_op.
     nand_op->command = NAND_OP_WRITE;
@@ -181,7 +181,7 @@ static zx_status_t nand_test_write(nand_device_t* dev, const void* cmd, size_t c
 
     // Queue the data read op and wait for response.
     dev->nand_proto.ops->queue(dev, nand_op);
-    completion_wait(&completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
     resp_hdr.status = nand_op->command; // Status stored here by callback.
     status = resp_hdr.status;
@@ -222,7 +222,7 @@ static zx_status_t nand_test_erase_block(nand_device_t* dev, const void* cmd,
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
-    completion_t completion = COMPLETION_INIT;
+    sync_completion_t completion = SYNC_COMPLETION_INIT;
 
     // Create nand_op.
     nand_op->command = NAND_OP_ERASE;
@@ -233,7 +233,7 @@ static zx_status_t nand_test_erase_block(nand_device_t* dev, const void* cmd,
 
     // Queue the data read op and wait for response.
     dev->nand_proto.ops->queue(dev, nand_op);
-    completion_wait(&completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
     resp_hdr.status = nand_op->command; // Status stored here by callback.
     memcpy(reply, &resp_hdr, sizeof(resp_hdr));

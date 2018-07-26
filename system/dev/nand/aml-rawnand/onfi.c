@@ -10,7 +10,7 @@
 #include <ddk/debug.h>
 #include <ddk/protocol/rawnand.h>
 
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 #include <zircon/threads.h>

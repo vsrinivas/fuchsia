@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/param.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <threads.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
@@ -212,7 +212,7 @@ static void gpt_read_sync_complete(block_op_t* bop, zx_status_t status) {
     // Pass 32bit status back to caller via 32bit command field
     // Saves from needing custom structs, etc.
     bop->command = status;
-    completion_signal((completion_t*)bop->cookie);
+    sync_completion_signal((sync_completion_t*)bop->cookie);
 }
 
 static zx_status_t vmo_read(zx_handle_t vmo, void* data, uint64_t off, size_t len) {
@@ -251,7 +251,7 @@ static int gpt_bind_thread(void* arg) {
         goto unbind;
     }
 
-    completion_t completion = COMPLETION_INIT;
+    sync_completion_t completion = SYNC_COMPLETION_INIT;
 
     // read partition table header synchronously (LBA1)
     bop->command = BLOCK_OP_READ;
@@ -264,7 +264,7 @@ static int gpt_bind_thread(void* arg) {
     bop->cookie = &completion;
 
     bp.ops->queue(bp.ctx, bop);
-    completion_wait(&completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
     if (bop->command != ZX_OK) {
         zxlogf(ERROR, "gpt: error %d reading partition header\n", bop->command);
         goto unbind;
@@ -298,9 +298,9 @@ static int gpt_bind_thread(void* arg) {
     bop->rw.offset_vmo = 0;
     bop->rw.pages = NULL;
 
-    completion_reset(&completion);
+    sync_completion_reset(&completion);
     bp.ops->queue(bp.ctx, bop);
-    completion_wait(&completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
     if (bop->command != ZX_OK) {
         zxlogf(ERROR, "gpt: error %d reading partition table\n", bop->command);
         goto unbind;

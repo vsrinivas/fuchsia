@@ -8,7 +8,7 @@
 #include <ddk/protocol/block.h>
 
 #include <zircon/device/ramdisk.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 #include <assert.h>
 #include <inttypes.h>
@@ -37,7 +37,7 @@ typedef struct ramdisk_device {
     uint64_t blk_count;
 
     mtx_t lock;
-    completion_t signal;
+    sync_completion_t signal;
     list_node_t txn_list;
     list_node_t deferred_list;
     bool dead;
@@ -93,9 +93,9 @@ static int worker_thread(void* arg) {
             }
 
             if (txn == NULL) {
-                completion_wait(&dev->signal, ZX_TIME_INFINITE);
+                sync_completion_wait(&dev->signal, ZX_TIME_INFINITE);
             } else {
-                completion_reset(&dev->signal);
+                sync_completion_reset(&dev->signal);
                 break;
             }
         }
@@ -215,7 +215,7 @@ static void ramdisk_unbind(void* ctx) {
     mtx_lock(&ramdev->lock);
     ramdev->dead = true;
     mtx_unlock(&ramdev->lock);
-    completion_signal(&ramdev->signal);
+    sync_completion_signal(&ramdev->signal);
     device_remove(ramdev->zxdev);
 }
 
@@ -246,7 +246,7 @@ static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
         memset(&ramdev->blk_counts, 0, sizeof(ramdev->blk_counts));
         ramdev->sa_blk_count = 0;
         mtx_unlock(&ramdev->lock);
-        completion_signal(&ramdev->signal);
+        sync_completion_signal(&ramdev->signal);
         return ZX_OK;
     }
     case IOCTL_RAMDISK_SLEEP_AFTER: {
@@ -328,7 +328,7 @@ static void ramdisk_queue(void* ctx, block_op_t* bop) {
         if (dead) {
             bop->completion_cb(bop, ZX_ERR_BAD_STATE);
         } else {
-            completion_signal(&ramdev->signal);
+            sync_completion_signal(&ramdev->signal);
         }
         break;
     case BLOCK_OP_FLUSH:
@@ -356,7 +356,7 @@ static void ramdisk_release(void* ctx) {
     mtx_lock(&ramdev->lock);
     ramdev->dead = true;
     mtx_unlock(&ramdev->lock);
-    completion_signal(&ramdev->signal);
+    sync_completion_signal(&ramdev->signal);
 
     int r;
     thrd_join(ramdev->worker, &r);

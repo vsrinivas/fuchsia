@@ -5,7 +5,7 @@
 #include <ddk/protocol/usb.h>
 #include <ddk/usb-request.h>
 #include <endian.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <stdio.h>
 #include <string.h>
 #include <utf_conversion/utf_conversion.h>
@@ -23,7 +23,7 @@ typedef struct usb_langid_desc {
 } __PACKED usb_langid_desc_t;
 
 static void usb_device_control_complete(usb_request_t* req, void* cookie) {
-    completion_signal((completion_t*)cookie);
+    sync_completion_signal((sync_completion_t*)cookie);
 }
 
 zx_status_t usb_device_control(usb_device_t* dev, uint8_t request_type,
@@ -53,14 +53,14 @@ zx_status_t usb_device_control(usb_device_t* dev, uint8_t request_type,
         usb_request_copyto(req, data, length, 0);
     }
 
-    completion_t completion = COMPLETION_INIT;
+    sync_completion_t completion = SYNC_COMPLETION_INIT;
 
     req->header.length = length;
     req->complete_cb = usb_device_control_complete;
     req->cookie = &completion;
 
     usb_hci_request_queue(&dev->hci, req);
-    completion_wait(&completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
     zx_status_t status = req->response.status;
     if (status == ZX_OK) {

@@ -13,18 +13,18 @@ static void xhci_sync_command_callback(void* data, uint32_t cc, xhci_trb_t* comm
     xhci_sync_command_t* command = (xhci_sync_command_t*)data;
     command->status = XHCI_READ32(&event_trb->status);
     command->control = XHCI_READ32(&event_trb->control);
-    completion_signal(&command->completion);
+    sync_completion_signal(&command->completion);
 }
 
 void xhci_sync_command_init(xhci_sync_command_t* command) {
-    completion_reset(&command->completion);
+    sync_completion_reset(&command->completion);
     command->context.callback = xhci_sync_command_callback;
     command->context.data = command;
 }
 
 // returns condition code
 int xhci_sync_command_wait(xhci_sync_command_t* command) {
-    completion_wait(&command->completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&command->completion, ZX_TIME_INFINITE);
 
     return (command->status & XHCI_MASK(EVT_TRB_CC_START, EVT_TRB_CC_BITS)) >> EVT_TRB_CC_START;
 }
@@ -38,7 +38,7 @@ zx_status_t xhci_send_command(xhci_t* xhci, uint32_t cmd, uint64_t ptr, uint32_t
 
     // Wait for one second (arbitrarily chosen timeout)
     // TODO(voydanoff) consider making the timeout a parameter to this function
-    zx_status_t status = completion_wait(&command.completion, ZX_SEC(1));
+    zx_status_t status = sync_completion_wait(&command.completion, ZX_SEC(1));
     if (status == ZX_OK) {
         cc = (command.status & XHCI_MASK(EVT_TRB_CC_START, EVT_TRB_CC_BITS)) >> EVT_TRB_CC_START;
          if (cc == TRB_CC_SUCCESS) {
@@ -47,14 +47,14 @@ zx_status_t xhci_send_command(xhci_t* xhci, uint32_t cmd, uint64_t ptr, uint32_t
         zxlogf(ERROR, "xhci_send_command %u failed, cc: %d\n", cmd, cc);
         return ZX_ERR_INTERNAL;
     } else if (status == ZX_ERR_TIMED_OUT) {
-        completion_reset(&command.completion);
+        sync_completion_reset(&command.completion);
 
         // abort the command
         volatile uint64_t* crcr_ptr = &xhci->op_regs->crcr;
         XHCI_WRITE64(crcr_ptr, CRCR_CA);
 
         // wait for TRB_CC_COMMAND_ABORTED
-        completion_wait(&command.completion, ZX_TIME_INFINITE);
+        sync_completion_wait(&command.completion, ZX_TIME_INFINITE);
         cc = (command.status & XHCI_MASK(EVT_TRB_CC_START, EVT_TRB_CC_BITS)) >> EVT_TRB_CC_START;
         if (cc == TRB_CC_SUCCESS) {
             // command must have completed while we were trying to abort it

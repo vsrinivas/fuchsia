@@ -19,7 +19,7 @@
 #include <ddk/protocol/sdmmc.h>
 
 // Zircon Includes
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <pretty/hexdump.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>

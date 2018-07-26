@@ -63,7 +63,7 @@ typedef struct {
         efi_managed_network_receive_data* RxData;
         efi_managed_network_transmit_data* TxData;
     } Packet;
-} efi_managed_network_completion_token;
+} efi_managed_network_sync_completion_token;
 
 typedef struct efi_managed_network_protocol {
     efi_status (*GetModeData) (struct efi_managed_network_protocol* self,
@@ -80,13 +80,13 @@ typedef struct efi_managed_network_protocol {
                           efi_mac_addr* mac_addr) EFIAPI;
 
     efi_status (*Transmit) (struct efi_managed_network_protocol* self,
-                            efi_managed_network_completion_token* token) EFIAPI;
+                            efi_managed_network_sync_completion_token* token) EFIAPI;
 
     efi_status (*Receive) (struct efi_managed_network_protocol* self,
-                           efi_managed_network_completion_token* token) EFIAPI;
+                           efi_managed_network_sync_completion_token* token) EFIAPI;
 
     efi_status (*Cancel) (struct efi_managed_network_protocol* self,
-                          efi_managed_network_completion_token* token) EFIAPI;
+                          efi_managed_network_sync_completion_token* token) EFIAPI;
 
     efi_status (*Poll) (struct efi_managed_network_protocol* self) EFIAPI;
 } efi_managed_network_protocol;

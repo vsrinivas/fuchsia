@@ -12,7 +12,7 @@
 
 #include <inet6/inet6.h>
 #include <lib/fdio/spawn.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <tftp/tftp.h>
 #include <zircon/assert.h>
 #include <zircon/boot/netboot.h>
@@ -53,7 +53,7 @@ typedef struct {
             atomic_uint buf_refcount;
             atomic_size_t offset;       // Buffer write offset (read offset is stored locally)
             thrd_t buf_copy_thrd;
-            completion_t data_ready;    // Allows read thread to block on buffer writes
+            sync_completion_t data_ready;    // Allows read thread to block on buffer writes
         } paver;
     };
 } file_info_t;
@@ -153,12 +153,12 @@ static int paver_copy_buffer(void* arg) {
     int result = 0;
     zx_time_t last_reported = zx_clock_get_monotonic();
     while (read_ndx < file_info->paver.size) {
-        completion_reset(&file_info->paver.data_ready);
+        sync_completion_reset(&file_info->paver.data_ready);
         size_t write_ndx = atomic_load(&file_info->paver.offset);
         if (write_ndx == read_ndx) {
             // Wait for more data to be written -- we are allowed up to 3 tftp timeouts before
             // a connection is dropped, so we should wait at least that long before giving up.
-            if (completion_wait(&file_info->paver.data_ready, ZX_SEC(5 * TFTP_TIMEOUT_SECS))
+            if (sync_completion_wait(&file_info->paver.data_ready, ZX_SEC(5 * TFTP_TIMEOUT_SECS))
                 == ZX_OK) {
                 continue;
             }
@@ -373,7 +373,7 @@ static tftp_status file_write(const void* data, size_t* length, off_t offset, vo
         size_t new_offset = offset + *length;
         atomic_store(&file_info->paver.offset, new_offset);
         // Wake the paver thread, if it is waiting for data
-        completion_signal(&file_info->paver.data_ready);
+        sync_completion_signal(&file_info->paver.data_ready);
         return TFTP_NO_ERROR;
     } else {
         int write_result = netfile_offset_write(data, offset, *length);

@@ -19,7 +19,7 @@
 #include <ddk/protocol/rawnand.h>
 #include <hw/reg.h>
 
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 #include <zircon/threads.h>
@@ -319,7 +319,7 @@ static zx_status_t aml_queue_rb(aml_raw_nand_t* raw_nand) {
     volatile uint8_t* reg = (volatile uint8_t*)
         io_buffer_virt(&raw_nand->mmio[NANDREG_WINDOW]);
 
-    raw_nand->req_completion = COMPLETION_INIT;
+    raw_nand->req_completion = SYNC_COMPLETION_INIT;
     cfg = readl(reg + P_NAND_CFG);
     cfg |= (1 << 21);
     writel(cfg, reg + P_NAND_CFG);
@@ -330,7 +330,7 @@ static zx_status_t aml_queue_rb(aml_raw_nand_t* raw_nand) {
     cmd = AML_CMD_RB | AML_CMD_IO6 | (1 << 16) | (0x18 & 0x1f);
     writel(cmd, reg + P_NAND_CMD);
     aml_cmd_idle(raw_nand, 2);
-    status = completion_wait(&raw_nand->req_completion,
+    status = sync_completion_wait(&raw_nand->req_completion,
                              ZX_SEC(1));
     if (status == ZX_ERR_TIMED_OUT) {
         zxlogf(ERROR, "%s: Request timed out, not woken up from irq\n",
@@ -740,9 +740,9 @@ static int aml_raw_nand_irq_thread(void* arg) {
         }
         /*
          * Wakeup blocked requester on
-         * completion_wait(&raw_nand->req_completion, ZX_TIME_INFINITE);
+         * sync_completion_wait(&raw_nand->req_completion, ZX_TIME_INFINITE);
          */
-        completion_signal(&raw_nand->req_completion);
+        sync_completion_signal(&raw_nand->req_completion);
     }
 
     return 0;
@@ -970,7 +970,7 @@ static zx_status_t aml_raw_nand_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    raw_nand->req_completion = COMPLETION_INIT;
+    raw_nand->req_completion = SYNC_COMPLETION_INIT;
 
     if ((status = device_get_protocol(parent,
                                       ZX_PROTOCOL_PLATFORM_DEV,
