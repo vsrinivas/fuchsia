@@ -57,7 +57,7 @@ fbl::unique_ptr<Result> PosixRunTest(const char* argv[],
     // form "<name>=<value>".  The env_strings array just keeps the underlying
     // std::string objects alive so the envp pointers remain valid.
     std::string env_strings[countof(kEnvironmentWhitelist)];
-    const char* envp[countof(env_strings)];
+    const char* envp[countof(env_strings) + 1];  // +1 for null terminator.
     size_t i = 0;
     for (const char* var : kEnvironmentWhitelist) {
         const char* val = getenv(var);
