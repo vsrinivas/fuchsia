@@ -4,6 +4,6 @@
         "peridot/packages/benchmarks/ledger"
     ],
     "packages": [
-        "//peridot/tests/benchmark:peridot_benchmarks"
+        "//peridot/tests/benchmarks:peridot_benchmarks"
     ]
 }

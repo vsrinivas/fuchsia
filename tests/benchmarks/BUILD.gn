@@ -60,7 +60,7 @@ package("peridot_benchmarks") {
 
   binaries = [
     {
-      name = rebase_path("peridot_benchmarks.sh")
+      name = rebase_path("benchmarks.sh")
       dest = "benchmarks.sh"
     },
   ]

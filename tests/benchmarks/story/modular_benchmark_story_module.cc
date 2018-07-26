@@ -13,7 +13,7 @@
 #include <trace/event.h>
 #include <trace/observer.h>
 
-#include "peridot/tests/benchmark/story/tracing_waiter.h"
+#include "peridot/tests/benchmarks/story/tracing_waiter.h"
 
 namespace {
 

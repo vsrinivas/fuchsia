@@ -25,7 +25,7 @@
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "peridot/tests/benchmark/story/tracing_waiter.h"
+#include "peridot/tests/benchmarks/story/tracing_waiter.h"
 
 namespace {
 
