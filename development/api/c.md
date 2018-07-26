@@ -171,6 +171,8 @@ There are several types of compile time constants.
 - Enumerated integer constants
 - Floating point constants
 
+#### Single integer constants
+
 A single integer constants has some `NAME` in a library `TAG`, and its
 definition looks like the following.
 
@@ -183,6 +185,8 @@ where `EXPR` has one of the following forms (for a `uint32_t`)
 - `((uint32_t) 23)`
 - `((uint32_t) 0x23)`
 - `((uint32_t) (EXPR | EXPR | ...))`
+
+#### Enumerated integer constants
 
 Given an enumerated set of integer constants named `NAME` in a library
 `TAG`, a related set of compile-time constants has the following
@@ -212,6 +216,8 @@ constants (always wrapped in parentheses):
 Do not include a count of values, which is difficult to maintain as
 the set of constants grows.
 
+#### Floating point constants
+
 Floating point constants are similar to single integer constants,
 except that a different mechanism is used to describe the type. Float
 constants must end in `f` or `F`; double constants have no suffix;
@@ -237,14 +243,16 @@ Function declarations should be placed in `extern "C"` guards. These
 are canonically provided by using the `__BEGIN_CDECLS` and
 `__END_CDECLS` macros from [compiler.h].
 
+#### Function parameters
+
 Function parameters must be named. For example,
 
 ```C
 // Disallowed: missing parameter name
-zx_status_t frob_vmo(zx_handle_t, size_t num_bytes);
+zx_status_t tag_frob_vmo(zx_handle_t, size_t num_bytes);
 
 // Allowed: all parameters named
-zx_status_t frob_vmo(zx_handle_t vmo, size_t num_bytes);
+zx_status_t tag_frob_vmo(zx_handle_t vmo, size_t num_bytes);
 ```
 
 It should be clear which parameters are consumed and which are
@@ -263,9 +271,13 @@ zx_status_t tag_frobinate(zx_handle_t maybe_consumed_foo);
 By convention, out parameters go last in a function's signature, and
 should be named `out_*`.
 
+#### Variadic functions
+
 Variadic functions should be avoided for everything except printf-like
 functions. Those functions should document their format string
 contract with the `__PRINTFLIKE` attribute from [compiler.h].
+
+#### Static inline functions
 
 Static inline functions are allowed, and are preferable to
 function-like macros. Inline-only (that is, not also `static`) C
@@ -283,6 +295,8 @@ specific types. This includes pointers to opaque structs. `void*` is
 acceptable for refering to raw memory, and to interfaces that pass
 around opaque user cookies or contexts.
 
+#### Opaque/Explicit types
+
 Defining an opaque struct is preferable to using `void*`. Opaque
 structs should be declared like:
 
@@ -297,11 +311,15 @@ typedef struct tag_thing {
 } tag_thing_t;
 ```
 
+#### Reserved fields
+
 Any reserved fields in a struct should be documented as to the purpose
 of the reservation.
 
 A future version of this document will give guidance as to how to
 describe string parameters in C interfaces.
+
+#### Anonymouse types
 
 Top-level anonymous types are not allowed. Anonymous structures and
 unions are allowed insade other structures, and inside function
@@ -318,12 +336,16 @@ typedef struct tag_message {
 } tag_message_t;
 ```
 
+#### Function typedefs
+
 Typedefs for function types are permitted.
 
 Functions should not overload return values with a `zx_status_t` on
 failure and a positive success value. Functions should not overload
 return values with a `zx_status_t` that contains additional values not
 described in [zircon/errors.h].
+
+#### Status return
 
 Prefer `zx_status_t` as a return value to describe errors relating to
 Zircon primitives and to I/O.
