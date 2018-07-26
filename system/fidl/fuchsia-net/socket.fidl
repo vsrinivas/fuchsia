@@ -24,56 +24,8 @@ enum SocketProtocol {
     icmpv6 = 58;
 };
 
-struct String {
-    array<uint8>:256 val;
-    uint32 len;
-};
-
-enum AddrInfoStatus {
-    ok = 0;
-    // invalid flags
-    bad_flags = 1;
-    // missing node name or service name
-    no_name = 2;
-    // temporary failure
-    again = 3;
-    // non-recoverable failure
-    fail = 4;
-    // no address found for node name
-    no_data = 5;
-    // argument buffer overflow
-    buffer_overflow = 6;
-    // system error
-    system_error = 7;
-};
-
-struct AddrInfoHints {
-    int32 flags;
-    int32 family;
-    int32 sock_type;
-    int32 protocol;
-};
-
-struct AddrStorage {
-    array<uint8>:16 val;
-    uint32 len;
-    int32 unused; // TODO: remove this once the field alignment issue is fixed.
-};
-
-struct AddrInfo {
-    int32 flags;
-    int32 family;
-    int32 sock_type;
-    int32 protocol;
-    AddrStorage addr;
-    uint16 port;
-};
-
 [Discoverable, Layout="Simple"]
 interface LegacySocketProvider {
     1: OpenSocket(SocketDomain domain, SocketType type, SocketProtocol protocol)
         -> (handle<socket> s, int32 @status);
-    2: GetAddrInfo(String? node, String? service, AddrInfoHints? hints)
-        -> (AddrInfoStatus @status, int32 nres, AddrInfo? ai0, AddrInfo? ai1, AddrInfo? ai2, AddrInfo? ai3);
-    // TODO: change (nres, ai0, ai1, ai2, ai3) to a vector once we can.
 };
