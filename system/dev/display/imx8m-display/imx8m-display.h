@@ -6,16 +6,14 @@
 
 #include <assert.h>
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/display.h>
-#include <ddk/protocol/gpio.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zircon/device/display.h>
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/display-controller.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 #include <threads.h>
@@ -26,26 +24,23 @@
 
 typedef struct {
     zx_device_t*                        zxdev;
-    platform_device_protocol_t          pdev;
     zx_device_t*                        parent;
-    zx_device_t*                        mydevice;
-    zx_device_t*                        fbdevice;
+    platform_device_protocol_t          pdev;
     zx_handle_t                         bti;
-    zx_handle_t                         inth;
-
-    gpio_protocol_t                     gpio;
 
     thrd_t                              main_thread;
+    // Lock for general display state, in particular display_id.
+    mtx_t                               display_lock;
+    // Lock for imported images.
+    mtx_t                               image_lock;
+    // Lock for the display callback, for enforcing an ordering on
+    // hotplug callbacks. Should be acquired before display_lock.
+    mtx_t                               cb_lock;
 
     io_buffer_t                         mmio_dc;
     io_buffer_t                         fbuffer;
-    zx_display_info_t                   disp_info;
 
-    uint8_t                             input_color_format;
-    uint8_t                             output_color_format;
-    uint8_t                             color_depth;
-
-    bool console_visible;
-    zx_display_cb_t ownership_change_callback;
-    void* ownership_change_cookie;
+    display_controller_cb_t*            dc_cb;
+    void*                               dc_cb_ctx;
+    list_node_t                         imported_images;
 } imx8m_display_t;
