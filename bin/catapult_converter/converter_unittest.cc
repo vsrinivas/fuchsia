@@ -137,7 +137,7 @@ TEST(CatapultConverter, Convert) {
         "guid": "dummy_guid_0",
         "type": "GenericSet",
         "values": [
-            4321
+            123004005006
         ]
     },
     {
@@ -230,7 +230,8 @@ TEST(CatapultConverter, Convert) {
 
   rapidjson::Document output;
   ConverterArgs args;
-  args.timestamp = 4321;
+  // Test a timestamp value that does not fit into a 32-bit int type.
+  args.timestamp = 123004005006;
   args.masters = "example_masters";
   args.bots = "example_bots";
   args.log_url = "https://ci.example.com/build/100";
