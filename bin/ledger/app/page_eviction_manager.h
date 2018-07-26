@@ -65,6 +65,13 @@ class PageEvictionManager : public PageUsageListener {
   PageEvictionManager() {}
   ~PageEvictionManager() override {}
 
+  // Sets the callback to be called every time the PageEvictionManager is empty.
+  virtual void set_on_empty(fit::closure on_empty_callback) = 0;
+
+  // Returns whether the PageEvictionManager is empty, i.e. whether there are no
+  // pending operations.
+  virtual bool IsEmpty() = 0;
+
   // Tries to evict from the local storage the least recently used page among
   // those that have been backed up in the cloud and are not currectly in use.
   // Returns |IO_ERROR| through the callback in case of failure to retrieve data

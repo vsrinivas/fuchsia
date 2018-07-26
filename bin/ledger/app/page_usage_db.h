@@ -49,22 +49,26 @@ class PageUsageDb {
   // operation is performed.
   Status Init();
 
-  // Marks the page with the given id as opened.
+  // Marks the page with the given id as opened. |INTERNAL_ERROR| is returned if
+  // the operation is interrupted.
   Status MarkPageOpened(coroutine::CoroutineHandler* handler,
                         fxl::StringView ledger_name,
                         storage::PageIdView page_id);
 
-  // Marks the page with the given id as closed.
+  // Marks the page with the given id as closed. |INTERNAL_ERROR| is returned if
+  // the operation is interrupted.
   Status MarkPageClosed(coroutine::CoroutineHandler* handler,
                         fxl::StringView ledger_name,
                         storage::PageIdView page_id);
 
-  // Marks the page with the given id as evicted.
+  // Marks the page with the given id as evicted. |INTERNAL_ERROR| is returned
+  // if the operation is interrupted.
   Status MarkPageEvicted(coroutine::CoroutineHandler* handler,
                          fxl::StringView ledger_name,
                          storage::PageIdView page_id);
 
-  // Marks all open pages as closed.
+  // Marks all open pages as closed. |INTERNAL_ERROR| is returned if the
+  // operation is interrupted.
   Status MarkAllPagesClosed(coroutine::CoroutineHandler* handler);
 
   // Updates |pages| to contain an iterator over all entries of page

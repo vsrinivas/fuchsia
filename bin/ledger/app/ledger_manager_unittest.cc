@@ -191,6 +191,10 @@ class FakePageEvictionManager : public PageEvictionManager {
   FakePageEvictionManager() {}
   ~FakePageEvictionManager() override {}
 
+  void set_on_empty(fit::closure on_empty_callback) override {}
+
+  bool IsEmpty() override { return true; }
+
   void OnPageOpened(fxl::StringView /*ledger_name*/,
                     storage::PageIdView /*page_id*/) override {
     ++page_opened_count;

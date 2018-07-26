@@ -50,6 +50,7 @@ class PageEvictionManagerTest : public gtest::TestLoopFixture {
   // gtest::TestLoopFixture:
   void SetUp() override {
     EXPECT_EQ(Status::OK, page_eviction_manager_.Init());
+    RunLoopUntilIdle();
     page_eviction_manager_.SetDelegate(&delegate_);
   }
 
@@ -208,6 +209,48 @@ TEST_F(PageEvictionManagerTest, PageNotFoundIsNotAnError) {
 
   EXPECT_EQ(Status::OK, status);
   EXPECT_THAT(delegate_.deleted_pages_, IsEmpty());
+}
+
+TEST_F(PageEvictionManagerTest, IsEmpty) {
+  std::string ledger_name = "ledger";
+  storage::PageId page = std::string(kPageIdSize, '1');
+  bool on_empty_called = false;
+
+  page_eviction_manager_.set_on_empty([&] { on_empty_called = true; });
+
+  EXPECT_TRUE(page_eviction_manager_.IsEmpty());
+  EXPECT_FALSE(on_empty_called);
+
+  // PageEvictionManagerImpl should be empty if there is no pending operation
+  // on: OnPageOpened, OnPageClosed, or TryCleanUp.
+  on_empty_called = false;
+  page_eviction_manager_.OnPageOpened(ledger_name, page);
+  EXPECT_FALSE(page_eviction_manager_.IsEmpty());
+  EXPECT_FALSE(on_empty_called);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(page_eviction_manager_.IsEmpty());
+  EXPECT_TRUE(on_empty_called);
+
+  on_empty_called = false;
+  page_eviction_manager_.OnPageClosed(ledger_name, page);
+  EXPECT_FALSE(page_eviction_manager_.IsEmpty());
+  EXPECT_FALSE(on_empty_called);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(page_eviction_manager_.IsEmpty());
+  EXPECT_TRUE(on_empty_called);
+
+  bool called;
+  Status status;
+  on_empty_called = false;
+  page_eviction_manager_.TryCleanUp(
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  EXPECT_FALSE(page_eviction_manager_.IsEmpty());
+  EXPECT_FALSE(on_empty_called);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_TRUE(page_eviction_manager_.IsEmpty());
+  EXPECT_TRUE(on_empty_called);
 }
 
 }  // namespace

@@ -29,6 +29,7 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
   ledger_managers_.set_on_empty([this] { CheckEmpty(); });
   ledger_repository_debug_bindings_.set_empty_set_handler(
       [this] { CheckEmpty(); });
+  page_eviction_manager_->set_on_empty([this] { CheckEmpty(); });
 }
 
 LedgerRepositoryImpl::~LedgerRepositoryImpl() {}
@@ -138,8 +139,10 @@ void LedgerRepositoryImpl::CheckEmpty() {
   if (!on_empty_callback_)
     return;
   if (ledger_managers_.empty() && bindings_.size() == 0 &&
-      ledger_repository_debug_bindings_.size() == 0)
+      ledger_repository_debug_bindings_.size() == 0 &&
+      page_eviction_manager_->IsEmpty()) {
     on_empty_callback_();
+  }
 }
 
 void LedgerRepositoryImpl::GetLedgerRepositoryDebug(

@@ -10,6 +10,7 @@
 #include <utility>
 
 #include <lib/fit/function.h>
+#include <lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/bin/ledger/app/page_usage_db.h"
 #include "peridot/bin/ledger/app/page_utils.h"
@@ -34,6 +35,10 @@ class PageEvictionManagerImpl : public PageEvictionManager {
   void SetDelegate(PageEvictionManager::Delegate* delegate);
 
   // PageEvictionManager:
+  void set_on_empty(fit::closure on_empty_callback) override;
+
+  bool IsEmpty() override;
+
   void TryCleanUp(fit::function<void(Status)> callback) override;
 
   void OnPageOpened(fxl::StringView ledger_name,
@@ -43,6 +48,10 @@ class PageEvictionManagerImpl : public PageEvictionManager {
                     storage::PageIdView page_id) override;
 
  private:
+  // A token that performs a given action on destruction. ExpiringToken objects
+  // are used to keep track of pending operations.
+  using ExpiringToken = fxl::AutoCall<fit::closure>;
+
   // A Completer allowing waiting until the target operation is completed.
   class Completer {
    public:
@@ -90,14 +99,23 @@ class PageEvictionManagerImpl : public PageEvictionManager {
   // Marks the given page as evicted in the page usage database.
   void MarkPageEvicted(std::string ledger_name, storage::PageId page_id);
 
+  ExpiringToken NewExpiringToken();
+
+  async_dispatcher_t* dispatcher_;
   // The initialization completer. |Init| method starts marking pages as closed,
   // and returns before that operation is done. This completer makes sure that
   // all methods accessing the page usage database wait until the initialization
   // has finished, before reading or updating information.
   Completer initialization_completer_;
+  // A closure to be called every time all pending operations are completed.
+  fit::closure on_empty_callback_;
+  ssize_t pending_operations_ = 0;
   PageEvictionManager::Delegate* delegate_ = nullptr;
   PageUsageDb db_;
   coroutine::CoroutineManager coroutine_manager_;
+
+  // Must be the last member.
+  fxl::WeakPtrFactory<PageEvictionManagerImpl> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageEvictionManagerImpl);
 };

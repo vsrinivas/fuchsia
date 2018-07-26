@@ -4,6 +4,7 @@
 
 #include "peridot/bin/ledger/app/page_eviction_manager_impl.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/strings/concatenate.h>
 #include <zx/time.h>
@@ -18,6 +19,37 @@
 #include "peridot/bin/ledger/storage/public/types.h"
 
 namespace ledger {
+namespace {
+
+// Logs an error message if the given |status| is not |OK| or |INTERNAL_ERROR|.
+void LogOnPageUpdateError(fxl::StringView operation_description, Status status,
+                          fxl::StringView ledger_name,
+                          storage::PageIdView page_id) {
+  // Don't print an error on |INTERNAL_ERROR|: it means that the operation was
+  // interrupted, because PageEvictionManagerImpl was destroyed before being
+  // empty.
+  if (status != Status::OK && status != Status::INTERNAL_ERROR) {
+    FXL_LOG(ERROR) << "Failed to " << operation_description
+                   << " in PageUsage DB. Status: " << fidl::ToUnderlying(status)
+                   << ". Ledger name: " << ledger_name
+                   << ". Page ID: " << convert::ToHex(page_id);
+  }
+}
+
+// If the given |status| is not |OK|, logs an error message on failure to
+// initialize. Returns true in case of error; false otherwise.
+bool LogOnInitializationError(fxl::StringView operation_description,
+                              Status status) {
+  if (status != Status::OK) {
+    FXL_LOG(ERROR) << operation_description
+                   << " failed because of initialization error: "
+                   << fidl::ToUnderlying(status);
+    return true;
+  }
+  return false;
+}
+
+}  // namespace
 
 PageEvictionManagerImpl::Completer::Completer() {}
 
@@ -38,12 +70,11 @@ Status PageEvictionManagerImpl::Completer::WaitUntilDone(
 
   auto sync_call_status =
       coroutine::SyncCall(handler, [this](fit::closure callback) {
-        // SyncCall finishes its execution when the given |callback| is
-        // called. To block the termination of |SyncCall| (and of
-        // |WaitUntilDone|), here we push this |callback| in the vector of
-        // |callbacks_|. Once |Complete| is called, we will call all of these
-        // callbacks, which will eventually unblock all pending |WaitUntilDone|
-        // calls.
+        // SyncCall finishes its execution when the given |callback| is called.
+        // To block the termination of |SyncCall| (and of |WaitUntilDone|), here
+        // we push this |callback| in the vector of |callbacks_|. Once
+        // |Complete| is called, we will call all of these callbacks, which will
+        // eventually unblock all pending |WaitUntilDone| calls.
         callbacks_.push_back(std::move(callback));
       });
   if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
@@ -71,9 +102,11 @@ PageEvictionManagerImpl::PageEvictionManagerImpl(
     async_dispatcher_t* dispatcher,
     coroutine::CoroutineService* coroutine_service,
     ledger::DetachedPath db_path)
-    : db_(dispatcher, db_path.SubPath({storage::kSerializationVersion,
+    : dispatcher_(dispatcher),
+      db_(dispatcher, db_path.SubPath({storage::kSerializationVersion,
                                        kPageUsageDbSerializationVersion})),
-      coroutine_manager_(coroutine_service) {}
+      coroutine_manager_(coroutine_service),
+      weak_factory_(this) {}
 
 PageEvictionManagerImpl::~PageEvictionManagerImpl() {}
 
@@ -88,6 +121,7 @@ Status PageEvictionManagerImpl::Init() {
   // finalize the initialization completer when done.
   coroutine_manager_.StartCoroutine(
       [this](coroutine::CoroutineHandler* handler) {
+        ExpiringToken token = NewExpiringToken();
         Status status = db_.MarkAllPagesClosed(handler);
         initialization_completer_.Complete(status);
       });
@@ -101,16 +135,21 @@ void PageEvictionManagerImpl::SetDelegate(
   delegate_ = delegate;
 }
 
+void PageEvictionManagerImpl::set_on_empty(fit::closure on_empty_callback) {
+  on_empty_callback_ = std::move(on_empty_callback);
+}
+
+bool PageEvictionManagerImpl::IsEmpty() { return pending_operations_ == 0; }
+
 void PageEvictionManagerImpl::TryCleanUp(fit::function<void(Status)> callback) {
   // TODO(nellyv): we should define some way to chose eviction policies.
   coroutine_manager_.StartCoroutine(
-      std::move(callback), [this](coroutine::CoroutineHandler* handler,
-                                  fit::function<void(Status)> callback) {
+      std::move(callback),
+      [this](coroutine::CoroutineHandler* handler,
+             fit::function<void(Status)> callback) mutable {
+        ExpiringToken token = NewExpiringToken();
         Status status = initialization_completer_.WaitUntilDone(handler);
-        if (status != Status::OK) {
-          FXL_LOG(ERROR)
-              << "TryCleanUp failed because of initialization error: "
-              << fidl::ToUnderlying(status);
+        if (LogOnInitializationError("TryCleanUp", status)) {
           callback(status);
           return;
         }
@@ -138,8 +177,19 @@ void PageEvictionManagerImpl::TryCleanUp(fit::function<void(Status)> callback) {
             return;
           }
           if (can_evict) {
-            EvictPage(page_info.ledger_name, page_info.page_id,
-                      std::move(callback));
+            auto sync_call_status = coroutine::SyncCall(
+                handler,
+                [this, ledger_name = page_info.ledger_name,
+                 page_id = page_info.page_id](auto callback) {
+                  EvictPage(ledger_name, page_id, std::move(callback));
+                },
+                &status);
+            if (sync_call_status ==
+                coroutine::ContinuationStatus::INTERRUPTED) {
+              callback(Status::INTERNAL_ERROR);
+            } else {
+              callback(status);
+            }
             return;
           }
         }
@@ -152,18 +202,13 @@ void PageEvictionManagerImpl::OnPageOpened(fxl::StringView ledger_name,
   coroutine_manager_.StartCoroutine([this, ledger_name = ledger_name.ToString(),
                                      page_id = page_id.ToString()](
                                         coroutine::CoroutineHandler* handler) {
+    ExpiringToken token = NewExpiringToken();
     Status status = initialization_completer_.WaitUntilDone(handler);
-    if (status != Status::OK) {
-      FXL_LOG(ERROR) << "OnPageOpened failed because of initialization error: "
-                     << fidl::ToUnderlying(status);
+    if (LogOnInitializationError("OnPageOpened", status)) {
       return;
     }
     status = db_.MarkPageOpened(handler, ledger_name, page_id);
-    if (status != Status::OK) {
-      FXL_LOG(ERROR)
-          << "Failed to mark the page as opened in PageUsage DB. Ledger name: "
-          << ledger_name << ". Page ID: " << convert::ToHex(page_id);
-    }
+    LogOnPageUpdateError("mark page as opened", status, ledger_name, page_id);
   });
 }
 
@@ -172,18 +217,13 @@ void PageEvictionManagerImpl::OnPageClosed(fxl::StringView ledger_name,
   coroutine_manager_.StartCoroutine([this, ledger_name = ledger_name.ToString(),
                                      page_id = page_id.ToString()](
                                         coroutine::CoroutineHandler* handler) {
+    ExpiringToken token = NewExpiringToken();
     Status status = initialization_completer_.WaitUntilDone(handler);
-    if (status != Status::OK) {
-      FXL_LOG(ERROR) << "OnPageClosed failed because of initialization error: "
-                     << fidl::ToUnderlying(status);
+    if (LogOnInitializationError("OnPageClosed", status)) {
       return;
     }
     status = db_.MarkPageClosed(handler, ledger_name, page_id);
-    if (status != Status::OK) {
-      FXL_LOG(ERROR)
-          << "Failed to mark the page as closed in PageUsage DB. Ledger name: "
-          << ledger_name << ". Page ID: " << convert::ToHex(page_id);
-    }
+    LogOnPageUpdateError("mark page as closed", status, ledger_name, page_id);
   });
 }
 
@@ -277,11 +317,26 @@ void PageEvictionManagerImpl::MarkPageEvicted(std::string ledger_name,
                                      page_id = std::move(page_id)](
                                         coroutine::CoroutineHandler* handler) {
     Status status = db_.MarkPageEvicted(handler, ledger_name, page_id);
-    if (status != Status::OK) {
-      FXL_LOG(ERROR) << "Failed to mark the page as evicted. Ledger name: "
-                     << ledger_name << ". Page ID: " << convert::ToHex(page_id);
-    }
+    LogOnPageUpdateError("mark page as evicted", status, ledger_name, page_id);
   });
+}
+
+PageEvictionManagerImpl::ExpiringToken
+PageEvictionManagerImpl::NewExpiringToken() {
+  ++pending_operations_;
+  return ExpiringToken(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this] {
+    --pending_operations_;
+    // We need to post a task here: Tokens expire while a coroutine is being
+    // executed, and if |on_empty_callback_| is executed directly, it might end
+    // up deleting the PageEvictionManagerImpl object, which will delete the
+    // |coroutine_manager_|.
+    async::PostTask(dispatcher_,
+                    callback::MakeScoped(weak_factory_.GetWeakPtr(), [this] {
+                      if (on_empty_callback_ && pending_operations_ == 0) {
+                        on_empty_callback_();
+                      }
+                    }));
+  }));
 }
 
 }  // namespace ledger
