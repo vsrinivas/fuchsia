@@ -13,12 +13,14 @@ Location::Location() = default;
 Location::Location(State state, uint64_t address)
     : state_(state), address_(address) {}
 Location::Location(uint64_t address, FileLine&& file_line, int column,
+                   const SymbolContext& symbol_context,
                    const LazySymbol& function)
     : state_(State::kSymbolized),
       address_(address),
       file_line_(std::move(file_line)),
       column_(column),
-      function_(function) {}
+      function_(function),
+      symbol_context_(symbol_context) {}
 Location::~Location() = default;
 
 void Location::AddAddressOffset(uint64_t offset) {

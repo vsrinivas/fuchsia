@@ -68,14 +68,19 @@ std::vector<FileLine> TargetSymbolsImpl::FindLinesForSymbol(
   // we only want to return once.
   std::set<FileLine> result_set;
 
+  // This uses a null symbol context since this function doesn't depend on
+  // any actual locations of libraries in memory.
+  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
+
   std::vector<uint64_t> addrs;
   for (const auto& module : modules_) {
-    addrs = module->module_symbols()->RelativeAddressesForFunction(name);
+    addrs =
+        module->module_symbols()->AddressesForFunction(symbol_context, name);
 
     // Convert each address back into a location to get its file/line.
     for (uint64_t addr : addrs) {
       Location loc =
-          module->module_symbols()->RelativeLocationForRelativeAddress(addr);
+          module->module_symbols()->LocationForAddress(symbol_context, addr);
       if (loc.has_symbols())
         result_set.insert(loc.file_line());
     }

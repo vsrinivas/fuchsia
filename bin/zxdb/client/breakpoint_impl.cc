@@ -162,9 +162,7 @@ BreakpointAction BreakpointImpl::OnHit(Thread* thread) {
   return BreakpointAction::kStop;
 }
 
-void BreakpointImpl::BackendBreakpointRemoved() {
-  backend_installed_ = false;
-}
+void BreakpointImpl::BackendBreakpointRemoved() { backend_installed_ = false; }
 
 void BreakpointImpl::WillDestroyThread(Process* process, Thread* thread) {
   if (settings_.scope_thread == thread) {
@@ -185,18 +183,24 @@ void BreakpointImpl::DidLoadModuleSymbols(Process* process,
   // Should only get this notification for relevant processes.
   FXL_DCHECK(CouldApplyToProcess(process));
 
+  const ModuleSymbols* module_symbols = module->module_symbols();
+
   // Resolve addresses.
   bool changed = false;
   if (settings_.location.type == InputLocation::Type::kSymbol) {
     changed = procs_[process].AddLocations(
-        this, process, module->AddressesForFunction(settings_.location.symbol));
+        this, process,
+        module_symbols->AddressesForFunction(module->symbol_context(),
+                                             settings_.location.symbol));
   } else if (settings_.location.type == InputLocation::Type::kLine) {
     // Need to resolve file names to pass canonical ones to AddressesForLine.
-    for (std::string& file : module->GetModuleSymbols()->FindFileMatches(
-             settings_.location.line.file())) {
+    for (std::string& file :
+         module_symbols->FindFileMatches(settings_.location.line.file())) {
       changed = procs_[process].AddLocations(
-          this, process, module->AddressesForLine(FileLine(
-                             std::move(file), settings_.location.line.line())));
+          this, process,
+          module_symbols->AddressesForLine(
+              module->symbol_context(),
+              FileLine(std::move(file), settings_.location.line.line())));
     }
   }
 

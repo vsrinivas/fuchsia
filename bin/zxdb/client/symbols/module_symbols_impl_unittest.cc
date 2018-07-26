@@ -28,8 +28,8 @@ class ScopedUnlink {
 
 // Trying to load a nonexistand file should error.
 TEST(ModuleSymbols, NonExistantFile) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName() +
-                           "_NONEXISTANT", "");
+  ModuleSymbolsImpl module(
+      TestSymbolModule::GetCheckedInTestFileName() + "_NONEXISTANT", "");
   Err err = module.Load();
   EXPECT_TRUE(err.has_error());
 }
@@ -45,8 +45,8 @@ TEST(ModuleSymbols, BadFileType) {
   EXPECT_LT(0, write(fd, temp_name, strlen(temp_name)));
   close(fd);
 
-  ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName() +
-                           "_NONEXISTANT", "");
+  ModuleSymbolsImpl module(
+      TestSymbolModule::GetCheckedInTestFileName() + "_NONEXISTANT", "");
   Err err = module.Load();
   EXPECT_TRUE(err.has_error());
 }
@@ -56,9 +56,13 @@ TEST(ModuleSymbols, Basic) {
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
+  // Make a symbol context with some load address to ensure that the addresses
+  // round-trip properly.
+  SymbolContext symbol_context(0x18000);
+
   // MyFunction() should have one implementation.
   std::vector<uint64_t> addrs =
-      module.RelativeAddressesForFunction(TestSymbolModule::kMyFunctionName);
+      module.AddressesForFunction(symbol_context, TestSymbolModule::kMyFunctionName);
   ASSERT_EQ(1u, addrs.size());
 
   // On one occasion Clang generated a symbol file that listed many functions
@@ -71,16 +75,20 @@ TEST(ModuleSymbols, Basic) {
   ASSERT_NE(0u, addrs[0]);
 
   // That address should resolve back to the function name.
-  Location loc = module.RelativeLocationForRelativeAddress(addrs[0]);
+  Location loc = module.LocationForAddress(symbol_context, addrs[0]);
   EXPECT_TRUE(loc.is_symbolized());
   EXPECT_EQ("zxdb_symbol_test.cc", loc.file_line().GetFileNamePart());
   EXPECT_EQ(TestSymbolModule::kMyFunctionLine, loc.file_line().line());
 }
 
-TEST(ModuleSymbols, LineDetailsForRelativeAddress) {
+TEST(ModuleSymbols, LineDetailsForAddress) {
   ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName(), "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
+
+  // Make a symbol context with some load address to ensure that the addresses
+  // round-trip properly.
+  SymbolContext symbol_context(0x18000);
 
   // Get the canonical file name to test.
   auto file_matches = module.FindFileMatches("line_lookup_symbol_test.cc");
@@ -90,16 +98,17 @@ TEST(ModuleSymbols, LineDetailsForRelativeAddress) {
   // Get address of line 28 which is a normal line with code on both sides.
   int const kLineToQuery = 28;
   std::vector<uint64_t> addrs;
-  addrs = module.RelativeAddressesForLine(FileLine(file_name, kLineToQuery));
+  addrs = module.AddressesForLine(symbol_context, FileLine(file_name, kLineToQuery));
   ASSERT_LE(1u, addrs.size());
-  Location location = module.RelativeLocationForRelativeAddress(addrs[0]);
+  Location location =
+      module.LocationForAddress(symbol_context, addrs[0]);
   EXPECT_EQ(kLineToQuery, location.file_line().line());
   EXPECT_EQ(file_name, location.file_line().file());
 
   // Lookup the line info. Normally we expect one line table entry for this but
   // don't want to assume that since the compiler could emit multiple entries
   // for it.
-  LineDetails line_details = module.LineDetailsForRelativeAddress(addrs[0]);
+  LineDetails line_details = module.LineDetailsForAddress(symbol_context, addrs[0]);
   EXPECT_EQ(file_name, line_details.file_line().file());
   EXPECT_EQ(kLineToQuery, line_details.file_line().line());
   ASSERT_FALSE(line_details.entries().empty());
@@ -109,14 +118,14 @@ TEST(ModuleSymbols, LineDetailsForRelativeAddress) {
 
   // The address before the beginning of the range should be the previous line.
   LineDetails prev_details =
-      module.LineDetailsForRelativeAddress(begin_range - 1);
+      module.LineDetailsForAddress(symbol_context, begin_range - 1);
   EXPECT_EQ(kLineToQuery - 1, prev_details.file_line().line());
   EXPECT_EQ(file_name, prev_details.file_line().file());
   ASSERT_FALSE(prev_details.entries().empty());
   EXPECT_EQ(begin_range, prev_details.entries().back().range.end());
 
   // The end of the range (which is non-inclusive) should be the next line.
-  LineDetails next_details = module.LineDetailsForRelativeAddress(end_range);
+  LineDetails next_details = module.LineDetailsForAddress(symbol_context, end_range);
   EXPECT_EQ(kLineToQuery + 1, next_details.file_line().line());
   EXPECT_EQ(file_name, next_details.file_line().file());
   ASSERT_FALSE(next_details.entries().empty());
@@ -128,6 +137,10 @@ TEST(ModuleSymbols, AddressesForLine) {
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
+  // Make a symbol context with some load address to ensure that the addresses
+  // round-trip properly.
+  SymbolContext symbol_context(0x18000);
+
   // Get the canonical file name to test.
   auto file_matches = module.FindFileMatches("line_lookup_symbol_test.cc");
   ASSERT_EQ(1u, file_matches.size());
@@ -135,35 +148,36 @@ TEST(ModuleSymbols, AddressesForLine) {
 
   // Basic one, look for line 27 which is a normal statement.
   std::vector<uint64_t> addrs;
-  addrs = module.RelativeAddressesForLine(FileLine(file_name, 27));
+  addrs = module.AddressesForLine(symbol_context, FileLine(file_name, 27));
   ASSERT_LE(1u, addrs.size());
-  Location location = module.RelativeLocationForRelativeAddress(addrs[0]);
+  Location location =
+      module.LocationForAddress(symbol_context, addrs[0]);
   EXPECT_EQ(27, location.file_line().line());
   EXPECT_EQ(file_name, location.file_line().file());
 
   // Line 26 is a comment line, looking it up should get the following line.
-  addrs = module.RelativeAddressesForLine(FileLine(file_name, 26));
+  addrs = module.AddressesForLine(symbol_context, FileLine(file_name, 26));
   ASSERT_LE(1u, addrs.size());
-  location = module.RelativeLocationForRelativeAddress(addrs[0]);
+  location = module.LocationForAddress(symbol_context, addrs[0]);
   EXPECT_EQ(27, location.file_line().line());
   EXPECT_EQ(file_name, location.file_line().file());
 
   // Line 15 is the beginning of the templatized function. There should be
   // two matches since its instantiated twice.
-  addrs = module.RelativeAddressesForLine(FileLine(file_name, 15));
+  addrs = module.AddressesForLine(symbol_context, FileLine(file_name, 15));
   ASSERT_EQ(2u, addrs.size());
-  location = module.RelativeLocationForRelativeAddress(addrs[0]);
+  location = module.LocationForAddress(symbol_context, addrs[0]);
   EXPECT_EQ(15, location.file_line().line());
   EXPECT_EQ(file_name, location.file_line().file());
-  location = module.RelativeLocationForRelativeAddress(addrs[1]);
+  location = module.LocationForAddress(symbol_context, addrs[1]);
   EXPECT_EQ(15, location.file_line().line());
   EXPECT_EQ(file_name, location.file_line().file());
 
   // Line 17 is only present in one of the two template instantiations.
   // We should only find it once (see note below about case #2).
-  addrs = module.RelativeAddressesForLine(FileLine(file_name, 17));
+  addrs = module.AddressesForLine(symbol_context, FileLine(file_name, 17));
   ASSERT_TRUE(addrs.size() == 1u || addrs.size() == 2u);
-  location = module.RelativeLocationForRelativeAddress(addrs[0]);
+  location = module.LocationForAddress(symbol_context, addrs[0]);
   EXPECT_EQ(17, location.file_line().line());
   if (addrs.size() == 2u) {
     // MSVC in debug mode will emit the full code in both instantiations of the
@@ -171,7 +185,7 @@ TEST(ModuleSymbols, AddressesForLine) {
     // even though Clang doesn't do this. The important thing is that looking
     // up line 17 never gives us line 19 (which is the other template
     // instantiation).
-    location = module.RelativeLocationForRelativeAddress(addrs[1]);
+    location = module.LocationForAddress(symbol_context, addrs[1]);
     EXPECT_EQ(17, location.file_line().line());
   }
 }

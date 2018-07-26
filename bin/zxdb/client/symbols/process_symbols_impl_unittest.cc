@@ -38,9 +38,8 @@ class NotificationsImpl : public ProcessSymbolsImpl::Notifications {
   bool HaveOneLoadFor(uint64_t addr, const std::string& local_file) const {
     if (loaded_.size() != 1u)
       return false;
-    return loaded_[0]->GetLoadAddress() == addr &&
-           loaded_[0]->GetModuleSymbols()->GetStatus().symbol_file ==
-               local_file;
+    return loaded_[0]->load_address() == addr &&
+           loaded_[0]->module_symbols()->GetStatus().symbol_file == local_file;
   }
 
   // Notifications implementation.
@@ -48,7 +47,7 @@ class NotificationsImpl : public ProcessSymbolsImpl::Notifications {
     loaded_.push_back(module);
   }
   void WillUnloadModuleSymbols(LoadedModuleSymbols* module) override {
-    unloaded_.push_back(module->GetLoadAddress());
+    unloaded_.push_back(module->load_address());
   }
   void OnSymbolLoadFailure(const Err& err) override { err_count_++; }
 
@@ -93,9 +92,9 @@ TEST(ProcessSymbolsImpl, SetModules) {
   // Should have gotten one add notifications and no others.
   ASSERT_EQ(1u, notifications.loaded().size());
   LoadedModuleSymbols* loaded_symbols = notifications.loaded()[0];
-  EXPECT_EQ(base1, loaded_symbols->GetLoadAddress());
+  EXPECT_EQ(base1, loaded_symbols->load_address());
   EXPECT_EQ(test_file_name,
-            loaded_symbols->GetModuleSymbols()->GetStatus().symbol_file);
+            loaded_symbols->module_symbols()->GetStatus().symbol_file);
   EXPECT_EQ(0, notifications.err_count());
 
   // Replace with a different one at the same address.

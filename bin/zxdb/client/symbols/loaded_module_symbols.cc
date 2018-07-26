@@ -6,7 +6,13 @@
 
 namespace zxdb {
 
-LoadedModuleSymbols::LoadedModuleSymbols() = default;
+LoadedModuleSymbols::LoadedModuleSymbols(
+    fxl::RefPtr<SystemSymbols::ModuleRef> module,
+    uint64_t load_address)
+    : module_(std::move(module)),
+      load_address_(load_address),
+      symbol_context_(load_address) {}
+
 LoadedModuleSymbols::~LoadedModuleSymbols() = default;
 
 }  // namespace zxdb

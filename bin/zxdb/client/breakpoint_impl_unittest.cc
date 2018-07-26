@@ -114,15 +114,17 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   ASSERT_TRUE(sink().adds.empty());
 
   // Make two fake modules. The first will resolve the function to two
-  // locations, the second will resolve nothing.
-  const uint64_t kRelAddress1 = 0x78456345;
-  const uint64_t kRelAddress2 = 0x12345678;
+  // locations, the second will resolve nothing. They must be larger than the
+  // module base.
+  const uint64_t kModule1Base = 0x1000000;
+  const uint64_t kAddress1 = 0x78456345;
+  const uint64_t kAddress2 = 0x12345678;
   std::unique_ptr<MockModuleSymbols> module1 =
       std::make_unique<MockModuleSymbols>("myfile1.so");
   std::unique_ptr<MockModuleSymbols> module2 =
       std::make_unique<MockModuleSymbols>("myfile2.so");
   module1->AddSymbol(kFunctionName,
-                     std::vector<uint64_t>{kRelAddress1, kRelAddress2});
+                     std::vector<uint64_t>{kAddress1, kAddress2});
 
   // Cause the process to load the module. We have to keep the module_ref
   // alive for this to stay cached in the SystemSymbols.
@@ -137,7 +139,6 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
 
   // Cause the process to load module 1.
   std::vector<debug_ipc::Module> modules;
-  const uint64_t kModule1Base = 0x1000000;
   debug_ipc::Module load1;
   load1.name = "test";
   load1.base = kModule1Base;
@@ -160,8 +161,6 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   EXPECT_EQ(0u, out.breakpoint.locations[1].thread_koid);
 
   // Addresses could be in either order. They should be absolute.
-  const uint64_t kAddress1 = kModule1Base + kRelAddress1;
-  const uint64_t kAddress2 = kModule1Base + kRelAddress2;
   EXPECT_TRUE((out.breakpoint.locations[0].address == kAddress1 &&
                out.breakpoint.locations[1].address == kAddress2) ||
               (out.breakpoint.locations[0].address == kAddress2 &&
@@ -218,7 +217,6 @@ TEST_F(BreakpointImplTest, Address) {
   EXPECT_FALSE(out.breakpoint.one_shot);
   EXPECT_EQ(debug_ipc::Stop::kAll, out.breakpoint.stop);
   EXPECT_EQ(1u, out.breakpoint.locations.size());
-  // EXPECT_EQ(, out.breakpoint.locations[0].process_koid);
 }
 
 }  // namespace zxdb

@@ -12,6 +12,8 @@ namespace zxdb {
 TEST(InputLocationParser, Parse) {
   InputLocation location;
 
+  SymbolContext relative_context = SymbolContext::ForRelativeAddresses();
+
   // Valid symbol (including colons).
   Err err = ParseInputLocation(nullptr, "Foo::Bar", &location);
   EXPECT_FALSE(err.has_error());
@@ -50,16 +52,18 @@ TEST(InputLocationParser, Parse) {
 
   // Implicit file name and valid frame but the location has no file name.
   debug_ipc::StackFrame stack_frame = {0x1234, 0x12345678};
-  MockFrame frame_no_file(nullptr, nullptr, stack_frame,
-                          Location(0x1234, FileLine(), 0, LazySymbol()));
+  MockFrame frame_no_file(
+      nullptr, nullptr, stack_frame,
+      Location(0x1234, FileLine(), 0, relative_context, LazySymbol()));
   location = InputLocation();
   err = ParseInputLocation(&frame_no_file, "21", &location);
   EXPECT_TRUE(err.has_error());
 
   // Valid implicit file name.
   std::string file = "foo.cc";
-  MockFrame frame_valid(nullptr, nullptr, stack_frame,
-                        Location(0x1234, FileLine(file, 12), 0, LazySymbol()));
+  MockFrame frame_valid(
+      nullptr, nullptr, stack_frame,
+      Location(0x1234, FileLine(file, 12), 0, relative_context, LazySymbol()));
   location = InputLocation();
   err = ParseInputLocation(&frame_valid, "21", &location);
   EXPECT_FALSE(err.has_error()) << err.msg();

@@ -19,7 +19,6 @@ struct Module;
 namespace zxdb {
 
 class LoadedModuleSymbols;
-class LoadedModuleSymbolsImpl;
 class TargetSymbolsImpl;
 
 // Main client interface for querying process symbol information. See also
@@ -65,7 +64,7 @@ class ProcessSymbolsImpl : public ProcessSymbols {
     uint64_t base = 0;
 
     // MAY BE NULL if the symbols could not be loaded.
-    std::unique_ptr<LoadedModuleSymbolsImpl> symbols;
+    std::unique_ptr<LoadedModuleSymbols> symbols;
   };
 
   // Creates the ModuleInfo structure, attempts to load the symbols, and

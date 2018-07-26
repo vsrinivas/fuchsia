@@ -16,15 +16,15 @@ namespace zxdb {
 
 class FileLine;
 class LineDetails;
+class SymbolContext;
 
 // Represents the symbols for a module (executable or shared library).
 //
-// All addresses in and out of the API of this class are module-relative (hence
-// the "Relative*" naming). This way, the symbol information can be shared
-// between multiple processes that have mapped the same .so file (often at
-// different addresses). This means that callers have to offset addresses when
-// calling into this class, and offset them in the opposite way when they get
-// the results.
+// All addresses in and out of the API of this class are absolute inside a
+// running process. Since this class itself is independent of load addresses,
+// the functions take a SymbolContext which is used to convert between the
+// absolute addresses use as inputs and outputs, and the module-relative
+// addresses used by the symbol tables.
 class ModuleSymbols {
  public:
   ModuleSymbols();
@@ -39,25 +39,31 @@ class ModuleSymbols {
   // base address is.
   virtual ModuleSymbolStatus GetStatus() const = 0;
 
-  // Returns a symbolized Location object for the given module-relative
-  // location. The address in the returned location object will also be
-  // module-relative. The location will be of type kAddress if there is no
-  // symbol for this location.
-  virtual Location RelativeLocationForRelativeAddress(
-      uint64_t address) const = 0;
+  // Returns a symbolized Location object for the given absolute location.
+  // The location will be of type kAddress if there is no symbol for this
+  // location.
+  //
+  // The SymbolContext will be used to interpret the absolute input address.
+  virtual Location LocationForAddress(const SymbolContext& symbol_context,
+                                      uint64_t absolute_address) const = 0;
 
   // Computes the line that corresponds to the given address. Unlike
-  // RelativeLocationForRelativeAddress (which just returns the current source
-  // line), this returns the entire set of contiguous line table entries with
-  // code ranges with the same line as the given address.
-  virtual LineDetails LineDetailsForRelativeAddress(uint64_t address) const = 0;
+  // LocationForAddress (which just returns the current source line), this
+  // returns the entire set of contiguous line table entries with code ranges
+  // with the same line as the given address.
+  //
+  // The SymbolContext will be used to interpret the absolute input address.
+  virtual LineDetails LineDetailsForAddress(
+      const SymbolContext& symbol_context, uint64_t absolute_address) const = 0;
 
-  // Returns the addresses (relative to the base of this module) for the given
-  // function name. The function name must be an exact match. The addresses
-  // will indicate the start of the function. Since a function implementation
-  // can be duplicated more than once, there can be multiple results.
-  virtual std::vector<uint64_t> RelativeAddressesForFunction(
-      const std::string& name) const = 0;
+  // Returns the addresses for the given function name. The function name must
+  // be an exact match. The addresses will indicate the start of the function.
+  // Since a function implementation can be duplicated more than once, there
+  // can be multiple results.
+  //
+  // The SymbolContext will be used to generate the absolute output addresses.
+  virtual std::vector<uint64_t> AddressesForFunction(
+      const SymbolContext& symbol_context, const std::string& name) const = 0;
 
   // Returns a vector of full file names that match the input.
   //
@@ -79,7 +85,7 @@ class ModuleSymbols {
   // try its best to find the best line if an exact match isn't possible.
   //
   // If you need to find out the exact actual location that this resolved to,
-  // look up the restulting address again.
+  // look up the resulting address again.
   //
   // If the file wasn't found or contains no code, it will return an empty
   // vector. If the file exists and contains code, it will always return
@@ -87,8 +93,10 @@ class ModuleSymbols {
   //
   // The input file name must be a full path that matches exactly. Use
   // FindFileMatches() to get these.
-  virtual std::vector<uint64_t> RelativeAddressesForLine(
-      const FileLine& line) const = 0;
+  //
+  // The SymbolContext will be used to generate the absolute output addresses.
+  virtual std::vector<uint64_t> AddressesForLine(
+      const SymbolContext& symbol_context, const FileLine& line) const = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleSymbols);

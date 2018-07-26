@@ -54,17 +54,21 @@ class ModuleSymbolsImpl : public ModuleSymbols {
 
   // ModuleSymbols implementation.
   ModuleSymbolStatus GetStatus() const override;
-  Location RelativeLocationForRelativeAddress(uint64_t address) const override;
-  LineDetails LineDetailsForRelativeAddress(uint64_t address) const override;
-  std::vector<uint64_t> RelativeAddressesForFunction(
+  Location LocationForAddress(const SymbolContext& symbol_context,
+                              uint64_t absolute_address) const override;
+  LineDetails LineDetailsForAddress(const SymbolContext& symbol_context,
+                                    uint64_t absolute_address) const override;
+  std::vector<uint64_t> AddressesForFunction(
+      const SymbolContext& symbol_context,
       const std::string& name) const override;
   std::vector<std::string> FindFileMatches(
       const std::string& name) const override;
-  std::vector<uint64_t> RelativeAddressesForLine(
-      const FileLine& line) const override;
+  std::vector<uint64_t> AddressesForLine(const SymbolContext& symbol_context,
+                                         const FileLine& line) const override;
 
  private:
-  llvm::DWARFCompileUnit* CompileUnitForAddress(uint64_t address) const;
+  llvm::DWARFCompileUnit* CompileUnitForRelativeAddress(
+      uint64_t relative_address) const;
 
   const std::string name_;
   const std::string build_id_;

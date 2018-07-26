@@ -5,7 +5,7 @@
 #include "garnet/bin/zxdb/client/symbols/process_symbols_impl.h"
 
 #include "garnet/bin/zxdb/client/symbols/line_details.h"
-#include "garnet/bin/zxdb/client/symbols/loaded_module_symbols_impl.h"
+#include "garnet/bin/zxdb/client/symbols/loaded_module_symbols.h"
 #include "garnet/bin/zxdb/client/symbols/module_symbols_impl.h"
 #include "garnet/bin/zxdb/client/symbols/system_symbols.h"
 #include "garnet/bin/zxdb/client/symbols/target_symbols_impl.h"
@@ -76,8 +76,10 @@ void ProcessSymbolsImpl::SetModules(
   // Update the TargetSymbols.
   target_symbols_->RemoveAllModules();
   for (auto& pair : modules_) {
-    if (pair.second.symbols)
-      target_symbols_->AddModule(pair.second.symbols->module());
+    if (pair.second.symbols) {
+      target_symbols_->AddModule(fxl::RefPtr<SystemSymbols::ModuleRef>(
+          pair.second.symbols->module_ref()));
+    }
   }
 
   // Send notifications last so everything is in a consistent state.
@@ -95,7 +97,7 @@ std::vector<ModuleSymbolStatus> ProcessSymbolsImpl::GetStatus() const {
   std::vector<ModuleSymbolStatus> result;
   for (const auto& pair : modules_) {
     if (pair.second.symbols.get()) {
-      result.push_back(pair.second.symbols->GetModuleSymbols()->GetStatus());
+      result.push_back(pair.second.symbols->module_symbols()->GetStatus());
       // ModuleSymbols doesn't know the name or base address so fill in now.
       result.back().name = pair.second.name;
       result.back().base = pair.second.base;
@@ -116,14 +118,16 @@ Location ProcessSymbolsImpl::LocationForAddress(uint64_t address) const {
   const ModuleInfo* info = InfoForAddress(address);
   if (!info || !info->symbols)
     return Location(Location::State::kSymbolized, address);  // Can't symbolize.
-  return info->symbols->LocationForAddress(address);
+  return info->symbols->module_symbols()->LocationForAddress(
+      info->symbols->symbol_context(), address);
 }
 
 LineDetails ProcessSymbolsImpl::LineDetailsForAddress(uint64_t address) const {
   const ModuleInfo* info = InfoForAddress(address);
   if (!info || !info->symbols)
     return LineDetails();
-  return info->symbols->LineDetailsForAddress(address);
+  return info->symbols->module_symbols()->LineDetailsForAddress(
+      info->symbols->symbol_context(), address);
 }
 
 std::vector<uint64_t> ProcessSymbolsImpl::AddressesForFunction(
@@ -131,7 +135,9 @@ std::vector<uint64_t> ProcessSymbolsImpl::AddressesForFunction(
   std::vector<uint64_t> result;
   for (const auto& pair : modules_) {
     if (pair.second.symbols) {
-      for (auto local_addr : pair.second.symbols->AddressesForFunction(name))
+      const LoadedModuleSymbols* loaded = pair.second.symbols.get();
+      for (auto local_addr : loaded->module_symbols()->AddressesForFunction(
+               loaded->symbol_context(), name))
         result.push_back(local_addr);
     }
   }
@@ -143,7 +149,9 @@ std::vector<uint64_t> ProcessSymbolsImpl::AddressesForLine(
   std::vector<uint64_t> result;
   for (const auto& pair : modules_) {
     if (pair.second.symbols) {
-      for (auto local_addr : pair.second.symbols->AddressesForLine(line))
+      const LoadedModuleSymbols* loaded = pair.second.symbols.get();
+      for (auto local_addr : loaded->module_symbols()->AddressesForLine(
+               loaded->symbol_context(), line))
         result.push_back(local_addr);
     }
   }
@@ -165,8 +173,8 @@ ProcessSymbolsImpl::ModuleInfo* ProcessSymbolsImpl::SaveModuleInfo(
     if (!ExpectSymbolsForName(module.name))
       *symbol_load_err = Err();
   } else {
-    // Success, make the LoadedModuleSymbolsImpl.
-    info.symbols = std::make_unique<LoadedModuleSymbolsImpl>(
+    // Success, make the LoadedModuleSymbols.
+    info.symbols = std::make_unique<LoadedModuleSymbols>(
         std::move(module_symbols), module.base);
   }
 

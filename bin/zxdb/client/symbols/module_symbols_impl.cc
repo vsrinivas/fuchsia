@@ -8,6 +8,7 @@
 
 #include "garnet/bin/zxdb/client/symbols/dwarf_symbol_factory.h"
 #include "garnet/bin/zxdb/client/symbols/line_details.h"
+#include "garnet/bin/zxdb/client/symbols/symbol_context.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
@@ -211,16 +212,19 @@ Err ModuleSymbolsImpl::Load() {
 // This function is similar to llvm::DWARFContext::getLineInfoForAddress
 // but we can't use that because we want the actual DIE reference to the
 // function rather than its name.
-Location ModuleSymbolsImpl::RelativeLocationForRelativeAddress(
-    uint64_t address) const {
+Location ModuleSymbolsImpl::LocationForAddress(
+    const SymbolContext& symbol_context, uint64_t absolute_address) const {
   // TODO(brettw) handle addresses that aren't code (e.g. data).
-  llvm::DWARFCompileUnit* unit = CompileUnitForAddress(address);
-  if (!unit)
-    return Location(Location::State::kSymbolized, address);  // No symbol.
+  uint64_t relative_address =
+      symbol_context.AbsoluteToRelative(absolute_address);
+  llvm::DWARFCompileUnit* unit =
+      CompileUnitForRelativeAddress(relative_address);
+  if (!unit)  // No symbol
+    return Location(Location::State::kSymbolized, absolute_address);
 
   // Get the innermost subroutine or inlined function for the address. This
   // may be empty, but still lookup the line info below in case its present.
-  llvm::DWARFDie subroutine = unit->getSubroutineForAddress(address);
+  llvm::DWARFDie subroutine = unit->getSubroutineForAddress(relative_address);
   LazySymbol lazy_function;
   if (subroutine)
     lazy_function = symbol_factory_->MakeLazy(subroutine);
@@ -231,27 +235,33 @@ Location ModuleSymbolsImpl::RelativeLocationForRelativeAddress(
   if (line_table) {
     llvm::DILineInfo line_info;
     if (line_table->getFileLineInfoForAddress(
-            address, unit->getCompilationDir(),
+            relative_address, unit->getCompilationDir(),
             llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
             line_info)) {
       // Line info present.
-      return Location(address,
+      return Location(absolute_address,
                       FileLine(std::move(line_info.FileName), line_info.Line),
-                      line_info.Column, std::move(lazy_function));
+                      line_info.Column, symbol_context,
+                      std::move(lazy_function));
     }
   }
 
   // No line information.
-  return Location(address, FileLine(), 0, std::move(lazy_function));
+  return Location(absolute_address, FileLine(), 0, symbol_context,
+                  std::move(lazy_function));
 }
 
 // By policy this function decides that line table entries with a "0" line
 // index count with the previous non-zero entry. The compiler will generate
 // a row with a 0 line number to indicate an instruction range that isn't
 // associated with a source line.
-LineDetails ModuleSymbolsImpl::LineDetailsForRelativeAddress(
-    uint64_t address) const {
-  llvm::DWARFCompileUnit* unit = CompileUnitForAddress(address);
+LineDetails ModuleSymbolsImpl::LineDetailsForAddress(
+    const SymbolContext& symbol_context, uint64_t absolute_address) const {
+  uint64_t relative_address =
+      symbol_context.AbsoluteToRelative(absolute_address);
+
+  llvm::DWARFCompileUnit* unit =
+      CompileUnitForRelativeAddress(relative_address);
   if (!unit)
     return LineDetails();
   const llvm::DWARFDebugLine::LineTable* line_table =
@@ -260,7 +270,7 @@ LineDetails ModuleSymbolsImpl::LineDetailsForRelativeAddress(
     return LineDetails();
 
   const auto& rows = line_table->Rows;
-  uint32_t found_row_index = line_table->lookupAddress(address);
+  uint32_t found_row_index = line_table->lookupAddress(relative_address);
 
   // The row could be not found or it could be in a "nop" range indicated by
   // an "end sequence" marker. For padding between functions, the compiler will
@@ -314,15 +324,17 @@ LineDetails ModuleSymbolsImpl::LineDetailsForRelativeAddress(
 
     LineDetails::LineEntry entry;
     entry.column = rows[i].Column;
-    entry.range = AddressRange(rows[i].Address, rows[i + 1].Address);
+    entry.range =
+        AddressRange(symbol_context.RelativeToAbsolute(rows[i].Address),
+                     symbol_context.RelativeToAbsolute(rows[i + 1].Address));
     result.entries().push_back(entry);
   }
 
   return result;
 }
 
-std::vector<uint64_t> ModuleSymbolsImpl::RelativeAddressesForFunction(
-    const std::string& name) const {
+std::vector<uint64_t> ModuleSymbolsImpl::AddressesForFunction(
+    const SymbolContext& symbol_context, const std::string& name) const {
   const std::vector<ModuleSymbolIndexNode::DieRef>& entries =
       index_.FindFunctionExact(name);
 
@@ -340,7 +352,7 @@ std::vector<uint64_t> ModuleSymbolsImpl::RelativeAddressesForFunction(
         [](const llvm::DWARFAddressRange& a, const llvm::DWARFAddressRange& b) {
           return a.LowPC < b.LowPC;
         });
-    result.push_back(min_iter->LowPC);
+    result.push_back(symbol_context.RelativeToAbsolute(min_iter->LowPC));
   }
   return result;
 }
@@ -370,8 +382,8 @@ std::vector<std::string> ModuleSymbolsImpl::FindFileMatches(
 //    To solve this duplication problem, get the resolved line of each of the
 //    addresses found above and find the best one. Keep only those locations
 //    matching the best one (there can still be multiple).
-std::vector<uint64_t> ModuleSymbolsImpl::RelativeAddressesForLine(
-    const FileLine& line) const {
+std::vector<uint64_t> ModuleSymbolsImpl::AddressesForLine(
+    const SymbolContext& symbol_context, const FileLine& line) const {
   std::vector<uint64_t> result;
   const std::vector<unsigned>* units = index_.FindFileUnitIndices(line.file());
   if (!units)
@@ -402,15 +414,15 @@ std::vector<uint64_t> ModuleSymbolsImpl::RelativeAddressesForLine(
       [](const LineMatch& a, const LineMatch& b) { return a.line < b.line; });
   for (const LineMatch& match : matches) {
     if (match.line == min_elt_iter->line)
-      result.push_back(match.address);
+      result.push_back(symbol_context.RelativeToAbsolute(match.address));
   }
   return result;
 }
 
-llvm::DWARFCompileUnit* ModuleSymbolsImpl::CompileUnitForAddress(
-    uint64_t address) const {
+llvm::DWARFCompileUnit* ModuleSymbolsImpl::CompileUnitForRelativeAddress(
+    uint64_t relative_address) const {
   return compile_units_.getUnitForOffset(
-      context_->getDebugAranges()->findAddress(address));
+      context_->getDebugAranges()->findAddress(relative_address));
 }
 
 }  // namespace zxdb

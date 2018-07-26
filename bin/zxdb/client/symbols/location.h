@@ -8,6 +8,7 @@
 
 #include "garnet/bin/zxdb/client/symbols/file_line.h"
 #include "garnet/bin/zxdb/client/symbols/lazy_symbol.h"
+#include "garnet/bin/zxdb/client/symbols/symbol_context.h"
 
 namespace zxdb {
 
@@ -28,6 +29,7 @@ class Location {
   Location();
   Location(State state, uint64_t address);
   Location(uint64_t address, FileLine&& file_line, int column,
+           const SymbolContext& symbol_context,
            const LazySymbol& function = LazySymbol());
   ~Location();
 
@@ -38,7 +40,9 @@ class Location {
   bool is_symbolized() const { return state_ == State::kSymbolized; }
   bool has_symbols() const { return file_line_.is_valid(); }
 
+  // The absolute address of this location.
   uint64_t address() const { return address_; }
+
   const FileLine& file_line() const { return file_line_; }
   int column() const { return column_; }
 
@@ -49,6 +53,10 @@ class Location {
   // be the symbol table indicates file/line info for this address but could
   // lack a function record for it.
   const LazySymbol& function() const { return function_; }
+
+  // Symbolized locations will have a valid symbol context for converting
+  // addresses.
+  const SymbolContext& symbol_context() const { return symbol_context_; }
 
   // Offsets the code addresses in this by adding an amount. This is used to
   // convert module-relative addresses to global ones by adding the module
@@ -61,6 +69,7 @@ class Location {
   FileLine file_line_;
   int column_ = 0;
   LazySymbol function_;
+  SymbolContext symbol_context_ = SymbolContext::ForRelativeAddresses();
 };
 
 }  // namespace zxdb
