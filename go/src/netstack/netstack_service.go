@@ -360,6 +360,9 @@ func (*dnsImpl) GetNameServers() ([]nsfidl.NetAddress, error) {
 
 var netstackService *nsfidl.NetstackService
 
+// TODO(NET-1263): register resolver admin service once clients don't crash netstack
+// var dnsService *nsfidl.ResolverAdminService
+
 // AddNetstackService registers the NetstackService with the application context,
 // allowing it to respond to FIDL queries.
 func AddNetstackService(ctx *context.Context) error {
@@ -379,6 +382,13 @@ func AddNetstackService(ctx *context.Context) error {
 		}
 		return nil
 	})
+
+	// TODO(NET-1263): register resolver admin service once clients don't crash netstack
+	// when registering.
+	// ctx.OutgoingService.AddService(nsfidl.ResolverAdminName, func(c zx.Channel) error {
+	//   _, err := dnsService.Add(&dnsImpl{}, c, nil)
+	//   return err
+	// })
 
 	ctx.OutgoingService.AddService(net.ConnectivityName, func(c zx.Channel) error {
 		k, err := connectivity.Service.Add(struct{}{}, c, nil)

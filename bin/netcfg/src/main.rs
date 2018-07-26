@@ -19,8 +19,9 @@ extern crate futures;
 use async::temp::TempFutureExt;
 use failure::{Error, ResultExt};
 use fidl_fuchsia_devicesettings::{DeviceSettingsManagerMarker};
-use netstack::{NetstackMarker, NetInterface, NetstackEvent, INTERFACE_FEATURE_SYNTH, INTERFACE_FEATURE_LOOPBACK};
+use netstack::{NetstackMarker, NetAddress, Ipv4Address, Ipv6Address, NetAddressFamily, NetInterface, NetstackEvent, INTERFACE_FEATURE_SYNTH, INTERFACE_FEATURE_LOOPBACK};
 use std::fs;
+use std::net::IpAddr;
 use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
 
 mod device_id;
@@ -28,8 +29,14 @@ mod device_id;
 const DEFAULT_CONFIG_FILE: &str = "/pkg/data/default.json";
 
 #[derive(Debug, Deserialize)]
-pub struct Config {
+struct Config {
     pub device_name: Option<String>,
+    pub dns_config: DnsConfig,
+}
+
+#[derive(Debug, Deserialize)]
+struct DnsConfig {
+    pub servers: Vec<IpAddr>,
 }
 
 fn is_physical(n: &NetInterface) -> bool {
@@ -67,5 +74,23 @@ fn main() -> Result<(), Error> {
         },
     }.map_err(Into::into);
 
+    let mut servers = default_config.dns_config.servers.iter().map(to_net_address).collect::<Vec<NetAddress>>();
+    let () = netstack.set_name_servers(&mut servers.iter_mut())?;
+
     executor.run_singlethreaded(device_name)
+}
+
+fn to_net_address(addr: &IpAddr) -> NetAddress {
+    match addr {
+        IpAddr::V4(v4addr) => NetAddress{
+            family: NetAddressFamily::Ipv4,
+            ipv4: Some(Box::new(Ipv4Address { addr: v4addr.octets() })),
+            ipv6: None,
+        },
+        IpAddr::V6(v6addr) => NetAddress{
+            family: NetAddressFamily::Ipv6,
+            ipv4: None,
+            ipv6: Some(Box::new(Ipv6Address { addr: v6addr.octets() })),
+        }
+    }
 }
