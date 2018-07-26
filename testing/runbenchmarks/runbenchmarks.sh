@@ -30,22 +30,23 @@ _got_errors=0
 _benchmark_summaries=""
 
 # Parses command line arguments.  This sets ${OUT_DIR} to the output
-# directory specified on the command line.
+# directory specified on the command line, and it reads other arguments,
+# which are used by the Catapult converter.
 #
 # This will normally be invoked as:
 #   runbench_read_arguments "$@"
 #
 # A script that uses runbench_read_arguments should be invoked as follows:
-#   benchmarks.sh <output-dir>
-#
-# Example: benchmarks.sh /tmp
+#   benchmarks.sh <output-dir> --catapult-converter-args <args>
 runbench_read_arguments() {
-    if [ $# -lt 1 ]; then
-        echo "error: missing output directory"
-        echo "Usage: $0 <output-dir>"
+    if [ $# -lt 2 ] || [ "$2" != "--catapult-converter-args" ]; then
+        echo "Error: Missing '--catapult-converter-args' argument"
+        echo "Usage: $0 <output-dir> --catapult-converter-args <args>"
         exit 1
     fi
     OUT_DIR="$1"
+    shift 2
+    _catapult_converter_args="$@"
 }
 
 # Runs a command and expects a results file to be produced.
@@ -94,6 +95,15 @@ runbench_exec() {
 
     # Record a successful run.
     _write_summary_entry "${results_file}" "PASS"
+
+    # Convert the results file to a Catapult Histogram JSON file.
+    local base_name="$(basename ${results_file} .json).catapult_json"
+    local catapult_file="$(dirname ${results_file})/$base_name"
+    /pkgfs/packages/catapult_converter/0/bin/app \
+        --input ${results_file} \
+        --output ${catapult_file} \
+        ${_catapult_converter_args}
+    _write_summary_entry "${catapult_file}" "PASS"
 }
 
 # Exits the current process with a code indicating whether any errors occurred.
