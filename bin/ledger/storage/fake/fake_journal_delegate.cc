@@ -7,7 +7,7 @@
 #include <utility>
 
 #include <lib/fit/function.h>
-#include <lib/fxl/random/rand.h>
+#include <zircon/syscalls.h>
 
 #include "peridot/bin/ledger/storage/fake/fake_commit.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
@@ -19,7 +19,7 @@ namespace {
 storage::CommitId RandomCommitId() {
   std::string result;
   result.resize(kCommitIdSize);
-  fxl::RandBytes(&result[0], kCommitIdSize);
+  zx_cprng_draw(&result[0], kCommitIdSize);
   return result;
 }
 

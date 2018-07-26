@@ -5,7 +5,7 @@
 #include "peridot/bin/ledger/storage/impl/object_impl.h"
 
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/random/rand.h>
+#include <zircon/syscalls.h>
 
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
@@ -19,7 +19,7 @@ namespace {
 std::string RandomString(size_t size) {
   std::string result;
   result.resize(size);
-  fxl::RandBytes(&result[0], size);
+  zx_cprng_draw(&result[0], size);
   return result;
 }
 

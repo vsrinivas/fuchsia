@@ -9,8 +9,8 @@
 #include <lib/fit/function.h>
 #include <lib/fxl/files/file.h>
 #include <lib/fxl/logging.h>
-#include <lib/fxl/random/rand.h>
 #include <lib/fxl/strings/concatenate.h>
+#include <zircon/syscalls.h>
 
 #include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
 #include "peridot/lib/convert/convert.h"
@@ -114,7 +114,7 @@ void UserSyncImpl::CheckCloudNotErased() {
 void UserSyncImpl::CreateFingerprint() {
   // Generate the fingerprint.
   char fingerprint_array[kFingerprintSize];
-  fxl::RandBytes(fingerprint_array, kFingerprintSize);
+  zx_cprng_draw(fingerprint_array, kFingerprintSize);
   fingerprint_ =
       convert::ToHex(fxl::StringView(fingerprint_array, kFingerprintSize));
 

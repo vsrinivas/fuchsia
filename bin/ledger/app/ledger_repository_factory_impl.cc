@@ -17,11 +17,11 @@
 #include <lib/fxl/files/file.h>
 #include <lib/fxl/files/path.h>
 #include <lib/fxl/files/scoped_temp_dir.h>
-#include <lib/fxl/random/rand.h>
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/string_view.h>
 #include <trace/event.h>
 #include <zircon/processargs.h>
+#include <zircon/syscalls.h>
 
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/page_eviction_manager_impl.h"
@@ -54,7 +54,7 @@ bool GetRepositoryName(const DetachedPath& base_path, std::string* name) {
 
   std::string new_name;
   new_name.resize(16);
-  fxl::RandBytes(&new_name[0], new_name.size());
+  zx_cprng_draw(&new_name[0], new_name.size());
   if (!files::WriteFileAt(name_path.root_fd(), name_path.path(),
                           new_name.c_str(), new_name.size())) {
     FXL_LOG(ERROR) << "Unable to write file at: " << name_path.path();

@@ -9,8 +9,8 @@
 
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
-#include <lib/fxl/random/rand.h>
 #include <lib/fxl/strings/string_printf.h>
+#include <zircon/syscalls.h>
 
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/impl/btree/builder.h"
@@ -104,7 +104,7 @@ ObjectIdentifier MakeObjectIdentifier(std::string content,
 std::string RandomString(size_t size) {
   std::string value;
   value.resize(size);
-  fxl::RandBytes(&value[0], value.size());
+  zx_cprng_draw(&value[0], value.size());
   return value;
 }
 

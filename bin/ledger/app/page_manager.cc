@@ -9,7 +9,7 @@
 #include <lib/callback/trace_callback.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/logging.h>
-#include <lib/fxl/random/rand.h>
+#include <zircon/syscalls.h>
 
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
@@ -100,7 +100,7 @@ void PageManager::BindPageSnapshot(
 Reference PageManager::CreateReference(
     storage::ObjectIdentifier object_identifier) {
   uint64_t index;
-  fxl::RandBytes(&index, sizeof(index));
+  zx_cprng_draw(&index, sizeof(index));
   FXL_DCHECK(references_.find(index) == references_.end());
   references_[index] = std::move(object_identifier);
   Reference reference;

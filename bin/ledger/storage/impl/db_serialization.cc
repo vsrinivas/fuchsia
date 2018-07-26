@@ -4,9 +4,9 @@
 
 #include "peridot/bin/ledger/storage/impl/db_serialization.h"
 
-#include <lib/fxl/random/rand.h>
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/string_view.h>
+#include <zircon/syscalls.h>
 
 #include "peridot/bin/ledger/storage/impl/object_identifier_encoding.h"
 
@@ -102,7 +102,7 @@ std::string JournalEntryRow::NewJournalId(JournalType journal_type) {
   id.resize(kJournalIdSize);
   id[0] = (journal_type == JournalType::IMPLICIT ? kImplicitPrefix
                                                  : kExplicitPrefix);
-  fxl::RandBytes(&id[1], kJournalIdSize - 1);
+  zx_cprng_draw(&id[1], kJournalIdSize - 1);
   return id;
 }
 

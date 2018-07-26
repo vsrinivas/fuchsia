@@ -4,8 +4,8 @@
 
 #include "peridot/bin/ledger/encryption/primitives/encrypt.h"
 
-#include <lib/fxl/random/rand.h>
 #include <openssl/aead.h>
+#include <zircon/syscalls.h>
 
 namespace encryption {
 
@@ -35,7 +35,7 @@ bool AES128GCMSIVEncrypt(fxl::StringView key, fxl::StringView data,
   uint8_t* result_as_int8_ptr = reinterpret_cast<uint8_t*>(&result[0]);
 
   // Generate seed.
-  fxl::RandBytes(&result[0], EVP_AEAD_nonce_length(algorithm));
+  zx_cprng_draw(&result[0], EVP_AEAD_nonce_length(algorithm));
 
   size_t out_len;
   if (EVP_AEAD_CTX_seal(

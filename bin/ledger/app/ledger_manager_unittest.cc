@@ -16,8 +16,8 @@
 #include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
 #include <lib/fxl/memory/ref_ptr.h>
-#include <lib/fxl/random/rand.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <zircon/syscalls.h>
 
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/app/constants.h"
@@ -35,7 +35,7 @@ namespace {
 
 ledger::PageId RandomId() {
   ledger::PageId result;
-  fxl::RandBytes(&result.id[0], result.id.count());
+  zx_cprng_draw(&result.id[0], result.id.count());
   return result;
 }
 
@@ -68,7 +68,8 @@ class DelayIsSyncedCallbackFakePageStorage
 
 class FakeLedgerStorage : public storage::LedgerStorage {
  public:
-  explicit FakeLedgerStorage(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+  explicit FakeLedgerStorage(async_dispatcher_t* dispatcher)
+      : dispatcher_(dispatcher) {}
   ~FakeLedgerStorage() override {}
 
   void CreatePageStorage(

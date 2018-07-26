@@ -4,12 +4,13 @@
 
 #include "peridot/bin/ledger/app/ledger_repository_impl.h"
 
+#include <zircon/syscalls.h>
+
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/random/rand.h"
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
@@ -23,7 +24,7 @@ namespace {
 std::string RandomString(size_t size) {
   std::string result;
   result.resize(size);
-  fxl::RandBytes(&result[0], size);
+  zx_cprng_draw(&result[0], size);
   return result;
 }
 

@@ -11,8 +11,8 @@
 #include <lib/callback/trace_callback.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fxl/logging.h>
-#include <lib/fxl/random/rand.h>
 #include <trace/event.h>
+#include <zircon/syscalls.h>
 
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/page_impl.h"
@@ -23,7 +23,7 @@ namespace ledger {
 namespace {
 
 void GenerateRandomId(::fidl::Array<uint8_t, kPageIdSize>* id) {
-  fxl::RandBytes(id->mutable_data(), kPageIdSize);
+  zx_cprng_draw(id->mutable_data(), kPageIdSize);
 }
 
 }  // namespace

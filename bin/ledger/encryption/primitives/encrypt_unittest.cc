@@ -7,7 +7,7 @@
 #include <algorithm>
 
 #include <gtest/gtest.h>
-#include <lib/fxl/random/rand.h>
+#include <zircon/syscalls.h>
 
 namespace encryption {
 namespace {
@@ -19,10 +19,10 @@ TEST_P(EncryptTest, Correctness) {
 
   std::string key;
   key.resize(16);
-  ASSERT_TRUE(fxl::RandBytes(&key[0], key.size()));
+  zx_cprng_draw(&key[0], key.size());
   std::string message;
   message.resize(kMessageSize);
-  ASSERT_TRUE(fxl::RandBytes(&message[0], message.size()));
+  zx_cprng_draw(&message[0], message.size());
 
   std::string encrypted;
   std::string decrypted;

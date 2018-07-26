@@ -8,6 +8,7 @@
 
 #include <lib/fxl/random/rand.h>
 #include <lib/fxl/strings/utf_codecs.h>
+#include <zircon/syscalls.h>
 
 #include "gtest/gtest.h"
 
@@ -135,7 +136,7 @@ TEST(EncodingTest, BackAndForth) {
     size_t size = fxl::RandUint64() % 4;
     char buffer[size];
     fxl::StringView view(buffer, size);
-    fxl::RandBytes(reinterpret_cast<unsigned char*>(buffer), size);
+    zx_cprng_draw(reinterpret_cast<unsigned char*>(buffer), size);
     EXPECT_TRUE(Decode(EncodeKey(view), &ret_key));
     EXPECT_EQ(view, ret_key);
     EXPECT_TRUE(Decode(EncodeValue(view), &ret_value));
