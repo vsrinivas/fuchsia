@@ -73,7 +73,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/async \
     system/ulib/fbl \
     system/ulib/trace \
-    system/ulib/trace-engine \
     system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \
@@ -81,6 +80,7 @@ MODULE_STATIC_LIBS := \
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/fdio \
+    system/ulib/trace-engine \
     system/ulib/zircon \
 
 MODULE_SO_NAME := $(MODULE_NAME)
