@@ -105,11 +105,6 @@ struct ProjectProfile {
 [Discoverable]
 // EncoderFactory creates an Encoder for a particular project.
 interface EncoderFactory {
-    // DEPRECATED, use GetEncoderForProject instead
-    // Creates an Encoder for the specified project.
-    // |project_id| Should be a project ID registered with the Cobalt system.
-    1: GetEncoder(int32 project_id, request<Encoder> encoder);
-
     // Creates an Encoder with the given configuration for the project
     // specified by the config in |profile|.
     // |profile| A ProjectProfile describing the Cobalt project that the
@@ -117,7 +112,7 @@ interface EncoderFactory {
     // |status| Returns OK on success or INVALID_ARGUMENTS if the project
     //          profile does not contain a valid Cobalt config with only a
     //          single project_id.
-    2: GetEncoderForProject(ProjectProfile profile,
+    1: GetEncoderForProject(ProjectProfile profile,
                             request<Encoder> encoder)
            -> (Status status);
 };
