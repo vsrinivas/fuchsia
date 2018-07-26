@@ -22,6 +22,8 @@ enum Status {
     ERR_FAN_LEVEL         = 4;
     // failed to get cpu stats info
     ERR_CPU_STATS         = 5;
+    // failed to get memory stat info
+    ERR_MEM_STATS         = 6;
 };
 
 struct DvfsOpp {
@@ -44,6 +46,9 @@ struct SystemStatus {
 
     // current CPU utilization
     uint32 cpu_utilization;
+
+    // current Memory usage
+    uint32 memory_utilization;
 };
 
 [Discoverable]

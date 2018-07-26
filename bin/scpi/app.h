@@ -27,11 +27,13 @@ class App : public fuchsia::scpi::SystemController {
   zx::handle GetRootResource();
   size_t ReadCpuCount(const zx::handle& root_resource);
   bool ReadCpuStats();
+  bool ReadMemStats();
   std::unique_ptr<component::StartupContext> context_;
   fidl::BindingSet<fuchsia::scpi::SystemController> bindings_;
   fxl::UniqueFD fd_;
   zx::handle root_resource_handle_;
   std::vector<zx_info_cpu_stats_t> cpu_stats_;
+  zx_info_kmem_stats_t mem_stats_;
   std::vector<zx_info_cpu_stats_t> last_cpu_stats_;
   size_t num_cores_;
 };

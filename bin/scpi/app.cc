@@ -49,11 +49,15 @@ size_t App::ReadCpuCount(const zx::handle& root_resource) {
 
 bool App::ReadCpuStats() {
   size_t actual, available;
+  zx_status_t err = root_resource_handle_.get_info(ZX_INFO_CPU_STATS, &cpu_stats_[0],
+                                                   num_cores_ * sizeof(zx_info_cpu_stats), &actual,
+                                                   &available);
+  return (err == ZX_OK);
+}
 
-  zx_status_t err = root_resource_handle_.get_info(
-      ZX_INFO_CPU_STATS, &cpu_stats_[0],
-      num_cores_ * sizeof(zx_info_cpu_stats), &actual, &available);
-
+bool App::ReadMemStats() {
+  zx_status_t err = root_resource_handle_.get_info(ZX_INFO_KMEM_STATS, &mem_stats_,
+                                                   sizeof(zx_info_kmem_stats_t), NULL, NULL);
   return (err == ZX_OK);
 }
 
@@ -174,6 +178,15 @@ void App::GetSystemStatus(GetSystemStatusCallback callback) {
   }
 
   info.cpu_utilization = busypercent_sum/num_cores_;
+
+  if (!ReadMemStats()) {
+    fprintf(stderr, "ERROR: Failed to get mem_stats_ \n");
+    callback(fuchsia::scpi::Status::ERR_MEM_STATS, std::move(info));
+    return;
+  }
+
+  info.memory_utilization = ((mem_stats_.total_bytes - mem_stats_.free_bytes) * 100 /
+                              mem_stats_.total_bytes);
 
   callback(fuchsia::scpi::Status::OK, std::move(info));
 }
