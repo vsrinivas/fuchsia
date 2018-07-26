@@ -40,7 +40,7 @@ __BEGIN_CDECLS
 // Useful for generating unique correlation ids for async and flow events.
 //
 // This function is thread-safe and lock-free.
-uint64_t trace_generate_nonce(void);
+__EXPORT uint64_t trace_generate_nonce(void);
 
 // Describes the state of the trace engine.
 typedef enum {
@@ -57,7 +57,7 @@ typedef enum {
 // Gets the current state of the trace engine.
 //
 // This function is thread-safe.
-trace_state_t trace_state(void);
+__EXPORT trace_state_t trace_state(void);
 
 // Returns true if tracing is enabled (started or stopping but not stopped).
 //
@@ -75,7 +75,7 @@ static inline bool trace_is_enabled(void) {
 // |category_literal| must be a null-terminated static string constant.
 //
 // This function is thread-safe.
-bool trace_is_category_enabled(const char* category_literal);
+__EXPORT bool trace_is_category_enabled(const char* category_literal);
 
 // Acquires a reference to the trace engine's context.
 // Must be balanced by a call to |trace_release_context()| when the result is non-NULL.
@@ -91,7 +91,7 @@ bool trace_is_category_enabled(const char* category_literal);
 // Returns NULL otherwise.
 //
 // This function is thread-safe, fail-fast, and lock-free.
-trace_context_t* trace_acquire_context(void);
+__EXPORT trace_context_t* trace_acquire_context(void);
 
 // Acquires a reference to the trace engine's context, only if the specified
 // category is enabled.  Must be balanced by a call to |trace_release_context()|
@@ -118,7 +118,7 @@ trace_context_t* trace_acquire_context(void);
 // Returns NULL otherwise.
 //
 // This function is thread-safe.
-trace_context_t* trace_acquire_context_for_category(const char* category_literal,
+__EXPORT trace_context_t* trace_acquire_context_for_category(const char* category_literal,
                                                     trace_string_ref_t* out_ref);
 
 // Releases a reference to the trace engine's context.
@@ -128,7 +128,7 @@ trace_context_t* trace_acquire_context_for_category(const char* category_literal
 // |context| must be a valid trace context reference.
 //
 // This function is thread-safe, never-fail, and lock-free.
-void trace_release_context(trace_context_t* context);
+__EXPORT void trace_release_context(trace_context_t* context);
 
 // Acquires a reference to the trace engine's context, for prolonged use.
 // This cannot be used to acquire the context for the purposes of writing to
@@ -149,7 +149,7 @@ void trace_release_context(trace_context_t* context);
 // Returns NULL otherwise.
 //
 // This function is thread-safe, fail-fast, and lock-free.
-trace_prolonged_context_t* trace_acquire_prolonged_context(void);
+__EXPORT trace_prolonged_context_t* trace_acquire_prolonged_context(void);
 
 // Releases a reference to the trace engine's prolonged context.
 // Must balance a prior successful call to |trace_acquire_prolonged_context()|.
@@ -157,7 +157,7 @@ trace_prolonged_context_t* trace_acquire_prolonged_context(void);
 // |context| must be a valid trace context reference.
 //
 // This function is thread-safe, never-fail, and lock-free.
-void trace_release_prolonged_context(trace_prolonged_context_t* context);
+__EXPORT void trace_release_prolonged_context(trace_prolonged_context_t* context);
 
 // Registers an event handle which the trace engine will signal when the
 // trace state or set of enabled categories changes.
@@ -185,18 +185,18 @@ void trace_release_prolonged_context(trace_prolonged_context_t* context);
 //
 // Returns |ZX_OK| if successful.
 // Returns |ZX_ERR_INVALID_ARGS| if the event was already registered.
-zx_status_t trace_register_observer(zx_handle_t event);
+__EXPORT zx_status_t trace_register_observer(zx_handle_t event);
 
 // Unregisters the observer event handle previously registered with
 // |trace_register_observer|.
 //
 // Returns |ZX_OK| if successful.
 // Returns |ZX_ERR_NOT_FOUND| if the event was not previously registered.
-zx_status_t trace_unregister_observer(zx_handle_t event);
+__EXPORT zx_status_t trace_unregister_observer(zx_handle_t event);
 
 // Callback to notify the engine that the observer has finished processing
 // all state changes.
-void trace_notify_observer_updated(zx_handle_t event);
+__EXPORT void trace_notify_observer_updated(zx_handle_t event);
 
 __END_CDECLS
 

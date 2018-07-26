@@ -9,6 +9,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
+MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS = \
     $(LOCAL_DIR)/reader.cpp \
@@ -31,6 +32,7 @@ include make/module.mk
 MODULE := $(LOCAL_DIR).hostlib
 
 MODULE_TYPE := hostlib
+MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS = \
     $(LOCAL_DIR)/reader.cpp \

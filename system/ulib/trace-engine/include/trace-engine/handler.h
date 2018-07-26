@@ -104,10 +104,10 @@ struct trace_handler_ops {
 //
 // Better yet, don't shut down the trace engine's asynchronous dispatcher unless
 // the process is already about to exit.
-zx_status_t trace_start_engine(async_dispatcher_t* dispatcher,
-                               trace_handler_t* handler,
-                               void* buffer,
-                               size_t buffer_num_bytes);
+__EXPORT zx_status_t trace_start_engine(async_dispatcher_t* dispatcher,
+                                        trace_handler_t* handler,
+                                        void* buffer,
+                                        size_t buffer_num_bytes);
 
 // Asynchronously stops the trace engine.
 //
@@ -121,6 +121,6 @@ zx_status_t trace_start_engine(async_dispatcher_t* dispatcher,
 // Returns |ZX_ERR_BAD_STATE| if current state is |TRACE_STOPPED|.
 //
 // This function is thread-safe.
-zx_status_t trace_stop_engine(zx_status_t disposition);
+__EXPORT zx_status_t trace_stop_engine(zx_status_t disposition);
 
 __END_CDECLS
