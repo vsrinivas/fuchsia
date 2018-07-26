@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.auth") {
   sources = [
+    "attestation_signer.fidl",
     "auth_provider.fidl",
     "auth_provider_factory.fidl",
     "token_manager.fidl",

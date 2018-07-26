@@ -23,9 +23,13 @@
 namespace auth {
 namespace dev_auth_provider {
 
+using fuchsia::auth::AssertionJWTParams;
+using fuchsia::auth::AttestationJWTParams;
+using fuchsia::auth::AttestationSigner;
 using fuchsia::auth::AuthenticationUIContext;
 
-class DevAuthProviderImpl : public fuchsia::auth::AuthProvider {
+class DevAuthProviderImpl : public fuchsia::auth::AuthProvider,
+                            fuchsia::auth::AttestationSigner {
  public:
   DevAuthProviderImpl();
 
@@ -35,6 +39,7 @@ class DevAuthProviderImpl : public fuchsia::auth::AuthProvider {
   // |AuthProvider|
   void GetPersistentCredential(
       fidl::InterfaceHandle<AuthenticationUIContext> auth_ui_context,
+      fidl::StringPtr user_profile_id,
       GetPersistentCredentialCallback callback) override;
 
   // |AuthProvider|
@@ -57,6 +62,21 @@ class DevAuthProviderImpl : public fuchsia::auth::AuthProvider {
   void RevokeAppOrPersistentCredential(
       fidl::StringPtr credential,
       RevokeAppOrPersistentCredentialCallback callback) override;
+
+  // |AuthProvider|
+  void GetPersistentCredentialFromAttestationJWT(
+      fidl::InterfaceHandle<AttestationSigner> attestation_signer,
+      AttestationJWTParams jwt_params,
+      fidl::InterfaceHandle<AuthenticationUIContext> auth_ui_context,
+      fidl::StringPtr user_profile_id,
+      GetPersistentCredentialFromAttestationJWTCallback callback) override;
+
+  // |AuthProvider|
+  void GetAppAccessTokenFromAssertionJWT(
+      fidl::InterfaceHandle<AttestationSigner> attestation_signer,
+      AssertionJWTParams jwt_params, fidl::StringPtr credential,
+      fidl::VectorPtr<::fidl::StringPtr> scopes,
+      GetAppAccessTokenFromAssertionJWTCallback callback) override;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DevAuthProviderImpl);
 };

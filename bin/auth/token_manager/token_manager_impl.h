@@ -38,13 +38,13 @@ class TokenManagerImpl : public fuchsia::auth::TokenManager {
  private:
   // |TokenManager|
   void Authorize(fuchsia::auth::AppConfig app_config,
-                 const fidl::VectorPtr<fidl::StringPtr> app_scopes,
+                 fidl::VectorPtr<fidl::StringPtr> app_scopes,
                  fidl::StringPtr user_profile_id,
                  AuthorizeCallback callback) override;
 
   void GetAccessToken(fuchsia::auth::AppConfig app_config,
                       fidl::StringPtr user_profile_id,
-                      const fidl::VectorPtr<fidl::StringPtr> app_scopes,
+                      fidl::VectorPtr<fidl::StringPtr> app_scopes,
                       GetAccessTokenCallback callback) override;
 
   void GetIdToken(fuchsia::auth::AppConfig app_config,

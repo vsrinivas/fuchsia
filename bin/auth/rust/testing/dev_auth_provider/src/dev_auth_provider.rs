@@ -15,8 +15,12 @@ use fidl::Error;
 use fidl_fuchsia_auth::{AuthProviderGetAppAccessTokenResponder,
                         AuthProviderGetAppFirebaseTokenResponder,
                         AuthProviderGetAppIdTokenResponder,
-                        AuthProviderGetPersistentCredentialResponder, AuthProviderMarker,
-                        AuthProviderRequest, AuthProviderRevokeAppOrPersistentCredentialResponder,
+                        AuthProviderGetPersistentCredentialResponder,
+                        AuthProviderMarker,
+                        AuthProviderRequest,
+                        AuthProviderRevokeAppOrPersistentCredentialResponder,
+                        AuthProviderGetPersistentCredentialFromAttestationJwtResponder,
+                        AuthProviderGetAppAccessTokenFromAssertionJwtResponder,
                         AuthProviderStatus, UserProfileInfo};
 use futures::future::FutureResult;
 use futures::prelude::*;
@@ -40,13 +44,15 @@ fn generate_random_string() -> String {
         .collect()
 }
 
-/// The AuthProvider struct is holding implementation of the `AuthProvider` fidl interface.
-/// This implementation is serving as a testing endpoint for token manager.
+/// The AuthProvider struct is holding implementation of the `AuthProvider` fidl
+/// interface. This implementation is serving as a testing endpoint for token
+/// manager.
 pub struct AuthProvider;
 
 impl AuthProvider {
-    /// Spawn a new task of handling request from the `AuthProviderRequestStream` by calling the
-    /// `handle_request` method. Create a warning on error.
+    /// Spawn a new task of handling request from the
+    /// `AuthProviderRequestStream` by calling the `handle_request` method.
+    /// Create a warning on error.
     pub fn spawn(server_end: ServerEnd<AuthProviderMarker>) {
         match server_end.into_stream() {
             Err(err) => {
@@ -61,8 +67,8 @@ impl AuthProvider {
         };
     }
 
-    /// Handle single `AuthProviderRequest` by calling the corresponding method according to the
-    /// actual variant of the `AuthProviderRequest` enum.
+    /// Handle single `AuthProviderRequest` by calling the corresponding method
+    /// according to the actual variant of the `AuthProviderRequest` enum.
     fn handle_request(req: AuthProviderRequest) -> FutureResult<(), Error> {
         match req {
             AuthProviderRequest::GetPersistentCredential { responder, .. } => {
@@ -91,11 +97,22 @@ impl AuthProvider {
             AuthProviderRequest::RevokeAppOrPersistentCredential { responder, .. } => {
                 Self::revoke_app_or_persistent_credential(responder)
             }
+
+            AuthProviderRequest::GetPersistentCredentialFromAttestationJwt{
+                responder,
+                ..
+            } => Self::get_persistent_credential_from_attestation_jwt(responder),
+
+            AuthProviderRequest::GetAppAccessTokenFromAssertionJwt{
+                responder,
+                ..
+            } => Self::get_app_access_token_from_assertion_jwt(responder),
         }
     }
 
-    /// Implementation of the `GetPersistenCredential` method for the `AuthProvider` fidl interface.
-    /// The field auth_ui_context is removed here as we will never use it in the dev auth provider.
+    /// Implementation of the `GetPersistenCredential` method for the
+    /// `AuthProvider` fidl interface. The field auth_ui_context is removed here
+    /// as we will never use it in the dev auth provider.
     fn get_persistent_credential(
         responder: AuthProviderGetPersistentCredentialResponder,
     ) -> FutureResult<(), Error> {
@@ -116,7 +133,8 @@ impl AuthProvider {
             .into_future()
     }
 
-    /// Implementation of the `GetAppAccessToken` method for the `AuthProvider` fidl interface.
+    /// Implementation of the `GetAppAccessToken` method for the `AuthProvider`
+    /// fidl interface.
     fn get_app_access_token(
         credential: String, client_id: Option<String>,
         responder: AuthProviderGetAppAccessTokenResponder,
@@ -136,7 +154,8 @@ impl AuthProvider {
             .into_future()
     }
 
-    /// Implementation of the `GetAppIdToken` method for the `AuthProvider` fidl interface.
+    /// Implementation of the `GetAppIdToken` method for the `AuthProvider` fidl
+    /// interface.
     fn get_app_id_token(
         credential: String, responder: AuthProviderGetAppIdTokenResponder,
     ) -> FutureResult<(), Error> {
@@ -151,7 +170,8 @@ impl AuthProvider {
             .into_future()
     }
 
-    /// Implementation of the `GetAppFirebaseToken` method for the `AuthProvider` fidl interface.
+    /// Implementation of the `GetAppFirebaseToken` method for the `AuthProvider`
+    /// fidl interface.
     fn get_app_firebase_token(
         firebase_api_key: String, responder: AuthProviderGetAppFirebaseTokenResponder,
     ) -> FutureResult<(), Error> {
@@ -170,13 +190,30 @@ impl AuthProvider {
             .into_future()
     }
 
-    /// Implementation of the `RevokeAppOrPersistentCredential` method for the `AuthProvider` fidl
-    /// interface.
+    /// Implementation of the `RevokeAppOrPersistentCredential` method for the
+    /// `AuthProvider` fidl interface.
     fn revoke_app_or_persistent_credential(
         responder: AuthProviderRevokeAppOrPersistentCredentialResponder,
     ) -> FutureResult<(), Error> {
         responder.send(AuthProviderStatus::Ok).into_future()
     }
+
+    /// Implementation of the `GetPersistentCredentialFromAttestationJwt` method
+    /// for the `AuthProvider` fidl interface.
+    fn get_persistent_credential_from_attestation_jwt(
+        responder: AuthProviderGetPersistentCredentialFromAttestationJwtResponder,
+    ) -> FutureResult<(), Error> {
+        responder.send(AuthProviderStatus::BadRequest, None, None, None, None).into_future()
+    }
+
+    /// Implementation of the `GetAppAccessTokenFromAssertionJwt` method for the
+    /// `AuthProvider` fidl interface.
+    fn get_app_access_token_from_assertion_jwt(
+        responder: AuthProviderGetAppAccessTokenFromAssertionJwtResponder,
+    ) -> FutureResult<(), Error> {
+        responder.send(AuthProviderStatus::BadRequest, None, None, None).into_future()
+    }
+
 }
 
 #[cfg(test)]
@@ -210,7 +247,7 @@ mod tests {
     fn test_get_persistent_credential() {
         async_test(|dev_auth_provider| {
             dev_auth_provider
-                .get_persistent_credential(None)
+                .get_persistent_credential(None, None)
                 .and_then(move |response| {
                     let (status, credential, user_profile_info) = response;
                     assert_eq!(status, AuthProviderStatus::Ok);

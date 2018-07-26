@@ -110,9 +110,10 @@ TokenManagerImpl::TokenManagerImpl(
 
 TokenManagerImpl::~TokenManagerImpl() {}
 
-void TokenManagerImpl::Authorize(
-    AppConfig app_config, const fidl::VectorPtr<fidl::StringPtr> app_scopes,
-    fidl::StringPtr user_profile_id, AuthorizeCallback callback) {
+void TokenManagerImpl::Authorize(AppConfig app_config,
+                                 fidl::VectorPtr<fidl::StringPtr> app_scopes,
+                                 fidl::StringPtr user_profile_id,
+                                 AuthorizeCallback callback) {
   auto it = auth_providers_.find(app_config.auth_provider_type);
   if (it == auth_providers_.end()) {
     callback(Status::AUTH_PROVIDER_SERVICE_UNAVAILABLE, nullptr);
@@ -130,7 +131,7 @@ void TokenManagerImpl::Authorize(
   });
 
   it->second->GetPersistentCredential(
-      std::move(auth_ui_context),
+      std::move(auth_ui_context), fidl::StringPtr(user_profile_id),
       [this, auth_provider_type = app_config.auth_provider_type,
        callback = std::move(callback)](
           AuthProviderStatus status, fidl::StringPtr credential,

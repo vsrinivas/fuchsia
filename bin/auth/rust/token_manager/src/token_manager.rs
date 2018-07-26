@@ -170,11 +170,10 @@ impl TokenManager {
     }
 
     /// Performs initial authorization for a user_profile.
+    /// TODO: |app_scopes| will be used in the future for Authenticators.
     fn authorize(
-        &self, app_config: AppConfig, _user_profile_id: Option<String>, _app_scopes: Vec<String>,
+        &self, app_config: AppConfig, user_profile_id: Option<String>, app_scopes: Vec<String>,
     ) -> TokenManagerFuture<UserProfileInfo> {
-        // TODO(jsankey): The C++ code ignores the scopes input, decide what to do with it.
-        // TODO(jsankey): The C++ code ignores the profile ID input, decide what to do with it.
         let auth_provider_type = app_config.auth_provider_type.clone();
         let store = self.token_store.clone();
         let ui_context = future_try!(
@@ -187,7 +186,9 @@ impl TokenManager {
             self.get_auth_provider_proxy(&app_config.auth_provider_type)
                 .and_then(move |proxy| {
                     proxy
-                        .get_persistent_credential(Some(ui_context))
+                        .get_persistent_credential(Some(ui_context),
+                            user_profile_id.as_ref().map(|x| &**x)
+                            )
                         .map_err(|err| {
                             TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
                         })

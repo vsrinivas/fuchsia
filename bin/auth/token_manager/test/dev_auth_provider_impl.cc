@@ -29,6 +29,7 @@ DevAuthProviderImpl::~DevAuthProviderImpl() {}
 
 void DevAuthProviderImpl::GetPersistentCredential(
     fidl::InterfaceHandle<AuthenticationUIContext> auth_ui_context,
+    fidl::StringPtr user_profile_id,
     GetPersistentCredentialCallback callback) {
   fuchsia::auth::UserProfileInfoPtr ui = fuchsia::auth::UserProfileInfo::New();
   ui->id = GenerateRandomString() + "@example.com";
@@ -83,6 +84,25 @@ void DevAuthProviderImpl::RevokeAppOrPersistentCredential(
     fidl::StringPtr credential,
     RevokeAppOrPersistentCredentialCallback callback) {
   callback(AuthProviderStatus::OK);
+}
+
+void DevAuthProviderImpl::GetPersistentCredentialFromAttestationJWT(
+    fidl::InterfaceHandle<AttestationSigner> attestation_signer,
+    AttestationJWTParams jwt_params,
+    fidl::InterfaceHandle<AuthenticationUIContext> auth_ui_context,
+    fidl::StringPtr user_profile_id,
+    GetPersistentCredentialFromAttestationJWTCallback callback) {
+  // TODO(ukode): Remote attestation flow will be added later.
+  callback(AuthProviderStatus::BAD_REQUEST, nullptr, nullptr, nullptr, nullptr);
+}
+
+void DevAuthProviderImpl::GetAppAccessTokenFromAssertionJWT(
+    fidl::InterfaceHandle<AttestationSigner> attestation_signer,
+    AssertionJWTParams jwt_params, fidl::StringPtr credential,
+    fidl::VectorPtr<::fidl::StringPtr> scopes,
+    GetAppAccessTokenFromAssertionJWTCallback callback) {
+  // TODO(ukode): Remote attestation flow will be added later.
+  callback(AuthProviderStatus::BAD_REQUEST, nullptr, nullptr, nullptr);
 }
 
 }  // namespace dev_auth_provider
