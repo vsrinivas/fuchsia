@@ -31,7 +31,6 @@ source_set("lib") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/network_wrapper",
-    "//third_party/cobalt/config:client_config",
     "//third_party/cobalt/config:cobalt_config_proto",
     "//third_party/cobalt/encoder",
     "//third_party/cobalt/util:pem_util",
@@ -57,7 +56,6 @@ executable("app") {
 package("cobalt") {
   deps = [
     ":app",
-    "//third_party/cobalt_config",
   ]
 
   binary = "cobalt"
@@ -70,12 +68,6 @@ package("cobalt") {
   ]
 
   resources = [
-    {
-      path = rebase_path(
-              get_label_info("//third_party/cobalt_config", "target_gen_dir") +
-              "/cobalt_config.binproto")
-      dest = "cobalt_config.binproto"
-    },
     {
       path = rebase_path(
               "//third_party/cobalt/production/fuchsia-cobalt-us-central1-c/analyzer_public.pem")

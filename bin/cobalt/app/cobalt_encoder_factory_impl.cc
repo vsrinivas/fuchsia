@@ -52,13 +52,12 @@ std::unique_ptr<ProjectContext> CreateProjectContext(
 } // namespace
 
 CobaltEncoderFactoryImpl::CobaltEncoderFactoryImpl(
-    std::shared_ptr<ClientConfig> client_config, ClientSecret client_secret,
+    ClientSecret client_secret,
     ObservationStoreDispatcher* store_dispatcher,
     util::EncryptedMessageMaker* encrypt_to_analyzer,
     ShippingDispatcher* shipping_dispatcher, const SystemData* system_data,
     TimerManager* timer_manager)
-    : client_config_(client_config),
-      client_secret_(std::move(client_secret)),
+    : client_secret_(std::move(client_secret)),
       store_dispatcher_(store_dispatcher),
       encrypt_to_analyzer_(encrypt_to_analyzer),
       shipping_dispatcher_(shipping_dispatcher),
@@ -119,20 +118,6 @@ void CobaltEncoderFactoryImpl::CreateLoggerSimple(
   logger_simple_bindings_.AddBinding(std::move(logger_simple_impl),
                                      std::move(request));
   callback(Status2::OK);
-}
-
-void CobaltEncoderFactoryImpl::GetEncoder(
-    int32_t project_id,
-    fidl::InterfaceRequest<fuchsia::cobalt::Encoder> request) {
-  std::unique_ptr<ProjectContext> project_context(
-      new ProjectContext(kFuchsiaCustomerId, project_id, client_config_));
-
-  std::unique_ptr<CobaltEncoderImpl> cobalt_encoder_impl(new CobaltEncoderImpl(
-      std::move(project_context), client_secret_, store_dispatcher_,
-      encrypt_to_analyzer_, shipping_dispatcher_, system_data_,
-      timer_manager_));
-  cobalt_encoder_bindings_.AddBinding(std::move(cobalt_encoder_impl),
-                                      std::move(request));
 }
 
 void CobaltEncoderFactoryImpl::GetEncoderForProject(

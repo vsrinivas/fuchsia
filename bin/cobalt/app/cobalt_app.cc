@@ -15,7 +15,6 @@ namespace cobalt {
 namespace http = ::fuchsia::net::oldhttp;
 
 using clearcut::ClearcutUploader;
-using config::ClientConfig;
 using encoder::ClearcutV1ShippingManager;
 using encoder::ClientSecret;
 using encoder::CobaltEncoderFactoryImpl;
@@ -36,7 +35,6 @@ const size_t kMaxBytesTotal = 1024 * 1024;       // 1 MiB
 constexpr char kCloudShufflerUri[] = "shuffler.cobalt-api.fuchsia.com:443";
 const char kClearcutServerUri[] = "https://jmt17.google.com/log";
 
-constexpr char kConfigBinProtoPath[] = "/pkg/data/cobalt_config.binproto";
 constexpr char kAnalyzerPublicKeyPemPath[] =
     "/pkg/data/certs/cobaltv0.1/analyzer_public.pem";
 constexpr char kShufflerPublicKeyPemPath[] =
@@ -103,27 +101,8 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
                                       &network_wrapper_, dispatcher))));
   shipping_dispatcher_.Start();
 
-  // Open the cobalt config file.
-  std::ifstream config_file_stream;
-  config_file_stream.open(kConfigBinProtoPath);
-  FXL_CHECK(config_file_stream && config_file_stream.good())
-      << "Could not open the Cobalt config file: " << kConfigBinProtoPath;
-  std::string cobalt_config_bytes;
-  cobalt_config_bytes.assign(
-      (std::istreambuf_iterator<char>(config_file_stream)),
-      std::istreambuf_iterator<char>());
-  FXL_CHECK(!cobalt_config_bytes.empty())
-      << "Could not read the Cobalt config file: " << kConfigBinProtoPath;
-
-  // Parse the data as a CobaltConfig, then extract the metric and encoding
-  // configs and construct a ClientConfig to house them.
-  client_config_.reset(
-      ClientConfig::CreateFromCobaltConfigBytes(cobalt_config_bytes).release());
-  FXL_CHECK(client_config_)
-      << "Could not parse the Cobalt config file: " << kConfigBinProtoPath;
-
   factory_impl_.reset(new CobaltEncoderFactoryImpl(
-      client_config_, getClientSecret(), &store_dispatcher_,
+      getClientSecret(), &store_dispatcher_,
       &encrypt_to_analyzer_, &shipping_dispatcher_, &system_data_,
       &timer_manager_));
 

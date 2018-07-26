@@ -40,8 +40,6 @@ namespace testapp {
 constexpr char kConfigBinProtoPath[] =
     "/pkgfs/packages/cobalt_tests/0/data/cobalt_config.binproto";
 
-const uint32_t kTestAppProjectId = 2;
-
 fuchsia::cobalt::ProjectProfile CobaltTestApp::LoadCobaltConfig() {
   fsl::SizedVmo config_vmo;
   bool success = fsl::VmoFromFilename(kConfigBinProtoPath, &config_vmo);
@@ -120,7 +118,6 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
                                 encoder_.encoder_.NewRequest(), &status);
   FXL_CHECK(status == fuchsia::cobalt::Status::OK)
       << "GetEncoderForProject() => " << StatusToString(status);
-  factory->GetEncoder(kTestAppProjectId, encoder_.encoder_.NewRequest());
 
   fuchsia::cobalt::LoggerFactorySyncPtr logger_factory;
   services.ConnectToService(logger_factory.NewRequest());

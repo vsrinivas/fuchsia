@@ -13,7 +13,6 @@
 #include "garnet/bin/cobalt/app/logger_impl.h"
 #include "garnet/bin/cobalt/app/timer_manager.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "third_party/cobalt/config/client_config.h"
 #include "third_party/cobalt/encoder/observation_store_dispatcher.h"
 #include "third_party/cobalt/encoder/shipping_dispatcher.h"
 #include "third_party/cobalt/util/encrypted_message_util.h"
@@ -24,8 +23,7 @@ namespace encoder {
 class CobaltEncoderFactoryImpl : public fuchsia::cobalt::LoggerFactory,
                                  public fuchsia::cobalt::EncoderFactory {
  public:
-  CobaltEncoderFactoryImpl(std::shared_ptr<config::ClientConfig> client_config,
-                           ClientSecret client_secret,
+  CobaltEncoderFactoryImpl(ClientSecret client_secret,
                            ObservationStoreDispatcher* store_dispatcher,
                            util::EncryptedMessageMaker* encrypt_to_analyzer,
                            ShippingDispatcher* shipping_dispatcher,
@@ -47,15 +45,11 @@ class CobaltEncoderFactoryImpl : public fuchsia::cobalt::LoggerFactory,
       fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
       CreateLoggerSimpleCallback callback);
 
-  void GetEncoder(int32_t project_id,
-                  fidl::InterfaceRequest<fuchsia::cobalt::Encoder> request);
-
   void GetEncoderForProject(
       fuchsia::cobalt::ProjectProfile profile,
       fidl::InterfaceRequest<fuchsia::cobalt::Encoder> request,
       GetEncoderForProjectCallback callback);
 
-  std::shared_ptr<config::ClientConfig> client_config_;
   ClientSecret client_secret_;
   fidl::BindingSet<fuchsia::cobalt::Logger,
                    std::unique_ptr<fuchsia::cobalt::Logger>>
