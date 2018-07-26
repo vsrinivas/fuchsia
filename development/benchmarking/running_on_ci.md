@@ -41,8 +41,9 @@ We don't yet have a system that computes the locations of benchmark files from t
 
 Each `$layer` project has a shell script that runs all benchmarks for that project.  This is the file you'll modify to add your benchmark.  These scripts are located at:
 
-* Garnet: [//garnet/bin/benchmarks/benchmarks.sh](https://fuchsia.googlesource.com/garnet/+/master/bin/benchmarks/benchmarks.sh)
-* Peridot: [//peridot/tests/benchmark/peridot_benchmarks.sh](https://fuchsia.googlesource.com/peridot/+/master/tests/benchmark/peridot_benchmarks.sh)
+* Garnet: [//garnet/tests/benchmarks](https://fuchsia.googlesource.com/garnet/+/master/tests/benchmarks)
+* Peridot: [//peridot/tests/benchmarks](https://fuchsia.googlesource.com/peridot/+/master/tests/benchmarks)
+* Topaz: [//topaz/tests/benchmarks](https://fuchsia.googlesource.com/topaz/+/master/tests/benchmarks)
 
 Add a command to this file to execute your test, see those scripts for examples.
 
