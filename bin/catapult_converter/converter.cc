@@ -142,26 +142,10 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
   };
 
   for (auto& element : input->GetArray()) {
-    uint32_t inner_label_count = 0;
-    for (auto& sample : element["samples"].GetArray()) {
+    // The new schema has a member "values" which is a list of floating point
+    // numbers.
+    if (element.HasMember("values")) {
       std::string name = element["label"].GetString();
-      // Generate a compound name if there is an inner label as well as an
-      // outer label.
-      if (sample.HasMember("label")) {
-        if (sample["label"].GetStringLength() == 0) {
-          fprintf(stderr, "Inner label field is empty\n");
-          exit(1);
-        }
-        name += "_";
-        name += sample["label"].GetString();
-        ++inner_label_count;
-      }
-      // Convert spaces to underscores in the name.
-      for (size_t index = 0; index < name.size(); ++index) {
-        if (name[index] == ' ')
-          name[index] = '_';
-      }
-
       rapidjson::Value histogram;
       histogram.SetObject();
       histogram.AddMember("name", name, alloc);
@@ -176,7 +160,7 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
       diagnostic_map.AddMember("benchmarks", test_suite_guid, alloc);
       histogram.AddMember("diagnostics", diagnostic_map, alloc);
 
-      rapidjson::Value& values = sample["values"];
+      const rapidjson::Value& values = element["values"].GetArray();
       std::vector<double> vals;
       vals.reserve(values.Size());
       for (auto& val : values.GetArray()) {
@@ -227,12 +211,102 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
       histogram.AddMember("numNans", 0, alloc);
 
       output->PushBack(histogram, alloc);
-    }
+    } else {
+      // Convert the old schema.
+      // TODO(IN-452): Migrate existing tests to the new schema and delete this.
 
-    size_t samples_size = element["samples"].GetArray().Size();
-    if (samples_size > 1 && inner_label_count != samples_size) {
-      fprintf(stderr, "Some entries in 'samples' array lack labels\n");
-      exit(1);
+      uint32_t inner_label_count = 0;
+      for (auto& sample : element["samples"].GetArray()) {
+        std::string name = element["label"].GetString();
+        // Generate a compound name if there is an inner label as well as an
+        // outer label.
+        if (sample.HasMember("label")) {
+          if (sample["label"].GetStringLength() == 0) {
+            fprintf(stderr, "Inner label field is empty\n");
+            exit(1);
+          }
+          name += "_";
+          name += sample["label"].GetString();
+          ++inner_label_count;
+        }
+        // Convert spaces to underscores in the name.
+        for (size_t index = 0; index < name.size(); ++index) {
+          if (name[index] == ' ')
+            name[index] = '_';
+        }
+
+        rapidjson::Value histogram;
+        histogram.SetObject();
+        histogram.AddMember("name", name, alloc);
+        histogram.AddMember("unit", "ms_smallerIsBetter", alloc);
+        histogram.AddMember("description", "", alloc);
+
+        // The "test_suite" field in the input becomes the "benchmarks"
+        // diagnostic in the output.
+        rapidjson::Value test_suite_guid =
+            MakeGuidForTestSuiteName(element["test_suite"].GetString());
+        rapidjson::Value diagnostic_map = helper.Copy(shared_diagnostic_map);
+        diagnostic_map.AddMember("benchmarks", test_suite_guid, alloc);
+        histogram.AddMember("diagnostics", diagnostic_map, alloc);
+
+        const rapidjson::Value& values = sample["values"];
+        std::vector<double> vals;
+        vals.reserve(values.Size());
+        for (auto& val : values.GetArray()) {
+          vals.push_back(val.GetDouble());
+        }
+
+        // Check time units and convert if necessary.
+        const char* unit = element["unit"].GetString();
+        if (strcmp(unit, "nanoseconds") == 0 || strcmp(unit, "ns") == 0) {
+          // Convert from nanoseconds to milliseconds.
+          for (auto& val : vals) {
+            val /= 1e6;
+          }
+        } else if (!(strcmp(unit, "milliseconds") == 0 ||
+                     strcmp(unit, "ms") == 0)) {
+          fprintf(stderr, "Units not recognized: %s\n", unit);
+          exit(1);
+        }
+
+        double sum = 0;
+        double sum_of_logs = 0;
+        for (auto val : vals) {
+          sum += val;
+          sum_of_logs += log(val);
+        }
+        double mean = sum / vals.size();
+        // meanlogs is the mean of the logs of the values, which is useful for
+        // calculating the geometric mean of the values.
+        double meanlogs = sum_of_logs / vals.size();
+        double min = *std::min_element(vals.begin(), vals.end());
+        double max = *std::max_element(vals.begin(), vals.end());
+        double variance = Variance(vals, mean);
+        rapidjson::Value stats;
+        stats.SetArray();
+        stats.PushBack(vals.size(), alloc);  // "count" entry.
+        stats.PushBack(max, alloc);
+        stats.PushBack(meanlogs, alloc);
+        stats.PushBack(mean, alloc);
+        stats.PushBack(min, alloc);
+        stats.PushBack(sum, alloc);
+        stats.PushBack(variance, alloc);
+        histogram.AddMember("running", stats, alloc);
+
+        histogram.AddMember("guid", MakeUuid(), alloc);
+        // This field is redundant with the "count" entry in "running".
+        histogram.AddMember("maxNumSampleValues", vals.size(), alloc);
+        // Assume for now that we didn't get any NaN values.
+        histogram.AddMember("numNans", 0, alloc);
+
+        output->PushBack(histogram, alloc);
+      }
+
+      size_t samples_size = element["samples"].GetArray().Size();
+      if (samples_size > 1 && inner_label_count != samples_size) {
+        fprintf(stderr, "Some entries in 'samples' array lack labels\n");
+        exit(1);
+      }
     }
   }
 }
