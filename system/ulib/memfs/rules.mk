@@ -14,6 +14,8 @@ LOCAL_INC := $(LOCAL_DIR)/include/lib/memfs
 
 MODULE := $(LOCAL_DIR).cpp
 MODULE_TYPE := userlib
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
 MODULE_NAME := memfs-cpp
 
 MODULE_SRCS := \
@@ -52,6 +54,8 @@ include make/module.mk
 
 MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
 MODULE_NAME := memfs
 
 MODULE_SRCS := \
