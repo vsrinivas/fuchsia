@@ -15,6 +15,9 @@ namespace internal {
 template <bool Enabled>
 class AdoptionValidator;
 
+constexpr const char kStarting[] = "RcST";
+constexpr const char kAdopted[] = "RcAD";
+
 // This will catch:
 // - Double-adoptions
 // - AddRef/Release without adopting first
@@ -41,16 +44,29 @@ public:
 private:
     void AssertMagic(const uint32_t expected) const {
         ZX_DEBUG_ASSERT_MSG(magic_ == expected,
-                            "Invalid magic (expect: 0x%02x, got: 0x%02x)\n",
+                            "fbl::RefCounted: Invalid magic: "
+                            "expected: %s (0x%02x), got: %s (0x%02x)\n",
+                            MagicString(expected),
                             static_cast<unsigned int>(expected),
+                            MagicString(magic_),
                             static_cast<unsigned int>(magic_));
     }
 
+    constexpr const char* MagicString(uint32_t magic) const {
+        switch (magic) {
+        case kStartingMagic:
+            return kStarting;
+        case kAdoptedMagic:
+            return kAdopted;
+        }
+        return "<unknown>";
+    }
+
     // The object has been constructed, but not yet adopted or destroyed.
-    static constexpr uint32_t kStartingMagic = fbl::magic("RcST");
+    static constexpr uint32_t kStartingMagic = fbl::magic(kStarting);
 
     // The object has been constructed and adopted, but not destroyed.
-    static constexpr uint32_t kAdoptedMagic = fbl::magic("RcAD");
+    static constexpr uint32_t kAdoptedMagic = fbl::magic(kAdopted);
 
     mutable volatile uint32_t magic_ = kStartingMagic;
 };
