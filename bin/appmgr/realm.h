@@ -14,16 +14,19 @@
 #include <unordered_map>
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include "garnet/bin/appmgr/cmx_metadata.h"
 #include "garnet/bin/appmgr/component_container.h"
 #include "garnet/bin/appmgr/component_controller_impl.h"
 #include "garnet/bin/appmgr/environment_controller_impl.h"
 #include "garnet/bin/appmgr/hub/hub_info.h"
 #include "garnet/bin/appmgr/hub/realm_hub.h"
 #include "garnet/bin/appmgr/namespace.h"
+#include "garnet/bin/appmgr/namespace_builder.h"
 #include "garnet/bin/appmgr/runner_holder.h"
 #include "garnet/bin/appmgr/scheme_map.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fit/function.h"
+#include "lib/fsl/vmo/file.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"
@@ -108,6 +111,18 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
                                   ComponentRequestWrapper component_request,
                                   fxl::RefPtr<Namespace> ns,
                                   ComponentObjectCreatedCallback callback);
+
+  void CreateElfBinaryComponentFromPackage(
+      fuchsia::sys::LaunchInfo launch_info, fsl::SizedVmo& app_data,
+      ExportedDirType exported_dir_layout, zx::channel loader_service,
+      fdio_flat_namespace_t* flat, ComponentRequestWrapper component_request,
+      fxl::RefPtr<Namespace> ns, ComponentObjectCreatedCallback callback);
+
+  void CreateRunnerComponentFromPackage(
+      fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
+      CmxMetadata& cmx, std::string& runtime_data,
+      fuchsia::sys::FlatNamespace flat,
+      ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns);
 
   zx::channel OpenInfoDir();
 
