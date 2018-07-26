@@ -52,6 +52,8 @@ void arm_gicv2m_init(const paddr_t* reg_frames, const vaddr_t* reg_frames_virt, 
         uint     base_spi = (type_reg >> 16) & 0x3FF;
         uint     num_spi  = type_reg & 0x3FF;
 
+        dprintf(SPEW, "GICv2m %u: base spi %u count %u\n", i, base_spi, num_spi);
+
         for (uint i = 0; i < num_spi; ++i) {
             uint spi_id = base_spi + i;
             if ((spi_id < MIN_VALID_MSI_SPI) || (spi_id > MAX_VALID_MSI_SPI)) {

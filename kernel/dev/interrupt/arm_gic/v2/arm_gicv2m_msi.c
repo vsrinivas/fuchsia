@@ -14,6 +14,8 @@
 #include <trace.h>
 #include <zircon/types.h>
 
+#define LOCAL_TRACE 0
+
 p2ra_state_t g_32bit_targets;
 p2ra_state_t g_64bit_targets;
 
@@ -123,6 +125,8 @@ zx_status_t arm_gicv2m_msi_alloc_block(uint requested_irqs,
         p2ra_free_range(is_32bit ? &g_32bit_targets : &g_64bit_targets, alloc_start, alloc_size);
         return ret;
     }
+
+    LTRACEF("success: base spi %u size %u\n", alloc_start, alloc_size);
 
     /* Success!  Fill out the bookkeeping and we are done */
     out_block->platform_ctx = (void*)is_32bit;
