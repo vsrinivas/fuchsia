@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use ess_store::{EssStore, SavedEss};
+use known_ess_store::{KnownEssStore, KnownEss};
 use failure;
 use fidl::endpoints2::create_endpoints;
 use fidl_sme;
@@ -39,7 +39,7 @@ enum ManualRequest {
 
 pub fn new_client(iface_id: u16,
                   sme: fidl_sme::ClientSmeProxy,
-                  ess_store: Arc<EssStore>)
+                  ess_store: Arc<KnownEssStore>)
     -> (Client, impl Future<Item = (), Error = Never>)
 {
     let (req_sender, req_receiver) = mpsc::unbounded();
@@ -69,7 +69,7 @@ type NextReqFut = stream::StreamFuture<mpsc::UnboundedReceiver<ManualRequest>>;
 #[derive(Clone)]
 struct Services {
     sme: fidl_sme::ClientSmeProxy,
-    ess_store: Arc<EssStore>,
+    ess_store: Arc<KnownEssStore>,
 }
 
 fn auto_connect_state(services: Services, next_req: NextReqFut) -> State {
@@ -112,17 +112,17 @@ fn attempt_auto_connect(services: Services)
         .into_future()
         .and_then(fetch_scan_results)
         .and_then(move |results| {
-            let saved_networks = {
+            let known_networks = {
                 let services = services.clone();
                 results.into_iter()
                     .filter_map(move |ess| {
                         services.ess_store.lookup(&ess.best_bss.ssid)
-                            .map(|saved_ess| (ess.best_bss.ssid, saved_ess))
+                            .map(|known_ess| (ess.best_bss.ssid, known_ess))
                     })
             };
-            stream::iter_ok(saved_networks)
-                .skip_while(move |(ssid, saved_ess)| {
-                    connect_to_saved_network(&services.sme, ssid, saved_ess)
+            stream::iter_ok(known_networks)
+                .skip_while(move |(ssid, known_ess)| {
+                    connect_to_known_network(&services.sme, ssid, known_ess)
                         .map(|connected| !connected)
                 })
                 .next()
@@ -131,12 +131,12 @@ fn attempt_auto_connect(services: Services)
         .map(|(item, _)| item.map(|(ssid, _)| ssid))
 }
 
-fn connect_to_saved_network(sme: &fidl_sme::ClientSmeProxy, ssid: &[u8], saved_ess: &SavedEss)
+fn connect_to_known_network(sme: &fidl_sme::ClientSmeProxy, ssid: &[u8], known_ess: &KnownEss)
     -> impl Future<Item = bool, Error = failure::Error>
 {
     let ssid_str = String::from_utf8_lossy(ssid).into_owned();
     println!("wlancfg: Auto-connecting to '{}'", ssid_str);
-    start_connect_txn(sme, &ssid, &saved_ess.password)
+    start_connect_txn(sme, &ssid, &known_ess.password)
         .into_future()
         .and_then(wait_until_connected)
         .map(move |r| match r {
@@ -154,7 +154,7 @@ fn connect_to_saved_network(sme: &fidl_sme::ClientSmeProxy, ssid: &[u8], saved_e
 fn manual_connect_state(services: Services, next_req: NextReqFut, req: ConnectRequest) -> State {
     println!("wlancfg: Connecting to '{}' because of a manual request from the user",
         String::from_utf8_lossy(&req.ssid));
-    services.ess_store.store(req.ssid.clone(), SavedEss {
+    services.ess_store.store(req.ssid.clone(), KnownEss {
         password: req.password.clone()
     }).unwrap_or_else(|e| eprintln!("wlancfg: Failed to store network password: {}", e));
 
@@ -276,7 +276,7 @@ mod tests {
         assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
 
         // Now save a known ESS and "wait" for the next try
-        ess_store.store(b"bar".to_vec(), SavedEss { password: b"qwerty".to_vec() })
+        ess_store.store(b"bar".to_vec(), KnownEss { password: b"qwerty".to_vec() })
             .expect("failed to store a network password");
         assert!(exec.wake_next_timer().is_some());
         assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
@@ -356,12 +356,12 @@ mod tests {
         txn.send_on_finished(code).expect("failed to send OnFinished to ConnectTxn");
     }
 
-    fn create_ess_store(path: &Path) -> Arc<EssStore> {
-        Arc::new(EssStore::new_with_paths(path.join("store.json"), path.join("store.json.tmp"))
-            .expect("failed to create an EssStore"))
+    fn create_ess_store(path: &Path) -> Arc<KnownEssStore> {
+        Arc::new(KnownEssStore::new_with_paths(path.join("store.json"), path.join("store.json.tmp"))
+            .expect("failed to create an KnownEssStore"))
     }
 
-    fn create_client(ess_store: Arc<EssStore>)
+    fn create_client(ess_store: Arc<KnownEssStore>)
         -> (Client, impl Future<Item = (), Error = Never>, ClientSmeRequestStream)
     {
         let (proxy, server) = create_endpoints::<fidl_sme::ClientSmeMarker>()

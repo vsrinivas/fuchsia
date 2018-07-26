@@ -11,17 +11,17 @@ use std::collections::HashMap;
 use std::{fs, io, mem};
 use std::path::{Path, PathBuf};
 
-const SAVED_NETWORKS_PATH: &str = "/data/saved_networks.json";
-const TMP_SAVED_NETWORKS_PATH: &str = "/data/saved_networks.json.tmp";
+const KNOWN_NETWORKS_PATH: &str = "/data/known_networks.json";
+const TMP_KNOWN_NETWORKS_PATH: &str = "/data/known_networks.json.tmp";
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct SavedEss {
+pub struct KnownEss {
     pub password: Vec<u8>,
 }
 
-type EssMap = HashMap<Vec<u8>, SavedEss>;
+type EssMap = HashMap<Vec<u8>, KnownEss>;
 
-pub struct EssStore {
+pub struct KnownEssStore {
     storage_path: PathBuf,
     tmp_storage_path: PathBuf,
     ess_by_ssid: Mutex<EssMap>,
@@ -41,10 +41,10 @@ struct EssJsonWrite<'a> {
     password: &'a [u8],
 }
 
-impl EssStore {
+impl KnownEssStore {
     pub fn new() -> Result<Self, failure::Error> {
-        Self::new_with_paths(PathBuf::from(SAVED_NETWORKS_PATH),
-                        PathBuf::from(TMP_SAVED_NETWORKS_PATH))
+        Self::new_with_paths(PathBuf::from(KNOWN_NETWORKS_PATH),
+                        PathBuf::from(TMP_KNOWN_NETWORKS_PATH))
     }
 
     pub fn new_with_paths(storage_path: PathBuf, tmp_storage_path: PathBuf)
@@ -54,7 +54,7 @@ impl EssStore {
             Ok(file) => match serde_json::from_reader(file) {
                 Ok(list) => list,
                 Err(e) => {
-                    error!("Failed to parse the list of saved wireless networks from JSON\
+                    error!("Failed to parse the list of known wireless networks from JSON\
                             in {}: {}. Starting with an empty list.", storage_path.display(), e);
                     fs::remove_file(&storage_path)
                         .map_err(|e| format_err!("Failed to delete {}: {}",
@@ -69,19 +69,19 @@ impl EssStore {
         };
         let mut ess_by_ssid = HashMap::with_capacity(ess_list.len());
         for ess in ess_list {
-            ess_by_ssid.insert(ess.ssid, SavedEss {
+            ess_by_ssid.insert(ess.ssid, KnownEss {
                 password: ess.password,
             });
         }
         let ess_by_ssid = Mutex::new(ess_by_ssid);
-        Ok(EssStore{ storage_path, tmp_storage_path, ess_by_ssid })
+        Ok(KnownEssStore{ storage_path, tmp_storage_path, ess_by_ssid })
     }
 
-    pub fn lookup(&self, ssid: &[u8]) -> Option<SavedEss> {
+    pub fn lookup(&self, ssid: &[u8]) -> Option<KnownEss> {
         self.ess_by_ssid.lock().get(ssid).map(Clone::clone)
     }
 
-    pub fn store(&self, ssid: Vec<u8>, ess: SavedEss) -> Result<(), failure::Error> {
+    pub fn store(&self, ssid: Vec<u8>, ess: KnownEss) -> Result<(), failure::Error> {
         let mut guard = self.ess_by_ssid.lock();
         // Even if writing into the file fails, it is still okay
         // to modify the in-memory map. We are not too worried about consistency here.
@@ -197,20 +197,20 @@ mod tests {
 
     #[test]
     fn bail_if_path_is_bad() {
-        match EssStore::new_with_paths(PathBuf::from("/dev/null/foo"), PathBuf::from("/dev/null")) {
+        match KnownEssStore::new_with_paths(PathBuf::from("/dev/null/foo"), PathBuf::from("/dev/null")) {
             Ok(_) => panic!("expected constructor to fail"),
             Err(e) => assert!(e.to_string().contains("Failed to open /dev/null/foo"),
                               format!("error message was: {}", e))
         }
     }
 
-    fn create_ess_store(path: &Path) -> EssStore {
-        EssStore::new_with_paths(path.join(STORE_JSON_PATH), path.join("store.json.tmp"))
-            .expect("Failed to create an EssStore")
+    fn create_ess_store(path: &Path) -> KnownEssStore {
+        KnownEssStore::new_with_paths(path.join(STORE_JSON_PATH), path.join("store.json.tmp"))
+            .expect("Failed to create an KnownEssStore")
     }
 
-    fn ess(password: &[u8]) -> SavedEss {
-        SavedEss {
+    fn ess(password: &[u8]) -> KnownEss {
+        KnownEss {
             password: password.to_vec(),
         }
     }

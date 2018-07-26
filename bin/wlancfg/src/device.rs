@@ -5,7 +5,7 @@
 use async;
 use config::{self, Config};
 use client;
-use ess_store::EssStore;
+use known_ess_store::KnownEssStore;
 use fidl::{self, endpoints2::create_endpoints};
 use futures::prelude::*;
 use futures::{future, stream};
@@ -21,7 +21,7 @@ pub struct Listener {
     legacy_client: shim::ClientRef,
 }
 
-pub fn handle_event(listener: &Arc<Listener>, evt: DeviceWatcherEvent, ess_store: &Arc<EssStore>)
+pub fn handle_event(listener: &Arc<Listener>, evt: DeviceWatcherEvent, ess_store: &Arc<KnownEssStore>)
     -> impl Future<Item = (), Error = fidl::Error>
 {
     println!("wlancfg got event: {:?}", evt);
@@ -111,7 +111,7 @@ fn on_phy_removed(_listener: &Arc<Listener>, id: u16)
     future::ok(())
 }
 
-fn on_iface_added(listener: &Arc<Listener>, iface_id: u16, ess_store: Arc<EssStore>)
+fn on_iface_added(listener: &Arc<Listener>, iface_id: u16, ess_store: Arc<KnownEssStore>)
     -> impl Future<Item = (), Error = Never>
 {
     let service = listener.proxy.clone();
