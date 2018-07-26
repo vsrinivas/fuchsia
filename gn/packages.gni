@@ -3,8 +3,31 @@
 # found in the LICENSE file.
 
 declare_args() {
-  # List of packages (a GN list of strings).  If unset, guessed based
-  # on which layer is found in the //.jiri_manifest file.
+
+  # List of product definition files describing the packages to build, and
+  # where they are to be installed in images and updates.
+  #
+  # A product definition file is a JSON file containing:
+  # monolith:
+  #   a list of packages included in OTA images, base system images, and the
+  #   distribution repository.
+  # preinstall:
+  #   a list of packages pre-installed on the system (also added to the
+  #   distribution repository)
+  # available:
+  #   a list of packages only added to the distribution repository)
+  #
+  # If a package is referenced in monolith and in preinstall, monolith takes
+  # priority, and the package will be added to OTA images as part of the
+  # verified boot set of static packages.
+  #
+  # If unset, layer will be guessed using //.jiri_manifest and
+  # //{layer}/products/default will be used.
+  fuchsia_products = []
+
+  # List of packages (a GN list of strings).
+  # This list of packages is added to the set of "available" packages, see
+  # `products` for more information.
   fuchsia_packages = []
 
   # List of extra packages to synthesize on the fly.  This is only for
@@ -21,15 +44,48 @@ declare_args() {
   synthesize_packages = []
 }
 
-if (fuchsia_packages == []) {
+if (fuchsia_products == [] && fuchsia_packages == []) {
   _jiri_manifest = "//.jiri_manifest"
-  foreach(layer,
-          exec_script("//build/gn/guess_layer.py",
-                      [ rebase_path(_jiri_manifest) ],
-                      "list lines",
-                      [ _jiri_manifest ])) {
-    fuchsia_packages += [ "$layer/packages/default" ]
+  _layers = exec_script("//build/gn/guess_layer.py",
+                        [ rebase_path(_jiri_manifest) ],
+                        "list lines",
+                        [ _jiri_manifest ])
+  foreach(layer, _layers) {
+    fuchsia_products += [ "$layer/products/default" ]
   }
+}
+
+# Resolve all the `fuchsia_products` JSON files and their dependencies
+# into lists of GN labels:
+# monolith - package labels for base system and verified boot image
+# preinstall - package labels for preinstall, but not OTA
+# available - package labels for the install and update repository
+# host_tests - labels for host tests
+# data_deps - labels for host tools and non-package build targets
+_preprocessed_products = exec_script("preprocess_products.py",
+                                     [
+                                       # A list of strings in GN syntax is
+                                       # valid JSON too.
+                                       "--products=$fuchsia_products",
+                                     ],
+                                     "json")
+
+# Tell GN that the files preprocess_products.py ran are inputs to the
+# generation step, by declaring them as file inputs to a (silly) exec_script
+# invocation.
+exec_script("/bin/sh", ["-c", ":"], "", _preprocessed_products.files_read)
+
+monolith_packages = []
+foreach(pkg, _preprocessed_products.monolith) {
+  monolith_packages += [ get_label_info(pkg, "label_no_toolchain") ]
+}
+preinstall_packages = []
+foreach(pkg, _preprocessed_products.preinstall) {
+  preinstall_packages += [ get_label_info(pkg, "label_no_toolchain") ]
+}
+available_packages = []
+foreach(pkg, _preprocessed_products.available) {
+  available_packages += [ get_label_info(pkg, "label_no_toolchain") ]
 }
 
 # Resolve all the `fuchsia_packages` JSON files and their imports
@@ -47,28 +103,25 @@ _preprocessed_packages = exec_script("prepreprocess_build_packages.py",
 # invocation.
 exec_script("/bin/sh", ["-c", ":"], "", _preprocessed_packages.files_read)
 
-# Every GN package() target included in the build.  The image-building
-# steps iterate over this to aggregate all the internal targets defined by
-# the package() template.
-package_targets = []
+# Additional fuchsia packages are added to preinstall_packages
 foreach(pkg, _preprocessed_packages.targets) {
-  # Expand the label to its full name.
-  package_targets += [ get_label_info(pkg, "label_no_toolchain") ]
+  # Note: currently the infrastructure recipes require the packages build
+  # arguments to be added to the base image. In the future this should
+  # transition to preinstall_packages.
+  monolith_packages += [ get_label_info(pkg, "label_no_toolchain") ]
 }
 
 # Every extra GN target the package JSON requests be built on the side.
 # This is for things like install_host_tools() targets whose output should
 # be on hand for a developer to use in conjuction with a Fuchsia package.
 package_data_deps = []
-foreach(pkg, _preprocessed_packages.data_deps) {
-  # Expand the label to its full name.
+foreach(pkg, _preprocessed_products.data_deps + _preprocessed_packages.data_deps) {
   package_data_deps += [ get_label_info(pkg, "label_no_toolchain") ]
 }
 
 # Labels of test() targets to be copied into $root_build_dir/host_tests.
 package_host_tests = []
-foreach(label, _preprocessed_packages.host_tests) {
-  # Expand the label to its full name.
+foreach(label, _preprocessed_products.host_tests + _preprocessed_packages.host_tests) {
   package_host_tests += [ get_label_info(label, "label_no_toolchain") ]
 }
 
@@ -76,5 +129,10 @@ foreach(label, _preprocessed_packages.host_tests) {
 # so the package() target is //build/gn:package_name.
 foreach(pkg, synthesize_packages) {
   pkg = "//build/gn:${pkg.name}"
-  package_targets += [ get_label_info(pkg, "label_no_toolchain") ]
+  # Note: currently the infrastructure recipes require infra synthesized
+  # packages to become members of the monolith set.
+  monolith_packages += [ get_label_info(pkg, "label_no_toolchain") ]
 }
+
+# all_packages contains a list of all requested packages.
+all_packages = monolith_packages + preinstall_packages + available_packages
