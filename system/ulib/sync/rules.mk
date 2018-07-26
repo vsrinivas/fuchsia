@@ -14,9 +14,6 @@ MODULE_SRCS += \
 MODULE_LIBS := \
     system/ulib/zircon \
 
-MODULE_HEADER_DEPS := \
-    system/ulib/fbl \
-
 MODULE_EXPORT := a
 
 include make/module.mk

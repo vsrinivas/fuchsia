@@ -10,6 +10,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/hidbus.h>
 
+#include <fbl/atomic.h>
 #include <fbl/mutex.h>
 
 #include <hid/ambient-light.h>

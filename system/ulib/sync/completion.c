@@ -5,8 +5,8 @@
 #include <sync/completion.h>
 
 #include <limits.h>
-#include <zircon/syscalls.h>
 #include <stdatomic.h>
+#include <zircon/syscalls.h>
 
 enum {
     UNSIGNALED = 0,
@@ -22,7 +22,7 @@ zx_status_t completion_wait_deadline(completion_t* completion, zx_time_t deadlin
     // TODO(kulakowski): With a little more state (a waiters count),
     // this could optimistically spin before entering the kernel.
 
-    atomic_int* futex = &completion->futex.futex;
+    atomic_int* futex = &completion->futex;
 
     for (;;) {
         int32_t current_value = atomic_load(futex);
@@ -47,11 +47,11 @@ zx_status_t completion_wait_deadline(completion_t* completion, zx_time_t deadlin
 }
 
 void completion_signal(completion_t* completion) {
-    atomic_int* futex = &completion->futex.futex;
+    atomic_int* futex = &completion->futex;
     atomic_store(futex, SIGNALED);
     zx_futex_wake(futex, UINT32_MAX);
 }
 
 void completion_reset(completion_t* completion) {
-    atomic_store(&completion->futex.futex, UNSIGNALED);
+    atomic_store(&completion->futex, UNSIGNALED);
 }

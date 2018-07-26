@@ -4,17 +4,17 @@
 
 #pragma once
 
-#include <sync/futex.h>
-#include <zircon/types.h>
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS;
 
-typedef struct completion_t {
-    futex_t futex;
+typedef struct completion {
+    zx_futex_t futex;
 
 #ifdef __cplusplus
-    completion_t() : futex(0) {}
+    completion()
+        : futex(0) {}
 #endif
 } completion_t;
 

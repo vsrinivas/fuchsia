@@ -8,9 +8,10 @@
 #include <unistd.h>
 
 #include <ddk/protocol/block.h>
+#include <fbl/array.h>
+#include <fbl/atomic.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <fbl/array.h>
 #include <fbl/limits.h>
 #include <fbl/new.h>
 #include <lib/fzl/mapped-vmo.h>
