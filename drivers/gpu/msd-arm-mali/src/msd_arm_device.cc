@@ -428,14 +428,16 @@ magma::Status MsdArmDevice::ProcessJobInterrupt()
                 dumped_on_failure = true;
             }
 
-            scheduler_->JobCompleted(slot, static_cast<ArmMaliResultCode>(result));
+            uint64_t job_tail = regs.Tail().ReadFrom(register_io_.get()).reg_value();
+
+            scheduler_->JobCompleted(slot, static_cast<ArmMaliResultCode>(result), job_tail);
             failed &= ~(1 << slot);
         }
 
         uint32_t finished = irq_status.finished_slots().get();
         while (finished) {
             uint32_t slot = __builtin_ffs(finished) - 1;
-            scheduler_->JobCompleted(slot, kArmMaliResultSuccess);
+            scheduler_->JobCompleted(slot, kArmMaliResultSuccess, 0u);
             finished &= ~(1 << slot);
         }
     }
@@ -758,7 +760,7 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* regi
 
     // Skip atom if address space can't be assigned.
     if (!address_manager_->AssignAddressSpace(atom)) {
-        scheduler_->JobCompleted(atom->slot(), kArmMaliResultAtomTerminated);
+        scheduler_->JobCompleted(atom->slot(), kArmMaliResultAtomTerminated, 0u);
         return;
     }
     if (atom->require_cycle_counter()) {

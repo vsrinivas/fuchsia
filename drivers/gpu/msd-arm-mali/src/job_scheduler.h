@@ -35,7 +35,7 @@ public:
 
     void CancelAtomsForConnection(std::shared_ptr<MsdArmConnection> connection);
 
-    void JobCompleted(uint64_t slot, ArmMaliResultCode result_code);
+    void JobCompleted(uint64_t slot, ArmMaliResultCode result_code, uint64_t tail);
 
     uint32_t job_slots() const { return job_slots_; }
 

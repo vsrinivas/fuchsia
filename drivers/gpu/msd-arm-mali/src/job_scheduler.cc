@@ -152,13 +152,16 @@ void JobScheduler::CancelAtomsForConnection(std::shared_ptr<MsdArmConnection> co
         runnable_list.remove_if(removal_function);
 }
 
-void JobScheduler::JobCompleted(uint64_t slot, ArmMaliResultCode result_code)
+void JobScheduler::JobCompleted(uint64_t slot, ArmMaliResultCode result_code, uint64_t tail)
 {
     std::shared_ptr<MsdArmAtom>& atom = executing_atoms_[slot];
     DASSERT(atom);
     TRACE_ASYNC_END("magma", AtomRunningString(slot), atom->trace_nonce());
     if (result_code == kArmMaliResultSoftStopped) {
         atom->set_soft_stopped(false);
+        // The tail is the first job executed that didn't complete. When continuing execution, skip
+        // jobs before that in the job chain, or else kArmMaliResultDataInvalidFault is generated.
+        atom->set_gpu_address(tail);
         runnable_atoms_[slot].push_front(atom);
     }
     owner_->AtomCompleted(atom.get(), result_code);

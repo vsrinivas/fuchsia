@@ -32,6 +32,7 @@ public:
     uint64_t trace_nonce() const { return trace_nonce_; }
     std::weak_ptr<MsdArmConnection> connection() const { return connection_; }
     uint64_t gpu_address() const { return gpu_address_; }
+    void set_gpu_address(uint64_t gpu_address) { gpu_address_ = gpu_address; }
     uint32_t slot() const { return slot_; }
     uint8_t atom_number() const { return atom_number_; }
     const magma_arm_mali_user_data& user_data() const { return user_data_; }
@@ -86,7 +87,7 @@ private:
     // The following data is immmutable after construction.
     const uint64_t trace_nonce_;
     const std::weak_ptr<MsdArmConnection> connection_;
-    const uint64_t gpu_address_;
+    uint64_t gpu_address_;
     const uint32_t slot_;
     const int8_t priority_;
     bool require_cycle_counter_ = false;

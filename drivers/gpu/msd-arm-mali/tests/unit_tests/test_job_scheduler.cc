@@ -96,10 +96,10 @@ public:
         EXPECT_EQ(1u, owner.run_list().size());
         EXPECT_EQ(atom1_ptr, owner.run_list()[0]);
         EXPECT_TRUE(owner.gpu_active());
-        scheduler.JobCompleted(0, kArmMaliResultSuccess);
+        scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
         EXPECT_EQ(2u, owner.run_list().size());
         EXPECT_EQ(atom2_ptr, owner.run_list()[1]);
-        scheduler.JobCompleted(0, kArmMaliResultSuccess);
+        scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
         EXPECT_FALSE(owner.gpu_active());
     }
 
@@ -146,7 +146,7 @@ public:
         EXPECT_EQ(0u, scheduler.GetAtomListSize());
         EXPECT_EQ(0u, scheduler.waiting_atoms_.size());
         EXPECT_EQ(atom1.get(), scheduler.executing_atom());
-        scheduler.JobCompleted(0, kArmMaliResultSuccess);
+        scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
 
         // The second atom should have been thrown away, and the first should be
         // removed due to completion.
@@ -192,7 +192,7 @@ public:
         EXPECT_EQ(atom3.get(), scheduler.executing_atom());
         EXPECT_EQ(2u, scheduler.GetAtomListSize());
 
-        scheduler.JobCompleted(0, kArmMaliResultSuccess);
+        scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
         EXPECT_EQ(nullptr, scheduler.executing_atom());
         EXPECT_EQ(2u, scheduler.GetAtomListSize());
 
@@ -211,7 +211,7 @@ public:
         unqueued_atom1->set_result_code(kArmMaliResultSuccess);
         unqueued_atom1.reset();
 
-        scheduler.JobCompleted(0, kArmMaliResultSuccess);
+        scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
         EXPECT_EQ(atom2.get(), scheduler.executing_atom());
         EXPECT_EQ(0u, scheduler.GetAtomListSize());
     }
@@ -298,7 +298,7 @@ public:
         scheduler.KillTimedOutAtoms();
         EXPECT_EQ(1u, owner.stopped_atoms().size());
 
-        scheduler.JobCompleted(0, kArmMaliResultSuccess);
+        scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
         EXPECT_EQ(nullptr, scheduler.executing_atom());
         EXPECT_EQ(scheduler.GetCurrentTimeoutDuration(), JobScheduler::Clock::duration::max());
     }
@@ -521,7 +521,7 @@ public:
         EXPECT_EQ(atom1.get(), owner.run_list()[0]);
         EXPECT_EQ(atom_slot1.get(), owner.run_list()[1]);
 
-        scheduler.JobCompleted(0, kArmMaliResultSuccess);
+        scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
 
         scheduler.TryToSchedule();
         EXPECT_EQ(3u, owner.run_list().size());
@@ -559,7 +559,7 @@ public:
         EXPECT_EQ(1u, owner.run_list().size());
         EXPECT_EQ(atom1.get(), owner.run_list().back());
 
-        scheduler.JobCompleted(0, kArmMaliResultSuccess);
+        scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
 
         // atom3 should run next, since it's the highest-priority in its connection.
         scheduler.TryToSchedule();
@@ -568,12 +568,12 @@ public:
 
         // atom1_2 should run before 2, because we're trying to keep the atom
         // ratio the same.
-        scheduler.JobCompleted(0, kArmMaliResultSuccess);
+        scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
         scheduler.TryToSchedule();
         EXPECT_EQ(3u, owner.run_list().size());
         EXPECT_EQ(atom1_2.get(), owner.run_list().back());
 
-        scheduler.JobCompleted(0, kArmMaliResultSuccess);
+        scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
         scheduler.TryToSchedule();
         EXPECT_EQ(atom2.get(), owner.run_list().back());
 
@@ -609,29 +609,31 @@ public:
 
         // It's possible the atom won't be soft-stopped before it completes.
         if (normal_completion) {
-            scheduler.JobCompleted(0, kArmMaliResultSuccess);
+            scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
             scheduler.TryToSchedule();
 
             EXPECT_EQ(2u, owner.run_list().size());
             EXPECT_EQ(atom2.get(), owner.run_list().back());
 
-            scheduler.JobCompleted(0, kArmMaliResultSuccess);
+            scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
             scheduler.TryToSchedule();
             // atom1 shouldn't run again.
             EXPECT_EQ(2u, owner.run_list().size());
             EXPECT_EQ(atom2.get(), owner.run_list().back());
         } else {
-            scheduler.JobCompleted(0, kArmMaliResultSoftStopped);
+            scheduler.JobCompleted(0, kArmMaliResultSoftStopped, 100u);
             scheduler.TryToSchedule();
 
             EXPECT_EQ(2u, owner.run_list().size());
             EXPECT_EQ(atom2.get(), owner.run_list().back());
 
-            scheduler.JobCompleted(0, kArmMaliResultSuccess);
+            scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
             scheduler.TryToSchedule();
 
             EXPECT_EQ(3u, owner.run_list().size());
             EXPECT_EQ(atom1.get(), owner.run_list().back());
+            // GPU address should have been updated.
+            EXPECT_EQ(100u, atom1->gpu_address());
         }
     }
 };
