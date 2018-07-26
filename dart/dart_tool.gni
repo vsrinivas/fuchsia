@@ -94,7 +94,6 @@ template("dart_tool") {
     rebased_packages_path = rebase_path(packages_path)
 
     args = [
-      "--no-preview-dart-2",
       "--snapshot=$rebased_snapshot_path",
       "--snapshot-depfile=$rebased_depfile_path",
       "--packages=$rebased_packages_path",
