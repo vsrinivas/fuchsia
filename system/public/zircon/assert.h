@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_ASSERT_
+#define ZIRCON_ASSERT_
 
 #ifdef _KERNEL
 #include <assert.h>
@@ -22,7 +23,7 @@
 
 #else // #ifdef _KERNEL
 
-#include <stdio.h> // for printf
+#include <stdio.h>  // for printf
 #include <stdlib.h> // for abort
 
 #include <zircon/compiler.h>
@@ -40,11 +41,12 @@
         }                                                                       \
     } while (0)
 
-#define ZX_ASSERT_MSG(x, msg, msgargs...)                                                           \
-    do {                                                                                            \
-        if (unlikely(!(x))) {                                                                       \
-            ZX_PANIC("ASSERT FAILED at (%s:%d): %s\n" msg "\n", __FILE__, __LINE__, #x, ##msgargs); \
-        }                                                                                           \
+#define ZX_ASSERT_MSG(x, msg, msgargs...)                       \
+    do {                                                        \
+        if (unlikely(!(x))) {                                   \
+            ZX_PANIC("ASSERT FAILED at (%s:%d): %s\n" msg "\n", \
+                     __FILE__, __LINE__, #x, ##msgargs);        \
+        }                                                       \
     } while (0)
 
 // conditionally implement DEBUG_ASSERT based on ZX_DEBUGLEVEL in kernel space
@@ -80,3 +82,5 @@
 #define ZX_DEBUG_ASSERT_MSG_COND(x, msg, msgargs...) do { } while (0)
 #endif
 #endif // #ifdef _KERNEL
+
+#endif // ZIRCON_ASSERT_
