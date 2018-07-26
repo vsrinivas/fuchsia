@@ -29,6 +29,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/zx \
     system/ulib/fbl \
     system/ulib/digest \
+    system/ulib/sync \
     system/ulib/zxcpp \
     third_party/ulib/cksum \
     third_party/ulib/uboringssl \
