@@ -210,6 +210,9 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   void PerformFocusStoryAction(const fuchsia::modular::Action& action,
                                const std::string& override_story_id);
 
+  void PerformFocusModuleAction(const fuchsia::modular::Action& action,
+                                const std::string& story_id);
+
   // The listener will be called with the id of the story to which the module
   // was added. This can be override_story_id or the action.story_id.
   void PerformAddModuleAction(

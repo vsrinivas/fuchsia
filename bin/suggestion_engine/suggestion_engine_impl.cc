@@ -371,6 +371,10 @@ void SuggestionEngineImpl::ExecuteActions(
         PerformFocusStoryAction(action, override_story_id);
         break;
       }
+      case fuchsia::modular::Action::Tag::kFocusModule: {
+        PerformFocusModuleAction(action, override_story_id);
+        break;
+      }
       case fuchsia::modular::Action::Tag::kAddModule: {
         PerformAddModuleAction(action, std::move(listener), proposal_id,
                                override_story_id);
@@ -484,6 +488,26 @@ void SuggestionEngineImpl::PerformFocusStoryAction(
   focus_provider_ptr_->Request(story_id);
 }
 
+void SuggestionEngineImpl::PerformFocusModuleAction(
+    const fuchsia::modular::Action& action, const std::string& story_id) {
+  if (story_id.empty()) {
+    FXL_LOG(WARNING) << "Unable to focus module; no story id provided";
+    return;
+  }
+  fuchsia::modular::StoryControllerPtr story_controller;
+  story_provider_->GetController(story_id, story_controller.NewRequest());
+  auto module_path = action.focus_module().module_path.Clone();
+  if (module_path->empty()) {
+    FXL_LOG(WARNING) << "Unable to focus module; no module path provided";
+    return;
+  }
+
+  fuchsia::modular::ModuleControllerPtr mod_controller;
+  story_controller->GetModuleController(std::move(module_path),
+                                        mod_controller.NewRequest());
+  mod_controller->Focus();
+}
+
 void SuggestionEngineImpl::PerformAddModuleAction(
     const fuchsia::modular::Action& action,
     fidl::InterfaceHandle<fuchsia::modular::ProposalListener> listener,
@@ -561,6 +585,7 @@ void SuggestionEngineImpl::PerformUpdateModuleAction(
               if (entry.name != parameter.name) {
                 continue;
               }
+
               fuchsia::modular::LinkPtr link;
               story_controller->GetLink(fidl::Clone(entry.link_path),
                                         link.NewRequest());

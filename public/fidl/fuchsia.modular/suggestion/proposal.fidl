@@ -66,6 +66,7 @@ interface ProposalListener {
 
 union Action {
   FocusStory focus_story;
+  FocusModule focus_module;
   AddModule add_module;
   UpdateModule update_module;
   SetLinkValueAction set_link_value_action;
@@ -87,6 +88,12 @@ struct CreateStory {
 // Brings an existing story into focus.
 struct FocusStory {
   string story_id;
+};
+
+// Brings an existing module into focus.
+struct FocusModule {
+  // The module path of the existing module.
+  vector<string> module_path;
 };
 
 // Adds a module from an Intent to an existing story.

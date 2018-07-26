@@ -62,6 +62,7 @@ double ModPairRankingFeature::ComputeFeatureInternal(
       }
       case fuchsia::modular::Action::Tag::kCustomAction:
       case fuchsia::modular::Action::Tag::kFocusStory:
+      case fuchsia::modular::Action::Tag::kFocusModule:
       case fuchsia::modular::Action::Tag::kSetLinkValueAction:
       case fuchsia::modular::Action::Tag::kUpdateModule:
       case fuchsia::modular::Action::Tag::kQueryAction:
