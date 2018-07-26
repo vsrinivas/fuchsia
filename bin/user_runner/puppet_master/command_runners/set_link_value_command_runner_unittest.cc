@@ -4,60 +4,18 @@
 
 #include "peridot/bin/user_runner/puppet_master/command_runners/set_link_value_command_runner.h"
 
-#include <lib/async/cpp/future.h>
 #include <lib/fsl/vmo/strings.h>
 
 #include "gtest/gtest.h"
-#include "peridot/lib/ledger_client/page_id.h"
-#include "peridot/lib/testing/test_with_ledger.h"
+#include "peridot/lib/testing/test_with_session_storage.h"
 
 namespace modular {
 namespace {
 
-class SetLinkValueCommandRunnerTest : public testing::TestWithLedger {
+class SetLinkValueCommandRunnerTest : public testing::TestWithSessionStorage {
  protected:
-  std::unique_ptr<SessionStorage> MakeStorage(std::string ledger_page) {
-    auto page_id = MakePageId(ledger_page);
-    return std::make_unique<SessionStorage>(ledger_client(), page_id);
-  }
-
   std::unique_ptr<SetLinkValueCommandRunner> MakeRunner() {
     return std::make_unique<SetLinkValueCommandRunner>();
-  }
-
-  std::unique_ptr<StoryStorage> GetStoryStorage(SessionStorage* const storage,
-                                                std::string story_id) {
-    std::unique_ptr<StoryStorage> story_storage;
-    bool done{};
-    storage->GetStoryStorage(story_id)->Then(
-        [&](std::unique_ptr<StoryStorage> result) {
-          FXL_DCHECK(result);
-          story_storage = std::move(result);
-          done = true;
-        });
-    RunLoopUntil([&] { return done; });
-
-    return story_storage;
-  }
-
-  fidl::StringPtr CreateStory(SessionStorage* const storage) {
-    auto future_story = storage->CreateStory(
-        nullptr /* extra */, false /* is_kind_of_proto_story */);
-    bool done{};
-    fidl::StringPtr story_id;
-    future_story->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId) {
-      done = true;
-      story_id = std::move(id);
-    });
-    RunLoopUntil([&] { return done; });
-
-    return story_id;
-  }
-
-  fuchsia::modular::LinkPath MakeLinkPath(const std::string& name) {
-    fuchsia::modular::LinkPath path;
-    path.link_name = name;
-    return path;
   }
 
   fuchsia::modular::StoryCommand MakeSetLinkValueCommand(
@@ -77,7 +35,7 @@ class SetLinkValueCommandRunnerTest : public testing::TestWithLedger {
 // On an empty story, it sets a link with a value, then updates it. Each time
 // verifying that the link value is the expected one.
 TEST_F(SetLinkValueCommandRunnerTest, Execute) {
-  auto storage = MakeStorage("page");
+  auto storage = MakeSessionStorage("page");
   auto runner = MakeRunner();
   auto story_id = CreateStory(storage.get());
   auto story_storage = GetStoryStorage(storage.get(), story_id);
@@ -95,13 +53,7 @@ TEST_F(SetLinkValueCommandRunnerTest, Execute) {
   done = false;
 
   // Let's get the value.
-  story_storage->GetLinkValue(MakeLinkPath("link"))
-      ->Then([&](StoryStorage::Status status, fidl::StringPtr v) {
-        EXPECT_EQ("10", *v);
-        done = true;
-      });
-  RunLoopUntil([&] { return done; });
-  done = false;
+  EXPECT_EQ("10", GetLinkValue(story_storage.get(), "link"));
 
   // Mutate again.
   auto command2 = MakeSetLinkValueCommand("link", "20");
@@ -115,12 +67,7 @@ TEST_F(SetLinkValueCommandRunnerTest, Execute) {
   done = false;
 
   // Let's get the value again, we should see the new one.
-  story_storage->GetLinkValue(MakeLinkPath("link"))
-      ->Then([&](StoryStorage::Status status, fidl::StringPtr v) {
-        EXPECT_EQ("20", *v);
-        done = true;
-      });
-  RunLoopUntil([&] { return done; });
+  EXPECT_EQ("20", GetLinkValue(story_storage.get(), "link"));
 }
 
 }  // namespace

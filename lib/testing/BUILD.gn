@@ -116,6 +116,21 @@ source_set("test_with_ledger") {
   ]
 }
 
+source_set("test_with_session_storage") {
+  testonly = true
+
+  sources = [
+    "test_with_session_storage.cc",
+    "test_with_session_storage.h",
+  ]
+
+  public_deps = [
+    ":test_with_ledger",
+    "//peridot/bin/user_runner/storage",
+    "//peridot/public/fidl/fuchsia.modular",
+  ]
+}
+
 source_set("fake_agent_runner_storage") {
   testonly = true
 
@@ -186,7 +201,6 @@ source_set("wait_until_idle") {
     "//third_party/googletest:gtest",
   ]
 }
-
 
 source_set("test_driver") {
   sources = [

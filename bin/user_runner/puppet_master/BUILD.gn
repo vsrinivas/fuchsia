@@ -84,9 +84,9 @@ executable("dispatch_story_command_executor_unittest") {
 
   deps = [
     ":dispatch_story_command_executor",
+    "//peridot/lib/testing:test_with_ledger",
     "//peridot/public/fidl/fuchsia.modular",
     "//third_party/googletest:gtest_main",
-    "//peridot/lib/testing:test_with_ledger",
   ]
 }
 

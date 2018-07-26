@@ -22,9 +22,9 @@ std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
     fuchsia::modular::FocusProviderPtr focus_provider) {
   std::map<fuchsia::modular::StoryCommand::Tag, std::unique_ptr<CommandRunner>>
       command_runners;
-  command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kSetFocusState,
-                          new SetFocusStateCommandRunner(
-                              std::move(focus_provider)));
+  command_runners.emplace(
+      fuchsia::modular::StoryCommand::Tag::kSetFocusState,
+      new SetFocusStateCommandRunner(std::move(focus_provider)));
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kAddMod,
                           new AddModCommandRunner());
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kUpdateMod,
@@ -35,8 +35,7 @@ std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
                           new SetLinkValueCommandRunner());
 
   auto executor = std::make_unique<DispatchStoryCommandExecutor>(
-      session_storage,
-      std::move(command_runners));
+      session_storage, std::move(command_runners));
   return executor;
 }
 

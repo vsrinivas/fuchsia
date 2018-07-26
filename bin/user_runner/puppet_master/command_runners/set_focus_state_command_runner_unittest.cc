@@ -44,8 +44,8 @@ class SetFocusStateCommandRunnerTest : public gtest::TestLoopFixture {
   void SetUp() override {
     fidl::InterfacePtr<fuchsia::modular::FocusProvider> focus_provider;
     focus_handler_.AddProviderBinding(focus_provider.NewRequest());
-    runner_ = std::make_unique<SetFocusStateCommandRunner>(
-        std::move(focus_provider));
+    runner_ =
+        std::make_unique<SetFocusStateCommandRunner>(std::move(focus_provider));
   }
 
  protected:
@@ -76,12 +76,12 @@ TEST_F(SetFocusStateCommandRunnerTest, Unfocus) {
   fuchsia::modular::StoryCommand command;
   command.set_set_focus_state(std::move(set_focus_state));
 
-  runner_->Execute(nullptr /* story_id */, nullptr /* story_storage */, std::move(command),
-                   [&](fuchsia::modular::ExecuteResult result) {
-                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK,
-                               result.status);
-                     EXPECT_TRUE(result.story_id->empty());
-                   });
+  runner_->Execute(
+      nullptr /* story_id */, nullptr /* story_storage */, std::move(command),
+      [&](fuchsia::modular::ExecuteResult result) {
+        EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
+        EXPECT_TRUE(result.story_id->empty());
+      });
 
   RunLoopUntilIdle();
   EXPECT_TRUE(focus_handler_.request_called_with_story_id().empty());

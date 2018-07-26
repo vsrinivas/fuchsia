@@ -504,8 +504,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
     context_engine_app_->services().ConnectToService(
         std::move(context_engine_request));
     AtEnd(Reset(&context_engine_app_));
-    AtEnd(Teardown(kBasicTimeout, "ContextEngine",
-                   context_engine_app_.get()));
+    AtEnd(Teardown(kBasicTimeout, "ContextEngine", context_engine_app_.get()));
   }
 
   auto maxwell_app_component_context =
@@ -600,8 +599,8 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
       entity_provider_runner_.get(), presentation_provider_impl_.get(), test_));
   story_provider_impl_->Connect(std::move(story_provider_request));
 
-  AtEnd(Teardown(kStoryProviderTimeout, "StoryProvider",
-                 &story_provider_impl_));
+  AtEnd(
+      Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
 
   fuchsia::modular::FocusProviderPtr focus_provider_puppet_master;
   auto focus_provider_request_puppet_master =

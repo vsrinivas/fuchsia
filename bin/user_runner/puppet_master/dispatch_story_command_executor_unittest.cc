@@ -224,9 +224,11 @@ TEST_F(DispatchStoryCommandExecutorTest, ErrorsAbortEarly) {
 
   bool done{false};
   fuchsia::modular::ExecuteResult result;
-  executor_->ExecuteCommands(
-      story_id, std::move(commands),
-      [&](fuchsia::modular::ExecuteResult r) { done = true; result = std::move(r); });
+  executor_->ExecuteCommands(story_id, std::move(commands),
+                             [&](fuchsia::modular::ExecuteResult r) {
+                               done = true;
+                               result = std::move(r);
+                             });
   RunLoopUntil([&]() { return done; });
 
   EXPECT_EQ(fuchsia::modular::ExecuteStatus::INVALID_COMMAND, result.status);
