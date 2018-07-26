@@ -179,6 +179,11 @@ void RemoteServiceManager::OnNotification(bool, att::Handle value_handle,
                                           const common::ByteBuffer& value) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
+  if (services_.empty()) {
+    FXL_VLOG(1) << "gatt: Ignoring notification from unknown service";
+    return;
+  }
+
   // Find the service that |value_handle| belongs to.
   auto iter = services_.upper_bound(value_handle);
   if (iter != services_.begin()) --iter;

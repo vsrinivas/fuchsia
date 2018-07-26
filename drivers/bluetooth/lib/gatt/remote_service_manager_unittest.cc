@@ -1653,6 +1653,16 @@ TEST_F(GATT_RemoteServiceManagerTest, EnableNotificationsRequestManyError) {
   EXPECT_TRUE(status);
 }
 
+// Notifications received when the remote service database is empty should be
+// dropped and not cause a crash.
+TEST_F(GATT_RemoteServiceManagerTest, NotificationWithoutServices) {
+  for (att::Handle i = 0; i < 10; ++i) {
+    fake_client()->SendNotification(
+        false, i, common::CreateStaticByteBuffer('n', 'o', 't', 'i', 'f', 'y'));
+  }
+  RunLoopUntilIdle();
+}
+
 TEST_F(GATT_RemoteServiceManagerTest, NotificationCallback) {
   constexpr IdType kId1 = 0;
   constexpr IdType kId2 = 1;
