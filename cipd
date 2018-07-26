@@ -44,24 +44,40 @@ readonly CLIENT="${SCRIPT_DIR}/.cipd_client"
 
 readonly USER_AGENT="buildtools/$(git -C ${SCRIPT_DIR} rev-parse HEAD 2>/dev/null || echo "???")"
 
-if [[ ! -e "${CLIENT}" ]]; then
+
+# clean_bootstrap bootstraps the client from scratch using 'curl'.
+function clean_bootstrap() {
   echo "Bootstrapping cipd client for ${HOST_PLATFORM}-${HOST_ARCH}..."
-  CLIENT_TMP="$(mktemp -p "${SCRIPT_DIR}" 2>/dev/null || mktemp "${SCRIPT_DIR}/.cipd_client.XXXXXXX")"
+  local CLIENT_TMP="$(mktemp -p "${SCRIPT_DIR}" 2>/dev/null || mktemp "${SCRIPT_DIR}/.cipd_client.XXXXXXX")"
   if hash curl 2> /dev/null ; then
     curl -f --progress-bar "${URL}" -A "${USER_AGENT}"  -L -o "${CLIENT_TMP}"
     chmod +x "${CLIENT_TMP}"
   else
-    echo "The \`curl\` command is missing, download ${URL} as ${CLIENT}, and then re-run this command" 1>&2
+    echo "The \`curl\` command is missing, download ${URL} as ${CLIENT}, set +x, and then re-run this command" 1>&2
     exit 1
   fi
   mv "${CLIENT_TMP}" "${CLIENT}"
+}
+
+# self_update asks the existing client to update itself, if necessary.
+function self_update() {
+  "${CLIENT}" selfupdate -version "${CIPD_CLIENT_VERSION}" -service-url "${CIPD_CLIENT_URL}"
+}
+
+if [[ ! -x "${CLIENT}" ]]; then
+  clean_bootstrap
 fi
 
 export CIPD_HTTP_USER_AGENT_PREFIX="${USER_AGENT}"
-if ! "${CLIENT}" selfupdate -version "${CIPD_CLIENT_VERSION}" ; then
-  echo -n "[31;1mselfupdate failed:[0;1m " 1>&2
-  echo "run \`CIPD_HTTP_USER_AGENT_PREFIX=${USER_AGENT}/manual ${CLIENT} selfupdate -version '${CIPD_CLIENT_VERSION}'\` to diagnose" 1>&2
-  echo "[0m" 1>&2
+if ! self_update ; then
+  echo -n "[31;1mCIPD selfupdate failed. " 1>&2
+  echo "Trying to bootstrap the CIPD client from scratch... [0m" 1>&2
+  clean_bootstrap
+  if ! self_update ; then  # need to run it again to setup .cipd_version file
+    echo -n "[31;1mBootstrap from scratch failed, something is seriously broken[0m " 1>&2
+    echo "run \`CIPD_HTTP_USER_AGENT_PREFIX=${USER_AGENT}/manual ${CLIENT} selfupdate -version '${CIPD_CLIENT_VERSION}'\` to diagnose if this is repeating." 1>&2
+    echo "[0m" 1>&2
+  fi
 fi
 
 exec "${CLIENT}" "${@}"

@@ -1,5 +1,4 @@
-/.cipd_client
-/.cipd_client_cache
+/.cipd_client*
 /.versions
 /linux-x64/
 /mac-x64/
