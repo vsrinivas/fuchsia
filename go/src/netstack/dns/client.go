@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"netstack/dns/dnsmessage"
+
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/stack"
@@ -34,6 +35,19 @@ import (
 	"github.com/google/netstack/tcpip/transport/udp"
 	"github.com/google/netstack/waiter"
 )
+
+func init() {
+	clientConf.lastChecked = time.Now()
+
+	// Prepare ch so that only one update of clientConfig may
+	// run at once.
+	clientConf.ch = make(chan struct{}, 1)
+	clientConf.dnsConfig = &tmpDNSConfig
+	if clientConf.runtimeServers != nil {
+		clientConf.dnsConfig.servers = append(clientConf.dnsConfig.servers, clientConf.runtimeServers...)
+	}
+	clientConf.resolver = newCachedResolver(newNetworkResolver(clientConf.dnsConfig))
+}
 
 // TODO(mpcomplete): Use FIDL to fetch the DNS config from the parent process.
 var tmpDNSConfig = dnsConfig{
@@ -288,8 +302,6 @@ func addrRecordList(rrs []dnsmessage.Resource) []tcpip.Address {
 
 // A clientConfig represents a DNS stub resolver configuration.
 type clientConfig struct {
-	initOnce sync.Once // guards init of clientConfig
-
 	// ch is used as a semaphore that only allows one lookup at a
 	// time to recheck resolv.conf.
 	ch          chan struct{} // guards lastChecked and modTime
@@ -336,26 +348,10 @@ func (conf *clientConfig) updateConfigLocked(dnsConfig *dnsConfig) {
 	conf.resolver = newCachedResolver(newNetworkResolver(conf.dnsConfig))
 }
 
-// init initializes conf and is only called via conf.initOnce.
-func (conf *clientConfig) init() {
-	// Set dnsConfig and lastChecked so we don't parse
-	// resolv.conf twice the first time.
-	if conf.dnsConfig == nil {
-		conf.updateConfigLocked(readConfig())
-	}
-	conf.lastChecked = time.Now()
-
-	// Prepare ch so that only one update of clientConfig may
-	// run at once.
-	conf.ch = make(chan struct{}, 1)
-}
-
 // tryUpdate tries to update conf with the named resolv.conf file.
 // The name variable only exists for testing. It is otherwise always
 // "/etc/resolv.conf".
 func (conf *clientConfig) tryUpdate() {
-	conf.initOnce.Do(conf.init)
-
 	// Ensure only one update at a time checks resolv.conf.
 	if !conf.tryAcquireSema() {
 		return
