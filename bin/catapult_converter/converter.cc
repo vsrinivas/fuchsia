@@ -18,7 +18,7 @@
 #include "third_party/rapidjson/rapidjson/error/en.h"
 #include "third_party/rapidjson/rapidjson/filereadstream.h"
 #include "third_party/rapidjson/rapidjson/filewritestream.h"
-#include "third_party/rapidjson/rapidjson/writer.h"
+#include "third_party/rapidjson/rapidjson/prettywriter.h"
 
 namespace {
 
@@ -43,7 +43,7 @@ double Variance(const std::vector<double>& values, double mean) {
 void WriteJson(FILE* fp, rapidjson::Document* doc) {
   char buffer[100];
   rapidjson::FileWriteStream output_stream(fp, buffer, sizeof(buffer));
-  rapidjson::Writer<rapidjson::FileWriteStream> writer(output_stream);
+  rapidjson::PrettyWriter<rapidjson::FileWriteStream> writer(output_stream);
   doc->Accept(writer);
 }
 
