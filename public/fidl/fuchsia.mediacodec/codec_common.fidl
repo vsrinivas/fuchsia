@@ -275,6 +275,8 @@ union VideoCompressedFormat {
 // VideoUncompressedFormatSpecificDetails
 //
 // Extended format-specific uncompressed video format details.
+//
+// TODO(dustingreen): Switch to FIDL table instead.
 union VideoUncompressedFormatSpecificDetails {
   // TODO(dustingreen): Which formats that we care about really require special
   // format-specific details here?
@@ -421,7 +423,9 @@ struct CodecFormatDetails {
   //
   // audio/aac - this is an AudioSpecificConfig().
   // audio/aac-adts - this is not set.
-  // TODO(dustingreen): make the audio/aac-adts statement true soon
+  // TODO(dustingreen): make the audio/aac-adts statement true soon.  At the
+  // moment we set this with make_AudioSpecificConfig_from_ADTS_header(), but
+  // that should not be the client's job for ADTS.
   //
   // For some formats whose "ES" data format is self-contained, or for which
   // there is no format-defined binary OOB config, this is null.

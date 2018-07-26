@@ -81,7 +81,8 @@ struct CodecBufferConstraints {
   // default_settings will have the corresponding setting field set to that
   // recommended value.
   //
-  // The codec promises that these default settings as-is are guaranteed to
+  // The codec promises that these default settings as-is (except for
+  // buffer_lifetime_ordinal) are guaranteed to
   // satisfy the constraints indicated by the other fields of
   // CodecBufferConstraints.  While client-side checking that these
   // settings are within the constraints is likely unnecessary in the client,
@@ -91,6 +92,11 @@ struct CodecBufferConstraints {
   //
   // This structure will always have single_buffer_mode false.  See
   // single_buffer_mode_allowed for whether single_buffer_mode true is allowed.
+  //
+  // The client must set the buffer_lifetime_ordinal field to a proper value
+  // before sending back to the server.  The 0 initially in this field will be
+  // rejected by the server if sent back as-is.  See comments on
+  // CodecPortBufferSettings.buffer_lifetime_ordinal.
   CodecPortBufferSettings default_settings;
 
   // For uncompresesd video, separate and complete frames, each in its own
@@ -178,8 +184,7 @@ struct CodecBufferConstraints {
   // packet_count_for_client_max.
   //
   // This value must be at least 1.  This can be 0xFFFFFFFF if there's no
-  // codec-enforced max, but codecs are encouraged to set a large but still
-  // plausibly-workable max, and clients are encouraged to request a number of
+  // codec-enforced max.  Clients are encouraged to request a number of
   // packets that isn't excessively large for the client's scenario.
   uint32 packet_count_for_client_max;
 
@@ -602,8 +607,8 @@ struct CodecPacketHeader {
   // server) must ignore a message with stale buffer_lifetime_ordinal.
   uint64 buffer_lifetime_ordinal;
 
-  // The set of packet_index(s) is densely packed from 0..count-1 for input and
-  // output separately.
+  // The overall set of packet_index values is densely packed from 0..count-1
+  // for input and output separately.  They can be queued in any order.
   //
   // Both the client and server should validate the packet_index against the
   // known bound and disconnect if it's out of bounds.
@@ -1215,6 +1220,13 @@ interface Codec {
   // After receiving the available input buffer via this event, the codec
   // client can call later call QueueInputBuffer with appropriate offset and
   // length set.
+  //
+  // TODO(dustingreen): At the moment, there is no guarantee re. the order of
+  // these messages with respect to the order of QueueInputPacket(), but at
+  // least for decoders, it might be worthwhile to require that servers preserve
+  // the order vs. QueueInputPacket(), to make it easier to feed input from a
+  // ring buffer or similar.  For audio encoders it might still make sense.  For
+  // video encoders probably not.
   17: -> OnFreeInputPacket(CodecPacketHeader free_input_packet);
 
   // Inform the server that all QueueInputPacket() messages for this stream
