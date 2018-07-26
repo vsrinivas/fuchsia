@@ -7,7 +7,7 @@
 #include <lib/fdio/util.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/fxl/logging.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/processargs.h>
 
 namespace scoped_tmpfs {
@@ -32,9 +32,9 @@ ScopedTmpFS::ScopedTmpFS() : config_(MakeConfig()), loop_(&config_) {
 
 ScopedTmpFS::~ScopedTmpFS() {
   root_fd_.reset();
-  completion_t unmounted;
+  sync_completion_t unmounted;
   memfs_free_filesystem(memfs_, &unmounted);
-  zx_status_t status = completion_wait(&unmounted, ZX_SEC(3));
+  zx_status_t status = sync_completion_wait(&unmounted, ZX_SEC(3));
   FXL_DCHECK(status == ZX_OK);
 }
 
