@@ -104,14 +104,10 @@ fn serve_mlme_sme<STA, SRS>(proxy: MlmeProxy, event_stream: MlmeEventStream,
         })
         .then(|r| match r {
             Ok(_) => Err(format_err!("SME->MLME sender future unexpectedly finished")),
-            Err(fidl::Error::ClientWrite(status)) => {
-                if status == zx::Status::PEER_CLOSED {
-                    // Don't treat closed channel as error; terminate the future peacefully instead
-                    Ok(())
-                } else {
-                    Err(fidl::Error::ClientWrite(status).into())
-                }
-            }
+            Err(ref e) if is_peer_closed(e) => {
+                // Don't treat closed channel as error; terminate the future peacefully instead
+                Ok(())
+            },
             Err(other) => Err(other.into()),
         });
     // Select, not join: terminate as soon as one of the futures terminates
@@ -218,17 +214,31 @@ fn serve_user_stream(stream: client::UserStream<ClientTokens>)
             Ok(match e {
                 client::UserEvent::ScanFinished{ token, result } => {
                     send_scan_results(token, result).unwrap_or_else(|e| {
-                        error!("Error sending scan results to user: {}", e);
+                        if !is_peer_closed(&e) {
+                            error!("Error sending scan results to user: {}", e);
+                        }
                     })
                 },
                 client::UserEvent::ConnectFinished { token, result } => {
                     send_connect_result(token, result).unwrap_or_else(|e| {
-                        error!("Error sending connect result to user: {}", e);
+                        if !is_peer_closed(&e) {
+                            error!("Error sending connect result to user: {}", e);
+                        }
                     })
                 }
             })
         })
         .map(|_| ())
+}
+
+fn is_peer_closed(e: &fidl::Error) -> bool {
+    match e {
+        fidl::Error::ServerResponseWrite(zx::Status::PEER_CLOSED)
+          | fidl::Error::ServerRequestRead(zx::Status::PEER_CLOSED)
+          | fidl::Error::ClientRead(zx::Status::PEER_CLOSED)
+          | fidl::Error::ClientWrite(zx::Status::PEER_CLOSED) => true,
+        _ => false
+    }
 }
 
 fn send_scan_results(token: fidl_sme::ScanTransactionControlHandle,
