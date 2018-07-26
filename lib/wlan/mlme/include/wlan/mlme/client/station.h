@@ -7,8 +7,8 @@
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/eapol.h>
 #include <wlan/mlme/mac_frame.h>
-#include <wlan/mlme/service.h>
 #include <wlan/mlme/sequence.h>
+#include <wlan/mlme/service.h>
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <fuchsia/wlan/stats/cpp/fidl.h>
@@ -85,7 +85,6 @@ class Station {
     zx_status_t PostChannelChange();
 
     const Timer& timer() const { return *timer_; }
-
     ::fuchsia::wlan::stats::ClientMlmeStats stats() const;
 
    private:
@@ -128,7 +127,9 @@ class Station {
     bool IsCbw40TxReady() const;
     bool IsQosReady() const;
     bool IsAmsduRxReady() const;
-    HtCapabilities BuildHtCapabilities() const;
+
+    zx_status_t BuildMcsSet(SupportedMcsSet* mcs_set) const;
+    zx_status_t BuildHtCapabilities(HtCapabilities* htc) const;
     uint8_t GetTid();
     uint8_t GetTid(const EthFrame& frame);
 
@@ -153,4 +154,5 @@ class Station {
     common::WlanStats<common::ClientMlmeStats, ::fuchsia::wlan::stats::ClientMlmeStats> stats_;
 };
 
+const wlan_band_info_t* FindBand(const wlan_info_t& ifc_info, bool is_5ghz);
 }  // namespace wlan

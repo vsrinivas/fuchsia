@@ -8,6 +8,7 @@
 #include <wlan/common/energy.h>
 #include <wlan/common/logging.h>
 #include <wlan/common/stats.h>
+#include <wlan/mlme/client/bss.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mac_frame.h>
@@ -18,6 +19,7 @@
 
 #include <fuchsia/wlan/mlme/c/fidl.h>
 
+#include <inttypes.h>
 #include <cstring>
 #include <utility>
 
@@ -424,7 +426,15 @@ zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateReques
     }
 
     if (IsHTReady()) {
-        HtCapabilities htc = BuildHtCapabilities();
+        HtCapabilities htc{};
+        zx_status_t status = BuildHtCapabilities(&htc);
+        if (status != ZX_OK) {
+            errorf("could not build HtCapabilities. status %d\n", status);
+            service::SendAssocConfirm(device_,
+                                      wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+            return ZX_ERR_IO;
+        }
+
         if (!w.write<HtCapabilities>(htc.ht_cap_info, htc.ampdu_params, htc.mcs_set, htc.ht_ext_cap,
                                      htc.txbf_cap, htc.asel_cap)) {
             errorf("could not write HtCapabilities\n");
@@ -1376,15 +1386,34 @@ bool Station::IsAmsduRxReady() const {
     return true;
 }
 
-HtCapabilities Station::BuildHtCapabilities() const {
-    // TODO(porce): Find intersection of
-    // - BSS capabilities
-    // - Client radio capabilities
-    // - Client configuration
+zx_status_t Station::BuildMcsSet(SupportedMcsSet* mcs_set) const {
+    //  Retrieve client wlanphy capability
+    const wlan_info_t& ifc_info = device_->GetWlanInfo().ifc_info;
+    auto is_5ghz = common::Is5Ghz(join_chan_);
+
+    auto bi = FindBand(ifc_info, is_5ghz);
+    if (bi == nullptr) {
+        errorf("failed to find band info from wlan info for band %s\n",
+               is_5ghz ? "5 GHz" : "2 GHz");
+        return ZX_ERR_INTERNAL;
+    }
+
+    *mcs_set = *reinterpret_cast<const SupportedMcsSet*>(&bi->ht_caps.supported_mcs_set);
+    return ZX_OK;
+}
+
+zx_status_t Station::BuildHtCapabilities(HtCapabilities* htc) const {
+    // TODO(porce): Determine which value to use for each field
+    // (a) client radio capabilities, as reported by device driver
+    // (b) intersection of (a) and radio configurations
+    // (c) intersection of (b) and BSS capabilities
+    // (d) intersection of (c) and radio configuration
+
+    ZX_DEBUG_ASSERT(htc != nullptr);
+    if (htc == nullptr) { return ZX_ERR_INVALID_ARGS; }
 
     // Static cooking for Proof-of-Concept
-    HtCapabilities htc;
-    HtCapabilityInfo& hci = htc.ht_cap_info;
+    HtCapabilityInfo& hci = htc->ht_cap_info;
 
     hci.set_ldpc_coding_cap(0);  // Ralink RT5370 is incapable of LDPC.
 
@@ -1408,25 +1437,23 @@ HtCapabilities Station::BuildHtCapabilities() const {
     hci.set_intolerant_40(0);
     hci.set_lsig_txop_protect(0);
 
-    AmpduParams& ampdu = htc.ampdu_params;
+    AmpduParams& ampdu = htc->ampdu_params;
     ampdu.set_exponent(3);                                // 65535 bytes
     ampdu.set_min_start_spacing(AmpduParams::FOUR_USEC);  // Aruba
     // ampdu.set_min_start_spacing(AmpduParams::EIGHT_USEC);  // TP-Link
     // ampdu.set_min_start_spacing(AmpduParams::SIXTEEN_USEC);
 
-    SupportedMcsSet& mcs = htc.mcs_set;
-    mcs.rx_mcs_head.set_bitmask(0xff);  // MCS 0-7
-    // mcs.rx_mcs_head.set_bitmask(0xffff);  // MCS 0-15
-    mcs.tx_mcs.set_set_defined(1);  // Aruba
+    zx_status_t status = BuildMcsSet(&htc->mcs_set);
+    if (status != ZX_OK) { return status; }
 
-    HtExtCapabilities& hec = htc.ht_ext_cap;
+    HtExtCapabilities& hec = htc->ht_ext_cap;
     hec.set_pco(0);
     hec.set_pco_transition(HtExtCapabilities::PCO_RESERVED);
     hec.set_mcs_feedback(HtExtCapabilities::MCS_NOFEEDBACK);
     hec.set_htc_ht_support(0);
     hec.set_rd_responder(0);
 
-    TxBfCapability& txbf = htc.txbf_cap;
+    TxBfCapability& txbf = htc->txbf_cap;
     txbf.set_implicit_rx(0);
     txbf.set_rx_stag_sounding(0);
     txbf.set_tx_stag_sounding(0);
@@ -1447,7 +1474,7 @@ HtCapabilities Station::BuildHtCapabilities() const {
     txbf.set_csi_rows_human(1);               // 1 antenna
     txbf.set_chan_estimation_human(1);        // # space-time stream
 
-    AselCapability& asel = htc.asel_cap;
+    AselCapability& asel = htc->asel_cap;
     asel.set_asel(0);
     asel.set_csi_feedback_tx_asel(0);
     asel.set_explicit_csi_feedback(0);
@@ -1455,7 +1482,7 @@ HtCapabilities Station::BuildHtCapabilities() const {
     asel.set_rx_asel(0);
     asel.set_tx_sounding_ppdu(0);
 
-    return htc;  // 28 bytes.
+    return ZX_OK;
 }
 
 uint8_t Station::GetTid() {
@@ -1476,4 +1503,22 @@ uint8_t Station::GetTid(const EthFrame& frame) {
 wlan_stats::ClientMlmeStats Station::stats() const {
     return stats_.ToFidl();
 }
+
+const wlan_band_info_t* FindBand(const wlan_info_t& ifc_info, bool is_5ghz) {
+    ZX_DEBUG_ASSERT(ifc_info.num_bands <= WLAN_MAX_BANDS);
+
+    for (uint8_t idx = 0; idx < ifc_info.num_bands; idx++) {
+        auto bi = &ifc_info.bands[idx];
+        auto base_freq = bi->supported_channels.base_freq;
+
+        if (is_5ghz && base_freq == common::kBaseFreq5Ghz) {
+            return bi;
+        } else if (!is_5ghz && base_freq == common::kBaseFreq2Ghz) {
+            return bi;
+        }
+    }
+
+    return nullptr;
+}
+
 }  // namespace wlan
