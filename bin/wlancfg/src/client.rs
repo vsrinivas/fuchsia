@@ -300,6 +300,192 @@ mod tests {
         assert_eq!(None, exec.wake_next_timer());
     }
 
+    #[test]
+    fn manual_connect_cancels_auto_connect() {
+        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
+        let ess_store = create_ess_store(temp_dir.path());
+        let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let mut next_sme_req = sme_server.next();
+
+        // Expect the state machine to initiate a scan to find a known network to connect to
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
+        let _scan_txn = match poll_sme_req(&mut exec, &mut next_sme_req) {
+            Async::Ready(ClientSmeRequest::Scan { txn, .. }) => txn,
+            _ => panic!("expected a Scan request"),
+        };
+
+        // Expect no other messages to SME for now
+        assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
+
+        // Send a manual connect request and expect the state machine
+        // to start connecting to the network immediately
+        let mut receiver = send_manual_connect_request(&client, b"foo");
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
+        send_connect_result(&mut exec, &mut next_sme_req, b"foo", b"qwerty",
+                            fidl_sme::ConnectResultCode::Success);
+
+        // Let the state machine absorb the response
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
+
+        // Expect a response to the user's request
+        assert_eq!(Ok(Async::Ready(fidl_sme::ConnectResultCode::Success)),
+                   exec.run_until_stalled(&mut receiver));
+
+        // Expect no other messages to SME or pending timers
+        assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
+        assert_eq!(None, exec.wake_next_timer());
+    }
+
+    #[test]
+    fn manual_connect_cancels_manual_connect() {
+        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
+        let ess_store = create_ess_store(temp_dir.path());
+        let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let mut next_sme_req = sme_server.next();
+
+        // Expect the state machine to initiate a scan to find a known network to connect to
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
+        let _scan_txn = match poll_sme_req(&mut exec, &mut next_sme_req) {
+            Async::Ready(ClientSmeRequest::Scan { txn, .. }) => txn,
+            _ => panic!("expected a Scan request"),
+        };
+
+        // Expect no other messages to SME for now
+        assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
+
+        // Send the first manual connect request
+        let mut receiver_one = send_manual_connect_request(&client, b"foo");
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
+
+        // Expect the state machine to start connecting to the network immediately.
+        let _connect_txn = match poll_sme_req(&mut exec, &mut next_sme_req) {
+            Async::Ready(ClientSmeRequest::Connect { req, txn, .. }) => {
+                assert_eq!(b"foo", &req.ssid[..]);
+                txn
+            },
+            _ => panic!("expected a Connect request"),
+        };
+
+        // Send another connect request without waiting for the first one to complete
+        let mut receiver_two = send_manual_connect_request(&client, b"bar");
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
+
+        // Expect the first request to be canceled
+        assert_eq!(Ok(Async::Ready(fidl_sme::ConnectResultCode::Canceled)),
+                   exec.run_until_stalled(&mut receiver_one));
+
+        // Expect the state machine to start connecting to the network immediately.
+        // Send a successful result and let the state machine absorb it.
+        send_connect_result(&mut exec, &mut next_sme_req, b"bar", b"qwerty",
+                            fidl_sme::ConnectResultCode::Success);
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
+
+        // Expect a response to the second request from user
+        assert_eq!(Ok(Async::Ready(fidl_sme::ConnectResultCode::Success)),
+                   exec.run_until_stalled(&mut receiver_two));
+
+        // Expect no other messages to SME or pending timers
+        assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
+        assert_eq!(None, exec.wake_next_timer());
+    }
+
+    #[test]
+    fn manual_connect_when_already_connected() {
+        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
+        let ess_store = create_ess_store(temp_dir.path());
+        let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let mut next_sme_req = sme_server.next();
+
+        // Get the state machine into the connected state by auto-connecting to a known network
+        ess_store.store(b"foo".to_vec(), KnownEss { password: b"12345".to_vec() })
+            .expect("failed to store a network password");
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
+        send_scan_results(&mut exec, &mut next_sme_req, &[&b"foo"[..]]);
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
+        send_connect_result(&mut exec, &mut next_sme_req, b"foo", b"12345",
+                            fidl_sme::ConnectResultCode::Success);
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
+
+        // We should be in the connected state now, with no pending timers or messages to SME
+        assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
+        assert_eq!(None, exec.wake_next_timer());
+
+        // Now, send a manual connect request and expect the machine to start connecting immediately
+        let mut receiver = send_manual_connect_request(&client, b"bar");
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
+        send_connect_result(&mut exec, &mut next_sme_req, b"bar", b"qwerty",
+                            fidl_sme::ConnectResultCode::Success);
+
+        // Let the state machine absorb the response
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
+
+        // Expect a response to the user's request
+        assert_eq!(Ok(Async::Ready(fidl_sme::ConnectResultCode::Success)),
+                   exec.run_until_stalled(&mut receiver));
+
+        // Expect no other messages to SME or pending timers
+        assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
+        assert_eq!(None, exec.wake_next_timer());
+    }
+
+    #[test]
+    fn manual_connect_failure_triggers_auto_connect() {
+        let mut exec = async::Executor::new().expect("failed to create an executor");
+        let temp_dir = tempdir::TempDir::new("client_test").expect("failed to create temp dir");
+        let ess_store = create_ess_store(temp_dir.path());
+        let (client, mut fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let mut next_sme_req = sme_server.next();
+
+        // Expect the state machine to initiate a scan to find a known network to connect to
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
+        let _scan_txn = match poll_sme_req(&mut exec, &mut next_sme_req) {
+            Async::Ready(ClientSmeRequest::Scan { txn, .. }) => txn,
+            _ => panic!("expected a Scan request"),
+        };
+
+        // Expect no other messages to SME for now
+        assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
+
+        // Send a manual connect request and expect the state machine
+        // to start connecting to the network immediately.
+        // Reply with a failure.
+        let mut receiver = send_manual_connect_request(&client, b"foo");
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
+        send_connect_result(&mut exec, &mut next_sme_req, b"foo", b"qwerty",
+                            fidl_sme::ConnectResultCode::Failed);
+        assert_eq!(Ok(Async::Pending), exec.run_until_stalled(&mut fut));
+
+        // State machine should be in the auto-connect state now and is expected to
+        // start scanning immediately
+        match poll_sme_req(&mut exec, &mut next_sme_req) {
+            Async::Ready(ClientSmeRequest::Scan { .. }) => {},
+            _ => panic!("expected a Scan request"),
+        };
+
+        // Expect a response to the user's request
+        assert_eq!(Ok(Async::Ready(fidl_sme::ConnectResultCode::Failed)),
+                   exec.run_until_stalled(&mut receiver));
+
+        // Expect no other messages to SME or pending timers for now
+        assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
+        assert_eq!(None, exec.wake_next_timer());
+    }
+
+    fn send_manual_connect_request(client: &Client, ssid: &[u8])
+        -> oneshot::Receiver<fidl_sme::ConnectResultCode>
+    {
+        let (responder, receiver) = oneshot::channel();
+        client.connect(ConnectRequest {
+            ssid: ssid.to_vec(),
+            password: b"qwerty".to_vec(),
+            responder
+        }).expect("sending a connect request failed");
+        receiver
+    }
+
     fn poll_sme_req(exec: &mut async::Executor,
                     next_sme_req: &mut StreamFuture<ClientSmeRequestStream>)
         -> Async<ClientSmeRequest>
