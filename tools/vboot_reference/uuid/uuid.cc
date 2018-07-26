@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 #include "uuid/uuid.h"
-#include "lib/fxl/random/rand.h"
 
-void uuid_generate(uint8_t out[16]) {
-  fxl::RandBytes((unsigned char*)out, 16);
-}
+#include <openssl/rand.h>
+
+void uuid_generate(uint8_t out[16]) { RAND_bytes((unsigned char*)out, 16); }

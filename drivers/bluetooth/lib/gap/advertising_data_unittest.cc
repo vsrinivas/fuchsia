@@ -9,8 +9,6 @@
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 
-#include "lib/fxl/random/rand.h"
-
 namespace btlib {
 namespace gap {
 namespace {
@@ -225,7 +223,7 @@ TEST(GAP_AdvertisingDataTest, Copy) {
   common::UUID gatt(kGattUuid);
   common::UUID eddy(kEddystoneUuid);
   auto rand_data = common::DynamicByteBuffer(kRandomDataSize);
-  fxl::RandBytes(rand_data.mutable_data(), kRandomDataSize);
+  zx_cprng_draw(rand_data.mutable_data(), kRandomDataSize);
 
   AdvertisingData source;
   source.AddURI("http://fuchsia.cl");
@@ -253,7 +251,7 @@ TEST(GAP_AdvertisingDataTest, Move) {
   common::UUID gatt(kGattUuid);
   common::UUID eddy(kEddystoneUuid);
   auto rand_data = common::DynamicByteBuffer(kRandomDataSize);
-  fxl::RandBytes(rand_data.mutable_data(), kRandomDataSize);
+  zx_cprng_draw(rand_data.mutable_data(), kRandomDataSize);
 
   AdvertisingData source;
   source.AddURI("http://fuchsia.cl");

@@ -12,7 +12,6 @@
 #include "util.h"
 
 #include "lib/fxl/macros.h"
-#include "lib/fxl/random/rand.h"
 
 namespace btlib {
 
@@ -284,7 +283,7 @@ class SMP_MasterPairingTest : public SMP_PairingStateTest {
                                         UInt128* out_random, uint32_t tk = 0) {
     FXL_DCHECK(out_confirm);
     FXL_DCHECK(out_random);
-    fxl::RandBytes(out_random->data(), out_random->size());
+    zx_cprng_draw(out_random->data(), out_random->size());
     GenerateConfirmValue(*out_random, out_confirm, false /* peer_initiator */,
                          tk);
   }
@@ -346,7 +345,7 @@ class SMP_SlavePairingTest : public SMP_PairingStateTest {
                                         UInt128* out_random, uint32_t tk = 0) {
     FXL_DCHECK(out_confirm);
     FXL_DCHECK(out_random);
-    fxl::RandBytes(out_random->data(), out_random->size());
+    zx_cprng_draw(out_random->data(), out_random->size());
     GenerateConfirmValue(*out_random, out_confirm, true /* peer_initiator */,
                          tk);
   }

@@ -135,7 +135,6 @@ executable("cgpt") {
     ]
   }
   deps = [
-    "//garnet/public/lib/fxl",
     "//third_party/boringssl:crypto",
   ]
   configs += [ ":internal_config" ]

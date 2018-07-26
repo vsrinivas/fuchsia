@@ -5,11 +5,11 @@
 #include "fake_device.h"
 
 #include <endian.h>
+#include <zircon/syscalls.h>
 
 #include "garnet/drivers/bluetooth/lib/common/packet_view.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap_defs.h"
 #include "lib/fxl/logging.h"
-#include "lib/fxl/random/rand.h"
 
 namespace btlib {
 
@@ -23,7 +23,7 @@ void WriteRandomRSSI(int8_t* out_mem) {
   constexpr int8_t kRSSIMax = 20;
 
   int8_t rssi;
-  fxl::RandBytes(reinterpret_cast<unsigned char*>(&rssi), sizeof(rssi));
+  zx_cprng_draw(reinterpret_cast<unsigned char*>(&rssi), sizeof(rssi));
   rssi = (rssi % (kRSSIMax - kRSSIMin)) + kRSSIMin;
 
   *out_mem = rssi;
