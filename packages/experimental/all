@@ -1,5 +1,4 @@
 {
     "imports": [
-        "garnet/packages/experimental/zircon_guest"
     ]
 }
