@@ -43,12 +43,14 @@ static void platform_i2c_complete(i2c_txn_t* txn, zx_status_t status, const uint
                                      size_t data_length) {
     struct {
         pdev_resp_t resp;
-        uint8_t data[PDEV_I2C_MAX_TRANSFER_SIZE];
+        uint8_t data[PDEV_I2C_MAX_TRANSFER_SIZE] = {};
     } resp = {
         .resp = {
             .txid = txn->txid,
             .status = status,
             .i2c_txn = {
+                .write_length = 0,
+                .read_length = 0,
                 .complete_cb = txn->complete_cb,
                 .cookie = txn->cookie,
             },
@@ -59,17 +61,17 @@ static void platform_i2c_complete(i2c_txn_t* txn, zx_status_t status, const uint
         memcpy(resp.data, data, data_length);
     }
 
-    status = zx_channel_write(txn->channel_handle, 0, &resp, sizeof(resp.resp) + data_length,
-                              NULL, 0);
+    status = zx_channel_write(txn->channel_handle, 0, &resp,
+                              static_cast<uint32_t>(sizeof(resp.resp) + data_length), nullptr, 0);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_i2c_read_complete: zx_channel_write failed %d\n", status);
     }
 }
 
 static int i2c_bus_thread(void *arg) {
-    platform_i2c_bus_t* i2c_bus = arg;
+    platform_i2c_bus_t* i2c_bus = static_cast<platform_i2c_bus_t*>(arg);
 
-    uint8_t* read_buffer = malloc(i2c_bus->max_transfer);
+    uint8_t* read_buffer = static_cast<uint8_t*>(malloc(i2c_bus->max_transfer));
     if (!read_buffer) {
         return -1;
     }
@@ -81,7 +83,7 @@ static int i2c_bus_thread(void *arg) {
         i2c_txn_t* txn;
 
         mtx_lock(&i2c_bus->lock);
-        while ((txn = list_remove_head_type(&i2c_bus->queued_txns, i2c_txn_t, node)) != NULL) {
+        while ((txn = list_remove_head_type(&i2c_bus->queued_txns, i2c_txn_t, node)) != nullptr) {
             mtx_unlock(&i2c_bus->lock);
 
             zx_status_t status = i2c_impl_transact(&i2c_bus->i2c, i2c_bus->bus_id, txn->address,
@@ -106,12 +108,13 @@ zx_status_t platform_i2c_init(platform_bus_t* bus, i2c_impl_protocol_t* i2c) {
         return ZX_ERR_BAD_STATE;
     }
 
-    size_t bus_count = i2c_impl_get_bus_count(i2c);
+    uint32_t bus_count = i2c_impl_get_bus_count(i2c);
     if (!bus_count) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    platform_i2c_bus_t* i2c_buses = calloc(bus_count, sizeof(platform_i2c_bus_t));
+    platform_i2c_bus_t* i2c_buses = static_cast<platform_i2c_bus_t*>(calloc(bus_count,
+                                                                     sizeof(platform_i2c_bus_t)));
     if (!i2c_buses) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -166,7 +169,7 @@ zx_status_t platform_i2c_transact(platform_bus_t* bus, pdev_req_t* req, pbus_i2c
     i2c_txn_t* txn = list_remove_head_type(&i2c_bus->free_txns, i2c_txn_t, node);
     if (!txn) {
         // add space for write buffer
-        txn = calloc(1, sizeof(i2c_txn_t) + i2c_bus->max_transfer);
+        txn = static_cast<i2c_txn_t*>(calloc(1, sizeof(i2c_txn_t) + i2c_bus->max_transfer));
     }
     if (!txn) {
         mtx_unlock(&i2c_bus->lock);

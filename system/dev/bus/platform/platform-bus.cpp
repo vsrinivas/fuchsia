@@ -20,7 +20,7 @@
 
 static zx_status_t platform_bus_get_bti(void* ctx, uint32_t iommu_index, uint32_t bti_id,
                                         zx_handle_t* out_handle) {
-    platform_bus_t* bus = ctx;
+    platform_bus_t* bus = static_cast<platform_bus_t*>(ctx);
     if (iommu_index != 0) {
         return ZX_ERR_OUT_OF_RANGE;
     }
@@ -36,7 +36,7 @@ static zx_status_t platform_bus_set_protocol(void* ctx, uint32_t proto_id, void*
     if (!protocol) {
         return ZX_ERR_INVALID_ARGS;
     }
-    platform_bus_t* bus = ctx;
+    platform_bus_t* bus = static_cast<platform_bus_t*>(ctx);
 
     switch (proto_id) {
     case ZX_PROTOCOL_USB_MODE_SWITCH:
@@ -78,7 +78,7 @@ static zx_status_t platform_bus_set_protocol(void* ctx, uint32_t proto_id, void*
 }
 
 static zx_status_t platform_bus_wait_protocol(void* ctx, uint32_t proto_id) {
-    platform_bus_t* bus = ctx;
+    platform_bus_t* bus = static_cast<platform_bus_t*>(ctx);
 
     platform_bus_protocol_t dummy;
     while (platform_bus_get_protocol(bus, proto_id, &dummy) == ZX_ERR_NOT_SUPPORTED) {
@@ -92,13 +92,13 @@ static zx_status_t platform_bus_wait_protocol(void* ctx, uint32_t proto_id) {
 }
 
 static zx_status_t platform_bus_device_add(void* ctx, const pbus_dev_t* dev, uint32_t flags) {
-    platform_bus_t* bus = ctx;
+    platform_bus_t* bus = static_cast<platform_bus_t*>(ctx);
     return platform_device_add(bus, dev, flags);
 }
 
 static zx_status_t platform_bus_device_enable(void* ctx, uint32_t vid, uint32_t pid, uint32_t did,
                                               bool enable) {
-    platform_bus_t* bus = ctx;
+    platform_bus_t* bus = static_cast<platform_bus_t*>(ctx);
     platform_dev_t* dev;
     list_for_every_entry(&bus->devices, dev, platform_dev_t, node) {
         if (dev->vid == vid && dev->pid == pid && dev->did == did) {
@@ -110,7 +110,7 @@ static zx_status_t platform_bus_device_enable(void* ctx, uint32_t vid, uint32_t 
 }
 
 static const char* platform_bus_get_board_name(void* ctx) {
-    platform_bus_t* bus = ctx;
+    platform_bus_t* bus = static_cast<platform_bus_t*>(ctx);
     return bus->platform_id.board_name;
 }
 
@@ -124,11 +124,11 @@ static platform_bus_protocol_ops_t platform_bus_proto_ops = {
 
 // not static so we can access from platform_dev_get_protocol()
 zx_status_t platform_bus_get_protocol(void* ctx, uint32_t proto_id, void* protocol) {
-    platform_bus_t* bus = ctx;
+    platform_bus_t* bus = static_cast<platform_bus_t*>(ctx);
 
     switch (proto_id) {
     case ZX_PROTOCOL_PLATFORM_BUS: {
-        platform_bus_protocol_t* proto = protocol;
+        platform_bus_protocol_t* proto = static_cast<platform_bus_protocol_t*>(protocol);
         proto->ops = &platform_bus_proto_ops;
         proto->ctx = bus;
         return ZX_OK;
@@ -190,7 +190,7 @@ zx_status_t platform_bus_get_protocol(void* ctx, uint32_t proto_id, void* protoc
 }
 
 static void platform_bus_release(void* ctx) {
-    platform_bus_t* bus = ctx;
+    platform_bus_t* bus = static_cast<platform_bus_t*>(ctx);
 
     platform_dev_t* dev;
     list_for_every_entry(&bus->devices, dev, platform_dev_t, node) {
@@ -205,7 +205,19 @@ static void platform_bus_release(void* ctx) {
 static zx_protocol_device_t platform_bus_proto = {
     .version = DEVICE_OPS_VERSION,
     .get_protocol = platform_bus_get_protocol,
+    .open = nullptr,
+    .open_at = nullptr,
+    .close = nullptr,
+    .unbind = nullptr,
     .release = platform_bus_release,
+    .read = nullptr,
+    .write = nullptr,
+    .get_size = nullptr,
+    .ioctl = nullptr,
+    .suspend = nullptr,
+    .resume = nullptr,
+    .rxrpc = nullptr,
+    .message = nullptr,
 };
 
 static zx_status_t platform_bus_suspend(void* ctx, uint32_t flags) {
@@ -214,7 +226,20 @@ static zx_status_t platform_bus_suspend(void* ctx, uint32_t flags) {
 
 static zx_protocol_device_t sys_device_proto = {
     .version = DEVICE_OPS_VERSION,
+    .get_protocol = nullptr,
+    .open = nullptr,
+    .open_at = nullptr,
+    .close = nullptr,
+    .unbind = nullptr,
+    .release = nullptr,
+    .read = nullptr,
+    .write = nullptr,
+    .get_size = nullptr,
+    .ioctl = nullptr,
     .suspend = platform_bus_suspend,
+    .resume = nullptr,
+    .rxrpc = nullptr,
+    .message = nullptr,
 };
 
 static zx_status_t platform_bus_read_zbi(platform_bus_t* bus, zx_handle_t vmo) {
@@ -255,7 +280,7 @@ static zx_status_t platform_bus_read_zbi(platform_bus_t* bus, zx_handle_t vmo) {
     }
 
     if (metadata_size) {
-        bus->metadata = malloc(metadata_size);
+        bus->metadata = static_cast<uint8_t*>(malloc(metadata_size));
         if (!bus->metadata) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -306,14 +331,14 @@ static zx_status_t platform_bus_read_zbi(platform_bus_t* bus, zx_handle_t vmo) {
     return ZX_OK;
 }
 
-static zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const char* name,
-                                       const char* args, zx_handle_t zbi_vmo) {
+zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const char* name,
+                                const char* args, zx_handle_t zbi_vmo) {
     if (!args) {
         zxlogf(ERROR, "platform_bus_create: args missing\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    platform_bus_t* bus = calloc(1, sizeof(platform_bus_t));
+    platform_bus_t* bus = static_cast<platform_bus_t*>(calloc(1, sizeof(platform_bus_t)));
     if (!bus) {
         return  ZX_ERR_NO_MEMORY;
     }
@@ -340,12 +365,11 @@ static zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const cha
     bus->iommu.ctx = bus;
 
     // This creates the "sys" device
-    device_add_args_t self_args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = name,
-        .ops = &sys_device_proto,
-        .flags = DEVICE_ADD_NON_BINDABLE,
-    };
+    device_add_args_t self_args = {};
+    self_args.version = DEVICE_ADD_ARGS_VERSION;
+    self_args.name = name;
+    self_args.ops = &sys_device_proto;
+    self_args.flags = DEVICE_ADD_NON_BINDABLE;
 
     status = device_add(parent, &self_args, &parent);
     if (status != ZX_OK) {
@@ -362,26 +386,16 @@ static zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const cha
         {BIND_PLATFORM_DEV_PID, 0, bus->platform_id.pid},
     };
 
-    device_add_args_t add_args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "platform",
-        .ctx = bus,
-        .ops = &platform_bus_proto,
-        .proto_id = ZX_PROTOCOL_PLATFORM_BUS,
-        .proto_ops = &platform_bus_proto_ops,
-        .props = props,
-        .prop_count = countof(props),
-    };
+    device_add_args_t add_args = {};
+    add_args.version = DEVICE_ADD_ARGS_VERSION;
+    add_args.name = "platform";
+    add_args.ctx = bus;
+    add_args.ops = &platform_bus_proto;
+    add_args.proto_id = ZX_PROTOCOL_PLATFORM_BUS;
+    add_args.proto_ops = &platform_bus_proto_ops;
+    add_args.props = props;
+    add_args.prop_count = countof(props);
 
    return device_add(parent, &add_args, &bus->zxdev);
 }
 
-static zx_driver_ops_t platform_bus_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .create = platform_bus_create,
-};
-
-ZIRCON_DRIVER_BEGIN(platform_bus, platform_bus_driver_ops, "zircon", "0.1", 1)
-    // devmgr loads us directly, so we need no binding information here
-    BI_ABORT_IF_AUTOBIND,
-ZIRCON_DRIVER_END(platform_bus)

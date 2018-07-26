@@ -84,6 +84,11 @@ typedef struct {
 // platform-bus.c
 zx_status_t platform_bus_get_protocol(void* ctx, uint32_t proto_id, void* protocol);
 
+__BEGIN_CDECLS
+zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const char* name,
+                                const char* args, zx_handle_t zbi_vmo);
+__END_CDECLS
+
 // platform-device.c
 void platform_dev_free(platform_dev_t* dev);
 zx_status_t platform_device_add(platform_bus_t* bus, const pbus_dev_t* dev, uint32_t flags);
