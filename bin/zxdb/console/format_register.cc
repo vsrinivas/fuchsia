@@ -100,7 +100,7 @@ Err InternalFormatCategory(debug_ipc::RegisterCategory::Type cat,
 
     row.push_back(OutputBuffer::WithContents(reg_pair.second));
     row.push_back(OutputBuffer::WithContents(
-        fxl::StringPrintf("%" PRIx64, reg_pair.first->size())));
+        fxl::StringPrintf("%zx", reg_pair.first->size())));
     row.push_back(RegisterValueToOutputBuffer(*reg_pair.first));
   }
 
