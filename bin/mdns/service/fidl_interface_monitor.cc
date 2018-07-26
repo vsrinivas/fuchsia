@@ -27,7 +27,7 @@ FidlInterfaceMonitor::FidlInterfaceMonitor(
     binding_.Unbind();
     FXL_LOG(ERROR) << "Connection to netstack dropped.";
   });
-  netstack_.events().InterfacesChanged =
+  netstack_.events().OnInterfacesChanged =
       fit::bind_member(this, &FidlInterfaceMonitor::OnInterfacesChanged);
 }
 

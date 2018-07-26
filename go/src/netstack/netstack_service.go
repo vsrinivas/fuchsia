@@ -337,7 +337,7 @@ func AddNetstackService(ctx *context.Context) error {
 		// Send a synthetic InterfacesChanged event to each client when they join
 		// Prevents clients from having to race GetInterfaces / InterfacesChanged.
 		if p, ok := netstackService.EventProxyFor(k); ok {
-			p.InterfacesChanged(getInterfaces())
+			p.OnInterfacesChanged(getInterfaces())
 		}
 		return nil
 	})
@@ -356,7 +356,7 @@ func OnInterfacesChanged() {
 		connectivity.InferAndNotify(interfaces)
 		for key, client := range netstackService.Bindings {
 			if p, ok := netstackService.EventProxyFor(key); ok {
-				p.InterfacesChanged(interfaces)
+				p.OnInterfacesChanged(interfaces)
 			}
 			// TODO(stijlist): port mDNS to use FIDL2 events instead of NotificationListener
 			client.Stub.(*nsfidl.NetstackStub).Impl.(*netstackImpl).onInterfacesChanged(interfaces)

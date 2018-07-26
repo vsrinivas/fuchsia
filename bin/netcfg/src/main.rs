@@ -70,7 +70,7 @@ fn main() -> Result<(), Error> {
         None =>
             netstack
                 .take_event_stream()
-                .filter_map(|NetstackEvent::InterfacesChanged { interfaces: is }| future::ok(derive_device_name(is)))
+                .filter_map(|NetstackEvent::OnInterfacesChanged { interfaces: is }| future::ok(derive_device_name(is)))
                 .next()
                 .map_err(|(e, _)| e)
                 .and_then(|(opt, _)| {

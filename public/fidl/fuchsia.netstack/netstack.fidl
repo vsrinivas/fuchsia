@@ -175,5 +175,5 @@ interface Netstack {
   // Gets the status of the packet filter.
   14: GetFilterStatus() -> (bool enabled);
 
-  0x1000: -> InterfacesChanged(vector<NetInterface> interfaces);
+  0x1000: -> OnInterfacesChanged(vector<NetInterface> interfaces);
 };
