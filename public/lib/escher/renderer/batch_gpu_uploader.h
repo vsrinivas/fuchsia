@@ -1,4 +1,4 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -57,7 +57,7 @@ class BatchGpuUploader : public ResourceRecycler, public Reffable {
    private:
     friend class BatchGpuUploader;
     // Gets the CommandBuffer to batch commands with all other posted writers.
-    // This writer cannot be used after the command buffer has been retreived.
+    // This writer cannot be used after the command buffer has been retrieved.
     CommandBufferPtr TakeCommandsAndShutdown();
 
     CommandBufferPtr command_buffer_;
