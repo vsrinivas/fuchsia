@@ -57,21 +57,24 @@ DfxDelay* DfxDelay::Create(uint32_t frame_rate, uint16_t channels_in,
 DfxDelay::DfxDelay(uint32_t frame_rate, uint16_t channels)
     : DfxBase(Effect::Delay, kNumControls, frame_rate, channels, channels,
               kLatencyFrames, kLatencyFrames) {
-  delay_buff_ = std::make_unique<float[]>(kMaxDelayFrames * channels);
-  temp_buff_ = std::make_unique<float[]>(kMaxDelayFrames * channels);
+  // This buff must accomodate our maximum delay, plus the largest 'num_frames'
+  // required by process_inplace -- which can be as large as frame_rate.
+  delay_buff_ =
+      std::make_unique<float[]>((kMaxDelayFrames + frame_rate) * channels);
 
   Reset();
 }
 
-// Returns FRAMES of delay. We cache SAMPLES, so must convert to frames.
+// Returns FRAMES of delay. We cache SAMPLES for convenience, so convert back.
 bool DfxDelay::GetControlValue(uint16_t control_num, float* value_out) {
   *value_out = delay_samples_ / channels_in_;
   return true;
 }
 
-// This Delay effect chooses to self-flush, upon a change to the delay setting.
+// This effect chooses to self-flush, upon any change to our delay setting.
 bool DfxDelay::SetControlValue(uint16_t control_num, float value) {
-  if (value > kMaxDelayFrames || value < kMinDelayFrames) {
+  if (control_num >= kNumControls || value > kMaxDelayFrames ||
+      value < kMinDelayFrames) {
     return false;
   }
 
@@ -85,58 +88,37 @@ bool DfxDelay::SetControlValue(uint16_t control_num, float value) {
 }
 
 // Revert effect instance to a just-initialized state (incl. control settings).
+// Reset should always Flush, if relevant settings are changed.
 bool DfxDelay::Reset() {
   delay_samples_ = kInitialDelayFrames * channels_in_;
 
-  // Reset should always Flush, once settings are reinitialized.
   return Flush();
 }
 
-// TODO(mpuryear) optimize using a circular buffer and std::memmove <cstring>
+// Delay the incoming stream by the number of frames specified in control 0.
+//
+// TODO: with circular buffer, optimize 2N+D to N+min(N,D), where N=num_frames;
+// D=delay. Suggested algorithm: 1.copy min(N,D) from aud_buf to cache;
+// 2.shift max(N-D,0) within aud_buf; 3.copy min(N,D) from cache to aud_buf.
 bool DfxDelay::ProcessInplace(uint32_t num_frames, float* audio_buff) {
-  if (delay_samples_ == 0) {
-    return true;
-  }
+  if (delay_samples_ > 0) {
+    uint32_t audio_buff_bytes = num_frames * channels_in_ * sizeof(float);
 
-  uint32_t num_samples = num_frames * channels_in_;
-
-  // Populate the next buffer of cached delay samples, into a temp buffer. Don't
-  // overwrite the real delay buffer because we still need those contents.
-  for (uint32_t sample = 0; sample < delay_samples_; ++sample) {
-    // If delay is greater than num_frames, then some cache samples are simply
-    // previous cache samples that "moved up in line"
-    if (sample + num_samples < delay_samples_) {
-      temp_buff_[sample] = delay_buff_[sample + num_samples];
-    } else {
-      // For the rest of the delay buffer, cache newly-submitted samples.
-      temp_buff_[sample] = audio_buff[num_samples - delay_samples_ + sample];
-    }
-  }
-
-  // If num_frames is greater than our delay, then some newly-submitted samples
-  // should simply move backward, rather than be moved into our delay cache.
-  // Copy back-to-front, so we don't incorrectly overwrite contents.
-  for (uint32_t sample = num_samples - 1; sample >= delay_samples_; sample--) {
-    audio_buff[sample] = audio_buff[sample - delay_samples_];
-  }
-
-  // Populate the front of our audio buffer from previously-cached samples.
-  for (uint32_t sample = 0; sample < delay_samples_; ++sample) {
-    if (sample < num_samples) {
-      audio_buff[sample] = delay_buff_[sample];
-    }
-    // Also save our temp cache for next time.
-    delay_buff_[sample] = temp_buff_[sample];
+    // DfxDelay maintains a "delay cache" containing the next samples to emit.
+    // 1) Copy all samples from audio_buff to delay cache (after previous ones).
+    ::memcpy(delay_buff_.get() + delay_samples_, audio_buff, audio_buff_bytes);
+    // 2) Fill audio_buff, from front of the delay cache.
+    ::memcpy(audio_buff, delay_buff_.get(), audio_buff_bytes);
+    // 3) Shift the remaining cached samples to the front of the delay cache.
+    ::memmove(delay_buff_.get(), delay_buff_.get() + num_frames * channels_in_,
+              delay_samples_ * sizeof(float));
   }
 
   return true;
 }
-
 // Retain control settings but drop any accumulated state or history.
 bool DfxDelay::Flush() {
-  for (uint32_t sample = 0; sample < delay_samples_; ++sample) {
-    delay_buff_[sample] = 0.0f;
-  }
+  ::memset(delay_buff_.get(), 0, delay_samples_ * sizeof(float));
 
   return true;
 }

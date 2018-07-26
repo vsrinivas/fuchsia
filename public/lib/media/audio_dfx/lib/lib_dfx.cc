@@ -49,8 +49,9 @@ bool fuchsia_audio_dfx_get_control_info(
 
 // Returns dfx_token representing active instance of ‘effect_id’ (0 if fail).
 // If channels_in==out, effect must process in-place.
-uint64_t fuchsia_audio_dfx_create(uint32_t effect_id, uint32_t frame_rate,
-                                  uint16_t channels_in, uint16_t channels_out) {
+fx_token_t fuchsia_audio_dfx_create(uint32_t effect_id, uint32_t frame_rate,
+                                    uint16_t channels_in,
+                                    uint16_t channels_out) {
   media::audio_dfx_test::DfxBase* effect =
       media::audio_dfx_test::DfxBase::Create(effect_id, frame_rate, channels_in,
                                              channels_out);
@@ -58,12 +59,11 @@ uint64_t fuchsia_audio_dfx_create(uint32_t effect_id, uint32_t frame_rate,
     return FUCHSIA_AUDIO_DFX_INVALID_TOKEN;
   }
 
-  // TODO(mpuryear) Perhaps use void* (not uint64): typedef void* fx_token_t.
-  return reinterpret_cast<uintptr_t>(effect);
+  return effect;
 }
 
 // Deletes this active effect.
-bool fuchsia_audio_dfx_delete(uint64_t dfx_token) {
+bool fuchsia_audio_dfx_delete(fx_token_t dfx_token) {
   if (dfx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN) {
     return false;
   }
@@ -78,7 +78,7 @@ bool fuchsia_audio_dfx_delete(uint64_t dfx_token) {
 // the number of frames of group delay, and optionally the ideal number of
 // frames that the system provides the effect for each call
 bool fuchsia_audio_dfx_get_parameters(
-    uint64_t dfx_token, fuchsia_audio_dfx_parameters* device_fx_params) {
+    fx_token_t dfx_token, fuchsia_audio_dfx_parameters* device_fx_params) {
   if (dfx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN ||
       device_fx_params == nullptr) {
     return false;
@@ -89,7 +89,7 @@ bool fuchsia_audio_dfx_get_parameters(
 }
 
 // Returns the value of the specified control, on this active effect
-bool fuchsia_audio_dfx_get_control_value(uint64_t dfx_token,
+bool fuchsia_audio_dfx_get_control_value(fx_token_t dfx_token,
                                          uint16_t control_num,
                                          float* value_out) {
   if (dfx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN || value_out == nullptr) {
@@ -105,7 +105,7 @@ bool fuchsia_audio_dfx_get_control_value(uint64_t dfx_token,
 }
 
 // Sets the value of the specified control, on this active effect
-bool fuchsia_audio_dfx_set_control_value(uint64_t dfx_token,
+bool fuchsia_audio_dfx_set_control_value(fx_token_t dfx_token,
                                          uint16_t control_num, float value) {
   if (dfx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN) {
     return false;
@@ -120,7 +120,7 @@ bool fuchsia_audio_dfx_set_control_value(uint64_t dfx_token,
 }
 
 // Returns this active effect to its initial state and settings.
-bool fuchsia_audio_dfx_reset(uint64_t dfx_token) {
+bool fuchsia_audio_dfx_reset(fx_token_t dfx_token) {
   if (dfx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN) {
     return false;
   }
@@ -130,7 +130,8 @@ bool fuchsia_audio_dfx_reset(uint64_t dfx_token) {
 }
 
 // Synchronously processes the buffer of ‘num_frames’ audio data, in-place
-bool fuchsia_audio_dfx_process_inplace(uint64_t dfx_token, uint32_t num_frames,
+bool fuchsia_audio_dfx_process_inplace(fx_token_t dfx_token,
+                                       uint32_t num_frames,
                                        float* audio_buff_in_out) {
   if (dfx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN ||
       audio_buff_in_out == nullptr) {
@@ -145,7 +146,7 @@ bool fuchsia_audio_dfx_process_inplace(uint64_t dfx_token, uint32_t num_frames,
 }
 
 // Synchronously processes ‘num_frames’ from audio_buff_in to audio_buff_out.
-bool fuchsia_audio_dfx_process(uint64_t dfx_token, uint32_t num_frames,
+bool fuchsia_audio_dfx_process(fx_token_t dfx_token, uint32_t num_frames,
                                const float* audio_buff_in,
                                float* audio_buff_out) {
   if (dfx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN ||
@@ -161,7 +162,7 @@ bool fuchsia_audio_dfx_process(uint64_t dfx_token, uint32_t num_frames,
 }
 
 // Flushes any cached state, but retains settings, on this active effect.
-bool fuchsia_audio_dfx_flush(uint64_t dfx_token) {
+bool fuchsia_audio_dfx_flush(fx_token_t dfx_token) {
   if (dfx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN) {
     return false;
   }

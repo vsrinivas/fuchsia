@@ -34,25 +34,27 @@ class DfxBaseTest : public testing::Test {
         (bool (*)(uint32_t, uint16_t, fuchsia_audio_dfx_control_description*))
             dlsym(dfx_lib_, "fuchsia_audio_dfx_get_control_info");
 
-    fn_create_ = (uint64_t(*)(uint32_t, uint32_t, uint16_t, uint16_t))dlsym(
+    fn_create_ = (fx_token_t(*)(uint32_t, uint32_t, uint16_t, uint16_t))dlsym(
         dfx_lib_, "fuchsia_audio_dfx_create");
     fn_delete_ =
-        (bool (*)(uint64_t))dlsym(dfx_lib_, "fuchsia_audio_dfx_delete");
+        (bool (*)(fx_token_t))dlsym(dfx_lib_, "fuchsia_audio_dfx_delete");
     fn_get_parameters_ =
-        (bool (*)(uint64_t, fuchsia_audio_dfx_parameters*))dlsym(
+        (bool (*)(fx_token_t, fuchsia_audio_dfx_parameters*))dlsym(
             dfx_lib_, "fuchsia_audio_dfx_get_parameters");
 
-    fn_get_control_value_ = (bool (*)(uint64_t, uint16_t, float*))dlsym(
+    fn_get_control_value_ = (bool (*)(fx_token_t, uint16_t, float*))dlsym(
         dfx_lib_, "fuchsia_audio_dfx_get_control_value");
-    fn_set_control_value_ = (bool (*)(uint64_t, uint16_t, float))dlsym(
+    fn_set_control_value_ = (bool (*)(fx_token_t, uint16_t, float))dlsym(
         dfx_lib_, "fuchsia_audio_dfx_set_control_value");
-    fn_reset_ = (bool (*)(uint64_t))dlsym(dfx_lib_, "fuchsia_audio_dfx_reset");
+    fn_reset_ =
+        (bool (*)(fx_token_t))dlsym(dfx_lib_, "fuchsia_audio_dfx_reset");
 
-    fn_process_inplace_ = (bool (*)(uint64_t, uint32_t, float*))dlsym(
+    fn_process_inplace_ = (bool (*)(fx_token_t, uint32_t, float*))dlsym(
         dfx_lib_, "fuchsia_audio_dfx_process_inplace");
-    fn_process_ = (bool (*)(uint64_t, uint32_t, const float*, float*))dlsym(
+    fn_process_ = (bool (*)(fx_token_t, uint32_t, const float*, float*))dlsym(
         dfx_lib_, "fuchsia_audio_dfx_process");
-    fn_flush_ = (bool (*)(uint64_t))dlsym(dfx_lib_, "fuchsia_audio_dfx_flush");
+    fn_flush_ =
+        (bool (*)(fx_token_t))dlsym(dfx_lib_, "fuchsia_audio_dfx_flush");
 
     ASSERT_NE(fn_get_num_fx_, nullptr) << "get_num_effects() did not load";
     ASSERT_NE(fn_get_info_, nullptr) << "get_info() did not load";
@@ -74,6 +76,8 @@ class DfxBaseTest : public testing::Test {
     ASSERT_NE(fn_process_, nullptr) << " process() did not load ";
     ASSERT_NE(fn_flush_, nullptr) << " flush() did not load ";
   }
+  void TestDelayBounds(uint32_t frame_rate, uint32_t channels,
+                       uint32_t delay_frames);
 
   void* dfx_lib_ = nullptr;
 
@@ -82,17 +86,17 @@ class DfxBaseTest : public testing::Test {
   bool (*fn_get_control_info_)(uint32_t, uint16_t,
                                fuchsia_audio_dfx_control_description*);
 
-  uint64_t (*fn_create_)(uint32_t, uint32_t, uint16_t, uint16_t);
-  bool (*fn_delete_)(uint64_t);
-  bool (*fn_get_parameters_)(uint64_t, fuchsia_audio_dfx_parameters*);
+  fx_token_t (*fn_create_)(uint32_t, uint32_t, uint16_t, uint16_t);
+  bool (*fn_delete_)(fx_token_t);
+  bool (*fn_get_parameters_)(fx_token_t, fuchsia_audio_dfx_parameters*);
 
-  bool (*fn_get_control_value_)(uint64_t, uint16_t, float*);
-  bool (*fn_set_control_value_)(uint64_t, uint16_t, float);
-  bool (*fn_reset_)(uint64_t);
+  bool (*fn_get_control_value_)(fx_token_t, uint16_t, float*);
+  bool (*fn_set_control_value_)(fx_token_t, uint16_t, float);
+  bool (*fn_reset_)(fx_token_t);
 
-  bool (*fn_process_inplace_)(uint64_t, uint32_t, float*);
-  bool (*fn_process_)(uint64_t, uint32_t, const float*, float*);
-  bool (*fn_flush_)(uint64_t);
+  bool (*fn_process_inplace_)(fx_token_t, uint32_t, float*);
+  bool (*fn_process_)(fx_token_t, uint32_t, const float*, float*);
+  bool (*fn_flush_)(fx_token_t);
 };
 
 // When validating controls, we make certain assumptions about the test effects.
@@ -207,7 +211,7 @@ TEST_F(DfxBaseTest, GetControlInfo) {
 // Tests the create ABI.
 TEST_F(DfxBaseTest, Create) {
   uint32_t frame_rate = 0;
-  uint64_t dfx_token =
+  fx_token_t dfx_token =
       fn_create_(Effect::Delay, frame_rate, kTestChans, kTestChans);
   EXPECT_NE(dfx_token, FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
 
@@ -245,7 +249,8 @@ TEST_F(DfxBaseTest, Create) {
 
 // Tests the delete ABI.
 TEST_F(DfxBaseTest, Delete) {
-  uint64_t dfx_token = fn_create_(Effect::Delay, 48000, kTestChans, kTestChans);
+  fx_token_t dfx_token =
+      fn_create_(Effect::Delay, 48000, kTestChans, kTestChans);
   ASSERT_NE(dfx_token, FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
 
   EXPECT_TRUE(fn_delete_(dfx_token));
@@ -257,7 +262,7 @@ TEST_F(DfxBaseTest, GetParameters_Delay) {
   fuchsia_audio_dfx_parameters device_fx_params;
 
   uint32_t frame_rate = 48000;
-  uint64_t dfx_token =
+  fx_token_t dfx_token =
       fn_create_(Effect::Delay, frame_rate, kTestChans, kTestChans);
 
   EXPECT_TRUE(fn_get_parameters_(dfx_token, &device_fx_params));
@@ -284,7 +289,7 @@ TEST_F(DfxBaseTest, GetParameters_Rechannel) {
   fuchsia_audio_dfx_parameters device_fx_params;
 
   uint32_t frame_rate = 48000;
-  uint64_t dfx_token =
+  fx_token_t dfx_token =
       fn_create_(Effect::Rechannel, frame_rate, DfxRechannel::kNumChannelsIn,
                  DfxRechannel::kNumChannelsOut);
   device_fx_params.frame_rate = 44100;  // should be overwritten
@@ -305,7 +310,7 @@ TEST_F(DfxBaseTest, GetParameters_Swap) {
   fuchsia_audio_dfx_parameters device_fx_params;
 
   uint32_t frame_rate = 44100;
-  uint64_t dfx_token =
+  fx_token_t dfx_token =
       fn_create_(Effect::Swap, frame_rate, kTestChans, kTestChans);
   device_fx_params.frame_rate = 48000;  // should be overwritten
 
@@ -331,7 +336,8 @@ TEST_F(DfxBaseTest, GetControlValue_Delay) {
   ASSERT_TRUE(
       fn_get_control_info_(Effect::Delay, control_num, &dfx_control_desc));
 
-  uint64_t dfx_token = fn_create_(Effect::Delay, 48000, kTestChans, kTestChans);
+  fx_token_t dfx_token =
+      fn_create_(Effect::Delay, 48000, kTestChans, kTestChans);
   ASSERT_TRUE(dfx_token);
   float val;
   EXPECT_TRUE(fn_get_control_value_(dfx_token, control_num, &val));
@@ -354,7 +360,7 @@ TEST_F(DfxBaseTest, GetControlValue_Delay) {
 TEST_F(DfxBaseTest, GetControlValue_Other) {
   float val;
 
-  uint64_t dfx_token =
+  fx_token_t dfx_token =
       fn_create_(Effect::Rechannel, 48000, DfxRechannel::kNumChannelsIn,
                  DfxRechannel::kNumChannelsOut);
   ASSERT_TRUE(dfx_token);
@@ -378,7 +384,8 @@ TEST_F(DfxBaseTest, SetControlValue_Delay) {
   ASSERT_TRUE(
       fn_get_control_info_(Effect::Delay, control_num, &dfx_control_desc));
 
-  uint64_t dfx_token = fn_create_(Effect::Delay, 48000, kTestChans, kTestChans);
+  fx_token_t dfx_token =
+      fn_create_(Effect::Delay, 48000, kTestChans, kTestChans);
 
   EXPECT_TRUE(fn_set_control_value_(dfx_token, control_num, kTestDelay1));
 
@@ -400,7 +407,7 @@ TEST_F(DfxBaseTest, SetControlValue_Delay) {
 
 // Tests cases in which we expect set_control_value to fail.
 TEST_F(DfxBaseTest, SetControlValue_Other) {
-  uint64_t dfx_token =
+  fx_token_t dfx_token =
       fn_create_(Effect::Rechannel, 48000, DfxRechannel::kNumChannelsIn,
                  DfxRechannel::kNumChannelsOut);
   ASSERT_TRUE(dfx_token);
@@ -424,7 +431,8 @@ TEST_F(DfxBaseTest, Reset) {
   ASSERT_TRUE(
       fn_get_control_info_(Effect::Delay, control_num, &dfx_control_desc));
 
-  uint64_t dfx_token = fn_create_(Effect::Delay, 48000, kTestChans, kTestChans);
+  fx_token_t dfx_token =
+      fn_create_(Effect::Delay, 48000, kTestChans, kTestChans);
 
   float new_value;
   ASSERT_TRUE(fn_get_control_value_(dfx_token, control_num, &new_value));
@@ -446,29 +454,27 @@ TEST_F(DfxBaseTest, Reset) {
 
 // Tests the process_inplace ABI, and that the test DFX behaves as expected.
 TEST_F(DfxBaseTest, ProcessInPlace_Delay) {
-  constexpr uint32_t kNumFrames = 12;
-  constexpr uint32_t kDelayFrames = 6;
-  float delay_buff_in_out[kNumFrames * kTestChans] = {0};
-  float expect[kNumFrames * kTestChans];
-  for (uint32_t i = 0; i < kNumFrames; ++i) {
-    delay_buff_in_out[i * kTestChans] = static_cast<float>(i + 1);
-    delay_buff_in_out[i * kTestChans + 1] = -static_cast<float>(i + 1);
+  uint32_t num_samples = 12 * kTestChans;
+  uint32_t delay_samples = 6 * kTestChans;
+  float delay_buff_in_out[num_samples];
+  float expect[num_samples];
 
-    expect[i * kTestChans] =
-        (i < kDelayFrames ? 0.0f
-                          : delay_buff_in_out[(i - kDelayFrames) * kTestChans]);
-    expect[i * kTestChans + 1] =
-        (i < kDelayFrames
-             ? 0.0f
-             : delay_buff_in_out[(i - kDelayFrames) * kTestChans + 1]);
+  for (uint32_t i = 0; i < delay_samples; ++i) {
+    delay_buff_in_out[i] = static_cast<float>(i + 1);
+    expect[i] = 0.0f;
+  }
+  for (uint32_t i = delay_samples; i < num_samples; ++i) {
+    delay_buff_in_out[i] = static_cast<float>(i + 1);
+    expect[i] = delay_buff_in_out[i - delay_samples];
   }
 
-  uint64_t dfx_token = fn_create_(Effect::Delay, 48000, kTestChans, kTestChans);
+  fx_token_t dfx_token =
+      fn_create_(Effect::Delay, 48000, kTestChans, kTestChans);
   ASSERT_NE(dfx_token, FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
 
   uint16_t control_num = 0;
-  ASSERT_TRUE(fn_set_control_value_(dfx_token, control_num,
-                                    static_cast<float>(kDelayFrames)));
+  ASSERT_TRUE(fn_set_control_value_(
+      dfx_token, control_num, static_cast<float>(delay_samples / kTestChans)));
 
   EXPECT_TRUE(fn_process_inplace_(dfx_token, 4, delay_buff_in_out));
   EXPECT_TRUE(
@@ -476,8 +482,8 @@ TEST_F(DfxBaseTest, ProcessInPlace_Delay) {
   EXPECT_TRUE(
       fn_process_inplace_(dfx_token, 4, delay_buff_in_out + (8 * kTestChans)));
 
-  for (uint32_t sample = 0; sample < kNumFrames * kTestChans; ++sample) {
-    EXPECT_EQ(delay_buff_in_out[sample], expect[sample]);
+  for (uint32_t sample = 0; sample < num_samples; ++sample) {
+    EXPECT_EQ(delay_buff_in_out[sample], expect[sample]) << sample;
   }
   EXPECT_TRUE(fn_process_inplace_(dfx_token, 0, delay_buff_in_out));
   EXPECT_TRUE(fn_delete_(dfx_token));
@@ -489,7 +495,8 @@ TEST_F(DfxBaseTest, ProcessInPlace_Swap) {
   float right_left_buff_in_out[kNumFrames * kTestChans] = {
       1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f};
 
-  uint64_t dfx_token = fn_create_(Effect::Swap, 48000, kTestChans, kTestChans);
+  fx_token_t dfx_token =
+      fn_create_(Effect::Swap, 48000, kTestChans, kTestChans);
   ASSERT_NE(dfx_token, FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
 
   EXPECT_TRUE(
@@ -509,7 +516,8 @@ TEST_F(DfxBaseTest, ProcessInPlace_Fail) {
   constexpr uint32_t kNumFrames = 1;
   float buff_in_out[kNumFrames * DfxRechannel::kNumChannelsIn] = {0};
 
-  uint64_t dfx_token = fn_create_(Effect::Swap, 48000, kTestChans, kTestChans);
+  fx_token_t dfx_token =
+      fn_create_(Effect::Swap, 48000, kTestChans, kTestChans);
   ASSERT_NE(dfx_token, FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
 
   // Calls with invalid token or null buff_ptr should fail.
@@ -536,7 +544,7 @@ TEST_F(DfxBaseTest, Process_Rechannel) {
   float expected[kNumFrames * DfxRechannel::kNumChannelsOut] = {0.799536645f,
                                                                 -0.340580851f};
 
-  uint64_t dfx_token =
+  fx_token_t dfx_token =
       fn_create_(Effect::Rechannel, 48000, DfxRechannel::kNumChannelsIn,
                  DfxRechannel::kNumChannelsOut);
   ASSERT_NE(dfx_token, FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
@@ -559,7 +567,7 @@ TEST_F(DfxBaseTest, Process_Fail) {
   float audio_buff_out[kNumFrames * kTestChans] = {0.0f};
 
   // Test null token, buffer_in, buffer_out
-  uint64_t dfx_token =
+  fx_token_t dfx_token =
       fn_create_(Effect::Rechannel, 48000, DfxRechannel::kNumChannelsIn,
                  DfxRechannel::kNumChannelsOut);
   ASSERT_NE(dfx_token, FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
@@ -596,7 +604,7 @@ TEST_F(DfxBaseTest, ProcessInPlace_Chain) {
                                              0.0f, 0.0f,  -0.1f, 1.0f,
                                              2.0f, -0.2f, -3.0f, 0.3f};
 
-  uint64_t delay1_token, swap_token, delay2_token;
+  fx_token_t delay1_token, swap_token, delay2_token;
   delay1_token = fn_create_(Effect::Delay, 44100, kTestChans, kTestChans);
   swap_token = fn_create_(Effect::Swap, 44100, kTestChans, kTestChans);
   delay2_token = fn_create_(Effect::Delay, 44100, kTestChans, kTestChans);
@@ -631,7 +639,8 @@ TEST_F(DfxBaseTest, Flush) {
   constexpr uint32_t kNumFrames = 1;
   float buff_in_out[kTestChans] = {1.0f, -1.0f};
 
-  uint64_t dfx_token = fn_create_(Effect::Delay, 44100, kTestChans, kTestChans);
+  fx_token_t dfx_token =
+      fn_create_(Effect::Delay, 44100, kTestChans, kTestChans);
 
   float new_value;
   ASSERT_TRUE(fn_get_control_value_(dfx_token, 0, &new_value));
@@ -657,6 +666,46 @@ TEST_F(DfxBaseTest, Flush) {
   // Verify invalid effect token
   EXPECT_FALSE(fn_flush_(FUCHSIA_AUDIO_DFX_INVALID_TOKEN));
   EXPECT_TRUE(fn_delete_(dfx_token));
+}
+
+void DfxBaseTest::TestDelayBounds(uint32_t frame_rate, uint32_t channels,
+                                  uint32_t delay_frames) {
+  uint32_t delay_samples = delay_frames * channels;
+  uint32_t num_frames = frame_rate;
+  uint32_t num_samples = num_frames * channels;
+
+  std::unique_ptr<float[]> delay_buff_in_out =
+      std::make_unique<float[]>(num_samples);
+  std::unique_ptr<float[]> expect = std::make_unique<float[]>(num_samples);
+
+  fx_token_t dfx_token =
+      fn_create_(Effect::Delay, frame_rate, channels, channels);
+  ASSERT_NE(dfx_token, FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
+
+  ASSERT_TRUE(
+      fn_set_control_value_(dfx_token, 0, static_cast<float>(delay_frames)));
+
+  for (uint32_t pass = 0; pass < 2; ++pass) {
+    for (uint32_t i = 0; i < num_samples; ++i) {
+      delay_buff_in_out[i] = static_cast<float>(i + pass * num_samples + 1);
+      expect[i] = fmax(delay_buff_in_out[i] - delay_samples, 0.0f);
+    }
+    EXPECT_TRUE(
+        fn_process_inplace_(dfx_token, num_frames, delay_buff_in_out.get()));
+    for (uint32_t sample = 0; sample < num_samples; ++sample) {
+      EXPECT_EQ(delay_buff_in_out[sample], expect[sample]) << sample;
+    }
+  }
+
+  EXPECT_TRUE(fn_delete_(dfx_token));
+}
+
+// Verifies DfxDelay at the outer allowed bounds (largest delays and buffers).
+TEST_F(DfxBaseTest, ProcessInPlace_Bounds) {
+  TestDelayBounds(192000, 42, media::audio_dfx_test::DfxDelay::kMaxDelayFrames);
+  TestDelayBounds(48000, 168, media::audio_dfx_test::DfxDelay::kMaxDelayFrames);
+  TestDelayBounds(32000, FUCHSIA_AUDIO_DFX_CHANNELS_MAX,
+                  media::audio_dfx_test::DfxDelay::kMaxDelayFrames);
 }
 
 }  // namespace audio_dfx_test

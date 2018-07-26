@@ -15,15 +15,16 @@
 
 __BEGIN_CDECLS
 
-const size_t FUCHSIA_AUDIO_DFX_MAX_NAME_LENGTH = 255;
-const uint64_t FUCHSIA_AUDIO_DFX_INVALID_TOKEN = 0;
+typedef void* fx_token_t;
+const fx_token_t FUCHSIA_AUDIO_DFX_INVALID_TOKEN = nullptr;
 
 const uint16_t FUCHSIA_AUDIO_DFX_CHANNELS_ANY =
     std::numeric_limits<uint16_t>::max();
 const uint16_t FUCHSIA_AUDIO_DFX_CHANNELS_SAME_AS_IN =
     std::numeric_limits<uint16_t>::max() - 1;
-const uint16_t FUCHSIA_AUDIO_DFX_CHANNELS_MAX =
-    std::numeric_limits<int16_t>::max();
+const uint16_t FUCHSIA_AUDIO_DFX_CHANNELS_MAX = 256;
+
+const size_t FUCHSIA_AUDIO_DFX_MAX_NAME_LENGTH = 255;
 
 typedef struct {
   char name[FUCHSIA_AUDIO_DFX_MAX_NAME_LENGTH];
@@ -72,45 +73,48 @@ __EXPORT bool fuchsia_audio_dfx_get_control_info(
 // TODO(mpuryear): Incorporate basic channel configuration (initially via simple
 // enum) to the driver, DFX, mixer, renderer and capturer interfaces.
 // TODO(mpuryear): Enable the mixer to mix between basic channel configurations.
-__EXPORT uint64_t fuchsia_audio_dfx_create(uint32_t effect_id,
-                                           uint32_t frame_rate,
-                                           uint16_t channels_in,
-                                           uint16_t channels_out);
+__EXPORT fx_token_t fuchsia_audio_dfx_create(uint32_t effect_id,
+                                             uint32_t frame_rate,
+                                             uint16_t channels_in,
+                                             uint16_t channels_out);
 
 // Deletes this active effect.
-__EXPORT bool fuchsia_audio_dfx_delete(uint64_t dfx_token);
+__EXPORT bool fuchsia_audio_dfx_delete(fx_token_t dfx_token);
 
 // Returns the operational parameters for this instance of the device effect.
 // These parameters are invariant for the lifetime of this effect, based on
 // initial values provided when the client created the effect.
 __EXPORT bool fuchsia_audio_dfx_get_parameters(
-    uint64_t dfx_token, fuchsia_audio_dfx_parameters* device_fx_params);
+    fx_token_t dfx_token, fuchsia_audio_dfx_parameters* device_fx_params);
 
 // Returns the value of the specified control, on this active effect.
-__EXPORT bool fuchsia_audio_dfx_get_control_value(uint64_t dfx_token,
+__EXPORT bool fuchsia_audio_dfx_get_control_value(fx_token_t dfx_token,
                                                   uint16_t control_num,
                                                   float* value_out);
 
 // Sets the value of the specified control, on this active effect.
-__EXPORT bool fuchsia_audio_dfx_set_control_value(uint64_t dfx_token,
+__EXPORT bool fuchsia_audio_dfx_set_control_value(fx_token_t dfx_token,
                                                   uint16_t control_num,
                                                   float value);
 
 // Returns this active effect to its initial state and settings.
-__EXPORT bool fuchsia_audio_dfx_reset(uint64_t dfx_token);
+__EXPORT bool fuchsia_audio_dfx_reset(fx_token_t dfx_token);
 
-// Synchronously processes the buffer of ‘num_frames’ audio data, in-place.
-__EXPORT bool fuchsia_audio_dfx_process_inplace(uint64_t dfx_token,
+// Synchronously process ‘num_frames’ of audio, in-place. The value of
+// 'num_frames' cannot exceed frame_rate: it must be <= 1 second of audio.
+__EXPORT bool fuchsia_audio_dfx_process_inplace(fx_token_t dfx_token,
                                                 uint32_t num_frames,
                                                 float* audio_buff_in_out);
 
-// Synchronously processes ‘num_frames’ from audio_buff_in to audio_buff_out.
-__EXPORT bool fuchsia_audio_dfx_process(uint64_t dfx_token, uint32_t num_frames,
+// Synchronously process ‘num_frames’ from audio_buff_in to audio_buff_out.
+// 'num_frames' cannot exceed frame_rate: it must be <= 1 second of audio.
+__EXPORT bool fuchsia_audio_dfx_process(fx_token_t dfx_token,
+                                        uint32_t num_frames,
                                         const float* audio_buff_in,
                                         float* audio_buff_out);
 
 // Flushes any cached state, but retains settings, on this active effect.
-__EXPORT bool fuchsia_audio_dfx_flush(uint64_t dfx_token);
+__EXPORT bool fuchsia_audio_dfx_flush(fx_token_t dfx_token);
 
 __END_CDECLS
 

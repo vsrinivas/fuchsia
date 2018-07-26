@@ -31,7 +31,7 @@ class DfxDelay : public DfxBase {
       FUCHSIA_AUDIO_DFX_CHANNELS_SAME_AS_IN;
   static constexpr uint32_t kLatencyFrames = 0;
 
-  static constexpr uint32_t kMaxDelayFrames = 65536;
+  static constexpr uint32_t kMaxDelayFrames = 64000;
   static constexpr uint32_t kMinDelayFrames = 0;
   static constexpr uint32_t kInitialDelayFrames = 0;
 
@@ -44,6 +44,7 @@ class DfxDelay : public DfxBase {
                           uint16_t channels_out);
 
   DfxDelay(uint32_t frame_rate, uint16_t channels);
+  ~DfxDelay() = default;
 
   bool GetControlValue(uint16_t control_num, float* value_out) override;
   bool SetControlValue(uint16_t control_num, float value) override;
@@ -54,8 +55,9 @@ class DfxDelay : public DfxBase {
 
  protected:
   uint32_t delay_samples_;
+  // This buff must accomodate the largest process_inplace call, plus our delay.
+  // N.B.: 'num_frames' for process_inplace can be as large as frame_rate.
   std::unique_ptr<float[]> delay_buff_;
-  std::unique_ptr<float[]> temp_buff_;
 };
 
 }  // namespace audio_dfx_test

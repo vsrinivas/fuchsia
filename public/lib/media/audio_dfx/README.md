@@ -130,7 +130,7 @@ Specifically, it returns details about a particular control on that effect.
 
 ### **fuchsia_audio_dfx_create**
 ```
-uint64_t fuchsia_audio_dfx_create(
+fx_token_t fuchsia_audio_dfx_create(
     uint32_t effect_id,
     uint32_t frame_rate,
     uint16_t channels_in,
@@ -156,7 +156,7 @@ channels.
 #### Returns
 - **FUCHSIA_AUDIO_DFX_INVALID_TOKEN**: call failed; no resources should be
 allocated.
-- **Otherwise**: call succeeded; the returned `uint64_t` is a token
+- **Otherwise**: call succeeded; the returned `fx_token_t` is a token
 representing the just-created active instance of this effect type.
 
 #### Notes
@@ -169,7 +169,7 @@ require the created device effect to process audio in-place.
 ### **fuchsia_audio_dfx_delete**
 ```
 bool fuchsia_audio_dfx_delete(
-    uint64_t dfx_token
+    fx_token_t dfx_token
   );
 ```
 #### Inputs
@@ -183,12 +183,12 @@ longer valid.
 ### **fuchsia_audio_dfx_get_parameters**
 ```
 bool fuchsia_audio_dfx_get_parameters(
-    uint64_t dfx_token,
+    fx_token_t dfx_token,
     fuchsia_audio_dfx_parameters* device_fx_params
   );
 ```
 #### Inputs
-- **dfx_token**: a `uint64_t` representing an active effect instance.
+- **dfx_token**: a `fx_token_t` representing an active effect instance.
 - **device_fx_params**: pointer to a *fuchsia_audio_dfx_parameters* struct
 allocated by the system. The DFX implementation should copy information about
 the specified active effect instance into this struct.
@@ -206,13 +206,13 @@ based on the initial values provided when the client created the effect.
 ### **fuchsia_audio_dfx_get_control_value**
 ```
 bool fuchsia_audio_dfx_get_control_value(
-    uint64_t dfx_token,
+    fx_token_t dfx_token,
     uint16_t control_num,
     float* value_out
   );
 ```
 #### Inputs
-- **dfx_token**: a `uint64_t` representing an active effect instance.
+- **dfx_token**: a `fx_token_t` representing an active effect instance.
 - **control_num**: a `uint16_t` representing a control of this effect instance.
 - **value_out**: a pointer to a `float` allocated by the system, into which the
 DFX implementation should copy the current value of this control.
@@ -228,13 +228,13 @@ effect.
 ### **fuchsia_audio_dfx_set_control_value**
 ```
 bool fuchsia_audio_dfx_set_control_value(
-    uint64_t dfx_token,
+    fx_token_t dfx_token,
     uint16_t control_num,
     float value
   );
 ```
 #### Inputs
-- **dfx_token**: a `uint64_t` representing an active effect instance.
+- **dfx_token**: a `fx_token_t` representing an active effect instance.
 - **control_num**: a `uint16_t` representing a control of this effect instance.
 - **value**: a `float` containing the value to which this control should be set.
 
@@ -248,7 +248,7 @@ This interface sets the value of the specified control, on this active effect.
 ### **fuchsia_audio_dfx_reset**
 ```
 bool fuchsia_audio_dfx_reset(
-    uint64_t dfx_token
+    fx_token_t dfx_token
   );
 ```
 #### Inputs
@@ -263,15 +263,16 @@ previously processed audio).
 ### **fuchsia_audio_dfx_process_inplace**
 ```
 bool fuchsia_audio_dfx_process_inplace(
-    uint64_t dfx_token,
+    fx_token_t dfx_token,
     uint32_t num_frames,
     float* audio_buff_in_out
   );
 ```
 #### Inputs
-- **dfx_token**: a `uint64_t` representing an active effect instance.
+- **dfx_token**: a `fx_token_t` representing an active effect instance.
 - **num_frames**: a `uint32_t` containing the number of frames that the
-specified effect instance must process.
+specified effect instance must process. This value cannot exceed the
+previously-set frame rate for this effect instance.
 - **audio_buff_in_out**: a pointer to an audio buffer containing samples of
 type `float`.
 
@@ -292,19 +293,24 @@ multiplied by the value of `channels_out`, from the earlier
 rechannelization occurs. It is preferred over **fuchsia_audio_dfx_process**
 because of its reduced memory consumption and related system impact.
 
+The upper limit on the value of `num_frames` guarantees that no
+**fuchsia_audio_dfx_process_inplace** call will ever entail more than one
+second of audio.
+
 ### **fuchsia_audio_dfx_process**
 ```
 bool fuchsia_audio_dfx_process(
-    uint64_t dfx_token,
+    fx_token_t dfx_token,
     uint32_t num_frames,
     const float* audio_buff_in,
     float* audio_buff_out
   );
 ```
 #### Inputs
-- **dfx_token**: a `uint64_t` representing an active effect instance.
+- **dfx_token**: a `fx_token_t` representing an active effect instance.
 - **num_frames**: a `uint32_t` containing the number of frames that the
-specified effect instance must process.
+specified effect instance must process. This value cannot exceed the
+previously-set frame rate for this effect instance.
 - **audio_buff_in**: a pointer to a buffer containing audio samples of type
 `float`, from which `num_frames` audio frames must be ingested by the effect
 instance.
@@ -332,10 +338,14 @@ used otherwise. Where possible, the system instead uses
 **fuchsia_audio_dfx_process_inplace**, because of its reduced memory consumption
 and related system impact.
 
+The upper limit on the value of `num_frames` guarantees that no
+**fuchsia_audio_dfx_process** call will ever entail more than one second of
+audio.
+
 ### **fuchsia_audio_dfx_flush**
 ```
 bool fuchsia_audio_dfx_flush(
-    uint64_t dfx_token
+    fx_token_t dfx_token
   );
 ```
 #### Inputs
@@ -347,13 +357,21 @@ has been discarded.
 - **false**: invalid effect token; no further action was taken.
 
 #### Notes
-Flushing an effect instance does not return its *settings* to their initial state.
-To do that, the **fuchsia_audio_dfx_reset** call must be used.
+Flushing an effect instance does not return its *settings* to their initial
+state. To do that, **fuchsia_audio_dfx_reset** must be called.
 
 
-## **Structs**
+## **Typedefs and Structs**
 
 Below are fields and usages for the Media Client structs:
+
+### **fx_token_t**
+```
+typedef void* fx_token_t;
+```
+This token represents an active instance of an effect. They are guaranteed to be
+unique, although new values might recycle those of previously-deleted effect
+instances.
 
 ### **fuchsia_audio_dfx_description**
 ```
@@ -471,18 +489,9 @@ throughput, power consumption and other factors.
 ## **Constants**
 Below are constant values used with the DFX interfaces and structs:
 
-### **FUCHSIA_AUDIO_DFX_MAX_NAME_LENGTH**
-```
-const size_t FUCHSIA_AUDIO_DFX_MAX_NAME_LENGTH = 255;
-```
-This value is used as an outer limit on the lengths of names of effects and
-their controls. This const is important because it determines the effective
-size of the structs **fuchsia_audio_dfx_description** and
-**fuchsia_audio_dfx_control_description** (see above).
-
 ### **FUCHSIA_AUDIO_DFX_INVALID_TOKEN**
 ```
-const uint64_t FUCHSIA_AUDIO_DFX_INVALID_TOKEN = 0;
+const fx_token_t FUCHSIA_AUDIO_DFX_INVALID_TOKEN = 0;
 ```
 This value is returned by **fuchsia_audio_dfx_create**, if an effect instance
 with the specified parameters _cannot_ be created.
@@ -511,12 +520,20 @@ reports its `incoming_channels` as **FUCHSIA_AUDIO_DFX_CHANNELS_ANY**.
 
 ### **FUCHSIA_AUDIO_DFX_CHANNELS_MAX**
 ```
-const uint16_t FUCHSIA_AUDIO_DFX_CHANNELS_MAX =
-    std::numeric_limits<int16_t>::max();
+const uint16_t FUCHSIA_AUDIO_DFX_CHANNELS_MAX = 256;
 ```
 This is the maximum value allowed in **fuchsia_audio_dfx_create** calls or in
 the **fuchsia_audio_dfx_parameters** struct. It can also be used in
 **fuchsia_audio_dfx_description** structs, but note that in practice, effects
 are constrained by the number of channels supported by actual audio hardware.
 Currently the Fuchsia audio system limits this to MAX_PCM_CHANNEL_COUNT, which
-is much less than `numeric_limits<int16_t>::max()` (32767).
+is less than this value.
+
+### **FUCHSIA_AUDIO_DFX_MAX_NAME_LENGTH**
+```
+const size_t FUCHSIA_AUDIO_DFX_MAX_NAME_LENGTH = 255;
+```
+This value is used as an outer limit on the lengths of names of effects and
+their controls. This const is important because it determines the effective
+size of the structs **fuchsia_audio_dfx_description** and
+**fuchsia_audio_dfx_control_description** (see above).
