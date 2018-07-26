@@ -4,8 +4,8 @@
 
 #include <string>
 
-#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 
 #include "codec_factory_app.h"
 

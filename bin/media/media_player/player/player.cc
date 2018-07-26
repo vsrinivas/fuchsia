@@ -16,7 +16,8 @@
 
 namespace media_player {
 
-Player::Player(async_dispatcher_t* dispatcher) : graph_(dispatcher), dispatcher_(dispatcher) {}
+Player::Player(async_dispatcher_t* dispatcher)
+    : graph_(dispatcher), dispatcher_(dispatcher) {}
 
 Player::~Player() {}
 

@@ -9,8 +9,8 @@
 #include <memory>
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 
 #include "lib/fxl/logging.h"
 

@@ -20,8 +20,8 @@ class Renderer : public AsyncNode {
 
   ~Renderer() override;
 
-  // Provides an dispatcher object and update callback to the renderer. The callback
-  // should be called to notify of changes in the value returned by
+  // Provides an dispatcher object and update callback to the renderer. The
+  // callback should be called to notify of changes in the value returned by
   // end_of_stream(). Subclasses of Renderer may use this callback to signal
   // additional changes.
   void Provision(async_dispatcher_t* dispatcher, fit::closure update_callback);

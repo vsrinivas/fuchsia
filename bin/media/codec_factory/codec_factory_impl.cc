@@ -40,9 +40,9 @@ void CodecFactoryImpl::CreateSelfOwned(
   assert(!self);
 }
 
-CodecFactoryImpl::CodecFactoryImpl(
-    CodecFactoryApp* app, component::StartupContext* startup_context,
-    zx::channel channel)
+CodecFactoryImpl::CodecFactoryImpl(CodecFactoryApp* app,
+                                   component::StartupContext* startup_context,
+                                   zx::channel channel)
     : app_(app),
       startup_context_(startup_context),
       channel_temp_(std::move(channel)) {}

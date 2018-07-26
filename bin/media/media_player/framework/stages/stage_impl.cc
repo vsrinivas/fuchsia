@@ -117,7 +117,7 @@ void StageImpl::PostTask(fit::closure task) {
 void StageImpl::PostShutdownTask(fit::closure task) {
   FXL_DCHECK(dispatcher_);
   async::PostTask(dispatcher_, [shared_this = shared_from_this(),
-                           task = std::move(task)]() { task(); });
+                                task = std::move(task)]() { task(); });
 }
 
 void StageImpl::RunTasks() {

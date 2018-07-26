@@ -206,7 +206,8 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   // Commit dirty settings to storage if needed, and schedule/reschedule the
   // timer as needed.
   void CommitDirtySettings();
-  void CommitDirtySettingsThunk(async_dispatcher_t*, async::TaskBase*, zx_status_t) {
+  void CommitDirtySettingsThunk(async_dispatcher_t*, async::TaskBase*,
+                                zx_status_t) {
     CommitDirtySettings();
   }
 

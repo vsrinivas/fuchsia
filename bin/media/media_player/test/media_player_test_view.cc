@@ -183,7 +183,7 @@ void MediaPlayerTestView::Layout() {
 
   // Make the background fill the space.
   scenic::Rectangle background_shape(session(), logical_size().width,
-                                         logical_size().height);
+                                     logical_size().height);
   background_node_.SetShape(background_shape);
   background_node_.SetTranslation(logical_size().width * .5f,
                                   logical_size().height * .5f,
@@ -227,15 +227,15 @@ void MediaPlayerTestView::Layout() {
 
   // Put the progress bar under the content.
   scenic::Rectangle progress_bar_shape(session(), controls_rect_.width,
-                                           controls_rect_.height);
+                                       controls_rect_.height);
   progress_bar_node_.SetShape(progress_bar_shape);
   progress_bar_node_.SetTranslation(
       controls_rect_.x + controls_rect_.width * 0.5f,
       controls_rect_.y + controls_rect_.height * 0.5f, kProgressBarElevation);
 
   // Put the progress bar slider on top of the progress bar.
-  scenic::Rectangle progress_bar_slider_shape(
-      session(), controls_rect_.width, controls_rect_.height);
+  scenic::Rectangle progress_bar_slider_shape(session(), controls_rect_.width,
+                                              controls_rect_.height);
   progress_bar_slider_node_.SetShape(progress_bar_slider_shape);
   progress_bar_slider_node_.SetTranslation(
       controls_rect_.x + controls_rect_.width * 0.5f,

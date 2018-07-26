@@ -35,7 +35,8 @@ class Segment {
   // changes. The update callback is used to notify of changes to the value
   // returned by problem(). Subclasses of Segment may use this callback to
   // signal additional changes.
-  void Provision(Graph* graph, async_dispatcher_t* dispatcher, fit::closure update_callback);
+  void Provision(Graph* graph, async_dispatcher_t* dispatcher,
+                 fit::closure update_callback);
 
   // Revokes the graph, task runner and update callback provided in a previous
   // call to |Provision|.

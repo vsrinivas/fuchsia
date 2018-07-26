@@ -15,7 +15,8 @@ Renderer::Renderer() { ClearPendingTimelineFunction(); }
 
 Renderer::~Renderer() {}
 
-void Renderer::Provision(async_dispatcher_t* dispatcher, fit::closure update_callback) {
+void Renderer::Provision(async_dispatcher_t* dispatcher,
+                         fit::closure update_callback) {
   dispatcher_ = dispatcher;
   update_callback_ = std::move(update_callback);
 }

@@ -146,8 +146,7 @@ class FactoryServiceBase {
     fidl::BindingSet<Interface> bindings_;
   };
 
-  FactoryServiceBase(
-      std::unique_ptr<component::StartupContext> startup_context)
+  FactoryServiceBase(std::unique_ptr<component::StartupContext> startup_context)
       : startup_context_(std::move(startup_context)),
         dispatcher_(async_get_default_dispatcher()) {}
 
@@ -205,12 +204,13 @@ class FactoryServiceBase {
 // The unbind happens synchronously to prevent any pending method calls from
 // happening. The release is deferred so that RCHECK works in a product
 // constructor.
-#define RCHECK(condition)                                                   \
-  if (!(condition)) {                                                       \
-    FXL_LOG(ERROR) << "request precondition failed: " #condition ".";       \
-    Unbind();                                                               \
-    async::PostTask(async_get_default_dispatcher(), [this]() { ReleaseFromOwner(); }); \
-    return;                                                                 \
+#define RCHECK(condition)                                             \
+  if (!(condition)) {                                                 \
+    FXL_LOG(ERROR) << "request precondition failed: " #condition "."; \
+    Unbind();                                                         \
+    async::PostTask(async_get_default_dispatcher(),                   \
+                    [this]() { ReleaseFromOwner(); });                \
+    return;                                                           \
   }
 
 #endif  // GARNET_BIN_MEDIA_NET_MEDIA_SERVICE_FACTORY_SERVICE_BASE_H_

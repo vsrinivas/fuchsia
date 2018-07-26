@@ -29,13 +29,11 @@ class MediaPlayerImpl : public fuchsia::mediaplayer::MediaPlayer {
  public:
   static std::unique_ptr<MediaPlayerImpl> Create(
       fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer> request,
-      component::StartupContext* startup_context,
-      fit::closure quit_callback);
+      component::StartupContext* startup_context, fit::closure quit_callback);
 
   MediaPlayerImpl(
       fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer> request,
-      component::StartupContext* startup_context,
-      fit::closure quit_callback);
+      component::StartupContext* startup_context, fit::closure quit_callback);
 
   ~MediaPlayerImpl() override;
 

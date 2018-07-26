@@ -60,7 +60,8 @@ int main(int argc, const char** argv) {
                         request) {
               player = media_player::MediaPlayerImpl::Create(
                   std::move(request), startup_context, [&loop]() {
-                    async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
+                    async::PostTask(loop.dispatcher(),
+                                    [&loop]() { loop.Quit(); });
                   });
             });
 

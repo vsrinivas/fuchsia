@@ -109,8 +109,9 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
-  media::tools::MediaApp media_app(
-      [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });
+  media::tools::MediaApp media_app([&loop]() {
+    async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
+  });
 
   std::string num_channels_str = command_line.GetOptionValueWithDefault(
       kNumChannelsSwitch, kNumChannelsDefault);

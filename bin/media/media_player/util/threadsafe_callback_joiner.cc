@@ -42,8 +42,9 @@ void ThreadsafeCallbackJoiner::Complete() {
     std::swap(dispatcher, join_callback_dispatcher_);
   }
 
-  async::PostTask(dispatcher, [shared_this = shared_from_this(),
-                          callback = std::move(callback)]() { callback(); });
+  async::PostTask(dispatcher,
+                  [shared_this = shared_from_this(),
+                   callback = std::move(callback)]() { callback(); });
 }
 
 fit::closure ThreadsafeCallbackJoiner::NewCallback() {
@@ -71,9 +72,10 @@ void ThreadsafeCallbackJoiner::WhenJoined(async_dispatcher_t* dispatcher,
     }
   }
 
-  async::PostTask(
-      dispatcher, [shared_this = shared_from_this(),
-              join_callback = std::move(join_callback)]() { join_callback(); });
+  async::PostTask(dispatcher, [shared_this = shared_from_this(),
+                               join_callback = std::move(join_callback)]() {
+    join_callback();
+  });
 }
 
 bool ThreadsafeCallbackJoiner::Cancel() {

@@ -137,8 +137,8 @@ void HttpReader::ReadFromSocket() {
       waiter_ = std::make_unique<async::Wait>(
           socket_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
 
-      waiter_->set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
-                                  zx_status_t status,
+      waiter_->set_handler([this](async_dispatcher_t* dispatcher,
+                                  async::Wait* wait, zx_status_t status,
                                   const zx_packet_signal_t* signal) {
         if (status != ZX_OK) {
           if (status != ZX_ERR_CANCELED) {

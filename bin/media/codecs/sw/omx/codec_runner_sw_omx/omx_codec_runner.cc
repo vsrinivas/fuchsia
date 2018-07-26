@@ -155,8 +155,8 @@ void InitOmxStruct(OMX_STRUCT* omx_struct) {
 
 namespace codec_runner {
 
-OmxCodecRunner::OmxCodecRunner(async_dispatcher_t* fidl_dispatcher, thrd_t fidl_thread,
-                               std::string_view mime_type,
+OmxCodecRunner::OmxCodecRunner(async_dispatcher_t* fidl_dispatcher,
+                               thrd_t fidl_thread, std::string_view mime_type,
                                std::string_view lib_filename)
     : CodecRunner(fidl_dispatcher, fidl_thread),
       mime_type_(mime_type),
@@ -293,7 +293,8 @@ bool OmxCodecRunner::Load() {
   // which prevents any overlap between Setup items and StreamControl items.
   //
   // The StreamControl thread is allowed to block.
-  stream_control_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+  stream_control_ =
+      std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
   zx_status_t start_thread_result = stream_control_->StartThread(
       "StreamControl_ordering_domain", &stream_control_thread_);
   if (start_thread_result != ZX_OK) {
@@ -642,7 +643,8 @@ void OmxCodecRunner::GenerateAndSendNewOutputConfig(
     Exit("CodecOutputConfig::Clone() failed - exiting - status: %d\n",
          clone_status);
   }
-  VLOGF("GenerateAndSendNewOutputConfig() - fidl_dispatcher_: %p\n", fidl_dispatcher_);
+  VLOGF("GenerateAndSendNewOutputConfig() - fidl_dispatcher_: %p\n",
+        fidl_dispatcher_);
   PostSerial(fidl_dispatcher_,
              [this, output_config = std::move(config_copy)]() mutable {
                binding_->events().OnOutputConfig(std::move(output_config));
@@ -1007,9 +1009,10 @@ void OmxCodecRunner::EnableOnStreamFailed() {
 
 void OmxCodecRunner::SetInputBufferSettings(
     fuchsia::mediacodec::CodecPortBufferSettings input_settings) {
-  PostSerial(stream_control_dispatcher_, [this, input_settings = input_settings] {
-    SetInputBufferSettings_StreamControl(input_settings);
-  });
+  PostSerial(stream_control_dispatcher_,
+             [this, input_settings = input_settings] {
+               SetInputBufferSettings_StreamControl(input_settings);
+             });
 }
 
 void OmxCodecRunner::SetInputBufferSettings_StreamControl(
@@ -1424,8 +1427,8 @@ void OmxCodecRunner::CloseCurrentStream(uint64_t stream_lifetime_ordinal,
     EnsureFutureStreamCloseSeenLocked(stream_lifetime_ordinal);
   }  // ~lock
   PostSerial(stream_control_dispatcher_, [this, stream_lifetime_ordinal,
-                                     release_input_buffers,
-                                     release_output_buffers] {
+                                          release_input_buffers,
+                                          release_output_buffers] {
     CloseCurrentStream_StreamControl(
         stream_lifetime_ordinal, release_input_buffers, release_output_buffers);
   });
@@ -2869,8 +2872,9 @@ void OmxCodecRunner::onOmxStreamFailed(uint64_t stream_lifetime_ordinal) {
     // ordering domain to ensure ordering vs. any previously-sent output on this
     // stream that was sent directly from codec processing thread.
     //
-    // This failure is dispatcher, in the sense that the client may still be sending
-    // input data, and the OMX codec is expected to not reject that input data.
+    // This failure is dispatcher, in the sense that the client may still be
+    // sending input data, and the OMX codec is expected to not reject that
+    // input data.
     //
     // There's not actually any need to track that the stream failed anywhere
     // in the OmxCodecRunner.  The client needs to at least
@@ -3312,7 +3316,8 @@ void OmxCodecRunner::ValidateBufferSettingsVsConstraints(
   }
 }
 
-void OmxCodecRunner::PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run) {
+void OmxCodecRunner::PostSerial(async_dispatcher_t* dispatcher,
+                                fit::closure to_run) {
   zx_status_t post_result = async::PostTask(dispatcher, std::move(to_run));
   if (post_result != ZX_OK) {
     Exit("async::PostTask() failed - post_result %d", post_result);

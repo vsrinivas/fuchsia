@@ -11,10 +11,10 @@ source_set("fidl") {
   deps = [
     "//garnet/bin/media/media_player/framework",
     "//garnet/bin/media/media_player/util",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
     "//garnet/public/fidl/fuchsia.media",
     "//garnet/public/fidl/fuchsia.mediaplayer",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/media/transport",
   ]

@@ -7,10 +7,12 @@ import("//build/test.gni")
 action_foreach("generate_schemas") {
   visibility = [ ":*" ]
   script = "//garnet/bin/media/audio_server/schema/make_schema_header.py"
-  outputs = [ "$target_gen_dir/schema/{{source_name_part}}.inl" ]
+  outputs = [
+    "$target_gen_dir/schema/{{source_name_part}}.inl",
+  ]
   args = [
     "{{source}}",
-    rebase_path("$target_gen_dir") + "/schema/{{source_name_part}}.inl"
+    rebase_path("$target_gen_dir") + "/schema/{{source_name_part}}.inl",
   ]
 
   sources = [
@@ -104,11 +106,11 @@ executable("audio_server") {
     "//garnet/bin/media/audio_server:audio_mixer_lib",
     "//garnet/bin/media/util",
     "//garnet/lib/media/wav_writer",
+    "//garnet/public/fidl/fuchsia.media",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/audio",
-    "//garnet/public/fidl/fuchsia.media",
     "//garnet/public/lib/media/timeline",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
@@ -134,11 +136,11 @@ test("tests") {
   ]
 
   deps = [
+    "//garnet/public/fidl/fuchsia.media",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
-    "//garnet/public/fidl/fuchsia.media",
     "//third_party/googletest:gtest_main",
   ]
 }

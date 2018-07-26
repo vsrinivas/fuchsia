@@ -34,10 +34,8 @@ class FakeViewManager : public ::fuchsia::ui::viewsv1::ViewManager {
 
   void CreateView(
       fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view,
-      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner,
-      fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewListener>
-          view_listener,
+      fidl::InterfaceRequest<::fuchsia::ui::viewsv1token::ViewOwner> view_owner,
+      fidl::InterfaceHandle<::fuchsia::ui::viewsv1::ViewListener> view_listener,
       zx::eventpair parent_export_token, fidl::StringPtr label) override;
 
   void CreateViewTree(

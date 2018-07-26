@@ -8,7 +8,8 @@
 
 namespace codec_runner {
 
-CodecRunner::CodecRunner(async_dispatcher_t* fidl_dispatcher, thrd_t fidl_thread)
+CodecRunner::CodecRunner(async_dispatcher_t* fidl_dispatcher,
+                         thrd_t fidl_thread)
     : fidl_dispatcher_(fidl_dispatcher), fidl_thread_(fidl_thread) {
   // nothing else to do here
 }

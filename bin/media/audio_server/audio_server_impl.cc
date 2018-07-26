@@ -31,8 +31,9 @@ AudioServerImpl::AudioServerImpl() : device_manager_(this) {
   // non-realtime ones).  This, however, will take more significant
   // restructuring.  We will cross that bridge when we have the TBD way to deal
   // with realtime requirements in place.
-  async::PostTask(
-      dispatcher_, []() { zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */); });
+  async::PostTask(dispatcher_, []() {
+    zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
+  });
 
   // Set up our output manager.
   zx_status_t res = device_manager_.Init();
@@ -47,7 +48,8 @@ AudioServerImpl::AudioServerImpl() : device_manager_(this) {
   // manager so that we wait until we are certain that we have discovered and
   // probed the capabilities of all of the pre-existing inputs and outputs
   // before proceeding.  See MTWN-118
-  async::PostDelayedTask(dispatcher_, [this]() { PublishServices(); }, zx::msec(50));
+  async::PostDelayedTask(dispatcher_, [this]() { PublishServices(); },
+                         zx::msec(50));
 }
 
 AudioServerImpl::~AudioServerImpl() {

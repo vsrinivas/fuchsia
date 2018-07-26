@@ -14,7 +14,9 @@ namespace media_player {
 namespace test {
 
 FakeViewManager::FakeViewManager(FakeScenic* fake_scenic)
-    : dispatcher_(async_get_default_dispatcher()), binding_(this), fake_scenic_(fake_scenic) {}
+    : dispatcher_(async_get_default_dispatcher()),
+      binding_(this),
+      fake_scenic_(fake_scenic) {}
 
 FakeViewManager::~FakeViewManager() {}
 

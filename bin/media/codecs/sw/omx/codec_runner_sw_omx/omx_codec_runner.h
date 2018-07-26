@@ -937,8 +937,8 @@ class OmxCodecRunner : public CodecRunner {
   // Overall behavior.
   //
 
-  // Post to dispatcher in a way that's guaranteed to run the posted work in the same
-  // order as the posting order.
+  // Post to dispatcher in a way that's guaranteed to run the posted work in the
+  // same order as the posting order.
   void PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run);
 
   FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(OmxCodecRunner);

@@ -35,11 +35,11 @@
 // state, the consequence is added to a list to be executed when the incident
 // occurs. In occurred state, When executes the consequence.
 //
-// If a dispatcher is provided in the constructor, all consequences are posted to
-// that dispatcher. If no dispatcher is provided, consequences queued prior to the Occur
-// call are called synchronously from the Occur call, and consequences for
-// When calls in the occurred state are called synchronously from the When
-// calls.
+// If a dispatcher is provided in the constructor, all consequences are posted
+// to that dispatcher. If no dispatcher is provided, consequences queued prior
+// to the Occur call are called synchronously from the Occur call, and
+// consequences for When calls in the occurred state are called synchronously
+// from the When calls.
 //
 // An Incident occurs when its Occur (or Run) method is invoked and the Incident
 // is in the initial state. All registered consequences of the Incident are

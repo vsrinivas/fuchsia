@@ -44,11 +44,13 @@ void LocalCodecFactory::CreateSelfOwned(
   // single statement.  The actual pointed-at instance isn't moving, so it's
   // fine to have this ref for a moment here.
   std::unique_ptr<BindingType>& binding = codec_factory->binding_;
-  binding = std::make_unique<BindingType>(
-      std::move(codec_factory), std::move(codec_factory_request), fidl_dispatcher);
+  binding = std::make_unique<BindingType>(std::move(codec_factory),
+                                          std::move(codec_factory_request),
+                                          fidl_dispatcher);
 }
 
-LocalCodecFactory::LocalCodecFactory(async_dispatcher_t* fidl_dispatcher, thrd_t fidl_thread)
+LocalCodecFactory::LocalCodecFactory(async_dispatcher_t* fidl_dispatcher,
+                                     thrd_t fidl_thread)
     : fidl_dispatcher_(fidl_dispatcher), fidl_thread_(fidl_thread) {
   // nothing else to do here
 }
@@ -107,7 +109,8 @@ void LocalCodecFactory::CreateCommon(
 // targetted behavior override.  Either this method needs to know or another
 // method to create a different way needs to exist.
 std::unique_ptr<codec_runner::CodecRunner>
-LocalCodecFactory::CreateRawOmxRunner(async_dispatcher_t* fidl_dispatcher, thrd_t fidl_thread,
+LocalCodecFactory::CreateRawOmxRunner(async_dispatcher_t* fidl_dispatcher,
+                                      thrd_t fidl_thread,
                                       const CodecStrategy& codec_strategy) {
   return std::make_unique<codec_runner::OmxCodecRunner>(
       fidl_dispatcher, fidl_thread, codec_strategy.mime_type,
