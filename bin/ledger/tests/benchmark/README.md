@@ -84,6 +84,7 @@ page.
 * __Get page__: How long does it take to establish a new page connection?
     * `add_new_page.tspec`: connection to the new page with previously unused
       ID.
+    * `add_many_pages.tspec`: same as above, but with a bigger number of requests.
     * `get_same_page.tspec`: several connection to the same page
 * __Put__: How long does it take to write data to a page? And how long before the
   client will receive a [PageWatcher notification] about its own change?

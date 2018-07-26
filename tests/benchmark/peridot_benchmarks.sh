@@ -17,11 +17,17 @@ runbench_read_arguments "$@"
 # properly.
 
 # TODO(LE-425): Fix & re-enable this test.
-# runbench_exec "${OUT_DIR}/ledger.add_new_page.json" \
+# runbench_exec "${OUT_DIR}/ledger.add_many_pages.json" \
 #    trace record \
-#    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/add_new_page.tspec \
-#    --test-suite=fuchsia.ledger.add_new_page \
-#    --benchmark-results-file="${OUT_DIR}/ledger.add_new_page.json"
+#    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/add_many_pages.tspec \
+#    --test-suite=fuchsia.ledger.add_many_pages \
+#    --benchmark-results-file="${OUT_DIR}/ledger.add_many_pages.json"
+
+runbench_exec "${OUT_DIR}/ledger.add_new_page.json" \
+    trace record \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/add_new_page.tspec \
+    --test-suite=fuchsia.ledger.add_new_page \
+    --benchmark-results-file="${OUT_DIR}/ledger.add_new_page.json"
 
 runbench_exec "${OUT_DIR}/ledger.get_same_page.json" \
     trace record \

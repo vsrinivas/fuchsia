@@ -66,6 +66,11 @@ package("ledger_benchmarks") {
     },
 
     {
+      path = rebase_path("get_page/add_many_pages.tspec")
+      dest = "add_many_pages.tspec"
+    },
+
+    {
       path = rebase_path("backlog/backlog.tspec")
       dest = "backlog.tspec"
     },
