@@ -124,11 +124,6 @@ static int aml_start_thread(void* arg) {
         goto fail;
     }
 
-    if ((status = aml_bluetooth_init(bus)) != ZX_OK) {
-        zxlogf(ERROR, "aml_bluetooth_init failed: %d\n", status);
-        goto fail;
-    }
-
     if ((status = aml_usb_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_usb_init failed: %d\n", status);
         goto fail;
@@ -166,6 +161,13 @@ static int aml_start_thread(void* arg) {
 
     if ((status = ams_light_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "ams_light_init failed: %d\n", status);
+        goto fail;
+    }
+
+    // This function includes some non-trivial delays, so lets run this last
+    // to avoid slowing down the rest of the boot.
+    if ((status = aml_bluetooth_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "aml_bluetooth_init failed: %d\n", status);
         goto fail;
     }
 

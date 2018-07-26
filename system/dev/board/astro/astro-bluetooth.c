@@ -107,6 +107,7 @@ zx_status_t aml_bluetooth_init(aml_bus_t* bus) {
     gpio_write(&bus->gpio, SOC_BT_REG_ON, 0);
     usleep(10 * 1000);
     gpio_write(&bus->gpio, SOC_BT_REG_ON, 1);
+    usleep(100 * 1000);
 
     // Bind UART for Bluetooth HCI
     status = pbus_device_add(&bus->pbus, &bt_uart_dev, 0);
