@@ -76,11 +76,11 @@ constexpr char kLedgerDashboardEnvLabel[] = "ledger-dashboard";
 constexpr char kClipboardAgentUrl[] = "clipboard_agent";
 constexpr char kLedgerRepositoryDirectory[] = "/data/LEDGER";
 
-fuchsia::ledger::cloud::firebase::Config GetLedgerFirebaseConfig() {
-  fuchsia::ledger::cloud::firebase::Config firebase_config;
-  firebase_config.server_id = kFirebaseServerId;
-  firebase_config.api_key = kFirebaseApiKey;
-  return firebase_config;
+fuchsia::ledger::cloud::firestore::Config GetLedgerFirestoreConfig() {
+  fuchsia::ledger::cloud::firestore::Config config;
+  config.server_id = kFirebaseProjectId;
+  config.api_key = kFirebaseApiKey;
+  return config;
 }
 
 zx::channel GetLedgerRepositoryDirectory() {
@@ -269,7 +269,7 @@ void UserRunnerImpl::InitializeLedger() {
     // If not running in Guest mode, spin up a cloud provider for Ledger to use
     // for syncing.
     fuchsia::modular::AppConfig cloud_provider_config;
-    cloud_provider_config.url = kCloudProviderFirebaseAppUrl;
+    cloud_provider_config.url = kCloudProviderFirestoreAppUrl;
     cloud_provider_config.args = fidl::VectorPtr<fidl::StringPtr>::New(0);
     cloud_provider_app_ =
         std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
@@ -823,10 +823,10 @@ fuchsia::ledger::cloud::CloudProviderPtr UserRunnerImpl::GetCloudProvider() {
       ledger_token_provider;
   token_provider_factory_->GetTokenProvider(kLedgerAppUrl,
                                             ledger_token_provider.NewRequest());
-  auto firebase_config = GetLedgerFirebaseConfig();
+  auto config = GetLedgerFirestoreConfig();
 
   cloud_provider_factory_->GetCloudProvider(
-      std::move(firebase_config), std::move(ledger_token_provider),
+      std::move(config), std::move(ledger_token_provider),
       cloud_provider.NewRequest(), [](fuchsia::ledger::cloud::Status status) {
         if (status != fuchsia::ledger::cloud::Status::OK) {
           FXL_LOG(ERROR) << "Failed to create a cloud provider: "

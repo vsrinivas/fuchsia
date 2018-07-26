@@ -32,7 +32,7 @@ executable_package("user_runner") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/cloud_provider_firebase/fidl",
+    "//peridot/bin/cloud_provider_firestore/fidl",
     "//peridot/bin/device_runner/cobalt",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/user_runner/agent_runner",
@@ -98,8 +98,8 @@ executable_package("dev_user_shell") {
 
 source_set("session_ctl") {
   sources = [
-    "session_ctl.h",
     "session_ctl.cc",
+    "session_ctl.h",
   ]
 
   deps = [

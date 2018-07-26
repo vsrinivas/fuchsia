@@ -10,7 +10,7 @@
 #include <vector>
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/firestore/cpp/fidl.h>
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
@@ -180,7 +180,7 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
   fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory_;
   fuchsia::modular::internal::UserContextPtr user_context_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> cloud_provider_app_;
-  fuchsia::ledger::cloud::firebase::FactoryPtr cloud_provider_factory_;
+  fuchsia::ledger::cloud::firestore::FactoryPtr cloud_provider_factory_;
   std::unique_ptr<AppClient<fuchsia::ledger::internal::LedgerController>>
       ledger_app_;
   fuchsia::ledger::internal::LedgerRepositoryFactoryPtr

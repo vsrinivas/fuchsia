@@ -7,7 +7,7 @@
 
 namespace modular {
 
-constexpr char kCloudProviderFirebaseAppUrl[] = "cloud_provider_firebase";
+constexpr char kCloudProviderFirestoreAppUrl[] = "cloud_provider_firestore";
 constexpr char kLedgerAppUrl[] = "ledger";
 constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
 constexpr uint8_t kLedgerRootPageId[] = {
@@ -15,7 +15,7 @@ constexpr uint8_t kLedgerRootPageId[] = {
 };
 
 // Hard-coded communal Ledger instance.
-const char kFirebaseServerId[] = "fuchsia-ledger";
+const char kFirebaseProjectId[] = "fuchsia-ledger";
 const char kFirebaseApiKey[] = "AIzaSyDzzuJILOn6riFPTXC36HlH6CEdliLapDA";
 
 }  // namespace modular

@@ -17,9 +17,9 @@ constexpr uint64_t kCommitIdSize = 32;
 // The id of the first commit of a page.
 constexpr char kFirstPageCommitIdArray[kCommitIdSize] = {0};
 constexpr fxl::StringView kFirstPageCommitId(kFirstPageCommitIdArray,
-                                                   kCommitIdSize);
+                                             kCommitIdSize);
 // The serialization version of the ledger.
-constexpr fxl::StringView kSerializationVersion = "25";
+constexpr fxl::StringView kSerializationVersion = "26";
 
 }  // namespace storage
 
