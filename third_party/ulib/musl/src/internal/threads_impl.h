@@ -110,10 +110,6 @@ static inline struct pthread* tp_to_pthread(void* tp) {
     return (struct pthread*)((char*)tp - PTHREAD_TP_OFFSET);
 }
 
-#ifndef DTP_OFFSET
-#define DTP_OFFSET 0
-#endif
-
 #define SIGALL_SET ((sigset_t*)(const unsigned long long[2]){-1, -1})
 
 #define PTHREAD_MUTEX_MASK (PTHREAD_MUTEX_RECURSIVE | PTHREAD_MUTEX_ERRORCHECK)
