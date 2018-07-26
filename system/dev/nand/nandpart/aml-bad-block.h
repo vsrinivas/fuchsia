@@ -6,11 +6,12 @@
 
 #include <stddef.h>
 
+#include <ddk/metadata/bad-block.h>
+
 #include <fbl/array.h>
 #include <fbl/ref_ptr.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
-#include <zircon/device/bad-block.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 

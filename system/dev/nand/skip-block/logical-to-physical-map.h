@@ -12,40 +12,40 @@
 namespace nand {
 
 // Logical block to physical block mapping. Provides bad block skip
-// functionality.
-//
-// NOT THREADSAFE.
+// functionality. If more than one copy is required, the logical space for each
+// copy begins at the physical block |block_count_| / |copy|, and bad blocks are
+// skipped from there.
 class LogicalToPhysicalMap {
 public:
     LogicalToPhysicalMap()
-        : block_count_(0) {}
+        : copies_(0), block_count_(0) {}
 
-    // Constructor. |bad_blocks| is expected to be a sorted list of physical
-    // block numbers.
-    LogicalToPhysicalMap(uint32_t block_count, fbl::Array<uint32_t> bad_blocks);
+    // Constructor.
+    LogicalToPhysicalMap(uint32_t copies, uint32_t block_count, fbl::Array<uint32_t> bad_blocks);
 
     // Move constructor.
     LogicalToPhysicalMap(LogicalToPhysicalMap&& other)
-        : block_count_(other.block_count_), bad_blocks_(fbl::move(other.bad_blocks_)) {}
+        : copies_(other.copies_), block_count_(other.block_count_),
+          bad_blocks_(fbl::move(other.bad_blocks_)) {}
 
     // Move assignment operator.
     LogicalToPhysicalMap& operator=(LogicalToPhysicalMap&& other) {
         if (this != &other) {
+            copies_ = other.copies_;
             block_count_ = other.block_count_;
             bad_blocks_ = fbl::move(other.bad_blocks_);
         }
         return *this;
     }
 
-    zx_status_t GetPhysical(uint32_t block, uint32_t* physical_block) const;
+    zx_status_t GetPhysical(uint32_t copy, uint32_t block, uint32_t* physical_block) const;
 
-    uint32_t LogicalBlockCount() const {
-        return block_count_ - static_cast<uint32_t>(bad_blocks_.size());
-    }
+    uint32_t LogicalBlockCount(uint32_t copy) const;
 
 private:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(LogicalToPhysicalMap);
 
+    uint32_t copies_;
     uint32_t block_count_;
     fbl::Array<uint32_t> bad_blocks_;
 };

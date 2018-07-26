@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/driver.h>
+#include <ddk/metadata/bad-block.h>
 #include <ddk/protocol/nand.h>
 #include <ddktl/protocol/nand.h>
 
@@ -13,7 +14,6 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <lib/zx/vmo.h>
-#include <zircon/device/bad-block.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 

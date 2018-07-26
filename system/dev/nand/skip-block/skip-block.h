@@ -36,10 +36,7 @@ public:
     zx_status_t Bind();
 
     // Device protocol implementation.
-    zx_off_t DdkGetSize() {
-        fbl::AutoLock al(&lock_);
-        return GetBlockSize() * block_map_.LogicalBlockCount();
-    }
+    zx_off_t DdkGetSize();
     zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
                          void* out_buf, size_t out_len, size_t* out_actual);
     void DdkUnbind() { DdkRemove(); }
@@ -47,9 +44,9 @@ public:
 
 private:
     explicit SkipBlockDevice(zx_device_t* parent, nand_protocol_t nand_proto,
-                             bad_block_protocol_t bad_block_proto)
+                             bad_block_protocol_t bad_block_proto, uint32_t copy_count)
         : DeviceType(parent), nand_proto_(nand_proto), bad_block_proto_(bad_block_proto),
-          nand_(&nand_proto_), bad_block_(&bad_block_proto_) {
+          nand_(&nand_proto_), bad_block_(&bad_block_proto_), copy_count_(copy_count) {
         nand_.Query(&nand_info_, &parent_op_size_);
     }
 
@@ -77,6 +74,8 @@ private:
     size_t parent_op_size_;
     // Operation buffer of size parent_op_size_.
     fbl::Array<uint8_t> nand_op_ __TA_GUARDED(lock_);
+
+    const uint32_t copy_count_;
 };
 
 } // namespace nand

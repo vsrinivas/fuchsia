@@ -29,7 +29,7 @@ public:
     // Spawns device nodes based on parent node.
     static zx_status_t Create(zx_device_t* parent);
 
-    zx_status_t Bind(const char* name);
+    zx_status_t Bind(const char* name, uint32_t copy_count);
 
     // Device protocol implementation.
     zx_off_t DdkGetSize() {

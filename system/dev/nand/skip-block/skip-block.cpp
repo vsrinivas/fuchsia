@@ -7,9 +7,11 @@
 #include <string.h>
 
 #include <ddk/debug.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/bad-block.h>
 #include <ddk/protocol/nand.h>
 
+#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 #include <lib/zx/vmo.h>
@@ -25,6 +27,7 @@ struct BlockOperationContext {
     nand_info_t* nand_info;
     LogicalToPhysicalMap* block_map;
     ddk::NandProtocolProxy* nand;
+    uint32_t copy;
     uint32_t current_block;
     uint32_t physical_block;
     sync_completion_t* completion_event;
@@ -44,7 +47,7 @@ void ReadCompletionCallback(nand_op_t* op, zx_status_t status) {
     }
     ctx->current_block += 1;
 
-    status = ctx->block_map->GetPhysical(ctx->current_block, &ctx->physical_block);
+    status = ctx->block_map->GetPhysical(ctx->copy, ctx->current_block, &ctx->physical_block);
     if (status != ZX_OK) {
         ctx->status = status;
         ctx->mark_bad = false;
@@ -74,7 +77,7 @@ void WriteCompletionCallback(nand_op_t* op, zx_status_t status) {
     ctx->current_block += 1;
     ctx->op.vmo_offset += ctx->nand_info->pages_per_block;
 
-    status = ctx->block_map->GetPhysical(ctx->current_block, &ctx->physical_block);
+    status = ctx->block_map->GetPhysical(ctx->copy, ctx->current_block, &ctx->physical_block);
     if (status != ZX_OK) {
         ctx->status = status;
         ctx->mark_bad = false;
@@ -131,14 +134,29 @@ zx_status_t SkipBlockDevice::Create(zx_device_t* parent) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
+    uint32_t copy_count;
+    size_t actual;
+    zx_status_t status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &copy_count,
+                                             sizeof(copy_count), &actual);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "skip-block: parent device '%s' has no private metadata\n",
+               device_get_name(parent));
+        return status;
+    }
+    if (actual != sizeof(copy_count)) {
+        zxlogf(ERROR, "skip-block: Private metadata is of size %zu, expected to be %zu\n", actual,
+               sizeof(copy_count));
+        return ZX_ERR_INTERNAL;
+    }
+
     fbl::AllocChecker ac;
     fbl::unique_ptr<SkipBlockDevice> device(new (&ac) SkipBlockDevice(parent, nand_proto,
-                                                                      bad_block_proto));
+                                                                      bad_block_proto, copy_count));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_status_t status = device->Bind();
+    status = device->Bind();
     if (status != ZX_OK) {
         return status;
     }
@@ -196,14 +214,19 @@ zx_status_t SkipBlockDevice::Bind() {
         zxlogf(ERROR, "skip-block: Failed to get bad block list\n");
         return status;
     }
-    block_map_ = fbl::move(LogicalToPhysicalMap(nand_info_.num_blocks, fbl::move(bad_blocks)));
+    block_map_ = fbl::move(LogicalToPhysicalMap(copy_count_, nand_info_.num_blocks,
+                                                fbl::move(bad_blocks)));
 
     return DdkAdd("skip-block");
 }
 
 zx_status_t SkipBlockDevice::GetPartitionInfo(skip_block_partition_info_t* info) const {
     info->block_size_bytes = GetBlockSize();
-    info->partition_block_count = block_map_.LogicalBlockCount();
+    uint32_t logical_block_count = UINT32_MAX;
+    for (uint32_t copy = 0; copy < copy_count_; copy++) {
+        logical_block_count = fbl::min(logical_block_count, block_map_.LogicalBlockCount(copy));
+    }
+    info->partition_block_count = logical_block_count;
     memcpy(info->partition_guid, nand_info_.partition_guid, ZBI_PARTITION_GUID_LEN);
 
     return ZX_OK;
@@ -229,8 +252,13 @@ zx_status_t SkipBlockDevice::Read(const skip_block_rw_operation_t& op) {
         return status;
     }
 
+    // TODO(surajmalhotra): We currently only read from the first copy. Given a
+    // good use case, we could improve this to read from other copies in the
+    // case or read failures, or perhaps expose ability to chose which copy gets
+    // read to the user.
+    constexpr uint32_t kReadCopy = 0;
     uint32_t physical_block;
-    status = block_map_.GetPhysical(op.block, &physical_block);
+    status = block_map_.GetPhysical(kReadCopy, op.block, &physical_block);
     if (status != ZX_OK) {
         return status;
     }
@@ -240,6 +268,7 @@ zx_status_t SkipBlockDevice::Read(const skip_block_rw_operation_t& op) {
         .nand_info = &nand_info_,
         .block_map = &block_map_,
         .nand = &nand_,
+        .copy = kReadCopy,
         .current_block = op.block,
         .physical_block = physical_block,
         .completion_event = &completion,
@@ -272,56 +301,72 @@ zx_status_t SkipBlockDevice::Write(const skip_block_rw_operation_t& op, bool* ba
     }
 
     *bad_block_grown = false;
-    for (;;) {
-        uint32_t physical_block;
-        status = block_map_.GetPhysical(op.block, &physical_block);
-        if (status != ZX_OK) {
-            return status;
-        }
-
-        sync_completion_t completion;
-        BlockOperationContext op_context = {
-            .op = op,
-            .nand_info = &nand_info_,
-            .block_map = &block_map_,
-            .nand = &nand_,
-            .current_block = op.block,
-            .physical_block = physical_block,
-            .completion_event = &completion,
-            .status = ZX_OK,
-            .mark_bad = false,
-        };
-
-        auto* nand_op = reinterpret_cast<nand_op_t*>(nand_op_.get());
-        nand_op->erase.command = NAND_OP_ERASE;
-        nand_op->erase.first_block = physical_block;
-        nand_op->erase.num_blocks = 1;
-        // The erase callback will enqueue subsequent writes and erases.
-        nand_op->completion_cb = EraseCompletionCallback;
-        nand_op->cookie = &op_context;
-        nand_.Queue(nand_op);
-
-        // Wait on completion.
-        sync_completion_wait(&completion, ZX_TIME_INFINITE);
-        if (op_context.mark_bad) {
-            zxlogf(ERROR, "Failed to erase/write block %u, marking bad\n",
-                   op_context.physical_block);
-            status = bad_block_.MarkBlockBad(op_context.physical_block);
+    for (uint32_t copy = 0; copy < copy_count_; copy++) {
+        for (;;) {
+            uint32_t physical_block;
+            status = block_map_.GetPhysical(copy, op.block, &physical_block);
             if (status != ZX_OK) {
-                zxlogf(ERROR, "skip-block: Failed to mark block bad\n");
                 return status;
             }
-            // Logical to physical mapping has changed, so we need to re-initialize block_map_.
-            fbl::Array<uint32_t> bad_blocks;
-            // TODO(surajmalhotra): Make it impossible for this to fail.
-            ZX_ASSERT(GetBadBlockList(&bad_blocks) == ZX_OK);
-            block_map_ = fbl::move(LogicalToPhysicalMap(nand_info_.num_blocks,
-                                                        fbl::move(bad_blocks)));
-            *bad_block_grown = true;
-            continue;
+
+            sync_completion_t completion;
+            BlockOperationContext op_context = {
+                .op = op,
+                .nand_info = &nand_info_,
+                .block_map = &block_map_,
+                .nand = &nand_,
+                .copy = copy,
+                .current_block = op.block,
+                .physical_block = physical_block,
+                .completion_event = &completion,
+                .status = ZX_OK,
+                .mark_bad = false,
+            };
+
+            auto* nand_op = reinterpret_cast<nand_op_t*>(nand_op_.get());
+            nand_op->erase.command = NAND_OP_ERASE;
+            nand_op->erase.first_block = physical_block;
+            nand_op->erase.num_blocks = 1;
+            // The erase callback will enqueue subsequent writes and erases.
+            nand_op->completion_cb = EraseCompletionCallback;
+            nand_op->cookie = &op_context;
+            nand_.Queue(nand_op);
+
+            // Wait on completion.
+            sync_completion_wait(&completion, ZX_TIME_INFINITE);
+            if (op_context.mark_bad) {
+                zxlogf(ERROR, "Failed to erase/write block %u, marking bad\n",
+                       op_context.physical_block);
+                status = bad_block_.MarkBlockBad(op_context.physical_block);
+                if (status != ZX_OK) {
+                    zxlogf(ERROR, "skip-block: Failed to mark block bad\n");
+                    return status;
+                }
+                // Logical to physical mapping has changed, so we need to re-initialize block_map_.
+                fbl::Array<uint32_t> bad_blocks;
+                // TODO(surajmalhotra): Make it impossible for this to fail.
+                ZX_ASSERT(GetBadBlockList(&bad_blocks) == ZX_OK);
+                block_map_ = fbl::move(LogicalToPhysicalMap(copy_count_, nand_info_.num_blocks,
+                                                            fbl::move(bad_blocks)));
+                *bad_block_grown = true;
+                continue;
+            }
+            if (op_context.status != ZX_OK) {
+                return op_context.status;
+            }
+            break;
         }
-        return op_context.status;
     }
+    return ZX_OK;
+}
+
+zx_off_t SkipBlockDevice::DdkGetSize() {
+    fbl::AutoLock al(&lock_);
+    uint32_t logical_block_count = UINT32_MAX;
+    for (uint32_t copy = 0; copy < copy_count_; copy++) {
+        logical_block_count = fbl::min(logical_block_count, block_map_.LogicalBlockCount(copy));
+    }
+    return GetBlockSize() * logical_block_count;
 }
 
 zx_status_t SkipBlockDevice::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,

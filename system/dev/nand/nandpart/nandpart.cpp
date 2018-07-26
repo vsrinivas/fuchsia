@@ -12,6 +12,7 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
+#include <ddk/metadata/nand.h>
 #include <ddk/protocol/bad-block.h>
 
 #include <fbl/algorithm.h>
@@ -54,25 +55,24 @@ zx_status_t NandPartDevice::Create(zx_device_t* parent) {
     // Make sure parent_op_size is aligned, so we can safely add our data at the end.
     parent_op_size = fbl::round_up(parent_op_size, 8u);
 
-    // Query parent for bad block configuration info.
+    // Query parent for nand configuration info.
     size_t actual;
-    bad_block_config_t bad_block_config;
-    zx_status_t status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &bad_block_config,
-                                             sizeof(bad_block_config), &actual);
+    nand_config_t nand_config;
+    zx_status_t status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &nand_config,
+                                             sizeof(nand_config), &actual);
     if (status != ZX_OK) {
         zxlogf(ERROR, "nandpart: parent device '%s' has no device metadata\n",
                device_get_name(parent));
         return status;
     }
-    if (actual != sizeof(bad_block_config)) {
-        zxlogf(ERROR, "nandpart: Expected metadata of size %zu, got %zu\n",
-               sizeof(bad_block_config), actual);
+    if (actual < sizeof(nand_config_t)) {
+        zxlogf(ERROR, "nandpart: Expected metadata is of size %zu, needs to at least be %zu\n",
+               actual, sizeof(nand_config_t));
         return ZX_ERR_INTERNAL;
     }
-
     // Create a bad block instance.
     BadBlock::Config config = {
-        .bad_block_config = bad_block_config,
+        .bad_block_config = nand_config.bad_block_config,
         .nand_proto = nand_proto,
     };
     fbl::RefPtr<BadBlock> bad_block;
@@ -97,10 +97,10 @@ zx_status_t NandPartDevice::Create(zx_device_t* parent) {
         return ZX_ERR_INTERNAL;
     }
 
-    zbi_partition_map_t* pmap = (zbi_partition_map_t*)buffer;
+    auto* pmap = reinterpret_cast<zbi_partition_map_t*>(buffer);
 
     const size_t minimum_size =
-        sizeof(zbi_partition_map_t) + (sizeof(zbi_partition_t) * (pmap->partition_count));
+        sizeof(zbi_partition_map_t) + (sizeof(zbi_partition_t) * pmap->partition_count);
     if (actual < minimum_size) {
         zxlogf(ERROR, "nandpart: Partition map is of size %zu, needs to at least be %zu\n", actual,
                minimum_size);
@@ -133,7 +133,17 @@ zx_status_t NandPartDevice::Create(zx_device_t* parent) {
         if (!ac.check()) {
             continue;
         }
-        status = device->Bind(part->name);
+        // Find optional partition_config information.
+        uint32_t copy_count = 1;
+        for (uint32_t i = 0; i < nand_config.extra_partition_config_count; i++) {
+            if (memcmp(nand_config.extra_partition_config[i].type_guid, part->type_guid,
+                       sizeof(part->type_guid)) == 0 &&
+                nand_config.extra_partition_config[i].copy_count > 0) {
+                copy_count = nand_config.extra_partition_config[i].copy_count;
+                break;
+            }
+        }
+        status = device->Bind(part->name, copy_count);
         if (status != ZX_OK) {
             zxlogf(ERROR, "Failed to bind %s with error %d\n", part->name, status);
 
@@ -146,7 +156,7 @@ zx_status_t NandPartDevice::Create(zx_device_t* parent) {
     return ZX_OK;
 }
 
-zx_status_t NandPartDevice::Bind(const char* name) {
+zx_status_t NandPartDevice::Bind(const char* name, uint32_t copy_count) {
     zxlogf(INFO, "nandpart: Binding %s to %s\n", name, device_get_name(parent()));
 
     zx_device_prop_t props[] = {
@@ -160,7 +170,13 @@ zx_status_t NandPartDevice::Bind(const char* name) {
     }
 
     // Add empty partition map metadata to prevent this driver from binding to its child devices
-    status = DdkAddMetadata(DEVICE_METADATA_PARTITION_MAP, NULL, 0);
+    status = DdkAddMetadata(DEVICE_METADATA_PARTITION_MAP, nullptr, 0);
+    if (status != ZX_OK) {
+        DdkRemove();
+        return status;
+    }
+
+    status = DdkAddMetadata(DEVICE_METADATA_PRIVATE, &copy_count, sizeof(copy_count));
     if (status != ZX_OK) {
         DdkRemove();
         return status;
@@ -186,14 +202,14 @@ void NandPartDevice::Queue(nand_op_t* op) {
 
     // Make offset relative to full underlying device
     switch (command) {
-      case NAND_OP_READ:
-      case NAND_OP_WRITE:
+    case NAND_OP_READ:
+    case NAND_OP_WRITE:
         translated_op->rw.offset_nand += (erase_block_start_ * nand_info_.pages_per_block);
         break;
-      case NAND_OP_ERASE:
+    case NAND_OP_ERASE:
         translated_op->erase.first_block += erase_block_start_;
         break;
-      default:
+    default:
         op->completion_cb(op, ZX_ERR_NOT_SUPPORTED);
         return;
     }
@@ -222,7 +238,7 @@ zx_status_t NandPartDevice::GetBadBlockList(uint32_t* bad_block_list, uint32_t b
             return status;
         }
         for (uint32_t i = 0; i < bad_block_list_.size(); i++) {
-          bad_block_list_[i] -= erase_block_start_;
+            bad_block_list_[i] -= erase_block_start_;
         }
     }
 

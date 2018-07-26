@@ -6,13 +6,14 @@
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddk/metadata.h>
+#include <ddk/metadata/nand.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
 #include <hw/reg.h>
 #include <soc/aml-a113/a113-hw.h>
 #include <unistd.h>
-#include <zircon/device/bad-block.h>
+#include <zircon/hw/gpt.h>
 
 #include "gauss.h"
 #include "gauss-hw.h"
@@ -45,11 +46,20 @@ static const pbus_bti_t raw_nand_btis[] = {
     },
 };
 
-static const bad_block_config_t config = {
-    .type = kAmlogicUboot,
-    .aml = {
-        .table_start_block = 20,
-        .table_end_block = 23,
+static const nand_config_t config = {
+    .bad_block_config = {
+        .type = kAmlogicUboot,
+        .aml = {
+            .table_start_block = 20,
+            .table_end_block = 23,
+        },
+    },
+    .extra_partition_config_count = 1,
+    .extra_partition_config = {
+        {
+            .type_guid = GUID_BOOTLOADER_VALUE,
+            .copy_count = 4,
+        },
     },
 };
 
@@ -62,7 +72,7 @@ static const pbus_metadata_t raw_nand_metadata[] = {
         .type = DEVICE_METADATA_PRIVATE,
         .extra = 0,
         .data = &config,
-        .len = sizeof(config),
+        .len = sizeof(config) + sizeof(nand_partition_config_t),
     },
 };
 
