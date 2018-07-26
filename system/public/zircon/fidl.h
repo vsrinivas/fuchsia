@@ -335,6 +335,19 @@ struct fidl_txn {
     zx_status_t (*reply)(fidl_txn_t* txn, const fidl_msg_t* msg);
 };
 
+// An epitaph.  Epitaphs are defined in the FIDL wire format specification.
+// Once sent down the wire, the channel should be closed.  app_error is an
+// application-specific error code.
+typedef struct fidl_epitaph {
+    FIDL_ALIGNDECL
+    fidl_message_header_t hdr;
+    zx_status_t sys_error;
+    uint32_t app_error;
+} fidl_epitaph_t;
+
+// This ordinal value is reserved for Epitaphs.
+#define FIDL_EPITAPH_ORDINAL 0xFFFFFFFF
+
 // Assumptions.
 
 // Ensure that FIDL_ALIGNMENT is sufficient.

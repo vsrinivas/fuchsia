@@ -13,6 +13,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/builder.cpp \
     $(LOCAL_DIR)/decoding.cpp \
     $(LOCAL_DIR)/encoding.cpp \
+    $(LOCAL_DIR)/epitaph.c \
     $(LOCAL_DIR)/formatting.cpp \
     $(LOCAL_DIR)/message_buffer.cpp \
     $(LOCAL_DIR)/message_builder.cpp \
