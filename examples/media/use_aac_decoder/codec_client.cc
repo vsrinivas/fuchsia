@@ -454,10 +454,6 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
         constraints.packet_count_for_codec_recommended;
     uint32_t packet_count_for_client = kMinExtraOutputPacketsForClient;
     uint32_t packet_count = packet_count_for_codec + packet_count_for_client;
-    if (packet_count < packet_count_for_codec ||
-        packet_count > constraints.packet_count_for_codec_max) {
-      Exit("can't easily meet server output constraints");
-    }
     // printf("Sending SetOutputBufferSettings - buffer_lifetime_ordinal: %lu
     // buffer_constraints_version_ordinal: %lu\n",
     // new_output_buffer_lifetime_ordinal,
