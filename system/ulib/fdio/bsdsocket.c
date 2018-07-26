@@ -27,11 +27,6 @@
 #include "private.h"
 #include "unistd.h"
 
-#ifndef FIDL_SOCKET_PROVIDER
-#define FIDL_SOCKET_PROVIDER 1
-#endif
-
-zx_status_t zxsio_open(fdio_t** io, zx_handle_t svc, const char* name);
 zx_status_t zxsio_accept(fdio_t* io, zx_handle_t* s2);
 
 static zx_status_t fdio_getsockopt(fdio_t* io, int level, int optname,
@@ -77,12 +72,6 @@ static zx_status_t get_service_with_retries(const char* path, zx_handle_t* saved
     return r;
 }
 
-static zx_status_t get_netstack(zx_handle_t* out) {
-    static zx_handle_t saved = ZX_HANDLE_INVALID;
-    static mtx_t lock = MTX_INIT;
-    return get_service_with_retries("/svc/net.Netstack", &saved, &lock, out);
-}
-
 static zx_status_t get_dns(zx_handle_t* out) {
     static zx_handle_t saved = ZX_HANDLE_INVALID;
     static mtx_t lock = MTX_INIT;
@@ -99,25 +88,6 @@ int socket(int domain, int type, int protocol) {
     fdio_t* io = NULL;
     zx_status_t r;
 
-#if !FIDL_SOCKET_PROVIDER
-    // SOCK_NONBLOCK and SOCK_CLOEXEC in type are handled locally rather than
-    // remotely so do not include them in path.
-    char path[1024];
-    int n = snprintf(path, sizeof(path), "%s/%d/%d/%d", ZXRIO_SOCKET_DIR_SOCKET,
-                     domain, type & ~(SOCK_NONBLOCK | SOCK_CLOEXEC), protocol);
-    if (n < 0 || n >= (int)sizeof(path)) {
-        return ERRNO(EINVAL);
-    }
-
-    zx_handle_t svc;
-    if ((r = get_netstack(&svc)) != ZX_OK) {
-        return ERRNO(EIO);
-    }
-    if ((r = zxsio_open(&io, svc, path)) != ZX_OK) {
-        return ERROR(r);
-    }
-
-#else // FIDL_SOCKET_PROVIDER
     zx_handle_t sp;
     r = get_socket_provider(&sp);
     if (r != ZX_OK) {
@@ -134,8 +104,6 @@ int socket(int domain, int type, int protocol) {
     }
 
     io = fdio_socket_create(s, 0);
-#endif
-
     if (io == NULL) {
         return ERRNO(EIO);
     }
@@ -327,82 +295,6 @@ int getaddrinfo(const char* __restrict node,
                 const char* __restrict service,
                 const struct addrinfo* __restrict hints,
                 struct addrinfo** __restrict res) {
-#if !FIDL_SOCKET_PROVIDER
-    fdio_t* io = NULL;
-    zx_status_t r;
-
-    if ((node == NULL && service == NULL) || res == NULL) {
-        errno = EINVAL;
-        return EAI_SYSTEM;
-    }
-    // TODO(joshlf): Use DNS (get_dns()) instead of Netstack
-    zx_handle_t svc;
-    if ((r = get_netstack(&svc)) != ZX_OK) {
-        errno = fdio_status_to_errno(r);
-        return EAI_SYSTEM;
-    }
-    if ((r = zxsio_open(&io, svc, ZXRIO_SOCKET_DIR_NONE)) != ZX_OK) {
-        errno = fdio_status_to_errno(r);
-        return EAI_SYSTEM;
-    }
-
-    static_assert(sizeof(zxrio_gai_req_reply_t) <= FDIO_CHUNK_SIZE,
-                  "this type should be no larger than FDIO_CHUNK_SIZE");
-
-    zxrio_gai_req_reply_t gai;
-
-    gai.req.node_is_null = (node == NULL) ? 1 : 0;
-    gai.req.service_is_null = (service == NULL) ? 1 : 0;
-    gai.req.hints_is_null = (hints == NULL) ? 1 : 0;
-    if (node) {
-        strncpy(gai.req.node, node, ZXRIO_GAI_REQ_NODE_MAXLEN);
-        gai.req.node[ZXRIO_GAI_REQ_NODE_MAXLEN - 1] = '\0';
-    }
-    if (service) {
-        strncpy(gai.req.service, service, ZXRIO_GAI_REQ_SERVICE_MAXLEN);
-        gai.req.service[ZXRIO_GAI_REQ_SERVICE_MAXLEN - 1] = '\0';
-    }
-    if (hints) {
-        if (hints->ai_addrlen != 0 || hints->ai_addr != NULL ||
-            hints->ai_canonname != NULL || hints->ai_next != NULL) {
-            errno = EINVAL;
-            return EAI_SYSTEM;
-        }
-        memcpy(&gai.req.hints, hints, sizeof(struct addrinfo));
-    }
-
-    r = io->ops->misc(io, ZXRIO_GETADDRINFO, 0, sizeof(zxrio_gai_reply_t),
-                      &gai, sizeof(gai));
-    io->ops->close(io);
-    fdio_release(io);
-
-    if (r < 0) {
-        errno = fdio_status_to_errno(r);
-        return EAI_SYSTEM;
-    }
-    if (gai.reply.retval == 0) {
-        // alloc the memory for the out param
-        zxrio_gai_reply_t* reply = calloc(1, sizeof(*reply));
-        // copy the reply
-        memcpy(reply, &gai.reply, sizeof(*reply));
-
-        // link all entries in the reply
-        struct addrinfo* next = NULL;
-        for (int i = reply->nres - 1; i >= 0; --i) {
-            // adjust ai_addr to point the new address if not NULL
-            if (reply->res[i].ai.ai_addr != NULL) {
-                reply->res[i].ai.ai_addr =
-                    (struct sockaddr*)&reply->res[i].addr;
-            }
-            reply->res[i].ai.ai_next = next;
-            next = &reply->res[i].ai;
-        }
-        // the top of the reply must be the first addrinfo in the list
-        assert(next == (struct addrinfo*)reply);
-        *res = next;
-    }
-    return gai.reply.retval;
-#else // FIDL_SOCKET_PROVIDER
     if ((node == NULL && service == NULL) || res == NULL) {
         errno = EINVAL;
         return EAI_SYSTEM;
@@ -530,7 +422,6 @@ int getaddrinfo(const char* __restrict node,
     *res = next;
 
     return 0;
-#endif
 }
 
 void freeaddrinfo(struct addrinfo* res) {

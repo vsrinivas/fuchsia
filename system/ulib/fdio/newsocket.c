@@ -35,58 +35,6 @@ static bool is_rio_message_reply_valid(zxsio_msg_t* msg, uint32_t size) {
     return is_rio_message_valid(msg);
 }
 
-zx_status_t zxsio_open(fdio_t** io, zx_handle_t svc, const char* name) {
-    size_t namelen = strlen(name);
-    if (namelen > ZXSIO_PAYLOAD_SZ) {
-        return ZX_ERR_BAD_PATH;
-    }
-
-    zxsio_msg_t msg;
-    memset(&msg, 0, ZXSIO_HDR_SZ);
-    msg.op = ZXRIO_OPEN;
-    msg.datalen = namelen;
-    memcpy(msg.data, name, namelen);
-
-    zx_status_t r;
-    zx_handle_t h;
-    if ((r = zx_channel_create(0, &h, &msg.handle[0])) < 0) {
-        return r;
-    }
-    msg.hcount = 1;
-
-    if ((r = zx_channel_write(svc, 0, &msg, ZXSIO_HDR_SZ + msg.datalen,
-                              msg.handle, msg.hcount)) < 0) {
-        zx_handle_close(h);
-        return r;
-    }
-
-    zx_object_wait_one(h, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                       ZX_TIME_INFINITE, NULL);
-
-    zx_status_t remote_r = ZX_OK;
-    zx_handle_t new_h = ZX_HANDLE_INVALID;
-    uint32_t actual_bytes, actual_handles;
-    if ((r = zx_channel_read(h, 0, &remote_r, &new_h, sizeof(remote_r), 1,
-                             &actual_bytes, &actual_handles)) != ZX_OK) {
-        zx_handle_close(h);
-        return r;
-    }
-    zx_handle_close(h);
-
-    if (actual_bytes < sizeof(remote_r) || actual_handles != 1 ||
-        new_h == ZX_HANDLE_INVALID) {
-        return ZX_ERR_IO;
-    }
-    if (remote_r != ZX_OK) {
-        return remote_r;
-    }
-
-    if ((*io = fdio_socket_create(new_h, 0)) == NULL) {
-        return ZX_ERR_NO_RESOURCES;
-    }
-    return ZX_OK;
-}
-
 zx_status_t zxsio_accept(fdio_t* io, zx_handle_t* s2) {
     zxsio_t* sio = (zxsio_t*)io;
 
