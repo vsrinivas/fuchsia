@@ -25,6 +25,7 @@ static_library("symbols") {
     "module_symbols.h",
     "namespace.h",
     "process_symbols.h",
+    "symbol_data_provider.h",
     "system_symbols.h",
     "target_symbols.h",
     "struct_class.h",
