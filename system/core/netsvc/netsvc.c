@@ -20,6 +20,7 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
+#include <zircon/time.h>
 
 #include "device_id.h"
 
@@ -103,7 +104,7 @@ void update_timeouts(void) {
                              debuglog_next_timeout : tftp_next_timeout;
     if (next_timeout != ZX_TIME_INFINITE) {
         netifc_set_timer((next_timeout < now) ? 0 :
-                         ((next_timeout - now)/ZX_MSEC(1)));
+                         (zx_time_sub_time(next_timeout, now)) / ZX_MSEC(1));
     }
 }
 

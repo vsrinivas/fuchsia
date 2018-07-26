@@ -34,6 +34,7 @@
 #include <platform/pc/timer.h>
 #include <platform/timer.h>
 #include <pow2.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 #include "platform_p.h"
@@ -569,7 +570,7 @@ zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
         LTRACEF("Scheduling oneshot timer for min duration\n");
         return apic_timer_set_oneshot(1, 1, false /* unmasked */);
     }
-    const zx_duration_t interval = deadline - now;
+    const zx_duration_t interval = zx_time_sub_time(deadline, now);
     DEBUG_ASSERT(interval != 0);
 
     uint64_t apic_ticks_needed = u64_mul_u64_fp32_64(interval, apic_ticks_per_ns);

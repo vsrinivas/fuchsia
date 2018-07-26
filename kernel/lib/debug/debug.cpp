@@ -17,12 +17,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/types.h>
+#include <zircon/time.h>
 
 void spin(uint32_t usecs) {
     zx_time_t start = current_time();
 
     zx_duration_t nsecs = ZX_USEC(usecs);
-    while ((current_time() - start) < nsecs)
+    while (zx_time_sub_time(current_time(), start) < nsecs)
         ;
 }
 

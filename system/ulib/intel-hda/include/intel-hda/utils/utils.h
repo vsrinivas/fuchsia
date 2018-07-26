@@ -23,8 +23,8 @@ namespace intel_hda {
 
 static constexpr size_t MAX_HANDLER_CAPTURE_SIZE = sizeof(void*) * 2;
 using WaitConditionFn = fbl::InlineFunction<bool(), MAX_HANDLER_CAPTURE_SIZE>;
-zx_status_t WaitCondition(zx_time_t timeout,
-                          zx_time_t poll_interval,
+zx_status_t WaitCondition(zx_duration_t timeout,
+                          zx_duration_t poll_interval,
                           WaitConditionFn cond);
 
 template <typename E> constexpr typename fbl::underlying_type<E>::type to_underlying(E e) {

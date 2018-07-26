@@ -26,7 +26,7 @@ typedef struct sync_completion {
 // Returns ZX_ERR_TIMED_OUT if timeout elapses, and ZX_OK if woken by
 // a call to sync_completion_signal or if the completion has already been
 // signaled.
-zx_status_t sync_completion_wait(sync_completion_t* completion, zx_time_t timeout);
+zx_status_t sync_completion_wait(sync_completion_t* completion, zx_duration_t timeout);
 
 // Returns ZX_ERR_TIMED_OUT if deadline elapses, and ZX_OK if woken by
 // a call to sync_completion_signal or if the completion has already been

@@ -31,6 +31,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <zircon/thread_annotations.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 #include <zxcpp/new.h>
 
@@ -105,7 +106,8 @@ void pmm_count_total_states(size_t state_count[VM_PAGE_STATE_COUNT_]) {
 }
 
 static void pmm_dump_timer(struct timer* t, zx_time_t now, void*) {
-    timer_set_oneshot(t, now + ZX_SEC(1), &pmm_dump_timer, nullptr);
+    zx_time_t deadline = zx_time_add_duration(now, ZX_SEC(1));
+    timer_set_oneshot(t, deadline, &pmm_dump_timer, nullptr);
     pmm_node.DumpFree();
 }
 
@@ -136,8 +138,8 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
         if (!show_mem) {
             printf("pmm free: issue the same command to stop.\n");
             timer_init(&timer);
-            timer_set(&timer, current_time() + ZX_SEC(1), TIMER_SLACK_CENTER, ZX_MSEC(20),
-                      &pmm_dump_timer, nullptr);
+            zx_time_t deadline = zx_time_add_duration(current_time(), ZX_SEC(1));
+            timer_set(&timer, deadline, TIMER_SLACK_CENTER, ZX_MSEC(20), &pmm_dump_timer, nullptr);
             show_mem = true;
         } else {
             timer_cancel(&timer);

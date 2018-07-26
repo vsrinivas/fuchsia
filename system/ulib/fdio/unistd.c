@@ -28,6 +28,7 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
+#include <zircon/time.h>
 
 #include <lib/fdio/debug.h>
 #include <lib/fdio/io.h>
@@ -1548,7 +1549,7 @@ static int zx_utimens(fdio_t* io, const struct timespec times[2], int flags) {
     // extract modify time
     vn.modify_time = (times == NULL || times[1].tv_nsec == UTIME_NOW)
         ? zx_clock_get(ZX_CLOCK_UTC)
-        : ZX_SEC(times[1].tv_sec) + times[1].tv_nsec;
+        : zx_time_add_duration(ZX_SEC(times[1].tv_sec), times[1].tv_nsec);
 
     if (times == NULL || times[1].tv_nsec != UTIME_OMIT) {
         // TODO(orr) UTIME_NOW requires write access or euid == owner or "appropriate privilege"
@@ -1935,7 +1936,8 @@ int ppoll(struct pollfd* fds, nfds_t n,
         if (timeout_ts && timeout_ts->tv_sec >= 0 && timeout_ts->tv_nsec >= 0 &&
             (uint64_t)timeout_ts->tv_sec <= UINT64_MAX / ZX_SEC(1)) {
             zx_duration_t seconds_duration = ZX_SEC(timeout_ts->tv_sec);
-            zx_duration_t duration = seconds_duration + timeout_ts->tv_nsec;
+            zx_duration_t duration =
+                zx_duration_add_duration(seconds_duration, timeout_ts->tv_nsec);
             if (duration >= seconds_duration) {
                 tmo = zx_deadline_after(duration);
             }
@@ -2034,7 +2036,7 @@ int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict
     int nfds = 0;
     if (r == ZX_OK && nvalid > 0) {
         zx_time_t tmo = (tv == NULL) ? ZX_TIME_INFINITE :
-            zx_deadline_after(ZX_SEC(tv->tv_sec) + ZX_USEC(tv->tv_usec));
+            zx_deadline_after(zx_duration_add_duration(ZX_SEC(tv->tv_sec), ZX_USEC(tv->tv_usec)));
         r = zx_object_wait_many(items, nvalid, tmo);
         // pending signals could be reported on ZX_ERR_TIMED_OUT case as well
         if (r == ZX_OK || r == ZX_ERR_TIMED_OUT) {

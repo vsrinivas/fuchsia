@@ -12,6 +12,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <zircon/compiler.h>
+#include <zircon/time.h>
 
 #include "trace.h"
 #include "virtio_gpu.h"
@@ -434,7 +435,7 @@ void GpuDevice::virtio_gpu_flusher() {
                                          next_deadline, handles, displayed_fb_ != nullptr);
             }
         }
-        next_deadline += period;
+        next_deadline = zx_time_add_duration(next_deadline, period);
     }
 }
 

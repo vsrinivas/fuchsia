@@ -2,20 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/syscalls.h>
-#include <zircon/thread_annotations.h>
-#include <unittest/unittest.h>
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
+#include <unittest/unittest.h>
+#include <zircon/syscalls.h>
+#include <zircon/thread_annotations.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
 
 static mtx_t g_mutex = MTX_INIT;
 
 static void xlog(const char* str) {
-    uint64_t now = zx_clock_get(ZX_CLOCK_UTC);
+    zx_time_t now = zx_clock_get(ZX_CLOCK_UTC);
     unittest_printf("[%08" PRIu64 ".%08" PRIu64 "]: %s",
                     now / 1000000000, now % 1000000000, str);
 }
@@ -191,11 +193,7 @@ static int test_timeout_helper(void* ctx) TA_NO_THREAD_SAFETY_ANALYSIS {
 static bool test_timeout_elapsed(void) {
     BEGIN_TEST;
 
-    const zx_time_t kRelativeDeadline = ZX_MSEC(100);
-    // TODO(kulakowski) The kernel can currently return up to a
-    // millisecond short in its internal conversion to lk_time_t. For
-    // now, just accept this.
-    const zx_time_t kAcceptableElapsedTime = ZX_MSEC(99);
+    const zx_duration_t kRelativeDeadline = ZX_MSEC(100);
 
     timeout_args args;
     ASSERT_EQ(thrd_success, mtx_init(&args.mutex, mtx_plain), "could not create mutex");
@@ -221,13 +219,8 @@ static bool test_timeout_elapsed(void) {
         }
         int rc = mtx_timedlock(&args.mutex, &then);
         ASSERT_EQ(rc, thrd_timedout, "wait should time out");
-        zx_time_t elapsed = zx_clock_get(ZX_CLOCK_UTC) - now;
-        if (elapsed < kAcceptableElapsedTime) {
-            unittest_printf_critical("\nelapsed %" PRIu64
-                            " < kAcceptableElapsedTime: %" PRIu64 "\n",
-                            elapsed, kAcceptableElapsedTime);
-            EXPECT_TRUE(false, "wait returned early");
-        }
+        zx_duration_t elapsed = zx_time_sub_time(zx_clock_get(ZX_CLOCK_UTC), now);
+        EXPECT_GE(elapsed, kRelativeDeadline, "wait returned early");
     }
 
     // Inform the helper thread that we are done.

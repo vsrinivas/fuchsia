@@ -9,11 +9,13 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <fs-management/ramdisk.h>
-#include <zircon/syscalls.h>
-#include <zircon/device/ramdisk.h>
-#include <zircon/device/block.h>
 #include <block-client/client.h>
+#include <fs-management/ramdisk.h>
+#include <zircon/device/block.h>
+#include <zircon/device/ramdisk.h>
+#include <zircon/syscalls.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
 
 static uint64_t number(const char* str) {
     char* end;
@@ -52,7 +54,7 @@ static void bytes_per_second(uint64_t bytes, uint64_t nanos) {
     fprintf(stderr, "%g %s/s\n", rate, unit);
 }
 
-static zx_time_t iotime_posix(int is_read, int fd, size_t total, size_t bufsz) {
+static zx_duration_t iotime_posix(int is_read, int fd, size_t total, size_t bufsz) {
     void* buffer = malloc(bufsz);
     if (buffer == NULL) {
         fprintf(stderr, "error: out of memory\n");
@@ -77,7 +79,7 @@ static zx_time_t iotime_posix(int is_read, int fd, size_t total, size_t bufsz) {
     }
     zx_time_t t1 = zx_clock_get_monotonic();
 
-    return t1 - t0;
+    return zx_time_sub_time(t1, t0);
 }
 
 
@@ -90,7 +92,7 @@ static int make_ramdisk(size_t blocks) {
     return open(ramdisk_path, O_RDWR);
 }
 
-static zx_time_t iotime_block(int is_read, int fd, size_t total, size_t bufsz) {
+static zx_duration_t iotime_block(int is_read, int fd, size_t total, size_t bufsz) {
     if ((total % 4096) || (bufsz % 4096)) {
         fprintf(stderr, "error: total and buffer size must be multiples of 4K\n");
         return ZX_TIME_INFINITE;
@@ -99,7 +101,7 @@ static zx_time_t iotime_block(int is_read, int fd, size_t total, size_t bufsz) {
     return iotime_posix(is_read, fd, total, bufsz);
 }
 
-static zx_time_t iotime_fifo(char* dev, int is_read, int fd, size_t total, size_t bufsz) {
+static zx_duration_t iotime_fifo(char* dev, int is_read, int fd, size_t total, size_t bufsz) {
     zx_status_t r;
     zx_handle_t vmo;
     if ((r = zx_vmo_create(bufsz, 0, &vmo)) != ZX_OK) {
@@ -158,7 +160,7 @@ static zx_time_t iotime_fifo(char* dev, int is_read, int fd, size_t total, size_
         n -= xfer;
     }
     zx_time_t t1 = zx_clock_get_monotonic();
-    return t1 - t0;
+    return zx_time_sub_time(t1, t0);
 }
 
 static int usage(void) {
@@ -196,7 +198,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    zx_time_t res;
+    zx_duration_t res;
     if (!strcmp(argv[2], "posix")) {
         res = iotime_posix(is_read, fd, total, bufsz);
     } else if (!strcmp(argv[2], "block")) {

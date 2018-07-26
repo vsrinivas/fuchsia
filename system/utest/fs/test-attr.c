@@ -12,8 +12,10 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 
-#include <zircon/syscalls.h>
 #include <lib/fdio/vfs.h>
+#include <zircon/syscalls.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
 
 #include "filesystems.h"
 
@@ -21,7 +23,7 @@
 
 zx_time_t nstimespec(struct timespec ts) {
     // assumes very small number of seconds in deltas
-    return ts.tv_sec * ZX_SEC(1) + ts.tv_nsec;
+    return zx_time_add_duration(ZX_SEC(ts.tv_sec), ts.tv_nsec);
 }
 
 bool test_attr(void) {

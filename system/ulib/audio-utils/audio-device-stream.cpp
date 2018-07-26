@@ -5,22 +5,24 @@
 #include <audio-utils/audio-device-stream.h>
 #include <audio-utils/audio-input.h>
 #include <audio-utils/audio-output.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
+#include <fbl/limits.h>
 #include <fcntl.h>
 #include <inttypes.h>
-#include <zircon/assert.h>
-#include <zircon/device/audio.h>
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
+#include <lib/fdio/io.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
-#include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
-#include <fbl/limits.h>
-#include <lib/fdio/io.h>
 #include <stdio.h>
 #include <string.h>
+#include <zircon/assert.h>
+#include <zircon/device/audio.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
 
 namespace audio {
 namespace utils {
@@ -358,7 +360,8 @@ zx_status_t AudioDeviceStream::PlugMonitor(float duration) {
                                                                zx_time_t plug_time) {
         printf("Plug State now : %s (%.3lf sec since last change).\n",
                plug_state ? "plugged" : "unplugged",
-               static_cast<double>(plug_time - last_plug_time) / ZX_SEC(1));
+               static_cast<double>(zx_time_sub_time(plug_time, last_plug_time)) /
+                   static_cast<double>(ZX_SEC(1)));
 
         last_plug_state = plug_state;
         last_plug_time  = plug_time;
@@ -415,7 +418,7 @@ zx_status_t AudioDeviceStream::PlugMonitor(float duration) {
             if (now >= deadline)
                 break;
 
-            zx_time_t next_wake = fbl::min(deadline, now + ZX_MSEC(100u));
+            zx_time_t next_wake = fbl::min(deadline, zx_time_add_duration(now, ZX_MSEC(100u)));
 
             zx_signals_t sigs;
             zx_status_t res = stream_ch_.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time(next_wake), &sigs);

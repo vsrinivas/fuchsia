@@ -19,6 +19,7 @@
 #include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include <zircon/time.h>
 
 #include "netsvc.h"
 
@@ -176,7 +177,7 @@ static int paver_copy_buffer(void* arg) {
             }
             read_ndx += r;
             zx_time_t curr_time = zx_clock_get_monotonic();
-            if ((curr_time - last_reported) >= ZX_SEC(1)) {
+            if (zx_time_sub_time(curr_time, last_reported) >= ZX_SEC(1)) {
                 float complete = ((float)read_ndx / (float)file_info->paver.size) * 100.0;
                 printf("netsvc: paver write progress %0.1f%%\n", complete);
                 last_reported = curr_time;

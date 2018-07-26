@@ -52,7 +52,7 @@ public:
 
     void SetLogPrefix(const char* new_prefix);
 
-    zx_status_t WaitForFirmwareReady(zx_time_t timeout) {
+    zx_status_t WaitForFirmwareReady(zx_duration_t timeout) {
         return sync_completion_wait(&fw_ready_completion_, timeout);
     }
     void Shutdown();

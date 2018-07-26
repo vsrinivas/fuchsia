@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include <zircon/errors.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 #include <zircon/syscalls.h>
 #include <fbl/algorithm.h>
@@ -94,7 +95,7 @@ int LoadGeneratorThread::Run() {
     while (!quit_) {
         double work_delay = MakeRandomDouble(min_work_msec(), max_work_msec());
         zx_ticks_t work_deadline_ticks = zx_ticks_get()
-                                       + static_cast<zx_time_t>(work_delay * ticks_per_msec);
+                                       + static_cast<zx_ticks_t>(work_delay * ticks_per_msec);
 
         while (!quit_ && (zx_ticks_get() < work_deadline_ticks)) {
             accumulator_ += MakeRandomDouble(kMinNum, kMaxNum);
@@ -110,18 +111,18 @@ int LoadGeneratorThread::Run() {
             break;
 
         double sleep_delay = MakeRandomDouble(min_sleep_msec(), max_sleep_msec());
-        zx_time_t sleep_deadline = zx_clock_get_monotonic()
-                                 + static_cast<zx_time_t>(sleep_delay * 1000000.0);
+        zx_time_t sleep_deadline =
+            zx_deadline_after(static_cast<zx_duration_t>(sleep_delay * 1000000.0));
 
         do {
-            static constexpr zx_time_t max_sleep = ZX_MSEC(10);
+            static constexpr zx_duration_t max_sleep = ZX_MSEC(10);
             zx_time_t now = zx_clock_get_monotonic();
 
             if (now >= sleep_deadline)
                 break;
 
-            if ((sleep_deadline - now) > max_sleep) {
-                zx_nanosleep(now + max_sleep);
+            if (zx_time_sub_time(sleep_deadline, now) > max_sleep) {
+                zx_nanosleep(zx_time_add_duration(now, max_sleep));
             } else {
                 zx_nanosleep(sleep_deadline);
                 break;

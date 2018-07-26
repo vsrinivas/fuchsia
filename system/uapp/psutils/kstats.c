@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <pretty/sizes.h>
 #include <zircon/device/sysinfo.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
-#include <pretty/sizes.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -26,8 +28,8 @@
 // TODO: dynamically compute this based on what it returns
 #define MAX_CPUS 32
 
-static zx_status_t cpustats(zx_handle_t root_resource, zx_time_t delay) {
-    static zx_time_t last_idle_time[MAX_CPUS];
+static zx_status_t cpustats(zx_handle_t root_resource, zx_duration_t delay) {
+    static zx_duration_t last_idle_time[MAX_CPUS];
     static zx_info_cpu_stats_t old_stats[MAX_CPUS];
     zx_info_cpu_stats_t stats[MAX_CPUS];
 
@@ -52,11 +54,16 @@ static zx_status_t cpustats(zx_handle_t root_resource, zx_time_t delay) {
            " ints (hw  tmr tmr_cb)"
            " ipi (rs  gen)\n");
     for (size_t i = 0; i < actual; i++) {
-        zx_time_t idle_time = stats[i].idle_time;
+        zx_duration_t idle_time = stats[i].idle_time;
 
-        zx_time_t delta_time = idle_time - last_idle_time[i];
-        zx_time_t busy_time = delay - (delta_time > delay ? delay : delta_time);
-        unsigned int busypercent = (busy_time * 10000) / delay;
+        zx_duration_t delta_time = zx_duration_sub_duration(idle_time, last_idle_time[i]);
+        zx_duration_t busy_time;
+        if (delay > delta_time) {
+            busy_time = zx_duration_sub_duration(delay, delta_time);
+        } else {
+            busy_time = 0;
+        }
+        unsigned int busypercent = zx_duration_mul_uint64(busy_time, 10000) / delay;
 
         printf("%3zu"
                " %3u.%02u%%"
@@ -181,7 +188,7 @@ static void print_help(FILE* f) {
 int main(int argc, char** argv) {
     bool cpu_stats = false;
     bool mem_stats = false;
-    zx_time_t delay = ZX_SEC(1);
+    zx_duration_t delay = ZX_SEC(1);
     int num_loops = -1;
     bool timestamp = false;
 

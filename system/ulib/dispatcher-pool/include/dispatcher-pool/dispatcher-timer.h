@@ -4,10 +4,11 @@
 
 #pragma once
 
+#include <fbl/ref_ptr.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
-#include <fbl/ref_ptr.h>
 
 #include <dispatcher-pool/dispatcher-event-source.h>
 
@@ -48,7 +49,7 @@ public:
     using ProcessHandler =
         fbl::InlineFunction<zx_status_t(Timer*), MAX_HANDLER_CAPTURE_SIZE>;
 
-    static fbl::RefPtr<Timer> Create(zx_time_t early_slop_nsec = 0);
+    static fbl::RefPtr<Timer> Create(zx_duration_t early_slop_nsec = 0);
 
     // Activate a timer object, creating the kernel timer and binding the Timer
     // object to an execution domain and a processing handler.
@@ -67,14 +68,14 @@ protected:
 private:
     friend class fbl::RefPtr<Timer>;
 
-    Timer(zx_time_t early_slop_nsec)
+    Timer(zx_duration_t early_slop_nsec)
         : EventSource(ZX_TIMER_SIGNALED),
           early_slop_nsec_(early_slop_nsec) { }
 
     void DisarmLocked() __TA_REQUIRES(obj_lock_);
     zx_status_t SetTimerAndWaitLocked() __TA_REQUIRES(obj_lock_);
 
-    const zx_time_t early_slop_nsec_;
+    const zx_duration_t early_slop_nsec_;
     bool armed_ __TA_GUARDED(obj_lock_) = false;
     bool timer_set_ __TA_GUARDED(obj_lock_) = false;
     zx_time_t deadline_ __TA_GUARDED(obj_lock_);

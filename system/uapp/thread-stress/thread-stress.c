@@ -6,6 +6,8 @@
 #include <threads.h>
 
 #include <zircon/syscalls.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
 
 #define NUM_THREADS 1000
 
@@ -43,9 +45,9 @@ int main(int argc, char** argv) {
         printf(
             "%d threads in %.2fs (create %.2fs, join %.2fs)\n",
             NUM_THREADS,
-            (join - start) / 1e9,
-            (create - start) / 1e9,
-            (join - create) / 1e9);
+            zx_time_sub_time(join, start) / 1e9,
+            zx_time_sub_time(create, start) / 1e9,
+            zx_time_sub_time(join, create) / 1e9);
     }
     return 0;
 }

@@ -44,7 +44,7 @@ static bool verbose = false;
 static bool print = false;
 static bool forever = false;
 static bool matched = false;
-static zx_time_t timeout = 0;
+static zx_duration_t timeout = 0;
 const char* devclass = NULL;
 
 typedef struct rule {
@@ -248,12 +248,13 @@ int main(int argc, char** argv) {
         exit(1);
     }
 
+    zx_time_t deadline;
     if (timeout == 0) {
-        timeout = ZX_TIME_INFINITE;
+        deadline = ZX_TIME_INFINITE;
     } else {
-        timeout = zx_deadline_after(timeout);
+        deadline = zx_deadline_after(timeout);
     }
-    zx_status_t status = fdio_watch_directory(dirfd, watchcb, timeout, NULL);
+    zx_status_t status = fdio_watch_directory(dirfd, watchcb, deadline, NULL);
     close(dirfd);
 
     switch (status) {

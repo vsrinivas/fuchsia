@@ -21,6 +21,7 @@
 #include <target.h>
 #include <trace.h>
 #include <vm/vm.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 // disable priority boosting
@@ -717,20 +718,22 @@ void sched_preempt_timer_tick(zx_time_t now) {
 
     // did this tick complete the time slice?
     DEBUG_ASSERT(now > current_thread->last_started_running);
-    zx_time_t delta = now - current_thread->last_started_running;
+    zx_duration_t delta = zx_time_sub_time(now, current_thread->last_started_running);
     if (delta >= current_thread->remaining_time_slice) {
         // we completed the time slice, do not restart it and let the scheduler run
         current_thread->remaining_time_slice = 0;
 
         // set a timer to go off on the time slice interval from now
-        timer_preempt_reset(now + THREAD_INITIAL_TIME_SLICE);
+        timer_preempt_reset(zx_time_add_duration(now, THREAD_INITIAL_TIME_SLICE));
 
         // Mark a reschedule as pending.  The irq handler will call back
         // into us with sched_preempt().
         thread_preempt_set_pending();
     } else {
         // the timer tick must have fired early, reschedule and continue
-        timer_preempt_reset(current_thread->last_started_running + current_thread->remaining_time_slice);
+        zx_time_t deadline = zx_time_add_duration(current_thread->last_started_running,
+                                                  current_thread->remaining_time_slice);
+        timer_preempt_reset(deadline);
     }
 }
 
@@ -783,9 +786,10 @@ void sched_resched_internal(void) {
 
     // account for time used on the old thread
     DEBUG_ASSERT(now >= oldthread->last_started_running);
-    zx_duration_t old_runtime = now - oldthread->last_started_running;
-    oldthread->runtime_ns += old_runtime;
-    oldthread->remaining_time_slice -= MIN(old_runtime, oldthread->remaining_time_slice);
+    zx_duration_t old_runtime = zx_time_sub_time(now, oldthread->last_started_running);
+    oldthread->runtime_ns = zx_duration_add_duration(oldthread->runtime_ns, old_runtime);
+    oldthread->remaining_time_slice = zx_duration_sub_duration(
+        oldthread->remaining_time_slice, MIN(old_runtime, oldthread->remaining_time_slice));
 
     // set up quantum for the new thread if it was consumed
     if (newthread->remaining_time_slice == 0) {
@@ -815,7 +819,8 @@ void sched_resched_internal(void) {
     CPU_STATS_INC(context_switches);
 
     if (thread_is_idle(oldthread)) {
-        percpu[cpu].stats.idle_time += now - oldthread->last_started_running;
+        zx_duration_t delta = zx_time_sub_time(now, oldthread->last_started_running);
+        percpu[cpu].stats.idle_time = zx_duration_add_duration(percpu[cpu].stats.idle_time, delta);
     }
 
     LOCAL_KTRACE2("CS timeslice old", (uint32_t)oldthread->user_tid, oldthread->remaining_time_slice);
@@ -842,7 +847,7 @@ void sched_resched_internal(void) {
         // make sure the time slice is reasonable
         DEBUG_ASSERT(newthread->remaining_time_slice > 0 && newthread->remaining_time_slice < ZX_SEC(1));
 
-        timer_preempt_reset(now + newthread->remaining_time_slice);
+        timer_preempt_reset(zx_time_add_duration(now, newthread->remaining_time_slice));
     }
 
     // set some optional target debug leds

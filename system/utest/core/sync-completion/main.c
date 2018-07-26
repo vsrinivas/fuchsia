@@ -4,13 +4,15 @@
 
 #include <lib/sync/completion.h>
 
-#include <zircon/syscalls.h>
-#include <unittest/unittest.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
+#include <unittest/unittest.h>
+#include <zircon/syscalls.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
 
 static sync_completion_t completion = SYNC_COMPLETION_INIT;
 
@@ -65,10 +67,10 @@ static bool test_completions(void) {
 
 static bool test_timeout(void) {
     BEGIN_TEST;
-    zx_time_t timeout = 0u;
+    zx_duration_t timeout = 0u;
     sync_completion_t completion = SYNC_COMPLETION_INIT;
     for (int iteration = 0; iteration < 1000; iteration++) {
-        timeout += 2000u;
+        zx_duration_add_duration(timeout, 2000u);
         zx_status_t status = sync_completion_wait(&completion, timeout);
         ASSERT_EQ(status, ZX_ERR_TIMED_OUT, "wait returned spuriously!");
     }

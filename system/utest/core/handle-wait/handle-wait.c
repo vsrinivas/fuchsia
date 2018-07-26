@@ -53,7 +53,7 @@ typedef struct thread_data {
 typedef struct wait_data {
     zx_handle_t handle;
     zx_handle_t signals;
-    zx_time_t timeout;
+    zx_duration_t timeout;
     zx_status_t status;
 } wait_data_t;
 

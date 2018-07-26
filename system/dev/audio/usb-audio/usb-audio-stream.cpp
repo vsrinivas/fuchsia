@@ -5,14 +5,15 @@
 #include <audio-proto-utils/format-utils.h>
 #include <ddk/device.h>
 #include <digest/digest.h>
-#include <lib/zx/vmar.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/limits.h>
+#include <lib/zx/vmar.h>
 #include <string.h>
 #include <zircon/device/usb.h>
 #include <zircon/hw/usb-audio.h>
 #include <zircon/process.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 #include <dispatcher-pool/dispatcher-thread-pool.h>
@@ -1040,7 +1041,7 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
                 // Then we can accurately report the start time as the time of
                 // the tick on which we scheduled the first transaction.
                 resp.start.result = ZX_OK;
-                resp.start.start_time = complete_time - ZX_MSEC(1);
+                resp.start.start_time = zx_time_sub_duration(complete_time, ZX_MSEC(1));
                 rb_channel_->Write(&resp.start, sizeof(resp.start));
             }
             {

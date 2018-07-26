@@ -15,6 +15,7 @@
 #include <platform.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 #include <object/bus_transaction_initiator_dispatcher.h>
@@ -433,7 +434,9 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
                 zx_time_t idle_time = cpu->stats.idle_time;
                 bool is_idle = mp_is_cpu_idle(i);
                 if (is_idle) {
-                    idle_time += current_time() - percpu[i].idle_thread.last_started_running;
+                    zx_duration_t recent_idle = zx_time_sub_time(
+                        current_time(), percpu[i].idle_thread.last_started_running);
+                    idle_time = zx_duration_add_duration(idle_time, recent_idle);
                 }
                 stats.idle_time = idle_time;
             }

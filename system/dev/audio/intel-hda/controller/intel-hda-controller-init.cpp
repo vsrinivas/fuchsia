@@ -17,11 +17,11 @@ namespace audio {
 namespace intel_hda {
 
 namespace {
-static constexpr zx_time_t INTEL_HDA_RESET_HOLD_TIME_NSEC        = ZX_USEC(100); // Section 5.5.1.2
-static constexpr zx_time_t INTEL_HDA_RESET_TIMEOUT_NSEC          = ZX_MSEC(1);   // 1mS Arbitrary
-static constexpr zx_time_t INTEL_HDA_RING_BUF_RESET_TIMEOUT_NSEC = ZX_MSEC(1);   // 1mS Arbitrary
-static constexpr zx_time_t INTEL_HDA_RESET_POLL_TIMEOUT_NSEC     = ZX_USEC(10);  // 10uS Arbitrary
-static constexpr zx_time_t INTEL_HDA_CODEC_DISCOVERY_WAIT_NSEC   = ZX_USEC(521); // Section 4.3
+static constexpr zx_duration_t INTEL_HDA_RESET_HOLD_TIME_NSEC        = ZX_USEC(100); // Section 5.5.1.2
+static constexpr zx_duration_t INTEL_HDA_RESET_TIMEOUT_NSEC          = ZX_MSEC(1);   // 1mS Arbitrary
+static constexpr zx_duration_t INTEL_HDA_RING_BUF_RESET_TIMEOUT_NSEC = ZX_MSEC(1);   // 1mS Arbitrary
+static constexpr zx_duration_t INTEL_HDA_RESET_POLL_TIMEOUT_NSEC     = ZX_USEC(10);  // 10uS Arbitrary
+static constexpr zx_duration_t INTEL_HDA_CODEC_DISCOVERY_WAIT_NSEC   = ZX_USEC(521); // Section 4.3
 
 static constexpr unsigned int MAX_CAPS = 10;  // Arbitrary number of capabilities to check
 }  // anon namespace

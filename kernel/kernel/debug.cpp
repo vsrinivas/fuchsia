@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <vm/vm.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 #if WITH_LIB_CONSOLE
@@ -120,7 +121,7 @@ static int cmd_threadstats(int argc, const cmd_args* argv, uint32_t flags) {
         printf("thread stats (cpu %u):\n", i);
         printf("\ttotal idle time: %" PRIu64 "\n", percpu[i].stats.idle_time);
         printf("\ttotal busy time: %" PRIu64 "\n",
-               current_time() - percpu[i].stats.idle_time);
+               zx_time_sub_duration(current_time(), percpu[i].stats.idle_time));
         printf("\treschedules: %lu\n", percpu[i].stats.reschedules);
         printf("\treschedule_ipis: %lu\n", percpu[i].stats.reschedule_ipis);
         printf("\tcontext_switches: %lu\n", percpu[i].stats.context_switches);
@@ -152,12 +153,19 @@ static void threadload(timer_t* t, zx_time_t now, void* arg) {
         // if the cpu is currently idle, add the time since it went idle up until now to the idle counter
         bool is_idle = !!mp_is_cpu_idle(i);
         if (is_idle) {
-            idle_time += current_time() - percpu[i].idle_thread.last_started_running;
+            zx_duration_t recent_idle_time =
+                zx_time_sub_time(current_time(), percpu[i].idle_thread.last_started_running);
+            idle_time = zx_duration_add_duration(idle_time, recent_idle_time);
         }
 
-        zx_duration_t delta_time = idle_time - last_idle_time[i];
-        zx_duration_t busy_time = ZX_SEC(1) - (delta_time > ZX_SEC(1) ? ZX_SEC(1) : delta_time);
-        zx_duration_t busypercent = (busy_time * 10000) / ZX_SEC(1);
+        zx_duration_t delta_time = zx_duration_sub_duration(idle_time, last_idle_time[i]);
+        zx_duration_t busy_time;
+        if (ZX_SEC(1) > delta_time) {
+            busy_time = zx_duration_sub_duration(ZX_SEC(1), delta_time);
+        } else {
+            busy_time = 0;
+        }
+        zx_duration_t busypercent = zx_duration_mul_uint64(busy_time, 10000) / ZX_SEC(1);
 
         printf("%3u"
                " %3u.%02u%%"
@@ -183,7 +191,8 @@ static void threadload(timer_t* t, zx_time_t now, void* arg) {
         last_idle_time[i] = idle_time;
     }
 
-    timer_set(t, now + ZX_SEC(1), TIMER_SLACK_CENTER, ZX_MSEC(10), &threadload, NULL);
+    zx_time_t deadline = zx_time_add_duration(now, ZX_SEC(1));
+    timer_set(t, deadline, TIMER_SLACK_CENTER, ZX_MSEC(10), &threadload, NULL);
 
     // reschedule here to allow the debuglog a chance to run
     thread_preempt_set_pending();
@@ -196,7 +205,7 @@ static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
     if (showthreadload == false) {
         // start the display
         timer_init(&tltimer);
-        timer_set(&tltimer, current_time() + ZX_SEC(1),
+        timer_set(&tltimer, zx_time_add_duration(current_time(), ZX_SEC(1)),
                   TIMER_SLACK_CENTER, ZX_MSEC(10), &threadload, NULL);
         showthreadload = true;
     } else {

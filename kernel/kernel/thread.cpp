@@ -45,6 +45,7 @@
 #include <string.h>
 #include <target.h>
 #include <vm/vm.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 #include <lockdep/lockdep.h>
@@ -874,7 +875,7 @@ static void thread_sleep_handler(timer_t* timer, zx_time_t now, void* arg) {
 static uint64_t sleep_slack(zx_time_t deadline, zx_time_t now) {
     if (deadline < now)
         return MIN_SLEEP_SLACK;
-    zx_duration_t slack = (deadline - now) / DIV_SLEEP_SLACK;
+    zx_duration_t slack = zx_time_sub_time(deadline, now) / DIV_SLEEP_SLACK;
     return MAX(MIN_SLEEP_SLACK, MIN(slack, MAX_SLEEP_SLACK));
 }
 
@@ -937,10 +938,8 @@ zx_status_t thread_sleep_etc(zx_time_t deadline, bool interruptable) {
 }
 
 zx_status_t thread_sleep_relative(zx_duration_t delay) {
-    if (delay != ZX_TIME_INFINITE) {
-        delay += current_time();
-    }
-    return thread_sleep(delay);
+    zx_time_t deadline = zx_time_add_duration(current_time(), delay);
+    return thread_sleep(deadline);
 }
 
 /**
@@ -954,7 +953,8 @@ zx_duration_t thread_runtime(const thread_t* t) {
 
     zx_duration_t runtime = t->runtime_ns;
     if (t->state == THREAD_RUNNING) {
-        runtime += current_time() - t->last_started_running;
+        zx_duration_t recent = zx_time_sub_time(current_time(), t->last_started_running);
+        runtime = zx_duration_add_duration(runtime, recent);
     }
 
     return runtime;
@@ -1176,7 +1176,8 @@ void dump_thread(thread_t* t, bool full_dump) {
 
     zx_duration_t runtime = t->runtime_ns;
     if (t->state == THREAD_RUNNING) {
-        runtime += current_time() - t->last_started_running;
+        zx_duration_t recent = zx_time_sub_time(current_time(), t->last_started_running);
+        runtime = zx_duration_add_duration(runtime, recent);
     }
 
     char oname[THREAD_NAME_LENGTH];

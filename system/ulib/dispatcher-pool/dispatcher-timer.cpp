@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/syscalls.h>
-#include <zircon/types.h>
 #include <lib/zx/timer.h>
+#include <zircon/syscalls.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
 
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-timer.h>
@@ -151,7 +152,8 @@ void Timer::Dispatch(ExecutionDomain* domain) {
         // If the timer was moved into the future, skip the dispatch operation,
         // but fall into the code which re-sets the timer.  Otherwise, the timer
         // has now fired and we should reset our internal bookkeeping.
-        do_dispatch = ((zx_clock_get_monotonic() + early_slop_nsec_) >= deadline_);
+        do_dispatch =
+            (zx_time_add_duration(zx_clock_get_monotonic(), early_slop_nsec_) >= deadline_);
         if (do_dispatch) {
             DisarmLocked();
         }

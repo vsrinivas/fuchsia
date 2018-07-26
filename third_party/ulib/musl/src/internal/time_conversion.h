@@ -5,12 +5,13 @@
 #include "threads_impl.h"
 
 #include <bits/alltypes.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 static inline zx_time_t __duration_timespec_to_deadline(const struct timespec timespec) {
-    // TODO(kulakowski) Systematic time overflow checking.
-    zx_time_t nanos = timespec.tv_nsec;
-    nanos += timespec.tv_sec * 1000000000ull;
+    zx_duration_t nanos = zx_duration_add_duration(
+        zx_duration_mul_uint64(1000000000ull, timespec.tv_sec),
+        timespec.tv_nsec);
     return _zx_deadline_after(nanos);
 }
 

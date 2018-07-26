@@ -10,10 +10,11 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-#include <fs/block-txn.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
+#include <fs/block-txn.h>
 #include <zircon/device/vfs.h>
+#include <zircon/time.h>
 
 #ifdef __Fuchsia__
 #include <zircon/syscalls.h>
@@ -36,7 +37,7 @@ zx_time_t minfs_gettime_utc() {
     // linux/zircon compatible
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
-    zx_time_t time = ZX_SEC(ts.tv_sec)+ts.tv_nsec;
+    zx_time_t time = zx_time_add_duration(ZX_SEC(ts.tv_sec), ts.tv_nsec);
     return time;
 }
 

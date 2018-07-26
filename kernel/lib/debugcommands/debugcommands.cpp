@@ -5,20 +5,20 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-
+#include <arch.h>
+#include <arch/ops.h>
 #include <ctype.h>
 #include <debug.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <list.h>
-#include <string.h>
-#include <arch/ops.h>
-#include <platform.h>
-#include <platform/debug.h>
 #include <kernel/cmdline.h>
 #include <kernel/thread.h>
+#include <list.h>
+#include <platform.h>
+#include <platform/debug.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <vm/pmm.h>
-#include <arch.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 #include <lib/console.h>
@@ -289,7 +289,7 @@ static int cmd_sleep(int argc, const cmd_args *argv, uint32_t flags)
     if (argc >= 2) {
         t = ZX_MSEC(argv[1].u);
         if (!strcmp(argv[0].str, "sleep"))
-            t *= 1000;
+            t = zx_duration_mul_uint64(t, 1000);
     }
 
     thread_sleep_relative(t);

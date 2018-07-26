@@ -7,24 +7,25 @@
 
 #include <arch/mmu.h>
 #include <assert.h>
-#include <zircon/compiler.h>
 #include <debug.h>
+#include <dev/interrupt.h>
 #include <dev/pcie_bridge.h>
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
 #include <err.h>
-#include <inttypes.h>
-#include <kernel/spinlock.h>
-#include <vm/arch_vm_aspace.h>
-#include <lk/init.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/limits.h>
-#include <dev/interrupt.h>
+#include <inttypes.h>
+#include <kernel/spinlock.h>
+#include <lk/init.h>
+#include <platform.h>
 #include <string.h>
 #include <trace.h>
-#include <platform.h>
+#include <vm/arch_vm_aspace.h>
 #include <vm/vm.h>
+#include <zircon/compiler.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 #include <fbl/alloc_checker.h>
@@ -281,7 +282,7 @@ zx_status_t PcieDevice::DoFunctionLevelReset() {
             break;
         }
         thread_sleep_relative(ZX_MSEC(1));
-    } while ((current_time() - start) < ZX_SEC(5));
+    } while (zx_time_sub_time(current_time(), start) < ZX_SEC(5));
 
     if (ret != ZX_OK) {
         TRACEF("Timeout waiting for pending transactions to clear the bus "
@@ -315,7 +316,7 @@ zx_status_t PcieDevice::DoFunctionLevelReset() {
             break;
         }
         thread_sleep_relative(ZX_MSEC(1));
-    } while ((current_time() - start) < ZX_SEC(5));
+    } while (zx_time_sub_time(current_time(), start) < ZX_SEC(5));
 
     if (ret == ZX_OK) {
         // 6) Software reconfigures the function and enables it for normal operation

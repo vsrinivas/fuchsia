@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <pretty/sizes.h>
+#include <task-utils/walker.h>
 #include <zircon/listnode.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
-#include <pretty/sizes.h>
-#include <task-utils/walker.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
 
 #include <fcntl.h>
 #include <inttypes.h>
@@ -29,7 +31,7 @@ typedef struct {
 
     // has it been seen this pass?
     bool scanned;
-    zx_time_t delta_time;
+    zx_duration_t delta_time;
 
     // information about the thread
     zx_koid_t proc_koid;
@@ -41,7 +43,7 @@ typedef struct {
 } thread_info_t;
 
 // arguments
-static zx_time_t delay = ZX_SEC(1);
+static zx_duration_t delay = ZX_SEC(1);
 static int count = -1;
 static bool print_all = false;
 static bool raw_time = false;
@@ -122,7 +124,7 @@ static zx_status_t thread_callback(void* unused_ctx, int depth,
             // and copy the new state over
             temp->scanned = true;
             temp->delta_time =
-                e.stats.total_runtime - temp->stats.total_runtime;
+                zx_duration_sub_duration(e.stats.total_runtime, temp->stats.total_runtime);
             temp->info = e.info;
             temp->stats = e.stats;
             return ZX_OK;

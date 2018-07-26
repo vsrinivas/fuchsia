@@ -20,6 +20,7 @@
 #include <zircon/device/ethernet.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 #include <inet6/inet6.h>
@@ -230,7 +231,7 @@ int eth_add_mcast_filter(const mac_addr_t* addr) {
 static volatile zx_time_t net_timer = 0;
 
 void netifc_set_timer(uint32_t ms) {
-    net_timer = zx_clock_get_monotonic() + ZX_MSEC(ms);
+    net_timer = zx_deadline_after(ZX_MSEC(ms));
 }
 
 int netifc_timer_expired(void) {
@@ -445,7 +446,7 @@ int netifc_poll(void) {
 
         zx_time_t deadline;
         if (net_timer) {
-            deadline = net_timer + ZX_MSEC(1);
+            deadline = zx_time_add_duration(net_timer, ZX_MSEC(1));
         } else {
             deadline = ZX_TIME_INFINITE;
         }

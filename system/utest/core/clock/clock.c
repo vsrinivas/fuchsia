@@ -4,8 +4,10 @@
 
 #include <stdbool.h>
 
-#include <zircon/syscalls.h>
 #include <unittest/unittest.h>
+#include <zircon/syscalls.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
 
 static bool clock_monotonic_test(void) {
     BEGIN_TEST;
@@ -22,7 +24,7 @@ static bool clock_monotonic_test(void) {
         // This calls zx_nanosleep directly rather than using
         // zx_deadline_after, which internally gets the monotonic
         // clock.
-        zx_nanosleep(current + 1000u);
+        zx_nanosleep(zx_time_add_duration(current, 1000u));
 
         previous = current;
     }

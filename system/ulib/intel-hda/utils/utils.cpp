@@ -3,27 +3,29 @@
 // found in the LICENSE file.
 
 #include <zircon/syscalls/object.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
 
 #include <intel-hda/utils/utils.h>
 
 namespace audio {
 namespace intel_hda {
 
-zx_status_t WaitCondition(zx_time_t timeout,
-                          zx_time_t poll_interval,
+zx_status_t WaitCondition(zx_duration_t timeout,
+                          zx_duration_t poll_interval,
                           WaitConditionFn cond) {
     ZX_DEBUG_ASSERT(poll_interval != ZX_TIME_INFINITE);
     ZX_DEBUG_ASSERT(cond);
 
     zx_time_t now = zx_clock_get_monotonic();
-    timeout += now;
+    zx_time_t deadline = zx_time_add_duration(now, timeout);
 
     while (!cond()) {
         now = zx_clock_get_monotonic();
-        if (now >= timeout)
+        if (now >= deadline)
             return ZX_ERR_TIMED_OUT;
 
-        zx_time_t sleep_time = timeout - now;
+        zx_duration_t sleep_time = zx_time_sub_time(deadline, now);
         if (poll_interval < sleep_time)
             sleep_time = poll_interval;
 

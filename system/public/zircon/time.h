@@ -12,6 +12,8 @@
 // These functions perform overflow-safe time arithmetic, clamping to
 // ZX_TIME_INFINITE in case of overflow and 0 in case of underflow.
 //
+// C++ code should use zx::time and zx::duration instead.
+//
 // The naming scheme is zx_<first argument>_<operation>_<second argument>.
 //
 // TODO(maniscalco): Consider expanding the set of operations to include division, modulo, unit

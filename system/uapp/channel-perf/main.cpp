@@ -10,10 +10,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <zircon/compiler.h>
-#include <zircon/syscalls.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
 
 namespace {
 
@@ -34,10 +36,10 @@ struct TestArgs {
     uint32_t queue;
 };
 
-void do_test(uint32_t duration, const TestArgs& test_args) {
+void do_test(uint32_t duration_sec, const TestArgs& test_args) {
     __UNUSED zx_status_t status;
 
-    uint64_t duration_ns = duration * 1000000000ull;
+    zx_duration_t duration_ns = ZX_SEC(duration_sec);
 
     // We'll write to mp[0] (and read from mp[1]).
     zx_handle_t mp[2] = {ZX_HANDLE_INVALID, ZX_HANDLE_INVALID};
@@ -90,7 +92,7 @@ void do_test(uint32_t duration, const TestArgs& test_args) {
         }
 
         end_ns = zx_clock_get_monotonic();
-        if ((end_ns - start_ns) >= duration_ns)
+        if (zx_time_sub_time(end_ns, start_ns) >= duration_ns)
             break;
     }
 
@@ -105,7 +107,7 @@ void do_test(uint32_t duration, const TestArgs& test_args) {
     status = zx_handle_close(mp[1]);
     assert(status == ZX_OK);
 
-    double real_duration = static_cast<double>(end_ns - start_ns) / 1000000000.0;
+    double real_duration = static_cast<double>(zx_time_sub_time(end_ns, start_ns)) / 1000000000.0;
     double its_per_second = static_cast<double>(big_its) * big_it_size / real_duration;
     printf("write/read %" PRIu32 " bytes, %" PRIu32 " handles (%" PRIu32 " pre-queued): "
                "%.0f iterations/second\n",

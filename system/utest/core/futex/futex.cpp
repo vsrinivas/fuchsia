@@ -4,9 +4,6 @@
 
 #include <inttypes.h>
 #include <limits.h>
-#include <zircon/syscalls.h>
-#include <zircon/threads.h>
-#include <unittest/unittest.h>
 #include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,7 +11,11 @@
 #include <threads.h>
 #include <time.h>
 #include <unistd.h>
-
+#include <unittest/unittest.h>
+#include <zircon/syscalls.h>
+#include <zircon/threads.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
 
 static bool test_futex_wait_value_mismatch() {
     BEGIN_TEST;
@@ -42,7 +43,7 @@ static bool test_futex_wait_timeout_elapsed() {
         zx_time_t now = zx_clock_get_monotonic();
         zx_status_t rc = zx_futex_wait(&futex_value, 0, zx_deadline_after(kRelativeDeadline));
         ASSERT_EQ(rc, ZX_ERR_TIMED_OUT, "wait should time out");
-        zx_time_t elapsed = zx_clock_get_monotonic() - now;
+        zx_duration_t elapsed = zx_time_sub_time(zx_clock_get_monotonic(), now);
         if (elapsed < kRelativeDeadline) {
             unittest_printf("\nelapsed %" PRIu64
                             " < kRelativeDeadline: %" PRIu64 "\n",
@@ -455,7 +456,7 @@ static bool test_futex_misaligned() {
 }
 
 static void log(const char* str) {
-    uint64_t now = zx_clock_get_monotonic();
+    zx_time_t now = zx_clock_get_monotonic();
     unittest_printf("[%08" PRIu64 ".%08" PRIu64 "]: %s",
                     now / 1000000000, now % 1000000000, str);
 }

@@ -7,7 +7,6 @@
 #include "iommu_impl.h"
 
 #include <err.h>
-#include <zxcpp/new.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/limits.h>
@@ -18,6 +17,8 @@
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_paged.h>
 #include <vm/vm_object_physical.h>
+#include <zircon/time.h>
+#include <zxcpp/new.h>
 
 #include "context_table_state.h"
 #include "device_context.h"
@@ -405,7 +406,7 @@ zx_status_t IommuImpl::Initialize() {
         return status;
     }
 
-    status = SetTranslationEnableLocked(true, current_time() + ZX_SEC(1));
+    status = SetTranslationEnableLocked(true, zx_time_add_duration(current_time(), ZX_SEC(1)));
     if (status != ZX_OK) {
         LTRACEF("set translation enable failed\n");
         return status;
@@ -475,7 +476,7 @@ zx_status_t IommuImpl::SetRootTablePointerLocked(paddr_t pa) {
     global_ctl.set_root_table_ptr(1);
     global_ctl.WriteTo(&mmio_);
     zx_status_t status = WaitForValueLocked(&global_ctl, &decltype(global_ctl)::root_table_ptr,
-                                            1, current_time() + ZX_SEC(1));
+                                            1, zx_time_add_duration(current_time(), ZX_SEC(1)));
     if (status != ZX_OK) {
         LTRACEF("Timed out waiting for root_table_ptr bit to take\n");
         return status;
@@ -616,7 +617,7 @@ zx_status_t IommuImpl::WaitForValueLocked(RegType* reg,
             break;
         }
 
-        zx_time_t sleep_deadline = fbl::min(now + kMaxSleepDuration, deadline);
+        zx_time_t sleep_deadline = fbl::min(zx_time_add_duration(now, kMaxSleepDuration), deadline);
         thread_sleep(sleep_deadline);
     }
     return ZX_ERR_TIMED_OUT;

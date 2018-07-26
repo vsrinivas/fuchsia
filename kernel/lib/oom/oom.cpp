@@ -6,14 +6,15 @@
 
 #include <lib/oom.h>
 
-#include <kernel/thread.h>
-#include <vm/pmm.h>
-#include <lib/console.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <kernel/thread.h>
+#include <lib/console.h>
 #include <platform.h>
 #include <pretty/sizes.h>
+#include <vm/pmm.h>
 #include <zircon/errors.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 #include <inttypes.h>
@@ -175,8 +176,8 @@ static int cmd_oom(int argc, const cmd_args* argv, uint32_t flags) {
             oom_running = false;
             thread_t* t = oom_thread;
             oom_thread = nullptr;
-            zx_time_t deadline = current_time() + 4 * oom_sleep_duration_ns;
-
+            zx_duration_t timeout = zx_duration_mul_uint64(oom_sleep_duration_ns, 4);
+            zx_time_t deadline = zx_time_add_duration(current_time(), timeout);
             lock.release();
             zx_status_t s = thread_join(t, nullptr, deadline);
             if (s == ZX_OK) {

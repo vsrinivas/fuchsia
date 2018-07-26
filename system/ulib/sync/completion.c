@@ -13,8 +13,9 @@ enum {
     SIGNALED = 1,
 };
 
-zx_status_t sync_completion_wait(sync_completion_t* completion, zx_time_t timeout) {
-    zx_time_t deadline = (timeout == ZX_TIME_INFINITE) ? timeout : zx_deadline_after(timeout);
+zx_status_t sync_completion_wait(sync_completion_t* completion, zx_duration_t timeout) {
+    zx_time_t deadline =
+        (timeout == ZX_TIME_INFINITE) ? ZX_TIME_INFINITE : zx_deadline_after(timeout);
     return sync_completion_wait_deadline(completion, deadline);
 }
 

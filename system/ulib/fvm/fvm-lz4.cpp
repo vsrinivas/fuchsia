@@ -151,7 +151,7 @@ fvm::partition_descriptor_t* SparseReader::Partitions() {
 
 zx_status_t SparseReader::ReadData(uint8_t* data, size_t length, size_t* actual) {
 #ifdef __Fuchsia__
-    zx_time_t start = zx_ticks_get();
+    zx_ticks_t start = zx_ticks_get();
 #endif
     size_t total_size = 0;
     if (compressed_) {
@@ -226,7 +226,7 @@ zx_status_t SparseReader::ReadData(uint8_t* data, size_t length, size_t* actual)
 
 zx_status_t SparseReader::ReadRaw(uint8_t* data, size_t length, size_t* actual) {
 #ifdef __Fuchsia__
-    zx_time_t start = zx_ticks_get();
+    zx_ticks_t start = zx_ticks_get();
 #endif
     ssize_t r;
     size_t total_size = 0;

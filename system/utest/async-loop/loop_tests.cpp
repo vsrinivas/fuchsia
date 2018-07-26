@@ -190,7 +190,7 @@ protected:
         } else {
             repeat_count_ -= 1;
             if (status == ZX_OK) {
-                deadline += interval_.get();
+                deadline = zx_time_add_duration(deadline, interval_.get());
                 Post(dispatcher);
             }
         }

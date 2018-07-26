@@ -11,11 +11,13 @@
 #include <unistd.h>
 
 #include <fbl/atomic.h>
-#include <perftest/results.h>
-#include <zircon/syscalls.h>
-#include <zircon/device/block.h>
-#include <lib/zircon-internal/xorshiftrand.h>
 #include <lib/sync/completion.h>
+#include <lib/zircon-internal/xorshiftrand.h>
+#include <perftest/results.h>
+#include <zircon/device/block.h>
+#include <zircon/syscalls.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
 
 static uint64_t number(const char* str) {
     char* end;
@@ -200,7 +202,7 @@ static int bio_random_thread(void* arg) {
 }
 
 
-static zx_status_t bio_random(bio_random_args_t* a, uint64_t* _total, zx_time_t* _res) {
+static zx_status_t bio_random(bio_random_args_t* a, uint64_t* _total, zx_duration_t* _res) {
 
     thrd_t t;
     int r;
@@ -243,7 +245,7 @@ static zx_status_t bio_random(bio_random_args_t* a, uint64_t* _total, zx_time_t*
     fprintf(stderr, "waiting for thread to exit...\n");
     thrd_join(t, &r);
 
-    *_res = t1 - t0;
+    *_res = zx_time_sub_time(t1, t0);
     *_total = a->count * a->xfer;
     return ZX_OK;
 
@@ -349,7 +351,7 @@ int main(int argc, char** argv) {
     }
     a.count = total / a.xfer;
 
-    zx_time_t res = 0;
+    zx_duration_t res = 0;
     total = 0;
     if (bio_random(&a, &total, &res) != ZX_OK) {
         return -1;

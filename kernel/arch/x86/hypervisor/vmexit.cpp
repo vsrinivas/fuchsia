@@ -28,6 +28,7 @@
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <zircon/syscalls/hypervisor.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 #include "pvclock_priv.h"
@@ -572,7 +573,8 @@ zx_time_t lvt_deadline(LocalApicState* local_apic_state) {
     uint32_t shift = BITS_SHIFT(local_apic_state->lvt_divide_config, 1, 0) |
                      (BIT_SHIFT(local_apic_state->lvt_divide_config, 3) << 2);
     uint32_t divisor_shift = (shift + 1) & 7;
-    return current_time() + ticks_to_nanos(local_apic_state->lvt_initial_count << divisor_shift);
+    zx_duration_t duration = ticks_to_nanos(local_apic_state->lvt_initial_count << divisor_shift);
+    return zx_time_add_duration(current_time(), duration);
 }
 
 static void update_timer(LocalApicState* local_apic_state, zx_time_t deadline);

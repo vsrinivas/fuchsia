@@ -113,9 +113,9 @@ private:
 
 #ifdef __Fuchsia__
     // Total time spent reading/decompressing data
-    zx_time_t total_time_ = 0;
+    zx_ticks_t total_time_ = 0;
     // Total time spent reading data from fd
-    zx_time_t read_time_ = 0;
+    zx_ticks_t read_time_ = 0;
 #endif
 };
 

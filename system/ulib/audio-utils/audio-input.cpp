@@ -7,11 +7,13 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/limits.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
 
 namespace audio {
 namespace utils {
 
-static constexpr zx_time_t CHUNK_TIME = ZX_MSEC(100);
+static constexpr zx_duration_t CHUNK_TIME = ZX_MSEC(100);
 static constexpr float MIN_DURATION = 0.100f;
 static constexpr float MAX_DURATION = 86400.0f;
 
@@ -47,7 +49,8 @@ zx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
         return res;
     }
 
-    uint64_t ring_bytes_64 = ((CHUNK_TIME * frame_rate_) / ZX_SEC(1)) * frame_sz_;
+    uint64_t ring_bytes_64 =
+        (zx_duration_mul_uint64(CHUNK_TIME, frame_rate_) / ZX_SEC(1)) * frame_sz_;
     if (ring_bytes_64 > fbl::numeric_limits<uint32_t>::max()) {
         printf("Invalid frame rate %u\n", frame_rate_);
         return res;
@@ -63,9 +66,9 @@ zx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
         return res;
     }
 
-    zx_time_t duration_nsec = static_cast<zx_time_t>(ZX_SEC(1)
-                            * static_cast<double>(duration_seconds));
-    zx_time_t stop_time = zx_clock_get_monotonic() + duration_nsec;
+    zx_duration_t duration_nsec = static_cast<zx_time_t>(ZX_SEC(1)
+                                  * static_cast<double>(duration_seconds));
+    zx_time_t stop_time = zx_time_add_duration(zx_clock_get_monotonic(), duration_nsec);
     printf("Recording for %.1f seconds\n", duration_seconds);
 
     res = StartRingBuffer();
