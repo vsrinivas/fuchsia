@@ -15,7 +15,6 @@
 #include <unistd.h>
 
 #include <fbl/auto_call.h>
-#include <unittest/unittest.h>
 
 namespace runtests {
 namespace {
@@ -28,8 +27,6 @@ constexpr const char* const kEnvironmentWhitelist[] = {
     "LSAN_SYMBOLIZER_PATH",
     "MSAN_SYMBOLIZER_PATH",
     "UBSAN_SYMBOLIZER_PATH",
-    // From unittest.h. Set by RunAllTests().
-    TEST_ENV_NAME,
 };
 
 } // namespace
