@@ -49,4 +49,22 @@ VK_TEST(Frame, InvalidCommandBufferType) {
       "");
 }
 
+VK_TEST(Frame, SubmitPartialFrameCreatesCleanCommandBuffer) {
+  auto escher = test::GetEscher()->GetWeakPtr();
+  auto frame =
+      escher->NewFrame("test_frame", 0, false, CommandBuffer::Type::kTransfer);
+  EXPECT_EQ(CommandBuffer::Type::kTransfer, frame->cmds()->type());
+  uint64_t command_buffer_sequence_number =
+      frame->command_buffer_sequence_number();
+
+  frame->SubmitPartialFrame(SemaphorePtr());
+
+  EXPECT_EQ(CommandBuffer::Type::kTransfer, frame->cmds()->type());
+  EXPECT_NE(command_buffer_sequence_number,
+            frame->command_buffer_sequence_number());
+  EXPECT_EQ(frame->command_buffer_sequence_number(),
+            frame->command_buffer()->sequence_number());
+  frame->EndFrame(SemaphorePtr(), [] {});
+}
+
 }  // namespace escher

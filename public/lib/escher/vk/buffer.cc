@@ -16,7 +16,8 @@ const ResourceTypeInfo Buffer::kTypeInfo("Buffer", ResourceType::kResource,
 
 BufferPtr Buffer::New(ResourceManager* manager, GpuAllocator* allocator,
                       vk::DeviceSize size, vk::BufferUsageFlags usage_flags,
-                      vk::MemoryPropertyFlags memory_property_flags) {
+                      vk::MemoryPropertyFlags memory_property_flags,
+                      vk::DeviceSize offset) {
   FXL_DCHECK(manager);
   FXL_DCHECK(allocator);
 
@@ -35,7 +36,8 @@ BufferPtr Buffer::New(ResourceManager* manager, GpuAllocator* allocator,
   auto mem = allocator->Allocate(device.getBufferMemoryRequirements(vk_buffer),
                                  memory_property_flags);
 
-  return fxl::MakeRefCounted<Buffer>(manager, std::move(mem), vk_buffer, size);
+  return fxl::MakeRefCounted<Buffer>(manager, std::move(mem), vk_buffer,
+                                     BufferRange(offset, size));
 }
 
 BufferPtr Buffer::New(ResourceManager* manager, GpuMemPtr mem,
@@ -51,20 +53,20 @@ BufferPtr Buffer::New(ResourceManager* manager, GpuMemPtr mem,
   auto vk_buffer =
       ESCHER_CHECKED_VK_RESULT(device.createBuffer(buffer_create_info));
 
-  return fxl::MakeRefCounted<Buffer>(manager, std::move(mem), vk_buffer, size,
-                                     offset);
+  return fxl::MakeRefCounted<Buffer>(manager, std::move(mem), vk_buffer,
+                                     BufferRange(offset, size));
 }
 
 Buffer::Buffer(ResourceManager* manager, GpuMemPtr mem, vk::Buffer buffer,
-               vk::DeviceSize size, vk::DeviceSize offset)
+               BufferRange range)
     : WaitableResource(manager),
       mem_(std::move(mem)),
       buffer_(buffer),
-      size_(size),
-      ptr_(mem_->mapped_ptr() + offset) {
-  FXL_DCHECK(size + offset <= mem_->size());
+      range_(range),
+      ptr_(mem_->mapped_ptr() + range_.offset) {
+  FXL_DCHECK(range_.size + range_.offset <= mem_->size());
   vulkan_context().device.bindBufferMemory(buffer_, mem_->base(),
-                                           mem_->offset() + offset);
+                                           mem_->offset() + range_.offset);
 }
 
 Buffer::~Buffer() { vulkan_context().device.destroyBuffer(buffer_); }

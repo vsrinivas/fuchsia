@@ -24,8 +24,10 @@ typedef std::function<void()> FrameRetiredCallback;
 class Frame;
 using FramePtr = fxl::RefPtr<Frame>;
 
-// Represents a single rendered frame.  Passed into a Renderer, which uses it to
-// obtain command buffers, submit partial frames, do profiling, etc.
+// Represents a single render pass on a command queue. There may be multiple
+// frames issuing commands per render draw call. Frame is passed into a
+// Renderer, which uses it to obtain command buffers, submit partial frames, do
+// profiling, etc.
 class Frame : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
@@ -51,6 +53,9 @@ class Frame : public Resource {
   CommandBuffer* cmds() const { return new_command_buffer_.get(); }
   impl::CommandBuffer* command_buffer() const { return command_buffer_; }
   vk::CommandBuffer vk_command_buffer() const { return vk_command_buffer_; }
+  uint64_t command_buffer_sequence_number() const {
+    return command_buffer_sequence_number_;
+  }
   GpuAllocator* gpu_allocator();
 
   // Allocate temporary CPU memory that is valid until EndFrame() is called.
@@ -87,9 +92,21 @@ class Frame : public Resource {
         bool enable_gpu_logging);
   void BeginFrame();
 
+  // Issues a new CommandBuffer for a frame, and marks the frame as InProgress.
+  void IssueCommandBuffer();
+
   // Called by impl::FrameManager when the Frame is returned to the pool, so
   // that it can be reused in newly constructed frames.
   BlockAllocator TakeBlockAllocator() { return std::move(block_allocator_); }
+
+  // Called by BatchGpuUploader to write to the new_command_buffer_ and gather
+  // work to post to the GPU.
+  // TODO(SCN-846) Remove these functions once BatchGpuUploader::Writers are
+  // backed by secondary buffers, and the frame's primary command buffer is not
+  // moved into the Writer.
+  friend class BatchGpuUploader;
+  CommandBufferPtr TakeCommandBuffer();
+  void PutCommandBuffer(CommandBufferPtr command_buffer);
 
   static void LogGpuQueryResults(
       uint64_t escher_frame_number,
@@ -119,7 +136,12 @@ class Frame : public Resource {
   vk::Queue queue_;
 
   CommandBuffer::Type command_buffer_type_;
+  // The sequence number of the command_buffer managed by this frame. Cached
+  // here to track which command_buffer was managed by this frame if the command
+  // buffer was taken (via TakeCommandBuffer()) for GPU uploads.
+  uint64_t command_buffer_sequence_number_;
   CommandBufferPtr new_command_buffer_;
+  // Cached elements of new_command_buffer_.
   impl::CommandBuffer* command_buffer_ = nullptr;
   vk::CommandBuffer vk_command_buffer_;
 

@@ -27,6 +27,7 @@ if (is_mac) {
       "object_unittest.cc",
       "paper/paper_render_queue_unittest.cc",
       "pose_buffer_latching_test.cc",
+      "renderer/batch_gpu_uploader_unittest.cc",
       "renderer/frame_unittest.cc",
       "renderer/render_queue_unittest.cc",
       "run_all_unittests.cc",

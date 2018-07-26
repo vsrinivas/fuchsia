@@ -11,7 +11,6 @@ namespace escher {
 namespace impl {
 
 FrameManager::FrameManager(EscherWeakPtr escher)
-
     : ResourceManager(escher),
       // TODO(ES-103): the intention here was to use UniformBufferPool's
       // recently-added ring-based recycling to manage resource reclamation.
@@ -38,7 +37,6 @@ FramePtr FrameManager::NewFrame(const char* trace_literal,
                                 escher::CommandBuffer::Type requested_type) {
   TRACE_DURATION("gfx", "escher::FrameManager::NewFrame");
   uniform_buffer_pool_.BeginFrame();
-  // TODO(SCN-844) Allow client to specify CommandBuffer type.
   FramePtr frame = fxl::AdoptRef<Frame>(
       new Frame(this, requested_type, std::move(*GetBlockAllocator().get()),
                 uniform_buffer_pool_.GetWeakPtr(), frame_number, trace_literal,

@@ -79,7 +79,7 @@ void UniformBufferPool::InternalAllocate() {
     // RefPtr go out of scope immediately; the Buffer will be added to
     // free_buffers_ via OnReceiveOwnable().
     fxl::MakeRefCounted<Buffer>(this, std::move(mem), new_buffers[i],
-                                buffer_size_);
+                                BufferRange(0, buffer_size_));
   }
 
   is_allocating_ = false;

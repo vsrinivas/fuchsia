@@ -214,6 +214,8 @@ source_set("escher") {
     "paper/paper_render_queue.h",
     "profiling/timestamp_profiler.cc",
     "profiling/timestamp_profiler.h",
+    "renderer/batch_gpu_uploader.cc",
+    "renderer/batch_gpu_uploader.h",
     "renderer/frame.cc",
     "renderer/frame.h",
     "renderer/moment_shadow_map.cc",
