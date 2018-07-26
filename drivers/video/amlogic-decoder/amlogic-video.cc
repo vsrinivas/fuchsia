@@ -261,26 +261,30 @@ zx_status_t AmlogicVideo::InitializeEsParser() {
          kSearchPatternSize);
   io_buffer_cache_flush(&search_pattern_, 0, kSearchPatternSize);
 
-  parser_interrupt_thread_ = std::thread([this]() {
-    DLOG("Starting parser thread\n");
-    while (true) {
-      zx_time_t time;
-      zx_status_t zx_status =
-          zx_interrupt_wait(parser_interrupt_handle_.get(), &time);
-      if (zx_status != ZX_OK)
-        return;
+  // This check exists so we can call InitializeEsParser() more than once, when
+  // called from CodecImpl (indirectly via a CodecAdapter).
+  if (!parser_interrupt_thread_.joinable()) {
+    parser_interrupt_thread_ = std::thread([this]() {
+      DLOG("Starting parser thread\n");
+      while (true) {
+        zx_time_t time;
+        zx_status_t zx_status =
+            zx_interrupt_wait(parser_interrupt_handle_.get(), &time);
+        if (zx_status != ZX_OK)
+          return;
 
-      auto status = ParserIntStatus::Get().ReadFrom(parser_.get());
-      // Clear interrupt.
-      status.WriteTo(parser_.get());
-      DLOG("Got Parser interrupt status %x\n", status.reg_value());
-      if (status.start_code_found()) {
-        PfifoRdPtr::Get().FromValue(0).WriteTo(parser_.get());
-        PfifoWrPtr::Get().FromValue(0).WriteTo(parser_.get());
-        parser_finished_event_.signal(0, ZX_USER_SIGNAL_0);
+        auto status = ParserIntStatus::Get().ReadFrom(parser_.get());
+        // Clear interrupt.
+        status.WriteTo(parser_.get());
+        DLOG("Got Parser interrupt status %x\n", status.reg_value());
+        if (status.start_code_found()) {
+          PfifoRdPtr::Get().FromValue(0).WriteTo(parser_.get());
+          PfifoWrPtr::Get().FromValue(0).WriteTo(parser_.get());
+          parser_finished_event_.signal(0, ZX_USER_SIGNAL_0);
+        }
       }
-    }
-  });
+    });
+  }
 
   ParserIntStatus::Get().FromValue(0xffff).WriteTo(parser_.get());
   ParserIntEnable::Get()
@@ -342,6 +346,13 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
   if (status != ZX_OK) {
     DECODE_ERROR("Parser timed out\n");
     ParserFetchCmd::Get().FromValue(0).WriteTo(parser_.get());
+    // TODO(dustingreen): Evaluate whether it's safe to immediately do this
+    // io_buffer_release().  If the ParserFetchCmd write of 0 just above
+    // guarantees the HW will immediately stop reading input data from the
+    // input_file buffer, vs. potentially reading a bit more and allowing those
+    // reads to influence a lower-capability-client-visible output buffer.  We
+    // might need to find a way to round-trip that we've stopped the parser
+    // before deleting the input buffer.
     io_buffer_release(&input_file);
     return ZX_ERR_TIMED_OUT;
   }

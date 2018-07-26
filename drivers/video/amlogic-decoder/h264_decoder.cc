@@ -426,6 +426,8 @@ void H264Decoder::InitializeStream() {
   uint32_t display_width = mb_width * 16 - crop_info.right();
   uint32_t display_height = mb_height * 16 - crop_info.bottom();
 
+  // TODO(dustingreen): Should the first parameter be max_dpb_size instead of
+  // kActualDPBSize?:
   InitializeFrames(kActualDPBSize, mb_width * 16, mb_height * 16, display_width, display_height);
 
   AvScratch0::Get()

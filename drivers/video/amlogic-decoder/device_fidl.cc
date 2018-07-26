@@ -43,9 +43,11 @@ void DeviceFidl::CreateChannelBoundCodecFactory(zx::channel* client_endpoint) {
   }
   std::unique_ptr<LocalCodecFactory> factory =
       std::make_unique<LocalCodecFactory>(device_);
-  factory->SetErrorHandler([this, factory_ptr = factory.get()] {
+  factory->SetErrorHandler([this, raw_factory_ptr = factory.get()] {
     FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
-    factories_.erase(factories_.find(factory_ptr));
+    auto iter = factories_.find(raw_factory_ptr);
+    FXL_DCHECK(iter != factories_.end());
+    factories_.erase(iter);
   });
   // Any destruction of "this" is also posted over to shared_fidl_thread(), and
   // will run after the work posted here runs.
@@ -58,8 +60,9 @@ void DeviceFidl::CreateChannelBoundCodecFactory(zx::channel* client_endpoint) {
       [this, factory = std::move(factory),
        server_endpoint = std::move(local_server_endpoint)]() mutable {
         FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
+        LocalCodecFactory* raw_factory_ptr = factory.get();
         auto insert_result = factories_.insert(
-            std::make_pair(factory.get(), std::move(factory)));
+            std::make_pair(raw_factory_ptr, std::move(factory)));
         // insert success
         FXL_DCHECK(insert_result.second);
         insert_result.first->second->Bind(std::move(server_endpoint));
@@ -69,13 +72,17 @@ void DeviceFidl::CreateChannelBoundCodecFactory(zx::channel* client_endpoint) {
 
 void DeviceFidl::BindCodecImpl(std::unique_ptr<CodecImpl> codec) {
   FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
-  codec->SetErrorHandler([this, codec = codec.get()] {
-    FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
-    codecs_.erase(codecs_.find(codec));
-  });
+  CodecImpl* raw_codec_ptr = codec.get();
   auto insert_result =
-      codecs_.insert(std::make_pair(codec.get(), std::move(codec)));
+      codecs_.insert(std::make_pair(raw_codec_ptr, std::move(codec)));
   // insert success
   FXL_DCHECK(insert_result.second);
-  (*insert_result.first).second->Bind();
+  (*insert_result.first).second->BindAsync([this, raw_codec_ptr] {
+    printf("BindCodecImpl()'s error handler start\n");
+    FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
+    auto iter = codecs_.find(raw_codec_ptr);
+    FXL_DCHECK(iter != codecs_.end());
+    codecs_.erase(iter);
+    printf("BindCodecImpl()'s error handler end\n");
+  });
 }

@@ -89,73 +89,88 @@ void use_h264_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
   codec_factory.Unbind();
 
   VLOGF("before starting in_thread...\n");
-  std::unique_ptr<std::thread> in_thread = std::make_unique<std::thread>(
-      [&codec_client, &input_bytes, input_size]() {
-        // Raw .h264 has start codes 00 00 00 01 before each NAL, and the start
-        // codes don't alias in the middle of NALs, so we just scan for NALs and
-        // send them in to the decoder.
-        auto queue_access_unit = [&codec_client, &input_bytes](
-                                     uint8_t* bytes, size_t byte_count) {
-          size_t bytes_so_far = 0;
-          // printf("queuing offset: %ld byte_count: %zu\n", bytes -
-          // input_bytes.get(), byte_count);
-          while (bytes_so_far != byte_count) {
-            std::unique_ptr<fuchsia::mediacodec::CodecPacket> packet =
-                codec_client.BlockingGetFreeInputPacket();
-            const CodecBuffer& buffer =
-                codec_client.GetInputBufferByIndex(packet->header.packet_index);
-            size_t bytes_to_copy =
-                std::min(byte_count - bytes_so_far, buffer.size_bytes());
-            packet->stream_lifetime_ordinal = kStreamLifetimeOrdinal;
-            packet->start_offset = 0;
-            packet->valid_length_bytes = bytes_to_copy;
-            packet->timestamp_ish = 0;
-            packet->start_access_unit = true;
-            packet->known_end_access_unit = true;
-            memcpy(buffer.base(), bytes + bytes_so_far, bytes_to_copy);
-            codec_client.QueueInputPacket(std::move(packet));
-            bytes_so_far += bytes_to_copy;
+  std::unique_ptr<std::thread> in_thread = std::make_unique<
+      std::thread>([&codec_client, &input_bytes, input_size]() {
+    // Raw .h264 has start codes 00 00 00 01 before each NAL, and the start
+    // codes don't alias in the middle of NALs, so we just scan for NALs and
+    // send them in to the decoder.
+    auto queue_access_unit = [&codec_client, &input_bytes](uint8_t* bytes,
+                                                           size_t byte_count) {
+      size_t bytes_so_far = 0;
+      // printf("queuing offset: %ld byte_count: %zu\n", bytes -
+      // input_bytes.get(), byte_count);
+      while (bytes_so_far != byte_count) {
+        std::unique_ptr<fuchsia::mediacodec::CodecPacket> packet =
+            codec_client.BlockingGetFreeInputPacket();
+        const CodecBuffer& buffer =
+            codec_client.GetInputBufferByIndex(packet->header.packet_index);
+        size_t bytes_to_copy =
+            std::min(byte_count - bytes_so_far, buffer.size_bytes());
+        packet->stream_lifetime_ordinal = kStreamLifetimeOrdinal;
+        packet->start_offset = 0;
+        packet->valid_length_bytes = bytes_to_copy;
+        packet->timestamp_ish = 0;
+        packet->start_access_unit = (bytes_so_far == 0);
+        packet->known_end_access_unit =
+            (bytes_so_far + bytes_to_copy == byte_count);
+        memcpy(buffer.base(), bytes + bytes_so_far, bytes_to_copy);
+        codec_client.QueueInputPacket(std::move(packet));
+        bytes_so_far += bytes_to_copy;
+      }
+    };
+    // Queue all at once because AmlogicVideo::ParseVideo() seems to want
+    // all the data at once for the moment.
+    //
+    // TODO(dustingreen): We shouldn't be queueing all the data in one
+    // packet like this.  Maybe there's something in ParseVideo() that
+    // interferes with ongoing parsing, or maybe some of the non-frame NALs
+    // need to be grouped with frame NALs for the HW's benefit, or...  In
+    // any case, this hack needs to go away.
+    constexpr bool kQueueAllAtOnceHack = true;
+    if (kQueueAllAtOnceHack) {
+      FXL_CHECK(input_size >= 4);
+      FXL_CHECK(is_start_code(&input_bytes[0]));
+      queue_access_unit(&input_bytes[0], input_size);
+    } else {
+      for (size_t i = 0; i < input_size - 3;) {
+        if (!is_start_code(&input_bytes[i])) {
+          if (i == 0) {
+            Exit(
+                "Didn't find a start code at the start of the file, and this "
+                "example doesn't scan forward (for now).");
+          } else {
+            Exit(
+                "Fell out of sync somehow - previous NAL offset + previous "
+                "NAL length not a start code.");
           }
-        };
-        for (size_t i = 0; i < input_size - 3;) {
-          if (!(input_bytes[i] == 0x00 && input_bytes[i + 1] == 0x00 &&
-                input_bytes[i + 2] == 0x00 && input_bytes[i + 3] == 0x01)) {
-            if (i == 0) {
-              Exit(
-                  "Didn't find a start code at the start of the file, and this "
-                  "example doesn't scan forward (for now).");
-            } else {
-              Exit(
-                  "Fell out of sync somehow - previous NAL offset + previous "
-                  "NAL length not a start code.");
-            }
-          }
-          size_t nal_start_offset = i + 4;
-          // Scan for end of NAL.  The end of NAL can be because we're out of
-          // data, or because we hit another start code.
-          size_t find_end_iter = nal_start_offset;
-          while (find_end_iter < input_size &&
-                 !is_start_code(&input_bytes[find_end_iter])) {
-            find_end_iter++;
-          }
-          if (find_end_iter == nal_start_offset) {
-            if (find_end_iter == input_size) {
-              Exit("Start code at end of file unexpected");
-            } else {
-              Exit("Two adjacent start codes unexpected.");
-            }
-          }
-          FXL_DCHECK(find_end_iter > nal_start_offset);
-          size_t nal_length = find_end_iter - nal_start_offset;
-          queue_access_unit(&input_bytes[nal_start_offset], nal_length);
-          // start code + NAL payload
-          i += 4 + nal_length;
         }
+        size_t nal_start_offset = i + 4;
+        // Scan for end of NAL.  The end of NAL can be because we're out of
+        // data, or because we hit another start code.
+        size_t find_end_iter = nal_start_offset;
+        while (find_end_iter < input_size &&
+               !is_start_code(&input_bytes[find_end_iter])) {
+          find_end_iter++;
+        }
+        if (find_end_iter == nal_start_offset) {
+          if (find_end_iter == input_size) {
+            Exit("Start code at end of file unexpected");
+          } else {
+            Exit("Two adjacent start codes unexpected.");
+          }
+        }
+        FXL_DCHECK(find_end_iter > nal_start_offset);
+        size_t nal_length = find_end_iter - nal_start_offset;
+        queue_access_unit(&input_bytes[nal_start_offset - 4], 4 + nal_length);
+        // start code + NAL payload
+        i += 4 + nal_length;
+      }
+    }
 
-        // Send through QueueInputEndOfStream().
-        codec_client.QueueInputEndOfStream(kStreamLifetimeOrdinal);
-        // input thread done
-      });
+    // Send through QueueInputEndOfStream().
+    codec_client.QueueInputEndOfStream(kStreamLifetimeOrdinal);
+    // input thread done
+  });
 
   // Separate thread to process the output.
   //
@@ -251,7 +266,7 @@ void use_h264_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
         // NV12 requires UV be same line stride as Y.
         size_t total_size =
             raw->secondary_start_offset +
-            raw->primary_height_pixels * raw->primary_line_stride_bytes;
+            raw->primary_height_pixels / 2 * raw->primary_line_stride_bytes;
         if (packet.valid_length_bytes < total_size) {
           Exit("packet.valid_length_bytes < total_size");
         }

@@ -48,6 +48,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
                                                uint32_t height, uint32_t wrap,
                                                uint32_t blockmode) override;
   void FreeCanvas(std::unique_ptr<CanvasEntry> canvas) override;
+
   DecoderCore* core() override { return core_.get(); }
   zx_status_t AllocateIoBuffer(io_buffer_t* buffer, size_t size,
                                uint32_t alignment_log2,
@@ -62,6 +63,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   friend class TestH264;
   friend class TestMpeg2;
   friend class TestVP9;
+  friend class CodecAdapterH264;
 
   zx_status_t InitializeStreamBuffer(bool use_parser, uint32_t size);
   zx_status_t InitializeEsParser();

@@ -53,13 +53,14 @@ package("media") {
   ]
 }
 
+# Tests that run on CQ
 package("tests") {
   testonly = true
 
   package_name = "media_examples_tests"
 
   deps = [
-    "//garnet/examples/media/use_aac_decoder:test",
+    "//garnet/examples/media/use_aac_decoder:use_aac_decoder_test",
   ]
 
   tests = [
@@ -72,6 +73,32 @@ package("tests") {
     {
       path = rebase_path("use_aac_decoder/test/test_audio.adts")
       dest = "media_test_data/test_audio.adts"
+    },
+  ]
+}
+
+# Tests that don't run on CQ
+package("manual_tests") {
+  testonly = true
+
+  package_name = "media_examples_manual_tests"
+
+  deps = [
+    "//garnet/examples/media/use_aac_decoder:use_h264_decoder_test",
+  ]
+
+  tests = [
+    {
+      # Should pass when run manually on VIM2, fails otherwise.
+      name = "use_h264_decoder_test"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "../../test_data/media/third_party/chromium_media_test_data/bear.h264")
+      dest = "media_test_data/bear.h264"
     },
   ]
 }

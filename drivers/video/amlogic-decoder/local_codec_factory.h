@@ -10,6 +10,10 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fxl/macros.h>
 
+// TODO(dustingreen): Concider pulling LocalCodecFactory out into a source_set
+// that can be used by other HW codec drivers (in contrast to CodecImpl source
+// set which will need to remain usable for both SW and HW codecs).
+
 class DeviceCtx;
 
 // A LocalCodecFactory is owned by DeviceFidl via a unique_ptr<>.  The channel

@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+#include <lib/component/cpp/startup_context.h>
 
 #include <stdio.h>
 
@@ -55,8 +55,9 @@ void test_factory() {
   // from the main thread, but if it moves to use FIDL libs instead, then it
   // won't be any longer, so call from FIDL thread instead.
   PostSerial(
-      fidl_loop.dispatcher(), [&startup_context, request = codec_factory.NewRequest(
-                                                fidl_loop.dispatcher())]() mutable {
+      fidl_loop.dispatcher(),
+      [&startup_context,
+       request = codec_factory.NewRequest(fidl_loop.dispatcher())]() mutable {
         startup_context
             ->ConnectToEnvironmentService<fuchsia::mediacodec::CodecFactory>(
                 std::move(request));
@@ -69,17 +70,17 @@ void test_factory() {
     FailFatal();
   });
   // Use FIDL thread to send request for Codec.
-  PostSerial(fidl_loop.dispatcher(),
-             [&codec_factory, request = codec.NewRequest(fidl_loop.dispatcher()),
-              params = fuchsia::mediacodec::CreateDecoder_Params{
-                  .input_details.format_details_version_ordinal = 0,
-                  .input_details.mime_type = "video/h264",
-                  .promise_separate_access_units_on_input = true,
-                  .require_hw = true,
-              }]() mutable {
-               codec_factory->CreateDecoder(std::move(params),
-                                            std::move(request));
-             });
+  PostSerial(
+      fidl_loop.dispatcher(),
+      [&codec_factory, request = codec.NewRequest(fidl_loop.dispatcher()),
+       params = fuchsia::mediacodec::CreateDecoder_Params{
+           .input_details.format_details_version_ordinal = 0,
+           .input_details.mime_type = "video/h264",
+           .promise_separate_access_units_on_input = true,
+           .require_hw = true,
+       }]() mutable {
+        codec_factory->CreateDecoder(std::move(params), std::move(request));
+      });
 
   // Use FIDL thread to check that codec can communicate to the driver
   // round-trip.  The other-thread usage is a bit unnatural here, but we want to
@@ -89,7 +90,7 @@ void test_factory() {
   bool is_sync_done = false;
   std::condition_variable is_sync_done_condition;
   PostSerial(fidl_loop.dispatcher(), [&codec, &is_sync_done_lock, &is_sync_done,
-                                 &is_sync_done_condition] {
+                                      &is_sync_done_condition] {
     codec->Sync([&is_sync_done_lock, &is_sync_done, &is_sync_done_condition] {
       printf("codec->Sync() completing (FIDL thread)\n");
       {  // scope lock

@@ -47,16 +47,16 @@ class DeviceFidl {
   DeviceCtx* device_ = nullptr;
 
   // We want channel closure to imply LocalCodecFactory instance destruction,
-  // and we want DeviceCtx destruction to imply all LocalCodecFactory instances
-  // get destructed.
+  // and we want DeviceCtx destruction (not presently implemented) to imply all
+  // LocalCodecFactory instances get destructed.
   //
   // For consistency with the Codec case we don't use a BindingSet here.  Also
   // in case we need events() in CodecFactory later.
   //
   // A LocalCodecFactory is indirectly responsible for removing itself from this
-  // list when its channel closes, via
-  // LocalCodecFactory::SetSelfDestructHandler().  That removal happens on
-  // shared_fidl_thread(), as does other LocalCodecFactory work.
+  // list when its channel closes, via an error handler set by this class on the
+  // LocalCodecFactory.  That removal happens on shared_fidl_thread(), as does
+  // other LocalCodecFactory work.
   //
   // We allow more than 1 in this set at least to accomodate races if the main
   // CodecFactory restarts.  It's also fine if the main CodecFactory wants to
@@ -67,12 +67,13 @@ class DeviceFidl {
   std::map<LocalCodecFactory*, std::unique_ptr<LocalCodecFactory>> factories_;
 
   // We want channel closure to imply CodecImpl instance destruction, and we
-  // want DeviceCtx destruction to imply all CodecImpl instances get destructed.
+  // want DeviceCtx destruction (not presently implemented) to imply all
+  // CodecImpl instances get destructed.
   //
   // The CodecImpl is indirectly responsible for removing itself from this set
-  // when the channel closes, via CodecImpl::SetSelfDestructHandler().  This
-  // happens on shared_fidl_thread(), along with some of the other non-blocking
-  // CodecImpl FIDL handling.
+  // when the channel closes, via an error handler set by this class on
+  // CodecImpl.  The error hander is called on shared_fidl_thread(), along with
+  // some of the other non-blocking CodecImpl FIDL handling.
   //
   // We don't use a BindingSet here because we need events().
   //
