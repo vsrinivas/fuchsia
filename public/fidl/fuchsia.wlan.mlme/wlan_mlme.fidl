@@ -284,7 +284,7 @@ struct HTOperationInfo {
     HtProtect ht_protect;
     bool nongreenfield_present; // Nongreenfield HT STAs present
     bool obss_non_ht;           // OBSS Non-HT STAs present
-    uint16 center_freq_seg2;    // VHT
+    uint8 center_freq_seg2;    // VHT
     bool dual_beacon;
     bool dual_cts_protect;
     bool stbc_beacon;

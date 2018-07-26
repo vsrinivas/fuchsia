@@ -707,8 +707,10 @@ class HtOpInfoHead : public common::BitField<uint32_t> {
 
     WLAN_BIT_FIELD(reserved2, 11, 1);          // Note 802.11n D1.10 implementaions use these.
     WLAN_BIT_FIELD(obss_non_ht, 12, 1);        // OBSS Non-HT STAs present.
-    WLAN_BIT_FIELD(center_freq_seg2, 13, 11);  // VHT
-    WLAN_BIT_FIELD(reserved3, 21, 2);
+    // IEEE 802.11-2016 Figure 9-339 has an incosistency so this is Fuchsia interpretation:
+    // The channel number for the second segment in a 80+80 Mhz channel
+    WLAN_BIT_FIELD(center_freq_seg2, 13, 8);   // VHT
+    WLAN_BIT_FIELD(reserved3, 21, 3);
 
     WLAN_BIT_FIELD(reserved4, 24, 6);
     WLAN_BIT_FIELD(dual_beacon, 30, 1);

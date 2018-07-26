@@ -434,8 +434,34 @@ std::unique_ptr<wlan_mlme::HtCapabilities> HtCapabilitiesToFidl(const HtCapabili
     return fidl;
 }
 
+wlan_mlme::HTOperationInfo HtOpInfoToFidl(const HtOpInfoHead& head, const HtOpInfoTail tail) {
+    wlan_mlme::HTOperationInfo fidl;
+
+    fidl.secondary_chan_offset =
+        static_cast<wlan_mlme::SecChanOffset>(head.secondary_chan_offset());
+    fidl.sta_chan_width = static_cast<wlan_mlme::StaChanWidth>(head.sta_chan_width());
+    fidl.rifs_mode = (head.rifs_mode() == 1);
+    fidl.ht_protect = static_cast<wlan_mlme::HtProtect>(head.ht_protect());
+    fidl.nongreenfield_present = (head.nongreenfield_present() == 1);
+    fidl.obss_non_ht = (head.obss_non_ht() == 1);
+    fidl.center_freq_seg2 = head.center_freq_seg2();
+    fidl.dual_beacon = (head.dual_beacon() == 1);
+    fidl.dual_cts_protect = (head.dual_cts_protect() == 1);
+
+    fidl.stbc_beacon = (tail.stbc_beacon() == 1);
+    fidl.lsig_txop_protect = (tail.lsig_txop_protect() == 1);
+    fidl.pco_active = (tail.pco_active() == 1);
+    fidl.pco_phase = (tail.pco_phase() == 1);
+
+    return fidl;
+}
+
 std::unique_ptr<wlan_mlme::HtOperation> HtOperationToFidl(const HtOperation& ie) {
     auto fidl = wlan_mlme::HtOperation::New();
+
+    fidl->primary_chan = ie.primary_chan;
+    fidl->ht_op_info = HtOpInfoToFidl(ie.head, ie.tail);
+    fidl->basic_mcs_set = SupportedMcsSetToFidl(ie.basic_mcs_set);
 
     return fidl;
 }

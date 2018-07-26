@@ -10,7 +10,6 @@
 #include <gtest/gtest.h>
 
 #include <memory>
-#include <utility>
 
 namespace wlan {
 namespace {
@@ -139,7 +138,7 @@ TEST(BssTest, HtCapabilitiesBitFieldOrHuman) {
     EXPECT_EQ(hc.txbf_cap.chan_estimation_human(), 4);
 }
 
-TEST(BssTest, HtCapabilitiesToFidl_Human) {
+TEST(BssTest, HtCapabilitiesToFidlHuman) {
     HtCapabilities hc;
 
     hc.mcs_set.tx_mcs.set_max_ss_human(3);
@@ -158,6 +157,52 @@ TEST(BssTest, HtCapabilitiesToFidl_Human) {
     EXPECT_EQ(fidl->txbf_cap.comp_steering_ants, 1);
     EXPECT_EQ(fidl->txbf_cap.csi_rows, 2);
     EXPECT_EQ(fidl->txbf_cap.chan_estimation, 3);
+}
+
+TEST(BssTest, HtOperationToFidl) {
+    HtOperation hto;
+
+    hto.primary_chan = 169;
+
+    hto.head.set_secondary_chan_offset(1);
+    hto.head.set_sta_chan_width(1);
+    hto.head.set_rifs_mode(1);
+    hto.head.set_ht_protect(2);
+    hto.head.set_nongreenfield_present(1);
+    hto.head.set_obss_non_ht(1);
+    hto.head.set_center_freq_seg2(155);
+    hto.head.set_dual_beacon(1);
+    hto.head.set_dual_cts_protect(1);
+
+    hto.tail.set_stbc_beacon(1);
+    hto.tail.set_lsig_txop_protect(1);
+    hto.tail.set_pco_active(1);
+    hto.tail.set_pco_phase(1);
+
+    hto.basic_mcs_set.rx_mcs_head.set_bitmask(0xFFFFFFFF);
+
+    auto fidl = HtOperationToFidl(hto);
+    ASSERT_NE(fidl, nullptr);
+
+    EXPECT_EQ(fidl->primary_chan, 169);
+
+    const auto& htoi = fidl->ht_op_info;
+    EXPECT_EQ(htoi.secondary_chan_offset, wlan_mlme::SecChanOffset::SECONDARY_ABOVE);
+    EXPECT_EQ(htoi.sta_chan_width, wlan_mlme::StaChanWidth::ANY);
+    EXPECT_TRUE(htoi.rifs_mode);
+    EXPECT_EQ(htoi.ht_protect, wlan_mlme::HtProtect::TWENTY_MHZ);
+    EXPECT_TRUE(htoi.nongreenfield_present);
+    EXPECT_TRUE(htoi.obss_non_ht);
+    EXPECT_EQ(htoi.center_freq_seg2, 155);
+    EXPECT_TRUE(htoi.dual_beacon);
+    EXPECT_TRUE(htoi.dual_cts_protect);
+
+    EXPECT_TRUE(htoi.stbc_beacon);
+    EXPECT_TRUE(htoi.lsig_txop_protect);
+    EXPECT_TRUE(htoi.pco_active);
+    EXPECT_TRUE(htoi.pco_phase);
+
+    EXPECT_EQ(fidl->basic_mcs_set.rx_mcs_set, wlan_mlme::HtMcs::MCS0_31);
 }
 }  // namespace
 }  // namespace wlan
