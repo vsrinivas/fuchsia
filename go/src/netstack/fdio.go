@@ -57,7 +57,7 @@ var (
 func socketDispatcher(stk *stack.Stack, ctx *context.Context) (*socketServer, error) {
 	a := socketServer{
 		stack:      stk,
-		dnsClient:  dns.NewClient(stk, 0),
+		dnsClient:  dns.NewClient(stk),
 		io:         make(map[cookie]*iostate),
 		next:       1,
 	}

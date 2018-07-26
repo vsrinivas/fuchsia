@@ -45,7 +45,7 @@ func sortByRFC6724withSrcs(addrs []tcpip.Address, srcs []tcpip.Address) {
 // number is irrelevant.
 func srcAddrs(c *Client, addrs []tcpip.Address) []tcpip.Address {
 	srcs := make([]tcpip.Address, len(addrs))
-	dst := tcpip.FullAddress{Port: 9, NIC: c.nicid}
+	dst := tcpip.FullAddress{Port: 9}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
 	for i := range addrs {
 		dst.Addr = addrs[i]

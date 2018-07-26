@@ -56,7 +56,6 @@ func init() {
 // Client is a DNS client.
 type Client struct {
 	stack *stack.Stack
-	nicid tcpip.NICID
 }
 
 // A Resolver answers DNS Questions.
@@ -78,10 +77,9 @@ func (e *Error) Error() string {
 }
 
 // NewClient creates a DHCP client.
-func NewClient(s *stack.Stack, nicid tcpip.NICID) *Client {
+func NewClient(s *stack.Stack) *Client {
 	return &Client{
 		stack: s,
-		nicid: nicid,
 	}
 }
 
@@ -241,7 +239,6 @@ func (c *Client) tryOneName(cfg *dnsConfig, name string, qtype dnsmessage.Type) 
 	for i := 0; i < cfg.attempts; i++ {
 		for _, server := range cfg.servers {
 			server := tcpip.FullAddress{
-				NIC:  c.nicid,
 				Addr: server.Addr,
 				Port: server.Port,
 			}
