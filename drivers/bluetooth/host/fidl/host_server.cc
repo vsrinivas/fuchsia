@@ -338,13 +338,13 @@ void HostServer::SetPairingDelegate(
   io_capability_ = fidl_helpers::NewIoCapability(input, output);
 
   auto self = weak_ptr_factory_.GetWeakPtr();
-  pairing_delegate_.Bind(std::move(delegate));
   if (delegate) {
     adapter()->le_connection_manager()->SetPairingDelegate(self);
   } else {
     adapter()->le_connection_manager()->SetPairingDelegate(
         fxl::WeakPtr<PairingDelegate>());
   }
+  pairing_delegate_.Bind(std::move(delegate));
   pairing_delegate_.set_error_handler([self] {
     if (self) {
       self->adapter()->le_connection_manager()->SetPairingDelegate(
