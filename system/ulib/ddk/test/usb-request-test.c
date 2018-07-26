@@ -21,11 +21,11 @@ static bool test_alloc_simple(void) {
     usb_request_t* req;
     ASSERT_EQ(usb_request_alloc(&req, bti_handle, PAGE_SIZE * 3, 1), ZX_OK, "");
     ASSERT_NONNULL(req, "");
-    ASSERT_TRUE(io_buffer_is_valid(&req->buffer), "");
+    ASSERT_TRUE((req->vmo_handle != ZX_HANDLE_INVALID), "");
 
     ASSERT_EQ(usb_request_physmap(req), ZX_OK, "");
-    ASSERT_NONNULL(req->buffer.phys_list, "expected phys list to be set");
-    ASSERT_EQ(req->buffer.phys_count, 3u, "unexpected phys count");
+    ASSERT_NONNULL(req->phys_list, "expected phys list to be set");
+    ASSERT_EQ(req->phys_count, 3u, "unexpected phys count");
 
     usb_request_release(req);
     zx_handle_close(bti_handle);
@@ -79,7 +79,7 @@ static bool test_pool(void) {
     usb_request_t* req;
     ASSERT_EQ(usb_request_alloc(&req, bti_handle, 8u, 1), ZX_OK, "");
     ASSERT_NONNULL(req, "");
-    ASSERT_TRUE(io_buffer_is_valid(&req->buffer), "");
+    ASSERT_TRUE((req->vmo_handle != ZX_HANDLE_INVALID), "");
 
     usb_request_t* zero_req;
     ASSERT_EQ(usb_request_alloc(&zero_req, bti_handle, 0, 1), ZX_OK, "");

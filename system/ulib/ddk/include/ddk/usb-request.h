@@ -54,8 +54,21 @@ typedef struct usb_request {
     // for control transactions
     usb_setup_t setup;
 
-    // request payload
-    io_buffer_t buffer;
+    // vmo_handle for payload
+    zx_handle_t vmo_handle;
+    zx_handle_t bti_handle;
+    size_t size;
+    // offset of the start of data from first page address of the vmo.
+    zx_off_t offset;
+    // mapped address of the first page of the vmo.
+    // Add offset to get actual data.
+    void* virt;
+
+    zx_handle_t pmt;
+    // phys addresses of the payload.
+    zx_paddr_t* phys_list;
+    // Number of physical pages of the payload.
+    uint64_t phys_count;
 
     // The complete_cb() callback is set by the requestor and is
     // invoked by the 'complete' ops method when it is called by
