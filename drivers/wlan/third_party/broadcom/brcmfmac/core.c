@@ -446,7 +446,7 @@ void brcmf_txfinalize(struct brcmf_if* ifp, struct brcmf_netbuf* txp, bool succe
 
     if (type == ETH_P_PAE) {
         if (atomic_fetch_sub(&ifp->pend_8021x_cnt, 1) == 1) {
-            completion_signal(&ifp->pend_8021x_wait);
+            sync_completion_signal(&ifp->pend_8021x_wait);
         }
     }
 
@@ -728,7 +728,7 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
     ifp->ifidx = ifidx;
     ifp->bsscfgidx = bsscfgidx;
 
-    ifp->pend_8021x_wait = COMPLETION_INIT;
+    ifp->pend_8021x_wait = SYNC_COMPLETION_INIT;
     //spin_lock_init(&ifp->netif_stop_lock);
 
     if (mac_addr != NULL) {
@@ -1215,11 +1215,11 @@ static int brcmf_get_pend_8021x_cnt(struct brcmf_if* ifp) {
 void brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp) {
     zx_status_t result;
 
-    completion_reset(&ifp->pend_8021x_wait);
+    sync_completion_reset(&ifp->pend_8021x_wait);
     if (!brcmf_get_pend_8021x_cnt(ifp)) {
         return;
     }
-    result = completion_wait(&ifp->pend_8021x_wait, ZX_MSEC(MAX_WAIT_FOR_8021X_TX_MSEC));
+    result = sync_completion_wait(&ifp->pend_8021x_wait, ZX_MSEC(MAX_WAIT_FOR_8021X_TX_MSEC));
 
     if (result != ZX_OK) {
         brcmf_err("Timed out waiting for no pending 802.1x packets\n");

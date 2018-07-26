@@ -413,7 +413,7 @@ void ath10k_core_get_fw_features_str(struct ath10k* ar,
 static void ath10k_send_suspend_complete(struct ath10k* ar) {
     ath10k_dbg(ar, ATH10K_DBG_BOOT, "boot suspend complete\n");
 
-    completion_signal(&ar->target_suspend);
+    sync_completion_signal(&ar->target_suspend);
 }
 
 static void ath10k_init_sdio(struct ath10k* ar) {
@@ -1652,14 +1652,14 @@ static void ath10k_core_restart(struct work_struct* work) {
 
     ieee80211_stop_queues(ar->hw);
     ath10k_drain_tx(ar);
-    completion_signal(&ar->scan.started);
-    completion_signal(&ar->scan.completed);
-    completion_signal(&ar->scan.on_channel);
-    completion_signal(&ar->offchan_tx_completed);
-    completion_signal(&ar->install_key_done);
-    completion_signal(&ar->vdev_setup_done);
-    completion_signal(&ar->thermal.wmi_sync);
-    completion_signal(&ar->bss_survey_done);
+    sync_completion_signal(&ar->scan.started);
+    sync_completion_signal(&ar->scan.completed);
+    sync_completion_signal(&ar->scan.on_channel);
+    sync_completion_signal(&ar->offchan_tx_completed);
+    sync_completion_signal(&ar->install_key_done);
+    sync_completion_signal(&ar->vdev_setup_done);
+    sync_completion_signal(&ar->thermal.wmi_sync);
+    sync_completion_signal(&ar->bss_survey_done);
     wake_up(&ar->htt.empty_tx_wq);
     zx_object_signal(ar->tx_credits_event, 0, WMI_TX_CREDITS_AVAILABLE);
     wake_up(&ar->peer_mapping_wq);
@@ -2175,7 +2175,7 @@ err:
 zx_status_t ath10k_wait_for_suspend(struct ath10k* ar, uint32_t suspend_opt) {
     zx_status_t ret;
 
-    completion_reset(&ar->target_suspend);
+    sync_completion_reset(&ar->target_suspend);
 
     ret = ath10k_wmi_pdev_suspend_target(ar, suspend_opt);
     if (ret != ZX_OK) {
@@ -2183,7 +2183,7 @@ zx_status_t ath10k_wait_for_suspend(struct ath10k* ar, uint32_t suspend_opt) {
         return ret;
     }
 
-    if (completion_wait(&ar->target_suspend, ZX_SEC(1)) == ZX_ERR_TIMED_OUT) {
+    if (sync_completion_wait(&ar->target_suspend, ZX_SEC(1)) == ZX_ERR_TIMED_OUT) {
         ath10k_warn("suspend timed out - target pause event never came\n");
         return ZX_ERR_TIMED_OUT;
     }
@@ -2485,17 +2485,17 @@ zx_status_t ath10k_core_create(struct ath10k** ar_ptr, size_t priv_size,
         goto err_free_mac;
     }
 
-    ar->scan.started = COMPLETION_INIT;
-    ar->scan.completed = COMPLETION_INIT;
-    ar->scan.on_channel = COMPLETION_INIT;
-    ar->target_suspend = COMPLETION_INIT;
-    ar->wow.wakeup_completed = COMPLETION_INIT;
+    ar->scan.started = SYNC_COMPLETION_INIT;
+    ar->scan.completed = SYNC_COMPLETION_INIT;
+    ar->scan.on_channel = SYNC_COMPLETION_INIT;
+    ar->target_suspend = SYNC_COMPLETION_INIT;
+    ar->wow.wakeup_completed = SYNC_COMPLETION_INIT;
 
-    ar->install_key_done = COMPLETION_INIT;
-    ar->vdev_setup_done = COMPLETION_INIT;
-    ar->thermal.wmi_sync = COMPLETION_INIT;
-    ar->bss_survey_done = COMPLETION_INIT;
-    ar->assoc_complete = COMPLETION_INIT;
+    ar->install_key_done = SYNC_COMPLETION_INIT;
+    ar->vdev_setup_done = SYNC_COMPLETION_INIT;
+    ar->thermal.wmi_sync = SYNC_COMPLETION_INIT;
+    ar->bss_survey_done = SYNC_COMPLETION_INIT;
+    ar->assoc_complete = SYNC_COMPLETION_INIT;
 
 #if 0 // NEEDS PORTING
     INIT_DELAYED_WORK(&ar->scan.timeout, ath10k_scan_timeout_work);
@@ -2531,7 +2531,7 @@ zx_status_t ath10k_core_create(struct ath10k** ar_ptr, size_t priv_size,
     init_waitqueue_head(&ar->peer_mapping_wq);
     init_waitqueue_head(&ar->htt.empty_tx_wq);
 
-    ar->offchan_tx_completed = COMPLETION_INIT;
+    ar->offchan_tx_completed = SYNC_COMPLETION_INIT;
     INIT_WORK(&ar->offchan_tx_work, ath10k_offchan_tx_work);
     skb_queue_head_init(&ar->offchan_tx_queue);
 

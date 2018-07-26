@@ -366,7 +366,7 @@ void ath10k_debug_fw_stats_process(struct ath10k* ar, struct sk_buff* skb) {
         list_splice_tail_init(&stats.vdevs, &ar->debug.fw_stats.vdevs);
     }
 
-    completion_signal(&ar->debug.fw_stats_complete);
+    sync_completion_signal(&ar->debug.fw_stats_complete);
 
 free:
     /* In some cases lists have been spliced and cleared. Free up
@@ -395,7 +395,7 @@ static int ath10k_debug_fw_stats_request(struct ath10k* ar) {
             return -ETIMEDOUT;
         }
 
-        completion_reset(&ar->debug.fw_stats_complete);
+        sync_completion_reset(&ar->debug.fw_stats_complete);
 
         ret = ath10k_wmi_request_stats(ar, ar->fw_stats_req_mask);
         if (ret) {
@@ -403,7 +403,7 @@ static int ath10k_debug_fw_stats_request(struct ath10k* ar) {
             return ret;
         }
 
-        if (completion_wait(&ar->debug.fw_stats_complete, ZX_SEC(1)) == ZX_ERR_TIMED_OUT) {
+        if (sync_completion_wait(&ar->debug.fw_stats_complete, ZX_SEC(1)) == ZX_ERR_TIMED_OUT) {
             return -ETIMEDOUT;
         }
 
@@ -1645,7 +1645,7 @@ static int ath10k_debug_tpc_stats_request(struct ath10k* ar) {
 
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
-    completion_reset(&ar->debug.tpc_complete);
+    sync_completion_reset(&ar->debug.tpc_complete);
 
     ret = ath10k_wmi_pdev_get_tpc_config(ar, WMI_TPC_CONFIG_PARAM);
     if (ret) {
@@ -1653,7 +1653,7 @@ static int ath10k_debug_tpc_stats_request(struct ath10k* ar) {
         return ret;
     }
 
-    if (completion_wait(&ar->debug.tpc_complete, ZX_SEC(1)) == ZX_ERR_TIMED_OUT) {
+    if (sync_completion_wait(&ar->debug.tpc_complete, ZX_SEC(1)) == ZX_ERR_TIMED_OUT) {
         return -ETIMEDOUT;
     }
 
@@ -1666,7 +1666,7 @@ void ath10k_debug_tpc_stats_process(struct ath10k* ar,
 
     kfree(ar->debug.tpc_stats);
     ar->debug.tpc_stats = tpc_stats;
-    completion_signal(&ar->debug.tpc_complete);
+    sync_completion_signal(&ar->debug.tpc_complete);
 
     mtx_unlock(&ar->data_lock);
 }
@@ -2374,8 +2374,8 @@ int ath10k_debug_register(struct ath10k* ar) {
     INIT_DELAYED_WORK(&ar->debug.htt_stats_dwork,
                       ath10k_debug_htt_stats_dwork);
 
-    ar->debug.tpc_complete = COMPLETION_INIT;
-    ar->debug.fw_stats_complete = COMPLETION_INIT;
+    ar->debug.tpc_complete = SYNC_COMPLETION_INIT;
+    ar->debug.fw_stats_complete = SYNC_COMPLETION_INIT;
 
     debugfs_create_file("fw_stats", 0400, ar->debug.debugfs_phy, ar,
                         &fops_fw_stats);

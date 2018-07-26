@@ -1256,7 +1256,7 @@ static void __ath10k_sdio_write_async(struct ath10k* ar,
         ep = &ar->htc.endpoint[req->eid];
         ath10k_htc_notify_tx_completion(ep, skb);
     } else if (req->comp) {
-        completion_signal(req->comp);
+        sync_completion_signal(req->comp);
     }
 
     ath10k_sdio_free_bus_req(ar, req);
@@ -1282,7 +1282,7 @@ static void ath10k_sdio_write_async_work(struct work_struct* work) {
 
 static int ath10k_sdio_prep_async_req(struct ath10k* ar, uint32_t addr,
                                       struct sk_buff* skb,
-                                      completion_t* comp,
+                                      sync_completion_t* comp,
                                       bool htc_msg, enum ath10k_htc_ep_id eid) {
     struct ath10k_sdio* ar_sdio = ath10k_sdio_priv(ar);
     struct ath10k_sdio_bus_request* bus_req;
@@ -1672,7 +1672,7 @@ static void ath10k_sdio_irq_disable(struct ath10k* ar) {
     struct ath10k_sdio_irq_data* irq_data = &ar_sdio->irq_data;
     struct ath10k_sdio_irq_enable_regs* regs = irq_data->irq_en_reg;
     struct sk_buff* skb;
-    completion_t irqs_disabled_comp;
+    sync_completion_t irqs_disabled_comp;
     int ret;
 
     skb = dev_alloc_skb(sizeof(*regs));
@@ -1688,7 +1688,7 @@ static void ath10k_sdio_irq_disable(struct ath10k* ar) {
 
     mtx_unlock(&irq_data->mtx);
 
-    irqs_disabled_comp = COMPLETION_INIT;
+    irqs_disabled_comp = SYNC_COMPLETION_INIT;
     ret = ath10k_sdio_prep_async_req(ar, MBOX_INT_STATUS_ENABLE_ADDRESS,
                                      skb, &irqs_disabled_comp, false, 0);
     if (ret) {
@@ -1700,7 +1700,7 @@ static void ath10k_sdio_irq_disable(struct ath10k* ar) {
     /* Wait for the completion of the IRQ disable request.
      * If there is a timeout we will try to disable irq's anyway.
      */
-    if (completion_wait(&irqs_disabled_comp, SDIO_IRQ_DISABLE_TIMEOUT) == ZX_ERR_TIMED_OUT) {
+    if (sync_completion_wait(&irqs_disabled_comp, SDIO_IRQ_DISABLE_TIMEOUT) == ZX_ERR_TIMED_OUT) {
         ath10k_warn("sdio irq disable request timed out\n");
     }
 

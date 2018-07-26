@@ -21,7 +21,7 @@
 #define _ALL_SOURCE // to get MTX_INIT from threads.h
 #include <threads.h>
 
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
@@ -43,7 +43,7 @@ struct workqueue_struct {
     mtx_t lock;
     list_node_t list;
     struct work_struct* current;
-    completion_t work_ready;
+    sync_completion_t work_ready;
     char name[WORKQUEUE_NAME_MAXLEN];
     pthread_t thread;
 };
@@ -156,8 +156,8 @@ static void* workqueue_runner(void* arg) {
     struct workqueue_struct* workqueue = (struct workqueue_struct*) arg;
 
     while(1) {
-        completion_wait(&workqueue->work_ready, ZX_TIME_INFINITE);
-        completion_reset(&workqueue->work_ready);
+        sync_completion_wait(&workqueue->work_ready, ZX_TIME_INFINITE);
+        sync_completion_reset(&workqueue->work_ready);
         struct work_struct* work;
         list_node_t* item;
         mtx_lock(&workqueue->lock);
@@ -203,13 +203,13 @@ void workqueue_schedule(struct workqueue_struct* workqueue, struct work_struct* 
         }
     }
     list_add_tail(&workqueue->list, &work->item);
-    completion_signal(&workqueue->work_ready);
+    sync_completion_signal(&workqueue->work_ready);
     mtx_unlock(&workqueue->lock);
 }
 
 static void start_workqueue(struct workqueue_struct* workqueue, const char* name) {
     strlcpy(workqueue->name, name, WORKQUEUE_NAME_MAXLEN);
-    workqueue->work_ready = COMPLETION_INIT;
+    workqueue->work_ready = SYNC_COMPLETION_INIT;
     list_initialize(&workqueue->list);
     workqueue->current = NULL;
     pthread_create(&workqueue->thread, NULL, workqueue_runner, workqueue);

@@ -23,7 +23,7 @@
 #include <stdint.h>
 #include <threads.h>
 
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <ddk/device.h>
 #include <wlan/protocol/mac.h>
 
@@ -127,9 +127,9 @@ struct ath10k_mem_chunk {
 
 struct ath10k_wmi {
     enum ath10k_htc_ep_id eid;
-    completion_t service_ready;
-    completion_t unified_ready;
-    completion_t barrier;
+    sync_completion_t service_ready;
+    sync_completion_t unified_ready;
+    sync_completion_t barrier;
     zx_handle_t tx_credits_event;
     BITARR(svc_map, WMI_SERVICE_MAX);
     struct wmi_cmd_map* cmd;
@@ -371,7 +371,7 @@ struct ath10k_debug {
     struct dentry* debugfs_phy;
 
     struct ath10k_fw_stats fw_stats;
-    completion_t fw_stats_complete;
+    sync_completion_t fw_stats_complete;
     bool fw_stats_done;
 
     unsigned long htt_stats_mask;
@@ -382,7 +382,7 @@ struct ath10k_debug {
     /* used for tpc-dump storage, protected by data-lock */
     struct ath10k_tpc_stats* tpc_stats;
 
-    completion_t tpc_complete;
+    sync_completion_t tpc_complete;
 
     /* protected by conf_mutex */
     uint64_t fw_dbglog_mask;
@@ -750,7 +750,7 @@ struct ath10k {
        void* cookie;
     } wlanmac;
 
-    completion_t target_suspend;
+    sync_completion_t target_suspend;
 
     const struct ath10k_hw_regs* regs;
     const struct ath10k_hw_ce_regs* hw_ce_regs;
@@ -791,9 +791,9 @@ struct ath10k {
     enum ath10k_cal_mode cal_mode;
 
     struct {
-        completion_t started;
-        completion_t completed;
-        completion_t on_channel;
+        sync_completion_t started;
+        sync_completion_t completed;
+        sync_completion_t on_channel;
 #if 0 // NEEDS PORTING
         struct delayed_work timeout;
 #endif // NEEDS PORTING
@@ -843,9 +843,9 @@ struct ath10k {
     uint8_t cfg_tx_chainmask;
     uint8_t cfg_rx_chainmask;
 
-    completion_t install_key_done;
+    sync_completion_t install_key_done;
 
-    completion_t vdev_setup_done;
+    sync_completion_t vdev_setup_done;
 
 #if 0 // NEEDS PORTING
     struct workqueue_struct* workqueue;
@@ -887,7 +887,7 @@ struct ath10k {
 #if 0 // NEEDS PORTING
     struct work_struct offchan_tx_work;
     struct sk_buff_head offchan_tx_queue;
-    completion_t offchan_tx_completed;
+    sync_completion_t offchan_tx_completed;
     struct sk_buff* offchan_tx_skb;
 
     struct work_struct wmi_mgmt_tx_work;
@@ -905,7 +905,7 @@ struct ath10k {
 #endif
 
     mtx_t assoc_lock;
-    completion_t assoc_complete;
+    sync_completion_t assoc_complete;
     struct ath10k_msg_buf* assoc_frame;
 
 #if 0 // NEEDS PORTING
@@ -924,7 +924,7 @@ struct ath10k {
      * avoid reporting garbage data.
      */
     bool ch_info_can_report_survey;
-    completion_t bss_survey_done;
+    sync_completion_t bss_survey_done;
 
 #if 0 // NEEDS PORTING
     struct dfs_pattern_detector* dfs_detector;

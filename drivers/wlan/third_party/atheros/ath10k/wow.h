@@ -18,7 +18,7 @@
 
 struct ath10k_wow {
     uint32_t max_num_patterns;
-    completion_t wakeup_completed;
+    sync_completion_t wakeup_completed;
 #if 0 // NEEDS PORTING
     struct wiphy_wowlan_support wowlan_support;
 #endif // NEEDS PORTING

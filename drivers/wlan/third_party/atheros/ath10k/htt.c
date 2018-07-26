@@ -231,14 +231,14 @@ static zx_status_t ath10k_htt_verify_version(struct ath10k_htt* htt) {
 zx_status_t ath10k_htt_setup(struct ath10k_htt* htt) {
     zx_status_t status;
 
-    htt->target_version_received = COMPLETION_INIT;
+    htt->target_version_received = SYNC_COMPLETION_INIT;
 
     status = ath10k_htt_h2t_ver_req_msg(htt);
     if (status != ZX_OK) {
         return status;
     }
 
-    if (completion_wait(&htt->target_version_received,
+    if (sync_completion_wait(&htt->target_version_received,
                         HTT_TARGET_VERSION_TIMEOUT) == ZX_ERR_TIMED_OUT) {
         ath10k_warn("htt version request timed out\n");
         return ZX_ERR_TIMED_OUT;

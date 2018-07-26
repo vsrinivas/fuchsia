@@ -10,7 +10,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <lib/zx/vmo.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/cipher.h>
 #include <wlan/common/logging.h>

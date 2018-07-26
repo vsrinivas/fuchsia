@@ -16,7 +16,7 @@
 #include "pcie.h"
 
 #include <ddk/driver.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 #include "brcm_hw_ids.h"
 #include "brcmu_utils.h"
@@ -249,7 +249,7 @@ struct brcmf_pciedev_info {
     struct brcmf_chip* ci;
     uint32_t coreid;
     struct brcmf_pcie_shared_info shared;
-    completion_t mbdata_resp_wait;
+    sync_completion_t mbdata_resp_wait;
     bool irq_allocated;
     bool wowl_enabled;
     uint8_t dma_idx_sz;
@@ -624,7 +624,7 @@ static void brcmf_pcie_handle_mb_data(struct brcmf_pciedev_info* devinfo) {
     }
     if (dtoh_mb_data & BRCMF_D2H_DEV_D3_ACK) {
         brcmf_dbg(PCIE, "D2H_MB_DATA: D3 ACK\n");
-        completion_signal(&devinfo->mbdata_resp_wait);
+        sync_completion_signal(&devinfo->mbdata_resp_wait);
     }
 }
 
@@ -1561,7 +1561,7 @@ static void brcmf_pcie_setup(struct brcmf_device* dev, zx_status_t ret,
     bus->msgbuf->max_rxbufpost = devinfo->shared.max_rxbufpost;
     bus->msgbuf->max_flowrings = devinfo->shared.max_flowrings;
 
-    devinfo->mbdata_resp_wait = COMPLETION_INIT;
+    devinfo->mbdata_resp_wait = SYNC_COMPLETION_INIT;
 
     brcmf_pcie_intr_enable(devinfo);
     if (brcmf_pcie_attach_bus(devinfo) == 0) {
@@ -1729,10 +1729,10 @@ static zx_status_t brcmf_pcie_pm_enter_D3(struct brcmf_device* dev) {
 
     brcmf_bus_change_state(bus, BRCMF_BUS_DOWN);
 
-    completion_reset(&devinfo->mbdata_resp_wait);
+    sync_completion_reset(&devinfo->mbdata_resp_wait);
     brcmf_pcie_send_mb_data(devinfo, BRCMF_H2D_HOST_D3_INFORM);
 
-    result = completion_wait(&devinfo->mbdata_resp_wait, ZX_MSEC(BRCMF_PCIE_MBDATA_TIMEOUT_MSEC));
+    result = sync_completion_wait(&devinfo->mbdata_resp_wait, ZX_MSEC(BRCMF_PCIE_MBDATA_TIMEOUT_MSEC));
     if (result != ZX_OK) {
         brcmf_err("Timeout on response for entering D3 substate\n");
         brcmf_bus_change_state(bus, BRCMF_BUS_UP);

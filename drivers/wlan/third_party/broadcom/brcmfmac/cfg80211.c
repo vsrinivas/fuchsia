@@ -3444,7 +3444,7 @@ static zx_status_t brcmf_wowl_nd_results(struct brcmf_if* ifp, const struct brcm
     cfg->wowl.nd_info->matches[0] = cfg->wowl.nd;
 
     /* Inform (the resume task) that the net detect information was recvd */
-    completion_signal(&cfg->wowl.nd_data_wait);
+    sync_completion_signal(&cfg->wowl.nd_data_wait);
 
     return ZX_OK;
 }
@@ -3498,7 +3498,7 @@ static void brcmf_report_wowl_wakeind(struct wiphy* wiphy, struct brcmf_if* ifp)
         }
         if (wakeind & BRCMF_WOWL_PFN_FOUND) {
             brcmf_dbg(INFO, "WOWL Wake indicator: BRCMF_WOWL_PFN_FOUND\n");
-            err = completion_wait(&cfg->wowl.nd_data_wait, ZX_MSEC(BRCMF_ND_INFO_TIMEOUT_MSEC));
+            err = sync_completion_wait(&cfg->wowl.nd_data_wait, ZX_MSEC(BRCMF_ND_INFO_TIMEOUT_MSEC));
             if (err != ZX_OK) {
                 brcmf_err("No result for wowl net detect\n");
             } else {
@@ -3581,7 +3581,7 @@ static void brcmf_configure_wowl(struct brcmf_cfg80211_info* cfg, struct brcmf_i
         brcmf_cfg80211_sched_scan_start(cfg->wiphy, ifp->ndev, wowl->nd_config);
         wowl_config |= BRCMF_WOWL_PFN_FOUND;
 
-        completion_reset(&cfg->wowl.nd_data_wait);
+        sync_completion_reset(&cfg->wowl.nd_data_wait);
         cfg->wowl.nd_enabled = true;
         /* Now reroute the event for PFN to the wowl function. */
         brcmf_fweh_unregister(cfg->pub, BRCMF_E_PFN_NET_FOUND);
@@ -5360,7 +5360,7 @@ static zx_status_t brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cf
     if (event == BRCMF_E_LINK && reason == BRCMF_E_REASON_LINK_BSSCFG_DIS &&
             ndev != cfg_to_ndev(cfg)) {
         brcmf_dbg(CONN, "AP mode link down\n");
-        completion_signal(&cfg->vif_disabled);
+        sync_completion_signal(&cfg->vif_disabled);
         return ZX_OK;
     }
 
@@ -5419,7 +5419,7 @@ static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
             brcmf_link_down(ifp->vif, brcmf_map_fw_linkdown_reason(e));
             brcmf_init_prof(ndev_to_prof(ndev));
             if (ndev != cfg_to_ndev(cfg)) {
-                completion_signal(&cfg->vif_disabled);
+                sync_completion_signal(&cfg->vif_disabled);
             }
             brcmf_net_setcarrier(ifp, false);
         }
@@ -5498,7 +5498,7 @@ static zx_status_t brcmf_notify_vif_event(struct brcmf_if* ifp, const struct brc
         }
         mtx_unlock(&event->vif_event_lock);
         if (event->action == cfg->vif_event_pending_action) {
-            completion_signal(&event->vif_event_wait);
+            sync_completion_signal(&event->vif_event_wait);
         }
         return ZX_OK;
 
@@ -5506,14 +5506,14 @@ static zx_status_t brcmf_notify_vif_event(struct brcmf_if* ifp, const struct brc
         mtx_unlock(&event->vif_event_lock);
         /* event may not be upon user request */
         if (brcmf_cfg80211_vif_event_armed(cfg) && event->action == cfg->vif_event_pending_action) {
-            completion_signal(&event->vif_event_wait);
+            sync_completion_signal(&event->vif_event_wait);
         }
         return ZX_OK;
 
     case BRCMF_E_IF_CHANGE:
         mtx_unlock(&event->vif_event_lock);
         if (event->action == cfg->vif_event_pending_action) {
-            completion_signal(&event->vif_event_wait);
+            sync_completion_signal(&event->vif_event_wait);
         }
         return ZX_OK;
 
@@ -5612,7 +5612,7 @@ static zx_status_t wl_init_priv(struct brcmf_cfg80211_info* cfg) {
     mtx_init(&cfg->usr_sync, mtx_plain);
     brcmf_init_escan(cfg);
     brcmf_init_conf(cfg->conf);
-    cfg->vif_disabled = COMPLETION_INIT;
+    cfg->vif_disabled = SYNC_COMPLETION_INIT;
     return err;
 }
 
@@ -5623,7 +5623,7 @@ static void wl_deinit_priv(struct brcmf_cfg80211_info* cfg) {
 }
 
 static void init_vif_event(struct brcmf_cfg80211_vif_event* event) {
-    event->vif_event_wait = COMPLETION_INIT;
+    event->vif_event_wait = SYNC_COMPLETION_INIT;
     mtx_init(&event->vif_event_lock, mtx_plain);
 }
 
@@ -6272,7 +6272,7 @@ static void brcmf_wiphy_wowl_params(struct wiphy* wiphy, struct brcmf_if* ifp) {
         if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_WOWL_ND)) {
             wowl->flags |= WIPHY_WOWLAN_NET_DETECT;
             wowl->max_nd_match_sets = BRCMF_PNO_MAX_PFN_COUNT;
-            cfg->wowl.nd_data_wait = COMPLETION_INIT;
+            cfg->wowl.nd_data_wait = SYNC_COMPLETION_INIT;
         }
     }
     if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_WOWL_GTK)) {
@@ -6526,7 +6526,7 @@ void brcmf_cfg80211_arm_vif_event(struct brcmf_cfg80211_info* cfg, struct brcmf_
     mtx_lock(&event->vif_event_lock);
     event->vif = vif;
     event->action = 0;
-    completion_reset(&event->vif_event_wait);
+    sync_completion_reset(&event->vif_event_wait);
     cfg->vif_event_pending_action = pending_action;
     mtx_unlock(&event->vif_event_lock);
 }
@@ -6554,7 +6554,7 @@ bool brcmf_cfg80211_vif_event_armed(struct brcmf_cfg80211_info* cfg) {
 zx_status_t brcmf_cfg80211_wait_vif_event(struct brcmf_cfg80211_info* cfg, zx_duration_t timeout) {
     struct brcmf_cfg80211_vif_event* event = &cfg->vif_event;
 
-    return completion_wait(&event->vif_event_wait, timeout);
+    return sync_completion_wait(&event->vif_event_wait, timeout);
 }
 
 static zx_status_t brcmf_translate_country_code(struct brcmf_pub* drvr, char alpha2[2],

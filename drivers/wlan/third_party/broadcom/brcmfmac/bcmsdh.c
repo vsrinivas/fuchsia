@@ -15,7 +15,7 @@
  */
 /* ****************** SDIO CARD Interface Functions **************************/
 
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 #include <stdatomic.h>
 
@@ -50,8 +50,8 @@ struct brcmf_sdiod_freezer {
     atomic_int freezing;
     atomic_int thread_count;
     uint32_t frozen_count;
-    completion_t thread_freeze;
-    completion_t resumed;
+    sync_completion_t thread_freeze;
+    sync_completion_t resumed;
 };
 
 static irqreturn_t brcmf_sdiod_oob_irqhandler(int irq, void* dev_id) {
@@ -542,8 +542,8 @@ static zx_status_t brcmf_sdiod_freezer_attach(struct brcmf_sdio_dev* sdiodev) {
     }
     atomic_store(&sdiodev->freezer->thread_count, 0);
     atomic_store(&sdiodev->freezer->freezing, 0);
-    sdiodev->freezer->thread_freeze = COMPLETION_INIT;
-    sdiodev->freezer->resumed = COMPLETION_INIT;
+    sdiodev->freezer->thread_freeze = SYNC_COMPLETION_INIT;
+    sdiodev->freezer->resumed = SYNC_COMPLETION_INIT;
     return ZX_OK;
 }
 
@@ -558,11 +558,11 @@ static zx_status_t brcmf_sdiod_freezer_on(struct brcmf_sdio_dev* sdiodev) {
     zx_status_t res = ZX_OK;
 
     sdiodev->freezer->frozen_count = 0;
-    completion_reset(&sdiodev->freezer->resumed);
-    completion_reset(&sdiodev->freezer->thread_freeze);
+    sync_completion_reset(&sdiodev->freezer->resumed);
+    sync_completion_reset(&sdiodev->freezer->thread_freeze);
     atomic_store(&sdiodev->freezer->freezing, 1);
     brcmf_sdio_trigger_dpc(sdiodev->bus);
-    completion_wait(&sdiodev->freezer->thread_freeze, ZX_TIME_INFINITE);
+    sync_completion_wait(&sdiodev->freezer->thread_freeze, ZX_TIME_INFINITE);
     sdio_claim_host(sdiodev->func1);
     res = brcmf_sdio_sleep(sdiodev->bus, true);
     sdio_release_host(sdiodev->func1);
@@ -574,7 +574,7 @@ static void brcmf_sdiod_freezer_off(struct brcmf_sdio_dev* sdiodev) {
     brcmf_sdio_sleep(sdiodev->bus, false);
     sdio_release_host(sdiodev->func1);
     atomic_store(&sdiodev->freezer->freezing, 0);
-    completion_signal(&sdiodev->freezer->resumed);
+    sync_completion_signal(&sdiodev->freezer->resumed);
 }
 
 bool brcmf_sdiod_freezing(struct brcmf_sdio_dev* sdiodev) {
@@ -587,9 +587,9 @@ void brcmf_sdiod_try_freeze(struct brcmf_sdio_dev* sdiodev) {
     }
     sdiodev->freezer->frozen_count++;
     if (atomic_load(&sdiodev->freezer->thread_count) == sdiodev->freezer->frozen_count) {
-        completion_signal(&sdiodev->freezer->thread_freeze);
+        sync_completion_signal(&sdiodev->freezer->thread_freeze);
     }
-    completion_wait(&sdiodev->freezer->resumed, ZX_TIME_INFINITE);
+    sync_completion_wait(&sdiodev->freezer->resumed, ZX_TIME_INFINITE);
 }
 
 void brcmf_sdiod_freezer_count(struct brcmf_sdio_dev* sdiodev) {

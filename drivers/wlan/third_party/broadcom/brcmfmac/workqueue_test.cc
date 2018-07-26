@@ -27,16 +27,16 @@ void __brcmf_dbg(uint32_t filter, const char* func, const char* fmt, ...) {}
 
 } // extern "C"
 
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 #include "gtest/gtest.h"
 
 namespace {
 
 struct TestWork {
-    completion_t entered;
-    completion_t leaving;
-    completion_t proceed;
+    sync_completion_t entered;
+    sync_completion_t leaving;
+    sync_completion_t proceed;
     struct work_struct work;
     int state;
     TestWork();
@@ -49,10 +49,10 @@ TestWork::TestWork() :
 static void handler(struct work_struct* work) {
     TestWork* tester = containerof(work, TestWork, work);
     tester->state++;
-    completion_signal(&tester->entered);
-    completion_wait(&tester->proceed, ZX_TIME_INFINITE);
+    sync_completion_signal(&tester->entered);
+    sync_completion_wait(&tester->proceed, ZX_TIME_INFINITE);
     tester->state++;
-    completion_signal(&tester->leaving);
+    sync_completion_signal(&tester->leaving);
 }
 
 TEST(Workqueue, JobsInOrder) {
@@ -63,14 +63,14 @@ TEST(Workqueue, JobsInOrder) {
     workqueue_init_work(&work2.work, handler);
     workqueue_schedule(queue, &work1.work);
     workqueue_schedule(queue, &work2.work);
-    completion_wait(&work1.entered, ZX_TIME_INFINITE);
+    sync_completion_wait(&work1.entered, ZX_TIME_INFINITE);
     EXPECT_EQ(work1.state, 1);
     EXPECT_EQ(work2.state, 0);
-    completion_signal(&work1.proceed);
-    completion_wait(&work2.entered, ZX_TIME_INFINITE);
+    sync_completion_signal(&work1.proceed);
+    sync_completion_wait(&work2.entered, ZX_TIME_INFINITE);
     EXPECT_EQ(work1.state, 2);
     EXPECT_EQ(work2.state, 1);
-    completion_signal(&work2.proceed);
+    sync_completion_signal(&work2.proceed);
     workqueue_destroy(queue);
 }
 
@@ -86,8 +86,8 @@ TEST(Workqueue, ScheduleTwiceIgnored) {
     workqueue_schedule(queue, &work1.work);
     workqueue_schedule(queue, &work2.work);
     workqueue_schedule(queue, &work2.work);
-    completion_signal(&work1.proceed);
-    completion_signal(&work2.proceed);
+    sync_completion_signal(&work1.proceed);
+    sync_completion_signal(&work2.proceed);
     workqueue_destroy(queue);
     EXPECT_EQ(work1.state, 2);
     EXPECT_EQ(work2.state, 2);
@@ -97,9 +97,9 @@ TEST(Workqueue, DefaultQueueWorks) {
     TestWork work1;
     workqueue_init_work(&work1.work, handler);
     workqueue_schedule_default(&work1.work);
-    completion_wait(&work1.entered, ZX_TIME_INFINITE);
+    sync_completion_wait(&work1.entered, ZX_TIME_INFINITE);
     EXPECT_EQ(work1.state, 1);
-    completion_signal(&work1.proceed);
+    sync_completion_signal(&work1.proceed);
     workqueue_flush_default();
 }
 
@@ -116,23 +116,23 @@ TEST(Workqueue, CancelPending) {
     workqueue_schedule(queue, &work1.work);
     workqueue_schedule(queue, &work2.work);
     workqueue_schedule(queue, &work3.work);
-    completion_wait(&work1.entered, ZX_TIME_INFINITE);
+    sync_completion_wait(&work1.entered, ZX_TIME_INFINITE);
     EXPECT_EQ(work1.state, 1);
     EXPECT_EQ(work2.state, 0);
     workqueue_cancel_work(&work2.work);
-    completion_signal(&work1.proceed);
-    completion_wait(&work3.entered, ZX_TIME_INFINITE);
+    sync_completion_signal(&work1.proceed);
+    sync_completion_wait(&work3.entered, ZX_TIME_INFINITE);
     EXPECT_EQ(work1.state, 2);
     EXPECT_EQ(work2.state, 0);
     EXPECT_EQ(work3.state, 1);
-    completion_signal(&work3.proceed);
+    sync_completion_signal(&work3.proceed);
     workqueue_destroy(queue);
 }
 
 struct WorkCanceler {
     struct work_struct work;
     TestWork* target;
-    completion_t leaving;
+    sync_completion_t leaving;
     int state;
     WorkCanceler();
 };
@@ -145,7 +145,7 @@ static void cancel_handler(struct work_struct* work) {
     WorkCanceler* canceler = containerof(work, WorkCanceler, work);
     workqueue_cancel_work(&canceler->target->work);
     canceler->state = 2;
-    completion_signal(&canceler->leaving);
+    sync_completion_signal(&canceler->leaving);
 }
 
 // Upon canceling a job that is in progress, the canceler should block until the job completes.
@@ -161,7 +161,7 @@ TEST(Workqueue, CancelCurrent) {
     workqueue_init_work(&canceler.work, cancel_handler);
     workqueue_schedule(queue, &work1.work);
     workqueue_schedule(queue, &work2.work);
-    completion_wait(&work1.entered, ZX_TIME_INFINITE);
+    sync_completion_wait(&work1.entered, ZX_TIME_INFINITE);
     EXPECT_EQ(work1.state, 1);
     EXPECT_EQ(work2.state, 0);
     workqueue_schedule_default(&canceler.work);
@@ -170,12 +170,12 @@ TEST(Workqueue, CancelCurrent) {
     zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
     EXPECT_EQ(work1.state, 1);
     EXPECT_EQ(canceler.state, 0);
-    completion_signal(&work1.proceed);
-    completion_wait(&work2.entered, ZX_TIME_INFINITE);
+    sync_completion_signal(&work1.proceed);
+    sync_completion_wait(&work2.entered, ZX_TIME_INFINITE);
     EXPECT_EQ(work1.state, 2);
     EXPECT_EQ(work2.state, 1);
-    completion_wait(&canceler.leaving, ZX_TIME_INFINITE);
-    completion_signal(&work2.proceed);
+    sync_completion_wait(&canceler.leaving, ZX_TIME_INFINITE);
+    sync_completion_signal(&work2.proceed);
     workqueue_destroy(queue);
 }
 

@@ -18,7 +18,7 @@
 
 #include <ddk/protocol/usb.h>
 #include <driver/usb.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/status.h>
 
 #include <threads.h>
@@ -169,7 +169,7 @@ struct brcmf_usbdev_info {
     usb_setup_t ctl_read;
     uint32_t ctl_urb_actual_length;
     int ctl_urb_status;
-    completion_t ioctl_resp_wait;
+    sync_completion_t ioctl_resp_wait;
     atomic_ulong ctl_op;
     uint8_t ifnum;
 
@@ -282,11 +282,11 @@ static struct brcmf_usbdev_info* brcmf_usb_get_businfo(struct brcmf_device* dev)
 }
 
 static zx_status_t brcmf_usb_ioctl_resp_wait(struct brcmf_usbdev_info* devinfo) {
-    return completion_wait(&devinfo->ioctl_resp_wait, ZX_MSEC(IOCTL_RESP_TIMEOUT_MSEC));
+    return sync_completion_wait(&devinfo->ioctl_resp_wait, ZX_MSEC(IOCTL_RESP_TIMEOUT_MSEC));
 }
 
 static void brcmf_usb_ioctl_resp_wake(struct brcmf_usbdev_info* devinfo) {
-    completion_signal(&devinfo->ioctl_resp_wait);
+    sync_completion_signal(&devinfo->ioctl_resp_wait);
 }
 
 static void brcmf_usb_ctl_complete(struct brcmf_usbdev_info* devinfo, int type, int status) {
@@ -415,7 +415,7 @@ static zx_status_t brcmf_usb_tx_ctlpkt(struct brcmf_device* dev, uint8_t* buf, u
         return ZX_ERR_IO;
     }
 
-    completion_reset(&devinfo->ioctl_resp_wait);
+    sync_completion_reset(&devinfo->ioctl_resp_wait);
     err = brcmf_usb_send_ctl(devinfo, buf, len);
     if (err != ZX_OK) {
         brcmf_err("fail %d bytes: %d\n", err, len);
@@ -446,7 +446,7 @@ static zx_status_t brcmf_usb_rx_ctlpkt(struct brcmf_device* dev, uint8_t* buf, u
         return ZX_ERR_IO;
     }
 
-    completion_reset(&devinfo->ioctl_resp_wait);
+    sync_completion_reset(&devinfo->ioctl_resp_wait);
     err = brcmf_usb_recv_ctl(devinfo, buf, len);
     if (err != ZX_OK) {
         brcmf_err("fail %d bytes: %d\n", err, len);
@@ -855,7 +855,7 @@ static zx_status_t brcmf_usb_dl_cmd(struct brcmf_usbdev_info* devinfo, uint8_t c
     brcmf_usb_init_control_urb(devinfo->ctl_urb, devinfo, &devinfo->ctl_read, (void*)tmpbuf, size,
                                (usb_request_complete_cb)brcmf_usb_sync_complete, devinfo);
 
-    completion_reset(&devinfo->ioctl_resp_wait);
+    sync_completion_reset(&devinfo->ioctl_resp_wait);
     ret = brcmf_usb_queue_urb(devinfo->ctl_urb);
     if (ret != ZX_OK) {
         brcmf_err("usb_queue_urb failed %d\n", ret);
@@ -977,7 +977,7 @@ static zx_status_t brcmf_usb_dl_send_bulk(struct brcmf_usbdev_info* devinfo, voi
     brcmf_usb_init_bulk_urb(devinfo->bulk_urb, devinfo, devinfo->tx_endpoint, buffer, len, true,
                        (usb_request_complete_cb)brcmf_usb_sync_complete, devinfo);
 
-    completion_reset(&devinfo->ioctl_resp_wait);
+    sync_completion_reset(&devinfo->ioctl_resp_wait);
     ret = brcmf_usb_queue_urb(devinfo->bulk_urb);
     if (ret != ZX_OK) {
         brcmf_err("usb_queue_urb failed %d\n", ret);
@@ -1215,7 +1215,7 @@ static struct brcmf_usbdev* brcmf_usb_attach(struct brcmf_usbdev_info* devinfo, 
     devinfo->bus_pub.bus_mtu = BRCMF_USB_MAX_PKT_SIZE;
 
     /* Initialize other structure content */
-    devinfo->ioctl_resp_wait = COMPLETION_INIT;
+    devinfo->ioctl_resp_wait = SYNC_COMPLETION_INIT;
 
     /* Initialize the spinlocks */
     //spin_lock_init(&devinfo->qlock);

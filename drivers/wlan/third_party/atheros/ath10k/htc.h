@@ -19,7 +19,7 @@
 #define _HTC_H_
 
 #include <ddk/io-buffer.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/listnode.h>
 #include <zircon/threads.h>
 
@@ -361,7 +361,7 @@ struct ath10k_htc {
     uint8_t control_resp_buffer[ATH10K_HTC_MAX_CTRL_MSG_LEN];
     int control_resp_len;
 
-    completion_t ctl_resp;
+    sync_completion_t ctl_resp;
 
     int total_transmit_credits;
     int target_credit_size;

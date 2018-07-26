@@ -1660,14 +1660,14 @@ void ath10k_wmi_put_wmi_channel(struct wmi_channel* ch,
 }
 
 zx_status_t ath10k_wmi_wait_for_service_ready(struct ath10k* ar) {
-    if (completion_wait(&ar->wmi.service_ready, WMI_SERVICE_READY_TIMEOUT) == ZX_ERR_TIMED_OUT) {
+    if (sync_completion_wait(&ar->wmi.service_ready, WMI_SERVICE_READY_TIMEOUT) == ZX_ERR_TIMED_OUT) {
         return ZX_ERR_TIMED_OUT;
     }
     return ZX_OK;
 }
 
 zx_status_t ath10k_wmi_wait_for_unified_ready(struct ath10k* ar) {
-    if (completion_wait(&ar->wmi.unified_ready, WMI_UNIFIED_READY_TIMEOUT) == ZX_ERR_TIMED_OUT) {
+    if (sync_completion_wait(&ar->wmi.unified_ready, WMI_UNIFIED_READY_TIMEOUT) == ZX_ERR_TIMED_OUT) {
         return ZX_ERR_TIMED_OUT;
     }
     return ZX_OK;
@@ -1900,7 +1900,7 @@ static void ath10k_wmi_event_scan_started(struct ath10k* ar) {
         }
 #endif // NEEDS PORTING
 
-        completion_signal(&ar->scan.started);
+        sync_completion_signal(&ar->scan.started);
         break;
     }
 }
@@ -1917,7 +1917,7 @@ static void ath10k_wmi_event_scan_start_failed(struct ath10k* ar) {
                     ar->scan.state);
         break;
     case ATH10K_SCAN_STARTING:
-        completion_signal(&ar->scan.started);
+        sync_completion_signal(&ar->scan.started);
         __ath10k_scan_finish(ar);
         break;
     }
@@ -1982,7 +1982,7 @@ static void ath10k_wmi_event_scan_foreign_chan(struct ath10k* ar, uint32_t freq)
         ar->scan_channel = ieee80211_get_channel(ar->hw->wiphy, freq);
 
         if (ar->scan.is_roc && ar->scan.roc_freq == freq) {
-            completion_signal(&ar->scan.on_channel);
+            sync_completion_signal(&ar->scan.on_channel);
         }
 #endif // NEEDS PORTING
         break;
@@ -2387,7 +2387,7 @@ zx_status_t ath10k_wmi_event_mgmt_rx(struct ath10k* ar, struct ath10k_msg_buf* b
             ar->assoc_frame = buf;
             // This path is critical. If we don't tell the firmware to associate before
             // the first key packet is received, it will gladly deauthenticate us.
-            completion_signal(&ar->assoc_complete);
+            sync_completion_signal(&ar->assoc_complete);
 
             // mac_bss_assoc owns the buffer now
             free_buf = false;
@@ -2560,7 +2560,7 @@ void ath10k_wmi_event_echo(struct ath10k* ar, struct ath10k_msg_buf* msg_buf) {
                arg.value);
 
     if (arg.value == ATH10K_WMI_BARRIER_ECHO_ID) {
-        completion_signal(&ar->wmi.barrier);
+        sync_completion_signal(&ar->wmi.barrier);
     }
 }
 
@@ -3162,12 +3162,12 @@ void ath10k_wmi_event_vdev_start_resp(struct ath10k* ar, struct ath10k_msg_buf* 
         return;
     }
 
-    completion_signal(&ar->vdev_setup_done);
+    sync_completion_signal(&ar->vdev_setup_done);
 }
 
 void ath10k_wmi_event_vdev_stopped(struct ath10k* ar, struct ath10k_msg_buf* buf) {
     ath10k_dbg(ar, ATH10K_DBG_WMI, "WMI_VDEV_STOPPED_EVENTID\n");
-    completion_signal(&ar->vdev_setup_done);
+    sync_completion_signal(&ar->vdev_setup_done);
 }
 
 #if 0 // NEEDS PORTING
@@ -4213,7 +4213,7 @@ void ath10k_wmi_event_wow_wakeup_host(struct ath10k* ar, struct sk_buff* skb) {
     struct wmi_wow_ev_arg ev = {};
     int ret;
 
-    completion_signal(&ar->wow.wakeup_completed);
+    sync_completion_signal(&ar->wow.wakeup_completed);
 
     ret = ath10k_wmi_pull_wow_event(ar, skb, &ev);
     if (ret) {
@@ -4844,7 +4844,7 @@ skip_mem_alloc:
 
     ath10k_msg_buf_free(buf);
     ar->svc_rdy_buf = NULL;
-    completion_signal(&ar->wmi.service_ready);
+    sync_completion_signal(&ar->wmi.service_ready);
     return 0;
 }
 
@@ -4926,7 +4926,7 @@ zx_status_t ath10k_wmi_event_ready(struct ath10k* ar, struct ath10k_msg_buf* msg
                arg.status);
 
     memcpy(ar->mac_addr, arg.mac_addr, ETH_ALEN);
-    completion_signal(&ar->wmi.unified_ready);
+    sync_completion_signal(&ar->wmi.unified_ready);
     return 0;
 }
 
@@ -4991,7 +4991,7 @@ static int ath10k_wmi_event_pdev_bss_chan_info(struct ath10k* ar,
                          SURVEY_INFO_TIME_TX);
 exit:
     mtx_unlock(&ar->data_lock);
-    completion_signal(&ar->bss_survey_done);
+    sync_completion_signal(&ar->bss_survey_done);
     return 0;
 }
 #endif // NEEDS PORTING
@@ -8016,7 +8016,7 @@ ath10k_wmi_barrier(struct ath10k* ar) {
     zx_status_t ret;
 
     mtx_lock(&ar->data_lock);
-    completion_reset(&ar->wmi.barrier);
+    sync_completion_reset(&ar->wmi.barrier);
     mtx_unlock(&ar->data_lock);
 
     ret = ath10k_wmi_echo(ar, ATH10K_WMI_BARRIER_ECHO_ID);
@@ -8025,7 +8025,7 @@ ath10k_wmi_barrier(struct ath10k* ar) {
         return ret;
     }
 
-    if (completion_wait(&ar->wmi.barrier, ATH10K_WMI_BARRIER_TIMEOUT) == ZX_ERR_TIMED_OUT) {
+    if (sync_completion_wait(&ar->wmi.barrier, ATH10K_WMI_BARRIER_TIMEOUT) == ZX_ERR_TIMED_OUT) {
         return ZX_ERR_TIMED_OUT;
     }
 
@@ -8497,9 +8497,9 @@ zx_status_t ath10k_wmi_attach(struct ath10k* ar) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    ar->wmi.service_ready = COMPLETION_INIT;
-    ar->wmi.unified_ready = COMPLETION_INIT;
-    ar->wmi.barrier = COMPLETION_INIT;
+    ar->wmi.service_ready = SYNC_COMPLETION_INIT;
+    ar->wmi.unified_ready = SYNC_COMPLETION_INIT;
+    ar->wmi.barrier = SYNC_COMPLETION_INIT;
 
     return ZX_OK;
 }

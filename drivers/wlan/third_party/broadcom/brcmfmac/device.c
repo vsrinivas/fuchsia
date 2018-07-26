@@ -33,7 +33,7 @@ static void brcmf_timer_handler(async_dispatcher_t* dispatcher, async_task_t* ta
     timer->callback_function(timer->data);
     mtx_lock(&timer->lock);
     timer->scheduled = false;
-    completion_signal(&timer->finished);
+    sync_completion_signal(&timer->finished);
     mtx_unlock(&timer->lock);
 }
 
@@ -41,7 +41,7 @@ void brcmf_timer_init(brcmf_timer_info_t* timer, brcmf_timer_callback_t* callbac
     memset(&timer->task.state, 0, sizeof(timer->task.state));
     timer->task.handler = brcmf_timer_handler;
     timer->callback_function = callback;
-    timer->finished = COMPLETION_INIT;
+    timer->finished = SYNC_COMPLETION_INIT;
     timer->scheduled = false;
     mtx_init(&timer->lock, mtx_plain);
 }
@@ -51,7 +51,7 @@ void brcmf_timer_set(brcmf_timer_info_t* timer, zx_duration_t delay) {
     async_cancel_task(default_dispatcher, &timer->task); // Make sure it's not scheduled
     timer->task.deadline = delay + async_now(default_dispatcher);
     timer->scheduled = true;
-    completion_reset(&timer->finished);
+    sync_completion_reset(&timer->finished);
     async_post_task(default_dispatcher, &timer->task);
     mtx_unlock(&timer->lock);
 }
@@ -65,7 +65,7 @@ void brcmf_timer_stop(brcmf_timer_info_t* timer) {
     zx_status_t result = async_cancel_task(default_dispatcher, &timer->task);
     mtx_unlock(&timer->lock);
     if (result != ZX_OK) {
-        completion_wait(&timer->finished, ZX_TIME_INFINITE);
+        sync_completion_wait(&timer->finished, ZX_TIME_INFINITE);
     }
 }
 

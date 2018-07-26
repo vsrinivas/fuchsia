@@ -384,7 +384,7 @@ static zx_status_t ath10k_install_key(struct ath10k_vif* arvif,
 
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
-    completion_reset(&ar->install_key_done);
+    sync_completion_reset(&ar->install_key_done);
 
     if (arvif->nohwcrypt) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -395,7 +395,7 @@ static zx_status_t ath10k_install_key(struct ath10k_vif* arvif,
         return ret;
     }
 
-    if (completion_wait(&ar->install_key_done, ZX_SEC(3)) == ZX_ERR_TIMED_OUT) {
+    if (sync_completion_wait(&ar->install_key_done, ZX_SEC(3)) == ZX_ERR_TIMED_OUT) {
         ath10k_err("Timed out waiting for key install complete message\n");
         return ZX_ERR_TIMED_OUT;
     }
@@ -901,7 +901,7 @@ static inline zx_status_t ath10k_vdev_setup_sync(struct ath10k* ar) {
         return ZX_ERR_BAD_STATE;
     }
 
-    if (completion_wait(&ar->vdev_setup_done, ATH10K_VDEV_SETUP_TIMEOUT) == ZX_ERR_TIMED_OUT) {
+    if (sync_completion_wait(&ar->vdev_setup_done, ATH10K_VDEV_SETUP_TIMEOUT) == ZX_ERR_TIMED_OUT) {
         return ZX_ERR_TIMED_OUT;
     }
 
@@ -943,7 +943,7 @@ static int ath10k_monitor_vdev_start(struct ath10k* ar, int vdev_id) {
     arg.channel.max_reg_power = channel->max_reg_power * 2;
     arg.channel.max_antenna_gain = channel->max_antenna_gain * 2;
 
-    completion_reset(&ar->vdev_setup_done);
+    sync_completion_reset(&ar->vdev_setup_done);
 
     ret = ath10k_wmi_vdev_start(ar, &arg);
     if (ret) {
@@ -991,7 +991,7 @@ static int ath10k_monitor_vdev_stop(struct ath10k* ar) {
         ath10k_warn("failed to put down monitor vdev %i: %d\n",
                     ar->monitor_vdev_id, ret);
 
-    completion_reset(&ar->vdev_setup_done);
+    sync_completion_reset(&ar->vdev_setup_done);
 
     ret = ath10k_wmi_vdev_stop(ar, ar->monitor_vdev_id);
     if (ret)
@@ -1325,7 +1325,7 @@ static int ath10k_vdev_stop(struct ath10k_vif* arvif) {
 
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
-    completion_reset(&ar->vdev_setup_done);
+    sync_completion_reset(&ar->vdev_setup_done);
 
     ret = ath10k_wmi_vdev_stop(ar, arvif->vdev_id);
     if (ret) {
@@ -1394,7 +1394,7 @@ static zx_status_t ath10k_vdev_start_restart(struct ath10k_vif* arvif,
 
     struct wmi_vdev_start_request_arg arg = {};
 
-    completion_reset(&ar->vdev_setup_done);
+    sync_completion_reset(&ar->vdev_setup_done);
 
     arg.vdev_id = arvif->vdev_id;
     arg.dtim_period = arvif->dtim_period;
@@ -3005,9 +3005,9 @@ int ath10k_mac_bss_assoc(void* thrd_data) {
     zx_status_t status;
 
     while (1) {
-        completion_wait(&ar->assoc_complete, ZX_TIME_INFINITE);
+        sync_completion_wait(&ar->assoc_complete, ZX_TIME_INFINITE);
         mtx_lock(&ar->assoc_lock);
-        completion_reset(&ar->assoc_complete);
+        sync_completion_reset(&ar->assoc_complete);
 
         // assoc_frame is set by ath10k_wmi_event_mgmt_rx before signaling the
         // assoc_complete completion.
@@ -4089,7 +4089,7 @@ void ath10k_offchan_tx_work(struct work_struct* work) {
         }
 
         mtx_lock(&ar->data_lock);
-        completion_reset(&ar->offchan_tx_completed);
+        sync_completion_reset(&ar->offchan_tx_completed);
         ar->offchan_tx_skb = skb;
         mtx_unlock(&ar->data_lock);
 
@@ -4116,7 +4116,7 @@ void ath10k_offchan_tx_work(struct work_struct* work) {
             /* not serious */
         }
 
-        if (completion_wait(&ar->offchan_tx_completed, ZX_SEC(3)) == ZX_ERR_TIMED_OUT) {
+        if (sync_completion_wait(&ar->offchan_tx_completed, ZX_SEC(3)) == ZX_ERR_TIMED_OUT) {
             ath10k_warn("timed out waiting for offchannel skb %pK\n", skb);
         }
 
@@ -4178,7 +4178,7 @@ void __ath10k_scan_finish(struct ath10k* ar) {
         ath10k_offchan_tx_purge(ar);
         cancel_delayed_work(&ar->scan.timeout);
 #endif // NEEDS PORTING
-        completion_signal(&ar->scan.completed);
+        sync_completion_signal(&ar->scan.completed);
         break;
     }
 }
@@ -4206,7 +4206,7 @@ static int ath10k_scan_stop(struct ath10k* ar) {
         goto out;
     }
 
-    zx_status_t status = completion_wait(&ar->scan.completed, ZX_SEC(3));
+    zx_status_t status = sync_completion_wait(&ar->scan.completed, ZX_SEC(3));
     if (status == ZX_ERR_TIMED_OUT) {
         ath10k_warn("failed to receive scan abortion completion: timed out\n");
         ret = -ETIMEDOUT;
@@ -4288,7 +4288,7 @@ static int ath10k_start_scan(struct ath10k* ar,
         return ret;
     }
 
-    if (completion_wait(&ar->scan.started, ZX_SEC(1)) == ZX_ERR_TIMED_OUT) {
+    if (sync_completion_wait(&ar->scan.started, ZX_SEC(1)) == ZX_ERR_TIMED_OUT) {
         ret = ath10k_scan_stop(ar);
         if (ret) {
             ath10k_warn("failed to stop scan: %d\n", ret);
@@ -5838,8 +5838,8 @@ static int ath10k_hw_scan(struct ieee80211_hw* hw,
     mtx_lock(&ar->data_lock);
     switch (ar->scan.state) {
     case ATH10K_SCAN_IDLE:
-        completion_reset(&ar->scan.started);
-        completion_reset(&ar->scan.completed);
+        sync_completion_reset(&ar->scan.started);
+        sync_completion_reset(&ar->scan.completed);
         ar->scan.state = ATH10K_SCAN_STARTING;
         ar->scan.is_roc = false;
         ar->scan.vdev_id = arvif->vdev_id;
@@ -6665,9 +6665,9 @@ static int ath10k_remain_on_channel(struct ieee80211_hw* hw,
     mtx_lock(&ar->data_lock);
     switch (ar->scan.state) {
     case ATH10K_SCAN_IDLE:
-        completion_reset(&ar->scan.started);
-        completion_reset(&ar->scan.completed);
-        completion_reset(&ar->scan.on_channel);
+        sync_completion_reset(&ar->scan.started);
+        sync_completion_reset(&ar->scan.completed);
+        sync_completion_reset(&ar->scan.on_channel);
         ar->scan.state = ATH10K_SCAN_STARTING;
         ar->scan.is_roc = true;
         ar->scan.vdev_id = arvif->vdev_id;
@@ -6711,7 +6711,7 @@ static int ath10k_remain_on_channel(struct ieee80211_hw* hw,
         goto exit;
     }
 
-    if (completion_wait(&ar->scan.on_channel, ZX_SEC(3)) == ZX_ERR_TIMED_OUT) {
+    if (sync_completion_wait(&ar->scan.on_channel, ZX_SEC(3)) == ZX_ERR_TIMED_OUT) {
         ath10k_warn("failed to switch to channel for roc scan\n");
 
         ret = ath10k_scan_stop(ar);
@@ -6879,7 +6879,7 @@ ath10k_mac_update_bss_chan_survey(struct ath10k* ar,
         return;
     }
 
-    completion_reset(&ar->bss_survey_done);
+    sync_completion_reset(&ar->bss_survey_done);
 
     ret = ath10k_wmi_pdev_bss_chan_info_request(ar, type);
     if (ret) {
@@ -6887,7 +6887,7 @@ ath10k_mac_update_bss_chan_survey(struct ath10k* ar,
         return;
     }
 
-    if (completion_wait(&ar->bss_survey_done, ZX_SEC(3)) == ZX_ERR_TIMED_OUT) {
+    if (sync_completion_wait(&ar->bss_survey_done, ZX_SEC(3)) == ZX_ERR_TIMED_OUT) {
         ath10k_warn("bss channel survey timed out\n");
         return;
     }

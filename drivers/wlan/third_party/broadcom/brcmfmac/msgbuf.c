@@ -23,7 +23,7 @@
 #include <stdatomic.h>
 #include <threads.h>
 
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
@@ -251,7 +251,7 @@ struct brcmf_msgbuf {
     uint16_t data_seq_no;
     uint16_t ioctl_seq_no;
     uint32_t reqid;
-    completion_t ioctl_resp_wait;
+    sync_completion_t ioctl_resp_wait;
 
     struct brcmf_msgbuf_pktids* tx_pktids;
     struct brcmf_msgbuf_pktids* rx_pktids;
@@ -453,11 +453,11 @@ static zx_status_t brcmf_msgbuf_tx_ioctl(struct brcmf_pub* drvr, int ifidx, uint
 }
 
 static zx_status_t brcmf_msgbuf_ioctl_resp_wait(struct brcmf_msgbuf* msgbuf) {
-    return completion_wait(&msgbuf->ioctl_resp_wait, ZX_MSEC(MSGBUF_IOCTL_RESP_TIMEOUT_MSEC));
+    return sync_completion_wait(&msgbuf->ioctl_resp_wait, ZX_MSEC(MSGBUF_IOCTL_RESP_TIMEOUT_MSEC));
 }
 
 static void brcmf_msgbuf_ioctl_resp_wake(struct brcmf_msgbuf* msgbuf) {
-    completion_signal(&msgbuf->ioctl_resp_wait);
+    sync_completion_signal(&msgbuf->ioctl_resp_wait);
 }
 
 static zx_status_t brcmf_msgbuf_query_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf,
@@ -468,7 +468,7 @@ static zx_status_t brcmf_msgbuf_query_dcmd(struct brcmf_pub* drvr, int ifidx, ui
 
     brcmf_dbg(MSGBUF, "ifidx=%d, cmd=%d, len=%d\n", ifidx, cmd, len);
     *fwerr = ZX_OK;
-    completion_reset(&msgbuf->ioctl_resp_wait);
+    sync_completion_reset(&msgbuf->ioctl_resp_wait);
     err = brcmf_msgbuf_tx_ioctl(drvr, ifidx, cmd, buf, len);
     if (err != ZX_OK) {
         return err;
@@ -1364,7 +1364,7 @@ zx_status_t brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr) {
     drvr->proto->rxreorder = brcmf_msgbuf_rxreorder;
     drvr->proto->pd = msgbuf;
 
-    msgbuf->ioctl_resp_wait = COMPLETION_INIT;
+    msgbuf->ioctl_resp_wait = SYNC_COMPLETION_INIT;
 
     msgbuf->commonrings = (struct brcmf_commonring**)if_msgbuf->commonrings;
     msgbuf->flowrings = (struct brcmf_commonring**)if_msgbuf->flowrings;

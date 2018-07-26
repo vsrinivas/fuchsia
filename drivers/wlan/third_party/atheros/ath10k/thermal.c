@@ -80,7 +80,7 @@ static ssize_t ath10k_thermal_show_temp(struct device* dev,
         goto out;
     }
 
-    completion_reset(&ar->thermal.wmi_sync);
+    sync_completion_reset(&ar->thermal.wmi_sync);
     ret = ath10k_wmi_pdev_get_temperature(ar);
     if (ret) {
         ath10k_warn("failed to read temperature %d\n", ret);
@@ -92,7 +92,7 @@ static ssize_t ath10k_thermal_show_temp(struct device* dev,
         goto out;
     }
 
-    if (completion_wait(&ar->thermal.wmi_sync, ATH10K_THERMAL_SYNC_TIMEOUT) == ZX_ERR_TIMED_OUT) {
+    if (sync_completion_wait(&ar->thermal.wmi_sync, ATH10K_THERMAL_SYNC_TIMEOUT) == ZX_ERR_TIMED_OUT) {
         ath10k_warn("failed to synchronize thermal read\n");
         ret = -ETIMEDOUT;
         goto out;
@@ -113,7 +113,7 @@ void ath10k_thermal_event_temperature(struct ath10k* ar, int temperature) {
     mtx_lock(&ar->data_lock);
     ar->thermal.temperature = temperature;
     mtx_unlock(&ar->data_lock);
-    completion_signal(&ar->thermal.wmi_sync);
+    sync_completion_signal(&ar->thermal.wmi_sync);
 }
 
 static SENSOR_DEVICE_ATTR(temp1_input, 0444, ath10k_thermal_show_temp,

@@ -16,7 +16,7 @@
 
 #include "sdio.h"
 
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <zircon/status.h>
 
 #include <stdatomic.h>
@@ -494,11 +494,11 @@ struct brcmf_sdio {
     zx_status_t ctrl_frame_err;
 
     // spinlock_t txq_lock; /* protect bus->txq */
-    completion_t ctrl_wait;
-    completion_t dcmd_resp_wait;
+    sync_completion_t ctrl_wait;
+    sync_completion_t dcmd_resp_wait;
 
     brcmf_timer_info_t timer;
-    completion_t watchdog_wait;
+    sync_completion_t watchdog_wait;
     struct task_struct* watchdog_tsk;
     bool wd_active;
 
@@ -1589,11 +1589,11 @@ static uint8_t brcmf_sdio_rxglom(struct brcmf_sdio* bus, uint8_t rxseq) {
 static int brcmf_sdio_dcmd_resp_wait(struct brcmf_sdio* bus, bool* pending) {
     /* Wait until control frame is available */
     *pending = false; // TODO(cphoenix): Does signal_pending() have meaning in Garnet?
-    return completion_wait(&bus->dcmd_resp_wait, ZX_MSEC(DCMD_RESP_TIMEOUT_MSEC));
+    return sync_completion_wait(&bus->dcmd_resp_wait, ZX_MSEC(DCMD_RESP_TIMEOUT_MSEC));
 }
 
 static zx_status_t brcmf_sdio_dcmd_resp_wake(struct brcmf_sdio* bus) {
-    completion_signal(&bus->dcmd_resp_wait);
+    sync_completion_signal(&bus->dcmd_resp_wait);
 
     return ZX_OK;
 }
@@ -1907,7 +1907,7 @@ static uint brcmf_sdio_readframes(struct brcmf_sdio* bus, uint maxframes) {
 }
 
 static void brcmf_sdio_wait_event_wakeup(struct brcmf_sdio* bus) {
-    completion_signal(&bus->ctrl_wait);
+    sync_completion_signal(&bus->ctrl_wait);
     return;
 }
 
@@ -2770,7 +2770,7 @@ static zx_status_t brcmf_sdio_bus_txctl(struct brcmf_device* dev, unsigned char*
     bus->ctrl_frame_stat = true;
 
     brcmf_sdio_trigger_dpc(bus);
-    completion_wait(&bus->ctrl_wait, ZX_MSEC(CTL_DONE_TIMEOUT_MSEC));
+    sync_completion_wait(&bus->ctrl_wait, ZX_MSEC(CTL_DONE_TIMEOUT_MSEC));
     ret = ZX_OK;
     if (bus->ctrl_frame_stat) {
         sdio_claim_host(bus->sdiodev->func1);
@@ -3793,14 +3793,14 @@ static zx_status_t brcmf_sdio_watchdog_thread(void* data) {
             break;
         }
         brcmf_sdiod_freezer_uncount(bus->sdiodev);
-        wait = completion_wait(&bus->watchdog_wait, ZX_TIME_INFINITE);
+        wait = sync_completion_wait(&bus->watchdog_wait, ZX_TIME_INFINITE);
         brcmf_sdiod_freezer_count(bus->sdiodev);
         brcmf_sdiod_try_freeze(bus->sdiodev);
         if (!wait) {
             brcmf_sdio_bus_watchdog(bus);
             /* Count the tick for reference */
             bus->sdcnt.tickcnt++;
-            completion_reset(&bus->watchdog_wait);
+            sync_completion_reset(&bus->watchdog_wait);
         } else {
             break;
         }
@@ -3813,7 +3813,7 @@ static void brcmf_sdio_watchdog(void* data) {
     struct brcmf_sdio* bus = data;
 
     if (bus->watchdog_tsk) {
-        completion_signal(&bus->watchdog_wait);
+        sync_completion_signal(&bus->watchdog_wait);
         /* Reschedule the watchdog */
         if (bus->wd_active) {
             brcmf_timer_set(&bus->timer, ZX_MSEC(BRCMF_WD_POLL_MSEC));
@@ -4005,13 +4005,13 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
 
     //spin_lock_init(&bus->rxctl_lock);
     //spin_lock_init(&bus->txq_lock);
-    bus->ctrl_wait = COMPLETION_INIT;
-    bus->dcmd_resp_wait = COMPLETION_INIT;
+    bus->ctrl_wait = SYNC_COMPLETION_INIT;
+    bus->dcmd_resp_wait = SYNC_COMPLETION_INIT;
 
     /* Set up the watchdog timer */
     brcmf_timer_init(&bus->timer, brcmf_sdio_watchdog);
     /* Initialize watchdog thread */
-    bus->watchdog_wait = COMPLETION_INIT;
+    bus->watchdog_wait = SYNC_COMPLETION_INIT;
     // TODO(cphoenix): Hack to make it compile - will be fixed when we support SDIO.
     brcmf_err("* * Need to do ret = kthread_run(brcmf_sdio_watchdog_thread, ...");
     (void)brcmf_sdio_watchdog_thread;

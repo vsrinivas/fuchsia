@@ -2357,7 +2357,7 @@ bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct ath10k_msg_buf* msg_bu
     case HTT_T2H_MSG_TYPE_VERSION_CONF: {
         htt->target_version_major = resp->ver_resp.major;
         htt->target_version_minor = resp->ver_resp.minor;
-        completion_signal(&htt->target_version_received);
+        sync_completion_signal(&htt->target_version_received);
         break;
     }
     case HTT_T2H_MSG_TYPE_RX_IND:
@@ -2425,7 +2425,7 @@ bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct ath10k_msg_buf* msg_bu
                    ev->peer_id,
                    !!(ev->flags & HTT_SECURITY_IS_UNICAST),
                    MS(ev->flags, HTT_SECURITY_TYPE));
-        completion_signal(&ar->install_key_done);
+        sync_completion_signal(&ar->install_key_done);
         break;
     }
     case HTT_T2H_MSG_TYPE_RX_FRAG_IND: {

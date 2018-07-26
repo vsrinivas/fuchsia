@@ -16,7 +16,7 @@
 #ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_P2P_H_
 #define GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_P2P_H_
 
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 
 #include "core.h"
 #include "device.h"
@@ -100,7 +100,7 @@ enum brcmf_p2p_status {
  */
 struct afx_hdl {
     struct work_struct afx_work;
-    completion_t act_frm_scan;
+    sync_completion_t act_frm_scan;
     bool is_active;
     int32_t peer_chan;
     bool is_listen;
@@ -142,11 +142,11 @@ struct brcmf_p2p_info {
     struct ieee80211_channel remain_on_channel;
     uint32_t remain_on_channel_cookie;
     uint8_t next_af_subtype;
-    completion_t send_af_done;
+    sync_completion_t send_af_done;
     struct afx_hdl afx_hdl;
     uint32_t af_sent_channel;
     zx_time_t af_tx_sent_time;
-    completion_t wait_next_af;
+    sync_completion_t wait_next_af;
     bool gon_req_action;
     bool block_gon_req_tx;
     bool p2pdev_dynamically;

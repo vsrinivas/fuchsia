@@ -26,7 +26,7 @@
 #include <lib/async/time.h>     // for async_now()
 #include <pthread.h>
 #include <string.h>
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <threads.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
@@ -74,7 +74,7 @@ typedef struct brcmf_timer_info {
     void* data;
     brcmf_timer_callback_t* callback_function;
     bool scheduled;
-    completion_t finished;
+    sync_completion_t finished;
     mtx_t lock;
 } brcmf_timer_info_t;
 

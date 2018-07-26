@@ -423,12 +423,12 @@ static void ath10k_htc_control_rx_complete(struct ath10k* ar, struct ath10k_msg_
     case ATH10K_HTC_MSG_READY_ID:
     case ATH10K_HTC_MSG_CONNECT_SERVICE_RESP_ID:
         /* handle HTC control message */
-        if (completion_wait(&htc->ctl_resp, 0) == ZX_OK) {
+        if (sync_completion_wait(&htc->ctl_resp, 0) == ZX_OK) {
             /* this is a fatal error, target should not be
              * sending unsolicited messages on the ep 0
              */
             ath10k_warn("HTC rx ctrl still processing\n");
-            completion_signal(&htc->ctl_resp);
+            sync_completion_signal(&htc->ctl_resp);
             goto out;
         }
 
@@ -438,7 +438,7 @@ static void ath10k_htc_control_rx_complete(struct ath10k* ar, struct ath10k_msg_
 
         memcpy(htc->control_resp_buffer, msg, htc->control_resp_len);
 
-        completion_signal(&htc->ctl_resp);
+        sync_completion_signal(&htc->ctl_resp);
         break;
     case ATH10K_HTC_MSG_SEND_SUSPEND_COMPLETE:
         htc->htc_ops.target_send_suspend_complete(ar);
@@ -517,7 +517,7 @@ static uint8_t ath10k_htc_get_credit_allocation(struct ath10k_htc* htc,
 static zx_status_t ath10k_htc_wait_ctl_resp(struct ath10k_htc* htc) {
     struct ath10k* ar = htc->ar;
     int i;
-    zx_status_t status = completion_wait(&htc->ctl_resp, ATH10K_HTC_WAIT_TIMEOUT);
+    zx_status_t status = sync_completion_wait(&htc->ctl_resp, ATH10K_HTC_WAIT_TIMEOUT);
     if (status == ZX_ERR_TIMED_OUT) {
         /* Workaround: In some cases the PCI HIF doesn't
          * receive interrupt for the control response message
@@ -532,7 +532,7 @@ static zx_status_t ath10k_htc_wait_ctl_resp(struct ath10k_htc* htc) {
             ath10k_hif_send_complete_check(ar, i, 1);
         }
 
-        status = completion_wait(&htc->ctl_resp, ATH10K_HTC_WAIT_TIMEOUT);
+        status = sync_completion_wait(&htc->ctl_resp, ATH10K_HTC_WAIT_TIMEOUT);
     }
     return status;
 }
@@ -647,7 +647,7 @@ zx_status_t ath10k_htc_connect_service(struct ath10k_htc* htc,
     req_msg->flags = flags;
     req_msg->service_id = conn_req->service_id;
 
-    completion_reset(&htc->ctl_resp);
+    sync_completion_reset(&htc->ctl_resp);
 
     status = ath10k_htc_send(htc, ATH10K_HTC_EP_0, msg_buf);
     if (status != ZX_OK) {
@@ -809,7 +809,7 @@ zx_status_t ath10k_htc_init(struct ath10k* ar) {
         return status;
     }
 
-    htc->ctl_resp = COMPLETION_INIT;
+    htc->ctl_resp = SYNC_COMPLETION_INIT;
 
     return ZX_OK;
 }

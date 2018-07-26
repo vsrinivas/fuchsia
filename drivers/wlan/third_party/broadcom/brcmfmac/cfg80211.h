@@ -17,7 +17,7 @@
 #ifndef BRCMFMAC_CFG80211_H
 #define BRCMFMAC_CFG80211_H
 
-#include <sync/completion.h>
+#include <lib/sync/completion.h>
 #include <threads.h>
 
 #include <zircon/listnode.h>
@@ -243,7 +243,7 @@ struct escan_info {
  * @vif: virtual interface object related to the event.
  */
 struct brcmf_cfg80211_vif_event {
-    completion_t vif_event_wait;
+    sync_completion_t vif_event_wait;
     mtx_t vif_event_lock;
     uint8_t action;
     struct brcmf_cfg80211_vif* vif;
@@ -264,7 +264,7 @@ struct brcmf_cfg80211_wowl {
     uint32_t pre_pmmode;
     struct cfg80211_wowlan_nd_match* nd;
     struct cfg80211_wowlan_nd_info* nd_info;
-    completion_t nd_data_wait;
+    sync_completion_t nd_data_wait;
     bool nd_enabled;
 };
 
@@ -332,7 +332,7 @@ struct brcmf_cfg80211_info {
     struct list_node vif_list;
     struct brcmf_cfg80211_vif_event vif_event;
     uint8_t vif_event_pending_action;
-    completion_t vif_disabled;
+    sync_completion_t vif_disabled;
     struct brcmu_d11inf d11inf;
     struct brcmf_assoclist_le assoclist;
     struct brcmf_cfg80211_wowl wowl;
