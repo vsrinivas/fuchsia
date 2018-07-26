@@ -206,8 +206,7 @@ mod tests {
 
         // Send first message of 4-Way Handshake to Supplicant
         let anonce = test_util::get_nonce();
-        let key_replay_counter = 1u64;
-        let msg1 = eapol::Frame::Key(test_util::get_4whs_msg1(&anonce[..], key_replay_counter));
+        let msg1 = eapol::Frame::Key(test_util::get_4whs_msg1(&anonce[..], |_| {}));
         let updates = esssa
             .on_eapol_frame(&msg1)
             .expect("error processing first 4-Way Handshake method");
@@ -234,7 +233,7 @@ mod tests {
                 assert_eq!(msg2.descriptor_type, 2);
                 assert_eq!(msg2.key_info.value(), 0x010A);
                 assert_eq!(msg2.key_len, 0);
-                assert_eq!(msg2.key_replay_counter, key_replay_counter);
+                assert_eq!(msg2.key_replay_counter, 1);
                 assert!(!test_util::is_zero(&msg2.key_nonce[..]));
                 assert!(test_util::is_zero(&msg2.key_iv[..]));
                 assert_eq!(msg2.key_rsc, 0);
@@ -261,7 +260,7 @@ mod tests {
 
         // Send third message of 4-Way Handshake to Supplicant.
         let gtk = vec![42u8; 16];
-        let key_frame = test_util::get_4whs_msg3(&ptk, &anonce[..], &gtk[..], None);
+        let key_frame = test_util::get_4whs_msg3(&ptk, &anonce[..], &gtk[..], |_| {});
         let msg3 = eapol::Frame::Key(key_frame);
         let updates = esssa
             .on_eapol_frame(&msg3)

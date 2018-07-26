@@ -209,8 +209,8 @@ impl Fourway {
             &RoleHandler::Authenticator(ref a) => a.key_replay_counter,
             &RoleHandler::Supplicant(ref s) => s.key_replay_counter(),
         };
-        if frame.key_replay_counter <= min_key_replay_counter {
-            return Err(Error::InvalidKeyReplayCounter.into());
+        if min_key_replay_counter > 0 && frame.key_replay_counter <= min_key_replay_counter {
+            return Err(Error::InvalidKeyReplayCounter(frame.key_replay_counter, min_key_replay_counter).into());
         }
 
         // IEEE Std 802.11-2016, 12.7.2, e)
@@ -519,78 +519,125 @@ fn is_zero(slice: &[u8]) -> bool {
     slice.iter().all(|&x| x == 0)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rsna::test_util::{self, MessageOverride};
+    use rsna::test_util;
     use bytes::Bytes;
 
-    fn make_handshake() -> Fourway {
-        // Create a new instance of the 4-Way Handshake in Supplicant role.
-        let pmk = test_util::get_pmk();
-        let cfg = Config{
-            s_rsne: test_util::get_s_rsne(),
-            a_rsne: test_util::get_a_rsne(),
-            s_addr: test_util::S_ADDR,
-            a_addr: test_util::A_ADDR,
-            role: Role::Supplicant
-        };
-        Fourway::new(cfg, pmk).expect("error while creating 4-Way Handshake")
-    }
-
-    fn compute_ptk(a_nonce: &[u8], supplicant_result: SecAssocResult) -> Option<Ptk> {
-        match supplicant_result.expect("expected successful processing of first message")
-            .get(0)
-            .expect("expected at least one response from Supplicant")
-            {
-                SecAssocUpdate::TxEapolKeyFrame(msg2) => {
-                    let snonce = msg2.key_nonce;
-                    let derived_ptk = test_util::get_ptk(a_nonce, &snonce[..]);
-                    Some(derived_ptk)
-                }
-                _ => None,
-            }
+    #[test]
+    fn test_zero_key_replay_counter_msg1() {
+        let (_, msg1_result) = test_util::send_msg1(|msg1| {
+            msg1.key_replay_counter = 0;
+        });
+        assert!(msg1_result.is_ok(),
+                "error, expected success for processing first msg but result is: {:?}",
+                msg1_result);
     }
 
     #[test]
-    fn test_nonzero_mic_in_first_msg() {
-        let mut handshake = make_handshake();
+    fn test_nonzero_key_replay_counter_msg1() {
+        let (_, msg1_result) = test_util::send_msg1(|msg1| {
+            msg1.key_replay_counter = 1;
+        });
 
-        // Send first message of Handshake to Supplicant and verify result.
-        let a_nonce = test_util::get_nonce();
-        let mut msg1 = test_util::get_4whs_msg1(&a_nonce[..], 1);
-        msg1.key_mic = Bytes::from(vec![0xAA; 16]);
-        let result = handshake.on_eapol_key_frame(&msg1);
-        assert!(result.is_ok(), "error, expected success for processing first msg but result is: {:?}", result);
+        assert!(msg1_result.is_ok(),
+                "error, expected success for processing first msg but result is: {:?}",
+                msg1_result);
+    }
+
+    #[test]
+    fn test_zero_key_replay_counter_lower_msg3_counter() {
+        let (mut env, msg1_result) = test_util::send_msg1(|msg1| {
+            msg1.key_replay_counter = 1;
+        });
+        assert!(msg1_result.is_ok(),
+                "error, expected success for processing first msg but result is: {:?}",
+                msg1_result);
+
+        // Because the Supplicant only updates the key replay counter when a valid EAPOL message
+        // with a MIC was received, the Authenticator can send messages with a counter lower than
+        // the one used in the first message.
+        let msg3_result = env.send_msg3(vec![42u8; 16], |msg3| {
+            msg3.key_replay_counter = 0;
+        });
+        assert!(msg3_result.is_ok(),
+                "error, expected success for processing third msg but result is: {:?}",
+                msg3_result);
+    }
+
+    #[test]
+    fn test_zero_key_replay_counter_valid_msg3() {
+        let (mut env, msg1_result) = test_util::send_msg1(|msg1| {
+            msg1.key_replay_counter = 0;
+        });
+        assert!(msg1_result.is_ok(),
+                "error, expected success for processing first msg but result is: {:?}",
+                msg1_result);
+
+        let msg3_result = env.send_msg3(vec![42u8; 16], |msg3| {
+            msg3.key_replay_counter = 1;
+        });
+        assert!(msg3_result.is_ok(),
+                "error, expected success for processing third msg but result is: {:?}",
+                msg3_result);
+    }
+
+    #[test]
+    fn test_zero_key_replay_counter_replayed_msg3() {
+        // Establish 4-Way Handshake
+        let (mut env, msg1_result) = test_util::send_msg1(|msg1| {
+            msg1.key_replay_counter = 0;
+        });
+        assert!(msg1_result.is_ok(),
+                "error, expected success for processing first msg but result is: {:?}",
+                msg1_result);
+
+        let msg3_result = env.send_msg3(vec![42u8; 16], |msg3| {
+            msg3.key_replay_counter = 1;
+        });
+        assert!(msg3_result.is_ok(),
+                "error, expected success for processing third msg but result is: {:?}",
+                msg3_result);
+
+        // The just sent third message increased the key replay counter.
+        // All successive EAPOL frames are required to have a larger key replay counter.
+        // Send an invalid message.
+        let msg3_result = env.send_msg3(vec![42u8; 16], |msg3| {
+            msg3.key_replay_counter = 1;
+        });
+        assert!(msg3_result.is_err(),
+                "error, expected failure for third msg but result is: {:?}", msg3_result);
+
+        // Send a valid replay of the third message.
+        let msg3_result = env.send_msg3(vec![42u8; 16], |msg3| {
+            msg3.key_replay_counter = 2;
+        });
+        assert!(msg3_result.is_ok(),
+                "error, expected success for processing third msg but result is: {:?}",
+                msg3_result);
     }
 
     // First messages of 4-Way Handshake must carry a zeroed IV in all protocol versions.
 
     #[test]
     fn test_random_iv_msg1_v1() {
-        let mut handshake = make_handshake();
-
-        // Send first message of Handshake to Supplicant and verify result.
-        let a_nonce = test_util::get_nonce();
-        let mut msg1 = test_util::get_4whs_msg1(&a_nonce[..], 1);
-        msg1.version = 1;
-        msg1.key_iv[0] = 0xFF;
-        let result = handshake.on_eapol_key_frame(&msg1);
-        assert!(result.is_err(), "error, expected failure for first msg but result is: {:?}", result);
+        let (_, msg1_result) = test_util::send_msg1(|msg1| {
+            msg1.version = 1;
+            msg1.key_iv = [0xFFu8; 16];
+        });
+        assert!(msg1_result.is_err(),
+                "error, expected failure for first msg but result is: {:?}", msg1_result);
     }
 
     #[test]
     fn test_random_iv_msg1_v2() {
-        let mut handshake = make_handshake();
-
-        // Send first message of Handshake to Supplicant and verify result.
-        let a_nonce = test_util::get_nonce();
-        let mut msg1 = test_util::get_4whs_msg1(&a_nonce[..], 1);
-        msg1.version = 2;
-        msg1.key_iv[0] = 0xFF;
-        let result = handshake.on_eapol_key_frame(&msg1);
-        assert!(result.is_err(), "error, expected failure for first msg but result is: {:?}", result);
+        let (_, msg1_result) = test_util::send_msg1(|msg1| {
+            msg1.version = 2;
+            msg1.key_iv = [0xFFu8; 16];
+        });
+        assert!(msg1_result.is_err(),
+                "error, expected failure for first msg but result is: {:?}", msg1_result);
     }
 
     // EAPOL Key frames can carry a random IV in the third message of the 4-Way Handshake if
@@ -599,66 +646,45 @@ mod tests {
 
     #[test]
     fn test_random_iv_msg3_v1() {
-        let mut handshake = make_handshake();
-
-        // Send first message of Handshake to Supplicant and derive PTK.
-        let a_nonce = test_util::get_nonce();
-        let msg1 = test_util::get_4whs_msg1(&a_nonce[..], 1);
-        let result = handshake.on_eapol_key_frame(&msg1);
-        let ptk = compute_ptk(&a_nonce[..], result).expect("could not derive PTK");
-
-        // Send third message of 4-Way Handshake to Supplicant.
-        let gtk = vec![42u8; 16];
-        let mut msg3 = test_util::get_4whs_msg3(&ptk, &a_nonce[..], &gtk[..], Some(MessageOverride{
-            version: 1,
-            replay_counter: 2,
-            iv: [0xFFu8; 16],
-        }));
-        let result = handshake.on_eapol_key_frame(&msg3);
-        assert!(result.is_ok(), "error, expected success for processing third msg but result is: {:?}", result);
+        let (mut env, msg1_result) = test_util::send_msg1(|_| {});
+        assert!(msg1_result.is_ok(),
+                "error, expected success for processing first msg but result is: {:?}",
+                msg1_result);
+        let msg3_result = env.send_msg3(vec![42u8; 16], |msg3| {
+            msg3.version = 1;
+            msg3.key_iv = [0xFFu8; 16];
+        });
+        assert!(msg3_result.is_ok(),
+                "error, expected success for processing third msg but result is: {:?}",
+                msg3_result);
     }
 
     #[test]
     fn test_random_iv_msg3_v2() {
-        let mut handshake = make_handshake();
-
-        // Send first message of Handshake to Supplicant and derive PTK.
-        let a_nonce = test_util::get_nonce();
-        let msg1 = test_util::get_4whs_msg1(&a_nonce[..], 1);
-        let result = handshake.on_eapol_key_frame(&msg1);
-        let ptk = compute_ptk(&a_nonce[..], result).expect("could not derive PTK");
-
-        // Send third message of 4-Way Handshake to Supplicant.
-        let gtk = vec![42u8; 16];
-        let mut msg3 = test_util::get_4whs_msg3(&ptk, &a_nonce[..], &gtk[..], Some(MessageOverride{
-            version: 2,
-            replay_counter: 2,
-            iv: [0xFFu8; 16],
-        }));
-        let result = handshake.on_eapol_key_frame(&msg3);
-        assert!(result.is_err(), "error, expected failure for third msg but result is: {:?}", result);
+        let (mut env, msg1_result) = test_util::send_msg1(|_| {});
+        assert!(msg1_result.is_ok(),
+                "error, expected success for processing first msg but result is: {:?}",
+                msg1_result);
+        let msg3_result = env.send_msg3(vec![42u8; 16], |msg3| {
+            msg3.version = 2;
+            msg3.key_iv = [0xFFu8; 16];
+        });
+        assert!(msg3_result.is_err(),
+                "error, expected failure for third msg but result is: {:?}", msg3_result);
     }
 
     #[test]
     fn test_zeroed_iv_msg3_v2() {
-        let mut handshake = make_handshake();
-
-        // Send first message of Handshake to Supplicant and derive PTK.
-        let a_nonce = test_util::get_nonce();
-        let msg1 = test_util::get_4whs_msg1(&a_nonce[..], 1);
-        let result = handshake.on_eapol_key_frame(&msg1);
-        let ptk = compute_ptk(&a_nonce[..], result).expect("could not derive PTK");
-
-        // Send third message of 4-Way Handshake to Supplicant.
-        let gtk = vec![42u8; 16];
-        let mut msg3 = test_util::get_4whs_msg3(&ptk, &a_nonce[..], &gtk[..], Some(MessageOverride{
-            version: 2,
-            replay_counter: 2,
-            iv: [0u8; 16],
-        }));
-        let result = handshake.on_eapol_key_frame(&msg3);
-        assert!(result.is_ok(), "error, expected success for processing third msg but result is: {:?}", result);
+        let (mut env, msg1_result) = test_util::send_msg1(|_| {});
+        assert!(msg1_result.is_ok(),
+                "error, expected success for processing first msg but result is: {:?}",
+                msg1_result);
+        let msg3_result = env.send_msg3(vec![42u8; 16], |msg3| {
+            msg3.version = 2;
+            msg3.key_iv = [0u8; 16];
+        });
+        assert!(msg3_result.is_ok(),
+                "error, expected success for processing third msg but result is: {:?}",
+                msg3_result);
     }
-
-    // TODO(hahnr): Add additional tests.
 }

@@ -10,7 +10,7 @@ use bytes::BytesMut;
 use cipher::{self, Cipher};
 use crypto_utils::nonce::NonceReader;
 use hex::FromHex;
-use key::exchange;
+use key::exchange::{self, handshake::fourway::{Fourway, Config}};
 use key::ptk::Ptk;
 use key_data;
 use key_data::kde;
@@ -140,7 +140,10 @@ pub fn get_pairwise_cipher() -> cipher::Cipher {
     get_s_rsne().pairwise_cipher_suites.remove(0)
 }
 
-pub fn get_4whs_msg1(anonce: &[u8], replay_counter: u64) -> eapol::KeyFrame {
+pub fn get_4whs_msg1<F>(anonce: &[u8], msg_modifier: F)
+    -> eapol::KeyFrame
+    where F: Fn(&mut eapol::KeyFrame)
+{
     let mut msg = eapol::KeyFrame {
         version: 1,
         packet_type: 3,
@@ -148,7 +151,7 @@ pub fn get_4whs_msg1(anonce: &[u8], replay_counter: u64) -> eapol::KeyFrame {
         descriptor_type: 2,
         key_info: eapol::KeyInformation(0x008a),
         key_len: 16,
-        key_replay_counter: replay_counter,
+        key_replay_counter: 1,
         key_mic: Bytes::from(vec![0u8; mic_len()]),
         key_rsc: 0,
         key_iv: [0u8; 16],
@@ -156,17 +159,15 @@ pub fn get_4whs_msg1(anonce: &[u8], replay_counter: u64) -> eapol::KeyFrame {
         key_data_len: 0,
         key_data: Bytes::from(vec![]),
     };
+    msg_modifier(&mut msg);
     msg.update_packet_body_len();
     msg
 }
 
-pub struct MessageOverride {
-    pub version: u8,
-    pub iv: [u8; 16],
-    pub replay_counter: u64,
-}
-
-pub fn get_4whs_msg3(ptk: &Ptk, anonce: &[u8], gtk: &[u8], msg_override: Option<MessageOverride>) -> eapol::KeyFrame {
+pub fn get_4whs_msg3<F>(ptk: &Ptk, anonce: &[u8], gtk: &[u8], msg_modifier: F)
+    -> eapol::KeyFrame
+    where F: Fn(&mut eapol::KeyFrame)
+{
     let mut buf = Vec::with_capacity(256);
 
     // Write GTK KDE
@@ -187,20 +188,21 @@ pub fn get_4whs_msg3(ptk: &Ptk, anonce: &[u8], gtk: &[u8], msg_override: Option<
     let encrypted_key_data = encrypt_key_data(ptk.kek(), &buf[..]);
 
     let mut msg = eapol::KeyFrame {
-        version: msg_override.as_ref().map_or(1, |c| c.version),
+        version: 1,
         packet_type: 3,
         packet_body_len: 0, // Updated afterwards
         descriptor_type: 2,
         key_info: eapol::KeyInformation(0x13ca),
         key_len: 16,
-        key_replay_counter: msg_override.as_ref().map_or(2, |c| c.replay_counter),
+        key_replay_counter: 2,
         key_mic: Bytes::from(vec![0u8; mic_len()]),
         key_rsc: 0,
-        key_iv: msg_override.as_ref().map_or([0u8; 16], |c| c.iv),
+        key_iv: [0u8; 16],
         key_nonce: eapol::to_array(anonce),
         key_data_len: encrypted_key_data.len() as u16,
         key_data: Bytes::from(encrypted_key_data),
     };
+    msg_modifier(&mut msg);
     msg.update_packet_body_len();
 
     let mic = compute_mic(ptk.kck(), &msg);
@@ -211,4 +213,66 @@ pub fn get_4whs_msg3(ptk: &Ptk, anonce: &[u8], gtk: &[u8], msg_override: Option<
 
 pub fn is_zero(slice: &[u8]) -> bool {
     slice.iter().all(|&x| x == 0)
+}
+
+fn make_handshake() -> Fourway {
+    // Create a new instance of the 4-Way Handshake in Supplicant role.
+    let pmk = test_util::get_pmk();
+    let cfg = Config{
+        s_rsne: test_util::get_s_rsne(),
+        a_rsne: test_util::get_a_rsne(),
+        s_addr: test_util::S_ADDR,
+        a_addr: test_util::A_ADDR,
+        role: Role::Supplicant
+    };
+    Fourway::new(cfg, pmk).expect("error while creating 4-Way Handshake")
+}
+
+fn compute_ptk(a_nonce: &[u8], supplicant_result: &SecAssocResult) -> Option<Ptk> {
+    match supplicant_result {
+        Ok(updates) => {
+            for u in updates {
+                match u {
+                    SecAssocUpdate::TxEapolKeyFrame(msg2) => {
+                        let snonce = msg2.key_nonce;
+                        let derived_ptk = test_util::get_ptk(a_nonce, &snonce[..]);
+                        return Some(derived_ptk)
+                    }
+                    _ => {},
+                }
+            }
+        }
+        _ => {}
+    }
+    None
+}
+
+pub struct FourwayHandshakeTestEnv {
+    handshake: Fourway,
+    a_nonce: Vec<u8>,
+    ptk: Option<Ptk>,
+}
+
+pub fn send_msg1<F>(msg_modifier: F) -> (FourwayHandshakeTestEnv, SecAssocResult)
+    where F: Fn(&mut eapol::KeyFrame) {
+    let mut handshake = make_handshake();
+
+    // Send first message of Handshake to Supplicant and verify result.
+    let a_nonce = get_nonce();
+    let mut msg1 = get_4whs_msg1(&a_nonce[..], msg_modifier);
+    let result = handshake.on_eapol_key_frame(&msg1);
+
+    let ptk = compute_ptk(&a_nonce[..], &result);
+    (FourwayHandshakeTestEnv{ handshake, a_nonce, ptk }, result)
+}
+
+impl FourwayHandshakeTestEnv {
+    pub fn send_msg3<F>(&mut self, gtk: Vec<u8>, msg_modifier: F) -> SecAssocResult
+        where F: Fn(&mut eapol::KeyFrame) {
+        // Send third message of 4-Way Handshake to Supplicant.
+        let ptk = self.ptk.as_ref().unwrap();
+        let mut msg3 =
+            get_4whs_msg3(ptk, &self.a_nonce[..], &gtk[..], msg_modifier);
+        self.handshake.on_eapol_key_frame(&msg3)
+    }
 }

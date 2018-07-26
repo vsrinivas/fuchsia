@@ -130,8 +130,8 @@ pub enum Error {
     InvalidMic,
     #[fail(display = "cannot decrypt key data; PTK not yet derived")]
     UnexpectedEncryptedKeyData,
-    #[fail(display = "invalid key replay counter")]
-    InvalidKeyReplayCounter,
+    #[fail(display = "invalid key replay counter {:?}; expected counter to be > {:?}", _0, _1)]
+    InvalidKeyReplayCounter(u64, u64),
     #[fail(display = "invalid nonce; nonce must match nonce from 1st message")]
     ErrorNonceDoesntMatch,
     #[fail(display = "invalid IV; expected zeroed IV")]
