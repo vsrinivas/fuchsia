@@ -10,6 +10,7 @@
 #include <utility>
 
 #include "garnet/drivers/bluetooth/lib/hci/connection_parameters.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/fake_channel.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 
 namespace btlib {
@@ -63,7 +64,9 @@ class FakeLayer final : public L2CAP {
 
   // Called when a new channel gets opened. Tests can use this to obtain a
   // reference to all channels.
-  void set_channel_callback(ChannelCallback callback) {
+  using FakeChannelCallback =
+      fit::function<void(fbl::RefPtr<l2cap::testing::FakeChannel>)>;
+  void set_channel_callback(FakeChannelCallback callback) {
     chan_cb_ = std::move(callback);
   }
 
@@ -102,7 +105,7 @@ class FakeLayer final : public L2CAP {
 
   bool initialized_ = false;
   std::unordered_map<hci::ConnectionHandle, LinkData> links_;
-  ChannelCallback chan_cb_;
+  FakeChannelCallback chan_cb_;
   std::unordered_map<PSM, ChannelDelivery> inbound_conn_cbs_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeLayer);
