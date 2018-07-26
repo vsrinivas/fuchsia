@@ -23,14 +23,13 @@ class StreamInfo
 };
 
 // AvScratch6
-class CropInfo
-    : public TypedRegisterBase<DosRegisterIo, CropInfo, uint32_t> {
+class CropInfo : public TypedRegisterBase<DosRegisterIo, CropInfo, uint32_t> {
  public:
   // All quantities are the number of pixels to be cropped from each side.
   DEF_FIELD(7, 0, bottom);
-  DEF_FIELD(15, 8, top); // Ignored
+  DEF_FIELD(15, 8, top);  // Ignored
   DEF_FIELD(23, 16, right);
-  DEF_FIELD(31, 24, left); // Ignored
+  DEF_FIELD(31, 24, left);  // Ignored
 
   static auto Get() { return AddrType(0x09c6 * 4); }
 };
@@ -296,7 +295,8 @@ void H264Decoder::SetFrameReadyNotifier(FrameReadyNotifier notifier) {
 }
 
 zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
-                                          uint32_t height, uint32_t display_width,
+                                          uint32_t height,
+                                          uint32_t display_width,
                                           uint32_t display_height) {
   for (auto& frame : video_frames_) {
     owner_->FreeCanvas(std::move(frame.y_canvas));
@@ -428,7 +428,8 @@ void H264Decoder::InitializeStream() {
 
   // TODO(dustingreen): Should the first parameter be max_dpb_size instead of
   // kActualDPBSize?:
-  InitializeFrames(kActualDPBSize, mb_width * 16, mb_height * 16, display_width, display_height);
+  InitializeFrames(kActualDPBSize, mb_width * 16, mb_height * 16, display_width,
+                   display_height);
 
   AvScratch0::Get()
       .FromValue((max_reference_size << 24) | (kActualDPBSize << 16) |
