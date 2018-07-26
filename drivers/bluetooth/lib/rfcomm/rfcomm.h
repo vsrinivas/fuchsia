@@ -35,6 +35,12 @@ inline constexpr Role OppositeRole(Role role) {
              : role == Role::kInitiator ? Role::kResponder : Role::kInitiator;
 }
 
+// This function defines what it means for a multiplexer to be started: namely,
+// it has its role set to initiator or responder.
+inline constexpr bool MultiplexerStarted(Role role) {
+  return role == Role::kInitiator || role == Role::kResponder;
+}
+
 // DLCIs are 6 bits. See RFCOMM 5.4. Any DLCI value will be truncated to the
 // least significant 6 bits.
 using DLCI = uint8_t;
@@ -95,6 +101,16 @@ enum class FrameType : uint8_t {
   kUnnumberedInfoHeaderCheck    = 0b11101111
 };
 // clang-format on
+
+// Whether the frame is a valid multiplexer start-up frame. Valid multiplexer
+// start-up frames are the only frames which are allowed to be sent before the
+// multiplexer starts.
+constexpr bool IsMuxStartupFrame(FrameType type, DLCI dlci) {
+  return dlci == kMuxControlDLCI &&
+         (type == FrameType::kSetAsynchronousBalancedMode ||
+          type == FrameType::kUnnumberedAcknowledgement ||
+          type == FrameType::kDisconnectedMode);
+}
 
 }  // namespace rfcomm
 }  // namespace btlib

@@ -117,16 +117,49 @@ std::unique_ptr<Frame> Frame::Parse(bool credit_based_flow, Role role,
     return nullptr;
   }
 
+  // Parse the frame type and DLCI first and then determine if we can parse the
+  // frame. We can parse the frame if the multiplexer is started, or if the
+  // multiplexer isn't started and it's a valid pre-mux-startup frame.
   DLCI dlci = buffer[kAddressIndex] >> kDLCIShift;
+  FrameType frame_type = (FrameType)(buffer[kControlIndex] & kControlMask);
+
+  if (!MultiplexerStarted(role) && !IsMuxStartupFrame(frame_type, dlci)) {
+    FXL_LOG(WARNING) << "rfcomm: Frame type "
+                     << static_cast<unsigned>(frame_type)
+                     << " before mux start";
+    return nullptr;
+  }
+
   bool cr_bit = buffer[kAddressIndex] & kCRMask;
   // See table 1 in 5.2.1.2, which describes exactly how the C/R bit is
   // interpreted.
-  CommandResponse command_response =
-      (role == Role::kInitiator && cr_bit) ||
-              (role == Role::kResponder && !cr_bit)
-          ? CommandResponse::kCommand
-          : CommandResponse::kResponse;
-  FrameType frame_type = (FrameType)(buffer[kControlIndex] & kControlMask);
+  CommandResponse command_response;
+  if (MultiplexerStarted(role)) {
+    // See table 1 in 5.2.1.2, which describes exactly how the C/R bit is
+    // interpreted.
+    command_response = (role == Role::kInitiator && cr_bit) ||
+                               (role == Role::kResponder && !cr_bit)
+                           ? CommandResponse::kCommand
+                           : CommandResponse::kResponse;
+  } else {
+    // This is not defined explicitly in the spec. If the multiplexer isn't
+    // started, we assume the frame has the role the sender would take if
+    // multiplexer startup succeeds.
+    switch (frame_type) {
+      case FrameType::kSetAsynchronousBalancedMode:
+        command_response =
+            cr_bit ? CommandResponse::kCommand : CommandResponse::kResponse;
+        break;
+      case FrameType::kDisconnectedMode:
+      case FrameType::kUnnumberedAcknowledgement:
+        command_response =
+            cr_bit ? CommandResponse::kResponse : CommandResponse::kCommand;
+        break;
+      default:
+        FXL_NOTREACHED();
+        break;
+    }
+  }
   bool poll_final = buffer[kControlIndex] & kPFMask;
 
   InformationLength length = buffer[kLengthIndex] >> kLengthFirstOctetShift;
@@ -226,7 +259,6 @@ void Frame::Write(common::MutableBufferView buffer) const {
 }
 
 void Frame::WriteHeader(common::MutableBufferView buffer) const {
-  FXL_DCHECK(role_ == Role::kInitiator || role_ == Role::kResponder);
   FXL_DCHECK(buffer.size() >= header_size());
 
   size_t offset = 0;
@@ -235,11 +267,31 @@ void Frame::WriteHeader(common::MutableBufferView buffer) const {
   // Set EA bit (DLCI/address is always 1 octet in length)
   address |= kEAMask;
   // Set C/R bit
-  uint8_t command_response_bit =
-      (role_ == Role::kInitiator &&
-       command_response_ == CommandResponse::kCommand) ||
-      (role_ == Role::kResponder &&
-       command_response_ == CommandResponse::kResponse);
+  uint8_t command_response_bit;
+  if (role_ == Role::kInitiator || role_ == Role::kResponder) {
+    // GSM Table 1.
+    command_response_bit = (role_ == Role::kInitiator &&
+                            command_response_ == CommandResponse::kCommand) ||
+                           (role_ == Role::kResponder &&
+                            command_response_ == CommandResponse::kResponse);
+  } else if (role_ == Role::kUnassigned) {
+    // There are only specific frames which can be encoded when the multiplexer
+    // is not yet started.
+    FXL_DCHECK(IsMuxStartupFrame(FrameType(control_), dlci_));
+
+    // TODO(gusss): the spec does not say how we encode the C/R bit when the
+    // multiplexer is not yet started.
+    // Set the C/R bit as if startup succeeds (see GSM table 1)
+    //  - SABM (command) frames become initiator, C/R = 1
+    //  - UA (response) frames become responder, C/R = 1
+    //  - DM (response) frames come from would-be responder, C/R = 1
+    command_response_bit = 1;
+  } else {
+    FXL_DCHECK(false) << "Unexpected role while writing frame: "
+                      << unsigned(role_);
+    return;
+  }
+
   address &= ~kCRMask;
   address |= command_response_bit << kCRShift;
   buffer[offset] = address;

@@ -143,6 +143,60 @@ const auto kTestCommandFrame = common::CreateStaticByteBuffer(
     // FCS
     0b01101100);
 
+// Contruction of pre-multiplexer-startup SABM frame:
+//  - Role is unset
+//  - Sent to DLCI 0
+const auto kPreMuxSABMFrame = common::CreateStaticByteBuffer(
+    // Address octet:
+    // E/A bit is always 1. Our implementation sets C/R bit to 1 for
+    // pre-mux-startup SABM frames. DLCI is 0.
+    0b00000011,
+    // Control octet:
+    // P/F bit (p) is 1 for SABM.
+    0b00111111,
+    // Length octet:
+    // Length is 0.
+    0b00000001,
+    // FCS octet:
+    // Please see GSM 5.2.1.6, GSM Annex B, and RFCOMM 5.1.1.
+    0b00011100);
+
+// Contruction of pre-multiplexer-startup SABM frame:
+//  - Role is unset
+//  - Sent to DLCI 0
+const auto kPreMuxUAFrame = common::CreateStaticByteBuffer(
+    // Address octet:
+    // E/A bit is always 1. Our implementation sets C/R bit to 1 for
+    // pre-mux-startup UA frames. DLCI is 0.
+    0b00000011,
+    // Control octet:
+    // P/F bit (Final bit) is 1 for UA.
+    0b01110011,
+    // Length octet:
+    // Length is 0.
+    0b00000001,
+    // FCS octet:
+    // Please see GSM 5.2.1.6, GSM Annex B, and RFCOMM 5.1.1.
+    0b11010111);
+
+// Contruction of pre-multiplexer-startup DM frame:
+//  - Role is unset
+//  - Sent to DLCI 0
+const auto kPreMuxDMFrame = common::CreateStaticByteBuffer(
+    // Address octet:
+    // E/A bit is always 1. Our implementation sets C/R bit to 1 for
+    // pre-mux-startup frames. DLCI is 0.
+    0b00000011,
+    // Control octet:
+    // P/F bit (Final bit) is 1 for DM.
+    0b00011111,
+    // Length octet:
+    // Length is 0.
+    0b00000001,
+    // FCS octet:
+    // Please see GSM 5.2.1.6, GSM Annex B, and RFCOMM 5.1.1.
+    0b00110110);
+
 const auto kInvalidLengthFrame = common::CreateStaticByteBuffer(0, 1, 2);
 
 // Same as the hellofuchsia frame, but information field is too short.
@@ -209,6 +263,26 @@ TEST_F(RFCOMM_FrameTest, WriteFrameWithMuxCommandAndCredits) {
   EXPECT_EQ(kTestCommandFrame, buffer);
 }
 
+TEST_F(RFCOMM_FrameTest, WritePreMuxStartupSABM) {
+  SetAsynchronousBalancedModeCommand frame(Role::kUnassigned, kMuxControlDLCI);
+  common::DynamicByteBuffer buffer(frame.written_size());
+  frame.Write(buffer.mutable_view());
+  EXPECT_EQ(kPreMuxSABMFrame, buffer);
+}
+
+TEST_F(RFCOMM_FrameTest, WritePreMuxStartupUA) {
+  UnnumberedAcknowledgementResponse frame(Role::kUnassigned, kMuxControlDLCI);
+  common::DynamicByteBuffer buffer(frame.written_size());
+  frame.Write(buffer.mutable_view());
+  EXPECT_EQ(kPreMuxUAFrame, buffer);
+}
+TEST_F(RFCOMM_FrameTest, WritePreMuxStartupDM) {
+  DisconnectedModeResponse frame(Role::kUnassigned, kMuxControlDLCI);
+  common::DynamicByteBuffer buffer(frame.written_size());
+  frame.Write(buffer.mutable_view());
+  EXPECT_EQ(kPreMuxDMFrame, buffer);
+}
+
 TEST_F(RFCOMM_FrameTest, ReadFrame) {
   auto frame =
       Frame::Parse(kEmptyFrameCreditBasedFlow, kEmptyFrameRole, kEmptyFrame);
@@ -265,6 +339,24 @@ TEST_F(RFCOMM_FrameTest, ReadFrameWithMuxCommandAndCredits) {
   auto test_command = std::unique_ptr<TestCommand>(
       static_cast<TestCommand*>(mux_command.release()));
   EXPECT_EQ(kTestCommandFrameMuxCommandPattern, test_command->test_pattern());
+}
+
+TEST_F(RFCOMM_FrameTest, ReadFramesPreMuxStartup) {
+  auto frame = Frame::Parse(true, Role::kUnassigned, kPreMuxSABMFrame);
+  EXPECT_TRUE(frame);
+  EXPECT_EQ(CommandResponse::kCommand, frame->command_response());
+
+  frame = Frame::Parse(true, Role::kUnassigned, kPreMuxUAFrame);
+  EXPECT_TRUE(frame);
+  EXPECT_EQ(CommandResponse::kResponse, frame->command_response());
+
+  frame = Frame::Parse(true, Role::kUnassigned, kPreMuxDMFrame);
+  EXPECT_TRUE(frame);
+  EXPECT_EQ(CommandResponse::kResponse, frame->command_response());
+
+  EXPECT_FALSE(Frame::Parse(true, Role::kUnassigned, kHelloFrame));
+  EXPECT_FALSE(Frame::Parse(true, Role::kUnassigned, kFuchsiaFrame));
+  EXPECT_FALSE(Frame::Parse(true, Role::kUnassigned, kTestCommandFrame));
 }
 
 TEST_F(RFCOMM_FrameTest, ReadInvalidFrame_TooShort) {
